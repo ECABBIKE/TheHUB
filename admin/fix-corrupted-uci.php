@@ -4,10 +4,10 @@
  *
  * Handles two types of problems:
  * 1. Real UCI-IDs (14+ chars) assigned to multiple different people
- * 2. Temporary SWE-IDs (with dash or short format) assigned to multiple people
+ * 2. Temporary SWE-IDs (format SWE25XXXXX) assigned to multiple people
  *
- * For real UCI-IDs: Keep for person with most results, clear for others
- * For temp SWE-IDs: Clear ALL duplicates (they're just placeholders)
+ * For real UCI-IDs: Keep for person with most results, give others new SWE-ID
+ * For temp SWE-IDs: Keep for person with most results, give others new unique SWE-ID
  */
 require_once __DIR__ . '/../config.php';
 require_admin();
@@ -32,7 +32,7 @@ function isRealUciId($license) {
     // Temp SWE-ID has dash: SWE-000001
     if (strpos($clean, '-') !== false) return false;
 
-    // Temp SWE-ID format: SWE25XXXXX (10 chars, 5 unique digits at end)
+    // Temp SWE-ID format: SWE25XXXXX (10 chars, 7 digits after SWE)
     // Example: SWE2500318
     if (preg_match('/^SWE\d{7}$/', $clean)) {
         return false; // This is a temp SWE-ID, not real UCI
@@ -47,15 +47,23 @@ function isRealUciId($license) {
     return false;
 }
 
-// Check if this is a temp SWE-ID (format: SWE25XXXXX)
-function isTempSweId($license) {
-    if (empty($license)) return false;
-    $clean = str_replace(' ', '', $license);
-
-    // Format: SWE25XXXXX (SWE + 2 digits for year + 5 digits unique)
-    // Also catch SWE-XXXXXX format (with dash)
-    return preg_match('/^SWE\d{7}$/', $clean) || strpos($clean, 'SWE-') === 0;
+// Find the highest existing SWE-ID number to generate new unique ones
+function getNextSweIdNumber($db) {
+    $result = $db->getRow("
+        SELECT MAX(CAST(SUBSTRING(license_number, 4) AS UNSIGNED)) as max_num
+        FROM riders
+        WHERE license_number REGEXP '^SWE[0-9]{7}$'
+    ");
+    return ($result['max_num'] ?? 2500000) + 1;
 }
+
+// Generate a new unique SWE-ID
+function generateNewSweId($number) {
+    return 'SWE' . str_pad($number, 7, '0', STR_PAD_LEFT);
+}
+
+// Get next SWE-ID number (will be incremented as we use them)
+$nextSweIdNumber = getNextSweIdNumber($db);
 
 // Find all license_numbers with multiple owners
 $duplicates = $db->getAll("
@@ -74,8 +82,9 @@ $duplicates = $db->getAll("
 
 $realUciConflicts = [];
 $tempSweConflicts = [];
-$totalUciCleared = 0;
-$totalSweCleared = 0;
+$totalUciFixed = 0;
+$totalSweFixed = 0;
+$newIdsAssigned = [];
 
 foreach ($duplicates as $entry) {
     $riderIds = explode(',', $entry['rider_ids']);
@@ -132,9 +141,9 @@ foreach ($duplicates as $entry) {
         // Only process if different names (otherwise it's a real duplicate, not corruption)
         if (!$hasDifferentNames) continue;
 
-        // Keep UCI for first rider (most results), clear for others
+        // Keep UCI for first rider (most results), give others new SWE-ID
         $keepRider = $riders[0];
-        $clearRiders = array_slice($riders, 1);
+        $fixRiders = array_slice($riders, 1);
 
         $logEntry = [
             'license' => $entry['license_number'],
@@ -146,27 +155,32 @@ foreach ($duplicates as $entry) {
                 'birth_year' => $keepRider['birth_year'],
                 'club' => $keepRider['club_name']
             ],
-            'clear' => []
+            'fix' => []
         ];
 
-        foreach ($clearRiders as $rider) {
-            $logEntry['clear'][] = [
+        foreach ($fixRiders as $rider) {
+            $newSweId = generateNewSweId($nextSweIdNumber);
+            $nextSweIdNumber++;
+
+            $logEntry['fix'][] = [
                 'id' => $rider['id'],
                 'name' => $rider['firstname'] . ' ' . $rider['lastname'],
-                'results' => $rider['result_count']
+                'results' => $rider['result_count'],
+                'new_id' => $newSweId
             ];
 
             if (!$dryRun && $mode !== 'swe') {
-                $db->update('riders', ['license_number' => null], 'id = ?', [$rider['id']]);
-                $totalUciCleared++;
+                $db->update('riders', ['license_number' => $newSweId], 'id = ?', [$rider['id']]);
+                $totalUciFixed++;
+                $newIdsAssigned[] = ['rider_id' => $rider['id'], 'name' => $rider['firstname'] . ' ' . $rider['lastname'], 'new_id' => $newSweId];
             }
         }
 
         $realUciConflicts[] = $logEntry;
     } else {
-        // Temp SWE-ID: Clear ALL duplicates - keep only for person with most results
+        // Temp SWE-ID: Keep for person with most results, give others new unique SWE-ID
         $keepRider = $riders[0];
-        $clearRiders = array_slice($riders, 1);
+        $fixRiders = array_slice($riders, 1);
 
         $logEntry = [
             'license' => $entry['license_number'],
@@ -178,19 +192,24 @@ foreach ($duplicates as $entry) {
                 'birth_year' => $keepRider['birth_year'],
                 'club' => $keepRider['club_name']
             ],
-            'clear' => []
+            'fix' => []
         ];
 
-        foreach ($clearRiders as $rider) {
-            $logEntry['clear'][] = [
+        foreach ($fixRiders as $rider) {
+            $newSweId = generateNewSweId($nextSweIdNumber);
+            $nextSweIdNumber++;
+
+            $logEntry['fix'][] = [
                 'id' => $rider['id'],
                 'name' => $rider['firstname'] . ' ' . $rider['lastname'],
-                'results' => $rider['result_count']
+                'results' => $rider['result_count'],
+                'new_id' => $newSweId
             ];
 
             if (!$dryRun && $mode !== 'uci') {
-                $db->update('riders', ['license_number' => null], 'id = ?', [$rider['id']]);
-                $totalSweCleared++;
+                $db->update('riders', ['license_number' => $newSweId], 'id = ?', [$rider['id']]);
+                $totalSweFixed++;
+                $newIdsAssigned[] = ['rider_id' => $rider['id'], 'name' => $rider['firstname'] . ' ' . $rider['lastname'], 'new_id' => $newSweId];
             }
         }
 
@@ -199,8 +218,8 @@ foreach ($duplicates as $entry) {
 }
 
 // Calculate totals
-$totalUciToFix = array_sum(array_map(fn($e) => count($e['clear']), $realUciConflicts));
-$totalSweToFix = array_sum(array_map(fn($e) => count($e['clear']), $tempSweConflicts));
+$totalUciToFix = array_sum(array_map(fn($e) => count($e['fix']), $realUciConflicts));
+$totalSweToFix = array_sum(array_map(fn($e) => count($e['fix']), $tempSweConflicts));
 
 // Page output
 $page_title = 'Fixa duplicerade licens-ID';
@@ -214,7 +233,7 @@ include __DIR__ . '/components/unified-layout.php';
 
 <style>
 .keep-badge { background: #dcfce7; color: #166534; padding: 2px 8px; border-radius: 4px; font-size: 11px; }
-.clear-badge { background: #fee2e2; color: #991b1b; padding: 2px 8px; border-radius: 4px; font-size: 11px; }
+.new-badge { background: #dbeafe; color: #1e40af; padding: 2px 8px; border-radius: 4px; font-size: 11px; }
 .uci-badge { background: #dbeafe; color: #1e40af; padding: 2px 8px; border-radius: 4px; font-size: 11px; }
 .swe-badge { background: #fef3c7; color: #92400e; padding: 2px 8px; border-radius: 4px; font-size: 11px; }
 </style>
@@ -224,14 +243,51 @@ include __DIR__ . '/components/unified-layout.php';
     <i data-lucide="alert-triangle"></i>
     <strong>FÖRHANDSGRANSKNING</strong> - Inga ändringar görs ännu.
     <br>Detta verktyg hittar licens-ID:n som felaktigt tilldelats flera personer.
+    <br><strong>Åkare som får sitt ID ändrat tilldelas ett nytt unikt SWE-ID.</strong>
 </div>
 <?php else: ?>
 <div class="alert alert-success mb-lg">
     <i data-lucide="check-circle"></i>
     <strong>KLAR!</strong>
-    <?php if ($mode === 'all' || $mode === 'uci'): ?>Rensade UCI-ID för <?= $totalUciCleared ?> åkare. <?php endif; ?>
-    <?php if ($mode === 'all' || $mode === 'swe'): ?>Rensade SWE-ID för <?= $totalSweCleared ?> åkare.<?php endif; ?>
+    <?php if ($mode === 'all' || $mode === 'uci'): ?>Fixade <?= $totalUciFixed ?> åkare med UCI-konflikt. <?php endif; ?>
+    <?php if ($mode === 'all' || $mode === 'swe'): ?>Fixade <?= $totalSweFixed ?> åkare med SWE-ID-konflikt.<?php endif; ?>
+    <br><small>Alla berörda åkare har fått nya unika SWE-ID.</small>
 </div>
+
+<?php if (!empty($newIdsAssigned)): ?>
+<div class="card mb-lg">
+    <div class="card-header">
+        <h3>Nya tilldelade SWE-ID (<?= count($newIdsAssigned) ?>)</h3>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-sm">
+                <thead>
+                    <tr>
+                        <th>Rider ID</th>
+                        <th>Namn</th>
+                        <th>Nytt SWE-ID</th>
+                    </tr>
+                </thead>
+                <tbody>
+                <?php foreach (array_slice($newIdsAssigned, 0, 50) as $assignment): ?>
+                    <tr>
+                        <td><?= $assignment['rider_id'] ?></td>
+                        <td><?= h($assignment['name']) ?></td>
+                        <td><code class="new-badge"><?= h($assignment['new_id']) ?></code></td>
+                    </tr>
+                <?php endforeach; ?>
+                <?php if (count($newIdsAssigned) > 50): ?>
+                    <tr>
+                        <td colspan="3" class="text-secondary">... och <?= count($newIdsAssigned) - 50 ?> till</td>
+                    </tr>
+                <?php endif; ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
 <?php endif; ?>
 
 <div class="card mb-lg">
@@ -243,34 +299,34 @@ include __DIR__ . '/components/unified-layout.php';
             <div class="stat-card" style="border-left: 4px solid #1e40af;">
                 <div class="stat-number" style="color: #1e40af;"><?= count($realUciConflicts) ?></div>
                 <div class="stat-label">Riktiga UCI-ID konflikter</div>
-                <small class="text-secondary"><?= $totalUciToFix ?> åkare att rensa (behåller 1 per ID)</small>
+                <small class="text-secondary"><?= $totalUciToFix ?> åkare får nytt SWE-ID</small>
             </div>
             <div class="stat-card" style="border-left: 4px solid #92400e;">
                 <div class="stat-number" style="color: #92400e;"><?= count($tempSweConflicts) ?></div>
                 <div class="stat-label">Temporära SWE-ID konflikter</div>
-                <small class="text-secondary"><?= $totalSweToFix ?> åkare att rensa (behåller 1 per ID)</small>
+                <small class="text-secondary"><?= $totalSweToFix ?> åkare får nytt SWE-ID</small>
             </div>
         </div>
 
         <?php if ($dryRun && ($totalUciToFix > 0 || $totalSweToFix > 0)): ?>
         <div class="mt-lg" style="display: flex; gap: var(--space-md); flex-wrap: wrap;">
             <?php if ($totalUciToFix > 0): ?>
-            <a href="?execute=1&mode=uci" class="btn btn-primary" onclick="return confirm('Rensa UCI-ID för <?= $totalUciToFix ?> felaktigt tilldelade åkare?\n\nDessa är RIKTIGA UCI-ID som tilldelats flera olika personer.')">
+            <a href="?execute=1&mode=uci" class="btn btn-primary" onclick="return confirm('Fixa UCI-ID för <?= $totalUciToFix ?> åkare?\n\nDe får nya unika SWE-ID.')">
                 <i data-lucide="badge-check"></i>
                 Fixa UCI-ID (<?= $totalUciToFix ?>)
             </a>
             <?php endif; ?>
 
             <?php if ($totalSweToFix > 0): ?>
-            <a href="?execute=1&mode=swe" class="btn btn-warning" onclick="return confirm('Rensa SWE-ID för <?= $totalSweToFix ?> åkare?\n\nDessa är TEMPORÄRA ID som felaktigt tilldelats flera personer.')">
-                <i data-lucide="eraser"></i>
+            <a href="?execute=1&mode=swe" class="btn btn-warning" onclick="return confirm('Fixa SWE-ID för <?= $totalSweToFix ?> åkare?\n\nDe får nya unika SWE-ID.')">
+                <i data-lucide="refresh-cw"></i>
                 Fixa SWE-ID (<?= $totalSweToFix ?>)
             </a>
             <?php endif; ?>
 
             <?php if ($totalUciToFix > 0 && $totalSweToFix > 0): ?>
-            <a href="?execute=1&mode=all" class="btn btn-danger" onclick="return confirm('Rensa ALLA duplicerade ID (<?= $totalUciToFix + $totalSweToFix ?> åkare)?\n\nDetta fixar både UCI-ID och SWE-ID konflikter.')">
-                <i data-lucide="trash-2"></i>
+            <a href="?execute=1&mode=all" class="btn btn-danger" onclick="return confirm('Fixa ALLA (<?= $totalUciToFix + $totalSweToFix ?> åkare)?\n\nAlla får nya unika SWE-ID.')">
+                <i data-lucide="zap"></i>
                 Fixa ALLA (<?= $totalUciToFix + $totalSweToFix ?>)
             </a>
             <?php endif; ?>
@@ -295,17 +351,16 @@ include __DIR__ . '/components/unified-layout.php';
         <?php if (!empty($tempSweConflicts)): ?>
         <div class="alert alert-info mb-md">
             <i data-lucide="info"></i>
-            Temporära SWE-ID (format: <code>SWE25XXXXX</code>) ska vara unika. Dessa ID har tilldelats flera personer under import och behöver rensas.
-            <br><strong>Åkaren med flest resultat behåller ID:t, övriga får ID:t rensat.</strong>
-            <br><small>SWE-ID försvinner automatiskt när åkaren får ett riktigt UCI-ID.</small>
+            Temporära SWE-ID (format: <code>SWE25XXXXX</code>) ska vara unika och låsta till varje åkare.
+            <br><strong>Åkaren med flest resultat behåller ID:t, övriga får nya unika SWE-ID.</strong>
         </div>
         <div class="table-responsive">
             <table class="table">
                 <thead>
                     <tr>
-                        <th>SWE-ID</th>
+                        <th>Duplicerat ID</th>
                         <th>Behåller <span class="keep-badge">BEHÅLL</span></th>
-                        <th>Rensas <span class="clear-badge">RENSA</span></th>
+                        <th>Får nytt ID <span class="new-badge">NYTT</span></th>
                         <th>Antal</th>
                     </tr>
                 </thead>
@@ -326,19 +381,20 @@ include __DIR__ . '/components/unified-layout.php';
                         </td>
                         <td>
                             <?php
-                            $showCount = min(3, count($entry['clear']));
-                            $hiddenCount = count($entry['clear']) - $showCount;
-                            foreach (array_slice($entry['clear'], 0, $showCount) as $c): ?>
+                            $showCount = min(3, count($entry['fix']));
+                            $hiddenCount = count($entry['fix']) - $showCount;
+                            foreach (array_slice($entry['fix'], 0, $showCount) as $f): ?>
                             <div class="mb-xs">
-                                <span class="text-danger"><?= h($c['name']) ?></span>
-                                <small>(<?= $c['results'] ?> res)</small>
+                                <span><?= h($f['name']) ?></span>
+                                <code class="new-badge"><?= h($f['new_id']) ?></code>
+                                <small>(<?= $f['results'] ?> res)</small>
                             </div>
                             <?php endforeach; ?>
                             <?php if ($hiddenCount > 0): ?>
                             <small class="text-secondary">... och <?= $hiddenCount ?> till</small>
                             <?php endif; ?>
                         </td>
-                        <td><strong class="text-danger"><?= count($entry['clear']) ?></strong></td>
+                        <td><strong><?= count($entry['fix']) ?></strong></td>
                     </tr>
                 <?php endforeach; ?>
                 </tbody>
@@ -358,7 +414,7 @@ include __DIR__ . '/components/unified-layout.php';
         <div class="alert alert-info mb-md">
             <i data-lucide="info"></i>
             Riktiga UCI-ID (14+ tecken) som tilldelats flera OLIKA personer. Detta är datakorruption.
-            <br><strong>Åkaren med flest resultat behåller UCI-ID:t, övriga får det rensat.</strong>
+            <br><strong>Åkaren med flest resultat behåller UCI-ID:t, övriga får nya SWE-ID.</strong>
         </div>
         <div class="table-responsive">
             <table class="table">
@@ -366,7 +422,7 @@ include __DIR__ . '/components/unified-layout.php';
                     <tr>
                         <th>UCI-ID</th>
                         <th>Behåller <span class="keep-badge">BEHÅLL</span></th>
-                        <th>Rensas <span class="clear-badge">RENSA</span></th>
+                        <th>Får nytt SWE-ID <span class="new-badge">NYTT</span></th>
                         <th>Antal</th>
                     </tr>
                 </thead>
@@ -388,19 +444,20 @@ include __DIR__ . '/components/unified-layout.php';
                         </td>
                         <td>
                             <?php
-                            $showCount = min(3, count($entry['clear']));
-                            $hiddenCount = count($entry['clear']) - $showCount;
-                            foreach (array_slice($entry['clear'], 0, $showCount) as $c): ?>
+                            $showCount = min(3, count($entry['fix']));
+                            $hiddenCount = count($entry['fix']) - $showCount;
+                            foreach (array_slice($entry['fix'], 0, $showCount) as $f): ?>
                             <div class="mb-xs">
-                                <span class="text-danger"><?= h($c['name']) ?></span>
-                                <small>(<?= $c['results'] ?> res)</small>
+                                <span><?= h($f['name']) ?></span>
+                                <code class="new-badge"><?= h($f['new_id']) ?></code>
+                                <small>(<?= $f['results'] ?> res)</small>
                             </div>
                             <?php endforeach; ?>
                             <?php if ($hiddenCount > 0): ?>
                             <small class="text-secondary">... och <?= $hiddenCount ?> till</small>
                             <?php endif; ?>
                         </td>
-                        <td><strong class="text-danger"><?= count($entry['clear']) ?></strong></td>
+                        <td><strong><?= count($entry['fix']) ?></strong></td>
                     </tr>
                 <?php endforeach; ?>
                 </tbody>
