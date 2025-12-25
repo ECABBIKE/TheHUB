@@ -1194,12 +1194,13 @@
 
 /* Chart with proper axes */
 .dashboard-chart-body--axes {
-    padding: var(--space-sm) 0;
+    padding: 0;
+    width: 100%;
 }
 
 .dashboard-chart-svg--axes {
     width: 100%;
-    height: 180px;
+    height: 250px;
     display: block;
 }
 
