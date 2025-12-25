@@ -357,27 +357,110 @@ include __DIR__ . '/components/unified-layout.php';
   <i data-lucide="camera"></i>
   Profilbild
  </h2>
- <div class="flex items-center gap-lg">
+ <div class="flex items-center gap-lg flex-wrap">
   <?php
   $initials = strtoupper(substr($rider['firstname'] ?? '', 0, 1) . substr($rider['lastname'] ?? '', 0, 1));
-  $imageUrl = $rider['profile_image_url'] ?? '';
+  $imageUrl = $rider['avatar_url'] ?? $rider['profile_image_url'] ?? '';
   ?>
-  <div class="profile-image-preview" style="width: 120px; height: 120px; border-radius: var(--radius-md); background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; overflow: hidden; color: white; font-size: 2.5rem; font-weight: 700;">
-  <?php if ($imageUrl): ?>
-  <img src="<?= h($imageUrl) ?>" alt="Profilbild" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-  <span style="display: none;"><?= h($initials) ?></span>
-  <?php else: ?>
-  <?= h($initials) ?>
-  <?php endif; ?>
+  <div class="admin-avatar-container" style="position: relative;">
+   <div class="profile-image-preview" id="adminAvatarPreview" style="width: 120px; height: 120px; border-radius: var(--radius-md); background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; overflow: hidden; color: white; font-size: 2.5rem; font-weight: 700; cursor: pointer;" onclick="document.getElementById('adminAvatarInput').click()">
+   <?php if ($imageUrl): ?>
+   <img src="<?= h($imageUrl) ?>" alt="Profilbild" id="adminAvatarImage" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+   <span style="display: none;"><?= h($initials) ?></span>
+   <?php else: ?>
+   <span id="adminAvatarInitials"><?= h($initials) ?></span>
+   <?php endif; ?>
+   </div>
+   <div id="adminAvatarLoading" style="display: none; position: absolute; inset: 0; background: rgba(0,0,0,0.6); border-radius: var(--radius-md); align-items: center; justify-content: center;">
+    <div style="width: 32px; height: 32px; border: 3px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.8s linear infinite;"></div>
+   </div>
   </div>
-  <div class="flex flex-col gap-sm" style="flex: 1;">
-  <label class="label">Bild-URL</label>
-  <input type="text" name="profile_image_url" class="input" value="<?= h($imageUrl) ?>" placeholder="https://exempel.com/bild.jpg" form="rider-form">
-  <small class="text-secondary">Klistra in en direktlank till en bild (t.ex. fran Instagram, Imgur eller annan bildvard). Lamna tomt for att visa initialer.</small>
+  <div class="flex flex-col gap-sm" style="flex: 1; min-width: 200px;">
+   <div class="flex gap-sm items-center flex-wrap">
+    <label class="btn btn-secondary" style="cursor: pointer; margin: 0;">
+     <i data-lucide="upload" style="width: 16px; height: 16px;"></i>
+     Ladda upp bild
+     <input type="file" id="adminAvatarInput" accept="image/jpeg,image/png,image/gif,image/webp" style="display: none;">
+    </label>
+    <span id="adminAvatarStatus" style="font-size: 0.875rem;"></span>
+   </div>
+   <div style="margin-top: 8px;">
+    <label class="label">Eller ange bild-URL manuellt</label>
+    <input type="text" name="profile_image_url" id="profileImageUrlInput" class="input" value="<?= h($imageUrl) ?>" placeholder="https://exempel.com/bild.jpg" form="rider-form">
+   </div>
+   <small class="text-secondary">Max 2MB. JPG, PNG, GIF eller WebP.</small>
   </div>
  </div>
  </div>
  </div>
+ <style>
+ @keyframes spin { to { transform: rotate(360deg); } }
+ </style>
+ <script>
+ document.addEventListener('DOMContentLoaded', function() {
+  const avatarInput = document.getElementById('adminAvatarInput');
+  const avatarPreview = document.getElementById('adminAvatarPreview');
+  const avatarLoading = document.getElementById('adminAvatarLoading');
+  const avatarStatus = document.getElementById('adminAvatarStatus');
+  const urlInput = document.getElementById('profileImageUrlInput');
+  const riderId = <?= intval($id) ?>;
+
+  if (!avatarInput) return;
+
+  avatarInput.addEventListener('change', async function(e) {
+   const file = e.target.files[0];
+   if (!file) return;
+
+   const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+   if (!allowedTypes.includes(file.type)) {
+    showStatus('Otillåten filtyp', 'error');
+    return;
+   }
+
+   if (file.size > 2 * 1024 * 1024) {
+    showStatus('Max 2MB', 'error');
+    return;
+   }
+
+   avatarLoading.style.display = 'flex';
+   showStatus('Laddar upp...', 'info');
+
+   const formData = new FormData();
+   formData.append('avatar', file);
+   formData.append('rider_id', riderId);
+
+   try {
+    const response = await fetch('/api/update-avatar.php', {
+     method: 'POST',
+     body: formData
+    });
+    const result = await response.json();
+
+    if (result.success) {
+     showStatus('Uppladdad!', 'success');
+     updatePreview(result.avatar_url);
+     urlInput.value = result.avatar_url;
+    } else {
+     showStatus(result.error || 'Fel', 'error');
+    }
+   } catch (error) {
+    showStatus('Uppladdning misslyckades', 'error');
+   } finally {
+    avatarLoading.style.display = 'none';
+   }
+  });
+
+  function updatePreview(src) {
+   avatarPreview.innerHTML = '<img src="' + src + '" alt="Profilbild" style="width: 100%; height: 100%; object-fit: cover;">';
+  }
+
+  function showStatus(msg, type) {
+   avatarStatus.textContent = msg;
+   avatarStatus.style.color = type === 'error' ? '#ef4444' : type === 'success' ? '#22c55e' : '#6b7280';
+   if (type === 'success') setTimeout(() => { avatarStatus.textContent = ''; }, 3000);
+  }
+ });
+ </script>
 
  <!-- Edit Form -->
  <form method="POST" class="card" id="rider-form">
