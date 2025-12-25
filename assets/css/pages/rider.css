@@ -39,7 +39,8 @@
 
 .profile-photo-hero {
     width: 100%;
-    aspect-ratio: 1 / 1;
+    aspect-ratio: 4 / 3;
+    max-height: 240px;
     background: linear-gradient(180deg, #f0f0f0 0%, #e5e5e5 100%);
     overflow: hidden;
 }
@@ -48,6 +49,7 @@
     width: 100%;
     height: 100%;
     object-fit: cover;
+    object-position: center top;
 }
 
 .profile-photo-placeholder {
@@ -60,40 +62,38 @@
 }
 
 .profile-photo-placeholder svg {
-    width: 60px;
-    height: 60px;
+    width: 48px;
+    height: 48px;
     color: #ccc;
 }
 
 .profile-info-centered {
     text-align: center;
-    padding: var(--space-md) var(--space-lg);
+    padding: var(--space-sm) var(--space-md);
 }
 
 .profile-name-hero {
-    font-size: 1.5rem;
+    font-size: 1.25rem;
     font-weight: 700;
-    margin: 0 0 var(--space-xs);
+    margin: 0 0 2px;
     color: var(--color-primary);
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: var(--space-sm);
+    gap: var(--space-xs);
 }
 
 .profile-subtitle {
     display: block;
-    font-size: 0.875rem;
+    font-size: 0.8125rem;
     color: var(--color-text-secondary);
-    margin-bottom: var(--space-xs);
 }
 
 .profile-club-link-hero {
     display: block;
-    font-size: 0.875rem;
+    font-size: 0.8125rem;
     color: var(--color-accent);
     text-decoration: none;
-    margin-bottom: var(--space-xs);
 }
 
 .profile-club-link-hero:hover {
@@ -102,48 +102,50 @@
 
 .profile-uci-text {
     display: block;
-    font-size: 0.75rem;
+    font-size: 0.6875rem;
     color: var(--color-text-muted);
     font-family: var(--font-mono, monospace);
     letter-spacing: 0.5px;
+    margin-top: 2px;
 }
 
-/* License Badge - Full Width Green Box */
+/* License Badge - Compact */
 .profile-license-badge {
-    margin: 0 var(--space-lg);
-    padding: var(--space-sm) var(--space-md);
+    margin: 0 var(--space-md);
+    padding: var(--space-xs) var(--space-sm);
     background: linear-gradient(135deg, rgba(97, 206, 112, 0.15) 0%, rgba(97, 206, 112, 0.08) 100%);
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-sm);
     text-align: center;
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: 0;
 }
 
 .license-label {
-    font-size: 0.625rem;
+    font-size: 0.5625rem;
     text-transform: uppercase;
     letter-spacing: 1px;
     color: var(--color-text-secondary);
 }
 
 .license-year {
-    font-size: 1.125rem;
+    font-size: 1rem;
     font-weight: 700;
     color: var(--color-primary);
+    line-height: 1.2;
 }
 
 /* Social Icons - Simple Gray Style */
 .profile-social-simple {
     display: flex;
     justify-content: center;
-    gap: var(--space-md);
-    padding: var(--space-md) 0;
+    gap: var(--space-sm);
+    padding: var(--space-sm) 0;
 }
 
 .social-icon-simple {
-    width: 28px;
-    height: 28px;
+    width: 24px;
+    height: 24px;
     display: flex;
     align-items: center;
     justify-content: center;
@@ -152,8 +154,8 @@
 }
 
 .social-icon-simple svg {
-    width: 22px;
-    height: 22px;
+    width: 20px;
+    height: 20px;
     fill: #333;
 }
 
@@ -169,23 +171,23 @@
 /* Action Buttons - Outline Style */
 .profile-card-v4 .profile-actions-row {
     display: flex;
-    gap: var(--space-sm);
-    padding: 0 var(--space-lg) var(--space-lg);
+    gap: var(--space-xs);
+    padding: 0 var(--space-md) var(--space-md);
 }
 
 .btn-action-outline {
     flex: 1;
-    padding: var(--space-sm) var(--space-md);
+    padding: var(--space-xs) var(--space-sm);
     border: 1px solid var(--color-border);
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-sm);
     background: white;
     color: var(--color-primary);
-    font-size: 0.875rem;
+    font-size: 0.8125rem;
     font-weight: 500;
     display: flex;
     align-items: center;
     justify-content: center;
-    gap: var(--space-xs);
+    gap: var(--space-2xs);
     cursor: pointer;
     text-decoration: none;
     transition: all 0.15s ease;
@@ -197,7 +199,7 @@
 }
 
 .btn-action-outline i {
-    width: 16px;
+    width: 14px;
     height: 16px;
 }
 
