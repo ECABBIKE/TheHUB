@@ -166,22 +166,41 @@ function getLastSurnamePart($lastname) {
     return mb_strtolower(end($parts), 'UTF-8');
 }
 
-// Find all name duplicates (same firstname + lastname, different IDs)
-// Using simple TRIM and LOWER (REGEXP_REPLACE can fail on older MySQL)
-$nameDuplicates = $db->getAll("
-    SELECT
-        LOWER(TRIM(firstname)) as fn,
-        LOWER(TRIM(lastname)) as ln,
-        GROUP_CONCAT(id ORDER BY id) as rider_ids,
-        COUNT(*) as count
+// Find all name duplicates using PHP normalization
+// This catches variations with different spacing, invisible chars, etc.
+$allRiders = $db->getAll("
+    SELECT id, firstname, lastname
     FROM riders
     WHERE firstname IS NOT NULL AND firstname != ''
     AND lastname IS NOT NULL AND lastname != ''
-    GROUP BY fn, ln
-    HAVING count > 1
-    ORDER BY count DESC
-    LIMIT 200
 ");
+
+// Group by normalized name (PHP handles all whitespace normalization)
+$nameGroups = [];
+foreach ($allRiders as $r) {
+    $normalizedFn = preg_replace('/\s+/', ' ', mb_strtolower(trim($r['firstname']), 'UTF-8'));
+    $normalizedLn = preg_replace('/\s+/', ' ', mb_strtolower(trim($r['lastname']), 'UTF-8'));
+    $key = $normalizedFn . '|' . $normalizedLn;
+    $nameGroups[$key][] = $r['id'];
+}
+
+// Filter groups with 2+ riders
+$nameDuplicates = [];
+foreach ($nameGroups as $key => $ids) {
+    if (count($ids) > 1) {
+        list($fn, $ln) = explode('|', $key);
+        $nameDuplicates[] = [
+            'fn' => $fn,
+            'ln' => $ln,
+            'rider_ids' => implode(',', $ids),
+            'count' => count($ids)
+        ];
+    }
+}
+
+// Sort by count DESC and limit
+usort($nameDuplicates, fn($a, $b) => $b['count'] - $a['count']);
+$nameDuplicates = array_slice($nameDuplicates, 0, 200);
 
 // Also find fuzzy duplicates (same firstname + same last part of surname)
 // This catches "Mattias Sjöström-Varg" vs "Mattias Varg"
