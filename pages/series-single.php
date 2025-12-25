@@ -268,137 +268,16 @@ try {
 
     $totalParticipants = count($ridersInSeries);
 
-    // Get club standings from cache (uses club-points-system.php)
-    // This reads from club_standings_cache table which is populated via admin
+    // Calculate club standings with 100%/50% rule
+    // Best rider per club/class/event = 100%, second best = 50%, others = 0%
     $clubStandings = [];
-    $clubRiderContributions = []; // For compatibility
-
-    // First try to get cached data
-    $useCachedClubStandings = false;
-    try {
-        // Use getDB() wrapper which has getAll() method
-        $dbWrapper = getDB();
-        $clubStandingsRaw = getClubStandings($dbWrapper, $seriesId);
-        if (!empty($clubStandingsRaw)) {
-            $useCachedClubStandings = true;
-
-            // Get event points for all clubs in this series
-            $eventPointsStmt = $db->prepare("
-                SELECT club_id, event_id, total_points
-                FROM club_event_points
-                WHERE series_id = ?
-            ");
-            $eventPointsStmt->execute([$seriesId]);
-            $allEventPoints = $eventPointsStmt->fetchAll(PDO::FETCH_ASSOC);
-
-            // Group event points by club
-            $eventPointsByClub = [];
-            foreach ($allEventPoints as $ep) {
-                $eventPointsByClub[$ep['club_id']][$ep['event_id']] = (int)$ep['total_points'];
-            }
-
-            // Get top riders for each club
-            $ridersStmt = $db->prepare("
-                SELECT crp.club_id, crp.rider_id, crp.club_points, r.firstname, r.lastname, cls.display_name as class_name
-                FROM club_rider_points crp
-                JOIN riders r ON crp.rider_id = r.id
-                LEFT JOIN classes cls ON crp.class_id = cls.id
-                WHERE crp.series_id = ?
-                ORDER BY crp.club_id, crp.club_points DESC
-            ");
-            $ridersStmt->execute([$seriesId]);
-            $allRiders = $ridersStmt->fetchAll(PDO::FETCH_ASSOC);
-
-            // Group riders by club (aggregate points per rider)
-            $ridersByClub = [];
-            foreach ($allRiders as $r) {
-                $key = $r['club_id'] . '_' . $r['rider_id'];
-                if (!isset($ridersByClub[$r['club_id']][$key])) {
-                    $ridersByClub[$r['club_id']][$key] = [
-                        'rider_id' => $r['rider_id'],
-                        'name' => $r['firstname'] . ' ' . $r['lastname'],
-                        'class_name' => $r['class_name'],
-                        'points' => 0
-                    ];
-                }
-                $ridersByClub[$r['club_id']][$key]['points'] += (int)$r['club_points'];
-            }
-
-            foreach ($clubStandingsRaw as $club) {
-                $clubId = $club['club_id'];
-
-                // Build event_points array for this club
-                $clubEventPoints = [];
-                foreach ($seriesEvents as $e) {
-                    $clubEventPoints[$e['id']] = $eventPointsByClub[$clubId][$e['id']] ?? 0;
-                }
-
-                // Get riders for this club, sorted by points
-                $clubRiders = isset($ridersByClub[$clubId]) ? array_values($ridersByClub[$clubId]) : [];
-                usort($clubRiders, fn($a, $b) => $b['points'] - $a['points']);
-
-                $clubStandings[$clubId] = [
-                    'club_id' => $clubId,
-                    'club_name' => $club['club_name'],
-                    'short_name' => $club['short_name'] ?? null,
-                    'city' => $club['city'] ?? null,
-                    'logo' => $club['logo'] ?? null,
-                    'total_points' => $club['total_points'],
-                    'rider_count' => $club['total_participants'],
-                    'scoring_riders' => $club['total_participants'],
-                    'events_count' => $club['events_count'] ?? 0,
-                    'best_event_points' => $club['best_event_points'] ?? 0,
-                    'ranking' => $club['ranking'],
-                    'event_points' => $clubEventPoints,
-                    'riders' => $clubRiders
-                ];
-            }
-        }
-    } catch (Exception $e) {
-        // Cache tables don't exist or query failed - fall back to calculation
-        error_log("CLUB_STANDINGS: Cache query failed: " . $e->getMessage());
-    }
-
-    // Fallback to on-the-fly calculation if no cached data
-    if (!$useCachedClubStandings && !empty($seriesEvents)) {
-        $firstEventId = $seriesEvents[0]['id'];
-        $debugStmt = $db->prepare("
-            SELECT
-                COUNT(*) as total_results,
-                COUNT(rd.club_id) as results_with_direct_club,
-                COUNT(DISTINCT rd.club_id) as unique_direct_clubs
-            FROM results r
-            JOIN riders rd ON r.cyclist_id = rd.id
-            WHERE r.event_id = ? AND r.status = 'finished' AND r.points > 0
-        ");
-        $debugStmt->execute([$firstEventId]);
-        $debugCounts = $debugStmt->fetch(PDO::FETCH_ASSOC);
-        error_log("CLUB_DEBUG: Event {$firstEventId} - Total results: {$debugCounts['total_results']}, With direct club: {$debugCounts['results_with_direct_club']}, Unique clubs: {$debugCounts['unique_direct_clubs']}");
-
-        // Also check rider_club_seasons
-        $seriesYear = $series['year'] ?? date('Y');
-        $debugStmt2 = $db->prepare("
-            SELECT COUNT(DISTINCT rcs.rider_id) as riders_with_season_club
-            FROM results r
-            JOIN riders rd ON r.cyclist_id = rd.id
-            JOIN rider_club_seasons rcs ON rd.id = rcs.rider_id AND rcs.season_year = ?
-            WHERE r.event_id = ? AND r.status = 'finished' AND r.points > 0
-        ");
-        $debugStmt2->execute([$seriesYear, $firstEventId]);
-        $seasonCount = $debugStmt2->fetchColumn();
-        error_log("CLUB_DEBUG: Riders with season club (year {$seriesYear}): {$seasonCount}");
+    $clubRiderContributions = []; // Track individual rider contributions
 
     foreach ($seriesEvents as $event) {
         $eventId = $event['id'];
 
         // Get all results for this event with series points, grouped by club and class
         // Only include riders with clubs and classes that award points
-        // Check both riders.club_id AND rider_club_seasons for club membership
-        $seriesYear = $series['year'] ?? date('Y');
-
-        // Debug logging for club standings
-        error_log("CLUB_STANDINGS: Processing event {$eventId} ({$event['name']}), seriesYear={$seriesYear}, useSeriesResults=" . ($useSeriesResults ? 'true' : 'false'));
-
         if ($useSeriesResults) {
             $stmt = $db->prepare("
                 SELECT
@@ -407,24 +286,22 @@ try {
                     sr.points,
                     rd.firstname,
                     rd.lastname,
-                    COALESCE(rd.club_id, rcs.club_id) as club_id,
-                    COALESCE(c.name, c2.name) as club_name,
+                    c.id as club_id,
+                    c.name as club_name,
                     cls.name as class_name,
                     cls.display_name as class_display_name
                 FROM series_results sr
                 JOIN riders rd ON sr.cyclist_id = rd.id
                 LEFT JOIN clubs c ON rd.club_id = c.id
-                LEFT JOIN rider_club_seasons rcs ON rd.id = rcs.rider_id AND rcs.season_year = ?
-                LEFT JOIN clubs c2 ON rcs.club_id = c2.id
                 LEFT JOIN classes cls ON sr.class_id = cls.id
                 WHERE sr.series_id = ? AND sr.event_id = ?
-                AND COALESCE(rd.club_id, rcs.club_id) IS NOT NULL
+                AND c.id IS NOT NULL
                 AND sr.points > 0
                 AND COALESCE(cls.series_eligible, 1) = 1
                 AND COALESCE(cls.awards_points, 1) = 1
-                ORDER BY COALESCE(rd.club_id, rcs.club_id), sr.class_id, sr.points DESC
+                ORDER BY c.id, sr.class_id, sr.points DESC
             ");
-            $stmt->execute([$seriesYear, $seriesId, $eventId]);
+            $stmt->execute([$seriesId, $eventId]);
         } else {
             // Fallback to results table
             $stmt = $db->prepare("
@@ -434,33 +311,25 @@ try {
                     r.points,
                     rd.firstname,
                     rd.lastname,
-                    COALESCE(rd.club_id, rcs.club_id) as club_id,
-                    COALESCE(c.name, c2.name) as club_name,
+                    c.id as club_id,
+                    c.name as club_name,
                     cls.name as class_name,
                     cls.display_name as class_display_name
                 FROM results r
                 JOIN riders rd ON r.cyclist_id = rd.id
                 LEFT JOIN clubs c ON rd.club_id = c.id
-                LEFT JOIN rider_club_seasons rcs ON rd.id = rcs.rider_id AND rcs.season_year = ?
-                LEFT JOIN clubs c2 ON rcs.club_id = c2.id
                 LEFT JOIN classes cls ON r.class_id = cls.id
                 WHERE r.event_id = ?
                 AND r.status = 'finished'
-                AND COALESCE(rd.club_id, rcs.club_id) IS NOT NULL
+                AND c.id IS NOT NULL
                 AND r.points > 0
                 AND COALESCE(cls.series_eligible, 1) = 1
                 AND COALESCE(cls.awards_points, 1) = 1
-                ORDER BY COALESCE(rd.club_id, rcs.club_id), r.class_id, r.points DESC
+                ORDER BY c.id, r.class_id, r.points DESC
             ");
-            $stmt->execute([$seriesYear, $eventId]);
+            $stmt->execute([$eventId]);
         }
         $eventResults = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-        // Debug logging
-        error_log("CLUB_STANDINGS: Event {$eventId} returned " . count($eventResults) . " results with clubs");
-        if (count($eventResults) > 0) {
-            error_log("CLUB_STANDINGS: First result: " . json_encode($eventResults[0]));
-        }
 
         // Group by club and class
         $clubClassResults = [];
@@ -480,14 +349,11 @@ try {
                 $clubName = $rider['club_name'];
                 $originalPoints = (float)$rider['points'];
                 $clubPoints = 0;
-                $percentage = 0;
 
                 if ($rank === 1) {
                     $clubPoints = $originalPoints;
-                    $percentage = 100;
                 } elseif ($rank === 2) {
                     $clubPoints = round($originalPoints * 0.5, 0);
-                    $percentage = 50;
                 }
 
                 // Initialize club if not exists
@@ -561,9 +427,6 @@ try {
         });
     }
     unset($club);
-
-        error_log("CLUB_STANDINGS: Fallback calculation done - " . count($clubStandings) . " clubs");
-    } // End of: if (!$useCachedClubStandings && !empty($seriesEvents))
 
 } catch (Exception $e) {
     $error = $e->getMessage();
