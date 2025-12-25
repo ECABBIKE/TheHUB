@@ -23,59 +23,74 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         set_time_limit(300); // 5 minutes max
 
         try {
-            $cutoff = date('Y-m-d', strtotime('-24 months'));
-
-            // Get all unique event dates
-            $eventDates = $db->getAll("
-                SELECT DISTINCT DATE(e.date) as event_date
-                FROM events e
-                JOIN results r ON r.event_id = e.id
-                WHERE e.date >= ?
-                  AND e.discipline IN ('ENDURO', 'DH')
-                  AND r.status = 'finished'
-                ORDER BY e.date ASC
-            ", [$cutoff]);
-
+            // Generate one snapshot per month for the last 24 months
             $totalSnapshots = 0;
-            $processedDates = 0;
+            $processedMonths = 0;
+            $previousPositions = []; // Track positions for calculating changes
 
-            foreach ($eventDates as $row) {
-                $eventDate = $row['event_date'];
+            // Generate list of months (oldest first)
+            $months = [];
+            for ($i = 24; $i >= 0; $i--) {
+                $months[] = date('Y-m-01', strtotime("-$i months"));
+            }
 
-                // Calculate ranking as of this date
-                $riderData = calculateRankingDataAsOf($db, 'GRAVITY', $eventDate);
+            foreach ($months as $monthStart) {
+                // Calculate ranking as of end of this month
+                $monthEnd = date('Y-m-t', strtotime($monthStart)); // Last day of month
+
+                // Check if there are any events up to this date
+                $hasEvents = $db->getRow("
+                    SELECT COUNT(*) as cnt FROM events e
+                    JOIN results r ON r.event_id = e.id
+                    WHERE e.date <= ? AND e.discipline IN ('ENDURO', 'DH') AND r.status = 'finished'
+                ", [$monthEnd]);
+
+                if (($hasEvents['cnt'] ?? 0) == 0) continue;
+
+                // Calculate ranking as of this month
+                $riderData = calculateRankingDataAsOf($db, 'GRAVITY', $monthEnd);
 
                 if (empty($riderData)) continue;
 
-                // Delete existing snapshots for this date
-                $db->query("DELETE FROM ranking_snapshots WHERE discipline = 'GRAVITY' AND snapshot_date = ?", [$eventDate]);
+                // Delete existing snapshots for this month
+                $db->query("DELETE FROM ranking_snapshots WHERE discipline = 'GRAVITY' AND snapshot_date BETWEEN ? AND ?",
+                    [$monthStart, $monthEnd]);
 
-                // Insert new snapshots
+                // Insert new snapshots (use first of month as snapshot date)
                 foreach ($riderData as $rider) {
+                    $riderId = $rider['rider_id'];
+                    $prevPos = $previousPositions[$riderId] ?? null;
+                    $posChange = $prevPos !== null ? ($prevPos - $rider['ranking_position']) : null;
+
                     $db->query("INSERT INTO ranking_snapshots
                         (rider_id, discipline, snapshot_date, total_ranking_points,
                          points_last_12_months, points_months_13_24, events_count,
                          ranking_position, previous_position, position_change)
-                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, NULL, NULL)", [
-                        $rider['rider_id'],
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", [
+                        $riderId,
                         'GRAVITY',
-                        $eventDate,
+                        $monthStart,
                         $rider['total_ranking_points'],
                         $rider['points_12'],
                         $rider['points_13_24'],
                         $rider['events_count'],
-                        $rider['ranking_position']
+                        $rider['ranking_position'],
+                        $prevPos,
+                        $posChange
                     ]);
                     $totalSnapshots++;
+
+                    // Store position for next month's change calculation
+                    $previousPositions[$riderId] = $rider['ranking_position'];
                 }
-                $processedDates++;
+                $processedMonths++;
             }
 
             $stats = [
-                'dates' => $processedDates,
+                'months' => $processedMonths,
                 'snapshots' => $totalSnapshots
             ];
-            $message = "Klart! Skapade $totalSnapshots snapshots för $processedDates event-datum.";
+            $message = "Klart! Skapade $totalSnapshots snapshots för $processedMonths månader.";
             $messageType = 'success';
 
         } catch (Exception $e) {
@@ -151,14 +166,14 @@ include __DIR__ . '/../includes/admin-header.php';
             <h3>Generera snapshots</h3>
         </div>
         <div class="card-body">
-            <p>Detta skapar en ranking-snapshot för varje event-datum de senaste 24 månaderna.</p>
-            <p class="text-muted">Scriptet beräknar rankingen "som den var" vid varje datum, så alla historiska positioner blir korrekta.</p>
+            <p>Detta skapar <strong>en ranking-snapshot per månad</strong> för de senaste 24 månaderna.</p>
+            <p class="text-muted">Scriptet beräknar rankingen "som den var" i slutet av varje månad, och sparar positionsförändringar mellan månader.</p>
 
             <form method="POST" class="mt-lg">
                 <input type="hidden" name="action" value="backfill">
                 <button type="submit" class="btn btn-primary" onclick="this.disabled=true; this.innerHTML='Bearbetar...'; this.form.submit();">
                     <i data-lucide="play"></i>
-                    Kör backfill
+                    Kör backfill (24 månader)
                 </button>
             </form>
         </div>
