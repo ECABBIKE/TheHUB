@@ -204,18 +204,19 @@ $nameDuplicates = array_slice($nameDuplicates, 0, 200);
 
 // Also find fuzzy duplicates (same firstname + same last part of surname)
 // This catches "Mattias Sjöström-Varg" vs "Mattias Varg"
+// Using UPPER() instead of LOWER() for MySQL compatibility
 $fuzzyDuplicates = $db->getAll("
     SELECT
-        LOWER(TRIM(firstname)) as fn,
-        SUBSTRING_INDEX(LOWER(TRIM(lastname)), '-', -1) as ln_last,
-        SUBSTRING_INDEX(LOWER(TRIM(lastname)), ' ', -1) as ln_word,
+        UPPER(TRIM(firstname)) as fn,
+        SUBSTRING_INDEX(UPPER(TRIM(lastname)), '-', -1) as ln_last,
+        SUBSTRING_INDEX(UPPER(TRIM(lastname)), ' ', -1) as ln_word,
         GROUP_CONCAT(DISTINCT id ORDER BY id) as rider_ids,
         COUNT(DISTINCT id) as count
     FROM riders
     WHERE firstname IS NOT NULL AND firstname != ''
     AND lastname IS NOT NULL AND lastname != ''
     GROUP BY fn, ln_last
-    HAVING count > 1 AND COUNT(DISTINCT LOWER(TRIM(lastname))) > 1
+    HAVING count > 1 AND COUNT(DISTINCT UPPER(TRIM(lastname))) > 1
     ORDER BY count DESC
     LIMIT 100
 ");
