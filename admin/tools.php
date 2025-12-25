@@ -197,6 +197,25 @@ include __DIR__ . '/components/unified-layout.php';
             </a>
         </div>
     </div>
+
+    <!-- Fix Birth Years -->
+    <div class="tool-card">
+        <div class="tool-card-header">
+            <div class="tool-icon danger">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/><path d="m9 16 2 2 4-4"/></svg>
+            </div>
+            <div>
+                <h4 class="tool-title">Fixa födelseår</h4>
+                <p class="tool-description">Korrigera felaktiga födelseår (t.ex. från felparsade personnummer)</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/fix-birth-years" class="btn-admin btn-admin-primary flex-1">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
+                Fixa födelseår
+            </a>
+        </div>
+    </div>
 </div>
 
 <h3 class="section-title">Dubbletthantering</h3>
