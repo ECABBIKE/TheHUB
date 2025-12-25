@@ -57,24 +57,27 @@ function getLicenseTypeName($license) {
 
 // Handle merge action
 $mergeResult = null;
-if ($mergeId && !$dryRun) {
+if ($mergeId !== null && !$dryRun) {
     // Get the merge group
-    $keepId = (int)$_GET['keep'];
-    $removeIds = array_map('intval', explode(',', $_GET['remove']));
+    $keepId = isset($_GET['keep']) ? (int)$_GET['keep'] : 0;
+    $removeIds = isset($_GET['remove']) ? array_map('intval', explode(',', $_GET['remove'])) : [];
 
     if ($keepId && !empty($removeIds)) {
         $totalMoved = 0;
 
         foreach ($removeIds as $removeId) {
-            // Move results from remove to keep
-            $moved = $db->query(
-                "UPDATE results SET cyclist_id = ? WHERE cyclist_id = ?",
-                [$keepId, $removeId]
-            );
-            $totalMoved += $db->getAffectedRows();
+            if ($removeId <= 0) continue;
 
-            // Delete the duplicate rider
-            $db->query("DELETE FROM riders WHERE id = ?", [$removeId]);
+            // Move results from remove to keep using proper update method
+            $moved = $db->update('results',
+                ['cyclist_id' => $keepId],
+                'cyclist_id = ?',
+                [$removeId]
+            );
+            $totalMoved += $moved;
+
+            // Delete the duplicate rider using proper delete method
+            $db->delete('riders', 'id = ?', [$removeId]);
         }
 
         $mergeResult = [
@@ -128,6 +131,17 @@ foreach ($nameDuplicates as $dup) {
     }
 
     if (count($riders) < 2) continue;
+
+    // Check birth years - only consider duplicates if birth years match or are empty
+    // Different birth years = likely different people with same name
+    $birthYears = [];
+    foreach ($riders as $r) {
+        if (!empty($r['birth_year'])) {
+            $birthYears[$r['birth_year']] = true;
+        }
+    }
+    // Skip if we have multiple DIFFERENT birth years (not the same person!)
+    if (count($birthYears) > 1) continue;
 
     // Check if they have different license numbers (not just format differences)
     $uniqueLicenses = [];
@@ -219,8 +233,8 @@ include __DIR__ . '/components/unified-layout.php';
 
 <div class="alert alert-info mb-lg">
     <i data-lucide="info"></i>
-    <strong>Namndubletter</strong> - Samma namn men olika licens-ID.
-    <br>Dessa är troligen samma person som importerats flera gånger.
+    <strong>Namndubletter</strong> - Samma namn, samma födelseår, men olika licens-ID.
+    <br>Endast åkare med samma (eller tomt) födelseår visas - olika födelseår = olika personer.
     <br><strong>Prioritet:</strong> UCI-ID > SWE-ID > Inget ID, sedan flest resultat.
 </div>
 
