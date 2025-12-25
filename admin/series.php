@@ -178,7 +178,7 @@ $eventsWithResultsSelect = $seriesEventsTableExists
         INNER JOIN results r ON r.event_id = se2.event_id
         WHERE se2.series_id = s.id AND r.status = "finished")'
     : '0';
-$brandSelect = $brandColumnExists ? ', s.brand_id, sb.name as brand_name' : ', NULL as brand_id, NULL as brand_name';
+$brandSelect = $brandColumnExists ? ', s.brand_id, sb.name as brand_name, sb.logo as brand_logo' : ', NULL as brand_id, NULL as brand_name, NULL as brand_logo';
 $brandJoin = $brandColumnExists ? 'LEFT JOIN series_brands sb ON s.brand_id = sb.id' : '';
 
 // Rebuild where clause for aliased table
@@ -391,9 +391,14 @@ include __DIR__ . '/components/unified-layout.php';
                             <tr>
                                 <td>
                                     <?php if (!empty($serie['brand_name'])): ?>
-                                        <span style="font-weight: 500; color: var(--color-text);">
-                                            <?= htmlspecialchars($serie['brand_name']) ?>
-                                        </span>
+                                        <div style="display: flex; align-items: center; gap: var(--space-sm);">
+                                            <?php if (!empty($serie['brand_logo'])): ?>
+                                                <img src="<?= htmlspecialchars($serie['brand_logo']) ?>" alt="" style="max-width: 32px; max-height: 32px; object-fit: contain;">
+                                            <?php endif; ?>
+                                            <span style="font-weight: 500; color: var(--color-text);">
+                                                <?= htmlspecialchars($serie['brand_name']) ?>
+                                            </span>
+                                        </div>
                                     <?php else: ?>
                                         <span style="color: var(--color-text-secondary); font-style: italic;">
                                             Ingen huvudserie
