@@ -1194,14 +1194,14 @@
 
 /* Chart with proper axes */
 .dashboard-chart-body--axes {
-    padding: var(--space-sm) 0;
+    padding: 0;
+    width: 100%;
 }
 
 .dashboard-chart-svg--axes {
     width: 100%;
-    aspect-ratio: 450 / 200;
+    height: 250px;
     display: block;
-    max-height: 220px;
 }
 
 /* Form Card in Right Column (legacy - keep for compatibility) */
