@@ -465,46 +465,83 @@ skip_club_standings:
         </div>
     </div>
 
-    <!-- Collapsible Events Section -->
-    <details class="events-dropdown">
-        <summary class="events-dropdown-header">
-            <span><i data-lucide="calendar" class="events-dropdown-icon"></i> Tävlingar i serien</span>
-            <span class="events-count"><?= count($events) ?> st</span>
-            <span class="dropdown-arrow">▾</span>
-        </summary>
-        <div class="events-dropdown-content">
-            <?php if (empty($events)): ?>
-                <p class="text-muted">Inga tavlingar i serien annu.</p>
-            <?php else: ?>
-                <?php foreach ($events as $i => $event):
-                    $eventDate = strtotime($event['date']);
-                    $hasResults = $eventDate < time() && $event['result_count'] > 0;
-                ?>
-                <a href="/event/<?= $event['id'] ?>" class="event-dropdown-item">
-                    <span class="event-num">#<?= $i + 1 ?></span>
-                    <span class="event-date"><?= date('j M', $eventDate) ?></span>
-                    <span class="event-name"><?= htmlspecialchars($event['name']) ?></span>
-                    <span class="event-results"><?= $hasResults ? $event['result_count'] . ' resultat' : 'Kommande' ?></span>
-                </a>
-                <?php endforeach; ?>
+    <!-- Navigation Row: Toggle + Events Dropdown -->
+    <div class="series-nav-row">
+        <!-- Toggle Buttons: Individual / Clubs -->
+        <div class="standings-toggle">
+            <button class="standings-toggle-btn active" data-tab="individual" onclick="switchTab('individual')">
+                <i data-lucide="user"></i>
+                <span>Individuellt</span>
+            </button>
+            <?php if ($showClubChampionship): ?>
+            <button class="standings-toggle-btn" data-tab="club" onclick="switchTab('club')">
+                <i data-lucide="shield"></i>
+                <span>Klubbmastarskap</span>
+            </button>
             <?php endif; ?>
         </div>
-    </details>
 
-    <!-- Toggle Buttons: Individual / Clubs -->
-    <div class="tabs-nav">
-        <button class="tab-pill active" data-tab="individual" onclick="switchTab('individual')">
-            <i data-lucide="user" class="standings-tab-icon"></i> Individuellt
-        </button>
-        <?php if ($showClubChampionship): ?>
-        <button class="tab-pill" data-tab="club" onclick="switchTab('club')">
-            <i data-lucide="shield" class="standings-tab-icon"></i> Klubbmastarskap
-        </button>
-        <?php endif; ?>
+        <!-- Collapsible Events Section -->
+        <details class="events-dropdown">
+            <summary class="events-dropdown-header">
+                <span><i data-lucide="calendar" class="events-dropdown-icon"></i> Tavlingar i serien</span>
+                <span class="events-count"><?= count($events) ?> st</span>
+                <span class="dropdown-arrow">▾</span>
+            </summary>
+            <div class="events-dropdown-content">
+                <?php if (empty($events)): ?>
+                    <p class="text-muted">Inga tavlingar i serien annu.</p>
+                <?php else: ?>
+                    <?php foreach ($events as $i => $event):
+                        $eventDate = strtotime($event['date']);
+                        $hasResults = $eventDate < time() && $event['result_count'] > 0;
+                    ?>
+                    <a href="/event/<?= $event['id'] ?>" class="event-dropdown-item">
+                        <span class="event-num">#<?= $i + 1 ?></span>
+                        <span class="event-date"><?= date('j M', $eventDate) ?></span>
+                        <span class="event-name"><?= htmlspecialchars($event['name']) ?></span>
+                        <span class="event-results"><?= $hasResults ? $event['result_count'] . ' resultat' : 'Kommande' ?></span>
+                    </a>
+                    <?php endforeach; ?>
+                <?php endif; ?>
+            </div>
+        </details>
     </div>
 
     <!-- Individual Standings Section -->
     <div id="individual-standings">
+        <?php
+        // Calculate individual stats
+        $totalIndividualRiders = 0;
+        $totalIndividualPoints = 0;
+        foreach ($standingsByClass as $classData) {
+            $totalIndividualRiders += count($classData['riders']);
+            foreach ($classData['riders'] as $rider) {
+                $totalIndividualPoints += $rider['total_points'];
+            }
+        }
+        ?>
+
+        <!-- Summary Stats Cards -->
+        <div class="stats-grid mb-md">
+            <div class="stat-card">
+                <div class="stat-value"><?= count($classes) ?></div>
+                <div class="stat-label">Klasser</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value"><?= number_format($totalIndividualPoints) ?></div>
+                <div class="stat-label">Totala poang</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value"><?= $totalIndividualRiders ?></div>
+                <div class="stat-label">Deltagare</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value"><?= count($events) ?></div>
+                <div class="stat-label">Events</div>
+            </div>
+        </div>
+
         <!-- Filters -->
         <form method="get" class="filter-bar">
             <div class="filter-group">
@@ -726,7 +763,7 @@ skip_club_standings:
 
 <script>
 function switchTab(tab) {
-    document.querySelectorAll('.tab-pill').forEach(btn => {
+    document.querySelectorAll('.standings-toggle-btn').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.tab === tab);
     });
     const individualEl = document.getElementById('individual-standings');
@@ -844,6 +881,72 @@ document.addEventListener('keydown', function(e) {
 </script>
 
 <style>
+/* Series Navigation Row - Toggle + Dropdown side by side on desktop */
+.series-nav-row {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+    margin-bottom: var(--space-md);
+}
+@media (min-width: 768px) {
+    .series-nav-row {
+        flex-direction: row;
+        align-items: stretch;
+    }
+    .series-nav-row .standings-toggle {
+        flex: 1;
+        margin-bottom: 0;
+    }
+    .series-nav-row .events-dropdown {
+        flex: 1;
+    }
+}
+
+/* Standings Toggle (50/50 buttons within toggle container) */
+.standings-toggle {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-sm);
+}
+.standings-toggle-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-sm);
+    padding: var(--space-md);
+    background: var(--color-star);
+    border: 2px solid var(--color-border);
+    border-radius: var(--radius-md);
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--color-text);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+.standings-toggle-btn i {
+    width: 20px;
+    height: 20px;
+}
+.standings-toggle-btn:hover {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+}
+.standings-toggle-btn.active {
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+    color: white;
+}
+@media (max-width: 599px) {
+    .standings-toggle-btn {
+        padding: var(--space-sm) var(--space-md);
+        font-size: 0.875rem;
+    }
+    .standings-toggle-btn i {
+        width: 18px;
+        height: 18px;
+    }
+}
+
 /* Stats Grid for Club Standings */
 .stats-grid {
     display: grid;
