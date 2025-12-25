@@ -28,29 +28,34 @@ function calculateEventClubPoints($db, $eventId, $seriesId) {
     $db->delete('club_rider_points', 'event_id = ? AND series_id = ?', [$eventId, $seriesId]);
     $db->delete('club_event_points', 'event_id = ? AND series_id = ?', [$eventId, $seriesId]);
 
+    // Get the event year for club membership lookup
+    $eventInfo = $db->getRow("SELECT YEAR(date) as event_year FROM events WHERE id = ?", [$eventId]);
+    $eventYear = $eventInfo['event_year'] ?? date('Y');
+
     // Get all results for this event grouped by club and class
     // Only include riders with clubs and finished status
-    // IMPORTANT: Only include classes that are series-eligible and award points
+    // IMPORTANT: Uses rider_club_seasons for the event year, falls back to riders.club_id
     $results = $db->getAll("
         SELECT
             r.id as result_id,
             r.cyclist_id,
             r.class_id,
             r.points,
-            rd.club_id,
+            COALESCE(rcs.club_id, rd.club_id) as club_id,
             rd.firstname,
             rd.lastname
         FROM results r
         JOIN riders rd ON r.cyclist_id = rd.id
         JOIN classes c ON r.class_id = c.id
+        LEFT JOIN rider_club_seasons rcs ON rcs.rider_id = rd.id AND rcs.season_year = ?
         WHERE r.event_id = ?
         AND r.status = 'finished'
-        AND rd.club_id IS NOT NULL
+        AND COALESCE(rcs.club_id, rd.club_id) IS NOT NULL
         AND r.points > 0
         AND COALESCE(c.series_eligible, 1) = 1
         AND COALESCE(c.awards_points, 1) = 1
-        ORDER BY rd.club_id, r.class_id, r.points DESC
-    ", [$eventId]);
+        ORDER BY COALESCE(rcs.club_id, rd.club_id), r.class_id, r.points DESC
+    ", [$eventYear, $eventId]);
 
     if (empty($results)) {
         return $stats;

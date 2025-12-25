@@ -445,6 +445,25 @@ include __DIR__ . '/components/unified-layout.php';
         </div>
     </div>
 
+    <!-- Sync Club Membership -->
+    <div class="tool-card">
+        <div class="tool-card-header">
+            <div class="tool-icon danger">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M23 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            </div>
+            <div>
+                <h4 class="tool-title">Synka klubbmedlemskap</h4>
+                <p class="tool-description">Synka rider_club_seasons med riders.club_id - KRITISKT för klubbmästerskap!</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/sync-club-membership" class="btn-admin btn-admin-danger flex-1">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                Synka klubbar
+            </a>
+        </div>
+    </div>
+
     <!-- Format UCI ID (Manual) -->
     <div class="tool-card">
         <div class="tool-card-header">
