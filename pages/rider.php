@@ -659,12 +659,18 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
                 </a>
             </div>
 
-            <!-- Share Button -->
+            <!-- Action Buttons -->
             <div class="profile-actions-row">
                 <button type="button" class="btn-share" onclick="shareProfile(<?= $riderId ?>)">
                     <i data-lucide="share-2"></i>
                     <span>Dela</span>
                 </button>
+                <?php if (function_exists('hub_is_admin') && hub_is_admin()): ?>
+                <a href="/admin/rider-edit.php?id=<?= $riderId ?>" class="btn-edit-profile">
+                    <i data-lucide="pencil"></i>
+                    <span>Redigera</span>
+                </a>
+                <?php endif; ?>
             </div>
         </div>
 

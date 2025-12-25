@@ -265,6 +265,36 @@
     border-color: var(--color-accent);
 }
 
+/* Edit Profile Button (Admin only) */
+.btn-edit-profile {
+    flex: 1;
+    padding: var(--space-sm) var(--space-md);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-bg-surface);
+    color: var(--color-text-primary);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-xs);
+    cursor: pointer;
+    text-decoration: none;
+    transition: all var(--transition-fast);
+}
+
+.btn-edit-profile:hover {
+    background: var(--color-accent);
+    border-color: var(--color-accent);
+    color: white;
+}
+
+.btn-edit-profile i {
+    width: 16px;
+    height: 16px;
+}
+
 /* ============================================================================
    FORM CARD V3
    ============================================================================ */
@@ -1817,6 +1847,74 @@
 
     .form-ratio {
         display: none;
+    }
+}
+
+/* ============================================================================
+   DESKTOP ENHANCEMENTS - WIDER HISTORY RESULTS
+   ============================================================================ */
+@media (min-width: 768px) {
+    /* Make history card content more spacious on desktop */
+    .history-card-full {
+        padding: var(--space-xl);
+    }
+
+    .history-card-full .card-section-title {
+        margin-bottom: var(--space-lg);
+    }
+
+    .results-list-compact {
+        gap: var(--space-sm);
+    }
+
+    /* Wider, more spacious result rows on desktop */
+    .history-card-full .result-row {
+        padding: var(--space-md) var(--space-lg);
+        gap: var(--space-lg);
+        border-radius: var(--radius-md);
+    }
+
+    .history-card-full .result-pos {
+        width: 44px;
+        height: 44px;
+        font-size: var(--text-md);
+    }
+
+    .history-card-full .medal-icon-sm {
+        width: 28px;
+        height: 28px;
+    }
+
+    .history-card-full .result-date {
+        font-size: var(--text-base);
+        min-width: 80px;
+    }
+
+    .history-card-full .result-details {
+        flex-direction: row;
+        align-items: center;
+        gap: var(--space-md);
+    }
+
+    .history-card-full .result-name {
+        font-size: var(--text-lg);
+        flex: 1;
+    }
+
+    .history-card-full .result-meta {
+        flex-shrink: 0;
+        font-size: var(--text-base);
+    }
+
+    /* Year dividers more prominent on desktop */
+    .history-card-full .year-divider {
+        margin: var(--space-lg) 0;
+        padding: var(--space-md) 0;
+    }
+
+    .history-card-full .year-label {
+        font-size: var(--text-base);
+        font-weight: var(--weight-bold);
     }
 }
 
