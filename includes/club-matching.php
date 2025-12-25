@@ -98,9 +98,9 @@ function findClubByName($db, $clubName) {
         return null;
     }
 
-    // 1. Try exact case-insensitive match first
+    // 1. Try exact case-insensitive match first (using UPPER - LOWER doesn't work with this MySQL)
     $club = $db->getRow(
-        "SELECT id, name FROM clubs WHERE LOWER(name) = LOWER(?)",
+        "SELECT id, name FROM clubs WHERE UPPER(name) = UPPER(?)",
         [$clubName]
     );
     if ($club) {
@@ -194,7 +194,7 @@ function findClubByName($db, $clubName) {
     // Only if the search term is long enough to be meaningful
     if (strlen($clubName) >= 5) {
         $club = $db->getRow(
-            "SELECT id, name FROM clubs WHERE LOWER(name) LIKE LOWER(?)",
+            "SELECT id, name FROM clubs WHERE UPPER(name) LIKE UPPER(?)",
             ['%' . $clubName . '%']
         );
         if ($club) {
