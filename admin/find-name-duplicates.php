@@ -28,17 +28,22 @@ function getLicensePriority($license) {
     if (empty($license)) return 0; // No license
     $clean = str_replace([' ', '-'], '', $license);
 
-    // Real UCI-ID: 14+ chars, format like SWE19900515001
+    // Real UCI-ID formats:
+    // 1. With country prefix: SWE19900515001 (3 letters + 11 digits = 14+ chars)
+    // 2. Pure numeric: 10129214286 (11 digits)
     if (strlen($clean) >= 14 && preg_match('/^[A-Z]{3}\d{11}/', $clean)) {
         return 3; // Highest priority
     }
+    if (preg_match('/^\d{9,12}$/', $clean)) {
+        return 3; // Also highest - pure numeric UCI-ID (9-12 digits)
+    }
 
-    // Temp SWE-ID: SWE25XXXXX (10 chars)
+    // Temp SWE-ID: SWE25XXXXX (10 chars, SWE + 7 digits)
     if (preg_match('/^SWE\d{7}$/', $clean)) {
         return 1; // Low priority
     }
 
-    // Other format (old SWE-XXXXXX with dash, etc.)
+    // Other format
     return 2; // Medium priority
 }
 
@@ -46,9 +51,15 @@ function getLicenseTypeName($license) {
     if (empty($license)) return 'Inget ID';
     $clean = str_replace([' ', '-'], '', $license);
 
+    // UCI-ID with country prefix
     if (strlen($clean) >= 14 && preg_match('/^[A-Z]{3}\d{11}/', $clean)) {
         return 'UCI-ID';
     }
+    // Pure numeric UCI-ID (9-12 digits)
+    if (preg_match('/^\d{9,12}$/', $clean)) {
+        return 'UCI-ID';
+    }
+    // Temp SWE-ID
     if (preg_match('/^SWE\d{7}$/', $clean)) {
         return 'SWE-ID';
     }
