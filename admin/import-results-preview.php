@@ -295,6 +295,10 @@ function parseAndAnalyzeCSV($filepath, $db) {
  $riderCount = $db->getRow("SELECT COUNT(*) as cnt FROM riders");
  $sampleRider = $db->getRow("SELECT id, firstname, lastname, license_number FROM riders ORDER BY id DESC LIMIT 1");
 
+ // Check if specific test rider exists (Ella Svegby)
+ $testRider = $db->getRow("SELECT id, firstname, lastname, license_number, uci_id FROM riders WHERE lastname LIKE '%vegby%' OR lastname LIKE '%Svegby%' LIMIT 1");
+ $testUci = $db->getRow("SELECT id, firstname, lastname, license_number, uci_id FROM riders WHERE license_number LIKE '%10068327790%' OR uci_id LIKE '%10068327790%' LIMIT 1");
+
  $stats = [
  'total_rows' => 0,
  'riders_existing' => 0,
@@ -306,37 +310,17 @@ function parseAndAnalyzeCSV($filepath, $db) {
  'potential_duplicates' => [],
  'debug_rows' => [],
  'db_rider_count' => $riderCount['cnt'] ?? 0,
- 'db_sample_rider' => $sampleRider ? "{$sampleRider['firstname']} {$sampleRider['lastname']} (ID:{$sampleRider['id']})" : 'INGEN'
+ 'db_sample_rider' => $sampleRider ? "{$sampleRider['firstname']} {$sampleRider['lastname']} (ID:{$sampleRider['id']}, lic:{$sampleRider['license_number']})" : 'INGEN',
+ 'db_test_rider' => $testRider ? "Svegby: {$testRider['firstname']} {$testRider['lastname']} lic={$testRider['license_number']} uci={$testRider['uci_id']}" : 'EJ HITTAD',
+ 'db_test_uci' => $testUci ? "UCI-match: {$testUci['firstname']} {$testUci['lastname']}" : 'UCI 10068327790 EJ HITTAD'
  ];
 
  $riderCache = [];
  $clubCache = [];
  $duplicateCache = [];
 
- // Read file content and detect/convert encoding (same as actual import)
- $content = file_get_contents($filepath);
- if ($content === false) {
-     throw new Exception('Kunde inte läsa filen');
- }
-
- // Detect encoding and convert to UTF-8
- $encoding = mb_detect_encoding($content, ['UTF-8', 'ISO-8859-1', 'Windows-1252'], true);
- if ($encoding && $encoding !== 'UTF-8') {
-     $content = mb_convert_encoding($content, 'UTF-8', $encoding);
-     error_log("PREVIEW: Converted file from {$encoding} to UTF-8");
- }
-
- // Remove BOM if present
- $content = preg_replace('/^\xEF\xBB\xBF/', '', $content);
-
- // Write back to temp file for fgetcsv
- $tempFile = tempnam(sys_get_temp_dir(), 'preview_utf8_');
- file_put_contents($tempFile, $content);
- $originalPath = $filepath;
- $filepath = $tempFile;
-
+ // Open file directly (encoding handled by PHP/MySQL)
  if (($handle = fopen($filepath, 'r')) === false) {
-     @unlink($tempFile);
      throw new Exception('Kunde inte öppna filen');
  }
 
@@ -361,7 +345,6 @@ function parseAndAnalyzeCSV($filepath, $db) {
  $rawHeader = fgetcsv($handle, 0, $delimiter);
  if (!$rawHeader) {
  fclose($handle);
- if (isset($tempFile)) @unlink($tempFile);
  throw new Exception('Tom fil eller ogiltigt format');
  }
 
@@ -644,15 +627,24 @@ function parseAndAnalyzeCSV($filepath, $db) {
     $debugInfo['match_method'] = $matchStrategy;
     $debugInfo['db_check'] = "Hittad ({$matchStrategy}): {$rider['firstname']} {$rider['lastname']} [DB-lic: {$rider['license_number']}]";
    } elseif ($debugInfo) {
-    // Check what's in DB for this name - including license info
+    // Check what's in DB for this name - try LIKE instead of LOWER() for debugging
     $dbCheck = $db->getRow(
-     "SELECT id, firstname, lastname, license_number, uci_id FROM riders WHERE LOWER(lastname) = LOWER(?) LIMIT 1",
-     [$lastName]
+     "SELECT id, firstname, lastname, license_number, uci_id FROM riders WHERE lastname LIKE ? LIMIT 1",
+     ['%' . substr($lastName, 1, 5) . '%']  // Search for middle part of lastname
     );
     if ($dbCheck) {
-     $debugInfo['db_check'] = "DB: '{$dbCheck['firstname']} {$dbCheck['lastname']}' lic={$dbCheck['license_number']} uci={$dbCheck['uci_id']}";
+     $debugInfo['db_check'] = "DB (LIKE): '{$dbCheck['firstname']} {$dbCheck['lastname']}' - CSV: '{$lastName}'";
     } else {
-     $debugInfo['db_check'] = "Inget efternamn '{$lastName}' finns i DB";
+     // Try exact case-insensitive match on first 3 chars
+     $dbCheck2 = $db->getRow(
+      "SELECT id, firstname, lastname FROM riders WHERE UPPER(lastname) LIKE ? LIMIT 1",
+      [strtoupper(substr($lastName, 0, 4)) . '%']
+     );
+     if ($dbCheck2) {
+      $debugInfo['db_check'] = "DB (UPPER): '{$dbCheck2['firstname']} {$dbCheck2['lastname']}' - CSV uppercase issue?";
+     } else {
+      $debugInfo['db_check'] = "Inget efternamn som '{$lastName}' finns i DB";
+     }
     }
    }
 
@@ -744,11 +736,6 @@ function parseAndAnalyzeCSV($filepath, $db) {
 
  fclose($handle);
 
- // Clean up temp file
- if (isset($tempFile) && file_exists($tempFile)) {
-     @unlink($tempFile);
- }
-
  // Make clubs list unique
  $stats['clubs_list'] = array_unique($stats['clubs_list']);
 
@@ -837,8 +824,10 @@ include __DIR__ . '/components/unified-layout.php';
   </div>
   <div class="card-body">
    <div class="alert alert-info mb-md">
-   <strong>DB-status:</strong> <?= $matchingStats['db_rider_count'] ?? '?' ?> riders i databasen.
-   Senaste: <?= h($matchingStats['db_sample_rider'] ?? 'okänd') ?>
+   <strong>DB-status:</strong> <?= $matchingStats['db_rider_count'] ?? '?' ?> riders i databasen.<br>
+   Senaste: <?= h($matchingStats['db_sample_rider'] ?? 'okänd') ?><br>
+   <strong>Test Svegby:</strong> <?= h($matchingStats['db_test_rider'] ?? '?') ?><br>
+   <strong>Test UCI:</strong> <?= h($matchingStats['db_test_uci'] ?? '?') ?>
    </div>
    <div class="table-responsive">
    <table class="table table-sm">
