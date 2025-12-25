@@ -833,6 +833,44 @@ include __DIR__ . '/components/unified-layout.php';
             </a>
         </div>
     </div>
+
+    <!-- Club Points System (Migration 071) -->
+    <div class="tool-card">
+        <div class="tool-card-header">
+            <div class="tool-icon warning">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>
+            </div>
+            <div>
+                <h4 class="tool-title">Klubbpoäng-tabeller</h4>
+                <p class="tool-description">Migration 071: Skapar tabeller för klubbpoängsystemet</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/run-migration.php?file=071_club_points_system.sql" class="btn-admin btn-admin-warning flex-1">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5V19A9 3 0 0 0 21 19V5"/></svg>
+                Kör migration 071
+            </a>
+        </div>
+    </div>
+
+    <!-- Ranking Snapshots System (Migration 072) -->
+    <div class="tool-card">
+        <div class="tool-card-header">
+            <div class="tool-icon warning">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 21h12a2 2 0 0 0 2-2v-2H10v2a2 2 0 1 1-4 0V5a2 2 0 1 0-4 0v3h4"/><path d="M19 17V5a2 2 0 0 0-2-2H4"/><path d="m9 9.5 2 2 4-4"/></svg>
+            </div>
+            <div>
+                <h4 class="tool-title">Ranking-tabeller</h4>
+                <p class="tool-description">Migration 072: Skapar tabeller för 24-månaders ranking (snapshots)</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/run-migration.php?file=072_ranking_snapshots_system.sql" class="btn-admin btn-admin-warning flex-1">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5V19A9 3 0 0 0 21 19V5"/></svg>
+                Kör migration 072
+            </a>
+        </div>
+    </div>
 </div>
 
 <!-- Warning Box -->
