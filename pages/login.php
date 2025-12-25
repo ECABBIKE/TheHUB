@@ -17,7 +17,7 @@ require_once HUB_V3_ROOT . '/components/icons.php';
  */
 function clean_redirect_url(?string $url): string {
     if (empty($url)) {
-        return '/dashboard';  // Default to dashboard instead of /
+        return '/welcome';  // Default to welcome page
     }
 
     // Decode URL if it's encoded
@@ -25,7 +25,7 @@ function clean_redirect_url(?string $url): string {
 
     // Parse the URL
     $parsed = parse_url($url);
-    $path = $parsed['path'] ?? '/dashboard';
+    $path = $parsed['path'] ?? '/welcome';
 
     // Don't redirect to login page (prevent loops)
     if (strpos($path, '/login') === 0 || $path === '/login') {
@@ -36,12 +36,12 @@ function clean_redirect_url(?string $url): string {
                 return clean_redirect_url($queryParams['redirect']);
             }
         }
-        return '/dashboard';
+        return '/welcome';
     }
 
-    // Don't redirect to root - go to dashboard
+    // Don't redirect to root - go to welcome
     if ($path === '/' || $path === '') {
-        return '/dashboard';
+        return '/welcome';
     }
 
     // Return the path (don't allow external redirects)
@@ -51,12 +51,6 @@ function clean_redirect_url(?string $url): string {
 // Already logged in? Redirect
 if (hub_is_logged_in()) {
     $redirect = clean_redirect_url($_GET['redirect'] ?? '');
-
-    // If admin, always go to admin dashboard (unless specific redirect given)
-    if (hub_is_admin() && ($redirect === '/dashboard' || $redirect === '/')) {
-        $redirect = '/admin/dashboard.php';
-    }
-
     header('Location: ' . $redirect);
     exit;
 }
@@ -76,12 +70,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if ($result['success']) {
             $redirect = clean_redirect_url($_POST['redirect'] ?? $_GET['redirect'] ?? '');
-
-            // If admin, always go to admin dashboard (unless specific redirect given)
-            if (hub_is_admin() && ($redirect === '/dashboard' || $redirect === '/')) {
-                $redirect = '/admin/dashboard.php';
-            }
-
             header('Location: ' . $redirect);
             exit;
         } else {

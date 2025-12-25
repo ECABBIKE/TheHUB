@@ -222,7 +222,7 @@ if (!function_exists('getDeadlineInfo')) {
                                 <?php if ($deadlineInfo && $deadlineInfo['days'] >= 0): ?>
                                 <div class="event-stat deadline-stat <?= $deadlineInfo['class'] ?>">
                                     <span class="stat-value"><?= $deadlineInfo['text'] ?></span>
-                                    <span class="stat-label">anmälan</span>
+                                    <span class="stat-label">sista anmälan</span>
                                 </div>
                                 <?php endif; ?>
                             </div>
