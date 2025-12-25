@@ -685,7 +685,6 @@ skip_club_standings:
                             <tr>
                                 <th style="width: 60px;">Rank</th>
                                 <th>Klubb</th>
-                                <th class="table-col-hide-portrait">Ort</th>
                                 <th class="text-right">Poang</th>
                                 <th class="text-right table-col-hide-portrait">Deltagare</th>
                                 <th class="text-right table-col-hide-portrait">Events</th>
@@ -707,8 +706,7 @@ skip_club_standings:
                                         <?= $clubPos ?>
                                     <?php endif; ?>
                                 </td>
-                                <td><strong><?= htmlspecialchars($club['club_name']) ?></strong></td>
-                                <td class="text-muted table-col-hide-portrait"><?= htmlspecialchars($club['club_city'] ?? '-') ?></td>
+                                <td><a href="/club/<?= $club['club_id'] ?>" class="text-link"><strong><?= htmlspecialchars($club['club_name']) ?></strong></a></td>
                                 <td class="text-right"><strong><?= number_format($club['total_points']) ?></strong></td>
                                 <td class="text-right table-col-hide-portrait"><?= $club['rider_count'] ?></td>
                                 <td class="text-right table-col-hide-portrait"><?= $club['events_with_points'] ?></td>
@@ -902,6 +900,25 @@ document.addEventListener('keydown', function(e) {
     }
 }
 
+/* Override events-dropdown to match toggle buttons */
+.series-nav-row .events-dropdown {
+    background: white;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    margin-bottom: 0;
+}
+.series-nav-row .events-dropdown-header {
+    padding: var(--space-sm) var(--space-md);
+    font-size: 0.875rem;
+    background: white;
+}
+.series-nav-row .events-dropdown-header:hover {
+    background: #f5f5f5;
+}
+.series-nav-row .events-dropdown[open] {
+    box-shadow: none;
+}
+
 /* Standings Toggle (50/50 buttons within toggle container) */
 .standings-toggle {
     display: grid;
@@ -913,45 +930,35 @@ document.addEventListener('keydown', function(e) {
     align-items: center;
     justify-content: center;
     gap: var(--space-sm);
-    padding: var(--space-md);
-    background: var(--color-star);
-    border: 2px solid var(--color-border);
-    border-radius: var(--radius-md);
-    font-size: 1rem;
+    padding: var(--space-sm) var(--space-md);
+    background: white;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    font-size: 0.875rem;
     font-weight: 600;
-    color: var(--color-text);
+    color: var(--color-primary);
     cursor: pointer;
     transition: all 0.15s ease;
 }
 .standings-toggle-btn i {
-    width: 20px;
-    height: 20px;
+    width: 18px;
+    height: 18px;
 }
 .standings-toggle-btn:hover {
-    border-color: var(--color-primary);
-    color: var(--color-primary);
+    background: #f5f5f5;
+    border-color: var(--color-secondary);
 }
 .standings-toggle-btn.active {
     background: var(--color-primary);
     border-color: var(--color-primary);
     color: white;
 }
-@media (max-width: 599px) {
-    .standings-toggle-btn {
-        padding: var(--space-sm) var(--space-md);
-        font-size: 0.875rem;
-    }
-    .standings-toggle-btn i {
-        width: 18px;
-        height: 18px;
-    }
-}
 
 /* Stats Grid for Club Standings */
 .stats-grid {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
-    gap: var(--space-md);
+    gap: var(--space-sm);
 }
 @media (max-width: 599px) {
     .stats-grid {
@@ -959,19 +966,20 @@ document.addEventListener('keydown', function(e) {
     }
 }
 .stat-card {
-    background: var(--color-star);
+    background: white;
     border: 1px solid var(--color-border);
-    border-radius: var(--radius-md);
-    padding: var(--space-md);
+    border-radius: var(--radius-sm);
+    padding: var(--space-sm) var(--space-md);
     text-align: center;
 }
 .stat-value {
-    font-size: 1.75rem;
+    font-size: 1.25rem;
     font-weight: 700;
     color: var(--color-primary);
+    line-height: 1.2;
 }
 .stat-label {
-    font-size: 0.875rem;
+    font-size: 0.75rem;
     color: var(--color-text);
 }
 
@@ -1016,7 +1024,7 @@ document.addEventListener('keydown', function(e) {
 }
 .modal-content {
     position: relative;
-    background: var(--color-star);
+    background: white;
     border-radius: var(--radius-lg);
     width: 100%;
     max-width: 600px;
@@ -1050,7 +1058,7 @@ document.addEventListener('keydown', function(e) {
 .modal-stat {
     text-align: center;
     padding: var(--space-sm);
-    background: var(--color-star-fade);
+    background: #f5f5f5;
     border-radius: var(--radius-sm);
 }
 .modal-stat-value {
