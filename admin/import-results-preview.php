@@ -546,39 +546,79 @@ function parseAndAnalyzeCSV($filepath, $db) {
    }
   }
 
-  // Try name match if no license match (case-insensitive)
+  // Try name match if no license match - use multiple strategies (same as import)
   if (!$rider) {
+   // Strategy 1: Exact name match
    $rider = $db->getRow(
    "SELECT id, firstname, lastname, license_number, uci_id FROM riders WHERE LOWER(firstname) = LOWER(?) AND LOWER(lastname) = LOWER(?)",
    [$firstName, $lastName]
    );
 
-   // Only suggest duplicate if UCI-IDs don't conflict
-   // Same name + no UCI = possible duplicate
-   // Same name + same UCI = same person (not duplicate warning)
-   // Same name + different UCI = different people (NO duplicate)
-   if ($rider) {
-   $existingLicense = preg_replace('/[^0-9]/', '', $rider['license_number'] ?? '');
-
-   // Check if this is a potential duplicate (both have no UCI or one is missing)
-   if (empty($normalizedLicense) && empty($existingLicense)) {
-    // Both have no UCI - possible duplicate
-    $dupKey = strtolower($firstName . '|' . $lastName);
-    if (!isset($duplicateCache[$dupKey])) {
-    $duplicateCache[$dupKey] = true;
-    $stats['potential_duplicates'][] = [
-     'csv_name' => $firstName . ' ' . $lastName,
-     'csv_license' => $licenseNumber ?: '(ingen)',
-     'existing_id' => $rider['id'],
-     'existing_name' => $rider['firstname'] . ' ' . $rider['lastname'],
-     'existing_license' => $rider['license_number'] ?: '(ingen)',
-     'type' => 'name_no_uci'
-    ];
-    }
-   } elseif (!empty($normalizedLicense) && !empty($existingLicense) && $normalizedLicense !== $existingLicense) {
-    // Different UCI-IDs = different people, not a duplicate
-    $rider = null; // Treat as new rider
+   // Strategy 2: Handle double last names (e.g., "Svensson Lindberg")
+   if (!$rider) {
+    $rider = $db->getRow(
+     "SELECT id, firstname, lastname, license_number, uci_id FROM riders
+      WHERE LOWER(firstname) = LOWER(?)
+      AND (LOWER(lastname) LIKE LOWER(?) OR LOWER(?) LIKE CONCAT('%', LOWER(lastname), '%'))",
+     [$firstName, '%' . $lastName . '%', $lastName]
+    );
    }
+
+   // Strategy 3: If lastname has space, try matching last part only
+   if (!$rider && strpos($lastName, ' ') !== false) {
+    $lastnameParts = explode(' ', $lastName);
+    $lastPart = end($lastnameParts);
+    $rider = $db->getRow(
+     "SELECT id, firstname, lastname, license_number, uci_id FROM riders
+      WHERE LOWER(firstname) = LOWER(?) AND LOWER(lastname) = LOWER(?)",
+     [$firstName, $lastPart]
+    );
+   }
+
+   // Strategy 4: Handle middle names - try first part of firstname
+   if (!$rider && strpos($firstName, ' ') !== false) {
+    $firstNamePart = explode(' ', $firstName)[0];
+    $rider = $db->getRow(
+     "SELECT id, firstname, lastname, license_number, uci_id FROM riders
+      WHERE LOWER(firstname) = LOWER(?) AND LOWER(lastname) = LOWER(?)",
+     [$firstNamePart, $lastName]
+    );
+   }
+
+   // Strategy 5: Fuzzy firstname match (starts with) + exact lastname
+   if (!$rider) {
+    $firstNamePart = explode(' ', $firstName)[0];
+    $rider = $db->getRow(
+     "SELECT id, firstname, lastname, license_number, uci_id FROM riders
+      WHERE LOWER(firstname) LIKE LOWER(?)
+      AND LOWER(lastname) = LOWER(?)",
+     [$firstNamePart . '%', $lastName]
+    );
+   }
+
+   // Check duplicate status if found
+   if ($rider) {
+    $existingLicense = preg_replace('/[^0-9]/', '', $rider['license_number'] ?? '');
+
+    // Check if this is a potential duplicate (both have no UCI or one is missing)
+    if (empty($normalizedLicense) && empty($existingLicense)) {
+     // Both have no UCI - possible duplicate
+     $dupKey = strtolower($firstName . '|' . $lastName);
+     if (!isset($duplicateCache[$dupKey])) {
+     $duplicateCache[$dupKey] = true;
+     $stats['potential_duplicates'][] = [
+      'csv_name' => $firstName . ' ' . $lastName,
+      'csv_license' => $licenseNumber ?: '(ingen)',
+      'existing_id' => $rider['id'],
+      'existing_name' => $rider['firstname'] . ' ' . $rider['lastname'],
+      'existing_license' => $rider['license_number'] ?: '(ingen)',
+      'type' => 'name_no_uci'
+     ];
+     }
+    } elseif (!empty($normalizedLicense) && !empty($existingLicense) && $normalizedLicense !== $existingLicense) {
+     // Different UCI-IDs = different people, not a duplicate
+     $rider = null; // Treat as new rider
+    }
    }
   }
 
