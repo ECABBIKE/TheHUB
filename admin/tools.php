@@ -888,7 +888,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/ranking-backfill" class="btn-admin btn-admin-primary flex-1">
+            <a href="/admin/ranking-backfill.php" class="btn-admin btn-admin-primary flex-1">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
                 Generera snapshots
             </a>
