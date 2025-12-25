@@ -49,6 +49,8 @@ $matchingStats = [
  'total_rows' => 0,
  'riders_existing' => 0,
  'riders_new' => 0,
+ 'riders_will_get_uci' => 0,
+ 'riders_uci_updates' => [],
  'clubs_existing' => 0,
  'clubs_new' => 0,
  'classes' => [],
@@ -59,6 +61,12 @@ try {
  $result = parseAndAnalyzeCSV($_SESSION['import_preview_file'], $db);
  $previewData = $result['data'];
  $matchingStats = $result['stats'];
+
+ // Debug: Log UCI matching stats
+ error_log("PREVIEW STATS: riders_existing={$matchingStats['riders_existing']}, riders_new={$matchingStats['riders_new']}, riders_will_get_uci={$matchingStats['riders_will_get_uci']}");
+ if (!empty($matchingStats['riders_uci_updates'])) {
+  error_log("PREVIEW UCI UPDATES: " . count($matchingStats['riders_uci_updates']) . " riders will get UCI-ID");
+ }
 } catch (Exception $e) {
  $message = 'Parsning misslyckades: ' . $e->getMessage();
  $messageType = 'error';
@@ -708,7 +716,7 @@ include __DIR__ . '/components/unified-layout.php';
  </div>
 
  <!-- Stats Cards -->
- <div class="grid grid-cols-2 gs-md-grid-cols-5 gap-lg mb-lg">
+ <div class="grid grid-cols-2 gs-md-grid-cols-4 gap-lg mb-lg">
   <div class="stat-card">
   <i data-lucide="file-text" class="icon-lg text-primary mb-md"></i>
   <div class="stat-number"><?= $matchingStats['total_rows'] ?></div>
@@ -725,16 +733,18 @@ include __DIR__ . '/components/unified-layout.php';
   <div class="stat-label">Nya deltagare</div>
   </div>
   <div class="stat-card">
-  <i data-lucide="id-card" class="icon-lg text-accent mb-md"></i>
-  <div class="stat-number"><?= $matchingStats['riders_will_get_uci'] ?? 0 ?></div>
-  <div class="stat-label">Får UCI-ID</div>
-  </div>
-  <div class="stat-card">
   <i data-lucide="timer" class="icon-lg text-primary mb-md"></i>
   <div class="stat-number"><?= count($matchingStats['stage_columns'] ?? []) ?></div>
   <div class="stat-label">Sträckor</div>
   </div>
  </div>
+
+ <?php if (($matchingStats['riders_will_get_uci'] ?? 0) > 0): ?>
+ <div class="alert alert--success mb-lg">
+  <i data-lucide="id-card"></i>
+  <strong><?= $matchingStats['riders_will_get_uci'] ?> deltagare</strong> kommer få sitt UCI-ID ifyllt automatiskt vid import.
+ </div>
+ <?php endif; ?>
 
  <!-- Detected Stage Columns -->
  <?php if (!empty($matchingStats['stage_columns'])): ?>
