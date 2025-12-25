@@ -312,6 +312,25 @@ include __DIR__ . '/components/unified-layout.php';
         </div>
     </div>
 
+    <!-- Fix SWE-ID Format -->
+    <div class="tool-card">
+        <div class="tool-card-header">
+            <div class="tool-icon warning">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 21h5v-5"/></svg>
+            </div>
+            <div>
+                <h4 class="tool-title">Konvertera SWE-ID format</h4>
+                <p class="tool-description">Konvertera gamla SWE-ID (SWE-03.235) till nytt format (SWE2500235)</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/fix-swe-format" class="btn-admin btn-admin-primary flex-1">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
+                Konvertera SWE-ID
+            </a>
+        </div>
+    </div>
+
     <!-- Format UCI ID (Manual) -->
     <div class="tool-card">
         <div class="tool-card-header">
