@@ -20,30 +20,83 @@ if (!hasRole('super_admin')) {
     die('Endast super_admin kan köra detta script');
 }
 
+// Create exclusions table if not exists
+$db->query("CREATE TABLE IF NOT EXISTS duplicate_exclusions (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    rider_id_1 INT NOT NULL,
+    rider_id_2 INT NOT NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY unique_pair (rider_id_1, rider_id_2)
+)");
+
 $dryRun = !isset($_GET['execute']);
 $mergeId = isset($_GET['merge']) ? (int)$_GET['merge'] : null;
+$excludeAction = isset($_GET['exclude']);
+$mergeAllAction = isset($_GET['merge_all']);
+
+// Handle exclude action (mark as not duplicates)
+$excludeResult = null;
+if ($excludeAction && !$dryRun) {
+    $ids = isset($_GET['ids']) ? array_map('intval', explode(',', $_GET['ids'])) : [];
+    if (count($ids) >= 2) {
+        sort($ids);
+        $excluded = 0;
+        // Store all pairs as exclusions
+        for ($i = 0; $i < count($ids); $i++) {
+            for ($j = $i + 1; $j < count($ids); $j++) {
+                $db->query("INSERT IGNORE INTO duplicate_exclusions (rider_id_1, rider_id_2) VALUES (?, ?)",
+                    [$ids[$i], $ids[$j]]);
+                $excluded++;
+            }
+        }
+        $excludeResult = ['excluded' => $excluded, 'ids' => $ids];
+    }
+}
+
+// Get all excluded pairs for filtering
+$excludedPairs = [];
+$exclusions = $db->getAll("SELECT rider_id_1, rider_id_2 FROM duplicate_exclusions");
+foreach ($exclusions as $exc) {
+    $key = $exc['rider_id_1'] . '-' . $exc['rider_id_2'];
+    $excludedPairs[$key] = true;
+}
+
+function isExcludedPair($id1, $id2, $excludedPairs) {
+    $ids = [$id1, $id2];
+    sort($ids);
+    $key = $ids[0] . '-' . $ids[1];
+    return isset($excludedPairs[$key]);
+}
+
+function groupIsExcluded($riderIds, $excludedPairs) {
+    // Group is excluded if ALL pairs in the group are excluded
+    $ids = array_map('intval', $riderIds);
+    for ($i = 0; $i < count($ids); $i++) {
+        for ($j = $i + 1; $j < count($ids); $j++) {
+            if (!isExcludedPair($ids[$i], $ids[$j], $excludedPairs)) {
+                return false; // At least one pair is not excluded
+            }
+        }
+    }
+    return true; // All pairs are excluded
+}
 
 // Helper function to determine license type priority
 function getLicensePriority($license) {
     if (empty($license)) return 0; // No license
     $clean = str_replace([' ', '-'], '', $license);
 
-    // Real UCI-ID formats:
-    // 1. With country prefix: SWE19900515001 (3 letters + 11 digits = 14+ chars)
-    // 2. Pure numeric: 10129214286 (11 digits)
-    if (strlen($clean) >= 14 && preg_match('/^[A-Z]{3}\d{11}/', $clean)) {
-        return 3; // Highest priority
-    }
-    if (preg_match('/^\d{9,12}$/', $clean)) {
-        return 3; // Also highest - pure numeric UCI-ID (9-12 digits)
-    }
-
-    // Temp SWE-ID: SWE25XXXXX (10 chars, SWE + 7 digits)
+    // Temp SWE-ID: SWE25XXXXX (SWE + 7 digits) - check first!
     if (preg_match('/^SWE\d{7}$/', $clean)) {
-        return 1; // Low priority
+        return 1; // Low priority - temporary ID
     }
 
-    // Other format
+    // Real UCI-ID: Pure numeric, typically 9-12 digits
+    if (preg_match('/^\d{9,14}$/', $clean)) {
+        return 3; // Highest priority - real UCI-ID
+    }
+
+    // Other format (unknown)
     return 2; // Medium priority
 }
 
@@ -51,17 +104,13 @@ function getLicenseTypeName($license) {
     if (empty($license)) return 'Inget ID';
     $clean = str_replace([' ', '-'], '', $license);
 
-    // UCI-ID with country prefix
-    if (strlen($clean) >= 14 && preg_match('/^[A-Z]{3}\d{11}/', $clean)) {
-        return 'UCI-ID';
-    }
-    // Pure numeric UCI-ID (9-12 digits)
-    if (preg_match('/^\d{9,12}$/', $clean)) {
-        return 'UCI-ID';
-    }
-    // Temp SWE-ID
+    // Temp SWE-ID - check first!
     if (preg_match('/^SWE\d{7}$/', $clean)) {
         return 'SWE-ID';
+    }
+    // Real UCI-ID: Pure numeric
+    if (preg_match('/^\d{9,14}$/', $clean)) {
+        return 'UCI-ID';
     }
     return 'Annat';
 }
@@ -99,6 +148,9 @@ if ($mergeId !== null && !$dryRun) {
         ];
     }
 }
+
+// Handle merge all action - will be processed after we find duplicates
+$mergeAllResult = null;
 
 // Find all name duplicates (same firstname + lastname, different IDs)
 $nameDuplicates = $db->getAll("
@@ -177,6 +229,9 @@ foreach ($nameDuplicates as $dup) {
     // Only show if there are different licenses OR some without license
     if (!$hasDifferentLicenses && !$hasNoLicense) continue;
 
+    // Skip if this group has been excluded (marked as "not duplicates")
+    if (groupIsExcluded($riderIds, $excludedPairs)) continue;
+
     // Sort by priority: license type, then results, then completeness
     usort($riders, function($a, $b) {
         // First by license priority (higher = better)
@@ -206,6 +261,44 @@ foreach ($nameDuplicates as $dup) {
     ];
 
     $totalDuplicates += count($mergeRiders);
+}
+
+// Handle merge all action (after we have the duplicate groups)
+if ($mergeAllAction && !$dryRun && !empty($duplicateGroups)) {
+    $totalMerged = 0;
+    $totalResultsMoved = 0;
+    $groupsMerged = 0;
+
+    foreach ($duplicateGroups as $group) {
+        $keepId = $group['keep']['id'];
+        foreach ($group['merge'] as $mergeRider) {
+            $removeId = $mergeRider['id'];
+            if ($removeId <= 0) continue;
+
+            // Move results
+            $moved = $db->update('results',
+                ['cyclist_id' => $keepId],
+                'cyclist_id = ?',
+                [$removeId]
+            );
+            $totalResultsMoved += $moved;
+
+            // Delete duplicate
+            $db->delete('riders', 'id = ?', [$removeId]);
+            $totalMerged++;
+        }
+        $groupsMerged++;
+    }
+
+    $mergeAllResult = [
+        'groups' => $groupsMerged,
+        'merged' => $totalMerged,
+        'results_moved' => $totalResultsMoved
+    ];
+
+    // Clear the groups since we just merged them all
+    $duplicateGroups = [];
+    $totalDuplicates = 0;
 }
 
 // Page output
@@ -242,6 +335,23 @@ include __DIR__ . '/components/unified-layout.php';
 </div>
 <?php endif; ?>
 
+<?php if ($mergeAllResult): ?>
+<div class="alert alert-success mb-lg">
+    <i data-lucide="check-circle"></i>
+    <strong>Alla sammanslagningar klara!</strong>
+    <?= $mergeAllResult['groups'] ?> grupper, <?= $mergeAllResult['merged'] ?> dubletter borttagna,
+    <?= $mergeAllResult['results_moved'] ?> resultat flyttade.
+</div>
+<?php endif; ?>
+
+<?php if ($excludeResult): ?>
+<div class="alert alert-info mb-lg">
+    <i data-lucide="ban"></i>
+    <strong>Markerade som ej dubletter!</strong>
+    <?= count($excludeResult['ids']) ?> riders kommer inte längre visas som dubletter av varandra.
+</div>
+<?php endif; ?>
+
 <div class="alert alert-info mb-lg">
     <i data-lucide="info"></i>
     <strong>Namndubletter</strong> - Samma namn, samma födelseår, men olika licens-ID.
@@ -269,8 +379,14 @@ include __DIR__ . '/components/unified-layout.php';
 
 <?php if (!empty($duplicateGroups)): ?>
 <div class="card">
-    <div class="card-header">
+    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
         <h3>Namndubletter (<?= count($duplicateGroups) ?>)</h3>
+        <a href="?execute=1&merge_all=1"
+           class="btn btn-danger"
+           onclick="return confirm('SLÅ IHOP ALLA <?= count($duplicateGroups) ?> GRUPPER?\\n\\nDetta slår ihop <?= $totalDuplicates ?> dubletter och kan inte ångras!')">
+            <i data-lucide="git-merge"></i>
+            Slå ihop alla (<?= $totalDuplicates ?>)
+        </a>
     </div>
     <div class="card-body">
         <?php foreach ($duplicateGroups as $index => $group): ?>
@@ -283,13 +399,23 @@ include __DIR__ . '/components/unified-layout.php';
                 <?php
                 $keepId = $group['keep']['id'];
                 $removeIds = implode(',', array_column($group['merge'], 'id'));
+                $allIds = implode(',', array_column($group['all_riders'], 'id'));
                 ?>
-                <a href="?execute=1&merge=<?= $index ?>&keep=<?= $keepId ?>&remove=<?= $removeIds ?>"
-                   class="btn btn-sm btn-warning"
-                   onclick="return confirm('Slå ihop <?= count($group['merge']) ?> dubletter till <?= h($group['keep']['firstname'] . ' ' . $group['keep']['lastname']) ?> (ID: <?= $keepId ?>)?\\n\\nResultat flyttas och dubbletter tas bort.')">
-                    <i data-lucide="git-merge"></i>
-                    Slå ihop
-                </a>
+                <div style="display: flex; gap: var(--space-sm);">
+                    <a href="?execute=1&exclude=1&ids=<?= $allIds ?>"
+                       class="btn btn-sm btn-secondary"
+                       title="Markera som ej dubletter"
+                       onclick="return confirm('Markera dessa <?= $group['total_riders'] ?> som EJ dubletter?\\n\\nDe kommer inte längre visas i denna lista.')">
+                        <i data-lucide="ban"></i>
+                        Ej dubbletter
+                    </a>
+                    <a href="?execute=1&merge=<?= $index ?>&keep=<?= $keepId ?>&remove=<?= $removeIds ?>"
+                       class="btn btn-sm btn-warning"
+                       onclick="return confirm('Slå ihop <?= count($group['merge']) ?> dubletter till <?= h($group['keep']['firstname'] . ' ' . $group['keep']['lastname']) ?> (ID: <?= $keepId ?>)?\\n\\nResultat flyttas och dubbletter tas bort.')">
+                        <i data-lucide="git-merge"></i>
+                        Slå ihop
+                    </a>
+                </div>
             </div>
             <div class="duplicate-card-body">
                 <!-- Keep this one -->
