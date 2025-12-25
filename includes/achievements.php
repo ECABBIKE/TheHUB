@@ -1948,53 +1948,53 @@ function renderRiderAchievements(PDO $pdo, int $rider_id, array $stats = null): 
             </div>
 
             <!-- Core Badge Grid -->
-            <div class="badge-grid">
-                <div class="badge-item<?= ($stats['gold'] ?? 0) === 0 ? ' locked' : '' ?>" data-tooltip="1:a plats i ett lopp">
+            <div class="badge-grid" data-rider-id="<?= $rider_id ?>">
+                <div class="badge-item<?= ($stats['gold'] ?? 0) === 0 ? ' locked' : '' ?><?= ($stats['gold'] ?? 0) > 0 ? ' clickable' : '' ?>" data-tooltip="1:a plats i ett lopp" data-achievement="gold" data-label="Guld">
                     <?= renderGoldBadge() ?>
                     <span class="badge-value<?= ($stats['gold'] ?? 0) === 0 ? ' empty' : '' ?>"><?= ($stats['gold'] ?? 0) > 0 ? $stats['gold'] : '–' ?></span>
                     <span class="badge-label">Guld</span>
                 </div>
 
-                <div class="badge-item<?= ($stats['silver'] ?? 0) === 0 ? ' locked' : '' ?>" data-tooltip="2:a plats i ett lopp">
+                <div class="badge-item<?= ($stats['silver'] ?? 0) === 0 ? ' locked' : '' ?><?= ($stats['silver'] ?? 0) > 0 ? ' clickable' : '' ?>" data-tooltip="2:a plats i ett lopp" data-achievement="silver" data-label="Silver">
                     <?= renderSilverBadge() ?>
                     <span class="badge-value<?= ($stats['silver'] ?? 0) === 0 ? ' empty' : '' ?>"><?= ($stats['silver'] ?? 0) > 0 ? $stats['silver'] : '–' ?></span>
                     <span class="badge-label">Silver</span>
                 </div>
 
-                <div class="badge-item<?= ($stats['bronze'] ?? 0) === 0 ? ' locked' : '' ?>" data-tooltip="3:e plats i ett lopp">
+                <div class="badge-item<?= ($stats['bronze'] ?? 0) === 0 ? ' locked' : '' ?><?= ($stats['bronze'] ?? 0) > 0 ? ' clickable' : '' ?>" data-tooltip="3:e plats i ett lopp" data-achievement="bronze" data-label="Brons">
                     <?= renderBronzeBadge() ?>
                     <span class="badge-value<?= ($stats['bronze'] ?? 0) === 0 ? ' empty' : '' ?>"><?= ($stats['bronze'] ?? 0) > 0 ? $stats['bronze'] : '–' ?></span>
                     <span class="badge-label">Brons</span>
                 </div>
 
-                <div class="badge-item<?= ($stats['hot_streak'] ?? 0) === 0 ? ' locked' : '' ?>" data-tooltip="3+ pallplatser i rad">
+                <div class="badge-item<?= ($stats['hot_streak'] ?? 0) === 0 ? ' locked' : '' ?><?= ($stats['hot_streak'] ?? 0) > 0 ? ' clickable' : '' ?>" data-tooltip="3+ pallplatser i rad" data-achievement="hot_streak" data-label="Pallserie">
                     <?= renderHotStreakBadge() ?>
                     <span class="badge-value<?= ($stats['hot_streak'] ?? 0) === 0 ? ' empty' : '' ?>"><?= ($stats['hot_streak'] ?? 0) > 0 ? $stats['hot_streak'] : '–' ?></span>
                     <span class="badge-label">Pallserie</span>
                 </div>
 
-                <div class="badge-item<?= ($stats['series_completed'] ?? 0) === 0 ? ' locked' : '' ?>" data-tooltip="100% fullföljt i en serie">
+                <div class="badge-item<?= ($stats['series_completed'] ?? 0) === 0 ? ' locked' : '' ?><?= ($stats['series_completed'] ?? 0) > 0 ? ' clickable' : '' ?>" data-tooltip="100% fullföljt i en serie" data-achievement="series_completed" data-label="Fullföljt">
                     <?= renderFinisherBadge() ?>
                     <span class="badge-value<?= ($stats['series_completed'] ?? 0) === 0 ? ' empty' : '' ?>"><?= ($stats['series_completed'] ?? 0) > 0 ? $stats['series_completed'] : '–' ?></span>
                     <span class="badge-label">Fullföljt</span>
                 </div>
 
-                <div class="badge-item<?= !($stats['is_serieledare'] ?? false) ? ' locked' : '' ?>" data-tooltip="Leder en serie">
+                <div class="badge-item<?= !($stats['is_serieledare'] ?? false) ? ' locked' : '' ?><?= ($stats['is_serieledare'] ?? false) ? ' clickable' : '' ?>" data-tooltip="Leder en serie" data-achievement="series_leader" data-label="Serieledare">
                     <?= renderSeriesLeaderBadge() ?>
                     <span class="badge-value<?= !($stats['is_serieledare'] ?? false) ? ' empty' : '' ?>"><?= ($stats['is_serieledare'] ?? false) ? 'Ja' : '–' ?></span>
                     <span class="badge-label">Serieledare</span>
                 </div>
 
-                <div class="badge-item<?= ($stats['series_wins'] ?? 0) === 0 ? ' locked' : '' ?>" data-tooltip="Vunnit en serietotal">
+                <div class="badge-item<?= ($stats['series_wins'] ?? 0) === 0 ? ' locked' : '' ?><?= ($stats['series_wins'] ?? 0) > 0 ? ' clickable' : '' ?>" data-tooltip="Vunnit en serietotal" data-achievement="series_champion" data-label="Seriesegrare">
                     <?= renderSeriesChampionBadge() ?>
                     <span class="badge-value<?= ($stats['series_wins'] ?? 0) === 0 ? ' empty' : '' ?>"><?= ($stats['series_wins'] ?? 0) > 0 ? $stats['series_wins'] : '–' ?></span>
-                    <span class="badge-label">Mästare</span>
+                    <span class="badge-label">Seriesegrare</span>
                 </div>
 
-                <div class="badge-item<?= ($stats['sm_wins'] ?? 0) === 0 ? ' locked' : '' ?>" data-tooltip="Vunnit ett SM-event">
+                <div class="badge-item<?= ($stats['sm_wins'] ?? 0) === 0 ? ' locked' : '' ?><?= ($stats['sm_wins'] ?? 0) > 0 ? ' clickable' : '' ?>" data-tooltip="Vunnit ett SM-event" data-achievement="swedish_champion" data-label="Svensk mästare">
                     <?= renderSwedishChampionBadge() ?>
                     <span class="badge-value<?= ($stats['sm_wins'] ?? 0) === 0 ? ' empty' : '' ?>"><?= ($stats['sm_wins'] ?? 0) > 0 ? $stats['sm_wins'] : '–' ?></span>
-                    <span class="badge-label">SM-vinnare</span>
+                    <span class="badge-label">Svensk mästare</span>
                 </div>
             </div>
 
@@ -2049,6 +2049,227 @@ function renderRiderAchievements(PDO $pdo, int $rider_id, array $stats = null): 
             <?php endif; ?>
         </div>
     </section>
+
+    <!-- Achievement Events Modal -->
+    <div id="achievement-modal" class="achievement-modal" style="display: none;">
+        <div class="achievement-modal-overlay"></div>
+        <div class="achievement-modal-content">
+            <div class="achievement-modal-header">
+                <h3 id="achievement-modal-title">Events</h3>
+                <button type="button" class="achievement-modal-close" onclick="closeAchievementModal()">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+                </button>
+            </div>
+            <div class="achievement-modal-body" id="achievement-modal-body">
+                <div class="achievement-loading">Laddar...</div>
+            </div>
+        </div>
+    </div>
+
+    <style>
+    .badge-item.clickable {
+        cursor: pointer;
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+    }
+    .badge-item.clickable:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    }
+    .achievement-modal {
+        position: fixed;
+        inset: 0;
+        z-index: 9999;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: var(--space-md, 16px);
+    }
+    .achievement-modal-overlay {
+        position: absolute;
+        inset: 0;
+        background: rgba(0,0,0,0.5);
+        backdrop-filter: blur(2px);
+    }
+    .achievement-modal-content {
+        position: relative;
+        background: var(--color-bg-surface, #fff);
+        border-radius: var(--radius-lg, 12px);
+        box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+        max-width: 500px;
+        width: 100%;
+        max-height: 80vh;
+        overflow: hidden;
+        display: flex;
+        flex-direction: column;
+    }
+    .achievement-modal-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: var(--space-md, 16px) var(--space-lg, 24px);
+        border-bottom: 1px solid var(--color-border, #e5e7eb);
+    }
+    .achievement-modal-header h3 {
+        margin: 0;
+        font-size: 1.125rem;
+        font-weight: 600;
+    }
+    .achievement-modal-close {
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: var(--space-xs, 4px);
+        color: var(--color-text-secondary, #666);
+        border-radius: var(--radius-sm, 6px);
+    }
+    .achievement-modal-close:hover {
+        background: var(--color-bg-hover, #f3f4f6);
+        color: var(--color-text, #333);
+    }
+    .achievement-modal-body {
+        padding: var(--space-lg, 24px);
+        overflow-y: auto;
+        flex: 1;
+    }
+    .achievement-loading {
+        text-align: center;
+        color: var(--color-text-secondary, #666);
+        padding: var(--space-xl, 32px);
+    }
+    .achievement-event-list {
+        list-style: none;
+        margin: 0;
+        padding: 0;
+    }
+    .achievement-event-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: var(--space-sm, 8px) 0;
+        border-bottom: 1px solid var(--color-border, #e5e7eb);
+    }
+    .achievement-event-item:last-child {
+        border-bottom: none;
+    }
+    .achievement-event-item a {
+        color: var(--color-accent, #61CE70);
+        text-decoration: none;
+        font-weight: 500;
+    }
+    .achievement-event-item a:hover {
+        text-decoration: underline;
+    }
+    .achievement-event-meta {
+        font-size: 0.875rem;
+        color: var(--color-text-secondary, #666);
+    }
+    .achievement-event-position {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        font-weight: 600;
+        font-size: 0.75rem;
+        margin-right: var(--space-sm, 8px);
+    }
+    .achievement-event-position.p1 { background: #FFD700; color: #000; }
+    .achievement-event-position.p2 { background: #C0C0C0; color: #000; }
+    .achievement-event-position.p3 { background: #CD7F32; color: #fff; }
+    .achievement-empty {
+        text-align: center;
+        color: var(--color-text-secondary, #666);
+        padding: var(--space-lg, 24px);
+    }
+    </style>
+
+    <script>
+    (function() {
+        // Click handler for achievement badges
+        document.addEventListener('click', function(e) {
+            const badge = e.target.closest('.badge-item.clickable');
+            if (!badge) return;
+
+            const grid = badge.closest('.badge-grid');
+            const riderId = grid ? grid.dataset.riderId : null;
+            const achievementType = badge.dataset.achievement;
+            const label = badge.dataset.label || 'Events';
+
+            if (!riderId || !achievementType) return;
+
+            showAchievementModal(riderId, achievementType, label);
+        });
+
+        window.showAchievementModal = async function(riderId, type, label) {
+            const modal = document.getElementById('achievement-modal');
+            const title = document.getElementById('achievement-modal-title');
+            const body = document.getElementById('achievement-modal-body');
+
+            title.textContent = label;
+            body.innerHTML = '<div class="achievement-loading">Laddar...</div>';
+            modal.style.display = 'flex';
+
+            try {
+                const response = await fetch(`/api/achievement-events.php?rider_id=${riderId}&type=${type}`);
+                const data = await response.json();
+
+                if (data.success && data.events && data.events.length > 0) {
+                    let html = '<ul class="achievement-event-list">';
+                    data.events.forEach(event => {
+                        const date = event.date ? new Date(event.date).toLocaleDateString('sv-SE') : '';
+                        const posClass = event.position <= 3 ? 'p' + event.position : '';
+
+                        if (event.series_name) {
+                            // Series-type achievement
+                            html += `<li class="achievement-event-item">
+                                <div>
+                                    <strong>${event.series_name}</strong>
+                                    ${event.year ? `<span class="achievement-event-meta">(${event.year})</span>` : ''}
+                                </div>
+                            </li>`;
+                        } else {
+                            // Event-type achievement
+                            html += `<li class="achievement-event-item">
+                                <div>
+                                    ${event.position ? `<span class="achievement-event-position ${posClass}">${event.position}</span>` : ''}
+                                    <a href="/event/${event.id}">${event.name}</a>
+                                    ${event.class_name ? `<span class="achievement-event-meta"> - ${event.class_name}</span>` : ''}
+                                </div>
+                                <span class="achievement-event-meta">${date}</span>
+                            </li>`;
+                        }
+                    });
+                    html += '</ul>';
+                    body.innerHTML = html;
+                } else {
+                    body.innerHTML = '<div class="achievement-empty">Inga events hittades</div>';
+                }
+            } catch (error) {
+                body.innerHTML = '<div class="achievement-empty">Kunde inte ladda events</div>';
+                console.error('Achievement events error:', error);
+            }
+        };
+
+        window.closeAchievementModal = function() {
+            document.getElementById('achievement-modal').style.display = 'none';
+        };
+
+        // Close on overlay click
+        document.addEventListener('click', function(e) {
+            if (e.target.classList.contains('achievement-modal-overlay')) {
+                closeAchievementModal();
+            }
+        });
+
+        // Close on Escape key
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                closeAchievementModal();
+            }
+        });
+    })();
+    </script>
     <?php
     return ob_get_clean();
 }
@@ -2074,8 +2295,8 @@ function getRiderAchievementDefinitions(): array {
                 ['id' => 'hot_streak', 'name' => 'Pallserie', 'requirement' => '3+ pallplatser i rad', 'description' => 'När du tar 3 eller fler pallplatser i följd.', 'has_counter' => true, 'accent' => '#61CE70', 'svg_function' => 'renderHotStreakBadge'],
                 ['id' => 'finisher_100', 'name' => 'Fullföljare', 'requirement' => '100% fullföljt i en serie', 'description' => 'Fullföljt alla deltävlingar i en serie.', 'has_counter' => true, 'accent' => '#61CE70', 'svg_function' => 'renderFinisherBadge'],
                 ['id' => 'series_leader', 'name' => 'Serieledare', 'requirement' => 'Leder en serie', 'description' => 'Visas när du leder en aktiv serie.', 'has_counter' => false, 'accent' => '#EF761F', 'svg_function' => 'renderSeriesLeaderBadge'],
-                ['id' => 'series_champion', 'name' => 'Seriemästare', 'requirement' => 'Vunnit en serietotal', 'description' => 'Permanent badge för varje serie du vunnit.', 'has_counter' => true, 'accent' => '#FFD700', 'svg_function' => 'renderSeriesChampionBadge'],
-                ['id' => 'swedish_champion', 'name' => 'SM-vinnare', 'requirement' => 'Vunnit ett SM-event', 'description' => 'Permanent badge för varje SM-titel.', 'has_counter' => true, 'accent' => '#004a98', 'svg_function' => 'renderSwedishChampionBadge']
+                ['id' => 'series_champion', 'name' => 'Seriesegrare', 'requirement' => 'Vunnit en serietotal', 'description' => 'Permanent badge för varje serie du vunnit.', 'has_counter' => true, 'accent' => '#FFD700', 'svg_function' => 'renderSeriesChampionBadge'],
+                ['id' => 'swedish_champion', 'name' => 'Svensk mästare', 'requirement' => 'Vunnit ett SM-event', 'description' => 'Permanent badge för varje SM-titel.', 'has_counter' => true, 'accent' => '#004a98', 'svg_function' => 'renderSwedishChampionBadge']
             ]
         ],
         'lojalitet' => [
