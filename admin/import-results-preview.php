@@ -49,6 +49,8 @@ $matchingStats = [
  'total_rows' => 0,
  'riders_existing' => 0,
  'riders_new' => 0,
+ 'riders_will_get_uci' => 0,
+ 'riders_uci_updates' => [],
  'clubs_existing' => 0,
  'clubs_new' => 0,
  'classes' => [],
@@ -59,6 +61,12 @@ try {
  $result = parseAndAnalyzeCSV($_SESSION['import_preview_file'], $db);
  $previewData = $result['data'];
  $matchingStats = $result['stats'];
+
+ // Debug: Log UCI matching stats
+ error_log("PREVIEW STATS: riders_existing={$matchingStats['riders_existing']}, riders_new={$matchingStats['riders_new']}, riders_will_get_uci={$matchingStats['riders_will_get_uci']}");
+ if (!empty($matchingStats['riders_uci_updates'])) {
+  error_log("PREVIEW UCI UPDATES: " . count($matchingStats['riders_uci_updates']) . " riders will get UCI-ID");
+ }
 } catch (Exception $e) {
  $message = 'Parsning misslyckades: ' . $e->getMessage();
  $messageType = 'error';
