@@ -15,7 +15,7 @@ $messageType = 'info';
 
 // Check if tables exist
 if (!rankingTablesExist($db)) {
-    $message = 'Rankingtabeller saknas. Kör migration 028_ranking_system.sql för att skapa dem.';
+    $message = 'Rankingtabeller saknas. Kör migration 072_ranking_snapshots_system.sql för att skapa dem.';
     $messageType = 'warning';
 }
 
