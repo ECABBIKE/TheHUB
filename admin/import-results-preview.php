@@ -540,13 +540,24 @@ function parseAndAnalyzeCSV($filepath, $db) {
   $isDuplicate = false;
 
   // Try normalized license first - check both license_number AND uci_id columns
+  // Remove ALL non-digits in SQL using REGEXP_REPLACE (MySQL 8+) or multiple REPLACE
   if (!empty($normalizedLicense)) {
    $rider = $db->getRow(
    "SELECT id, firstname, lastname, license_number, uci_id FROM riders
-    WHERE REPLACE(REPLACE(license_number, ' ', ''), '-', '') = ?
-       OR REPLACE(REPLACE(uci_id, ' ', ''), '-', '') = ?",
+    WHERE REGEXP_REPLACE(COALESCE(license_number, ''), '[^0-9]', '') = ?
+       OR REGEXP_REPLACE(COALESCE(uci_id, ''), '[^0-9]', '') = ?",
    [$normalizedLicense, $normalizedLicense]
    );
+
+   // Fallback if REGEXP_REPLACE failed (older MySQL)
+   if (!$rider) {
+    $rider = $db->getRow(
+    "SELECT id, firstname, lastname, license_number, uci_id FROM riders
+     WHERE REPLACE(REPLACE(REPLACE(REPLACE(license_number, ' ', ''), '-', ''), '.', ''), ' ', '') = ?
+        OR REPLACE(REPLACE(REPLACE(REPLACE(uci_id, ' ', ''), '-', ''), '.', ''), ' ', '') = ?",
+    [$normalizedLicense, $normalizedLicense]
+    );
+   }
    if ($debugInfo && $rider) {
     $debugInfo['matched'] = true;
     $debugInfo['match_method'] = 'uci_id';
@@ -635,15 +646,15 @@ function parseAndAnalyzeCSV($filepath, $db) {
    if ($debugInfo && $rider) {
     $debugInfo['matched'] = true;
     $debugInfo['match_method'] = $matchStrategy;
-    $debugInfo['db_check'] = "Hittad ({$matchStrategy}): {$rider['firstname']} {$rider['lastname']}";
+    $debugInfo['db_check'] = "Hittad ({$matchStrategy}): {$rider['firstname']} {$rider['lastname']} [DB-lic: {$rider['license_number']}]";
    } elseif ($debugInfo) {
-    // Check what's in DB for this name
+    // Check what's in DB for this name - including license info
     $dbCheck = $db->getRow(
-     "SELECT id, firstname, lastname FROM riders WHERE LOWER(lastname) = LOWER(?) LIMIT 1",
+     "SELECT id, firstname, lastname, license_number, uci_id FROM riders WHERE LOWER(lastname) = LOWER(?) LIMIT 1",
      [$lastName]
     );
     if ($dbCheck) {
-     $debugInfo['db_check'] = "DB har '{$dbCheck['firstname']} {$dbCheck['lastname']}' men matchade inte";
+     $debugInfo['db_check'] = "DB: '{$dbCheck['firstname']} {$dbCheck['lastname']}' lic={$dbCheck['license_number']} uci={$dbCheck['uci_id']}";
     } else {
      $debugInfo['db_check'] = "Inget efternamn '{$lastName}' finns i DB";
     }
