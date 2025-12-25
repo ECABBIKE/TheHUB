@@ -716,7 +716,7 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
                 <!-- Position Header -->
                 <div class="series-position-header">
                     <div class="series-rank-display">
-                        <span class="series-rank-number"><?= $standing['ranking'] ?></span>
+                        <span class="series-rank-number">#<?= $standing['ranking'] ?></span>
                         <span class="series-rank-text">av <?= $standing['total_riders'] ?> i <?= htmlspecialchars($standing['class_name'] ?? 'klassen') ?></span>
                     </div>
                     <?php if ($standing['trend'] != 0): ?>
