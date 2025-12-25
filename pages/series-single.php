@@ -27,11 +27,10 @@ try {
 }
 
 try {
-    // Fetch series details with brand logo
+    // Fetch series details
     $stmt = $db->prepare("
-        SELECT s.*, sb.logo as brand_logo, sb.name as brand_name, COUNT(DISTINCT e.id) as event_count
+        SELECT s.*, COUNT(DISTINCT e.id) as event_count
         FROM series s
-        LEFT JOIN series_brands sb ON s.brand_id = sb.id
         LEFT JOIN events e ON s.id = e.series_id
         WHERE s.id = ?
         GROUP BY s.id
@@ -349,11 +348,14 @@ try {
                 $clubName = $rider['club_name'];
                 $originalPoints = (float)$rider['points'];
                 $clubPoints = 0;
+                $percentage = 0;
 
                 if ($rank === 1) {
                     $clubPoints = $originalPoints;
+                    $percentage = 100;
                 } elseif ($rank === 2) {
                     $clubPoints = round($originalPoints * 0.5, 0);
+                    $percentage = 50;
                 }
 
                 // Initialize club if not exists
@@ -450,9 +452,6 @@ if (!$series) {
 <section class="info-card mb-md">
   <div class="info-card-stripe"></div>
   <div class="info-card-content">
-    <?php if (!empty($series['brand_logo'])): ?>
-    <img src="<?= htmlspecialchars($series['brand_logo']) ?>" alt="<?= htmlspecialchars($series['brand_name'] ?? '') ?>" class="info-card-logo" style="max-width: 80px; max-height: 80px; object-fit: contain; margin-right: var(--space-md);">
-    <?php endif; ?>
     <div class="info-card-main">
       <h1 class="info-card-title"><?= htmlspecialchars($series['name']) ?></h1>
       <div class="info-card-meta">
@@ -489,16 +488,15 @@ if (!$series) {
     <span class="events-dropdown-arrow">▾</span>
   </summary>
   <div class="events-dropdown-content">
-    <?php foreach ($seriesEvents as $event):
-        $parts = [];
-        if ($event['date']) $parts[] = date('j M', strtotime($event['date']));
-        $parts[] = htmlspecialchars($event['name']);
-        if (!empty($event['location'])) $parts[] = htmlspecialchars($event['location']);
-        $parts[] = $event['result_count'] . ' resultat';
-    ?>
-    <a href="/event/<?= $event['id'] ?>" class="event-simple-row">
-      <?= implode(' - ', $parts) ?>
+    <?php $eventNum = 1; ?>
+    <?php foreach ($seriesEvents as $event): ?>
+    <a href="/event/<?= $event['id'] ?>" class="event-dropdown-item">
+      <span class="event-item-num">#<?= $eventNum ?></span>
+      <span class="event-item-date"><?= $event['date'] ? date('j M', strtotime($event['date'])) : '-' ?></span>
+      <span class="event-item-name"><?= htmlspecialchars($event['name']) ?></span>
+      <span class="event-item-results"><?= $event['result_count'] ?> resultat</span>
     </a>
+    <?php $eventNum++; ?>
     <?php endforeach; ?>
   </div>
 </details>
@@ -683,7 +681,6 @@ if (!$series) {
           <?php $eventNum++; ?>
           <?php endforeach; ?>
           <th class="col-total">Totalt</th>
-          <th class="col-action"></th>
         </tr>
       </thead>
       <tbody>
@@ -711,11 +708,6 @@ if (!$series) {
           <td class="col-total">
             <strong><?= $club['total_points'] ?></strong>
           </td>
-          <td class="col-action">
-            <button type="button" class="btn-icon" title="Visa detaljer" onclick="openClubModal(<?= $club['club_id'] ?>, <?= $seriesId ?>, '<?= htmlspecialchars(addslashes($club['club_name'])) ?>'); event.stopPropagation();">
-              <i data-lucide="eye"></i>
-            </button>
-          </td>
         </tr>
         <!-- Hidden club riders sub-rows -->
         <?php foreach ($club['riders'] as $rIdx => $clubRider): ?>
@@ -731,7 +723,6 @@ if (!$series) {
           <td class="col-event" class="col-fixed"></td>
           <?php endforeach; ?>
           <td class="col-total text-muted"><?= $clubRider['points'] ?> p</td>
-          <td class="col-action"></td>
         </tr>
         <?php endforeach; ?>
         <?php endforeach; ?>
@@ -743,7 +734,7 @@ if (!$series) {
   <div class="result-list">
     <?php $clubPos = 0; ?>
     <?php foreach ($clubStandings as $club): $clubPos++; ?>
-    <a href="/club-points?club_id=<?= $club['club_id'] ?>&series_id=<?= $seriesId ?>" class="club-result-item">
+    <div class="club-result-item">
       <div class="result-place <?= $clubPos <= 3 ? 'top-3' : '' ?>">
         <?php if ($clubPos == 1): ?>
           <img src="/assets/icons/medal-1st.svg" alt="1:a" class="medal-icon-mobile">
@@ -763,10 +754,7 @@ if (!$series) {
         <div class="points-big"><?= $club['total_points'] ?></div>
         <div class="points-label">poäng</div>
       </div>
-      <div class="result-action">
-        <i data-lucide="eye"></i>
-      </div>
-    </a>
+    </div>
     <!-- Mobile club riders -->
     <div class="club-riders-mobile" data-mobile-club="<?= htmlspecialchars($club['club_name']) ?>">
       <?php foreach (array_slice($club['riders'], 0, 5) as $clubRider): ?>
@@ -845,143 +833,4 @@ window.addEventListener('orientationchange', function() {
   setTimeout(updateLandscapeClass, 100);
 });
 
-// Club Detail Modal Functions
-function openClubModal(clubId, seriesId, clubName) {
-  const modal = document.getElementById('club-detail-modal');
-  const iframe = document.getElementById('club-detail-iframe');
-  const title = document.getElementById('club-modal-title');
-
-  title.textContent = clubName + ' - Klubbpoäng';
-  iframe.src = '/club-points?club_id=' + clubId + '&series_id=' + seriesId + '&modal=1';
-  modal.style.display = 'flex';
-  document.body.style.overflow = 'hidden';
-
-  // Re-render lucide icons in modal
-  if (typeof lucide !== 'undefined') {
-    lucide.createIcons();
-  }
-}
-
-function closeClubModal() {
-  const modal = document.getElementById('club-detail-modal');
-  const iframe = document.getElementById('club-detail-iframe');
-
-  modal.style.display = 'none';
-  iframe.src = '';
-  document.body.style.overflow = '';
-}
-
-// Close modal on escape key
-document.addEventListener('keydown', function(e) {
-  if (e.key === 'Escape') {
-    const modal = document.getElementById('club-detail-modal');
-    if (modal && modal.style.display !== 'none') {
-      closeClubModal();
-    }
-  }
-});
-
-// Close modal on overlay click
-document.getElementById('club-detail-modal')?.addEventListener('click', function(e) {
-  if (e.target === this) {
-    closeClubModal();
-  }
-});
 </script>
-
-<!-- Club Detail Modal -->
-<div id="club-detail-modal" class="modal-overlay" style="display: none;">
-  <div class="modal-container modal-lg">
-    <div class="modal-header">
-      <h2 id="club-modal-title">Klubbpoäng</h2>
-      <button type="button" class="modal-close" onclick="closeClubModal()">
-        <i data-lucide="x"></i>
-      </button>
-    </div>
-    <div class="modal-body">
-      <iframe id="club-detail-iframe" src="" style="width: 100%; height: 70vh; border: none;"></iframe>
-    </div>
-  </div>
-</div>
-
-<style>
-/* Club Detail Modal Styles */
-.modal-overlay {
-  position: fixed;
-  top: 0;
-  left: 0;
-  right: 0;
-  bottom: 0;
-  background: rgba(0, 0, 0, 0.6);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 9999;
-  padding: var(--space-md);
-}
-
-.modal-container {
-  background: var(--color-bg-card);
-  border-radius: var(--radius-lg);
-  max-width: 900px;
-  width: 100%;
-  max-height: 90vh;
-  display: flex;
-  flex-direction: column;
-  box-shadow: var(--shadow-xl);
-}
-
-.modal-lg {
-  max-width: 1000px;
-}
-
-.modal-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  padding: var(--space-md) var(--space-lg);
-  border-bottom: 1px solid var(--color-border);
-}
-
-.modal-header h2 {
-  margin: 0;
-  font-size: var(--text-lg);
-  font-weight: var(--weight-semibold);
-}
-
-.modal-close {
-  background: none;
-  border: none;
-  padding: var(--space-xs);
-  cursor: pointer;
-  color: var(--color-text-muted);
-  border-radius: var(--radius-sm);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.modal-close:hover {
-  background: var(--color-bg-hover);
-  color: var(--color-text-primary);
-}
-
-.modal-body {
-  flex: 1;
-  overflow: auto;
-  padding: 0;
-}
-
-@media (max-width: 767px) {
-  .modal-overlay {
-    padding: 0;
-  }
-
-  .modal-container {
-    max-width: 100%;
-    max-height: 100%;
-    border-radius: 0;
-    height: 100%;
-  }
-}
-</style>
