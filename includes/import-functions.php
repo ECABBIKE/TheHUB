@@ -470,14 +470,14 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
                     }
                 }
 
-                // Try by name if no license match - use simple = instead of LOWER() which doesn't work
+                // Try by name if no license match - use UPPER() for case-insensitive matching
                 if (!$rider) {
                     $firstName = trim($data['firstname']);
                     $lastName = trim($data['lastname']);
 
-                    // Simple exact match (case-sensitive but usually works)
+                    // Case-insensitive match using UPPER() (LOWER() doesn't work with this MySQL collation)
                     $rider = $db->getRow(
-                        "SELECT id, license_number FROM riders WHERE firstname = ? AND lastname = ?",
+                        "SELECT id, license_number FROM riders WHERE UPPER(firstname) = UPPER(?) AND UPPER(lastname) = UPPER(?)",
                         [$firstName, $lastName]
                     );
 

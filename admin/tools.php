@@ -334,6 +334,25 @@ include __DIR__ . '/components/unified-layout.php';
         </div>
     </div>
 
+    <!-- BULK Merge Duplicates -->
+    <div class="tool-card">
+        <div class="tool-card-header">
+            <div class="tool-icon danger">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m8 6 4-4 4 4"/><path d="M12 2v10.3a4 4 0 0 1-1.172 2.872L4 22"/><path d="m20 22-5-5"/></svg>
+            </div>
+            <div>
+                <h4 class="tool-title">BULK: Slå ihop ALLA</h4>
+                <p class="tool-description">Slå ihop ALLA dubletter (UCI + namn) med ett klick. Behåller bästa profilen.</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/bulk-merge-duplicates" class="btn-admin btn-admin-danger flex-1">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm"><path d="m8 6 4-4 4 4"/><path d="M12 2v10.3"/></svg>
+                BULK MERGE
+            </a>
+        </div>
+    </div>
+
     <!-- Assign Missing SWE-ID -->
     <div class="tool-card">
         <div class="tool-card-header">
@@ -628,6 +647,25 @@ include __DIR__ . '/components/unified-layout.php';
             <a href="/admin/series" class="btn-admin btn-admin-secondary flex-1">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/></svg>
                 Hantera serier
+            </a>
+        </div>
+    </div>
+
+    <!-- Fix Series Points -->
+    <div class="tool-card">
+        <div class="tool-card-header">
+            <div class="tool-icon warning">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+            </div>
+            <div>
+                <h4 class="tool-title">Fixa seriepoäng</h4>
+                <p class="tool-description">Diagnostisera och beräkna om seriesammanställningar</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/fix-series-points" class="btn-admin btn-admin-warning flex-1">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0"/></svg>
+                Fixa seriepoäng
             </a>
         </div>
     </div>

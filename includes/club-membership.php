@@ -164,7 +164,18 @@ function getRiderClubHistory($db, $riderId) {
  * @return bool True if club can be changed
  */
 function canChangeClubForYear($db, $riderId, $year) {
-    // Check if there are any results for this year
+    // Check if there's already a club set for this year
+    $existingClub = $db->getRow(
+        "SELECT club_id FROM rider_club_seasons WHERE rider_id = ? AND season_year = ?",
+        [$riderId, $year]
+    );
+
+    // If no club is set yet, allow setting one (even if results exist)
+    if (!$existingClub || !$existingClub['club_id']) {
+        return true;
+    }
+
+    // If club is already set, only allow changing if no results exist
     $hasResults = $db->getRow("
         SELECT 1 FROM results r
         JOIN events e ON r.event_id = e.id

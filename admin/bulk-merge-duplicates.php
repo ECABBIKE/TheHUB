@@ -261,10 +261,13 @@ $sampleUci = $pdo->query("
     LIMIT 20
 ")->fetchAll(PDO::FETCH_ASSOC);
 
-$sampleName = $pdo->query("
+// Get name duplicates - but filter to only show MERGEABLE ones
+// (those where all riders have same UCI or no UCI - different UCIs = different people)
+$rawNameDups = $pdo->query("
     SELECT UPPER(firstname) as fn, UPPER(lastname) as ln,
            GROUP_CONCAT(CONCAT(firstname, ' ', lastname) ORDER BY id SEPARATOR ' | ') as names,
            GROUP_CONCAT(id ORDER BY id) as ids,
+           GROUP_CONCAT(COALESCE(REPLACE(REPLACE(license_number, ' ', ''), '-', ''), '') ORDER BY id SEPARATOR '|') as uci_list,
            GROUP_CONCAT(COALESCE(license_number, '-') ORDER BY id SEPARATOR ' | ') as ucis,
            COUNT(*) as cnt
     FROM riders
@@ -273,8 +276,27 @@ $sampleName = $pdo->query("
     GROUP BY UPPER(firstname), UPPER(lastname)
     HAVING cnt > 1
     ORDER BY cnt DESC
-    LIMIT 20
+    LIMIT 100
 ")->fetchAll(PDO::FETCH_ASSOC);
+
+// Filter to only show mergeable - where all valid UCIs are the same (or no UCIs)
+$sampleName = [];
+foreach ($rawNameDups as $dup) {
+    $uciValues = explode('|', $dup['uci_list']);
+    // Get only valid UCIs (8+ digits)
+    $validUcis = array_filter($uciValues, fn($u) => strlen($u) >= 8);
+    $uniqueUcis = array_unique($validUcis);
+
+    // Mergeable if: 0 or 1 unique valid UCIs (all have same or no UCI)
+    if (count($uniqueUcis) <= 1) {
+        $sampleName[] = $dup;
+    }
+
+    if (count($sampleName) >= 20) break;
+}
+
+// Also count non-mergeable (different UCIs = different people with same name)
+$nonMergeableCount = count($rawNameDups) - count($sampleName);
 
 $page_title = 'Bulk-sammanslagning av dubletter';
 $breadcrumbs = [
@@ -309,9 +331,9 @@ include __DIR__ . '/components/unified-layout.php';
         <div class="text-xs text-muted"><?= $totalUciExtra ?> extra poster</div>
     </div>
     <div class="stat-card">
-        <div class="stat-number text-warning"><?= $nameDupCount ?></div>
+        <div class="stat-number text-warning"><?= count($sampleName) ?></div>
         <div class="stat-label">Namn-dubbletter</div>
-        <div class="text-xs text-muted"><?= $totalNameExtra ?> extra poster</div>
+        <div class="text-xs text-muted">(<?= $nonMergeableCount ?> med olika UCI hoppas över)</div>
     </div>
     <div class="stat-card">
         <div class="stat-number"><?= $totalUciExtra + $totalNameExtra ?></div>
@@ -367,11 +389,17 @@ include __DIR__ . '/components/unified-layout.php';
 <!-- Name Duplicates -->
 <div class="card mb-lg">
     <div class="card-header">
-        <h3><i data-lucide="users"></i> Namn-dubletter (<?= $nameDupCount ?> grupper)</h3>
+        <h3><i data-lucide="users"></i> Namn-dubletter som kan slås samman (<?= count($sampleName) ?> grupper)</h3>
     </div>
     <div class="card-body gs-padding-0">
+        <?php if ($nonMergeableCount > 0): ?>
+        <div class="alert alert-info m-md">
+            <i data-lucide="info"></i>
+            <strong><?= $nonMergeableCount ?> grupper hoppas över</strong> - personer med samma namn men olika UCI-ID (olika personer).
+        </div>
+        <?php endif; ?>
         <?php if (empty($sampleName)): ?>
-        <div class="alert alert-success m-md">Inga namn-dubletter!</div>
+        <div class="alert alert-success m-md">Inga namn-dubletter som kan slås samman!</div>
         <?php else: ?>
         <div class="table-responsive">
             <table class="table table-sm">
