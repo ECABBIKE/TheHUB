@@ -67,29 +67,14 @@ try {
 // Get all existing classes for mapping
 $existingClasses = $db->getAll("SELECT id, name, display_name, sort_order FROM classes WHERE active = 1 ORDER BY sort_order ASC, display_name ASC");
 
-// Class name mappings - "Tävling" variants to "Elit"
-$classNameMappings = [
-    'tävling herrar' => 'herrar elit',
-    'tävling damer' => 'damer elit',
-    'tavling herrar' => 'herrar elit',
-    'tavling damer' => 'damer elit',
-    'herrar tävling' => 'herrar elit',
-    'damer tävling' => 'damer elit',
-];
-
 // Analyze which CSV classes exist and which are new
 $classAnalysis = [];
 foreach ($matchingStats['classes'] as $csvClass) {
  $match = null;
  $csvClassNormalized = strtolower(trim($csvClass));
 
- // Apply class name mapping if exists
- $searchName = $classNameMappings[$csvClassNormalized] ?? $csvClassNormalized;
-
  foreach ($existingClasses as $existing) {
- if (strtolower($existing['display_name']) === $searchName ||
-  strtolower($existing['name']) === $searchName ||
-  strtolower($existing['display_name']) === $csvClassNormalized ||
+ if (strtolower($existing['display_name']) === $csvClassNormalized ||
   strtolower($existing['name']) === $csvClassNormalized) {
   $match = $existing;
   break;
@@ -99,9 +84,7 @@ foreach ($matchingStats['classes'] as $csvClass) {
  // Try partial match if no exact match
  if (!$match) {
  foreach ($existingClasses as $existing) {
-  if (strpos(strtolower($existing['display_name']), $searchName) !== false ||
-  strpos($searchName, strtolower($existing['display_name'])) !== false ||
-  strpos(strtolower($existing['display_name']), $csvClassNormalized) !== false ||
+  if (strpos(strtolower($existing['display_name']), $csvClassNormalized) !== false ||
   strpos($csvClassNormalized, strtolower($existing['display_name'])) !== false) {
   $match = $existing;
   break;
@@ -308,36 +291,15 @@ function parseAndAnalyzeCSV($filepath, $db) {
  $clubCache = [];
  $duplicateCache = [];
 
- // Read file and detect/convert encoding (same as import function!)
- $content = file_get_contents($filepath);
- if ($content === false) {
-     throw new Exception('Kunde inte läsa filen');
- }
-
- // Detect encoding and convert to UTF-8
- $encoding = mb_detect_encoding($content, ['UTF-8', 'ISO-8859-1', 'Windows-1252'], true);
- if ($encoding && $encoding !== 'UTF-8') {
-     $content = mb_convert_encoding($content, 'UTF-8', $encoding);
- }
-
- // Remove BOM if present
- $content = preg_replace('/^\xEF\xBB\xBF/', '', $content);
-
- // Write to temp file for fgetcsv
- $tempFile = tempnam(sys_get_temp_dir(), 'preview_utf8_');
- file_put_contents($tempFile, $content);
- $filepath = $tempFile;
-
  if (($handle = fopen($filepath, 'r')) === false) {
-     @unlink($tempFile);
-     throw new Exception('Kunde inte öppna filen');
+ throw new Exception('Kunde inte öppna filen');
  }
 
  // Auto-detect delimiter (comma, semicolon, or tab)
  $firstLine = fgets($handle);
  rewind($handle);
 
- // Remove BOM if present (just in case)
+ // Remove BOM if present (UTF-8 files from Excel often have this)
  $firstLine = preg_replace('/^\xEF\xBB\xBF/', '', $firstLine);
 
  $commaCount = substr_count($firstLine, ',');
@@ -619,11 +581,6 @@ function parseAndAnalyzeCSV($filepath, $db) {
  }
 
  fclose($handle);
-
- // Clean up temp file if we created one
- if (isset($tempFile) && file_exists($tempFile)) {
-     @unlink($tempFile);
- }
 
  // Make clubs list unique
  $stats['clubs_list'] = array_unique($stats['clubs_list']);
