@@ -67,27 +67,14 @@ try {
 // Get all existing classes for mapping
 $existingClasses = $db->getAll("SELECT id, name, display_name, sort_order FROM classes WHERE active = 1 ORDER BY sort_order ASC, display_name ASC");
 
-// Class name mappings - common variants to standard names
-$classNameMappings = [
-    'tävling damer' => 'damer elit',
-    'tävling herrar' => 'herrar elit',
-    'tavling damer' => 'damer elit',
-    'tavling herrar' => 'herrar elit',
-];
-
 // Analyze which CSV classes exist and which are new
 $classAnalysis = [];
 foreach ($matchingStats['classes'] as $csvClass) {
  $match = null;
  $csvClassNormalized = strtolower(trim($csvClass));
 
- // Apply class name mapping if exists
- $searchName = $classNameMappings[$csvClassNormalized] ?? $csvClassNormalized;
-
  foreach ($existingClasses as $existing) {
- if (strtolower($existing['display_name']) === $searchName ||
-  strtolower($existing['name']) === $searchName ||
-  strtolower($existing['display_name']) === $csvClassNormalized ||
+ if (strtolower($existing['display_name']) === $csvClassNormalized ||
   strtolower($existing['name']) === $csvClassNormalized) {
   $match = $existing;
   break;
@@ -97,9 +84,7 @@ foreach ($matchingStats['classes'] as $csvClass) {
  // Try partial match if no exact match
  if (!$match) {
  foreach ($existingClasses as $existing) {
-  if (strpos(strtolower($existing['display_name']), $searchName) !== false ||
-  strpos($searchName, strtolower($existing['display_name'])) !== false ||
-  strpos(strtolower($existing['display_name']), $csvClassNormalized) !== false ||
+  if (strpos(strtolower($existing['display_name']), $csvClassNormalized) !== false ||
   strpos($csvClassNormalized, strtolower($existing['display_name'])) !== false) {
   $match = $existing;
   break;
@@ -291,14 +276,6 @@ function isFieldMappingRowPreview($row) {
  */
 function parseAndAnalyzeCSV($filepath, $db) {
  $data = [];
- // Quick DB sanity check
- $riderCount = $db->getRow("SELECT COUNT(*) as cnt FROM riders");
- $sampleRider = $db->getRow("SELECT id, firstname, lastname, license_number FROM riders ORDER BY id DESC LIMIT 1");
-
- // Check if specific test rider exists (Ella Svegby)
- $testRider = $db->getRow("SELECT id, firstname, lastname, license_number, uci_id FROM riders WHERE lastname LIKE '%vegby%' OR lastname LIKE '%Svegby%' LIMIT 1");
- $testUci = $db->getRow("SELECT id, firstname, lastname, license_number, uci_id FROM riders WHERE license_number LIKE '%10068327790%' OR uci_id LIKE '%10068327790%' LIMIT 1");
-
  $stats = [
  'total_rows' => 0,
  'riders_existing' => 0,
@@ -307,26 +284,23 @@ function parseAndAnalyzeCSV($filepath, $db) {
  'clubs_new' => 0,
  'clubs_list' => [],
  'classes' => [],
- 'potential_duplicates' => [],
- 'debug_rows' => [],
- 'db_rider_count' => $riderCount['cnt'] ?? 0,
- 'db_sample_rider' => $sampleRider ? "{$sampleRider['firstname']} {$sampleRider['lastname']} (ID:{$sampleRider['id']}, lic:{$sampleRider['license_number']})" : 'INGEN',
- 'db_test_rider' => $testRider ? "Svegby: {$testRider['firstname']} {$testRider['lastname']} lic={$testRider['license_number']} uci={$testRider['uci_id']}" : 'EJ HITTAD',
- 'db_test_uci' => $testUci ? "UCI-match: {$testUci['firstname']} {$testUci['lastname']}" : 'UCI 10068327790 EJ HITTAD'
+ 'potential_duplicates' => []
  ];
 
  $riderCache = [];
  $clubCache = [];
  $duplicateCache = [];
 
- // Open file directly (encoding handled by PHP/MySQL)
  if (($handle = fopen($filepath, 'r')) === false) {
-     throw new Exception('Kunde inte öppna filen');
+ throw new Exception('Kunde inte öppna filen');
  }
 
  // Auto-detect delimiter (comma, semicolon, or tab)
  $firstLine = fgets($handle);
  rewind($handle);
+
+ // Remove BOM if present (UTF-8 files from Excel often have this)
+ $firstLine = preg_replace('/^\xEF\xBB\xBF/', '', $firstLine);
 
  $commaCount = substr_count($firstLine, ',');
  $semicolonCount = substr_count($firstLine, ';');
@@ -456,17 +430,14 @@ function parseAndAnalyzeCSV($filepath, $db) {
      }
 
      $mappings = [
-         'firstname' => 'firstname', 'förnamn' => 'firstname', 'fornamn' => 'firstname', 'name' => 'firstname', 'namn' => 'firstname',
-         'lastname' => 'lastname', 'efternamn' => 'lastname', 'surname' => 'lastname',
+         'firstname' => 'firstname', 'förnamn' => 'firstname', 'fornamn' => 'firstname',
+         'lastname' => 'lastname', 'efternamn' => 'lastname',
          'category' => 'category', 'class' => 'category', 'klass' => 'category',
-         'kategori' => 'category', 'grupp' => 'category', 'startgrupp' => 'category',
-         'startgroup' => 'category', 'racecategory' => 'category', 'tavlingsklass' => 'category',
-         'division' => 'category', 'agegroup' => 'category', 'aldersgrupp' => 'category',
-         'club' => 'club_name', 'klubb' => 'club_name', 'team' => 'club_name', 'forening' => 'club_name', 'förening' => 'club_name',
-         'position' => 'position', 'placering' => 'position', 'placebycategory' => 'position', 'rank' => 'position', 'plats' => 'position', 'place' => 'position',
-         'time' => 'finish_time', 'tid' => 'finish_time', 'nettime' => 'finish_time', 'totaltime' => 'finish_time', 'resultat' => 'finish_time', 'result' => 'finish_time',
+         'club' => 'club_name', 'klubb' => 'club_name', 'team' => 'club_name',
+         'position' => 'position', 'placering' => 'position', 'placebycategory' => 'position',
+         'time' => 'finish_time', 'tid' => 'finish_time', 'nettime' => 'finish_time',
          'status' => 'status',
-         'uciid' => 'license_number', 'licens' => 'license_number', 'license' => 'license_number', 'licensnr' => 'license_number', 'licensnumber' => 'license_number',
+         'uciid' => 'license_number', 'licens' => 'license_number',
      ];
 
      $header[] = $mappings[$col] ?? $col;
@@ -474,11 +445,6 @@ function parseAndAnalyzeCSV($filepath, $db) {
 
  // Add detected stage columns to stats
  $stats['stage_columns'] = $stageColumnsDetected;
-
- // DEBUG: Log headers
- error_log("=== CSV HEADER DEBUG ===");
- error_log("RAW: " . implode(' | ', array_slice($rawHeader, 0, 10)));
- error_log("MAPPED: " . implode(' | ', array_slice($header, 0, 10)));
 
  // Read all rows
  while (($row = fgetcsv($handle, 0, $delimiter)) !== false) {
@@ -506,21 +472,6 @@ function parseAndAnalyzeCSV($filepath, $db) {
  $licenseNumber = trim($rowData['license_number'] ?? '');
  $normalizedLicense = preg_replace('/[^0-9]/', '', $licenseNumber);
 
- // Debug first 5 rows - collect for display
- static $debugRowCount = 0;
- $debugInfo = null;
- if ($debugRowCount < 5) {
-  $debugInfo = [
-   'row' => $debugRowCount + 1,
-   'firstname' => $firstName,
-   'lastname' => $lastName,
-   'license' => $licenseNumber,
-   'matched' => false,
-   'match_method' => 'none',
-   'db_check' => null
-  ];
- }
-
  if (!empty($firstName) && !empty($lastName)) {
   $riderKey = $firstName . '|' . $lastName . '|' . $normalizedLicense;
 
@@ -528,24 +479,12 @@ function parseAndAnalyzeCSV($filepath, $db) {
   $rider = null;
   $isDuplicate = false;
 
-  // Try normalized license first - check both license_number AND uci_id columns
-  // Use multiple REPLACE to handle spaces, hyphens, dots (works on all MySQL versions)
+  // Try normalized license first
   if (!empty($normalizedLicense)) {
    $rider = $db->getRow(
-   "SELECT id, firstname, lastname, license_number, uci_id FROM riders
-    WHERE REPLACE(REPLACE(REPLACE(COALESCE(license_number, ''), ' ', ''), '-', ''), '.', '') = ?
-       OR REPLACE(REPLACE(REPLACE(COALESCE(uci_id, ''), ' ', ''), '-', ''), '.', '') = ?",
-   [$normalizedLicense, $normalizedLicense]
+   "SELECT id, firstname, lastname, license_number FROM riders WHERE REPLACE(REPLACE(license_number, ' ', ''), '-', '') = ?",
+   [$normalizedLicense]
    );
-   if ($debugInfo && $rider) {
-    $debugInfo['matched'] = true;
-    $debugInfo['match_method'] = 'uci_id';
-    $debugInfo['db_check'] = "Hittad via UCI: {$rider['firstname']} {$rider['lastname']}";
-   }
-   // Debug
-   if ($debugRowCount < 5) {
-    error_log("UCI SEARCH for '{$normalizedLicense}': " . ($rider ? "FOUND id={$rider['id']}" : "NOT FOUND"));
-   }
 
    // Check if it's a format duplicate (same UCI but different format)
    if ($rider && $rider['license_number'] !== $licenseNumber && !empty($rider['license_number'])) {
@@ -564,126 +503,39 @@ function parseAndAnalyzeCSV($filepath, $db) {
    }
   }
 
-  // Try name match if no license match - use multiple strategies (same as import)
+  // Try name match if no license match
   if (!$rider) {
-   $matchStrategy = 'none';
-
-   // Strategy 1: Exact name match (use UPPER instead of LOWER for better MySQL compat)
    $rider = $db->getRow(
-   "SELECT id, firstname, lastname, license_number, uci_id FROM riders WHERE UPPER(firstname) = UPPER(?) AND UPPER(lastname) = UPPER(?)",
+   "SELECT id, firstname, lastname, license_number FROM riders WHERE firstname = ? AND lastname = ?",
    [$firstName, $lastName]
    );
-   if ($rider) $matchStrategy = 'exact_name';
 
-   // Strategy 2: Handle double last names (e.g., "Svensson Lindberg")
-   if (!$rider) {
-    $rider = $db->getRow(
-     "SELECT id, firstname, lastname, license_number, uci_id FROM riders
-      WHERE UPPER(firstname) = UPPER(?)
-      AND (UPPER(lastname) LIKE UPPER(?) OR UPPER(?) LIKE CONCAT('%', UPPER(lastname), '%'))",
-     [$firstName, '%' . $lastName . '%', $lastName]
-    );
-    if ($rider) $matchStrategy = 'double_lastname';
-   }
-
-   // Strategy 3: If lastname has space, try matching last part only
-   if (!$rider && strpos($lastName, ' ') !== false) {
-    $lastnameParts = explode(' ', $lastName);
-    $lastPart = end($lastnameParts);
-    $rider = $db->getRow(
-     "SELECT id, firstname, lastname, license_number, uci_id FROM riders
-      WHERE UPPER(firstname) = UPPER(?) AND UPPER(lastname) = UPPER(?)",
-     [$firstName, $lastPart]
-    );
-    if ($rider) $matchStrategy = 'lastname_part';
-   }
-
-   // Strategy 4: Handle middle names - try first part of firstname
-   if (!$rider && strpos($firstName, ' ') !== false) {
-    $firstNamePart = explode(' ', $firstName)[0];
-    $rider = $db->getRow(
-     "SELECT id, firstname, lastname, license_number, uci_id FROM riders
-      WHERE UPPER(firstname) = UPPER(?) AND UPPER(lastname) = UPPER(?)",
-     [$firstNamePart, $lastName]
-    );
-    if ($rider) $matchStrategy = 'firstname_part';
-   }
-
-   // Strategy 5: Fuzzy firstname match (starts with) + exact lastname
-   if (!$rider) {
-    $firstNamePart = explode(' ', $firstName)[0];
-    $rider = $db->getRow(
-     "SELECT id, firstname, lastname, license_number, uci_id FROM riders
-      WHERE UPPER(firstname) LIKE UPPER(?)
-      AND UPPER(lastname) = UPPER(?)",
-     [$firstNamePart . '%', $lastName]
-    );
-    if ($rider) $matchStrategy = 'fuzzy_firstname';
-   }
-
-   // Update debug info
-   if ($debugInfo && $rider) {
-    $debugInfo['matched'] = true;
-    $debugInfo['match_method'] = $matchStrategy;
-    $debugInfo['db_check'] = "Hittad ({$matchStrategy}): {$rider['firstname']} {$rider['lastname']} [DB-lic: {$rider['license_number']}]";
-   } elseif ($debugInfo) {
-    // Check what's in DB for this name - try LIKE instead of LOWER() for debugging
-    $dbCheck = $db->getRow(
-     "SELECT id, firstname, lastname, license_number, uci_id FROM riders WHERE lastname LIKE ? LIMIT 1",
-     ['%' . substr($lastName, 1, 5) . '%']  // Search for middle part of lastname
-    );
-    if ($dbCheck) {
-     $debugInfo['db_check'] = "DB (LIKE): '{$dbCheck['firstname']} {$dbCheck['lastname']}' - CSV: '{$lastName}'";
-    } else {
-     // Try exact case-insensitive match on first 3 chars
-     $dbCheck2 = $db->getRow(
-      "SELECT id, firstname, lastname FROM riders WHERE UPPER(lastname) LIKE ? LIMIT 1",
-      [strtoupper(substr($lastName, 0, 4)) . '%']
-     );
-     if ($dbCheck2) {
-      $debugInfo['db_check'] = "DB (UPPER): '{$dbCheck2['firstname']} {$dbCheck2['lastname']}' - CSV uppercase issue?";
-     } else {
-      $debugInfo['db_check'] = "Inget efternamn som '{$lastName}' finns i DB";
-     }
-    }
-   }
-
-   // Check duplicate status if found
+   // Only suggest duplicate if UCI-IDs don't conflict
+   // Same name + no UCI = possible duplicate
+   // Same name + same UCI = same person (not duplicate warning)
+   // Same name + different UCI = different people (NO duplicate)
    if ($rider) {
-    $existingLicense = preg_replace('/[^0-9]/', '', $rider['license_number'] ?? '');
+   $existingLicense = preg_replace('/[^0-9]/', '', $rider['license_number'] ?? '');
 
-    // Check if one is SWE-ID and other is UCI-ID (same person, different ID types)
-    $csvIsSweId = preg_match('/^SWE\d{7}$/', str_replace([' ', '-'], '', $licenseNumber));
-    $dbIsSweId = preg_match('/^SWE\d{7}$/', str_replace([' ', '-'], '', $rider['license_number'] ?? ''));
-    $csvIsUciId = !$csvIsSweId && strlen($normalizedLicense) >= 9;
-    $dbIsUciId = !$dbIsSweId && strlen($existingLicense) >= 9;
-
-    // Different ID types = same person (SWE vs UCI)
-    $differentIdTypes = ($csvIsSweId && $dbIsUciId) || ($csvIsUciId && $dbIsSweId);
-
-    // Check if this is a potential duplicate (both have no UCI or one is missing)
-    if (empty($normalizedLicense) && empty($existingLicense)) {
-     // Both have no UCI - possible duplicate
-     $dupKey = strtolower($firstName . '|' . $lastName);
-     if (!isset($duplicateCache[$dupKey])) {
-     $duplicateCache[$dupKey] = true;
-     $stats['potential_duplicates'][] = [
-      'csv_name' => $firstName . ' ' . $lastName,
-      'csv_license' => $licenseNumber ?: '(ingen)',
-      'existing_id' => $rider['id'],
-      'existing_name' => $rider['firstname'] . ' ' . $rider['lastname'],
-      'existing_license' => $rider['license_number'] ?: '(ingen)',
-      'type' => 'name_no_uci'
-     ];
-     }
-    } elseif (!empty($normalizedLicense) && !empty($existingLicense) && $normalizedLicense !== $existingLicense && !$differentIdTypes) {
-     // Different UCI-IDs of SAME type = different people, not a duplicate
-     $rider = null; // Treat as new rider
-     if ($debugInfo) {
-      $debugInfo['db_check'] = "Samma namn men olika UCI-ID (ej match)";
-     }
+   // Check if this is a potential duplicate (both have no UCI or one is missing)
+   if (empty($normalizedLicense) && empty($existingLicense)) {
+    // Both have no UCI - possible duplicate
+    $dupKey = strtolower($firstName . '|' . $lastName);
+    if (!isset($duplicateCache[$dupKey])) {
+    $duplicateCache[$dupKey] = true;
+    $stats['potential_duplicates'][] = [
+     'csv_name' => $firstName . ' ' . $lastName,
+     'csv_license' => $licenseNumber ?: '(ingen)',
+     'existing_id' => $rider['id'],
+     'existing_name' => $rider['firstname'] . ' ' . $rider['lastname'],
+     'existing_license' => $rider['license_number'] ?: '(ingen)',
+     'type' => 'name_no_uci'
+    ];
     }
-    // If differentIdTypes is true, keep the match - same person with SWE-ID vs UCI-ID
+   } elseif (!empty($normalizedLicense) && !empty($existingLicense) && $normalizedLicense !== $existingLicense) {
+    // Different UCI-IDs = different people, not a duplicate
+    $rider = null; // Treat as new rider
+   }
    }
   }
 
@@ -694,12 +546,6 @@ function parseAndAnalyzeCSV($filepath, $db) {
   } else {
    $stats['riders_new']++;
   }
-  }
-
-  // Save debug info
-  if ($debugInfo) {
-   $stats['debug_rows'][] = $debugInfo;
-   $debugRowCount++;
   }
  }
 
@@ -812,54 +658,6 @@ include __DIR__ . '/components/unified-layout.php';
   <div class="stat-label">Sträckor</div>
   </div>
  </div>
-
- <!-- Debug: Rider Matching -->
- <?php if (!empty($matchingStats['debug_rows'])): ?>
-  <div class="card mb-lg">
-  <div class="card-header" style="background: #fef3c7;">
-   <h3 class="text-warning">
-   <i data-lucide="bug"></i>
-   Debug: Matchningsförsök (första 5 rader)
-   </h3>
-  </div>
-  <div class="card-body">
-   <div class="alert alert-info mb-md">
-   <strong>DB-status:</strong> <?= $matchingStats['db_rider_count'] ?? '?' ?> riders i databasen.<br>
-   Senaste: <?= h($matchingStats['db_sample_rider'] ?? 'okänd') ?><br>
-   <strong>Test Svegby:</strong> <?= h($matchingStats['db_test_rider'] ?? '?') ?><br>
-   <strong>Test UCI:</strong> <?= h($matchingStats['db_test_uci'] ?? '?') ?>
-   </div>
-   <div class="table-responsive">
-   <table class="table table-sm">
-    <thead>
-    <tr>
-     <th>#</th>
-     <th>Förnamn</th>
-     <th>Efternamn</th>
-     <th>Licens</th>
-     <th>Matchad?</th>
-     <th>Metod</th>
-     <th>DB-info</th>
-    </tr>
-    </thead>
-    <tbody>
-    <?php foreach ($matchingStats['debug_rows'] as $dbg): ?>
-     <tr class="<?= $dbg['matched'] ? 'bg-success-light' : 'bg-danger-light' ?>" style="background: <?= $dbg['matched'] ? '#dcfce7' : '#fee2e2' ?>;">
-     <td><?= $dbg['row'] ?></td>
-     <td><code><?= h($dbg['firstname']) ?></code></td>
-     <td><code><?= h($dbg['lastname']) ?></code></td>
-     <td><code><?= h($dbg['license'] ?: '-') ?></code></td>
-     <td><?= $dbg['matched'] ? '<span class="badge badge-success">JA</span>' : '<span class="badge badge-danger">NEJ</span>' ?></td>
-     <td><?= h($dbg['match_method']) ?></td>
-     <td><small><?= h($dbg['db_check'] ?? '-') ?></small></td>
-     </tr>
-    <?php endforeach; ?>
-    </tbody>
-   </table>
-   </div>
-  </div>
-  </div>
- <?php endif; ?>
 
  <!-- Detected Stage Columns -->
  <?php if (!empty($matchingStats['stage_columns'])): ?>
@@ -1004,14 +802,6 @@ include __DIR__ . '/components/unified-layout.php';
     </tr>
     </thead>
     <tbody>
-    <?php if (empty($classAnalysis)): ?>
-     <tr>
-     <td colspan="3" class="text-center text-muted py-lg">
-      <i data-lucide="alert-circle" class="icon-sm"></i>
-      Ingen klasskolumn hittades i CSV-filen. Kontrollera att kolumnnamnet är "Klass", "Class", "Kategori", "Grupp" eller liknande.
-     </td>
-     </tr>
-    <?php endif; ?>
     <?php foreach ($classAnalysis as $classInfo): ?>
      <tr>
      <td>
