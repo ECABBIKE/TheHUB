@@ -36,6 +36,12 @@ foreach ($rankingPaths as $path) {
     }
 }
 
+// Include avatar helper functions
+$avatarHelperPath = dirname(__DIR__) . '/includes/get-avatar.php';
+if (file_exists($avatarHelperPath)) {
+    require_once $avatarHelperPath;
+}
+
 if (!$riderId) {
     header('Location: /riders');
     exit;
@@ -53,7 +59,7 @@ try {
                 r.license_number, r.license_type, r.license_year, r.license_valid_until, r.gravity_id, r.active,
                 r.social_instagram, r.social_facebook, r.social_strava, r.social_youtube, r.social_tiktok,
                 r.stats_total_starts, r.stats_total_finished, r.stats_total_wins, r.stats_total_podiums,
-                r.first_season, r.experience_level, r.profile_image_url,
+                r.first_season, r.experience_level, r.profile_image_url, r.avatar_url,
                 c.id as club_id, c.name as club_name, c.city as club_city
             FROM riders r
             LEFT JOIN clubs c ON r.club_id = c.id
@@ -94,6 +100,7 @@ try {
             $rider['first_season'] = null;
             $rider['experience_level'] = 1;
             $rider['profile_image_url'] = null;
+            $rider['avatar_url'] = null;
         }
     }
 
@@ -476,8 +483,17 @@ try {
     $expInfo = $experienceInfo[$experienceLevel] ?? $experienceInfo[1];
 
     // Profile image URL or initials fallback
-    $profileImageUrl = $rider['profile_image_url'] ?? null;
-    $initials = strtoupper(substr($rider['firstname'] ?? '', 0, 1) . substr($rider['lastname'] ?? '', 0, 1));
+    // Prefer avatar_url (from ImgBB), fallback to profile_image_url
+    $profileImageUrl = $rider['avatar_url'] ?? $rider['profile_image_url'] ?? null;
+
+    // If no stored image and avatar helper is available, use UI Avatars as fallback
+    if (!$profileImageUrl && function_exists('get_rider_avatar')) {
+        $profileImageUrl = get_rider_avatar($rider, 200);
+    }
+
+    $initials = function_exists('get_rider_initials')
+        ? get_rider_initials($rider)
+        : strtoupper(substr($rider['firstname'] ?? '', 0, 1) . substr($rider['lastname'] ?? '', 0, 1));
 
     // Check license status
     $hasLicense = !empty($rider['license_type']);
