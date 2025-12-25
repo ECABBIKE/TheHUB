@@ -465,10 +465,24 @@ skip_club_standings:
         </div>
     </div>
 
+    <!-- Toggle Buttons: Individual / Clubs (50/50 width) -->
+    <div class="standings-toggle">
+        <button class="standings-toggle-btn active" data-tab="individual" onclick="switchTab('individual')">
+            <i data-lucide="user"></i>
+            <span>Individuellt</span>
+        </button>
+        <?php if ($showClubChampionship): ?>
+        <button class="standings-toggle-btn" data-tab="club" onclick="switchTab('club')">
+            <i data-lucide="shield"></i>
+            <span>Klubbmastarskap</span>
+        </button>
+        <?php endif; ?>
+    </div>
+
     <!-- Collapsible Events Section -->
     <details class="events-dropdown">
         <summary class="events-dropdown-header">
-            <span><i data-lucide="calendar" class="events-dropdown-icon"></i> Tävlingar i serien</span>
+            <span><i data-lucide="calendar" class="events-dropdown-icon"></i> Tavlingar i serien</span>
             <span class="events-count"><?= count($events) ?> st</span>
             <span class="dropdown-arrow">▾</span>
         </summary>
@@ -490,18 +504,6 @@ skip_club_standings:
             <?php endif; ?>
         </div>
     </details>
-
-    <!-- Toggle Buttons: Individual / Clubs -->
-    <div class="tabs-nav">
-        <button class="tab-pill active" data-tab="individual" onclick="switchTab('individual')">
-            <i data-lucide="user" class="standings-tab-icon"></i> Individuellt
-        </button>
-        <?php if ($showClubChampionship): ?>
-        <button class="tab-pill" data-tab="club" onclick="switchTab('club')">
-            <i data-lucide="shield" class="standings-tab-icon"></i> Klubbmastarskap
-        </button>
-        <?php endif; ?>
-    </div>
 
     <!-- Individual Standings Section -->
     <div id="individual-standings">
@@ -726,7 +728,7 @@ skip_club_standings:
 
 <script>
 function switchTab(tab) {
-    document.querySelectorAll('.tab-pill').forEach(btn => {
+    document.querySelectorAll('.standings-toggle-btn').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.tab === tab);
     });
     const individualEl = document.getElementById('individual-standings');
@@ -844,6 +846,52 @@ document.addEventListener('keydown', function(e) {
 </script>
 
 <style>
+/* Standings Toggle (50/50 buttons) */
+.standings-toggle {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-sm);
+    margin-bottom: var(--space-md);
+}
+.standings-toggle-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-sm);
+    padding: var(--space-md);
+    background: var(--color-star);
+    border: 2px solid var(--color-border);
+    border-radius: var(--radius-md);
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--color-text);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+.standings-toggle-btn i {
+    width: 20px;
+    height: 20px;
+}
+.standings-toggle-btn:hover {
+    border-color: var(--color-primary);
+    color: var(--color-primary);
+}
+.standings-toggle-btn.active {
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+    color: white;
+}
+@media (max-width: 599px) {
+    .standings-toggle-btn {
+        padding: var(--space-sm) var(--space-md);
+        font-size: 0.875rem;
+    }
+    .standings-toggle-btn i {
+        width: 18px;
+        height: 18px;
+    }
+}
+
 /* Stats Grid for Club Standings */
 .stats-grid {
     display: grid;
