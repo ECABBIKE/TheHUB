@@ -32,6 +32,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email = trim($_POST['email'] ?? '');
     $clubId = intval($_POST['club_id'] ?? 0) ?: null;
 
+    // New profile fields
+    $birthYear = intval($_POST['birth_year'] ?? 0) ?: null;
+    $phone = trim($_POST['phone'] ?? '');
+    $uciId = trim($_POST['uci_id'] ?? '');
+    $iceName = trim($_POST['ice_name'] ?? '');
+    $icePhone = trim($_POST['ice_phone'] ?? '');
+
     // Social profiles
     $socialInstagram = trim($_POST['social_instagram'] ?? '');
     $socialStrava = trim($_POST['social_strava'] ?? '');
@@ -52,19 +59,49 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $error = 'Förnamn och efternamn krävs.';
     } else {
         try {
-            $stmt = $pdo->prepare("
-                UPDATE riders
-                SET firstname = ?, lastname = ?, email = ?, club_id = ?,
-                    social_instagram = ?, social_strava = ?, social_facebook = ?,
-                    social_youtube = ?, social_tiktok = ?
-                WHERE id = ?
-            ");
-            $stmt->execute([
+            // Build dynamic update query based on which columns exist
+            $updateFields = [
+                'firstname = ?', 'lastname = ?', 'email = ?', 'club_id = ?',
+                'social_instagram = ?', 'social_strava = ?', 'social_facebook = ?',
+                'social_youtube = ?', 'social_tiktok = ?'
+            ];
+            $updateValues = [
                 $firstName, $lastName, $email, $clubId,
                 $socialInstagram ?: null, $socialStrava ?: null, $socialFacebook ?: null,
-                $socialYoutube ?: null, $socialTiktok ?: null,
-                $currentUser['id']
-            ]);
+                $socialYoutube ?: null, $socialTiktok ?: null
+            ];
+
+            // Try to add new fields (they might not exist yet)
+            try {
+                $testStmt = $pdo->query("SHOW COLUMNS FROM riders LIKE 'phone'");
+                if ($testStmt->rowCount() > 0) {
+                    $updateFields[] = 'birth_year = ?';
+                    $updateFields[] = 'phone = ?';
+                    $updateFields[] = 'ice_name = ?';
+                    $updateFields[] = 'ice_phone = ?';
+                    $updateValues[] = $birthYear;
+                    $updateValues[] = $phone ?: null;
+                    $updateValues[] = $iceName ?: null;
+                    $updateValues[] = $icePhone ?: null;
+
+                    // Only update UCI ID if user doesn't already have one from license sync
+                    if (empty($currentUser['uci_id'])) {
+                        $updateFields[] = 'uci_id = ?';
+                        $updateValues[] = $uciId ?: null;
+                    }
+                }
+            } catch (PDOException $e) {
+                // New columns don't exist yet, skip them
+            }
+
+            $updateValues[] = $currentUser['id'];
+
+            $stmt = $pdo->prepare("
+                UPDATE riders
+                SET " . implode(', ', $updateFields) . "
+                WHERE id = ?
+            ");
+            $stmt->execute($updateValues);
             $message = 'Profilen har uppdaterats!';
 
             // Refresh user data
@@ -76,8 +113,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// Get clubs for dropdown
-$clubs = $pdo->query("SELECT id, name FROM clubs ORDER BY name")->fetchAll(PDO::FETCH_ASSOC);
+// Get active clubs for dropdown
+$clubs = $pdo->query("SELECT id, name FROM clubs WHERE active = 1 ORDER BY name")->fetchAll(PDO::FETCH_ASSOC);
 ?>
 
 <div class="page-header">
@@ -163,6 +200,7 @@ $clubs = $pdo->query("SELECT id, name FROM clubs ORDER BY name")->fetchAll(PDO::
 <form method="POST" class="profile-form">
     <div class="form-section">
         <h2>Personuppgifter</h2>
+        <p class="form-help">Denna information används för att förifylla anmälningsformulär.</p>
 
         <div class="form-row">
             <div class="form-group">
@@ -177,10 +215,44 @@ $clubs = $pdo->query("SELECT id, name FROM clubs ORDER BY name")->fetchAll(PDO::
             </div>
         </div>
 
-        <div class="form-group">
-            <label for="email">E-post</label>
-            <input type="email" id="email" name="email"
-                   value="<?= htmlspecialchars($currentUser['email'] ?? '') ?>">
+        <div class="form-row">
+            <div class="form-group">
+                <label for="email">E-post</label>
+                <input type="email" id="email" name="email"
+                       value="<?= htmlspecialchars($currentUser['email'] ?? '') ?>"
+                       placeholder="din@email.se">
+            </div>
+            <div class="form-group">
+                <label for="phone">Telefon</label>
+                <input type="tel" id="phone" name="phone"
+                       value="<?= htmlspecialchars($currentUser['phone'] ?? '') ?>"
+                       placeholder="07X XXX XX XX">
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label for="birth_year">Födelseår</label>
+                <input type="number" id="birth_year" name="birth_year"
+                       value="<?= htmlspecialchars($currentUser['birth_year'] ?? '') ?>"
+                       min="1920" max="<?= date('Y') ?>"
+                       placeholder="ÅÅÅÅ">
+            </div>
+            <div class="form-group">
+                <label for="uci_id">UCI ID</label>
+                <?php if (!empty($currentUser['uci_id'])): ?>
+                    <input type="text" id="uci_id" name="uci_id"
+                           value="<?= htmlspecialchars($currentUser['uci_id'] ?? '') ?>"
+                           readonly disabled
+                           class="input-disabled">
+                    <small class="form-help">UCI ID synkas från din licens och kan inte ändras.</small>
+                <?php else: ?>
+                    <input type="text" id="uci_id" name="uci_id"
+                           value="<?= htmlspecialchars($currentUser['uci_id'] ?? '') ?>"
+                           placeholder="SWE19901231">
+                    <small class="form-help">Fyll i om du har ett UCI ID.</small>
+                <?php endif; ?>
+            </div>
         </div>
     </div>
 
@@ -188,15 +260,35 @@ $clubs = $pdo->query("SELECT id, name FROM clubs ORDER BY name")->fetchAll(PDO::
         <h2>Klubb</h2>
 
         <div class="form-group">
-            <label for="club_id">Välj klubb</label>
+            <label for="club_id">Cykelklubb</label>
             <select id="club_id" name="club_id">
                 <option value="">Ingen klubb</option>
                 <?php foreach ($clubs as $club): ?>
-                    <option value="<?= $club['id'] ?>" <?= $currentUser['club_id'] == $club['id'] ? 'selected' : '' ?>>
+                    <option value="<?= $club['id'] ?>" <?= ($currentUser['club_id'] ?? '') == $club['id'] ? 'selected' : '' ?>>
                         <?= htmlspecialchars($club['name']) ?>
                     </option>
                 <?php endforeach; ?>
             </select>
+        </div>
+    </div>
+
+    <div class="form-section">
+        <h2>Nödkontakt (ICE)</h2>
+        <p class="form-help">In Case of Emergency - kontaktperson vid olycka.</p>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label for="ice_name">Kontaktperson</label>
+                <input type="text" id="ice_name" name="ice_name"
+                       value="<?= htmlspecialchars($currentUser['ice_name'] ?? '') ?>"
+                       placeholder="Namn på anhörig">
+            </div>
+            <div class="form-group">
+                <label for="ice_phone">Telefon (ICE)</label>
+                <input type="tel" id="ice_phone" name="ice_phone"
+                       value="<?= htmlspecialchars($currentUser['ice_phone'] ?? '') ?>"
+                       placeholder="07X XXX XX XX">
+            </div>
         </div>
     </div>
 
@@ -403,6 +495,56 @@ $clubs = $pdo->query("SELECT id, name FROM clubs ORDER BY name")->fetchAll(PDO::
     .avatar-upload-info {
         text-align: left;
     }
+}
+
+/* Form row for side-by-side inputs */
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr;
+    gap: var(--space-md);
+}
+
+@media (min-width: 768px) {
+    .form-row {
+        grid-template-columns: 1fr 1fr;
+    }
+}
+
+/* Disabled input styling */
+.input-disabled,
+input:disabled {
+    background: var(--color-bg-sunken, #f5f5f5);
+    color: var(--color-text-secondary, #6b7280);
+    cursor: not-allowed;
+    opacity: 0.7;
+}
+
+/* Form section spacing */
+.form-section {
+    margin-bottom: var(--space-xl);
+    padding-bottom: var(--space-lg);
+    border-bottom: 1px solid var(--color-border, #e5e7eb);
+}
+
+.form-section:last-of-type {
+    border-bottom: none;
+}
+
+.form-section h2 {
+    margin-bottom: var(--space-sm);
+    font-size: 1.125rem;
+}
+
+.form-help {
+    color: var(--color-text-secondary, #6b7280);
+    font-size: 0.875rem;
+    margin-bottom: var(--space-md);
+}
+
+.form-group small.form-help {
+    margin-top: var(--space-xs);
+    margin-bottom: 0;
+    display: block;
 }
 </style>
 
