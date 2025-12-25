@@ -786,7 +786,7 @@ if (!$series) {
 </div><!-- End individual-standings -->
 
 <!-- Club Standings Section -->
-<div id="club-standings" class="hidden">
+<div id="club-standings" style="display: none;">
 
 <?php if (empty($clubStandings)): ?>
 <section class="card">
@@ -949,18 +949,9 @@ function switchStandingsTab(tab) {
   document.querySelectorAll('.tab-pill').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.tab === tab);
   });
-
   // Show/hide sections
-  const individualDiv = document.getElementById('individual-standings');
-  const clubDiv = document.getElementById('club-standings');
-
-  if (tab === 'individual') {
-    individualDiv.style.setProperty('display', 'block', 'important');
-    clubDiv.style.setProperty('display', 'none', 'important');
-  } else {
-    individualDiv.style.setProperty('display', 'none', 'important');
-    clubDiv.style.setProperty('display', 'block', 'important');
-  }
+  document.getElementById('individual-standings').style.display = tab === 'individual' ? '' : 'none';
+  document.getElementById('club-standings').style.display = tab === 'club' ? '' : 'none';
 }
 
 function toggleClubRiders(btn, event) {
