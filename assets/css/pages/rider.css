@@ -1192,6 +1192,17 @@
     display: block;
 }
 
+/* Chart with proper axes */
+.dashboard-chart-body--axes {
+    padding: var(--space-sm) 0;
+}
+
+.dashboard-chart-svg--axes {
+    width: 100%;
+    height: 180px;
+    display: block;
+}
+
 /* Form Card in Right Column (legacy - keep for compatibility) */
 .form-card {
     background: var(--color-bg-card);

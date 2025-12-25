@@ -613,8 +613,9 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
 
         <!-- STATS CARD - Tabbed Ranking/Form -->
         <?php
-        // Prepare ranking data
+        // Prepare ranking data with proper chart dimensions
         $hasRankingChart = false;
+        $rankMonthLabels = [];
         if ($rankingPosition) {
             $hasRankingChart = !empty($rankingHistoryFull) && count($rankingHistoryFull) >= 2;
             if ($hasRankingChart) {
@@ -623,27 +624,47 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
                 $bestRank = min($rankPositions);
                 $worstRank = max($rankPositions);
 
-                $rankChartWidth = 400;
-                $rankChartHeight = 130;
-                $rankPaddingX = 15;
+                // Chart dimensions with space for axes
+                $rankChartWidth = 450;
+                $rankChartHeight = 200;
+                $rankPaddingLeft = 40;   // Space for Y-axis labels
+                $rankPaddingRight = 20;
                 $rankPaddingTop = 20;
-                $rankPaddingBottom = 15;
+                $rankPaddingBottom = 35; // Space for X-axis labels
                 $rankNumResults = count($rankChartData);
 
-                $rankDisplayMin = max(1, $bestRank - 2);
-                $rankDisplayMax = $worstRank + 5;
+                // Calculate nice Y-axis range
+                $rankDisplayMin = max(1, $bestRank - 1);
+                $rankDisplayMax = $worstRank + 2;
+                // Round to nice numbers
+                $rankDisplayMax = ceil($rankDisplayMax / 5) * 5;
+                if ($rankDisplayMax < 5) $rankDisplayMax = 5;
                 $rankRange = max(1, $rankDisplayMax - $rankDisplayMin);
 
+                $rankGraphWidth = $rankChartWidth - $rankPaddingLeft - $rankPaddingRight;
                 $rankGraphHeight = $rankChartHeight - $rankPaddingTop - $rankPaddingBottom;
-                $rankXStep = $rankNumResults > 1 ? ($rankChartWidth - $rankPaddingX * 2) / ($rankNumResults - 1) : 0;
+                $rankXStep = $rankNumResults > 1 ? $rankGraphWidth / ($rankNumResults - 1) : 0;
 
-                $rankDataPoints = [];
-                foreach ($rankChartData as $idx => $rh) {
-                    $x = $rankPaddingX + ($idx * $rankXStep);
-                    $y = $rankPaddingTop + (($rh['ranking_position'] - $rankDisplayMin) / $rankRange) * $rankGraphHeight;
-                    $rankDataPoints[] = ['x' => $x, 'y' => $y, 'pos' => $rh['ranking_position']];
+                // Generate Y-axis tick values
+                $rankYTicks = [];
+                $tickCount = min(5, $rankDisplayMax);
+                $tickStep = max(1, ceil($rankRange / 4));
+                for ($i = $rankDisplayMin; $i <= $rankDisplayMax; $i += $tickStep) {
+                    $rankYTicks[] = $i;
                 }
 
+                // Build data points and month labels
+                $rankDataPoints = [];
+                $swedishMonthsShort = ['jan', 'feb', 'mar', 'apr', 'maj', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'dec'];
+                foreach ($rankChartData as $idx => $rh) {
+                    $x = $rankPaddingLeft + ($idx * $rankXStep);
+                    $y = $rankPaddingTop + (($rh['ranking_position'] - $rankDisplayMin) / $rankRange) * $rankGraphHeight;
+                    $monthNum = isset($rh['month']) ? (int)date('n', strtotime($rh['month'] . '-01')) - 1 : $idx;
+                    $monthLabel = $swedishMonthsShort[$monthNum % 12] ?? '';
+                    $rankDataPoints[] = ['x' => $x, 'y' => $y, 'pos' => $rh['ranking_position'], 'month' => $monthLabel];
+                }
+
+                // Build smooth path
                 $rankPathD = "M " . $rankDataPoints[0]['x'] . "," . $rankDataPoints[0]['y'];
                 for ($i = 1; $i < count($rankDataPoints); $i++) {
                     $cpX = ($rankDataPoints[$i-1]['x'] + $rankDataPoints[$i]['x']) / 2;
@@ -653,8 +674,9 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
             }
         }
 
-        // Prepare form data
+        // Prepare form data with proper chart dimensions
         $hasFormChart = $hasCompetitiveResults && !empty($formResults);
+        $formEventLabels = [];
         if ($hasFormChart) {
             $chartResults = array_slice($formResults, -10);
             $positions = array_column($chartResults, 'position');
@@ -662,29 +684,46 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
             $avgPlacement = count($positions) > 0 ? array_sum($positions) / count($positions) : 0;
             $avgDisplay = number_format($avgPlacement, 1);
 
-            $chartWidth = 400;
-            $chartHeight = 130;
-            $paddingX = 15;
+            // Chart dimensions with space for axes
+            $chartWidth = 450;
+            $chartHeight = 200;
+            $paddingLeft = 40;
+            $paddingRight = 20;
             $paddingTop = 20;
-            $paddingBottom = 15;
+            $paddingBottom = 35;
             $numResults = count($chartResults);
 
             $maxPos = max($positions);
             $minPos = min($positions);
             $displayMin = max(1, $minPos - 1);
             $displayMax = $maxPos + 2;
+            $displayMax = ceil($displayMax / 5) * 5;
+            if ($displayMax < 5) $displayMax = 5;
             $range = max(1, $displayMax - $displayMin);
 
+            $graphWidth = $chartWidth - $paddingLeft - $paddingRight;
             $graphHeight = $chartHeight - $paddingTop - $paddingBottom;
-            $xStep = $numResults > 1 ? ($chartWidth - $paddingX * 2) / ($numResults - 1) : 0;
+            $xStep = $numResults > 1 ? $graphWidth / ($numResults - 1) : 0;
 
-            $dataPoints = [];
-            foreach ($chartResults as $idx => $fr) {
-                $x = $paddingX + ($idx * $xStep);
-                $y = $paddingTop + (($fr['position'] - $displayMin) / $range) * $graphHeight;
-                $dataPoints[] = ['x' => $x, 'y' => $y, 'pos' => $fr['position']];
+            // Generate Y-axis ticks
+            $formYTicks = [];
+            $tickStep = max(1, ceil($range / 4));
+            for ($i = $displayMin; $i <= $displayMax; $i += $tickStep) {
+                $formYTicks[] = $i;
             }
 
+            // Build data points
+            $dataPoints = [];
+            $swedishMonthsShort = ['jan', 'feb', 'mar', 'apr', 'maj', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'dec'];
+            foreach ($chartResults as $idx => $fr) {
+                $x = $paddingLeft + ($idx * $xStep);
+                $y = $paddingTop + (($fr['position'] - $displayMin) / $range) * $graphHeight;
+                $eventDate = strtotime($fr['event_date'] ?? 'now');
+                $monthLabel = $swedishMonthsShort[(int)date('n', $eventDate) - 1] ?? '';
+                $dataPoints[] = ['x' => $x, 'y' => $y, 'pos' => $fr['position'], 'month' => $monthLabel];
+            }
+
+            // Build smooth path
             $pathD = "M " . $dataPoints[0]['x'] . "," . $dataPoints[0]['y'];
             for ($i = 1; $i < count($dataPoints); $i++) {
                 $cpX = ($dataPoints[$i-1]['x'] + $dataPoints[$i]['x']) / 2;
@@ -727,19 +766,47 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
                     </div>
                 </div>
                 <?php if ($hasRankingChart): ?>
-                <div class="dashboard-chart-body">
-                    <svg viewBox="0 0 <?= $rankChartWidth ?> <?= $rankChartHeight ?>" preserveAspectRatio="none" class="dashboard-chart-svg">
+                <div class="dashboard-chart-body dashboard-chart-body--axes">
+                    <svg viewBox="0 0 <?= $rankChartWidth ?> <?= $rankChartHeight ?>" preserveAspectRatio="xMidYMid meet" class="dashboard-chart-svg dashboard-chart-svg--axes">
                         <defs>
                             <linearGradient id="rankingGradient" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="0%" stop-color="#ef4444" stop-opacity="0.4"/>
-                                <stop offset="100%" stop-color="#ef4444" stop-opacity="0.05"/>
+                                <stop offset="0%" stop-color="#ef4444" stop-opacity="0.3"/>
+                                <stop offset="100%" stop-color="#ef4444" stop-opacity="0.02"/>
                             </linearGradient>
                         </defs>
+
+                        <!-- Horizontal grid lines -->
+                        <?php foreach ($rankYTicks as $tick):
+                            $tickY = $rankPaddingTop + (($tick - $rankDisplayMin) / $rankRange) * $rankGraphHeight;
+                        ?>
+                        <line x1="<?= $rankPaddingLeft ?>" y1="<?= $tickY ?>" x2="<?= $rankChartWidth - $rankPaddingRight ?>" y2="<?= $tickY ?>" stroke="#e5e7eb" stroke-width="1"/>
+                        <?php endforeach; ?>
+
+                        <!-- Y-axis labels -->
+                        <?php foreach ($rankYTicks as $tick):
+                            $tickY = $rankPaddingTop + (($tick - $rankDisplayMin) / $rankRange) * $rankGraphHeight;
+                        ?>
+                        <text x="<?= $rankPaddingLeft - 8 ?>" y="<?= $tickY + 4 ?>" font-size="11" fill="#6b7280" text-anchor="end" font-family="system-ui, sans-serif"><?= $tick ?></text>
+                        <?php endforeach; ?>
+
+                        <!-- X-axis labels (months) -->
+                        <?php
+                        $labelStep = max(1, floor(count($rankDataPoints) / 6));
+                        foreach ($rankDataPoints as $idx => $dp):
+                            if ($idx % $labelStep === 0 || $idx === count($rankDataPoints) - 1):
+                        ?>
+                        <text x="<?= $dp['x'] ?>" y="<?= $rankChartHeight - 8 ?>" font-size="11" fill="#6b7280" text-anchor="middle" font-family="system-ui, sans-serif"><?= ucfirst($dp['month']) ?></text>
+                        <?php endif; endforeach; ?>
+
+                        <!-- Area fill -->
                         <path d="<?= $rankAreaPath ?>" fill="url(#rankingGradient)"/>
+
+                        <!-- Line -->
                         <path d="<?= $rankPathD ?>" fill="none" stroke="#ef4444" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+
+                        <!-- Data points -->
                         <?php foreach ($rankDataPoints as $idx => $dp): ?>
-                        <circle cx="<?= $dp['x'] ?>" cy="<?= $dp['y'] ?>" r="4" fill="#ef4444" stroke="white" stroke-width="1.5"/>
-                        <text x="<?= $dp['x'] ?>" y="<?= $dp['y'] - 8 ?>" font-size="9" fill="var(--color-text-secondary)" text-anchor="middle" font-weight="600"><?= $dp['pos'] ?></text>
+                        <circle cx="<?= $dp['x'] ?>" cy="<?= $dp['y'] ?>" r="5" fill="#ef4444" stroke="white" stroke-width="2"/>
                         <?php endforeach; ?>
                     </svg>
                 </div>
@@ -767,19 +834,47 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
                         </div>
                     </div>
                 </div>
-                <div class="dashboard-chart-body">
-                    <svg viewBox="0 0 <?= $chartWidth ?> <?= $chartHeight ?>" preserveAspectRatio="none" class="dashboard-chart-svg">
+                <div class="dashboard-chart-body dashboard-chart-body--axes">
+                    <svg viewBox="0 0 <?= $chartWidth ?> <?= $chartHeight ?>" preserveAspectRatio="xMidYMid meet" class="dashboard-chart-svg dashboard-chart-svg--axes">
                         <defs>
                             <linearGradient id="formGradient" x1="0" y1="0" x2="0" y2="1">
-                                <stop offset="0%" stop-color="#61CE70" stop-opacity="0.4"/>
-                                <stop offset="100%" stop-color="#61CE70" stop-opacity="0.05"/>
+                                <stop offset="0%" stop-color="#61CE70" stop-opacity="0.3"/>
+                                <stop offset="100%" stop-color="#61CE70" stop-opacity="0.02"/>
                             </linearGradient>
                         </defs>
+
+                        <!-- Horizontal grid lines -->
+                        <?php foreach ($formYTicks as $tick):
+                            $tickY = $paddingTop + (($tick - $displayMin) / $range) * $graphHeight;
+                        ?>
+                        <line x1="<?= $paddingLeft ?>" y1="<?= $tickY ?>" x2="<?= $chartWidth - $paddingRight ?>" y2="<?= $tickY ?>" stroke="#e5e7eb" stroke-width="1"/>
+                        <?php endforeach; ?>
+
+                        <!-- Y-axis labels -->
+                        <?php foreach ($formYTicks as $tick):
+                            $tickY = $paddingTop + (($tick - $displayMin) / $range) * $graphHeight;
+                        ?>
+                        <text x="<?= $paddingLeft - 8 ?>" y="<?= $tickY + 4 ?>" font-size="11" fill="#6b7280" text-anchor="end" font-family="system-ui, sans-serif"><?= $tick ?></text>
+                        <?php endforeach; ?>
+
+                        <!-- X-axis labels (months) -->
+                        <?php
+                        $formLabelStep = max(1, floor(count($dataPoints) / 6));
+                        foreach ($dataPoints as $idx => $dp):
+                            if ($idx % $formLabelStep === 0 || $idx === count($dataPoints) - 1):
+                        ?>
+                        <text x="<?= $dp['x'] ?>" y="<?= $chartHeight - 8 ?>" font-size="11" fill="#6b7280" text-anchor="middle" font-family="system-ui, sans-serif"><?= ucfirst($dp['month']) ?></text>
+                        <?php endif; endforeach; ?>
+
+                        <!-- Area fill -->
                         <path d="<?= $areaPath ?>" fill="url(#formGradient)"/>
+
+                        <!-- Line -->
                         <path d="<?= $pathD ?>" fill="none" stroke="#61CE70" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+
+                        <!-- Data points -->
                         <?php foreach ($dataPoints as $idx => $dp): ?>
-                        <circle cx="<?= $dp['x'] ?>" cy="<?= $dp['y'] ?>" r="4" fill="#61CE70" stroke="white" stroke-width="1.5"/>
-                        <text x="<?= $dp['x'] ?>" y="<?= $dp['y'] - 8 ?>" font-size="9" fill="var(--color-text-secondary)" text-anchor="middle" font-weight="600"><?= $dp['pos'] ?></text>
+                        <circle cx="<?= $dp['x'] ?>" cy="<?= $dp['y'] ?>" r="5" fill="#61CE70" stroke="white" stroke-width="2"/>
                         <?php endforeach; ?>
                     </svg>
                 </div>
