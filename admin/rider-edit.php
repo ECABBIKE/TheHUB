@@ -945,7 +945,10 @@ include __DIR__ . '/components/unified-layout.php';
 
   foreach ($allYears as $year => $data):
    $resultsCount = $data['results_count'] ?? ($yearsWithResultsMap[$year] ?? 0);
-   $isLocked = $data['locked'] || $resultsCount > 0;
+   // Only locked if: club is already set AND (explicitly locked OR has results)
+   // If no club is set, allow setting one even if results exist
+   $hasClubSet = !empty($data['club_id']);
+   $isLocked = $hasClubSet && ($data['locked'] || $resultsCount > 0);
   ?>
   <tr>
    <td><strong><?= $year ?></strong></td>
