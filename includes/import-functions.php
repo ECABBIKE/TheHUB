@@ -512,35 +512,51 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
                     );
 
                     if ($rider) {
-                        $matching_stats['riders_found']++;
-                        error_log("IMPORT RIDER FOUND BY NAME: rider_id={$rider['id']} for '{$firstName}' '{$lastName}'");
+                        $existingLicense = $rider['license_number'] ?? '';
+                        $existingLicenseDigits = preg_replace('/[^0-9]/', '', $existingLicense);
+                        $existingUciDigits = preg_replace('/[^0-9]/', '', $rider['uci_id'] ?? '');
 
-                        // If we found by name and import has UCI ID, check if we should update
-                        if (!empty($licenseNumber)) {
-                            $existingLicense = $rider['license_number'] ?? '';
-                            $importedDigits = preg_replace('/[^0-9]/', '', $licenseNumber);
-                            $existingLicenseDigits = preg_replace('/[^0-9]/', '', $existingLicense);
-                            $existingUciDigits = preg_replace('/[^0-9]/', '', $rider['uci_id'] ?? '');
+                        // UCI-ID CONFLICT CHECK (same logic as preview!)
+                        // If both CSV and existing rider have UCI-IDs but they're different,
+                        // these are DIFFERENT PEOPLE with the same name - don't match
+                        if (!empty($licenseNumberDigits) && !empty($existingLicenseDigits) && $licenseNumberDigits !== $existingLicenseDigits) {
+                            error_log("IMPORT RIDER UCI CONFLICT: '{$firstName}' '{$lastName}' - CSV UCI: {$licenseNumberDigits}, DB UCI: {$existingLicenseDigits} - treating as different person");
+                            $rider = null; // Don't use this rider - they have different UCI-IDs
+                        } elseif (!empty($licenseNumberDigits) && !empty($existingUciDigits) && $licenseNumberDigits !== $existingUciDigits) {
+                            error_log("IMPORT RIDER UCI CONFLICT (uci_id field): '{$firstName}' '{$lastName}' - CSV UCI: {$licenseNumberDigits}, DB uci_id: {$existingUciDigits} - treating as different person");
+                            $rider = null; // Don't use this rider - they have different UCI-IDs
+                        }
 
-                            // Check if existing license is a temp SWE-ID (SWE25XXXXX format)
-                            $isTempSweId = preg_match('/^SWE\d{7}$/', str_replace([' ', '-'], '', $existingLicense));
-                            // Check if imported license is a real UCI-ID (14+ chars)
-                            $importedClean = str_replace([' ', '-'], '', $licenseNumber);
-                            $isRealUciId = strlen($importedClean) >= 14 && preg_match('/^[A-Z]{3}\d{11}/', $importedClean);
+                        if ($rider) {
+                            $matching_stats['riders_found']++;
+                            error_log("IMPORT RIDER FOUND BY NAME: rider_id={$rider['id']} for '{$firstName}' '{$lastName}'");
 
-                            // Update license_number if:
-                            // 1. Empty - always update
-                            // 2. Has temp SWE-ID and import has real UCI-ID - replace SWE with UCI
-                            $shouldUpdate = empty($existingLicense) ||
-                                           ($isTempSweId && $isRealUciId && $importedDigits !== $existingLicenseDigits);
+                            // If we found by name and import has UCI ID, check if we should update
+                            if (!empty($licenseNumber)) {
+                                $importedDigits = preg_replace('/[^0-9]/', '', $licenseNumber);
 
-                            if ($shouldUpdate && $importedDigits !== $existingUciDigits) {
-                                $db->update('riders', ['license_number' => $licenseNumber], 'id = ?', [$rider['id']]);
-                                $matching_stats['riders_updated_with_uci'] = ($matching_stats['riders_updated_with_uci'] ?? 0) + 1;
-                                error_log("IMPORT RIDER UCI UPDATED: rider_id={$rider['id']} old='{$existingLicense}' new='{$licenseNumber}'");
+                                // Check if existing license is a temp SWE-ID (SWE25XXXXX format)
+                                $isTempSweId = preg_match('/^SWE\d{7}$/', str_replace([' ', '-'], '', $existingLicense));
+                                // Check if imported license is a real UCI-ID (14+ chars)
+                                $importedClean = str_replace([' ', '-'], '', $licenseNumber);
+                                $isRealUciId = strlen($importedClean) >= 14 && preg_match('/^[A-Z]{3}\d{11}/', $importedClean);
+
+                                // Update license_number if:
+                                // 1. Empty - always update
+                                // 2. Has temp SWE-ID and import has real UCI-ID - replace SWE with UCI
+                                $shouldUpdate = empty($existingLicense) ||
+                                               ($isTempSweId && $isRealUciId && $importedDigits !== $existingLicenseDigits);
+
+                                if ($shouldUpdate && $importedDigits !== $existingUciDigits) {
+                                    $db->update('riders', ['license_number' => $licenseNumber], 'id = ?', [$rider['id']]);
+                                    $matching_stats['riders_updated_with_uci'] = ($matching_stats['riders_updated_with_uci'] ?? 0) + 1;
+                                    error_log("IMPORT RIDER UCI UPDATED: rider_id={$rider['id']} old='{$existingLicense}' new='{$licenseNumber}'");
+                                }
                             }
                         }
-                    } else {
+                    }
+
+                    if (!$rider) {
                         error_log("IMPORT RIDER NOT FOUND BY NAME: '{$firstName}' '{$lastName}'");
                     }
                 }
