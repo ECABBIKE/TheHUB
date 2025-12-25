@@ -1,117 +1,129 @@
 <?php
 /**
- * Admin tool to clear results for a specific event
- * Useful when import went wrong and rollback isn't available
+ * Clear Event Results - Rensa resultat per event eller serie
  */
 require_once __DIR__ . '/../config.php';
 require_admin();
 
 $db = getDB();
+$pdo = $db->getPdo();
+
 $message = '';
 $messageType = 'info';
 
-// Handle delete action
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
- checkCsrf();
+// Hämta alla serier
+$allSeries = $db->getAll("SELECT id, name, year FROM series ORDER BY year DESC, name");
 
- $action = $_POST['action'] ?? '';
-
- if ($action === 'delete_results') {
- $eventId = (int)$_POST['event_id'];
-
- if (!$eventId) {
-  $message = 'Inget event valt';
-  $messageType = 'error';
- } else {
-  try {
-  // Get count before delete
-  $count = $db->getRow("SELECT COUNT(*) as cnt FROM results WHERE event_id = ?", [$eventId]);
-  $resultCount = $count['cnt'] ?? 0;
-
-  // Delete results
-  $db->delete('results', 'event_id = ?', [$eventId]);
-
-  $message ="Raderade {$resultCount} resultat för eventet";
-  $messageType = 'success';
-
-  } catch (Exception $e) {
-  $message = 'Fel vid radering: ' . $e->getMessage();
-  $messageType = 'error';
-  }
- }
- } elseif ($action === 'cleanup_orphans') {
- try {
-  // Count before delete
-  $beforeCount = $db->getRow("SELECT COUNT(*) as cnt FROM riders WHERE id NOT IN (SELECT DISTINCT cyclist_id FROM results)");
-
-  // Delete riders that have no results
-  $db->query("
-  DELETE FROM riders
-  WHERE id NOT IN (SELECT DISTINCT cyclist_id FROM results)
- ");
-
-  $deletedCount = $beforeCount['cnt'] ?? 0;
-
-  $message ="Raderade {$deletedCount} föräldralösa deltagare (utan resultat)";
-  $messageType = 'success';
-
- } catch (Exception $e) {
-  $message = 'Fel vid rensning: ' . $e->getMessage();
-  $messageType = 'error';
- }
- }
-}
-
-// Get selected event
+// Välj serie eller event
+$selectedSeriesId = isset($_GET['series_id']) ? (int)$_GET['series_id'] : null;
 $selectedEventId = isset($_GET['event_id']) ? (int)$_GET['event_id'] : null;
 
-// Get all events with result counts
-$events = $db->getAll("
- SELECT
- e.id,
- e.name,
- e.date,
- e.location,
- COUNT(r.id) as result_count
- FROM events e
- LEFT JOIN results r ON e.id = r.event_id
- GROUP BY e.id
- ORDER BY e.date DESC
-");
+// Hantera radering
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    checkCsrf();
+    $action = $_POST['action'] ?? '';
 
-// Get results for selected event
-$eventResults = [];
-$selectedEvent = null;
-if ($selectedEventId) {
- $selectedEvent = $db->getRow("SELECT * FROM events WHERE id = ?", [$selectedEventId]);
+    if ($action === 'delete_event_results') {
+        $eventId = (int)$_POST['event_id'];
+        try {
+            $pdo->beginTransaction();
 
- if ($selectedEvent) {
- $eventResults = $db->getAll("
-  SELECT
-  r.*,
-  CONCAT(ri.firstname, ' ', ri.lastname) as rider_name,
-  ri.license_number,
-  c.name as club_name,
-  cls.display_name as class_name
-  FROM results r
-  JOIN riders ri ON r.cyclist_id = ri.id
-  LEFT JOIN clubs c ON ri.club_id = c.id
-  LEFT JOIN classes cls ON r.class_id = cls.id
-  WHERE r.event_id = ?
-  ORDER BY cls.sort_order ASC, r.position ASC
- ", [$selectedEventId]);
- }
+            // Radera series_results först
+            $stmt = $pdo->prepare("DELETE FROM series_results WHERE event_id = ?");
+            $stmt->execute([$eventId]);
+            $seriesDeleted = $stmt->rowCount();
+
+            // Radera results
+            $stmt = $pdo->prepare("DELETE FROM results WHERE event_id = ?");
+            $stmt->execute([$eventId]);
+            $resultsDeleted = $stmt->rowCount();
+
+            $pdo->commit();
+            $message = "Raderade {$resultsDeleted} resultat och {$seriesDeleted} serieresultat";
+            $messageType = 'success';
+        } catch (Exception $e) {
+            $pdo->rollBack();
+            $message = "Fel: " . $e->getMessage();
+            $messageType = 'error';
+        }
+    }
+
+    if ($action === 'delete_series_results') {
+        $seriesId = (int)$_POST['series_id'];
+        try {
+            $pdo->beginTransaction();
+
+            $eventIds = $db->getAll("SELECT event_id FROM series_events WHERE series_id = ?", [$seriesId]);
+            $totalResults = 0;
+            $totalSeriesResults = 0;
+
+            foreach ($eventIds as $e) {
+                $stmt = $pdo->prepare("DELETE FROM series_results WHERE event_id = ? AND series_id = ?");
+                $stmt->execute([$e['event_id'], $seriesId]);
+                $totalSeriesResults += $stmt->rowCount();
+
+                $stmt = $pdo->prepare("DELETE FROM results WHERE event_id = ?");
+                $stmt->execute([$e['event_id']]);
+                $totalResults += $stmt->rowCount();
+            }
+
+            $pdo->commit();
+            $message = "Raderade {$totalResults} resultat och {$totalSeriesResults} serieresultat för hela serien";
+            $messageType = 'success';
+        } catch (Exception $e) {
+            $pdo->rollBack();
+            $message = "Fel: " . $e->getMessage();
+            $messageType = 'error';
+        }
+    }
+
+    if ($action === 'cleanup_orphans') {
+        try {
+            $stmt = $pdo->query("
+                DELETE FROM riders
+                WHERE id NOT IN (SELECT DISTINCT cyclist_id FROM results WHERE cyclist_id IS NOT NULL)
+            ");
+            $deleted = $stmt->rowCount();
+            $message = "Raderade {$deleted} åkare utan resultat";
+            $messageType = 'success';
+        } catch (Exception $e) {
+            $message = "Fel: " . $e->getMessage();
+            $messageType = 'error';
+        }
+    }
 }
 
-// Get orphan count
-$orphanCount = $db->getRow("
- SELECT COUNT(*) as cnt
- FROM riders
- WHERE id NOT IN (SELECT DISTINCT cyclist_id FROM results)
-");
+// Hämta events
+$events = [];
+if ($selectedSeriesId) {
+    $events = $db->getAll("
+        SELECT e.id, e.name, e.date, e.location,
+               (SELECT COUNT(*) FROM results WHERE event_id = e.id) as result_count,
+               (SELECT COUNT(*) FROM series_results WHERE event_id = e.id AND series_id = ?) as series_result_count
+        FROM events e
+        JOIN series_events se ON e.id = se.event_id
+        WHERE se.series_id = ?
+        ORDER BY e.date
+    ", [$selectedSeriesId, $selectedSeriesId]);
+} else {
+    $events = $db->getAll("
+        SELECT e.id, e.name, e.date, e.location,
+               (SELECT COUNT(*) FROM results WHERE event_id = e.id) as result_count,
+               0 as series_result_count
+        FROM events e
+        ORDER BY e.date DESC
+        LIMIT 50
+    ");
+}
 
-// Page config for unified layout
-$page_title = 'Rensa event-resultat';
+// Räkna orphans
+$orphanCount = $db->getRow("
+    SELECT COUNT(*) as cnt FROM riders
+    WHERE id NOT IN (SELECT DISTINCT cyclist_id FROM results WHERE cyclist_id IS NOT NULL)
+")['cnt'] ?? 0;
+
+// Page config
+$page_title = 'Rensa resultat';
 $breadcrumbs = [
     ['label' => 'Verktyg', 'url' => '/admin/tools'],
     ['label' => 'Rensa resultat']
@@ -119,167 +131,137 @@ $breadcrumbs = [
 include __DIR__ . '/components/unified-layout.php';
 ?>
 
+<h1 class="text-primary mb-lg">
+    <i data-lucide="trash-2"></i> Rensa resultat
+</h1>
 
- 
- <h1 class="text-primary mb-lg">
-  <i data-lucide="trash-2"></i>
-  Rensa event-resultat
- </h1>
+<?php if ($message): ?>
+<div class="alert alert-<?= $messageType ?> mb-lg">
+    <?= h($message) ?>
+</div>
+<?php endif; ?>
 
- <?php if ($message): ?>
-  <div class="alert alert-<?= $messageType ?> mb-lg">
-  <i data-lucide="<?= $messageType === 'success' ? 'check-circle' : 'alert-circle' ?>"></i>
-  <?= h($message) ?>
-  </div>
- <?php endif; ?>
+<div class="alert alert--warning mb-lg">
+    <i data-lucide="alert-triangle"></i>
+    <strong>Varning!</strong> Radering kan inte ångras. Gör en backup först.
+</div>
 
- <!-- Warning -->
- <div class="alert alert--warning mb-lg">
-  <i data-lucide="alert-triangle"></i>
-  <div>
-  <strong>Varning!</strong> Att radera resultat kan inte ångras.
-  Se till att du har en backup eller är helt säker innan du fortsätter.
-  </div>
- </div>
+<div class="grid grid-cols-1 md-grid-cols-2 gap-lg mb-lg">
+    <!-- Serie-väljare -->
+    <div class="card">
+        <div class="card-header">
+            <h3><i data-lucide="trophy"></i> Välj serie</h3>
+        </div>
+        <div class="card-body">
+            <form method="GET">
+                <div class="form-group mb-md">
+                    <select name="series_id" class="form-select" onchange="this.form.submit()">
+                        <option value="">-- Alla events (senaste 50) --</option>
+                        <?php foreach ($allSeries as $s): ?>
+                        <option value="<?= $s['id'] ?>" <?= $selectedSeriesId == $s['id'] ? 'selected' : '' ?>>
+                            <?= h($s['name']) ?> (<?= $s['year'] ?>)
+                        </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+            </form>
 
- <div class="grid grid-cols-1 gs-lg-grid-cols-2 gap-lg">
-  <!-- Event Selector -->
-  <div class="card">
-  <div class="card-header">
-   <h2 class="text-primary">
-   <i data-lucide="calendar"></i>
-   Välj event att rensa
-   </h2>
-  </div>
-  <div class="card-body">
-   <form method="GET" class="mb-md">
-   <div class="form-group">
-    <label class="label">Event</label>
-    <select name="event_id" class="input" onchange="this.form.submit()">
-    <option value="">-- Välj ett event --</option>
-    <?php foreach ($events as $event): ?>
-     <option value="<?= $event['id'] ?>" <?= $selectedEventId == $event['id'] ? 'selected' : '' ?>>
-     <?= h($event['name']) ?>
-     (<?= date('Y-m-d', strtotime($event['date'])) ?>)
-     - <?= $event['result_count'] ?> resultat
-     </option>
-    <?php endforeach; ?>
-    </select>
-   </div>
-   </form>
+            <?php if ($selectedSeriesId): ?>
+            <form method="POST" onsubmit="return confirm('VARNING! Radera ALLA resultat för hela serien?')">
+                <?= csrf_field() ?>
+                <input type="hidden" name="action" value="delete_series_results">
+                <input type="hidden" name="series_id" value="<?= $selectedSeriesId ?>">
+                <button type="submit" class="btn btn-danger w-full">
+                    <i data-lucide="alert-triangle"></i>
+                    Radera ALLA resultat i serien
+                </button>
+            </form>
+            <?php endif; ?>
+        </div>
+    </div>
 
-   <?php if ($selectedEvent && count($eventResults) > 0): ?>
-   <form method="POST" onsubmit="return confirm('VARNING!\n\nDu är på väg att radera <?= count($eventResults) ?> resultat för:\n<?= addslashes($selectedEvent['name']) ?>\n\nDetta kan INTE ångras!\n\nÄr du helt säker?');">
-    <?= csrf_field() ?>
-    <input type="hidden" name="action" value="delete_results">
-    <input type="hidden" name="event_id" value="<?= $selectedEventId ?>">
-    <button type="submit" class="btn btn-danger w-full">
-    <i data-lucide="trash-2"></i>
-    Radera alla <?= count($eventResults) ?> resultat
-    </button>
-   </form>
-   <?php elseif ($selectedEvent): ?>
-   <div class="alert alert--info">
-    <i data-lucide="info"></i>
-    Inga resultat att radera för detta event
-   </div>
-   <?php endif; ?>
-  </div>
-  </div>
+    <!-- Orphan cleanup -->
+    <div class="card">
+        <div class="card-header">
+            <h3><i data-lucide="user-x"></i> Rensa åkare utan resultat</h3>
+        </div>
+        <div class="card-body">
+            <div class="stat-card mb-md">
+                <div class="stat-number"><?= number_format($orphanCount) ?></div>
+                <div class="stat-label">Åkare utan resultat</div>
+            </div>
 
-  <!-- Cleanup Orphans -->
-  <div class="card">
-  <div class="card-header">
-   <h2 class="text-primary">
-   <i data-lucide="user-x"></i>
-   Rensa föräldralösa deltagare
-   </h2>
-  </div>
-  <div class="card-body">
-   <p class="text-secondary mb-md">
-   Radera deltagare som inte har några resultat kopplade till sig.
-   Detta kan vara deltagare som skapades vid import men vars resultat sedan raderades.
-   </p>
+            <?php if ($orphanCount > 0): ?>
+            <form method="POST" onsubmit="return confirm('Radera <?= $orphanCount ?> åkare utan resultat?')">
+                <?= csrf_field() ?>
+                <input type="hidden" name="action" value="cleanup_orphans">
+                <button type="submit" class="btn btn-warning w-full">
+                    <i data-lucide="user-x"></i>
+                    Rensa <?= number_format($orphanCount) ?> åkare
+                </button>
+            </form>
+            <?php else: ?>
+            <div class="alert alert-success">Inga åkare att rensa</div>
+            <?php endif; ?>
+        </div>
+    </div>
+</div>
 
-   <div class="stat-card mb-md">
-   <div class="stat-number"><?= $orphanCount['cnt'] ?? 0 ?></div>
-   <div class="stat-label">Deltagare utan resultat</div>
-   </div>
+<!-- Events-lista -->
+<div class="card">
+    <div class="card-header">
+        <h3><i data-lucide="calendar"></i> Events (<?= count($events) ?>)</h3>
+    </div>
+    <div class="card-body gs-padding-0">
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>ID</th>
+                        <th>Event</th>
+                        <th>Datum</th>
+                        <th>Resultat</th>
+                        <th>Serieresultat</th>
+                        <th>Åtgärd</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($events as $event): ?>
+                    <tr>
+                        <td><?= $event['id'] ?></td>
+                        <td><strong><?= h($event['name']) ?></strong></td>
+                        <td><?= $event['date'] ?></td>
+                        <td>
+                            <span class="badge badge-<?= $event['result_count'] > 0 ? 'primary' : 'secondary' ?>">
+                                <?= $event['result_count'] ?>
+                            </span>
+                        </td>
+                        <td>
+                            <span class="badge badge-<?= $event['series_result_count'] > 0 ? 'warning' : 'secondary' ?>">
+                                <?= $event['series_result_count'] ?>
+                            </span>
+                        </td>
+                        <td>
+                            <?php if ($event['result_count'] > 0): ?>
+                            <form method="POST" style="display:inline" onsubmit="return confirm('Radera <?= $event['result_count'] ?> resultat för <?= h($event['name']) ?>?')">
+                                <?= csrf_field() ?>
+                                <input type="hidden" name="action" value="delete_event_results">
+                                <input type="hidden" name="event_id" value="<?= $event['id'] ?>">
+                                <button type="submit" class="btn btn-danger btn-sm">
+                                    <i data-lucide="trash-2"></i> Radera
+                                </button>
+                            </form>
+                            <?php else: ?>
+                            <span class="text-muted">Inga resultat</span>
+                            <?php endif; ?>
+                        </td>
+                    </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
 
-   <?php if (($orphanCount['cnt'] ?? 0) > 0): ?>
-   <form method="POST" onsubmit="return confirm('Radera <?= $orphanCount['cnt'] ?> deltagare utan resultat?\n\nDetta kan INTE ångras!');">
-    <?= csrf_field() ?>
-    <input type="hidden" name="action" value="cleanup_orphans">
-    <button type="submit" class="btn btn-warning w-full">
-    <i data-lucide="user-x"></i>
-    Rensa <?= $orphanCount['cnt'] ?> föräldralösa
-    </button>
-   </form>
-   <?php else: ?>
-   <div class="alert alert--success">
-    <i data-lucide="check"></i>
-    Inga föräldralösa deltagare att rensa
-   </div>
-   <?php endif; ?>
-  </div>
-  </div>
- </div>
-
- <!-- Results Preview -->
- <?php if ($selectedEvent && count($eventResults) > 0): ?>
-  <div class="card mt-lg">
-  <div class="card-header">
-   <h2 class="text-primary">
-   <i data-lucide="list"></i>
-   Resultat för <?= h($selectedEvent['name']) ?> (<?= count($eventResults) ?>)
-   </h2>
-  </div>
-  <div class="card-body gs-padding-0">
-   <div class="table-responsive" style="max-height: 400px; overflow: auto;">
-   <table class="table table-sm">
-    <thead style="position: sticky; top: 0; background: var(--gs-white);">
-    <tr>
-     <th>Plac</th>
-     <th>Namn</th>
-     <th>UCI-ID</th>
-     <th>Klubb</th>
-     <th>Klass</th>
-     <th>Tid</th>
-     <th>Poäng</th>
-    </tr>
-    </thead>
-    <tbody>
-    <?php foreach ($eventResults as $result): ?>
-     <tr>
-     <td><?= $result['position'] ?: '-' ?></td>
-     <td><strong><?= h($result['rider_name']) ?></strong></td>
-     <td><code class="text-xs"><?= h($result['license_number']) ?: '-' ?></code></td>
-     <td><?= h($result['club_name']) ?: '-' ?></td>
-     <td>
-      <?php if ($result['class_name']): ?>
-      <span class="badge badge-sm badge-primary"><?= h($result['class_name']) ?></span>
-      <?php else: ?>
-      -
-      <?php endif; ?>
-     </td>
-     <td style="font-family: monospace;"><?= h($result['finish_time']) ?: '-' ?></td>
-     <td><?= (int)$result['points'] ?></td>
-     </tr>
-    <?php endforeach; ?>
-    </tbody>
-   </table>
-   </div>
-  </div>
-  </div>
- <?php endif; ?>
-
- <div class="mt-lg">
-  <a href="/admin/import-results.php" class="btn btn--secondary">
-  <i data-lucide="arrow-left"></i>
-  Tillbaka till import
-  </a>
- </div>
- </div>
-
-
+</div>
 <?php include __DIR__ . '/components/unified-layout-footer.php'; ?>
