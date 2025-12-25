@@ -28,6 +28,10 @@ if (!$series) {
     return;
 }
 
+// Club championship only available for series from 2024 onwards
+// Earlier data (2016-2023) is unreliable
+$showClubChampionship = isset($series['year']) && (int)$series['year'] >= 2024;
+
 // Check if series_events table exists
 $useSeriesEvents = false;
 try {
@@ -248,9 +252,15 @@ if (!empty($eventIds)) {
 // ============================================================================
 // CLUB STANDINGS with 100%/50% rule
 // Best rider per club/class/event = 100%, second best = 50%, others = 0%
+// Only calculated for series from 2024 onwards
 // ============================================================================
 $clubStandings = [];
 $clubRiderContributions = [];
+
+if (!$showClubChampionship) {
+    // Skip club standings calculation for series before 2024
+    goto skip_club_standings;
+}
 
 foreach ($events as $event) {
     $eventId = $event['id'];
@@ -266,6 +276,7 @@ foreach ($events as $event) {
                 rd.lastname,
                 c.id as club_id,
                 c.name as club_name,
+                c.city as club_city,
                 cls.name as class_name,
                 cls.display_name as class_display_name
             FROM series_results sr
@@ -290,6 +301,7 @@ foreach ($events as $event) {
                 rd.lastname,
                 c.id as club_id,
                 c.name as club_name,
+                c.city as club_city,
                 cls.name as class_name,
                 cls.display_name as class_display_name
             FROM results r
@@ -338,10 +350,13 @@ foreach ($events as $event) {
                 $clubStandings[$clubId] = [
                     'club_id' => $clubId,
                     'club_name' => $clubName,
+                    'club_city' => $rider['club_city'] ?? '',
                     'riders' => [],
                     'total_points' => 0,
                     'event_points' => [],
-                    'rider_count' => 0
+                    'rider_count' => 0,
+                    'best_event_points' => 0,
+                    'events_with_points' => 0
                 ];
                 foreach ($events as $e) {
                     $clubStandings[$clubId]['event_points'][$e['id']] = 0;
@@ -385,6 +400,23 @@ foreach ($clubRiderContributions as $riderData) {
     }
 }
 
+// Calculate best_event_points and events_with_points for each club
+foreach ($clubStandings as $clubId => &$club) {
+    $maxEventPoints = 0;
+    $eventsWithPoints = 0;
+    foreach ($club['event_points'] as $pts) {
+        if ($pts > $maxEventPoints) {
+            $maxEventPoints = $pts;
+        }
+        if ($pts > 0) {
+            $eventsWithPoints++;
+        }
+    }
+    $club['best_event_points'] = $maxEventPoints;
+    $club['events_with_points'] = $eventsWithPoints;
+}
+unset($club);
+
 // Sort clubs by total points
 uasort($clubStandings, function($a, $b) {
     return $b['total_points'] - $a['total_points'];
@@ -397,6 +429,8 @@ foreach ($clubStandings as &$club) {
     });
 }
 unset($club);
+
+skip_club_standings:
 ?>
 
 <div class="page-header">
@@ -462,9 +496,11 @@ unset($club);
         <button class="tab-pill active" data-tab="individual" onclick="switchTab('individual')">
             <i data-lucide="user" class="standings-tab-icon"></i> Individuellt
         </button>
+        <?php if ($showClubChampionship): ?>
         <button class="tab-pill" data-tab="club" onclick="switchTab('club')">
-            <i data-lucide="shield" class="standings-tab-icon"></i> Klubbmästarskap
+            <i data-lucide="shield" class="standings-tab-icon"></i> Klubbmastarskap
         </button>
+        <?php endif; ?>
     </div>
 
     <!-- Individual Standings Section -->
@@ -563,32 +599,67 @@ unset($club);
         </div>
     </div>
 
-    <!-- Club Standings Section -->
+    <?php if ($showClubChampionship): ?>
+    <!-- Club Standings Section (Admin Style) -->
     <div id="club-standings" style="display: none;">
+        <?php
+        // Calculate summary stats
+        $clubTotalPoints = array_sum(array_column($clubStandings, 'total_points'));
+        $clubTotalParticipants = array_sum(array_column($clubStandings, 'rider_count'));
+        $clubCount = count($clubStandings);
+        $eventCount = count($events);
+        ?>
+
+        <!-- Summary Stats Cards -->
+        <div class="stats-grid mb-md">
+            <div class="stat-card">
+                <div class="stat-value"><?= $clubCount ?></div>
+                <div class="stat-label">Klubbar</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value"><?= number_format($clubTotalPoints) ?></div>
+                <div class="stat-label">Totala poang</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value"><?= $clubTotalParticipants ?></div>
+                <div class="stat-label">Deltagare</div>
+            </div>
+            <div class="stat-card">
+                <div class="stat-value"><?= $eventCount ?></div>
+                <div class="stat-label">Events</div>
+            </div>
+        </div>
+
+        <!-- Club Standings Table -->
         <div class="card">
-            <h2 class="card-title"><i data-lucide="shield" class="card-title-icon"></i> Klubbmästarskap</h2>
-            <p class="text-muted standings-note"><?= count($clubStandings) ?> klubbar - Basta akare per klass: 100%, nast basta: 50%</p>
+            <div class="card-header">
+                <h2 class="card-title"><i data-lucide="list-ordered" class="card-title-icon"></i> Klubbranking - <?= htmlspecialchars($series['name']) ?></h2>
+            </div>
 
             <?php if (empty($clubStandings)): ?>
-                <p class="text-muted text-center">Inga klubbresultat annu.</p>
+                <div class="empty-state">
+                    <div class="empty-state-icon"><i data-lucide="shield"></i></div>
+                    <p>Inga klubbresultat annu.</p>
+                </div>
             <?php else: ?>
                 <div class="table-responsive">
-                    <table class="table standings-table club-table">
+                    <table class="table">
                         <thead>
                             <tr>
-                                <th class="col-pos">#</th>
-                                <th class="col-club-name">Klubb</th>
-                                <th class="col-riders">Akare</th>
-                                <?php $eventNum = 1; foreach ($events as $event): ?>
-                                <th class="col-event" title="<?= htmlspecialchars($event['name']) ?>">#<?= $eventNum++ ?></th>
-                                <?php endforeach; ?>
-                                <th class="col-total">Total</th>
+                                <th style="width: 60px;">Rank</th>
+                                <th>Klubb</th>
+                                <th class="table-col-hide-portrait">Ort</th>
+                                <th class="text-right">Poang</th>
+                                <th class="text-right table-col-hide-portrait">Deltagare</th>
+                                <th class="text-right table-col-hide-portrait">Events</th>
+                                <th class="text-right table-col-hide-portrait">Basta event</th>
+                                <th style="width: 50px;"></th>
                             </tr>
                         </thead>
                         <tbody>
                             <?php $clubPos = 0; foreach ($clubStandings as $club): $clubPos++; ?>
-                            <tr class="club-row" data-club="<?= $club['club_id'] ?>">
-                                <td class="col-pos">
+                            <tr>
+                                <td>
                                     <?php if ($clubPos == 1): ?>
                                         <img src="/assets/icons/medal-1st.svg" alt="1:a" class="medal-icon">
                                     <?php elseif ($clubPos == 2): ?>
@@ -599,64 +670,301 @@ unset($club);
                                         <?= $clubPos ?>
                                     <?php endif; ?>
                                 </td>
-                                <td class="col-club-name">
-                                    <div class="club-info">
-                                        <span class="club-name-text"><?= htmlspecialchars($club['club_name']) ?></span>
-                                        <button class="club-expand-btn" onclick="toggleClubRiders(this, event)">▸</button>
-                                    </div>
+                                <td><strong><?= htmlspecialchars($club['club_name']) ?></strong></td>
+                                <td class="text-muted table-col-hide-portrait"><?= htmlspecialchars($club['club_city'] ?? '-') ?></td>
+                                <td class="text-right"><strong><?= number_format($club['total_points']) ?></strong></td>
+                                <td class="text-right table-col-hide-portrait"><?= $club['rider_count'] ?></td>
+                                <td class="text-right table-col-hide-portrait"><?= $club['events_with_points'] ?></td>
+                                <td class="text-right table-col-hide-portrait"><?= number_format($club['best_event_points']) ?></td>
+                                <td>
+                                    <button class="btn-icon" onclick="showClubDetail(<?= $club['club_id'] ?>)" title="Visa detaljer">
+                                        <i data-lucide="eye"></i>
+                                    </button>
                                 </td>
-                                <td class="col-riders"><?= $club['rider_count'] ?></td>
-                                <?php foreach ($events as $event):
-                                    $pts = $club['event_points'][$event['id']] ?? 0;
-                                ?>
-                                <td class="col-event"><?= $pts > 0 ? $pts : '-' ?></td>
-                                <?php endforeach; ?>
-                                <td class="col-total"><strong><?= $club['total_points'] ?></strong></td>
                             </tr>
-                            <?php foreach ($club['riders'] as $clubRider): ?>
-                            <tr class="club-rider-row hidden" data-parent="<?= $club['club_id'] ?>" style="display: none;">
-                                <td></td>
-                                <td colspan="2" class="club-rider-cell">
-                                    <a href="/rider/<?= $clubRider['rider_id'] ?>">
-                                        ↳ <?= htmlspecialchars($clubRider['name']) ?>
-                                    </a>
-                                    <span class="rider-class">(<?= htmlspecialchars($clubRider['class_name']) ?>)</span>
-                                </td>
-                                <?php foreach ($events as $event): ?>
-                                <td class="col-event"></td>
-                                <?php endforeach; ?>
-                                <td class="col-total text-muted"><?= $clubRider['points'] ?> p</td>
-                            </tr>
-                            <?php endforeach; ?>
                             <?php endforeach; ?>
                         </tbody>
                     </table>
                 </div>
             <?php endif; ?>
         </div>
+
+        <!-- Info Card -->
+        <div class="card mt-md">
+            <div class="card-body">
+                <p class="text-muted text-sm" style="margin: 0;">
+                    <i data-lucide="info" style="width: 14px; height: 14px; vertical-align: middle;"></i>
+                    Basta akare per klubb/klass far 100%, nast basta 50%, ovriga 0%.
+                </p>
+            </div>
+        </div>
     </div>
 </div>
+
+<!-- Club Detail Modal -->
+<div id="club-detail-modal" class="modal" style="display: none;">
+    <div class="modal-backdrop" onclick="closeClubDetail()"></div>
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 id="club-detail-title">Klubbdetaljer</h3>
+            <button class="btn-icon" onclick="closeClubDetail()"><i data-lucide="x"></i></button>
+        </div>
+        <div class="modal-body" id="club-detail-body">
+            <!-- Content loaded dynamically -->
+        </div>
+    </div>
+</div>
+
+<!-- Store club data for modal -->
+<script type="application/json" id="club-data">
+<?= json_encode(array_values($clubStandings), JSON_UNESCAPED_UNICODE) ?>
+</script>
+<script type="application/json" id="events-data">
+<?= json_encode($events, JSON_UNESCAPED_UNICODE) ?>
+</script>
+<?php endif; // $showClubChampionship ?>
 
 <script>
 function switchTab(tab) {
     document.querySelectorAll('.tab-pill').forEach(btn => {
         btn.classList.toggle('active', btn.dataset.tab === tab);
     });
-    document.getElementById('individual-standings').style.display = tab === 'individual' ? '' : 'none';
-    document.getElementById('club-standings').style.display = tab === 'club' ? '' : 'none';
+    const individualEl = document.getElementById('individual-standings');
+    const clubEl = document.getElementById('club-standings');
+    if (individualEl) individualEl.style.display = tab === 'individual' ? '' : 'none';
+    if (clubEl) clubEl.style.display = tab === 'club' ? '' : 'none';
+    // Re-initialize Lucide icons for the newly visible section
+    if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+    }
 }
 
-function toggleClubRiders(btn, e) {
-    e.stopPropagation();
-    const row = btn.closest('tr');
-    const clubId = row.dataset.club;
-    const isExpanded = btn.textContent === '▾';
-    btn.textContent = isExpanded ? '▸' : '▾';
-    document.querySelectorAll(`tr[data-parent="${clubId}"]`).forEach(r => {
-        r.style.display = isExpanded ? 'none' : '';
+// Club detail modal functions (only if club championship is enabled)
+const clubDataEl = document.getElementById('club-data');
+const eventsDataEl = document.getElementById('events-data');
+const clubData = clubDataEl ? JSON.parse(clubDataEl.textContent) : [];
+const eventsData = eventsDataEl ? JSON.parse(eventsDataEl.textContent) : [];
+
+function showClubDetail(clubId) {
+    if (!clubData.length) return;
+    const club = clubData.find(c => c.club_id === clubId);
+    if (!club) return;
+
+    document.getElementById('club-detail-title').textContent = club.club_name;
+
+    // Build event breakdown table
+    let eventRows = '';
+    eventsData.forEach((event, idx) => {
+        const pts = club.event_points[event.id] || 0;
+        const eventDate = event.date ? new Date(event.date).toLocaleDateString('sv-SE', {day: 'numeric', month: 'short'}) : '-';
+        eventRows += `<tr>
+            <td>#${idx + 1}</td>
+            <td>${event.name}</td>
+            <td>${eventDate}</td>
+            <td class="text-right"><strong>${pts > 0 ? pts.toLocaleString() : '-'}</strong></td>
+        </tr>`;
     });
+
+    // Build riders list
+    let riderRows = '';
+    club.riders.forEach(rider => {
+        riderRows += `<tr>
+            <td><a href="/rider/${rider.rider_id}">${rider.name}</a></td>
+            <td class="text-muted">${rider.class_name}</td>
+            <td class="text-right"><strong>${rider.points.toLocaleString()} p</strong></td>
+        </tr>`;
+    });
+
+    const html = `
+        <div class="modal-stats">
+            <div class="modal-stat">
+                <div class="modal-stat-value">${club.total_points.toLocaleString()}</div>
+                <div class="modal-stat-label">Totalt</div>
+            </div>
+            <div class="modal-stat">
+                <div class="modal-stat-value">${club.rider_count}</div>
+                <div class="modal-stat-label">Akare</div>
+            </div>
+            <div class="modal-stat">
+                <div class="modal-stat-value">${club.events_with_points}</div>
+                <div class="modal-stat-label">Events</div>
+            </div>
+            <div class="modal-stat">
+                <div class="modal-stat-value">${club.best_event_points.toLocaleString()}</div>
+                <div class="modal-stat-label">Basta</div>
+            </div>
+        </div>
+
+        <h4 style="margin: 16px 0 8px;">Poang per event</h4>
+        <div class="table-responsive">
+            <table class="table table--sm">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Event</th>
+                        <th>Datum</th>
+                        <th class="text-right">Poang</th>
+                    </tr>
+                </thead>
+                <tbody>${eventRows}</tbody>
+            </table>
+        </div>
+
+        <h4 style="margin: 16px 0 8px;">Akare (${club.rider_count} st)</h4>
+        <div class="table-responsive">
+            <table class="table table--sm">
+                <thead>
+                    <tr>
+                        <th>Namn</th>
+                        <th>Klass</th>
+                        <th class="text-right">Poang</th>
+                    </tr>
+                </thead>
+                <tbody>${riderRows}</tbody>
+            </table>
+        </div>
+    `;
+
+    document.getElementById('club-detail-body').innerHTML = html;
+    document.getElementById('club-detail-modal').style.display = 'flex';
+    document.body.style.overflow = 'hidden';
 }
+
+function closeClubDetail() {
+    document.getElementById('club-detail-modal').style.display = 'none';
+    document.body.style.overflow = '';
+}
+
+// Close modal on Escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeClubDetail();
+    }
+});
 </script>
 
+<style>
+/* Stats Grid for Club Standings */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--space-md);
+}
+@media (max-width: 599px) {
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+.stat-card {
+    background: var(--color-star);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: var(--space-md);
+    text-align: center;
+}
+.stat-value {
+    font-size: 1.75rem;
+    font-weight: 700;
+    color: var(--color-primary);
+}
+.stat-label {
+    font-size: 0.875rem;
+    color: var(--color-text);
+}
+
+/* Button Icon */
+.btn-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    background: var(--color-star);
+    color: var(--color-text);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+.btn-icon:hover {
+    background: var(--color-star-fade);
+    color: var(--color-primary);
+    border-color: var(--color-primary);
+}
+.btn-icon i {
+    width: 16px;
+    height: 16px;
+}
+
+/* Modal Styles */
+.modal {
+    position: fixed;
+    inset: 0;
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-md);
+}
+.modal-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.5);
+}
+.modal-content {
+    position: relative;
+    background: var(--color-star);
+    border-radius: var(--radius-lg);
+    width: 100%;
+    max-width: 600px;
+    max-height: 90vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    box-shadow: var(--shadow-lg);
+}
+.modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-md) var(--space-lg);
+    border-bottom: 1px solid var(--color-border);
+}
+.modal-header h3 {
+    margin: 0;
+    font-size: 1.125rem;
+}
+.modal-body {
+    padding: var(--space-lg);
+    overflow-y: auto;
+}
+.modal-stats {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
+    gap: var(--space-sm);
+    margin-bottom: var(--space-md);
+}
+.modal-stat {
+    text-align: center;
+    padding: var(--space-sm);
+    background: var(--color-star-fade);
+    border-radius: var(--radius-sm);
+}
+.modal-stat-value {
+    font-size: 1.25rem;
+    font-weight: 700;
+    color: var(--color-primary);
+}
+.modal-stat-label {
+    font-size: 0.75rem;
+    color: var(--color-text);
+}
+.table--sm {
+    font-size: 0.875rem;
+}
+.table--sm th, .table--sm td {
+    padding: var(--space-xs) var(--space-sm);
+}
+</style>
 
 <!-- CSS loaded from /assets/css/pages/series-show.css -->
