@@ -919,7 +919,7 @@ document.addEventListener('keydown', function(e) {
     border-radius: var(--radius-md);
     font-size: 1rem;
     font-weight: 600;
-    color: var(--color-text);
+    color: var(--color-primary);
     cursor: pointer;
     transition: all 0.15s ease;
 }
@@ -928,8 +928,8 @@ document.addEventListener('keydown', function(e) {
     height: 20px;
 }
 .standings-toggle-btn:hover {
-    border-color: var(--color-primary);
-    color: var(--color-primary);
+    background: var(--color-star-fade);
+    border-color: var(--color-secondary);
 }
 .standings-toggle-btn.active {
     background: var(--color-primary);
