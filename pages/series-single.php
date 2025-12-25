@@ -281,9 +281,64 @@ try {
         $clubStandingsRaw = getClubStandings($dbWrapper, $seriesId);
         if (!empty($clubStandingsRaw)) {
             $useCachedClubStandings = true;
+
+            // Get event points for all clubs in this series
+            $eventPointsStmt = $db->prepare("
+                SELECT club_id, event_id, total_points
+                FROM club_event_points
+                WHERE series_id = ?
+            ");
+            $eventPointsStmt->execute([$seriesId]);
+            $allEventPoints = $eventPointsStmt->fetchAll(PDO::FETCH_ASSOC);
+
+            // Group event points by club
+            $eventPointsByClub = [];
+            foreach ($allEventPoints as $ep) {
+                $eventPointsByClub[$ep['club_id']][$ep['event_id']] = (int)$ep['total_points'];
+            }
+
+            // Get top riders for each club
+            $ridersStmt = $db->prepare("
+                SELECT crp.club_id, crp.rider_id, crp.club_points, r.firstname, r.lastname, cls.display_name as class_name
+                FROM club_rider_points crp
+                JOIN riders r ON crp.rider_id = r.id
+                LEFT JOIN classes cls ON crp.class_id = cls.id
+                WHERE crp.series_id = ?
+                ORDER BY crp.club_id, crp.club_points DESC
+            ");
+            $ridersStmt->execute([$seriesId]);
+            $allRiders = $ridersStmt->fetchAll(PDO::FETCH_ASSOC);
+
+            // Group riders by club (aggregate points per rider)
+            $ridersByClub = [];
+            foreach ($allRiders as $r) {
+                $key = $r['club_id'] . '_' . $r['rider_id'];
+                if (!isset($ridersByClub[$r['club_id']][$key])) {
+                    $ridersByClub[$r['club_id']][$key] = [
+                        'rider_id' => $r['rider_id'],
+                        'name' => $r['firstname'] . ' ' . $r['lastname'],
+                        'class_name' => $r['class_name'],
+                        'points' => 0
+                    ];
+                }
+                $ridersByClub[$r['club_id']][$key]['points'] += (int)$r['club_points'];
+            }
+
             foreach ($clubStandingsRaw as $club) {
-                $clubStandings[$club['club_id']] = [
-                    'club_id' => $club['club_id'],
+                $clubId = $club['club_id'];
+
+                // Build event_points array for this club
+                $clubEventPoints = [];
+                foreach ($seriesEvents as $e) {
+                    $clubEventPoints[$e['id']] = $eventPointsByClub[$clubId][$e['id']] ?? 0;
+                }
+
+                // Get riders for this club, sorted by points
+                $clubRiders = isset($ridersByClub[$clubId]) ? array_values($ridersByClub[$clubId]) : [];
+                usort($clubRiders, fn($a, $b) => $b['points'] - $a['points']);
+
+                $clubStandings[$clubId] = [
+                    'club_id' => $clubId,
                     'club_name' => $club['club_name'],
                     'short_name' => $club['short_name'] ?? null,
                     'city' => $club['city'] ?? null,
@@ -294,8 +349,8 @@ try {
                     'events_count' => $club['events_count'] ?? 0,
                     'best_event_points' => $club['best_event_points'] ?? 0,
                     'ranking' => $club['ranking'],
-                    'event_points' => [],
-                    'riders' => []
+                    'event_points' => $clubEventPoints,
+                    'riders' => $clubRiders
                 ];
             }
         }
