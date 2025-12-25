@@ -333,10 +333,10 @@ try {
 
     // 3. Ranking history - Get historical positions from snapshots
     $rankingHistory = [];
-    $rankingHistoryFull = []; // Full history for the graph (up to 50 entries)
+    $rankingHistoryFull = []; // Full history for the graph (last 24 months)
     if ($rankingFunctionsLoaded) {
         try {
-            // Get ALL ranking snapshots for the full graph
+            // Get ALL ranking snapshots from last 24 months for the full graph
             $historyStmt = $db->prepare("
                 SELECT
                     snapshot_date,
@@ -346,13 +346,14 @@ try {
                     total_ranking_points
                 FROM ranking_snapshots
                 WHERE rider_id = ? AND discipline = 'GRAVITY'
+                  AND snapshot_date >= DATE_SUB(CURDATE(), INTERVAL 24 MONTH)
                 ORDER BY snapshot_date ASC
             ");
             $historyStmt->execute([$riderId]);
             $allSnapshots = $historyStmt->fetchAll(PDO::FETCH_ASSOC);
 
-            // Store full history for graph (limit to 50 entries for performance)
-            $rankingHistoryFull = array_slice($allSnapshots, -50);
+            // Store full history for graph (all snapshots from last 24 months)
+            $rankingHistoryFull = $allSnapshots;
 
             // Group by month for compact display (take latest per month)
             $byMonth = [];
