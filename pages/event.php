@@ -831,6 +831,13 @@ if (!empty($eventSponsors['content'])): ?>
             </select>
         </div>
         <?php endif; ?>
+
+        <?php if (!empty($event['series_id'])): ?>
+        <a href="/series/<?= $event['series_id'] ?>" class="series-standings-btn">
+            <i data-lucide="trophy"></i>
+            Serietabeller
+        </a>
+        <?php endif; ?>
     </div>
 </div>
 

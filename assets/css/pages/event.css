@@ -511,6 +511,33 @@
     }
 }
 
+/* Series Standings Button */
+.series-standings-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-xs);
+    padding: var(--space-xs) var(--space-md);
+    background: var(--color-accent);
+    color: white;
+    border-radius: var(--radius-md);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    text-decoration: none;
+    white-space: nowrap;
+    transition: background var(--transition-fast), transform var(--transition-fast);
+    flex-shrink: 0;
+}
+
+.series-standings-btn:hover {
+    background: var(--color-accent-hover, #4fb85e);
+    transform: translateY(-1px);
+}
+
+.series-standings-btn i, .series-standings-btn svg {
+    width: 16px;
+    height: 16px;
+}
+
 /* Filter Row */
 .filter-row {
     display: flex;
