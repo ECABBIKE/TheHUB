@@ -25,7 +25,184 @@
 }
 
 /* ============================================================================
-   PROFILE CARD V3
+   PROFILE CARD V4 - Portrait Style (Inspired Design)
+   ============================================================================ */
+.profile-card-v4 {
+    background: white;
+    border-radius: var(--radius-lg);
+    padding: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+.profile-photo-hero {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    background: linear-gradient(180deg, #f0f0f0 0%, #e5e5e5 100%);
+    overflow: hidden;
+}
+
+.profile-photo-hero img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.profile-photo-placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(180deg, #f8f8f8 0%, #e8e8e8 100%);
+}
+
+.profile-photo-placeholder svg {
+    width: 60px;
+    height: 60px;
+    color: #ccc;
+}
+
+.profile-info-centered {
+    text-align: center;
+    padding: var(--space-md) var(--space-lg);
+}
+
+.profile-name-hero {
+    font-size: 1.5rem;
+    font-weight: 700;
+    margin: 0 0 var(--space-xs);
+    color: var(--color-primary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-sm);
+}
+
+.profile-subtitle {
+    display: block;
+    font-size: 0.875rem;
+    color: var(--color-text-secondary);
+    margin-bottom: var(--space-xs);
+}
+
+.profile-club-link-hero {
+    display: block;
+    font-size: 0.875rem;
+    color: var(--color-accent);
+    text-decoration: none;
+    margin-bottom: var(--space-xs);
+}
+
+.profile-club-link-hero:hover {
+    text-decoration: underline;
+}
+
+.profile-uci-text {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+    font-family: var(--font-mono, monospace);
+    letter-spacing: 0.5px;
+}
+
+/* License Badge - Full Width Green Box */
+.profile-license-badge {
+    margin: 0 var(--space-lg);
+    padding: var(--space-sm) var(--space-md);
+    background: linear-gradient(135deg, rgba(97, 206, 112, 0.15) 0%, rgba(97, 206, 112, 0.08) 100%);
+    border-radius: var(--radius-md);
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.license-label {
+    font-size: 0.625rem;
+    text-transform: uppercase;
+    letter-spacing: 1px;
+    color: var(--color-text-secondary);
+}
+
+.license-year {
+    font-size: 1.125rem;
+    font-weight: 700;
+    color: var(--color-primary);
+}
+
+/* Social Icons - Simple Gray Style */
+.profile-social-simple {
+    display: flex;
+    justify-content: center;
+    gap: var(--space-md);
+    padding: var(--space-md) 0;
+}
+
+.social-icon-simple {
+    width: 28px;
+    height: 28px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    transition: transform 0.15s ease;
+}
+
+.social-icon-simple svg {
+    width: 22px;
+    height: 22px;
+    fill: #333;
+}
+
+.social-icon-simple:hover {
+    transform: scale(1.15);
+}
+
+.social-icon-simple.empty {
+    opacity: 0.25;
+    pointer-events: none;
+}
+
+/* Action Buttons - Outline Style */
+.profile-card-v4 .profile-actions-row {
+    display: flex;
+    gap: var(--space-sm);
+    padding: 0 var(--space-lg) var(--space-lg);
+}
+
+.btn-action-outline {
+    flex: 1;
+    padding: var(--space-sm) var(--space-md);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: white;
+    color: var(--color-primary);
+    font-size: 0.875rem;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-xs);
+    cursor: pointer;
+    text-decoration: none;
+    transition: all 0.15s ease;
+}
+
+.btn-action-outline:hover {
+    background: var(--color-bg-hover);
+    border-color: var(--color-primary);
+}
+
+.btn-action-outline i {
+    width: 16px;
+    height: 16px;
+}
+
+/* ============================================================================
+   PROFILE CARD V3 (Legacy)
    ============================================================================ */
 .profile-card {
     background: var(--color-bg-card);
