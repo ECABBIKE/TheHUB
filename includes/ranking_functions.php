@@ -317,6 +317,144 @@ function calculateRankingData($db, $discipline = 'GRAVITY', $debug = false) {
 }
 
 /**
+ * Calculate ranking data as of a specific date (for backfill/historical snapshots)
+ * Same logic as calculateRankingData() but calculates relative to asOfDate instead of today
+ */
+function calculateRankingDataAsOf($db, $discipline = 'GRAVITY', $asOfDate = null) {
+    if (!$asOfDate) {
+        $asOfDate = date('Y-m-d');
+    }
+
+    $cutoffDate = date('Y-m-d', strtotime($asOfDate . ' -24 months'));
+
+    $fieldMultipliers = getRankingFieldMultipliers($db);
+    $eventLevelMultipliers = getEventLevelMultipliers($db);
+    $timeDecay = getRankingTimeDecay($db);
+
+    // Build discipline filter
+    $disciplineFilter = '';
+    $params = [$asOfDate, $cutoffDate];
+
+    if ($discipline === 'GRAVITY') {
+        $disciplineFilter = "AND e.discipline IN ('ENDURO', 'DH')";
+    } elseif ($discipline) {
+        $disciplineFilter = 'AND e.discipline = ?';
+        $params[] = $discipline;
+    }
+
+    // Get all qualifying results up to asOfDate
+    $results = $db->getAll("
+        SELECT
+            r.cyclist_id as rider_id,
+            r.event_id,
+            r.class_id,
+            COALESCE(
+                CASE
+                    WHEN COALESCE(r.run_1_points, 0) > 0 OR COALESCE(r.run_2_points, 0) > 0
+                    THEN COALESCE(r.run_1_points, 0) + COALESCE(r.run_2_points, 0)
+                    ELSE r.points
+                END,
+                r.points
+            ) as original_points,
+            e.date as event_date,
+            e.discipline,
+            COALESCE(e.event_level, 'national') as event_level
+        FROM results r
+        JOIN events e ON r.event_id = e.id
+        JOIN classes cl ON r.class_id = cl.id
+        WHERE r.status = 'finished'
+        AND (r.points > 0 OR COALESCE(r.run_1_points, 0) > 0 OR COALESCE(r.run_2_points, 0) > 0)
+        AND e.date <= ?
+        AND e.date >= ?
+        {$disciplineFilter}
+        AND COALESCE(cl.series_eligible, 1) = 1
+        AND COALESCE(cl.awards_points, 1) = 1
+    ", $params);
+
+    if (empty($results)) return [];
+
+    // Calculate field sizes per event/class
+    $fieldSizes = [];
+    foreach ($results as $result) {
+        $key = $result['event_id'] . '_' . $result['class_id'];
+        $fieldSizes[$key] = ($fieldSizes[$key] ?? 0) + 1;
+    }
+
+    // Calculate points per rider
+    $riderData = [];
+    $referenceDate = new DateTime($asOfDate);
+
+    foreach ($results as $result) {
+        $riderId = $result['rider_id'];
+        $key = $result['event_id'] . '_' . $result['class_id'];
+        $fieldSize = $fieldSizes[$key] ?? 1;
+
+        // Calculate multipliers
+        $fieldMult = getFieldMultiplier($fieldSize, $fieldMultipliers);
+        $eventLevelMult = $eventLevelMultipliers[$result['event_level']] ?? 1.00;
+
+        // Time decay relative to asOfDate
+        $eventDate = new DateTime($result['event_date']);
+        $monthsDiff = ($referenceDate->format('Y') - $eventDate->format('Y')) * 12 +
+                      ($referenceDate->format('n') - $eventDate->format('n'));
+
+        if ($monthsDiff < 12) {
+            $timeMult = $timeDecay['months_1_12'];
+        } elseif ($monthsDiff < 24) {
+            $timeMult = $timeDecay['months_13_24'];
+        } else {
+            $timeMult = $timeDecay['months_25_plus'];
+        }
+
+        // Calculate ranking points
+        $basePoints = (float)$result['original_points'];
+        $rankingPoints = $basePoints * $fieldMult * $eventLevelMult;
+        $weightedPoints = $rankingPoints * $timeMult;
+
+        // Aggregate per rider
+        if (!isset($riderData[$riderId])) {
+            $riderData[$riderId] = [
+                'rider_id' => $riderId,
+                'total_ranking_points' => 0,
+                'points_12' => 0,
+                'points_13_24' => 0,
+                'events_count' => 0
+            ];
+        }
+
+        $riderData[$riderId]['total_ranking_points'] += $weightedPoints;
+        $riderData[$riderId]['events_count']++;
+
+        if ($monthsDiff < 12) {
+            $riderData[$riderId]['points_12'] += $rankingPoints;
+        } else {
+            $riderData[$riderId]['points_13_24'] += $rankingPoints;
+        }
+    }
+
+    // Sort by total points
+    usort($riderData, function($a, $b) {
+        return $b['total_ranking_points'] <=> $a['total_ranking_points'];
+    });
+
+    // Add ranking positions
+    $position = 1;
+    $prevPoints = null;
+    $actualPosition = 1;
+
+    foreach ($riderData as &$rider) {
+        if ($prevPoints !== null && $rider['total_ranking_points'] < $prevPoints) {
+            $position = $actualPosition;
+        }
+        $rider['ranking_position'] = $position;
+        $prevPoints = $rider['total_ranking_points'];
+        $actualPosition++;
+    }
+
+    return array_values($riderData);
+}
+
+/**
  * Calculate CLUB ranking data - GLOBAL 24-month rolling
  *
  * Per event/class: Best rider per club = 100%, second best = 50%, others = 0%

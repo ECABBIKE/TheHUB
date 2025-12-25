@@ -2,98 +2,11 @@
 /**
  * Admin: Backfill Ranking Snapshots
  * Genererar ranking-snapshots för varje månad de senaste 24 månaderna
+ * Använder samma beräkningslogik som huvudsystemet (calculateRankingDataAsOf)
  */
 
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../includes/ranking_functions.php';
-
-/**
- * Calculate ranking data as of a specific date
- */
-function calculateRankingDataAsOf($db, $discipline, $asOfDate) {
-    $cutoff12 = date('Y-m-d', strtotime($asOfDate . ' -12 months'));
-    $cutoff24 = date('Y-m-d', strtotime($asOfDate . ' -24 months'));
-
-    $events = $db->getAll("
-        SELECT e.id as event_id, e.date as event_date, e.event_level
-        FROM events e
-        WHERE e.date <= ? AND e.date >= ? AND e.discipline IN ('ENDURO', 'DH')
-        ORDER BY e.date DESC
-    ", [$asOfDate, $cutoff24]);
-
-    if (empty($events)) return [];
-
-    $riderPoints = [];
-
-    foreach ($events as $event) {
-        $fieldSize = $db->getRow("
-            SELECT COUNT(DISTINCT cyclist_id) as cnt FROM results WHERE event_id = ? AND status = 'finished'
-        ", [$event['event_id']]);
-        $participantCount = $fieldSize['cnt'] ?? 0;
-
-        $results = $db->getAll("
-            SELECT cyclist_id as rider_id, position, points as original_points
-            FROM results WHERE event_id = ? AND status = 'finished' AND position > 0
-        ", [$event['event_id']]);
-
-        foreach ($results as $result) {
-            $riderId = $result['rider_id'];
-            if (!isset($riderPoints[$riderId])) {
-                $riderPoints[$riderId] = ['rider_id' => $riderId, 'points_12' => 0, 'points_13_24' => 0, 'events_count' => 0];
-            }
-
-            $basePoints = $result['original_points'] ?? 0;
-            $fieldMultiplier = calcFieldMult($participantCount);
-            $levelMultiplier = calcLevelMult($event['event_level'] ?? 'local');
-            $weightedPoints = $basePoints * $fieldMultiplier * $levelMultiplier;
-
-            if (strtotime($event['event_date']) >= strtotime($cutoff12)) {
-                $riderPoints[$riderId]['points_12'] += $weightedPoints;
-            } else {
-                $riderPoints[$riderId]['points_13_24'] += $weightedPoints * 0.5;
-            }
-            $riderPoints[$riderId]['events_count']++;
-        }
-    }
-
-    $rankings = [];
-    foreach ($riderPoints as $riderId => $data) {
-        $total = $data['points_12'] + $data['points_13_24'];
-        if ($total > 0) {
-            $rankings[] = [
-                'rider_id' => $riderId,
-                'total_ranking_points' => $total,
-                'points_12' => $data['points_12'],
-                'points_13_24' => $data['points_13_24'],
-                'events_count' => $data['events_count'],
-                'ranking_position' => 0
-            ];
-        }
-    }
-
-    usort($rankings, fn($a, $b) => $b['total_ranking_points'] <=> $a['total_ranking_points']);
-    foreach ($rankings as $idx => &$rider) {
-        $rider['ranking_position'] = $idx + 1;
-    }
-
-    return $rankings;
-}
-
-function calcFieldMult($count) {
-    if ($count >= 50) return 1.0;
-    if ($count >= 40) return 0.95;
-    if ($count >= 30) return 0.90;
-    if ($count >= 20) return 0.85;
-    if ($count >= 15) return 0.80;
-    if ($count >= 10) return 0.75;
-    if ($count >= 5) return 0.60;
-    return 0.50;
-}
-
-function calcLevelMult($level) {
-    $m = ['world_cup'=>1.5,'world_series'=>1.4,'ews'=>1.3,'national_championship'=>1.25,'sm'=>1.25,'national'=>1.1,'regional'=>1.0,'local'=>0.9];
-    return $m[strtolower($level)] ?? 1.0;
-}
 
 // Page setup
 $page_title = 'Backfill Ranking Snapshots';
@@ -125,16 +38,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                 // Calculate ranking as of end of this month
                 $monthEnd = date('Y-m-t', strtotime($monthStart)); // Last day of month
 
-                // Check if there are any events up to this date
-                $hasEvents = $db->getRow("
-                    SELECT COUNT(*) as cnt FROM events e
-                    JOIN results r ON r.event_id = e.id
-                    WHERE e.date <= ? AND e.discipline IN ('ENDURO', 'DH') AND r.status = 'finished'
-                ", [$monthEnd]);
-
-                if (($hasEvents['cnt'] ?? 0) == 0) continue;
-
-                // Calculate ranking as of this month
+                // Use the system's proper calculation function
                 $riderData = calculateRankingDataAsOf($db, 'GRAVITY', $monthEnd);
 
                 if (empty($riderData)) continue;
@@ -250,7 +154,7 @@ include __DIR__ . '/components/unified-layout.php';
     </div>
     <div class="card-body">
         <p>Detta skapar <strong>en ranking-snapshot per månad</strong> för de senaste 24 månaderna.</p>
-        <p class="text-muted">Scriptet beräknar rankingen "som den var" i slutet av varje månad, och sparar positionsförändringar mellan månader.</p>
+        <p class="text-muted">Använder samma beräkningslogik som ranking-systemet (fältstorlek, eventtyp, tidsviktning).</p>
 
         <form method="POST" class="mt-lg">
             <input type="hidden" name="action" value="backfill">
