@@ -568,9 +568,9 @@ function parseAndAnalyzeCSV($filepath, $db) {
   if (!$rider) {
    $matchStrategy = 'none';
 
-   // Strategy 1: Exact name match
+   // Strategy 1: Exact name match (use UPPER instead of LOWER for better MySQL compat)
    $rider = $db->getRow(
-   "SELECT id, firstname, lastname, license_number, uci_id FROM riders WHERE LOWER(firstname) = LOWER(?) AND LOWER(lastname) = LOWER(?)",
+   "SELECT id, firstname, lastname, license_number, uci_id FROM riders WHERE UPPER(firstname) = UPPER(?) AND UPPER(lastname) = UPPER(?)",
    [$firstName, $lastName]
    );
    if ($rider) $matchStrategy = 'exact_name';
@@ -579,8 +579,8 @@ function parseAndAnalyzeCSV($filepath, $db) {
    if (!$rider) {
     $rider = $db->getRow(
      "SELECT id, firstname, lastname, license_number, uci_id FROM riders
-      WHERE LOWER(firstname) = LOWER(?)
-      AND (LOWER(lastname) LIKE LOWER(?) OR LOWER(?) LIKE CONCAT('%', LOWER(lastname), '%'))",
+      WHERE UPPER(firstname) = UPPER(?)
+      AND (UPPER(lastname) LIKE UPPER(?) OR UPPER(?) LIKE CONCAT('%', UPPER(lastname), '%'))",
      [$firstName, '%' . $lastName . '%', $lastName]
     );
     if ($rider) $matchStrategy = 'double_lastname';
@@ -592,7 +592,7 @@ function parseAndAnalyzeCSV($filepath, $db) {
     $lastPart = end($lastnameParts);
     $rider = $db->getRow(
      "SELECT id, firstname, lastname, license_number, uci_id FROM riders
-      WHERE LOWER(firstname) = LOWER(?) AND LOWER(lastname) = LOWER(?)",
+      WHERE UPPER(firstname) = UPPER(?) AND UPPER(lastname) = UPPER(?)",
      [$firstName, $lastPart]
     );
     if ($rider) $matchStrategy = 'lastname_part';
@@ -603,7 +603,7 @@ function parseAndAnalyzeCSV($filepath, $db) {
     $firstNamePart = explode(' ', $firstName)[0];
     $rider = $db->getRow(
      "SELECT id, firstname, lastname, license_number, uci_id FROM riders
-      WHERE LOWER(firstname) = LOWER(?) AND LOWER(lastname) = LOWER(?)",
+      WHERE UPPER(firstname) = UPPER(?) AND UPPER(lastname) = UPPER(?)",
      [$firstNamePart, $lastName]
     );
     if ($rider) $matchStrategy = 'firstname_part';
@@ -614,8 +614,8 @@ function parseAndAnalyzeCSV($filepath, $db) {
     $firstNamePart = explode(' ', $firstName)[0];
     $rider = $db->getRow(
      "SELECT id, firstname, lastname, license_number, uci_id FROM riders
-      WHERE LOWER(firstname) LIKE LOWER(?)
-      AND LOWER(lastname) = LOWER(?)",
+      WHERE UPPER(firstname) LIKE UPPER(?)
+      AND UPPER(lastname) = UPPER(?)",
      [$firstNamePart . '%', $lastName]
     );
     if ($rider) $matchStrategy = 'fuzzy_firstname';
