@@ -894,17 +894,17 @@ function switchStandingsTab(tab) {
   document.querySelectorAll('.tab-pill').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.tab === tab);
   });
-  
-  // Show/hide sections using CSS classes
+
+  // Show/hide sections
   const individualDiv = document.getElementById('individual-standings');
   const clubDiv = document.getElementById('club-standings');
-  
+
   if (tab === 'individual') {
-    individualDiv.classList.remove('hidden');
-    clubDiv.classList.add('hidden');
+    individualDiv.style.setProperty('display', 'block', 'important');
+    clubDiv.style.setProperty('display', 'none', 'important');
   } else {
-    individualDiv.classList.add('hidden');
-    clubDiv.classList.remove('hidden');
+    individualDiv.style.setProperty('display', 'none', 'important');
+    clubDiv.style.setProperty('display', 'block', 'important');
   }
 }
 
