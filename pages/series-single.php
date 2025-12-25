@@ -276,7 +276,9 @@ try {
     // First try to get cached data
     $useCachedClubStandings = false;
     try {
-        $clubStandingsRaw = getClubStandings($db, $seriesId);
+        // Use getDB() wrapper which has getAll() method
+        $dbWrapper = getDB();
+        $clubStandingsRaw = getClubStandings($dbWrapper, $seriesId);
         if (!empty($clubStandingsRaw)) {
             $useCachedClubStandings = true;
             foreach ($clubStandingsRaw as $club) {
