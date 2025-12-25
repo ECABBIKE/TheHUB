@@ -63,6 +63,28 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
     global $IMPORT_EVENT_MAPPING;
     $IMPORT_EVENT_MAPPING = $eventMapping;
 
+    // Read file content and detect/convert encoding
+    $content = file_get_contents($filepath);
+    if ($content === false) {
+        throw new Exception('Kunde inte läsa filen');
+    }
+
+    // Detect encoding and convert to UTF-8
+    $encoding = mb_detect_encoding($content, ['UTF-8', 'ISO-8859-1', 'Windows-1252'], true);
+    if ($encoding && $encoding !== 'UTF-8') {
+        $content = mb_convert_encoding($content, 'UTF-8', $encoding);
+        error_log("IMPORT: Converted file from {$encoding} to UTF-8");
+    }
+
+    // Remove BOM if present
+    $content = preg_replace('/^\xEF\xBB\xBF/', '', $content);
+
+    // Write back to temp file for fgetcsv
+    $tempFile = tempnam(sys_get_temp_dir(), 'import_utf8_');
+    file_put_contents($tempFile, $content);
+    $filepath = $tempFile;
+    $shouldCleanupTemp = true;
+
     if (($handle = fopen($filepath, 'r')) === false) {
         throw new Exception('Kunde inte öppna filen');
     }
@@ -454,6 +476,11 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
             if (!isset($riderCache[$riderName . '|' . $licenseNumber])) {
                 // Try to find rider by license number OR uci_id first (normalized)
                 $rider = null;
+                $matchMethod = 'none';
+
+                // Debug: Log the search
+                error_log("IMPORT RIDER SEARCH: '{$data['firstname']}' '{$data['lastname']}' UCI='{$rawLicenseNumber}'");
+
                 if (!empty($licenseNumberDigits)) {
                     // Try match with normalized number in license_number OR uci_id (compare digits only)
                     $rider = $db->getRow(
@@ -464,6 +491,8 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
                     );
                     if ($rider) {
                         $matching_stats['riders_found']++;
+                        $matchMethod = 'uci_id';
+                        error_log("IMPORT RIDER FOUND BY UCI: rider_id={$rider['id']}");
                         // If matched via uci_id but license_number is empty/different, update it
                         if (!empty($licenseNumber) && empty($rider['license_number'])) {
                             $db->update('riders', ['license_number' => $licenseNumber], 'id = ?', [$rider['id']]);
@@ -543,6 +572,7 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
 
                     if ($rider) {
                         $matching_stats['riders_found']++;
+                        error_log("IMPORT RIDER FOUND BY NAME: rider_id={$rider['id']} for '{$firstName}' '{$lastName}'");
 
                         // If we found by name and import has UCI ID but rider doesn't have it in either field
                         if (!empty($licenseNumber)) {
@@ -556,8 +586,11 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
                             if (!$hasLicense && $importedDigits !== $existingUciDigits) {
                                 $db->update('riders', ['license_number' => $licenseNumber], 'id = ?', [$rider['id']]);
                                 $matching_stats['riders_updated_with_uci'] = ($matching_stats['riders_updated_with_uci'] ?? 0) + 1;
+                                error_log("IMPORT RIDER UCI UPDATED: rider_id={$rider['id']} uci={$licenseNumber}");
                             }
                         }
+                    } else {
+                        error_log("IMPORT RIDER NOT FOUND BY NAME: '{$firstName}' '{$lastName}'");
                     }
                 }
 
@@ -565,6 +598,7 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
                 if (!$rider) {
                     $matching_stats['riders_not_found']++;
                     $matching_stats['riders_created']++;
+                    error_log("IMPORT RIDER CREATING NEW: '{$data['firstname']}' '{$data['lastname']}'");
 
                     // Determine gender from class name if available
                     $gender = 'M';
@@ -884,6 +918,11 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
     }
 
     fclose($handle);
+
+    // Clean up temp file if created for encoding conversion
+    if (isset($shouldCleanupTemp) && $shouldCleanupTemp && isset($tempFile) && file_exists($tempFile)) {
+        @unlink($tempFile);
+    }
 
     return [
         'stats' => $stats,

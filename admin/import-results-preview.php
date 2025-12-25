@@ -280,6 +280,8 @@ function parseAndAnalyzeCSV($filepath, $db) {
  'total_rows' => 0,
  'riders_existing' => 0,
  'riders_new' => 0,
+ 'riders_will_get_uci' => 0,
+ 'riders_uci_updates' => [], // List of riders who will get UCI-ID
  'clubs_existing' => 0,
  'clubs_new' => 0,
  'clubs_list' => [],
@@ -594,10 +596,25 @@ function parseAndAnalyzeCSV($filepath, $db) {
    }
   }
 
-  $riderCache[$riderKey] = $rider ? true : false;
+  $riderCache[$riderKey] = $rider ? $rider : false;
 
   if ($rider) {
    $stats['riders_existing']++;
+
+   // Check if this rider will get UCI-ID updated
+   // (CSV has license, rider doesn't have one)
+   if (!empty($normalizedLicense) && empty($rider['license_number'])) {
+    $stats['riders_will_get_uci']++;
+    // Store details for display (limit to first 50)
+    if (count($stats['riders_uci_updates']) < 50) {
+     $stats['riders_uci_updates'][] = [
+      'csv_name' => $firstName . ' ' . $lastName,
+      'csv_uci' => $licenseNumber,
+      'existing_id' => $rider['id'],
+      'existing_name' => $rider['firstname'] . ' ' . $rider['lastname']
+     ];
+    }
+   }
   } else {
    $stats['riders_new']++;
   }
@@ -691,7 +708,7 @@ include __DIR__ . '/components/unified-layout.php';
  </div>
 
  <!-- Stats Cards -->
- <div class="grid grid-cols-2 gs-md-grid-cols-4 gap-lg mb-lg">
+ <div class="grid grid-cols-2 gs-md-grid-cols-5 gap-lg mb-lg">
   <div class="stat-card">
   <i data-lucide="file-text" class="icon-lg text-primary mb-md"></i>
   <div class="stat-number"><?= $matchingStats['total_rows'] ?></div>
@@ -708,7 +725,12 @@ include __DIR__ . '/components/unified-layout.php';
   <div class="stat-label">Nya deltagare</div>
   </div>
   <div class="stat-card">
-  <i data-lucide="timer" class="icon-lg text-accent mb-md"></i>
+  <i data-lucide="id-card" class="icon-lg text-accent mb-md"></i>
+  <div class="stat-number"><?= $matchingStats['riders_will_get_uci'] ?? 0 ?></div>
+  <div class="stat-label">Får UCI-ID</div>
+  </div>
+  <div class="stat-card">
+  <i data-lucide="timer" class="icon-lg text-primary mb-md"></i>
   <div class="stat-number"><?= count($matchingStats['stage_columns'] ?? []) ?></div>
   <div class="stat-label">Sträckor</div>
   </div>
@@ -794,6 +816,58 @@ include __DIR__ . '/components/unified-layout.php';
    <i data-lucide="info"></i>
    <strong>Tips:</strong> Importera filen - systemet matchar automatiskt via normaliserat UCI-ID.
    <br>Du kan också <a href="/admin/cleanup-duplicates.php" class="link">rensa dubletter</a> efteråt.
+   </div>
+  </div>
+  </div>
+ <?php endif; ?>
+
+ <?php if (!empty($matchingStats['riders_uci_updates'])): ?>
+  <div class="card mb-lg">
+  <div class="card-header" style="background: var(--color-accent); color: white;">
+   <h3 style="color: white;">
+   <i data-lucide="id-card"></i>
+   UCI-ID kommer fyllas i (<?= $matchingStats['riders_will_get_uci'] ?>)
+   </h3>
+  </div>
+  <div class="card-body">
+   <p class="text-sm text-secondary mb-md">
+   Dessa deltagare matchades på namn och kommer få sitt UCI-ID ifyllt från CSV-filen.
+   </p>
+   <div class="table-responsive" style="max-height: 250px; overflow: auto;">
+   <table class="table table-sm">
+    <thead>
+    <tr>
+     <th>Matchad deltagare</th>
+     <th>UCI-ID att lägga till</th>
+    </tr>
+    </thead>
+    <tbody>
+    <?php foreach ($matchingStats['riders_uci_updates'] as $update): ?>
+     <tr>
+     <td>
+      <a href="/rider/<?= $update['existing_id'] ?>" target="_blank" class="link">
+       <?= h($update['existing_name']) ?>
+      </a>
+      <span class="text-xs text-secondary">(#<?= $update['existing_id'] ?>)</span>
+     </td>
+     <td>
+      <code class="badge badge-success"><?= h($update['csv_uci']) ?></code>
+     </td>
+     </tr>
+    <?php endforeach; ?>
+    <?php if ($matchingStats['riders_will_get_uci'] > 50): ?>
+    <tr>
+     <td colspan="2" class="text-secondary text-center">
+     ... och <?= $matchingStats['riders_will_get_uci'] - 50 ?> fler
+     </td>
+    </tr>
+    <?php endif; ?>
+    </tbody>
+   </table>
+   </div>
+   <div class="alert alert--success mt-md">
+   <i data-lucide="check-circle"></i>
+   <strong>Automatiskt:</strong> UCI-ID:n kommer läggas till vid import - ingen manuell åtgärd krävs.
    </div>
   </div>
   </div>
