@@ -332,7 +332,7 @@ include __DIR__ . '/components/unified-layout.php';
                             <th class="event-field">Serie</th>
                             <th>Plats</th>
                             <th class="event-field">Format</th>
-                            <th class="event-field">Level</th>
+                            <th class="event-field">Rankingklass</th>
                             <th class="event-field">Event Format</th>
                             <th class="event-field">Prismall</th>
                             <th class="event-field">Advent ID</th>
@@ -392,8 +392,8 @@ include __DIR__ . '/components/unified-layout.php';
                                 <td class="event-field">
                                     <select class="admin-form-select" style="min-width: 130px; padding: var(--space-xs) var(--space-sm);" onchange="updateEventLevel(<?= $event['id'] ?>, this.value)">
                                         <option value="">-</option>
-                                        <option value="Nationell (100%)" <?= ($event['event_level'] ?? '') === 'Nationell (100%)' ? 'selected' : '' ?>>Nationell (100%)</option>
-                                        <option value="Sportmotion (50%)" <?= ($event['event_level'] ?? '') === 'Sportmotion (50%)' ? 'selected' : '' ?>>Sportmotion (50%)</option>
+                                        <option value="national" <?= ($event['event_level'] ?? '') === 'national' ? 'selected' : '' ?>>Nationell (100%)</option>
+                                        <option value="sportmotion" <?= ($event['event_level'] ?? '') === 'sportmotion' ? 'selected' : '' ?>>Sportmotion (50%)</option>
                                     </select>
                                 </td>
                                 <td class="event-field">
@@ -566,13 +566,13 @@ async function updateEventLevel(eventId, eventLevel) {
 
         const result = await response.json();
         if (!result.success) {
-            alert('Fel: ' + (result.error || 'Kunde inte uppdatera event level'));
+            alert('Fel: ' + (result.error || 'Kunde inte uppdatera rankingklass'));
         } else {
-            showToast('Event Level uppdaterat', 'success');
+            showToast('Rankingklass uppdaterad', 'success');
         }
     } catch (error) {
         console.error('Error:', error);
-        alert('Fel vid uppdatering av event level');
+        alert('Fel vid uppdatering av rankingklass');
     }
 }
 

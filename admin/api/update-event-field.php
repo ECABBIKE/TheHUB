@@ -45,7 +45,7 @@ if (!in_array($field, $allowedFields)) {
 }
 
 // Validate field-specific values
-$validEventLevels = ['', 'Nationell (100%)', 'Sportmotion (50%)'];
+$validEventLevels = ['', 'national', 'sportmotion'];
 $validEventFormats = ['', 'Enduro (en tid)', 'Downhill Standard', 'SweCUP Downhill', 'Dual Slalom'];
 
 switch ($field) {
