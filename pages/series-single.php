@@ -273,6 +273,36 @@ try {
     $clubStandings = [];
     $clubRiderContributions = []; // Track individual rider contributions
 
+    // DEBUG: Check how many riders have clubs
+    if (!empty($seriesEvents)) {
+        $firstEventId = $seriesEvents[0]['id'];
+        $debugStmt = $db->prepare("
+            SELECT
+                COUNT(*) as total_results,
+                COUNT(rd.club_id) as results_with_direct_club,
+                COUNT(DISTINCT rd.club_id) as unique_direct_clubs
+            FROM results r
+            JOIN riders rd ON r.cyclist_id = rd.id
+            WHERE r.event_id = ? AND r.status = 'finished' AND r.points > 0
+        ");
+        $debugStmt->execute([$firstEventId]);
+        $debugCounts = $debugStmt->fetch(PDO::FETCH_ASSOC);
+        error_log("CLUB_DEBUG: Event {$firstEventId} - Total results: {$debugCounts['total_results']}, With direct club: {$debugCounts['results_with_direct_club']}, Unique clubs: {$debugCounts['unique_direct_clubs']}");
+
+        // Also check rider_club_seasons
+        $seriesYear = $series['year'] ?? date('Y');
+        $debugStmt2 = $db->prepare("
+            SELECT COUNT(DISTINCT rcs.rider_id) as riders_with_season_club
+            FROM results r
+            JOIN riders rd ON r.cyclist_id = rd.id
+            JOIN rider_club_seasons rcs ON rd.id = rcs.rider_id AND rcs.season_year = ?
+            WHERE r.event_id = ? AND r.status = 'finished' AND r.points > 0
+        ");
+        $debugStmt2->execute([$seriesYear, $firstEventId]);
+        $seasonCount = $debugStmt2->fetchColumn();
+        error_log("CLUB_DEBUG: Riders with season club (year {$seriesYear}): {$seasonCount}");
+    }
+
     foreach ($seriesEvents as $event) {
         $eventId = $event['id'];
 
@@ -280,6 +310,9 @@ try {
         // Only include riders with clubs and classes that award points
         // Check both riders.club_id AND rider_club_seasons for club membership
         $seriesYear = $series['year'] ?? date('Y');
+
+        // Debug logging for club standings
+        error_log("CLUB_STANDINGS: Processing event {$eventId} ({$event['name']}), seriesYear={$seriesYear}, useSeriesResults=" . ($useSeriesResults ? 'true' : 'false'));
 
         if ($useSeriesResults) {
             $stmt = $db->prepare("
@@ -337,6 +370,12 @@ try {
             $stmt->execute([$seriesYear, $eventId]);
         }
         $eventResults = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Debug logging
+        error_log("CLUB_STANDINGS: Event {$eventId} returned " . count($eventResults) . " results with clubs");
+        if (count($eventResults) > 0) {
+            error_log("CLUB_STANDINGS: First result: " . json_encode($eventResults[0]));
+        }
 
         // Group by club and class
         $clubClassResults = [];
@@ -437,6 +476,9 @@ try {
         });
     }
     unset($club);
+
+    // Final debug logging
+    error_log("CLUB_STANDINGS: Final result - " . count($clubStandings) . " clubs with standings");
 
 } catch (Exception $e) {
     $error = $e->getMessage();
