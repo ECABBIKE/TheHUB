@@ -152,11 +152,26 @@ if ($mergeId !== null && !$dryRun) {
 // Handle merge all action - will be processed after we find duplicates
 $mergeAllResult = null;
 
+// Helper to normalize names (collapse spaces, trim, lowercase)
+function normalizeName($name) {
+    $name = trim($name);
+    $name = preg_replace('/\s+/', ' ', $name); // Collapse multiple spaces
+    $name = mb_strtolower($name, 'UTF-8');
+    return $name;
+}
+
+// Helper to get last word of surname (for fuzzy matching)
+function getLastSurnamePart($lastname) {
+    $parts = preg_split('/[\s\-]+/', trim($lastname));
+    return mb_strtolower(end($parts), 'UTF-8');
+}
+
 // Find all name duplicates (same firstname + lastname, different IDs)
+// Using normalized names to handle extra spaces
 $nameDuplicates = $db->getAll("
     SELECT
-        LOWER(TRIM(firstname)) as fn,
-        LOWER(TRIM(lastname)) as ln,
+        LOWER(TRIM(REGEXP_REPLACE(firstname, '\\\\s+', ' '))) as fn,
+        LOWER(TRIM(REGEXP_REPLACE(lastname, '\\\\s+', ' '))) as ln,
         GROUP_CONCAT(id ORDER BY id) as rider_ids,
         COUNT(*) as count
     FROM riders
@@ -168,10 +183,49 @@ $nameDuplicates = $db->getAll("
     LIMIT 100
 ");
 
+// Also find fuzzy duplicates (same firstname + same last part of surname)
+// This catches "Mattias Sjöström-Varg" vs "Mattias Varg"
+$fuzzyDuplicates = $db->getAll("
+    SELECT
+        LOWER(TRIM(REGEXP_REPLACE(firstname, '\\\\s+', ' '))) as fn,
+        SUBSTRING_INDEX(LOWER(TRIM(lastname)), '-', -1) as ln_last,
+        SUBSTRING_INDEX(LOWER(TRIM(lastname)), ' ', -1) as ln_word,
+        GROUP_CONCAT(DISTINCT id ORDER BY id) as rider_ids,
+        COUNT(DISTINCT id) as count
+    FROM riders
+    WHERE firstname IS NOT NULL AND firstname != ''
+    AND lastname IS NOT NULL AND lastname != ''
+    GROUP BY fn, ln_last
+    HAVING count > 1 AND COUNT(DISTINCT LOWER(TRIM(lastname))) > 1
+    ORDER BY count DESC
+    LIMIT 50
+");
+
+// Merge the two result sets (exact + fuzzy), avoiding duplicates
+$allDuplicates = $nameDuplicates;
+$seenIds = [];
+foreach ($nameDuplicates as $dup) {
+    foreach (explode(',', $dup['rider_ids']) as $id) {
+        $seenIds[$id] = true;
+    }
+}
+foreach ($fuzzyDuplicates as $dup) {
+    $ids = explode(',', $dup['rider_ids']);
+    $newIds = array_filter($ids, fn($id) => !isset($seenIds[$id]));
+    if (count($newIds) >= 2 || (count($newIds) >= 1 && count($ids) >= 2)) {
+        $allDuplicates[] = [
+            'fn' => $dup['fn'],
+            'ln' => $dup['ln_last'] . ' (fuzzy)',
+            'rider_ids' => $dup['rider_ids'],
+            'count' => $dup['count']
+        ];
+    }
+}
+
 $duplicateGroups = [];
 $totalDuplicates = 0;
 
-foreach ($nameDuplicates as $dup) {
+foreach ($allDuplicates as $dup) {
     $riderIds = explode(',', $dup['rider_ids']);
 
     // Get details for each rider
