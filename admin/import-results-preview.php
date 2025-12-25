@@ -449,6 +449,11 @@ function parseAndAnalyzeCSV($filepath, $db) {
  // Add detected stage columns to stats
  $stats['stage_columns'] = $stageColumnsDetected;
 
+ // DEBUG: Log headers
+ error_log("=== CSV HEADER DEBUG ===");
+ error_log("RAW: " . implode(' | ', array_slice($rawHeader, 0, 10)));
+ error_log("MAPPED: " . implode(' | ', array_slice($header, 0, 10)));
+
  // Read all rows
  while (($row = fgetcsv($handle, 0, $delimiter)) !== false) {
  if (count($row) < 2) continue;
@@ -475,6 +480,14 @@ function parseAndAnalyzeCSV($filepath, $db) {
  $licenseNumber = trim($rowData['license_number'] ?? '');
  $normalizedLicense = preg_replace('/[^0-9]/', '', $licenseNumber);
 
+ // Debug first 3 rows
+ static $debugRowCount = 0;
+ if ($debugRowCount < 3) {
+  error_log("=== ROW DEBUG {$debugRowCount} ===");
+  error_log("firstname='{$firstName}' lastname='{$lastName}' license='{$licenseNumber}' normalized='{$normalizedLicense}'");
+  $debugRowCount++;
+ }
+
  if (!empty($firstName) && !empty($lastName)) {
   $riderKey = $firstName . '|' . $lastName . '|' . $normalizedLicense;
 
@@ -482,12 +495,18 @@ function parseAndAnalyzeCSV($filepath, $db) {
   $rider = null;
   $isDuplicate = false;
 
-  // Try normalized license first
+  // Try normalized license first - check both license_number AND uci_id columns
   if (!empty($normalizedLicense)) {
    $rider = $db->getRow(
-   "SELECT id, firstname, lastname, license_number FROM riders WHERE REPLACE(REPLACE(license_number, ' ', ''), '-', '') = ?",
-   [$normalizedLicense]
+   "SELECT id, firstname, lastname, license_number, uci_id FROM riders
+    WHERE REPLACE(REPLACE(license_number, ' ', ''), '-', '') = ?
+       OR REPLACE(REPLACE(uci_id, ' ', ''), '-', '') = ?",
+   [$normalizedLicense, $normalizedLicense]
    );
+   // Debug
+   if ($debugRowCount <= 3) {
+    error_log("UCI SEARCH for '{$normalizedLicense}': " . ($rider ? "FOUND id={$rider['id']}" : "NOT FOUND"));
+   }
 
    // Check if it's a format duplicate (same UCI but different format)
    if ($rider && $rider['license_number'] !== $licenseNumber && !empty($rider['license_number'])) {
@@ -506,10 +525,10 @@ function parseAndAnalyzeCSV($filepath, $db) {
    }
   }
 
-  // Try name match if no license match
+  // Try name match if no license match (case-insensitive)
   if (!$rider) {
    $rider = $db->getRow(
-   "SELECT id, firstname, lastname, license_number FROM riders WHERE firstname = ? AND lastname = ?",
+   "SELECT id, firstname, lastname, license_number, uci_id FROM riders WHERE LOWER(firstname) = LOWER(?) AND LOWER(lastname) = LOWER(?)",
    [$firstName, $lastName]
    );
 
