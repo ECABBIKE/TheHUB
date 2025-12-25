@@ -548,7 +548,7 @@ include __DIR__ . '/components/unified-layout.php';
             <span class="text-secondary text-sm">Klicka för att expandera/minimera</span>
             <?php endif; ?>
         </summary>
-        <fieldset class="admin-card-body fieldset-reset" <?= $isPromotorOnly ? 'disabled' : '' ?>>
+        <fieldset class="admin-card-body fieldset-reset" style="padding: var(--space-lg);" <?= $isPromotorOnly ? 'disabled' : '' ?>>
             <div class="form-grid form-grid-2">
                 <div class="admin-form-group form-full-width">
                     <label class="admin-form-label">Namn <span class="required">*</span></label>
@@ -608,7 +608,7 @@ include __DIR__ . '/components/unified-layout.php';
             <span class="text-secondary text-sm">Klicka för att expandera/minimera</span>
             <?php endif; ?>
         </summary>
-        <fieldset class="admin-card-body fieldset-reset" <?= $isPromotorOnly ? 'disabled' : '' ?>>
+        <fieldset class="admin-card-body fieldset-reset" style="padding: var(--space-lg);" <?= $isPromotorOnly ? 'disabled' : '' ?>>
             <div class="form-grid form-grid-2">
                 <div class="admin-form-group">
                     <label class="admin-form-label">Tävlingsformat</label>
@@ -819,7 +819,7 @@ include __DIR__ . '/components/unified-layout.php';
             <span class="text-secondary text-sm">Klicka för att expandera/minimera</span>
             <?php endif; ?>
         </summary>
-        <fieldset class="admin-card-body fieldset-reset" <?= $isPromotorOnly ? 'disabled' : '' ?>>
+        <fieldset class="admin-card-body fieldset-reset" style="padding: var(--space-lg);" <?= $isPromotorOnly ? 'disabled' : '' ?>>
             <div class="admin-form-group">
                 <label class="admin-form-label">Betalningsmottagare (Swish)</label>
                 <select name="payment_recipient_id" class="admin-form-select">
