@@ -60,38 +60,55 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } else {
         try {
             // Build dynamic update query based on which columns exist
+            // Start with core fields that always exist
             $updateFields = [
-                'firstname = ?', 'lastname = ?', 'email = ?', 'club_id = ?',
-                'social_instagram = ?', 'social_strava = ?', 'social_facebook = ?',
-                'social_youtube = ?', 'social_tiktok = ?'
+                'firstname = ?', 'lastname = ?', 'email = ?', 'club_id = ?'
             ];
             $updateValues = [
-                $firstName, $lastName, $email, $clubId,
-                $socialInstagram ?: null, $socialStrava ?: null, $socialFacebook ?: null,
-                $socialYoutube ?: null, $socialTiktok ?: null
+                $firstName, $lastName, $email, $clubId
             ];
 
-            // Try to add new fields (they might not exist yet)
-            try {
-                $testStmt = $pdo->query("SHOW COLUMNS FROM riders LIKE 'phone'");
-                if ($testStmt->rowCount() > 0) {
-                    $updateFields[] = 'birth_year = ?';
-                    $updateFields[] = 'phone = ?';
-                    $updateFields[] = 'ice_name = ?';
-                    $updateFields[] = 'ice_phone = ?';
-                    $updateValues[] = $birthYear;
-                    $updateValues[] = $phone ?: null;
-                    $updateValues[] = $iceName ?: null;
-                    $updateValues[] = $icePhone ?: null;
+            // Check which optional columns exist
+            $existingColumns = [];
+            $colStmt = $pdo->query("SHOW COLUMNS FROM riders");
+            while ($col = $colStmt->fetch(PDO::FETCH_ASSOC)) {
+                $existingColumns[] = $col['Field'];
+            }
 
-                    // Only update UCI ID if user doesn't already have one from license sync
-                    if (empty($currentUser['uci_id'])) {
-                        $updateFields[] = 'uci_id = ?';
-                        $updateValues[] = $uciId ?: null;
-                    }
+            // Add social columns if they exist
+            $socialColumns = [
+                'social_instagram' => $socialInstagram ?: null,
+                'social_strava' => $socialStrava ?: null,
+                'social_facebook' => $socialFacebook ?: null,
+                'social_youtube' => $socialYoutube ?: null,
+                'social_tiktok' => $socialTiktok ?: null
+            ];
+            foreach ($socialColumns as $colName => $colValue) {
+                if (in_array($colName, $existingColumns)) {
+                    $updateFields[] = "$colName = ?";
+                    $updateValues[] = $colValue;
                 }
-            } catch (PDOException $e) {
-                // New columns don't exist yet, skip them
+            }
+
+            // Add new profile fields if they exist
+            if (in_array('phone', $existingColumns)) {
+                $updateFields[] = 'birth_year = ?';
+                $updateFields[] = 'phone = ?';
+                $updateValues[] = $birthYear;
+                $updateValues[] = $phone ?: null;
+            }
+            if (in_array('ice_name', $existingColumns)) {
+                $updateFields[] = 'ice_name = ?';
+                $updateValues[] = $iceName ?: null;
+            }
+            if (in_array('ice_phone', $existingColumns)) {
+                $updateFields[] = 'ice_phone = ?';
+                $updateValues[] = $icePhone ?: null;
+            }
+            // Only update UCI ID if column exists and user doesn't already have one from license sync
+            if (in_array('uci_id', $existingColumns) && empty($currentUser['uci_id'])) {
+                $updateFields[] = 'uci_id = ?';
+                $updateValues[] = $uciId ?: null;
             }
 
             $updateValues[] = $currentUser['id'];
