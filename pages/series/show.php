@@ -564,7 +564,7 @@ unset($club);
     </div>
 
     <!-- Club Standings Section -->
-    <div id="club-standings" class="hidden">
+    <div id="club-standings" style="display: none;">
         <div class="card">
             <h2 class="card-title"><i data-lucide="shield" class="card-title-icon"></i> Klubbmästarskap</h2>
             <p class="text-muted standings-note"><?= count($clubStandings) ?> klubbar - Basta akare per klass: 100%, nast basta: 50%</p>
@@ -614,7 +614,7 @@ unset($club);
                                 <td class="col-total"><strong><?= $club['total_points'] ?></strong></td>
                             </tr>
                             <?php foreach ($club['riders'] as $clubRider): ?>
-                            <tr class="club-rider-row" data-parent="<?= $club['club_id'] ?>" class="hidden">
+                            <tr class="club-rider-row hidden" data-parent="<?= $club['club_id'] ?>" style="display: none;">
                                 <td></td>
                                 <td colspan="2" class="club-rider-cell">
                                     <a href="/rider/<?= $clubRider['rider_id'] ?>">
