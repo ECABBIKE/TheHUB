@@ -1007,7 +1007,7 @@ document.addEventListener('keydown', function(e) {
 }
 .modal-content {
     position: relative;
-    background: var(--color-star);
+    background: white;
     border-radius: var(--radius-lg);
     width: 100%;
     max-width: 600px;
@@ -1041,7 +1041,7 @@ document.addEventListener('keydown', function(e) {
 .modal-stat {
     text-align: center;
     padding: var(--space-sm);
-    background: var(--color-star-fade);
+    background: #f5f5f5;
     border-radius: var(--radius-sm);
 }
 .modal-stat-value {
