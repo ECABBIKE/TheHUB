@@ -133,6 +133,7 @@ RewriteRule ^admin/force-zero-motion-kids/?$ admin/force-zero-motion-kids.php [Q
 RewriteRule ^admin/find-duplicates/?$ admin/find-duplicates.php [QSA,L]
 RewriteRule ^admin/cleanup-duplicates/?$ admin/cleanup-duplicates.php [QSA,L]
 RewriteRule ^admin/auto-merge-duplicates/?$ admin/auto-merge-duplicates.php [QSA,L]
+RewriteRule ^admin/fix-corrupted-uci/?$ admin/fix-corrupted-uci.php [QSA,L]
 RewriteRule ^admin/cleanup-clubs/?$ admin/cleanup-clubs.php [QSA,L]
 RewriteRule ^admin/search-uci-id/?$ admin/search-uci-id.php [QSA,L]
 RewriteRule ^admin/import-gravity-id/?$ admin/import-gravity-id.php [QSA,L]
