@@ -821,7 +821,105 @@
     font-weight: var(--weight-medium);
 }
 
-/* Form Card in Right Column */
+/* ============================================================================
+   DASHBOARD CHART CARDS - Modern Style
+   ============================================================================ */
+.dashboard-chart-card {
+    background: var(--color-bg-card);
+    border-radius: var(--radius-lg);
+    padding: var(--space-lg);
+    display: flex;
+    flex-direction: column;
+    overflow: hidden;
+    border: 1px solid var(--color-border);
+}
+
+.dashboard-chart-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: var(--space-md);
+}
+
+.dashboard-chart-title {
+    font-size: var(--text-sm);
+    font-weight: var(--weight-semibold);
+    color: var(--color-text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.dashboard-chart-stats {
+    display: flex;
+    gap: var(--space-lg);
+}
+
+.dashboard-stat {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+}
+
+.dashboard-stat-value {
+    font-size: 1.75rem;
+    font-weight: var(--weight-bold);
+    color: var(--color-text-primary);
+    line-height: 1.1;
+}
+
+.dashboard-stat-value--green {
+    color: #61CE70;
+}
+
+.dashboard-stat-value--red {
+    color: #ef4444;
+}
+
+.dashboard-stat-label {
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+    margin-top: 2px;
+}
+
+.dashboard-chart-body {
+    flex: 1;
+    min-height: 100px;
+    margin: 0 calc(-1 * var(--space-lg));
+    margin-bottom: calc(-1 * var(--space-sm));
+}
+
+.dashboard-chart-svg {
+    width: 100%;
+    height: 100%;
+    display: block;
+}
+
+.dashboard-chart-footer {
+    display: flex;
+    justify-content: center;
+    padding-top: var(--space-sm);
+    margin-top: var(--space-xs);
+    border-top: 1px solid var(--color-border);
+}
+
+.dashboard-chart-footer span {
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+}
+
+/* Green theme border accent */
+.dashboard-chart-card--green {
+    border-top: 3px solid #61CE70;
+}
+
+/* Red theme border accent */
+.dashboard-chart-card--red {
+    border-top: 3px solid #ef4444;
+}
+
+/* Form Card in Right Column (legacy - keep for compatibility) */
 .form-card {
     background: var(--color-bg-card);
     border-radius: var(--radius-lg);
@@ -1506,6 +1604,7 @@
     .profile-card,
     .form-card,
     .ranking-history-card,
+    .dashboard-chart-card,
     .series-card,
     .ranking-card,
     .form-points-card,

@@ -862,80 +862,87 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
             <?php endif; ?>
         </div>
 
-        <!-- FORM CARD -->
-        <div class="card form-card">
-            <h3 class="card-section-title-sm"><i data-lucide="trending-up"></i> Form</h3>
-            <?php if ($hasCompetitiveResults && !empty($formResults)):
-                // Använd max 10 senaste tävlingarna
-                $chartResults = array_slice($formResults, -10);
-                $positions = array_column($chartResults, 'position');
-                $avgPlacement = count($positions) > 0 ? array_sum($positions) / count($positions) : 0;
-                $avgDisplay = number_format($avgPlacement, 1);
+        <!-- FORM CARD - Dashboard Style -->
+        <?php if ($hasCompetitiveResults && !empty($formResults)):
+            // Använd max 10 senaste tävlingarna
+            $chartResults = array_slice($formResults, -10);
+            $positions = array_column($chartResults, 'position');
+            $bestPos = min($positions);
+            $avgPlacement = count($positions) > 0 ? array_sum($positions) / count($positions) : 0;
+            $avgDisplay = number_format($avgPlacement, 1);
 
-                $chartWidth = 320;
-                $chartHeight = 140;
-                $paddingX = 15;
-                $paddingTop = 20;
-                $paddingBottom = 35;
-                $numResults = count($chartResults);
+            $chartWidth = 400;
+            $chartHeight = 120;
+            $paddingX = 10;
+            $paddingTop = 10;
+            $paddingBottom = 20;
+            $numResults = count($chartResults);
 
-                $maxPos = max($positions);
-                $minPos = min($positions);
-                $displayMin = max(1, $minPos - 1);
-                $displayMax = $maxPos + 2;
-                $range = max(1, $displayMax - $displayMin);
+            $maxPos = max($positions);
+            $minPos = min($positions);
+            $displayMin = max(1, $minPos - 1);
+            $displayMax = $maxPos + 2;
+            $range = max(1, $displayMax - $displayMin);
 
-                $graphHeight = $chartHeight - $paddingTop - $paddingBottom;
-                $xStep = $numResults > 1 ? ($chartWidth - $paddingX * 2) / ($numResults - 1) : 0;
+            $graphHeight = $chartHeight - $paddingTop - $paddingBottom;
+            $xStep = $numResults > 1 ? ($chartWidth - $paddingX * 2) / ($numResults - 1) : 0;
 
-                $dataPoints = [];
-                foreach ($chartResults as $idx => $fr) {
-                    $x = $paddingX + ($idx * $xStep);
-                    $y = $paddingTop + (($fr['position'] - $displayMin) / $range) * $graphHeight;
-                    $dataPoints[] = ['x' => $x, 'y' => $y, 'pos' => $fr['position']];
-                }
+            $dataPoints = [];
+            foreach ($chartResults as $idx => $fr) {
+                $x = $paddingX + ($idx * $xStep);
+                $y = $paddingTop + (($fr['position'] - $displayMin) / $range) * $graphHeight;
+                $dataPoints[] = ['x' => $x, 'y' => $y, 'pos' => $fr['position']];
+            }
 
-                $avgY = $paddingTop + (($avgPlacement - $displayMin) / $range) * $graphHeight;
-
-                // Smooth kurva
-                $pathD = "M " . $dataPoints[0]['x'] . "," . $dataPoints[0]['y'];
-                for ($i = 1; $i < count($dataPoints); $i++) {
-                    $cpX = ($dataPoints[$i-1]['x'] + $dataPoints[$i]['x']) / 2;
-                    $pathD .= " Q " . $cpX . "," . $dataPoints[$i-1]['y'] . " " . $dataPoints[$i]['x'] . "," . $dataPoints[$i]['y'];
-                }
-                $areaPath = $pathD . " L " . end($dataPoints)['x'] . "," . ($chartHeight - $paddingBottom) . " L " . $dataPoints[0]['x'] . "," . ($chartHeight - $paddingBottom) . " Z";
-            ?>
-            <div class="form-chart-header">
-                <span class="form-avg-value"><?= $avgDisplay ?></span>
-                <span class="form-avg-label">snittplacering</span>
+            // Smooth kurva
+            $pathD = "M " . $dataPoints[0]['x'] . "," . $dataPoints[0]['y'];
+            for ($i = 1; $i < count($dataPoints); $i++) {
+                $cpX = ($dataPoints[$i-1]['x'] + $dataPoints[$i]['x']) / 2;
+                $pathD .= " Q " . $cpX . "," . $dataPoints[$i-1]['y'] . " " . $dataPoints[$i]['x'] . "," . $dataPoints[$i]['y'];
+            }
+            $areaPath = $pathD . " L " . end($dataPoints)['x'] . "," . ($chartHeight - $paddingBottom) . " L " . $dataPoints[0]['x'] . "," . ($chartHeight - $paddingBottom) . " Z";
+        ?>
+        <div class="dashboard-chart-card dashboard-chart-card--green">
+            <div class="dashboard-chart-header">
+                <div class="dashboard-chart-title">Form</div>
+                <div class="dashboard-chart-stats">
+                    <div class="dashboard-stat">
+                        <span class="dashboard-stat-value dashboard-stat-value--green">#<?= $bestPos ?></span>
+                        <span class="dashboard-stat-label">Bästa</span>
+                    </div>
+                    <div class="dashboard-stat">
+                        <span class="dashboard-stat-value"><?= $avgDisplay ?></span>
+                        <span class="dashboard-stat-label">Snitt</span>
+                    </div>
+                </div>
             </div>
-            <div class="form-chart-container">
-                <svg viewBox="0 0 <?= $chartWidth ?> <?= $chartHeight ?>" class="form-area-chart">
+            <div class="dashboard-chart-body">
+                <svg viewBox="0 0 <?= $chartWidth ?> <?= $chartHeight ?>" preserveAspectRatio="none" class="dashboard-chart-svg">
                     <defs>
-                        <linearGradient id="formAreaGradient" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stop-color="#61CE70" stop-opacity="0.35"/>
+                        <linearGradient id="formGradient" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stop-color="#61CE70" stop-opacity="0.4"/>
                             <stop offset="100%" stop-color="#61CE70" stop-opacity="0.05"/>
                         </linearGradient>
                     </defs>
-                    <!-- Baseline -->
-                    <line x1="<?= $paddingX ?>" y1="<?= $chartHeight - $paddingBottom ?>" x2="<?= $chartWidth - $paddingX ?>" y2="<?= $chartHeight - $paddingBottom ?>" stroke="var(--color-border)" stroke-width="1"/>
-                    <!-- Average line -->
-                    <line x1="<?= $paddingX ?>" y1="<?= $avgY ?>" x2="<?= $chartWidth - $paddingX ?>" y2="<?= $avgY ?>" stroke="#61CE70" stroke-width="1.5" stroke-dasharray="6,4" opacity="0.6"/>
-                    <!-- Area fill -->
-                    <path d="<?= $areaPath ?>" fill="url(#formAreaGradient)"/>
-                    <!-- Trend line -->
+                    <path d="<?= $areaPath ?>" fill="url(#formGradient)"/>
                     <path d="<?= $pathD ?>" fill="none" stroke="#61CE70" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-                    <!-- Data points and labels -->
-                    <?php foreach ($dataPoints as $dp): ?>
-                    <circle cx="<?= $dp['x'] ?>" cy="<?= $dp['y'] ?>" r="5" fill="#61CE70" stroke="white" stroke-width="2"/>
-                    <text x="<?= $dp['x'] ?>" y="<?= $chartHeight - $paddingBottom + 14 ?>" font-size="10" fill="var(--color-text-secondary)" text-anchor="middle" font-weight="500">#<?= $dp['pos'] ?></text>
-                    <?php endforeach; ?>
+                    <?php
+                    $pointInterval = max(1, floor($numResults / 8));
+                    foreach ($dataPoints as $idx => $dp):
+                        $showPoint = ($idx === 0 || $idx === count($dataPoints) - 1 || $idx % $pointInterval === 0);
+                        if ($showPoint):
+                    ?>
+                    <circle cx="<?= $dp['x'] ?>" cy="<?= $dp['y'] ?>" r="4" fill="#61CE70" stroke="white" stroke-width="1.5"/>
+                    <?php endif; endforeach; ?>
                 </svg>
             </div>
-            <?php endif; ?>
+            <div class="dashboard-chart-footer">
+                <span><?= $numResults ?> tävlingar</span>
+            </div>
         </div>
+        <?php endif; ?>
 
-        <!-- RANKING HISTORY CARD -->
+        <!-- RANKING HISTORY CARD - Dashboard Style -->
         <?php if (!empty($rankingHistoryFull) && count($rankingHistoryFull) >= 2):
             // Use all available snapshots for the graph (up to 50)
             $rankChartData = $rankingHistoryFull;
@@ -943,12 +950,13 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
             $bestRank = min($rankPositions);
             $worstRank = max($rankPositions);
             $currentRank = end($rankPositions);
+            $currentPoints = end($rankChartData)['total_ranking_points'] ?? $rankingPoints ?? 0;
 
-            $rankChartWidth = 320;
-            $rankChartHeight = 140;
-            $rankPaddingX = 15;
-            $rankPaddingTop = 20;
-            $rankPaddingBottom = 25;
+            $rankChartWidth = 400;
+            $rankChartHeight = 120;
+            $rankPaddingX = 10;
+            $rankPaddingTop = 10;
+            $rankPaddingBottom = 20;
             $rankNumResults = count($rankChartData);
 
             // For ranking: lower is better, so invert the Y axis
@@ -974,54 +982,43 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
                 $rankPathD .= " Q " . $cpX . "," . $rankDataPoints[$i-1]['y'] . " " . $rankDataPoints[$i]['x'] . "," . $rankDataPoints[$i]['y'];
             }
             $rankAreaPath = $rankPathD . " L " . end($rankDataPoints)['x'] . "," . ($rankChartHeight - $rankPaddingBottom) . " L " . $rankDataPoints[0]['x'] . "," . ($rankChartHeight - $rankPaddingBottom) . " Z";
-
-            // Best position line
-            $bestY = $rankPaddingTop + (($bestRank - $rankDisplayMin) / $rankRange) * $rankGraphHeight;
         ?>
-        <div class="card ranking-history-card">
-            <h3 class="card-section-title-sm"><i data-lucide="trending-up"></i> Rankinghistorik</h3>
-            <div class="ranking-chart-header">
-                <div class="ranking-stat">
-                    <span class="ranking-stat-value ranking-best">#<?= $bestRank ?></span>
-                    <span class="ranking-stat-label">bästa</span>
-                </div>
-                <div class="ranking-stat">
-                    <span class="ranking-stat-value">#<?= $currentRank ?></span>
-                    <span class="ranking-stat-label">nuvarande</span>
+        <div class="dashboard-chart-card dashboard-chart-card--red">
+            <div class="dashboard-chart-header">
+                <div class="dashboard-chart-title">Ranking</div>
+                <div class="dashboard-chart-stats">
+                    <div class="dashboard-stat">
+                        <span class="dashboard-stat-value dashboard-stat-value--red">#<?= $bestRank ?></span>
+                        <span class="dashboard-stat-label">Bästa</span>
+                    </div>
+                    <div class="dashboard-stat">
+                        <span class="dashboard-stat-value"><?= number_format($currentPoints, 1) ?></span>
+                        <span class="dashboard-stat-label">Poäng</span>
+                    </div>
                 </div>
             </div>
-            <div class="ranking-chart-container">
-                <svg viewBox="0 0 <?= $rankChartWidth ?> <?= $rankChartHeight ?>" class="ranking-area-chart">
+            <div class="dashboard-chart-body">
+                <svg viewBox="0 0 <?= $rankChartWidth ?> <?= $rankChartHeight ?>" preserveAspectRatio="none" class="dashboard-chart-svg">
                     <defs>
-                        <linearGradient id="rankingAreaGradient" x1="0" y1="0" x2="0" y2="1">
-                            <stop offset="0%" stop-color="#ef4444" stop-opacity="0.35"/>
+                        <linearGradient id="rankingGradient" x1="0" y1="0" x2="0" y2="1">
+                            <stop offset="0%" stop-color="#ef4444" stop-opacity="0.4"/>
                             <stop offset="100%" stop-color="#ef4444" stop-opacity="0.05"/>
                         </linearGradient>
                     </defs>
-                    <!-- Baseline -->
-                    <line x1="<?= $rankPaddingX ?>" y1="<?= $rankChartHeight - $rankPaddingBottom ?>" x2="<?= $rankChartWidth - $rankPaddingX ?>" y2="<?= $rankChartHeight - $rankPaddingBottom ?>" stroke="var(--color-border)" stroke-width="1"/>
-                    <!-- Best rank line -->
-                    <line x1="<?= $rankPaddingX ?>" y1="<?= $bestY ?>" x2="<?= $rankChartWidth - $rankPaddingX ?>" y2="<?= $bestY ?>" stroke="#ef4444" stroke-width="1.5" stroke-dasharray="6,4" opacity="0.6"/>
-                    <!-- Area fill -->
-                    <path d="<?= $rankAreaPath ?>" fill="url(#rankingAreaGradient)"/>
-                    <!-- Trend line -->
+                    <path d="<?= $rankAreaPath ?>" fill="url(#rankingGradient)"/>
                     <path d="<?= $rankPathD ?>" fill="none" stroke="#ef4444" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-                    <!-- Data points (show fewer points if many) -->
                     <?php
-                    $pointInterval = max(1, floor($rankNumResults / 10)); // Show ~10 points max
+                    $pointInterval = max(1, floor($rankNumResults / 8));
                     foreach ($rankDataPoints as $idx => $dp):
                         $showPoint = ($idx === 0 || $idx === count($rankDataPoints) - 1 || $idx % $pointInterval === 0);
                         if ($showPoint):
                     ?>
                     <circle cx="<?= $dp['x'] ?>" cy="<?= $dp['y'] ?>" r="4" fill="#ef4444" stroke="white" stroke-width="1.5"/>
                     <?php endif; endforeach; ?>
-                    <!-- First and last labels -->
-                    <text x="<?= $rankDataPoints[0]['x'] ?>" y="<?= $rankChartHeight - $rankPaddingBottom + 12 ?>" font-size="9" fill="var(--color-text-secondary)" text-anchor="start" font-weight="500"><?= date('M y', strtotime($rankDataPoints[0]['date'])) ?></text>
-                    <text x="<?= end($rankDataPoints)['x'] ?>" y="<?= $rankChartHeight - $rankPaddingBottom + 12 ?>" font-size="9" fill="var(--color-text-secondary)" text-anchor="end" font-weight="500"><?= date('M y', strtotime(end($rankDataPoints)['date'])) ?></text>
                 </svg>
             </div>
-            <div class="ranking-chart-footer">
-                <span class="ranking-snapshots-count"><?= $rankNumResults ?> uppdateringar</span>
+            <div class="dashboard-chart-footer">
+                <span><?= $rankNumResults ?> uppdateringar</span>
             </div>
         </div>
         <?php endif; ?>
