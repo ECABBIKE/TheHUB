@@ -498,6 +498,11 @@ function parseAndAnalyzeCSV($filepath, $db) {
  // Add detected stage columns to stats
  $stats['stage_columns'] = $stageColumnsDetected;
 
+ // DEBUG: Log headers to see column mapping
+ error_log("=== CSV IMPORT DEBUG ===");
+ error_log("RAW HEADERS: " . implode(' | ', $rawHeader));
+ error_log("MAPPED HEADERS: " . implode(' | ', $header));
+
  // Read all rows
  while (($row = fgetcsv($handle, 0, $delimiter)) !== false) {
  if (count($row) < 2) continue;
@@ -523,6 +528,14 @@ function parseAndAnalyzeCSV($filepath, $db) {
  $lastName = trim($rowData['lastname'] ?? '');
  $licenseNumber = trim($rowData['license_number'] ?? '');
  $normalizedLicense = preg_replace('/[^0-9]/', '', $licenseNumber);
+
+ // Debug first row completely
+ static $firstRowDebug = true;
+ if ($firstRowDebug) {
+  error_log("FIRST ROW DATA: " . json_encode($rowData, JSON_UNESCAPED_UNICODE));
+  error_log("EXTRACTED: first='{$firstName}' last='{$lastName}' license='{$licenseNumber}' normalized='{$normalizedLicense}'");
+  $firstRowDebug = false;
+ }
 
  if (!empty($firstName) && !empty($lastName)) {
   $riderKey = $firstName . '|' . $lastName . '|' . $normalizedLicense;
