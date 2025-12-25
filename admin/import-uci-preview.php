@@ -16,6 +16,81 @@ $messageType = 'info';
 $preview_data = null;
 $stats = null;
 
+/**
+ * Parse Swedish personnummer (10 or 12 digits) and extract birth year
+ * Formats:
+ * - 12 digits: YYYYMMDDXXXX or YYYYMMDD-XXXX → extract YYYY
+ * - 10 digits: YYMMDDXXXX or YYMMDD-XXXX → convert YY to YYYY
+ * - Just year: YYYY → return as-is
+ * @param string $pnr Personnummer string
+ * @return int|null Birth year (4 digits) or null if parsing failed
+ */
+function parsePersonnummer($pnr) {
+    if (empty($pnr)) {
+        return null;
+    }
+
+    // Remove whitespace, dashes, and plus signs
+    $pnr = preg_replace('/[\s\-\+]/', '', trim($pnr));
+
+    // If it's already just a 4-digit year, return it
+    if (preg_match('/^\d{4}$/', $pnr)) {
+        $year = (int)$pnr;
+        if ($year >= 1900 && $year <= date('Y')) {
+            return $year;
+        }
+    }
+
+    // 12 digits: YYYYMMDDXXXX
+    if (preg_match('/^(\d{4})\d{8}$/', $pnr, $matches)) {
+        $year = (int)$matches[1];
+        if ($year >= 1900 && $year <= date('Y')) {
+            return $year;
+        }
+    }
+
+    // 10 digits: YYMMDDXXXX
+    if (preg_match('/^(\d{2})\d{8}$/', $pnr, $matches)) {
+        $yy = (int)$matches[1];
+        $currentYear = (int)date('Y');
+        $currentCentury = (int)floor($currentYear / 100) * 100;
+
+        // Determine century: if YY > current year's last 2 digits, it's previous century
+        if ($yy > ($currentYear % 100)) {
+            $year = $currentCentury - 100 + $yy;
+        } else {
+            $year = $currentCentury + $yy;
+        }
+
+        return $year;
+    }
+
+    // 8 digits without last 4: YYYYMMDD
+    if (preg_match('/^(\d{4})\d{4}$/', $pnr, $matches)) {
+        $year = (int)$matches[1];
+        if ($year >= 1900 && $year <= date('Y')) {
+            return $year;
+        }
+    }
+
+    // 6 digits: YYMMDD
+    if (preg_match('/^(\d{2})\d{4}$/', $pnr, $matches)) {
+        $yy = (int)$matches[1];
+        $currentYear = (int)date('Y');
+        $currentCentury = (int)floor($currentYear / 100) * 100;
+
+        if ($yy > ($currentYear % 100)) {
+            $year = $currentCentury - 100 + $yy;
+        } else {
+            $year = $currentCentury + $yy;
+        }
+
+        return $year;
+    }
+
+    return null;
+}
+
 // ============================================================================
 // PHASE 1: UPLOAD & PREVIEW
 // ============================================================================
