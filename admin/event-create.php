@@ -134,7 +134,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
  $_SESSION['message'] = 'Event skapat!';
  $_SESSION['messageType'] = 'success';
- header('Location: /admin/events.php');
+ header('Location: /admin/events');
  exit;
  } catch (Exception $e) {
  $message = 'Ett fel uppstod: ' . $e->getMessage();
@@ -174,7 +174,7 @@ include __DIR__ . '/components/unified-layout.php';
 ?>
 
 <div class="admin-card">
- <div class="container" class="gs-max-w-800">
+ <div class="container gs-max-w-800">
  <!-- Header -->
  <div class="flex items-center justify-between mb-lg">
  <h1 class="">
@@ -197,7 +197,7 @@ include __DIR__ . '/components/unified-layout.php';
 
  <!-- Form -->
  <div class="card">
- <form method="POST" class="card-body">
+ <form method="POST" class="card-body" style="padding: var(--space-lg);">
  <?= csrf_field() ?>
 
  <div class="grid grid-cols-1 gap-md">
