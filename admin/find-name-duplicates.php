@@ -167,11 +167,11 @@ function getLastSurnamePart($lastname) {
 }
 
 // Find all name duplicates (same firstname + lastname, different IDs)
-// Using normalized names to handle extra spaces
+// Using simple TRIM and LOWER (REGEXP_REPLACE can fail on older MySQL)
 $nameDuplicates = $db->getAll("
     SELECT
-        LOWER(TRIM(REGEXP_REPLACE(firstname, '\\\\s+', ' '))) as fn,
-        LOWER(TRIM(REGEXP_REPLACE(lastname, '\\\\s+', ' '))) as ln,
+        LOWER(TRIM(firstname)) as fn,
+        LOWER(TRIM(lastname)) as ln,
         GROUP_CONCAT(id ORDER BY id) as rider_ids,
         COUNT(*) as count
     FROM riders
@@ -180,14 +180,14 @@ $nameDuplicates = $db->getAll("
     GROUP BY fn, ln
     HAVING count > 1
     ORDER BY count DESC
-    LIMIT 100
+    LIMIT 200
 ");
 
 // Also find fuzzy duplicates (same firstname + same last part of surname)
 // This catches "Mattias Sjöström-Varg" vs "Mattias Varg"
 $fuzzyDuplicates = $db->getAll("
     SELECT
-        LOWER(TRIM(REGEXP_REPLACE(firstname, '\\\\s+', ' '))) as fn,
+        LOWER(TRIM(firstname)) as fn,
         SUBSTRING_INDEX(LOWER(TRIM(lastname)), '-', -1) as ln_last,
         SUBSTRING_INDEX(LOWER(TRIM(lastname)), ' ', -1) as ln_word,
         GROUP_CONCAT(DISTINCT id ORDER BY id) as rider_ids,
@@ -198,7 +198,7 @@ $fuzzyDuplicates = $db->getAll("
     GROUP BY fn, ln_last
     HAVING count > 1 AND COUNT(DISTINCT LOWER(TRIM(lastname))) > 1
     ORDER BY count DESC
-    LIMIT 50
+    LIMIT 100
 ");
 
 // Merge the two result sets (exact + fuzzy), avoiding duplicates
