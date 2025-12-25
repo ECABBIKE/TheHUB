@@ -451,45 +451,39 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
             // For database comparison, strip spaces
             $licenseNumberDigits = preg_replace('/[^0-9]/', '', $licenseNumber);
 
-            if (!isset($riderCache[$riderName . '|' . $licenseNumber])) {
+            // IMPORTANT: Use UCI-ID as PRIMARY cache key if available
+            // This ensures same UCI = same rider, regardless of name variations
+            $cacheKey = !empty($licenseNumberDigits) ? "UCI:{$licenseNumberDigits}" : "NAME:{$riderName}";
+
+            if (!isset($riderCache[$cacheKey])) {
                 // Try to find rider by license number first (normalized)
                 $rider = null;
                 if (!empty($licenseNumberDigits)) {
                     // Try exact match with normalized number (compare digits only)
                     $rider = $db->getRow(
-                        "SELECT id FROM riders WHERE REPLACE(REPLACE(license_number, ' ', ''), '-', '') = ?",
+                        "SELECT id, firstname, lastname FROM riders WHERE REPLACE(REPLACE(license_number, ' ', ''), '-', '') = ?",
                         [$licenseNumberDigits]
                     );
                     if ($rider) {
                         $matching_stats['riders_found']++;
+                        error_log("IMPORT: UCI match found - UCI:{$licenseNumberDigits} → rider ID {$rider['id']} ({$rider['firstname']} {$rider['lastname']})");
                     }
                 }
 
-                // Try by name if no license match
+                // Try by name if no license match - use simple = instead of LOWER() which doesn't work
                 if (!$rider) {
-                    // First try exact match
+                    $firstName = trim($data['firstname']);
+                    $lastName = trim($data['lastname']);
+
+                    // Simple exact match (case-sensitive but usually works)
                     $rider = $db->getRow(
-                        "SELECT id, license_number FROM riders WHERE LOWER(firstname) = LOWER(?) AND LOWER(lastname) = LOWER(?)",
-                        [trim($data['firstname']), trim($data['lastname'])]
+                        "SELECT id, license_number FROM riders WHERE firstname = ? AND lastname = ?",
+                        [$firstName, $lastName]
                     );
-
-                    // If no exact match, try fuzzy match (first name starts with, handle middle names)
-                    if (!$rider) {
-                        $firstName = trim($data['firstname']);
-                        $lastName = trim($data['lastname']);
-
-                        // Try matching with first part of firstname (handle middle names)
-                        $firstNamePart = explode(' ', $firstName)[0];
-                        $rider = $db->getRow(
-                            "SELECT id, license_number FROM riders
-                             WHERE (LOWER(firstname) LIKE LOWER(?) OR LOWER(firstname) = LOWER(?))
-                             AND LOWER(lastname) = LOWER(?)",
-                            [$firstNamePart . '%', $firstNamePart, $lastName]
-                        );
-                    }
 
                     if ($rider) {
                         $matching_stats['riders_found']++;
+                        error_log("IMPORT: Name match found - '{$firstName} {$lastName}' → rider ID {$rider['id']}");
 
                         // If we found by name and import has UCI ID but rider doesn't - update rider
                         if (!empty($licenseNumber) && empty($rider['license_number'])) {
@@ -497,7 +491,10 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
                                 'license_number' => $licenseNumber
                             ], 'id = ?', [$rider['id']]);
                             $matching_stats['riders_updated_with_uci'] = ($matching_stats['riders_updated_with_uci'] ?? 0) + 1;
+                            error_log("IMPORT: Updated rider {$rider['id']} with UCI: {$licenseNumber}");
                         }
+                    } else {
+                        error_log("IMPORT: No match found for '{$firstName} {$lastName}' UCI:{$licenseNumberDigits}");
                     }
                 }
 
@@ -530,13 +527,14 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
                         trackImportRecord($db, $importId, 'rider', $riderId, 'created');
                     }
 
-                    $riderCache[$riderName . '|' . $licenseNumber] = $riderId;
+                    error_log("IMPORT: Created new rider ID {$riderId} for '{$data['firstname']} {$data['lastname']}' UCI:{$licenseNumberDigits}");
+                    $riderCache[$cacheKey] = $riderId;
                 } else {
-                    $riderCache[$riderName . '|' . $licenseNumber] = $rider['id'];
+                    $riderCache[$cacheKey] = $rider['id'];
                 }
             }
 
-            $riderId = $riderCache[$riderName . '|' . $licenseNumber];
+            $riderId = $riderCache[$cacheKey];
 
             // Find or create club using smart matching
             $clubId = null;
@@ -544,9 +542,9 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
             if (!empty($clubName)) {
                 // Normalize the club name for cache key to catch variants
                 $normalizedClubName = normalizeClubName($clubName);
-                $cacheKey = !empty($normalizedClubName) ? $normalizedClubName : $clubName;
+                $clubCacheKey = !empty($normalizedClubName) ? $normalizedClubName : $clubName;
 
-                if (!isset($clubCache[$cacheKey])) {
+                if (!isset($clubCache[$clubCacheKey])) {
                     // Use smart matching (handles CK/Ck, OK/Ok variants, etc.)
                     $club = findClubByName($db, $clubName);
 
@@ -560,12 +558,12 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
                         if ($importId) {
                             trackImportRecord($db, $importId, 'club', $newClubId, 'created');
                         }
-                        $clubCache[$cacheKey] = $newClubId;
+                        $clubCache[$clubCacheKey] = $newClubId;
                     } else {
-                        $clubCache[$cacheKey] = $club['id'];
+                        $clubCache[$clubCacheKey] = $club['id'];
                     }
                 }
-                $clubId = $clubCache[$cacheKey];
+                $clubId = $clubCache[$clubCacheKey];
             }
 
             // Find or create class
