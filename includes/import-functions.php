@@ -574,19 +574,29 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
                         $matching_stats['riders_found']++;
                         error_log("IMPORT RIDER FOUND BY NAME: rider_id={$rider['id']} for '{$firstName}' '{$lastName}'");
 
-                        // If we found by name and import has UCI ID but rider doesn't have it in either field
+                        // If we found by name and import has UCI ID, check if we should update
                         if (!empty($licenseNumber)) {
-                            $hasLicense = !empty($rider['license_number']);
-                            $hasUciId = !empty($rider['uci_id']);
+                            $existingLicense = $rider['license_number'] ?? '';
                             $importedDigits = preg_replace('/[^0-9]/', '', $licenseNumber);
-                            $existingLicenseDigits = preg_replace('/[^0-9]/', '', $rider['license_number'] ?? '');
+                            $existingLicenseDigits = preg_replace('/[^0-9]/', '', $existingLicense);
                             $existingUciDigits = preg_replace('/[^0-9]/', '', $rider['uci_id'] ?? '');
 
-                            // Update license_number if empty and not matching uci_id
-                            if (!$hasLicense && $importedDigits !== $existingUciDigits) {
+                            // Check if existing license is a temp SWE-ID (SWE25XXXXX format)
+                            $isTempSweId = preg_match('/^SWE\d{7}$/', str_replace([' ', '-'], '', $existingLicense));
+                            // Check if imported license is a real UCI-ID (14+ chars)
+                            $importedClean = str_replace([' ', '-'], '', $licenseNumber);
+                            $isRealUciId = strlen($importedClean) >= 14 && preg_match('/^[A-Z]{3}\d{11}/', $importedClean);
+
+                            // Update license_number if:
+                            // 1. Empty - always update
+                            // 2. Has temp SWE-ID and import has real UCI-ID - replace SWE with UCI
+                            $shouldUpdate = empty($existingLicense) ||
+                                           ($isTempSweId && $isRealUciId && $importedDigits !== $existingLicenseDigits);
+
+                            if ($shouldUpdate && $importedDigits !== $existingUciDigits) {
                                 $db->update('riders', ['license_number' => $licenseNumber], 'id = ?', [$rider['id']]);
                                 $matching_stats['riders_updated_with_uci'] = ($matching_stats['riders_updated_with_uci'] ?? 0) + 1;
-                                error_log("IMPORT RIDER UCI UPDATED: rider_id={$rider['id']} uci={$licenseNumber}");
+                                error_log("IMPORT RIDER UCI UPDATED: rider_id={$rider['id']} old='{$existingLicense}' new='{$licenseNumber}'");
                             }
                         }
                     } else {
