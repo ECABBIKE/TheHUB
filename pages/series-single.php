@@ -894,10 +894,18 @@ function switchStandingsTab(tab) {
   document.querySelectorAll('.tab-pill').forEach(btn => {
     btn.classList.toggle('active', btn.dataset.tab === tab);
   });
-  // Show/hide sections
-  document.getElementById('individual-standings').style.display = tab === 'individual' ? '' : 'none';
-  document.getElementById('club-standings').style.display = tab === 'club' ? '' : 'none';
-}
+  
+  // Show/hide sections using CSS classes
+  const individualDiv = document.getElementById('individual-standings');
+  const clubDiv = document.getElementById('club-standings');
+  
+  if (tab === 'individual') {
+    individualDiv.classList.remove('hidden');
+    clubDiv.classList.add('hidden');
+  } else {
+    individualDiv.classList.add('hidden');
+    clubDiv.classList.remove('hidden');
+  }
 
 function toggleClubRiders(btn, event) {
   event.stopPropagation();
