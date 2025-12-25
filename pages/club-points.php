@@ -3,9 +3,11 @@
  * Public Club Points Detail Page
  * Shows detailed breakdown of a club's points in a series
  * Accessed via /club-points?club_id=X&series_id=Y
+ * Add ?modal=1 to load without header/footer (for iframe embedding)
  */
 
 $db = hub_db();
+$isModal = isset($_GET['modal']) && $_GET['modal'] == '1';
 
 // Get parameters
 $clubId = isset($_GET['club_id']) ? (int)$_GET['club_id'] : 0;
@@ -209,8 +211,24 @@ if (!$hasCachedData) {
         'best_event_points' => $bestEventPoints
     ];
 }
-?>
 
+// If modal mode, output standalone HTML with minimal styling
+if ($isModal):
+?>
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title><?= htmlspecialchars($club['name']) ?> - Klubbpoäng</title>
+    <link rel="stylesheet" href="/assets/css/base.css">
+    <link rel="stylesheet" href="/assets/css/components.css">
+    <script src="https://unpkg.com/lucide@latest"></script>
+</head>
+<body style="background: var(--color-bg-page); padding: var(--space-lg);">
+<?php endif; ?>
+
+<?php if (!$isModal): ?>
 <!-- Back Button -->
 <div class="mb-lg">
     <a href="/series/<?= $seriesId ?>" class="btn-link">
@@ -218,6 +236,7 @@ if (!$hasCachedData) {
         Tillbaka till <?= htmlspecialchars($series['name']) ?>
     </a>
 </div>
+<?php endif; ?>
 
 <!-- Header -->
 <div class="club-header mb-lg">
@@ -553,3 +572,12 @@ arsort($classTotals);
     color: var(--color-text-muted);
 }
 </style>
+
+<?php if ($isModal): ?>
+<script>
+  // Initialize lucide icons
+  lucide.createIcons();
+</script>
+</body>
+</html>
+<?php endif; ?>
