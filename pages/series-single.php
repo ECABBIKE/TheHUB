@@ -647,6 +647,31 @@ if (!$series) {
 <!-- Club Standings Section -->
 <div id="club-standings" style="display: none;">
 
+<!-- DEBUG START -->
+<div class="alert alert-warning" style="margin: 16px;">
+    <strong>DEBUG klubbmästerskap:</strong><br>
+    Antal klubbar: <?= count($clubStandings) ?><br>
+    Antal events: <?= count($seriesEvents) ?><br>
+    useSeriesResults: <?= $useSeriesResults ? 'JA' : 'NEJ' ?><br>
+    <?php if (empty($clubStandings)): ?>
+    <br><strong>$clubStandings är TOM!</strong><br>
+    <?php
+    // Test-query för att se om det finns data
+    $testStmt = $db->prepare("
+        SELECT COUNT(*) as cnt, COUNT(DISTINCT rd.club_id) as clubs
+        FROM results r
+        JOIN riders rd ON r.cyclist_id = rd.id
+        JOIN events e ON r.event_id = e.id
+        WHERE e.series_id = ? AND r.points > 0 AND rd.club_id IS NOT NULL
+    ");
+    $testStmt->execute([$seriesId]);
+    $testData = $testStmt->fetch(PDO::FETCH_ASSOC);
+    ?>
+    Resultat med klubb (results-tabell): <?= $testData['cnt'] ?> st från <?= $testData['clubs'] ?> klubbar<br>
+    <?php endif; ?>
+</div>
+<!-- DEBUG END -->
+
 <?php if (empty($clubStandings)): ?>
 <section class="card">
   <div class="empty-state">
