@@ -513,24 +513,16 @@ skip_club_standings:
         <?php
         // Calculate individual stats
         $totalIndividualRiders = 0;
-        $totalIndividualPoints = 0;
         foreach ($standingsByClass as $classData) {
             $totalIndividualRiders += count($classData['riders']);
-            foreach ($classData['riders'] as $rider) {
-                $totalIndividualPoints += $rider['total_points'];
-            }
         }
         ?>
 
         <!-- Summary Stats Cards -->
-        <div class="stats-grid mb-md">
+        <div class="stats-grid stats-grid--3 mb-md">
             <div class="stat-card">
                 <div class="stat-value"><?= count($classes) ?></div>
                 <div class="stat-label">Klasser</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value"><?= number_format($totalIndividualPoints) ?></div>
-                <div class="stat-label">Totala poang</div>
             </div>
             <div class="stat-card">
                 <div class="stat-value"><?= $totalIndividualRiders ?></div>
@@ -641,21 +633,16 @@ skip_club_standings:
     <div id="club-standings" style="display: none;">
         <?php
         // Calculate summary stats
-        $clubTotalPoints = array_sum(array_column($clubStandings, 'total_points'));
         $clubTotalParticipants = array_sum(array_column($clubStandings, 'rider_count'));
         $clubCount = count($clubStandings);
         $eventCount = count($events);
         ?>
 
         <!-- Summary Stats Cards -->
-        <div class="stats-grid mb-md">
+        <div class="stats-grid stats-grid--3 mb-md">
             <div class="stat-card">
                 <div class="stat-value"><?= $clubCount ?></div>
                 <div class="stat-label">Klubbar</div>
-            </div>
-            <div class="stat-card">
-                <div class="stat-value"><?= number_format($clubTotalPoints) ?></div>
-                <div class="stat-label">Totala poang</div>
             </div>
             <div class="stat-card">
                 <div class="stat-value"><?= $clubTotalParticipants ?></div>
@@ -954,16 +941,14 @@ document.addEventListener('keydown', function(e) {
     color: white;
 }
 
-/* Stats Grid for Club Standings */
+/* Stats Grid */
 .stats-grid {
     display: grid;
     grid-template-columns: repeat(4, 1fr);
     gap: var(--space-sm);
 }
-@media (max-width: 599px) {
-    .stats-grid {
-        grid-template-columns: repeat(2, 1fr);
-    }
+.stats-grid--3 {
+    grid-template-columns: repeat(3, 1fr);
 }
 .stat-card {
     background: white;
