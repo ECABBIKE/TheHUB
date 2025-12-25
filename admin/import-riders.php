@@ -677,20 +677,28 @@ function importRidersFromCSV($filepath, $db, $seasonYear = null) {
       $birthYear = (int)$birthYearValue;
     }
   }
-  // Fall back to birthdate column - extract year from date (YYYY-MM-DD, DD/MM/YYYY, etc.)
+  // Fall back to birthdate column - extract year from date or personnummer
+  // NOTE: SCF exports use "Födelsedatum" column but it contains personnummer (YYYYMMDD-XXXX)
   if (!$birthYear && !empty($data['birthdate'])) {
-  $dateStr = trim($data['birthdate']);
-  // Try to parse various date formats
-  if (preg_match('/^(\d{4})[-\/]/', $dateStr, $m)) {
-   // YYYY-MM-DD or YYYY/MM/DD
-   $birthYear = (int)$m[1];
-  } elseif (preg_match('/[-\/](\d{4})$/', $dateStr, $m)) {
-   // DD-MM-YYYY or DD/MM/YYYY
-   $birthYear = (int)$m[1];
-  } elseif (preg_match('/^(\d{4})$/', $dateStr, $m)) {
-   // Just year
-   $birthYear = (int)$m[1];
-  }
+    $dateStr = trim($data['birthdate']);
+
+    // FIRST: Try to parse as personnummer (YYYYMMDD-XXXX or YYMMDD-XXXX)
+    // This handles SCF format where "Födelsedatum" contains personnummer
+    $birthYear = parsePersonnummer($dateStr);
+
+    // If personnummer parsing failed, try date formats
+    if (!$birthYear) {
+      if (preg_match('/^(\d{4})[-\/](\d{2})[-\/](\d{2})$/', $dateStr, $m)) {
+        // YYYY-MM-DD or YYYY/MM/DD (strict: must have 3 parts)
+        $birthYear = (int)$m[1];
+      } elseif (preg_match('/^(\d{2})[-\/](\d{2})[-\/](\d{4})$/', $dateStr, $m)) {
+        // DD-MM-YYYY or DD/MM/YYYY (strict: must have 3 parts, year at end)
+        $birthYear = (int)$m[3];
+      } elseif (preg_match('/^(\d{4})$/', $dateStr, $m)) {
+        // Just year
+        $birthYear = (int)$m[1];
+      }
+    }
   }
 
   // Prepare rider data
