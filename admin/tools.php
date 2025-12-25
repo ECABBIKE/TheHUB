@@ -334,6 +334,25 @@ include __DIR__ . '/components/unified-layout.php';
         </div>
     </div>
 
+    <!-- BULK Merge Duplicates -->
+    <div class="tool-card">
+        <div class="tool-card-header">
+            <div class="tool-icon danger">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m8 6 4-4 4 4"/><path d="M12 2v10.3a4 4 0 0 1-1.172 2.872L4 22"/><path d="m20 22-5-5"/></svg>
+            </div>
+            <div>
+                <h4 class="tool-title">BULK: Slå ihop ALLA</h4>
+                <p class="tool-description">Slå ihop ALLA dubletter (UCI + namn) med ett klick. Behåller bästa profilen.</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/bulk-merge-duplicates" class="btn-admin btn-admin-danger flex-1">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm"><path d="m8 6 4-4 4 4"/><path d="M12 2v10.3"/></svg>
+                BULK MERGE
+            </a>
+        </div>
+    </div>
+
     <!-- Assign Missing SWE-ID -->
     <div class="tool-card">
         <div class="tool-card-header">
