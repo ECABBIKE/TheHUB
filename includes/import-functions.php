@@ -63,28 +63,6 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
     global $IMPORT_EVENT_MAPPING;
     $IMPORT_EVENT_MAPPING = $eventMapping;
 
-    // Read file content and detect/convert encoding
-    $content = file_get_contents($filepath);
-    if ($content === false) {
-        throw new Exception('Kunde inte läsa filen');
-    }
-
-    // Detect encoding and convert to UTF-8
-    $encoding = mb_detect_encoding($content, ['UTF-8', 'ISO-8859-1', 'Windows-1252'], true);
-    if ($encoding && $encoding !== 'UTF-8') {
-        $content = mb_convert_encoding($content, 'UTF-8', $encoding);
-        error_log("IMPORT: Converted file from {$encoding} to UTF-8");
-    }
-
-    // Remove BOM if present
-    $content = preg_replace('/^\xEF\xBB\xBF/', '', $content);
-
-    // Write back to temp file for fgetcsv
-    $tempFile = tempnam(sys_get_temp_dir(), 'import_utf8_');
-    file_put_contents($tempFile, $content);
-    $filepath = $tempFile;
-    $shouldCleanupTemp = true;
-
     if (($handle = fopen($filepath, 'r')) === false) {
         throw new Exception('Kunde inte öppna filen');
     }
@@ -474,129 +452,52 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
             $licenseNumberDigits = preg_replace('/[^0-9]/', '', $licenseNumber);
 
             if (!isset($riderCache[$riderName . '|' . $licenseNumber])) {
-                // Try to find rider by license number OR uci_id first (normalized)
+                // Try to find rider by license number first (normalized)
                 $rider = null;
-                $matchMethod = 'none';
-
-                // Debug: Log the search
-                error_log("IMPORT RIDER SEARCH: '{$data['firstname']}' '{$data['lastname']}' UCI='{$rawLicenseNumber}'");
-
                 if (!empty($licenseNumberDigits)) {
-                    // Try match with normalized number in license_number OR uci_id (compare digits only)
+                    // Try exact match with normalized number (compare digits only)
                     $rider = $db->getRow(
-                        "SELECT id, license_number, uci_id FROM riders
-                         WHERE REPLACE(REPLACE(license_number, ' ', ''), '-', '') = ?
-                            OR REPLACE(REPLACE(uci_id, ' ', ''), '-', '') = ?",
-                        [$licenseNumberDigits, $licenseNumberDigits]
+                        "SELECT id FROM riders WHERE REPLACE(REPLACE(license_number, ' ', ''), '-', '') = ?",
+                        [$licenseNumberDigits]
                     );
                     if ($rider) {
                         $matching_stats['riders_found']++;
-                        $matchMethod = 'uci_id';
-                        error_log("IMPORT RIDER FOUND BY UCI: rider_id={$rider['id']}");
-                        // If matched via uci_id but license_number is empty/different, update it
-                        if (!empty($licenseNumber) && empty($rider['license_number'])) {
-                            $db->update('riders', ['license_number' => $licenseNumber], 'id = ?', [$rider['id']]);
-                        }
                     }
                 }
 
-                // Try by name if no license match - use advanced matching strategies
+                // Try by name if no license match
                 if (!$rider) {
-                    $firstName = trim($data['firstname']);
-                    $lastName = trim($data['lastname']);
-                    $clubName = trim($data['club_name'] ?? '');
+                    // First try exact match
+                    $rider = $db->getRow(
+                        "SELECT id, license_number FROM riders WHERE LOWER(firstname) = LOWER(?) AND LOWER(lastname) = LOWER(?)",
+                        [trim($data['firstname']), trim($data['lastname'])]
+                    );
 
-                    // Strategy 1: Exact name match with club (highest confidence)
-                    // Using UPPER() for case-insensitive matching (LOWER doesn't work with this MySQL)
-                    if (!empty($clubName)) {
-                        $rider = $db->getRow(
-                            "SELECT r.id, r.license_number, r.uci_id FROM riders r
-                             LEFT JOIN clubs c ON r.club_id = c.id
-                             WHERE UPPER(r.firstname) = UPPER(?) AND UPPER(r.lastname) = UPPER(?) AND UPPER(c.name) LIKE UPPER(?)",
-                            [$firstName, $lastName, '%' . $clubName . '%']
-                        );
-                    }
-
-                    // Strategy 2: Exact name match (any club)
+                    // If no exact match, try fuzzy match (first name starts with, handle middle names)
                     if (!$rider) {
-                        $rider = $db->getRow(
-                            "SELECT id, license_number, uci_id FROM riders WHERE UPPER(firstname) = UPPER(?) AND UPPER(lastname) = UPPER(?)",
-                            [$firstName, $lastName]
-                        );
-                    }
+                        $firstName = trim($data['firstname']);
+                        $lastName = trim($data['lastname']);
 
-                    // Strategy 3: Handle double last names (e.g., "Svensson Lindberg")
-                    if (!$rider) {
-                        $rider = $db->getRow(
-                            "SELECT id, license_number, uci_id FROM riders
-                             WHERE UPPER(firstname) = UPPER(?)
-                             AND (UPPER(lastname) LIKE UPPER(?) OR UPPER(?) LIKE CONCAT('%', UPPER(lastname), '%'))",
-                            [$firstName, '%' . $lastName . '%', $lastName]
-                        );
-                    }
-
-                    // Strategy 4: If lastname has space, try matching last part only
-                    if (!$rider && strpos($lastName, ' ') !== false) {
-                        $lastnameParts = explode(' ', $lastName);
-                        $lastPart = end($lastnameParts);
-                        $rider = $db->getRow(
-                            "SELECT id, license_number, uci_id FROM riders WHERE UPPER(firstname) = UPPER(?) AND UPPER(lastname) = UPPER(?)",
-                            [$firstName, $lastPart]
-                        );
-                    }
-
-                    // Strategy 5: Handle middle names - try first part of firstname
-                    if (!$rider) {
-                        $firstNamePart = explode(' ', $firstName)[0];
-                        if ($firstNamePart !== $firstName) {
-                            $rider = $db->getRow(
-                                "SELECT id, license_number, uci_id FROM riders WHERE UPPER(firstname) = UPPER(?) AND UPPER(lastname) = UPPER(?)",
-                                [$firstNamePart, $lastName]
-                            );
-                        }
-                    }
-
-                    // Strategy 6: Fuzzy firstname match (starts with) + exact lastname
-                    if (!$rider) {
+                        // Try matching with first part of firstname (handle middle names)
                         $firstNamePart = explode(' ', $firstName)[0];
                         $rider = $db->getRow(
-                            "SELECT id, license_number, uci_id FROM riders
-                             WHERE UPPER(firstname) LIKE UPPER(?) AND UPPER(lastname) = UPPER(?)",
-                            [$firstNamePart . '%', $lastName]
+                            "SELECT id, license_number FROM riders
+                             WHERE (LOWER(firstname) LIKE LOWER(?) OR LOWER(firstname) = LOWER(?))
+                             AND LOWER(lastname) = LOWER(?)",
+                            [$firstNamePart . '%', $firstNamePart, $lastName]
                         );
                     }
 
                     if ($rider) {
                         $matching_stats['riders_found']++;
-                        error_log("IMPORT RIDER FOUND BY NAME: rider_id={$rider['id']} for '{$firstName}' '{$lastName}'");
 
-                        // If we found by name and import has UCI ID, check if we should update
-                        if (!empty($licenseNumber)) {
-                            $existingLicense = $rider['license_number'] ?? '';
-                            $importedDigits = preg_replace('/[^0-9]/', '', $licenseNumber);
-                            $existingLicenseDigits = preg_replace('/[^0-9]/', '', $existingLicense);
-                            $existingUciDigits = preg_replace('/[^0-9]/', '', $rider['uci_id'] ?? '');
-
-                            // Check if existing license is a temp SWE-ID (SWE25XXXXX format)
-                            $isTempSweId = preg_match('/^SWE\d{7}$/', str_replace([' ', '-'], '', $existingLicense));
-                            // Check if imported license is a real UCI-ID (14+ chars)
-                            $importedClean = str_replace([' ', '-'], '', $licenseNumber);
-                            $isRealUciId = strlen($importedClean) >= 14 && preg_match('/^[A-Z]{3}\d{11}/', $importedClean);
-
-                            // Update license_number if:
-                            // 1. Empty - always update
-                            // 2. Has temp SWE-ID and import has real UCI-ID - replace SWE with UCI
-                            $shouldUpdate = empty($existingLicense) ||
-                                           ($isTempSweId && $isRealUciId && $importedDigits !== $existingLicenseDigits);
-
-                            if ($shouldUpdate && $importedDigits !== $existingUciDigits) {
-                                $db->update('riders', ['license_number' => $licenseNumber], 'id = ?', [$rider['id']]);
-                                $matching_stats['riders_updated_with_uci'] = ($matching_stats['riders_updated_with_uci'] ?? 0) + 1;
-                                error_log("IMPORT RIDER UCI UPDATED: rider_id={$rider['id']} old='{$existingLicense}' new='{$licenseNumber}'");
-                            }
+                        // If we found by name and import has UCI ID but rider doesn't - update rider
+                        if (!empty($licenseNumber) && empty($rider['license_number'])) {
+                            $db->update('riders', [
+                                'license_number' => $licenseNumber
+                            ], 'id = ?', [$rider['id']]);
+                            $matching_stats['riders_updated_with_uci'] = ($matching_stats['riders_updated_with_uci'] ?? 0) + 1;
                         }
-                    } else {
-                        error_log("IMPORT RIDER NOT FOUND BY NAME: '{$firstName}' '{$lastName}'");
                     }
                 }
 
@@ -604,7 +505,6 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
                 if (!$rider) {
                     $matching_stats['riders_not_found']++;
                     $matching_stats['riders_created']++;
-                    error_log("IMPORT RIDER CREATING NEW: '{$data['firstname']}' '{$data['lastname']}'");
 
                     // Determine gender from class name if available
                     $gender = 'M';
@@ -641,13 +541,7 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
             // Find or create club using smart matching
             $clubId = null;
             $clubName = trim($data['club_name'] ?? '');
-
-            // Validate club name - must have at least 2 alphanumeric characters
-            // This prevents empty, whitespace-only, or single-character club names
-            $clubNameClean = preg_replace('/[^a-zA-ZåäöÅÄÖ0-9]/u', '', $clubName);
-            $isValidClubName = !empty($clubName) && mb_strlen($clubNameClean, 'UTF-8') >= 2;
-
-            if ($isValidClubName) {
+            if (!empty($clubName)) {
                 // Normalize the club name for cache key to catch variants
                 $normalizedClubName = normalizeClubName($clubName);
                 $cacheKey = !empty($normalizedClubName) ? $normalizedClubName : $clubName;
@@ -696,16 +590,16 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
                     if (isset($IMPORT_CLASS_MAPPINGS[$className])) {
                         $classCache[$className] = $IMPORT_CLASS_MAPPINGS[$className];
                     } else {
-                        // Try exact match first (case-insensitive using UPPER)
+                        // Try exact match first (case-insensitive)
                         $class = $db->getRow(
-                            "SELECT id FROM classes WHERE UPPER(display_name) = UPPER(?) OR UPPER(name) = UPPER(?)",
+                            "SELECT id FROM classes WHERE LOWER(display_name) = LOWER(?) OR LOWER(name) = LOWER(?)",
                             [$className, $className]
                         );
 
                         // Try partial match if exact fails
                         if (!$class) {
                             $class = $db->getRow(
-                                "SELECT id FROM classes WHERE UPPER(display_name) LIKE UPPER(?) OR UPPER(name) LIKE UPPER(?)",
+                                "SELECT id FROM classes WHERE LOWER(display_name) LIKE LOWER(?) OR LOWER(name) LIKE LOWER(?)",
                                 ['%' . $className . '%', '%' . $className . '%']
                             );
                         }
@@ -924,11 +818,6 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
     }
 
     fclose($handle);
-
-    // Clean up temp file if created for encoding conversion
-    if (isset($shouldCleanupTemp) && $shouldCleanupTemp && isset($tempFile) && file_exists($tempFile)) {
-        @unlink($tempFile);
-    }
 
     return [
         'stats' => $stats,

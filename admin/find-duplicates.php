@@ -66,6 +66,53 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['reset_ignored'])) {
     exit;
 }
 
+// Handle MERGE action - merge two riders
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['merge_pair'])) {
+    checkCsrf();
+    $keepId = (int)$_POST['keep_id'];
+    $removeId = (int)$_POST['remove_id'];
+
+    if ($keepId > 0 && $removeId > 0 && $keepId !== $removeId) {
+        try {
+            $pdo = $db->getPdo();
+            $pdo->beginTransaction();
+
+            // Move results
+            $stmt = $pdo->prepare("UPDATE results SET cyclist_id = ? WHERE cyclist_id = ?");
+            $stmt->execute([$keepId, $removeId]);
+            $resultsMoved = $stmt->rowCount();
+
+            // Move series_results
+            $stmt = $pdo->prepare("UPDATE series_results SET cyclist_id = ? WHERE cyclist_id = ?");
+            $stmt->execute([$keepId, $removeId]);
+            $seriesResultsMoved = $stmt->rowCount();
+
+            // Get rider info before delete
+            $removedRider = $db->getRow("SELECT firstname, lastname FROM riders WHERE id = ?", [$removeId]);
+            $keptRider = $db->getRow("SELECT firstname, lastname FROM riders WHERE id = ?", [$keepId]);
+
+            // Delete the duplicate
+            $pdo->prepare("DELETE FROM riders WHERE id = ?")->execute([$removeId]);
+
+            $pdo->commit();
+
+            // Remove from ignored list if it was there
+            $pairKey = getRiderPairKey($keepId, $removeId);
+            $ignoredDuplicates = array_filter($ignoredDuplicates, fn($k) => $k !== $pairKey);
+            saveIgnoredRiderDuplicates($ignoredFile, $ignoredDuplicates);
+
+            $_SESSION['dup_message'] = "Sammanslagen! {$removedRider['firstname']} {$removedRider['lastname']} (ID {$removeId}) → {$keptRider['firstname']} {$keptRider['lastname']} (ID {$keepId}). Flyttade {$resultsMoved} resultat.";
+            $_SESSION['dup_message_type'] = 'success';
+        } catch (Exception $e) {
+            if (isset($pdo)) $pdo->rollBack();
+            $_SESSION['dup_message'] = 'Fel vid sammanslagning: ' . $e->getMessage();
+            $_SESSION['dup_message_type'] = 'error';
+        }
+    }
+    header('Location: /admin/find-duplicates.php');
+    exit;
+}
+
 // Check for message from redirect
 if (isset($_SESSION['dup_message'])) {
  $message = $_SESSION['dup_message'];
@@ -288,6 +335,149 @@ if (isset($_GET['action']) && $_GET['action'] === 'merge') {
     }
 }
 
+// Handle MERGE ALL action - merge all duplicates automatically
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['merge_all'])) {
+    checkCsrf();
+
+    $mergeCount = 0;
+    $errorCount = 0;
+    $totalResultsMoved = 0;
+
+    // Get all duplicate groups
+    $duplicateGroups = $db->getAll("
+        SELECT firstname, lastname, COUNT(*) as cnt
+        FROM riders
+        WHERE firstname IS NOT NULL AND lastname IS NOT NULL
+        GROUP BY LOWER(firstname), LOWER(lastname)
+        HAVING cnt > 1
+        LIMIT 100
+    ");
+
+    foreach ($duplicateGroups as $group) {
+        // Get all riders in this group
+        $riders = $db->getAll("
+            SELECT r.*,
+                   c.name as club_name,
+                   (SELECT COUNT(*) FROM results WHERE cyclist_id = r.id) as result_count
+            FROM riders r
+            LEFT JOIN clubs c ON r.club_id = c.id
+            WHERE LOWER(r.firstname) = LOWER(?) AND LOWER(r.lastname) = LOWER(?)
+            ORDER BY r.id
+        ", [$group['firstname'], $group['lastname']]);
+
+        if (count($riders) < 2) continue;
+
+        // Score each rider: higher = more complete data + more results
+        foreach ($riders as &$r) {
+            $score = $r['result_count'] * 10; // Results are very important
+            if (!empty($r['license_number']) && strpos($r['license_number'], 'SWE') !== 0) $score += 100; // Real UCI ID
+            if (!empty($r['license_number'])) $score += 10;
+            if (!empty($r['birth_year'])) $score += 5;
+            if (!empty($r['email'])) $score += 5;
+            if (!empty($r['club_id'])) $score += 5;
+            if (!empty($r['gender'])) $score += 2;
+            $r['score'] = $score;
+        }
+        unset($r);
+
+        // Sort by score descending
+        usort($riders, fn($a, $b) => $b['score'] - $a['score']);
+
+        // Keep the best one, merge others into it
+        $keep = array_shift($riders);
+        $keepId = $keep['id'];
+
+        // Check if any pair is in the ignored list - skip if so
+        $skipGroup = false;
+        foreach ($riders as $remove) {
+            $pairKey = getRiderPairKey($keepId, $remove['id']);
+            if (in_array($pairKey, $ignoredDuplicates)) {
+                $skipGroup = true;
+                break;
+            }
+        }
+        if ($skipGroup) continue;
+
+        // Check if riders have conflicting UCI IDs
+        $keepUci = preg_replace('/[^0-9]/', '', $keep['license_number'] ?? '');
+        $hasConflict = false;
+        foreach ($riders as $remove) {
+            $removeUci = preg_replace('/[^0-9]/', '', $remove['license_number'] ?? '');
+            if (!empty($keepUci) && !empty($removeUci) && $keepUci !== $removeUci) {
+                // Both have different real UCI IDs - skip this pair
+                $hasConflict = true;
+                break;
+            }
+        }
+        if ($hasConflict) continue;
+
+        // Merge all others into keep
+        foreach ($riders as $remove) {
+            $removeId = $remove['id'];
+
+            try {
+                $db->beginTransaction();
+
+                // Move results
+                $resultsToMove = $db->getAll("SELECT id, event_id, class_id FROM results WHERE cyclist_id = ?", [$removeId]);
+                foreach ($resultsToMove as $result) {
+                    $existing = $db->getRow(
+                        "SELECT id FROM results WHERE cyclist_id = ? AND event_id = ? AND class_id <=> ?",
+                        [$keepId, $result['event_id'], $result['class_id']]
+                    );
+                    if (!empty($existing)) {
+                        $db->delete('results', 'id = ?', [$result['id']]);
+                    } else {
+                        $db->update('results', ['cyclist_id' => $keepId], 'id = ?', [$result['id']]);
+                        $totalResultsMoved++;
+                    }
+                }
+
+                // Move series_results
+                $db->query("UPDATE series_results SET cyclist_id = ? WHERE cyclist_id = ?", [$keepId, $removeId]);
+
+                // Update keep rider with missing data from remove rider
+                $updates = [];
+                if (empty($keep['birth_year']) && !empty($remove['birth_year'])) {
+                    $updates['birth_year'] = $remove['birth_year'];
+                    $keep['birth_year'] = $remove['birth_year'];
+                }
+                if (empty($keep['email']) && !empty($remove['email'])) {
+                    $updates['email'] = $remove['email'];
+                    $keep['email'] = $remove['email'];
+                }
+                if (empty($keep['club_id']) && !empty($remove['club_id'])) {
+                    $updates['club_id'] = $remove['club_id'];
+                    $keep['club_id'] = $remove['club_id'];
+                }
+                $keepIsSweid = empty($keep['license_number']) || strpos($keep['license_number'], 'SWE') === 0;
+                $removeIsUci = !empty($remove['license_number']) && strpos($remove['license_number'], 'SWE') !== 0;
+                if ($keepIsSweid && $removeIsUci) {
+                    $updates['license_number'] = $remove['license_number'];
+                    $keep['license_number'] = $remove['license_number'];
+                }
+                if (!empty($updates)) {
+                    $db->update('riders', $updates, 'id = ?', [$keepId]);
+                }
+
+                // Delete the duplicate
+                $db->delete('riders', 'id = ?', [$removeId]);
+
+                $db->commit();
+                $mergeCount++;
+            } catch (Exception $e) {
+                try { $db->rollback(); } catch (Exception $re) {}
+                $errorCount++;
+            }
+        }
+    }
+
+    $_SESSION['dup_message'] = "Klart! Slog ihop {$mergeCount} dubletter, flyttade {$totalResultsMoved} resultat." . ($errorCount > 0 ? " ({$errorCount} fel)" : "");
+    $_SESSION['dup_message_type'] = $errorCount > 0 ? 'warning' : 'success';
+    header('Location: /admin/find-duplicates.php');
+    exit;
+}
+
 // Find potential duplicates - simple approach: same firstname+lastname
 $potentialDuplicates = [];
 
@@ -495,11 +685,21 @@ include __DIR__ . '/components/unified-layout.php';
  <?php endif; ?>
 
  <div class="card">
-  <div class="card-header">
+  <div class="card-header flex justify-between items-center">
   <h2 class="">
    <i data-lucide="users"></i>
    Potentiella dubbletter (<?= count($potentialDuplicates) ?>)
   </h2>
+  <?php if (!empty($potentialDuplicates)): ?>
+  <form method="POST" style="display: inline;">
+   <?= csrf_field() ?>
+   <button type="submit" name="merge_all" class="btn btn-danger"
+           onclick="return confirm('Slå ihop ALLA <?= count($potentialDuplicates) ?> dubbletter automatiskt?\n\nDen bästa profilen (flest resultat/data) behålls för varje par.\nIgnorerade par och par med olika UCI-ID hoppas över.')">
+    <i data-lucide="git-merge"></i>
+    Slå ihop alla
+   </button>
+  </form>
+  <?php endif; ?>
   </div>
   <div class="card-body">
   <?php if (empty($potentialDuplicates)): ?>

@@ -67,29 +67,14 @@ try {
 // Get all existing classes for mapping
 $existingClasses = $db->getAll("SELECT id, name, display_name, sort_order FROM classes WHERE active = 1 ORDER BY sort_order ASC, display_name ASC");
 
-// Class name mappings - "Tävling" variants to "Elit"
-$classNameMappings = [
-    'tävling herrar' => 'herrar elit',
-    'tävling damer' => 'damer elit',
-    'tavling herrar' => 'herrar elit',
-    'tavling damer' => 'damer elit',
-    'herrar tävling' => 'herrar elit',
-    'damer tävling' => 'damer elit',
-];
-
 // Analyze which CSV classes exist and which are new
 $classAnalysis = [];
 foreach ($matchingStats['classes'] as $csvClass) {
  $match = null;
  $csvClassNormalized = strtolower(trim($csvClass));
 
- // Apply class name mapping if exists
- $searchName = $classNameMappings[$csvClassNormalized] ?? $csvClassNormalized;
-
  foreach ($existingClasses as $existing) {
- if (strtolower($existing['display_name']) === $searchName ||
-  strtolower($existing['name']) === $searchName ||
-  strtolower($existing['display_name']) === $csvClassNormalized ||
+ if (strtolower($existing['display_name']) === $csvClassNormalized ||
   strtolower($existing['name']) === $csvClassNormalized) {
   $match = $existing;
   break;
@@ -99,9 +84,7 @@ foreach ($matchingStats['classes'] as $csvClass) {
  // Try partial match if no exact match
  if (!$match) {
  foreach ($existingClasses as $existing) {
-  if (strpos(strtolower($existing['display_name']), $searchName) !== false ||
-  strpos($searchName, strtolower($existing['display_name'])) !== false ||
-  strpos(strtolower($existing['display_name']), $csvClassNormalized) !== false ||
+  if (strpos(strtolower($existing['display_name']), $csvClassNormalized) !== false ||
   strpos($csvClassNormalized, strtolower($existing['display_name'])) !== false) {
   $match = $existing;
   break;
