@@ -1175,12 +1175,47 @@
 }
 
 /* ============================================================================
-   HISTORY CARD (FULL WIDTH)
+   HISTORY CARD (In Left Column - same width as series card)
    ============================================================================ */
+.history-card {
+    background: var(--color-bg-card);
+    border-radius: var(--radius-lg);
+    padding: var(--card-padding);
+}
+
+/* Legacy full-width version (kept for compatibility) */
 .history-card-full {
     background: var(--color-bg-card);
     border-radius: var(--radius-lg);
     padding: var(--card-padding);
+}
+
+/* Inline button for dashboard chart footer */
+.btn-calc-ranking-inline {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-xs);
+    padding: var(--space-xs) var(--space-md);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    background: var(--color-bg-surface);
+    color: var(--color-text-secondary);
+    font-size: var(--text-xs);
+    font-weight: var(--weight-medium);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.btn-calc-ranking-inline i {
+    width: 14px;
+    height: 14px;
+}
+
+.btn-calc-ranking-inline:hover {
+    background: var(--color-bg-hover);
+    border-color: var(--color-accent);
+    color: var(--color-text-primary);
 }
 
 /* Results List */
@@ -1622,6 +1657,7 @@
     .form-points-card,
     .highlights-card,
     .achievements-card,
+    .history-card,
     .history-card-full {
         margin-left: calc(-1 * var(--container-padding, 16px)) !important;
         margin-right: calc(-1 * var(--container-padding, 16px)) !important;
@@ -1806,6 +1842,7 @@
     }
 
     /* History card mobile - compact and clean */
+    .history-card,
     .history-card-full {
         padding: var(--space-md);
     }
