@@ -507,12 +507,12 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
                     $clubName = trim($data['club_name'] ?? '');
 
                     // Strategy 1: Exact name match with club (highest confidence)
-                    // NOTE: Using direct = comparison since MySQL collation is case-insensitive
+                    // Using UPPER() for case-insensitive matching (LOWER doesn't work with this MySQL)
                     if (!empty($clubName)) {
                         $rider = $db->getRow(
                             "SELECT r.id, r.license_number, r.uci_id FROM riders r
                              LEFT JOIN clubs c ON r.club_id = c.id
-                             WHERE r.firstname = ? AND r.lastname = ? AND c.name LIKE ?",
+                             WHERE UPPER(r.firstname) = UPPER(?) AND UPPER(r.lastname) = UPPER(?) AND UPPER(c.name) LIKE UPPER(?)",
                             [$firstName, $lastName, '%' . $clubName . '%']
                         );
                     }
@@ -520,7 +520,7 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
                     // Strategy 2: Exact name match (any club)
                     if (!$rider) {
                         $rider = $db->getRow(
-                            "SELECT id, license_number, uci_id FROM riders WHERE firstname = ? AND lastname = ?",
+                            "SELECT id, license_number, uci_id FROM riders WHERE UPPER(firstname) = UPPER(?) AND UPPER(lastname) = UPPER(?)",
                             [$firstName, $lastName]
                         );
                     }
@@ -529,8 +529,8 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
                     if (!$rider) {
                         $rider = $db->getRow(
                             "SELECT id, license_number, uci_id FROM riders
-                             WHERE firstname = ?
-                             AND (lastname LIKE ? OR ? LIKE CONCAT('%', lastname, '%'))",
+                             WHERE UPPER(firstname) = UPPER(?)
+                             AND (UPPER(lastname) LIKE UPPER(?) OR UPPER(?) LIKE CONCAT('%', UPPER(lastname), '%'))",
                             [$firstName, '%' . $lastName . '%', $lastName]
                         );
                     }
@@ -540,7 +540,7 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
                         $lastnameParts = explode(' ', $lastName);
                         $lastPart = end($lastnameParts);
                         $rider = $db->getRow(
-                            "SELECT id, license_number, uci_id FROM riders WHERE firstname = ? AND lastname = ?",
+                            "SELECT id, license_number, uci_id FROM riders WHERE UPPER(firstname) = UPPER(?) AND UPPER(lastname) = UPPER(?)",
                             [$firstName, $lastPart]
                         );
                     }
@@ -550,7 +550,7 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
                         $firstNamePart = explode(' ', $firstName)[0];
                         if ($firstNamePart !== $firstName) {
                             $rider = $db->getRow(
-                                "SELECT id, license_number, uci_id FROM riders WHERE firstname = ? AND lastname = ?",
+                                "SELECT id, license_number, uci_id FROM riders WHERE UPPER(firstname) = UPPER(?) AND UPPER(lastname) = UPPER(?)",
                                 [$firstNamePart, $lastName]
                             );
                         }
@@ -561,7 +561,7 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
                         $firstNamePart = explode(' ', $firstName)[0];
                         $rider = $db->getRow(
                             "SELECT id, license_number, uci_id FROM riders
-                             WHERE firstname LIKE ? AND lastname = ?",
+                             WHERE UPPER(firstname) LIKE UPPER(?) AND UPPER(lastname) = UPPER(?)",
                             [$firstNamePart . '%', $lastName]
                         );
                     }
@@ -696,16 +696,16 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
                     if (isset($IMPORT_CLASS_MAPPINGS[$className])) {
                         $classCache[$className] = $IMPORT_CLASS_MAPPINGS[$className];
                     } else {
-                        // Try exact match first (case-insensitive via MySQL collation)
+                        // Try exact match first (case-insensitive using UPPER)
                         $class = $db->getRow(
-                            "SELECT id FROM classes WHERE display_name = ? OR name = ?",
+                            "SELECT id FROM classes WHERE UPPER(display_name) = UPPER(?) OR UPPER(name) = UPPER(?)",
                             [$className, $className]
                         );
 
                         // Try partial match if exact fails
                         if (!$class) {
                             $class = $db->getRow(
-                                "SELECT id FROM classes WHERE display_name LIKE ? OR name LIKE ?",
+                                "SELECT id FROM classes WHERE UPPER(display_name) LIKE UPPER(?) OR UPPER(name) LIKE UPPER(?)",
                                 ['%' . $className . '%', '%' . $className . '%']
                             );
                         }
