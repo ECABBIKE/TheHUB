@@ -16,25 +16,27 @@ header('Cache-Control: no-store');
 
 require_once dirname(__DIR__) . '/config.php';
 require_once dirname(__DIR__) . '/hub-config.php';
+require_once dirname(__DIR__) . '/includes/auth.php';
 require_once dirname(__DIR__) . '/includes/upload-avatar.php';
 
 $response = ['success' => false, 'error' => null, 'avatar_url' => null];
 
 try {
-    // Check if user is logged in
-    if (!hub_is_logged_in()) {
+    // Check if user is logged in (rider or admin)
+    $isRiderLoggedIn = function_exists('hub_is_logged_in') && hub_is_logged_in();
+    $isAdminLoggedIn = function_exists('isLoggedIn') && isLoggedIn();
+
+    if (!$isRiderLoggedIn && !$isAdminLoggedIn) {
         http_response_code(401);
         $response['error'] = 'Du måste vara inloggad för att ändra profilbild.';
         echo json_encode($response);
         exit;
     }
 
-    $currentUser = hub_current_user();
-    if (!$currentUser) {
-        http_response_code(401);
-        $response['error'] = 'Kunde inte hämta användarinformation.';
-        echo json_encode($response);
-        exit;
+    // Get current user info
+    $currentUser = null;
+    if ($isRiderLoggedIn && function_exists('hub_current_user')) {
+        $currentUser = hub_current_user();
     }
 
     // Only accept POST requests
@@ -45,15 +47,23 @@ try {
         exit;
     }
 
-    // Get rider ID to update (default: current user)
-    $riderId = intval($_POST['rider_id'] ?? $currentUser['id']);
+    // Get rider ID to update
+    $riderId = intval($_POST['rider_id'] ?? ($currentUser['id'] ?? 0));
+
+    if ($riderId <= 0) {
+        http_response_code(400);
+        $response['error'] = 'Ingen åkare angiven.';
+        echo json_encode($response);
+        exit;
+    }
 
     // Security: Check if user can edit this profile
-    if ($riderId !== $currentUser['id']) {
-        // Check if it's a child profile
-        if (!hub_is_parent_of($currentUser['id'], $riderId)) {
-            // Check if user is admin
-            if (!hub_is_admin()) {
+    // Admins can edit any profile
+    if (!$isAdminLoggedIn) {
+        // For non-admins, check ownership
+        if (!$currentUser || $riderId !== $currentUser['id']) {
+            // Check if it's a child profile
+            if (!$currentUser || !function_exists('hub_is_parent_of') || !hub_is_parent_of($currentUser['id'], $riderId)) {
                 http_response_code(403);
                 $response['error'] = 'Du har inte behörighet att ändra denna profil.';
                 echo json_encode($response);
