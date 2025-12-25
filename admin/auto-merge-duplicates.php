@@ -4,8 +4,7 @@
  * Keeps the rider with most results, moves results from duplicate
  */
 require_once __DIR__ . '/../config.php';
-require_once __DIR__ . '/../includes/auth.php';
-requireAdmin();
+require_admin();
 
 $db = getDB();
 
@@ -96,7 +95,7 @@ foreach ($duplicates as $dup) {
 
         if (!$dryRun) {
             // Move all results from duplicate to keeper
-            $moved = $db->execute(
+            $moved = $db->query(
                 "UPDATE results SET cyclist_id = ? WHERE cyclist_id = ?",
                 [$keepRider['id'], $mergeRider['id']]
             );
@@ -104,7 +103,7 @@ foreach ($duplicates as $dup) {
             $totalResultsMoved += $mergeRider['result_count'];
 
             // Update rider_club_seasons
-            $db->execute(
+            $db->query(
                 "UPDATE rider_club_seasons SET rider_id = ? WHERE rider_id = ? AND rider_id != ?",
                 [$keepRider['id'], $mergeRider['id'], $keepRider['id']]
             );
@@ -124,7 +123,7 @@ foreach ($duplicates as $dup) {
             }
 
             // Delete the duplicate rider
-            $db->execute("DELETE FROM riders WHERE id = ?", [$mergeRider['id']]);
+            $db->delete('riders', 'id = ?', [$mergeRider['id']]);
         }
 
         $totalMerged++;
@@ -134,16 +133,16 @@ foreach ($duplicates as $dup) {
 }
 
 // Page output
-$pageTitle = 'Auto-merge UCI Dubletter';
-include __DIR__ . '/../includes/admin-header.php';
+$page_title = 'Auto-merge UCI Dubletter';
+$breadcrumbs = [
+    ['label' => 'Inställningar', 'url' => '/admin/settings'],
+    ['label' => 'Verktyg', 'url' => '/admin/tools'],
+    ['label' => 'Auto-merge UCI Dubletter']
+];
+include __DIR__ . '/components/unified-layout.php';
 ?>
 
-<div class="admin-content">
-    <div class="page-header">
-        <h1><?= $pageTitle ?></h1>
-    </div>
-
-    <?php if ($dryRun): ?>
+<?php if ($dryRun): ?>
     <div class="alert alert-warning mb-lg">
         <i data-lucide="alert-triangle"></i>
         <strong>DRY RUN</strong> - Inga ändringar görs. Granska listan nedan och klicka "Kör merge" för att utföra.
@@ -237,6 +236,5 @@ include __DIR__ . '/../includes/admin-header.php';
         Inga UCI-ID dubletter hittades!
     </div>
     <?php endif; ?>
-</div>
 
-<?php include __DIR__ . '/../includes/admin-footer.php'; ?>
+<?php include __DIR__ . '/components/unified-layout-footer.php'; ?>
