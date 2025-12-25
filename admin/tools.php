@@ -314,6 +314,25 @@ include __DIR__ . '/components/unified-layout.php';
             </a>
         </div>
     </div>
+
+    <!-- Find Name Duplicates -->
+    <div class="tool-card">
+        <div class="tool-card-header">
+            <div class="tool-icon warning">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            </div>
+            <div>
+                <h4 class="tool-title">Namndubletter</h4>
+                <p class="tool-description">Hitta samma namn med olika licens-ID. Per Einar Brovold med både UCI och SWE-ID.</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/find-name-duplicates" class="btn-admin btn-admin-warning flex-1">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                Hitta namndubletter
+            </a>
+        </div>
+    </div>
 </div>
 
 <h3 class="section-title">Klubbhantering</h3>
