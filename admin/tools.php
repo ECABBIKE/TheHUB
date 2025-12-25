@@ -650,6 +650,25 @@ include __DIR__ . '/components/unified-layout.php';
             </a>
         </div>
     </div>
+
+    <!-- Fix Series Points -->
+    <div class="tool-card">
+        <div class="tool-card-header">
+            <div class="tool-icon warning">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/></svg>
+            </div>
+            <div>
+                <h4 class="tool-title">Fixa seriepoäng</h4>
+                <p class="tool-description">Diagnostisera och beräkna om seriesammanställningar</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/fix-series-points" class="btn-admin btn-admin-warning flex-1">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0"/></svg>
+                Fixa seriepoäng
+            </a>
+        </div>
+    </div>
 </div>
 
 <h3 class="section-title">Statistik & Utmärkelser</h3>
