@@ -102,7 +102,7 @@ try {
         ?>
         <div class="page-grid">
             <section class="card grid-full text-center p-lg">
-                <div class="text-4xl mb-md">🚴‍♂️❓</div>
+                <div class="text-4xl mb-md"><i data-lucide="user-x"></i></div>
                 <h1 class="text-2xl font-bold mb-sm">Åkare hittades inte</h1>
                 <p class="text-secondary mb-lg">Åkare med ID <code class="code"><?= $riderId ?></code> finns inte i databasen.</p>
                 <div class="flex justify-center gap-md">
@@ -113,6 +113,26 @@ try {
         </div>
         <?php
         return;
+    }
+
+    // If no club from riders table, check rider_club_seasons for current/latest year
+    if (empty($rider['club_id'])) {
+        $currentYear = (int)date('Y');
+        $seasonClub = $db->prepare("
+            SELECT rcs.club_id, c.name as club_name, c.city as club_city
+            FROM rider_club_seasons rcs
+            JOIN clubs c ON rcs.club_id = c.id
+            WHERE rcs.rider_id = ?
+            ORDER BY rcs.season_year DESC
+            LIMIT 1
+        ");
+        $seasonClub->execute([$riderId]);
+        $clubFromSeason = $seasonClub->fetch(PDO::FETCH_ASSOC);
+        if ($clubFromSeason) {
+            $rider['club_id'] = $clubFromSeason['club_id'];
+            $rider['club_name'] = $clubFromSeason['club_name'];
+            $rider['club_city'] = $clubFromSeason['club_city'];
+        }
     }
 
     // Fetch rider's results

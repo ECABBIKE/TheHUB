@@ -471,26 +471,73 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
                     }
                 }
 
-                // Try by name if no license match
+                // Try by name if no license match - use advanced matching strategies
                 if (!$rider) {
-                    // First try exact match
-                    $rider = $db->getRow(
-                        "SELECT id, license_number, uci_id FROM riders WHERE LOWER(firstname) = LOWER(?) AND LOWER(lastname) = LOWER(?)",
-                        [trim($data['firstname']), trim($data['lastname'])]
-                    );
+                    $firstName = trim($data['firstname']);
+                    $lastName = trim($data['lastname']);
+                    $clubName = trim($data['club_name'] ?? '');
 
-                    // If no exact match, try fuzzy match (first name starts with, handle middle names)
+                    // Strategy 1: Exact name match with club (highest confidence)
+                    if (!empty($clubName)) {
+                        $rider = $db->getRow(
+                            "SELECT r.id, r.license_number, r.uci_id FROM riders r
+                             LEFT JOIN clubs c ON r.club_id = c.id
+                             WHERE LOWER(r.firstname) = LOWER(?)
+                             AND LOWER(r.lastname) = LOWER(?)
+                             AND LOWER(c.name) LIKE LOWER(?)",
+                            [$firstName, $lastName, '%' . $clubName . '%']
+                        );
+                    }
+
+                    // Strategy 2: Exact name match (any club)
                     if (!$rider) {
-                        $firstName = trim($data['firstname']);
-                        $lastName = trim($data['lastname']);
+                        $rider = $db->getRow(
+                            "SELECT id, license_number, uci_id FROM riders WHERE LOWER(firstname) = LOWER(?) AND LOWER(lastname) = LOWER(?)",
+                            [$firstName, $lastName]
+                        );
+                    }
 
-                        // Try matching with first part of firstname (handle middle names)
+                    // Strategy 3: Handle double last names (e.g., "Svensson Lindberg")
+                    if (!$rider) {
+                        $rider = $db->getRow(
+                            "SELECT id, license_number, uci_id FROM riders
+                             WHERE LOWER(firstname) = LOWER(?)
+                             AND (LOWER(lastname) LIKE LOWER(?) OR LOWER(?) LIKE CONCAT('%', LOWER(lastname), '%'))",
+                            [$firstName, '%' . $lastName . '%', $lastName]
+                        );
+                    }
+
+                    // Strategy 4: If lastname has space, try matching last part only
+                    if (!$rider && strpos($lastName, ' ') !== false) {
+                        $lastnameParts = explode(' ', $lastName);
+                        $lastPart = end($lastnameParts);
+                        $rider = $db->getRow(
+                            "SELECT id, license_number, uci_id FROM riders
+                             WHERE LOWER(firstname) = LOWER(?) AND LOWER(lastname) = LOWER(?)",
+                            [$firstName, $lastPart]
+                        );
+                    }
+
+                    // Strategy 5: Handle middle names - try first part of firstname
+                    if (!$rider) {
+                        $firstNamePart = explode(' ', $firstName)[0];
+                        if ($firstNamePart !== $firstName) {
+                            $rider = $db->getRow(
+                                "SELECT id, license_number, uci_id FROM riders
+                                 WHERE LOWER(firstname) = LOWER(?) AND LOWER(lastname) = LOWER(?)",
+                                [$firstNamePart, $lastName]
+                            );
+                        }
+                    }
+
+                    // Strategy 6: Fuzzy firstname match (starts with) + exact lastname
+                    if (!$rider) {
                         $firstNamePart = explode(' ', $firstName)[0];
                         $rider = $db->getRow(
                             "SELECT id, license_number, uci_id FROM riders
-                             WHERE (LOWER(firstname) LIKE LOWER(?) OR LOWER(firstname) = LOWER(?))
+                             WHERE LOWER(firstname) LIKE LOWER(?)
                              AND LOWER(lastname) = LOWER(?)",
-                            [$firstNamePart . '%', $firstNamePart, $lastName]
+                            [$firstNamePart . '%', $lastName]
                         );
                     }
 
@@ -554,7 +601,13 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
             // Find or create club using smart matching
             $clubId = null;
             $clubName = trim($data['club_name'] ?? '');
-            if (!empty($clubName)) {
+
+            // Validate club name - must have at least 2 alphanumeric characters
+            // This prevents empty, whitespace-only, or single-character club names
+            $clubNameClean = preg_replace('/[^a-zA-ZåäöÅÄÖ0-9]/u', '', $clubName);
+            $isValidClubName = !empty($clubName) && mb_strlen($clubNameClean, 'UTF-8') >= 2;
+
+            if ($isValidClubName) {
                 // Normalize the club name for cache key to catch variants
                 $normalizedClubName = normalizeClubName($clubName);
                 $cacheKey = !empty($normalizedClubName) ? $normalizedClubName : $clubName;

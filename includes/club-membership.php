@@ -57,15 +57,16 @@ function getRiderClubForYear($db, $riderId, $year, $createIfMissing = false) {
 
 /**
  * Set a rider's club for a specific season/year
- * Only allowed if the season is not locked (no results yet)
+ * Only allowed if the season is not locked (no results yet), unless force is true
  *
  * @param object $db Database connection
  * @param int $riderId Rider ID
  * @param int $clubId Club ID
  * @param int $year Season year
+ * @param bool $force Force update even if locked (super admin only)
  * @return array ['success' => bool, 'message' => string]
  */
-function setRiderClubForYear($db, $riderId, $clubId, $year) {
+function setRiderClubForYear($db, $riderId, $clubId, $year, $force = false) {
     try {
         // Check if there's an existing locked entry
         $existing = $db->getRow(
@@ -74,19 +75,20 @@ function setRiderClubForYear($db, $riderId, $clubId, $year) {
         );
 
         if ($existing) {
-            if ($existing['locked']) {
+            if ($existing['locked'] && !$force) {
                 return [
                     'success' => false,
                     'message' => "Kan inte byta klubb för {$year} - åkaren har redan resultat det året"
                 ];
             }
 
-            // Update existing unlocked entry
+            // Update existing entry (force allows updating locked entries)
             $result = $db->update('rider_club_seasons', [
                 'club_id' => $clubId
             ], 'id = ?', [$existing['id']]);
 
-            error_log("setRiderClubForYear: Updated existing entry, result={$result}");
+            $forceNote = $force && $existing['locked'] ? ' (forced by super admin)' : '';
+            error_log("setRiderClubForYear: Updated existing entry{$forceNote}, result={$result}");
         } else {
             // Create new entry
             $insertId = $db->insert('rider_club_seasons', [

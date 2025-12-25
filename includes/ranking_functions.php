@@ -665,15 +665,27 @@ function getCurrentRanking($db, $discipline = 'GRAVITY', $limit = 50, $offset = 
     $total = $countResult['cnt'] ?? 0;
 
     // Get paginated results
+    // Uses COALESCE to fallback to rider_club_seasons if riders.club_id is NULL
     $riders = $db->getAll("
         SELECT
             rs.*,
             r.firstname,
             r.lastname,
-            c.name as club_name
+            COALESCE(r.club_id, rcs_latest.club_id) as club_id,
+            COALESCE(c.name, c_season.name) as club_name
         FROM ranking_snapshots rs
         JOIN riders r ON rs.rider_id = r.id
         LEFT JOIN clubs c ON r.club_id = c.id
+        LEFT JOIN (
+            SELECT rider_id, club_id
+            FROM rider_club_seasons
+            WHERE (rider_id, season_year) IN (
+                SELECT rider_id, MAX(season_year)
+                FROM rider_club_seasons
+                GROUP BY rider_id
+            )
+        ) rcs_latest ON rcs_latest.rider_id = r.id AND r.club_id IS NULL
+        LEFT JOIN clubs c_season ON rcs_latest.club_id = c_season.id
         WHERE rs.discipline = ? AND rs.snapshot_date = ?
         ORDER BY rs.ranking_position ASC
         LIMIT ? OFFSET ?
