@@ -449,6 +449,11 @@ function parseAndAnalyzeCSV($filepath, $db) {
  // Add detected stage columns to stats
  $stats['stage_columns'] = $stageColumnsDetected;
 
+ // DEBUG: Log headers
+ error_log("=== CSV HEADER DEBUG ===");
+ error_log("RAW: " . implode(' | ', array_slice($rawHeader, 0, 10)));
+ error_log("MAPPED: " . implode(' | ', array_slice($header, 0, 10)));
+
  // Read all rows
  while (($row = fgetcsv($handle, 0, $delimiter)) !== false) {
  if (count($row) < 2) continue;
@@ -475,6 +480,14 @@ function parseAndAnalyzeCSV($filepath, $db) {
  $licenseNumber = trim($rowData['license_number'] ?? '');
  $normalizedLicense = preg_replace('/[^0-9]/', '', $licenseNumber);
 
+ // Debug first 3 rows
+ static $debugRowCount = 0;
+ if ($debugRowCount < 3) {
+  error_log("=== ROW DEBUG {$debugRowCount} ===");
+  error_log("firstname='{$firstName}' lastname='{$lastName}' license='{$licenseNumber}' normalized='{$normalizedLicense}'");
+  $debugRowCount++;
+ }
+
  if (!empty($firstName) && !empty($lastName)) {
   $riderKey = $firstName . '|' . $lastName . '|' . $normalizedLicense;
 
@@ -490,6 +503,10 @@ function parseAndAnalyzeCSV($filepath, $db) {
        OR REPLACE(REPLACE(uci_id, ' ', ''), '-', '') = ?",
    [$normalizedLicense, $normalizedLicense]
    );
+   // Debug
+   if ($debugRowCount <= 3) {
+    error_log("UCI SEARCH for '{$normalizedLicense}': " . ($rider ? "FOUND id={$rider['id']}" : "NOT FOUND"));
+   }
 
    // Check if it's a format duplicate (same UCI but different format)
    if ($rider && $rider['license_number'] !== $licenseNumber && !empty($rider['license_number'])) {
