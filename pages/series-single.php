@@ -906,6 +906,7 @@ function switchStandingsTab(tab) {
     individualDiv.classList.add('hidden');
     clubDiv.classList.remove('hidden');
   }
+}
 
 function toggleClubRiders(btn, event) {
   event.stopPropagation();
