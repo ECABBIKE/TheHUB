@@ -188,53 +188,61 @@
     fill: var(--color-text-secondary);
 }
 
-.social-link:hover {
-    transform: translateY(-2px);
-}
-
-.social-link.instagram:hover {
+/* Active social links show brand colors by default */
+.social-link.instagram:not(.empty) {
     background: linear-gradient(45deg, #f09433 0%,#e6683c 25%,#dc2743 50%,#cc2366 75%,#bc1888 100%);
 }
 
-.social-link.instagram:hover svg {
+.social-link.instagram:not(.empty) svg {
     fill: white;
 }
 
-.social-link.strava:hover {
+.social-link.strava:not(.empty) {
     background: #FC4C02;
 }
 
-.social-link.strava:hover svg {
+.social-link.strava:not(.empty) svg {
     fill: white;
 }
 
-.social-link.facebook:hover {
+.social-link.facebook:not(.empty) {
     background: #1877F2;
 }
 
-.social-link.facebook:hover svg {
+.social-link.facebook:not(.empty) svg {
     fill: white;
 }
 
-.social-link.youtube:hover {
+.social-link.youtube:not(.empty) {
     background: #FF0000;
 }
 
-.social-link.youtube:hover svg {
+.social-link.youtube:not(.empty) svg {
     fill: white;
 }
 
-.social-link.tiktok:hover {
+.social-link.tiktok:not(.empty) {
     background: #000000;
 }
 
-.social-link.tiktok:hover svg {
+.social-link.tiktok:not(.empty) svg {
     fill: white;
 }
 
+/* Hover effect for active links */
+.social-link:not(.empty):hover {
+    transform: translateY(-2px);
+}
+
+/* Empty links (no URL) are gray and inactive */
 .social-link.empty {
-    opacity: 0.3;
+    opacity: 0.4;
     pointer-events: none;
+    background: var(--color-bg-surface);
+}
+
+.social-link.empty svg {
+    fill: var(--color-text-secondary);
 }
 
 /* Share Button */
