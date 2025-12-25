@@ -216,11 +216,11 @@ $breadcrumbs = [
 $page_actions = '
 <button id="bulk-edit-toggle" class="btn-admin btn-admin-secondary mr-sm" onclick="toggleBulkEdit(\'event\')">
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.375 2.625a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4Z"/></svg>
-    <span id="bulk-edit-label">Masseditering Tävling</span>
+    <span id="bulk-edit-label">Massändra tävlingsfält</span>
 </button>
 <button id="bulk-edit-organizer-toggle" class="btn-admin btn-admin-secondary mr-sm" onclick="toggleBulkEdit(\'organizer\')">
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-    <span id="bulk-edit-organizer-label">Masseditering Arrangör</span>
+    <span id="bulk-edit-organizer-label">Visa arrangörsfält</span>
 </button>
 <a href="/admin/events/create" class="btn-admin btn-admin-primary">
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
@@ -757,19 +757,26 @@ if (!document.getElementById('toast-animations')) {
 let bulkEditMode = null;
 let bulkChanges = {};
 
-// Hide editable fields by default
+// Show event fields by default on desktop, hide organizer fields until activated
 document.addEventListener('DOMContentLoaded', function() {
     const style = document.createElement('style');
     style.textContent = `
-        .event-field,
+        /* Show event fields by default, hide organizer fields */
         .organizer-field {
             display: none;
         }
-        .bulk-edit-event-mode .event-field {
-            display: table-cell;
-        }
         .bulk-edit-organizer-mode .organizer-field {
             display: table-cell;
+        }
+        /* Make the table horizontally scrollable */
+        .admin-table-container {
+            overflow-x: auto;
+        }
+        /* Compact styling for visible fields */
+        .admin-table .admin-form-select,
+        .admin-table .admin-form-input {
+            font-size: 0.75rem;
+            padding: 4px 8px;
         }
     `;
     document.head.appendChild(style);
@@ -789,11 +796,11 @@ function toggleBulkEdit(mode) {
         // Reset both buttons
         eventBtn.classList.remove('btn-admin-primary');
         eventBtn.classList.add('btn-admin-secondary');
-        eventLabel.textContent = 'Masseditering Tävling';
+        eventLabel.textContent = 'Massändra tävlingsfält';
 
         organizerBtn.classList.remove('btn-admin-primary');
         organizerBtn.classList.add('btn-admin-secondary');
-        organizerLabel.textContent = 'Masseditering Arrangör';
+        organizerLabel.textContent = 'Visa arrangörsfält';
 
         // Remove mode classes
         table.classList.remove('bulk-edit-event-mode', 'bulk-edit-organizer-mode');
@@ -814,7 +821,7 @@ function toggleBulkEdit(mode) {
             // Deactivate organizer mode
             organizerBtn.classList.remove('btn-admin-primary');
             organizerBtn.classList.add('btn-admin-secondary');
-            organizerLabel.textContent = 'Masseditering Arrangör';
+            organizerLabel.textContent = 'Visa arrangörsfält';
 
             // Show event fields
             table.classList.remove('bulk-edit-organizer-mode');
@@ -828,7 +835,7 @@ function toggleBulkEdit(mode) {
             // Deactivate event mode
             eventBtn.classList.remove('btn-admin-primary');
             eventBtn.classList.add('btn-admin-secondary');
-            eventLabel.textContent = 'Masseditering Tävling';
+            eventLabel.textContent = 'Massändra tävlingsfält';
 
             // Show organizer fields
             table.classList.remove('bulk-edit-event-mode');
