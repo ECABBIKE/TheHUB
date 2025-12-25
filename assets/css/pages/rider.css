@@ -52,6 +52,25 @@
     object-position: center top;
 }
 
+/* Initials Avatar */
+.profile-photo-hero.initials-bg {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.profile-initials,
+.profile-initials-fallback {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 4rem;
+    font-weight: 700;
+    color: white;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
 .profile-photo-placeholder {
     width: 100%;
     height: 100%;

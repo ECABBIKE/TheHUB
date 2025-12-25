@@ -31,23 +31,6 @@ $riderUser = $db->getRow("
 $message = '';
 $messageType = 'info';
 
-// Profile image path
-$profileImageDir = __DIR__ . '/../uploads/riders/';
-$profileImageUrl = '/uploads/riders/';
-$profileImage = null;
-
-// Create directory if not exists
-if (!is_dir($profileImageDir)) {
- mkdir($profileImageDir, 0755, true);
-}
-
-// Check for existing profile image
-foreach (['jpg', 'jpeg', 'png', 'webp'] as $ext) {
- if (file_exists($profileImageDir . $id . '.' . $ext)) {
- $profileImage = $profileImageUrl . $id . '.' . $ext . '?v=' . filemtime($profileImageDir . $id . '.' . $ext);
- break;
- }
-}
 
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -55,67 +38,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
  $action = $_POST['action'] ?? 'save_rider';
 
- // Handle profile image upload
- if ($action === 'upload_image') {
- if (!isset($_FILES['profile_image']) || $_FILES['profile_image']['error'] === UPLOAD_ERR_NO_FILE) {
- $message = 'Ingen fil vald. Välj en bild att ladda upp.';
- $messageType = 'error';
- } elseif ($_FILES['profile_image']['error'] !== UPLOAD_ERR_OK) {
- $uploadErrors = [
-  UPLOAD_ERR_INI_SIZE => 'Filen är för stor (server-gräns).',
-  UPLOAD_ERR_FORM_SIZE => 'Filen är för stor.',
-  UPLOAD_ERR_PARTIAL => 'Filen laddades bara upp delvis.',
-  UPLOAD_ERR_NO_TMP_DIR => 'Ingen temp-mapp konfigurerad.',
-  UPLOAD_ERR_CANT_WRITE => 'Kunde inte skriva filen till disk.',
-  UPLOAD_ERR_EXTENSION => 'Uppladdning stoppad av PHP-tillägg.',
- ];
- $message = $uploadErrors[$_FILES['profile_image']['error']] ?? 'Okänt uppladdningsfel.';
- $messageType = 'error';
- } else {
- $allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
- $maxSize = 5 * 1024 * 1024; // 5MB
-
- $file = $_FILES['profile_image'];
-
- if (!in_array($file['type'], $allowedTypes)) {
-  $message = 'Endast JPG, PNG och WebP är tillåtna. Du valde: ' . h($file['type']);
-  $messageType = 'error';
- } elseif ($file['size'] > $maxSize) {
-  $message = 'Bilden får max vara 5MB. Din fil var ' . round($file['size'] / 1024 / 1024, 1) . 'MB.';
-  $messageType = 'error';
- } else {
-  // Remove old images
-  foreach (['jpg', 'jpeg', 'png', 'webp'] as $ext) {
-  $oldFile = $profileImageDir . $id . '.' . $ext;
-  if (file_exists($oldFile)) @unlink($oldFile);
-  }
-
-  // Save new image
-  $ext = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION)) ?: 'jpg';
-  if ($ext === 'jpeg') $ext = 'jpg';
-  $newPath = $profileImageDir . $id . '.' . $ext;
-
-  if (move_uploaded_file($file['tmp_name'], $newPath)) {
-  $message = 'Profilbild uppladdad!';
-  $messageType = 'success';
-  $profileImage = $profileImageUrl . $id . '.' . $ext . '?v=' . time();
-  } else {
-  $message = 'Kunde inte spara bilden. Kontrollera att mappen uploads/riders/ har skrivbehörighet.';
-  $messageType = 'error';
-  error_log("Failed to move uploaded file to: $newPath");
-  }
- }
- }
- } elseif ($action === 'delete_image') {
- // Delete profile image
- foreach (['jpg', 'jpeg', 'png', 'webp'] as $ext) {
- $oldFile = $profileImageDir . $id . '.' . $ext;
- if (file_exists($oldFile)) unlink($oldFile);
- }
- $profileImage = null;
- $message = 'Profilbild borttagen!';
- $messageType = 'success';
- } elseif ($action === 'save_rider') {
+ if ($action === 'save_rider') {
  // Validate required fields
  $firstname = trim($_POST['firstname'] ?? '');
  $lastname = trim($_POST['lastname'] ?? '');
@@ -173,6 +96,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
  'team' => trim($_POST['team'] ?? ''),
  'notes' => trim($_POST['notes'] ?? ''),
  'active' => isset($_POST['active']) ? 1 : 0,
+ // Profile image URL
+ 'profile_image_url' => trim($_POST['profile_image_url'] ?? '') ?: null,
  // Social media links (normalized to full URLs)
  'social_instagram' => $normalizeSocial($_POST['social_instagram'] ?? '', 'instagram'),
  'social_facebook' => $normalizeSocial($_POST['social_facebook'] ?? '', 'facebook'),
@@ -433,41 +358,29 @@ include __DIR__ . '/components/unified-layout.php';
   Profilbild
  </h2>
  <div class="flex items-center gap-lg">
-  <div class="profile-image-preview" style="width: 120px; height: 120px; border-radius: 50%; background: var(--color-bg-sunken); display: flex; align-items: center; justify-content: center; overflow: hidden;">
-  <?php if ($profileImage): ?>
-  <img src="<?= h($profileImage) ?>" alt="Profilbild" style="width: 100%; height: 100%; object-fit: cover;">
+  <?php
+  $initials = strtoupper(substr($rider['firstname'] ?? '', 0, 1) . substr($rider['lastname'] ?? '', 0, 1));
+  $imageUrl = $rider['profile_image_url'] ?? '';
+  ?>
+  <div class="profile-image-preview" style="width: 120px; height: 120px; border-radius: var(--radius-md); background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; overflow: hidden; color: white; font-size: 2.5rem; font-weight: 700;">
+  <?php if ($imageUrl): ?>
+  <img src="<?= h($imageUrl) ?>" alt="Profilbild" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+  <span style="display: none;"><?= h($initials) ?></span>
   <?php else: ?>
-  <i data-lucide="user" class="icon-lg" style="opacity: 0.3;"></i>
+  <?= h($initials) ?>
   <?php endif; ?>
   </div>
-  <div class="flex flex-col gap-sm">
-  <form method="POST" enctype="multipart/form-data" class="flex items-center gap-sm">
-  <?= csrf_field() ?>
-  <input type="hidden" name="action" value="upload_image">
-  <input type="file" name="profile_image" accept="image/jpeg,image/png,image/webp" class="input" style="max-width: 200px;">
-  <button type="submit" class="btn btn--primary btn--sm">
-   <i data-lucide="upload"></i>
-   Ladda upp
-  </button>
-  </form>
-  <?php if ($profileImage): ?>
-  <form method="POST" style="display: inline;">
-  <?= csrf_field() ?>
-  <input type="hidden" name="action" value="delete_image">
-  <button type="submit" class="btn btn--secondary btn--sm" onclick="return confirm('Ta bort profilbilden?')">
-   <i data-lucide="trash-2"></i>
-   Ta bort bild
-  </button>
-  </form>
-  <?php endif; ?>
-  <small class="text-secondary">Max 5MB. JPG, PNG eller WebP.</small>
+  <div class="flex flex-col gap-sm" style="flex: 1;">
+  <label class="label">Bild-URL</label>
+  <input type="text" name="profile_image_url" class="input" value="<?= h($imageUrl) ?>" placeholder="https://exempel.com/bild.jpg" form="rider-form">
+  <small class="text-secondary">Klistra in en direktlank till en bild (t.ex. fran Instagram, Imgur eller annan bildvard). Lamna tomt for att visa initialer.</small>
   </div>
  </div>
  </div>
  </div>
 
  <!-- Edit Form -->
- <form method="POST" class="card">
+ <form method="POST" class="card" id="rider-form">
  <?= csrf_field() ?>
  <input type="hidden" name="action" value="save_rider">
 
