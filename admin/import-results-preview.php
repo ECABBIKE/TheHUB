@@ -291,16 +291,36 @@ function parseAndAnalyzeCSV($filepath, $db) {
  $clubCache = [];
  $duplicateCache = [];
 
+ // Read file content and detect/convert encoding (same as actual import)
+ $content = file_get_contents($filepath);
+ if ($content === false) {
+     throw new Exception('Kunde inte läsa filen');
+ }
+
+ // Detect encoding and convert to UTF-8
+ $encoding = mb_detect_encoding($content, ['UTF-8', 'ISO-8859-1', 'Windows-1252'], true);
+ if ($encoding && $encoding !== 'UTF-8') {
+     $content = mb_convert_encoding($content, 'UTF-8', $encoding);
+     error_log("PREVIEW: Converted file from {$encoding} to UTF-8");
+ }
+
+ // Remove BOM if present
+ $content = preg_replace('/^\xEF\xBB\xBF/', '', $content);
+
+ // Write back to temp file for fgetcsv
+ $tempFile = tempnam(sys_get_temp_dir(), 'preview_utf8_');
+ file_put_contents($tempFile, $content);
+ $originalPath = $filepath;
+ $filepath = $tempFile;
+
  if (($handle = fopen($filepath, 'r')) === false) {
- throw new Exception('Kunde inte öppna filen');
+     @unlink($tempFile);
+     throw new Exception('Kunde inte öppna filen');
  }
 
  // Auto-detect delimiter (comma, semicolon, or tab)
  $firstLine = fgets($handle);
  rewind($handle);
-
- // Remove BOM if present (UTF-8 files from Excel often have this)
- $firstLine = preg_replace('/^\xEF\xBB\xBF/', '', $firstLine);
 
  $commaCount = substr_count($firstLine, ',');
  $semicolonCount = substr_count($firstLine, ';');
@@ -319,6 +339,7 @@ function parseAndAnalyzeCSV($filepath, $db) {
  $rawHeader = fgetcsv($handle, 0, $delimiter);
  if (!$rawHeader) {
  fclose($handle);
+ if (isset($tempFile)) @unlink($tempFile);
  throw new Exception('Tom fil eller ogiltigt format');
  }
 
@@ -603,6 +624,11 @@ function parseAndAnalyzeCSV($filepath, $db) {
  }
 
  fclose($handle);
+
+ // Clean up temp file
+ if (isset($tempFile) && file_exists($tempFile)) {
+     @unlink($tempFile);
+ }
 
  // Make clubs list unique
  $stats['clubs_list'] = array_unique($stats['clubs_list']);
