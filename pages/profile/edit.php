@@ -1,6 +1,6 @@
 <?php
 /**
- * TheHUB V3.5 - Edit Profile with Social Profiles
+ * TheHUB V3.5 - Edit Profile with Social Profiles and Avatar Upload
  */
 
 $currentUser = hub_current_user();
@@ -17,6 +17,12 @@ $error = '';
 $rebuildPath = dirname(dirname(__DIR__)) . '/includes/rebuild-rider-stats.php';
 if (file_exists($rebuildPath)) {
     require_once $rebuildPath;
+}
+
+// Include avatar helper functions
+$avatarHelperPath = dirname(dirname(__DIR__)) . '/includes/get-avatar.php';
+if (file_exists($avatarHelperPath)) {
+    require_once $avatarHelperPath;
 }
 
 // Handle form submission
@@ -90,6 +96,69 @@ $clubs = $pdo->query("SELECT id, name FROM clubs ORDER BY name")->fetchAll(PDO::
 <?php if ($error): ?>
     <div class="alert alert-error"><?= htmlspecialchars($error) ?></div>
 <?php endif; ?>
+
+<!-- Avatar Upload Section -->
+<div class="card avatar-section">
+    <div class="card-body">
+        <h2>Profilbild</h2>
+        <p class="form-help">Ladda upp en profilbild som visas på din profil och i resultatlistor.</p>
+
+        <div class="avatar-upload-wrapper">
+            <?php
+            // Get current avatar URL
+            $avatarUrl = '';
+            if (function_exists('get_rider_avatar')) {
+                $avatarUrl = get_rider_avatar($currentUser, 200);
+            } elseif (!empty($currentUser['avatar_url'])) {
+                $avatarUrl = $currentUser['avatar_url'];
+            }
+
+            $initials = '';
+            if (function_exists('get_rider_initials')) {
+                $initials = get_rider_initials($currentUser);
+            } else {
+                $initials = strtoupper(
+                    substr($currentUser['firstname'] ?? '', 0, 1) .
+                    substr($currentUser['lastname'] ?? '', 0, 1)
+                );
+            }
+            ?>
+
+            <div class="avatar-upload-container" id="avatarContainer">
+                <div class="avatar-preview" id="avatarPreview" style="width: 200px; height: 200px;">
+                    <?php if (!empty($currentUser['avatar_url'])): ?>
+                        <img src="<?= htmlspecialchars($currentUser['avatar_url']) ?>" alt="Din profilbild" class="avatar-image" id="avatarImage">
+                    <?php elseif ($avatarUrl): ?>
+                        <img src="<?= htmlspecialchars($avatarUrl) ?>" alt="Din profilbild" class="avatar-image" id="avatarImage">
+                    <?php else: ?>
+                        <div class="avatar-fallback" id="avatarFallback">
+                            <span class="avatar-initials"><?= htmlspecialchars($initials) ?></span>
+                        </div>
+                    <?php endif; ?>
+                </div>
+
+                <div class="avatar-upload-overlay" id="avatarOverlay">
+                    <i data-lucide="camera"></i>
+                </div>
+
+                <div class="avatar-loading" id="avatarLoading" style="display: none;"></div>
+
+                <input type="file"
+                       id="avatarInput"
+                       class="avatar-upload-input"
+                       accept="image/jpeg,image/png,image/gif,image/webp"
+                       aria-label="Välj profilbild">
+            </div>
+
+            <div class="avatar-upload-info">
+                <p class="text-secondary text-sm">Klicka för att välja en bild</p>
+                <p class="text-secondary text-xs">Max 2MB. JPG, PNG, GIF eller WebP.</p>
+            </div>
+
+            <div class="avatar-upload-status" id="avatarStatus" style="display: none;"></div>
+        </div>
+    </div>
+</div>
 
 <form method="POST" class="profile-form">
     <div class="form-section">
@@ -187,5 +256,257 @@ $clubs = $pdo->query("SELECT id, name FROM clubs ORDER BY name")->fetchAll(PDO::
     </div>
 </form>
 
+<!-- Avatar Upload Styles -->
+<style>
+.avatar-section {
+    margin-bottom: var(--space-lg);
+}
+
+.avatar-upload-wrapper {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-md);
+    padding: var(--space-lg) 0;
+}
+
+.avatar-upload-container {
+    position: relative;
+    cursor: pointer;
+}
+
+.avatar-preview {
+    border-radius: 50%;
+    overflow: hidden;
+    background: var(--color-accent, #61CE70);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: var(--shadow-md);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+
+.avatar-upload-container:hover .avatar-preview {
+    transform: scale(1.02);
+    box-shadow: var(--shadow-lg);
+}
+
+.avatar-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.avatar-fallback {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--color-accent, #61CE70);
+    color: #ffffff;
+}
+
+.avatar-initials {
+    font-size: 4rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+
+.avatar-upload-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.5);
+    border-radius: 50%;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+}
+
+.avatar-upload-container:hover .avatar-upload-overlay {
+    opacity: 1;
+}
+
+.avatar-upload-overlay i,
+.avatar-upload-overlay svg {
+    color: #ffffff;
+    width: 48px;
+    height: 48px;
+}
+
+.avatar-upload-input {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+    border-radius: 50%;
+}
+
+.avatar-loading {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.6);
+    border-radius: 50%;
+}
+
+.avatar-loading::after {
+    content: '';
+    width: 48px;
+    height: 48px;
+    border: 4px solid rgba(255, 255, 255, 0.3);
+    border-top-color: #ffffff;
+    border-radius: 50%;
+    animation: avatar-spin 0.8s linear infinite;
+}
+
+@keyframes avatar-spin {
+    to { transform: rotate(360deg); }
+}
+
+.avatar-upload-info {
+    text-align: center;
+}
+
+.avatar-upload-status {
+    padding: var(--space-sm) var(--space-md);
+    border-radius: var(--radius-sm);
+    text-align: center;
+    max-width: 300px;
+}
+
+.avatar-upload-status.success {
+    background: rgba(97, 206, 112, 0.1);
+    color: var(--color-success, #61CE70);
+    border: 1px solid var(--color-success, #61CE70);
+}
+
+.avatar-upload-status.error {
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--color-danger, #ef4444);
+    border: 1px solid var(--color-danger, #ef4444);
+}
+
+/* Responsive */
+@media (min-width: 768px) {
+    .avatar-upload-wrapper {
+        flex-direction: row;
+        justify-content: flex-start;
+        gap: var(--space-xl);
+    }
+
+    .avatar-upload-info {
+        text-align: left;
+    }
+}
+</style>
+
+<!-- Avatar Upload JavaScript -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const avatarInput = document.getElementById('avatarInput');
+    const avatarPreview = document.getElementById('avatarPreview');
+    const avatarLoading = document.getElementById('avatarLoading');
+    const avatarStatus = document.getElementById('avatarStatus');
+
+    if (!avatarInput) return;
+
+    avatarInput.addEventListener('change', async function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        // Validate file type
+        const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+        if (!allowedTypes.includes(file.type)) {
+            showStatus('Otillåten filtyp. Välj JPG, PNG, GIF eller WebP.', 'error');
+            return;
+        }
+
+        // Validate file size (2MB max)
+        const maxSize = 2 * 1024 * 1024;
+        if (file.size > maxSize) {
+            showStatus('Filen är för stor. Max 2MB tillåten.', 'error');
+            return;
+        }
+
+        // Show preview immediately
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            showPreviewImage(e.target.result);
+        };
+        reader.readAsDataURL(file);
+
+        // Show loading state
+        avatarLoading.style.display = 'flex';
+        hideStatus();
+
+        // Upload to server
+        const formData = new FormData();
+        formData.append('avatar', file);
+
+        try {
+            const response = await fetch('/api/update-avatar.php', {
+                method: 'POST',
+                body: formData
+            });
+
+            const result = await response.json();
+
+            if (result.success) {
+                showStatus('Profilbilden har uppdaterats!', 'success');
+                // Update the preview with the ImgBB URL
+                if (result.avatar_url) {
+                    showPreviewImage(result.avatar_url);
+                }
+            } else {
+                showStatus(result.error || 'Något gick fel', 'error');
+            }
+        } catch (error) {
+            console.error('Avatar upload error:', error);
+            showStatus('Kunde inte ladda upp bilden. Försök igen.', 'error');
+        } finally {
+            avatarLoading.style.display = 'none';
+        }
+    });
+
+    function showPreviewImage(src) {
+        // Remove existing content
+        avatarPreview.innerHTML = '';
+
+        // Create and add new image
+        const img = document.createElement('img');
+        img.src = src;
+        img.alt = 'Din profilbild';
+        img.className = 'avatar-image';
+        img.id = 'avatarImage';
+        avatarPreview.appendChild(img);
+    }
+
+    function showStatus(message, type) {
+        avatarStatus.textContent = message;
+        avatarStatus.className = 'avatar-upload-status ' + type;
+        avatarStatus.style.display = 'block';
+
+        // Auto-hide success messages after 5 seconds
+        if (type === 'success') {
+            setTimeout(hideStatus, 5000);
+        }
+    }
+
+    function hideStatus() {
+        avatarStatus.style.display = 'none';
+    }
+
+    // Reinitialize Lucide icons for the camera icon
+    if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+    }
+});
+</script>
 
 <!-- CSS loaded from /assets/css/pages/profile-edit.css -->

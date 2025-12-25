@@ -13,6 +13,12 @@ if (!$currentUser) {
 
 $pdo = hub_db();
 
+// Include avatar helper functions
+$avatarHelperPath = dirname(dirname(__DIR__)) . '/includes/get-avatar.php';
+if (file_exists($avatarHelperPath)) {
+    require_once $avatarHelperPath;
+}
+
 // Get linked children
 $linkedChildren = hub_get_linked_children($currentUser['id']);
 
@@ -66,7 +72,27 @@ $recentResults = $resultStmt->fetchAll(PDO::FETCH_ASSOC);
 <!-- Profile Card -->
 <div class="profile-card">
     <div class="profile-avatar">
-        <?= strtoupper(substr($currentUser['firstname'], 0, 1) . substr($currentUser['lastname'], 0, 1)) ?>
+        <?php
+        // Check for avatar image
+        $avatarUrl = $currentUser['avatar_url'] ?? null;
+        $initials = function_exists('get_rider_initials')
+            ? get_rider_initials($currentUser)
+            : strtoupper(substr($currentUser['firstname'] ?? '', 0, 1) . substr($currentUser['lastname'] ?? '', 0, 1));
+
+        if ($avatarUrl):
+        ?>
+            <img src="<?= htmlspecialchars($avatarUrl) ?>"
+                 alt="Din profilbild"
+                 class="profile-avatar-image"
+                 onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+            <span class="profile-avatar-fallback" style="display: none;"><?= htmlspecialchars($initials) ?></span>
+        <?php elseif (function_exists('get_rider_avatar')): ?>
+            <img src="<?= htmlspecialchars(get_rider_avatar($currentUser, 80)) ?>"
+                 alt="Din profilbild"
+                 class="profile-avatar-image">
+        <?php else: ?>
+            <?= htmlspecialchars($initials) ?>
+        <?php endif; ?>
     </div>
     <div class="profile-info">
         <h2 class="profile-name"><?= htmlspecialchars($currentUser['firstname'] . ' ' . $currentUser['lastname']) ?></h2>
@@ -185,5 +211,22 @@ $recentResults = $resultStmt->fetchAll(PDO::FETCH_ASSOC);
     <a href="/logout" class="btn btn-outline btn-danger">Logga ut</a>
 </div>
 
+
+<!-- Avatar image styles -->
+<style>
+.profile-avatar-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    border-radius: 50%;
+}
+.profile-avatar-fallback {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 100%;
+    height: 100%;
+}
+</style>
 
 <!-- CSS loaded from /assets/css/pages/profile-index.css -->
