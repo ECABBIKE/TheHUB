@@ -964,6 +964,7 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
             </div>
             <?php endif; ?>
             <div class="dashboard-chart-footer">
+                <span><?= count($rankingHistoryFull) ?> snapshots</span>
                 <button type="button" class="btn-calc-ranking-inline" onclick="openRankingModal()">
                     <i data-lucide="calculator"></i>
                     <span>Visa uträkning</span>
