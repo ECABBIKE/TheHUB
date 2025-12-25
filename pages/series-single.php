@@ -439,6 +439,11 @@ if (!$series) {
 }
 ?>
 
+<!-- VERSION CHECK: claude-fix-2025-12-25-v2 -->
+<div style="background: red; color: white; padding: 10px; text-align: center; font-weight: bold;">
+    TEST: Om du ser detta är RÄTT version uppe! (claude-fix-v2)
+</div>
+
 <?php if (isset($error)): ?>
 <section class="card mb-lg">
   <div class="card-title text-error">Fel</div>
