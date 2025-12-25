@@ -941,3 +941,27 @@ function getRiderRankingDetails($db, $riderId, $discipline = 'GRAVITY') {
         'ranking_position' => $ranking['ranking_position'] ?? null
     ];
 }
+
+/**
+ * Get ranking history for a rider (all snapshots over time)
+ * Returns up to $limit snapshots ordered by date ascending (oldest first)
+ */
+function getRiderRankingHistory($db, $riderId, $discipline = 'GRAVITY', $limit = 50) {
+    // Get all snapshots for this rider, ordered by date (oldest first)
+    $history = $db->getAll("
+        SELECT
+            snapshot_date,
+            ranking_position,
+            total_ranking_points,
+            points_last_12_months,
+            points_months_13_24,
+            events_count,
+            position_change
+        FROM ranking_snapshots
+        WHERE rider_id = ? AND discipline = ?
+        ORDER BY snapshot_date ASC
+        LIMIT ?
+    ", [$riderId, $discipline, $limit]);
+
+    return $history;
+}
