@@ -2,10 +2,8 @@
 /**
  * V3 Series Single Page - Series standings with per-event points
  * Uses series_results table for series-specific points (matches V2)
- * Club standings use 100%/50% rule from club-points-system.php
+ * Club standings use 100%/50% rule (best rider = 100%, second = 50%)
  */
-
-require_once HUB_V3_ROOT . '/includes/club-points-system.php';
 
 $db = hub_db();
 $seriesId = intval($pageInfo['params']['id'] ?? 0);
