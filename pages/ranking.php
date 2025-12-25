@@ -34,8 +34,8 @@ if (!in_array($view, ['riders', 'clubs'])) {
     $view = 'riders';
 }
 
-// Pagination
-$page = isset($_GET['page']) ? max(1, (int)$_GET['page']) : 1;
+// Pagination - use 'p' to avoid conflict with routing 'page' parameter
+$page = isset($_GET['p']) ? max(1, (int)$_GET['p']) : 1;
 $perPage = 50;
 $offset = ($page - 1) * $perPage;
 
@@ -321,13 +321,13 @@ $disciplineNames = [
 <?php if ($totalPages > 1): ?>
 <nav class="pagination mt-lg" aria-label="Sidnavigering">
   <?php if ($page > 1): ?>
-    <a href="/ranking?discipline=<?= $discipline ?>&view=<?= $view ?>&page=<?= $page - 1 ?>" class="btn btn--ghost">← Föregående</a>
+    <a href="/ranking?discipline=<?= $discipline ?>&view=<?= $view ?>&p=<?= $page - 1 ?>" class="btn btn--ghost">← Föregående</a>
   <?php endif; ?>
 
   <span class="pagination-info">Sida <?= $page ?> av <?= $totalPages ?></span>
 
   <?php if ($page < $totalPages): ?>
-    <a href="/ranking?discipline=<?= $discipline ?>&view=<?= $view ?>&page=<?= $page + 1 ?>" class="btn btn--ghost">Nästa →</a>
+    <a href="/ranking?discipline=<?= $discipline ?>&view=<?= $view ?>&p=<?= $page + 1 ?>" class="btn btn--ghost">Nästa →</a>
   <?php endif; ?>
 </nav>
 <?php endif; ?>
