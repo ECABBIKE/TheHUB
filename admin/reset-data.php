@@ -32,25 +32,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_reset'])) {
 
             // Delete in order (child tables first)
             $tables = [
-                'series_results' => 'Serieresultat',
-                'rider_club_seasons' => 'Klubbsäsonger',
-                'rider_parents' => 'Föräldrakopplingar',
-                'rider_claims' => 'Profilförfrågningar',
-                'results' => 'Resultat',
-                'registrations' => 'Anmälningar',
-                'riders' => 'Åkare',
-                'clubs' => 'Klubbar',
+                'ranking_snapshots',
+                'club_ranking_snapshots',
+                'ranking_history',
+                'series_results',
+                'rider_club_seasons',
+                'rider_parents',
+                'rider_claims',
+                'results',
+                'registrations',
+                'club_points',
+                'club_points_riders',
+                'riders',
+                'clubs',
             ];
 
             $deleted = [];
-            foreach ($tables as $table => $label) {
+            foreach ($tables as $table) {
                 try {
                     $count = $db->pdo->query("SELECT COUNT(*) FROM `$table`")->fetchColumn();
-                    $db->pdo->exec("TRUNCATE TABLE `$table`");
-                    $deleted[$label] = $count;
+                    $db->pdo->exec("DELETE FROM `$table`");
+                    $db->pdo->exec("ALTER TABLE `$table` AUTO_INCREMENT = 1");
+                    $deleted[$table] = $count;
                 } catch (Exception $e) {
                     // Table might not exist, skip
-                    $deleted[$label] = 'N/A';
+                    $deleted[$table] = 0;
                 }
             }
 
@@ -61,12 +67,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_reset'])) {
 
             $message = 'Data raderad! Raderade: ';
             $parts = [];
-            foreach ($deleted as $label => $count) {
-                if ($count !== 'N/A' && $count > 0) {
-                    $parts[] = "$count $label";
+            foreach ($deleted as $table => $count) {
+                if ($count > 0) {
+                    $parts[] = "$count från $table";
                 }
             }
-            $message .= implode(', ', $parts);
+            $message .= !empty($parts) ? implode(', ', $parts) : 'Inga rader';
 
         } catch (Exception $e) {
             $db->pdo->rollBack();
@@ -75,14 +81,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_reset'])) {
     }
 }
 
-// Get current counts
+// Get current counts (with error handling for missing tables)
+function safeCount($db, $table) {
+    try {
+        return $db->getRow("SELECT COUNT(*) as c FROM `$table`")['c'] ?? 0;
+    } catch (Exception $e) {
+        return 0;
+    }
+}
+
 $counts = [
-    'results' => $db->getRow("SELECT COUNT(*) as c FROM results")['c'] ?? 0,
-    'riders' => $db->getRow("SELECT COUNT(*) as c FROM riders")['c'] ?? 0,
-    'clubs' => $db->getRow("SELECT COUNT(*) as c FROM clubs")['c'] ?? 0,
-    'series_results' => $db->getRow("SELECT COUNT(*) as c FROM series_results")['c'] ?? 0,
-    'events' => $db->getRow("SELECT COUNT(*) as c FROM events")['c'] ?? 0,
-    'series' => $db->getRow("SELECT COUNT(*) as c FROM series")['c'] ?? 0,
+    'results' => safeCount($db, 'results'),
+    'riders' => safeCount($db, 'riders'),
+    'clubs' => safeCount($db, 'clubs'),
+    'series_results' => safeCount($db, 'series_results'),
+    'ranking_snapshots' => safeCount($db, 'ranking_snapshots'),
+    'events' => safeCount($db, 'events'),
+    'series' => safeCount($db, 'series'),
 ];
 
 // Page config
@@ -125,8 +140,8 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
 
-        <div class="row">
-            <div class="col-md-6">
+        <div class="gs-info-grid">
+            <div>
                 <h3 class="mb-md text-danger">
                     <i data-lucide="x-circle"></i>
                     Kommer raderas
@@ -134,23 +149,27 @@ include __DIR__ . '/components/unified-layout.php';
                 <table class="table">
                     <tr>
                         <td>Resultat</td>
-                        <td class="text-right"><strong><?= number_format($counts['results']) ?></strong></td>
+                        <td style="text-align:right"><strong><?= number_format($counts['results']) ?></strong></td>
                     </tr>
                     <tr>
                         <td>Åkare</td>
-                        <td class="text-right"><strong><?= number_format($counts['riders']) ?></strong></td>
+                        <td style="text-align:right"><strong><?= number_format($counts['riders']) ?></strong></td>
                     </tr>
                     <tr>
                         <td>Klubbar</td>
-                        <td class="text-right"><strong><?= number_format($counts['clubs']) ?></strong></td>
+                        <td style="text-align:right"><strong><?= number_format($counts['clubs']) ?></strong></td>
                     </tr>
                     <tr>
                         <td>Serieresultat</td>
-                        <td class="text-right"><strong><?= number_format($counts['series_results']) ?></strong></td>
+                        <td style="text-align:right"><strong><?= number_format($counts['series_results']) ?></strong></td>
+                    </tr>
+                    <tr>
+                        <td>Ranking-snapshots</td>
+                        <td style="text-align:right"><strong><?= number_format($counts['ranking_snapshots']) ?></strong></td>
                     </tr>
                 </table>
             </div>
-            <div class="col-md-6">
+            <div>
                 <h3 class="mb-md text-success">
                     <i data-lucide="check-circle"></i>
                     Behålls
@@ -158,19 +177,19 @@ include __DIR__ . '/components/unified-layout.php';
                 <table class="table">
                     <tr>
                         <td>Events/Tävlingar</td>
-                        <td class="text-right"><strong><?= number_format($counts['events']) ?></strong></td>
+                        <td style="text-align:right"><strong><?= number_format($counts['events']) ?></strong></td>
                     </tr>
                     <tr>
                         <td>Serier</td>
-                        <td class="text-right"><strong><?= number_format($counts['series']) ?></strong></td>
+                        <td style="text-align:right"><strong><?= number_format($counts['series']) ?></strong></td>
                     </tr>
                     <tr>
                         <td>Klasser</td>
-                        <td class="text-right"><strong>Alla</strong></td>
+                        <td style="text-align:right"><strong>Alla</strong></td>
                     </tr>
                     <tr>
                         <td>Venues, Inställningar</td>
-                        <td class="text-right"><strong>Alla</strong></td>
+                        <td style="text-align:right"><strong>Alla</strong></td>
                     </tr>
                 </table>
             </div>
