@@ -3,6 +3,7 @@
  * Admin Rider Claims - Review and approve profile merge requests
  */
 require_once __DIR__ . '/../config.php';
+require_once __DIR__ . '/../includes/mail.php';
 require_admin();
 
 $db = getDB();
@@ -105,7 +106,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                     $pdo->commit();
 
-                    $message = "Profiler sammanslagna! {$claimant['firstname']} {$claimant['lastname']} → {$target['firstname']} {$target['lastname']}. {$moved} resultat flyttade.";
+                    // Send password reset email to the merged profile
+                    $emailSent = false;
+                    $targetEmail = $updates['email'] ?? $target['email'] ?? '';
+                    if (!empty($targetEmail)) {
+                        // Generate password reset token
+                        $token = bin2hex(random_bytes(32));
+                        $expires = date('Y-m-d H:i:s', strtotime('+24 hours'));
+
+                        $db->query(
+                            "UPDATE riders SET password_reset_token = ?, password_reset_expires = ? WHERE id = ?",
+                            [$token, $expires, $targetId]
+                        );
+
+                        $resetLink = 'https://thehub.gravityseries.se/reset-password?token=' . $token;
+                        $riderName = trim($target['firstname'] . ' ' . $target['lastname']);
+
+                        $emailSent = hub_send_password_reset_email($targetEmail, $riderName, $resetLink);
+                    }
+
+                    $emailStatus = $emailSent ? ' Mail med lösenordslänk skickat!' : '';
+                    $message = "Profiler sammanslagna! {$claimant['firstname']} {$claimant['lastname']} → {$target['firstname']} {$target['lastname']}. {$moved} resultat flyttade.{$emailStatus}";
                     $messageType = 'success';
 
                 } catch (Exception $e) {
