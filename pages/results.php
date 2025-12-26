@@ -146,9 +146,7 @@ try {
                     <?php foreach ($yearEvents as $event): ?>
                         <?php
                         $eventDate = $event['date'] ? strtotime($event['date']) : null;
-                        $dayName = $eventDate ? hub_day_short($eventDate) : '';
-                        $dayNum = $eventDate ? date('j', $eventDate) : '-';
-                        $monthShort = $eventDate ? strtoupper(hub_month_short($eventDate)) : '';
+                        $dateFormatted = $eventDate ? date('j', $eventDate) . ' ' . hub_month_short($eventDate) : '-';
                         $location = $event['venue_city'] ?: $event['location'];
                         $accentColor = $event['series_accent'] ?: '#61CE70';
                         $seriesLogo = $event['series_logo'] ?? '';
@@ -166,32 +164,22 @@ try {
                             </div>
                             <?php endif; ?>
 
-                            <div class="event-date">
-                                <span class="event-month-abbr"><?= $monthShort ?></span>
-                                <span class="event-day-num"><?= $dayNum ?></span>
-                                <span class="event-day-name"><?= $dayName ?></span>
-                            </div>
+                            <span class="event-date-inline"><?= $dateFormatted ?></span>
 
-                            <div class="event-main">
-                                <h3 class="event-title"><?= htmlspecialchars($event['name']) ?></h3>
-                                <div class="event-details">
-                                    <?php if ($event['brand_name']): ?>
-                                        <span class="event-series"><?= htmlspecialchars($event['brand_name']) ?></span>
-                                    <?php endif; ?>
-                                    <?php if ($location): ?>
-                                        <span class="event-location">
-                                            <i data-lucide="map-pin"></i><?= htmlspecialchars($location) ?>
-                                        </span>
-                                    <?php endif; ?>
-                                </div>
-                            </div>
+                            <?php if ($event['brand_name']): ?>
+                            <span class="event-series-badge"><?= htmlspecialchars($event['brand_name']) ?></span>
+                            <?php endif; ?>
 
-                            <div class="event-stats">
-                                <div class="event-stat">
-                                    <span class="stat-value"><?= $event['rider_count'] ?></span>
-                                    <span class="stat-label">deltagare</span>
-                                </div>
-                            </div>
+                            <h3 class="event-title"><?= htmlspecialchars($event['name']) ?></h3>
+
+                            <?php if ($location): ?>
+                            <span class="event-location-inline">
+                                <i data-lucide="map-pin"></i>
+                                <?= htmlspecialchars($location) ?>
+                            </span>
+                            <?php endif; ?>
+
+                            <span class="event-riders"><?= $event['rider_count'] ?> deltagare</span>
 
                             <div class="event-arrow">
                                 <i data-lucide="chevron-right"></i>
