@@ -2032,8 +2032,8 @@ document.getElementById('activateModal')?.addEventListener('click', function(e) 
                         backgroundColor: rankingGradient,
                         fill: {
                             target: 'origin',
-                            above: 'transparent',
-                            below: rankingGradient
+                            above: rankingGradient,
+                            below: 'transparent'
                         },
                         tension: 0.4,
                         borderWidth: 2,
@@ -2099,8 +2099,8 @@ document.getElementById('activateModal')?.addEventListener('click', function(e) 
                         backgroundColor: formGradient,
                         fill: {
                             target: 'origin',
-                            above: 'transparent',
-                            below: formGradient
+                            above: formGradient,
+                            below: 'transparent'
                         },
                         tension: 0.4,
                         borderWidth: 2,
