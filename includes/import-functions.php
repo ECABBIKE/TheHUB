@@ -791,7 +791,7 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
             if ($clubId && $forceClubUpdate) {
                 // Force update: use club from CSV regardless of locked status
                 $resultClubId = $clubId;
-                setRiderClubForYear($db, $riderId, $clubId, $eventYear);
+                setRiderClubForYear($db, $riderId, $clubId, $eventYear, true);  // Pass true to force update locked entries
                 lockRiderClubForYear($db, $riderId, $eventYear);
                 $db->update('riders', ['club_id' => $clubId], 'id = ?', [$riderId]);
             } elseif ($existingSeasonClub && $existingSeasonClub['locked'] && !$forceClubUpdate) {
