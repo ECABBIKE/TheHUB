@@ -22,6 +22,9 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 $targetRiderId = (int)($_POST['target_rider_id'] ?? 0);
 $adminDirect = !empty($_POST['admin_direct']);
 $email = trim($_POST['email'] ?? '');
+$phone = trim($_POST['phone'] ?? '');
+$instagram = trim($_POST['instagram'] ?? '');
+$facebook = trim($_POST['facebook'] ?? '');
 $reason = trim($_POST['reason'] ?? '');
 
 if (!$targetRiderId) {
@@ -61,6 +64,11 @@ try {
             exit;
         }
 
+        if (empty($phone)) {
+            echo json_encode(['success' => false, 'error' => 'Telefonnummer krävs för verifiering']);
+            exit;
+        }
+
         // Check if email is already used by another rider
         $existingRider = $db->getRow("SELECT id, firstname, lastname FROM riders WHERE email = ? AND id != ?", [$email, $targetRiderId]);
         if ($existingRider) {
@@ -71,11 +79,19 @@ try {
             exit;
         }
 
-        // Direct update - connect email to profile
-        $db->query("UPDATE riders SET email = ?, updated_at = NOW() WHERE id = ?", [$email, $targetRiderId]);
+        // Build verification notes
+        $verificationNotes = [];
+        $verificationNotes[] = "Tel: {$phone}";
+        if ($instagram) $verificationNotes[] = "IG: {$instagram}";
+        if ($facebook) $verificationNotes[] = "FB: {$facebook}";
+        if ($reason) $verificationNotes[] = "Note: {$reason}";
+        $fullNotes = implode(' | ', $verificationNotes);
 
-        // Log the action
-        error_log("ADMIN DIRECT CLAIM: Super admin connected email '{$email}' to rider {$targetRiderId} ({$targetRider['firstname']} {$targetRider['lastname']}). Note: {$reason}");
+        // Direct update - connect email and phone to profile
+        $db->query("UPDATE riders SET email = ?, phone = ?, updated_at = NOW() WHERE id = ?", [$email, $phone, $targetRiderId]);
+
+        // Log the action with full verification info
+        error_log("ADMIN DIRECT CLAIM: Super admin connected email '{$email}' to rider {$targetRiderId} ({$targetRider['firstname']} {$targetRider['lastname']}). Verification: {$fullNotes}");
 
         echo json_encode([
             'success' => true,

@@ -1616,25 +1616,53 @@ document.addEventListener('DOMContentLoaded', function() {
             </button>
         </div>
         <form id="claimForm" class="claim-modal-body">
-            <div class="claim-info-box" style="background: rgba(97, 206, 112, 0.1); border: 1px solid var(--color-success);">
-                <i data-lucide="shield-check" style="color: var(--color-success);"></i>
-                <p style="color: var(--color-text);"><strong>Super Admin:</strong> Koppla en e-postadress direkt till denna profil. Profilen får då tillgång till inloggning och profilredigering.</p>
+            <div class="claim-info-box claim-info-admin">
+                <i data-lucide="shield-check"></i>
+                <p><strong>Super Admin:</strong> Koppla en e-postadress direkt till denna profil. Profilen får då tillgång till inloggning och profilredigering.</p>
             </div>
 
-            <div class="claim-profile-card claim-profile-target" style="margin-bottom: var(--space-lg);">
+            <div class="claim-profile-card claim-profile-target">
                 <span class="claim-profile-label">Profil utan e-post</span>
                 <span class="claim-profile-name"><?= $fullName ?></span>
                 <span class="claim-profile-meta"><?= count($results) ?> resultat</span>
             </div>
 
             <div class="claim-form-group">
-                <label for="claimEmail">E-postadress att koppla</label>
-                <input type="email" id="claimEmail" name="email" class="form-input" required placeholder="namn@example.com" style="width: 100%; padding: var(--space-sm); border: 1px solid var(--color-border); border-radius: var(--radius-sm);">
+                <label for="claimEmail">E-postadress att koppla <span class="required">*</span></label>
+                <input type="email" id="claimEmail" name="email" class="claim-input" required placeholder="namn@example.com">
+            </div>
+
+            <div class="claim-form-group">
+                <label for="claimPhone">Telefonnummer <span class="required">*</span></label>
+                <input type="tel" id="claimPhone" name="phone" class="claim-input" required placeholder="070-123 45 67">
+                <span class="claim-field-hint">Obligatoriskt för verifiering</span>
+            </div>
+
+            <div class="claim-form-divider">
+                <span>Sociala medier (för verifiering)</span>
+            </div>
+
+            <div class="claim-social-grid">
+                <div class="claim-form-group">
+                    <label for="claimInstagram">
+                        <i data-lucide="instagram"></i>
+                        Instagram
+                    </label>
+                    <input type="text" id="claimInstagram" name="instagram" class="claim-input" placeholder="@användarnamn">
+                </div>
+
+                <div class="claim-form-group">
+                    <label for="claimFacebook">
+                        <i data-lucide="facebook"></i>
+                        Facebook
+                    </label>
+                    <input type="text" id="claimFacebook" name="facebook" class="claim-input" placeholder="Profilnamn eller URL">
+                </div>
             </div>
 
             <div class="claim-form-group">
                 <label for="claimReason">Anteckning (valfritt)</label>
-                <textarea id="claimReason" name="reason" rows="2" placeholder="T.ex. verifierad via telefon..."></textarea>
+                <textarea id="claimReason" name="reason" rows="2" class="claim-textarea" placeholder="T.ex. verifierad via telefon..."></textarea>
             </div>
 
             <input type="hidden" name="target_rider_id" value="<?= $riderId ?>">
@@ -1662,7 +1690,9 @@ document.addEventListener('DOMContentLoaded', function() {
     display: none;
     position: fixed;
     inset: 0;
-    background: rgba(0,0,0,0.5);
+    background: rgba(0,0,0,0.7);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
     z-index: 1000;
     justify-content: center;
     align-items: center;
@@ -1672,12 +1702,14 @@ document.addEventListener('DOMContentLoaded', function() {
     display: flex;
 }
 .claim-modal {
-    background: var(--color-bg);
+    background: #1a1a1a;
+    border: 1px solid var(--color-border);
     border-radius: var(--radius-lg);
-    max-width: 500px;
+    max-width: 520px;
     width: 100%;
     max-height: 90vh;
     overflow-y: auto;
+    box-shadow: 0 25px 50px -12px rgba(0,0,0,0.5);
 }
 .claim-modal-header {
     display: flex;
@@ -1685,6 +1717,7 @@ document.addEventListener('DOMContentLoaded', function() {
     justify-content: space-between;
     padding: var(--space-md) var(--space-lg);
     border-bottom: 1px solid var(--color-border);
+    background: #222;
 }
 .claim-modal-header h3 {
     display: flex;
@@ -1692,6 +1725,10 @@ document.addEventListener('DOMContentLoaded', function() {
     gap: var(--space-sm);
     margin: 0;
     font-size: var(--text-lg);
+    color: #fff;
+}
+.claim-modal-header h3 i {
+    color: var(--color-accent);
 }
 .claim-modal-close {
     background: none;
@@ -1702,7 +1739,8 @@ document.addEventListener('DOMContentLoaded', function() {
     border-radius: var(--radius-sm);
 }
 .claim-modal-close:hover {
-    background: var(--color-bg-hover);
+    background: rgba(255,255,255,0.1);
+    color: #fff;
 }
 .claim-modal-body {
     padding: var(--space-lg);
@@ -1711,33 +1749,31 @@ document.addEventListener('DOMContentLoaded', function() {
     display: flex;
     gap: var(--space-sm);
     padding: var(--space-md);
-    background: var(--color-bg-secondary);
+    background: rgba(97, 206, 112, 0.1);
+    border: 1px solid var(--color-success);
     border-radius: var(--radius-md);
     margin-bottom: var(--space-lg);
 }
-.claim-info-box i {
+.claim-info-box.claim-info-admin i {
     flex-shrink: 0;
     width: 20px;
     height: 20px;
-    color: var(--color-accent);
+    color: var(--color-success);
 }
 .claim-info-box p {
     margin: 0;
     font-size: var(--text-sm);
-    color: var(--color-text-secondary);
+    color: #ccc;
 }
-.claim-profiles {
-    display: flex;
-    align-items: center;
-    gap: var(--space-md);
-    margin-bottom: var(--space-lg);
+.claim-info-box p strong {
+    color: #fff;
 }
 .claim-profile-card {
-    flex: 1;
     padding: var(--space-md);
-    background: var(--color-bg-secondary);
+    background: #222;
     border-radius: var(--radius-md);
     text-align: center;
+    margin-bottom: var(--space-lg);
 }
 .claim-profile-target {
     border: 2px solid var(--color-accent);
@@ -1747,10 +1783,14 @@ document.addEventListener('DOMContentLoaded', function() {
     font-size: var(--text-xs);
     color: var(--color-text-secondary);
     margin-bottom: var(--space-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
 }
 .claim-profile-name {
     display: block;
     font-weight: 600;
+    font-size: var(--text-lg);
+    color: #fff;
 }
 .claim-profile-meta {
     display: block;
@@ -1758,50 +1798,115 @@ document.addEventListener('DOMContentLoaded', function() {
     color: var(--color-text-secondary);
     margin-top: 2px;
 }
-.claim-arrow {
-    color: var(--color-text-secondary);
-}
 .claim-form-group {
-    margin-bottom: var(--space-lg);
+    margin-bottom: var(--space-md);
 }
 .claim-form-group label {
-    display: block;
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
     font-size: var(--text-sm);
     font-weight: 500;
     margin-bottom: var(--space-xs);
+    color: #ccc;
 }
-.claim-form-group textarea {
+.claim-form-group label i {
+    width: 16px;
+    height: 16px;
+    color: var(--color-text-secondary);
+}
+.claim-form-group label .required {
+    color: var(--color-danger);
+}
+.claim-input,
+.claim-textarea {
     width: 100%;
-    padding: var(--space-sm);
+    padding: var(--space-sm) var(--space-md);
+    background: #222;
     border: 1px solid var(--color-border);
     border-radius: var(--radius-sm);
     font-family: inherit;
     font-size: var(--text-sm);
+    color: #fff;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease;
+}
+.claim-input:focus,
+.claim-textarea:focus {
+    outline: none;
+    border-color: var(--color-accent);
+    box-shadow: 0 0 0 3px rgba(97, 206, 112, 0.15);
+}
+.claim-input::placeholder,
+.claim-textarea::placeholder {
+    color: #666;
+}
+.claim-textarea {
     resize: vertical;
+    min-height: 60px;
+}
+.claim-field-hint {
+    display: block;
+    font-size: var(--text-xs);
+    color: var(--color-text-secondary);
+    margin-top: var(--space-2xs);
+}
+.claim-form-divider {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    margin: var(--space-lg) 0;
+    color: var(--color-text-secondary);
+    font-size: var(--text-sm);
+}
+.claim-form-divider::before,
+.claim-form-divider::after {
+    content: '';
+    flex: 1;
+    height: 1px;
+    background: var(--color-border);
+}
+.claim-social-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-md);
 }
 .claim-form-actions {
     display: flex;
     gap: var(--space-sm);
     justify-content: flex-end;
+    margin-top: var(--space-lg);
+    padding-top: var(--space-lg);
+    border-top: 1px solid var(--color-border);
 }
 .claim-form-actions .btn-secondary {
     padding: var(--space-sm) var(--space-md);
-    background: var(--color-bg-secondary);
+    background: transparent;
     border: 1px solid var(--color-border);
     border-radius: var(--radius-sm);
     cursor: pointer;
+    color: #ccc;
+    transition: all 0.15s ease;
+}
+.claim-form-actions .btn-secondary:hover {
+    background: rgba(255,255,255,0.05);
+    border-color: #666;
 }
 .claim-form-actions .btn-primary {
     display: flex;
     align-items: center;
     gap: var(--space-xs);
-    padding: var(--space-sm) var(--space-md);
+    padding: var(--space-sm) var(--space-lg);
     background: var(--color-accent);
-    color: white;
+    color: #111;
     border: none;
     border-radius: var(--radius-sm);
     cursor: pointer;
-    font-weight: 500;
+    font-weight: 600;
+    transition: all 0.15s ease;
+}
+.claim-form-actions .btn-primary:hover {
+    background: #7dd88a;
+    transform: translateY(-1px);
 }
 .claim-success {
     padding: var(--space-xl);
@@ -1815,6 +1920,7 @@ document.addEventListener('DOMContentLoaded', function() {
 }
 .claim-success h4 {
     margin: 0 0 var(--space-sm);
+    color: #fff;
 }
 .claim-success p {
     color: var(--color-text-secondary);
@@ -1828,12 +1934,18 @@ document.addEventListener('DOMContentLoaded', function() {
     opacity: 0.6;
     cursor: not-allowed !important;
 }
-@media (max-width: 500px) {
-    .claim-profiles {
-        flex-direction: column;
+@media (max-width: 540px) {
+    .claim-modal {
+        max-width: 100%;
+        max-height: 100vh;
+        border-radius: 0;
+        margin: 0;
     }
-    .claim-arrow {
-        transform: rotate(90deg);
+    .claim-modal-overlay {
+        padding: 0;
+    }
+    .claim-social-grid {
+        grid-template-columns: 1fr;
     }
 }
 </style>
