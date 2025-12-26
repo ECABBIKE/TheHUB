@@ -153,6 +153,15 @@
     line-height: 1.2;
 }
 
+/* Inactive/expired license styling */
+.profile-license-badge.license-inactive {
+    background: linear-gradient(135deg, rgba(122, 122, 122, 0.15) 0%, rgba(122, 122, 122, 0.08) 100%);
+}
+
+.profile-license-badge.license-inactive .license-year {
+    color: var(--color-text);
+}
+
 /* Social Icons - Simple Gray Style */
 .profile-social-simple {
     display: flex;
