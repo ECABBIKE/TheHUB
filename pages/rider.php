@@ -1112,9 +1112,9 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
         <?php if (!empty($clubHistory)): ?>
         <div class="card club-history-card">
             <h3 class="card-section-title-sm"><i data-lucide="history"></i> Klubbtillhörighet</h3>
-            <div class="club-history-list">
+            <div class="club-history-list" id="clubHistoryList">
                 <?php foreach ($clubHistory as $ch): ?>
-                <div class="club-history-item">
+                <div class="club-history-item" id="club-season-<?= $riderId ?>-<?= $ch['season_year'] ?>">
                     <span class="club-history-year"><?= $ch['season_year'] ?></span>
                     <a href="/club/<?= $ch['club_id'] ?>" class="club-history-name"><?= htmlspecialchars($ch['club_name']) ?></a>
                     <span class="club-history-meta">
@@ -1123,6 +1123,11 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
                         <i data-lucide="lock" style="width: 12px; height: 12px; color: var(--color-warning);"></i>
                         <?php endif; ?>
                     </span>
+                    <?php if ($isSuperAdmin): ?>
+                    <button type="button" class="btn-delete-club-season" onclick="deleteClubSeason(<?= $riderId ?>, <?= $ch['season_year'] ?>)" title="Radera klubbtillhörighet">
+                        <i data-lucide="trash-2"></i>
+                    </button>
+                    <?php endif; ?>
                 </div>
                 <?php endforeach; ?>
             </div>
@@ -1156,6 +1161,17 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
             align-items: center;
             gap: 4px;
         }
+        .btn-delete-club-season {
+            background: none;
+            border: none;
+            color: var(--color-danger);
+            cursor: pointer;
+            padding: 4px;
+            opacity: 0.6;
+            transition: opacity 0.2s;
+        }
+        .btn-delete-club-season:hover { opacity: 1; }
+        .btn-delete-club-season i { width: 14px; height: 14px; }
         </style>
         <?php endif; ?>
 
@@ -2197,4 +2213,34 @@ function initSeriesTabs() {
 // Init on page load
 document.addEventListener('DOMContentLoaded', initSeriesTabs);
 </script>
+
+<!-- Delete Club Season (superadmin) -->
+<?php if ($isSuperAdmin): ?>
+<script>
+function deleteClubSeason(riderId, year) {
+    if (!confirm('Radera klubbtillhörighet för ' + year + '?\n\nDetta tar bort kopplingen mellan åkaren och klubben för detta år.')) {
+        return;
+    }
+
+    fetch('/api/delete-club-season.php', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ rider_id: riderId, year: year })
+    })
+    .then(r => r.json())
+    .then(data => {
+        if (data.success) {
+            const row = document.getElementById('club-season-' + riderId + '-' + year);
+            if (row) {
+                row.style.opacity = '0';
+                setTimeout(() => row.remove(), 200);
+            }
+        } else {
+            alert('Fel: ' + (data.error || 'Kunde inte radera'));
+        }
+    })
+    .catch(err => alert('Fel: ' + err.message));
+}
+</script>
+<?php endif; ?>
 
