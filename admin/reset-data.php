@@ -32,12 +32,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_reset'])) {
 
             // Delete in order (child tables first)
             $tables = [
+                'ranking_snapshots',
+                'club_ranking_snapshots',
+                'ranking_history',
                 'series_results',
                 'rider_club_seasons',
                 'rider_parents',
                 'rider_claims',
                 'results',
                 'registrations',
+                'club_points',
+                'club_points_riders',
                 'riders',
                 'clubs',
             ];
@@ -76,14 +81,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_reset'])) {
     }
 }
 
-// Get current counts
+// Get current counts (with error handling for missing tables)
+function safeCount($db, $table) {
+    try {
+        return $db->getRow("SELECT COUNT(*) as c FROM `$table`")['c'] ?? 0;
+    } catch (Exception $e) {
+        return 0;
+    }
+}
+
 $counts = [
-    'results' => $db->getRow("SELECT COUNT(*) as c FROM results")['c'] ?? 0,
-    'riders' => $db->getRow("SELECT COUNT(*) as c FROM riders")['c'] ?? 0,
-    'clubs' => $db->getRow("SELECT COUNT(*) as c FROM clubs")['c'] ?? 0,
-    'series_results' => $db->getRow("SELECT COUNT(*) as c FROM series_results")['c'] ?? 0,
-    'events' => $db->getRow("SELECT COUNT(*) as c FROM events")['c'] ?? 0,
-    'series' => $db->getRow("SELECT COUNT(*) as c FROM series")['c'] ?? 0,
+    'results' => safeCount($db, 'results'),
+    'riders' => safeCount($db, 'riders'),
+    'clubs' => safeCount($db, 'clubs'),
+    'series_results' => safeCount($db, 'series_results'),
+    'ranking_snapshots' => safeCount($db, 'ranking_snapshots'),
+    'events' => safeCount($db, 'events'),
+    'series' => safeCount($db, 'series'),
 ];
 
 // Page config
@@ -148,6 +162,10 @@ include __DIR__ . '/components/unified-layout.php';
                     <tr>
                         <td>Serieresultat</td>
                         <td style="text-align:right"><strong><?= number_format($counts['series_results']) ?></strong></td>
+                    </tr>
+                    <tr>
+                        <td>Ranking-snapshots</td>
+                        <td style="text-align:right"><strong><?= number_format($counts['ranking_snapshots']) ?></strong></td>
                     </tr>
                 </table>
             </div>
