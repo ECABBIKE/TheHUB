@@ -366,12 +366,16 @@
         font-size: var(--text-base);
     }
 
-    /* Hide extras on mobile */
+    /* Hide extras on mobile - keep deadline visible */
     .event-series-badge,
     .event-location-inline,
-    .event-registrations,
-    .event-deadline {
+    .event-registrations {
         display: none;
+    }
+
+    .event-deadline {
+        padding: 2px 8px;
+        font-size: var(--text-xs);
     }
 
     .event-arrow {
