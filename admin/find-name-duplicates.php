@@ -321,16 +321,15 @@ foreach ($allDuplicates as $dup) {
 
     if (count($riders) < 2) continue;
 
-    // Check birth years - only consider duplicates if birth years match or are empty
-    // Different birth years = likely different people with same name
+    // Check birth years - flag but don't skip different birth years
+    // Different birth years might still be the same person with wrong data
     $birthYears = [];
     foreach ($riders as $r) {
         if (!empty($r['birth_year'])) {
             $birthYears[$r['birth_year']] = true;
         }
     }
-    // Skip if we have multiple DIFFERENT birth years (not the same person!)
-    if (count($birthYears) > 1) continue;
+    $hasDifferentBirthYears = count($birthYears) > 1;
 
     // Check if they have different license numbers (not just format differences)
     $uniqueLicenses = [];
@@ -341,8 +340,7 @@ foreach ($allDuplicates as $dup) {
         }
     }
 
-    // Skip if all have the same license (handled by other tools)
-    // But include if some have no license or different licenses
+    // Check license status for info display
     $hasNoLicense = false;
     $hasDifferentLicenses = count($uniqueLicenses) > 1;
     foreach ($riders as $r) {
@@ -351,9 +349,7 @@ foreach ($allDuplicates as $dup) {
             break;
         }
     }
-
-    // Only show if there are different licenses OR some without license
-    if (!$hasDifferentLicenses && !$hasNoLicense) continue;
+    $allSameLicense = !$hasDifferentLicenses && !$hasNoLicense && count($uniqueLicenses) === 1;
 
     // Skip if this group has been excluded (marked as "not duplicates")
     if (groupIsExcluded($riderIds, $excludedPairs)) continue;
@@ -383,7 +379,10 @@ foreach ($allDuplicates as $dup) {
         'total_results' => array_sum(array_column($riders, 'result_count')),
         'keep' => $keepRider,
         'merge' => $mergeRiders,
-        'all_riders' => $riders
+        'all_riders' => $riders,
+        'has_different_birth_years' => $hasDifferentBirthYears,
+        'all_same_license' => $allSameLicense,
+        'birth_years' => array_keys($birthYears)
     ];
 
     $totalDuplicates += count($mergeRiders);
@@ -516,11 +515,17 @@ include __DIR__ . '/components/unified-layout.php';
     </div>
     <div class="card-body">
         <?php foreach ($duplicateGroups as $index => $group): ?>
-        <div class="duplicate-card">
+        <div class="duplicate-card" <?= !empty($group['has_different_birth_years']) ? 'style="border-color: var(--color-warning);"' : '' ?>>
             <div class="duplicate-card-header">
                 <div>
                     <strong><?= h($group['name']) ?></strong>
                     <span class="text-secondary">(<?= $group['total_riders'] ?> poster, <?= $group['total_results'] ?> resultat totalt)</span>
+                    <?php if (!empty($group['has_different_birth_years'])): ?>
+                        <span class="badge badge-warning" style="margin-left: 8px;">Olika födelseår: <?= implode(', ', $group['birth_years']) ?></span>
+                    <?php endif; ?>
+                    <?php if (!empty($group['all_same_license'])): ?>
+                        <span class="badge badge-info" style="margin-left: 8px;">Samma licens-ID</span>
+                    <?php endif; ?>
                 </div>
                 <?php
                 $keepId = $group['keep']['id'];
