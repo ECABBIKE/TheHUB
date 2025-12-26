@@ -1,7 +1,7 @@
 <?php
 /**
  * TheHUB V3.5 - Series List
- * Shows all competition series with Serie + År selectors
+ * Redesigned to match results page layout with row-based cards
  */
 
 // Prevent direct access
@@ -26,7 +26,6 @@ $filterSeriesName = isset($_GET['series']) ? trim($_GET['series']) : null;
 $currentYear = (int)date('Y');
 
 // Check if user has set any filter params (series or year)
-// Note: Router sets $_GET['page'], so we can't use count($_GET) === 0
 $hasFilterParams = isset($_GET['series']) || isset($_GET['year']);
 
 if (!$hasFilterParams) {
@@ -75,16 +74,18 @@ if ($filterYear) {
 
 $whereClause = 'WHERE ' . implode(' AND ', $where);
 
-// Get series for display
+// Get series for display with brand info
 if ($useSeriesEvents) {
     $sql = "
         SELECT s.id, s.name, s.description, s.year, s.status, s.logo, s.start_date, s.end_date,
+               sb.name as brand_name, sb.logo as brand_logo, sb.accent_color,
                COUNT(DISTINCT se.event_id) as event_count,
                (SELECT COUNT(DISTINCT r.cyclist_id)
                 FROM results r
                 INNER JOIN series_events se2 ON r.event_id = se2.event_id
                 WHERE se2.series_id = s.id) as participant_count
         FROM series s
+        LEFT JOIN series_brands sb ON s.brand_id = sb.id
         LEFT JOIN series_events se ON s.id = se.series_id
         {$whereClause}
         GROUP BY s.id
@@ -93,12 +94,14 @@ if ($useSeriesEvents) {
 } else {
     $sql = "
         SELECT s.id, s.name, s.description, s.year, s.status, s.logo, s.start_date, s.end_date,
+               sb.name as brand_name, sb.logo as brand_logo, sb.accent_color,
                COUNT(DISTINCT e.id) as event_count,
                (SELECT COUNT(DISTINCT r.cyclist_id)
                 FROM results r
                 INNER JOIN events e2 ON r.event_id = e2.id
                 WHERE e2.series_id = s.id) as participant_count
         FROM series s
+        LEFT JOIN series_brands sb ON s.brand_id = sb.id
         LEFT JOIN events e ON s.id = e.series_id
         {$whereClause}
         GROUP BY s.id
@@ -109,6 +112,16 @@ $stmt = $pdo->prepare($sql);
 $stmt->execute($params);
 $seriesList = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+// Group series by year
+$seriesByYear = [];
+foreach ($seriesList as $series) {
+    $year = $series['year'] ?: 'Okänt';
+    $seriesByYear[$year][] = $series;
+}
+krsort($seriesByYear);
+
+$totalSeries = count($seriesList);
+
 // Page title
 $pageTitle = 'Tävlingsserier';
 if ($filterSeriesName && !empty($seriesList)) {
@@ -118,12 +131,14 @@ if ($filterSeriesName && !empty($seriesList)) {
 }
 ?>
 
+<link rel="stylesheet" href="/assets/css/pages/series-index.css?v=<?= filemtime(__DIR__ . '/../../assets/css/pages/series-index.css') ?>">
+
 <div class="page-header">
     <h1 class="page-title">
         <i data-lucide="award" class="page-icon"></i>
         <?= htmlspecialchars($pageTitle) ?>
     </h1>
-    <p class="page-subtitle">Alla GravitySeries och andra tävlingsserier</p>
+    <p class="page-subtitle"><?= $totalSeries ?> tävlingsserier</p>
 </div>
 
 <!-- Filters -->
@@ -159,28 +174,62 @@ if ($filterSeriesName && !empty($seriesList)) {
         <p>Prova ett annat filter.</p>
     </div>
 <?php else: ?>
-    <div class="series-logo-grid">
-        <?php foreach ($seriesList as $s): ?>
-        <a href="/series/<?= $s['id'] ?>" class="series-logo-card">
-            <div class="series-logo-wrapper">
-                <?php if ($s['logo']): ?>
-                    <img src="<?= htmlspecialchars($s['logo']) ?>" alt="<?= htmlspecialchars($s['name']) ?>" class="series-logo-img">
-                <?php else: ?>
-                    <div class="series-logo-placeholder"><i data-lucide="trophy" class="icon-xl text-muted"></i></div>
-                <?php endif; ?>
-                <span class="series-year-badge"><?= $s['year'] ?></span>
-            </div>
-            <div class="series-logo-info">
-                <h3 class="series-logo-name"><?= htmlspecialchars($s['name']) ?></h3>
-                <div class="series-logo-meta">
-                    <span><?= $s['event_count'] ?> tävlingar</span>
-                    <?php if ($s['participant_count']): ?>
-                        <span class="meta-sep">•</span>
-                        <span><?= $s['participant_count'] ?> deltagare</span>
-                    <?php endif; ?>
+    <div class="series-list-container">
+        <?php foreach ($seriesByYear as $year => $yearSeries): ?>
+            <div class="series-year-section">
+                <div class="series-year-divider">
+                    <span class="series-year-label"><?= $year ?></span>
+                    <span class="series-year-line"></span>
+                    <span class="series-year-count"><?= count($yearSeries) ?> serier</span>
+                </div>
+                <div class="series-list">
+                    <?php foreach ($yearSeries as $s):
+                        $accentColor = $s['accent_color'] ?: '#61CE70';
+                        $logo = $s['brand_logo'] ?: $s['logo'];
+                        $statusClass = $s['status'] === 'active' ? 'status-active' : 'status-completed';
+                        $statusText = $s['status'] === 'active' ? 'Pågår' : 'Avslutad';
+                    ?>
+                    <a href="/series/<?= $s['id'] ?>" class="series-row" style="--series-accent: <?= htmlspecialchars($accentColor) ?>">
+                        <div class="series-accent-bar"></div>
+
+                        <?php if ($logo): ?>
+                        <div class="series-logo">
+                            <img src="<?= htmlspecialchars($logo) ?>" alt="<?= htmlspecialchars($s['name']) ?>">
+                        </div>
+                        <?php else: ?>
+                        <div class="series-logo series-logo-placeholder">
+                            <i data-lucide="trophy"></i>
+                        </div>
+                        <?php endif; ?>
+
+                        <div class="series-main">
+                            <h3 class="series-title"><?= htmlspecialchars($s['name']) ?></h3>
+                            <div class="series-details">
+                                <?php if ($s['brand_name']): ?>
+                                <span class="series-brand"><?= htmlspecialchars($s['brand_name']) ?></span>
+                                <?php endif; ?>
+                                <span class="series-status <?= $statusClass ?>"><?= $statusText ?></span>
+                            </div>
+                        </div>
+
+                        <div class="series-stats">
+                            <div class="series-stat">
+                                <span class="stat-value"><?= $s['event_count'] ?></span>
+                                <span class="stat-label">tävlingar</span>
+                            </div>
+                            <div class="series-stat">
+                                <span class="stat-value"><?= $s['participant_count'] ?: 0 ?></span>
+                                <span class="stat-label">deltagare</span>
+                            </div>
+                        </div>
+
+                        <div class="series-arrow">
+                            <i data-lucide="chevron-right"></i>
+                        </div>
+                    </a>
+                    <?php endforeach; ?>
                 </div>
             </div>
-        </a>
         <?php endforeach; ?>
     </div>
 <?php endif; ?>
