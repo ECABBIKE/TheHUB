@@ -202,25 +202,14 @@ if ($filterSeriesName && !empty($seriesList)) {
                         </div>
                         <?php endif; ?>
 
-                        <div class="series-main">
-                            <h3 class="series-title"><?= htmlspecialchars($s['name']) ?></h3>
-                            <div class="series-details">
-                                <?php if ($s['brand_name']): ?>
-                                <span class="series-brand"><?= htmlspecialchars($s['brand_name']) ?></span>
-                                <?php endif; ?>
-                                <span class="series-status <?= $statusClass ?>"><?= $statusText ?></span>
-                            </div>
-                        </div>
+                        <h3 class="series-title"><?= htmlspecialchars($s['name']) ?></h3>
+
+                        <span class="series-status <?= $statusClass ?>"><?= $statusText ?></span>
 
                         <div class="series-stats">
-                            <div class="series-stat">
-                                <span class="stat-value"><?= $s['event_count'] ?></span>
-                                <span class="stat-label">tävlingar</span>
-                            </div>
-                            <div class="series-stat">
-                                <span class="stat-value"><?= $s['participant_count'] ?: 0 ?></span>
-                                <span class="stat-label">deltagare</span>
-                            </div>
+                            <span class="series-stat-inline"><?= $s['event_count'] ?> tävlingar</span>
+                            <span class="series-stat-sep">|</span>
+                            <span class="series-stat-inline"><?= $s['participant_count'] ?: 0 ?> deltagare</span>
                         </div>
 
                         <div class="series-arrow">

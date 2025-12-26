@@ -1,9 +1,10 @@
 <?php
 /**
- * API Endpoint: Submit Profile Claim Request
+ * API Endpoint: Profile Claim / Direct Email Connection
  *
- * Allows logged-in users to claim historical rider profiles
- * that don't have an email associated with them.
+ * Two modes:
+ * 1. Super Admin direct: Directly connects email to profile (admin_direct=1)
+ * 2. User claim: Creates a claim request for admin approval (not yet implemented publicly)
  */
 
 header('Content-Type: application/json');
@@ -17,21 +18,10 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
-// Check if user is logged in
-$currentUser = function_exists('hub_current_user') ? hub_current_user() : null;
-
-if (!$currentUser || empty($currentUser['id'])) {
-    http_response_code(401);
-    echo json_encode(['success' => false, 'error' => 'Du måste vara inloggad']);
-    exit;
-}
-
-$claimantRiderId = $currentUser['id'];
-$claimantEmail = $currentUser['email'] ?? '';
-$claimantName = trim(($currentUser['firstname'] ?? '') . ' ' . ($currentUser['lastname'] ?? ''));
-
-// Get target rider ID
+// Get parameters
 $targetRiderId = (int)($_POST['target_rider_id'] ?? 0);
+$adminDirect = !empty($_POST['admin_direct']);
+$email = trim($_POST['email'] ?? '');
 $reason = trim($_POST['reason'] ?? '');
 
 if (!$targetRiderId) {
@@ -39,16 +29,10 @@ if (!$targetRiderId) {
     exit;
 }
 
-// Cannot claim your own profile
-if ($claimantRiderId === $targetRiderId) {
-    echo json_encode(['success' => false, 'error' => 'Du kan inte koppla till din egen profil']);
-    exit;
-}
-
 try {
     $db = getDB();
 
-    // Check that target rider exists and has no email (is claimable)
+    // Check that target rider exists and has no email
     $targetRider = $db->getRow("SELECT id, email, firstname, lastname FROM riders WHERE id = ?", [$targetRiderId]);
 
     if (!$targetRider) {
@@ -57,7 +41,65 @@ try {
     }
 
     if (!empty($targetRider['email'])) {
-        echo json_encode(['success' => false, 'error' => 'Denna profil är redan kopplad till ett konto']);
+        echo json_encode(['success' => false, 'error' => 'Denna profil har redan en e-postadress']);
+        exit;
+    }
+
+    // Mode 1: Super Admin direct connection
+    if ($adminDirect) {
+        // Verify super admin
+        $isSuperAdmin = function_exists('hub_is_super_admin') && hub_is_super_admin();
+
+        if (!$isSuperAdmin) {
+            http_response_code(403);
+            echo json_encode(['success' => false, 'error' => 'Endast super admin kan göra direkt koppling']);
+            exit;
+        }
+
+        if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            echo json_encode(['success' => false, 'error' => 'Ogiltig e-postadress']);
+            exit;
+        }
+
+        // Check if email is already used by another rider
+        $existingRider = $db->getRow("SELECT id, firstname, lastname FROM riders WHERE email = ? AND id != ?", [$email, $targetRiderId]);
+        if ($existingRider) {
+            echo json_encode([
+                'success' => false,
+                'error' => 'E-postadressen används redan av ' . $existingRider['firstname'] . ' ' . $existingRider['lastname'] . ' (ID: ' . $existingRider['id'] . ')'
+            ]);
+            exit;
+        }
+
+        // Direct update - connect email to profile
+        $db->query("UPDATE riders SET email = ?, updated_at = NOW() WHERE id = ?", [$email, $targetRiderId]);
+
+        // Log the action
+        error_log("ADMIN DIRECT CLAIM: Super admin connected email '{$email}' to rider {$targetRiderId} ({$targetRider['firstname']} {$targetRider['lastname']}). Note: {$reason}");
+
+        echo json_encode([
+            'success' => true,
+            'message' => 'E-post kopplad till profilen!'
+        ]);
+        exit;
+    }
+
+    // Mode 2: User claim request (for future use when public claims are enabled)
+    $currentUser = function_exists('hub_current_user') ? hub_current_user() : null;
+
+    if (!$currentUser || empty($currentUser['id'])) {
+        http_response_code(401);
+        echo json_encode(['success' => false, 'error' => 'Du måste vara inloggad']);
+        exit;
+    }
+
+    $claimantRiderId = $currentUser['id'];
+    $claimantEmail = $currentUser['email'] ?? '';
+    $claimantName = trim(($currentUser['firstname'] ?? '') . ' ' . ($currentUser['lastname'] ?? ''));
+
+    // Cannot claim your own profile
+    if ($claimantRiderId === $targetRiderId) {
+        echo json_encode(['success' => false, 'error' => 'Du kan inte koppla till din egen profil']);
         exit;
     }
 
