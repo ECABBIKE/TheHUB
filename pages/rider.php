@@ -1199,6 +1199,57 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
             </div>
         </div>
 
+        <!-- CLUB HISTORY CARD -->
+        <?php if (!empty($clubHistory)): ?>
+        <div class="card club-history-card">
+            <h3 class="card-section-title-sm"><i data-lucide="history"></i> Klubbtillhörighet</h3>
+            <div class="club-history-list">
+                <?php foreach ($clubHistory as $ch): ?>
+                <div class="club-history-item">
+                    <span class="club-history-year"><?= $ch['season_year'] ?></span>
+                    <a href="/club/<?= $ch['club_id'] ?>" class="club-history-name"><?= htmlspecialchars($ch['club_name']) ?></a>
+                    <span class="club-history-meta">
+                        <?= $ch['results_count'] ?> resultat
+                        <?php if ($ch['locked']): ?>
+                        <i data-lucide="lock" style="width: 12px; height: 12px; color: var(--color-warning);"></i>
+                        <?php endif; ?>
+                    </span>
+                </div>
+                <?php endforeach; ?>
+            </div>
+        </div>
+        <style>
+        .club-history-card { padding: var(--space-md); }
+        .club-history-list { display: flex; flex-direction: column; gap: var(--space-xs); }
+        .club-history-item {
+            display: flex;
+            align-items: center;
+            gap: var(--space-sm);
+            padding: var(--space-xs) 0;
+            border-bottom: 1px solid var(--color-border);
+        }
+        .club-history-item:last-child { border-bottom: none; }
+        .club-history-year {
+            font-weight: 600;
+            font-size: 14px;
+            min-width: 50px;
+        }
+        .club-history-name {
+            flex: 1;
+            color: var(--color-text);
+            text-decoration: none;
+        }
+        .club-history-name:hover { color: var(--color-accent); }
+        .club-history-meta {
+            font-size: 12px;
+            color: var(--color-text);
+            display: flex;
+            align-items: center;
+            gap: 4px;
+        }
+        </style>
+        <?php endif; ?>
+
         <!-- HIGHLIGHTS CARD -->
         <div class="card highlights-card">
             <h3 class="card-section-title-sm"><i data-lucide="star"></i> Highlights</h3>
