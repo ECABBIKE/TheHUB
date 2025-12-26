@@ -92,10 +92,10 @@ try {
         $token = bin2hex(random_bytes(32));
         $expires = date('Y-m-d H:i:s', strtotime('+24 hours'));
 
-        // Direct update - connect email, phone and set password reset token
+        // Direct update - connect email, phone, social media and set password reset token
         $db->query(
-            "UPDATE riders SET email = ?, phone = ?, password_reset_token = ?, password_reset_expires = ?, updated_at = NOW() WHERE id = ?",
-            [$email, $phone, $token, $expires, $targetRiderId]
+            "UPDATE riders SET email = ?, phone = ?, social_instagram = ?, social_facebook = ?, password_reset_token = ?, password_reset_expires = ?, updated_at = NOW() WHERE id = ?",
+            [$email, $phone, $instagram ?: null, $facebook ?: null, $token, $expires, $targetRiderId]
         );
 
         // Build reset link and send email
