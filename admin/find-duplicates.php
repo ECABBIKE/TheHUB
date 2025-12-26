@@ -422,6 +422,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['merge_all'])) {
         }
         if ($hasConflict) continue;
 
+        // IMPORTANT: Check for conflicting birth years - don't auto-merge different people!
+        $keepBirthYear = $keep['birth_year'] ?? null;
+        $hasBirthYearConflict = false;
+        foreach ($riders as $remove) {
+            $removeBirthYear = $remove['birth_year'] ?? null;
+            // If BOTH have birth years and they're different, skip this merge
+            if (!empty($keepBirthYear) && !empty($removeBirthYear) && $keepBirthYear !== $removeBirthYear) {
+                $hasBirthYearConflict = true;
+                break;
+            }
+        }
+        if ($hasBirthYearConflict) continue;
+
         // Merge all others into keep
         foreach ($riders as $remove) {
             $removeId = $remove['id'];
@@ -746,9 +759,9 @@ include __DIR__ . '/components/unified-layout.php';
   <form method="POST" style="display: inline;">
    <?= csrf_field() ?>
    <button type="submit" name="merge_all" class="btn btn-danger"
-           onclick="return confirm('Slå ihop ALLA <?= count($potentialDuplicates) ?> dubbletter automatiskt?\n\nDen bästa profilen (flest resultat/data) behålls för varje par.\nIgnorerade par och par med olika UCI-ID hoppas över.')">
+           onclick="return confirm('Slå ihop dubbletter automatiskt?\n\nDen bästa profilen (flest resultat/data) behålls.\n\nHOPPAS ÖVER:\n- Par med olika UCI-ID\n- Par med olika födelseår\n- Ignorerade par')">
     <i data-lucide="git-merge"></i>
-    Slå ihop alla
+    Slå ihop säkra
    </button>
   </form>
   <?php endif; ?>
@@ -760,10 +773,22 @@ include __DIR__ . '/components/unified-layout.php';
    <p class="text-success mt-md">Inga potentiella dubbletter hittades!</p>
    </div>
   <?php else: ?>
-   <?php foreach ($potentialDuplicates as $idx => $dup): ?>
-   <div style="border: 2px solid #ffc107; border-radius: 8px; margin-bottom: 1rem; overflow: hidden;">
-   <div class="flex justify-between items-center" style="background: rgba(255,193,7,0.15); padding: 0.5rem 1rem;">
-    <span class="badge <?= $dup['reason'] === 'Samma UCI ID' ? 'badge-danger' : 'badge-warning' ?>">
+   <?php foreach ($potentialDuplicates as $idx => $dup):
+   // Check if this pair has different birth years
+   $hasDifferentBirthYears = !empty($dup['rider1']['birth_year']) && !empty($dup['rider2']['birth_year'])
+                             && $dup['rider1']['birth_year'] !== $dup['rider2']['birth_year'];
+   $borderColor = $hasDifferentBirthYears ? '#dc3545' : '#ffc107';
+   $bgColor = $hasDifferentBirthYears ? 'rgba(220,53,69,0.15)' : 'rgba(255,193,7,0.15)';
+   ?>
+   <div style="border: 2px solid <?= $borderColor ?>; border-radius: 8px; margin-bottom: 1rem; overflow: hidden;">
+   <?php if ($hasDifferentBirthYears): ?>
+   <div style="background: #dc3545; color: white; padding: 0.5rem 1rem; font-weight: bold;">
+    <i data-lucide="alert-triangle" style="width: 16px; height: 16px; display: inline-block; vertical-align: middle;"></i>
+    VARNING: Olika födelseår (<?= $dup['rider1']['birth_year'] ?> vs <?= $dup['rider2']['birth_year'] ?>) - Kan vara olika personer!
+   </div>
+   <?php endif; ?>
+   <div class="flex justify-between items-center" style="background: <?= $bgColor ?>; padding: 0.5rem 1rem;">
+    <span class="badge <?= $dup['reason'] === 'Samma UCI ID' ? 'badge-danger' : ($hasDifferentBirthYears ? 'badge-danger' : 'badge-warning') ?>">
     <?= h($dup['reason']) ?>
     </span>
     <span class="text-secondary text-sm">#<?= $idx + 1 ?></span>
@@ -825,10 +850,15 @@ include __DIR__ . '/components/unified-layout.php';
      </a>
      <?php
      $otherId = $key === 'rider1' ? $dup['rider2']['id'] : $dup['rider1']['id'];
+     $otherBirthYear = $key === 'rider1' ? $dup['rider2']['birth_year'] : $dup['rider1']['birth_year'];
+     $confirmMsg = 'Behåll denna profil och ta bort den andra?\\n\\nResultat flyttas och data slås ihop.';
+     if ($hasDifferentBirthYears) {
+         $confirmMsg = 'VARNING: Olika födelseår!\\n\\n' . $rider['birth_year'] . ' vs ' . $otherBirthYear . '\\n\\nÄr du SÄKER på att detta är samma person?\\n\\nResultat flyttas och den andra profilen raderas permanent.';
+     }
      ?>
      <a href="?action=merge&keep=<?= $rider['id'] ?>&remove=<?= $otherId ?>"
-     class="btn btn--sm btn-success flex-1"
-     onclick="return confirm('Behåll denna profil och ta bort den andra?\n\nResultat flyttas och data slås ihop.')">
+     class="btn btn--sm <?= $hasDifferentBirthYears ? 'btn-warning' : 'btn-success' ?> flex-1"
+     onclick="return confirm('<?= $confirmMsg ?>')">
      <i data-lucide="check"></i> Behåll denna
      </a>
     </div>
