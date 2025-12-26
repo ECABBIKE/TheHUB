@@ -1056,7 +1056,7 @@
     display: flex;
     justify-content: space-between;
     align-items: flex-start;
-    margin-bottom: var(--space-md);
+    margin-bottom: var(--space-xs);
 }
 
 .dashboard-chart-title {
@@ -1112,7 +1112,7 @@
 .dashboard-chart-footer {
     display: flex;
     justify-content: center;
-    padding-top: var(--space-sm);
+    padding-top: var(--space-xs);
     margin-top: var(--space-xs);
     border-top: 1px solid var(--color-border);
 }
@@ -1189,7 +1189,7 @@
 
 .stats-tab-content {
     display: none;
-    padding: var(--space-lg);
+    padding: var(--space-sm) var(--space-md);
 }
 
 .stats-tab-content.active {
@@ -1200,8 +1200,8 @@
 .dashboard-chart-body {
     position: relative;
     width: 100%;
-    height: 300px;
-    padding: var(--space-sm);
+    height: 280px;
+    padding: 0;
 }
 
 .dashboard-chart-body canvas {
