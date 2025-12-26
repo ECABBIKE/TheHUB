@@ -735,8 +735,10 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
 
             foreach ($chartResults as $fr) {
                 $eventDate = strtotime($fr['event_date'] ?? 'now');
-                $monthLabel = ucfirst($swedishMonthsShort[(int)date('n', $eventDate) - 1] ?? '');
-                $formChartLabels[] = $monthLabel;
+                // Show date like "23 jun" instead of just month
+                $dayNum = date('j', $eventDate);
+                $monthShort = $swedishMonthsShort[(int)date('n', $eventDate) - 1] ?? '';
+                $formChartLabels[] = $dayNum . ' ' . $monthShort;
                 $formChartData[] = (int)$fr['position'];
             }
         }
@@ -2034,9 +2036,9 @@ document.getElementById('activateModal')?.addEventListener('click', function(e) 
         const rankingCtx = document.getElementById('rankingChart');
         if (rankingCtx) {
             const ctx = rankingCtx.getContext('2d');
-            const rankingGradient = ctx.createLinearGradient(0, 0, 0, 100);
-            rankingGradient.addColorStop(0, 'rgba(239, 68, 68, 0.02)');
-            rankingGradient.addColorStop(1, 'rgba(239, 68, 68, 0.25)');
+            const rankingGradient = ctx.createLinearGradient(0, 0, 0, 280);
+            rankingGradient.addColorStop(0, 'rgba(239, 68, 68, 0.25)');
+            rankingGradient.addColorStop(1, 'rgba(239, 68, 68, 0.02)');
 
             new Chart(rankingCtx, {
                 type: 'line',
@@ -2046,7 +2048,7 @@ document.getElementById('activateModal')?.addEventListener('click', function(e) 
                         data: <?= json_encode($rankingChartData) ?>,
                         borderColor: '#ef4444',
                         backgroundColor: rankingGradient,
-                        fill: 'end',
+                        fill: 'start',
                         tension: 0.4,
                         borderWidth: 2,
                         pointRadius: 3,
@@ -2097,9 +2099,9 @@ document.getElementById('activateModal')?.addEventListener('click', function(e) 
         const formCtx = document.getElementById('formChart');
         if (formCtx) {
             const ctx = formCtx.getContext('2d');
-            const formGradient = ctx.createLinearGradient(0, 0, 0, 100);
-            formGradient.addColorStop(0, 'rgba(97, 206, 112, 0.02)');
-            formGradient.addColorStop(1, 'rgba(97, 206, 112, 0.25)');
+            const formGradient = ctx.createLinearGradient(0, 0, 0, 280);
+            formGradient.addColorStop(0, 'rgba(97, 206, 112, 0.25)');
+            formGradient.addColorStop(1, 'rgba(97, 206, 112, 0.02)');
 
             new Chart(formCtx, {
                 type: 'line',
@@ -2109,7 +2111,7 @@ document.getElementById('activateModal')?.addEventListener('click', function(e) 
                         data: <?= json_encode($formChartData) ?>,
                         borderColor: '#61CE70',
                         backgroundColor: formGradient,
-                        fill: 'end',
+                        fill: 'start',
                         tension: 0.4,
                         borderWidth: 2,
                         pointRadius: 3,
