@@ -159,17 +159,18 @@ if (!function_exists('getDeadlineInfo')) {
         </div>
     <?php else: ?>
         <?php foreach ($eventsByMonth as $month => $monthEvents): ?>
-            <div class="calendar-month">
-                <h2 class="calendar-month-title">
-                    <?= hub_format_month_year($month . '-01') ?>
-                </h2>
+            <div class="calendar-month-section">
+                <div class="calendar-month-divider">
+                    <span class="calendar-month-label"><?= hub_format_month_year($month . '-01') ?></span>
+                    <span class="calendar-month-line"></span>
+                    <span class="calendar-month-count"><?= count($monthEvents) ?> event</span>
+                </div>
                 <div class="event-list">
                     <?php foreach ($monthEvents as $event): ?>
                         <?php
                         $eventDate = strtotime($event['date']);
+                        $dateFormatted = date('j', $eventDate) . ' ' . hub_month_short($eventDate);
                         $dayName = hub_day_short($eventDate);
-                        $dayNum = date('j', $eventDate);
-                        $monthShort = strtoupper(hub_month_short($eventDate));
                         $deadlineInfo = getDeadlineInfo($event['registration_deadline']);
                         $location = $event['venue_city'] ?: $event['location'];
                         $accentColor = $event['series_accent'] ?: '#61CE70';
@@ -184,48 +185,38 @@ if (!function_exists('getDeadlineInfo')) {
                             </div>
                             <?php else: ?>
                             <div class="event-logo event-logo-placeholder">
-                                <i data-lucide="trophy"></i>
+                                <i data-lucide="calendar"></i>
                             </div>
                             <?php endif; ?>
 
-                            <div class="event-date">
-                                <span class="event-month-abbr"><?= $monthShort ?></span>
-                                <span class="event-day-num"><?= $dayNum ?></span>
+                            <span class="event-date-inline">
+                                <strong><?= $dateFormatted ?></strong>
                                 <span class="event-day-name"><?= $dayName ?></span>
-                            </div>
+                            </span>
 
-                            <div class="event-main">
-                                <h3 class="event-title"><?= htmlspecialchars($event['name']) ?></h3>
-                                <div class="event-details">
-                                    <?php if ($event['series_name']): ?>
-                                        <span class="event-series"><?= htmlspecialchars($event['series_name']) ?></span>
-                                    <?php endif; ?>
-                                    <?php if (!empty($event['discipline'])): ?>
-                                        <span class="event-format"><?= htmlspecialchars($formatNames[$event['discipline']] ?? $event['discipline']) ?></span>
-                                    <?php endif; ?>
-                                    <?php if ($location): ?>
-                                        <span class="event-location">
-                                            <i data-lucide="map-pin"></i><?= htmlspecialchars($location) ?>
-                                        </span>
-                                    <?php endif; ?>
-                                </div>
-                            </div>
+                            <?php if ($event['series_name']): ?>
+                            <span class="event-series-badge"><?= htmlspecialchars($event['series_name']) ?></span>
+                            <?php endif; ?>
 
-                            <div class="event-stats">
-                                <?php if ($event['registration_count'] > 0): ?>
-                                <div class="event-stat">
-                                    <span class="stat-value"><?= $event['registration_count'] ?></span>
-                                    <span class="stat-label">anmälda</span>
-                                </div>
-                                <?php endif; ?>
+                            <h3 class="event-title"><?= htmlspecialchars($event['name']) ?></h3>
 
-                                <?php if ($deadlineInfo && $deadlineInfo['days'] >= 0): ?>
-                                <div class="event-stat deadline-stat <?= $deadlineInfo['class'] ?>">
-                                    <span class="stat-value"><?= $deadlineInfo['text'] ?></span>
-                                    <span class="stat-label">sista anmälan</span>
-                                </div>
-                                <?php endif; ?>
-                            </div>
+                            <?php if ($location): ?>
+                            <span class="event-location-inline">
+                                <i data-lucide="map-pin"></i>
+                                <?= htmlspecialchars($location) ?>
+                            </span>
+                            <?php endif; ?>
+
+                            <?php if ($event['registration_count'] > 0): ?>
+                            <span class="event-registrations"><?= $event['registration_count'] ?> anmälda</span>
+                            <?php endif; ?>
+
+                            <?php if ($deadlineInfo && $deadlineInfo['days'] >= 0): ?>
+                            <span class="event-deadline <?= $deadlineInfo['class'] ?>">
+                                <i data-lucide="clock"></i>
+                                <?= $deadlineInfo['text'] ?>
+                            </span>
+                            <?php endif; ?>
 
                             <div class="event-arrow">
                                 <i data-lucide="chevron-right"></i>
