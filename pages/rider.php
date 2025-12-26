@@ -2014,8 +2014,8 @@ document.getElementById('activateModal')?.addEventListener('click', function(e) 
         if (rankingCtx) {
             const ctx = rankingCtx.getContext('2d');
             const rankingGradient = ctx.createLinearGradient(0, 0, 0, 100);
-            rankingGradient.addColorStop(0, 'rgba(239, 68, 68, 0.3)');
-            rankingGradient.addColorStop(1, 'rgba(239, 68, 68, 0.02)');
+            rankingGradient.addColorStop(0, 'rgba(239, 68, 68, 0.02)');
+            rankingGradient.addColorStop(1, 'rgba(239, 68, 68, 0.25)');
 
             new Chart(rankingCtx, {
                 type: 'line',
@@ -2025,7 +2025,7 @@ document.getElementById('activateModal')?.addEventListener('click', function(e) 
                         data: <?= json_encode($rankingChartData) ?>,
                         borderColor: '#ef4444',
                         backgroundColor: rankingGradient,
-                        fill: true,
+                        fill: 'end',
                         tension: 0.4,
                         borderWidth: 2,
                         pointRadius: 3,
@@ -2077,8 +2077,8 @@ document.getElementById('activateModal')?.addEventListener('click', function(e) 
         if (formCtx) {
             const ctx = formCtx.getContext('2d');
             const formGradient = ctx.createLinearGradient(0, 0, 0, 100);
-            formGradient.addColorStop(0, 'rgba(97, 206, 112, 0.3)');
-            formGradient.addColorStop(1, 'rgba(97, 206, 112, 0.02)');
+            formGradient.addColorStop(0, 'rgba(97, 206, 112, 0.02)');
+            formGradient.addColorStop(1, 'rgba(97, 206, 112, 0.25)');
 
             new Chart(formCtx, {
                 type: 'line',
@@ -2088,7 +2088,7 @@ document.getElementById('activateModal')?.addEventListener('click', function(e) 
                         data: <?= json_encode($formChartData) ?>,
                         borderColor: '#61CE70',
                         backgroundColor: formGradient,
-                        fill: true,
+                        fill: 'end',
                         tension: 0.4,
                         borderWidth: 2,
                         pointRadius: 3,

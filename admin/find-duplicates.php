@@ -491,6 +491,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['merge_all'])) {
 
 // Find potential duplicates - simple approach: same firstname+lastname
 $potentialDuplicates = [];
+$debugInfo = []; // Debug: track what's happening
 
 $duplicateGroups = $db->getAll("
  SELECT firstname, lastname, COUNT(*) as cnt
@@ -501,6 +502,7 @@ $duplicateGroups = $db->getAll("
  ORDER BY cnt DESC
  LIMIT 100
 ");
+$debugInfo['query_found'] = count($duplicateGroups);
 
 // Helper function to get rider classes
 function getRiderClasses($db, $riderId) {
@@ -543,11 +545,16 @@ foreach ($duplicateGroups as $group) {
    $isSwe2 = !empty($r2['license_number']) && strpos($r2['license_number'], 'SWE') === 0;
 
    // Only skip if BOTH have real (non-SWE) UCI IDs and they're different
-   if ($uci1 && $uci2 && $uci1 !== $uci2) continue;
+   if ($uci1 && $uci2 && $uci1 !== $uci2) {
+     $debugInfo['skipped_different_uci'][] = $r1['firstname'] . ' ' . $r1['lastname'] . " ($uci1 vs $uci2)";
+     continue;
+   }
 
    // Skip if this pair is marked as "not duplicates"
    $pairKey = getRiderPairKey($r1['id'], $r2['id']);
    if (in_array($pairKey, $ignoredDuplicates)) continue;
+
+   // NOTE: We NO LONGER skip based on different birth years - show them all and let user decide
 
    // Check missing data
    $r1Missing = [];
@@ -693,6 +700,20 @@ include __DIR__ . '/components/unified-layout.php';
   <?= h($message) ?>
   </div>
  <?php endif; ?>
+
+ <!-- Debug info -->
+ <div class="card mb-lg" style="background: #fff3cd; border: 1px solid #ffc107;">
+  <div class="card-body">
+   <strong>Debug:</strong> Hittade <?= $debugInfo['query_found'] ?? 0 ?> namngrupper.
+   <?php if (!empty($debugInfo['skipped_different_uci'])): ?>
+   <br><strong>Hoppade över (olika UCI):</strong> <?= count($debugInfo['skipped_different_uci']) ?> - <?= implode(', ', array_slice($debugInfo['skipped_different_uci'], 0, 5)) ?>
+   <?php endif; ?>
+   <?php if (!empty($debugInfo['skipped_different_birth'])): ?>
+   <br><strong>Hoppade över (olika födelseår):</strong> <?= count($debugInfo['skipped_different_birth']) ?> - <?= implode(', ', array_slice($debugInfo['skipped_different_birth'], 0, 5)) ?>
+   <?php endif; ?>
+   <br><strong>Visas:</strong> <?= count($potentialDuplicates) ?> dubbletter
+  </div>
+ </div>
 
  <?php $ignoredCount = count($ignoredDuplicates); ?>
  <?php if ($ignoredCount > 0): ?>
