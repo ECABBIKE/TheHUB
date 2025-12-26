@@ -2173,20 +2173,32 @@ document.getElementById('activateModal')?.addEventListener('click', function(e) 
 function loadSeriesYear(year) {
     const container = document.getElementById('seriesContent');
     const select = document.getElementById('seriesYearSelect');
-    if (!container) return;
+    if (!container) {
+        console.error('Series container not found');
+        return;
+    }
 
     // Update select value
     if (select) select.value = year;
 
     // Show loading state
-    container.style.opacity = '0.5';
+    container.innerHTML = '<div class="series-loading"><i data-lucide="loader-2" class="spin"></i> Laddar...</div>';
 
     // Fetch new content
-    fetch('/api/rider-series.php?id=<?= $riderId ?>&year=' + year)
-        .then(response => response.text())
+    const url = '/api/rider-series.php?id=<?= $riderId ?>&year=' + year;
+    console.log('Fetching series:', url);
+
+    fetch(url)
+        .then(response => {
+            console.log('Response status:', response.status);
+            if (!response.ok) {
+                throw new Error('HTTP ' + response.status);
+            }
+            return response.text();
+        })
         .then(html => {
+            console.log('Received HTML length:', html.length);
             container.innerHTML = html;
-            container.style.opacity = '1';
             // Re-init Lucide icons
             if (typeof lucide !== 'undefined') lucide.createIcons();
             // Re-init series tabs
@@ -2194,7 +2206,7 @@ function loadSeriesYear(year) {
         })
         .catch(err => {
             console.error('Series load error:', err);
-            container.style.opacity = '1';
+            container.innerHTML = '<div class="series-empty-state"><p class="text-muted">Kunde inte ladda seriedata</p></div>';
         });
 }
 
