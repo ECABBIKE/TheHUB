@@ -1159,11 +1159,13 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
                 <?php endif; ?>
             </div>
 
-            <!-- License Badge -->
-            <div class="profile-license-badge">
+            <!-- License Badge - only show if rider has license data -->
+            <?php if (!empty($rider['license_year']) || !empty($rider['license_type'])): ?>
+            <div class="profile-license-badge <?= $licenseActive ? '' : 'license-inactive' ?>">
                 <span class="license-label">Licens</span>
-                <span class="license-year"><?= $rider['license_year'] ?? date('Y') ?></span>
+                <span class="license-year"><?= $rider['license_year'] ?: '-' ?></span>
             </div>
+            <?php endif; ?>
 
             <!-- Social Media Icons - Simple gray style -->
             <div class="profile-social-simple">
