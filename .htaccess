@@ -162,6 +162,7 @@ RewriteRule ^admin/merge-specific-riders/?$ admin/merge-specific-riders.php [QSA
 RewriteRule ^admin/check-license-numbers/?$ admin/check-license-numbers.php [QSA,L]
 RewriteRule ^admin/verify-swe-licenses/?$ admin/verify-swe-licenses.php [QSA,L]
 RewriteRule ^admin/fix-rider-clubs/?$ admin/fix-rider-clubs.php [QSA,L]
+RewriteRule ^admin/rider-claims/?$ admin/rider-claims.php [QSA,L]
 RewriteRule ^admin/club-points/?$ admin/club-points.php [QSA,L]
 RewriteRule ^admin/data-explorer/?$ admin/data-explorer.php [QSA,L]
 RewriteRule ^admin/download-templates/?$ admin/download-templates.php [QSA,L]

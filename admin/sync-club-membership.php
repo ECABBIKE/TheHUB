@@ -22,17 +22,23 @@ $dryRun = !isset($_GET['execute']);
 $direction = $_GET['direction'] ?? 'season_to_rider'; // or 'rider_to_season' or 'rebuild_all_from_results' or 'cleanup_orphans'
 
 // Handle cleanup of orphan club seasons (entries without results)
+// ONLY deletes entries from PAST years (not current year) to avoid deleting legitimate pre-season data
 if ($direction === 'cleanup_orphans' && !$dryRun) {
-    // Find and delete rider_club_seasons entries where the rider has no results that year
+    $currentYear = (int)date('Y');
+
+    // Find and delete rider_club_seasons entries where:
+    // 1. The rider has no results that year
+    // 2. The year is in the past (not current year)
     $deleted = $db->query("
         DELETE rcs FROM rider_club_seasons rcs
-        WHERE NOT EXISTS (
+        WHERE rcs.season_year < ?
+        AND NOT EXISTS (
             SELECT 1 FROM results r
             JOIN events e ON r.event_id = e.id
             WHERE r.cyclist_id = rcs.rider_id
             AND YEAR(e.date) = rcs.season_year
         )
-    ");
+    ", [$currentYear]);
 
     $deletedCount = $deleted ? $deleted->rowCount() : 0;
 
@@ -133,6 +139,7 @@ if ($direction === 'rebuild_all_from_results' && !$dryRun) {
 }
 
 // Find orphan club seasons (entries without any results that year)
+// Only show past years - current year entries are kept (could be pre-season registrations)
 $orphanSeasons = $db->getAll("
     SELECT
         rcs.id,
@@ -145,7 +152,8 @@ $orphanSeasons = $db->getAll("
     FROM rider_club_seasons rcs
     JOIN riders r ON rcs.rider_id = r.id
     JOIN clubs c ON rcs.club_id = c.id
-    WHERE NOT EXISTS (
+    WHERE rcs.season_year < ?
+    AND NOT EXISTS (
         SELECT 1 FROM results res
         JOIN events e ON res.event_id = e.id
         WHERE res.cyclist_id = rcs.rider_id
@@ -153,7 +161,7 @@ $orphanSeasons = $db->getAll("
     )
     ORDER BY rcs.season_year DESC, r.lastname, r.firstname
     LIMIT 500
-");
+", [(int)$currentYear]);
 
 // Find mismatches: riders with 2025 season club but different/null rider.club_id
 $mismatches = $db->getAll("
