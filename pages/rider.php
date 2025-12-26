@@ -544,31 +544,28 @@ try {
         }
     }
 
-    // Check if this profile can be claimed by the current user
+    // Check if this profile can be claimed (visible to super admins for testing)
     $canClaimProfile = false;
     $hasPendingClaim = false;
-    $claimantRiderId = null;
+    $isSuperAdmin = function_exists('hub_is_super_admin') && hub_is_super_admin();
 
-    if ($currentUser && !$isOwnProfile && empty($rider['email'])) {
-        // User is logged in, viewing someone else's profile, and that profile has no email
-        $claimantRiderId = $currentUser['id'] ?? null;
+    // Super admins can see claim button on any profile without email (for testing)
+    if ($isSuperAdmin && empty($rider['email'])) {
+        // Check if there's already a pending claim for this profile
+        try {
+            $claimCheck = $db->prepare("
+                SELECT id FROM rider_claims
+                WHERE target_rider_id = ? AND status = 'pending'
+            ");
+            $claimCheck->execute([$riderId]);
+            $hasPendingClaim = $claimCheck->fetch() !== false;
 
-        if ($claimantRiderId && $claimantRiderId != $riderId) {
-            // Check if there's already a pending claim
-            try {
-                $claimCheck = $db->prepare("
-                    SELECT id FROM rider_claims
-                    WHERE claimant_rider_id = ? AND target_rider_id = ? AND status = 'pending'
-                ");
-                $claimCheck->execute([$claimantRiderId, $riderId]);
-                $hasPendingClaim = $claimCheck->fetch() !== false;
-
-                if (!$hasPendingClaim) {
-                    $canClaimProfile = true;
-                }
-            } catch (Exception $e) {
-                // Table might not exist yet
+            if (!$hasPendingClaim) {
+                $canClaimProfile = true;
             }
+        } catch (Exception $e) {
+            // Table might not exist yet
+            $canClaimProfile = true; // Allow testing even without table
         }
     }
 
@@ -1237,14 +1234,14 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
                     <span>Dela</span>
                 </button>
                 <?php if ($canClaimProfile): ?>
-                <button type="button" class="btn-action-outline btn-claim-profile" onclick="openClaimModal()">
-                    <i data-lucide="user-plus"></i>
-                    <span>Koppla profil</span>
+                <button type="button" class="btn-action-outline btn-claim-profile" onclick="openClaimModal()" title="Koppla e-postadress till denna profil">
+                    <i data-lucide="mail-plus"></i>
+                    <span>Koppla e-post</span>
                 </button>
                 <?php elseif ($hasPendingClaim): ?>
                 <button type="button" class="btn-action-outline btn-claim-pending" disabled>
                     <i data-lucide="clock"></i>
-                    <span>Förfrågan skickad</span>
+                    <span>Väntande förfrågan</span>
                 </button>
                 <?php endif; ?>
                 <?php if (function_exists('hub_is_admin') && hub_is_admin()): ?>
@@ -1606,58 +1603,55 @@ document.addEventListener('DOMContentLoaded', function() {
 <?php endif; ?>
 
 <?php if ($canClaimProfile): ?>
-<!-- Profile Claim Modal -->
+<!-- Profile Claim Modal (Super Admin) -->
 <div id="claimModal" class="claim-modal-overlay">
     <div class="claim-modal">
         <div class="claim-modal-header">
             <h3>
                 <i data-lucide="user-plus"></i>
-                Koppla profil
+                Koppla e-post till profil
             </h3>
             <button type="button" class="claim-modal-close" onclick="closeClaimModal()">
                 <i data-lucide="x"></i>
             </button>
         </div>
         <form id="claimForm" class="claim-modal-body">
-            <div class="claim-info-box">
-                <i data-lucide="info"></i>
-                <p>Du kan koppla denna historiska profil till ditt konto om du tror att det är din data. En administratör kommer att granska din förfrågan.</p>
+            <div class="claim-info-box" style="background: rgba(97, 206, 112, 0.1); border: 1px solid var(--color-success);">
+                <i data-lucide="shield-check" style="color: var(--color-success);"></i>
+                <p style="color: var(--color-text);"><strong>Super Admin:</strong> Koppla en e-postadress direkt till denna profil. Profilen får då tillgång till inloggning och profilredigering.</p>
             </div>
 
-            <div class="claim-profiles">
-                <div class="claim-profile-card">
-                    <span class="claim-profile-label">Din profil</span>
-                    <span class="claim-profile-name"><?= htmlspecialchars($currentUser['firstname'] ?? '') ?> <?= htmlspecialchars($currentUser['lastname'] ?? '') ?></span>
-                </div>
-                <div class="claim-arrow">
-                    <i data-lucide="arrow-right"></i>
-                </div>
-                <div class="claim-profile-card claim-profile-target">
-                    <span class="claim-profile-label">Profil att koppla</span>
-                    <span class="claim-profile-name"><?= $fullName ?></span>
-                    <span class="claim-profile-meta"><?= count($results) ?> resultat</span>
-                </div>
+            <div class="claim-profile-card claim-profile-target" style="margin-bottom: var(--space-lg);">
+                <span class="claim-profile-label">Profil utan e-post</span>
+                <span class="claim-profile-name"><?= $fullName ?></span>
+                <span class="claim-profile-meta"><?= count($results) ?> resultat</span>
             </div>
 
             <div class="claim-form-group">
-                <label for="claimReason">Varför tror du att detta är din profil? (valfritt)</label>
-                <textarea id="claimReason" name="reason" rows="3" placeholder="T.ex. stavning av namn, tävlingar du deltagit i..."></textarea>
+                <label for="claimEmail">E-postadress att koppla</label>
+                <input type="email" id="claimEmail" name="email" class="form-input" required placeholder="namn@example.com" style="width: 100%; padding: var(--space-sm); border: 1px solid var(--color-border); border-radius: var(--radius-sm);">
+            </div>
+
+            <div class="claim-form-group">
+                <label for="claimReason">Anteckning (valfritt)</label>
+                <textarea id="claimReason" name="reason" rows="2" placeholder="T.ex. verifierad via telefon..."></textarea>
             </div>
 
             <input type="hidden" name="target_rider_id" value="<?= $riderId ?>">
+            <input type="hidden" name="admin_direct" value="1">
 
             <div class="claim-form-actions">
                 <button type="button" class="btn-secondary" onclick="closeClaimModal()">Avbryt</button>
                 <button type="submit" class="btn-primary">
-                    <i data-lucide="send"></i>
-                    Skicka förfrågan
+                    <i data-lucide="check"></i>
+                    Koppla direkt
                 </button>
             </div>
         </form>
         <div id="claimSuccess" class="claim-success" style="display: none;">
             <i data-lucide="check-circle"></i>
-            <h4>Förfrågan skickad!</h4>
-            <p>En administratör kommer att granska din förfrågan och meddela dig.</p>
+            <h4>E-post kopplad!</h4>
+            <p>Profilen är nu kopplad till e-postadressen.</p>
             <button type="button" class="btn-primary" onclick="closeClaimModal(); location.reload();">Stäng</button>
         </div>
     </div>
