@@ -131,13 +131,15 @@ if (!empty($eventIds)) {
             ri.id as rider_id,
             ri.firstname,
             ri.lastname,
-            ri.club_id,
-            c.name as club_name,
+            COALESCE(rcs.club_id, ri.club_id) as club_id,
+            COALESCE(rcs_club.name, c.name) as club_name,
             cls.id as class_id,
             cls.name as class_name,
             cls.display_name as class_display_name,
             cls.sort_order as class_sort_order
         FROM riders ri
+        LEFT JOIN rider_club_seasons rcs ON ri.id = rcs.rider_id AND rcs.season_year = ?
+        LEFT JOIN clubs rcs_club ON rcs.club_id = rcs_club.id
         LEFT JOIN clubs c ON ri.club_id = c.id
         JOIN results r ON ri.id = r.cyclist_id
         LEFT JOIN classes cls ON r.class_id = cls.id
@@ -145,7 +147,8 @@ if (!empty($eventIds)) {
           AND COALESCE(cls.series_eligible, 1) = 1
           AND COALESCE(cls.awards_points, 1) = 1
     ";
-    $params = $eventIds;
+    $seriesYear = $series['year'] ?? (int)date('Y');
+    $params = array_merge([$seriesYear], $eventIds);
 
     if ($selectedClass !== 'all') {
         $sql .= " AND r.class_id = ?";
@@ -266,6 +269,7 @@ foreach ($events as $event) {
     $eventId = $event['id'];
 
     // Get all results for this event with series points, grouped by club and class
+    // Use rider_club_seasons for accurate year-based club membership
     if ($useSeriesResults) {
         $stmt = $pdo->prepare("
             SELECT
@@ -274,23 +278,25 @@ foreach ($events as $event) {
                 sr.points,
                 rd.firstname,
                 rd.lastname,
-                c.id as club_id,
-                c.name as club_name,
-                c.city as club_city,
+                COALESCE(rcs.club_id, rd.club_id) as club_id,
+                COALESCE(rcs_club.name, c.name) as club_name,
+                COALESCE(rcs_club.city, c.city) as club_city,
                 cls.name as class_name,
                 cls.display_name as class_display_name
             FROM series_results sr
             JOIN riders rd ON sr.cyclist_id = rd.id
+            LEFT JOIN rider_club_seasons rcs ON rd.id = rcs.rider_id AND rcs.season_year = ?
+            LEFT JOIN clubs rcs_club ON rcs.club_id = rcs_club.id
             LEFT JOIN clubs c ON rd.club_id = c.id
             LEFT JOIN classes cls ON sr.class_id = cls.id
             WHERE sr.series_id = ? AND sr.event_id = ?
-            AND c.id IS NOT NULL
+            AND COALESCE(rcs.club_id, rd.club_id) IS NOT NULL
             AND sr.points > 0
             AND COALESCE(cls.series_eligible, 1) = 1
             AND COALESCE(cls.awards_points, 1) = 1
-            ORDER BY c.id, sr.class_id, sr.points DESC
+            ORDER BY COALESCE(rcs.club_id, rd.club_id), sr.class_id, sr.points DESC
         ");
-        $stmt->execute([$seriesId, $eventId]);
+        $stmt->execute([$seriesYear, $seriesId, $eventId]);
     } else {
         $stmt = $pdo->prepare("
             SELECT
@@ -299,24 +305,26 @@ foreach ($events as $event) {
                 r.points,
                 rd.firstname,
                 rd.lastname,
-                c.id as club_id,
-                c.name as club_name,
-                c.city as club_city,
+                COALESCE(rcs.club_id, rd.club_id) as club_id,
+                COALESCE(rcs_club.name, c.name) as club_name,
+                COALESCE(rcs_club.city, c.city) as club_city,
                 cls.name as class_name,
                 cls.display_name as class_display_name
             FROM results r
             JOIN riders rd ON r.cyclist_id = rd.id
+            LEFT JOIN rider_club_seasons rcs ON rd.id = rcs.rider_id AND rcs.season_year = ?
+            LEFT JOIN clubs rcs_club ON rcs.club_id = rcs_club.id
             LEFT JOIN clubs c ON rd.club_id = c.id
             LEFT JOIN classes cls ON r.class_id = cls.id
             WHERE r.event_id = ?
             AND r.status = 'finished'
-            AND c.id IS NOT NULL
+            AND COALESCE(rcs.club_id, rd.club_id) IS NOT NULL
             AND r.points > 0
             AND COALESCE(cls.series_eligible, 1) = 1
             AND COALESCE(cls.awards_points, 1) = 1
-            ORDER BY c.id, r.class_id, r.points DESC
+            ORDER BY COALESCE(rcs.club_id, rd.club_id), r.class_id, r.points DESC
         ");
-        $stmt->execute([$eventId]);
+        $stmt->execute([$seriesYear, $eventId]);
     }
     $eventResults = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
