@@ -2030,11 +2030,7 @@ document.getElementById('activateModal')?.addEventListener('click', function(e) 
                         data: <?= json_encode($rankingChartData) ?>,
                         borderColor: '#ef4444',
                         backgroundColor: rankingGradient,
-                        fill: {
-                            target: 'origin',
-                            above: rankingGradient,
-                            below: 'transparent'
-                        },
+                        fill: 'end',
                         tension: 0.4,
                         borderWidth: 2,
                         pointRadius: 3,
@@ -2097,11 +2093,7 @@ document.getElementById('activateModal')?.addEventListener('click', function(e) 
                         data: <?= json_encode($formChartData) ?>,
                         borderColor: '#61CE70',
                         backgroundColor: formGradient,
-                        fill: {
-                            target: 'origin',
-                            above: formGradient,
-                            below: 'transparent'
-                        },
+                        fill: 'end',
                         tension: 0.4,
                         borderWidth: 2,
                         pointRadius: 3,

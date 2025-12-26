@@ -1189,7 +1189,7 @@
 
 .stats-tab-content {
     display: none;
-    padding: var(--space-sm) var(--space-md);
+    padding: var(--space-xs) var(--space-md) var(--space-sm);
 }
 
 .stats-tab-content.active {

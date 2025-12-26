@@ -787,13 +787,20 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
 
             $resultClubId = null;
 
+            // Only update rider's profile club_id if importing CURRENT year results
+            $currentYear = (int)date('Y');
+            $shouldUpdateProfileClub = ($eventYear >= $currentYear);
+
             // If forceClubUpdate is true, always use the CSV club (ignore locked status)
             if ($clubId && $forceClubUpdate) {
                 // Force update: use club from CSV regardless of locked status
                 $resultClubId = $clubId;
                 setRiderClubForYear($db, $riderId, $clubId, $eventYear, true);  // Pass true to force update locked entries
                 lockRiderClubForYear($db, $riderId, $eventYear);
-                $db->update('riders', ['club_id' => $clubId], 'id = ?', [$riderId]);
+                // Only update profile club for current/future years
+                if ($shouldUpdateProfileClub) {
+                    $db->update('riders', ['club_id' => $clubId], 'id = ?', [$riderId]);
+                }
             } elseif ($existingSeasonClub && $existingSeasonClub['locked'] && !$forceClubUpdate) {
                 // Rider already has results this year - use their locked club
                 $resultClubId = $existingSeasonClub['club_id'];
@@ -804,8 +811,10 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
                 // Set/update this as the rider's club for the year
                 setRiderClubForYear($db, $riderId, $clubId, $eventYear);
                 lockRiderClubForYear($db, $riderId, $eventYear);
-                // Also update the rider's profile club_id
-                $db->update('riders', ['club_id' => $clubId], 'id = ?', [$riderId]);
+                // Only update profile club for current/future years - NOT historical imports!
+                if ($shouldUpdateProfileClub) {
+                    $db->update('riders', ['club_id' => $clubId], 'id = ?', [$riderId]);
+                }
             } else {
                 // No club in CSV, use rider's profile club
                 $resultClubId = getRiderClubForYear($db, $riderId, $eventYear, true);
