@@ -54,6 +54,9 @@
         })();
     </script>
 
+    <!-- Chart.js for dynamic charts -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
     <!-- Lucide Icons (pinned version with SRI for security) -->
     <script src="https://unpkg.com/lucide@0.263.1/dist/umd/lucide.min.js"
             integrity="sha384-5wnXeGaKKM8t+1xSmT9SzNz2R3YVHHdHKpzr6ZYRQyDdNsXLqwVG+S0c5qK6V3JL"

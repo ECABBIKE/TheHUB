@@ -1201,17 +1201,16 @@
     display: block;
 }
 
-/* Chart with proper axes */
-.dashboard-chart-body--axes {
-    padding: 0;
+/* Chart.js Canvas Container */
+.dashboard-chart-body {
+    position: relative;
     width: 100%;
-    aspect-ratio: 450 / 200;
+    padding: var(--space-sm);
 }
 
-.dashboard-chart-svg--axes {
-    width: 100%;
-    height: 100%;
-    display: block;
+.dashboard-chart-body canvas {
+    width: 100% !important;
+    height: auto !important;
 }
 
 /* Form Card in Right Column (legacy - keep for compatibility) */
