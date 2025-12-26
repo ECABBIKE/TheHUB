@@ -544,28 +544,35 @@ try {
         }
     }
 
-    // Check if this profile can be claimed (visible to super admins for testing)
-    $canClaimProfile = false;
+    // Check if this profile can be claimed or needs activation (visible to super admins)
+    $canClaimProfile = false;      // Profile without email - can connect email
+    $canActivateProfile = false;   // Profile with email but no password - can activate
     $hasPendingClaim = false;
     $isSuperAdmin = function_exists('hub_is_super_admin') && hub_is_super_admin();
 
-    // Super admins can see claim button on any profile without email (for testing)
-    if ($isSuperAdmin && empty($rider['email'])) {
-        // Check if there's already a pending claim for this profile
-        try {
-            $claimCheck = $db->prepare("
-                SELECT id FROM rider_claims
-                WHERE target_rider_id = ? AND status = 'pending'
-            ");
-            $claimCheck->execute([$riderId]);
-            $hasPendingClaim = $claimCheck->fetch() !== false;
+    // Super admins can see claim/activate button
+    if ($isSuperAdmin) {
+        if (empty($rider['email'])) {
+            // No email - show "Connect email" option
+            // Check if there's already a pending claim for this profile
+            try {
+                $claimCheck = $db->prepare("
+                    SELECT id FROM rider_claims
+                    WHERE target_rider_id = ? AND status = 'pending'
+                ");
+                $claimCheck->execute([$riderId]);
+                $hasPendingClaim = $claimCheck->fetch() !== false;
 
-            if (!$hasPendingClaim) {
-                $canClaimProfile = true;
+                if (!$hasPendingClaim) {
+                    $canClaimProfile = true;
+                }
+            } catch (Exception $e) {
+                // Table might not exist yet
+                $canClaimProfile = true; // Allow testing even without table
             }
-        } catch (Exception $e) {
-            // Table might not exist yet
-            $canClaimProfile = true; // Allow testing even without table
+        } else {
+            // Has email - show "Activate account" option (sends password reset)
+            $canActivateProfile = empty($rider['password']);
         }
     }
 
@@ -1238,6 +1245,11 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
                     <i data-lucide="mail-plus"></i>
                     <span>Koppla e-post</span>
                 </button>
+                <?php elseif ($canActivateProfile): ?>
+                <button type="button" class="btn-action-outline btn-activate-profile" onclick="openActivateModal()" title="Skicka aktiveringslänk till <?= htmlspecialchars($rider['email']) ?>">
+                    <i data-lucide="user-check"></i>
+                    <span>Aktivera konto</span>
+                </button>
                 <?php elseif ($hasPendingClaim): ?>
                 <button type="button" class="btn-action-outline btn-claim-pending" disabled>
                     <i data-lucide="clock"></i>
@@ -1685,6 +1697,58 @@ document.addEventListener('DOMContentLoaded', function() {
     </div>
 </div>
 
+<!-- Aktivera konto Modal (for profiles WITH email but no password) -->
+<?php if ($canActivateProfile): ?>
+<div id="activateModal" class="claim-modal-overlay">
+    <div class="claim-modal">
+        <div class="claim-modal-header">
+            <h3>
+                <i data-lucide="user-check"></i>
+                Aktivera konto
+            </h3>
+            <button type="button" class="claim-modal-close" onclick="closeActivateModal()">
+                <i data-lucide="x"></i>
+            </button>
+        </div>
+        <div class="claim-modal-body">
+            <div class="claim-info-box claim-info-admin">
+                <i data-lucide="shield-check"></i>
+                <p><strong>Super Admin:</strong> Skicka en aktiveringslänk till denna profil så att användaren kan sätta sitt lösenord.</p>
+            </div>
+
+            <div class="claim-profile-card claim-profile-target">
+                <span class="claim-profile-label">Profil att aktivera</span>
+                <span class="claim-profile-name"><?= htmlspecialchars($rider['firstname'] . ' ' . $rider['lastname']) ?></span>
+                <span class="claim-profile-meta"><?= $resultCount ?> resultat</span>
+            </div>
+
+            <div class="claim-form-group">
+                <label>
+                    <i data-lucide="mail"></i>
+                    E-postadress
+                </label>
+                <input type="email" class="claim-input" value="<?= htmlspecialchars($rider['email']) ?>" readonly style="background: var(--color-bg-secondary);">
+                <span class="claim-field-hint">Ett mail med lösenordslänk skickas hit</span>
+            </div>
+
+            <div class="claim-form-actions">
+                <button type="button" class="btn-secondary" onclick="closeActivateModal()">Avbryt</button>
+                <button type="button" class="btn-primary" onclick="sendActivationEmail(<?= $riderId ?>)">
+                    <i data-lucide="send"></i>
+                    Skicka aktiveringslänk
+                </button>
+            </div>
+        </div>
+        <div id="activateSuccess" class="claim-success" style="display: none;">
+            <i data-lucide="check-circle"></i>
+            <h4>Aktiveringslänk skickad!</h4>
+            <p>Användaren får ett mail med länk för att sätta lösenord.</p>
+            <button type="button" class="btn-primary" onclick="closeActivateModal();">Stäng</button>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
+
 <style>
 .claim-modal-overlay {
     display: none;
@@ -2038,6 +2102,60 @@ document.getElementById('claimForm')?.addEventListener('submit', async function(
 // Close modal on overlay click
 document.getElementById('claimModal')?.addEventListener('click', function(e) {
     if (e.target === this) closeClaimModal();
+});
+</script>
+<?php endif; ?>
+
+<?php if ($canActivateProfile): ?>
+<script>
+function openActivateModal() {
+    document.getElementById('activateModal').classList.add('active');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeActivateModal() {
+    document.getElementById('activateModal').classList.remove('active');
+    document.body.style.overflow = '';
+}
+
+async function sendActivationEmail(riderId) {
+    const btn = event.target.closest('button');
+    const originalHtml = btn.innerHTML;
+
+    btn.disabled = true;
+    btn.innerHTML = '<i data-lucide="loader-2" class="animate-spin"></i> Skickar...';
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+
+    try {
+        const response = await fetch('/api/rider-activate.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ rider_id: riderId })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            document.querySelector('#activateModal .claim-modal-body').style.display = 'none';
+            document.getElementById('activateSuccess').style.display = 'block';
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+        } else {
+            alert(result.error || 'Ett fel uppstod');
+            btn.disabled = false;
+            btn.innerHTML = originalHtml;
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+        }
+    } catch (error) {
+        alert('Ett fel uppstod vid anslutning till servern');
+        btn.disabled = false;
+        btn.innerHTML = originalHtml;
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
+}
+
+// Close modal on overlay click
+document.getElementById('activateModal')?.addEventListener('click', function(e) {
+    if (e.target === this) closeActivateModal();
 });
 </script>
 <?php endif; ?>
