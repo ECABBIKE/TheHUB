@@ -1693,7 +1693,7 @@ document.addEventListener('DOMContentLoaded', function() {
     background: rgba(0,0,0,0.7);
     backdrop-filter: blur(4px);
     -webkit-backdrop-filter: blur(4px);
-    z-index: 99999;
+    z-index: 200;
     justify-content: center;
     align-items: center;
     padding: var(--space-md);
@@ -1934,25 +1934,20 @@ document.addEventListener('DOMContentLoaded', function() {
     opacity: 0.6;
     cursor: not-allowed !important;
 }
-/* Mobile Fullscreen Modal */
+/* Mobile Modal - Between header and bottom nav */
 @media (max-width: 767px) {
     .claim-modal-overlay {
-        padding: 0;
-        align-items: stretch;
+        top: var(--header-height, 60px);
+        bottom: var(--mobile-nav-height, 64px);
+        padding: var(--space-sm);
     }
     .claim-modal {
-        position: fixed;
-        top: 0;
-        left: 0;
-        width: 100vw;
-        height: 100vh;
-        max-width: 100vw;
-        max-height: 100vh;
-        border-radius: 0;
-        border: none;
+        max-width: 100%;
+        max-height: 100%;
+        height: auto;
+        border-radius: var(--radius-md);
         display: flex;
         flex-direction: column;
-        z-index: 1;
     }
     .claim-modal-header {
         position: sticky;
@@ -1960,13 +1955,14 @@ document.addEventListener('DOMContentLoaded', function() {
         z-index: 10;
         flex-shrink: 0;
         background: var(--color-bg-card);
+        border-radius: var(--radius-md) var(--radius-md) 0 0;
     }
     .claim-modal-header h3 {
         font-size: 1rem;
     }
     .claim-modal-close {
-        width: 44px;
-        height: 44px;
+        width: 40px;
+        height: 40px;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -1974,8 +1970,8 @@ document.addEventListener('DOMContentLoaded', function() {
         border-radius: var(--radius-full);
     }
     .claim-modal-close i {
-        width: 24px;
-        height: 24px;
+        width: 20px;
+        height: 20px;
     }
     .claim-modal-body {
         flex: 1;
