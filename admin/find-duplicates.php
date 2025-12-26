@@ -184,11 +184,19 @@ function checkDuplicatePair($r1, $r2, $nameReason) {
  $uci2 = normalizeUci($r2['license_number']);
  $isRealUci1 = isRealUci($r1['license_number']);
  $isRealUci2 = isRealUci($r2['license_number']);
+ $isSweId1 = !empty($r1['license_number']) && strpos($r1['license_number'], 'SWE') === 0;
+ $isSweId2 = !empty($r2['license_number']) && strpos($r2['license_number'], 'SWE') === 0;
 
+ // Only exclude if BOTH have real UCI IDs (not SWE) and they're different
  if ($isRealUci1 && $isRealUci2 && $uci1 !== $uci2) {
  return null;
  }
- if (!empty($r1['birth_year']) && !empty($r2['birth_year']) && $r1['birth_year'] !== $r2['birth_year']) {
+
+ // If one has SWE-ID and the other has UCI-ID, they're likely duplicates - don't exclude based on birth year
+ $oneHasSweOneHasUci = ($isSweId1 && $isRealUci2) || ($isSweId2 && $isRealUci1);
+
+ // Only exclude based on birth year if NEITHER has a SWE-ID (both have real data)
+ if (!$oneHasSweOneHasUci && !empty($r1['birth_year']) && !empty($r2['birth_year']) && $r1['birth_year'] !== $r2['birth_year']) {
  return null;
  }
 
@@ -197,8 +205,11 @@ function checkDuplicatePair($r1, $r2, $nameReason) {
 
  if (empty($r1['birth_year']) && !empty($r2['birth_year'])) $r1Missing[] = 'födelseår';
  if (empty($r2['birth_year']) && !empty($r1['birth_year'])) $r2Missing[] = 'födelseår';
- if (!$isRealUci1 && $isRealUci2) $r1Missing[] = 'UCI ID';
- if (!$isRealUci2 && $isRealUci1) $r2Missing[] = 'UCI ID';
+ // Mark SWE-ID as "missing UCI ID" when comparing to a real UCI ID
+ if ($isSweId1 && $isRealUci2) $r1Missing[] = 'UCI ID (har SWE-ID)';
+ elseif (!$isRealUci1 && $isRealUci2) $r1Missing[] = 'UCI ID';
+ if ($isSweId2 && $isRealUci1) $r2Missing[] = 'UCI ID (har SWE-ID)';
+ elseif (!$isRealUci2 && $isRealUci1) $r2Missing[] = 'UCI ID';
  if (empty($r1['email']) && !empty($r2['email'])) $r1Missing[] = 'e-post';
  if (empty($r2['email']) && !empty($r1['email'])) $r2Missing[] = 'e-post';
  if (empty($r1['club_id']) && !empty($r2['club_id'])) $r1Missing[] = 'klubb';
