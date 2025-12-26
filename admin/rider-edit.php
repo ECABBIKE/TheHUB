@@ -976,7 +976,7 @@ include __DIR__ . '/components/unified-layout.php';
    <?php endif; ?>
    </td>
    <td>
-   <?php if (!$isLocked): ?>
+   <?php if (!$isLocked || hasRole('super_admin')): ?>
     <form method="POST" class="flex items-center gap-sm">
     <?= csrf_field() ?>
     <input type="hidden" name="action" value="update_club_year">
@@ -989,9 +989,12 @@ include __DIR__ . '/components/unified-layout.php';
      </option>
      <?php endforeach; ?>
     </select>
-    <button type="submit" class="btn btn--primary btn--sm">
+    <button type="submit" class="btn btn--primary btn--sm" title="<?= $isLocked ? 'Super admin: Tvinga ändring' : 'Spara' ?>">
      <i data-lucide="save"></i>
     </button>
+    <?php if ($isLocked): ?>
+    <span class="text-warning text-xs">(admin)</span>
+    <?php endif; ?>
     </form>
    <?php else: ?>
     <span class="text-secondary text-sm">Kan ej ändras</span>
