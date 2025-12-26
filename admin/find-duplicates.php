@@ -165,7 +165,7 @@ function areNamesSimilar($fn1, $ln1, $fn2, $ln2) {
  }
  }
  $lnSim = nameSimilarity($ln1, $ln2);
- if ($lnSim >= 85 && strtolower($fn1) === strtolower($fn2)) {
+ if ($lnSim >= 80 && strtolower($fn1) === strtolower($fn2)) {
  return ['match' => true, 'reason' =>"Samma förnamn, liknande efternamn ({$lnSim}%)"];
  }
  $ln1Lower = strtolower($ln1);

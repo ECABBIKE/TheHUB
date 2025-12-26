@@ -166,6 +166,21 @@ function getLastSurnamePart($lastname) {
     return mb_strtolower(end($parts), 'UTF-8');
 }
 
+// Helper for Levenshtein-based name similarity
+function lastnameSimilarity($ln1, $ln2) {
+    $ln1 = mb_strtolower(trim($ln1), 'UTF-8');
+    $ln2 = mb_strtolower(trim($ln2), 'UTF-8');
+    if ($ln1 === $ln2) return 100;
+    if (strlen($ln1) < 2 || strlen($ln2) < 2) return 0;
+    // Limit for levenshtein
+    $ln1 = substr($ln1, 0, 255);
+    $ln2 = substr($ln2, 0, 255);
+    $maxLen = max(strlen($ln1), strlen($ln2));
+    if ($maxLen === 0) return 0;
+    $distance = levenshtein($ln1, $ln2);
+    return round((1 - $distance / $maxLen) * 100);
+}
+
 // Find all name duplicates using PHP normalization
 // This catches variations with different spacing, invisible chars, etc.
 $allRiders = $db->getAll("
@@ -239,6 +254,43 @@ foreach ($fuzzyDuplicates as $dup) {
             'rider_ids' => $dup['rider_ids'],
             'count' => $dup['count']
         ];
+    }
+}
+
+// Find spelling-variation duplicates (Ågren vs Åhgren, etc.)
+// Group by firstname, then compare lastnames with Levenshtein
+$ridersByFirstname = [];
+foreach ($allRiders as $r) {
+    $normalizedFn = preg_replace('/\s+/', ' ', mb_strtolower(trim($r['firstname']), 'UTF-8'));
+    $ridersByFirstname[$normalizedFn][] = $r;
+}
+
+foreach ($ridersByFirstname as $fn => $ridersWithSameFn) {
+    if (count($ridersWithSameFn) < 2) continue;
+
+    // Compare all pairs for similar lastnames
+    for ($i = 0; $i < count($ridersWithSameFn); $i++) {
+        for ($j = $i + 1; $j < count($ridersWithSameFn); $j++) {
+            $r1 = $ridersWithSameFn[$i];
+            $r2 = $ridersWithSameFn[$j];
+
+            // Skip if already in seenIds together
+            if (isset($seenIds[$r1['id']]) && isset($seenIds[$r2['id']])) continue;
+
+            $similarity = lastnameSimilarity($r1['lastname'], $r2['lastname']);
+
+            // If 80-99% similar (not exact, but close), it's a potential spelling variation
+            if ($similarity >= 80 && $similarity < 100) {
+                $allDuplicates[] = [
+                    'fn' => $fn,
+                    'ln' => $r1['lastname'] . ' / ' . $r2['lastname'] . " ({$similarity}%)",
+                    'rider_ids' => $r1['id'] . ',' . $r2['id'],
+                    'count' => 2
+                ];
+                $seenIds[$r1['id']] = true;
+                $seenIds[$r2['id']] = true;
+            }
+        }
     }
 }
 

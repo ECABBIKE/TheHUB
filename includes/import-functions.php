@@ -316,6 +316,13 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
             'kön' => 'gender',
             'kon' => 'gender',
 
+            // Nationality
+            'nationality' => 'nationality',
+            'nation' => 'nationality',
+            'land' => 'nationality',
+            'country' => 'nationality',
+            'nat' => 'nationality',
+
             // Birth year
             'birthyear' => 'birth_year',
             'födelseår' => 'birth_year',
@@ -467,6 +474,17 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
                     if ($rider) {
                         $matching_stats['riders_found']++;
                         error_log("IMPORT: UCI match found - UCI:{$licenseNumberDigits} → rider ID {$rider['id']} ({$rider['firstname']} {$rider['lastname']})");
+
+                        // Update rider nationality if provided in CSV (always override if provided)
+                        $importNationality = strtoupper(trim($data['nationality'] ?? ''));
+                        if (!empty($importNationality) && strlen($importNationality) <= 3) {
+                            $riderNat = $db->getRow("SELECT nationality FROM riders WHERE id = ?", [$rider['id']]);
+                            if (empty($riderNat['nationality']) || $riderNat['nationality'] !== $importNationality) {
+                                $db->update('riders', ['nationality' => $importNationality], 'id = ?', [$rider['id']]);
+                                $matching_stats['riders_updated_with_nationality'] = ($matching_stats['riders_updated_with_nationality'] ?? 0) + 1;
+                                error_log("IMPORT: Updated rider {$rider['id']} nationality to: {$importNationality}");
+                            }
+                        }
                     }
                 }
 
@@ -511,6 +529,17 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
                             $matching_stats['riders_updated_with_uci'] = ($matching_stats['riders_updated_with_uci'] ?? 0) + 1;
                             error_log("IMPORT: Updated rider {$rider['id']} with UCI: {$licenseNumber}");
                         }
+
+                        // Update rider nationality if provided in CSV (always override if provided)
+                        $importNationality = strtoupper(trim($data['nationality'] ?? ''));
+                        if (!empty($importNationality) && strlen($importNationality) <= 3) {
+                            $riderNat = $db->getRow("SELECT nationality FROM riders WHERE id = ?", [$rider['id']]);
+                            if (empty($riderNat['nationality']) || $riderNat['nationality'] !== $importNationality) {
+                                $db->update('riders', ['nationality' => $importNationality], 'id = ?', [$rider['id']]);
+                                $matching_stats['riders_updated_with_nationality'] = ($matching_stats['riders_updated_with_nationality'] ?? 0) + 1;
+                                error_log("IMPORT: Updated rider {$rider['id']} nationality to: {$importNationality}");
+                            }
+                        }
                     } else {
                         error_log("IMPORT: No match found for '{$firstName} {$lastName}' UCI:{$licenseNumberDigits}");
                     }
@@ -533,11 +562,16 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
                     // Generate SWE license number if no UCI ID provided
                     $finalLicenseNumber = $licenseNumber ?: generateSweLicenseNumber($db);
 
+                    // Get nationality from import if available
+                    $importNationality = strtoupper(trim($data['nationality'] ?? ''));
+                    if (strlen($importNationality) > 3) $importNationality = '';
+
                     $riderId = $db->insert('riders', [
                         'firstname' => trim($data['firstname']),
                         'lastname' => trim($data['lastname']),
                         'license_number' => $finalLicenseNumber,
-                        'gender' => $gender
+                        'gender' => $gender,
+                        'nationality' => !empty($importNationality) ? $importNationality : null
                     ]);
 
                     // Track for rollback
