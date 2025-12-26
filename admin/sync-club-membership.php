@@ -19,7 +19,27 @@ if (!hasRole('super_admin')) {
 $currentYear = date('Y');
 $targetYear = isset($_GET['year']) ? (int)$_GET['year'] : (int)$currentYear;
 $dryRun = !isset($_GET['execute']);
-$direction = $_GET['direction'] ?? 'season_to_rider'; // or 'rider_to_season' or 'rebuild_all_from_results'
+$direction = $_GET['direction'] ?? 'season_to_rider'; // or 'rider_to_season' or 'rebuild_all_from_results' or 'cleanup_orphans'
+
+// Handle cleanup of orphan club seasons (entries without results)
+if ($direction === 'cleanup_orphans' && !$dryRun) {
+    // Find and delete rider_club_seasons entries where the rider has no results that year
+    $deleted = $db->query("
+        DELETE rcs FROM rider_club_seasons rcs
+        WHERE NOT EXISTS (
+            SELECT 1 FROM results r
+            JOIN events e ON r.event_id = e.id
+            WHERE r.cyclist_id = rcs.rider_id
+            AND YEAR(e.date) = rcs.season_year
+        )
+    ");
+
+    $deletedCount = $deleted ? $deleted->rowCount() : 0;
+
+    $_SESSION['cleanup_result'] = ['deleted' => $deletedCount];
+    header("Location: ?year={$targetYear}&cleaned=1");
+    exit;
+}
 
 // Handle complete rebuild from results
 if ($direction === 'rebuild_all_from_results' && !$dryRun) {
@@ -111,6 +131,29 @@ if ($direction === 'rebuild_all_from_results' && !$dryRun) {
     header("Location: ?year={$targetYear}&rebuilt=1");
     exit;
 }
+
+// Find orphan club seasons (entries without any results that year)
+$orphanSeasons = $db->getAll("
+    SELECT
+        rcs.id,
+        rcs.rider_id,
+        rcs.season_year,
+        rcs.club_id,
+        r.firstname,
+        r.lastname,
+        c.name as club_name
+    FROM rider_club_seasons rcs
+    JOIN riders r ON rcs.rider_id = r.id
+    JOIN clubs c ON rcs.club_id = c.id
+    WHERE NOT EXISTS (
+        SELECT 1 FROM results res
+        JOIN events e ON res.event_id = e.id
+        WHERE res.cyclist_id = rcs.rider_id
+        AND YEAR(e.date) = rcs.season_year
+    )
+    ORDER BY rcs.season_year DESC, r.lastname, r.firstname
+    LIMIT 500
+");
 
 // Find mismatches: riders with 2025 season club but different/null rider.club_id
 $mismatches = $db->getAll("
@@ -265,6 +308,15 @@ include __DIR__ . '/components/unified-layout.php';
 </div>
 <?php endif; ?>
 
+<?php if (isset($_GET['cleaned']) && isset($_SESSION['cleanup_result'])): ?>
+<?php $cleanupResult = $_SESSION['cleanup_result']; unset($_SESSION['cleanup_result']); ?>
+<div class="alert alert-success mb-lg">
+    <i data-lucide="trash-2"></i>
+    <strong>Städning klar!</strong>
+    <?= $cleanupResult['deleted'] ?> klubbtillhörigheter utan resultat har raderats.
+</div>
+<?php endif; ?>
+
 <?php if (isset($_GET['rebuilt']) && isset($_SESSION['rebuild_result'])): ?>
 <?php $rebuildResult = $_SESSION['rebuild_result']; unset($_SESSION['rebuild_result']); ?>
 <div class="alert alert-success mb-lg">
@@ -313,6 +365,55 @@ include __DIR__ . '/components/unified-layout.php';
         </a>
     </div>
 </div>
+
+<!-- Cleanup Orphan Seasons -->
+<?php if (!empty($orphanSeasons)): ?>
+<div class="card mb-lg" style="border: 2px solid var(--color-warning);">
+    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; background: rgba(245, 158, 11, 0.1);">
+        <div>
+            <h3><i data-lucide="trash-2"></i> Klubbtillhörigheter utan resultat (<?= count($orphanSeasons) ?>)</h3>
+            <p class="text-secondary" style="margin: 0; font-size: 13px;">
+                Dessa poster har ingen nytta - åkaren har inga resultat för det året
+            </p>
+        </div>
+        <a href="?execute=1&direction=cleanup_orphans"
+           class="btn btn-warning"
+           onclick="return confirm('Radera <?= count($orphanSeasons) ?> klubbtillhörigheter utan resultat?\n\nDessa poster har ingen funktion eftersom åkaren inte har några resultat för det året.')">
+            <i data-lucide="trash-2"></i>
+            Radera alla (<?= count($orphanSeasons) ?>)
+        </a>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Åkare</th>
+                        <th>År</th>
+                        <th>Klubb</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach (array_slice($orphanSeasons, 0, 50) as $o): ?>
+                    <tr>
+                        <td>
+                            <a href="/admin/rider-edit/<?= $o['rider_id'] ?>">
+                                <?= h($o['firstname'] . ' ' . $o['lastname']) ?>
+                            </a>
+                        </td>
+                        <td><?= $o['season_year'] ?></td>
+                        <td><?= h($o['club_name']) ?></td>
+                    </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+        <?php if (count($orphanSeasons) > 50): ?>
+        <p class="text-secondary">Visar 50 av <?= count($orphanSeasons) ?></p>
+        <?php endif; ?>
+    </div>
+</div>
+<?php endif; ?>
 
 <!-- Year selector -->
 <div class="card mb-lg">
