@@ -2151,12 +2151,21 @@ document.getElementById('activateModal')?.addEventListener('click', function(e) 
         <?php endif; ?>
     }
 
-    // Initialize when DOM is ready
+    // Wait for Chart.js to be available (loaded in footer)
+    function waitForChart() {
+        if (typeof Chart !== 'undefined') {
+            initCharts();
+        } else {
+            // Chart.js not loaded yet, retry
+            setTimeout(waitForChart, 50);
+        }
+    }
+
+    // Start checking after DOM is ready
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', initCharts);
+        document.addEventListener('DOMContentLoaded', waitForChart);
     } else {
-        // Small delay to ensure Chart.js is loaded
-        setTimeout(initCharts, 100);
+        waitForChart();
     }
 })();
 </script>
