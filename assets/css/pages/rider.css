@@ -687,6 +687,25 @@
     padding: var(--space-xl) var(--space-md);
 }
 
+.series-loading {
+    text-align: center;
+    padding: var(--space-xl) var(--space-md);
+    color: var(--color-text-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-sm);
+}
+
+.series-loading i {
+    animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+    from { transform: rotate(0deg); }
+    to { transform: rotate(360deg); }
+}
+
 .series-empty-state i {
     margin-bottom: var(--space-md);
     color: var(--color-text-muted);
