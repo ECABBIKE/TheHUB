@@ -10,6 +10,7 @@
 header('Content-Type: application/json');
 
 require_once __DIR__ . '/../config.php';
+require_once __DIR__ . '/../includes/mail.php';
 
 // Only POST allowed
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -87,15 +88,34 @@ try {
         if ($reason) $verificationNotes[] = "Note: {$reason}";
         $fullNotes = implode(' | ', $verificationNotes);
 
-        // Direct update - connect email and phone to profile
-        $db->query("UPDATE riders SET email = ?, phone = ?, updated_at = NOW() WHERE id = ?", [$email, $phone, $targetRiderId]);
+        // Generate password reset token
+        $token = bin2hex(random_bytes(32));
+        $expires = date('Y-m-d H:i:s', strtotime('+24 hours'));
+
+        // Direct update - connect email, phone and set password reset token
+        $db->query(
+            "UPDATE riders SET email = ?, phone = ?, password_reset_token = ?, password_reset_expires = ?, updated_at = NOW() WHERE id = ?",
+            [$email, $phone, $token, $expires, $targetRiderId]
+        );
+
+        // Build reset link and send email
+        $baseUrl = 'https://thehub.gravityseries.se';
+        $resetLink = $baseUrl . '/reset-password?token=' . $token;
+        $riderName = trim($targetRider['firstname'] . ' ' . $targetRider['lastname']);
+
+        $emailSent = hub_send_password_reset_email($email, $riderName, $resetLink);
 
         // Log the action with full verification info
-        error_log("ADMIN DIRECT CLAIM: Super admin connected email '{$email}' to rider {$targetRiderId} ({$targetRider['firstname']} {$targetRider['lastname']}). Verification: {$fullNotes}");
+        error_log("ADMIN DIRECT CLAIM: Super admin connected email '{$email}' to rider {$targetRiderId} ({$targetRider['firstname']} {$targetRider['lastname']}). Verification: {$fullNotes}. Email sent: " . ($emailSent ? 'yes' : 'no'));
+
+        $message = $emailSent
+            ? 'E-post kopplad! Ett mail med lösenordslänk har skickats.'
+            : 'E-post kopplad! Kunde inte skicka mail - användaren kan använda "Glömt lösenord".';
 
         echo json_encode([
             'success' => true,
-            'message' => 'E-post kopplad till profilen!'
+            'message' => $message,
+            'email_sent' => $emailSent
         ]);
         exit;
     }

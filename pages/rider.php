@@ -1939,22 +1939,24 @@ document.addEventListener('DOMContentLoaded', function() {
     .claim-modal-overlay {
         top: var(--header-height, 60px);
         bottom: var(--mobile-nav-height, 64px);
-        padding: var(--space-sm);
+        padding: 0;
         overflow: hidden;
+        align-items: stretch;
     }
     .claim-modal {
         max-width: 100%;
         max-height: 100%;
         height: 100%;
-        border-radius: var(--radius-md);
+        border-radius: 0;
         display: flex;
         flex-direction: column;
         overflow: hidden;
+        border: none;
     }
     .claim-modal-header {
         flex-shrink: 0;
         background: var(--color-bg-card);
-        border-radius: var(--radius-md) var(--radius-md) 0 0;
+        border-radius: 0;
     }
     .claim-modal-header h3 {
         font-size: 1rem;
