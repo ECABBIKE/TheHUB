@@ -2001,142 +2001,164 @@ document.getElementById('activateModal')?.addEventListener('click', function(e) 
 <!-- Chart.js Initialization -->
 <?php if ($hasRankingChart || $hasFormChart): ?>
 <script>
-document.addEventListener('DOMContentLoaded', function() {
-    // Common chart options for both charts
-    const commonOptions = {
-        responsive: true,
-        maintainAspectRatio: true,
-        aspectRatio: 2.25,
-        interaction: {
-            intersect: false,
-            mode: 'index'
-        },
-        plugins: {
-            legend: { display: false },
-            tooltip: {
-                backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                titleFont: { size: 12, weight: 'normal' },
-                bodyFont: { size: 14, weight: 'bold' },
-                padding: 10,
-                cornerRadius: 6,
-                displayColors: false
-            }
-        },
-        scales: {
-            x: {
-                grid: { display: false },
-                ticks: {
-                    font: { size: 11 },
-                    color: '#6b7280',
-                    maxRotation: 0
-                }
-            },
-            y: {
-                reverse: true,
-                beginAtZero: false,
-                grid: { color: '#e5e7eb' },
-                ticks: {
-                    font: { size: 11 },
-                    color: '#6b7280',
-                    stepSize: 1,
-                    callback: function(value) {
-                        return Number.isInteger(value) ? value : '';
-                    }
-                }
-            }
-        },
-        elements: {
-            line: {
-                tension: 0.4,
-                borderWidth: 2.5,
-                borderCapStyle: 'round',
-                borderJoinStyle: 'round'
-            },
-            point: {
-                radius: 5,
-                hoverRadius: 7,
-                borderWidth: 2,
-                backgroundColor: '#fff'
-            }
+(function() {
+    function initCharts() {
+        if (typeof Chart === 'undefined') {
+            console.error('Chart.js not loaded');
+            return;
         }
-    };
 
-    <?php if ($hasRankingChart): ?>
-    // Ranking Chart (red theme)
-    const rankingCtx = document.getElementById('rankingChart');
-    if (rankingCtx) {
-        const rankingGradient = rankingCtx.getContext('2d').createLinearGradient(0, 0, 0, 200);
-        rankingGradient.addColorStop(0, 'rgba(239, 68, 68, 0.3)');
-        rankingGradient.addColorStop(1, 'rgba(239, 68, 68, 0.02)');
+        <?php if ($hasRankingChart): ?>
+        // Ranking Chart (red theme)
+        const rankingCtx = document.getElementById('rankingChart');
+        if (rankingCtx) {
+            const ctx = rankingCtx.getContext('2d');
+            const rankingGradient = ctx.createLinearGradient(0, 0, 0, 180);
+            rankingGradient.addColorStop(0, 'rgba(239, 68, 68, 0.3)');
+            rankingGradient.addColorStop(1, 'rgba(239, 68, 68, 0.02)');
 
-        new Chart(rankingCtx, {
-            type: 'line',
-            data: {
-                labels: <?= json_encode($rankingChartLabels) ?>,
-                datasets: [{
-                    data: <?= json_encode($rankingChartData) ?>,
-                    borderColor: '#ef4444',
-                    backgroundColor: rankingGradient,
-                    fill: true,
-                    pointBackgroundColor: '#fff',
-                    pointBorderColor: '#ef4444'
-                }]
-            },
-            options: {
-                ...commonOptions,
-                plugins: {
-                    ...commonOptions.plugins,
-                    tooltip: {
-                        ...commonOptions.plugins.tooltip,
-                        callbacks: {
-                            title: function(items) { return items[0].label; },
-                            label: function(item) { return 'Position: #' + item.raw; }
+            new Chart(rankingCtx, {
+                type: 'line',
+                data: {
+                    labels: <?= json_encode($rankingChartLabels) ?>,
+                    datasets: [{
+                        data: <?= json_encode($rankingChartData) ?>,
+                        borderColor: '#ef4444',
+                        backgroundColor: rankingGradient,
+                        fill: true,
+                        tension: 0.4,
+                        borderWidth: 2.5,
+                        pointRadius: 5,
+                        pointHoverRadius: 7,
+                        pointBackgroundColor: '#fff',
+                        pointBorderColor: '#ef4444',
+                        pointBorderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    aspectRatio: 2.5,
+                    interaction: { intersect: false, mode: 'index' },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            titleFont: { size: 12 },
+                            bodyFont: { size: 14, weight: 'bold' },
+                            padding: 10,
+                            cornerRadius: 6,
+                            displayColors: false,
+                            callbacks: {
+                                title: function(items) { return items[0].label; },
+                                label: function(item) { return 'Position: #' + item.raw; }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: { display: false },
+                            ticks: { font: { size: 11 }, color: '#6b7280', maxRotation: 0 }
+                        },
+                        y: {
+                            reverse: true,
+                            beginAtZero: false,
+                            grid: { color: '#e5e7eb' },
+                            ticks: {
+                                font: { size: 11 },
+                                color: '#6b7280',
+                                stepSize: 1,
+                                callback: function(value) {
+                                    return Number.isInteger(value) ? value : '';
+                                }
+                            }
                         }
                     }
                 }
-            }
-        });
-    }
-    <?php endif; ?>
+            });
+        }
+        <?php endif; ?>
 
-    <?php if ($hasFormChart): ?>
-    // Form Chart (green theme)
-    const formCtx = document.getElementById('formChart');
-    if (formCtx) {
-        const formGradient = formCtx.getContext('2d').createLinearGradient(0, 0, 0, 200);
-        formGradient.addColorStop(0, 'rgba(97, 206, 112, 0.3)');
-        formGradient.addColorStop(1, 'rgba(97, 206, 112, 0.02)');
+        <?php if ($hasFormChart): ?>
+        // Form Chart (green theme)
+        const formCtx = document.getElementById('formChart');
+        if (formCtx) {
+            const ctx = formCtx.getContext('2d');
+            const formGradient = ctx.createLinearGradient(0, 0, 0, 180);
+            formGradient.addColorStop(0, 'rgba(97, 206, 112, 0.3)');
+            formGradient.addColorStop(1, 'rgba(97, 206, 112, 0.02)');
 
-        new Chart(formCtx, {
-            type: 'line',
-            data: {
-                labels: <?= json_encode($formChartLabels) ?>,
-                datasets: [{
-                    data: <?= json_encode($formChartData) ?>,
-                    borderColor: '#61CE70',
-                    backgroundColor: formGradient,
-                    fill: true,
-                    pointBackgroundColor: '#fff',
-                    pointBorderColor: '#61CE70'
-                }]
-            },
-            options: {
-                ...commonOptions,
-                plugins: {
-                    ...commonOptions.plugins,
-                    tooltip: {
-                        ...commonOptions.plugins.tooltip,
-                        callbacks: {
-                            title: function(items) { return items[0].label; },
-                            label: function(item) { return 'Placering: #' + item.raw; }
+            new Chart(formCtx, {
+                type: 'line',
+                data: {
+                    labels: <?= json_encode($formChartLabels) ?>,
+                    datasets: [{
+                        data: <?= json_encode($formChartData) ?>,
+                        borderColor: '#61CE70',
+                        backgroundColor: formGradient,
+                        fill: true,
+                        tension: 0.4,
+                        borderWidth: 2.5,
+                        pointRadius: 5,
+                        pointHoverRadius: 7,
+                        pointBackgroundColor: '#fff',
+                        pointBorderColor: '#61CE70',
+                        pointBorderWidth: 2
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: true,
+                    aspectRatio: 2.5,
+                    interaction: { intersect: false, mode: 'index' },
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            titleFont: { size: 12 },
+                            bodyFont: { size: 14, weight: 'bold' },
+                            padding: 10,
+                            cornerRadius: 6,
+                            displayColors: false,
+                            callbacks: {
+                                title: function(items) { return items[0].label; },
+                                label: function(item) { return 'Placering: #' + item.raw; }
+                            }
+                        }
+                    },
+                    scales: {
+                        x: {
+                            grid: { display: false },
+                            ticks: { font: { size: 11 }, color: '#6b7280', maxRotation: 0 }
+                        },
+                        y: {
+                            reverse: true,
+                            beginAtZero: false,
+                            grid: { color: '#e5e7eb' },
+                            ticks: {
+                                font: { size: 11 },
+                                color: '#6b7280',
+                                stepSize: 1,
+                                callback: function(value) {
+                                    return Number.isInteger(value) ? value : '';
+                                }
+                            }
                         }
                     }
                 }
-            }
-        });
+            });
+        }
+        <?php endif; ?>
     }
-    <?php endif; ?>
-});
+
+    // Initialize when DOM is ready
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', initCharts);
+    } else {
+        // Small delay to ensure Chart.js is loaded
+        setTimeout(initCharts, 100);
+    }
+})();
 </script>
 <?php endif; ?>
 
