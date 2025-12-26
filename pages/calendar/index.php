@@ -214,6 +214,7 @@ if (!function_exists('getDeadlineInfo')) {
                             <?php if ($deadlineInfo && $deadlineInfo['days'] >= 0): ?>
                             <span class="event-deadline <?= $deadlineInfo['class'] ?>">
                                 <i data-lucide="clock"></i>
+                                <span class="deadline-label">Anmälan stänger:</span>
                                 <?= $deadlineInfo['text'] ?>
                             </span>
                             <?php endif; ?>
