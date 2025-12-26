@@ -48,7 +48,23 @@ $pageTitle = 'Logga in';
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <title><?= $pageTitle ?> - <?= ORGANIZER_APP_NAME ?></title>
 
-    <link rel="icon" type="image/png" href="<?= SITE_URL ?>/assets/images/favicon.png">
+    <?php
+    // Load favicon from branding
+    $faviconUrl = '/assets/favicon.svg';
+    $brandingFile = __DIR__ . '/../uploads/branding.json';
+    if (file_exists($brandingFile)) {
+        $brandingData = json_decode(file_get_contents($brandingFile), true);
+        if (!empty($brandingData['logos']['favicon'])) {
+            $faviconUrl = $brandingData['logos']['favicon'];
+        }
+    }
+    $faviconExt = strtolower(pathinfo($faviconUrl, PATHINFO_EXTENSION));
+    $faviconMime = match($faviconExt) {
+        'svg' => 'image/svg+xml', 'ico' => 'image/x-icon', 'png' => 'image/png',
+        'jpg', 'jpeg' => 'image/jpeg', 'webp' => 'image/webp', default => 'image/png'
+    };
+    ?>
+    <link rel="icon" type="<?= $faviconMime ?>" href="<?= SITE_URL . htmlspecialchars($faviconUrl) ?>">
     <link rel="stylesheet" href="<?= SITE_URL ?>/assets/css/base.css">
     <link rel="stylesheet" href="<?= ORGANIZER_BASE_URL ?>/assets/css/organizer.css">
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
