@@ -744,14 +744,29 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
             $eventDateInfo = $db->getRow("SELECT date FROM events WHERE id = ?", [$eventId]);
             $eventYear = $eventDateInfo ? (int)date('Y', strtotime($eventDateInfo['date'])) : (int)date('Y');
 
-            // Get the rider's club for that year (create entry if missing)
-            $resultClubId = getRiderClubForYear($db, $riderId, $eventYear, true);
+            // FIXED: First race of year should set the club, then lock it
+            // Check if rider already has a LOCKED club for this year (has results)
+            $existingSeasonClub = $db->getRow(
+                "SELECT club_id, locked FROM rider_club_seasons WHERE rider_id = ? AND season_year = ?",
+                [$riderId, $eventYear]
+            );
 
-            // If no club from season lookup, try using the club from CSV import data
-            if (!$resultClubId && $clubId) {
+            $resultClubId = null;
+
+            if ($existingSeasonClub && $existingSeasonClub['locked']) {
+                // Rider already has results this year - use their locked club
+                $resultClubId = $existingSeasonClub['club_id'];
+            } elseif ($clubId) {
+                // First race of the year OR not locked: use club from CSV
+                // This is the key fix: CSV club takes precedence for first race
                 $resultClubId = $clubId;
-                // Also set this as the rider's club for that year
+                // Set/update this as the rider's club for the year
                 setRiderClubForYear($db, $riderId, $clubId, $eventYear);
+                // Also update the rider's profile club_id
+                $db->update('riders', ['club_id' => $clubId], 'id = ?', [$riderId]);
+            } else {
+                // No club in CSV, use rider's profile club
+                $resultClubId = getRiderClubForYear($db, $riderId, $eventYear, true);
             }
 
             $resultData = [

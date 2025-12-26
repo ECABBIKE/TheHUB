@@ -383,6 +383,8 @@ function ensureUTF8ForImport($filepath) {
 function importRidersFromCSV($filepath, $db, $seasonYear = null) {
  // Include club membership functions
  require_once __DIR__ . '/../includes/club-membership.php';
+ // Include smart club matching functions
+ require_once __DIR__ . '/../includes/club-matching.php';
 
  // Default to current year if not specified
  if ($seasonYear === null) {
@@ -828,39 +830,35 @@ function importRidersFromCSV($filepath, $db, $seasonYear = null) {
   }
   }
 
-  // Handle club - fuzzy matching
+  // Handle club - use smart matching (handles CK/Ck/Cykelklubben variants, case-insensitive)
   if (!empty($data['club'])) {
   $clubName = trim($data['club']);
 
+  // Normalize for cache key to catch variants
+  $normalizedClubName = normalizeClubName($clubName);
+  $clubCacheKey = !empty($normalizedClubName) ? $normalizedClubName : strtolower($clubName);
+
   // Check cache first
-  if (isset($clubCache[$clubName])) {
-   $riderData['club_id'] = $clubCache[$clubName];
+  if (isset($clubCache[$clubCacheKey])) {
+   $riderData['club_id'] = $clubCache[$clubCacheKey];
   } else {
-   // Try exact match first
-   $club = $db->getRow(
-   "SELECT id FROM clubs WHERE name = ? LIMIT 1",
-   [$clubName]
-   );
+   // Use smart matching from club-matching.php
+   // Handles: case-insensitive, CK/Ck/Cykelklubben variants, fuzzy/typo matching
+   $club = findClubByName($db, $clubName);
 
    if (!$club) {
-   // Try fuzzy match (LIKE)
-   $club = $db->getRow(
-   "SELECT id FROM clubs WHERE name LIKE ? LIMIT 1",
-    ['%' . $clubName . '%']
-   );
-   }
-
-   if (!$club) {
-   // Create new club
+   // Create new club with the original name from CSV
    $clubId = $db->insert('clubs', [
     'name' => $clubName,
     'active' => 1
    ]);
-   $clubCache[$clubName] = $clubId;
+   $clubCache[$clubCacheKey] = $clubId;
    $riderData['club_id'] = $clubId;
+   error_log("Import: Created new club '{$clubName}' with ID {$clubId}");
    } else {
-   $clubCache[$clubName] = $club['id'];
+   $clubCache[$clubCacheKey] = $club['id'];
    $riderData['club_id'] = $club['id'];
+   error_log("Import: Matched '{$clubName}' to existing club '{$club['name']}' (ID: {$club['id']})");
    }
   }
   } else {
