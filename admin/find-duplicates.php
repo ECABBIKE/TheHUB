@@ -531,20 +531,29 @@ foreach ($duplicateGroups as $group) {
  $r1 = $riders[0];
  $r2 = $riders[1];
 
- // Skip if different UCI or different birth year
+ // Check license types
  $uci1 = isRealUci($r1['license_number']) ? normalizeUci($r1['license_number']) : null;
  $uci2 = isRealUci($r2['license_number']) ? normalizeUci($r2['license_number']) : null;
+ $isSwe1 = !empty($r1['license_number']) && strpos($r1['license_number'], 'SWE') === 0;
+ $isSwe2 = !empty($r2['license_number']) && strpos($r2['license_number'], 'SWE') === 0;
 
+ // Only skip if BOTH have real (non-SWE) UCI IDs and they're different
  if ($uci1 && $uci2 && $uci1 !== $uci2) continue;
- if ($r1['birth_year'] && $r2['birth_year'] && $r1['birth_year'] !== $r2['birth_year']) continue;
+
+ // If one has SWE-ID and the other has UCI - DON'T skip based on birth year (likely same person)
+ $oneHasSweOneHasUci = ($isSwe1 && $uci2) || ($isSwe2 && $uci1);
+ if (!$oneHasSweOneHasUci && $r1['birth_year'] && $r2['birth_year'] && $r1['birth_year'] !== $r2['birth_year']) continue;
 
  // Check missing data
  $r1Missing = [];
  $r2Missing = [];
  if (!$r1['birth_year'] && $r2['birth_year']) $r1Missing[] = 'födelseår';
  if (!$r2['birth_year'] && $r1['birth_year']) $r2Missing[] = 'födelseår';
- if (!$uci1 && $uci2) $r1Missing[] = 'UCI ID';
- if (!$uci2 && $uci1) $r2Missing[] = 'UCI ID';
+ // Mark SWE-ID as missing real UCI when comparing to UCI profile
+ if ($isSwe1 && $uci2) $r1Missing[] = 'UCI ID (har SWE-ID)';
+ elseif (!$uci1 && $uci2) $r1Missing[] = 'UCI ID';
+ if ($isSwe2 && $uci1) $r2Missing[] = 'UCI ID (har SWE-ID)';
+ elseif (!$uci2 && $uci1) $r2Missing[] = 'UCI ID';
  if (!$r1['email'] && $r2['email']) $r1Missing[] = 'e-post';
  if (!$r2['email'] && $r1['email']) $r2Missing[] = 'e-post';
 
