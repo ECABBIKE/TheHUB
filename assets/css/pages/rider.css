@@ -1209,7 +1209,8 @@
 
 .dashboard-chart-svg--axes {
     width: 100%;
-    height: 250px;
+    height: auto;
+    max-height: 180px;
     display: block;
 }
 
