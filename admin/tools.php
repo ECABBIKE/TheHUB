@@ -371,6 +371,44 @@ include __DIR__ . '/components/unified-layout.php';
             </a>
         </div>
     </div>
+
+    <!-- Merge Specific Riders -->
+    <div class="tool-card">
+        <div class="tool-card-header">
+            <div class="tool-icon warning">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m8 6 4-4 4 4"/><path d="M12 2v10.3a4 4 0 0 1-1.172 2.872L4 22"/><path d="m20 22-5-5"/></svg>
+            </div>
+            <div>
+                <h4 class="tool-title">Slå ihop specifika åkare</h4>
+                <p class="tool-description">Manuellt välja och slå ihop två specifika deltagare.</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/merge-specific-riders" class="btn-admin btn-admin-warning flex-1">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm"><path d="m8 6 4-4 4 4"/><path d="M12 2v10.3"/></svg>
+                Slå ihop manuellt
+            </a>
+        </div>
+    </div>
+
+    <!-- Enrich Riders -->
+    <div class="tool-card">
+        <div class="tool-card-header">
+            <div class="tool-icon">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+            </div>
+            <div>
+                <h4 class="tool-title">Berika åkardata</h4>
+                <p class="tool-description">Komplettera åkarprofiler med saknad data.</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/enrich-riders" class="btn-admin btn-admin-secondary flex-1">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
+                Berika åkare
+            </a>
+        </div>
+    </div>
 </div>
 
 <h3 class="section-title">Klubbhantering</h3>
@@ -625,7 +663,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/point-scales.php" class="btn-admin btn-admin-primary flex-1">
+            <a href="/admin/point-scales" class="btn-admin btn-admin-primary flex-1">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm"><line x1="18" x2="18" y1="20" y2="10"/><line x1="12" x2="12" y1="20" y2="4"/></svg>
                 Hantera poängmallar
             </a>
@@ -686,7 +724,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/rebuild-stats.php" class="btn-admin btn-admin-primary flex-1">
+            <a href="/admin/rebuild-stats" class="btn-admin btn-admin-primary flex-1">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm"><path d="M21.5 2v6h-6M2.5 22v-6h6"/></svg>
                 Rebuild statistik
             </a>
@@ -751,7 +789,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/run-migrations.php" class="btn-admin btn-admin-secondary flex-1">
+            <a href="/admin/migrations" class="btn-admin btn-admin-secondary flex-1">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5V19A9 3 0 0 0 21 19V5"/></svg>
                 Kör migrationer
             </a>
@@ -888,7 +926,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/ranking-backfill.php" class="btn-admin btn-admin-primary flex-1">
+            <a href="/admin/ranking-backfill" class="btn-admin btn-admin-primary flex-1">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
                 Generera snapshots
             </a>
