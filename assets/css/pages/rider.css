@@ -1205,12 +1205,12 @@
 .dashboard-chart-body--axes {
     padding: 0;
     width: 100%;
+    aspect-ratio: 450 / 200;
 }
 
 .dashboard-chart-svg--axes {
     width: 100%;
-    height: auto;
-    max-height: 180px;
+    height: 100%;
     display: block;
 }
 
