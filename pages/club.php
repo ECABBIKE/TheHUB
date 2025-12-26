@@ -1,6 +1,6 @@
 <?php
 /**
- * V3 Single Club Page - Club profile with members and stats
+ * V3.5 Club Profile Page - Large logo, all-time members with year badges
  */
 
 $db = hub_db();
@@ -26,28 +26,14 @@ foreach ($rankingPaths as $path) {
     }
 }
 
-// Load filter setting from admin configuration
-$publicSettings = require HUB_V3_ROOT . '/config/public_settings.php';
-$filter = $publicSettings['public_riders_display'] ?? 'all';
-
 if (!$clubId) {
     header('Location: /riders');
     exit;
 }
 
-// Get selected year from query string (default to current year)
 $currentYear = (int)date('Y');
-$selectedYear = isset($_GET['year']) ? (int)$_GET['year'] : $currentYear;
-
-// Validate year range
-if ($selectedYear < 2016 || $selectedYear > $currentYear + 1) {
-    $selectedYear = $currentYear;
-}
 
 try {
-    // DEBUG: Performance timer (remove after testing)
-    $debugStartTime = microtime(true);
-
     // Fetch club details
     $stmt = $db->prepare("SELECT * FROM clubs WHERE id = ?");
     $stmt->execute([$clubId]);
@@ -58,7 +44,64 @@ try {
         return;
     }
 
-    // Get available years for this club from rider_club_seasons
+    // Get ALL unique members across all years with their membership years
+    $stmt = $db->prepare("
+        SELECT
+            r.id,
+            r.firstname,
+            r.lastname,
+            r.birth_year,
+            r.gender,
+            GROUP_CONCAT(DISTINCT rcs.season_year ORDER BY rcs.season_year DESC SEPARATOR ',') as member_years
+        FROM riders r
+        INNER JOIN rider_club_seasons rcs ON r.id = rcs.rider_id AND rcs.club_id = ?
+        WHERE r.active = 1
+        GROUP BY r.id
+        ORDER BY r.lastname, r.firstname
+    ");
+    $stmt->execute([$clubId]);
+    $allMembers = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Also get riders with current club_id but no season records
+    $stmt = $db->prepare("
+        SELECT
+            r.id,
+            r.firstname,
+            r.lastname,
+            r.birth_year,
+            r.gender
+        FROM riders r
+        LEFT JOIN rider_club_seasons rcs ON r.id = rcs.rider_id AND rcs.club_id = ?
+        WHERE r.club_id = ? AND r.active = 1 AND rcs.id IS NULL
+        ORDER BY r.lastname, r.firstname
+    ");
+    $stmt->execute([$clubId, $clubId]);
+    $currentMembers = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Merge: add current year to those without season records
+    foreach ($currentMembers as $member) {
+        $member['member_years'] = (string)$currentYear;
+        $allMembers[] = $member;
+    }
+
+    // Get unique member IDs
+    $memberIds = array_unique(array_column($allMembers, 'id'));
+    $uniqueMembers = [];
+    foreach ($allMembers as $m) {
+        if (!isset($uniqueMembers[$m['id']])) {
+            $uniqueMembers[$m['id']] = $m;
+        } else {
+            // Merge years if duplicate
+            $existingYears = explode(',', $uniqueMembers[$m['id']]['member_years']);
+            $newYears = explode(',', $m['member_years']);
+            $allYears = array_unique(array_merge($existingYears, $newYears));
+            rsort($allYears);
+            $uniqueMembers[$m['id']]['member_years'] = implode(',', $allYears);
+        }
+    }
+    $members = array_values($uniqueMembers);
+
+    // Get available years for stats
     $stmt = $db->prepare("
         SELECT DISTINCT season_year
         FROM rider_club_seasons
@@ -68,163 +111,26 @@ try {
     $stmt->execute([$clubId]);
     $availableYears = array_column($stmt->fetchAll(PDO::FETCH_ASSOC), 'season_year');
 
-    // Add current year if not in list
-    if (!in_array($currentYear, $availableYears)) {
-        array_unshift($availableYears, $currentYear);
-    }
+    // Calculate total stats across all years
+    $totalUniqueMembers = count($members);
 
-    // Fetch club members for selected year
-    // First try rider_club_seasons, then fall back to riders.club_id
-    if ($filter === 'with_results') {
-        // Show only riders with results for this year
-        $stmt = $db->prepare("
-            SELECT DISTINCT r.id, r.firstname, r.lastname, r.birth_year, r.gender,
-                   rcs.locked as membership_locked
-            FROM riders r
-            LEFT JOIN rider_club_seasons rcs ON r.id = rcs.rider_id AND rcs.season_year = ?
-            INNER JOIN results res ON r.id = res.cyclist_id
-            INNER JOIN events e ON res.event_id = e.id
-            WHERE (rcs.club_id = ? OR (rcs.club_id IS NULL AND r.club_id = ?))
-              AND r.active = 1
-              AND YEAR(e.date) = ?
-            ORDER BY r.lastname, r.firstname
-        ");
-        $stmt->execute([$selectedYear, $clubId, $clubId, $selectedYear]);
-    } else {
-        // Show all members for this year (from rider_club_seasons OR current profile)
-        $stmt = $db->prepare("
-            SELECT r.id, r.firstname, r.lastname, r.birth_year, r.gender,
-                   rcs.locked as membership_locked
-            FROM riders r
-            LEFT JOIN rider_club_seasons rcs ON r.id = rcs.rider_id AND rcs.season_year = ?
-            WHERE (rcs.club_id = ? OR (rcs.club_id IS NULL AND r.club_id = ?))
-              AND r.active = 1
-            ORDER BY r.lastname, r.firstname
-        ");
-        $stmt->execute([$selectedYear, $clubId, $clubId]);
-    }
-    $members = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-    // PERFORMANCE FIX: Fetch ALL results for all members in ONE query instead of N+1
-    // This reduces database calls from N (one per member) to just 2 queries total
-
-    $memberIds = array_column($members, 'id');
-    $memberStats = [];
-
+    // Get total results count for this club's members
     if (!empty($memberIds)) {
-        // Initialize stats for all members
-        foreach ($memberIds as $mid) {
-            $memberStats[$mid] = [
-                'total_races' => 0,
-                'total_points' => 0,
-                'podiums' => 0,
-                'best_position' => null,
-                'results' => []
-            ];
-        }
-
-        // Query 1: Get all finished results for club members
         $placeholders = implode(',', array_fill(0, count($memberIds), '?'));
         $stmt = $db->prepare("
-            SELECT res.id, res.cyclist_id, res.event_id, res.class_id, res.points, res.finish_time
+            SELECT COUNT(DISTINCT res.id) as total_races,
+                   SUM(res.points) as total_points
             FROM results res
             WHERE res.cyclist_id IN ($placeholders) AND res.status = 'finished'
         ");
         $stmt->execute($memberIds);
-        $allMemberResults = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-        // Collect unique event/class combinations we need to calculate positions for
-        $eventClassCombos = [];
-        foreach ($allMemberResults as $res) {
-            $key = $res['event_id'] . '|' . $res['class_id'];
-            if (!isset($eventClassCombos[$key])) {
-                $eventClassCombos[$key] = ['event_id' => $res['event_id'], 'class_id' => $res['class_id']];
-            }
-            // Store result for later processing
-            $memberStats[$res['cyclist_id']]['results'][] = $res;
-        }
-
-        // Query 2: Get ALL results for these event/class combos to calculate positions
-        // This is needed to know where club members placed relative to everyone
-        $allPositionData = [];
-        if (!empty($eventClassCombos)) {
-            $orConditions = [];
-            $params = [];
-            foreach ($eventClassCombos as $combo) {
-                $orConditions[] = "(event_id = ? AND class_id = ?)";
-                $params[] = $combo['event_id'];
-                $params[] = $combo['class_id'];
-            }
-
-            $stmt = $db->prepare("
-                SELECT id, event_id, class_id, cyclist_id, finish_time
-                FROM results
-                WHERE status = 'finished' AND (" . implode(' OR ', $orConditions) . ")
-                ORDER BY event_id, class_id, finish_time
-            ");
-            $stmt->execute($params);
-            $positionResults = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-            // Build position lookup: event_id|class_id|cyclist_id => position
-            $currentEventClass = '';
-            $position = 0;
-            foreach ($positionResults as $pr) {
-                $eventClassKey = $pr['event_id'] . '|' . $pr['class_id'];
-                if ($eventClassKey !== $currentEventClass) {
-                    $currentEventClass = $eventClassKey;
-                    $position = 0;
-                }
-                $position++;
-                $lookupKey = $pr['event_id'] . '|' . $pr['class_id'] . '|' . $pr['cyclist_id'];
-                $allPositionData[$lookupKey] = $position;
-            }
-        }
-
-        // Calculate stats for each member using pre-fetched data
-        foreach ($memberStats as $cyclistId => &$stats) {
-            $stats['total_races'] = count($stats['results']);
-            $stats['total_points'] = array_sum(array_column($stats['results'], 'points'));
-
-            foreach ($stats['results'] as $res) {
-                $posKey = $res['event_id'] . '|' . $res['class_id'] . '|' . $cyclistId;
-                $classPosition = $allPositionData[$posKey] ?? null;
-
-                if ($classPosition !== null) {
-                    if ($classPosition <= 3) {
-                        $stats['podiums']++;
-                    }
-                    if ($stats['best_position'] === null || $classPosition < $stats['best_position']) {
-                        $stats['best_position'] = (int)$classPosition;
-                    }
-                }
-            }
-            unset($stats['results']); // Free memory
-        }
-        unset($stats);
+        $statsRow = $stmt->fetch(PDO::FETCH_ASSOC);
+        $totalRaces = (int)($statsRow['total_races'] ?? 0);
+        $totalPoints = (int)($statsRow['total_points'] ?? 0);
+    } else {
+        $totalRaces = 0;
+        $totalPoints = 0;
     }
-
-    // Assign calculated stats to members
-    foreach ($members as &$member) {
-        $mid = $member['id'];
-        $member['total_races'] = $memberStats[$mid]['total_races'] ?? 0;
-        $member['total_points'] = $memberStats[$mid]['total_points'] ?? 0;
-        $member['podiums'] = $memberStats[$mid]['podiums'] ?? 0;
-        $member['best_position'] = $memberStats[$mid]['best_position'] ?? null;
-    }
-    unset($member);
-
-    // Sort by points
-    usort($members, function($a, $b) {
-        if ($b['total_points'] != $a['total_points']) {
-            return $b['total_points'] - $a['total_points'];
-        }
-        return $b['total_races'] - $a['total_races'];
-    });
-
-    $totalMembers = count($members);
-    $totalRaces = array_sum(array_column($members, 'total_races'));
-    $totalPoints = array_sum(array_column($members, 'total_points'));
-    $totalPodiums = array_sum(array_column($members, 'podiums'));
 
     // Get club ranking position
     $clubRankingPosition = null;
@@ -238,23 +144,31 @@ try {
         }
     }
 
-    // DEBUG: Stop timer
-    $debugQueryTime = round((microtime(true) - $debugStartTime) * 1000, 2);
+    // Count members per year for display
+    $membersPerYear = [];
+    foreach ($availableYears as $year) {
+        $membersPerYear[$year] = 0;
+    }
+    foreach ($members as $m) {
+        $years = explode(',', $m['member_years']);
+        foreach ($years as $y) {
+            if (isset($membersPerYear[$y])) {
+                $membersPerYear[$y]++;
+            }
+        }
+    }
 
 } catch (Exception $e) {
     $error = $e->getMessage();
     $club = null;
-    $debugQueryTime = 0;
 }
 
 if (!$club) {
     include HUB_V3_ROOT . '/pages/404.php';
     return;
 }
-?>
 
-<?php
-// Check for club logo - first uploaded file, then URL from database
+// Check for club logo
 $clubLogo = null;
 $clubLogoDir = dirname(__DIR__) . '/uploads/clubs/';
 $clubLogoUrl = '/uploads/clubs/';
@@ -264,263 +178,140 @@ foreach (['jpg', 'jpeg', 'png', 'webp', 'svg'] as $ext) {
         break;
     }
 }
-// Fallback to logo URL from database
 if (!$clubLogo && !empty($club['logo'])) {
     $clubLogo = $club['logo'];
 }
 ?>
 
+<link rel="stylesheet" href="/assets/css/pages/club.css?v=<?= file_exists(dirname(__DIR__) . '/assets/css/pages/club.css') ? filemtime(dirname(__DIR__) . '/assets/css/pages/club.css') : time() ?>">
+
 <?php if (isset($error)): ?>
-<section class="card mb-lg">
-  <div class="card-title text-error">Fel</div>
-  <p><?= htmlspecialchars($error) ?></p>
-</section>
+<div class="alert alert-error">
+    <i data-lucide="alert-circle"></i>
+    <?= htmlspecialchars($error) ?>
+</div>
 <?php endif; ?>
 
-<!-- Club Header Grid: Hero + Achievements side by side on desktop -->
-<?php if (function_exists('renderClubAchievements')): ?>
-<link rel="stylesheet" href="/assets/css/achievements.css?v=<?= file_exists(dirname(__DIR__) . '/assets/css/achievements.css') ? filemtime(dirname(__DIR__) . '/assets/css/achievements.css') : time() ?>">
-<?php endif; ?>
+<!-- Club Profile Card -->
+<div class="club-profile-card">
+    <div class="club-logo-large">
+        <?php if ($clubLogo): ?>
+            <img src="<?= htmlspecialchars($clubLogo) ?>" alt="<?= htmlspecialchars($club['name']) ?>">
+        <?php else: ?>
+            <div class="club-logo-placeholder">
+                <i data-lucide="users"></i>
+            </div>
+        <?php endif; ?>
+    </div>
 
-<div class="club-header-grid">
-  <!-- Club Hero -->
-  <section class="club-hero club-hero--grid">
-    <div class="hero-accent-bar"></div>
-    <div class="hero-content">
-      <div class="hero-top">
-        <div class="club-logo-container">
-          <div class="club-logo">
-            <?php if ($clubLogo): ?>
-              <img src="<?= htmlspecialchars($clubLogo) ?>" alt="<?= htmlspecialchars($club['name']) ?>">
-            <?php else: ?>
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5">
-                <path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"/>
-                <circle cx="9" cy="7" r="4"/>
-                <path d="M23 21v-2a4 4 0 0 0-3-3.87"/>
-                <path d="M16 3.13a4 4 0 0 1 0 7.75"/>
-              </svg>
-            <?php endif; ?>
-          </div>
-          <?php if ($clubRankingPosition): ?>
-          <div class="ranking-badge">
-            <span class="rank-label">Ranking</span>
-            <span class="rank-number">#<?= $clubRankingPosition ?></span>
-          </div>
-          <?php endif; ?>
+    <h1 class="club-name"><?= htmlspecialchars($club['name']) ?></h1>
+
+    <?php if ($club['city']): ?>
+    <p class="club-location">
+        <i data-lucide="map-pin"></i>
+        <?= htmlspecialchars($club['city']) ?>
+    </p>
+    <?php endif; ?>
+
+    <?php if ($clubRankingPosition): ?>
+    <div class="club-ranking">
+        <span class="ranking-label">Klubbranking</span>
+        <span class="ranking-position">#<?= $clubRankingPosition ?></span>
+    </div>
+    <?php endif; ?>
+
+    <div class="club-stats">
+        <div class="club-stat">
+            <span class="stat-value"><?= $totalUniqueMembers ?></span>
+            <span class="stat-label">Medlemmar</span>
         </div>
-
-        <div class="hero-info">
-          <h1 class="club-name"><?= htmlspecialchars($club['name']) ?></h1>
-          <?php if ($club['city']): ?>
-          <span class="club-location"><?= htmlspecialchars($club['city']) ?></span>
-          <?php endif; ?>
-          <div class="club-badges">
-            <span class="club-badge"><?= $totalMembers ?> medlemmar</span>
-            <?php if ($totalPoints > 0): ?>
-            <span class="club-badge club-badge--accent"><?= number_format($totalPoints) ?> poäng</span>
-            <?php endif; ?>
-          </div>
+        <div class="club-stat">
+            <span class="stat-value"><?= count($availableYears) ?></span>
+            <span class="stat-label">Säsonger</span>
         </div>
-      </div>
+        <div class="club-stat">
+            <span class="stat-value"><?= number_format($totalPoints) ?></span>
+            <span class="stat-label">Poäng</span>
+        </div>
+    </div>
 
-      <?php if ($club['website'] || $club['email']): ?>
-      <div class="hero-contact">
+    <?php if ($club['website'] || $club['email']): ?>
+    <div class="club-contact">
         <?php if ($club['website']): ?>
         <a href="<?= htmlspecialchars($club['website']) ?>" target="_blank" rel="noopener" class="contact-link">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/>
-            <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
-          </svg>
-          <span><?= htmlspecialchars(preg_replace('#^https?://#', '', $club['website'])) ?></span>
+            <i data-lucide="globe"></i>
+            <?= htmlspecialchars(preg_replace('#^https?://#', '', $club['website'])) ?>
         </a>
         <?php endif; ?>
         <?php if ($club['email']): ?>
         <a href="mailto:<?= htmlspecialchars($club['email']) ?>" class="contact-link">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-            <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
-            <polyline points="22,6 12,13 2,6"/>
-          </svg>
-          <span><?= htmlspecialchars($club['email']) ?></span>
+            <i data-lucide="mail"></i>
+            <?= htmlspecialchars($club['email']) ?>
         </a>
         <?php endif; ?>
-      </div>
-      <?php endif; ?>
     </div>
-  </section>
-
-  <!-- Club Achievements -->
-  <?php if (function_exists('renderClubAchievements')): ?>
-  <section class="club-achievements-grid">
-    <?= renderClubAchievements($db, $clubId) ?>
-  </section>
-  <?php endif; ?>
+    <?php endif; ?>
 </div>
 
-<style>
-/* Club Header Grid - 50/50 on desktop */
-.club-header-grid {
-  display: grid;
-  grid-template-columns: 1fr;
-  gap: var(--space-lg);
-  margin-bottom: var(--space-lg);
-}
-
-@media (min-width: 1024px) {
-  .club-header-grid {
-    grid-template-columns: 1fr 1fr;
-    align-items: stretch;
-  }
-
-  .club-hero--grid {
-    height: 100%;
-    display: flex;
-    flex-direction: column;
-  }
-
-  .club-hero--grid .hero-content {
-    flex: 1;
-    display: flex;
-    flex-direction: column;
-    justify-content: center;
-  }
-
-  .club-achievements-grid {
-    height: 100%;
-  }
-
-  .club-achievements-grid .achievement-card {
-    height: 100%;
-    margin-bottom: 0;
-  }
-}
-
-/* Make achievements card fill height */
-.club-achievements-grid .achievement-card {
-  display: flex;
-  flex-direction: column;
-}
-
-.club-achievements-grid .achievement-badges {
-  flex: 1;
-}
-</style>
-
-<!-- Members -->
-<section class="card">
-  <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: var(--space-md);">
-    <div>
-      <h2 class="card-title">Medlemmar <?= $selectedYear ?></h2>
-      <p class="card-subtitle"><?= $totalMembers ?> åkare detta år</p>
+<!-- Members List -->
+<div class="club-members-section">
+    <div class="section-header">
+        <h2 class="section-title">
+            <i data-lucide="users"></i>
+            Alla medlemmar
+        </h2>
+        <p class="section-subtitle"><?= $totalUniqueMembers ?> unika medlemmar genom åren</p>
     </div>
-    <div class="year-filter" style="display: flex; align-items: center; gap: var(--space-sm);">
-      <label for="year-select" style="font-size: 14px; color: var(--color-text);">Säsong:</label>
-      <select id="year-select" class="form-select" style="width: auto; min-width: 100px;"
-              onchange="window.location.href='?year=' + this.value">
-        <?php for ($y = $currentYear; $y >= 2016; $y--): ?>
-          <option value="<?= $y ?>" <?= $y == $selectedYear ? 'selected' : '' ?>><?= $y ?></option>
-        <?php endfor; ?>
-      </select>
-    </div>
-  </div>
 
-  <?php if (empty($members)): ?>
-  <div class="empty-state">
-    <div class="empty-state-icon"><i data-lucide="users"></i></div>
-    <p>Inga registrerade medlemmar för <?= $selectedYear ?></p>
-    <?php if ($selectedYear != $currentYear): ?>
-    <a href="?year=<?= $currentYear ?>" class="btn btn-secondary" style="margin-top: var(--space-md);">
-      Visa <?= $currentYear ?>
-    </a>
-    <?php endif; ?>
-  </div>
-  <?php else: ?>
-  <div class="table-wrapper">
-    <table class="table table--striped table--hover">
-      <thead>
-        <tr>
-          <th class="col-rider">Namn</th>
-          <th class="text-center">Starter</th>
-          <th class="text-center table-col-hide-portrait">Pallplatser</th>
-          <th class="text-center">Bästa</th>
-          <th class="text-right table-col-hide-portrait">Poäng</th>
-        </tr>
-      </thead>
-      <tbody>
-        <?php foreach ($members as $member): ?>
-        <tr onclick="window.location='/rider/<?= $member['id'] ?>'" class="cursor-pointer">
-          <td class="col-rider">
-            <a href="/rider/<?= $member['id'] ?>" class="rider-link">
-              <?= htmlspecialchars($member['firstname'] . ' ' . $member['lastname']) ?>
-            </a>
-            <?php if ($member['birth_year']): ?>
-              <span class="rider-year"><?= $member['birth_year'] ?></span>
-            <?php endif; ?>
-          </td>
-          <td class="text-center">
-            <strong><?= $member['total_races'] ?: 0 ?></strong>
-          </td>
-          <td class="text-center table-col-hide-portrait">
-            <?php if ($member['podiums'] > 0): ?>
-              <span class="podium-badge">🏆 <?= $member['podiums'] ?></span>
-            <?php else: ?>
-              <span class="text-muted">-</span>
-            <?php endif; ?>
-          </td>
-          <td class="text-center">
-            <?php if ($member['best_position']): ?>
-              <?php if ($member['best_position'] == 1): ?>
-                <img src="/assets/icons/medal-1st.svg" alt="1:a" class="medal-icon">
-              <?php elseif ($member['best_position'] == 2): ?>
-                <img src="/assets/icons/medal-2nd.svg" alt="2:a" class="medal-icon">
-              <?php elseif ($member['best_position'] == 3): ?>
-                <img src="/assets/icons/medal-3rd.svg" alt="3:e" class="medal-icon">
-              <?php else: ?>
-                <span class="position-badge">#<?= $member['best_position'] ?></span>
-              <?php endif; ?>
-            <?php else: ?>
-              <span class="text-muted">-</span>
-            <?php endif; ?>
-          </td>
-          <td class="text-right table-col-hide-portrait">
-            <?php if ($member['total_points'] > 0): ?>
-              <span class="points-value"><?= number_format($member['total_points'], 0) ?></span>
-            <?php else: ?>
-              <span class="text-muted">-</span>
-            <?php endif; ?>
-          </td>
-        </tr>
+    <?php if (empty($members)): ?>
+    <div class="empty-state">
+        <div class="empty-icon"><i data-lucide="users"></i></div>
+        <h3>Inga medlemmar registrerade</h3>
+        <p>Det finns inga registrerade medlemmar för denna klubb.</p>
+    </div>
+    <?php else: ?>
+    <div class="members-list">
+        <?php foreach ($members as $member):
+            $years = explode(',', $member['member_years']);
+            $yearCount = count($years);
+            $latestYear = $years[0] ?? '';
+            $isCurrentMember = in_array($currentYear, $years);
+        ?>
+        <a href="/rider/<?= $member['id'] ?>" class="member-row <?= $isCurrentMember ? 'member-current' : '' ?>">
+            <div class="member-avatar">
+                <?= strtoupper(substr($member['firstname'], 0, 1) . substr($member['lastname'], 0, 1)) ?>
+            </div>
+
+            <div class="member-info">
+                <span class="member-name"><?= htmlspecialchars($member['firstname'] . ' ' . $member['lastname']) ?></span>
+                <?php if ($member['birth_year']): ?>
+                <span class="member-birth"><?= $member['birth_year'] ?></span>
+                <?php endif; ?>
+            </div>
+
+            <div class="member-years">
+                <?php if ($yearCount <= 3): ?>
+                    <?php foreach ($years as $y): ?>
+                    <span class="year-badge <?= $y == $currentYear ? 'year-current' : '' ?>"><?= $y ?></span>
+                    <?php endforeach; ?>
+                <?php else: ?>
+                    <span class="year-badge <?= $latestYear == $currentYear ? 'year-current' : '' ?>"><?= $latestYear ?></span>
+                    <span class="year-more">+<?= $yearCount - 1 ?> år</span>
+                <?php endif; ?>
+            </div>
+
+            <div class="member-arrow">
+                <i data-lucide="chevron-right"></i>
+            </div>
+        </a>
         <?php endforeach; ?>
-      </tbody>
-    </table>
-  </div>
+    </div>
+    <?php endif; ?>
+</div>
 
-  <!-- Mobile Card View -->
-  <div class="result-list">
-    <?php foreach ($members as $member): ?>
-    <a href="/rider/<?= $member['id'] ?>" class="result-item">
-      <div class="result-place">
-        <?php if ($member['best_position'] && $member['best_position'] <= 3): ?>
-          <?php if ($member['best_position'] == 1): ?>
-            <img src="/assets/icons/medal-1st.svg" alt="1:a" class="medal-icon">
-          <?php elseif ($member['best_position'] == 2): ?>
-            <img src="/assets/icons/medal-2nd.svg" alt="2:a" class="medal-icon">
-          <?php else: ?>
-            <img src="/assets/icons/medal-3rd.svg" alt="3:e" class="medal-icon">
-          <?php endif; ?>
-        <?php else: ?>
-          <?= $member['total_races'] ?: 0 ?>
-        <?php endif; ?>
-      </div>
-      <div class="result-info">
-        <div class="result-name"><?= htmlspecialchars($member['firstname'] . ' ' . $member['lastname']) ?></div>
-        <div class="result-club"><?= $member['total_races'] ?: 0 ?> starter<?= $member['podiums'] > 0 ? ' • 🏆 ' . $member['podiums'] : '' ?></div>
-      </div>
-      <div class="result-points">
-        <div class="points-big"><?= number_format($member['total_points'] ?? 0) ?></div>
-        <div class="points-label">poäng</div>
-      </div>
-    </a>
-    <?php endforeach; ?>
-  </div>
-  <?php endif; ?>
-</section>
+<?php if (function_exists('renderClubAchievements')): ?>
+<link rel="stylesheet" href="/assets/css/achievements.css?v=<?= file_exists(dirname(__DIR__) . '/assets/css/achievements.css') ? filemtime(dirname(__DIR__) . '/assets/css/achievements.css') : time() ?>">
+<div class="club-achievements-section">
+    <?= renderClubAchievements($db, $clubId) ?>
+</div>
+<?php endif; ?>
