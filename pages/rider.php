@@ -143,6 +143,20 @@ try {
         }
     }
 
+    // Fetch club membership history
+    $clubHistoryStmt = $db->prepare("
+        SELECT rcs.season_year, rcs.club_id, c.name as club_name, rcs.locked,
+               (SELECT COUNT(*) FROM results res
+                JOIN events e ON res.event_id = e.id
+                WHERE res.cyclist_id = ? AND YEAR(e.date) = rcs.season_year) as results_count
+        FROM rider_club_seasons rcs
+        JOIN clubs c ON rcs.club_id = c.id
+        WHERE rcs.rider_id = ?
+        ORDER BY rcs.season_year DESC
+    ");
+    $clubHistoryStmt->execute([$riderId, $riderId]);
+    $clubHistory = $clubHistoryStmt->fetchAll(PDO::FETCH_ASSOC);
+
     // Fetch rider's results
     $stmt = $db->prepare("
         SELECT

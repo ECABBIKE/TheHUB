@@ -35,6 +35,15 @@ if (!$clubId) {
     exit;
 }
 
+// Get selected year from query string (default to current year)
+$currentYear = (int)date('Y');
+$selectedYear = isset($_GET['year']) ? (int)$_GET['year'] : $currentYear;
+
+// Validate year range
+if ($selectedYear < 2016 || $selectedYear > $currentYear + 1) {
+    $selectedYear = $currentYear;
+}
+
 try {
     // DEBUG: Performance timer (remove after testing)
     $debugStartTime = microtime(true);
@@ -49,26 +58,51 @@ try {
         return;
     }
 
-    // Fetch club members based on admin filter setting
+    // Get available years for this club from rider_club_seasons
+    $stmt = $db->prepare("
+        SELECT DISTINCT season_year
+        FROM rider_club_seasons
+        WHERE club_id = ?
+        ORDER BY season_year DESC
+    ");
+    $stmt->execute([$clubId]);
+    $availableYears = array_column($stmt->fetchAll(PDO::FETCH_ASSOC), 'season_year');
+
+    // Add current year if not in list
+    if (!in_array($currentYear, $availableYears)) {
+        array_unshift($availableYears, $currentYear);
+    }
+
+    // Fetch club members for selected year
+    // First try rider_club_seasons, then fall back to riders.club_id
     if ($filter === 'with_results') {
-        // Show only riders with results
+        // Show only riders with results for this year
         $stmt = $db->prepare("
-            SELECT DISTINCT r.id, r.firstname, r.lastname, r.birth_year, r.gender
+            SELECT DISTINCT r.id, r.firstname, r.lastname, r.birth_year, r.gender,
+                   rcs.locked as membership_locked
             FROM riders r
+            LEFT JOIN rider_club_seasons rcs ON r.id = rcs.rider_id AND rcs.season_year = ?
             INNER JOIN results res ON r.id = res.cyclist_id
-            WHERE r.club_id = ? AND r.active = 1
+            INNER JOIN events e ON res.event_id = e.id
+            WHERE (rcs.club_id = ? OR (rcs.club_id IS NULL AND r.club_id = ?))
+              AND r.active = 1
+              AND YEAR(e.date) = ?
             ORDER BY r.lastname, r.firstname
         ");
+        $stmt->execute([$selectedYear, $clubId, $clubId, $selectedYear]);
     } else {
-        // Show all active members
+        // Show all members for this year (from rider_club_seasons OR current profile)
         $stmt = $db->prepare("
-            SELECT id, firstname, lastname, birth_year, gender
-            FROM riders
-            WHERE club_id = ? AND active = 1
-            ORDER BY lastname, firstname
+            SELECT r.id, r.firstname, r.lastname, r.birth_year, r.gender,
+                   rcs.locked as membership_locked
+            FROM riders r
+            LEFT JOIN rider_club_seasons rcs ON r.id = rcs.rider_id AND rcs.season_year = ?
+            WHERE (rcs.club_id = ? OR (rcs.club_id IS NULL AND r.club_id = ?))
+              AND r.active = 1
+            ORDER BY r.lastname, r.firstname
         ");
+        $stmt->execute([$selectedYear, $clubId, $clubId]);
     }
-    $stmt->execute([$clubId]);
     $members = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     // PERFORMANCE FIX: Fetch ALL results for all members in ONE query instead of N+1
@@ -373,17 +407,31 @@ if (!$clubLogo && !empty($club['logo'])) {
 
 <!-- Members -->
 <section class="card">
-  <div class="card-header">
+  <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: var(--space-md);">
     <div>
-      <h2 class="card-title">Medlemmar</h2>
-      <p class="card-subtitle"><?= $totalMembers ?> aktiva åkare</p>
+      <h2 class="card-title">Medlemmar <?= $selectedYear ?></h2>
+      <p class="card-subtitle"><?= $totalMembers ?> åkare detta år</p>
+    </div>
+    <div class="year-filter" style="display: flex; align-items: center; gap: var(--space-sm);">
+      <label for="year-select" style="font-size: 14px; color: var(--color-text);">Säsong:</label>
+      <select id="year-select" class="form-select" style="width: auto; min-width: 100px;"
+              onchange="window.location.href='?year=' + this.value">
+        <?php for ($y = $currentYear; $y >= 2016; $y--): ?>
+          <option value="<?= $y ?>" <?= $y == $selectedYear ? 'selected' : '' ?>><?= $y ?></option>
+        <?php endfor; ?>
+      </select>
     </div>
   </div>
 
   <?php if (empty($members)): ?>
   <div class="empty-state">
-    <div class="empty-state-icon">👥</div>
-    <p>Inga registrerade medlemmar</p>
+    <div class="empty-state-icon"><i data-lucide="users"></i></div>
+    <p>Inga registrerade medlemmar för <?= $selectedYear ?></p>
+    <?php if ($selectedYear != $currentYear): ?>
+    <a href="?year=<?= $currentYear ?>" class="btn btn-secondary" style="margin-top: var(--space-md);">
+      Visa <?= $currentYear ?>
+    </a>
+    <?php endif; ?>
   </div>
   <?php else: ?>
   <div class="table-wrapper">
