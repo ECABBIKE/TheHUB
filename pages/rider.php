@@ -1693,7 +1693,7 @@ document.addEventListener('DOMContentLoaded', function() {
     background: rgba(0,0,0,0.7);
     backdrop-filter: blur(4px);
     -webkit-backdrop-filter: blur(4px);
-    z-index: 1000;
+    z-index: 99999;
     justify-content: center;
     align-items: center;
     padding: var(--space-md);
@@ -1938,32 +1938,44 @@ document.addEventListener('DOMContentLoaded', function() {
 @media (max-width: 767px) {
     .claim-modal-overlay {
         padding: 0;
+        align-items: stretch;
     }
     .claim-modal {
-        max-width: 100%;
-        max-height: 100%;
-        height: 100%;
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100vw;
+        height: 100vh;
+        max-width: 100vw;
+        max-height: 100vh;
         border-radius: 0;
+        border: none;
         display: flex;
         flex-direction: column;
+        z-index: 1;
     }
     .claim-modal-header {
         position: sticky;
         top: 0;
         z-index: 10;
         flex-shrink: 0;
+        background: var(--color-bg-card);
     }
     .claim-modal-header h3 {
         font-size: 1rem;
     }
     .claim-modal-close {
-        width: 40px;
-        height: 40px;
+        width: 44px;
+        height: 44px;
         display: flex;
         align-items: center;
         justify-content: center;
-        background: var(--color-bg-card);
+        background: var(--color-bg-secondary);
         border-radius: var(--radius-full);
+    }
+    .claim-modal-close i {
+        width: 24px;
+        height: 24px;
     }
     .claim-modal-body {
         flex: 1;
