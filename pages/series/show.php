@@ -1063,6 +1063,48 @@ document.addEventListener('keydown', function(e) {
     font-size: 0.75rem;
     color: var(--color-text);
 }
+
+/* Mobile Fullscreen Modal */
+@media (max-width: 767px) {
+    .modal {
+        padding: 0;
+    }
+    .modal-content {
+        max-width: 100%;
+        max-height: 100%;
+        height: 100%;
+        border-radius: 0;
+    }
+    .modal-header {
+        position: sticky;
+        top: 0;
+        background: white;
+        z-index: 10;
+        padding: var(--space-md);
+        border-bottom: 1px solid var(--color-border);
+    }
+    .modal-header h3 {
+        font-size: 1rem;
+    }
+    .modal-header .btn-icon {
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--color-bg-secondary);
+        border-radius: var(--radius-full);
+    }
+    .modal-body {
+        flex: 1;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        padding: var(--space-md);
+    }
+    .modal-stats {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
 .table--sm {
     font-size: 0.875rem;
 }

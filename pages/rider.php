@@ -1934,15 +1934,42 @@ document.addEventListener('DOMContentLoaded', function() {
     opacity: 0.6;
     cursor: not-allowed !important;
 }
-@media (max-width: 540px) {
-    .claim-modal {
-        max-width: 100%;
-        max-height: 100vh;
-        border-radius: 0;
-        margin: 0;
-    }
+/* Mobile Fullscreen Modal */
+@media (max-width: 767px) {
     .claim-modal-overlay {
         padding: 0;
+    }
+    .claim-modal {
+        max-width: 100%;
+        max-height: 100%;
+        height: 100%;
+        border-radius: 0;
+        display: flex;
+        flex-direction: column;
+    }
+    .claim-modal-header {
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        flex-shrink: 0;
+    }
+    .claim-modal-header h3 {
+        font-size: 1rem;
+    }
+    .claim-modal-close {
+        width: 40px;
+        height: 40px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: var(--color-bg-card);
+        border-radius: var(--radius-full);
+    }
+    .claim-modal-body {
+        flex: 1;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        padding: var(--space-md);
     }
     .claim-social-grid {
         grid-template-columns: 1fr;
