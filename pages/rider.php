@@ -1940,19 +1940,18 @@ document.addEventListener('DOMContentLoaded', function() {
         top: var(--header-height, 60px);
         bottom: var(--mobile-nav-height, 64px);
         padding: var(--space-sm);
+        overflow: hidden;
     }
     .claim-modal {
         max-width: 100%;
         max-height: 100%;
-        height: auto;
+        height: 100%;
         border-radius: var(--radius-md);
         display: flex;
         flex-direction: column;
+        overflow: hidden;
     }
     .claim-modal-header {
-        position: sticky;
-        top: 0;
-        z-index: 10;
         flex-shrink: 0;
         background: var(--color-bg-card);
         border-radius: var(--radius-md) var(--radius-md) 0 0;
@@ -1978,6 +1977,7 @@ document.addEventListener('DOMContentLoaded', function() {
         overflow-y: auto;
         -webkit-overflow-scrolling: touch;
         padding: var(--space-md);
+        min-height: 0;
     }
     .claim-social-grid {
         grid-template-columns: 1fr;
