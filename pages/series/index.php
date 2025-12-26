@@ -25,21 +25,12 @@ try {
 $filterSeriesName = isset($_GET['series']) ? trim($_GET['series']) : null;
 $currentYear = (int)date('Y');
 
-// Check if user has set any filter params (series or year)
-$hasFilterParams = isset($_GET['series']) || isset($_GET['year']);
-
-if (!$hasFilterParams) {
-    // Initial page load - default to current year
-    $filterYear = $currentYear;
-} elseif (isset($_GET['year']) && $_GET['year'] === 'all') {
-    // Explicitly selected "Alla år"
-    $filterYear = null;
-} elseif (isset($_GET['year']) && is_numeric($_GET['year'])) {
-    // Specific year selected
+// Check if user has set any filter params
+// Default: show ALL years (like results page)
+if (isset($_GET['year']) && $_GET['year'] !== 'all' && is_numeric($_GET['year'])) {
     $filterYear = intval($_GET['year']);
 } else {
-    // Has series param but no year - show all years for that series
-    $filterYear = null;
+    $filterYear = null; // Show all years by default
 }
 
 // Get unique series names for dropdown
@@ -122,12 +113,10 @@ krsort($seriesByYear);
 
 $totalSeries = count($seriesList);
 
-// Page title
-$pageTitle = 'Tävlingsserier';
+// Page title - always "Serier" unless filtered to specific series
+$pageTitle = 'Serier';
 if ($filterSeriesName && !empty($seriesList)) {
     $pageTitle = $seriesList[0]['name'];
-} elseif ($filterYear) {
-    $pageTitle = "Serier $filterYear";
 }
 ?>
 
@@ -138,7 +127,7 @@ if ($filterSeriesName && !empty($seriesList)) {
         <i data-lucide="award" class="page-icon"></i>
         <?= htmlspecialchars($pageTitle) ?>
     </h1>
-    <p class="page-subtitle"><?= $totalSeries ?> tävlingsserier</p>
+    <p class="page-subtitle">Alla tävlingsserier</p>
 </div>
 
 <!-- Filters -->
