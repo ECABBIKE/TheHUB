@@ -3,6 +3,7 @@ require_once __DIR__ . '/../config.php';
 require_admin();
 
 $db = getDB();
+$isSuperAdmin = hasRole('super_admin');
 
 // Get rider ID
 $id = isset($_GET['id']) && is_numeric($_GET['id']) ? intval($_GET['id']) : null;
@@ -84,7 +85,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   }
  };
 
- // Prepare rider data (read-only fields excluded: license_number, license_type, license_category, license_valid_until, discipline)
+ // Prepare rider data (read-only fields excluded: license_number, license_type, license_category, license_valid_until)
+ // Note: discipline is editable by superadmin
  $riderData = [
  'firstname' => $firstname,
  'lastname' => $lastname,
@@ -105,6 +107,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
  'social_youtube' => $normalizeSocial($_POST['social_youtube'] ?? '', 'youtube'),
  'social_tiktok' => $normalizeSocial($_POST['social_tiktok'] ?? '', 'tiktok'),
  ];
+
+ // Superadmin can edit disciplines
+ if ($isSuperAdmin && isset($_POST['disciplines'])) {
+  $disciplines = is_array($_POST['disciplines']) ? $_POST['disciplines'] : [];
+  $riderData['discipline'] = implode(',', array_filter($disciplines));
+ }
 
  try {
  // Debug logging
@@ -685,11 +693,12 @@ include __DIR__ . '/components/unified-layout.php';
   <small class="text-secondary">Tilldelas av systemet</small>
   </div>
 
-  <!-- Disciplines Checkboxes (read-only from license) -->
+  <!-- Disciplines Checkboxes (editable by superadmin) -->
   <div class="col-span-2">
   <label class="label">
   <i data-lucide="list"></i>
   Licensierade discipliner
+  <?php if ($isSuperAdmin): ?><span class="badge badge-warning" style="margin-left: 0.5rem;">Redigerbar</span><?php endif; ?>
   </label>
   <?php
   // Use the actual discipline values from the database
@@ -718,15 +727,15 @@ include __DIR__ . '/components/unified-layout.php';
   <div style="display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 0.5rem;">
   <?php foreach ($allDisciplines as $code => $name): ?>
   <?php $isChecked = in_array(strtoupper($code), $riderDisciplines); ?>
-  <label class="flex items-center gap-sm" style="padding: 0.5rem 0.75rem; background: <?= $isChecked ? 'rgba(97, 206, 112, 0.15)' : 'var(--color-bg-sunken)' ?>; border: 1px solid <?= $isChecked ? 'var(--color-accent)' : 'var(--color-border)' ?>; border-radius: var(--radius-md); cursor: not-allowed; opacity: <?= $isChecked ? '1' : '0.6' ?>;">
-  <input type="checkbox" <?= $isChecked ? 'checked' : '' ?> disabled style="accent-color: var(--color-accent);">
+  <label class="flex items-center gap-sm" style="padding: 0.5rem 0.75rem; background: <?= $isChecked ? 'rgba(97, 206, 112, 0.15)' : 'var(--color-bg-sunken)' ?>; border: 1px solid <?= $isChecked ? 'var(--color-accent)' : 'var(--color-border)' ?>; border-radius: var(--radius-md); cursor: <?= $isSuperAdmin ? 'pointer' : 'not-allowed' ?>; opacity: <?= $isChecked || $isSuperAdmin ? '1' : '0.6' ?>;">
+  <input type="checkbox" name="disciplines[]" value="<?= $code ?>" <?= $isChecked ? 'checked' : '' ?> <?= $isSuperAdmin ? '' : 'disabled' ?> style="accent-color: var(--color-accent);">
   <span class="text-sm" style="color: <?= $isChecked ? 'var(--color-accent)' : 'var(--color-text-secondary)' ?>;"><?= h($name) ?></span>
   </label>
   <?php endforeach; ?>
   </div>
   <?php if (!empty($riderDiscipline) && $riderDiscipline !== ''): ?>
   <small class="text-secondary" style="display: block; margin-top: 0.5rem;">Från licens: <strong><?= h($rider['discipline']) ?></strong></small>
-  <?php else: ?>
+  <?php elseif (!$isSuperAdmin): ?>
   <small class="text-secondary" style="display: block; margin-top: 0.5rem;">Ingen disciplin registrerad i licensdatan.</small>
   <?php endif; ?>
   </div>
