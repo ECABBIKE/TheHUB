@@ -133,22 +133,22 @@ if ($filterSeriesName && !empty($seriesList)) {
 <!-- Filters -->
 <div class="filter-bar">
     <div class="filter-group">
-        <label class="filter-label">Serie</label>
-        <select class="filter-select" onchange="window.location=this.value">
-            <option value="/series?<?= $filterYear ? 'year=' . $filterYear : 'year=all' ?>" <?= !$filterSeriesName ? 'selected' : '' ?>>Alla serier</option>
+        <label for="filter-series" class="filter-label">Serie</label>
+        <select id="filter-series" class="filter-select" onchange="applyFilters()">
+            <option value="">Alla serier</option>
             <?php foreach ($allSeriesNames as $name): ?>
-            <option value="/series?series=<?= urlencode($name) ?><?= $filterYear ? '&year=' . $filterYear : '&year=all' ?>" <?= $filterSeriesName === $name ? 'selected' : '' ?>>
+            <option value="<?= htmlspecialchars($name) ?>" <?= $filterSeriesName === $name ? 'selected' : '' ?>>
                 <?= htmlspecialchars($name) ?>
             </option>
             <?php endforeach; ?>
         </select>
     </div>
     <div class="filter-group">
-        <label class="filter-label">År</label>
-        <select class="filter-select" onchange="window.location=this.value">
-            <option value="/series?<?= $filterSeriesName ? 'series=' . urlencode($filterSeriesName) . '&' : '' ?>year=all" <?= $filterYear === null ? 'selected' : '' ?>>Alla år</option>
+        <label for="filter-year" class="filter-label">År</label>
+        <select id="filter-year" class="filter-select" onchange="applyFilters()">
+            <option value="">Alla år</option>
             <?php foreach ($availableYears as $year): ?>
-            <option value="/series?<?= $filterSeriesName ? 'series=' . urlencode($filterSeriesName) . '&' : '' ?>year=<?= $year ?>" <?= $filterYear == $year ? 'selected' : '' ?>>
+            <option value="<?= $year ?>" <?= $filterYear == $year ? 'selected' : '' ?>>
                 <?= $year ?>
             </option>
             <?php endforeach; ?>
@@ -211,3 +211,14 @@ if ($filterSeriesName && !empty($seriesList)) {
         <?php endforeach; ?>
     </div>
 <?php endif; ?>
+
+<script>
+function applyFilters() {
+    const series = document.getElementById('filter-series').value;
+    const year = document.getElementById('filter-year').value;
+    const params = new URLSearchParams();
+    if (series) params.set('series', series);
+    if (year) params.set('year', year);
+    window.location.href = '/series' + (params.toString() ? '?' + params : '');
+}
+</script>

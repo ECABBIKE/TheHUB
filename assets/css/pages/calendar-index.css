@@ -212,6 +212,10 @@
     height: 14px;
 }
 
+.deadline-label {
+    color: var(--color-text-muted);
+}
+
 .event-deadline.soon {
     background: rgba(245, 158, 11, 0.15);
     color: var(--color-warning);
@@ -376,6 +380,10 @@
     .event-deadline {
         padding: 2px 8px;
         font-size: var(--text-xs);
+    }
+
+    .deadline-label {
+        display: none;
     }
 
     .event-arrow {
