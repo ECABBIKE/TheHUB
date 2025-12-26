@@ -30,6 +30,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if (!empty($_POST['club_id'])) {
             $updates['club_id'] = intval($_POST['club_id']);
         }
+        if (!empty($_POST['nationality'])) {
+            $updates['nationality'] = strtoupper(substr($_POST['nationality'], 0, 3));
+        }
 
         if (!empty($updates)) {
             try {
@@ -51,8 +54,9 @@ $filterConditions = [
     'missing_birth_year' => 'birth_year IS NULL OR birth_year = 0',
     'missing_gender' => "gender IS NULL OR gender = ''",
     'missing_club' => 'club_id IS NULL',
+    'missing_nationality' => "nationality IS NULL OR nationality = ''",
     'has_swe_id' => "license_number LIKE 'SWE%'",
-    'all_incomplete' => "(birth_year IS NULL OR birth_year = 0) OR (gender IS NULL OR gender = '') OR club_id IS NULL"
+    'all_incomplete' => "(birth_year IS NULL OR birth_year = 0) OR (gender IS NULL OR gender = '') OR club_id IS NULL OR (nationality IS NULL OR nationality = '')"
 ];
 
 $condition = $filterConditions[$filter] ?? $filterConditions['missing_birth_year'];
@@ -74,28 +78,18 @@ $stats = $db->getRow("
         COUNT(*) as total,
         SUM(CASE WHEN birth_year IS NULL OR birth_year = 0 THEN 1 ELSE 0 END) as missing_birth_year,
         SUM(CASE WHEN gender IS NULL OR gender = '' THEN 1 ELSE 0 END) as missing_gender,
-        SUM(CASE WHEN club_id IS NULL THEN 1 ELSE 0 END) as missing_club
+        SUM(CASE WHEN club_id IS NULL THEN 1 ELSE 0 END) as missing_club,
+        SUM(CASE WHEN nationality IS NULL OR nationality = '' THEN 1 ELSE 0 END) as missing_nationality
     FROM riders
 ");
 
-$pageTitle = 'Berika Deltagardata';
-$pageType = 'admin';
-include __DIR__ . '/../includes/layout-header.php';
+$page_title = 'Berika Deltagardata';
+$breadcrumbs = [
+    ['label' => 'Verktyg', 'url' => '/admin/tools'],
+    ['label' => 'Berika Deltagardata']
+];
+include __DIR__ . '/components/unified-layout.php';
 ?>
-
-<main class="main-content">
-    <div class="container">
-        <!-- Header -->
-        <div class="flex items-center justify-between mb-lg">
-            <h1 class="text-primary">
-                <i data-lucide="user-plus"></i>
-                Berika Deltagardata
-            </h1>
-            <a href="/admin/import.php" class="btn btn--secondary">
-                <i data-lucide="arrow-left"></i>
-                Tillbaka
-            </a>
-        </div>
 
         <?php if ($message): ?>
         <div class="alert alert--<?= h($messageType) ?> mb-lg">
@@ -104,33 +98,39 @@ include __DIR__ . '/../includes/layout-header.php';
         </div>
         <?php endif; ?>
 
-        <!-- Stats -->
-        <div class="grid grid-cols-4 gap-md mb-lg">
-            <div class="card">
-                <div class="card-body text-center">
-                    <div class="text-2xl text-primary"><?= $stats['total'] ?? 0 ?></div>
-                    <div class="text-sm text-secondary">Totalt deltagare</div>
-                </div>
-            </div>
-            <div class="card">
-                <div class="card-body text-center">
-                    <div class="text-2xl text-warning"><?= $stats['missing_birth_year'] ?? 0 ?></div>
-                    <div class="text-sm text-secondary">Saknar födelseår</div>
-                </div>
-            </div>
-            <div class="card">
-                <div class="card-body text-center">
-                    <div class="text-2xl text-warning"><?= $stats['missing_gender'] ?? 0 ?></div>
-                    <div class="text-sm text-secondary">Saknar kön</div>
-                </div>
-            </div>
-            <div class="card">
-                <div class="card-body text-center">
-                    <div class="text-2xl text-warning"><?= $stats['missing_club'] ?? 0 ?></div>
-                    <div class="text-sm text-secondary">Saknar klubb</div>
-                </div>
-            </div>
+<!-- Stats -->
+<div class="grid grid-cols-5 gap-md mb-lg">
+    <div class="card">
+        <div class="card-body text-center">
+            <div class="text-2xl text-primary"><?= $stats['total'] ?? 0 ?></div>
+            <div class="text-sm text-secondary">Totalt deltagare</div>
         </div>
+    </div>
+    <div class="card">
+        <div class="card-body text-center">
+            <div class="text-2xl text-warning"><?= $stats['missing_birth_year'] ?? 0 ?></div>
+            <div class="text-sm text-secondary">Saknar födelseår</div>
+        </div>
+    </div>
+    <div class="card">
+        <div class="card-body text-center">
+            <div class="text-2xl text-warning"><?= $stats['missing_gender'] ?? 0 ?></div>
+            <div class="text-sm text-secondary">Saknar kön</div>
+        </div>
+    </div>
+    <div class="card">
+        <div class="card-body text-center">
+            <div class="text-2xl text-warning"><?= $stats['missing_club'] ?? 0 ?></div>
+            <div class="text-sm text-secondary">Saknar klubb</div>
+        </div>
+    </div>
+    <div class="card">
+        <div class="card-body text-center">
+            <div class="text-2xl text-warning"><?= $stats['missing_nationality'] ?? 0 ?></div>
+            <div class="text-sm text-secondary">Saknar nationalitet</div>
+        </div>
+    </div>
+</div>
 
         <!-- Filter -->
         <div class="card mb-lg">
@@ -145,6 +145,7 @@ include __DIR__ . '/../includes/layout-header.php';
                             <option value="missing_birth_year" <?= $filter === 'missing_birth_year' ? 'selected' : '' ?>>Saknar födelseår</option>
                             <option value="missing_gender" <?= $filter === 'missing_gender' ? 'selected' : '' ?>>Saknar kön</option>
                             <option value="missing_club" <?= $filter === 'missing_club' ? 'selected' : '' ?>>Saknar klubb</option>
+                            <option value="missing_nationality" <?= $filter === 'missing_nationality' ? 'selected' : '' ?>>Saknar nationalitet</option>
                             <option value="has_swe_id" <?= $filter === 'has_swe_id' ? 'selected' : '' ?>>Har SWE ID</option>
                             <option value="all_incomplete" <?= $filter === 'all_incomplete' ? 'selected' : '' ?>>Alla med saknad data</option>
                         </select>
@@ -180,6 +181,7 @@ include __DIR__ . '/../includes/layout-header.php';
                                 <th>Licensnummer</th>
                                 <th>Födelseår</th>
                                 <th>Kön</th>
+                                <th>Nationalitet</th>
                                 <th>Klubb</th>
                                 <th class="text-right">Åtgärder</th>
                             </tr>
@@ -207,6 +209,13 @@ include __DIR__ . '/../includes/layout-header.php';
                                 <td>
                                     <?php if ($rider['gender']): ?>
                                     <?= $rider['gender'] === 'M' ? 'Man' : 'Kvinna' ?>
+                                    <?php else: ?>
+                                    <span class="badge badge--warning">Saknas</span>
+                                    <?php endif; ?>
+                                </td>
+                                <td>
+                                    <?php if (!empty($rider['nationality'])): ?>
+                                    <?= h($rider['nationality']) ?>
                                     <?php else: ?>
                                     <span class="badge badge--warning">Saknas</span>
                                     <?php endif; ?>
@@ -262,6 +271,12 @@ include __DIR__ . '/../includes/layout-header.php';
                 </div>
 
                 <div class="form-group mb-md">
+                    <label class="label">Nationalitet</label>
+                    <input type="text" name="nationality" id="editNationality" class="input" maxlength="3" placeholder="SWE, NOR, FIN..." style="text-transform: uppercase;">
+                    <small class="text-secondary">3-bokstavskod (ISO 3166-1 alpha-3)</small>
+                </div>
+
+                <div class="form-group mb-md">
                     <label class="label">Klubb</label>
                     <select name="club_id" id="editClubId" class="input">
                         <option value="">Ingen klubb</option>
@@ -285,6 +300,7 @@ function editRider(id, rider) {
     document.getElementById('editRiderId').value = id;
     document.getElementById('editBirthYear').value = rider.birth_year || '';
     document.getElementById('editGender').value = rider.gender || '';
+    document.getElementById('editNationality').value = rider.nationality || '';
     document.getElementById('editClubId').value = rider.club_id || '';
     document.getElementById('modalTitle').textContent = 'Redigera ' + rider.firstname + ' ' + rider.lastname;
     document.getElementById('editModal').style.display = 'flex';
@@ -299,4 +315,4 @@ document.getElementById('editModal').addEventListener('click', function(e) {
 });
 </script>
 
-<?php include __DIR__ . '/../includes/layout-footer.php'; ?>
+<?php include __DIR__ . '/components/unified-layout-footer.php'; ?>
