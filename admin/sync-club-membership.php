@@ -430,7 +430,7 @@ include __DIR__ . '/components/unified-layout.php';
         <form method="get" style="display: flex; gap: var(--space-md); align-items: center;">
             <label class="form-label" style="margin: 0;">Välj år:</label>
             <select name="year" class="form-select" style="width: auto;" onchange="this.form.submit()">
-                <?php for ($y = (int)$currentYear; $y >= 2020; $y--): ?>
+                <?php for ($y = (int)$currentYear + 1; $y >= 2015; $y--): ?>
                 <option value="<?= $y ?>" <?= $y == $targetYear ? 'selected' : '' ?>><?= $y ?></option>
                 <?php endfor; ?>
             </select>
