@@ -66,6 +66,32 @@ $noSeasonEntry = $db->getAll("
     LIMIT 500
 ", [$targetYear, $targetYear]);
 
+// Find riders with results this year but club in results differs from rider_club_seasons
+$resultsWithDifferentClub = $db->getAll("
+    SELECT
+        r.id as rider_id,
+        r.firstname,
+        r.lastname,
+        rcs.club_id as season_club_id,
+        c_season.name as season_club_name,
+        rcs.locked,
+        res.club_id as result_club_id,
+        c_result.name as result_club_name,
+        COUNT(res.id) as result_count
+    FROM riders r
+    JOIN results res ON r.id = res.cyclist_id
+    JOIN events e ON res.event_id = e.id
+    LEFT JOIN rider_club_seasons rcs ON r.id = rcs.rider_id AND rcs.season_year = ?
+    LEFT JOIN clubs c_season ON rcs.club_id = c_season.id
+    JOIN clubs c_result ON res.club_id = c_result.id
+    WHERE YEAR(e.date) = ?
+      AND res.club_id IS NOT NULL
+      AND (rcs.club_id IS NULL OR rcs.club_id != res.club_id)
+    GROUP BY r.id, rcs.club_id, res.club_id
+    ORDER BY r.lastname, r.firstname
+    LIMIT 500
+", [$targetYear, $targetYear]);
+
 $syncResult = null;
 if (!$dryRun) {
     $synced = 0;
@@ -88,6 +114,38 @@ if (!$dryRun) {
                 [$r['rider_id'], $r['current_club_id'], $targetYear]
             );
             $synced++;
+        }
+    } elseif ($direction === 'results_to_season') {
+        // Create/update season entries from results.club_id
+        // This takes the club from the results and sets it as the season club
+        foreach ($resultsWithDifferentClub as $r) {
+            // Check if entry exists
+            $existing = $db->getRow(
+                "SELECT id, locked FROM rider_club_seasons WHERE rider_id = ? AND season_year = ?",
+                [$r['rider_id'], $targetYear]
+            );
+
+            if ($existing) {
+                // Only update if not locked (or force)
+                if (!$existing['locked']) {
+                    $db->update('rider_club_seasons',
+                        ['club_id' => $r['result_club_id']],
+                        'id = ?',
+                        [$existing['id']]
+                    );
+                    $synced++;
+                }
+            } else {
+                // Create new entry with club from results
+                $db->query(
+                    "INSERT INTO rider_club_seasons (rider_id, club_id, season_year, locked) VALUES (?, ?, ?, 1)",
+                    [$r['rider_id'], $r['result_club_id'], $targetYear]
+                );
+                $synced++;
+            }
+
+            // Also update the rider's profile club
+            $db->update('riders', ['club_id' => $r['result_club_id']], 'id = ?', [$r['rider_id']]);
         }
     }
 
@@ -264,6 +322,80 @@ include __DIR__ . '/components/unified-layout.php';
         </div>
         <?php if (count($noSeasonEntry) > 100): ?>
         <p class="text-secondary">Visar 100 av <?= count($noSeasonEntry) ?></p>
+        <?php endif; ?>
+        <?php endif; ?>
+    </div>
+</div>
+
+<!-- Problem 3: Results have club but rider_club_seasons differs -->
+<div class="card mb-lg">
+    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+            <h3>Klubb i resultat skiljer sig från säsong (<?= count($resultsWithDifferentClub) ?>)</h3>
+            <p class="text-secondary" style="margin: 0; font-size: 13px;">
+                Dessa har resultat <?= $targetYear ?> med en klubb som skiljer sig från rider_club_seasons
+            </p>
+        </div>
+        <?php if (!empty($resultsWithDifferentClub)): ?>
+        <a href="?year=<?= $targetYear ?>&execute=1&direction=results_to_season"
+           class="btn btn-warning"
+           onclick="return confirm('Synka <?= count($resultsWithDifferentClub) ?> åkares säsongsklubb från deras resultat?\n\nDetta uppdaterar både rider_club_seasons OCH riders.club_id till klubben från resultaten.')">
+            <i data-lucide="database"></i>
+            Bygg från resultat (<?= count($resultsWithDifferentClub) ?>)
+        </a>
+        <?php endif; ?>
+    </div>
+    <div class="card-body">
+        <?php if (empty($resultsWithDifferentClub)): ?>
+        <div class="alert alert-success">
+            <i data-lucide="check-circle"></i>
+            Alla resultat matchar rider_club_seasons för <?= $targetYear ?>!
+        </div>
+        <?php else: ?>
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Åkare</th>
+                        <th>Säsongsklubb</th>
+                        <th></th>
+                        <th>Klubb i resultat</th>
+                        <th>Antal resultat</th>
+                        <th>Låst</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach (array_slice($resultsWithDifferentClub, 0, 100) as $r): ?>
+                    <tr>
+                        <td>
+                            <a href="/admin/rider-edit/<?= $r['rider_id'] ?>">
+                                <?= h($r['firstname'] . ' ' . $r['lastname']) ?>
+                            </a>
+                        </td>
+                        <td>
+                            <?php if ($r['season_club_name']): ?>
+                                <span class="text-danger"><?= h($r['season_club_name']) ?></span>
+                            <?php else: ?>
+                                <span class="text-secondary">Ingen</span>
+                            <?php endif; ?>
+                        </td>
+                        <td><i data-lucide="arrow-right" style="width: 16px; color: var(--color-warning);"></i></td>
+                        <td><span class="text-success"><strong><?= h($r['result_club_name']) ?></strong></span></td>
+                        <td><?= $r['result_count'] ?></td>
+                        <td>
+                            <?php if ($r['locked']): ?>
+                                <span class="badge badge-warning">Låst</span>
+                            <?php else: ?>
+                                <span class="badge badge-secondary">Ej låst</span>
+                            <?php endif; ?>
+                        </td>
+                    </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+        <?php if (count($resultsWithDifferentClub) > 100): ?>
+        <p class="text-secondary">Visar 100 av <?= count($resultsWithDifferentClub) ?></p>
         <?php endif; ?>
         <?php endif; ?>
     </div>
