@@ -39,14 +39,15 @@ if (!function_exists('hub_asset')) {
 
 <!-- iOS Icons -->
 <?php
-// iOS requires PNG format - use branding favicon if it's PNG, otherwise use a default SVG->PNG fallback
+// iOS requires PNG format - use branding favicon if set
+// Note: We read branding once here, then reuse for regular favicon below
 $appleTouchIcon = '/assets/favicon.svg'; // Default
 $brandingJsonFileApple = __DIR__ . '/../uploads/branding.json';
+$brandingDataForIcons = null;
 if (file_exists($brandingJsonFileApple)) {
-    $brandingJsonApple = json_decode(file_get_contents($brandingJsonFileApple), true);
-    if (!empty($brandingJsonApple['logos']['favicon'])) {
-        // iOS prefers PNG, but can handle other formats
-        $appleTouchIcon = $brandingJsonApple['logos']['favicon'];
+    $brandingDataForIcons = json_decode(file_get_contents($brandingJsonFileApple), true);
+    if (!empty($brandingDataForIcons['logos']['favicon'])) {
+        $appleTouchIcon = $brandingDataForIcons['logos']['favicon'];
     }
 }
 ?>
@@ -59,22 +60,19 @@ if (file_exists($brandingJsonFileApple)) {
 
 <!-- Favicon -->
 <?php
-// Load custom favicon from branding.json if set
-$faviconPath = '/uploads/icons/GSIkon.png'; // Default
-$brandingJsonFile = __DIR__ . '/../uploads/branding.json';
-if (file_exists($brandingJsonFile)) {
-    $brandingJson = json_decode(file_get_contents($brandingJsonFile), true);
-    if (!empty($brandingJson['logos']['favicon'])) {
-        $faviconPath = $brandingJson['logos']['favicon'];
-    }
-}
+// Reuse branding data from iOS icons section above (already read)
+$faviconPath = $appleTouchIcon; // Same as apple-touch-icon, already loaded from branding
 // Determine icon type based on file extension
-$iconType = 'image/png';
-if (strpos($faviconPath, '.svg') !== false) {
-    $iconType = 'image/svg+xml';
-} elseif (strpos($faviconPath, '.ico') !== false) {
-    $iconType = 'image/x-icon';
-}
+$faviconExt = strtolower(pathinfo($faviconPath, PATHINFO_EXTENSION));
+$iconType = match($faviconExt) {
+    'svg' => 'image/svg+xml',
+    'ico' => 'image/x-icon',
+    'png' => 'image/png',
+    'gif' => 'image/gif',
+    'jpg', 'jpeg' => 'image/jpeg',
+    'webp' => 'image/webp',
+    default => 'image/png'
+};
 ?>
 <link rel="icon" type="<?= $iconType ?>" sizes="32x32" href="<?= htmlspecialchars($faviconPath) ?>">
 <link rel="icon" type="<?= $iconType ?>" sizes="16x16" href="<?= htmlspecialchars($faviconPath) ?>">

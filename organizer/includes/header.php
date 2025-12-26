@@ -24,9 +24,24 @@ if (!defined('THEHUB_INIT')) {
     <!-- PWA Manifest -->
     <link rel="manifest" href="<?= ORGANIZER_BASE_URL ?>/manifest.json">
 
-    <!-- Icons -->
-    <link rel="icon" type="image/svg+xml" href="<?= ORGANIZER_BASE_URL ?>/assets/icons/icon.svg">
-    <link rel="apple-touch-icon" href="<?= ORGANIZER_BASE_URL ?>/assets/icons/icon.svg">
+    <!-- Icons - load from branding -->
+    <?php
+    $faviconUrl = '/assets/favicon.svg';
+    $brandingFile = __DIR__ . '/../../uploads/branding.json';
+    if (file_exists($brandingFile)) {
+        $brandingData = json_decode(file_get_contents($brandingFile), true);
+        if (!empty($brandingData['logos']['favicon'])) {
+            $faviconUrl = $brandingData['logos']['favicon'];
+        }
+    }
+    $faviconExt = strtolower(pathinfo($faviconUrl, PATHINFO_EXTENSION));
+    $faviconMime = match($faviconExt) {
+        'svg' => 'image/svg+xml', 'ico' => 'image/x-icon', 'png' => 'image/png',
+        'jpg', 'jpeg' => 'image/jpeg', 'webp' => 'image/webp', default => 'image/png'
+    };
+    ?>
+    <link rel="icon" type="<?= $faviconMime ?>" href="<?= SITE_URL . htmlspecialchars($faviconUrl) ?>">
+    <link rel="apple-touch-icon" href="<?= SITE_URL . htmlspecialchars($faviconUrl) ?>">
 
     <!-- Global CSS -->
     <link rel="stylesheet" href="<?= SITE_URL ?>/assets/css/reset.css">
