@@ -123,19 +123,35 @@ try {
         return;
     }
 
-    // If no club from riders table, check rider_club_seasons for current/latest year
+    // If no club from riders table, check rider_club_seasons for current year first, then latest
     if (empty($rider['club_id'])) {
         $currentYear = (int)date('Y');
+
+        // First try current year (2025)
         $seasonClub = $db->prepare("
             SELECT rcs.club_id, c.name as club_name, c.city as club_city
             FROM rider_club_seasons rcs
             JOIN clubs c ON rcs.club_id = c.id
-            WHERE rcs.rider_id = ?
-            ORDER BY rcs.season_year DESC
+            WHERE rcs.rider_id = ? AND rcs.season_year = ?
             LIMIT 1
         ");
-        $seasonClub->execute([$riderId]);
+        $seasonClub->execute([$riderId, $currentYear]);
         $clubFromSeason = $seasonClub->fetch(PDO::FETCH_ASSOC);
+
+        // If no current year, fall back to latest year
+        if (!$clubFromSeason) {
+            $seasonClub = $db->prepare("
+                SELECT rcs.club_id, c.name as club_name, c.city as club_city
+                FROM rider_club_seasons rcs
+                JOIN clubs c ON rcs.club_id = c.id
+                WHERE rcs.rider_id = ?
+                ORDER BY rcs.season_year DESC
+                LIMIT 1
+            ");
+            $seasonClub->execute([$riderId]);
+            $clubFromSeason = $seasonClub->fetch(PDO::FETCH_ASSOC);
+        }
+
         if ($clubFromSeason) {
             $rider['club_id'] = $clubFromSeason['club_id'];
             $rider['club_name'] = $clubFromSeason['club_name'];
