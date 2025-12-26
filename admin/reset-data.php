@@ -32,25 +32,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_reset'])) {
 
             // Delete in order (child tables first)
             $tables = [
-                'series_results' => 'Serieresultat',
-                'rider_club_seasons' => 'Klubbsäsonger',
-                'rider_parents' => 'Föräldrakopplingar',
-                'rider_claims' => 'Profilförfrågningar',
-                'results' => 'Resultat',
-                'registrations' => 'Anmälningar',
-                'riders' => 'Åkare',
-                'clubs' => 'Klubbar',
+                'series_results',
+                'rider_club_seasons',
+                'rider_parents',
+                'rider_claims',
+                'results',
+                'registrations',
+                'riders',
+                'clubs',
             ];
 
             $deleted = [];
-            foreach ($tables as $table => $label) {
+            foreach ($tables as $table) {
                 try {
                     $count = $db->pdo->query("SELECT COUNT(*) FROM `$table`")->fetchColumn();
-                    $db->pdo->exec("TRUNCATE TABLE `$table`");
-                    $deleted[$label] = $count;
+                    $db->pdo->exec("DELETE FROM `$table`");
+                    $db->pdo->exec("ALTER TABLE `$table` AUTO_INCREMENT = 1");
+                    $deleted[$table] = $count;
                 } catch (Exception $e) {
                     // Table might not exist, skip
-                    $deleted[$label] = 'N/A';
+                    $deleted[$table] = 0;
                 }
             }
 
@@ -61,12 +62,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_reset'])) {
 
             $message = 'Data raderad! Raderade: ';
             $parts = [];
-            foreach ($deleted as $label => $count) {
-                if ($count !== 'N/A' && $count > 0) {
-                    $parts[] = "$count $label";
+            foreach ($deleted as $table => $count) {
+                if ($count > 0) {
+                    $parts[] = "$count från $table";
                 }
             }
-            $message .= implode(', ', $parts);
+            $message .= !empty($parts) ? implode(', ', $parts) : 'Inga rader';
 
         } catch (Exception $e) {
             $db->pdo->rollBack();
@@ -125,8 +126,8 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
 
-        <div class="row">
-            <div class="col-md-6">
+        <div class="gs-info-grid">
+            <div>
                 <h3 class="mb-md text-danger">
                     <i data-lucide="x-circle"></i>
                     Kommer raderas
@@ -134,23 +135,23 @@ include __DIR__ . '/components/unified-layout.php';
                 <table class="table">
                     <tr>
                         <td>Resultat</td>
-                        <td class="text-right"><strong><?= number_format($counts['results']) ?></strong></td>
+                        <td style="text-align:right"><strong><?= number_format($counts['results']) ?></strong></td>
                     </tr>
                     <tr>
                         <td>Åkare</td>
-                        <td class="text-right"><strong><?= number_format($counts['riders']) ?></strong></td>
+                        <td style="text-align:right"><strong><?= number_format($counts['riders']) ?></strong></td>
                     </tr>
                     <tr>
                         <td>Klubbar</td>
-                        <td class="text-right"><strong><?= number_format($counts['clubs']) ?></strong></td>
+                        <td style="text-align:right"><strong><?= number_format($counts['clubs']) ?></strong></td>
                     </tr>
                     <tr>
                         <td>Serieresultat</td>
-                        <td class="text-right"><strong><?= number_format($counts['series_results']) ?></strong></td>
+                        <td style="text-align:right"><strong><?= number_format($counts['series_results']) ?></strong></td>
                     </tr>
                 </table>
             </div>
-            <div class="col-md-6">
+            <div>
                 <h3 class="mb-md text-success">
                     <i data-lucide="check-circle"></i>
                     Behålls
@@ -158,19 +159,19 @@ include __DIR__ . '/components/unified-layout.php';
                 <table class="table">
                     <tr>
                         <td>Events/Tävlingar</td>
-                        <td class="text-right"><strong><?= number_format($counts['events']) ?></strong></td>
+                        <td style="text-align:right"><strong><?= number_format($counts['events']) ?></strong></td>
                     </tr>
                     <tr>
                         <td>Serier</td>
-                        <td class="text-right"><strong><?= number_format($counts['series']) ?></strong></td>
+                        <td style="text-align:right"><strong><?= number_format($counts['series']) ?></strong></td>
                     </tr>
                     <tr>
                         <td>Klasser</td>
-                        <td class="text-right"><strong>Alla</strong></td>
+                        <td style="text-align:right"><strong>Alla</strong></td>
                     </tr>
                     <tr>
                         <td>Venues, Inställningar</td>
-                        <td class="text-right"><strong>Alla</strong></td>
+                        <td style="text-align:right"><strong>Alla</strong></td>
                     </tr>
                 </table>
             </div>
