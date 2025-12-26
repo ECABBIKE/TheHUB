@@ -2013,7 +2013,7 @@ document.getElementById('activateModal')?.addEventListener('click', function(e) 
         const rankingCtx = document.getElementById('rankingChart');
         if (rankingCtx) {
             const ctx = rankingCtx.getContext('2d');
-            const rankingGradient = ctx.createLinearGradient(0, 0, 0, 180);
+            const rankingGradient = ctx.createLinearGradient(0, 0, 0, 100);
             rankingGradient.addColorStop(0, 'rgba(239, 68, 68, 0.3)');
             rankingGradient.addColorStop(1, 'rgba(239, 68, 68, 0.02)');
 
@@ -2027,9 +2027,9 @@ document.getElementById('activateModal')?.addEventListener('click', function(e) 
                         backgroundColor: rankingGradient,
                         fill: true,
                         tension: 0.4,
-                        borderWidth: 2.5,
-                        pointRadius: 5,
-                        pointHoverRadius: 7,
+                        borderWidth: 2,
+                        pointRadius: 3,
+                        pointHoverRadius: 5,
                         pointBackgroundColor: '#fff',
                         pointBorderColor: '#ef4444',
                         pointBorderWidth: 2
@@ -2037,41 +2037,33 @@ document.getElementById('activateModal')?.addEventListener('click', function(e) 
                 },
                 options: {
                     responsive: true,
-                    maintainAspectRatio: true,
-                    aspectRatio: 2.5,
+                    maintainAspectRatio: false,
                     interaction: { intersect: false, mode: 'index' },
                     plugins: {
                         legend: { display: false },
                         tooltip: {
                             backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                            titleFont: { size: 12 },
-                            bodyFont: { size: 14, weight: 'bold' },
-                            padding: 10,
-                            cornerRadius: 6,
+                            titleFont: { size: 10 },
+                            bodyFont: { size: 11, weight: 'bold' },
+                            padding: 6,
+                            cornerRadius: 4,
                             displayColors: false,
                             callbacks: {
                                 title: function(items) { return items[0].label; },
-                                label: function(item) { return 'Position: #' + item.raw; }
+                                label: function(item) { return '#' + item.raw; }
                             }
                         }
                     },
                     scales: {
                         x: {
                             grid: { display: false },
-                            ticks: { font: { size: 11 }, color: '#6b7280', maxRotation: 0 }
+                            ticks: { font: { size: 9 }, color: '#6b7280', maxRotation: 0 }
                         },
                         y: {
                             reverse: true,
                             beginAtZero: false,
-                            grid: { color: '#e5e7eb' },
-                            ticks: {
-                                font: { size: 11 },
-                                color: '#6b7280',
-                                stepSize: 1,
-                                callback: function(value) {
-                                    return Number.isInteger(value) ? value : '';
-                                }
-                            }
+                            grid: { color: '#f0f0f0' },
+                            ticks: { font: { size: 9 }, color: '#6b7280' }
                         }
                     }
                 }
@@ -2084,7 +2076,7 @@ document.getElementById('activateModal')?.addEventListener('click', function(e) 
         const formCtx = document.getElementById('formChart');
         if (formCtx) {
             const ctx = formCtx.getContext('2d');
-            const formGradient = ctx.createLinearGradient(0, 0, 0, 180);
+            const formGradient = ctx.createLinearGradient(0, 0, 0, 100);
             formGradient.addColorStop(0, 'rgba(97, 206, 112, 0.3)');
             formGradient.addColorStop(1, 'rgba(97, 206, 112, 0.02)');
 
@@ -2098,9 +2090,9 @@ document.getElementById('activateModal')?.addEventListener('click', function(e) 
                         backgroundColor: formGradient,
                         fill: true,
                         tension: 0.4,
-                        borderWidth: 2.5,
-                        pointRadius: 5,
-                        pointHoverRadius: 7,
+                        borderWidth: 2,
+                        pointRadius: 3,
+                        pointHoverRadius: 5,
                         pointBackgroundColor: '#fff',
                         pointBorderColor: '#61CE70',
                         pointBorderWidth: 2
@@ -2108,41 +2100,33 @@ document.getElementById('activateModal')?.addEventListener('click', function(e) 
                 },
                 options: {
                     responsive: true,
-                    maintainAspectRatio: true,
-                    aspectRatio: 2.5,
+                    maintainAspectRatio: false,
                     interaction: { intersect: false, mode: 'index' },
                     plugins: {
                         legend: { display: false },
                         tooltip: {
                             backgroundColor: 'rgba(0, 0, 0, 0.8)',
-                            titleFont: { size: 12 },
-                            bodyFont: { size: 14, weight: 'bold' },
-                            padding: 10,
-                            cornerRadius: 6,
+                            titleFont: { size: 10 },
+                            bodyFont: { size: 11, weight: 'bold' },
+                            padding: 6,
+                            cornerRadius: 4,
                             displayColors: false,
                             callbacks: {
                                 title: function(items) { return items[0].label; },
-                                label: function(item) { return 'Placering: #' + item.raw; }
+                                label: function(item) { return '#' + item.raw; }
                             }
                         }
                     },
                     scales: {
                         x: {
                             grid: { display: false },
-                            ticks: { font: { size: 11 }, color: '#6b7280', maxRotation: 0 }
+                            ticks: { font: { size: 9 }, color: '#6b7280', maxRotation: 0 }
                         },
                         y: {
                             reverse: true,
                             beginAtZero: false,
-                            grid: { color: '#e5e7eb' },
-                            ticks: {
-                                font: { size: 11 },
-                                color: '#6b7280',
-                                stepSize: 1,
-                                callback: function(value) {
-                                    return Number.isInteger(value) ? value : '';
-                                }
-                            }
+                            grid: { color: '#f0f0f0' },
+                            ticks: { font: { size: 9 }, color: '#6b7280' }
                         }
                     }
                 }

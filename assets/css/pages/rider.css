@@ -1205,13 +1205,13 @@
 .dashboard-chart-body {
     position: relative;
     width: 100%;
-    min-height: 180px;
+    height: 120px;
     padding: var(--space-sm);
 }
 
 .dashboard-chart-body canvas {
     width: 100% !important;
-    max-width: 100%;
+    height: 100% !important;
 }
 
 /* Form Card in Right Column (legacy - keep for compatibility) */
