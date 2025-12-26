@@ -33,7 +33,7 @@ function isFieldMappingRow($row) {
  * Import results from CSV file with event mapping
  * Returns stage names mapping for automatic configuration
  */
-function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMapping = [], $forceClassId = null) {
+function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMapping = [], $forceClassId = null, $forceClubUpdate = false) {
     $stats = [
         'total' => 0,
         'success' => 0,
@@ -753,7 +753,14 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
 
             $resultClubId = null;
 
-            if ($existingSeasonClub && $existingSeasonClub['locked']) {
+            // If forceClubUpdate is true, always use the CSV club (ignore locked status)
+            if ($clubId && $forceClubUpdate) {
+                // Force update: use club from CSV regardless of locked status
+                $resultClubId = $clubId;
+                setRiderClubForYear($db, $riderId, $clubId, $eventYear);
+                lockRiderClubForYear($db, $riderId, $eventYear);
+                $db->update('riders', ['club_id' => $clubId], 'id = ?', [$riderId]);
+            } elseif ($existingSeasonClub && $existingSeasonClub['locked'] && !$forceClubUpdate) {
                 // Rider already has results this year - use their locked club
                 $resultClubId = $existingSeasonClub['club_id'];
             } elseif ($clubId) {
@@ -762,6 +769,7 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
                 $resultClubId = $clubId;
                 // Set/update this as the rider's club for the year
                 setRiderClubForYear($db, $riderId, $clubId, $eventYear);
+                lockRiderClubForYear($db, $riderId, $eventYear);
                 // Also update the rider's profile club_id
                 $db->update('riders', ['club_id' => $clubId], 'id = ?', [$riderId]);
             } else {

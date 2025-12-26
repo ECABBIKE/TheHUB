@@ -121,6 +121,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_import'])) {
  // Create event mapping - all rows go to selected event
  $eventMapping = ['Välj event för alla resultat' => $selectedEventId];
 
+ // Check if force club update is requested
+ $forceClubUpdate = isset($_POST['force_club_update']) && $_POST['force_club_update'] === '1';
+
  // Import with event mapping
  $importId = startImportHistory(
   $db,
@@ -135,7 +138,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_import'])) {
   $db,
   $importId,
   $eventMapping,
-  null
+  null,
+  $forceClubUpdate
  );
 
  $stats = $result['stats'];
@@ -971,6 +975,19 @@ include __DIR__ . '/components/unified-layout.php';
   <?php endif; ?>
   </div>
  </div>
+
+ <!-- Import Options -->
+  <div class="card mb-md">
+   <div class="card-body">
+    <label class="flex align-center gap-sm" style="cursor: pointer;">
+     <input type="checkbox" name="force_club_update" value="1">
+     <span><strong>Tvinga uppdatering av klubb</strong> - Ersätt befintliga klubbtillhörigheter med klubben från CSV</span>
+    </label>
+    <p class="text-secondary text-sm" style="margin: var(--space-xs) 0 0 var(--space-lg);">
+     Använd detta om tidigare import hade fel klubb. Annars behålls befintlig klubb för åkare som redan har resultat.
+    </p>
+   </div>
+  </div>
 
  <!-- Import Button -->
   <div class="flex gap-md gs-justify-end">
