@@ -22,21 +22,27 @@ $dryRun = !isset($_GET['execute']);
 $direction = $_GET['direction'] ?? 'season_to_rider'; // or 'rider_to_season' or 'rebuild_all_from_results' or 'cleanup_orphans'
 
 // Handle cleanup of orphan club seasons (entries without results)
+// ONLY deletes entries from old years (before 2024) to preserve recent verified data
 if ($direction === 'cleanup_orphans' && !$dryRun) {
-    // Find and delete rider_club_seasons entries where the rider has no results that year
+    $safeYear = 2024; // Don't delete 2024 or later - has verified UCI data
+
+    // Find and delete rider_club_seasons entries where:
+    // 1. The rider has no results that year
+    // 2. The year is before 2024 (older, unverified data)
     $deleted = $db->query("
         DELETE rcs FROM rider_club_seasons rcs
-        WHERE NOT EXISTS (
+        WHERE rcs.season_year < ?
+        AND NOT EXISTS (
             SELECT 1 FROM results r
             JOIN events e ON r.event_id = e.id
             WHERE r.cyclist_id = rcs.rider_id
             AND YEAR(e.date) = rcs.season_year
         )
-    ");
+    ", [$safeYear]);
 
     $deletedCount = $deleted ? $deleted->rowCount() : 0;
 
-    $_SESSION['cleanup_result'] = ['deleted' => $deletedCount];
+    $_SESSION['cleanup_result'] = ['deleted' => $deletedCount, 'before_year' => $safeYear];
     header("Location: ?year={$targetYear}&cleaned=1");
     exit;
 }
@@ -133,6 +139,8 @@ if ($direction === 'rebuild_all_from_results' && !$dryRun) {
 }
 
 // Find orphan club seasons (entries without any results that year)
+// Only show pre-2024 years - 2024+ has verified UCI data that should be kept
+$safeYearForPreview = 2024;
 $orphanSeasons = $db->getAll("
     SELECT
         rcs.id,
@@ -145,7 +153,8 @@ $orphanSeasons = $db->getAll("
     FROM rider_club_seasons rcs
     JOIN riders r ON rcs.rider_id = r.id
     JOIN clubs c ON rcs.club_id = c.id
-    WHERE NOT EXISTS (
+    WHERE rcs.season_year < ?
+    AND NOT EXISTS (
         SELECT 1 FROM results res
         JOIN events e ON res.event_id = e.id
         WHERE res.cyclist_id = rcs.rider_id
@@ -153,7 +162,7 @@ $orphanSeasons = $db->getAll("
     )
     ORDER BY rcs.season_year DESC, r.lastname, r.firstname
     LIMIT 500
-");
+", [$safeYearForPreview]);
 
 // Find mismatches: riders with 2025 season club but different/null rider.club_id
 $mismatches = $db->getAll("
@@ -371,14 +380,14 @@ include __DIR__ . '/components/unified-layout.php';
 <div class="card mb-lg" style="border: 2px solid var(--color-warning);">
     <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; background: rgba(245, 158, 11, 0.1);">
         <div>
-            <h3><i data-lucide="trash-2"></i> Klubbtillhörigheter utan resultat (<?= count($orphanSeasons) ?>)</h3>
+            <h3><i data-lucide="trash-2"></i> Klubbtillhörigheter utan resultat - före 2024 (<?= count($orphanSeasons) ?>)</h3>
             <p class="text-secondary" style="margin: 0; font-size: 13px;">
-                Dessa poster har ingen nytta - åkaren har inga resultat för det året
+                Poster från 2016-2023 utan resultat. Data från 2024+ bevaras (verifierad via UCI).
             </p>
         </div>
         <a href="?execute=1&direction=cleanup_orphans"
            class="btn btn-warning"
-           onclick="return confirm('Radera <?= count($orphanSeasons) ?> klubbtillhörigheter utan resultat?\n\nDessa poster har ingen funktion eftersom åkaren inte har några resultat för det året.')">
+           onclick="return confirm('Radera <?= count($orphanSeasons) ?> klubbtillhörigheter från 2016-2023 utan resultat?\n\nEndast poster FÖRE 2024 raderas.\nData från 2024 och framåt bevaras.')">
             <i data-lucide="trash-2"></i>
             Radera alla (<?= count($orphanSeasons) ?>)
         </a>

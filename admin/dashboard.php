@@ -39,6 +39,13 @@ try {
         $stats['registrations_today'] = 0;
         $stats['registrations_week'] = 0;
     }
+
+    // Pending rider claims
+    try {
+        $stats['pending_claims'] = $pdo->query("SELECT COUNT(*) FROM rider_claims WHERE status = 'pending'")->fetchColumn();
+    } catch (Exception $e) {
+        $stats['pending_claims'] = 0;
+    }
 } catch (Exception $e) {
     $stats = [
         'riders' => 0, 'events' => 0, 'clubs' => 0, 'series' => 0,
@@ -89,6 +96,98 @@ $breadcrumbs = [
 // Include unified layout
 include __DIR__ . '/components/unified-layout.php';
 ?>
+
+<?php if ($stats['pending_claims'] > 0): ?>
+<!-- Pending Claims Alert -->
+<div class="pending-claims-alert" style="margin-bottom: var(--space-lg);">
+    <a href="/admin/rider-claims" class="claims-alert-content">
+        <div class="claims-alert-icon">
+            <i data-lucide="user-check"></i>
+        </div>
+        <div class="claims-alert-text">
+            <strong><?= $stats['pending_claims'] ?> profilförfråg<?= $stats['pending_claims'] > 1 ? 'ningar' : 'an' ?> väntar på granskning</strong>
+            <span>Användare vill koppla sina konton till historiska profiler</span>
+        </div>
+        <div class="claims-alert-action">
+            <span>Granska</span>
+            <i data-lucide="arrow-right"></i>
+        </div>
+    </a>
+</div>
+<style>
+.pending-claims-alert {
+    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
+    border: 1px solid #f59e0b;
+    border-radius: var(--radius-lg);
+    overflow: hidden;
+}
+.claims-alert-content {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    padding: var(--space-md) var(--space-lg);
+    text-decoration: none;
+    color: #92400e;
+    transition: background 0.15s ease;
+}
+.claims-alert-content:hover {
+    background: rgba(245, 158, 11, 0.1);
+}
+.claims-alert-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    background: #f59e0b;
+    border-radius: var(--radius-md);
+    color: white;
+    flex-shrink: 0;
+}
+.claims-alert-icon i {
+    width: 24px;
+    height: 24px;
+}
+.claims-alert-text {
+    flex: 1;
+}
+.claims-alert-text strong {
+    display: block;
+    font-size: var(--text-base);
+    color: #78350f;
+    margin-bottom: 2px;
+}
+.claims-alert-text span {
+    font-size: var(--text-sm);
+}
+.claims-alert-action {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    padding: var(--space-xs) var(--space-md);
+    background: #f59e0b;
+    color: white;
+    border-radius: var(--radius-md);
+    font-weight: 500;
+    font-size: var(--text-sm);
+}
+.claims-alert-action i {
+    width: 16px;
+    height: 16px;
+}
+@media (max-width: 600px) {
+    .claims-alert-content {
+        flex-wrap: wrap;
+        padding: var(--space-md);
+    }
+    .claims-alert-action {
+        width: 100%;
+        justify-content: center;
+        margin-top: var(--space-xs);
+    }
+}
+</style>
+<?php endif; ?>
 
 <!-- Key Metrics -->
 <div class="dashboard-metrics">

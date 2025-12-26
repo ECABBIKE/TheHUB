@@ -55,7 +55,7 @@ try {
     try {
         $stmt = $db->prepare("
             SELECT
-                r.id, r.firstname, r.lastname, r.birth_year, r.gender, r.nationality,
+                r.id, r.firstname, r.lastname, r.birth_year, r.gender, r.nationality, r.email,
                 r.license_number, r.license_type, r.license_year, r.license_valid_until, r.gravity_id, r.active,
                 r.social_instagram, r.social_facebook, r.social_strava, r.social_youtube, r.social_tiktok,
                 r.stats_total_starts, r.stats_total_finished, r.stats_total_wins, r.stats_total_podiums,
@@ -76,7 +76,7 @@ try {
     if (!$rider && !$hasNewColumns) {
         $stmt = $db->prepare("
             SELECT
-                r.id, r.firstname, r.lastname, r.birth_year, r.gender, r.nationality,
+                r.id, r.firstname, r.lastname, r.birth_year, r.gender, r.nationality, r.email,
                 r.license_number, r.license_type, r.license_year, r.license_valid_until, r.gravity_id, r.active,
                 c.id as club_id, c.name as club_name, c.city as club_city
             FROM riders r
@@ -525,6 +525,34 @@ try {
             $licenseActive = true;
         } elseif (!empty($rider['license_valid_until']) && $rider['license_valid_until'] !== '0000-00-00') {
             $licenseActive = strtotime($rider['license_valid_until']) >= strtotime('today');
+        }
+    }
+
+    // Check if this profile can be claimed by the current user
+    $canClaimProfile = false;
+    $hasPendingClaim = false;
+    $claimantRiderId = null;
+
+    if ($currentUser && !$isOwnProfile && empty($rider['email'])) {
+        // User is logged in, viewing someone else's profile, and that profile has no email
+        $claimantRiderId = $currentUser['id'] ?? null;
+
+        if ($claimantRiderId && $claimantRiderId != $riderId) {
+            // Check if there's already a pending claim
+            try {
+                $claimCheck = $db->prepare("
+                    SELECT id FROM rider_claims
+                    WHERE claimant_rider_id = ? AND target_rider_id = ? AND status = 'pending'
+                ");
+                $claimCheck->execute([$claimantRiderId, $riderId]);
+                $hasPendingClaim = $claimCheck->fetch() !== false;
+
+                if (!$hasPendingClaim) {
+                    $canClaimProfile = true;
+                }
+            } catch (Exception $e) {
+                // Table might not exist yet
+            }
         }
     }
 
@@ -1192,6 +1220,17 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
                     <i data-lucide="share-2"></i>
                     <span>Dela</span>
                 </button>
+                <?php if ($canClaimProfile): ?>
+                <button type="button" class="btn-action-outline btn-claim-profile" onclick="openClaimModal()">
+                    <i data-lucide="user-plus"></i>
+                    <span>Koppla profil</span>
+                </button>
+                <?php elseif ($hasPendingClaim): ?>
+                <button type="button" class="btn-action-outline btn-claim-pending" disabled>
+                    <i data-lucide="clock"></i>
+                    <span>Förfrågan skickad</span>
+                </button>
+                <?php endif; ?>
                 <?php if (function_exists('hub_is_admin') && hub_is_admin()): ?>
                 <a href="/admin/rider-edit.php?id=<?= $riderId ?>" class="btn-action-outline">
                     <i data-lucide="pencil"></i>
@@ -1548,5 +1587,299 @@ document.addEventListener('DOMContentLoaded', function() {
         </div>
     </div>
 </div>
+<?php endif; ?>
+
+<?php if ($canClaimProfile): ?>
+<!-- Profile Claim Modal -->
+<div id="claimModal" class="claim-modal-overlay">
+    <div class="claim-modal">
+        <div class="claim-modal-header">
+            <h3>
+                <i data-lucide="user-plus"></i>
+                Koppla profil
+            </h3>
+            <button type="button" class="claim-modal-close" onclick="closeClaimModal()">
+                <i data-lucide="x"></i>
+            </button>
+        </div>
+        <form id="claimForm" class="claim-modal-body">
+            <div class="claim-info-box">
+                <i data-lucide="info"></i>
+                <p>Du kan koppla denna historiska profil till ditt konto om du tror att det är din data. En administratör kommer att granska din förfrågan.</p>
+            </div>
+
+            <div class="claim-profiles">
+                <div class="claim-profile-card">
+                    <span class="claim-profile-label">Din profil</span>
+                    <span class="claim-profile-name"><?= htmlspecialchars($currentUser['firstname'] ?? '') ?> <?= htmlspecialchars($currentUser['lastname'] ?? '') ?></span>
+                </div>
+                <div class="claim-arrow">
+                    <i data-lucide="arrow-right"></i>
+                </div>
+                <div class="claim-profile-card claim-profile-target">
+                    <span class="claim-profile-label">Profil att koppla</span>
+                    <span class="claim-profile-name"><?= $fullName ?></span>
+                    <span class="claim-profile-meta"><?= count($results) ?> resultat</span>
+                </div>
+            </div>
+
+            <div class="claim-form-group">
+                <label for="claimReason">Varför tror du att detta är din profil? (valfritt)</label>
+                <textarea id="claimReason" name="reason" rows="3" placeholder="T.ex. stavning av namn, tävlingar du deltagit i..."></textarea>
+            </div>
+
+            <input type="hidden" name="target_rider_id" value="<?= $riderId ?>">
+
+            <div class="claim-form-actions">
+                <button type="button" class="btn-secondary" onclick="closeClaimModal()">Avbryt</button>
+                <button type="submit" class="btn-primary">
+                    <i data-lucide="send"></i>
+                    Skicka förfrågan
+                </button>
+            </div>
+        </form>
+        <div id="claimSuccess" class="claim-success" style="display: none;">
+            <i data-lucide="check-circle"></i>
+            <h4>Förfrågan skickad!</h4>
+            <p>En administratör kommer att granska din förfrågan och meddela dig.</p>
+            <button type="button" class="btn-primary" onclick="closeClaimModal(); location.reload();">Stäng</button>
+        </div>
+    </div>
+</div>
+
+<style>
+.claim-modal-overlay {
+    display: none;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.5);
+    z-index: 1000;
+    justify-content: center;
+    align-items: center;
+    padding: var(--space-md);
+}
+.claim-modal-overlay.active {
+    display: flex;
+}
+.claim-modal {
+    background: var(--color-bg);
+    border-radius: var(--radius-lg);
+    max-width: 500px;
+    width: 100%;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+.claim-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-md) var(--space-lg);
+    border-bottom: 1px solid var(--color-border);
+}
+.claim-modal-header h3 {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    margin: 0;
+    font-size: var(--text-lg);
+}
+.claim-modal-close {
+    background: none;
+    border: none;
+    padding: var(--space-xs);
+    cursor: pointer;
+    color: var(--color-text-secondary);
+    border-radius: var(--radius-sm);
+}
+.claim-modal-close:hover {
+    background: var(--color-bg-hover);
+}
+.claim-modal-body {
+    padding: var(--space-lg);
+}
+.claim-info-box {
+    display: flex;
+    gap: var(--space-sm);
+    padding: var(--space-md);
+    background: var(--color-bg-secondary);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--space-lg);
+}
+.claim-info-box i {
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    color: var(--color-accent);
+}
+.claim-info-box p {
+    margin: 0;
+    font-size: var(--text-sm);
+    color: var(--color-text-secondary);
+}
+.claim-profiles {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    margin-bottom: var(--space-lg);
+}
+.claim-profile-card {
+    flex: 1;
+    padding: var(--space-md);
+    background: var(--color-bg-secondary);
+    border-radius: var(--radius-md);
+    text-align: center;
+}
+.claim-profile-target {
+    border: 2px solid var(--color-accent);
+}
+.claim-profile-label {
+    display: block;
+    font-size: var(--text-xs);
+    color: var(--color-text-secondary);
+    margin-bottom: var(--space-xs);
+}
+.claim-profile-name {
+    display: block;
+    font-weight: 600;
+}
+.claim-profile-meta {
+    display: block;
+    font-size: var(--text-sm);
+    color: var(--color-text-secondary);
+    margin-top: 2px;
+}
+.claim-arrow {
+    color: var(--color-text-secondary);
+}
+.claim-form-group {
+    margin-bottom: var(--space-lg);
+}
+.claim-form-group label {
+    display: block;
+    font-size: var(--text-sm);
+    font-weight: 500;
+    margin-bottom: var(--space-xs);
+}
+.claim-form-group textarea {
+    width: 100%;
+    padding: var(--space-sm);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    font-family: inherit;
+    font-size: var(--text-sm);
+    resize: vertical;
+}
+.claim-form-actions {
+    display: flex;
+    gap: var(--space-sm);
+    justify-content: flex-end;
+}
+.claim-form-actions .btn-secondary {
+    padding: var(--space-sm) var(--space-md);
+    background: var(--color-bg-secondary);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+}
+.claim-form-actions .btn-primary {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    padding: var(--space-sm) var(--space-md);
+    background: var(--color-accent);
+    color: white;
+    border: none;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-weight: 500;
+}
+.claim-success {
+    padding: var(--space-xl);
+    text-align: center;
+}
+.claim-success i {
+    width: 48px;
+    height: 48px;
+    color: var(--color-success);
+    margin-bottom: var(--space-md);
+}
+.claim-success h4 {
+    margin: 0 0 var(--space-sm);
+}
+.claim-success p {
+    color: var(--color-text-secondary);
+    margin-bottom: var(--space-lg);
+}
+.btn-claim-profile {
+    border-color: var(--color-accent) !important;
+    color: var(--color-accent) !important;
+}
+.btn-claim-pending {
+    opacity: 0.6;
+    cursor: not-allowed !important;
+}
+@media (max-width: 500px) {
+    .claim-profiles {
+        flex-direction: column;
+    }
+    .claim-arrow {
+        transform: rotate(90deg);
+    }
+}
+</style>
+
+<script>
+function openClaimModal() {
+    document.getElementById('claimModal').classList.add('active');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeClaimModal() {
+    document.getElementById('claimModal').classList.remove('active');
+    document.body.style.overflow = '';
+}
+
+document.getElementById('claimForm')?.addEventListener('submit', async function(e) {
+    e.preventDefault();
+
+    const form = e.target;
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const originalHtml = submitBtn.innerHTML;
+
+    submitBtn.disabled = true;
+    submitBtn.innerHTML = '<i data-lucide="loader-2" class="animate-spin"></i> Skickar...';
+
+    try {
+        const formData = new FormData(form);
+        const response = await fetch('/api/rider-claim.php', {
+            method: 'POST',
+            body: formData
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            form.style.display = 'none';
+            document.getElementById('claimSuccess').style.display = 'block';
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+        } else {
+            alert(result.error || 'Ett fel uppstod');
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = originalHtml;
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+        }
+    } catch (error) {
+        alert('Ett fel uppstod vid anslutning till servern');
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = originalHtml;
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
+});
+
+// Close modal on overlay click
+document.getElementById('claimModal')?.addEventListener('click', function(e) {
+    if (e.target === this) closeClaimModal();
+});
+</script>
 <?php endif; ?>
 

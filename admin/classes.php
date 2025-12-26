@@ -288,7 +288,7 @@ include __DIR__ . '/components/unified-layout.php';
 </div>
 
 <!-- Class Modal -->
-<div id="classModal" class="admin-modal" class="hidden">
+<div id="classModal" class="admin-modal" style="display: none;">
     <div class="admin-modal-overlay" onclick="closeClassModal()"></div>
     <div class="admin-modal-content" style="max-width: 700px;">
         <div class="admin-modal-header">
