@@ -499,7 +499,8 @@ $duplicateGroups = $db->getAll("
  WHERE firstname IS NOT NULL AND lastname IS NOT NULL
  GROUP BY LOWER(firstname), LOWER(lastname)
  HAVING cnt > 1
- LIMIT 30
+ ORDER BY cnt DESC
+ LIMIT 100
 ");
 $debugInfo['query_found'] = count($duplicateGroups);
 
@@ -519,6 +520,7 @@ function getRiderClasses($db, $riderId) {
 }
 
 foreach ($duplicateGroups as $group) {
+ // Get ALL riders with this name (increased limit to 20)
  $riders = $db->getAll("
  SELECT r.id, r.firstname, r.lastname, r.birth_year, r.license_number,
   r.email, r.club_id, c.name as club_name,
@@ -526,64 +528,71 @@ foreach ($duplicateGroups as $group) {
  FROM riders r
  LEFT JOIN clubs c ON r.club_id = c.id
  WHERE LOWER(r.firstname) = LOWER(?) AND LOWER(r.lastname) = LOWER(?)
- LIMIT 5
+ ORDER BY r.id
+ LIMIT 20
 ", [$group['firstname'], $group['lastname']]);
 
- if (count($riders) >= 2) {
- $r1 = $riders[0];
- $r2 = $riders[1];
+ // Compare ALL pairs of riders in this group
+ for ($i = 0; $i < count($riders); $i++) {
+  for ($j = $i + 1; $j < count($riders); $j++) {
+   $r1 = $riders[$i];
+   $r2 = $riders[$j];
 
- // Check license types
- $uci1 = isRealUci($r1['license_number']) ? normalizeUci($r1['license_number']) : null;
- $uci2 = isRealUci($r2['license_number']) ? normalizeUci($r2['license_number']) : null;
- $isSwe1 = !empty($r1['license_number']) && strpos($r1['license_number'], 'SWE') === 0;
- $isSwe2 = !empty($r2['license_number']) && strpos($r2['license_number'], 'SWE') === 0;
+   // Check license types
+   $uci1 = isRealUci($r1['license_number']) ? normalizeUci($r1['license_number']) : null;
+   $uci2 = isRealUci($r2['license_number']) ? normalizeUci($r2['license_number']) : null;
+   $isSwe1 = !empty($r1['license_number']) && strpos($r1['license_number'], 'SWE') === 0;
+   $isSwe2 = !empty($r2['license_number']) && strpos($r2['license_number'], 'SWE') === 0;
 
- // Only skip if BOTH have real (non-SWE) UCI IDs and they're different
- if ($uci1 && $uci2 && $uci1 !== $uci2) {
-   $debugInfo['skipped_different_uci'][] = $r1['firstname'] . ' ' . $r1['lastname'] . " ($uci1 vs $uci2)";
-   continue;
- }
+   // Only skip if BOTH have real (non-SWE) UCI IDs and they're different
+   if ($uci1 && $uci2 && $uci1 !== $uci2) {
+     $debugInfo['skipped_different_uci'][] = $r1['firstname'] . ' ' . $r1['lastname'] . " ($uci1 vs $uci2)";
+     continue;
+   }
 
- // If one has SWE-ID and the other has UCI - DON'T skip based on birth year (likely same person)
- $oneHasSweOneHasUci = ($isSwe1 && $uci2) || ($isSwe2 && $uci1);
- if (!$oneHasSweOneHasUci && $r1['birth_year'] && $r2['birth_year'] && $r1['birth_year'] !== $r2['birth_year']) {
-   $debugInfo['skipped_different_birth'][] = $r1['firstname'] . ' ' . $r1['lastname'] . " ({$r1['birth_year']} vs {$r2['birth_year']})";
-   continue;
- }
+   // Skip if this pair is marked as "not duplicates"
+   $pairKey = getRiderPairKey($r1['id'], $r2['id']);
+   if (in_array($pairKey, $ignoredDuplicates)) continue;
 
- // Check missing data
- $r1Missing = [];
- $r2Missing = [];
- if (!$r1['birth_year'] && $r2['birth_year']) $r1Missing[] = 'födelseår';
- if (!$r2['birth_year'] && $r1['birth_year']) $r2Missing[] = 'födelseår';
- // Mark SWE-ID as missing real UCI when comparing to UCI profile
- if ($isSwe1 && $uci2) $r1Missing[] = 'UCI ID (har SWE-ID)';
- elseif (!$uci1 && $uci2) $r1Missing[] = 'UCI ID';
- if ($isSwe2 && $uci1) $r2Missing[] = 'UCI ID (har SWE-ID)';
- elseif (!$uci2 && $uci1) $r2Missing[] = 'UCI ID';
- if (!$r1['email'] && $r2['email']) $r1Missing[] = 'e-post';
- if (!$r2['email'] && $r1['email']) $r2Missing[] = 'e-post';
+   // NOTE: We NO LONGER skip based on different birth years - show them all and let user decide
 
- $sameUci = $uci1 && $uci2 && $uci1 === $uci2;
+   // Check missing data
+   $r1Missing = [];
+   $r2Missing = [];
+   if (!$r1['birth_year'] && $r2['birth_year']) $r1Missing[] = 'födelseår';
+   if (!$r2['birth_year'] && $r1['birth_year']) $r2Missing[] = 'födelseår';
+   // Mark SWE-ID as missing real UCI when comparing to UCI profile
+   if ($isSwe1 && $uci2) $r1Missing[] = 'UCI ID (har SWE-ID)';
+   elseif (!$uci1 && $uci2) $r1Missing[] = 'UCI ID';
+   if ($isSwe2 && $uci1) $r2Missing[] = 'UCI ID (har SWE-ID)';
+   elseif (!$uci2 && $uci1) $r2Missing[] = 'UCI ID';
+   if (!$r1['email'] && $r2['email']) $r1Missing[] = 'e-post';
+   if (!$r2['email'] && $r1['email']) $r2Missing[] = 'e-post';
 
- // Skip if this pair is marked as "not duplicates"
- $pairKey = getRiderPairKey($r1['id'], $r2['id']);
- if (in_array($pairKey, $ignoredDuplicates)) continue;
+   $sameUci = $uci1 && $uci2 && $uci1 === $uci2;
 
- // Always show duplicates with same name (removed the skip condition)
- $potentialDuplicates[] = [
-  'pair_key' => $pairKey,
-  'reason' => $sameUci ? 'Samma UCI ID' : 'Exakt samma namn',
-  'rider1' => ['id' => $r1['id'], 'name' => $r1['firstname'].' '.$r1['lastname'],
-   'birth_year' => $r1['birth_year'], 'license' => $r1['license_number'],
-   'email' => $r1['email'], 'club' => $r1['club_name'], 'missing' => $r1Missing,
-   'results' => $r1['result_count'] ?? 0, 'classes' => getRiderClasses($db, $r1['id'])],
-  'rider2' => ['id' => $r2['id'], 'name' => $r2['firstname'].' '.$r2['lastname'],
-   'birth_year' => $r2['birth_year'], 'license' => $r2['license_number'],
-   'email' => $r2['email'], 'club' => $r2['club_name'], 'missing' => $r2Missing,
-   'results' => $r2['result_count'] ?? 0, 'classes' => getRiderClasses($db, $r2['id'])]
- ];
+   // Determine reason for showing as duplicates
+   $reason = 'Exakt samma namn';
+   if ($sameUci) {
+    $reason = 'Samma UCI ID';
+   } elseif ($r1['birth_year'] && $r2['birth_year'] && $r1['birth_year'] !== $r2['birth_year']) {
+    $reason = 'Samma namn, olika födelseår (' . $r1['birth_year'] . ' vs ' . $r2['birth_year'] . ')';
+   }
+
+   // Always show duplicates with same name
+   $potentialDuplicates[] = [
+    'pair_key' => $pairKey,
+    'reason' => $reason,
+    'rider1' => ['id' => $r1['id'], 'name' => $r1['firstname'].' '.$r1['lastname'],
+     'birth_year' => $r1['birth_year'], 'license' => $r1['license_number'],
+     'email' => $r1['email'], 'club' => $r1['club_name'], 'missing' => $r1Missing,
+     'results' => $r1['result_count'] ?? 0, 'classes' => getRiderClasses($db, $r1['id'])],
+    'rider2' => ['id' => $r2['id'], 'name' => $r2['firstname'].' '.$r2['lastname'],
+     'birth_year' => $r2['birth_year'], 'license' => $r2['license_number'],
+     'email' => $r2['email'], 'club' => $r2['club_name'], 'missing' => $r2Missing,
+     'results' => $r2['result_count'] ?? 0, 'classes' => getRiderClasses($db, $r2['id'])]
+   ];
+  }
  }
 }
 
@@ -601,7 +610,8 @@ $fuzzyGroups = $db->getAll("
     WHERE firstname IS NOT NULL AND lastname IS NOT NULL
     GROUP BY LOWER(lastname), SOUNDEX(firstname)
     HAVING cnt > 1 AND COUNT(DISTINCT LOWER(firstname)) > 1
-    LIMIT 30
+    ORDER BY cnt DESC
+    LIMIT 100
 ");
 
 foreach ($fuzzyGroups as $group) {
