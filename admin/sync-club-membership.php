@@ -19,7 +19,98 @@ if (!hasRole('super_admin')) {
 $currentYear = date('Y');
 $targetYear = isset($_GET['year']) ? (int)$_GET['year'] : (int)$currentYear;
 $dryRun = !isset($_GET['execute']);
-$direction = $_GET['direction'] ?? 'season_to_rider'; // or 'rider_to_season'
+$direction = $_GET['direction'] ?? 'season_to_rider'; // or 'rider_to_season' or 'rebuild_all_from_results'
+
+// Handle complete rebuild from results
+if ($direction === 'rebuild_all_from_results' && !$dryRun) {
+    // Get all distinct years from results
+    $years = $db->getAll("
+        SELECT DISTINCT YEAR(e.date) as year
+        FROM results r
+        JOIN events e ON r.event_id = e.id
+        WHERE r.club_id IS NOT NULL
+        ORDER BY year ASC
+    ");
+
+    $totalRebuilt = 0;
+    $yearStats = [];
+
+    foreach ($years as $yearRow) {
+        $year = (int)$yearRow['year'];
+        if ($year < 2000 || $year > 2100) continue; // Sanity check
+
+        // Get first result's club for each rider in this year
+        // Using MIN(e.date) to find the first race
+        $firstClubs = $db->getAll("
+            SELECT
+                r.cyclist_id as rider_id,
+                r.club_id,
+                MIN(e.date) as first_race_date
+            FROM results r
+            JOIN events e ON r.event_id = e.id
+            WHERE YEAR(e.date) = ?
+              AND r.club_id IS NOT NULL
+            GROUP BY r.cyclist_id, r.club_id
+            HAVING first_race_date = (
+                SELECT MIN(e2.date)
+                FROM results r2
+                JOIN events e2 ON r2.event_id = e2.id
+                WHERE r2.cyclist_id = r.cyclist_id
+                  AND YEAR(e2.date) = ?
+                  AND r2.club_id IS NOT NULL
+            )
+        ", [$year, $year]);
+
+        $yearCount = 0;
+        foreach ($firstClubs as $fc) {
+            // Insert or update rider_club_seasons
+            $existing = $db->getRow(
+                "SELECT id FROM rider_club_seasons WHERE rider_id = ? AND season_year = ?",
+                [$fc['rider_id'], $year]
+            );
+
+            if ($existing) {
+                $db->update('rider_club_seasons',
+                    ['club_id' => $fc['club_id'], 'locked' => 1],
+                    'id = ?',
+                    [$existing['id']]
+                );
+            } else {
+                $db->query(
+                    "INSERT INTO rider_club_seasons (rider_id, club_id, season_year, locked) VALUES (?, ?, ?, 1)",
+                    [$fc['rider_id'], $fc['club_id'], $year]
+                );
+            }
+            $yearCount++;
+        }
+
+        $yearStats[$year] = $yearCount;
+        $totalRebuilt += $yearCount;
+    }
+
+    // Also update riders.club_id to latest year's club
+    $latestYear = max(array_keys($yearStats));
+    $db->query("
+        UPDATE riders r
+        SET r.club_id = (
+            SELECT rcs.club_id
+            FROM rider_club_seasons rcs
+            WHERE rcs.rider_id = r.id AND rcs.season_year = ?
+        )
+        WHERE EXISTS (
+            SELECT 1 FROM rider_club_seasons rcs2
+            WHERE rcs2.rider_id = r.id AND rcs2.season_year = ?
+        )
+    ", [$latestYear, $latestYear]);
+
+    $_SESSION['rebuild_result'] = [
+        'total' => $totalRebuilt,
+        'years' => $yearStats
+    ];
+
+    header("Location: ?year={$targetYear}&rebuilt=1");
+    exit;
+}
 
 // Find mismatches: riders with 2025 season club but different/null rider.club_id
 $mismatches = $db->getAll("
@@ -174,11 +265,53 @@ include __DIR__ . '/components/unified-layout.php';
 </div>
 <?php endif; ?>
 
+<?php if (isset($_GET['rebuilt']) && isset($_SESSION['rebuild_result'])): ?>
+<?php $rebuildResult = $_SESSION['rebuild_result']; unset($_SESSION['rebuild_result']); ?>
+<div class="alert alert-success mb-lg">
+    <i data-lucide="check-circle"></i>
+    <strong>Komplett ombyggnad klar!</strong><br>
+    Totalt <?= $rebuildResult['total'] ?> klubbtillhörigheter uppdaterade.<br>
+    <small>
+        Per år:
+        <?php foreach ($rebuildResult['years'] as $year => $count): ?>
+            <?= $year ?>: <?= $count ?> st<?= array_key_last($rebuildResult['years']) !== $year ? ', ' : '' ?>
+        <?php endforeach; ?>
+    </small>
+</div>
+<?php endif; ?>
+
 <div class="alert alert-info mb-lg">
     <i data-lucide="info"></i>
     <strong>Klubbmedlemskap för <?= $targetYear ?></strong><br>
     Hittar åkare där <code>riders.club_id</code> inte matchar <code>rider_club_seasons</code> för <?= $targetYear ?>.
     <br>Detta är kritiskt för klubbmästerskap!
+</div>
+
+<!-- Complete Rebuild Card -->
+<div class="card mb-lg" style="border: 2px solid var(--color-danger);">
+    <div class="card-header" style="background: rgba(239, 68, 68, 0.1);">
+        <h3><i data-lucide="rotate-ccw"></i> Komplett ombyggnad av klubbtillhörigheter</h3>
+        <p class="text-secondary" style="margin: 0; font-size: 13px;">
+            Bygger om ALLA klubbtillhörigheter för ALLA år baserat på resultatdata
+        </p>
+    </div>
+    <div class="card-body">
+        <div class="alert alert-warning mb-md">
+            <i data-lucide="alert-triangle"></i>
+            <strong>Varning!</strong> Detta ersätter alla befintliga klubbtillhörigheter.
+            <ul style="margin: var(--space-sm) 0 0; padding-left: var(--space-lg);">
+                <li>För varje åkare och år: klubben från <strong>första tävlingen</strong> det året används</li>
+                <li>Alla poster markeras som låsta (har resultat)</li>
+                <li><code>riders.club_id</code> uppdateras till senaste årets klubb</li>
+            </ul>
+        </div>
+        <a href="?execute=1&direction=rebuild_all_from_results"
+           class="btn btn-danger"
+           onclick="return confirm('VARNING: Detta kommer att:\n\n1. Ersätta ALLA klubbtillhörigheter (rider_club_seasons)\n2. Basera klubb på första resultatet varje år\n3. Uppdatera riders.club_id till senaste årets klubb\n\nDetta kan inte ångras enkelt.\n\nÄr du säker?')">
+            <i data-lucide="database"></i>
+            Bygg om alla klubbtillhörigheter från resultat
+        </a>
+    </div>
 </div>
 
 <!-- Year selector -->
