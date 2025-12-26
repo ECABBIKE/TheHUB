@@ -55,7 +55,7 @@ try {
     try {
         $stmt = $db->prepare("
             SELECT
-                r.id, r.firstname, r.lastname, r.birth_year, r.gender, r.nationality, r.email,
+                r.id, r.firstname, r.lastname, r.birth_year, r.gender, r.nationality, r.email, r.password,
                 r.license_number, r.license_type, r.license_year, r.license_valid_until, r.gravity_id, r.active,
                 r.social_instagram, r.social_facebook, r.social_strava, r.social_youtube, r.social_tiktok,
                 r.stats_total_starts, r.stats_total_finished, r.stats_total_wins, r.stats_total_podiums,
@@ -76,7 +76,7 @@ try {
     if (!$rider && !$hasNewColumns) {
         $stmt = $db->prepare("
             SELECT
-                r.id, r.firstname, r.lastname, r.birth_year, r.gender, r.nationality, r.email,
+                r.id, r.firstname, r.lastname, r.birth_year, r.gender, r.nationality, r.email, r.password,
                 r.license_number, r.license_type, r.license_year, r.license_valid_until, r.gravity_id, r.active,
                 c.id as club_id, c.name as club_name, c.city as club_city
             FROM riders r
