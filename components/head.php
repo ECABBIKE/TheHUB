@@ -86,6 +86,9 @@ $iconType = match($faviconExt) {
 <!-- Lucide Icons - pinned to specific version for stability -->
 <script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
 
+<!-- Chart.js for dynamic charts -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+
 <title><?= htmlspecialchars($pageTitle) ?></title>
 
 <!-- CSS with cache busting (filemtime) -->

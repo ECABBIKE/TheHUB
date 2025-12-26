@@ -775,8 +775,6 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
                 <div class="dashboard-chart-body">
                     <canvas id="rankingChart"></canvas>
                 </div>
-                <?php else: ?>
-                <!-- Debug: hasRankingChart=false, rankingHistoryFull count=<?= count($rankingHistoryFull ?? []) ?> -->
                 <?php endif; ?>
                 <div class="dashboard-chart-footer">
                     <button type="button" class="btn-calc-ranking-inline" onclick="openRankingModal()">
@@ -2013,7 +2011,6 @@ document.getElementById('activateModal')?.addEventListener('click', function(e) 
         <?php if ($hasRankingChart): ?>
         // Ranking Chart (red theme)
         const rankingCtx = document.getElementById('rankingChart');
-        console.log('rankingCtx:', rankingCtx, 'data:', <?= json_encode($rankingChartData) ?>);
         if (rankingCtx) {
             const ctx = rankingCtx.getContext('2d');
             const rankingGradient = ctx.createLinearGradient(0, 0, 0, 100);
@@ -2138,24 +2135,11 @@ document.getElementById('activateModal')?.addEventListener('click', function(e) 
         <?php endif; ?>
     }
 
-    // Wait for Chart.js to be available (loaded in footer)
-    function waitForChart() {
-        console.log('waitForChart called, Chart defined:', typeof Chart !== 'undefined');
-        if (typeof Chart !== 'undefined') {
-            console.log('Initializing charts...');
-            initCharts();
-            console.log('Charts initialized');
-        } else {
-            // Chart.js not loaded yet, retry
-            setTimeout(waitForChart, 50);
-        }
-    }
-
-    // Start checking after DOM is ready
+    // Chart.js is now loaded before this script runs
     if (document.readyState === 'loading') {
-        document.addEventListener('DOMContentLoaded', waitForChart);
+        document.addEventListener('DOMContentLoaded', initCharts);
     } else {
-        waitForChart();
+        initCharts();
     }
 })();
 </script>
