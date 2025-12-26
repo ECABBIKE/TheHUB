@@ -853,7 +853,7 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
                 </div>
                 <?php if ($hasRankingChart): ?>
                 <div class="dashboard-chart-body dashboard-chart-body--axes">
-                    <svg viewBox="0 0 <?= $rankChartWidth ?> <?= $rankChartHeight ?>" preserveAspectRatio="xMidYMid meet" class="dashboard-chart-svg dashboard-chart-svg--axes">
+                    <svg viewBox="0 0 <?= $rankChartWidth ?> <?= $rankChartHeight ?>" preserveAspectRatio="none" class="dashboard-chart-svg dashboard-chart-svg--axes">
                         <defs>
                             <linearGradient id="rankingGradient" x1="0" y1="0" x2="0" y2="1">
                                 <stop offset="0%" stop-color="#ef4444" stop-opacity="0.3"/>
@@ -921,7 +921,7 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
                     </div>
                 </div>
                 <div class="dashboard-chart-body dashboard-chart-body--axes">
-                    <svg viewBox="0 0 <?= $chartWidth ?> <?= $chartHeight ?>" preserveAspectRatio="xMidYMid meet" class="dashboard-chart-svg dashboard-chart-svg--axes">
+                    <svg viewBox="0 0 <?= $chartWidth ?> <?= $chartHeight ?>" preserveAspectRatio="none" class="dashboard-chart-svg dashboard-chart-svg--axes">
                         <defs>
                             <linearGradient id="formGradient" x1="0" y1="0" x2="0" y2="1">
                                 <stop offset="0%" stop-color="#61CE70" stop-opacity="0.3"/>
