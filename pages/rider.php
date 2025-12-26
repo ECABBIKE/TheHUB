@@ -4,7 +4,10 @@
  */
 
 $db = hub_db();
-$riderId = intval($pageInfo['params']['id'] ?? 0);
+$riderId = intval($pageInfo['params']['id'] ?? $_GET['id'] ?? 0);
+
+// AJAX request for series content only
+$isAjaxSeriesRequest = isset($_GET['ajax']) && $_GET['ajax'] === 'series';
 
 // Check if current user is viewing their own profile
 $currentUser = function_exists('hub_current_user') ? hub_current_user() : null;
@@ -816,7 +819,7 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
             <div class="series-header">
                 <h3 class="card-section-title"><i data-lucide="trophy"></i> Serieställning</h3>
                 <?php if (count($availableYears) > 1): ?>
-                <select id="seriesYearSelect" class="form-select form-select-sm" onchange="window.location.href='?series_year=' + this.value">
+                <select id="seriesYearSelect" class="form-select form-select-sm" onchange="loadSeriesYear(this.value)">
                     <?php foreach ($availableYears as $year): ?>
                     <option value="<?= $year ?>" <?= $year == $selectedSeriesYear ? 'selected' : '' ?>><?= $year ?></option>
                     <?php endforeach; ?>
@@ -825,6 +828,7 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
                 <span class="year-badge"><?= $selectedSeriesYear ?></span>
                 <?php endif; ?>
             </div>
+            <div id="seriesContent">
 
             <?php if (!empty($seriesStandings)): ?>
             <!-- Series tabs -->
@@ -945,10 +949,11 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
                 <i data-lucide="calendar-x" class="icon-xl text-muted"></i>
                 <p class="text-muted">Inga serieresultat för <?= $selectedSeriesYear ?>.</p>
                 <?php if ($selectedSeriesYear != date('Y') && in_array((int)date('Y'), $availableYears)): ?>
-                <a href="?series_year=<?= date('Y') ?>" class="btn btn-ghost btn-sm">Visa aktuellt år</a>
+                <a href="#" onclick="loadSeriesYear(<?= date('Y') ?>); return false;" class="btn btn-ghost btn-sm">Visa aktuellt år</a>
                 <?php endif; ?>
             </div>
             <?php endif; ?>
+            </div><!-- /#seriesContent -->
         </div>
         <?php endif; ?>
 
@@ -2025,7 +2030,11 @@ document.getElementById('activateModal')?.addEventListener('click', function(e) 
                         data: <?= json_encode($rankingChartData) ?>,
                         borderColor: '#ef4444',
                         backgroundColor: rankingGradient,
-                        fill: 'end',
+                        fill: {
+                            target: 'origin',
+                            above: 'transparent',
+                            below: rankingGradient
+                        },
                         tension: 0.4,
                         borderWidth: 2,
                         pointRadius: 3,
@@ -2088,7 +2097,11 @@ document.getElementById('activateModal')?.addEventListener('click', function(e) 
                         data: <?= json_encode($formChartData) ?>,
                         borderColor: '#61CE70',
                         backgroundColor: formGradient,
-                        fill: 'end',
+                        fill: {
+                            target: 'origin',
+                            above: 'transparent',
+                            below: formGradient
+                        },
                         tension: 0.4,
                         borderWidth: 2,
                         pointRadius: 3,
@@ -2144,4 +2157,52 @@ document.getElementById('activateModal')?.addEventListener('click', function(e) 
 })();
 </script>
 <?php endif; ?>
+
+<!-- Series Year AJAX Loading -->
+<script>
+function loadSeriesYear(year) {
+    const container = document.getElementById('seriesContent');
+    const select = document.getElementById('seriesYearSelect');
+    if (!container) return;
+
+    // Update select value
+    if (select) select.value = year;
+
+    // Show loading state
+    container.style.opacity = '0.5';
+
+    // Fetch new content
+    fetch('/api/rider-series.php?id=<?= $riderId ?>&year=' + year)
+        .then(response => response.text())
+        .then(html => {
+            container.innerHTML = html;
+            container.style.opacity = '1';
+            // Re-init Lucide icons
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+            // Re-init series tabs
+            initSeriesTabs();
+        })
+        .catch(err => {
+            console.error('Series load error:', err);
+            container.style.opacity = '1';
+        });
+}
+
+function initSeriesTabs() {
+    document.querySelectorAll('.series-tab-btn').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const target = this.dataset.target;
+            // Update tabs
+            document.querySelectorAll('.series-tab-btn').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            // Update panels
+            document.querySelectorAll('.series-panel').forEach(p => p.classList.remove('active'));
+            const panel = document.getElementById(target);
+            if (panel) panel.classList.add('active');
+        });
+    });
+}
+// Init on page load
+document.addEventListener('DOMContentLoaded', initSeriesTabs);
+</script>
 
