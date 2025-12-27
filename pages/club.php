@@ -44,7 +44,7 @@ try {
         return;
     }
 
-    // Get ALL unique members across all years with their membership years
+    // Get ALL unique members across all years with their membership years AND stats
     $stmt = $db->prepare("
         SELECT
             r.id,
@@ -52,7 +52,10 @@ try {
             r.lastname,
             r.birth_year,
             r.gender,
-            GROUP_CONCAT(DISTINCT rcs.season_year ORDER BY rcs.season_year DESC SEPARATOR ',') as member_years
+            GROUP_CONCAT(DISTINCT rcs.season_year ORDER BY rcs.season_year DESC SEPARATOR ',') as member_years,
+            COALESCE(r.stats_total_starts, 0) as total_races,
+            COALESCE(r.stats_total_wins, 0) as total_wins,
+            COALESCE(r.stats_total_podiums, 0) as total_podiums
         FROM riders r
         INNER JOIN rider_club_seasons rcs ON r.id = rcs.rider_id AND rcs.club_id = ?
         WHERE r.active = 1
@@ -69,7 +72,10 @@ try {
             r.firstname,
             r.lastname,
             r.birth_year,
-            r.gender
+            r.gender,
+            COALESCE(r.stats_total_starts, 0) as total_races,
+            COALESCE(r.stats_total_wins, 0) as total_wins,
+            COALESCE(r.stats_total_podiums, 0) as total_podiums
         FROM riders r
         LEFT JOIN rider_club_seasons rcs ON r.id = rcs.rider_id AND rcs.club_id = ?
         WHERE r.club_id = ? AND r.active = 1 AND rcs.id IS NULL
@@ -270,34 +276,71 @@ if (!$clubLogo && !empty($club['logo'])) {
         <p>Det finns inga registrerade medlemmar för denna klubb.</p>
     </div>
     <?php else: ?>
-    <div class="members-list">
+
+    <!-- Desktop Table View -->
+    <div class="table-responsive members-table-desktop">
+        <table class="table table--striped">
+            <thead>
+                <tr>
+                    <th>Namn</th>
+                    <th class="text-center">Race</th>
+                    <th class="text-center">Vinster</th>
+                    <th class="text-center">Pallplatser</th>
+                    <th class="text-right">Medlemsår</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ($members as $member):
+                    $years = explode(',', $member['member_years']);
+                    sort($years);
+                    $yearsStr = implode(', ', $years);
+                    $isCurrentMember = in_array($currentYear, $years);
+                ?>
+                <tr onclick="window.location='/rider/<?= $member['id'] ?>'" class="cursor-pointer <?= $isCurrentMember ? 'member-current-row' : '' ?>">
+                    <td>
+                        <div class="member-name-cell">
+                            <div class="member-avatar-small">
+                                <?= strtoupper(substr($member['firstname'], 0, 1) . substr($member['lastname'], 0, 1)) ?>
+                            </div>
+                            <div class="member-name-info">
+                                <span class="member-name"><?= htmlspecialchars($member['firstname'] . ' ' . $member['lastname']) ?></span>
+                                <?php if ($member['birth_year']): ?>
+                                <span class="member-birth"><?= $member['birth_year'] ?></span>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="text-center"><?= (int)$member['total_races'] ?></td>
+                    <td class="text-center"><?= (int)$member['total_wins'] ?></td>
+                    <td class="text-center"><?= (int)$member['total_podiums'] ?></td>
+                    <td class="text-right member-years-cell"><?= htmlspecialchars($yearsStr) ?></td>
+                </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Mobile Card View -->
+    <div class="members-list-mobile">
         <?php foreach ($members as $member):
             $years = explode(',', $member['member_years']);
-            $yearCount = count($years);
-            $latestYear = $years[0] ?? '';
+            sort($years);
+            $yearsStr = implode(', ', $years);
             $isCurrentMember = in_array($currentYear, $years);
         ?>
         <a href="/rider/<?= $member['id'] ?>" class="member-row <?= $isCurrentMember ? 'member-current' : '' ?>">
-            <div class="member-avatar">
+            <div class="member-avatar-small">
                 <?= strtoupper(substr($member['firstname'], 0, 1) . substr($member['lastname'], 0, 1)) ?>
             </div>
 
-            <div class="member-info">
+            <div class="member-info-mobile">
                 <span class="member-name"><?= htmlspecialchars($member['firstname'] . ' ' . $member['lastname']) ?></span>
-                <?php if ($member['birth_year']): ?>
-                <span class="member-birth"><?= $member['birth_year'] ?></span>
-                <?php endif; ?>
-            </div>
-
-            <div class="member-years">
-                <?php if ($yearCount <= 3): ?>
-                    <?php foreach ($years as $y): ?>
-                    <span class="year-badge <?= $y == $currentYear ? 'year-current' : '' ?>"><?= $y ?></span>
-                    <?php endforeach; ?>
-                <?php else: ?>
-                    <span class="year-badge <?= $latestYear == $currentYear ? 'year-current' : '' ?>"><?= $latestYear ?></span>
-                    <span class="year-more">+<?= $yearCount - 1 ?> år</span>
-                <?php endif; ?>
+                <div class="member-stats-row">
+                    <span class="stat-mini"><?= (int)$member['total_races'] ?> race</span>
+                    <span class="stat-mini"><?= (int)$member['total_wins'] ?> vinst</span>
+                    <span class="stat-mini"><?= (int)$member['total_podiums'] ?> pall</span>
+                </div>
+                <span class="member-years-small"><?= htmlspecialchars($yearsStr) ?></span>
             </div>
 
             <div class="member-arrow">
