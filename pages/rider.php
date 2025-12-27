@@ -374,10 +374,11 @@ try {
 
     // 3. Ranking history - Get historical positions from snapshots
     $rankingHistory = [];
-    $rankingHistoryFull = []; // Full history for the graph (up to 50 entries)
+    $rankingHistoryFull = []; // Full history for "Visa historik"
+    $rankingHistory24m = [];  // Last 24 months for main chart
     if ($rankingFunctionsLoaded) {
         try {
-            // Get ALL ranking snapshots for the full graph
+            // Get ALL ranking snapshots
             $historyStmt = $db->prepare("
                 SELECT
                     snapshot_date,
@@ -392,8 +393,15 @@ try {
             $historyStmt->execute([$riderId]);
             $allSnapshots = $historyStmt->fetchAll(PDO::FETCH_ASSOC);
 
-            // Store full history for graph (limit to 50 entries for performance)
-            $rankingHistoryFull = array_slice($allSnapshots, -50);
+            // Store full history for "Visa historik" section
+            $rankingHistoryFull = $allSnapshots;
+
+            // Filter to last 24 months for main chart
+            $cutoff24m = date('Y-m-d', strtotime('-24 months'));
+            $rankingHistory24m = array_filter($allSnapshots, function($snap) use ($cutoff24m) {
+                return $snap['snapshot_date'] >= $cutoff24m;
+            });
+            $rankingHistory24m = array_values($rankingHistory24m);
 
             // Group by month for compact display (take latest per month)
             $byMonth = [];
@@ -739,15 +747,16 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
 
         <!-- STATS CARD - Tabbed Ranking/Form -->
         <?php
-        // Prepare ranking chart data for Chart.js
+        // Prepare ranking chart data for Chart.js - MAIN CHART shows only last 24 months
         $hasRankingChart = false;
         $rankingChartLabels = [];
         $rankingChartData = [];
         $swedishMonthsShort = ['jan', 'feb', 'mar', 'apr', 'maj', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'dec'];
 
-        if ($rankingPosition && !empty($rankingHistoryFull) && count($rankingHistoryFull) >= 2) {
+        // Use 24-month filtered data for main chart
+        if ($rankingPosition && !empty($rankingHistory24m) && count($rankingHistory24m) >= 2) {
             $hasRankingChart = true;
-            foreach ($rankingHistoryFull as $rh) {
+            foreach ($rankingHistory24m as $rh) {
                 $monthNum = isset($rh['month']) ? (int)date('n', strtotime($rh['month'] . '-01')) - 1 : 0;
                 $rankingChartLabels[] = ucfirst($swedishMonthsShort[$monthNum % 12] ?? '');
                 $rankingChartData[] = (int)$rh['ranking_position'];
@@ -1283,6 +1292,12 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
                 <div class="ranking-modal-body" id="achievementModalBody">
                     <!-- Content populated by JS -->
                 </div>
+                <div class="modal-close-footer">
+                    <button type="button" onclick="closeAchievementModal()" class="modal-close-btn">
+                        <i data-lucide="x"></i>
+                        Stäng
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -1342,6 +1357,16 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
 
         document.getElementById('achievementModal')?.addEventListener('click', function(e) {
             if (e.target === this) closeAchievementModal();
+        });
+
+        // ESC key to close achievement modal
+        document.addEventListener('keydown', function(e) {
+            if (e.key === 'Escape') {
+                const achievementModal = document.getElementById('achievementModal');
+                if (achievementModal && achievementModal.style.display === 'flex') {
+                    closeAchievementModal();
+                }
+            }
         });
 
         // Add click handlers to badges with data
@@ -1833,6 +1858,16 @@ function initHistoryChart() {
 // Close on overlay click
 document.getElementById('historyModal')?.addEventListener('click', function(e) {
     if (e.target === this) closeHistoryModal();
+});
+
+// ESC key to close history modal
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        const historyModal = document.getElementById('historyModal');
+        if (historyModal && historyModal.style.display === 'flex') {
+            closeHistoryModal();
+        }
+    }
 });
 </script>
 
