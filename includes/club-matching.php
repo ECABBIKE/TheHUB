@@ -111,10 +111,15 @@ function findClubByName($db, $clubName) {
     $normalizedSearch = normalizeClubName($clubName);
 
     // Get all clubs and normalize them for comparison
-    // (This is cached per request so it's not too expensive)
+    // Cache is refreshed if a new club was added (tracked via count)
     static $normalizedClubCache = null;
     static $normalizedClubCacheNoS = null; // Also cache without trailing 's'
-    if ($normalizedClubCache === null) {
+    static $lastClubCount = -1;
+
+    // Check if cache needs refresh (new clubs added)
+    $currentCount = (int)$db->getRow("SELECT COUNT(*) as c FROM clubs")['c'];
+
+    if ($normalizedClubCache === null || $currentCount !== $lastClubCount) {
         $allClubs = $db->getAll("SELECT id, name FROM clubs WHERE active = 1");
         $normalizedClubCache = [];
         $normalizedClubCacheNoS = [];
@@ -129,6 +134,7 @@ function findClubByName($db, $clubName) {
                 $normalizedClubCacheNoS[$withoutS] = $c;
             }
         }
+        $lastClubCount = $currentCount;
     }
 
     // Check for normalized match
