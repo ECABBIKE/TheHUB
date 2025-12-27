@@ -28,6 +28,10 @@ $defaultScales = [
     'top5_small' => ['name' => 'Topp 5 (liten)', 'points' => [10, 7, 5, 3, 2]],
 ];
 
+// Check if series is preselected from URL
+$preselectedSeriesId = isset($_GET['series']) ? (int)$_GET['series'] : null;
+$defaultSelectionMode = $preselectedSeriesId ? 'series' : 'single';
+
 // Get all series
 $series = $db->getAll("
     SELECT s.id, s.name, s.year, COUNT(DISTINCT e.id) as event_count
@@ -170,7 +174,7 @@ $previewEventIds = [];
 $previewClassIds = [];
 $previewStage = null;
 $previewScale = null;
-$selectionMode = $_POST['selection_mode'] ?? 'single';
+$selectionMode = $_POST['selection_mode'] ?? $defaultSelectionMode;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['preview_bonus'])) {
     $selectionMode = $_POST['selection_mode'] ?? 'single';
@@ -341,7 +345,7 @@ include __DIR__ . '/components/unified-layout.php';
                     <select name="series_id" id="series_id" class="form-select">
                         <option value="">Välj serie...</option>
                         <?php foreach ($series as $s): ?>
-                            <option value="<?= $s['id'] ?>">
+                            <option value="<?= $s['id'] ?>" <?= $preselectedSeriesId == $s['id'] ? 'selected' : '' ?>>
                                 <?= htmlspecialchars($s['name']) ?> (<?= $s['year'] ?>) - <?= $s['event_count'] ?> event
                             </option>
                         <?php endforeach; ?>
