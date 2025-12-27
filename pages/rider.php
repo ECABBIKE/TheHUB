@@ -832,16 +832,24 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
         <div class="card series-card">
             <div class="series-header">
                 <h3 class="card-section-title"><i data-lucide="trophy"></i> Serieställning</h3>
-                <?php if (count($availableYears) > 1): ?>
-                <select id="seriesYearSelect" class="form-select form-select-sm" onchange="loadSeriesYear(this.value)">
-                    <?php foreach ($availableYears as $year): ?>
-                    <option value="<?= $year ?>" <?= $year == $selectedSeriesYear ? 'selected' : '' ?>><?= $year ?></option>
-                    <?php endforeach; ?>
-                </select>
-                <?php else: ?>
-                <span class="year-badge"><?= $selectedSeriesYear ?></span>
-                <?php endif; ?>
             </div>
+
+            <!-- Year Filter Links -->
+            <?php if (count($availableYears) > 1): ?>
+            <div class="series-year-tabs">
+                <?php foreach ($availableYears as $year): ?>
+                <a href="/rider/<?= $riderId ?>?series_year=<?= $year ?>"
+                   class="year-tab <?= $year == $selectedSeriesYear ? 'active' : '' ?>">
+                    <?= $year ?>
+                </a>
+                <?php endforeach; ?>
+            </div>
+            <?php else: ?>
+            <div class="series-year-tabs">
+                <span class="year-tab active"><?= $selectedSeriesYear ?></span>
+            </div>
+            <?php endif; ?>
+
             <div id="seriesContent">
 
             <?php if (!empty($seriesStandings)): ?>
