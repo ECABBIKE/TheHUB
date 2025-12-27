@@ -139,12 +139,14 @@ function rebuildRiderStats($pdo, $rider_id) {
 function rebuildAllRiderStats($pdo, $progressCallback = null) {
     $startTime = microtime(true);
 
-    // Hämta alla åkare som har minst ett resultat
+    // Hämta alla åkare som har minst ett resultat OCH finns i riders-tabellen
+    // Detta förhindrar att achievements skapas för ogiltiga rider_ids
     $stmt = $pdo->query("
-        SELECT DISTINCT r.cyclist_id as rider_id
-        FROM results r
-        WHERE r.cyclist_id IS NOT NULL
-        ORDER BY r.cyclist_id
+        SELECT DISTINCT res.cyclist_id as rider_id
+        FROM results res
+        INNER JOIN riders r ON res.cyclist_id = r.id
+        WHERE res.cyclist_id IS NOT NULL
+        ORDER BY res.cyclist_id
     ");
     $riderIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
 

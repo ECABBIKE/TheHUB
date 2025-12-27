@@ -8,6 +8,48 @@ requireAdmin();
 
 $db = getDB();
 $pageTitle = 'Debug Achievements';
+$message = '';
+$messageType = '';
+
+// Handle fix actions
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    if (isset($_POST['action'])) {
+        switch ($_POST['action']) {
+            case 'clean_orphaned_achievements':
+                // Delete achievements where rider_id doesn't exist in riders
+                $stmt = $db->query("
+                    DELETE ra FROM rider_achievements ra
+                    LEFT JOIN riders r ON ra.rider_id = r.id
+                    WHERE r.id IS NULL
+                ");
+                $deleted = $stmt->rowCount();
+                $message = "Raderade {$deleted} orphaned achievements";
+                $messageType = 'success';
+                break;
+
+            case 'fix_cyclist_ids_by_name':
+                // Try to fix cyclist_id in results by matching rider names
+                // This assumes the original name was stored somewhere or can be matched
+                $fixed = 0;
+                $notFound = 0;
+
+                // Get results with invalid cyclist_id (not in riders table)
+                $stmt = $db->query("
+                    SELECT DISTINCT res.cyclist_id
+                    FROM results res
+                    LEFT JOIN riders r ON res.cyclist_id = r.id
+                    WHERE r.id IS NULL AND res.cyclist_id IS NOT NULL
+                ");
+                $invalidIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+                // This is complex - we would need a way to match the external ID to actual rider
+                // For now, just report how many are invalid
+                $message = "Hittade " . count($invalidIds) . " ogiltiga cyclist_id. Manuell åtgärd krävs.";
+                $messageType = 'warning';
+                break;
+        }
+    }
+}
 
 include __DIR__ . '/../includes/admin-header.php';
 ?>
@@ -16,6 +58,12 @@ include __DIR__ . '/../includes/admin-header.php';
     <div class="page-header">
         <h1><?= $pageTitle ?></h1>
     </div>
+
+    <?php if ($message): ?>
+    <div class="alert alert-<?= $messageType ?>" style="margin-bottom: var(--space-md);">
+        <?= htmlspecialchars($message) ?>
+    </div>
+    <?php endif; ?>
 
     <div class="card">
         <div class="card-header">
@@ -142,10 +190,14 @@ include __DIR__ . '/../includes/admin-header.php';
                 LIMIT 20
             ")->fetchAll(PDO::FETCH_ASSOC);
 
+            $totalOrphaned = 0;
             if (empty($orphaned)) {
                 echo "<p style='color: var(--color-success);'>Inga orphaned achievements hittades - alla rider_id matchar riders.id</p>";
             } else {
-                echo "<p style='color: var(--color-danger);'>Varning: Achievements med rider_id som inte finns i riders:</p>";
+                foreach ($orphaned as $o) {
+                    $totalOrphaned += $o['count'];
+                }
+                echo "<p style='color: var(--color-danger);'>Varning: {$totalOrphaned} achievements med rider_id som inte finns i riders:</p>";
                 echo "<table class='table'>";
                 echo "<thead><tr><th>rider_id</th><th>Antal achievements</th></tr></thead>";
                 echo "<tbody>";
@@ -153,6 +205,11 @@ include __DIR__ . '/../includes/admin-header.php';
                     echo "<tr><td>{$o['rider_id']}</td><td>{$o['count']}</td></tr>";
                 }
                 echo "</tbody></table>";
+
+                echo "<form method='post' style='margin-top: var(--space-md);' onsubmit='return confirm(\"Radera alla orphaned achievements?\");'>";
+                echo "<input type='hidden' name='action' value='clean_orphaned_achievements'>";
+                echo "<button type='submit' class='btn btn-danger'>Radera {$totalOrphaned} orphaned achievements</button>";
+                echo "</form>";
             }
             ?>
         </div>
@@ -174,10 +231,14 @@ include __DIR__ . '/../includes/admin-header.php';
                 LIMIT 20
             ")->fetchAll(PDO::FETCH_ASSOC);
 
+            $totalOrphanedResults = 0;
             if (empty($orphanedResults)) {
                 echo "<p style='color: var(--color-success);'>Inga orphaned results hittades - alla cyclist_id matchar riders.id</p>";
             } else {
-                echo "<p style='color: var(--color-danger);'>Varning: Resultat med cyclist_id som inte finns i riders:</p>";
+                foreach ($orphanedResults as $o) {
+                    $totalOrphanedResults += $o['count'];
+                }
+                echo "<p style='color: var(--color-danger);'>Varning: {$totalOrphanedResults} resultat med cyclist_id som inte finns i riders:</p>";
                 echo "<table class='table'>";
                 echo "<thead><tr><th>cyclist_id</th><th>Antal resultat</th></tr></thead>";
                 echo "<tbody>";
@@ -185,6 +246,18 @@ include __DIR__ . '/../includes/admin-header.php';
                     echo "<tr><td>{$o['cyclist_id']}</td><td>{$o['count']}</td></tr>";
                 }
                 echo "</tbody></table>";
+
+                echo "<div class='alert alert-warning' style='margin-top: var(--space-md);'>";
+                echo "<strong>Detta är grundproblemet!</strong><br>";
+                echo "Results-tabellen innehåller cyclist_id värden som inte matchar riders.id.<br>";
+                echo "Detta sker när import använder externa ID istället för interna rider IDs.<br><br>";
+                echo "<strong>Lösningar:</strong>";
+                echo "<ol>";
+                echo "<li>Kör om importen med korrekt rider-matchning</li>";
+                echo "<li>Uppdatera cyclist_id i results manuellt</li>";
+                echo "<li>Radera orphaned results om de inte behövs</li>";
+                echo "</ol>";
+                echo "</div>";
             }
             ?>
         </div>
