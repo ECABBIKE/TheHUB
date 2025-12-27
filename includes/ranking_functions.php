@@ -163,11 +163,45 @@ function getDisciplineDisplayName($discipline) {
 }
 
 /**
+ * Get the date of the most recent event with results
+ * This is used as the reference date for ranking calculations
+ * instead of "today", ensuring rankings are always based on actual data
+ */
+function getLatestEventDateWithResults($db, $discipline = 'GRAVITY') {
+    $disciplineFilter = '';
+    $params = [];
+
+    if ($discipline === 'GRAVITY') {
+        $disciplineFilter = "AND e.discipline IN ('ENDURO', 'DH')";
+    } elseif ($discipline) {
+        $disciplineFilter = 'AND e.discipline = ?';
+        $params[] = $discipline;
+    }
+
+    $result = $db->getRow("
+        SELECT MAX(e.date) as latest_date
+        FROM events e
+        JOIN results r ON r.event_id = e.id
+        WHERE r.status = 'finished'
+        AND (r.points > 0 OR COALESCE(r.run_1_points, 0) > 0 OR COALESCE(r.run_2_points, 0) > 0)
+        {$disciplineFilter}
+    ", $params);
+
+    return $result['latest_date'] ?? date('Y-m-d');
+}
+
+/**
  * Calculate ranking data on-the-fly from results
  * Returns array of riders with their ranking points
+ *
+ * IMPORTANT: Ranking is calculated relative to the latest event with results,
+ * NOT relative to today's date. This ensures correct time decay even when
+ * viewing historical data.
  */
 function calculateRankingData($db, $discipline = 'GRAVITY', $debug = false) {
-    $cutoffDate = date('Y-m-d', strtotime('-24 months'));
+    // Use latest event date as reference instead of today
+    $referenceDate = getLatestEventDateWithResults($db, $discipline);
+    $cutoffDate = date('Y-m-d', strtotime($referenceDate . ' -24 months'));
 
     $fieldMultipliers = getRankingFieldMultipliers($db);
     $eventLevelMultipliers = getEventLevelMultipliers($db);
@@ -239,7 +273,7 @@ function calculateRankingData($db, $discipline = 'GRAVITY', $debug = false) {
 
     // Calculate points per rider
     $riderData = [];
-    $today = new DateTime();
+    $refDateObj = new DateTime($referenceDate);
 
     foreach ($results as $result) {
         $riderId = $result['rider_id'];
@@ -250,10 +284,10 @@ function calculateRankingData($db, $discipline = 'GRAVITY', $debug = false) {
         $fieldMult = getFieldMultiplier($fieldSize, $fieldMultipliers);
         $eventLevelMult = $eventLevelMultipliers[$result['event_level']] ?? 1.00;
 
-        // Time decay
+        // Time decay relative to latest event date (not today)
         $eventDate = new DateTime($result['event_date']);
-        $monthsDiff = ($today->format('Y') - $eventDate->format('Y')) * 12 +
-                      ($today->format('n') - $eventDate->format('n'));
+        $monthsDiff = ($refDateObj->format('Y') - $eventDate->format('Y')) * 12 +
+                      ($refDateObj->format('n') - $eventDate->format('n'));
 
         if ($monthsDiff < 12) {
             $timeMult = $timeDecay['months_1_12'];
@@ -462,7 +496,9 @@ function calculateRankingDataAsOf($db, $discipline = 'GRAVITY', $asOfDate = null
  * Same field size weighting
  */
 function calculateClubRankingData($db, $discipline = 'GRAVITY', $debug = false) {
-    $cutoffDate = date('Y-m-d', strtotime('-24 months'));
+    // Use latest event date as reference instead of today
+    $referenceDate = getLatestEventDateWithResults($db, $discipline);
+    $cutoffDate = date('Y-m-d', strtotime($referenceDate . ' -24 months'));
 
     $fieldMultipliers = getRankingFieldMultipliers($db);
     $eventLevelMultipliers = getEventLevelMultipliers($db);
@@ -524,7 +560,7 @@ function calculateClubRankingData($db, $discipline = 'GRAVITY', $debug = false) 
         $fieldSizes[$key] = ($fieldSizes[$key] ?? 0) + 1;
     }
 
-    $today = new DateTime();
+    $refDateObj = new DateTime($referenceDate);
     $clubData = [];
 
     // Group results by event/class/club to determine 1st and 2nd best
@@ -556,10 +592,10 @@ function calculateClubRankingData($db, $discipline = 'GRAVITY', $debug = false) 
             // Club position multiplier: 1st = 100%, 2nd = 50%
             $clubPositionMult = ($rank === 1) ? 1.00 : 0.50;
 
-            // Time decay
+            // Time decay relative to latest event date (not today)
             $eventDate = new DateTime($rider['event_date']);
-            $monthsDiff = ($today->format('Y') - $eventDate->format('Y')) * 12 +
-                          ($today->format('n') - $eventDate->format('n'));
+            $monthsDiff = ($refDateObj->format('Y') - $eventDate->format('Y')) * 12 +
+                          ($refDateObj->format('n') - $eventDate->format('n'));
 
             if ($monthsDiff < 12) {
                 $timeMult = $timeDecay['months_1_12'];
@@ -810,7 +846,8 @@ function calculateClubRankingDataAsOf($db, $discipline = 'GRAVITY', $asOfDate = 
  * Save ranking snapshots for a specific discipline
  */
 function saveRankingSnapshots($db, $discipline, $debug = false) {
-    $snapshotDate = date('Y-m-d');
+    // Use latest event date as snapshot date (not today)
+    $snapshotDate = getLatestEventDateWithResults($db, $discipline);
 
     // Get previous snapshot for position changes
     $previousSnapshot = $db->getAll("
@@ -864,7 +901,8 @@ function saveRankingSnapshots($db, $discipline, $debug = false) {
  * Save CLUB ranking snapshots for a specific discipline
  */
 function saveClubRankingSnapshots($db, $discipline, $debug = false) {
-    $snapshotDate = date('Y-m-d');
+    // Use latest event date as snapshot date (not today)
+    $snapshotDate = getLatestEventDateWithResults($db, $discipline);
 
     // Get previous snapshot
     $previousSnapshot = $db->getAll("
@@ -924,7 +962,8 @@ function runFullRankingUpdate($db, $debug = false) {
     $stats = [
         'enduro' => ['riders' => 0, 'clubs' => 0],
         'dh' => ['riders' => 0, 'clubs' => 0],
-        'gravity' => ['riders' => 0, 'clubs' => 0]
+        'gravity' => ['riders' => 0, 'clubs' => 0],
+        'monthly_snapshots' => 0
     ];
 
     foreach (['ENDURO', 'DH', 'GRAVITY'] as $discipline) {
@@ -937,6 +976,10 @@ function runFullRankingUpdate($db, $debug = false) {
         $stats[$key]['clubs'] = saveClubRankingSnapshots($db, $discipline, $debug);
     }
 
+    // Also create monthly snapshots going back 24 months
+    if ($debug) echo "<p>Creating monthly historical snapshots...</p>";
+    $stats['monthly_snapshots'] = createMonthlyRankingSnapshots($db, $debug);
+
     $stats['total_time'] = round(microtime(true) - $startTime, 2);
 
     // Save last calculation info
@@ -948,6 +991,148 @@ function runFullRankingUpdate($db, $debug = false) {
     ]);
 
     return $stats;
+}
+
+/**
+ * Create monthly ranking snapshots going back 24 months from latest event
+ * This provides historical data for ranking charts
+ */
+function createMonthlyRankingSnapshots($db, $debug = false) {
+    $snapshotCount = 0;
+
+    // Get the latest event date as our reference point
+    $latestEventDate = getLatestEventDateWithResults($db, 'GRAVITY');
+
+    // Generate list of 1st of each month going back 24 months
+    $refDate = new DateTime($latestEventDate);
+    $monthlyDates = [];
+
+    // Start from the 1st of the current month of the latest event
+    $currentMonth = new DateTime($refDate->format('Y-m-01'));
+
+    for ($i = 0; $i < 24; $i++) {
+        $monthlyDates[] = $currentMonth->format('Y-m-d');
+        $currentMonth->modify('-1 month');
+    }
+
+    foreach ($monthlyDates as $snapshotDate) {
+        // Check if we have any events with results before this date
+        $hasData = $db->getRow("
+            SELECT 1 FROM events e
+            JOIN results r ON r.event_id = e.id
+            WHERE e.date <= ? AND r.status = 'finished'
+            AND (r.points > 0 OR COALESCE(r.run_1_points, 0) > 0)
+            LIMIT 1
+        ", [$snapshotDate]);
+
+        if (!$hasData) {
+            continue; // Skip months without any data
+        }
+
+        // Check if snapshot already exists for this date
+        $existing = $db->getRow("
+            SELECT 1 FROM ranking_snapshots
+            WHERE discipline = 'GRAVITY' AND snapshot_date = ?
+            LIMIT 1
+        ", [$snapshotDate]);
+
+        if ($existing) {
+            continue; // Don't overwrite existing snapshots
+        }
+
+        if ($debug) echo "<p>Creating snapshot for {$snapshotDate}...</p>";
+
+        // Calculate ranking as of this date
+        $riderData = calculateRankingDataAsOf($db, 'GRAVITY', $snapshotDate);
+
+        // Get previous snapshot for position changes
+        $previousSnapshot = $db->getAll("
+            SELECT rider_id, ranking_position FROM ranking_snapshots
+            WHERE discipline = 'GRAVITY' AND snapshot_date = (
+                SELECT MAX(snapshot_date) FROM ranking_snapshots
+                WHERE discipline = 'GRAVITY' AND snapshot_date < ?
+            )
+        ", [$snapshotDate]);
+
+        $previousPositions = [];
+        foreach ($previousSnapshot as $prev) {
+            $previousPositions[$prev['rider_id']] = $prev['ranking_position'];
+        }
+
+        // Insert rider snapshots
+        foreach ($riderData as $rider) {
+            $prevPos = $previousPositions[$rider['rider_id']] ?? null;
+            $posChange = $prevPos !== null ? ($prevPos - $rider['ranking_position']) : null;
+
+            $db->query("INSERT INTO ranking_snapshots
+                (rider_id, discipline, snapshot_date, total_ranking_points,
+                 points_last_12_months, points_months_13_24, events_count,
+                 ranking_position, previous_position, position_change)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", [
+                $rider['rider_id'],
+                'GRAVITY',
+                $snapshotDate,
+                $rider['total_ranking_points'],
+                $rider['points_12'],
+                $rider['points_13_24'],
+                $rider['events_count'],
+                $rider['ranking_position'],
+                $prevPos,
+                $posChange
+            ]);
+            $snapshotCount++;
+        }
+
+        // Also calculate club ranking
+        $clubData = calculateClubRankingDataAsOf($db, 'GRAVITY', $snapshotDate);
+
+        // Check if club snapshot exists
+        $existingClub = $db->getRow("
+            SELECT 1 FROM club_ranking_snapshots
+            WHERE discipline = 'GRAVITY' AND snapshot_date = ?
+            LIMIT 1
+        ", [$snapshotDate]);
+
+        if (!$existingClub) {
+            $previousClubSnapshot = $db->getAll("
+                SELECT club_id, ranking_position FROM club_ranking_snapshots
+                WHERE discipline = 'GRAVITY' AND snapshot_date = (
+                    SELECT MAX(snapshot_date) FROM club_ranking_snapshots
+                    WHERE discipline = 'GRAVITY' AND snapshot_date < ?
+                )
+            ", [$snapshotDate]);
+
+            $previousClubPositions = [];
+            foreach ($previousClubSnapshot as $prev) {
+                $previousClubPositions[$prev['club_id']] = $prev['ranking_position'];
+            }
+
+            foreach ($clubData as $club) {
+                $prevPos = $previousClubPositions[$club['club_id']] ?? null;
+                $posChange = $prevPos !== null ? ($prevPos - $club['ranking_position']) : null;
+
+                $db->query("INSERT INTO club_ranking_snapshots
+                    (club_id, discipline, snapshot_date, total_ranking_points,
+                     points_last_12_months, points_months_13_24, riders_count, events_count,
+                     ranking_position, previous_position, position_change)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)", [
+                    $club['club_id'],
+                    'GRAVITY',
+                    $snapshotDate,
+                    $club['total_ranking_points'],
+                    $club['points_12'],
+                    $club['points_13_24'],
+                    $club['riders_count'],
+                    $club['events_count'],
+                    $club['ranking_position'],
+                    $prevPos,
+                    $posChange
+                ]);
+            }
+        }
+    }
+
+    return $snapshotCount;
 }
 
 /**
@@ -1078,8 +1263,9 @@ function getRankingStats($db) {
             )
         ", [$discipline, $discipline]);
 
-        // Count unique events in last 24 months
-        $cutoff = date('Y-m-d', strtotime('-24 months'));
+        // Count unique events in last 24 months from latest event
+        $latestDate = getLatestEventDateWithResults($db, $discipline);
+        $cutoff = date('Y-m-d', strtotime($latestDate . ' -24 months'));
         $discFilter = $discipline === 'GRAVITY' ? "IN ('ENDURO', 'DH')" : "= '$discipline'";
         $eventCount = $db->getRow("SELECT COUNT(DISTINCT id) as cnt FROM events WHERE discipline $discFilter AND date >= ?", [$cutoff]);
 
@@ -1161,8 +1347,9 @@ function getRiderRankingDetails($db, $riderId, $discipline = 'GRAVITY') {
         ", [$riderId, $discipline, $latestSnapshot['snapshot_date']]);
     }
 
-    // Get event breakdown
-    $cutoffDate = date('Y-m-d', strtotime('-24 months'));
+    // Get event breakdown - use latest event date as reference
+    $referenceDate = getLatestEventDateWithResults($db, $discipline);
+    $cutoffDate = date('Y-m-d', strtotime($referenceDate . ' -24 months'));
     $disciplineFilter = $discipline === 'GRAVITY' ? "AND e.discipline IN ('ENDURO', 'DH')" : "AND e.discipline = ?";
     $params = [$riderId, $cutoffDate];
     if ($discipline !== 'GRAVITY') {
@@ -1218,9 +1405,9 @@ function getRiderRankingDetails($db, $riderId, $discipline = 'GRAVITY') {
             ? ($eventLevelMultipliers['sportmotion'] ?? 0.50)
             : ($eventLevelMultipliers['national'] ?? 1.00);
 
-        // Time decay based on event date
+        // Time decay relative to latest event date (not today)
         $eventDate = $event['event_date'] ?? date('Y-m-d');
-        $monthsAgo = (int)((time() - strtotime($eventDate)) / (30.44 * 24 * 3600));
+        $monthsAgo = (int)((strtotime($referenceDate) - strtotime($eventDate)) / (30.44 * 24 * 3600));
         if ($monthsAgo <= 12) {
             $timeMult = $timeDecay['months_1_12'] ?? 1.00;
         } elseif ($monthsAgo <= 24) {
