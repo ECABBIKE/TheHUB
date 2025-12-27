@@ -646,6 +646,162 @@ include __DIR__ . '/components/unified-layout.php';
             </a>
         </div>
     </div>
+
+    <!-- Fix Result Club IDs -->
+    <div class="tool-card">
+        <div class="tool-card-header">
+            <div class="tool-icon warning">
+                <i data-lucide="building-2"></i>
+            </div>
+            <div>
+                <h4 class="tool-title">Fixa klubb-ID i resultat</h4>
+                <p class="tool-description">Korrigera saknade eller felaktiga klubbtillhörigheter i resultat</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/fix-result-club-ids" class="btn-admin btn-admin-warning flex-1">
+                <i data-lucide="building-2" class="icon-sm"></i>
+                Fixa klubb-ID
+            </a>
+        </div>
+    </div>
+
+    <!-- Fix Time Format -->
+    <div class="tool-card">
+        <div class="tool-card-header">
+            <div class="tool-icon warning">
+                <i data-lucide="clock"></i>
+            </div>
+            <div>
+                <h4 class="tool-title">Fixa tidsformat</h4>
+                <p class="tool-description">Korrigera felaktiga tidsformat (t.ex. 0:04:17.45 → 4:17.45)</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/fix-time-format" class="btn-admin btn-admin-warning flex-1">
+                <i data-lucide="clock" class="icon-sm"></i>
+                Fixa tider
+            </a>
+        </div>
+    </div>
+
+    <!-- Recalculate All Points -->
+    <div class="tool-card">
+        <div class="tool-card-header">
+            <div class="tool-icon danger">
+                <i data-lucide="calculator"></i>
+            </div>
+            <div>
+                <h4 class="tool-title">Räkna om alla poäng</h4>
+                <p class="tool-description">Beräkna om poäng för alla resultat i systemet</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/recalculate-all-points" class="btn-admin btn-admin-danger flex-1">
+                <i data-lucide="calculator" class="icon-sm"></i>
+                Räkna om poäng
+            </a>
+        </div>
+    </div>
+</div>
+
+<h3 class="section-title">Import</h3>
+
+<div class="tools-grid">
+    <!-- Import Results -->
+    <div class="tool-card">
+        <div class="tool-card-header">
+            <div class="tool-icon">
+                <i data-lucide="upload"></i>
+            </div>
+            <div>
+                <h4 class="tool-title">Importera resultat</h4>
+                <p class="tool-description">Importera tävlingsresultat från CSV-fil</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/import-results" class="btn-admin btn-admin-primary flex-1">
+                <i data-lucide="upload" class="icon-sm"></i>
+                Importera resultat
+            </a>
+        </div>
+    </div>
+
+    <!-- Import Riders -->
+    <div class="tool-card">
+        <div class="tool-card-header">
+            <div class="tool-icon">
+                <i data-lucide="users"></i>
+            </div>
+            <div>
+                <h4 class="tool-title">Importera deltagare</h4>
+                <p class="tool-description">Importera deltagare från CSV-fil</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/import-riders" class="btn-admin btn-admin-primary flex-1">
+                <i data-lucide="users" class="icon-sm"></i>
+                Importera deltagare
+            </a>
+        </div>
+    </div>
+
+    <!-- Import Clubs -->
+    <div class="tool-card">
+        <div class="tool-card-header">
+            <div class="tool-icon">
+                <i data-lucide="building"></i>
+            </div>
+            <div>
+                <h4 class="tool-title">Importera klubbar</h4>
+                <p class="tool-description">Importera klubbar från CSV-fil</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/import-clubs" class="btn-admin btn-admin-secondary flex-1">
+                <i data-lucide="building" class="icon-sm"></i>
+                Importera klubbar
+            </a>
+        </div>
+    </div>
+
+    <!-- Import Events -->
+    <div class="tool-card">
+        <div class="tool-card-header">
+            <div class="tool-icon">
+                <i data-lucide="calendar"></i>
+            </div>
+            <div>
+                <h4 class="tool-title">Importera event</h4>
+                <p class="tool-description">Importera event/tävlingar från CSV-fil</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/import-events" class="btn-admin btn-admin-secondary flex-1">
+                <i data-lucide="calendar" class="icon-sm"></i>
+                Importera event
+            </a>
+        </div>
+    </div>
+
+    <!-- All Import Tools -->
+    <div class="tool-card">
+        <div class="tool-card-header">
+            <div class="tool-icon">
+                <i data-lucide="folder-input"></i>
+            </div>
+            <div>
+                <h4 class="tool-title">Alla import-verktyg</h4>
+                <p class="tool-description">Översikt över alla tillgängliga import-funktioner</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/import" class="btn-admin btn-admin-secondary flex-1">
+                <i data-lucide="folder-input" class="icon-sm"></i>
+                Visa alla
+            </a>
+        </div>
+    </div>
 </div>
 
 <h3 class="section-title">Serier & Poäng</h3>
@@ -743,9 +899,169 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/tools/diagnose-series" class="btn-admin btn-admin-secondary flex-1">
+            <a href="/admin/diagnose-series" class="btn-admin btn-admin-secondary flex-1">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
                 Visa diagnostik
+            </a>
+        </div>
+    </div>
+</div>
+
+<h3 class="section-title">Debug & Diagnostik</h3>
+
+<div class="tools-grid">
+    <!-- Debug Achievements -->
+    <div class="tool-card">
+        <div class="tool-card-header">
+            <div class="tool-icon warning">
+                <i data-lucide="bug"></i>
+            </div>
+            <div>
+                <h4 class="tool-title">Debug: Utmärkelser</h4>
+                <p class="tool-description">Felsök och verifiera beräkning av utmärkelser och achievements</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/debug-achievements" class="btn-admin btn-admin-warning flex-1">
+                <i data-lucide="bug" class="icon-sm"></i>
+                Debug utmärkelser
+            </a>
+        </div>
+    </div>
+
+    <!-- Debug Series Points -->
+    <div class="tool-card">
+        <div class="tool-card-header">
+            <div class="tool-icon warning">
+                <i data-lucide="chart-bar"></i>
+            </div>
+            <div>
+                <h4 class="tool-title">Debug: Seriepoäng</h4>
+                <p class="tool-description">Felsök och verifiera seriepoäng och standings</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/debug-series-points" class="btn-admin btn-admin-warning flex-1">
+                <i data-lucide="chart-bar" class="icon-sm"></i>
+                Debug seriepoäng
+            </a>
+        </div>
+    </div>
+
+    <!-- Test DB -->
+    <div class="tool-card">
+        <div class="tool-card-header">
+            <div class="tool-icon">
+                <i data-lucide="database"></i>
+            </div>
+            <div>
+                <h4 class="tool-title">Testa databasanslutning</h4>
+                <p class="tool-description">Verifiera att databasanslutningen fungerar korrekt</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/test-db" class="btn-admin btn-admin-secondary flex-1">
+                <i data-lucide="database" class="icon-sm"></i>
+                Testa DB
+            </a>
+        </div>
+    </div>
+
+    <!-- Test Import Debug -->
+    <div class="tool-card">
+        <div class="tool-card-header">
+            <div class="tool-icon warning">
+                <i data-lucide="file-search"></i>
+            </div>
+            <div>
+                <h4 class="tool-title">Debug: Import</h4>
+                <p class="tool-description">Felsök CSV-import och kolumnmappning</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/test-import-debug" class="btn-admin btn-admin-warning flex-1">
+                <i data-lucide="file-search" class="icon-sm"></i>
+                Debug import
+            </a>
+        </div>
+    </div>
+</div>
+
+<h3 class="section-title">Data & Licensverktyg</h3>
+
+<div class="tools-grid">
+    <!-- Data Explorer -->
+    <div class="tool-card">
+        <div class="tool-card-header">
+            <div class="tool-icon">
+                <i data-lucide="table-2"></i>
+            </div>
+            <div>
+                <h4 class="tool-title">Data Explorer</h4>
+                <p class="tool-description">Bläddra och sök i databastabeller, visa statistik</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/data-explorer" class="btn-admin btn-admin-primary flex-1">
+                <i data-lucide="table-2" class="icon-sm"></i>
+                Öppna Data Explorer
+            </a>
+        </div>
+    </div>
+
+    <!-- Check License Numbers -->
+    <div class="tool-card">
+        <div class="tool-card-header">
+            <div class="tool-icon">
+                <i data-lucide="id-card"></i>
+            </div>
+            <div>
+                <h4 class="tool-title">Kontrollera licensnummer</h4>
+                <p class="tool-description">Verifiera och kontrollera licensnummer i systemet</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/check-license-numbers" class="btn-admin btn-admin-secondary flex-1">
+                <i data-lucide="id-card" class="icon-sm"></i>
+                Kontrollera licenser
+            </a>
+        </div>
+    </div>
+
+    <!-- Verify SWE Licenses -->
+    <div class="tool-card">
+        <div class="tool-card-header">
+            <div class="tool-icon warning">
+                <i data-lucide="shield-check"></i>
+            </div>
+            <div>
+                <h4 class="tool-title">Verifiera SWE-licenser</h4>
+                <p class="tool-description">Kontrollera giltighet och format för svenska licenser</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/verify-swe-licenses" class="btn-admin btn-admin-warning flex-1">
+                <i data-lucide="shield-check" class="icon-sm"></i>
+                Verifiera SWE
+            </a>
+        </div>
+    </div>
+
+    <!-- License Class Matrix -->
+    <div class="tool-card">
+        <div class="tool-card-header">
+            <div class="tool-icon">
+                <i data-lucide="grid-3x3"></i>
+            </div>
+            <div>
+                <h4 class="tool-title">Licens-klassmatris</h4>
+                <p class="tool-description">Visa matris över licenser och klasser för deltagare</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/license-class-matrix" class="btn-admin btn-admin-secondary flex-1">
+                <i data-lucide="grid-3x3" class="icon-sm"></i>
+                Visa matris
             </a>
         </div>
     </div>
@@ -769,6 +1085,67 @@ include __DIR__ . '/components/unified-layout.php';
             <a href="/admin/clear-cache" class="btn-admin btn-admin-secondary flex-1">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm"><path d="M21.5 2v6h-6"/></svg>
                 Rensa cache
+            </a>
+        </div>
+    </div>
+</div>
+
+<h3 class="section-title">Backup & Reset</h3>
+
+<div class="tools-grid">
+    <!-- Backup -->
+    <div class="tool-card">
+        <div class="tool-card-header">
+            <div class="tool-icon">
+                <i data-lucide="hard-drive-download"></i>
+            </div>
+            <div>
+                <h4 class="tool-title">Backup</h4>
+                <p class="tool-description">Skapa backup av databas och filer</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/backup" class="btn-admin btn-admin-primary flex-1">
+                <i data-lucide="hard-drive-download" class="icon-sm"></i>
+                Skapa backup
+            </a>
+        </div>
+    </div>
+
+    <!-- Reset Data -->
+    <div class="tool-card">
+        <div class="tool-card-header">
+            <div class="tool-icon danger">
+                <i data-lucide="trash-2"></i>
+            </div>
+            <div>
+                <h4 class="tool-title">Återställ data</h4>
+                <p class="tool-description">Nollställ och rensa specifika databastabeller (FARLIGT!)</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/reset-data" class="btn-admin btn-admin-danger flex-1">
+                <i data-lucide="trash-2" class="icon-sm"></i>
+                Återställ data
+            </a>
+        </div>
+    </div>
+
+    <!-- Reset Simple -->
+    <div class="tool-card">
+        <div class="tool-card-header">
+            <div class="tool-icon danger">
+                <i data-lucide="rotate-ccw"></i>
+            </div>
+            <div>
+                <h4 class="tool-title">Enkel återställning</h4>
+                <p class="tool-description">Snabb återställning av vanliga tabeller</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/reset-simple" class="btn-admin btn-admin-danger flex-1">
+                <i data-lucide="rotate-ccw" class="icon-sm"></i>
+                Enkel reset
             </a>
         </div>
     </div>
@@ -948,6 +1325,44 @@ include __DIR__ . '/components/unified-layout.php';
             <a href="/admin/ranking" class="btn-admin btn-admin-secondary flex-1">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
                 Ranking-inställningar
+            </a>
+        </div>
+    </div>
+
+    <!-- Ranking Backfill History -->
+    <div class="tool-card">
+        <div class="tool-card-header">
+            <div class="tool-icon">
+                <i data-lucide="history"></i>
+            </div>
+            <div>
+                <h4 class="tool-title">Ranking-historik</h4>
+                <p class="tool-description">Visa och hantera historiska ranking-snapshots</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/ranking-backfill-history" class="btn-admin btn-admin-secondary flex-1">
+                <i data-lucide="history" class="icon-sm"></i>
+                Visa historik
+            </a>
+        </div>
+    </div>
+
+    <!-- Ranking Minimal -->
+    <div class="tool-card">
+        <div class="tool-card-header">
+            <div class="tool-icon">
+                <i data-lucide="list-ordered"></i>
+            </div>
+            <div>
+                <h4 class="tool-title">Minimal ranking</h4>
+                <p class="tool-description">Visa enkel ranking-lista utan extra funktionalitet</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/ranking-minimal" class="btn-admin btn-admin-secondary flex-1">
+                <i data-lucide="list-ordered" class="icon-sm"></i>
+                Visa ranking
             </a>
         </div>
     </div>
