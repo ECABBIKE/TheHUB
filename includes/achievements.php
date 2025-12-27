@@ -118,8 +118,7 @@ function getDetailedAchievements(PDO $pdo, int $rider_id, string $achievement_ty
             e.name as event_name,
             e.date as event_date,
             e.discipline,
-            s.name as series_name,
-            s.short_name as series_short_name
+            s.name as series_name
         FROM rider_achievements ra
         LEFT JOIN events e ON ra.event_id = e.id
         LEFT JOIN series s ON ra.series_id = s.id

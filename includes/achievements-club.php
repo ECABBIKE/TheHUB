@@ -142,8 +142,7 @@ function getClubDetailedAchievements(PDO $pdo, int $club_id): array {
                 r.id as rider_id,
                 r.firstname,
                 r.lastname,
-                s.name as series_name,
-                s.short_name as series_short_name
+                s.name as series_name
             FROM rider_achievements ra
             JOIN riders r ON ra.rider_id = r.id
             LEFT JOIN series s ON ra.series_id = s.id
