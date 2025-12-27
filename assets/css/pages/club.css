@@ -1,8 +1,188 @@
 /**
  * Club Page Styles
- * Extracted from pages/club.php
+ * V4 - 2-column layout matching rider profile page
  */
 
+/* ============================================
+   2-COLUMN LAYOUT (Same as rider page)
+   ============================================ */
+.club-profile-layout {
+    display: grid;
+    grid-template-columns: 70% 30%;
+    gap: var(--space-lg);
+    margin-bottom: var(--space-lg);
+}
+
+.club-profile-layout .left-column {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-lg);
+}
+
+.club-profile-layout .right-column {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-lg);
+    align-content: start;
+}
+
+/* ============================================
+   CLUB PROFILE CARD V4 - Portrait Style
+   (Same as rider profile-card-v4)
+   ============================================ */
+.club-profile-card-v4 {
+    background: white;
+    border-radius: var(--radius-lg);
+    padding: 0;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+}
+
+.club-logo-hero {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    background: linear-gradient(180deg, #f0f0f0 0%, #e5e5e5 100%);
+    overflow: hidden;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.club-logo-hero img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+    padding: var(--space-lg);
+}
+
+.club-logo-hero.initials-bg {
+    background: linear-gradient(135deg, var(--color-primary) 0%, var(--color-secondary) 100%);
+}
+
+.club-initials {
+    font-size: 4rem;
+    font-weight: 700;
+    color: white;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+.club-info-centered {
+    text-align: center;
+    padding: var(--space-sm) var(--space-md);
+}
+
+.club-name-hero {
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin: 0 0 2px;
+    color: var(--color-primary);
+}
+
+.club-subtitle {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-2xs);
+    font-size: 0.8125rem;
+    color: var(--color-text-secondary);
+}
+
+.club-subtitle i {
+    width: 14px;
+    height: 14px;
+}
+
+/* Stats Row */
+.club-stats-row {
+    display: flex;
+    justify-content: space-around;
+    padding: var(--space-md);
+    border-top: 1px solid var(--color-border);
+    border-bottom: 1px solid var(--color-border);
+}
+
+.club-stat-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+}
+
+.club-stat-item .stat-value {
+    font-size: var(--text-xl);
+    font-weight: 800;
+    color: var(--color-text);
+    line-height: 1;
+}
+
+.club-stat-item .stat-label {
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+}
+
+/* Contact Links */
+.club-contact-links {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+    padding: var(--space-md);
+}
+
+.club-contact-links .contact-link {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    padding: var(--space-sm);
+    background: var(--color-bg-secondary);
+    border-radius: var(--radius-sm);
+    color: var(--color-text-secondary);
+    font-size: var(--text-sm);
+    text-decoration: none;
+    transition: all 0.15s ease;
+}
+
+.club-contact-links .contact-link:hover {
+    background: var(--color-accent);
+    color: white;
+}
+
+.club-contact-links .contact-link i {
+    width: 16px;
+    height: 16px;
+}
+
+/* Mobile: Stack columns */
+@media (max-width: 991px) {
+    .club-profile-layout {
+        grid-template-columns: 1fr;
+    }
+
+    .club-profile-layout .right-column {
+        order: -1; /* Profile card first on mobile */
+    }
+}
+
+@media (max-width: 767px) {
+    .club-profile-card-v4 {
+        margin-left: calc(-1 * var(--container-padding, 16px));
+        margin-right: calc(-1 * var(--container-padding, 16px));
+        border-radius: 0;
+    }
+
+    .club-initials {
+        font-size: 3rem;
+    }
+
+    .club-name-hero {
+        font-size: 1.1rem;
+    }
+}
+
+/* ============================================
+   LEGACY: Club Hero (kept for compatibility)
+   ============================================ */
 /* Club Hero */
 .club-hero {
   background: var(--color-bg-surface);
