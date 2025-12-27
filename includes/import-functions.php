@@ -736,36 +736,26 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
             }
 
             // Validate class gender matches rider gender
-            // Get rider's actual gender from database
+            // TRUST THE CLASS NAME - if mismatch, update rider's gender (not the class)
             if ($classId) {
                 $riderInfo = $db->getRow("SELECT gender, birth_year FROM riders WHERE id = ?", [$riderId]);
-                if ($riderInfo && $riderInfo['gender']) {
-                    // Check if class name suggests wrong gender
+                if ($riderInfo) {
+                    // Check what gender the class name suggests
                     $classIsFemale = preg_match('/(dam|women|female|flickor|girls|^[FK][\d\-])/i', $className);
                     $classIsMale = preg_match('/(herr|men|male|pojkar|boys|^[MP][\d\-])/i', $className);
                     $riderIsFemale = in_array($riderInfo['gender'], ['F', 'K']);
 
-                    // Gender mismatch detected
-                    if (($classIsFemale && !$riderIsFemale) || ($classIsMale && $riderIsFemale)) {
-                        // Try to find correct class using determineRiderClass
-                        if ($riderInfo['birth_year']) {
-                            // Get event date for age calculation
-                            $eventInfo = $db->getRow("SELECT date, discipline FROM events WHERE id = ?", [$eventId]);
-                            if ($eventInfo) {
-                                $correctClassId = determineRiderClass(
-                                    $db,
-                                    $riderInfo['birth_year'],
-                                    $riderInfo['gender'],
-                                    $eventInfo['date'],
-                                    $eventInfo['discipline'] ?? 'ENDURO'
-                                );
-                                if ($correctClassId) {
-                                    $classId = $correctClassId;
-                                    // Log this correction
-                                    error_log("Import: Corrected class for {$data['firstname']} {$data['lastname']} from '$className' (gender mismatch)");
-                                }
-                            }
-                        }
+                    // Gender mismatch detected - trust the class and update rider's gender
+                    if ($classIsFemale && !$riderIsFemale) {
+                        // Class is female but rider is registered as male - fix rider
+                        $db->update('riders', ['gender' => 'K'], 'id = ?', [$riderId]);
+                        error_log("Import: Updated rider {$data['firstname']} {$data['lastname']} gender to K (was M, racing in '$className')");
+                        $matching_stats['riders_gender_corrected'] = ($matching_stats['riders_gender_corrected'] ?? 0) + 1;
+                    } elseif ($classIsMale && $riderIsFemale) {
+                        // Class is male but rider is registered as female - fix rider
+                        $db->update('riders', ['gender' => 'M'], 'id = ?', [$riderId]);
+                        error_log("Import: Updated rider {$data['firstname']} {$data['lastname']} gender to M (was K, racing in '$className')");
+                        $matching_stats['riders_gender_corrected'] = ($matching_stats['riders_gender_corrected'] ?? 0) + 1;
                     }
                 }
             }
