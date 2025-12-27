@@ -1712,7 +1712,7 @@ let historyChartInstance = null;
 function openHistoryModal() {
     const modal = document.getElementById('historyModal');
     if (modal) {
-        modal.style.display = 'flex';
+        modal.classList.add('active');
         document.body.style.overflow = 'hidden';
 
         // Initialize chart after modal is visible
@@ -1727,7 +1727,7 @@ function openHistoryModal() {
 function closeHistoryModal() {
     const modal = document.getElementById('historyModal');
     if (modal) {
-        modal.style.display = 'none';
+        modal.classList.remove('active');
         document.body.style.overflow = '';
     }
 }
