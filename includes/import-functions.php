@@ -674,24 +674,31 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
             $classId = $forceClassId;
             $className = trim($data['class_name'] ?? '');
             if (!$classId && !empty($className)) {
-                // Normalize class names for common variants
-                $classNameMappings = [
-                    'tävling damer' => 'Damer Elit',
-                    'tävling herrar' => 'Herrar Elit',
-                    'tavling damer' => 'Damer Elit',
-                    'tavling herrar' => 'Herrar Elit',
-                ];
-                $normalizedClassName = strtolower($className);
-                if (isset($classNameMappings[$normalizedClassName])) {
-                    $className = $classNameMappings[$normalizedClassName];
-                }
+                // IMPORTANT: Check user mapping FIRST, before any normalization
+                // The mapping from preview page uses the original CSV class name
+                global $IMPORT_CLASS_MAPPINGS;
+                $originalClassName = $className;
 
-                if (!isset($classCache[$className])) {
-                    // Check if we have a mapping from the preview page
-                    global $IMPORT_CLASS_MAPPINGS;
-                    if (isset($IMPORT_CLASS_MAPPINGS[$className])) {
-                        $classCache[$className] = $IMPORT_CLASS_MAPPINGS[$className];
-                    } else {
+                if (isset($IMPORT_CLASS_MAPPINGS[$originalClassName])) {
+                    // User has explicitly mapped this class - use their choice
+                    if (!isset($classCache[$originalClassName])) {
+                        $classCache[$originalClassName] = $IMPORT_CLASS_MAPPINGS[$originalClassName];
+                    }
+                    $classId = $classCache[$originalClassName];
+                } else {
+                    // No user mapping - apply automatic normalization
+                    $classNameMappings = [
+                        'tävling damer' => 'Damer Elit',
+                        'tävling herrar' => 'Herrar Elit',
+                        'tavling damer' => 'Damer Elit',
+                        'tavling herrar' => 'Herrar Elit',
+                    ];
+                    $normalizedClassName = strtolower($className);
+                    if (isset($classNameMappings[$normalizedClassName])) {
+                        $className = $classNameMappings[$normalizedClassName];
+                    }
+
+                    if (!isset($classCache[$className])) {
                         // Try exact match first (case-insensitive)
                         $class = $db->getRow(
                             "SELECT id FROM classes WHERE LOWER(display_name) = LOWER(?) OR LOWER(name) = LOWER(?)",
@@ -721,9 +728,11 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
                         } else {
                             $classCache[$className] = $class['id'];
                         }
+                        $classId = $classCache[$className];
+                    } else {
+                        $classId = $classCache[$className];
                     }
                 }
-                $classId = $classCache[$className];
             }
 
             // Validate class gender matches rider gender
