@@ -506,8 +506,20 @@ if (strlen($clubInitials) < 2 && strlen($club['name']) >= 2) {
                         }
                     },
                     scales: {
-                        y: { reverse: true, min: 1, title: { display: true, text: 'Position' }, ticks: { stepSize: 1 } },
-                        x: { ticks: { maxRotation: 45, minRotation: 45 } }
+                        y: {
+                            reverse: true,
+                            min: 1,
+                            title: { display: true, text: 'Position' },
+                            ticks: { stepSize: 1 },
+                            grid: {
+                                color: '#e5e7eb',
+                                drawBorder: false
+                            }
+                        },
+                        x: {
+                            ticks: { maxRotation: 45, minRotation: 45 },
+                            grid: { display: false }
+                        }
                     }
                 }
             });
@@ -932,7 +944,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         display: true,
                         position: 'left',
                         grid: {
-                            color: 'rgba(0, 0, 0, 0.06)',
+                            color: '#e5e7eb',
                             drawBorder: false
                         },
                         ticks: {
