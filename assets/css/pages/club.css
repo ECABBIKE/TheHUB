@@ -481,14 +481,31 @@
     width: 48px;
     height: 48px;
     border-radius: var(--radius-full);
-    background: linear-gradient(135deg, var(--color-accent) 0%, #4CAF50 100%);
-    color: white;
+    background: var(--color-bg-secondary);
+    color: var(--color-text-secondary);
     display: flex;
     align-items: center;
     justify-content: center;
     font-size: var(--text-sm);
-    font-weight: 700;
+    font-weight: 600;
     flex-shrink: 0;
+    border: 1px solid var(--color-border);
+}
+
+/* Small Avatar for table view */
+.member-avatar-small {
+    width: 36px;
+    height: 36px;
+    border-radius: var(--radius-full);
+    background: var(--color-bg-secondary);
+    color: var(--color-text-secondary);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: var(--text-xs);
+    font-weight: 600;
+    flex-shrink: 0;
+    border: 1px solid var(--color-border);
 }
 
 /* Member Info */
@@ -678,5 +695,126 @@
 
     .member-name {
         font-size: var(--text-lg);
+    }
+}
+
+/* ============================================
+   MEMBERS TABLE VIEW - Desktop
+   ============================================ */
+.members-table-desktop {
+    display: block;
+}
+
+.members-list-mobile {
+    display: none;
+}
+
+.member-name-cell {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+}
+
+.member-name-info {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.member-name-info .member-name {
+    font-weight: 600;
+    color: var(--color-text);
+}
+
+.member-name-info .member-birth {
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+}
+
+.member-years-cell {
+    font-size: var(--text-sm);
+    color: var(--color-text-secondary);
+    max-width: 200px;
+}
+
+.member-current-row {
+    background: rgba(97, 206, 112, 0.05);
+}
+
+.member-current-row td:first-child {
+    box-shadow: inset 4px 0 0 var(--color-accent);
+}
+
+/* Mobile styles */
+.member-info-mobile {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+    min-width: 0;
+}
+
+.member-info-mobile .member-name {
+    font-weight: 600;
+    color: var(--color-text);
+}
+
+.member-stats-row {
+    display: flex;
+    gap: var(--space-sm);
+    flex-wrap: wrap;
+}
+
+.stat-mini {
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+}
+
+.member-years-small {
+    font-size: var(--text-xs);
+    color: var(--color-text-secondary);
+}
+
+/* Mobile: Show cards, hide table */
+@media (max-width: 767px) {
+    .members-table-desktop {
+        display: none;
+    }
+
+    .members-list-mobile {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-xs);
+    }
+
+    .members-list-mobile .member-row {
+        display: flex;
+        align-items: center;
+        gap: var(--space-md);
+        padding: var(--space-md);
+        background: var(--color-bg-card);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-md);
+        text-decoration: none;
+        color: inherit;
+        margin-left: calc(-1 * var(--container-padding, 16px));
+        margin-right: calc(-1 * var(--container-padding, 16px));
+        border-radius: 0;
+        border-left: none;
+        border-right: none;
+    }
+
+    .members-list-mobile .member-row.member-current {
+        box-shadow: inset 4px 0 0 var(--color-accent);
+    }
+
+    .members-list-mobile .member-arrow {
+        flex-shrink: 0;
+        color: var(--color-text-muted);
+    }
+
+    .members-list-mobile .member-arrow i {
+        width: 20px;
+        height: 20px;
     }
 }

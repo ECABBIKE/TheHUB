@@ -58,14 +58,11 @@ function calculateDHPoints($db, $event_id, $position, $run1_position, $run2_posi
         $run1_points = 0;
         $run2_points = 0;
 
-        error_log("🔍 DH SweCUP: scale_id={$scale_id}, run1_pos={$run1_position}, run2_pos={$run2_position}");
-
         if ($run1_position && $run1_position >= 1) {
             $value = $db->getRow(
                 "SELECT run_1_points, points FROM point_scale_values WHERE scale_id = ? AND position = ?",
                 [$scale_id, $run1_position]
             );
-            error_log("🔍 Run1 query result: " . json_encode($value));
             // Use run_1_points if available, otherwise fall back to regular points
             if ($value) {
                 $run1_points = !empty($value['run_1_points']) ? (float)$value['run_1_points'] : (float)($value['points'] ?? 0);
@@ -77,7 +74,6 @@ function calculateDHPoints($db, $event_id, $position, $run1_position, $run2_posi
                 "SELECT run_2_points, points FROM point_scale_values WHERE scale_id = ? AND position = ?",
                 [$scale_id, $run2_position]
             );
-            error_log("🔍 Run2 query result: " . json_encode($value));
             // Use run_2_points if available, otherwise fall back to regular points
             if ($value) {
                 $run2_points = !empty($value['run_2_points']) ? (float)$value['run_2_points'] : (float)($value['points'] ?? 0);
@@ -85,8 +81,6 @@ function calculateDHPoints($db, $event_id, $position, $run1_position, $run2_posi
         }
 
         $total_points = $run1_points + $run2_points;
-
-        error_log("✅ DH SweCUP Points: Run 1 (P{$run1_position}) = {$run1_points}, Run 2 (P{$run2_position}) = {$run2_points}, Total = {$total_points}");
 
         return [
             'run_1_points' => $run1_points,
@@ -96,8 +90,6 @@ function calculateDHPoints($db, $event_id, $position, $run1_position, $run2_posi
     } else {
         // Standard DH: Only fastest run counts (position based on best time)
         $points = calculatePoints($db, $event_id, $position, $status, $class_id);
-
-        error_log("✅ DH Standard Points: Position {$position} = {$points} points");
 
         return [
             'run_1_points' => 0,
@@ -630,8 +622,6 @@ function recalculateDHEventResults($db, $event_id, $new_scale_id = null, $use_sw
                 }
             }
         }
-
-        error_log("✅ Recalculated DH event {$event_id}: {$stats['positions_updated']} positions, {$stats['points_updated']} points");
 
     } catch (Exception $e) {
         $stats['errors'][] = "Fatal error: " . $e->getMessage();

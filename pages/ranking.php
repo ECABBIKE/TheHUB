@@ -67,6 +67,8 @@ $disciplineNames = [
 ];
 ?>
 
+<link rel="stylesheet" href="/assets/css/pages/ranking.css?v=<?= file_exists(dirname(__DIR__) . '/assets/css/pages/ranking.css') ? filemtime(dirname(__DIR__) . '/assets/css/pages/ranking.css') : time() ?>">
+
 <div class="page-header">
   <h1 class="page-title">
     <i data-lucide="trending-up" class="page-icon"></i>

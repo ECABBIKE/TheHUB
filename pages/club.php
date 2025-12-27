@@ -44,7 +44,7 @@ try {
         return;
     }
 
-    // Get ALL unique members across all years with their membership years
+    // Get ALL unique members across all years with their membership years AND stats
     $stmt = $db->prepare("
         SELECT
             r.id,
@@ -52,7 +52,10 @@ try {
             r.lastname,
             r.birth_year,
             r.gender,
-            GROUP_CONCAT(DISTINCT rcs.season_year ORDER BY rcs.season_year DESC SEPARATOR ',') as member_years
+            GROUP_CONCAT(DISTINCT rcs.season_year ORDER BY rcs.season_year DESC SEPARATOR ',') as member_years,
+            COALESCE(r.stats_total_starts, 0) as total_races,
+            COALESCE(r.stats_total_wins, 0) as total_wins,
+            COALESCE(r.stats_total_podiums, 0) as total_podiums
         FROM riders r
         INNER JOIN rider_club_seasons rcs ON r.id = rcs.rider_id AND rcs.club_id = ?
         WHERE r.active = 1
@@ -69,7 +72,10 @@ try {
             r.firstname,
             r.lastname,
             r.birth_year,
-            r.gender
+            r.gender,
+            COALESCE(r.stats_total_starts, 0) as total_races,
+            COALESCE(r.stats_total_wins, 0) as total_wins,
+            COALESCE(r.stats_total_podiums, 0) as total_podiums
         FROM riders r
         LEFT JOIN rider_club_seasons rcs ON r.id = rcs.rider_id AND rcs.club_id = ?
         WHERE r.club_id = ? AND r.active = 1 AND rcs.id IS NULL
@@ -270,34 +276,71 @@ if (!$clubLogo && !empty($club['logo'])) {
         <p>Det finns inga registrerade medlemmar för denna klubb.</p>
     </div>
     <?php else: ?>
-    <div class="members-list">
+
+    <!-- Desktop Table View -->
+    <div class="table-responsive members-table-desktop">
+        <table class="table table--striped">
+            <thead>
+                <tr>
+                    <th>Namn</th>
+                    <th class="text-center">Race</th>
+                    <th class="text-center">Vinster</th>
+                    <th class="text-center">Pallplatser</th>
+                    <th class="text-right">Medlemsår</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ($members as $member):
+                    $years = explode(',', $member['member_years']);
+                    sort($years);
+                    $yearsStr = implode(', ', $years);
+                    $isCurrentMember = in_array($currentYear, $years);
+                ?>
+                <tr onclick="window.location='/rider/<?= $member['id'] ?>'" class="cursor-pointer <?= $isCurrentMember ? 'member-current-row' : '' ?>">
+                    <td>
+                        <div class="member-name-cell">
+                            <div class="member-avatar-small">
+                                <?= strtoupper(substr($member['firstname'], 0, 1) . substr($member['lastname'], 0, 1)) ?>
+                            </div>
+                            <div class="member-name-info">
+                                <span class="member-name"><?= htmlspecialchars($member['firstname'] . ' ' . $member['lastname']) ?></span>
+                                <?php if ($member['birth_year']): ?>
+                                <span class="member-birth"><?= $member['birth_year'] ?></span>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    </td>
+                    <td class="text-center"><?= (int)$member['total_races'] ?></td>
+                    <td class="text-center"><?= (int)$member['total_wins'] ?></td>
+                    <td class="text-center"><?= (int)$member['total_podiums'] ?></td>
+                    <td class="text-right member-years-cell"><?= htmlspecialchars($yearsStr) ?></td>
+                </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Mobile Card View -->
+    <div class="members-list-mobile">
         <?php foreach ($members as $member):
             $years = explode(',', $member['member_years']);
-            $yearCount = count($years);
-            $latestYear = $years[0] ?? '';
+            sort($years);
+            $yearsStr = implode(', ', $years);
             $isCurrentMember = in_array($currentYear, $years);
         ?>
         <a href="/rider/<?= $member['id'] ?>" class="member-row <?= $isCurrentMember ? 'member-current' : '' ?>">
-            <div class="member-avatar">
+            <div class="member-avatar-small">
                 <?= strtoupper(substr($member['firstname'], 0, 1) . substr($member['lastname'], 0, 1)) ?>
             </div>
 
-            <div class="member-info">
+            <div class="member-info-mobile">
                 <span class="member-name"><?= htmlspecialchars($member['firstname'] . ' ' . $member['lastname']) ?></span>
-                <?php if ($member['birth_year']): ?>
-                <span class="member-birth"><?= $member['birth_year'] ?></span>
-                <?php endif; ?>
-            </div>
-
-            <div class="member-years">
-                <?php if ($yearCount <= 3): ?>
-                    <?php foreach ($years as $y): ?>
-                    <span class="year-badge <?= $y == $currentYear ? 'year-current' : '' ?>"><?= $y ?></span>
-                    <?php endforeach; ?>
-                <?php else: ?>
-                    <span class="year-badge <?= $latestYear == $currentYear ? 'year-current' : '' ?>"><?= $latestYear ?></span>
-                    <span class="year-more">+<?= $yearCount - 1 ?> år</span>
-                <?php endif; ?>
+                <div class="member-stats-row">
+                    <span class="stat-mini"><?= (int)$member['total_races'] ?> race</span>
+                    <span class="stat-mini"><?= (int)$member['total_wins'] ?> vinst</span>
+                    <span class="stat-mini"><?= (int)$member['total_podiums'] ?> pall</span>
+                </div>
+                <span class="member-years-small"><?= htmlspecialchars($yearsStr) ?></span>
             </div>
 
             <div class="member-arrow">
@@ -311,6 +354,71 @@ if (!$clubLogo && !empty($club['logo'])) {
 
 <?php if (function_exists('renderClubAchievements')): ?>
 <link rel="stylesheet" href="/assets/css/achievements.css?v=<?= file_exists(dirname(__DIR__) . '/assets/css/achievements.css') ? filemtime(dirname(__DIR__) . '/assets/css/achievements.css') : time() ?>">
+<style>
+/* Club Achievement Modal - Same as rider page */
+.club-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    display: none;
+    align-items: flex-start;
+    justify-content: center;
+    z-index: 1000;
+    padding: calc(var(--header-height, 60px) + 20px) var(--space-md) var(--space-xl);
+    overflow-y: auto;
+}
+.club-modal-overlay.active {
+    display: flex;
+}
+.club-modal {
+    background: var(--color-bg-card);
+    border-radius: var(--radius-lg);
+    width: 100%;
+    max-width: 500px;
+    box-shadow: var(--shadow-lg);
+    overflow: hidden;
+}
+.club-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-md) var(--space-lg);
+    border-bottom: 1px solid var(--color-border);
+}
+.club-modal-header h3 {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    margin: 0;
+    font-size: var(--text-lg);
+}
+.club-modal-header h3 i {
+    width: 20px;
+    height: 20px;
+    color: var(--color-accent);
+}
+.club-modal-close {
+    background: none;
+    border: none;
+    padding: var(--space-xs);
+    cursor: pointer;
+    color: var(--color-text-secondary);
+    border-radius: var(--radius-sm);
+}
+.club-modal-close:hover {
+    background: var(--color-bg-secondary);
+    color: var(--color-text);
+}
+.club-modal-close i {
+    width: 20px;
+    height: 20px;
+}
+.club-modal-body {
+    padding: var(--space-lg);
+    max-height: 60vh;
+    overflow-y: auto;
+}
+</style>
 <div class="club-achievements-section">
     <?= renderClubAchievements($db, $clubId) ?>
 </div>
@@ -325,18 +433,18 @@ if (function_exists('getClubDetailedAchievements')) {
 
 <?php if (!empty($clubDetailedAchievements)): ?>
 <!-- Club Achievement Details Modal -->
-<div id="clubAchievementModal" class="ranking-modal-overlay" style="display:none; padding-top: calc(var(--header-height, 60px) + 10px);">
-    <div class="ranking-modal" style="max-height: calc(100vh - var(--header-height, 60px) - 40px); max-width: 500px;">
-        <div class="ranking-modal-header">
+<div id="clubAchievementModal" class="club-modal-overlay">
+    <div class="club-modal">
+        <div class="club-modal-header">
             <h3 id="clubAchievementModalTitle">
                 <i data-lucide="award"></i>
                 <span></span>
             </h3>
-            <button type="button" class="ranking-modal-close" onclick="closeClubAchievementModal()">
+            <button type="button" class="club-modal-close" id="closeClubModalBtn">
                 <i data-lucide="x"></i>
             </button>
         </div>
-        <div class="ranking-modal-body" id="clubAchievementModalBody">
+        <div class="club-modal-body" id="clubAchievementModalBody">
             <!-- Content populated by JS -->
         </div>
     </div>
@@ -401,7 +509,7 @@ function openClubAchievementModal(achievementType) {
     html += '</div>';
 
     body.innerHTML = html;
-    modal.style.display = 'flex';
+    modal.classList.add('active');
     document.body.style.overflow = 'hidden';
 
     if (typeof lucide !== 'undefined') lucide.createIcons();
@@ -410,17 +518,36 @@ function openClubAchievementModal(achievementType) {
 function closeClubAchievementModal() {
     const modal = document.getElementById('clubAchievementModal');
     if (modal) {
-        modal.style.display = 'none';
+        modal.classList.remove('active');
         document.body.style.overflow = '';
     }
 }
 
-document.getElementById('clubAchievementModal')?.addEventListener('click', function(e) {
-    if (e.target === this) closeClubAchievementModal();
-});
-
-// Add click handlers to badges with data
+// Setup event listeners when DOM is ready
 document.addEventListener('DOMContentLoaded', function() {
+    const modal = document.getElementById('clubAchievementModal');
+    const closeBtn = document.getElementById('closeClubModalBtn');
+
+    // Close button click
+    if (closeBtn) {
+        closeBtn.addEventListener('click', closeClubAchievementModal);
+    }
+
+    // Click outside modal to close
+    if (modal) {
+        modal.addEventListener('click', function(e) {
+            if (e.target === this) closeClubAchievementModal();
+        });
+    }
+
+    // ESC key to close
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && modal && modal.classList.contains('active')) {
+            closeClubAchievementModal();
+        }
+    });
+
+    // Add click handlers to badges with data
     document.querySelectorAll('.badge-item.clickable').forEach(badge => {
         badge.addEventListener('click', function() {
             const type = this.dataset.achievement;

@@ -919,6 +919,19 @@
     transform: scale(1.1);
 }
 
+.badge-item.clickable {
+    cursor: pointer;
+}
+
+.badge-item.clickable:hover::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: var(--radius-md);
+    border: 2px solid var(--color-accent);
+    pointer-events: none;
+}
+
 .badge-item.locked {
     opacity: 0.4;
     cursor: default;

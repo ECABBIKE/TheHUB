@@ -22,6 +22,54 @@
   color: var(--color-text-muted);
 }
 
+/* ============================================
+   DISCIPLINE TABS - Gravity / Enduro / DH
+   ============================================ */
+.discipline-tabs {
+  display: flex;
+  gap: var(--space-sm);
+  margin-bottom: var(--space-md);
+}
+
+.discipline-tab {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: var(--space-sm) var(--space-lg);
+  font-size: var(--text-sm);
+  font-weight: 600;
+  color: var(--color-text-secondary);
+  background: var(--color-bg-secondary);
+  border: 1px solid var(--color-border);
+  border-radius: var(--radius-md);
+  text-decoration: none;
+  transition: all 0.15s ease;
+  white-space: nowrap;
+}
+
+.discipline-tab:hover {
+  background: var(--color-bg-hover);
+  border-color: var(--color-text-muted);
+  color: var(--color-text);
+}
+
+.discipline-tab.active {
+  background: var(--color-primary);
+  border-color: var(--color-primary);
+  color: white;
+}
+
+@media (max-width: 599px) {
+  .discipline-tabs {
+    gap: var(--space-xs);
+  }
+
+  .discipline-tab {
+    padding: var(--space-xs) var(--space-md);
+    font-size: var(--text-xs);
+  }
+}
+
 /* NOTE: Tab styles now use unified .tab-pill from components.css */
 
 .view-toggle {
