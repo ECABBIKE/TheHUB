@@ -448,6 +448,13 @@ function parseAndAnalyzeCSV($filepath, $db) {
          'time' => 'finish_time', 'tid' => 'finish_time', 'nettime' => 'finish_time',
          'status' => 'status',
          'uciid' => 'license_number', 'licens' => 'license_number',
+         'birthyear' => 'birth_year', 'födelseår' => 'birth_year', 'fodelsear' => 'birth_year',
+         'bib' => 'bib_number', 'bibno' => 'bib_number', 'startnr' => 'bib_number', 'startnummer' => 'bib_number',
+         // DH run times
+         'run1' => 'run_1_time', 'run1time' => 'run_1_time', 'åk1' => 'run_1_time', 'ak1' => 'run_1_time',
+         'kval' => 'run_1_time', 'qualifying' => 'run_1_time',
+         'run2' => 'run_2_time', 'run2time' => 'run_2_time', 'åk2' => 'run_2_time', 'ak2' => 'run_2_time',
+         'final' => 'run_2_time',
      ];
 
      $header[] = $mappings[$col] ?? $col;
