@@ -58,11 +58,14 @@ function calculateDHPoints($db, $event_id, $position, $run1_position, $run2_posi
         $run1_points = 0;
         $run2_points = 0;
 
+        error_log("🔍 DH SweCUP: scale_id={$scale_id}, run1_pos={$run1_position}, run2_pos={$run2_position}");
+
         if ($run1_position && $run1_position >= 1) {
             $value = $db->getRow(
                 "SELECT run_1_points, points FROM point_scale_values WHERE scale_id = ? AND position = ?",
                 [$scale_id, $run1_position]
             );
+            error_log("🔍 Run1 query result: " . json_encode($value));
             // Use run_1_points if available, otherwise fall back to regular points
             if ($value) {
                 $run1_points = !empty($value['run_1_points']) ? (float)$value['run_1_points'] : (float)($value['points'] ?? 0);
@@ -74,6 +77,7 @@ function calculateDHPoints($db, $event_id, $position, $run1_position, $run2_posi
                 "SELECT run_2_points, points FROM point_scale_values WHERE scale_id = ? AND position = ?",
                 [$scale_id, $run2_position]
             );
+            error_log("🔍 Run2 query result: " . json_encode($value));
             // Use run_2_points if available, otherwise fall back to regular points
             if ($value) {
                 $run2_points = !empty($value['run_2_points']) ? (float)$value['run_2_points'] : (float)($value['points'] ?? 0);
