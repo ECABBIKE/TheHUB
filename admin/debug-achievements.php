@@ -6,68 +6,30 @@ error_reporting(E_ALL);
 ini_set('display_errors', 1);
 
 require_once __DIR__ . '/../config.php';
-// Temporarily disabled for debugging
-// require_once __DIR__ . '/../includes/auth.php';
-// requireAdmin();
 
 $db = getDB();
-$pageTitle = 'Debug Achievements';
-$message = '';
-$messageType = '';
-
-// Handle fix actions
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    if (isset($_POST['action'])) {
-        try {
-            switch ($_POST['action']) {
-                case 'clean_orphaned_achievements':
-                    // Delete achievements where rider_id doesn't exist in riders
-                    $stmt = $db->prepare("
-                        DELETE ra FROM rider_achievements ra
-                        LEFT JOIN riders r ON ra.rider_id = r.id
-                        WHERE r.id IS NULL
-                    ");
-                    $stmt->execute();
-                    $deleted = $stmt->rowCount();
-                    $message = "Raderade {$deleted} orphaned achievements";
-                    $messageType = 'success';
-                    break;
-
-                case 'fix_cyclist_ids_by_name':
-                    // Get results with invalid cyclist_id (not in riders table)
-                    $stmt = $db->query("
-                        SELECT DISTINCT res.cyclist_id
-                        FROM results res
-                        LEFT JOIN riders r ON res.cyclist_id = r.id
-                        WHERE r.id IS NULL AND res.cyclist_id IS NOT NULL
-                    ");
-                    $invalidIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
-                    $message = "Hittade " . count($invalidIds) . " ogiltiga cyclist_id. Manuell åtgärd krävs.";
-                    $messageType = 'warning';
-                    break;
-            }
-        } catch (Exception $e) {
-            $message = "Fel: " . $e->getMessage();
-            $messageType = 'danger';
-        }
-    }
-}
-
-include __DIR__ . '/../includes/admin-header.php';
 ?>
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Debug Achievements</title>
+    <style>
+        body { font-family: system-ui, sans-serif; padding: 20px; max-width: 1200px; margin: 0 auto; }
+        .card { border: 1px solid #ddd; border-radius: 8px; margin-bottom: 20px; }
+        .card-header { background: #f5f5f5; padding: 15px; border-bottom: 1px solid #ddd; }
+        .card-header h3 { margin: 0; }
+        .card-body { padding: 15px; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { padding: 8px; text-align: left; border-bottom: 1px solid #eee; }
+        .success { color: green; }
+        .danger { color: red; }
+        .warning { background: #fff3cd; padding: 10px; border-radius: 4px; margin-top: 10px; }
+    </style>
+</head>
+<body>
+<h1>Debug Achievements</h1>
 
-<div class="admin-content">
-    <div class="page-header">
-        <h1><?= $pageTitle ?></h1>
-    </div>
-
-    <?php if ($message): ?>
-    <div class="alert alert-<?= $messageType ?>" style="margin-bottom: var(--space-md);">
-        <?= htmlspecialchars($message) ?>
-    </div>
-    <?php endif; ?>
-
-    <?php try { ?>
+<?php try { ?>
     <div class="card">
         <div class="card-header">
             <h3>Databas-status</h3>
@@ -410,11 +372,11 @@ include __DIR__ . '/../includes/admin-header.php';
             <?php endif; ?>
         </div>
     </div>
-    <?php } catch (Exception $e) { ?>
-    <div class="alert alert-danger">
-        <strong>Databasfel:</strong> <?= htmlspecialchars($e->getMessage()) ?>
-    </div>
-    <?php } ?>
+<?php } catch (Exception $e) { ?>
+<div class="danger">
+    <strong>Databasfel:</strong> <?= htmlspecialchars($e->getMessage()) ?>
 </div>
+<?php } ?>
 
-<?php include __DIR__ . '/../includes/admin-footer.php'; ?>
+</body>
+</html>
