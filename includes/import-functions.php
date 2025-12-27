@@ -787,9 +787,15 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
 
             $resultClubId = null;
 
-            // Only update rider's profile club_id if importing CURRENT year results
+            // Check if rider currently has a club set in their profile
+            $riderProfile = $db->getRow("SELECT club_id FROM riders WHERE id = ?", [$riderId]);
+            $riderHasNoClub = empty($riderProfile['club_id']);
+
+            // Update rider's profile club_id if:
+            // 1. Importing CURRENT year results (or future)
+            // 2. OR rider has no club set yet (even for historical imports)
             $currentYear = (int)date('Y');
-            $shouldUpdateProfileClub = ($eventYear >= $currentYear);
+            $shouldUpdateProfileClub = ($eventYear >= $currentYear) || $riderHasNoClub;
 
             // If forceClubUpdate is true, always use the CSV club (ignore locked status)
             if ($clubId && $forceClubUpdate) {
@@ -797,13 +803,17 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
                 $resultClubId = $clubId;
                 setRiderClubForYear($db, $riderId, $clubId, $eventYear, true);  // Pass true to force update locked entries
                 lockRiderClubForYear($db, $riderId, $eventYear);
-                // Only update profile club for current/future years
+                // Update profile club
                 if ($shouldUpdateProfileClub) {
                     $db->update('riders', ['club_id' => $clubId], 'id = ?', [$riderId]);
                 }
             } elseif ($existingSeasonClub && $existingSeasonClub['locked'] && !$forceClubUpdate) {
                 // Rider already has results this year - use their locked club
                 $resultClubId = $existingSeasonClub['club_id'];
+                // Still update profile if rider has no club
+                if ($riderHasNoClub && $resultClubId) {
+                    $db->update('riders', ['club_id' => $resultClubId], 'id = ?', [$riderId]);
+                }
             } elseif ($clubId) {
                 // First race of the year OR not locked: use club from CSV
                 // This is the key fix: CSV club takes precedence for first race
@@ -811,7 +821,7 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
                 // Set/update this as the rider's club for the year
                 setRiderClubForYear($db, $riderId, $clubId, $eventYear);
                 lockRiderClubForYear($db, $riderId, $eventYear);
-                // Only update profile club for current/future years - NOT historical imports!
+                // Update profile club if current year OR rider has no club
                 if ($shouldUpdateProfileClub) {
                     $db->update('riders', ['club_id' => $clubId], 'id = ?', [$riderId]);
                 }

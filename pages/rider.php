@@ -786,6 +786,12 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
                         <i data-lucide="calculator"></i>
                         <span>Visa uträkning</span>
                     </button>
+                    <?php if (count($rankingHistoryFull) >= 3): ?>
+                    <button type="button" class="btn-calc-ranking-inline" onclick="openHistoryModal()">
+                        <i data-lucide="history"></i>
+                        <span>Visa historik</span>
+                    </button>
+                    <?php endif; ?>
                 </div>
             </div>
             <?php endif; ?>
@@ -1473,6 +1479,198 @@ document.addEventListener('DOMContentLoaded', function() {
         </div>
     </div>
 </div>
+
+<!-- Ranking History Modal -->
+<?php if (!empty($rankingHistoryFull) && count($rankingHistoryFull) >= 3): ?>
+<div id="historyModal" class="ranking-modal-overlay" style="padding-top: calc(var(--header-height, 60px) + 10px);">
+    <div class="ranking-modal" style="max-height: calc(100vh - var(--header-height, 60px) - 40px); max-width: 800px;">
+        <div class="ranking-modal-header" class="pt-md">
+            <h3>
+                <i data-lucide="history"></i>
+                Rankinghistorik
+            </h3>
+            <button type="button" class="ranking-modal-close" onclick="closeHistoryModal()">
+                <i data-lucide="x"></i>
+            </button>
+        </div>
+        <div class="ranking-modal-body">
+            <div class="ranking-modal-summary">
+                <span class="summary-label">Nuvarande position</span>
+                <span class="summary-value">#<?= $rankingPosition ?></span>
+            </div>
+
+            <?php
+            // Prepare full history data for the modal chart
+            $historyLabels = [];
+            $historyData = [];
+            $historyPoints = [];
+            foreach ($rankingHistoryFull as $rh) {
+                $date = strtotime($rh['snapshot_date'] ?? $rh['month'] . '-01');
+                $historyLabels[] = date('M Y', $date);
+                $historyData[] = (int)$rh['ranking_position'];
+                $historyPoints[] = (float)($rh['total_ranking_points'] ?? 0);
+            }
+
+            // Find best and worst positions
+            $bestHistoryPos = !empty($historyData) ? min($historyData) : 0;
+            $worstHistoryPos = !empty($historyData) ? max($historyData) : 0;
+            $firstPos = $historyData[0] ?? 0;
+            $lastPos = end($historyData) ?: 0;
+            $improvement = $firstPos - $lastPos;
+            ?>
+
+            <div class="history-stats-row">
+                <div class="history-stat">
+                    <span class="history-stat-value text-success">#<?= $bestHistoryPos ?></span>
+                    <span class="history-stat-label">Bästa</span>
+                </div>
+                <div class="history-stat">
+                    <span class="history-stat-value">#<?= $worstHistoryPos ?></span>
+                    <span class="history-stat-label">Sämsta</span>
+                </div>
+                <div class="history-stat">
+                    <span class="history-stat-value <?= $improvement > 0 ? 'text-success' : ($improvement < 0 ? 'text-danger' : '') ?>">
+                        <?= $improvement > 0 ? '+' : '' ?><?= $improvement ?>
+                    </span>
+                    <span class="history-stat-label">Utveckling</span>
+                </div>
+                <div class="history-stat">
+                    <span class="history-stat-value"><?= count($historyData) ?></span>
+                    <span class="history-stat-label">Datapunkter</span>
+                </div>
+            </div>
+
+            <div class="history-chart-container" style="height: 300px; margin: var(--space-lg) 0;">
+                <canvas id="historyChart"></canvas>
+            </div>
+
+            <div class="modal-close-footer">
+                <button type="button" onclick="closeHistoryModal()" class="modal-close-btn">
+                    <i data-lucide="x"></i>
+                    Stäng
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+const historyChartLabels = <?= json_encode($historyLabels) ?>;
+const historyChartData = <?= json_encode($historyData) ?>;
+const historyChartPoints = <?= json_encode($historyPoints) ?>;
+let historyChartInstance = null;
+
+function openHistoryModal() {
+    const modal = document.getElementById('historyModal');
+    if (modal) {
+        modal.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+
+        // Initialize chart after modal is visible
+        setTimeout(() => {
+            initHistoryChart();
+        }, 100);
+
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
+}
+
+function closeHistoryModal() {
+    const modal = document.getElementById('historyModal');
+    if (modal) {
+        modal.style.display = 'none';
+        document.body.style.overflow = '';
+    }
+}
+
+function initHistoryChart() {
+    const ctx = document.getElementById('historyChart');
+    if (!ctx || historyChartInstance) return;
+
+    historyChartInstance = new Chart(ctx, {
+        type: 'line',
+        data: {
+            labels: historyChartLabels,
+            datasets: [{
+                label: 'Ranking',
+                data: historyChartData,
+                borderColor: '#ef4444',
+                backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                borderWidth: 2,
+                fill: true,
+                tension: 0.3,
+                pointRadius: 3,
+                pointHoverRadius: 5
+            }]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: { display: false },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            const idx = context.dataIndex;
+                            const points = historyChartPoints[idx] || 0;
+                            return ['Position: #' + context.raw, 'Poäng: ' + points.toFixed(0)];
+                        }
+                    }
+                }
+            },
+            scales: {
+                y: {
+                    reverse: true,
+                    min: 1,
+                    title: { display: true, text: 'Position' },
+                    ticks: { stepSize: 1 }
+                },
+                x: {
+                    ticks: {
+                        maxRotation: 45,
+                        minRotation: 45,
+                        autoSkip: true,
+                        maxTicksLimit: 12
+                    }
+                }
+            }
+        }
+    });
+}
+
+// Close on overlay click
+document.getElementById('historyModal')?.addEventListener('click', function(e) {
+    if (e.target === this) closeHistoryModal();
+});
+</script>
+
+<style>
+.history-stats-row {
+    display: flex;
+    justify-content: space-around;
+    padding: var(--space-md);
+    background: var(--color-bg-secondary);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--space-md);
+}
+.history-stat {
+    text-align: center;
+}
+.history-stat-value {
+    display: block;
+    font-size: 1.5rem;
+    font-weight: 700;
+}
+.history-stat-label {
+    font-size: 0.75rem;
+    color: var(--color-text-secondary);
+    text-transform: uppercase;
+}
+.history-chart-container {
+    position: relative;
+}
+</style>
+<?php endif; ?>
 <?php endif; ?>
 
 <?php if ($canClaimProfile): ?>
