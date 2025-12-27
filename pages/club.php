@@ -114,6 +114,10 @@ try {
         try {
             $placeholders = implode(',', array_fill(0, count($memberIds), '?'));
             $cutoffDate = date('Y-m-d', strtotime('-24 months'));
+            // Priority for club assignment:
+            // 1. r.club_id (explicitly set in results table)
+            // 2. rider_club_seasons for the event year (historical club membership)
+            // 3. rd.club_id (rider's current club as last fallback)
             $stmt = $db->prepare("
                 SELECT
                     r.cyclist_id as rider_id,
@@ -130,9 +134,11 @@ try {
                     ) as ranking_contribution
                 FROM results r
                 JOIN events e ON r.event_id = e.id
+                JOIN riders rd ON r.cyclist_id = rd.id
+                LEFT JOIN rider_club_seasons rcs ON rcs.rider_id = rd.id AND rcs.season_year = YEAR(e.date)
                 WHERE r.cyclist_id IN ($placeholders)
                 AND r.status = 'finished'
-                AND COALESCE(r.club_id, (SELECT club_id FROM riders WHERE id = r.cyclist_id)) = ?
+                AND COALESCE(r.club_id, rcs.club_id, rd.club_id) = ?
                 AND e.date >= ?
                 AND e.discipline IN ('ENDURO', 'DH')
                 GROUP BY r.cyclist_id

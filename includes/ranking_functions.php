@@ -516,15 +516,17 @@ function calculateClubRankingData($db, $discipline = 'GRAVITY', $debug = false) 
     }
 
     // Get all qualifying results with club info, sorted by points for club position calculation
-    // Uses r.club_id (from results table) with fallback to rd.club_id (from riders table)
-    // This ensures points follow the club the rider was with at the time of the result
+    // Priority for club assignment:
+    // 1. r.club_id (explicitly set in results table)
+    // 2. rider_club_seasons for the event year (historical club membership)
+    // 3. rd.club_id (rider's current club as last fallback)
     $results = $db->getAll("
         SELECT
             r.cyclist_id as rider_id,
             r.event_id,
             r.class_id,
-            COALESCE(r.club_id, rd.club_id) as club_id,
-            c.name as club_name,
+            COALESCE(r.club_id, rcs.club_id, rd.club_id) as club_id,
+            COALESCE(c1.name, c2.name, c3.name) as club_name,
             COALESCE(
                 CASE
                     WHEN COALESCE(r.run_1_points, 0) > 0 OR COALESCE(r.run_2_points, 0) > 0
@@ -540,15 +542,18 @@ function calculateClubRankingData($db, $discipline = 'GRAVITY', $debug = false) 
         JOIN events e ON r.event_id = e.id
         JOIN classes cl ON r.class_id = cl.id
         JOIN riders rd ON r.cyclist_id = rd.id
-        LEFT JOIN clubs c ON COALESCE(r.club_id, rd.club_id) = c.id
+        LEFT JOIN rider_club_seasons rcs ON rcs.rider_id = rd.id AND rcs.season_year = YEAR(e.date)
+        LEFT JOIN clubs c1 ON r.club_id = c1.id
+        LEFT JOIN clubs c2 ON rcs.club_id = c2.id
+        LEFT JOIN clubs c3 ON rd.club_id = c3.id
         WHERE r.status = 'finished'
-        AND COALESCE(r.club_id, rd.club_id) IS NOT NULL
+        AND COALESCE(r.club_id, rcs.club_id, rd.club_id) IS NOT NULL
         AND (r.points > 0 OR COALESCE(r.run_1_points, 0) > 0 OR COALESCE(r.run_2_points, 0) > 0)
         AND e.date >= ?
         {$disciplineFilter}
         AND COALESCE(cl.series_eligible, 1) = 1
         AND COALESCE(cl.awards_points, 1) = 1
-        ORDER BY e.id, cl.id, COALESCE(r.club_id, rd.club_id), original_points DESC
+        ORDER BY e.id, cl.id, COALESCE(r.club_id, rcs.club_id, rd.club_id), original_points DESC
     ", $params);
 
     if (empty($results)) return [];
@@ -697,13 +702,17 @@ function calculateClubRankingDataAsOf($db, $discipline = 'GRAVITY', $asOfDate = 
     }
 
     // Get all qualifying results with club info up to asOfDate
+    // Priority for club assignment:
+    // 1. r.club_id (explicitly set in results table)
+    // 2. rider_club_seasons for the event year (historical club membership)
+    // 3. rd.club_id (rider's current club as last fallback)
     $results = $db->getAll("
         SELECT
             r.cyclist_id as rider_id,
             r.event_id,
             r.class_id,
-            COALESCE(r.club_id, rd.club_id) as club_id,
-            c.name as club_name,
+            COALESCE(r.club_id, rcs.club_id, rd.club_id) as club_id,
+            COALESCE(c1.name, c2.name, c3.name) as club_name,
             COALESCE(
                 CASE
                     WHEN COALESCE(r.run_1_points, 0) > 0 OR COALESCE(r.run_2_points, 0) > 0
@@ -719,16 +728,19 @@ function calculateClubRankingDataAsOf($db, $discipline = 'GRAVITY', $asOfDate = 
         JOIN events e ON r.event_id = e.id
         JOIN classes cl ON r.class_id = cl.id
         JOIN riders rd ON r.cyclist_id = rd.id
-        LEFT JOIN clubs c ON COALESCE(r.club_id, rd.club_id) = c.id
+        LEFT JOIN rider_club_seasons rcs ON rcs.rider_id = rd.id AND rcs.season_year = YEAR(e.date)
+        LEFT JOIN clubs c1 ON r.club_id = c1.id
+        LEFT JOIN clubs c2 ON rcs.club_id = c2.id
+        LEFT JOIN clubs c3 ON rd.club_id = c3.id
         WHERE r.status = 'finished'
-        AND COALESCE(r.club_id, rd.club_id) IS NOT NULL
+        AND COALESCE(r.club_id, rcs.club_id, rd.club_id) IS NOT NULL
         AND (r.points > 0 OR COALESCE(r.run_1_points, 0) > 0 OR COALESCE(r.run_2_points, 0) > 0)
         AND e.date <= ?
         AND e.date >= ?
         {$disciplineFilter}
         AND COALESCE(cl.series_eligible, 1) = 1
         AND COALESCE(cl.awards_points, 1) = 1
-        ORDER BY e.id, cl.id, COALESCE(r.club_id, rd.club_id), original_points DESC
+        ORDER BY e.id, cl.id, COALESCE(r.club_id, rcs.club_id, rd.club_id), original_points DESC
     ", $params);
 
     if (empty($results)) return [];
