@@ -2,6 +2,9 @@
 /**
  * Debug Achievements - Check rider ID mismatches
  */
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../includes/auth.php';
 requireAdmin();
@@ -14,39 +17,37 @@ $messageType = '';
 // Handle fix actions
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['action'])) {
-        switch ($_POST['action']) {
-            case 'clean_orphaned_achievements':
-                // Delete achievements where rider_id doesn't exist in riders
-                $stmt = $db->query("
-                    DELETE ra FROM rider_achievements ra
-                    LEFT JOIN riders r ON ra.rider_id = r.id
-                    WHERE r.id IS NULL
-                ");
-                $deleted = $stmt->rowCount();
-                $message = "Raderade {$deleted} orphaned achievements";
-                $messageType = 'success';
-                break;
+        try {
+            switch ($_POST['action']) {
+                case 'clean_orphaned_achievements':
+                    // Delete achievements where rider_id doesn't exist in riders
+                    $stmt = $db->prepare("
+                        DELETE ra FROM rider_achievements ra
+                        LEFT JOIN riders r ON ra.rider_id = r.id
+                        WHERE r.id IS NULL
+                    ");
+                    $stmt->execute();
+                    $deleted = $stmt->rowCount();
+                    $message = "Raderade {$deleted} orphaned achievements";
+                    $messageType = 'success';
+                    break;
 
-            case 'fix_cyclist_ids_by_name':
-                // Try to fix cyclist_id in results by matching rider names
-                // This assumes the original name was stored somewhere or can be matched
-                $fixed = 0;
-                $notFound = 0;
-
-                // Get results with invalid cyclist_id (not in riders table)
-                $stmt = $db->query("
-                    SELECT DISTINCT res.cyclist_id
-                    FROM results res
-                    LEFT JOIN riders r ON res.cyclist_id = r.id
-                    WHERE r.id IS NULL AND res.cyclist_id IS NOT NULL
-                ");
-                $invalidIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
-
-                // This is complex - we would need a way to match the external ID to actual rider
-                // For now, just report how many are invalid
-                $message = "Hittade " . count($invalidIds) . " ogiltiga cyclist_id. Manuell åtgärd krävs.";
-                $messageType = 'warning';
-                break;
+                case 'fix_cyclist_ids_by_name':
+                    // Get results with invalid cyclist_id (not in riders table)
+                    $stmt = $db->query("
+                        SELECT DISTINCT res.cyclist_id
+                        FROM results res
+                        LEFT JOIN riders r ON res.cyclist_id = r.id
+                        WHERE r.id IS NULL AND res.cyclist_id IS NOT NULL
+                    ");
+                    $invalidIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
+                    $message = "Hittade " . count($invalidIds) . " ogiltiga cyclist_id. Manuell åtgärd krävs.";
+                    $messageType = 'warning';
+                    break;
+            }
+        } catch (Exception $e) {
+            $message = "Fel: " . $e->getMessage();
+            $messageType = 'danger';
         }
     }
 }
@@ -65,6 +66,7 @@ include __DIR__ . '/../includes/admin-header.php';
     </div>
     <?php endif; ?>
 
+    <?php try { ?>
     <div class="card">
         <div class="card-header">
             <h3>Databas-status</h3>
@@ -407,6 +409,11 @@ include __DIR__ . '/../includes/admin-header.php';
             <?php endif; ?>
         </div>
     </div>
+    <?php } catch (Exception $e) { ?>
+    <div class="alert alert-danger">
+        <strong>Databasfel:</strong> <?= htmlspecialchars($e->getMessage()) ?>
+    </div>
+    <?php } ?>
 </div>
 
 <?php include __DIR__ . '/../includes/admin-footer.php'; ?>
