@@ -13,7 +13,7 @@ require_admin();
 $pageTitle = 'Fixa resultat klubb-ID';
 include __DIR__ . '/../includes/admin-header.php';
 
-$db = hub_db();
+$db = getDB();
 $message = '';
 $messageType = '';
 $dryRun = !isset($_POST['execute']);
