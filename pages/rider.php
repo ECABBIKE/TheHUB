@@ -397,7 +397,9 @@ try {
             $rankingHistoryFull = $allSnapshots;
 
             // Filter to last 24 months for main chart
-            $cutoff24m = date('Y-m-d', strtotime('-24 months'));
+            // Use latest snapshot date as reference (not today's date)
+            $latestSnapshotDate = !empty($allSnapshots) ? end($allSnapshots)['snapshot_date'] : date('Y-m-d');
+            $cutoff24m = date('Y-m-d', strtotime($latestSnapshotDate . ' -24 months'));
             $rankingHistory24m = array_filter($allSnapshots, function($snap) use ($cutoff24m) {
                 return $snap['snapshot_date'] >= $cutoff24m;
             });
