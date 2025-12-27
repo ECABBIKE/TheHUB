@@ -5,8 +5,8 @@ require_admin();
 
 $db = getDB();
 
-// Get event ID from URL
-$eventId = isset($_GET['event_id']) ? (int)$_GET['event_id'] : 0;
+// Get event ID from URL (accept both 'id', 'event_id', and 'event' for flexibility)
+$eventId = isset($_GET['id']) ? (int)$_GET['id'] : (isset($_GET['event_id']) ? (int)$_GET['event_id'] : (isset($_GET['event']) ? (int)$_GET['event'] : 0));
 
 if (!$eventId) {
  header('Location: /admin/results.php');
