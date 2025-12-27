@@ -949,8 +949,8 @@ document.addEventListener('keydown', function(e) {
     border-color: #323539;
 }
 .standings-toggle-btn.active {
-    background: #171717;
-    border-color: #171717;
+    background: var(--color-accent);
+    border-color: var(--color-accent);
     color: #ffffff;
 }
 
