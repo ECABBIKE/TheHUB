@@ -796,7 +796,7 @@ function renderClubAchievements(PDO $pdo, int $club_id, array $stats = null): st
     <div class="achievements-card">
         <div class="achievements-card-header">
             <h3 class="achievements-card-title">Klubb Achievements</h3>
-            <a href="/achievements#club" class="achievements-info-link">ℹ️ Visa alla</a>
+            <a href="/achievements#club" class="achievements-info-link"><i data-lucide="info"></i> Visa alla</a>
         </div>
 
         <!-- Club Experience Slider -->
