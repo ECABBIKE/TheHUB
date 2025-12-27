@@ -491,6 +491,20 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
                                 error_log("IMPORT: Updated rider {$rider['id']} nationality to: {$importNationality}");
                             }
                         }
+
+                        // Update rider birth_year if provided in CSV and rider doesn't have it
+                        $importBirthYear = trim($data['birth_year'] ?? '');
+                        if (!empty($importBirthYear) && is_numeric($importBirthYear)) {
+                            $importBirthYear = (int)$importBirthYear;
+                            if ($importBirthYear >= 1940 && $importBirthYear <= (int)date('Y')) {
+                                $riderData = $db->getRow("SELECT birth_year FROM riders WHERE id = ?", [$rider['id']]);
+                                if (empty($riderData['birth_year'])) {
+                                    $db->update('riders', ['birth_year' => $importBirthYear], 'id = ?', [$rider['id']]);
+                                    $matching_stats['riders_updated_with_birthyear'] = ($matching_stats['riders_updated_with_birthyear'] ?? 0) + 1;
+                                    error_log("IMPORT: Updated rider {$rider['id']} birth_year to: {$importBirthYear}");
+                                }
+                            }
+                        }
                     }
                 }
 
@@ -546,6 +560,20 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
                                 error_log("IMPORT: Updated rider {$rider['id']} nationality to: {$importNationality}");
                             }
                         }
+
+                        // Update rider birth_year if provided in CSV and rider doesn't have it
+                        $importBirthYear = trim($data['birth_year'] ?? '');
+                        if (!empty($importBirthYear) && is_numeric($importBirthYear)) {
+                            $importBirthYear = (int)$importBirthYear;
+                            if ($importBirthYear >= 1940 && $importBirthYear <= (int)date('Y')) {
+                                $riderData = $db->getRow("SELECT birth_year FROM riders WHERE id = ?", [$rider['id']]);
+                                if (empty($riderData['birth_year'])) {
+                                    $db->update('riders', ['birth_year' => $importBirthYear], 'id = ?', [$rider['id']]);
+                                    $matching_stats['riders_updated_with_birthyear'] = ($matching_stats['riders_updated_with_birthyear'] ?? 0) + 1;
+                                    error_log("IMPORT: Updated rider {$rider['id']} birth_year to: {$importBirthYear}");
+                                }
+                            }
+                        }
                     } else {
                         error_log("IMPORT: No match found for '{$firstName} {$lastName}' UCI:{$licenseNumberDigits}");
                     }
@@ -572,12 +600,25 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
                     $importNationality = strtoupper(trim($data['nationality'] ?? ''));
                     if (strlen($importNationality) > 3) $importNationality = '';
 
+                    // Get birth year from import if available
+                    $importBirthYear = trim($data['birth_year'] ?? '');
+                    if (!empty($importBirthYear) && is_numeric($importBirthYear)) {
+                        $importBirthYear = (int)$importBirthYear;
+                        // Validate reasonable birth year range (1940-current year)
+                        if ($importBirthYear < 1940 || $importBirthYear > (int)date('Y')) {
+                            $importBirthYear = null;
+                        }
+                    } else {
+                        $importBirthYear = null;
+                    }
+
                     $riderId = $db->insert('riders', [
                         'firstname' => trim($data['firstname']),
                         'lastname' => trim($data['lastname']),
                         'license_number' => $finalLicenseNumber,
                         'gender' => $gender,
-                        'nationality' => !empty($importNationality) ? $importNationality : null
+                        'nationality' => !empty($importNationality) ? $importNationality : null,
+                        'birth_year' => $importBirthYear
                     ]);
 
                     // Track for rollback

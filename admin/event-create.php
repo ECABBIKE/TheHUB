@@ -334,7 +334,7 @@ include __DIR__ . '/components/unified-layout.php';
    Downhill Standard (två åk, snabbaste räknas)
   </option>
   <option value="DH_SWECUP" <?= ($_POST['event_format'] ?? '') === 'DH_SWECUP' ? 'selected' : '' ?>>
-   SweCUP Downhill (två åk, båda ger poäng)
+   SweCUP Downhill (Kval + Final, ranking efter Final)
   </option>
   <option value="DUAL_SLALOM" <?= ($_POST['event_format'] ?? '') === 'DUAL_SLALOM' ? 'selected' : '' ?>>
    Dual Slalom
