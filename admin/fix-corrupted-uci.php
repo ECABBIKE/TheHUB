@@ -29,11 +29,12 @@ function isRealUciId($license) {
     // Remove spaces
     $clean = str_replace(' ', '', $license);
 
-    // Temp SWE-ID has dash: SWE-000001
-    if (strpos($clean, '-') !== false) return false;
+    // Temp SWE-ID format with dashes: SWE-2025-00001
+    if (preg_match('/^SWE-\d{4}-\d{5}$/', $clean)) {
+        return false; // This is a temp SWE-ID, not real UCI
+    }
 
-    // Temp SWE-ID format: SWE25XXXXX (10 chars, 7 digits after SWE)
-    // Example: SWE2500318
+    // Temp SWE-ID format without dashes: SWE2500318 (10 chars, 7 digits after SWE)
     if (preg_match('/^SWE\d{7}$/', $clean)) {
         return false; // This is a temp SWE-ID, not real UCI
     }
