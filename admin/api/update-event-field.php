@@ -37,7 +37,7 @@ if (!$field) {
 }
 
 // Whitelist of allowed fields
-$allowedFields = ['event_level', 'event_format', 'pricing_template_id', 'advent_id'];
+$allowedFields = ['event_level', 'event_format', 'point_scale_id', 'pricing_template_id', 'advent_id'];
 
 if (!in_array($field, $allowedFields)) {
     echo json_encode(['success' => false, 'error' => 'Invalid field name']);
@@ -46,7 +46,7 @@ if (!in_array($field, $allowedFields)) {
 
 // Validate field-specific values
 $validEventLevels = ['', 'national', 'sportmotion'];
-$validEventFormats = ['', 'Enduro (en tid)', 'Downhill Standard', 'SweCUP Downhill', 'Dual Slalom'];
+$validEventFormats = ['', 'ENDURO', 'DH_STANDARD', 'DH_SWECUP', 'DUAL_SLALOM'];
 
 switch ($field) {
     case 'event_level':
@@ -63,6 +63,10 @@ switch ($field) {
             exit;
         }
         $value = $value ?: null;
+        break;
+
+    case 'point_scale_id':
+        $value = ($value !== '' && $value !== null) ? intval($value) : null;
         break;
 
     case 'pricing_template_id':

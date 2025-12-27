@@ -83,7 +83,7 @@ $seriesIdSelect = $seriesEventsTableExists
 
 $sql = "SELECT
     e.id, e.name, e.date, e.location, e.discipline, e.status,
-    e.event_level, e.event_format, e.pricing_template_id, e.advent_id,
+    e.event_level, e.event_format, e.point_scale_id, e.pricing_template_id, e.advent_id,
     e.organizer_club_id, e.website, e.contact_email, e.contact_phone,
     e.registration_deadline, e.registration_deadline_time,
     v.name as venue_name,
@@ -163,6 +163,13 @@ try {
     $allPricingTemplates = $pdo->query("SELECT id, name FROM pricing_templates ORDER BY is_default DESC, name")->fetchAll(PDO::FETCH_ASSOC);
 } catch (Exception $e) {
     $allPricingTemplates = [];
+}
+
+// Get all point scales for ranking dropdown
+try {
+    $allPointScales = $pdo->query("SELECT id, name, discipline FROM point_scales WHERE active = 1 ORDER BY name")->fetchAll(PDO::FETCH_ASSOC);
+} catch (Exception $e) {
+    $allPointScales = [];
 }
 
 // Get unique brands (series names without year) for filter
@@ -334,6 +341,7 @@ include __DIR__ . '/components/unified-layout.php';
                             <th class="event-field">Format</th>
                             <th class="event-field">Rankingklass</th>
                             <th class="event-field">Event Format</th>
+                            <th class="event-field">Poängskala</th>
                             <th class="event-field">Prismall</th>
                             <th class="event-field">Advent ID</th>
                             <th class="organizer-field">Arrangör</th>
@@ -399,10 +407,20 @@ include __DIR__ . '/components/unified-layout.php';
                                 <td class="event-field">
                                     <select class="admin-form-select" style="min-width: 150px; padding: var(--space-xs) var(--space-sm);" onchange="updateEventFormat(<?= $event['id'] ?>, this.value)">
                                         <option value="">-</option>
-                                        <option value="Enduro (en tid)" <?= ($event['event_format'] ?? '') === 'Enduro (en tid)' ? 'selected' : '' ?>>Enduro (en tid)</option>
-                                        <option value="Downhill Standard" <?= ($event['event_format'] ?? '') === 'Downhill Standard' ? 'selected' : '' ?>>Downhill Standard</option>
-                                        <option value="SweCUP Downhill" <?= ($event['event_format'] ?? '') === 'SweCUP Downhill' ? 'selected' : '' ?>>SweCUP Downhill</option>
-                                        <option value="Dual Slalom" <?= ($event['event_format'] ?? '') === 'Dual Slalom' ? 'selected' : '' ?>>Dual Slalom</option>
+                                        <option value="ENDURO" <?= ($event['event_format'] ?? '') === 'ENDURO' ? 'selected' : '' ?>>Enduro</option>
+                                        <option value="DH_STANDARD" <?= ($event['event_format'] ?? '') === 'DH_STANDARD' ? 'selected' : '' ?>>DH Standard</option>
+                                        <option value="DH_SWECUP" <?= ($event['event_format'] ?? '') === 'DH_SWECUP' ? 'selected' : '' ?>>SweCUP DH</option>
+                                        <option value="DUAL_SLALOM" <?= ($event['event_format'] ?? '') === 'DUAL_SLALOM' ? 'selected' : '' ?>>Dual Slalom</option>
+                                    </select>
+                                </td>
+                                <td class="event-field">
+                                    <select class="admin-form-select" style="min-width: 140px; padding: var(--space-xs) var(--space-sm); font-size: 0.875rem;" onchange="updatePointScale(<?= $event['id'] ?>, this.value)">
+                                        <option value="">-</option>
+                                        <?php foreach ($allPointScales as $scale): ?>
+                                            <option value="<?= $scale['id'] ?>" <?= ($event['point_scale_id'] ?? '') == $scale['id'] ? 'selected' : '' ?>>
+                                                <?= htmlspecialchars($scale['name']) ?>
+                                            </option>
+                                        <?php endforeach; ?>
                                     </select>
                                 </td>
                                 <td class="event-field">
@@ -600,6 +618,33 @@ async function updateEventFormat(eventId, eventFormat) {
     } catch (error) {
         console.error('Error:', error);
         alert('Fel vid uppdatering av event format');
+    }
+}
+
+async function updatePointScale(eventId, pointScaleId) {
+    try {
+        const response = await fetch('/admin/api/update-event-field.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                event_id: eventId,
+                field: 'point_scale_id',
+                value: pointScaleId,
+                csrf_token: csrfToken
+            })
+        });
+
+        const result = await response.json();
+        if (!result.success) {
+            alert('Fel: ' + (result.error || 'Kunde inte uppdatera poängskala'));
+        } else {
+            showToast('Poängskala uppdaterad', 'success');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Fel vid uppdatering av poängskala');
     }
 }
 
