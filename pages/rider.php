@@ -186,7 +186,7 @@ try {
             sb.accent_color as series_color,
             cls.display_name as class_name,
             COALESCE(cls.awards_points, 1) as awards_podiums,
-            CASE WHEN LOWER(COALESCE(cls.display_name, cls.name, '')) LIKE '%motion%' THEN 1 ELSE 0 END as is_motion
+            CASE WHEN COALESCE(cls.awards_points, 1) = 0 THEN 1 ELSE 0 END as is_motion
         FROM results res
         JOIN events e ON res.event_id = e.id
         LEFT JOIN series s ON e.series_id = s.id
