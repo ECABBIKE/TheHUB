@@ -391,10 +391,15 @@ function parseAndAnalyzeCSV($filepath, $db) {
          $originalCol = trim($rawHeader[$i]);
          if (empty($originalCol)) continue;
 
-         // Skip UCI-ID if it appears here
+         // Skip non-stage columns that may appear between Club and NetTime
+         // This includes: UCI-ID, birth year, age, and DH run times (Run1/Run2)
          $normalizedCheck = mb_strtolower($originalCol, 'UTF-8');
          $normalizedCheck = str_replace([' ', '-', '_'], '', $normalizedCheck);
-         if (in_array($normalizedCheck, ['uciid', 'ucikod', 'licens', 'licensenumber'])) {
+         if (in_array($normalizedCheck, [
+             'uciid', 'ucikod', 'licens', 'licensenumber',
+             'birthyear', 'födelseår', 'fodelsear', 'ålder', 'alder', 'age',
+             'run1', 'run2', 'run1time', 'run2time', 'åk1', 'åk2', 'ak1', 'ak2'
+         ])) {
              continue;
          }
 
