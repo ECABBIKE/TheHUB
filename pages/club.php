@@ -929,10 +929,31 @@ document.addEventListener('DOMContentLoaded', function() {
                     y: {
                         reverse: true,
                         min: 1,
-                        display: false
+                        display: true,
+                        position: 'left',
+                        grid: {
+                            color: 'rgba(0, 0, 0, 0.06)',
+                            drawBorder: false
+                        },
+                        ticks: {
+                            font: { size: 10 },
+                            color: '#9ca3af',
+                            padding: 4,
+                            callback: function(value) {
+                                return value;
+                            }
+                        }
                     },
                     x: {
-                        display: false
+                        display: true,
+                        grid: {
+                            display: false
+                        },
+                        ticks: {
+                            font: { size: 9 },
+                            color: '#9ca3af',
+                            maxRotation: 0
+                        }
                     }
                 },
                 interaction: {
