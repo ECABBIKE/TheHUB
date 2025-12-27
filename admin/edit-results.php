@@ -82,18 +82,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   $messageType = 'error';
  }
  } elseif ($action === 'recalculate') {
- // Recalculate points for this event
+ // Recalculate points for this event - use appropriate function based on format
  try {
-  $stats = recalculateEventPoints($db, $eventId);
-  if ($stats) {
-   $message = "Poäng omräknade! Uppdaterade: {$stats['updated']}, Fel: {$stats['failed']}";
-   $messageType = $stats['failed'] > 0 ? 'warning' : 'success';
+  $eventFormat = $event['event_format'] ?? 'ENDURO';
+  $isDH = in_array($eventFormat, ['DH_STANDARD', 'DH_SWECUP']);
+
+  if ($isDH) {
+   $useSwecupDh = ($eventFormat === 'DH_SWECUP');
+   $stats = recalculateDHEventResults($db, $eventId, null, $useSwecupDh);
+   $message = "DH-resultat omräknade! Positioner: {$stats['positions_updated']}, Poäng: {$stats['points_updated']}";
+   $messageType = !empty($stats['errors']) ? 'warning' : 'success';
   } else {
-   $message = 'Kunde inte räkna om poäng. Kontrollera att poängskalan är konfigurerad.';
-   $messageType = 'error';
+   $stats = recalculateEventResults($db, $eventId);
+   $message = "Resultat omräknade! Positioner: {$stats['positions_updated']}, Poäng: {$stats['points_updated']}";
+   $messageType = !empty($stats['errors']) ? 'warning' : 'success';
   }
  } catch (Exception $e) {
-  $message = 'Fel vid omräkning av poäng: ' . $e->getMessage();
+  $message = 'Fel vid omräkning: ' . $e->getMessage();
   $messageType = 'error';
  }
  }
