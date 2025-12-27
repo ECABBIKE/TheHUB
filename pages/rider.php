@@ -426,6 +426,12 @@ try {
         $achievements = getRiderAchievements($db, $riderId);
     }
 
+    // Get detailed achievements (for modal display)
+    $detailedAchievements = [];
+    if (function_exists('getAllDetailedAchievements')) {
+        $detailedAchievements = getAllDetailedAchievements($db, $riderId);
+    }
+
     // Get social profiles
     $socialProfiles = [];
     if (function_exists('getRiderSocialProfiles')) {
@@ -1221,6 +1227,149 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
             }
             ?>
         </div>
+
+        <!-- Achievement Details Modal -->
+        <?php if (!empty($detailedAchievements)): ?>
+        <div id="achievementModal" class="ranking-modal-overlay" style="display:none; padding-top: calc(var(--header-height, 60px) + 10px);">
+            <div class="ranking-modal" style="max-height: calc(100vh - var(--header-height, 60px) - 40px); max-width: 500px;">
+                <div class="ranking-modal-header">
+                    <h3 id="achievementModalTitle">
+                        <i data-lucide="award"></i>
+                        <span></span>
+                    </h3>
+                    <button type="button" class="ranking-modal-close" onclick="closeAchievementModal()">
+                        <i data-lucide="x"></i>
+                    </button>
+                </div>
+                <div class="ranking-modal-body" id="achievementModalBody">
+                    <!-- Content populated by JS -->
+                </div>
+            </div>
+        </div>
+
+        <script>
+        const detailedAchievements = <?= json_encode($detailedAchievements) ?>;
+
+        function openAchievementModal(achievementType) {
+            const data = detailedAchievements[achievementType];
+            if (!data || !data.items || data.items.length === 0) return;
+
+            const modal = document.getElementById('achievementModal');
+            const titleSpan = document.querySelector('#achievementModalTitle span');
+            const body = document.getElementById('achievementModalBody');
+
+            titleSpan.textContent = data.label;
+
+            let html = '<div class="achievement-details-list">';
+            data.items.forEach(item => {
+                const year = item.season_year || '';
+                const eventName = item.event_name || item.achievement_value || '';
+                const seriesName = item.series_name || item.series_short_name || '';
+                const eventId = item.event_id;
+                const eventDate = item.event_date ? new Date(item.event_date).toLocaleDateString('sv-SE', {day: 'numeric', month: 'short', year: 'numeric'}) : '';
+
+                html += '<div class="achievement-detail-item">';
+                if (eventId) {
+                    html += `<a href="/event/${eventId}" class="achievement-detail-link">`;
+                }
+                html += `<div class="achievement-detail-content">`;
+                if (seriesName) {
+                    html += `<span class="achievement-detail-series">${seriesName}</span>`;
+                }
+                html += `<span class="achievement-detail-name">${eventName}</span>`;
+                html += `<span class="achievement-detail-year">${eventDate || year}</span>`;
+                html += `</div>`;
+                if (eventId) {
+                    html += `<i data-lucide="chevron-right" class="achievement-detail-arrow"></i></a>`;
+                }
+                html += '</div>';
+            });
+            html += '</div>';
+
+            body.innerHTML = html;
+            modal.style.display = 'flex';
+            document.body.style.overflow = 'hidden';
+
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+        }
+
+        function closeAchievementModal() {
+            const modal = document.getElementById('achievementModal');
+            if (modal) {
+                modal.style.display = 'none';
+                document.body.style.overflow = '';
+            }
+        }
+
+        document.getElementById('achievementModal')?.addEventListener('click', function(e) {
+            if (e.target === this) closeAchievementModal();
+        });
+
+        // Add click handlers to badges with data
+        document.addEventListener('DOMContentLoaded', function() {
+            document.querySelectorAll('.badge-item.clickable').forEach(badge => {
+                badge.addEventListener('click', function() {
+                    const type = this.dataset.achievement;
+                    if (type && detailedAchievements[type]) {
+                        openAchievementModal(type);
+                    }
+                });
+            });
+        });
+        </script>
+
+        <style>
+        .achievement-details-list {
+            display: flex;
+            flex-direction: column;
+            gap: var(--space-sm);
+        }
+        .achievement-detail-item {
+            background: var(--color-bg-secondary);
+            border-radius: var(--radius-sm);
+            overflow: hidden;
+        }
+        .achievement-detail-link {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            padding: var(--space-md);
+            text-decoration: none;
+            color: inherit;
+            transition: background 0.2s;
+        }
+        .achievement-detail-link:hover {
+            background: var(--color-bg-hover);
+        }
+        .achievement-detail-content {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+        }
+        .achievement-detail-item:not(:has(a)) .achievement-detail-content {
+            padding: var(--space-md);
+        }
+        .achievement-detail-series {
+            font-size: 0.7rem;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: var(--color-text-secondary);
+        }
+        .achievement-detail-name {
+            font-weight: 600;
+            color: var(--color-text-primary);
+        }
+        .achievement-detail-year {
+            font-size: 0.85rem;
+            color: var(--color-text-secondary);
+        }
+        .achievement-detail-arrow {
+            width: 20px;
+            height: 20px;
+            color: var(--color-text-secondary);
+        }
+        </style>
+        <?php endif; ?>
 
     </div><!-- End right-column -->
 

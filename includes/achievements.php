@@ -102,6 +102,75 @@ function getRiderAchievementStats(PDO $pdo, int $rider_id): array {
 }
 
 /**
+ * Get detailed achievement data for a specific achievement type
+ * Returns full details including event/series names and links
+ */
+function getDetailedAchievements(PDO $pdo, int $rider_id, string $achievement_type): array {
+    $stmt = $pdo->prepare("
+        SELECT
+            ra.id,
+            ra.achievement_type,
+            ra.achievement_value,
+            ra.series_id,
+            ra.season_year,
+            ra.event_id,
+            ra.earned_at,
+            e.name as event_name,
+            e.date as event_date,
+            e.discipline,
+            s.name as series_name,
+            s.short_name as series_short_name
+        FROM rider_achievements ra
+        LEFT JOIN events e ON ra.event_id = e.id
+        LEFT JOIN series s ON ra.series_id = s.id
+        WHERE ra.rider_id = ? AND ra.achievement_type = ?
+        ORDER BY ra.season_year DESC, ra.earned_at DESC
+    ");
+    $stmt->execute([$rider_id, $achievement_type]);
+    return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+
+/**
+ * Get all achievements with details for a rider
+ * Groups achievements by type with full metadata
+ */
+function getAllDetailedAchievements(PDO $pdo, int $rider_id): array {
+    $achievements = [];
+
+    // Swedish Championships
+    $championships = getDetailedAchievements($pdo, $rider_id, 'swedish_champion');
+    if (!empty($championships)) {
+        $achievements['swedish_champion'] = [
+            'label' => 'Svensk mästare',
+            'count' => count($championships),
+            'items' => $championships
+        ];
+    }
+
+    // Series Championships
+    $seriesWins = getDetailedAchievements($pdo, $rider_id, 'series_champion');
+    if (!empty($seriesWins)) {
+        $achievements['series_champion'] = [
+            'label' => 'Serieseger',
+            'count' => count($seriesWins),
+            'items' => $seriesWins
+        ];
+    }
+
+    // Finisher 100%
+    $finisher = getDetailedAchievements($pdo, $rider_id, 'finisher_100');
+    if (!empty($finisher)) {
+        $achievements['finisher_100'] = [
+            'label' => '100% Genomfört',
+            'count' => count($finisher),
+            'items' => $finisher
+        ];
+    }
+
+    return $achievements;
+}
+
+/**
  * Get experience level name
  */
 function getExperienceLevelName(int $level): string {
