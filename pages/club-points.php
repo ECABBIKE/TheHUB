@@ -36,8 +36,13 @@ if (!$club) {
     return;
 }
 
-// Get series info
-$stmt = $db->prepare("SELECT * FROM series WHERE id = ?");
+// Get series info with brand logo fallback
+$stmt = $db->prepare("
+    SELECT s.*, COALESCE(s.logo, sb.logo) as logo, sb.accent_color as brand_accent_color
+    FROM series s
+    LEFT JOIN series_brands sb ON s.brand_id = sb.id
+    WHERE s.id = ?
+");
 $stmt->execute([$seriesId]);
 $series = $stmt->fetch(PDO::FETCH_ASSOC);
 
