@@ -685,6 +685,25 @@ include __DIR__ . '/components/unified-layout.php';
         </div>
     </div>
 
+    <!-- Stage Bonus Points -->
+    <div class="tool-card">
+        <div class="tool-card-header">
+            <div class="tool-icon">
+                <i data-lucide="trophy"></i>
+            </div>
+            <div>
+                <h4 class="tool-title">Sträckbonus</h4>
+                <p class="tool-description">Ge bonuspoäng till snabbaste på en specifik sträcka (PS/SS)</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/stage-bonus-points.php" class="btn-admin btn-admin-primary flex-1">
+                <i data-lucide="trophy" class="icon-sm"></i>
+                Sträckbonus
+            </a>
+        </div>
+    </div>
+
     <!-- Fix Time Format -->
     <div class="tool-card">
         <div class="tool-card-header">
