@@ -901,3 +901,57 @@
         grid-template-columns: 1fr;
     }
 }
+
+/* ============================================================================
+   FILTER TABS (for results page year/series filtering)
+   ============================================================================ */
+.filter-tabs {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: var(--space-sm);
+}
+
+.filter-tabs .filter-label {
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    color: var(--color-text-secondary);
+    margin-right: var(--space-xs);
+}
+
+.filter-tab {
+    display: inline-flex;
+    align-items: center;
+    padding: var(--space-xs) var(--space-sm);
+    background: var(--color-bg-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-full);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    color: var(--color-text-secondary);
+    text-decoration: none;
+    transition: all var(--transition-fast);
+}
+
+.filter-tab:hover {
+    background: var(--color-bg-hover);
+    border-color: var(--color-accent);
+    color: var(--color-text-primary);
+}
+
+.filter-tab.active {
+    background: var(--tab-accent, var(--color-accent));
+    border-color: var(--tab-accent, var(--color-accent));
+    color: white;
+}
+
+@media (max-width: 600px) {
+    .filter-tabs {
+        gap: var(--space-xs);
+    }
+
+    .filter-tab {
+        padding: 4px 8px;
+        font-size: var(--text-xs);
+    }
+}

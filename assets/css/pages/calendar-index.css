@@ -156,6 +156,29 @@
     flex-shrink: 0;
 }
 
+/* SM Championship Badge */
+.event-sm-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 4px 10px;
+    background: linear-gradient(135deg, #FFD700 0%, #FFA500 100%);
+    color: #1a1a1a;
+    border-radius: var(--radius-full);
+    font-size: var(--text-sm);
+    font-weight: 700;
+    white-space: nowrap;
+    flex-shrink: 0;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    box-shadow: 0 2px 4px rgba(255, 193, 7, 0.3);
+}
+
+.event-sm-badge i {
+    width: 14px;
+    height: 14px;
+}
+
 /* Title */
 .event-title {
     flex: 1;
@@ -370,11 +393,22 @@
         font-size: var(--text-base);
     }
 
-    /* Hide extras on mobile - keep deadline visible */
+    /* Hide extras on mobile - keep deadline and SM badge visible */
     .event-series-badge,
     .event-location-inline,
     .event-registrations {
         display: none;
+    }
+
+    /* SM badge stays visible and compact on mobile */
+    .event-sm-badge {
+        padding: 2px 6px;
+        font-size: var(--text-xs);
+    }
+
+    .event-sm-badge i {
+        width: 12px;
+        height: 12px;
     }
 
     .event-deadline {

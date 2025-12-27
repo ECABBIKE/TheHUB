@@ -14,6 +14,7 @@ $filterFormat = $_GET['format'] ?? '';
 // Get upcoming events with series colors and logo from brand
 $sql = "
     SELECT e.*,
+           e.is_championship,
            s.name as series_name,
            s.id as series_id,
            sb.logo as series_logo,
@@ -196,6 +197,13 @@ if (!function_exists('getDeadlineInfo')) {
 
                             <?php if ($event['series_name']): ?>
                             <span class="event-series-badge"><?= htmlspecialchars($event['series_name']) ?></span>
+                            <?php endif; ?>
+
+                            <?php if (!empty($event['is_championship'])): ?>
+                            <span class="event-sm-badge" title="Svenska Mästerskap">
+                                <i data-lucide="medal"></i>
+                                SM
+                            </span>
                             <?php endif; ?>
 
                             <h3 class="event-title"><?= htmlspecialchars($event['name']) ?></h3>

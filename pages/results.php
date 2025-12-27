@@ -35,7 +35,7 @@ try {
 
     // Get events with results, including brand colors and logo
     $sql = "
-        SELECT e.id, e.name, e.date, e.location,
+        SELECT e.id, e.name, e.date, e.location, e.is_championship,
                s.id as series_id, s.name as series_name,
                sb.id as brand_id, sb.name as brand_name,
                sb.logo as series_logo,
@@ -168,6 +168,13 @@ try {
 
                             <?php if ($event['brand_name']): ?>
                             <span class="event-series-badge"><?= htmlspecialchars($event['brand_name']) ?></span>
+                            <?php endif; ?>
+
+                            <?php if (!empty($event['is_championship'])): ?>
+                            <span class="event-sm-badge" title="Svenska Mästerskap">
+                                <i data-lucide="medal"></i>
+                                SM
+                            </span>
                             <?php endif; ?>
 
                             <h3 class="event-title"><?= htmlspecialchars($event['name']) ?></h3>
