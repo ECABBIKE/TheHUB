@@ -95,24 +95,15 @@ $stats = $db->getRow("
     FROM riders
 ");
 
-$pageTitle = 'Kontrollera Licensnummer';
-$pageType = 'admin';
-include __DIR__ . '/../includes/layout-header.php';
-?>
+// Page config
+$page_title = 'Kontrollera Licensnummer';
+$breadcrumbs = [
+    ['label' => 'Verktyg', 'url' => '/admin/tools.php'],
+    ['label' => 'Kontrollera Licensnummer']
+];
 
-<main class="main-content">
-    <div class="container">
-        <!-- Header -->
-        <div class="flex items-center justify-between mb-lg">
-            <h1 class="text-primary">
-                <i data-lucide="shield-check"></i>
-                Kontrollera Licensnummer
-            </h1>
-            <a href="/admin/import.php" class="btn btn--secondary">
-                <i data-lucide="arrow-left"></i>
-                Tillbaka
-            </a>
-        </div>
+include __DIR__ . '/components/unified-layout.php';
+?>
 
         <?php if ($message): ?>
         <div class="alert alert--<?= h($messageType) ?> mb-lg">
@@ -280,8 +271,6 @@ include __DIR__ . '/../includes/layout-header.php';
                 <?php endif; ?>
             </div>
         </div>
-    </div>
-</main>
 
 <!-- Edit Modal -->
 <div id="editModal" style="display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;">
@@ -326,4 +315,4 @@ document.getElementById('editModal').addEventListener('click', function(e) {
 });
 </script>
 
-<?php include __DIR__ . '/../includes/layout-footer.php'; ?>
+<?php include __DIR__ . '/components/unified-layout-footer.php'; ?>

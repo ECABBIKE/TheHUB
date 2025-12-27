@@ -2,32 +2,20 @@
 /**
  * Debug Achievements - Check rider ID mismatches
  */
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
-
 require_once __DIR__ . '/../config.php';
+require_admin();
 
 $db = getDB();
+
+// Page config
+$page_title = 'Debug: Utmärkelser';
+$breadcrumbs = [
+    ['label' => 'Verktyg', 'url' => '/admin/tools.php'],
+    ['label' => 'Debug: Utmärkelser']
+];
+
+include __DIR__ . '/components/unified-layout.php';
 ?>
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Debug Achievements</title>
-    <style>
-        body { font-family: system-ui, sans-serif; padding: 20px; max-width: 1200px; margin: 0 auto; }
-        .card { border: 1px solid #ddd; border-radius: 8px; margin-bottom: 20px; }
-        .card-header { background: #f5f5f5; padding: 15px; border-bottom: 1px solid #ddd; }
-        .card-header h3 { margin: 0; }
-        .card-body { padding: 15px; }
-        table { width: 100%; border-collapse: collapse; }
-        th, td { padding: 8px; text-align: left; border-bottom: 1px solid #eee; }
-        .success { color: green; }
-        .danger { color: red; }
-        .warning { background: #fff3cd; padding: 10px; border-radius: 4px; margin-top: 10px; }
-    </style>
-</head>
-<body>
-<h1>Debug Achievements</h1>
 
 <?php try { ?>
     <div class="card">
@@ -157,12 +145,12 @@ $db = getDB();
 
             $totalOrphaned = 0;
             if (empty($orphaned)) {
-                echo "<p style='color: var(--color-success);'>Inga orphaned achievements hittades - alla rider_id matchar riders.id</p>";
+                echo "<p class='text-success'>Inga orphaned achievements hittades - alla rider_id matchar riders.id</p>";
             } else {
                 foreach ($orphaned as $o) {
                     $totalOrphaned += $o['count'];
                 }
-                echo "<p style='color: var(--color-danger);'>Varning: {$totalOrphaned} achievements med rider_id som inte finns i riders:</p>";
+                echo "<p class='text-danger'>Varning: {$totalOrphaned} achievements med rider_id som inte finns i riders:</p>";
                 echo "<table class='table'>";
                 echo "<thead><tr><th>rider_id</th><th>Antal achievements</th></tr></thead>";
                 echo "<tbody>";
@@ -198,12 +186,12 @@ $db = getDB();
 
             $totalOrphanedResults = 0;
             if (empty($orphanedResults)) {
-                echo "<p style='color: var(--color-success);'>Inga orphaned results hittades - alla cyclist_id matchar riders.id</p>";
+                echo "<p class='text-success'>Inga orphaned results hittades - alla cyclist_id matchar riders.id</p>";
             } else {
                 foreach ($orphanedResults as $o) {
                     $totalOrphanedResults += $o['count'];
                 }
-                echo "<p style='color: var(--color-danger);'>Varning: {$totalOrphanedResults} resultat med cyclist_id som inte finns i riders:</p>";
+                echo "<p class='text-danger'>Varning: {$totalOrphanedResults} resultat med cyclist_id som inte finns i riders:</p>";
                 echo "<table class='table'>";
                 echo "<thead><tr><th>cyclist_id</th><th>Antal resultat</th></tr></thead>";
                 echo "<tbody>";
@@ -373,10 +361,9 @@ $db = getDB();
         </div>
     </div>
 <?php } catch (Exception $e) { ?>
-<div class="danger">
+<div class="alert alert-danger">
     <strong>Databasfel:</strong> <?= htmlspecialchars($e->getMessage()) ?>
 </div>
 <?php } ?>
 
-</body>
-</html>
+<?php include __DIR__ . '/components/unified-layout-footer.php'; ?>
