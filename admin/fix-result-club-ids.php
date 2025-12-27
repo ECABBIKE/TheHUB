@@ -7,9 +7,8 @@
  * based on which club the rider was a member of at the time of the event.
  */
 
-require_once __DIR__ . '/../config/database.php';
-require_once __DIR__ . '/../includes/auth.php';
-requireAdmin();
+require_once __DIR__ . '/../config.php';
+require_admin();
 
 $pageTitle = 'Fixa resultat klubb-ID';
 include __DIR__ . '/../includes/admin-header.php';
