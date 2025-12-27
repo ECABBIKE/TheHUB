@@ -124,6 +124,110 @@ function getClubAchievementStats(PDO $pdo, int $club_id): array {
 }
 
 /**
+ * Get detailed club achievements with member names and event links
+ * For showing in modal when clicking on achievements
+ */
+function getClubDetailedAchievements(PDO $pdo, int $club_id): array {
+    $achievements = [];
+
+    try {
+        // Series Champions (members who won series)
+        $stmt = $pdo->prepare("
+            SELECT
+                ra.id,
+                ra.achievement_type,
+                ra.achievement_value,
+                ra.series_id,
+                ra.season_year,
+                r.id as rider_id,
+                r.firstname,
+                r.lastname,
+                s.name as series_name,
+                s.short_name as series_short_name
+            FROM rider_achievements ra
+            JOIN riders r ON ra.rider_id = r.id
+            LEFT JOIN series s ON ra.series_id = s.id
+            WHERE r.club_id = ?
+            AND ra.achievement_type = 'series_champion'
+            ORDER BY ra.season_year DESC, r.lastname ASC
+        ");
+        $stmt->execute([$club_id]);
+        $seriesWins = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        if (!empty($seriesWins)) {
+            $achievements['series_champion'] = [
+                'label' => 'Seriesegrar',
+                'count' => count($seriesWins),
+                'items' => $seriesWins
+            ];
+        }
+
+        // Swedish Champions (SM winners from club)
+        $stmt = $pdo->prepare("
+            SELECT
+                ra.id,
+                ra.achievement_type,
+                ra.achievement_value,
+                ra.season_year,
+                ra.event_id,
+                r.id as rider_id,
+                r.firstname,
+                r.lastname,
+                e.name as event_name,
+                e.date as event_date,
+                e.discipline
+            FROM rider_achievements ra
+            JOIN riders r ON ra.rider_id = r.id
+            LEFT JOIN events e ON ra.event_id = e.id
+            WHERE r.club_id = ?
+            AND ra.achievement_type = 'swedish_champion'
+            ORDER BY ra.season_year DESC, r.lastname ASC
+        ");
+        $stmt->execute([$club_id]);
+        $smWins = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        if (!empty($smWins)) {
+            $achievements['swedish_champion'] = [
+                'label' => 'SM-medaljer',
+                'count' => count($smWins),
+                'items' => $smWins
+            ];
+        }
+
+        // Unique champions (for the "Mästare" badge)
+        $stmt = $pdo->prepare("
+            SELECT
+                r.id as rider_id,
+                r.firstname,
+                r.lastname,
+                COUNT(*) as wins,
+                GROUP_CONCAT(DISTINCT ra.season_year ORDER BY ra.season_year DESC SEPARATOR ', ') as years
+            FROM rider_achievements ra
+            JOIN riders r ON ra.rider_id = r.id
+            WHERE r.club_id = ?
+            AND ra.achievement_type = 'series_champion'
+            GROUP BY r.id
+            ORDER BY wins DESC, r.lastname ASC
+        ");
+        $stmt->execute([$club_id]);
+        $champions = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        if (!empty($champions)) {
+            $achievements['unique_champions'] = [
+                'label' => 'Seriemästare',
+                'count' => count($champions),
+                'items' => $champions
+            ];
+        }
+
+    } catch (PDOException $e) {
+        // Silently fail
+    }
+
+    return $achievements;
+}
+
+/**
  * Get club experience level name
  */
 function getClubExperienceLevelName(int $level): string {
@@ -758,14 +862,20 @@ function renderClubAchievements(PDO $pdo, int $club_id, array $stats = null): st
             </div>
 
             <!-- Seriesegrar -->
-            <div class="badge-item<?= $stats['series_wins'] === 0 ? ' locked' : '' ?>" data-tooltip="Medlemmars seriesegrar">
+            <div class="badge-item<?= $stats['series_wins'] === 0 ? ' locked' : '' ?><?= $stats['series_wins'] > 0 ? ' clickable' : '' ?>"
+                 data-tooltip="Medlemmars seriesegrar"
+                 data-achievement="series_champion"
+                 data-label="Seriesegrar">
                 <?= renderClubSeriesWinsBadge() ?>
                 <span class="badge-value<?= $stats['series_wins'] === 0 ? ' empty' : '' ?>"><?= $stats['series_wins'] > 0 ? $stats['series_wins'] : '–' ?></span>
                 <span class="badge-label">Seriesegrar</span>
             </div>
 
             <!-- SM-medaljer -->
-            <div class="badge-item<?= $stats['sm_medals'] === 0 ? ' locked' : '' ?>" data-tooltip="SM-medaljer för klubben">
+            <div class="badge-item<?= $stats['sm_medals'] === 0 ? ' locked' : '' ?><?= $stats['sm_medals'] > 0 ? ' clickable' : '' ?>"
+                 data-tooltip="SM-medaljer för klubben"
+                 data-achievement="swedish_champion"
+                 data-label="SM-medaljer">
                 <?= renderClubSmMedalsBadge() ?>
                 <span class="badge-value<?= $stats['sm_medals'] === 0 ? ' empty' : '' ?>"><?= $stats['sm_medals'] > 0 ? $stats['sm_medals'] : '–' ?></span>
                 <span class="badge-label">SM-medaljer</span>
@@ -781,8 +891,10 @@ function renderClubAchievements(PDO $pdo, int $club_id, array $stats = null): st
             </div>
 
             <!-- Mästare i klubben -->
-            <div class="badge-item<?= $stats['unique_champions'] === 0 ? ' locked' : '' ?>"
-                 data-tooltip="<?= $stats['unique_champions'] > 0 ? htmlspecialchars(implode(', ', $stats['champion_names'])) : 'Unika seriemästare från klubben' ?>">
+            <div class="badge-item<?= $stats['unique_champions'] === 0 ? ' locked' : '' ?><?= $stats['unique_champions'] > 0 ? ' clickable' : '' ?>"
+                 data-tooltip="<?= $stats['unique_champions'] > 0 ? htmlspecialchars(implode(', ', $stats['champion_names'])) : 'Unika seriemästare från klubben' ?>"
+                 data-achievement="unique_champions"
+                 data-label="Seriemästare">
                 <?= renderClubChampionsBadge() ?>
                 <span class="badge-value<?= $stats['unique_champions'] === 0 ? ' empty' : '' ?>"><?= $stats['unique_champions'] > 0 ? $stats['unique_champions'] : '–' ?></span>
                 <span class="badge-label">Mästare</span>

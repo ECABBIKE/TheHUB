@@ -314,4 +314,171 @@ if (!$clubLogo && !empty($club['logo'])) {
 <div class="club-achievements-section">
     <?= renderClubAchievements($db, $clubId) ?>
 </div>
+
+<?php
+// Get detailed achievements for modal
+$clubDetailedAchievements = [];
+if (function_exists('getClubDetailedAchievements')) {
+    $clubDetailedAchievements = getClubDetailedAchievements($db, $clubId);
+}
+?>
+
+<?php if (!empty($clubDetailedAchievements)): ?>
+<!-- Club Achievement Details Modal -->
+<div id="clubAchievementModal" class="ranking-modal-overlay" style="display:none; padding-top: calc(var(--header-height, 60px) + 10px);">
+    <div class="ranking-modal" style="max-height: calc(100vh - var(--header-height, 60px) - 40px); max-width: 500px;">
+        <div class="ranking-modal-header">
+            <h3 id="clubAchievementModalTitle">
+                <i data-lucide="award"></i>
+                <span></span>
+            </h3>
+            <button type="button" class="ranking-modal-close" onclick="closeClubAchievementModal()">
+                <i data-lucide="x"></i>
+            </button>
+        </div>
+        <div class="ranking-modal-body" id="clubAchievementModalBody">
+            <!-- Content populated by JS -->
+        </div>
+    </div>
+</div>
+
+<script>
+const clubDetailedAchievements = <?= json_encode($clubDetailedAchievements) ?>;
+
+function openClubAchievementModal(achievementType) {
+    const data = clubDetailedAchievements[achievementType];
+    if (!data || !data.items || data.items.length === 0) return;
+
+    const modal = document.getElementById('clubAchievementModal');
+    const titleSpan = document.querySelector('#clubAchievementModalTitle span');
+    const body = document.getElementById('clubAchievementModalBody');
+
+    titleSpan.textContent = data.label;
+
+    let html = '<div class="achievement-details-list">';
+
+    if (achievementType === 'unique_champions') {
+        // Special format for unique champions - show rider with total wins
+        data.items.forEach(item => {
+            const riderName = item.firstname + ' ' + item.lastname;
+            const riderId = item.rider_id;
+            const wins = item.wins;
+            const years = item.years || '';
+
+            html += '<div class="achievement-detail-item">';
+            html += `<a href="/rider/${riderId}" class="achievement-detail-link">`;
+            html += `<div class="achievement-detail-content">`;
+            html += `<span class="achievement-detail-name">${riderName}</span>`;
+            html += `<span class="achievement-detail-year">${wins} seger${wins > 1 ? 'ar' : ''} (${years})</span>`;
+            html += `</div>`;
+            html += `<i data-lucide="chevron-right" class="achievement-detail-arrow"></i></a>`;
+            html += '</div>';
+        });
+    } else {
+        // Format for series_champion and swedish_champion
+        data.items.forEach(item => {
+            const riderName = item.firstname + ' ' + item.lastname;
+            const riderId = item.rider_id;
+            const year = item.season_year || '';
+            const seriesName = item.series_name || item.series_short_name || '';
+            const eventName = item.event_name || item.achievement_value || '';
+            const eventId = item.event_id;
+
+            html += '<div class="achievement-detail-item">';
+            html += `<a href="/rider/${riderId}" class="achievement-detail-link">`;
+            html += `<div class="achievement-detail-content">`;
+            if (seriesName) {
+                html += `<span class="achievement-detail-series">${seriesName}</span>`;
+            }
+            html += `<span class="achievement-detail-name">${riderName}</span>`;
+            html += `<span class="achievement-detail-year">${eventName || year}${year && eventName ? ' (' + year + ')' : ''}</span>`;
+            html += `</div>`;
+            html += `<i data-lucide="chevron-right" class="achievement-detail-arrow"></i></a>`;
+            html += '</div>';
+        });
+    }
+
+    html += '</div>';
+
+    body.innerHTML = html;
+    modal.style.display = 'flex';
+    document.body.style.overflow = 'hidden';
+
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function closeClubAchievementModal() {
+    const modal = document.getElementById('clubAchievementModal');
+    if (modal) {
+        modal.style.display = 'none';
+        document.body.style.overflow = '';
+    }
+}
+
+document.getElementById('clubAchievementModal')?.addEventListener('click', function(e) {
+    if (e.target === this) closeClubAchievementModal();
+});
+
+// Add click handlers to badges with data
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.badge-item.clickable').forEach(badge => {
+        badge.addEventListener('click', function() {
+            const type = this.dataset.achievement;
+            if (type && clubDetailedAchievements[type]) {
+                openClubAchievementModal(type);
+            }
+        });
+    });
+});
+</script>
+
+<style>
+.achievement-details-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+}
+.achievement-detail-item {
+    background: var(--color-bg-secondary);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+}
+.achievement-detail-link {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-md);
+    text-decoration: none;
+    color: inherit;
+    transition: background 0.2s;
+}
+.achievement-detail-link:hover {
+    background: var(--color-bg-hover);
+}
+.achievement-detail-content {
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+.achievement-detail-series {
+    font-size: 0.7rem;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    color: var(--color-text-secondary);
+}
+.achievement-detail-name {
+    font-weight: 600;
+    color: var(--color-text-primary);
+}
+.achievement-detail-year {
+    font-size: 0.85rem;
+    color: var(--color-text-secondary);
+}
+.achievement-detail-arrow {
+    width: 20px;
+    height: 20px;
+    color: var(--color-text-secondary);
+}
+</style>
+<?php endif; ?>
 <?php endif; ?>
