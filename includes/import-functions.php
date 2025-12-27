@@ -171,7 +171,8 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
                 'uciid', 'ucikod', 'licens', 'licensenumber',
                 'birthyear', 'födelseår', 'fodelsear', 'ålder', 'alder', 'age',
                 'run1', 'run2', 'run1time', 'run2time', 'åk1', 'åk2', 'ak1', 'ak2',
-                'kval', 'qualifying', 'final'
+                'kval', 'qualifying', 'final',
+                'land', 'nationality', 'nationalitet', 'country', 'nation'
             ])) {
                 continue;
             }
@@ -769,7 +770,7 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
 
             // Determine status
             $status = strtolower(trim($data['status'] ?? 'finished'));
-            if (in_array($status, ['fin', 'finish', 'finished', 'ok', ''])) {
+            if (in_array($status, ['fin', 'finish', 'finished', 'finnished', 'ok', ''])) {
                 $status = 'finished';
             } elseif (in_array($status, ['dnf', 'did not finish'])) {
                 $status = 'dnf';

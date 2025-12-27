@@ -406,7 +406,8 @@ function parseAndAnalyzeCSV($filepath, $db) {
              'uciid', 'ucikod', 'licens', 'licensenumber',
              'birthyear', 'födelseår', 'fodelsear', 'ålder', 'alder', 'age',
              'run1', 'run2', 'run1time', 'run2time', 'åk1', 'åk2', 'ak1', 'ak2',
-             'kval', 'qualifying', 'final'
+             'kval', 'qualifying', 'final',
+             'land', 'nationality', 'nationalitet', 'country', 'nation'
          ])) {
              continue;
          }
@@ -454,6 +455,7 @@ function parseAndAnalyzeCSV($filepath, $db) {
          'position' => 'position', 'placering' => 'position', 'placebycategory' => 'position',
          'time' => 'finish_time', 'tid' => 'finish_time', 'nettime' => 'finish_time',
          'status' => 'status',
+         'land' => 'nationality', 'nationality' => 'nationality', 'nationalitet' => 'nationality', 'country' => 'nationality',
          'uciid' => 'license_number', 'licens' => 'license_number',
          'birthyear' => 'birth_year', 'födelseår' => 'birth_year', 'fodelsear' => 'birth_year',
          'bib' => 'bib_number', 'bibno' => 'bib_number', 'startnr' => 'bib_number', 'startnummer' => 'bib_number',
