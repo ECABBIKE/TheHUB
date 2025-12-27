@@ -1,10 +1,7 @@
 <?php
 /**
- * Simple Reset Tool - No fancy layout
+ * Simple Reset Tool
  */
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
-
 require_once __DIR__ . '/../config.php';
 require_admin();
 
@@ -57,50 +54,64 @@ if ($_POST['confirm'] ?? '' === 'RADERA ALLT') {
 $riders = $db->getRow("SELECT COUNT(*) as c FROM riders")['c'] ?? 0;
 $clubs = $db->getRow("SELECT COUNT(*) as c FROM clubs")['c'] ?? 0;
 $results = $db->getRow("SELECT COUNT(*) as c FROM results")['c'] ?? 0;
+
+// Page config
+$page_title = 'Enkel återställning';
+$breadcrumbs = [
+    ['label' => 'Verktyg', 'url' => '/admin/tools.php'],
+    ['label' => 'Enkel återställning']
+];
+
+include __DIR__ . '/components/unified-layout.php';
 ?>
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Reset Data</title>
-    <style>
-        body { font-family: sans-serif; padding: 40px; max-width: 600px; margin: 0 auto; }
-        .danger { color: red; }
-        .success { color: green; }
-        input[type=text] { padding: 10px; font-size: 16px; width: 200px; }
-        button { padding: 10px 20px; font-size: 16px; background: red; color: white; border: none; cursor: pointer; }
-        table { width: 100%; border-collapse: collapse; margin: 20px 0; }
-        td { padding: 8px; border-bottom: 1px solid #ddd; }
-    </style>
-</head>
-<body>
-    <h1>Reset Data</h1>
 
-    <?php if ($message): ?>
-        <p class="success"><strong><?= $message ?></strong></p>
-    <?php endif; ?>
+<?php if ($message): ?>
+    <div class="alert alert-success"><?= htmlspecialchars($message) ?></div>
+<?php endif; ?>
 
-    <?php if ($error): ?>
-        <p class="danger"><strong>Fel: <?= $error ?></strong></p>
-    <?php endif; ?>
+<?php if ($error): ?>
+    <div class="alert alert-danger">Fel: <?= htmlspecialchars($error) ?></div>
+<?php endif; ?>
 
-    <h2>Nuvarande data:</h2>
-    <table>
-        <tr><td>Åkare</td><td><strong><?= number_format($riders) ?></strong></td></tr>
-        <tr><td>Klubbar</td><td><strong><?= number_format($clubs) ?></strong></td></tr>
-        <tr><td>Resultat</td><td><strong><?= number_format($results) ?></strong></td></tr>
-    </table>
+<div class="card">
+    <div class="card-header">
+        <h3>Nuvarande data</h3>
+    </div>
+    <div class="card-body">
+        <table class="table">
+            <tr><td>Åkare</td><td><strong><?= number_format($riders) ?></strong></td></tr>
+            <tr><td>Klubbar</td><td><strong><?= number_format($clubs) ?></strong></td></tr>
+            <tr><td>Resultat</td><td><strong><?= number_format($results) ?></strong></td></tr>
+        </table>
+    </div>
+</div>
 
-    <?php if ($riders > 0 || $clubs > 0): ?>
-    <h2 class="danger">Radera all data</h2>
-    <p>Skriv <strong>RADERA ALLT</strong> för att bekräfta:</p>
-    <form method="POST">
-        <input type="text" name="confirm" placeholder="Skriv här...">
-        <button type="submit">Radera</button>
-    </form>
-    <?php else: ?>
-    <p class="success">Databasen är tom - redo för import!</p>
-    <?php endif; ?>
+<?php if ($riders > 0 || $clubs > 0): ?>
+<div class="card" style="margin-top: var(--space-md);">
+    <div class="card-header">
+        <h3 class="text-danger">Radera all data</h3>
+    </div>
+    <div class="card-body">
+        <div class="alert alert-danger" style="margin-bottom: var(--space-md);">
+            <strong>VARNING!</strong> Detta raderar ALL data i systemet.
+        </div>
+        <p>Skriv <strong>RADERA ALLT</strong> för att bekräfta:</p>
+        <form method="POST" style="margin-top: var(--space-md);">
+            <div class="form-group" style="display: flex; gap: var(--space-sm); align-items: center;">
+                <input type="text" name="confirm" class="form-input" placeholder="Skriv här..." style="max-width: 200px;">
+                <button type="submit" class="btn btn-danger">Radera</button>
+            </div>
+        </form>
+    </div>
+</div>
+<?php else: ?>
+<div class="alert alert-success" style="margin-top: var(--space-md);">
+    Databasen är tom - redo för import!
+</div>
+<?php endif; ?>
 
-    <p><a href="/admin/import.php">Gå till Import</a></p>
-</body>
-</html>
+<div style="margin-top: var(--space-lg);">
+    <a href="/admin/import.php" class="btn btn-primary">Gå till Import</a>
+</div>
+
+<?php include __DIR__ . '/components/unified-layout-footer.php'; ?>

@@ -1,14 +1,34 @@
 <?php
-error_reporting(E_ALL);
-ini_set('display_errors', 1);
-
+/**
+ * Test DB - Check database connection and tables
+ */
 require_once __DIR__ . '/../config.php';
+require_admin();
+
 $db = getDB();
 
-echo "<h3>Series table columns:</h3>";
-$cols = $db->query("DESCRIBE series")->fetchAll(PDO::FETCH_ASSOC);
-echo "<pre>";
-foreach ($cols as $col) {
-    echo $col['Field'] . " - " . $col['Type'] . "\n";
-}
-echo "</pre>";
+// Page config
+$page_title = 'Testa DB';
+$breadcrumbs = [
+    ['label' => 'Verktyg', 'url' => '/admin/tools.php'],
+    ['label' => 'Testa DB']
+];
+
+include __DIR__ . '/components/unified-layout.php';
+?>
+
+<div class="card">
+    <div class="card-header">
+        <h3>Series table columns</h3>
+    </div>
+    <div class="card-body">
+        <pre><?php
+        $cols = $db->query("DESCRIBE series")->fetchAll(PDO::FETCH_ASSOC);
+        foreach ($cols as $col) {
+            echo htmlspecialchars($col['Field'] . " - " . $col['Type']) . "\n";
+        }
+        ?></pre>
+    </div>
+</div>
+
+<?php include __DIR__ . '/components/unified-layout-footer.php'; ?>

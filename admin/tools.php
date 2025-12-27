@@ -191,7 +191,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/normalize-names" class="btn-admin btn-admin-primary flex-1">
+            <a href="/admin/normalize-names.php" class="btn-admin btn-admin-primary flex-1">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm"><path d="M4 7V4h16v3"/><path d="M9 20h6"/><path d="M12 4v16"/></svg>
                 Normalisera namn
             </a>
@@ -210,7 +210,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/fix-birth-years" class="btn-admin btn-admin-primary flex-1">
+            <a href="/admin/fix-birth-years.php" class="btn-admin btn-admin-primary flex-1">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="3" x2="21" y1="10" y2="10"/></svg>
                 Fixa födelseår
             </a>
@@ -245,7 +245,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/find-duplicates" class="btn-admin btn-admin-primary flex-1">
+            <a href="/admin/find-duplicates.php" class="btn-admin btn-admin-primary flex-1">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
                 Sök dubbletter
             </a>
@@ -270,7 +270,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/cleanup-duplicates" class="btn-admin btn-admin-secondary flex-1">
+            <a href="/admin/cleanup-duplicates.php" class="btn-admin btn-admin-secondary flex-1">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm"><path d="m8 6 4-4 4 4"/><path d="M12 2v10.3"/></svg>
                 Hantera sammanslagning
             </a>
@@ -289,7 +289,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/auto-merge-duplicates" class="btn-admin btn-admin-danger flex-1">
+            <a href="/admin/auto-merge-duplicates.php" class="btn-admin btn-admin-danger flex-1">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm"><path d="m8 6 4-4 4 4"/><path d="M12 2v10.3"/></svg>
                 Auto-merge UCI
             </a>
@@ -308,7 +308,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/fix-corrupted-uci" class="btn-admin btn-admin-danger flex-1">
+            <a href="/admin/fix-corrupted-uci.php" class="btn-admin btn-admin-danger flex-1">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/></svg>
                 Fixa korrupt UCI
             </a>
@@ -327,7 +327,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/find-name-duplicates" class="btn-admin btn-admin-warning flex-1">
+            <a href="/admin/find-name-duplicates.php" class="btn-admin btn-admin-warning flex-1">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
                 Hitta namndubletter
             </a>
@@ -346,7 +346,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/bulk-merge-duplicates" class="btn-admin btn-admin-danger flex-1">
+            <a href="/admin/bulk-merge-duplicates.php" class="btn-admin btn-admin-danger flex-1">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm"><path d="m8 6 4-4 4 4"/><path d="M12 2v10.3"/></svg>
                 BULK MERGE
             </a>
@@ -365,7 +365,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/assign-missing-swe-id" class="btn-admin btn-admin-secondary flex-1">
+            <a href="/admin/assign-missing-swe-id.php" class="btn-admin btn-admin-secondary flex-1">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                 Tilldela SWE-ID
             </a>
@@ -384,7 +384,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/merge-specific-riders" class="btn-admin btn-admin-warning flex-1">
+            <a href="/admin/merge-specific-riders.php" class="btn-admin btn-admin-warning flex-1">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm"><path d="m8 6 4-4 4 4"/><path d="M12 2v10.3"/></svg>
                 Slå ihop manuellt
             </a>
@@ -403,7 +403,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/enrich-riders" class="btn-admin btn-admin-secondary flex-1">
+            <a href="/admin/enrich-riders.php" class="btn-admin btn-admin-secondary flex-1">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
                 Berika åkare
             </a>
@@ -434,7 +434,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/cleanup-clubs" class="btn-admin btn-admin-secondary flex-1">
+            <a href="/admin/cleanup-clubs.php" class="btn-admin btn-admin-secondary flex-1">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/></svg>
                 Rensa klubbar
             </a>
@@ -457,7 +457,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/fix-uci-format" class="btn-admin btn-admin-primary flex-1">
+            <a href="/admin/fix-uci-format.php" class="btn-admin btn-admin-primary flex-1">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm"><path d="M12 20h9"/><path d="M16.5 3.5a2.12 2.12 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>
                 Skanna &amp; Fixa
             </a>
@@ -476,7 +476,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/fix-swe-format" class="btn-admin btn-admin-primary flex-1">
+            <a href="/admin/fix-swe-format.php" class="btn-admin btn-admin-primary flex-1">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
                 Konvertera SWE-ID
             </a>
@@ -495,7 +495,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/fix-swe-prefix" class="btn-admin btn-admin-warning flex-1">
+            <a href="/admin/fix-swe-prefix.php" class="btn-admin btn-admin-warning flex-1">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm"><path d="M12 20h9"/><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4 12.5-12.5z"/></svg>
                 Fixa prefix
             </a>
@@ -514,7 +514,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/sync-club-membership" class="btn-admin btn-admin-danger flex-1">
+            <a href="/admin/sync-club-membership.php" class="btn-admin btn-admin-danger flex-1">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/></svg>
                 Synka klubbar
             </a>
@@ -533,7 +533,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/format-uci-id" class="btn-admin btn-admin-secondary flex-1">
+            <a href="/admin/format-uci-id.php" class="btn-admin btn-admin-secondary flex-1">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm"><path d="M4 7V4h16v3"/><path d="M9 20h6"/><path d="M12 4v16"/></svg>
                 Formatera manuellt
             </a>
@@ -560,7 +560,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/search-uci-id" class="btn-admin btn-admin-secondary flex-1">
+            <a href="/admin/search-uci-id.php" class="btn-admin btn-admin-secondary flex-1">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
                 Sök UCI-ID
             </a>
@@ -579,7 +579,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/import-uci" class="btn-admin btn-admin-secondary flex-1">
+            <a href="/admin/import-uci.php" class="btn-admin btn-admin-secondary flex-1">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/></svg>
                 Importera UCI
             </a>
@@ -598,7 +598,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/import-gravity-id" class="btn-admin btn-admin-secondary flex-1">
+            <a href="/admin/import-gravity-id.php" class="btn-admin btn-admin-secondary flex-1">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/></svg>
                 Importera Gravity-ID
             </a>
@@ -621,7 +621,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/clear-event-results" class="btn-admin btn-admin-danger flex-1">
+            <a href="/admin/clear-event-results.php" class="btn-admin btn-admin-danger flex-1">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/></svg>
                 Rensa resultat
             </a>
@@ -640,7 +640,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/import-history" class="btn-admin btn-admin-secondary flex-1">
+            <a href="/admin/import-history.php" class="btn-admin btn-admin-secondary flex-1">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm"><path d="M3 12a9 9 0 1 0 9-9"/><path d="M3 3v5h5"/></svg>
                 Visa historik
             </a>
@@ -659,7 +659,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/fix-result-club-ids" class="btn-admin btn-admin-warning flex-1">
+            <a href="/admin/fix-result-club-ids.php" class="btn-admin btn-admin-warning flex-1">
                 <i data-lucide="building-2" class="icon-sm"></i>
                 Fixa klubb-ID
             </a>
@@ -678,7 +678,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/fix-time-format" class="btn-admin btn-admin-warning flex-1">
+            <a href="/admin/fix-time-format.php" class="btn-admin btn-admin-warning flex-1">
                 <i data-lucide="clock" class="icon-sm"></i>
                 Fixa tider
             </a>
@@ -697,7 +697,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/recalculate-all-points" class="btn-admin btn-admin-danger flex-1">
+            <a href="/admin/recalculate-all-points.php" class="btn-admin btn-admin-danger flex-1">
                 <i data-lucide="calculator" class="icon-sm"></i>
                 Räkna om poäng
             </a>
@@ -720,7 +720,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/import-results" class="btn-admin btn-admin-primary flex-1">
+            <a href="/admin/import-results.php" class="btn-admin btn-admin-primary flex-1">
                 <i data-lucide="upload" class="icon-sm"></i>
                 Importera resultat
             </a>
@@ -739,7 +739,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/import-riders" class="btn-admin btn-admin-primary flex-1">
+            <a href="/admin/import-riders.php" class="btn-admin btn-admin-primary flex-1">
                 <i data-lucide="users" class="icon-sm"></i>
                 Importera deltagare
             </a>
@@ -758,7 +758,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/import-clubs" class="btn-admin btn-admin-secondary flex-1">
+            <a href="/admin/import-clubs.php" class="btn-admin btn-admin-secondary flex-1">
                 <i data-lucide="building" class="icon-sm"></i>
                 Importera klubbar
             </a>
@@ -777,7 +777,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/import-events" class="btn-admin btn-admin-secondary flex-1">
+            <a href="/admin/import-events.php" class="btn-admin btn-admin-secondary flex-1">
                 <i data-lucide="calendar" class="icon-sm"></i>
                 Importera event
             </a>
@@ -796,7 +796,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/import" class="btn-admin btn-admin-secondary flex-1">
+            <a href="/admin/import.php" class="btn-admin btn-admin-secondary flex-1">
                 <i data-lucide="folder-input" class="icon-sm"></i>
                 Visa alla
             </a>
@@ -819,7 +819,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/point-scales" class="btn-admin btn-admin-primary flex-1">
+            <a href="/admin/point-scales.php" class="btn-admin btn-admin-primary flex-1">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm"><line x1="18" x2="18" y1="20" y2="10"/><line x1="12" x2="12" y1="20" y2="4"/></svg>
                 Hantera poängmallar
             </a>
@@ -838,7 +838,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/series" class="btn-admin btn-admin-secondary flex-1">
+            <a href="/admin/series.php" class="btn-admin btn-admin-secondary flex-1">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/></svg>
                 Hantera serier
             </a>
@@ -857,7 +857,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/fix-series-points" class="btn-admin btn-admin-warning flex-1">
+            <a href="/admin/fix-series-points.php" class="btn-admin btn-admin-warning flex-1">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm"><path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0"/></svg>
                 Fixa seriepoäng
             </a>
@@ -880,7 +880,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/rebuild-stats" class="btn-admin btn-admin-primary flex-1">
+            <a href="/admin/rebuild-stats.php" class="btn-admin btn-admin-primary flex-1">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm"><path d="M21.5 2v6h-6M2.5 22v-6h6"/></svg>
                 Rebuild statistik
             </a>
@@ -899,7 +899,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/diagnose-series" class="btn-admin btn-admin-secondary flex-1">
+            <a href="/admin/diagnose-series.php" class="btn-admin btn-admin-secondary flex-1">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
                 Visa diagnostik
             </a>
@@ -1082,7 +1082,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/clear-cache" class="btn-admin btn-admin-secondary flex-1">
+            <a href="/admin/clear-cache.php" class="btn-admin btn-admin-secondary flex-1">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm"><path d="M21.5 2v6h-6"/></svg>
                 Rensa cache
             </a>
@@ -1166,7 +1166,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/migrations" class="btn-admin btn-admin-secondary flex-1">
+            <a href="/admin/migrations.php" class="btn-admin btn-admin-secondary flex-1">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5V19A9 3 0 0 0 21 19V5"/></svg>
                 Kör migrationer
             </a>
@@ -1261,7 +1261,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/run-migration.php?file=071_club_points_system.sql" class="btn-admin btn-admin-warning flex-1">
+            <a href="/admin/run-migration.php?file=071_club_points_system.sql.php" class="btn-admin btn-admin-warning flex-1">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5V19A9 3 0 0 0 21 19V5"/></svg>
                 Kör migration 071
             </a>
@@ -1280,7 +1280,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/run-migration.php?file=072_ranking_snapshots_system.sql" class="btn-admin btn-admin-warning flex-1">
+            <a href="/admin/run-migration.php?file=072_ranking_snapshots_system.sql.php" class="btn-admin btn-admin-warning flex-1">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5V19A9 3 0 0 0 21 19V5"/></svg>
                 Kör migration 072
             </a>
@@ -1303,7 +1303,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/ranking-backfill" class="btn-admin btn-admin-primary flex-1">
+            <a href="/admin/ranking-backfill.php" class="btn-admin btn-admin-primary flex-1">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
                 Generera snapshots
             </a>
@@ -1322,7 +1322,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/ranking" class="btn-admin btn-admin-secondary flex-1">
+            <a href="/admin/ranking.php" class="btn-admin btn-admin-secondary flex-1">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
                 Ranking-inställningar
             </a>
