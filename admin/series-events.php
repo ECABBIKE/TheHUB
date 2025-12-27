@@ -482,7 +482,7 @@ include __DIR__ . '/components/unified-layout.php';
  <p class="text-secondary">Hantera events och poängmallar</p>
  </div>
  <div class="flex gap-sm flex-wrap">
-  <a href="/admin/stage-bonus-points.php?series=<?= $seriesId ?>" class="btn btn--accent">
+  <a href="/admin/stage-bonus-points.php?series=<?= $seriesId ?>" class="btn btn--primary">
    <i data-lucide="trophy"></i>
    Sträckbonus
   </a>
