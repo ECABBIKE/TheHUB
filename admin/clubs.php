@@ -127,6 +127,43 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $message = 'Ett fel uppstod: ' . $e->getMessage();
             $messageType = 'error';
         }
+    } elseif ($action === 'merge') {
+        $keepId = intval($_POST['keep_id'] ?? 0);
+        $mergeId = intval($_POST['merge_id'] ?? 0);
+
+        if ($keepId && $mergeId && $keepId !== $mergeId) {
+            try {
+                $db->pdo->beginTransaction();
+
+                // Get club names for message
+                $keepClub = $db->getRow("SELECT name FROM clubs WHERE id = ?", [$keepId]);
+                $mergeClub = $db->getRow("SELECT name FROM clubs WHERE id = ?", [$mergeId]);
+
+                // Move riders to keep club
+                $db->pdo->prepare("UPDATE riders SET club_id = ? WHERE club_id = ?")->execute([$keepId, $mergeId]);
+
+                // Move results to keep club
+                $db->pdo->prepare("UPDATE results SET club_id = ? WHERE club_id = ?")->execute([$keepId, $mergeId]);
+
+                // Move rider_club_seasons to keep club
+                $db->pdo->prepare("UPDATE rider_club_seasons SET club_id = ? WHERE club_id = ?")->execute([$keepId, $mergeId]);
+
+                // Delete the merged club
+                $db->delete('clubs', 'id = ?', [$mergeId]);
+
+                $db->pdo->commit();
+
+                $message = "Klubben \"{$mergeClub['name']}\" har slagits samman med \"{$keepClub['name']}\"";
+                $messageType = 'success';
+            } catch (Exception $e) {
+                $db->pdo->rollBack();
+                $message = 'Fel vid sammanslagning: ' . $e->getMessage();
+                $messageType = 'error';
+            }
+        } else {
+            $message = 'Välj två olika klubbar att slå samman';
+            $messageType = 'error';
+        }
     }
 }
 
@@ -311,10 +348,30 @@ include __DIR__ . '/components/unified-layout.php';
                 <a href="/admin/club-edit.php" class="btn btn--primary">Skapa klubb</a>
             </div>
         <?php else: ?>
+            <!-- Merge toolbar (hidden until 2 selected) -->
+            <div id="mergeToolbar" style="display: none; padding: var(--space-md); background: var(--color-accent-light); border-bottom: 1px solid var(--color-border);">
+                <form method="POST" id="mergeForm" style="display: flex; align-items: center; gap: var(--space-md); flex-wrap: wrap;">
+                    <?= csrf_field() ?>
+                    <input type="hidden" name="action" value="merge">
+                    <input type="hidden" name="keep_id" id="keepId">
+                    <input type="hidden" name="merge_id" id="mergeId">
+                    <span><strong id="selectedCount">0</strong> klubbar valda</span>
+                    <span id="mergePreview" style="flex: 1;"></span>
+                    <button type="button" class="btn btn--secondary btn-sm" onclick="swapMergeDirection()">
+                        <i data-lucide="arrow-left-right"></i> Byt riktning
+                    </button>
+                    <button type="submit" class="btn btn--primary btn-sm">
+                        <i data-lucide="git-merge"></i> Slå samman
+                    </button>
+                    <button type="button" class="btn btn--secondary btn-sm" onclick="clearSelection()">Avbryt</button>
+                </form>
+            </div>
+
             <div class="admin-table-container">
                 <table class="admin-table">
                     <thead>
                         <tr>
+                            <th style="width: 40px;"><input type="checkbox" id="selectAllClubs" title="Markera alla"></th>
                             <th style="width: 50px;"></th>
                             <th>Namn</th>
                             <th>Förkortning</th>
@@ -328,6 +385,12 @@ include __DIR__ . '/components/unified-layout.php';
                     <tbody>
                         <?php foreach ($clubs as $club): ?>
                             <tr>
+                                <td>
+                                    <input type="checkbox" class="club-checkbox"
+                                           data-id="<?= $club['id'] ?>"
+                                           data-name="<?= htmlspecialchars($club['name']) ?>"
+                                           data-members="<?= $club['rider_count'] ?>">
+                                </td>
                                 <td>
                                     <?php if (!empty($club['logo'])): ?>
                                         <img src="<?= htmlspecialchars($club['logo']) ?>" alt="<?= htmlspecialchars($club['name']) ?>"
@@ -407,6 +470,78 @@ document.addEventListener('DOMContentLoaded', function() {
             searchForm.submit();
         }
     });
+});
+
+// Club merge functionality
+let selectedClubs = [];
+
+document.querySelectorAll('.club-checkbox').forEach(cb => {
+    cb.addEventListener('change', updateMergeToolbar);
+});
+
+document.getElementById('selectAllClubs')?.addEventListener('change', function() {
+    document.querySelectorAll('.club-checkbox').forEach(cb => {
+        cb.checked = this.checked;
+    });
+    updateMergeToolbar();
+});
+
+function updateMergeToolbar() {
+    selectedClubs = [];
+    document.querySelectorAll('.club-checkbox:checked').forEach(cb => {
+        selectedClubs.push({
+            id: cb.dataset.id,
+            name: cb.dataset.name,
+            members: parseInt(cb.dataset.members) || 0
+        });
+    });
+
+    const toolbar = document.getElementById('mergeToolbar');
+    const countEl = document.getElementById('selectedCount');
+    const previewEl = document.getElementById('mergePreview');
+
+    countEl.textContent = selectedClubs.length;
+
+    if (selectedClubs.length === 2) {
+        toolbar.style.display = 'block';
+        document.getElementById('keepId').value = selectedClubs[0].id;
+        document.getElementById('mergeId').value = selectedClubs[1].id;
+        previewEl.innerHTML = `<strong>"${selectedClubs[1].name}"</strong> (${selectedClubs[1].members} medl.) → <strong>"${selectedClubs[0].name}"</strong> (${selectedClubs[0].members} medl.)`;
+    } else if (selectedClubs.length > 2) {
+        toolbar.style.display = 'block';
+        previewEl.innerHTML = '<em style="color: var(--color-warning);">Välj endast 2 klubbar för sammanslagning</em>';
+    } else {
+        toolbar.style.display = 'none';
+    }
+
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function swapMergeDirection() {
+    if (selectedClubs.length !== 2) return;
+    selectedClubs.reverse();
+    document.getElementById('keepId').value = selectedClubs[0].id;
+    document.getElementById('mergeId').value = selectedClubs[1].id;
+    document.getElementById('mergePreview').innerHTML =
+        `<strong>"${selectedClubs[1].name}"</strong> (${selectedClubs[1].members} medl.) → <strong>"${selectedClubs[0].name}"</strong> (${selectedClubs[0].members} medl.)`;
+}
+
+function clearSelection() {
+    document.querySelectorAll('.club-checkbox').forEach(cb => cb.checked = false);
+    document.getElementById('selectAllClubs').checked = false;
+    selectedClubs = [];
+    document.getElementById('mergeToolbar').style.display = 'none';
+}
+
+document.getElementById('mergeForm')?.addEventListener('submit', function(e) {
+    if (selectedClubs.length !== 2) {
+        e.preventDefault();
+        alert('Välj exakt 2 klubbar för sammanslagning');
+        return;
+    }
+    if (!confirm(`Slå samman "${selectedClubs[1].name}" med "${selectedClubs[0].name}"?\n\nAlla medlemmar och resultat flyttas till "${selectedClubs[0].name}".`)) {
+        e.preventDefault();
+    }
 });
 </script>
 
