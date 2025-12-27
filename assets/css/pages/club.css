@@ -1340,3 +1340,115 @@
         border-right: none;
     }
 }
+
+/* ============================================
+   CLUB ACHIEVEMENTS - Right Column Compact
+   ============================================ */
+.club-achievements-section .achievements-card {
+    padding: var(--space-md);
+}
+
+.club-achievements-section .achievements-card-header {
+    margin-bottom: var(--space-sm);
+}
+
+.club-achievements-section .achievements-card-title {
+    font-size: 12px;
+}
+
+/* Compact experience slider */
+.club-achievements-section .exp-section {
+    margin-bottom: var(--space-md);
+}
+
+.club-achievements-section .exp-title {
+    font-size: 13px;
+}
+
+.club-achievements-section .exp-since {
+    font-size: 11px;
+}
+
+.club-achievements-section .exp-labels span {
+    font-size: 9px;
+}
+
+/* Badge grid - 2 columns for narrow column */
+.club-achievements-section .badge-grid {
+    grid-template-columns: repeat(2, 1fr) !important;
+    gap: var(--space-xs);
+}
+
+/* Smaller badges */
+.club-achievements-section .badge-item {
+    padding: var(--space-sm) var(--space-xs);
+}
+
+.club-achievements-section .badge-item .badge-svg,
+.club-achievements-section .badge-item svg {
+    width: 36px;
+    height: 36px;
+}
+
+.club-achievements-section .badge-value {
+    font-size: 11px;
+    margin-top: 4px;
+}
+
+.club-achievements-section .badge-label {
+    font-size: 8px;
+}
+
+/* Clickable badges */
+.club-achievements-section .badge-item.clickable {
+    cursor: pointer;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.club-achievements-section .badge-item.clickable:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+/* 3 columns on slightly wider screens */
+@media (min-width: 1200px) {
+    .club-achievements-section .badge-grid {
+        grid-template-columns: repeat(4, 1fr) !important;
+    }
+
+    .club-achievements-section .badge-item .badge-svg,
+    .club-achievements-section .badge-item svg {
+        width: 32px;
+        height: 32px;
+    }
+
+    .club-achievements-section .badge-value {
+        font-size: 10px;
+    }
+
+    .club-achievements-section .badge-label {
+        font-size: 7px;
+    }
+}
+
+/* Mobile: Full width badges */
+@media (max-width: 991px) {
+    .club-achievements-section .badge-grid {
+        grid-template-columns: repeat(4, 1fr) !important;
+        gap: var(--space-sm);
+    }
+
+    .club-achievements-section .badge-item .badge-svg,
+    .club-achievements-section .badge-item svg {
+        width: 44px;
+        height: 44px;
+    }
+
+    .club-achievements-section .badge-value {
+        font-size: 12px;
+    }
+
+    .club-achievements-section .badge-label {
+        font-size: 9px;
+    }
+}

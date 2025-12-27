@@ -506,8 +506,20 @@ if (strlen($clubInitials) < 2 && strlen($club['name']) >= 2) {
                         }
                     },
                     scales: {
-                        y: { reverse: true, min: 1, title: { display: true, text: 'Position' }, ticks: { stepSize: 1 } },
-                        x: { ticks: { maxRotation: 45, minRotation: 45 } }
+                        y: {
+                            reverse: true,
+                            min: 1,
+                            title: { display: true, text: 'Position' },
+                            ticks: { stepSize: 1 },
+                            grid: {
+                                color: '#e5e7eb',
+                                drawBorder: false
+                            }
+                        },
+                        x: {
+                            ticks: { maxRotation: 45, minRotation: 45 },
+                            grid: { display: false }
+                        }
                     }
                 }
             });
@@ -929,10 +941,31 @@ document.addEventListener('DOMContentLoaded', function() {
                     y: {
                         reverse: true,
                         min: 1,
-                        display: false
+                        display: true,
+                        position: 'left',
+                        grid: {
+                            color: '#e5e7eb',
+                            drawBorder: false
+                        },
+                        ticks: {
+                            font: { size: 10 },
+                            color: '#9ca3af',
+                            padding: 4,
+                            callback: function(value) {
+                                return value;
+                            }
+                        }
                     },
                     x: {
-                        display: false
+                        display: true,
+                        grid: {
+                            display: false
+                        },
+                        ticks: {
+                            font: { size: 9 },
+                            color: '#9ca3af',
+                            maxRotation: 0
+                        }
                     }
                 },
                 interaction: {
