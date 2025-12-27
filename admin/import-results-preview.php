@@ -398,7 +398,8 @@ function parseAndAnalyzeCSV($filepath, $db) {
          if (in_array($normalizedCheck, [
              'uciid', 'ucikod', 'licens', 'licensenumber',
              'birthyear', 'födelseår', 'fodelsear', 'ålder', 'alder', 'age',
-             'run1', 'run2', 'run1time', 'run2time', 'åk1', 'åk2', 'ak1', 'ak2'
+             'run1', 'run2', 'run1time', 'run2time', 'åk1', 'åk2', 'ak1', 'ak2',
+             'kval', 'qualifying', 'final'
          ])) {
              continue;
          }

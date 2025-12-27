@@ -170,7 +170,8 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
             if (in_array($normalizedCheck, [
                 'uciid', 'ucikod', 'licens', 'licensenumber',
                 'birthyear', 'födelseår', 'fodelsear', 'ålder', 'alder', 'age',
-                'run1', 'run2', 'run1time', 'run2time', 'åk1', 'åk2', 'ak1', 'ak2'
+                'run1', 'run2', 'run1time', 'run2time', 'åk1', 'åk2', 'ak1', 'ak2',
+                'kval', 'qualifying', 'final'
             ])) {
                 continue;
             }
@@ -346,11 +347,14 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
             'run1' => 'run_1_time',
             'åk1' => 'run_1_time',
             'ak1' => 'run_1_time',
+            'kval' => 'run_1_time',
+            'qualifying' => 'run_1_time',
             'run2time' => 'run_2_time',
             'run_2_time' => 'run_2_time',
             'run2' => 'run_2_time',
             'åk2' => 'run_2_time',
             'ak2' => 'run_2_time',
+            'final' => 'run_2_time',
 
             // DH split times for run 1 (stored in ss1-ss4)
             'run1split1' => 'ss1',
