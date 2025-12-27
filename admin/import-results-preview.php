@@ -158,7 +158,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_import'])) {
  updateImportHistory($db, $importId, $stats, $errors, $importStatus);
 
  // Recalculate results to fix class assignments and calculate correct points
- $recalcStats = recalculateEventResults($db, $selectedEventId);
+ // Use DH-specific recalculation for DH events
+ $isDH = ($selectedEvent['discipline'] ?? '') === 'DH' || strpos($selectedEvent['event_format'] ?? '', 'DH') !== false;
+ if ($isDH) {
+  $useSwecupDh = ($selectedEvent['event_format'] ?? '') === 'DH_SWECUP';
+  $recalcStats = recalculateDHEventResults($db, $selectedEventId, null, $useSwecupDh);
+ } else {
+  $recalcStats = recalculateEventResults($db, $selectedEventId);
+ }
  $classesFixed = $recalcStats['classes_fixed'] ?? 0;
  $pointsCalculated = $recalcStats['points_updated'] ?? 0;
 
