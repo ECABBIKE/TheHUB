@@ -207,6 +207,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'event_format' => trim($_POST['event_format'] ?? 'ENDURO'),
             'stage_names' => !empty($_POST['stage_names']) ? trim($_POST['stage_names']) : null,
             'series_id' => !empty($_POST['series_id']) ? intval($_POST['series_id']) : null,
+            'point_scale_id' => !empty($_POST['point_scale_id']) ? intval($_POST['point_scale_id']) : null,
             'pricing_template_id' => !empty($_POST['pricing_template_id']) ? intval($_POST['pricing_template_id']) : null,
             'distance' => !empty($_POST['distance']) ? floatval($_POST['distance']) : null,
             'elevation_gain' => !empty($_POST['elevation_gain']) ? intval($_POST['elevation_gain']) : null,
@@ -453,6 +454,7 @@ $eventYear = !empty($event['date']) ? date('Y', strtotime($event['date'])) : dat
 $venues = $db->getAll("SELECT id, name, city FROM venues WHERE active = 1 ORDER BY name");
 $clubs = $db->getAll("SELECT id, name, city FROM clubs WHERE active = 1 ORDER BY name");
 $pricingTemplates = $db->getAll("SELECT id, name, is_default FROM pricing_templates ORDER BY is_default DESC, name ASC");
+$pointScales = $db->getAll("SELECT id, name, discipline FROM point_scales WHERE active = 1 ORDER BY name ASC");
 
 // Fetch global texts
 $globalTexts = $db->getAll("SELECT field_key, content FROM global_texts WHERE is_active = 1");
@@ -592,6 +594,7 @@ include __DIR__ . '/components/unified-layout.php';
     <input type="hidden" name="series_id" value="<?= h($event['series_id'] ?? '') ?>">
     <input type="hidden" name="event_level" value="<?= h($event['event_level'] ?? 'national') ?>">
     <input type="hidden" name="event_format" value="<?= h($event['event_format'] ?? 'ENDURO') ?>">
+    <input type="hidden" name="point_scale_id" value="<?= h($event['point_scale_id'] ?? '') ?>">
     <input type="hidden" name="pricing_template_id" value="<?= h($event['pricing_template_id'] ?? '') ?>">
     <input type="hidden" name="distance" value="<?= h($event['distance'] ?? '') ?>">
     <input type="hidden" name="elevation_gain" value="<?= h($event['elevation_gain'] ?? '') ?>">
@@ -676,6 +679,19 @@ include __DIR__ . '/components/unified-layout.php';
                         <option value="DH_SWECUP" <?= ($event['event_format'] ?? '') === 'DH_SWECUP' ? 'selected' : '' ?>>SweCUP Downhill (Kval + Final, ranking efter Final)</option>
                         <option value="DUAL_SLALOM" <?= ($event['event_format'] ?? '') === 'DUAL_SLALOM' ? 'selected' : '' ?>>Dual Slalom</option>
                     </select>
+                </div>
+
+                <div class="admin-form-group">
+                    <label class="admin-form-label">Poängskala (ranking)</label>
+                    <select name="point_scale_id" class="admin-form-select">
+                        <option value="">Ingen poängskala</option>
+                        <?php foreach ($pointScales as $scale): ?>
+                            <option value="<?= $scale['id'] ?>" <?= ($event['point_scale_id'] ?? '') == $scale['id'] ? 'selected' : '' ?>>
+                                <?= h($scale['name']) ?><?php if ($scale['discipline']): ?> (<?= h($scale['discipline']) ?>)<?php endif; ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                    <small class="form-help">Används för att beräkna rankingpoäng</small>
                 </div>
 
                 <div class="admin-form-group">
