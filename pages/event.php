@@ -932,9 +932,15 @@ if (!empty($eventSponsors['content'])): ?>
                     <th class="col-rider">Åkare</th>
                     <th class="col-club table-col-hide-mobile">Klubb</th>
                     <?php if ($isDH): ?>
+                    <?php if ($eventFormat === 'DH_SWECUP'): ?>
+                    <th class="col-time table-col-hide-mobile">Kval</th>
+                    <th class="col-time table-col-hide-mobile">Final</th>
+                    <th class="col-time">Tid</th>
+                    <?php else: ?>
                     <th class="col-time table-col-hide-mobile">Åk 1</th>
                     <th class="col-time table-col-hide-mobile">Åk 2</th>
                     <th class="col-time">Bästa</th>
+                    <?php endif; ?>
                     <?php else: ?>
                     <th class="col-time">Tid</th>
                     <?php foreach ($classSplits as $ss): ?>

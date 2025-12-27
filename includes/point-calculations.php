@@ -522,29 +522,37 @@ function recalculateDHEventResults($db, $event_id, $new_scale_id = null, $use_sw
                 }
             }
 
-            // Sort by fastest time (best of two runs) for overall position
+            // Sort for overall position
+            // SweCUP DH: Sort by run 2 time (Final)
+            // Standard DH: Sort by fastest time (best of two runs)
             $overallResults = $groupResults;
-            usort($overallResults, function($a, $b) {
+            usort($overallResults, function($a, $b) use ($use_swecup_dh) {
                 if ($a['status'] !== 'finished') return 1;
                 if ($b['status'] !== 'finished') return -1;
 
-                // Get fastest time for each rider
-                $aFastest = null;
-                if (!empty($a['run_1_time'])) $aFastest = $a['run_1_time'];
-                if (!empty($a['run_2_time']) && (!$aFastest || $a['run_2_time'] < $aFastest)) {
-                    $aFastest = $a['run_2_time'];
+                if ($use_swecup_dh) {
+                    // SweCUP DH: Ranking based on Run 2 (Final) time only
+                    $aTime = !empty($a['run_2_time']) ? $a['run_2_time'] : null;
+                    $bTime = !empty($b['run_2_time']) ? $b['run_2_time'] : null;
+                } else {
+                    // Standard DH: Get fastest time for each rider
+                    $aTime = null;
+                    if (!empty($a['run_1_time'])) $aTime = $a['run_1_time'];
+                    if (!empty($a['run_2_time']) && (!$aTime || $a['run_2_time'] < $aTime)) {
+                        $aTime = $a['run_2_time'];
+                    }
+
+                    $bTime = null;
+                    if (!empty($b['run_1_time'])) $bTime = $b['run_1_time'];
+                    if (!empty($b['run_2_time']) && (!$bTime || $b['run_2_time'] < $bTime)) {
+                        $bTime = $b['run_2_time'];
+                    }
                 }
 
-                $bFastest = null;
-                if (!empty($b['run_1_time'])) $bFastest = $b['run_1_time'];
-                if (!empty($b['run_2_time']) && (!$bFastest || $b['run_2_time'] < $bFastest)) {
-                    $bFastest = $b['run_2_time'];
-                }
+                if (!$aTime) return 1;
+                if (!$bTime) return -1;
 
-                if (!$aFastest) return 1;
-                if (!$bFastest) return -1;
-
-                return strcmp($aFastest, $bFastest);
+                return strcmp($aTime, $bTime);
             });
 
             // Assign overall positions and calculate points
@@ -552,6 +560,23 @@ function recalculateDHEventResults($db, $event_id, $new_scale_id = null, $use_sw
             foreach ($overallResults as $result) {
                 $overallPosition = null;
                 $pointsData = ['run_1_points' => 0, 'run_2_points' => 0, 'total_points' => 0];
+
+                // Calculate finish_time for DH events
+                // SweCUP DH: use run_2_time (Final)
+                // Standard DH: use fastest run
+                $finishTime = null;
+                if ($use_swecup_dh) {
+                    $finishTime = $result['run_2_time'] ?? null;
+                } else {
+                    // Get fastest time
+                    if (!empty($result['run_1_time']) && !empty($result['run_2_time'])) {
+                        $finishTime = min($result['run_1_time'], $result['run_2_time']);
+                    } elseif (!empty($result['run_1_time'])) {
+                        $finishTime = $result['run_1_time'];
+                    } elseif (!empty($result['run_2_time'])) {
+                        $finishTime = $result['run_2_time'];
+                    }
+                }
 
                 // E-BIKE participants don't get position or points
                 if ($result['is_ebike']) {
@@ -576,10 +601,11 @@ function recalculateDHEventResults($db, $event_id, $new_scale_id = null, $use_sw
                     );
                 }
 
-                // Update result with positions and points
+                // Update result with positions, points, and finish_time
                 try {
                     $db->update('results', [
                         'position' => $overallPosition,
+                        'finish_time' => $finishTime,
                         'points' => $pointsData['total_points'],
                         'run_1_points' => $pointsData['run_1_points'],
                         'run_2_points' => $pointsData['run_2_points']
