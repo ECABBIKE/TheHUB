@@ -929,27 +929,29 @@ document.addEventListener('keydown', function(e) {
     justify-content: center;
     gap: var(--space-sm);
     padding: var(--space-sm) var(--space-md);
-    background: white;
+    background: #ffffff;
     border: 1px solid var(--color-border);
     border-radius: var(--radius-sm);
     font-size: 0.875rem;
     font-weight: 600;
-    color: var(--color-primary);
+    color: #171717;
     cursor: pointer;
     transition: all 0.15s ease;
+    opacity: 1;
 }
 .standings-toggle-btn i {
     width: 18px;
     height: 18px;
+    color: inherit;
 }
 .standings-toggle-btn:hover {
     background: #f5f5f5;
-    border-color: var(--color-secondary);
+    border-color: #323539;
 }
 .standings-toggle-btn.active {
-    background: var(--color-primary);
-    border-color: var(--color-primary);
-    color: white;
+    background: #171717;
+    border-color: #171717;
+    color: #ffffff;
 }
 
 /* Stats Grid */

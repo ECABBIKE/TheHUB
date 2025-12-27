@@ -481,7 +481,11 @@ include __DIR__ . '/components/unified-layout.php';
  </h1>
  <p class="text-secondary">Hantera events och poängmallar</p>
  </div>
- <div class="flex gap-sm">
+ <div class="flex gap-sm flex-wrap">
+  <a href="/admin/stage-bonus-points.php?series=<?= $seriesId ?>" class="btn btn--accent">
+   <i data-lucide="trophy"></i>
+   Sträckbonus
+  </a>
   <form method="POST" class="inline">
    <?= csrf_field() ?>
    <input type="hidden" name="action" value="recalculate_all">
@@ -490,6 +494,10 @@ include __DIR__ . '/components/unified-layout.php';
     Beräkna om poäng
    </button>
   </form>
+  <a href="/admin/series/edit/<?= $seriesId ?>" class="btn btn--secondary">
+   <i data-lucide="settings"></i>
+   Inställningar
+  </a>
   <a href="/admin/series.php" class="btn btn--secondary">
    <i data-lucide="arrow-left"></i>
    Tillbaka

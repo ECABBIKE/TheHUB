@@ -118,6 +118,28 @@ try {
     }
 } catch (Exception $e) {}
 
+// Check if stage_bonus_config column exists
+$stageBonusColumnExists = false;
+try {
+    $columns = $db->getAll("SHOW COLUMNS FROM series LIKE 'stage_bonus_config'");
+    $stageBonusColumnExists = !empty($columns);
+} catch (Exception $e) {}
+
+// Get all classes for stage bonus configuration
+$allClasses = [];
+try {
+    $allClasses = $db->getAll("SELECT id, display_name, sort_order FROM classes WHERE active = 1 ORDER BY sort_order");
+} catch (Exception $e) {}
+
+// Default point scales for stage bonus
+$stageBonusScales = [
+    'top3' => ['name' => 'Topp 3', 'points' => [25, 20, 16]],
+    'top5' => ['name' => 'Topp 5', 'points' => [25, 20, 16, 13, 11]],
+    'top10' => ['name' => 'Topp 10', 'points' => [25, 20, 16, 13, 11, 10, 9, 8, 7, 6]],
+    'top3_small' => ['name' => 'Topp 3 (liten)', 'points' => [10, 7, 5]],
+    'top5_small' => ['name' => 'Topp 5 (liten)', 'points' => [10, 7, 5, 3, 2]],
+];
+
 // Function to save sponsor assignments
 function saveSponsorAssignments($db, $seriesId, $postData) {
     $pdo = $db->getPdo();
@@ -209,6 +231,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         // Add payment_recipient_id if column exists
         if ($paymentRecipientColumnExists) {
             $seriesData['payment_recipient_id'] = !empty($_POST['payment_recipient_id']) ? intval($_POST['payment_recipient_id']) : null;
+        }
+
+        // Add stage_bonus_config if column exists
+        if ($stageBonusColumnExists) {
+            $stageBonusEnabled = isset($_POST['stage_bonus_enabled']) && $_POST['stage_bonus_enabled'] === '1';
+            if ($stageBonusEnabled) {
+                $stageBonusConfig = [
+                    'enabled' => true,
+                    'stage' => $_POST['stage_bonus_stage'] ?? 'ss1',
+                    'scale' => $_POST['stage_bonus_scale'] ?? 'top3',
+                    'points' => $stageBonusScales[$_POST['stage_bonus_scale'] ?? 'top3']['points'] ?? [25, 20, 16],
+                    'class_ids' => !empty($_POST['stage_bonus_class_ids']) ? array_map('intval', $_POST['stage_bonus_class_ids']) : null,
+                ];
+                $seriesData['stage_bonus_config'] = json_encode($stageBonusConfig);
+            } else {
+                $seriesData['stage_bonus_config'] = null;
+            }
         }
 
         try {
@@ -671,6 +710,86 @@ include __DIR__ . '/components/unified-layout.php';
     </div>
     <?php endif; ?>
 
+    <!-- Stage Bonus Configuration -->
+    <?php if ($stageBonusColumnExists): ?>
+    <?php
+    // Parse existing stage bonus config
+    $currentStageBonus = null;
+    if (!empty($series['stage_bonus_config'])) {
+        $currentStageBonus = json_decode($series['stage_bonus_config'], true);
+    }
+    $stageBonusEnabled = $currentStageBonus['enabled'] ?? false;
+    $stageBonusStage = $currentStageBonus['stage'] ?? 'ss1';
+    $stageBonusScale = $currentStageBonus['scale'] ?? 'top3';
+    $stageBonusClassIds = $currentStageBonus['class_ids'] ?? [];
+    ?>
+    <div class="admin-card">
+        <div class="admin-card-header">
+            <h2>
+                <i data-lucide="trophy" class="icon-md"></i>
+                Sträckbonus (automatisk)
+            </h2>
+        </div>
+        <div class="admin-card-body">
+            <p class="text-secondary text-sm mb-md">
+                Ge automatiskt bonuspoäng till snabbaste på en sträcka när resultat importeras.
+            </p>
+
+            <div class="admin-form-group mb-md">
+                <label class="checkbox-label">
+                    <input type="checkbox" name="stage_bonus_enabled" value="1"
+                           <?= $stageBonusEnabled ? 'checked' : '' ?>
+                           onchange="toggleStageBonusConfig(this.checked)">
+                    <span>Aktivera automatisk sträckbonus</span>
+                </label>
+            </div>
+
+            <div id="stage-bonus-config" style="<?= $stageBonusEnabled ? '' : 'display: none;' ?>">
+                <div class="admin-form-row">
+                    <div class="admin-form-group">
+                        <label class="admin-form-label">Sträcka</label>
+                        <select name="stage_bonus_stage" class="admin-form-select">
+                            <?php for ($i = 1; $i <= 8; $i++): ?>
+                            <option value="ss<?= $i ?>" <?= $stageBonusStage === "ss{$i}" ? 'selected' : '' ?>>
+                                SS<?= $i ?> / PS<?= $i ?>
+                            </option>
+                            <?php endfor; ?>
+                        </select>
+                    </div>
+                    <div class="admin-form-group">
+                        <label class="admin-form-label">Poängskala</label>
+                        <select name="stage_bonus_scale" class="admin-form-select">
+                            <?php foreach ($stageBonusScales as $key => $scale): ?>
+                            <option value="<?= $key ?>" <?= $stageBonusScale === $key ? 'selected' : '' ?>>
+                                <?= htmlspecialchars($scale['name']) ?> (<?= implode(', ', $scale['points']) ?>)
+                            </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                </div>
+
+                <div class="admin-form-group mt-md">
+                    <label class="admin-form-label">Klasser (lämna tomt för alla)</label>
+                    <div class="checkbox-grid">
+                        <?php foreach ($allClasses as $class): ?>
+                        <label class="checkbox-chip">
+                            <input type="checkbox" name="stage_bonus_class_ids[]" value="<?= $class['id'] ?>"
+                                   <?= in_array($class['id'], $stageBonusClassIds ?: []) ? 'checked' : '' ?>>
+                            <?= htmlspecialchars($class['display_name']) ?>
+                        </label>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+
+                <div class="alert alert-info mt-md text-sm">
+                    <i data-lucide="info" class="icon-sm"></i>
+                    <span>Bonuspoängen läggs automatiskt till när resultat importeras till ett event i denna serie.</span>
+                </div>
+            </div>
+        </div>
+    </div>
+    <?php endif; ?>
+
     <!-- Stats (only for existing series) -->
     <?php if (!$isNew): ?>
     <div class="admin-card">
@@ -777,6 +896,10 @@ document.querySelector('form').addEventListener('submit', function(e) {
     }
 });
 
+function toggleStageBonusConfig(enabled) {
+    document.getElementById('stage-bonus-config').style.display = enabled ? '' : 'none';
+}
+
 <?php if (!$isNew): ?>
 function deleteSeries(id, name) {
     if (!confirm('Är du säker på att du vill ta bort "' + name + '"?\n\nDetta kan inte ångras.')) {
@@ -812,6 +935,27 @@ function deleteSeries(id, name) {
     outline: none;
     border-color: var(--color-accent);
     box-shadow: 0 0 0 3px var(--color-accent-alpha);
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    cursor: pointer;
+}
+.checkbox-label input {
+    width: 18px;
+    height: 18px;
+}
+.checkbox-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-xs);
+    padding: var(--space-sm);
+    background: var(--color-bg-surface, #f8f9fa);
+    border-radius: var(--radius-md);
+    max-height: 200px;
+    overflow-y: auto;
 }
 
 /* Mobile adjustments */
