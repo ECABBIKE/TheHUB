@@ -66,15 +66,19 @@ if (isset($_GET['template'])) {
 
 // Load existing events for dropdown with series info
 $existingEvents = $db->getAll("
- SELECT e.id, e.name, e.date, e.location,
+ SELECT e.id, e.name, e.date, e.location, YEAR(e.date) as event_year,
   GROUP_CONCAT(DISTINCT s.name ORDER BY s.name SEPARATOR ', ') as series_names
  FROM events e
  LEFT JOIN series_events se ON e.id = se.event_id
  LEFT JOIN series s ON se.series_id = s.id
  GROUP BY e.id
  ORDER BY e.date DESC
- LIMIT 200
+ LIMIT 500
 ");
+
+// Get unique years for filter
+$eventYears = array_unique(array_column($existingEvents, 'event_year'));
+rsort($eventYears);
 
 // Handle CSV upload - redirect to preview
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['import_file'])) {
@@ -193,16 +197,30 @@ include __DIR__ . '/components/unified-layout.php';
   </p>
   </div>
 
-  <!-- Step 2: Select Event -->
+  <!-- Step 2: Select Year -->
+  <div class="form-group mb-lg">
+  <label for="year_filter" class="label label-lg">
+  <span class="badge badge-primary mr-sm">2</span>
+  Välj år
+  </label>
+  <select id="year_filter" class="input input-lg">
+  <option value="">-- Alla år --</option>
+  <?php foreach ($eventYears as $year): ?>
+  <option value="<?= $year ?>" <?= $year == date('Y') ? 'selected' : '' ?>><?= $year ?></option>
+  <?php endforeach; ?>
+  </select>
+  </div>
+
+  <!-- Step 3: Select Event -->
   <div class="form-group mb-lg">
   <label for="event_id" class="label label-lg">
-  <span class="badge badge-primary mr-sm">2</span>
+  <span class="badge badge-primary mr-sm">3</span>
   Välj event
   </label>
   <select id="event_id" name="event_id" class="input input-lg" required>
   <option value="">-- Välj ett event --</option>
   <?php foreach ($existingEvents as $event): ?>
-  <option value="<?= $event['id'] ?>">
+  <option value="<?= $event['id'] ?>" data-year="<?= $event['event_year'] ?>">
    <?php if ($event['series_names']): ?>[<?= h($event['series_names']) ?>] <?php endif; ?>
    <?= h($event['name']) ?> (<?= date('Y-m-d', strtotime($event['date'])) ?>)
    <?php if ($event['location']): ?>- <?= h($event['location']) ?><?php endif; ?>
@@ -214,10 +232,10 @@ include __DIR__ . '/components/unified-layout.php';
   </p>
   </div>
 
-  <!-- Step 3: Select File -->
+  <!-- Step 4: Select File -->
   <div class="form-group mb-lg">
   <label for="import_file" class="label label-lg">
-  <span class="badge badge-primary mr-sm">3</span>
+  <span class="badge badge-primary mr-sm">4</span>
   Välj CSV-fil
   </label>
   <input type="file"
@@ -231,11 +249,11 @@ include __DIR__ . '/components/unified-layout.php';
   </p>
   </div>
 
-  <!-- Step 4: Preview Button -->
+  <!-- Step 5: Preview Button -->
   <div class="form-group">
   <button type="submit" class="btn btn--primary btn-lg w-full">
   <i data-lucide="eye"></i>
-  <span class="badge badge-light mr-sm">4</span>
+  <span class="badge badge-light mr-sm">5</span>
   Förhandsgranska import
   </button>
   </div>
@@ -331,5 +349,36 @@ Herrar Elite,2,Erik,SVENSSON,Göteborg MTB,,DNF,DNF,1:55.34,1:39.21,DNF</pre>
  <span class="text-secondary text-sm ml-sm">Korrigerar tider med fel format (t.ex. 0:04:17.45 → 4:17.45)</span>
  </div>
 </div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const yearFilter = document.getElementById('year_filter');
+    const eventSelect = document.getElementById('event_id');
+    const allOptions = Array.from(eventSelect.querySelectorAll('option[data-year]'));
+
+    function filterEvents() {
+        const selectedYear = yearFilter.value;
+
+        // Reset event selection
+        eventSelect.value = '';
+
+        // Show/hide options based on year
+        allOptions.forEach(option => {
+            if (!selectedYear || option.dataset.year === selectedYear) {
+                option.style.display = '';
+                option.disabled = false;
+            } else {
+                option.style.display = 'none';
+                option.disabled = true;
+            }
+        });
+    }
+
+    yearFilter.addEventListener('change', filterEvents);
+
+    // Apply filter on load (since current year is pre-selected)
+    filterEvents();
+});
+</script>
 
 <?php include __DIR__ . '/components/unified-layout-footer.php'; ?>
