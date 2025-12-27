@@ -922,7 +922,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/debug-achievements" class="btn-admin btn-admin-warning flex-1">
+            <a href="/admin/debug-achievements.php" class="btn-admin btn-admin-warning flex-1">
                 <i data-lucide="bug" class="icon-sm"></i>
                 Debug utmärkelser
             </a>
@@ -941,7 +941,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/debug-series-points" class="btn-admin btn-admin-warning flex-1">
+            <a href="/admin/debug-series-points.php" class="btn-admin btn-admin-warning flex-1">
                 <i data-lucide="chart-bar" class="icon-sm"></i>
                 Debug seriepoäng
             </a>
@@ -960,7 +960,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/test-db" class="btn-admin btn-admin-secondary flex-1">
+            <a href="/admin/test-db.php" class="btn-admin btn-admin-secondary flex-1">
                 <i data-lucide="database" class="icon-sm"></i>
                 Testa DB
             </a>
@@ -979,7 +979,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/test-import-debug" class="btn-admin btn-admin-warning flex-1">
+            <a href="/admin/test-import-debug.php" class="btn-admin btn-admin-warning flex-1">
                 <i data-lucide="file-search" class="icon-sm"></i>
                 Debug import
             </a>
@@ -1002,7 +1002,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/data-explorer" class="btn-admin btn-admin-primary flex-1">
+            <a href="/admin/data-explorer.php" class="btn-admin btn-admin-primary flex-1">
                 <i data-lucide="table-2" class="icon-sm"></i>
                 Öppna Data Explorer
             </a>
@@ -1021,7 +1021,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/check-license-numbers" class="btn-admin btn-admin-secondary flex-1">
+            <a href="/admin/check-license-numbers.php" class="btn-admin btn-admin-secondary flex-1">
                 <i data-lucide="id-card" class="icon-sm"></i>
                 Kontrollera licenser
             </a>
@@ -1040,7 +1040,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/verify-swe-licenses" class="btn-admin btn-admin-warning flex-1">
+            <a href="/admin/verify-swe-licenses.php" class="btn-admin btn-admin-warning flex-1">
                 <i data-lucide="shield-check" class="icon-sm"></i>
                 Verifiera SWE
             </a>
@@ -1059,7 +1059,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/license-class-matrix" class="btn-admin btn-admin-secondary flex-1">
+            <a href="/admin/license-class-matrix.php" class="btn-admin btn-admin-secondary flex-1">
                 <i data-lucide="grid-3x3" class="icon-sm"></i>
                 Visa matris
             </a>
@@ -1105,7 +1105,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/backup" class="btn-admin btn-admin-primary flex-1">
+            <a href="/admin/backup.php" class="btn-admin btn-admin-primary flex-1">
                 <i data-lucide="hard-drive-download" class="icon-sm"></i>
                 Skapa backup
             </a>
@@ -1124,7 +1124,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/reset-data" class="btn-admin btn-admin-danger flex-1">
+            <a href="/admin/reset-data.php" class="btn-admin btn-admin-danger flex-1">
                 <i data-lucide="trash-2" class="icon-sm"></i>
                 Återställ data
             </a>
@@ -1143,7 +1143,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/reset-simple" class="btn-admin btn-admin-danger flex-1">
+            <a href="/admin/reset-simple.php" class="btn-admin btn-admin-danger flex-1">
                 <i data-lucide="rotate-ccw" class="icon-sm"></i>
                 Enkel reset
             </a>
@@ -1341,7 +1341,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/ranking-backfill-history" class="btn-admin btn-admin-secondary flex-1">
+            <a href="/admin/ranking-backfill-history.php" class="btn-admin btn-admin-secondary flex-1">
                 <i data-lucide="history" class="icon-sm"></i>
                 Visa historik
             </a>
@@ -1360,7 +1360,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/ranking-minimal" class="btn-admin btn-admin-secondary flex-1">
+            <a href="/admin/ranking-minimal.php" class="btn-admin btn-admin-secondary flex-1">
                 <i data-lucide="list-ordered" class="icon-sm"></i>
                 Visa ranking
             </a>
