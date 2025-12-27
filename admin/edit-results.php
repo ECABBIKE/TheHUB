@@ -5,8 +5,8 @@ require_admin();
 
 $db = getDB();
 
-// Get event ID from URL
-$eventId = isset($_GET['event_id']) ? (int)$_GET['event_id'] : 0;
+// Get event ID from URL (accept both 'id', 'event_id', and 'event' for flexibility)
+$eventId = isset($_GET['id']) ? (int)$_GET['id'] : (isset($_GET['event_id']) ? (int)$_GET['event_id'] : (isset($_GET['event']) ? (int)$_GET['event'] : 0));
 
 if (!$eventId) {
  header('Location: /admin/results.php');
@@ -20,6 +20,10 @@ if (!$event) {
  header('Location: /admin/results.php');
  exit;
 }
+
+// Check if DH event for displaying run times
+$eventFormat = $event['event_format'] ?? 'ENDURO';
+$isDH = in_array($eventFormat, ['DH_STANDARD', 'DH_SWECUP']);
 
 $message = '';
 $messageType = 'info';
@@ -62,6 +66,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   'points' => !empty($_POST['points']) ? (float)$_POST['points'] : 0,
   'status' => trim($_POST['status'] ?? 'finished'),
  ];
+
+ // Add DH run times if provided
+ if (isset($_POST['run_1_time'])) {
+  $updateData['run_1_time'] = !empty($_POST['run_1_time']) ? trim($_POST['run_1_time']) : null;
+ }
+ if (isset($_POST['run_2_time'])) {
+  $updateData['run_2_time'] = !empty($_POST['run_2_time']) ? trim($_POST['run_2_time']) : null;
+ }
 
  try {
   $db->update('results', $updateData, 'id = ?', [$resultId]);
@@ -224,7 +236,11 @@ include __DIR__ . '/components/unified-layout.php';
      <th class="table-th-w120">Licens</th>
      <th class="table-th-w150">Klubb</th>
      <th class="table-th-w100">Startnr</th>
-     <th class="table-th-w120">Tid</th>
+     <?php if ($isDH): ?>
+     <th class="table-th-w100"><?= $eventFormat === 'DH_SWECUP' ? 'Kval' : 'Åk 1' ?></th>
+     <th class="table-th-w100"><?= $eventFormat === 'DH_SWECUP' ? 'Final' : 'Åk 2' ?></th>
+     <?php endif; ?>
+     <th class="table-th-w120"><?= $isDH ? 'Bästa' : 'Tid' ?></th>
      <th class="table-th-w80">Poäng</th>
      <th class="table-th-w120">Status</th>
      <th class="table-th-w120">Åtgärder</th>
@@ -304,13 +320,32 @@ include __DIR__ . '/components/unified-layout.php';
        class="input input-w80">
       </td>
 
+      <!-- DH Run Times -->
+      <?php if ($isDH): ?>
+      <td class="text-center">
+      <input type="text"
+       name="run_1_time"
+       value="<?= h($result['run_1_time'] ?? '') ?>"
+       class="input input-w100-mono"
+       placeholder="M:SS.mm">
+      </td>
+      <td class="text-center">
+      <input type="text"
+       name="run_2_time"
+       value="<?= h($result['run_2_time'] ?? '') ?>"
+       class="input input-w100-mono"
+       placeholder="M:SS.mm">
+      </td>
+      <?php endif; ?>
+
       <!-- Finish Time -->
       <td class="text-center">
       <input type="text"
        name="finish_time"
        value="<?= h($result['finish_time']) ?>"
        class="input input-w100-mono"
-       placeholder="HH:MM:SS">
+       placeholder="<?= $isDH ? 'Auto' : 'HH:MM:SS' ?>"
+       <?= $isDH ? 'readonly style="background: var(--color-star-fade);"' : '' ?>>
       </td>
 
       <!-- Points -->
@@ -361,7 +396,7 @@ include __DIR__ . '/components/unified-layout.php';
  <?php endif; ?>
 
 <!-- License Assignment Modal -->
-<div id="license-modal" class="gs-modal" class="hidden">
+<div id="license-modal" class="gs-modal hidden">
  <div class="gs-modal-backdrop"></div>
  <div class="gs-modal-content" style="max-width: 400px;">
  <div class="gs-modal-header">
