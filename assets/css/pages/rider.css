@@ -1893,6 +1893,25 @@
     color: #16a34a;
 }
 
+.modal-month-change {
+    font-size: var(--text-xs);
+    font-weight: 600;
+    padding: var(--space-2xs) var(--space-sm);
+    border-radius: var(--radius-full);
+    background: var(--color-bg-hover);
+    color: var(--color-text-secondary);
+}
+
+.modal-month-change.positive {
+    background: rgba(97, 206, 112, 0.15);
+    color: #16a34a;
+}
+
+.modal-month-change.negative {
+    background: rgba(239, 68, 68, 0.15);
+    color: #dc2626;
+}
+
 .modal-event-item {
     padding: var(--space-md);
     background: #f9fafb;

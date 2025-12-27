@@ -500,11 +500,42 @@ try {
                     $rankingEventsByMonth[$monthKey] = [
                         'month_label' => ucfirst($swedishMonths[$monthNum]) . ' ' . date('Y', $eventDate),
                         'events' => [],
-                        'total_points' => 0
+                        'total_points' => 0,
+                        'position_change' => null
                     ];
                 }
                 $rankingEventsByMonth[$monthKey]['events'][] = $event;
                 $rankingEventsByMonth[$monthKey]['total_points'] += ($event['weighted_points'] ?? 0);
+            }
+
+            // Calculate position change per month from ranking history
+            if (!empty($rankingHistoryFull)) {
+                // Build map of month -> position at end of that month
+                $positionByMonth = [];
+                foreach ($rankingHistoryFull as $snap) {
+                    $positionByMonth[$snap['month']] = (int)$snap['ranking_position'];
+                }
+
+                // Get sorted list of months
+                $monthKeys = array_keys($positionByMonth);
+                sort($monthKeys);
+
+                // Calculate position change for each month (compared to previous month)
+                for ($i = 0; $i < count($monthKeys); $i++) {
+                    $month = $monthKeys[$i];
+                    $currentPos = $positionByMonth[$month];
+
+                    if ($i > 0) {
+                        $prevMonth = $monthKeys[$i - 1];
+                        $prevPos = $positionByMonth[$prevMonth];
+                        // Positive change = improved (lower position number is better)
+                        $change = $prevPos - $currentPos;
+
+                        if (isset($rankingEventsByMonth[$month])) {
+                            $rankingEventsByMonth[$month]['position_change'] = $change;
+                        }
+                    }
+                }
             }
         }
     }
@@ -1570,7 +1601,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 <?php foreach ($rankingEventsByMonth as $monthKey => $monthData): ?>
                 <div class="modal-month-divider">
                     <span class="modal-month-label"><?= htmlspecialchars($monthData['month_label']) ?></span>
-                    <span class="modal-month-points">+<?= number_format($monthData['total_points'], 0) ?> p</span>
+                    <?php if ($monthData['position_change'] !== null): ?>
+                    <span class="modal-month-change <?= $monthData['position_change'] > 0 ? 'positive' : ($monthData['position_change'] < 0 ? 'negative' : '') ?>">
+                        <?= $monthData['position_change'] > 0 ? '+' : '' ?><?= $monthData['position_change'] ?> plac
+                    </span>
+                    <?php endif; ?>
                 </div>
                 <?php foreach ($monthData['events'] as $event): ?>
                 <div class="modal-event-item">
