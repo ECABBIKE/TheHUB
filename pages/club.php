@@ -107,6 +107,57 @@ try {
     }
     $members = array_values($uniqueMembers);
 
+    // Get each member's ranking points contribution to this club
+    // Uses simplified calculation: sum of weighted points from results where rider was in this club
+    $memberRankingPoints = [];
+    if (!empty($memberIds)) {
+        try {
+            $placeholders = implode(',', array_fill(0, count($memberIds), '?'));
+            $cutoffDate = date('Y-m-d', strtotime('-24 months'));
+            $stmt = $db->prepare("
+                SELECT
+                    r.cyclist_id as rider_id,
+                    SUM(
+                        CASE
+                            WHEN COALESCE(r.run_1_points, 0) > 0 OR COALESCE(r.run_2_points, 0) > 0
+                            THEN COALESCE(r.run_1_points, 0) + COALESCE(r.run_2_points, 0)
+                            ELSE COALESCE(r.points, 0)
+                        END *
+                        CASE
+                            WHEN e.date >= DATE_SUB(CURDATE(), INTERVAL 12 MONTH) THEN 1.0
+                            ELSE 0.5
+                        END
+                    ) as ranking_contribution
+                FROM results r
+                JOIN events e ON r.event_id = e.id
+                WHERE r.cyclist_id IN ($placeholders)
+                AND r.status = 'finished'
+                AND COALESCE(r.club_id, (SELECT club_id FROM riders WHERE id = r.cyclist_id)) = ?
+                AND e.date >= ?
+                AND e.discipline IN ('ENDURO', 'DH')
+                GROUP BY r.cyclist_id
+            ");
+            $params = array_merge($memberIds, [$clubId, $cutoffDate]);
+            $stmt->execute($params);
+            foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+                $memberRankingPoints[$row['rider_id']] = (float)$row['ranking_contribution'];
+            }
+        } catch (Exception $e) {
+            // Ignore - just won't show ranking points
+        }
+    }
+
+    // Add ranking points to members and sort by it
+    foreach ($members as &$m) {
+        $m['ranking_contribution'] = $memberRankingPoints[$m['id']] ?? 0;
+    }
+    unset($m);
+
+    // Sort members by ranking contribution (highest first)
+    usort($members, function($a, $b) {
+        return $b['ranking_contribution'] <=> $a['ranking_contribution'];
+    });
+
     // Get available years for stats
     $stmt = $db->prepare("
         SELECT DISTINCT season_year
@@ -305,7 +356,7 @@ if (strlen($clubInitials) < 2 && strlen($club['name']) >= 2) {
             <?php endif; ?>
             <div class="dashboard-chart-footer">
                 <?php if (count($clubRankingHistoryFull) >= 3): ?>
-                <button type="button" class="btn-calc-ranking-inline" onclick="openClubHistoryModal()">
+                <button type="button" class="btn-calc-ranking-inline" onclick="toggleClubHistory()">
                     <i data-lucide="history"></i>
                     <span>Visa historik</span>
                 </button>
@@ -316,10 +367,125 @@ if (strlen($clubInitials) < 2 && strlen($club['name']) >= 2) {
                 </a>
             </div>
         </div>
+
+        <!-- INLINE HISTORY SECTION (hidden by default) -->
+        <?php if (count($clubRankingHistoryFull) >= 3):
+            $clubHistoryLabels = [];
+            $clubHistoryData = [];
+            $clubHistoryPoints = [];
+            foreach ($clubRankingHistoryFull as $rh) {
+                $date = strtotime($rh['snapshot_date'] ?? $rh['month'] . '-01');
+                $clubHistoryLabels[] = date('M Y', $date);
+                $clubHistoryData[] = (int)$rh['ranking_position'];
+                $clubHistoryPoints[] = (float)($rh['total_ranking_points'] ?? 0);
+            }
+            $bestClubHistoryPos = !empty($clubHistoryData) ? min($clubHistoryData) : 0;
+            $worstClubHistoryPos = !empty($clubHistoryData) ? max($clubHistoryData) : 0;
+            $firstClubPos = $clubHistoryData[0] ?? 0;
+            $lastClubPos = end($clubHistoryData) ?: 0;
+            $clubImprovement = $firstClubPos - $lastClubPos;
+        ?>
+        <div id="clubHistorySection" class="card club-history-section" style="display: none;">
+            <div class="card-header">
+                <h3 class="card-title">
+                    <i data-lucide="history"></i>
+                    Rankinghistorik
+                </h3>
+                <button type="button" class="btn-close-history" onclick="toggleClubHistory()">
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
+            <div class="card-body">
+                <div class="history-stats-row">
+                    <div class="history-stat">
+                        <span class="history-stat-value text-success">#<?= $bestClubHistoryPos ?></span>
+                        <span class="history-stat-label">Bästa</span>
+                    </div>
+                    <div class="history-stat">
+                        <span class="history-stat-value">#<?= $worstClubHistoryPos ?></span>
+                        <span class="history-stat-label">Sämsta</span>
+                    </div>
+                    <div class="history-stat">
+                        <span class="history-stat-value <?= $clubImprovement > 0 ? 'text-success' : ($clubImprovement < 0 ? 'text-danger' : '') ?>">
+                            <?= $clubImprovement > 0 ? '+' : '' ?><?= $clubImprovement ?>
+                        </span>
+                        <span class="history-stat-label">Utveckling</span>
+                    </div>
+                    <div class="history-stat">
+                        <span class="history-stat-value"><?= count($clubHistoryData) ?></span>
+                        <span class="history-stat-label">Datapunkter</span>
+                    </div>
+                </div>
+                <div class="history-chart-container" style="height: 250px;">
+                    <canvas id="clubHistoryChart"></canvas>
+                </div>
+            </div>
+        </div>
+        <script>
+        const clubHistoryChartLabels = <?= json_encode($clubHistoryLabels) ?>;
+        const clubHistoryChartData = <?= json_encode($clubHistoryData) ?>;
+        const clubHistoryChartPoints = <?= json_encode($clubHistoryPoints) ?>;
+        let clubHistoryChartInstance = null;
+
+        function toggleClubHistory() {
+            const section = document.getElementById('clubHistorySection');
+            if (section.style.display === 'none') {
+                section.style.display = 'block';
+                section.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                setTimeout(() => initClubHistoryChart(), 100);
+                if (typeof lucide !== 'undefined') lucide.createIcons();
+            } else {
+                section.style.display = 'none';
+            }
+        }
+
+        function initClubHistoryChart() {
+            const ctx = document.getElementById('clubHistoryChart');
+            if (!ctx || clubHistoryChartInstance) return;
+            clubHistoryChartInstance = new Chart(ctx, {
+                type: 'line',
+                data: {
+                    labels: clubHistoryChartLabels,
+                    datasets: [{
+                        label: 'Ranking',
+                        data: clubHistoryChartData,
+                        borderColor: '#ef4444',
+                        backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                        borderWidth: 2,
+                        fill: true,
+                        tension: 0.3,
+                        pointRadius: 3,
+                        pointHoverRadius: 5
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false },
+                        tooltip: {
+                            callbacks: {
+                                label: function(context) {
+                                    const idx = context.dataIndex;
+                                    const points = clubHistoryChartPoints[idx] || 0;
+                                    return ['Position: #' + context.raw, 'Poäng: ' + points.toFixed(0)];
+                                }
+                            }
+                        }
+                    },
+                    scales: {
+                        y: { reverse: true, min: 1, title: { display: true, text: 'Position' }, ticks: { stepSize: 1 } },
+                        x: { ticks: { maxRotation: 45, minRotation: 45 } }
+                    }
+                }
+            });
+        }
+        </script>
+        <?php endif; ?>
         <?php endif; ?>
 
         <!-- MEMBERS SECTION -->
-        <div class="club-members-section">
+        <div class="card club-members-card">
             <div class="section-header">
                 <h2 class="section-title">
                     <i data-lucide="users"></i>
@@ -342,10 +508,11 @@ if (strlen($clubInitials) < 2 && strlen($club['name']) >= 2) {
             <thead>
                 <tr>
                     <th>Namn</th>
+                    <th class="text-right">Poäng</th>
                     <th class="text-center">Race</th>
                     <th class="text-center">Vinster</th>
-                    <th class="text-center">Pallplatser</th>
-                    <th class="text-right">Medlemsår</th>
+                    <th class="text-center">Pall</th>
+                    <th class="text-right">År</th>
                 </tr>
             </thead>
             <tbody>
@@ -354,6 +521,7 @@ if (strlen($clubInitials) < 2 && strlen($club['name']) >= 2) {
                     sort($years);
                     $yearsStr = implode(', ', $years);
                     $isCurrentMember = in_array($currentYear, $years);
+                    $rankingPts = $member['ranking_contribution'] ?? 0;
                 ?>
                 <tr onclick="window.location='/rider/<?= $member['id'] ?>'" class="cursor-pointer <?= $isCurrentMember ? 'member-current-row' : '' ?>">
                     <td>
@@ -368,6 +536,13 @@ if (strlen($clubInitials) < 2 && strlen($club['name']) >= 2) {
                                 <?php endif; ?>
                             </div>
                         </div>
+                    </td>
+                    <td class="text-right">
+                        <?php if ($rankingPts > 0): ?>
+                        <span class="member-ranking-pts"><?= number_format($rankingPts, 0) ?></span>
+                        <?php else: ?>
+                        <span class="text-muted">-</span>
+                        <?php endif; ?>
                     </td>
                     <td class="text-center"><?= (int)$member['total_races'] ?></td>
                     <td class="text-center"><?= (int)$member['total_wins'] ?></td>
@@ -386,6 +561,7 @@ if (strlen($clubInitials) < 2 && strlen($club['name']) >= 2) {
             sort($years);
             $yearsStr = implode(', ', $years);
             $isCurrentMember = in_array($currentYear, $years);
+            $rankingPts = $member['ranking_contribution'] ?? 0;
         ?>
         <a href="/rider/<?= $member['id'] ?>" class="member-row <?= $isCurrentMember ? 'member-current' : '' ?>">
             <div class="member-avatar-small">
@@ -393,13 +569,17 @@ if (strlen($clubInitials) < 2 && strlen($club['name']) >= 2) {
             </div>
 
             <div class="member-info-mobile">
-                <span class="member-name"><?= htmlspecialchars($member['firstname'] . ' ' . $member['lastname']) ?></span>
+                <div class="member-name-row">
+                    <span class="member-name"><?= htmlspecialchars($member['firstname'] . ' ' . $member['lastname']) ?></span>
+                    <?php if ($rankingPts > 0): ?>
+                    <span class="member-ranking-pts-mobile"><?= number_format($rankingPts, 0) ?> p</span>
+                    <?php endif; ?>
+                </div>
                 <div class="member-stats-row">
                     <span class="stat-mini"><?= (int)$member['total_races'] ?> race</span>
                     <span class="stat-mini"><?= (int)$member['total_wins'] ?> vinst</span>
                     <span class="stat-mini"><?= (int)$member['total_podiums'] ?> pall</span>
                 </div>
-                <span class="member-years-small"><?= htmlspecialchars($yearsStr) ?></span>
             </div>
 
             <div class="member-arrow">
@@ -409,7 +589,7 @@ if (strlen($clubInitials) < 2 && strlen($club['name']) >= 2) {
         <?php endforeach; ?>
     </div>
     <?php endif; ?>
-        </div><!-- End club-members-section -->
+        </div><!-- End club-members-card -->
 
     </div><!-- End left-column -->
 
@@ -480,141 +660,6 @@ if (strlen($clubInitials) < 2 && strlen($club['name']) >= 2) {
     </div><!-- End right-column -->
 
 </div><!-- End club-profile-layout -->
-
-<!-- Club Ranking History Modal -->
-<?php if (!empty($clubRankingHistoryFull) && count($clubRankingHistoryFull) >= 3):
-    $clubHistoryLabels = [];
-    $clubHistoryData = [];
-    $clubHistoryPoints = [];
-    foreach ($clubRankingHistoryFull as $rh) {
-        $date = strtotime($rh['snapshot_date'] ?? $rh['month'] . '-01');
-        $clubHistoryLabels[] = date('M Y', $date);
-        $clubHistoryData[] = (int)$rh['ranking_position'];
-        $clubHistoryPoints[] = (float)($rh['total_ranking_points'] ?? 0);
-    }
-    $bestClubHistoryPos = !empty($clubHistoryData) ? min($clubHistoryData) : 0;
-    $worstClubHistoryPos = !empty($clubHistoryData) ? max($clubHistoryData) : 0;
-    $firstClubPos = $clubHistoryData[0] ?? 0;
-    $lastClubPos = end($clubHistoryData) ?: 0;
-    $clubImprovement = $firstClubPos - $lastClubPos;
-?>
-<div id="clubHistoryModal" class="club-modal-overlay">
-    <div class="club-modal" style="max-width: 800px;">
-        <div class="club-modal-header">
-            <h3>
-                <i data-lucide="history"></i>
-                <span>Rankinghistorik</span>
-            </h3>
-            <button type="button" class="club-modal-close" onclick="closeClubHistoryModal()">
-                <i data-lucide="x"></i>
-            </button>
-        </div>
-        <div class="club-modal-body">
-            <div class="ranking-modal-summary">
-                <span class="summary-label">Nuvarande position</span>
-                <span class="summary-value">#<?= $clubRankingPosition ?></span>
-            </div>
-            <div class="history-stats-row">
-                <div class="history-stat">
-                    <span class="history-stat-value text-success">#<?= $bestClubHistoryPos ?></span>
-                    <span class="history-stat-label">Bästa</span>
-                </div>
-                <div class="history-stat">
-                    <span class="history-stat-value">#<?= $worstClubHistoryPos ?></span>
-                    <span class="history-stat-label">Sämsta</span>
-                </div>
-                <div class="history-stat">
-                    <span class="history-stat-value <?= $clubImprovement > 0 ? 'text-success' : ($clubImprovement < 0 ? 'text-danger' : '') ?>">
-                        <?= $clubImprovement > 0 ? '+' : '' ?><?= $clubImprovement ?>
-                    </span>
-                    <span class="history-stat-label">Utveckling</span>
-                </div>
-                <div class="history-stat">
-                    <span class="history-stat-value"><?= count($clubHistoryData) ?></span>
-                    <span class="history-stat-label">Datapunkter</span>
-                </div>
-            </div>
-            <div class="history-chart-container" style="height: 300px; margin: var(--space-lg) 0;">
-                <canvas id="clubHistoryChart"></canvas>
-            </div>
-            <div class="modal-close-footer">
-                <button type="button" onclick="closeClubHistoryModal()" class="modal-close-btn">
-                    <i data-lucide="x"></i>
-                    Stäng
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
-<script>
-const clubHistoryChartLabels = <?= json_encode($clubHistoryLabels) ?>;
-const clubHistoryChartData = <?= json_encode($clubHistoryData) ?>;
-const clubHistoryChartPoints = <?= json_encode($clubHistoryPoints) ?>;
-let clubHistoryChartInstance = null;
-
-function openClubHistoryModal() {
-    const modal = document.getElementById('clubHistoryModal');
-    if (modal) {
-        modal.classList.add('active');
-        document.body.style.overflow = 'hidden';
-        setTimeout(() => initClubHistoryChart(), 100);
-        if (typeof lucide !== 'undefined') lucide.createIcons();
-    }
-}
-
-function closeClubHistoryModal() {
-    const modal = document.getElementById('clubHistoryModal');
-    if (modal) {
-        modal.classList.remove('active');
-        document.body.style.overflow = '';
-    }
-}
-
-function initClubHistoryChart() {
-    const ctx = document.getElementById('clubHistoryChart');
-    if (!ctx || clubHistoryChartInstance) return;
-    clubHistoryChartInstance = new Chart(ctx, {
-        type: 'line',
-        data: {
-            labels: clubHistoryChartLabels,
-            datasets: [{
-                label: 'Ranking',
-                data: clubHistoryChartData,
-                borderColor: '#ef4444',
-                backgroundColor: 'rgba(239, 68, 68, 0.1)',
-                borderWidth: 2,
-                fill: true,
-                tension: 0.3,
-                pointRadius: 3,
-                pointHoverRadius: 5
-            }]
-        },
-        options: {
-            responsive: true,
-            maintainAspectRatio: false,
-            plugins: {
-                legend: { display: false },
-                tooltip: {
-                    callbacks: {
-                        label: function(context) {
-                            const idx = context.dataIndex;
-                            const points = clubHistoryChartPoints[idx] || 0;
-                            return ['Position: #' + context.raw, 'Poäng: ' + points.toFixed(0)];
-                        }
-                    }
-                }
-            },
-            scales: {
-                y: { reverse: true, min: 1, title: { display: true, text: 'Position' }, ticks: { stepSize: 1 } },
-                x: { ticks: { maxRotation: 45, minRotation: 45 } }
-            }
-        }
-    });
-}
-document.addEventListener('keydown', function(e) { if (e.key === 'Escape') closeClubHistoryModal(); });
-document.getElementById('clubHistoryModal')?.addEventListener('click', function(e) { if (e.target === this) closeClubHistoryModal(); });
-</script>
-<?php endif; ?>
 
 <?php
 // Get detailed achievements for modal
