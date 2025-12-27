@@ -33,13 +33,13 @@ $results = $db->getAll("
 ", [$originalRiderId]);
 
 // The two different people:
-// H21/U21: UCI 10022589765, Specialized Concept Store CK
-// H35:     UCI 10107308050, Hunneberg Sport & Motionsklubb
+// U21 (stays with #22568): UCI 10022589765, Specialized Concept Store CK
+// H35 (NEW rider):         UCI 10107308050, Hunneberg Sport & Motionsklubb
 
-$newRiderUciId = '10022589765';
-$newRiderClubName = 'Specialized Concept Store CK';
+$newRiderUciId = '10107308050';
+$newRiderClubName = 'Hunneberg Sport & Motionsklubb';
 
-// Identify results to move (U21/H21/Junior classes, typically 2019-2020)
+// Identify results to move (H35/Masters classes should go to NEW rider)
 $resultsToMove = [];
 $resultsToKeep = [];
 
@@ -48,19 +48,23 @@ foreach ($results as $result) {
     $className = strtolower($result['class_name'] ?? '');
     $displayName = strtolower($result['display_name'] ?? '');
 
-    // Check if this is a U21/H21/Junior result
-    $isU21 = strpos($className, 'u21') !== false ||
-             strpos($className, 'h21') !== false ||
-             strpos($className, 'under 21') !== false ||
-             strpos($displayName, 'u21') !== false ||
-             strpos($displayName, 'h21') !== false ||
-             strpos($displayName, 'under 21') !== false ||
-             strpos($className, 'junior') !== false ||
-             strpos($displayName, 'junior') !== false ||
-             strpos($className, 'herrar 21') !== false ||
-             strpos($displayName, 'herrar 21') !== false;
+    // Check if this is a H35/Masters/Veterans result (should be moved to new rider)
+    $isH35 = strpos($className, 'h35') !== false ||
+             strpos($className, 'h40') !== false ||
+             strpos($className, 'h45') !== false ||
+             strpos($className, 'h50') !== false ||
+             strpos($displayName, 'h35') !== false ||
+             strpos($displayName, 'h40') !== false ||
+             strpos($displayName, 'h45') !== false ||
+             strpos($displayName, 'h50') !== false ||
+             strpos($className, 'herrar 35') !== false ||
+             strpos($displayName, 'herrar 35') !== false ||
+             strpos($className, 'master') !== false ||
+             strpos($displayName, 'master') !== false ||
+             strpos($className, 'veteran') !== false ||
+             strpos($displayName, 'veteran') !== false;
 
-    if ($isU21) {
+    if ($isH35) {
         $resultsToMove[] = $result;
     } else {
         $resultsToKeep[] = $result;
@@ -74,25 +78,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['confirm_split'])) {
     try {
         $db->beginTransaction();
 
-        // Try to find the club "Specialized Concept Store CK"
-        $specializedClub = $db->getRow("SELECT id FROM clubs WHERE name LIKE '%Specialized%' OR name LIKE '%concept store%' LIMIT 1");
+        // Try to find the club "Hunneberg Sport & Motionsklubb"
+        $hunnebergClub = $db->getRow("SELECT id FROM clubs WHERE name LIKE '%Hunneberg%' LIMIT 1");
 
-        // Create new rider for U21 person
+        // Create new rider for H35 person (Hunneberg)
         $newRiderData = [
             'firstname' => $originalRider['firstname'],
             'lastname' => $originalRider['lastname'],
             'gender' => 'male',
             'nationality' => 'SWE',
             'active' => 1,
-            'uci_id' => $newRiderUciId, // 10022589765
+            'uci_id' => $newRiderUciId, // 10107308050
             'created_at' => date('Y-m-d H:i:s')
         ];
 
         // Add club - either from form or auto-detected
         if (!empty($_POST['new_club_id'])) {
             $newRiderData['club_id'] = (int)$_POST['new_club_id'];
-        } elseif ($specializedClub) {
-            $newRiderData['club_id'] = $specializedClub['id'];
+        } elseif ($hunnebergClub) {
+            $newRiderData['club_id'] = $hunnebergClub['id'];
         }
 
         // Add birth year if provided
@@ -242,7 +246,7 @@ include __DIR__ . '/components/unified-layout.php';
 <!-- Confirm Form -->
 <div class="card mt-lg">
     <div class="card-header">
-        <h3><i data-lucide="user-plus"></i> Skapa ny åkare för U21-resultaten</h3>
+        <h3><i data-lucide="user-plus"></i> Skapa ny åkare för H35-resultaten (Hunneberg)</h3>
     </div>
     <div class="card-body">
         <form method="POST">
