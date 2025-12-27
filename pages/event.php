@@ -576,6 +576,90 @@ try {
         }
     }
 
+    // Calculate global DH run stats for "Åktider Total" view (DH equivalent of Sträcktider Total)
+    $globalDHResults = [];
+    $globalDHStats = [];
+
+    if ($isDH) {
+        // Collect all results from competitive DH classes (excluding motion/kids)
+        foreach ($resultsByClass as $classKey => $classData) {
+            $rankingType = $classData['ranking_type'] ?? 'time';
+            $className = strtolower($classData['class_name'] ?? '');
+
+            // Skip motion classes and kids classes
+            if ($rankingType !== 'time') continue;
+            if (strpos($className, 'kids') !== false || strpos($className, 'barn') !== false) continue;
+            if (strpos($className, 'motion') !== false) continue;
+
+            foreach ($classData['results'] as $result) {
+                if ($result['status'] === 'finished') {
+                    $globalDHResults[] = array_merge($result, [
+                        'original_class' => $classData['display_name']
+                    ]);
+                }
+            }
+        }
+
+        // Calculate global run stats and rankings for run 1 and run 2
+        foreach (['run_1_time' => 1, 'run_2_time' => 2] as $runKey => $runNum) {
+            $runTimes = [];
+            foreach ($globalDHResults as $idx => $result) {
+                if (!empty($result[$runKey])) {
+                    $runTimes[] = [
+                        'idx' => $idx,
+                        'time' => timeToSeconds($result[$runKey])
+                    ];
+                }
+            }
+
+            if (count($runTimes) > 0) {
+                usort($runTimes, function($a, $b) {
+                    return $a['time'] <=> $b['time'];
+                });
+
+                $bestTime = $runTimes[0]['time'];
+                $times = array_column($runTimes, 'time');
+                $min = min($times);
+                $max = max($times);
+
+                // Cap outliers at 90th percentile + 30%
+                if (count($times) >= 3) {
+                    $p90Index = (int) floor(count($times) * 0.9);
+                    sort($times);
+                    $p90 = $times[$p90Index];
+                    if ($max > $p90 * 1.3) {
+                        $max = $p90;
+                    }
+                }
+
+                $globalDHStats[$runKey] = [
+                    'min' => $min,
+                    'max' => $max,
+                    'range' => $max - $min
+                ];
+
+                // Assign global rankings
+                foreach ($runTimes as $rank => $entry) {
+                    $ridx = $entry['idx'];
+                    $globalDHResults[$ridx]['global_run_rank_' . $runNum] = $rank + 1;
+                    $diff = $entry['time'] - $bestTime;
+                    if ($diff > 0) {
+                        $globalDHResults[$ridx]['global_run_diff_' . $runNum] = '+' . number_format($diff, 2);
+                    } else {
+                        $globalDHResults[$ridx]['global_run_diff_' . $runNum] = '';
+                    }
+                }
+            }
+        }
+
+        // Sort global DH results by run 1 time by default
+        usort($globalDHResults, function($a, $b) {
+            $aTime = !empty($a['run_1_time']) ? timeToSeconds($a['run_1_time']) : PHP_INT_MAX;
+            $bTime = !empty($b['run_1_time']) ? timeToSeconds($b['run_1_time']) : PHP_INT_MAX;
+            return $aTime <=> $bTime;
+        });
+    }
+
     // Fetch registrations
     $registrations = $db->prepare("
         SELECT reg.*, r.firstname, r.lastname, c.name as club_name
@@ -710,6 +794,13 @@ if (!empty($event['header_banner_url'])): ?>
                     <i data-lucide="award"></i>
                     <?= h($event['series_name']) ?>
                 </a>
+                <?php endif; ?>
+
+                <?php if (!empty($event['is_championship'])): ?>
+                <span class="event-sm-badge" title="Svenska Mästerskap">
+                    <i data-lucide="medal"></i>
+                    SM
+                </span>
                 <?php endif; ?>
             </div>
 
@@ -948,6 +1039,13 @@ if (!empty($eventSponsors['content'])): ?>
         <label class="toggle-label">
             <input type="checkbox" id="totalViewToggle" onchange="toggleTotalView(this.checked)">
             <span class="toggle-text">Sträcktider Total</span>
+            <span class="toggle-switch"></span>
+        </label>
+        <?php endif; ?>
+        <?php if ($isDH && count($globalDHResults) > 0): ?>
+        <label class="toggle-label">
+            <input type="checkbox" id="dhTotalViewToggle" onchange="toggleDHTotalView(this.checked)">
+            <span class="toggle-text">Åktider Total</span>
             <span class="toggle-switch"></span>
         </label>
         <?php endif; ?>
@@ -1320,6 +1418,134 @@ if (!empty($eventSponsors['content'])): ?>
                         <?php if ($splitRank): ?><span class="split-rank">(<?= $splitRank ?>)</span><?php endif; ?>
                     </div>
                     <?php endforeach; ?>
+                </div>
+            </div>
+        </a>
+        <?php endforeach; ?>
+    </div>
+</section>
+<?php endif; ?>
+
+<!-- Total DH Run Times Section (hidden by default, shown when toggle is active) -->
+<?php if ($isDH && count($globalDHResults) > 0): ?>
+<section class="card mb-lg total-dh-section hidden" id="total-dh-section">
+    <div class="card-header">
+        <div>
+            <h2 class="card-title">Åktider Total</h2>
+            <p class="card-subtitle"><?= count($globalDHResults) ?> deltagare från alla tävlingsklasser (exkl. Kids/Motion)</p>
+        </div>
+    </div>
+
+    <!-- Desktop Table -->
+    <div class="table-wrapper">
+        <table class="table table--striped table--hover results-table" id="total-dh-table">
+            <thead>
+                <tr>
+                    <th class="col-place">#</th>
+                    <th class="col-rider">Åkare</th>
+                    <th class="col-club table-col-hide-mobile">Klubb</th>
+                    <th class="col-class table-col-hide-mobile">Klass</th>
+                    <th class="col-time col-dh-run table-col-hide-mobile sortable-header" data-sort="run1" onclick="sortDHTotalByRun(this, 1)"><?= $eventFormat === 'DH_SWECUP' ? 'Kval' : 'Åk 1' ?> <span class="sort-icon"></span></th>
+                    <th class="col-time col-dh-run table-col-hide-mobile sortable-header" data-sort="run2" onclick="sortDHTotalByRun(this, 2)"><?= $eventFormat === 'DH_SWECUP' ? 'Final' : 'Åk 2' ?> <span class="sort-icon"></span></th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ($globalDHResults as $gIdx => $result):
+                    $searchData = strtolower($result['firstname'] . ' ' . $result['lastname'] . ' ' . ($result['club_name'] ?? ''));
+
+                    // Calculate color classes for runs
+                    $run1Time = $result['run_1_time'] ?? '';
+                    $run2Time = $result['run_2_time'] ?? '';
+                    $run1Class = '';
+                    $run2Class = '';
+                    $run1Rank = $result['global_run_rank_1'] ?? null;
+                    $run2Rank = $result['global_run_rank_2'] ?? null;
+                    $run1Diff = $result['global_run_diff_1'] ?? '';
+                    $run2Diff = $result['global_run_diff_2'] ?? '';
+                    $run1Seconds = !empty($run1Time) ? timeToSeconds($run1Time) : PHP_INT_MAX;
+                    $run2Seconds = !empty($run2Time) ? timeToSeconds($run2Time) : PHP_INT_MAX;
+
+                    if (!empty($run1Time) && isset($globalDHStats['run_1_time'])) {
+                        $stats = $globalDHStats['run_1_time'];
+                        $timeSeconds = timeToSeconds($run1Time);
+                        if ($stats['range'] > 0.5) {
+                            $position = ($timeSeconds - $stats['min']) / $stats['range'];
+                            $level = min(10, max(1, floor($position * 9) + 1));
+                            $run1Class = 'split-' . $level;
+                        }
+                    }
+                    if (!empty($run2Time) && isset($globalDHStats['run_2_time'])) {
+                        $stats = $globalDHStats['run_2_time'];
+                        $timeSeconds = timeToSeconds($run2Time);
+                        if ($stats['range'] > 0.5) {
+                            $position = ($timeSeconds - $stats['min']) / $stats['range'];
+                            $level = min(10, max(1, floor($position * 9) + 1));
+                            $run2Class = 'split-' . $level;
+                        }
+                    }
+                ?>
+                <tr class="result-row" onclick="window.location='/rider/<?= $result['rider_id'] ?>'" data-search="<?= h($searchData) ?>">
+                    <td class="col-place total-position"><?= $gIdx + 1 ?></td>
+                    <td class="col-rider">
+                        <a href="/rider/<?= $result['rider_id'] ?>" class="rider-link">
+                            <?= h($result['firstname'] . ' ' . $result['lastname']) ?>
+                        </a>
+                    </td>
+                    <td class="col-club table-col-hide-mobile">
+                        <?php if ($result['club_id']): ?>
+                            <a href="/club/<?= $result['club_id'] ?>"><?= h($result['club_name'] ?? '-') ?></a>
+                        <?php else: ?>
+                            -
+                        <?php endif; ?>
+                    </td>
+                    <td class="col-class table-col-hide-mobile">
+                        <span class="class-badge"><?= h($result['original_class'] ?? '-') ?></span>
+                    </td>
+                    <td class="col-time col-dh-run table-col-hide-mobile <?= $run1Class ?>" data-sort-value="<?= $run1Seconds ?>">
+                        <?php if (!empty($run1Time)): ?>
+                        <div class="split-time-main"><?= formatDisplayTime($run1Time) ?></div>
+                        <div class="split-time-details"><?= $run1Diff ?: '' ?><?= $run1Diff && $run1Rank ? ' ' : '' ?><?= $run1Rank ? '(' . $run1Rank . ')' : '' ?></div>
+                        <?php else: ?>-<?php endif; ?>
+                    </td>
+                    <td class="col-time col-dh-run table-col-hide-mobile <?= $run2Class ?>" data-sort-value="<?= $run2Seconds ?>">
+                        <?php if (!empty($run2Time)): ?>
+                        <div class="split-time-main"><?= formatDisplayTime($run2Time) ?></div>
+                        <div class="split-time-details"><?= $run2Diff ?: '' ?><?= $run2Diff && $run2Rank ? ' ' : '' ?><?= $run2Rank ? '(' . $run2Rank . ')' : '' ?></div>
+                        <?php else: ?>-<?php endif; ?>
+                    </td>
+                </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+    </div>
+
+    <!-- Mobile Card View -->
+    <div class="result-list">
+        <?php foreach ($globalDHResults as $gIdx => $result):
+            $searchData = strtolower($result['firstname'] . ' ' . $result['lastname'] . ' ' . ($result['club_name'] ?? ''));
+            $run1Time = $result['run_1_time'] ?? '';
+            $run2Time = $result['run_2_time'] ?? '';
+            $run1Rank = $result['global_run_rank_1'] ?? null;
+            $run2Rank = $result['global_run_rank_2'] ?? null;
+        ?>
+        <a href="/rider/<?= $result['rider_id'] ?>" class="result-item result-item-splits" data-search="<?= h($searchData) ?>">
+            <div class="result-place">
+                <?= $gIdx + 1 ?>
+            </div>
+            <div class="result-info">
+                <div class="result-name"><?= h($result['firstname'] . ' ' . $result['lastname']) ?></div>
+                <div class="result-club"><?= h($result['club_name'] ?? '-') ?> &middot; <?= h($result['original_class'] ?? '') ?></div>
+                <div class="result-splits-row">
+                    <div class="result-split-item">
+                        <span class="split-label"><?= $eventFormat === 'DH_SWECUP' ? 'Kval' : 'Åk 1' ?></span>
+                        <span class="split-value"><?= !empty($run1Time) ? formatDisplayTime($run1Time) : '-' ?></span>
+                        <?php if ($run1Rank): ?><span class="split-rank">(<?= $run1Rank ?>)</span><?php endif; ?>
+                    </div>
+                    <div class="result-split-item">
+                        <span class="split-label"><?= $eventFormat === 'DH_SWECUP' ? 'Final' : 'Åk 2' ?></span>
+                        <span class="split-value"><?= !empty($run2Time) ? formatDisplayTime($run2Time) : '-' ?></span>
+                        <?php if ($run2Rank): ?><span class="split-rank">(<?= $run2Rank ?>)</span><?php endif; ?>
+                    </div>
                 </div>
             </div>
         </a>
@@ -1960,6 +2186,85 @@ function sortTotalBySplit(headerEl, splitNum) {
     let colIndex = -1;
     headers.forEach((th, idx) => {
         if (th.dataset.sort === 'ss' + splitNum) {
+            colIndex = idx;
+        }
+    });
+
+    if (colIndex === -1) return;
+
+    // Determine sort direction
+    const isAscending = !headerEl.classList.contains('sort-asc');
+
+    // Remove sort classes from all headers
+    table.querySelectorAll('.sortable-header').forEach(th => {
+        th.classList.remove('sort-asc', 'sort-desc');
+    });
+
+    // Add sort class to clicked header
+    headerEl.classList.add(isAscending ? 'sort-asc' : 'sort-desc');
+
+    // Sort rows
+    rows.sort((a, b) => {
+        const aCell = a.cells[colIndex];
+        const bCell = b.cells[colIndex];
+        const aVal = parseFloat(aCell?.dataset.sortValue) || Infinity;
+        const bVal = parseFloat(bCell?.dataset.sortValue) || Infinity;
+
+        return isAscending ? aVal - bVal : bVal - aVal;
+    });
+
+    // Update position numbers and re-append rows
+    rows.forEach((row, idx) => {
+        const posCell = row.querySelector('.total-position');
+        if (posCell) {
+            posCell.textContent = idx + 1;
+        }
+        tbody.appendChild(row);
+    });
+}
+
+// Toggle DH Total view (Åktider Total)
+function toggleDHTotalView(enabled) {
+    const classSections = document.querySelectorAll('.class-section');
+    const totalSection = document.getElementById('total-dh-section');
+    const classFilter = document.getElementById('classFilter');
+
+    if (enabled) {
+        // Hide class sections, show DH total section
+        classSections.forEach(section => section.classList.add('hidden'));
+        if (totalSection) totalSection.classList.remove('hidden');
+        // Disable class filter when in total view
+        if (classFilter) {
+            classFilter.disabled = true;
+            classFilter.style.opacity = '0.5';
+        }
+    } else {
+        // Show class sections, hide DH total section
+        classSections.forEach(section => section.classList.remove('hidden'));
+        if (totalSection) totalSection.classList.add('hidden');
+        // Re-enable class filter
+        if (classFilter) {
+            classFilter.disabled = false;
+            classFilter.style.opacity = '1';
+        }
+        // Re-apply filters
+        filterResults();
+    }
+}
+
+// Sort DH total section by run time
+function sortDHTotalByRun(headerEl, runNum) {
+    const table = document.getElementById('total-dh-table');
+    if (!table) return;
+
+    const tbody = table.querySelector('tbody');
+    const rows = Array.from(tbody.querySelectorAll('tr.result-row'));
+
+    // Get the column index for this run
+    const headers = table.querySelectorAll('thead th');
+    let colIndex = -1;
+    headers.forEach((th, idx) => {
+        if (th.dataset.sort === 'run' + runNum) {
             colIndex = idx;
         }
     });

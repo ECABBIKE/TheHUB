@@ -508,6 +508,9 @@ skip_club_standings:
                         <span class="event-num">#<?= $i + 1 ?></span>
                         <span class="event-date"><?= date('j M', $eventDate) ?></span>
                         <span class="event-name"><?= htmlspecialchars($event['name']) ?></span>
+                        <?php if (!empty($event['is_championship'])): ?>
+                        <span class="event-sm-badge event-sm-badge--small" title="Svenska Mästerskap">SM</span>
+                        <?php endif; ?>
                         <span class="event-results"><?= $hasResults ? $event['result_count'] . ' resultat' : 'Kommande' ?></span>
                     </a>
                     <?php endforeach; ?>
