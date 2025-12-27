@@ -321,8 +321,6 @@ function getRiderSeriesStandings($pdo, $rider_id, $year = null) {
         JOIN classes c ON r.class_id = c.id
         WHERE r.cyclist_id = ? AND YEAR(e.date) = ? AND r.status = 'finished'
           AND COALESCE(c.awards_points, 1) = 1
-          AND LOWER(COALESCE(c.display_name, c.name, '')) NOT LIKE '%motion%'
-          AND LOWER(COALESCE(c.display_name, c.name, '')) NOT LIKE '%sport%'
     ");
     $stmt->execute([$rider_id, $year]);
     $seriesClasses = $stmt->fetchAll(PDO::FETCH_ASSOC);
