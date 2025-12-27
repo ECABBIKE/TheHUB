@@ -51,11 +51,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $run1Points = $_POST['run_1_points'] ?? [];
                 $run2Points = $_POST['run_2_points'] ?? [];
 
+                error_log("🔍 POINT SCALE SAVE: isDHScale={$isDHScale}, scaleId={$scaleId}");
+                error_log("🔍 POST data: positions=" . count($positions) . ", points=" . count($points) . ", run1=" . count($run1Points) . ", run2=" . count($run2Points));
+
+                $insertedCount = 0;
                 foreach ($positions as $idx => $position) {
                     if (!empty($position)) {
                         $pointValue = !empty($points[$idx]) ? floatval($points[$idx]) : 0;
-                        $run1Value = $isDHScale && !empty($run1Points[$idx]) ? floatval($run1Points[$idx]) : 0;
-                        $run2Value = $isDHScale && !empty($run2Points[$idx]) ? floatval($run2Points[$idx]) : 0;
+                        // Always save run_1/run_2 points if they have values, regardless of checkbox
+                        $run1Value = !empty($run1Points[$idx]) ? floatval($run1Points[$idx]) : 0;
+                        $run2Value = !empty($run2Points[$idx]) ? floatval($run2Points[$idx]) : 0;
 
                         // Only insert if at least one value is non-zero
                         if ($pointValue > 0 || $run1Value > 0 || $run2Value > 0) {
@@ -66,9 +71,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                                 'run_1_points' => $run1Value,
                                 'run_2_points' => $run2Value
                             ]);
+                            $insertedCount++;
+                            if ($insertedCount <= 5) {
+                                error_log("🔍 Inserted pos={$position}: points={$pointValue}, run1={$run1Value}, run2={$run2Value}");
+                            }
                         }
                     }
                 }
+                error_log("🔍 Total inserted: {$insertedCount} rows");
 
                 set_flash('success', 'Poängmall uppdaterad!');
                 redirect('/admin/point-scale-edit.php?id=' . $scaleId);
@@ -204,8 +214,8 @@ include __DIR__ . '/components/unified-layout.php';
                             <tr>
                                 <th style="width: 80px;">Pos</th>
                                 <th class="standard-col">Poäng</th>
-                                <th class="dh-col" class="hidden">Kval</th>
-                                <th class="dh-col" class="hidden">Final</th>
+                                <th class="dh-col hidden">Kval</th>
+                                <th class="dh-col hidden">Final</th>
                             </tr>
                         </thead>
                         <tbody>
@@ -224,12 +234,12 @@ include __DIR__ . '/components/unified-layout.php';
                                            value="<?= $posValue['points'] ? h($posValue['points']) : '' ?>"
                                            placeholder="0">
                                 </td>
-                                <td class="dh-col" class="hidden">
+                                <td class="dh-col hidden">
                                     <input type="number" name="run_1_points[]" step="0.01" class="input input--sm"
                                            value="<?= $posValue['run_1_points'] ? h($posValue['run_1_points']) : '' ?>"
                                            placeholder="0">
                                 </td>
-                                <td class="dh-col" class="hidden">
+                                <td class="dh-col hidden">
                                     <input type="number" name="run_2_points[]" step="0.01" class="input input--sm"
                                            value="<?= $posValue['run_2_points'] ? h($posValue['run_2_points']) : '' ?>"
                                            placeholder="0">
