@@ -22,9 +22,8 @@ $stats = [];
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     try {
-        // Get all results that have NULL club_id or potentially wrong club_id
-        // Join with events to get the event year
-        $resultsQuery = $db->prepare("
+        // Get all results with event info
+        $allResults = $db->getAll("
             SELECT
                 r.id as result_id,
                 r.cyclist_id as rider_id,
@@ -42,8 +41,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             WHERE r.status = 'finished'
             ORDER BY e.date DESC, r.id
         ");
-        $resultsQuery->execute();
-        $allResults = $resultsQuery->fetchAll(PDO::FETCH_ASSOC);
 
         $stats = [
             'total_results' => count($allResults),
@@ -62,15 +59,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $currentClubId = $result['current_result_club_id'];
 
             // Find what club the rider was in for this event's year
-            $seasonQuery = $db->prepare("
-                SELECT club_id, c.name as club_name
+            $seasonData = $db->getRow("
+                SELECT rcs.club_id, c.name as club_name
                 FROM rider_club_seasons rcs
                 JOIN clubs c ON rcs.club_id = c.id
                 WHERE rcs.rider_id = ? AND rcs.season_year = ?
                 LIMIT 1
-            ");
-            $seasonQuery->execute([$riderId, $eventYear]);
-            $seasonData = $seasonQuery->fetch(PDO::FETCH_ASSOC);
+            ", [$riderId, $eventYear]);
 
             if (!$seasonData) {
                 $stats['no_season_data']++;
@@ -87,31 +82,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Need to fix this result
             $stats['fixed']++;
 
-            // Get club names for the log
+            // Get old club name for the log
             $oldClubName = 'NULL';
             if ($currentClubId) {
-                $oldClubQuery = $db->prepare("SELECT name FROM clubs WHERE id = ?");
-                $oldClubQuery->execute([$currentClubId]);
-                $oldClub = $oldClubQuery->fetch(PDO::FETCH_ASSOC);
+                $oldClub = $db->getRow("SELECT name FROM clubs WHERE id = ?", [$currentClubId]);
                 $oldClubName = $oldClub['name'] ?? 'Okänd';
             }
 
-            $stats['details'][] = [
-                'rider' => $result['firstname'] . ' ' . $result['lastname'],
-                'rider_id' => $riderId,
-                'event' => $result['event_name'],
-                'event_date' => $result['event_date'],
-                'old_club' => $oldClubName,
-                'new_club' => $seasonData['club_name'],
-                'result_id' => $result['result_id']
-            ];
+            // Only store first 100 details
+            if (count($stats['details']) < 100) {
+                $stats['details'][] = [
+                    'rider' => $result['firstname'] . ' ' . $result['lastname'],
+                    'rider_id' => $riderId,
+                    'event' => $result['event_name'],
+                    'event_date' => $result['event_date'],
+                    'old_club' => $oldClubName,
+                    'new_club' => $seasonData['club_name'],
+                    'result_id' => $result['result_id']
+                ];
+            }
 
             // Update the result if not dry run
             if (!$dryRun) {
-                $updateQuery = $db->prepare("
-                    UPDATE results SET club_id = ? WHERE id = ?
-                ");
-                $updateQuery->execute([$correctClubId, $result['result_id']]);
+                $db->query("UPDATE results SET club_id = ? WHERE id = ?", [$correctClubId, $result['result_id']]);
             }
         }
 
@@ -183,22 +176,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <h3>Resultat</h3>
         </div>
         <div class="card-body">
-            <div class="stats-grid" style="grid-template-columns: repeat(4, 1fr); margin-bottom: var(--space-lg);">
-                <div class="stat-card">
-                    <div class="stat-value"><?= number_format($stats['total_results']) ?></div>
-                    <div class="stat-label">Totalt resultat</div>
+            <div class="stats-grid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-md); margin-bottom: var(--space-lg);">
+                <div class="stat-card" style="background: var(--color-bg-secondary); padding: var(--space-md); border-radius: var(--radius-md); text-align: center;">
+                    <div style="font-size: var(--text-2xl); font-weight: 700;"><?= number_format($stats['total_results']) ?></div>
+                    <div style="font-size: var(--text-sm); color: var(--color-text-muted);">Totalt resultat</div>
                 </div>
-                <div class="stat-card">
-                    <div class="stat-value"><?= number_format($stats['already_correct']) ?></div>
-                    <div class="stat-label">Redan korrekta</div>
+                <div class="stat-card" style="background: var(--color-bg-secondary); padding: var(--space-md); border-radius: var(--radius-md); text-align: center;">
+                    <div style="font-size: var(--text-2xl); font-weight: 700;"><?= number_format($stats['already_correct']) ?></div>
+                    <div style="font-size: var(--text-sm); color: var(--color-text-muted);">Redan korrekta</div>
                 </div>
-                <div class="stat-card stat-card--accent">
-                    <div class="stat-value"><?= number_format($stats['fixed']) ?></div>
-                    <div class="stat-label"><?= $dryRun ? 'Skulle korrigeras' : 'Korrigerade' ?></div>
+                <div class="stat-card" style="background: rgba(97, 206, 112, 0.1); padding: var(--space-md); border-radius: var(--radius-md); text-align: center;">
+                    <div style="font-size: var(--text-2xl); font-weight: 700; color: var(--color-accent);"><?= number_format($stats['fixed']) ?></div>
+                    <div style="font-size: var(--text-sm); color: var(--color-text-muted);"><?= $dryRun ? 'Skulle korrigeras' : 'Korrigerade' ?></div>
                 </div>
-                <div class="stat-card">
-                    <div class="stat-value"><?= number_format($stats['no_season_data']) ?></div>
-                    <div class="stat-label">Saknar säsongsdata</div>
+                <div class="stat-card" style="background: var(--color-bg-secondary); padding: var(--space-md); border-radius: var(--radius-md); text-align: center;">
+                    <div style="font-size: var(--text-2xl); font-weight: 700;"><?= number_format($stats['no_season_data']) ?></div>
+                    <div style="font-size: var(--text-sm); color: var(--color-text-muted);">Saknar säsongsdata</div>
                 </div>
             </div>
 
@@ -216,7 +209,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         </tr>
                     </thead>
                     <tbody>
-                        <?php foreach (array_slice($stats['details'], 0, 100) as $detail): ?>
+                        <?php foreach ($stats['details'] as $detail): ?>
                         <tr>
                             <td>
                                 <a href="/rider/<?= $detail['rider_id'] ?>">
@@ -232,8 +225,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     </tbody>
                 </table>
             </div>
-            <?php if (count($stats['details']) > 100): ?>
-            <p class="text-muted">...och <?= count($stats['details']) - 100 ?> fler</p>
+            <?php if ($stats['fixed'] > 100): ?>
+            <p class="text-muted">...och <?= $stats['fixed'] - 100 ?> fler</p>
             <?php endif; ?>
             <?php endif; ?>
         </div>
