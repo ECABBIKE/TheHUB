@@ -109,15 +109,30 @@ try {
 
     // Get each member's ranking points contribution to this club
     // Uses simplified calculation: sum of weighted points from results where rider was in this club
+    // IMPORTANT: Use latest event date as reference (not today's date) to match ranking calculation
     $memberRankingPoints = [];
     if (!empty($memberIds)) {
         try {
+            // Get the latest event date with results (same reference as ranking system)
+            $latestEventStmt = $db->prepare("
+                SELECT MAX(e.date) as latest_date
+                FROM events e
+                JOIN results r ON r.event_id = e.id
+                WHERE r.status = 'finished'
+                AND e.discipline IN ('ENDURO', 'DH')
+            ");
+            $latestEventStmt->execute();
+            $latestRow = $latestEventStmt->fetch(PDO::FETCH_ASSOC);
+            $referenceDate = $latestRow['latest_date'] ?? date('Y-m-d');
+
             $placeholders = implode(',', array_fill(0, count($memberIds), '?'));
-            $cutoffDate = date('Y-m-d', strtotime('-24 months'));
+            $cutoffDate = date('Y-m-d', strtotime($referenceDate . ' -24 months'));
             // Priority for club assignment:
             // 1. r.club_id (explicitly set in results table)
             // 2. rider_club_seasons for the event year (historical club membership)
             // 3. rd.club_id (rider's current club as last fallback)
+            // Calculate the 12-month boundary for time decay
+            $twelveMoAgo = date('Y-m-d', strtotime($referenceDate . ' -12 months'));
             $stmt = $db->prepare("
                 SELECT
                     r.cyclist_id as rider_id,
@@ -128,7 +143,7 @@ try {
                             ELSE COALESCE(r.points, 0)
                         END *
                         CASE
-                            WHEN e.date >= DATE_SUB(CURDATE(), INTERVAL 12 MONTH) THEN 1.0
+                            WHEN e.date >= ? THEN 1.0
                             ELSE 0.5
                         END
                     ) as ranking_contribution
@@ -143,7 +158,7 @@ try {
                 AND e.discipline IN ('ENDURO', 'DH')
                 GROUP BY r.cyclist_id
             ");
-            $params = array_merge($memberIds, [$clubId, $cutoffDate]);
+            $params = array_merge([$twelveMoAgo], $memberIds, [$clubId, $cutoffDate]);
             $stmt->execute($params);
             foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
                 $memberRankingPoints[$row['rider_id']] = (float)$row['ranking_contribution'];
@@ -213,7 +228,8 @@ try {
 
     // Get club ranking history from snapshots (for graph)
     $clubRankingHistory = [];
-    $clubRankingHistoryFull = [];
+    $clubRankingHistoryFull = []; // All history for "Visa historik"
+    $clubRankingHistory24m = [];  // Last 24 months for main chart
     try {
         $historyStmt = $db->prepare("
             SELECT
@@ -232,8 +248,15 @@ try {
         $historyStmt->execute([$clubId]);
         $allSnapshots = $historyStmt->fetchAll(PDO::FETCH_ASSOC);
 
-        // Store full history for graph (limit to 50 entries for performance)
-        $clubRankingHistoryFull = array_slice($allSnapshots, -50);
+        // Store full history for "Visa historik" section
+        $clubRankingHistoryFull = $allSnapshots;
+
+        // Filter to last 24 months for main chart
+        $cutoff24m = date('Y-m-d', strtotime('-24 months'));
+        $clubRankingHistory24m = array_filter($allSnapshots, function($snap) use ($cutoff24m) {
+            return $snap['snapshot_date'] >= $cutoff24m;
+        });
+        $clubRankingHistory24m = array_values($clubRankingHistory24m);
 
         // Group by month for compact display (take latest per month)
         $byMonth = [];
@@ -302,15 +325,16 @@ if (!$clubLogo && !empty($club['logo'])) {
 <?php endif; ?>
 
 <?php
-// Prepare ranking chart data for Chart.js
+// Prepare ranking chart data for Chart.js - MAIN CHART shows only last 24 months
 $hasClubRankingChart = false;
 $clubRankingChartLabels = [];
 $clubRankingChartData = [];
 $swedishMonthsShort = ['jan', 'feb', 'mar', 'apr', 'maj', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'dec'];
 
-if ($clubRankingPosition && !empty($clubRankingHistoryFull) && count($clubRankingHistoryFull) >= 2) {
+// Use 24-month filtered data for main chart
+if ($clubRankingPosition && !empty($clubRankingHistory24m) && count($clubRankingHistory24m) >= 2) {
     $hasClubRankingChart = true;
-    foreach ($clubRankingHistoryFull as $rh) {
+    foreach ($clubRankingHistory24m as $rh) {
         $monthNum = isset($rh['month']) ? (int)date('n', strtotime($rh['month'] . '-01')) - 1 : 0;
         $clubRankingChartLabels[] = ucfirst($swedishMonthsShort[$monthNum % 12] ?? '');
         $clubRankingChartData[] = (int)$rh['ranking_position'];
