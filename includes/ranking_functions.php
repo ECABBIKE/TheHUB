@@ -635,6 +635,178 @@ function calculateClubRankingData($db, $discipline = 'GRAVITY', $debug = false) 
 }
 
 /**
+ * Calculate CLUB ranking data as of a specific date (for backfill/historical snapshots)
+ * Same logic as calculateClubRankingData() but calculates relative to asOfDate instead of today
+ */
+function calculateClubRankingDataAsOf($db, $discipline = 'GRAVITY', $asOfDate = null) {
+    if (!$asOfDate) {
+        $asOfDate = date('Y-m-d');
+    }
+
+    $cutoffDate = date('Y-m-d', strtotime($asOfDate . ' -24 months'));
+
+    $fieldMultipliers = getRankingFieldMultipliers($db);
+    $eventLevelMultipliers = getEventLevelMultipliers($db);
+    $timeDecay = getRankingTimeDecay($db);
+
+    // Build discipline filter
+    $disciplineFilter = '';
+    $params = [$asOfDate, $cutoffDate];
+
+    if ($discipline === 'GRAVITY') {
+        $disciplineFilter = "AND e.discipline IN ('ENDURO', 'DH')";
+    } elseif ($discipline) {
+        $disciplineFilter = 'AND e.discipline = ?';
+        $params[] = $discipline;
+    }
+
+    // Get all qualifying results with club info up to asOfDate
+    $results = $db->getAll("
+        SELECT
+            r.cyclist_id as rider_id,
+            r.event_id,
+            r.class_id,
+            COALESCE(r.club_id, rd.club_id) as club_id,
+            c.name as club_name,
+            COALESCE(
+                CASE
+                    WHEN COALESCE(r.run_1_points, 0) > 0 OR COALESCE(r.run_2_points, 0) > 0
+                    THEN COALESCE(r.run_1_points, 0) + COALESCE(r.run_2_points, 0)
+                    ELSE r.points
+                END,
+                r.points
+            ) as original_points,
+            e.date as event_date,
+            e.discipline,
+            COALESCE(e.event_level, 'national') as event_level
+        FROM results r
+        JOIN events e ON r.event_id = e.id
+        JOIN classes cl ON r.class_id = cl.id
+        JOIN riders rd ON r.cyclist_id = rd.id
+        LEFT JOIN clubs c ON COALESCE(r.club_id, rd.club_id) = c.id
+        WHERE r.status = 'finished'
+        AND COALESCE(r.club_id, rd.club_id) IS NOT NULL
+        AND (r.points > 0 OR COALESCE(r.run_1_points, 0) > 0 OR COALESCE(r.run_2_points, 0) > 0)
+        AND e.date <= ?
+        AND e.date >= ?
+        {$disciplineFilter}
+        AND COALESCE(cl.series_eligible, 1) = 1
+        AND COALESCE(cl.awards_points, 1) = 1
+        ORDER BY e.id, cl.id, COALESCE(r.club_id, rd.club_id), original_points DESC
+    ", $params);
+
+    if (empty($results)) return [];
+
+    // Calculate field sizes per event/class
+    $fieldSizes = [];
+    foreach ($results as $result) {
+        $key = $result['event_id'] . '_' . $result['class_id'];
+        $fieldSizes[$key] = ($fieldSizes[$key] ?? 0) + 1;
+    }
+
+    $referenceDate = new DateTime($asOfDate);
+    $clubData = [];
+
+    // Group results by event/class/club to determine 1st and 2nd best
+    $eventClassClub = [];
+    foreach ($results as $result) {
+        $key = $result['event_id'] . '_' . $result['class_id'] . '_' . $result['club_id'];
+        if (!isset($eventClassClub[$key])) {
+            $eventClassClub[$key] = [];
+        }
+        $eventClassClub[$key][] = $result;
+    }
+
+    // Process each event/class/club group
+    foreach ($eventClassClub as $key => $riders) {
+        $rank = 1;
+        foreach ($riders as $rider) {
+            if ($rank > 2) break;
+
+            $clubId = $rider['club_id'];
+            $fieldKey = $rider['event_id'] . '_' . $rider['class_id'];
+            $fieldSize = $fieldSizes[$fieldKey] ?? 1;
+
+            $fieldMult = getFieldMultiplier($fieldSize, $fieldMultipliers);
+            $eventLevelMult = $eventLevelMultipliers[$rider['event_level']] ?? 1.00;
+            $clubPositionMult = ($rank === 1) ? 1.00 : 0.50;
+
+            // Time decay relative to asOfDate
+            $eventDate = new DateTime($rider['event_date']);
+            $monthsDiff = ($referenceDate->format('Y') - $eventDate->format('Y')) * 12 +
+                          ($referenceDate->format('n') - $eventDate->format('n'));
+
+            if ($monthsDiff < 12) {
+                $timeMult = $timeDecay['months_1_12'];
+            } elseif ($monthsDiff < 24) {
+                $timeMult = $timeDecay['months_13_24'];
+            } else {
+                $timeMult = $timeDecay['months_25_plus'];
+            }
+
+            $basePoints = (float)$rider['original_points'];
+            $rankingPoints = $basePoints * $fieldMult * $eventLevelMult * $clubPositionMult;
+            $weightedPoints = $rankingPoints * $timeMult;
+
+            if (!isset($clubData[$clubId])) {
+                $clubData[$clubId] = [
+                    'club_id' => $clubId,
+                    'club_name' => $rider['club_name'],
+                    'total_ranking_points' => 0,
+                    'points_12' => 0,
+                    'points_13_24' => 0,
+                    'riders_count' => 0,
+                    'events_count' => 0,
+                    'scoring_riders' => []
+                ];
+            }
+
+            $clubData[$clubId]['total_ranking_points'] += $weightedPoints;
+            $clubData[$clubId]['events_count']++;
+
+            if ($monthsDiff < 12) {
+                $clubData[$clubId]['points_12'] += $rankingPoints;
+            } else {
+                $clubData[$clubId]['points_13_24'] += $rankingPoints;
+            }
+
+            if (!in_array($rider['rider_id'], $clubData[$clubId]['scoring_riders'])) {
+                $clubData[$clubId]['scoring_riders'][] = $rider['rider_id'];
+            }
+
+            $rank++;
+        }
+    }
+
+    // Convert scoring_riders array to count
+    foreach ($clubData as &$club) {
+        $club['riders_count'] = count($club['scoring_riders']);
+        unset($club['scoring_riders']);
+    }
+
+    // Sort by total points
+    usort($clubData, function($a, $b) {
+        return $b['total_ranking_points'] <=> $a['total_ranking_points'];
+    });
+
+    // Add ranking positions
+    $position = 1;
+    $prevPoints = null;
+    $actualPosition = 1;
+
+    foreach ($clubData as &$club) {
+        if ($prevPoints !== null && $club['total_ranking_points'] < $prevPoints) {
+            $position = $actualPosition;
+        }
+        $club['ranking_position'] = $position;
+        $prevPoints = $club['total_ranking_points'];
+        $actualPosition++;
+    }
+
+    return array_values($clubData);
+}
+
+/**
  * Save ranking snapshots for a specific discipline
  */
 function saveRankingSnapshots($db, $discipline, $debug = false) {
