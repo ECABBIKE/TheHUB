@@ -962,6 +962,12 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
 
     fclose($handle);
 
+    // Apply automatic stage bonus if series has it configured
+    $stageBonusApplied = applySeriesStageBonusForEvent($db, $eventMapping['event_id'] ?? null);
+    if ($stageBonusApplied > 0) {
+        $matching_stats['stage_bonus_applied'] = $stageBonusApplied;
+    }
+
     return [
         'stats' => $stats,
         'matching' => $matching_stats,
@@ -969,4 +975,118 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
         'stage_names' => $stageNamesMapping,
         'changelog' => $changelog
     ];
+}
+
+/**
+ * Apply series stage bonus points for a specific event
+ * Called automatically after import if series has stage_bonus_config
+ *
+ * @param Database $db
+ * @param int $eventId
+ * @return int Number of riders who got bonus points
+ */
+function applySeriesStageBonusForEvent($db, $eventId) {
+    if (!$eventId) return 0;
+
+    try {
+        // Get series for this event (via series_events junction table or direct series_id)
+        $seriesConfig = $db->getRow("
+            SELECT s.stage_bonus_config
+            FROM series s
+            INNER JOIN series_events se ON s.id = se.series_id
+            WHERE se.event_id = ?
+            LIMIT 1
+        ", [$eventId]);
+
+        // Fallback: check direct series_id on event
+        if (!$seriesConfig) {
+            $seriesConfig = $db->getRow("
+                SELECT s.stage_bonus_config
+                FROM series s
+                INNER JOIN events e ON s.id = e.series_id
+                WHERE e.id = ?
+            ", [$eventId]);
+        }
+
+        if (!$seriesConfig || empty($seriesConfig['stage_bonus_config'])) {
+            return 0;
+        }
+
+        $config = json_decode($seriesConfig['stage_bonus_config'], true);
+        if (!$config || !($config['enabled'] ?? false)) {
+            return 0;
+        }
+
+        $stage = $config['stage'] ?? 'ss1';
+        $pointValues = $config['points'] ?? [25, 20, 16];
+        $classIds = $config['class_ids'] ?? null;
+
+        // Validate stage column name
+        $stageColumn = preg_replace('/[^a-z0-9_]/', '', $stage);
+        if (!preg_match('/^ss\d+$/', $stageColumn)) {
+            return 0;
+        }
+
+        // Get results for this event with stage times
+        $sql = "
+            SELECT r.id as result_id, r.class_id, r.{$stageColumn} as stage_time
+            FROM results r
+            WHERE r.event_id = ?
+              AND r.{$stageColumn} IS NOT NULL
+              AND r.{$stageColumn} != ''
+              AND r.{$stageColumn} != '0'
+        ";
+        $params = [$eventId];
+
+        if (!empty($classIds)) {
+            $placeholders = implode(',', array_fill(0, count($classIds), '?'));
+            $sql .= " AND r.class_id IN ({$placeholders})";
+            $params = array_merge($params, $classIds);
+        }
+
+        $sql .= " ORDER BY r.class_id, r.{$stageColumn} ASC";
+
+        $results = $db->getAll($sql, $params);
+
+        if (empty($results)) {
+            return 0;
+        }
+
+        // Group by class
+        $byClass = [];
+        foreach ($results as $result) {
+            $cId = $result['class_id'] ?? 0;
+            if (!isset($byClass[$cId])) {
+                $byClass[$cId] = [];
+            }
+            $byClass[$cId][] = $result;
+        }
+
+        // Apply bonus points per class
+        $updated = 0;
+        foreach ($byClass as $cId => $classResults) {
+            $rank = 1;
+            foreach ($classResults as $result) {
+                if ($rank <= count($pointValues)) {
+                    $bonusPoints = $pointValues[$rank - 1];
+                    $db->query(
+                        "UPDATE results SET points = COALESCE(points, 0) + ? WHERE id = ?",
+                        [$bonusPoints, $result['result_id']]
+                    );
+                    $updated++;
+                }
+                $rank++;
+            }
+        }
+
+        if ($updated > 0) {
+            error_log("Import: Applied stage bonus ({$stage}) to {$updated} riders for event {$eventId}");
+        }
+
+        return $updated;
+
+    } catch (Exception $e) {
+        error_log("Import: Failed to apply stage bonus: " . $e->getMessage());
+        return 0;
+    }
 }
