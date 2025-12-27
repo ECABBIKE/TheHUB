@@ -109,7 +109,7 @@ function rebuildRiderStats($pdo, $rider_id) {
         // Svensk Mästare (vunnit mästerskapstävling)
         $championships = calculateSwedishChampionships($pdo, $rider_id);
         foreach ($championships as $champ) {
-            insertAchievement($pdo, $rider_id, 'swedish_champion', $champ['event_name'], null, $champ['year']);
+            insertAchievement($pdo, $rider_id, 'swedish_champion', $champ['event_name'], null, $champ['year'], $champ['event_id']);
             $stats['achievements_added']++;
         }
 
@@ -920,13 +920,13 @@ function getSeriesResults($pdo, $series_id, $rider_id, $year) {
 /**
  * Sparar achievement till databasen
  */
-function insertAchievement($pdo, $rider_id, $type, $value = null, $series_id = null, $year = null) {
+function insertAchievement($pdo, $rider_id, $type, $value = null, $series_id = null, $year = null, $event_id = null) {
     $stmt = $pdo->prepare("
         INSERT INTO rider_achievements
-            (rider_id, achievement_type, achievement_value, series_id, season_year)
-        VALUES (?, ?, ?, ?, ?)
+            (rider_id, achievement_type, achievement_value, series_id, season_year, event_id)
+        VALUES (?, ?, ?, ?, ?, ?)
     ");
-    $stmt->execute([$rider_id, $type, $value, $series_id, $year]);
+    $stmt->execute([$rider_id, $type, $value, $series_id, $year, $event_id]);
 }
 
 /**
