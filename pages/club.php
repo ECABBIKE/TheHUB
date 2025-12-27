@@ -354,6 +354,71 @@ if (!$clubLogo && !empty($club['logo'])) {
 
 <?php if (function_exists('renderClubAchievements')): ?>
 <link rel="stylesheet" href="/assets/css/achievements.css?v=<?= file_exists(dirname(__DIR__) . '/assets/css/achievements.css') ? filemtime(dirname(__DIR__) . '/assets/css/achievements.css') : time() ?>">
+<style>
+/* Club Achievement Modal - Same as rider page */
+.club-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    display: none;
+    align-items: flex-start;
+    justify-content: center;
+    z-index: 1000;
+    padding: calc(var(--header-height, 60px) + 20px) var(--space-md) var(--space-xl);
+    overflow-y: auto;
+}
+.club-modal-overlay.active {
+    display: flex;
+}
+.club-modal {
+    background: var(--color-bg-card);
+    border-radius: var(--radius-lg);
+    width: 100%;
+    max-width: 500px;
+    box-shadow: var(--shadow-lg);
+    overflow: hidden;
+}
+.club-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-md) var(--space-lg);
+    border-bottom: 1px solid var(--color-border);
+}
+.club-modal-header h3 {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    margin: 0;
+    font-size: var(--text-lg);
+}
+.club-modal-header h3 i {
+    width: 20px;
+    height: 20px;
+    color: var(--color-accent);
+}
+.club-modal-close {
+    background: none;
+    border: none;
+    padding: var(--space-xs);
+    cursor: pointer;
+    color: var(--color-text-secondary);
+    border-radius: var(--radius-sm);
+}
+.club-modal-close:hover {
+    background: var(--color-bg-secondary);
+    color: var(--color-text);
+}
+.club-modal-close i {
+    width: 20px;
+    height: 20px;
+}
+.club-modal-body {
+    padding: var(--space-lg);
+    max-height: 60vh;
+    overflow-y: auto;
+}
+</style>
 <div class="club-achievements-section">
     <?= renderClubAchievements($db, $clubId) ?>
 </div>
@@ -368,18 +433,18 @@ if (function_exists('getClubDetailedAchievements')) {
 
 <?php if (!empty($clubDetailedAchievements)): ?>
 <!-- Club Achievement Details Modal -->
-<div id="clubAchievementModal" class="ranking-modal-overlay" style="display:none; padding-top: calc(var(--header-height, 60px) + 10px);">
-    <div class="ranking-modal" style="max-height: calc(100vh - var(--header-height, 60px) - 40px); max-width: 500px;">
-        <div class="ranking-modal-header">
+<div id="clubAchievementModal" class="club-modal-overlay">
+    <div class="club-modal">
+        <div class="club-modal-header">
             <h3 id="clubAchievementModalTitle">
                 <i data-lucide="award"></i>
                 <span></span>
             </h3>
-            <button type="button" class="ranking-modal-close" onclick="closeClubAchievementModal()">
+            <button type="button" class="club-modal-close" id="closeClubModalBtn">
                 <i data-lucide="x"></i>
             </button>
         </div>
-        <div class="ranking-modal-body" id="clubAchievementModalBody">
+        <div class="club-modal-body" id="clubAchievementModalBody">
             <!-- Content populated by JS -->
         </div>
     </div>
@@ -444,7 +509,7 @@ function openClubAchievementModal(achievementType) {
     html += '</div>';
 
     body.innerHTML = html;
-    modal.style.display = 'flex';
+    modal.classList.add('active');
     document.body.style.overflow = 'hidden';
 
     if (typeof lucide !== 'undefined') lucide.createIcons();
@@ -453,17 +518,36 @@ function openClubAchievementModal(achievementType) {
 function closeClubAchievementModal() {
     const modal = document.getElementById('clubAchievementModal');
     if (modal) {
-        modal.style.display = 'none';
+        modal.classList.remove('active');
         document.body.style.overflow = '';
     }
 }
 
-document.getElementById('clubAchievementModal')?.addEventListener('click', function(e) {
-    if (e.target === this) closeClubAchievementModal();
-});
-
-// Add click handlers to badges with data
+// Setup event listeners when DOM is ready
 document.addEventListener('DOMContentLoaded', function() {
+    const modal = document.getElementById('clubAchievementModal');
+    const closeBtn = document.getElementById('closeClubModalBtn');
+
+    // Close button click
+    if (closeBtn) {
+        closeBtn.addEventListener('click', closeClubAchievementModal);
+    }
+
+    // Click outside modal to close
+    if (modal) {
+        modal.addEventListener('click', function(e) {
+            if (e.target === this) closeClubAchievementModal();
+        });
+    }
+
+    // ESC key to close
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && modal && modal.classList.contains('active')) {
+            closeClubAchievementModal();
+        }
+    });
+
+    // Add click handlers to badges with data
     document.querySelectorAll('.badge-item.clickable').forEach(badge => {
         badge.addEventListener('click', function() {
             const type = this.dataset.achievement;
