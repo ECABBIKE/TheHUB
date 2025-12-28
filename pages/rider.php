@@ -1993,7 +1993,7 @@ document.addEventListener('keydown', function(e) {
 </div>
 
 <!-- Aktivera konto Modal (for profiles WITH email but no password) -->
-<!-- Modal always rendered - button visibility controlled by $canActivateProfile check -->
+<!-- Modal always rendered - button visibility controlled by $canActivateProfile check (line ~1163) -->
 <div id="activateModal" class="claim-modal-overlay">
     <div class="claim-modal">
         <div class="claim-modal-header">
@@ -2717,4 +2717,3 @@ function deleteClubSeason(riderId, year) {
 }
 </script>
 <?php endif; ?>
-
