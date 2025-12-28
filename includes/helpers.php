@@ -399,8 +399,7 @@ function getVersionInfo() {
     'name' => APP_VERSION_NAME,
     'build' => defined('APP_BUILD') ? APP_BUILD : '',
     'deployment' => $totalDeployments,
-    'commit' => $commitHash,
-    'build_test' => defined('BUILD_TEST') ? BUILD_TEST : ''
+    'commit' => $commitHash
   ];
 }
 ?>
