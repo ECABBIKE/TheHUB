@@ -56,7 +56,7 @@ $matchingStats = [
 ];
 
 try {
- $result = parseAndAnalyzeCSV($_SESSION['import_preview_file'], $db);
+ $result = parseAndAnalyzeCSV($_SESSION['import_preview_file'], $db, $selectedEvent);
  $previewData = $result['data'];
  $matchingStats = $result['stats'];
 } catch (Exception $e) {
@@ -285,7 +285,10 @@ function isFieldMappingRowPreview($row) {
 /**
  * Parse CSV and analyze matching statistics
  */
-function parseAndAnalyzeCSV($filepath, $db) {
+function parseAndAnalyzeCSV($filepath, $db, $event = null) {
+ // Check if this is a DH event to calculate finish_time from Run1/Run2
+ $isDHEvent = ($event['discipline'] ?? '') === 'DH' || strpos($event['event_format'] ?? '', 'DH') !== false;
+ $useSwecupDh = ($event['event_format'] ?? '') === 'DH_SWECUP';
  $data = [];
  $stats = [
  'total_rows' => 0,
@@ -489,6 +492,47 @@ function parseAndAnalyzeCSV($filepath, $db) {
  }
 
  $rowData = array_combine($header, $row);
+
+ // For DH: Calculate finish_time from Run1/Run2 if empty
+ $run1 = trim($rowData['run_1_time'] ?? '');
+ $run2 = trim($rowData['run_2_time'] ?? '');
+ $finishTime = trim($rowData['finish_time'] ?? '');
+ $hasRunData = !empty($run1) || !empty($run2);
+
+ if (empty($finishTime) && $hasRunData) {
+  // Helper to convert time string to seconds
+  $timeToSeconds = function($timeStr) {
+   if (empty($timeStr) || in_array(strtoupper($timeStr), ['DNF', 'DNS', 'DQ', 'DSQ'])) {
+    return PHP_FLOAT_MAX;
+   }
+   $parts = explode(':', $timeStr);
+   if (count($parts) === 3) {
+    return ((float)$parts[0] * 3600) + ((float)$parts[1] * 60) + (float)$parts[2];
+   } elseif (count($parts) === 2) {
+    return ((float)$parts[0] * 60) + (float)$parts[1];
+   }
+   return (float)$timeStr;
+  };
+
+  if ($useSwecupDh) {
+   // SweCUP: Only Run 2 (Final) counts
+   if (!empty($run2) && !in_array(strtoupper($run2), ['DNF', 'DNS', 'DQ', 'DSQ'])) {
+    $rowData['finish_time'] = $run2;
+   }
+  } else {
+   // DH_STANDARD or auto-detect: Best (fastest) of both runs
+   $run1Seconds = $timeToSeconds($run1);
+   $run2Seconds = $timeToSeconds($run2);
+   if ($run1Seconds < PHP_FLOAT_MAX || $run2Seconds < PHP_FLOAT_MAX) {
+    if ($run1Seconds <= $run2Seconds && $run1Seconds < PHP_FLOAT_MAX) {
+     $rowData['finish_time'] = $run1;
+    } elseif ($run2Seconds < PHP_FLOAT_MAX) {
+     $rowData['finish_time'] = $run2;
+    }
+   }
+  }
+ }
+
  $data[] = $rowData;
  $stats['total_rows']++;
 
