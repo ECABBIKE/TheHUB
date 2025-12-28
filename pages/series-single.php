@@ -98,6 +98,20 @@ try {
         $eventsWithPoints = $seriesEvents;
     }
 
+    // Check if this series uses DH-style points (run_1_points + run_2_points)
+    $isDHSeries = false;
+    if (!empty($eventsWithPoints)) {
+        $firstEvent = reset($eventsWithPoints);
+        if (!empty($firstEvent['template_id'])) {
+            $dhCheck = $db->prepare("
+                SELECT COUNT(*) as cnt FROM point_scale_values
+                WHERE scale_id = ? AND (run_1_points > 0 OR run_2_points > 0)
+            ");
+            $dhCheck->execute([$firstEvent['template_id']]);
+            $isDHSeries = ($dhCheck->fetchColumn() > 0);
+        }
+    }
+
     // Get all classes that have results in this series (only series-eligible classes that award points)
     $stmt = $db->prepare("
         SELECT DISTINCT c.id, c.name, c.display_name, c.sort_order,
@@ -179,6 +193,8 @@ try {
             'class_name' => $rider['class_display_name'] ?? $rider['class_name'] ?? 'Okänd',
             'class_id' => $rider['class_id'],
             'event_points' => [],
+            'event_run1' => [],   // DH Kval points
+            'event_run2' => [],   // DH Race points
             'excluded_events' => [],
             'total_points' => 0
         ];
@@ -187,11 +203,13 @@ try {
         $allPoints = [];
         foreach ($seriesEvents as $event) {
             $points = 0;
+            $run1Points = 0;
+            $run2Points = 0;
 
             if ($useSeriesResults) {
                 // Use series_results table (series-specific points)
                 $stmt = $db->prepare("
-                    SELECT points
+                    SELECT points, run_1_points, run_2_points
                     FROM series_results
                     WHERE series_id = ? AND cyclist_id = ? AND event_id = ? AND class_id <=> ?
                     LIMIT 1
@@ -200,7 +218,7 @@ try {
             } else {
                 // Fallback: Use results.points
                 $stmt = $db->prepare("
-                    SELECT points
+                    SELECT points, 0 as run_1_points, 0 as run_2_points
                     FROM results
                     WHERE cyclist_id = ? AND event_id = ? AND class_id = ?
                     LIMIT 1
@@ -210,8 +228,14 @@ try {
 
             $result = $stmt->fetch(PDO::FETCH_ASSOC);
             $points = $result ? (int)$result['points'] : 0;
+            $run1Points = $result ? (int)($result['run_1_points'] ?? 0) : 0;
+            $run2Points = $result ? (int)($result['run_2_points'] ?? 0) : 0;
 
             $riderData['event_points'][$event['id']] = $points;
+            // Store DH-specific points for dual-column display
+            $riderData['event_run1'][$event['id']] = $run1Points;
+            $riderData['event_run2'][$event['id']] = $run2Points;
+
             if ($points > 0) {
                 $allPoints[] = ['event_id' => $event['id'], 'points' => $points];
             }
@@ -450,11 +474,6 @@ if (!$series) {
 }
 ?>
 
-<!-- VERSION CHECK: claude-fix-2025-12-25-v2 -->
-<div style="background: red; color: white; padding: 10px; text-align: center; font-weight: bold;">
-    TEST: Om du ser detta är RÄTT version uppe! (claude-fix-v2)
-</div>
-
 <?php if (isset($error)): ?>
 <section class="card mb-lg">
   <div class="card-title text-error">Fel</div>
@@ -575,9 +594,18 @@ if (!$series) {
           <th class="col-club table-col-hide-portrait">Klubb</th>
           <?php $eventNum = 1; ?>
           <?php foreach ($eventsWithPoints as $event): ?>
-          <th class="col-event" class="col-fixed" title="<?= htmlspecialchars($event['name']) ?>">
-            #<?= $eventNum ?>
-          </th>
+            <?php if ($isDHSeries): ?>
+            <th class="col-event col-event-dh" title="<?= htmlspecialchars($event['name']) ?> - Kval">
+              #<?= $eventNum ?> K
+            </th>
+            <th class="col-event col-event-dh" title="<?= htmlspecialchars($event['name']) ?> - Race">
+              #<?= $eventNum ?> R
+            </th>
+            <?php else: ?>
+            <th class="col-event" title="<?= htmlspecialchars($event['name']) ?>">
+              #<?= $eventNum ?>
+            </th>
+            <?php endif; ?>
           <?php $eventNum++; ?>
           <?php endforeach; ?>
           <th class="col-total">Totalt</th>
@@ -602,19 +630,32 @@ if (!$series) {
           <?php foreach ($eventsWithPoints as $event): ?>
           <?php
           $pts = $rider['event_points'][$event['id']] ?? 0;
+          $run1 = $rider['event_run1'][$event['id']] ?? 0;
+          $run2 = $rider['event_run2'][$event['id']] ?? 0;
           $isExcluded = isset($rider['excluded_events'][$event['id']]);
           ?>
-          <td class="col-event <?= $pts > 0 ? 'has-points' : '' ?> <?= $isExcluded ? 'excluded' : '' ?>" class="col-fixed">
-            <?php if ($pts > 0): ?>
-              <?php if ($isExcluded): ?>
-                <span class="excluded-points" title="Räknas ej"><?= $pts ?></span>
-              <?php else: ?>
-                <?= $pts ?>
-              <?php endif; ?>
+            <?php if ($isDHSeries): ?>
+            <!-- DH: Kval column -->
+            <td class="col-event col-event-dh <?= $run1 > 0 ? 'has-points' : '' ?>">
+              <?= $run1 > 0 ? $run1 : '–' ?>
+            </td>
+            <!-- DH: Race column -->
+            <td class="col-event col-event-dh <?= $run2 > 0 ? 'has-points' : '' ?>">
+              <?= $run2 > 0 ? $run2 : '–' ?>
+            </td>
             <?php else: ?>
-              –
+            <td class="col-event <?= $pts > 0 ? 'has-points' : '' ?> <?= $isExcluded ? 'excluded' : '' ?>">
+              <?php if ($pts > 0): ?>
+                <?php if ($isExcluded): ?>
+                  <span class="excluded-points" title="Räknas ej"><?= $pts ?></span>
+                <?php else: ?>
+                  <?= $pts ?>
+                <?php endif; ?>
+              <?php else: ?>
+                –
+              <?php endif; ?>
+            </td>
             <?php endif; ?>
-          </td>
           <?php endforeach; ?>
           <td class="col-total">
             <strong><?= $rider['total_points'] ?></strong>
