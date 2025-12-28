@@ -21,24 +21,26 @@ if (function_exists('opcache_reset')) {
 clearstatcache(true);
 echo "<p style='color: green;'>✅ Stat cache cleared</p>";
 
-// Show current file modification time
-$rankingFile = __DIR__ . '/../includes/ranking_functions.php';
-if (file_exists($rankingFile)) {
-    $modTime = filemtime($rankingFile);
-    echo "<p><strong>ranking_functions.php modified:</strong> " . date('Y-m-d H:i:s', $modTime) . "</p>";
+// Check rider.php for activation feature
+$riderFile = __DIR__ . '/../pages/rider.php';
+if (file_exists($riderFile)) {
+    $modTime = filemtime($riderFile);
+    echo "<p><strong>pages/rider.php modified:</strong> " . date('Y-m-d H:i:s', $modTime) . "</p>";
 
-    // Check for version stamp in file
-    $content = file_get_contents($rankingFile);
-    if (strpos($content, '2025-11-25-005') !== false) {
-        echo "<p style='color: green;'>✅ Version 2025-11-25-005 found in file!</p>";
+    // Check for activation feature
+    $content = file_get_contents($riderFile);
+    $hasActivateModal = strpos($content, 'activateModal') !== false;
+    if ($hasActivateModal) {
+        echo "<p style='color: green;'>✅ Activation feature found in file!</p>";
     } else {
-        echo "<p style='color: red;'>❌ Version 2025-11-25-005 NOT found in file!</p>";
-        echo "<p>File might not be updated yet. Check git pull.</p>";
+        echo "<p style='color: red;'>❌ Activation feature NOT found in file!</p>";
+        echo "<p>File might not be updated yet. Upload latest pages/rider.php</p>";
     }
 } else {
-    echo "<p style='color: red;'>❌ ranking_functions.php not found!</p>";
+    echo "<p style='color: red;'>❌ pages/rider.php not found!</p>";
 }
 
-echo "<p><a href='/admin/ranking.php'>→ Go to Ranking Admin</a></p>";
+echo "<p><a href='/admin/check-rider-version.php'>→ Check File Versions</a></p>";
+echo "<p><a href='/rider/23988'>→ Test Rider Page</a></p>";
 echo "</body></html>";
 ?>
