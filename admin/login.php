@@ -15,17 +15,22 @@ if (isset($_GET['timeout'])) {
 }
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+ // SECURITY: Verify CSRF token
+ if (!verify_csrf_token($_POST['csrf_token'] ?? '')) {
+ $error = 'Ogiltig förfrågan. Försök igen.';
+ } else {
  $username = $_POST['username'] ?? '';
  $password = $_POST['password'] ?? '';
 
  // Check rate limiting before attempting login
  if (isLoginRateLimited($username)) {
- $error = 'För många inloggningsförsök. Vänta 15 minuter och försök igen.';
+  $error = 'För många inloggningsförsök. Vänta 15 minuter och försök igen.';
  } elseif (login_admin($username, $password)) {
- // All users go to homepage after login
- redirect('/');
+  // All users go to homepage after login
+  redirect('/');
  } else {
- $error = 'Felaktigt användarnamn eller lösenord';
+  $error = 'Felaktigt användarnamn eller lösenord';
+ }
  }
 }
 
@@ -145,6 +150,7 @@ $pageTitle = 'Logga in';
  <?php endif; ?>
 
  <form method="POST" class="login-form">
+  <?= csrf_field() ?>
   <div class="form-group">
   <label for="username" class="form-label">Användarnamn</label>
   <input
