@@ -2423,8 +2423,16 @@ document.getElementById('claimModal')?.addEventListener('click', function(e) {
 <?php if ($canActivateProfile): ?>
 <script>
 function openActivateModal() {
-    document.getElementById('activateModal').classList.add('active');
-    document.body.style.overflow = 'hidden';
+    console.log('🔍 openActivateModal called!');
+    const modal = document.getElementById('activateModal');
+    console.log('🔍 Modal element:', modal);
+    if (modal) {
+        modal.classList.add('active');
+        console.log('🔍 Added active class');
+        document.body.style.overflow = 'hidden';
+    } else {
+        console.error('❌ activateModal element not found!');
+    }
 }
 
 function closeActivateModal() {
