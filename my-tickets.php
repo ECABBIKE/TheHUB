@@ -22,6 +22,9 @@ $messageType = 'info';
 
 // Handle refund request
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+ // SECURITY: Verify CSRF token
+ checkCsrf();
+
  $action = $_POST['action'] ?? '';
 
  if ($action === 'request_refund') {
@@ -331,6 +334,7 @@ include __DIR__ . '/includes/layout-header.php';
  </div>
  <form method="POST">
   <div class="gs-modal-body">
+  <?= csrf_field() ?>
   <input type="hidden" name="action" value="request_refund">
   <input type="hidden" name="ticket_id" id="refundTicketId">
 

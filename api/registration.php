@@ -154,6 +154,14 @@ try {
             throw new Exception('Ogiltig JSON-data');
         }
 
+        // SECURITY: Verify CSRF token for state-changing operations
+        $csrfToken = $data['csrf_token'] ?? $_POST['csrf_token'] ?? '';
+        if (!verify_csrf_token($csrfToken)) {
+            http_response_code(403);
+            echo json_encode(['success' => false, 'error' => 'CSRF token validation failed']);
+            exit;
+        }
+
         $eventId = intval($data['event_id'] ?? 0);
         $participants = $data['participants'] ?? [];
 

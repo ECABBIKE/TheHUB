@@ -5,9 +5,10 @@
  * Parallel evaluation structure using the same database as production
  */
 
-// Enable error reporting for debugging (remove in production)
+// PRODUCTION: Log errors, don't display them
 error_reporting(E_ALL);
-ini_set('display_errors', '1');
+ini_set('display_errors', '0');  // Security: Never show errors to users
+ini_set('log_errors', '1');
 
 // ============================================================================
 // DATABASE CONNECTION (uses parent config)

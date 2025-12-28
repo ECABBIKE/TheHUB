@@ -1,8 +1,10 @@
 <?php
-// CRITICAL: Enable errors FIRST before anything else
+// PRODUCTION: Errors logged to file, not displayed to users
 error_reporting(E_ALL);
-ini_set('display_errors', '1');
-ini_set('display_startup_errors', '1');
+ini_set('display_errors', '0');  // NEVER show errors to users in production
+ini_set('display_startup_errors', '0');
+ini_set('log_errors', '1');
+ini_set('error_log', __DIR__ . '/logs/error.log');
 
 // Start output buffering to allow redirects from included pages (like login.php)
 ob_start();
