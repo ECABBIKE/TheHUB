@@ -262,13 +262,15 @@ $sampleUci = $pdo->query("
 ")->fetchAll(PDO::FETCH_ASSOC);
 
 // Get name duplicates - but filter to only show MERGEABLE ones
-// (those where all riders have same UCI or no UCI - different UCIs = different people)
+// Include birth_year and club_id to determine if they're really the same person
 $rawNameDups = $pdo->query("
     SELECT UPPER(firstname) as fn, UPPER(lastname) as ln,
            GROUP_CONCAT(CONCAT(firstname, ' ', lastname) ORDER BY id SEPARATOR ' | ') as names,
            GROUP_CONCAT(id ORDER BY id) as ids,
            GROUP_CONCAT(COALESCE(REPLACE(REPLACE(license_number, ' ', ''), '-', ''), '') ORDER BY id SEPARATOR '|') as uci_list,
            GROUP_CONCAT(COALESCE(license_number, '-') ORDER BY id SEPARATOR ' | ') as ucis,
+           GROUP_CONCAT(COALESCE(birth_year, 0) ORDER BY id SEPARATOR '|') as birth_years,
+           GROUP_CONCAT(COALESCE(club_id, 0) ORDER BY id SEPARATOR '|') as club_ids,
            COUNT(*) as cnt
     FROM riders
     WHERE firstname IS NOT NULL AND firstname != ''
@@ -276,34 +278,66 @@ $rawNameDups = $pdo->query("
     GROUP BY UPPER(firstname), UPPER(lastname)
     HAVING cnt > 1
     ORDER BY cnt DESC
-    LIMIT 100
+    LIMIT 300
 ")->fetchAll(PDO::FETCH_ASSOC);
 
-// Filter to only show mergeable - where all valid UCIs are the same (or no UCIs)
-// SWE-prefix licenses are national licenses, not UCI IDs - they don't block merging
+// Filter to only show LIKELY duplicates
+// Different UCI IDs = different people
+// Different birth years AND different clubs = different people (common name)
 $sampleName = [];
 foreach ($rawNameDups as $dup) {
     $uciValues = explode('|', $dup['uci_list']);
+    $birthYears = array_map('intval', explode('|', $dup['birth_years']));
+    $clubIds = array_map('intval', explode('|', $dup['club_ids']));
 
-    // Get only valid UCI IDs (11 digits in format XXX XXX XXX XX)
-    // Exclude SWE-prefix national licenses and short numbers
+    // Get only valid UCI IDs (10+ digits)
     $validUcis = array_filter($uciValues, function($u) {
-        // Extract only digits
         $digits = preg_replace('/[^0-9]/', '', $u);
-        // Valid UCI IDs have 11 digits - SWE licenses have fewer
         return strlen($digits) >= 10;
     });
-
-    // Normalize to just digits for comparison
     $normalizedUcis = array_map(fn($u) => preg_replace('/[^0-9]/', '', $u), $validUcis);
     $uniqueUcis = array_unique($normalizedUcis);
 
-    // Mergeable if: 0 or 1 unique valid UCIs (all have same or no UCI)
-    if (count($uniqueUcis) <= 1) {
-        $sampleName[] = $dup;
+    // SKIP if multiple different valid UCI IDs (definitely different people)
+    if (count($uniqueUcis) > 1) {
+        continue;
     }
 
-    if (count($sampleName) >= 20) break;
+    // Check birth years and clubs
+    $validBirthYears = array_filter($birthYears, fn($y) => $y > 1900);
+    $uniqueBirthYears = array_unique($validBirthYears);
+    $validClubIds = array_filter($clubIds, fn($c) => $c > 0);
+    $uniqueClubIds = array_unique($validClubIds);
+
+    // SKIP if different birth years AND different clubs (common name, different people)
+    // Example: "Fredrik Nilsson" born 1991 in Club A vs born 1997 in Club B = different people
+    if (count($uniqueBirthYears) > 1 && count($uniqueClubIds) > 1) {
+        // Check if any pair shares a club - if so, might still be duplicate
+        $sharesSomething = false;
+        for ($i = 0; $i < count($birthYears); $i++) {
+            for ($j = $i + 1; $j < count($birthYears); $j++) {
+                // Same club OR one has no birth year OR one has no club
+                if ($clubIds[$i] === $clubIds[$j] && $clubIds[$i] > 0) {
+                    $sharesSomething = true;
+                    break 2;
+                }
+                if ($birthYears[$i] === 0 || $birthYears[$j] === 0) {
+                    $sharesSomething = true;
+                    break 2;
+                }
+                if ($clubIds[$i] === 0 || $clubIds[$j] === 0) {
+                    $sharesSomething = true;
+                    break 2;
+                }
+            }
+        }
+        if (!$sharesSomething) {
+            continue; // Skip - different people with common name
+        }
+    }
+
+    $sampleName[] = $dup;
+    if (count($sampleName) >= 50) break;
 }
 
 // Also count non-mergeable (different UCIs = different people with same name)
