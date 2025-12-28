@@ -19,6 +19,8 @@ $canEditEvent = function_exists('canAccessEvent') && canAccessEvent($eventId);
 if (!function_exists('timeToSeconds')) {
     function timeToSeconds($time) {
         if (empty($time)) return PHP_INT_MAX;
+        // Treat "0:00", "0:00:00" etc as invalid (no time recorded)
+        if (preg_match('/^0+[:.]?0*[:.]?0*$/', $time)) return PHP_INT_MAX;
         $decimal = 0;
         if (preg_match('/(\.\d+)$/', $time, $matches)) {
             $decimal = floatval($matches[1]);
@@ -33,7 +35,9 @@ if (!function_exists('timeToSeconds')) {
         } elseif (count($parts) === 1) {
             $seconds = (int)$parts[0];
         }
-        return $seconds + $decimal;
+        $total = $seconds + $decimal;
+        // Return invalid for times under 1 second (impossible for DH)
+        return $total < 1 ? PHP_INT_MAX : $total;
     }
 }
 
@@ -1207,16 +1211,22 @@ if (!empty($eventSponsors['content'])): ?>
                     <td class="col-time font-bold">
                         <?php
                         $bestTime = null;
+                        // Helper to check if time is valid (not empty, not 0:00)
+                        $isValidDHTime = function($t) {
+                            return !empty($t) && !preg_match('/^0+[:.]?0*[:.]?0*$/', $t);
+                        };
                         if ($eventFormat === 'DH_SWECUP') {
-                            $bestTime = $result['run_2_time'];
+                            $bestTime = $isValidDHTime($result['run_2_time']) ? $result['run_2_time'] : null;
                         } else {
-                            if ($result['run_1_time'] && $result['run_2_time']) {
+                            $r1Valid = $isValidDHTime($result['run_1_time']);
+                            $r2Valid = $isValidDHTime($result['run_2_time']);
+                            if ($r1Valid && $r2Valid) {
                                 $t1 = timeToSeconds($result['run_1_time']);
                                 $t2 = timeToSeconds($result['run_2_time']);
                                 $bestTime = $t1 < $t2 ? $result['run_1_time'] : $result['run_2_time'];
-                            } elseif ($result['run_1_time']) {
+                            } elseif ($r1Valid) {
                                 $bestTime = $result['run_1_time'];
-                            } else {
+                            } elseif ($r2Valid) {
                                 $bestTime = $result['run_2_time'];
                             }
                         }
