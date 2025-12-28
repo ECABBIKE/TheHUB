@@ -82,6 +82,7 @@ if (APP_ENV === 'development') {
 define('APP_VERSION', '1.0');
 define('APP_VERSION_NAME', 'Release');
 define('APP_BUILD', '2025-12-28');
+define('BUILD_TEST', 'ACTIVATION-FIX-001'); // TEMP: För att verifiera deployment
 define('DEPLOYMENT_OFFSET', 131); // Deployments before git repo
 
 try {

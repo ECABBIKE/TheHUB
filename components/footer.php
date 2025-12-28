@@ -21,6 +21,9 @@ if (function_exists('getVersionInfo')) {
                 [<?= htmlspecialchars($versionInfo['build']) ?>.<?= str_pad($versionInfo['deployment'], 3, '0', STR_PAD_LEFT) ?>]
                 <?php endif; ?>
                 • <?= htmlspecialchars($versionInfo['name']) ?>
+                <?php if (!empty($versionInfo['build_test'])): ?>
+                • <strong style="color: #61CE70;"><?= htmlspecialchars($versionInfo['build_test']) ?></strong>
+                <?php endif; ?>
             </span>
             <?php endif; ?>
         </p>
