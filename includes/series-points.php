@@ -149,12 +149,87 @@ function recalculateSeriesEventPoints($db, $seriesId, $eventId) {
 
     $templateId = $seriesEvent['template_id'];
 
+    // Check if this is a DH scale (has run_1_points/run_2_points values in template)
+    $isDHScale = false;
+    if ($templateId) {
+        $dhCheck = $db->getRow(
+            "SELECT COUNT(*) as cnt FROM point_scale_values
+             WHERE scale_id = ? AND (run_1_points > 0 OR run_2_points > 0)",
+            [$templateId]
+        );
+        $isDHScale = ($dhCheck['cnt'] ?? 0) > 0;
+    }
+
     // Get event level for potential future use
     $event = $db->getRow(
         "SELECT COALESCE(event_level, 'national') as event_level FROM events WHERE id = ?",
         [$eventId]
     );
     $eventLevel = $event ? $event['event_level'] : 'national';
+
+    // For DH scales: Calculate positions from run times and lookup points
+    $dhPointsMap = []; // cyclist_id => ['run_1' => X, 'run_2' => Y, 'total' => Z]
+
+    if ($isDHScale) {
+        // Get all results with run times for this event
+        $dhResults = $db->getAll("
+            SELECT r.id, r.cyclist_id, r.class_id, r.run_1_time, r.run_2_time, r.status
+            FROM results r
+            INNER JOIN classes cl ON r.class_id = cl.id
+            WHERE r.event_id = ?
+              AND COALESCE(cl.awards_points, 1) = 1
+              AND COALESCE(cl.series_eligible, 1) = 1
+        ", [$eventId]);
+
+        // Get point scale values for this DH template
+        $scaleValues = $db->getAll("
+            SELECT position, run_1_points, run_2_points
+            FROM point_scale_values
+            WHERE scale_id = ?
+            ORDER BY position
+        ", [$templateId]);
+
+        $run1PointsByPos = [];
+        $run2PointsByPos = [];
+        foreach ($scaleValues as $sv) {
+            $run1PointsByPos[$sv['position']] = (float)$sv['run_1_points'];
+            $run2PointsByPos[$sv['position']] = (float)$sv['run_2_points'];
+        }
+
+        // Calculate KVAL positions (sorted by run_1_time)
+        $kvalResults = array_filter($dhResults, fn($r) => !empty($r['run_1_time']) && $r['status'] !== 'dns');
+        usort($kvalResults, fn($a, $b) => strcmp($a['run_1_time'], $b['run_1_time']));
+
+        $kvalPosition = 1;
+        foreach ($kvalResults as $r) {
+            $cyclistId = $r['cyclist_id'];
+            if (!isset($dhPointsMap[$cyclistId])) {
+                $dhPointsMap[$cyclistId] = ['run_1' => 0, 'run_2' => 0, 'total' => 0];
+            }
+            $dhPointsMap[$cyclistId]['run_1'] = (int)($run1PointsByPos[$kvalPosition] ?? 0);
+            $kvalPosition++;
+        }
+
+        // Calculate FINAL positions (sorted by run_2_time, only those who have final time)
+        $finalResults = array_filter($dhResults, fn($r) => !empty($r['run_2_time']) && $r['status'] === 'finished');
+        usort($finalResults, fn($a, $b) => strcmp($a['run_2_time'], $b['run_2_time']));
+
+        $finalPosition = 1;
+        foreach ($finalResults as $r) {
+            $cyclistId = $r['cyclist_id'];
+            if (!isset($dhPointsMap[$cyclistId])) {
+                $dhPointsMap[$cyclistId] = ['run_1' => 0, 'run_2' => 0, 'total' => 0];
+            }
+            $dhPointsMap[$cyclistId]['run_2'] = (int)($run2PointsByPos[$finalPosition] ?? 0);
+            $finalPosition++;
+        }
+
+        // Calculate totals
+        foreach ($dhPointsMap as $cyclistId => &$pts) {
+            $pts['total'] = $pts['run_1'] + $pts['run_2'];
+        }
+        unset($pts);
+    }
 
     // Get all results for this event - ONLY classes that award points AND are series eligible
     $results = $db->getAll("
@@ -167,7 +242,6 @@ function recalculateSeriesEventPoints($db, $seriesId, $eventId) {
     ", [$eventId]);
 
     // PERFORMANCE FIX: Pre-fetch ALL existing series_results for this event/series
-    // This eliminates N+1 query problem (was doing 1 query per result)
     $existingResults = $db->getAll("
         SELECT id, cyclist_id, class_id, points
         FROM series_results
@@ -182,43 +256,66 @@ function recalculateSeriesEventPoints($db, $seriesId, $eventId) {
     }
 
     foreach ($results as $result) {
-        // Calculate points from template using position
-        $pointsData = calculateSeriesPointsDetailed(
-            $db,
-            $templateId,
-            $result['position'],
-            $result['status']
-        );
-        $points = $pointsData['total'];
+        $cyclistId = $result['cyclist_id'];
+
+        // Use DH points if available, otherwise calculate from position
+        if ($isDHScale && isset($dhPointsMap[$cyclistId])) {
+            $points = $dhPointsMap[$cyclistId]['total'];
+            $run1Points = $dhPointsMap[$cyclistId]['run_1'];
+            $run2Points = $dhPointsMap[$cyclistId]['run_2'];
+        } else {
+            // Standard: Calculate points from template using position
+            $pointsData = calculateSeriesPointsDetailed(
+                $db,
+                $templateId,
+                $result['position'],
+                $result['status']
+            );
+            $points = $pointsData['total'];
+            $run1Points = 0;
+            $run2Points = 0;
+        }
 
         // Check if series_result already exists using lookup map (no DB query!)
-        $lookupKey = $result['cyclist_id'] . '|' . ($result['class_id'] ?? 'null');
+        $lookupKey = $cyclistId . '|' . ($result['class_id'] ?? 'null');
         $existing = $existingMap[$lookupKey] ?? null;
 
         if ($existing) {
             // Update if points changed
             if ($existing['points'] != $points) {
-                $db->update('series_results', [
+                $updateData = [
                     'position' => $result['position'],
                     'status' => $result['status'],
                     'points' => $points,
                     'template_id' => $templateId,
                     'calculated_at' => date('Y-m-d H:i:s')
-                ], 'id = ?', [$existing['id']]);
+                ];
+                // Add run points for DH
+                if ($isDHScale) {
+                    $updateData['run_1_points'] = $run1Points;
+                    $updateData['run_2_points'] = $run2Points;
+                }
+                $db->update('series_results', $updateData, 'id = ?', [$existing['id']]);
                 $stats['updated']++;
             }
         } else {
             // Insert new series_result
-            $db->insert('series_results', [
+            $insertData = [
                 'series_id' => $seriesId,
                 'event_id' => $eventId,
-                'cyclist_id' => $result['cyclist_id'],
+                'cyclist_id' => $cyclistId,
                 'class_id' => $result['class_id'],
                 'position' => $result['position'],
                 'status' => $result['status'],
                 'points' => $points,
                 'template_id' => $templateId
-            ]);
+            ];
+            // Add run points for DH
+            if ($isDHScale) {
+                $insertData['run_1_points'] = $run1Points;
+                $insertData['run_2_points'] = $run2Points;
+            }
+            $db->insert('series_results', $insertData);
             $stats['inserted']++;
         }
     }
