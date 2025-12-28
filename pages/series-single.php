@@ -496,6 +496,21 @@ if (!$series) {
 </section>
 <?php endif; ?>
 
+<!-- DEBUG: DH Detection -->
+<div style="background: #ffc; padding: 10px; margin-bottom: 10px; font-family: monospace; font-size: 12px;">
+  <strong>DEBUG DH:</strong>
+  isDHSeries = <?= $isDHSeries ? 'TRUE' : 'FALSE' ?> |
+  seriesId = <?= $seriesId ?> |
+  firstEvent templateId = <?= $eventsWithPoints ? reset($eventsWithPoints)['template_id'] ?? 'NULL' : 'no events' ?>
+  <?php
+  // Check series_results directly
+  $debugCheck = $db->prepare("SELECT COUNT(*) as cnt, SUM(COALESCE(run_1_points,0)) as r1sum, SUM(COALESCE(run_2_points,0)) as r2sum FROM series_results WHERE series_id = ?");
+  $debugCheck->execute([$seriesId]);
+  $debugData = $debugCheck->fetch(PDO::FETCH_ASSOC);
+  ?>
+  | series_results: <?= $debugData['cnt'] ?> rows, run1_sum=<?= $debugData['r1sum'] ?? 0 ?>, run2_sum=<?= $debugData['r2sum'] ?? 0 ?>
+</div>
+
 <!-- Series Info Card -->
 <section class="info-card mb-md">
   <div class="info-card-stripe"></div>
