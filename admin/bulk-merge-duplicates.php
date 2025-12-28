@@ -280,12 +280,23 @@ $rawNameDups = $pdo->query("
 ")->fetchAll(PDO::FETCH_ASSOC);
 
 // Filter to only show mergeable - where all valid UCIs are the same (or no UCIs)
+// SWE-prefix licenses are national licenses, not UCI IDs - they don't block merging
 $sampleName = [];
 foreach ($rawNameDups as $dup) {
     $uciValues = explode('|', $dup['uci_list']);
-    // Get only valid UCIs (8+ digits)
-    $validUcis = array_filter($uciValues, fn($u) => strlen($u) >= 8);
-    $uniqueUcis = array_unique($validUcis);
+
+    // Get only valid UCI IDs (11 digits in format XXX XXX XXX XX)
+    // Exclude SWE-prefix national licenses and short numbers
+    $validUcis = array_filter($uciValues, function($u) {
+        // Extract only digits
+        $digits = preg_replace('/[^0-9]/', '', $u);
+        // Valid UCI IDs have 11 digits - SWE licenses have fewer
+        return strlen($digits) >= 10;
+    });
+
+    // Normalize to just digits for comparison
+    $normalizedUcis = array_map(fn($u) => preg_replace('/[^0-9]/', '', $u), $validUcis);
+    $uniqueUcis = array_unique($normalizedUcis);
 
     // Mergeable if: 0 or 1 unique valid UCIs (all have same or no UCI)
     if (count($uniqueUcis) <= 1) {
