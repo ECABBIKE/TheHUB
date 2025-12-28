@@ -9,15 +9,13 @@
     grid-template-columns: 7fr 3fr;
     gap: var(--space-lg);
     margin-bottom: var(--space-lg);
-    max-width: 100%;
-    overflow-x: hidden;
 }
 
 .left-column {
     display: flex;
     flex-direction: column;
     gap: var(--space-lg);
-    min-width: 0; /* Prevent grid blowout */
+    min-width: 0;
 }
 
 .right-column {
@@ -25,7 +23,7 @@
     flex-direction: column;
     gap: var(--space-lg);
     align-content: start;
-    min-width: 0; /* Prevent grid blowout */
+    min-width: 0;
 }
 
 /* ============================================================================
@@ -2079,31 +2077,25 @@
    ============================================================================ */
 @media (max-width: 1024px) {
     .rider-profile-layout {
-        grid-template-columns: 1fr minmax(0, 300px);
+        grid-template-columns: 1fr 300px;
     }
 }
 
 @media (max-width: 767px) {
     .rider-profile-layout {
         grid-template-columns: 1fr;
-        gap: 0;
-        margin-left: calc(-1 * var(--container-padding, 12px));
-        margin-right: calc(-1 * var(--container-padding, 12px));
-        width: calc(100% + (2 * var(--container-padding, 12px)));
     }
 
     /* Mobile: Profile card (in right-column) comes FIRST */
     .right-column {
         order: 1;
-        gap: 0;
     }
 
     .left-column {
         order: 2;
-        gap: 0;
     }
 
-    /* Edge-to-edge design för alla kort på mobil */
+    /* Edge-to-edge design för alla kort på mobil - styrs av --container-padding från branding */
     .card,
     .profile-card,
     .profile-card-v4,
@@ -2117,15 +2109,12 @@
     .achievements-card,
     .history-card,
     .history-card-full {
-        margin-left: 0 !important;
-        margin-right: 0 !important;
-        border-radius: 0 !important;
+        margin-left: calc(-1 * var(--container-padding, 16px)) !important;
+        margin-right: calc(-1 * var(--container-padding, 16px)) !important;
+        border-radius: var(--radius-md, 0) !important;
         border-left: none !important;
         border-right: none !important;
-        width: 100% !important;
-        /* Intern padding för innehåll - matchar container-padding */
-        padding-left: var(--container-padding, 12px) !important;
-        padding-right: var(--container-padding, 12px) !important;
+        width: calc(100% + (2 * var(--container-padding, 16px))) !important;
     }
 
     /* Profile card mobile - compact badges */
