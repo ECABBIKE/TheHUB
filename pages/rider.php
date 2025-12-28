@@ -626,6 +626,21 @@ try {
         }
     }
 
+    // ===== DEBUG OUTPUT - TEMPORARY =====
+    echo "<!-- DEBUG ACTIVATION -->";
+    echo "<div style='position:fixed; top:10px; right:10px; background:yellow; padding:20px; z-index:9999; border:3px solid red; max-width:400px;'>";
+    echo "<h3 style='color:red; margin:0 0 10px 0;'>🔍 DEBUG ACTIVATION</h3>";
+    echo "<strong>isSuperAdmin:</strong> " . var_export($isSuperAdmin, true) . "<br>";
+    echo "<strong>canClaimProfile:</strong> " . var_export($canClaimProfile, true) . "<br>";
+    echo "<strong>canActivateProfile:</strong> " . var_export($canActivateProfile, true) . "<br>";
+    echo "<strong>hasPendingClaim:</strong> " . var_export($hasPendingClaim, true) . "<br>";
+    echo "<strong>rider email:</strong> " . ($rider['email'] ?? 'NONE') . "<br>";
+    echo "<strong>rider has password:</strong> " . (!empty($rider['password']) ? 'YES' : 'NO') . "<br>";
+    echo "<strong>hub_is_super_admin exists:</strong> " . (function_exists('hub_is_super_admin') ? 'YES' : 'NO') . "<br>";
+    echo "</div>";
+    echo "<!-- END DEBUG -->";
+    // ===== END DEBUG =====
+
 } catch (Exception $e) {
     $error = $e->getMessage();
     $rider = null;
