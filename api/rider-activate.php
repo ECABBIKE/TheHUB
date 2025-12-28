@@ -38,10 +38,17 @@ if (!$isSuperAdmin) {
 }
 
 try {
-    $db = getDB();
+    global $pdo;
+
+    if (!$pdo) {
+        echo json_encode(['success' => false, 'error' => 'Databasanslutning misslyckades']);
+        exit;
+    }
 
     // Get rider
-    $rider = $db->getRow("SELECT id, email, password, firstname, lastname FROM riders WHERE id = ?", [$riderId]);
+    $stmt = $pdo->prepare("SELECT id, email, password, firstname, lastname FROM riders WHERE id = ?");
+    $stmt->execute([$riderId]);
+    $rider = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if (!$rider) {
         echo json_encode(['success' => false, 'error' => 'Profilen hittades inte']);
@@ -62,10 +69,8 @@ try {
     $token = bin2hex(random_bytes(32));
     $expires = date('Y-m-d H:i:s', strtotime('+24 hours'));
 
-    $db->query(
-        "UPDATE riders SET password_reset_token = ?, password_reset_expires = ? WHERE id = ?",
-        [$token, $expires, $riderId]
-    );
+    $stmt = $pdo->prepare("UPDATE riders SET password_reset_token = ?, password_reset_expires = ? WHERE id = ?");
+    $stmt->execute([$token, $expires, $riderId]);
 
     // Build reset link and send email
     $baseUrl = 'https://thehub.gravityseries.se';
