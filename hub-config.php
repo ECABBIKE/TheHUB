@@ -640,7 +640,22 @@ if (!function_exists('hub_get_user_role')) {
      */
     function hub_get_user_role(?int $userId = null): int {
         if ($userId === null) {
-            return $_SESSION['hub_user_role'] ?? ROLE_RIDER;
+            // Check V3 hub session first
+            if (isset($_SESSION['hub_user_role'])) {
+                return $_SESSION['hub_user_role'];
+            }
+
+            // Fallback to admin session (from includes/auth.php login)
+            if (isset($_SESSION['admin_role'])) {
+                $roleMap = [
+                    'super_admin' => ROLE_SUPER_ADMIN,
+                    'admin' => ROLE_ADMIN,
+                    'promotor' => ROLE_PROMOTOR,
+                ];
+                return $roleMap[$_SESSION['admin_role']] ?? ROLE_RIDER;
+            }
+
+            return ROLE_RIDER;
         }
 
         static $cache = [];
