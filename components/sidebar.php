@@ -48,6 +48,19 @@ $sidebarNav = defined('HUB_NAV') ? HUB_NAV : [
 // Load admin tabs config to get navigation from single source of truth
 require_once __DIR__ . '/../includes/config/admin-tabs-config.php';
 
+// Get pending claims count for notification badge (only in admin section)
+$pendingClaimsCount = 0;
+if ($isAdminSection && $isAdminUser) {
+    try {
+        global $pdo;
+        if ($pdo) {
+            $pendingClaimsCount = (int)$pdo->query("SELECT COUNT(*) FROM rider_claims WHERE status = 'pending'")->fetchColumn();
+        }
+    } catch (Exception $e) {
+        $pendingClaimsCount = 0;
+    }
+}
+
 // Build admin navigation from config - show only main groups
 $adminNav = [
     ['id' => 'admin-dashboard', 'label' => 'Dashboard', 'icon' => 'layout-dashboard', 'url' => '/admin/dashboard', 'aria' => 'Admin Dashboard'],
@@ -65,7 +78,7 @@ foreach ($ADMIN_TABS as $groupId => $group) {
     // Get first tab's URL as the group URL
     $firstTabUrl = $group['tabs'][0]['url'] ?? '/admin/';
 
-    $adminNav[] = [
+    $navItem = [
         'id' => 'admin-' . $groupId,
         'label' => $group['title'],
         'icon' => $group['icon'],
@@ -73,6 +86,14 @@ foreach ($ADMIN_TABS as $groupId => $group) {
         'aria' => $group['title'],
         'pages' => get_pages_in_group($groupId) // All pages in this group
     ];
+
+    // Add notification badge for Databas (riders/claims)
+    if ($groupId === 'database' && $pendingClaimsCount > 0) {
+        $navItem['badge'] = $pendingClaimsCount;
+        $navItem['badgeType'] = 'alert'; // Red badge
+    }
+
+    $adminNav[] = $navItem;
 }
 
 // Check if current admin page is active - using pages array from config
@@ -98,13 +119,19 @@ function isAdminPageActive($item, $requestUri) {
         <div class="sidebar-section-title">Admin</div>
         <?php foreach ($adminNav as $item): ?>
           <?php $isActive = isAdminPageActive($item, $_SERVER['REQUEST_URI']); ?>
+          <?php $hasBadge = isset($item['badge']) && $item['badge'] > 0; ?>
           <a href="<?= htmlspecialchars($item['url']) ?>"
-             class="sidebar-link<?= $isActive ? ' is-active' : '' ?>"
+             class="sidebar-link<?= $isActive ? ' is-active' : '' ?><?= $hasBadge ? ' has-badge' : '' ?>"
              data-nav="<?= htmlspecialchars($item['id']) ?>"
              data-tooltip="<?= htmlspecialchars($item['label']) ?>"
              <?= $isActive ? 'aria-current="page"' : '' ?>
              aria-label="<?= htmlspecialchars($item['aria']) ?>">
-            <span class="sidebar-icon" aria-hidden="true"><?= hub_icon($item['icon'], 'sidebar-icon-svg') ?></span>
+            <span class="sidebar-icon" aria-hidden="true">
+              <?= hub_icon($item['icon'], 'sidebar-icon-svg') ?>
+              <?php if ($hasBadge): ?>
+                <span class="sidebar-badge sidebar-badge--<?= $item['badgeType'] ?? 'default' ?>"><?= $item['badge'] ?></span>
+              <?php endif; ?>
+            </span>
             <span class="sidebar-label"><?= htmlspecialchars($item['label']) ?></span>
           </a>
         <?php endforeach; ?>
@@ -256,6 +283,43 @@ function isAdminPageActive($item, $requestUri) {
 /* Admin link styling */
 .sidebar-link--admin {
     color: var(--color-accent-text) !important;
+}
+
+/* Notification badge on sidebar icons */
+.sidebar-icon {
+    position: relative;
+}
+
+.sidebar-badge {
+    position: absolute;
+    top: -6px;
+    right: -8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    font-size: 10px;
+    font-weight: 600;
+    line-height: 1;
+    border-radius: 8px;
+    background: var(--color-text-secondary);
+    color: white;
+}
+
+.sidebar-badge--alert {
+    background: #ef4444;
+    animation: pulse-badge 2s infinite;
+}
+
+@keyframes pulse-badge {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+}
+
+.sidebar-link.has-badge .sidebar-icon-svg {
+    color: #ef4444;
 }
 
 /* ========================================================================

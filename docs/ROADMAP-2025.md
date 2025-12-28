@@ -1,5 +1,5 @@
 # TheHUB - Komplett Projektsammanställning
-**Senast uppdaterad: 2025-12-23**
+**Senast uppdaterad: 2025-12-28**
 **Projektägare: JALLE**
 **Status: Aktiv utveckling**
 **Version:** v3.5
@@ -55,6 +55,30 @@ En komplett plattform för svenska cykeltävlingar, specifikt GravitySeries. Han
 - [x] Public clubs page skapad
 - [x] Import history med rollback
 - [x] Sidebar permanent på desktop
+
+### ✅ Elimination / Dual Slalom (Dec 2025)
+- [x] Databastabeller för elimination brackets
+  - `elimination_qualifying` - Kvalresultat (2 åk, bästa tid för seedning)
+  - `elimination_brackets` - Head-to-head matchningar
+  - `elimination_results` - Slutresultat
+- [x] Admin-sidor för hantering
+  - `/admin/elimination.php` - Översikt
+  - `/admin/elimination-manage.php` - Hantera brackets per event
+  - `/admin/elimination-import-qualifying.php` - CSV-import av kvalresultat
+- [x] Publik visning på eventsida (elimination-flik)
+- [x] Stöd för 8, 16 eller 32 åkare per bracket
+- [x] B-final struktur förberedd
+
+**Flöde:**
+```
+KVAL (2 åk, bästa tid) → Seedning (1-32) → BRACKET → FINAL + 3-4:e plats
+```
+
+**Användning:**
+1. Kör migration via `/admin/run-migrations.php`
+2. Importera kvalresultat (CSV med Startnr, Namn, Kval 1, Kval 2)
+3. Generera bracket (välj storlek 8/16/32)
+4. Mata in heat-resultat
 
 ---
 
@@ -288,6 +312,7 @@ Fas 3: Eventuellt fasa ut WordPress helt
 
 | Datum | Uppdatering |
 |-------|-------------|
+| 2025-12-28 | Elimination/Dual Slalom system implementerat |
 | 2025-12-23 | CSS cleanup: 1426→774 inline styles (-46%) |
 | 2025-12-23 | Roadmap sammanslagen och uppdaterad |
 | 2025-12-18 | Komplett projektsammanställning |
