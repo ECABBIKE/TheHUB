@@ -1313,6 +1313,22 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
         <script>
         const detailedAchievements = <?= json_encode($detailedAchievements) ?>;
 
+        // Format discipline name for display
+        function formatDiscipline(discipline) {
+            const labels = {
+                'enduro': 'Enduro',
+                'downhill': 'Downhill',
+                'dh': 'Downhill',
+                'xc': 'Cross Country',
+                'cross-country': 'Cross Country',
+                'xco': 'XCO',
+                'xcc': 'XCC',
+                'e-mtb': 'E-MTB',
+                'emtb': 'E-MTB'
+            };
+            return labels[discipline?.toLowerCase()] || discipline || '';
+        }
+
         function openAchievementModal(achievementType) {
             const data = detailedAchievements[achievementType];
             if (!data || !data.items || data.items.length === 0) return;
@@ -1328,16 +1344,20 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
                 const year = item.season_year || '';
                 const eventName = item.event_name || item.achievement_value || '';
                 const seriesName = item.series_name || item.series_short_name || '';
+                const discipline = item.discipline || '';
                 const eventId = item.event_id;
                 const eventDate = item.event_date ? new Date(item.event_date).toLocaleDateString('sv-SE', {day: 'numeric', month: 'short', year: 'numeric'}) : '';
+
+                // For championships, show discipline (Enduro, DH, XC) if no series name
+                const categoryLabel = seriesName || (discipline ? formatDiscipline(discipline) : '');
 
                 html += '<div class="achievement-detail-item">';
                 if (eventId) {
                     html += `<a href="/event/${eventId}" class="achievement-detail-link">`;
                 }
                 html += `<div class="achievement-detail-content">`;
-                if (seriesName) {
-                    html += `<span class="achievement-detail-series">${seriesName}</span>`;
+                if (categoryLabel) {
+                    html += `<span class="achievement-detail-series">${categoryLabel}</span>`;
                 }
                 html += `<span class="achievement-detail-name">${eventName}</span>`;
                 html += `<span class="achievement-detail-year">${eventDate || year}</span>`;
