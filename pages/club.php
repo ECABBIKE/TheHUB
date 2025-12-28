@@ -33,6 +33,50 @@ if (!$clubId) {
 
 $currentYear = (int)date('Y');
 
+/**
+ * Compress consecutive years into ranges
+ * "2021, 2022, 2023, 2024" → "2021-2024"
+ * "2019, 2021, 2022, 2023" → "2019, 2021-2023"
+ */
+function compressYears(array $years): string {
+    if (empty($years)) return '';
+
+    $years = array_map('intval', $years);
+    sort($years);
+
+    $ranges = [];
+    $start = $years[0];
+    $end = $years[0];
+
+    for ($i = 1; $i < count($years); $i++) {
+        if ($years[$i] == $end + 1) {
+            $end = $years[$i];
+        } else {
+            // Save current range
+            if ($end - $start >= 2) {
+                $ranges[] = "$start-$end";
+            } elseif ($end > $start) {
+                $ranges[] = "$start, $end";
+            } else {
+                $ranges[] = "$start";
+            }
+            $start = $years[$i];
+            $end = $years[$i];
+        }
+    }
+
+    // Save last range
+    if ($end - $start >= 2) {
+        $ranges[] = "$start-$end";
+    } elseif ($end > $start) {
+        $ranges[] = "$start, $end";
+    } else {
+        $ranges[] = "$start";
+    }
+
+    return implode(', ', $ranges);
+}
+
 try {
     // Fetch club details
     $stmt = $db->prepare("SELECT * FROM clubs WHERE id = ?");
@@ -562,8 +606,7 @@ if (strlen($clubInitials) < 2 && strlen($club['name']) >= 2) {
             <tbody>
                 <?php foreach ($members as $member):
                     $years = explode(',', $member['member_years']);
-                    sort($years);
-                    $yearsStr = implode(', ', $years);
+                    $yearsStr = compressYears($years);
                     $isCurrentMember = in_array($currentYear, $years);
                     $rankingPts = $member['ranking_contribution'] ?? 0;
                 ?>
@@ -602,8 +645,7 @@ if (strlen($clubInitials) < 2 && strlen($club['name']) >= 2) {
     <div class="members-list-mobile">
         <?php foreach ($members as $member):
             $years = explode(',', $member['member_years']);
-            sort($years);
-            $yearsStr = implode(', ', $years);
+            $yearsStr = compressYears($years);
             $isCurrentMember = in_array($currentYear, $years);
             $rankingPts = $member['ranking_contribution'] ?? 0;
         ?>
