@@ -2295,62 +2295,6 @@ document.addEventListener('keydown', function(e) {
 }
 </style>
 
-<!-- ============================================== -->
-<!-- Aktivera konto Modal - ALWAYS RENDERED -->
-<!-- Placed here to ensure modal exists in DOM -->
-<!-- Button visibility controlled by $canActivateProfile (line ~1163) -->
-<!-- ============================================== -->
-<!-- Aktivera konto Modal (for profiles WITH email but no password) -->
-<div id="activateModal" class="claim-modal-overlay">
-    <div class="claim-modal">
-        <div class="claim-modal-header">
-            <h3>
-                <i data-lucide="user-check"></i>
-                Aktivera konto
-            </h3>
-            <button type="button" class="claim-modal-close" onclick="closeActivateModal()">
-                <i data-lucide="x"></i>
-            </button>
-        </div>
-        <div class="claim-modal-body">
-            <div class="claim-info-box claim-info-admin">
-                <i data-lucide="shield-check"></i>
-                <p><strong>Super Admin:</strong> Skicka en aktiveringslänk till denna profil så att användaren kan sätta sitt lösenord.</p>
-            </div>
-
-            <div class="claim-profile-card claim-profile-target">
-                <span class="claim-profile-label">Profil att aktivera</span>
-                <span class="claim-profile-name"><?= htmlspecialchars($rider['firstname'] . ' ' . $rider['lastname']) ?></span>
-                <span class="claim-profile-meta"><?= $resultCount ?> resultat</span>
-            </div>
-
-            <div class="claim-form-group">
-                <label>
-                    <i data-lucide="mail"></i>
-                    E-postadress
-                </label>
-                <input type="email" class="claim-input" value="<?= htmlspecialchars($rider['email']) ?>" readonly style="background: var(--color-bg-secondary);">
-                <span class="claim-field-hint">Ett mail med lösenordslänk skickas hit</span>
-            </div>
-
-            <div class="claim-form-actions">
-                <button type="button" class="btn-secondary" onclick="closeActivateModal()">Avbryt</button>
-                <button type="button" class="btn-primary" onclick="sendActivationEmail(<?= $riderId ?>)">
-                    <i data-lucide="send"></i>
-                    Skicka aktiveringslänk
-                </button>
-            </div>
-        </div>
-        <div id="activateSuccess" class="claim-success" style="display: none;">
-            <i data-lucide="check-circle"></i>
-            <h4>Aktiveringslänk skickad!</h4>
-            <p>Användaren får ett mail med länk för att sätta lösenord.</p>
-            <button type="button" class="btn-primary" onclick="closeActivateModal();">Stäng</button>
-        </div>
-    </div>
-</div>
-
-
 <script>
 function openClaimModal() {
     document.getElementById('claimModal').classList.add('active');
@@ -2410,24 +2354,74 @@ document.getElementById('claimModal')?.addEventListener('click', function(e) {
 <script>
 // Activation modal functions - loaded unconditionally to ensure onclick handlers work
 function openActivateModal() {
-    console.log('🔍 openActivateModal() called');
-    const modal = document.getElementById('activateModal');
+    // Create modal dynamically (like shareProfile does)
+    const modal = document.createElement('div');
+    modal.id = 'activateModal';
+    modal.className = 'claim-modal-overlay active';
+    modal.innerHTML = `
+        <div class="claim-modal">
+            <div class="claim-modal-header">
+                <h3>
+                    <i data-lucide="user-check"></i>
+                    Aktivera konto
+                </h3>
+                <button type="button" class="claim-modal-close" onclick="closeActivateModal()">
+                    <i data-lucide="x"></i>
+                </button>
+            </div>
+            <div class="claim-modal-body">
+                <div class="claim-info-box claim-info-admin">
+                    <i data-lucide="shield-check"></i>
+                    <p><strong>Super Admin:</strong> Skicka en aktiveringslänk till denna profil så att användaren kan sätta sitt lösenord.</p>
+                </div>
 
-    if (modal) {
-        console.log('✅ Modal found, opening...');
-        modal.classList.add('active');
-        document.body.style.overflow = 'hidden';
-    } else {
-        console.error('❌ Modal #activateModal not found in DOM');
-        console.error('   → Check if $canActivateProfile is true (see debug box)');
-        console.error('   → Modal HTML should render around line 2016 if condition is met');
-    }
+                <div class="claim-profile-card claim-profile-target">
+                    <span class="claim-profile-label">Profil att aktivera</span>
+                    <span class="claim-profile-name"><?= htmlspecialchars($rider['firstname'] . ' ' . $rider['lastname']) ?></span>
+                    <span class="claim-profile-meta"><?= count($results) ?> resultat</span>
+                </div>
+
+                <div class="claim-form-group">
+                    <label>
+                        <i data-lucide="mail"></i>
+                        E-postadress
+                    </label>
+                    <input type="email" class="claim-input" value="<?= htmlspecialchars($rider['email']) ?>" readonly style="background: var(--color-bg-secondary);">
+                    <span class="claim-field-hint">Ett mail med lösenordslänk skickas hit</span>
+                </div>
+
+                <div class="claim-form-actions">
+                    <button type="button" class="btn-secondary" onclick="closeActivateModal()">Avbryt</button>
+                    <button type="button" class="btn-primary" onclick="sendActivationEmail(<?= $riderId ?>)">
+                        <i data-lucide="send"></i>
+                        Skicka aktiveringslänk
+                    </button>
+                </div>
+            </div>
+            <div id="activateSuccess" class="claim-success" style="display: none;">
+                <i data-lucide="check-circle"></i>
+                <h4>Aktiveringslänk skickad!</h4>
+                <p>Användaren får ett mail med länk för att sätta lösenord.</p>
+                <button type="button" class="btn-primary" onclick="closeActivateModal();">Stäng</button>
+            </div>
+        </div>
+    `;
+    document.body.appendChild(modal);
+    document.body.style.overflow = 'hidden';
+    
+    // Re-init lucide icons
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+    
+    // Close on overlay click
+    modal.addEventListener('click', (e) => {
+        if (e.target === modal) closeActivateModal();
+    });
 }
 
 function closeActivateModal() {
     const modal = document.getElementById('activateModal');
     if (modal) {
-        modal.classList.remove('active');
+        modal.remove();
         document.body.style.overflow = '';
     }
 }
@@ -2467,24 +2461,6 @@ async function sendActivationEmail(riderId) {
     }
 }
 
-// Safe event listener attachment
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', function() {
-        const modal = document.getElementById('activateModal');
-        if (modal) {
-            modal.addEventListener('click', function(e) {
-                if (e.target === this) closeActivateModal();
-            });
-        }
-    });
-} else {
-    const modal = document.getElementById('activateModal');
-    if (modal) {
-        modal.addEventListener('click', function(e) {
-            if (e.target === this) closeActivateModal();
-        });
-    }
-}
 </script>
 
 <!-- Chart.js Initialization -->
