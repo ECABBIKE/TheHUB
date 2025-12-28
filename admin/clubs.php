@@ -129,46 +129,72 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     } elseif ($action === 'merge') {
         $keepId = intval($_POST['keep_id'] ?? 0);
-        $mergeId = intval($_POST['merge_id'] ?? 0);
+        $mergeIds = $_POST['merge_ids'] ?? [];
 
-        if ($keepId && $mergeId && $keepId !== $mergeId) {
+        // Support both old format (single merge_id) and new format (array of merge_ids)
+        if (empty($mergeIds) && !empty($_POST['merge_id'])) {
+            $mergeIds = [intval($_POST['merge_id'])];
+        }
+
+        // Ensure mergeIds is array of integers
+        $mergeIds = array_map('intval', (array)$mergeIds);
+        $mergeIds = array_filter($mergeIds, fn($id) => $id > 0 && $id !== $keepId);
+
+        if ($keepId && !empty($mergeIds)) {
             try {
                 // Get club names for message
                 $keepClub = $db->getRow("SELECT name FROM clubs WHERE id = ?", [$keepId]);
-                $mergeClub = $db->getRow("SELECT name FROM clubs WHERE id = ?", [$mergeId]);
+                if (!$keepClub) {
+                    throw new Exception('Målklubben hittades inte');
+                }
 
-                if (!$keepClub || !$mergeClub) {
-                    throw new Exception('En eller båda klubbarna hittades inte');
+                $mergedNames = [];
+                foreach ($mergeIds as $mergeId) {
+                    $mergeClub = $db->getRow("SELECT name FROM clubs WHERE id = ?", [$mergeId]);
+                    if ($mergeClub) {
+                        $mergedNames[] = $mergeClub['name'];
+                    }
+                }
+
+                if (empty($mergedNames)) {
+                    throw new Exception('Inga klubbar att slå samman hittades');
                 }
 
                 $db->pdo->beginTransaction();
 
-                // Move riders to keep club
-                $stmt = $db->pdo->prepare("UPDATE riders SET club_id = ? WHERE club_id = ?");
-                $stmt->execute([$keepId, $mergeId]);
-
-                // Move results to keep club (if column exists)
-                try {
-                    $stmt = $db->pdo->prepare("UPDATE results SET club_id = ? WHERE club_id = ?");
+                foreach ($mergeIds as $mergeId) {
+                    // Move riders to keep club
+                    $stmt = $db->pdo->prepare("UPDATE riders SET club_id = ? WHERE club_id = ?");
                     $stmt->execute([$keepId, $mergeId]);
-                } catch (Exception $e) {
-                    // Column might not exist, skip
-                }
 
-                // Move rider_club_seasons to keep club (if table exists)
-                try {
-                    $stmt = $db->pdo->prepare("UPDATE rider_club_seasons SET club_id = ? WHERE club_id = ?");
-                    $stmt->execute([$keepId, $mergeId]);
-                } catch (Exception $e) {
-                    // Table might not exist, skip
-                }
+                    // Move results to keep club (if column exists)
+                    try {
+                        $stmt = $db->pdo->prepare("UPDATE results SET club_id = ? WHERE club_id = ?");
+                        $stmt->execute([$keepId, $mergeId]);
+                    } catch (Exception $e) {
+                        // Column might not exist, skip
+                    }
 
-                // Delete the merged club
-                $db->pdo->prepare("DELETE FROM clubs WHERE id = ?")->execute([$mergeId]);
+                    // Move rider_club_seasons to keep club (if table exists)
+                    try {
+                        $stmt = $db->pdo->prepare("UPDATE rider_club_seasons SET club_id = ? WHERE club_id = ?");
+                        $stmt->execute([$keepId, $mergeId]);
+                    } catch (Exception $e) {
+                        // Table might not exist, skip
+                    }
+
+                    // Delete the merged club
+                    $db->pdo->prepare("DELETE FROM clubs WHERE id = ?")->execute([$mergeId]);
+                }
 
                 $db->pdo->commit();
 
-                $message = "Klubben \"{$mergeClub['name']}\" har slagits samman med \"{$keepClub['name']}\"";
+                $count = count($mergedNames);
+                if ($count === 1) {
+                    $message = "Klubben \"{$mergedNames[0]}\" har slagits samman med \"{$keepClub['name']}\"";
+                } else {
+                    $message = "{$count} klubbar har slagits samman med \"{$keepClub['name']}\": " . implode(', ', $mergedNames);
+                }
                 $messageType = 'success';
             } catch (Exception $e) {
                 if ($db->pdo->inTransaction()) {
@@ -178,7 +204,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $messageType = 'error';
             }
         } else {
-            $message = 'Välj två olika klubbar att slå samman';
+            $message = 'Välj minst två klubbar att slå samman';
             $messageType = 'error';
         }
     }

@@ -134,7 +134,7 @@ function calculateSeriesPointsDetailed($db, $templateId, $position, $status = 'f
  * @return array Stats: ['inserted' => X, 'updated' => X, 'deleted' => X]
  */
 function recalculateSeriesEventPoints($db, $seriesId, $eventId) {
-    $stats = ['inserted' => 0, 'updated' => 0, 'deleted' => 0, 'dh_recalculated' => false, 'positions_recalculated' => false];
+    $stats = ['inserted' => 0, 'updated' => 0, 'deleted' => 0];
 
     // Get the template for this event in this series
     $seriesEvent = $db->getRow(
@@ -149,82 +149,16 @@ function recalculateSeriesEventPoints($db, $seriesId, $eventId) {
 
     $templateId = $seriesEvent['template_id'];
 
-    // Check if this is a DH scale (has run_1_points/run_2_points values in template)
-    $isDHScale = false;
-    if ($templateId) {
-        $dhCheck = $db->getRow(
-            "SELECT COUNT(*) as cnt FROM point_scale_values
-             WHERE scale_id = ? AND (run_1_points > 0 OR run_2_points > 0)",
-            [$templateId]
-        );
-        $isDHScale = ($dhCheck['cnt'] ?? 0) > 0;
-    }
-
-    // Get event info including format
+    // Get event level for potential future use
     $event = $db->getRow(
-        "SELECT COALESCE(event_level, 'national') as event_level, event_format, discipline FROM events WHERE id = ?",
+        "SELECT COALESCE(event_level, 'national') as event_level FROM events WHERE id = ?",
         [$eventId]
     );
     $eventLevel = $event ? $event['event_level'] : 'national';
-    $eventFormat = $event['event_format'] ?? '';
-    $discipline = $event['discipline'] ?? '';
-
-    // Determine if this is a DH event - check multiple indicators
-    $isDHEvent = (
-        $eventFormat === 'DH_SWECUP' ||
-        $eventFormat === 'DH_STANDARD' ||
-        ($discipline === 'DH' && $isDHScale)
-    );
-
-    // Include point-calculations.php if not already loaded (needed for recalculation functions)
-    if (!function_exists('recalculateEventResults')) {
-        require_once __DIR__ . '/point-calculations.php';
-    }
-
-    // Check if positions/points are missing in results table
-    $dataCheck = $db->getRow("
-        SELECT COUNT(*) as total,
-               SUM(CASE WHEN position IS NOT NULL AND position > 0 THEN 1 ELSE 0 END) as has_position,
-               SUM(CASE WHEN COALESCE(run_1_points, 0) > 0 OR COALESCE(run_2_points, 0) > 0 THEN 1 ELSE 0 END) as has_run_points
-        FROM results
-        WHERE event_id = ? AND status = 'finished'
-    ", [$eventId]);
-
-    $totalResults = (int)($dataCheck['total'] ?? 0);
-    $hasPositions = (int)($dataCheck['has_position'] ?? 0);
-    $hasRunPoints = (int)($dataCheck['has_run_points'] ?? 0);
-
-    // Determine if we need to recalculate
-    $needsRecalc = false;
-    if ($totalResults > 0) {
-        if ($isDHScale && $isDHEvent) {
-            // DH events: Need recalc if run_1_points/run_2_points are missing
-            $needsRecalc = ($hasRunPoints < ($totalResults * 0.5));
-        } else {
-            // Standard events: Need recalc if positions are missing
-            $needsRecalc = ($hasPositions < ($totalResults * 0.5));
-        }
-    }
-
-    if ($needsRecalc) {
-        if ($isDHScale && $isDHEvent) {
-            // DH event: Use DH recalculation with run-specific positions
-            error_log("Series points: Running DH recalculation for event {$eventId} with scale {$templateId}");
-            recalculateDHEventResults($db, $eventId, $templateId, true);
-            $stats['dh_recalculated'] = true;
-        } else {
-            // Standard event: Use normal recalculation
-            error_log("Series points: Running position recalculation for event {$eventId} with scale {$templateId}");
-            recalculateEventResults($db, $eventId, $templateId);
-            $stats['positions_recalculated'] = true;
-        }
-    }
 
     // Get all results for this event - ONLY classes that award points AND are series eligible
-    // For DH events, also fetch the already-calculated run_1_points and run_2_points
     $results = $db->getAll("
-        SELECT r.id, r.cyclist_id, r.class_id, r.position, r.status,
-               r.run_1_points as results_run_1, r.run_2_points as results_run_2
+        SELECT r.id, r.cyclist_id, r.class_id, r.position, r.status
         FROM results r
         INNER JOIN classes cl ON r.class_id = cl.id
         WHERE r.event_id = ?
@@ -248,27 +182,13 @@ function recalculateSeriesEventPoints($db, $seriesId, $eventId) {
     }
 
     foreach ($results as $result) {
-        $pointsData = ['total' => 0, 'run_1' => 0, 'run_2' => 0];
-
-        if ($isDHScale && $isDHEvent) {
-            // DH scale AND DH event: Use the already-calculated run_1_points and run_2_points from results table
-            // These were calculated with the correct run-specific positions
-            $run1 = (float)($result['results_run_1'] ?? 0);
-            $run2 = (float)($result['results_run_2'] ?? 0);
-            $pointsData = [
-                'total' => (int)($run1 + $run2),
-                'run_1' => (int)$run1,
-                'run_2' => (int)$run2
-            ];
-        } else {
-            // Standard scale: Calculate from template using position
-            $pointsData = calculateSeriesPointsDetailed(
-                $db,
-                $templateId,
-                $result['position'],
-                $result['status']
-            );
-        }
+        // Calculate points from template using position
+        $pointsData = calculateSeriesPointsDetailed(
+            $db,
+            $templateId,
+            $result['position'],
+            $result['status']
+        );
         $points = $pointsData['total'];
 
         // Check if series_result already exists using lookup map (no DB query!)
@@ -278,24 +198,18 @@ function recalculateSeriesEventPoints($db, $seriesId, $eventId) {
         if ($existing) {
             // Update if points changed
             if ($existing['points'] != $points) {
-                $updateData = [
+                $db->update('series_results', [
                     'position' => $result['position'],
                     'status' => $result['status'],
                     'points' => $points,
                     'template_id' => $templateId,
                     'calculated_at' => date('Y-m-d H:i:s')
-                ];
-                // Add run_1/run_2 if DH scale (check if columns exist)
-                if ($pointsData['run_1'] > 0 || $pointsData['run_2'] > 0) {
-                    $updateData['run_1_points'] = $pointsData['run_1'];
-                    $updateData['run_2_points'] = $pointsData['run_2'];
-                }
-                $db->update('series_results', $updateData, 'id = ?', [$existing['id']]);
+                ], 'id = ?', [$existing['id']]);
                 $stats['updated']++;
             }
         } else {
             // Insert new series_result
-            $insertData = [
+            $db->insert('series_results', [
                 'series_id' => $seriesId,
                 'event_id' => $eventId,
                 'cyclist_id' => $result['cyclist_id'],
@@ -304,13 +218,7 @@ function recalculateSeriesEventPoints($db, $seriesId, $eventId) {
                 'status' => $result['status'],
                 'points' => $points,
                 'template_id' => $templateId
-            ];
-            // Add run_1/run_2 if DH scale
-            if ($pointsData['run_1'] > 0 || $pointsData['run_2'] > 0) {
-                $insertData['run_1_points'] = $pointsData['run_1'];
-                $insertData['run_2_points'] = $pointsData['run_2'];
-            }
-            $db->insert('series_results', $insertData);
+            ]);
             $stats['inserted']++;
         }
     }
