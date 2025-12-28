@@ -2124,7 +2124,7 @@ function renderRiderAchievements(PDO $pdo, int $rider_id, array $stats = null): 
         <div class="achievement-modal-content">
             <div class="achievement-modal-header">
                 <h3 id="achievement-modal-title">Events</h3>
-                <button type="button" class="achievement-modal-close" onclick="closeAchievementModal()">
+                <button type="button" class="achievement-modal-close" id="achievement-modal-close-btn">
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
                 </button>
             </div>
@@ -2157,9 +2157,11 @@ function renderRiderAchievements(PDO $pdo, int $rider_id, array $stats = null): 
         inset: 0;
         background: rgba(0,0,0,0.5);
         backdrop-filter: blur(2px);
+        z-index: 1;
     }
     .achievement-modal-content {
         position: relative;
+        z-index: 2;
         background: var(--color-bg-surface, #fff);
         border-radius: var(--radius-lg, 12px);
         box-shadow: 0 20px 60px rgba(0,0,0,0.3);
@@ -2322,6 +2324,13 @@ function renderRiderAchievements(PDO $pdo, int $rider_id, array $stats = null): 
         window.closeAchievementModal = function() {
             document.getElementById('achievement-modal').style.display = 'none';
         };
+
+        // Close button click
+        document.getElementById('achievement-modal-close-btn').addEventListener('click', function(e) {
+            e.preventDefault();
+            e.stopPropagation();
+            closeAchievementModal();
+        });
 
         // Close on overlay click
         document.addEventListener('click', function(e) {
