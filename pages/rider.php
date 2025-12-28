@@ -626,21 +626,6 @@ try {
         }
     }
 
-    // ===== DEBUG OUTPUT - TEMPORARY =====
-    echo "<!-- DEBUG ACTIVATION -->";
-    echo "<div style='position:fixed; top:10px; right:10px; background:yellow; padding:20px; z-index:9999; border:3px solid red; max-width:400px;'>";
-    echo "<h3 style='color:red; margin:0 0 10px 0;'>🔍 DEBUG ACTIVATION</h3>";
-    echo "<strong>isSuperAdmin:</strong> " . var_export($isSuperAdmin, true) . "<br>";
-    echo "<strong>canClaimProfile:</strong> " . var_export($canClaimProfile, true) . "<br>";
-    echo "<strong>canActivateProfile:</strong> " . var_export($canActivateProfile, true) . "<br>";
-    echo "<strong>hasPendingClaim:</strong> " . var_export($hasPendingClaim, true) . "<br>";
-    echo "<strong>rider email:</strong> " . ($rider['email'] ?? 'NONE') . "<br>";
-    echo "<strong>rider has password:</strong> " . (!empty($rider['password']) ? 'YES' : 'NO') . "<br>";
-    echo "<strong>hub_is_super_admin exists:</strong> " . (function_exists('hub_is_super_admin') ? 'YES' : 'NO') . "<br>";
-    echo "</div>";
-    echo "<!-- END DEBUG -->";
-    // ===== END DEBUG =====
-
 } catch (Exception $e) {
     $error = $e->getMessage();
     $rider = null;
@@ -1169,20 +1154,16 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
                     <i data-lucide="share-2"></i>
                     <span>Dela</span>
                 </button>
-                <!-- DEBUG: Before button check -->
                 <?php if ($canClaimProfile): ?>
-                <!-- DEBUG: Showing CLAIM button -->
                 <button type="button" class="btn-action-outline btn-claim-profile" onclick="openClaimModal()" title="Koppla e-postadress till denna profil">
                     <i data-lucide="mail-plus"></i>
                     <span>Koppla e-post</span>
                 </button>
                 <?php elseif ($canActivateProfile): ?>
-                <!-- DEBUG: Showing ACTIVATE button -->
                 <button type="button" class="btn-action-outline btn-activate-profile" onclick="openActivateModal()" title="Skicka aktiveringslänk till <?= htmlspecialchars($rider['email']) ?>">
                     <i data-lucide="user-check"></i>
                     <span>Aktivera konto</span>
                 </button>
-                <!-- DEBUG: After ACTIVATE button -->
                 <?php elseif ($hasPendingClaim): ?>
                 <button type="button" class="btn-action-outline btn-claim-pending" disabled>
                     <i data-lucide="clock"></i>
@@ -2012,9 +1993,7 @@ document.addEventListener('keydown', function(e) {
 </div>
 
 <!-- Aktivera konto Modal (for profiles WITH email but no password) -->
-<!-- DEBUG: canActivateProfile = <?= var_export($canActivateProfile, true) ?> -->
-<?php if (true): // FORCE RENDER - WAS: if ($canActivateProfile): ?>
-<!-- DEBUG: INSIDE canActivateProfile - Modal SHOULD be rendered below -->
+<?php if ($canActivateProfile): ?>
 <div id="activateModal" class="claim-modal-overlay">
     <div class="claim-modal">
         <div class="claim-modal-header">
@@ -2063,8 +2042,7 @@ document.addEventListener('keydown', function(e) {
         </div>
     </div>
 </div>
-<?php endif; // FORCE RENDER ?>
-<!-- DEBUG: After activateModal endif -->
+<?php endif; ?>
 
 <style>
 .claim-modal-overlay {
@@ -2423,24 +2401,30 @@ document.getElementById('claimModal')?.addEventListener('click', function(e) {
 </script>
 <?php endif; ?>
 
-<?php if (true): // FORCE RENDER - WAS: if ($canActivateProfile): ?>
+<!-- Activation Modal JavaScript - Always loaded -->
 <script>
+// Activation modal functions - loaded unconditionally to ensure onclick handlers work
 function openActivateModal() {
-    console.log('🔍 openActivateModal called!');
+    console.log('🔍 openActivateModal() called');
     const modal = document.getElementById('activateModal');
-    console.log('🔍 Modal element:', modal);
+
     if (modal) {
+        console.log('✅ Modal found, opening...');
         modal.classList.add('active');
-        console.log('🔍 Added active class');
         document.body.style.overflow = 'hidden';
     } else {
-        console.error('❌ activateModal element not found!');
+        console.error('❌ Modal #activateModal not found in DOM');
+        console.error('   → Check if $canActivateProfile is true (see debug box)');
+        console.error('   → Modal HTML should render around line 2016 if condition is met');
     }
 }
 
 function closeActivateModal() {
-    document.getElementById('activateModal').classList.remove('active');
-    document.body.style.overflow = '';
+    const modal = document.getElementById('activateModal');
+    if (modal) {
+        modal.classList.remove('active');
+        document.body.style.overflow = '';
+    }
 }
 
 async function sendActivationEmail(riderId) {
@@ -2478,12 +2462,25 @@ async function sendActivationEmail(riderId) {
     }
 }
 
-// Close modal on overlay click
-document.getElementById('activateModal')?.addEventListener('click', function(e) {
-    if (e.target === this) closeActivateModal();
-});
+// Safe event listener attachment
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', function() {
+        const modal = document.getElementById('activateModal');
+        if (modal) {
+            modal.addEventListener('click', function(e) {
+                if (e.target === this) closeActivateModal();
+            });
+        }
+    });
+} else {
+    const modal = document.getElementById('activateModal');
+    if (modal) {
+        modal.addEventListener('click', function(e) {
+            if (e.target === this) closeActivateModal();
+        });
+    }
+}
 </script>
-<?php endif; // FORCE RENDER ?>
 
 <!-- Chart.js Initialization -->
 <?php if ($hasRankingChart || $hasFormChart): ?>
