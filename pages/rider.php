@@ -1991,8 +1991,9 @@ document.addEventListener('keydown', function(e) {
         </div>
     </div>
 </div>
+<?php endif; ?>
 
-
+<!-- Modal CSS - Always loaded for both claim and activate modals -->
 <style>
 .claim-modal-overlay {
     display: none;
@@ -2295,6 +2296,7 @@ document.addEventListener('keydown', function(e) {
 }
 </style>
 
+<?php if ($canClaimProfile): ?>
 <script>
 function openClaimModal() {
     document.getElementById('claimModal').classList.add('active');
