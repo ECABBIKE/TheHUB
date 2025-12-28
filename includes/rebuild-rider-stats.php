@@ -256,16 +256,18 @@ function getRiderSocialProfiles($pdo, $rider_id) {
     $profiles = [];
 
     if (!empty($row['social_instagram'])) {
+        $ig = $row['social_instagram'];
         $profiles['instagram'] = [
-            'username' => $row['social_instagram'],
-            'url' => 'https://instagram.com/' . $row['social_instagram']
+            'username' => $ig,
+            'url' => strpos($ig, 'http') === 0 ? $ig : 'https://instagram.com/' . ltrim($ig, '@')
         ];
     }
 
     if (!empty($row['social_strava'])) {
+        $strava = $row['social_strava'];
         $profiles['strava'] = [
-            'id' => $row['social_strava'],
-            'url' => 'https://strava.com/athletes/' . $row['social_strava']
+            'id' => $strava,
+            'url' => strpos($strava, 'http') === 0 ? $strava : 'https://strava.com/athletes/' . $strava
         ];
     }
 
@@ -279,18 +281,24 @@ function getRiderSocialProfiles($pdo, $rider_id) {
 
     if (!empty($row['social_youtube'])) {
         $yt = $row['social_youtube'];
+        if (strpos($yt, 'http') === 0) {
+            $url = $yt;
+        } elseif (strpos($yt, '@') === 0) {
+            $url = 'https://youtube.com/' . $yt;
+        } else {
+            $url = 'https://youtube.com/@' . $yt;
+        }
         $profiles['youtube'] = [
             'id' => $yt,
-            'url' => strpos($yt, '@') === 0
-                ? 'https://youtube.com/' . $yt
-                : 'https://youtube.com/channel/' . $yt
+            'url' => $url
         ];
     }
 
     if (!empty($row['social_tiktok'])) {
+        $tt = $row['social_tiktok'];
         $profiles['tiktok'] = [
-            'username' => $row['social_tiktok'],
-            'url' => 'https://tiktok.com/@' . ltrim($row['social_tiktok'], '@')
+            'username' => $tt,
+            'url' => strpos($tt, 'http') === 0 ? $tt : 'https://tiktok.com/@' . ltrim($tt, '@')
         ];
     }
 
