@@ -21,6 +21,8 @@ if (!function_exists('timeToSeconds')) {
         if (empty($time)) return PHP_INT_MAX;
         // Treat "0:00", "0:00:00" etc as invalid (no time recorded)
         if (preg_match('/^0+[:.]?0*[:.]?0*$/', $time)) return PHP_INT_MAX;
+        // Treat status values as invalid
+        if (in_array(strtolower($time), ['dns', 'dnf', 'dq', 'dsq'])) return PHP_INT_MAX;
         $decimal = 0;
         if (preg_match('/(\.\d+)$/', $time, $matches)) {
             $decimal = floatval($matches[1]);
@@ -46,6 +48,8 @@ if (!function_exists('formatDisplayTime')) {
         if (empty($time)) return null;
         // Treat "0:00" etc as no time
         if (preg_match('/^0+[:.]?0*[:.]?0*$/', $time)) return null;
+        // Treat status values as no time
+        if (in_array(strtolower($time), ['dns', 'dnf', 'dq', 'dsq'])) return null;
         $decimal = '';
         if (preg_match('/(\.\d+)$/', $time, $matches)) {
             $decimal = $matches[1];
