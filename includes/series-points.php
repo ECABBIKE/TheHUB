@@ -149,6 +149,17 @@ function recalculateSeriesEventPoints($db, $seriesId, $eventId) {
 
     $templateId = $seriesEvent['template_id'];
 
+    // Check if this is a DH scale (has run_1_points/run_2_points values in template)
+    $isDHScale = false;
+    if ($templateId) {
+        $dhCheck = $db->getRow(
+            "SELECT COUNT(*) as cnt FROM point_scale_values
+             WHERE scale_id = ? AND (run_1_points > 0 OR run_2_points > 0)",
+            [$templateId]
+        );
+        $isDHScale = ($dhCheck['cnt'] ?? 0) > 0;
+    }
+
     // Get event_level for sportmotion multiplier
     $event = $db->getRow(
         "SELECT COALESCE(event_level, 'national') as event_level FROM events WHERE id = ?",
@@ -157,8 +168,10 @@ function recalculateSeriesEventPoints($db, $seriesId, $eventId) {
     $eventLevel = $event ? $event['event_level'] : 'national';
 
     // Get all results for this event - ONLY classes that award points AND are series eligible
+    // For DH events, also fetch the already-calculated run_1_points and run_2_points
     $results = $db->getAll("
-        SELECT r.id, r.cyclist_id, r.class_id, r.position, r.status
+        SELECT r.id, r.cyclist_id, r.class_id, r.position, r.status,
+               r.run_1_points as results_run_1, r.run_2_points as results_run_2
         FROM results r
         INNER JOIN classes cl ON r.class_id = cl.id
         WHERE r.event_id = ?
@@ -182,13 +195,27 @@ function recalculateSeriesEventPoints($db, $seriesId, $eventId) {
     }
 
     foreach ($results as $result) {
-        // Calculate points using detailed function (includes run_1/run_2 for DH)
-        $pointsData = calculateSeriesPointsDetailed(
-            $db,
-            $templateId,
-            $result['position'],
-            $result['status']
-        );
+        $pointsData = ['total' => 0, 'run_1' => 0, 'run_2' => 0];
+
+        if ($isDHScale) {
+            // DH scale: Use the already-calculated run_1_points and run_2_points from results table
+            // These were calculated with the correct run-specific positions
+            $run1 = (float)($result['results_run_1'] ?? 0);
+            $run2 = (float)($result['results_run_2'] ?? 0);
+            $pointsData = [
+                'total' => (int)($run1 + $run2),
+                'run_1' => (int)$run1,
+                'run_2' => (int)$run2
+            ];
+        } else {
+            // Standard scale: Calculate from template using position
+            $pointsData = calculateSeriesPointsDetailed(
+                $db,
+                $templateId,
+                $result['position'],
+                $result['status']
+            );
+        }
         $points = $pointsData['total'];
 
         // Check if series_result already exists using lookup map (no DB query!)
