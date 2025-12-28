@@ -350,6 +350,31 @@
    MOBILE STYLES
    ============================================ */
 @media (max-width: 767px) {
+    /* Filter bar - card-style centered on mobile */
+    .filter-bar {
+        flex-direction: column;
+        align-items: center;
+        background: var(--color-bg-card);
+        padding: var(--space-lg);
+        border-radius: var(--radius-lg);
+        gap: var(--space-md);
+    }
+
+    .filter-group {
+        width: 100%;
+        max-width: 280px;
+        text-align: center;
+    }
+
+    .filter-label {
+        display: block;
+        margin-bottom: var(--space-xs);
+    }
+
+    .filter-select {
+        width: 100%;
+    }
+
     .calendar-events {
         gap: var(--space-lg);
     }

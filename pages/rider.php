@@ -2296,8 +2296,8 @@ document.addEventListener('keydown', function(e) {
 /* Mobile Modal - Between header and bottom nav */
 @media (max-width: 767px) {
     .claim-modal-overlay {
-        top: var(--header-height, 60px);
-        bottom: var(--mobile-nav-height, 64px);
+        top: calc(var(--header-height, 60px) + env(safe-area-inset-top, 0px));
+        bottom: calc(var(--mobile-nav-height, 95px) + env(safe-area-inset-bottom, 0px));
         padding: 0;
         overflow: hidden;
         align-items: stretch;

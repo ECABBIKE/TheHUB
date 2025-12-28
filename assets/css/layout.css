@@ -114,6 +114,9 @@
     padding-bottom:calc(var(--container-padding) + var(--mobile-nav-height) + env(safe-area-inset-bottom) + 60px);
     margin-left:0;
     width:100%;
+    /* Ensure touch scrolling works on mobile */
+    -webkit-overflow-scrolling:touch;
+    touch-action:pan-y;
   }
 }
 
