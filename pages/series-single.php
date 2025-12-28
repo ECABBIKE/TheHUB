@@ -99,18 +99,33 @@ try {
     }
 
     // Check if this series uses DH-style points (run_1_points + run_2_points)
+    // Also check series_results to see if any results have run_1_points or run_2_points populated
     $isDHSeries = false;
     if (!empty($eventsWithPoints)) {
         $firstEvent = reset($eventsWithPoints);
         if (!empty($firstEvent['template_id'])) {
+            // Check point_scale_values for DH template (handles NULL values)
             $dhCheck = $db->prepare("
-                SELECT COUNT(*) as cnt FROM point_scale_values
-                WHERE scale_id = ? AND (run_1_points > 0 OR run_2_points > 0)
+                SELECT COUNT(*) FROM point_scale_values
+                WHERE scale_id = ? AND (COALESCE(run_1_points, 0) > 0 OR COALESCE(run_2_points, 0) > 0)
             ");
             $dhCheck->execute([$firstEvent['template_id']]);
             $isDHSeries = ($dhCheck->fetchColumn() > 0);
         }
+
+        // Also check if series_results has DH data (backup detection)
+        if (!$isDHSeries) {
+            $dhResultsCheck = $db->prepare("
+                SELECT COUNT(*) FROM series_results
+                WHERE series_id = ? AND (COALESCE(run_1_points, 0) > 0 OR COALESCE(run_2_points, 0) > 0)
+            ");
+            $dhResultsCheck->execute([$seriesId]);
+            $isDHSeries = ($dhResultsCheck->fetchColumn() > 0);
+        }
     }
+
+    // Debug log for DH detection
+    error_log("SERIES {$seriesId}: isDHSeries = " . ($isDHSeries ? 'TRUE' : 'FALSE'));
 
     // Get all classes that have results in this series (only series-eligible classes that award points)
     $stmt = $db->prepare("
