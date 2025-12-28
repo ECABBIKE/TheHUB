@@ -43,7 +43,20 @@ error_log("RIDER_ACTIVATE: admin_role from session: " . ($_SESSION['admin_role']
 if (!$isSuperAdmin) {
     http_response_code(403);
     error_log("RIDER_ACTIVATE: Access denied - not super admin");
-    echo json_encode(['success' => false, 'error' => 'Endast super admin kan skicka aktiveringslänkar']);
+
+    // Return detailed debug info in non-production
+    $debugInfo = [
+        'admin_logged_in' => isset($_SESSION['admin_logged_in']) ? 'yes' : 'no',
+        'admin_role' => $_SESSION['admin_role'] ?? 'not set',
+        'hub_user_role' => $_SESSION['hub_user_role'] ?? 'not set',
+        'function_exists' => function_exists('hub_is_super_admin') ? 'yes' : 'no'
+    ];
+
+    echo json_encode([
+        'success' => false,
+        'error' => 'Endast super admin kan skicka aktiveringslänkar',
+        'debug' => $debugInfo
+    ]);
     exit;
 }
 
