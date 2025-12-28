@@ -45,8 +45,9 @@ function calculateSeriesPointsForPosition($db, $templateId, $position, $status =
     }
 
     // Get points from point_scale_values table
+    // For DH scales, points may be in run_1_points + run_2_points instead of points column
     $pointValue = $db->getRow(
-        "SELECT psv.points
+        "SELECT psv.points, psv.run_1_points, psv.run_2_points
          FROM point_scale_values psv
          JOIN point_scales ps ON psv.scale_id = ps.id
          WHERE ps.id = ? AND ps.active = 1 AND psv.position = ?",
@@ -54,7 +55,18 @@ function calculateSeriesPointsForPosition($db, $templateId, $position, $status =
     );
 
     if ($pointValue) {
-        $points = (int)$pointValue['points'];
+        // Check for DH scale format: run_1_points + run_2_points
+        $run1 = (float)($pointValue['run_1_points'] ?? 0);
+        $run2 = (float)($pointValue['run_2_points'] ?? 0);
+
+        if ($run1 > 0 || $run2 > 0) {
+            // DH scale - use combined run points
+            $points = (int)($run1 + $run2);
+        } else {
+            // Standard scale - use points column
+            $points = (int)$pointValue['points'];
+        }
+
         // NOTE: NO event_level multiplier for series points!
         // event_level (sportmotion/national) only affects RANKING points, not series.
         // Series points are determined solely by the template_id in series_events.
