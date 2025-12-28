@@ -1169,16 +1169,20 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
                     <i data-lucide="share-2"></i>
                     <span>Dela</span>
                 </button>
+                <!-- DEBUG: Before button check -->
                 <?php if ($canClaimProfile): ?>
+                <!-- DEBUG: Showing CLAIM button -->
                 <button type="button" class="btn-action-outline btn-claim-profile" onclick="openClaimModal()" title="Koppla e-postadress till denna profil">
                     <i data-lucide="mail-plus"></i>
                     <span>Koppla e-post</span>
                 </button>
                 <?php elseif ($canActivateProfile): ?>
+                <!-- DEBUG: Showing ACTIVATE button -->
                 <button type="button" class="btn-action-outline btn-activate-profile" onclick="openActivateModal()" title="Skicka aktiveringslänk till <?= htmlspecialchars($rider['email']) ?>">
                     <i data-lucide="user-check"></i>
                     <span>Aktivera konto</span>
                 </button>
+                <!-- DEBUG: After ACTIVATE button -->
                 <?php elseif ($hasPendingClaim): ?>
                 <button type="button" class="btn-action-outline btn-claim-pending" disabled>
                     <i data-lucide="clock"></i>
