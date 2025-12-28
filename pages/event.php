@@ -1115,14 +1115,14 @@ if (!empty($eventSponsors['content'])): ?>
                     <?php if ($eventFormat === 'DH_SWECUP'): ?>
                     <th class="col-time col-dh-run table-col-hide-mobile sortable-header" data-sort="run1" onclick="sortDHByRun(this, '<?= $classKey ?>', 1)">Kval <span class="sort-icon"></span></th>
                     <th class="col-time col-dh-run table-col-hide-mobile sortable-header" data-sort="run2" onclick="sortDHByRun(this, '<?= $classKey ?>', 2)">Final <span class="sort-icon"></span></th>
-                    <th class="col-time">Tid</th>
+                    <th class="col-time sortable-header" data-sort="time" onclick="sortByTime(this, '<?= $classKey ?>')">Tid <span class="sort-icon"></span></th>
                     <?php else: ?>
                     <th class="col-time col-dh-run table-col-hide-mobile sortable-header" data-sort="run1" onclick="sortDHByRun(this, '<?= $classKey ?>', 1)">Åk 1 <span class="sort-icon"></span></th>
                     <th class="col-time col-dh-run table-col-hide-mobile sortable-header" data-sort="run2" onclick="sortDHByRun(this, '<?= $classKey ?>', 2)">Åk 2 <span class="sort-icon"></span></th>
-                    <th class="col-time">Bästa</th>
+                    <th class="col-time sortable-header" data-sort="best" onclick="sortByTime(this, '<?= $classKey ?>')">Bästa <span class="sort-icon"></span></th>
                     <?php endif; ?>
                     <?php else: ?>
-                    <th class="col-time">Tid</th>
+                    <th class="col-time sortable-header" data-sort="time" onclick="sortByTime(this, '<?= $classKey ?>')">Tid <span class="sort-icon"></span></th>
                     <?php foreach ($classSplits as $ss): ?>
                     <?php if ($isMotionOrKids): ?>
                     <th class="col-split split-time-col table-col-hide-mobile"><?= $stageNames[$ss] ?? 'SS' . $ss ?></th>
@@ -1222,29 +1222,34 @@ if (!empty($eventSponsors['content'])): ?>
                         <span class="text-secondary">DNS</span>
                         <?php endif; ?>
                     </td>
-                    <td class="col-time font-bold">
-                        <?php
-                        $bestTime = null;
-                        // Helper to check if time is valid (not empty, not 0:00)
-                        $isValidDHTime = function($t) {
-                            return !empty($t) && !preg_match('/^0+[:.]?0*[:.]?0*$/', $t);
-                        };
-                        if ($eventFormat === 'DH_SWECUP') {
-                            $bestTime = $isValidDHTime($result['run_2_time']) ? $result['run_2_time'] : null;
-                        } else {
-                            $r1Valid = $isValidDHTime($result['run_1_time']);
-                            $r2Valid = $isValidDHTime($result['run_2_time']);
-                            if ($r1Valid && $r2Valid) {
-                                $t1 = timeToSeconds($result['run_1_time']);
-                                $t2 = timeToSeconds($result['run_2_time']);
-                                $bestTime = $t1 < $t2 ? $result['run_1_time'] : $result['run_2_time'];
-                            } elseif ($r1Valid) {
-                                $bestTime = $result['run_1_time'];
-                            } elseif ($r2Valid) {
-                                $bestTime = $result['run_2_time'];
-                            }
+                    <?php
+                    $bestTime = null;
+                    $bestTimeSeconds = PHP_INT_MAX;
+                    // Helper to check if time is valid (not empty, not 0:00)
+                    $isValidDHTime = function($t) {
+                        return !empty($t) && !preg_match('/^0+[:.]?0*[:.]?0*$/', $t);
+                    };
+                    if ($eventFormat === 'DH_SWECUP') {
+                        $bestTime = $isValidDHTime($result['run_2_time']) ? $result['run_2_time'] : null;
+                    } else {
+                        $r1Valid = $isValidDHTime($result['run_1_time']);
+                        $r2Valid = $isValidDHTime($result['run_2_time']);
+                        if ($r1Valid && $r2Valid) {
+                            $t1 = timeToSeconds($result['run_1_time']);
+                            $t2 = timeToSeconds($result['run_2_time']);
+                            $bestTime = $t1 < $t2 ? $result['run_1_time'] : $result['run_2_time'];
+                        } elseif ($r1Valid) {
+                            $bestTime = $result['run_1_time'];
+                        } elseif ($r2Valid) {
+                            $bestTime = $result['run_2_time'];
                         }
-                        if ($bestTime && $result['status'] === 'finished'): ?>
+                    }
+                    if ($bestTime) {
+                        $bestTimeSeconds = timeToSeconds($bestTime);
+                    }
+                    ?>
+                    <td class="col-time font-bold" data-sort-value="<?= $bestTimeSeconds ?>">
+                        <?php if ($bestTime && $result['status'] === 'finished'): ?>
                         <div class="split-time-main"><?= formatDisplayTime($bestTime) ?></div>
                         <?php if (!empty($result['time_behind'])): ?>
                         <div class="split-time-details"><?= $result['time_behind'] ?></div>
@@ -1254,7 +1259,8 @@ if (!empty($eventSponsors['content'])): ?>
                         <?php endif; ?>
                     </td>
                     <?php else: ?>
-                    <td class="col-time">
+                    <?php $finishTimeSeconds = !empty($result['finish_time']) ? timeToSeconds($result['finish_time']) : PHP_INT_MAX; ?>
+                    <td class="col-time" data-sort-value="<?= $finishTimeSeconds ?>">
                         <?php if ($result['status'] === 'finished' && $result['finish_time']): ?>
                         <div class="split-time-main"><?= formatDisplayTime($result['finish_time']) ?></div>
                         <?php if ($isTimeRanked && !empty($result['time_behind']) && $result['time_behind'] !== '-'): ?>
@@ -2164,6 +2170,55 @@ function sortDHByRun(headerEl, classKey, runNum) {
     let colIndex = -1;
     headers.forEach((th, idx) => {
         if (th.dataset.sort === 'run' + runNum) {
+            colIndex = idx;
+        }
+    });
+
+    if (colIndex === -1) return;
+
+    // Determine sort direction
+    const isAscending = !headerEl.classList.contains('sort-asc');
+
+    // Remove sort classes from all headers in this table
+    table.querySelectorAll('.sortable-header').forEach(th => {
+        th.classList.remove('sort-asc', 'sort-desc');
+    });
+
+    // Add sort class to clicked header
+    headerEl.classList.add(isAscending ? 'sort-asc' : 'sort-desc');
+
+    // Sort rows
+    rows.sort((a, b) => {
+        const aCell = a.cells[colIndex];
+        const bCell = b.cells[colIndex];
+        const aVal = parseFloat(aCell?.dataset.sortValue) || Infinity;
+        const bVal = parseFloat(bCell?.dataset.sortValue) || Infinity;
+
+        return isAscending ? aVal - bVal : bVal - aVal;
+    });
+
+    // Re-append rows
+    rows.forEach((row) => {
+        tbody.appendChild(row);
+    });
+}
+
+// Sort class section by time (Bästa/Tid column)
+function sortByTime(headerEl, classKey) {
+    const section = document.getElementById('class-' + classKey);
+    if (!section) return;
+
+    const table = section.querySelector('.results-table');
+    if (!table) return;
+
+    const tbody = table.querySelector('tbody');
+    const rows = Array.from(tbody.querySelectorAll('tr.result-row'));
+
+    // Get the column index for time/best column
+    const headers = table.querySelectorAll('thead th');
+    let colIndex = -1;
+    headers.forEach((th, idx) => {
+        if (th.dataset.sort === 'time' || th.dataset.sort === 'best') {
             colIndex = idx;
         }
     });
