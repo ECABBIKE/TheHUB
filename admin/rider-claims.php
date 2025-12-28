@@ -124,9 +124,17 @@ $pendingClaims = $db->getAll("
         r_target.birth_year as target_birth_year,
         r_target.license_number as target_license,
         c.name as target_club,
-        (SELECT COUNT(*) FROM results WHERE cyclist_id = rc.target_rider_id) as target_results
+        (SELECT COUNT(*) FROM results WHERE cyclist_id = rc.target_rider_id) as target_results,
+        -- Claimant info (if claimant_rider_id exists)
+        r_claimant.firstname as claimant_firstname,
+        r_claimant.lastname as claimant_lastname,
+        r_claimant.email as claimant_email_actual,
+        r_claimant.birth_year as claimant_birth_year,
+        r_claimant.license_number as claimant_license,
+        (SELECT COUNT(*) FROM results WHERE cyclist_id = rc.claimant_rider_id) as claimant_results
     FROM rider_claims rc
     JOIN riders r_target ON rc.target_rider_id = r_target.id
+    LEFT JOIN riders r_claimant ON rc.claimant_rider_id = r_claimant.id
     LEFT JOIN clubs c ON r_target.club_id = c.id
     WHERE rc.status = 'pending'
     ORDER BY rc.created_at DESC
@@ -180,6 +188,8 @@ include __DIR__ . '/components/unified-layout.php';
         <?php foreach ($pendingClaims as $claim): ?>
         <div class="card mb-md" style="border: 2px solid var(--color-warning);">
             <div class="card-body">
+                <?php if ($claim['claimant_rider_id']): ?>
+                <!-- TWO PROFILE MERGE MODE -->
                 <div style="display: grid; grid-template-columns: 1fr auto 1fr; gap: var(--space-lg); align-items: start;">
 
                     <!-- Claimant (new profile with email) -->
@@ -188,25 +198,25 @@ include __DIR__ . '/components/unified-layout.php';
                         <p class="mb-xs">
                             <strong>
                                 <a href="/admin/rider-edit/<?= $claim['claimant_rider_id'] ?>" target="_blank">
-                                    <?= h($claim['claimant_firstname'] . ' ' . $claim['claimant_lastname']) ?>
+                                    <?= h(($claim['claimant_firstname'] ?? '') . ' ' . ($claim['claimant_lastname'] ?? '')) ?>
                                 </a>
                             </strong>
                         </p>
                         <p class="text-secondary mb-xs">
                             <i data-lucide="mail" style="width: 14px;"></i>
-                            <?= h($claim['claimant_email_actual'] ?: 'Ingen e-post') ?>
+                            <?= h($claim['claimant_email_actual'] ?? $claim['claimant_email'] ?? 'Ingen e-post') ?>
                         </p>
                         <p class="text-secondary mb-xs">
                             <i data-lucide="calendar" style="width: 14px;"></i>
-                            Född: <?= $claim['claimant_birth_year'] ?: '-' ?>
+                            Född: <?= ($claim['claimant_birth_year'] ?? '') ?: '-' ?>
                         </p>
                         <p class="text-secondary mb-xs">
                             <i data-lucide="trophy" style="width: 14px;"></i>
-                            <?= $claim['claimant_results'] ?> resultat
+                            <?= $claim['claimant_results'] ?? 0 ?> resultat
                         </p>
                         <p class="text-secondary">
                             <i data-lucide="id-card" style="width: 14px;"></i>
-                            <?= h($claim['claimant_license'] ?: 'Inget UCI') ?>
+                            <?= h(($claim['claimant_license'] ?? '') ?: 'Inget UCI') ?>
                         </p>
                     </div>
 
@@ -244,6 +254,69 @@ include __DIR__ . '/components/unified-layout.php';
                         </p>
                     </div>
                 </div>
+                <?php else: ?>
+                <!-- EMAIL CLAIM MODE (no existing profile, just claiming historical one) -->
+                <div style="display: grid; grid-template-columns: 1fr auto 1fr; gap: var(--space-lg); align-items: start;">
+
+                    <!-- Request info -->
+                    <div>
+                        <h4 class="text-secondary mb-sm">Förfrågan</h4>
+                        <p class="mb-xs">
+                            <strong><?= h($claim['claimant_name'] ?: 'Okänt namn') ?></strong>
+                        </p>
+                        <p class="text-secondary mb-xs">
+                            <i data-lucide="mail" style="width: 14px;"></i>
+                            <?= h($claim['claimant_email']) ?>
+                        </p>
+                        <?php if (!empty($claim['phone'])): ?>
+                        <p class="text-secondary mb-xs">
+                            <i data-lucide="phone" style="width: 14px;"></i>
+                            <?= h($claim['phone']) ?>
+                        </p>
+                        <?php endif; ?>
+                        <?php if (!empty($claim['instagram'])): ?>
+                        <p class="text-secondary mb-xs">
+                            <i data-lucide="instagram" style="width: 14px;"></i>
+                            <?= h($claim['instagram']) ?>
+                        </p>
+                        <?php endif; ?>
+                    </div>
+
+                    <!-- Arrow -->
+                    <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; padding-top: var(--space-xl);">
+                        <i data-lucide="arrow-right" style="width: 32px; height: 32px; color: var(--color-success);"></i>
+                        <span class="text-secondary" style="font-size: 12px;">vill koppla till</span>
+                    </div>
+
+                    <!-- Target (profile to claim) -->
+                    <div>
+                        <h4 class="text-secondary mb-sm">Profil att aktivera</h4>
+                        <p class="mb-xs">
+                            <strong>
+                                <a href="/admin/rider-edit/<?= $claim['target_rider_id'] ?>" target="_blank">
+                                    <?= h($claim['target_firstname'] . ' ' . $claim['target_lastname']) ?>
+                                </a>
+                            </strong>
+                        </p>
+                        <p class="text-secondary mb-xs">
+                            <i data-lucide="mail" style="width: 14px;"></i>
+                            <?= h($claim['target_email'] ?: 'Ingen e-post (läggs till)') ?>
+                        </p>
+                        <p class="text-secondary mb-xs">
+                            <i data-lucide="calendar" style="width: 14px;"></i>
+                            Född: <?= $claim['target_birth_year'] ?: '-' ?>
+                        </p>
+                        <p class="text-secondary mb-xs">
+                            <i data-lucide="trophy" style="width: 14px;"></i>
+                            <strong><?= $claim['target_results'] ?> resultat</strong>
+                        </p>
+                        <p class="text-secondary">
+                            <i data-lucide="id-card" style="width: 14px;"></i>
+                            <?= h($claim['target_license'] ?: 'Inget UCI') ?>
+                        </p>
+                    </div>
+                </div>
+                <?php endif; ?>
 
                 <?php if ($claim['reason']): ?>
                 <div class="mt-md" style="background: var(--color-bg-secondary); padding: var(--space-sm); border-radius: var(--radius-sm);">
@@ -268,6 +341,7 @@ include __DIR__ . '/components/unified-layout.php';
                     </form>
 
                     <!-- Approve form -->
+                    <?php if ($claim['claimant_rider_id']): ?>
                     <form method="POST" style="display: inline;" onsubmit="return confirm('Godkänn och slå ihop profilerna?\n\nDetta kommer:\n- Flytta resultat från ny profil till historisk profil\n- Kopiera e-post/kontaktinfo till historisk profil\n- Ta bort den nya profilen\n\nDetta kan inte ångras!');">
                         <?= csrf_field() ?>
                         <input type="hidden" name="action" value="approve">
@@ -276,6 +350,16 @@ include __DIR__ . '/components/unified-layout.php';
                             <i data-lucide="check"></i> Godkänn & Slå ihop
                         </button>
                     </form>
+                    <?php else: ?>
+                    <form method="POST" style="display: inline;" onsubmit="return confirm('Godkänn profilkoppling?\n\nDetta kommer:\n- Koppla e-postadressen till profilen\n- Skicka lösenordslänk till användaren\n- Användaren kan sedan logga in');">
+                        <?= csrf_field() ?>
+                        <input type="hidden" name="action" value="approve">
+                        <input type="hidden" name="claim_id" value="<?= $claim['id'] ?>">
+                        <button type="submit" class="btn btn-primary">
+                            <i data-lucide="check"></i> Godkänn & Aktivera
+                        </button>
+                    </form>
+                    <?php endif; ?>
                 </div>
             </div>
         </div>

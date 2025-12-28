@@ -284,6 +284,9 @@ include __DIR__ . '/components/unified-layout.php';
                 </p>
             </div>
             <div class="flex gap-sm">
+                <a href="/admin/elimination-live.php?event_id=<?= $eventId ?>&class_id=<?= $selectedClassId ?>" class="btn-admin btn-admin-primary">
+                    <i data-lucide="radio"></i> Live Entry
+                </a>
                 <a href="/event/<?= $eventId ?>?tab=elimination" class="btn-admin btn-admin-secondary">
                     <i data-lucide="eye"></i> Visa publikt
                 </a>
