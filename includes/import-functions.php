@@ -926,13 +926,13 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
                 $finishTime = $timeStr;
             }
 
-            // For DH: Calculate finish_time based on event_format
-            // DH_STANDARD: Best (fastest) of Run 1 and Run 2
-            // DH_SWECUP: Run 2 (Final) only
-            if (empty($finishTime) && in_array($eventFormat, ['DH_STANDARD', 'DH_SWECUP'])) {
-                $run1 = trim($data['run_1_time'] ?? '');
-                $run2 = trim($data['run_2_time'] ?? '');
+            // For DH: Calculate finish_time from Run1/Run2 if NetTime is empty
+            // Auto-detect: If we have Run1/Run2 data but no finish_time, calculate it
+            $run1 = trim($data['run_1_time'] ?? '');
+            $run2 = trim($data['run_2_time'] ?? '');
+            $hasRunData = !empty($run1) || !empty($run2);
 
+            if (empty($finishTime) && $hasRunData) {
                 // Helper function to convert time string to seconds for comparison
                 $timeToSeconds = function($timeStr) {
                     if (empty($timeStr) || in_array(strtoupper($timeStr), ['DNF', 'DNS', 'DQ', 'DSQ'])) {
@@ -956,7 +956,7 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
                         $finishTime = $run2;
                     }
                 } else {
-                    // DH_STANDARD: Best (fastest) of both runs
+                    // DH_STANDARD or auto-detect: Best (fastest) of both runs
                     $run1Seconds = $timeToSeconds($run1);
                     $run2Seconds = $timeToSeconds($run2);
 
@@ -967,6 +967,10 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
                             $finishTime = $run2;
                         }
                     }
+                }
+
+                if (!empty($finishTime)) {
+                    error_log("IMPORT DH: Calculated finish_time '{$finishTime}' from Run1='{$run1}' Run2='{$run2}' for {$data['firstname']} {$data['lastname']}");
                 }
             }
 
