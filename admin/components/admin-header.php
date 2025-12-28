@@ -10,9 +10,12 @@
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" x2="20" y1="12" y2="12"/><line x1="4" x2="20" y1="6" y2="6"/><line x1="4" x2="20" y1="18" y2="18"/></svg>
         </button>
 
-        <a href="/admin/dashboard" class="admin-logo">
+        <a href="/admin/dashboard" class="admin-logo <?= !empty($pendingClaimsCount) ? 'has-alerts' : '' ?>">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/></svg>
-            <span>TheHUB Admin</span>
+            <span>TheHUB</span>
+            <?php if (!empty($pendingClaimsCount)): ?>
+            <span class="logo-alert-badge" title="<?= $pendingClaimsCount ?> väntande förfrågan"><?= $pendingClaimsCount ?></span>
+            <?php endif; ?>
         </a>
     </div>
 
