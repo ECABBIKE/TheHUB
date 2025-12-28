@@ -2188,13 +2188,23 @@ function renderRiderAchievements(PDO $pdo, int $rider_id, array $stats = null): 
         background: none;
         border: none;
         cursor: pointer;
-        padding: var(--space-xs, 4px);
+        padding: var(--space-sm, 8px);
         color: var(--color-text-secondary, #666);
         border-radius: var(--radius-sm, 6px);
+        position: relative;
+        z-index: 10;
+        min-width: 32px;
+        min-height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
     }
     .achievement-modal-close:hover {
         background: var(--color-bg-hover, #f3f4f6);
         color: var(--color-text, #333);
+    }
+    .achievement-modal-close svg {
+        pointer-events: none;
     }
     .achievement-modal-body {
         padding: var(--space-lg, 24px);
