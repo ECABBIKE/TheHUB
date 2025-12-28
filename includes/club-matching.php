@@ -30,9 +30,14 @@ function normalizeClubName($name) {
 
     // Remove common prefixes/suffixes (order matters - longer patterns first)
     $patterns = [
+        // Long prefixes first
+        '/^mountainbikeklubb\s+/u',      // "Mountainbikeklubb X" -> "x"
+        '/^mountainbike\s+/u',           // "Mountainbike X" -> "x"
         '/^cykelklubben\s+/u',           // "Cykelklubben Fix" -> "fix"
         '/^cykelklubb\s+/u',             // "Cykelklubb Fix" -> "fix"
         '/^cykelföreningen\s+/u',        // "Cykelföreningen X" -> "x"
+        '/^team\s+/u',                   // "Team Kungälv" -> "kungälv"
+        '/^mtb\s+/u',                    // "MTB Täby" -> "täby"
         '/^ifk\s+/u',                    // "IFK Trampen" -> "trampen"
         '/^ok\s+/u',                     // "OK Tyr" -> "tyr"
         '/^ck\s+/u',                     // "CK Fix" -> "fix"
@@ -41,20 +46,23 @@ function normalizeClubName($name) {
         '/^sk\s+/u',                     // "SK X" -> "x"
         '/^fk\s+/u',                     // "FK X" -> "x"
         '/^bk\s+/u',                     // "BK X" -> "x"
-        '/\s+ck$/u',                     // "Fix CK" -> "fix"
-        '/\s+ok$/u',                     // "Tyr OK" -> "tyr"
+        // Long suffixes
+        '/\s+mountainbikeklubb$/u',      // "X Mountainbikeklubb" -> "x"
+        '/\s+mountainbike$/u',           // "X Mountainbike" -> "x"
+        '/\s+idrottssällskap$/u',
+        '/\s+idrottsällskap$/u',
+        '/\s+idrottsförening$/u',
         '/\s+cykelklubb$/u',             // "Fix Cykelklubb" -> "fix"
         '/\s+cykelklubben$/u',           // "Fix Cykelklubben" -> "fix"
+        // Short suffixes
+        '/\s+enduro$/u',                 // "Fix Enduro" -> "fix"
+        '/\s+mtb$/u',                    // "Fix MTB" -> "fix"
+        '/\s+ck$/u',                     // "Fix CK" -> "fix"
+        '/\s+ok$/u',                     // "Tyr OK" -> "tyr"
         '/\s+if$/u',                     // "Fix IF" -> "fix"
         '/\s+ifk$/u',                    // "X IFK" -> "x"
         '/\s+ik$/u',                     // "X IK" -> "X"
         '/\s+sk$/u',                     // "X SK" -> "X"
-        '/\s+mtb$/u',                    // "Fix MTB" -> "fix"
-        '/\s+enduro$/u',                 // "Fix Enduro" -> "fix"
-        '/\s+mountainbikeklubb$/u',      // "MTB Täby Mountainbikeklubb" -> "mtb täby"
-        '/\s+idrottssällskap$/u',
-        '/\s+idrottsällskap$/u',
-        '/\s+idrottsförening$/u',
     ];
 
     foreach ($patterns as $pattern) {

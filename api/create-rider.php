@@ -53,11 +53,51 @@ if (!empty($errors)) {
 
 $db = getDB();
 
-// Check if rider already exists with same name and birth year
+// Check if rider already exists - use smart matching
+// Priority 1: Exact name + birth year match
 $existing = $db->getRow("
-    SELECT id, license_number FROM riders
-    WHERE firstname = ? AND lastname = ? AND birth_year = ?
+    SELECT id, license_number, birth_year FROM riders
+    WHERE UPPER(firstname) = UPPER(?) AND UPPER(lastname) = UPPER(?) AND birth_year = ?
 ", [$firstname, $lastname, $birthYear]);
+
+// Priority 2: Name match with NULL birth year (can update with the new birth year)
+if (!$existing) {
+    $existing = $db->getRow("
+        SELECT id, license_number, birth_year FROM riders
+        WHERE UPPER(firstname) = UPPER(?) AND UPPER(lastname) = UPPER(?)
+        AND (birth_year IS NULL OR birth_year = ?)
+    ", [$firstname, $lastname, $birthYear]);
+
+    // Update birth year if the existing rider doesn't have one
+    if ($existing && empty($existing['birth_year']) && $birthYear) {
+        $db->update('riders', ['birth_year' => $birthYear], 'id = ?', [$existing['id']]);
+    }
+}
+
+// Priority 3: Just name match (warn about potential duplicate)
+if (!$existing) {
+    $potentialDup = $db->getRow("
+        SELECT id, license_number, birth_year FROM riders
+        WHERE UPPER(firstname) = UPPER(?) AND UPPER(lastname) = UPPER(?)
+    ", [$firstname, $lastname]);
+
+    if ($potentialDup) {
+        // Same name exists with different birth year - likely same person
+        // Return the existing rider but flag it
+        echo json_encode([
+            'success' => true,
+            'existing' => true,
+            'potential_duplicate' => true,
+            'rider' => [
+                'id' => $potentialDup['id'],
+                'name' => "$firstname $lastname",
+                'existing_birth_year' => $potentialDup['birth_year'],
+                'message' => 'Deltagare med samma namn finns redan (annat födelseår)'
+            ]
+        ]);
+        exit;
+    }
+}
 
 if ($existing) {
     echo json_encode([
