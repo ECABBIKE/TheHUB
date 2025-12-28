@@ -767,6 +767,41 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
                 $finishTime = $timeStr;
             }
 
+            // For DH: If no finish_time but we have Run1/Run2, use the best (fastest) time
+            if (empty($finishTime)) {
+                $run1 = trim($data['run_1_time'] ?? '');
+                $run2 = trim($data['run_2_time'] ?? '');
+
+                // Helper function to convert time string to seconds for comparison
+                $timeToSeconds = function($timeStr) {
+                    if (empty($timeStr) || in_array(strtoupper($timeStr), ['DNF', 'DNS', 'DQ', 'DSQ'])) {
+                        return PHP_FLOAT_MAX; // Invalid times are "slower" than any valid time
+                    }
+                    // Handle formats like "1:38.227" (m:ss.ms) or "98.227" (ss.ms)
+                    if (preg_match('/^(\d+):(\d+)\.(\d+)$/', $timeStr, $m)) {
+                        return ((int)$m[1] * 60) + (int)$m[2] + ((int)$m[3] / pow(10, strlen($m[3])));
+                    } elseif (preg_match('/^(\d+)\.(\d+)$/', $timeStr, $m)) {
+                        return (int)$m[1] + ((int)$m[2] / pow(10, strlen($m[2])));
+                    } elseif (preg_match('/^(\d+):(\d+):(\d+)\.(\d+)$/', $timeStr, $m)) {
+                        // h:mm:ss.ms format
+                        return ((int)$m[1] * 3600) + ((int)$m[2] * 60) + (int)$m[3] + ((int)$m[4] / pow(10, strlen($m[4])));
+                    }
+                    return PHP_FLOAT_MAX;
+                };
+
+                $run1Seconds = $timeToSeconds($run1);
+                $run2Seconds = $timeToSeconds($run2);
+
+                // Pick the fastest valid time
+                if ($run1Seconds < PHP_FLOAT_MAX || $run2Seconds < PHP_FLOAT_MAX) {
+                    if ($run1Seconds <= $run2Seconds && $run1Seconds < PHP_FLOAT_MAX) {
+                        $finishTime = $run1;
+                    } elseif ($run2Seconds < PHP_FLOAT_MAX) {
+                        $finishTime = $run2;
+                    }
+                }
+            }
+
             // Determine status
             $status = strtolower(trim($data['status'] ?? 'finished'));
             if (in_array($status, ['fin', 'finish', 'finished', 'finnished', 'ok', ''])) {
