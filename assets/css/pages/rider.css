@@ -2111,12 +2111,12 @@
     .achievements-card,
     .history-card,
     .history-card-full {
-        margin-left: calc(-1 * var(--container-padding, 16px)) !important;
-        margin-right: calc(-1 * var(--container-padding, 16px)) !important;
-        border-radius: var(--radius-md, 0) !important;
+        margin-left: calc(-1 * var(--container-padding, 12px)) !important;
+        margin-right: calc(-1 * var(--container-padding, 12px)) !important;
+        border-radius: 0 !important;
         border-left: none !important;
         border-right: none !important;
-        width: calc(100% + (2 * var(--container-padding, 16px))) !important;
+        width: calc(100% + (2 * var(--container-padding, 12px))) !important;
     }
 
     /* Profile card mobile - compact badges */
