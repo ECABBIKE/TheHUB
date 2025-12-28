@@ -88,70 +88,47 @@ try {
 
         case 'series_completed':
         case 'finisher_100':
-            // Series where rider completed 100%
+            // Series where rider completed 100% - from rider_achievements table
             $events = $db->getAll("
-                SELECT DISTINCT s.id, s.name as series_name, s.year,
-                       COUNT(DISTINCT se.event_id) as total_events,
-                       COUNT(DISTINCT CASE WHEN r.id IS NOT NULL THEN se.event_id END) as participated_events
-                FROM series s
-                JOIN series_events se ON s.id = se.series_id
-                LEFT JOIN results r ON r.event_id = se.event_id AND r.cyclist_id = ? AND r.status = 'finished'
-                WHERE se.series_id IN (
-                    SELECT se2.series_id
-                    FROM series_events se2
-                    JOIN results r2 ON r2.event_id = se2.event_id AND r2.cyclist_id = ?
-                    GROUP BY se2.series_id
-                    HAVING COUNT(DISTINCT se2.event_id) = COUNT(DISTINCT CASE WHEN r2.id IS NOT NULL THEN se2.event_id END)
-                )
-                GROUP BY s.id
-                ORDER BY s.year DESC, s.name
-            ", [$riderId, $riderId]);
+                SELECT s.id, s.name as series_name, s.year, ra.season_year
+                FROM rider_achievements ra
+                JOIN series s ON ra.series_id = s.id
+                WHERE ra.rider_id = ? AND ra.achievement_type = 'finisher_100'
+                ORDER BY ra.season_year DESC, s.name
+            ", [$riderId]);
             break;
 
         case 'series_leader':
-            // Current series where rider is leading
+            // Current series where rider is leading - from rider_achievements table
             $events = $db->getAll("
-                SELECT s.id, s.name as series_name, s.year
-                FROM series s
-                WHERE s.status = 'active'
-                AND s.id IN (
-                    SELECT ss.series_id
-                    FROM series_standings ss
-                    WHERE ss.rider_id = ? AND ss.rank = 1
-                )
-                ORDER BY s.year DESC
+                SELECT s.id, s.name as series_name, s.year, ra.season_year
+                FROM rider_achievements ra
+                JOIN series s ON ra.series_id = s.id
+                WHERE ra.rider_id = ? AND ra.achievement_type = 'series_leader'
+                ORDER BY ra.season_year DESC, s.name
             ", [$riderId]);
             break;
 
         case 'series_champion':
         case 'series_wins':
-            // Series won by rider
+            // Series won by rider - from rider_achievements table
             $events = $db->getAll("
-                SELECT s.id, s.name as series_name, s.year
-                FROM series s
-                WHERE s.status = 'completed'
-                AND s.id IN (
-                    SELECT ss.series_id
-                    FROM series_standings ss
-                    WHERE ss.rider_id = ? AND ss.rank = 1
-                )
-                ORDER BY s.year DESC, s.name
+                SELECT s.id, s.name as series_name, s.year, ra.season_year
+                FROM rider_achievements ra
+                JOIN series s ON ra.series_id = s.id
+                WHERE ra.rider_id = ? AND ra.achievement_type = 'series_champion'
+                ORDER BY ra.season_year DESC, s.name
             ", [$riderId]);
             break;
 
         case 'swedish_champion':
         case 'sm_wins':
-            // SM events won
+            // SM events won - from rider_achievements table
             $events = $db->getAll("
-                SELECT e.id, e.name, e.date, e.location, r.position, c.name as class_name
-                FROM results r
-                JOIN events e ON r.event_id = e.id
-                LEFT JOIN classes c ON r.class_id = c.id
-                WHERE r.cyclist_id = ?
-                AND r.position = 1
-                AND r.status = 'finished'
-                AND e.is_championship = 1
-                ORDER BY e.date DESC
+                SELECT ra.id, ra.achievement_value as series_name, ra.season_year as year
+                FROM rider_achievements ra
+                WHERE ra.rider_id = ? AND ra.achievement_type = 'swedish_champion'
+                ORDER BY ra.season_year DESC
             ", [$riderId]);
             break;
 
