@@ -108,92 +108,111 @@ include __DIR__ . '/components/unified-layout.php';
 ?>
 
 <?php if ($stats['pending_claims'] > 0): ?>
-<!-- Pending Claims Alert -->
-<div class="pending-claims-alert" style="margin-bottom: var(--space-lg);">
-    <a href="/admin/rider-claims" class="claims-alert-content">
-        <div class="claims-alert-icon">
-            <i data-lucide="user-check"></i>
-        </div>
-        <div class="claims-alert-text">
-            <strong><?= $stats['pending_claims'] ?> profilförfråg<?= $stats['pending_claims'] > 1 ? 'ningar' : 'an' ?> väntar på granskning</strong>
-            <span>Användare vill koppla sina konton till historiska profiler</span>
-        </div>
-        <div class="claims-alert-action">
-            <span>Granska</span>
-            <i data-lucide="arrow-right"></i>
-        </div>
-    </a>
-</div>
+<!-- Pending Claims Alert - Prominent Red Box -->
+<a href="/admin/rider-claims.php" class="pending-claims-box">
+    <div class="claims-box-icon">
+        <i data-lucide="user-check"></i>
+        <span class="claims-box-count"><?= $stats['pending_claims'] ?></span>
+    </div>
+    <div class="claims-box-text">
+        <strong>Profilkopplingar väntar</strong>
+        <span><?= $stats['pending_claims'] ?> användare vill verifiera sina profiler</span>
+    </div>
+    <div class="claims-box-arrow">
+        <i data-lucide="chevron-right"></i>
+    </div>
+</a>
 <style>
-.pending-claims-alert {
-    background: linear-gradient(135deg, #fef3c7 0%, #fde68a 100%);
-    border: 1px solid #f59e0b;
-    border-radius: var(--radius-lg);
-    overflow: hidden;
-}
-.claims-alert-content {
+.pending-claims-box {
     display: flex;
     align-items: center;
-    gap: var(--space-md);
-    padding: var(--space-md) var(--space-lg);
+    gap: var(--space-lg);
+    padding: var(--space-lg) var(--space-xl);
+    margin-bottom: var(--space-lg);
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    border-radius: var(--radius-lg);
     text-decoration: none;
-    color: #92400e;
-    transition: background 0.15s ease;
+    color: white;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
 }
-.claims-alert-content:hover {
-    background: rgba(245, 158, 11, 0.1);
+.pending-claims-box:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(239, 68, 68, 0.4);
 }
-.claims-alert-icon {
+.claims-box-icon {
+    position: relative;
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 48px;
-    height: 48px;
-    background: #f59e0b;
+    width: 56px;
+    height: 56px;
+    background: rgba(255,255,255,0.2);
     border-radius: var(--radius-md);
-    color: white;
     flex-shrink: 0;
 }
-.claims-alert-icon i {
+.claims-box-icon i {
+    width: 28px;
+    height: 28px;
+}
+.claims-box-count {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 28px;
+    height: 28px;
+    padding: 0 6px;
+    background: white;
+    color: #ef4444;
+    font-size: 14px;
+    font-weight: 700;
+    border-radius: 14px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+.claims-box-text {
+    flex: 1;
+}
+.claims-box-text strong {
+    display: block;
+    font-size: var(--text-lg);
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+.claims-box-text span {
+    font-size: var(--text-sm);
+    opacity: 0.9;
+}
+.claims-box-arrow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+.claims-box-arrow i {
     width: 24px;
     height: 24px;
 }
-.claims-alert-text {
-    flex: 1;
-}
-.claims-alert-text strong {
-    display: block;
-    font-size: var(--text-base);
-    color: #78350f;
-    margin-bottom: 2px;
-}
-.claims-alert-text span {
-    font-size: var(--text-sm);
-}
-.claims-alert-action {
-    display: flex;
-    align-items: center;
-    gap: var(--space-xs);
-    padding: var(--space-xs) var(--space-md);
-    background: #f59e0b;
-    color: white;
-    border-radius: var(--radius-md);
-    font-weight: 500;
-    font-size: var(--text-sm);
-}
-.claims-alert-action i {
-    width: 16px;
-    height: 16px;
-}
 @media (max-width: 600px) {
-    .claims-alert-content {
-        flex-wrap: wrap;
+    .pending-claims-box {
         padding: var(--space-md);
+        gap: var(--space-md);
     }
-    .claims-alert-action {
-        width: 100%;
-        justify-content: center;
-        margin-top: var(--space-xs);
+    .claims-box-icon {
+        width: 48px;
+        height: 48px;
+    }
+    .claims-box-text strong {
+        font-size: var(--text-base);
+    }
+    .claims-box-arrow {
+        display: none;
     }
 }
 </style>

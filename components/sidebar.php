@@ -62,9 +62,21 @@ if ($isAdminSection && $isAdminUser) {
 }
 
 // Build admin navigation from config - show only main groups
-$adminNav = [
-    ['id' => 'admin-dashboard', 'label' => 'Dashboard', 'icon' => 'layout-dashboard', 'url' => '/admin/dashboard', 'aria' => 'Admin Dashboard'],
+$dashboardItem = [
+    'id' => 'admin-dashboard',
+    'label' => 'Dashboard',
+    'icon' => 'layout-dashboard',
+    'url' => '/admin/dashboard',
+    'aria' => 'Admin Dashboard'
 ];
+
+// Add badge to Dashboard if there are pending claims
+if ($pendingClaimsCount > 0) {
+    $dashboardItem['badge'] = $pendingClaimsCount;
+    $dashboardItem['badgeType'] = 'alert';
+}
+
+$adminNav = [$dashboardItem];
 
 // Add main groups from ADMIN_TABS config
 foreach ($ADMIN_TABS as $groupId => $group) {
@@ -86,12 +98,6 @@ foreach ($ADMIN_TABS as $groupId => $group) {
         'aria' => $group['title'],
         'pages' => get_pages_in_group($groupId) // All pages in this group
     ];
-
-    // Add notification badge for Databas (riders/claims)
-    if ($groupId === 'database' && $pendingClaimsCount > 0) {
-        $navItem['badge'] = $pendingClaimsCount;
-        $navItem['badgeType'] = 'alert'; // Red badge
-    }
 
     $adminNav[] = $navItem;
 }
