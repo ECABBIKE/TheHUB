@@ -2012,7 +2012,9 @@ document.addEventListener('keydown', function(e) {
 </div>
 
 <!-- Aktivera konto Modal (for profiles WITH email but no password) -->
+<!-- DEBUG: canActivateProfile = <?= var_export($canActivateProfile, true) ?> -->
 <?php if ($canActivateProfile): ?>
+<!-- DEBUG: INSIDE canActivateProfile - Modal SHOULD be rendered below -->
 <div id="activateModal" class="claim-modal-overlay">
     <div class="claim-modal">
         <div class="claim-modal-header">
@@ -2062,6 +2064,7 @@ document.addEventListener('keydown', function(e) {
     </div>
 </div>
 <?php endif; ?>
+<!-- DEBUG: After activateModal endif -->
 
 <style>
 .claim-modal-overlay {
