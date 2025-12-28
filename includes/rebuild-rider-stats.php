@@ -824,6 +824,7 @@ function calculateSwedishChampionships($pdo, $rider_id) {
 
 /**
  * Beräknar trend (positionsförändring efter senaste event)
+ * Returns: positive number = improved, negative = declined, 0 = no change
  */
 function calculateTrend($pdo, $series_id, $rider_id, $class_id, $year) {
     // Hämta senaste två events
@@ -838,12 +839,11 @@ function calculateTrend($pdo, $series_id, $rider_id, $class_id, $year) {
     $events = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     if (count($events) < 2) {
-        return ['direction' => 'same', 'change' => 0];
+        return 0;
     }
 
     // Get standings before latest event
     $latestEventId = $events[0]['id'];
-    $previousEventId = $events[1]['id'];
 
     // Calculate ranking after previous event (excluding latest)
     $stmt = $pdo->prepare("
@@ -872,18 +872,11 @@ function calculateTrend($pdo, $series_id, $rider_id, $class_id, $year) {
     $currentPosition = getSeriesRanking($pdo, $series_id, $rider_id, $class_id, $year);
 
     if ($previousPosition === null || $currentPosition === null) {
-        return ['direction' => 'same', 'change' => 0];
+        return 0;
     }
 
-    $change = $previousPosition - $currentPosition;
-
-    if ($change > 0) {
-        return ['direction' => 'up', 'change' => $change];
-    } elseif ($change < 0) {
-        return ['direction' => 'down', 'change' => abs($change)];
-    }
-
-    return ['direction' => 'same', 'change' => 0];
+    // Positive = improved (moved up in ranking), negative = declined
+    return $previousPosition - $currentPosition;
 }
 
 /**

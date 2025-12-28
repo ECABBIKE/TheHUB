@@ -755,8 +755,8 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
         $rankingChartData = [];
         $swedishMonthsShort = ['jan', 'feb', 'mar', 'apr', 'maj', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'dec'];
 
-        // Use 24-month filtered data for main chart
-        if ($rankingPosition && !empty($rankingHistory24m) && count($rankingHistory24m) >= 2) {
+        // Use 24-month filtered data for main chart (needs at least 1 data point)
+        if ($rankingPosition && !empty($rankingHistory24m) && count($rankingHistory24m) >= 1) {
             $hasRankingChart = true;
             foreach ($rankingHistory24m as $rh) {
                 $monthNum = isset($rh['month']) ? (int)date('n', strtotime($rh['month'] . '-01')) - 1 : 0;
@@ -828,13 +828,20 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
                 <div class="dashboard-chart-body">
                     <canvas id="rankingChart"></canvas>
                 </div>
+                <?php elseif ($rankingPosition): ?>
+                <div class="dashboard-chart-body dashboard-chart-placeholder">
+                    <p class="text-muted text-center" style="padding: var(--space-lg);">
+                        <i data-lucide="clock" style="width: 24px; height: 24px; margin-bottom: var(--space-xs); opacity: 0.5;"></i><br>
+                        Historik genereras nästa ranking-uppdatering
+                    </p>
+                </div>
                 <?php endif; ?>
                 <div class="dashboard-chart-footer">
                     <button type="button" class="btn-calc-ranking-inline" onclick="openRankingModal()">
                         <i data-lucide="calculator"></i>
                         <span>Visa uträkning</span>
                     </button>
-                    <?php if (count($rankingHistoryFull) >= 3): ?>
+                    <?php if (!empty($rankingHistoryFull)): ?>
                     <button type="button" class="btn-calc-ranking-inline" onclick="openHistoryModal()">
                         <i data-lucide="history"></i>
                         <span>Visa historik</span>
@@ -1700,7 +1707,7 @@ document.addEventListener('DOMContentLoaded', function() {
 </div>
 
 <!-- Ranking History Modal -->
-<?php if (!empty($rankingHistoryFull) && count($rankingHistoryFull) >= 3): ?>
+<?php if (!empty($rankingHistoryFull)): ?>
 <div id="historyModal" class="ranking-modal-overlay" style="padding-top: calc(var(--header-height, 60px) + 10px);">
     <div class="ranking-modal" style="max-height: calc(100vh - var(--header-height, 60px) - 40px); max-width: 800px;">
         <div class="ranking-modal-header" class="pt-md">

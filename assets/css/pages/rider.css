@@ -1509,6 +1509,43 @@
     font-size: clamp(0.625rem, 1.2vw, 0.75rem);
 }
 
+/* Badge grid in rider achievements card - responsive sizing */
+.achievements-card .badge-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-sm);
+}
+
+.achievements-card .badge-item {
+    min-width: 0; /* Allow shrinking */
+}
+
+.achievements-card .badge-label {
+    font-size: 8px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
+}
+
+.achievements-card .badge-value {
+    font-size: 12px;
+}
+
+.achievements-card .badge-svg {
+    width: 48px;
+    height: 48px;
+}
+
+@media (min-width: 400px) {
+    .achievements-card .badge-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
+
+    .achievements-card .badge-label {
+        font-size: 9px;
+    }
+}
+
 /* ============================================================================
    HISTORY CARD (In Left Column - same width as series card)
    ============================================================================ */
