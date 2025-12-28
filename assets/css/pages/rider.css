@@ -2123,6 +2123,9 @@
         border-left: none !important;
         border-right: none !important;
         width: 100% !important;
+        /* Intern padding för innehåll - matchar container-padding */
+        padding-left: var(--container-padding, 12px) !important;
+        padding-right: var(--container-padding, 12px) !important;
     }
 
     /* Profile card mobile - compact badges */
