@@ -18,12 +18,12 @@ $stats = [
 ];
 
 try {
-    // Count potential duplicate riders
+    // Count potential duplicate riders (same name, regardless of birth year)
     $result = $db->query("
         SELECT COUNT(*) FROM (
-            SELECT first_name, last_name, birth_year
+            SELECT UPPER(firstname), UPPER(lastname)
             FROM riders
-            GROUP BY first_name, last_name, birth_year
+            GROUP BY UPPER(firstname), UPPER(lastname)
             HAVING COUNT(*) > 1
         ) as dups
     ");
