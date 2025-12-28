@@ -1345,6 +1345,7 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
                 const eventName = item.event_name || item.achievement_value || '';
                 const seriesName = item.series_name || item.series_short_name || '';
                 const discipline = item.discipline || '';
+                const className = item.class_name || '';
                 const eventId = item.event_id;
                 const eventDate = item.event_date ? new Date(item.event_date).toLocaleDateString('sv-SE', {day: 'numeric', month: 'short', year: 'numeric'}) : '';
 
@@ -1356,8 +1357,8 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
                     html += `<a href="/event/${eventId}" class="achievement-detail-link">`;
                 }
                 html += `<div class="achievement-detail-content">`;
-                if (categoryLabel) {
-                    html += `<span class="achievement-detail-series">${categoryLabel}</span>`;
+                if (categoryLabel || className) {
+                    html += `<span class="achievement-detail-series">${[categoryLabel, className].filter(Boolean).join(' · ')}</span>`;
                 }
                 html += `<span class="achievement-detail-name">${eventName}</span>`;
                 html += `<span class="achievement-detail-year">${eventDate || year}</span>`;
