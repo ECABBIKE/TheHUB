@@ -2013,7 +2013,7 @@ document.addEventListener('keydown', function(e) {
 
 <!-- Aktivera konto Modal (for profiles WITH email but no password) -->
 <!-- DEBUG: canActivateProfile = <?= var_export($canActivateProfile, true) ?> -->
-<?php // TEMPORARILY DISABLED: if ($canActivateProfile): ?>
+<?php if (true): // FORCE RENDER - WAS: if ($canActivateProfile): ?>
 <!-- DEBUG: INSIDE canActivateProfile - Modal SHOULD be rendered below -->
 <div id="activateModal" class="claim-modal-overlay">
     <div class="claim-modal">
@@ -2063,7 +2063,7 @@ document.addEventListener('keydown', function(e) {
         </div>
     </div>
 </div>
-<?php // TEMPORARILY DISABLED: endif; ?>
+<?php endif; // FORCE RENDER ?>
 <!-- DEBUG: After activateModal endif -->
 
 <style>
@@ -2423,7 +2423,7 @@ document.getElementById('claimModal')?.addEventListener('click', function(e) {
 </script>
 <?php endif; ?>
 
-<?php // TEMPORARILY DISABLED: if ($canActivateProfile): ?>
+<?php if (true): // FORCE RENDER - WAS: if ($canActivateProfile): ?>
 <script>
 function openActivateModal() {
     console.log('🔍 openActivateModal called!');
@@ -2483,7 +2483,7 @@ document.getElementById('activateModal')?.addEventListener('click', function(e) 
     if (e.target === this) closeActivateModal();
 });
 </script>
-<?php // TEMPORARILY DISABLED: endif; ?>
+<?php endif; // FORCE RENDER ?>
 
 <!-- Chart.js Initialization -->
 <?php if ($hasRankingChart || $hasFormChart): ?>
