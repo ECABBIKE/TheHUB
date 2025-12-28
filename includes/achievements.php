@@ -2120,11 +2120,11 @@ function renderRiderAchievements(PDO $pdo, int $rider_id, array $stats = null): 
 
     <!-- Achievement Events Modal -->
     <div id="achievement-modal" class="achievement-modal" style="display: none;">
-        <div class="achievement-modal-overlay"></div>
+        <div class="achievement-modal-overlay" onclick="document.getElementById('achievement-modal').style.display='none';"></div>
         <div class="achievement-modal-content">
             <div class="achievement-modal-header">
                 <h3 id="achievement-modal-title">Events</h3>
-                <button type="button" class="achievement-modal-close" id="achievement-modal-close-btn">
+                <button type="button" class="achievement-modal-close" id="achievement-modal-close-btn" onclick="document.getElementById('achievement-modal').style.display='none'; return false;">
                     <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
                 </button>
             </div>
