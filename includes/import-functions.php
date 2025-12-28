@@ -8,6 +8,71 @@
 require_once __DIR__ . '/club-matching.php';
 
 /**
+ * Extract possible birth years from age class name
+ * Examples: "Pojkar 13-14" in 2024 → [2010, 2011]
+ *           "Herrar 19-29" → [1995-2005]
+ *           "U17" → born 2007-2008 in 2024
+ *
+ * @param string $className The class name (e.g., "Pojkar 13-14", "U17", "Junior")
+ * @param int|null $eventYear The year of the event (defaults to current year)
+ * @return array Array of possible birth years, empty if can't determine
+ */
+function getBirthYearsFromClassName($className, $eventYear = null) {
+    if (empty($className)) return [];
+
+    $eventYear = $eventYear ?: (int)date('Y');
+    $birthYears = [];
+
+    // Pattern 1: Age range like "13-14", "19-29"
+    if (preg_match('/(\d{1,2})\s*[-–]\s*(\d{1,2})/', $className, $matches)) {
+        $minAge = (int)$matches[1];
+        $maxAge = (int)$matches[2];
+
+        // Calculate birth years (someone who is 13 in 2024 was born in 2011)
+        for ($age = $minAge; $age <= $maxAge; $age++) {
+            $birthYears[] = $eventYear - $age;
+        }
+    }
+    // Pattern 2: U-categories like "U17", "U19"
+    elseif (preg_match('/U\s*(\d{1,2})/i', $className, $matches)) {
+        $maxAge = (int)$matches[1];
+        // U17 means under 17, so ages 15-16 typically
+        for ($age = $maxAge - 2; $age < $maxAge; $age++) {
+            $birthYears[] = $eventYear - $age;
+        }
+    }
+    // Pattern 3: Single age like "12 år"
+    elseif (preg_match('/(\d{1,2})\s*år/i', $className, $matches)) {
+        $birthYears[] = $eventYear - (int)$matches[1];
+    }
+    // Pattern 4: Junior (typically 17-18)
+    elseif (preg_match('/junior/i', $className)) {
+        $birthYears = [$eventYear - 17, $eventYear - 18];
+    }
+
+    return $birthYears;
+}
+
+/**
+ * Check if a birth year is compatible with an age class
+ */
+function isBirthYearCompatibleWithClass($birthYear, $className, $eventYear = null) {
+    if (empty($birthYear) || empty($className)) return true; // Can't verify, assume compatible
+
+    $possibleYears = getBirthYearsFromClassName($className, $eventYear);
+    if (empty($possibleYears)) return true; // Can't determine, assume compatible
+
+    // Allow 1 year tolerance for edge cases (birthday timing)
+    foreach ($possibleYears as $year) {
+        if (abs($birthYear - $year) <= 1) {
+            return true;
+        }
+    }
+
+    return false;
+}
+
+/**
  * Check if a row appears to be a field mapping/description row
  * These rows contain field names like "class", "position", "club_name" instead of actual data
  */
@@ -525,14 +590,79 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
                 if (!$rider) {
                     $firstName = trim($data['firstname']);
                     $lastName = trim($data['lastname']);
+                    $importClubName = trim($data['club_name'] ?? '');
 
-                    // Case-insensitive EXACT match using UPPER() (LOWER() doesn't work with this MySQL collation)
-                    $rider = $db->getRow(
-                        "SELECT id, license_number FROM riders WHERE UPPER(firstname) = UPPER(?) AND UPPER(lastname) = UPPER(?)",
-                        [$firstName, $lastName]
-                    );
+                    // SMART MATCHING: If we have club info, prioritize name+club match
+                    // Same name + same club = almost certainly same person
+                    if (!empty($importClubName)) {
+                        // First try: name + club match (strongest signal)
+                        $normalizedImportClub = normalizeClubName($importClubName);
+                        $rider = $db->getRow(
+                            "SELECT r.id, r.license_number FROM riders r
+                             LEFT JOIN clubs c ON r.club_id = c.id
+                             WHERE UPPER(r.firstname) = UPPER(?) AND UPPER(r.lastname) = UPPER(?)
+                             AND c.id IS NOT NULL
+                             ORDER BY
+                                CASE WHEN UPPER(c.name) = UPPER(?) THEN 0
+                                     WHEN UPPER(REPLACE(REPLACE(c.name, 'CK', 'Ck'), 'OK', 'Ok')) LIKE CONCAT('%', UPPER(?), '%') THEN 1
+                                     ELSE 2 END,
+                                r.id ASC
+                             LIMIT 1",
+                            [$firstName, $lastName, $importClubName, $normalizedImportClub]
+                        );
 
-                    // If exact match fails, try FUZZY matching for middle names
+                        if ($rider) {
+                            error_log("IMPORT: Name+Club match - '{$firstName} {$lastName}' + club '{$importClubName}' → rider ID {$rider['id']}");
+                        }
+                    }
+
+                    // Second try: exact name match (any club)
+                    // If multiple riders have same name, prefer one with compatible birth year
+                    if (!$rider) {
+                        $className = $data['class_name'] ?? '';
+                        $possibleBirthYears = getBirthYearsFromClassName($className);
+
+                        // Get ALL riders with this name
+                        $nameMatches = $db->getAll(
+                            "SELECT id, license_number, birth_year FROM riders WHERE UPPER(firstname) = UPPER(?) AND UPPER(lastname) = UPPER(?)",
+                            [$firstName, $lastName]
+                        );
+
+                        if (!empty($nameMatches)) {
+                            if (count($nameMatches) === 1) {
+                                // Only one match - use it
+                                $rider = $nameMatches[0];
+                            } elseif (!empty($possibleBirthYears)) {
+                                // Multiple matches - prefer one with compatible birth year
+                                foreach ($nameMatches as $match) {
+                                    if (!empty($match['birth_year']) && in_array((int)$match['birth_year'], $possibleBirthYears)) {
+                                        $rider = $match;
+                                        error_log("IMPORT: Name match with birth year verification - class '{$className}' matches birth year {$match['birth_year']}");
+                                        break;
+                                    }
+                                }
+                                // If no birth year match, try one without birth year (can update it)
+                                if (!$rider) {
+                                    foreach ($nameMatches as $match) {
+                                        if (empty($match['birth_year'])) {
+                                            $rider = $match;
+                                            error_log("IMPORT: Name match with empty birth year - will update from class '{$className}'");
+                                            break;
+                                        }
+                                    }
+                                }
+                                // Last resort - use first match
+                                if (!$rider) {
+                                    $rider = $nameMatches[0];
+                                }
+                            } else {
+                                // No age class info - use first match
+                                $rider = $nameMatches[0];
+                            }
+                        }
+                    }
+
+                    // Third try: FUZZY matching for middle names
                     // "Lo Nyberg Zetterlund" should match existing "Lo Zetterlund"
                     // "Lo Zetterlund" should match existing "Lo Nyberg Zetterlund"
                     if (!$rider) {
@@ -576,15 +706,28 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
 
                         // Update rider birth_year if provided in CSV and rider doesn't have it
                         $importBirthYear = trim($data['birth_year'] ?? '');
+                        $riderData = $db->getRow("SELECT birth_year FROM riders WHERE id = ?", [$rider['id']]);
+
                         if (!empty($importBirthYear) && is_numeric($importBirthYear)) {
                             $importBirthYear = (int)$importBirthYear;
                             if ($importBirthYear >= 1940 && $importBirthYear <= (int)date('Y')) {
-                                $riderData = $db->getRow("SELECT birth_year FROM riders WHERE id = ?", [$rider['id']]);
                                 if (empty($riderData['birth_year'])) {
                                     $db->update('riders', ['birth_year' => $importBirthYear], 'id = ?', [$rider['id']]);
                                     $matching_stats['riders_updated_with_birthyear'] = ($matching_stats['riders_updated_with_birthyear'] ?? 0) + 1;
                                     error_log("IMPORT: Updated rider {$rider['id']} birth_year to: {$importBirthYear}");
                                 }
+                            }
+                        }
+                        // If no birth year in CSV but rider is missing it, try to infer from age class
+                        elseif (empty($riderData['birth_year'])) {
+                            $className = $data['class_name'] ?? '';
+                            $inferredYears = getBirthYearsFromClassName($className);
+                            if (!empty($inferredYears)) {
+                                // Use the middle of the range as best guess
+                                $inferredBirthYear = $inferredYears[intval(count($inferredYears) / 2)];
+                                $db->update('riders', ['birth_year' => $inferredBirthYear], 'id = ?', [$rider['id']]);
+                                $matching_stats['riders_updated_with_birthyear'] = ($matching_stats['riders_updated_with_birthyear'] ?? 0) + 1;
+                                error_log("IMPORT: Inferred rider {$rider['id']} birth_year to: {$inferredBirthYear} from class '{$className}'");
                             }
                         }
                     } else {
@@ -613,7 +756,7 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
                     $importNationality = strtoupper(trim($data['nationality'] ?? ''));
                     if (strlen($importNationality) > 3) $importNationality = '';
 
-                    // Get birth year from import if available
+                    // Get birth year from import if available, or infer from age class
                     $importBirthYear = trim($data['birth_year'] ?? '');
                     if (!empty($importBirthYear) && is_numeric($importBirthYear)) {
                         $importBirthYear = (int)$importBirthYear;
@@ -622,7 +765,15 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
                             $importBirthYear = null;
                         }
                     } else {
-                        $importBirthYear = null;
+                        // Try to infer birth year from age class (e.g., "Pojkar 13-14" → 2010/2011)
+                        $inferredYears = getBirthYearsFromClassName($className);
+                        if (!empty($inferredYears)) {
+                            // Use the middle of the range as best guess
+                            $importBirthYear = $inferredYears[intval(count($inferredYears) / 2)];
+                            error_log("IMPORT: Inferred birth year {$importBirthYear} from class '{$className}'");
+                        } else {
+                            $importBirthYear = null;
+                        }
                     }
 
                     $riderId = $db->insert('riders', [
