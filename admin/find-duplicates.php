@@ -409,15 +409,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['merge_all'])) {
         }
         if ($skipGroup) continue;
 
-        // Check if riders have conflicting UCI IDs
-        $keepUci = preg_replace('/[^0-9]/', '', $keep['license_number'] ?? '');
+        // Check if riders have conflicting UCI IDs (only real UCI IDs, not SWE-IDs)
+        $keepLicense = $keep['license_number'] ?? '';
+        $keepIsRealUci = !empty($keepLicense) && strpos($keepLicense, 'SWE') !== 0;
         $hasConflict = false;
         foreach ($riders as $remove) {
-            $removeUci = preg_replace('/[^0-9]/', '', $remove['license_number'] ?? '');
-            if (!empty($keepUci) && !empty($removeUci) && $keepUci !== $removeUci) {
-                // Both have different real UCI IDs - skip this pair
-                $hasConflict = true;
-                break;
+            $removeLicense = $remove['license_number'] ?? '';
+            $removeIsRealUci = !empty($removeLicense) && strpos($removeLicense, 'SWE') !== 0;
+            // Only conflict if BOTH have real UCI IDs (not SWE-IDs) and they're different
+            if ($keepIsRealUci && $removeIsRealUci) {
+                $keepUci = preg_replace('/\s+/', '', $keepLicense);
+                $removeUci = preg_replace('/\s+/', '', $removeLicense);
+                if ($keepUci !== $removeUci) {
+                    $hasConflict = true;
+                    break;
+                }
             }
         }
         if ($hasConflict) continue;

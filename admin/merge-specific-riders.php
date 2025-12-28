@@ -75,18 +75,28 @@ if ($rider2Id) {
     ", [$rider2Id]);
 }
 
-// Visa senaste dubbletter
+// Visa senaste dubbletter - optimerad query
+// Först hitta namn som har dubbletter, sedan hämta detaljerna
 $recentDuplicates = $db->getAll("
+    WITH duplicate_names AS (
+        SELECT LOWER(TRIM(firstname)) as fn, LOWER(TRIM(lastname)) as ln
+        FROM riders
+        WHERE firstname IS NOT NULL AND lastname IS NOT NULL
+        GROUP BY LOWER(TRIM(firstname)), LOWER(TRIM(lastname))
+        HAVING COUNT(*) > 1
+        LIMIT 100
+    )
     SELECT r1.id as id1, r2.id as id2,
            r1.firstname as name1_first, r1.lastname as name1_last,
            r2.firstname as name2_first, r2.lastname as name2_last,
            r1.license_number as license1, r2.license_number as license2,
-           (SELECT COUNT(*) FROM results WHERE cyclist_id = r1.id) as results1,
-           (SELECT COUNT(*) FROM results WHERE cyclist_id = r2.id) as results2
-    FROM riders r1
-    JOIN riders r2 ON r1.id < r2.id
-    WHERE UPPER(TRIM(r1.firstname)) = UPPER(TRIM(r2.firstname))
-      AND UPPER(TRIM(r1.lastname)) = UPPER(TRIM(r2.lastname))
+           COALESCE(res1.cnt, 0) as results1,
+           COALESCE(res2.cnt, 0) as results2
+    FROM duplicate_names dn
+    JOIN riders r1 ON LOWER(TRIM(r1.firstname)) = dn.fn AND LOWER(TRIM(r1.lastname)) = dn.ln
+    JOIN riders r2 ON LOWER(TRIM(r2.firstname)) = dn.fn AND LOWER(TRIM(r2.lastname)) = dn.ln AND r1.id < r2.id
+    LEFT JOIN (SELECT cyclist_id, COUNT(*) as cnt FROM results GROUP BY cyclist_id) res1 ON res1.cyclist_id = r1.id
+    LEFT JOIN (SELECT cyclist_id, COUNT(*) as cnt FROM results GROUP BY cyclist_id) res2 ON res2.cyclist_id = r2.id
     ORDER BY r2.id DESC
     LIMIT 50
 ");
