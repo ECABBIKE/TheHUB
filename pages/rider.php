@@ -1945,8 +1945,8 @@ document.addEventListener('keydown', function(e) {
         </div>
         <form id="claimForm" class="claim-modal-body">
             <div class="claim-info-box claim-info-admin">
-                <i data-lucide="shield-check"></i>
-                <p><strong>Super Admin:</strong> Koppla en e-postadress direkt till denna profil. Profilen får då tillgång till inloggning och profilredigering.</p>
+                <i data-lucide="clock"></i>
+                <p><strong>Kräver godkännande:</strong> Förfrågan skickas till admin för granskning. Efter godkännande kopplas e-posten och en aktiveringslänk skickas.</p>
             </div>
 
             <div class="claim-profile-card claim-profile-target">
@@ -1994,21 +1994,20 @@ document.addEventListener('keydown', function(e) {
             </div>
 
             <input type="hidden" name="target_rider_id" value="<?= $riderId ?>">
-            <input type="hidden" name="admin_direct" value="1">
 
             <div class="claim-form-actions">
                 <button type="button" class="btn-secondary" onclick="closeClaimModal()">Avbryt</button>
                 <button type="submit" class="btn-primary">
-                    <i data-lucide="check"></i>
-                    Koppla direkt
+                    <i data-lucide="send"></i>
+                    Skicka förfrågan
                 </button>
             </div>
         </form>
         <div id="claimSuccess" class="claim-success" style="display: none;">
-            <i data-lucide="check-circle"></i>
-            <h4>E-post kopplad!</h4>
-            <p>Profilen är nu kopplad till e-postadressen.</p>
-            <button type="button" class="btn-primary" onclick="closeClaimModal(); location.reload();">Stäng</button>
+            <i data-lucide="clock"></i>
+            <h4>Förfrågan skickad!</h4>
+            <p>En admin kommer att granska och godkänna förfrågan. Aktiveringslänk skickas därefter.</p>
+            <button type="button" class="btn-primary" onclick="closeClaimModal();">Stäng</button>
         </div>
     </div>
 </div>

@@ -1,17 +1,15 @@
 <?php
 /**
- * API Endpoint: Profile Claim / Direct Email Connection
+ * API Endpoint: Profile Claim / Email Connection Request
  *
- * Two modes:
- * 1. Super Admin direct: Directly connects email to profile (admin_direct=1)
- * 2. User claim: Creates a claim request for admin approval (not yet implemented publicly)
+ * ALL email connections now create a claim that requires admin approval.
+ * This ensures proper identity verification before connecting emails to profiles.
  */
 
 header('Content-Type: application/json');
 
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../hub-config.php';
-require_once __DIR__ . '/../includes/mail.php';
 
 // Only POST allowed
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -22,7 +20,6 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 // Get parameters
 $targetRiderId = (int)($_POST['target_rider_id'] ?? 0);
-$adminDirect = !empty($_POST['admin_direct']);
 $email = trim($_POST['email'] ?? '');
 $phone = trim($_POST['phone'] ?? '');
 $instagram = trim($_POST['instagram'] ?? '');
@@ -31,6 +28,16 @@ $reason = trim($_POST['reason'] ?? '');
 
 if (!$targetRiderId) {
     echo json_encode(['success' => false, 'error' => 'Ogiltig profil']);
+    exit;
+}
+
+// Require login (super admin or regular user)
+$isSuperAdmin = function_exists('hub_is_super_admin') && hub_is_super_admin();
+$currentUser = function_exists('hub_current_user') ? hub_current_user() : null;
+
+if (!$isSuperAdmin && (!$currentUser || empty($currentUser['id']))) {
+    http_response_code(401);
+    echo json_encode(['success' => false, 'error' => 'Du måste vara inloggad']);
     exit;
 }
 
@@ -50,121 +57,69 @@ try {
         exit;
     }
 
-    // Mode 1: Super Admin direct connection
-    if ($adminDirect) {
-        // Verify super admin
-        $isSuperAdmin = function_exists('hub_is_super_admin') && hub_is_super_admin();
+    // Validate email
+    if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
+        echo json_encode(['success' => false, 'error' => 'Ogiltig e-postadress']);
+        exit;
+    }
 
-        if (!$isSuperAdmin) {
-            http_response_code(403);
-            echo json_encode(['success' => false, 'error' => 'Endast super admin kan göra direkt koppling']);
-            exit;
-        }
-
-        if (empty($email) || !filter_var($email, FILTER_VALIDATE_EMAIL)) {
-            echo json_encode(['success' => false, 'error' => 'Ogiltig e-postadress']);
-            exit;
-        }
-
-        if (empty($phone)) {
-            echo json_encode(['success' => false, 'error' => 'Telefonnummer krävs för verifiering']);
-            exit;
-        }
-
-        // Check if email is already used by another rider
-        $existingRider = $db->getRow("SELECT id, firstname, lastname FROM riders WHERE email = ? AND id != ?", [$email, $targetRiderId]);
-        if ($existingRider) {
-            echo json_encode([
-                'success' => false,
-                'error' => 'E-postadressen används redan av ' . $existingRider['firstname'] . ' ' . $existingRider['lastname'] . ' (ID: ' . $existingRider['id'] . ')'
-            ]);
-            exit;
-        }
-
-        // Build verification notes
-        $verificationNotes = [];
-        $verificationNotes[] = "Tel: {$phone}";
-        if ($instagram) $verificationNotes[] = "IG: {$instagram}";
-        if ($facebook) $verificationNotes[] = "FB: {$facebook}";
-        if ($reason) $verificationNotes[] = "Note: {$reason}";
-        $fullNotes = implode(' | ', $verificationNotes);
-
-        // Generate password reset token
-        $token = bin2hex(random_bytes(32));
-        $expires = date('Y-m-d H:i:s', strtotime('+24 hours'));
-
-        // Direct update - connect email, phone, social media and set password reset token
-        $db->query(
-            "UPDATE riders SET email = ?, phone = ?, social_instagram = ?, social_facebook = ?, password_reset_token = ?, password_reset_expires = ?, updated_at = NOW() WHERE id = ?",
-            [$email, $phone, $instagram ?: null, $facebook ?: null, $token, $expires, $targetRiderId]
-        );
-
-        // Build reset link and send email
-        $baseUrl = 'https://thehub.gravityseries.se';
-        $resetLink = $baseUrl . '/reset-password?token=' . $token;
-        $riderName = trim($targetRider['firstname'] . ' ' . $targetRider['lastname']);
-
-        $emailSent = hub_send_password_reset_email($email, $riderName, $resetLink);
-
-        // Log the action with full verification info
-        error_log("ADMIN DIRECT CLAIM: Super admin connected email '{$email}' to rider {$targetRiderId} ({$targetRider['firstname']} {$targetRider['lastname']}). Verification: {$fullNotes}. Email sent: " . ($emailSent ? 'yes' : 'no'));
-
-        $message = $emailSent
-            ? 'E-post kopplad! Ett mail med lösenordslänk har skickats.'
-            : 'E-post kopplad! Kunde inte skicka mail - användaren kan använda "Glömt lösenord".';
-
+    // Check if email is already used by another rider
+    $existingRider = $db->getRow("SELECT id, firstname, lastname FROM riders WHERE email = ? AND id != ?", [$email, $targetRiderId]);
+    if ($existingRider) {
         echo json_encode([
-            'success' => true,
-            'message' => $message,
-            'email_sent' => $emailSent
+            'success' => false,
+            'error' => 'E-postadressen används redan av ' . $existingRider['firstname'] . ' ' . $existingRider['lastname'] . ' (ID: ' . $existingRider['id'] . ')'
         ]);
         exit;
     }
 
-    // Mode 2: User claim request (for future use when public claims are enabled)
-    $currentUser = function_exists('hub_current_user') ? hub_current_user() : null;
-
-    if (!$currentUser || empty($currentUser['id'])) {
-        http_response_code(401);
-        echo json_encode(['success' => false, 'error' => 'Du måste vara inloggad']);
-        exit;
-    }
-
-    $claimantRiderId = $currentUser['id'];
-    $claimantEmail = $currentUser['email'] ?? '';
-    $claimantName = trim(($currentUser['firstname'] ?? '') . ' ' . ($currentUser['lastname'] ?? ''));
-
-    // Cannot claim your own profile
-    if ($claimantRiderId === $targetRiderId) {
-        echo json_encode(['success' => false, 'error' => 'Du kan inte koppla till din egen profil']);
-        exit;
-    }
-
-    // Check if there's already a pending claim for this combination
+    // Check if there's already a pending claim for this target
     $existingClaim = $db->getRow(
-        "SELECT id FROM rider_claims WHERE claimant_rider_id = ? AND target_rider_id = ? AND status = 'pending'",
-        [$claimantRiderId, $targetRiderId]
+        "SELECT id FROM rider_claims WHERE target_rider_id = ? AND status = 'pending'",
+        [$targetRiderId]
     );
 
     if ($existingClaim) {
-        echo json_encode(['success' => false, 'error' => 'Du har redan en väntande förfrågan för denna profil']);
+        echo json_encode(['success' => false, 'error' => 'Det finns redan en väntande förfrågan för denna profil']);
         exit;
     }
 
-    // Insert the claim
+    // Build verification notes
+    $verificationNotes = [];
+    if ($phone) $verificationNotes[] = "Tel: {$phone}";
+    if ($instagram) $verificationNotes[] = "IG: {$instagram}";
+    if ($facebook) $verificationNotes[] = "FB: {$facebook}";
+    if ($reason) $verificationNotes[] = $reason;
+    $fullNotes = implode(' | ', $verificationNotes);
+
+    // Determine who is making the claim
+    $claimantRiderId = $currentUser['id'] ?? null;
+    $claimantName = $isSuperAdmin ? 'Super Admin' : trim(($currentUser['firstname'] ?? '') . ' ' . ($currentUser['lastname'] ?? ''));
+    $createdBy = $isSuperAdmin ? 'admin' : 'user';
+
+    // Create the claim - requires admin approval
     $db->insert('rider_claims', [
         'claimant_rider_id' => $claimantRiderId,
         'target_rider_id' => $targetRiderId,
-        'claimant_email' => $claimantEmail,
+        'claimant_email' => $email,
         'claimant_name' => $claimantName,
-        'reason' => $reason ?: null,
+        'phone' => $phone,
+        'instagram' => $instagram,
+        'facebook' => $facebook,
+        'reason' => $fullNotes ?: null,
+        'created_by' => $createdBy,
         'status' => 'pending',
         'created_at' => date('Y-m-d H:i:s')
     ]);
 
+    // Log the action
+    $targetName = trim($targetRider['firstname'] . ' ' . $targetRider['lastname']);
+    error_log("PROFILE CLAIM CREATED: {$claimantName} requested to connect '{$email}' to rider {$targetRiderId} ({$targetName}). Verification: {$fullNotes}");
+
     echo json_encode([
         'success' => true,
-        'message' => 'Förfrågan skickad! En administratör kommer att granska den.'
+        'message' => 'Förfrågan skickad! En administratör kommer att granska och godkänna kopplingen.',
+        'requires_approval' => true
     ]);
 
 } catch (Exception $e) {
