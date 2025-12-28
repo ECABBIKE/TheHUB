@@ -23,7 +23,12 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 $input = json_decode(file_get_contents('php://input'), true);
 $riderId = (int)($input['rider_id'] ?? 0);
 
+// Debug logging
+error_log("RIDER_ACTIVATE: Request received for rider_id=" . $riderId);
+error_log("RIDER_ACTIVATE: Session data: " . print_r($_SESSION, true));
+
 if (!$riderId) {
+    error_log("RIDER_ACTIVATE: No rider_id provided");
     echo json_encode(['success' => false, 'error' => 'Ogiltig profil']);
     exit;
 }
@@ -31,8 +36,13 @@ if (!$riderId) {
 // Verify super admin
 $isSuperAdmin = function_exists('hub_is_super_admin') && hub_is_super_admin();
 
+error_log("RIDER_ACTIVATE: hub_is_super_admin exists: " . (function_exists('hub_is_super_admin') ? 'yes' : 'no'));
+error_log("RIDER_ACTIVATE: isSuperAdmin: " . ($isSuperAdmin ? 'yes' : 'no'));
+error_log("RIDER_ACTIVATE: admin_role from session: " . ($_SESSION['admin_role'] ?? 'not set'));
+
 if (!$isSuperAdmin) {
     http_response_code(403);
+    error_log("RIDER_ACTIVATE: Access denied - not super admin");
     echo json_encode(['success' => false, 'error' => 'Endast super admin kan skicka aktiveringslänkar']);
     exit;
 }
