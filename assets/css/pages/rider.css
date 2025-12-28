@@ -2096,6 +2096,7 @@
     /* Edge-to-edge design för alla kort på mobil - styrs av --container-padding från branding */
     .card,
     .profile-card,
+    .profile-card-v4,
     .form-card,
     .ranking-history-card,
     .dashboard-chart-card,
