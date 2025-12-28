@@ -50,8 +50,18 @@ try {
     $stats = [
         'riders' => 0, 'events' => 0, 'clubs' => 0, 'series' => 0,
         'upcoming' => 0, 'results' => 0, 'pending_orders' => 0,
-        'total_revenue' => 0, 'registrations_today' => 0, 'registrations_week' => 0
+        'total_revenue' => 0, 'registrations_today' => 0, 'registrations_week' => 0,
+        'pending_claims' => 0
     ];
+}
+
+// Ensure pending_claims is always set (in case of partial failure above)
+if (!isset($stats['pending_claims'])) {
+    try {
+        $stats['pending_claims'] = $pdo->query("SELECT COUNT(*) FROM rider_claims WHERE status = 'pending'")->fetchColumn();
+    } catch (Exception $e) {
+        $stats['pending_claims'] = 0;
+    }
 }
 
 // Get upcoming events

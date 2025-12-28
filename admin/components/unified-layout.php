@@ -21,6 +21,17 @@ require_admin();
 // Get theme
 $theme = hub_get_theme();
 
+// Get pending claims count for header notification
+$pendingClaimsCount = 0;
+try {
+    global $pdo;
+    if ($pdo) {
+        $pendingClaimsCount = (int)$pdo->query("SELECT COUNT(*) FROM rider_claims WHERE status = 'pending'")->fetchColumn();
+    }
+} catch (Exception $e) {
+    $pendingClaimsCount = 0;
+}
+
 // Create a mock pageInfo for the sidebar
 $pageInfo = [
     'page' => 'admin',

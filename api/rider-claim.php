@@ -95,22 +95,44 @@ try {
     // Determine who is making the claim
     $claimantRiderId = $currentUser['id'] ?? null;
     $claimantName = $isSuperAdmin ? 'Super Admin' : trim(($currentUser['firstname'] ?? '') . ' ' . ($currentUser['lastname'] ?? ''));
-    $createdBy = $isSuperAdmin ? 'admin' : 'user';
+
+    // Check if new columns exist (migration 077)
+    $hasNewColumns = false;
+    try {
+        $colCheck = $db->getRow("SHOW COLUMNS FROM rider_claims LIKE 'phone'");
+        $hasNewColumns = !empty($colCheck);
+    } catch (Exception $e) {
+        $hasNewColumns = false;
+    }
 
     // Create the claim - requires admin approval
-    $db->insert('rider_claims', [
-        'claimant_rider_id' => $claimantRiderId,
-        'target_rider_id' => $targetRiderId,
-        'claimant_email' => $email,
-        'claimant_name' => $claimantName,
-        'phone' => $phone,
-        'instagram' => $instagram,
-        'facebook' => $facebook,
-        'reason' => $fullNotes ?: null,
-        'created_by' => $createdBy,
-        'status' => 'pending',
-        'created_at' => date('Y-m-d H:i:s')
-    ]);
+    if ($hasNewColumns) {
+        // Use new schema with additional columns
+        $db->insert('rider_claims', [
+            'claimant_rider_id' => $claimantRiderId,
+            'target_rider_id' => $targetRiderId,
+            'claimant_email' => $email,
+            'claimant_name' => $claimantName,
+            'phone' => $phone ?: null,
+            'instagram' => $instagram ?: null,
+            'facebook' => $facebook ?: null,
+            'created_by' => $isSuperAdmin ? 'admin' : 'user',
+            'reason' => $fullNotes ?: null,
+            'status' => 'pending',
+            'created_at' => date('Y-m-d H:i:s')
+        ]);
+    } else {
+        // Fallback to old schema (include contact info in reason)
+        $db->insert('rider_claims', [
+            'claimant_rider_id' => $claimantRiderId,
+            'target_rider_id' => $targetRiderId,
+            'claimant_email' => $email,
+            'claimant_name' => $claimantName,
+            'reason' => $fullNotes ?: null,
+            'status' => 'pending',
+            'created_at' => date('Y-m-d H:i:s')
+        ]);
+    }
 
     // Log the action
     $targetName = trim($targetRider['firstname'] . ' ' . $targetRider['lastname']);
