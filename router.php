@@ -35,7 +35,7 @@ if (!defined('HUB_V3_ROOT')) {
 function hub_requires_auth(string $page): bool {
     // Only auth-related pages are public - everything else requires login
     $publicPages = [
-        '', 'welcome', 'login', 'logout', 'forgot-password', 'reset-password', 'activate-account', 'index.php'
+        '', 'welcome', 'login', 'logout', 'forgot-password', 'reset-password', 'activate-account', 'index.php', 'rider-register'
     ];
     return !in_array($page, $publicPages);
 }
@@ -150,6 +150,16 @@ function hub_get_current_page(): array {
             'subpage' => $subpage,
             'params' => $id ? ['id' => $id] : [],
             'file' => $file
+        ];
+    }
+
+    // Rider registration page (rider-register/123)
+    if ($section === 'rider-register' && isset($segments[1])) {
+        return [
+            'page' => 'rider-register',
+            'section' => 'database',
+            'params' => ['id' => $segments[1]],
+            'file' => HUB_V3_ROOT . '/pages/rider-register.php'
         ];
     }
 
