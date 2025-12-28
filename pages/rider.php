@@ -841,7 +841,7 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
                         <i data-lucide="calculator"></i>
                         <span>Visa uträkning</span>
                     </button>
-                    <?php if (count($rankingHistoryFull) >= 3): ?>
+                    <?php if (!empty($rankingHistoryFull)): ?>
                     <button type="button" class="btn-calc-ranking-inline" onclick="openHistoryModal()">
                         <i data-lucide="history"></i>
                         <span>Visa historik</span>
@@ -1707,7 +1707,7 @@ document.addEventListener('DOMContentLoaded', function() {
 </div>
 
 <!-- Ranking History Modal -->
-<?php if (!empty($rankingHistoryFull) && count($rankingHistoryFull) >= 3): ?>
+<?php if (!empty($rankingHistoryFull)): ?>
 <div id="historyModal" class="ranking-modal-overlay" style="padding-top: calc(var(--header-height, 60px) + 10px);">
     <div class="ranking-modal" style="max-height: calc(100vh - var(--header-height, 60px) - 40px); max-width: 800px;">
         <div class="ranking-modal-header" class="pt-md">
