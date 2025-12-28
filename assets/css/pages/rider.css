@@ -185,7 +185,7 @@
 .social-icon-simple svg {
     width: 20px;
     height: 20px;
-    fill: #333;
+    fill: #ccc;
 }
 
 .social-icon-simple:hover {
@@ -196,6 +196,13 @@
     opacity: 0.25;
     pointer-events: none;
 }
+
+/* Active social icons with brand colors */
+.social-icon-simple.social-instagram:not(.empty) svg { fill: #E4405F; }
+.social-icon-simple.social-strava:not(.empty) svg { fill: #FC4C02; }
+.social-icon-simple.social-facebook:not(.empty) svg { fill: #1877F2; }
+.social-icon-simple.social-youtube:not(.empty) svg { fill: #FF0000; }
+.social-icon-simple.social-tiktok:not(.empty) svg { fill: #000000; }
 
 /* Action Buttons - Outline Style */
 .profile-card-v4 .profile-actions-row {
