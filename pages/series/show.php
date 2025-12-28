@@ -626,8 +626,14 @@ skip_club_standings:
                                     <th class="col-club">Klubb</th>
                                     <?php $eventNum = 1; foreach ($events as $event): ?>
                                         <?php if ($isDHSeries): ?>
-                                        <th class="col-event col-event-dh" title="<?= htmlspecialchars($event['name']) ?> - Kval">#<?= $eventNum ?> K</th>
-                                        <th class="col-event col-event-dh" title="<?= htmlspecialchars($event['name']) ?> - Race">#<?= $eventNum ?> R</th>
+                                        <th class="col-event col-event-dh" title="<?= htmlspecialchars($event['name']) ?> - Kval">
+                                            <div class="th-dh">#<?= $eventNum ?></div>
+                                            <div class="th-dh-type">Kval</div>
+                                        </th>
+                                        <th class="col-event col-event-dh" title="<?= htmlspecialchars($event['name']) ?> - Race">
+                                            <div class="th-dh">#<?= $eventNum ?></div>
+                                            <div class="th-dh-type">Race</div>
+                                        </th>
                                         <?php else: ?>
                                         <th class="col-event" title="<?= htmlspecialchars($event['name']) ?>">#<?= $eventNum ?></th>
                                         <?php endif; ?>
@@ -934,6 +940,24 @@ document.addEventListener('keydown', function(e) {
 </script>
 
 <style>
+/* DH Series - two-row header for Kval/Race */
+.th-dh {
+    font-weight: 600;
+    font-size: 0.85rem;
+}
+.th-dh-type {
+    font-weight: 400;
+    font-size: 0.7rem;
+    color: var(--color-text-secondary, #666);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+.col-event-dh {
+    min-width: 45px;
+    text-align: center;
+    padding: 4px 6px !important;
+}
+
 /* Series Navigation Row - Toggle + Dropdown side by side on desktop */
 .series-nav-row {
     display: flex;
