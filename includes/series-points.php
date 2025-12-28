@@ -134,7 +134,7 @@ function calculateSeriesPointsDetailed($db, $templateId, $position, $status = 'f
  * @return array Stats: ['inserted' => X, 'updated' => X, 'deleted' => X]
  */
 function recalculateSeriesEventPoints($db, $seriesId, $eventId) {
-    $stats = ['inserted' => 0, 'updated' => 0, 'deleted' => 0, 'dh_recalculated' => false, 'positions_recalculated' => false];
+    $stats = ['inserted' => 0, 'updated' => 0, 'deleted' => 0];
 
     // Get the template for this event in this series
     $seriesEvent = $db->getRow(
@@ -175,50 +175,6 @@ function recalculateSeriesEventPoints($db, $seriesId, $eventId) {
         $eventFormat === 'DH_STANDARD' ||
         ($discipline === 'DH' && $isDHScale)
     );
-
-    // Include point-calculations.php if not already loaded (needed for recalculation functions)
-    if (!function_exists('recalculateEventResults')) {
-        require_once __DIR__ . '/point-calculations.php';
-    }
-
-    // Check if positions/points are missing in results table
-    $dataCheck = $db->getRow("
-        SELECT COUNT(*) as total,
-               SUM(CASE WHEN position IS NOT NULL AND position > 0 THEN 1 ELSE 0 END) as has_position,
-               SUM(CASE WHEN COALESCE(run_1_points, 0) > 0 OR COALESCE(run_2_points, 0) > 0 THEN 1 ELSE 0 END) as has_run_points
-        FROM results
-        WHERE event_id = ? AND status = 'finished'
-    ", [$eventId]);
-
-    $totalResults = (int)($dataCheck['total'] ?? 0);
-    $hasPositions = (int)($dataCheck['has_position'] ?? 0);
-    $hasRunPoints = (int)($dataCheck['has_run_points'] ?? 0);
-
-    // Determine if we need to recalculate
-    $needsRecalc = false;
-    if ($totalResults > 0) {
-        if ($isDHScale && $isDHEvent) {
-            // DH events: Need recalc if run_1_points/run_2_points are missing
-            $needsRecalc = ($hasRunPoints < ($totalResults * 0.5));
-        } else {
-            // Standard events: Need recalc if positions are missing
-            $needsRecalc = ($hasPositions < ($totalResults * 0.5));
-        }
-    }
-
-    if ($needsRecalc) {
-        if ($isDHScale && $isDHEvent) {
-            // DH event: Use DH recalculation with run-specific positions
-            error_log("Series points: Running DH recalculation for event {$eventId} with scale {$templateId}");
-            recalculateDHEventResults($db, $eventId, $templateId, true);
-            $stats['dh_recalculated'] = true;
-        } else {
-            // Standard event: Use normal recalculation
-            error_log("Series points: Running position recalculation for event {$eventId} with scale {$templateId}");
-            recalculateEventResults($db, $eventId, $templateId);
-            $stats['positions_recalculated'] = true;
-        }
-    }
 
     // Get all results for this event - ONLY classes that award points AND are series eligible
     // For DH events, also fetch the already-calculated run_1_points and run_2_points
