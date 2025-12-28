@@ -246,10 +246,13 @@ $totalNameExtra = $pdo->query("
     ) t
 ")->fetch()['total'] ?? 0;
 
-// Sample duplicates for preview
-$sampleUci = $pdo->query("
+// Sample duplicates for preview - but filter to only show REAL duplicates
+// Same license + different names = license CONFLICT (data error), not a duplicate
+$rawUciDups = $pdo->query("
     SELECT REPLACE(REPLACE(license_number, ' ', ''), '-', '') as uci,
            GROUP_CONCAT(CONCAT(firstname, ' ', lastname) ORDER BY id SEPARATOR ' | ') as names,
+           GROUP_CONCAT(UPPER(firstname) ORDER BY id SEPARATOR '|') as firstnames,
+           GROUP_CONCAT(UPPER(lastname) ORDER BY id SEPARATOR '|') as lastnames,
            GROUP_CONCAT(id ORDER BY id) as ids,
            COUNT(*) as cnt
     FROM riders
@@ -258,8 +261,31 @@ $sampleUci = $pdo->query("
     GROUP BY uci
     HAVING cnt > 1
     ORDER BY cnt DESC
-    LIMIT 20
+    LIMIT 50
 ")->fetchAll(PDO::FETCH_ASSOC);
+
+// Filter: Only show as duplicates if names are the same (or very similar)
+// Different names with same license = data conflict, not a duplicate to merge
+$sampleUci = [];
+$licenseConflicts = [];
+foreach ($rawUciDups as $dup) {
+    $firstnames = explode('|', $dup['firstnames']);
+    $lastnames = explode('|', $dup['lastnames']);
+
+    // Check if all names are the same (case-insensitive)
+    $uniqueFirstnames = array_unique($firstnames);
+    $uniqueLastnames = array_unique($lastnames);
+
+    if (count($uniqueFirstnames) === 1 && count($uniqueLastnames) === 1) {
+        // All names identical = real duplicate
+        $sampleUci[] = $dup;
+    } else {
+        // Different names with same license = conflict
+        $licenseConflicts[] = $dup;
+    }
+
+    if (count($sampleUci) >= 20) break;
+}
 
 // Get name duplicates - but filter to only show MERGEABLE ones
 // Include birth_year and club_id to determine if they're really the same person
@@ -506,12 +532,18 @@ include __DIR__ . '/components/unified-layout.php';
     </form>
 </div>
 
-<!-- UCI Duplicates -->
+<!-- UCI Duplicates (same license + same name = real duplicates) -->
 <div class="card mb-lg">
     <div class="card-header">
-        <h3><i data-lucide="fingerprint"></i> UCI-dubletter (<?= $uciDupCount ?> grupper)</h3>
+        <h3><i data-lucide="fingerprint"></i> UCI-dubletter (<?= count($sampleUci) ?> grupper)</h3>
     </div>
     <div class="card-body gs-padding-0">
+        <?php if (!empty($licenseConflicts)): ?>
+        <div class="alert alert-warning m-md">
+            <i data-lucide="alert-triangle"></i>
+            <strong><?= count($licenseConflicts) ?> licenskonflikter hoppas över</strong> - samma licens-ID men olika namn (datafel, ej dubletter).
+        </div>
+        <?php endif; ?>
         <?php if (empty($sampleUci)): ?>
         <div class="alert alert-success m-md">Inga UCI-dubletter!</div>
         <?php else: ?>
@@ -540,6 +572,42 @@ include __DIR__ . '/components/unified-layout.php';
         <?php endif; ?>
     </div>
 </div>
+
+<?php if (!empty($licenseConflicts)): ?>
+<!-- License Conflicts (same license but different names = data error) -->
+<div class="card mb-lg">
+    <div class="card-header" style="background: var(--color-warning); color: #000;">
+        <h3><i data-lucide="alert-triangle"></i> Licenskonflikter (<?= count($licenseConflicts) ?>) - INTE dubletter!</h3>
+    </div>
+    <div class="card-body gs-padding-0">
+        <div class="alert alert-warning m-md">
+            <i data-lucide="info"></i>
+            Dessa har samma licens-ID men <strong>olika namn</strong>. Det är ett datafel - två olika personer har fått samma ID.
+            <strong>Slå INTE ihop dessa!</strong> Fixa istället licens-ID:t på en av dem.
+        </div>
+        <div class="table-responsive">
+            <table class="table table-sm">
+                <thead>
+                    <tr>
+                        <th>Licens-ID</th>
+                        <th>Namn (olika!)</th>
+                        <th>IDs</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($licenseConflicts as $conflict): ?>
+                    <tr>
+                        <td><code><?= h($conflict['uci']) ?></code></td>
+                        <td style="color: var(--color-danger);"><?= h($conflict['names']) ?></td>
+                        <td><code><?= h($conflict['ids']) ?></code></td>
+                    </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
 
 <!-- Name Duplicates -->
 <div class="card mb-lg">
