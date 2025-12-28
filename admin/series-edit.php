@@ -233,6 +233,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $seriesData['payment_recipient_id'] = !empty($_POST['payment_recipient_id']) ? intval($_POST['payment_recipient_id']) : null;
         }
 
+        // Add historical_data_verified
+        $seriesData['historical_data_verified'] = isset($_POST['historical_data_verified']) ? 1 : 0;
+
         // Add stage_bonus_config if column exists
         if ($stageBonusColumnExists) {
             $stageBonusEnabled = isset($_POST['stage_bonus_enabled']) && $_POST['stage_bonus_enabled'] === '1';
@@ -504,7 +507,7 @@ include __DIR__ . '/components/unified-layout.php';
                     <select id="status" name="status" class="admin-form-select">
                         <option value="planning" <?= ($series['status'] ?? '') === 'planning' ? 'selected' : '' ?>>Planering</option>
                         <option value="active" <?= ($series['status'] ?? '') === 'active' ? 'selected' : '' ?>>Aktiv</option>
-                        <option value="completed" <?= ($series['status'] ?? '') === 'completed' ? 'selected' : '' ?>>Avslutad ✓</option>
+                        <option value="completed" <?= ($series['status'] ?? '') === 'completed' ? 'selected' : '' ?>>Avslutad</option>
                         <option value="cancelled" <?= ($series['status'] ?? '') === 'cancelled' ? 'selected' : '' ?>>Inställd</option>
                     </select>
                     <small class="text-secondary text-xs">
@@ -512,6 +515,19 @@ include __DIR__ . '/components/unified-layout.php';
                     </small>
                 </div>
             </div>
+
+            <?php if (($series['year'] ?? date('Y')) <= 2024): ?>
+            <div class="admin-form-group mt-md">
+                <label class="checkbox-label">
+                    <input type="checkbox" name="historical_data_verified" value="1"
+                           <?= !empty($series['historical_data_verified']) ? 'checked' : '' ?>>
+                    <span>Historisk data verifierad</span>
+                </label>
+                <small class="text-secondary text-xs d-block mt-xs">
+                    Bocka i när serietabellen är korrekt. Tar bort varningsmeddelandet för användare.
+                </small>
+            </div>
+            <?php endif; ?>
 
             <details class="mt-sm">
                 <summary class="cursor-pointer text-secondary text-sm">

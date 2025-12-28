@@ -69,6 +69,7 @@ $whereClause = 'WHERE ' . implode(' AND ', $where);
 if ($useSeriesEvents) {
     $sql = "
         SELECT s.id, s.name, s.description, s.year, s.status, s.logo, s.start_date, s.end_date,
+               s.historical_data_verified,
                sb.name as brand_name, sb.logo as brand_logo, sb.accent_color,
                COUNT(DISTINCT se.event_id) as event_count,
                (SELECT COUNT(DISTINCT r.cyclist_id)
@@ -85,6 +86,7 @@ if ($useSeriesEvents) {
 } else {
     $sql = "
         SELECT s.id, s.name, s.description, s.year, s.status, s.logo, s.start_date, s.end_date,
+               s.historical_data_verified,
                sb.name as brand_name, sb.logo as brand_logo, sb.accent_color,
                COUNT(DISTINCT e.id) as event_count,
                (SELECT COUNT(DISTINCT r.cyclist_id)
@@ -164,13 +166,30 @@ if ($filterSeriesName && !empty($seriesList)) {
     </div>
 <?php else: ?>
     <div class="series-list-container">
-        <?php foreach ($seriesByYear as $year => $yearSeries): ?>
+        <?php foreach ($seriesByYear as $year => $yearSeries):
+            // Check if any series in this year is unverified (for years <= 2024)
+            $hasUnverifiedSeries = false;
+            if (is_numeric($year) && $year <= 2024) {
+                foreach ($yearSeries as $ys) {
+                    if (empty($ys['historical_data_verified'])) {
+                        $hasUnverifiedSeries = true;
+                        break;
+                    }
+                }
+            }
+        ?>
             <div class="series-year-section">
                 <div class="series-year-divider">
                     <span class="series-year-label"><?= $year ?></span>
                     <span class="series-year-line"></span>
                     <span class="series-year-count"><?= count($yearSeries) ?> serier</span>
                 </div>
+                <?php if ($hasUnverifiedSeries): ?>
+                <div class="series-historical-warning">
+                    <i data-lucide="alert-triangle"></i>
+                    <span>Serietabellerna för äldre serier är under arbete. Dessa kräver en del manuellt arbete för att bli korrekta och arbete pågår.</span>
+                </div>
+                <?php endif; ?>
                 <div class="series-list">
                     <?php foreach ($yearSeries as $s):
                         $accentColor = $s['accent_color'] ?: '#61CE70';

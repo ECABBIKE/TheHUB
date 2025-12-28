@@ -481,6 +481,17 @@ skip_club_standings:
         </div>
     </div>
 
+    <?php
+    // Show warning for unverified historical series (2024 and older)
+    $showHistoricalWarning = isset($series['year']) && (int)$series['year'] <= 2024 && empty($series['historical_data_verified']);
+    if ($showHistoricalWarning):
+    ?>
+    <div class="series-historical-warning">
+        <i data-lucide="alert-triangle"></i>
+        <span>Serietabellerna för äldre serier är under arbete. Dessa kräver en del manuellt arbete för att bli korrekta och arbete pågår.</span>
+    </div>
+    <?php endif; ?>
+
     <!-- Navigation Row: Toggle + Events Dropdown -->
     <div class="series-nav-row">
         <!-- Toggle Buttons: Individual / Clubs -->

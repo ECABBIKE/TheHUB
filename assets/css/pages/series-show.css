@@ -627,3 +627,36 @@ input.filter-select {
         display: none;
     }
 }
+
+/* Historical Data Warning Banner */
+.series-historical-warning {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-sm);
+    padding: var(--space-md);
+    background: rgba(245, 158, 11, 0.1);
+    border: 1px solid var(--color-warning);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--space-lg);
+    color: var(--color-text-secondary);
+    font-size: var(--text-sm);
+    line-height: 1.5;
+}
+
+.series-historical-warning i {
+    flex-shrink: 0;
+    width: 18px;
+    height: 18px;
+    color: var(--color-warning);
+    margin-top: 1px;
+}
+
+@media (max-width: 767px) {
+    .series-historical-warning {
+        margin-left: calc(-1 * var(--container-padding, 16px));
+        margin-right: calc(-1 * var(--container-padding, 16px));
+        border-radius: 0;
+        border-left: none;
+        border-right: none;
+    }
+}
