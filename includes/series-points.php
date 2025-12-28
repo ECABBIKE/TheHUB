@@ -134,7 +134,7 @@ function calculateSeriesPointsDetailed($db, $templateId, $position, $status = 'f
  * @return array Stats: ['inserted' => X, 'updated' => X, 'deleted' => X]
  */
 function recalculateSeriesEventPoints($db, $seriesId, $eventId) {
-    $stats = ['inserted' => 0, 'updated' => 0, 'deleted' => 0];
+    $stats = ['inserted' => 0, 'updated' => 0, 'deleted' => 0, 'dh_recalculated' => false];
 
     // Get the template for this event in this series
     $seriesEvent = $db->getRow(
@@ -160,12 +160,43 @@ function recalculateSeriesEventPoints($db, $seriesId, $eventId) {
         $isDHScale = ($dhCheck['cnt'] ?? 0) > 0;
     }
 
-    // Get event_level for sportmotion multiplier
+    // Get event info including format
     $event = $db->getRow(
-        "SELECT COALESCE(event_level, 'national') as event_level FROM events WHERE id = ?",
+        "SELECT COALESCE(event_level, 'national') as event_level, event_format, discipline FROM events WHERE id = ?",
         [$eventId]
     );
     $eventLevel = $event ? $event['event_level'] : 'national';
+    $eventFormat = $event['event_format'] ?? '';
+    $discipline = $event['discipline'] ?? '';
+
+    // For DH events: Check if run_1_points/run_2_points are missing in results table
+    // If so, recalculate the DH event first to populate them
+    if ($isDHScale && (strpos($eventFormat, 'DH') !== false || $discipline === 'DH')) {
+        $missingCheck = $db->getRow("
+            SELECT COUNT(*) as total,
+                   SUM(CASE WHEN COALESCE(run_1_points, 0) > 0 OR COALESCE(run_2_points, 0) > 0 THEN 1 ELSE 0 END) as has_points
+            FROM results
+            WHERE event_id = ? AND status = 'finished'
+        ", [$eventId]);
+
+        // If most results are missing DH points, recalculate the event
+        if (($missingCheck['total'] ?? 0) > 0 && ($missingCheck['has_points'] ?? 0) == 0) {
+            // Include point-calculations.php if not already loaded
+            if (!function_exists('recalculateDHEventResults')) {
+                require_once __DIR__ . '/point-calculations.php';
+            }
+
+            // If using a DH scale (with run_1/run_2 values), assume SweCUP DH format
+            // since that's what uses the dual-run point system
+            $useSwecupDh = $isDHScale || ($eventFormat === 'DH_SWECUP');
+
+            // Use the series template_id as the scale - this ensures we use the correct
+            // DH point scale with run_1_points and run_2_points values
+            error_log("Series points: Running DH recalculation for event {$eventId} with scale {$templateId} (SweCUP: " . ($useSwecupDh ? 'yes' : 'no') . ")");
+            recalculateDHEventResults($db, $eventId, $templateId, $useSwecupDh);
+            $stats['dh_recalculated'] = true;
+        }
+    }
 
     // Get all results for this event - ONLY classes that award points AND are series eligible
     // For DH events, also fetch the already-calculated run_1_points and run_2_points
