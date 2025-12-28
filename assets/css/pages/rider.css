@@ -2117,6 +2117,15 @@
         width: calc(100% + (2 * var(--container-padding, 16px))) !important;
     }
 
+    /* Highlights card mobile - add internal padding */
+    .highlights-card {
+        padding: var(--space-md) var(--container-padding, 16px) !important;
+    }
+
+    .highlight-item {
+        padding: var(--space-sm) var(--space-md);
+    }
+
     /* Profile card mobile - compact badges */
     .profile-card {
         padding: var(--space-md);
