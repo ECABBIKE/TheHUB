@@ -168,6 +168,7 @@ function recalculateSeriesEventPoints($db, $seriesId, $eventId) {
     $eventLevel = $event ? $event['event_level'] : 'national';
 
     // For DH scales: Calculate positions from run times and lookup points
+    // IMPORTANT: Positions are calculated PER CLASS, not globally!
     $dhPointsMap = []; // cyclist_id => ['run_1' => X, 'run_2' => Y, 'total' => Z]
 
     if ($isDHScale) {
@@ -196,32 +197,45 @@ function recalculateSeriesEventPoints($db, $seriesId, $eventId) {
             $run2PointsByPos[$sv['position']] = (float)$sv['run_2_points'];
         }
 
-        // Calculate KVAL positions (sorted by run_1_time)
-        $kvalResults = array_filter($dhResults, fn($r) => !empty($r['run_1_time']) && $r['status'] !== 'dns');
-        usort($kvalResults, fn($a, $b) => strcmp($a['run_1_time'], $b['run_1_time']));
-
-        $kvalPosition = 1;
-        foreach ($kvalResults as $r) {
-            $cyclistId = $r['cyclist_id'];
-            if (!isset($dhPointsMap[$cyclistId])) {
-                $dhPointsMap[$cyclistId] = ['run_1' => 0, 'run_2' => 0, 'total' => 0];
+        // Group results by class_id for per-class ranking
+        $resultsByClass = [];
+        foreach ($dhResults as $r) {
+            $classId = $r['class_id'];
+            if (!isset($resultsByClass[$classId])) {
+                $resultsByClass[$classId] = [];
             }
-            $dhPointsMap[$cyclistId]['run_1'] = (int)($run1PointsByPos[$kvalPosition] ?? 0);
-            $kvalPosition++;
+            $resultsByClass[$classId][] = $r;
         }
 
-        // Calculate FINAL positions (sorted by run_2_time, only those who have final time)
-        $finalResults = array_filter($dhResults, fn($r) => !empty($r['run_2_time']) && $r['status'] === 'finished');
-        usort($finalResults, fn($a, $b) => strcmp($a['run_2_time'], $b['run_2_time']));
+        // Calculate positions PER CLASS
+        foreach ($resultsByClass as $classId => $classResults) {
+            // Calculate KVAL positions for this class (sorted by run_1_time)
+            $kvalResults = array_filter($classResults, fn($r) => !empty($r['run_1_time']) && $r['status'] !== 'dns');
+            usort($kvalResults, fn($a, $b) => strcmp($a['run_1_time'], $b['run_1_time']));
 
-        $finalPosition = 1;
-        foreach ($finalResults as $r) {
-            $cyclistId = $r['cyclist_id'];
-            if (!isset($dhPointsMap[$cyclistId])) {
-                $dhPointsMap[$cyclistId] = ['run_1' => 0, 'run_2' => 0, 'total' => 0];
+            $kvalPosition = 1;
+            foreach ($kvalResults as $r) {
+                $cyclistId = $r['cyclist_id'];
+                if (!isset($dhPointsMap[$cyclistId])) {
+                    $dhPointsMap[$cyclistId] = ['run_1' => 0, 'run_2' => 0, 'total' => 0];
+                }
+                $dhPointsMap[$cyclistId]['run_1'] = (int)($run1PointsByPos[$kvalPosition] ?? 0);
+                $kvalPosition++;
             }
-            $dhPointsMap[$cyclistId]['run_2'] = (int)($run2PointsByPos[$finalPosition] ?? 0);
-            $finalPosition++;
+
+            // Calculate FINAL positions for this class (sorted by run_2_time)
+            $finalResults = array_filter($classResults, fn($r) => !empty($r['run_2_time']) && $r['status'] === 'finished');
+            usort($finalResults, fn($a, $b) => strcmp($a['run_2_time'], $b['run_2_time']));
+
+            $finalPosition = 1;
+            foreach ($finalResults as $r) {
+                $cyclistId = $r['cyclist_id'];
+                if (!isset($dhPointsMap[$cyclistId])) {
+                    $dhPointsMap[$cyclistId] = ['run_1' => 0, 'run_2' => 0, 'total' => 0];
+                }
+                $dhPointsMap[$cyclistId]['run_2'] = (int)($run2PointsByPos[$finalPosition] ?? 0);
+                $finalPosition++;
+            }
         }
 
         // Calculate totals
