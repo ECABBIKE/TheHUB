@@ -77,7 +77,7 @@ $ADMIN_TABS = [
                 'label' => 'Elimination',
                 'icon' => 'git-branch',
                 'url' => '/admin/elimination.php',
-                'pages' => ['elimination.php', 'elimination-manage.php', 'elimination-import-qualifying.php', 'elimination-add-qualifying.php', 'elimination-create.php']
+                'pages' => ['elimination.php', 'elimination-manage.php', 'elimination-live.php', 'elimination-import-qualifying.php', 'elimination-add-qualifying.php', 'elimination-create.php']
             ]
         ]
     ],
