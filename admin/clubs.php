@@ -391,18 +391,19 @@ include __DIR__ . '/components/unified-layout.php';
                 <a href="/admin/club-edit.php" class="btn btn--primary">Skapa klubb</a>
             </div>
         <?php else: ?>
-            <!-- Merge toolbar (hidden until 2 selected) -->
+            <!-- Merge toolbar (hidden until 2+ selected) -->
             <div id="mergeToolbar" style="display: none; padding: var(--space-md); background: var(--color-accent-light); border-bottom: 1px solid var(--color-border);">
                 <form method="POST" id="mergeForm" style="display: flex; align-items: center; gap: var(--space-md); flex-wrap: wrap;">
                     <?= csrf_field() ?>
                     <input type="hidden" name="action" value="merge">
                     <input type="hidden" name="keep_id" id="keepId">
-                    <input type="hidden" name="merge_id" id="mergeId">
+                    <div id="mergeIdsContainer"></div>
                     <span><strong id="selectedCount">0</strong> klubbar valda</span>
-                    <span id="mergePreview" style="flex: 1;"></span>
-                    <button type="button" class="btn btn--secondary btn-sm" onclick="swapMergeDirection()">
-                        <i data-lucide="arrow-left-right"></i> Byt riktning
-                    </button>
+                    <div style="flex: 1; display: flex; align-items: center; gap: var(--space-sm);">
+                        <label style="white-space: nowrap;">Behåll:</label>
+                        <select id="keepSelect" class="form-select form-select-sm" style="min-width: 200px;"></select>
+                    </div>
+                    <span id="mergePreview" style="color: var(--color-text-secondary); font-size: 0.9em;"></span>
                     <button type="submit" class="btn btn--primary btn-sm">
                         <i data-lucide="git-merge"></i> Slå samman
                     </button>
@@ -539,20 +540,30 @@ function updateMergeToolbar() {
         });
     });
 
+    // Sort by members (most members first) for default keep selection
+    selectedClubs.sort((a, b) => b.members - a.members);
+
     const toolbar = document.getElementById('mergeToolbar');
     const countEl = document.getElementById('selectedCount');
     const previewEl = document.getElementById('mergePreview');
+    const keepSelect = document.getElementById('keepSelect');
+    const mergeIdsContainer = document.getElementById('mergeIdsContainer');
 
     countEl.textContent = selectedClubs.length;
 
-    if (selectedClubs.length === 2) {
+    if (selectedClubs.length >= 2) {
         toolbar.style.display = 'block';
+
+        // Build keep dropdown
+        keepSelect.innerHTML = selectedClubs.map(c =>
+            `<option value="${c.id}">${c.name} (${c.members} medl.)</option>`
+        ).join('');
+
+        // Set default keep (most members)
+        keepSelect.value = selectedClubs[0].id;
         document.getElementById('keepId').value = selectedClubs[0].id;
-        document.getElementById('mergeId').value = selectedClubs[1].id;
-        previewEl.innerHTML = `<strong>"${selectedClubs[1].name}"</strong> (${selectedClubs[1].members} medl.) → <strong>"${selectedClubs[0].name}"</strong> (${selectedClubs[0].members} medl.)`;
-    } else if (selectedClubs.length > 2) {
-        toolbar.style.display = 'block';
-        previewEl.innerHTML = '<em style="color: var(--color-warning);">Välj endast 2 klubbar för sammanslagning</em>';
+
+        updateMergePreview();
     } else {
         toolbar.style.display = 'none';
     }
@@ -560,14 +571,30 @@ function updateMergeToolbar() {
     if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
-function swapMergeDirection() {
-    if (selectedClubs.length !== 2) return;
-    selectedClubs.reverse();
-    document.getElementById('keepId').value = selectedClubs[0].id;
-    document.getElementById('mergeId').value = selectedClubs[1].id;
-    document.getElementById('mergePreview').innerHTML =
-        `<strong>"${selectedClubs[1].name}"</strong> (${selectedClubs[1].members} medl.) → <strong>"${selectedClubs[0].name}"</strong> (${selectedClubs[0].members} medl.)`;
+function updateMergePreview() {
+    const keepId = document.getElementById('keepSelect').value;
+    const keepClub = selectedClubs.find(c => c.id === keepId);
+    const mergeClubs = selectedClubs.filter(c => c.id !== keepId);
+
+    document.getElementById('keepId').value = keepId;
+
+    // Update hidden merge_ids inputs
+    const container = document.getElementById('mergeIdsContainer');
+    container.innerHTML = mergeClubs.map(c =>
+        `<input type="hidden" name="merge_ids[]" value="${c.id}">`
+    ).join('');
+
+    // Update preview text
+    const previewEl = document.getElementById('mergePreview');
+    if (mergeClubs.length === 1) {
+        previewEl.innerHTML = `"${mergeClubs[0].name}" → "${keepClub.name}"`;
+    } else {
+        previewEl.innerHTML = `${mergeClubs.length} klubbar → "${keepClub.name}"`;
+    }
 }
+
+// Listen for keep selection changes
+document.getElementById('keepSelect')?.addEventListener('change', updateMergePreview);
 
 function clearSelection() {
     document.querySelectorAll('.club-checkbox').forEach(cb => cb.checked = false);
@@ -577,12 +604,25 @@ function clearSelection() {
 }
 
 document.getElementById('mergeForm')?.addEventListener('submit', function(e) {
-    if (selectedClubs.length !== 2) {
+    if (selectedClubs.length < 2) {
         e.preventDefault();
-        alert('Välj exakt 2 klubbar för sammanslagning');
+        alert('Välj minst 2 klubbar för att slå samman.');
         return;
     }
-    if (!confirm(`Slå samman "${selectedClubs[1].name}" med "${selectedClubs[0].name}"?\n\nAlla medlemmar och resultat flyttas till "${selectedClubs[0].name}".`)) {
+
+    const keepId = document.getElementById('keepSelect').value;
+    const keepClub = selectedClubs.find(c => c.id === keepId);
+    const mergeClubs = selectedClubs.filter(c => c.id !== keepId);
+    const mergeNames = mergeClubs.map(c => c.name).join(', ');
+
+    let msg;
+    if (mergeClubs.length === 1) {
+        msg = `Slå samman "${mergeClubs[0].name}" med "${keepClub.name}"?\n\nAlla medlemmar och resultat flyttas till "${keepClub.name}".`;
+    } else {
+        msg = `Slå samman ${mergeClubs.length} klubbar med "${keepClub.name}"?\n\nKlubbar som tas bort:\n${mergeNames}\n\nAlla medlemmar och resultat flyttas till "${keepClub.name}".`;
+    }
+
+    if (!confirm(msg)) {
         e.preventDefault();
     }
 });
