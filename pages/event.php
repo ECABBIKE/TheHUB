@@ -19,6 +19,8 @@ $canEditEvent = function_exists('canAccessEvent') && canAccessEvent($eventId);
 if (!function_exists('timeToSeconds')) {
     function timeToSeconds($time) {
         if (empty($time)) return PHP_INT_MAX;
+        // Treat "0:00", "0:00:00" etc as invalid (no time recorded)
+        if (preg_match('/^0+[:.]?0*[:.]?0*$/', $time)) return PHP_INT_MAX;
         $decimal = 0;
         if (preg_match('/(\.\d+)$/', $time, $matches)) {
             $decimal = floatval($matches[1]);
@@ -33,13 +35,17 @@ if (!function_exists('timeToSeconds')) {
         } elseif (count($parts) === 1) {
             $seconds = (int)$parts[0];
         }
-        return $seconds + $decimal;
+        $total = $seconds + $decimal;
+        // Return invalid for times under 1 second (impossible for DH)
+        return $total < 1 ? PHP_INT_MAX : $total;
     }
 }
 
 if (!function_exists('formatDisplayTime')) {
     function formatDisplayTime($time) {
         if (empty($time)) return null;
+        // Treat "0:00" etc as no time
+        if (preg_match('/^0+[:.]?0*[:.]?0*$/', $time)) return null;
         $decimal = '';
         if (preg_match('/(\.\d+)$/', $time, $matches)) {
             $decimal = $matches[1];
@@ -378,10 +384,14 @@ try {
                 $runTimes = [];
                 foreach ($classData['results'] as $idx => $result) {
                     if (!empty($result[$runKey]) && $result['status'] === 'finished') {
-                        $runTimes[] = [
-                            'idx' => $idx,
-                            'time' => timeToSeconds($result[$runKey])
-                        ];
+                        $seconds = timeToSeconds($result[$runKey]);
+                        // Only include valid times (not 0:00 or empty)
+                        if ($seconds < PHP_INT_MAX) {
+                            $runTimes[] = [
+                                'idx' => $idx,
+                                'time' => $seconds
+                            ];
+                        }
                     }
                 }
 
@@ -605,10 +615,14 @@ try {
             $runTimes = [];
             foreach ($globalDHResults as $idx => $result) {
                 if (!empty($result[$runKey])) {
-                    $runTimes[] = [
-                        'idx' => $idx,
-                        'time' => timeToSeconds($result[$runKey])
-                    ];
+                    $seconds = timeToSeconds($result[$runKey]);
+                    // Only include valid times (not 0:00 or empty)
+                    if ($seconds < PHP_INT_MAX) {
+                        $runTimes[] = [
+                            'idx' => $idx,
+                            'time' => $seconds
+                        ];
+                    }
                 }
             }
 
@@ -1185,38 +1199,48 @@ if (!empty($eventSponsors['content'])): ?>
                         $run2Diff = $result['run_diff_2'] ?? '';
                     ?>
                     <td class="col-time col-dh-run table-col-hide-mobile <?= $run1Class ?>" data-sort-value="<?= $run1Seconds ?>">
-                        <?php if (!empty($result['run_1_time'])): ?>
-                        <div class="split-time-main"><?= formatDisplayTime($result['run_1_time']) ?></div>
+                        <?php
+                        $r1Display = formatDisplayTime($result['run_1_time'] ?? '');
+                        if ($r1Display): ?>
+                        <div class="split-time-main"><?= $r1Display ?></div>
                         <?php if (!$isMotionOrKids && ($run1Diff || $run1Rank)): ?>
                         <div class="split-time-details"><?= $run1Diff ?: '' ?><?= $run1Diff && $run1Rank ? ' ' : '' ?><?= $run1Rank ? '(' . $run1Rank . ')' : '' ?></div>
                         <?php endif; ?>
                         <?php else: ?>
-                        -
+                        <span class="text-secondary">DNS</span>
                         <?php endif; ?>
                     </td>
                     <td class="col-time col-dh-run table-col-hide-mobile <?= $run2Class ?>" data-sort-value="<?= $run2Seconds ?>">
-                        <?php if (!empty($result['run_2_time'])): ?>
-                        <div class="split-time-main"><?= formatDisplayTime($result['run_2_time']) ?></div>
+                        <?php
+                        $r2Display = formatDisplayTime($result['run_2_time'] ?? '');
+                        if ($r2Display): ?>
+                        <div class="split-time-main"><?= $r2Display ?></div>
                         <?php if (!$isMotionOrKids && ($run2Diff || $run2Rank)): ?>
                         <div class="split-time-details"><?= $run2Diff ?: '' ?><?= $run2Diff && $run2Rank ? ' ' : '' ?><?= $run2Rank ? '(' . $run2Rank . ')' : '' ?></div>
                         <?php endif; ?>
                         <?php else: ?>
-                        -
+                        <span class="text-secondary">DNS</span>
                         <?php endif; ?>
                     </td>
                     <td class="col-time font-bold">
                         <?php
                         $bestTime = null;
+                        // Helper to check if time is valid (not empty, not 0:00)
+                        $isValidDHTime = function($t) {
+                            return !empty($t) && !preg_match('/^0+[:.]?0*[:.]?0*$/', $t);
+                        };
                         if ($eventFormat === 'DH_SWECUP') {
-                            $bestTime = $result['run_2_time'];
+                            $bestTime = $isValidDHTime($result['run_2_time']) ? $result['run_2_time'] : null;
                         } else {
-                            if ($result['run_1_time'] && $result['run_2_time']) {
+                            $r1Valid = $isValidDHTime($result['run_1_time']);
+                            $r2Valid = $isValidDHTime($result['run_2_time']);
+                            if ($r1Valid && $r2Valid) {
                                 $t1 = timeToSeconds($result['run_1_time']);
                                 $t2 = timeToSeconds($result['run_2_time']);
                                 $bestTime = $t1 < $t2 ? $result['run_1_time'] : $result['run_2_time'];
-                            } elseif ($result['run_1_time']) {
+                            } elseif ($r1Valid) {
                                 $bestTime = $result['run_1_time'];
-                            } else {
+                            } elseif ($r2Valid) {
                                 $bestTime = $result['run_2_time'];
                             }
                         }
@@ -1502,16 +1526,16 @@ if (!empty($eventSponsors['content'])): ?>
                         <span class="class-badge"><?= h($result['original_class'] ?? '-') ?></span>
                     </td>
                     <td class="col-time col-dh-run table-col-hide-mobile <?= $run1Class ?>" data-sort-value="<?= $run1Seconds ?>">
-                        <?php if (!empty($run1Time)): ?>
-                        <div class="split-time-main"><?= formatDisplayTime($run1Time) ?></div>
+                        <?php $r1Disp = formatDisplayTime($run1Time); if ($r1Disp): ?>
+                        <div class="split-time-main"><?= $r1Disp ?></div>
                         <div class="split-time-details"><?= $run1Diff ?: '' ?><?= $run1Diff && $run1Rank ? ' ' : '' ?><?= $run1Rank ? '(' . $run1Rank . ')' : '' ?></div>
-                        <?php else: ?>-<?php endif; ?>
+                        <?php else: ?><span class="text-secondary">DNS</span><?php endif; ?>
                     </td>
                     <td class="col-time col-dh-run table-col-hide-mobile <?= $run2Class ?>" data-sort-value="<?= $run2Seconds ?>">
-                        <?php if (!empty($run2Time)): ?>
-                        <div class="split-time-main"><?= formatDisplayTime($run2Time) ?></div>
+                        <?php $r2Disp = formatDisplayTime($run2Time); if ($r2Disp): ?>
+                        <div class="split-time-main"><?= $r2Disp ?></div>
                         <div class="split-time-details"><?= $run2Diff ?: '' ?><?= $run2Diff && $run2Rank ? ' ' : '' ?><?= $run2Rank ? '(' . $run2Rank . ')' : '' ?></div>
-                        <?php else: ?>-<?php endif; ?>
+                        <?php else: ?><span class="text-secondary">DNS</span><?php endif; ?>
                     </td>
                 </tr>
                 <?php endforeach; ?>
@@ -1538,12 +1562,12 @@ if (!empty($eventSponsors['content'])): ?>
                 <div class="result-splits-row">
                     <div class="result-split-item">
                         <span class="split-label"><?= $eventFormat === 'DH_SWECUP' ? 'Kval' : 'Åk 1' ?></span>
-                        <span class="split-value"><?= !empty($run1Time) ? formatDisplayTime($run1Time) : '-' ?></span>
+                        <span class="split-value"><?= formatDisplayTime($run1Time) ?: 'DNS' ?></span>
                         <?php if ($run1Rank): ?><span class="split-rank">(<?= $run1Rank ?>)</span><?php endif; ?>
                     </div>
                     <div class="result-split-item">
                         <span class="split-label"><?= $eventFormat === 'DH_SWECUP' ? 'Final' : 'Åk 2' ?></span>
-                        <span class="split-value"><?= !empty($run2Time) ? formatDisplayTime($run2Time) : '-' ?></span>
+                        <span class="split-value"><?= formatDisplayTime($run2Time) ?: 'DNS' ?></span>
                         <?php if ($run2Rank): ?><span class="split-rank">(<?= $run2Rank ?>)</span><?php endif; ?>
                     </div>
                 </div>
