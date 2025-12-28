@@ -461,6 +461,14 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
                 continue;
             }
 
+            // Get event format for DH scoring rules (cache it)
+            static $eventFormatCache = [];
+            if (!isset($eventFormatCache[$eventId])) {
+                $eventInfo = $db->getRow("SELECT event_format FROM events WHERE id = ?", [$eventId]);
+                $eventFormatCache[$eventId] = $eventInfo['event_format'] ?? 'ENDURO';
+            }
+            $eventFormat = $eventFormatCache[$eventId];
+
             // Find or create rider
             $riderName = trim($data['firstname']) . '|' . trim($data['lastname']);
             $rawLicenseNumber = $data['license_number'] ?? '';
@@ -765,6 +773,50 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
             $timeStr = trim($data['finish_time'] ?? '');
             if (!empty($timeStr) && $timeStr !== 'DNF' && $timeStr !== 'DNS' && $timeStr !== 'DQ') {
                 $finishTime = $timeStr;
+            }
+
+            // For DH: Calculate finish_time based on event_format
+            // DH_STANDARD: Best (fastest) of Run 1 and Run 2
+            // DH_SWECUP: Run 2 (Final) only
+            if (empty($finishTime) && in_array($eventFormat, ['DH_STANDARD', 'DH_SWECUP'])) {
+                $run1 = trim($data['run_1_time'] ?? '');
+                $run2 = trim($data['run_2_time'] ?? '');
+
+                // Helper function to convert time string to seconds for comparison
+                $timeToSeconds = function($timeStr) {
+                    if (empty($timeStr) || in_array(strtoupper($timeStr), ['DNF', 'DNS', 'DQ', 'DSQ'])) {
+                        return PHP_FLOAT_MAX; // Invalid times are "slower" than any valid time
+                    }
+                    // Handle formats like "1:38.227" (m:ss.ms) or "98.227" (ss.ms)
+                    if (preg_match('/^(\d+):(\d+)\.(\d+)$/', $timeStr, $m)) {
+                        return ((int)$m[1] * 60) + (int)$m[2] + ((int)$m[3] / pow(10, strlen($m[3])));
+                    } elseif (preg_match('/^(\d+)\.(\d+)$/', $timeStr, $m)) {
+                        return (int)$m[1] + ((int)$m[2] / pow(10, strlen($m[2])));
+                    } elseif (preg_match('/^(\d+):(\d+):(\d+)\.(\d+)$/', $timeStr, $m)) {
+                        // h:mm:ss.ms format
+                        return ((int)$m[1] * 3600) + ((int)$m[2] * 60) + (int)$m[3] + ((int)$m[4] / pow(10, strlen($m[4])));
+                    }
+                    return PHP_FLOAT_MAX;
+                };
+
+                if ($eventFormat === 'DH_SWECUP') {
+                    // SweCUP: Only Run 2 (Final) counts for ranking/points
+                    if (!empty($run2) && !in_array(strtoupper($run2), ['DNF', 'DNS', 'DQ', 'DSQ'])) {
+                        $finishTime = $run2;
+                    }
+                } else {
+                    // DH_STANDARD: Best (fastest) of both runs
+                    $run1Seconds = $timeToSeconds($run1);
+                    $run2Seconds = $timeToSeconds($run2);
+
+                    if ($run1Seconds < PHP_FLOAT_MAX || $run2Seconds < PHP_FLOAT_MAX) {
+                        if ($run1Seconds <= $run2Seconds && $run1Seconds < PHP_FLOAT_MAX) {
+                            $finishTime = $run1;
+                        } elseif ($run2Seconds < PHP_FLOAT_MAX) {
+                            $finishTime = $run2;
+                        }
+                    }
+                }
             }
 
             // Determine status
