@@ -525,14 +525,41 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
                 if (!$rider) {
                     $firstName = trim($data['firstname']);
                     $lastName = trim($data['lastname']);
+                    $importClubName = trim($data['club_name'] ?? '');
 
-                    // Case-insensitive EXACT match using UPPER() (LOWER() doesn't work with this MySQL collation)
-                    $rider = $db->getRow(
-                        "SELECT id, license_number FROM riders WHERE UPPER(firstname) = UPPER(?) AND UPPER(lastname) = UPPER(?)",
-                        [$firstName, $lastName]
-                    );
+                    // SMART MATCHING: If we have club info, prioritize name+club match
+                    // Same name + same club = almost certainly same person
+                    if (!empty($importClubName)) {
+                        // First try: name + club match (strongest signal)
+                        $normalizedImportClub = normalizeClubName($importClubName);
+                        $rider = $db->getRow(
+                            "SELECT r.id, r.license_number FROM riders r
+                             LEFT JOIN clubs c ON r.club_id = c.id
+                             WHERE UPPER(r.firstname) = UPPER(?) AND UPPER(r.lastname) = UPPER(?)
+                             AND c.id IS NOT NULL
+                             ORDER BY
+                                CASE WHEN UPPER(c.name) = UPPER(?) THEN 0
+                                     WHEN UPPER(REPLACE(REPLACE(c.name, 'CK', 'Ck'), 'OK', 'Ok')) LIKE CONCAT('%', UPPER(?), '%') THEN 1
+                                     ELSE 2 END,
+                                r.id ASC
+                             LIMIT 1",
+                            [$firstName, $lastName, $importClubName, $normalizedImportClub]
+                        );
 
-                    // If exact match fails, try FUZZY matching for middle names
+                        if ($rider) {
+                            error_log("IMPORT: Name+Club match - '{$firstName} {$lastName}' + club '{$importClubName}' → rider ID {$rider['id']}");
+                        }
+                    }
+
+                    // Second try: exact name match (any club)
+                    if (!$rider) {
+                        $rider = $db->getRow(
+                            "SELECT id, license_number FROM riders WHERE UPPER(firstname) = UPPER(?) AND UPPER(lastname) = UPPER(?)",
+                            [$firstName, $lastName]
+                        );
+                    }
+
+                    // Third try: FUZZY matching for middle names
                     // "Lo Nyberg Zetterlund" should match existing "Lo Zetterlund"
                     // "Lo Zetterlund" should match existing "Lo Nyberg Zetterlund"
                     if (!$rider) {
