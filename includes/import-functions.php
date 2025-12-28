@@ -938,6 +938,10 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
                     if (empty($timeStr) || in_array(strtoupper($timeStr), ['DNF', 'DNS', 'DQ', 'DSQ'])) {
                         return PHP_FLOAT_MAX; // Invalid times are "slower" than any valid time
                     }
+                    // Treat "0:00", "0:00:00", "0:00.00" etc as invalid (no time recorded)
+                    if (preg_match('/^0+[:.]?0*[:.]?0*$/', $timeStr)) {
+                        return PHP_FLOAT_MAX;
+                    }
                     // Handle formats like "1:38.227" (m:ss.ms) or "98.227" (ss.ms)
                     if (preg_match('/^(\d+):(\d+)\.(\d+)$/', $timeStr, $m)) {
                         return ((int)$m[1] * 60) + (int)$m[2] + ((int)$m[3] / pow(10, strlen($m[3])));
@@ -952,7 +956,7 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
 
                 if ($eventFormat === 'DH_SWECUP') {
                     // SweCUP: Only Run 2 (Final) counts for ranking/points
-                    if (!empty($run2) && !in_array(strtoupper($run2), ['DNF', 'DNS', 'DQ', 'DSQ'])) {
+                    if (!empty($run2) && !in_array(strtoupper($run2), ['DNF', 'DNS', 'DQ', 'DSQ']) && !preg_match('/^0+[:.]?0*[:.]?0*$/', $run2)) {
                         $finishTime = $run2;
                     }
                 } else {

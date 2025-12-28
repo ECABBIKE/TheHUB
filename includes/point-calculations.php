@@ -457,6 +457,14 @@ function recalculateDHEventResults($db, $event_id, $new_scale_id = null, $use_sw
         'errors' => []
     ];
 
+    // Helper to check if a DH time is valid (not empty, not "0:00", not DNF/DNS)
+    $isValidTime = function($time) {
+        if (empty($time)) return false;
+        // Treat "0:00", "0:00:00", "0:00.00" etc as invalid
+        if (preg_match('/^0+[:.]?0*[:.]?0*$/', $time)) return false;
+        return true;
+    };
+
     try {
         // Update point scale if provided
         if ($new_scale_id) {
@@ -489,9 +497,9 @@ function recalculateDHEventResults($db, $event_id, $new_scale_id = null, $use_sw
         foreach ($byGroup as $groupKey => $groupResults) {
             // Sort by run 1 time for run 1 positions
             $run1Results = $groupResults;
-            usort($run1Results, function($a, $b) {
-                if ($a['status'] !== 'finished' || empty($a['run_1_time'])) return 1;
-                if ($b['status'] !== 'finished' || empty($b['run_1_time'])) return -1;
+            usort($run1Results, function($a, $b) use ($isValidTime) {
+                if ($a['status'] !== 'finished' || !$isValidTime($a['run_1_time'])) return 1;
+                if ($b['status'] !== 'finished' || !$isValidTime($b['run_1_time'])) return -1;
                 return strcmp($a['run_1_time'], $b['run_1_time']);
             });
 
@@ -499,7 +507,7 @@ function recalculateDHEventResults($db, $event_id, $new_scale_id = null, $use_sw
             $run1Positions = [];
             $pos = 1;
             foreach ($run1Results as $result) {
-                if ($result['status'] === 'finished' && !empty($result['run_1_time'])) {
+                if ($result['status'] === 'finished' && $isValidTime($result['run_1_time'])) {
                     $run1Positions[$result['id']] = $pos++;
                 } else {
                     $run1Positions[$result['id']] = null;
@@ -508,9 +516,9 @@ function recalculateDHEventResults($db, $event_id, $new_scale_id = null, $use_sw
 
             // Sort by run 2 time for run 2 positions
             $run2Results = $groupResults;
-            usort($run2Results, function($a, $b) {
-                if ($a['status'] !== 'finished' || empty($a['run_2_time'])) return 1;
-                if ($b['status'] !== 'finished' || empty($b['run_2_time'])) return -1;
+            usort($run2Results, function($a, $b) use ($isValidTime) {
+                if ($a['status'] !== 'finished' || !$isValidTime($a['run_2_time'])) return 1;
+                if ($b['status'] !== 'finished' || !$isValidTime($b['run_2_time'])) return -1;
                 return strcmp($a['run_2_time'], $b['run_2_time']);
             });
 
@@ -518,7 +526,7 @@ function recalculateDHEventResults($db, $event_id, $new_scale_id = null, $use_sw
             $run2Positions = [];
             $pos = 1;
             foreach ($run2Results as $result) {
-                if ($result['status'] === 'finished' && !empty($result['run_2_time'])) {
+                if ($result['status'] === 'finished' && $isValidTime($result['run_2_time'])) {
                     $run2Positions[$result['id']] = $pos++;
                 } else {
                     $run2Positions[$result['id']] = null;
@@ -529,25 +537,25 @@ function recalculateDHEventResults($db, $event_id, $new_scale_id = null, $use_sw
             // SweCUP DH: Sort by run 2 time (Final)
             // Standard DH: Sort by fastest time (best of two runs)
             $overallResults = $groupResults;
-            usort($overallResults, function($a, $b) use ($use_swecup_dh) {
+            usort($overallResults, function($a, $b) use ($use_swecup_dh, $isValidTime) {
                 if ($a['status'] !== 'finished') return 1;
                 if ($b['status'] !== 'finished') return -1;
 
                 if ($use_swecup_dh) {
                     // SweCUP DH: Ranking based on Run 2 (Final) time only
-                    $aTime = !empty($a['run_2_time']) ? $a['run_2_time'] : null;
-                    $bTime = !empty($b['run_2_time']) ? $b['run_2_time'] : null;
+                    $aTime = $isValidTime($a['run_2_time']) ? $a['run_2_time'] : null;
+                    $bTime = $isValidTime($b['run_2_time']) ? $b['run_2_time'] : null;
                 } else {
                     // Standard DH: Get fastest time for each rider
                     $aTime = null;
-                    if (!empty($a['run_1_time'])) $aTime = $a['run_1_time'];
-                    if (!empty($a['run_2_time']) && (!$aTime || $a['run_2_time'] < $aTime)) {
+                    if ($isValidTime($a['run_1_time'])) $aTime = $a['run_1_time'];
+                    if ($isValidTime($a['run_2_time']) && (!$aTime || $a['run_2_time'] < $aTime)) {
                         $aTime = $a['run_2_time'];
                     }
 
                     $bTime = null;
-                    if (!empty($b['run_1_time'])) $bTime = $b['run_1_time'];
-                    if (!empty($b['run_2_time']) && (!$bTime || $b['run_2_time'] < $bTime)) {
+                    if ($isValidTime($b['run_1_time'])) $bTime = $b['run_1_time'];
+                    if ($isValidTime($b['run_2_time']) && (!$bTime || $b['run_2_time'] < $bTime)) {
                         $bTime = $b['run_2_time'];
                     }
                 }
@@ -569,14 +577,16 @@ function recalculateDHEventResults($db, $event_id, $new_scale_id = null, $use_sw
                 // Standard DH: use fastest run
                 $finishTime = null;
                 if ($use_swecup_dh) {
-                    $finishTime = $result['run_2_time'] ?? null;
+                    $finishTime = $isValidTime($result['run_2_time']) ? $result['run_2_time'] : null;
                 } else {
-                    // Get fastest time
-                    if (!empty($result['run_1_time']) && !empty($result['run_2_time'])) {
+                    // Get fastest time (only consider valid times)
+                    $run1Valid = $isValidTime($result['run_1_time']);
+                    $run2Valid = $isValidTime($result['run_2_time']);
+                    if ($run1Valid && $run2Valid) {
                         $finishTime = min($result['run_1_time'], $result['run_2_time']);
-                    } elseif (!empty($result['run_1_time'])) {
+                    } elseif ($run1Valid) {
                         $finishTime = $result['run_1_time'];
-                    } elseif (!empty($result['run_2_time'])) {
+                    } elseif ($run2Valid) {
                         $finishTime = $result['run_2_time'];
                     }
                 }
@@ -585,7 +595,7 @@ function recalculateDHEventResults($db, $event_id, $new_scale_id = null, $use_sw
                 if ($result['is_ebike']) {
                     $overallPosition = null;
                     // Points already set to 0 above
-                } elseif ($result['status'] === 'finished' && (!empty($result['run_1_time']) || !empty($result['run_2_time']))) {
+                } elseif ($result['status'] === 'finished' && ($isValidTime($result['run_1_time']) || $isValidTime($result['run_2_time']))) {
                     $overallPosition = $pos++;
 
                     // Calculate DH points

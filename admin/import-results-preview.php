@@ -505,6 +505,10 @@ function parseAndAnalyzeCSV($filepath, $db, $event = null) {
    if (empty($timeStr) || in_array(strtoupper($timeStr), ['DNF', 'DNS', 'DQ', 'DSQ'])) {
     return PHP_FLOAT_MAX;
    }
+   // Treat "0:00", "0:00:00", "0:00.00" etc as invalid (no time recorded)
+   if (preg_match('/^0+[:.]?0*[:.]?0*$/', $timeStr)) {
+    return PHP_FLOAT_MAX;
+   }
    $parts = explode(':', $timeStr);
    if (count($parts) === 3) {
     return ((float)$parts[0] * 3600) + ((float)$parts[1] * 60) + (float)$parts[2];
@@ -516,7 +520,7 @@ function parseAndAnalyzeCSV($filepath, $db, $event = null) {
 
   if ($useSwecupDh) {
    // SweCUP: Only Run 2 (Final) counts
-   if (!empty($run2) && !in_array(strtoupper($run2), ['DNF', 'DNS', 'DQ', 'DSQ'])) {
+   if (!empty($run2) && !in_array(strtoupper($run2), ['DNF', 'DNS', 'DQ', 'DSQ']) && !preg_match('/^0+[:.]?0*[:.]?0*$/', $run2)) {
     $rowData['finish_time'] = $run2;
    }
   } else {
