@@ -25,10 +25,12 @@ try {
 }
 
 try {
-    // Fetch series details
+    // Fetch series details with brand logo fallback
     $stmt = $db->prepare("
-        SELECT s.*, COUNT(DISTINCT e.id) as event_count
+        SELECT s.*, COALESCE(s.logo, sb.logo) as logo, sb.accent_color as brand_accent_color,
+               COUNT(DISTINCT e.id) as event_count
         FROM series s
+        LEFT JOIN series_brands sb ON s.brand_id = sb.id
         LEFT JOIN events e ON s.id = e.series_id
         WHERE s.id = ?
         GROUP BY s.id

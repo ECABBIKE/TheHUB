@@ -18,8 +18,16 @@ if (!$seriesId) {
     return;
 }
 
-// Fetch series details
-$stmt = $pdo->prepare("SELECT * FROM series WHERE id = ?");
+// Fetch series details with brand logo fallback
+$stmt = $pdo->prepare("
+    SELECT s.*,
+           COALESCE(s.logo, sb.logo) as logo,
+           sb.name as brand_name,
+           sb.accent_color as brand_accent_color
+    FROM series s
+    LEFT JOIN series_brands sb ON s.brand_id = sb.id
+    WHERE s.id = ?
+");
 $stmt->execute([$seriesId]);
 $series = $stmt->fetch(PDO::FETCH_ASSOC);
 
@@ -949,8 +957,8 @@ document.addEventListener('keydown', function(e) {
     border-color: #323539;
 }
 .standings-toggle-btn.active {
-    background: #171717;
-    border-color: #171717;
+    background: var(--color-accent);
+    border-color: var(--color-accent);
     color: #ffffff;
 }
 

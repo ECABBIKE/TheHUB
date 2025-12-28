@@ -696,6 +696,7 @@ if (strlen($clubInitials) < 2 && strlen($club['name']) >= 2) {
         </div>
 
         <?php if (function_exists('renderClubAchievements')): ?>
+        <link rel="stylesheet" href="/assets/css/achievements.css?v=<?= file_exists(dirname(__DIR__) . '/assets/css/achievements.css') ? filemtime(dirname(__DIR__) . '/assets/css/achievements.css') : time() ?>">
         <div class="club-achievements-section">
             <?= renderClubAchievements($db, $clubId) ?>
         </div>
@@ -714,7 +715,6 @@ if (function_exists('getClubDetailedAchievements')) {
 ?>
 
 <?php if (!empty($clubDetailedAchievements)): ?>
-<link rel="stylesheet" href="/assets/css/achievements.css?v=<?= file_exists(dirname(__DIR__) . '/assets/css/achievements.css') ? filemtime(dirname(__DIR__) . '/assets/css/achievements.css') : time() ?>">
 <!-- Club Achievement Details Modal -->
 <div id="clubAchievementModal" class="club-modal-overlay">
     <div class="club-modal">
