@@ -49,14 +49,10 @@ if (isset($_GET['recalculate']) && $_GET['recalculate'] == '1') {
         $eventLog['results_found'] = count($results);
 
         foreach ($results as $r) {
-            // Calculate what points would be
-            $points = 0;
+            // Calculate what points would be using the new detailed function
+            $pointsData = ['total' => 0, 'run_1' => 0, 'run_2' => 0];
             if ($templateId) {
-                $pointValue = $db->getRow(
-                    "SELECT points FROM point_scale_values WHERE scale_id = ? AND position = ?",
-                    [$templateId, $r['position']]
-                );
-                $points = $pointValue ? (int)$pointValue['points'] : 0;
+                $pointsData = calculateSeriesPointsDetailed($db, $templateId, $r['position'], $r['status']);
             }
 
             $eventLog['points_calculated'][] = [
@@ -65,7 +61,9 @@ if (isset($_GET['recalculate']) && $_GET['recalculate'] == '1') {
                 'class' => $r['class_name'],
                 'awards_points' => $r['awards_points'],
                 'series_eligible' => $r['series_eligible'],
-                'calculated_points' => $points,
+                'calculated_points' => $pointsData['total'],
+                'calc_run1' => $pointsData['run_1'],
+                'calc_run2' => $pointsData['run_2'],
                 'results_points' => $r['results_points'],
                 'series_results_points' => $r['series_results_points'],
                 'status' => $r['status']
@@ -129,13 +127,15 @@ if (!empty($recalcLog)) {
         if (empty($eventLog['points_calculated'])) {
             echo "<p class='warning'>Inga resultat att beräkna!</p>";
         } else {
-            echo "<table><tr><th>Åkare</th><th>Pos</th><th>Klass</th><th>awards_points</th><th>series_elig</th><th>results.points</th><th>series_results</th><th>Beräknat</th></tr>";
+            echo "<table><tr><th>Åkare</th><th>Pos</th><th>Klass</th><th>awards</th><th>elig</th><th>results.pts</th><th>series_res</th><th>Kval</th><th>Final</th><th>Total</th></tr>";
             foreach ($eventLog['points_calculated'] as $pc) {
                 $calcClass = $pc['calculated_points'] > 0 ? 'success' : 'error';
                 $apClass = $pc['awards_points'] == 1 ? 'success' : 'error';
                 $seClass = $pc['series_eligible'] == 1 ? 'success' : 'error';
                 $rpClass = $pc['results_points'] > 0 ? 'info' : '';
                 $srpClass = $pc['series_results_points'] > 0 ? 'success' : 'warning';
+                $r1Class = ($pc['calc_run1'] ?? 0) > 0 ? 'info' : '';
+                $r2Class = ($pc['calc_run2'] ?? 0) > 0 ? 'info' : '';
                 echo "<tr>
                     <td>{$pc['rider']}</td>
                     <td>{$pc['position']}</td>
@@ -144,7 +144,9 @@ if (!empty($recalcLog)) {
                     <td class='{$seClass}'>{$pc['series_eligible']}</td>
                     <td class='{$rpClass}'>{$pc['results_points']}</td>
                     <td class='{$srpClass}'>" . ($pc['series_results_points'] ?? 'NULL') . "</td>
-                    <td class='{$calcClass}'>{$pc['calculated_points']}</td>
+                    <td class='{$r1Class}'>" . ($pc['calc_run1'] ?? 0) . "</td>
+                    <td class='{$r2Class}'>" . ($pc['calc_run2'] ?? 0) . "</td>
+                    <td class='{$calcClass}'><strong>{$pc['calculated_points']}</strong></td>
                 </tr>";
             }
             echo "</table>";
@@ -183,22 +185,35 @@ echo "</table></div>";
 // 3. Check point_scales and their values
 echo "<div class='card'><h2>2. Tillgängliga Point Scales</h2>";
 $scales = $db->getAll("SELECT * FROM point_scales ORDER BY name");
-echo "<table><tr><th>ID</th><th>Namn</th><th>Active</th><th>Antal positioner</th><th>Topp 5 poäng</th></tr>";
+echo "<table><tr><th>ID</th><th>Namn</th><th>Active</th><th>Typ</th><th>Antal pos</th><th>Topp 5 poäng</th></tr>";
 foreach ($scales as $scale) {
-    $values = $db->getAll("SELECT position, points FROM point_scale_values WHERE scale_id = ? ORDER BY position LIMIT 5", [$scale['id']]);
+    $values = $db->getAll("SELECT position, points, run_1_points, run_2_points FROM point_scale_values WHERE scale_id = ? ORDER BY position LIMIT 5", [$scale['id']]);
     $valueCount = $db->getRow("SELECT COUNT(*) as cnt FROM point_scale_values WHERE scale_id = ?", [$scale['id']]);
     $countClass = $valueCount['cnt'] > 0 ? 'success' : 'error';
     $activeClass = $scale['active'] ? 'success' : 'warning';
 
+    // Check if it's a DH scale (has run_1/run_2 values)
+    $isDH = false;
     $top5 = [];
     foreach ($values as $v) {
-        $top5[] = "#{$v['position']}={$v['points']}";
+        $run1 = (float)($v['run_1_points'] ?? 0);
+        $run2 = (float)($v['run_2_points'] ?? 0);
+        if ($run1 > 0 || $run2 > 0) {
+            $isDH = true;
+            $total = $run1 + $run2;
+            $top5[] = "#{$v['position']}=K{$run1}+F{$run2}={$total}";
+        } else {
+            $top5[] = "#{$v['position']}={$v['points']}";
+        }
     }
+
+    $typeLabel = $isDH ? "<span class='info'>DH (Kval+Final)</span>" : "Standard";
 
     echo "<tr>
         <td>{$scale['id']}</td>
         <td>{$scale['name']}</td>
         <td class='{$activeClass}'>" . ($scale['active'] ? 'Ja' : 'Nej') . "</td>
+        <td>{$typeLabel}</td>
         <td class='{$countClass}'>{$valueCount['cnt']}</td>
         <td>" . (empty($top5) ? "<span class='error'>TOM!</span>" : implode(', ', $top5)) . "</td>
     </tr>";
