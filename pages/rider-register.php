@@ -59,8 +59,8 @@ $fullName = $rider ? trim($rider['firstname'] . ' ' . $rider['lastname']) : '';
 <div class="auth-container">
     <div class="auth-card register-card">
         <div class="auth-header">
-            <h1>Koppla e-post till profil</h1>
-            <p>Lägg till e-postadress och kontaktinfo</p>
+            <h1>Begär e-postkoppling</h1>
+            <p>Skicka förfrågan om att koppla e-post till profil</p>
         </div>
 
         <?php if ($message): ?>
@@ -130,21 +130,20 @@ $fullName = $rider ? trim($rider['firstname'] . ' ' . $rider['lastname']) : '';
                 </div>
 
                 <input type="hidden" name="target_rider_id" value="<?= $riderId ?>">
-                <input type="hidden" name="admin_direct" value="1">
 
                 <div id="formMessage" class="alert" style="display: none;"></div>
 
                 <button type="submit" class="btn btn--primary btn--block" id="submitBtn">
-                    <i data-lucide="check"></i>
-                    Koppla e-post
+                    <i data-lucide="send"></i>
+                    Skicka förfrågan
                 </button>
             </form>
 
             <!-- Success State (hidden initially) -->
             <div id="successState" class="register-success" style="display: none;">
-                <i data-lucide="check-circle"></i>
-                <h3>E-post kopplad!</h3>
-                <p>Profilen är nu kopplad till e-postadressen. Ett mail med lösenordslänk har skickats.</p>
+                <i data-lucide="clock"></i>
+                <h3>Förfrågan skickad!</h3>
+                <p>En admin kommer att granska och godkänna förfrågan. Aktiveringslänk skickas därefter till angiven e-postadress.</p>
                 <a href="/rider/<?= $riderId ?>" class="btn btn--primary btn--block">
                     Tillbaka till profil
                 </a>

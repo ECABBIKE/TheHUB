@@ -23,115 +23,72 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         if ($claim) {
             if ($action === 'approve') {
-                // Approve and merge: move all data from claimant to target, then delete claimant
+                // Approve: Connect email to target profile and send password reset
                 try {
-                    $pdo = $db->getPdo();
-                    $pdo->beginTransaction();
-
-                    $claimantId = $claim['claimant_rider_id'];
                     $targetId = $claim['target_rider_id'];
+                    $emailToConnect = $claim['claimant_email'];
 
-                    // Get both riders
-                    $claimant = $db->getRow("SELECT * FROM riders WHERE id = ?", [$claimantId]);
+                    // Get target rider
                     $target = $db->getRow("SELECT * FROM riders WHERE id = ?", [$targetId]);
 
-                    if (!$claimant || !$target) {
-                        throw new Exception("En av profilerna kunde inte hittas");
+                    if (!$target) {
+                        throw new Exception("Profilen kunde inte hittas");
                     }
 
-                    // Update target with data from claimant (email, phone etc)
-                    $updates = [];
-                    if (empty($target['email']) && !empty($claimant['email'])) {
-                        $updates['email'] = $claimant['email'];
-                    }
-                    if (empty($target['phone']) && !empty($claimant['phone'])) {
-                        $updates['phone'] = $claimant['phone'];
-                    }
-                    if (empty($target['birth_year']) && !empty($claimant['birth_year'])) {
-                        $updates['birth_year'] = $claimant['birth_year'];
-                    }
-                    if (empty($target['gender']) && !empty($claimant['gender'])) {
-                        $updates['gender'] = $claimant['gender'];
-                    }
-                    if (empty($target['nationality']) && !empty($claimant['nationality'])) {
-                        $updates['nationality'] = $claimant['nationality'];
-                    }
-                    // Prefer real UCI ID over SWE-generated
-                    if (!empty($claimant['license_number']) && strpos($claimant['license_number'], 'SWE') !== 0) {
-                        if (empty($target['license_number']) || strpos($target['license_number'], 'SWE') === 0) {
-                            $updates['license_number'] = $claimant['license_number'];
-                        }
+                    if (!empty($target['email'])) {
+                        throw new Exception("Profilen har redan en e-postadress kopplad");
                     }
 
-                    if (!empty($updates)) {
-                        $db->update('riders', $updates, 'id = ?', [$targetId]);
+                    // Build updates from claim data
+                    $updates = [
+                        'email' => $emailToConnect,
+                        'updated_at' => date('Y-m-d H:i:s')
+                    ];
+
+                    // Add phone if provided in claim
+                    if (!empty($claim['phone'])) {
+                        $updates['phone'] = $claim['phone'];
                     }
 
-                    // Move results from claimant to target
-                    $resultsToMove = $db->getAll("SELECT id, event_id, class_id FROM results WHERE cyclist_id = ?", [$claimantId]);
-                    $moved = 0;
-                    $skipped = 0;
-
-                    foreach ($resultsToMove as $result) {
-                        // Check if target already has result for same event/class
-                        $existing = $db->getRow(
-                            "SELECT id FROM results WHERE cyclist_id = ? AND event_id = ? AND class_id <=> ?",
-                            [$targetId, $result['event_id'], $result['class_id']]
-                        );
-
-                        if (!$existing) {
-                            $db->update('results', ['cyclist_id' => $targetId], 'id = ?', [$result['id']]);
-                            $moved++;
-                        } else {
-                            $skipped++;
-                        }
+                    // Add social media if provided
+                    if (!empty($claim['instagram'])) {
+                        $updates['social_instagram'] = $claim['instagram'];
+                    }
+                    if (!empty($claim['facebook'])) {
+                        $updates['social_facebook'] = $claim['facebook'];
                     }
 
-                    // Move rider_club_seasons
-                    $db->query(
-                        "UPDATE IGNORE rider_club_seasons SET rider_id = ? WHERE rider_id = ?",
-                        [$targetId, $claimantId]
-                    );
+                    // Generate password reset token
+                    $token = bin2hex(random_bytes(32));
+                    $expires = date('Y-m-d H:i:s', strtotime('+24 hours'));
+                    $updates['password_reset_token'] = $token;
+                    $updates['password_reset_expires'] = $expires;
+
+                    // Update the rider
+                    $db->update('riders', $updates, 'id = ?', [$targetId]);
 
                     // Update claim status
                     $db->update('rider_claims', [
                         'status' => 'approved',
                         'reviewed_by' => $_SESSION['admin_id'],
                         'reviewed_at' => date('Y-m-d H:i:s'),
-                        'admin_notes' => "Merged: {$moved} results moved, {$skipped} skipped"
+                        'admin_notes' => trim($_POST['admin_notes'] ?? '') ?: 'Godkänd'
                     ], 'id = ?', [$claimId]);
 
-                    // Delete the claimant profile
-                    $db->delete('riders', 'id = ?', [$claimantId]);
+                    // Send password reset email
+                    $resetLink = 'https://thehub.gravityseries.se/reset-password?token=' . $token;
+                    $riderName = trim($target['firstname'] . ' ' . $target['lastname']);
+                    $emailSent = hub_send_password_reset_email($emailToConnect, $riderName, $resetLink);
 
-                    $pdo->commit();
-
-                    // Send password reset email to the merged profile
-                    $emailSent = false;
-                    $targetEmail = $updates['email'] ?? $target['email'] ?? '';
-                    if (!empty($targetEmail)) {
-                        // Generate password reset token
-                        $token = bin2hex(random_bytes(32));
-                        $expires = date('Y-m-d H:i:s', strtotime('+24 hours'));
-
-                        $db->query(
-                            "UPDATE riders SET password_reset_token = ?, password_reset_expires = ? WHERE id = ?",
-                            [$token, $expires, $targetId]
-                        );
-
-                        $resetLink = 'https://thehub.gravityseries.se/reset-password?token=' . $token;
-                        $riderName = trim($target['firstname'] . ' ' . $target['lastname']);
-
-                        $emailSent = hub_send_password_reset_email($targetEmail, $riderName, $resetLink);
-                    }
-
-                    $emailStatus = $emailSent ? ' Mail med lösenordslänk skickat!' : '';
-                    $message = "Profiler sammanslagna! {$claimant['firstname']} {$claimant['lastname']} → {$target['firstname']} {$target['lastname']}. {$moved} resultat flyttade.{$emailStatus}";
+                    $emailStatus = $emailSent ? ' Mail med lösenordslänk skickat!' : ' Kunde inte skicka mail.';
+                    $message = "E-post kopplad till {$riderName}!{$emailStatus}";
                     $messageType = 'success';
 
+                    // Log the action
+                    error_log("CLAIM APPROVED: Admin {$_SESSION['admin_id']} connected '{$emailToConnect}' to rider {$targetId} ({$riderName})");
+
                 } catch (Exception $e) {
-                    if (isset($pdo)) $pdo->rollBack();
-                    $message = 'Fel vid sammanslagning: ' . $e->getMessage();
+                    $message = 'Fel: ' . $e->getMessage();
                     $messageType = 'error';
                 }
 
@@ -161,21 +118,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 $pendingClaims = $db->getAll("
     SELECT
         rc.*,
-        r_claimant.firstname as claimant_firstname,
-        r_claimant.lastname as claimant_lastname,
-        r_claimant.email as claimant_email_actual,
-        r_claimant.birth_year as claimant_birth_year,
-        r_claimant.license_number as claimant_license,
-        (SELECT COUNT(*) FROM results WHERE cyclist_id = rc.claimant_rider_id) as claimant_results,
         r_target.firstname as target_firstname,
         r_target.lastname as target_lastname,
         r_target.email as target_email,
         r_target.birth_year as target_birth_year,
         r_target.license_number as target_license,
+        c.name as target_club,
         (SELECT COUNT(*) FROM results WHERE cyclist_id = rc.target_rider_id) as target_results
     FROM rider_claims rc
-    JOIN riders r_claimant ON rc.claimant_rider_id = r_claimant.id
     JOIN riders r_target ON rc.target_rider_id = r_target.id
+    LEFT JOIN clubs c ON r_target.club_id = c.id
     WHERE rc.status = 'pending'
     ORDER BY rc.created_at DESC
 ");
