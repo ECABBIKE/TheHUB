@@ -1918,7 +1918,7 @@ document.addEventListener('keydown', function(e) {
                 <i data-lucide="user-plus"></i>
                 Koppla e-post till profil
             </h3>
-            <button type="button" class="claim-modal-close" onclick="closeClaimModal()">
+            <button type="button" class="claim-modal-close" onclick="document.getElementById('claimModal').classList.remove('active');">
                 <i data-lucide="x"></i>
             </button>
         </div>
@@ -2001,7 +2001,7 @@ document.addEventListener('keydown', function(e) {
                 <i data-lucide="user-check"></i>
                 Aktivera konto
             </h3>
-            <button type="button" class="claim-modal-close" onclick="closeActivateModal()">
+            <button type="button" class="claim-modal-close" onclick="document.getElementById('activateModal').classList.remove('active');">
                 <i data-lucide="x"></i>
             </button>
         </div>
@@ -2096,6 +2096,15 @@ document.addEventListener('keydown', function(e) {
     cursor: pointer;
     color: var(--color-text-secondary);
     border-radius: var(--radius-sm);
+    min-width: 36px;
+    min-height: 36px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.claim-modal-close i,
+.claim-modal-close svg {
+    pointer-events: none;
 }
 .claim-modal-close:hover {
     background: var(--color-bg-secondary);
