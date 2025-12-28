@@ -2322,22 +2322,38 @@ function renderRiderAchievements(PDO $pdo, int $rider_id, array $stats = null): 
         };
 
         window.closeAchievementModal = function() {
-            document.getElementById('achievement-modal').style.display = 'none';
+            const modal = document.getElementById('achievement-modal');
+            if (modal) {
+                modal.style.display = 'none';
+            }
         };
 
-        // Close button click
-        document.getElementById('achievement-modal-close-btn').addEventListener('click', function(e) {
-            e.preventDefault();
-            e.stopPropagation();
-            closeAchievementModal();
-        });
-
-        // Close on overlay click
-        document.addEventListener('click', function(e) {
-            if (e.target.classList.contains('achievement-modal-overlay')) {
+        // Close button click - use event delegation for reliability
+        const closeBtn = document.getElementById('achievement-modal-close-btn');
+        if (closeBtn) {
+            closeBtn.addEventListener('click', function(e) {
+                e.preventDefault();
+                e.stopPropagation();
                 closeAchievementModal();
-            }
-        });
+            });
+        }
+
+        // Also add click handler directly to the modal for close button (fallback)
+        const modal = document.getElementById('achievement-modal');
+        if (modal) {
+            modal.addEventListener('click', function(e) {
+                // Close on overlay click
+                if (e.target.classList.contains('achievement-modal-overlay')) {
+                    closeAchievementModal();
+                }
+                // Close on X button click (anywhere in the button or SVG)
+                if (e.target.closest('.achievement-modal-close')) {
+                    e.preventDefault();
+                    e.stopPropagation();
+                    closeAchievementModal();
+                }
+            });
+        }
 
         // Close on Escape key
         document.addEventListener('keydown', function(e) {
