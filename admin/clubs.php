@@ -160,16 +160,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     throw new Exception('Inga klubbar att slå samman hittades');
                 }
 
-                $db->pdo->beginTransaction();
+                $pdo = $db->getPdo();
+                $pdo->beginTransaction();
 
                 foreach ($mergeIds as $mergeId) {
                     // Move riders to keep club
-                    $stmt = $db->pdo->prepare("UPDATE riders SET club_id = ? WHERE club_id = ?");
+                    $stmt = $pdo->prepare("UPDATE riders SET club_id = ? WHERE club_id = ?");
                     $stmt->execute([$keepId, $mergeId]);
 
                     // Move results to keep club (if column exists)
                     try {
-                        $stmt = $db->pdo->prepare("UPDATE results SET club_id = ? WHERE club_id = ?");
+                        $stmt = $pdo->prepare("UPDATE results SET club_id = ? WHERE club_id = ?");
                         $stmt->execute([$keepId, $mergeId]);
                     } catch (Exception $e) {
                         // Column might not exist, skip
@@ -177,17 +178,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                     // Move rider_club_seasons to keep club (if table exists)
                     try {
-                        $stmt = $db->pdo->prepare("UPDATE rider_club_seasons SET club_id = ? WHERE club_id = ?");
+                        $stmt = $pdo->prepare("UPDATE rider_club_seasons SET club_id = ? WHERE club_id = ?");
                         $stmt->execute([$keepId, $mergeId]);
                     } catch (Exception $e) {
                         // Table might not exist, skip
                     }
 
                     // Delete the merged club
-                    $db->pdo->prepare("DELETE FROM clubs WHERE id = ?")->execute([$mergeId]);
+                    $pdo->prepare("DELETE FROM clubs WHERE id = ?")->execute([$mergeId]);
                 }
 
-                $db->pdo->commit();
+                $pdo->commit();
 
                 $count = count($mergedNames);
                 if ($count === 1) {
@@ -197,8 +198,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
                 $messageType = 'success';
             } catch (Exception $e) {
-                if ($db->pdo->inTransaction()) {
-                    $db->pdo->rollBack();
+                if (isset($pdo) && $pdo->inTransaction()) {
+                    $pdo->rollBack();
                 }
                 $message = 'Fel vid sammanslagning: ' . $e->getMessage();
                 $messageType = 'error';
