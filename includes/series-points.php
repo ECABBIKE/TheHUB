@@ -134,7 +134,7 @@ function calculateSeriesPointsDetailed($db, $templateId, $position, $status = 'f
  * @return array Stats: ['inserted' => X, 'updated' => X, 'deleted' => X]
  */
 function recalculateSeriesEventPoints($db, $seriesId, $eventId) {
-    $stats = ['inserted' => 0, 'updated' => 0, 'deleted' => 0, 'dh_recalculated' => false];
+    $stats = ['inserted' => 0, 'updated' => 0, 'deleted' => 0, 'dh_recalculated' => false, 'positions_recalculated' => false];
 
     // Get the template for this event in this series
     $seriesEvent = $db->getRow(
@@ -176,31 +176,35 @@ function recalculateSeriesEventPoints($db, $seriesId, $eventId) {
         ($discipline === 'DH' && $isDHScale)
     );
 
-    // For DH events with DH scale: Check if run_1_points/run_2_points are missing in results table
-    // If so, recalculate the DH event first to populate them
-    if ($isDHScale && $isDHEvent) {
-        $missingCheck = $db->getRow("
-            SELECT COUNT(*) as total,
-                   SUM(CASE WHEN COALESCE(run_1_points, 0) > 0 OR COALESCE(run_2_points, 0) > 0 THEN 1 ELSE 0 END) as has_points
-            FROM results
-            WHERE event_id = ? AND status = 'finished'
-        ", [$eventId]);
+    // Include point-calculations.php if not already loaded (needed for recalculation functions)
+    if (!function_exists('recalculateEventResults')) {
+        require_once __DIR__ . '/point-calculations.php';
+    }
 
-        // If most results are missing DH points, recalculate the event
-        if (($missingCheck['total'] ?? 0) > 0 && ($missingCheck['has_points'] ?? 0) == 0) {
-            // Include point-calculations.php if not already loaded
-            if (!function_exists('recalculateDHEventResults')) {
-                require_once __DIR__ . '/point-calculations.php';
-            }
+    // Check if positions are missing in results table
+    $positionCheck = $db->getRow("
+        SELECT COUNT(*) as total,
+               SUM(CASE WHEN position IS NOT NULL AND position > 0 THEN 1 ELSE 0 END) as has_position
+        FROM results
+        WHERE event_id = ? AND status = 'finished'
+    ", [$eventId]);
 
-            // Use SweCUP DH format when using a DH scale (with separate run points)
+    $totalResults = (int)($positionCheck['total'] ?? 0);
+    $hasPositions = (int)($positionCheck['has_position'] ?? 0);
+
+    // If most results are missing positions, recalculate the event first
+    if ($totalResults > 0 && $hasPositions < ($totalResults * 0.5)) {
+        if ($isDHScale && $isDHEvent) {
+            // DH event: Use DH recalculation with run-specific positions
             $useSwecupDh = $isDHScale;
-
-            // Use the series template_id as the scale - this ensures we use the correct
-            // DH point scale with run_1_points and run_2_points values
-            error_log("Series points: Running DH recalculation for event {$eventId} with scale {$templateId} (SweCUP: " . ($useSwecupDh ? 'yes' : 'no') . ")");
+            error_log("Series points: Running DH recalculation for event {$eventId} with scale {$templateId}");
             recalculateDHEventResults($db, $eventId, $templateId, $useSwecupDh);
             $stats['dh_recalculated'] = true;
+        } else {
+            // Standard event: Use normal recalculation
+            error_log("Series points: Running position recalculation for event {$eventId} with scale {$templateId}");
+            recalculateEventResults($db, $eventId, $templateId);
+            $stats['positions_recalculated'] = true;
         }
     }
 
