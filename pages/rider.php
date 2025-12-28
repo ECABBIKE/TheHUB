@@ -755,8 +755,8 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
         $rankingChartData = [];
         $swedishMonthsShort = ['jan', 'feb', 'mar', 'apr', 'maj', 'jun', 'jul', 'aug', 'sep', 'okt', 'nov', 'dec'];
 
-        // Use 24-month filtered data for main chart
-        if ($rankingPosition && !empty($rankingHistory24m) && count($rankingHistory24m) >= 2) {
+        // Use 24-month filtered data for main chart (needs at least 1 data point)
+        if ($rankingPosition && !empty($rankingHistory24m) && count($rankingHistory24m) >= 1) {
             $hasRankingChart = true;
             foreach ($rankingHistory24m as $rh) {
                 $monthNum = isset($rh['month']) ? (int)date('n', strtotime($rh['month'] . '-01')) - 1 : 0;
@@ -827,6 +827,13 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
                 <?php if ($hasRankingChart): ?>
                 <div class="dashboard-chart-body">
                     <canvas id="rankingChart"></canvas>
+                </div>
+                <?php elseif ($rankingPosition): ?>
+                <div class="dashboard-chart-body dashboard-chart-placeholder">
+                    <p class="text-muted text-center" style="padding: var(--space-lg);">
+                        <i data-lucide="clock" style="width: 24px; height: 24px; margin-bottom: var(--space-xs); opacity: 0.5;"></i><br>
+                        Historik genereras nästa ranking-uppdatering
+                    </p>
                 </div>
                 <?php endif; ?>
                 <div class="dashboard-chart-footer">
