@@ -20,11 +20,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['request_reset'])) {
  $result = rider_request_password_reset($email);
  $message = $result['message'];
  $messageType = $result['success'] ? 'success' : 'error';
-
- // Show link for development (remove in production)
- if ($result['success'] && isset($result['link'])) {
-  $message .= '<br><br><strong>Utvecklingsläge:</strong> <a href="' . $result['link'] . '" class="link">Klicka här för att återställa lösenord</a>';
- }
  }
 }
 

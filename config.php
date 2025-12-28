@@ -104,6 +104,32 @@ if (session_status() === PHP_SESSION_NONE) {
     session_start();
 }
 
+// Security headers (only for web requests, not CLI)
+if (php_sapi_name() !== 'cli') {
+    // Prevent MIME type sniffing
+    header("X-Content-Type-Options: nosniff");
+
+    // Prevent clickjacking
+    header("X-Frame-Options: SAMEORIGIN");
+
+    // Enable XSS filter in older browsers
+    header("X-XSS-Protection: 1; mode=block");
+
+    // Control referrer information
+    header("Referrer-Policy: strict-origin-when-cross-origin");
+
+    // Disable dangerous browser features
+    header("Permissions-Policy: geolocation=(), microphone=(), camera=()");
+
+    // HSTS - Force HTTPS for 1 year (only if HTTPS is enabled)
+    if (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') {
+        header("Strict-Transport-Security: max-age=31536000; includeSubDomains");
+    }
+
+    // Content Security Policy - Allow Lucide icons from unpkg.com
+    header("Content-Security-Policy: default-src 'self'; script-src 'self' https://unpkg.com 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:;");
+}
+
 date_default_timezone_set('Europe/Stockholm');
 
 require_once __DIR__ . '/includes/helpers.php';

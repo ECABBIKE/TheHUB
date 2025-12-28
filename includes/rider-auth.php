@@ -205,16 +205,17 @@ function rider_request_password_reset($email) {
     ], 'id = ?', [$rider['id']]);
 
     // TODO: Send email with reset link
-    // For now, return the token (in production, this should be emailed)
+    // For now, log the link for admin to manually send
     $resetLink = SITE_URL . '/rider-reset-password.php?token=' . $token;
 
-    error_log("Password reset link for {$email}: {$resetLink}");
+    // SECURITY: Only log email, never the full link in production
+    error_log("Password reset requested for: {$email}");
 
+    // PRODUCTION: Return success without exposing token
+    // Admin can access token from database if needed for manual password reset
     return [
         'success' => true,
-        'message' => 'Återställningslänk skickad! (Kontrollera server-loggen för länken - e-post kommer implementeras senare)',
-        'token' => $token, // Remove in production
-        'link' => $resetLink // Remove in production
+        'message' => 'Om e-postadressen finns i systemet kommer du få instruktioner för återställning. Kontakta admin om du inte får något mail inom 10 minuter.'
     ];
 }
 
