@@ -449,25 +449,47 @@ foreach ($allRiders as $rider) {
     $soundexGroups[$key][] = $rider;
 }
 
-// Find soundex groups with different actual names
+// Find soundex groups with different actual names - but require names to be ACTUALLY similar
+// Soundex is too aggressive: "Andersson" and "Andreasson" have same soundex but are different names
 $spellingDups = [];
 foreach ($soundexGroups as $key => $riders) {
     if (count($riders) > 1) {
         // Check if they have different actual names
         $uniqueNames = array_unique(array_map(fn($r) => strtoupper($r['firstname'] . ' ' . $r['lastname']), $riders));
         if (count($uniqueNames) > 1) {
-            // Check UCI conflicts
+            // Check UCI conflicts - different UCIs = different people
             $validUcis = array_filter(array_map(fn($r) => $r['uci_digits'], $riders), fn($u) => strlen($u) >= 8);
             $uniqueUcis = array_unique($validUcis);
-            if (count($uniqueUcis) <= 1) {
-                $spellingDups[] = [
-                    'soundex' => $key,
-                    'riders' => $riders,
-                    'names' => implode(' | ', array_map(fn($r) => $r['firstname'] . ' ' . $r['lastname'], $riders)),
-                    'ids' => implode(', ', array_column($riders, 'id')),
-                    'cnt' => count($riders)
-                ];
+            if (count($uniqueUcis) > 1) {
+                continue; // Different UCI IDs = definitely different people
             }
+
+            // Additional check: lastnames must be very similar (Levenshtein distance <= 2)
+            // This prevents "Andersson" vs "Andreasson" false positives
+            $lastnames = array_map(fn($r) => strtoupper(trim($r['lastname'])), $riders);
+            $uniqueLastnames = array_unique($lastnames);
+            if (count($uniqueLastnames) > 1) {
+                // Check if lastnames are actually similar
+                $lastnamesSimilar = true;
+                $firstLastname = $lastnames[0];
+                foreach ($lastnames as $ln) {
+                    if (levenshtein($firstLastname, $ln) > 2) {
+                        $lastnamesSimilar = false;
+                        break;
+                    }
+                }
+                if (!$lastnamesSimilar) {
+                    continue; // Lastnames too different
+                }
+            }
+
+            $spellingDups[] = [
+                'soundex' => $key,
+                'riders' => $riders,
+                'names' => implode(' | ', array_map(fn($r) => $r['firstname'] . ' ' . $r['lastname'], $riders)),
+                'ids' => implode(', ', array_column($riders, 'id')),
+                'cnt' => count($riders)
+            ];
         }
     }
 }
