@@ -21,6 +21,15 @@ try {
     $useSeriesEvents = false;
 }
 
+// Check if historical_data_verified column exists
+$hasVerifiedColumn = false;
+try {
+    $check = $pdo->query("SHOW COLUMNS FROM series LIKE 'historical_data_verified'");
+    $hasVerifiedColumn = $check->rowCount() > 0;
+} catch (Exception $e) {
+    $hasVerifiedColumn = false;
+}
+
 // Get filter parameters
 $filterSeriesName = isset($_GET['series']) ? trim($_GET['series']) : null;
 $currentYear = (int)date('Y');
@@ -66,10 +75,12 @@ if ($filterYear) {
 $whereClause = 'WHERE ' . implode(' AND ', $where);
 
 // Get series for display with brand info
+$verifiedCol = $hasVerifiedColumn ? 's.historical_data_verified,' : '0 as historical_data_verified,';
+
 if ($useSeriesEvents) {
     $sql = "
         SELECT s.id, s.name, s.description, s.year, s.status, s.logo, s.start_date, s.end_date,
-               s.historical_data_verified,
+               {$verifiedCol}
                sb.name as brand_name, sb.logo as brand_logo, sb.accent_color,
                COUNT(DISTINCT se.event_id) as event_count,
                (SELECT COUNT(DISTINCT r.cyclist_id)
@@ -86,7 +97,7 @@ if ($useSeriesEvents) {
 } else {
     $sql = "
         SELECT s.id, s.name, s.description, s.year, s.status, s.logo, s.start_date, s.end_date,
-               s.historical_data_verified,
+               {$verifiedCol}
                sb.name as brand_name, sb.logo as brand_logo, sb.accent_color,
                COUNT(DISTINCT e.id) as event_count,
                (SELECT COUNT(DISTINCT r.cyclist_id)
