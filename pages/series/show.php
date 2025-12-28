@@ -60,6 +60,20 @@ try {
     $useSeriesResults = false;
 }
 
+// Check if this series uses DH-style points (run_1_points + run_2_points)
+$isDHSeries = false;
+try {
+    $dhCheck = $pdo->prepare("
+        SELECT COUNT(*) as cnt FROM series_results
+        WHERE series_id = ? AND (COALESCE(run_1_points, 0) > 0 OR COALESCE(run_2_points, 0) > 0)
+    ");
+    $dhCheck->execute([$seriesId]);
+    $dhRow = $dhCheck->fetch(PDO::FETCH_ASSOC);
+    $isDHSeries = ($dhRow && $dhRow['cnt'] > 0);
+} catch (Exception $e) {
+    $isDHSeries = false;
+}
+
 // Get events in series
 if ($useSeriesEvents) {
     $stmt = $pdo->prepare("
@@ -185,6 +199,8 @@ if (!empty($eventIds)) {
             'club_name' => $rider['club_name'],
             'class_id' => $rider['class_id'],
             'event_points' => [],
+            'event_run1' => [],   // DH Kval points
+            'event_run2' => [],   // DH Race points
             'excluded_events' => [],
             'total_points' => 0
         ];
@@ -194,14 +210,14 @@ if (!empty($eventIds)) {
         foreach ($events as $event) {
             if ($useSeriesResults) {
                 $pStmt = $pdo->prepare("
-                    SELECT points FROM series_results
+                    SELECT points, run_1_points, run_2_points FROM series_results
                     WHERE series_id = ? AND cyclist_id = ? AND event_id = ? AND class_id = ?
                     LIMIT 1
                 ");
                 $pStmt->execute([$seriesId, $rider['rider_id'], $event['id'], $rider['class_id']]);
             } else {
                 $pStmt = $pdo->prepare("
-                    SELECT points FROM results
+                    SELECT points, 0 as run_1_points, 0 as run_2_points FROM results
                     WHERE cyclist_id = ? AND event_id = ? AND class_id = ?
                     LIMIT 1
                 ");
@@ -209,7 +225,11 @@ if (!empty($eventIds)) {
             }
             $result = $pStmt->fetch(PDO::FETCH_ASSOC);
             $points = $result ? (int)$result['points'] : 0;
+            $run1 = $result ? (int)($result['run_1_points'] ?? 0) : 0;
+            $run2 = $result ? (int)($result['run_2_points'] ?? 0) : 0;
             $riderData['event_points'][$event['id']] = $points;
+            $riderData['event_run1'][$event['id']] = $run1;
+            $riderData['event_run2'][$event['id']] = $run2;
             if ($points > 0) {
                 $allPoints[] = ['event_id' => $event['id'], 'points' => $points];
             }
@@ -605,8 +625,13 @@ skip_club_standings:
                                     <th class="col-name">Namn</th>
                                     <th class="col-club">Klubb</th>
                                     <?php $eventNum = 1; foreach ($events as $event): ?>
-                                    <th class="col-event" title="<?= htmlspecialchars($event['name']) ?>">#<?= $eventNum++ ?></th>
-                                    <?php endforeach; ?>
+                                        <?php if ($isDHSeries): ?>
+                                        <th class="col-event col-event-dh" title="<?= htmlspecialchars($event['name']) ?> - Kval">#<?= $eventNum ?> K</th>
+                                        <th class="col-event col-event-dh" title="<?= htmlspecialchars($event['name']) ?> - Race">#<?= $eventNum ?> R</th>
+                                        <?php else: ?>
+                                        <th class="col-event" title="<?= htmlspecialchars($event['name']) ?>">#<?= $eventNum ?></th>
+                                        <?php endif; ?>
+                                    <?php $eventNum++; endforeach; ?>
                                     <th class="col-total">Total</th>
                                 </tr>
                             </thead>
@@ -632,19 +657,32 @@ skip_club_standings:
                                     <td class="col-club"><?= htmlspecialchars($row['club_name'] ?? '-') ?></td>
                                     <?php foreach ($events as $event):
                                         $pts = $row['event_points'][$event['id']] ?? 0;
+                                        $run1 = $row['event_run1'][$event['id']] ?? 0;
+                                        $run2 = $row['event_run2'][$event['id']] ?? 0;
                                         $isExcluded = isset($row['excluded_events'][$event['id']]);
                                     ?>
-                                    <td class="col-event <?= $isExcluded ? 'excluded' : '' ?>">
-                                        <?php if ($pts > 0): ?>
-                                            <?php if ($isExcluded): ?>
-                                                <span class="points-excluded" title="Raknas ej"><?= $pts ?></span>
-                                            <?php else: ?>
-                                                <?= $pts ?>
-                                            <?php endif; ?>
+                                        <?php if ($isDHSeries): ?>
+                                        <!-- DH: Kval column -->
+                                        <td class="col-event col-event-dh">
+                                            <?= $run1 > 0 ? $run1 : '<span class="no-points">-</span>' ?>
+                                        </td>
+                                        <!-- DH: Race column -->
+                                        <td class="col-event col-event-dh">
+                                            <?= $run2 > 0 ? $run2 : '<span class="no-points">-</span>' ?>
+                                        </td>
                                         <?php else: ?>
-                                            <span class="no-points">-</span>
+                                        <td class="col-event <?= $isExcluded ? 'excluded' : '' ?>">
+                                            <?php if ($pts > 0): ?>
+                                                <?php if ($isExcluded): ?>
+                                                    <span class="points-excluded" title="Raknas ej"><?= $pts ?></span>
+                                                <?php else: ?>
+                                                    <?= $pts ?>
+                                                <?php endif; ?>
+                                            <?php else: ?>
+                                                <span class="no-points">-</span>
+                                            <?php endif; ?>
+                                        </td>
                                         <?php endif; ?>
-                                    </td>
                                     <?php endforeach; ?>
                                     <td class="col-total"><strong><?= $row['total_points'] ?></strong></td>
                                 </tr>
