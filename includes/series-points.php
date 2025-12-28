@@ -83,6 +83,49 @@ function calculateSeriesPointsForPosition($db, $templateId, $position, $status =
 }
 
 /**
+ * Calculate series points with separate run1/run2 values for DH scales
+ * Returns array with 'total', 'run_1', 'run_2' keys
+ *
+ * @param object $db Database instance
+ * @param int $templateId The point_scales.id to use
+ * @param int $position The rider's position (1-based)
+ * @param string $status Result status
+ * @return array ['total' => int, 'run_1' => int, 'run_2' => int]
+ */
+function calculateSeriesPointsDetailed($db, $templateId, $position, $status = 'finished') {
+    $result = ['total' => 0, 'run_1' => 0, 'run_2' => 0];
+
+    if (in_array($status, ['dnf', 'dns', 'dq']) || !$position || $position < 1 || !$templateId) {
+        return $result;
+    }
+
+    $pointValue = $db->getRow(
+        "SELECT psv.points, psv.run_1_points, psv.run_2_points
+         FROM point_scale_values psv
+         JOIN point_scales ps ON psv.scale_id = ps.id
+         WHERE ps.id = ? AND ps.active = 1 AND psv.position = ?",
+        [$templateId, $position]
+    );
+
+    if ($pointValue) {
+        $run1 = (float)($pointValue['run_1_points'] ?? 0);
+        $run2 = (float)($pointValue['run_2_points'] ?? 0);
+
+        if ($run1 > 0 || $run2 > 0) {
+            // DH scale
+            $result['run_1'] = (int)$run1;
+            $result['run_2'] = (int)$run2;
+            $result['total'] = (int)($run1 + $run2);
+        } else {
+            // Standard scale
+            $result['total'] = (int)$pointValue['points'];
+        }
+    }
+
+    return $result;
+}
+
+/**
  * Recalculate all series_results for a specific event in a series
  *
  * @param object $db Database instance
@@ -139,14 +182,14 @@ function recalculateSeriesEventPoints($db, $seriesId, $eventId) {
     }
 
     foreach ($results as $result) {
-        // Calculate points using series template with event_level multiplier
-        $points = calculateSeriesPointsForPosition(
+        // Calculate points using detailed function (includes run_1/run_2 for DH)
+        $pointsData = calculateSeriesPointsDetailed(
             $db,
             $templateId,
             $result['position'],
-            $result['status'],
-            $eventLevel
+            $result['status']
         );
+        $points = $pointsData['total'];
 
         // Check if series_result already exists using lookup map (no DB query!)
         $lookupKey = $result['cyclist_id'] . '|' . ($result['class_id'] ?? 'null');
@@ -155,18 +198,24 @@ function recalculateSeriesEventPoints($db, $seriesId, $eventId) {
         if ($existing) {
             // Update if points changed
             if ($existing['points'] != $points) {
-                $db->update('series_results', [
+                $updateData = [
                     'position' => $result['position'],
                     'status' => $result['status'],
                     'points' => $points,
                     'template_id' => $templateId,
                     'calculated_at' => date('Y-m-d H:i:s')
-                ], 'id = ?', [$existing['id']]);
+                ];
+                // Add run_1/run_2 if DH scale (check if columns exist)
+                if ($pointsData['run_1'] > 0 || $pointsData['run_2'] > 0) {
+                    $updateData['run_1_points'] = $pointsData['run_1'];
+                    $updateData['run_2_points'] = $pointsData['run_2'];
+                }
+                $db->update('series_results', $updateData, 'id = ?', [$existing['id']]);
                 $stats['updated']++;
             }
         } else {
             // Insert new series_result
-            $db->insert('series_results', [
+            $insertData = [
                 'series_id' => $seriesId,
                 'event_id' => $eventId,
                 'cyclist_id' => $result['cyclist_id'],
@@ -175,7 +224,13 @@ function recalculateSeriesEventPoints($db, $seriesId, $eventId) {
                 'status' => $result['status'],
                 'points' => $points,
                 'template_id' => $templateId
-            ]);
+            ];
+            // Add run_1/run_2 if DH scale
+            if ($pointsData['run_1'] > 0 || $pointsData['run_2'] > 0) {
+                $insertData['run_1_points'] = $pointsData['run_1'];
+                $insertData['run_2_points'] = $pointsData['run_2'];
+            }
+            $db->insert('series_results', $insertData);
             $stats['inserted']++;
         }
     }
