@@ -709,6 +709,18 @@ try {
     $kartaPublished = empty($event['karta_publish_at']) || strtotime($event['karta_publish_at']) <= time();
     $pmPublished = empty($event['pm_publish_at']) || strtotime($event['pm_publish_at']) <= time();
 
+    // Check for elimination data
+    $hasEliminationData = false;
+    try {
+        $elimCheck = $db->prepare("SELECT COUNT(*) as cnt FROM elimination_qualifying WHERE event_id = ?");
+        $elimCheck->execute([$eventId]);
+        $elimRow = $elimCheck->fetch(PDO::FETCH_ASSOC);
+        $hasEliminationData = ($elimRow && $elimRow['cnt'] > 0);
+    } catch (Exception $e) {
+        // Table doesn't exist yet
+        $hasEliminationData = false;
+    }
+
     // Determine active tab based on event state
     // Priority: 1. Results (if exists) 2. Inbjudan (default for upcoming events)
     $hasResults = !empty($results);
@@ -931,6 +943,13 @@ if (!empty($eventSponsors['content'])): ?>
             <i data-lucide="trophy"></i>
             Resultat
             <span class="tab-badge"><?= $totalParticipants ?></span>
+        </a>
+        <?php endif; ?>
+
+        <?php if ($hasEliminationData): ?>
+        <a href="?id=<?= $eventId ?>&tab=elimination" class="event-tab <?= $activeTab === 'elimination' ? 'active' : '' ?>">
+            <i data-lucide="git-branch"></i>
+            Elimination
         </a>
         <?php endif; ?>
 
@@ -2001,6 +2020,20 @@ render_event_map($eventId, $db, [
         <?php else: ?>
             <p class="text-muted">Anmälningssystemet är inte konfigurerat för detta event ännu.</p>
         <?php endif; ?>
+    </div>
+</section>
+
+<?php elseif ($activeTab === 'elimination'): ?>
+<!-- ELIMINATION TAB -->
+<section class="card">
+    <div class="card-header">
+        <h2 class="card-title"><i data-lucide="git-branch"></i> Elimination / Dual Slalom</h2>
+    </div>
+    <div class="card-body">
+        <?php
+        // Include the elimination display component
+        include INCLUDES_PATH . '/elimination-display.php';
+        ?>
     </div>
 </section>
 
