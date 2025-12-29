@@ -15,7 +15,7 @@ if (!$eventId) {
 }
 
 // Get event info
-$event = $db->getOne("SELECT e.*, s.name as series_name FROM events e LEFT JOIN series s ON e.series_id = s.id WHERE e.id = ?", [$eventId]);
+$event = $db->getRow("SELECT e.*, s.name as series_name FROM events e LEFT JOIN series s ON e.series_id = s.id WHERE e.id = ?", [$eventId]);
 if (!$event) {
     $_SESSION['error'] = 'Event hittades inte';
     header('Location: /admin/elimination.php');
