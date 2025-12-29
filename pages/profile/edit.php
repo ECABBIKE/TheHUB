@@ -39,6 +39,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $iceName = trim($_POST['ice_name'] ?? '');
     $icePhone = trim($_POST['ice_phone'] ?? '');
 
+    // Address fields for purchases/receipts
+    $address = trim($_POST['address'] ?? '');
+    $postalCode = trim($_POST['postal_code'] ?? '');
+    $postalCity = trim($_POST['postal_city'] ?? '');
+
     // Social profiles
     $socialInstagram = trim($_POST['social_instagram'] ?? '');
     $socialStrava = trim($_POST['social_strava'] ?? '');
@@ -105,6 +110,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $updateFields[] = 'ice_phone = ?';
                 $updateValues[] = $icePhone ?: null;
             }
+
+            // Address fields for purchases/receipts
+            if (in_array('address', $existingColumns)) {
+                $updateFields[] = 'address = ?';
+                $updateValues[] = $address ?: null;
+            }
+            if (in_array('postal_code', $existingColumns)) {
+                $updateFields[] = 'postal_code = ?';
+                $updateValues[] = $postalCode ?: null;
+            }
+            if (in_array('postal_city', $existingColumns)) {
+                $updateFields[] = 'postal_city = ?';
+                $updateValues[] = $postalCity ?: null;
+            }
+
             // Only update UCI ID if column exists and user doesn't already have one from license sync
             if (in_array('uci_id', $existingColumns) && empty($currentUser['uci_id'])) {
                 $updateFields[] = 'uci_id = ?';
@@ -305,6 +325,35 @@ $clubs = $pdo->query("SELECT id, name FROM clubs WHERE active = 1 ORDER BY name"
                 <input type="tel" id="ice_phone" name="ice_phone"
                        value="<?= htmlspecialchars($currentUser['ice_phone'] ?? '') ?>"
                        placeholder="07X XXX XX XX">
+            </div>
+        </div>
+    </div>
+
+    <div class="form-section">
+        <h2>Leveransadress</h2>
+        <p class="form-help">Används vid köp för leverans och kvitton. Sparas för framtida köp.</p>
+
+        <div class="form-group">
+            <label for="address">Adress</label>
+            <input type="text" id="address" name="address"
+                   value="<?= htmlspecialchars($currentUser['address'] ?? '') ?>"
+                   placeholder="Gatuadress 123">
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label for="postal_code">Postnummer</label>
+                <input type="text" id="postal_code" name="postal_code"
+                       value="<?= htmlspecialchars($currentUser['postal_code'] ?? '') ?>"
+                       placeholder="123 45"
+                       pattern="[0-9\s]{5,6}"
+                       maxlength="6">
+            </div>
+            <div class="form-group">
+                <label for="postal_city">Postort</label>
+                <input type="text" id="postal_city" name="postal_city"
+                       value="<?= htmlspecialchars($currentUser['postal_city'] ?? '') ?>"
+                       placeholder="Stockholm">
             </div>
         </div>
     </div>
