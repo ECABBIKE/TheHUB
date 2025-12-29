@@ -35,11 +35,116 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['merge'])) {
             $stmt->execute([$keepId, $removeId]);
             $seriesResultsMoved = $stmt->rowCount();
 
+            // Flytta elimination_qualifying
+            $eliminationMoved = 0;
+            try {
+                $stmt = $pdo->prepare("UPDATE elimination_qualifying SET rider_id = ? WHERE rider_id = ?");
+                $stmt->execute([$keepId, $removeId]);
+                $eliminationMoved += $stmt->rowCount();
+            } catch (Exception $e) {
+                // Table might not exist
+            }
+
+            // Flytta elimination_brackets (alla rider-fält)
+            try {
+                $stmt = $pdo->prepare("UPDATE elimination_brackets SET rider_1_id = ? WHERE rider_1_id = ?");
+                $stmt->execute([$keepId, $removeId]);
+                $eliminationMoved += $stmt->rowCount();
+
+                $stmt = $pdo->prepare("UPDATE elimination_brackets SET rider_2_id = ? WHERE rider_2_id = ?");
+                $stmt->execute([$keepId, $removeId]);
+                $eliminationMoved += $stmt->rowCount();
+
+                $stmt = $pdo->prepare("UPDATE elimination_brackets SET winner_id = ? WHERE winner_id = ?");
+                $stmt->execute([$keepId, $removeId]);
+                $eliminationMoved += $stmt->rowCount();
+
+                $stmt = $pdo->prepare("UPDATE elimination_brackets SET loser_id = ? WHERE loser_id = ?");
+                $stmt->execute([$keepId, $removeId]);
+                $eliminationMoved += $stmt->rowCount();
+            } catch (Exception $e) {
+                // Table might not exist
+            }
+
+            // Flytta elimination_results
+            try {
+                $stmt = $pdo->prepare("UPDATE elimination_results SET rider_id = ? WHERE rider_id = ?");
+                $stmt->execute([$keepId, $removeId]);
+                $eliminationMoved += $stmt->rowCount();
+            } catch (Exception $e) {
+                // Table might not exist
+            }
+
+            // Flytta event_registrations
+            $regMoved = 0;
+            try {
+                // First delete any duplicate registrations (same event, keep has registration already)
+                $pdo->prepare("
+                    DELETE er1 FROM event_registrations er1
+                    INNER JOIN event_registrations er2 ON er1.event_id = er2.event_id
+                    WHERE er1.rider_id = ? AND er2.rider_id = ?
+                ")->execute([$removeId, $keepId]);
+
+                $stmt = $pdo->prepare("UPDATE event_registrations SET rider_id = ? WHERE rider_id = ?");
+                $stmt->execute([$keepId, $removeId]);
+                $regMoved += $stmt->rowCount();
+            } catch (Exception $e) {
+                // Table might not exist
+            }
+
+            // Flytta event_tickets
+            try {
+                $pdo->prepare("
+                    DELETE et1 FROM event_tickets et1
+                    INNER JOIN event_tickets et2 ON et1.event_id = et2.event_id
+                    WHERE et1.rider_id = ? AND et2.rider_id = ?
+                ")->execute([$removeId, $keepId]);
+
+                $stmt = $pdo->prepare("UPDATE event_tickets SET rider_id = ? WHERE rider_id = ?");
+                $stmt->execute([$keepId, $removeId]);
+                $regMoved += $stmt->rowCount();
+            } catch (Exception $e) {
+                // Table might not exist
+            }
+
+            // Flytta club_rider_points
+            try {
+                $stmt = $pdo->prepare("UPDATE club_rider_points SET rider_id = ? WHERE rider_id = ?");
+                $stmt->execute([$keepId, $removeId]);
+            } catch (Exception $e) {
+                // Table might not exist
+            }
+
+            // Flytta event_refund_requests
+            try {
+                $stmt = $pdo->prepare("UPDATE event_refund_requests SET rider_id = ? WHERE rider_id = ?");
+                $stmt->execute([$keepId, $removeId]);
+            } catch (Exception $e) {
+                // Table might not exist
+            }
+
+            // Flytta rider_claims (update both columns)
+            try {
+                $pdo->prepare("UPDATE rider_claims SET claimant_rider_id = ? WHERE claimant_rider_id = ?")->execute([$keepId, $removeId]);
+                $pdo->prepare("UPDATE rider_claims SET target_rider_id = ? WHERE target_rider_id = ?")->execute([$keepId, $removeId]);
+            } catch (Exception $e) {
+                // Table might not exist
+            }
+
             // Ta bort dubletten
             $pdo->prepare("DELETE FROM riders WHERE id = ?")->execute([$removeId]);
 
             $pdo->commit();
-            $message = "Klart! Flyttade {$resultsMoved} resultat och {$seriesResultsMoved} serieresultat från ID {$removeId} till ID {$keepId}. Åkare {$removeId} raderad.";
+
+            $msg = "Klart! Flyttade {$resultsMoved} resultat, {$seriesResultsMoved} serieresultat";
+            if ($eliminationMoved > 0) {
+                $msg .= ", {$eliminationMoved} elimination-poster";
+            }
+            if ($regMoved > 0) {
+                $msg .= ", {$regMoved} anmälningar/biljetter";
+            }
+            $msg .= " från ID {$removeId} till ID {$keepId}. Åkare {$removeId} raderad.";
+            $message = $msg;
             $messageType = 'success';
         } catch (Exception $e) {
             $pdo->rollBack();

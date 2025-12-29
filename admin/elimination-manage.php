@@ -411,6 +411,50 @@ function generateFinalResults($pdo, $db, $eventId, $classId) {
         ")->execute([$eventId, $classId, $rider['loser_id'], $position, $rider['seed_position'], $rider['round_name']]);
         $position++;
     }
+
+    // Sync final results to main results table for series points
+    syncEliminationResultsToMainTable($pdo, $db, $eventId, $classId);
+}
+
+/**
+ * Sync elimination results to main results table
+ * Uses series_class_id if set, otherwise uses the elimination class_id
+ */
+function syncEliminationResultsToMainTable($pdo, $db, $eventId, $classId) {
+    // Get all elimination results with their series class mapping
+    $eliminationResults = $db->getAll("
+        SELECT er.rider_id, er.final_position, eq.series_class_id, eq.best_time, eq.bib_number
+        FROM elimination_results er
+        JOIN elimination_qualifying eq ON eq.event_id = er.event_id AND eq.rider_id = er.rider_id
+        WHERE er.event_id = ? AND er.class_id = ?
+        ORDER BY er.final_position ASC
+    ", [$eventId, $classId]);
+
+    foreach ($eliminationResults as $result) {
+        // Use series_class_id if set, otherwise use the elimination class_id
+        $targetClass = $result['series_class_id'] ?: $classId;
+
+        // Delete any old results for this rider in different classes (class change cleanup)
+        $pdo->prepare("DELETE FROM results WHERE event_id = ? AND cyclist_id = ? AND class_id != ?")->execute([
+            $eventId, $result['rider_id'], $targetClass
+        ]);
+
+        // Insert/update result with final bracket position
+        $pdo->prepare("
+            INSERT INTO results (event_id, class_id, cyclist_id, position, finish_time, bib_number, status)
+            VALUES (?, ?, ?, ?, ?, ?, 'finished')
+            ON DUPLICATE KEY UPDATE
+            position = VALUES(position),
+            finish_time = VALUES(finish_time)
+        ")->execute([
+            $eventId,
+            $targetClass,
+            $result['rider_id'],
+            $result['final_position'],
+            $result['best_time'],
+            $result['bib_number']
+        ]);
+    }
 }
 
 /**
@@ -751,6 +795,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
+    if ($action === 'resync_results') {
+        // Re-sync elimination results to main results table
+        $classId = intval($_POST['class_id'] ?? 0);
+
+        if ($classId) {
+            try {
+                // First regenerate elimination_results from brackets
+                generateFinalResults($pdo, $db, $eventId, $classId);
+
+                $_SESSION['success'] = "Resultat synkade om från bracket-placeringar!";
+            } catch (Exception $e) {
+                $_SESSION['error'] = "Fel vid synkning: " . $e->getMessage();
+            }
+        }
+
+        header("Location: /admin/elimination-manage.php?event_id={$eventId}&class_id={$classId}");
+        exit;
+    }
+
     if ($action === 'save_heat') {
         // Save heat result
         $heatId = intval($_POST['heat_id'] ?? 0);
@@ -882,6 +945,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if ($qual) {
                     $targetClass = $seriesClassId ?: $qual['class_id'];
 
+                    // Check if rider has a final bracket result - use that position instead of qualifying
+                    $finalResult = $db->getRow("
+                        SELECT final_position FROM elimination_results
+                        WHERE event_id = ? AND rider_id = ?
+                    ", [$qual['event_id'], $qual['rider_id']]);
+
+                    // Use final bracket position if available, otherwise qualifying position
+                    $position = $finalResult ? $finalResult['final_position'] : $qual['seed_position'];
+
                     // Delete old result first (to handle class change)
                     $pdo->prepare("DELETE FROM results WHERE event_id = ? AND cyclist_id = ? AND class_id != ?")->execute([
                         $qual['event_id'], $qual['rider_id'], $targetClass
@@ -898,7 +970,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $qual['event_id'],
                         $targetClass,
                         $qual['rider_id'],
-                        $qual['seed_position'],
+                        $position,
                         $qual['best_time'],
                         $qual['bib_number']
                     ]);
@@ -1360,8 +1432,16 @@ foreach ($allFinalResultsByClass as $cdata) {
         <?php else: ?>
             <?php foreach ($allFinalResultsByClass as $classId => $classData): ?>
                 <div class="admin-card mb-lg">
-                    <div class="admin-card-header">
+                    <div class="admin-card-header" style="display: flex; justify-content: space-between; align-items: center;">
                         <h3><?= h($classData['name']) ?></h3>
+                        <form method="POST" style="display: inline;">
+                            <?= csrf_field() ?>
+                            <input type="hidden" name="action" value="resync_results">
+                            <input type="hidden" name="class_id" value="<?= $classId ?>">
+                            <button type="submit" class="btn-admin btn-admin-sm btn-admin-secondary" title="Synka om resultat från brackets till resultattabellen">
+                                <i data-lucide="refresh-cw"></i> Synka om
+                            </button>
+                        </form>
                     </div>
                     <div class="admin-card-body" style="padding: 0;">
                         <div class="admin-table-container">

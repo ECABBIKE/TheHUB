@@ -8,6 +8,131 @@ require_admin();
 global $pdo;
 $db = getDB();
 
+// Message variables
+$message = '';
+$messageType = 'info';
+
+// Handle POST actions (merge)
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    checkCsrf();
+
+    $action = $_POST['action'] ?? '';
+
+    if ($action === 'merge') {
+        $keepId = intval($_POST['keep_id'] ?? 0);
+        $mergeIds = $_POST['merge_ids'] ?? [];
+
+        // Ensure mergeIds is array of integers
+        $mergeIds = array_map('intval', (array)$mergeIds);
+        $mergeIds = array_filter($mergeIds, fn($id) => $id > 0 && $id !== $keepId);
+
+        if ($keepId && !empty($mergeIds)) {
+            try {
+                // Get rider names for message
+                $keepRider = $db->getRow("SELECT firstname, lastname FROM riders WHERE id = ?", [$keepId]);
+                if (!$keepRider) {
+                    throw new Exception('Måldeltagaren hittades inte');
+                }
+                $keepName = $keepRider['firstname'] . ' ' . $keepRider['lastname'];
+
+                $mergedNames = [];
+                foreach ($mergeIds as $mergeId) {
+                    $mergeRider = $db->getRow("SELECT firstname, lastname FROM riders WHERE id = ?", [$mergeId]);
+                    if ($mergeRider) {
+                        $mergedNames[] = $mergeRider['firstname'] . ' ' . $mergeRider['lastname'];
+                    }
+                }
+
+                if (empty($mergedNames)) {
+                    throw new Exception('Inga deltagare att slå samman hittades');
+                }
+
+                $pdo = $db->getPdo();
+                $pdo->beginTransaction();
+
+                foreach ($mergeIds as $removeId) {
+                    // Move results
+                    $stmt = $pdo->prepare("UPDATE results SET cyclist_id = ? WHERE cyclist_id = ?");
+                    $stmt->execute([$keepId, $removeId]);
+
+                    // Move series_results
+                    $stmt = $pdo->prepare("UPDATE series_results SET cyclist_id = ? WHERE cyclist_id = ?");
+                    $stmt->execute([$keepId, $removeId]);
+
+                    // Move elimination_qualifying
+                    try {
+                        $stmt = $pdo->prepare("UPDATE elimination_qualifying SET rider_id = ? WHERE rider_id = ?");
+                        $stmt->execute([$keepId, $removeId]);
+                    } catch (Exception $e) { /* Table might not exist */ }
+
+                    // Move elimination_brackets (all rider fields)
+                    try {
+                        $pdo->prepare("UPDATE elimination_brackets SET rider_1_id = ? WHERE rider_1_id = ?")->execute([$keepId, $removeId]);
+                        $pdo->prepare("UPDATE elimination_brackets SET rider_2_id = ? WHERE rider_2_id = ?")->execute([$keepId, $removeId]);
+                        $pdo->prepare("UPDATE elimination_brackets SET winner_id = ? WHERE winner_id = ?")->execute([$keepId, $removeId]);
+                        $pdo->prepare("UPDATE elimination_brackets SET loser_id = ? WHERE loser_id = ?")->execute([$keepId, $removeId]);
+                    } catch (Exception $e) { /* Table might not exist */ }
+
+                    // Move elimination_results
+                    try {
+                        $pdo->prepare("UPDATE elimination_results SET rider_id = ? WHERE rider_id = ?")->execute([$keepId, $removeId]);
+                    } catch (Exception $e) { /* Table might not exist */ }
+
+                    // Move event_registrations (delete duplicates first)
+                    try {
+                        $pdo->prepare("DELETE er1 FROM event_registrations er1 INNER JOIN event_registrations er2 ON er1.event_id = er2.event_id WHERE er1.rider_id = ? AND er2.rider_id = ?")->execute([$removeId, $keepId]);
+                        $pdo->prepare("UPDATE event_registrations SET rider_id = ? WHERE rider_id = ?")->execute([$keepId, $removeId]);
+                    } catch (Exception $e) { /* Table might not exist */ }
+
+                    // Move event_tickets
+                    try {
+                        $pdo->prepare("DELETE et1 FROM event_tickets et1 INNER JOIN event_tickets et2 ON et1.event_id = et2.event_id WHERE et1.rider_id = ? AND et2.rider_id = ?")->execute([$removeId, $keepId]);
+                        $pdo->prepare("UPDATE event_tickets SET rider_id = ? WHERE rider_id = ?")->execute([$keepId, $removeId]);
+                    } catch (Exception $e) { /* Table might not exist */ }
+
+                    // Move club_rider_points
+                    try {
+                        $pdo->prepare("UPDATE club_rider_points SET rider_id = ? WHERE rider_id = ?")->execute([$keepId, $removeId]);
+                    } catch (Exception $e) { /* Table might not exist */ }
+
+                    // Move event_refund_requests
+                    try {
+                        $pdo->prepare("UPDATE event_refund_requests SET rider_id = ? WHERE rider_id = ?")->execute([$keepId, $removeId]);
+                    } catch (Exception $e) { /* Table might not exist */ }
+
+                    // Move rider_claims
+                    try {
+                        $pdo->prepare("UPDATE rider_claims SET claimed_rider_id = ? WHERE claimed_rider_id = ?")->execute([$keepId, $removeId]);
+                        $pdo->prepare("UPDATE rider_claims SET requesting_rider_id = ? WHERE requesting_rider_id = ?")->execute([$keepId, $removeId]);
+                    } catch (Exception $e) { /* Table might not exist */ }
+
+                    // Delete the merged rider
+                    $pdo->prepare("DELETE FROM riders WHERE id = ?")->execute([$removeId]);
+                }
+
+                $pdo->commit();
+
+                $count = count($mergedNames);
+                if ($count === 1) {
+                    $message = "Deltagaren \"{$mergedNames[0]}\" har slagits samman med \"$keepName\"";
+                } else {
+                    $message = "$count deltagare har slagits samman med \"$keepName\": " . implode(', ', $mergedNames);
+                }
+                $messageType = 'success';
+            } catch (Exception $e) {
+                if (isset($pdo) && $pdo->inTransaction()) {
+                    $pdo->rollBack();
+                }
+                $message = 'Fel vid sammanslagning: ' . $e->getMessage();
+                $messageType = 'error';
+            }
+        } else {
+            $message = 'Välj minst två deltagare att slå samman';
+            $messageType = 'error';
+        }
+    }
+}
+
 // Handle search and filters
 $search = $_GET['search'] ?? '';
 $club_id = isset($_GET['club_id']) && is_numeric($_GET['club_id']) ? intval($_GET['club_id']) : null;
@@ -195,6 +320,21 @@ function buildSortUrl($field, $currentSort, $currentOrder, $search, $club_id, $n
 include __DIR__ . '/components/unified-layout.php';
 ?>
 
+<?php if ($message): ?>
+    <div class="alert alert-<?= $messageType === 'success' ? 'success' : ($messageType === 'error' ? 'error' : 'info') ?>">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+            <?php if ($messageType === 'success'): ?>
+                <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/>
+            <?php elseif ($messageType === 'error'): ?>
+                <circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="8" y2="12"/><line x1="12" x2="12.01" y1="16" y2="16"/>
+            <?php else: ?>
+                <circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="16" y2="12"/><line x1="12" x2="12.01" y1="8" y2="8"/>
+            <?php endif; ?>
+        </svg>
+        <?= htmlspecialchars($message) ?>
+    </div>
+<?php endif; ?>
+
 <?php if ($selectedClub): ?>
     <div class="alert alert-info">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="16" y2="12"/><line x1="12" x2="12.01" y1="8" y2="8"/></svg>
@@ -292,10 +432,31 @@ include __DIR__ . '/components/unified-layout.php';
                 <p>Prova att ändra sökning eller filter.</p>
             </div>
         <?php else: ?>
+            <!-- Merge toolbar (hidden until 2+ selected) -->
+            <div id="mergeToolbar" style="display: none; padding: var(--space-md); background: var(--color-accent-light); border-bottom: 1px solid var(--color-border);">
+                <form method="POST" id="mergeForm" style="display: flex; align-items: center; gap: var(--space-md); flex-wrap: wrap;">
+                    <?= csrf_field() ?>
+                    <input type="hidden" name="action" value="merge">
+                    <input type="hidden" name="keep_id" id="keepId">
+                    <div id="mergeIdsContainer"></div>
+                    <span><strong id="selectedCount">0</strong> deltagare valda</span>
+                    <div style="flex: 1; display: flex; align-items: center; gap: var(--space-sm);">
+                        <label style="white-space: nowrap;">Behåll:</label>
+                        <select id="keepSelect" class="form-select form-select-sm" style="min-width: 250px;"></select>
+                    </div>
+                    <span id="mergePreview" style="color: var(--color-text-secondary); font-size: 0.9em;"></span>
+                    <button type="submit" class="btn btn--primary btn-sm">
+                        <i data-lucide="git-merge"></i> Slå samman
+                    </button>
+                    <button type="button" class="btn btn--secondary btn-sm" onclick="clearRiderSelection()">Avbryt</button>
+                </form>
+            </div>
+
             <div class="admin-table-container">
                 <table class="admin-table">
                     <thead>
                         <tr>
+                            <th style="width: 40px;"><input type="checkbox" id="selectAllRiders" title="Markera alla"></th>
                             <th>
                                 <a href="<?= buildSortUrl('name', $sortBy, $sortOrder, $search, $club_id, $nationality, $onlyWithResults, $onlySweId, $onlyActivated, $hasEmail) ?>" class="admin-sortable">
                                     Namn
@@ -416,6 +577,13 @@ include __DIR__ . '/components/unified-layout.php';
                             }
                             ?>
                             <tr>
+                                <td>
+                                    <input type="checkbox" class="rider-checkbox"
+                                           data-id="<?= $rider['id'] ?>"
+                                           data-name="<?= htmlspecialchars($rider['firstname'] . ' ' . $rider['lastname']) ?>"
+                                           data-results="<?= $rider['result_count'] ?>"
+                                           data-license="<?= htmlspecialchars($rider['license_number'] ?? '') ?>">
+                                </td>
                                 <td>
                                     <a href="/rider/<?= $rider['id'] ?>" class="color-accent no-underline font-medium">
                                         <?= htmlspecialchars($rider['firstname'] . ' ' . $rider['lastname']) ?>
@@ -549,6 +717,126 @@ function deleteRider(id, name) {
         searchInput.setSelectionRange(searchInput.value.length, searchInput.value.length);
     }
 })();
+
+// Rider merge functionality
+let selectedRiders = [];
+
+document.querySelectorAll('.rider-checkbox').forEach(cb => {
+    cb.addEventListener('change', updateMergeToolbar);
+});
+
+document.getElementById('selectAllRiders')?.addEventListener('change', function() {
+    document.querySelectorAll('.rider-checkbox').forEach(cb => {
+        cb.checked = this.checked;
+    });
+    updateMergeToolbar();
+});
+
+function updateMergeToolbar() {
+    selectedRiders = [];
+    document.querySelectorAll('.rider-checkbox:checked').forEach(cb => {
+        selectedRiders.push({
+            id: cb.dataset.id,
+            name: cb.dataset.name,
+            results: parseInt(cb.dataset.results) || 0,
+            license: cb.dataset.license || ''
+        });
+    });
+
+    // Sort by results (most results first) for default keep selection
+    // Then prefer real UCI-ID (not SWE-ID) over temporary IDs
+    selectedRiders.sort((a, b) => {
+        // First: prefer real UCI-ID (not starting with SWE)
+        const aIsReal = a.license && !a.license.startsWith('SWE');
+        const bIsReal = b.license && !b.license.startsWith('SWE');
+        if (aIsReal && !bIsReal) return -1;
+        if (!aIsReal && bIsReal) return 1;
+        // Then by results
+        return b.results - a.results;
+    });
+
+    const toolbar = document.getElementById('mergeToolbar');
+    const countEl = document.getElementById('selectedCount');
+    const keepSelect = document.getElementById('keepSelect');
+
+    countEl.textContent = selectedRiders.length;
+
+    if (selectedRiders.length >= 2) {
+        toolbar.style.display = 'block';
+
+        // Build keep dropdown
+        keepSelect.innerHTML = selectedRiders.map(r =>
+            `<option value="${r.id}">${r.name} (${r.results} res., ${r.license || 'ingen licens'})</option>`
+        ).join('');
+
+        // Set default keep (best candidate)
+        keepSelect.value = selectedRiders[0].id;
+        document.getElementById('keepId').value = selectedRiders[0].id;
+
+        updateMergePreview();
+    } else {
+        toolbar.style.display = 'none';
+    }
+
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
+function updateMergePreview() {
+    const keepId = document.getElementById('keepSelect').value;
+    const keepRider = selectedRiders.find(r => r.id === keepId);
+    const mergeRiders = selectedRiders.filter(r => r.id !== keepId);
+
+    document.getElementById('keepId').value = keepId;
+
+    // Update hidden merge_ids inputs
+    const container = document.getElementById('mergeIdsContainer');
+    container.innerHTML = mergeRiders.map(r =>
+        `<input type="hidden" name="merge_ids[]" value="${r.id}">`
+    ).join('');
+
+    // Update preview text
+    const previewEl = document.getElementById('mergePreview');
+    if (mergeRiders.length === 1) {
+        previewEl.innerHTML = `"${mergeRiders[0].name}" → "${keepRider.name}"`;
+    } else {
+        previewEl.innerHTML = `${mergeRiders.length} deltagare → "${keepRider.name}"`;
+    }
+}
+
+// Listen for keep selection changes
+document.getElementById('keepSelect')?.addEventListener('change', updateMergePreview);
+
+function clearRiderSelection() {
+    document.querySelectorAll('.rider-checkbox').forEach(cb => cb.checked = false);
+    const selectAll = document.getElementById('selectAllRiders');
+    if (selectAll) selectAll.checked = false;
+    selectedRiders = [];
+    document.getElementById('mergeToolbar').style.display = 'none';
+}
+
+document.getElementById('mergeForm')?.addEventListener('submit', function(e) {
+    if (selectedRiders.length < 2) {
+        e.preventDefault();
+        alert('Välj minst 2 deltagare för att slå samman.');
+        return;
+    }
+
+    const keepId = document.getElementById('keepSelect').value;
+    const keepRider = selectedRiders.find(r => r.id === keepId);
+    const mergeRiders = selectedRiders.filter(r => r.id !== keepId);
+    const mergeNames = mergeRiders.map(r => r.name).join(', ');
+
+    let msg;
+    if (mergeRiders.length === 1) {
+        msg = `Slå samman "${mergeRiders[0].name}" med "${keepRider.name}"?\n\nAlla resultat och data flyttas till "${keepRider.name}".`;
+    } else {
+        msg = `Slå samman ${mergeRiders.length} deltagare med "${keepRider.name}"?\n\nDeltagare som tas bort:\n${mergeNames}\n\nAlla resultat och data flyttas till "${keepRider.name}".`;
+    }
+
+    if (!confirm(msg)) {
+        e.preventDefault();
+    }
+});
 </script>
 
 <style>
