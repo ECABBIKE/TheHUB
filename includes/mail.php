@@ -20,7 +20,7 @@ function hub_send_email(string $to, string $subject, string $body, array $option
 
     // Default sender info (from .env or fallback)
     $fromName = $options['from_name'] ?? env('MAIL_FROM_NAME', 'TheHUB');
-    $fromEmail = $options['from_email'] ?? env('MAIL_FROM_ADDRESS', 'info@gravityseries.se');
+    $fromEmail = $options['from_email'] ?? env('MAIL_FROM_ADDRESS', 'noreply@thehub.gravityseries.se');
     $replyTo = $options['reply_to'] ?? $fromEmail;
 
     // Log the email attempt
