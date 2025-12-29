@@ -714,12 +714,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                     // Get class name for message
                     $className = $db->getRow("SELECT display_name, name FROM classes WHERE id = ?", [$classId]);
-                    $classResults[] = ($className['display_name'] ?? $className['name']) . " ({$numQualifiers} åkare)";
+                    $classResults[] = ($className['display_name'] ?? $className['name']) . " ({$numQualifiers} åkare, {$bracketSize}-bracket)";
                 }
             }
 
             if ($generatedCount > 0) {
-                $_SESSION['success'] = "Bracket genererade för {$generatedCount} klasser, totalt {$totalRiders} åkare: " . implode(', ', $classResults);
+                // Verify what was actually inserted
+                $debugInfo = [];
+                foreach ($allClasses as $classRow) {
+                    $cid = $classRow['class_id'];
+                    $firstHeats = $db->getAll("
+                        SELECT heat_number, rider_1_seed, rider_2_seed
+                        FROM elimination_brackets
+                        WHERE event_id = ? AND class_id = ?
+                        ORDER BY round_number, heat_number
+                        LIMIT 4
+                    ", [$eventId, $cid]);
+                    if (!empty($firstHeats)) {
+                        $heatsInfo = [];
+                        foreach ($firstHeats as $h) {
+                            $heatsInfo[] = "H{$h['heat_number']}:[{$h['rider_1_seed']}v{$h['rider_2_seed']}]";
+                        }
+                        $debugInfo[] = implode(' ', $heatsInfo);
+                    }
+                }
+                $debugStr = !empty($debugInfo) ? " | Seeds: " . implode('; ', $debugInfo) : '';
+                $_SESSION['success'] = "Bracket genererade för {$generatedCount} klasser, totalt {$totalRiders} åkare: " . implode(', ', $classResults) . $debugStr;
             } else {
                 $_SESSION['error'] = "Inga klasser med tillräckligt med kvalificerade åkare (minst 2 krävs).";
             }
