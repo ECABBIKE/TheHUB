@@ -3,6 +3,14 @@
  * Authentication and session management
  */
 
+// Ensure redirect function exists (fallback if helpers.php not loaded)
+if (!function_exists('redirect')) {
+    function redirect($url) {
+        header('Location: ' . $url);
+        exit;
+    }
+}
+
 // Start session if not already started
 if (session_status() === PHP_SESSION_NONE) {
     // Configure secure session parameters
