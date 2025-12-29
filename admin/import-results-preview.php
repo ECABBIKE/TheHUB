@@ -423,7 +423,8 @@ function parseAndAnalyzeCSV($filepath, $db, $event = null) {
              'birthyear', 'födelseår', 'fodelsear', 'ålder', 'alder', 'age',
              'run1', 'run2', 'run1time', 'run2time', 'åk1', 'åk2', 'ak1', 'ak2',
              'kval', 'qualifying', 'final',
-             'land', 'nationality', 'nationalitet', 'country', 'nation'
+             'land', 'nationality', 'nationalitet', 'country', 'nation',
+             'status', 'fin', 'finished', 'dns', 'dnf', 'dq', 'dsq'
          ])) {
              continue;
          }
