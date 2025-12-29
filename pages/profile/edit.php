@@ -125,10 +125,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $updateValues[] = $postalCity ?: null;
             }
 
-            // Only update UCI ID if column exists and user doesn't already have one from license sync
-            if (in_array('uci_id', $existingColumns) && empty($currentUser['uci_id'])) {
+            // UCI ID - only allow setting if not already set (prevent overwrites)
+            if (in_array('uci_id', $existingColumns) && empty($currentUser['uci_id']) && !empty($uciId)) {
                 $updateFields[] = 'uci_id = ?';
-                $updateValues[] = $uciId ?: null;
+                $updateValues[] = $uciId;
             }
 
             $updateValues[] = $currentUser['id'];
@@ -279,15 +279,15 @@ $clubs = $pdo->query("SELECT id, name FROM clubs WHERE active = 1 ORDER BY name"
                 <label for="uci_id">UCI ID</label>
                 <?php if (!empty($currentUser['uci_id'])): ?>
                     <input type="text" id="uci_id" name="uci_id"
-                           value="<?= htmlspecialchars($currentUser['uci_id'] ?? '') ?>"
+                           value="<?= htmlspecialchars($currentUser['uci_id']) ?>"
                            readonly disabled
                            class="input-disabled">
-                    <small class="form-help">UCI ID synkas från din licens och kan inte ändras.</small>
+                    <small class="form-help">UCI ID kan inte ändras efter att det sparats.</small>
                 <?php else: ?>
                     <input type="text" id="uci_id" name="uci_id"
-                           value="<?= htmlspecialchars($currentUser['uci_id'] ?? '') ?>"
+                           value=""
                            placeholder="SWE19901231">
-                    <small class="form-help">Fyll i om du har ett UCI ID.</small>
+                    <small class="form-help">Fyll i ditt UCI ID om du har ett.</small>
                 <?php endif; ?>
             </div>
         </div>
