@@ -152,6 +152,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (isset($_POST['action']) && $_POST['action'] === 'import') {
         $fallbackClassId = intval($_POST['class_id'] ?? 0);
         $previewData = $_SESSION['elimination_import_preview'] ?? [];
+        $clearExisting = isset($_POST['clear_existing']) && $_POST['clear_existing'] === '1';
 
         if (!empty($previewData)) {
             $imported = 0;
@@ -177,6 +178,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $stmt = $pdo->prepare("INSERT INTO classes (name, display_name, discipline, active) VALUES (?, ?, 'DUAL_SLALOM', 1)");
                     $stmt->execute([strtolower(str_replace(' ', '_', $csvClassName)), $csvClassName]);
                     $createdClasses[$csvClassName] = $pdo->lastInsertId();
+                }
+            }
+
+            // Collect all class IDs that will be imported
+            $classesToClear = [];
+            if ($fallbackClassId) {
+                $classesToClear[$fallbackClassId] = true;
+            }
+            foreach ($previewData as $row) {
+                if (!empty($row['class'])) {
+                    $csvClassName = $row['class'];
+                    if (isset($createdClasses[$csvClassName])) {
+                        $classesToClear[$createdClasses[$csvClassName]] = true;
+                    } elseif (isset($classMap[$csvClassName]) && $classMap[$csvClassName] !== '__CREATE__') {
+                        $classesToClear[(int)$classMap[$csvClassName]] = true;
+                    }
+                }
+            }
+
+            // Clear existing data if requested
+            if ($clearExisting && !empty($classesToClear)) {
+                foreach (array_keys($classesToClear) as $clsId) {
+                    $pdo->prepare("DELETE FROM elimination_brackets WHERE event_id = ? AND class_id = ?")->execute([$eventId, $clsId]);
+                    $pdo->prepare("DELETE FROM elimination_qualifying WHERE event_id = ? AND class_id = ?")->execute([$eventId, $clsId]);
+                    $pdo->prepare("DELETE FROM elimination_results WHERE event_id = ? AND class_id = ?")->execute([$eventId, $clsId]);
+                    $pdo->prepare("DELETE FROM results WHERE event_id = ? AND class_id = ?")->execute([$eventId, $clsId]);
                 }
             }
 
@@ -271,23 +298,45 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             }
 
-            // Update seed positions for all imported classes
+            // Update seed positions and sync to results table for all imported classes
             foreach (array_keys($classesImported) as $impClassId) {
                 $qualifiers = $db->getAll("
-                    SELECT id FROM elimination_qualifying
-                    WHERE event_id = ? AND class_id = ?
-                    ORDER BY best_time ASC
+                    SELECT eq.id, eq.rider_id, eq.bib_number, eq.best_time
+                    FROM elimination_qualifying eq
+                    WHERE eq.event_id = ? AND eq.class_id = ?
+                    ORDER BY eq.best_time ASC
                 ", [$eventId, $impClassId]);
 
                 $pos = 1;
                 foreach ($qualifiers as $q) {
+                    // Update seed position
                     $pdo->prepare("UPDATE elimination_qualifying SET seed_position = ? WHERE id = ?")->execute([$pos, $q['id']]);
+
+                    // Sync to main results table (for result counts and series calculations)
+                    $stmt = $pdo->prepare("
+                        INSERT INTO results (event_id, class_id, cyclist_id, position, finish_time, bib_number, status)
+                        VALUES (?, ?, ?, ?, ?, ?, 'finished')
+                        ON DUPLICATE KEY UPDATE
+                        position = VALUES(position),
+                        finish_time = VALUES(finish_time),
+                        bib_number = VALUES(bib_number),
+                        status = VALUES(status)
+                    ");
+                    $stmt->execute([
+                        $eventId,
+                        $impClassId,
+                        $q['rider_id'],
+                        $pos,
+                        $q['best_time'],
+                        $q['bib_number']
+                    ]);
+
                     $pos++;
                 }
             }
 
             $numClasses = count($classesImported);
-            $_SESSION['success'] = "Importerade $imported kvalificeringsresultat i $numClasses klass(er)!";
+            $_SESSION['success'] = "Importerade $imported kvalificeringsresultat i $numClasses klass(er)! Resultaten är nu synkade.";
             if (!empty($errors)) {
                 $_SESSION['warning'] = implode('<br>', array_slice($errors, 0, 5));
             }
@@ -491,6 +540,14 @@ include __DIR__ . '/components/unified-layout.php';
                         <?php endforeach; ?>
                     </tbody>
                 </table>
+            </div>
+
+            <div class="admin-form-group mb-lg">
+                <label class="admin-form-label" style="display: flex; align-items: center; gap: var(--space-sm); cursor: pointer;">
+                    <input type="checkbox" name="clear_existing" value="1" checked style="width: 18px; height: 18px;">
+                    <span>Rensa befintliga resultat för dessa klasser innan import</span>
+                </label>
+                <p class="form-help" style="margin-left: 26px;">Rekommenderas för att undvika dubbletter. Rensar kvalificering, bracket och huvudresultat.</p>
             </div>
 
             <div class="flex gap-md">
