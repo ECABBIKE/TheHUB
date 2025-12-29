@@ -159,7 +159,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $classesImported = [];
             $classCache = [];
 
-            // Build class lookup cache
+            // Build class lookup cache with multiple variants
             foreach ($classes as $c) {
                 $classCache[strtolower($c['name'])] = $c['id'];
                 if (!empty($c['display_name'])) {
@@ -167,14 +167,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             }
 
+            // Helper to find class by fuzzy matching
+            $findClassId = function($csvClassName) use ($classes, $classCache) {
+                $csvClass = strtolower(trim($csvClassName));
+
+                // Exact match
+                if (isset($classCache[$csvClass])) {
+                    return $classCache[$csvClass];
+                }
+
+                // Partial match - check if CSV class contains or is contained in DB class
+                foreach ($classes as $c) {
+                    $dbName = strtolower($c['name']);
+                    $dbDisplay = strtolower($c['display_name'] ?? '');
+
+                    if (strpos($dbName, $csvClass) !== false || strpos($csvClass, $dbName) !== false) {
+                        return $c['id'];
+                    }
+                    if ($dbDisplay && (strpos($dbDisplay, $csvClass) !== false || strpos($csvClass, $dbDisplay) !== false)) {
+                        return $c['id'];
+                    }
+                }
+
+                return null;
+            };
+
             foreach ($previewData as $idx => $row) {
                 try {
                     // Determine class_id - use CSV class or fallback
                     $rowClassId = $fallbackClassId;
                     if (!empty($row['class'])) {
-                        $csvClass = strtolower(trim($row['class']));
-                        if (isset($classCache[$csvClass])) {
-                            $rowClassId = $classCache[$csvClass];
+                        $foundClassId = $findClassId($row['class']);
+                        if ($foundClassId) {
+                            $rowClassId = $foundClassId;
                         }
                     }
 
