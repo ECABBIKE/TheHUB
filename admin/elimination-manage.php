@@ -206,7 +206,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $rider2Total = $rider2Run1 + $rider2Run2;
 
             // Determine winner (lower total time wins)
-            $heat = $db->getOne("SELECT * FROM elimination_brackets WHERE id = ?", [$heatId]);
+            $heat = $db->getRow("SELECT * FROM elimination_brackets WHERE id = ?", [$heatId]);
             $winnerId = null;
             $loserId = null;
 
