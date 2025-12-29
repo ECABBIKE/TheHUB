@@ -57,7 +57,7 @@ function hub_send_php_mail(string $to, string $subject, string $body, string $fr
  * Send email using SMTP
  */
 function hub_send_smtp_email(string $to, string $subject, string $body, string $fromName, string $fromEmail, string $replyTo): bool {
-    $host = env('MAIL_HOST', 'smtp.hostinger.com');
+    $host = env('MAIL_HOST', 'smtp.hostinger.com'); // smtp.hostinger.com works, mail.hostinger.com doesn't
     $port = (int) env('MAIL_PORT', 465);
     $encryption = env('MAIL_ENCRYPTION', 'ssl');
     $username = env('MAIL_USERNAME', '');
