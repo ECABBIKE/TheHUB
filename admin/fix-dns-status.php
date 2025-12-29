@@ -1,8 +1,8 @@
 <?php
 /**
- * Fix DNS Status - Detect and fix riders with empty times that should be DNS
+ * Fix DNS Status - Detect and fix riders with empty times or DNS text that should be DNS
  *
- * This tool finds riders marked as 'finished' but with no finish time,
+ * This tool finds riders marked as 'finished' but with no valid finish time,
  * which indicates they are actually DNS (Did Not Start).
  */
 require_once __DIR__ . '/../config.php';
@@ -16,6 +16,25 @@ $messageType = '';
 // Get event filter
 $eventId = isset($_GET['event_id']) ? (int)$_GET['event_id'] : null;
 
+// Common condition for detecting DNS riders with wrong status
+// Checks: empty times, zero times, or DNS/DNF/DQ text in time fields
+$dnsCondition = "
+    r.status = 'finished'
+    AND (
+        -- No valid finish_time
+        (r.finish_time IS NULL OR r.finish_time = '' OR r.finish_time = '0:00' OR r.finish_time = '0:00:00' OR r.finish_time = '0:00.00'
+         OR UPPER(r.finish_time) IN ('DNS', 'DNF', 'DQ', 'DSQ'))
+        -- AND no valid DH run times
+        AND (r.run_1_time IS NULL OR r.run_1_time = '' OR r.run_1_time = '0:00' OR r.run_1_time = '0:00:00'
+             OR UPPER(r.run_1_time) IN ('DNS', 'DNF', 'DQ', 'DSQ'))
+        AND (r.run_2_time IS NULL OR r.run_2_time = '' OR r.run_2_time = '0:00' OR r.run_2_time = '0:00:00'
+             OR UPPER(r.run_2_time) IN ('DNS', 'DNF', 'DQ', 'DSQ'))
+        -- AND no valid Enduro split times
+        AND (r.ss1 IS NULL OR r.ss1 = '' OR r.ss1 = '0:00' OR r.ss1 = '0:00:00'
+             OR UPPER(r.ss1) IN ('DNS', 'DNF', 'DQ', 'DSQ'))
+    )
+";
+
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['fix'])) {
     checkCsrf();
 
@@ -28,15 +47,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['fix'])) {
     }
 
     // Count affected rows before fix
-    $beforeStmt = $db->prepare("
-        SELECT COUNT(*) as cnt
-        FROM results r
-        WHERE r.status = 'finished'
-        AND (r.finish_time IS NULL OR r.finish_time = '' OR r.finish_time = '0:00' OR r.finish_time = '0:00:00' OR r.finish_time = '0:00.00')
-        AND (r.run_1_time IS NULL OR r.run_1_time = '' OR r.run_1_time = '0:00' OR r.run_1_time = '0:00:00')
-        AND (r.ss1 IS NULL OR r.ss1 = '' OR r.ss1 = '0:00' OR r.ss1 = '0:00:00')
-        {$eventFilter}
-    ");
+    $beforeStmt = $db->prepare("SELECT COUNT(*) as cnt FROM results r WHERE {$dnsCondition} {$eventFilter}");
     $beforeStmt->execute($params);
     $before = $beforeStmt->fetch(PDO::FETCH_ASSOC);
 
@@ -44,11 +55,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['fix'])) {
     $fixStmt = $db->prepare("
         UPDATE results r
         SET r.status = 'dns', r.position = NULL, r.points = 0
-        WHERE r.status = 'finished'
-        AND (r.finish_time IS NULL OR r.finish_time = '' OR r.finish_time = '0:00' OR r.finish_time = '0:00:00' OR r.finish_time = '0:00.00')
-        AND (r.run_1_time IS NULL OR r.run_1_time = '' OR r.run_1_time = '0:00' OR r.run_1_time = '0:00:00')
-        AND (r.ss1 IS NULL OR r.ss1 = '' OR r.ss1 = '0:00' OR r.ss1 = '0:00:00')
-        {$eventFilter}
+        WHERE {$dnsCondition} {$eventFilter}
     ");
     $fixStmt->execute($params);
 
@@ -66,31 +73,19 @@ if ($eventId) {
 }
 
 // Count current affected rows
-$countStmt = $db->prepare("
-    SELECT COUNT(*) as cnt
-    FROM results r
-    WHERE r.status = 'finished'
-    AND (r.finish_time IS NULL OR r.finish_time = '' OR r.finish_time = '0:00' OR r.finish_time = '0:00:00' OR r.finish_time = '0:00.00')
-    AND (r.run_1_time IS NULL OR r.run_1_time = '' OR r.run_1_time = '0:00' OR r.run_1_time = '0:00:00')
-    AND (r.ss1 IS NULL OR r.ss1 = '' OR r.ss1 = '0:00' OR r.ss1 = '0:00:00')
-    {$eventFilter}
-");
+$countStmt = $db->prepare("SELECT COUNT(*) as cnt FROM results r WHERE {$dnsCondition} {$eventFilter}");
 $countStmt->execute($params);
 $affected = $countStmt->fetch(PDO::FETCH_ASSOC);
 
 // Get sample of affected results
 $sampleStmt = $db->prepare("
-    SELECT r.id, r.position, r.status, r.finish_time, r.run_1_time, r.ss1,
+    SELECT r.id, r.position, r.status, r.finish_time, r.run_1_time, r.run_2_time, r.ss1,
            CONCAT(ri.firstname, ' ', ri.lastname) as rider_name,
-           e.name as event_name, e.date as event_date
+           e.name as event_name, e.date as event_date, e.event_format
     FROM results r
     JOIN riders ri ON r.cyclist_id = ri.id
     JOIN events e ON r.event_id = e.id
-    WHERE r.status = 'finished'
-    AND (r.finish_time IS NULL OR r.finish_time = '' OR r.finish_time = '0:00' OR r.finish_time = '0:00:00' OR r.finish_time = '0:00.00')
-    AND (r.run_1_time IS NULL OR r.run_1_time = '' OR r.run_1_time = '0:00' OR r.run_1_time = '0:00:00')
-    AND (r.ss1 IS NULL OR r.ss1 = '' OR r.ss1 = '0:00' OR r.ss1 = '0:00:00')
-    {$eventFilter}
+    WHERE {$dnsCondition} {$eventFilter}
     ORDER BY e.date DESC
     LIMIT 30
 ");
@@ -98,20 +93,14 @@ $sampleStmt->execute($params);
 $samples = $sampleStmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Get events for filter dropdown
-$events = $db->query("
+$events = $db->getAll("
     SELECT e.id, e.name, e.date,
-           (SELECT COUNT(*) FROM results r
-            WHERE r.event_id = e.id
-            AND r.status = 'finished'
-            AND (r.finish_time IS NULL OR r.finish_time = '' OR r.finish_time = '0:00' OR r.finish_time = '0:00:00')
-            AND (r.run_1_time IS NULL OR r.run_1_time = '' OR r.run_1_time = '0:00' OR r.run_1_time = '0:00:00')
-            AND (r.ss1 IS NULL OR r.ss1 = '' OR r.ss1 = '0:00' OR r.ss1 = '0:00:00')
-           ) as dns_count
+           (SELECT COUNT(*) FROM results r WHERE r.event_id = e.id AND {$dnsCondition}) as dns_count
     FROM events e
     HAVING dns_count > 0
     ORDER BY e.date DESC
     LIMIT 50
-")->fetchAll(PDO::FETCH_ASSOC);
+");
 
 $page_title = 'Fixa DNS-status';
 $breadcrumbs = [
@@ -137,8 +126,8 @@ include __DIR__ . '/components/unified-layout.php';
     </div>
     <div class="card-body">
         <p class="mb-lg">
-            Detta verktyg hittar åkare som är markerade som <strong>'finished'</strong> men saknar tid
-            (finish_time, run_1_time och ss1 är tomma). Dessa bör vara <strong>DNS</strong> (Did Not Start).
+            Detta verktyg hittar åkare som är markerade som <strong>'finished'</strong> men saknar giltig tid
+            (tom tid, nolltid, eller "DNS"/"DNF"/"DQ" som tidvärde). Dessa bör ha <strong>status = 'dns'</strong>.
         </p>
 
         <!-- Event filter -->
@@ -158,7 +147,7 @@ include __DIR__ . '/components/unified-layout.php';
 
         <div class="alert alert--info mb-lg">
             <i data-lucide="info"></i>
-            <strong><?= $affected['cnt'] ?></strong> åkare har status='finished' men saknar tid (bör vara DNS).
+            <strong><?= $affected['cnt'] ?></strong> åkare har status='finished' men saknar giltig tid (bör vara DNS).
         </div>
 
         <?php if ($affected['cnt'] > 0): ?>
@@ -182,9 +171,10 @@ include __DIR__ . '/components/unified-layout.php';
                         <th>Åkare</th>
                         <th>Event</th>
                         <th>Datum</th>
+                        <th>Format</th>
                         <th>Status</th>
-                        <th>Placering</th>
-                        <th>Tid</th>
+                        <th>Plac.</th>
+                        <th>Tid/Åk1/SS1</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -193,9 +183,17 @@ include __DIR__ . '/components/unified-layout.php';
                         <td><?= h($row['rider_name']) ?></td>
                         <td><?= h($row['event_name']) ?></td>
                         <td><?= date('Y-m-d', strtotime($row['event_date'])) ?></td>
+                        <td><span class="badge"><?= h($row['event_format'] ?? 'ENDURO') ?></span></td>
                         <td><span class="badge badge-success"><?= strtoupper($row['status']) ?></span></td>
-                        <td><span class="text-danger"><?= $row['position'] ?: '-' ?></span></td>
-                        <td class="text-secondary"><?= $row['finish_time'] ?: '(tom)' ?></td>
+                        <td class="text-danger"><?= $row['position'] ?: '-' ?></td>
+                        <td class="text-secondary">
+                            <?php
+                            if (!empty($row['run_1_time'])) echo 'Åk1: ' . h($row['run_1_time']);
+                            elseif (!empty($row['ss1'])) echo 'SS1: ' . h($row['ss1']);
+                            elseif (!empty($row['finish_time'])) echo h($row['finish_time']);
+                            else echo '(tom)';
+                            ?>
+                        </td>
                     </tr>
                     <?php endforeach; ?>
                 </tbody>
@@ -206,7 +204,7 @@ include __DIR__ . '/components/unified-layout.php';
         <?php else: ?>
         <div class="alert alert--success">
             <i data-lucide="check-circle"></i>
-            Inga problem hittades! Alla åkare med status='finished' har en tid.
+            Inga problem hittades! Alla åkare med status='finished' har en giltig tid.
         </div>
         <?php endif; ?>
     </div>
