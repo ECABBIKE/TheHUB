@@ -714,8 +714,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         }
                     }
 
-                    // Generate subsequent rounds
-                    generateNextRounds($pdo, $eventId, $classId);
+                    // NOTE: Generera INTE nästa runda här!
+                    // Nästa runda skapas automatiskt när alla heats i nuvarande runda har vinnare.
+                    // Om alla heats är BYEs, kör generateNextRounds direkt
+                    $pendingCount = $db->getRow("
+                        SELECT COUNT(*) as cnt FROM elimination_brackets
+                        WHERE event_id = ? AND class_id = ? AND status = 'pending'
+                    ", [$eventId, $classId]);
+
+                    if ($pendingCount['cnt'] == 0) {
+                        // Alla heats är BYEs, generera nästa runda direkt
+                        generateNextRounds($pdo, $eventId, $classId);
+                    }
 
                     $generatedCount++;
                     $totalRiders += $numQualifiers;
