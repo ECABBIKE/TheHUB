@@ -84,7 +84,7 @@ function hub_send_smtp_email(string $to, string $subject, string $body, string $
             "{$protocol}{$host}:{$port}",
             $errno,
             $errstr,
-            30,
+            10,
             STREAM_CLIENT_CONNECT,
             $context
         );
