@@ -2533,9 +2533,10 @@ async function sendActivationEmail(riderId) {
     if (typeof lucide !== 'undefined') lucide.createIcons();
 
     try {
-        const response = await fetch('https://thehub.gravityseries.se/api/rider-activate.php', {
+        const response = await fetch('/api/rider-activate.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
+            credentials: 'same-origin',
             body: JSON.stringify({ rider_id: riderId })
         });
 
