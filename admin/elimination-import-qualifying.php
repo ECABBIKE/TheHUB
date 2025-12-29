@@ -159,7 +159,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $classesImported = [];
             $classCache = [];
 
-            // Build class lookup cache
+            // Build class lookup cache with multiple variants
             foreach ($classes as $c) {
                 $classCache[strtolower($c['name'])] = $c['id'];
                 if (!empty($c['display_name'])) {
@@ -167,19 +167,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             }
 
+            // Get class mapping from form
+            $classMap = $_POST['class_map'] ?? [];
+            $createdClasses = [];
+
+            // Pre-create any new classes
+            foreach ($classMap as $csvClassName => $targetId) {
+                if ($targetId === '__CREATE__') {
+                    $stmt = $pdo->prepare("INSERT INTO classes (name, display_name, discipline, active) VALUES (?, ?, 'DUAL_SLALOM', 1)");
+                    $stmt->execute([strtolower(str_replace(' ', '_', $csvClassName)), $csvClassName]);
+                    $createdClasses[$csvClassName] = $pdo->lastInsertId();
+                }
+            }
+
             foreach ($previewData as $idx => $row) {
                 try {
-                    // Determine class_id - use CSV class or fallback
+                    // Determine class_id from mapping or fallback
                     $rowClassId = $fallbackClassId;
                     if (!empty($row['class'])) {
-                        $csvClass = strtolower(trim($row['class']));
-                        if (isset($classCache[$csvClass])) {
-                            $rowClassId = $classCache[$csvClass];
+                        $csvClassName = $row['class'];
+                        if (isset($createdClasses[$csvClassName])) {
+                            $rowClassId = $createdClasses[$csvClassName];
+                        } elseif (isset($classMap[$csvClassName]) && $classMap[$csvClassName] !== '__CREATE__') {
+                            $rowClassId = (int)$classMap[$csvClassName];
                         }
                     }
 
                     if (!$rowClassId) {
-                        $errors[] = "Rad " . ($idx + 1) . ": Kunde inte hitta klass '{$row['class']}'";
+                        $errors[] = "Rad " . ($idx + 1) . ": Ingen klass vald för '{$row['class']}'";
                         continue;
                     }
 
@@ -331,13 +346,53 @@ include __DIR__ . '/components/unified-layout.php';
 </div>
 
 <?php if (!empty($previewData)):
-    // Check if CSV has class data
+    // Check if CSV has class data and match to existing classes
     $hasClassData = false;
     $csvClasses = [];
+    $classMatches = []; // CSV class name => ['count' => N, 'matched_id' => X or null, 'matched_name' => Y]
+
+    // Build class lookup
+    $classLookup = [];
+    foreach ($classes as $c) {
+        $classLookup[strtolower($c['name'])] = $c;
+        if (!empty($c['display_name'])) {
+            $classLookup[strtolower($c['display_name'])] = $c;
+        }
+    }
+
+    // Helper to find matching class
+    $findMatchingClass = function($csvClassName) use ($classes, $classLookup) {
+        $csvLower = strtolower(trim($csvClassName));
+        if (isset($classLookup[$csvLower])) {
+            return $classLookup[$csvLower];
+        }
+        // Partial match
+        foreach ($classes as $c) {
+            $dbName = strtolower($c['name']);
+            $dbDisplay = strtolower($c['display_name'] ?? '');
+            if (strpos($dbName, $csvLower) !== false || strpos($csvLower, $dbName) !== false) {
+                return $c;
+            }
+            if ($dbDisplay && (strpos($dbDisplay, $csvLower) !== false || strpos($csvLower, $dbDisplay) !== false)) {
+                return $c;
+            }
+        }
+        return null;
+    };
+
     foreach ($previewData as $row) {
         if (!empty($row['class'])) {
             $hasClassData = true;
-            $csvClasses[$row['class']] = ($csvClasses[$row['class']] ?? 0) + 1;
+            $className = $row['class'];
+            if (!isset($classMatches[$className])) {
+                $match = $findMatchingClass($className);
+                $classMatches[$className] = [
+                    'count' => 0,
+                    'matched_id' => $match ? $match['id'] : null,
+                    'matched_name' => $match ? ($match['display_name'] ?? $match['name']) : null
+                ];
+            }
+            $classMatches[$className]['count']++;
         }
     }
 ?>
@@ -350,12 +405,37 @@ include __DIR__ . '/components/unified-layout.php';
             <input type="hidden" name="action" value="import">
 
             <?php if ($hasClassData): ?>
-            <div class="alert alert--success mb-lg">
-                <i data-lucide="check-circle"></i>
-                <strong>Klasser hittade i CSV:</strong>
-                <?php foreach ($csvClasses as $className => $count): ?>
-                    <span class="badge badge-success ml-sm"><?= h($className) ?> (<?= $count ?>)</span>
-                <?php endforeach; ?>
+            <div class="mb-lg">
+                <h4 class="mb-sm">Klassmatchning</h4>
+                <table class="table table-sm">
+                    <thead>
+                        <tr>
+                            <th>Klass i CSV</th>
+                            <th>Antal</th>
+                            <th>Mappa till</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($classMatches as $csvName => $info): ?>
+                        <tr>
+                            <td><strong><?= h($csvName) ?></strong></td>
+                            <td><?= $info['count'] ?></td>
+                            <td>
+                                <select name="class_map[<?= h($csvName) ?>]" class="form-select form-select-sm">
+                                    <option value="__CREATE__" <?= !$info['matched_id'] ? 'selected' : '' ?>>
+                                        + Skapa ny klass "<?= h($csvName) ?>"
+                                    </option>
+                                    <?php foreach ($classes as $c): ?>
+                                    <option value="<?= $c['id'] ?>" <?= $info['matched_id'] == $c['id'] ? 'selected' : '' ?>>
+                                        <?= h($c['display_name'] ?? $c['name']) ?>
+                                    </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </td>
+                        </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
             </div>
             <input type="hidden" name="class_id" value="0">
             <?php else: ?>
