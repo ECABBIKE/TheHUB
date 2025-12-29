@@ -1,12 +1,12 @@
 <?php
 /**
  * TheHUB Email Helper
- * Simple email sending using PHP's mail() function
- * Compatible with Hostinger shared hosting
+ * Supports both PHP mail() and SMTP
+ * Configure SMTP in .env file for reliable email delivery
  */
 
 /**
- * Send an email using PHP mail()
+ * Send an email using SMTP or PHP mail()
  *
  * @param string $to Recipient email address
  * @param string $subject Email subject
@@ -15,12 +15,28 @@
  * @return bool True if mail was accepted for delivery
  */
 function hub_send_email(string $to, string $subject, string $body, array $options = []): bool {
-    // Default sender info
-    $fromName = $options['from_name'] ?? 'TheHUB';
-    $fromEmail = $options['from_email'] ?? 'HUB@gravityseries.se';
+    // Get mail configuration from environment
+    $mailDriver = env('MAIL_DRIVER', 'mail'); // 'smtp' or 'mail'
+
+    // Default sender info (from .env or fallback)
+    $fromName = $options['from_name'] ?? env('MAIL_FROM_NAME', 'TheHUB');
+    $fromEmail = $options['from_email'] ?? env('MAIL_FROM_ADDRESS', 'HUB@gravityseries.se');
     $replyTo = $options['reply_to'] ?? $fromEmail;
 
-    // Build headers
+    // Log the email attempt
+    error_log("TheHUB Mail: Sending to {$to} - Subject: {$subject} - Driver: {$mailDriver}");
+
+    if ($mailDriver === 'smtp') {
+        return hub_send_smtp_email($to, $subject, $body, $fromName, $fromEmail, $replyTo);
+    } else {
+        return hub_send_php_mail($to, $subject, $body, $fromName, $fromEmail, $replyTo);
+    }
+}
+
+/**
+ * Send email using PHP's native mail() function
+ */
+function hub_send_php_mail(string $to, string $subject, string $body, string $fromName, string $fromEmail, string $replyTo): bool {
     $headers = [];
     $headers[] = 'MIME-Version: 1.0';
     $headers[] = 'Content-Type: text/html; charset=UTF-8';
@@ -28,26 +44,187 @@ function hub_send_email(string $to, string $subject, string $body, array $option
     $headers[] = "Reply-To: {$replyTo}";
     $headers[] = 'X-Mailer: TheHUB/3.5';
 
-    // Log the email attempt
-    error_log("TheHUB Mail: Sending to {$to} - Subject: {$subject}");
-
-    // Send email
     $result = @mail($to, $subject, $body, implode("\r\n", $headers));
 
     if (!$result) {
-        error_log("TheHUB Mail: Failed to send email to {$to}");
+        error_log("TheHUB Mail: PHP mail() failed to send to {$to}");
     }
 
     return $result;
 }
 
 /**
+ * Send email using SMTP
+ */
+function hub_send_smtp_email(string $to, string $subject, string $body, string $fromName, string $fromEmail, string $replyTo): bool {
+    $host = env('MAIL_HOST', 'smtp.hostinger.com');
+    $port = (int) env('MAIL_PORT', 465);
+    $encryption = env('MAIL_ENCRYPTION', 'ssl');
+    $username = env('MAIL_USERNAME', '');
+    $password = env('MAIL_PASSWORD', '');
+
+    if (empty($username) || empty($password)) {
+        error_log("TheHUB Mail: SMTP credentials not configured in .env");
+        // Fallback to PHP mail
+        return hub_send_php_mail($to, $subject, $body, $fromName, $fromEmail, $replyTo);
+    }
+
+    try {
+        // Connect to SMTP server
+        $context = stream_context_create([
+            'ssl' => [
+                'verify_peer' => false,
+                'verify_peer_name' => false,
+                'allow_self_signed' => true
+            ]
+        ]);
+
+        $protocol = ($encryption === 'ssl') ? 'ssl://' : '';
+        $socket = @stream_socket_client(
+            "{$protocol}{$host}:{$port}",
+            $errno,
+            $errstr,
+            30,
+            STREAM_CLIENT_CONNECT,
+            $context
+        );
+
+        if (!$socket) {
+            error_log("TheHUB Mail: SMTP connection failed: {$errstr} ({$errno})");
+            return false;
+        }
+
+        // Read greeting
+        $response = fgets($socket, 515);
+        if (substr($response, 0, 3) !== '220') {
+            error_log("TheHUB Mail: SMTP greeting failed: {$response}");
+            fclose($socket);
+            return false;
+        }
+
+        // EHLO
+        fputs($socket, "EHLO " . gethostname() . "\r\n");
+        $response = hub_smtp_get_response($socket);
+
+        // Start TLS if using TLS encryption (port 587)
+        if ($encryption === 'tls' && strpos($response, 'STARTTLS') !== false) {
+            fputs($socket, "STARTTLS\r\n");
+            $response = fgets($socket, 515);
+            if (substr($response, 0, 3) !== '220') {
+                error_log("TheHUB Mail: STARTTLS failed: {$response}");
+                fclose($socket);
+                return false;
+            }
+            stream_socket_enable_crypto($socket, true, STREAM_CRYPTO_METHOD_TLS_CLIENT);
+            fputs($socket, "EHLO " . gethostname() . "\r\n");
+            hub_smtp_get_response($socket);
+        }
+
+        // AUTH LOGIN
+        fputs($socket, "AUTH LOGIN\r\n");
+        $response = fgets($socket, 515);
+        if (substr($response, 0, 3) !== '334') {
+            error_log("TheHUB Mail: AUTH LOGIN failed: {$response}");
+            fclose($socket);
+            return false;
+        }
+
+        // Send username
+        fputs($socket, base64_encode($username) . "\r\n");
+        $response = fgets($socket, 515);
+        if (substr($response, 0, 3) !== '334') {
+            error_log("TheHUB Mail: Username rejected: {$response}");
+            fclose($socket);
+            return false;
+        }
+
+        // Send password
+        fputs($socket, base64_encode($password) . "\r\n");
+        $response = fgets($socket, 515);
+        if (substr($response, 0, 3) !== '235') {
+            error_log("TheHUB Mail: Authentication failed: {$response}");
+            fclose($socket);
+            return false;
+        }
+
+        // MAIL FROM
+        fputs($socket, "MAIL FROM:<{$fromEmail}>\r\n");
+        $response = fgets($socket, 515);
+        if (substr($response, 0, 3) !== '250') {
+            error_log("TheHUB Mail: MAIL FROM rejected: {$response}");
+            fclose($socket);
+            return false;
+        }
+
+        // RCPT TO
+        fputs($socket, "RCPT TO:<{$to}>\r\n");
+        $response = fgets($socket, 515);
+        if (substr($response, 0, 3) !== '250' && substr($response, 0, 3) !== '251') {
+            error_log("TheHUB Mail: RCPT TO rejected: {$response}");
+            fclose($socket);
+            return false;
+        }
+
+        // DATA
+        fputs($socket, "DATA\r\n");
+        $response = fgets($socket, 515);
+        if (substr($response, 0, 3) !== '354') {
+            error_log("TheHUB Mail: DATA rejected: {$response}");
+            fclose($socket);
+            return false;
+        }
+
+        // Build email headers and body
+        $headers = "From: {$fromName} <{$fromEmail}>\r\n";
+        $headers .= "Reply-To: {$replyTo}\r\n";
+        $headers .= "To: {$to}\r\n";
+        $headers .= "Subject: {$subject}\r\n";
+        $headers .= "MIME-Version: 1.0\r\n";
+        $headers .= "Content-Type: text/html; charset=UTF-8\r\n";
+        $headers .= "X-Mailer: TheHUB/3.5\r\n";
+        $headers .= "\r\n";
+
+        // Send headers and body (escape dots at start of lines)
+        $body = str_replace("\n.", "\n..", $body);
+        fputs($socket, $headers . $body . "\r\n.\r\n");
+
+        $response = fgets($socket, 515);
+        if (substr($response, 0, 3) !== '250') {
+            error_log("TheHUB Mail: Message rejected: {$response}");
+            fclose($socket);
+            return false;
+        }
+
+        // QUIT
+        fputs($socket, "QUIT\r\n");
+        fclose($socket);
+
+        error_log("TheHUB Mail: Email sent successfully via SMTP to {$to}");
+        return true;
+
+    } catch (Exception $e) {
+        error_log("TheHUB Mail: SMTP error: " . $e->getMessage());
+        return false;
+    }
+}
+
+/**
+ * Read multi-line SMTP response
+ */
+function hub_smtp_get_response($socket): string {
+    $response = '';
+    while ($line = fgets($socket, 515)) {
+        $response .= $line;
+        // If 4th character is a space, this is the last line
+        if (isset($line[3]) && $line[3] === ' ') {
+            break;
+        }
+    }
+    return $response;
+}
+
+/**
  * Send password reset email
- *
- * @param string $email Recipient email
- * @param string $name Recipient name
- * @param string $resetLink Full reset URL with token
- * @return bool True if email was sent
  */
 function hub_send_password_reset_email(string $email, string $name, string $resetLink): bool {
     $subject = 'Återställ ditt lösenord - TheHUB';
@@ -55,7 +232,7 @@ function hub_send_password_reset_email(string $email, string $name, string $rese
     $body = hub_email_template('password_reset', [
         'name' => $name,
         'reset_link' => $resetLink,
-        'expires' => '1 timme'
+        'expires' => '24 timmar'
     ]);
 
     return hub_send_email($email, $subject, $body);
@@ -63,11 +240,6 @@ function hub_send_password_reset_email(string $email, string $name, string $rese
 
 /**
  * Send account activation email
- *
- * @param string $email Recipient email
- * @param string $name Recipient name
- * @param string $activationLink Full activation URL with token
- * @return bool True if email was sent
  */
 function hub_send_account_activation_email(string $email, string $name, string $activationLink): bool {
     $subject = 'Aktivera ditt konto - TheHUB';
@@ -83,10 +255,6 @@ function hub_send_account_activation_email(string $email, string $name, string $
 
 /**
  * Get email template with variables replaced
- *
- * @param string $template Template name
- * @param array $vars Variables to replace
- * @return string Rendered HTML email
  */
 function hub_email_template(string $template, array $vars = []): string {
     // Base styles for email
@@ -95,11 +263,11 @@ function hub_email_template(string $template, array $vars = []): string {
         .container { max-width: 600px; margin: 0 auto; padding: 20px; }
         .card { background: #ffffff; border-radius: 12px; padding: 32px; box-shadow: 0 2px 8px rgba(0,0,0,0.1); }
         .header { text-align: center; margin-bottom: 24px; }
-        .logo { font-size: 24px; font-weight: bold; color: #f59e0b; }
+        .logo { font-size: 24px; font-weight: bold; color: #61CE70; }
         h1 { font-size: 24px; margin: 0 0 16px 0; color: #111; }
         p { margin: 0 0 16px 0; }
-        .btn { display: inline-block; background: #f59e0b; color: #ffffff !important; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: 600; margin: 16px 0; }
-        .btn:hover { background: #d97706; }
+        .text-center { text-align: center; }
+        .btn { display: inline-block; background: #61CE70; color: #111 !important; padding: 14px 28px; border-radius: 8px; text-decoration: none; font-weight: 600; margin: 16px 0; }
         .link { word-break: break-all; color: #666; font-size: 14px; background: #f5f5f5; padding: 12px; border-radius: 6px; margin: 16px 0; }
         .footer { text-align: center; margin-top: 24px; padding-top: 24px; border-top: 1px solid #eee; color: #666; font-size: 14px; }
         .note { font-size: 14px; color: #666; }
@@ -109,7 +277,7 @@ function hub_email_template(string $template, array $vars = []): string {
     $templates = [
         'password_reset' => '
             <div class="header">
-                <div class="logo">🏆 TheHUB</div>
+                <div class="logo">TheHUB</div>
             </div>
             <h1>Återställ ditt lösenord</h1>
             <p>Hej {{name}},</p>
@@ -125,7 +293,7 @@ function hub_email_template(string $template, array $vars = []): string {
 
         'welcome' => '
             <div class="header">
-                <div class="logo">🏆 TheHUB</div>
+                <div class="logo">TheHUB</div>
             </div>
             <h1>Välkommen till TheHUB!</h1>
             <p>Hej {{name}},</p>
@@ -138,7 +306,7 @@ function hub_email_template(string $template, array $vars = []): string {
 
         'account_activation' => '
             <div class="header">
-                <div class="logo">🏆 TheHUB</div>
+                <div class="logo">TheHUB</div>
             </div>
             <h1>Aktivera ditt konto</h1>
             <p>Hej {{name}},</p>
@@ -150,6 +318,20 @@ function hub_email_template(string $template, array $vars = []): string {
             <p class="note">Eller kopiera och klistra in denna länk i din webbläsare:</p>
             <div class="link">{{activation_link}}</div>
             <p class="note">Länken är giltig i {{expires}}. Om du inte begärde denna aktivering kan du ignorera detta mail.</p>
+        ',
+
+        'claim_approved' => '
+            <div class="header">
+                <div class="logo">TheHUB</div>
+            </div>
+            <h1>Din profil är aktiverad!</h1>
+            <p>Hej {{name}},</p>
+            <p>Din begäran om att aktivera din profil på TheHUB har godkänts.</p>
+            <p>Klicka på knappen nedan för att sätta ditt lösenord och logga in:</p>
+            <p class="text-center">
+                <a href="{{activation_link}}" class="btn">Aktivera konto</a>
+            </p>
+            <p class="note">Länken är giltig i {{expires}}.</p>
         '
     ];
 
