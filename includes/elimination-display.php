@@ -15,11 +15,9 @@ if (!isset($db) || !isset($eventId)) {
 
 // Check if elimination tables exist
 $eliminationTablesExist = false;
-try {
-    $db->query("SELECT 1 FROM elimination_qualifying LIMIT 1");
+$checkResult = $db->query("SELECT 1 FROM elimination_qualifying LIMIT 1");
+if ($checkResult !== false) {
     $eliminationTablesExist = true;
-} catch (Exception $e) {
-    $eliminationTablesExist = false;
 }
 
 if (!$eliminationTablesExist) {
@@ -28,14 +26,14 @@ if (!$eliminationTablesExist) {
 
 // Get classes with elimination data
 $eliminationClasses = $db->getAll("
-    SELECT DISTINCT c.id, c.name, c.display_name,
+    SELECT c.id, c.name, c.display_name,
         COUNT(DISTINCT eq.id) as qual_count,
         COUNT(DISTINCT eb.id) as bracket_count
     FROM classes c
     LEFT JOIN elimination_qualifying eq ON c.id = eq.class_id AND eq.event_id = ?
     LEFT JOIN elimination_brackets eb ON c.id = eb.class_id AND eb.event_id = ?
     WHERE eq.id IS NOT NULL OR eb.id IS NOT NULL
-    GROUP BY c.id
+    GROUP BY c.id, c.name, c.display_name, c.sort_order
     ORDER BY c.sort_order, c.name
 ", [$eventId, $eventId]);
 
