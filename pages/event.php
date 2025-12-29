@@ -324,7 +324,23 @@ try {
                 continue;
             }
 
-            if ($result['status'] === 'finished') {
+            // Check if rider is actually finished with a valid time
+            // Some imports mark DNS riders as 'finished' but without a time
+            // For DH events, also check run_1_time and run_2_time
+            $hasValidTime = false;
+            $invalidTimes = ['DNS', 'DNF', 'DQ', 'DSQ', '0:00', '0:00:00', '0:00.00', ''];
+
+            if (!empty($result['finish_time']) && !in_array(strtoupper($result['finish_time']), $invalidTimes)) {
+                $hasValidTime = true;
+            } elseif (!empty($result['run_1_time']) && !in_array(strtoupper($result['run_1_time']), $invalidTimes)) {
+                $hasValidTime = true;
+            } elseif (!empty($result['run_2_time']) && !in_array(strtoupper($result['run_2_time']), $invalidTimes)) {
+                $hasValidTime = true;
+            } elseif (!empty($result['ss1']) && !in_array(strtoupper($result['ss1']), $invalidTimes)) {
+                $hasValidTime = true;
+            }
+
+            if ($result['status'] === 'finished' && $hasValidTime) {
                 $position++;
                 $result['class_position'] = $position;
 
