@@ -1014,6 +1014,11 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
                 $position = (int)$positionRaw;
             }
 
+            // DNS/DNF/DQ riders should NOT have a position
+            if (in_array($status, ['dns', 'dnf', 'dq'])) {
+                $position = null;
+            }
+
             // Check if class awards points
             $awardsPoints = true;
             if ($classId) {
