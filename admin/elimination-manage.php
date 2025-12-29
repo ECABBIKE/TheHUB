@@ -96,6 +96,86 @@ if ($tablesExist && $selectedClassId) {
     ", [$eventId, $selectedClassId]);
 }
 
+/**
+ * Generate all subsequent rounds for an elimination bracket
+ * Automatically advances BYE winners to next round
+ */
+function generateNextRounds($pdo, $eventId, $classId) {
+    $roundOrder = ['round_of_32', 'round_of_16', 'quarterfinal', 'semifinal', 'final'];
+    $roundNames = [
+        'round_of_32' => 'round_of_16',
+        'round_of_16' => 'quarterfinal',
+        'quarterfinal' => 'semifinal',
+        'semifinal' => 'final'
+    ];
+
+    // Process each round in order
+    foreach ($roundOrder as $roundIdx => $currentRound) {
+        // Get heats from current round
+        $stmt = $pdo->prepare("
+            SELECT * FROM elimination_brackets
+            WHERE event_id = ? AND class_id = ? AND round_name = ?
+            ORDER BY heat_number ASC
+        ");
+        $stmt->execute([$eventId, $classId, $currentRound]);
+        $currentHeats = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        if (empty($currentHeats)) continue;
+
+        $nextRound = $roundNames[$currentRound] ?? null;
+        if (!$nextRound) continue; // Final has no next round
+
+        $nextRoundNumber = $roundIdx + 2;
+        $winnersPerNextHeat = 2; // 2 winners make 1 next heat
+
+        // Check if next round already exists
+        $checkStmt = $pdo->prepare("SELECT COUNT(*) FROM elimination_brackets WHERE event_id = ? AND class_id = ? AND round_name = ?");
+        $checkStmt->execute([$eventId, $classId, $nextRound]);
+        if ($checkStmt->fetchColumn() > 0) continue; // Already created
+
+        // Collect winners from current round (including BYEs)
+        $winners = [];
+        foreach ($currentHeats as $heat) {
+            if ($heat['winner_id']) {
+                $winners[] = [
+                    'rider_id' => $heat['winner_id'],
+                    'seed' => $heat['rider_1_seed'] // Use original seed for ordering
+                ];
+            }
+        }
+
+        // Create next round heats
+        $nextHeatNum = 1;
+        for ($i = 0; $i < count($winners); $i += 2) {
+            $rider1 = $winners[$i] ?? null;
+            $rider2 = $winners[$i + 1] ?? null;
+
+            $status = ($rider1 && $rider2) ? 'pending' : 'bye';
+            $winnerId = null;
+
+            if ($status === 'bye' && $rider1) {
+                $winnerId = $rider1['rider_id'];
+            }
+
+            $stmt = $pdo->prepare("
+                INSERT INTO elimination_brackets
+                (event_id, class_id, bracket_type, round_name, round_number, heat_number,
+                 rider_1_id, rider_2_id, rider_1_seed, rider_2_seed, winner_id, status, bracket_position)
+                VALUES (?, ?, 'main', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ");
+            $stmt->execute([
+                $eventId, $classId, $nextRound, $nextRoundNumber, $nextHeatNum,
+                $rider1 ? $rider1['rider_id'] : null,
+                $rider2 ? $rider2['rider_id'] : null,
+                $rider1 ? $rider1['seed'] : null,
+                $rider2 ? $rider2['seed'] : null,
+                $winnerId, $status, $nextHeatNum
+            ]);
+            $nextHeatNum++;
+        }
+    }
+}
+
 // Handle form submissions
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
@@ -180,6 +260,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $heatNum++;
                     }
 
+                    // Generate subsequent rounds (quarterfinal, semifinal, final)
+                    generateNextRounds($pdo, $eventId, $classId);
+
                     $_SESSION['success'] = "Bracket genererat för " . count($qualifiers) . " åkare!";
                 } else {
                     $_SESSION['error'] = "Minst 2 kvalificerade åkare krävs för att generera bracket.";
@@ -196,10 +279,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'save_heat') {
         // Save heat result
         $heatId = intval($_POST['heat_id'] ?? 0);
-        $rider1Run1 = floatval($_POST['rider1_run1'] ?? 0);
-        $rider1Run2 = floatval($_POST['rider1_run2'] ?? 0);
-        $rider2Run1 = floatval($_POST['rider2_run1'] ?? 0);
-        $rider2Run2 = floatval($_POST['rider2_run2'] ?? 0);
+        // Handle both comma and dot as decimal separator
+        $rider1Run1 = floatval(str_replace(',', '.', $_POST['rider1_run1'] ?? '0'));
+        $rider1Run2 = floatval(str_replace(',', '.', $_POST['rider1_run2'] ?? '0'));
+        $rider2Run1 = floatval(str_replace(',', '.', $_POST['rider2_run1'] ?? '0'));
+        $rider2Run2 = floatval(str_replace(',', '.', $_POST['rider2_run2'] ?? '0'));
 
         if ($heatId) {
             $rider1Total = $rider1Run1 + $rider1Run2;
