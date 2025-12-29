@@ -34,13 +34,25 @@ try {
     // Table might not exist yet
 }
 
-// Get available migrations
-$migrationsDir = __DIR__ . '/../database/migrations/';
+// Get available migrations - check both possible directories
+$possibleDirs = [
+    __DIR__ . '/../database/migrations/',
+    __DIR__ . '/../migrations/',
+];
+
+$migrationsDir = null;
+foreach ($possibleDirs as $dir) {
+    if (is_dir($dir)) {
+        $migrationsDir = $dir;
+        break;
+    }
+}
+
 $migrations = [];
 $todaysMigrations = [];
 $today = date('Y-m-d');
 
-if (is_dir($migrationsDir)) {
+if ($migrationsDir && is_dir($migrationsDir)) {
     $files = glob($migrationsDir . '*.sql');
     foreach ($files as $file) {
         $filename = basename($file);
