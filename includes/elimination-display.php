@@ -480,21 +480,32 @@ tr.advances .seed-badge {
 .bracket-visual .match-slot {
     display: flex;
     align-items: center;
-    background: var(--color-bg);
+    background: white;
     border: 1px solid var(--color-border);
-    padding: 4px 8px;
+    padding: 6px 10px;
     font-size: var(--text-sm);
-    min-height: 28px;
+    min-height: 32px;
 }
 
 .bracket-visual .match-slot:first-child {
     border-bottom: none;
+    border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+}
+
+.bracket-visual .match-slot:last-of-type {
+    border-radius: 0 0 var(--radius-sm) var(--radius-sm);
 }
 
 .bracket-visual .match-slot.winner {
     background: var(--color-accent);
     color: white;
     border-color: var(--color-accent);
+}
+
+.bracket-visual .match-slot.bye-slot {
+    background: var(--color-bg-secondary);
+    color: var(--color-text-secondary);
+    font-style: italic;
 }
 
 .bracket-visual .slot-seed {
