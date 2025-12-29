@@ -137,9 +137,13 @@ function generateNextRounds($pdo, $eventId, $classId) {
         $winners = [];
         foreach ($currentHeats as $heat) {
             if ($heat['winner_id']) {
+                // Use the correct seed based on which rider is the winner
+                $seed = ($heat['winner_id'] == $heat['rider_1_id'])
+                    ? $heat['rider_1_seed']
+                    : $heat['rider_2_seed'];
                 $winners[] = [
                     'rider_id' => $heat['winner_id'],
-                    'seed' => $heat['rider_1_seed'] // Use original seed for ordering
+                    'seed' => $seed
                 ];
             }
         }
@@ -172,6 +176,87 @@ function generateNextRounds($pdo, $eventId, $classId) {
                 $winnerId, $status, $nextHeatNum
             ]);
             $nextHeatNum++;
+        }
+    }
+}
+
+/**
+ * Advance a winner to the next round
+ * Places winner in the correct slot based on their heat number
+ */
+function advanceWinnerToNextRound($pdo, $db, $eventId, $completedHeat) {
+    $roundNames = [
+        'round_of_32' => 'round_of_16',
+        'round_of_16' => 'quarterfinal',
+        'quarterfinal' => 'semifinal',
+        'semifinal' => 'final'
+    ];
+
+    $currentRound = $completedHeat['round_name'];
+    $nextRound = $roundNames[$currentRound] ?? null;
+
+    if (!$nextRound || !$completedHeat['winner_id']) {
+        return; // No next round or no winner
+    }
+
+    // Calculate which heat and slot in next round
+    // Heat 1,2 -> next heat 1; Heat 3,4 -> next heat 2; etc.
+    $currentHeat = $completedHeat['heat_number'];
+    $nextHeatNum = ceil($currentHeat / 2);
+    $isFirstSlot = ($currentHeat % 2) === 1; // Odd heats go to rider_1, even to rider_2
+
+    // Get the winner's seed
+    $winnerSeed = ($completedHeat['winner_id'] == $completedHeat['rider_1_id'])
+        ? $completedHeat['rider_1_seed']
+        : $completedHeat['rider_2_seed'];
+
+    // Check if next round heat exists
+    $nextHeat = $db->getRow("
+        SELECT * FROM elimination_brackets
+        WHERE event_id = ? AND class_id = ? AND round_name = ? AND heat_number = ?
+    ", [$eventId, $completedHeat['class_id'], $nextRound, $nextHeatNum]);
+
+    if ($nextHeat) {
+        // Update existing heat
+        if ($isFirstSlot) {
+            $stmt = $pdo->prepare("UPDATE elimination_brackets SET rider_1_id = ?, rider_1_seed = ? WHERE id = ?");
+            $stmt->execute([$completedHeat['winner_id'], $winnerSeed, $nextHeat['id']]);
+        } else {
+            $stmt = $pdo->prepare("UPDATE elimination_brackets SET rider_2_id = ?, rider_2_seed = ? WHERE id = ?");
+            $stmt->execute([$completedHeat['winner_id'], $winnerSeed, $nextHeat['id']]);
+        }
+
+        // Check if both riders are now assigned - if so and one of them is null, it's a BYE
+        $updatedHeat = $db->getRow("SELECT * FROM elimination_brackets WHERE id = ?", [$nextHeat['id']]);
+        if ($updatedHeat['rider_1_id'] && !$updatedHeat['rider_2_id']) {
+            $stmt = $pdo->prepare("UPDATE elimination_brackets SET status = 'bye', winner_id = ? WHERE id = ?");
+            $stmt->execute([$updatedHeat['rider_1_id'], $nextHeat['id']]);
+        } elseif (!$updatedHeat['rider_1_id'] && $updatedHeat['rider_2_id']) {
+            $stmt = $pdo->prepare("UPDATE elimination_brackets SET status = 'bye', winner_id = ? WHERE id = ?");
+            $stmt->execute([$updatedHeat['rider_2_id'], $nextHeat['id']]);
+        }
+    } else {
+        // Create new heat in next round
+        $roundNumbers = ['round_of_16' => 2, 'quarterfinal' => 3, 'semifinal' => 4, 'final' => 5];
+        $roundNum = $roundNumbers[$nextRound] ?? 2;
+
+        $stmt = $pdo->prepare("
+            INSERT INTO elimination_brackets
+            (event_id, class_id, bracket_type, round_name, round_number, heat_number,
+             rider_1_id, rider_2_id, rider_1_seed, rider_2_seed, status, bracket_position)
+            VALUES (?, ?, 'main', ?, ?, ?, ?, ?, ?, ?, 'pending', ?)
+        ");
+
+        if ($isFirstSlot) {
+            $stmt->execute([
+                $eventId, $completedHeat['class_id'], $nextRound, $roundNum, $nextHeatNum,
+                $completedHeat['winner_id'], null, $winnerSeed, null, $nextHeatNum
+            ]);
+        } else {
+            $stmt->execute([
+                $eventId, $completedHeat['class_id'], $nextRound, $roundNum, $nextHeatNum,
+                null, $completedHeat['winner_id'], null, $winnerSeed, $nextHeatNum
+            ]);
         }
     }
 }
@@ -279,6 +364,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'save_heat') {
         // Save heat result
         $heatId = intval($_POST['heat_id'] ?? 0);
+        $isBye = isset($_POST['is_bye']) && $_POST['is_bye'] === '1';
+        $skipBye = isset($_POST['skip_bye']) && $_POST['skip_bye'] === '1';
+
         // Handle both comma and dot as decimal separator
         $rider1Run1 = floatval(str_replace(',', '.', $_POST['rider1_run1'] ?? '0'));
         $rider1Run2 = floatval(str_replace(',', '.', $_POST['rider1_run2'] ?? '0'));
@@ -289,33 +377,71 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $rider1Total = $rider1Run1 + $rider1Run2;
             $rider2Total = $rider2Run1 + $rider2Run2;
 
-            // Determine winner (lower total time wins)
+            // Get current heat data
             $heat = $db->getRow("SELECT * FROM elimination_brackets WHERE id = ?", [$heatId]);
-            $winnerId = null;
-            $loserId = null;
+            $winnerId = $heat['winner_id']; // Keep existing winner for BYE
+            $loserId = $heat['loser_id'];
 
-            if ($rider1Total > 0 && $rider2Total > 0) {
-                if ($rider1Total < $rider2Total) {
-                    $winnerId = $heat['rider_1_id'];
-                    $loserId = $heat['rider_2_id'];
-                } else {
-                    $winnerId = $heat['rider_2_id'];
-                    $loserId = $heat['rider_1_id'];
+            if ($skipBye && $isBye) {
+                // Just mark BYE as completed without times - winner is already set
+                $stmt = $pdo->prepare("UPDATE elimination_brackets SET status = 'completed' WHERE id = ?");
+                $stmt->execute([$heatId]);
+                $_SESSION['success'] = "BYE-runda markerad som klar!";
+
+                // Advance winner to next round
+                advanceWinnerToNextRound($pdo, $db, $eventId, $heat);
+
+                header("Location: /admin/elimination-manage.php?event_id={$eventId}&class_id={$selectedClassId}");
+                exit;
+            } elseif ($isBye) {
+                // For BYE heats with times, save times and mark completed
+                $stmt = $pdo->prepare("
+                    UPDATE elimination_brackets SET
+                        rider_1_run1 = ?, rider_1_run2 = ?, rider_1_total = ?,
+                        rider_2_run1 = ?, rider_2_run2 = ?, rider_2_total = ?,
+                        status = 'completed'
+                    WHERE id = ?
+                ");
+                $stmt->execute([
+                    $rider1Run1 ?: null, $rider1Run2 ?: null, $rider1Total ?: null,
+                    $rider2Run1 ?: null, $rider2Run2 ?: null, $rider2Total ?: null,
+                    $heatId
+                ]);
+
+                // Advance winner to next round
+                advanceWinnerToNextRound($pdo, $db, $eventId, $heat);
+            } else {
+                // Normal heat - determine winner (lower total time wins)
+                if ($rider1Total > 0 && $rider2Total > 0) {
+                    if ($rider1Total < $rider2Total) {
+                        $winnerId = $heat['rider_1_id'];
+                        $loserId = $heat['rider_2_id'];
+                    } else {
+                        $winnerId = $heat['rider_2_id'];
+                        $loserId = $heat['rider_1_id'];
+                    }
+                }
+
+                $stmt = $pdo->prepare("
+                    UPDATE elimination_brackets SET
+                        rider_1_run1 = ?, rider_1_run2 = ?, rider_1_total = ?,
+                        rider_2_run1 = ?, rider_2_run2 = ?, rider_2_total = ?,
+                        winner_id = ?, loser_id = ?, status = 'completed'
+                    WHERE id = ?
+                ");
+                $stmt->execute([
+                    $rider1Run1, $rider1Run2, $rider1Total,
+                    $rider2Run1, $rider2Run2, $rider2Total,
+                    $winnerId, $loserId, $heatId
+                ]);
+
+                // Advance winner to next round if we have a winner
+                if ($winnerId) {
+                    // Reload heat with winner_id to pass to function
+                    $completedHeat = $db->getRow("SELECT * FROM elimination_brackets WHERE id = ?", [$heatId]);
+                    advanceWinnerToNextRound($pdo, $db, $eventId, $completedHeat);
                 }
             }
-
-            $stmt = $pdo->prepare("
-                UPDATE elimination_brackets SET
-                    rider_1_run1 = ?, rider_1_run2 = ?, rider_1_total = ?,
-                    rider_2_run1 = ?, rider_2_run2 = ?, rider_2_total = ?,
-                    winner_id = ?, loser_id = ?, status = 'completed'
-                WHERE id = ?
-            ");
-            $stmt->execute([
-                $rider1Run1, $rider1Run2, $rider1Total,
-                $rider2Run1, $rider2Run2, $rider2Total,
-                $winnerId, $loserId, $heatId
-            ]);
 
             $_SESSION['success'] = "Heat sparat!";
         }
@@ -551,13 +677,47 @@ include __DIR__ . '/components/unified-layout.php';
                                             </div>
 
                                             <?php if ($heat['status'] === 'bye'): ?>
-                                                <div class="bracket-matchup">
-                                                    <div class="bracket-rider <?= $heat['winner_id'] == $heat['rider_1_id'] ? 'winner' : '' ?>">
-                                                        <span class="seed"><?= $heat['rider_1_seed'] ?></span>
-                                                        <span class="name"><?= h($heat['rider1_firstname'] . ' ' . $heat['rider1_lastname']) ?></span>
-                                                        <span class="time">BYE</span>
+                                                <form method="POST" class="bracket-matchup-form">
+                                                    <input type="hidden" name="action" value="save_heat">
+                                                    <input type="hidden" name="heat_id" value="<?= $heat['id'] ?>">
+                                                    <input type="hidden" name="is_bye" value="1">
+
+                                                    <div class="bracket-rider winner">
+                                                        <span class="seed"><?= $heat['rider_1_seed'] ?: $heat['rider_2_seed'] ?></span>
+                                                        <span class="name">
+                                                            <?php if ($heat['rider_1_id']): ?>
+                                                                <?= h($heat['rider1_firstname'] . ' ' . $heat['rider1_lastname']) ?>
+                                                            <?php else: ?>
+                                                                <?= h($heat['rider2_firstname'] . ' ' . $heat['rider2_lastname']) ?>
+                                                            <?php endif; ?>
+                                                        </span>
+                                                        <div class="times">
+                                                            <?php if ($heat['rider_1_id']): ?>
+                                                                <input type="text" inputmode="decimal" name="rider1_run1" value="<?= $heat['rider_1_run1'] ? number_format($heat['rider_1_run1'], 3) : '' ?>" placeholder="Åk1" class="time-input">
+                                                                <input type="text" inputmode="decimal" name="rider1_run2" value="<?= $heat['rider_1_run2'] ? number_format($heat['rider_1_run2'], 3) : '' ?>" placeholder="Åk2" class="time-input">
+                                                                <span class="total"><?= $heat['rider_1_total'] ? number_format($heat['rider_1_total'], 3) : '-' ?></span>
+                                                            <?php else: ?>
+                                                                <input type="text" inputmode="decimal" name="rider2_run1" value="<?= $heat['rider_2_run1'] ? number_format($heat['rider_2_run1'], 3) : '' ?>" placeholder="Åk1" class="time-input">
+                                                                <input type="text" inputmode="decimal" name="rider2_run2" value="<?= $heat['rider_2_run2'] ? number_format($heat['rider_2_run2'], 3) : '' ?>" placeholder="Åk2" class="time-input">
+                                                                <span class="total"><?= $heat['rider_2_total'] ? number_format($heat['rider_2_total'], 3) : '-' ?></span>
+                                                            <?php endif; ?>
+                                                        </div>
                                                     </div>
-                                                </div>
+
+                                                    <div class="bracket-rider bye-slot">
+                                                        <span class="seed">-</span>
+                                                        <span class="name"><em>BYE</em></span>
+                                                    </div>
+
+                                                    <div class="flex gap-sm mt-sm">
+                                                        <button type="submit" class="btn-admin btn-admin-primary btn-admin-sm">
+                                                            <i data-lucide="save"></i> Spara tider
+                                                        </button>
+                                                        <button type="submit" name="skip_bye" value="1" class="btn-admin btn-admin-secondary btn-admin-sm">
+                                                            <i data-lucide="skip-forward"></i> Gå vidare
+                                                        </button>
+                                                    </div>
+                                                </form>
                                             <?php else: ?>
                                                 <form method="POST" class="bracket-matchup-form">
                                                     <input type="hidden" name="action" value="save_heat">

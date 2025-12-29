@@ -9,13 +9,16 @@
  * - $selectedClassId: (optional) Class to display, defaults to first class with data
  */
 
-if (!isset($db) || !isset($eventId)) {
+if (!isset($eventId)) {
     return;
 }
 
+// Get our own database instance (Database class, not PDO)
+$elimDb = Database::getInstance();
+
 // Check if elimination tables exist
 $eliminationTablesExist = false;
-$checkResult = $db->query("SELECT 1 FROM elimination_qualifying LIMIT 1");
+$checkResult = $elimDb->query("SELECT 1 FROM elimination_qualifying LIMIT 1");
 if ($checkResult !== false) {
     $eliminationTablesExist = true;
 }
@@ -25,7 +28,7 @@ if (!$eliminationTablesExist) {
 }
 
 // Get classes with elimination data
-$eliminationClasses = $db->getAll("
+$eliminationClasses = $elimDb->getAll("
     SELECT c.id, c.name, c.display_name,
         COUNT(DISTINCT eq.id) as qual_count,
         COUNT(DISTINCT eb.id) as bracket_count
@@ -45,7 +48,7 @@ if (empty($eliminationClasses)) {
 $elimClassId = isset($_GET['elim_class']) ? intval($_GET['elim_class']) : $eliminationClasses[0]['id'];
 
 // Get qualifying results
-$qualifyingResults = $db->getAll("
+$qualifyingResults = $elimDb->getAll("
     SELECT eq.*, r.firstname, r.lastname, cl.name as club_name
     FROM elimination_qualifying eq
     JOIN riders r ON eq.rider_id = r.id
@@ -55,7 +58,7 @@ $qualifyingResults = $db->getAll("
 ", [$eventId, $elimClassId]);
 
 // Get bracket data grouped by round
-$bracketsRaw = $db->getAll("
+$bracketsRaw = $elimDb->getAll("
     SELECT eb.*,
         r1.firstname as rider1_firstname, r1.lastname as rider1_lastname,
         cl1.name as rider1_club,
@@ -78,7 +81,7 @@ foreach ($bracketsRaw as $b) {
 }
 
 // Get final results
-$finalResults = $db->getAll("
+$finalResults = $elimDb->getAll("
     SELECT er.*, r.firstname, r.lastname, cl.name as club_name
     FROM elimination_results er
     JOIN riders r ON er.rider_id = r.id

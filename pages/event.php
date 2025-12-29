@@ -231,6 +231,21 @@ try {
     $stmt->execute([$eventId]);
     $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+    // Normalize status values (e.g., 'FIN' -> 'finished')
+    foreach ($results as &$result) {
+        $status = strtolower(trim($result['status'] ?? ''));
+        if (in_array($status, ['fin', 'finish', 'finnished', 'ok'])) {
+            $result['status'] = 'finished';
+        } elseif (in_array($status, ['dnf', 'did not finish'])) {
+            $result['status'] = 'dnf';
+        } elseif (in_array($status, ['dns', 'did not start'])) {
+            $result['status'] = 'dns';
+        } elseif (in_array($status, ['dq', 'dsq', 'disqualified'])) {
+            $result['status'] = 'dq';
+        }
+    }
+    unset($result); // Break reference
+
     // Check if any results have split times
     $hasSplitTimes = false;
     foreach ($results as $result) {
