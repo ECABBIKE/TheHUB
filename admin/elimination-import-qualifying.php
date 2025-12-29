@@ -74,6 +74,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'class' => 'class',
                 'tävlingsklass' => 'class',
                 'category' => 'class',
+                // Series points class (for Dual Slalom youth classes)
+                'serieklass' => 'series_class',
+                'serie klass' => 'series_class',
+                'series_class' => 'series_class',
+                'seriepoängklass' => 'series_class',
+                'poängklass' => 'series_class',
                 'kval 1' => 'run1',
                 'kval1' => 'run1',
                 'run1' => 'run1',
