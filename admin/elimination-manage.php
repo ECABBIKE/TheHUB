@@ -645,8 +645,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $roundName = 'semifinal';
                         $roundNumber = 1;
                     } elseif ($bracketSize == 8) {
-                        // Quarterfinal: Heats 1,2 -> SF1; Heats 3,4 -> SF2
-                        $seedPairs = [[1,8], [4,5], [2,7], [3,6]];
+                        // Quarterfinal: Seed 2 i Heat 4 (längst ner visuellt)
+                        // Heat 1,2 → SF1; Heat 3,4 → SF2
+                        $seedPairs = [[1,8], [4,5], [3,6], [2,7]];
                         $roundName = 'quarterfinal';
                         $roundNumber = 1;
                     } elseif ($bracketSize == 16) {
