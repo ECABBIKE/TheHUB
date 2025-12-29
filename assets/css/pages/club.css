@@ -1452,3 +1452,129 @@
         font-size: 9px;
     }
 }
+
+/* ============================================
+   CLUB MODAL - Achievement details popup
+   ============================================ */
+.club-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.6);
+    backdrop-filter: blur(4px);
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-md);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.2s, visibility 0.2s;
+}
+
+.club-modal-overlay.active {
+    opacity: 1;
+    visibility: visible;
+}
+
+.club-modal {
+    background: var(--color-bg-card, #fff);
+    border-radius: var(--radius-lg);
+    max-width: 480px;
+    width: 100%;
+    max-height: 80vh;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    transform: translateY(20px);
+    transition: transform 0.2s;
+}
+
+.club-modal-overlay.active .club-modal {
+    transform: translateY(0);
+}
+
+.club-modal-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-md) var(--space-lg);
+    border-bottom: 1px solid var(--color-border);
+}
+
+.club-modal-header h3 {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    margin: 0;
+    font-size: 1.125rem;
+}
+
+.club-modal-header h3 i {
+    width: 20px;
+    height: 20px;
+    color: var(--color-accent);
+}
+
+.club-modal-close {
+    background: transparent;
+    border: none;
+    cursor: pointer;
+    padding: var(--space-xs);
+    border-radius: var(--radius-sm);
+    color: var(--color-text-secondary);
+    transition: background 0.2s, color 0.2s;
+}
+
+.club-modal-close:hover {
+    background: var(--color-bg-hover);
+    color: var(--color-text-primary);
+}
+
+.club-modal-close i {
+    width: 20px;
+    height: 20px;
+}
+
+.club-modal-body {
+    padding: var(--space-md) var(--space-lg);
+    overflow-y: auto;
+    flex: 1;
+}
+
+/* ============================================
+   SORTABLE TABLE HEADERS
+   ============================================ */
+.members-table-desktop th.sortable {
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+}
+
+.members-table-desktop th.sortable:hover {
+    background: var(--color-bg-hover, #f5f5f5);
+}
+
+.members-table-desktop th.sortable::after {
+    content: '';
+    display: inline-block;
+    width: 0;
+    height: 0;
+    margin-left: 6px;
+    vertical-align: middle;
+    border-left: 4px solid transparent;
+    border-right: 4px solid transparent;
+    border-top: 4px solid var(--color-text-muted);
+    opacity: 0.3;
+}
+
+.members-table-desktop th.sortable.asc::after {
+    border-top: none;
+    border-bottom: 4px solid var(--color-accent);
+    opacity: 1;
+}
+
+.members-table-desktop th.sortable.desc::after {
+    border-top: 4px solid var(--color-accent);
+    opacity: 1;
+}
