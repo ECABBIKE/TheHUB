@@ -400,10 +400,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 // Delete qualifying results
                 $pdo->prepare("DELETE FROM elimination_qualifying WHERE event_id = ? AND class_id = ?")->execute([$eventId, $classId]);
 
-                // Delete final results
+                // Delete final results from elimination_results
                 $pdo->prepare("DELETE FROM elimination_results WHERE event_id = ? AND class_id = ?")->execute([$eventId, $classId]);
 
-                $_SESSION['success'] = "Kvalificering och bracket rensade för denna klass.";
+                // Also delete from main results table
+                $pdo->prepare("DELETE FROM results WHERE event_id = ? AND class_id = ?")->execute([$eventId, $classId]);
+
+                $_SESSION['success'] = "Alla resultat rensade för denna klass (kvalificering, bracket och tävlingsresultat).";
             } catch (Exception $e) {
                 $_SESSION['error'] = "Fel vid rensning: " . $e->getMessage();
             }
