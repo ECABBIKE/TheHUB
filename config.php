@@ -9,14 +9,23 @@ ini_set('error_log', __DIR__ . '/logs/error.log');
 function env($key, $default = null) {
     $value = getenv($key);
     if ($value === false) {
-        $envFile = __DIR__ . '/.env';
-        if (file_exists($envFile)) {
-            $lines = file($envFile);
-            foreach ($lines as $line) {
-                if (strpos($line, '=') !== false) {
-                    list($k, $v) = explode('=', trim($line), 2);
-                    if (trim($k) === $key) {
-                        return trim($v);
+        // Check .env first, then .env.production as fallback
+        $envFiles = [
+            __DIR__ . '/.env',
+            __DIR__ . '/.env.production'
+        ];
+        foreach ($envFiles as $envFile) {
+            if (file_exists($envFile)) {
+                $lines = file($envFile);
+                foreach ($lines as $line) {
+                    $line = trim($line);
+                    // Skip comments and empty lines
+                    if (empty($line) || strpos($line, '#') === 0) continue;
+                    if (strpos($line, '=') !== false) {
+                        list($k, $v) = explode('=', $line, 2);
+                        if (trim($k) === $key) {
+                            return trim($v);
+                        }
                     }
                 }
             }

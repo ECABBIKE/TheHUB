@@ -100,6 +100,10 @@ try {
     $resetLink = $baseUrl . '/reset-password?token=' . $token;
     $riderName = trim($rider['firstname'] . ' ' . $rider['lastname']);
 
+    // Log mail configuration for debugging
+    error_log("RIDER_ACTIVATE: Mail config - Driver: " . env('MAIL_DRIVER', 'mail') . ", Host: " . env('MAIL_HOST', 'not set') . ", From: " . env('MAIL_FROM_ADDRESS', 'not set'));
+    error_log("RIDER_ACTIVATE: Attempting to send to {$rider['email']} for {$riderName}");
+
     $emailSent = hub_send_password_reset_email($rider['email'], $riderName, $resetLink);
 
     // Log the action

@@ -63,8 +63,11 @@ function hub_send_smtp_email(string $to, string $subject, string $body, string $
     $username = env('MAIL_USERNAME', '');
     $password = env('MAIL_PASSWORD', '');
 
+    // Debug logging
+    error_log("TheHUB Mail SMTP: Connecting to {$host}:{$port} ({$encryption}) as {$username}");
+
     if (empty($username) || empty($password)) {
-        error_log("TheHUB Mail: SMTP credentials not configured in .env");
+        error_log("TheHUB Mail: SMTP credentials not configured - username: " . ($username ?: 'empty') . ", password: " . ($password ? 'set' : 'empty'));
         // Fallback to PHP mail
         return hub_send_php_mail($to, $subject, $body, $fromName, $fromEmail, $replyTo);
     }
