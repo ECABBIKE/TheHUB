@@ -1401,7 +1401,13 @@ if (!empty($eventSponsors['content'])): ?>
                     $searchData = strtolower($result['firstname'] . ' ' . $result['lastname'] . ' ' . ($result['club_name'] ?? ''));
                 ?>
                 <tr class="result-row" onclick="window.location='/rider/<?= $result['rider_id'] ?>'" data-search="<?= h($searchData) ?>">
-                    <td class="col-place total-position"><?= $gIdx + 1 ?></td>
+                    <td class="col-place total-position">
+                        <?php if ($result['status'] !== 'finished'): ?>
+                            <span class="status-badge status-<?= strtolower($result['status']) ?>"><?= strtoupper(substr($result['status'], 0, 3)) ?></span>
+                        <?php else: ?>
+                            <?= $gIdx + 1 ?>
+                        <?php endif; ?>
+                    </td>
                     <td class="col-rider">
                         <a href="/rider/<?= $result['rider_id'] ?>" class="rider-link">
                             <?= h($result['firstname'] . ' ' . $result['lastname']) ?>
@@ -1455,7 +1461,11 @@ if (!empty($eventSponsors['content'])): ?>
         ?>
         <a href="/rider/<?= $result['rider_id'] ?>" class="result-item result-item-splits" data-search="<?= h($searchData) ?>">
             <div class="result-place">
-                <?= $gIdx + 1 ?>
+                <?php if ($result['status'] !== 'finished'): ?>
+                    <span class="status-mini"><?= strtoupper(substr($result['status'], 0, 3)) ?></span>
+                <?php else: ?>
+                    <?= $gIdx + 1 ?>
+                <?php endif; ?>
             </div>
             <div class="result-info">
                 <div class="result-name"><?= h($result['firstname'] . ' ' . $result['lastname']) ?></div>
@@ -1538,7 +1548,13 @@ if (!empty($eventSponsors['content'])): ?>
                     }
                 ?>
                 <tr class="result-row" onclick="window.location='/rider/<?= $result['rider_id'] ?>'" data-search="<?= h($searchData) ?>">
-                    <td class="col-place total-position"><?= $gIdx + 1 ?></td>
+                    <td class="col-place total-position">
+                        <?php if ($result['status'] !== 'finished'): ?>
+                            <span class="status-badge status-<?= strtolower($result['status']) ?>"><?= strtoupper(substr($result['status'], 0, 3)) ?></span>
+                        <?php else: ?>
+                            <?= $gIdx + 1 ?>
+                        <?php endif; ?>
+                    </td>
                     <td class="col-rider">
                         <a href="/rider/<?= $result['rider_id'] ?>" class="rider-link">
                             <?= h($result['firstname'] . ' ' . $result['lastname']) ?>
@@ -1583,7 +1599,11 @@ if (!empty($eventSponsors['content'])): ?>
         ?>
         <a href="/rider/<?= $result['rider_id'] ?>" class="result-item result-item-splits" data-search="<?= h($searchData) ?>">
             <div class="result-place">
-                <?= $gIdx + 1 ?>
+                <?php if ($result['status'] !== 'finished'): ?>
+                    <span class="status-mini"><?= strtoupper(substr($result['status'], 0, 3)) ?></span>
+                <?php else: ?>
+                    <?= $gIdx + 1 ?>
+                <?php endif; ?>
             </div>
             <div class="result-info">
                 <div class="result-name"><?= h($result['firstname'] . ' ' . $result['lastname']) ?></div>
