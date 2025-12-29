@@ -125,6 +125,80 @@ if ($tablesExist) {
     if ($selectedClassId && isset($allFinalResultsByClass[$selectedClassId])) {
         $finalResults = $allFinalResultsByClass[$selectedClassId]['results'] ?? [];
     }
+
+    // AUTO-REPAIR: Check for missing bronze matches and create them
+    // This fixes events created before the bronze match logic was added
+    $repairCount = 0;
+    foreach ($classes as $classInfo) {
+        $cid = $classInfo['id'];
+
+        // Check if both semifinals are complete but no bronze match exists
+        $semiFinals = $db->getAll("
+            SELECT * FROM elimination_brackets
+            WHERE event_id = ? AND class_id = ? AND round_name = 'semifinal'
+            AND loser_id IS NOT NULL
+            ORDER BY heat_number ASC
+        ", [$eventId, $cid]);
+
+        if (count($semiFinals) >= 2) {
+            // Check if bronze match already exists
+            $bronzeExists = $db->getRow("
+                SELECT id FROM elimination_brackets
+                WHERE event_id = ? AND class_id = ? AND round_name = 'third_place'
+            ", [$eventId, $cid]);
+
+            if (!$bronzeExists) {
+                // Create bronze match with both semifinal losers
+                $loser1 = $semiFinals[0];
+                $loser2 = $semiFinals[1];
+
+                $loser1Seed = ($loser1['loser_id'] == $loser1['rider_1_id']) ? $loser1['rider_1_seed'] : $loser1['rider_2_seed'];
+                $loser2Seed = ($loser2['loser_id'] == $loser2['rider_1_id']) ? $loser2['rider_1_seed'] : $loser2['rider_2_seed'];
+
+                $stmt = $pdo->prepare("
+                    INSERT INTO elimination_brackets
+                    (event_id, class_id, bracket_type, round_name, round_number, heat_number,
+                     rider_1_id, rider_2_id, rider_1_seed, rider_2_seed, status, bracket_position)
+                    VALUES (?, ?, 'main', 'third_place', 5, 1, ?, ?, ?, ?, 'pending', 1)
+                ");
+                $stmt->execute([
+                    $eventId, $cid,
+                    $loser1['loser_id'], $loser2['loser_id'],
+                    $loser1Seed, $loser2Seed
+                ]);
+                $repairCount++;
+
+                // Also update the allBracketsByClass data so UI shows the new bronze match
+                $allBracketsByClass[$cid]['rounds']['third_place'][] = [
+                    'id' => $pdo->lastInsertId(),
+                    'event_id' => $eventId,
+                    'class_id' => $cid,
+                    'class_display_name' => $classInfo['display_name'] ?? $classInfo['name'],
+                    'class_name' => $classInfo['name'],
+                    'bracket_type' => 'main',
+                    'round_name' => 'third_place',
+                    'round_number' => 5,
+                    'heat_number' => 1,
+                    'rider_1_id' => $loser1['loser_id'],
+                    'rider_2_id' => $loser2['loser_id'],
+                    'rider_1_seed' => $loser1Seed,
+                    'rider_2_seed' => $loser2Seed,
+                    'rider1_firstname' => null, // Will be fetched separately if needed
+                    'rider1_lastname' => null,
+                    'rider2_firstname' => null,
+                    'rider2_lastname' => null,
+                    'status' => 'pending',
+                    'winner_id' => null,
+                    'loser_id' => null,
+                    'bracket_position' => 1
+                ];
+            }
+        }
+    }
+
+    if ($repairCount > 0) {
+        $_SESSION['success'] = "Automatisk reparation: Skapade $repairCount bronsmatch(er) som saknades.";
+    }
 }
 
 /**
