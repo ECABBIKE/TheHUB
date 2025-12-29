@@ -418,6 +418,46 @@ function advanceWinnerToNextRound($pdo, $db, $eventId, $completedHeat) {
             ]);
         }
     }
+
+    // If this was a semifinal, check if we should create the bronze match
+    if ($currentRound === 'semifinal' && $completedHeat['loser_id']) {
+        // Check if bronze match already exists
+        $bronzeExists = $db->getRow("
+            SELECT id FROM elimination_brackets
+            WHERE event_id = ? AND class_id = ? AND round_name = 'third_place'
+        ", [$eventId, $completedHeat['class_id']]);
+
+        if (!$bronzeExists) {
+            // Check if both semifinals are completed (have losers)
+            $semiFinals = $db->getAll("
+                SELECT * FROM elimination_brackets
+                WHERE event_id = ? AND class_id = ? AND round_name = 'semifinal'
+                AND loser_id IS NOT NULL
+                ORDER BY heat_number ASC
+            ", [$eventId, $completedHeat['class_id']]);
+
+            if (count($semiFinals) >= 2) {
+                // Create bronze match with both semifinal losers
+                $loser1 = $semiFinals[0];
+                $loser2 = $semiFinals[1];
+
+                $loser1Seed = ($loser1['loser_id'] == $loser1['rider_1_id']) ? $loser1['rider_1_seed'] : $loser1['rider_2_seed'];
+                $loser2Seed = ($loser2['loser_id'] == $loser2['rider_1_id']) ? $loser2['rider_1_seed'] : $loser2['rider_2_seed'];
+
+                $stmt = $pdo->prepare("
+                    INSERT INTO elimination_brackets
+                    (event_id, class_id, bracket_type, round_name, round_number, heat_number,
+                     rider_1_id, rider_2_id, rider_1_seed, rider_2_seed, status, bracket_position)
+                    VALUES (?, ?, 'main', 'third_place', 5, 1, ?, ?, ?, ?, 'pending', 1)
+                ");
+                $stmt->execute([
+                    $eventId, $completedHeat['class_id'],
+                    $loser1['loser_id'], $loser2['loser_id'],
+                    $loser1Seed, $loser2Seed
+                ]);
+            }
+        }
+    }
 }
 
 // Handle form submissions
