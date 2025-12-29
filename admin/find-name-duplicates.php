@@ -351,6 +351,22 @@ foreach ($allDuplicates as $dup) {
     }
     $allSameLicense = !$hasDifferentLicenses && !$hasNoLicense && count($uniqueLicenses) === 1;
 
+    // IMPORTANT: Skip if multiple riders have DIFFERENT real UCI-IDs
+    // Different UCI-IDs = different people with same name, NOT duplicates!
+    $realUciIds = [];
+    foreach ($riders as $r) {
+        if ($r['license_priority'] == 3) { // Real UCI-ID (not SWE-ID)
+            $normalized = preg_replace('/[^0-9]/', '', $r['license_number'] ?? '');
+            if (!empty($normalized)) {
+                $realUciIds[$normalized] = true;
+            }
+        }
+    }
+    // If we have 2+ different real UCI-IDs, these are definitely different people
+    if (count($realUciIds) >= 2) {
+        continue; // Skip this group - not duplicates!
+    }
+
     // Skip if this group has been excluded (marked as "not duplicates")
     if (groupIsExcluded($riderIds, $excludedPairs)) continue;
 
