@@ -206,6 +206,18 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
             return 'SS' . (int)$m[2];
         }
 
+        // Lap/Varv → LAP
+        if (preg_match('/^(lap|varv|runda|round)(\d*)$/', $normalized, $m)) {
+            $num = !empty($m[2]) ? (int)$m[2] : ++$counters['lap'];
+            return 'LAP' . $num;
+        }
+
+        // Split/Mellantid → SPLIT
+        if (preg_match('/^(split|mellantid|intermediate)(\d*)$/', $normalized, $m)) {
+            $num = !empty($m[2]) ? (int)$m[2] : ++$counters['split'];
+            return 'SPLIT' . $num;
+        }
+
         // Just a number or unknown format - use SS with sequential number
         if (preg_match('/^\d+$/', $normalized)) {
             return 'SS' . (int)$normalized;
@@ -216,7 +228,7 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
     };
 
     // Counters for stages without numbers
-    $stageCounters = ['ps' => 0, 'pw' => 0, 'ss' => 0];
+    $stageCounters = ['ps' => 0, 'pw' => 0, 'ss' => 0, 'lap' => 0, 'split' => 0];
 
     // If we found both Club and NetTime, everything between them is stage columns
     if ($clubIndex >= 0 && $netTimeIndex > $clubIndex) {
@@ -264,9 +276,9 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
             $normalizedCol = str_replace([' ', '-', '_'], '', $normalizedCol);
 
             // Check if this looks like a split/stage time column
-            // Matches: ss1, ps1, s1, v1, stage1, sträcka1, varv1, lap1, etc.
+            // Matches: ss1, ps1, s1, v1, stage1, sträcka1, varv1, lap1, split1, etc.
             // Also matches standalone names: prostage, powerstage, prolog, prologue (with or without number)
-            $isSplitTimeCol = preg_match('/^(ss|ps|s|v|stage|sträcka|stracka|etapp|varv|lap)\d*/', $normalizedCol)
+            $isSplitTimeCol = preg_match('/^(ss|ps|s|v|stage|sträcka|stracka|etapp|varv|lap|split|mellantid|intermediate)\d*/', $normalizedCol)
                            || preg_match('/^(prostage|powerstage|prolog|prologue|prologstage)\d*$/', $normalizedCol);
 
             if ($isSplitTimeCol) {

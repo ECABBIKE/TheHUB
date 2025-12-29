@@ -13,14 +13,19 @@ if (!isset($eventId)) {
     return;
 }
 
-// Get our own database instance (Database class, not PDO)
-$elimDb = Database::getInstance();
+// Use PDO from global scope (set by config.php)
+$elimPdo = $GLOBALS['pdo'] ?? null;
+if (!$elimPdo) {
+    return;
+}
 
 // Check if elimination tables exist
 $eliminationTablesExist = false;
-$checkResult = $elimDb->query("SELECT 1 FROM elimination_qualifying LIMIT 1");
-if ($checkResult !== false) {
+try {
+    $elimPdo->query("SELECT 1 FROM elimination_qualifying LIMIT 1");
     $eliminationTablesExist = true;
+} catch (PDOException $e) {
+    $eliminationTablesExist = false;
 }
 
 if (!$eliminationTablesExist) {
@@ -28,7 +33,7 @@ if (!$eliminationTablesExist) {
 }
 
 // Get classes with elimination data
-$eliminationClasses = $elimDb->getAll("
+$stmt = $elimPdo->prepare("
     SELECT c.id, c.name, c.display_name,
         COUNT(DISTINCT eq.id) as qual_count,
         COUNT(DISTINCT eb.id) as bracket_count
@@ -38,7 +43,9 @@ $eliminationClasses = $elimDb->getAll("
     WHERE eq.id IS NOT NULL OR eb.id IS NOT NULL
     GROUP BY c.id, c.name, c.display_name, c.sort_order
     ORDER BY c.sort_order, c.name
-", [$eventId, $eventId]);
+");
+$stmt->execute([$eventId, $eventId]);
+$eliminationClasses = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 if (empty($eliminationClasses)) {
     return;
@@ -48,17 +55,19 @@ if (empty($eliminationClasses)) {
 $elimClassId = isset($_GET['elim_class']) ? intval($_GET['elim_class']) : $eliminationClasses[0]['id'];
 
 // Get qualifying results
-$qualifyingResults = $elimDb->getAll("
+$stmt = $elimPdo->prepare("
     SELECT eq.*, r.firstname, r.lastname, cl.name as club_name
     FROM elimination_qualifying eq
     JOIN riders r ON eq.rider_id = r.id
     LEFT JOIN clubs cl ON r.club_id = cl.id
     WHERE eq.event_id = ? AND eq.class_id = ?
     ORDER BY eq.seed_position ASC, eq.best_time ASC
-", [$eventId, $elimClassId]);
+");
+$stmt->execute([$eventId, $elimClassId]);
+$qualifyingResults = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Get bracket data grouped by round
-$bracketsRaw = $elimDb->getAll("
+$stmt = $elimPdo->prepare("
     SELECT eb.*,
         r1.firstname as rider1_firstname, r1.lastname as rider1_lastname,
         cl1.name as rider1_club,
@@ -73,7 +82,9 @@ $bracketsRaw = $elimDb->getAll("
     LEFT JOIN riders w ON eb.winner_id = w.id
     WHERE eb.event_id = ? AND eb.class_id = ?
     ORDER BY eb.round_number ASC, eb.heat_number ASC
-", [$eventId, $elimClassId]);
+");
+$stmt->execute([$eventId, $elimClassId]);
+$bracketsRaw = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 $brackets = [];
 foreach ($bracketsRaw as $b) {
@@ -81,14 +92,16 @@ foreach ($bracketsRaw as $b) {
 }
 
 // Get final results
-$finalResults = $elimDb->getAll("
+$stmt = $elimPdo->prepare("
     SELECT er.*, r.firstname, r.lastname, cl.name as club_name
     FROM elimination_results er
     JOIN riders r ON er.rider_id = r.id
     LEFT JOIN clubs cl ON r.club_id = cl.id
     WHERE er.event_id = ? AND er.class_id = ?
     ORDER BY er.final_position ASC
-", [$eventId, $elimClassId]);
+");
+$stmt->execute([$eventId, $elimClassId]);
+$finalResults = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Round name translations
 $roundNames = [
