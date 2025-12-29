@@ -176,19 +176,19 @@ include __DIR__ . '/components/unified-layout.php';
 <!-- Tab Navigation -->
 <div class="tabs mb-lg">
     <nav class="tabs-nav">
-        <a href="?tab=enduro" class="tab-btn <?= $activeTab === 'enduro' ? 'active' : '' ?>">
+        <a href="?tab=enduro" class="tab <?= $activeTab === 'enduro' ? 'active' : '' ?>">
             <i data-lucide="mountain"></i>
             Enduro
         </a>
-        <a href="?tab=dh" class="tab-btn <?= $activeTab === 'dh' ? 'active' : '' ?>">
+        <a href="?tab=dh" class="tab <?= $activeTab === 'dh' ? 'active' : '' ?>">
             <i data-lucide="arrow-down"></i>
             Downhill
         </a>
-        <a href="?tab=xc" class="tab-btn <?= $activeTab === 'xc' ? 'active' : '' ?>">
+        <a href="?tab=xc" class="tab <?= $activeTab === 'xc' ? 'active' : '' ?>">
             <i data-lucide="circle"></i>
             XC
         </a>
-        <a href="?tab=dual_slalom" class="tab-btn <?= $activeTab === 'dual_slalom' ? 'active' : '' ?>">
+        <a href="?tab=dual_slalom" class="tab <?= $activeTab === 'dual_slalom' ? 'active' : '' ?>">
             <i data-lucide="git-branch"></i>
             Dual Slalom
         </a>
