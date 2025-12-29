@@ -664,16 +664,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $roundName = 'round_of_16';
                         $roundNumber = 1;
                     } else {
-                        // Round of 32: Heats 1,2 -> R16 Heat 1; Heats 3,4 -> R16 Heat 2; etc.
+                        // Round of 32: Korrekt seeding för att 1 vs 2 möts i final
+                        // ÖVRE HALVAN (Semifinal 1):
+                        // R32 Heats 1-4 → R16 Heats 1,2 → Kvartsfinal 1
+                        // R32 Heats 5-8 → R16 Heats 3,4 → Kvartsfinal 2
+                        // NEDRE HALVAN (Semifinal 2):
+                        // R32 Heats 9-12 → R16 Heats 5,6 → Kvartsfinal 3
+                        // R32 Heats 13-16 → R16 Heats 7,8 → Kvartsfinal 4
                         $seedPairs = [
-                            [1,32], [16,17],  // -> R16 Heat 1
-                            [8,25], [9,24],   // -> R16 Heat 2
-                            [4,29], [13,20],  // -> R16 Heat 3
-                            [5,28], [12,21],  // -> R16 Heat 4
-                            [2,31], [15,18],  // -> R16 Heat 5
-                            [7,26], [10,23],  // -> R16 Heat 6
-                            [3,30], [14,19],  // -> R16 Heat 7
-                            [6,27], [11,22]   // -> R16 Heat 8
+                            // ÖVRE HALVAN (SF1):
+                            [1,32], [16,17], [8,25], [9,24],   // R32 H1-4 → R16 H1,2 → QF1
+                            [5,28], [12,21], [4,29], [13,20],  // R32 H5-8 → R16 H3,4 → QF2
+                            // NEDRE HALVAN (SF2):
+                            [3,30], [14,19], [6,27], [11,22],  // R32 H9-12 → R16 H5,6 → QF3
+                            [7,26], [10,23], [2,31], [15,18]   // R32 H13-16 → R16 H7,8 → QF4
                         ];
                         $roundName = 'round_of_32';
                         $roundNumber = 1;
