@@ -32,7 +32,8 @@ $selectedEventId = $_SESSION['import_selected_event'];
 $importFormat = $_SESSION['import_format'] ?? 'enduro';
 $formatNames = [
  'enduro' => 'Enduro',
- 'dh' => 'Downhill'
+ 'dh' => 'Downhill',
+ 'xc' => 'Cross Country'
 ];
 
 // Get selected event info
@@ -380,6 +381,18 @@ function parseAndAnalyzeCSV($filepath, $db, $event = null) {
          return 'SS' . (int)$m[2];
      }
 
+     // XC: Lap/Varv → LAP (for cross-country lap times)
+     if (preg_match('/^(lap|varv|runda|round)(\d*)$/', $normalized, $m)) {
+         $num = !empty($m[2]) ? (int)$m[2] : ++$counters['lap'];
+         return 'LAP' . $num;
+     }
+
+     // XC: Split → SPLIT (for intermediate times)
+     if (preg_match('/^(split|mellantid|intermediate)(\d*)$/', $normalized, $m)) {
+         $num = !empty($m[2]) ? (int)$m[2] : ++$counters['split'];
+         return 'SPLIT' . $num;
+     }
+
      // Just a number or unknown format - use SS with sequential number
      if (preg_match('/^\d+$/', $normalized)) {
          return 'SS' . (int)$normalized;
@@ -390,7 +403,7 @@ function parseAndAnalyzeCSV($filepath, $db, $event = null) {
  };
 
  // Counters for stages without numbers
- $stageCounters = ['ps' => 0, 'pw' => 0, 'ss' => 0];
+ $stageCounters = ['ps' => 0, 'pw' => 0, 'ss' => 0, 'lap' => 0, 'split' => 0];
 
  // Detect stage columns (between Club and NetTime)
  $splitTimeColumns = [];
@@ -744,8 +757,8 @@ include __DIR__ . '/components/unified-layout.php';
   </div>
   <div class="card-body">
    <p class="text-sm text-secondary mb-md">
-   Dessa kolumner hittades mellan "Club" och "NetTime" och kommer att importeras som sträcktider.
-   Sträcknamnen mappas enligt: Prostage &rarr; PS, Powerstage &rarr; PW, Stage/SS &rarr; SS.
+   Dessa kolumner hittades mellan "Club" och "NetTime" och kommer att importeras som sträck-/varvtider.
+   Mappning: Prostage &rarr; PS, Powerstage &rarr; PW, Stage/SS &rarr; SS, Lap/Varv &rarr; LAP, Split &rarr; SPLIT.
    </p>
    <div class="flex flex-wrap gap-sm">
    <?php foreach ($matchingStats['stage_columns'] as $index => $stageInfo): ?>
