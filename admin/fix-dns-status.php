@@ -4,6 +4,8 @@
  *
  * This tool finds riders marked as 'finished' but with no valid finish time,
  * which indicates they are actually DNS (Did Not Start).
+ *
+ * Also fixes invalid status values like 'FIN' to 'finished'.
  */
 require_once __DIR__ . '/../config.php';
 require_admin();
@@ -16,6 +18,38 @@ $messageType = '';
 
 // Get event filter
 $eventId = isset($_GET['event_id']) ? (int)$_GET['event_id'] : null;
+
+// Fix invalid status values like 'FIN', 'fin', 'Fin' to 'finished'
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['fix_fin_status'])) {
+    checkCsrf();
+
+    $eventFilter = '';
+    $params = [];
+
+    if (!empty($_POST['event_id'])) {
+        $eventFilter = ' AND event_id = ?';
+        $params[] = (int)$_POST['event_id'];
+    }
+
+    // Count before
+    $stmt = $pdo->prepare("SELECT COUNT(*) as cnt FROM results WHERE UPPER(status) IN ('FIN', 'FINISH', 'FINNISHED', 'OK') {$eventFilter}");
+    $stmt->execute($params);
+    $count = $stmt->fetch(PDO::FETCH_ASSOC)['cnt'];
+
+    // Fix
+    $stmt = $pdo->prepare("UPDATE results SET status = 'finished' WHERE UPPER(status) IN ('FIN', 'FINISH', 'FINNISHED', 'OK') {$eventFilter}");
+    $stmt->execute($params);
+
+    $message = "Fixat! {$count} resultat fick status ändrad till 'finished'.";
+    $messageType = 'success';
+}
+
+// Count invalid status values
+$eventFilterCheck = $eventId ? ' AND event_id = ?' : '';
+$paramsCheck = $eventId ? [$eventId] : [];
+$invalidStatusStmt = $pdo->prepare("SELECT COUNT(*) as cnt FROM results WHERE UPPER(status) IN ('FIN', 'FINISH', 'FINNISHED', 'OK') {$eventFilterCheck}");
+$invalidStatusStmt->execute($paramsCheck);
+$invalidStatusCount = $invalidStatusStmt->fetch(PDO::FETCH_ASSOC)['cnt'];
 
 // Common condition for detecting DNS riders with wrong status
 // Checks: empty times, zero times, or DNS/DNF/DQ text in time fields
@@ -113,6 +147,35 @@ include __DIR__ . '/components/unified-layout.php';
 <div class="alert alert-<?= $messageType ?> mb-lg">
     <i data-lucide="<?= $messageType === 'success' ? 'check-circle' : 'alert-circle' ?>"></i>
     <?= h($message) ?>
+</div>
+<?php endif; ?>
+
+<?php if ($invalidStatusCount > 0): ?>
+<div class="card mb-lg">
+    <div class="card-header">
+        <h2 class="text-warning">
+            <i data-lucide="alert-triangle"></i>
+            Felaktig status: FIN istället för finished
+        </h2>
+    </div>
+    <div class="card-body">
+        <div class="alert alert--warning mb-lg">
+            <i data-lucide="alert-triangle"></i>
+            <strong><?= $invalidStatusCount ?></strong> resultat har status "FIN" eller liknande istället för "finished".
+            Detta orsakar visningsproblem på event-sidor.
+        </div>
+
+        <form method="POST">
+            <?= csrf_field() ?>
+            <?php if ($eventId): ?>
+            <input type="hidden" name="event_id" value="<?= $eventId ?>">
+            <?php endif; ?>
+            <button type="submit" name="fix_fin_status" value="1" class="btn btn--warning btn-lg">
+                <i data-lucide="check"></i>
+                Fixa <?= $invalidStatusCount ?> resultat (ändra FIN → finished)
+            </button>
+        </form>
+    </div>
 </div>
 <?php endif; ?>
 

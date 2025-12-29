@@ -405,31 +405,69 @@ function parseAndAnalyzeCSV($filepath, $db, $event = null) {
  // Counters for stages without numbers
  $stageCounters = ['ps' => 0, 'pw' => 0, 'ss' => 0, 'lap' => 0, 'split' => 0];
 
- // Detect stage columns (between Club and NetTime)
+ // Detect stage columns
  $splitTimeColumns = [];
  $splitTimeIndex = 1;
 
+ // Known non-stage column names to skip
+ $nonStageColumns = [
+     'uciid', 'ucikod', 'licens', 'licensenumber',
+     'birthyear', 'födelseår', 'fodelsear', 'ålder', 'alder', 'age',
+     'run1', 'run2', 'run1time', 'run2time', 'åk1', 'åk2', 'ak1', 'ak2',
+     'kval', 'qualifying', 'final',
+     'land', 'nationality', 'nationalitet', 'country', 'nation',
+     'status', 'fin', 'finished', 'dns', 'dnf', 'dq', 'dsq',
+     'placebycategory', 'place', 'plac', 'placering', 'position', 'pos',
+     'bib', 'startnr', 'startnummer', 'nr', 'number',
+     'category', 'class', 'klass', 'kategori',
+     'firstname', 'förnamn', 'fornamn', 'first',
+     'lastname', 'efternamn', 'last', 'surname',
+     'name', 'namn', 'fullname',
+     'club', 'klubb', 'clubb', 'team', 'huvudförening', 'huvudforening',
+     'nettime', 'time', 'tid', 'finishtime', 'totaltid', 'totaltime', 'nettid'
+ ];
+
+ // Known stage column patterns
+ $stagePatterns = [
+     '/^(prostage|prolog|prologue)(\d*)$/i',
+     '/^(powerstage|power)(\d*)$/i',
+     '/^(ss|stage|sträcka|stracka|etapp|s)(\d+)$/i',
+     '/^(lap|varv|runda|round)(\d*)$/i',
+     '/^(split|mellantid|intermediate)(\d*)$/i',
+     '/^\d+$/'  // Just a number
+ ];
+
+ // Helper to check if column name matches stage patterns
+ $isStageColumn = function($col) use ($stagePatterns, $nonStageColumns) {
+     $normalized = mb_strtolower(trim($col), 'UTF-8');
+     $normalized = str_replace([' ', '-', '_'], '', $normalized);
+
+     // Skip known non-stage columns
+     if (in_array($normalized, $nonStageColumns)) {
+         return false;
+     }
+
+     // Check if matches any stage pattern
+     foreach ($stagePatterns as $pattern) {
+         if (preg_match($pattern, $normalized)) {
+             return true;
+         }
+     }
+     return false;
+ };
+
+ // Strategy 1: Columns between Club and NetTime
  if ($clubIndex >= 0 && $netTimeIndex > $clubIndex) {
      for ($i = $clubIndex + 1; $i < $netTimeIndex; $i++) {
          $originalCol = trim($rawHeader[$i]);
          if (empty($originalCol)) continue;
 
-         // Skip non-stage columns that may appear between Club and NetTime
-         // This includes: UCI-ID, birth year, age, and DH run times (Run1/Run2)
          $normalizedCheck = mb_strtolower($originalCol, 'UTF-8');
          $normalizedCheck = str_replace([' ', '-', '_'], '', $normalizedCheck);
-         if (in_array($normalizedCheck, [
-             'uciid', 'ucikod', 'licens', 'licensenumber',
-             'birthyear', 'födelseår', 'fodelsear', 'ålder', 'alder', 'age',
-             'run1', 'run2', 'run1time', 'run2time', 'åk1', 'åk2', 'ak1', 'ak2',
-             'kval', 'qualifying', 'final',
-             'land', 'nationality', 'nationalitet', 'country', 'nation',
-             'status', 'fin', 'finished', 'dns', 'dnf', 'dq', 'dsq'
-         ])) {
+         if (in_array($normalizedCheck, $nonStageColumns)) {
              continue;
          }
 
-         // Generate proper stage name (PS1, PW1, SS1, etc.)
          $properName = $generateStageName($originalCol, $stageCounters);
 
          $splitTimeColumns[$i] = [
@@ -442,6 +480,30 @@ function parseAndAnalyzeCSV($filepath, $db, $event = null) {
              'display' => $properName
          ];
          $splitTimeIndex++;
+     }
+ }
+
+ // Strategy 2: If no Club column, look for stage pattern columns before NetTime
+ if (empty($splitTimeColumns) && $netTimeIndex > 0) {
+     for ($i = 0; $i < $netTimeIndex; $i++) {
+         $originalCol = trim($rawHeader[$i]);
+         if (empty($originalCol)) continue;
+
+         // Only include columns that match stage patterns
+         if ($isStageColumn($originalCol)) {
+             $properName = $generateStageName($originalCol, $stageCounters);
+
+             $splitTimeColumns[$i] = [
+                 'original' => $originalCol,
+                 'mapped' => 'ss' . $splitTimeIndex,
+                 'display' => $properName
+             ];
+             $stageColumnsDetected[$splitTimeIndex] = [
+                 'original' => $originalCol,
+                 'display' => $properName
+             ];
+             $splitTimeIndex++;
+         }
      }
  }
 
