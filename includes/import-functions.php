@@ -385,7 +385,10 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
             // Status (column header variants)
             'status' => 'status',
             'fin' => 'status',
+            'finish' => 'status',
             'finished' => 'status',
+            'finnish' => 'status',
+            'finnised' => 'status',
 
             // Gender
             'gender' => 'gender',
