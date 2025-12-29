@@ -791,7 +791,16 @@ td.col-place {
 .results-table th.col-gap,
 .results-table td.col-gap { width: 70px !important; min-width: 70px; max-width: 70px; }
 
-.results-table th.col-split,
+.results-table th.col-split {
+    width: 85px !important;
+    min-width: 70px;
+    max-width: 100px;
+    white-space: normal !important;
+    word-break: break-word;
+    line-height: 1.2;
+    font-size: var(--text-xs);
+    padding: 4px 6px !important;
+}
 .results-table td.col-split { width: 85px !important; min-width: 85px; max-width: 85px; }
 
 .col-time {
