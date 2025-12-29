@@ -130,6 +130,7 @@ if ($tablesExist) {
 /**
  * Generate all subsequent rounds for an elimination bracket
  * Automatically advances BYE winners to next round
+ * Also creates bronze match (3rd/4th place) after semifinals
  */
 function generateNextRounds($pdo, $eventId, $classId) {
     $roundOrder = ['round_of_32', 'round_of_16', 'quarterfinal', 'semifinal', 'final'];
@@ -157,7 +158,6 @@ function generateNextRounds($pdo, $eventId, $classId) {
         if (!$nextRound) continue; // Final has no next round
 
         $nextRoundNumber = $roundIdx + 2;
-        $winnersPerNextHeat = 2; // 2 winners make 1 next heat
 
         // Check if next round already exists
         $checkStmt = $pdo->prepare("SELECT COUNT(*) FROM elimination_brackets WHERE event_id = ? AND class_id = ? AND round_name = ?");
@@ -168,7 +168,6 @@ function generateNextRounds($pdo, $eventId, $classId) {
         $winners = [];
         foreach ($currentHeats as $heat) {
             if ($heat['winner_id']) {
-                // Use the correct seed based on which rider is the winner
                 $seed = ($heat['winner_id'] == $heat['rider_1_id'])
                     ? $heat['rider_1_seed']
                     : $heat['rider_2_seed'];
@@ -208,6 +207,135 @@ function generateNextRounds($pdo, $eventId, $classId) {
             ]);
             $nextHeatNum++;
         }
+
+        // After creating the final, also create the bronze match (3rd/4th place)
+        if ($currentRound === 'semifinal' && count($currentHeats) >= 2) {
+            // Check if bronze match already exists
+            $bronzeCheck = $pdo->prepare("SELECT COUNT(*) FROM elimination_brackets WHERE event_id = ? AND class_id = ? AND round_name = 'third_place'");
+            $bronzeCheck->execute([$eventId, $classId]);
+            if ($bronzeCheck->fetchColumn() == 0) {
+                // Collect losers from semifinals for bronze match
+                $losers = [];
+                foreach ($currentHeats as $heat) {
+                    if ($heat['loser_id']) {
+                        $seed = ($heat['loser_id'] == $heat['rider_1_id'])
+                            ? $heat['rider_1_seed']
+                            : $heat['rider_2_seed'];
+                        $losers[] = [
+                            'rider_id' => $heat['loser_id'],
+                            'seed' => $seed
+                        ];
+                    }
+                }
+
+                // Create bronze match if we have 2 losers
+                if (count($losers) >= 2) {
+                    $stmt = $pdo->prepare("
+                        INSERT INTO elimination_brackets
+                        (event_id, class_id, bracket_type, round_name, round_number, heat_number,
+                         rider_1_id, rider_2_id, rider_1_seed, rider_2_seed, status, bracket_position)
+                        VALUES (?, ?, 'main', 'third_place', ?, 1, ?, ?, ?, ?, 'pending', 1)
+                    ");
+                    $stmt->execute([
+                        $eventId, $classId, $nextRoundNumber,
+                        $losers[0]['rider_id'], $losers[1]['rider_id'],
+                        $losers[0]['seed'], $losers[1]['seed']
+                    ]);
+                }
+            }
+        }
+    }
+}
+
+/**
+ * Generate final results when both final and bronze matches are complete
+ */
+function generateFinalResults($pdo, $db, $eventId, $classId) {
+    // Check if final and bronze matches are both completed
+    $final = $db->getRow("
+        SELECT * FROM elimination_brackets
+        WHERE event_id = ? AND class_id = ? AND round_name = 'final' AND status = 'completed'
+    ", [$eventId, $classId]);
+
+    $bronze = $db->getRow("
+        SELECT * FROM elimination_brackets
+        WHERE event_id = ? AND class_id = ? AND round_name = 'third_place' AND status = 'completed'
+    ", [$eventId, $classId]);
+
+    if (!$final) return; // Final not completed yet
+
+    // Clear existing results for this class
+    $pdo->prepare("DELETE FROM elimination_results WHERE event_id = ? AND class_id = ?")->execute([$eventId, $classId]);
+
+    // 1st place - final winner
+    if ($final['winner_id']) {
+        $pdo->prepare("
+            INSERT INTO elimination_results (event_id, class_id, rider_id, final_position, qualifying_position, bracket_type)
+            SELECT ?, ?, ?, 1, eq.seed_position, 'main'
+            FROM elimination_qualifying eq
+            WHERE eq.event_id = ? AND eq.class_id = ? AND eq.rider_id = ?
+        ")->execute([$eventId, $classId, $final['winner_id'], $eventId, $classId, $final['winner_id']]);
+    }
+
+    // 2nd place - final loser
+    if ($final['loser_id']) {
+        $pdo->prepare("
+            INSERT INTO elimination_results (event_id, class_id, rider_id, final_position, qualifying_position, bracket_type)
+            SELECT ?, ?, ?, 2, eq.seed_position, 'main'
+            FROM elimination_qualifying eq
+            WHERE eq.event_id = ? AND eq.class_id = ? AND eq.rider_id = ?
+        ")->execute([$eventId, $classId, $final['loser_id'], $eventId, $classId, $final['loser_id']]);
+    }
+
+    // 3rd and 4th place from bronze match
+    if ($bronze) {
+        if ($bronze['winner_id']) {
+            $pdo->prepare("
+                INSERT INTO elimination_results (event_id, class_id, rider_id, final_position, qualifying_position, bracket_type)
+                SELECT ?, ?, ?, 3, eq.seed_position, 'main'
+                FROM elimination_qualifying eq
+                WHERE eq.event_id = ? AND eq.class_id = ? AND eq.rider_id = ?
+            ")->execute([$eventId, $classId, $bronze['winner_id'], $eventId, $classId, $bronze['winner_id']]);
+        }
+        if ($bronze['loser_id']) {
+            $pdo->prepare("
+                INSERT INTO elimination_results (event_id, class_id, rider_id, final_position, qualifying_position, bracket_type)
+                SELECT ?, ?, ?, 4, eq.seed_position, 'main'
+                FROM elimination_qualifying eq
+                WHERE eq.event_id = ? AND eq.class_id = ? AND eq.rider_id = ?
+            ")->execute([$eventId, $classId, $bronze['loser_id'], $eventId, $classId, $bronze['loser_id']]);
+        }
+    }
+
+    // Add remaining riders based on elimination round
+    $eliminatedRiders = $db->getAll("
+        SELECT eb.loser_id, eb.round_name, eq.seed_position
+        FROM elimination_brackets eb
+        JOIN elimination_qualifying eq ON eq.rider_id = eb.loser_id AND eq.event_id = eb.event_id AND eq.class_id = eb.class_id
+        WHERE eb.event_id = ? AND eb.class_id = ?
+        AND eb.round_name NOT IN ('final', 'third_place')
+        AND eb.loser_id IS NOT NULL
+        ORDER BY
+            CASE eb.round_name
+                WHEN 'semifinal' THEN 1
+                WHEN 'quarterfinal' THEN 2
+                WHEN 'round_of_16' THEN 3
+                WHEN 'round_of_32' THEN 4
+            END,
+            eq.seed_position ASC
+    ", [$eventId, $classId]);
+
+    $position = 5;
+    foreach ($eliminatedRiders as $rider) {
+        // Skip if already in results (semifinal losers are in bronze)
+        if ($rider['round_name'] === 'semifinal') continue;
+
+        $pdo->prepare("
+            INSERT INTO elimination_results (event_id, class_id, rider_id, final_position, qualifying_position, eliminated_in_round, bracket_type)
+            VALUES (?, ?, ?, ?, ?, ?, 'main')
+            ON DUPLICATE KEY UPDATE final_position = VALUES(final_position)
+        ")->execute([$eventId, $classId, $rider['loser_id'], $position, $rider['seed_position'], $rider['round_name']]);
+        $position++;
     }
 }
 
@@ -539,6 +667,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 // Advance winner to next round
                 advanceWinnerToNextRound($pdo, $db, $eventId, $heat);
 
+                // Check if this completes final or bronze match
+                if (in_array($heat['round_name'], ['final', 'third_place'])) {
+                    generateFinalResults($pdo, $db, $eventId, $heat['class_id']);
+                }
+
                 header("Location: /admin/elimination-manage.php?event_id={$eventId}&class_id={$selectedClassId}");
                 exit;
             } elseif ($isBye) {
@@ -558,6 +691,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 // Advance winner to next round
                 advanceWinnerToNextRound($pdo, $db, $eventId, $heat);
+
+                // Check if this completes final or bronze match
+                if (in_array($heat['round_name'], ['final', 'third_place'])) {
+                    generateFinalResults($pdo, $db, $eventId, $heat['class_id']);
+                }
             } else {
                 // Normal heat - determine winner (lower total time wins)
                 if ($rider1Total > 0 && $rider2Total > 0) {
@@ -588,6 +726,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     // Reload heat with winner_id to pass to function
                     $completedHeat = $db->getRow("SELECT * FROM elimination_brackets WHERE id = ?", [$heatId]);
                     advanceWinnerToNextRound($pdo, $db, $eventId, $completedHeat);
+
+                    // Check if this completes final or bronze match - generate final results
+                    if (in_array($completedHeat['round_name'], ['final', 'third_place'])) {
+                        generateFinalResults($pdo, $db, $eventId, $completedHeat['class_id']);
+                    }
                 }
             }
 
@@ -603,26 +746,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $seriesClasses = $_POST['series_class'] ?? [];
 
         try {
-            $stmt = $pdo->prepare("UPDATE elimination_qualifying SET series_class_id = ? WHERE id = ?");
+            // First check if series_class_id column exists
+            try {
+                $pdo->query("SELECT series_class_id FROM elimination_qualifying LIMIT 1");
+            } catch (Exception $e) {
+                // Column doesn't exist, add it
+                $pdo->exec("ALTER TABLE elimination_qualifying ADD COLUMN series_class_id INT NULL AFTER class_id");
+            }
 
             $updated = 0;
             foreach ($seriesClasses as $qualId => $seriesClassId) {
+                $qualId = intval($qualId);
                 $seriesClassId = !empty($seriesClassId) ? intval($seriesClassId) : null;
-                $stmt->execute([$seriesClassId, intval($qualId)]);
-                $updated++;
-            }
 
-            // Also sync to main results table with the new series classes
-            foreach ($seriesClasses as $qualId => $seriesClassId) {
+                $stmt = $pdo->prepare("UPDATE elimination_qualifying SET series_class_id = ? WHERE id = ?");
+                $stmt->execute([$seriesClassId, $qualId]);
+                $updated++;
+
+                // Also sync to main results table with the new series class
                 $qual = $db->getRow("SELECT * FROM elimination_qualifying WHERE id = ?", [$qualId]);
                 if ($qual) {
-                    $targetClass = !empty($seriesClassId) ? intval($seriesClassId) : $qual['class_id'];
+                    $targetClass = $seriesClassId ?: $qual['class_id'];
+
+                    // Delete old result first (to handle class change)
+                    $pdo->prepare("DELETE FROM results WHERE event_id = ? AND cyclist_id = ? AND class_id != ?")->execute([
+                        $qual['event_id'], $qual['rider_id'], $targetClass
+                    ]);
 
                     $syncStmt = $pdo->prepare("
                         INSERT INTO results (event_id, class_id, cyclist_id, position, finish_time, bib_number, status)
                         VALUES (?, ?, ?, ?, ?, ?, 'finished')
                         ON DUPLICATE KEY UPDATE
-                        class_id = VALUES(class_id),
                         position = VALUES(position),
                         finish_time = VALUES(finish_time)
                     ");
