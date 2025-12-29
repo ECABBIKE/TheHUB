@@ -9,6 +9,7 @@ require_once __DIR__ . '/../config.php';
 require_admin();
 
 $db = getDB();
+global $pdo;
 
 $message = '';
 $messageType = '';
@@ -44,12 +45,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['fix'])) {
     }
 
     // Count affected rows before fix
-    $beforeStmt = $db->prepare("SELECT COUNT(*) as cnt FROM results r WHERE {$dnsCondition} {$eventFilter}");
+    $beforeStmt = $pdo->prepare("SELECT COUNT(*) as cnt FROM results r WHERE {$dnsCondition} {$eventFilter}");
     $beforeStmt->execute($params);
     $before = $beforeStmt->fetch(PDO::FETCH_ASSOC);
 
     // Fix status to DNS
-    $fixStmt = $db->prepare("
+    $fixStmt = $pdo->prepare("
         UPDATE results r
         SET r.status = 'dns', r.position = NULL, r.points = 0
         WHERE {$dnsCondition} {$eventFilter}
@@ -70,12 +71,12 @@ if ($eventId) {
 }
 
 // Count current affected rows
-$countStmt = $db->prepare("SELECT COUNT(*) as cnt FROM results r WHERE {$dnsCondition} {$eventFilter}");
+$countStmt = $pdo->prepare("SELECT COUNT(*) as cnt FROM results r WHERE {$dnsCondition} {$eventFilter}");
 $countStmt->execute($params);
 $affected = $countStmt->fetch(PDO::FETCH_ASSOC);
 
 // Get sample of affected results
-$sampleStmt = $db->prepare("
+$sampleStmt = $pdo->prepare("
     SELECT r.id, r.position, r.status, r.finish_time, r.run_1_time, r.run_2_time, r.ss1,
            CONCAT(ri.firstname, ' ', ri.lastname) as rider_name,
            e.name as event_name, e.date as event_date, e.event_format

@@ -16,7 +16,7 @@ if (!$eventId) {
 }
 
 // Get event info
-$event = $db->getOne("SELECT e.*, s.name as series_name FROM events e LEFT JOIN series s ON e.series_id = s.id WHERE e.id = ?", [$eventId]);
+$event = $db->getRow("SELECT e.*, s.name as series_name FROM events e LEFT JOIN series s ON e.series_id = s.id WHERE e.id = ?", [$eventId]);
 if (!$event) {
     $_SESSION['error'] = 'Event hittades inte';
     header('Location: /admin/elimination.php');
@@ -82,7 +82,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax'])) {
             }
 
             // Check if entry exists
-            $existing = $db->getOne("SELECT id FROM elimination_qualifying WHERE event_id = ? AND class_id = ? AND rider_id = ?",
+            $existing = $db->getRow("SELECT id FROM elimination_qualifying WHERE event_id = ? AND class_id = ? AND rider_id = ?",
                 [$eventId, $classId, $riderId]);
 
             if ($existing) {
@@ -121,7 +121,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax'])) {
         }
 
         try {
-            $heat = $db->getOne("SELECT * FROM elimination_brackets WHERE id = ?", [$heatId]);
+            $heat = $db->getRow("SELECT * FROM elimination_brackets WHERE id = ?", [$heatId]);
             if (!$heat) {
                 echo json_encode(['success' => false, 'error' => 'Heat hittades inte']);
                 exit;
