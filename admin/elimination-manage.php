@@ -1148,6 +1148,36 @@ function confirmClearAll() {
 </script>
 
 
+<!-- Clear Brackets Only (keep qualifying) -->
+<?php if ($totalBracketCount > 0): ?>
+<div class="admin-card mb-lg" style="border-color: var(--color-warning);">
+    <div class="admin-card-body">
+        <div class="flex items-center justify-between flex-wrap gap-md">
+            <div>
+                <h4 style="margin: 0; color: var(--color-warning);">
+                    <i data-lucide="refresh-cw"></i> Rensa bracket
+                </h4>
+                <p style="margin: var(--space-xs) 0 0; color: var(--color-text-secondary);">
+                    Tar bort brackets och slutresultat. Kvalificeringsresultat behålls.
+                </p>
+            </div>
+            <div class="flex gap-sm">
+                <?php foreach ($allBracketsByClass as $classId => $classData): ?>
+                    <form method="POST" style="display: inline;" class="clear-bracket-form">
+                        <?= csrf_field() ?>
+                        <input type="hidden" name="action" value="clear_brackets">
+                        <input type="hidden" name="class_id" value="<?= $classId ?>">
+                        <button type="submit" class="btn-admin btn-admin-warning" onclick="return confirm('Rensa bracket för <?= h($classData['name'] ?? 'denna klass') ?>?\n\nKvalificeringsresultat behålls.')">
+                            <i data-lucide="trash"></i> <?= h($classData['name'] ?? 'Klass ' . $classId) ?>
+                        </button>
+                    </form>
+                <?php endforeach; ?>
+            </div>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
+
 <!-- Clear All Results -->
 <?php if ($totalQualifiers > 0): ?>
 <div class="admin-card mb-lg" style="border-color: var(--color-error);">
