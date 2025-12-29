@@ -598,32 +598,51 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
-    if ($action === 'save_class_mappings') {
-        // Save class mappings for series points
-        $mappings = $_POST['mappings'] ?? [];
+    if ($action === 'save_series_classes') {
+        // Save series class for each rider
+        $seriesClasses = $_POST['series_class'] ?? [];
 
         try {
-            // Delete existing mappings for this event
-            $pdo->prepare("DELETE FROM elimination_class_mapping WHERE event_id = ?")->execute([$eventId]);
+            $stmt = $pdo->prepare("UPDATE elimination_qualifying SET series_class_id = ? WHERE id = ?");
 
-            // Insert new mappings
-            $stmt = $pdo->prepare("
-                INSERT INTO elimination_class_mapping (event_id, ds_class_id, series_class_id)
-                VALUES (?, ?, ?)
-            ");
+            $updated = 0;
+            foreach ($seriesClasses as $qualId => $seriesClassId) {
+                $seriesClassId = !empty($seriesClassId) ? intval($seriesClassId) : null;
+                $stmt->execute([$seriesClassId, intval($qualId)]);
+                $updated++;
+            }
 
-            foreach ($mappings as $dsClassId => $seriesClassId) {
-                if (!empty($seriesClassId) && $seriesClassId != $dsClassId) {
-                    $stmt->execute([$eventId, $dsClassId, $seriesClassId]);
+            // Also sync to main results table with the new series classes
+            foreach ($seriesClasses as $qualId => $seriesClassId) {
+                $qual = $db->getRow("SELECT * FROM elimination_qualifying WHERE id = ?", [$qualId]);
+                if ($qual) {
+                    $targetClass = !empty($seriesClassId) ? intval($seriesClassId) : $qual['class_id'];
+
+                    $syncStmt = $pdo->prepare("
+                        INSERT INTO results (event_id, class_id, cyclist_id, position, finish_time, bib_number, status)
+                        VALUES (?, ?, ?, ?, ?, ?, 'finished')
+                        ON DUPLICATE KEY UPDATE
+                        class_id = VALUES(class_id),
+                        position = VALUES(position),
+                        finish_time = VALUES(finish_time)
+                    ");
+                    $syncStmt->execute([
+                        $qual['event_id'],
+                        $targetClass,
+                        $qual['rider_id'],
+                        $qual['seed_position'],
+                        $qual['best_time'],
+                        $qual['bib_number']
+                    ]);
                 }
             }
 
-            $_SESSION['success'] = "Klassmappningar sparade!";
+            $_SESSION['success'] = "Seriepoängklasser sparade för {$updated} deltagare!";
         } catch (Exception $e) {
-            $_SESSION['error'] = "Fel vid sparande av mappningar: " . $e->getMessage();
+            $_SESSION['error'] = "Fel vid sparande: " . $e->getMessage();
         }
 
-        header("Location: /admin/elimination-manage.php?event_id={$eventId}&class_id={$selectedClassId}");
+        header("Location: /admin/elimination-manage.php?event_id={$eventId}");
         exit;
     }
 }
@@ -788,64 +807,6 @@ function confirmClearAll() {
 }
 </script>
 
-<!-- Class Mapping for Series Points -->
-<?php if ($totalQualifiers > 0): ?>
-<div class="admin-card mb-lg">
-    <div class="admin-card-header">
-        <h3 style="display: flex; align-items: center; gap: var(--space-sm);">
-            <i data-lucide="arrow-right-left"></i>
-            Seriepoängklasser
-        </h3>
-    </div>
-    <div class="admin-card-body">
-        <p class="mb-md" style="color: var(--color-text-secondary);">
-            Mappa DS-klasser till seriens huvudklasser för poängberäkning.
-            Om ingen mappning anges används samma klass.
-        </p>
-        <form method="POST">
-            <input type="hidden" name="action" value="save_class_mappings">
-            <div class="admin-table-container mb-md">
-                <table class="admin-table">
-                    <thead>
-                        <tr>
-                            <th>DS-klass (Dual Slalom)</th>
-                            <th>Seriepoängklass</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($classes as $dsClass): ?>
-                            <?php if ($dsClass['rider_count'] > 0): ?>
-                            <tr>
-                                <td>
-                                    <strong><?= h($dsClass['display_name'] ?? $dsClass['name']) ?></strong>
-                                    <span class="text-secondary text-sm">(<?= $dsClass['rider_count'] ?> åkare)</span>
-                                </td>
-                                <td>
-                                    <select name="mappings[<?= $dsClass['id'] ?>]" class="admin-form-select" style="max-width: 300px;">
-                                        <option value="">-- Samma klass --</option>
-                                        <?php foreach ($allSeriesClasses as $sc): ?>
-                                            <?php if ($sc['id'] != $dsClass['id']): ?>
-                                            <option value="<?= $sc['id'] ?>" <?= ($classMappings[$dsClass['id']] ?? '') == $sc['id'] ? 'selected' : '' ?>>
-                                                <?= h($sc['display_name'] ?? $sc['name']) ?>
-                                                <?php if ($sc['discipline']): ?>(<?= h($sc['discipline']) ?>)<?php endif; ?>
-                                            </option>
-                                            <?php endif; ?>
-                                        <?php endforeach; ?>
-                                    </select>
-                                </td>
-                            </tr>
-                            <?php endif; ?>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
-            </div>
-            <button type="submit" class="btn-admin btn-admin-primary">
-                <i data-lucide="save"></i> Spara mappningar
-            </button>
-        </form>
-    </div>
-</div>
-<?php endif; ?>
 
 <!-- Clear All Results -->
 <?php if ($totalQualifiers > 0): ?>
@@ -921,6 +882,13 @@ foreach ($allFinalResultsByClass as $cdata) {
                 </div>
             </div>
         <?php else: ?>
+            <form method="POST" id="series-class-form">
+                <input type="hidden" name="action" value="save_series_classes">
+                <div class="mb-md flex justify-end">
+                    <button type="submit" class="btn-admin btn-admin-primary">
+                        <i data-lucide="save"></i> Spara seriepoängklasser
+                    </button>
+                </div>
             <?php foreach ($allQualifyingByClass as $classId => $classData): ?>
                 <div class="admin-card mb-lg">
                     <div class="admin-card-header">
@@ -936,9 +904,8 @@ foreach ($allFinalResultsByClass as $cdata) {
                                         <th>Nr</th>
                                         <th>Namn</th>
                                         <th>Klubb</th>
-                                        <th class="text-right">Åk 1</th>
-                                        <th class="text-right">Åk 2</th>
                                         <th class="text-right">Bäst</th>
+                                        <th>Seriepoängklass</th>
                                         <th class="text-center">Bracket</th>
                                     </tr>
                                 </thead>
@@ -949,9 +916,17 @@ foreach ($allFinalResultsByClass as $cdata) {
                                             <td><?= h($qr['bib_number'] ?? '-') ?></td>
                                             <td><?= h($qr['firstname'] . ' ' . $qr['lastname']) ?></td>
                                             <td><?= h($qr['club_name'] ?? '-') ?></td>
-                                            <td class="text-right"><?= $qr['run_1_time'] ? number_format($qr['run_1_time'], 3) : '-' ?></td>
-                                            <td class="text-right"><?= $qr['run_2_time'] ? number_format($qr['run_2_time'], 3) : '-' ?></td>
                                             <td class="text-right"><strong><?= $qr['best_time'] ? number_format($qr['best_time'], 3) : '-' ?></strong></td>
+                                            <td>
+                                                <select name="series_class[<?= $qr['id'] ?>]" class="admin-form-select" style="min-width: 150px; font-size: var(--text-sm);">
+                                                    <option value="">-- DS-klass --</option>
+                                                    <?php foreach ($allSeriesClasses as $sc): ?>
+                                                        <option value="<?= $sc['id'] ?>" <?= ($qr['series_class_id'] ?? '') == $sc['id'] ? 'selected' : '' ?>>
+                                                            <?= h($sc['display_name'] ?? $sc['name']) ?>
+                                                        </option>
+                                                    <?php endforeach; ?>
+                                                </select>
+                                            </td>
                                             <td class="text-center">
                                             <?php if ($qr['advances_to_bracket']): ?>
                                                 <span class="admin-badge admin-badge-success">Ja</span>
@@ -967,6 +942,7 @@ foreach ($allFinalResultsByClass as $cdata) {
                 </div>
             </div>
             <?php endforeach; ?>
+            </form>
         <?php endif; ?>
     </div>
 
