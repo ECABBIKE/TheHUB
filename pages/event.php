@@ -242,6 +242,17 @@ try {
         }
     }
 
+    // Check if DH event has run 2 data
+    $hasRun2Data = false;
+    if ($isDH) {
+        foreach ($results as $result) {
+            if (!empty($result['run_2_time']) && !in_array(strtolower($result['run_2_time']), ['dns', 'dnf', 'dq', '0:00', '0:00.00'])) {
+                $hasRun2Data = true;
+                break;
+            }
+        }
+    }
+
     // Parse stage names
     $stageNames = [];
     if (!empty($event['stage_names'])) {
@@ -455,10 +466,14 @@ try {
                 $splitTimes = [];
                 foreach ($classData['results'] as $idx => $result) {
                     if (!empty($result['ss' . $ss]) && $result['status'] === 'finished') {
-                        $splitTimes[] = [
-                            'idx' => $idx,
-                            'time' => timeToSeconds($result['ss' . $ss])
-                        ];
+                        $timeSeconds = timeToSeconds($result['ss' . $ss]);
+                        // Only include valid times (not PHP_INT_MAX from invalid data)
+                        if ($timeSeconds < PHP_INT_MAX) {
+                            $splitTimes[] = [
+                                'idx' => $idx,
+                                'time' => $timeSeconds
+                            ];
+                        }
                     }
                 }
 
@@ -532,10 +547,14 @@ try {
             $splitTimes = [];
             foreach ($globalSplitResults as $idx => $result) {
                 if (!empty($result['ss' . $ss])) {
-                    $splitTimes[] = [
-                        'idx' => $idx,
-                        'time' => timeToSeconds($result['ss' . $ss])
-                    ];
+                    $timeSeconds = timeToSeconds($result['ss' . $ss]);
+                    // Only include valid times (not PHP_INT_MAX from invalid data)
+                    if ($timeSeconds < PHP_INT_MAX) {
+                        $splitTimes[] = [
+                            'idx' => $idx,
+                            'time' => $timeSeconds
+                        ];
+                    }
                 }
             }
 
@@ -1139,10 +1158,12 @@ if (!empty($eventSponsors['content'])): ?>
                     <th class="col-time col-dh-run table-col-hide-mobile sortable-header" data-sort="run1" onclick="sortDHByRun(this, '<?= $classKey ?>', 1)">Kval <span class="sort-icon"></span></th>
                     <th class="col-time col-dh-run table-col-hide-mobile sortable-header" data-sort="run2" onclick="sortDHByRun(this, '<?= $classKey ?>', 2)">Final <span class="sort-icon"></span></th>
                     <th class="col-time sortable-header" data-sort="time" onclick="sortByTime(this, '<?= $classKey ?>')">Tid <span class="sort-icon"></span></th>
-                    <?php else: ?>
+                    <?php elseif ($hasRun2Data): ?>
                     <th class="col-time col-dh-run table-col-hide-mobile sortable-header" data-sort="run1" onclick="sortDHByRun(this, '<?= $classKey ?>', 1)">Åk 1 <span class="sort-icon"></span></th>
                     <th class="col-time col-dh-run table-col-hide-mobile sortable-header" data-sort="run2" onclick="sortDHByRun(this, '<?= $classKey ?>', 2)">Åk 2 <span class="sort-icon"></span></th>
                     <th class="col-time sortable-header" data-sort="best" onclick="sortByTime(this, '<?= $classKey ?>')">Bästa <span class="sort-icon"></span></th>
+                    <?php else: ?>
+                    <th class="col-time sortable-header" data-sort="time" onclick="sortByTime(this, '<?= $classKey ?>')">Tid <span class="sort-icon"></span></th>
                     <?php endif; ?>
                     <?php else: ?>
                     <th class="col-time sortable-header" data-sort="time" onclick="sortByTime(this, '<?= $classKey ?>')">Tid <span class="sort-icon"></span></th>
@@ -1188,7 +1209,7 @@ if (!empty($eventSponsors['content'])): ?>
                             -
                         <?php endif; ?>
                     </td>
-                    <?php if ($isDH):
+                    <?php if ($isDH && ($eventFormat === 'DH_SWECUP' || $hasRun2Data)):
                         // Calculate color classes for DH runs
                         $run1Class = '';
                         $run2Class = '';
@@ -1508,8 +1529,15 @@ if (!empty($eventSponsors['content'])): ?>
                     <th class="col-rider">Åkare</th>
                     <th class="col-club table-col-hide-mobile">Klubb</th>
                     <th class="col-class table-col-hide-mobile">Klass</th>
-                    <th class="col-time col-dh-run table-col-hide-mobile sortable-header" data-sort="run1" onclick="sortDHTotalByRun(this, 1)"><?= $eventFormat === 'DH_SWECUP' ? 'Kval' : 'Åk 1' ?> <span class="sort-icon"></span></th>
-                    <th class="col-time col-dh-run table-col-hide-mobile sortable-header" data-sort="run2" onclick="sortDHTotalByRun(this, 2)"><?= $eventFormat === 'DH_SWECUP' ? 'Final' : 'Åk 2' ?> <span class="sort-icon"></span></th>
+                    <?php if ($eventFormat === 'DH_SWECUP'): ?>
+                    <th class="col-time col-dh-run table-col-hide-mobile sortable-header" data-sort="run1" onclick="sortDHTotalByRun(this, 1)">Kval <span class="sort-icon"></span></th>
+                    <th class="col-time col-dh-run table-col-hide-mobile sortable-header" data-sort="run2" onclick="sortDHTotalByRun(this, 2)">Final <span class="sort-icon"></span></th>
+                    <?php elseif ($hasRun2Data): ?>
+                    <th class="col-time col-dh-run table-col-hide-mobile sortable-header" data-sort="run1" onclick="sortDHTotalByRun(this, 1)">Åk 1 <span class="sort-icon"></span></th>
+                    <th class="col-time col-dh-run table-col-hide-mobile sortable-header" data-sort="run2" onclick="sortDHTotalByRun(this, 2)">Åk 2 <span class="sort-icon"></span></th>
+                    <?php else: ?>
+                    <th class="col-time table-col-hide-mobile sortable-header" data-sort="run1" onclick="sortDHTotalByRun(this, 1)">Tid <span class="sort-icon"></span></th>
+                    <?php endif; ?>
                 </tr>
             </thead>
             <tbody>
@@ -1570,6 +1598,7 @@ if (!empty($eventSponsors['content'])): ?>
                     <td class="col-class table-col-hide-mobile">
                         <span class="class-badge"><?= h($result['original_class'] ?? '-') ?></span>
                     </td>
+                    <?php if ($eventFormat === 'DH_SWECUP' || $hasRun2Data): ?>
                     <td class="col-time col-dh-run table-col-hide-mobile <?= $run1Class ?>" data-sort-value="<?= $run1Seconds ?>">
                         <?php $r1Disp = formatDisplayTime($run1Time); if ($r1Disp): ?>
                         <div class="split-time-main"><?= $r1Disp ?></div>
@@ -1582,6 +1611,13 @@ if (!empty($eventSponsors['content'])): ?>
                         <div class="split-time-details"><?= $run2Diff ?: '' ?><?= $run2Diff && $run2Rank ? ' ' : '' ?><?= $run2Rank ? '(' . $run2Rank . ')' : '' ?></div>
                         <?php else: ?><span class="text-secondary">DNS</span><?php endif; ?>
                     </td>
+                    <?php else: ?>
+                    <td class="col-time table-col-hide-mobile <?= $run1Class ?>" data-sort-value="<?= $run1Seconds ?>">
+                        <?php $r1Disp = formatDisplayTime($run1Time); if ($r1Disp): ?>
+                        <div class="split-time-main"><?= $r1Disp ?></div>
+                        <?php else: ?><span class="text-secondary">DNS</span><?php endif; ?>
+                    </td>
+                    <?php endif; ?>
                 </tr>
                 <?php endforeach; ?>
             </tbody>
@@ -1609,6 +1645,7 @@ if (!empty($eventSponsors['content'])): ?>
                 <div class="result-name"><?= h($result['firstname'] . ' ' . $result['lastname']) ?></div>
                 <div class="result-club"><?= h($result['club_name'] ?? '-') ?> &middot; <?= h($result['original_class'] ?? '') ?></div>
                 <div class="result-splits-row">
+                    <?php if ($eventFormat === 'DH_SWECUP' || $hasRun2Data): ?>
                     <div class="result-split-item">
                         <span class="split-label"><?= $eventFormat === 'DH_SWECUP' ? 'Kval' : 'Åk 1' ?></span>
                         <span class="split-value"><?= formatDisplayTime($run1Time) ?: 'DNS' ?></span>
@@ -1619,6 +1656,12 @@ if (!empty($eventSponsors['content'])): ?>
                         <span class="split-value"><?= formatDisplayTime($run2Time) ?: 'DNS' ?></span>
                         <?php if ($run2Rank): ?><span class="split-rank">(<?= $run2Rank ?>)</span><?php endif; ?>
                     </div>
+                    <?php else: ?>
+                    <div class="result-split-item">
+                        <span class="split-label">Tid</span>
+                        <span class="split-value"><?= formatDisplayTime($run1Time) ?: 'DNS' ?></span>
+                    </div>
+                    <?php endif; ?>
                 </div>
             </div>
         </a>
