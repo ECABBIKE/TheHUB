@@ -20,7 +20,7 @@ function hub_send_email(string $to, string $subject, string $body, array $option
 
     // Default sender info (from .env or fallback)
     $fromName = $options['from_name'] ?? env('MAIL_FROM_NAME', 'TheHUB');
-    $fromEmail = $options['from_email'] ?? env('MAIL_FROM_ADDRESS', 'info@gravityseries.se');
+    $fromEmail = $options['from_email'] ?? env('MAIL_FROM_ADDRESS', 'noreply@thehub.gravityseries.se');
     $replyTo = $options['reply_to'] ?? $fromEmail;
 
     // Log the email attempt
@@ -41,7 +41,7 @@ function hub_send_php_mail(string $to, string $subject, string $body, string $fr
     $headers[] = 'MIME-Version: 1.0';
     $headers[] = 'Content-Type: text/html; charset=UTF-8';
     $headers[] = "From: {$fromName} <{$fromEmail}>";
-    $headers[] = "Reply-To: {$replyTo}";
+    $headers[] = "Reply-To: {$fromEmail}"; // Use from email as reply-to
     $headers[] = 'X-Mailer: TheHUB/3.5';
 
     $result = @mail($to, $subject, $body, implode("\r\n", $headers));
@@ -57,7 +57,7 @@ function hub_send_php_mail(string $to, string $subject, string $body, string $fr
  * Send email using SMTP
  */
 function hub_send_smtp_email(string $to, string $subject, string $body, string $fromName, string $fromEmail, string $replyTo): bool {
-    $host = env('MAIL_HOST', 'smtp.hostinger.com');
+    $host = env('MAIL_HOST', 'smtp.hostinger.com'); // smtp.hostinger.com works, mail.hostinger.com doesn't
     $port = (int) env('MAIL_PORT', 465);
     $encryption = env('MAIL_ENCRYPTION', 'ssl');
     $username = env('MAIL_USERNAME', '');
