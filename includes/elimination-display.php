@@ -27,17 +27,17 @@ if (!$eliminationTablesExist) {
 }
 
 // Get classes with elimination data
-$eliminationClasses = $db->query("
+$eliminationClasses = $db->getAll("
     SELECT DISTINCT c.id, c.name, c.display_name,
         COUNT(DISTINCT eq.id) as qual_count,
         COUNT(DISTINCT eb.id) as bracket_count
     FROM classes c
-    LEFT JOIN elimination_qualifying eq ON c.id = eq.class_id AND eq.event_id = {$eventId}
-    LEFT JOIN elimination_brackets eb ON c.id = eb.class_id AND eb.event_id = {$eventId}
+    LEFT JOIN elimination_qualifying eq ON c.id = eq.class_id AND eq.event_id = ?
+    LEFT JOIN elimination_brackets eb ON c.id = eb.class_id AND eb.event_id = ?
     WHERE eq.id IS NOT NULL OR eb.id IS NOT NULL
     GROUP BY c.id
     ORDER BY c.sort_order, c.name
-")->fetchAll(PDO::FETCH_ASSOC);
+", [$eventId, $eventId]);
 
 if (empty($eliminationClasses)) {
     return;
@@ -47,19 +47,17 @@ if (empty($eliminationClasses)) {
 $elimClassId = isset($_GET['elim_class']) ? intval($_GET['elim_class']) : $eliminationClasses[0]['id'];
 
 // Get qualifying results
-$qualResults = $db->prepare("
+$qualifyingResults = $db->getAll("
     SELECT eq.*, r.firstname, r.lastname, cl.name as club_name
     FROM elimination_qualifying eq
     JOIN riders r ON eq.rider_id = r.id
     LEFT JOIN clubs cl ON r.club_id = cl.id
     WHERE eq.event_id = ? AND eq.class_id = ?
     ORDER BY eq.seed_position ASC, eq.best_time ASC
-");
-$qualResults->execute([$eventId, $elimClassId]);
-$qualifyingResults = $qualResults->fetchAll(PDO::FETCH_ASSOC);
+", [$eventId, $elimClassId]);
 
 // Get bracket data grouped by round
-$bracketStmt = $db->prepare("
+$bracketsRaw = $db->getAll("
     SELECT eb.*,
         r1.firstname as rider1_firstname, r1.lastname as rider1_lastname,
         cl1.name as rider1_club,
@@ -74,9 +72,7 @@ $bracketStmt = $db->prepare("
     LEFT JOIN riders w ON eb.winner_id = w.id
     WHERE eb.event_id = ? AND eb.class_id = ?
     ORDER BY eb.round_number ASC, eb.heat_number ASC
-");
-$bracketStmt->execute([$eventId, $elimClassId]);
-$bracketsRaw = $bracketStmt->fetchAll(PDO::FETCH_ASSOC);
+", [$eventId, $elimClassId]);
 
 $brackets = [];
 foreach ($bracketsRaw as $b) {
@@ -84,16 +80,14 @@ foreach ($bracketsRaw as $b) {
 }
 
 // Get final results
-$finalStmt = $db->prepare("
+$finalResults = $db->getAll("
     SELECT er.*, r.firstname, r.lastname, cl.name as club_name
     FROM elimination_results er
     JOIN riders r ON er.rider_id = r.id
     LEFT JOIN clubs cl ON r.club_id = cl.id
     WHERE er.event_id = ? AND er.class_id = ?
     ORDER BY er.final_position ASC
-");
-$finalStmt->execute([$eventId, $elimClassId]);
-$finalResults = $finalStmt->fetchAll(PDO::FETCH_ASSOC);
+", [$eventId, $elimClassId]);
 
 // Round name translations
 $roundNames = [

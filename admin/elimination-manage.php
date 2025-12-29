@@ -568,8 +568,8 @@ include __DIR__ . '/components/unified-layout.php';
                                                         <span class="seed"><?= $heat['rider_1_seed'] ?></span>
                                                         <span class="name"><?= h($heat['rider1_firstname'] . ' ' . $heat['rider1_lastname']) ?></span>
                                                         <div class="times">
-                                                            <input type="number" step="0.001" name="rider1_run1" value="<?= $heat['rider_1_run1'] ?: '' ?>" placeholder="Åk1" class="time-input">
-                                                            <input type="number" step="0.001" name="rider1_run2" value="<?= $heat['rider_1_run2'] ?: '' ?>" placeholder="Åk2" class="time-input">
+                                                            <input type="text" inputmode="decimal" name="rider1_run1" value="<?= $heat['rider_1_run1'] ? number_format($heat['rider_1_run1'], 3) : '' ?>" placeholder="Åk1" class="time-input">
+                                                            <input type="text" inputmode="decimal" name="rider1_run2" value="<?= $heat['rider_1_run2'] ? number_format($heat['rider_1_run2'], 3) : '' ?>" placeholder="Åk2" class="time-input">
                                                             <span class="total"><?= $heat['rider_1_total'] ? number_format($heat['rider_1_total'], 3) : '-' ?></span>
                                                         </div>
                                                     </div>
@@ -581,8 +581,8 @@ include __DIR__ . '/components/unified-layout.php';
                                                         <span class="seed"><?= $heat['rider_2_seed'] ?></span>
                                                         <span class="name"><?= h($heat['rider2_firstname'] . ' ' . $heat['rider2_lastname']) ?></span>
                                                         <div class="times">
-                                                            <input type="number" step="0.001" name="rider2_run1" value="<?= $heat['rider_2_run1'] ?: '' ?>" placeholder="Åk1" class="time-input">
-                                                            <input type="number" step="0.001" name="rider2_run2" value="<?= $heat['rider_2_run2'] ?: '' ?>" placeholder="Åk2" class="time-input">
+                                                            <input type="text" inputmode="decimal" name="rider2_run1" value="<?= $heat['rider_2_run1'] ? number_format($heat['rider_2_run1'], 3) : '' ?>" placeholder="Åk1" class="time-input">
+                                                            <input type="text" inputmode="decimal" name="rider2_run2" value="<?= $heat['rider_2_run2'] ? number_format($heat['rider_2_run2'], 3) : '' ?>" placeholder="Åk2" class="time-input">
                                                             <span class="total"><?= $heat['rider_2_total'] ? number_format($heat['rider_2_total'], 3) : '-' ?></span>
                                                         </div>
                                                     </div>
