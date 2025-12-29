@@ -298,6 +298,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             }
 
+            // Get class mappings for this event (DS class -> series class)
+            $classMappings = [];
+            try {
+                $mappingsRaw = $db->getAll("
+                    SELECT ds_class_id, series_class_id FROM elimination_class_mapping
+                    WHERE event_id = ?
+                ", [$eventId]);
+                foreach ($mappingsRaw as $m) {
+                    $classMappings[$m['ds_class_id']] = $m['series_class_id'];
+                }
+            } catch (Exception $e) {
+                // Table might not exist yet
+            }
+
             // Update seed positions and sync to results table for all imported classes
             foreach (array_keys($classesImported) as $impClassId) {
                 $qualifiers = $db->getAll("
@@ -307,12 +321,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     ORDER BY eq.best_time ASC
                 ", [$eventId, $impClassId]);
 
+                // Determine which class to use for series points (mapped or same)
+                $seriesClassId = $classMappings[$impClassId] ?? $impClassId;
+
                 $pos = 1;
                 foreach ($qualifiers as $q) {
                     // Update seed position
                     $pdo->prepare("UPDATE elimination_qualifying SET seed_position = ? WHERE id = ?")->execute([$pos, $q['id']]);
 
-                    // Sync to main results table (for result counts and series calculations)
+                    // Sync to main results table using mapped class (for series calculations)
                     $stmt = $pdo->prepare("
                         INSERT INTO results (event_id, class_id, cyclist_id, position, finish_time, bib_number, status)
                         VALUES (?, ?, ?, ?, ?, ?, 'finished')
@@ -324,7 +341,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     ");
                     $stmt->execute([
                         $eventId,
-                        $impClassId,
+                        $seriesClassId,  // Use mapped class for series points
                         $q['rider_id'],
                         $pos,
                         $q['best_time'],

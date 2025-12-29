@@ -52,24 +52,36 @@ try {
     $tablesExist = false;
 }
 
-// Get qualifying results for selected class
+// Get qualifying results for selected class (for backwards compat)
 $qualifyingResults = [];
 $brackets = [];
 $finalResults = [];
 
-if ($tablesExist && $selectedClassId) {
-    $qualifyingResults = $db->getAll("
-        SELECT eq.*, r.firstname, r.lastname, cl.name as club_name
+// Get ALL qualifying results grouped by class
+$allQualifyingByClass = [];
+$allBracketsByClass = [];
+$allFinalResultsByClass = [];
+
+if ($tablesExist) {
+    // Get all qualifying results for ALL classes
+    $allQualRaw = $db->getAll("
+        SELECT eq.*, r.firstname, r.lastname, cl.name as club_name, c.display_name as class_display_name, c.name as class_name
         FROM elimination_qualifying eq
         JOIN riders r ON eq.rider_id = r.id
         LEFT JOIN clubs cl ON r.club_id = cl.id
-        WHERE eq.event_id = ? AND eq.class_id = ?
-        ORDER BY eq.seed_position ASC, eq.best_time ASC
-    ", [$eventId, $selectedClassId]);
+        JOIN classes c ON eq.class_id = c.id
+        WHERE eq.event_id = ?
+        ORDER BY c.sort_order, c.name, eq.seed_position ASC, eq.best_time ASC
+    ", [$eventId]);
 
-    // Get brackets grouped by round
-    $bracketsRaw = $db->getAll("
-        SELECT eb.*,
+    foreach ($allQualRaw as $q) {
+        $allQualifyingByClass[$q['class_id']]['name'] = $q['class_display_name'] ?? $q['class_name'];
+        $allQualifyingByClass[$q['class_id']]['results'][] = $q;
+    }
+
+    // Get all brackets for ALL classes
+    $allBracketsRaw = $db->getAll("
+        SELECT eb.*, c.display_name as class_display_name, c.name as class_name,
             r1.firstname as rider1_firstname, r1.lastname as rider1_lastname,
             r2.firstname as rider2_firstname, r2.lastname as rider2_lastname,
             w.firstname as winner_firstname, w.lastname as winner_lastname
@@ -77,23 +89,42 @@ if ($tablesExist && $selectedClassId) {
         LEFT JOIN riders r1 ON eb.rider_1_id = r1.id
         LEFT JOIN riders r2 ON eb.rider_2_id = r2.id
         LEFT JOIN riders w ON eb.winner_id = w.id
-        WHERE eb.event_id = ? AND eb.class_id = ?
-        ORDER BY eb.round_number ASC, eb.heat_number ASC
-    ", [$eventId, $selectedClassId]);
+        JOIN classes c ON eb.class_id = c.id
+        WHERE eb.event_id = ?
+        ORDER BY c.sort_order, c.name, eb.round_number ASC, eb.heat_number ASC
+    ", [$eventId]);
 
-    // Group brackets by round
-    foreach ($bracketsRaw as $b) {
-        $brackets[$b['round_name']][] = $b;
+    foreach ($allBracketsRaw as $b) {
+        $allBracketsByClass[$b['class_id']]['name'] = $b['class_display_name'] ?? $b['class_name'];
+        $allBracketsByClass[$b['class_id']]['rounds'][$b['round_name']][] = $b;
     }
 
-    $finalResults = $db->getAll("
-        SELECT er.*, r.firstname, r.lastname, cl.name as club_name
+    // Get all final results for ALL classes
+    $allFinalRaw = $db->getAll("
+        SELECT er.*, r.firstname, r.lastname, cl.name as club_name, c.display_name as class_display_name, c.name as class_name
         FROM elimination_results er
         JOIN riders r ON er.rider_id = r.id
         LEFT JOIN clubs cl ON r.club_id = cl.id
-        WHERE er.event_id = ? AND er.class_id = ?
-        ORDER BY er.final_position ASC
-    ", [$eventId, $selectedClassId]);
+        JOIN classes c ON er.class_id = c.id
+        WHERE er.event_id = ?
+        ORDER BY c.sort_order, c.name, er.final_position ASC
+    ", [$eventId]);
+
+    foreach ($allFinalRaw as $f) {
+        $allFinalResultsByClass[$f['class_id']]['name'] = $f['class_display_name'] ?? $f['class_name'];
+        $allFinalResultsByClass[$f['class_id']]['results'][] = $f;
+    }
+
+    // Also keep selected class data for backwards compat
+    if ($selectedClassId && isset($allQualifyingByClass[$selectedClassId])) {
+        $qualifyingResults = $allQualifyingByClass[$selectedClassId]['results'] ?? [];
+    }
+    if ($selectedClassId && isset($allBracketsByClass[$selectedClassId])) {
+        $brackets = $allBracketsByClass[$selectedClassId]['rounds'] ?? [];
+    }
+    if ($selectedClassId && isset($allFinalResultsByClass[$selectedClassId])) {
+        $finalResults = $allFinalResultsByClass[$selectedClassId]['results'] ?? [];
+    }
 }
 
 /**
@@ -397,6 +428,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         exit;
     }
 
+    if ($action === 'clear_all_results') {
+        // Clear ALL results for this event (all classes)
+        try {
+            // Delete all brackets for this event
+            $pdo->prepare("DELETE FROM elimination_brackets WHERE event_id = ?")->execute([$eventId]);
+
+            // Delete all qualifying results for this event
+            $pdo->prepare("DELETE FROM elimination_qualifying WHERE event_id = ?")->execute([$eventId]);
+
+            // Delete all final results from elimination_results
+            $pdo->prepare("DELETE FROM elimination_results WHERE event_id = ?")->execute([$eventId]);
+
+            // Delete from main results table (only for classes that had elimination data)
+            $pdo->prepare("DELETE FROM results WHERE event_id = ?")->execute([$eventId]);
+
+            // Delete class mappings too
+            try {
+                $pdo->prepare("DELETE FROM elimination_class_mapping WHERE event_id = ?")->execute([$eventId]);
+            } catch (Exception $e) {
+                // Table might not exist
+            }
+
+            $_SESSION['success'] = "Alla resultat för detta event har rensats (alla klasser).";
+        } catch (Exception $e) {
+            $_SESSION['error'] = "Fel vid rensning: " . $e->getMessage();
+        }
+
+        header("Location: /admin/elimination-manage.php?event_id={$eventId}");
+        exit;
+    }
+
     if ($action === 'clear_qualifying') {
         // Clear qualifying results for this class (and any brackets)
         $classId = intval($_POST['class_id'] ?? 0);
@@ -535,7 +597,58 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         header("Location: /admin/elimination-manage.php?event_id={$eventId}&class_id={$selectedClassId}");
         exit;
     }
+
+    if ($action === 'save_class_mappings') {
+        // Save class mappings for series points
+        $mappings = $_POST['mappings'] ?? [];
+
+        try {
+            // Delete existing mappings for this event
+            $pdo->prepare("DELETE FROM elimination_class_mapping WHERE event_id = ?")->execute([$eventId]);
+
+            // Insert new mappings
+            $stmt = $pdo->prepare("
+                INSERT INTO elimination_class_mapping (event_id, ds_class_id, series_class_id)
+                VALUES (?, ?, ?)
+            ");
+
+            foreach ($mappings as $dsClassId => $seriesClassId) {
+                if (!empty($seriesClassId) && $seriesClassId != $dsClassId) {
+                    $stmt->execute([$eventId, $dsClassId, $seriesClassId]);
+                }
+            }
+
+            $_SESSION['success'] = "Klassmappningar sparade!";
+        } catch (Exception $e) {
+            $_SESSION['error'] = "Fel vid sparande av mappningar: " . $e->getMessage();
+        }
+
+        header("Location: /admin/elimination-manage.php?event_id={$eventId}&class_id={$selectedClassId}");
+        exit;
+    }
 }
+
+// Get class mappings for this event
+$classMappings = [];
+try {
+    $mappingsRaw = $db->getAll("
+        SELECT ds_class_id, series_class_id FROM elimination_class_mapping
+        WHERE event_id = ?
+    ", [$eventId]);
+    foreach ($mappingsRaw as $m) {
+        $classMappings[$m['ds_class_id']] = $m['series_class_id'];
+    }
+} catch (Exception $e) {
+    // Table might not exist yet
+}
+
+// Get all series classes for dropdown
+$allSeriesClasses = $db->getAll("
+    SELECT id, name, display_name, discipline
+    FROM classes
+    WHERE active = 1
+    ORDER BY sort_order, name
+");
 
 // Page config
 $page_title = 'Hantera Elimination - ' . $event['name'];
@@ -665,104 +778,181 @@ function confirmGenerateBrackets() {
         document.getElementById('generate-brackets-form').submit();
     }
 }
+
+function confirmClearAll() {
+    const message = 'Vill du rensa ALLA resultat för detta event?\n\nDetta tar bort:\n- Alla kvalificeringsresultat\n- Alla brackets\n- Alla slutresultat\n\nDenna åtgärd kan inte ångras!';
+
+    if (confirm(message)) {
+        document.getElementById('clear-all-form').submit();
+    }
+}
 </script>
 
-<!-- Class Selector -->
+<!-- Class Mapping for Series Points -->
+<?php if ($totalQualifiers > 0): ?>
 <div class="admin-card mb-lg">
+    <div class="admin-card-header">
+        <h3 style="display: flex; align-items: center; gap: var(--space-sm);">
+            <i data-lucide="arrow-right-left"></i>
+            Seriepoängklasser
+        </h3>
+    </div>
     <div class="admin-card-body">
-        <form method="GET" class="admin-form-row">
-            <input type="hidden" name="event_id" value="<?= $eventId ?>">
-            <div class="admin-form-group" style="margin-bottom: 0; flex: 1;">
-                <label for="class-select" class="admin-form-label">Välj Klass</label>
-                <select id="class-select" name="class_id" class="admin-form-select" onchange="this.form.submit()">
-                    <?php if (empty($classes)): ?>
-                        <option value="">-- Inga klasser med kvaldata --</option>
-                    <?php endif; ?>
-                    <?php foreach ($classes as $class): ?>
-                        <option value="<?= $class['id'] ?>" <?= $selectedClassId == $class['id'] ? 'selected' : '' ?>>
-                            <?= h($class['display_name'] ?? $class['name']) ?>
-                            <?php if ($class['rider_count'] > 0): ?> (<?= $class['rider_count'] ?> åkare)<?php endif; ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
+        <p class="mb-md" style="color: var(--color-text-secondary);">
+            Mappa DS-klasser till seriens huvudklasser för poängberäkning.
+            Om ingen mappning anges används samma klass.
+        </p>
+        <form method="POST">
+            <input type="hidden" name="action" value="save_class_mappings">
+            <div class="admin-table-container mb-md">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>DS-klass (Dual Slalom)</th>
+                            <th>Seriepoängklass</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($classes as $dsClass): ?>
+                            <?php if ($dsClass['rider_count'] > 0): ?>
+                            <tr>
+                                <td>
+                                    <strong><?= h($dsClass['display_name'] ?? $dsClass['name']) ?></strong>
+                                    <span class="text-secondary text-sm">(<?= $dsClass['rider_count'] ?> åkare)</span>
+                                </td>
+                                <td>
+                                    <select name="mappings[<?= $dsClass['id'] ?>]" class="admin-form-select" style="max-width: 300px;">
+                                        <option value="">-- Samma klass --</option>
+                                        <?php foreach ($allSeriesClasses as $sc): ?>
+                                            <?php if ($sc['id'] != $dsClass['id']): ?>
+                                            <option value="<?= $sc['id'] ?>" <?= ($classMappings[$dsClass['id']] ?? '') == $sc['id'] ? 'selected' : '' ?>>
+                                                <?= h($sc['display_name'] ?? $sc['name']) ?>
+                                                <?php if ($sc['discipline']): ?>(<?= h($sc['discipline']) ?>)<?php endif; ?>
+                                            </option>
+                                            <?php endif; ?>
+                                        <?php endforeach; ?>
+                                    </select>
+                                </td>
+                            </tr>
+                            <?php endif; ?>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
             </div>
+            <button type="submit" class="btn-admin btn-admin-primary">
+                <i data-lucide="save"></i> Spara mappningar
+            </button>
         </form>
     </div>
 </div>
+<?php endif; ?>
+
+<!-- Clear All Results -->
+<?php if ($totalQualifiers > 0): ?>
+<div class="admin-card mb-lg" style="border-color: var(--color-error);">
+    <div class="admin-card-body">
+        <div class="flex items-center justify-between flex-wrap gap-md">
+            <div>
+                <h4 style="margin: 0; color: var(--color-error);">
+                    <i data-lucide="trash-2"></i> Rensa alla resultat
+                </h4>
+                <p style="margin: var(--space-xs) 0 0; color: var(--color-text-secondary);">
+                    Tar bort alla kvalificeringar, brackets och resultat för detta event.
+                </p>
+            </div>
+            <form method="POST" style="display: inline;" id="clear-all-form">
+                <input type="hidden" name="action" value="clear_all_results">
+                <button type="button" onclick="confirmClearAll()" class="btn-admin btn-admin-danger">
+                    <i data-lucide="trash-2"></i> Rensa allt
+                </button>
+            </form>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
+
+<?php
+$totalQualCount = 0;
+foreach ($allQualifyingByClass as $cdata) {
+    $totalQualCount += count($cdata['results'] ?? []);
+}
+$totalBracketCount = 0;
+foreach ($allBracketsByClass as $cdata) {
+    foreach ($cdata['rounds'] ?? [] as $heats) {
+        $totalBracketCount += count($heats);
+    }
+}
+$totalResultCount = 0;
+foreach ($allFinalResultsByClass as $cdata) {
+    $totalResultCount += count($cdata['results'] ?? []);
+}
+?>
 
 <!-- Tabs for different sections -->
 <div class="tabs mb-lg">
     <nav class="tabs-nav">
         <button class="tab-btn active" data-tab="qualifying">
             <i data-lucide="timer"></i> Kvalificering
-            <span class="admin-badge admin-badge-<?= count($qualifyingResults) > 0 ? 'success' : 'secondary' ?> ml-sm"><?= count($qualifyingResults) ?></span>
+            <span class="admin-badge admin-badge-<?= $totalQualCount > 0 ? 'success' : 'secondary' ?> ml-sm"><?= $totalQualCount ?></span>
         </button>
         <button class="tab-btn" data-tab="brackets">
             <i data-lucide="git-branch"></i> Bracket
-            <span class="admin-badge admin-badge-<?= !empty($brackets) ? 'success' : 'secondary' ?> ml-sm"><?= array_sum(array_map('count', $brackets)) ?></span>
+            <span class="admin-badge admin-badge-<?= $totalBracketCount > 0 ? 'success' : 'secondary' ?> ml-sm"><?= $totalBracketCount ?></span>
         </button>
         <button class="tab-btn" data-tab="results">
             <i data-lucide="trophy"></i> Resultat
-            <span class="admin-badge admin-badge-<?= count($finalResults) > 0 ? 'success' : 'secondary' ?> ml-sm"><?= count($finalResults) ?></span>
+            <span class="admin-badge admin-badge-<?= $totalResultCount > 0 ? 'success' : 'secondary' ?> ml-sm"><?= $totalResultCount ?></span>
         </button>
     </nav>
 
-    <!-- QUALIFYING TAB -->
+    <!-- QUALIFYING TAB - Shows ALL classes -->
     <div class="tab-content active" id="qualifying">
-        <div class="admin-card">
-            <div class="admin-card-header">
-                <h3>Kvalificeringsresultat</h3>
-                <div class="flex gap-sm flex-wrap">
-                    <a href="/admin/elimination-import-qualifying.php?event_id=<?= $eventId ?>&class_id=<?= $selectedClassId ?>" class="btn-admin btn-admin-primary btn-admin-sm">
-                        <i data-lucide="upload"></i> Importera
-                    </a>
-                    <a href="/admin/elimination-add-qualifying.php?event_id=<?= $eventId ?>&class_id=<?= $selectedClassId ?>" class="btn-admin btn-admin-secondary btn-admin-sm">
-                        <i data-lucide="plus"></i> Lägg till
-                    </a>
-                    <?php if (!empty($qualifyingResults)): ?>
-                        <form method="POST" style="display: inline;" onsubmit="return confirm('Vill du rensa ALL kvalificering och bracket för denna klass?');">
-                            <input type="hidden" name="action" value="clear_qualifying">
-                            <input type="hidden" name="class_id" value="<?= $selectedClassId ?>">
-                            <button type="submit" class="btn-admin btn-admin-danger btn-admin-sm">
-                                <i data-lucide="trash-2"></i> Rensa allt
-                            </button>
-                        </form>
-                    <?php endif; ?>
-                </div>
-            </div>
-            <div class="admin-card-body">
-                <?php if (empty($qualifyingResults)): ?>
+        <?php if (empty($allQualifyingByClass)): ?>
+            <div class="admin-card">
+                <div class="admin-card-body">
                     <div class="admin-empty-state">
                         <i data-lucide="timer"></i>
                         <h3>Inga kvalresultat</h3>
-                        <p>Importera eller lägg till kvalificeringsresultat för att komma igång.</p>
+                        <p>Importera kvalificeringsresultat för att komma igång.</p>
+                        <a href="/admin/elimination-import-qualifying.php?event_id=<?= $eventId ?>" class="btn-admin btn-admin-primary mt-md">
+                            <i data-lucide="upload"></i> Importera kvalresultat
+                        </a>
                     </div>
-                <?php else: ?>
-                    <div class="admin-table-container">
-                        <table class="admin-table">
-                            <thead>
-                                <tr>
-                                    <th>Seed</th>
-                                    <th>Nr</th>
-                                    <th>Namn</th>
-                                    <th>Klubb</th>
-                                    <th class="text-right">Åk 1</th>
-                                    <th class="text-right">Åk 2</th>
-                                    <th class="text-right">Bäst</th>
-                                    <th class="text-center">Till bracket</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php foreach ($qualifyingResults as $qr): ?>
-                                    <tr class="<?= $qr['advances_to_bracket'] ? 'row-highlight' : '' ?>">
-                                        <td><strong><?= $qr['seed_position'] ?? '-' ?></strong></td>
-                                        <td><?= h($qr['bib_number'] ?? '-') ?></td>
-                                        <td><?= h($qr['firstname'] . ' ' . $qr['lastname']) ?></td>
-                                        <td><?= h($qr['club_name'] ?? '-') ?></td>
-                                        <td class="text-right"><?= $qr['run_1_time'] ? number_format($qr['run_1_time'], 3) : '-' ?></td>
-                                        <td class="text-right"><?= $qr['run_2_time'] ? number_format($qr['run_2_time'], 3) : '-' ?></td>
-                                        <td class="text-right"><strong><?= $qr['best_time'] ? number_format($qr['best_time'], 3) : '-' ?></strong></td>
-                                        <td class="text-center">
+                </div>
+            </div>
+        <?php else: ?>
+            <?php foreach ($allQualifyingByClass as $classId => $classData): ?>
+                <div class="admin-card mb-lg">
+                    <div class="admin-card-header">
+                        <h3><?= h($classData['name']) ?></h3>
+                        <span class="admin-badge admin-badge-success"><?= count($classData['results']) ?> åkare</span>
+                    </div>
+                    <div class="admin-card-body" style="padding: 0;">
+                        <div class="admin-table-container">
+                            <table class="admin-table">
+                                <thead>
+                                    <tr>
+                                        <th>Seed</th>
+                                        <th>Nr</th>
+                                        <th>Namn</th>
+                                        <th>Klubb</th>
+                                        <th class="text-right">Åk 1</th>
+                                        <th class="text-right">Åk 2</th>
+                                        <th class="text-right">Bäst</th>
+                                        <th class="text-center">Bracket</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($classData['results'] as $qr): ?>
+                                        <tr class="<?= $qr['advances_to_bracket'] ? 'row-highlight' : '' ?>">
+                                            <td><strong><?= $qr['seed_position'] ?? '-' ?></strong></td>
+                                            <td><?= h($qr['bib_number'] ?? '-') ?></td>
+                                            <td><?= h($qr['firstname'] . ' ' . $qr['lastname']) ?></td>
+                                            <td><?= h($qr['club_name'] ?? '-') ?></td>
+                                            <td class="text-right"><?= $qr['run_1_time'] ? number_format($qr['run_1_time'], 3) : '-' ?></td>
+                                            <td class="text-right"><?= $qr['run_2_time'] ? number_format($qr['run_2_time'], 3) : '-' ?></td>
+                                            <td class="text-right"><strong><?= $qr['best_time'] ? number_format($qr['best_time'], 3) : '-' ?></strong></td>
+                                            <td class="text-center">
                                             <?php if ($qr['advances_to_bracket']): ?>
                                                 <span class="admin-badge admin-badge-success">Ja</span>
                                             <?php else: ?>
@@ -774,46 +964,42 @@ function confirmGenerateBrackets() {
                             </tbody>
                         </table>
                     </div>
-
-                <?php endif; ?>
+                </div>
             </div>
-        </div>
+            <?php endforeach; ?>
+        <?php endif; ?>
     </div>
 
-    <!-- BRACKETS TAB -->
+    <!-- BRACKETS TAB - Shows ALL classes -->
     <div class="tab-content" id="brackets">
-        <div class="admin-card">
-            <div class="admin-card-header">
-                <h3>Elimination Bracket</h3>
-                <?php if (!empty($brackets)): ?>
-                    <form method="POST" style="display: inline;" onsubmit="return confirm('Vill du rensa bracket? Kvalificeringsresultat behålls.');">
-                        <input type="hidden" name="action" value="clear_brackets">
-                        <input type="hidden" name="class_id" value="<?= $selectedClassId ?>">
-                        <button type="submit" class="btn-admin btn-admin-warning btn-admin-sm">
-                            <i data-lucide="refresh-cw"></i> Rensa bracket
-                        </button>
-                    </form>
-                <?php endif; ?>
-            </div>
-            <div class="admin-card-body">
-                <?php if (empty($brackets)): ?>
+        <?php if (empty($allBracketsByClass)): ?>
+            <div class="admin-card">
+                <div class="admin-card-body">
                     <div class="admin-empty-state">
                         <i data-lucide="git-branch"></i>
                         <h3>Ingen bracket genererad</h3>
-                        <p>Lägg först in kvalificeringsresultat och generera sedan bracket.</p>
+                        <p>Generera bracket från kvalificeringsresultaten.</p>
                     </div>
-                <?php else: ?>
-                    <?php
-                    $roundNames = [
-                        'round_of_32' => '32-delsfinal',
-                        'round_of_16' => '16-delsfinal',
-                        'quarterfinal' => 'Kvartsfinal',
-                        'semifinal' => 'Semifinal',
-                        'third_place' => 'Brons',
-                        'final' => 'Final'
-                    ];
-                    ?>
-                    <?php foreach ($brackets as $roundName => $heats): ?>
+                </div>
+            </div>
+        <?php else: ?>
+            <?php
+            $roundNames = [
+                'round_of_32' => '32-delsfinal',
+                'round_of_16' => '16-delsfinal',
+                'quarterfinal' => 'Kvartsfinal',
+                'semifinal' => 'Semifinal',
+                'third_place' => 'Brons',
+                'final' => 'Final'
+            ];
+            ?>
+            <?php foreach ($allBracketsByClass as $classId => $classData): ?>
+                <div class="admin-card mb-lg">
+                    <div class="admin-card-header">
+                        <h3><?= h($classData['name']) ?></h3>
+                    </div>
+                    <div class="admin-card-body">
+                        <?php foreach ($classData['rounds'] as $roundName => $heats): ?>
                         <div class="bracket-round mb-lg">
                             <h4 class="mb-md"><?= $roundNames[$roundName] ?? ucfirst($roundName) ?></h4>
                             <div class="bracket-heats">
@@ -908,67 +1094,74 @@ function confirmGenerateBrackets() {
                                 <?php endforeach; ?>
                             </div>
                         </div>
-                    <?php endforeach; ?>
-                <?php endif; ?>
-            </div>
-        </div>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+            <?php endforeach; ?>
+        <?php endif; ?>
     </div>
 
-    <!-- RESULTS TAB -->
+    <!-- RESULTS TAB - Shows ALL classes -->
     <div class="tab-content" id="results">
-        <div class="admin-card">
-            <div class="admin-card-header">
-                <h3>Slutresultat</h3>
-            </div>
-            <div class="admin-card-body">
-                <?php if (empty($finalResults)): ?>
+        <?php if (empty($allFinalResultsByClass)): ?>
+            <div class="admin-card">
+                <div class="admin-card-body">
                     <div class="admin-empty-state">
                         <i data-lucide="trophy"></i>
                         <h3>Inga slutresultat</h3>
                         <p>Slutresultat genereras automatiskt när alla heats är klara.</p>
                     </div>
-                <?php else: ?>
-                    <div class="admin-table-container">
-                        <table class="admin-table">
-                            <thead>
-                                <tr>
-                                    <th>Plac</th>
-                                    <th>Namn</th>
-                                    <th>Klubb</th>
-                                    <th>Kval</th>
-                                    <th>Bracket</th>
-                                    <th class="text-right">Poäng</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                <?php foreach ($finalResults as $result): ?>
-                                    <tr>
-                                        <td>
-                                            <?php if ($result['final_position'] <= 3): ?>
-                                                <span class="position-badge position-<?= $result['final_position'] ?>"><?= $result['final_position'] ?></span>
-                                            <?php else: ?>
-                                                <?= $result['final_position'] ?>
-                                            <?php endif; ?>
-                                        </td>
-                                        <td><?= h($result['firstname'] . ' ' . $result['lastname']) ?></td>
-                                        <td><?= h($result['club_name'] ?? '-') ?></td>
-                                        <td><?= $result['qualifying_position'] ?? '-' ?></td>
-                                        <td>
-                                            <?php if ($result['bracket_type'] === 'consolation'): ?>
-                                                <span class="admin-badge admin-badge-warning">B</span>
-                                            <?php else: ?>
-                                                <span class="admin-badge admin-badge-success">A</span>
-                                            <?php endif; ?>
-                                        </td>
-                                        <td class="text-right"><?= $result['points'] ?></td>
-                                    </tr>
-                                <?php endforeach; ?>
-                            </tbody>
-                        </table>
-                    </div>
-                <?php endif; ?>
+                </div>
             </div>
-        </div>
+        <?php else: ?>
+            <?php foreach ($allFinalResultsByClass as $classId => $classData): ?>
+                <div class="admin-card mb-lg">
+                    <div class="admin-card-header">
+                        <h3><?= h($classData['name']) ?></h3>
+                    </div>
+                    <div class="admin-card-body" style="padding: 0;">
+                        <div class="admin-table-container">
+                            <table class="admin-table">
+                                <thead>
+                                    <tr>
+                                        <th>Plac</th>
+                                        <th>Namn</th>
+                                        <th>Klubb</th>
+                                        <th>Kval</th>
+                                        <th>Bracket</th>
+                                        <th class="text-right">Poäng</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($classData['results'] as $result): ?>
+                                        <tr>
+                                            <td>
+                                                <?php if ($result['final_position'] <= 3): ?>
+                                                    <span class="position-badge position-<?= $result['final_position'] ?>"><?= $result['final_position'] ?></span>
+                                                <?php else: ?>
+                                                    <?= $result['final_position'] ?>
+                                                <?php endif; ?>
+                                            </td>
+                                            <td><?= h($result['firstname'] . ' ' . $result['lastname']) ?></td>
+                                            <td><?= h($result['club_name'] ?? '-') ?></td>
+                                            <td><?= $result['qualifying_position'] ?? '-' ?></td>
+                                            <td>
+                                                <?php if ($result['bracket_type'] === 'consolation'): ?>
+                                                    <span class="admin-badge admin-badge-warning">B</span>
+                                                <?php else: ?>
+                                                    <span class="admin-badge admin-badge-success">A</span>
+                                                <?php endif; ?>
+                                            </td>
+                                            <td class="text-right"><?= $result['points'] ?></td>
+                                        </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            <?php endforeach; ?>
+        <?php endif; ?>
     </div>
 </div>
 
