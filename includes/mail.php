@@ -17,7 +17,7 @@
 function hub_send_email(string $to, string $subject, string $body, array $options = []): bool {
     // Default sender info
     $fromName = $options['from_name'] ?? 'TheHUB';
-    $fromEmail = $options['from_email'] ?? 'noreply@thehub.gravityseries.se';
+    $fromEmail = $options['from_email'] ?? 'HUB@gravityseries.se';
     $replyTo = $options['reply_to'] ?? $fromEmail;
 
     // Build headers
