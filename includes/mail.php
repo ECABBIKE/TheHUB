@@ -1,12 +1,12 @@
 <?php
 /**
  * TheHUB Email Helper
- * Supports both PHP mail() and SMTP
- * Configure SMTP in .env file for reliable email delivery
+ * Supports Resend (recommended), SMTP, and PHP mail()
+ * Configure in .env file - set MAIL_DRIVER=resend for best deliverability
  */
 
 /**
- * Send an email using SMTP or PHP mail()
+ * Send an email using configured driver
  *
  * @param string $to Recipient email address
  * @param string $subject Email subject
@@ -16,7 +16,7 @@
  */
 function hub_send_email(string $to, string $subject, string $body, array $options = []): bool {
     // Get mail configuration from environment
-    $mailDriver = env('MAIL_DRIVER', 'mail'); // 'smtp' or 'mail'
+    $mailDriver = env('MAIL_DRIVER', 'mail'); // 'resend', 'smtp', or 'mail'
 
     // Default sender info (from .env or fallback)
     $fromName = $options['from_name'] ?? env('MAIL_FROM_NAME', 'TheHUB');
@@ -26,10 +26,65 @@ function hub_send_email(string $to, string $subject, string $body, array $option
     // Log the email attempt
     error_log("TheHUB Mail: Sending to {$to} - Subject: {$subject} - Driver: {$mailDriver}");
 
-    if ($mailDriver === 'smtp') {
+    if ($mailDriver === 'resend') {
+        return hub_send_resend_email($to, $subject, $body, $fromName, $fromEmail, $replyTo);
+    } elseif ($mailDriver === 'smtp') {
         return hub_send_smtp_email($to, $subject, $body, $fromName, $fromEmail, $replyTo);
     } else {
         return hub_send_php_mail($to, $subject, $body, $fromName, $fromEmail, $replyTo);
+    }
+}
+
+/**
+ * Send email using Resend API (recommended for best deliverability)
+ */
+function hub_send_resend_email(string $to, string $subject, string $body, string $fromName, string $fromEmail, string $replyTo): bool {
+    $apiKey = env('RESEND_API_KEY', '');
+
+    if (empty($apiKey)) {
+        error_log("TheHUB Mail: Resend API key not configured, falling back to SMTP");
+        return hub_send_smtp_email($to, $subject, $body, $fromName, $fromEmail, $replyTo);
+    }
+
+    $data = [
+        'from' => "{$fromName} <{$fromEmail}>",
+        'to' => [$to],
+        'subject' => $subject,
+        'html' => $body,
+        'reply_to' => $replyTo
+    ];
+
+    $ch = curl_init('https://api.resend.com/emails');
+    curl_setopt_array($ch, [
+        CURLOPT_RETURNTRANSFER => true,
+        CURLOPT_POST => true,
+        CURLOPT_HTTPHEADER => [
+            'Authorization: Bearer ' . $apiKey,
+            'Content-Type: application/json'
+        ],
+        CURLOPT_POSTFIELDS => json_encode($data),
+        CURLOPT_TIMEOUT => 30
+    ]);
+
+    $response = curl_exec($ch);
+    $httpCode = curl_getinfo($ch, CURLINFO_HTTP_CODE);
+    $error = curl_error($ch);
+    curl_close($ch);
+
+    if ($error) {
+        error_log("TheHUB Mail: Resend cURL error: {$error}");
+        return false;
+    }
+
+    $result = json_decode($response, true);
+
+    if ($httpCode >= 200 && $httpCode < 300 && isset($result['id'])) {
+        error_log("TheHUB Mail: Email sent successfully via Resend to {$to} (ID: {$result['id']})");
+        return true;
+    } else {
+        $errorMsg = $result['message'] ?? $result['error'] ?? $response;
+        error_log("TheHUB Mail: Resend error (HTTP {$httpCode}): {$errorMsg}");
+        return false;
     }
 }
 
