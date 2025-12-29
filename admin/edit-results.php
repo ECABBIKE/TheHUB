@@ -67,6 +67,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   'status' => trim($_POST['status'] ?? 'finished'),
  ];
 
+ // Update class if provided
+ if (isset($_POST['class_id']) && $_POST['class_id'] !== '') {
+  $updateData['class_id'] = (int)$_POST['class_id'];
+ }
+
  // Add DH run times if provided
  if (isset($_POST['run_1_time'])) {
   $updateData['run_1_time'] = !empty($_POST['run_1_time']) ? trim($_POST['run_1_time']) : null;
@@ -233,6 +238,7 @@ include __DIR__ . '/components/unified-layout.php';
     <tr>
      <th class="table-th-w60">Plac.</th>
      <th>Namn</th>
+     <th class="table-th-w140">Klass</th>
      <th class="table-th-w120">Licens</th>
      <th class="table-th-w150">Klubb</th>
      <th class="table-th-w100">Startnr</th>
@@ -274,6 +280,17 @@ include __DIR__ . '/components/unified-layout.php';
        • <?= $result['gender'] == 'M' ? 'Herr' : ($result['gender'] == 'F' ? 'Dam' : '') ?>
        <?php endif; ?>
       </div>
+      </td>
+
+      <!-- Class -->
+      <td>
+      <select name="class_id" class="input input-xs">
+       <?php foreach ($classes as $class): ?>
+       <option value="<?= $class['id'] ?>" <?= $result['class_id'] == $class['id'] ? 'selected' : '' ?>>
+        <?= h($class['display_name'] ?? $class['name']) ?>
+       </option>
+       <?php endforeach; ?>
+      </select>
       </td>
 
       <!-- License -->
