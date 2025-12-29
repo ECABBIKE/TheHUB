@@ -188,6 +188,25 @@ include __DIR__ . '/components/unified-layout.php';
     </div>
    </div>
 
+   <!-- Bulk Resultat -->
+   <div class="admin-import-section" style="border-left: 3px solid var(--color-success);">
+    <div class="admin-import-section-header">
+     <div class="admin-import-section-icon" style="background: rgba(97, 206, 112, 0.1); color: var(--color-success);">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 16v6"/><path d="M12 21v-6"/><path d="M8 17v4"/><path d="M4 21h16"/><path d="M4 3h16"/><path d="M16 3v6"/><path d="M12 3v6"/><path d="M8 3v6"/></svg>
+     </div>
+     <div class="admin-import-section-content">
+      <h3 class="admin-import-section-title">Bulk-import Resultat</h3>
+      <p class="admin-import-section-description">Importera 100+ CSV-filer i ett svep.</p>
+     </div>
+    </div>
+    <div class="admin-import-section-actions">
+     <a href="/admin/import-bulk-results.php" class="btn-admin btn-admin-success btn-admin-sm" title="Bulk-import">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      <span>Bulk</span>
+     </a>
+    </div>
+   </div>
+
    <!-- Events -->
    <div class="admin-import-section" style="border-left: 3px solid var(--color-info);">
     <div class="admin-import-section-header">
