@@ -26,54 +26,75 @@ echo "MAIL_FROM_ADDRESS: " . env('MAIL_FROM_ADDRESS', 'NOT SET') . "\n";
 echo "MAIL_FROM_NAME: " . env('MAIL_FROM_NAME', 'NOT SET') . "\n";
 echo "\n";
 
-// Test SMTP connection
-echo "=== Testing SMTP Connection ===\n";
-$host = env('MAIL_HOST', 'mail.hostinger.com');
-$port = (int) env('MAIL_PORT', 465);
-$encryption = env('MAIL_ENCRYPTION', 'ssl');
+// Test multiple SMTP hosts
+echo "=== Testing SMTP Connections ===\n";
 
-$protocol = ($encryption === 'ssl') ? 'ssl://' : '';
-$address = "{$protocol}{$host}:{$port}";
-echo "Connecting to: {$address}\n";
+$hosts = [
+    ['host' => 'mail.hostinger.com', 'port' => 465, 'enc' => 'ssl'],
+    ['host' => 'smtp.hostinger.com', 'port' => 465, 'enc' => 'ssl'],
+    ['host' => 'smtp.hostinger.com', 'port' => 587, 'enc' => 'tls'],
+    ['host' => 'localhost', 'port' => 25, 'enc' => ''],
+];
 
-$context = stream_context_create([
-    'ssl' => [
-        'verify_peer' => false,
-        'verify_peer_name' => false,
-        'allow_self_signed' => true
-    ]
-]);
+foreach ($hosts as $config) {
+    $host = $config['host'];
+    $port = $config['port'];
+    $encryption = $config['enc'];
 
-$socket = @stream_socket_client(
-    $address,
-    $errno,
-    $errstr,
-    10,
-    STREAM_CLIENT_CONNECT,
-    $context
-);
+    $protocol = ($encryption === 'ssl') ? 'ssl://' : '';
+    $address = "{$protocol}{$host}:{$port}";
+    echo "Testing: {$address} ... ";
 
-if (!$socket) {
-    echo "FAILED: {$errstr} ({$errno})\n";
-} else {
-    echo "SUCCESS: Connected!\n";
+    $context = stream_context_create([
+        'ssl' => [
+            'verify_peer' => false,
+            'verify_peer_name' => false,
+            'allow_self_signed' => true
+        ]
+    ]);
 
-    // Read greeting
-    $greeting = fgets($socket, 515);
-    echo "Server greeting: {$greeting}\n";
+    $socket = @stream_socket_client(
+        $address,
+        $errno,
+        $errstr,
+        5, // 5 second timeout for testing
+        STREAM_CLIENT_CONNECT,
+        $context
+    );
 
-    fclose($socket);
+    if (!$socket) {
+        echo "FAILED ({$errstr})\n";
+    } else {
+        $greeting = fgets($socket, 515);
+        echo "OK! Server: " . trim($greeting) . "\n";
+        fclose($socket);
+    }
 }
 
-echo "\n=== Send Test Email ===\n";
-if (isset($_POST['test_email'])) {
-    $testEmail = $_POST['test_email'];
-    echo "Sending test email to: {$testEmail}\n";
+echo "\n";
+
+// Test PHP mail() function
+echo "=== Testing PHP mail() ===\n";
+if (isset($_POST['test_php_mail'])) {
+    $testEmail = $_POST['test_php_mail'];
+    echo "Sending via PHP mail() to: {$testEmail}\n";
+
+    $headers = "From: TheHUB <info@gravityseries.se>\r\n";
+    $headers .= "Content-Type: text/html; charset=UTF-8\r\n";
+
+    $result = @mail($testEmail, 'TheHUB Test (PHP mail)', '<p>Test from PHP mail()</p>', $headers);
+    echo "Result: " . ($result ? 'SENT (check inbox/spam)' : 'FAILED') . "\n";
+}
+
+echo "\n=== Send Test via SMTP ===\n";
+if (isset($_POST['test_smtp'])) {
+    $testEmail = $_POST['test_smtp'];
+    echo "Sending via SMTP to: {$testEmail}\n";
 
     $result = hub_send_email(
         $testEmail,
-        'TheHUB Test Email',
-        '<h1>Test</h1><p>This is a test email from TheHUB.</p>',
+        'TheHUB Test Email (SMTP)',
+        '<h1>Test</h1><p>This is a test email from TheHUB via SMTP.</p>',
         []
     );
 
@@ -81,12 +102,18 @@ if (isset($_POST['test_email'])) {
 }
 
 echo "</pre>";
-
-// Form to send test email
 ?>
+
+<h3>Test PHP mail() (fallback)</h3>
 <form method="POST">
-    <input type="email" name="test_email" placeholder="your@email.com" required>
-    <button type="submit">Send Test Email</button>
+    <input type="email" name="test_php_mail" placeholder="your@email.com" required>
+    <button type="submit">Send via PHP mail()</button>
 </form>
 
-<p><strong>DELETE THIS FILE AFTER TESTING!</strong></p>
+<h3>Test SMTP</h3>
+<form method="POST">
+    <input type="email" name="test_smtp" placeholder="your@email.com" required>
+    <button type="submit">Send via SMTP</button>
+</form>
+
+<p style="color: red;"><strong>DELETE THIS FILE AFTER TESTING!</strong></p>
