@@ -118,7 +118,7 @@ $recentResults = $resultStmt->fetchAll(PDO::FETCH_ASSOC);
         <span class="quick-link-label">Mina anmälningar</span>
         <span class="quick-link-arrow">›</span>
     </a>
-    <a href="/profile/results" class="quick-link">
+    <a href="/rider/<?= $currentUser['id'] ?>" class="quick-link">
         <span class="quick-link-icon"><i data-lucide="flag"></i></span>
         <span class="quick-link-label">Mina resultat</span>
         <span class="quick-link-arrow">›</span>
@@ -176,7 +176,7 @@ $recentResults = $resultStmt->fetchAll(PDO::FETCH_ASSOC);
     <div class="section">
         <div class="section-header">
             <h2>Senaste resultat</h2>
-            <a href="/profile/results" class="section-link">Visa alla</a>
+            <a href="/rider/<?= $currentUser['id'] ?>" class="section-link">Visa alla</a>
         </div>
         <div class="results-list">
             <?php foreach ($recentResults as $result): ?>
