@@ -17,7 +17,7 @@ if (!$eventId) {
 }
 
 // Get event info
-$event = $db->getOne("SELECT * FROM events WHERE id = ?", [$eventId]);
+$event = $db->getRow("SELECT * FROM events WHERE id = ?", [$eventId]);
 if (!$event) {
     $_SESSION['error'] = 'Event hittades inte';
     header('Location: /admin/elimination.php');
@@ -150,15 +150,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 
     if (isset($_POST['action']) && $_POST['action'] === 'import') {
-        $importClassId = intval($_POST['class_id'] ?? 0);
+        $fallbackClassId = intval($_POST['class_id'] ?? 0);
         $previewData = $_SESSION['elimination_import_preview'] ?? [];
 
-        if ($importClassId && !empty($previewData)) {
+        if (!empty($previewData)) {
             $imported = 0;
             $errors = [];
+            $classesImported = [];
+            $classCache = [];
+
+            // Build class lookup cache
+            foreach ($classes as $c) {
+                $classCache[strtolower($c['name'])] = $c['id'];
+                if (!empty($c['display_name'])) {
+                    $classCache[strtolower($c['display_name'])] = $c['id'];
+                }
+            }
 
             foreach ($previewData as $idx => $row) {
                 try {
+                    // Determine class_id - use CSV class or fallback
+                    $rowClassId = $fallbackClassId;
+                    if (!empty($row['class'])) {
+                        $csvClass = strtolower(trim($row['class']));
+                        if (isset($classCache[$csvClass])) {
+                            $rowClassId = $classCache[$csvClass];
+                        }
+                    }
+
+                    if (!$rowClassId) {
+                        $errors[] = "Rad " . ($idx + 1) . ": Kunde inte hitta klass '{$row['class']}'";
+                        continue;
+                    }
+
                     // Find or create rider
                     $firstname = $row['firstname'] ?? '';
                     $lastname = $row['lastname'] ?? '';
@@ -172,7 +196,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     if (empty($firstname)) continue;
 
                     // Try to find existing rider
-                    $rider = $db->getOne(
+                    $rider = $db->getRow(
                         "SELECT id FROM riders WHERE firstname = ? AND lastname = ? LIMIT 1",
                         [$firstname, $lastname]
                     );
@@ -181,7 +205,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         // Create new rider
                         $clubId = null;
                         if (!empty($row['club'])) {
-                            $club = $db->getOne("SELECT id FROM clubs WHERE name LIKE ? LIMIT 1", ['%' . $row['club'] . '%']);
+                            $club = $db->getRow("SELECT id FROM clubs WHERE name LIKE ? LIMIT 1", ['%' . $row['club'] . '%']);
                             $clubId = $club ? $club['id'] : null;
                         }
 
@@ -217,7 +241,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     ");
                     $stmt->execute([
                         $eventId,
-                        $importClassId,
+                        $rowClassId,
                         $riderId,
                         $row['bib'] ?? null,
                         $run1 > 0 ? $run1 : null,
@@ -225,35 +249,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $best > 0 ? $best : null
                     ]);
 
+                    $classesImported[$rowClassId] = true;
                     $imported++;
                 } catch (Exception $e) {
                     $errors[] = "Rad " . ($idx + 1) . ": " . $e->getMessage();
                 }
             }
 
-            // Update seed positions based on best_time
-            $pdo->prepare("
-                SET @pos := 0;
-                UPDATE elimination_qualifying
-                SET seed_position = (@pos := @pos + 1)
-                WHERE event_id = ? AND class_id = ?
-                ORDER BY best_time ASC
-            ")->execute([$eventId, $importClassId]);
+            // Update seed positions for all imported classes
+            foreach (array_keys($classesImported) as $impClassId) {
+                $qualifiers = $db->getAll("
+                    SELECT id FROM elimination_qualifying
+                    WHERE event_id = ? AND class_id = ?
+                    ORDER BY best_time ASC
+                ", [$eventId, $impClassId]);
 
-            // Simple sequential update
-            $qualifiers = $db->getAll("
-                SELECT id FROM elimination_qualifying
-                WHERE event_id = ? AND class_id = ?
-                ORDER BY best_time ASC
-            ", [$eventId, $importClassId]);
-
-            $pos = 1;
-            foreach ($qualifiers as $q) {
-                $pdo->prepare("UPDATE elimination_qualifying SET seed_position = ? WHERE id = ?")->execute([$pos, $q['id']]);
-                $pos++;
+                $pos = 1;
+                foreach ($qualifiers as $q) {
+                    $pdo->prepare("UPDATE elimination_qualifying SET seed_position = ? WHERE id = ?")->execute([$pos, $q['id']]);
+                    $pos++;
+                }
             }
 
-            $_SESSION['success'] = "Importerade $imported kvalificeringsresultat!";
+            $numClasses = count($classesImported);
+            $_SESSION['success'] = "Importerade $imported kvalificeringsresultat i $numClasses klass(er)!";
             if (!empty($errors)) {
                 $_SESSION['warning'] = implode('<br>', array_slice($errors, 0, 5));
             }
@@ -261,7 +280,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             unset($_SESSION['elimination_import_preview']);
             unset($_SESSION['elimination_import_event']);
 
-            header("Location: /admin/elimination-manage.php?event_id={$eventId}&class_id={$importClassId}");
+            $redirectClassId = $fallbackClassId ?: array_key_first($classesImported);
+            header("Location: /admin/elimination-manage.php?event_id={$eventId}&class_id={$redirectClassId}");
             exit;
         }
     }
@@ -310,7 +330,17 @@ include __DIR__ . '/components/unified-layout.php';
     </div>
 </div>
 
-<?php if (!empty($previewData)): ?>
+<?php if (!empty($previewData)):
+    // Check if CSV has class data
+    $hasClassData = false;
+    $csvClasses = [];
+    foreach ($previewData as $row) {
+        if (!empty($row['class'])) {
+            $hasClassData = true;
+            $csvClasses[$row['class']] = ($csvClasses[$row['class']] ?? 0) + 1;
+        }
+    }
+?>
 <div class="admin-card">
     <div class="admin-card-header">
         <h3>Förhandsgranskning (<?= count($previewData) ?> rader)</h3>
@@ -319,8 +349,18 @@ include __DIR__ . '/components/unified-layout.php';
         <form method="POST">
             <input type="hidden" name="action" value="import">
 
+            <?php if ($hasClassData): ?>
+            <div class="alert alert--success mb-lg">
+                <i data-lucide="check-circle"></i>
+                <strong>Klasser hittade i CSV:</strong>
+                <?php foreach ($csvClasses as $className => $count): ?>
+                    <span class="badge badge-success ml-sm"><?= h($className) ?> (<?= $count ?>)</span>
+                <?php endforeach; ?>
+            </div>
+            <input type="hidden" name="class_id" value="0">
+            <?php else: ?>
             <div class="admin-form-group mb-lg">
-                <label class="admin-form-label">Importera till klass</label>
+                <label class="admin-form-label">Importera till klass (CSV saknar klassinfo)</label>
                 <select name="class_id" class="admin-form-select" required>
                     <option value="">-- Välj klass --</option>
                     <?php foreach ($classes as $c): ?>
@@ -330,6 +370,7 @@ include __DIR__ . '/components/unified-layout.php';
                     <?php endforeach; ?>
                 </select>
             </div>
+            <?php endif; ?>
 
             <div class="admin-table-container mb-lg">
                 <table class="admin-table">
