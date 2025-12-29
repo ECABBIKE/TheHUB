@@ -199,55 +199,77 @@ $roundNames = [
                 <p>Bracket har inte genererats än.</p>
             </div>
         <?php else: ?>
-            <div class="bracket-container">
-                <?php foreach ($brackets as $roundName => $heats): ?>
-                    <div class="bracket-round">
-                        <h4 class="round-title"><?= $roundNames[$roundName] ?? ucfirst(str_replace('_', ' ', $roundName)) ?></h4>
-                        <div class="round-heats">
+            <?php
+            // Determine bracket structure
+            $roundOrder = ['round_of_32', 'round_of_16', 'quarterfinal', 'semifinal', 'final'];
+            $orderedBrackets = [];
+            foreach ($roundOrder as $r) {
+                if (isset($brackets[$r])) {
+                    $orderedBrackets[$r] = $brackets[$r];
+                }
+            }
+            $numRounds = count($orderedBrackets);
+            $roundKeys = array_keys($orderedBrackets);
+            ?>
+            <div class="bracket-visual" data-rounds="<?= $numRounds ?>">
+                <?php foreach ($orderedBrackets as $roundName => $heats): ?>
+                    <?php $roundIndex = array_search($roundName, $roundKeys); ?>
+                    <div class="bracket-round" data-round="<?= $roundIndex ?>">
+                        <div class="round-header"><?= $roundNames[$roundName] ?? ucfirst(str_replace('_', ' ', $roundName)) ?></div>
+                        <div class="round-matches">
                             <?php foreach ($heats as $heat): ?>
-                                <div class="bracket-heat <?= $heat['status'] ?>">
-                                    <div class="heat-matchup">
-                                        <!-- Rider 1 -->
-                                        <div class="matchup-rider <?= $heat['winner_id'] == $heat['rider_1_id'] ? 'winner' : '' ?>">
-                                            <span class="rider-seed"><?= $heat['rider_1_seed'] ?></span>
-                                            <span class="rider-name">
-                                                <?php if ($heat['rider_1_id']): ?>
-                                                    <?= h($heat['rider1_firstname'] . ' ' . $heat['rider1_lastname']) ?>
-                                                <?php else: ?>
-                                                    <em>TBD</em>
-                                                <?php endif; ?>
-                                            </span>
-                                            <span class="rider-times">
-                                                <?php if ($heat['rider_1_total']): ?>
-                                                    <?= number_format($heat['rider_1_total'], 3) ?>
-                                                <?php elseif ($heat['status'] === 'bye'): ?>
-                                                    BYE
-                                                <?php endif; ?>
-                                            </span>
-                                        </div>
-
-                                        <!-- Rider 2 -->
-                                        <div class="matchup-rider <?= $heat['winner_id'] == $heat['rider_2_id'] ? 'winner' : '' ?>">
-                                            <span class="rider-seed"><?= $heat['rider_2_seed'] ?></span>
-                                            <span class="rider-name">
-                                                <?php if ($heat['rider_2_id']): ?>
-                                                    <?= h($heat['rider2_firstname'] . ' ' . $heat['rider2_lastname']) ?>
-                                                <?php else: ?>
-                                                    <em>-</em>
-                                                <?php endif; ?>
-                                            </span>
-                                            <span class="rider-times">
-                                                <?php if ($heat['rider_2_total']): ?>
-                                                    <?= number_format($heat['rider_2_total'], 3) ?>
-                                                <?php endif; ?>
-                                            </span>
-                                        </div>
+                                <div class="bracket-match <?= $heat['status'] ?>">
+                                    <div class="match-slot <?= $heat['winner_id'] == $heat['rider_1_id'] ? 'winner' : '' ?>">
+                                        <span class="slot-seed"><?= $heat['rider_1_seed'] ?: '-' ?></span>
+                                        <span class="slot-name">
+                                            <?php if ($heat['rider_1_id']): ?>
+                                                <?= h($heat['rider1_firstname'] . ' ' . $heat['rider1_lastname']) ?>
+                                            <?php else: ?>
+                                                BYE
+                                            <?php endif; ?>
+                                        </span>
+                                        <span class="slot-time"><?= $heat['rider_1_total'] ? number_format($heat['rider_1_total'], 3) : '' ?></span>
                                     </div>
+                                    <div class="match-slot <?= $heat['winner_id'] == $heat['rider_2_id'] ? 'winner' : '' ?>">
+                                        <span class="slot-seed"><?= $heat['rider_2_seed'] ?: '-' ?></span>
+                                        <span class="slot-name">
+                                            <?php if ($heat['rider_2_id']): ?>
+                                                <?= h($heat['rider2_firstname'] . ' ' . $heat['rider2_lastname']) ?>
+                                            <?php else: ?>
+                                                BYE
+                                            <?php endif; ?>
+                                        </span>
+                                        <span class="slot-time"><?= $heat['rider_2_total'] ? number_format($heat['rider_2_total'], 3) : '' ?></span>
+                                    </div>
+                                    <div class="match-connector"></div>
                                 </div>
                             <?php endforeach; ?>
                         </div>
                     </div>
                 <?php endforeach; ?>
+
+                <!-- Winner slot -->
+                <div class="bracket-round winner-round">
+                    <div class="round-header">Vinnare</div>
+                    <div class="round-matches">
+                        <div class="bracket-match final-winner">
+                            <div class="match-slot winner">
+                                <span class="slot-seed"></span>
+                                <span class="slot-name">
+                                    <?php
+                                    $finalHeat = end($orderedBrackets['final'] ?? []);
+                                    if ($finalHeat && $finalHeat['winner_id']):
+                                        echo h($finalHeat['winner_firstname'] . ' ' . $finalHeat['winner_lastname']);
+                                    else:
+                                        echo '-';
+                                    endif;
+                                    ?>
+                                </span>
+                                <span class="slot-time"></span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         <?php endif; ?>
     </div>
@@ -414,80 +436,172 @@ tr.advances .seed-badge {
     font-weight: 600;
 }
 
-/* Bracket Styles */
-.bracket-container {
+/* Visual Bracket Styles - Tournament Tree */
+.bracket-visual {
     display: flex;
-    gap: var(--space-lg);
+    gap: 0;
     overflow-x: auto;
-    padding: var(--space-md) 0;
+    padding: var(--space-lg) var(--space-md);
+    min-height: 400px;
 }
 
-.bracket-round {
-    flex: 0 0 auto;
-    min-width: 200px;
-}
-
-.round-title {
-    text-align: center;
-    margin-bottom: var(--space-md);
-    font-size: var(--text-sm);
-    color: var(--color-text-secondary);
-    text-transform: uppercase;
-    letter-spacing: 0.5px;
-}
-
-.round-heats {
+.bracket-visual .bracket-round {
     display: flex;
     flex-direction: column;
-    gap: var(--space-md);
+    flex-shrink: 0;
+    min-width: 180px;
 }
 
-.bracket-heat {
+.bracket-visual .round-header {
+    text-align: center;
+    font-size: var(--text-xs);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--color-text-secondary);
+    padding: var(--space-sm);
     background: var(--color-bg-secondary);
-    border-radius: var(--radius-md);
-    overflow: hidden;
+    border-bottom: 1px solid var(--color-border);
 }
 
-.bracket-heat.completed {
-    border: 1px solid var(--color-border);
+.bracket-visual .round-matches {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    justify-content: space-around;
+    padding: var(--space-sm) 0;
 }
 
-.heat-matchup {
-    padding: var(--space-xs);
+.bracket-visual .bracket-match {
+    position: relative;
+    margin: var(--space-xs) 0;
 }
 
-.matchup-rider {
+.bracket-visual .match-slot {
     display: flex;
     align-items: center;
-    gap: var(--space-sm);
-    padding: var(--space-xs) var(--space-sm);
-    border-radius: var(--radius-sm);
+    background: var(--color-bg);
+    border: 1px solid var(--color-border);
+    padding: 4px 8px;
+    font-size: var(--text-sm);
+    min-height: 28px;
 }
 
-.matchup-rider.winner {
+.bracket-visual .match-slot:first-child {
+    border-bottom: none;
+}
+
+.bracket-visual .match-slot.winner {
     background: var(--color-accent);
     color: white;
+    border-color: var(--color-accent);
 }
 
-.rider-seed {
+.bracket-visual .slot-seed {
     font-weight: 600;
     min-width: 20px;
-    font-size: var(--text-sm);
+    color: var(--color-text-secondary);
+    font-size: var(--text-xs);
 }
 
-.rider-name {
+.bracket-visual .match-slot.winner .slot-seed {
+    color: rgba(255,255,255,0.8);
+}
+
+.bracket-visual .slot-name {
     flex: 1;
-    font-size: var(--text-sm);
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
+    padding-right: var(--space-xs);
 }
 
-.rider-times {
-    font-size: var(--text-sm);
+.bracket-visual .slot-time {
+    font-size: var(--text-xs);
     font-weight: 500;
-    min-width: 50px;
+    min-width: 45px;
     text-align: right;
+}
+
+/* Connector lines */
+.bracket-visual .match-connector {
+    position: absolute;
+    right: -20px;
+    top: 50%;
+    width: 20px;
+    height: 1px;
+    background: var(--color-border);
+}
+
+.bracket-visual .match-connector::after {
+    content: '';
+    position: absolute;
+    right: 0;
+    width: 1px;
+    background: var(--color-border);
+}
+
+/* Adjust connector heights based on round */
+.bracket-visual .bracket-round[data-round="0"] .bracket-match:nth-child(odd) .match-connector::after {
+    top: 0;
+    height: calc(50% + var(--space-xs) + 14px);
+}
+
+.bracket-visual .bracket-round[data-round="0"] .bracket-match:nth-child(even) .match-connector::after {
+    bottom: 0;
+    height: calc(50% + var(--space-xs) + 14px);
+}
+
+.bracket-visual .bracket-round[data-round="1"] .bracket-match:nth-child(odd) .match-connector::after {
+    top: 0;
+    height: calc(100% + var(--space-md));
+}
+
+.bracket-visual .bracket-round[data-round="1"] .bracket-match:nth-child(even) .match-connector::after {
+    bottom: 0;
+    height: calc(100% + var(--space-md));
+}
+
+/* Winner round */
+.bracket-visual .winner-round {
+    min-width: 150px;
+}
+
+.bracket-visual .winner-round .match-slot {
+    border: 2px solid var(--color-accent);
+    background: rgba(97, 206, 112, 0.1);
+    font-weight: 600;
+}
+
+.bracket-visual .final-winner .match-connector {
+    display: none;
+}
+
+/* BYE styling */
+.bracket-visual .bracket-match.bye .match-slot:last-child {
+    color: var(--color-text-secondary);
+    font-style: italic;
+}
+
+/* Responsive - stack on mobile */
+@media (max-width: 767px) {
+    .bracket-visual {
+        flex-direction: column;
+        gap: var(--space-lg);
+        min-height: auto;
+    }
+
+    .bracket-visual .bracket-round {
+        min-width: 100%;
+    }
+
+    .bracket-visual .match-connector {
+        display: none;
+    }
+
+    .bracket-visual .round-matches {
+        gap: var(--space-sm);
+    }
 }
 
 /* Position medals */
