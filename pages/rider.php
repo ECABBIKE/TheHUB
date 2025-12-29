@@ -1995,6 +1995,19 @@ document.addEventListener('keydown', function(e) {
 
             <input type="hidden" name="target_rider_id" value="<?= $riderId ?>">
 
+            <!-- GDPR Consent -->
+            <div class="claim-consent-group">
+                <label class="claim-consent-label">
+                    <input type="checkbox" id="claimConsent" name="gdpr_consent" value="1" required>
+                    <span class="claim-consent-checkmark"></span>
+                    <span class="claim-consent-text">
+                        Jag godkänner att mina uppgifter sparas och behandlas enligt
+                        <a href="/integritetspolicy" target="_blank">integritetspolicyn</a>.
+                        Uppgifterna används endast för att verifiera min identitet och hantera mitt konto.
+                    </span>
+                </label>
+            </div>
+
             <div class="claim-form-actions">
                 <button type="button" class="btn-secondary" onclick="closeClaimModal()">Avbryt</button>
                 <button type="submit" class="btn-primary">
@@ -2262,6 +2275,69 @@ document.addEventListener('keydown', function(e) {
 .btn-claim-pending {
     opacity: 0.6;
     cursor: not-allowed !important;
+}
+/* GDPR Consent Checkbox */
+.claim-consent-group {
+    margin: var(--space-lg) 0;
+    padding: var(--space-md);
+    background: var(--color-bg-secondary);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--color-border);
+}
+.claim-consent-label {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-sm);
+    cursor: pointer;
+    font-size: var(--text-sm);
+    line-height: 1.5;
+}
+.claim-consent-label input[type="checkbox"] {
+    position: absolute;
+    opacity: 0;
+    cursor: pointer;
+}
+.claim-consent-checkmark {
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    background: var(--color-bg-card);
+    border: 2px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.15s ease;
+    margin-top: 2px;
+}
+.claim-consent-checkmark::after {
+    content: '';
+    width: 6px;
+    height: 10px;
+    border: solid transparent;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+    margin-bottom: 2px;
+}
+.claim-consent-label input:checked ~ .claim-consent-checkmark {
+    background: var(--color-accent);
+    border-color: var(--color-accent);
+}
+.claim-consent-label input:checked ~ .claim-consent-checkmark::after {
+    border-color: #111;
+}
+.claim-consent-label input:focus ~ .claim-consent-checkmark {
+    box-shadow: 0 0 0 3px rgba(97, 206, 112, 0.2);
+}
+.claim-consent-text {
+    color: var(--color-text-secondary);
+}
+.claim-consent-text a {
+    color: var(--color-accent);
+    text-decoration: underline;
+}
+.claim-consent-text a:hover {
+    color: #7dd88a;
 }
 /* Mobile Modal - Between header and bottom nav */
 @media (max-width: 767px) {
