@@ -22,14 +22,25 @@ if (!$event) {
     exit;
 }
 
-// Get all classes for this event (from existing results or all active classes)
+// Get classes that have elimination qualifying data for this event
 $classes = $db->getAll("
-    SELECT DISTINCT c.id, c.name, c.display_name
+    SELECT DISTINCT c.id, c.name, c.display_name, COUNT(eq.id) as rider_count
     FROM classes c
+    INNER JOIN elimination_qualifying eq ON eq.class_id = c.id AND eq.event_id = ?
     WHERE c.active = 1
-    AND (c.discipline LIKE '%DUAL_SLALOM%' OR c.discipline LIKE '%DH%' OR c.discipline IS NULL)
+    GROUP BY c.id, c.name, c.display_name
     ORDER BY c.sort_order, c.name
-");
+", [$eventId]);
+
+// If no classes with qualifying data, show all active classes as fallback
+if (empty($classes)) {
+    $classes = $db->getAll("
+        SELECT DISTINCT c.id, c.name, c.display_name, 0 as rider_count
+        FROM classes c
+        WHERE c.active = 1
+        ORDER BY c.sort_order, c.name
+    ");
+}
 
 $selectedClassId = isset($_GET['class_id']) ? intval($_GET['class_id']) : ($classes[0]['id'] ?? 0);
 
@@ -303,9 +314,13 @@ include __DIR__ . '/components/unified-layout.php';
             <div class="admin-form-group" style="margin-bottom: 0; flex: 1;">
                 <label for="class-select" class="admin-form-label">Välj Klass</label>
                 <select id="class-select" name="class_id" class="admin-form-select" onchange="this.form.submit()">
+                    <?php if (empty($classes)): ?>
+                        <option value="">-- Inga klasser med kvaldata --</option>
+                    <?php endif; ?>
                     <?php foreach ($classes as $class): ?>
                         <option value="<?= $class['id'] ?>" <?= $selectedClassId == $class['id'] ? 'selected' : '' ?>>
                             <?= h($class['display_name'] ?? $class['name']) ?>
+                            <?php if ($class['rider_count'] > 0): ?> (<?= $class['rider_count'] ?> åkare)<?php endif; ?>
                         </option>
                     <?php endforeach; ?>
                 </select>
