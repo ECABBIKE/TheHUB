@@ -650,12 +650,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $roundName = 'quarterfinal';
                         $roundNumber = 1;
                     } elseif ($bracketSize == 16) {
-                        // Round of 16: Heats 1,2 -> QF1; Heats 3,4 -> QF2; etc.
+                        // Round of 16: Korrekt seeding för att 1 vs 2 möts i final
+                        // ÖVRE HALVAN (Semifinal 1):
+                        // Heat 1,2 -> Kvartsfinal 1; Heat 3,4 -> Kvartsfinal 2
+                        // NEDRE HALVAN (Semifinal 2):
+                        // Heat 5,6 -> Kvartsfinal 3; Heat 7,8 -> Kvartsfinal 4
                         $seedPairs = [
-                            [1,16], [8,9],   // -> QF Heat 1
-                            [4,13], [5,12],  // -> QF Heat 2
-                            [2,15], [7,10],  // -> QF Heat 3
-                            [3,14], [6,11]   // -> QF Heat 4
+                            [1,16], [8,9],   // Heat 1,2 -> Kvartsfinal 1
+                            [5,12], [4,13],  // Heat 3,4 -> Kvartsfinal 2
+                            [3,14], [6,11],  // Heat 5,6 -> Kvartsfinal 3
+                            [7,10], [2,15]   // Heat 7,8 -> Kvartsfinal 4
                         ];
                         $roundName = 'round_of_16';
                         $roundNumber = 1;
