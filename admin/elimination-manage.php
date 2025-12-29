@@ -272,20 +272,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($action === 'generate_brackets') {
         // Generate brackets from qualifying results
-        $bracketSize = intval($_POST['bracket_size'] ?? 16);
         $classId = intval($_POST['class_id'] ?? 0);
 
-        if ($classId && in_array($bracketSize, [8, 16, 32])) {
+        if ($classId) {
             try {
-                // Get top N qualifiers
+                // Get ALL qualifiers with finished status
                 $qualifiers = $db->getAll("
                     SELECT * FROM elimination_qualifying
                     WHERE event_id = ? AND class_id = ? AND status = 'finished'
                     ORDER BY best_time ASC
-                    LIMIT ?
-                ", [$eventId, $classId, $bracketSize]);
+                ", [$eventId, $classId]);
 
-                if (count($qualifiers) >= 2) {
+                $numQualifiers = count($qualifiers);
+
+                if ($numQualifiers >= 2) {
+                    // Auto-determine bracket size: smallest power of 2 >= numQualifiers
+                    if ($numQualifiers <= 4) {
+                        $bracketSize = 4;
+                    } elseif ($numQualifiers <= 8) {
+                        $bracketSize = 8;
+                    } elseif ($numQualifiers <= 16) {
+                        $bracketSize = 16;
+                    } else {
+                        $bracketSize = 32;
+                    }
+
+                    // Number of BYEs = bracket size - actual riders
+                    $numByes = $bracketSize - $numQualifiers;
+
                     // Clear existing brackets for this class
                     $pdo->prepare("DELETE FROM elimination_brackets WHERE event_id = ? AND class_id = ?")->execute([$eventId, $classId]);
 
@@ -297,63 +311,123 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $seedPos++;
                     }
 
-                    // Generate first round matchups using standard bracket seeding
-                    // 1 vs 16, 8 vs 9, 5 vs 12, 4 vs 13, 3 vs 14, 6 vs 11, 7 vs 10, 2 vs 15
-                    $seedPairs = [];
-                    $numQualifiers = count($qualifiers);
-
-                    if ($bracketSize == 8) {
+                    // Standard bracket seeding (designed so top seeds meet in finals if they win)
+                    // Heat matchups arranged so seed 1 and 2 are on opposite sides of bracket
+                    if ($bracketSize == 4) {
+                        // Semifinal start: 1v4, 2v3
+                        $seedPairs = [[1,4], [2,3]];
+                        $roundName = 'semifinal';
+                        $roundNumber = 1;
+                    } elseif ($bracketSize == 8) {
+                        // Quarterfinal start: 1v8, 4v5, 3v6, 2v7
                         $seedPairs = [[1,8], [4,5], [3,6], [2,7]];
+                        $roundName = 'quarterfinal';
+                        $roundNumber = 1;
                     } elseif ($bracketSize == 16) {
+                        // Round of 16 start
                         $seedPairs = [[1,16], [8,9], [5,12], [4,13], [3,14], [6,11], [7,10], [2,15]];
+                        $roundName = 'round_of_16';
+                        $roundNumber = 1;
                     } else { // 32
                         $seedPairs = [
                             [1,32], [16,17], [9,24], [8,25], [5,28], [12,21], [13,20], [4,29],
                             [3,30], [14,19], [11,22], [6,27], [7,26], [10,23], [15,18], [2,31]
                         ];
+                        $roundName = 'round_of_32';
+                        $roundNumber = 1;
                     }
 
-                    $roundName = $bracketSize == 8 ? 'quarterfinal' : ($bracketSize == 16 ? 'round_of_16' : 'round_of_32');
                     $heatNum = 1;
 
                     foreach ($seedPairs as $pair) {
-                        $rider1 = isset($qualifiers[$pair[0] - 1]) ? $qualifiers[$pair[0] - 1] : null;
-                        $rider2 = isset($qualifiers[$pair[1] - 1]) ? $qualifiers[$pair[1] - 1] : null;
+                        // Get rider for each seed position (null if BYE - seed > numQualifiers)
+                        $rider1 = ($pair[0] <= $numQualifiers) ? $qualifiers[$pair[0] - 1] : null;
+                        $rider2 = ($pair[1] <= $numQualifiers) ? $qualifiers[$pair[1] - 1] : null;
 
-                        // If one rider is missing, it's a BYE
+                        // If one or both riders missing, it's a BYE
                         $status = ($rider1 && $rider2) ? 'pending' : 'bye';
                         $winnerId = null;
-                        $loserId = null;
 
                         if ($status === 'bye') {
+                            // The present rider wins by BYE
                             $winnerId = $rider1 ? $rider1['rider_id'] : ($rider2 ? $rider2['rider_id'] : null);
                         }
 
-                        $stmt = $pdo->prepare("
-                            INSERT INTO elimination_brackets
-                            (event_id, class_id, bracket_type, round_name, round_number, heat_number,
-                             rider_1_id, rider_2_id, rider_1_seed, rider_2_seed, winner_id, status, bracket_position)
-                            VALUES (?, ?, 'main', ?, 1, ?, ?, ?, ?, ?, ?, ?, ?)
-                        ");
-                        $stmt->execute([
-                            $eventId, $classId, $roundName, $heatNum,
-                            $rider1 ? $rider1['rider_id'] : null,
-                            $rider2 ? $rider2['rider_id'] : null,
-                            $pair[0], $pair[1],
-                            $winnerId, $status, $heatNum
-                        ]);
-                        $heatNum++;
+                        // Only create heat if at least one rider exists
+                        if ($rider1 || $rider2) {
+                            $stmt = $pdo->prepare("
+                                INSERT INTO elimination_brackets
+                                (event_id, class_id, bracket_type, round_name, round_number, heat_number,
+                                 rider_1_id, rider_2_id, rider_1_seed, rider_2_seed, winner_id, status, bracket_position)
+                                VALUES (?, ?, 'main', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                            ");
+                            $stmt->execute([
+                                $eventId, $classId, $roundName, $roundNumber, $heatNum,
+                                $rider1 ? $rider1['rider_id'] : null,
+                                $rider2 ? $rider2['rider_id'] : null,
+                                $pair[0], $pair[1],
+                                $winnerId, $status, $heatNum
+                            ]);
+                            $heatNum++;
+                        }
                     }
 
-                    // Generate subsequent rounds (quarterfinal, semifinal, final)
+                    // Generate subsequent rounds (semifinal, final, etc.)
                     generateNextRounds($pdo, $eventId, $classId);
 
-                    $_SESSION['success'] = "Bracket genererat för " . count($qualifiers) . " åkare!";
+                    $_SESSION['success'] = "Bracket genererat för {$numQualifiers} åkare (bracket-storlek: {$bracketSize})!";
                 } else {
                     $_SESSION['error'] = "Minst 2 kvalificerade åkare krävs för att generera bracket.";
                 }
             } catch (Exception $e) {
                 $_SESSION['error'] = "Fel vid generering: " . $e->getMessage();
+            }
+        }
+
+        header("Location: /admin/elimination-manage.php?event_id={$eventId}&class_id={$classId}");
+        exit;
+    }
+
+    if ($action === 'clear_qualifying') {
+        // Clear qualifying results for this class (and any brackets)
+        $classId = intval($_POST['class_id'] ?? 0);
+
+        if ($classId) {
+            try {
+                // Delete brackets first (they depend on qualifying)
+                $pdo->prepare("DELETE FROM elimination_brackets WHERE event_id = ? AND class_id = ?")->execute([$eventId, $classId]);
+
+                // Delete qualifying results
+                $pdo->prepare("DELETE FROM elimination_qualifying WHERE event_id = ? AND class_id = ?")->execute([$eventId, $classId]);
+
+                // Delete final results
+                $pdo->prepare("DELETE FROM elimination_results WHERE event_id = ? AND class_id = ?")->execute([$eventId, $classId]);
+
+                $_SESSION['success'] = "Kvalificering och bracket rensade för denna klass.";
+            } catch (Exception $e) {
+                $_SESSION['error'] = "Fel vid rensning: " . $e->getMessage();
+            }
+        }
+
+        header("Location: /admin/elimination-manage.php?event_id={$eventId}&class_id={$classId}");
+        exit;
+    }
+
+    if ($action === 'clear_brackets') {
+        // Clear only brackets (keep qualifying)
+        $classId = intval($_POST['class_id'] ?? 0);
+
+        if ($classId) {
+            try {
+                $pdo->prepare("DELETE FROM elimination_brackets WHERE event_id = ? AND class_id = ?")->execute([$eventId, $classId]);
+                $pdo->prepare("DELETE FROM elimination_results WHERE event_id = ? AND class_id = ?")->execute([$eventId, $classId]);
+
+                // Reset advances_to_bracket flag
+                $pdo->prepare("UPDATE elimination_qualifying SET advances_to_bracket = 0 WHERE event_id = ? AND class_id = ?")->execute([$eventId, $classId]);
+
+                $_SESSION['success'] = "Bracket rensat. Kvalificeringsresultat behålls.";
+            } catch (Exception $e) {
+                $_SESSION['error'] = "Fel vid rensning: " . $e->getMessage();
             }
         }
 
@@ -561,13 +635,22 @@ include __DIR__ . '/components/unified-layout.php';
         <div class="admin-card">
             <div class="admin-card-header">
                 <h3>Kvalificeringsresultat</h3>
-                <div class="flex gap-sm">
+                <div class="flex gap-sm flex-wrap">
                     <a href="/admin/elimination-import-qualifying.php?event_id=<?= $eventId ?>&class_id=<?= $selectedClassId ?>" class="btn-admin btn-admin-primary btn-admin-sm">
                         <i data-lucide="upload"></i> Importera
                     </a>
                     <a href="/admin/elimination-add-qualifying.php?event_id=<?= $eventId ?>&class_id=<?= $selectedClassId ?>" class="btn-admin btn-admin-secondary btn-admin-sm">
                         <i data-lucide="plus"></i> Lägg till
                     </a>
+                    <?php if (!empty($qualifyingResults)): ?>
+                        <form method="POST" style="display: inline;" onsubmit="return confirm('Vill du rensa ALL kvalificering och bracket för denna klass?');">
+                            <input type="hidden" name="action" value="clear_qualifying">
+                            <input type="hidden" name="class_id" value="<?= $selectedClassId ?>">
+                            <button type="submit" class="btn-admin btn-admin-danger btn-admin-sm">
+                                <i data-lucide="trash-2"></i> Rensa allt
+                            </button>
+                        </form>
+                    <?php endif; ?>
                 </div>
             </div>
             <div class="admin-card-body">
@@ -620,14 +703,13 @@ include __DIR__ . '/components/unified-layout.php';
                         <form method="POST" class="flex items-end gap-md flex-wrap">
                             <input type="hidden" name="action" value="generate_brackets">
                             <input type="hidden" name="class_id" value="<?= $selectedClassId ?>">
-                            <div class="admin-form-group" style="margin-bottom: 0;">
-                                <label class="admin-form-label">Bracket-storlek</label>
-                                <select name="bracket_size" class="admin-form-select">
-                                    <option value="8">8 åkare</option>
-                                    <option value="16" selected>16 åkare</option>
-                                    <option value="32">32 åkare</option>
-                                </select>
-                            </div>
+                            <p class="text-secondary" style="margin: 0; align-self: center;">
+                                Bracket-storlek beräknas automatiskt (<?= count($qualifyingResults) ?> åkare = <?=
+                                    count($qualifyingResults) <= 4 ? '4' :
+                                    (count($qualifyingResults) <= 8 ? '8' :
+                                    (count($qualifyingResults) <= 16 ? '16' : '32'))
+                                ?>-bracket)
+                            </p>
                             <button type="submit" class="btn-admin btn-admin-primary">
                                 <i data-lucide="git-branch"></i> Generera Bracket
                             </button>
@@ -643,6 +725,15 @@ include __DIR__ . '/components/unified-layout.php';
         <div class="admin-card">
             <div class="admin-card-header">
                 <h3>Elimination Bracket</h3>
+                <?php if (!empty($brackets)): ?>
+                    <form method="POST" style="display: inline;" onsubmit="return confirm('Vill du rensa bracket? Kvalificeringsresultat behålls.');">
+                        <input type="hidden" name="action" value="clear_brackets">
+                        <input type="hidden" name="class_id" value="<?= $selectedClassId ?>">
+                        <button type="submit" class="btn-admin btn-admin-warning btn-admin-sm">
+                            <i data-lucide="refresh-cw"></i> Rensa bracket
+                        </button>
+                    </form>
+                <?php endif; ?>
             </div>
             <div class="admin-card-body">
                 <?php if (empty($brackets)): ?>
