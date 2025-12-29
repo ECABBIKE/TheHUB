@@ -636,23 +636,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $seedPos++;
                     }
 
-                    // Standard bracket seeding
+                    // Standard bracket seeding - ORDER IS CRITICAL!
+                    // Heats 1,2 -> next round Heat 1; Heats 3,4 -> next round Heat 2; etc.
+                    // This ensures proper advancement through the bracket
                     if ($bracketSize == 4) {
+                        // Semifinal: Heat 1,2 -> Final
                         $seedPairs = [[1,4], [2,3]];
                         $roundName = 'semifinal';
                         $roundNumber = 1;
                     } elseif ($bracketSize == 8) {
-                        $seedPairs = [[1,8], [4,5], [3,6], [2,7]];
+                        // Quarterfinal: Heats 1,2 -> SF1; Heats 3,4 -> SF2
+                        $seedPairs = [[1,8], [4,5], [2,7], [3,6]];
                         $roundName = 'quarterfinal';
                         $roundNumber = 1;
                     } elseif ($bracketSize == 16) {
-                        $seedPairs = [[1,16], [8,9], [5,12], [4,13], [3,14], [6,11], [7,10], [2,15]];
+                        // Round of 16: Heats 1,2 -> QF1; Heats 3,4 -> QF2; etc.
+                        $seedPairs = [
+                            [1,16], [8,9],   // -> QF Heat 1
+                            [4,13], [5,12],  // -> QF Heat 2
+                            [2,15], [7,10],  // -> QF Heat 3
+                            [3,14], [6,11]   // -> QF Heat 4
+                        ];
                         $roundName = 'round_of_16';
                         $roundNumber = 1;
                     } else {
+                        // Round of 32: Heats 1,2 -> R16 Heat 1; Heats 3,4 -> R16 Heat 2; etc.
                         $seedPairs = [
-                            [1,32], [16,17], [9,24], [8,25], [5,28], [12,21], [13,20], [4,29],
-                            [3,30], [14,19], [11,22], [6,27], [7,26], [10,23], [15,18], [2,31]
+                            [1,32], [16,17],  // -> R16 Heat 1
+                            [8,25], [9,24],   // -> R16 Heat 2
+                            [4,29], [13,20],  // -> R16 Heat 3
+                            [5,28], [12,21],  // -> R16 Heat 4
+                            [2,31], [15,18],  // -> R16 Heat 5
+                            [7,26], [10,23],  // -> R16 Heat 6
+                            [3,30], [14,19],  // -> R16 Heat 7
+                            [6,27], [11,22]   // -> R16 Heat 8
                         ];
                         $roundName = 'round_of_32';
                         $roundNumber = 1;
@@ -1148,36 +1165,6 @@ function confirmClearAll() {
 </script>
 
 
-<!-- Clear Brackets Only (keep qualifying) -->
-<?php if ($totalBracketCount > 0): ?>
-<div class="admin-card mb-lg" style="border-color: var(--color-warning);">
-    <div class="admin-card-body">
-        <div class="flex items-center justify-between flex-wrap gap-md">
-            <div>
-                <h4 style="margin: 0; color: var(--color-warning);">
-                    <i data-lucide="refresh-cw"></i> Rensa bracket
-                </h4>
-                <p style="margin: var(--space-xs) 0 0; color: var(--color-text-secondary);">
-                    Tar bort brackets och slutresultat. Kvalificeringsresultat behålls.
-                </p>
-            </div>
-            <div class="flex gap-sm">
-                <?php foreach ($allBracketsByClass as $classId => $classData): ?>
-                    <form method="POST" style="display: inline;" class="clear-bracket-form">
-                        <?= csrf_field() ?>
-                        <input type="hidden" name="action" value="clear_brackets">
-                        <input type="hidden" name="class_id" value="<?= $classId ?>">
-                        <button type="submit" class="btn-admin btn-admin-warning" onclick="return confirm('Rensa bracket för <?= h($classData['name'] ?? 'denna klass') ?>?\n\nKvalificeringsresultat behålls.')">
-                            <i data-lucide="trash"></i> <?= h($classData['name'] ?? 'Klass ' . $classId) ?>
-                        </button>
-                    </form>
-                <?php endforeach; ?>
-            </div>
-        </div>
-    </div>
-</div>
-<?php endif; ?>
-
 <!-- Clear All Results -->
 <?php if ($totalQualifiers > 0): ?>
 <div class="admin-card mb-lg" style="border-color: var(--color-error);">
@@ -1218,6 +1205,36 @@ foreach ($allFinalResultsByClass as $cdata) {
     $totalResultCount += count($cdata['results'] ?? []);
 }
 ?>
+
+<!-- Clear Brackets Only (keep qualifying) -->
+<?php if ($totalBracketCount > 0): ?>
+<div class="admin-card mb-lg" style="border-color: var(--color-warning);">
+    <div class="admin-card-body">
+        <div class="flex items-center justify-between flex-wrap gap-md">
+            <div>
+                <h4 style="margin: 0; color: var(--color-warning);">
+                    <i data-lucide="refresh-cw"></i> Rensa bracket
+                </h4>
+                <p style="margin: var(--space-xs) 0 0; color: var(--color-text-secondary);">
+                    Tar bort brackets och slutresultat. Kvalificeringsresultat behålls.
+                </p>
+            </div>
+            <div class="flex gap-sm">
+                <?php foreach ($allBracketsByClass as $classId => $classData): ?>
+                    <form method="POST" style="display: inline;" class="clear-bracket-form">
+                        <?= csrf_field() ?>
+                        <input type="hidden" name="action" value="clear_brackets">
+                        <input type="hidden" name="class_id" value="<?= $classId ?>">
+                        <button type="submit" class="btn-admin btn-admin-warning" onclick="return confirm('Rensa bracket för <?= h($classData['name'] ?? 'denna klass') ?>?\n\nKvalificeringsresultat behålls.')">
+                            <i data-lucide="trash"></i> <?= h($classData['name'] ?? 'Klass ' . $classId) ?>
+                        </button>
+                    </form>
+                <?php endforeach; ?>
+            </div>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
 
 <!-- Tabs for different sections -->
 <div class="tabs mb-lg">
