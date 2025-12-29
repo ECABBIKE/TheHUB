@@ -65,6 +65,10 @@ foreach ($roleCounts as $row) {
     $roleStats[$row['role']] = $row['count'];
 }
 
+// Get count of activated rider accounts (riders with password set)
+$activatedRidersCount = $db->getRow("SELECT COUNT(*) as count FROM riders WHERE password IS NOT NULL AND password != ''");
+$roleStats['activated_riders'] = $activatedRidersCount['count'] ?? 0;
+
 // Page config
 $page_title = 'Användarhantering';
 $breadcrumbs = [
@@ -118,15 +122,15 @@ include __DIR__ . '/components/unified-layout.php';
             <div class="admin-stat-label">Promotor</div>
         </div>
     </div>
-    <div class="admin-stat-card">
+    <a href="/admin/riders?activated=1" class="admin-stat-card" style="text-decoration: none; color: inherit;">
         <div class="admin-stat-icon stat-icon-warning">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-lg"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
         </div>
         <div class="admin-stat-content">
-            <div class="admin-stat-value"><?= $roleStats['rider'] ?? 0 ?></div>
+            <div class="admin-stat-value"><?= $roleStats['activated_riders'] ?? 0 ?></div>
             <div class="admin-stat-label">Rider-konton</div>
         </div>
-    </div>
+    </a>
 </div>
 
 <!-- Filters -->
