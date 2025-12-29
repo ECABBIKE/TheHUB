@@ -349,7 +349,7 @@ function parseAndAnalyzeCSV($filepath, $db, $event = null) {
      $normalizedCol = str_replace([' ', '-', '_'], '', $normalizedCol);
 
      // Find Club column
-     if (in_array($normalizedCol, ['club', 'klubb', 'team', 'huvudförening', 'huvudforening'])) {
+     if (in_array($normalizedCol, ['club', 'klubb', 'clubb', 'team', 'huvudförening', 'huvudforening'])) {
          $clubIndex = $index;
      }
      // Find NetTime/finish_time column
@@ -454,7 +454,7 @@ function parseAndAnalyzeCSV($filepath, $db, $event = null) {
          'firstname' => 'firstname', 'förnamn' => 'firstname', 'fornamn' => 'firstname',
          'lastname' => 'lastname', 'efternamn' => 'lastname',
          'category' => 'category', 'class' => 'category', 'klass' => 'category',
-         'club' => 'club_name', 'klubb' => 'club_name', 'team' => 'club_name',
+         'club' => 'club_name', 'klubb' => 'club_name', 'clubb' => 'club_name', 'team' => 'club_name',
          'position' => 'position', 'placering' => 'position', 'placebycategory' => 'position',
          'time' => 'finish_time', 'tid' => 'finish_time', 'nettime' => 'finish_time',
          'status' => 'status',
