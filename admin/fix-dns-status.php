@@ -21,15 +21,12 @@ $eventId = isset($_GET['event_id']) ? (int)$_GET['event_id'] : null;
 $dnsCondition = "
     r.status = 'finished'
     AND (
-        -- No valid finish_time
         (r.finish_time IS NULL OR r.finish_time = '' OR r.finish_time = '0:00' OR r.finish_time = '0:00:00' OR r.finish_time = '0:00.00'
          OR UPPER(r.finish_time) IN ('DNS', 'DNF', 'DQ', 'DSQ'))
-        -- AND no valid DH run times
         AND (r.run_1_time IS NULL OR r.run_1_time = '' OR r.run_1_time = '0:00' OR r.run_1_time = '0:00:00'
              OR UPPER(r.run_1_time) IN ('DNS', 'DNF', 'DQ', 'DSQ'))
         AND (r.run_2_time IS NULL OR r.run_2_time = '' OR r.run_2_time = '0:00' OR r.run_2_time = '0:00:00'
              OR UPPER(r.run_2_time) IN ('DNS', 'DNF', 'DQ', 'DSQ'))
-        -- AND no valid Enduro split times
         AND (r.ss1 IS NULL OR r.ss1 = '' OR r.ss1 = '0:00' OR r.ss1 = '0:00:00'
              OR UPPER(r.ss1) IN ('DNS', 'DNF', 'DQ', 'DSQ'))
     )
@@ -92,12 +89,13 @@ $sampleStmt = $db->prepare("
 $sampleStmt->execute($params);
 $samples = $sampleStmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Get events for filter dropdown
+// Get events for filter dropdown - find events with DNS issues
 $events = $db->getAll("
-    SELECT e.id, e.name, e.date,
-           (SELECT COUNT(*) FROM results r WHERE r.event_id = e.id AND {$dnsCondition}) as dns_count
+    SELECT e.id, e.name, e.date, COUNT(r.id) as dns_count
     FROM events e
-    HAVING dns_count > 0
+    INNER JOIN results r ON r.event_id = e.id
+    WHERE {$dnsCondition}
+    GROUP BY e.id
     ORDER BY e.date DESC
     LIMIT 50
 ");
