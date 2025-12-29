@@ -595,6 +595,10 @@ function recalculateDHEventResults($db, $event_id, $new_scale_id = null, $use_sw
                 if ($result['is_ebike']) {
                     $overallPosition = null;
                     // Points already set to 0 above
+                // DNS/DNF/DQ riders should NEVER have position or points
+                } elseif (in_array($result['status'], ['dns', 'dnf', 'dq'])) {
+                    $overallPosition = null;
+                    // Points already set to 0 above
                 } elseif ($result['status'] === 'finished' && ($isValidTime($result['run_1_time']) || $isValidTime($result['run_2_time']))) {
                     $overallPosition = $pos++;
 
@@ -711,6 +715,10 @@ function recalculateEventResults($db, $event_id, $new_scale_id = null) {
 
                 // E-BIKE participants don't get position or points
                 if ($result['is_ebike']) {
+                    $newPosition = null;
+                    $newPoints = 0;
+                // DNS/DNF/DQ riders should NEVER have position or points
+                } elseif (in_array($result['status'], ['dns', 'dnf', 'dq'])) {
                     $newPosition = null;
                     $newPoints = 0;
                 } elseif ($result['status'] === 'finished' && !empty($result['finish_time'])) {
