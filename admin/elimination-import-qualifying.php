@@ -97,6 +97,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'best' => 'best',
                 'bäst' => 'best',
                 'totaltid' => 'best',
+                // Final position for completed events
+                'slutplacering' => 'final_position',
+                'final_position' => 'final_position',
+                'final' => 'final_position',
+                'placering' => 'final_position',
+                'plats' => 'final_position',
+                'position' => 'final_position',
             ];
 
             $mappedHeaders = [];
@@ -127,6 +134,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
                 if (isset($row['best'])) {
                     $row['best'] = floatval(str_replace(',', '.', $row['best']));
+                }
+
+                // Parse final position for completed events
+                if (isset($row['final_position'])) {
+                    $row['final_position'] = intval($row['final_position']);
                 }
 
                 // Calculate best time if not provided
@@ -164,6 +176,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $imported = 0;
             $errors = [];
             $classesImported = [];
+            $classesWithFinalResults = [];
             $classCache = [];
 
             // Build class lookup cache with multiple variants
@@ -297,6 +310,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $best > 0 ? $best : null
                     ]);
 
+                    // If final position is provided, insert into elimination_results
+                    $finalPos = intval($row['final_position'] ?? 0);
+                    if ($finalPos > 0) {
+                        $stmt = $pdo->prepare("
+                            INSERT INTO elimination_results
+                            (event_id, class_id, rider_id, final_position)
+                            VALUES (?, ?, ?, ?)
+                            ON DUPLICATE KEY UPDATE
+                            final_position = VALUES(final_position)
+                        ");
+                        $stmt->execute([$eventId, $rowClassId, $riderId, $finalPos]);
+
+                        // Track that this class has final results
+                        if (!isset($classesWithFinalResults[$rowClassId])) {
+                            $classesWithFinalResults[$rowClassId] = true;
+                        }
+                    }
+
                     $classesImported[$rowClassId] = true;
                     $imported++;
                 } catch (Exception $e) {
@@ -334,32 +365,73 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 foreach ($qualifiers as $q) {
                     // Update seed position
                     $pdo->prepare("UPDATE elimination_qualifying SET seed_position = ? WHERE id = ?")->execute([$pos, $q['id']]);
-
-                    // Sync to main results table using mapped class (for series calculations)
-                    $stmt = $pdo->prepare("
-                        INSERT INTO results (event_id, class_id, cyclist_id, position, finish_time, bib_number, status)
-                        VALUES (?, ?, ?, ?, ?, ?, 'finished')
-                        ON DUPLICATE KEY UPDATE
-                        position = VALUES(position),
-                        finish_time = VALUES(finish_time),
-                        bib_number = VALUES(bib_number),
-                        status = VALUES(status)
-                    ");
-                    $stmt->execute([
-                        $eventId,
-                        $seriesClassId,  // Use mapped class for series points
-                        $q['rider_id'],
-                        $pos,
-                        $q['best_time'],
-                        $q['bib_number']
-                    ]);
-
                     $pos++;
+                }
+
+                // Sync to results - use final positions if imported, otherwise use seed positions
+                if (isset($classesWithFinalResults[$impClassId])) {
+                    // Use final_position from elimination_results
+                    $finalResults = $db->getAll("
+                        SELECT er.rider_id, er.final_position, eq.bib_number, eq.best_time
+                        FROM elimination_results er
+                        JOIN elimination_qualifying eq ON eq.event_id = er.event_id
+                            AND eq.class_id = er.class_id AND eq.rider_id = er.rider_id
+                        WHERE er.event_id = ? AND er.class_id = ?
+                        ORDER BY er.final_position ASC
+                    ", [$eventId, $impClassId]);
+
+                    foreach ($finalResults as $fr) {
+                        $stmt = $pdo->prepare("
+                            INSERT INTO results (event_id, class_id, cyclist_id, position, finish_time, bib_number, status)
+                            VALUES (?, ?, ?, ?, ?, ?, 'finished')
+                            ON DUPLICATE KEY UPDATE
+                            position = VALUES(position),
+                            finish_time = VALUES(finish_time),
+                            bib_number = VALUES(bib_number),
+                            status = VALUES(status)
+                        ");
+                        $stmt->execute([
+                            $eventId,
+                            $seriesClassId,
+                            $fr['rider_id'],
+                            $fr['final_position'],
+                            $fr['best_time'],
+                            $fr['bib_number']
+                        ]);
+                    }
+                } else {
+                    // No final results - use seed positions (qualifying only)
+                    $seedPos = 1;
+                    foreach ($qualifiers as $q) {
+                        $stmt = $pdo->prepare("
+                            INSERT INTO results (event_id, class_id, cyclist_id, position, finish_time, bib_number, status)
+                            VALUES (?, ?, ?, ?, ?, ?, 'finished')
+                            ON DUPLICATE KEY UPDATE
+                            position = VALUES(position),
+                            finish_time = VALUES(finish_time),
+                            bib_number = VALUES(bib_number),
+                            status = VALUES(status)
+                        ");
+                        $stmt->execute([
+                            $eventId,
+                            $seriesClassId,
+                            $q['rider_id'],
+                            $seedPos,
+                            $q['best_time'],
+                            $q['bib_number']
+                        ]);
+                        $seedPos++;
+                    }
                 }
             }
 
             $numClasses = count($classesImported);
-            $_SESSION['success'] = "Importerade $imported kvalificeringsresultat i $numClasses klass(er)! Resultaten är nu synkade.";
+            $numFinalClasses = count($classesWithFinalResults);
+            if ($numFinalClasses > 0) {
+                $_SESSION['success'] = "Importerade $imported resultat med slutplaceringar i $numFinalClasses klass(er)! Resultaten är nu synkade.";
+            } else {
+                $_SESSION['success'] = "Importerade $imported kvalificeringsresultat i $numClasses klass(er)! Resultaten är nu synkade.";
+            }
             if (!empty($errors)) {
                 $_SESSION['warning'] = implode('<br>', array_slice($errors, 0, 5));
             }
@@ -375,7 +447,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 // Page config
-$page_title = 'Importera Kvalresultat';
+$page_title = 'Importera DS-resultat';
 $breadcrumbs = [
     ['label' => 'Elimination', 'url' => '/admin/elimination.php'],
     ['label' => $event['name'], 'url' => "/admin/elimination-manage.php?event_id={$eventId}"],
@@ -387,18 +459,20 @@ include __DIR__ . '/components/unified-layout.php';
 
 <div class="admin-card mb-lg">
     <div class="admin-card-header">
-        <h3>Importera Kvalificeringsresultat</h3>
+        <h3>Importera DS-resultat</h3>
     </div>
     <div class="admin-card-body">
-        <p class="mb-md">Ladda upp en CSV-fil med kvalificeringstider. Filen ska innehålla kolumner för:</p>
+        <p class="mb-md">Ladda upp en CSV-fil med kvalificeringstider och/eller slutresultat. Filen ska innehålla kolumner för:</p>
         <ul class="mb-lg" style="margin-left: var(--space-lg); color: var(--color-text-secondary);">
             <li><strong>Startnr</strong> (valfritt) - Startnummer</li>
-            <li><strong>Namn</strong> eller <strong>Förnamn + Efternamn</strong> - Åkarens namn</li>
+            <li><strong>Namn</strong> eller <strong>Förnamn + Efternamn</strong> - Deltagarens namn</li>
             <li><strong>Klubb</strong> (valfritt) - Cykelklubb</li>
             <li><strong>Klass</strong> (valfritt) - Tävlingsklass</li>
+            <li><strong>Serieklass</strong> (valfritt) - Klass för seriepoäng (om annan än tävlingsklass)</li>
             <li><strong>Kval 1</strong> - Tid för första kvalåket</li>
             <li><strong>Kval 2</strong> (valfritt) - Tid för andra kvalåket</li>
-            <li><strong>TID:</strong> eller <strong>Bäst</strong> (valfritt) - Bästa tid (beräknas automatiskt om ej angiven)</li>
+            <li><strong>Bäst</strong> (valfritt) - Bästa tid (beräknas automatiskt om ej angiven)</li>
+            <li><strong>Slutplacering</strong> (valfritt) - Slutplacering från bracket (för avverkade event)</li>
         </ul>
 
         <form method="POST" enctype="multipart/form-data">
@@ -524,6 +598,16 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
             <?php endif; ?>
 
+            <?php
+            // Check if any row has final_position
+            $hasFinalPositions = false;
+            foreach ($previewData as $row) {
+                if (!empty($row['final_position'])) {
+                    $hasFinalPositions = true;
+                    break;
+                }
+            }
+            ?>
             <div class="admin-table-container mb-lg">
                 <table class="admin-table">
                     <thead>
@@ -536,6 +620,9 @@ include __DIR__ . '/components/unified-layout.php';
                             <th class="text-right">Kval 1</th>
                             <th class="text-right">Kval 2</th>
                             <th class="text-right">Bäst</th>
+                            <?php if ($hasFinalPositions): ?>
+                            <th class="text-right">Slutplac.</th>
+                            <?php endif; ?>
                         </tr>
                     </thead>
                     <tbody>
@@ -559,6 +646,9 @@ include __DIR__ . '/components/unified-layout.php';
                                 <td class="text-right"><?= isset($row['run1']) && $row['run1'] > 0 ? number_format($row['run1'], 3) : '-' ?></td>
                                 <td class="text-right"><?= isset($row['run2']) && $row['run2'] > 0 ? number_format($row['run2'], 3) : '-' ?></td>
                                 <td class="text-right"><strong><?= isset($row['best']) && $row['best'] > 0 ? number_format($row['best'], 3) : '-' ?></strong></td>
+                                <?php if ($hasFinalPositions): ?>
+                                <td class="text-right"><?= !empty($row['final_position']) ? $row['final_position'] : '-' ?></td>
+                                <?php endif; ?>
                             </tr>
                         <?php endforeach; ?>
                     </tbody>
@@ -592,11 +682,24 @@ include __DIR__ . '/components/unified-layout.php';
         <h3>Exempelformat</h3>
     </div>
     <div class="admin-card-body">
-        <p class="mb-md">Din CSV-fil bör se ut ungefär så här:</p>
-        <pre style="background: var(--color-bg-secondary); padding: var(--space-md); border-radius: var(--radius-md); overflow-x: auto; font-size: var(--text-sm);">Startnr;Namn;Klubb;Tävlingsklass;Kval 1;Kval 2;TID:
+        <p class="mb-md"><strong>Bara kvalificering</strong> (för att sedan köra bracket i systemet):</p>
+        <pre style="background: var(--color-bg-secondary); padding: var(--space-md); border-radius: var(--radius-md); overflow-x: auto; font-size: var(--text-sm); margin-bottom: var(--space-md);">Startnr;Namn;Klubb;Klass;Kval 1;Kval 2;Bäst
 5;Theodor Ek;CK Fix;Ungdom Pojkar;12,977;13,051;12,977
 9;Arvid Andersson;Falkenbergs CK;Ungdom Pojkar;13,625;13,407;13,407
 14;Leo Drotz;Mera Lera MTB;Ungdom Pojkar;13,477;13,950;13,477</pre>
+
+        <p class="mb-md"><strong>Avverkat event med slutplaceringar</strong> (hoppar över bracket):</p>
+        <pre style="background: var(--color-bg-secondary); padding: var(--space-md); border-radius: var(--radius-md); overflow-x: auto; font-size: var(--text-sm);">Startnr;Namn;Klubb;Klass;Serieklass;Kval 1;Kval 2;Bäst;Slutplacering
+5;Theodor Ek;CK Fix;Ungdom Pojkar;Pojkar U15;12,977;13,051;12,977;1
+9;Arvid Andersson;Falkenbergs CK;Ungdom Pojkar;Pojkar U15;13,625;13,407;13,407;2
+14;Leo Drotz;Mera Lera MTB;Ungdom Pojkar;Pojkar U15;13,477;13,950;13,477;3
+22;Erik Svensson;SISU CK;Ungdom Pojkar;Pojkar U15;14,125;14,250;14,125;4</pre>
+        <p class="form-help mt-sm">
+            <a href="/templates/import-ds-complete-template.csv" download>
+                <i data-lucide="download" style="width: 14px; height: 14px;"></i>
+                Ladda ner mall för avverkade event
+            </a>
+        </p>
     </div>
 </div>
 
