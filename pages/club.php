@@ -592,14 +592,14 @@ if (strlen($clubInitials) < 2 && strlen($club['name']) >= 2) {
 
     <!-- Desktop Table View -->
     <div class="table-responsive members-table-desktop">
-        <table class="table table--striped">
+        <table class="table table--striped" id="membersTable">
             <thead>
                 <tr>
                     <th>Namn</th>
-                    <th class="text-right">Poäng</th>
-                    <th class="text-center">Race</th>
-                    <th class="text-center">Vinster</th>
-                    <th class="text-center">Pall</th>
+                    <th class="text-right sortable desc" data-sort="1">Poäng</th>
+                    <th class="text-center sortable" data-sort="2">Race</th>
+                    <th class="text-center sortable" data-sort="3">Vinster</th>
+                    <th class="text-center sortable" data-sort="4">Pall</th>
                     <th class="text-right">År</th>
                 </tr>
             </thead>
@@ -624,16 +624,16 @@ if (strlen($clubInitials) < 2 && strlen($club['name']) >= 2) {
                             </div>
                         </div>
                     </td>
-                    <td class="text-right">
+                    <td class="text-right" data-value="<?= $rankingPts ?>">
                         <?php if ($rankingPts > 0): ?>
                         <span class="member-ranking-pts"><?= number_format($rankingPts, 0) ?></span>
                         <?php else: ?>
                         <span class="text-muted">-</span>
                         <?php endif; ?>
                     </td>
-                    <td class="text-center"><?= (int)$member['total_races'] ?></td>
-                    <td class="text-center"><?= (int)$member['total_wins'] ?></td>
-                    <td class="text-center"><?= (int)$member['total_podiums'] ?></td>
+                    <td class="text-center" data-value="<?= (int)$member['total_races'] ?>"><?= (int)$member['total_races'] ?></td>
+                    <td class="text-center" data-value="<?= (int)$member['total_wins'] ?>"><?= (int)$member['total_wins'] ?></td>
+                    <td class="text-center" data-value="<?= (int)$member['total_podiums'] ?>"><?= (int)$member['total_podiums'] ?></td>
                     <td class="text-right member-years-cell"><?= htmlspecialchars($yearsStr) ?></td>
                 </tr>
                 <?php endforeach; ?>
@@ -1020,3 +1020,43 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 <?php endif; ?>
+
+<!-- Table Sorting Script -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const table = document.getElementById('membersTable');
+    if (!table) return;
+
+    const headers = table.querySelectorAll('th.sortable');
+    const tbody = table.querySelector('tbody');
+
+    headers.forEach(header => {
+        header.addEventListener('click', function() {
+            const colIndex = parseInt(this.dataset.sort);
+            const isDesc = this.classList.contains('desc');
+
+            // Remove sort classes from all headers
+            headers.forEach(h => h.classList.remove('asc', 'desc'));
+
+            // Toggle sort direction
+            if (isDesc) {
+                this.classList.add('asc');
+            } else {
+                this.classList.add('desc');
+            }
+
+            const rows = Array.from(tbody.querySelectorAll('tr'));
+            const sortAsc = this.classList.contains('asc');
+
+            rows.sort((a, b) => {
+                const aVal = parseFloat(a.cells[colIndex].dataset.value) || 0;
+                const bVal = parseFloat(b.cells[colIndex].dataset.value) || 0;
+                return sortAsc ? aVal - bVal : bVal - aVal;
+            });
+
+            // Re-append sorted rows
+            rows.forEach(row => tbody.appendChild(row));
+        });
+    });
+});
+</script>
