@@ -382,8 +382,10 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
             'totaltid' => 'finish_time',
             'totaltime' => 'finish_time',
 
-            // Status
+            // Status (column header variants)
             'status' => 'status',
+            'fin' => 'status',
+            'finished' => 'status',
 
             // Gender
             'gender' => 'gender',
