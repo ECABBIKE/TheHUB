@@ -61,8 +61,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax'])) {
     if ($action === 'save_qualifying') {
         $riderId = intval($_POST['rider_id'] ?? 0);
         $classId = intval($_POST['class_id'] ?? 0);
-        $run1 = $_POST['run1'] !== '' ? floatval($_POST['run1']) : null;
-        $run2 = $_POST['run2'] !== '' ? floatval($_POST['run2']) : null;
+        // Handle both comma and dot as decimal separator
+        $run1 = $_POST['run1'] !== '' ? floatval(str_replace(',', '.', $_POST['run1'])) : null;
+        $run2 = $_POST['run2'] !== '' ? floatval(str_replace(',', '.', $_POST['run2'])) : null;
         $status = $_POST['status'] ?? 'finished';
 
         if (!$riderId || !$classId) {
@@ -110,10 +111,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['ajax'])) {
 
     if ($action === 'save_heat') {
         $heatId = intval($_POST['heat_id'] ?? 0);
-        $rider1Run1 = $_POST['rider1_run1'] !== '' ? floatval($_POST['rider1_run1']) : null;
-        $rider1Run2 = $_POST['rider1_run2'] !== '' ? floatval($_POST['rider1_run2']) : null;
-        $rider2Run1 = $_POST['rider2_run1'] !== '' ? floatval($_POST['rider2_run1']) : null;
-        $rider2Run2 = $_POST['rider2_run2'] !== '' ? floatval($_POST['rider2_run2']) : null;
+        // Handle both comma and dot as decimal separator
+        $rider1Run1 = $_POST['rider1_run1'] !== '' ? floatval(str_replace(',', '.', $_POST['rider1_run1'])) : null;
+        $rider1Run2 = $_POST['rider1_run2'] !== '' ? floatval(str_replace(',', '.', $_POST['rider1_run2'])) : null;
+        $rider2Run1 = $_POST['rider2_run1'] !== '' ? floatval(str_replace(',', '.', $_POST['rider2_run1'])) : null;
+        $rider2Run2 = $_POST['rider2_run2'] !== '' ? floatval(str_replace(',', '.', $_POST['rider2_run2'])) : null;
 
         if (!$heatId) {
             echo json_encode(['success' => false, 'error' => 'Heat-ID saknas']);
