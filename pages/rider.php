@@ -1073,7 +1073,7 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
                     <?php endif; ?>
                     <span class="result-date"><?= date('j M', strtotime($result['event_date'])) ?></span>
                     <span class="result-details">
-                        <span class="result-name"><?= htmlspecialchars($result['series_name'] ?? $result['event_name']) ?></span>
+                        <span class="result-name"><?= htmlspecialchars($result['event_name']) ?></span>
                         <span class="result-meta"><?= htmlspecialchars($result['location'] ?? '') ?><?= !empty($result['location']) && !empty($result['class_name']) ? ' · ' : '' ?><?= htmlspecialchars($result['class_name'] ?? '') ?></span>
                     </span>
                 </a>
