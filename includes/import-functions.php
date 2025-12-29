@@ -229,7 +229,7 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
             }
 
             // Skip non-stage columns that may appear between Club and NetTime
-            // This includes: UCI-ID, birth year, age, and DH run times (Run1/Run2)
+            // This includes: UCI-ID, birth year, age, DH run times, status columns
             $normalizedCheck = mb_strtolower($originalCol, 'UTF-8');
             $normalizedCheck = str_replace([' ', '-', '_'], '', $normalizedCheck);
             if (in_array($normalizedCheck, [
@@ -237,7 +237,8 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
                 'birthyear', 'födelseår', 'fodelsear', 'ålder', 'alder', 'age',
                 'run1', 'run2', 'run1time', 'run2time', 'åk1', 'åk2', 'ak1', 'ak2',
                 'kval', 'qualifying', 'final',
-                'land', 'nationality', 'nationalitet', 'country', 'nation'
+                'land', 'nationality', 'nationalitet', 'country', 'nation',
+                'status', 'fin', 'finished', 'dns', 'dnf', 'dq', 'dsq'
             ])) {
                 continue;
             }
@@ -381,8 +382,13 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
             'totaltid' => 'finish_time',
             'totaltime' => 'finish_time',
 
-            // Status
+            // Status (column header variants)
             'status' => 'status',
+            'fin' => 'status',
+            'finish' => 'status',
+            'finished' => 'status',
+            'finnish' => 'status',
+            'finnised' => 'status',
 
             // Gender
             'gender' => 'gender',
