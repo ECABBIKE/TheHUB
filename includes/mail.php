@@ -41,7 +41,7 @@ function hub_send_php_mail(string $to, string $subject, string $body, string $fr
     $headers[] = 'MIME-Version: 1.0';
     $headers[] = 'Content-Type: text/html; charset=UTF-8';
     $headers[] = "From: {$fromName} <{$fromEmail}>";
-    $headers[] = "Reply-To: {$replyTo}";
+    $headers[] = "Reply-To: {$fromEmail}"; // Use from email as reply-to
     $headers[] = 'X-Mailer: TheHUB/3.5';
 
     $result = @mail($to, $subject, $body, implode("\r\n", $headers));
