@@ -645,8 +645,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $roundName = 'semifinal';
                         $roundNumber = 1;
                     } elseif ($bracketSize == 8) {
-                        // Quarterfinal: Heats 1,2 -> SF1; Heats 3,4 -> SF2
-                        $seedPairs = [[1,8], [4,5], [2,7], [3,6]];
+                        // Quarterfinal: Seed 2 i Heat 4 (längst ner visuellt)
+                        // Heat 1,2 → SF1; Heat 3,4 → SF2
+                        $seedPairs = [[1,8], [4,5], [3,6], [2,7]];
                         $roundName = 'quarterfinal';
                         $roundNumber = 1;
                     } elseif ($bracketSize == 16) {
@@ -714,8 +715,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         }
                     }
 
-                    // Generate subsequent rounds
-                    generateNextRounds($pdo, $eventId, $classId);
+                    // NOTE: Generera INTE nästa runda här!
+                    // Nästa runda skapas automatiskt när alla heats i nuvarande runda har vinnare.
+                    // Om alla heats är BYEs, kör generateNextRounds direkt
+                    $pendingCount = $db->getRow("
+                        SELECT COUNT(*) as cnt FROM elimination_brackets
+                        WHERE event_id = ? AND class_id = ? AND status = 'pending'
+                    ", [$eventId, $classId]);
+
+                    if ($pendingCount['cnt'] == 0) {
+                        // Alla heats är BYEs, generera nästa runda direkt
+                        generateNextRounds($pdo, $eventId, $classId);
+                    }
 
                     $generatedCount++;
                     $totalRiders += $numQualifiers;
