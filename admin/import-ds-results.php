@@ -1,7 +1,8 @@
 <?php
 /**
- * Import Dual Slalom Results - Simple placement import with manual points
- * CSV format: Class, Position, FirstName, LastName, Club, Points
+ * Import Dual Slalom Results
+ * - Event class (display) + Series class (points)
+ * CSV format: Eventklass, Placering, Förnamn, Efternamn, Klubb, Serieklass, Poäng
  */
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../includes/import-functions.php';
@@ -15,19 +16,18 @@ $messageType = 'info';
 if (isset($_GET['download_template'])) {
     header('Content-Type: text/csv; charset=utf-8');
     header('Content-Disposition: attachment; filename="ds-resultat-mall.csv"');
-    echo "Klass;Placering;Förnamn;Efternamn;Klubb;Poäng\n";
-    echo "Herrar Elite;1;Johan;Andersson;Stockholm CK;100\n";
-    echo "Herrar Elite;2;Erik;Svensson;Göteborg MTB;80\n";
-    echo "Herrar Elite;3;Anders;Nilsson;;65\n";
-    echo "Herrar Elite;4;Peter;Lindqvist;Malmö CK;55\n";
-    echo "Damer Elite;1;Anna;Johansson;Uppsala CK;100\n";
-    echo "Damer Elite;2;Maria;Eriksson;;80\n";
-    echo "Herrar Junior;1;Oscar;Berg;Lund CK;100\n";
-    echo "Herrar Junior;2;Viktor;Ström;;80\n";
+    echo "Eventklass;Placering;Förnamn;Efternamn;Klubb;Serieklass;Poäng\n";
+    echo "Sportmotion Herr;1;Johan;Andersson;Stockholm CK;Herrar Elite;100\n";
+    echo "Sportmotion Herr;2;Erik;Svensson;Göteborg MTB;Herrar Elite;80\n";
+    echo "Sportmotion Herr;3;Anders;Nilsson;;Herrar Junior;65\n";
+    echo "Sportmotion Dam;1;Anna;Johansson;Uppsala CK;Damer Elite;100\n";
+    echo "Sportmotion Dam;2;Maria;Eriksson;;Damer Elite;80\n";
+    echo "Pojkar 13-16;1;Oscar;Berg;Malmö CK;Herrar Junior;100\n";
+    echo "Flickor 13-16;1;Lisa;Ström;;Damer Junior;100\n";
     exit;
 }
 
-// Get events (DS only, or all if none found)
+// Get events
 $events = $db->getAll("
     SELECT e.id, e.name, e.date, e.discipline
     FROM events e
@@ -44,6 +44,9 @@ if (empty($events)) {
         LIMIT 200
     ");
 }
+
+// Get all classes for reference
+$allClasses = $db->getAll("SELECT id, display_name, name FROM classes WHERE active = 1 ORDER BY sort_order, display_name");
 
 // Handle import
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['import'])) {
@@ -70,9 +73,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['import'])) {
         // Check if first line is header
         $firstLineLower = strtolower($firstLine);
         $hasHeader = (strpos($firstLineLower, 'klass') !== false ||
-                      strpos($firstLineLower, 'class') !== false ||
                       strpos($firstLineLower, 'poäng') !== false ||
-                      strpos($firstLineLower, 'points') !== false);
+                      strpos($firstLineLower, 'serie') !== false);
 
         if ($hasHeader) {
             array_shift($lines);
@@ -84,18 +86,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['import'])) {
 
             $cols = str_getcsv($line, $delimiter);
 
-            // Expected: Class, Position, FirstName, LastName, Club, Points
-            if (count($cols) < 4) {
-                $errors[] = "Rad " . ($lineNum + 1) . ": För få kolumner";
+            // Expected: Eventklass, Placering, Förnamn, Efternamn, Klubb, Serieklass, Poäng
+            if (count($cols) < 6) {
+                $errors[] = "Rad " . ($lineNum + 1) . ": För få kolumner (behöver minst 6)";
                 continue;
             }
 
-            $className = trim($cols[0]);
+            $eventClassName = trim($cols[0]);
             $position = (int)trim($cols[1]);
             $firstName = trim($cols[2]);
             $lastName = trim($cols[3]);
             $clubName = isset($cols[4]) ? trim($cols[4]) : '';
-            $points = isset($cols[5]) ? (float)trim($cols[5]) : 0;
+            $seriesClassName = trim($cols[5]);
+            $points = isset($cols[6]) ? (float)trim($cols[6]) : 0;
 
             if (empty($firstName) || empty($lastName)) {
                 $errors[] = "Rad " . ($lineNum + 1) . ": Saknar namn";
@@ -108,21 +111,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['import'])) {
             }
 
             try {
-                // Find or create class
-                $class = $db->getRow(
+                // Find or create EVENT class
+                $eventClass = $db->getRow(
                     "SELECT id FROM classes WHERE LOWER(display_name) = LOWER(?) OR LOWER(name) = LOWER(?)",
-                    [$className, $className]
+                    [$eventClassName, $eventClassName]
                 );
 
-                if (!$class) {
-                    $classId = $db->insert('classes', [
-                        'name' => strtolower(str_replace(' ', '_', $className)),
-                        'display_name' => $className,
+                if (!$eventClass) {
+                    $eventClassId = $db->insert('classes', [
+                        'name' => strtolower(str_replace(' ', '_', $eventClassName)),
+                        'display_name' => $eventClassName,
                         'active' => 1,
-                        'sort_order' => 999
+                        'sort_order' => 900
                     ]);
                 } else {
-                    $classId = $class['id'];
+                    $eventClassId = $eventClass['id'];
+                }
+
+                // Find or create SERIES class
+                $seriesClass = $db->getRow(
+                    "SELECT id FROM classes WHERE LOWER(display_name) = LOWER(?) OR LOWER(name) = LOWER(?)",
+                    [$seriesClassName, $seriesClassName]
+                );
+
+                if (!$seriesClass) {
+                    $seriesClassId = $db->insert('classes', [
+                        'name' => strtolower(str_replace(' ', '_', $seriesClassName)),
+                        'display_name' => $seriesClassName,
+                        'active' => 1,
+                        'sort_order' => 950
+                    ]);
+                } else {
+                    $seriesClassId = $seriesClass['id'];
                 }
 
                 // Find or create rider
@@ -132,7 +152,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['import'])) {
                 );
 
                 if (!$rider) {
-                    // Find or create club
                     $clubId = null;
                     if (!empty($clubName)) {
                         $club = $db->getRow("SELECT id FROM clubs WHERE LOWER(name) = LOWER(?)", [$clubName]);
@@ -155,27 +174,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['import'])) {
 
                 // Check if result already exists
                 $existing = $db->getRow(
-                    "SELECT id FROM results WHERE event_id = ? AND cyclist_id = ? AND class_id = ?",
-                    [$eventId, $riderId, $classId]
+                    "SELECT id FROM results WHERE event_id = ? AND cyclist_id = ?",
+                    [$eventId, $riderId]
                 );
 
+                $resultData = [
+                    'position' => $position,
+                    'class_id' => $eventClassId,
+                    'series_class_id' => $seriesClassId,
+                    'points' => $points,
+                    'status' => 'finished'
+                ];
+
                 if ($existing) {
-                    // Update with manual points
-                    $db->update('results', [
-                        'position' => $position,
-                        'points' => $points,
-                        'status' => 'finished'
-                    ], 'id = ?', [$existing['id']]);
+                    $db->update('results', $resultData, 'id = ?', [$existing['id']]);
                 } else {
-                    // Insert with manual points
-                    $db->insert('results', [
-                        'event_id' => $eventId,
-                        'cyclist_id' => $riderId,
-                        'class_id' => $classId,
-                        'position' => $position,
-                        'points' => $points,
-                        'status' => 'finished'
-                    ]);
+                    $resultData['event_id'] = $eventId;
+                    $resultData['cyclist_id'] = $riderId;
+                    $db->insert('results', $resultData);
                 }
 
                 $imported++;
@@ -186,7 +202,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['import'])) {
         }
 
         if ($imported > 0) {
-            $message = "$imported resultat importerade med manuella poäng!";
+            $message = "$imported resultat importerade!";
             if (!empty($errors)) {
                 $message .= " (" . count($errors) . " fel)";
             }
@@ -225,6 +241,10 @@ include __DIR__ . '/components/unified-layout.php';
         </a>
     </div>
     <div class="card-body">
+        <div class="alert alert-info mb-lg">
+            <strong>Dubbla klasser:</strong> Eventklass visas på resultatsidan, Serieklass används för seriepoäng.
+        </div>
+
         <form method="POST">
             <?= csrf_field() ?>
 
@@ -242,13 +262,13 @@ include __DIR__ . '/components/unified-layout.php';
 
             <div class="form-group mb-lg">
                 <label class="label">2. Klistra in CSV-data</label>
-                <textarea name="csv_data" class="input" rows="15" placeholder="Klass;Placering;Förnamn;Efternamn;Klubb;Poäng
-Herrar Elite;1;Johan;Andersson;Stockholm CK;100
-Herrar Elite;2;Erik;Svensson;Göteborg MTB;80
-Damer Elite;1;Anna;Johansson;Uppsala CK;100
+                <textarea name="csv_data" class="input" rows="15" placeholder="Eventklass;Placering;Förnamn;Efternamn;Klubb;Serieklass;Poäng
+Sportmotion Herr;1;Johan;Andersson;Stockholm CK;Herrar Elite;100
+Sportmotion Herr;2;Erik;Svensson;;Herrar Elite;80
+Sportmotion Dam;1;Anna;Johansson;Uppsala CK;Damer Elite;100
 ..." style="font-family: monospace; font-size: 13px;"></textarea>
                 <p class="text-sm text-secondary mt-sm">
-                    Format: <code>Klass;Placering;Förnamn;Efternamn;Klubb;Poäng</code>
+                    Format: <code>Eventklass;Placering;Förnamn;Efternamn;Klubb;Serieklass;Poäng</code>
                 </p>
             </div>
 
@@ -266,19 +286,32 @@ Damer Elite;1;Anna;Johansson;Uppsala CK;100
         <h3><i data-lucide="info"></i> Exempeldata</h3>
     </div>
     <div class="card-body">
-        <pre class="gs-code-dark" style="font-size: 13px;">Klass;Placering;Förnamn;Efternamn;Klubb;Poäng
-Herrar Elite;1;Johan;Andersson;Stockholm CK;100
-Herrar Elite;2;Erik;Svensson;Göteborg MTB;80
-Herrar Elite;3;Anders;Nilsson;;65
-Herrar Elite;4;Peter;Lindqvist;Malmö CK;55
-Damer Elite;1;Anna;Johansson;Uppsala CK;100
-Damer Elite;2;Maria;Eriksson;;80
-Herrar Junior;1;Oscar;Berg;Lund CK;100
-Herrar Junior;2;Viktor;Ström;;80</pre>
+        <pre class="gs-code-dark" style="font-size: 13px;">Eventklass;Placering;Förnamn;Efternamn;Klubb;Serieklass;Poäng
+Sportmotion Herr;1;Johan;Andersson;Stockholm CK;Herrar Elite;100
+Sportmotion Herr;2;Erik;Svensson;Göteborg MTB;Herrar Elite;80
+Sportmotion Herr;3;Anders;Nilsson;;Herrar Junior;65
+Sportmotion Dam;1;Anna;Johansson;Uppsala CK;Damer Elite;100
+Sportmotion Dam;2;Maria;Eriksson;;Damer Elite;80
+Pojkar 13-16;1;Oscar;Berg;Malmö CK;Herrar Junior;100
+Flickor 13-16;1;Lisa;Ström;;Damer Junior;100</pre>
         <p class="text-sm text-secondary mt-md">
-            <strong>Poäng sätts manuellt</strong> - systemet räknar inte ut dem automatiskt.
-            Klubb kan lämnas tom.
+            <strong>Eventklass</strong> = Visas på resultatsidan (Sportmotion Herr, etc.)<br>
+            <strong>Serieklass</strong> = Där poängen räknas i serietabellen (Herrar Elite, etc.)
         </p>
+    </div>
+</div>
+
+<!-- Available classes -->
+<div class="card mt-lg">
+    <div class="card-header">
+        <h3><i data-lucide="list"></i> Befintliga klasser</h3>
+    </div>
+    <div class="card-body">
+        <div style="display: flex; flex-wrap: wrap; gap: 8px;">
+            <?php foreach ($allClasses as $c): ?>
+            <span class="badge"><?= h($c['display_name']) ?></span>
+            <?php endforeach; ?>
+        </div>
     </div>
 </div>
 
