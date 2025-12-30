@@ -2526,8 +2526,8 @@ function openActivateModal() {
             </div>
             <div class="claim-modal-body">
                 <div class="claim-info-box claim-info-admin">
-                    <i data-lucide="shield-check"></i>
-                    <p><strong>Super Admin:</strong> Skicka en aktiveringslänk till denna profil så att användaren kan sätta sitt lösenord.</p>
+                    <i data-lucide="mail"></i>
+                    <p>En aktiveringslänk skickas till profilens e-postadress så att kontot kan aktiveras med ett lösenord.</p>
                 </div>
 
                 <div class="claim-profile-card claim-profile-target">
