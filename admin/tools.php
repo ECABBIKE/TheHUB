@@ -1124,6 +1124,124 @@ include __DIR__ . '/components/unified-layout.php';
     </div>
 </div>
 
+<h3 class="section-title">Årshantering & Datakvalitet</h3>
+
+<div class="tools-grid">
+    <!-- Yearly Rebuild -->
+    <div class="tool-card">
+        <div class="tool-card-header">
+            <div class="tool-icon danger">
+                <i data-lucide="calendar-cog"></i>
+            </div>
+            <div>
+                <h4 class="tool-title">Årsombyggnad</h4>
+                <p class="tool-description">Komplett arbetsflöde: importera deltagare, lås klubbar, rensa resultat, importera om</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/tools/yearly-rebuild.php" class="btn-admin btn-admin-danger flex-1">
+                <i data-lucide="calendar-cog" class="icon-sm"></i>
+                Årsombyggnad
+            </a>
+        </div>
+    </div>
+
+    <!-- Yearly Import Review -->
+    <div class="tool-card">
+        <div class="tool-card-header">
+            <div class="tool-icon">
+                <i data-lucide="calendar-check"></i>
+            </div>
+            <div>
+                <h4 class="tool-title">Import-granskning</h4>
+                <p class="tool-description">Granska alla event per år, hitta problem, lås klubbtillhörigheter</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/tools/yearly-import-review.php" class="btn-admin btn-admin-primary flex-1">
+                <i data-lucide="calendar-check" class="icon-sm"></i>
+                Årsgranskning
+            </a>
+        </div>
+    </div>
+
+    <!-- Diagnose Club Times -->
+    <div class="tool-card">
+        <div class="tool-card-header">
+            <div class="tool-icon warning">
+                <i data-lucide="clock"></i>
+            </div>
+            <div>
+                <h4 class="tool-title">Diagnostik: Tidsklubbar</h4>
+                <p class="tool-description">Hitta klubbar vars namn ser ut som tider (kolumnförskjutning)</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/tools/diagnose-club-times.php" class="btn-admin btn-admin-warning flex-1">
+                <i data-lucide="search" class="icon-sm"></i>
+                Diagnostisera
+            </a>
+        </div>
+    </div>
+
+    <!-- Fix Club Times -->
+    <div class="tool-card">
+        <div class="tool-card-header">
+            <div class="tool-icon warning">
+                <i data-lucide="wrench"></i>
+            </div>
+            <div>
+                <h4 class="tool-title">Fixa tidsklubbar</h4>
+                <p class="tool-description">Rensa och fixa klubbar med tidsliknande namn</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/tools/fix-club-times.php" class="btn-admin btn-admin-warning flex-1">
+                <i data-lucide="wrench" class="icon-sm"></i>
+                Fixa klubbar
+            </a>
+        </div>
+    </div>
+
+    <!-- Diagnose Class Errors -->
+    <div class="tool-card">
+        <div class="tool-card-header">
+            <div class="tool-icon warning">
+                <i data-lucide="users"></i>
+            </div>
+            <div>
+                <h4 class="tool-title">Diagnostik: Klassfel</h4>
+                <p class="tool-description">Hitta åkare som hamnat i fel klass (t.ex. Motion Kids)</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/tools/diagnose-class-errors.php" class="btn-admin btn-admin-warning flex-1">
+                <i data-lucide="search" class="icon-sm"></i>
+                Diagnostisera
+            </a>
+        </div>
+    </div>
+
+    <!-- Fix UCI Conflicts -->
+    <div class="tool-card">
+        <div class="tool-card-header">
+            <div class="tool-icon danger">
+                <i data-lucide="user-x"></i>
+            </div>
+            <div>
+                <h4 class="tool-title">Fixa UCI-konflikter</h4>
+                <p class="tool-description">Hitta och fixa åkare med förväxlade UCI-ID (samma efternamn)</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/tools/fix-uci-conflicts.php" class="btn-admin btn-admin-danger flex-1">
+                <i data-lucide="user-x" class="icon-sm"></i>
+                Fixa UCI
+            </a>
+        </div>
+    </div>
+</div>
+
 <h3 class="section-title">Cache & System</h3>
 
 <div class="tools-grid">
