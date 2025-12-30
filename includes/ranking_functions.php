@@ -163,31 +163,36 @@ function getDisciplineDisplayName($discipline) {
 }
 
 /**
- * Get the date of the most recent event with results
- * This is used as the reference date for ranking calculations
- * instead of "today", ensuring rankings are always based on actual data
+ * Get the ranking reference date - first day of month AFTER the latest event
+ *
+ * IMPORTANT: This now returns the SAME date for all disciplines to ensure
+ * consistent time decay calculations. Previously, each discipline had its own
+ * reference date which caused GRAVITY (ENDURO+DH) to show different points
+ * than the sum of ENDURO and DH rankings.
+ *
+ * The reference date is: first day of the month after the latest event with results
+ * This ensures a consistent 24-month rolling window.
  */
 function getLatestEventDateWithResults($db, $discipline = 'GRAVITY') {
-    $disciplineFilter = '';
-    $params = [];
-
-    if ($discipline === 'GRAVITY') {
-        $disciplineFilter = "AND e.discipline IN ('ENDURO', 'DH')";
-    } elseif ($discipline) {
-        $disciplineFilter = 'AND e.discipline = ?';
-        $params[] = $discipline;
-    }
-
+    // ALWAYS use the latest event across ALL disciplines (ENDURO + DH)
+    // This ensures consistent time decay calculations regardless of which
+    // discipline ranking we're calculating
     $result = $db->getRow("
         SELECT MAX(e.date) as latest_date
         FROM events e
         JOIN results r ON r.event_id = e.id
         WHERE r.status = 'finished'
         AND (r.points > 0 OR COALESCE(r.run_1_points, 0) > 0 OR COALESCE(r.run_2_points, 0) > 0)
-        {$disciplineFilter}
-    ", $params);
+        AND e.discipline IN ('ENDURO', 'DH')
+    ");
 
-    return $result['latest_date'] ?? date('Y-m-d');
+    $latestDate = $result['latest_date'] ?? date('Y-m-d');
+
+    // Calculate first day of the month AFTER the latest event
+    // This is the reference point for time decay calculations
+    $firstOfNextMonth = date('Y-m-01', strtotime($latestDate . ' +1 month'));
+
+    return $firstOfNextMonth;
 }
 
 /**
