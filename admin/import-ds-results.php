@@ -1,11 +1,10 @@
 <?php
 /**
- * Import Dual Slalom Results - Simple placement import for points
- * CSV format: Class, Position, FirstName, LastName, Club (optional)
+ * Import Dual Slalom Results - Simple placement import with manual points
+ * CSV format: Class, Position, FirstName, LastName, Club, Points
  */
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../includes/import-functions.php';
-require_once __DIR__ . '/../includes/point-calculations.php';
 require_admin();
 
 $db = getDB();
@@ -16,17 +15,19 @@ $messageType = 'info';
 if (isset($_GET['download_template'])) {
     header('Content-Type: text/csv; charset=utf-8');
     header('Content-Disposition: attachment; filename="ds-resultat-mall.csv"');
-    echo "Klass;Placering;Förnamn;Efternamn;Klubb\n";
-    echo "Herrar Elite;1;Johan;Andersson;Stockholm CK\n";
-    echo "Herrar Elite;2;Erik;Svensson;Göteborg MTB\n";
-    echo "Herrar Elite;3;Anders;Nilsson;\n";
-    echo "Damer Elite;1;Anna;Johansson;Uppsala CK\n";
-    echo "Damer Elite;2;Maria;Eriksson;\n";
-    echo "Herrar Junior;1;Oscar;Berg;Malmö CK\n";
+    echo "Klass;Placering;Förnamn;Efternamn;Klubb;Poäng\n";
+    echo "Herrar Elite;1;Johan;Andersson;Stockholm CK;100\n";
+    echo "Herrar Elite;2;Erik;Svensson;Göteborg MTB;80\n";
+    echo "Herrar Elite;3;Anders;Nilsson;;65\n";
+    echo "Herrar Elite;4;Peter;Lindqvist;Malmö CK;55\n";
+    echo "Damer Elite;1;Anna;Johansson;Uppsala CK;100\n";
+    echo "Damer Elite;2;Maria;Eriksson;;80\n";
+    echo "Herrar Junior;1;Oscar;Berg;Lund CK;100\n";
+    echo "Herrar Junior;2;Viktor;Ström;;80\n";
     exit;
 }
 
-// Get events (DS only)
+// Get events (DS only, or all if none found)
 $events = $db->getAll("
     SELECT e.id, e.name, e.date, e.discipline
     FROM events e
@@ -35,7 +36,6 @@ $events = $db->getAll("
     LIMIT 100
 ");
 
-// Get all events if no DS-specific found
 if (empty($events)) {
     $events = $db->getAll("
         SELECT id, name, date, discipline
@@ -44,9 +44,6 @@ if (empty($events)) {
         LIMIT 200
     ");
 }
-
-// Get classes
-$classes = $db->getAll("SELECT id, display_name FROM classes WHERE active = 1 ORDER BY sort_order, display_name");
 
 // Handle import
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['import'])) {
@@ -62,9 +59,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['import'])) {
         $message = 'Klistra in CSV-data';
         $messageType = 'error';
     } else {
-        $event = $db->getRow("SELECT * FROM events WHERE id = ?", [$eventId]);
-
-        // Parse CSV
         $lines = explode("\n", $csvData);
         $imported = 0;
         $errors = [];
@@ -75,10 +69,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['import'])) {
 
         // Check if first line is header
         $firstLineLower = strtolower($firstLine);
-        $hasHeader = (strpos($firstLineLower, 'class') !== false ||
-                      strpos($firstLineLower, 'klass') !== false ||
-                      strpos($firstLineLower, 'position') !== false ||
-                      strpos($firstLineLower, 'plac') !== false);
+        $hasHeader = (strpos($firstLineLower, 'klass') !== false ||
+                      strpos($firstLineLower, 'class') !== false ||
+                      strpos($firstLineLower, 'poäng') !== false ||
+                      strpos($firstLineLower, 'points') !== false);
 
         if ($hasHeader) {
             array_shift($lines);
@@ -90,7 +84,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['import'])) {
 
             $cols = str_getcsv($line, $delimiter);
 
-            // Expected: Class, Position, FirstName, LastName, [Club]
+            // Expected: Class, Position, FirstName, LastName, Club, Points
             if (count($cols) < 4) {
                 $errors[] = "Rad " . ($lineNum + 1) . ": För få kolumner";
                 continue;
@@ -101,6 +95,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['import'])) {
             $firstName = trim($cols[2]);
             $lastName = trim($cols[3]);
             $clubName = isset($cols[4]) ? trim($cols[4]) : '';
+            $points = isset($cols[5]) ? (float)trim($cols[5]) : 0;
 
             if (empty($firstName) || empty($lastName)) {
                 $errors[] = "Rad " . ($lineNum + 1) . ": Saknar namn";
@@ -120,7 +115,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['import'])) {
                 );
 
                 if (!$class) {
-                    // Create class
                     $classId = $db->insert('classes', [
                         'name' => strtolower(str_replace(' ', '_', $className)),
                         'display_name' => $className,
@@ -166,18 +160,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['import'])) {
                 );
 
                 if ($existing) {
-                    // Update
+                    // Update with manual points
                     $db->update('results', [
                         'position' => $position,
+                        'points' => $points,
                         'status' => 'finished'
                     ], 'id = ?', [$existing['id']]);
                 } else {
-                    // Insert
+                    // Insert with manual points
                     $db->insert('results', [
                         'event_id' => $eventId,
                         'cyclist_id' => $riderId,
                         'class_id' => $classId,
                         'position' => $position,
+                        'points' => $points,
                         'status' => 'finished'
                     ]);
                 }
@@ -189,17 +185,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['import'])) {
             }
         }
 
-        // Calculate points
         if ($imported > 0) {
-            try {
-                recalculateEventResults($db, $eventId);
-            } catch (Exception $e) {
-                // Ignore point calculation errors
-            }
-        }
-
-        if ($imported > 0) {
-            $message = "$imported resultat importerade!";
+            $message = "$imported resultat importerade med manuella poäng!";
             if (!empty($errors)) {
                 $message .= " (" . count($errors) . " fel)";
             }
@@ -230,7 +217,7 @@ include __DIR__ . '/components/unified-layout.php';
     <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
         <h2>
             <i data-lucide="git-branch"></i>
-            Importera Dual Slalom Placeringar
+            Importera DS Resultat
         </h2>
         <a href="?download_template=1" class="btn btn--secondary btn--sm">
             <i data-lucide="download"></i>
@@ -255,13 +242,13 @@ include __DIR__ . '/components/unified-layout.php';
 
             <div class="form-group mb-lg">
                 <label class="label">2. Klistra in CSV-data</label>
-                <textarea name="csv_data" class="input" rows="15" placeholder="Klass;Plac;Förnamn;Efternamn;Klubb
-Herrar Elite;1;Johan;Andersson;Stockholm CK
-Herrar Elite;2;Erik;Svensson;Göteborg MTB
-Damer Elite;1;Anna;Johansson;Uppsala CK
+                <textarea name="csv_data" class="input" rows="15" placeholder="Klass;Placering;Förnamn;Efternamn;Klubb;Poäng
+Herrar Elite;1;Johan;Andersson;Stockholm CK;100
+Herrar Elite;2;Erik;Svensson;Göteborg MTB;80
+Damer Elite;1;Anna;Johansson;Uppsala CK;100
 ..." style="font-family: monospace; font-size: 13px;"></textarea>
                 <p class="text-sm text-secondary mt-sm">
-                    Format: <code>Klass;Placering;Förnamn;Efternamn;Klubb</code> (klubb är valfritt)
+                    Format: <code>Klass;Placering;Förnamn;Efternamn;Klubb;Poäng</code>
                 </p>
             </div>
 
@@ -279,17 +266,18 @@ Damer Elite;1;Anna;Johansson;Uppsala CK
         <h3><i data-lucide="info"></i> Exempeldata</h3>
     </div>
     <div class="card-body">
-        <pre class="gs-code-dark" style="font-size: 13px;">Klass;Plac;Förnamn;Efternamn;Klubb
-Herrar Elite;1;Johan;ANDERSSON;Stockholm CK
-Herrar Elite;2;Erik;SVENSSON;Göteborg MTB
-Herrar Elite;3;Anders;NILSSON;
-Herrar Elite;4;Peter;LINDQVIST;Malmö CK
-Damer Elite;1;Anna;JOHANSSON;Uppsala CK
-Damer Elite;2;Maria;ERIKSSON;Lund MTB
-Herrar Junior;1;Oscar;BERG;
-Herrar Junior;2;Viktor;STRÖM;</pre>
+        <pre class="gs-code-dark" style="font-size: 13px;">Klass;Placering;Förnamn;Efternamn;Klubb;Poäng
+Herrar Elite;1;Johan;Andersson;Stockholm CK;100
+Herrar Elite;2;Erik;Svensson;Göteborg MTB;80
+Herrar Elite;3;Anders;Nilsson;;65
+Herrar Elite;4;Peter;Lindqvist;Malmö CK;55
+Damer Elite;1;Anna;Johansson;Uppsala CK;100
+Damer Elite;2;Maria;Eriksson;;80
+Herrar Junior;1;Oscar;Berg;Lund CK;100
+Herrar Junior;2;Viktor;Ström;;80</pre>
         <p class="text-sm text-secondary mt-md">
-            <strong>Tips:</strong> Kopiera direkt från Excel/Google Sheets. Systemet hanterar både <code>;</code> och <code>,</code> som separator.
+            <strong>Poäng sätts manuellt</strong> - systemet räknar inte ut dem automatiskt.
+            Klubb kan lämnas tom.
         </p>
     </div>
 </div>
