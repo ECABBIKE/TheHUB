@@ -891,7 +891,7 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
                             // class_aliases table might not exist yet
                         }
 
-                        // Try exact match (case-insensitive)
+                        // Try exact match (case-insensitive) - NO partial matching to avoid "Herrar" matching "Herrar Junior"
                         if (!$class) {
                             $class = $db->getRow(
                                 "SELECT id FROM classes WHERE LOWER(display_name) = LOWER(?) OR LOWER(name) = LOWER(?)",
@@ -899,13 +899,8 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
                             );
                         }
 
-                        // Try partial match if exact fails
-                        if (!$class) {
-                            $class = $db->getRow(
-                                "SELECT id FROM classes WHERE LOWER(display_name) LIKE LOWER(?) OR LOWER(name) LIKE LOWER(?)",
-                                ['%' . $className . '%', '%' . $className . '%']
-                            );
-                        }
+                        // NO partial match - it causes wrong matches like "Herrar" -> "Herrar Junior"
+                        // If exact match fails, create new class - user can merge later with fix-event-classes.php
 
                         if (!$class) {
                             // Create class
