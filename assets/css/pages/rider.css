@@ -2375,29 +2375,29 @@
         font-size: 12px;
     }
 
-    /* Ranking Modal Mobile - Compact Design */
+    /* Ranking Modal Mobile - Between header and bottom nav */
     .ranking-modal-overlay {
         padding: 0;
         align-items: stretch;
+        top: calc(var(--header-height, 60px) + env(safe-area-inset-top, 0px));
+        bottom: calc(var(--mobile-nav-height, 95px) + env(safe-area-inset-bottom, 0px));
+        overflow: hidden;
     }
 
     .ranking-modal {
-        max-height: 100vh;
-        max-height: 100dvh;
-        height: 100vh;
-        height: 100dvh;
+        max-height: 100%;
+        height: 100%;
         width: 100%;
         max-width: 100%;
         border-radius: 0;
         display: flex;
         flex-direction: column;
+        overflow: hidden;
     }
 
     .ranking-modal-header {
         padding: var(--space-sm) var(--space-md);
         flex-shrink: 0;
-        position: sticky;
-        top: 0;
         z-index: 10;
         background: #ffffff;
     }

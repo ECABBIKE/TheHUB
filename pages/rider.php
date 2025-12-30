@@ -1779,8 +1779,9 @@ document.addEventListener('DOMContentLoaded', function() {
         </div>
     </div>
 </div>
+<?php endif; ?>
 
-<!-- Ranking History Modal -->
+<!-- Ranking History Modal - Outside rankingPosition block so it shows for history-only riders -->
 <?php if (!empty($rankingHistoryFull)): ?>
 <div id="historyModal" class="ranking-modal-overlay" style="padding-top: calc(var(--header-height, 60px) + 10px);">
     <div class="ranking-modal" style="max-height: calc(100vh - var(--header-height, 60px) - 40px); max-width: 800px;">
@@ -1984,7 +1985,6 @@ document.addEventListener('keydown', function(e) {
     position: relative;
 }
 </style>
-<?php endif; ?>
 <?php endif; ?>
 
 <?php if ($canClaimProfile): ?>
