@@ -9,19 +9,25 @@ require_admin();
 $db = getDB();
 
 // Handle AJAX
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     header('Content-Type: application/json');
 
-    // Manual CSRF check that returns JSON instead of die()
+    // Use verify_csrf_token() which returns bool instead of die()
     $token = $_POST['csrf_token'] ?? '';
-    if (empty($token) || !isset($_SESSION['csrf_token']) || !hash_equals($_SESSION['csrf_token'], $token)) {
+    if (!verify_csrf_token($token)) {
         echo json_encode(['success' => false, 'error' => 'CSRF-token ogiltigt. Ladda om sidan.']);
         exit;
     }
 
-    $action = $_POST['action'] ?? '';
+    $action = $_POST['action'];
 
     try {
+        // Debug action to test if AJAX works
+        if ($action === 'test') {
+            echo json_encode(['success' => true, 'message' => 'AJAX works!']);
+            exit;
+        }
+
         if ($action === 'change_class') {
             $eventId = (int)$_POST['event_id'];
             $fromClassId = (int)$_POST['from_class_id'];
