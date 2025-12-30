@@ -254,12 +254,7 @@ include __DIR__ . '/components/unified-layout.php';
     </thead>
     <tbody>
     <?php foreach ($classData['results'] as $result): ?>
-     <tr id="result-row-<?= $result['id'] ?>">
-     <form method="POST" class="result-form gs-form-inline">
-      <?= csrf_field() ?>
-      <input type="hidden" name="result_id" value="<?= $result['id'] ?>">
-      <input type="hidden" name="action" value="update">
-
+     <tr id="result-row-<?= $result['id'] ?>" data-result-id="<?= $result['id'] ?>">
       <!-- Position -->
       <td class="text-center">
       <input type="number"
@@ -388,8 +383,8 @@ include __DIR__ . '/components/unified-layout.php';
       <!-- Actions -->
       <td class="text-center">
       <div class="flex gap-xs justify-center">
-       <button type="submit"
-        class="btn btn--primary btn--sm"
+       <button type="button"
+        class="btn btn--primary btn--sm save-result"
         title="Spara">
        <i data-lucide="save" class="icon-sm"></i>
        </button>
@@ -402,7 +397,6 @@ include __DIR__ . '/components/unified-layout.php';
        </button>
       </div>
       </td>
-     </form>
      </tr>
     <?php endforeach; ?>
     </tbody>
@@ -482,6 +476,44 @@ include __DIR__ . '/components/unified-layout.php';
 <script src="https://unpkg.com/lucide@latest"></script>
 <script>
  lucide.createIcons();
+
+ // Save result - collect data from row and submit
+ document.querySelectorAll('.save-result').forEach(btn => {
+ btn.addEventListener('click', function() {
+  const row = this.closest('tr');
+  const resultId = row.dataset.resultId;
+
+  // Collect all input values from the row
+  const form = document.createElement('form');
+  form.method = 'POST';
+  form.innerHTML = `<?= csrf_field() ?>`;
+
+  // Add result_id and action
+  const hiddenId = document.createElement('input');
+  hiddenId.type = 'hidden';
+  hiddenId.name = 'result_id';
+  hiddenId.value = resultId;
+  form.appendChild(hiddenId);
+
+  const hiddenAction = document.createElement('input');
+  hiddenAction.type = 'hidden';
+  hiddenAction.name = 'action';
+  hiddenAction.value = 'update';
+  form.appendChild(hiddenAction);
+
+  // Collect all named inputs/selects from the row
+  row.querySelectorAll('input[name], select[name]').forEach(input => {
+   const clone = document.createElement('input');
+   clone.type = 'hidden';
+   clone.name = input.name;
+   clone.value = input.value;
+   form.appendChild(clone);
+  });
+
+  document.body.appendChild(form);
+  form.submit();
+ });
+ });
 
  // Delete result confirmation
  document.querySelectorAll('.delete-result').forEach(btn => {
