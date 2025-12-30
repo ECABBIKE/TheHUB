@@ -3,7 +3,8 @@
  * TheHUB Router
  * Handles URL routing for the SPA structure
  *
- * AUTHENTICATION: All pages require login except welcome and login
+ * AUTHENTICATION: Most content pages are public. Only profile, checkout
+ * and dashboard require login.
  */
 
 // Ensure hub-config is loaded
@@ -33,10 +34,21 @@ if (!defined('HUB_V3_ROOT')) {
  * Returns true if user should be redirected to login
  */
 function hub_requires_auth(string $page): bool {
-    // Only auth-related pages are public - everything else requires login
+    // Public pages - accessible without login
     $publicPages = [
-        '', 'welcome', 'login', 'logout', 'forgot-password', 'reset-password', 'activate-account', 'index.php', 'rider-register'
+        // Auth pages
+        '', 'welcome', 'login', 'logout', 'forgot-password', 'reset-password', 'activate-account', 'index.php',
+        // Public content pages
+        'calendar', 'results', 'series', 'database', 'ranking',
+        'rider', 'riders', 'event', 'club', 'clubs',
+        'rider-register', 'club-points', 'achievements'
     ];
+
+    // Pages that require login
+    // - profile (user's personal data)
+    // - checkout (payment)
+    // - dashboard (personal dashboard)
+
     return !in_array($page, $publicPages);
 }
 
