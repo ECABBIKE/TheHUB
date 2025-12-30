@@ -118,6 +118,53 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   $message = 'Fel vid omräkning: ' . $e->getMessage();
   $messageType = 'error';
  }
+ } elseif ($action === 'save_all' && isset($_POST['results']) && is_array($_POST['results'])) {
+ // Save all results at once
+ $updated = 0;
+ $errors = [];
+
+ foreach ($_POST['results'] as $resId => $data) {
+  $resId = (int)$resId;
+  if ($resId < 1) continue;
+
+  $updateData = [
+   'position' => !empty($data['position']) ? (int)$data['position'] : null,
+   'bib_number' => trim($data['bib_number'] ?? ''),
+   'finish_time' => !empty($data['finish_time']) ? trim($data['finish_time']) : null,
+   'points' => isset($data['points']) ? (float)$data['points'] : 0,
+   'status' => trim($data['status'] ?? 'finished'),
+  ];
+
+  if (isset($data['class_id']) && $data['class_id'] !== '') {
+   $updateData['class_id'] = (int)$data['class_id'];
+  }
+
+  if (isset($data['run_1_time'])) {
+   $updateData['run_1_time'] = !empty($data['run_1_time']) ? trim($data['run_1_time']) : null;
+  }
+  if (isset($data['run_2_time'])) {
+   $updateData['run_2_time'] = !empty($data['run_2_time']) ? trim($data['run_2_time']) : null;
+  }
+
+  try {
+   $db->update('results', $updateData, 'id = ?', [$resId]);
+   $updated++;
+  } catch (Exception $e) {
+   $errors[] = "Resultat $resId: " . $e->getMessage();
+  }
+ }
+
+ if ($updated > 0) {
+  $message = "$updated resultat sparade!";
+  $messageType = 'success';
+  if (!empty($errors)) {
+   $message .= " (" . count($errors) . " fel)";
+   $messageType = 'warning';
+  }
+ } else {
+  $message = "Inga resultat uppdaterades.";
+  $messageType = 'error';
+ }
  }
 }
 
@@ -217,6 +264,18 @@ include __DIR__ . '/components/unified-layout.php';
   </div>
   </div>
  <?php else: ?>
+  <!-- Save All Button -->
+  <form method="POST" id="save-all-form">
+   <?= csrf_field() ?>
+   <input type="hidden" name="action" value="save_all">
+
+   <div class="mb-md">
+    <button type="submit" class="btn btn--primary btn--lg">
+     <i data-lucide="save"></i>
+     Spara alla ändringar
+    </button>
+   </div>
+
   <!-- Results by Class -->
   <?php foreach ($resultsByClass as $className => $classData): ?>
   <div class="card mb-lg">
@@ -258,7 +317,7 @@ include __DIR__ . '/components/unified-layout.php';
       <!-- Position -->
       <td class="text-center">
       <input type="number"
-       name="position"
+       name="results[<?= $result['id'] ?>][position]"
        value="<?= h($result['position']) ?>"
        class="input input-w60"
        min="1">
@@ -279,7 +338,7 @@ include __DIR__ . '/components/unified-layout.php';
 
       <!-- Class -->
       <td>
-      <select name="class_id" class="input input-xs">
+      <select name="results[<?= $result['id'] ?>][class_id]" class="input input-xs">
        <?php foreach ($classes as $class): ?>
        <option value="<?= $class['id'] ?>" <?= $result['class_id'] == $class['id'] ? 'selected' : '' ?>>
         <?= h($class['display_name'] ?? $class['name']) ?>
@@ -327,7 +386,7 @@ include __DIR__ . '/components/unified-layout.php';
       <!-- Bib Number -->
       <td class="text-center">
       <input type="text"
-       name="bib_number"
+       name="results[<?= $result['id'] ?>][bib_number]"
        value="<?= h($result['bib_number']) ?>"
        class="input input-w80">
       </td>
@@ -336,14 +395,14 @@ include __DIR__ . '/components/unified-layout.php';
       <?php if ($isDH): ?>
       <td class="text-center">
       <input type="text"
-       name="run_1_time"
+       name="results[<?= $result['id'] ?>][run_1_time]"
        value="<?= h($result['run_1_time'] ?? '') ?>"
        class="input input-w100-mono"
        placeholder="M:SS.mm">
       </td>
       <td class="text-center">
       <input type="text"
-       name="run_2_time"
+       name="results[<?= $result['id'] ?>][run_2_time]"
        value="<?= h($result['run_2_time'] ?? '') ?>"
        class="input input-w100-mono"
        placeholder="M:SS.mm">
@@ -353,7 +412,7 @@ include __DIR__ . '/components/unified-layout.php';
       <!-- Finish Time -->
       <td class="text-center">
       <input type="text"
-       name="finish_time"
+       name="results[<?= $result['id'] ?>][finish_time]"
        value="<?= h($result['finish_time']) ?>"
        class="input input-w100-mono"
        placeholder="<?= $isDH ? 'Auto' : 'HH:MM:SS' ?>"
@@ -363,7 +422,7 @@ include __DIR__ . '/components/unified-layout.php';
       <!-- Points -->
       <td class="text-center">
       <input type="number"
-       name="points"
+       name="results[<?= $result['id'] ?>][points]"
        value="<?= h($result['points']) ?>"
        class="input input-w70"
        step="1"
@@ -372,7 +431,7 @@ include __DIR__ . '/components/unified-layout.php';
 
       <!-- Status -->
       <td class="text-center">
-      <select name="status" class="input input-xs">
+      <select name="results[<?= $result['id'] ?>][status]" class="input input-xs">
        <option value="finished" <?= $result['status'] === 'finished' ? 'selected' : '' ?>>Slutförd</option>
        <option value="dnf" <?= $result['status'] === 'dnf' ? 'selected' : '' ?>>DNF</option>
        <option value="dns" <?= $result['status'] === 'dns' ? 'selected' : '' ?>>DNS</option>
@@ -382,12 +441,6 @@ include __DIR__ . '/components/unified-layout.php';
 
       <!-- Actions -->
       <td class="text-center">
-      <div class="flex gap-xs justify-center">
-       <button type="button"
-        class="btn btn--primary btn--sm save-result"
-        title="Spara">
-       <i data-lucide="save" class="icon-sm"></i>
-       </button>
        <button type="button"
         class="btn btn-danger btn--sm delete-result"
         data-result-id="<?= $result['id'] ?>"
@@ -395,7 +448,6 @@ include __DIR__ . '/components/unified-layout.php';
         title="Ta bort">
        <i data-lucide="trash-2" class="icon-sm"></i>
        </button>
-      </div>
       </td>
      </tr>
     <?php endforeach; ?>
@@ -404,6 +456,15 @@ include __DIR__ . '/components/unified-layout.php';
    </div>
   </div>
   <?php endforeach; ?>
+
+   <!-- Save All Button Bottom -->
+   <div class="mt-md">
+    <button type="submit" class="btn btn--primary btn--lg">
+     <i data-lucide="save"></i>
+     Spara alla ändringar
+    </button>
+   </div>
+  </form>
  <?php endif; ?>
 
 <!-- License Assignment Modal -->
@@ -476,44 +537,6 @@ include __DIR__ . '/components/unified-layout.php';
 <script src="https://unpkg.com/lucide@latest"></script>
 <script>
  lucide.createIcons();
-
- // Save result - collect data from row and submit
- document.querySelectorAll('.save-result').forEach(btn => {
- btn.addEventListener('click', function() {
-  const row = this.closest('tr');
-  const resultId = row.dataset.resultId;
-
-  // Collect all input values from the row
-  const form = document.createElement('form');
-  form.method = 'POST';
-  form.innerHTML = `<?= csrf_field() ?>`;
-
-  // Add result_id and action
-  const hiddenId = document.createElement('input');
-  hiddenId.type = 'hidden';
-  hiddenId.name = 'result_id';
-  hiddenId.value = resultId;
-  form.appendChild(hiddenId);
-
-  const hiddenAction = document.createElement('input');
-  hiddenAction.type = 'hidden';
-  hiddenAction.name = 'action';
-  hiddenAction.value = 'update';
-  form.appendChild(hiddenAction);
-
-  // Collect all named inputs/selects from the row
-  row.querySelectorAll('input[name], select[name]').forEach(input => {
-   const clone = document.createElement('input');
-   clone.type = 'hidden';
-   clone.name = input.name;
-   clone.value = input.value;
-   form.appendChild(clone);
-  });
-
-  document.body.appendChild(form);
-  form.submit();
- });
- });
 
  // Delete result confirmation
  document.querySelectorAll('.delete-result').forEach(btn => {
