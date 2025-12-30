@@ -6,6 +6,7 @@
 
 require_once __DIR__ . '/../../config.php';
 require_once __DIR__ . '/../../hub-config.php';
+require_once __DIR__ . '/../../includes/db.php';
 
 header('Content-Type: text/html; charset=utf-8');
 
@@ -49,7 +50,7 @@ echo "<p>Analyserar databas efter problem...</p>";
 // ============================================================================
 echo "<h2>1. Klubbar som ser ut som tider/sträcktider</h2>";
 
-$timePatternClubs = $db->fetchAll("
+$timePatternClubs = $db->getAll("
     SELECT c.id, c.name, c.city, COUNT(r.id) as rider_count
     FROM clubs c
     LEFT JOIN riders r ON r.club_id = c.id
@@ -87,7 +88,7 @@ if ($timePatternClubs) {
 echo "<h2>2. Resultat med telefonnummer/skräpdata i fält</h2>";
 
 // Check bib_number for phone numbers or other garbage
-$garbageInFields = $db->fetchAll("
+$garbageInFields = $db->getAll("
     SELECT r.id, r.event_id, r.cyclist_id, r.position, r.bib_number, r.finish_time, r.points, r.notes,
            e.name as event_name, e.date as event_date,
            CONCAT(ri.firstname, ' ', ri.lastname) as rider_name
@@ -128,7 +129,7 @@ if ($garbageInFields) {
 echo "<h2>3. Resultat med misstänkta tider</h2>";
 
 // Check for finish_time values that seem wrong
-$suspiciousTimes = $db->fetchAll("
+$suspiciousTimes = $db->getAll("
     SELECT r.id, r.event_id, r.cyclist_id, r.position, r.finish_time, r.points,
            e.name as event_name, e.date as event_date,
            CONCAT(ri.firstname, ' ', ri.lastname) as rider_name
@@ -171,7 +172,7 @@ echo "<h2>4. Stage-tider (SS1-SS15) med problem</h2>";
 // First check if SS columns exist
 $hasSSColumns = false;
 try {
-    $columns = $db->fetchAll("SHOW COLUMNS FROM results LIKE 'ss%'");
+    $columns = $db->getAll("SHOW COLUMNS FROM results LIKE 'ss%'");
     $hasSSColumns = count($columns) > 0;
 } catch (Exception $e) {
     $hasSSColumns = false;
@@ -179,7 +180,7 @@ try {
 
 if ($hasSSColumns) {
     // Look for SS times that look like phone numbers or other garbage
-    $suspiciousSS = $db->fetchAll("
+    $suspiciousSS = $db->getAll("
         SELECT r.id, r.event_id, r.cyclist_id, r.position,
                r.ss1, r.ss2, r.ss3,
                e.name as event_name, e.date as event_date,
@@ -227,7 +228,7 @@ if ($hasSSColumns) {
 echo "<h2>5. Åkare med misstänkta klubbkopplingar</h2>";
 
 // Check if there's a club_name or similar field that might have bad data
-$ridersWithBadClubs = $db->fetchAll("
+$ridersWithBadClubs = $db->getAll("
     SELECT r.id, r.firstname, r.lastname, r.club_id, c.name as club_name
     FROM riders r
     LEFT JOIN clubs c ON r.club_id = c.id
@@ -261,7 +262,7 @@ if ($ridersWithBadClubs) {
 // ============================================================================
 echo "<h2>6. Event med positioner/poäng som inte stämmer</h2>";
 
-$mismatchEvents = $db->fetchAll("
+$mismatchEvents = $db->getAll("
     SELECT e.id, e.name, e.date,
            COUNT(r.id) as result_count,
            MAX(r.position) as max_position,
@@ -305,7 +306,7 @@ if ($mismatchEvents) {
 // ============================================================================
 echo "<h2>7. Potentiella dubbletter av åkare</h2>";
 
-$duplicates = $db->fetchAll("
+$duplicates = $db->getAll("
     SELECT firstname, lastname, birth_year, COUNT(*) as count,
            GROUP_CONCAT(id ORDER BY id SEPARATOR ', ') as ids
     FROM riders
@@ -337,7 +338,7 @@ if ($duplicates) {
 // ============================================================================
 echo "<h2>8. Resultatöversikt per år</h2>";
 
-$yearStats = $db->fetchAll("
+$yearStats = $db->getAll("
     SELECT YEAR(e.date) as year,
            COUNT(DISTINCT e.id) as event_count,
            COUNT(r.id) as result_count,
@@ -367,7 +368,7 @@ echo "</table></div>";
 // ============================================================================
 echo "<h2>9. Specifik kontroll: Enduro Åre-event</h2>";
 
-$areEvents = $db->fetchAll("
+$areEvents = $db->getAll("
     SELECT e.id, e.name, e.date, e.discipline,
            COUNT(r.id) as result_count
     FROM events e
