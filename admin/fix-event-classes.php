@@ -21,12 +21,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $fromClassId = (int)$_POST['from_class_id'];
             $toClassId = (int)$_POST['to_class_id'];
 
-            $result = $db->execute(
+            // Count before update
+            $beforeCount = $db->getRow(
+                "SELECT COUNT(*) as cnt FROM results WHERE event_id = ? AND class_id = ?",
+                [$eventId, $fromClassId]
+            );
+
+            // Do the update using raw query
+            $stmt = $db->query(
                 "UPDATE results SET class_id = ? WHERE event_id = ? AND class_id = ?",
                 [$toClassId, $eventId, $fromClassId]
             );
 
-            $count = $db->getPdo()->rowCount();
+            $count = $stmt ? $stmt->rowCount() : $beforeCount['cnt'];
             echo json_encode(['success' => true, 'count' => $count]);
             exit;
         }
@@ -50,12 +57,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $fromClassId = (int)$_POST['from_class_id'];
             $toClassId = (int)$_POST['to_class_id'];
 
-            $db->execute(
+            // Count before update
+            $beforeCount = $db->getRow(
+                "SELECT COUNT(*) as cnt FROM results WHERE class_id = ?",
+                [$fromClassId]
+            );
+
+            $stmt = $db->query(
                 "UPDATE results SET class_id = ? WHERE class_id = ?",
                 [$toClassId, $fromClassId]
             );
 
-            $count = $db->getPdo()->rowCount();
+            $count = $stmt ? $stmt->rowCount() : $beforeCount['cnt'];
 
             // Delete the now-empty class
             $db->delete('classes', 'id = ?', [$fromClassId]);
