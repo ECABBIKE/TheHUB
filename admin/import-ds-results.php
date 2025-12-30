@@ -1,8 +1,7 @@
 <?php
 /**
  * Import Dual Slalom Results
- * - Event class (display) + Series class (points)
- * CSV format: Eventklass, Placering, Förnamn, Efternamn, Klubb, Serieklass, Poäng
+ * CSV format: Eventklass, Placering, Namn, Klubb, Serieklass, Poäng
  */
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../includes/import-functions.php';
@@ -16,14 +15,13 @@ $messageType = 'info';
 if (isset($_GET['download_template'])) {
     header('Content-Type: text/csv; charset=utf-8');
     header('Content-Disposition: attachment; filename="ds-resultat-mall.csv"');
-    echo "Eventklass;Placering;Förnamn;Efternamn;Klubb;Serieklass;Poäng\n";
-    echo "Sportmotion Herr;1;Johan;Andersson;Stockholm CK;Herrar Elite;100\n";
-    echo "Sportmotion Herr;2;Erik;Svensson;Göteborg MTB;Herrar Elite;80\n";
-    echo "Sportmotion Herr;3;Anders;Nilsson;;Herrar Junior;65\n";
-    echo "Sportmotion Dam;1;Anna;Johansson;Uppsala CK;Damer Elite;100\n";
-    echo "Sportmotion Dam;2;Maria;Eriksson;;Damer Elite;80\n";
-    echo "Pojkar 13-16;1;Oscar;Berg;Malmö CK;Herrar Junior;100\n";
-    echo "Flickor 13-16;1;Lisa;Ström;;Damer Junior;100\n";
+    echo "Eventklass;Placering;Namn;Klubb;Serieklass;Poäng\n";
+    echo "Flickor 13-16;1;Ebba Myrefelt;Borgholm CK;Flickor 13-14;100\n";
+    echo "Flickor 13-16;2;Elsa Sporre Friberg;CK Fix;Flickor 13-14;80\n";
+    echo "Pojkar 13-16;1;Theodor Ek;CK Fix;Pojkar 15-16;100\n";
+    echo "Pojkar 13-16;2;Arvid Andersson;Falkenbergs CK;Pojkar 15-16;80\n";
+    echo "Sportmotion Dam;1;Ella Mårtensson;Borås CA;Damer Junior;100\n";
+    echo "Sportmotion Herr;1;Ivan Bergström;RND Racing;Herrar Junior;100\n";
     exit;
 }
 
@@ -48,6 +46,15 @@ if (empty($events)) {
 // Get all classes for reference
 $allClasses = $db->getAll("SELECT id, display_name, name FROM classes WHERE active = 1 ORDER BY sort_order, display_name");
 
+// Helper function to split name
+function splitName($fullName) {
+    $fullName = trim($fullName);
+    $parts = preg_split('/\s+/', $fullName, 2);
+    $firstName = $parts[0] ?? '';
+    $lastName = $parts[1] ?? '';
+    return [$firstName, $lastName];
+}
+
 // Handle import
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['import'])) {
     checkCsrf();
@@ -68,13 +75,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['import'])) {
 
         // Detect delimiter
         $firstLine = $lines[0];
-        $delimiter = (substr_count($firstLine, ';') > substr_count($firstLine, ',')) ? ';' : ',';
+        $delimiter = "\t"; // Tab first (from Excel/Sheets paste)
+        if (substr_count($firstLine, ';') > substr_count($firstLine, "\t")) {
+            $delimiter = ';';
+        } elseif (substr_count($firstLine, ',') > substr_count($firstLine, "\t") && substr_count($firstLine, ',') > substr_count($firstLine, ';')) {
+            $delimiter = ',';
+        }
 
         // Check if first line is header
         $firstLineLower = strtolower($firstLine);
         $hasHeader = (strpos($firstLineLower, 'klass') !== false ||
-                      strpos($firstLineLower, 'poäng') !== false ||
-                      strpos($firstLineLower, 'serie') !== false);
+                      strpos($firstLineLower, 'plac') !== false ||
+                      strpos($firstLineLower, 'namn') !== false ||
+                      strpos($firstLineLower, 'poäng') !== false);
 
         if ($hasHeader) {
             array_shift($lines);
@@ -86,21 +99,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['import'])) {
 
             $cols = str_getcsv($line, $delimiter);
 
-            // Expected: Eventklass, Placering, Förnamn, Efternamn, Klubb, Serieklass, Poäng
-            if (count($cols) < 6) {
-                $errors[] = "Rad " . ($lineNum + 1) . ": För få kolumner (behöver minst 6)";
+            // Expected: Eventklass, Placering, Namn, Klubb, Serieklass, Poäng
+            if (count($cols) < 5) {
+                $errors[] = "Rad " . ($lineNum + 1) . ": För få kolumner (behöver minst 5)";
                 continue;
             }
 
             $eventClassName = trim($cols[0]);
             $position = (int)trim($cols[1]);
-            $firstName = trim($cols[2]);
-            $lastName = trim($cols[3]);
-            $clubName = isset($cols[4]) ? trim($cols[4]) : '';
-            $seriesClassName = trim($cols[5]);
-            $points = isset($cols[6]) ? (float)trim($cols[6]) : 0;
+            $fullName = trim($cols[2]);
+            $clubName = isset($cols[3]) ? trim($cols[3]) : '';
+            $seriesClassName = trim($cols[4]);
+            $points = isset($cols[5]) ? (float)trim($cols[5]) : 0;
 
-            if (empty($firstName) || empty($lastName)) {
+            // Split name
+            list($firstName, $lastName) = splitName($fullName);
+
+            if (empty($firstName)) {
                 $errors[] = "Rad " . ($lineNum + 1) . ": Saknar namn";
                 continue;
             }
@@ -242,7 +257,7 @@ include __DIR__ . '/components/unified-layout.php';
     </div>
     <div class="card-body">
         <div class="alert alert-info mb-lg">
-            <strong>Dubbla klasser:</strong> Eventklass visas på resultatsidan, Serieklass används för seriepoäng.
+            <strong>Format:</strong> Eventklass · Placering · Namn · Klubb · Serieklass · Poäng
         </div>
 
         <form method="POST">
@@ -261,14 +276,16 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
 
             <div class="form-group mb-lg">
-                <label class="label">2. Klistra in CSV-data</label>
-                <textarea name="csv_data" class="input" rows="15" placeholder="Eventklass;Placering;Förnamn;Efternamn;Klubb;Serieklass;Poäng
-Sportmotion Herr;1;Johan;Andersson;Stockholm CK;Herrar Elite;100
-Sportmotion Herr;2;Erik;Svensson;;Herrar Elite;80
-Sportmotion Dam;1;Anna;Johansson;Uppsala CK;Damer Elite;100
+                <label class="label">2. Klistra in data</label>
+                <textarea name="csv_data" class="input" rows="18" placeholder="Eventklass;Placering;Namn;Klubb;Serieklass;Poäng
+Flickor 13-16;1;Ebba Myrefelt;Borgholm CK;Flickor 13-14;100
+Flickor 13-16;2;Elsa Sporre Friberg;CK Fix;Flickor 13-14;80
+Pojkar 13-16;1;Theodor Ek;CK Fix;Pojkar 15-16;100
+Sportmotion Dam;1;Ella Mårtensson;Borås CA;Damer Junior;100
+Sportmotion Herr;1;Ivan Bergström;RND Racing;Herrar Junior;100
 ..." style="font-family: monospace; font-size: 13px;"></textarea>
                 <p class="text-sm text-secondary mt-sm">
-                    Format: <code>Eventklass;Placering;Förnamn;Efternamn;Klubb;Serieklass;Poäng</code>
+                    Stöder tab, semikolon och komma som separator.
                 </p>
             </div>
 
@@ -280,38 +297,27 @@ Sportmotion Dam;1;Anna;Johansson;Uppsala CK;Damer Elite;100
     </div>
 </div>
 
-<!-- Quick Reference -->
+<!-- Example based on user's data -->
 <div class="card mt-lg">
     <div class="card-header">
-        <h3><i data-lucide="info"></i> Exempeldata</h3>
+        <h3><i data-lucide="info"></i> Exempeldata (baserat på din lista)</h3>
     </div>
     <div class="card-body">
-        <pre class="gs-code-dark" style="font-size: 13px;">Eventklass;Placering;Förnamn;Efternamn;Klubb;Serieklass;Poäng
-Sportmotion Herr;1;Johan;Andersson;Stockholm CK;Herrar Elite;100
-Sportmotion Herr;2;Erik;Svensson;Göteborg MTB;Herrar Elite;80
-Sportmotion Herr;3;Anders;Nilsson;;Herrar Junior;65
-Sportmotion Dam;1;Anna;Johansson;Uppsala CK;Damer Elite;100
-Sportmotion Dam;2;Maria;Eriksson;;Damer Elite;80
-Pojkar 13-16;1;Oscar;Berg;Malmö CK;Herrar Junior;100
-Flickor 13-16;1;Lisa;Ström;;Damer Junior;100</pre>
+        <pre class="gs-code-dark" style="font-size: 12px; overflow-x: auto;">Eventklass;Placering;Namn;Klubb;Serieklass;Poäng
+Flickor 13-16;1;Ebba Myrefelt;Borgholm CK;Flickor 13-14;100
+Flickor 13-16;2;Elsa Sporre Friberg;CK Fix;Flickor 13-14;80
+Flickor 13-16;3;Sara Warnevik;;Flickor 13-14;65
+Pojkar 13-16;1;Theodor Ek;CK Fix;Pojkar 15-16;100
+Pojkar 13-16;2;Arvid Andersson;Falkenbergs CK;Pojkar 15-16;80
+Pojkar 13-16;3;Leo Drotz;Mera Lera MTB;Pojkar 15-16;65
+Sportmotion Dam;1;Ella Mårtensson;Borås CA;Damer Junior;100
+Sportmotion Dam;2;Iris Fehrm;Ulricehamns CK;Flickor 15-16;80
+Sportmotion Herr;1;Ivan Bergström;RND Racing;Herrar Junior;100
+Sportmotion Herr;2;Simon Carlsén;Ulricehamns CK;Herrar Junior;80</pre>
         <p class="text-sm text-secondary mt-md">
-            <strong>Eventklass</strong> = Visas på resultatsidan (Sportmotion Herr, etc.)<br>
-            <strong>Serieklass</strong> = Där poängen räknas i serietabellen (Herrar Elite, etc.)
+            <strong>Eventklass</strong> = De 4 klasserna som visas på resultatsidan<br>
+            <strong>Serieklass</strong> = Åkarens riktiga klass där poängen räknas
         </p>
-    </div>
-</div>
-
-<!-- Available classes -->
-<div class="card mt-lg">
-    <div class="card-header">
-        <h3><i data-lucide="list"></i> Befintliga klasser</h3>
-    </div>
-    <div class="card-body">
-        <div style="display: flex; flex-wrap: wrap; gap: 8px;">
-            <?php foreach ($allClasses as $c): ?>
-            <span class="badge"><?= h($c['display_name']) ?></span>
-            <?php endforeach; ?>
-        </div>
     </div>
 </div>
 
