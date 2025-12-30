@@ -1,67 +1,42 @@
 <?php
 /**
  * Event Class Manager - Fix wrong classes per event
- * Filter by event, see classes with counts, one-click to change
+ * Filter by event, see classes with counts, save all changes at once
  */
 require_once __DIR__ . '/../config.php';
 require_admin();
 
 $db = getDB();
 
-// Handle AJAX
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
-    header('Content-Type: application/json');
+// Handle form submit
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['save_changes'])) {
+    checkCsrf();
 
-    // Use verify_csrf_token() which returns bool instead of die()
-    $token = $_POST['csrf_token'] ?? '';
-    if (!verify_csrf_token($token)) {
-        echo json_encode(['success' => false, 'error' => 'CSRF-token ogiltigt. Ladda om sidan.']);
-        exit;
-    }
+    $eventId = (int)$_POST['event_id'];
+    $changes = $_POST['changes'] ?? [];
+    $changedCount = 0;
 
-    $action = $_POST['action'];
+    foreach ($changes as $fromClassId => $toClassId) {
+        $fromClassId = (int)$fromClassId;
+        $toClassId = (int)$toClassId;
 
-    try {
-        // Debug action to test if AJAX works
-        if ($action === 'test') {
-            echo json_encode(['success' => true, 'message' => 'AJAX works!']);
-            exit;
-        }
-
-        if ($action === 'change_class') {
-            $eventId = (int)$_POST['event_id'];
-            $fromClassId = (int)$_POST['from_class_id'];
-            $toClassId = (int)$_POST['to_class_id'];
-
-            if ($fromClassId === $toClassId) {
-                echo json_encode(['success' => false, 'error' => 'Samma klass vald']);
-                exit;
-            }
-
-            // Count before update
-            $beforeCount = $db->getRow(
-                "SELECT COUNT(*) as cnt FROM results WHERE event_id = ? AND class_id = ?",
-                [$eventId, $fromClassId]
-            );
-
-            // Do the update
+        if ($toClassId > 0 && $fromClassId !== $toClassId) {
             $db->update('results',
                 ['class_id' => $toClassId],
                 'event_id = ? AND class_id = ?',
                 [$eventId, $fromClassId]
             );
-
-            echo json_encode(['success' => true, 'count' => (int)$beforeCount['cnt']]);
-            exit;
+            $changedCount++;
         }
-
-        echo json_encode(['success' => false, 'error' => 'Okänd action: ' . $action]);
-        exit;
-
-    } catch (Exception $e) {
-        echo json_encode(['success' => false, 'error' => $e->getMessage()]);
-        exit;
     }
+
+    if ($changedCount > 0) {
+        $_SESSION['flash_message'] = "$changedCount klassbyten sparade!";
+        $_SESSION['flash_type'] = 'success';
+    }
+
+    header("Location: ?event_id=$eventId");
+    exit;
 }
 
 // Get selected event
@@ -77,7 +52,7 @@ $allEvents = $db->getAll("
     ORDER BY e.date DESC
 ");
 
-// Get classes for selected event (or all if none selected)
+// Get classes for selected event
 if ($selectedEventId > 0) {
     $classesQuery = "
         SELECT
@@ -85,26 +60,21 @@ if ($selectedEventId > 0) {
             c.display_name as class_name,
             c.name as class_code,
             c.sort_order,
-            COUNT(r.id) as result_count,
-            e.id as event_id,
-            e.name as event_name,
-            e.date as event_date
+            COUNT(r.id) as result_count
         FROM results r
         JOIN classes c ON r.class_id = c.id
-        JOIN events e ON r.event_id = e.id
-        WHERE e.id = ?
-        GROUP BY c.id, e.id
+        WHERE r.event_id = ?
+        GROUP BY c.id
         ORDER BY c.sort_order, c.display_name
     ";
     $eventClasses = $db->getAll($classesQuery, [$selectedEventId]);
     $selectedEvent = $db->getRow("SELECT id, name, date FROM events WHERE id = ?", [$selectedEventId]);
 } else {
-    // Show summary of all events with class counts
     $eventClasses = [];
     $selectedEvent = null;
 }
 
-// Get ALL classes for dropdown (to change to)
+// Get ALL classes for dropdown
 $allClasses = $db->getAll("
     SELECT id, display_name, sort_order
     FROM classes
@@ -152,13 +122,8 @@ include __DIR__ . '/components/unified-layout.php';
     font-weight: 600;
     min-width: 60px;
 }
-.class-table .actions {
-    display: flex;
-    gap: var(--space-sm);
-    align-items: center;
-}
 .class-table select {
-    min-width: 180px;
+    min-width: 200px;
 }
 .class-name.suspicious {
     color: var(--color-warning);
@@ -170,10 +135,13 @@ include __DIR__ . '/components/unified-layout.php';
     gap: var(--space-md);
 }
 .event-summary-card {
+    display: block;
     background: var(--color-surface);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-sm);
     padding: var(--space-md);
+    text-decoration: none;
+    color: inherit;
 }
 .event-summary-card:hover {
     border-color: var(--color-accent);
@@ -185,11 +153,27 @@ include __DIR__ . '/components/unified-layout.php';
     color: var(--color-text);
     font-size: 0.875rem;
 }
-.saved-row {
-    background: rgba(97, 206, 112, 0.15) !important;
-    transition: background 0.3s;
+.save-bar {
+    position: sticky;
+    bottom: 0;
+    background: var(--color-background);
+    padding: var(--space-md);
+    border-top: 2px solid var(--color-accent);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin: var(--space-lg) calc(-1 * var(--space-md)) 0;
+}
+.changed-row {
+    background: rgba(97, 206, 112, 0.1) !important;
 }
 </style>
+
+<?php if (isset($_SESSION['flash_message'])): ?>
+<div class="alert alert-<?= $_SESSION['flash_type'] ?? 'info' ?> mb-lg">
+    <?= h($_SESSION['flash_message']) ?>
+</div>
+<?php unset($_SESSION['flash_message'], $_SESSION['flash_type']); endif; ?>
 
 <div class="card">
     <div class="card-header">
@@ -212,67 +196,69 @@ include __DIR__ . '/components/unified-layout.php';
             </select>
             <?php if ($selectedEventId > 0): ?>
             <a href="?event_id=0" class="btn btn--secondary btn--sm">
-                <i data-lucide="x"></i> Rensa filter
+                <i data-lucide="x"></i> Rensa
             </a>
             <?php endif; ?>
         </div>
 
         <?php if ($selectedEventId > 0 && $selectedEvent): ?>
         <!-- Selected Event Classes -->
-        <div class="mb-md">
-            <h3><?= h($selectedEvent['name']) ?></h3>
-            <p class="text-secondary"><?= date('Y-m-d', strtotime($selectedEvent['date'])) ?></p>
-        </div>
+        <form method="POST" id="classForm">
+            <?= csrf_field() ?>
+            <input type="hidden" name="event_id" value="<?= $selectedEventId ?>">
+            <input type="hidden" name="save_changes" value="1">
 
-        <?php if (!empty($eventClasses)): ?>
-        <table class="class-table">
-            <thead>
-                <tr>
-                    <th>Klass</th>
-                    <th>Resultat</th>
-                    <th>Byt till</th>
-                    <th></th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php foreach ($eventClasses as $class): ?>
-                <?php
-                // Mark as suspicious if sort_order >= 900 (auto-created)
-                $isSuspicious = $class['sort_order'] >= 900;
-                ?>
-                <tr data-event-id="<?= $class['event_id'] ?>" data-class-id="<?= $class['class_id'] ?>">
-                    <td class="class-name <?= $isSuspicious ? 'suspicious' : '' ?>">
-                        <?= h($class['class_name']) ?>
-                        <?php if ($isSuspicious): ?>
-                        <i data-lucide="alert-circle" style="width:14px;height:14px;color:var(--color-warning);vertical-align:middle;"></i>
-                        <?php endif; ?>
-                        <?php if ($class['class_code'] !== $class['class_name']): ?>
-                        <span class="text-secondary text-sm">(<?= h($class['class_code']) ?>)</span>
-                        <?php endif; ?>
-                    </td>
-                    <td class="count"><?= $class['result_count'] ?></td>
-                    <td>
-                        <select class="input input-sm change-to-select">
-                            <option value="">-- Behåll --</option>
-                            <?php foreach ($allClasses as $ac): ?>
-                            <?php if ($ac['id'] != $class['class_id']): ?>
-                            <option value="<?= $ac['id'] ?>"><?= h($ac['display_name']) ?></option>
+            <div class="mb-md">
+                <h3><?= h($selectedEvent['name']) ?></h3>
+                <p class="text-secondary"><?= date('Y-m-d', strtotime($selectedEvent['date'])) ?> · <?= count($eventClasses) ?> klasser</p>
+            </div>
+
+            <?php if (!empty($eventClasses)): ?>
+            <table class="class-table">
+                <thead>
+                    <tr>
+                        <th>Nuvarande klass</th>
+                        <th>Antal</th>
+                        <th>Byt till</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($eventClasses as $class): ?>
+                    <?php $isSuspicious = $class['sort_order'] >= 900; ?>
+                    <tr data-class-id="<?= $class['class_id'] ?>">
+                        <td class="class-name <?= $isSuspicious ? 'suspicious' : '' ?>">
+                            <?= h($class['class_name']) ?>
+                            <?php if ($isSuspicious): ?>
+                            <i data-lucide="alert-circle" style="width:14px;height:14px;color:var(--color-warning);vertical-align:middle;"></i>
                             <?php endif; ?>
-                            <?php endforeach; ?>
-                        </select>
-                    </td>
-                    <td>
-                        <button type="button" class="btn btn--primary btn--sm change-btn">
-                            <i data-lucide="save"></i> Spara
-                        </button>
-                    </td>
-                </tr>
-                <?php endforeach; ?>
-            </tbody>
-        </table>
-        <?php else: ?>
-        <p class="text-secondary">Inga klasser hittades för detta event.</p>
-        <?php endif; ?>
+                        </td>
+                        <td class="count"><?= $class['result_count'] ?></td>
+                        <td>
+                            <select name="changes[<?= $class['class_id'] ?>]" class="input input-sm class-select">
+                                <option value="">-- Behåll --</option>
+                                <?php foreach ($allClasses as $ac): ?>
+                                <?php if ($ac['id'] != $class['class_id']): ?>
+                                <option value="<?= $ac['id'] ?>"><?= h($ac['display_name']) ?></option>
+                                <?php endif; ?>
+                                <?php endforeach; ?>
+                            </select>
+                        </td>
+                    </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+
+            <div class="save-bar">
+                <span id="changeCount" class="text-secondary">Inga ändringar</span>
+                <button type="submit" class="btn btn--primary btn-lg" id="saveBtn" disabled>
+                    <i data-lucide="save"></i>
+                    Spara alla ändringar
+                </button>
+            </div>
+            <?php else: ?>
+            <p class="text-secondary">Inga klasser hittades för detta event.</p>
+            <?php endif; ?>
+        </form>
 
         <?php else: ?>
         <!-- No event selected - show summary -->
@@ -295,65 +281,42 @@ include __DIR__ . '/components/unified-layout.php';
 </div>
 
 <script>
-const csrfToken = '<?= csrf_token() ?>';
-
 function filterByEvent(eventId) {
     window.location.href = '?event_id=' + eventId;
 }
 
-// Change class handler
-document.querySelectorAll('.change-btn').forEach(btn => {
-    btn.addEventListener('click', async function() {
+// Track changes
+document.querySelectorAll('.class-select').forEach(select => {
+    select.addEventListener('change', function() {
         const row = this.closest('tr');
-        const eventId = row.dataset.eventId;
-        const fromClassId = row.dataset.classId;
-        const select = row.querySelector('.change-to-select');
-        const toClassId = select.value;
-
-        if (!toClassId) {
-            alert('Välj en klass att byta till');
-            return;
+        if (this.value) {
+            row.classList.add('changed-row');
+        } else {
+            row.classList.remove('changed-row');
         }
-
-        this.disabled = true;
-        this.innerHTML = '<i data-lucide="loader"></i> Sparar...';
-
-        const formData = new FormData();
-        formData.append('action', 'change_class');
-        formData.append('csrf_token', csrfToken);
-        formData.append('event_id', eventId);
-        formData.append('from_class_id', fromClassId);
-        formData.append('to_class_id', toClassId);
-
-        try {
-            const response = await fetch(location.href, { method: 'POST', body: formData });
-            const result = await response.json();
-
-            if (result.success) {
-                row.classList.add('saved-row');
-                row.querySelector('.class-name').innerHTML = '✓ Bytt till "' + select.options[select.selectedIndex].text + '" (' + result.count + ' st)';
-                this.innerHTML = '<i data-lucide="check"></i> Klart!';
-                this.classList.remove('btn--primary');
-                this.classList.add('btn--success');
-
-                // Remove row after delay
-                setTimeout(() => {
-                    row.style.opacity = '0.5';
-                }, 1500);
-            } else {
-                alert('Fel: ' + result.error);
-                this.disabled = false;
-                this.innerHTML = '<i data-lucide="save"></i> Spara';
-            }
-        } catch (err) {
-            alert('Nätverksfel: ' + err.message);
-            this.disabled = false;
-            this.innerHTML = '<i data-lucide="save"></i> Spara';
-        }
-
-        if (typeof lucide !== 'undefined') lucide.createIcons();
+        updateChangeCount();
     });
 });
+
+function updateChangeCount() {
+    const changed = document.querySelectorAll('.class-select').length > 0
+        ? [...document.querySelectorAll('.class-select')].filter(s => s.value).length
+        : 0;
+    const countEl = document.getElementById('changeCount');
+    const saveBtn = document.getElementById('saveBtn');
+
+    if (changed > 0) {
+        countEl.textContent = changed + ' ändring' + (changed > 1 ? 'ar' : '') + ' att spara';
+        countEl.style.color = 'var(--color-accent)';
+        countEl.style.fontWeight = '600';
+        saveBtn.disabled = false;
+    } else {
+        countEl.textContent = 'Inga ändringar';
+        countEl.style.color = '';
+        countEl.style.fontWeight = '';
+        saveBtn.disabled = true;
+    }
+}
 
 if (typeof lucide !== 'undefined') lucide.createIcons();
 </script>
