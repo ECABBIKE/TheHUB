@@ -599,42 +599,40 @@ try {
         }
     }
 
-    // Check if this profile can be claimed or needs activation (visible to super admins)
+    // Check if this profile can be claimed or needs activation
+    // Available to ALL visitors - not just logged in users
     $canClaimProfile = false;      // Profile without email - can connect email
     $canActivateProfile = false;   // Profile with email but no password - can activate
     $hasPendingClaim = false;
 
-    // Check super admin status - both V3 hub login and admin panel login
+    // Check super admin status for admin-only features
     $isSuperAdmin = function_exists('hub_is_super_admin') && hub_is_super_admin();
     if (!$isSuperAdmin && isset($_SESSION['admin_logged_in']) && $_SESSION['admin_logged_in'] === true) {
-        // Fallback: Check admin panel session
         $isSuperAdmin = ($_SESSION['admin_role'] ?? '') === 'super_admin';
     }
 
-    // Super admins can see claim/activate button
-    if ($isSuperAdmin) {
-        if (empty($rider['email'])) {
-            // No email - show "Connect email" option
-            // Check if there's already a pending claim for this profile
-            try {
-                $claimCheck = $db->prepare("
-                    SELECT id FROM rider_claims
-                    WHERE target_rider_id = ? AND status = 'pending'
-                ");
-                $claimCheck->execute([$riderId]);
-                $hasPendingClaim = $claimCheck->fetch() !== false;
+    // Anyone can see claim/activate buttons - the process requires email verification
+    if (empty($rider['email'])) {
+        // No email - show "Connect email" option
+        // Check if there's already a pending claim for this profile
+        try {
+            $claimCheck = $db->prepare("
+                SELECT id FROM rider_claims
+                WHERE target_rider_id = ? AND status = 'pending'
+            ");
+            $claimCheck->execute([$riderId]);
+            $hasPendingClaim = $claimCheck->fetch() !== false;
 
-                if (!$hasPendingClaim) {
-                    $canClaimProfile = true;
-                }
-            } catch (Exception $e) {
-                // Table might not exist yet
-                $canClaimProfile = true; // Allow testing even without table
+            if (!$hasPendingClaim) {
+                $canClaimProfile = true;
             }
-        } else {
-            // Has email - show "Activate account" option (sends password reset)
-            $canActivateProfile = empty($rider['password']);
+        } catch (Exception $e) {
+            // Table might not exist yet
+            $canClaimProfile = true; // Allow testing even without table
         }
+    } else {
+        // Has email - show "Activate account" option (sends password reset)
+        $canActivateProfile = empty($rider['password']);
     }
 
 } catch (Exception $e) {
