@@ -11,7 +11,13 @@ $db = getDB();
 // Handle AJAX
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     header('Content-Type: application/json');
-    checkCsrf();
+
+    try {
+        checkCsrf();
+    } catch (Exception $e) {
+        echo json_encode(['success' => false, 'error' => 'CSRF-fel']);
+        exit;
+    }
 
     $action = $_POST['action'] ?? '';
 
@@ -27,21 +33,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 [$eventId, $fromClassId]
             );
 
-            // Do the update using raw query
-            $stmt = $db->query(
-                "UPDATE results SET class_id = ? WHERE event_id = ? AND class_id = ?",
-                [$toClassId, $eventId, $fromClassId]
+            // Do the update
+            $db->update('results',
+                ['class_id' => $toClassId],
+                'event_id = ? AND class_id = ?',
+                [$eventId, $fromClassId]
             );
 
-            $count = $stmt ? $stmt->rowCount() : $beforeCount['cnt'];
-            echo json_encode(['success' => true, 'count' => $count]);
+            echo json_encode(['success' => true, 'count' => (int)$beforeCount['cnt']]);
             exit;
         }
 
         if ($action === 'delete_class') {
             $classId = (int)$_POST['class_id'];
 
-            // Check if used
             $count = $db->getRow("SELECT COUNT(*) as cnt FROM results WHERE class_id = ?", [$classId]);
             if ($count['cnt'] > 0) {
                 echo json_encode(['success' => false, 'error' => 'Klassen har fortfarande resultat']);
@@ -63,19 +68,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 [$fromClassId]
             );
 
-            $stmt = $db->query(
-                "UPDATE results SET class_id = ? WHERE class_id = ?",
-                [$toClassId, $fromClassId]
+            // Do the update
+            $db->update('results',
+                ['class_id' => $toClassId],
+                'class_id = ?',
+                [$fromClassId]
             );
-
-            $count = $stmt ? $stmt->rowCount() : $beforeCount['cnt'];
 
             // Delete the now-empty class
             $db->delete('classes', 'id = ?', [$fromClassId]);
 
-            echo json_encode(['success' => true, 'count' => $count]);
+            echo json_encode(['success' => true, 'count' => (int)$beforeCount['cnt']]);
             exit;
         }
+
+        echo json_encode(['success' => false, 'error' => 'Okänd action: ' . $action]);
+        exit;
 
     } catch (Exception $e) {
         echo json_encode(['success' => false, 'error' => $e->getMessage()]);
