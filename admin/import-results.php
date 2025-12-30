@@ -325,15 +325,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['import_ds_final'])) {
 
         if ($imported > 0) {
             try {
-                recalculateEventResults($db, $eventId);
+                // NOTE: For DS import, we do NOT call recalculateEventResults() because
+                // it would overwrite our position values with time-based positions.
+                // Instead, we only sync to series_results for points calculation.
                 require_once INCLUDES_PATH . '/series-points.php';
-                syncEventResultsToAllSeries($db, $eventId);
-                $message = "$imported slutresultat importerade! Poäng beräknade för " . count($classesToCalculate) . " kvalpoängsklasser.";
+                $syncStats = syncEventResultsToAllSeries($db, $eventId);
+
+                $message = "$imported slutresultat importerade!";
+                if (!empty($syncStats)) {
+                    $totalInserted = array_sum(array_column($syncStats, 'inserted'));
+                    $totalUpdated = array_sum(array_column($syncStats, 'updated'));
+                    $message .= " Seriepoäng: {$totalInserted} nya, {$totalUpdated} uppdaterade.";
+                }
                 if (!empty($errors)) {
                     $message .= " (" . count($errors) . " rader hoppades över)";
                 }
             } catch (Exception $e) {
-                $message = "$imported resultat importerade. Poängberäkning: " . $e->getMessage();
+                $message = "$imported resultat importerade. Seriepoäng: " . $e->getMessage();
             }
             $messageType = 'success';
         } else {
