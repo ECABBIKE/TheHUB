@@ -603,7 +603,13 @@ try {
     $canClaimProfile = false;      // Profile without email - can connect email
     $canActivateProfile = false;   // Profile with email but no password - can activate
     $hasPendingClaim = false;
+
+    // Check super admin status - both V3 hub login and admin panel login
     $isSuperAdmin = function_exists('hub_is_super_admin') && hub_is_super_admin();
+    if (!$isSuperAdmin && isset($_SESSION['admin_logged_in']) && $_SESSION['admin_logged_in'] === true) {
+        // Fallback: Check admin panel session
+        $isSuperAdmin = ($_SESSION['admin_role'] ?? '') === 'super_admin';
+    }
 
     // Super admins can see claim/activate button
     if ($isSuperAdmin) {
