@@ -197,6 +197,159 @@ include __DIR__ . '/components/unified-layout.php';
 
 <?php if ($activeTab === 'dual_slalom'): ?>
 <!-- DUAL SLALOM TAB -->
+<?php
+// Handle DS Final Results import
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['import_ds_final'])) {
+    checkCsrf();
+
+    $eventId = (int)$_POST['event_id'];
+    $csvData = trim($_POST['csv_data']);
+    $clearExisting = isset($_POST['clear_existing']) && $_POST['clear_existing'] === '1';
+
+    if (!$eventId) {
+        $message = 'Välj ett event';
+        $messageType = 'error';
+    } elseif (empty($csvData)) {
+        $message = 'Klistra in data';
+        $messageType = 'error';
+    } else {
+        global $pdo;
+        $lines = explode("\n", $csvData);
+        $imported = 0;
+        $errors = [];
+        $lastEventClass = '';
+
+        // Detect delimiter
+        $firstLine = $lines[0];
+        $tabCount = substr_count($firstLine, "\t");
+        $semiCount = substr_count($firstLine, ';');
+        $delimiter = ($tabCount >= 3) ? "\t" : (($semiCount > 2) ? ';' : ',');
+
+        // Check for header
+        $hasHeader = (stripos($firstLine, 'klass') !== false || stripos($firstLine, 'plac') !== false || stripos($firstLine, 'namn') !== false);
+        if ($hasHeader) array_shift($lines);
+
+        // Clear existing if requested
+        if ($clearExisting) {
+            $pdo->prepare("DELETE FROM results WHERE event_id = ?")->execute([$eventId]);
+        }
+
+        $classesToCalculate = [];
+
+        foreach ($lines as $lineNum => $line) {
+            $line = trim($line);
+            if (empty($line)) continue;
+
+            $cols = str_getcsv($line, $delimiter);
+            $nonEmpty = array_filter($cols, function($v) { return trim($v) !== ''; });
+            if (count($nonEmpty) < 3) continue;
+
+            $position = (int)trim($cols[0] ?? '');
+            $eventClassName = trim($cols[1] ?? '');
+            $fullName = trim($cols[2] ?? '');
+            $clubName = trim($cols[3] ?? '');
+            $seriesClassName = trim($cols[4] ?? '');
+
+            if (empty($eventClassName) && !empty($lastEventClass)) {
+                $eventClassName = $lastEventClass;
+            } elseif (!empty($eventClassName)) {
+                $lastEventClass = $eventClassName;
+            }
+
+            // Split name
+            $parts = preg_split('/\s+/', $fullName, 2);
+            $firstName = $parts[0] ?? '';
+            $lastName = $parts[1] ?? '';
+
+            if (empty($firstName) || $position < 1 || $position > 200) continue;
+            if (empty($seriesClassName)) {
+                $errors[] = "Rad " . ($lineNum + 1) . ": Saknar kvalpoängsklass för $fullName";
+                continue;
+            }
+
+            try {
+                // Find/create event class
+                $eventClass = $db->getRow("SELECT id FROM classes WHERE LOWER(display_name) = LOWER(?) OR LOWER(name) = LOWER(?)", [$eventClassName, $eventClassName]);
+                $eventClassId = $eventClass ? $eventClass['id'] : $db->insert('classes', ['name' => strtolower(str_replace(' ', '_', $eventClassName)), 'display_name' => $eventClassName, 'active' => 1, 'sort_order' => 900]);
+
+                // Find/create series class
+                $seriesClass = $db->getRow("SELECT id FROM classes WHERE LOWER(display_name) = LOWER(?) OR LOWER(name) = LOWER(?)", [$seriesClassName, $seriesClassName]);
+                $seriesClassId = $seriesClass ? $seriesClass['id'] : $db->insert('classes', ['name' => strtolower(str_replace(' ', '_', $seriesClassName)), 'display_name' => $seriesClassName, 'active' => 1, 'sort_order' => 950]);
+
+                // Find/create rider
+                $rider = $db->getRow("SELECT id FROM riders WHERE UPPER(firstname) = UPPER(?) AND UPPER(lastname) = UPPER(?)", [$firstName, $lastName]);
+                if (!$rider) {
+                    $clubId = null;
+                    if (!empty($clubName)) {
+                        $club = $db->getRow("SELECT id FROM clubs WHERE LOWER(name) = LOWER(?)", [$clubName]);
+                        $clubId = $club ? $club['id'] : $db->insert('clubs', ['name' => $clubName, 'active' => 1]);
+                    }
+                    $riderId = $db->insert('riders', ['firstname' => $firstName, 'lastname' => $lastName, 'club_id' => $clubId, 'active' => 1]);
+                } else {
+                    $riderId = $rider['id'];
+                }
+
+                // Check existing
+                $existing = $db->getRow("SELECT id FROM results WHERE event_id = ? AND cyclist_id = ?", [$eventId, $riderId]);
+
+                $resultData = [
+                    'position' => $position,
+                    'class_id' => $eventClassId,
+                    'series_class_id' => $seriesClassId,
+                    'status' => 'finished'
+                ];
+
+                if ($existing) {
+                    $db->update('results', $resultData, 'id = ?', [$existing['id']]);
+                } else {
+                    $resultData['event_id'] = $eventId;
+                    $resultData['cyclist_id'] = $riderId;
+                    $db->insert('results', $resultData);
+                }
+
+                $classesToCalculate[$seriesClassId] = true;
+                $imported++;
+            } catch (Exception $e) {
+                $errors[] = "Rad " . ($lineNum + 1) . ": " . $e->getMessage();
+            }
+        }
+
+        if ($imported > 0) {
+            try {
+                recalculateEventResults($db, $eventId);
+                require_once INCLUDES_PATH . '/series-points.php';
+                syncEventResultsToAllSeries($db, $eventId);
+                $message = "$imported slutresultat importerade! Poäng beräknade för " . count($classesToCalculate) . " kvalpoängsklasser.";
+            } catch (Exception $e) {
+                $message = "$imported resultat importerade. Poängberäkning: " . $e->getMessage();
+            }
+            $messageType = 'success';
+        } else {
+            $message = "Ingen data importerades. " . implode(", ", array_slice($errors, 0, 3));
+            $messageType = 'error';
+        }
+    }
+}
+
+// Get DS events
+$dsEvents = $db->getAll("
+    SELECT e.id, e.name, e.date
+    FROM events e
+    WHERE e.discipline = 'DS' OR e.name LIKE '%Dual%' OR e.name LIKE '%Slalom%'
+    ORDER BY e.date DESC
+    LIMIT 100
+");
+if (empty($dsEvents)) {
+    $dsEvents = $existingEvents;
+}
+?>
+
+<?php if ($message): ?>
+<div class="alert alert-<?= $messageType ?> mb-lg">
+    <?= h($message) ?>
+</div>
+<?php endif; ?>
+
 <div class="card">
     <div class="card-header">
         <h2 class="text-primary">
@@ -205,60 +358,134 @@ include __DIR__ . '/components/unified-layout.php';
         </h2>
     </div>
     <div class="card-body">
-        <p class="mb-lg">Dual Slalom använder ett separat system för kvalificering och bracket-hantering.</p>
-
-        <div class="grid grid-cols-1 md-grid-cols-2 gap-lg">
-            <!-- Import Qualifying -->
-            <div class="card card-bordered">
-                <div class="card-header">
-                    <h3><i data-lucide="upload"></i> Importera kvalresultat</h3>
-                </div>
-                <div class="card-body">
-                    <p class="text-sm text-secondary mb-md">
-                        Importera CSV med kvaltider för att seeda deltagare till bracket.
-                    </p>
-                    <a href="/admin/elimination-import-qualifying.php" class="btn btn--primary w-full">
-                        <i data-lucide="file-plus"></i>
-                        Importera kvalresultat
-                    </a>
-                </div>
-            </div>
-
-            <!-- Manage Bracket -->
-            <div class="card card-bordered">
-                <div class="card-header">
-                    <h3><i data-lucide="git-merge"></i> Hantera bracket</h3>
-                </div>
-                <div class="card-body">
-                    <p class="text-sm text-secondary mb-md">
-                        Hantera elimination-bracket och registrera resultat från omgångar.
-                    </p>
-                    <a href="/admin/elimination.php" class="btn btn--secondary w-full">
-                        <i data-lucide="list"></i>
-                        Visa alla DS-events
-                    </a>
-                </div>
-            </div>
+        <!-- Sub-tabs for DS -->
+        <div class="tabs mb-lg">
+            <nav class="tabs-nav">
+                <button class="tab active" data-ds-tab="final">
+                    <i data-lucide="trophy"></i>
+                    Slutresultat (Eliminering)
+                </button>
+                <button class="tab" data-ds-tab="qualifying">
+                    <i data-lucide="timer"></i>
+                    Kvalificering
+                </button>
+                <button class="tab" data-ds-tab="bracket">
+                    <i data-lucide="git-merge"></i>
+                    Bracket
+                </button>
+            </nav>
         </div>
 
-        <!-- Template Download -->
-        <div class="mt-lg">
-            <a href="?template=dual_slalom" class="btn btn--secondary btn--sm">
-                <i data-lucide="download"></i>
-                Ladda ner mall för kvalresultat
+        <!-- FINAL RESULTS TAB (Default) -->
+        <div id="ds-tab-final" class="ds-tab-content">
+            <div class="alert alert-info mb-lg">
+                <strong>Importera slutresultat från eliminering:</strong><br>
+                <ul style="margin: 8px 0 0 20px;">
+                    <li><strong>Placering</strong> = Elimineringsplacering (1, 2, 3...)</li>
+                    <li><strong>Tävlingsklass</strong> = Visas i resultatlistan</li>
+                    <li><strong>Kvalpoängsklass</strong> = Där seriepoängen räknas</li>
+                </ul>
+            </div>
+
+            <form method="POST">
+                <?= csrf_field() ?>
+                <input type="hidden" name="import_ds_final" value="1">
+
+                <div class="form-group mb-lg">
+                    <label class="label label-lg">
+                        <span class="badge badge-primary mr-sm">1</span>
+                        Välj Event
+                    </label>
+                    <select name="event_id" class="input input-lg" required style="max-width: 500px;">
+                        <option value="">-- Välj event --</option>
+                        <?php foreach ($dsEvents as $e): ?>
+                        <option value="<?= $e['id'] ?>">
+                            <?= h($e['name']) ?> (<?= date('Y-m-d', strtotime($e['date'])) ?>)
+                        </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+
+                <div class="form-group mb-lg">
+                    <label class="checkbox-label">
+                        <input type="checkbox" name="clear_existing" value="1">
+                        <span>Rensa befintliga resultat först</span>
+                    </label>
+                </div>
+
+                <div class="form-group mb-lg">
+                    <label class="label label-lg">
+                        <span class="badge badge-primary mr-sm">2</span>
+                        Klistra in data (kopiera från Excel/Sheets)
+                    </label>
+                    <textarea name="csv_data" class="input" rows="15" placeholder="Placering&#9;Tävlingsklass&#9;Namn&#9;Klubb&#9;Kvalpoängsklass
+1&#9;Flickor 13-16&#9;Ebba Myrefelt&#9;Borgholm CK&#9;Flickor 13-14
+2&#9;Flickor 13-16&#9;Elsa Sporre Friberg&#9;CK Fix&#9;Flickor 13-14
+..." style="font-family: monospace; font-size: 13px;"></textarea>
+                </div>
+
+                <button type="submit" class="btn btn--primary btn-lg">
+                    <i data-lucide="upload"></i>
+                    Importera Slutresultat
+                </button>
+            </form>
+
+            <details class="gs-details mt-lg">
+                <summary class="text-sm text-primary">Visa exempelformat</summary>
+                <pre class="gs-code-dark mt-md">Placering	Tävlingsklass	Namn	Klubb	Kvalpoängsklass
+1	Flickor 13-16	Ebba Myrefelt	Borgholm CK	Flickor 13-14
+2	Flickor 13-16	Elsa Sporre Friberg	CK Fix	Flickor 13-14
+3	Flickor 13-16	Sara Warnevik		Flickor 15-16
+1	Pojkar 13-16	Theodor Ek	CK Fix	Pojkar 15-16
+1	Sportmotion Damer	Ella Mårtensson	Borås CA	Damer Junior</pre>
+            </details>
+        </div>
+
+        <!-- QUALIFYING TAB -->
+        <div id="ds-tab-qualifying" class="ds-tab-content" style="display: none;">
+            <p class="mb-lg">Importera CSV med kvaltider för att seeda deltagare till bracket.</p>
+
+            <a href="/admin/elimination-import-qualifying.php" class="btn btn--primary">
+                <i data-lucide="file-plus"></i>
+                Importera kvalresultat
             </a>
-        </div>
 
-        <!-- Format Info -->
-        <div class="alert alert--info mt-lg">
-            <i data-lucide="info"></i>
-            <div>
+            <div class="mt-lg">
+                <a href="?template=dual_slalom" class="btn btn--secondary btn--sm">
+                    <i data-lucide="download"></i>
+                    Ladda ner mall för kvalresultat
+                </a>
+            </div>
+
+            <div class="alert alert--info mt-lg">
                 <strong>CSV-format för kvalificering:</strong><br>
                 <code>Category, Bib, FirstName, LastName, Club, Run1, Run2, BestTime, Status</code>
             </div>
         </div>
+
+        <!-- BRACKET TAB -->
+        <div id="ds-tab-bracket" class="ds-tab-content" style="display: none;">
+            <p class="mb-lg">Hantera elimination-bracket och registrera resultat från omgångar.</p>
+
+            <a href="/admin/elimination.php" class="btn btn--secondary">
+                <i data-lucide="list"></i>
+                Visa alla DS-events
+            </a>
+        </div>
     </div>
 </div>
+
+<script>
+document.querySelectorAll('[data-ds-tab]').forEach(btn => {
+    btn.addEventListener('click', function() {
+        const tabId = this.dataset.dsTab;
+        document.querySelectorAll('[data-ds-tab]').forEach(b => b.classList.remove('active'));
+        this.classList.add('active');
+        document.querySelectorAll('.ds-tab-content').forEach(c => c.style.display = 'none');
+        document.getElementById('ds-tab-' + tabId).style.display = '';
+    });
+});
+</script>
 
 <?php else: ?>
 <!-- ENDURO / DH / XC TABS -->

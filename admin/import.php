@@ -207,6 +207,25 @@ include __DIR__ . '/components/unified-layout.php';
     </div>
    </div>
 
+   <!-- Dual Slalom Slutresultat -->
+   <div class="admin-import-section" style="border-left: 3px solid #9333ea;">
+    <div class="admin-import-section-header">
+     <div class="admin-import-section-icon" style="background: rgba(147, 51, 234, 0.1); color: #9333ea;">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/></svg>
+     </div>
+     <div class="admin-import-section-content">
+      <h3 class="admin-import-section-title">Dual Slalom Resultat</h3>
+      <p class="admin-import-section-description">Elimineringsresultat med tävlings- och kvalpoängsklass.</p>
+     </div>
+    </div>
+    <div class="admin-import-section-actions">
+     <a href="/admin/import-results.php?tab=dual_slalom" class="btn-admin btn-admin-sm" style="background: linear-gradient(135deg, #9333ea 0%, #6366f1 100%); color: white;" title="Importera">
+      <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+      <span>Import</span>
+     </a>
+    </div>
+   </div>
+
    <!-- Events -->
    <div class="admin-import-section" style="border-left: 3px solid var(--color-info);">
     <div class="admin-import-section-header">

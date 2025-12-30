@@ -193,6 +193,16 @@ try {
     $eventFormat = $event['event_format'] ?? 'ENDURO';
     $isDH = in_array($eventFormat, ['DH_STANDARD', 'DH_SWECUP']);
 
+    // Check if this is a Dual Slalom event (discipline = DS or has elimination data with series_class_id)
+    $isDS = ($event['discipline'] ?? '') === 'DS';
+    if (!$isDS) {
+        // Also check if results have series_class_id set (indicating DS-style import)
+        $dsCheck = $db->prepare("SELECT COUNT(*) as cnt FROM results WHERE event_id = ? AND series_class_id IS NOT NULL LIMIT 1");
+        $dsCheck->execute([$eventId]);
+        $dsRow = $dsCheck->fetch(PDO::FETCH_ASSOC);
+        $isDS = ($dsRow && $dsRow['cnt'] > 0);
+    }
+
     // For DH events, calculate run time stats for color coding
     $dhRunStats = [];
     if ($isDH) {
@@ -200,6 +210,18 @@ try {
     }
 
     // Fetch all results for this event
+    // For DS events: sort by position (elimination result)
+    // For other events: sort by finish_time
+    $orderBy = $isDS
+        ? "cls.sort_order ASC,
+           COALESCE(cls.name, 'Oklassificerad'),
+           CASE WHEN res.status = 'finished' THEN 0 ELSE 1 END,
+           res.position ASC"
+        : "cls.sort_order ASC,
+           COALESCE(cls.name, 'Oklassificerad'),
+           CASE WHEN res.status = 'finished' THEN 0 ELSE 1 END,
+           res.finish_time ASC";
+
     $stmt = $db->prepare("
         SELECT
             res.*,
@@ -222,11 +244,7 @@ try {
         LEFT JOIN clubs c ON COALESCE(res.club_id, r.club_id) = c.id
         LEFT JOIN classes cls ON res.class_id = cls.id
         WHERE res.event_id = ?
-        ORDER BY
-            cls.sort_order ASC,
-            COALESCE(cls.name, 'Oklassificerad'),
-            CASE WHEN res.status = 'finished' THEN 0 ELSE 1 END,
-            res.finish_time ASC
+        ORDER BY {$orderBy}
     ");
     $stmt->execute([$eventId]);
     $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
