@@ -107,16 +107,16 @@ foreach ($eventsWithClasses as $row) {
     ];
 }
 
-// Get all "good" classes (sort_order < 900, or many results)
-$goodClasses = $db->getAll("
-    SELECT c.id, c.display_name, c.gender, COUNT(r.id) as total_results
+// Get ALL classes for dropdown
+$allClasses = $db->getAll("
+    SELECT c.id, c.display_name, c.gender, c.sort_order, COUNT(r.id) as total_results
     FROM classes c
     LEFT JOIN results r ON c.id = r.class_id
     WHERE c.active = 1
     GROUP BY c.id
-    HAVING total_results > 5 OR c.sort_order < 900
     ORDER BY c.sort_order, c.display_name
 ");
+$goodClasses = $allClasses; // Use all classes in dropdowns
 
 // Get "bad" classes (likely auto-created, few results, high sort_order)
 $badClasses = $db->getAll("
