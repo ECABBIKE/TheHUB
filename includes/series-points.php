@@ -246,10 +246,11 @@ function recalculateSeriesEventPoints($db, $seriesId, $eventId) {
     }
 
     // Get all results for this event - ONLY classes that award points AND are series eligible
+    // Include series_class_id for DS events where points go to a different class
     $results = $db->getAll("
-        SELECT r.id, r.cyclist_id, r.class_id, r.position, r.status
+        SELECT r.id, r.cyclist_id, r.class_id, r.series_class_id, r.position, r.status
         FROM results r
-        INNER JOIN classes cl ON r.class_id = cl.id
+        INNER JOIN classes cl ON COALESCE(r.series_class_id, r.class_id) = cl.id
         WHERE r.event_id = ?
           AND COALESCE(cl.awards_points, 1) = 1
           AND COALESCE(cl.series_eligible, 1) = 1
@@ -290,8 +291,11 @@ function recalculateSeriesEventPoints($db, $seriesId, $eventId) {
             $run2Points = 0;
         }
 
+        // Use series_class_id if set, otherwise class_id (for DS events where points go to different class)
+        $effectiveClassId = $result['series_class_id'] ?? $result['class_id'];
+
         // Check if series_result already exists using lookup map (no DB query!)
-        $lookupKey = $cyclistId . '|' . ($result['class_id'] ?? 'null');
+        $lookupKey = $cyclistId . '|' . ($effectiveClassId ?? 'null');
         $existing = $existingMap[$lookupKey] ?? null;
 
         if ($existing) {
@@ -313,12 +317,12 @@ function recalculateSeriesEventPoints($db, $seriesId, $eventId) {
                 $stats['updated']++;
             }
         } else {
-            // Insert new series_result
+            // Insert new series_result (use series_class_id if set for DS events)
             $insertData = [
                 'series_id' => $seriesId,
                 'event_id' => $eventId,
                 'cyclist_id' => $cyclistId,
-                'class_id' => $result['class_id'],
+                'class_id' => $effectiveClassId,
                 'position' => $result['position'],
                 'status' => $result['status'],
                 'points' => $points,
