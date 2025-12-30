@@ -62,7 +62,7 @@ try {
         $params[] = $filterYear;
     }
 
-    $sql .= " GROUP BY e.id ORDER BY e.date DESC LIMIT 100";
+    $sql .= " GROUP BY e.id ORDER BY e.date DESC";
 
     $stmt = $pdo->prepare($sql);
     $stmt->execute($params);

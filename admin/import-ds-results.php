@@ -12,6 +12,20 @@ $db = getDB();
 $message = '';
 $messageType = 'info';
 
+// Download template
+if (isset($_GET['download_template'])) {
+    header('Content-Type: text/csv; charset=utf-8');
+    header('Content-Disposition: attachment; filename="ds-resultat-mall.csv"');
+    echo "Klass;Placering;Förnamn;Efternamn;Klubb\n";
+    echo "Herrar Elite;1;Johan;Andersson;Stockholm CK\n";
+    echo "Herrar Elite;2;Erik;Svensson;Göteborg MTB\n";
+    echo "Herrar Elite;3;Anders;Nilsson;\n";
+    echo "Damer Elite;1;Anna;Johansson;Uppsala CK\n";
+    echo "Damer Elite;2;Maria;Eriksson;\n";
+    echo "Herrar Junior;1;Oscar;Berg;Malmö CK\n";
+    exit;
+}
+
 // Get events (DS only)
 $events = $db->getAll("
     SELECT e.id, e.name, e.date, e.discipline
@@ -213,11 +227,15 @@ include __DIR__ . '/components/unified-layout.php';
 <?php endif; ?>
 
 <div class="card">
-    <div class="card-header">
+    <div class="card-header" style="display:flex; justify-content:space-between; align-items:center;">
         <h2>
             <i data-lucide="git-branch"></i>
             Importera Dual Slalom Placeringar
         </h2>
+        <a href="?download_template=1" class="btn btn--secondary btn--sm">
+            <i data-lucide="download"></i>
+            Ladda ner mall
+        </a>
     </div>
     <div class="card-body">
         <form method="POST">
