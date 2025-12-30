@@ -800,27 +800,31 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
             }
         }
 
-        // Show card if either ranking or form data exists
-        if ($rankingPosition || $hasFormChart):
+        // Show card if ranking, form data, or ranking history exists
+        // Ranking history should always be visible even without current ranking
+        $hasRankingHistory = !empty($rankingHistoryFull);
+        if ($rankingPosition || $hasFormChart || $hasRankingHistory):
         ?>
         <div class="card stats-tabbed-card">
             <div class="stats-tabs">
-                <?php if ($rankingPosition): ?>
+                <?php if ($rankingPosition || $hasRankingHistory): ?>
                 <button class="stats-tab active" data-tab="ranking-tab">
                     <i data-lucide="trending-up"></i>
                     <span>Ranking</span>
                 </button>
                 <?php endif; ?>
                 <?php if ($hasFormChart): ?>
-                <button class="stats-tab <?= !$rankingPosition ? 'active' : '' ?>" data-tab="form-tab">
+                <button class="stats-tab <?= !$rankingPosition && !$hasRankingHistory ? 'active' : '' ?>" data-tab="form-tab">
                     <i data-lucide="activity"></i>
                     <span>Form</span>
                 </button>
                 <?php endif; ?>
             </div>
 
-            <?php if ($rankingPosition): ?>
+            <?php if ($rankingPosition || $hasRankingHistory): ?>
             <div class="stats-tab-content active" id="ranking-tab">
+                <?php if ($rankingPosition): ?>
+                <!-- Has current ranking -->
                 <div class="dashboard-chart-header">
                     <div class="dashboard-chart-stats">
                         <div class="dashboard-stat">
@@ -837,7 +841,7 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
                 <div class="dashboard-chart-body">
                     <canvas id="rankingChart"></canvas>
                 </div>
-                <?php elseif ($rankingPosition): ?>
+                <?php else: ?>
                 <div class="dashboard-chart-body dashboard-chart-placeholder">
                     <p class="text-muted text-center" style="padding: var(--space-lg);">
                         <i data-lucide="clock" style="width: 24px; height: 24px; margin-bottom: var(--space-xs); opacity: 0.5;"></i><br>
@@ -850,18 +854,53 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
                         <i data-lucide="calculator"></i>
                         <span>Visa uträkning</span>
                     </button>
-                    <?php if (!empty($rankingHistoryFull)): ?>
+                    <?php if ($hasRankingHistory): ?>
                     <button type="button" class="btn-calc-ranking-inline" onclick="openHistoryModal()">
                         <i data-lucide="history"></i>
                         <span>Visa historik</span>
                     </button>
                     <?php endif; ?>
                 </div>
+                <?php else: ?>
+                <!-- No current ranking, but has history - show history-focused view -->
+                <?php
+                // Get last known position from history
+                $lastHistoryEntry = end($rankingHistoryFull);
+                $lastKnownPosition = $lastHistoryEntry['ranking_position'] ?? null;
+                $lastKnownDate = $lastHistoryEntry['snapshot_date'] ?? null;
+                $bestHistoryPosition = !empty($rankingHistoryFull) ? min(array_column($rankingHistoryFull, 'ranking_position')) : null;
+                ?>
+                <div class="dashboard-chart-header">
+                    <div class="dashboard-chart-stats">
+                        <div class="dashboard-stat">
+                            <span class="dashboard-stat-value" style="color: var(--color-text);">#<?= $lastKnownPosition ?? '-' ?></span>
+                            <span class="dashboard-stat-label">Senaste</span>
+                        </div>
+                        <div class="dashboard-stat">
+                            <span class="dashboard-stat-value dashboard-stat-value--green">#<?= $bestHistoryPosition ?? '-' ?></span>
+                            <span class="dashboard-stat-label">Bästa</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="dashboard-chart-body dashboard-chart-placeholder">
+                    <p class="text-muted text-center" style="padding: var(--space-lg);">
+                        <i data-lucide="history" style="width: 24px; height: 24px; margin-bottom: var(--space-xs); opacity: 0.5;"></i><br>
+                        Ingen aktuell ranking<br>
+                        <small>Senast rankad: <?= $lastKnownDate ? date('j M Y', strtotime($lastKnownDate)) : 'okänt' ?></small>
+                    </p>
+                </div>
+                <div class="dashboard-chart-footer">
+                    <button type="button" class="btn-calc-ranking-inline" onclick="openHistoryModal()">
+                        <i data-lucide="history"></i>
+                        <span>Visa historik</span>
+                    </button>
+                </div>
+                <?php endif; ?>
             </div>
             <?php endif; ?>
 
             <?php if ($hasFormChart): ?>
-            <div class="stats-tab-content <?= !$rankingPosition ? 'active' : '' ?>" id="form-tab">
+            <div class="stats-tab-content <?= !$rankingPosition && !$hasRankingHistory ? 'active' : '' ?>" id="form-tab">
                 <div class="dashboard-chart-header">
                     <div class="dashboard-chart-stats">
                         <div class="dashboard-stat">
@@ -1755,11 +1794,6 @@ document.addEventListener('DOMContentLoaded', function() {
             </button>
         </div>
         <div class="ranking-modal-body">
-            <div class="ranking-modal-summary">
-                <span class="summary-label">Nuvarande position</span>
-                <span class="summary-value">#<?= $rankingPosition ?></span>
-            </div>
-
             <?php
             // Prepare full history data for the modal chart
             $historyLabels = [];
@@ -1778,7 +1812,16 @@ document.addEventListener('DOMContentLoaded', function() {
             $firstPos = $historyData[0] ?? 0;
             $lastPos = end($historyData) ?: 0;
             $improvement = $firstPos - $lastPos;
+
+            // Get the display position (current or last known)
+            $displayPosition = $rankingPosition ?: $lastPos;
+            $positionLabel = $rankingPosition ? 'Nuvarande position' : 'Senaste position';
             ?>
+
+            <div class="ranking-modal-summary">
+                <span class="summary-label"><?= $positionLabel ?></span>
+                <span class="summary-value">#<?= $displayPosition ?></span>
+            </div>
 
             <div class="history-stats-row">
                 <div class="history-stat">
