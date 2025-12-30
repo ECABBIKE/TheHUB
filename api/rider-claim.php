@@ -31,15 +31,10 @@ if (!$targetRiderId) {
     exit;
 }
 
-// Require login (super admin or regular user)
+// No login required - claims go to admin for approval
+// Admin verifies identity before connecting email to profile
 $isSuperAdmin = function_exists('hub_is_super_admin') && hub_is_super_admin();
 $currentUser = function_exists('hub_current_user') ? hub_current_user() : null;
-
-if (!$isSuperAdmin && (!$currentUser || empty($currentUser['id']))) {
-    http_response_code(401);
-    echo json_encode(['success' => false, 'error' => 'Du måste vara inloggad']);
-    exit;
-}
 
 try {
     $db = getDB();
