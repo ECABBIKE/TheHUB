@@ -197,11 +197,14 @@ try {
     $isDS = ($event['discipline'] ?? '') === 'DS';
     if (!$isDS) {
         // Also check if results have series_class_id set (indicating DS-style import)
-        $dsCheck = $db->prepare("SELECT COUNT(*) as cnt FROM results WHERE event_id = ? AND series_class_id IS NOT NULL LIMIT 1");
+        $dsCheck = $db->prepare("SELECT COUNT(*) as cnt FROM results WHERE event_id = ? AND series_class_id IS NOT NULL");
         $dsCheck->execute([$eventId]);
         $dsRow = $dsCheck->fetch(PDO::FETCH_ASSOC);
-        $isDS = ($dsRow && $dsRow['cnt'] > 0);
+        $isDS = ($dsRow && (int)$dsRow['cnt'] > 0);
     }
+
+    // DEBUG: Log DS detection
+    error_log("EVENT {$eventId}: isDS=" . ($isDS ? 'true' : 'false') . ", discipline=" . ($event['discipline'] ?? 'null'));
 
     // For DH events, calculate run time stats for color coding
     $dhRunStats = [];
@@ -210,13 +213,13 @@ try {
     }
 
     // Fetch all results for this event
-    // For DS events: sort by position (elimination result)
+    // For DS events: sort by position (elimination result), NULL positions last
     // For other events: sort by finish_time
     $orderBy = $isDS
         ? "cls.sort_order ASC,
            COALESCE(cls.name, 'Oklassificerad'),
            CASE WHEN res.status = 'finished' THEN 0 ELSE 1 END,
-           res.position ASC"
+           CASE WHEN res.position IS NULL OR res.position = 0 THEN 9999 ELSE res.position END ASC"
         : "cls.sort_order ASC,
            COALESCE(cls.name, 'Oklassificerad'),
            CASE WHEN res.status = 'finished' THEN 0 ELSE 1 END,
@@ -325,32 +328,57 @@ try {
     foreach ($resultsByClass as $classKey => &$classData) {
         $rankingType = $classData['ranking_type'] ?? 'time';
 
-        usort($classData['results'], function($a, $b) use ($rankingType) {
-            if ($rankingType !== 'time') {
-                $aName = ($a['lastname'] ?? '') . ' ' . ($a['firstname'] ?? '');
-                $bName = ($b['lastname'] ?? '') . ' ' . ($b['firstname'] ?? '');
-                return strcasecmp($aName, $bName);
-            }
+        // For DS events: sort by stored position (elimination result), don't re-sort by time
+        if ($isDS) {
+            usort($classData['results'], function($a, $b) {
+                // Finished riders first
+                if ($a['status'] === 'finished' && $b['status'] !== 'finished') return -1;
+                if ($a['status'] !== 'finished' && $b['status'] === 'finished') return 1;
 
-            if ($a['status'] === 'finished' && $b['status'] !== 'finished') return -1;
-            if ($a['status'] !== 'finished' && $b['status'] === 'finished') return 1;
+                // Sort by position (from database)
+                $aPos = (int)($a['position'] ?? 9999);
+                $bPos = (int)($b['position'] ?? 9999);
+                if ($aPos === 0) $aPos = 9999;
+                if ($bPos === 0) $bPos = 9999;
+                return $aPos <=> $bPos;
+            });
+        } else {
+            // Standard sorting for non-DS events
+            usort($classData['results'], function($a, $b) use ($rankingType) {
+                if ($rankingType !== 'time') {
+                    $aName = ($a['lastname'] ?? '') . ' ' . ($a['firstname'] ?? '');
+                    $bName = ($b['lastname'] ?? '') . ' ' . ($b['firstname'] ?? '');
+                    return strcasecmp($aName, $bName);
+                }
 
-            if ($a['status'] === 'finished' && $b['status'] === 'finished') {
-                $aSeconds = timeToSeconds($a['finish_time']);
-                $bSeconds = timeToSeconds($b['finish_time']);
-                return $aSeconds <=> $bSeconds;
-            }
+                if ($a['status'] === 'finished' && $b['status'] !== 'finished') return -1;
+                if ($a['status'] !== 'finished' && $b['status'] === 'finished') return 1;
 
-            $statusPriority = ['dnf' => 1, 'dq' => 2, 'dns' => 3];
-            $aPriority = $statusPriority[$a['status']] ?? 4;
-            $bPriority = $statusPriority[$b['status']] ?? 4;
-            return $aPriority <=> $bPriority;
-        });
+                if ($a['status'] === 'finished' && $b['status'] === 'finished') {
+                    $aSeconds = timeToSeconds($a['finish_time']);
+                    $bSeconds = timeToSeconds($b['finish_time']);
+                    return $aSeconds <=> $bSeconds;
+                }
+
+                $statusPriority = ['dnf' => 1, 'dq' => 2, 'dns' => 3];
+                $aPriority = $statusPriority[$a['status']] ?? 4;
+                $bPriority = $statusPriority[$b['status']] ?? 4;
+                return $aPriority <=> $bPriority;
+            });
+        }
 
         // Calculate positions and time behind
         $position = 0;
         $winnerSeconds = 0;
         foreach ($classData['results'] as &$result) {
+            // For DS events: use the stored position directly
+            if ($isDS) {
+                $storedPos = (int)($result['position'] ?? 0);
+                $result['class_position'] = ($storedPos > 0) ? $storedPos : null;
+                $result['time_behind'] = null; // No time comparison for DS
+                continue;
+            }
+
             if ($rankingType !== 'time') {
                 $result['class_position'] = null;
                 $result['time_behind'] = null;
