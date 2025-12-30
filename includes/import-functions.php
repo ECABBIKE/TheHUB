@@ -876,11 +876,28 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
                     }
 
                     if (!isset($classCache[$className])) {
-                        // Try exact match first (case-insensitive)
-                        $class = $db->getRow(
-                            "SELECT id FROM classes WHERE LOWER(display_name) = LOWER(?) OR LOWER(name) = LOWER(?)",
-                            [$className, $className]
-                        );
+                        // Try alias match first (from class_aliases table)
+                        $class = null;
+                        try {
+                            $aliasMatch = $db->getRow(
+                                "SELECT class_id FROM class_aliases WHERE LOWER(alias) = LOWER(?)",
+                                [$className]
+                            );
+                            if ($aliasMatch) {
+                                $class = ['id' => $aliasMatch['class_id']];
+                                error_log("IMPORT: Class alias match - '{$className}' → class_id {$aliasMatch['class_id']}");
+                            }
+                        } catch (Exception $e) {
+                            // class_aliases table might not exist yet
+                        }
+
+                        // Try exact match (case-insensitive)
+                        if (!$class) {
+                            $class = $db->getRow(
+                                "SELECT id FROM classes WHERE LOWER(display_name) = LOWER(?) OR LOWER(name) = LOWER(?)",
+                                [$className, $className]
+                            );
+                        }
 
                         // Try partial match if exact fails
                         if (!$class) {
