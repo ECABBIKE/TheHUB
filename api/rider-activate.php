@@ -3,7 +3,7 @@
  * API Endpoint: Send activation email to rider
  *
  * Sends a password reset email to a rider who has an email but no password set.
- * Only accessible by super admins.
+ * Open to all users - email verification ensures only the profile owner can activate.
  */
 
 header('Content-Type: application/json');
@@ -23,42 +23,13 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 $input = json_decode(file_get_contents('php://input'), true);
 $riderId = (int)($input['rider_id'] ?? 0);
 
-// Debug logging
-error_log("RIDER_ACTIVATE: Request received for rider_id=" . $riderId);
-error_log("RIDER_ACTIVATE: Session data: " . print_r($_SESSION, true));
-
 if (!$riderId) {
-    error_log("RIDER_ACTIVATE: No rider_id provided");
     echo json_encode(['success' => false, 'error' => 'Ogiltig profil']);
     exit;
 }
 
-// Verify super admin
-$isSuperAdmin = function_exists('hub_is_super_admin') && hub_is_super_admin();
-
-error_log("RIDER_ACTIVATE: hub_is_super_admin exists: " . (function_exists('hub_is_super_admin') ? 'yes' : 'no'));
-error_log("RIDER_ACTIVATE: isSuperAdmin: " . ($isSuperAdmin ? 'yes' : 'no'));
-error_log("RIDER_ACTIVATE: admin_role from session: " . ($_SESSION['admin_role'] ?? 'not set'));
-
-if (!$isSuperAdmin) {
-    http_response_code(403);
-    error_log("RIDER_ACTIVATE: Access denied - not super admin");
-
-    // Return detailed debug info in non-production
-    $debugInfo = [
-        'admin_logged_in' => isset($_SESSION['admin_logged_in']) ? 'yes' : 'no',
-        'admin_role' => $_SESSION['admin_role'] ?? 'not set',
-        'hub_user_role' => $_SESSION['hub_user_role'] ?? 'not set',
-        'function_exists' => function_exists('hub_is_super_admin') ? 'yes' : 'no'
-    ];
-
-    echo json_encode([
-        'success' => false,
-        'error' => 'Endast super admin kan skicka aktiveringslänkar',
-        'debug' => $debugInfo
-    ]);
-    exit;
-}
+// No authentication required - the activation email is sent to the profile's
+// registered email address, so only the rightful owner can complete activation
 
 try {
     global $pdo;
