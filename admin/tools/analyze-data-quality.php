@@ -6,7 +6,7 @@
 
 require_once __DIR__ . '/../../config.php';
 require_once __DIR__ . '/../../hub-config.php';
-require_once __DIR__ . '/../../includes/db.php';
+// Note: getDB() is provided by helpers.php which is included via config.php
 
 header('Content-Type: text/html; charset=utf-8');
 
