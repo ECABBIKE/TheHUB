@@ -649,18 +649,53 @@ tr.advances .seed-badge {
 </style>
 
 <script>
-// Tab switching for elimination display
-document.querySelectorAll('.elim-subtab').forEach(btn => {
-    btn.addEventListener('click', () => {
-        const targetId = btn.dataset.target;
+// Tab switching for elimination display - wait for DOM to be ready
+document.addEventListener('DOMContentLoaded', function() {
+    document.querySelectorAll('.elim-subtab').forEach(btn => {
+        btn.addEventListener('click', function(e) {
+            e.preventDefault();
+            const targetId = this.dataset.target;
+            if (!targetId) return;
 
-        // Update buttons
-        document.querySelectorAll('.elim-subtab').forEach(b => b.classList.remove('active'));
-        btn.classList.add('active');
+            // Update buttons
+            document.querySelectorAll('.elim-subtab').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
 
-        // Update sections
-        document.querySelectorAll('.elim-section').forEach(s => s.classList.add('hidden'));
-        document.getElementById(targetId).classList.remove('hidden');
+            // Update sections
+            document.querySelectorAll('.elim-section').forEach(s => s.classList.add('hidden'));
+            const targetSection = document.getElementById(targetId);
+            if (targetSection) {
+                targetSection.classList.remove('hidden');
+            }
+        });
     });
+
+    // Re-initialize Lucide icons if available
+    if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+    }
 });
+
+// Fallback: also run immediately in case DOM is already loaded
+if (document.readyState !== 'loading') {
+    document.querySelectorAll('.elim-subtab').forEach(btn => {
+        if (!btn.hasAttribute('data-click-bound')) {
+            btn.setAttribute('data-click-bound', 'true');
+            btn.addEventListener('click', function(e) {
+                e.preventDefault();
+                const targetId = this.dataset.target;
+                if (!targetId) return;
+
+                document.querySelectorAll('.elim-subtab').forEach(b => b.classList.remove('active'));
+                this.classList.add('active');
+
+                document.querySelectorAll('.elim-section').forEach(s => s.classList.add('hidden'));
+                const targetSection = document.getElementById(targetId);
+                if (targetSection) {
+                    targetSection.classList.remove('hidden');
+                }
+            });
+        }
+    });
+}
 </script>

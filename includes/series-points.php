@@ -246,10 +246,15 @@ function recalculateSeriesEventPoints($db, $seriesId, $eventId) {
     }
 
     // Get all results for this event - ONLY classes that award points AND are series eligible
+    // For DS events: Use series_class_id if set (kvalpoängsklass), otherwise use class_id
     $results = $db->getAll("
-        SELECT r.id, r.cyclist_id, r.class_id, r.position, r.status
+        SELECT r.id, r.cyclist_id,
+               COALESCE(r.series_class_id, r.class_id) as effective_class_id,
+               r.class_id,
+               r.series_class_id,
+               r.position, r.status
         FROM results r
-        INNER JOIN classes cl ON r.class_id = cl.id
+        INNER JOIN classes cl ON COALESCE(r.series_class_id, r.class_id) = cl.id
         WHERE r.event_id = ?
           AND COALESCE(cl.awards_points, 1) = 1
           AND COALESCE(cl.series_eligible, 1) = 1
@@ -263,6 +268,7 @@ function recalculateSeriesEventPoints($db, $seriesId, $eventId) {
     ", [$seriesId, $eventId]);
 
     // Build lookup map: "cyclist_id|class_id" => ['id' => ..., 'points' => ...]
+    // Note: class_id in series_results should match effective_class_id from results
     $existingMap = [];
     foreach ($existingResults as $er) {
         $key = $er['cyclist_id'] . '|' . ($er['class_id'] ?? 'null');
@@ -291,7 +297,9 @@ function recalculateSeriesEventPoints($db, $seriesId, $eventId) {
         }
 
         // Check if series_result already exists using lookup map (no DB query!)
-        $lookupKey = $cyclistId . '|' . ($result['class_id'] ?? 'null');
+        // Use effective_class_id (series_class_id if set, otherwise class_id) for DS support
+        $effectiveClassId = $result['effective_class_id'] ?? $result['class_id'];
+        $lookupKey = $cyclistId . '|' . ($effectiveClassId ?? 'null');
         $existing = $existingMap[$lookupKey] ?? null;
 
         if ($existing) {
@@ -314,11 +322,12 @@ function recalculateSeriesEventPoints($db, $seriesId, $eventId) {
             }
         } else {
             // Insert new series_result
+            // Use effective_class_id for series points (kvalpoängsklass for DS)
             $insertData = [
                 'series_id' => $seriesId,
                 'event_id' => $eventId,
                 'cyclist_id' => $cyclistId,
-                'class_id' => $result['class_id'],
+                'class_id' => $effectiveClassId,
                 'position' => $result['position'],
                 'status' => $result['status'],
                 'points' => $points,
@@ -335,11 +344,12 @@ function recalculateSeriesEventPoints($db, $seriesId, $eventId) {
     }
 
     // Delete series_results that no longer have a matching result
+    // Use COALESCE to match effective_class_id (series_class_id if set, otherwise class_id)
     $deleted = $db->query("
         DELETE sr FROM series_results sr
         LEFT JOIN results r ON r.event_id = sr.event_id
             AND r.cyclist_id = sr.cyclist_id
-            AND r.class_id <=> sr.class_id
+            AND COALESCE(r.series_class_id, r.class_id) <=> sr.class_id
         WHERE sr.series_id = ? AND sr.event_id = ? AND r.id IS NULL
     ", [$seriesId, $eventId]);
 
