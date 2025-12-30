@@ -948,6 +948,25 @@ include __DIR__ . '/components/unified-layout.php';
 <h3 class="section-title">Debug & Diagnostik</h3>
 
 <div class="tools-grid">
+    <!-- Data Quality Analysis -->
+    <div class="tool-card">
+        <div class="tool-card-header">
+            <div class="tool-icon danger">
+                <i data-lucide="search-x"></i>
+            </div>
+            <div>
+                <h4 class="tool-title">Datakvalitetsanalys</h4>
+                <p class="tool-description">Hitta korrupt data: telefonnummer i tider, fel klubbar, dubbletter, position/poäng-missmatch</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/tools/analyze-data-quality.php" class="btn-admin btn-admin-danger flex-1">
+                <i data-lucide="search-x" class="icon-sm"></i>
+                Analysera datakvalitet
+            </a>
+        </div>
+    </div>
+
     <!-- Debug Achievements -->
     <div class="tool-card">
         <div class="tool-card-header">
