@@ -69,12 +69,56 @@ foreach ($roleCounts as $row) {
 $activatedRidersCount = $db->getRow("SELECT COUNT(*) as count FROM riders WHERE password IS NOT NULL AND password != ''");
 $roleStats['activated_riders'] = $activatedRidersCount['count'] ?? 0;
 
+// Get promotors (riders with promotor role via rider_profiles)
+$promotors = $db->getAll("
+    SELECT
+        r.id as rider_id,
+        r.firstname,
+        r.lastname,
+        r.email,
+        c.name as club_name,
+        au.id as user_id,
+        (SELECT COUNT(*) FROM promotor_events pe WHERE pe.user_id = au.id) as event_count
+    FROM riders r
+    JOIN rider_profiles rp ON r.id = rp.rider_id
+    JOIN admin_users au ON rp.user_id = au.id
+    LEFT JOIN clubs c ON r.club_id = c.id
+    WHERE au.role = 'promotor'
+    ORDER BY r.lastname, r.firstname
+");
+
+// Get club admins
+$clubAdmins = $db->getAll("
+    SELECT
+        ca.id,
+        ca.club_id,
+        c.name as club_name,
+        r.id as rider_id,
+        r.firstname,
+        r.lastname,
+        r.email
+    FROM club_admins ca
+    JOIN clubs c ON ca.club_id = c.id
+    JOIN admin_users au ON ca.user_id = au.id
+    LEFT JOIN rider_profiles rp ON au.id = rp.user_id
+    LEFT JOIN riders r ON rp.rider_id = r.id
+    ORDER BY c.name, r.lastname
+");
+
 // Page config
 $page_title = 'Användarhantering';
 $breadcrumbs = [
     ['label' => 'Användare']
 ];
-$page_actions = '<a href="/admin/user-edit.php" class="btn-admin btn-admin-primary">
+$page_actions = '<a href="/admin/role-management.php" class="btn btn--primary">
+    <i data-lucide="star"></i>
+    Koppla promotor
+</a>
+<a href="/admin/club-admins.php" class="btn btn--secondary">
+    <i data-lucide="building"></i>
+    Koppla klubb-admin
+</a>
+<a href="/admin/user-edit.php" class="btn btn--secondary">
     <i data-lucide="user-plus"></i>
     Ny användare
 </a>';
@@ -95,7 +139,7 @@ include __DIR__ . '/components/unified-layout.php';
 
 <!-- Role Stats -->
 <div class="admin-stats-grid">
-    <div class="admin-stat-card">
+    <a href="/admin/users.php?role=super_admin" class="admin-stat-card" style="text-decoration: none; color: inherit;">
         <div class="admin-stat-icon stat-icon-error">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-lg"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
         </div>
@@ -103,8 +147,8 @@ include __DIR__ . '/components/unified-layout.php';
             <div class="admin-stat-value"><?= $roleStats['super_admin'] ?? 0 ?></div>
             <div class="admin-stat-label">Super Admin</div>
         </div>
-    </div>
-    <div class="admin-stat-card">
+    </a>
+    <a href="/admin/users.php?role=admin" class="admin-stat-card" style="text-decoration: none; color: inherit;">
         <div class="admin-stat-icon stat-icon-accent">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-lg"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
         </div>
@@ -112,8 +156,8 @@ include __DIR__ . '/components/unified-layout.php';
             <div class="admin-stat-value"><?= $roleStats['admin'] ?? 0 ?></div>
             <div class="admin-stat-label">Admin</div>
         </div>
-    </div>
-    <div class="admin-stat-card">
+    </a>
+    <a href="#promotors-section" class="admin-stat-card" style="text-decoration: none; color: inherit;">
         <div class="admin-stat-icon stat-icon-info">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-lg"><rect width="18" height="18" x="3" y="4" rx="2" ry="2"/><line x1="16" x2="16" y1="2" y2="6"/><line x1="8" x2="8" y1="2" y2="6"/><line x1="3" x2="21" y1="10" y2="10"/><path d="m9 16 2 2 4-4"/></svg>
         </div>
@@ -121,7 +165,7 @@ include __DIR__ . '/components/unified-layout.php';
             <div class="admin-stat-value"><?= $roleStats['promotor'] ?? 0 ?></div>
             <div class="admin-stat-label">Promotor</div>
         </div>
-    </div>
+    </a>
     <a href="/admin/riders?activated=1" class="admin-stat-card" style="text-decoration: none; color: inherit;">
         <div class="admin-stat-icon stat-icon-warning">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-lg"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
@@ -271,6 +315,114 @@ include __DIR__ . '/components/unified-layout.php';
                     </tbody>
                 </table>
             </div>
+        <?php endif; ?>
+    </div>
+</div>
+
+<!-- Promotors List -->
+<div class="card mb-lg" id="promotors-section">
+    <div class="card-header flex justify-between items-center">
+        <h2>
+            <i data-lucide="star"></i>
+            Promotörer (<?= count($promotors) ?>)
+        </h2>
+        <a href="/admin/role-management.php" class="btn btn--primary btn--sm">
+            <i data-lucide="plus"></i> Lägg till
+        </a>
+    </div>
+    <div class="card-body">
+        <?php if (empty($promotors)): ?>
+        <p class="text-secondary">Inga promotörer kopplade ännu.</p>
+        <?php else: ?>
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Namn</th>
+                        <th>Klubb</th>
+                        <th>E-post</th>
+                        <th>Events</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($promotors as $p): ?>
+                    <tr>
+                        <td>
+                            <a href="/admin/rider-edit.php?id=<?= $p['rider_id'] ?>" class="link">
+                                <?= h($p['firstname'] . ' ' . $p['lastname']) ?>
+                            </a>
+                        </td>
+                        <td><?= h($p['club_name'] ?? '-') ?></td>
+                        <td class="text-secondary"><?= h($p['email']) ?></td>
+                        <td><span class="badge badge-secondary"><?= $p['event_count'] ?></span></td>
+                        <td class="text-right">
+                            <a href="/admin/user-events.php?id=<?= $p['user_id'] ?>" class="btn btn--secondary btn--sm">
+                                <i data-lucide="calendar"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+        <?php endif; ?>
+    </div>
+</div>
+
+<!-- Club Admins List -->
+<div class="card mb-lg" id="club-admins-section">
+    <div class="card-header flex justify-between items-center">
+        <h2>
+            <i data-lucide="building"></i>
+            Klubb-administratörer (<?= count($clubAdmins) ?>)
+        </h2>
+        <a href="/admin/club-admins.php" class="btn btn--primary btn--sm">
+            <i data-lucide="plus"></i> Lägg till
+        </a>
+    </div>
+    <div class="card-body">
+        <?php if (empty($clubAdmins)): ?>
+        <p class="text-secondary">Inga klubb-administratörer kopplade ännu.</p>
+        <?php else: ?>
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Namn</th>
+                        <th>Klubb</th>
+                        <th>E-post</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($clubAdmins as $ca): ?>
+                    <tr>
+                        <td>
+                            <?php if ($ca['rider_id']): ?>
+                            <a href="/admin/rider-edit.php?id=<?= $ca['rider_id'] ?>" class="link">
+                                <?= h($ca['firstname'] . ' ' . $ca['lastname']) ?>
+                            </a>
+                            <?php else: ?>
+                            <span class="text-secondary"><?= h($ca['email']) ?></span>
+                            <?php endif; ?>
+                        </td>
+                        <td>
+                            <a href="/admin/club-edit.php?id=<?= $ca['club_id'] ?>" class="link">
+                                <?= h($ca['club_name']) ?>
+                            </a>
+                        </td>
+                        <td class="text-secondary"><?= h($ca['email'] ?? '-') ?></td>
+                        <td class="text-right">
+                            <a href="/admin/club-admins.php" class="btn btn--secondary btn--sm">
+                                <i data-lucide="pencil"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
         <?php endif; ?>
     </div>
 </div>
