@@ -400,6 +400,7 @@ function canEditRiderProfile($riderId) {
 
 /**
  * Check if user can manage a specific club
+ * Checks both club_admins table and legacy rider_profiles.can_manage_club
  */
 function canManageClub($clubId) {
     if (!isLoggedIn()) {
@@ -418,6 +419,20 @@ function canManageClub($clubId) {
 
     try {
         $userId = $_SESSION['admin_id'] ?? null;
+
+        // Check club_admins table first (new system)
+        $sql = "SELECT can_edit_profile FROM club_admins
+                WHERE user_id = ? AND club_id = ?
+                LIMIT 1";
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute([$userId, $clubId]);
+        $clubAdmin = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($clubAdmin && $clubAdmin['can_edit_profile']) {
+            return true;
+        }
+
+        // Fallback to legacy rider_profiles system
         $sql = "SELECT 1 FROM rider_profiles rp
                 JOIN riders r ON rp.rider_id = r.id
                 WHERE rp.user_id = ? AND r.club_id = ? AND rp.can_manage_club = 1
@@ -428,6 +443,97 @@ function canManageClub($clubId) {
     } catch (PDOException $e) {
         error_log("Club access check error: " . $e->getMessage());
         return false;
+    }
+}
+
+/**
+ * Get club admin permissions for a user and club
+ * Returns permissions array or false if no access
+ */
+function getClubAdminPermissions($clubId) {
+    if (!isLoggedIn()) {
+        return false;
+    }
+
+    // Admin and above have all permissions
+    if (hasRole('admin')) {
+        return [
+            'can_edit_profile' => true,
+            'can_upload_logo' => true,
+            'can_manage_members' => true
+        ];
+    }
+
+    global $pdo;
+    if (!$pdo) {
+        return false;
+    }
+
+    try {
+        $userId = $_SESSION['admin_id'] ?? null;
+
+        $sql = "SELECT can_edit_profile, can_upload_logo, can_manage_members
+                FROM club_admins
+                WHERE user_id = ? AND club_id = ?
+                LIMIT 1";
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute([$userId, $clubId]);
+        $perms = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($perms) {
+            return [
+                'can_edit_profile' => (bool)$perms['can_edit_profile'],
+                'can_upload_logo' => (bool)$perms['can_upload_logo'],
+                'can_manage_members' => (bool)$perms['can_manage_members']
+            ];
+        }
+
+        return false;
+    } catch (PDOException $e) {
+        error_log("Get club admin permissions error: " . $e->getMessage());
+        return false;
+    }
+}
+
+/**
+ * Get all clubs a user can manage
+ */
+function getUserManagedClubs() {
+    if (!isLoggedIn()) {
+        return [];
+    }
+
+    global $pdo;
+    if (!$pdo) {
+        return [];
+    }
+
+    try {
+        $userId = $_SESSION['admin_id'] ?? null;
+
+        // If admin, they can manage all clubs
+        if (hasRole('admin')) {
+            $sql = "SELECT id, name, short_name, logo_url, city, country, active
+                    FROM clubs
+                    ORDER BY name";
+            $stmt = $pdo->prepare($sql);
+            $stmt->execute();
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        }
+
+        // Get clubs from club_admins table
+        $sql = "SELECT c.id, c.name, c.short_name, c.logo_url, c.city, c.country, c.active,
+                       ca.can_edit_profile, ca.can_upload_logo, ca.can_manage_members
+                FROM clubs c
+                JOIN club_admins ca ON c.id = ca.club_id
+                WHERE ca.user_id = ?
+                ORDER BY c.name";
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute([$userId]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        error_log("Get user managed clubs error: " . $e->getMessage());
+        return [];
     }
 }
 

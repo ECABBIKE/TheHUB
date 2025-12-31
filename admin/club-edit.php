@@ -88,6 +88,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $messageType = 'error';
         } else {
             // Prepare club data
+            $logoValue = trim($_POST['logo'] ?? '');
             $clubData = [
                 'name' => $name,
                 'short_name' => trim($_POST['short_name'] ?? ''),
@@ -95,7 +96,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'city' => trim($_POST['city'] ?? ''),
                 'country' => trim($_POST['country'] ?? 'Sverige'),
                 'website' => trim($_POST['website'] ?? ''),
-                'logo' => trim($_POST['logo'] ?? ''),
+                'logo' => $logoValue,
+                'logo_url' => $logoValue, // Also save to logo_url column
                 'email' => trim($_POST['email'] ?? ''),
                 'phone' => trim($_POST['phone'] ?? ''),
                 'contact_person' => trim($_POST['contact_person'] ?? ''),
@@ -378,22 +380,34 @@ include __DIR__ . '/components/unified-layout.php';
      ><?= h($club['description'] ?? '') ?></textarea>
     </div>
 
-    <!-- Logo URL -->
+    <!-- Logo Upload -->
     <div>
-     <label for="logo" class="label">Logotyp (URL)</label>
-     <input
-     type="url"
-     id="logo"
-     name="logo"
-     class="input"
-     value="<?= h($club['logo'] ?? '') ?>"
-     placeholder="https://example.com/logo.png"
-     >
-     <?php if (!empty($club['logo'])): ?>
-     <div class="mt-sm">
-      <img src="<?= h($club['logo']) ?>" alt="Klubblogotyp" style="max-height: 60px; border-radius: 4px;">
+     <label class="label">Logotyp</label>
+     <?php $logoUrl = $club['logo_url'] ?? $club['logo'] ?? ''; ?>
+     <div class="flex items-start gap-md">
+      <div class="club-logo-container" style="position: relative;">
+       <div class="logo-preview" id="clubLogoPreview" style="width: 120px; height: 80px; border-radius: var(--radius-md); background: var(--color-bg-sunken); display: flex; align-items: center; justify-content: center; overflow: hidden; cursor: pointer; border: 2px dashed var(--color-border);" onclick="document.getElementById('clubLogoInput').click()">
+        <?php if ($logoUrl): ?>
+        <img src="<?= h($logoUrl) ?>" alt="Klubblogotyp" id="clubLogoImage" style="max-width: 100%; max-height: 100%; object-fit: contain;">
+        <?php else: ?>
+        <i data-lucide="image" style="width: 32px; height: 32px; color: var(--color-text-secondary);"></i>
+        <?php endif; ?>
+       </div>
+       <div id="clubLogoLoading" style="display: none; position: absolute; inset: 0; background: rgba(0,0,0,0.6); border-radius: var(--radius-md); align-items: center; justify-content: center;">
+        <div style="width: 24px; height: 24px; border: 2px solid rgba(255,255,255,0.3); border-top-color: #fff; border-radius: 50%; animation: spin 0.8s linear infinite;"></div>
+       </div>
+      </div>
+      <div style="flex: 1;">
+       <label class="btn btn-secondary btn--sm" style="cursor: pointer; display: inline-flex;">
+        <i data-lucide="upload" style="width: 14px; height: 14px;"></i>
+        Ladda upp
+        <input type="file" id="clubLogoInput" accept="image/jpeg,image/png,image/gif,image/webp" style="display: none;">
+       </label>
+       <span id="clubLogoStatus" style="font-size: 0.75rem; display: block; margin-top: 0.5rem;"></span>
+       <input type="hidden" name="logo" id="logoUrlInput" value="<?= h($logoUrl) ?>">
+       <small class="text-secondary" style="display: block; margin-top: 0.5rem;">Max 2MB. JPG, PNG, GIF eller WebP.</small>
+      </div>
      </div>
-     <?php endif; ?>
     </div>
     </div>
    </div>
@@ -723,5 +737,81 @@ include __DIR__ . '/components/unified-layout.php';
     </div>
 </div>
 <?php endif; ?>
+
+<style>
+@keyframes spin { to { transform: rotate(360deg); } }
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const logoInput = document.getElementById('clubLogoInput');
+    const logoPreview = document.getElementById('clubLogoPreview');
+    const logoLoading = document.getElementById('clubLogoLoading');
+    const logoStatus = document.getElementById('clubLogoStatus');
+    const urlInput = document.getElementById('logoUrlInput');
+    const clubId = <?= intval($id) ?>;
+
+    if (!logoInput || !clubId) return;
+
+    logoInput.addEventListener('change', async function(e) {
+        const file = e.target.files[0];
+        if (!file) return;
+
+        const allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+        if (!allowedTypes.includes(file.type)) {
+            showStatus('Otillaten filtyp', 'error');
+            return;
+        }
+
+        if (file.size > 2 * 1024 * 1024) {
+            showStatus('Max 2MB', 'error');
+            return;
+        }
+
+        logoLoading.style.display = 'flex';
+        showStatus('Laddar upp...', 'info');
+
+        const formData = new FormData();
+        formData.append('logo', file);
+        formData.append('club_id', clubId);
+
+        try {
+            const response = await fetch('/api/update-club-logo.php', {
+                method: 'POST',
+                body: formData
+            });
+            const result = await response.json();
+
+            if (result.success) {
+                showStatus('Uppladdad!', 'success');
+                updatePreview(result.logo_url);
+                urlInput.value = result.logo_url;
+            } else {
+                showStatus(result.error || 'Fel', 'error');
+            }
+        } catch (error) {
+            showStatus('Uppladdning misslyckades', 'error');
+        } finally {
+            logoLoading.style.display = 'none';
+        }
+    });
+
+    function updatePreview(src) {
+        logoPreview.innerHTML = '<img src="' + src + '" alt="Klubblogotyp" style="max-width: 100%; max-height: 100%; object-fit: contain;">';
+        logoPreview.style.border = 'none';
+    }
+
+    function showStatus(msg, type) {
+        logoStatus.textContent = msg;
+        logoStatus.style.color = type === 'error' ? '#ef4444' : type === 'success' ? '#22c55e' : '#6b7280';
+        if (type === 'success') setTimeout(() => { logoStatus.textContent = ''; }, 3000);
+    }
+
+    // Re-init Lucide icons after page load
+    if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+    }
+});
+</script>
 
 <?php include __DIR__ . '/components/unified-layout-footer.php'; ?>

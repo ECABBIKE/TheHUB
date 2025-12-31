@@ -109,6 +109,7 @@ $admin_nav = array_filter($admin_nav, function($item) use ($roleHierarchy, $user
     $requiredLevel = $roleHierarchy[$item['min_role'] ?? 'admin'] ?? 2;
     return $userRoleLevel >= $requiredLevel;
 });
+
 ?>
 
 <aside class="admin-sidebar" id="adminSidebar">
