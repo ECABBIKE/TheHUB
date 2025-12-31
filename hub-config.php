@@ -480,40 +480,47 @@ if (!function_exists('hub_attempt_login')) {
 
         // =====================================================================
         // Normal rider login from database
+        // Check ALL riders with this email (handles multiple profiles)
         // =====================================================================
 
-        // Find rider by email
+        // Find all riders by email (not just the first one)
         $stmt = $pdo->prepare("
             SELECT id, email, password, firstname, lastname, is_admin, role_id
             FROM riders
             WHERE email = ? AND active = 1
-            LIMIT 1
+            ORDER BY id
         ");
         $stmt->execute([$email]);
-        $rider = $stmt->fetch(PDO::FETCH_ASSOC);
+        $riders = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        if (!$rider) {
+        if (empty($riders)) {
             return ['success' => false, 'error' => 'Ogiltig e-post eller lösenord.'];
         }
 
-        // Check if rider has a password set
-        if (empty($rider['password'])) {
-            return ['success' => false, 'error' => 'Du har inte satt ett lösenord ännu. Klicka på "Glömt lösenord" för att skapa ett.'];
+        // Try password against each matching rider profile
+        $hasActivatedAccount = false;
+        foreach ($riders as $rider) {
+            if (!empty($rider['password'])) {
+                $hasActivatedAccount = true;
+                if (password_verify($password, $rider['password'])) {
+                    // Login successful - create session for this rider
+                    hub_set_user_session($rider);
+
+                    // Update last login
+                    $stmt = $pdo->prepare("UPDATE riders SET last_login = NOW() WHERE id = ?");
+                    $stmt->execute([$rider['id']]);
+
+                    return ['success' => true, 'user' => $rider];
+                }
+            }
         }
 
-        // Verify password (bcrypt)
-        if (!password_verify($password, $rider['password'])) {
+        // No password matched
+        if ($hasActivatedAccount) {
             return ['success' => false, 'error' => 'Ogiltig e-post eller lösenord.'];
+        } else {
+            return ['success' => false, 'error' => 'Du har inte satt ett lösenord ännu. Klicka på "Aktivera konto" för att skapa ett.'];
         }
-
-        // Login successful - create session
-        hub_set_user_session($rider);
-
-        // Update last login
-        $stmt = $pdo->prepare("UPDATE riders SET last_login = NOW() WHERE id = ?");
-        $stmt->execute([$rider['id']]);
-
-        return ['success' => true, 'user' => $rider];
     }
 }
 

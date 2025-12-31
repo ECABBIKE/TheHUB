@@ -2,6 +2,8 @@
 /**
  * TheHUB V3.5 - Activate Account
  * Request account activation link for new users
+ *
+ * Handles multiple profiles with same email by letting user choose
  */
 
 // If already logged in, redirect to profile
@@ -19,57 +21,124 @@ $messageType = '';
 $showActivationLink = false;
 $activationLink = '';
 $emailSent = false;
+$showProfileSelection = false;
+$matchingProfiles = [];
+$submittedEmail = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email = trim($_POST['email'] ?? '');
+    $selectedRiderId = (int)($_POST['rider_id'] ?? 0);
+    $submittedEmail = $email;
 
     if (empty($email)) {
         $message = 'Ange din e-postadress';
         $messageType = 'error';
     } else {
-        // Find rider by email
-        $stmt = $pdo->prepare("SELECT id, firstname, lastname, email FROM riders WHERE email = ? LIMIT 1");
+        // Find ALL riders with this email (not just first)
+        $stmt = $pdo->prepare("
+            SELECT r.id, r.firstname, r.lastname, r.email, r.birth_year, r.password,
+                   c.name as club_name
+            FROM riders r
+            LEFT JOIN clubs c ON r.club_id = c.id
+            WHERE r.email = ?
+            ORDER BY r.lastname, r.firstname
+        ");
         $stmt->execute([$email]);
-        $rider = $stmt->fetch(PDO::FETCH_ASSOC);
+        $riders = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        if ($rider) {
-            // Generate activation token (same as reset token, but with longer expiry)
-            $token = bin2hex(random_bytes(32));
-            $expires = date('Y-m-d H:i:s', strtotime('+24 hours'));
-
-            // Save token
-            $updateStmt = $pdo->prepare("
-                UPDATE riders SET
-                    password_reset_token = ?,
-                    password_reset_expires = ?
-                WHERE id = ?
-            ");
-            $updateStmt->execute([$token, $expires, $rider['id']]);
-
-            // Build activation link (uses reset-password page)
-            $baseUrl = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http')
-                     . '://' . $_SERVER['HTTP_HOST'];
-            $activationLink = $baseUrl . '/reset-password?token=' . $token . '&activate=1';
-
-            // Send email
-            $riderName = trim($rider['firstname'] . ' ' . $rider['lastname']);
-            $emailSent = hub_send_account_activation_email($rider['email'], $riderName, $activationLink);
-
-            if ($emailSent) {
-                $message = 'Ett mail med aktiveringslänk har skickats till ' . htmlspecialchars($email);
-                $messageType = 'success';
-            } else {
-                // Email failed - show link as fallback (for admin use)
-                $showActivationLink = true;
-                $message = 'Kunde inte skicka mail. Här är aktiveringslänken:';
-                $messageType = 'warning';
-                error_log("Account activation email failed for {$email}: {$activationLink}");
-            }
-        } else {
+        if (empty($riders)) {
             // Security: Don't reveal if email exists or not
             $message = 'Om e-postadressen finns i systemet kommer du få ett mail med instruktioner.';
             $messageType = 'info';
+        } elseif (count($riders) === 1) {
+            // Only one profile - proceed directly
+            $rider = $riders[0];
+
+            if (!empty($rider['password'])) {
+                $message = 'Detta konto är redan aktiverat. Använd "Glömt lösenord" om du behöver återställa det.';
+                $messageType = 'warning';
+            } else {
+                sendActivationEmail($pdo, $rider, $message, $messageType, $emailSent, $showActivationLink, $activationLink);
+            }
+        } elseif ($selectedRiderId > 0) {
+            // User selected a specific profile
+            $rider = null;
+            foreach ($riders as $r) {
+                if ($r['id'] === $selectedRiderId) {
+                    $rider = $r;
+                    break;
+                }
+            }
+
+            if ($rider) {
+                if (!empty($rider['password'])) {
+                    $message = 'Detta konto är redan aktiverat. Använd "Glömt lösenord" om du behöver återställa det.';
+                    $messageType = 'warning';
+                } else {
+                    sendActivationEmail($pdo, $rider, $message, $messageType, $emailSent, $showActivationLink, $activationLink);
+                }
+            } else {
+                $message = 'Ogiltig profil vald.';
+                $messageType = 'error';
+            }
+        } else {
+            // Multiple profiles - show selection
+            // Filter out already activated profiles
+            $unactivatedProfiles = array_filter($riders, fn($r) => empty($r['password']));
+            $activatedProfiles = array_filter($riders, fn($r) => !empty($r['password']));
+
+            if (empty($unactivatedProfiles)) {
+                $message = 'Alla profiler kopplade till denna e-post är redan aktiverade. Använd "Glömt lösenord" om du behöver återställa ditt lösenord.';
+                $messageType = 'info';
+            } else {
+                $showProfileSelection = true;
+                $matchingProfiles = $unactivatedProfiles;
+
+                if (!empty($activatedProfiles)) {
+                    $message = 'OBS: ' . count($activatedProfiles) . ' profil(er) är redan aktiverade och visas inte nedan.';
+                    $messageType = 'info';
+                }
+            }
         }
+    }
+}
+
+/**
+ * Send activation email to a specific rider
+ */
+function sendActivationEmail($pdo, $rider, &$message, &$messageType, &$emailSent, &$showActivationLink, &$activationLink) {
+    // Generate activation token
+    $token = bin2hex(random_bytes(32));
+    $expires = date('Y-m-d H:i:s', strtotime('+24 hours'));
+
+    // Save token to this specific rider
+    $updateStmt = $pdo->prepare("
+        UPDATE riders SET
+            password_reset_token = ?,
+            password_reset_expires = ?
+        WHERE id = ?
+    ");
+    $updateStmt->execute([$token, $expires, $rider['id']]);
+
+    // Build activation link
+    $baseUrl = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http')
+             . '://' . $_SERVER['HTTP_HOST'];
+    $activationLink = $baseUrl . '/reset-password?token=' . $token . '&activate=1';
+
+    // Send email
+    $riderName = trim($rider['firstname'] . ' ' . $rider['lastname']);
+    $emailSent = hub_send_account_activation_email($rider['email'], $riderName, $activationLink);
+
+    if ($emailSent) {
+        $message = 'Ett mail med aktiveringslänk har skickats till ' . htmlspecialchars($rider['email']) .
+                   ' för profilen "' . htmlspecialchars($riderName) . '"';
+        $messageType = 'success';
+    } else {
+        // Email failed - show link as fallback
+        $showActivationLink = true;
+        $message = 'Kunde inte skicka mail. Här är aktiveringslänken:';
+        $messageType = 'warning';
+        error_log("Account activation email failed for {$rider['email']}: {$activationLink}");
     }
 }
 ?>
@@ -109,6 +178,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <a href="/login" class="btn btn--primary btn--block mt-md">
                 Tillbaka till inloggning
             </a>
+
         <?php elseif ($showActivationLink): ?>
             <!-- Email failed - show link as fallback -->
             <div class="reset-link-box">
@@ -122,6 +192,50 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     Aktivera konto
                 </a>
             </div>
+
+        <?php elseif ($showProfileSelection): ?>
+            <!-- Multiple profiles found - let user select -->
+            <div class="profile-selection">
+                <p class="selection-intro">
+                    <strong>Flera profiler hittades</strong> med denna e-postadress.
+                    Välj vilken profil du vill aktivera:
+                </p>
+
+                <form method="POST" class="auth-form">
+                    <input type="hidden" name="email" value="<?= htmlspecialchars($submittedEmail) ?>">
+
+                    <div class="profile-list">
+                        <?php foreach ($matchingProfiles as $index => $profile): ?>
+                            <label class="profile-option">
+                                <input type="radio" name="rider_id" value="<?= $profile['id'] ?>"
+                                       <?= $index === 0 ? 'checked' : '' ?>>
+                                <div class="profile-info">
+                                    <div class="profile-name">
+                                        <?= htmlspecialchars($profile['firstname'] . ' ' . $profile['lastname']) ?>
+                                    </div>
+                                    <div class="profile-details">
+                                        <?php if ($profile['birth_year']): ?>
+                                            <span>Född <?= $profile['birth_year'] ?></span>
+                                        <?php endif; ?>
+                                        <?php if ($profile['club_name']): ?>
+                                            <span><?= htmlspecialchars($profile['club_name']) ?></span>
+                                        <?php endif; ?>
+                                    </div>
+                                </div>
+                            </label>
+                        <?php endforeach; ?>
+                    </div>
+
+                    <button type="submit" class="btn btn--primary btn--block">
+                        Aktivera vald profil
+                    </button>
+                </form>
+
+                <a href="/activate" class="btn btn--secondary btn--block mt-sm">
+                    Tillbaka
+                </a>
+            </div>
+
         <?php else: ?>
             <form method="POST" class="auth-form">
                 <div class="form-group">
@@ -148,8 +262,95 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     </div>
 </div>
 
+<style>
+/* Profile selection styles - mobile first */
+.profile-selection {
+    margin-top: var(--space-md);
+}
 
-<!-- CSS loaded from /assets/css/pages/activate-account.css -->
+.selection-intro {
+    margin-bottom: var(--space-md);
+    color: var(--color-text);
+    line-height: 1.5;
+}
+
+.profile-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+    margin-bottom: var(--space-lg);
+}
+
+.profile-option {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-sm);
+    padding: var(--space-md);
+    background: var(--color-bg-sunken, #f8f9fa);
+    border: 2px solid var(--color-border);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.profile-option:hover {
+    border-color: var(--color-accent);
+    background: var(--color-bg, #fff);
+}
+
+.profile-option:has(input:checked) {
+    border-color: var(--color-accent);
+    background: var(--color-bg, #fff);
+    box-shadow: 0 0 0 3px rgba(97, 206, 112, 0.15);
+}
+
+.profile-option input[type="radio"] {
+    flex-shrink: 0;
+    width: 20px;
+    height: 20px;
+    margin-top: 2px;
+    accent-color: var(--color-accent);
+}
+
+.profile-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.profile-name {
+    font-weight: var(--weight-semibold, 600);
+    color: var(--color-text-primary, #171717);
+    margin-bottom: var(--space-xs);
+}
+
+.profile-details {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-xs) var(--space-md);
+    font-size: var(--text-sm);
+    color: var(--color-text-secondary, #7a7a7a);
+}
+
+.profile-details span {
+    display: inline-flex;
+    align-items: center;
+}
+
+.profile-details span::before {
+    content: '';
+    display: none;
+}
+
+/* Separator dot between details on larger screens */
+@media (min-width: 480px) {
+    .profile-details span:not(:first-child)::before {
+        content: '·';
+        display: inline;
+        margin-right: var(--space-md);
+        color: var(--color-border);
+    }
+}
+</style>
 
 <script>
 function copyLink() {
