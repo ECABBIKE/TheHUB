@@ -216,3 +216,64 @@ function rider_change_password($riderId, $currentPassword, $newPassword) {
 
     return ['success' => true, 'message' => 'Lösenord ändrat!'];
 }
+
+/**
+ * Get clubs that the current rider can manage
+ * Checks both rider_profiles.can_manage_club and club_admins table
+ */
+function get_rider_managed_clubs() {
+    if (!is_rider_logged_in()) {
+        return [];
+    }
+
+    $riderId = $_SESSION['rider_id'];
+    $db = getDB();
+
+    $clubs = [];
+
+    // Check rider_profiles for can_manage_club permission
+    $riderProfile = $db->getRow(
+        "SELECT rp.*, r.club_id
+         FROM rider_profiles rp
+         JOIN riders r ON rp.rider_id = r.id
+         WHERE rp.rider_id = ? AND rp.can_manage_club = 1",
+        [$riderId]
+    );
+
+    if ($riderProfile && $riderProfile['club_id']) {
+        $club = $db->getRow(
+            "SELECT c.*, 1 as can_edit_profile, 1 as can_upload_logo
+             FROM clubs c WHERE c.id = ?",
+            [$riderProfile['club_id']]
+        );
+        if ($club) {
+            $clubs[] = $club;
+        }
+    }
+
+    // Also check club_admins table via linked admin_user
+    if ($riderProfile && $riderProfile['user_id']) {
+        $adminClubs = $db->getAll(
+            "SELECT c.*, ca.can_edit_profile, ca.can_upload_logo
+             FROM club_admins ca
+             JOIN clubs c ON ca.club_id = c.id
+             WHERE ca.user_id = ?",
+            [$riderProfile['user_id']]
+        );
+        foreach ($adminClubs as $club) {
+            // Avoid duplicates
+            $found = false;
+            foreach ($clubs as $existing) {
+                if ($existing['id'] == $club['id']) {
+                    $found = true;
+                    break;
+                }
+            }
+            if (!$found) {
+                $clubs[] = $club;
+            }
+        }
+    }
+
+    return $clubs;
+}

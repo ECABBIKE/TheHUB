@@ -58,8 +58,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $clubData = [
                 'name' => $name,
                 'short_name' => trim($_POST['short_name'] ?? ''),
+                'region' => trim($_POST['region'] ?? ''),
                 'city' => trim($_POST['city'] ?? ''),
                 'country' => trim($_POST['country'] ?? 'Sverige'),
+                'address' => trim($_POST['address'] ?? ''),
+                'postal_code' => trim($_POST['postal_code'] ?? ''),
                 'website' => trim($_POST['website'] ?? ''),
                 'email' => trim($_POST['email'] ?? ''),
                 'phone' => trim($_POST['phone'] ?? ''),
@@ -67,6 +70,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'description' => trim($_POST['description'] ?? ''),
                 'facebook' => trim($_POST['facebook'] ?? ''),
                 'instagram' => trim($_POST['instagram'] ?? ''),
+                'swish_number' => trim($_POST['swish_number'] ?? ''),
+                'swish_name' => trim($_POST['swish_name'] ?? ''),
             ];
 
             // Only update logo if user has permission
@@ -140,9 +145,9 @@ include __DIR__ . '/components/unified-layout.php';
 <form method="POST">
     <?= csrf_field() ?>
 
-    <div class="grid grid-cols-1 gs-lg-grid-cols-3 gap-lg">
+    <div class="club-edit-layout">
         <!-- Main Content -->
-        <div class="gs-lg-col-span-2">
+        <div class="club-edit-main">
             <!-- Basic Information -->
             <div class="card mb-lg">
                 <div class="card-header">
@@ -162,7 +167,7 @@ include __DIR__ . '/components/unified-layout.php';
                         </div>
 
                         <!-- Short Name -->
-                        <div class="grid grid-cols-2 gap-md">
+                        <div class="form-row">
                             <div>
                                 <label for="short_name" class="label">Förkortning</label>
                                 <input type="text" id="short_name" name="short_name" class="input"
@@ -252,7 +257,7 @@ include __DIR__ . '/components/unified-layout.php';
                         </div>
 
                         <!-- Email and Phone -->
-                        <div class="grid grid-cols-2 gap-md">
+                        <div class="form-row">
                             <div>
                                 <label for="email" class="label">E-post</label>
                                 <input type="email" id="email" name="email" class="input"
@@ -269,12 +274,39 @@ include __DIR__ . '/components/unified-layout.php';
                             </div>
                         </div>
 
-                        <!-- City and Country -->
-                        <div class="grid grid-cols-2 gap-md">
+                        <!-- Address -->
+                        <div>
+                            <label for="address" class="label">Adress</label>
+                            <input type="text" id="address" name="address" class="input"
+                                   value="<?= h($club['address'] ?? '') ?>"
+                                   placeholder="Gatuadress"
+                                   <?= !$perms['can_edit_profile'] ? 'disabled' : '' ?>>
+                        </div>
+
+                        <!-- Postal code and City -->
+                        <div class="form-row">
+                            <div>
+                                <label for="postal_code" class="label">Postnummer</label>
+                                <input type="text" id="postal_code" name="postal_code" class="input"
+                                       value="<?= h($club['postal_code'] ?? '') ?>"
+                                       placeholder="123 45"
+                                       <?= !$perms['can_edit_profile'] ? 'disabled' : '' ?>>
+                            </div>
                             <div>
                                 <label for="city" class="label">Stad</label>
                                 <input type="text" id="city" name="city" class="input"
                                        value="<?= h($club['city'] ?? '') ?>"
+                                       <?= !$perms['can_edit_profile'] ? 'disabled' : '' ?>>
+                            </div>
+                        </div>
+
+                        <!-- Region and Country -->
+                        <div class="form-row">
+                            <div>
+                                <label for="region" class="label">Region/Län</label>
+                                <input type="text" id="region" name="region" class="input"
+                                       value="<?= h($club['region'] ?? '') ?>"
+                                       placeholder="T.ex. Stockholms län"
                                        <?= !$perms['can_edit_profile'] ? 'disabled' : '' ?>>
                             </div>
                             <div>
@@ -298,7 +330,7 @@ include __DIR__ . '/components/unified-layout.php';
                         </div>
 
                         <!-- Social Media -->
-                        <div class="grid grid-cols-2 gap-md">
+                        <div class="form-row">
                             <div>
                                 <label for="facebook" class="label">
                                     <i data-lucide="facebook" class="icon-sm"></i> Facebook
@@ -321,10 +353,43 @@ include __DIR__ . '/components/unified-layout.php';
                     </div>
                 </div>
             </div>
+
+            <!-- Swish/Payment Information -->
+            <div class="card mb-lg">
+                <div class="card-header">
+                    <h2 class="text-primary">
+                        <i data-lucide="credit-card"></i>
+                        Betalningsinformation
+                    </h2>
+                </div>
+                <div class="card-body">
+                    <div class="grid gap-md">
+                        <div class="form-row">
+                            <div>
+                                <label for="swish_number" class="label">Swish-nummer</label>
+                                <input type="tel" id="swish_number" name="swish_number" class="input"
+                                       value="<?= h($club['swish_number'] ?? '') ?>"
+                                       placeholder="070-123 45 67"
+                                       <?= !$perms['can_edit_profile'] ? 'disabled' : '' ?>>
+                            </div>
+                            <div>
+                                <label for="swish_name" class="label">Swish-namn</label>
+                                <input type="text" id="swish_name" name="swish_name" class="input"
+                                       value="<?= h($club['swish_name'] ?? '') ?>"
+                                       placeholder="Klubbens namn i Swish"
+                                       <?= !$perms['can_edit_profile'] ? 'disabled' : '' ?>>
+                            </div>
+                        </div>
+                        <p class="text-sm text-secondary">
+                            Swish-uppgifter används för att ta emot betalningar vid tävlingar som klubben arrangerar.
+                        </p>
+                    </div>
+                </div>
+            </div>
         </div>
 
         <!-- Sidebar -->
-        <div>
+        <div class="club-edit-sidebar">
             <!-- Actions -->
             <div class="card mb-lg">
                 <div class="card-body">
@@ -372,7 +437,68 @@ include __DIR__ . '/components/unified-layout.php';
 </form>
 
 <style>
+/* Mobile-first CSS */
 @keyframes spin { to { transform: rotate(360deg); } }
+
+/* Layout - Mobile first (single column) */
+.club-edit-layout {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-lg);
+}
+
+.club-edit-main {
+    width: 100%;
+}
+
+.club-edit-sidebar {
+    width: 100%;
+}
+
+/* Form rows - stack on mobile */
+.form-row {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+}
+
+.form-row > div {
+    width: 100%;
+}
+
+/* Logo preview responsive */
+.logo-preview {
+    width: 100%;
+    max-width: 150px;
+    height: 100px;
+}
+
+/* Desktop styles (min-width: 768px) */
+@media (min-width: 768px) {
+    .club-edit-layout {
+        flex-direction: row;
+        flex-wrap: wrap;
+    }
+
+    .club-edit-main {
+        flex: 2;
+        min-width: 0;
+    }
+
+    .club-edit-sidebar {
+        flex: 1;
+        min-width: 280px;
+        max-width: 350px;
+    }
+
+    .form-row {
+        flex-direction: row;
+    }
+
+    .form-row > div {
+        flex: 1;
+    }
+}
 </style>
 
 <?php if ($perms['can_upload_logo']): ?>

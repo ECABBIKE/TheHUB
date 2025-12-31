@@ -43,19 +43,73 @@ include __DIR__ . '/components/unified-layout.php';
     </p>
 </div>
 
-<div class="grid gap-lg" style="grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));">
+<style>
+/* Mobile-first CSS */
+.clubs-grid {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-lg);
+}
+
+.club-card-header {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-md);
+}
+
+.club-logo {
+    width: 60px;
+    height: 60px;
+    object-fit: contain;
+    border-radius: var(--radius-sm);
+    background: var(--color-bg-sunken);
+    flex-shrink: 0;
+}
+
+.club-logo-placeholder {
+    width: 60px;
+    height: 60px;
+    border-radius: var(--radius-sm);
+    background: var(--color-bg-sunken);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.club-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.club-permissions {
+    margin-top: var(--space-md);
+    padding-top: var(--space-md);
+    border-top: 1px solid var(--color-border);
+}
+
+/* Desktop styles */
+@media (min-width: 768px) {
+    .clubs-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+    }
+}
+</style>
+
+<div class="clubs-grid">
     <?php foreach ($myClubs as $club): ?>
     <div class="card">
         <div class="card-body">
-            <div class="flex items-start gap-md">
+            <div class="club-card-header">
                 <?php if (!empty($club['logo_url'])): ?>
-                <img src="<?= h($club['logo_url']) ?>" alt="<?= h($club['name']) ?>" style="width: 60px; height: 60px; object-fit: contain; border-radius: var(--radius-sm); background: var(--color-bg-sunken);">
+                <img src="<?= h($club['logo_url']) ?>" alt="<?= h($club['name']) ?>" class="club-logo">
                 <?php else: ?>
-                <div style="width: 60px; height: 60px; border-radius: var(--radius-sm); background: var(--color-bg-sunken); display: flex; align-items: center; justify-content: center;">
+                <div class="club-logo-placeholder">
                     <i data-lucide="building" style="width: 24px; height: 24px; color: var(--color-text-secondary);"></i>
                 </div>
                 <?php endif; ?>
-                <div style="flex: 1;">
+                <div class="club-info">
                     <h3 class="mb-xs"><?= h($club['name']) ?></h3>
                     <?php if ($club['short_name']): ?>
                     <span class="badge badge-secondary mb-sm"><?= h($club['short_name']) ?></span>
@@ -67,7 +121,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
 
             <?php if (!hasRole('admin')): ?>
-            <div class="mt-md pt-md" style="border-top: 1px solid var(--color-border);">
+            <div class="club-permissions">
                 <p class="text-xs text-secondary mb-sm">Dina behörigheter:</p>
                 <div class="flex gap-sm flex-wrap">
                     <?php if ($club['can_edit_profile'] ?? false): ?>
@@ -75,9 +129,6 @@ include __DIR__ . '/components/unified-layout.php';
                     <?php endif; ?>
                     <?php if ($club['can_upload_logo'] ?? false): ?>
                     <span class="badge badge-success"><i data-lucide="image" class="icon-xs"></i> Logo</span>
-                    <?php endif; ?>
-                    <?php if ($club['can_manage_members'] ?? false): ?>
-                    <span class="badge badge-success"><i data-lucide="users" class="icon-xs"></i> Medlemmar</span>
                     <?php endif; ?>
                 </div>
             </div>

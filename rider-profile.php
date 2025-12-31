@@ -43,6 +43,9 @@ if ($rider['birth_year']) {
 // Check license status
 $licenseStatus = checkLicense($rider);
 
+// Check if rider can manage any clubs
+$managedClubs = get_rider_managed_clubs();
+
 // Get rider's series standings (individual points)
 // Support both old (events.series_id) and new (series_events) connections
 $seriesStats = $db->getAll("
@@ -354,10 +357,16 @@ include __DIR__ . '/includes/layout-header.php';
     <i data-lucide="calendar"></i>
     Se kommande tävlingar
    </a>
-   <a href="/rider-change-password.php" class="btn btn--secondary w-full">
+   <a href="/rider-change-password.php" class="btn btn--secondary w-full<?= !empty($managedClubs) ? ' mb-sm' : '' ?>">
     <i data-lucide="key"></i>
     Ändra lösenord
    </a>
+   <?php if (!empty($managedClubs)): ?>
+   <a href="/admin/my-clubs.php" class="btn btn--secondary w-full">
+    <i data-lucide="building"></i>
+    Mina klubbar (<?= count($managedClubs) ?>)
+   </a>
+   <?php endif; ?>
    </div>
   </div>
 
