@@ -3,7 +3,8 @@
  * TheHUB V3.5 - Activate Account
  * Request account activation link for new users
  *
- * Handles multiple profiles with same email by letting user choose
+ * When multiple profiles share an email, ALL are linked to one login.
+ * This allows parents to manage their children's accounts.
  */
 
 // If already logged in, redirect to profile
@@ -21,23 +22,24 @@ $messageType = '';
 $showActivationLink = false;
 $activationLink = '';
 $emailSent = false;
-$showProfileSelection = false;
-$matchingProfiles = [];
+$showProfileList = false;
+$allProfiles = [];
 $submittedEmail = '';
+$alreadyActivated = false;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email = trim($_POST['email'] ?? '');
-    $selectedRiderId = (int)($_POST['rider_id'] ?? 0);
+    $confirmActivation = isset($_POST['confirm_activation']);
     $submittedEmail = $email;
 
     if (empty($email)) {
         $message = 'Ange din e-postadress';
         $messageType = 'error';
     } else {
-        // Find ALL riders with this email (not just first)
+        // Find ALL riders with this email
         $stmt = $pdo->prepare("
             SELECT r.id, r.firstname, r.lastname, r.email, r.birth_year, r.password,
-                   c.name as club_name
+                   r.linked_to_rider_id, c.name as club_name
             FROM riders r
             LEFT JOIN clubs c ON r.club_id = c.id
             WHERE r.email = ?
@@ -50,75 +52,78 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Security: Don't reveal if email exists or not
             $message = 'Om e-postadressen finns i systemet kommer du få ett mail med instruktioner.';
             $messageType = 'info';
-        } elseif (count($riders) === 1) {
-            // Only one profile - proceed directly
-            $rider = $riders[0];
-
-            if (!empty($rider['password'])) {
-                $message = 'Detta konto är redan aktiverat. Använd "Glömt lösenord" om du behöver återställa det.';
-                $messageType = 'warning';
-            } else {
-                sendActivationEmail($pdo, $rider, $message, $messageType, $emailSent, $showActivationLink, $activationLink);
-            }
-        } elseif ($selectedRiderId > 0) {
-            // User selected a specific profile
-            $rider = null;
-            foreach ($riders as $r) {
-                if ($r['id'] === $selectedRiderId) {
-                    $rider = $r;
-                    break;
-                }
-            }
-
-            if ($rider) {
-                if (!empty($rider['password'])) {
-                    $message = 'Detta konto är redan aktiverat. Använd "Glömt lösenord" om du behöver återställa det.';
-                    $messageType = 'warning';
-                } else {
-                    sendActivationEmail($pdo, $rider, $message, $messageType, $emailSent, $showActivationLink, $activationLink);
-                }
-            } else {
-                $message = 'Ogiltig profil vald.';
-                $messageType = 'error';
-            }
         } else {
-            // Multiple profiles - show selection
-            // Filter out already activated profiles
-            $unactivatedProfiles = array_filter($riders, fn($r) => empty($r['password']));
-            $activatedProfiles = array_filter($riders, fn($r) => !empty($r['password']));
+            // Check if any profile is already activated (has password)
+            $activatedProfile = null;
+            $unactivatedProfiles = [];
 
-            if (empty($unactivatedProfiles)) {
-                $message = 'Alla profiler kopplade till denna e-post är redan aktiverade. Använd "Glömt lösenord" om du behöver återställa ditt lösenord.';
-                $messageType = 'info';
-            } else {
-                $showProfileSelection = true;
-                $matchingProfiles = $unactivatedProfiles;
-
-                if (!empty($activatedProfiles)) {
-                    $message = 'OBS: ' . count($activatedProfiles) . ' profil(er) är redan aktiverade och visas inte nedan.';
-                    $messageType = 'info';
+            foreach ($riders as $rider) {
+                if (!empty($rider['password'])) {
+                    $activatedProfile = $rider;
+                } else {
+                    $unactivatedProfiles[] = $rider;
                 }
+            }
+
+            if ($activatedProfile) {
+                // Account already exists - link any unlinked profiles and inform user
+                $alreadyActivated = true;
+                $allProfiles = $riders;
+
+                // Link unactivated profiles to the activated one
+                if (!empty($unactivatedProfiles)) {
+                    $linkStmt = $pdo->prepare("
+                        UPDATE riders
+                        SET linked_to_rider_id = ?
+                        WHERE email = ? AND id != ? AND linked_to_rider_id IS NULL AND (password IS NULL OR password = '')
+                    ");
+                    $linkStmt->execute([$activatedProfile['id'], $email, $activatedProfile['id']]);
+                }
+
+                $message = 'Det finns redan ett aktiverat konto för denna e-post. Alla ' . count($riders) . ' profiler är tillgängliga via samma inloggning.';
+                $messageType = 'info';
+                $showProfileList = true;
+
+            } elseif ($confirmActivation) {
+                // User confirmed - send activation email
+                $primaryRider = $riders[0]; // Use first profile as primary
+                sendActivationEmail($pdo, $primaryRider, $riders, $message, $messageType, $emailSent, $showActivationLink, $activationLink);
+
+            } else {
+                // Show profiles and ask for confirmation
+                $allProfiles = $riders;
+                $showProfileList = true;
+
+                if (count($riders) > 1) {
+                    $message = 'Följande ' . count($riders) . ' profiler kommer att kopplas till samma konto:';
+                } else {
+                    $message = 'Följande profil kommer att aktiveras:';
+                }
+                $messageType = 'info';
             }
         }
     }
 }
 
 /**
- * Send activation email to a specific rider
+ * Send activation email and prepare for linking all profiles
  */
-function sendActivationEmail($pdo, $rider, &$message, &$messageType, &$emailSent, &$showActivationLink, &$activationLink) {
+function sendActivationEmail($pdo, $primaryRider, $allRiders, &$message, &$messageType, &$emailSent, &$showActivationLink, &$activationLink) {
     // Generate activation token
     $token = bin2hex(random_bytes(32));
     $expires = date('Y-m-d H:i:s', strtotime('+24 hours'));
 
-    // Save token to this specific rider
+    // Store info about profiles to link in a JSON field or use email lookup later
+    // For now, we'll link them when password is set based on email match
+
+    // Save token to primary rider
     $updateStmt = $pdo->prepare("
         UPDATE riders SET
             password_reset_token = ?,
             password_reset_expires = ?
         WHERE id = ?
     ");
-    $updateStmt->execute([$token, $expires, $rider['id']]);
+    $updateStmt->execute([$token, $expires, $primaryRider['id']]);
 
     // Build activation link
     $baseUrl = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http')
@@ -126,19 +131,25 @@ function sendActivationEmail($pdo, $rider, &$message, &$messageType, &$emailSent
     $activationLink = $baseUrl . '/reset-password?token=' . $token . '&activate=1';
 
     // Send email
-    $riderName = trim($rider['firstname'] . ' ' . $rider['lastname']);
-    $emailSent = hub_send_account_activation_email($rider['email'], $riderName, $activationLink);
+    $riderName = trim($primaryRider['firstname'] . ' ' . $primaryRider['lastname']);
+    $profileCount = count($allRiders);
+
+    $emailSent = hub_send_account_activation_email($primaryRider['email'], $riderName, $activationLink);
 
     if ($emailSent) {
-        $message = 'Ett mail med aktiveringslänk har skickats till ' . htmlspecialchars($rider['email']) .
-                   ' för profilen "' . htmlspecialchars($riderName) . '"';
+        if ($profileCount > 1) {
+            $message = "Ett mail med aktiveringslänk har skickats till " . htmlspecialchars($primaryRider['email']) .
+                       ". När du aktiverar kontot kommer alla {$profileCount} profiler att vara tillgängliga.";
+        } else {
+            $message = 'Ett mail med aktiveringslänk har skickats till ' . htmlspecialchars($primaryRider['email']);
+        }
         $messageType = 'success';
     } else {
         // Email failed - show link as fallback
         $showActivationLink = true;
         $message = 'Kunde inte skicka mail. Här är aktiveringslänken:';
         $messageType = 'warning';
-        error_log("Account activation email failed for {$rider['email']}: {$activationLink}");
+        error_log("Account activation email failed for {$primaryRider['email']}: {$activationLink}");
     }
 }
 ?>
@@ -159,7 +170,7 @@ function sendActivationEmail($pdo, $rider, &$message, &$messageType, &$emailSent
 
         <?php if ($message): ?>
             <div class="alert alert--<?= $messageType ?>">
-                <?= htmlspecialchars($message) ?>
+                <?= $message ?>
             </div>
         <?php endif; ?>
 
@@ -193,48 +204,96 @@ function sendActivationEmail($pdo, $rider, &$message, &$messageType, &$emailSent
                 </a>
             </div>
 
-        <?php elseif ($showProfileSelection): ?>
-            <!-- Multiple profiles found - let user select -->
-            <div class="profile-selection">
-                <p class="selection-intro">
-                    <strong>Flera profiler hittades</strong> med denna e-postadress.
-                    Välj vilken profil du vill aktivera:
-                </p>
-
-                <form method="POST" class="auth-form">
-                    <input type="hidden" name="email" value="<?= htmlspecialchars($submittedEmail) ?>">
-
-                    <div class="profile-list">
-                        <?php foreach ($matchingProfiles as $index => $profile): ?>
-                            <label class="profile-option">
-                                <input type="radio" name="rider_id" value="<?= $profile['id'] ?>"
-                                       <?= $index === 0 ? 'checked' : '' ?>>
-                                <div class="profile-info">
-                                    <div class="profile-name">
-                                        <?= htmlspecialchars($profile['firstname'] . ' ' . $profile['lastname']) ?>
-                                    </div>
-                                    <div class="profile-details">
-                                        <?php if ($profile['birth_year']): ?>
-                                            <span>Född <?= $profile['birth_year'] ?></span>
-                                        <?php endif; ?>
-                                        <?php if ($profile['club_name']): ?>
-                                            <span><?= htmlspecialchars($profile['club_name']) ?></span>
-                                        <?php endif; ?>
-                                    </div>
+        <?php elseif ($showProfileList && $alreadyActivated): ?>
+            <!-- Account already activated - show linked profiles -->
+            <div class="profile-list-display">
+                <p class="list-intro">Profiler kopplade till detta konto:</p>
+                <div class="profile-list">
+                    <?php foreach ($allProfiles as $profile): ?>
+                        <div class="profile-item <?= !empty($profile['password']) ? 'primary' : '' ?>">
+                            <div class="profile-info">
+                                <div class="profile-name">
+                                    <?= htmlspecialchars($profile['firstname'] . ' ' . $profile['lastname']) ?>
+                                    <?php if (!empty($profile['password'])): ?>
+                                        <span class="badge badge-primary">Primär</span>
+                                    <?php endif; ?>
                                 </div>
-                            </label>
-                        <?php endforeach; ?>
-                    </div>
+                                <div class="profile-details">
+                                    <?php if ($profile['birth_year']): ?>
+                                        <span>Född <?= $profile['birth_year'] ?></span>
+                                    <?php endif; ?>
+                                    <?php if ($profile['club_name']): ?>
+                                        <span><?= htmlspecialchars($profile['club_name']) ?></span>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
 
-                    <button type="submit" class="btn btn--primary btn--block">
-                        Aktivera vald profil
-                    </button>
-                </form>
-
-                <a href="/activate" class="btn btn--secondary btn--block mt-sm">
-                    Tillbaka
-                </a>
+                <p class="help-text">Använd "Glömt lösenord" om du behöver återställa ditt lösenord.</p>
             </div>
+
+            <a href="/forgot-password" class="btn btn--primary btn--block mt-md">
+                Glömt lösenord
+            </a>
+            <a href="/login" class="btn btn--secondary btn--block mt-sm">
+                Tillbaka till inloggning
+            </a>
+
+        <?php elseif ($showProfileList): ?>
+            <!-- Show profiles that will be linked -->
+            <div class="profile-list-display">
+                <p class="list-intro">
+                    <?php if (count($allProfiles) > 1): ?>
+                        Alla dessa profiler kommer att vara tillgängliga med samma inloggning:
+                    <?php endif; ?>
+                </p>
+                <div class="profile-list">
+                    <?php foreach ($allProfiles as $index => $profile): ?>
+                        <div class="profile-item <?= $index === 0 ? 'primary' : '' ?>">
+                            <div class="profile-info">
+                                <div class="profile-name">
+                                    <?= htmlspecialchars($profile['firstname'] . ' ' . $profile['lastname']) ?>
+                                    <?php if ($index === 0 && count($allProfiles) > 1): ?>
+                                        <span class="badge badge-primary">Huvudprofil</span>
+                                    <?php endif; ?>
+                                </div>
+                                <div class="profile-details">
+                                    <?php if ($profile['birth_year']): ?>
+                                        <span>Född <?= $profile['birth_year'] ?></span>
+                                    <?php endif; ?>
+                                    <?php if ($profile['club_name']): ?>
+                                        <span><?= htmlspecialchars($profile['club_name']) ?></span>
+                                    <?php endif; ?>
+                                </div>
+                            </div>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+
+                <?php if (count($allProfiles) > 1): ?>
+                    <p class="help-text">
+                        Efter aktivering kan du växla mellan profiler i din inloggade vy.
+                    </p>
+                <?php endif; ?>
+            </div>
+
+            <form method="POST" class="auth-form mt-md">
+                <input type="hidden" name="email" value="<?= htmlspecialchars($submittedEmail) ?>">
+                <input type="hidden" name="confirm_activation" value="1">
+                <button type="submit" class="btn btn--primary btn--block">
+                    <?php if (count($allProfiles) > 1): ?>
+                        Aktivera konto (<?= count($allProfiles) ?> profiler)
+                    <?php else: ?>
+                        Aktivera konto
+                    <?php endif; ?>
+                </button>
+            </form>
+
+            <a href="/activate-account" class="btn btn--secondary btn--block mt-sm">
+                Avbryt
+            </a>
 
         <?php else: ?>
             <form method="POST" class="auth-form">
@@ -246,9 +305,14 @@ function sendActivationEmail($pdo, $rider, &$message, &$messageType, &$emailSent
                 </div>
 
                 <button type="submit" class="btn btn--primary btn--block">
-                    Skicka aktiveringslänk
+                    Fortsätt
                 </button>
             </form>
+
+            <div class="info-box">
+                <strong>Flera profiler?</strong>
+                <p>Om du har flera profiler (t.ex. för barn) kopplade till samma e-post aktiveras alla med samma inloggning.</p>
+            </div>
 
             <div class="info-box">
                 <strong>Nytt konto?</strong>
@@ -263,53 +327,36 @@ function sendActivationEmail($pdo, $rider, &$message, &$messageType, &$emailSent
 </div>
 
 <style>
-/* Profile selection styles - mobile first */
-.profile-selection {
-    margin-top: var(--space-md);
+/* Profile list styles - mobile first */
+.profile-list-display {
+    margin: var(--space-md) 0;
 }
 
-.selection-intro {
-    margin-bottom: var(--space-md);
+.list-intro {
+    margin-bottom: var(--space-sm);
     color: var(--color-text);
-    line-height: 1.5;
+    font-weight: var(--weight-medium, 500);
 }
 
 .profile-list {
     display: flex;
     flex-direction: column;
     gap: var(--space-sm);
-    margin-bottom: var(--space-lg);
+    margin-bottom: var(--space-md);
 }
 
-.profile-option {
+.profile-item {
     display: flex;
-    align-items: flex-start;
-    gap: var(--space-sm);
+    align-items: center;
     padding: var(--space-md);
     background: var(--color-bg-sunken, #f8f9fa);
     border: 2px solid var(--color-border);
     border-radius: var(--radius-md);
-    cursor: pointer;
-    transition: all 0.15s ease;
 }
 
-.profile-option:hover {
+.profile-item.primary {
     border-color: var(--color-accent);
-    background: var(--color-bg, #fff);
-}
-
-.profile-option:has(input:checked) {
-    border-color: var(--color-accent);
-    background: var(--color-bg, #fff);
-    box-shadow: 0 0 0 3px rgba(97, 206, 112, 0.15);
-}
-
-.profile-option input[type="radio"] {
-    flex-shrink: 0;
-    width: 20px;
-    height: 20px;
-    margin-top: 2px;
-    accent-color: var(--color-accent);
+    background: rgba(97, 206, 112, 0.05);
 }
 
 .profile-info {
@@ -318,9 +365,28 @@ function sendActivationEmail($pdo, $rider, &$message, &$messageType, &$emailSent
 }
 
 .profile-name {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    flex-wrap: wrap;
     font-weight: var(--weight-semibold, 600);
     color: var(--color-text-primary, #171717);
     margin-bottom: var(--space-xs);
+}
+
+.badge {
+    display: inline-block;
+    padding: 2px 8px;
+    font-size: 11px;
+    font-weight: var(--weight-medium, 500);
+    border-radius: var(--radius-full);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.badge-primary {
+    background: var(--color-accent);
+    color: white;
 }
 
 .profile-details {
@@ -336,9 +402,29 @@ function sendActivationEmail($pdo, $rider, &$message, &$messageType, &$emailSent
     align-items: center;
 }
 
-.profile-details span::before {
-    content: '';
-    display: none;
+.help-text {
+    font-size: var(--text-sm);
+    color: var(--color-text-secondary);
+    margin-top: var(--space-sm);
+}
+
+.info-box {
+    margin-top: var(--space-md);
+    padding: var(--space-md);
+    background: var(--color-bg-sunken, #f8f9fa);
+    border-radius: var(--radius-md);
+    font-size: var(--text-sm);
+}
+
+.info-box strong {
+    display: block;
+    margin-bottom: var(--space-xs);
+    color: var(--color-text-primary);
+}
+
+.info-box p {
+    color: var(--color-text-secondary);
+    margin: 0;
 }
 
 /* Separator dot between details on larger screens */

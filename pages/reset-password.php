@@ -2,6 +2,9 @@
 /**
  * TheHUB V3.5 - Reset Password
  * Set new password with reset token
+ *
+ * When setting password, links all other profiles with same email
+ * to this account (for family account management)
  */
 
 // If already logged in, redirect to profile
@@ -12,10 +15,12 @@ if (hub_is_logged_in()) {
 
 $pdo = hub_db();
 $token = $_GET['token'] ?? '';
+$isActivation = isset($_GET['activate']);
 $message = '';
 $messageType = '';
 $validToken = false;
 $rider = null;
+$linkedProfilesCount = 0;
 
 // Validate token
 if (!empty($token)) {
@@ -31,6 +36,14 @@ if (!empty($token)) {
 
     if ($rider) {
         $validToken = true;
+
+        // Count other profiles with same email that will be linked
+        $countStmt = $pdo->prepare("
+            SELECT COUNT(*) as count FROM riders
+            WHERE email = ? AND id != ?
+        ");
+        $countStmt->execute([$rider['email'], $rider['id']]);
+        $linkedProfilesCount = (int)$countStmt->fetch(PDO::FETCH_ASSOC)['count'];
     } else {
         $message = 'Ogiltig eller utgången återställningslänk. Begär en ny länk.';
         $messageType = 'error';
@@ -55,24 +68,56 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $validToken) {
             UPDATE riders SET
                 password = ?,
                 password_reset_token = NULL,
-                password_reset_expires = NULL
+                password_reset_expires = NULL,
+                linked_to_rider_id = NULL
             WHERE id = ?
         ");
         $updateStmt->execute([$hashedPassword, $rider['id']]);
 
-        $message = 'Lösenord återställt! Du kan nu logga in.';
+        // Link all other riders with same email to this primary account
+        $linkStmt = $pdo->prepare("
+            UPDATE riders SET
+                linked_to_rider_id = ?,
+                password = NULL,
+                password_reset_token = NULL,
+                password_reset_expires = NULL
+            WHERE email = ? AND id != ?
+        ");
+        $linkStmt->execute([$rider['id'], $rider['email'], $rider['id']]);
+
+        // Get count of actually linked profiles
+        $linkedCount = $linkStmt->rowCount();
+
+        if ($isActivation) {
+            if ($linkedCount > 0) {
+                $message = "Konto aktiverat! Du har nu tillgång till " . ($linkedCount + 1) . " profiler med samma inloggning.";
+            } else {
+                $message = 'Konto aktiverat! Du kan nu logga in.';
+            }
+        } else {
+            if ($linkedCount > 0) {
+                $message = "Lösenord återställt! Alla " . ($linkedCount + 1) . " profiler är tillgängliga med samma inloggning.";
+            } else {
+                $message = 'Lösenord återställt! Du kan nu logga in.';
+            }
+        }
         $messageType = 'success';
         $validToken = false; // Hide form
     }
 }
+
+$pageTitle = $isActivation ? 'Aktivera konto' : 'Återställ lösenord';
 ?>
 
 <div class="auth-container">
     <div class="auth-card">
         <div class="auth-header">
-            <h1>Återställ lösenord</h1>
+            <h1><?= $pageTitle ?></h1>
             <?php if ($rider): ?>
-                <p>Ange nytt lösenord för <?= htmlspecialchars($rider['firstname'] . ' ' . $rider['lastname']) ?></p>
+                <p>
+                    <?= $isActivation ? 'Skapa' : 'Ange nytt' ?> lösenord för
+                    <strong><?= htmlspecialchars($rider['firstname'] . ' ' . $rider['lastname']) ?></strong>
+                </p>
             <?php else: ?>
                 <p>Ange din återställningskod eller begär en ny</p>
             <?php endif; ?>
@@ -86,10 +131,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $validToken) {
 
         <?php if ($messageType === 'success'): ?>
             <a href="/login" class="btn btn--primary btn--block">Gå till inloggning</a>
+
         <?php elseif ($validToken): ?>
+            <?php if ($linkedProfilesCount > 0): ?>
+                <div class="info-box mb-md">
+                    <strong><?= $linkedProfilesCount + 1 ?> profiler kommer att kopplas</strong>
+                    <p>Alla profiler med e-postadressen <?= htmlspecialchars($rider['email']) ?> kommer att vara tillgängliga med detta lösenord.</p>
+                </div>
+            <?php endif; ?>
+
             <form method="POST" class="auth-form">
                 <div class="form-group">
-                    <label for="password">Nytt lösenord</label>
+                    <label for="password">
+                        <?= $isActivation ? 'Välj lösenord' : 'Nytt lösenord' ?>
+                    </label>
                     <input type="password" id="password" name="password" required
                            placeholder="Minst 8 tecken"
                            minlength="8">
@@ -103,9 +158,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $validToken) {
                 </div>
 
                 <button type="submit" class="btn btn--primary btn--block">
-                    Spara nytt lösenord
+                    <?= $isActivation ? 'Aktivera konto' : 'Spara nytt lösenord' ?>
                 </button>
             </form>
+
         <?php else: ?>
             <p class="text-center">Ingen giltig återställningskod angiven.</p>
             <a href="/forgot-password" class="btn btn--primary btn--block mt-md">
@@ -114,10 +170,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $validToken) {
         <?php endif; ?>
 
         <div class="auth-footer">
-            <a href="/login">← Tillbaka till inloggning</a>
+            <a href="/login">&larr; Tillbaka till inloggning</a>
         </div>
     </div>
 </div>
 
+<style>
+.info-box {
+    padding: var(--space-md);
+    background: var(--color-bg-sunken, #f8f9fa);
+    border-radius: var(--radius-md);
+    border-left: 4px solid var(--color-accent);
+}
 
-<!-- CSS loaded from /assets/css/pages/reset-password.css -->
+.info-box strong {
+    display: block;
+    margin-bottom: var(--space-xs);
+    color: var(--color-text-primary);
+}
+
+.info-box p {
+    margin: 0;
+    font-size: var(--text-sm);
+    color: var(--color-text-secondary);
+}
+
+.mb-md {
+    margin-bottom: var(--space-md);
+}
+</style>
