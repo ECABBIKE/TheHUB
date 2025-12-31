@@ -278,6 +278,99 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
  $message = 'Kunde inte ta bort konto: ' . $e->getMessage();
  $messageType = 'error';
  }
+ } elseif ($action === 'upgrade_to_promotor' && hasRole('super_admin') && $riderUser) {
+ // Upgrade rider user to promotor role
+ try {
+ $db->update('admin_users', ['role' => 'promotor'], 'id = ?', [$riderUser['id']]);
+ $message = 'Användaren har uppgraderats till Promotör! Du kan nu tilldela events.';
+ $messageType = 'success';
+
+ // Refresh rider user
+ $riderUser = $db->getRow("
+  SELECT au.*, rp.can_edit_profile, rp.can_manage_club
+  FROM rider_profiles rp
+  JOIN admin_users au ON rp.user_id = au.id
+  WHERE rp.rider_id = ?
+ ", [$id]);
+ } catch (Exception $e) {
+ $message = 'Kunde inte uppgradera: ' . $e->getMessage();
+ $messageType = 'error';
+ }
+ } elseif ($action === 'downgrade_to_rider' && hasRole('super_admin') && $riderUser) {
+ // Downgrade promotor back to rider role
+ try {
+ // First remove any event assignments
+ $db->delete('promotor_events', 'user_id = ?', [$riderUser['id']]);
+ $db->delete('promotor_series', 'user_id = ?', [$riderUser['id']]);
+
+ $db->update('admin_users', ['role' => 'rider'], 'id = ?', [$riderUser['id']]);
+ $message = 'Användaren har nedgraderats till Rider.';
+ $messageType = 'success';
+
+ // Refresh rider user
+ $riderUser = $db->getRow("
+  SELECT au.*, rp.can_edit_profile, rp.can_manage_club
+  FROM rider_profiles rp
+  JOIN admin_users au ON rp.user_id = au.id
+  WHERE rp.rider_id = ?
+ ", [$id]);
+ } catch (Exception $e) {
+ $message = 'Kunde inte nedgradera: ' . $e->getMessage();
+ $messageType = 'error';
+ }
+ } elseif ($action === 'assign_club_admin' && hasRole('super_admin') && $riderUser) {
+ // Assign user as club admin
+ $clubIdToAdmin = isset($_POST['club_admin_id']) ? intval($_POST['club_admin_id']) : 0;
+ $canEditProfile = isset($_POST['club_can_edit']) ? 1 : 0;
+ $canUploadLogo = isset($_POST['club_can_upload']) ? 1 : 0;
+ $canManageMembers = isset($_POST['club_can_members']) ? 1 : 0;
+
+ if ($clubIdToAdmin > 0) {
+ try {
+  $currentAdmin = getCurrentAdmin();
+
+  // Check if assignment already exists
+  $existing = $db->getRow("SELECT id FROM club_admins WHERE user_id = ? AND club_id = ?",
+   [$riderUser['id'], $clubIdToAdmin]);
+
+  if ($existing) {
+   // Update existing
+   $db->update('club_admins', [
+    'can_edit_profile' => $canEditProfile,
+    'can_upload_logo' => $canUploadLogo,
+    'can_manage_members' => $canManageMembers
+   ], 'id = ?', [$existing['id']]);
+   $message = 'Klubb-admin behörigheter uppdaterade!';
+  } else {
+   // Create new
+   $db->insert('club_admins', [
+    'user_id' => $riderUser['id'],
+    'club_id' => $clubIdToAdmin,
+    'can_edit_profile' => $canEditProfile,
+    'can_upload_logo' => $canUploadLogo,
+    'can_manage_members' => $canManageMembers,
+    'granted_by' => $currentAdmin['id']
+   ]);
+   $message = 'Användaren är nu admin för klubben!';
+  }
+  $messageType = 'success';
+ } catch (Exception $e) {
+  $message = 'Kunde inte tilldela klubb-admin: ' . $e->getMessage();
+  $messageType = 'error';
+ }
+ }
+ } elseif ($action === 'remove_club_admin' && hasRole('super_admin') && $riderUser) {
+ $clubAdminId = isset($_POST['club_admin_assignment_id']) ? intval($_POST['club_admin_assignment_id']) : 0;
+ if ($clubAdminId > 0) {
+ try {
+  $db->delete('club_admins', 'id = ?', [$clubAdminId]);
+  $message = 'Klubb-admin tilldelning borttagen!';
+  $messageType = 'success';
+ } catch (Exception $e) {
+  $message = 'Kunde inte ta bort tilldelning: ' . $e->getMessage();
+  $messageType = 'error';
+ }
+ }
  }
 }
 
@@ -1227,6 +1320,198 @@ include __DIR__ . '/components/unified-layout.php';
  <?php endif; ?>
  </div>
  </div>
+
+ <!-- Role Management Section (only if user has account) -->
+ <?php if ($riderUser): ?>
+ <div class="card mt-lg">
+ <div class="card-header">
+ <h2>
+  <i data-lucide="shield"></i>
+  Rollhantering
+ </h2>
+ </div>
+ <div class="card-body">
+ <?php
+ $currentRole = $riderUser['role'] ?? 'rider';
+ $roleLabels = [
+  'rider' => 'Rider',
+  'promotor' => 'Promotör',
+  'admin' => 'Admin',
+  'super_admin' => 'Super Admin'
+ ];
+ $roleBadges = [
+  'rider' => 'badge-secondary',
+  'promotor' => 'badge-primary',
+  'admin' => 'badge-warning',
+  'super_admin' => 'badge-danger'
+ ];
+ ?>
+ <div class="flex items-center gap-md mb-lg flex-wrap">
+  <span class="text-secondary">Nuvarande roll:</span>
+  <span class="badge <?= $roleBadges[$currentRole] ?? 'badge-secondary' ?>">
+   <?= $roleLabels[$currentRole] ?? $currentRole ?>
+  </span>
+ </div>
+
+ <?php if ($currentRole === 'rider'): ?>
+  <!-- Upgrade to Promotor -->
+  <div class="alert alert--info mb-md">
+  <i data-lucide="arrow-up-circle"></i>
+  <div>
+   <strong>Uppgradera till Promotör</strong>
+   <p class="text-sm mt-xs">Som promotör kan användaren hantera events, registreringar och resultat för tilldelade tävlingar.</p>
+  </div>
+  </div>
+  <form method="POST" class="mb-lg">
+  <?= csrf_field() ?>
+  <input type="hidden" name="action" value="upgrade_to_promotor">
+  <button type="submit" class="btn btn--primary" onclick="return confirm('Vill du uppgradera denna användare till Promotör?')">
+   <i data-lucide="arrow-up-circle"></i>
+   Uppgradera till Promotör
+  </button>
+  </form>
+ <?php elseif ($currentRole === 'promotor'): ?>
+  <!-- Already promotor - show event management link -->
+  <div class="flex items-center justify-between flex-wrap gap-md mb-lg">
+  <div>
+   <h3 class="font-medium">Event-tilldelning</h3>
+   <p class="text-sm text-secondary">Hantera vilka events denna promotör har tillgång till</p>
+  </div>
+  <a href="/admin/user-events.php?id=<?= $riderUser['id'] ?>" class="btn btn--secondary">
+   <i data-lucide="calendar"></i>
+   Hantera events
+  </a>
+  </div>
+
+  <!-- Downgrade option -->
+  <div style="border-top: 1px solid var(--color-border); padding-top: var(--space-md); margin-top: var(--space-md);">
+  <form method="POST">
+   <?= csrf_field() ?>
+   <input type="hidden" name="action" value="downgrade_to_rider">
+   <button type="submit" class="btn btn--secondary" onclick="return confirm('Vill du nedgradera denna användare till Rider? Alla event-tilldelningar tas bort.')">
+   <i data-lucide="arrow-down-circle"></i>
+   Nedgradera till Rider
+   </button>
+  </form>
+  </div>
+ <?php else: ?>
+  <div class="alert alert--warning">
+  <i data-lucide="alert-triangle"></i>
+  <span>Denna användare har rollen <?= $roleLabels[$currentRole] ?? $currentRole ?> och kan inte ändras härifrån.</span>
+  </div>
+ <?php endif; ?>
+ </div>
+ </div>
+
+ <!-- Club Admin Section -->
+ <div class="card mt-lg">
+ <div class="card-header">
+ <h2>
+  <i data-lucide="building"></i>
+  Klubb-administration
+ </h2>
+ </div>
+ <div class="card-body">
+ <p class="text-secondary mb-md">
+  Tilldela användaren som administratör för en eller flera klubbar. Detta låter dem redigera klubbinformation och ladda upp logotyper.
+ </p>
+
+ <?php
+ // Get current club admin assignments for this user
+ $clubAdminAssignments = $db->getAll("
+  SELECT ca.*, c.name as club_name
+  FROM club_admins ca
+  JOIN clubs c ON ca.club_id = c.id
+  WHERE ca.user_id = ?
+  ORDER BY c.name
+ ", [$riderUser['id']]);
+ ?>
+
+ <?php if (!empty($clubAdminAssignments)): ?>
+ <div class="table-responsive mb-lg">
+  <table class="table">
+  <thead>
+   <tr>
+   <th>Klubb</th>
+   <th>Redigera</th>
+   <th>Logo</th>
+   <th>Medlemmar</th>
+   <th>Åtgärd</th>
+   </tr>
+  </thead>
+  <tbody>
+   <?php foreach ($clubAdminAssignments as $assignment): ?>
+   <tr>
+   <td><strong><?= h($assignment['club_name']) ?></strong></td>
+   <td><?= $assignment['can_edit_profile'] ? '<i data-lucide="check" class="text-accent"></i>' : '<i data-lucide="x" class="text-secondary"></i>' ?></td>
+   <td><?= $assignment['can_upload_logo'] ? '<i data-lucide="check" class="text-accent"></i>' : '<i data-lucide="x" class="text-secondary"></i>' ?></td>
+   <td><?= $assignment['can_manage_members'] ? '<i data-lucide="check" class="text-accent"></i>' : '<i data-lucide="x" class="text-secondary"></i>' ?></td>
+   <td>
+    <form method="POST" style="display: inline;">
+    <?= csrf_field() ?>
+    <input type="hidden" name="action" value="remove_club_admin">
+    <input type="hidden" name="club_admin_assignment_id" value="<?= $assignment['id'] ?>">
+    <button type="submit" class="btn btn-error btn--sm" onclick="return confirm('Ta bort denna tilldelning?')">
+     <i data-lucide="trash-2"></i>
+    </button>
+    </form>
+   </td>
+   </tr>
+   <?php endforeach; ?>
+  </tbody>
+  </table>
+ </div>
+ <?php endif; ?>
+
+ <!-- Add new club admin assignment -->
+ <form method="POST" class="card" style="background: var(--color-bg-sunken); border: 1px dashed var(--color-border);">
+  <div class="card-body">
+  <h4 class="mb-md">Lägg till klubbtilldelning</h4>
+  <?= csrf_field() ?>
+  <input type="hidden" name="action" value="assign_club_admin">
+
+  <div class="grid gap-md" style="grid-template-columns: 1fr auto;">
+   <div>
+   <label for="club_admin_id" class="label">Välj klubb</label>
+   <select name="club_admin_id" id="club_admin_id" class="input" required>
+    <option value="">Välj klubb...</option>
+    <?php
+    // Filter out already assigned clubs
+    $assignedClubIds = array_column($clubAdminAssignments, 'club_id');
+    foreach ($clubs as $club):
+     if (in_array($club['id'], $assignedClubIds)) continue;
+    ?>
+    <option value="<?= $club['id'] ?>"><?= h($club['name']) ?><?= !$club['active'] ? ' (inaktiv)' : '' ?></option>
+    <?php endforeach; ?>
+   </select>
+   </div>
+   <div style="display: flex; align-items: flex-end;">
+   <button type="submit" class="btn btn--primary">
+    <i data-lucide="plus"></i>
+    Lägg till
+   </button>
+   </div>
+  </div>
+
+  <div class="flex gap-lg flex-wrap mt-md">
+   <label class="checkbox flex items-center gap-sm">
+   <input type="checkbox" name="club_can_edit" value="1" checked>
+   <span class="text-sm">Kan redigera klubbinfo</span>
+   </label>
+   <label class="checkbox flex items-center gap-sm">
+   <input type="checkbox" name="club_can_upload" value="1" checked>
+   <span class="text-sm">Kan ladda upp logo</span>
+   </label>
+   <label class="checkbox flex items-center gap-sm">
+   <input type="checkbox" name="club_can_members" value="1">
+   <span class="text-sm">Kan hantera medlemmar</span>
+   </label>
+  </div>
+  </div>
+ </form>
+ </div>
+ </div>
+ <?php endif; ?>
  <?php endif; ?>
 
 <style>
