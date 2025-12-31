@@ -128,6 +128,32 @@ include __DIR__ . '/components/unified-layout.php';
     </div>
 </div>
 
+<!-- Admin Tools -->
+<div class="card mb-lg">
+    <div class="card-header">
+        <h2>
+            <i data-lucide="shield"></i>
+            Behörigheter & Roller
+        </h2>
+    </div>
+    <div class="card-body">
+        <div class="flex flex-col gap-md">
+            <a href="/admin/role-management.php" class="btn btn--secondary w-full justify-start">
+                <i data-lucide="star"></i>
+                Rollhantering (Promotörer)
+            </a>
+            <a href="/admin/club-admins.php" class="btn btn--secondary w-full justify-start">
+                <i data-lucide="building"></i>
+                Klubb-administratörer
+            </a>
+            <a href="/admin/tools.php" class="btn btn--secondary w-full justify-start">
+                <i data-lucide="wrench"></i>
+                Verktyg
+            </a>
+        </div>
+    </div>
+</div>
+
 <!-- Info Box -->
 <div class="alert alert-info">
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
