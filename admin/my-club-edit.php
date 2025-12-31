@@ -58,6 +58,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $clubData = [
                 'name' => $name,
                 'short_name' => trim($_POST['short_name'] ?? ''),
+                'org_number' => trim($_POST['org_number'] ?? ''),
                 'region' => trim($_POST['region'] ?? ''),
                 'city' => trim($_POST['city'] ?? ''),
                 'country' => trim($_POST['country'] ?? 'Sverige'),
@@ -166,7 +167,7 @@ include __DIR__ . '/components/unified-layout.php';
                                    <?= !$perms['can_edit_profile'] ? 'disabled' : '' ?>>
                         </div>
 
-                        <!-- Short Name -->
+                        <!-- Short Name and Org Number -->
                         <div class="form-row">
                             <div>
                                 <label for="short_name" class="label">Förkortning</label>
@@ -176,9 +177,18 @@ include __DIR__ . '/components/unified-layout.php';
                                        <?= !$perms['can_edit_profile'] ? 'disabled' : '' ?>>
                             </div>
                             <div>
-                                <label class="label">Medlemmar</label>
-                                <input type="text" class="input" value="<?= $riderCount ?> aktiva" disabled>
+                                <label for="org_number" class="label">Organisationsnummer</label>
+                                <input type="text" id="org_number" name="org_number" class="input"
+                                       value="<?= h($club['org_number'] ?? '') ?>"
+                                       placeholder="123456-7890"
+                                       <?= !$perms['can_edit_profile'] ? 'disabled' : '' ?>>
                             </div>
+                        </div>
+
+                        <!-- Members count (readonly) -->
+                        <div>
+                            <label class="label">Medlemmar</label>
+                            <input type="text" class="input" value="<?= $riderCount ?> aktiva" disabled>
                         </div>
 
                         <!-- Description -->
