@@ -480,40 +480,83 @@ if (!function_exists('hub_attempt_login')) {
 
         // =====================================================================
         // Normal rider login from database
+        // Check ALL riders with this email (handles multiple profiles)
+        // Also loads linked profiles after successful login
         // =====================================================================
 
-        // Find rider by email
+        // Find all riders by email (primary accounts with passwords)
         $stmt = $pdo->prepare("
-            SELECT id, email, password, firstname, lastname, is_admin, role_id
+            SELECT id, email, password, firstname, lastname, is_admin, role_id, linked_to_rider_id
             FROM riders
             WHERE email = ? AND active = 1
-            LIMIT 1
+            ORDER BY password IS NOT NULL DESC, id
         ");
         $stmt->execute([$email]);
-        $rider = $stmt->fetch(PDO::FETCH_ASSOC);
+        $riders = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        if (!$rider) {
+        if (empty($riders)) {
             return ['success' => false, 'error' => 'Ogiltig e-post eller lösenord.'];
         }
 
-        // Check if rider has a password set
-        if (empty($rider['password'])) {
-            return ['success' => false, 'error' => 'Du har inte satt ett lösenord ännu. Klicka på "Glömt lösenord" för att skapa ett.'];
+        // Try password against each matching rider profile (primary accounts)
+        $hasActivatedAccount = false;
+        foreach ($riders as $rider) {
+            if (!empty($rider['password'])) {
+                $hasActivatedAccount = true;
+                if (password_verify($password, $rider['password'])) {
+                    // Login successful - load all linked profiles
+                    $linkedProfiles = [];
+
+                    // Get all profiles linked to this primary account
+                    $linkedStmt = $pdo->prepare("
+                        SELECT id, firstname, lastname, birth_year, club_id
+                        FROM riders
+                        WHERE linked_to_rider_id = ? AND active = 1
+                        ORDER BY lastname, firstname
+                    ");
+                    $linkedStmt->execute([$rider['id']]);
+                    $linkedProfiles = $linkedStmt->fetchAll(PDO::FETCH_ASSOC);
+
+                    // Also get profiles with same email (for backwards compatibility)
+                    $sameEmailStmt = $pdo->prepare("
+                        SELECT id, firstname, lastname, birth_year, club_id
+                        FROM riders
+                        WHERE email = ? AND id != ? AND linked_to_rider_id IS NULL AND active = 1
+                        ORDER BY lastname, firstname
+                    ");
+                    $sameEmailStmt->execute([$rider['email'], $rider['id']]);
+                    $sameEmailProfiles = $sameEmailStmt->fetchAll(PDO::FETCH_ASSOC);
+
+                    // Merge linked profiles
+                    $allLinkedIds = [$rider['id']];
+                    foreach ($linkedProfiles as $lp) {
+                        $allLinkedIds[] = $lp['id'];
+                    }
+                    foreach ($sameEmailProfiles as $sep) {
+                        if (!in_array($sep['id'], $allLinkedIds)) {
+                            $allLinkedIds[] = $sep['id'];
+                            $linkedProfiles[] = $sep;
+                        }
+                    }
+
+                    // Create session with linked profiles
+                    hub_set_user_session($rider, $linkedProfiles);
+
+                    // Update last login
+                    $stmt = $pdo->prepare("UPDATE riders SET last_login = NOW() WHERE id = ?");
+                    $stmt->execute([$rider['id']]);
+
+                    return ['success' => true, 'user' => $rider, 'linked_profiles' => $linkedProfiles];
+                }
+            }
         }
 
-        // Verify password (bcrypt)
-        if (!password_verify($password, $rider['password'])) {
+        // No password matched
+        if ($hasActivatedAccount) {
             return ['success' => false, 'error' => 'Ogiltig e-post eller lösenord.'];
+        } else {
+            return ['success' => false, 'error' => 'Du har inte satt ett lösenord ännu. Klicka på "Aktivera konto" för att skapa ett.'];
         }
-
-        // Login successful - create session
-        hub_set_user_session($rider);
-
-        // Update last login
-        $stmt = $pdo->prepare("UPDATE riders SET last_login = NOW() WHERE id = ?");
-        $stmt->execute([$rider['id']]);
-
-        return ['success' => true, 'user' => $rider];
     }
 }
 
@@ -521,8 +564,11 @@ if (!function_exists('hub_set_user_session')) {
     /**
      * Set user session after successful login
      * Sets both V3 hub_* variables AND admin_* variables for admin panel compatibility
+     *
+     * @param array $user Primary user data
+     * @param array $linkedProfiles Optional array of linked rider profiles
      */
-    function hub_set_user_session(array $user): void {
+    function hub_set_user_session(array $user, array $linkedProfiles = []): void {
         $roleId = (int) ($user['role_id'] ?? ROLE_RIDER);
         $userName = ($user['firstname'] ?? '') . ' ' . ($user['lastname'] ?? '');
 
@@ -532,6 +578,17 @@ if (!function_exists('hub_set_user_session')) {
         $_SESSION['hub_user_name'] = $userName;
         $_SESSION['hub_user_role'] = $roleId;
         $_SESSION['hub_logged_in_at'] = time();
+
+        // Store linked profiles for profile switching
+        $_SESSION['hub_linked_profiles'] = $linkedProfiles;
+        $_SESSION['hub_active_rider_id'] = $user['id']; // Currently active rider profile
+
+        // Build list of all accessible rider IDs
+        $allRiderIds = [$user['id']];
+        foreach ($linkedProfiles as $profile) {
+            $allRiderIds[] = $profile['id'];
+        }
+        $_SESSION['hub_all_rider_ids'] = $allRiderIds;
 
         // Backwards compatibility - is_admin based on role
         $_SESSION['hub_is_admin'] = $roleId >= ROLE_ADMIN;

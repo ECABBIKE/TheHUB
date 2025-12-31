@@ -2,6 +2,8 @@
 /**
  * TheHUB V3.5 - Forgot Password
  * Request password reset link
+ *
+ * Finds the primary account (with password) when profiles are linked
  */
 
 // If already logged in, redirect to profile
@@ -19,6 +21,7 @@ $messageType = '';
 $showResetLink = false;
 $resetLink = '';
 $emailSent = false;
+$linkedProfilesCount = 0;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email = trim($_POST['email'] ?? '');
@@ -27,24 +30,53 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $message = 'Ange din e-postadress';
         $messageType = 'error';
     } else {
-        // Find rider by email
-        $stmt = $pdo->prepare("SELECT id, firstname, lastname, email FROM riders WHERE email = ? LIMIT 1");
+        // Find the primary rider (the one with password) for this email
+        // Check both email match AND linked profiles
+        $stmt = $pdo->prepare("
+            SELECT r.id, r.firstname, r.lastname, r.email, r.password
+            FROM riders r
+            WHERE r.email = ? AND r.password IS NOT NULL AND r.password != ''
+            ORDER BY r.id
+            LIMIT 1
+        ");
         $stmt->execute([$email]);
-        $rider = $stmt->fetch(PDO::FETCH_ASSOC);
+        $primaryRider = $stmt->fetch(PDO::FETCH_ASSOC);
 
-        if ($rider) {
+        if (!$primaryRider) {
+            // Maybe they entered email but account not activated yet?
+            $checkStmt = $pdo->prepare("SELECT COUNT(*) as count FROM riders WHERE email = ?");
+            $checkStmt->execute([$email]);
+            $hasProfiles = $checkStmt->fetch(PDO::FETCH_ASSOC)['count'] > 0;
+
+            if ($hasProfiles) {
+                $message = 'Kontot är inte aktiverat ännu. Gå till "Aktivera konto" för att skapa ett lösenord.';
+                $messageType = 'warning';
+            } else {
+                // Security: Don't reveal if email exists or not
+                $message = 'Om e-postadressen finns i systemet kommer du få ett mail med instruktioner.';
+                $messageType = 'info';
+            }
+        } else {
+            // Count linked profiles
+            $countStmt = $pdo->prepare("
+                SELECT COUNT(*) as count FROM riders
+                WHERE (email = ? OR linked_to_rider_id = ?) AND id != ?
+            ");
+            $countStmt->execute([$email, $primaryRider['id'], $primaryRider['id']]);
+            $linkedProfilesCount = (int)$countStmt->fetch(PDO::FETCH_ASSOC)['count'];
+
             // Generate reset token
             $token = bin2hex(random_bytes(32));
             $expires = date('Y-m-d H:i:s', strtotime('+1 hour'));
 
-            // Save token
+            // Save token to primary rider
             $updateStmt = $pdo->prepare("
                 UPDATE riders SET
                     password_reset_token = ?,
                     password_reset_expires = ?
                 WHERE id = ?
             ");
-            $updateStmt->execute([$token, $expires, $rider['id']]);
+            $updateStmt->execute([$token, $expires, $primaryRider['id']]);
 
             // Build reset link
             $baseUrl = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http')
@@ -52,23 +84,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $resetLink = $baseUrl . '/reset-password?token=' . $token;
 
             // Send email
-            $riderName = trim($rider['firstname'] . ' ' . $rider['lastname']);
-            $emailSent = hub_send_password_reset_email($rider['email'], $riderName, $resetLink);
+            $riderName = trim($primaryRider['firstname'] . ' ' . $primaryRider['lastname']);
+            $emailSent = hub_send_password_reset_email($primaryRider['email'], $riderName, $resetLink);
 
             if ($emailSent) {
-                $message = 'Ett mail med återställningslänk har skickats till ' . htmlspecialchars($email);
+                if ($linkedProfilesCount > 0) {
+                    $totalProfiles = $linkedProfilesCount + 1;
+                    $message = "Ett mail med återställningslänk har skickats till " . htmlspecialchars($email) .
+                               ". Lösenordet gäller för alla {$totalProfiles} kopplade profiler.";
+                } else {
+                    $message = 'Ett mail med återställningslänk har skickats till ' . htmlspecialchars($email);
+                }
                 $messageType = 'success';
             } else {
-                // Email failed - show link as fallback (for admin use)
+                // Email failed - show link as fallback
                 $showResetLink = true;
                 $message = 'Kunde inte skicka mail. Här är återställningslänken:';
                 $messageType = 'warning';
                 error_log("Password reset email failed for {$email}: {$resetLink}");
             }
-        } else {
-            // Security: Don't reveal if email exists or not
-            $message = 'Om e-postadressen finns i systemet kommer du få ett mail med instruktioner.';
-            $messageType = 'info';
         }
     }
 }
@@ -83,7 +117,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         <?php if ($message): ?>
             <div class="alert alert--<?= $messageType ?>">
-                <?= htmlspecialchars($message) ?>
+                <?= $message ?>
             </div>
         <?php endif; ?>
 
@@ -96,6 +130,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             <a href="/login" class="btn btn--primary btn--block mt-md">
                 Tillbaka till inloggning
             </a>
+
         <?php elseif ($showResetLink): ?>
             <!-- Email failed - show link as fallback -->
             <div class="reset-link-box">
@@ -109,6 +144,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     Gå till återställning
                 </a>
             </div>
+
+        <?php elseif ($messageType === 'warning'): ?>
+            <!-- Account not activated -->
+            <a href="/activate-account" class="btn btn--primary btn--block mt-md">
+                Aktivera konto
+            </a>
+            <a href="/login" class="btn btn--secondary btn--block mt-sm">
+                Tillbaka till inloggning
+            </a>
+
         <?php else: ?>
             <form method="POST" class="auth-form">
                 <div class="form-group">
@@ -122,16 +167,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     Skicka återställningslänk
                 </button>
             </form>
+
+            <div class="info-box">
+                <strong>Flera profiler?</strong>
+                <p>Om du har flera kopplade profiler gäller lösenordet för alla.</p>
+            </div>
         <?php endif; ?>
 
         <div class="auth-footer">
-            <a href="/login">← Tillbaka till inloggning</a>
+            <a href="/login">&larr; Tillbaka till inloggning</a>
         </div>
     </div>
 </div>
 
+<style>
+.info-box {
+    margin-top: var(--space-md);
+    padding: var(--space-md);
+    background: var(--color-bg-sunken, #f8f9fa);
+    border-radius: var(--radius-md);
+    font-size: var(--text-sm);
+}
 
-<!-- CSS loaded from /assets/css/pages/forgot-password.css -->
+.info-box strong {
+    display: block;
+    margin-bottom: var(--space-xs);
+    color: var(--color-text-primary);
+}
+
+.info-box p {
+    color: var(--color-text-secondary);
+    margin: 0;
+}
+</style>
 
 <script>
 function copyLink() {
