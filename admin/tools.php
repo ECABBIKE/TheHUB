@@ -1341,7 +1341,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/migrations.php" class="btn-admin btn-admin-secondary flex-1">
+            <a href="/admin/run-migrations.php" class="btn-admin btn-admin-secondary flex-1">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5V19A9 3 0 0 0 21 19V5"/></svg>
                 Kör migrationer
             </a>
@@ -1436,7 +1436,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/run-migration.php?file=071_club_points_system.sql.php" class="btn-admin btn-admin-warning flex-1">
+            <a href="/admin/run-migration.php?file=071_club_points_system.sql" class="btn-admin btn-admin-warning flex-1">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5V19A9 3 0 0 0 21 19V5"/></svg>
                 Kör migration 071
             </a>
@@ -1455,7 +1455,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/run-migration.php?file=072_ranking_snapshots_system.sql.php" class="btn-admin btn-admin-warning flex-1">
+            <a href="/admin/run-migration.php?file=072_ranking_snapshots_system.sql" class="btn-admin btn-admin-warning flex-1">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5V19A9 3 0 0 0 21 19V5"/></svg>
                 Kör migration 072
             </a>
