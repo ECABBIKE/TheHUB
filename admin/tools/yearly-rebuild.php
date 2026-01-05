@@ -46,6 +46,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $imported = 0;
             $updated = 0;
             $skipped = 0;
+            $clubsLocked = 0;
+            $clubsCleared = 0;
             $errors = [];
 
             // Detect delimiter
@@ -164,7 +166,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         }
                     }
 
-                    // Update club if provided and different
+                    // Update current club if provided and different
                     if ($clubId && $clubId != $rider['club_id']) {
                         $updateData['club_id'] = $clubId;
                     }
@@ -176,17 +178,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $skipped++;
                     }
 
-                    // Create/update rider_club_seasons for this year (optional - table might not exist)
-                    if ($clubId) {
-                        try {
+                    // Handle rider_club_seasons for this year
+                    try {
+                        if ($clubId) {
+                            // Has club - insert/update and LOCK for this year
                             $db->execute("
                                 INSERT INTO rider_club_seasons (rider_id, club_id, season_year, locked)
-                                VALUES (?, ?, ?, 0)
-                                ON DUPLICATE KEY UPDATE club_id = VALUES(club_id)
+                                VALUES (?, ?, ?, 1)
+                                ON DUPLICATE KEY UPDATE club_id = VALUES(club_id), locked = 1
                             ", [$rider['id'], $clubId, $selectedYear]);
-                        } catch (Exception $e) {
-                            // Table might not exist, ignore
+                            $clubsLocked++;
+                        } else {
+                            // No club in import - DELETE this year's affiliation
+                            $result = $db->execute("
+                                DELETE FROM rider_club_seasons
+                                WHERE rider_id = ? AND season_year = ?
+                            ", [$rider['id'], $selectedYear]);
+                            if ($result) $clubsCleared++;
                         }
+                    } catch (Exception $e) {
+                        // Table might not exist, ignore
                     }
                 } else {
                     // Create new rider
@@ -198,15 +209,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         'active' => 1
                     ]);
 
-                    // Create rider_club_seasons (optional - table might not exist)
+                    // Create rider_club_seasons if has club (locked immediately)
                     if ($clubId && $riderId) {
                         try {
                             $db->insert('rider_club_seasons', [
                                 'rider_id' => $riderId,
                                 'club_id' => $clubId,
                                 'season_year' => $selectedYear,
-                                'locked' => 0
+                                'locked' => 1
                             ]);
+                            $clubsLocked++;
                         } catch (Exception $e) {
                             // Table might not exist, ignore
                         }
@@ -216,7 +228,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             }
 
-            $message = "Deltagare: $imported nya, $updated uppdaterade, $skipped ignorerade";
+            $message = "Deltagare: $imported nya, $updated uppdaterade, $skipped ignorerade. ";
+            $message .= "Klubbtillhörigheter för $selectedYear: $clubsLocked låsta";
+            if ($clubsCleared > 0) {
+                $message .= ", $clubsCleared rensade";
+            }
             if (!empty($errors)) {
                 $message .= ". Varningar: " . count($errors);
             }
