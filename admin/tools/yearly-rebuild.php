@@ -7,10 +7,45 @@
  * 3. Clear all results for the year
  * 4. Re-import events one by one
  */
+
+// Force error display BEFORE anything else
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
+
+// Register shutdown function to catch fatal errors
+register_shutdown_function(function() {
+    $error = error_get_last();
+    if ($error && in_array($error['type'], [E_ERROR, E_CORE_ERROR, E_COMPILE_ERROR, E_PARSE])) {
+        echo "<pre style='background:#fdd;padding:20px;margin:20px;border:2px solid red;'>";
+        echo "<strong>FATAL ERROR:</strong>\n";
+        echo "Type: {$error['type']}\n";
+        echo "Message: {$error['message']}\n";
+        echo "File: {$error['file']}\n";
+        echo "Line: {$error['line']}\n";
+        echo "</pre>";
+    }
+});
+
+// Debug POST immediately - output directly to browser
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    error_log("=== yearly-rebuild.php VERY START of POST ===");
+    error_log("POST data: " . print_r($_POST, true));
+    error_log("FILES data: " . print_r($_FILES, true));
+
+    // Uncomment to see debug in browser:
+    // echo "<pre>DEBUG POST START\n";
+    // echo "POST: " . print_r($_POST, true);
+    // echo "FILES: " . print_r($_FILES, true);
+    // echo "</pre>";
+}
+
+require_once __DIR__ . '/../../config.php';
+
+// Re-force error display after config (config might disable it)
 ini_set('display_errors', 1);
 error_reporting(E_ALL);
 
-require_once __DIR__ . '/../../config.php';
 require_admin();
 
 $db = getDB();
@@ -22,27 +57,73 @@ $selectedYear = isset($_REQUEST['year']) ? (int)$_REQUEST['year'] : (int)date('Y
 
 // Handle actions
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
-    checkCsrf();
+    // Debug: Check if we get here
+    error_log("yearly-rebuild.php POST: action=" . ($_POST['action'] ?? 'none') . " year=" . $selectedYear);
+
+    // Check CSRF - wrap in try-catch to catch any errors
+    try {
+        checkCsrf();
+    } catch (Exception $e) {
+        error_log("yearly-rebuild.php CSRF error: " . $e->getMessage());
+        die("CSRF fel: " . htmlspecialchars($e->getMessage()));
+    }
+
     $action = $_POST['action'] ?? '';
 
     // =========================================================================
     // STEP 1: Import riders from file
     // =========================================================================
     if ($action === 'import_riders') {
+        error_log("yearly-rebuild.php: Starting import_riders");
+
         $csvData = '';
 
-        // Handle file upload
-        if (isset($_FILES['rider_file']) && $_FILES['rider_file']['error'] === UPLOAD_ERR_OK) {
-            $csvData = file_get_contents($_FILES['rider_file']['tmp_name']);
+        // Handle file upload - debug first
+        error_log("yearly-rebuild.php: FILES: " . print_r($_FILES, true));
+
+        if (isset($_FILES['rider_file'])) {
+            error_log("yearly-rebuild.php: File error code: " . $_FILES['rider_file']['error']);
+            if ($_FILES['rider_file']['error'] === UPLOAD_ERR_OK) {
+                $csvData = file_get_contents($_FILES['rider_file']['tmp_name']);
+                error_log("yearly-rebuild.php: Read " . strlen($csvData) . " bytes from file");
+            } else {
+                $uploadErrors = [
+                    UPLOAD_ERR_INI_SIZE => 'Filen överskrider upload_max_filesize',
+                    UPLOAD_ERR_FORM_SIZE => 'Filen överskrider MAX_FILE_SIZE',
+                    UPLOAD_ERR_PARTIAL => 'Filen laddades bara upp delvis',
+                    UPLOAD_ERR_NO_FILE => 'Ingen fil laddades upp',
+                    UPLOAD_ERR_NO_TMP_DIR => 'Temporär mapp saknas',
+                    UPLOAD_ERR_CANT_WRITE => 'Kunde inte skriva fil till disk',
+                    UPLOAD_ERR_EXTENSION => 'Fil-uppladdning stoppades av extension'
+                ];
+                $errMsg = $uploadErrors[$_FILES['rider_file']['error']] ?? 'Okänt fel';
+                $message = "Uppladdningsfel: $errMsg";
+                $messageType = 'error';
+                error_log("yearly-rebuild.php: Upload error: $errMsg");
+            }
+        } else {
+            error_log("yearly-rebuild.php: No rider_file in FILES");
         }
 
         $csvData = trim($csvData);
 
-        if (empty($csvData)) {
+        if (empty($csvData) && empty($message)) {
             $message = 'Ingen fil vald eller filen är tom';
             $messageType = 'error';
-        } else {
+        } elseif (!empty($csvData)) {
+            try {
+            error_log("yearly-rebuild.php: Starting to process CSV data");
+
+            // Check if $db is valid
+            if (!$db) {
+                error_log("yearly-rebuild.php: ERROR - db is null!");
+                $message = 'Databasanslutning saknas';
+                $messageType = 'error';
+                throw new Exception('Database connection is null');
+            }
+
             $lines = explode("\n", $csvData);
+            error_log("yearly-rebuild.php: Found " . count($lines) . " lines in CSV");
             $imported = 0;
             $updated = 0;
             $skipped = 0;
@@ -237,6 +318,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $message .= ". Varningar: " . count($errors);
             }
             $messageType = 'success';
+
+            } catch (Exception $e) {
+                error_log("yearly-rebuild.php: EXCEPTION during import: " . $e->getMessage());
+                error_log("yearly-rebuild.php: Stack trace: " . $e->getTraceAsString());
+                $message = 'Fel vid import: ' . $e->getMessage();
+                $messageType = 'error';
+            }
         }
     }
 
