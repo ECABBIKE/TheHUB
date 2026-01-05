@@ -136,7 +136,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 if (!empty($affectedSeries)) {
                     require_once __DIR__ . '/../includes/series-points.php';
                     foreach ($affectedSeries as $series) {
-                        recalculateSeriesStandings($series['id']);
+                        recalculateAllSeriesPoints($db, $series['id']);
                     }
                 }
 
