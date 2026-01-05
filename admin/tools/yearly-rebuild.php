@@ -26,10 +26,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // STEP 1: Import riders from file
     // =========================================================================
     if ($action === 'import_riders') {
-        $csvData = trim($_POST['rider_csv'] ?? '');
+        $csvData = '';
+
+        // Handle file upload
+        if (isset($_FILES['rider_file']) && $_FILES['rider_file']['error'] === UPLOAD_ERR_OK) {
+            $csvData = file_get_contents($_FILES['rider_file']['tmp_name']);
+        }
+
+        $csvData = trim($csvData);
 
         if (empty($csvData)) {
-            $message = 'Ingen data att importera';
+            $message = 'Ingen fil vald eller filen är tom';
             $messageType = 'error';
         } else {
             $lines = explode("\n", $csvData);
@@ -338,24 +345,22 @@ $events = $db->getAll("
     </div>
     <div class="card-body">
         <p class="text-secondary mb-md">
-            Klistra in deltagarlista. Dubbletter ignoreras (även felstavade namn matchas).
+            Ladda upp deltagarlista (CSV). Dubbletter ignoreras (även felstavade namn matchas).
             Klubbtillhörighet sparas för <?= $selectedYear ?>.
         </p>
 
-        <form method="POST">
+        <form method="POST" enctype="multipart/form-data">
             <?= csrf_field() ?>
             <input type="hidden" name="action" value="import_riders">
 
             <div class="form-group mb-md">
-                <label class="form-label">Format: Förnamn, Efternamn, Klubb, UCI-ID (valfritt)</label>
-                <textarea name="rider_csv" class="input" rows="10"
-                    placeholder="Erik	Svensson	Stockholm MTB	10012345678
-Anna	Johansson	Göteborg CK
-Johan	Andersson	Malmö CK	10087654321"></textarea>
+                <label class="form-label">Välj CSV-fil (Förnamn, Efternamn, Klubb, UCI-ID)</label>
+                <input type="file" name="rider_file" class="input" accept=".csv,.txt" required>
+                <p class="text-sm text-secondary mt-xs">Accepterar tab-, semikolon- eller kommaseparerade filer</p>
             </div>
 
             <button type="submit" class="btn btn--primary">
-                <i data-lucide="users"></i>
+                <i data-lucide="upload"></i>
                 Importera deltagare
             </button>
         </form>

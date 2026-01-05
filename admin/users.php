@@ -69,41 +69,43 @@ foreach ($roleCounts as $row) {
 $activatedRidersCount = $db->getRow("SELECT COUNT(*) as count FROM riders WHERE password IS NOT NULL AND password != ''");
 $roleStats['activated_riders'] = $activatedRidersCount['count'] ?? 0;
 
-// Get promotors (riders with promotor role via rider_profiles)
-$promotors = $db->getAll("
-    SELECT
-        r.id as rider_id,
-        r.firstname,
-        r.lastname,
-        r.email,
-        c.name as club_name,
-        au.id as user_id,
-        (SELECT COUNT(*) FROM promotor_events pe WHERE pe.user_id = au.id) as event_count
-    FROM riders r
-    JOIN rider_profiles rp ON r.id = rp.rider_id
-    JOIN admin_users au ON rp.user_id = au.id
-    LEFT JOIN clubs c ON r.club_id = c.id
-    WHERE au.role = 'promotor'
-    ORDER BY r.lastname, r.firstname
-");
+// Get promotors - simply from admin_users table
+$promotors = [];
+try {
+    $stmt = $pdo->query("
+        SELECT
+            au.id as user_id,
+            au.full_name,
+            au.email,
+            au.username
+        FROM admin_users au
+        WHERE au.role = 'promotor' AND au.active = 1
+        ORDER BY au.full_name
+    ");
+    $promotors = $stmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (Exception $e) {
+    // Ignore errors
+}
 
 // Get club admins
-$clubAdmins = $db->getAll("
-    SELECT
-        ca.id,
-        ca.club_id,
-        c.name as club_name,
-        r.id as rider_id,
-        r.firstname,
-        r.lastname,
-        r.email
-    FROM club_admins ca
-    JOIN clubs c ON ca.club_id = c.id
-    JOIN admin_users au ON ca.user_id = au.id
-    LEFT JOIN rider_profiles rp ON au.id = rp.user_id
-    LEFT JOIN riders r ON rp.rider_id = r.id
-    ORDER BY c.name, r.lastname
-");
+$clubAdmins = [];
+try {
+    $stmt = $pdo->query("
+        SELECT
+            ca.id,
+            ca.club_id,
+            c.name as club_name,
+            au.full_name,
+            au.email
+        FROM club_admins ca
+        JOIN clubs c ON ca.club_id = c.id
+        JOIN admin_users au ON ca.user_id = au.id
+        ORDER BY c.name, au.full_name
+    ");
+    $clubAdmins = $stmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (Exception $e) {
+    // Table might not exist or have wrong structure
+}
 
 // Page config
 $page_title = 'Användarhantering';
@@ -339,9 +341,7 @@ include __DIR__ . '/components/unified-layout.php';
                 <thead>
                     <tr>
                         <th>Namn</th>
-                        <th>Klubb</th>
                         <th>E-post</th>
-                        <th>Events</th>
                         <th></th>
                     </tr>
                 </thead>
@@ -349,15 +349,13 @@ include __DIR__ . '/components/unified-layout.php';
                     <?php foreach ($promotors as $p): ?>
                     <tr>
                         <td>
-                            <a href="/admin/rider-edit.php?id=<?= $p['rider_id'] ?>" class="link">
-                                <?= h($p['firstname'] . ' ' . $p['lastname']) ?>
+                            <a href="/admin/user-edit.php?id=<?= $p['user_id'] ?>" class="link">
+                                <?= h($p['full_name'] ?: $p['username']) ?>
                             </a>
                         </td>
-                        <td><?= h($p['club_name'] ?? '-') ?></td>
                         <td class="text-secondary"><?= h($p['email']) ?></td>
-                        <td><span class="badge badge-secondary"><?= $p['event_count'] ?></span></td>
                         <td class="text-right">
-                            <a href="/admin/user-events.php?id=<?= $p['user_id'] ?>" class="btn btn--secondary btn--sm">
+                            <a href="/admin/user-events.php?id=<?= $p['user_id'] ?>" class="btn btn--secondary btn--sm" title="Hantera events">
                                 <i data-lucide="calendar"></i>
                             </a>
                         </td>
@@ -398,15 +396,7 @@ include __DIR__ . '/components/unified-layout.php';
                 <tbody>
                     <?php foreach ($clubAdmins as $ca): ?>
                     <tr>
-                        <td>
-                            <?php if ($ca['rider_id']): ?>
-                            <a href="/admin/rider-edit.php?id=<?= $ca['rider_id'] ?>" class="link">
-                                <?= h($ca['firstname'] . ' ' . $ca['lastname']) ?>
-                            </a>
-                            <?php else: ?>
-                            <span class="text-secondary"><?= h($ca['email']) ?></span>
-                            <?php endif; ?>
-                        </td>
+                        <td><?= h($ca['full_name'] ?: $ca['email']) ?></td>
                         <td>
                             <a href="/admin/club-edit.php?id=<?= $ca['club_id'] ?>" class="link">
                                 <?= h($ca['club_name']) ?>
