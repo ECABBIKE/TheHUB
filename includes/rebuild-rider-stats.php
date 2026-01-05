@@ -810,6 +810,7 @@ function calculateMultiSeriesSeasons($pdo, $rider_id) {
 
 /**
  * Hittar Svensk Mästare-titlar (vunnit event markerat som mästerskap)
+ * Filtrerar på klasser som har is_championship_class = 1
  */
 function calculateSwedishChampionships($pdo, $rider_id) {
     $stmt = $pdo->prepare("
@@ -817,13 +818,16 @@ function calculateSwedishChampionships($pdo, $rider_id) {
             e.id as event_id,
             e.name as event_name,
             YEAR(e.date) as year,
-            r.class_id
+            r.class_id,
+            c.name as class_name
         FROM results r
         JOIN events e ON r.event_id = e.id
+        JOIN classes c ON r.class_id = c.id
         WHERE r.cyclist_id = ?
           AND r.position = 1
           AND r.status = 'finished'
           AND e.is_championship = 1
+          AND COALESCE(c.is_championship_class, 0) = 1
         ORDER BY e.date DESC
     ");
     $stmt->execute([$rider_id]);

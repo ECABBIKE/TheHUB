@@ -44,6 +44,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'awards_points' => isset($_POST['awards_points']) ? 1 : 0,
                 'ranking_type' => in_array($_POST['ranking_type'] ?? 'time', ['time', 'name', 'bib']) ? $_POST['ranking_type'] : 'time',
                 'series_eligible' => isset($_POST['series_eligible']) ? 1 : 0,
+                'is_championship_class' => isset($_POST['is_championship_class']) ? 1 : 0,
             ];
 
             try {
@@ -121,6 +122,7 @@ $categorySelect = $hasClassCategoryColumn ? "c.class_category_code," : "NULL as 
 $sql = "SELECT
     c.id, c.name, c.display_name, c.discipline, c.gender, c.min_age, c.max_age,
     c.sort_order, c.active, c.awards_points, c.ranking_type, c.series_eligible,
+    COALESCE(c.is_championship_class, 0) as is_championship_class,
     $categorySelect
     COUNT(DISTINCT r.id) as result_count
 FROM classes c
@@ -382,6 +384,13 @@ include __DIR__ . '/components/unified-layout.php';
                         </label>
                     </div>
 
+                    <div class="admin-form-group">
+                        <label class="admin-checkbox-label">
+                            <input type="checkbox" name="is_championship_class" id="isChampionshipClass">
+                            <span>SM-klass (ger SM-medalj vid mästerskapstävling)</span>
+                        </label>
+                    </div>
+
                     <?php if (!empty($classCategories)): ?>
                         <div class="admin-form-group">
                             <label class="admin-form-label">Licenskategori</label>
@@ -418,6 +427,7 @@ function openClassModal() {
     document.getElementById('awardsPoints').checked = true;
     document.getElementById('rankingType').value = 'time';
     document.getElementById('seriesEligible').checked = true;
+    document.getElementById('isChampionshipClass').checked = false;
     document.querySelectorAll('.discipline-checkbox').forEach(cb => cb.checked = false);
 }
 
@@ -441,6 +451,7 @@ function editClass(classData) {
     document.getElementById('awardsPoints').checked = classData.awards_points == 1 || classData.awards_points === null;
     document.getElementById('rankingType').value = classData.ranking_type || 'time';
     document.getElementById('seriesEligible').checked = classData.series_eligible == 1 || classData.series_eligible === null;
+    document.getElementById('isChampionshipClass').checked = classData.is_championship_class == 1;
 
     const categorySelect = document.getElementById('classCategoryCode');
     if (categorySelect) {
