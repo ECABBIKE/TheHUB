@@ -110,6 +110,16 @@ try {
 }
 
 if (session_status() === PHP_SESSION_NONE) {
+    // Configure session with longer lifetime (7 days)
+    session_set_cookie_params([
+        'lifetime' => 604800, // 7 days
+        'path' => '/',
+        'domain' => '',
+        'secure' => isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on',
+        'httponly' => true,
+        'samesite' => 'Lax'
+    ]);
+    session_name('thehub_session');
     session_start();
 }
 
