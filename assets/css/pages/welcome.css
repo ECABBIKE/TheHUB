@@ -247,6 +247,27 @@
     margin: 0;
 }
 
+/* Two-column grid for upcoming events */
+.welcome-upcoming-grid {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-md);
+    margin-bottom: var(--space-md);
+}
+
+.welcome-upcoming-grid .welcome-section {
+    margin-bottom: 0;
+}
+
+/* Discipline-specific date badges */
+.event-date-badge--enduro {
+    background: var(--color-ges-orange, #EF761F);
+}
+
+.event-date-badge--dh {
+    background: var(--color-gs-blue, #004a98);
+}
+
 /* Sections */
 .welcome-section {
     background: var(--color-bg-card);
@@ -399,6 +420,11 @@
 
     .welcome-nav-grid {
         grid-template-columns: repeat(2, 1fr);
+    }
+
+    .welcome-upcoming-grid {
+        grid-template-columns: 1fr;
+        gap: var(--space-sm);
     }
 
     .welcome-login-cta {
