@@ -3,6 +3,9 @@
  * Club Admins Management - Simple search tool
  * Search activated rider → Make them admin for their own club
  */
+ini_set('display_errors', 1);
+error_reporting(E_ALL);
+
 require_once __DIR__ . '/../config.php';
 require_admin();
 
@@ -11,118 +14,134 @@ if (!hasRole('admin')) {
     die('Access denied');
 }
 
-$db = getDB();
+$pdo = $GLOBALS['pdo'];
 $currentAdmin = getCurrentAdmin();
 $message = '';
 $messageType = '';
 
-// Check if tables exist
-$tablesExist = true;
+// Check if club_admins table exists
+$tableExists = true;
 try {
-    $db->getRow("SELECT 1 FROM rider_profiles LIMIT 1");
-    $db->getRow("SELECT 1 FROM club_admins LIMIT 1");
+    $pdo->query("SELECT 1 FROM club_admins LIMIT 1");
 } catch (Exception $e) {
-    $tablesExist = false;
+    $tableExists = false;
+    $message = 'Tabellen club_admins saknas. Kör migration 091 först.';
+    $messageType = 'error';
 }
 
 // Handle actions
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && $tablesExist) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $tableExists) {
     $action = $_POST['action'] ?? '';
 
     if ($action === 'add') {
         $riderId = (int)($_POST['rider_id'] ?? 0);
 
         if ($riderId) {
-            $rider = $db->getRow("
-                SELECT r.id, r.firstname, r.lastname, r.email, r.club_id, c.name as club_name
-                FROM riders r
-                LEFT JOIN clubs c ON r.club_id = c.id
-                WHERE r.id = ? AND r.password IS NOT NULL
-            ", [$riderId]);
+            try {
+                // Get rider info with club
+                $stmt = $pdo->prepare("
+                    SELECT r.id, r.firstname, r.lastname, r.email, r.club_id, c.name as club_name
+                    FROM riders r
+                    LEFT JOIN clubs c ON r.club_id = c.id
+                    WHERE r.id = ? AND r.password IS NOT NULL AND r.password != ''
+                ");
+                $stmt->execute([$riderId]);
+                $rider = $stmt->fetch(PDO::FETCH_ASSOC);
 
-            if (!$rider) {
-                $message = 'Rider hittades inte eller har inte aktiverat konto';
-                $messageType = 'error';
-            } elseif (!$rider['club_id']) {
-                $message = $rider['firstname'] . ' ' . $rider['lastname'] . ' saknar klubbkoppling';
-                $messageType = 'error';
-            } else {
-                // Get or create user account
-                $userLink = $db->getRow("
-                    SELECT rp.user_id FROM rider_profiles rp
-                    JOIN admin_users au ON rp.user_id = au.id
-                    WHERE rp.rider_id = ?
-                ", [$riderId]);
-
-                if ($userLink) {
-                    $userId = $userLink['user_id'];
+                if (!$rider) {
+                    $message = 'Rider hittades inte eller har inte aktiverat konto';
+                    $messageType = 'error';
+                } elseif (!$rider['club_id']) {
+                    $message = $rider['firstname'] . ' ' . $rider['lastname'] . ' saknar klubbkoppling';
+                    $messageType = 'error';
                 } else {
-                    // Create user account
-                    $username = strtolower(preg_replace('/[^a-z0-9]/', '', $rider['firstname'] . $rider['lastname']));
-                    $counter = 1;
-                    $baseUsername = $username;
-                    while ($db->getRow("SELECT id FROM admin_users WHERE username = ?", [$username])) {
-                        $username = $baseUsername . $counter++;
+                    // Check if rider already has admin account
+                    $stmt = $pdo->prepare("SELECT id FROM admin_users WHERE email = ?");
+                    $stmt->execute([$rider['email']]);
+                    $existingUser = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                    if ($existingUser) {
+                        $userId = $existingUser['id'];
+                    } else {
+                        // Create new admin user
+                        $username = strtolower(preg_replace('/[^a-z0-9]/', '', $rider['firstname'] . $rider['lastname']));
+                        $baseUsername = $username ?: 'user';
+                        $counter = 1;
+
+                        $stmt = $pdo->prepare("SELECT id FROM admin_users WHERE username = ?");
+                        $stmt->execute([$username]);
+                        while ($stmt->fetch()) {
+                            $username = $baseUsername . $counter++;
+                            $stmt->execute([$username]);
+                        }
+
+                        $stmt = $pdo->prepare("
+                            INSERT INTO admin_users (username, email, full_name, role, active, created_at)
+                            VALUES (?, ?, ?, 'rider', 1, NOW())
+                        ");
+                        $stmt->execute([$username, $rider['email'], $rider['firstname'] . ' ' . $rider['lastname']]);
+                        $userId = $pdo->lastInsertId();
                     }
 
-                    $db->execute("
-                        INSERT INTO admin_users (username, email, full_name, role, active, created_at)
-                        VALUES (?, ?, ?, 'rider', 1, NOW())
-                    ", [$username, $rider['email'], $rider['firstname'] . ' ' . $rider['lastname']]);
-                    $userId = $db->lastInsertId();
+                    // Check if already admin for this club
+                    $stmt = $pdo->prepare("SELECT id FROM club_admins WHERE user_id = ? AND club_id = ?");
+                    $stmt->execute([$userId, $rider['club_id']]);
 
-                    $db->execute("
-                        INSERT INTO rider_profiles (user_id, rider_id, is_primary, created_at)
-                        VALUES (?, ?, 1, NOW())
-                    ", [$userId, $riderId]);
+                    if ($stmt->fetch()) {
+                        $message = $rider['firstname'] . ' ' . $rider['lastname'] . ' är redan admin för ' . $rider['club_name'];
+                        $messageType = 'warning';
+                    } else {
+                        $stmt = $pdo->prepare("
+                            INSERT INTO club_admins (user_id, club_id, can_edit_profile, can_upload_logo, granted_by, created_at)
+                            VALUES (?, ?, 1, 1, ?, NOW())
+                        ");
+                        $stmt->execute([$userId, $rider['club_id'], $currentAdmin['id']]);
+
+                        $message = $rider['firstname'] . ' ' . $rider['lastname'] . ' är nu admin för ' . $rider['club_name'];
+                        $messageType = 'success';
+                    }
                 }
-
-                // Check if already admin for this club
-                $existing = $db->getRow("SELECT id FROM club_admins WHERE user_id = ? AND club_id = ?", [$userId, $rider['club_id']]);
-
-                if ($existing) {
-                    $message = $rider['firstname'] . ' ' . $rider['lastname'] . ' är redan admin för ' . $rider['club_name'];
-                    $messageType = 'warning';
-                } else {
-                    $db->execute("
-                        INSERT INTO club_admins (user_id, club_id, can_edit_profile, can_upload_logo, granted_by, created_at)
-                        VALUES (?, ?, 1, 1, ?, NOW())
-                    ", [$userId, $rider['club_id'], $currentAdmin['id']]);
-
-                    $message = $rider['firstname'] . ' ' . $rider['lastname'] . ' är nu admin för ' . $rider['club_name'];
-                    $messageType = 'success';
-                }
+            } catch (Exception $e) {
+                $message = 'Fel: ' . $e->getMessage();
+                $messageType = 'error';
             }
         }
     } elseif ($action === 'remove') {
         $id = (int)($_POST['id'] ?? 0);
         if ($id) {
-            $db->execute("DELETE FROM club_admins WHERE id = ?", [$id]);
-            $message = 'Klubb-admin borttagen';
-            $messageType = 'success';
+            try {
+                $stmt = $pdo->prepare("DELETE FROM club_admins WHERE id = ?");
+                $stmt->execute([$id]);
+                $message = 'Klubb-admin borttagen';
+                $messageType = 'success';
+            } catch (Exception $e) {
+                $message = 'Fel: ' . $e->getMessage();
+                $messageType = 'error';
+            }
         }
     }
 }
 
 // Get current club admins
 $clubAdmins = [];
-if (!$tablesExist) {
-    $message = 'Tabellerna rider_profiles och/eller club_admins saknas. Kör migrationer 091 och 093 först.';
-    $messageType = 'error';
-} else {
-    $clubAdmins = $db->getAll("
-        SELECT
-            ca.id,
-            r.firstname,
-            r.lastname,
-            c.name as club_name
-        FROM club_admins ca
-        JOIN admin_users au ON ca.user_id = au.id
-        JOIN rider_profiles rp ON au.id = rp.user_id
-        JOIN riders r ON rp.rider_id = r.id
-        JOIN clubs c ON ca.club_id = c.id
-        ORDER BY c.name, r.lastname
-    ");
+if ($tableExists) {
+    try {
+        $stmt = $pdo->query("
+            SELECT
+                ca.id,
+                au.full_name,
+                au.email,
+                c.name as club_name
+            FROM club_admins ca
+            JOIN admin_users au ON ca.user_id = au.id
+            JOIN clubs c ON ca.club_id = c.id
+            ORDER BY c.name, au.full_name
+        ");
+        $clubAdmins = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (Exception $e) {
+        $message = 'Kunde inte hämta klubb-admins: ' . $e->getMessage();
+        $messageType = 'error';
+    }
 }
 
 $page_title = 'Klubb-admin';
@@ -173,7 +192,7 @@ include __DIR__ . '/components/unified-layout.php';
                 <?php foreach ($clubAdmins as $ca): ?>
                 <div class="admin-row">
                     <div class="admin-info">
-                        <strong><?= h($ca['firstname'] . ' ' . $ca['lastname']) ?></strong>
+                        <strong><?= h($ca['full_name'] ?: $ca['email']) ?></strong>
                         <span class="text-secondary"><?= h($ca['club_name']) ?></span>
                     </div>
                     <form method="POST" onsubmit="return confirm('Ta bort?')">
