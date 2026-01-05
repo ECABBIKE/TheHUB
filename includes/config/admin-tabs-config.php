@@ -298,6 +298,7 @@ $ADMIN_TABS = [
                     'search-uci-id.php',
                     'diagnose-series.php',
                     'rebuild-stats.php',
+                    'fix-result-club-ids.php',
                     // Tools subfolder
                     'tools/yearly-rebuild.php',
                     'tools/yearly-import-review.php',

@@ -10,9 +10,6 @@
 require_once __DIR__ . '/../config.php';
 require_admin();
 
-$pageTitle = 'Fixa resultat klubb-ID';
-include __DIR__ . '/../includes/admin-header.php';
-
 $db = getDB();
 $message = '';
 $messageType = '';
@@ -121,118 +118,112 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $messageType = 'danger';
     }
 }
+
+$page_title = 'Fixa resultat klubb-ID';
+$breadcrumbs = [['label' => 'Verktyg', 'url' => '/admin/tools.php'], ['label' => 'Fixa klubb-ID']];
+include __DIR__ . '/components/unified-layout.php';
 ?>
 
-<div class="admin-content">
-    <div class="page-header">
-        <h1><?= $pageTitle ?></h1>
-        <p class="text-muted">Uppdaterar results.club_id baserat på rider_club_seasons för att säkerställa att poäng tillskrivs rätt klubb.</p>
+<?php if ($message): ?>
+<div class="alert alert-<?= $messageType ?>">
+    <?= htmlspecialchars($message) ?>
+</div>
+<?php endif; ?>
+
+<div class="admin-card">
+    <div class="admin-card-header">
+        <h3>Hur det fungerar</h3>
     </div>
-
-    <?php if ($message): ?>
-    <div class="alert alert-<?= $messageType ?>">
-        <?= htmlspecialchars($message) ?>
+    <div class="admin-card-body">
+        <p>Detta verktyg går igenom alla resultat och kontrollerar:</p>
+        <ol>
+            <li>Vilken säsong (år) tävlingen ägde rum</li>
+            <li>Vilken klubb åkaren var medlem i den säsongen (från rider_club_seasons)</li>
+            <li>Om results.club_id skiljer sig från säsongsklubben, uppdateras det</li>
+        </ol>
+        <p><strong>Viktigt:</strong> Efter uppdatering behöver klubbrankingen beräknas om.</p>
     </div>
-    <?php endif; ?>
-
-    <div class="card">
-        <div class="card-header">
-            <h3>Hur det fungerar</h3>
-        </div>
-        <div class="card-body">
-            <p>Detta verktyg går igenom alla resultat och kontrollerar:</p>
-            <ol>
-                <li>Vilken säsong (år) tävlingen ägde rum</li>
-                <li>Vilken klubb åkaren var medlem i den säsongen (från rider_club_seasons)</li>
-                <li>Om results.club_id skiljer sig från säsongsklubben, uppdateras det</li>
-            </ol>
-            <p><strong>Viktigt:</strong> Efter uppdatering behöver klubbrankingen beräknas om.</p>
-        </div>
-    </div>
-
-    <div class="card mt-lg">
-        <div class="card-header">
-            <h3>Kör verktyget</h3>
-        </div>
-        <div class="card-body">
-            <form method="post">
-                <div class="form-group">
-                    <button type="submit" class="btn btn-secondary" name="simulate">
-                        <i data-lucide="search"></i>
-                        Simulera (visa vad som skulle ändras)
-                    </button>
-                    <button type="submit" class="btn btn-primary" name="execute" onclick="return confirm('Är du säker? Detta kommer uppdatera databasen.')">
-                        <i data-lucide="zap"></i>
-                        Kör på riktigt
-                    </button>
-                </div>
-            </form>
-        </div>
-    </div>
-
-    <?php if (!empty($stats)): ?>
-    <div class="card mt-lg">
-        <div class="card-header">
-            <h3>Resultat</h3>
-        </div>
-        <div class="card-body">
-            <div class="stats-grid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-md); margin-bottom: var(--space-lg);">
-                <div class="stat-card" style="background: var(--color-bg-secondary); padding: var(--space-md); border-radius: var(--radius-md); text-align: center;">
-                    <div style="font-size: var(--text-2xl); font-weight: 700;"><?= number_format($stats['total_results']) ?></div>
-                    <div style="font-size: var(--text-sm); color: var(--color-text-muted);">Totalt resultat</div>
-                </div>
-                <div class="stat-card" style="background: var(--color-bg-secondary); padding: var(--space-md); border-radius: var(--radius-md); text-align: center;">
-                    <div style="font-size: var(--text-2xl); font-weight: 700;"><?= number_format($stats['already_correct']) ?></div>
-                    <div style="font-size: var(--text-sm); color: var(--color-text-muted);">Redan korrekta</div>
-                </div>
-                <div class="stat-card" style="background: rgba(97, 206, 112, 0.1); padding: var(--space-md); border-radius: var(--radius-md); text-align: center;">
-                    <div style="font-size: var(--text-2xl); font-weight: 700; color: var(--color-accent);"><?= number_format($stats['fixed']) ?></div>
-                    <div style="font-size: var(--text-sm); color: var(--color-text-muted);"><?= $dryRun ? 'Skulle korrigeras' : 'Korrigerade' ?></div>
-                </div>
-                <div class="stat-card" style="background: var(--color-bg-secondary); padding: var(--space-md); border-radius: var(--radius-md); text-align: center;">
-                    <div style="font-size: var(--text-2xl); font-weight: 700;"><?= number_format($stats['no_season_data']) ?></div>
-                    <div style="font-size: var(--text-sm); color: var(--color-text-muted);">Saknar säsongsdata</div>
-                </div>
-            </div>
-
-            <?php if (!empty($stats['details'])): ?>
-            <h4>Detaljerade ändringar (visar max 100)</h4>
-            <div class="table-responsive">
-                <table class="table table--striped">
-                    <thead>
-                        <tr>
-                            <th>Åkare</th>
-                            <th>Tävling</th>
-                            <th>Datum</th>
-                            <th>Från klubb</th>
-                            <th>Till klubb</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        <?php foreach ($stats['details'] as $detail): ?>
-                        <tr>
-                            <td>
-                                <a href="/rider/<?= $detail['rider_id'] ?>">
-                                    <?= htmlspecialchars($detail['rider']) ?>
-                                </a>
-                            </td>
-                            <td><?= htmlspecialchars($detail['event']) ?></td>
-                            <td><?= $detail['event_date'] ?></td>
-                            <td><?= htmlspecialchars($detail['old_club']) ?></td>
-                            <td><strong><?= htmlspecialchars($detail['new_club']) ?></strong></td>
-                        </tr>
-                        <?php endforeach; ?>
-                    </tbody>
-                </table>
-            </div>
-            <?php if ($stats['fixed'] > 100): ?>
-            <p class="text-muted">...och <?= $stats['fixed'] - 100 ?> fler</p>
-            <?php endif; ?>
-            <?php endif; ?>
-        </div>
-    </div>
-    <?php endif; ?>
-
 </div>
 
-<?php include __DIR__ . '/../includes/admin-footer.php'; ?>
+<div class="admin-card">
+    <div class="admin-card-header">
+        <h3>Kör verktyget</h3>
+    </div>
+    <div class="admin-card-body">
+        <form method="post" class="flex gap-md">
+            <button type="submit" class="btn-admin btn-admin-secondary" name="simulate">
+                <i data-lucide="search"></i>
+                Simulera (visa vad som skulle ändras)
+            </button>
+            <button type="submit" class="btn-admin btn-admin-primary" name="execute" onclick="return confirm('Är du säker? Detta kommer uppdatera databasen.')">
+                <i data-lucide="zap"></i>
+                Kör på riktigt
+            </button>
+        </form>
+    </div>
+</div>
+
+<?php if (!empty($stats)): ?>
+<div class="admin-card">
+    <div class="admin-card-header">
+        <h3>Resultat</h3>
+    </div>
+    <div class="admin-card-body">
+        <div class="stats-grid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-md); margin-bottom: var(--space-lg);">
+            <div class="stat-card" style="background: var(--color-bg-secondary); padding: var(--space-md); border-radius: var(--radius-md); text-align: center;">
+                <div style="font-size: var(--text-2xl); font-weight: 700;"><?= number_format($stats['total_results']) ?></div>
+                <div style="font-size: var(--text-sm); color: var(--color-text-secondary);">Totalt resultat</div>
+            </div>
+            <div class="stat-card" style="background: var(--color-bg-secondary); padding: var(--space-md); border-radius: var(--radius-md); text-align: center;">
+                <div style="font-size: var(--text-2xl); font-weight: 700;"><?= number_format($stats['already_correct']) ?></div>
+                <div style="font-size: var(--text-sm); color: var(--color-text-secondary);">Redan korrekta</div>
+            </div>
+            <div class="stat-card" style="background: rgba(97, 206, 112, 0.1); padding: var(--space-md); border-radius: var(--radius-md); text-align: center;">
+                <div style="font-size: var(--text-2xl); font-weight: 700; color: var(--color-accent);"><?= number_format($stats['fixed']) ?></div>
+                <div style="font-size: var(--text-sm); color: var(--color-text-secondary);"><?= $dryRun ? 'Skulle korrigeras' : 'Korrigerade' ?></div>
+            </div>
+            <div class="stat-card" style="background: var(--color-bg-secondary); padding: var(--space-md); border-radius: var(--radius-md); text-align: center;">
+                <div style="font-size: var(--text-2xl); font-weight: 700;"><?= number_format($stats['no_season_data']) ?></div>
+                <div style="font-size: var(--text-sm); color: var(--color-text-secondary);">Saknar säsongsdata</div>
+            </div>
+        </div>
+
+        <?php if (!empty($stats['details'])): ?>
+        <h4>Detaljerade ändringar (visar max 100)</h4>
+        <div class="admin-table-container">
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>Åkare</th>
+                        <th>Tävling</th>
+                        <th>Datum</th>
+                        <th>Från klubb</th>
+                        <th>Till klubb</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($stats['details'] as $detail): ?>
+                    <tr>
+                        <td>
+                            <a href="/rider/<?= $detail['rider_id'] ?>">
+                                <?= htmlspecialchars($detail['rider']) ?>
+                            </a>
+                        </td>
+                        <td><?= htmlspecialchars($detail['event']) ?></td>
+                        <td><?= $detail['event_date'] ?></td>
+                        <td><?= htmlspecialchars($detail['old_club']) ?></td>
+                        <td><strong><?= htmlspecialchars($detail['new_club']) ?></strong></td>
+                    </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+        <?php if ($stats['fixed'] > 100): ?>
+        <p class="text-secondary">...och <?= $stats['fixed'] - 100 ?> fler</p>
+        <?php endif; ?>
+        <?php endif; ?>
+    </div>
+</div>
+<?php endif; ?>
+
+<?php include __DIR__ . '/components/unified-layout-footer.php'; ?>
