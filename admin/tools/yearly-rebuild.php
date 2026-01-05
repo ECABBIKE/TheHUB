@@ -263,7 +263,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     try {
                         if ($clubId) {
                             // Has club - insert/update and LOCK for this year
-                            $db->execute("
+                            $db->query("
                                 INSERT INTO rider_club_seasons (rider_id, club_id, season_year, locked)
                                 VALUES (?, ?, ?, 1)
                                 ON DUPLICATE KEY UPDATE club_id = VALUES(club_id), locked = 1
@@ -271,7 +271,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             $clubsLocked++;
                         } else {
                             // No club in import - DELETE this year's affiliation
-                            $result = $db->execute("
+                            $result = $db->query("
                                 DELETE FROM rider_club_seasons
                                 WHERE rider_id = ? AND season_year = ?
                             ", [$rider['id'], $selectedYear]);
@@ -333,7 +333,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // =========================================================================
     if ($action === 'lock_clubs') {
         try {
-            $db->execute("
+            $db->query("
                 UPDATE rider_club_seasons
                 SET locked = 1
                 WHERE season_year = ?
@@ -366,10 +366,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $placeholders = implode(',', array_fill(0, count($eventIdList), '?'));
 
                 // Delete series_results for these events
-                $db->execute("DELETE FROM series_results WHERE event_id IN ($placeholders)", $eventIdList);
+                $db->query("DELETE FROM series_results WHERE event_id IN ($placeholders)", $eventIdList);
 
                 // Delete results
-                $deleted = $db->execute("DELETE FROM results WHERE event_id IN ($placeholders)", $eventIdList);
+                $db->query("DELETE FROM results WHERE event_id IN ($placeholders)", $eventIdList);
 
                 $message = "Raderade resultat för " . count($eventIdList) . " event i $selectedYear";
                 $messageType = 'success';
