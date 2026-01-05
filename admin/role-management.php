@@ -16,8 +16,16 @@ $currentAdmin = getCurrentAdmin();
 $message = '';
 $messageType = '';
 
+// Check if tables exist before handling actions
+$canProcess = true;
+try {
+    $db->getRow("SELECT 1 FROM rider_profiles LIMIT 1");
+} catch (Exception $e) {
+    $canProcess = false;
+}
+
 // Handle actions
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $canProcess) {
     $action = $_POST['action'] ?? '';
 
     if ($action === 'add') {
@@ -96,20 +104,51 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 // Get current promotors
-$promotors = $db->getAll("
-    SELECT
-        r.id as rider_id,
-        r.firstname,
-        r.lastname,
-        c.name as club_name,
-        (SELECT COUNT(*) FROM promotor_events pe WHERE pe.user_id = au.id) as event_count
-    FROM riders r
-    JOIN rider_profiles rp ON r.id = rp.rider_id
-    JOIN admin_users au ON rp.user_id = au.id
-    LEFT JOIN clubs c ON r.club_id = c.id
-    WHERE au.role = 'promotor'
-    ORDER BY r.lastname, r.firstname
-");
+$promotors = [];
+$tablesExist = true;
+try {
+    // Check if rider_profiles table exists
+    $db->getRow("SELECT 1 FROM rider_profiles LIMIT 1");
+} catch (Exception $e) {
+    $tablesExist = false;
+    $message = 'Tabellen rider_profiles saknas. Kör migration 093 först.';
+    $messageType = 'error';
+}
+
+if ($tablesExist) {
+    try {
+        $promotors = $db->getAll("
+            SELECT
+                r.id as rider_id,
+                r.firstname,
+                r.lastname,
+                c.name as club_name,
+                (SELECT COUNT(*) FROM promotor_events pe WHERE pe.user_id = au.id) as event_count
+            FROM riders r
+            JOIN rider_profiles rp ON r.id = rp.rider_id
+            JOIN admin_users au ON rp.user_id = au.id
+            LEFT JOIN clubs c ON r.club_id = c.id
+            WHERE au.role = 'promotor'
+            ORDER BY r.lastname, r.firstname
+        ");
+    } catch (Exception $e) {
+        // promotor_events might not exist
+        $promotors = $db->getAll("
+            SELECT
+                r.id as rider_id,
+                r.firstname,
+                r.lastname,
+                c.name as club_name,
+                0 as event_count
+            FROM riders r
+            JOIN rider_profiles rp ON r.id = rp.rider_id
+            JOIN admin_users au ON rp.user_id = au.id
+            LEFT JOIN clubs c ON r.club_id = c.id
+            WHERE au.role = 'promotor'
+            ORDER BY r.lastname, r.firstname
+        ");
+    }
+}
 
 $page_title = 'Promotörer';
 $breadcrumbs = [['label' => 'Användare', 'url' => '/admin/users.php'], ['label' => 'Promotörer']];

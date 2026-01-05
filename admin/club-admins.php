@@ -16,8 +16,17 @@ $currentAdmin = getCurrentAdmin();
 $message = '';
 $messageType = '';
 
+// Check if tables exist
+$tablesExist = true;
+try {
+    $db->getRow("SELECT 1 FROM rider_profiles LIMIT 1");
+    $db->getRow("SELECT 1 FROM club_admins LIMIT 1");
+} catch (Exception $e) {
+    $tablesExist = false;
+}
+
 // Handle actions
-if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && $tablesExist) {
     $action = $_POST['action'] ?? '';
 
     if ($action === 'add') {
@@ -96,19 +105,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 // Get current club admins
-$clubAdmins = $db->getAll("
-    SELECT
-        ca.id,
-        r.firstname,
-        r.lastname,
-        c.name as club_name
-    FROM club_admins ca
-    JOIN admin_users au ON ca.user_id = au.id
-    JOIN rider_profiles rp ON au.id = rp.user_id
-    JOIN riders r ON rp.rider_id = r.id
-    JOIN clubs c ON ca.club_id = c.id
-    ORDER BY c.name, r.lastname
-");
+$clubAdmins = [];
+if (!$tablesExist) {
+    $message = 'Tabellerna rider_profiles och/eller club_admins saknas. Kör migrationer 091 och 093 först.';
+    $messageType = 'error';
+} else {
+    $clubAdmins = $db->getAll("
+        SELECT
+            ca.id,
+            r.firstname,
+            r.lastname,
+            c.name as club_name
+        FROM club_admins ca
+        JOIN admin_users au ON ca.user_id = au.id
+        JOIN rider_profiles rp ON au.id = rp.user_id
+        JOIN riders r ON rp.rider_id = r.id
+        JOIN clubs c ON ca.club_id = c.id
+        ORDER BY c.name, r.lastname
+    ");
+}
 
 $page_title = 'Klubb-admin';
 $breadcrumbs = [['label' => 'Användare', 'url' => '/admin/users.php'], ['label' => 'Klubb-admin']];
