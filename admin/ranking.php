@@ -193,6 +193,7 @@ $missingEvents = $db->getAll("
         END as issue
     FROM events e
     WHERE e.date >= ?
+    AND e.date <= CURDATE()
     AND e.id NOT IN (
         SELECT DISTINCT e2.id
         FROM events e2
