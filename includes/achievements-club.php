@@ -193,31 +193,8 @@ function getClubDetailedAchievements(PDO $pdo, int $club_id): array {
             ];
         }
 
-        // Unique champions (for the "Mästare" badge)
-        $stmt = $pdo->prepare("
-            SELECT
-                r.id as rider_id,
-                r.firstname,
-                r.lastname,
-                COUNT(*) as wins,
-                GROUP_CONCAT(DISTINCT ra.season_year ORDER BY ra.season_year DESC SEPARATOR ', ') as years
-            FROM rider_achievements ra
-            JOIN riders r ON ra.rider_id = r.id
-            WHERE r.club_id = ?
-            AND ra.achievement_type = 'series_champion'
-            GROUP BY r.id
-            ORDER BY wins DESC, r.lastname ASC
-        ");
-        $stmt->execute([$club_id]);
-        $champions = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-        if (!empty($champions)) {
-            $achievements['unique_champions'] = [
-                'label' => 'Seriemästare',
-                'count' => count($champions),
-                'items' => $champions
-            ];
-        }
+        // Unique champions (for the "Mästare" badge) - removed from modal as it duplicates series_champion
+        // The badge still shows count of unique champions, but clicking opens series_champion list instead
 
     } catch (PDOException $e) {
         // Silently fail
@@ -889,14 +866,14 @@ function renderClubAchievements(PDO $pdo, int $club_id, array $stats = null): st
                 <span class="badge-label">Ranking</span>
             </div>
 
-            <!-- Mästare i klubben -->
-            <div class="badge-item<?= $stats['unique_champions'] === 0 ? ' locked' : '' ?><?= $stats['unique_champions'] > 0 ? ' clickable' : '' ?>"
-                 data-tooltip="<?= $stats['unique_champions'] > 0 ? htmlspecialchars(implode(', ', $stats['champion_names'])) : 'Unika seriemästare från klubben' ?>"
-                 data-achievement="unique_champions"
-                 data-label="Seriemästare">
+            <!-- Seriesegrar i klubben -->
+            <div class="badge-item<?= $stats['series_wins'] === 0 ? ' locked' : '' ?><?= $stats['series_wins'] > 0 ? ' clickable' : '' ?>"
+                 data-tooltip="<?= $stats['series_wins'] > 0 ? htmlspecialchars(implode(', ', $stats['champion_names'])) : 'Seriesegrar från klubben' ?>"
+                 data-achievement="series_champion"
+                 data-label="Seriesegrar">
                 <?= renderClubChampionsBadge() ?>
-                <span class="badge-value<?= $stats['unique_champions'] === 0 ? ' empty' : '' ?>"><?= $stats['unique_champions'] > 0 ? $stats['unique_champions'] : '–' ?></span>
-                <span class="badge-label">Mästare</span>
+                <span class="badge-value<?= $stats['series_wins'] === 0 ? ' empty' : '' ?>"><?= $stats['series_wins'] > 0 ? $stats['series_wins'] : '–' ?></span>
+                <span class="badge-label">Seriesegrar</span>
             </div>
         </div>
     </div>
@@ -991,10 +968,10 @@ function getClubAchievementDefinitions(): array {
                     'svg_function' => 'renderClubRankingBadge'
                 ],
                 [
-                    'id' => 'unique_champions',
-                    'name' => 'Mästare i Klubben',
-                    'requirement' => 'Antal unika seriemästare från klubben',
-                    'description' => 'Räknar hur många olika personer som vunnit en serie för klubben. Visar namn på hover.',
+                    'id' => 'series_champion',
+                    'name' => 'Seriesegrar',
+                    'requirement' => 'Antal seriesegrar från klubbens medlemmar',
+                    'description' => 'Räknar totalt antal seriesegrar som klubbens medlemmar tagit.',
                     'has_counter' => true,
                     'accent' => '#FFE009',
                     'svg_function' => 'renderClubChampionsBadge'
