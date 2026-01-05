@@ -78,6 +78,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $message = 'Ett fel uppstod: ' . $e->getMessage();
             $messageType = 'error';
         }
+    } elseif ($action === 'delete_empty') {
+        // Delete all classes with 0 results
+        try {
+            $emptyClasses = $db->getAll("
+                SELECT c.id, c.display_name
+                FROM classes c
+                LEFT JOIN results r ON c.id = r.class_id
+                GROUP BY c.id
+                HAVING COUNT(r.id) = 0
+            ");
+
+            $deletedCount = 0;
+            foreach ($emptyClasses as $class) {
+                $db->delete('classes', 'id = ?', [$class['id']]);
+                $deletedCount++;
+            }
+
+            $message = $deletedCount > 0
+                ? "{$deletedCount} tomma klasser borttagna!"
+                : 'Inga tomma klasser hittades.';
+            $messageType = $deletedCount > 0 ? 'success' : 'info';
+        } catch (Exception $e) {
+            $message = 'Ett fel uppstod: ' . $e->getMessage();
+            $messageType = 'error';
+        }
     }
 }
 
@@ -133,6 +158,17 @@ ORDER BY c.sort_order ASC, c.name ASC";
 
 $classes = $db->getAll($sql, $params);
 
+// Count empty classes (no results)
+$emptyClassCount = $db->getRow("
+    SELECT COUNT(*) as cnt FROM (
+        SELECT c.id
+        FROM classes c
+        LEFT JOIN results r ON c.id = r.class_id
+        GROUP BY c.id
+        HAVING COUNT(r.id) = 0
+    ) as empty_classes
+")['cnt'] ?? 0;
+
 // Get disciplines for filter
 $disciplinesList = $db->getAll("SELECT DISTINCT discipline FROM classes WHERE discipline IS NOT NULL AND discipline != '' ORDER BY discipline");
 
@@ -145,7 +181,14 @@ try {
 // Page config
 $page_title = 'Klasser';
 $breadcrumbs = [['label' => 'Klasser']];
-$page_actions = '<a href="/admin/import/classes" class="btn-admin btn-admin-secondary">
+$page_actions = '';
+if ($emptyClassCount > 0) {
+    $page_actions .= '<button onclick="deleteEmptyClasses()" class="btn-admin btn-admin-danger">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+        Ta bort tomma (' . $emptyClassCount . ')
+    </button>';
+}
+$page_actions .= '<a href="/admin/import/classes" class="btn-admin btn-admin-secondary">
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
     Importera CSV
 </a>
@@ -474,6 +517,17 @@ function deleteClass(id, name) {
     form.method = 'POST';
     form.innerHTML = '<input type="hidden" name="action" value="delete">' +
                      '<input type="hidden" name="id" value="' + id + '">' +
+                     '<input type="hidden" name="csrf_token" value="' + csrfToken + '">';
+    document.body.appendChild(form);
+    form.submit();
+}
+
+function deleteEmptyClasses() {
+    if (!confirm('Är du säker på att du vill ta bort alla klasser utan deltagare?')) return;
+
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.innerHTML = '<input type="hidden" name="action" value="delete_empty">' +
                      '<input type="hidden" name="csrf_token" value="' + csrfToken + '">';
     document.body.appendChild(form);
     form.submit();

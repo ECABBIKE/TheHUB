@@ -864,13 +864,28 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
                     $classId = $classCache[$originalClassName];
                 } else {
                     // No user mapping - apply automatic normalization
+                    // Maps common class name variants to canonical names
                     $classNameMappings = [
-                        'tävling damer' => 'Damer Elit',
+                        // Herrar Elit variants
                         'tävling herrar' => 'Herrar Elit',
-                        'tavling damer' => 'Damer Elit',
                         'tavling herrar' => 'Herrar Elit',
+                        'herrar tävling' => 'Herrar Elit',
+                        'herrar tavling' => 'Herrar Elit',
+                        'elit herrar' => 'Herrar Elit',
+                        'herr elit' => 'Herrar Elit',
+                        'elite men' => 'Herrar Elit',
+                        'men elite' => 'Herrar Elit',
+                        // Damer Elit variants
+                        'tävling damer' => 'Damer Elit',
+                        'tavling damer' => 'Damer Elit',
+                        'damer tävling' => 'Damer Elit',
+                        'damer tavling' => 'Damer Elit',
+                        'elit damer' => 'Damer Elit',
+                        'dam elit' => 'Damer Elit',
+                        'elite women' => 'Damer Elit',
+                        'women elite' => 'Damer Elit',
                     ];
-                    $normalizedClassName = strtolower($className);
+                    $normalizedClassName = strtolower(trim($className));
                     if (isset($classNameMappings[$normalizedClassName])) {
                         $className = $classNameMappings[$normalizedClassName];
                     }
