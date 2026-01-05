@@ -15,142 +15,124 @@ if (!hasRole('admin')) {
 }
 
 $db = getDB();
+$pdo = $GLOBALS['pdo'];
 $currentAdmin = getCurrentAdmin();
 $message = '';
 $messageType = '';
 
-// Check if tables exist before handling actions
-$canProcess = true;
-try {
-    $db->getRow("SELECT 1 FROM rider_profiles LIMIT 1");
-} catch (Exception $e) {
-    $canProcess = false;
-}
-
 // Handle actions
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && $canProcess) {
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = $_POST['action'] ?? '';
 
     if ($action === 'add') {
         $riderId = (int)($_POST['rider_id'] ?? 0);
 
         if ($riderId) {
-            $rider = $db->getRow("
-                SELECT r.id, r.firstname, r.lastname, r.email, r.password, c.name as club_name
-                FROM riders r
-                LEFT JOIN clubs c ON r.club_id = c.id
-                WHERE r.id = ? AND r.password IS NOT NULL
-            ", [$riderId]);
+            try {
+                // Get rider info
+                $stmt = $pdo->prepare("
+                    SELECT r.id, r.firstname, r.lastname, r.email, r.password, c.name as club_name
+                    FROM riders r
+                    LEFT JOIN clubs c ON r.club_id = c.id
+                    WHERE r.id = ? AND r.password IS NOT NULL AND r.password != ''
+                ");
+                $stmt->execute([$riderId]);
+                $rider = $stmt->fetch(PDO::FETCH_ASSOC);
 
-            if (!$rider) {
-                $message = 'Rider hittades inte eller har inte aktiverat konto';
-                $messageType = 'error';
-            } else {
-                // Get or create user account
-                $userLink = $db->getRow("
-                    SELECT rp.user_id, au.role FROM rider_profiles rp
-                    JOIN admin_users au ON rp.user_id = au.id
-                    WHERE rp.rider_id = ?
-                ", [$riderId]);
+                if (!$rider) {
+                    $message = 'Rider hittades inte eller har inte aktiverat konto';
+                    $messageType = 'error';
+                } else {
+                    // Check if rider already has admin account
+                    $stmt = $pdo->prepare("
+                        SELECT au.id, au.role
+                        FROM admin_users au
+                        WHERE au.email = ?
+                    ");
+                    $stmt->execute([$rider['email']]);
+                    $existingUser = $stmt->fetch(PDO::FETCH_ASSOC);
 
-                if ($userLink) {
-                    if ($userLink['role'] === 'promotor') {
-                        $message = $rider['firstname'] . ' ' . $rider['lastname'] . ' är redan promotör';
-                        $messageType = 'warning';
+                    if ($existingUser) {
+                        if ($existingUser['role'] === 'promotor') {
+                            $message = $rider['firstname'] . ' ' . $rider['lastname'] . ' är redan promotör';
+                            $messageType = 'warning';
+                        } else {
+                            $stmt = $pdo->prepare("UPDATE admin_users SET role = 'promotor' WHERE id = ?");
+                            $stmt->execute([$existingUser['id']]);
+                            $message = $rider['firstname'] . ' ' . $rider['lastname'] . ' är nu promotör';
+                            $messageType = 'success';
+                        }
                     } else {
-                        $db->execute("UPDATE admin_users SET role = 'promotor' WHERE id = ?", [$userLink['user_id']]);
+                        // Create new admin user
+                        $username = strtolower(preg_replace('/[^a-z0-9]/', '', $rider['firstname'] . $rider['lastname']));
+                        $counter = 1;
+                        $baseUsername = $username ?: 'user';
+
+                        // Check for unique username
+                        $stmt = $pdo->prepare("SELECT id FROM admin_users WHERE username = ?");
+                        $stmt->execute([$username]);
+                        while ($stmt->fetch()) {
+                            $username = $baseUsername . $counter++;
+                            $stmt->execute([$username]);
+                        }
+
+                        $stmt = $pdo->prepare("
+                            INSERT INTO admin_users (username, email, full_name, role, active, created_at)
+                            VALUES (?, ?, ?, 'promotor', 1, NOW())
+                        ");
+                        $stmt->execute([$username, $rider['email'], $rider['firstname'] . ' ' . $rider['lastname']]);
+
                         $message = $rider['firstname'] . ' ' . $rider['lastname'] . ' är nu promotör';
                         $messageType = 'success';
                     }
-                } else {
-                    // Create user account
-                    $username = strtolower(preg_replace('/[^a-z0-9]/', '', $rider['firstname'] . $rider['lastname']));
-                    $counter = 1;
-                    $baseUsername = $username;
-                    while ($db->getRow("SELECT id FROM admin_users WHERE username = ?", [$username])) {
-                        $username = $baseUsername . $counter++;
-                    }
-
-                    $db->execute("
-                        INSERT INTO admin_users (username, email, full_name, role, active, created_at)
-                        VALUES (?, ?, ?, 'promotor', 1, NOW())
-                    ", [$username, $rider['email'], $rider['firstname'] . ' ' . $rider['lastname']]);
-                    $userId = $db->lastInsertId();
-
-                    $db->execute("
-                        INSERT INTO rider_profiles (user_id, rider_id, is_primary, created_at)
-                        VALUES (?, ?, 1, NOW())
-                    ", [$userId, $riderId]);
-
-                    $message = $rider['firstname'] . ' ' . $rider['lastname'] . ' är nu promotör';
-                    $messageType = 'success';
                 }
+            } catch (Exception $e) {
+                $message = 'Fel: ' . $e->getMessage();
+                $messageType = 'error';
             }
         }
     } elseif ($action === 'remove') {
-        $riderId = (int)($_POST['rider_id'] ?? 0);
-        if ($riderId) {
-            $link = $db->getRow("
-                SELECT rp.user_id FROM rider_profiles rp
-                JOIN admin_users au ON rp.user_id = au.id
-                WHERE rp.rider_id = ?
-            ", [$riderId]);
+        $userId = (int)($_POST['user_id'] ?? 0);
+        if ($userId) {
+            try {
+                $stmt = $pdo->prepare("UPDATE admin_users SET role = 'rider' WHERE id = ?");
+                $stmt->execute([$userId]);
 
-            if ($link) {
-                $db->execute("UPDATE admin_users SET role = 'rider' WHERE id = ?", [$link['user_id']]);
-                $db->execute("DELETE FROM promotor_events WHERE user_id = ?", [$link['user_id']]);
+                // Try to delete from promotor_events if table exists
+                try {
+                    $stmt = $pdo->prepare("DELETE FROM promotor_events WHERE user_id = ?");
+                    $stmt->execute([$userId]);
+                } catch (Exception $e) {
+                    // Table might not exist, ignore
+                }
+
                 $message = 'Promotör-rollen borttagen';
                 $messageType = 'success';
+            } catch (Exception $e) {
+                $message = 'Fel: ' . $e->getMessage();
+                $messageType = 'error';
             }
         }
     }
 }
 
-// Get current promotors
+// Get current promotors - just from admin_users table
 $promotors = [];
-$tablesExist = true;
 try {
-    // Check if rider_profiles table exists
-    $db->getRow("SELECT 1 FROM rider_profiles LIMIT 1");
+    $stmt = $pdo->query("
+        SELECT
+            au.id as user_id,
+            au.full_name,
+            au.email,
+            au.username
+        FROM admin_users au
+        WHERE au.role = 'promotor' AND au.active = 1
+        ORDER BY au.full_name
+    ");
+    $promotors = $stmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (Exception $e) {
-    $tablesExist = false;
-    $message = 'Tabellen rider_profiles saknas. Kör migration 093 först.';
+    $message = 'Kunde inte hämta promotörer: ' . $e->getMessage();
     $messageType = 'error';
-}
-
-if ($tablesExist) {
-    try {
-        $promotors = $db->getAll("
-            SELECT
-                r.id as rider_id,
-                r.firstname,
-                r.lastname,
-                c.name as club_name,
-                (SELECT COUNT(*) FROM promotor_events pe WHERE pe.user_id = au.id) as event_count
-            FROM riders r
-            JOIN rider_profiles rp ON r.id = rp.rider_id
-            JOIN admin_users au ON rp.user_id = au.id
-            LEFT JOIN clubs c ON r.club_id = c.id
-            WHERE au.role = 'promotor'
-            ORDER BY r.lastname, r.firstname
-        ");
-    } catch (Exception $e) {
-        // promotor_events might not exist
-        $promotors = $db->getAll("
-            SELECT
-                r.id as rider_id,
-                r.firstname,
-                r.lastname,
-                c.name as club_name,
-                0 as event_count
-            FROM riders r
-            JOIN rider_profiles rp ON r.id = rp.rider_id
-            JOIN admin_users au ON rp.user_id = au.id
-            LEFT JOIN clubs c ON r.club_id = c.id
-            WHERE au.role = 'promotor'
-            ORDER BY r.lastname, r.firstname
-        ");
-    }
 }
 
 $page_title = 'Promotörer';
@@ -201,15 +183,12 @@ include __DIR__ . '/components/unified-layout.php';
                 <?php foreach ($promotors as $p): ?>
                 <div class="admin-row">
                     <div class="admin-info">
-                        <strong><?= h($p['firstname'] . ' ' . $p['lastname']) ?></strong>
-                        <span class="text-secondary"><?= h($p['club_name'] ?: 'Ingen klubb') ?></span>
-                        <?php if ($p['event_count'] > 0): ?>
-                            <span class="badge badge-sm"><?= $p['event_count'] ?> events</span>
-                        <?php endif; ?>
+                        <strong><?= h($p['full_name'] ?: $p['username']) ?></strong>
+                        <span class="text-secondary"><?= h($p['email']) ?></span>
                     </div>
                     <form method="POST" onsubmit="return confirm('Ta bort promotör-rollen?')">
                         <input type="hidden" name="action" value="remove">
-                        <input type="hidden" name="rider_id" value="<?= $p['rider_id'] ?>">
+                        <input type="hidden" name="user_id" value="<?= $p['user_id'] ?>">
                         <button class="btn btn--danger btn--sm"><i data-lucide="x"></i></button>
                     </form>
                 </div>

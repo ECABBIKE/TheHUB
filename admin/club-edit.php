@@ -632,7 +632,7 @@ include __DIR__ . '/components/unified-layout.php';
     <?= $isNew ? 'Skapa klubb' : 'Spara ändringar' ?>
     </button>
     <?php if (!$isNew): ?>
-    <a href="/club.php?id=<?= $id ?>" target="_blank" class="btn btn--secondary w-full mb-sm">
+    <a href="/club/<?= $id ?>" target="_blank" class="btn btn--secondary w-full mb-sm">
     <i data-lucide="eye"></i>
     Visa publik sida
     </a>
