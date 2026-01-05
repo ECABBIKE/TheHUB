@@ -14,7 +14,8 @@ require_once HUB_V3_ROOT . '/components/icons.php';
 
 $isLoggedIn = hub_is_logged_in();
 
-// Only fetch data if user is logged in
+// Always fetch data - page looks the same for all visitors
+$pdo = hub_db();
 $riderCount = 0;
 $clubCount = 0;
 $eventCount = 0;
@@ -23,79 +24,75 @@ $upcomingEnduro = [];
 $upcomingDH = [];
 $recentResults = [];
 
-if ($isLoggedIn) {
-    $pdo = hub_db();
+// Load filter setting from admin configuration
+$publicSettings = @include(HUB_V3_ROOT . '/config/public_settings.php');
+$filter = $publicSettings['public_riders_display'] ?? 'all';
 
-    // Load filter setting from admin configuration
-    $publicSettings = @include(HUB_V3_ROOT . '/config/public_settings.php');
-    $filter = $publicSettings['public_riders_display'] ?? 'all';
-
-    // Get current statistics
-    try {
-        // Total riders - respects admin filter setting
-        if ($filter === 'with_results') {
-            $riderCount = $pdo->query("
-                SELECT COUNT(DISTINCT r.id)
-                FROM riders r
-                INNER JOIN results res ON r.id = res.cyclist_id
-            ")->fetchColumn();
-
-            $clubCount = $pdo->query("
-                SELECT COUNT(DISTINCT c.id)
-                FROM clubs c
-                INNER JOIN riders r ON c.id = r.club_id
-                INNER JOIN results res ON r.id = res.cyclist_id
-            ")->fetchColumn();
-        } else {
-            $riderCount = $pdo->query("SELECT COUNT(*) FROM riders WHERE active = 1")->fetchColumn();
-            $clubCount = $pdo->query("SELECT COUNT(*) FROM clubs")->fetchColumn();
-        }
-
-        // Total events with results
-        $eventCount = $pdo->query("
-            SELECT COUNT(DISTINCT e.id)
-            FROM events e
-            INNER JOIN results r ON e.id = r.event_id
+// Get current statistics
+try {
+    // Total riders - respects admin filter setting
+    if ($filter === 'with_results') {
+        $riderCount = $pdo->query("
+            SELECT COUNT(DISTINCT r.id)
+            FROM riders r
+            INNER JOIN results res ON r.id = res.cyclist_id
         ")->fetchColumn();
 
-        // Active series
-        $seriesCount = $pdo->query("SELECT COUNT(*) FROM series WHERE status = 'active'")->fetchColumn();
-
-        // Upcoming Enduro events
-        $upcomingEnduro = $pdo->query("
-            SELECT e.id, e.name, e.date, e.location, s.name as series_name
-            FROM events e
-            LEFT JOIN series s ON e.series_id = s.id
-            WHERE e.date >= CURDATE() AND e.active = 1 AND e.discipline = 'ENDURO'
-            ORDER BY e.date ASC
-            LIMIT 3
-        ")->fetchAll(PDO::FETCH_ASSOC);
-
-        // Upcoming Downhill events
-        $upcomingDH = $pdo->query("
-            SELECT e.id, e.name, e.date, e.location, s.name as series_name
-            FROM events e
-            LEFT JOIN series s ON e.series_id = s.id
-            WHERE e.date >= CURDATE() AND e.active = 1 AND e.discipline = 'DH'
-            ORDER BY e.date ASC
-            LIMIT 3
-        ")->fetchAll(PDO::FETCH_ASSOC);
-
-        // Recent results (events with results from last 30 days)
-        $recentResults = $pdo->query("
-            SELECT e.id, e.name, e.date, e.location,
-                   COUNT(DISTINCT r.cyclist_id) as participant_count
-            FROM events e
-            INNER JOIN results r ON e.id = r.event_id
-            WHERE e.date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
-            GROUP BY e.id
-            ORDER BY e.date DESC
-            LIMIT 3
-        ")->fetchAll(PDO::FETCH_ASSOC);
-
-    } catch (Exception $e) {
-        // Keep defaults on error
+        $clubCount = $pdo->query("
+            SELECT COUNT(DISTINCT c.id)
+            FROM clubs c
+            INNER JOIN riders r ON c.id = r.club_id
+            INNER JOIN results res ON r.id = res.cyclist_id
+        ")->fetchColumn();
+    } else {
+        $riderCount = $pdo->query("SELECT COUNT(*) FROM riders WHERE active = 1")->fetchColumn();
+        $clubCount = $pdo->query("SELECT COUNT(*) FROM clubs")->fetchColumn();
     }
+
+    // Total events with results
+    $eventCount = $pdo->query("
+        SELECT COUNT(DISTINCT e.id)
+        FROM events e
+        INNER JOIN results r ON e.id = r.event_id
+    ")->fetchColumn();
+
+    // Active series
+    $seriesCount = $pdo->query("SELECT COUNT(*) FROM series WHERE status = 'active'")->fetchColumn();
+
+    // Upcoming Enduro events
+    $upcomingEnduro = $pdo->query("
+        SELECT e.id, e.name, e.date, e.location, s.name as series_name
+        FROM events e
+        LEFT JOIN series s ON e.series_id = s.id
+        WHERE e.date >= CURDATE() AND e.active = 1 AND e.discipline = 'ENDURO'
+        ORDER BY e.date ASC
+        LIMIT 3
+    ")->fetchAll(PDO::FETCH_ASSOC);
+
+    // Upcoming Downhill events
+    $upcomingDH = $pdo->query("
+        SELECT e.id, e.name, e.date, e.location, s.name as series_name
+        FROM events e
+        LEFT JOIN series s ON e.series_id = s.id
+        WHERE e.date >= CURDATE() AND e.active = 1 AND e.discipline = 'DH'
+        ORDER BY e.date ASC
+        LIMIT 3
+    ")->fetchAll(PDO::FETCH_ASSOC);
+
+    // Recent results (events with results from last 30 days)
+    $recentResults = $pdo->query("
+        SELECT e.id, e.name, e.date, e.location,
+               COUNT(DISTINCT r.cyclist_id) as participant_count
+        FROM events e
+        INNER JOIN results r ON e.id = r.event_id
+        WHERE e.date >= DATE_SUB(CURDATE(), INTERVAL 30 DAY)
+        GROUP BY e.id
+        ORDER BY e.date DESC
+        LIMIT 3
+    ")->fetchAll(PDO::FETCH_ASSOC);
+
+} catch (Exception $e) {
+    // Keep defaults on error
 }
 ?>
 
@@ -129,8 +126,7 @@ $homepageLogo = getBranding('logos.homepage');
         <p class="welcome-about-desc">Här hittar du kalender, resultat, serieställningar, ranking och databas över åkare och klubbar.</p>
     </div>
 
-    <?php if ($isLoggedIn): ?>
-    <!-- Stats Row - Only for logged in users -->
+    <!-- Stats Row -->
     <div class="welcome-stats">
         <div class="welcome-stat">
             <span class="stat-value"><?= number_format($riderCount) ?></span>
@@ -149,7 +145,6 @@ $homepageLogo = getBranding('logos.homepage');
             <span class="stat-label">Serier</span>
         </div>
     </div>
-    <?php endif; ?>
 
     <!-- Navigation Grid -->
     <div class="welcome-nav-grid">
