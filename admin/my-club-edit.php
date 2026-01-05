@@ -409,7 +409,7 @@ include __DIR__ . '/components/unified-layout.php';
                         Spara ändringar
                     </button>
                     <?php endif; ?>
-                    <a href="/club.php?id=<?= $id ?>" target="_blank" class="btn btn--secondary w-full mb-sm">
+                    <a href="/club/<?= $id ?>" target="_blank" class="btn btn--secondary w-full mb-sm">
                         <i data-lucide="eye"></i>
                         Visa publik sida
                     </a>
