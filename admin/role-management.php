@@ -3,6 +3,9 @@
  * Promotor Management - Simple search tool
  * Search activated rider → Make them promotor
  */
+ini_set('display_errors', 1);
+error_reporting(E_ALL);
+
 require_once __DIR__ . '/../config.php';
 require_admin();
 
