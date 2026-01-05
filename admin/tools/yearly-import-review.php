@@ -22,7 +22,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $year = (int)$_POST['year'];
 
         // Lock all rider_club_seasons for this year
-        $locked = $db->execute("UPDATE rider_club_seasons SET locked = 1 WHERE season_year = ?", [$year]);
+        $locked = $db->query("UPDATE rider_club_seasons SET locked = 1 WHERE season_year = ?", [$year]);
 
         $message = "Säsong $year låst - klubbtillhörigheter kan inte längre ändras";
         $messageType = 'success';
@@ -33,7 +33,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         // Rebuild rider_club_seasons from results for this year
         // First, get all unique rider+club combinations from results this year
-        $db->execute("
+        $db->query("
             INSERT INTO rider_club_seasons (rider_id, club_id, season_year, locked)
             SELECT DISTINCT
                 r.cyclist_id,
