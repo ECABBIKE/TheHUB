@@ -17,8 +17,8 @@ $db = getDB();
 $message = '';
 $messageType = 'info';
 
-// Get selected year
-$selectedYear = isset($_GET['year']) ? (int)$_GET['year'] : (int)date('Y');
+// Get selected year (from GET or POST)
+$selectedYear = isset($_REQUEST['year']) ? (int)$_REQUEST['year'] : (int)date('Y');
 
 // Handle actions
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
@@ -382,6 +382,7 @@ $events = $db->getAll("
         <form method="POST" enctype="multipart/form-data">
             <?= csrf_field() ?>
             <input type="hidden" name="action" value="import_riders">
+            <input type="hidden" name="year" value="<?= $selectedYear ?>">
 
             <div class="form-group mb-md">
                 <label class="form-label">Välj CSV-fil (Förnamn, Efternamn, Klubb, UCI-ID)</label>
@@ -424,6 +425,7 @@ $events = $db->getAll("
         <form method="POST">
             <?= csrf_field() ?>
             <input type="hidden" name="action" value="lock_clubs">
+            <input type="hidden" name="year" value="<?= $selectedYear ?>">
 
             <button type="submit" class="btn btn--warning"
                     onclick="return confirm('Lås alla klubbtillhörigheter för <?= $selectedYear ?>?')">
@@ -460,6 +462,7 @@ $events = $db->getAll("
         <form method="POST">
             <?= csrf_field() ?>
             <input type="hidden" name="action" value="clear_results">
+            <input type="hidden" name="year" value="<?= $selectedYear ?>">
 
             <div class="form-group mb-md">
                 <label class="form-label">Skriv RENSA för att bekräfta:</label>
