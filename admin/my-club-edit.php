@@ -356,9 +356,9 @@ include __DIR__ . '/components/unified-layout.php';
                                 <label for="instagram" class="label">
                                     <i data-lucide="instagram" class="icon-sm"></i> Instagram
                                 </label>
-                                <input type="url" id="instagram" name="instagram" class="input"
+                                <input type="text" id="instagram" name="instagram" class="input"
                                        value="<?= h($club['instagram'] ?? '') ?>"
-                                       placeholder="https://instagram.com/..."
+                                       placeholder="@användarnamn"
                                        <?= !$perms['can_edit_profile'] ? 'disabled' : '' ?>>
                             </div>
                         </div>

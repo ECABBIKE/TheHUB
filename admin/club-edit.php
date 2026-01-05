@@ -584,12 +584,12 @@ include __DIR__ . '/components/unified-layout.php';
       Instagram
      </label>
      <input
-      type="url"
+      type="text"
       id="instagram"
       name="instagram"
       class="input"
       value="<?= h($club['instagram'] ?? '') ?>"
-      placeholder="https://instagram.com/..."
+      placeholder="@användarnamn"
      >
      </div>
     </div>
