@@ -7,6 +7,9 @@
  * 3. Clear all results for the year
  * 4. Re-import events one by one
  */
+ini_set('display_errors', 1);
+error_reporting(E_ALL);
+
 require_once __DIR__ . '/../../config.php';
 require_admin();
 
@@ -173,13 +176,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $skipped++;
                     }
 
-                    // Create/update rider_club_seasons for this year
+                    // Create/update rider_club_seasons for this year (optional - table might not exist)
                     if ($clubId) {
-                        $db->execute("
-                            INSERT INTO rider_club_seasons (rider_id, club_id, season_year, locked)
-                            VALUES (?, ?, ?, 0)
-                            ON DUPLICATE KEY UPDATE club_id = VALUES(club_id)
-                        ", [$rider['id'], $clubId, $selectedYear]);
+                        try {
+                            $db->execute("
+                                INSERT INTO rider_club_seasons (rider_id, club_id, season_year, locked)
+                                VALUES (?, ?, ?, 0)
+                                ON DUPLICATE KEY UPDATE club_id = VALUES(club_id)
+                            ", [$rider['id'], $clubId, $selectedYear]);
+                        } catch (Exception $e) {
+                            // Table might not exist, ignore
+                        }
                     }
                 } else {
                     // Create new rider
@@ -191,14 +198,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         'active' => 1
                     ]);
 
-                    // Create rider_club_seasons
-                    if ($clubId) {
-                        $db->insert('rider_club_seasons', [
-                            'rider_id' => $riderId,
-                            'club_id' => $clubId,
-                            'season_year' => $selectedYear,
-                            'locked' => 0
-                        ]);
+                    // Create rider_club_seasons (optional - table might not exist)
+                    if ($clubId && $riderId) {
+                        try {
+                            $db->insert('rider_club_seasons', [
+                                'rider_id' => $riderId,
+                                'club_id' => $clubId,
+                                'season_year' => $selectedYear,
+                                'locked' => 0
+                            ]);
+                        } catch (Exception $e) {
+                            // Table might not exist, ignore
+                        }
                     }
 
                     $imported++;
@@ -217,15 +228,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // STEP 2: Lock club affiliations
     // =========================================================================
     if ($action === 'lock_clubs') {
-        $locked = $db->execute("
-            UPDATE rider_club_seasons
-            SET locked = 1
-            WHERE season_year = ?
-        ", [$selectedYear]);
+        try {
+            $db->execute("
+                UPDATE rider_club_seasons
+                SET locked = 1
+                WHERE season_year = ?
+            ", [$selectedYear]);
 
-        $count = $db->getRow("SELECT COUNT(*) as cnt FROM rider_club_seasons WHERE season_year = ? AND locked = 1", [$selectedYear]);
-        $message = "{$count['cnt']} klubbtillhörigheter låsta för $selectedYear";
-        $messageType = 'success';
+            $count = $db->getRow("SELECT COUNT(*) as cnt FROM rider_club_seasons WHERE season_year = ? AND locked = 1", [$selectedYear]);
+            $message = "{$count['cnt']} klubbtillhörigheter låsta för $selectedYear";
+            $messageType = 'success';
+        } catch (Exception $e) {
+            $message = 'Tabellen rider_club_seasons finns inte. Kör migration 052 först.';
+            $messageType = 'error';
+        }
     }
 
     // =========================================================================
@@ -276,10 +292,24 @@ $years = $db->getAll("
 $yearStats = $db->getRow("
     SELECT
         (SELECT COUNT(*) FROM events WHERE YEAR(date) = ?) as event_count,
-        (SELECT COUNT(*) FROM results r JOIN events e ON r.event_id = e.id WHERE YEAR(e.date) = ?) as result_count,
-        (SELECT COUNT(*) FROM rider_club_seasons WHERE season_year = ?) as club_seasons,
-        (SELECT COUNT(*) FROM rider_club_seasons WHERE season_year = ? AND locked = 1) as locked_seasons
-", [$selectedYear, $selectedYear, $selectedYear, $selectedYear]);
+        (SELECT COUNT(*) FROM results r JOIN events e ON r.event_id = e.id WHERE YEAR(e.date) = ?) as result_count
+", [$selectedYear, $selectedYear]);
+
+// Try to get club seasons stats (table might not exist)
+try {
+    $clubSeasons = $db->getRow("
+        SELECT
+            COUNT(*) as club_seasons,
+            SUM(CASE WHEN locked = 1 THEN 1 ELSE 0 END) as locked_seasons
+        FROM rider_club_seasons
+        WHERE season_year = ?
+    ", [$selectedYear]);
+    $yearStats['club_seasons'] = $clubSeasons['club_seasons'] ?? 0;
+    $yearStats['locked_seasons'] = $clubSeasons['locked_seasons'] ?? 0;
+} catch (Exception $e) {
+    $yearStats['club_seasons'] = 0;
+    $yearStats['locked_seasons'] = 0;
+}
 
 // Get events for this year
 $events = $db->getAll("
