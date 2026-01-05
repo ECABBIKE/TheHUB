@@ -1,4 +1,5 @@
 <?php
+echo "START"; exit;
 /**
  * Promotor Management - Simple search tool
  * Search activated rider → Make them promotor
