@@ -126,18 +126,26 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $tableExists) {
 $clubAdmins = [];
 if ($tableExists) {
     try {
-        $stmt = $pdo->query("
-            SELECT
-                ca.id,
-                au.full_name,
-                au.email,
-                c.name as club_name
-            FROM club_admins ca
-            JOIN admin_users au ON ca.user_id = au.id
-            JOIN clubs c ON ca.club_id = c.id
-            ORDER BY c.name, au.full_name
-        ");
-        $clubAdmins = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        // First check if table has correct columns
+        $cols = $pdo->query("DESCRIBE club_admins")->fetchAll(PDO::FETCH_COLUMN);
+        if (!in_array('user_id', $cols)) {
+            // Table has wrong structure - need to recreate
+            $message = 'Tabellen club_admins har fel struktur. Kör: DROP TABLE club_admins; och sedan migration 091 igen.';
+            $messageType = 'error';
+        } else {
+            $stmt = $pdo->query("
+                SELECT
+                    ca.id,
+                    au.full_name,
+                    au.email,
+                    c.name as club_name
+                FROM club_admins ca
+                JOIN admin_users au ON ca.user_id = au.id
+                JOIN clubs c ON ca.club_id = c.id
+                ORDER BY c.name, au.full_name
+            ");
+            $clubAdmins = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        }
     } catch (Exception $e) {
         $message = 'Kunde inte hämta klubb-admins: ' . $e->getMessage();
         $messageType = 'error';
