@@ -103,6 +103,54 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $message = 'Ett fel uppstod: ' . $e->getMessage();
             $messageType = 'error';
         }
+    } elseif ($action === 'merge') {
+        // Merge source class into target class
+        $sourceId = intval($_POST['source_id'] ?? 0);
+        $targetId = intval($_POST['target_id'] ?? 0);
+
+        if ($sourceId && $targetId && $sourceId !== $targetId) {
+            try {
+                // Get class names for message
+                $sourceClass = $db->getRow("SELECT display_name FROM classes WHERE id = ?", [$sourceId]);
+                $targetClass = $db->getRow("SELECT display_name FROM classes WHERE id = ?", [$targetId]);
+
+                // Get affected series before merge
+                $affectedSeries = $db->getAll("
+                    SELECT DISTINCT s.id
+                    FROM series s
+                    JOIN events e ON e.series_id = s.id
+                    JOIN results r ON r.event_id = e.id
+                    WHERE r.class_id = ?
+                ", [$sourceId]);
+
+                // Count results to move
+                $resultCount = $db->getRow("SELECT COUNT(*) as cnt FROM results WHERE class_id = ?", [$sourceId])['cnt'];
+
+                // Move all results from source to target
+                $db->query("UPDATE results SET class_id = ? WHERE class_id = ?", [$targetId, $sourceId]);
+
+                // Delete the source class
+                $db->delete('classes', 'id = ?', [$sourceId]);
+
+                // Recalculate affected series
+                if (!empty($affectedSeries)) {
+                    require_once __DIR__ . '/../includes/series-points.php';
+                    foreach ($affectedSeries as $series) {
+                        recalculateSeriesStandings($series['id']);
+                    }
+                }
+
+                $message = "Slagit ihop \"{$sourceClass['display_name']}\" med \"{$targetClass['display_name']}\" ({$resultCount} resultat flyttade). " .
+                           count($affectedSeries) . " serier omräknade.";
+                $messageType = 'success';
+            } catch (Exception $e) {
+                $message = 'Fel vid sammanslagning: ' . $e->getMessage();
+                $messageType = 'error';
+            }
+        } else {
+            $message = 'Ogiltig sammanslagning - välj två olika klasser.';
+            $messageType = 'error';
+        }
     }
 }
 
@@ -157,6 +205,22 @@ GROUP BY c.id
 ORDER BY c.sort_order ASC, c.name ASC";
 
 $classes = $db->getAll($sql, $params);
+
+// Get events for each class (for display and merge functionality)
+$classEvents = [];
+foreach ($classes as $class) {
+    if ($class['result_count'] > 0) {
+        $events = $db->getAll("
+            SELECT DISTINCT e.id, e.name, e.date
+            FROM events e
+            JOIN results r ON r.event_id = e.id
+            WHERE r.class_id = ?
+            ORDER BY e.date DESC
+            LIMIT 10
+        ", [$class['id']]);
+        $classEvents[$class['id']] = $events;
+    }
+}
 
 // Count empty classes (no results)
 $emptyClassCount = $db->getRow("
@@ -305,7 +369,27 @@ include __DIR__ . '/components/unified-layout.php';
                                         <?php endif; ?>
                                     <?php endif; ?>
                                 </td>
-                                <td><?= number_format($class['result_count']) ?></td>
+                                <td>
+                                    <?php if ($class['result_count'] > 0 && isset($classEvents[$class['id']])): ?>
+                                        <span class="class-event-count" onclick="showClassEvents(<?= $class['id'] ?>)" title="Klicka för att se event">
+                                            <?= number_format($class['result_count']) ?>
+                                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:12px;height:12px;vertical-align:middle;margin-left:2px;"><path d="m6 9 6 6 6-6"/></svg>
+                                        </span>
+                                        <div class="class-events-dropdown" id="events-<?= $class['id'] ?>" style="display:none;">
+                                            <strong>Event som använder denna klass:</strong>
+                                            <ul>
+                                                <?php foreach ($classEvents[$class['id']] as $ev): ?>
+                                                    <li><a href="/admin/event-edit.php?id=<?= $ev['id'] ?>"><?= htmlspecialchars($ev['name']) ?></a> <span class="text-secondary">(<?= date('Y-m-d', strtotime($ev['date'])) ?>)</span></li>
+                                                <?php endforeach; ?>
+                                                <?php if (count($classEvents[$class['id']]) >= 10): ?>
+                                                    <li class="text-secondary">...och fler</li>
+                                                <?php endif; ?>
+                                            </ul>
+                                        </div>
+                                    <?php else: ?>
+                                        <?= number_format($class['result_count']) ?>
+                                    <?php endif; ?>
+                                </td>
                                 <td>
                                     <span class="admin-badge <?= $class['active'] ? 'admin-badge-success' : 'admin-badge-secondary' ?>">
                                         <?= $class['active'] ? 'Aktiv' : 'Inaktiv' ?>
@@ -316,7 +400,11 @@ include __DIR__ . '/components/unified-layout.php';
                                         <button type="button" class="btn-admin btn-admin-sm btn-admin-secondary" onclick='editClass(<?= json_encode($class) ?>)' title="Redigera">
                                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
                                         </button>
-                                        <?php if ($class['result_count'] == 0): ?>
+                                        <?php if ($class['result_count'] > 0): ?>
+                                            <button onclick="openMergeModal(<?= $class['id'] ?>, '<?= addslashes($class['display_name']) ?>')" class="btn-admin btn-admin-sm btn-admin-warning" title="Slå ihop med annan klass">
+                                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m8 6 4-4 4 4"/><path d="M12 2v10.3a4 4 0 0 1-1.172 2.872L4 22"/><path d="m20 22-5-5"/></svg>
+                                            </button>
+                                        <?php else: ?>
                                             <button onclick="deleteClass(<?= $class['id'] ?>, '<?= addslashes($class['display_name']) ?>')" class="btn-admin btn-admin-sm btn-admin-danger" title="Ta bort">
                                                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
                                             </button>
@@ -456,6 +544,53 @@ include __DIR__ . '/components/unified-layout.php';
     </div>
 </div>
 
+<!-- Merge Modal -->
+<div id="mergeModal" class="admin-modal" style="display: none;">
+    <div class="admin-modal-overlay" onclick="closeMergeModal()"></div>
+    <div class="admin-modal-content" style="max-width: 500px;">
+        <div class="admin-modal-header">
+            <h2>Slå ihop klass</h2>
+            <button type="button" class="admin-modal-close" onclick="closeMergeModal()">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
+            </button>
+        </div>
+        <form method="POST" id="mergeForm">
+            <?= csrf_field() ?>
+            <input type="hidden" name="action" value="merge">
+            <input type="hidden" name="source_id" id="mergeSourceId" value="">
+
+            <div class="admin-modal-body">
+                <p class="mb-md">
+                    Flytta alla resultat från <strong id="mergeSourceName"></strong> till en annan klass.
+                    <br><span class="text-secondary">Källklassen tas bort efter sammanslagningen.</span>
+                </p>
+
+                <div class="admin-form-group">
+                    <label class="admin-form-label">Slå ihop med klass</label>
+                    <select name="target_id" id="mergeTargetId" class="admin-form-select" required>
+                        <option value="">-- Välj målklass --</option>
+                        <?php foreach ($classes as $c): ?>
+                            <option value="<?= $c['id'] ?>" data-name="<?= htmlspecialchars($c['display_name']) ?>">
+                                <?= htmlspecialchars($c['display_name']) ?>
+                                <?php if ($c['result_count'] > 0): ?>(<?= number_format($c['result_count']) ?> resultat)<?php endif; ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+
+                <div class="alert alert-warning mt-md">
+                    <strong>Varning:</strong> Alla resultat från källklassen flyttas till målklassen. Berörda serier räknas om automatiskt. Denna åtgärd kan inte ångras.
+                </div>
+            </div>
+
+            <div class="admin-modal-footer">
+                <button type="button" class="btn-admin btn-admin-secondary" onclick="closeMergeModal()">Avbryt</button>
+                <button type="submit" class="btn-admin btn-admin-warning">Slå ihop klasser</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <script>
 const csrfToken = '<?= htmlspecialchars(generate_csrf_token()) ?>';
 
@@ -533,8 +668,49 @@ function deleteEmptyClasses() {
     form.submit();
 }
 
+// Merge modal functions
+function openMergeModal(sourceId, sourceName) {
+    document.getElementById('mergeModal').style.display = 'flex';
+    document.getElementById('mergeSourceId').value = sourceId;
+    document.getElementById('mergeSourceName').textContent = sourceName;
+
+    // Disable the source class in target dropdown
+    const select = document.getElementById('mergeTargetId');
+    Array.from(select.options).forEach(opt => {
+        opt.disabled = (opt.value == sourceId);
+    });
+    select.value = '';
+}
+
+function closeMergeModal() {
+    document.getElementById('mergeModal').style.display = 'none';
+}
+
+// Show/hide class events dropdown
+function showClassEvents(classId) {
+    const dropdown = document.getElementById('events-' + classId);
+    if (dropdown) {
+        // Close all other dropdowns first
+        document.querySelectorAll('.class-events-dropdown').forEach(d => {
+            if (d.id !== 'events-' + classId) d.style.display = 'none';
+        });
+        dropdown.style.display = dropdown.style.display === 'none' ? 'block' : 'none';
+    }
+}
+
+// Close dropdowns when clicking outside
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('.class-event-count') && !e.target.closest('.class-events-dropdown')) {
+        document.querySelectorAll('.class-events-dropdown').forEach(d => d.style.display = 'none');
+    }
+});
+
 document.addEventListener('keydown', function(e) {
-    if (e.key === 'Escape') closeClassModal();
+    if (e.key === 'Escape') {
+        closeClassModal();
+        closeMergeModal();
+        document.querySelectorAll('.class-events-dropdown').forEach(d => d.style.display = 'none');
+    }
 });
 </script>
 
@@ -551,6 +727,20 @@ document.addEventListener('keydown', function(e) {
 .admin-modal-footer { display: flex; justify-content: flex-end; gap: var(--space-sm); padding: var(--space-lg); border-top: 1px solid var(--color-border); }
 .admin-checkbox-label { display: flex; align-items: center; gap: var(--space-xs); cursor: pointer; font-size: var(--text-sm); }
 .admin-checkbox-label input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--color-accent); }
+
+/* Class events dropdown */
+.class-event-count { cursor: pointer; color: var(--color-accent); text-decoration: underline; }
+.class-event-count:hover { color: var(--color-accent-hover); }
+.class-events-dropdown { position: absolute; background: var(--color-bg-surface); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: var(--space-sm); margin-top: var(--space-xs); z-index: 100; min-width: 300px; max-width: 400px; box-shadow: var(--shadow-lg); }
+.class-events-dropdown ul { list-style: none; margin: var(--space-xs) 0 0 0; padding: 0; max-height: 200px; overflow-y: auto; }
+.class-events-dropdown li { padding: var(--space-xs) 0; border-bottom: 1px solid var(--color-border); font-size: var(--text-sm); }
+.class-events-dropdown li:last-child { border-bottom: none; }
+.class-events-dropdown a { color: var(--color-accent); text-decoration: none; }
+.class-events-dropdown a:hover { text-decoration: underline; }
+
+/* Warning button style */
+.btn-admin-warning { background: var(--color-warning, #f59e0b); color: white; }
+.btn-admin-warning:hover { background: #d97706; }
 </style>
 
 <?php include __DIR__ . '/components/unified-layout-footer.php'; ?>
