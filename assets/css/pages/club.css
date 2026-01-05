@@ -153,6 +153,40 @@
     height: 16px;
 }
 
+/* Social Media Links */
+.club-social-links {
+    display: flex;
+    justify-content: center;
+    gap: var(--space-md);
+    padding: var(--space-sm) var(--space-md) var(--space-md);
+}
+
+.club-social-links .social-icon-simple {
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    text-decoration: none;
+    transition: transform 0.15s ease;
+}
+
+.club-social-links .social-icon-simple svg {
+    width: 24px;
+    height: 24px;
+    fill: #ccc;
+}
+
+.club-social-links .social-icon-simple:hover {
+    transform: scale(1.15);
+}
+
+/* Active social icons with brand colors */
+.club-social-links .social-instagram svg { fill: #E4405F; }
+.club-social-links .social-facebook svg { fill: #1877F2; }
+.club-social-links .social-youtube svg { fill: #FF0000; }
+.club-social-links .social-tiktok svg { fill: #000000; }
+
 /* Mobile: Stack columns */
 @media (max-width: 991px) {
     .club-profile-layout {

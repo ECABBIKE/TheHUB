@@ -30,6 +30,8 @@ $club = [
     'description' => '',
     'facebook' => '',
     'instagram' => '',
+    'youtube' => '',
+    'tiktok' => '',
     'org_number' => '',
     'scf_id' => '',
     'swish_number' => '',
@@ -106,6 +108,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'description' => trim($_POST['description'] ?? ''),
                 'facebook' => trim($_POST['facebook'] ?? ''),
                 'instagram' => trim($_POST['instagram'] ?? ''),
+                'youtube' => trim($_POST['youtube'] ?? ''),
+                'tiktok' => trim($_POST['tiktok'] ?? ''),
                 'org_number' => trim($_POST['org_number'] ?? ''),
                 'scf_id' => trim($_POST['scf_id'] ?? ''),
                 'swish_number' => trim($_POST['swish_number'] ?? '') ?: null,
@@ -586,6 +590,36 @@ include __DIR__ . '/components/unified-layout.php';
       class="input"
       value="<?= h($club['instagram'] ?? '') ?>"
       placeholder="https://instagram.com/..."
+     >
+     </div>
+    </div>
+    <div class="grid grid-cols-2 gap-md mt-md">
+     <div>
+     <label for="youtube" class="label">
+      <i data-lucide="youtube" class="icon-sm"></i>
+      YouTube
+     </label>
+     <input
+      type="url"
+      id="youtube"
+      name="youtube"
+      class="input"
+      value="<?= h($club['youtube'] ?? '') ?>"
+      placeholder="https://youtube.com/..."
+     >
+     </div>
+     <div>
+     <label for="tiktok" class="label">
+      <i data-lucide="music" class="icon-sm"></i>
+      TikTok
+     </label>
+     <input
+      type="text"
+      id="tiktok"
+      name="tiktok"
+      class="input"
+      value="<?= h($club['tiktok'] ?? '') ?>"
+      placeholder="@användarnamn"
      >
      </div>
     </div>
