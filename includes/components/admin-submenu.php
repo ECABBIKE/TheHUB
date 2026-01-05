@@ -12,9 +12,15 @@
 // Load tab configuration
 require_once __DIR__ . '/../config/admin-tabs-config.php';
 
-// Get current page
-$current_page = basename($_SERVER['PHP_SELF']);
+// Get current page - handle subfolders like tools/yearly-rebuild.php
 $current_path = $_SERVER['PHP_SELF'];
+$current_page = basename($current_path);
+
+// Check if we're in a subfolder under /admin/
+if (preg_match('#/admin/([^/]+)/([^/]+\.php)$#', $current_path, $matches)) {
+    // It's a subfolder page like /admin/tools/yearly-rebuild.php
+    $current_page = $matches[1] . '/' . $matches[2]; // e.g., "tools/yearly-rebuild.php"
+}
 
 // Only show on admin pages
 if (strpos($current_path, '/admin/') === false) {
