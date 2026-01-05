@@ -289,7 +289,24 @@ $ADMIN_TABS = [
                 'label' => 'Verktyg',
                 'icon' => 'wrench',
                 'url' => '/admin/tools.php',
-                'pages' => ['tools.php', 'normalize-names.php', 'find-duplicates.php', 'cleanup-duplicates.php', 'cleanup-clubs.php', 'search-uci-id.php', 'diagnose-series.php', 'rebuild-stats.php']
+                'pages' => [
+                    'tools.php',
+                    'normalize-names.php',
+                    'find-duplicates.php',
+                    'cleanup-duplicates.php',
+                    'cleanup-clubs.php',
+                    'search-uci-id.php',
+                    'diagnose-series.php',
+                    'rebuild-stats.php',
+                    // Tools subfolder
+                    'tools/yearly-rebuild.php',
+                    'tools/yearly-import-review.php',
+                    'tools/analyze-data-quality.php',
+                    'tools/diagnose-class-errors.php',
+                    'tools/diagnose-club-times.php',
+                    'tools/fix-club-times.php',
+                    'tools/fix-uci-conflicts.php'
+                ]
             ],
             [
                 'id' => 'branding',
