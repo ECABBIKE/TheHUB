@@ -450,13 +450,31 @@ if (!function_exists('hub_attempt_login')) {
                     return ['success' => false, 'error' => 'Kontot är inaktiverat. Kontakta administratören.'];
                 }
 
-                // Check if password hash exists
-                if (empty($adminUser['password_hash'])) {
-                    return ['success' => false, 'error' => 'Inget lösenord har satts för detta konto. Kontakta administratören.'];
+                $passwordVerified = false;
+
+                // First try admin_users password_hash if set
+                if (!empty($adminUser['password_hash'])) {
+                    $passwordVerified = password_verify($password, $adminUser['password_hash']);
+                }
+
+                // If admin_users password not set or didn't match, try linked rider password
+                if (!$passwordVerified && !empty($adminUser['email'])) {
+                    $riderStmt = $pdo->prepare("
+                        SELECT id, password
+                        FROM riders
+                        WHERE email = ? AND password IS NOT NULL AND password != ''
+                        LIMIT 1
+                    ");
+                    $riderStmt->execute([$adminUser['email']]);
+                    $linkedRider = $riderStmt->fetch(PDO::FETCH_ASSOC);
+
+                    if ($linkedRider && !empty($linkedRider['password'])) {
+                        $passwordVerified = password_verify($password, $linkedRider['password']);
+                    }
                 }
 
                 // Verify password
-                if (password_verify($password, $adminUser['password_hash'])) {
+                if ($passwordVerified) {
                     // Map admin role to role_id
                     $roleMap = [
                         'super_admin' => ROLE_SUPER_ADMIN,
