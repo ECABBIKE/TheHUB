@@ -127,6 +127,61 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $message = 'Ett fel uppstod: ' . $e->getMessage();
             $messageType = 'error';
         }
+    } elseif ($action === 'delete_and_orphan') {
+        // Delete club and make all riders club-less (for ALL years)
+        $id = intval($_POST['id']);
+        try {
+            $pdo = $db->getPdo();
+            $pdo->beginTransaction();
+
+            // Get club name for message
+            $club = $db->getRow("SELECT name FROM clubs WHERE id = ?", [$id]);
+            if (!$club) {
+                throw new Exception('Klubben hittades inte');
+            }
+
+            // Count affected riders
+            $riderCount = $db->getRow("SELECT COUNT(*) as cnt FROM riders WHERE club_id = ?", [$id])['cnt'];
+
+            // 1. Remove club from all riders (current club_id)
+            $pdo->prepare("UPDATE riders SET club_id = NULL WHERE club_id = ?")->execute([$id]);
+
+            // 2. Delete all historical club seasons for this club
+            $seasonCount = 0;
+            try {
+                $stmt = $pdo->prepare("SELECT COUNT(*) FROM rider_club_seasons WHERE club_id = ?");
+                $stmt->execute([$id]);
+                $seasonCount = $stmt->fetchColumn();
+                $pdo->prepare("DELETE FROM rider_club_seasons WHERE club_id = ?")->execute([$id]);
+            } catch (Exception $e) {
+                // Table might not exist
+            }
+
+            // 3. Remove club from all results (historical)
+            $resultCount = 0;
+            try {
+                $stmt = $pdo->prepare("SELECT COUNT(*) FROM results WHERE club_id = ?");
+                $stmt->execute([$id]);
+                $resultCount = $stmt->fetchColumn();
+                $pdo->prepare("UPDATE results SET club_id = NULL WHERE club_id = ?")->execute([$id]);
+            } catch (Exception $e) {
+                // Column might not exist
+            }
+
+            // 4. Delete the club
+            $pdo->prepare("DELETE FROM clubs WHERE id = ?")->execute([$id]);
+
+            $pdo->commit();
+
+            $message = "Klubben \"{$club['name']}\" borttagen. {$riderCount} åkare blev klubblösa, {$seasonCount} säsonger och {$resultCount} resultat uppdaterades.";
+            $messageType = 'success';
+        } catch (Exception $e) {
+            if (isset($pdo) && $pdo->inTransaction()) {
+                $pdo->rollBack();
+            }
+            $message = 'Fel vid borttagning: ' . $e->getMessage();
+            $messageType = 'error';
+        }
     } elseif ($action === 'merge') {
         $keepId = intval($_POST['keep_id'] ?? 0);
         $mergeIds = $_POST['merge_ids'] ?? [];
@@ -474,6 +529,9 @@ include __DIR__ . '/components/unified-layout.php';
                                         <a href="/admin/club-edit.php?id=<?= $club['id'] ?>" class="btn btn--sm btn--secondary" title="Redigera">
                                             <i data-lucide="pencil"></i>
                                         </a>
+                                        <button type="button" onclick="deleteClubAndOrphan(<?= $club['id'] ?>, '<?= addslashes($club['name']) ?>', <?= $club['rider_count'] ?>)" class="btn btn--sm btn--danger" title="Ta bort klubb (gör åkare klubblösa)">
+                                            <i data-lucide="trash-2"></i>
+                                        </button>
                                     </div>
                                 </td>
                             </tr>
@@ -627,6 +685,34 @@ document.getElementById('mergeForm')?.addEventListener('submit', function(e) {
         e.preventDefault();
     }
 });
+
+// Delete club and make riders club-less
+const csrfToken = '<?= htmlspecialchars(generate_csrf_token()) ?>';
+
+function deleteClubAndOrphan(clubId, clubName, riderCount) {
+    const msg = `VARNING: Ta bort "${clubName}"?\n\n` +
+        `Detta kommer att:\n` +
+        `• Göra ${riderCount} åkare klubblösa (nuvarande)\n` +
+        `• Ta bort alla historiska klubbsäsonger för denna klubb\n` +
+        `• Ta bort klubben från alla historiska resultat\n` +
+        `• Radera klubben permanent\n\n` +
+        `Denna åtgärd kan INTE ångras!`;
+
+    if (!confirm(msg)) return;
+
+    // Double confirm for destructive action
+    if (!confirm(`Är du HELT SÄKER? Skriv OK för att bekräfta.`)) return;
+
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.innerHTML = `
+        <input type="hidden" name="action" value="delete_and_orphan">
+        <input type="hidden" name="id" value="${clubId}">
+        <input type="hidden" name="csrf_token" value="${csrfToken}">
+    `;
+    document.body.appendChild(form);
+    form.submit();
+}
 </script>
 
 <?php include __DIR__ . '/components/unified-layout-footer.php'; ?>

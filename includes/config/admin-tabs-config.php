@@ -299,6 +299,8 @@ $ADMIN_TABS = [
                     'diagnose-series.php',
                     'rebuild-stats.php',
                     'fix-result-club-ids.php',
+                    'sync-club-membership.php',
+                    'sync-rider-clubs.php',
                     // Tools subfolder
                     'tools/yearly-rebuild.php',
                     'tools/yearly-import-review.php',
