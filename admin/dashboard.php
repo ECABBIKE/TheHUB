@@ -615,33 +615,23 @@ include __DIR__ . '/components/unified-layout.php';
     }
 }
 
-/* Mobile portrait */
-@media (max-width: 599px) {
+/* Mobile portrait - Edge-to-edge using --container-padding */
+@media (max-width: 767px) {
     .dashboard-metrics {
         grid-template-columns: 1fr;
-        gap: var(--space-sm);
+        gap: 1px;
+        background: var(--color-border);
         /* Edge-to-edge */
-        margin-left: calc(-1 * var(--space-md));
-        margin-right: calc(-1 * var(--space-md));
-        width: calc(100% + var(--space-md) * 2);
+        margin-left: calc(-1 * var(--container-padding, 16px));
+        margin-right: calc(-1 * var(--container-padding, 16px));
+        width: auto;
+        border-radius: 0;
     }
 
     .metric-card {
         border-radius: 0;
-        border-left: none;
-        border-right: none;
-        margin-bottom: -1px; /* Collapse borders */
-    }
-
-    .metric-card:first-child {
-        border-top-left-radius: 0;
-        border-top-right-radius: 0;
-    }
-
-    .metric-card:last-child {
-        border-bottom-left-radius: 0;
-        border-bottom-right-radius: 0;
-        margin-bottom: 0;
+        border: none;
+        padding: var(--container-padding, 16px);
     }
 
     .quick-actions {
@@ -666,22 +656,36 @@ include __DIR__ . '/components/unified-layout.php';
 
     /* Admin card edge-to-edge */
     .admin-card {
-        margin-left: calc(-1 * var(--space-md));
-        margin-right: calc(-1 * var(--space-md));
-        width: calc(100% + var(--space-md) * 2);
+        margin-left: calc(-1 * var(--container-padding, 16px));
+        margin-right: calc(-1 * var(--container-padding, 16px));
+        width: auto;
         border-radius: 0;
         border-left: none;
         border-right: none;
     }
 
-    /* Stat cards grid */
+    /* Restore internal padding for card content */
+    .admin-card-body,
+    .admin-card-header {
+        padding-left: var(--container-padding, 16px);
+        padding-right: var(--container-padding, 16px);
+    }
+
+    /* Stat cards grid - edge-to-edge */
     .grid-stats {
         grid-template-columns: repeat(2, 1fr) !important;
-        gap: var(--space-sm);
+        gap: var(--space-xs);
+        margin-left: calc(-1 * var(--container-padding, 16px));
+        margin-right: calc(-1 * var(--container-padding, 16px));
+        width: auto;
+        padding: 0 var(--container-padding, 16px);
     }
 
     .admin-stat-card {
         padding: var(--space-md);
+        border-radius: 0;
+        border-left: none;
+        border-right: none;
     }
 
     .admin-stat-card .stat-value {

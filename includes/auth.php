@@ -59,13 +59,25 @@ function requireLogin() {
         redirect('/admin/login.php');
     }
 
-    // Session activity timeout (30 minutes)
-    $timeout = defined('SESSION_ACTIVITY_TIMEOUT') ? SESSION_ACTIVITY_TIMEOUT : 1800;
+    // Session activity timeout
+    // If "remember me" is set, use 30 days, otherwise 30 minutes
+    $rememberMe = $_SESSION['remember_me'] ?? false;
+    if ($rememberMe) {
+        $timeout = 30 * 24 * 60 * 60; // 30 days
+    } else {
+        $timeout = defined('SESSION_ACTIVITY_TIMEOUT') ? SESSION_ACTIVITY_TIMEOUT : 1800; // 30 minutes
+    }
+
     if (isset($_SESSION['last_activity']) && (time() - $_SESSION['last_activity'] > $timeout)) {
         logout();
         redirect('/admin/login.php?timeout=1');
     }
     $_SESSION['last_activity'] = time();
+
+    // Refresh session cookie if remember me (extend expiry on each page load)
+    if ($rememberMe) {
+        setRememberMeSession();
+    }
 }
 
 /**
@@ -112,8 +124,11 @@ function clearLoginAttempts($username) {
 
 /**
  * Login user
+ * @param string $username
+ * @param string $password
+ * @param bool $rememberMe - If true, extends session to 30 days
  */
-function login($username, $password) {
+function login($username, $password, $rememberMe = false) {
     // Check for rate limiting
     if (isLoginRateLimited($username)) {
         return false;
@@ -140,13 +155,20 @@ function login($username, $password) {
         $_SESSION['admin_name'] = 'Administrator';
         $_SESSION['session_regenerated'] = true;
         $_SESSION['last_activity'] = time();
+        $_SESSION['remember_me'] = $rememberMe;
+
+        // If remember me, extend session cookie
+        if ($rememberMe) {
+            setRememberMeSession();
+        }
+
         clearLoginAttempts($username);
         return true;
     }
 
     // Try database authentication
     global $pdo;
-    
+
     if (!$pdo) {
         return false;
     }
@@ -183,6 +205,12 @@ function login($username, $password) {
         $_SESSION['admin_name'] = $user['full_name'] ?? $user['username'];
         $_SESSION['session_regenerated'] = true;
         $_SESSION['last_activity'] = time();
+        $_SESSION['remember_me'] = $rememberMe;
+
+        // If remember me, extend session cookie
+        if ($rememberMe) {
+            setRememberMeSession();
+        }
 
         // Update last login
         $stmt = $pdo->prepare("UPDATE admin_users SET last_login = NOW() WHERE id = ?");
@@ -195,6 +223,29 @@ function login($username, $password) {
         recordFailedLogin($username);
         return false;
     }
+}
+
+/**
+ * Set extended session for "Remember Me"
+ * Extends session cookie to 30 days
+ */
+function setRememberMeSession() {
+    $lifetime = 30 * 24 * 60 * 60; // 30 days in seconds
+
+    // Update session cookie parameters
+    $params = session_get_cookie_params();
+    setcookie(
+        session_name(),
+        session_id(),
+        [
+            'expires' => time() + $lifetime,
+            'path' => $params['path'],
+            'domain' => $params['domain'],
+            'secure' => $params['secure'],
+            'httponly' => $params['httponly'],
+            'samesite' => $params['samesite'] ?? 'Lax'
+        ]
+    );
 }
 
 /**

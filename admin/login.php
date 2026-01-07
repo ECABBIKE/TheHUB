@@ -21,11 +21,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
  } else {
  $username = $_POST['username'] ?? '';
  $password = $_POST['password'] ?? '';
+ $rememberMe = isset($_POST['remember_me']) && $_POST['remember_me'] === '1';
 
  // Check rate limiting before attempting login
  if (isLoginRateLimited($username)) {
   $error = 'För många inloggningsförsök. Vänta 15 minuter och försök igen.';
- } elseif (login_admin($username, $password)) {
+ } elseif (login($username, $password, $rememberMe)) {
   // All users go to homepage after login
   redirect('/');
  } else {
@@ -133,6 +134,26 @@ $pageTitle = 'Logga in';
    margin-bottom: var(--space-lg);
    border: 1px solid rgba(239, 68, 68, 0.2);
   }
+  .remember-group {
+   margin-top: var(--space-sm);
+  }
+  .remember-label {
+   display: flex;
+   align-items: center;
+   gap: var(--space-sm);
+   cursor: pointer;
+   font-size: var(--text-sm);
+   color: var(--color-text-secondary);
+  }
+  .remember-label input[type="checkbox"] {
+   width: 18px;
+   height: 18px;
+   accent-color: var(--color-accent);
+   cursor: pointer;
+  }
+  .remember-label:hover {
+   color: var(--color-text-primary);
+  }
  </style>
 </head>
 <body class="login-page">
@@ -174,6 +195,13 @@ $pageTitle = 'Logga in';
    required
    autocomplete="current-password"
   >
+  </div>
+
+  <div class="form-group remember-group">
+  <label class="remember-label">
+   <input type="checkbox" name="remember_me" value="1">
+   <span>Håll mig inloggad</span>
+  </label>
   </div>
 
   <button type="submit" class="login-btn">
