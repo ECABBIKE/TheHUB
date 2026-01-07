@@ -1345,7 +1345,7 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
 
         <!-- Achievement Details Modal -->
         <?php if (!empty($detailedAchievements)): ?>
-        <div id="achievementModal" class="ranking-modal-overlay" style="display:none; padding-top: calc(var(--header-height, 60px) + 10px);">
+        <div id="achievementModal" class="ranking-modal-overlay" style="display:none;">
             <div class="ranking-modal" style="max-height: calc(100vh - var(--header-height, 60px) - 40px); max-width: 500px;">
                 <div class="ranking-modal-header">
                     <h3 id="achievementModalTitle">
@@ -1687,9 +1687,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
 <?php if ($rankingPosition): ?>
 <!-- Ranking Calculation Modal -->
-<div id="rankingModal" class="ranking-modal-overlay" style="padding-top: calc(var(--header-height, 60px) + 10px);">
+<div id="rankingModal" class="ranking-modal-overlay">
     <div class="ranking-modal" style="max-height: calc(100vh - var(--header-height, 60px) - 40px);">
-        <div class="ranking-modal-header" class="pt-md">
+        <div class="ranking-modal-header">
             <h3>
                 <i data-lucide="calculator"></i>
                 Rankinguträkning
@@ -1788,9 +1788,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
 <!-- Ranking History Modal - Outside rankingPosition block so it shows for history-only riders -->
 <?php if (!empty($rankingHistoryFull)): ?>
-<div id="historyModal" class="ranking-modal-overlay" style="padding-top: calc(var(--header-height, 60px) + 10px);">
+<div id="historyModal" class="ranking-modal-overlay">
     <div class="ranking-modal" style="max-height: calc(100vh - var(--header-height, 60px) - 40px); max-width: 800px;">
-        <div class="ranking-modal-header" class="pt-md">
+        <div class="ranking-modal-header">
             <h3>
                 <i data-lucide="history"></i>
                 Rankinghistorik
