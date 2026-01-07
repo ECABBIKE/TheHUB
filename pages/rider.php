@@ -1989,6 +1989,19 @@ document.addEventListener('keydown', function(e) {
 .history-chart-container {
     position: relative;
 }
+@media (max-width: 767px) {
+    .history-stats-row {
+        margin-left: calc(-1 * var(--space-md));
+        margin-right: calc(-1 * var(--space-md));
+        width: calc(100% + 2 * var(--space-md));
+        border-radius: 0;
+    }
+    .history-chart-container {
+        margin-left: calc(-1 * var(--space-md));
+        margin-right: calc(-1 * var(--space-md));
+        width: calc(100% + 2 * var(--space-md));
+    }
+}
 </style>
 <?php endif; ?>
 
