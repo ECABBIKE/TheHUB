@@ -1311,6 +1311,13 @@ include __DIR__ . '/components/unified-layout.php';
         left: var(--sidebar-width, 280px);
     }
 }
+/* Mobile portrait: Position above mobile nav */
+@media (max-width: 899px) and (orientation: portrait) {
+    .floating-save-bar {
+        bottom: calc(var(--mobile-nav-height, 64px) + env(safe-area-inset-bottom, 0px));
+        padding-bottom: var(--space-sm);
+    }
+}
 .floating-save-content {
     display: flex;
     justify-content: flex-end;
@@ -1318,9 +1325,25 @@ include __DIR__ . '/components/unified-layout.php';
     max-width: 1200px;
     margin: 0 auto;
 }
+/* Mobile: Stack buttons */
+@media (max-width: 599px) {
+    .floating-save-content {
+        flex-direction: column;
+    }
+    .floating-save-content .btn {
+        width: 100%;
+        justify-content: center;
+    }
+}
 /* Add padding at bottom of page to account for floating bar */
 .admin-content {
     padding-bottom: 80px !important;
+}
+/* Extra padding on mobile for floating bar + mobile nav */
+@media (max-width: 899px) and (orientation: portrait) {
+    .admin-content {
+        padding-bottom: calc(80px + var(--mobile-nav-height, 64px) + env(safe-area-inset-bottom, 0px)) !important;
+    }
 }
 /* Styling for hidden checkbox to indicate hiding content */
 .checkbox-hidden span {
@@ -1585,6 +1608,33 @@ document.addEventListener('keydown', function(e) {
     width: 100%;
     max-width: 500px;
     margin-top: var(--space-xl);
+}
+/* Mobile: Fullscreen modal */
+@media (max-width: 599px) {
+    .modal-overlay {
+        padding: 0;
+        align-items: stretch;
+    }
+    .modal-content {
+        max-width: 100%;
+        height: 100%;
+        margin: 0;
+        border-radius: 0;
+        display: flex;
+        flex-direction: column;
+    }
+    .modal-body {
+        flex: 1;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    .modal-header {
+        padding-top: calc(var(--space-md) + env(safe-area-inset-top, 0px));
+    }
+    .modal-footer {
+        padding-bottom: calc(var(--space-md) + env(safe-area-inset-bottom, 0px));
+        border-radius: 0;
+    }
 }
 .modal-header {
     display: flex;

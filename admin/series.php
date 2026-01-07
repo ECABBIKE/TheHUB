@@ -636,6 +636,30 @@ document.addEventListener('keydown', function(e) {
     flex-direction: column;
 }
 
+/* Mobile: Fullscreen modal */
+@media (max-width: 599px) {
+    .admin-modal {
+        padding: 0;
+    }
+    .admin-modal-content {
+        width: 100%;
+        max-width: 100%;
+        height: 100%;
+        max-height: 100%;
+        border-radius: 0;
+    }
+    .admin-modal-header {
+        padding-top: calc(var(--space-lg) + env(safe-area-inset-top, 0px));
+    }
+    .admin-modal-footer {
+        padding-bottom: calc(var(--space-md) + env(safe-area-inset-bottom, 0px));
+    }
+    .admin-modal-close {
+        min-width: 44px;
+        min-height: 44px;
+    }
+}
+
 .admin-modal-header {
     display: flex;
     align-items: center;
@@ -671,6 +695,7 @@ document.addEventListener('keydown', function(e) {
 .admin-modal-body {
     padding: var(--space-lg);
     overflow-y: auto;
+    -webkit-overflow-scrolling: touch;
     flex: 1;
 }
 

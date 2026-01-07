@@ -218,12 +218,24 @@ include __DIR__ . '/components/unified-layout.php';
     background: var(--color-surface);
     border-top: 2px solid var(--color-accent);
     padding: var(--space-md);
+    padding-bottom: calc(var(--space-md) + env(safe-area-inset-bottom, 0px));
     display: none;
     z-index: 100;
     box-shadow: 0 -4px 20px rgba(0,0,0,0.15);
 }
 .action-panel.active {
     display: block;
+}
+/* Mobile: Position above mobile nav */
+@media (max-width: 899px) and (orientation: portrait) {
+    .action-panel {
+        bottom: calc(var(--mobile-nav-height, 64px) + env(safe-area-inset-bottom, 0px));
+        padding-bottom: var(--space-md);
+    }
+    .action-panel .flex {
+        flex-direction: column;
+        gap: var(--space-md);
+    }
 }
 .search-rider-input {
     position: relative;
@@ -380,21 +392,28 @@ include __DIR__ . '/components/unified-layout.php';
 </div>
 
 <!-- Merge Modal -->
-<div id="merge-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:200;">
-    <div style="position:absolute; top:50%; left:50%; transform:translate(-50%,-50%); background:var(--color-surface); padding:var(--space-lg); border-radius:var(--radius-md); width:400px;">
-        <h3 class="mb-md">Slå ihop rider</h3>
-        <p class="text-sm text-secondary mb-md">
-            Slå ihop "<span id="merge-source-name"></span>" med en annan rider.
-            Alla resultat flyttas till målridern.
-        </p>
-        <input type="hidden" id="merge-source-id">
-        <div class="form-group mb-md">
-            <label class="label">Sök målrider:</label>
-            <input type="text" id="merge-target-search" class="input" placeholder="Sök namn...">
-            <div id="merge-target-results" style="max-height:150px; overflow-y:auto; border:1px solid var(--color-border); border-radius:var(--radius-sm); margin-top:var(--space-xs); display:none;"></div>
+<div id="merge-modal" class="admin-modal" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:200; padding:var(--space-md);">
+    <div class="admin-modal-content" style="position:relative; margin:auto; background:var(--color-surface); padding:var(--space-lg); border-radius:var(--radius-md); width:100%; max-width:400px; max-height:90vh; overflow-y:auto;">
+        <div class="admin-modal-header" style="display:flex; justify-content:space-between; align-items:center; margin-bottom:var(--space-md);">
+            <h3>Slå ihop rider</h3>
+            <button type="button" class="btn btn--ghost btn--sm admin-modal-close" onclick="closeMergeModal()" style="min-width:44px; min-height:44px;">
+                <i data-lucide="x"></i>
+            </button>
         </div>
-        <input type="hidden" id="merge-target-id">
-        <div class="flex gap-sm justify-end">
+        <div class="admin-modal-body">
+            <p class="text-sm text-secondary mb-md">
+                Slå ihop "<span id="merge-source-name"></span>" med en annan rider.
+                Alla resultat flyttas till målridern.
+            </p>
+            <input type="hidden" id="merge-source-id">
+            <div class="form-group mb-md">
+                <label class="label">Sök målrider:</label>
+                <input type="text" id="merge-target-search" class="input" placeholder="Sök namn...">
+                <div id="merge-target-results" style="max-height:150px; overflow-y:auto; border:1px solid var(--color-border); border-radius:var(--radius-sm); margin-top:var(--space-xs); display:none;"></div>
+            </div>
+            <input type="hidden" id="merge-target-id">
+        </div>
+        <div class="admin-modal-footer" style="display:flex; gap:var(--space-sm); justify-content:flex-end; padding-top:var(--space-md); border-top:1px solid var(--color-border); margin-top:var(--space-md);">
             <button type="button" class="btn btn--secondary" onclick="closeMergeModal()">Avbryt</button>
             <button type="button" class="btn btn--danger" onclick="confirmMerge()">Slå ihop</button>
         </div>
