@@ -748,10 +748,10 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
         gap: var(--space-2xs);
     }
     .highlights-card {
-        padding: var(--space-sm);
+        padding: var(--space-sm) var(--space-md);
     }
     .highlight-item {
-        padding: var(--space-xs) 0;
+        padding: var(--space-xs) var(--space-sm);
     }
 }
 </style>
