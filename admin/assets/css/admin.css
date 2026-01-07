@@ -2850,7 +2850,7 @@ h2 svg.lucide {
         -webkit-overflow-scrolling: touch;
     }
 
-    /* Tables edge-to-edge */
+    /* Tables edge-to-edge - with proper scrolling */
     .admin-table-wrapper,
     .admin-content .table-responsive,
     .page-content.admin-content .table-responsive {
@@ -2858,11 +2858,33 @@ h2 svg.lucide {
         margin-right: calc(-1 * var(--container-padding, 16px)) !important;
         width: auto !important;
         border-radius: 0 !important;
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
     }
 
     .admin-table-wrapper .admin-table,
     .table-responsive table {
         border-radius: 0;
+    }
+
+    /* Tables inside cards - break out of card padding */
+    .admin-card-body .admin-table-container,
+    .admin-card-body[style*="padding: 0"] .admin-table-container {
+        margin-left: calc(-1 * var(--container-padding, 16px));
+        margin-right: calc(-1 * var(--container-padding, 16px));
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    /* Table first/last cell padding for edge-to-edge */
+    .admin-table th:first-child,
+    .admin-table td:first-child {
+        padding-left: var(--container-padding, 16px) !important;
+    }
+
+    .admin-table th:last-child,
+    .admin-table td:last-child {
+        padding-right: var(--container-padding, 16px) !important;
     }
 
     /* Restore internal padding for card content */

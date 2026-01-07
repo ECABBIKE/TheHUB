@@ -615,27 +615,40 @@ include __DIR__ . '/components/unified-layout.php';
     }
 }
 
-/* Mobile portrait - Edge-to-edge using --container-padding */
+/* Mobile portrait */
 @media (max-width: 767px) {
+    /* Metrics: keep 2x2 grid, just smaller */
     .dashboard-metrics {
-        grid-template-columns: 1fr;
-        gap: 1px;
-        background: var(--color-border);
-        /* Edge-to-edge */
-        margin-left: calc(-1 * var(--container-padding, 16px));
-        margin-right: calc(-1 * var(--container-padding, 16px));
-        width: auto;
-        border-radius: 0;
+        grid-template-columns: repeat(2, 1fr);
+        gap: var(--space-sm);
     }
 
     .metric-card {
-        border-radius: 0;
-        border: none;
-        padding: var(--container-padding, 16px);
+        padding: var(--space-md);
+        border-radius: var(--radius-md);
     }
 
+    .metric-icon {
+        width: 36px;
+        height: 36px;
+    }
+
+    .metric-icon svg {
+        width: 18px;
+        height: 18px;
+    }
+
+    .metric-value {
+        font-size: var(--text-lg);
+    }
+
+    .metric-label {
+        font-size: var(--text-xs);
+    }
+
+    /* Quick actions: 3 columns for 5 items */
     .quick-actions {
-        grid-template-columns: repeat(2, 1fr);
+        grid-template-columns: repeat(3, 1fr);
         gap: var(--space-xs);
     }
 
@@ -649,7 +662,7 @@ include __DIR__ . '/components/unified-layout.php';
         height: 20px;
     }
 
-    /* Grid wide - single column */
+    /* Grid wide - single column for card stacking */
     .grid-wide {
         grid-template-columns: 1fr !important;
     }
@@ -671,21 +684,36 @@ include __DIR__ . '/components/unified-layout.php';
         padding-right: var(--container-padding, 16px);
     }
 
-    /* Stat cards grid - edge-to-edge */
-    .grid-stats {
-        grid-template-columns: repeat(2, 1fr) !important;
-        gap: var(--space-xs);
+    /* Tables inside cards - ensure proper scrolling */
+    .admin-card-body .admin-table-container {
         margin-left: calc(-1 * var(--container-padding, 16px));
         margin-right: calc(-1 * var(--container-padding, 16px));
-        width: auto;
-        padding: 0 var(--container-padding, 16px);
+        overflow-x: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+
+    .admin-card-body .admin-table-container .admin-table {
+        min-width: 400px;
+    }
+
+    .admin-card-body .admin-table-container .admin-table th:first-child,
+    .admin-card-body .admin-table-container .admin-table td:first-child {
+        padding-left: var(--container-padding, 16px);
+    }
+
+    .admin-card-body .admin-table-container .admin-table th:last-child,
+    .admin-card-body .admin-table-container .admin-table td:last-child {
+        padding-right: var(--container-padding, 16px);
+    }
+
+    /* Stat cards grid - keep 2x2 */
+    .grid-stats {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: var(--space-sm);
     }
 
     .admin-stat-card {
         padding: var(--space-md);
-        border-radius: 0;
-        border-left: none;
-        border-right: none;
     }
 
     .admin-stat-card .stat-value {
