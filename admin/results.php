@@ -1,12 +1,23 @@
 <?php
 /**
  * Admin Results - V3 Design System
+ * Promotors can only see results for their own events
  */
 require_once __DIR__ . '/../config.php';
 require_admin();
 
 global $pdo;
 $db = getDB();
+
+// Check if user is a promotor (limited access)
+$isPromotorOnly = isRole('promotor');
+$promotorEventIds = [];
+
+if ($isPromotorOnly) {
+    // Get promotor's events
+    $promotorEvents = getPromotorEvents();
+    $promotorEventIds = array_column($promotorEvents, 'id');
+}
 
 // Get filter parameters
 $filterSeries = isset($_GET['series_id']) && is_numeric($_GET['series_id']) ? intval($_GET['series_id']) : null;
@@ -15,6 +26,18 @@ $filterYear = isset($_GET['year']) && is_numeric($_GET['year']) ? intval($_GET['
 // Build WHERE clause
 $where = [];
 $params = [];
+
+// Promotor filter - only show their events
+if ($isPromotorOnly) {
+    if (!empty($promotorEventIds)) {
+        $placeholders = implode(',', array_fill(0, count($promotorEventIds), '?'));
+        $where[] = "e.id IN ($placeholders)";
+        $params = array_merge($params, $promotorEventIds);
+    } else {
+        // Promotor with no events - show nothing
+        $where[] = "1=0";
+    }
+}
 
 if ($filterSeries) {
     $where[] = "e.series_id = ?";
@@ -52,8 +75,15 @@ try {
     $error = $e->getMessage();
 }
 
-// Get all series for filter buttons
-$allSeries = $db->getAll("SELECT id, name FROM series WHERE active = 1 ORDER BY name");
+// Get series for filter buttons (limited for promotors)
+if ($isPromotorOnly && !empty($promotorEventIds)) {
+    $placeholders = implode(',', array_fill(0, count($promotorEventIds), '?'));
+    $allSeries = $db->getAll("SELECT DISTINCT s.id, s.name FROM series s INNER JOIN events e ON e.series_id = s.id WHERE e.id IN ($placeholders) ORDER BY s.name", $promotorEventIds);
+} elseif ($isPromotorOnly) {
+    $allSeries = [];
+} else {
+    $allSeries = $db->getAll("SELECT id, name FROM series WHERE active = 1 ORDER BY name");
+}
 
 // Get all years from events
 $allYears = $db->getAll("SELECT DISTINCT YEAR(date) as year FROM events WHERE date IS NOT NULL ORDER BY year DESC");
@@ -64,10 +94,16 @@ $breadcrumbs = [
     ['label' => 'Events', 'url' => '/admin/events'],
     ['label' => 'Resultat']
 ];
-$page_actions = '<a href="/admin/import-results.php" class="btn-admin btn-admin-primary">
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
-    Importera Resultat
-</a>';
+
+// Promotors don't get import button
+if ($isPromotorOnly) {
+    $page_actions = '';
+} else {
+    $page_actions = '<a href="/admin/import-results.php" class="btn-admin btn-admin-primary">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
+        Importera Resultat
+    </a>';
+}
 
 // Include unified layout (uses same layout as public site)
 include __DIR__ . '/components/unified-layout.php';

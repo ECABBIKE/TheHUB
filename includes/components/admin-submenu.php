@@ -7,7 +7,102 @@
  * Include this in layout-header.php for admin pages
  *
  * Special handling for event-specific pages (shows event context menu)
+ * Promotors get a simplified navigation (back to their panel)
  */
+
+// Check if user is promotor-only (not admin)
+$isPromotorOnly = function_exists('isRole') && isRole('promotor');
+
+// Promotors get simplified navigation
+if ($isPromotorOnly) {
+    $current_page = basename($_SERVER['PHP_SELF']);
+
+    // Pages where promotor just gets a "back" link (no full menu)
+    $backLinkPages = ['event-edit.php', 'edit-results.php', 'sponsor-edit.php'];
+
+    if (in_array($current_page, $backLinkPages)) {
+        // Simple back link for detail/edit pages
+        ?>
+        <div class="admin-submenu admin-submenu--promotor-back">
+            <div class="admin-submenu-container">
+                <a href="/admin/promotor.php" class="promotor-back-link">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
+                    Tillbaka till mina tävlingar
+                </a>
+            </div>
+        </div>
+        <style>
+        .admin-submenu--promotor-back {
+            background: var(--color-bg-surface);
+            border-bottom: 1px solid var(--color-border);
+        }
+        .admin-submenu--promotor-back .admin-submenu-container {
+            padding: var(--space-sm) var(--space-md);
+        }
+        .promotor-back-link {
+            display: inline-flex;
+            align-items: center;
+            gap: var(--space-xs);
+            color: var(--color-accent);
+            text-decoration: none;
+            font-size: var(--text-sm);
+            font-weight: 500;
+            padding: var(--space-xs) 0;
+        }
+        .promotor-back-link:hover {
+            text-decoration: underline;
+        }
+        .promotor-back-link svg {
+            flex-shrink: 0;
+        }
+        </style>
+        <?php
+        return;
+    }
+
+    // On promotor.php - no submenu needed (the page itself is their dashboard)
+    if ($current_page === 'promotor.php') {
+        return; // No submenu on main promotor panel
+    }
+
+    // On other pages (events list, results list, etc) - show back link
+    ?>
+    <div class="admin-submenu admin-submenu--promotor-back">
+        <div class="admin-submenu-container">
+            <a href="/admin/promotor.php" class="promotor-back-link">
+                <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
+                Tillbaka till mina tävlingar
+            </a>
+        </div>
+    </div>
+    <style>
+    .admin-submenu--promotor-back {
+        background: var(--color-bg-surface);
+        border-bottom: 1px solid var(--color-border);
+    }
+    .admin-submenu--promotor-back .admin-submenu-container {
+        padding: var(--space-sm) var(--space-md);
+    }
+    .promotor-back-link {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-xs);
+        color: var(--color-accent);
+        text-decoration: none;
+        font-size: var(--text-sm);
+        font-weight: 500;
+        padding: var(--space-xs) 0;
+    }
+    .promotor-back-link:hover {
+        text-decoration: underline;
+    }
+    .promotor-back-link svg {
+        flex-shrink: 0;
+    }
+    </style>
+    <?php
+    return; // Don't show regular admin submenu
+}
 
 // Load tab configuration
 require_once __DIR__ . '/../config/admin-tabs-config.php';

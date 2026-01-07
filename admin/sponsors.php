@@ -4,6 +4,7 @@
  * TheHUB V3 - Media & Sponsor System
  *
  * Manage sponsors, tiers, and assignments
+ * Promotors can only see/edit sponsors for their own events
  */
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../includes/sponsor-functions.php';
@@ -11,36 +12,77 @@ require_once __DIR__ . '/../includes/media-functions.php';
 
 global $pdo;
 
+// Check if user is a promotor (limited access)
+$isPromotorOnly = isRole('promotor');
+$promotorEventIds = [];
+$promotorSeriesIds = [];
+
+if ($isPromotorOnly) {
+    // Get promotor's events
+    $promotorEvents = getPromotorEvents();
+    $promotorEventIds = array_column($promotorEvents, 'id');
+
+    // Get series IDs from promotor's events
+    if (!empty($promotorEventIds)) {
+        $placeholders = implode(',', array_fill(0, count($promotorEventIds), '?'));
+        $stmt = $pdo->prepare("SELECT DISTINCT series_id FROM events WHERE id IN ($placeholders) AND series_id IS NOT NULL");
+        $stmt->execute($promotorEventIds);
+        $promotorSeriesIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
+    }
+}
+
 // Get filter parameters
 $filterTier = $_GET['tier'] ?? null;
 $filterSeries = isset($_GET['series']) ? (int)$_GET['series'] : null;
 $filterActive = isset($_GET['active']) ? $_GET['active'] === '1' : null;
 $searchQuery = $_GET['search'] ?? '';
 
-// Get all series for filter and form
+// Get series for filter and form (limited for promotors)
 $allSeries = [];
 try {
-    $seriesStmt = $pdo->query("SELECT id, name, short_name FROM series ORDER BY name");
-    $allSeries = $seriesStmt->fetchAll(PDO::FETCH_ASSOC);
+    if ($isPromotorOnly && !empty($promotorSeriesIds)) {
+        $placeholders = implode(',', array_fill(0, count($promotorSeriesIds), '?'));
+        $seriesStmt = $pdo->prepare("SELECT id, name, short_name FROM series WHERE id IN ($placeholders) ORDER BY name");
+        $seriesStmt->execute($promotorSeriesIds);
+        $allSeries = $seriesStmt->fetchAll(PDO::FETCH_ASSOC);
+    } elseif (!$isPromotorOnly) {
+        $seriesStmt = $pdo->query("SELECT id, name, short_name FROM series ORDER BY name");
+        $allSeries = $seriesStmt->fetchAll(PDO::FETCH_ASSOC);
+    }
 } catch (Exception $e) {
     error_log("Sponsors - could not load series: " . $e->getMessage());
 }
 
 // Get sponsors (with optional series filter)
-if ($searchQuery) {
+// Promotors only see sponsors linked to their series
+if ($isPromotorOnly && empty($promotorSeriesIds)) {
+    // Promotor with no series - show empty
+    $sponsors = [];
+} elseif ($searchQuery) {
     $sponsors = search_sponsors($searchQuery, 100);
-} elseif ($filterSeries) {
-    // Filter by series
+    // Filter search results for promotors
+    if ($isPromotorOnly && !empty($promotorSeriesIds)) {
+        $sponsors = array_filter($sponsors, function($sp) use ($pdo, $promotorSeriesIds) {
+            $stmt = $pdo->prepare("SELECT 1 FROM series_sponsors WHERE sponsor_id = ? AND series_id IN (" . implode(',', $promotorSeriesIds) . ") LIMIT 1");
+            $stmt->execute([$sp['id']]);
+            return $stmt->fetch() !== false;
+        });
+        $sponsors = array_values($sponsors);
+    }
+} elseif ($filterSeries || ($isPromotorOnly && !empty($promotorSeriesIds))) {
+    // Filter by series (or all promotor's series)
+    $seriesFilter = $filterSeries ? [$filterSeries] : $promotorSeriesIds;
+    $placeholders = implode(',', array_fill(0, count($seriesFilter), '?'));
     $stmt = $pdo->prepare("
-        SELECT s.*, ss.series_id
+        SELECT DISTINCT s.*, ss.series_id
         FROM sponsors s
         INNER JOIN series_sponsors ss ON s.id = ss.sponsor_id
-        WHERE ss.series_id = ?
+        WHERE ss.series_id IN ($placeholders)
         " . ($filterTier ? " AND s.tier = ?" : "") . "
         " . ($filterActive !== null ? " AND s.active = ?" : "") . "
         ORDER BY s.display_order, s.name
     ");
-    $params = [$filterSeries];
+    $params = $seriesFilter;
     if ($filterTier) $params[] = $filterTier;
     if ($filterActive !== null) $params[] = $filterActive ? 1 : 0;
     $stmt->execute($params);

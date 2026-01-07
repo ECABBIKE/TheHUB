@@ -393,9 +393,9 @@ $pageTitle = 'Mina Tävlingar';
                 </div>
 
                 <div class="event-actions">
-                    <a href="/organizer/register.php?event=<?= $event['id'] ?>" class="btn btn-primary">
-                        <i data-lucide="user-plus"></i>
-                        Platsregistrering
+                    <a href="/admin/event-edit.php?id=<?= $event['id'] ?>" class="btn btn-primary">
+                        <i data-lucide="pencil"></i>
+                        Redigera event
                     </a>
                     <a href="/admin/promotor-registrations.php?event_id=<?= $event['id'] ?>" class="btn btn-secondary">
                         <i data-lucide="users"></i>
@@ -405,9 +405,13 @@ $pageTitle = 'Mina Tävlingar';
                         <i data-lucide="credit-card"></i>
                         Betalningar
                     </a>
+                    <a href="/organizer/register.php?event=<?= $event['id'] ?>" class="btn btn-secondary">
+                        <i data-lucide="user-plus"></i>
+                        Platsreg
+                    </a>
                     <a href="/event/<?= $event['id'] ?>" class="btn btn-secondary" target="_blank">
                         <i data-lucide="external-link"></i>
-                        Visa event
+                        Visa
                     </a>
                 </div>
             </div>
@@ -420,17 +424,21 @@ $pageTitle = 'Mina Tävlingar';
 <!-- Bottom Navigation -->
 <nav class="promotor-bottom-nav">
     <div class="promotor-bottom-nav-inner">
-        <a href="/" class="promotor-nav-link">
-            <i data-lucide="home"></i>
-            <span>Hem</span>
-        </a>
         <a href="/admin/promotor.php" class="promotor-nav-link active">
             <i data-lucide="calendar-check"></i>
-            <span>Tävlingar</span>
+            <span>Events</span>
+        </a>
+        <a href="/admin/sponsors.php" class="promotor-nav-link">
+            <i data-lucide="heart-handshake"></i>
+            <span>Sponsorer</span>
         </a>
         <a href="/organizer/" class="promotor-nav-link">
             <i data-lucide="user-plus"></i>
             <span>Platsreg</span>
+        </a>
+        <a href="/" class="promotor-nav-link">
+            <i data-lucide="home"></i>
+            <span>Hem</span>
         </a>
     </div>
 </nav>
