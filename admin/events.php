@@ -756,13 +756,19 @@ async function updateOrganizerField(eventId, field, value) {
     }
 }
 
-// Simple toast notification function
+// Simple toast notification function - Mobile friendly
 function showToast(message, type = 'success') {
     const toast = document.createElement('div');
+    const isMobile = window.innerWidth < 768;
+
+    // Mobile: bottom-center above nav, Desktop: top-right
+    const positionStyles = isMobile
+        ? `bottom: calc(var(--mobile-nav-height, 64px) + 16px + env(safe-area-inset-bottom, 0px)); left: 16px; right: 16px; top: auto;`
+        : `top: calc(20px + env(safe-area-inset-top, 0px)); right: 20px; left: auto; bottom: auto;`;
+
     toast.style.cssText = `
         position: fixed;
-        top: 20px;
-        right: 20px;
+        ${positionStyles}
         background: ${type === 'success' ? '#61CE70' : '#ef4444'};
         color: white;
         padding: 16px 24px;
@@ -770,13 +776,13 @@ function showToast(message, type = 'success') {
         box-shadow: 0 4px 12px rgba(0,0,0,0.15);
         z-index: 10000;
         font-weight: 500;
-        animation: slideIn 0.3s ease-out;
+        animation: ${isMobile ? 'slideUp' : 'slideIn'} 0.3s ease-out;
     `;
     toast.textContent = message;
     document.body.appendChild(toast);
 
     setTimeout(() => {
-        toast.style.animation = 'slideOut 0.3s ease-in';
+        toast.style.animation = `${isMobile ? 'slideDown' : 'slideOut'} 0.3s ease-in`;
         setTimeout(() => toast.remove(), 300);
     }, 3000);
 }
@@ -793,6 +799,14 @@ if (!document.getElementById('toast-animations')) {
         @keyframes slideOut {
             from { transform: translateX(0); opacity: 1; }
             to { transform: translateX(400px); opacity: 0; }
+        }
+        @keyframes slideUp {
+            from { transform: translateY(100px); opacity: 0; }
+            to { transform: translateY(0); opacity: 1; }
+        }
+        @keyframes slideDown {
+            from { transform: translateY(0); opacity: 1; }
+            to { transform: translateY(100px); opacity: 0; }
         }
     `;
     document.head.appendChild(style);

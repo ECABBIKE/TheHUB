@@ -307,6 +307,38 @@ include __DIR__ . '/components/unified-layout.php';
     margin-top: var(--space-xl);
 }
 
+/* Mobile: Fullscreen modal */
+@media (max-width: 599px) {
+    .modal {
+        padding: 0;
+    }
+    .modal-content {
+        max-width: 100%;
+        height: 100%;
+        margin: 0;
+        border-radius: 0;
+        display: flex;
+        flex-direction: column;
+    }
+    .modal-header {
+        padding-top: calc(var(--space-md) + env(safe-area-inset-top, 0px));
+        flex-shrink: 0;
+    }
+    .modal-body {
+        flex: 1;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+    }
+    .modal-footer {
+        padding-bottom: calc(var(--space-md) + env(safe-area-inset-bottom, 0px));
+        flex-shrink: 0;
+    }
+    .modal-close {
+        min-width: 44px;
+        min-height: 44px;
+    }
+}
+
 .modal-header {
     display: flex;
     justify-content: space-between;
