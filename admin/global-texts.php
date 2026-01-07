@@ -2,10 +2,17 @@
 /**
  * Global Texts Management - V3 Unified Design System
  * Manage default texts that can be used across events
+ * Admin/Super Admin only - promotors do not have access
  */
 
 require_once __DIR__ . '/../config.php';
 require_admin();
+
+// Promotors should not access this page
+if (isRole('promotor')) {
+    set_flash('error', 'Du har inte behörighet till denna sida');
+    redirect('/admin/promotor.php');
+}
 
 $db = getDB();
 $message = '';

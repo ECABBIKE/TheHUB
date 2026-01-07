@@ -7,7 +7,58 @@
  * Include this in layout-header.php for admin pages
  *
  * Special handling for event-specific pages (shows event context menu)
+ * Promotors get a simplified navigation (back to their panel)
  */
+
+// Check if user is promotor-only (not admin)
+$isPromotorOnly = function_exists('isRole') && isRole('promotor');
+
+// Promotors get a limited submenu with only their allowed tabs
+if ($isPromotorOnly) {
+    // Define what tabs promotors can see
+    $promotorAllowedTabs = [
+        'competitions' => [
+            'title' => 'Mina Tävlingar',
+            'tabs' => [
+                ['id' => 'dashboard', 'label' => 'Översikt', 'url' => '/admin/promotor.php', 'pages' => ['promotor.php']],
+                ['id' => 'events', 'label' => 'Events', 'url' => '/admin/events.php', 'pages' => ['events.php', 'event-edit.php']],
+                ['id' => 'results', 'label' => 'Resultat', 'url' => '/admin/results.php', 'pages' => ['results.php', 'edit-results.php']],
+                ['id' => 'sponsors', 'label' => 'Sponsorer', 'url' => '/admin/sponsors.php', 'pages' => ['sponsors.php', 'sponsor-edit.php']],
+                ['id' => 'registrations', 'label' => 'Anmälningar', 'url' => '/admin/promotor-registrations.php', 'pages' => ['promotor-registrations.php', 'event-registrations.php']],
+                ['id' => 'payments', 'label' => 'Betalningar', 'url' => '/admin/promotor-payments.php', 'pages' => ['promotor-payments.php', 'orders.php']]
+            ]
+        ]
+    ];
+
+    $current_page = basename($_SERVER['PHP_SELF']);
+    $active_tab = null;
+
+    // Find active tab
+    foreach ($promotorAllowedTabs['competitions']['tabs'] as $tab) {
+        if (in_array($current_page, $tab['pages'])) {
+            $active_tab = $tab['id'];
+            break;
+        }
+    }
+    ?>
+    <div class="admin-submenu admin-submenu--promotor">
+        <div class="admin-submenu-container">
+            <h2 class="admin-submenu-title"><?= $promotorAllowedTabs['competitions']['title'] ?></h2>
+            <nav class="admin-submenu-tabs" role="tablist">
+                <?php foreach ($promotorAllowedTabs['competitions']['tabs'] as $tab): ?>
+                <a href="<?= $tab['url'] ?>"
+                   class="admin-submenu-tab<?= $active_tab === $tab['id'] ? ' active' : '' ?>"
+                   role="tab"
+                   aria-selected="<?= $active_tab === $tab['id'] ? 'true' : 'false' ?>">
+                    <?= htmlspecialchars($tab['label']) ?>
+                </a>
+                <?php endforeach; ?>
+            </nav>
+        </div>
+    </div>
+    <?php
+    return; // Don't show regular admin submenu
+}
 
 // Load tab configuration
 require_once __DIR__ . '/../config/admin-tabs-config.php';
