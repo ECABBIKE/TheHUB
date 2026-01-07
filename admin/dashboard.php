@@ -586,7 +586,8 @@ include __DIR__ . '/components/unified-layout.php';
     border-radius: var(--radius-full);
 }
 
-@media (max-width: 768px) {
+/* Tablet */
+@media (max-width: 899px) {
     .dashboard-metrics {
         grid-template-columns: repeat(2, 1fr);
     }
@@ -611,6 +612,80 @@ include __DIR__ . '/components/unified-layout.php';
 
     .quick-actions {
         grid-template-columns: repeat(3, 1fr);
+    }
+}
+
+/* Mobile portrait */
+@media (max-width: 599px) {
+    .dashboard-metrics {
+        grid-template-columns: 1fr;
+        gap: var(--space-sm);
+        /* Edge-to-edge */
+        margin-left: calc(-1 * var(--space-md));
+        margin-right: calc(-1 * var(--space-md));
+        width: calc(100% + var(--space-md) * 2);
+    }
+
+    .metric-card {
+        border-radius: 0;
+        border-left: none;
+        border-right: none;
+        margin-bottom: -1px; /* Collapse borders */
+    }
+
+    .metric-card:first-child {
+        border-top-left-radius: 0;
+        border-top-right-radius: 0;
+    }
+
+    .metric-card:last-child {
+        border-bottom-left-radius: 0;
+        border-bottom-right-radius: 0;
+        margin-bottom: 0;
+    }
+
+    .quick-actions {
+        grid-template-columns: repeat(2, 1fr);
+        gap: var(--space-xs);
+    }
+
+    .quick-action {
+        padding: var(--space-sm);
+        font-size: var(--text-xs);
+    }
+
+    .quick-action svg {
+        width: 20px;
+        height: 20px;
+    }
+
+    /* Grid wide - single column */
+    .grid-wide {
+        grid-template-columns: 1fr !important;
+    }
+
+    /* Admin card edge-to-edge */
+    .admin-card {
+        margin-left: calc(-1 * var(--space-md));
+        margin-right: calc(-1 * var(--space-md));
+        width: calc(100% + var(--space-md) * 2);
+        border-radius: 0;
+        border-left: none;
+        border-right: none;
+    }
+
+    /* Stat cards grid */
+    .grid-stats {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: var(--space-sm);
+    }
+
+    .admin-stat-card {
+        padding: var(--space-md);
+    }
+
+    .admin-stat-card .stat-value {
+        font-size: var(--text-lg);
     }
 }
 </style>
