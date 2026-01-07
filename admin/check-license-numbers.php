@@ -66,11 +66,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // Find riders with problematic license numbers
 $filter = $_GET['filter'] ?? 'invalid';
 
+// UCI license format: XXX XXX XXX XX (11 digits with spaces) e.g. "101 180 688 85"
+// Also valid without spaces: 11 digits
 $filterQueries = [
-    'invalid' => "license_number IS NOT NULL AND license_number != '' AND license_number NOT LIKE 'SWE%' AND license_number NOT REGEXP '^[0-9]{11}$'",
+    'invalid' => "license_number IS NOT NULL AND license_number != ''
+                  AND license_number NOT LIKE 'SWE%'
+                  AND license_number NOT REGEXP '^[0-9]{11}$'
+                  AND license_number NOT REGEXP '^[0-9]{3} [0-9]{3} [0-9]{3} [0-9]{2}$'",
     'numeric_only' => "license_number REGEXP '^[0-9]+$' AND LENGTH(license_number) >= 8 AND license_number NOT LIKE 'SWE%'",
     'short' => "license_number IS NOT NULL AND LENGTH(license_number) > 0 AND LENGTH(license_number) < 8",
-    'has_spaces' => "license_number LIKE '% %'",
+    'has_spaces' => "license_number LIKE '% %' AND license_number NOT REGEXP '^[0-9]{3} [0-9]{3} [0-9]{3} [0-9]{2}$'",
+    'uci_format' => "license_number REGEXP '^[0-9]{3} [0-9]{3} [0-9]{3} [0-9]{2}$'",
     'all' => "license_number IS NOT NULL AND license_number != ''"
 ];
 
@@ -91,7 +97,12 @@ $stats = $db->getRow("
         COUNT(*) as total,
         SUM(CASE WHEN license_number LIKE 'SWE%' THEN 1 ELSE 0 END) as valid_swe,
         SUM(CASE WHEN license_number REGEXP '^[0-9]{11}$' THEN 1 ELSE 0 END) as valid_numeric,
-        SUM(CASE WHEN license_number IS NOT NULL AND license_number != '' AND license_number NOT LIKE 'SWE%' AND license_number NOT REGEXP '^[0-9]{11}$' THEN 1 ELSE 0 END) as invalid
+        SUM(CASE WHEN license_number REGEXP '^[0-9]{3} [0-9]{3} [0-9]{3} [0-9]{2}$' THEN 1 ELSE 0 END) as valid_uci,
+        SUM(CASE WHEN license_number IS NOT NULL AND license_number != ''
+                 AND license_number NOT LIKE 'SWE%'
+                 AND license_number NOT REGEXP '^[0-9]{11}$'
+                 AND license_number NOT REGEXP '^[0-9]{3} [0-9]{3} [0-9]{3} [0-9]{2}$'
+            THEN 1 ELSE 0 END) as invalid
     FROM riders
 ");
 
@@ -113,7 +124,7 @@ include __DIR__ . '/components/unified-layout.php';
         <?php endif; ?>
 
         <!-- Stats -->
-        <div class="grid grid-cols-4 gap-md mb-lg">
+        <div class="grid grid-cols-5 gap-md mb-lg">
             <div class="card">
                 <div class="card-body text-center">
                     <div class="text-2xl text-primary"><?= $stats['total'] ?? 0 ?></div>
@@ -124,6 +135,12 @@ include __DIR__ . '/components/unified-layout.php';
                 <div class="card-body text-center">
                     <div class="text-2xl text-success"><?= $stats['valid_swe'] ?? 0 ?></div>
                     <div class="text-sm text-secondary">Giltiga SWE ID</div>
+                </div>
+            </div>
+            <div class="card">
+                <div class="card-body text-center">
+                    <div class="text-2xl text-success"><?= $stats['valid_uci'] ?? 0 ?></div>
+                    <div class="text-sm text-secondary">Giltiga UCI</div>
                 </div>
             </div>
             <div class="card">
@@ -147,6 +164,7 @@ include __DIR__ . '/components/unified-layout.php';
                 <strong>Giltiga format:</strong>
                 <ul class="mt-sm" style="margin-left: 1.5rem; list-style: disc;">
                     <li><strong>SWE ID:</strong> SWE + 11 siffror (t.ex. SWE19850315001)</li>
+                    <li><strong>UCI:</strong> 11 siffror med mellanslag (t.ex. 101 180 688 85)</li>
                     <li><strong>Numeriskt:</strong> Exakt 11 siffror (personnummer utan bindestreck)</li>
                 </ul>
             </div>
@@ -165,7 +183,8 @@ include __DIR__ . '/components/unified-layout.php';
                             <option value="invalid" <?= $filter === 'invalid' ? 'selected' : '' ?>>Ogiltigt format</option>
                             <option value="numeric_only" <?= $filter === 'numeric_only' ? 'selected' : '' ?>>Numeriska (kan konverteras)</option>
                             <option value="short" <?= $filter === 'short' ? 'selected' : '' ?>>För korta (&lt; 8 tecken)</option>
-                            <option value="has_spaces" <?= $filter === 'has_spaces' ? 'selected' : '' ?>>Innehåller mellanslag</option>
+                            <option value="has_spaces" <?= $filter === 'has_spaces' ? 'selected' : '' ?>>Mellanslag (ej UCI-format)</option>
+                            <option value="uci_format" <?= $filter === 'uci_format' ? 'selected' : '' ?>>UCI-format</option>
                             <option value="all" <?= $filter === 'all' ? 'selected' : '' ?>>Alla med licensnummer</option>
                         </select>
                     </div>
@@ -211,11 +230,13 @@ include __DIR__ . '/components/unified-layout.php';
                             $canConvert = strlen($numbers) >= 8;
                             $isSwe = strpos($license, 'SWE') === 0;
                             $isValidNumeric = preg_match('/^[0-9]{11}$/', $license);
+                            $isValidUci = preg_match('/^[0-9]{3} [0-9]{3} [0-9]{3} [0-9]{2}$/', $license);
+                            $isValid = $isSwe || $isValidNumeric || $isValidUci;
 
                             $problems = [];
                             if (strlen($license) < 8) $problems[] = 'För kort';
-                            if (strpos($license, ' ') !== false) $problems[] = 'Mellanslag';
-                            if (!$isSwe && !$isValidNumeric && strlen($license) >= 8) $problems[] = 'Ogiltigt format';
+                            if (strpos($license, ' ') !== false && !$isValidUci) $problems[] = 'Mellanslag';
+                            if (!$isValid && strlen($license) >= 8) $problems[] = 'Ogiltigt format';
                             ?>
                             <tr>
                                 <td>
@@ -223,7 +244,7 @@ include __DIR__ . '/components/unified-layout.php';
                                     <br><small class="text-secondary">ID: <?= $rider['id'] ?></small>
                                 </td>
                                 <td>
-                                    <code class="<?= $isSwe || $isValidNumeric ? 'text-success' : 'text-error' ?>"><?= h($license) ?></code>
+                                    <code class="<?= $isValid ? 'text-success' : 'text-error' ?>"><?= h($license) ?></code>
                                 </td>
                                 <td>
                                     <?= h($rider['club_name'] ?? '-') ?>
