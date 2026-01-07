@@ -432,20 +432,24 @@
 
 /* Mobile */
 @media (max-width: 767px) {
-  .filters-bar {
+  .filter-bar {
     flex-direction: column;
-    padding: var(--container-padding);
-    margin-left: calc(-1 * var(--container-padding));
-    margin-right: calc(-1 * var(--container-padding));
-    border-radius: 0;
-    border-left: none;
-    border-right: none;
-    width: calc(100% + var(--container-padding) * 2);
+    align-items: center;
+    background: var(--color-bg-card);
+    padding: var(--space-lg);
+    border-radius: var(--radius-lg);
+    gap: var(--space-md);
   }
 
   .filter-group {
     width: 100%;
-    min-width: 0;
+    max-width: 280px;
+    text-align: center;
+  }
+
+  .filter-label {
+    display: block;
+    margin-bottom: var(--space-xs);
   }
 
   .filter-select {
