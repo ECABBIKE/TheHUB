@@ -126,34 +126,39 @@ try {
         return;
     }
 
-    // If no club from riders table, check rider_club_seasons for current year first, then latest
-    if (empty($rider['club_id'])) {
-        $currentYear = (int)date('Y');
+    // Always check rider_club_seasons for current year - this takes precedence over riders.club_id
+    // because rider_club_seasons represents the actual club for each season
+    $currentYear = (int)date('Y');
 
-        // First try current year (2025)
+    // First try current year from rider_club_seasons
+    $seasonClub = $db->prepare("
+        SELECT rcs.club_id, c.name as club_name, c.city as club_city
+        FROM rider_club_seasons rcs
+        JOIN clubs c ON rcs.club_id = c.id
+        WHERE rcs.rider_id = ? AND rcs.season_year = ?
+        LIMIT 1
+    ");
+    $seasonClub->execute([$riderId, $currentYear]);
+    $clubFromSeason = $seasonClub->fetch(PDO::FETCH_ASSOC);
+
+    // If found in rider_club_seasons for current year, use that
+    if ($clubFromSeason) {
+        $rider['club_id'] = $clubFromSeason['club_id'];
+        $rider['club_name'] = $clubFromSeason['club_name'];
+        $rider['club_city'] = $clubFromSeason['club_city'];
+    }
+    // If no current year entry and no club from riders table, try latest year
+    elseif (empty($rider['club_id'])) {
         $seasonClub = $db->prepare("
             SELECT rcs.club_id, c.name as club_name, c.city as club_city
             FROM rider_club_seasons rcs
             JOIN clubs c ON rcs.club_id = c.id
-            WHERE rcs.rider_id = ? AND rcs.season_year = ?
+            WHERE rcs.rider_id = ?
+            ORDER BY rcs.season_year DESC
             LIMIT 1
         ");
-        $seasonClub->execute([$riderId, $currentYear]);
+        $seasonClub->execute([$riderId]);
         $clubFromSeason = $seasonClub->fetch(PDO::FETCH_ASSOC);
-
-        // If no current year, fall back to latest year
-        if (!$clubFromSeason) {
-            $seasonClub = $db->prepare("
-                SELECT rcs.club_id, c.name as club_name, c.city as club_city
-                FROM rider_club_seasons rcs
-                JOIN clubs c ON rcs.club_id = c.id
-                WHERE rcs.rider_id = ?
-                ORDER BY rcs.season_year DESC
-                LIMIT 1
-            ");
-            $seasonClub->execute([$riderId]);
-            $clubFromSeason = $seasonClub->fetch(PDO::FETCH_ASSOC);
-        }
 
         if ($clubFromSeason) {
             $rider['club_id'] = $clubFromSeason['club_id'];
@@ -743,10 +748,10 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
         gap: var(--space-2xs);
     }
     .highlights-card {
-        padding: var(--space-sm);
+        padding: var(--space-sm) var(--space-md);
     }
     .highlight-item {
-        padding: var(--space-xs) 0;
+        padding: var(--space-xs) var(--space-sm);
     }
 }
 </style>
@@ -1340,7 +1345,7 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
 
         <!-- Achievement Details Modal -->
         <?php if (!empty($detailedAchievements)): ?>
-        <div id="achievementModal" class="ranking-modal-overlay" style="display:none; padding-top: calc(var(--header-height, 60px) + 10px);">
+        <div id="achievementModal" class="ranking-modal-overlay" style="display:none;">
             <div class="ranking-modal" style="max-height: calc(100vh - var(--header-height, 60px) - 40px); max-width: 500px;">
                 <div class="ranking-modal-header">
                     <h3 id="achievementModalTitle">
@@ -1682,9 +1687,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
 <?php if ($rankingPosition): ?>
 <!-- Ranking Calculation Modal -->
-<div id="rankingModal" class="ranking-modal-overlay" style="padding-top: calc(var(--header-height, 60px) + 10px);">
+<div id="rankingModal" class="ranking-modal-overlay">
     <div class="ranking-modal" style="max-height: calc(100vh - var(--header-height, 60px) - 40px);">
-        <div class="ranking-modal-header" class="pt-md">
+        <div class="ranking-modal-header">
             <h3>
                 <i data-lucide="calculator"></i>
                 Rankinguträkning
@@ -1783,9 +1788,9 @@ document.addEventListener('DOMContentLoaded', function() {
 
 <!-- Ranking History Modal - Outside rankingPosition block so it shows for history-only riders -->
 <?php if (!empty($rankingHistoryFull)): ?>
-<div id="historyModal" class="ranking-modal-overlay" style="padding-top: calc(var(--header-height, 60px) + 10px);">
+<div id="historyModal" class="ranking-modal-overlay">
     <div class="ranking-modal" style="max-height: calc(100vh - var(--header-height, 60px) - 40px); max-width: 800px;">
-        <div class="ranking-modal-header" class="pt-md">
+        <div class="ranking-modal-header">
             <h3>
                 <i data-lucide="history"></i>
                 Rankinghistorik

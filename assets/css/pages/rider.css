@@ -2375,12 +2375,10 @@
         font-size: 12px;
     }
 
-    /* Ranking Modal Mobile - Between header and bottom nav */
+    /* Ranking Modal Mobile - Full screen overlay with padding for header/nav */
     .ranking-modal-overlay {
-        padding: 0;
+        padding: calc(var(--header-height, 60px) + env(safe-area-inset-top, 0px)) 0 calc(var(--mobile-nav-height, 95px) + env(safe-area-inset-bottom, 0px)) 0;
         align-items: stretch;
-        top: calc(var(--header-height, 60px) + env(safe-area-inset-top, 0px));
-        bottom: calc(var(--mobile-nav-height, 95px) + env(safe-area-inset-bottom, 0px));
         overflow: hidden;
     }
 

@@ -67,6 +67,27 @@ try {
     error_log("EVENT EDIT: Error fetching event media: " . $e->getMessage());
 }
 
+// Check/create _hidden columns for event content fields
+$hiddenColumns = [
+    'invitation_hidden', 'hydration_hidden', 'toilets_hidden', 'bike_wash_hidden',
+    'food_hidden', 'shops_hidden', 'exhibitors_hidden', 'parking_hidden',
+    'hotel_hidden', 'local_hidden', 'media_hidden', 'contacts_hidden',
+    'pm_hidden', 'driver_meeting_hidden', 'training_hidden', 'timing_hidden',
+    'lift_hidden', 'rules_hidden', 'insurance_hidden', 'equipment_hidden',
+    'medical_hidden', 'scf_hidden', 'jury_hidden', 'schedule_hidden', 'start_times_hidden'
+];
+try {
+    foreach ($hiddenColumns as $col) {
+        $columns = $db->getAll("SHOW COLUMNS FROM events LIKE ?", [$col]);
+        if (empty($columns)) {
+            $db->query("ALTER TABLE events ADD COLUMN {$col} TINYINT(1) NOT NULL DEFAULT 0");
+            error_log("EVENT EDIT: Added {$col} column to events table");
+        }
+    }
+} catch (Exception $e) {
+    error_log("EVENT EDIT: Error checking/adding hidden columns: " . $e->getMessage());
+}
+
 // Get event ID from URL (supports both /admin/events/edit/123 and ?id=123)
 $id = 0;
 if (isset($_GET['id'])) {
@@ -277,6 +298,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'contacts_use_global' => isset($_POST['contacts_use_global']) ? 1 : 0,
             'scf_representatives' => trim($_POST['scf_representatives'] ?? ''),
             'scf_use_global' => isset($_POST['scf_use_global']) ? 1 : 0,
+            // Hidden flags for each content section
+            'invitation_hidden' => isset($_POST['invitation_hidden']) ? 1 : 0,
+            'hydration_hidden' => isset($_POST['hydration_hidden']) ? 1 : 0,
+            'toilets_hidden' => isset($_POST['toilets_hidden']) ? 1 : 0,
+            'bike_wash_hidden' => isset($_POST['bike_wash_hidden']) ? 1 : 0,
+            'food_hidden' => isset($_POST['food_hidden']) ? 1 : 0,
+            'shops_hidden' => isset($_POST['shops_hidden']) ? 1 : 0,
+            'exhibitors_hidden' => isset($_POST['exhibitors_hidden']) ? 1 : 0,
+            'parking_hidden' => isset($_POST['parking_hidden']) ? 1 : 0,
+            'hotel_hidden' => isset($_POST['hotel_hidden']) ? 1 : 0,
+            'local_hidden' => isset($_POST['local_hidden']) ? 1 : 0,
+            'media_hidden' => isset($_POST['media_hidden']) ? 1 : 0,
+            'contacts_hidden' => isset($_POST['contacts_hidden']) ? 1 : 0,
+            'pm_hidden' => isset($_POST['pm_hidden']) ? 1 : 0,
+            'driver_meeting_hidden' => isset($_POST['driver_meeting_hidden']) ? 1 : 0,
+            'training_hidden' => isset($_POST['training_hidden']) ? 1 : 0,
+            'timing_hidden' => isset($_POST['timing_hidden']) ? 1 : 0,
+            'lift_hidden' => isset($_POST['lift_hidden']) ? 1 : 0,
+            'rules_hidden' => isset($_POST['rules_hidden']) ? 1 : 0,
+            'insurance_hidden' => isset($_POST['insurance_hidden']) ? 1 : 0,
+            'equipment_hidden' => isset($_POST['equipment_hidden']) ? 1 : 0,
+            'medical_hidden' => isset($_POST['medical_hidden']) ? 1 : 0,
+            'scf_hidden' => isset($_POST['scf_hidden']) ? 1 : 0,
+            'jury_hidden' => isset($_POST['jury_hidden']) ? 1 : 0,
+            'schedule_hidden' => isset($_POST['schedule_hidden']) ? 1 : 0,
+            'start_times_hidden' => isset($_POST['start_times_hidden']) ? 1 : 0,
         ];
 
         try {
@@ -896,6 +943,10 @@ include __DIR__ . '/components/unified-layout.php';
                         <input type="checkbox" name="invitation_use_global" <?= !empty($event['invitation_use_global']) ? 'checked' : '' ?>>
                         <span class="text-xs">Global</span>
                     </label>
+                    <label class="checkbox-inline checkbox-hidden">
+                        <input type="checkbox" name="invitation_hidden" <?= !empty($event['invitation_hidden']) ? 'checked' : '' ?>>
+                        <span class="text-xs">Visa ej</span>
+                    </label>
                 </label>
                 <textarea name="invitation" class="admin-form-input" rows="4" placeholder="Välkommen till... (visas högst upp på Inbjudan-fliken)"><?= h($event['invitation'] ?? '') ?></textarea>
                 <small class="form-help">Inledande text som visas högst upp på Inbjudan-fliken på event-sidan.</small>
@@ -907,17 +958,17 @@ include __DIR__ . '/components/unified-layout.php';
 
             <?php
             $facilityFields = [
-                ['key' => 'hydration_stations', 'label' => 'Vätskekontroller', 'global_key' => 'hydration_use_global'],
-                ['key' => 'toilets_showers', 'label' => 'Toaletter/Dusch', 'global_key' => 'toilets_use_global'],
-                ['key' => 'bike_wash', 'label' => 'Cykeltvätt', 'global_key' => 'bike_wash_use_global'],
-                ['key' => 'food_cafe', 'label' => 'Mat/Café', 'global_key' => 'food_use_global'],
-                ['key' => 'shops_info', 'label' => 'Affärer', 'global_key' => 'shops_use_global'],
-                ['key' => 'exhibitors', 'label' => 'Utställare', 'global_key' => 'exhibitors_use_global'],
-                ['key' => 'parking_detailed', 'label' => 'Parkering', 'global_key' => 'parking_use_global'],
-                ['key' => 'hotel_accommodation', 'label' => 'Hotell/Boende', 'global_key' => 'hotel_use_global'],
-                ['key' => 'local_info', 'label' => 'Lokal information', 'global_key' => 'local_use_global'],
-                ['key' => 'media_production', 'label' => 'Media', 'global_key' => 'media_use_global'],
-                ['key' => 'contacts_info', 'label' => 'Kontakter', 'global_key' => 'contacts_use_global'],
+                ['key' => 'hydration_stations', 'label' => 'Vätskekontroller', 'global_key' => 'hydration_use_global', 'hidden_key' => 'hydration_hidden'],
+                ['key' => 'toilets_showers', 'label' => 'Toaletter/Dusch', 'global_key' => 'toilets_use_global', 'hidden_key' => 'toilets_hidden'],
+                ['key' => 'bike_wash', 'label' => 'Cykeltvätt', 'global_key' => 'bike_wash_use_global', 'hidden_key' => 'bike_wash_hidden'],
+                ['key' => 'food_cafe', 'label' => 'Mat/Café', 'global_key' => 'food_use_global', 'hidden_key' => 'food_hidden'],
+                ['key' => 'shops_info', 'label' => 'Affärer', 'global_key' => 'shops_use_global', 'hidden_key' => 'shops_hidden'],
+                ['key' => 'exhibitors', 'label' => 'Utställare', 'global_key' => 'exhibitors_use_global', 'hidden_key' => 'exhibitors_hidden'],
+                ['key' => 'parking_detailed', 'label' => 'Parkering', 'global_key' => 'parking_use_global', 'hidden_key' => 'parking_hidden'],
+                ['key' => 'hotel_accommodation', 'label' => 'Hotell/Boende', 'global_key' => 'hotel_use_global', 'hidden_key' => 'hotel_hidden'],
+                ['key' => 'local_info', 'label' => 'Lokal information', 'global_key' => 'local_use_global', 'hidden_key' => 'local_hidden'],
+                ['key' => 'media_production', 'label' => 'Media', 'global_key' => 'media_use_global', 'hidden_key' => 'media_hidden'],
+                ['key' => 'contacts_info', 'label' => 'Kontakter', 'global_key' => 'contacts_use_global', 'hidden_key' => 'contacts_hidden'],
             ];
             ?>
 
@@ -929,6 +980,10 @@ include __DIR__ . '/components/unified-layout.php';
                             <label class="checkbox-inline">
                                 <input type="checkbox" name="<?= $field['global_key'] ?>" <?= !empty($event[$field['global_key']]) ? 'checked' : '' ?>>
                                 <span class="text-xs">Global</span>
+                            </label>
+                            <label class="checkbox-inline checkbox-hidden">
+                                <input type="checkbox" name="<?= $field['hidden_key'] ?>" <?= !empty($event[$field['hidden_key']]) ? 'checked' : '' ?>>
+                                <span class="text-xs">Visa ej</span>
                             </label>
                         </label>
                         <textarea name="<?= $field['key'] ?>" class="admin-form-input" rows="2"><?= h($event[$field['key']] ?? '') ?></textarea>
@@ -966,16 +1021,16 @@ include __DIR__ . '/components/unified-layout.php';
 
             <?php
             $pmFields = [
-                ['key' => 'pm_content', 'label' => 'PM Huvudtext', 'global_key' => 'pm_use_global'],
-                ['key' => 'driver_meeting', 'label' => 'Förarmöte', 'global_key' => 'driver_meeting_use_global'],
-                ['key' => 'training_info', 'label' => 'Träning', 'global_key' => 'training_use_global'],
-                ['key' => 'timing_info', 'label' => 'Tidtagning', 'global_key' => 'timing_use_global'],
-                ['key' => 'lift_info', 'label' => 'Lift', 'global_key' => 'lift_use_global'],
-                ['key' => 'competition_rules', 'label' => 'Tävlingsregler', 'global_key' => 'rules_use_global'],
-                ['key' => 'insurance_info', 'label' => 'Försäkring', 'global_key' => 'insurance_use_global'],
-                ['key' => 'equipment_info', 'label' => 'Utrustning', 'global_key' => 'equipment_use_global'],
-                ['key' => 'medical_info', 'label' => 'Sjukvård', 'global_key' => 'medical_use_global'],
-                ['key' => 'scf_representatives', 'label' => 'SCF Representanter', 'global_key' => 'scf_use_global'],
+                ['key' => 'pm_content', 'label' => 'PM Huvudtext', 'global_key' => 'pm_use_global', 'hidden_key' => 'pm_hidden'],
+                ['key' => 'driver_meeting', 'label' => 'Förarmöte', 'global_key' => 'driver_meeting_use_global', 'hidden_key' => 'driver_meeting_hidden'],
+                ['key' => 'training_info', 'label' => 'Träning', 'global_key' => 'training_use_global', 'hidden_key' => 'training_hidden'],
+                ['key' => 'timing_info', 'label' => 'Tidtagning', 'global_key' => 'timing_use_global', 'hidden_key' => 'timing_hidden'],
+                ['key' => 'lift_info', 'label' => 'Lift', 'global_key' => 'lift_use_global', 'hidden_key' => 'lift_hidden'],
+                ['key' => 'competition_rules', 'label' => 'Tävlingsregler', 'global_key' => 'rules_use_global', 'hidden_key' => 'rules_hidden'],
+                ['key' => 'insurance_info', 'label' => 'Försäkring', 'global_key' => 'insurance_use_global', 'hidden_key' => 'insurance_hidden'],
+                ['key' => 'equipment_info', 'label' => 'Utrustning', 'global_key' => 'equipment_use_global', 'hidden_key' => 'equipment_hidden'],
+                ['key' => 'medical_info', 'label' => 'Sjukvård', 'global_key' => 'medical_use_global', 'hidden_key' => 'medical_hidden'],
+                ['key' => 'scf_representatives', 'label' => 'SCF Representanter', 'global_key' => 'scf_use_global', 'hidden_key' => 'scf_hidden'],
             ];
             ?>
 
@@ -987,6 +1042,10 @@ include __DIR__ . '/components/unified-layout.php';
                             <label class="checkbox-inline">
                                 <input type="checkbox" name="<?= $field['global_key'] ?>" <?= !empty($event[$field['global_key']]) ? 'checked' : '' ?>>
                                 <span class="text-xs">Global</span>
+                            </label>
+                            <label class="checkbox-inline checkbox-hidden">
+                                <input type="checkbox" name="<?= $field['hidden_key'] ?>" <?= !empty($event[$field['hidden_key']]) ? 'checked' : '' ?>>
+                                <span class="text-xs">Visa ej</span>
                             </label>
                         </label>
                         <textarea name="<?= $field['key'] ?>" class="admin-form-input" rows="3"><?= h($event[$field['key']] ?? '') ?></textarea>
@@ -1009,9 +1068,9 @@ include __DIR__ . '/components/unified-layout.php';
 
             <?php
             $otherTabFields = [
-                ['key' => 'jury_communication', 'label' => 'Jurykommuniké', 'global_key' => 'jury_use_global'],
-                ['key' => 'competition_schedule', 'label' => 'Tävlingsschema', 'global_key' => 'schedule_use_global'],
-                ['key' => 'start_times', 'label' => 'Starttider', 'global_key' => 'start_times_use_global', 'publish_key' => 'starttider_publish_at'],
+                ['key' => 'jury_communication', 'label' => 'Jurykommuniké', 'global_key' => 'jury_use_global', 'hidden_key' => 'jury_hidden'],
+                ['key' => 'competition_schedule', 'label' => 'Tävlingsschema', 'global_key' => 'schedule_use_global', 'hidden_key' => 'schedule_hidden'],
+                ['key' => 'start_times', 'label' => 'Starttider', 'global_key' => 'start_times_use_global', 'hidden_key' => 'start_times_hidden', 'publish_key' => 'starttider_publish_at'],
             ];
             ?>
 
@@ -1023,6 +1082,10 @@ include __DIR__ . '/components/unified-layout.php';
                             <label class="checkbox-inline">
                                 <input type="checkbox" name="<?= $field['global_key'] ?>" <?= !empty($event[$field['global_key']]) ? 'checked' : '' ?>>
                                 <span class="text-xs">Global</span>
+                            </label>
+                            <label class="checkbox-inline checkbox-hidden">
+                                <input type="checkbox" name="<?= $field['hidden_key'] ?>" <?= !empty($event[$field['hidden_key']]) ? 'checked' : '' ?>>
+                                <span class="text-xs">Visa ej</span>
                             </label>
                         </label>
                         <textarea name="<?= $field['key'] ?>" class="admin-form-input" rows="3"><?= h($event[$field['key']] ?? '') ?></textarea>
@@ -1258,6 +1321,13 @@ include __DIR__ . '/components/unified-layout.php';
 /* Add padding at bottom of page to account for floating bar */
 .admin-content {
     padding-bottom: 80px !important;
+}
+/* Styling for hidden checkbox to indicate hiding content */
+.checkbox-hidden span {
+    color: var(--color-danger);
+}
+.checkbox-hidden input:checked + span {
+    font-weight: 600;
 }
 </style>
 

@@ -28,7 +28,27 @@ function get_current_rider() {
         [$_SESSION['rider_id']]
     );
 
-    return $rider ?: null;
+    if (!$rider) {
+        return null;
+    }
+
+    // Check rider_club_seasons for current year - takes precedence over riders.club_id
+    $currentYear = (int)date('Y');
+    $seasonClub = $db->getRow(
+        "SELECT rcs.club_id, c.name as club_name
+         FROM rider_club_seasons rcs
+         JOIN clubs c ON rcs.club_id = c.id
+         WHERE rcs.rider_id = ? AND rcs.season_year = ?
+         LIMIT 1",
+        [$rider['id'], $currentYear]
+    );
+
+    if ($seasonClub) {
+        $rider['club_id'] = $seasonClub['club_id'];
+        $rider['club_name'] = $seasonClub['club_name'];
+    }
+
+    return $rider;
 }
 
 /**
