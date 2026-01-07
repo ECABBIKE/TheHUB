@@ -96,7 +96,7 @@ function hub_get_current_page(): array {
         ];
     }
 
-    // New V3.5 section-based routing
+    // New V1.0 section-based routing
     $sectionRoutes = [
         'calendar' => [
             'index' => '/pages/calendar/index.php',
@@ -133,7 +133,7 @@ function hub_get_current_page(): array {
         ]
     ];
 
-    // Check if this is a V3.5 section route
+    // Check if this is a V1.0 section route
     if (isset($sectionRoutes[$section])) {
         // If second segment is numeric, it's an ID
         if (isset($segments[1]) && is_numeric($segments[1])) {

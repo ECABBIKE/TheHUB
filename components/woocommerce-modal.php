@@ -1,6 +1,6 @@
 <?php
 /**
- * TheHUB V3.5 - WooCommerce Checkout Modal
+ * TheHUB V1.0 - WooCommerce Checkout Modal
  * Displays checkout in an iframe modal
  */
 ?>

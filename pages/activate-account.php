@@ -1,6 +1,6 @@
 <?php
 /**
- * TheHUB V3.5 - Activate Account
+ * TheHUB V1.0 - Activate Account
  * Request account activation link for new users
  *
  * When multiple profiles share an email, ALL are linked to one login.

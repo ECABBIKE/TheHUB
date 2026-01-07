@@ -1,7 +1,7 @@
 <?php
 /**
- * TheHUB V3.5 - Event Detail (Calendar View)
- * Based on V2 event-results.php but with V3.5 design
+ * TheHUB V1.0 - Event Detail (Calendar View)
+ * Based on V2 event-results.php but with V1.0 design
  */
 
 // Prevent direct access

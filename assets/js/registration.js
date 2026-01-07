@@ -1,5 +1,5 @@
 /**
- * TheHUB V3.5 - Registration Flow
+ * TheHUB V1.0 - Registration Flow
  * Handles multi-participant event registration
  */
 

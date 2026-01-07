@@ -1,6 +1,6 @@
 <?php
 /**
- * TheHUB V3.5 - Min Sida (Profile)
+ * TheHUB V1.0 - Min Sida (Profile)
  * Shows user profile, children, registrations, etc.
  */
 

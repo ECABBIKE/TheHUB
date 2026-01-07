@@ -1,6 +1,6 @@
 <?php
 /**
- * TheHUB V3.5 - Live Search Component
+ * TheHUB V1.0 - Live Search Component
  * Reusable search component for riders and clubs
  *
  * Usage: include this file with optional variables:

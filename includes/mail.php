@@ -97,7 +97,7 @@ function hub_send_php_mail(string $to, string $subject, string $body, string $fr
     $headers[] = 'Content-Type: text/html; charset=UTF-8';
     $headers[] = "From: {$fromName} <{$fromEmail}>";
     $headers[] = "Reply-To: {$fromEmail}"; // Use from email as reply-to
-    $headers[] = 'X-Mailer: TheHUB/3.5';
+    $headers[] = 'X-Mailer: TheHUB/1.0';
 
     $result = @mail($to, $subject, $body, implode("\r\n", $headers));
 
@@ -239,7 +239,7 @@ function hub_send_smtp_email(string $to, string $subject, string $body, string $
         $headers .= "Subject: {$subject}\r\n";
         $headers .= "MIME-Version: 1.0\r\n";
         $headers .= "Content-Type: text/html; charset=UTF-8\r\n";
-        $headers .= "X-Mailer: TheHUB/3.5\r\n";
+        $headers .= "X-Mailer: TheHUB/1.0\r\n";
         $headers .= "\r\n";
 
         // Send headers and body (escape dots at start of lines)

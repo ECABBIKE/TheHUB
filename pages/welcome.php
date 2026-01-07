@@ -1,6 +1,6 @@
 <?php
 /**
- * TheHUB V3.5 - Welcome Page
+ * TheHUB V1.0 - Welcome Page
  * Landing page with login requirement for data access
  */
 

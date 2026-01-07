@@ -1,6 +1,6 @@
 <?php
 /**
- * V3.5 Club Profile Page - Large logo, all-time members with year badges
+ * V1.0 Club Profile Page - Large logo, all-time members with year badges
  */
 
 $db = hub_db();

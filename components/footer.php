@@ -1,6 +1,6 @@
 <?php
 /**
- * TheHUB V3.5 - Footer
+ * TheHUB V1.0 - Footer
  * Theme toggle removed - users can change theme in profile settings
  */
 

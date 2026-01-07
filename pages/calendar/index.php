@@ -1,6 +1,6 @@
 <?php
 /**
- * TheHUB V3.5 - Kalender
+ * TheHUB V1.0 - Kalender
  * Visar kommande event med filter (månad, serie, format)
  */
 

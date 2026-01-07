@@ -367,7 +367,7 @@ if ($userTheme === 'auto') {
     <!-- 9. PWA Support -->
     <link rel="stylesheet" href="/assets/css/pwa.css?v=<?= filemtime(__DIR__ . '/../assets/css/pwa.css') ?>">
 
-    <!-- 9. GS Compatibility Layer (maps old gs-* classes to V3.5) -->
+    <!-- 9. GS Compatibility Layer (maps old gs-* classes to V1.0) -->
     <link rel="stylesheet" href="/assets/css/compatibility.css?v=<?= filemtime(__DIR__ . '/../assets/css/compatibility.css') ?>">
 
 

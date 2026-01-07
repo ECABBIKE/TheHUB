@@ -1,6 +1,6 @@
 # TheHUB Page Routing Rules
 
-## CRITICAL: V3.5 Section-Based Routing
+## CRITICAL: V1.0 Section-Based Routing
 
 The router (`/router.php`) uses section-based routing. **Always check `router.php` before editing any page file!**
 

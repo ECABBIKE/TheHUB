@@ -1,6 +1,6 @@
 <?php
 /**
- * TheHUB V3.5 - Reset Password
+ * TheHUB V1.0 - Reset Password
  * Set new password with reset token
  *
  * When setting password, links all other profiles with same email
@@ -20,10 +20,13 @@ $message = '';
 $messageType = '';
 $validToken = false;
 $rider = null;
+$adminUser = null;
+$accountType = null; // 'rider' or 'admin'
 $linkedProfilesCount = 0;
 
-// Validate token
+// Validate token - check both riders and admin_users
 if (!empty($token)) {
+    // First check riders table
     $stmt = $pdo->prepare("
         SELECT id, firstname, lastname, email
         FROM riders
@@ -36,6 +39,7 @@ if (!empty($token)) {
 
     if ($rider) {
         $validToken = true;
+        $accountType = 'rider';
 
         // Count other profiles with same email that will be linked
         $countStmt = $pdo->prepare("
@@ -45,8 +49,24 @@ if (!empty($token)) {
         $countStmt->execute([$rider['email'], $rider['id']]);
         $linkedProfilesCount = (int)$countStmt->fetch(PDO::FETCH_ASSOC)['count'];
     } else {
-        $message = 'Ogiltig eller utgången återställningslänk. Begär en ny länk.';
-        $messageType = 'error';
+        // Check admin_users table
+        $adminStmt = $pdo->prepare("
+            SELECT id, full_name, email
+            FROM admin_users
+            WHERE password_reset_token = ?
+            AND password_reset_expires > NOW()
+            LIMIT 1
+        ");
+        $adminStmt->execute([$token]);
+        $adminUser = $adminStmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($adminUser) {
+            $validToken = true;
+            $accountType = 'admin';
+        } else {
+            $message = 'Ogiltig eller utgången återställningslänk. Begär en ny länk.';
+            $messageType = 'error';
+        }
     }
 }
 
@@ -62,47 +82,65 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $validToken) {
         $message = 'Lösenorden matchar inte';
         $messageType = 'error';
     } else {
-        // Hash and save new password, clear reset token
+        // Hash new password
         $hashedPassword = password_hash($password, PASSWORD_DEFAULT);
-        $updateStmt = $pdo->prepare("
-            UPDATE riders SET
-                password = ?,
-                password_reset_token = NULL,
-                password_reset_expires = NULL,
-                linked_to_rider_id = NULL
-            WHERE id = ?
-        ");
-        $updateStmt->execute([$hashedPassword, $rider['id']]);
 
-        // Link all other riders with same email to this primary account
-        $linkStmt = $pdo->prepare("
-            UPDATE riders SET
-                linked_to_rider_id = ?,
-                password = NULL,
-                password_reset_token = NULL,
-                password_reset_expires = NULL
-            WHERE email = ? AND id != ?
-        ");
-        $linkStmt->execute([$rider['id'], $rider['email'], $rider['id']]);
+        if ($accountType === 'admin') {
+            // Update admin_users
+            $updateStmt = $pdo->prepare("
+                UPDATE admin_users SET
+                    password_hash = ?,
+                    password_reset_token = NULL,
+                    password_reset_expires = NULL
+                WHERE id = ?
+            ");
+            $updateStmt->execute([$hashedPassword, $adminUser['id']]);
 
-        // Get count of actually linked profiles
-        $linkedCount = $linkStmt->rowCount();
-
-        if ($isActivation) {
-            if ($linkedCount > 0) {
-                $message = "Konto aktiverat! Du har nu tillgång till " . ($linkedCount + 1) . " profiler med samma inloggning.";
-            } else {
-                $message = 'Konto aktiverat! Du kan nu logga in.';
-            }
+            $message = 'Lösenord återställt! Du kan nu logga in.';
+            $messageType = 'success';
+            $validToken = false;
         } else {
-            if ($linkedCount > 0) {
-                $message = "Lösenord återställt! Alla " . ($linkedCount + 1) . " profiler är tillgängliga med samma inloggning.";
+            // Update riders table
+            $updateStmt = $pdo->prepare("
+                UPDATE riders SET
+                    password = ?,
+                    password_reset_token = NULL,
+                    password_reset_expires = NULL,
+                    linked_to_rider_id = NULL
+                WHERE id = ?
+            ");
+            $updateStmt->execute([$hashedPassword, $rider['id']]);
+
+            // Link all other riders with same email to this primary account
+            $linkStmt = $pdo->prepare("
+                UPDATE riders SET
+                    linked_to_rider_id = ?,
+                    password = NULL,
+                    password_reset_token = NULL,
+                    password_reset_expires = NULL
+                WHERE email = ? AND id != ?
+            ");
+            $linkStmt->execute([$rider['id'], $rider['email'], $rider['id']]);
+
+            // Get count of actually linked profiles
+            $linkedCount = $linkStmt->rowCount();
+
+            if ($isActivation) {
+                if ($linkedCount > 0) {
+                    $message = "Konto aktiverat! Du har nu tillgång till " . ($linkedCount + 1) . " profiler med samma inloggning.";
+                } else {
+                    $message = 'Konto aktiverat! Du kan nu logga in.';
+                }
             } else {
-                $message = 'Lösenord återställt! Du kan nu logga in.';
+                if ($linkedCount > 0) {
+                    $message = "Lösenord återställt! Alla " . ($linkedCount + 1) . " profiler är tillgängliga med samma inloggning.";
+                } else {
+                    $message = 'Lösenord återställt! Du kan nu logga in.';
+                }
             }
+            $messageType = 'success';
+            $validToken = false; // Hide form
         }
-        $messageType = 'success';
-        $validToken = false; // Hide form
     }
 }
 
@@ -117,6 +155,11 @@ $pageTitle = $isActivation ? 'Aktivera konto' : 'Återställ lösenord';
                 <p>
                     <?= $isActivation ? 'Skapa' : 'Ange nytt' ?> lösenord för
                     <strong><?= htmlspecialchars($rider['firstname'] . ' ' . $rider['lastname']) ?></strong>
+                </p>
+            <?php elseif ($adminUser): ?>
+                <p>
+                    Ange nytt lösenord för
+                    <strong><?= htmlspecialchars($adminUser['full_name'] ?: $adminUser['email']) ?></strong>
                 </p>
             <?php else: ?>
                 <p>Ange din återställningskod eller begär en ny</p>

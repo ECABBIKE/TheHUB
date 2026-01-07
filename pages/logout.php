@@ -1,6 +1,6 @@
 <?php
 /**
- * TheHUB V3.5 - Logout
+ * TheHUB V1.0 - Logout
  */
 
 // Prevent direct access

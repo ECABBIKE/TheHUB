@@ -1,6 +1,6 @@
 <?php
 /**
- * TheHUB V3.5 - Registration API
+ * TheHUB V1.0 - Registration API
  *
  * Handles event registration flow including:
  * - Get rider info for registration

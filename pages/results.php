@@ -1,6 +1,6 @@
 <?php
 /**
- * V3.5 Results Page - Shows events with results
+ * V1.0 Results Page - Shows events with results
  * Matching calendar page design with brand colors
  */
 

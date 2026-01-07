@@ -1,6 +1,6 @@
 <?php
 /**
- * TheHUB V3.5 - Rider Registration
+ * TheHUB V1.0 - Rider Registration
  * Connect email to a rider profile (Super Admin only)
  */
 
