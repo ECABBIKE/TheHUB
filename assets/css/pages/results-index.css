@@ -31,15 +31,11 @@
    FILTERS BAR
    ========================================================================== */
 
-.filters-bar {
+.filter-bar {
   display: flex;
   flex-wrap: wrap;
   gap: var(--space-md);
   margin-bottom: var(--space-lg);
-  padding: var(--container-padding);
-  background: var(--color-bg-card);
-  border-radius: var(--radius-lg);
-  border: 1px solid var(--color-border);
 }
 
 .filter-group {
@@ -48,6 +44,7 @@
   gap: var(--space-2xs);
   flex: 1;
   min-width: 140px;
+  max-width: 200px;
 }
 
 .filter-label {
