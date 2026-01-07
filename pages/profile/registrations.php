@@ -1,6 +1,6 @@
 <?php
 /**
- * TheHUB V3.5 - My Registrations
+ * TheHUB V1.0 - My Registrations
  */
 
 $currentUser = hub_current_user();

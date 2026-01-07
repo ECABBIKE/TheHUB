@@ -10,10 +10,10 @@
 
 ```php
 // config.php - Uppdatera APP_BUILD med dagens datum vid varje push
-define('APP_VERSION', '3.5');          // Major.Minor version
-define('APP_VERSION_NAME', 'Beta');     // Version name
-define('APP_BUILD', '2025-12-11');      // UPPDATERA DETTA: YYYY-MM-DD
-define('DEPLOYMENT_OFFSET', 119);       // Ändra INTE
+define('APP_VERSION', '1.0');          // Major.Minor version
+define('APP_VERSION_NAME', 'Release');  // Version name
+define('APP_BUILD', '2026-01-07');      // UPPDATERA DETTA: YYYY-MM-DD
+define('DEPLOYMENT_OFFSET', 131);       // Ändra INTE
 ```
 
 ### Vid varje push:
@@ -21,12 +21,12 @@ define('DEPLOYMENT_OFFSET', 119);       // Ändra INTE
 2. Meddela användaren vilken version som skapades
 
 ### Format:
-Version visas som: `v3.5 [2025-12-11.XXX] - Beta`
+Version visas som: `v1.0 [2026-01-07.XXX] - Release`
 - XXX = antal git commits + DEPLOYMENT_OFFSET (räknas automatiskt)
 
 ### Exempel på meddelande:
 ```
-Pushat: TheHUB v3.5 [2025-12-11.125]
+Pushat: TheHUB v1.0 [2026-01-07.140]
 ```
 
 ## INGA EMOJIS - ALDRIG

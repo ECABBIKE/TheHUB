@@ -1,6 +1,6 @@
 <?php
 /**
- * TheHUB V3.5 - Payment Functions
+ * TheHUB V1.0 - Payment Functions
  *
  * Handles payment configuration, Swish links/QR, and order management.
  * Supports flexible payment config hierarchy: event > series > promotor > fallback

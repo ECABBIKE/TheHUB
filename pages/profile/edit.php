@@ -1,6 +1,6 @@
 <?php
 /**
- * TheHUB V3.5 - Edit Profile with Social Profiles and Avatar Upload
+ * TheHUB V1.0 - Edit Profile with Social Profiles and Avatar Upload
  */
 
 $currentUser = hub_current_user();

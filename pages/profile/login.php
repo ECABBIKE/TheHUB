@@ -1,6 +1,6 @@
 <?php
 /**
- * TheHUB V3.5 - Login Page
+ * TheHUB V1.0 - Login Page
  * Connects to WordPress/WooCommerce authentication
  */
 

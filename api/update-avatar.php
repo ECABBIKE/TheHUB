@@ -1,6 +1,6 @@
 <?php
 /**
- * TheHUB V3.5 - Avatar Update API
+ * TheHUB V1.0 - Avatar Update API
  *
  * Handles profile picture upload to ImgBB and updates rider record
  *

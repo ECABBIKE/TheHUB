@@ -1,6 +1,6 @@
 <?php
 /**
- * TheHUB V3.5 - Club Admin
+ * TheHUB V1.0 - Club Admin
  * Manage clubs where user is admin
  */
 

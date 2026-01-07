@@ -1,6 +1,6 @@
 <?php
 /**
- * TheHUB V3.5 - Forgot Password
+ * TheHUB V1.0 - Forgot Password
  * Request password reset link
  *
  * Finds the primary account (with password) when profiles are linked

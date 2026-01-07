@@ -1,6 +1,6 @@
 <?php
 /**
- * TheHUB V3.5 - Series List
+ * TheHUB V1.0 - Series List
  * Redesigned to match results page layout with row-based cards
  */
 

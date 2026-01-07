@@ -1,6 +1,6 @@
 <?php
 /**
- * TheHUB V3.5 - Reset Password
+ * TheHUB V1.0 - Reset Password
  * Set new password with reset token
  *
  * When setting password, links all other profiles with same email

@@ -143,8 +143,8 @@ All usages in rider.php must be updated when CSS classes are renamed.
 | `components/mobile-nav.php` | 7 | `// Ensure v3-config is loaded (may already be loaded by parent)` |
 | `router.php` | 9 | `// Ensure v3-config is loaded` |
 | `router.php` | 22 | `// Ensure HUB_V3_ROOT is defined` |
-| `router.php` | 83 | `// New V3.5 section-based routing` |
-| `router.php` | 120 | `// Check if this is a V3.5 section route` |
+| `router.php` | 83 | `// New V1.0 section-based routing` |
+| `router.php` | 120 | `// Check if this is a V1.0 section route` |
 | `api/search.php` | 27 | `// Use global $pdo from config.php (hub_db() is only in v3-config.php)` |
 | `pages/ranking.php` | 9 | `// Include ranking functions - try multiple paths for V3 routing compatibility` |
 | `pages/series/show.php` | 117 | `// Build standings with per-event points (like V2)` |
@@ -152,7 +152,7 @@ All usages in rider.php must be updated when CSS classes are renamed.
 | `pages/calendar/event.php` | 52 | `// Fetch event details (same as V2)` |
 | `pages/series-single.php` | 50 | `// Get all events in this series (using series_events junction table like V2)` |
 | `v3-config.php` | 29 | `// V3.6 VERSION INFO` |
-| `v3-config.php` | 60 | `// V3.5 NAVIGATION (6 main sections)` |
+| `v3-config.php` | 60 | `// V1.0 NAVIGATION (6 main sections)` |
 | `v3-config.php` | 181-251 | Multiple V2/V3 session compatibility comments |
 | `v3-config.php` | 526-588 | Multiple V2/V3 session comments |
 | `admin/point-templates.php` | 140 | `// Page config for V3 admin layout` |

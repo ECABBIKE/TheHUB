@@ -136,7 +136,7 @@ The admin menu is organized into these groups (see `admin-tabs-config.php`):
 
 ## Migration Notes
 
-### From v3.0 to v3.5
+### From v3.0 to v1.0
 - Container max-width changed from `1280px` to `1400px`
 - Use CSS variable `var(--content-max-width)` instead of hardcoded values
 - Event pages now have automatic isolation via `.event-page` class

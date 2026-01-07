@@ -1,6 +1,6 @@
 <?php
 /**
- * TheHUB V3.5 - Linked Children
+ * TheHUB V1.0 - Linked Children
  * Manage parent-child relationships for registration
  */
 

@@ -1,5 +1,5 @@
 /**
- * TheHUB V3.5 - WooCommerce Integration
+ * TheHUB V1.0 - WooCommerce Integration
  * Handles checkout modal and payment flow
  */
 

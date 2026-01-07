@@ -1,6 +1,6 @@
 <?php
 /**
- * TheHUB V3.5 - Search API DEBUG PAGE
+ * TheHUB V1.0 - Search API DEBUG PAGE
  * Shows detailed debug information for search queries
  */
 

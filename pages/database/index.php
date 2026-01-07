@@ -1,6 +1,6 @@
 <?php
 /**
- * TheHUB V3.5 - Databas
+ * TheHUB V1.0 - Databas
  * Sök åkare och klubbar - inspirerad av V2 riders.php och clubs/leaderboard.php
  */
 

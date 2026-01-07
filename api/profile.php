@@ -1,6 +1,6 @@
 <?php
 /**
- * TheHUB V3.5 - Profile API
+ * TheHUB V1.0 - Profile API
  *
  * Handles profile management:
  * - Link/unlink children

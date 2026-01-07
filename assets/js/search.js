@@ -1,5 +1,5 @@
 /**
- * TheHUB V3.5 - Live Search
+ * TheHUB V1.0 - Live Search
  * Real-time search for riders and clubs
  */
 

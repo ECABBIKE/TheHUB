@@ -1,6 +1,6 @@
 <?php
 /**
- * TheHUB V3.5 - Series Detail View
+ * TheHUB V1.0 - Series Detail View
  * Shows series info, events, and standings (Individual + Club with 100%/50% rule)
  */
 

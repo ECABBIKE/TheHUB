@@ -2,7 +2,7 @@
 **Senast uppdaterad: 2025-12-28**
 **Projektägare: JALLE**
 **Status: Aktiv utveckling**
-**Version:** v3.5
+**Version:** v1.0
 
 ---
 

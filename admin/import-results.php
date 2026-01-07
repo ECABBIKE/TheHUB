@@ -1,6 +1,6 @@
 <?php
 /**
- * Import Results - V3.5 Tabbed System
+ * Import Results - V1.0 Tabbed System
  * Supports: Enduro, Downhill, XC, Dual Slalom
  */
 require_once __DIR__ . '/../config.php';
