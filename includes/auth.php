@@ -161,12 +161,45 @@ function login($username, $password) {
         $stmt->execute([$username]);
         $user = $stmt->fetch();
 
+        // Also try to find by email (for promotors using their rider email as username)
+        if (!$user) {
+            $stmt = $pdo->prepare("SELECT id, username, password_hash, email, full_name, role, active
+                FROM admin_users
+                WHERE email = ? AND active = 1
+                LIMIT 1");
+            $stmt->execute([$username]);
+            $user = $stmt->fetch();
+        }
+
         if (!$user) {
             recordFailedLogin($username);
             return false;
         }
 
-        if (!password_verify($password, $user['password_hash'])) {
+        $passwordVerified = false;
+
+        // First try admin_users password_hash if set
+        if (!empty($user['password_hash'])) {
+            $passwordVerified = password_verify($password, $user['password_hash']);
+        }
+
+        // If admin_users password not set or didn't match, try linked rider password
+        if (!$passwordVerified && !empty($user['email'])) {
+            $riderStmt = $pdo->prepare("
+                SELECT id, password
+                FROM riders
+                WHERE email = ? AND password IS NOT NULL AND password != ''
+                LIMIT 1
+            ");
+            $riderStmt->execute([$user['email']]);
+            $linkedRider = $riderStmt->fetch();
+
+            if ($linkedRider && !empty($linkedRider['password'])) {
+                $passwordVerified = password_verify($password, $linkedRider['password']);
+            }
+        }
+
+        if (!$passwordVerified) {
             recordFailedLogin($username);
             return false;
         }
