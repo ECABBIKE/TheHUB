@@ -30,20 +30,51 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $message = 'Ange din e-postadress';
         $messageType = 'error';
     } else {
-        // Find the primary rider (the one with password) for this email
-        // Check both email match AND linked profiles
-        $stmt = $pdo->prepare("
-            SELECT r.id, r.firstname, r.lastname, r.email, r.password
-            FROM riders r
-            WHERE r.email = ? AND r.password IS NOT NULL AND r.password != ''
-            ORDER BY r.id
+        $accountFound = false;
+        $accountType = null; // 'rider' or 'admin'
+        $accountId = null;
+        $accountName = '';
+        $accountEmail = '';
+
+        // First check admin_users table (promotors, admins)
+        $adminStmt = $pdo->prepare("
+            SELECT id, full_name, email, password_hash
+            FROM admin_users
+            WHERE email = ? AND active = 1
             LIMIT 1
         ");
-        $stmt->execute([$email]);
-        $primaryRider = $stmt->fetch(PDO::FETCH_ASSOC);
+        $adminStmt->execute([$email]);
+        $adminUser = $adminStmt->fetch(PDO::FETCH_ASSOC);
 
-        if (!$primaryRider) {
-            // Maybe they entered email but account not activated yet?
+        if ($adminUser) {
+            $accountFound = true;
+            $accountType = 'admin';
+            $accountId = $adminUser['id'];
+            $accountName = $adminUser['full_name'] ?: 'Användare';
+            $accountEmail = $adminUser['email'];
+        } else {
+            // Check riders table
+            $stmt = $pdo->prepare("
+                SELECT r.id, r.firstname, r.lastname, r.email, r.password
+                FROM riders r
+                WHERE r.email = ? AND r.password IS NOT NULL AND r.password != ''
+                ORDER BY r.id
+                LIMIT 1
+            ");
+            $stmt->execute([$email]);
+            $primaryRider = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if ($primaryRider) {
+                $accountFound = true;
+                $accountType = 'rider';
+                $accountId = $primaryRider['id'];
+                $accountName = trim($primaryRider['firstname'] . ' ' . $primaryRider['lastname']);
+                $accountEmail = $primaryRider['email'];
+            }
+        }
+
+        if (!$accountFound) {
+            // Check if rider email exists but not activated
             $checkStmt = $pdo->prepare("SELECT COUNT(*) as count FROM riders WHERE email = ?");
             $checkStmt->execute([$email]);
             $hasProfiles = $checkStmt->fetch(PDO::FETCH_ASSOC)['count'] > 0;
@@ -57,26 +88,38 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $messageType = 'info';
             }
         } else {
-            // Count linked profiles
-            $countStmt = $pdo->prepare("
-                SELECT COUNT(*) as count FROM riders
-                WHERE (email = ? OR linked_to_rider_id = ?) AND id != ?
-            ");
-            $countStmt->execute([$email, $primaryRider['id'], $primaryRider['id']]);
-            $linkedProfilesCount = (int)$countStmt->fetch(PDO::FETCH_ASSOC)['count'];
-
             // Generate reset token
             $token = bin2hex(random_bytes(32));
             $expires = date('Y-m-d H:i:s', strtotime('+1 hour'));
 
-            // Save token to primary rider
-            $updateStmt = $pdo->prepare("
-                UPDATE riders SET
-                    password_reset_token = ?,
-                    password_reset_expires = ?
-                WHERE id = ?
-            ");
-            $updateStmt->execute([$token, $expires, $primaryRider['id']]);
+            if ($accountType === 'admin') {
+                // Save token to admin_users
+                $updateStmt = $pdo->prepare("
+                    UPDATE admin_users SET
+                        password_reset_token = ?,
+                        password_reset_expires = ?
+                    WHERE id = ?
+                ");
+                $updateStmt->execute([$token, $expires, $accountId]);
+                $linkedProfilesCount = 0;
+            } else {
+                // Save token to riders
+                $updateStmt = $pdo->prepare("
+                    UPDATE riders SET
+                        password_reset_token = ?,
+                        password_reset_expires = ?
+                    WHERE id = ?
+                ");
+                $updateStmt->execute([$token, $expires, $accountId]);
+
+                // Count linked profiles for riders
+                $countStmt = $pdo->prepare("
+                    SELECT COUNT(*) as count FROM riders
+                    WHERE (email = ? OR linked_to_rider_id = ?) AND id != ?
+                ");
+                $countStmt->execute([$accountEmail, $accountId, $accountId]);
+                $linkedProfilesCount = (int)$countStmt->fetch(PDO::FETCH_ASSOC)['count'];
+            }
 
             // Build reset link
             $baseUrl = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http')
@@ -84,8 +127,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $resetLink = $baseUrl . '/reset-password?token=' . $token;
 
             // Send email
-            $riderName = trim($primaryRider['firstname'] . ' ' . $primaryRider['lastname']);
-            $emailSent = hub_send_password_reset_email($primaryRider['email'], $riderName, $resetLink);
+            $emailSent = hub_send_password_reset_email($accountEmail, $accountName, $resetLink);
 
             if ($emailSent) {
                 if ($linkedProfilesCount > 0) {
