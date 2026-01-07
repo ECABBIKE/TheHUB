@@ -751,7 +751,7 @@ include __DIR__ . '/components/unified-layout.php';
                             </option>
                         <?php endforeach; ?>
                     </select>
-                    <small class="form-help">Välj prismall för detta event. <a href="/admin/pricing-templates.php">Hantera prismallar</a></small>
+                    <small class="form-help">Välj prismall för detta event.<?php if (isRole('super_admin')): ?> <a href="/admin/pricing-templates.php">Hantera prismallar</a><?php elseif (!empty($event['pricing_template_id'])): ?> <a href="/admin/pricing-template-edit.php?id=<?= $event['pricing_template_id'] ?>&event=<?= $id ?>">Redigera prismall</a><?php endif; ?></small>
                 </div>
 
                 <div class="admin-form-group">
