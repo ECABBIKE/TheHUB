@@ -140,8 +140,12 @@ try {
         </div>
     <?php else: ?>
         <?php foreach ($eventsByYear as $year => $yearEvents): ?>
-            <div class="calendar-month">
-                <h2 class="calendar-month-title"><?= $year ?></h2>
+            <div class="calendar-month-section">
+                <div class="calendar-month-divider">
+                    <span class="calendar-month-label"><?= $year ?></span>
+                    <span class="calendar-month-line"></span>
+                    <span class="calendar-month-count"><?= count($yearEvents) ?> event</span>
+                </div>
                 <div class="event-list">
                     <?php foreach ($yearEvents as $event): ?>
                         <?php
