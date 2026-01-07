@@ -71,7 +71,11 @@ if (!function_exists('formatDisplayTime')) {
 }
 
 if (!function_exists('getEventContent')) {
-    function getEventContent($event, $field, $useGlobalField, $globalTextMap) {
+    function getEventContent($event, $field, $useGlobalField, $globalTextMap, $hiddenField = null) {
+        // Check if content is hidden
+        if ($hiddenField && !empty($event[$hiddenField])) {
+            return '';
+        }
         if (!empty($event[$useGlobalField]) && !empty($globalTextMap[$field])) {
             return $globalTextMap[$field];
         }
@@ -1061,28 +1065,28 @@ if (!empty($eventSponsors['content'])): ?>
             Inbjudan
         </a>
 
-        <?php if ($showAllTabs && $pmPublished && (!empty($event['pm_content']) || !empty($event['pm_use_global']))): ?>
+        <?php if ($showAllTabs && $pmPublished && empty($event['pm_hidden']) && (!empty($event['pm_content']) || !empty($event['pm_use_global']))): ?>
         <a href="?id=<?= $eventId ?>&tab=pm" class="event-tab <?= $activeTab === 'pm' ? 'active' : '' ?>">
             <i data-lucide="file-text"></i>
             PM
         </a>
         <?php endif; ?>
 
-        <?php if ($showAllTabs && (!empty($event['jury_communication']) || !empty($event['jury_use_global']))): ?>
+        <?php if ($showAllTabs && empty($event['jury_hidden']) && (!empty($event['jury_communication']) || !empty($event['jury_use_global']))): ?>
         <a href="?id=<?= $eventId ?>&tab=jury" class="event-tab <?= $activeTab === 'jury' ? 'active' : '' ?>">
             <i data-lucide="scale"></i>
             Jury
         </a>
         <?php endif; ?>
 
-        <?php if ($showAllTabs && (!empty($event['competition_schedule']) || !empty($event['schedule_use_global']))): ?>
+        <?php if ($showAllTabs && empty($event['schedule_hidden']) && (!empty($event['competition_schedule']) || !empty($event['schedule_use_global']))): ?>
         <a href="?id=<?= $eventId ?>&tab=schema" class="event-tab <?= $activeTab === 'schema' ? 'active' : '' ?>">
             <i data-lucide="calendar-clock"></i>
             Schema
         </a>
         <?php endif; ?>
 
-        <?php if ($showAllTabs && $starttiderPublished && (!empty($event['start_times']) || !empty($event['start_times_use_global']))): ?>
+        <?php if ($showAllTabs && $starttiderPublished && empty($event['start_times_hidden']) && (!empty($event['start_times']) || !empty($event['start_times_use_global']))): ?>
         <a href="?id=<?= $eventId ?>&tab=starttider" class="event-tab <?= $activeTab === 'starttider' ? 'active' : '' ?>">
             <i data-lucide="list-ordered"></i>
             Starttider
@@ -1753,21 +1757,21 @@ if (!empty($eventSponsors['content'])): ?>
 <!-- INBJUDAN TAB - Invitation + Facilities & Logistics -->
 <?php
 // Get invitation content
-$invitationText = getEventContent($event, 'invitation', 'invitation_use_global', $globalTextMap);
+$invitationText = getEventContent($event, 'invitation', 'invitation_use_global', $globalTextMap, 'invitation_hidden');
 
 // Get all facility content
-$hydrationInfo = getEventContent($event, 'hydration_stations', 'hydration_use_global', $globalTextMap);
-$toiletsInfo = getEventContent($event, 'toilets_showers', 'toilets_use_global', $globalTextMap);
-$bikeWashInfo = getEventContent($event, 'bike_wash', 'bike_wash_use_global', $globalTextMap);
-$foodCafe = getEventContent($event, 'food_cafe', 'food_use_global', $globalTextMap);
-$shopsInfo = getEventContent($event, 'shops_info', 'shops_use_global', $globalTextMap);
-$exhibitorsInfo = getEventContent($event, 'exhibitors', 'exhibitors_use_global', $globalTextMap);
-$parkingInfo = $event['parking_detailed'] ?? '';
-$hotelInfo = $event['hotel_accommodation'] ?? '';
-$localInfo = getEventContent($event, 'local_info', 'local_use_global', $globalTextMap);
-$medicalInfo = getEventContent($event, 'medical_info', 'medical_use_global', $globalTextMap);
-$mediaInfo = getEventContent($event, 'media_production', 'media_use_global', $globalTextMap);
-$contactsInfo = getEventContent($event, 'contacts_info', 'contacts_use_global', $globalTextMap);
+$hydrationInfo = getEventContent($event, 'hydration_stations', 'hydration_use_global', $globalTextMap, 'hydration_hidden');
+$toiletsInfo = getEventContent($event, 'toilets_showers', 'toilets_use_global', $globalTextMap, 'toilets_hidden');
+$bikeWashInfo = getEventContent($event, 'bike_wash', 'bike_wash_use_global', $globalTextMap, 'bike_wash_hidden');
+$foodCafe = getEventContent($event, 'food_cafe', 'food_use_global', $globalTextMap, 'food_hidden');
+$shopsInfo = getEventContent($event, 'shops_info', 'shops_use_global', $globalTextMap, 'shops_hidden');
+$exhibitorsInfo = getEventContent($event, 'exhibitors', 'exhibitors_use_global', $globalTextMap, 'exhibitors_hidden');
+$parkingInfo = !empty($event['parking_hidden']) ? '' : ($event['parking_detailed'] ?? '');
+$hotelInfo = !empty($event['hotel_hidden']) ? '' : ($event['hotel_accommodation'] ?? '');
+$localInfo = getEventContent($event, 'local_info', 'local_use_global', $globalTextMap, 'local_hidden');
+$medicalInfo = getEventContent($event, 'medical_info', 'medical_use_global', $globalTextMap, 'medical_hidden');
+$mediaInfo = getEventContent($event, 'media_production', 'media_use_global', $globalTextMap, 'media_hidden');
+$contactsInfo = getEventContent($event, 'contacts_info', 'contacts_use_global', $globalTextMap, 'contacts_hidden');
 $hasFacilities = $hydrationInfo || $toiletsInfo || $bikeWashInfo || $foodCafe || $shopsInfo || $exhibitorsInfo || $parkingInfo || $hotelInfo || $localInfo || $medicalInfo || $mediaInfo || $contactsInfo;
 ?>
 
@@ -1898,16 +1902,16 @@ if (!$pmPublished):
 </section>
 <?php else:
 // Get all PM-related content
-$pmContent = getEventContent($event, 'pm_content', 'pm_use_global', $globalTextMap);
-$driverMeetingPM = getEventContent($event, 'driver_meeting', 'driver_meeting_use_global', $globalTextMap);
-$trainingPM = getEventContent($event, 'training_info', 'training_use_global', $globalTextMap);
-$timingPM = getEventContent($event, 'timing_info', 'timing_use_global', $globalTextMap);
-$liftPM = getEventContent($event, 'lift_info', 'lift_use_global', $globalTextMap);
-$rulesPM = getEventContent($event, 'competition_rules', 'rules_use_global', $globalTextMap);
-$insurancePM = getEventContent($event, 'insurance_info', 'insurance_use_global', $globalTextMap);
-$equipmentPM = getEventContent($event, 'equipment_info', 'equipment_use_global', $globalTextMap);
-$scfPM = getEventContent($event, 'scf_representatives', 'scf_use_global', $globalTextMap);
-$medicalPM = getEventContent($event, 'medical_info', 'medical_use_global', $globalTextMap);
+$pmContent = getEventContent($event, 'pm_content', 'pm_use_global', $globalTextMap, 'pm_hidden');
+$driverMeetingPM = getEventContent($event, 'driver_meeting', 'driver_meeting_use_global', $globalTextMap, 'driver_meeting_hidden');
+$trainingPM = getEventContent($event, 'training_info', 'training_use_global', $globalTextMap, 'training_hidden');
+$timingPM = getEventContent($event, 'timing_info', 'timing_use_global', $globalTextMap, 'timing_hidden');
+$liftPM = getEventContent($event, 'lift_info', 'lift_use_global', $globalTextMap, 'lift_hidden');
+$rulesPM = getEventContent($event, 'competition_rules', 'rules_use_global', $globalTextMap, 'rules_hidden');
+$insurancePM = getEventContent($event, 'insurance_info', 'insurance_use_global', $globalTextMap, 'insurance_hidden');
+$equipmentPM = getEventContent($event, 'equipment_info', 'equipment_use_global', $globalTextMap, 'equipment_hidden');
+$scfPM = getEventContent($event, 'scf_representatives', 'scf_use_global', $globalTextMap, 'scf_hidden');
+$medicalPM = getEventContent($event, 'medical_info', 'medical_use_global', $globalTextMap, 'medical_hidden');
 $hasPMContent = $pmContent || $driverMeetingPM || $trainingPM || $timingPM || $liftPM || $rulesPM || $insurancePM || $equipmentPM || $scfPM || $medicalPM;
 ?>
 <section class="card">
@@ -2000,7 +2004,7 @@ $hasPMContent = $pmContent || $driverMeetingPM || $trainingPM || $timingPM || $l
         <h2 class="card-title"><i data-lucide="gavel"></i> Jurykommuniké</h2>
     </div>
     <div class="card-body">
-        <?php $juryContent = getEventContent($event, 'jury_communication', 'jury_use_global', $globalTextMap); ?>
+        <?php $juryContent = getEventContent($event, 'jury_communication', 'jury_use_global', $globalTextMap, 'jury_hidden'); ?>
         <?php if ($juryContent): ?>
             <div class="prose"><?= nl2br(h($juryContent)) ?></div>
         <?php else: ?>
@@ -2016,7 +2020,7 @@ $hasPMContent = $pmContent || $driverMeetingPM || $trainingPM || $timingPM || $l
         <h2 class="card-title"><i data-lucide="calendar-clock"></i> Tävlingsschema</h2>
     </div>
     <div class="card-body">
-        <?php $scheduleContent = getEventContent($event, 'competition_schedule', 'schedule_use_global', $globalTextMap); ?>
+        <?php $scheduleContent = getEventContent($event, 'competition_schedule', 'schedule_use_global', $globalTextMap, 'schedule_hidden'); ?>
         <?php if ($scheduleContent): ?>
             <div class="prose"><?= nl2br(h($scheduleContent)) ?></div>
         <?php else: ?>
@@ -2032,7 +2036,7 @@ $hasPMContent = $pmContent || $driverMeetingPM || $trainingPM || $timingPM || $l
         <h2 class="card-title"><i data-lucide="clock"></i> Starttider</h2>
     </div>
     <div class="card-body">
-        <?php $startContent = getEventContent($event, 'start_times', 'start_times_use_global', $globalTextMap); ?>
+        <?php $startContent = getEventContent($event, 'start_times', 'start_times_use_global', $globalTextMap, 'start_times_hidden'); ?>
         <?php if ($startContent): ?>
             <div class="prose"><?= nl2br(h($startContent)) ?></div>
         <?php else: ?>
