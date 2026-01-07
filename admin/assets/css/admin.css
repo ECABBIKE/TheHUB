@@ -2775,72 +2775,103 @@ h2 svg.lucide {
 /* ========================================================================
    EDGE-TO-EDGE ON MOBILE
    Cards, tables, alerts go full-width on mobile for maximum data space
+   Uses --container-padding (matches layout.css and components.css)
    ======================================================================== */
 
 @media (max-width: 767px) {
-    /* Edge-to-edge cards */
+    /* Edge-to-edge cards - comprehensive admin selectors */
     .admin-card,
-    .admin-content > .card,
-    .admin-content > .table-responsive,
-    .admin-content > .alert,
-    .page-content > .card,
-    .page-content > .table-responsive,
-    .page-content > .alert {
-        margin-left: calc(-1 * var(--space-md));
-        margin-right: calc(-1 * var(--space-md));
-        border-radius: 0;
-        border-left: none;
-        border-right: none;
-        width: calc(100% + var(--space-md) * 2);
+    .admin-content .card,
+    .admin-content .table-responsive,
+    .admin-content .alert,
+    .page-content.admin-content .card,
+    .page-content.admin-content .table-responsive,
+    .page-content.admin-content .alert,
+    /* Dashboard specific */
+    .dashboard-metrics,
+    .pending-claims-box,
+    .dashboard-section,
+    .quick-actions,
+    /* Admin forms and sections */
+    .admin-form-section,
+    .admin-section {
+        margin-left: calc(-1 * var(--container-padding, 16px)) !important;
+        margin-right: calc(-1 * var(--container-padding, 16px)) !important;
+        border-radius: 0 !important;
+        border-left: none !important;
+        border-right: none !important;
+        width: auto !important;
+        max-width: none !important;
+    }
+
+    /* Dashboard metric cards - edge-to-edge container, cards inside stack */
+    .dashboard-metrics {
+        display: flex;
+        flex-direction: column;
+        gap: 1px;
+        background: var(--color-border);
+        padding: 0 !important;
+    }
+
+    .metric-card {
+        border-radius: 0 !important;
+        border: none !important;
+        margin: 0 !important;
+    }
+
+    /* Pending claims box edge-to-edge */
+    .pending-claims-box {
+        padding: var(--container-padding, 16px) !important;
     }
 
     /* Stats grid also edge-to-edge */
     .admin-stats-grid {
-        margin-left: calc(-1 * var(--space-md));
-        margin-right: calc(-1 * var(--space-md));
-        width: calc(100% + var(--space-md) * 2);
-        padding: 0 var(--space-md);
+        margin-left: calc(-1 * var(--container-padding, 16px)) !important;
+        margin-right: calc(-1 * var(--container-padding, 16px)) !important;
+        width: auto !important;
+        padding: 0 var(--container-padding, 16px);
         gap: var(--space-xs);
     }
 
     /* Stat cards - no side borders/radius */
     .admin-stat-card {
-        border-radius: 0;
-        border-left: none;
-        border-right: none;
-    }
-
-    /* First and last stat cards get radius */
-    .admin-stats-grid > *:first-child {
-        border-top-left-radius: var(--radius-md);
-    }
-
-    .admin-stats-grid > *:nth-child(2) {
-        border-top-right-radius: var(--radius-md);
+        border-radius: 0 !important;
+        border-left: none !important;
+        border-right: none !important;
     }
 
     /* Tabs edge-to-edge */
     .admin-tabs {
-        margin-left: calc(-1 * var(--space-md));
-        margin-right: calc(-1 * var(--space-md));
-        padding: 0 var(--space-md);
-        width: calc(100% + var(--space-md) * 2);
+        margin-left: calc(-1 * var(--container-padding, 16px)) !important;
+        margin-right: calc(-1 * var(--container-padding, 16px)) !important;
+        padding: 0 var(--container-padding, 16px);
+        width: auto !important;
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
     }
 
     /* Tables edge-to-edge */
     .admin-table-wrapper,
-    .table-responsive {
-        margin-left: calc(-1 * var(--space-md));
-        margin-right: calc(-1 * var(--space-md));
-        width: calc(100% + var(--space-md) * 2);
-        border-radius: 0;
+    .admin-content .table-responsive,
+    .page-content.admin-content .table-responsive {
+        margin-left: calc(-1 * var(--container-padding, 16px)) !important;
+        margin-right: calc(-1 * var(--container-padding, 16px)) !important;
+        width: auto !important;
+        border-radius: 0 !important;
     }
 
     .admin-table-wrapper .admin-table,
     .table-responsive table {
         border-radius: 0;
+    }
+
+    /* Restore internal padding for card content */
+    .admin-card .card-body,
+    .admin-card .card-header,
+    .admin-content .card .card-body,
+    .admin-content .card .card-header {
+        padding-left: var(--container-padding, 16px);
+        padding-right: var(--container-padding, 16px);
     }
 
     /* Mobile form grids - stack vertically */
@@ -3412,122 +3443,47 @@ h2 svg.lucide {
 /* ========================================================================
    MOBILE FIX 2025-01 PART 2 - Additional Global Mobile Fixes
    Comprehensive overrides for all inline styles and common patterns
+   Note: Main edge-to-edge rules are in EDGE-TO-EDGE ON MOBILE section above
    ======================================================================== */
 
 /* ------------------------------------------------------------------------
-   11. ADMIN CARDS - Edge-to-edge on mobile
-   ------------------------------------------------------------------------ */
-
-@media (max-width: 767px) {
-    .admin-card,
-    .card {
-        margin-left: calc(-1 * var(--space-md, 16px));
-        margin-right: calc(-1 * var(--space-md, 16px));
-        width: calc(100% + var(--space-md, 16px) * 2);
-        border-radius: 0 !important;
-        border-left: none !important;
-        border-right: none !important;
-    }
-
-    /* Cards inside grids need special handling */
-    .grid .admin-card,
-    .grid .card,
-    .page-grid .admin-card,
-    .page-grid .card {
-        margin-left: 0;
-        margin-right: 0;
-        width: 100%;
-    }
-}
-
-/* ------------------------------------------------------------------------
    12. FILTER FORMS - Stack vertically on mobile
+   Only target specific filter containers, not all forms
    ------------------------------------------------------------------------ */
 
 @media (max-width: 767px) {
-    /* Filter bar items */
+    /* Filter bar items - be more specific */
     .filter-bar,
     .filters-bar,
-    .filter-row,
-    form.flex,
-    .card-body form.flex,
-    .admin-card-body form.flex {
-        flex-direction: column !important;
-        align-items: stretch !important;
-        gap: var(--space-sm) !important;
+    .admin-filters {
+        flex-direction: column;
+        align-items: stretch;
+        gap: var(--space-sm);
     }
 
-    /* All filter inputs/selects full width */
+    /* Filter inputs full width */
     .filter-bar select,
-    .filter-bar input,
+    .filter-bar input[type="text"],
+    .filter-bar input[type="search"],
     .filters-bar select,
-    .filters-bar input,
-    .filter-row select,
-    .filter-row input,
-    form.flex select,
-    form.flex input[type="text"],
-    form.flex input[type="search"],
-    form.flex input[type="date"],
-    form.flex input[type="number"] {
-        width: 100% !important;
-        min-width: 0 !important;
-        max-width: none !important;
-    }
-
-    /* Remove inline width styles on form elements */
-    select[style*="width"],
-    input[style*="width"],
-    .form-group[style*="width"],
-    .form-group[style*="min-width"] {
-        width: 100% !important;
-        min-width: 0 !important;
-    }
-
-    /* Form groups stack */
-    .form-group,
-    .admin-form-group {
-        width: 100% !important;
-    }
-
-    /* Filter buttons full width */
-    .filter-bar button,
-    .filters-bar button,
-    .filter-row button,
-    form.flex > button,
-    form.flex > .btn,
-    form.flex > a.btn {
-        width: 100% !important;
-        justify-content: center !important;
+    .filters-bar input[type="text"] {
+        width: 100%;
+        min-width: 0;
     }
 }
 
 /* ------------------------------------------------------------------------
    13. GRID LAYOUTS - Single column on mobile
+   Be careful not to override everything - only target specific grids
    ------------------------------------------------------------------------ */
 
-@media (max-width: 767px) {
-    /* Force all grids to single column */
-    .grid,
-    .page-grid,
-    .admin-grid,
-    [class*="grid-cols-"],
-    [class*="grid-wide"] {
-        display: flex !important;
-        flex-direction: column !important;
-        gap: var(--space-md) !important;
-    }
-
-    .grid > *,
-    .page-grid > *,
-    .admin-grid > * {
-        width: 100% !important;
-    }
-
-    /* Stat grids - 2 columns on mobile */
-    .grid-stats {
-        display: grid !important;
-        grid-template-columns: repeat(2, 1fr) !important;
-        flex-direction: unset !important;
+@media (max-width: 599px) {
+    /* Two-column grids collapse to single column on small phones */
+    .grid-wide,
+    .admin-two-col {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-md);
     }
 }
 
@@ -3536,17 +3492,17 @@ h2 svg.lucide {
    ------------------------------------------------------------------------ */
 
 @media (max-width: 767px) {
-    /* Wrap all tables */
+    /* Wrap all tables - use container-padding for consistency */
     .admin-table-container,
-    .table-responsive,
-    .card-body:has(table),
+    .admin-content .table-responsive,
+    .admin-content .card-body:has(table),
     .admin-card-body:has(table) {
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
-        margin-left: calc(-1 * var(--space-md, 16px));
-        margin-right: calc(-1 * var(--space-md, 16px));
-        padding-left: var(--space-md, 16px);
-        padding-right: var(--space-md, 16px);
+        margin-left: calc(-1 * var(--container-padding, 16px));
+        margin-right: calc(-1 * var(--container-padding, 16px));
+        padding-left: var(--container-padding, 16px);
+        padding-right: var(--container-padding, 16px);
     }
 
     /* Table minimum width for scrolling */
@@ -3621,67 +3577,19 @@ h2 svg.lucide {
 
 /* ------------------------------------------------------------------------
    16. STAT CARDS - Compact on mobile
+   Note: Most stat card styles already defined elsewhere
    ------------------------------------------------------------------------ */
 
-@media (max-width: 599px) {
-    .admin-stat-card,
-    .stat-card,
-    .metric-card {
-        padding: var(--space-md) !important;
-    }
-
-    .admin-stat-card .stat-value,
-    .stat-card .stat-number,
-    .metric-card .metric-value {
-        font-size: var(--text-lg) !important;
-    }
-
-    .admin-stat-card .stat-label,
-    .stat-card .stat-label,
-    .metric-card .metric-label {
-        font-size: var(--text-xs) !important;
-    }
-
-    .stat-icon,
-    .metric-icon {
-        width: 36px !important;
-        height: 36px !important;
-    }
-
-    .stat-icon svg,
-    .metric-icon svg {
-        width: 18px !important;
-        height: 18px !important;
-    }
-}
+/* Intentionally minimal - see existing rules around line 1016 */
 
 /* ------------------------------------------------------------------------
-   17. IMPORT SECTIONS - Stack on mobile
+   17. IMPORT SECTIONS - Stack on mobile (minimal)
    ------------------------------------------------------------------------ */
 
 @media (max-width: 767px) {
-    .admin-import-grid {
-        display: flex !important;
-        flex-direction: column !important;
-        gap: var(--space-md) !important;
-    }
-
-    .admin-import-section {
-        margin-left: calc(-1 * var(--space-md, 16px));
-        margin-right: calc(-1 * var(--space-md, 16px));
-        width: calc(100% + var(--space-md, 16px) * 2);
-        border-radius: 0 !important;
-    }
-
     .admin-import-section-actions {
         flex-wrap: wrap;
         gap: var(--space-xs);
-    }
-
-    .admin-import-section-actions .btn-admin {
-        flex: 1;
-        min-width: 80px;
-        justify-content: center;
     }
 }
 
@@ -3730,13 +3638,16 @@ h2 svg.lucide {
 
 /* ------------------------------------------------------------------------
    20. ALERT BOXES - Full width on mobile
+   Note: Main alert edge-to-edge rules in EDGE-TO-EDGE ON MOBILE section
+   This adds extra specificity for standalone alerts
    ------------------------------------------------------------------------ */
 
 @media (max-width: 767px) {
-    .alert {
-        margin-left: calc(-1 * var(--space-md, 16px));
-        margin-right: calc(-1 * var(--space-md, 16px));
-        width: calc(100% + var(--space-md, 16px) * 2);
+    .admin-content > .alert,
+    .page-content.admin-content > .alert {
+        margin-left: calc(-1 * var(--container-padding, 16px)) !important;
+        margin-right: calc(-1 * var(--container-padding, 16px)) !important;
+        width: auto !important;
         border-radius: 0 !important;
         border-left: none !important;
         border-right: none !important;
