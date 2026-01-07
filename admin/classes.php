@@ -723,10 +723,20 @@ document.addEventListener('keydown', function(e) {
 .admin-modal-close { background: none; border: none; padding: var(--space-xs); cursor: pointer; color: var(--color-text-secondary); border-radius: var(--radius-sm); }
 .admin-modal-close:hover { background: var(--color-bg-tertiary); color: var(--color-text); }
 .admin-modal-close svg { width: 20px; height: 20px; }
-.admin-modal-body { padding: var(--space-lg); overflow-y: auto; flex: 1; }
+.admin-modal-body { padding: var(--space-lg); overflow-y: auto; -webkit-overflow-scrolling: touch; flex: 1; }
 .admin-modal-footer { display: flex; justify-content: flex-end; gap: var(--space-sm); padding: var(--space-lg); border-top: 1px solid var(--color-border); }
 .admin-checkbox-label { display: flex; align-items: center; gap: var(--space-xs); cursor: pointer; font-size: var(--text-sm); }
 .admin-checkbox-label input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--color-accent); }
+
+/* Mobile: Fullscreen modal */
+@media (max-width: 599px) {
+    .admin-modal { padding: 0; }
+    .admin-modal-content { width: 100%; max-width: 100%; height: 100%; max-height: 100%; border-radius: 0; }
+    .admin-modal-header { padding-top: calc(var(--space-lg) + env(safe-area-inset-top, 0px)); }
+    .admin-modal-footer { padding-bottom: calc(var(--space-lg) + env(safe-area-inset-bottom, 0px)); flex-wrap: wrap; }
+    .admin-modal-footer .btn-admin { flex: 1; min-width: 120px; justify-content: center; }
+    .admin-modal-close { min-width: 44px; min-height: 44px; }
+}
 
 /* Class events dropdown */
 .class-event-count { cursor: pointer; color: var(--color-accent); text-decoration: underline; }
@@ -737,6 +747,11 @@ document.addEventListener('keydown', function(e) {
 .class-events-dropdown li:last-child { border-bottom: none; }
 .class-events-dropdown a { color: var(--color-accent); text-decoration: none; }
 .class-events-dropdown a:hover { text-decoration: underline; }
+
+/* Mobile: Dropdown as fullwidth sheet */
+@media (max-width: 599px) {
+    .class-events-dropdown { position: fixed; left: var(--space-sm); right: var(--space-sm); bottom: calc(var(--mobile-nav-height, 64px) + env(safe-area-inset-bottom, 0px) + var(--space-sm)); top: auto; min-width: auto; max-width: none; max-height: 50vh; }
+}
 
 /* Warning button style */
 .btn-admin-warning { background: var(--color-warning, #f59e0b); color: white; }
