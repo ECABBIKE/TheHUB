@@ -100,8 +100,8 @@ try {
 <!-- Filters -->
 <div class="filter-bar">
     <div class="filter-group">
-        <label for="filter-brand" class="filter-label">Serie</label>
-        <select id="filter-brand" class="filter-select" onchange="applyFilters()">
+        <label for="filter-series" class="filter-label">Serie</label>
+        <select id="filter-series" class="filter-select" onchange="applyFilters()">
             <option value="">Alla serier</option>
             <?php foreach ($brandsList as $brand): ?>
                 <option value="<?= $brand['id'] ?>" <?= $filterBrand == $brand['id'] ? 'selected' : '' ?>>
@@ -205,10 +205,10 @@ try {
 
 <script>
 function applyFilters() {
-    const brand = document.getElementById('filter-brand').value;
+    const series = document.getElementById('filter-series').value;
     const year = document.getElementById('filter-year').value;
     const params = new URLSearchParams();
-    if (brand) params.set('brand', brand);
+    if (series) params.set('brand', series);
     if (year) params.set('year', year);
     window.location.href = '/results' + (params.toString() ? '?' + params : '');
 }
