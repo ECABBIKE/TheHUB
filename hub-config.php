@@ -282,21 +282,31 @@ if (!function_exists('hub_get_rider_by_email')) {
 
 if (!function_exists('hub_is_parent_of')) {
     function hub_is_parent_of(int $parentId, int $childId): bool {
-        $stmt = hub_db()->prepare("SELECT 1 FROM rider_parents WHERE parent_rider_id = ? AND child_rider_id = ?");
-        $stmt->execute([$parentId, $childId]);
-        return (bool) $stmt->fetch();
+        try {
+            $stmt = hub_db()->prepare("SELECT 1 FROM rider_parents WHERE parent_rider_id = ? AND child_rider_id = ?");
+            $stmt->execute([$parentId, $childId]);
+            return (bool) $stmt->fetch();
+        } catch (PDOException $e) {
+            // Table doesn't exist yet
+            return false;
+        }
     }
 }
 
 if (!function_exists('hub_get_linked_children')) {
     function hub_get_linked_children(int $parentId): array {
-        $stmt = hub_db()->prepare("
-            SELECT r.* FROM riders r
-            JOIN rider_parents rp ON r.id = rp.child_rider_id
-            WHERE rp.parent_rider_id = ?
-        ");
-        $stmt->execute([$parentId]);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        try {
+            $stmt = hub_db()->prepare("
+                SELECT r.* FROM riders r
+                JOIN rider_parents rp ON r.id = rp.child_rider_id
+                WHERE rp.parent_rider_id = ?
+            ");
+            $stmt->execute([$parentId]);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            // Table doesn't exist yet
+            return [];
+        }
     }
 }
 
@@ -315,21 +325,31 @@ if (!function_exists('hub_can_edit_club')) {
         $user = hub_current_user();
         if (!$user) return false;
 
-        $stmt = hub_db()->prepare("SELECT 1 FROM club_admins WHERE rider_id = ? AND club_id = ?");
-        $stmt->execute([$user['id'], $clubId]);
-        return (bool) $stmt->fetch();
+        try {
+            $stmt = hub_db()->prepare("SELECT 1 FROM club_admins WHERE rider_id = ? AND club_id = ?");
+            $stmt->execute([$user['id'], $clubId]);
+            return (bool) $stmt->fetch();
+        } catch (PDOException $e) {
+            // Table doesn't exist yet
+            return false;
+        }
     }
 }
 
 if (!function_exists('hub_get_admin_clubs')) {
     function hub_get_admin_clubs(int $riderId): array {
-        $stmt = hub_db()->prepare("
-            SELECT c.* FROM clubs c
-            JOIN club_admins ca ON c.id = ca.club_id
-            WHERE ca.rider_id = ?
-        ");
-        $stmt->execute([$riderId]);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        try {
+            $stmt = hub_db()->prepare("
+                SELECT c.* FROM clubs c
+                JOIN club_admins ca ON c.id = ca.club_id
+                WHERE ca.rider_id = ?
+            ");
+            $stmt->execute([$riderId]);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            // Table doesn't exist yet
+            return [];
+        }
     }
 }
 
