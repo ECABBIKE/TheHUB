@@ -319,3 +319,64 @@ a.text-primary:hover,
         box-shadow: var(--shadow-lg);
     }
 }
+
+/* ========================================================================
+   THEME SWITCHER I ADMIN DROPDOWN
+   ======================================================================== */
+.admin-dropdown-theme {
+    padding: var(--space-sm, 8px) var(--space-md, 16px);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-md, 16px);
+}
+
+.theme-label {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm, 8px);
+    font-size: var(--text-sm, 14px);
+    color: var(--color-text-primary);
+}
+
+.theme-label svg {
+    color: var(--color-text-muted);
+}
+
+.theme-options {
+    display: flex;
+    gap: 4px;
+}
+
+.theme-option-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border: 1px solid var(--color-border);
+    background: transparent;
+    border-radius: var(--radius-md, 8px);
+    color: var(--color-text-muted);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.theme-option-btn svg {
+    width: 16px;
+    height: 16px;
+}
+
+.theme-option-btn:hover {
+    background: var(--color-bg-hover);
+    color: var(--color-text-primary);
+    border-color: var(--color-border-strong);
+}
+
+.theme-option-btn.is-active,
+.theme-btn.is-active {
+    background: var(--color-accent-light);
+    color: var(--color-accent);
+    border-color: var(--color-accent);
+    box-shadow: var(--shadow-glow);
+}
