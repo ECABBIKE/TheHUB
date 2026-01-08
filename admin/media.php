@@ -60,6 +60,20 @@ $totalFiles = 0;
 $totalSize = 0;
 
 foreach ($folderStats as $stat) {
+    // For promotors, only count files in their allowed folders
+    if ($isPromotorOnly && !empty($promotorAllowedFolders)) {
+        $isAllowed = false;
+        foreach ($promotorAllowedFolders as $allowed) {
+            if (strpos($stat['folder'], $allowed) === 0 || $stat['folder'] === $allowed) {
+                $isAllowed = true;
+                break;
+            }
+        }
+        if (!$isAllowed) {
+            continue;
+        }
+    }
+
     // Group subfolders under parent for stats
     $mainFolder = explode('/', $stat['folder'])[0];
     if (!isset($statsByFolder[$mainFolder])) {
@@ -94,23 +108,8 @@ if ($isPromotorOnly) {
     $folders = [
         ['id' => 'sponsors', 'name' => 'Eventmedia', 'icon' => 'handshake']
     ];
-    // Force promotors to sponsors folder
-    if (!$currentFolder || ($currentFolder !== 'sponsors' && strpos($currentFolder, 'sponsors/') !== 0)) {
-        $currentFolder = 'sponsors';
-    }
-    // Verify access to current folder
-    if (strpos($currentFolder, 'sponsors/') === 0 && !empty($promotorAllowedFolders)) {
-        $hasAccess = false;
-        foreach ($promotorAllowedFolders as $allowed) {
-            if (strpos($currentFolder, dirname($allowed)) !== false || $currentFolder === dirname($allowed) || strpos($allowed, $currentFolder) === 0) {
-                $hasAccess = true;
-                break;
-            }
-        }
-        if (!$hasAccess) {
-            $currentFolder = 'sponsors';
-        }
-    }
+    // Force promotors to sponsors folder - ALWAYS
+    $currentFolder = 'sponsors';
 } else {
     $folders = [
         ['id' => 'branding', 'name' => 'Branding', 'icon' => 'palette'],
@@ -132,21 +131,30 @@ unset($folder);
 
 // Get media files
 if ($searchQuery) {
-    $mediaFiles = search_media($searchQuery, $currentFolder, 100);
+    $mediaFiles = search_media($searchQuery, $currentFolder, 100, true); // include subfolders
 } else {
-    $mediaFiles = get_media_by_folder($currentFolder, 100, 0);
+    // Include subfolders when viewing sponsors folder (to see event subfolders)
+    $includeSubfolders = ($currentFolder === 'sponsors' || strpos($currentFolder, 'sponsors/') === 0);
+    $mediaFiles = get_media_by_folder($currentFolder, 100, 0, $includeSubfolders);
 }
 
-// Filter media files for promotors
-if ($isPromotorOnly && !empty($promotorAllowedFolders) && !empty($mediaFiles)) {
-    $mediaFiles = array_filter($mediaFiles, function($file) use ($promotorAllowedFolders) {
-        foreach ($promotorAllowedFolders as $allowed) {
-            if (strpos($file['folder'], $allowed) === 0 || $file['folder'] === $allowed) {
-                return true;
+// Filter media files for promotors - only show their event folders
+if ($isPromotorOnly && !empty($mediaFiles)) {
+    if (!empty($promotorAllowedFolders)) {
+        $mediaFiles = array_filter($mediaFiles, function($file) use ($promotorAllowedFolders) {
+            foreach ($promotorAllowedFolders as $allowed) {
+                // Check if file is in an allowed folder or subfolder
+                if (strpos($file['folder'], $allowed) === 0 || $file['folder'] === $allowed) {
+                    return true;
+                }
             }
-        }
-        return false;
-    });
+            return false;
+        });
+        $mediaFiles = array_values($mediaFiles); // Re-index array
+    } else {
+        // Promotor has no events assigned - show empty
+        $mediaFiles = [];
+    }
 }
 
 // Page config
@@ -565,6 +573,7 @@ include __DIR__ . '/components/unified-layout.php';
         <h3 style="margin: 0 0 var(--space-md); font-size: 0.875rem; text-transform: uppercase; color: var(--color-text-secondary);">Mappar</h3>
 
         <ul class="folder-list">
+            <?php if (!$isPromotorOnly): ?>
             <li>
                 <a href="/admin/media" class="folder-item <?= $currentFolder === null ? 'active' : '' ?>">
                     <svg class="folder-icon" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
@@ -572,6 +581,7 @@ include __DIR__ . '/components/unified-layout.php';
                     <span class="folder-count"><?= $totalFiles ?></span>
                 </a>
             </li>
+            <?php endif; ?>
             <?php foreach ($folders as $folder): ?>
             <li>
                 <a href="/admin/media?folder=<?= $folder['id'] ?>" class="folder-item <?= $currentFolder === $folder['id'] || $parentFolder === $folder['id'] ? 'active' : '' ?>">
