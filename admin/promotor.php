@@ -101,6 +101,40 @@ $pageTitle = 'Mina Tävlingar';
         .promotor-header h1 i {
             color: var(--color-accent);
         }
+        /* Desktop Navigation - hidden on mobile */
+        .promotor-desktop-nav {
+            display: none;
+        }
+        @media (min-width: 769px) {
+            .promotor-desktop-nav {
+                display: flex;
+                gap: var(--space-xs);
+            }
+            .desktop-nav-link {
+                display: flex;
+                align-items: center;
+                gap: var(--space-xs);
+                padding: var(--space-sm) var(--space-md);
+                color: var(--color-text-secondary);
+                text-decoration: none;
+                font-size: var(--text-sm);
+                font-weight: 500;
+                border-radius: var(--radius-md);
+                transition: all 0.15s ease;
+            }
+            .desktop-nav-link:hover {
+                background: var(--color-bg-hover);
+                color: var(--color-text-primary);
+            }
+            .desktop-nav-link.active {
+                background: var(--color-accent);
+                color: white;
+            }
+            .desktop-nav-link i {
+                width: 18px;
+                height: 18px;
+            }
+        }
         .promotor-content {
             max-width: 1200px;
             margin: 0 auto;
@@ -332,10 +366,25 @@ $pageTitle = 'Mina Tävlingar';
         <i data-lucide="calendar-check"></i>
         <?= h($pageTitle) ?>
     </h1>
-    <a href="/" class="back-link">
-        <i data-lucide="arrow-left"></i>
-        Tillbaka till startsidan
-    </a>
+    <!-- Desktop Navigation -->
+    <nav class="promotor-desktop-nav">
+        <a href="/admin/promotor.php" class="desktop-nav-link active">
+            <i data-lucide="calendar-check"></i>
+            Events
+        </a>
+        <a href="/admin/sponsors.php" class="desktop-nav-link">
+            <i data-lucide="heart-handshake"></i>
+            Sponsorer
+        </a>
+        <a href="/admin/media.php" class="desktop-nav-link">
+            <i data-lucide="image"></i>
+            Media
+        </a>
+        <a href="/" class="desktop-nav-link">
+            <i data-lucide="home"></i>
+            Hem
+        </a>
+    </nav>
 </header>
 
 <main class="promotor-content">
