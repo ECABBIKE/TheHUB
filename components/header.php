@@ -38,14 +38,8 @@ $headerLogo = function_exists('getBranding') ? getBranding('logos.sidebar') : nu
                     <circle cx="12" cy="12" r="3"/>
                 </svg>
             </a>
-            <?php elseif ($isPromotorOnly): ?>
-            <a href="<?= $hubUrl ?>/admin/promotor.php" class="header-admin-link" title="Mina tävlingar">
-                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="20" height="20">
-                    <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
-                    <circle cx="12" cy="12" r="3"/>
-                </svg>
-            </a>
             <?php endif; ?>
+            <!-- Promotors use sidebar cog instead of header icon -->
 
             <div class="header-user-menu" data-dropdown>
                 <button class="header-user-btn" aria-expanded="false" aria-haspopup="true">
@@ -103,6 +97,7 @@ $headerLogo = function_exists('getBranding') ? getBranding('logos.sidebar') : nu
                         </svg>
                         Admin
                     </a>
+
                     <div class="header-dropdown-divider"></div>
                     <?php elseif ($isPromotorOnly): ?>
                     <a href="<?= $hubUrl ?>/admin/promotor.php" class="header-dropdown-item">
@@ -117,6 +112,39 @@ $headerLogo = function_exists('getBranding') ? getBranding('logos.sidebar') : nu
                     </a>
                     <div class="header-dropdown-divider"></div>
                     <?php endif; ?>
+
+                    <!-- NYTT: Theme Switcher i dropdown -->
+                    <div class="header-dropdown-theme">
+                        <div class="theme-label">
+                            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
+                                <circle cx="12" cy="12" r="4"/>
+                                <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/>
+                            </svg>
+                            Tema
+                        </div>
+                        <div class="theme-options">
+                            <button data-theme-set="light" class="theme-option-btn" title="Ljust tema">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <circle cx="12" cy="12" r="4"/>
+                                    <path d="M12 2v2M12 20v2M4.93 4.93l1.41 1.41M17.66 17.66l1.41 1.41M2 12h2M20 12h2M6.34 17.66l-1.41 1.41M19.07 4.93l-1.41 1.41"/>
+                                </svg>
+                            </button>
+                            <button data-theme-set="auto" class="theme-option-btn" title="Automatiskt">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <rect width="20" height="14" x="2" y="3" rx="2"/>
+                                    <line x1="8" x2="16" y1="21" y2="21"/>
+                                    <line x1="12" x2="12" y1="17" y2="21"/>
+                                </svg>
+                            </button>
+                            <button data-theme-set="dark" class="theme-option-btn" title="Mörkt tema">
+                                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                                    <path d="M12 3a6 6 0 0 0 9 9 9 9 0 1 1-9-9Z"/>
+                                </svg>
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="header-dropdown-divider"></div>
 
                     <a href="<?= $hubUrl ?>/logout" class="header-dropdown-item text-error">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
@@ -272,6 +300,64 @@ $headerLogo = function_exists('getBranding') ? getBranding('logos.sidebar') : nu
 
 .header-dropdown-item.text-error svg {
     color: var(--color-error);
+}
+
+/* Theme Switcher i Dropdown */
+.header-dropdown-theme {
+    padding: var(--space-sm) var(--space-md);
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-md);
+}
+
+.theme-label {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    font-size: var(--text-sm);
+    color: var(--color-text-primary);
+}
+
+.theme-label svg {
+    color: var(--color-text-muted);
+}
+
+.theme-options {
+    display: flex;
+    gap: var(--space-2xs);
+}
+
+.theme-option-btn {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border: 1px solid var(--color-border);
+    background: transparent;
+    border-radius: var(--radius-md);
+    color: var(--color-text-muted);
+    cursor: pointer;
+    transition: all var(--transition-fast);
+}
+
+.theme-option-btn svg {
+    width: 16px;
+    height: 16px;
+}
+
+.theme-option-btn:hover {
+    background: var(--color-bg-hover);
+    color: var(--color-text-primary);
+    border-color: var(--color-border-strong);
+}
+
+.theme-option-btn.is-active {
+    background: var(--color-accent-light);
+    color: var(--color-accent);
+    border-color: var(--color-accent);
+    box-shadow: var(--shadow-glow);
 }
 
 .text-secondary {
