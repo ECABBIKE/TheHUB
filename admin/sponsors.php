@@ -522,6 +522,7 @@ include __DIR__ . '/components/unified-layout.php';
         <?php endforeach; ?>
     </select>
 
+    <?php if (!$isPromotorOnly): ?>
     <div class="tier-filter">
         <a href="/admin/sponsors<?= $filterSeries ? "?series=$filterSeries" : '' ?>" class="tier-filter-btn <?= !$filterTier ? 'active' : '' ?>">Alla</a>
         <?php foreach ($tiers as $tierKey => $tier): ?>
@@ -530,6 +531,7 @@ include __DIR__ . '/components/unified-layout.php';
         </a>
         <?php endforeach; ?>
     </div>
+    <?php endif; ?>
 </div>
 
 <!-- Sponsor Grid -->
@@ -619,6 +621,7 @@ include __DIR__ . '/components/unified-layout.php';
                     <input type="text" class="form-input" id="sponsorName" name="name" required>
                 </div>
 
+                <?php if (!$isPromotorOnly): ?>
                 <div class="form-row">
                     <div class="form-group">
                         <label class="form-label">Nivå</label>
@@ -636,6 +639,10 @@ include __DIR__ . '/components/unified-layout.php';
                         </select>
                     </div>
                 </div>
+                <?php else: ?>
+                <input type="hidden" id="sponsorTier" name="tier" value="bronze">
+                <input type="hidden" id="sponsorActive" name="active" value="1">
+                <?php endif; ?>
 
                 <div class="form-group">
                     <label class="form-label">Serier</label>
@@ -650,14 +657,19 @@ include __DIR__ . '/components/unified-layout.php';
                 </div>
 
                 <div class="form-group">
-                    <label class="form-label">Webbplats</label>
-                    <input type="url" class="form-input" id="sponsorWebsite" name="website" placeholder="https://...">
+                    <label class="form-label">Webbplats <?php if ($isPromotorOnly): ?><span style="color: var(--color-error);">*</span><?php endif; ?></label>
+                    <input type="url" class="form-input" id="sponsorWebsite" name="website" placeholder="https://..." <?= $isPromotorOnly ? 'required' : '' ?>>
+                    <?php if ($isPromotorOnly): ?>
+                    <small style="color: var(--color-text-secondary);">Obligatoriskt - logotypen länkas till denna adress</small>
+                    <?php endif; ?>
                 </div>
 
+                <?php if (!$isPromotorOnly): ?>
                 <div class="form-group">
                     <label class="form-label">Beskrivning</label>
                     <textarea class="form-textarea" id="sponsorDescription" name="description" rows="3"></textarea>
                 </div>
+                <?php endif; ?>
 
                 <!-- Logo section - simplified -->
                 <div style="background: var(--color-bg-sunken); padding: var(--space-md); border-radius: var(--radius-md); margin-bottom: var(--space-md);">
@@ -679,10 +691,12 @@ include __DIR__ . '/components/unified-layout.php';
                                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-md"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
                             </div>
                             <input type="hidden" id="logoBannerId" name="logo_banner_id">
-                            <button type="button" class="btn btn-sm btn-secondary" onclick="openMediaPicker('banner')">Valj fran media</button>
+                            <input type="file" id="bannerUpload" accept="image/*" style="display:none" onchange="uploadLogoFile(this, 'banner')">
+                            <button type="button" class="btn btn-sm btn-primary" onclick="document.getElementById('bannerUpload').click()">Ladda upp</button>
+                            <button type="button" class="btn btn-sm btn-secondary" onclick="openMediaPicker('banner')">Välj från media</button>
                             <button type="button" class="btn btn-sm btn-ghost" onclick="clearLogoField('banner')">Ta bort</button>
                         </div>
-                        <small class="text-secondary">Stor banner for event-sidan</small>
+                        <small class="text-secondary">Stor banner för event-sidan</small>
                     </div>
 
                     <!-- Logo (4:1 ratio - auto-scales) -->
@@ -704,6 +718,7 @@ include __DIR__ . '/components/unified-layout.php';
                     </div>
                 </div>
 
+                <?php if (!$isPromotorOnly): ?>
                 <hr style="margin: var(--space-lg) 0; border: none; border-top: 1px solid var(--color-border);">
 
                 <h4 class="mb-md">Kontaktperson</h4>
@@ -728,6 +743,7 @@ include __DIR__ . '/components/unified-layout.php';
                     <label class="form-label">Sorteringsordning</label>
                     <input type="number" class="form-input" id="displayOrder" name="display_order" value="0" min="0">
                 </div>
+                <?php endif; ?>
             </div>
 
             <div class="modal-footer">
@@ -764,6 +780,7 @@ include __DIR__ . '/components/unified-layout.php';
 let currentSponsorId = null;
 let currentLogoField = null;
 let mediaData = [];
+const isPromotorOnly = <?= $isPromotorOnly ? 'true' : 'false' ?>;
 
 function filterBySeries(seriesId) {
     const url = new URL(window.location.href);
@@ -807,11 +824,15 @@ async function editSponsor(id) {
         document.getElementById('sponsorTier').value = sponsor.tier || 'bronze';
         document.getElementById('sponsorActive').value = sponsor.active ? '1' : '0';
         document.getElementById('sponsorWebsite').value = sponsor.website || '';
-        document.getElementById('sponsorDescription').value = sponsor.description || '';
-        document.getElementById('contactName').value = sponsor.contact_name || '';
-        document.getElementById('contactEmail').value = sponsor.contact_email || '';
-        document.getElementById('contactPhone').value = sponsor.contact_phone || '';
-        document.getElementById('displayOrder').value = sponsor.display_order || 0;
+
+        // These fields only exist for non-promotor users
+        if (!isPromotorOnly) {
+            document.getElementById('sponsorDescription').value = sponsor.description || '';
+            document.getElementById('contactName').value = sponsor.contact_name || '';
+            document.getElementById('contactEmail').value = sponsor.contact_email || '';
+            document.getElementById('contactPhone').value = sponsor.contact_phone || '';
+            document.getElementById('displayOrder').value = sponsor.display_order || 0;
+        }
 
         // Set logo fields
         clearLogoField('banner');
@@ -864,14 +885,14 @@ async function saveSponsor(event) {
 
     const data = {
         name: formData.get('name'),
-        tier: formData.get('tier'),
+        tier: formData.get('tier') || 'bronze',
         active: formData.get('active') === '1',
         website: formData.get('website') || null,
-        description: formData.get('description') || null,
-        contact_name: formData.get('contact_name') || null,
-        contact_email: formData.get('contact_email') || null,
-        contact_phone: formData.get('contact_phone') || null,
-        display_order: parseInt(formData.get('display_order')) || 0,
+        description: isPromotorOnly ? null : (formData.get('description') || null),
+        contact_name: isPromotorOnly ? null : (formData.get('contact_name') || null),
+        contact_email: isPromotorOnly ? null : (formData.get('contact_email') || null),
+        contact_phone: isPromotorOnly ? null : (formData.get('contact_phone') || null),
+        display_order: isPromotorOnly ? 0 : (parseInt(formData.get('display_order')) || 0),
         logo_banner_id: formData.get('logo_banner_id') || null,
         logo_media_id: formData.get('logo_media_id') || null,
         series_ids: selectedSeries
