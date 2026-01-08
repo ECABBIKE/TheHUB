@@ -1241,11 +1241,18 @@ include __DIR__ . '/components/unified-layout.php';
                     Visas i en egen sektion längst ner på event-sidan. 4 i bredd på desktop, 2 på mobil.
                 </small>
 
-                <!-- Quick add sponsor button -->
+                <!-- Quick add sponsor button - Links to media for promotors -->
+                <?php if ($isPromotorOnly): ?>
+                <a href="/admin/media" class="btn btn-secondary mt-md">
+                    <i data-lucide="image" class="icon-sm"></i>
+                    Hantera sponsorlogotyper
+                </a>
+                <?php else: ?>
                 <button type="button" class="btn btn-secondary mt-md" onclick="openQuickSponsorModal()">
                     <i data-lucide="plus" class="icon-sm"></i>
                     Lägg till ny partner
                 </button>
+                <?php endif; ?>
             </div>
         </div>
     </details>
@@ -1255,6 +1262,23 @@ include __DIR__ . '/components/unified-layout.php';
     <div class="admin-card">
         <div class="admin-card-body">
             <div class="flex items-center justify-between flex-wrap gap-md">
+                <?php if ($isPromotorOnly): ?>
+                <!-- Readonly status display for promotors -->
+                <div class="flex items-center gap-sm text-secondary">
+                    <input type="checkbox" disabled <?= $event['active'] ? 'checked' : '' ?>>
+                    <span>Aktivt event</span>
+                </div>
+                <div class="flex items-center gap-sm text-secondary">
+                    <input type="checkbox" disabled <?= !empty($event['is_championship']) ? 'checked' : '' ?>>
+                    <span><i data-lucide="trophy" class="icon-sm"></i> Svenskt Mästerskap</span>
+                    <?php if (!empty($event['is_championship'])): ?>
+                    <span class="admin-badge admin-badge-success text-xs ml-sm">SM</span>
+                    <?php endif; ?>
+                </div>
+                <!-- Hidden fields to preserve values -->
+                <input type="hidden" name="active" value="<?= $event['active'] ? '1' : '0' ?>">
+                <input type="hidden" name="is_championship" value="<?= !empty($event['is_championship']) ? '1' : '0' ?>">
+                <?php else: ?>
                 <label class="flex items-center gap-sm cursor-pointer">
                     <input type="checkbox" name="active" <?= $event['active'] ? 'checked' : '' ?>>
                     <span>Aktivt event</span>
@@ -1267,6 +1291,7 @@ include __DIR__ . '/components/unified-layout.php';
                     <span class="admin-badge admin-badge-success text-xs ml-sm">SM</span>
                     <?php endif; ?>
                 </label>
+                <?php endif; ?>
 
                 <div class="flex gap-sm">
                     <a href="/admin/events" class="btn-admin btn-admin-secondary">Avbryt</a>
@@ -1396,7 +1421,8 @@ document.addEventListener('DOMContentLoaded', function() {
     setupCheckboxLimit('#partnerSponsors', 0, 'partnerCount'); // 0 = unlimited
 });
 
-// Quick Sponsor Modal Functions
+<?php if (!$isPromotorOnly): ?>
+// Quick Sponsor Modal Functions (not available for promotors)
 function openQuickSponsorModal() {
     document.getElementById('quickSponsorModal').classList.add('active');
     document.getElementById('quickSponsorForm').reset();
@@ -1708,5 +1734,6 @@ document.addEventListener('keydown', function(e) {
     to { transform: rotate(360deg); }
 }
 </style>
+<?php endif; /* End quick sponsor modal - not for promotors */ ?>
 
 <?php include __DIR__ . '/components/unified-layout-footer.php'; ?>

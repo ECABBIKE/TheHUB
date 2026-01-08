@@ -268,8 +268,8 @@
 
 .admin-sidebar {
     width: 70px;
-    background: #1a1a2e;
-    border-right: 1px solid rgba(255, 255, 255, 0.08);
+    background: var(--color-bg-surface);
+    border-right: 1px solid var(--color-border);
     display: flex;
     flex-direction: column;
     position: fixed;
@@ -297,7 +297,7 @@
     justify-content: center;
     gap: 2px;
     padding: var(--space-sm) var(--space-xs);
-    color: rgba(255, 255, 255, 0.6);
+    color: var(--color-text-secondary);
     text-decoration: none;
     transition: all 0.2s ease;
     position: relative;
@@ -307,8 +307,8 @@
 }
 
 .nav-item:hover {
-    background: rgba(255, 255, 255, 0.08);
-    color: #fff;
+    background: var(--color-bg-hover);
+    color: var(--color-text-primary);
 }
 
 .nav-item.active {
@@ -352,7 +352,7 @@
 
 .sidebar-footer {
     padding: var(--space-sm) var(--space-xs);
-    border-top: 1px solid rgba(255, 255, 255, 0.08);
+    border-top: 1px solid var(--color-border);
 }
 
 .sidebar-link {
@@ -362,7 +362,7 @@
     justify-content: center;
     gap: 2px;
     padding: var(--space-sm) var(--space-xs);
-    color: rgba(255, 255, 255, 0.5);
+    color: var(--color-text-secondary);
     text-decoration: none;
     border-radius: var(--radius-md);
     transition: all 0.2s ease;
@@ -371,8 +371,8 @@
 }
 
 .sidebar-link:hover {
-    color: #fff;
-    background: rgba(255, 255, 255, 0.08);
+    color: var(--color-text-primary);
+    background: var(--color-bg-hover);
 }
 
 .sidebar-link svg {
@@ -1467,8 +1467,7 @@
 
 /* Enhanced Sidebar */
 .admin-sidebar {
-    box-shadow: var(--admin-shadow-medium);
-    background: linear-gradient(180deg, #1a1a2e 0%, #16162a 100%);
+    box-shadow: var(--admin-shadow-sm);
 }
 
 .nav-item {
