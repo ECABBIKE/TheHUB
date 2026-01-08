@@ -6,6 +6,7 @@
  */
 
 require_once __DIR__ . '/../config.php';
+require_admin();
 
 // Check if payment.php exists before including
 $paymentFunctionsAvailable = false;

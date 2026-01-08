@@ -17,7 +17,7 @@ if ($eventId <= 0) {
     exit;
 }
 
-$event = $db->getRow("SELECT id, name, date, karta_publish_at FROM events WHERE id = ?", [$eventId]);
+$event = $db->getRow("SELECT id, name, date, karta_publish_at, map_image_url FROM events WHERE id = ?", [$eventId]);
 if (!$event) {
     set_flash('error', 'Event hittades inte');
     header('Location: /admin/events');
@@ -221,6 +221,67 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $message = $publishAt ? 'Publiceringstid sparad: ' . date('Y-m-d H:i', strtotime($publishAt)) : 'Kartan visas direkt';
                 $messageType = 'success';
                 break;
+
+            case 'upload_static_map':
+                // Handle static map image upload
+                if (!isset($_FILES['static_map_image']) || $_FILES['static_map_image']['error'] === UPLOAD_ERR_NO_FILE) {
+                    // Check if URL was provided instead
+                    $mapUrl = trim($_POST['map_image_url'] ?? '');
+                    if (!empty($mapUrl)) {
+                        $db->query("UPDATE events SET map_image_url = ? WHERE id = ?", [$mapUrl, $eventId]);
+                        $event['map_image_url'] = $mapUrl;
+                        $message = 'Kartbild-URL sparad';
+                        $messageType = 'success';
+                    } else {
+                        throw new Exception('Ingen bild vald');
+                    }
+                } else {
+                    $file = $_FILES['static_map_image'];
+                    if ($file['error'] !== UPLOAD_ERR_OK) {
+                        throw new Exception('Fel vid uppladdning');
+                    }
+
+                    // Validate file type
+                    $allowedTypes = ['image/png', 'image/jpeg', 'image/webp'];
+                    $finfo = finfo_open(FILEINFO_MIME_TYPE);
+                    $mimeType = finfo_file($finfo, $file['tmp_name']);
+                    finfo_close($finfo);
+
+                    if (!in_array($mimeType, $allowedTypes)) {
+                        throw new Exception('Endast PNG, JPG eller WebP tillåts');
+                    }
+
+                    // Create upload directory
+                    $uploadDir = ROOT_PATH . '/media/events';
+                    if (!is_dir($uploadDir)) {
+                        mkdir($uploadDir, 0755, true);
+                    }
+
+                    // Generate filename
+                    $ext = pathinfo($file['name'], PATHINFO_EXTENSION);
+                    $filename = 'map_' . $eventId . '_' . time() . '.' . $ext;
+                    $filepath = $uploadDir . '/' . $filename;
+
+                    if (!move_uploaded_file($file['tmp_name'], $filepath)) {
+                        throw new Exception('Kunde inte spara bilden');
+                    }
+
+                    // Save to database
+                    $mapUrl = '/media/events/' . $filename;
+                    $db->query("UPDATE events SET map_image_url = ? WHERE id = ?", [$mapUrl, $eventId]);
+                    $event['map_image_url'] = $mapUrl;
+
+                    $message = 'Kartbild uppladdad!';
+                    $messageType = 'success';
+                }
+                break;
+
+            case 'remove_static_map':
+                $db->query("UPDATE events SET map_image_url = NULL WHERE id = ?", [$eventId]);
+                $event['map_image_url'] = null;
+                $message = 'Kartbild borttagen';
+                $messageType = 'success';
+                break;
         }
     } catch (Exception $e) {
         $message = $e->getMessage();
@@ -350,6 +411,62 @@ include __DIR__ . '/components/unified-layout.php';
             <button type="submit" class="btn-admin btn-admin-ghost btn-admin-sm" onclick="this.form.querySelector('[name=karta_publish_at]').value=''">Rensa</button>
             <?php endif; ?>
         </form>
+    </div>
+</div>
+
+<!-- Static Map Image Section -->
+<div class="admin-card mb-md">
+    <div class="admin-card-body">
+        <div class="flex justify-between items-start gap-lg flex-wrap">
+            <div class="flex-1" style="min-width: 250px;">
+                <strong><i data-lucide="image" class="icon-sm"></i> Statisk kartbild</strong>
+                <p class="text-sm text-secondary m-0 mt-xs">
+                    Använd en statisk bild istället för interaktiv karta. Perfekt för enklare evenemang.
+                </p>
+            </div>
+            <div class="flex-1" style="min-width: 300px;">
+                <?php if (!empty($event['map_image_url'])): ?>
+                <div class="flex gap-md items-start mb-md">
+                    <img src="<?= htmlspecialchars($event['map_image_url']) ?>" alt="Kartbild"
+                         style="max-width: 200px; max-height: 120px; border-radius: var(--radius-sm); border: 1px solid var(--color-border);">
+                    <div>
+                        <span class="badge badge-success mb-xs">Aktiv</span>
+                        <p class="text-xs text-secondary m-0"><?= htmlspecialchars($event['map_image_url']) ?></p>
+                        <form method="POST" class="mt-sm">
+                            <?= csrf_field() ?>
+                            <input type="hidden" name="action" value="remove_static_map">
+                            <button type="submit" class="btn-admin btn-admin-danger btn-admin-xs" onclick="return confirm('Ta bort kartbild?')">
+                                <i data-lucide="trash-2" class="icon-xs"></i> Ta bort
+                            </button>
+                        </form>
+                    </div>
+                </div>
+                <?php endif; ?>
+
+                <form method="POST" enctype="multipart/form-data">
+                    <?= csrf_field() ?>
+                    <input type="hidden" name="action" value="upload_static_map">
+                    <div class="flex gap-sm items-end flex-wrap">
+                        <div class="form-group mb-0" style="flex: 1; min-width: 200px;">
+                            <label class="form-label text-sm mb-xs">Ladda upp bild</label>
+                            <input type="file" name="static_map_image" accept="image/png,image/jpeg,image/webp"
+                                   class="admin-form-input admin-form-input-sm">
+                        </div>
+                        <span class="text-secondary text-sm">eller</span>
+                        <div class="form-group mb-0" style="flex: 1; min-width: 200px;">
+                            <label class="form-label text-sm mb-xs">Ange URL</label>
+                            <input type="url" name="map_image_url" placeholder="https://... eller /media/..."
+                                   class="admin-form-input admin-form-input-sm"
+                                   value="<?= htmlspecialchars($event['map_image_url'] ?? '') ?>">
+                        </div>
+                        <button type="submit" class="btn-admin btn-admin-primary btn-admin-sm">
+                            <i data-lucide="upload" class="icon-sm"></i> Spara
+                        </button>
+                    </div>
+                    <small class="form-help text-xs mt-sm block">PNG, JPG eller WebP. Rekommenderad storlek: 1200x800 px.</small>
+                </form>
+            </div>
+        </div>
     </div>
 </div>
 

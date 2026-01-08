@@ -7,6 +7,12 @@
 require_once __DIR__ . '/../config.php';
 require_admin();
 
+// Only super_admin can manage all pricing templates
+if (!isRole('super_admin')) {
+    set_flash('error', 'Endast superadmin har tillgång till prismallar');
+    redirect('/admin/');
+}
+
 $db = getDB();
 
 // Initialize message

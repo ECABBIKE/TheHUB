@@ -7,8 +7,36 @@
  */
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../includes/media-functions.php';
+require_admin();
 
 global $pdo;
+
+// Check if promotor - they get filtered view
+$isPromotorOnly = isRole('promotor');
+$promotorEventSlugs = [];
+$promotorAllowedFolders = [];
+
+if ($isPromotorOnly) {
+    // Get promotor's events and their folder slugs
+    $promotorEvents = getPromotorEvents();
+    foreach ($promotorEvents as $event) {
+        // Get series info for folder path
+        $eventInfo = $pdo->prepare("
+            SELECT e.name as event_name, s.short_name as series_short, s.name as series_name
+            FROM events e
+            LEFT JOIN series s ON e.series_id = s.id
+            WHERE e.id = ?
+        ");
+        $eventInfo->execute([$event['id']]);
+        $info = $eventInfo->fetch(PDO::FETCH_ASSOC);
+        if ($info) {
+            $seriesSlug = slugify($info['series_short'] ?: $info['series_name'] ?: 'general');
+            $eventSlug = slugify($info['event_name']);
+            $promotorAllowedFolders[] = "sponsors/{$seriesSlug}/{$eventSlug}";
+            $promotorEventSlugs[] = $eventSlug;
+        }
+    }
+}
 
 // Get current folder from query
 $currentFolder = $_GET['folder'] ?? null;
@@ -40,18 +68,53 @@ foreach ($folderStats as $stat) {
 $sponsorSubfolders = [];
 if ($currentFolder === 'sponsors' || $parentFolder === 'sponsors') {
     $sponsorSubfolders = get_media_subfolders('sponsors');
+
+    // Filter subfolders for promotors
+    if ($isPromotorOnly && !empty($promotorAllowedFolders)) {
+        $sponsorSubfolders = array_filter($sponsorSubfolders, function($subfolder) use ($promotorAllowedFolders) {
+            foreach ($promotorAllowedFolders as $allowed) {
+                if (strpos($allowed, $subfolder) !== false || strpos($subfolder, basename($allowed)) !== false) {
+                    return true;
+                }
+            }
+            return false;
+        });
+    }
 }
 
-// Define folders
-$folders = [
-    ['id' => 'branding', 'name' => 'Branding', 'icon' => 'palette'],
-    ['id' => 'general', 'name' => 'Allmänt', 'icon' => 'folder'],
-    ['id' => 'series', 'name' => 'Serier', 'icon' => 'trophy'],
-    ['id' => 'sponsors', 'name' => 'Sponsorer', 'icon' => 'handshake'],
-    ['id' => 'ads', 'name' => 'Annonser', 'icon' => 'megaphone'],
-    ['id' => 'clubs', 'name' => 'Klubbar', 'icon' => 'users'],
-    ['id' => 'events', 'name' => 'Event', 'icon' => 'calendar']
-];
+// Define folders - promotors only see sponsors
+if ($isPromotorOnly) {
+    $folders = [
+        ['id' => 'sponsors', 'name' => 'Eventmedia', 'icon' => 'handshake']
+    ];
+    // Force promotors to sponsors folder
+    if (!$currentFolder || ($currentFolder !== 'sponsors' && strpos($currentFolder, 'sponsors/') !== 0)) {
+        $currentFolder = 'sponsors';
+    }
+    // Verify access to current folder
+    if (strpos($currentFolder, 'sponsors/') === 0 && !empty($promotorAllowedFolders)) {
+        $hasAccess = false;
+        foreach ($promotorAllowedFolders as $allowed) {
+            if (strpos($currentFolder, dirname($allowed)) !== false || $currentFolder === dirname($allowed) || strpos($allowed, $currentFolder) === 0) {
+                $hasAccess = true;
+                break;
+            }
+        }
+        if (!$hasAccess) {
+            $currentFolder = 'sponsors';
+        }
+    }
+} else {
+    $folders = [
+        ['id' => 'branding', 'name' => 'Branding', 'icon' => 'palette'],
+        ['id' => 'general', 'name' => 'Allmänt', 'icon' => 'folder'],
+        ['id' => 'series', 'name' => 'Serier', 'icon' => 'trophy'],
+        ['id' => 'sponsors', 'name' => 'Sponsorer', 'icon' => 'handshake'],
+        ['id' => 'ads', 'name' => 'Annonser', 'icon' => 'megaphone'],
+        ['id' => 'clubs', 'name' => 'Klubbar', 'icon' => 'users'],
+        ['id' => 'events', 'name' => 'Event', 'icon' => 'calendar']
+    ];
+}
 
 // Add counts to folders
 foreach ($folders as &$folder) {
@@ -65,6 +128,18 @@ if ($searchQuery) {
     $mediaFiles = search_media($searchQuery, $currentFolder, 100);
 } else {
     $mediaFiles = get_media_by_folder($currentFolder, 100, 0);
+}
+
+// Filter media files for promotors
+if ($isPromotorOnly && !empty($promotorAllowedFolders) && !empty($mediaFiles)) {
+    $mediaFiles = array_filter($mediaFiles, function($file) use ($promotorAllowedFolders) {
+        foreach ($promotorAllowedFolders as $allowed) {
+            if (strpos($file['folder'], $allowed) === 0 || $file['folder'] === $allowed) {
+                return true;
+            }
+        }
+        return false;
+    });
 }
 
 // Page config

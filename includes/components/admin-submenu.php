@@ -155,7 +155,12 @@ if (isset($group['single_page']) && $group['single_page']) {
             <?= htmlspecialchars($group['title']) ?>
         </h2>
         <nav class="admin-submenu-tabs" role="tablist">
-            <?php foreach ($group['tabs'] as $tab): ?>
+            <?php foreach ($group['tabs'] as $tab):
+                // Check role requirement
+                if (!empty($tab['role']) && function_exists('isRole') && !isRole($tab['role'])) {
+                    continue; // Skip tabs user doesn't have access to
+                }
+            ?>
             <a href="<?= $tab['url'] ?>"
                class="admin-submenu-tab<?= $active_tab === $tab['id'] ? ' active' : '' ?>"
                role="tab"
