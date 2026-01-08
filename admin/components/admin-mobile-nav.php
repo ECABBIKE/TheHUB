@@ -26,8 +26,8 @@ $userRoleLevel = $roleHierarchy[$currentAdminRole] ?? 0;
 $adminNav = [
     ['id' => 'dashboard', 'label' => 'Dashboard', 'icon' => 'layout-dashboard', 'url' => '/admin/dashboard', 'pages' => ['dashboard.php', 'index.php'], 'min_role' => 'admin'],
     // Promotor-specific navigation
-    ['id' => 'competitions', 'label' => 'Tävlingar', 'icon' => 'calendar', 'url' => '/admin/events.php', 'pages' => get_pages_in_group('competitions'), 'min_role' => 'promotor'],
-    ['id' => 'series-settings', 'label' => 'Serier', 'icon' => 'medal', 'url' => '/admin/promotor.php', 'pages' => ['promotor.php'], 'min_role' => 'promotor', 'promotor_only' => true],
+    ['id' => 'competitions', 'label' => 'Tävlingar', 'icon' => 'calendar', 'url' => '/admin/promotor.php', 'pages' => ['promotor.php'], 'min_role' => 'promotor', 'promotor_only' => true],
+    ['id' => 'series-settings', 'label' => 'Serier', 'icon' => 'medal', 'url' => '/admin/promotor-series.php', 'pages' => ['promotor-series.php'], 'min_role' => 'promotor', 'promotor_only' => true],
     ['id' => 'sponsors', 'label' => 'Sponsorer', 'icon' => 'image', 'url' => '/admin/sponsors.php', 'pages' => ['sponsors.php'], 'min_role' => 'promotor'],
     ['id' => 'onsite', 'label' => 'Direktanmälan', 'icon' => 'user-plus', 'url' => '/admin/onsite-registration.php', 'pages' => ['onsite-registration.php'], 'min_role' => 'promotor', 'promotor_only' => true],
     // Admin-only navigation
