@@ -13,26 +13,62 @@
 }
 
 /* ========================================================================
-   ADMIN SIDEBAR - Fix hårdkodade färger
+   ADMIN SIDEBAR - Fix hårdkodade färger och matcha publik sidebar
    ======================================================================== */
 .admin-sidebar {
-    background: var(--color-bg-card);
-    border-right: 1px solid var(--color-border);
+    background: var(--color-bg-card) !important;
+    border-right: 1px solid var(--color-border) !important;
 }
 
-.admin-nav-item {
-    color: var(--color-text-secondary);
+/* Nav item - matcha .sidebar-link från public */
+.nav-item {
+    color: var(--color-text-secondary) !important;
+    border-radius: var(--radius-md);
+    transition: all 0.2s ease;
+    position: relative;
 }
 
-.admin-nav-item:hover {
-    background: var(--color-bg-hover);
-    color: var(--color-text-primary);
+.nav-item:hover {
+    background: var(--color-bg-hover) !important;
+    color: var(--color-text-primary) !important;
 }
 
-.admin-nav-item.is-active {
-    background: var(--color-accent-light);
-    color: var(--color-accent);
-    border-left-color: var(--color-accent) !important;
+.nav-item:hover svg {
+    color: var(--color-text-primary) !important;
+}
+
+/* Active state - FIX hårdkodad orange (rgba(245, 158, 11, 0.15)) till cyan */
+.nav-item.active {
+    background: var(--color-accent-light) !important;
+    color: var(--color-accent-text) !important;
+}
+
+.nav-item.active svg {
+    color: var(--color-accent-text) !important;
+}
+
+/* Active indicator bar */
+.nav-item.active::before {
+    background: var(--color-accent) !important;
+}
+
+/* Nav label styling */
+.nav-label {
+    color: inherit;
+}
+
+/* Nav separator */
+.nav-separator {
+    background: var(--color-border) !important;
+}
+
+/* Public nav items in admin sidebar */
+.nav-item--public {
+    opacity: 0.7;
+}
+
+.nav-item--public:hover {
+    opacity: 1;
 }
 
 /* ========================================================================
