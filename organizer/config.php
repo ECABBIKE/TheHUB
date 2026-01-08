@@ -88,7 +88,8 @@ function searchRiders(string $query, int $limit = 20): array {
 
     $stmt = $pdo->prepare("
         SELECT r.id, r.firstname, r.lastname, r.birth_year, r.gender,
-               r.license_number, c.name as club_name
+               r.license_number, r.email, r.phone, r.nationality,
+               r.ice_name, r.ice_phone, c.name as club_name
         FROM riders r
         LEFT JOIN clubs c ON r.club_id = c.id
         WHERE r.active = 1

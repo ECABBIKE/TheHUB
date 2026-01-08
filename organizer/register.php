@@ -92,9 +92,35 @@ include __DIR__ . '/includes/header.php';
                 <input type="tel" id="phone" class="org-input" placeholder="070-123 45 67">
             </div>
 
+            <div class="grid-2-col">
+                <div class="org-form-group">
+                    <label class="org-label">Klubb</label>
+                    <input type="text" id="club" class="org-input" placeholder="Klubbnamn">
+                </div>
+                <div class="org-form-group">
+                    <label class="org-label">Nationalitet</label>
+                    <input type="text" id="nationality" class="org-input" placeholder="SWE" maxlength="3" style="text-transform: uppercase;">
+                </div>
+            </div>
+
             <div class="org-form-group">
-                <label class="org-label">Klubb</label>
-                <input type="text" id="club" class="org-input" placeholder="Klubbnamn">
+                <label class="org-label">Licensnummer</label>
+                <input type="text" id="license_number" class="org-input" placeholder="SCF/UCI licensnummer">
+            </div>
+
+            <hr style="border: none; border-top: 1px solid var(--color-border); margin: var(--space-lg) 0;">
+
+            <h3 style="font-size: 14px; font-weight: 600; margin-bottom: var(--space-md); color: var(--color-text-secondary);">Nödkontakt (ICE)</h3>
+
+            <div class="grid-2-col">
+                <div class="org-form-group">
+                    <label class="org-label">Kontaktperson</label>
+                    <input type="text" id="ice_name" class="org-input" placeholder="Namn på anhörig">
+                </div>
+                <div class="org-form-group">
+                    <label class="org-label">Telefon (ICE)</label>
+                    <input type="tel" id="ice_phone" class="org-input" placeholder="070-123 45 67">
+                </div>
             </div>
 
             <div class="mt-lg" style="display: flex; gap: 16px;">
@@ -258,6 +284,10 @@ include __DIR__ . '/includes/header.php';
         document.getElementById('email').value = r.email || '';
         document.getElementById('phone').value = r.phone || '';
         document.getElementById('club').value = r.club_name || '';
+        document.getElementById('nationality').value = r.nationality || 'SWE';
+        document.getElementById('license_number').value = r.license_number || '';
+        document.getElementById('ice_name').value = r.ice_name || '';
+        document.getElementById('ice_phone').value = r.ice_phone || '';
         showStep('form');
     };
 
