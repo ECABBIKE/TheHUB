@@ -1531,9 +1531,15 @@ document.addEventListener('keydown', function(e) {
             <div class="modal-body">
                 <!-- Instructions -->
                 <div class="alert alert-info mb-md">
-                    <strong>Bildformat:</strong> PNG eller JPG med transparent eller vit bakgrund.<br>
-                    <strong>Storlek:</strong> 400x120 pixlar <span class="text-secondary">(liggande 10:3 format)</span><br>
-                    <small class="text-secondary">Använd en bred, liggande logotyp - inte fyrkantig. Bilden skalas automatiskt.</small>
+                    <strong>Bildformat:</strong> PNG eller JPG (transparent/vit bakgrund)<br>
+                    <strong>Storlekar som används:</strong>
+                    <ul style="margin: var(--space-xs) 0 0 var(--space-md); padding: 0; font-size: var(--text-sm);">
+                        <li>Banner: <strong>1200 x 150 px</strong></li>
+                        <li>Standard: <strong>200 x 60 px</strong> (ratio 10:3)</li>
+                        <li>Resultat: 160 x 40 px</li>
+                        <li>Partner: 300 px bred</li>
+                    </ul>
+                    <small class="text-secondary">Ladda upp i högsta kvalitet - bilden skalas automatiskt.</small>
                 </div>
 
                 <!-- Error/Success messages -->
