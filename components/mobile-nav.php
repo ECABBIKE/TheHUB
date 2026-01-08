@@ -16,6 +16,7 @@ require_once __DIR__ . '/icons.php';
 
 $currentPage = $pageInfo['page'] ?? 'dashboard';
 $isLoggedIn = function_exists('hub_is_logged_in') ? hub_is_logged_in() : false;
+$isPromotorOnly = function_exists('isRole') && isRole('promotor');
 
 // Fallback for hub_is_nav_active if not defined
 if (!function_exists('hub_is_nav_active')) {
@@ -42,6 +43,12 @@ $hubNav = defined('HUB_NAV') ? HUB_NAV : [
     ['id' => 'database', 'label' => 'Databas', 'url' => '/database', 'aria' => 'Databas'],
     ['id' => 'ranking', 'label' => 'Ranking', 'url' => '/ranking', 'aria' => 'Ranking'],
 ];
+
+// Add promotor admin link for promotors
+if ($isPromotorOnly) {
+    $navIcons['promotor-admin'] = 'settings';
+    $hubNav[] = ['id' => 'promotor-admin', 'label' => 'Admin', 'url' => '/admin/promotor.php', 'aria' => 'Mina tävlingar'];
+}
 ?>
 <nav class="mobile-nav" role="navigation" aria-label="Huvudnavigering">
   <div class="mobile-nav-inner">

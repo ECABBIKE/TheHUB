@@ -58,6 +58,7 @@
   padding:var(--space-sm);border-radius:var(--radius-md);
   color:var(--color-text-secondary);font-size:var(--text-xs);
   transition:all var(--transition-fast);
+  white-space:nowrap;
 }
 .sidebar-link:hover{background:var(--color-bg-hover);color:var(--color-text-primary)}
 .sidebar-link[aria-current="page"]{background:var(--color-accent-light);color:var(--color-accent-text)}
@@ -88,7 +89,7 @@
   padding-bottom:env(safe-area-inset-bottom);
   background:var(--color-bg-surface);
   border-top:1px solid var(--color-border);
-  z-index:var(--z-fixed);
+  z-index:999;
 }
 .mobile-nav-inner{display:flex;justify-content:space-around;align-items:center;height:100%;max-width:500px;margin:0 auto;padding:0 var(--space-xs)}
 .mobile-nav-link{
