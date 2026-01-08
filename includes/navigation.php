@@ -198,4 +198,216 @@ function nav_icon($name, $class = 'sidebar-icon-svg') {
     </nav>
 </aside>
 
-<!-- Styling inherited from components/sidebar.php and layout.css -->
+<style>
+/* ========================================================================
+   SIDEBAR - Icon-only with tooltips (70px wide)
+   Matching components/sidebar.php styling
+   ======================================================================== */
+
+/* Sidebar icon styling for Lucide SVGs */
+.sidebar-icon-svg {
+    width: 22px;
+    height: 22px;
+    color: inherit;
+    stroke: currentColor;
+}
+
+/* Sidebar link - icon with label below */
+.sidebar-link {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    padding: var(--space-sm) var(--space-xs);
+    margin: 0 auto;
+    color: var(--color-text-secondary);
+    text-decoration: none;
+    border-radius: var(--radius-md);
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.sidebar-link:hover {
+    color: var(--color-text-primary);
+    background: var(--color-bg-hover);
+}
+
+.sidebar-link:hover .sidebar-icon-svg {
+    color: var(--color-text-primary);
+}
+
+/* Active state for is-active class */
+.sidebar-link.is-active {
+    background: var(--color-accent-light);
+    color: var(--color-accent-text);
+}
+
+.sidebar-link.is-active .sidebar-icon-svg {
+    color: var(--color-accent-text);
+}
+
+/* Active indicator bar */
+.sidebar-link.is-active::before {
+    content: '';
+    position: absolute;
+    left: -12px;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 3px;
+    height: 24px;
+    background: var(--color-accent);
+    border-radius: 0 2px 2px 0;
+}
+
+.sidebar-icon svg {
+    color: inherit;
+    stroke: currentColor;
+}
+
+/* Label under icon */
+.sidebar-label {
+    display: block;
+    font-size: 10px;
+    font-weight: var(--weight-medium);
+    line-height: 1.2;
+    text-align: center;
+    margin-top: 2px;
+}
+
+/* Tooltip disabled - labels are visible */
+.sidebar-link::after {
+    display: none;
+}
+
+/* Sidebar Sections */
+.sidebar-section {
+    margin-bottom: var(--space-xs);
+}
+
+.sidebar-section-title {
+    font-size: 9px;
+    font-weight: var(--weight-semibold);
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: var(--space-xs) var(--space-sm);
+    text-align: center;
+}
+
+.sidebar-divider {
+    height: 1px;
+    background: var(--color-border);
+    margin: var(--space-xs) var(--space-sm);
+}
+
+/* Admin link styling */
+.sidebar-link--admin {
+    color: var(--color-accent-text) !important;
+}
+
+/* Notification badge on sidebar icons */
+.sidebar-icon {
+    position: relative;
+}
+
+.sidebar-badge {
+    position: absolute;
+    top: -6px;
+    right: -8px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 16px;
+    height: 16px;
+    padding: 0 4px;
+    font-size: 10px;
+    font-weight: 600;
+    line-height: 1;
+    border-radius: 8px;
+    background: var(--color-text-secondary);
+    color: white;
+}
+
+.sidebar-badge--alert {
+    background: #ef4444;
+    animation: pulse-badge 2s infinite;
+}
+
+@keyframes pulse-badge {
+    0%, 100% { transform: scale(1); }
+    50% { transform: scale(1.1); }
+}
+
+.sidebar-link.has-badge .sidebar-icon-svg {
+    color: #ef4444;
+}
+
+/* ========================================================================
+   MOBILE PORTRAIT - Slide-out menu with horizontal links
+   ======================================================================== */
+@media (max-width: 899px) and (orientation: portrait) {
+    .sidebar-link {
+        flex-direction: row;
+        justify-content: flex-start;
+        width: 100%;
+        height: auto;
+        gap: var(--space-md);
+        padding: var(--space-md) var(--space-lg);
+        margin: 0;
+    }
+
+    .sidebar-label {
+        display: block;
+        font-size: var(--text-sm);
+    }
+
+    .sidebar-link::after {
+        display: none;
+    }
+
+    .sidebar-link.is-active::before {
+        left: 0;
+    }
+}
+
+/* ========================================================================
+   MOBILE/TABLET LANDSCAPE - Compact icon-only sidebar flush to left
+   ======================================================================== */
+@media (max-width: 1023px) and (orientation: landscape) {
+    /* Sidebar must be flush to left edge */
+    .sidebar {
+        position: fixed !important;
+        top: var(--header-height, 60px) !important;
+        left: 0 !important;
+        right: auto !important;
+        margin: 0 !important;
+        margin-left: 0 !important;
+        transform: none !important;
+        width: 64px !important;
+        padding: 4px 0 !important;
+    }
+
+    .sidebar-link {
+        flex-direction: column !important;
+        padding: 6px 4px !important;
+        gap: 1px !important;
+        margin: 0 !important;
+        width: auto !important;
+    }
+
+    .sidebar-label {
+        display: none !important;
+    }
+
+    .sidebar-icon-svg {
+        width: 24px !important;
+        height: 24px !important;
+    }
+
+    .sidebar-link.is-active::before {
+        left: -4px !important;
+        height: 20px !important;
+    }
+}
+</style>
