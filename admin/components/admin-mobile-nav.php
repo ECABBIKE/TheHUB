@@ -25,10 +25,12 @@ $userRoleLevel = $roleHierarchy[$currentAdminRole] ?? 0;
 // 'promotor_only': true = only show for promotors (not for admins)
 $adminNav = [
     ['id' => 'dashboard', 'label' => 'Dashboard', 'icon' => 'layout-dashboard', 'url' => '/admin/dashboard', 'pages' => ['dashboard.php', 'index.php'], 'min_role' => 'admin'],
-    ['id' => 'my-events', 'label' => 'Mina Tävlingar', 'icon' => 'home', 'url' => '/admin/promotor.php', 'pages' => ['promotor.php'], 'min_role' => 'promotor', 'promotor_only' => true],
-    ['id' => 'competitions', 'label' => 'Tävlingar', 'icon' => 'calendar-check', 'url' => '/admin/events.php', 'pages' => get_pages_in_group('competitions'), 'min_role' => 'promotor'],
-    ['id' => 'media', 'label' => 'Media', 'icon' => 'image', 'url' => '/admin/media.php', 'pages' => ['media.php'], 'min_role' => 'promotor'],
-    ['id' => 'sponsors', 'label' => 'Sponsorer', 'icon' => 'heart-handshake', 'url' => '/admin/sponsors.php', 'pages' => ['sponsors.php'], 'min_role' => 'promotor'],
+    // Promotor-specific navigation
+    ['id' => 'competitions', 'label' => 'Tävlingar', 'icon' => 'calendar', 'url' => '/admin/events.php', 'pages' => get_pages_in_group('competitions'), 'min_role' => 'promotor'],
+    ['id' => 'series-settings', 'label' => 'Serier', 'icon' => 'medal', 'url' => '/admin/promotor.php', 'pages' => ['promotor.php'], 'min_role' => 'promotor', 'promotor_only' => true],
+    ['id' => 'sponsors', 'label' => 'Sponsorer', 'icon' => 'image', 'url' => '/admin/sponsors.php', 'pages' => ['sponsors.php'], 'min_role' => 'promotor'],
+    ['id' => 'onsite', 'label' => 'Direktanmälan', 'icon' => 'user-plus', 'url' => '/admin/onsite-registration.php', 'pages' => ['onsite-registration.php'], 'min_role' => 'promotor', 'promotor_only' => true],
+    // Admin-only navigation
     ['id' => 'standings', 'label' => 'Serier', 'icon' => 'medal', 'url' => '/admin/series.php', 'pages' => get_pages_in_group('standings'), 'min_role' => 'admin'],
     ['id' => 'database', 'label' => 'Databas', 'icon' => 'database', 'url' => '/admin/riders.php', 'pages' => get_pages_in_group('database'), 'min_role' => 'admin'],
     ['id' => 'import', 'label' => 'Import', 'icon' => 'upload', 'url' => '/admin/import.php', 'pages' => get_pages_in_group('import'), 'min_role' => 'admin'],
