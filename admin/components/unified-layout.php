@@ -38,6 +38,25 @@ $pageInfo = [
     'section' => 'admin',
     'params' => []
 ];
+
+// Auto-detect current admin page from URL for sidebar highlighting
+if (!isset($current_admin_page)) {
+    $scriptName = basename($_SERVER['SCRIPT_NAME'] ?? '', '.php');
+    $current_admin_page = match($scriptName) {
+        'promotor' => 'events',
+        'event-edit', 'event-create', 'events' => 'events',
+        'media', 'media-archive' => 'media',
+        'sponsors', 'sponsor-edit' => 'sponsors',
+        'dashboard' => 'dashboard',
+        'series', 'series-events', 'series-pricing' => 'series',
+        'riders', 'rider-edit' => 'riders',
+        'clubs', 'club-edit' => 'clubs',
+        'import' => 'import',
+        'ranking' => 'ranking',
+        'settings', 'system-settings', 'role-permissions' => 'settings',
+        default => $scriptName
+    };
+}
 ?>
 <!DOCTYPE html>
 <html lang="sv" data-theme="light">
@@ -152,7 +171,7 @@ $pageInfo = [
     <?php include HUB_V3_ROOT . '/components/header.php'; ?>
 
     <div class="app-layout">
-        <?php include HUB_V3_ROOT . '/components/sidebar.php'; ?>
+        <?php include __DIR__ . '/admin-sidebar.php'; ?>
 
         <main id="main-content" class="main-content" role="main">
             <!-- Admin Submenu (automatic based on current page) -->
