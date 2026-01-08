@@ -580,9 +580,9 @@ function upload_sponsor_logo($file, $folder, $uploadedBy = null) {
     $allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
     $maxSize = 10 * 1024 * 1024; // 10MB
 
-    // Sponsor logo target size
-    $targetWidth = 400;
-    $targetHeight = 120;
+    // Sponsor logo - store larger original, scale via CSS
+    // Max width 800px, maintain aspect ratio (no fixed height)
+    $maxWidth = 800;
 
     // Validate file
     if (!isset($file['tmp_name']) || !is_uploaded_file($file['tmp_name'])) {
@@ -614,9 +614,33 @@ function upload_sponsor_logo($file, $folder, $uploadedBy = null) {
         mkdir($dir, 0755, true);
     }
 
-    // Resize and save
-    if (!resize_image($file['tmp_name'], $absoluteFilepath, $targetWidth, $targetHeight)) {
-        return ['success' => false, 'error' => 'Kunde inte bearbeta bilden'];
+    // Get original dimensions
+    $imageInfo = getimagesize($file['tmp_name']);
+    if (!$imageInfo) {
+        return ['success' => false, 'error' => 'Kunde inte läsa bilden'];
+    }
+    $origWidth = $imageInfo[0];
+    $origHeight = $imageInfo[1];
+
+    // Only resize if wider than max, keep aspect ratio
+    $finalWidth = $origWidth;
+    $finalHeight = $origHeight;
+
+    if ($origWidth > $maxWidth) {
+        $finalWidth = $maxWidth;
+        $finalHeight = (int) round($origHeight * ($maxWidth / $origWidth));
+        // Resize maintaining aspect ratio
+        if (!resize_image($file['tmp_name'], $absoluteFilepath, $finalWidth, $finalHeight, true)) {
+            return ['success' => false, 'error' => 'Kunde inte bearbeta bilden'];
+        }
+    } else {
+        // Just copy the original
+        if (!move_uploaded_file($file['tmp_name'], $absoluteFilepath)) {
+            // Try copy if move fails (e.g., already moved)
+            if (!copy($file['tmp_name'], $absoluteFilepath)) {
+                return ['success' => false, 'error' => 'Kunde inte spara bilden'];
+            }
+        }
     }
 
     // Get final file size
@@ -634,8 +658,8 @@ function upload_sponsor_logo($file, $folder, $uploadedBy = null) {
             $relativeFilepath,
             'image/' . $ext,
             $finalSize,
-            $targetWidth,
-            $targetHeight,
+            $finalWidth,
+            $finalHeight,
             $folder,
             $uploadedBy
         ]);
