@@ -13,7 +13,7 @@ $currentAdmin = getCurrentAdmin();
 $pageTitle = 'Välj tävling';
 $showHeader = true;
 $headerTitle = ORGANIZER_APP_NAME;
-$showLogout = true;
+$showBackToAdmin = true;
 
 include __DIR__ . '/includes/header.php';
 ?>
