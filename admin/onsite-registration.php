@@ -3,27 +3,26 @@
  * TheHUB On-Site Registration
  * Allows promotors to register participants at the event venue
  */
-require_once __DIR__ . '/../config/database.php';
-require_once __DIR__ . '/../includes/auth.php';
+require_once __DIR__ . '/../config.php';
+require_admin();
 
 // Allow promotors and admins
 if (!hasRole('promotor')) {
-    header('Location: /login');
-    exit;
+    set_flash('error', 'Du har inte behörighet till denna sida');
+    redirect('/');
 }
 
-$pageTitle = 'Direktanmälan';
-include __DIR__ . '/../includes/admin-header.php';
-
-// Get user's assigned events (for promotors) or all upcoming events (for admins)
-$userId = $_SESSION['user_id'] ?? 0;
+$db = getDB();
+$currentUser = getCurrentAdmin();
+$userId = $currentUser['id'] ?? 0;
 $isPromotorOnly = isRole('promotor') && !hasRole('admin');
 
+// Get user's assigned events (for promotors) or all upcoming events (for admins)
 $upcomingEvents = [];
 try {
     if ($isPromotorOnly) {
         // Get promotor's assigned events that haven't happened yet
-        $stmt = $pdo->prepare("
+        $upcomingEvents = $db->getAll("
             SELECT e.id, e.name, e.date, e.location, s.name as series_name
             FROM events e
             LEFT JOIN series s ON e.series_id = s.id
@@ -31,11 +30,10 @@ try {
             WHERE ps.user_id = ? AND e.date >= CURDATE()
             ORDER BY e.date ASC
             LIMIT 20
-        ");
-        $stmt->execute([$userId]);
+        ", [$userId]);
     } else {
         // Admins see all upcoming events
-        $stmt = $pdo->query("
+        $upcomingEvents = $db->getAll("
             SELECT e.id, e.name, e.date, e.location, s.name as series_name
             FROM events e
             LEFT JOIN series s ON e.series_id = s.id
@@ -44,10 +42,12 @@ try {
             LIMIT 20
         ");
     }
-    $upcomingEvents = $stmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (Exception $e) {
     error_log("Error fetching events for on-site registration: " . $e->getMessage());
 }
+
+$pageTitle = 'Direktanmälan';
+include __DIR__ . '/components/unified-layout.php';
 ?>
 
 <div class="admin-content">
@@ -114,4 +114,4 @@ document.getElementById('event-select')?.addEventListener('change', function() {
 });
 </script>
 
-<?php include __DIR__ . '/../includes/admin-footer.php'; ?>
+<?php include __DIR__ . '/components/unified-layout-footer.php'; ?>
