@@ -2392,14 +2392,15 @@ h2 svg.lucide {
 .admin-mobile-nav-inner {
     display: flex;
     align-items: center;
+    justify-content: center;
     height: 100%;
     overflow-x: auto;
     overflow-y: hidden;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: none;
     -ms-overflow-style: none;
-    padding: 0 var(--space-xs);
-    gap: var(--space-2xs);
+    padding: 0 var(--space-md);
+    gap: var(--space-md);
 }
 
 .admin-mobile-nav-inner::-webkit-scrollbar {
