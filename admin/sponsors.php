@@ -659,62 +659,46 @@ include __DIR__ . '/components/unified-layout.php';
                     <textarea class="form-textarea" id="sponsorDescription" name="description" rows="3"></textarea>
                 </div>
 
-                <!-- Logo section with three sizes -->
+                <!-- Logo section - simplified -->
                 <div style="background: var(--color-bg-sunken); padding: var(--space-md); border-radius: var(--radius-md); margin-bottom: var(--space-md);">
                     <h4 style="margin: 0 0 var(--space-md) 0; font-size: 0.9rem;">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm" style="display: inline; vertical-align: middle; margin-right: 4px;"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
                         Logotyper
                     </h4>
                     <p style="font-size: 0.8rem; color: var(--color-text-secondary); margin-bottom: var(--space-md);">
-                        Ladda upp logotyper i <a href="/admin/media.php?folder=sponsors" target="_blank" style="color: var(--color-accent);">Mediabiblioteket</a> först, välj sedan här.
+                        Ladda upp logotyper i <a href="/admin/media?folder=sponsors" target="_blank" style="color: var(--color-accent);">Mediabiblioteket</a> och koppla dem sedan nedan.
                     </p>
 
-                    <!-- Banner Logo (1200x150) -->
+                    <!-- Banner (1200x150) -->
                     <div class="form-group">
                         <label class="form-label">
-                            Banner-logo <code style="background: var(--color-bg); padding: 2px 6px; border-radius: 4px; font-size: 0.75rem;">1200×150px</code>
+                            Banner <code style="background: var(--color-bg); padding: 2px 6px; border-radius: 4px; font-size: 0.75rem;">1200×150px</code>
                         </label>
                         <div class="logo-picker">
-                            <div class="logo-preview" id="logoBannerPreview" style="width: 120px; height: 40px;">
+                            <div class="logo-preview" id="logoBannerPreview" style="width: 200px; height: 25px;">
                                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-md"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
                             </div>
                             <input type="hidden" id="logoBannerId" name="logo_banner_id">
-                            <button type="button" class="btn btn-sm btn-secondary" onclick="openMediaPicker('banner')">Välj från media</button>
+                            <button type="button" class="btn btn-sm btn-secondary" onclick="openMediaPicker('banner')">Valj fran media</button>
                             <button type="button" class="btn btn-sm btn-ghost" onclick="clearLogoField('banner')">Ta bort</button>
                         </div>
-                        <small class="text-secondary">Stor banner högst upp på event-sidan</small>
+                        <small class="text-secondary">Stor banner for event-sidan</small>
                     </div>
 
-                    <!-- Standard Logo (200x60) -->
+                    <!-- Logo (4:1 ratio - auto-scales) -->
                     <div class="form-group">
                         <label class="form-label">
-                            Standard-logo <code style="background: var(--color-bg); padding: 2px 6px; border-radius: 4px; font-size: 0.75rem;">200×60px</code>
+                            Logo <code style="background: var(--color-bg); padding: 2px 6px; border-radius: 4px; font-size: 0.75rem;">600×150px</code>
                         </label>
                         <div class="logo-picker">
-                            <div class="logo-preview" id="logoStandardPreview">
+                            <div class="logo-preview" id="logoPreview" style="width: 120px; height: 30px;">
                                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-md"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
                             </div>
-                            <input type="hidden" id="logoStandardId" name="logo_standard_id">
-                            <button type="button" class="btn btn-sm btn-secondary" onclick="openMediaPicker('standard')">Välj från media</button>
-                            <button type="button" class="btn btn-sm btn-ghost" onclick="clearLogoField('standard')">Ta bort</button>
+                            <input type="hidden" id="logoId" name="logo_media_id">
+                            <button type="button" class="btn btn-sm btn-secondary" onclick="openMediaPicker('logo')">Valj fran media</button>
+                            <button type="button" class="btn btn-sm btn-ghost" onclick="clearLogoField('logo')">Ta bort</button>
                         </div>
-                        <small class="text-secondary">Logo-raden under event-info</small>
-                    </div>
-
-                    <!-- Small Logo (160x40) -->
-                    <div class="form-group">
-                        <label class="form-label">
-                            Liten logo <code style="background: var(--color-bg); padding: 2px 6px; border-radius: 4px; font-size: 0.75rem;">160×40px</code>
-                        </label>
-                        <div class="logo-picker">
-                            <div class="logo-preview" id="logoSmallPreview" style="width: 60px; height: 60px;">
-                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-md"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
-                            </div>
-                            <input type="hidden" id="logoSmallId" name="logo_small_id">
-                            <button type="button" class="btn btn-sm btn-secondary" onclick="openMediaPicker('small')">Välj från media</button>
-                            <button type="button" class="btn btn-sm btn-ghost" onclick="clearLogoField('small')">Ta bort</button>
-                        </div>
-                        <small class="text-secondary">"Resultat sponsrat av" vid klasserna</small>
+                        <small class="text-secondary">Auto-skalas till 300×75, 240×60, 160×40</small>
                     </div>
                 </div>
 
@@ -798,8 +782,7 @@ function openCreateModal() {
     document.getElementById('sponsorActive').value = '1';
     document.querySelectorAll('.series-checkbox').forEach(cb => cb.checked = false);
     clearLogoField('banner');
-    clearLogoField('standard');
-    clearLogoField('small');
+    clearLogoField('logo');
     document.getElementById('sponsorModal').classList.add('active');
 }
 
@@ -830,25 +813,19 @@ async function editSponsor(id) {
 
         // Set logo fields
         clearLogoField('banner');
-        clearLogoField('standard');
-        clearLogoField('small');
+        clearLogoField('logo');
 
         if (sponsor.logo_banner_id) {
             setLogoFieldById('banner', sponsor.logo_banner_id, sponsor.banner_logo_url);
         }
-        if (sponsor.logo_standard_id) {
-            setLogoFieldById('standard', sponsor.logo_standard_id, sponsor.standard_logo_url);
-        }
-        if (sponsor.logo_small_id) {
-            setLogoFieldById('small', sponsor.logo_small_id, sponsor.small_logo_url);
+        if (sponsor.logo_media_id) {
+            setLogoFieldById('logo', sponsor.logo_media_id, sponsor.logo_url);
         }
 
-        // Fallback to legacy logo
-        if (!sponsor.logo_banner_id && !sponsor.logo_standard_id && !sponsor.logo_small_id) {
-            const legacyUrl = sponsor.logo_url || (sponsor.logo ? '/uploads/sponsors/' + sponsor.logo : null);
-            if (legacyUrl) {
-                setLogoFieldByUrl('standard', legacyUrl);
-            }
+        // Fallback to legacy logo field
+        if (!sponsor.logo_media_id && sponsor.logo) {
+            const legacyUrl = '/uploads/sponsors/' + sponsor.logo;
+            setLogoFieldByUrl('logo', legacyUrl);
         }
 
         document.querySelectorAll('.series-checkbox').forEach(cb => {
@@ -894,8 +871,7 @@ async function saveSponsor(event) {
         contact_phone: formData.get('contact_phone') || null,
         display_order: parseInt(formData.get('display_order')) || 0,
         logo_banner_id: formData.get('logo_banner_id') || null,
-        logo_standard_id: formData.get('logo_standard_id') || null,
-        logo_small_id: formData.get('logo_small_id') || null,
+        logo_media_id: formData.get('logo_media_id') || null,
         series_ids: selectedSeries
     };
 
@@ -993,8 +969,7 @@ function renderMediaGrid() {
 function selectMedia(mediaId, filepath) {
     if (!currentLogoField) return;
 
-    const previewId = 'logo' + currentLogoField.charAt(0).toUpperCase() + currentLogoField.slice(1) + 'Preview';
-    const inputId = 'logo' + currentLogoField.charAt(0).toUpperCase() + currentLogoField.slice(1) + 'Id';
+    const { previewId, inputId } = getLogoFieldIds(currentLogoField);
 
     document.getElementById(inputId).value = mediaId;
     document.getElementById(previewId).innerHTML = `<img src="/${filepath}" alt="Logo" style="max-width: 100%; max-height: 100%; object-fit: contain;">`;
@@ -1003,8 +978,7 @@ function selectMedia(mediaId, filepath) {
 }
 
 function setLogoFieldById(field, mediaId, url) {
-    const previewId = 'logo' + field.charAt(0).toUpperCase() + field.slice(1) + 'Preview';
-    const inputId = 'logo' + field.charAt(0).toUpperCase() + field.slice(1) + 'Id';
+    const { previewId, inputId } = getLogoFieldIds(field);
 
     document.getElementById(inputId).value = mediaId;
     if (url) {
@@ -1012,19 +986,32 @@ function setLogoFieldById(field, mediaId, url) {
     }
 }
 
+function getLogoFieldIds(field) {
+    // Special case for 'logo' field (not 'logoLogo')
+    if (field === 'logo') {
+        return { previewId: 'logoPreview', inputId: 'logoId' };
+    }
+    // Standard pattern for banner
+    return {
+        previewId: 'logo' + field.charAt(0).toUpperCase() + field.slice(1) + 'Preview',
+        inputId: 'logo' + field.charAt(0).toUpperCase() + field.slice(1) + 'Id'
+    };
+}
+
 function setLogoFieldByUrl(field, url) {
-    const previewId = 'logo' + field.charAt(0).toUpperCase() + field.slice(1) + 'Preview';
+    const { previewId } = getLogoFieldIds(field);
     if (url) {
         document.getElementById(previewId).innerHTML = `<img src="${url}" alt="Logo" style="max-width: 100%; max-height: 100%; object-fit: contain;">`;
     }
 }
 
 function clearLogoField(field) {
-    const previewId = 'logo' + field.charAt(0).toUpperCase() + field.slice(1) + 'Preview';
-    const inputId = 'logo' + field.charAt(0).toUpperCase() + field.slice(1) + 'Id';
+    const { previewId, inputId } = getLogoFieldIds(field);
+    const preview = document.getElementById(previewId);
+    const input = document.getElementById(inputId);
 
-    document.getElementById(inputId).value = '';
-    document.getElementById(previewId).innerHTML = `
+    if (input) input.value = '';
+    if (preview) preview.innerHTML = `
         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
     `;
 }
