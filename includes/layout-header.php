@@ -411,8 +411,8 @@ if ($userTheme === 'auto') {
         </svg>
     </button>
 
-    <!-- Navigation -->
-    <?php include __DIR__ . '/navigation.php'; ?>
+    <!-- Navigation - use same sidebar component for consistency -->
+    <?php include __DIR__ . '/../components/sidebar.php'; ?>
 
     <!-- Overlay (hidden on desktop via inline CSS) -->
     <div class="sidebar-overlay" onclick="closeMenu()"></div>
