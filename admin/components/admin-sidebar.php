@@ -89,7 +89,7 @@ $admin_nav = [
         'icon' => '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><line x1="19" x2="19" y1="8" y2="14"/><line x1="22" x2="16" y1="11" y2="11"/></svg>',
         'url' => '/organizer/',
         'active' => false,
-        'min_role' => 'promotor'
+        'only_role' => 'promotor'  // Only visible for promotors, not admins
     ],
     [
         'id' => 'sponsors',
@@ -113,7 +113,12 @@ $admin_nav = [
 $roleHierarchy = ['promotor' => 1, 'admin' => 2, 'super_admin' => 3];
 $userRoleLevel = $roleHierarchy[$currentAdminRole] ?? 0;
 
-$admin_nav = array_filter($admin_nav, function($item) use ($roleHierarchy, $userRoleLevel) {
+$admin_nav = array_filter($admin_nav, function($item) use ($roleHierarchy, $userRoleLevel, $currentAdminRole) {
+    // If only_role is set, only that specific role can see it
+    if (isset($item['only_role'])) {
+        return $currentAdminRole === $item['only_role'];
+    }
+    // Otherwise use hierarchical min_role check
     $requiredLevel = $roleHierarchy[$item['min_role'] ?? 'admin'] ?? 2;
     return $userRoleLevel >= $requiredLevel;
 });
