@@ -66,7 +66,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if (empty($email) || empty($password)) {
         $error = 'Fyll i både e-post/användarnamn och lösenord.';
     } else {
-        $result = hub_attempt_login($email, $password);
+        $rememberMe = isset($_POST['remember_me']) && $_POST['remember_me'] === '1';
+        $result = hub_attempt_login($email, $password, $rememberMe);
 
         if ($result['success']) {
             $redirect = clean_redirect_url($_POST['redirect'] ?? $_GET['redirect'] ?? '');
@@ -141,6 +142,13 @@ $redirect = clean_redirect_url($_GET['redirect'] ?? '');
                             required
                         >
                     </div>
+                </div>
+
+                <div class="form-group remember-group">
+                    <label class="checkbox-label">
+                        <input type="checkbox" name="remember_me" value="1">
+                        <span>Håll mig inloggad</span>
+                    </label>
                 </div>
 
                 <button type="submit" class="btn btn--primary btn--block btn--lg">

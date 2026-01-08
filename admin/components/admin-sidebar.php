@@ -118,6 +118,40 @@ $admin_nav = array_filter($admin_nav, function($item) use ($roleHierarchy, $user
     return $userRoleLevel >= $requiredLevel;
 });
 
+// Public navigation items (visible to all)
+$public_nav = [
+    [
+        'id' => 'calendar',
+        'label' => 'Kalender',
+        'icon' => '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>',
+        'url' => '/calendar'
+    ],
+    [
+        'id' => 'results',
+        'label' => 'Resultat',
+        'icon' => '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 15s1-1 4-1 5 2 8 2 4-1 4-1V3s-1 1-4 1-5-2-8-2-4 1-4 1z"/><line x1="4" x2="4" y1="22" y2="15"/></svg>',
+        'url' => '/results'
+    ],
+    [
+        'id' => 'series',
+        'label' => 'Serier',
+        'icon' => '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>',
+        'url' => '/series'
+    ],
+    [
+        'id' => 'database',
+        'label' => 'Databas',
+        'icon' => '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>',
+        'url' => '/database'
+    ],
+    [
+        'id' => 'ranking',
+        'label' => 'Ranking',
+        'icon' => '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>',
+        'url' => '/ranking'
+    ]
+];
+
 ?>
 
 <aside class="admin-sidebar" id="adminSidebar">
@@ -132,15 +166,22 @@ $admin_nav = array_filter($admin_nav, function($item) use ($roleHierarchy, $user
                 <span class="nav-label"><?= htmlspecialchars($item['label']) ?></span>
             </a>
         <?php endforeach; ?>
-    </nav>
 
-    <!-- Sidebar Footer -->
-    <div class="sidebar-footer">
-        <a href="/" class="sidebar-link" data-tooltip="Tillbaka till sajten">
-            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
-            <span class="nav-label">Tillbaka</span>
-        </a>
-    </div>
+        <!-- Separator -->
+        <div class="nav-separator"></div>
+
+        <!-- Public navigation -->
+        <?php foreach ($public_nav as $item): ?>
+            <a
+                href="<?= htmlspecialchars($item['url']) ?>"
+                class="nav-item nav-item--public"
+                data-tooltip="<?= htmlspecialchars($item['label']) ?>"
+            >
+                <?= $item['icon'] ?>
+                <span class="nav-label"><?= htmlspecialchars($item['label']) ?></span>
+            </a>
+        <?php endforeach; ?>
+    </nav>
 </aside>
 
 <!-- Sidebar overlay for mobile -->
