@@ -73,6 +73,14 @@ $ADMIN_TABS = [
                 'pages' => ['global-texts.php']
             ],
             [
+                'id' => 'pricing-templates',
+                'label' => 'Prismallar',
+                'icon' => 'receipt',
+                'url' => '/admin/pricing-templates.php',
+                'pages' => ['pricing-templates.php'],
+                'role' => 'super_admin' // Only visible for super_admin
+            ],
+            [
                 'id' => 'elimination',
                 'label' => 'Elimination',
                 'icon' => 'git-branch',
