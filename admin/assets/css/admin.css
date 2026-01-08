@@ -350,6 +350,21 @@
     display: none;
 }
 
+/* Navigation separator */
+.nav-separator {
+    height: 1px;
+    background: var(--color-border);
+    margin: var(--space-sm) var(--space-xs);
+}
+
+/* Public nav items - slightly muted */
+.nav-item--public {
+    opacity: 0.7;
+}
+.nav-item--public:hover {
+    opacity: 1;
+}
+
 .sidebar-footer {
     padding: var(--space-sm) var(--space-xs);
     border-top: 1px solid var(--color-border);

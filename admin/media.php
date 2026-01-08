@@ -19,25 +19,29 @@ $isPromotorOnly = isRole('promotor');
 $promotorEventSlugs = [];
 $promotorAllowedFolders = [];
 
-if ($isPromotorOnly) {
+if ($isPromotorOnly && $pdo) {
     // Get promotor's events and their folder slugs
-    $promotorEvents = getPromotorEvents();
-    foreach ($promotorEvents as $event) {
-        // Get series info for folder path
-        $eventInfo = $pdo->prepare("
-            SELECT e.name as event_name, s.short_name as series_short, s.name as series_name
-            FROM events e
-            LEFT JOIN series s ON e.series_id = s.id
-            WHERE e.id = ?
-        ");
-        $eventInfo->execute([$event['id']]);
-        $info = $eventInfo->fetch(PDO::FETCH_ASSOC);
-        if ($info) {
-            $seriesSlug = slugify($info['series_short'] ?: $info['series_name'] ?: 'general');
-            $eventSlug = slugify($info['event_name']);
-            $promotorAllowedFolders[] = "sponsors/{$seriesSlug}/{$eventSlug}";
-            $promotorEventSlugs[] = $eventSlug;
+    try {
+        $promotorEvents = getPromotorEvents();
+        foreach ($promotorEvents as $event) {
+            // Get series info for folder path
+            $eventInfo = $pdo->prepare("
+                SELECT e.name as event_name, s.short_name as series_short, s.name as series_name
+                FROM events e
+                LEFT JOIN series s ON e.series_id = s.id
+                WHERE e.id = ?
+            ");
+            $eventInfo->execute([$event['id']]);
+            $info = $eventInfo->fetch(PDO::FETCH_ASSOC);
+            if ($info) {
+                $seriesSlug = slugify($info['series_short'] ?: $info['series_name'] ?: 'general');
+                $eventSlug = slugify($info['event_name']);
+                $promotorAllowedFolders[] = "sponsors/{$seriesSlug}/{$eventSlug}";
+                $promotorEventSlugs[] = $eventSlug;
+            }
         }
+    } catch (Exception $e) {
+        error_log("Promotor folder access error: " . $e->getMessage());
     }
 }
 
