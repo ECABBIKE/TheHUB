@@ -298,14 +298,29 @@ $clubs = $pdo->query("SELECT id, name FROM clubs WHERE active = 1 ORDER BY name"
 
         <div class="form-group">
             <label for="club_id">Cykelklubb</label>
+            <?php if (!empty($currentUser['club_id'])): ?>
+            <?php
+                $currentClubName = '';
+                foreach ($clubs as $club) {
+                    if ($club['id'] == $currentUser['club_id']) {
+                        $currentClubName = $club['name'];
+                        break;
+                    }
+                }
+            ?>
+            <input type="text" value="<?= htmlspecialchars($currentClubName) ?>" readonly disabled class="input-disabled">
+            <input type="hidden" name="club_id" value="<?= $currentUser['club_id'] ?>">
+            <small class="form-help">Klubb kan inte ändras. Kontakta admin vid behov.</small>
+            <?php else: ?>
             <select id="club_id" name="club_id">
                 <option value="">Ingen klubb</option>
                 <?php foreach ($clubs as $club): ?>
-                    <option value="<?= $club['id'] ?>" <?= ($currentUser['club_id'] ?? '') == $club['id'] ? 'selected' : '' ?>>
+                    <option value="<?= $club['id'] ?>">
                         <?= htmlspecialchars($club['name']) ?>
                     </option>
                 <?php endforeach; ?>
             </select>
+            <?php endif; ?>
         </div>
     </div>
 
