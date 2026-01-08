@@ -86,6 +86,11 @@ if (!isset($current_admin_page)) {
     <link rel="icon" type="<?= $faviconMime ?>" href="<?= htmlspecialchars($faviconUrl) ?>">
     <link rel="icon" type="<?= $faviconMime ?>" sizes="32x32" href="<?= htmlspecialchars($faviconUrl) ?>">
     <link rel="apple-touch-icon" href="<?= htmlspecialchars($faviconUrl) ?>">
+    <link rel="manifest" href="/admin/manifest.json">
+    <meta name="theme-color" content="#37d4d6">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="HUB Admin">
 
     <!-- V3 CSS -->
     <link rel="stylesheet" href="<?= hub_asset('css/reset.css') ?>">
