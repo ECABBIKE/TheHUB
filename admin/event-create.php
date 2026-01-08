@@ -4,6 +4,17 @@ require_admin();
 
 $db = getDB();
 
+// Check/create pricing_template_id column if it doesn't exist
+try {
+    $columns = $db->getAll("SHOW COLUMNS FROM events LIKE 'pricing_template_id'");
+    if (empty($columns)) {
+        $db->query("ALTER TABLE events ADD COLUMN pricing_template_id INT NULL");
+        error_log("EVENT CREATE: Added pricing_template_id column to events table");
+    }
+} catch (Exception $e) {
+    error_log("EVENT CREATE: Error checking/adding pricing_template_id column: " . $e->getMessage());
+}
+
 // Initialize message variables
 $message = '';
 $messageType = 'info';

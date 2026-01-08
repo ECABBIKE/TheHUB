@@ -101,7 +101,12 @@ if ($currentFolder === 'sponsors' || $parentFolder === 'sponsors') {
     if ($isPromotorOnly && !empty($promotorAllowedFolders)) {
         $sponsorSubfolders = array_filter($sponsorSubfolders, function($subfolder) use ($promotorAllowedFolders) {
             foreach ($promotorAllowedFolders as $allowed) {
-                if (strpos($allowed, $subfolder) !== false || strpos($subfolder, basename($allowed)) !== false) {
+                // $subfolder is array with 'name', 'path', 'count', 'size'
+                // Check if subfolder path matches or is prefix of allowed path
+                $subfolderPath = $subfolder['path'] ?? $subfolder['name'] ?? '';
+                if ($subfolderPath === $allowed ||
+                    strpos($allowed, $subfolderPath . '/') === 0 ||
+                    strpos($subfolderPath, $allowed) === 0) {
                     return true;
                 }
             }

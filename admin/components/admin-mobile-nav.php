@@ -27,7 +27,6 @@ $adminNav = [
     ['id' => 'competitions', 'label' => 'Tävlingar', 'icon' => 'calendar-check', 'url' => '/admin/events.php', 'pages' => get_pages_in_group('competitions'), 'min_role' => 'promotor'],
     ['id' => 'standings', 'label' => 'Serier', 'icon' => 'medal', 'url' => '/admin/series.php', 'pages' => get_pages_in_group('standings'), 'min_role' => 'admin'],
     ['id' => 'database', 'label' => 'Databas', 'icon' => 'database', 'url' => '/admin/riders.php', 'pages' => get_pages_in_group('database'), 'min_role' => 'admin'],
-    ['id' => 'config', 'label' => 'Konfig', 'icon' => 'sliders', 'url' => '/admin/classes.php', 'pages' => get_pages_in_group('config'), 'min_role' => 'admin'],
     ['id' => 'import', 'label' => 'Import', 'icon' => 'upload', 'url' => '/admin/import.php', 'pages' => get_pages_in_group('import'), 'min_role' => 'admin'],
     ['id' => 'settings', 'label' => 'System', 'icon' => 'settings', 'url' => '/admin/users.php', 'pages' => get_pages_in_group('settings'), 'min_role' => 'admin'],
 ];

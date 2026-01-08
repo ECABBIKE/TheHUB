@@ -56,6 +56,17 @@ try {
     error_log("EVENT EDIT: Error checking/adding header_banner_media_id column: " . $e->getMessage());
 }
 
+// Check/create pricing_template_id column
+try {
+    $columns = $db->getAll("SHOW COLUMNS FROM events LIKE 'pricing_template_id'");
+    if (empty($columns)) {
+        $db->query("ALTER TABLE events ADD COLUMN pricing_template_id INT NULL");
+        error_log("EVENT EDIT: Added pricing_template_id column to events table");
+    }
+} catch (Exception $e) {
+    error_log("EVENT EDIT: Error checking/adding pricing_template_id column: " . $e->getMessage());
+}
+
 // Get media files from events folder for banner selection
 $eventMediaFiles = [];
 try {
