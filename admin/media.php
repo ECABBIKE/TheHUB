@@ -23,6 +23,7 @@ if ($isPromotorOnly && $pdo) {
     // Get promotor's events and their folder slugs
     try {
         $promotorEvents = getPromotorEvents();
+        $promotorSeriesSlugs = []; // Track series for series-level access
         foreach ($promotorEvents as $event) {
             // Get series info for folder path
             $eventInfo = $pdo->prepare("
@@ -36,8 +37,14 @@ if ($isPromotorOnly && $pdo) {
             if ($info) {
                 $seriesSlug = slugify($info['series_short'] ?: $info['series_name'] ?: 'general');
                 $eventSlug = slugify($info['event_name']);
+                // Add event-specific folder
                 $promotorAllowedFolders[] = "sponsors/{$seriesSlug}/{$eventSlug}";
                 $promotorEventSlugs[] = $eventSlug;
+                // Also allow series-level folder access
+                if (!in_array($seriesSlug, $promotorSeriesSlugs)) {
+                    $promotorSeriesSlugs[] = $seriesSlug;
+                    $promotorAllowedFolders[] = "sponsors/{$seriesSlug}";
+                }
             }
         }
     } catch (Exception $e) {
