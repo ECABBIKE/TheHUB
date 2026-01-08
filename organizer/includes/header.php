@@ -92,4 +92,4 @@ if (!defined('THEHUB_INIT')) {
         </div>
     </header>
 <?php endif; ?>
-    <main class="org-main">
+    <main class="org-main<?= isset($mainClass) ? ' ' . htmlspecialchars($mainClass) : '' ?>">

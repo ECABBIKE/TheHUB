@@ -394,3 +394,8 @@
     .org-class-grid { grid-template-columns: repeat(3, 1fr); gap: var(--space-md); }
     .org-stats { gap: var(--space-md); }
 }
+
+/* Registration page - keep narrow on all screens for quick data entry */
+.org-main--narrow {
+    max-width: 500px !important;
+}
