@@ -155,8 +155,8 @@ function isAdminPageActive($item, $requestUri) {
         <?php
         $currentPath = $_SERVER['REQUEST_URI'];
         $promotorNav = [
-            ['id' => 'events', 'label' => 'Tävlingar', 'icon' => 'calendar', 'url' => '/admin/events.php', 'match' => '/admin/event'],
-            ['id' => 'series', 'label' => 'Serier', 'icon' => 'medal', 'url' => '/admin/promotor.php', 'match' => '/admin/promotor'],
+            ['id' => 'events', 'label' => 'Tävlingar', 'icon' => 'calendar', 'url' => '/admin/promotor.php', 'match' => '/admin/promotor.php'],
+            ['id' => 'series', 'label' => 'Serier', 'icon' => 'medal', 'url' => '/admin/promotor-series.php', 'match' => '/admin/promotor-series'],
             ['id' => 'sponsors', 'label' => 'Sponsorer', 'icon' => 'image', 'url' => '/admin/sponsors.php', 'match' => '/admin/sponsor'],
             ['id' => 'onsite', 'label' => 'Direktanmälan', 'icon' => 'user-plus', 'url' => '/admin/onsite-registration.php', 'match' => '/admin/onsite'],
         ];
