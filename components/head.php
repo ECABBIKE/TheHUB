@@ -102,6 +102,7 @@ $cssVersion = function($file) use ($cssDir) {
 <link rel="stylesheet" href="<?= hub_asset('css/reset.css') ?>?v=<?= $cssVersion('reset.css') ?>">
 <link rel="stylesheet" href="<?= hub_asset('css/tokens.css') ?>?v=<?= $cssVersion('tokens.css') ?>">
 <link rel="stylesheet" href="<?= hub_asset('css/theme.css') ?>?v=<?= $cssVersion('theme.css') ?>">
+<link rel="stylesheet" href="<?= hub_asset('css/effects.css') ?>?v=<?= $cssVersion('effects.css') ?>">
 <link rel="stylesheet" href="<?= hub_asset('css/layout.css') ?>?v=<?= $cssVersion('layout.css') ?>">
 <link rel="stylesheet" href="<?= hub_asset('css/components.css') ?>?v=<?= $cssVersion('components.css') ?>">
 <link rel="stylesheet" href="<?= hub_asset('css/tables.css') ?>?v=<?= $cssVersion('tables.css') ?>">
