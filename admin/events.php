@@ -1,14 +1,36 @@
 <?php
 /**
  * Admin Events - V3 Design System
+ * Promotors see only their assigned events
  */
 require_once __DIR__ . '/../config.php';
+require_admin();
 
 global $pdo;
 
-// Promotors should use promotor.php instead
-if (isRole('promotor')) {
-    redirect('/admin/promotor.php');
+// Check if promotor (limited access to only assigned events)
+$isPromotorOnly = isRole('promotor') && !hasRole('admin');
+$promotorEventIds = [];
+
+if ($isPromotorOnly) {
+    // Get promotor's assigned event IDs
+    $db = getDB();
+    $currentUser = getCurrentAdmin();
+    $userId = $currentUser['id'] ?? 0;
+
+    try {
+        $promotorEvents = $db->getAll("
+            SELECT event_id FROM promotor_events WHERE user_id = ?
+        ", [$userId]);
+        $promotorEventIds = array_column($promotorEvents, 'event_id');
+    } catch (Exception $e) {
+        error_log("Promotor events error: " . $e->getMessage());
+    }
+
+    // If promotor has no assigned events, show message
+    if (empty($promotorEventIds)) {
+        $noEventsMessage = 'Du har inga tilldelade tävlingar.';
+    }
 }
 
 // Get filter parameters
