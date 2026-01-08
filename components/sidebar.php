@@ -20,9 +20,11 @@ require_once __DIR__ . '/icons.php';
 
 $currentPage = $pageInfo['page'] ?? 'dashboard';
 $currentSection = $pageInfo['section'] ?? '';
-// Check roles properly
+// Check roles properly - use hasRole for hierarchical check
+// promotor = role 2, admin = role 3, super_admin = role 4
 $isPromotorOnly = function_exists('isRole') && isRole('promotor') && !(function_exists('hasRole') && hasRole('admin'));
-$isAdminUser = function_exists('hub_is_admin') ? hub_is_admin() : false;
+// isAdminUser must be admin or super_admin, NOT just logged in
+$isAdminUser = function_exists('hasRole') && hasRole('admin');
 // Promotors should see their limited admin menu, not full admin
 $isAdminSection = strpos($_SERVER['REQUEST_URI'], '/admin') === 0;
 
