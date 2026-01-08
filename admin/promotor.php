@@ -272,20 +272,25 @@ $pageTitle = 'Mina Tävlingar';
                 grid-template-columns: repeat(2, 1fr);
             }
         }
-        /* Bottom Navigation */
+        /* Bottom Navigation - Mobile only */
         .promotor-bottom-nav {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            height: 64px;
-            padding-bottom: env(safe-area-inset-bottom);
-            background: var(--color-bg-surface);
-            border-top: 1px solid var(--color-border);
-            z-index: 100;
-            display: flex;
-            justify-content: center;
-            align-items: center;
+            display: none; /* Hidden on desktop */
+        }
+        @media (max-width: 768px) {
+            .promotor-bottom-nav {
+                display: flex;
+                position: fixed;
+                bottom: 0;
+                left: 0;
+                right: 0;
+                height: 64px;
+                padding-bottom: env(safe-area-inset-bottom);
+                background: var(--color-bg-surface);
+                border-top: 1px solid var(--color-border);
+                z-index: 100;
+                justify-content: center;
+                align-items: center;
+            }
         }
         .promotor-bottom-nav-inner {
             display: flex;
