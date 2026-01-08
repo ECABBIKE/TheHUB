@@ -56,7 +56,7 @@ function nav_icon($name, $class = 'sidebar-icon-svg') {
     <nav class="sidebar-nav">
         <!-- PUBLIC NAVIGATION -->
         <a href="/"
-           class="sidebar-link<?= $current_page == 'index.php' && strpos($current_path, '/admin/') === false ? ' active' : '' ?>"
+           class="sidebar-link<?= $current_page == 'index.php' && strpos($current_path, '/admin/') === false ? ' is-active' : '' ?>"
            aria-label="Hem"
            <?= $current_page == 'index.php' && strpos($current_path, '/admin/') === false ? 'aria-current="page"' : '' ?>>
             <?= nav_icon('home') ?>
@@ -64,7 +64,7 @@ function nav_icon($name, $class = 'sidebar-icon-svg') {
         </a>
 
         <a href="/calendar"
-           class="sidebar-link<?= $current_page == 'events.php' && strpos($current_path, '/admin/') === false ? ' active' : '' ?>"
+           class="sidebar-link<?= $current_page == 'events.php' && strpos($current_path, '/admin/') === false ? ' is-active' : '' ?>"
            aria-label="Kalender"
            <?= $current_page == 'events.php' && strpos($current_path, '/admin/') === false ? 'aria-current="page"' : '' ?>>
             <?= nav_icon('calendar') ?>
@@ -72,7 +72,7 @@ function nav_icon($name, $class = 'sidebar-icon-svg') {
         </a>
 
         <a href="/results"
-           class="sidebar-link<?= $current_page == 'results.php' && strpos($current_path, '/admin/') === false ? ' active' : '' ?>"
+           class="sidebar-link<?= $current_page == 'results.php' && strpos($current_path, '/admin/') === false ? ' is-active' : '' ?>"
            aria-label="Resultat"
            <?= $current_page == 'results.php' && strpos($current_path, '/admin/') === false ? 'aria-current="page"' : '' ?>>
             <?= nav_icon('flag') ?>
@@ -80,7 +80,7 @@ function nav_icon($name, $class = 'sidebar-icon-svg') {
         </a>
 
         <a href="/series"
-           class="sidebar-link<?= $current_page == 'series.php' && strpos($current_path, '/admin/') === false ? ' active' : '' ?>"
+           class="sidebar-link<?= $current_page == 'series.php' && strpos($current_path, '/admin/') === false ? ' is-active' : '' ?>"
            aria-label="Serier"
            <?= $current_page == 'series.php' && strpos($current_path, '/admin/') === false ? 'aria-current="page"' : '' ?>>
             <?= nav_icon('trophy') ?>
@@ -88,7 +88,7 @@ function nav_icon($name, $class = 'sidebar-icon-svg') {
         </a>
 
         <a href="/database"
-           class="sidebar-link<?= $current_page == 'riders.php' && strpos($current_path, '/admin/') === false ? ' active' : '' ?>"
+           class="sidebar-link<?= $current_page == 'riders.php' && strpos($current_path, '/admin/') === false ? ' is-active' : '' ?>"
            aria-label="Databas"
            <?= $current_page == 'riders.php' && strpos($current_path, '/admin/') === false ? 'aria-current="page"' : '' ?>>
             <?= nav_icon('users') ?>
@@ -96,19 +96,19 @@ function nav_icon($name, $class = 'sidebar-icon-svg') {
         </a>
 
         <a href="/ranking"
-           class="sidebar-link<?= strpos($current_path, '/ranking/') !== false && strpos($current_path, '/admin/') === false ? ' active' : '' ?>"
+           class="sidebar-link<?= strpos($current_path, '/ranking/') !== false && strpos($current_path, '/admin/') === false ? ' is-active' : '' ?>"
            aria-label="Ranking"
            <?= strpos($current_path, '/ranking/') !== false && strpos($current_path, '/admin/') === false ? 'aria-current="page"' : '' ?>>
             <?= nav_icon('trending-up') ?>
             <span class="sidebar-label">Ranking</span>
         </a>
 
-        <?php if ($is_admin): ?>
-        <!-- ADMIN NAVIGATION (admin and super_admin only) -->
+        <?php if ($is_promotor && !$is_admin): ?>
+        <!-- PROMOTOR NAVIGATION (promotor only, not admin/super_admin) -->
         <div class="sidebar-divider"></div>
 
         <a href="/admin/dashboard.php"
-           class="sidebar-link<?= strpos($current_path, '/admin/dashboard.php') !== false ? ' active' : '' ?>"
+           class="sidebar-link<?= strpos($current_path, '/admin/dashboard.php') !== false ? ' is-active' : '' ?>"
            aria-label="Dashboard"
            <?= strpos($current_path, '/admin/dashboard.php') !== false ? 'aria-current="page"' : '' ?>>
             <?= nav_icon('layout-dashboard') ?>
@@ -116,7 +116,7 @@ function nav_icon($name, $class = 'sidebar-icon-svg') {
         </a>
 
         <a href="/admin/events.php"
-           class="sidebar-link<?= strpos($current_path, '/admin/events') !== false || strpos($current_path, '/admin/results') !== false || strpos($current_path, '/admin/venues') !== false || strpos($current_path, '/admin/ticket') !== false ? ' active' : '' ?>"
+           class="sidebar-link<?= strpos($current_path, '/admin/events') !== false || strpos($current_path, '/admin/results') !== false || strpos($current_path, '/admin/event-') !== false ? ' is-active' : '' ?>"
            aria-label="Tävlingar"
            <?= strpos($current_path, '/admin/events') !== false ? 'aria-current="page"' : '' ?>>
             <?= nav_icon('calendar-check') ?>
@@ -124,7 +124,37 @@ function nav_icon($name, $class = 'sidebar-icon-svg') {
         </a>
 
         <a href="/admin/series.php"
-           class="sidebar-link<?= strpos($current_path, '/admin/series') !== false || strpos($current_path, '/admin/ranking') !== false || strpos($current_path, '/admin/club-points') !== false ? ' active' : '' ?>"
+           class="sidebar-link<?= strpos($current_path, '/admin/series') !== false || strpos($current_path, '/admin/ranking') !== false ? ' is-active' : '' ?>"
+           aria-label="Serier"
+           <?= strpos($current_path, '/admin/series') !== false ? 'aria-current="page"' : '' ?>>
+            <?= nav_icon('medal') ?>
+            <span class="sidebar-label">Serier</span>
+        </a>
+
+        <?php endif; ?>
+
+        <?php if ($is_admin): ?>
+        <!-- ADMIN NAVIGATION (admin and super_admin only) -->
+        <div class="sidebar-divider"></div>
+
+        <a href="/admin/dashboard.php"
+           class="sidebar-link<?= strpos($current_path, '/admin/dashboard.php') !== false ? ' is-active' : '' ?>"
+           aria-label="Dashboard"
+           <?= strpos($current_path, '/admin/dashboard.php') !== false ? 'aria-current="page"' : '' ?>>
+            <?= nav_icon('layout-dashboard') ?>
+            <span class="sidebar-label">Dashboard</span>
+        </a>
+
+        <a href="/admin/events.php"
+           class="sidebar-link<?= strpos($current_path, '/admin/events') !== false || strpos($current_path, '/admin/results') !== false || strpos($current_path, '/admin/venues') !== false || strpos($current_path, '/admin/ticket') !== false ? ' is-active' : '' ?>"
+           aria-label="Tävlingar"
+           <?= strpos($current_path, '/admin/events') !== false ? 'aria-current="page"' : '' ?>>
+            <?= nav_icon('calendar-check') ?>
+            <span class="sidebar-label">Tävlingar</span>
+        </a>
+
+        <a href="/admin/series.php"
+           class="sidebar-link<?= strpos($current_path, '/admin/series') !== false || strpos($current_path, '/admin/ranking') !== false || strpos($current_path, '/admin/club-points') !== false ? ' is-active' : '' ?>"
            aria-label="Serier"
            <?= strpos($current_path, '/admin/series') !== false ? 'aria-current="page"' : '' ?>>
             <?= nav_icon('medal') ?>
@@ -132,7 +162,7 @@ function nav_icon($name, $class = 'sidebar-icon-svg') {
         </a>
 
         <a href="/admin/riders.php"
-           class="sidebar-link<?= strpos($current_path, '/admin/riders') !== false || strpos($current_path, '/admin/clubs') !== false || strpos($current_path, '/admin/find-duplicates') !== false || strpos($current_path, '/admin/cleanup-') !== false ? ' active' : '' ?>"
+           class="sidebar-link<?= strpos($current_path, '/admin/riders') !== false || strpos($current_path, '/admin/clubs') !== false || strpos($current_path, '/admin/find-duplicates') !== false || strpos($current_path, '/admin/cleanup-') !== false ? ' is-active' : '' ?>"
            aria-label="Databas"
            <?= strpos($current_path, '/admin/riders') !== false || strpos($current_path, '/admin/clubs') !== false ? 'aria-current="page"' : '' ?>>
             <?= nav_icon('users') ?>
@@ -140,7 +170,7 @@ function nav_icon($name, $class = 'sidebar-icon-svg') {
         </a>
 
         <a href="/admin/classes.php"
-           class="sidebar-link<?= strpos($current_path, '/admin/classes') !== false || strpos($current_path, '/admin/license') !== false || strpos($current_path, '/admin/point-') !== false || strpos($current_path, '/admin/registration-rules') !== false || strpos($current_path, '/admin/public-settings') !== false || strpos($current_path, '/admin/global-texts') !== false ? ' active' : '' ?>"
+           class="sidebar-link<?= strpos($current_path, '/admin/classes') !== false || strpos($current_path, '/admin/license') !== false || strpos($current_path, '/admin/point-') !== false || strpos($current_path, '/admin/registration-rules') !== false || strpos($current_path, '/admin/public-settings') !== false || strpos($current_path, '/admin/global-texts') !== false ? ' is-active' : '' ?>"
            aria-label="Konfiguration"
            <?= strpos($current_path, '/admin/classes') !== false ? 'aria-current="page"' : '' ?>>
             <?= nav_icon('sliders') ?>
@@ -148,7 +178,7 @@ function nav_icon($name, $class = 'sidebar-icon-svg') {
         </a>
 
         <a href="/admin/import.php"
-           class="sidebar-link<?= strpos($current_path, '/admin/import') !== false ? ' active' : '' ?>"
+           class="sidebar-link<?= strpos($current_path, '/admin/import') !== false ? ' is-active' : '' ?>"
            aria-label="Import"
            <?= strpos($current_path, '/admin/import') !== false ? 'aria-current="page"' : '' ?>>
             <?= nav_icon('upload') ?>
@@ -157,7 +187,7 @@ function nav_icon($name, $class = 'sidebar-icon-svg') {
 
         <?php if ($is_super_admin): ?>
         <a href="/admin/users.php"
-           class="sidebar-link<?= strpos($current_path, '/admin/users') !== false || strpos($current_path, '/admin/role-') !== false || strpos($current_path, '/admin/system-') !== false || strpos($current_path, '/admin/settings') !== false || strpos($current_path, '/admin/setup-') !== false || strpos($current_path, '/admin/run-') !== false || strpos($current_path, '/admin/tools') !== false ? ' active' : '' ?>"
+           class="sidebar-link<?= strpos($current_path, '/admin/users') !== false || strpos($current_path, '/admin/role-') !== false || strpos($current_path, '/admin/system-') !== false || strpos($current_path, '/admin/settings') !== false || strpos($current_path, '/admin/setup-') !== false || strpos($current_path, '/admin/run-') !== false || strpos($current_path, '/admin/tools') !== false ? ' is-active' : '' ?>"
            aria-label="System"
            <?= strpos($current_path, '/admin/users') !== false ? 'aria-current="page"' : '' ?>>
             <?= nav_icon('settings') ?>
@@ -168,65 +198,4 @@ function nav_icon($name, $class = 'sidebar-icon-svg') {
     </nav>
 </aside>
 
-<style>
-/* Admin sidebar styles */
-.sidebar-nav {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-    padding: 8px;
-}
-.sidebar-link {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    padding: 10px 12px;
-    color: var(--color-text-secondary, #6b7280);
-    text-decoration: none;
-    border-radius: 8px;
-    transition: all 0.15s ease;
-}
-.sidebar-link:hover {
-    background: var(--color-bg-hover, rgba(0,0,0,0.04));
-    color: var(--color-text-primary, #171717);
-}
-.sidebar-link.active,
-.sidebar-link[aria-current="page"] {
-    background: var(--color-accent-light, #e8f0fb);
-    color: var(--color-accent, #004a98);
-}
-.sidebar-icon-svg {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    flex-shrink: 0;
-}
-.sidebar-icon-svg svg {
-    width: 20px;
-    height: 20px;
-    stroke: currentColor;
-}
-.sidebar-label {
-    font-size: 14px;
-    font-weight: 500;
-    white-space: nowrap;
-}
-.sidebar-divider {
-    height: 1px;
-    background: var(--color-border, #E5E7EB);
-    margin: 8px 0;
-}
-
-/* Desktop: icon-only compact sidebar */
-@media (min-width: 1024px) {
-    .sidebar-link {
-        flex-direction: column;
-        gap: 4px;
-        padding: 8px;
-        text-align: center;
-    }
-    .sidebar-label {
-        font-size: 10px;
-    }
-}
-</style>
+<!-- Styling inherited from components/sidebar.php and layout.css -->
