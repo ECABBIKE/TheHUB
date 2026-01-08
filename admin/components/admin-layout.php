@@ -93,6 +93,7 @@ if ($userTheme === 'auto') {
 
     <!-- Admin-specific CSS (cache-busted) -->
     <link rel="stylesheet" href="/admin/assets/css/admin.css?v=<?= filemtime(__DIR__ . '/../assets/css/admin.css') ?>">
+    <link rel="stylesheet" href="/admin/assets/css/admin-theme-fix.css?v=<?= filemtime(__DIR__ . '/../assets/css/admin-theme-fix.css') ?>">
 </head>
 <body class="admin-body">
     <!-- Admin Header -->

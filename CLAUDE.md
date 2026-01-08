@@ -12,7 +12,7 @@
 // config.php - Uppdatera APP_BUILD med dagens datum vid varje push
 define('APP_VERSION', '1.0');          // Major.Minor version
 define('APP_VERSION_NAME', 'Release');  // Version name
-define('APP_BUILD', '2026-01-07');      // UPPDATERA DETTA: YYYY-MM-DD
+define('APP_BUILD', '2026-01-08');      // UPPDATERA DETTA: YYYY-MM-DD
 define('DEPLOYMENT_OFFSET', 131);       // Ändra INTE
 ```
 
@@ -21,12 +21,12 @@ define('DEPLOYMENT_OFFSET', 131);       // Ändra INTE
 2. Meddela användaren vilken version som skapades
 
 ### Format:
-Version visas som: `v1.0 [2026-01-07.XXX] - Release`
+Version visas som: `v1.0 [2026-01-08.XXX] - Release`
 - XXX = antal git commits + DEPLOYMENT_OFFSET (räknas automatiskt)
 
 ### Exempel på meddelande:
 ```
-Pushat: TheHUB v1.0 [2026-01-07.140]
+Pushat: TheHUB v1.0 [2026-01-08.XXX]
 ```
 
 ## INGA EMOJIS - ALDRIG
@@ -60,95 +60,154 @@ Vanliga Lucide-ikoner:
 Följande filer får INTE modifieras utan explicit godkännande:
 
 ```
-assets/css/base.css        # Grundläggande CSS-variabler
+assets/css/tokens.css      # Design tokens (spacing, radius, fonts)
+assets/css/theme.css       # Tema-variabler (Light/Dark mode)
 assets/css/components.css  # UI-komponenter
-assets/css/admin.css       # Admin-panel styling
-includes/header.php        # Sidheader
-includes/footer.php        # Sidfooter
-includes/admin-header.php  # Admin header
-includes/admin-sidebar.php # Admin navigation
+assets/css/layout.css      # Layout-system
+components/sidebar.php     # Sidebar navigation
+components/header.php      # Sidheader
+includes/layout-header.php # Layout wrapper
+includes/layout-footer.php # Layout footer
 ```
 
 ---
 
-## 🎨 DESIGNSYSTEM - ANVÄND ALLTID
+## DESIGNSYSTEM - ANVÄND ALLTID
 
 ### CSS-variabler (OBLIGATORISKT)
 
+TheHUB använder ett tema-baserat designsystem med Light/Dark Mode.
+Tema styrs via `data-theme` attribut på `<html>` elementet.
+
+```css
+/* ===== DARK MODE (Default) ===== */
+:root, html[data-theme="dark"] {
+  /* Bakgrunder */
+  --color-bg-page: #0b131e;
+  --color-bg-surface: #0d1520;
+  --color-bg-card: #0e1621;
+  --color-bg-hover: rgba(255, 255, 255, 0.06);
+
+  /* Text */
+  --color-text-primary: #f8f2f0;
+  --color-text-secondary: #c7cfdd;
+  --color-text-muted: #868fa2;
+
+  /* Accent - Cyan/Turquoise */
+  --color-accent: #37d4d6;
+  --color-accent-hover: #4ae0e2;
+  --color-accent-light: rgba(55, 212, 214, 0.15);
+  --color-accent-text: #37d4d6;
+
+  /* Borders */
+  --color-border: rgba(55, 212, 214, 0.2);
+  --color-border-strong: rgba(55, 212, 214, 0.3);
+
+  /* Status */
+  --color-success: #10b981;
+  --color-warning: #fbbf24;
+  --color-error: #ef4444;
+  --color-info: #38bdf8;
+}
+
+/* ===== LIGHT MODE ===== */
+html[data-theme="light"] {
+  /* Bakgrunder */
+  --color-bg-page: #f8f9fa;
+  --color-bg-surface: #ffffff;
+  --color-bg-card: #ffffff;
+  --color-bg-hover: rgba(55, 212, 214, 0.04);
+
+  /* Text */
+  --color-text-primary: #0b131e;
+  --color-text-secondary: #495057;
+  --color-text-muted: #868e96;
+
+  /* Accent - Cyan/Turquoise (ljusare) */
+  --color-accent: #2bc4c6;
+  --color-accent-hover: #37d4d6;
+  --color-accent-light: rgba(55, 212, 214, 0.1);
+  --color-accent-text: #2bc4c6;
+
+  /* Borders */
+  --color-border: rgba(55, 212, 214, 0.15);
+  --color-border-strong: rgba(55, 212, 214, 0.25);
+
+  /* Status */
+  --color-success: #059669;
+  --color-warning: #d97706;
+  --color-error: #dc2626;
+  --color-info: #0284c7;
+}
+```
+
+### Spacing (tokens.css)
+
 ```css
 :root {
-  /* Färger - ANVÄND ENDAST DESSA */
-  --color-primary: #171717;
-  --color-secondary: #323539;
-  --color-text: #7A7A7A;
-  --color-accent: #61CE70;
-  --color-star: #FDFDFD;
-  --color-star-fade: #F9F9F9;
-  --color-border: #e5e7eb;
-  --color-danger: #ef4444;
-  --color-warning: #f59e0b;
-  --color-success: #61CE70;
-
-  /* Serie-färger */
-  --color-gs-green: #61CE70;
-  --color-gs-blue: #004a98;
-  --color-ges-orange: #EF761F;
-  --color-ggs-green: #8A9A5B;
-
-  /* Spacing - ANVÄND ENDAST DESSA */
-  --space-xs: 4px;
-  --space-sm: 8px;
+  --space-2xs: 4px;
+  --space-xs: 8px;
+  --space-sm: 12px;
   --space-md: 16px;
   --space-lg: 24px;
   --space-xl: 32px;
   --space-2xl: 48px;
+  --space-3xl: 64px;
 
-  /* Radius */
   --radius-sm: 6px;
   --radius-md: 10px;
-  --radius-lg: 16px;
+  --radius-lg: 14px;
+  --radius-xl: 20px;
   --radius-full: 9999px;
-
-  /* Shadows */
-  --shadow-sm: 0 1px 2px rgba(0,0,0,0.05);
-  --shadow-md: 0 4px 12px rgba(0,0,0,0.08);
-  --shadow-lg: 0 10px 30px rgba(0,0,0,0.12);
 }
 ```
 
-### Dark Mode färger (FRAMTIDA)
+### Typografi
 
 ```css
-/* Dark Mode - EJ IMPLEMENTERAT ÄN */
-[data-theme="dark"] {
-  --color-bg-primary: #0E1621;      /* Mörkblå bakgrund */
-  --color-bg-surface: #1a2332;      /* Kort/ytor */
-  --color-text-primary: #FFFFFF;    /* Vit text */
-  --color-text-secondary: #C8D4E8;  /* Ljusblå/grå text */
-  --color-text-muted: #7E8798;      /* Dämpad text */
-  --color-accent: #37D4D6;          /* Cyan accent */
-  --color-border: #2a3444;          /* Mörkare border */
+:root {
+  --font-heading: 'Oswald', sans-serif;           /* H1 rubriker */
+  --font-heading-secondary: 'Cabin Condensed';    /* H2, H3 */
+  --font-body: 'Manrope', sans-serif;             /* Brödtext */
+  --font-link: 'Roboto', sans-serif;              /* Länkar */
 }
 ```
 
-### ❌ FÖRBJUDET
+### Serie-färger
+
+```css
+:root {
+  --series-enduro: #FFE009;
+  --series-downhill: #FF6B35;
+  --series-xc: #2E7D32;
+  --series-ges: #EF761F;
+  --series-ggs: #8A9A5B;
+  --series-gss: #6B4C9A;
+  --series-gravel: #795548;
+  --series-dual: #E91E63;
+}
+```
+
+### FÖRBJUDET
 
 ```css
 /* SKRIV ALDRIG DETTA */
-background: #61CE70;           /* Använd var(--color-accent) */
+background: #37d4d6;           /* Använd var(--color-accent) */
 padding: 15px;                 /* Använd var(--space-md) eller var(--space-lg) */
 border-radius: 8px;            /* Använd var(--radius-sm) */
-color: gray;                   /* Använd var(--color-text) */
+color: gray;                   /* Använd var(--color-text-secondary) */
+background: #0b131e;           /* Använd var(--color-bg-page) */
 ```
 
-### ✅ KORREKT
+### KORREKT
 
 ```css
 /* SKRIV ALLTID DETTA */
 background: var(--color-accent);
 padding: var(--space-md);
 border-radius: var(--radius-sm);
-color: var(--color-text);
+color: var(--color-text-secondary);
+background: var(--color-bg-page);
 ```
 
 ---
@@ -441,29 +500,42 @@ id, name, year, status, logo
 
 ---
 
-## 📂 PROJEKTSTRUKTUR
+## PROJEKTSTRUKTUR
 
 ```
 thehub/
+├── index.php               # Huvudrouter (SPA-liknande)
+├── hub-config.php          # Huvudkonfiguration
+├── router.php              # URL-routing
 ├── config/
 │   └── database.php
+├── components/             # UI-komponenter
+│   ├── sidebar.php         # LÅST - Navigation
+│   ├── header.php          # LÅST - Header
+│   ├── icons.php           # Lucide ikoner
+│   └── mobile-nav.php
 ├── includes/
-│   ├── header.php          # 🔒 LÅST
-│   ├── footer.php          # 🔒 LÅST
-│   ├── admin-header.php    # 🔒 LÅST
-│   ├── admin-sidebar.php   # 🔒 LÅST
-│   ├── admin-footer.php    # 🔒 LÅST
-│   ├── functions.php
-│   └── auth.php
+│   ├── layout-header.php   # LÅST - Layout wrapper
+│   ├── layout-footer.php   # LÅST - Layout footer
+│   ├── navigation.php      # Admin navigation
+│   ├── auth.php
+│   └── config/
+│       └── admin-tabs-config.php  # Admin meny-konfiguration
 ├── assets/
-│   ├── css/
-│   │   ├── base.css        # 🔒 LÅST - Variabler
-│   │   ├── components.css  # 🔒 LÅST - UI-komponenter
-│   │   └── admin.css       # 🔒 LÅST - Admin-specifikt
-│   └── js/
-│       └── main.js
-├── admin/
-│   ├── index.php
+│   └── css/
+│       ├── tokens.css      # LÅST - Design tokens
+│       ├── theme.css       # LÅST - Light/Dark mode
+│       ├── components.css  # LÅST - UI-komponenter
+│       ├── layout.css      # LÅST - Layout-system
+│       ├── tables.css
+│       └── utilities.css
+├── pages/                  # Publika sidor
+│   ├── calendar.php
+│   ├── results.php
 │   └── ...
-└── public pages...
+├── admin/                  # Admin-sidor
+│   ├── dashboard.php
+│   ├── events.php
+│   └── ...
+└── api/                    # API-endpoints
 ```
