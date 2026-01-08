@@ -338,11 +338,11 @@
 /* Label under icon */
 .nav-label {
     display: block;
-    font-size: 10px;
+    font-size: var(--text-xs);
     font-weight: var(--weight-medium);
     line-height: 1.2;
     text-align: center;
-    word-break: break-word;
+    white-space: nowrap;
 }
 
 /* Tooltip disabled - labels are visible */
@@ -1214,7 +1214,7 @@
     }
 
     .admin-sidebar .nav-label {
-        font-size: 10px;
+        font-size: var(--text-xs);
     }
 
     .admin-sidebar .sidebar-link {
