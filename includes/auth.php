@@ -422,6 +422,73 @@ function canAccessEvent($eventId) {
 }
 
 /**
+ * Check if promotor can access a specific series
+ * Returns true if user is admin OR if promotor is linked via promotor_series
+ */
+function canAccessSeries($seriesId) {
+    if (!isLoggedIn()) {
+        return false;
+    }
+
+    // Admin and above can access any series
+    if (hasRole('admin')) {
+        return true;
+    }
+
+    // Promotors can only access assigned series
+    if (!isRole('promotor')) {
+        return false;
+    }
+
+    global $pdo;
+    if (!$pdo) {
+        return false;
+    }
+
+    try {
+        $userId = $_SESSION['admin_id'] ?? null;
+        $sql = "SELECT 1 FROM promotor_series
+                WHERE user_id = ? AND series_id = ?
+                LIMIT 1";
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute([$userId, $seriesId]);
+        return $stmt->fetch() !== false;
+    } catch (PDOException $e) {
+        error_log("Series access check error: " . $e->getMessage());
+        return false;
+    }
+}
+
+/**
+ * Get all series a promotor can access
+ */
+function getPromotorSeries() {
+    if (!isLoggedIn()) {
+        return [];
+    }
+
+    global $pdo;
+    if (!$pdo) {
+        return [];
+    }
+
+    try {
+        $userId = $_SESSION['admin_id'] ?? null;
+        $sql = "SELECT s.*, ps.can_edit, ps.can_manage_results, ps.can_manage_registrations
+                FROM series s
+                JOIN promotor_series ps ON s.id = ps.series_id
+                WHERE ps.user_id = ?
+                ORDER BY s.year DESC, s.name ASC";
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute([$userId]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        error_log("Get promotor series error: " . $e->getMessage());
+        return [];
+    }
+}
+
+/**
  * Get all events a promotor can access
  */
 function getPromotorEvents() {

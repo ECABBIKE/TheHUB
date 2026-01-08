@@ -93,6 +93,7 @@ try {
             s.logo as series_logo,
             s.gradient_start as series_gradient_start,
             s.gradient_end as series_gradient_end,
+            s.organizer as series_organizer,
             v.name as venue_name,
             v.city as venue_city,
             v.address as venue_address,
@@ -891,13 +892,17 @@ if (!empty($event['header_banner_url'])): ?>
                 <?php endif; ?>
             </div>
 
-            <?php if (!empty($event['organizer_club_name'])): ?>
+            <?php if (!empty($event['organizer_club_name']) || !empty($event['series_organizer'])): ?>
             <div class="event-organizer-club">
                 <i data-lucide="users"></i>
                 Arrangör:
+                <?php if (!empty($event['organizer_club_name'])): ?>
                 <a href="/club/<?= $event['organizer_club_id_ref'] ?>" class="organizer-club-link">
                     <?= h($event['organizer_club_name']) ?>
                 </a>
+                <?php elseif (!empty($event['series_organizer'])): ?>
+                <span class="series-organizer"><?= h($event['series_organizer']) ?></span>
+                <?php endif; ?>
             </div>
             <?php endif; ?>
 
