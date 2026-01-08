@@ -84,7 +84,11 @@ if (!defined('THEHUB_INIT')) {
             <?php endif; ?>
         </div>
         <div class="org-header__right">
-            <?php if (isset($showLogout) && $showLogout): ?>
+            <?php if (isset($showBackToAdmin) && $showBackToAdmin): ?>
+                <a href="/admin/promotor.php" title="Tillbaka till Admin" aria-label="Tillbaka till Admin">
+                    <i data-lucide="x"></i>
+                </a>
+            <?php elseif (isset($showLogout) && $showLogout): ?>
                 <a href="logout.php" title="Logga ut" aria-label="Logga ut">
                     <i data-lucide="log-out"></i>
                 </a>
