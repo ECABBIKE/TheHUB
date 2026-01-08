@@ -1106,22 +1106,19 @@ include __DIR__ . '/components/unified-layout.php';
                 <?php endforeach; ?>
             </div>
 
-            <!-- Map Image URL - separate field -->
+            <!-- Map Link -->
             <div class="admin-form-group mt-lg">
-                <label class="admin-form-label">Kartbild URL (statisk bild)</label>
-                <div class="flex gap-sm">
-                    <input type="text" name="map_image_url" class="admin-form-input"
-                           value="<?= h($event['map_image_url'] ?? '') ?>"
-                           placeholder="https://... eller /media/events/karta.jpg">
+                <label class="admin-form-label">Karta</label>
+                <div class="flex gap-sm items-center">
                     <?php if (!empty($event['map_image_url'])): ?>
-                    <button type="button" class="btn btn-ghost btn-sm" onclick="this.previousElementSibling.value=''" title="Rensa">
-                        <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                            <line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/>
-                        </svg>
-                    </button>
+                    <span class="badge badge-success">Kartbild aktiv</span>
                     <?php endif; ?>
+                    <a href="/admin/event-map.php?id=<?= $id ?>" class="btn-admin btn-admin-secondary btn-admin-sm">
+                        <i data-lucide="map" class="icon-sm"></i>
+                        Hantera karta
+                    </a>
                 </div>
-                <small class="form-help">Lägg till URL till en statisk kartbild. Ladda upp bilder via <a href="/admin/media.php" target="_blank">Mediabiblioteket</a>.</small>
+                <small class="form-help">Ladda upp GPX-fil för interaktiv karta eller statisk kartbild.</small>
             </div>
         </div>
     </details>
