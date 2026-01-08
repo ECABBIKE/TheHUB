@@ -1540,8 +1540,8 @@ document.addEventListener('keydown', function(e) {
                 </div>
 
                 <!-- Error/Success messages -->
-                <div id="quickSponsorError" class="alert alert-danger mb-md" class="hidden"></div>
-                <div id="quickSponsorSuccess" class="alert alert-success mb-md" class="hidden"></div>
+                <div id="quickSponsorError" class="alert alert-danger mb-md hidden" style="display:none;"></div>
+                <div id="quickSponsorSuccess" class="alert alert-success mb-md hidden" style="display:none;"></div>
 
                 <!-- Logo upload -->
                 <div class="form-group mb-md">

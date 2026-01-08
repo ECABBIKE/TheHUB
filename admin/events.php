@@ -6,20 +6,9 @@ require_once __DIR__ . '/../config.php';
 
 global $pdo;
 
-// Check if user is a promotor (not admin/super_admin)
-$isPromotorOnly = isRole('promotor');
-$promotorEventIds = [];
-
-if ($isPromotorOnly) {
-    // Get only the events this promotor has access to
-    $promotorEvents = getPromotorEvents();
-    $promotorEventIds = array_column($promotorEvents, 'id');
-
-    // If promotor has no assigned events, show empty list
-    if (empty($promotorEventIds)) {
-        $events = [];
-        $noEventsMessage = 'Du har inga tilldelade events. Kontakta administratören för att få tillgång till events.';
-    }
+// Promotors should use promotor.php instead
+if (isRole('promotor')) {
+    redirect('/admin/promotor.php');
 }
 
 // Get filter parameters
