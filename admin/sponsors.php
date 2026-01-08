@@ -666,7 +666,7 @@ include __DIR__ . '/components/unified-layout.php';
                         Logotyper
                     </h4>
                     <p style="font-size: 0.8rem; color: var(--color-text-secondary); margin-bottom: var(--space-md);">
-                        Ladda upp logotyper i <a href="/admin/media?folder=sponsors" target="_blank" style="color: var(--color-accent);">Mediabiblioteket</a> och koppla dem sedan nedan.
+                        Ladda upp logotyp direkt eller välj från mediabiblioteket.
                     </p>
 
                     <!-- Banner (1200x150) -->
@@ -695,7 +695,9 @@ include __DIR__ . '/components/unified-layout.php';
                                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-md"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
                             </div>
                             <input type="hidden" id="logoId" name="logo_media_id">
-                            <button type="button" class="btn btn-sm btn-secondary" onclick="openMediaPicker('logo')">Valj fran media</button>
+                            <input type="file" id="logoUpload" accept="image/*" style="display:none" onchange="uploadLogoFile(this, 'logo')">
+                            <button type="button" class="btn btn-sm btn-primary" onclick="document.getElementById('logoUpload').click()">Ladda upp</button>
+                            <button type="button" class="btn btn-sm btn-secondary" onclick="openMediaPicker('logo')">Välj från media</button>
                             <button type="button" class="btn btn-sm btn-ghost" onclick="clearLogoField('logo')">Ta bort</button>
                         </div>
                         <small class="text-secondary">Auto-skalas till 300×75, 240×60, 160×40</small>
@@ -996,6 +998,57 @@ function getLogoFieldIds(field) {
         previewId: 'logo' + field.charAt(0).toUpperCase() + field.slice(1) + 'Preview',
         inputId: 'logo' + field.charAt(0).toUpperCase() + field.slice(1) + 'Id'
     };
+}
+
+// Direct upload for logo files
+async function uploadLogoFile(input, field) {
+    const file = input.files[0];
+    if (!file) return;
+
+    // Validate file type
+    if (!file.type.startsWith('image/')) {
+        alert('Välj en bildfil (JPG, PNG, etc.)');
+        return;
+    }
+
+    // Validate file size (max 10MB)
+    if (file.size > 10 * 1024 * 1024) {
+        alert('Filen är för stor. Max 10MB.');
+        return;
+    }
+
+    const { previewId } = getLogoFieldIds(field);
+    const preview = document.getElementById(previewId);
+
+    // Show loading state
+    preview.innerHTML = '<span style="font-size: 10px;">Laddar upp...</span>';
+
+    try {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('folder', 'sponsors');
+
+        const response = await fetch('/api/media.php?action=upload', {
+            method: 'POST',
+            body: formData
+        });
+
+        const result = await response.json();
+
+        if (result.success && result.media) {
+            setLogoFieldById(field, result.media.id, result.media.filepath);
+        } else {
+            alert('Uppladdning misslyckades: ' + (result.error || 'Okänt fel'));
+            preview.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-md"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>';
+        }
+    } catch (error) {
+        console.error('Upload error:', error);
+        alert('Ett fel uppstod vid uppladdning');
+        preview.innerHTML = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-md"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>';
+    }
+
+    // Clear input so same file can be re-selected
+    input.value = '';
 }
 
 function setLogoFieldByUrl(field, url) {

@@ -34,7 +34,11 @@ try {
         case 'list':
             handleList();
             break;
-            
+
+        case 'create_folder':
+            handleCreateFolder();
+            break;
+
         default:
             echo json_encode(['success' => false, 'error' => 'Ogiltig action']);
     }
@@ -196,5 +200,57 @@ function handleList() {
         'success' => true,
         'data' => $files,
         'count' => count($files)
+    ]);
+}
+
+/**
+ * Create a new folder
+ */
+function handleCreateFolder() {
+    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
+        echo json_encode(['success' => false, 'error' => 'POST krävs']);
+        return;
+    }
+
+    // Get JSON input
+    $input = json_decode(file_get_contents('php://input'), true);
+    $folderPath = $input['folder'] ?? '';
+
+    if (empty($folderPath)) {
+        echo json_encode(['success' => false, 'error' => 'Mappnamn saknas']);
+        return;
+    }
+
+    // Sanitize folder path
+    $folderPath = preg_replace('/[^a-z0-9\-\/]/', '', strtolower($folderPath));
+    $folderPath = trim($folderPath, '/');
+
+    if (empty($folderPath)) {
+        echo json_encode(['success' => false, 'error' => 'Ogiltigt mappnamn']);
+        return;
+    }
+
+    // Create the physical folder
+    $uploadDir = __DIR__ . '/../uploads/media/' . $folderPath;
+
+    if (is_dir($uploadDir)) {
+        // Folder already exists - that's fine
+        echo json_encode([
+            'success' => true,
+            'message' => 'Mappen finns redan',
+            'folder' => $folderPath
+        ]);
+        return;
+    }
+
+    if (!mkdir($uploadDir, 0755, true)) {
+        echo json_encode(['success' => false, 'error' => 'Kunde inte skapa mappen']);
+        return;
+    }
+
+    echo json_encode([
+        'success' => true,
+        'message' => 'Mappen skapades',
+        'folder' => $folderPath
     ]);
 }

@@ -635,7 +635,10 @@ include __DIR__ . '/components/unified-layout.php';
                 <line x1="12" x2="12" y1="3" y2="15"/>
             </svg>
             <p class="upload-zone-text">Dra och släpp filer här eller klicka för att välja</p>
-            <p class="upload-zone-hint">Max 10MB. Tillåtna format: JPG, PNG, GIF, WebP, SVG, PDF</p>
+            <p class="upload-zone-hint">Max 10MB. Format: JPG, PNG, GIF, WebP, SVG, PDF</p>
+            <p class="upload-zone-hint" style="margin-top: 4px; font-size: 0.7rem;">
+                <strong>Rekommenderade storlekar:</strong> Banner 1200×150px · Logo 600×150px · Ikon 300×75px
+            </p>
             <input type="file" id="fileInput" multiple accept=".jpg,.jpeg,.png,.gif,.webp,.svg,.pdf,image/jpeg,image/png,image/gif,image/webp,image/svg+xml,application/pdf" class="hidden">
 
             <div class="upload-progress" id="uploadProgress">
@@ -815,7 +818,7 @@ let selectedIds = new Set();
 let currentMediaId = null;
 
 // Create sponsor subfolder
-function createSponsorSubfolder() {
+async function createSponsorSubfolder() {
     const input = document.getElementById('newSubfolderName');
     const name = input.value.trim();
 
@@ -836,8 +839,27 @@ function createSponsorSubfolder() {
         return;
     }
 
-    // Navigate to the new subfolder
-    window.location.href = '/admin/media?folder=sponsors/' + encodeURIComponent(slug);
+    const folderPath = 'sponsors/' + slug;
+
+    try {
+        const response = await fetch('/api/media.php?action=create_folder', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ folder: folderPath })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            // Navigate to the new subfolder
+            window.location.href = '/admin/media?folder=' + encodeURIComponent(folderPath);
+        } else {
+            alert('Fel: ' + (result.error || 'Kunde inte skapa mappen'));
+        }
+    } catch (error) {
+        console.error('Create folder error:', error);
+        alert('Ett fel uppstod');
+    }
 }
 
 // Upload zone events
