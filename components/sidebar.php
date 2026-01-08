@@ -180,6 +180,17 @@ function isAdminPageActive($item, $requestUri) {
         <span class="sidebar-icon" aria-hidden="true"><?= hub_icon('settings', 'sidebar-icon-svg') ?></span>
         <span class="sidebar-label">Admin</span>
       </a>
+    <?php elseif (!$isAdminSection && $isPromotorOnly): ?>
+      <!-- Promotor Admin Link -->
+      <div class="sidebar-divider"></div>
+      <a href="/admin/promotor.php"
+         class="sidebar-link sidebar-link--admin"
+         data-nav="promotor-admin"
+         data-tooltip="Mina tävlingar"
+         aria-label="Hantera mina tävlingar">
+        <span class="sidebar-icon" aria-hidden="true"><?= hub_icon('settings', 'sidebar-icon-svg') ?></span>
+        <span class="sidebar-label">Admin</span>
+      </a>
     <?php endif; ?>
   </nav>
 </aside>

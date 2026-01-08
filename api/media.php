@@ -115,12 +115,58 @@ function handleUpdate() {
  */
 function handleDelete() {
     $id = $_GET['id'] ?? null;
-    
+
     if (!$id) {
         echo json_encode(['success' => false, 'error' => 'ID saknas']);
         return;
     }
-    
+
+    // Check if promotor - they can only delete files in their event folders
+    $isPromotorOnly = function_exists('isRole') && isRole('promotor');
+    if ($isPromotorOnly) {
+        global $pdo;
+        $media = get_media($id);
+        if (!$media) {
+            echo json_encode(['success' => false, 'error' => 'Media hittades inte']);
+            return;
+        }
+
+        // Get promotor's allowed folders
+        $promotorAllowedFolders = [];
+        if (function_exists('getPromotorEvents')) {
+            $promotorEvents = getPromotorEvents();
+            foreach ($promotorEvents as $event) {
+                $eventInfo = $pdo->prepare("
+                    SELECT e.name as event_name, s.short_name as series_short, s.name as series_name
+                    FROM events e
+                    LEFT JOIN series s ON e.series_id = s.id
+                    WHERE e.id = ?
+                ");
+                $eventInfo->execute([$event['id']]);
+                $info = $eventInfo->fetch(PDO::FETCH_ASSOC);
+                if ($info) {
+                    $seriesSlug = slugify($info['series_short'] ?: $info['series_name'] ?: 'general');
+                    $eventSlug = slugify($info['event_name']);
+                    $promotorAllowedFolders[] = "sponsors/{$seriesSlug}/{$eventSlug}";
+                }
+            }
+        }
+
+        // Check if file is in an allowed folder
+        $hasAccess = false;
+        foreach ($promotorAllowedFolders as $allowed) {
+            if (strpos($media['folder'], $allowed) === 0 || $media['folder'] === $allowed) {
+                $hasAccess = true;
+                break;
+            }
+        }
+
+        if (!$hasAccess) {
+            echo json_encode(['success' => false, 'error' => 'Du har inte behörighet att radera denna fil']);
+            return;
+        }
+    }
+
     $result = delete_media($id);
     echo json_encode($result);
 }
