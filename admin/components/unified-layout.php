@@ -171,7 +171,7 @@ if (!isset($current_admin_page)) {
     <?php include HUB_V3_ROOT . '/components/header.php'; ?>
 
     <div class="app-layout">
-        <?php include __DIR__ . '/admin-sidebar.php'; ?>
+        <?php include HUB_V3_ROOT . '/components/sidebar.php'; ?>
 
         <main id="main-content" class="main-content" role="main">
             <!-- Admin Submenu (automatic based on current page) -->
