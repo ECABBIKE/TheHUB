@@ -6,14 +6,17 @@
 
 /**
  * Ensure sponsor logo columns exist
+ * Simplified structure: banner (1200x150) and logo (600x150, auto-scales)
  */
 function ensure_sponsor_logo_columns() {
     global $pdo;
 
     $columns = [
         'logo_banner_id' => 'INT DEFAULT NULL COMMENT "Media ID for banner logo (1200x150)"',
-        'logo_standard_id' => 'INT DEFAULT NULL COMMENT "Media ID for standard logo (200x60)"',
-        'logo_small_id' => 'INT DEFAULT NULL COMMENT "Media ID for small logo (160x40)"'
+        'logo_media_id' => 'INT DEFAULT NULL COMMENT "Media ID for main logo (600x150, auto-scales to 300x75, 240x60, 160x40)"',
+        // Legacy columns kept for backwards compatibility
+        'logo_standard_id' => 'INT DEFAULT NULL COMMENT "Legacy: Media ID for standard logo"',
+        'logo_small_id' => 'INT DEFAULT NULL COMMENT "Legacy: Media ID for small logo"'
     ];
 
     try {
@@ -564,7 +567,8 @@ function remove_sponsor_from_series($sponsorId, $seriesId) {
 
 /**
  * Get sponsor with all logo URLs for different placements
- * Returns logo URLs keyed by placement: banner, standard, small
+ * Simplified structure: banner (1200x150) and logo (600x150, auto-scales)
+ * Returns logo_url for main logo and banner_logo_url for banner
  */
 function get_sponsor_with_logos($id) {
     global $pdo;
@@ -572,12 +576,12 @@ function get_sponsor_with_logos($id) {
     try {
         $stmt = $pdo->prepare("
             SELECT s.*,
-                   m_old.filepath as legacy_logo_url,
+                   m_logo.filepath as logo_url,
                    m_banner.filepath as banner_logo_url,
                    m_standard.filepath as standard_logo_url,
                    m_small.filepath as small_logo_url
             FROM sponsors s
-            LEFT JOIN media m_old ON s.logo_media_id = m_old.id
+            LEFT JOIN media m_logo ON s.logo_media_id = m_logo.id
             LEFT JOIN media m_banner ON s.logo_banner_id = m_banner.id
             LEFT JOIN media m_standard ON s.logo_standard_id = m_standard.id
             LEFT JOIN media m_small ON s.logo_small_id = m_small.id
@@ -587,19 +591,47 @@ function get_sponsor_with_logos($id) {
         $sponsor = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if ($sponsor) {
-            // Build logo URLs with fallbacks
-            // Banner: banner -> legacy -> logo field
+            // Main logo URL (from logo_media_id, with fallbacks to legacy fields)
+            $mainLogo = $sponsor['logo_url']
+                ?? $sponsor['standard_logo_url']
+                ?? $sponsor['small_logo_url']
+                ?? ($sponsor['logo'] ? '/uploads/sponsors/' . $sponsor['logo'] : null);
+
+            // Banner logo URL (from logo_banner_id, with fallback to main logo)
+            $bannerLogo = $sponsor['banner_logo_url'] ?? $mainLogo;
+
+            // Build logo URLs structure for backwards compatibility
             $sponsor['logo_urls'] = [
-                'banner' => $sponsor['banner_logo_url'] ?? $sponsor['legacy_logo_url'] ?? ($sponsor['logo'] ? '/uploads/sponsors/' . $sponsor['logo'] : null),
-                'standard' => $sponsor['standard_logo_url'] ?? $sponsor['legacy_logo_url'] ?? ($sponsor['logo'] ? '/uploads/sponsors/' . $sponsor['logo'] : null),
-                'small' => $sponsor['small_logo_url'] ?? $sponsor['legacy_logo_url'] ?? ($sponsor['logo'] ? '/uploads/sponsors/' . $sponsor['logo'] : null),
+                'banner' => $bannerLogo,
+                'standard' => $mainLogo,
+                'small' => $mainLogo,
             ];
+
+            // Set primary logo_url
+            $sponsor['logo_url'] = $mainLogo;
 
             // Normalize paths
             foreach ($sponsor['logo_urls'] as $key => $url) {
                 if ($url) {
                     $sponsor['logo_urls'][$key] = '/' . ltrim($url, '/');
                 }
+            }
+            if ($sponsor['logo_url']) {
+                $sponsor['logo_url'] = '/' . ltrim($sponsor['logo_url'], '/');
+            }
+            if ($sponsor['banner_logo_url']) {
+                $sponsor['banner_logo_url'] = '/' . ltrim($sponsor['banner_logo_url'], '/');
+            }
+        }
+
+        // Get series associations
+        if ($sponsor) {
+            try {
+                $seriesStmt = $pdo->prepare("SELECT series_id FROM series_sponsors WHERE sponsor_id = ?");
+                $seriesStmt->execute([$id]);
+                $sponsor['series_ids'] = $seriesStmt->fetchAll(PDO::FETCH_COLUMN);
+            } catch (Exception $e) {
+                $sponsor['series_ids'] = [];
             }
         }
 
