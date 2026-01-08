@@ -312,8 +312,8 @@
 }
 
 .nav-item.active {
-    background: rgba(245, 158, 11, 0.15);
-    color: var(--color-accent);
+    background: var(--color-accent-light);
+    color: var(--color-accent-text);
 }
 
 /* Active indicator bar */
@@ -1494,7 +1494,7 @@
 }
 
 .nav-item.active {
-    background: linear-gradient(135deg, rgba(245, 158, 11, 0.2) 0%, rgba(245, 158, 11, 0.1) 100%);
+    background: var(--color-accent-light);
 }
 
 /* Enhanced Cards with gradient headers */
