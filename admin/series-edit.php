@@ -2,10 +2,17 @@
 /**
  * Admin Series Edit - V3 Unified Design System
  * Dedicated page for editing series (like event-edit.php)
+ * Supports both admin and promotor access (via promotor_series)
  */
 require_once __DIR__ . '/../config.php';
-require_admin();
 
+// Require login (admin OR promotor)
+if (!isLoggedIn()) {
+    header('Location: /login?redirect=' . urlencode($_SERVER['REQUEST_URI']));
+    exit;
+}
+
+// Check access after we know the series ID (done below)
 $db = getDB();
 
 // Get series ID from URL (supports both /admin/series/edit/123 and ?id=123)
@@ -29,6 +36,27 @@ if ($id <= 0 && !$isNew) {
     header('Location: /admin/series');
     exit;
 }
+
+// Check access: Admin can access all, promotors need to be linked via promotor_series
+// For new series, only admins can create (promotors must be assigned by admin)
+if ($isNew) {
+    if (!hasRole('admin')) {
+        $_SESSION['message'] = 'Du har inte behörighet att skapa nya serier';
+        $_SESSION['messageType'] = 'error';
+        header('Location: /admin/series');
+        exit;
+    }
+} else {
+    if (!canAccessSeries($id)) {
+        $_SESSION['message'] = 'Du har inte behörighet att redigera denna serie';
+        $_SESSION['messageType'] = 'error';
+        header('Location: /admin/series');
+        exit;
+    }
+}
+
+// Check if user is promotor (limited editing)
+$isPromotor = isRole('promotor');
 
 // Set default values for new series (must be before POST handler)
 // Note: Logo is inherited from brand, not stored per series
