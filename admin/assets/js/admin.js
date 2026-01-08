@@ -86,27 +86,8 @@ function toggleUserMenu() {
 }
 
 // ========================================================================
-// THEME FUNCTIONS
+// MOBILE NAV FUNCTIONS
 // ========================================================================
-
-/**
- * Toggle between light and dark theme
- */
-function toggleTheme() {
-    const html = document.documentElement;
-    const currentTheme = html.getAttribute('data-theme');
-    const newTheme = currentTheme === 'dark' ? 'light' : 'dark';
-
-    html.setAttribute('data-theme', newTheme);
-    localStorage.setItem('thehub-theme', newTheme);
-
-    // Set cookie for server-side detection
-    document.cookie = 'hub_theme=' + newTheme + ';path=/;max-age=31536000';
-}
-
-/**
- * Initialize mobile navigation scroll indicators
- */
 function initMobileNavScrollIndicators() {
     const nav = document.querySelector('.admin-mobile-nav');
     const inner = document.querySelector('.admin-mobile-nav-inner');
@@ -134,29 +115,12 @@ function initMobileNavScrollIndicators() {
     }
 }
 
-/**
- * Initialize theme based on stored preference or system setting
- */
-function initTheme() {
-    const saved = localStorage.getItem('thehub-theme');
-    let theme = 'light';
-
-    if (saved === 'dark') {
-        theme = 'dark';
-    } else if (!saved || saved === 'auto') {
-        theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-    }
-
-    document.documentElement.setAttribute('data-theme', theme);
-}
-
 // ========================================================================
 // EVENT LISTENERS
 // ========================================================================
 
 document.addEventListener('DOMContentLoaded', function() {
-    // Initialize theme
-    initTheme();
+    // Theme is handled by /assets/js/theme.js
 
     // Initialize mobile nav scroll indicators
     initMobileNavScrollIndicators();
@@ -219,13 +183,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }, 250);
     });
 
-    // Listen for system theme changes
-    window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', function(e) {
-        const saved = localStorage.getItem('thehub-theme');
-        if (!saved || saved === 'auto') {
-            document.documentElement.setAttribute('data-theme', e.matches ? 'dark' : 'light');
-        }
-    });
+    // System theme changes handled by /assets/js/theme.js
 });
 
 // ========================================================================
