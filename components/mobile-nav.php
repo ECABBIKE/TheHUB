@@ -44,11 +44,7 @@ $hubNav = defined('HUB_NAV') ? HUB_NAV : [
     ['id' => 'ranking', 'label' => 'Ranking', 'url' => '/ranking', 'aria' => 'Ranking'],
 ];
 
-// Add promotor admin link for promotors
-if ($isPromotorOnly) {
-    $navIcons['promotor-admin'] = 'settings';
-    $hubNav[] = ['id' => 'promotor-admin', 'label' => 'Admin', 'url' => '/admin/promotor.php', 'aria' => 'Mina tävlingar'];
-}
+// Admin link is NOT added here - it's accessed via profile menu in header
 ?>
 <nav class="mobile-nav" role="navigation" aria-label="Huvudnavigering">
   <div class="mobile-nav-inner">

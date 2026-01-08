@@ -468,8 +468,6 @@ include __DIR__ . '/components/unified-layout.php';
 <?php endif; ?>
 
 <!-- MINA TÄVLINGAR -->
-<h2 class="section-title">Mina Tävlingar</h2>
-
 <?php if (empty($events)): ?>
 <div class="event-card">
     <div class="empty-state">
