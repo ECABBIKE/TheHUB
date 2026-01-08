@@ -402,8 +402,15 @@ if (!function_exists('hub_attempt_login')) {
      * Works with the riders table using password_hash
      * Also supports admin_users table and default admin login from config.php
      */
-    function hub_attempt_login(string $email, string $password): array {
+    function hub_attempt_login(string $email, string $password, bool $rememberMe = false): array {
         $pdo = hub_db();
+
+        // If remember me, extend session lifetime to 30 days
+        if ($rememberMe) {
+            $lifetime = 60 * 60 * 24 * 30; // 30 days
+            session_set_cookie_params($lifetime);
+            ini_set('session.gc_maxlifetime', $lifetime);
+        }
 
         // =====================================================================
         // FALLBACK: Check default admin credentials from config.php
