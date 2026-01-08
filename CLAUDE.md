@@ -116,6 +116,21 @@ includes/admin-sidebar.php # Admin navigation
 }
 ```
 
+### Dark Mode färger (FRAMTIDA)
+
+```css
+/* Dark Mode - EJ IMPLEMENTERAT ÄN */
+[data-theme="dark"] {
+  --color-bg-primary: #0E1621;      /* Mörkblå bakgrund */
+  --color-bg-surface: #1a2332;      /* Kort/ytor */
+  --color-text-primary: #FFFFFF;    /* Vit text */
+  --color-text-secondary: #C8D4E8;  /* Ljusblå/grå text */
+  --color-text-muted: #7E8798;      /* Dämpad text */
+  --color-accent: #37D4D6;          /* Cyan accent */
+  --color-border: #2a3444;          /* Mörkare border */
+}
+```
+
 ### ❌ FÖRBJUDET
 
 ```css

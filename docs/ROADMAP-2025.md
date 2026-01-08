@@ -300,6 +300,16 @@ Fas 3: Eventuellt fasa ut WordPress helt
 - [ ] Virtuella tävlingar
 - [ ] UCI-poäng integration
 - [ ] Multi-language
+- [ ] Dark Mode (färgpalett nedan)
+
+### Dark Mode Färgpalett (Godkänd)
+```
+#FFFFFF  - Primär text (vit)
+#C8D4E8  - Sekundär text (ljusblå/grå)
+#37D4D6  - Accent (cyan/turkos)
+#0E1621  - Bakgrund (mörkblå)
+#7E8798  - Muted text (grå)
+```
 
 ### Nekade idéer
 - ~~Forum~~ (finns Facebook-grupper)
