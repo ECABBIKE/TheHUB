@@ -432,9 +432,9 @@ $pageTitle = 'Mina Tävlingar';
             <i data-lucide="heart-handshake"></i>
             <span>Sponsorer</span>
         </a>
-        <a href="/organizer/" class="promotor-nav-link">
-            <i data-lucide="user-plus"></i>
-            <span>Platsreg</span>
+        <a href="/admin/media.php" class="promotor-nav-link">
+            <i data-lucide="image"></i>
+            <span>Media</span>
         </a>
         <a href="/" class="promotor-nav-link">
             <i data-lucide="home"></i>
