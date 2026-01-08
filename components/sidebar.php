@@ -20,13 +20,10 @@ require_once __DIR__ . '/icons.php';
 
 $currentPage = $pageInfo['page'] ?? 'dashboard';
 $currentSection = $pageInfo['section'] ?? '';
-// Promotors are NOT admins - they only get edit pen on their events
-$isPromotorOnly = function_exists('isRole') && isRole('promotor');
+// Check roles properly
+$isPromotorOnly = function_exists('isRole') && isRole('promotor') && !(function_exists('hasRole') && hasRole('admin'));
 $isAdminUser = function_exists('hub_is_admin') ? hub_is_admin() : false;
-// Promotors should not see admin section at all
-if ($isPromotorOnly) {
-    $isAdminUser = false;
-}
+// Promotors should see their limited admin menu, not full admin
 $isAdminSection = strpos($_SERVER['REQUEST_URI'], '/admin') === 0;
 
 // Fallback for hub_is_nav_active if not defined
@@ -149,6 +146,40 @@ function isAdminPageActive($item, $requestUri) {
       <!-- Back to Public Site -->
       <div class="sidebar-section">
         <div class="sidebar-section-title">Publik</div>
+    <?php elseif ($isAdminSection && $isPromotorOnly): ?>
+      <!-- Promotor Navigation -->
+      <div class="sidebar-section">
+        <div class="sidebar-section-title">Promotor</div>
+        <?php
+        $currentPath = $_SERVER['REQUEST_URI'];
+        $promotorNav = [
+            ['id' => 'dashboard', 'label' => 'Dashboard', 'icon' => 'layout-dashboard', 'url' => '/admin/dashboard.php', 'match' => '/admin/dashboard'],
+            ['id' => 'events', 'label' => 'Tävlingar', 'icon' => 'calendar-check', 'url' => '/admin/events.php', 'match' => '/admin/event'],
+            ['id' => 'series', 'label' => 'Serier', 'icon' => 'medal', 'url' => '/admin/series.php', 'match' => '/admin/series'],
+        ];
+        foreach ($promotorNav as $item):
+            $isActive = strpos($currentPath, $item['match']) !== false;
+        ?>
+          <a href="<?= htmlspecialchars($item['url']) ?>"
+             class="sidebar-link<?= $isActive ? ' is-active' : '' ?>"
+             data-nav="<?= htmlspecialchars($item['id']) ?>"
+             data-tooltip="<?= htmlspecialchars($item['label']) ?>"
+             <?= $isActive ? 'aria-current="page"' : '' ?>
+             aria-label="<?= htmlspecialchars($item['label']) ?>">
+            <span class="sidebar-icon" aria-hidden="true">
+              <?= hub_icon($item['icon'], 'sidebar-icon-svg') ?>
+            </span>
+            <span class="sidebar-label"><?= htmlspecialchars($item['label']) ?></span>
+          </a>
+        <?php endforeach; ?>
+      </div>
+
+      <!-- Divider -->
+      <div class="sidebar-divider"></div>
+
+      <!-- Back to Public Site -->
+      <div class="sidebar-section">
+        <div class="sidebar-section-title">Publik</div>
     <?php endif; ?>
 
     <!-- Public Navigation -->
@@ -165,7 +196,7 @@ function isAdminPageActive($item, $requestUri) {
       </a>
     <?php endforeach; ?>
 
-    <?php if ($isAdminSection && $isAdminUser): ?>
+    <?php if ($isAdminSection && ($isAdminUser || $isPromotorOnly)): ?>
       </div>
     <?php endif; ?>
 
