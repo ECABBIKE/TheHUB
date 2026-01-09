@@ -247,13 +247,17 @@ function checkDuplicatePair($r1, $r2, $nameReason) {
  ];
 }
 
-// Handle merge action
+// Handle merge action (supports both AJAX and regular requests)
 if (isset($_GET['action']) && $_GET['action'] === 'merge') {
     $keepId = (int)($_GET['keep'] ?? 0);
     $removeId = (int)($_GET['remove'] ?? 0);
+    $isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
 
     if ($keepId && $removeId && $keepId !== $removeId) {
         $transactionStarted = false;
+        $resultMessage = '';
+        $resultSuccess = false;
+
         try {
             $db->beginTransaction();
             $transactionStarted = true;
@@ -326,8 +330,8 @@ if (isset($_GET['action']) && $_GET['action'] === 'merge') {
 
             $db->commit();
 
-            $_SESSION['dup_message'] = "Sammanfogade {$removeRider['firstname']} {$removeRider['lastname']} → {$keepRider['firstname']} {$keepRider['lastname']} ({$moved} resultat flyttade" . ($deleted > 0 ? ", {$deleted} dubbletter borttagna" : "") . ")";
-            $_SESSION['dup_message_type'] = 'success';
+            $resultMessage = "Sammanfogade {$removeRider['firstname']} {$removeRider['lastname']} → {$keepRider['firstname']} {$keepRider['lastname']} ({$moved} resultat flyttade" . ($deleted > 0 ? ", {$deleted} dubbletter borttagna" : "") . ")";
+            $resultSuccess = true;
 
         } catch (Exception $e) {
             if ($transactionStarted) {
@@ -337,10 +341,25 @@ if (isset($_GET['action']) && $_GET['action'] === 'merge') {
                     // Ignore rollback errors
                 }
             }
-            $_SESSION['dup_message'] = "Fel: " . $e->getMessage();
-            $_SESSION['dup_message_type'] = 'error';
+            $resultMessage = "Fel: " . $e->getMessage();
+            $resultSuccess = false;
         }
 
+        // Return JSON for AJAX requests
+        if ($isAjax) {
+            header('Content-Type: application/json');
+            echo json_encode([
+                'success' => $resultSuccess,
+                'message' => $resultMessage,
+                'keepId' => $keepId,
+                'removeId' => $removeId
+            ]);
+            exit;
+        }
+
+        // Regular redirect for non-AJAX
+        $_SESSION['dup_message'] = $resultMessage;
+        $_SESSION['dup_message_type'] = $resultSuccess ? 'success' : 'error';
         header('Location: /admin/find-duplicates.php');
         exit;
     }
@@ -947,7 +966,7 @@ include __DIR__ . '/components/unified-layout.php';
    $borderColor = $hasDifferentBirthYears ? '#dc3545' : '#ffc107';
    $bgColor = $hasDifferentBirthYears ? 'rgba(220,53,69,0.15)' : 'rgba(255,193,7,0.15)';
    ?>
-   <div style="border: 2px solid <?= $borderColor ?>; border-radius: 8px; margin-bottom: 1rem; overflow: hidden;">
+   <div id="dup-pair-<?= $idx ?>" data-pair-key="<?= h($dup['pair_key']) ?>" style="border: 2px solid <?= $borderColor ?>; border-radius: 8px; margin-bottom: 1rem; overflow: hidden;">
    <?php if ($hasDifferentBirthYears): ?>
    <div style="background: #dc3545; color: white; padding: 0.5rem 1rem; font-weight: bold;">
     <i data-lucide="alert-triangle" style="width: 16px; height: 16px; display: inline-block; vertical-align: middle;"></i>
@@ -1023,11 +1042,14 @@ include __DIR__ . '/components/unified-layout.php';
          $confirmMsg = 'VARNING: Olika födelseår!\\n\\n' . $rider['birth_year'] . ' vs ' . $otherBirthYear . '\\n\\nÄr du SÄKER på att detta är samma person?\\n\\nResultat flyttas och den andra profilen raderas permanent.';
      }
      ?>
-     <a href="?action=merge&keep=<?= $rider['id'] ?>&remove=<?= $otherId ?>"
-     class="btn btn--sm <?= $hasDifferentBirthYears ? 'btn-warning' : 'btn-success' ?> flex-1"
-     onclick="return confirm('<?= $confirmMsg ?>')">
+     <button type="button"
+     class="btn btn--sm <?= $hasDifferentBirthYears ? 'btn-warning' : 'btn-success' ?> flex-1 merge-btn"
+     data-keep="<?= $rider['id'] ?>"
+     data-remove="<?= $otherId ?>"
+     data-pair-idx="<?= $idx ?>"
+     data-confirm="<?= $confirmMsg ?>">
      <i data-lucide="check"></i> Behåll denna
-     </a>
+     </button>
     </div>
     </div>
     <?php endforeach; ?>
@@ -1047,5 +1069,110 @@ include __DIR__ . '/components/unified-layout.php';
   <?php endif; ?>
   </div>
  </div>
+
+<script>
+// AJAX merge handling - no page reload
+document.querySelectorAll('.merge-btn').forEach(btn => {
+    btn.addEventListener('click', async function() {
+        const keepId = this.dataset.keep;
+        const removeId = this.dataset.remove;
+        const pairIdx = this.dataset.pairIdx;
+        const confirmMsg = this.dataset.confirm;
+
+        if (!confirm(confirmMsg.replace(/\\n/g, '\n'))) {
+            return;
+        }
+
+        // Disable button and show loading
+        this.disabled = true;
+        const originalText = this.innerHTML;
+        this.innerHTML = '<i data-lucide="loader-2" class="animate-spin"></i> Slår ihop...';
+
+        try {
+            const response = await fetch(`?action=merge&keep=${keepId}&remove=${removeId}`, {
+                method: 'GET',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                // Remove the card with animation
+                const card = document.getElementById('dup-pair-' + pairIdx);
+                if (card) {
+                    card.style.transition = 'opacity 0.3s, transform 0.3s';
+                    card.style.opacity = '0';
+                    card.style.transform = 'translateX(-20px)';
+                    setTimeout(() => {
+                        card.remove();
+                        // Update counter
+                        const counter = document.querySelector('.card-header h2');
+                        if (counter) {
+                            const match = counter.textContent.match(/\((\d+)\)/);
+                            if (match) {
+                                const newCount = parseInt(match[1]) - 1;
+                                counter.innerHTML = counter.innerHTML.replace(/\(\d+\)/, '(' + newCount + ')');
+                            }
+                        }
+                    }, 300);
+                }
+                // Show toast message
+                showToast(data.message, 'success');
+            } else {
+                showToast(data.message || 'Ett fel uppstod', 'error');
+                this.disabled = false;
+                this.innerHTML = originalText;
+            }
+        } catch (error) {
+            showToast('Nätverksfel: ' + error.message, 'error');
+            this.disabled = false;
+            this.innerHTML = originalText;
+        }
+    });
+});
+
+// Simple toast notification
+function showToast(message, type) {
+    const toast = document.createElement('div');
+    toast.style.cssText = `
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        padding: 1rem 1.5rem;
+        border-radius: 8px;
+        color: white;
+        font-weight: 500;
+        z-index: 9999;
+        max-width: 400px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        animation: slideIn 0.3s ease;
+        background: ${type === 'success' ? '#28a745' : '#dc3545'};
+    `;
+    toast.textContent = message;
+    document.body.appendChild(toast);
+
+    setTimeout(() => {
+        toast.style.animation = 'slideOut 0.3s ease';
+        setTimeout(() => toast.remove(), 300);
+    }, 4000);
+}
+
+// Add animation keyframes
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+    @keyframes slideOut { from { transform: translateX(0); opacity: 1; } to { transform: translateX(100%); opacity: 0; } }
+    .animate-spin { animation: spin 1s linear infinite; }
+    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+`;
+document.head.appendChild(style);
+
+// Re-init lucide icons after any DOM changes
+if (typeof lucide !== 'undefined') {
+    lucide.createIcons();
+}
+</script>
 
 <?php include __DIR__ . '/components/unified-layout-footer.php'; ?>
