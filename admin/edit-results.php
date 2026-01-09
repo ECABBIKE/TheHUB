@@ -118,6 +118,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   $message = 'Fel vid omräkning: ' . $e->getMessage();
   $messageType = 'error';
  }
+ } elseif ($action === 'move_all_class') {
+ // Move all results from one class to another
+ $fromClassId = isset($_POST['from_class_id']) ? (int)$_POST['from_class_id'] : 0;
+ $toClassId = isset($_POST['to_class_id']) ? (int)$_POST['to_class_id'] : 0;
+
+ if ($fromClassId && $toClassId && $fromClassId !== $toClassId) {
+  try {
+   // Count affected results
+   $count = $db->getRow(
+    "SELECT COUNT(*) as cnt FROM results WHERE event_id = ? AND class_id = ?",
+    [$eventId, $fromClassId]
+   )['cnt'] ?? 0;
+
+   if ($count > 0) {
+    // Update all results from source class to target class
+    $db->query(
+     "UPDATE results SET class_id = ? WHERE event_id = ? AND class_id = ?",
+     [$toClassId, $eventId, $fromClassId]
+    );
+
+    // Get class names for message
+    $fromClass = $db->getRow("SELECT name, display_name FROM classes WHERE id = ?", [$fromClassId]);
+    $toClass = $db->getRow("SELECT name, display_name FROM classes WHERE id = ?", [$toClassId]);
+
+    $message = "$count deltagare flyttade från " . ($fromClass['display_name'] ?? $fromClass['name']) . " till " . ($toClass['display_name'] ?? $toClass['name']) . "!";
+    $messageType = 'success';
+   } else {
+    $message = "Inga deltagare att flytta.";
+    $messageType = 'warning';
+   }
+  } catch (Exception $e) {
+   $message = 'Fel vid flytt: ' . $e->getMessage();
+   $messageType = 'error';
+  }
+ } else {
+  $message = 'Ogiltig käll- eller målklass.';
+  $messageType = 'error';
+ }
  } elseif ($action === 'save_all' && isset($_POST['results']) && is_array($_POST['results'])) {
  // Save all results at once
  $updated = 0;
@@ -277,19 +315,43 @@ include __DIR__ . '/components/unified-layout.php';
    </div>
 
   <!-- Results by Class -->
-  <?php foreach ($resultsByClass as $className => $classData): ?>
+  <?php foreach ($resultsByClass as $className => $classData):
+   // Get class_id from first result in this class
+   $currentClassId = $classData['results'][0]['class_id'] ?? 0;
+  ?>
   <div class="card mb-lg">
    <div class="card-header">
-   <h3 class="text-primary">
-    <i data-lucide="users"></i>
-    <?= h($classData['display_name']) ?>
-    <span class="badge badge-primary badge-sm gs-ml-xs">
-    <?= h($className) ?>
-    </span>
-    <span class="badge badge-secondary ml-sm">
-    <?= count($classData['results']) ?> deltagare
-    </span>
-   </h3>
+   <div class="flex items-center justify-between flex-wrap gap-sm">
+    <h3 class="text-primary gs-mb-0">
+     <i data-lucide="users"></i>
+     <?= h($classData['display_name']) ?>
+     <span class="badge badge-primary badge-sm gs-ml-xs">
+     <?= h($className) ?>
+     </span>
+     <span class="badge badge-secondary ml-sm">
+     <?= count($classData['results']) ?> deltagare
+     </span>
+    </h3>
+    <!-- Move All Control -->
+    <div class="flex items-center gap-xs">
+     <select id="move-target-<?= $currentClassId ?>" class="input input-xs" style="min-width: 150px;">
+      <option value="">Flytta alla till...</option>
+      <?php foreach ($classes as $class): ?>
+       <?php if ($class['id'] != $currentClassId): ?>
+       <option value="<?= $class['id'] ?>"><?= h($class['display_name'] ?? $class['name']) ?></option>
+       <?php endif; ?>
+      <?php endforeach; ?>
+     </select>
+     <button type="button"
+      class="btn btn--secondary btn--sm move-all-btn"
+      data-from-class="<?= $currentClassId ?>"
+      data-class-name="<?= h($classData['display_name']) ?>"
+      title="Flytta alla deltagare">
+      <i data-lucide="arrow-right-left"></i>
+      Flytta
+     </button>
+    </div>
+   </div>
    </div>
    <div class="card-body gs-p-0 table-scrollable">
    <table class="table table-sm">
@@ -595,6 +657,36 @@ include __DIR__ . '/components/unified-layout.php';
   const card = this.closest('label');
   card.style.borderColor = 'var(--primary)';
   card.style.backgroundColor = 'var(--primary-light, rgba(var(--primary-rgb), 0.1))';
+  }
+ });
+ });
+
+ // Move all participants from one class to another
+ document.querySelectorAll('.move-all-btn').forEach(btn => {
+ btn.addEventListener('click', function() {
+  const fromClassId = this.dataset.fromClass;
+  const className = this.dataset.className;
+  const selectEl = document.getElementById('move-target-' + fromClassId);
+  const toClassId = selectEl.value;
+
+  if (!toClassId) {
+  alert('Välj en målklass först.');
+  return;
+  }
+
+  const targetClassName = selectEl.options[selectEl.selectedIndex].text;
+
+  if (confirm('Flytta ALLA deltagare från "' + className + '" till "' + targetClassName + '"?\n\nDetta påverkar alla deltagare i klassen.')) {
+  const form = document.createElement('form');
+  form.method = 'POST';
+  form.innerHTML = `
+   <?= csrf_field() ?>
+   <input type="hidden" name="action" value="move_all_class">
+   <input type="hidden" name="from_class_id" value="${fromClassId}">
+   <input type="hidden" name="to_class_id" value="${toClassId}">
+  `;
+  document.body.appendChild(form);
+  form.submit();
   }
  });
  });
