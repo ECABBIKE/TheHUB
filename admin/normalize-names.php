@@ -58,20 +58,40 @@ function properNameCase($name) {
 }
 
 /**
- * Check if a name needs normalization (is all caps or all lowercase)
+ * Check if a name needs normalization
+ * - All caps: "ANDERSSON"
+ * - All lowercase: "andersson"
+ * - Mixed with caps words: "Anna ANDERSSON" or "ANDERSSON BERG"
  */
 function needsNormalization($name) {
     if (empty($name) || strlen($name) < 2) return false;
 
-    // Remove spaces and hyphens for checking
+    // Remove spaces and hyphens for full-name check
     $cleanName = preg_replace('/[\s-]/u', '', $name);
     if (empty($cleanName)) return false;
 
-    // Check if all uppercase or all lowercase (ignoring spaces and hyphens)
+    // Check if entire name is all uppercase or all lowercase
     $upper = mb_strtoupper($cleanName, 'UTF-8');
     $lower = mb_strtolower($cleanName, 'UTF-8');
 
-    return ($cleanName === $upper || $cleanName === $lower);
+    if ($cleanName === $upper || $cleanName === $lower) {
+        return true;
+    }
+
+    // Also check individual words - catch "Anna ANDERSSON" or "ANDERSSON BERG"
+    $words = preg_split('/[\s-]+/u', $name);
+    foreach ($words as $word) {
+        if (mb_strlen($word, 'UTF-8') >= 2) {
+            $wordUpper = mb_strtoupper($word, 'UTF-8');
+            $wordLower = mb_strtolower($word, 'UTF-8');
+            // If any word is all caps (and not a known acronym), needs normalization
+            if ($word === $wordUpper && preg_match('/[A-ZÄÖÅÜ]/u', $word)) {
+                return true;
+            }
+        }
+    }
+
+    return false;
 }
 
 // Handle form submission
@@ -150,7 +170,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
 
 // PERFORMANCE FIX: Only fetch riders that actually need normalization
 // Using SQL pattern matching instead of loading all riders into PHP memory
-// This query finds names that are ALL CAPS or all lowercase
+// This query finds names that are ALL CAPS, all lowercase, OR contain words in all caps
 // NOTE: Must use BINARY for case-sensitive comparison since MySQL default collation is case-insensitive
 $problematicRiders = $db->getAll("
     SELECT id, firstname, lastname, club_id
@@ -162,10 +182,20 @@ $problematicRiders = $db->getAll("
         -- All lowercase (case-sensitive comparison with BINARY)
         OR (LENGTH(firstname) >= 2 AND BINARY firstname = BINARY LOWER(firstname) AND firstname REGEXP BINARY '[a-zäöåü]')
         OR (LENGTH(lastname) >= 2 AND BINARY lastname = BINARY LOWER(lastname) AND lastname REGEXP BINARY '[a-zäöåü]')
+        -- Contains words in all caps (double last names like 'ANDERSSON BERG' or 'Anna ANDERSSON')
+        OR (lastname REGEXP BINARY '[A-ZÄÖÅ]{2,}' AND lastname REGEXP BINARY ' ')
+        OR (firstname REGEXP BINARY '[A-ZÄÖÅ]{2,}' AND firstname != BINARY UPPER(firstname))
+        OR (lastname REGEXP BINARY '[A-ZÄÖÅ]{2,}' AND lastname != BINARY UPPER(lastname))
     )
     ORDER BY lastname, firstname
     LIMIT 500
 ");
+
+// Filter in PHP to ensure accurate detection (SQL regex is limited)
+$problematicRiders = array_filter($problematicRiders, function($rider) {
+    return needsNormalization($rider['firstname']) || needsNormalization($rider['lastname']);
+});
+$problematicRiders = array_values($problematicRiders); // Re-index array
 
 // Add preview data
 foreach ($problematicRiders as &$rider) {
