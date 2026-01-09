@@ -27,6 +27,13 @@ $ECONOMY_GLOBAL = [
             'description' => 'Alla ordrar i systemet'
         ],
         [
+            'id' => 'recipients',
+            'label' => 'Mottagare',
+            'icon' => 'smartphone',
+            'url' => '/admin/payment-recipients.php',
+            'description' => 'Swish-mottagare och gateways'
+        ],
+        [
             'id' => 'templates',
             'label' => 'Prismallar',
             'icon' => 'file-text',
