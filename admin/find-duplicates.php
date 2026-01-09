@@ -622,6 +622,155 @@ foreach ($potentialDuplicates as $dup) {
     $seenPairs[$dup['rider2']['id'] . '-' . $dup['rider1']['id']] = true;
 }
 
+// === NEW: Find double last name duplicates ===
+// E.g. "Anna Andersson" vs "Anna Andersson Berg"
+// Get riders with potential double names (space/hyphen in name, or long lastname)
+$doubleNameRiders = $db->getAll("
+    SELECT r.id, r.firstname, r.lastname, r.birth_year, r.license_number,
+        r.email, r.club_id, c.name as club_name,
+        (SELECT COUNT(*) FROM results WHERE cyclist_id = r.id) as result_count
+    FROM riders r
+    LEFT JOIN clubs c ON r.club_id = c.id
+    WHERE r.firstname IS NOT NULL AND r.lastname IS NOT NULL
+      AND (
+        r.lastname LIKE '% %' OR r.lastname LIKE '%-%'
+        OR r.firstname LIKE '% %' OR r.firstname LIKE '%-%'
+      )
+    ORDER BY r.lastname, r.firstname
+    LIMIT 500
+");
+
+// For each double-name rider, find potential matches with similar names
+$checkedPairs = [];
+foreach ($doubleNameRiders as $r1) {
+    $fn1 = mb_strtolower(trim($r1['firstname']), 'UTF-8');
+    $ln1 = mb_strtolower(trim($r1['lastname']), 'UTF-8');
+    $fn1Norm = str_replace('-', ' ', $fn1);
+    $fn1Compact = str_replace(['-', ' '], '', $fn1);
+
+    // Extract lastname parts for matching
+    $ln1Parts = preg_split('/[\s-]+/', $ln1);
+    $ln1First = $ln1Parts[0] ?? '';
+
+    // Find riders with matching first name and partial lastname match
+    $potentialMatches = $db->getAll("
+        SELECT r.id, r.firstname, r.lastname, r.birth_year, r.license_number,
+            r.email, r.club_id, c.name as club_name,
+            (SELECT COUNT(*) FROM results WHERE cyclist_id = r.id) as result_count
+        FROM riders r
+        LEFT JOIN clubs c ON r.club_id = c.id
+        WHERE r.id != ?
+          AND (
+            LOWER(r.firstname) = ? OR LOWER(r.firstname) = ?
+            OR REPLACE(REPLACE(LOWER(r.firstname), '-', ''), ' ', '') = ?
+          )
+          AND (
+            LOWER(r.lastname) LIKE ? OR ? LIKE CONCAT('%', LOWER(r.lastname), '%')
+          )
+        LIMIT 20
+    ", [$r1['id'], $fn1, $fn1Norm, $fn1Compact, '%' . $ln1First . '%', $ln1]);
+
+    foreach ($potentialMatches as $r2) {
+        $pairKey = getRiderPairKey($r1['id'], $r2['id']);
+        if (isset($checkedPairs[$pairKey])) continue;
+        if (isset($seenPairs[$pairKey])) continue;
+        if (in_array($pairKey, $ignoredDuplicates)) continue;
+        $checkedPairs[$pairKey] = true;
+
+        $fn2 = mb_strtolower(trim($r2['firstname']), 'UTF-8');
+        $ln2 = mb_strtolower(trim($r2['lastname']), 'UTF-8');
+        $fn2Norm = str_replace('-', ' ', $fn2);
+
+        $isDuplicate = false;
+        $reason = '';
+
+        // Check 1: Same firstname, one lastname contains the other (double name)
+        // E.g. "Anna Andersson" vs "Anna Andersson Berg"
+        if ($fn1Norm === $fn2Norm || $fn1 === $fn2) {
+            if (mb_strlen($ln1, 'UTF-8') >= 3 && mb_strlen($ln2, 'UTF-8') >= 3) {
+                if ($ln1 !== $ln2 && (mb_strpos($ln1, $ln2) !== false || mb_strpos($ln2, $ln1) !== false)) {
+                    $isDuplicate = true;
+                    $reason = 'Dubbelnamn? (' . $r1['lastname'] . ' / ' . $r2['lastname'] . ')';
+                }
+            }
+        }
+
+        // Check 2: Similar firstname (hyphen vs space), same lastname
+        // E.g. "Anna-Maria Svensson" vs "Anna Maria Svensson"
+        if (!$isDuplicate && $ln1 === $ln2) {
+            $fn1Clean = str_replace(['-', ' '], '', $fn1);
+            $fn2Clean = str_replace(['-', ' '], '', $fn2);
+            if ($fn1Clean === $fn2Clean && $fn1 !== $fn2) {
+                $isDuplicate = true;
+                $reason = 'Samma namn, olika stavning (' . $r1['firstname'] . ' / ' . $r2['firstname'] . ')';
+            }
+        }
+
+        // Check 3: One firstname contains the other, same lastname
+        // E.g. "Anna Svensson" vs "Anna-Maria Svensson"
+        if (!$isDuplicate && $ln1 === $ln2) {
+            if (mb_strlen($fn1, 'UTF-8') >= 3 && mb_strlen($fn2, 'UTF-8') >= 3) {
+                if ($fn1 !== $fn2 && (mb_strpos($fn1, $fn2) !== false || mb_strpos($fn2, $fn1) !== false)) {
+                    $isDuplicate = true;
+                    $reason = 'Förnamn innehåller varandra (' . $r1['firstname'] . ' / ' . $r2['firstname'] . ')';
+                }
+            }
+        }
+
+        // Check 4: Same firstname, similar lastnames (one word difference)
+        // E.g. "Erik von Ansen" vs "Erik Ansen"
+        if (!$isDuplicate && ($fn1 === $fn2 || $fn1Norm === $fn2Norm)) {
+            $ln1Parts = preg_split('/[\s-]+/', $ln1);
+            $ln2Parts = preg_split('/[\s-]+/', $ln2);
+            // Check if one is subset of other (ignoring noble prefixes)
+            $noblePrefixes = ['von', 'af', 'de', 'van', 'der', 'la'];
+            $ln1Core = array_diff($ln1Parts, $noblePrefixes);
+            $ln2Core = array_diff($ln2Parts, $noblePrefixes);
+            if (!empty($ln1Core) && !empty($ln2Core) && $ln1Core != $ln2Core) {
+                $intersection = array_intersect($ln1Core, $ln2Core);
+                if (!empty($intersection) && (count($intersection) >= count($ln1Core) - 1 || count($intersection) >= count($ln2Core) - 1)) {
+                    $isDuplicate = true;
+                    $reason = 'Liknande efternamn (' . $r1['lastname'] . ' / ' . $r2['lastname'] . ')';
+                }
+            }
+        }
+
+        if (!$isDuplicate) continue;
+
+        // Skip if different UCI IDs
+        $uci1 = isRealUci($r1['license_number']) ? normalizeUci($r1['license_number']) : null;
+        $uci2 = isRealUci($r2['license_number']) ? normalizeUci($r2['license_number']) : null;
+        if ($uci1 && $uci2 && $uci1 !== $uci2) continue;
+
+        $r1Missing = [];
+        $r2Missing = [];
+        $isSwe1 = !empty($r1['license_number']) && strpos($r1['license_number'], 'SWE') === 0;
+        $isSwe2 = !empty($r2['license_number']) && strpos($r2['license_number'], 'SWE') === 0;
+
+        if (!$r1['birth_year'] && $r2['birth_year']) $r1Missing[] = 'födelseår';
+        if (!$r2['birth_year'] && $r1['birth_year']) $r2Missing[] = 'födelseår';
+        if ($isSwe1 && $uci2) $r1Missing[] = 'UCI ID (har SWE-ID)';
+        elseif (!$uci1 && $uci2) $r1Missing[] = 'UCI ID';
+        if ($isSwe2 && $uci1) $r2Missing[] = 'UCI ID (har SWE-ID)';
+        elseif (!$uci2 && $uci1) $r2Missing[] = 'UCI ID';
+
+        $seenPairs[$pairKey] = true;
+        $potentialDuplicates[] = [
+            'pair_key' => $pairKey,
+            'reason' => $reason,
+            'rider1' => ['id' => $r1['id'], 'name' => $r1['firstname'].' '.$r1['lastname'],
+                'birth_year' => $r1['birth_year'], 'license' => $r1['license_number'],
+                'email' => $r1['email'], 'club' => $r1['club_name'], 'missing' => $r1Missing,
+                'results' => $r1['result_count'] ?? 0, 'classes' => getRiderClasses($db, $r1['id'])],
+            'rider2' => ['id' => $r2['id'], 'name' => $r2['firstname'].' '.$r2['lastname'],
+                'birth_year' => $r2['birth_year'], 'license' => $r2['license_number'],
+                'email' => $r2['email'], 'club' => $r2['club_name'], 'missing' => $r2Missing,
+                'results' => $r2['result_count'] ?? 0, 'classes' => getRiderClasses($db, $r2['id'])]
+        ];
+    }
+}
+
+// Also find SOUNDEX fuzzy matches
 $fuzzyGroups = $db->getAll("
     SELECT lastname, SOUNDEX(firstname) as fname_sound, COUNT(*) as cnt,
            GROUP_CONCAT(DISTINCT firstname SEPARATOR '|') as firstnames
