@@ -371,7 +371,51 @@
 }
 
 /* ==========================================================================
-   CALENDAR/EVENT LIST STYLES
+   YEAR SECTION & DIVIDER (Large prominent headers - matching series page)
+   ========================================================================== */
+
+.results-events {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xl);
+}
+
+.results-year-section {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+/* Year Divider - LARGE and prominent (matching series page) */
+.results-year-divider {
+  display: flex;
+  align-items: center;
+  gap: var(--space-md);
+  padding: var(--space-sm) 0;
+}
+
+.results-year-label {
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--color-text);
+  line-height: 1;
+  letter-spacing: -0.02em;
+}
+
+.results-year-line {
+  flex: 1;
+  height: 2px;
+  background: linear-gradient(90deg, var(--color-border) 0%, transparent 100%);
+}
+
+.results-year-count {
+  font-size: var(--text-sm);
+  color: var(--color-text-muted);
+  white-space: nowrap;
+}
+
+/* ==========================================================================
+   CALENDAR/EVENT LIST STYLES (Legacy support)
    ========================================================================== */
 
 .calendar-events {
@@ -429,6 +473,20 @@
 
 /* Mobile */
 @media (max-width: 767px) {
+  /* Results year divider mobile */
+  .results-events {
+    gap: var(--space-lg);
+  }
+
+  .results-year-divider {
+    padding-left: var(--container-padding);
+    padding-right: var(--container-padding);
+  }
+
+  .results-year-label {
+    font-size: 1.75rem;
+  }
+
   .filter-bar {
     flex-direction: column;
     align-items: center;
@@ -513,5 +571,16 @@
 
   .calendar-month-title {
     padding-left: var(--container-padding);
+  }
+}
+
+/* Very small screens */
+@media (max-width: 400px) {
+  .results-year-label {
+    font-size: 1.5rem;
+  }
+
+  .results-year-count {
+    display: none;
   }
 }
