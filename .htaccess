@@ -167,6 +167,24 @@ RewriteRule ^admin/club-points/?$ admin/club-points.php [QSA,L]
 RewriteRule ^admin/data-explorer/?$ admin/data-explorer.php [QSA,L]
 RewriteRule ^admin/download-templates/?$ admin/download-templates.php [QSA,L]
 
+# Ekonomi section routes
+RewriteRule ^admin/ekonomi/?$ admin/ekonomi.php [QSA,L]
+RewriteRule ^admin/orders/?$ admin/orders.php [QSA,L]
+RewriteRule ^admin/gateway-settings/?$ admin/gateway-settings.php [QSA,L]
+RewriteRule ^admin/pricing-templates/?$ admin/pricing-templates.php [QSA,L]
+RewriteRule ^admin/pricing-template-edit/?$ admin/pricing-template-edit.php [QSA,L]
+RewriteRule ^admin/certificates/?$ admin/certificates.php [QSA,L]
+RewriteRule ^admin/payment-settings/?$ admin/payment-settings.php [QSA,L]
+RewriteRule ^admin/refund-requests/?$ admin/refund-requests.php [QSA,L]
+RewriteRule ^admin/registration-rules/?$ admin/registration-rules.php [QSA,L]
+RewriteRule ^admin/license-class-matrix/?$ admin/license-class-matrix.php [QSA,L]
+RewriteRule ^admin/promotor-payments/?$ admin/promotor-payments.php [QSA,L]
+RewriteRule ^admin/public-settings/?$ admin/public-settings.php [QSA,L]
+RewriteRule ^admin/results/?$ admin/results.php [QSA,L]
+RewriteRule ^admin/edit-results/?$ admin/edit-results.php [QSA,L]
+RewriteRule ^admin/elimination/?$ admin/elimination.php [QSA,L]
+RewriteRule ^admin/global-texts/?$ admin/global-texts.php [QSA,L]
+
 # Skip remaining admin files (direct PHP access)
 RewriteRule ^admin/.*\.php$ - [L]
 
