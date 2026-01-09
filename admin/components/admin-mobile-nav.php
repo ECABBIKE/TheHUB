@@ -5,8 +5,8 @@
  * MUST match admin-sidebar.php exactly!
  *
  * Role-based access:
- * - promotor: Dashboard, Tävlingar, Serier, Media, Sponsorer
- * - admin/super_admin: Full access
+ * - promotor: Dashboard, Tävlingar, Serier
+ * - admin/super_admin: + Databas, Import, System
  */
 require_once __DIR__ . '/../../hub-config.php';
 require_once __DIR__ . '/../../components/icons.php';
@@ -22,8 +22,6 @@ $adminNav = [
     ['id' => 'dashboard', 'label' => 'Dashboard', 'icon' => 'layout-dashboard', 'url' => $isPromotor ? '/admin/promotor' : '/admin/dashboard', 'min_role' => 'promotor'],
     ['id' => 'events', 'label' => 'Tävlingar', 'icon' => 'calendar', 'url' => '/admin/events', 'min_role' => 'promotor'],
     ['id' => 'series', 'label' => 'Serier', 'icon' => 'trophy', 'url' => '/admin/series', 'min_role' => 'promotor'],
-    ['id' => 'media', 'label' => 'Media', 'icon' => 'image', 'url' => '/admin/media', 'min_role' => 'promotor'],
-    ['id' => 'sponsors', 'label' => 'Sponsorer', 'icon' => 'heart-handshake', 'url' => '/admin/sponsors', 'min_role' => 'promotor'],
     ['id' => 'riders', 'label' => 'Databas', 'icon' => 'users', 'url' => '/admin/riders', 'min_role' => 'admin'],
     ['id' => 'import', 'label' => 'Import', 'icon' => 'upload', 'url' => '/admin/import', 'min_role' => 'admin'],
     ['id' => 'settings', 'label' => 'System', 'icon' => 'settings', 'url' => '/admin/settings', 'min_role' => 'admin'],
