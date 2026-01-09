@@ -5,9 +5,8 @@
  * Text appears in tooltip on hover
  *
  * Role-based access:
- * - promotor (role=2): Only events and sponsors
- * - admin (role=3): Everything except system settings
- * - super_admin (role=4): Full access
+ * - promotor: Dashboard, Tävlingar, Serier
+ * - admin/super_admin: + Konfiguration, Databas, Import, System
  */
 
 // Get current user's role
@@ -44,20 +43,12 @@ $admin_nav = [
         'min_role' => 'promotor'
     ],
     [
-        'id' => 'media',
-        'label' => 'Media',
-        'icon' => '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>',
-        'url' => '/admin/media',
-        'active' => in_array($current_admin_page, ['media', 'media-archive']),
-        'min_role' => 'promotor'
-    ],
-    [
-        'id' => 'sponsors',
-        'label' => 'Sponsorer',
-        'icon' => '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/><path d="M12 5 9.04 7.96a2.17 2.17 0 0 0 0 3.08c.82.82 2.13.85 3 .07l2.07-1.9a2.82 2.82 0 0 1 3.79 0l2.96 2.66"/><path d="m18 15-2-2"/><path d="m15 18-2-2"/></svg>',
-        'url' => '/admin/sponsors',
-        'active' => in_array($current_admin_page, ['sponsors', 'sponsor-edit']),
-        'min_role' => 'promotor'
+        'id' => 'config',
+        'label' => 'Konfiguration',
+        'icon' => '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><line x1="4" x2="4" y1="21" y2="14"/><line x1="4" x2="4" y1="10" y2="3"/><line x1="12" x2="12" y1="21" y2="12"/><line x1="12" x2="12" y1="8" y2="3"/><line x1="20" x2="20" y1="21" y2="16"/><line x1="20" x2="20" y1="12" y2="3"/><line x1="2" x2="6" y1="14" y2="14"/><line x1="10" x2="14" y1="8" y2="8"/><line x1="18" x2="22" y1="16" y2="16"/></svg>',
+        'url' => '/admin/classes',
+        'active' => in_array($current_admin_page, ['classes', 'license-class-matrix', 'public-settings', 'media']),
+        'min_role' => 'admin'
     ],
     [
         'id' => 'riders',

@@ -45,6 +45,8 @@ $ADMIN_TABS = [
                     // Ordrar & betalningar
                     'orders.php',
                     'payment-settings.php',
+                    'payment-recipients.php',
+                    'gateway-settings.php',
                     // Event-specifika
                     'event-payment.php',
                     'event-orders.php',
@@ -155,6 +157,51 @@ $ADMIN_TABS = [
                 'icon' => 'mountain',
                 'url' => '/admin/venues.php',
                 'pages' => ['venues.php', 'venue-edit.php']
+            ]
+        ]
+    ],
+
+    // ========================================
+    // KONFIGURATION
+    // ========================================
+    'config' => [
+        'title' => 'Konfiguration',
+        'icon' => 'sliders',
+        'tabs' => [
+            [
+                'id' => 'classes',
+                'label' => 'Klasser',
+                'icon' => 'layers',
+                'url' => '/admin/classes.php',
+                'pages' => ['classes.php']
+            ],
+            [
+                'id' => 'license-matrix',
+                'label' => 'Licenser',
+                'icon' => 'grid-3x3',
+                'url' => '/admin/license-class-matrix.php',
+                'pages' => ['license-class-matrix.php']
+            ],
+            [
+                'id' => 'point-scales',
+                'label' => 'Poängskalor',
+                'icon' => 'calculator',
+                'url' => '/admin/point-scales.php',
+                'pages' => ['point-scales.php', 'point-scale-edit.php', 'point-templates.php']
+            ],
+            [
+                'id' => 'public',
+                'label' => 'Publikt',
+                'icon' => 'globe',
+                'url' => '/admin/public-settings.php',
+                'pages' => ['public-settings.php']
+            ],
+            [
+                'id' => 'media',
+                'label' => 'Media',
+                'icon' => 'image',
+                'url' => '/admin/media.php',
+                'pages' => ['media.php']
             ]
         ]
     ],
