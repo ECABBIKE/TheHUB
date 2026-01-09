@@ -736,18 +736,7 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
                                 }
                             }
                         }
-                        // If no birth year in CSV but rider is missing it, try to infer from age class
-                        elseif (empty($riderData['birth_year'])) {
-                            $className = $data['class_name'] ?? '';
-                            $inferredYears = getBirthYearsFromClassName($className);
-                            if (!empty($inferredYears)) {
-                                // Use the middle of the range as best guess
-                                $inferredBirthYear = $inferredYears[intval(count($inferredYears) / 2)];
-                                $db->update('riders', ['birth_year' => $inferredBirthYear], 'id = ?', [$rider['id']]);
-                                $matching_stats['riders_updated_with_birthyear'] = ($matching_stats['riders_updated_with_birthyear'] ?? 0) + 1;
-                                error_log("IMPORT: Inferred rider {$rider['id']} birth_year to: {$inferredBirthYear} from class '{$className}'");
-                            }
-                        }
+                        // NOTE: We do NOT infer birth year from class name - only use explicit data
                     } else {
                         error_log("IMPORT: No match found for '{$firstName} {$lastName}' UCI:{$licenseNumberDigits}");
                     }
@@ -774,7 +763,7 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
                     $importNationality = strtoupper(trim($data['nationality'] ?? ''));
                     if (strlen($importNationality) > 3) $importNationality = '';
 
-                    // Get birth year from import if available, or infer from age class
+                    // Get birth year from import if available - NEVER infer/guess
                     $importBirthYear = trim($data['birth_year'] ?? '');
                     if (!empty($importBirthYear) && is_numeric($importBirthYear)) {
                         $importBirthYear = (int)$importBirthYear;
@@ -783,15 +772,7 @@ function importResultsFromCSVWithMapping($filepath, $db, $importId, $eventMappin
                             $importBirthYear = null;
                         }
                     } else {
-                        // Try to infer birth year from age class (e.g., "Pojkar 13-14" → 2010/2011)
-                        $inferredYears = getBirthYearsFromClassName($className);
-                        if (!empty($inferredYears)) {
-                            // Use the middle of the range as best guess
-                            $importBirthYear = $inferredYears[intval(count($inferredYears) / 2)];
-                            error_log("IMPORT: Inferred birth year {$importBirthYear} from class '{$className}'");
-                        } else {
-                            $importBirthYear = null;
-                        }
+                        $importBirthYear = null;
                     }
 
                     $riderId = $db->insert('riders', [
