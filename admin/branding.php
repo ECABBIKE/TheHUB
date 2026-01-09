@@ -59,22 +59,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $message = 'Branding återställt till standard!';
         $messageType = 'success';
     } else {
-        // Save custom colors
-        $customColors = [];
+        // Save custom colors for both themes
+        $darkColors = [];
+        $lightColors = [];
 
         foreach ($_POST as $key => $value) {
-            if (strpos($key, 'color_') === 0 && !empty($value)) {
-                $varName = str_replace('_', '-', substr($key, 6)); // color_bg_page -> bg-page
+            // Dark theme colors: dark_color_bg_page
+            if (strpos($key, 'dark_color_') === 0 && !empty($value)) {
+                $varName = str_replace('_', '-', substr($key, 11)); // dark_color_bg_page -> bg-page
                 $varName = '--color-' . $varName;
-
-                // Validate it's a valid color
                 if (preg_match('/^#[0-9A-Fa-f]{6}$/', $value) || preg_match('/^rgba?\(/', $value)) {
-                    $customColors[$varName] = $value;
+                    $darkColors[$varName] = $value;
+                }
+            }
+            // Light theme colors: light_color_bg_page
+            if (strpos($key, 'light_color_') === 0 && !empty($value)) {
+                $varName = str_replace('_', '-', substr($key, 12)); // light_color_bg_page -> bg-page
+                $varName = '--color-' . $varName;
+                if (preg_match('/^#[0-9A-Fa-f]{6}$/', $value) || preg_match('/^rgba?\(/', $value)) {
+                    $lightColors[$varName] = $value;
                 }
             }
         }
 
-        $branding['colors'] = $customColors;
+        $branding['colors'] = [
+            'dark' => $darkColors,
+            'light' => $lightColors
+        ];
 
         // Save responsive layout settings
         $branding['responsive'] = [
@@ -388,6 +399,55 @@ include __DIR__ . '/components/unified-layout.php';
     margin-top: var(--space-md);
 }
 
+/* Theme Tabs */
+.theme-tabs {
+    display: flex;
+    gap: var(--space-xs);
+    background: var(--color-bg-sunken);
+    padding: var(--space-xs);
+    border-radius: var(--radius-md);
+    width: fit-content;
+}
+
+.theme-tab {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    padding: var(--space-sm) var(--space-lg);
+    border: none;
+    background: transparent;
+    color: var(--color-text-secondary);
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+
+.theme-tab:hover {
+    color: var(--color-text-primary);
+}
+
+.theme-tab.active {
+    background: var(--color-bg-card);
+    color: var(--color-text-primary);
+    box-shadow: var(--shadow-sm);
+}
+
+.theme-tab i {
+    width: 16px;
+    height: 16px;
+}
+
+.theme-panel {
+    animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
 </style>
 
 <?php if ($message): ?>
@@ -512,51 +572,124 @@ include __DIR__ . '/components/unified-layout.php';
     </div>
 
     <!-- Colors Section -->
+    <?php
+    // Get saved colors or use defaults
+    $savedColors = $branding['colors'] ?? [];
+    // Handle legacy format (flat array) vs new format (dark/light arrays)
+    if (!isset($savedColors['dark']) && !isset($savedColors['light'])) {
+        // Legacy format - treat as dark theme
+        $savedDarkColors = $savedColors;
+        $savedLightColors = [];
+    } else {
+        $savedDarkColors = $savedColors['dark'] ?? [];
+        $savedLightColors = $savedColors['light'] ?? [];
+    }
+    ?>
     <div class="card mb-lg">
         <div class="card-header">
             <h2>
                 <i data-lucide="palette"></i>
                 Färger
             </h2>
-            <span class="badge">Mörkt tema</span>
         </div>
         <div class="card-body">
-            <p class="text-secondary mb-lg">
-                Klicka på en färgruta för att välja ny färg. Ändringar sparas och appliceras på hela sidan.
+            <p class="text-secondary mb-md">
+                Anpassa färger för mörkt och ljust tema. Klicka på en färgruta för att välja ny färg.
             </p>
 
-            <div class="branding-grid">
-                <?php foreach ($colorGroups as $groupName => $colors): ?>
-                <div class="color-group">
-                    <h3>
-                        <i data-lucide="<?= $groupName === 'Bakgrunder' ? 'square' : ($groupName === 'Text' ? 'type' : ($groupName === 'Status' ? 'check-circle' : 'minus')) ?>"></i>
-                        <?= h($groupName) ?>
-                    </h3>
-                    <?php foreach ($colors as $varKey => $colorInfo):
-                        $fullVar = '--color-' . $varKey;
-                        $currentValue = $branding['colors'][$fullVar] ?? $colorInfo['dark'];
-                        $inputName = 'color_' . str_replace('-', '_', $varKey);
-                    ?>
-                    <div class="color-item">
-                        <div class="color-swatch" style="background: <?= h($currentValue) ?>;">
-                            <input type="color"
-                                   name="<?= $inputName ?>"
-                                   value="<?= h(preg_match('/^#/', $currentValue) ? $currentValue : '#000000') ?>"
-                                   onchange="updateColorPreview(this, '<?= $varKey ?>')">
+            <!-- Theme Tabs -->
+            <div class="theme-tabs mb-lg">
+                <button type="button" class="theme-tab active" data-theme="dark" onclick="switchThemeTab('dark')">
+                    <i data-lucide="moon"></i>
+                    Mörkt tema
+                </button>
+                <button type="button" class="theme-tab" data-theme="light" onclick="switchThemeTab('light')">
+                    <i data-lucide="sun"></i>
+                    Ljust tema
+                </button>
+            </div>
+
+            <!-- Dark Theme Colors -->
+            <div class="theme-panel" id="dark-theme-panel">
+                <div class="branding-grid">
+                    <?php foreach ($colorGroups as $groupName => $colors): ?>
+                    <div class="color-group">
+                        <h3>
+                            <i data-lucide="<?= $groupName === 'Bakgrunder' ? 'square' : ($groupName === 'Text' ? 'type' : ($groupName === 'Status' ? 'check-circle' : 'minus')) ?>"></i>
+                            <?= h($groupName) ?>
+                        </h3>
+                        <?php foreach ($colors as $varKey => $colorInfo):
+                            $fullVar = '--color-' . $varKey;
+                            $currentValue = $savedDarkColors[$fullVar] ?? $colorInfo['dark'];
+                            $inputName = 'dark_color_' . str_replace('-', '_', $varKey);
+                        ?>
+                        <div class="color-item">
+                            <div class="color-swatch" style="background: <?= h($currentValue) ?>;">
+                                <input type="color"
+                                       name="<?= $inputName ?>"
+                                       value="<?= h(preg_match('/^#/', $currentValue) ? $currentValue : '#000000') ?>"
+                                       onchange="updateColorPreview(this, '<?= $varKey ?>', 'dark')">
+                            </div>
+                            <div class="color-info">
+                                <div class="color-label"><?= h($colorInfo['label']) ?></div>
+                            </div>
+                            <input type="text"
+                                   class="color-input"
+                                   value="<?= h($currentValue) ?>"
+                                   data-var="<?= $varKey ?>"
+                                   data-theme="dark"
+                                   onchange="updateFromText(this, 'dark')">
                         </div>
-                        <div class="color-info">
-                            <div class="color-label"><?= h($colorInfo['label']) ?></div>
-                            <div class="color-value"><?= h($fullVar) ?></div>
-                        </div>
-                        <input type="text"
-                               class="color-input"
-                               value="<?= h($currentValue) ?>"
-                               data-var="<?= $varKey ?>"
-                               onchange="updateFromText(this)">
+                        <?php endforeach; ?>
                     </div>
                     <?php endforeach; ?>
                 </div>
-                <?php endforeach; ?>
+            </div>
+
+            <!-- Light Theme Colors -->
+            <div class="theme-panel" id="light-theme-panel" style="display: none;">
+                <div class="branding-grid">
+                    <?php foreach ($colorGroups as $groupName => $colors): ?>
+                    <div class="color-group">
+                        <h3>
+                            <i data-lucide="<?= $groupName === 'Bakgrunder' ? 'square' : ($groupName === 'Text' ? 'type' : ($groupName === 'Status' ? 'check-circle' : 'minus')) ?>"></i>
+                            <?= h($groupName) ?>
+                        </h3>
+                        <?php foreach ($colors as $varKey => $colorInfo):
+                            $fullVar = '--color-' . $varKey;
+                            $currentValue = $savedLightColors[$fullVar] ?? $colorInfo['light'];
+                            $inputName = 'light_color_' . str_replace('-', '_', $varKey);
+                        ?>
+                        <div class="color-item">
+                            <div class="color-swatch" style="background: <?= h($currentValue) ?>;">
+                                <input type="color"
+                                       name="<?= $inputName ?>"
+                                       value="<?= h(preg_match('/^#/', $currentValue) ? $currentValue : '#FFFFFF') ?>"
+                                       onchange="updateColorPreview(this, '<?= $varKey ?>', 'light')">
+                            </div>
+                            <div class="color-info">
+                                <div class="color-label"><?= h($colorInfo['label']) ?></div>
+                            </div>
+                            <input type="text"
+                                   class="color-input"
+                                   value="<?= h($currentValue) ?>"
+                                   data-var="<?= $varKey ?>"
+                                   data-theme="light"
+                                   onchange="updateFromText(this, 'light')">
+                        </div>
+                        <?php endforeach; ?>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+
+            <div class="info-box mt-lg">
+                <p>
+                    <i data-lucide="info"></i>
+                    <span>
+                        <strong>Tips:</strong> Mörkt tema är standard. Ljust tema aktiveras via användarinställningar eller systeminställning.
+                    </span>
+                </p>
             </div>
         </div>
     </div>
@@ -917,7 +1050,24 @@ include __DIR__ . '/components/unified-layout.php';
     </div>
 
 <script>
-function updateColorPreview(input, varKey) {
+// Theme tab switching
+function switchThemeTab(theme) {
+    // Update tabs
+    document.querySelectorAll('.theme-tab').forEach(tab => {
+        tab.classList.toggle('active', tab.dataset.theme === theme);
+    });
+
+    // Update panels
+    document.getElementById('dark-theme-panel').style.display = theme === 'dark' ? 'block' : 'none';
+    document.getElementById('light-theme-panel').style.display = theme === 'light' ? 'block' : 'none';
+
+    // Re-initialize Lucide icons for the new panel
+    if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+    }
+}
+
+function updateColorPreview(input, varKey, theme) {
     const swatch = input.closest('.color-swatch');
     swatch.style.background = input.value;
 
@@ -926,11 +1076,14 @@ function updateColorPreview(input, varKey) {
     const textInput = row.querySelector('.color-input');
     textInput.value = input.value;
 
-    // Apply live preview
-    document.documentElement.style.setProperty('--color-' + varKey, input.value);
+    // Apply live preview only if we're editing the current active theme
+    const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
+    if (theme === currentTheme) {
+        document.documentElement.style.setProperty('--color-' + varKey, input.value);
+    }
 }
 
-function updateFromText(input) {
+function updateFromText(input, theme) {
     const varKey = input.dataset.var;
     const value = input.value;
 
@@ -945,8 +1098,11 @@ function updateFromText(input) {
         colorInput.value = value;
     }
 
-    // Apply live preview
-    document.documentElement.style.setProperty('--color-' + varKey, value);
+    // Apply live preview only if we're editing the current active theme
+    const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
+    if (theme === currentTheme) {
+        document.documentElement.style.setProperty('--color-' + varKey, value);
+    }
 }
 
 // Live preview for responsive settings
