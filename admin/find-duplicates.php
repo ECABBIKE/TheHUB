@@ -880,6 +880,108 @@ foreach ($fuzzyGroups as $group) {
     }
 }
 
+// === NEW: Find nickname/similar first name duplicates ===
+// Catches cases like "Oliver Barton" vs "Ollie Barton" that SOUNDEX misses
+$allLastnames = $db->getAll("
+    SELECT LOWER(lastname) as ln, COUNT(*) as cnt
+    FROM riders
+    WHERE firstname IS NOT NULL AND lastname IS NOT NULL
+    GROUP BY LOWER(lastname)
+    HAVING cnt >= 2 AND cnt <= 20
+    ORDER BY cnt DESC
+    LIMIT 200
+");
+
+foreach ($allLastnames as $lnGroup) {
+    $ridersWithSameLn = $db->getAll("
+        SELECT r.id, r.firstname, r.lastname, r.birth_year, r.license_number,
+            r.email, r.club_id, c.name as club_name,
+            (SELECT COUNT(*) FROM results WHERE cyclist_id = r.id) as result_count
+        FROM riders r
+        LEFT JOIN clubs c ON r.club_id = c.id
+        WHERE LOWER(r.lastname) = ?
+        ORDER BY r.firstname
+    ", [$lnGroup['ln']]);
+
+    // Compare all pairs for Levenshtein similarity in first names
+    for ($i = 0; $i < count($ridersWithSameLn) - 1; $i++) {
+        for ($j = $i + 1; $j < count($ridersWithSameLn); $j++) {
+            $r1 = $ridersWithSameLn[$i];
+            $r2 = $ridersWithSameLn[$j];
+
+            $fn1 = mb_strtolower(trim($r1['firstname']), 'UTF-8');
+            $fn2 = mb_strtolower(trim($r2['firstname']), 'UTF-8');
+
+            // Skip if same firstname (already caught by exact match)
+            if ($fn1 === $fn2) continue;
+
+            $pairKey = getRiderPairKey($r1['id'], $r2['id']);
+            if (isset($seenPairs[$pairKey])) continue;
+            if (in_array($pairKey, $ignoredDuplicates)) continue;
+
+            // Check if one name starts with the other (Oliver/Ollie, Alexander/Alex)
+            $isNickname = false;
+            $shorterName = strlen($fn1) < strlen($fn2) ? $fn1 : $fn2;
+            $longerName = strlen($fn1) < strlen($fn2) ? $fn2 : $fn1;
+
+            // One name starts with the other (min 3 chars)
+            if (strlen($shorterName) >= 3 && strpos($longerName, $shorterName) === 0) {
+                $isNickname = true;
+            }
+
+            // Check Levenshtein distance (for names like Olle/Ollie, Erik/Eric)
+            if (!$isNickname && strlen($fn1) >= 3 && strlen($fn2) >= 3) {
+                $distance = levenshtein($fn1, $fn2);
+                $maxLen = max(strlen($fn1), strlen($fn2));
+                // Allow up to 2 edits for short names, or 30% difference for longer names
+                if ($distance <= 2 || ($distance / $maxLen) <= 0.3) {
+                    $isNickname = true;
+                }
+            }
+
+            if (!$isNickname) continue;
+
+            // Skip if different UCI IDs (both real)
+            $uci1 = isRealUci($r1['license_number']) ? normalizeUci($r1['license_number']) : null;
+            $uci2 = isRealUci($r2['license_number']) ? normalizeUci($r2['license_number']) : null;
+            if ($uci1 && $uci2 && $uci1 !== $uci2) continue;
+
+            $seenPairs[$pairKey] = true;
+
+            $r1Missing = [];
+            $r2Missing = [];
+            $isSwe1 = !empty($r1['license_number']) && strpos($r1['license_number'], 'SWE') === 0;
+            $isSwe2 = !empty($r2['license_number']) && strpos($r2['license_number'], 'SWE') === 0;
+
+            if (!$r1['birth_year'] && $r2['birth_year']) $r1Missing[] = 'födelseår';
+            if (!$r2['birth_year'] && $r1['birth_year']) $r2Missing[] = 'födelseår';
+            if ($isSwe1 && $uci2) $r1Missing[] = 'UCI ID (har SWE-ID)';
+            elseif (!$uci1 && $uci2) $r1Missing[] = 'UCI ID';
+            if ($isSwe2 && $uci1) $r2Missing[] = 'UCI ID (har SWE-ID)';
+            elseif (!$uci2 && $uci1) $r2Missing[] = 'UCI ID';
+
+            // Determine reason
+            $reason = 'Smeknamn? (' . $r1['firstname'] . '/' . $r2['firstname'] . ')';
+            if ($r1['birth_year'] && $r2['birth_year'] && $r1['birth_year'] !== $r2['birth_year']) {
+                $reason = 'Liknande namn, OLIKA födelseår (' . $r1['birth_year'] . '/' . $r2['birth_year'] . ')';
+            }
+
+            $potentialDuplicates[] = [
+                'pair_key' => $pairKey,
+                'reason' => $reason,
+                'rider1' => ['id' => $r1['id'], 'name' => $r1['firstname'].' '.$r1['lastname'],
+                    'birth_year' => $r1['birth_year'], 'license' => $r1['license_number'],
+                    'email' => $r1['email'], 'club' => $r1['club_name'], 'missing' => $r1Missing,
+                    'results' => $r1['result_count'] ?? 0],
+                'rider2' => ['id' => $r2['id'], 'name' => $r2['firstname'].' '.$r2['lastname'],
+                    'birth_year' => $r2['birth_year'], 'license' => $r2['license_number'],
+                    'email' => $r2['email'], 'club' => $r2['club_name'], 'missing' => $r2Missing,
+                    'results' => $r2['result_count'] ?? 0]
+            ];
+        }
+    }
+}
+
 // BATCH LOAD all rider classes in ONE query (performance optimization)
 $allRiderIds = [];
 foreach ($potentialDuplicates as $dup) {
