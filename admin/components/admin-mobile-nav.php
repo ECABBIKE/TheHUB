@@ -6,7 +6,7 @@
  *
  * Role-based access:
  * - promotor: Dashboard, Tävlingar, Serier
- * - admin/super_admin: + Konfiguration, Databas, Import, System
+ * - admin/super_admin: + Ekonomi, Konfiguration, Databas, Import, System
  */
 require_once __DIR__ . '/../../hub-config.php';
 require_once __DIR__ . '/../../components/icons.php';
@@ -22,6 +22,7 @@ $adminNav = [
     ['id' => 'dashboard', 'label' => 'Dashboard', 'icon' => 'layout-dashboard', 'url' => $isPromotor ? '/admin/promotor' : '/admin/dashboard', 'min_role' => 'promotor'],
     ['id' => 'events', 'label' => 'Tävlingar', 'icon' => 'calendar', 'url' => '/admin/events', 'min_role' => 'promotor'],
     ['id' => 'series', 'label' => 'Serier', 'icon' => 'trophy', 'url' => '/admin/series', 'min_role' => 'promotor'],
+    ['id' => 'ekonomi', 'label' => 'Ekonomi', 'icon' => 'wallet', 'url' => '/admin/ekonomi', 'min_role' => 'admin'],
     ['id' => 'config', 'label' => 'Konfig', 'icon' => 'sliders', 'url' => '/admin/classes', 'min_role' => 'admin'],
     ['id' => 'riders', 'label' => 'Databas', 'icon' => 'users', 'url' => '/admin/riders', 'min_role' => 'admin'],
     ['id' => 'import', 'label' => 'Import', 'icon' => 'upload', 'url' => '/admin/import', 'min_role' => 'admin'],
