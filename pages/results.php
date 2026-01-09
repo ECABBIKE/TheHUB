@@ -123,6 +123,8 @@ try {
     </div>
 </div>
 
+<link rel="stylesheet" href="/assets/css/pages/results-index.css?v=<?= filemtime(__DIR__ . '/../assets/css/pages/results-index.css') ?>">
+
 <?php if (isset($error)): ?>
 <div class="alert alert-error">
     <i data-lucide="alert-circle"></i>
@@ -131,7 +133,7 @@ try {
 <?php endif; ?>
 
 <!-- Events List -->
-<div class="calendar-events">
+<div class="results-events">
     <?php if (empty($events)): ?>
         <div class="empty-state">
             <div class="empty-icon"><i data-lucide="trophy"></i></div>
@@ -140,11 +142,11 @@ try {
         </div>
     <?php else: ?>
         <?php foreach ($eventsByYear as $year => $yearEvents): ?>
-            <div class="calendar-month-section">
-                <div class="calendar-month-divider">
-                    <span class="calendar-month-label"><?= $year ?></span>
-                    <span class="calendar-month-line"></span>
-                    <span class="calendar-month-count"><?= count($yearEvents) ?> event</span>
+            <div class="results-year-section">
+                <div class="results-year-divider">
+                    <span class="results-year-label"><?= $year ?></span>
+                    <span class="results-year-line"></span>
+                    <span class="results-year-count"><?= count($yearEvents) ?> event</span>
                 </div>
                 <div class="event-list">
                     <?php foreach ($yearEvents as $event): ?>
