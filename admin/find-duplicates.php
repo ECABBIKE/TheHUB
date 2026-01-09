@@ -247,13 +247,17 @@ function checkDuplicatePair($r1, $r2, $nameReason) {
  ];
 }
 
-// Handle merge action
+// Handle merge action (supports both AJAX and regular requests)
 if (isset($_GET['action']) && $_GET['action'] === 'merge') {
     $keepId = (int)($_GET['keep'] ?? 0);
     $removeId = (int)($_GET['remove'] ?? 0);
+    $isAjax = !empty($_SERVER['HTTP_X_REQUESTED_WITH']) && strtolower($_SERVER['HTTP_X_REQUESTED_WITH']) === 'xmlhttprequest';
 
     if ($keepId && $removeId && $keepId !== $removeId) {
         $transactionStarted = false;
+        $resultMessage = '';
+        $resultSuccess = false;
+
         try {
             $db->beginTransaction();
             $transactionStarted = true;
@@ -326,8 +330,8 @@ if (isset($_GET['action']) && $_GET['action'] === 'merge') {
 
             $db->commit();
 
-            $_SESSION['dup_message'] = "Sammanfogade {$removeRider['firstname']} {$removeRider['lastname']} → {$keepRider['firstname']} {$keepRider['lastname']} ({$moved} resultat flyttade" . ($deleted > 0 ? ", {$deleted} dubbletter borttagna" : "") . ")";
-            $_SESSION['dup_message_type'] = 'success';
+            $resultMessage = "Sammanfogade {$removeRider['firstname']} {$removeRider['lastname']} → {$keepRider['firstname']} {$keepRider['lastname']} ({$moved} resultat flyttade" . ($deleted > 0 ? ", {$deleted} dubbletter borttagna" : "") . ")";
+            $resultSuccess = true;
 
         } catch (Exception $e) {
             if ($transactionStarted) {
@@ -337,10 +341,25 @@ if (isset($_GET['action']) && $_GET['action'] === 'merge') {
                     // Ignore rollback errors
                 }
             }
-            $_SESSION['dup_message'] = "Fel: " . $e->getMessage();
-            $_SESSION['dup_message_type'] = 'error';
+            $resultMessage = "Fel: " . $e->getMessage();
+            $resultSuccess = false;
         }
 
+        // Return JSON for AJAX requests
+        if ($isAjax) {
+            header('Content-Type: application/json');
+            echo json_encode([
+                'success' => $resultSuccess,
+                'message' => $resultMessage,
+                'keepId' => $keepId,
+                'removeId' => $removeId
+            ]);
+            exit;
+        }
+
+        // Regular redirect for non-AJAX
+        $_SESSION['dup_message'] = $resultMessage;
+        $_SESSION['dup_message_type'] = $resultSuccess ? 'success' : 'error';
         header('Location: /admin/find-duplicates.php');
         exit;
     }
@@ -510,7 +529,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['merge_all'])) {
 
 // Find potential duplicates - simple approach: same firstname+lastname
 $potentialDuplicates = [];
-$debugInfo = []; // Debug: track what's happening
 
 $duplicateGroups = $db->getAll("
  SELECT firstname, lastname, COUNT(*) as cnt
@@ -521,21 +539,32 @@ $duplicateGroups = $db->getAll("
  ORDER BY cnt DESC
  LIMIT 100
 ");
-$debugInfo['query_found'] = count($duplicateGroups);
 
-// Helper function to get rider classes
-function getRiderClasses($db, $riderId) {
+// Batch load classes for multiple riders (called ONCE at the end)
+function batchLoadRiderClasses($db, $riderIds) {
+    if (empty($riderIds)) return [];
+
+    $placeholders = implode(',', array_fill(0, count($riderIds), '?'));
     $classes = $db->getAll("
-        SELECT DISTINCT cl.name, cl.display_name
+        SELECT res.cyclist_id, cl.name, cl.display_name
         FROM results res
         JOIN classes cl ON res.class_id = cl.id
-        WHERE res.cyclist_id = ?
+        WHERE res.cyclist_id IN ($placeholders)
+        GROUP BY res.cyclist_id, cl.id
         ORDER BY cl.sort_order
-        LIMIT 5
-    ", [$riderId]);
-    return array_map(function($c) {
-        return $c['display_name'] ?: $c['name'];
-    }, $classes);
+    ", $riderIds);
+
+    $result = [];
+    foreach ($classes as $c) {
+        $riderId = $c['cyclist_id'];
+        if (!isset($result[$riderId])) {
+            $result[$riderId] = [];
+        }
+        if (count($result[$riderId]) < 5) {
+            $result[$riderId][] = $c['display_name'] ?: $c['name'];
+        }
+    }
+    return $result;
 }
 
 foreach ($duplicateGroups as $group) {
@@ -565,7 +594,6 @@ foreach ($duplicateGroups as $group) {
 
    // Only skip if BOTH have real (non-SWE) UCI IDs and they're different
    if ($uci1 && $uci2 && $uci1 !== $uci2) {
-     $debugInfo['skipped_different_uci'][] = $r1['firstname'] . ' ' . $r1['lastname'] . " ($uci1 vs $uci2)";
      continue;
    }
 
@@ -598,18 +626,18 @@ foreach ($duplicateGroups as $group) {
     $reason = 'Samma namn, olika födelseår (' . $r1['birth_year'] . ' vs ' . $r2['birth_year'] . ')';
    }
 
-   // Always show duplicates with same name
+   // Always show duplicates with same name (classes loaded later in batch)
    $potentialDuplicates[] = [
     'pair_key' => $pairKey,
     'reason' => $reason,
     'rider1' => ['id' => $r1['id'], 'name' => $r1['firstname'].' '.$r1['lastname'],
      'birth_year' => $r1['birth_year'], 'license' => $r1['license_number'],
      'email' => $r1['email'], 'club' => $r1['club_name'], 'missing' => $r1Missing,
-     'results' => $r1['result_count'] ?? 0, 'classes' => getRiderClasses($db, $r1['id'])],
+     'results' => $r1['result_count'] ?? 0],
     'rider2' => ['id' => $r2['id'], 'name' => $r2['firstname'].' '.$r2['lastname'],
      'birth_year' => $r2['birth_year'], 'license' => $r2['license_number'],
      'email' => $r2['email'], 'club' => $r2['club_name'], 'missing' => $r2Missing,
-     'results' => $r2['result_count'] ?? 0, 'classes' => getRiderClasses($db, $r2['id'])]
+     'results' => $r2['result_count'] ?? 0]
    ];
   }
  }
@@ -761,11 +789,11 @@ foreach ($doubleNameRiders as $r1) {
             'rider1' => ['id' => $r1['id'], 'name' => $r1['firstname'].' '.$r1['lastname'],
                 'birth_year' => $r1['birth_year'], 'license' => $r1['license_number'],
                 'email' => $r1['email'], 'club' => $r1['club_name'], 'missing' => $r1Missing,
-                'results' => $r1['result_count'] ?? 0, 'classes' => getRiderClasses($db, $r1['id'])],
+                'results' => $r1['result_count'] ?? 0],
             'rider2' => ['id' => $r2['id'], 'name' => $r2['firstname'].' '.$r2['lastname'],
                 'birth_year' => $r2['birth_year'], 'license' => $r2['license_number'],
                 'email' => $r2['email'], 'club' => $r2['club_name'], 'missing' => $r2Missing,
-                'results' => $r2['result_count'] ?? 0, 'classes' => getRiderClasses($db, $r2['id'])]
+                'results' => $r2['result_count'] ?? 0]
         ];
     }
 }
@@ -841,16 +869,32 @@ foreach ($fuzzyGroups as $group) {
                     'rider1' => ['id' => $r1['id'], 'name' => $r1['firstname'].' '.$r1['lastname'],
                         'birth_year' => $r1['birth_year'], 'license' => $r1['license_number'],
                         'email' => $r1['email'], 'club' => $r1['club_name'], 'missing' => $r1Missing,
-                        'results' => $r1['result_count'] ?? 0, 'classes' => getRiderClasses($db, $r1['id'])],
+                        'results' => $r1['result_count'] ?? 0],
                     'rider2' => ['id' => $r2['id'], 'name' => $r2['firstname'].' '.$r2['lastname'],
                         'birth_year' => $r2['birth_year'], 'license' => $r2['license_number'],
                         'email' => $r2['email'], 'club' => $r2['club_name'], 'missing' => $r2Missing,
-                        'results' => $r2['result_count'] ?? 0, 'classes' => getRiderClasses($db, $r2['id'])]
+                        'results' => $r2['result_count'] ?? 0]
                 ];
             }
         }
     }
 }
+
+// BATCH LOAD all rider classes in ONE query (performance optimization)
+$allRiderIds = [];
+foreach ($potentialDuplicates as $dup) {
+    $allRiderIds[] = $dup['rider1']['id'];
+    $allRiderIds[] = $dup['rider2']['id'];
+}
+$allRiderIds = array_unique($allRiderIds);
+$riderClassesMap = batchLoadRiderClasses($db, $allRiderIds);
+
+// Add classes to duplicates
+foreach ($potentialDuplicates as &$dup) {
+    $dup['rider1']['classes'] = $riderClassesMap[$dup['rider1']['id']] ?? [];
+    $dup['rider2']['classes'] = $riderClassesMap[$dup['rider2']['id']] ?? [];
+}
+unset($dup);
 
 // Page config for unified layout
 $page_title = 'Hitta Dubbletter';
@@ -869,19 +913,6 @@ include __DIR__ . '/components/unified-layout.php';
   </div>
  <?php endif; ?>
 
- <!-- Debug info -->
- <div class="card mb-lg" style="background: #fff3cd; border: 1px solid #ffc107;">
-  <div class="card-body">
-   <strong>Debug:</strong> Hittade <?= $debugInfo['query_found'] ?? 0 ?> namngrupper.
-   <?php if (!empty($debugInfo['skipped_different_uci'])): ?>
-   <br><strong>Hoppade över (olika UCI):</strong> <?= count($debugInfo['skipped_different_uci']) ?> - <?= implode(', ', array_slice($debugInfo['skipped_different_uci'], 0, 5)) ?>
-   <?php endif; ?>
-   <?php if (!empty($debugInfo['skipped_different_birth'])): ?>
-   <br><strong>Hoppade över (olika födelseår):</strong> <?= count($debugInfo['skipped_different_birth']) ?> - <?= implode(', ', array_slice($debugInfo['skipped_different_birth'], 0, 5)) ?>
-   <?php endif; ?>
-   <br><strong>Visas:</strong> <?= count($potentialDuplicates) ?> dubbletter
-  </div>
- </div>
 
  <?php $ignoredCount = count($ignoredDuplicates); ?>
  <?php if ($ignoredCount > 0): ?>
@@ -935,7 +966,7 @@ include __DIR__ . '/components/unified-layout.php';
    $borderColor = $hasDifferentBirthYears ? '#dc3545' : '#ffc107';
    $bgColor = $hasDifferentBirthYears ? 'rgba(220,53,69,0.15)' : 'rgba(255,193,7,0.15)';
    ?>
-   <div style="border: 2px solid <?= $borderColor ?>; border-radius: 8px; margin-bottom: 1rem; overflow: hidden;">
+   <div id="dup-pair-<?= $idx ?>" data-pair-key="<?= h($dup['pair_key']) ?>" style="border: 2px solid <?= $borderColor ?>; border-radius: 8px; margin-bottom: 1rem; overflow: hidden;">
    <?php if ($hasDifferentBirthYears): ?>
    <div style="background: #dc3545; color: white; padding: 0.5rem 1rem; font-weight: bold;">
     <i data-lucide="alert-triangle" style="width: 16px; height: 16px; display: inline-block; vertical-align: middle;"></i>
@@ -1011,11 +1042,14 @@ include __DIR__ . '/components/unified-layout.php';
          $confirmMsg = 'VARNING: Olika födelseår!\\n\\n' . $rider['birth_year'] . ' vs ' . $otherBirthYear . '\\n\\nÄr du SÄKER på att detta är samma person?\\n\\nResultat flyttas och den andra profilen raderas permanent.';
      }
      ?>
-     <a href="?action=merge&keep=<?= $rider['id'] ?>&remove=<?= $otherId ?>"
-     class="btn btn--sm <?= $hasDifferentBirthYears ? 'btn-warning' : 'btn-success' ?> flex-1"
-     onclick="return confirm('<?= $confirmMsg ?>')">
+     <button type="button"
+     class="btn btn--sm <?= $hasDifferentBirthYears ? 'btn-warning' : 'btn-success' ?> flex-1 merge-btn"
+     data-keep="<?= $rider['id'] ?>"
+     data-remove="<?= $otherId ?>"
+     data-pair-idx="<?= $idx ?>"
+     data-confirm="<?= $confirmMsg ?>">
      <i data-lucide="check"></i> Behåll denna
-     </a>
+     </button>
     </div>
     </div>
     <?php endforeach; ?>
@@ -1035,5 +1069,110 @@ include __DIR__ . '/components/unified-layout.php';
   <?php endif; ?>
   </div>
  </div>
+
+<script>
+// AJAX merge handling - no page reload
+document.querySelectorAll('.merge-btn').forEach(btn => {
+    btn.addEventListener('click', async function() {
+        const keepId = this.dataset.keep;
+        const removeId = this.dataset.remove;
+        const pairIdx = this.dataset.pairIdx;
+        const confirmMsg = this.dataset.confirm;
+
+        if (!confirm(confirmMsg.replace(/\\n/g, '\n'))) {
+            return;
+        }
+
+        // Disable button and show loading
+        this.disabled = true;
+        const originalText = this.innerHTML;
+        this.innerHTML = '<i data-lucide="loader-2" class="animate-spin"></i> Slår ihop...';
+
+        try {
+            const response = await fetch(`?action=merge&keep=${keepId}&remove=${removeId}`, {
+                method: 'GET',
+                headers: {
+                    'X-Requested-With': 'XMLHttpRequest'
+                }
+            });
+
+            const data = await response.json();
+
+            if (data.success) {
+                // Remove the card with animation
+                const card = document.getElementById('dup-pair-' + pairIdx);
+                if (card) {
+                    card.style.transition = 'opacity 0.3s, transform 0.3s';
+                    card.style.opacity = '0';
+                    card.style.transform = 'translateX(-20px)';
+                    setTimeout(() => {
+                        card.remove();
+                        // Update counter
+                        const counter = document.querySelector('.card-header h2');
+                        if (counter) {
+                            const match = counter.textContent.match(/\((\d+)\)/);
+                            if (match) {
+                                const newCount = parseInt(match[1]) - 1;
+                                counter.innerHTML = counter.innerHTML.replace(/\(\d+\)/, '(' + newCount + ')');
+                            }
+                        }
+                    }, 300);
+                }
+                // Show toast message
+                showToast(data.message, 'success');
+            } else {
+                showToast(data.message || 'Ett fel uppstod', 'error');
+                this.disabled = false;
+                this.innerHTML = originalText;
+            }
+        } catch (error) {
+            showToast('Nätverksfel: ' + error.message, 'error');
+            this.disabled = false;
+            this.innerHTML = originalText;
+        }
+    });
+});
+
+// Simple toast notification
+function showToast(message, type) {
+    const toast = document.createElement('div');
+    toast.style.cssText = `
+        position: fixed;
+        bottom: 20px;
+        right: 20px;
+        padding: 1rem 1.5rem;
+        border-radius: 8px;
+        color: white;
+        font-weight: 500;
+        z-index: 9999;
+        max-width: 400px;
+        box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        animation: slideIn 0.3s ease;
+        background: ${type === 'success' ? '#28a745' : '#dc3545'};
+    `;
+    toast.textContent = message;
+    document.body.appendChild(toast);
+
+    setTimeout(() => {
+        toast.style.animation = 'slideOut 0.3s ease';
+        setTimeout(() => toast.remove(), 300);
+    }, 4000);
+}
+
+// Add animation keyframes
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes slideIn { from { transform: translateX(100%); opacity: 0; } to { transform: translateX(0); opacity: 1; } }
+    @keyframes slideOut { from { transform: translateX(0); opacity: 1; } to { transform: translateX(100%); opacity: 0; } }
+    .animate-spin { animation: spin 1s linear infinite; }
+    @keyframes spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
+`;
+document.head.appendChild(style);
+
+// Re-init lucide icons after any DOM changes
+if (typeof lucide !== 'undefined') {
+    lucide.createIcons();
+}
+</script>
 
 <?php include __DIR__ . '/components/unified-layout-footer.php'; ?>
