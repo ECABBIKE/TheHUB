@@ -88,6 +88,130 @@ include __DIR__ . '/components/unified-layout.php';
 .section-title:first-child { margin-top: 0; }
 </style>
 
+<!-- ========== SÄSONGSHANTERING ========== -->
+<h3 class="section-title">Säsongshantering</h3>
+<div class="tools-grid">
+
+    <!-- Yearly Rebuild -->
+    <div class="tool-card">
+        <div class="tool-card-header">
+            <div class="tool-icon warning"><i data-lucide="calendar-cog"></i></div>
+            <div>
+                <h4 class="tool-title">Årsåterställning</h4>
+                <p class="tool-description">Återställ data för ny säsong</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/tools/yearly-rebuild.php" class="btn-admin btn-admin-warning">Öppna</a>
+        </div>
+    </div>
+
+    <!-- Yearly Import Review -->
+    <div class="tool-card">
+        <div class="tool-card-header">
+            <div class="tool-icon"><i data-lucide="file-search"></i></div>
+            <div>
+                <h4 class="tool-title">Granska årsimport</h4>
+                <p class="tool-description">Granska och godkänn importerad data</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/tools/yearly-import-review.php" class="btn-admin btn-admin-secondary">Granska</a>
+        </div>
+    </div>
+
+</div>
+
+<!-- ========== KLUBBAR & ÅKARE ========== -->
+<h3 class="section-title">Klubbar & Åkare</h3>
+<div class="tools-grid">
+
+    <!-- Sync Club Membership -->
+    <div class="tool-card">
+        <div class="tool-card-header">
+            <div class="tool-icon"><i data-lucide="link"></i></div>
+            <div>
+                <h4 class="tool-title">Synka klubbtillhörighet</h4>
+                <p class="tool-description">Återskapa och lås klubbkopplingar</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/sync-club-membership.php" class="btn-admin btn-admin-primary">Synka</a>
+        </div>
+    </div>
+
+    <!-- Sync Rider Clubs -->
+    <div class="tool-card">
+        <div class="tool-card-header">
+            <div class="tool-icon"><i data-lucide="users"></i></div>
+            <div>
+                <h4 class="tool-title">Synka åkare-klubbar</h4>
+                <p class="tool-description">Uppdatera åkarnas klubbtillhörighet</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/sync-rider-clubs.php" class="btn-admin btn-admin-primary">Synka</a>
+        </div>
+    </div>
+
+    <!-- Fix Result Club IDs -->
+    <div class="tool-card">
+        <div class="tool-card-header">
+            <div class="tool-icon warning"><i data-lucide="wrench"></i></div>
+            <div>
+                <h4 class="tool-title">Fixa klubb-ID i resultat</h4>
+                <p class="tool-description">Korrigera felaktiga klubbreferenser</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/fix-result-club-ids.php" class="btn-admin btn-admin-warning">Fixa</a>
+        </div>
+    </div>
+
+    <!-- Normalize Names -->
+    <div class="tool-card">
+        <div class="tool-card-header">
+            <div class="tool-icon"><i data-lucide="case-sensitive"></i></div>
+            <div>
+                <h4 class="tool-title">Normalisera namn</h4>
+                <p class="tool-description">Rätta stavning och versaler</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/normalize-names.php" class="btn-admin btn-admin-secondary">Normalisera</a>
+        </div>
+    </div>
+
+    <!-- Search UCI ID -->
+    <div class="tool-card">
+        <div class="tool-card-header">
+            <div class="tool-icon"><i data-lucide="globe"></i></div>
+            <div>
+                <h4 class="tool-title">Sök UCI-ID</h4>
+                <p class="tool-description">Hitta och tilldela UCI-ID</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/search-uci-id.php" class="btn-admin btn-admin-secondary">Sök</a>
+        </div>
+    </div>
+
+    <!-- Fix UCI Conflicts -->
+    <div class="tool-card">
+        <div class="tool-card-header">
+            <div class="tool-icon warning"><i data-lucide="alert-triangle"></i></div>
+            <div>
+                <h4 class="tool-title">Fixa UCI-konflikter</h4>
+                <p class="tool-description">Lös dubbletter och konflikter</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/tools/fix-uci-conflicts.php" class="btn-admin btn-admin-warning">Fixa</a>
+        </div>
+    </div>
+
+</div>
+
 <!-- ========== DATAHANTERING ========== -->
 <h3 class="section-title">Datahantering</h3>
 <div class="tools-grid">
