@@ -206,7 +206,10 @@ include __DIR__ . '/components/unified-layout.php';
                         <th>Event</th>
                         <th>Plats</th>
                         <th>Serie</th>
-                        <th class="text-center">Deltagare</th>
+                        <th class="text-center" title="Totalt antal deltagare. Siffror inom parentes: (DNF/DNS) - DNF=Bröt, DNS=Startade ej">
+                                        Deltagare
+                                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="14" height="14" style="vertical-align: middle; opacity: 0.5; cursor: help;"><circle cx="12" cy="12" r="10"/><path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/><path d="M12 17h.01"/></svg>
+                                    </th>
                         <th class="text-right">Åtgärder</th>
                     </tr>
                 </thead>
@@ -225,11 +228,11 @@ include __DIR__ . '/components/unified-layout.php';
                             <td><?= h($event['location'] ?? '-') ?></td>
                             <td><?= h($event['series_name'] ?? '-') ?></td>
                             <td class="text-center">
-                                <span class="admin-badge admin-badge-<?= $event['result_count'] > 0 ? 'success' : 'info' ?>">
+                                <span class="admin-badge admin-badge-<?= $event['result_count'] > 0 ? 'success' : 'info' ?>" title="Totalt antal resultat">
                                     <?= $event['result_count'] ?>
                                 </span>
                                 <?php if ($event['dnf_count'] > 0 || $event['dns_count'] > 0): ?>
-                                    <span style="color: var(--color-text-secondary); font-size: var(--text-xs);">
+                                    <span style="color: var(--color-text-secondary); font-size: var(--text-xs); cursor: help;" title="<?= $event['dnf_count'] ?> bröt (DNF), <?= $event['dns_count'] ?> startade ej (DNS)">
                                         (<?= $event['dnf_count'] ?>/<?= $event['dns_count'] ?>)
                                     </span>
                                 <?php endif; ?>
