@@ -510,7 +510,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['merge_all'])) {
 
 // Find potential duplicates - simple approach: same firstname+lastname
 $potentialDuplicates = [];
-$debugInfo = []; // Debug: track what's happening
 
 $duplicateGroups = $db->getAll("
  SELECT firstname, lastname, COUNT(*) as cnt
@@ -521,21 +520,32 @@ $duplicateGroups = $db->getAll("
  ORDER BY cnt DESC
  LIMIT 100
 ");
-$debugInfo['query_found'] = count($duplicateGroups);
 
-// Helper function to get rider classes
-function getRiderClasses($db, $riderId) {
+// Batch load classes for multiple riders (called ONCE at the end)
+function batchLoadRiderClasses($db, $riderIds) {
+    if (empty($riderIds)) return [];
+
+    $placeholders = implode(',', array_fill(0, count($riderIds), '?'));
     $classes = $db->getAll("
-        SELECT DISTINCT cl.name, cl.display_name
+        SELECT res.cyclist_id, cl.name, cl.display_name
         FROM results res
         JOIN classes cl ON res.class_id = cl.id
-        WHERE res.cyclist_id = ?
+        WHERE res.cyclist_id IN ($placeholders)
+        GROUP BY res.cyclist_id, cl.id
         ORDER BY cl.sort_order
-        LIMIT 5
-    ", [$riderId]);
-    return array_map(function($c) {
-        return $c['display_name'] ?: $c['name'];
-    }, $classes);
+    ", $riderIds);
+
+    $result = [];
+    foreach ($classes as $c) {
+        $riderId = $c['cyclist_id'];
+        if (!isset($result[$riderId])) {
+            $result[$riderId] = [];
+        }
+        if (count($result[$riderId]) < 5) {
+            $result[$riderId][] = $c['display_name'] ?: $c['name'];
+        }
+    }
+    return $result;
 }
 
 foreach ($duplicateGroups as $group) {
@@ -565,7 +575,6 @@ foreach ($duplicateGroups as $group) {
 
    // Only skip if BOTH have real (non-SWE) UCI IDs and they're different
    if ($uci1 && $uci2 && $uci1 !== $uci2) {
-     $debugInfo['skipped_different_uci'][] = $r1['firstname'] . ' ' . $r1['lastname'] . " ($uci1 vs $uci2)";
      continue;
    }
 
@@ -598,18 +607,18 @@ foreach ($duplicateGroups as $group) {
     $reason = 'Samma namn, olika födelseår (' . $r1['birth_year'] . ' vs ' . $r2['birth_year'] . ')';
    }
 
-   // Always show duplicates with same name
+   // Always show duplicates with same name (classes loaded later in batch)
    $potentialDuplicates[] = [
     'pair_key' => $pairKey,
     'reason' => $reason,
     'rider1' => ['id' => $r1['id'], 'name' => $r1['firstname'].' '.$r1['lastname'],
      'birth_year' => $r1['birth_year'], 'license' => $r1['license_number'],
      'email' => $r1['email'], 'club' => $r1['club_name'], 'missing' => $r1Missing,
-     'results' => $r1['result_count'] ?? 0, 'classes' => getRiderClasses($db, $r1['id'])],
+     'results' => $r1['result_count'] ?? 0],
     'rider2' => ['id' => $r2['id'], 'name' => $r2['firstname'].' '.$r2['lastname'],
      'birth_year' => $r2['birth_year'], 'license' => $r2['license_number'],
      'email' => $r2['email'], 'club' => $r2['club_name'], 'missing' => $r2Missing,
-     'results' => $r2['result_count'] ?? 0, 'classes' => getRiderClasses($db, $r2['id'])]
+     'results' => $r2['result_count'] ?? 0]
    ];
   }
  }
@@ -761,11 +770,11 @@ foreach ($doubleNameRiders as $r1) {
             'rider1' => ['id' => $r1['id'], 'name' => $r1['firstname'].' '.$r1['lastname'],
                 'birth_year' => $r1['birth_year'], 'license' => $r1['license_number'],
                 'email' => $r1['email'], 'club' => $r1['club_name'], 'missing' => $r1Missing,
-                'results' => $r1['result_count'] ?? 0, 'classes' => getRiderClasses($db, $r1['id'])],
+                'results' => $r1['result_count'] ?? 0],
             'rider2' => ['id' => $r2['id'], 'name' => $r2['firstname'].' '.$r2['lastname'],
                 'birth_year' => $r2['birth_year'], 'license' => $r2['license_number'],
                 'email' => $r2['email'], 'club' => $r2['club_name'], 'missing' => $r2Missing,
-                'results' => $r2['result_count'] ?? 0, 'classes' => getRiderClasses($db, $r2['id'])]
+                'results' => $r2['result_count'] ?? 0]
         ];
     }
 }
@@ -841,16 +850,32 @@ foreach ($fuzzyGroups as $group) {
                     'rider1' => ['id' => $r1['id'], 'name' => $r1['firstname'].' '.$r1['lastname'],
                         'birth_year' => $r1['birth_year'], 'license' => $r1['license_number'],
                         'email' => $r1['email'], 'club' => $r1['club_name'], 'missing' => $r1Missing,
-                        'results' => $r1['result_count'] ?? 0, 'classes' => getRiderClasses($db, $r1['id'])],
+                        'results' => $r1['result_count'] ?? 0],
                     'rider2' => ['id' => $r2['id'], 'name' => $r2['firstname'].' '.$r2['lastname'],
                         'birth_year' => $r2['birth_year'], 'license' => $r2['license_number'],
                         'email' => $r2['email'], 'club' => $r2['club_name'], 'missing' => $r2Missing,
-                        'results' => $r2['result_count'] ?? 0, 'classes' => getRiderClasses($db, $r2['id'])]
+                        'results' => $r2['result_count'] ?? 0]
                 ];
             }
         }
     }
 }
+
+// BATCH LOAD all rider classes in ONE query (performance optimization)
+$allRiderIds = [];
+foreach ($potentialDuplicates as $dup) {
+    $allRiderIds[] = $dup['rider1']['id'];
+    $allRiderIds[] = $dup['rider2']['id'];
+}
+$allRiderIds = array_unique($allRiderIds);
+$riderClassesMap = batchLoadRiderClasses($db, $allRiderIds);
+
+// Add classes to duplicates
+foreach ($potentialDuplicates as &$dup) {
+    $dup['rider1']['classes'] = $riderClassesMap[$dup['rider1']['id']] ?? [];
+    $dup['rider2']['classes'] = $riderClassesMap[$dup['rider2']['id']] ?? [];
+}
+unset($dup);
 
 // Page config for unified layout
 $page_title = 'Hitta Dubbletter';
@@ -869,19 +894,6 @@ include __DIR__ . '/components/unified-layout.php';
   </div>
  <?php endif; ?>
 
- <!-- Debug info -->
- <div class="card mb-lg" style="background: #fff3cd; border: 1px solid #ffc107;">
-  <div class="card-body">
-   <strong>Debug:</strong> Hittade <?= $debugInfo['query_found'] ?? 0 ?> namngrupper.
-   <?php if (!empty($debugInfo['skipped_different_uci'])): ?>
-   <br><strong>Hoppade över (olika UCI):</strong> <?= count($debugInfo['skipped_different_uci']) ?> - <?= implode(', ', array_slice($debugInfo['skipped_different_uci'], 0, 5)) ?>
-   <?php endif; ?>
-   <?php if (!empty($debugInfo['skipped_different_birth'])): ?>
-   <br><strong>Hoppade över (olika födelseår):</strong> <?= count($debugInfo['skipped_different_birth']) ?> - <?= implode(', ', array_slice($debugInfo['skipped_different_birth'], 0, 5)) ?>
-   <?php endif; ?>
-   <br><strong>Visas:</strong> <?= count($potentialDuplicates) ?> dubbletter
-  </div>
- </div>
 
  <?php $ignoredCount = count($ignoredDuplicates); ?>
  <?php if ($ignoredCount > 0): ?>
