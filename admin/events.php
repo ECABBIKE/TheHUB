@@ -3,11 +3,12 @@
  * Admin Events - V3 Design System
  */
 require_once __DIR__ . '/../config.php';
+require_admin();
 
 global $pdo;
 
-// Promotors should use promotor.php instead
-if (isRole('promotor')) {
+// Promotors use promotor.php instead
+if (isRole('promotor') && !hasRole('admin')) {
     redirect('/admin/promotor.php');
 }
 

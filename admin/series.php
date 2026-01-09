@@ -8,6 +8,17 @@ require_admin();
 global $pdo;
 $db = getDB();
 
+// Check if user is promotor only (not admin)
+$isPromotorOnly = isRole('promotor') && !hasRole('admin');
+$currentUserId = $_SESSION['admin_id'] ?? 0;
+
+// Check if promotor_series table exists
+$promotorSeriesTableExists = false;
+try {
+    $tables = $db->getAll("SHOW TABLES LIKE 'promotor_series'");
+    $promotorSeriesTableExists = !empty($tables);
+} catch (Exception $e) {}
+
 // Initialize message variables
 $message = '';
 $messageType = 'info';
@@ -184,11 +195,19 @@ $brandJoin = $brandColumnExists ? 'LEFT JOIN series_brands sb ON s.brand_id = sb
 // Rebuild where clause for aliased table
 $whereAliased = str_replace(['year', 'start_date', 'brand_id'], ['s.year', 's.start_date', 's.brand_id'], $whereClause);
 
+// Add promotor filtering - only show series they have access to
+$promotorJoin = '';
+$promotorWhere = '';
+if ($isPromotorOnly && $promotorSeriesTableExists && $currentUserId > 0) {
+    $promotorJoin = "INNER JOIN promotor_series ps ON s.id = ps.series_id AND ps.user_id = " . intval($currentUserId);
+}
+
 $sql = "SELECT s.id, s.name, s.type{$formatSelect}{$yearSelect}, s.status, s.start_date, s.end_date, s.logo, s.organizer,
     {$eventsCountSelect} as events_count,
     {$eventsWithResultsSelect} as events_with_results{$brandSelect}
     FROM series s
     {$brandJoin}
+    {$promotorJoin}
     {$whereAliased}
     ORDER BY sb.name ASC, s.year DESC, s.start_date DESC";
 
@@ -223,14 +242,20 @@ if ($seriesEventsTableExists) {
 // Page config
 $page_title = 'Serier';
 $page_group = 'standings';
-$page_actions = '<a href="/admin/series/brands" class="btn-admin btn-admin-secondary">
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>
-    Varumärken
-</a>
-<a href="/admin/series/edit?new=1" class="btn-admin btn-admin-primary">
-    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
-    Ny Serie
-</a>';
+
+// Promotors can't create new series or manage brands - only edit their assigned series
+if ($isPromotorOnly) {
+    $page_actions = ''; // No actions for promotors
+} else {
+    $page_actions = '<a href="/admin/series/brands" class="btn-admin btn-admin-secondary">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>
+        Varumärken
+    </a>
+    <a href="/admin/series/edit?new=1" class="btn-admin btn-admin-primary">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
+        Ny Serie
+    </a>';
+}
 
 // Include unified layout (uses same layout as public site)
 include __DIR__ . '/components/unified-layout.php';
@@ -461,9 +486,11 @@ include __DIR__ . '/components/unified-layout.php';
                                         <a href="/admin/series/edit/<?= $serie['id'] ?>" class="btn-admin btn-admin-sm btn-admin-secondary" title="Redigera">
                                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
                                         </a>
+                                        <?php if (!$isPromotorOnly): ?>
                                         <button onclick="deleteSeries(<?= $serie['id'] ?>, '<?= addslashes($serie['name']) ?>')" class="btn-admin btn-admin-sm btn-admin-danger" title="Ta bort">
                                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
                                         </button>
+                                        <?php endif; ?>
                                     </div>
                                 </td>
                             </tr>

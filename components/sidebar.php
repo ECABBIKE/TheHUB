@@ -155,10 +155,10 @@ function isAdminPageActive($item, $requestUri) {
         <?php
         $currentPath = $_SERVER['REQUEST_URI'];
         $promotorNav = [
-            ['id' => 'events', 'label' => 'Tävlingar', 'icon' => 'calendar-check', 'url' => '/admin/events.php', 'match' => '/admin/event'],
-            ['id' => 'series', 'label' => 'Serier', 'icon' => 'medal', 'url' => '/admin/series.php', 'match' => '/admin/series'],
-            ['id' => 'media', 'label' => 'Media', 'icon' => 'image', 'url' => '/admin/media.php', 'match' => '/admin/media'],
-            ['id' => 'sponsors', 'label' => 'Sponsorer', 'icon' => 'heart-handshake', 'url' => '/admin/sponsors.php', 'match' => '/admin/sponsor'],
+            ['id' => 'events', 'label' => 'Tävlingar', 'icon' => 'calendar', 'url' => '/admin/promotor.php', 'match' => '/admin/promotor.php'],
+            ['id' => 'series', 'label' => 'Serier', 'icon' => 'medal', 'url' => '/admin/promotor-series.php', 'match' => '/admin/promotor-series'],
+            ['id' => 'sponsors', 'label' => 'Sponsorer', 'icon' => 'image', 'url' => '/admin/sponsors.php', 'match' => '/admin/sponsor'],
+            ['id' => 'onsite', 'label' => 'Direktanmälan', 'icon' => 'user-plus', 'url' => '/admin/onsite-registration.php', 'match' => '/admin/onsite'],
         ];
         foreach ($promotorNav as $item):
             $isActive = strpos($currentPath, $item['match']) !== false;
