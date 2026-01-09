@@ -40,13 +40,16 @@ $ADMIN_TABS = [
                 'id' => 'economy',
                 'label' => 'Ekonomi',
                 'icon' => 'wallet',
-                'url' => '/admin/orders.php',
+                'url' => '/admin/ekonomi.php',
                 'pages' => [
+                    // Huvudpanel
+                    'ekonomi.php',
                     // Ordrar & betalningar
                     'orders.php',
                     'payment-settings.php',
                     'payment-recipients.php',
                     'gateway-settings.php',
+                    'certificates.php',
                     // Event-specifika
                     'event-payment.php',
                     'event-orders.php',
@@ -57,7 +60,12 @@ $ADMIN_TABS = [
                     'ticketing.php',
                     'event-tickets.php',
                     'refund-requests.php',
-                    'pricing-templates.php'
+                    'pricing-templates.php',
+                    'pricing-template-edit.php',
+                    // Anmälningsregler
+                    'registration-rules.php',
+                    // Promotor
+                    'promotor-payments.php'
                 ]
             ],
             [
