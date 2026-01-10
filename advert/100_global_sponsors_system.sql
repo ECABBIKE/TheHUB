@@ -246,4 +246,7 @@ INSERT INTO sponsor_settings (setting_key, setting_value, description) VALUES
 ('enable_analytics', '1', 'Aktivera sponsorstatistik'),
 ('require_approval_race_reports', '0', 'Kräv godkännande för race reports'),
 ('featured_reports_count', '3', 'Antal featured reports på startsida'),
-('instagram_auto_import', '0', 'Auto-importera från Instagram');
+('instagram_auto_import', '0', 'Auto-importera från Instagram'),
+('public_enabled', '0', 'Visa globala sponsorer för besökare (0=endast admin, 1=alla)'),
+('race_reports_public', '0', 'Visa race reports för besökare (0=endast admin, 1=alla)')
+ON DUPLICATE KEY UPDATE setting_key = setting_key;

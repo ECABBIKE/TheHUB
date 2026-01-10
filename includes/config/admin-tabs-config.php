@@ -43,6 +43,22 @@ $ADMIN_TABS = [
                 'pages' => ['sponsors.php', 'sponsor-edit.php']
             ],
             [
+                'id' => 'sponsor-placements',
+                'label' => 'Reklamplatser',
+                'icon' => 'layout-grid',
+                'url' => '/admin/sponsor-placements.php',
+                'pages' => ['sponsor-placements.php'],
+                'role' => 'super_admin'
+            ],
+            [
+                'id' => 'race-reports',
+                'label' => 'Race Reports',
+                'icon' => 'file-text',
+                'url' => '/admin/race-reports.php',
+                'pages' => ['race-reports.php', 'race-report-edit.php'],
+                'role' => 'super_admin'
+            ],
+            [
                 'id' => 'global-texts',
                 'label' => 'Texter',
                 'icon' => 'file-text',
