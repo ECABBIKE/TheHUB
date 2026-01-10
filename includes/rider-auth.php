@@ -64,8 +64,9 @@ function require_rider() {
 
 /**
  * Login rider with email and password
+ * @param bool $rememberMe If true, creates a persistent remember token
  */
-function rider_login($email, $password) {
+function rider_login($email, $password, $rememberMe = false) {
     $db = getDB();
 
     // Find rider by email
@@ -92,6 +93,12 @@ function rider_login($email, $password) {
     $_SESSION['rider_id'] = $rider['id'];
     $_SESSION['rider_name'] = $rider['firstname'] . ' ' . $rider['lastname'];
     $_SESSION['rider_email'] = $rider['email'];
+    $_SESSION['rider_remember_me'] = $rememberMe;
+
+    // If remember me, extend session cookie and create remember token
+    if ($rememberMe) {
+        rider_set_remember_token($rider['id']);
+    }
 
     // Update last login
     $db->update('riders', ['last_login' => date('Y-m-d H:i:s')], 'id = ?', [$rider['id']]);
@@ -100,12 +107,146 @@ function rider_login($email, $password) {
 }
 
 /**
+ * Set remember token cookie for persistent login
+ */
+function rider_set_remember_token($riderId) {
+    $db = getDB();
+    $lifetime = 30 * 24 * 60 * 60; // 30 days
+
+    // Generate secure token
+    $token = bin2hex(random_bytes(32));
+    $tokenHash = hash('sha256', $token);
+    $expires = date('Y-m-d H:i:s', time() + $lifetime);
+
+    // Store hashed token in database
+    $db->query(
+        "UPDATE riders SET remember_token = ?, remember_token_expires = ? WHERE id = ?",
+        [$tokenHash, $expires, $riderId]
+    );
+
+    // Set cookie with the original (unhashed) token
+    $secure = isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on';
+    setcookie(
+        'rider_remember',
+        $riderId . ':' . $token,
+        [
+            'expires' => time() + $lifetime,
+            'path' => '/',
+            'domain' => '',
+            'secure' => $secure,
+            'httponly' => true,
+            'samesite' => 'Lax'
+        ]
+    );
+
+    // Also extend session cookie
+    $params = session_get_cookie_params();
+    setcookie(
+        session_name(),
+        session_id(),
+        [
+            'expires' => time() + $lifetime,
+            'path' => $params['path'],
+            'domain' => $params['domain'],
+            'secure' => $params['secure'],
+            'httponly' => $params['httponly'],
+            'samesite' => $params['samesite'] ?? 'Lax'
+        ]
+    );
+}
+
+/**
+ * Check for remember token and auto-login if valid
+ * Call this at the start of pages that require authentication
+ */
+function rider_check_remember_token() {
+    // Already logged in
+    if (is_rider_logged_in()) {
+        return true;
+    }
+
+    // No remember cookie
+    if (empty($_COOKIE['rider_remember'])) {
+        return false;
+    }
+
+    // Parse cookie
+    $parts = explode(':', $_COOKIE['rider_remember'], 2);
+    if (count($parts) !== 2) {
+        rider_clear_remember_token();
+        return false;
+    }
+
+    list($riderId, $token) = $parts;
+    $riderId = (int)$riderId;
+
+    if ($riderId <= 0 || empty($token)) {
+        rider_clear_remember_token();
+        return false;
+    }
+
+    $db = getDB();
+
+    // Find rider with valid remember token
+    $tokenHash = hash('sha256', $token);
+    $rider = $db->getRow(
+        "SELECT * FROM riders
+         WHERE id = ? AND remember_token = ? AND remember_token_expires > NOW() AND active = 1",
+        [$riderId, $tokenHash]
+    );
+
+    if (!$rider) {
+        rider_clear_remember_token();
+        return false;
+    }
+
+    // Valid token - log the user in
+    $_SESSION['rider_id'] = $rider['id'];
+    $_SESSION['rider_name'] = $rider['firstname'] . ' ' . $rider['lastname'];
+    $_SESSION['rider_email'] = $rider['email'];
+    $_SESSION['rider_remember_me'] = true;
+
+    // Refresh the remember token (rotate for security)
+    rider_set_remember_token($rider['id']);
+
+    return true;
+}
+
+/**
+ * Clear remember token cookie and database entry
+ */
+function rider_clear_remember_token($riderId = null) {
+    // Clear cookie
+    setcookie('rider_remember', '', [
+        'expires' => time() - 3600,
+        'path' => '/',
+        'httponly' => true,
+        'samesite' => 'Lax'
+    ]);
+
+    // Clear database entry if rider ID provided
+    if ($riderId) {
+        $db = getDB();
+        $db->query(
+            "UPDATE riders SET remember_token = NULL, remember_token_expires = NULL WHERE id = ?",
+            [$riderId]
+        );
+    }
+}
+
+/**
  * Logout rider
  */
 function rider_logout() {
+    // Clear remember token if logged in
+    if (isset($_SESSION['rider_id'])) {
+        rider_clear_remember_token($_SESSION['rider_id']);
+    }
+
     unset($_SESSION['rider_id']);
     unset($_SESSION['rider_name']);
     unset($_SESSION['rider_email']);
+    unset($_SESSION['rider_remember_me']);
     session_destroy();
 }
 

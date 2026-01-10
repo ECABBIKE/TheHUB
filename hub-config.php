@@ -189,6 +189,10 @@ if (!function_exists('hub_is_logged_in')) {
         if (isset($_SESSION['rider_id']) && $_SESSION['rider_id'] > 0) {
             return true;
         }
+        // Check for "remember me" token and auto-login
+        if (function_exists('rider_check_remember_token') && rider_check_remember_token()) {
+            return true;
+        }
         return false;
     }
 }

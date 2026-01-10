@@ -129,6 +129,7 @@ function hub_get_current_page(): array {
             'registrations' => '/pages/profile/registrations.php',
             'results' => '/pages/profile/results.php',
             'receipts' => '/pages/profile/receipts.php',
+            'race-reports' => '/pages/profile/race-reports.php',
             'login' => '/pages/profile/login.php'
         ]
     ];

@@ -82,6 +82,9 @@ $disciplineNames = [
   </p>
 </div>
 
+<!-- Global Sponsor: Header Banner -->
+<?= render_global_sponsors('ranking', 'header_banner', '') ?>
+
 <!-- Discipline Tabs -->
 <div class="discipline-tabs mb-md">
   <a href="/ranking?discipline=GRAVITY&view=<?= $view ?>"
@@ -333,5 +336,8 @@ $disciplineNames = [
   <?php endif; ?>
 </nav>
 <?php endif; ?>
+
+<!-- Global Sponsor: Content Bottom -->
+<?= render_global_sponsors('ranking', 'content_bottom', 'Tack till våra partners') ?>
 
 <?php endif; ?>

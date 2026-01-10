@@ -97,6 +97,9 @@ try {
     <p class="page-subtitle"><?= $totalEvents ?> tävlingar med publicerade resultat</p>
 </div>
 
+<!-- Global Sponsor: Header Banner -->
+<?= render_global_sponsors('results', 'header_banner', '') ?>
+
 <!-- Filters -->
 <div class="filter-bar">
     <div class="filter-group">
@@ -204,6 +207,9 @@ try {
         <?php endforeach; ?>
     <?php endif; ?>
 </div>
+
+<!-- Global Sponsor: Content Bottom -->
+<?= render_global_sponsors('results', 'content_bottom', 'Tack till våra partners') ?>
 
 <script>
 function applyFilters() {

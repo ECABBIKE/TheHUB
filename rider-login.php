@@ -22,7 +22,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['login'])) {
  $message = 'Fyll i både e-post och lösenord';
  $messageType = 'error';
  } else {
- $result = rider_login($email, $password);
+ $rememberMe = isset($_POST['remember_me']) && $_POST['remember_me'] == '1';
+ $result = rider_login($email, $password, $rememberMe);
 
  if ($result['success']) {
   // Redirect to profile or original page
@@ -95,6 +96,13 @@ include __DIR__ . '/includes/layout-header.php';
     required
     placeholder="Ditt lösenord"
    >
+   </div>
+
+   <div class="form-group">
+    <label class="flex items-center gap-sm cursor-pointer">
+     <input type="checkbox" name="remember_me" value="1" class="form-checkbox">
+     <span class="text-sm">Kom ihåg mig i 30 dagar</span>
+    </label>
    </div>
 
    <button type="submit" name="login" class="btn btn--primary btn-lg w-full mb-md">

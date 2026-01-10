@@ -128,6 +128,11 @@ $recentResults = $resultStmt->fetchAll(PDO::FETCH_ASSOC);
         <span class="quick-link-label">Kvitton</span>
         <span class="quick-link-arrow">›</span>
     </a>
+    <a href="/profile/race-reports" class="quick-link">
+        <span class="quick-link-icon"><i data-lucide="file-text"></i></span>
+        <span class="quick-link-label">Mina Race Reports</span>
+        <span class="quick-link-arrow">›</span>
+    </a>
     <?php if (!empty($linkedChildren)): ?>
         <a href="/profile/children" class="quick-link">
             <span class="quick-link-icon"><i data-lucide="users"></i></span>

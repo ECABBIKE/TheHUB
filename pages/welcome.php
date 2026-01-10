@@ -119,6 +119,9 @@ $homepageLogo = getBranding('logos.homepage');
         </div>
     </div>
 
+    <!-- Global Sponsor: Header Banner -->
+    <?= render_global_sponsors('home', 'header_banner', '') ?>
+
     <!-- About Section with Title -->
     <div class="welcome-about text-center">
         <h1 class="welcome-about-title">THEHUB</h1>
@@ -293,4 +296,7 @@ $homepageLogo = getBranding('logos.homepage');
         </a>
     </div>
     <?php endif; ?>
+
+    <!-- Global Sponsor: Content Bottom -->
+    <?= render_global_sponsors('home', 'content_bottom', 'Tack till våra partners') ?>
 </div>
