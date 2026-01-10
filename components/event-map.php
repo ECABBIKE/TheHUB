@@ -737,13 +737,7 @@ if (!function_exists('render_event_map')) {
                         <div class="emap-segment-info">
                             <div class="emap-segment-name">
                                 <?= htmlspecialchars($segName) ?>
-                                <?php if ($segSponsorLogo):
-                                    // Handle both media library paths (uploads/media/...) and legacy paths
-                                    $logoPath = strpos($segSponsorLogo, 'uploads/') === 0 ? '/' . $segSponsorLogo : '/uploads/sponsors/' . $segSponsorLogo;
-                                ?>
-                                <span style="color: var(--color-text-secondary); font-weight: 400;">By</span>
-                                <img src="<?= htmlspecialchars($logoPath) ?>" alt="<?= htmlspecialchars($segSponsorName) ?>" class="emap-segment-sponsor">
-                                <?php elseif ($segSponsorName): ?>
+                                <?php if ($segSponsorName): ?>
                                 <span style="color: var(--color-text-secondary); font-weight: 400; font-size: 0.75rem;">By <?= htmlspecialchars($segSponsorName) ?></span>
                                 <?php endif; ?>
                             </div>
@@ -1111,16 +1105,7 @@ if (!function_exists('render_event_map')) {
                     const titleEl = document.getElementById(mapId + '-elevation-title');
                     const clearBtn = document.getElementById(mapId + '-elevation-clear');
                     if (titleEl) {
-                        if (segSponsorLogo) {
-                            // Handle both media library paths and legacy paths
-                            let logoPath = segSponsorLogo;
-                            if (segSponsorLogo.startsWith('uploads/')) {
-                                logoPath = '/' + segSponsorLogo;
-                            } else if (!segSponsorLogo.startsWith('/')) {
-                                logoPath = '/uploads/sponsors/' + segSponsorLogo;
-                            }
-                            titleEl.innerHTML = segName + ' <span class="emap-title-sponsor">By <img src="' + logoPath + '" alt="' + (segSponsorName || 'Sponsor') + '"></span>';
-                        } else if (segSponsorName) {
+                        if (segSponsorName) {
                             titleEl.innerHTML = segName + ' <span class="emap-title-sponsor">By ' + segSponsorName + '</span>';
                         } else {
                             titleEl.textContent = segName;
