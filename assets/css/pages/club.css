@@ -31,19 +31,20 @@
    (Same as rider profile-card-v4)
    ============================================ */
 .club-profile-card-v4 {
-    background: white;
+    background: var(--color-bg-surface);
     border-radius: var(--radius-lg);
     padding: 0;
     overflow: hidden;
     display: flex;
     flex-direction: column;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    box-shadow: var(--shadow-md);
+    border: 1px solid var(--color-border);
 }
 
 .club-logo-hero {
     width: 100%;
     aspect-ratio: 1 / 1;
-    background: linear-gradient(180deg, #f0f0f0 0%, #e5e5e5 100%);
+    background: var(--color-bg-sunken);
     overflow: hidden;
     display: flex;
     align-items: center;
@@ -1078,7 +1079,7 @@
 }
 
 .club-ranking-card .dashboard-stat-value--red {
-    color: #ef4444;
+    color: var(--color-error);
 }
 
 .club-ranking-card .dashboard-stat-label {
@@ -1155,7 +1156,7 @@
 .ranking-modal-summary .summary-value {
     font-size: var(--text-3xl);
     font-weight: 800;
-    color: #ef4444;
+    color: var(--color-error);
 }
 
 .history-stats-row {
@@ -1186,11 +1187,11 @@
 }
 
 .text-success {
-    color: #16a34a !important;
+    color: var(--color-success) !important;
 }
 
 .text-danger {
-    color: #dc2626 !important;
+    color: var(--color-error) !important;
 }
 
 .history-chart-container {
@@ -1511,7 +1512,7 @@
 }
 
 .club-modal {
-    background: var(--color-bg-card, #fff);
+    background: var(--color-bg-card);
     border-radius: var(--radius-lg);
     max-width: 480px;
     width: 100%;
@@ -1519,7 +1520,8 @@
     overflow: hidden;
     display: flex;
     flex-direction: column;
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    box-shadow: var(--shadow-lg);
+    border: 1px solid var(--color-border);
     transform: translateY(20px);
     transition: transform 0.2s;
 }
