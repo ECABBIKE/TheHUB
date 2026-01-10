@@ -130,7 +130,7 @@ $userTheme = 'light';
     <!-- CRITICAL: Inline CSS for light theme and FOUC prevention -->
     <style>
         html, body {
-            background: #F4F5F7;
+            background: #ebeced;
             color: #1A1A1A;
             margin: 0;
             padding: 0;

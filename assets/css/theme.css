@@ -80,12 +80,12 @@ html[data-theme="dark"] {
    LIGHT MODE - Samma visuella stil
    ============================================ */
 html[data-theme="light"] {
-  /* ===== BAKGRUNDER - Clean White Base ===== */
-  --color-bg-page: #f8f9fa;
-  --color-bg-surface: #ffffff;
+  /* ===== BAKGRUNDER - Clean Gray Base ===== */
+  --color-bg-page: #ebeced;
+  --color-bg-surface: #ebeced;
   --color-bg-card: #ffffff;
   --color-bg-elevated: #ffffff;
-  --color-bg-sunken: #f0f2f5;
+  --color-bg-sunken: #e2e3e5;
   --color-bg-hover: rgba(55, 212, 214, 0.04);
   --color-bg-active: rgba(55, 212, 214, 0.08);
 
