@@ -28,7 +28,6 @@ $headerLogo = function_exists('getBranding') ? getBranding('logos.sidebar') : nu
             <text x="20" y="25" text-anchor="middle" fill="currentColor" font-size="12" font-weight="bold">HUB</text>
         </svg>
         <?php endif; ?>
-        <span class="header-title">TheHUB</span>
     </a>
 
     <!-- Header Inline Sponsor (between logo and actions) -->
