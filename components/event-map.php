@@ -64,21 +64,17 @@ if (!function_exists('render_event_map')) {
 
         // POI type to Lucide icon mapping
         $poiIconMap = [
+            'tech_zone' => 'settings',
             'parking' => 'car',
             'start' => 'play',
             'finish' => 'flag',
-            'food' => 'utensils',
             'water' => 'droplet',
-            'wc' => 'door-open',
+            'food' => 'utensils',
+            'bike_wash' => 'spray-can',
+            'secretariat' => 'clipboard-list',
+            'medical' => 'heart-pulse',
             'toilet' => 'door-open',
-            'medical' => 'cross',
-            'first_aid' => 'cross',
-            'info' => 'info',
-            'camping' => 'tent',
-            'lift' => 'cable-car',
-            'arena' => 'map-pin',
-            'spectator' => 'eye',
-            'photo' => 'camera',
+            'shower' => 'droplets',
         ];
 
         // Group POIs by type
