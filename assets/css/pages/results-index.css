@@ -487,16 +487,23 @@
     font-size: 1.75rem;
   }
 
+  /* Filter bar - edge-to-edge on mobile */
   .filter-bar {
     flex-direction: column;
     background: var(--color-bg-card);
-    padding: var(--space-sm);
-    border-radius: var(--radius-lg);
+    padding: var(--space-sm) var(--container-padding, 16px);
     gap: var(--space-sm);
+    margin-left: calc(-1 * var(--container-padding, 16px));
+    margin-right: calc(-1 * var(--container-padding, 16px));
+    width: calc(100% + var(--container-padding, 16px) * 2);
+    border-radius: 0;
+    border-left: none;
+    border-right: none;
   }
 
   .filter-group {
     width: 100%;
+    max-width: none;
   }
 
   .filter-label {
