@@ -41,6 +41,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             $error = 'Kunde inte skapa placering: ' . ($result['error'] ?? 'Okänt fel');
         }
+    } elseif ($action === 'update_placement') {
+        $result = $sponsorManager->updatePlacement((int)$_POST['placement_id'], [
+            'sponsor_id' => (int)$_POST['sponsor_id'],
+            'page_type' => $_POST['page_type'],
+            'position' => $_POST['position'],
+            'display_order' => (int)($_POST['display_order'] ?? 0),
+            'is_active' => isset($_POST['is_active']) ? 1 : 0,
+            'start_date' => $_POST['start_date'] ?: null,
+            'end_date' => $_POST['end_date'] ?: null,
+            'impressions_target' => $_POST['impressions_target'] ?: null
+        ]);
+
+        if ($result['success']) {
+            $message = 'Placering uppdaterad!';
+        } else {
+            $error = 'Kunde inte uppdatera placering: ' . ($result['error'] ?? 'Okänt fel');
+        }
     } elseif ($action === 'delete_placement') {
         $result = $sponsorManager->deletePlacement((int)$_POST['placement_id']);
         if ($result['success']) {
@@ -81,18 +98,21 @@ $pageTypes = [
     'database' => 'Databas',
     'ranking' => 'Ranking',
     'calendar' => 'Kalender',
+    'rider' => 'Åkarsida',
+    'club' => 'Klubbsida',
+    'event' => 'Eventsida',
     'blog' => 'Race Reports',
     'all' => 'Alla sidor'
 ];
 
+// Note: sidebar positions only work on pages with sidebar layout
+// Currently working positions: header_inline, header_banner, content_top, content_bottom, footer
 $positions = [
-    'header_banner' => 'Header Banner',
-    'sidebar_top' => 'Sidebar Topp',
-    'sidebar_mid' => 'Sidebar Mitt',
+    'header_inline' => 'Header (mitt i menyraden)',
+    'header_banner' => 'Header Banner (under sidrubrik)',
     'content_top' => 'Innehåll Topp',
-    'content_mid' => 'Innehåll Mitt',
     'content_bottom' => 'Innehåll Botten',
-    'footer' => 'Footer'
+    'footer' => 'Footer (via layout)'
 ];
 
 $tierLabels = [
@@ -486,6 +506,9 @@ input:checked + .toggle-slider:before {
                 <?php endif; ?>
 
                 <div class="placement-actions">
+                    <button type="button" class="btn btn-ghost btn-sm" onclick="toggleEdit(<?= $placement['id'] ?>)">
+                        <i data-lucide="pencil"></i> Redigera
+                    </button>
                     <form method="POST" style="display: inline;" onsubmit="return confirm('Ta bort denna placering?');">
                         <input type="hidden" name="action" value="delete_placement">
                         <input type="hidden" name="placement_id" value="<?= $placement['id'] ?>">
@@ -494,10 +517,99 @@ input:checked + .toggle-slider:before {
                         </button>
                     </form>
                 </div>
+
+                <!-- Edit Form (hidden by default) -->
+                <div class="edit-form" id="edit-form-<?= $placement['id'] ?>" style="display: none; margin-top: var(--space-md); padding-top: var(--space-md); border-top: 1px solid var(--color-border);">
+                    <form method="POST">
+                        <input type="hidden" name="action" value="update_placement">
+                        <input type="hidden" name="placement_id" value="<?= $placement['id'] ?>">
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Sponsor</label>
+                                <select name="sponsor_id" required>
+                                    <?php foreach ($sponsors as $sponsor): ?>
+                                        <option value="<?= $sponsor['id'] ?>" <?= $placement['sponsor_id'] == $sponsor['id'] ? 'selected' : '' ?>>
+                                            <?= htmlspecialchars($sponsor['name']) ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Sidtyp</label>
+                                <select name="page_type" required>
+                                    <?php foreach ($pageTypes as $key => $label): ?>
+                                        <option value="<?= $key ?>" <?= $placement['page_type'] == $key ? 'selected' : '' ?>><?= $label ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+
+                            <div class="form-group">
+                                <label>Position</label>
+                                <select name="position" required>
+                                    <?php foreach ($positions as $key => $label): ?>
+                                        <option value="<?= $key ?>" <?= $placement['position'] == $key ? 'selected' : '' ?>><?= $label ?></option>
+                                    <?php endforeach; ?>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>Sorteringsordning</label>
+                                <input type="number" name="display_order" value="<?= $placement['display_order'] ?>" min="0">
+                            </div>
+
+                            <div class="form-group">
+                                <label>Startdatum</label>
+                                <input type="date" name="start_date" value="<?= $placement['start_date'] ? date('Y-m-d', strtotime($placement['start_date'])) : '' ?>">
+                            </div>
+
+                            <div class="form-group">
+                                <label>Slutdatum</label>
+                                <input type="date" name="end_date" value="<?= $placement['end_date'] ? date('Y-m-d', strtotime($placement['end_date'])) : '' ?>">
+                            </div>
+
+                            <div class="form-group">
+                                <label>Max visningar</label>
+                                <input type="number" name="impressions_target" value="<?= $placement['impressions_target'] ?>" min="0" placeholder="Obegränsat">
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label>
+                                    <input type="checkbox" name="is_active" value="1" <?= $placement['is_active'] ? 'checked' : '' ?>>
+                                    Aktiv
+                                </label>
+                            </div>
+                        </div>
+
+                        <div style="display: flex; gap: var(--space-sm);">
+                            <button type="submit" class="btn btn-primary btn-sm">
+                                <i data-lucide="save"></i> Spara
+                            </button>
+                            <button type="button" class="btn btn-ghost btn-sm" onclick="toggleEdit(<?= $placement['id'] ?>)">
+                                Avbryt
+                            </button>
+                        </div>
+                    </form>
+                </div>
             </div>
         <?php endforeach; ?>
     </div>
 <?php endif; ?>
+
+<script>
+function toggleEdit(placementId) {
+    const form = document.getElementById('edit-form-' + placementId);
+    if (form) {
+        form.style.display = form.style.display === 'none' ? 'block' : 'none';
+        lucide.createIcons();
+    }
+}
+</script>
 
 <!-- Tier Benefits -->
 <h3 style="margin: var(--space-xl) 0 var(--space-md);">Sponsornivåer och förmåner</h3>

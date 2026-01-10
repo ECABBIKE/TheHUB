@@ -50,7 +50,7 @@ class GlobalSponsorManager {
                         s.logo_dark,
                         s.website,
                         s.tier,
-                        s.banner_image,
+                        COALESCE(mb.filepath, s.banner_image) as banner_image,
                         sp.id as placement_id,
                         sp.position,
                         sp.display_order,
@@ -61,6 +61,7 @@ class GlobalSponsorManager {
                     FROM sponsors s
                     INNER JOIN sponsor_placements sp ON s.id = sp.sponsor_id
                     LEFT JOIN media m ON s.logo_media_id = m.id
+                    LEFT JOIN media mb ON s.logo_banner_id = mb.id
                     WHERE sp.page_type IN (:page_type, 'all')
                     AND sp.position = :position
                     AND sp.is_active = 1
@@ -254,8 +255,9 @@ class GlobalSponsorManager {
                          onclick="trackSponsorClick(' . intval($sponsor['id']) . ', ' . intval($sponsor['placement_id'] ?? 0) . ')">';
         }
 
-        // Använd banner för header, annars logo
-        if ($position === 'header_banner' && !empty($sponsor['banner_image'])) {
+        // Använd banner för breda positioner (header_banner, header_inline, content_top, content_bottom)
+        $useBanner = in_array($position, ['header_banner', 'header_inline', 'content_top', 'content_bottom', 'footer']);
+        if ($useBanner && !empty($sponsor['banner_image'])) {
             $html .= '<img src="' . htmlspecialchars($sponsor['banner_image']) . '"
                          alt="' . htmlspecialchars($sponsor['name']) . '"
                          class="sponsor-banner">';
@@ -310,6 +312,25 @@ class GlobalSponsorManager {
         $html .= '</div></section>';
 
         return $html;
+    }
+
+    /**
+     * Hämta enskild placering
+     */
+    public function getPlacement(int $id): ?array {
+        try {
+            $stmt = $this->pdo->prepare("
+                SELECT sp.*, s.name as sponsor_name, s.tier as sponsor_tier
+                FROM sponsor_placements sp
+                INNER JOIN sponsors s ON sp.sponsor_id = s.id
+                WHERE sp.id = :id
+            ");
+            $stmt->execute([':id' => $id]);
+            return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+        } catch (PDOException $e) {
+            error_log("getPlacement error: " . $e->getMessage());
+            return null;
+        }
     }
 
     /**

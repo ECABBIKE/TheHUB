@@ -36,29 +36,6 @@ $ADMIN_TABS = [
                 'pages' => ['results.php', 'edit-results.php', 'clear-event-results.php']
             ],
             [
-                'id' => 'sponsors',
-                'label' => 'Sponsorer',
-                'icon' => 'heart-handshake',
-                'url' => '/admin/sponsors.php',
-                'pages' => ['sponsors.php', 'sponsor-edit.php']
-            ],
-            [
-                'id' => 'sponsor-placements',
-                'label' => 'Reklamplatser',
-                'icon' => 'layout-grid',
-                'url' => '/admin/sponsor-placements.php',
-                'pages' => ['sponsor-placements.php'],
-                'role' => 'super_admin'
-            ],
-            [
-                'id' => 'race-reports',
-                'label' => 'Race Reports',
-                'icon' => 'file-text',
-                'url' => '/admin/race-reports.php',
-                'pages' => ['race-reports.php', 'race-report-edit.php'],
-                'role' => 'super_admin'
-            ],
-            [
                 'id' => 'global-texts',
                 'label' => 'Texter',
                 'icon' => 'file-text',
@@ -226,6 +203,29 @@ $ADMIN_TABS = [
                 'icon' => 'image',
                 'url' => '/admin/media.php',
                 'pages' => ['media.php']
+            ],
+            [
+                'id' => 'sponsors',
+                'label' => 'Sponsorer',
+                'icon' => 'heart-handshake',
+                'url' => '/admin/sponsors.php',
+                'pages' => ['sponsors.php', 'sponsor-edit.php']
+            ],
+            [
+                'id' => 'sponsor-placements',
+                'label' => 'Reklamplatser',
+                'icon' => 'layout-grid',
+                'url' => '/admin/sponsor-placements.php',
+                'pages' => ['sponsor-placements.php'],
+                'role' => 'super_admin'
+            ],
+            [
+                'id' => 'race-reports',
+                'label' => 'Race Reports',
+                'icon' => 'file-text',
+                'url' => '/admin/race-reports.php',
+                'pages' => ['race-reports.php', 'race-report-edit.php'],
+                'role' => 'super_admin'
             ]
         ]
     ],

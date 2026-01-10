@@ -9,6 +9,44 @@ require_once __DIR__ . '/../config.php';
 
 $db = getDB();
 
+// Check if required table exists
+$tableExists = false;
+try {
+    $check = $db->getAll("SHOW TABLES LIKE 'event_pricing_rules'");
+    $tableExists = !empty($check);
+} catch (Exception $e) {
+    $tableExists = false;
+}
+
+if (!$tableExists) {
+    // Show helpful error message instead of white screen
+    $page_title = 'Eventpriser - Migration krävs';
+    include __DIR__ . '/components/unified-layout.php';
+    ?>
+    <div class="card">
+        <div class="card-body" style="text-align: center; padding: var(--space-xl);">
+            <i data-lucide="alert-triangle" style="width: 48px; height: 48px; color: var(--color-warning); margin-bottom: var(--space-md);"></i>
+            <h2>Migration krävs</h2>
+            <p style="color: var(--color-text-secondary); margin: var(--space-md) 0;">
+                Tabellen <code>event_pricing_rules</code> finns inte i databasen.<br>
+                Kör Migration 101 för att skapa de nödvändiga tabellerna.
+            </p>
+            <div style="display: flex; gap: var(--space-md); justify-content: center; margin-top: var(--space-lg);">
+                <a href="/admin/migrations/101_pricing_templates_system.php" class="btn btn-primary">
+                    <i data-lucide="database"></i> Kör Migration 101
+                </a>
+                <a href="/admin/events.php" class="btn btn-secondary">
+                    <i data-lucide="arrow-left"></i> Tillbaka till events
+                </a>
+            </div>
+        </div>
+    </div>
+    <script>if(typeof lucide !== 'undefined') lucide.createIcons();</script>
+    <?php
+    include __DIR__ . '/../includes/admin-footer.php';
+    exit;
+}
+
 // Get event ID (supports both 'id' and 'event_id')
 $eventId = isset($_GET['id']) ? intval($_GET['id']) : (isset($_GET['event_id']) ? intval($_GET['event_id']) : 0);
 

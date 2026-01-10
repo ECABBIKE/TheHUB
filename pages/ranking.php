@@ -4,6 +4,11 @@
  * Matches v2 structure with discipline tabs
  */
 
+// Define page type for sponsor placements
+if (!defined('HUB_PAGE_TYPE')) {
+    define('HUB_PAGE_TYPE', 'ranking');
+}
+
 $db = hub_db();
 
 // Include ranking functions - try multiple paths for V3 routing compatibility
@@ -84,6 +89,9 @@ $disciplineNames = [
 
 <!-- Global Sponsor: Header Banner -->
 <?= render_global_sponsors('ranking', 'header_banner', '') ?>
+
+<!-- Global Sponsor: Content Top -->
+<?= render_global_sponsors('ranking', 'content_top', '') ?>
 
 <!-- Discipline Tabs -->
 <div class="discipline-tabs mb-md">
