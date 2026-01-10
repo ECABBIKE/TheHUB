@@ -15,7 +15,29 @@ if (!function_exists('hub_asset')) {
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover, user-scalable=no">
 <meta name="description" content="TheHUB – Sveriges plattform för gravity cycling">
 
-<!-- CRITICAL: FOUC Prevention - must be FIRST -->
+<!-- CRITICAL: Theme & FOUC Prevention - must be FIRST -->
+<script>
+(function() {
+    // Detect saved theme preference immediately (before CSS loads)
+    var theme = 'dark'; // Default
+    try {
+        var saved = localStorage.getItem('thehub-theme');
+        if (saved) theme = saved;
+        else {
+            var cookie = document.cookie.match(/(^| )hub_theme=([^;]+)/);
+            if (cookie) theme = cookie[2];
+        }
+    } catch(e) {}
+
+    // Resolve 'auto' to actual theme
+    if (theme === 'auto') {
+        theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    }
+
+    // Apply immediately to prevent flash
+    document.documentElement.setAttribute('data-theme', theme);
+})();
+</script>
 <style>
     /* Hide content until CSS is ready */
     .main-content { opacity: 0; }
@@ -23,8 +45,10 @@ if (!function_exists('hub_asset')) {
     /* Fallback: show after 300ms if JS fails */
     @keyframes fouc-fallback { to { opacity: 1; } }
     .main-content { animation: fouc-fallback 0.1s ease-out 0.3s forwards; }
-    /* Prevent layout shift */
-    html, body { background: #F4F5F7; margin: 0; padding: 0; }
+    /* Prevent layout shift - use theme-aware background */
+    html, body { margin: 0; padding: 0; }
+    html[data-theme="dark"], html[data-theme="dark"] body { background: #0A0C14; }
+    html[data-theme="light"], html[data-theme="light"] body { background: #F4F5F7; }
 </style>
 
 <!-- PWA Meta Tags -->
@@ -164,18 +188,47 @@ if (file_exists($brandingFile)) {
         $cssOutput = '';
         $colorCount = 0;
 
-        // Process custom colors
-        if (!empty($brandingData['colors'])) {
-            foreach ($brandingData['colors'] as $cssVar => $value) {
-                // Security: Only allow CSS custom properties (start with --)
-                if (strpos($cssVar, '--') === 0) {
-                    // Security: Sanitize value
-                    $safeValue = htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
+        // Process custom colors - supports both old flat format and new dark/light format
+        $darkColorsCss = '';
+        $lightColorsCss = '';
 
-                    // Validate it's a reasonable CSS value (hex, rgb, rgba, hsl, etc.)
-                    if (preg_match('/^(#[0-9A-Fa-f]{3,8}|rgba?\([^)]+\)|hsla?\([^)]+\)|[a-z]+)$/', $value)) {
-                        $cssOutput .= $cssVar . ':' . $safeValue . ';';
-                        $colorCount++;
+        if (!empty($brandingData['colors'])) {
+            $colors = $brandingData['colors'];
+
+            // Check if using new dual-theme format
+            if (isset($colors['dark']) || isset($colors['light'])) {
+                // New format: colors.dark and colors.light
+                if (!empty($colors['dark']) && is_array($colors['dark'])) {
+                    foreach ($colors['dark'] as $cssVar => $value) {
+                        if (strpos($cssVar, '--') === 0) {
+                            $safeValue = htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
+                            if (preg_match('/^(#[0-9A-Fa-f]{3,8}|rgba?\([^)]+\)|hsla?\([^)]+\)|[a-z]+)$/', $value)) {
+                                $darkColorsCss .= $cssVar . ':' . $safeValue . ';';
+                                $colorCount++;
+                            }
+                        }
+                    }
+                }
+                if (!empty($colors['light']) && is_array($colors['light'])) {
+                    foreach ($colors['light'] as $cssVar => $value) {
+                        if (strpos($cssVar, '--') === 0) {
+                            $safeValue = htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
+                            if (preg_match('/^(#[0-9A-Fa-f]{3,8}|rgba?\([^)]+\)|hsla?\([^)]+\)|[a-z]+)$/', $value)) {
+                                $lightColorsCss .= $cssVar . ':' . $safeValue . ';';
+                                $colorCount++;
+                            }
+                        }
+                    }
+                }
+            } else {
+                // Legacy flat format - treat as dark theme colors
+                foreach ($colors as $cssVar => $value) {
+                    if (strpos($cssVar, '--') === 0) {
+                        $safeValue = htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
+                        if (preg_match('/^(#[0-9A-Fa-f]{3,8}|rgba?\([^)]+\)|hsla?\([^)]+\)|[a-z]+)$/', $value)) {
+                            $darkColorsCss .= $cssVar . ':' . $safeValue . ';';
+                            $colorCount++;
+                        }
                     }
                 }
             }
@@ -293,83 +346,30 @@ if (file_exists($brandingFile)) {
             }
         }
 
-        // TEMPORARILY DISABLED - Process dark mode colors (bike app style)
-        // Disabled until site functionality is verified
-        /*
-        $darkColors = $brandingData['dark_colors'] ?? null;
-        $darkModeCss = '';
+        // Build theme-specific CSS from branding colors
+        $themeColorsCss = '';
 
-        if ($darkColors && is_array($darkColors)) {
-            // Apply ONLY to html[data-theme="dark"] - does NOT affect light mode!
-            $darkModeCss .= 'html[data-theme="dark"]{';
-
-            // Huvudbakgrund (page background)
-            if (!empty($darkColors['bg_page']) && preg_match('/^#[0-9A-Fa-f]{6}$/', $darkColors['bg_page'])) {
-                $bgPage = $darkColors['bg_page'];
-                $darkModeCss .= '--color-bg-page:' . htmlspecialchars($bgPage, ENT_QUOTES, 'UTF-8') . ';';
-
-                // Auto-generate sunken (darker)
-                list($r, $g, $b) = sscanf($bgPage, "#%02x%02x%02x");
-                $sunkenR = max(0, (int)($r * 0.7));
-                $sunkenG = max(0, (int)($g * 0.7));
-                $sunkenB = max(0, (int)($b * 0.7));
-                $darkModeCss .= '--color-bg-sunken:#' . sprintf('%02X%02X%02X', $sunkenR, $sunkenG, $sunkenB) . ';';
-
-                // Auto-generate gradient from bg-page
-                $startR = min(255, (int)($r * 0.95));
-                $startG = min(255, (int)($g * 0.95));
-                $startB = min(255, (int)($b * 0.95));
-                $darkModeCss .= '--gradient-start:#' . sprintf('%02X%02X%02X', $startR, $startG, $startB) . ';';
-
-                $endR = max(0, (int)($r * 1.1));
-                $endG = max(0, (int)($g * 1.1));
-                $endB = max(0, (int)($b * 1.1));
-                $darkModeCss .= '--gradient-end:#' . sprintf('%02X%02X%02X', $endR, $endG, $endB) . ';';
-            }
-
-            // Kortbakgrund (card background)
-            if (!empty($darkColors['bg_card']) && preg_match('/^#[0-9A-Fa-f]{6}$/', $darkColors['bg_card'])) {
-                $bgCard = $darkColors['bg_card'];
-                $darkModeCss .= '--color-bg-card:' . htmlspecialchars($bgCard, ENT_QUOTES, 'UTF-8') . ';';
-                $darkModeCss .= '--color-bg-surface:' . htmlspecialchars($bgCard, ENT_QUOTES, 'UTF-8') . ';';
-                $darkModeCss .= '--color-bg-elevated:' . htmlspecialchars($bgCard, ENT_QUOTES, 'UTF-8') . ';';
-
-                // Update glass effect background to match card color
-                list($r, $g, $b) = sscanf($bgCard, "#%02x%02x%02x");
-                $darkModeCss .= '--glass-bg:rgba(' . $r . ',' . $g . ',' . $b . ',0.75);';
-            }
-
-            // Accentfärg
-            if (!empty($darkColors['accent']) && preg_match('/^#[0-9A-Fa-f]{6}$/', $darkColors['accent'])) {
-                $accent = $darkColors['accent'];
-                $darkModeCss .= '--color-accent:' . htmlspecialchars($accent, ENT_QUOTES, 'UTF-8') . ';';
-                $darkModeCss .= '--color-accent-text:' . htmlspecialchars($accent, ENT_QUOTES, 'UTF-8') . ';';
-
-                // Auto-generate hover (lighter)
-                list($r, $g, $b) = sscanf($accent, "#%02x%02x%02x");
-                $hoverR = min(255, (int)($r * 1.2));
-                $hoverG = min(255, (int)($g * 1.2));
-                $hoverB = min(255, (int)($b * 1.2));
-                $darkModeCss .= '--color-accent-hover:#' . sprintf('%02X%02X%02X', $hoverR, $hoverG, $hoverB) . ';';
-
-                // Auto-generate light variant (rgba with low opacity)
-                $darkModeCss .= '--color-accent-light:rgba(' . $r . ',' . $g . ',' . $b . ',0.15);';
-                $darkModeCss .= '--accent-glow:rgba(' . $r . ',' . $g . ',' . $b . ',0.2);';
-            }
-
-            $darkModeCss .= '}';
+        // Dark theme colors (applied to :root and html[data-theme="dark"])
+        if ($darkColorsCss) {
+            // Apply to :root (default) since dark is the default theme
+            $themeColorsCss .= ':root,' . 'html[data-theme="dark"]{' . $darkColorsCss . '}';
         }
-        */
-        $darkModeCss = ''; // Set to empty while disabled
+
+        // Light theme colors (applied only to html[data-theme="light"])
+        if ($lightColorsCss) {
+            $themeColorsCss .= 'html[data-theme="light"]{' . $lightColorsCss . '}';
+        }
 
         // Output if we have anything to output
-        if ($colorCount > 0 || $responsiveCss || $layout || $gradient || $darkModeCss) {
+        if ($colorCount > 0 || $responsiveCss || $layout || $gradient || $themeColorsCss) {
             echo '<style id="custom-branding" data-colors="' . $colorCount . '">';
-            // Apply custom colors ONLY to :root (not to theme selectors)
-            // This allows theme.css to handle light/dark mode properly
-            echo ':root{' . $cssOutput . '}';
+            // Layout/responsive settings go to :root
+            if ($cssOutput) {
+                echo ':root{' . $cssOutput . '}';
+            }
+            // Theme-specific colors
+            echo $themeColorsCss;
             echo $responsiveCss;
-            echo $darkModeCss;
             echo '</style>';
         }
     }

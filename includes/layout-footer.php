@@ -37,7 +37,8 @@
     }
     ?>
 
-    <!-- Theme switcher removed - always light theme to prevent flash -->
+    <!-- Theme System -->
+    <script src="/assets/js/theme.js?v=<?= filemtime(__DIR__ . '/../assets/js/theme.js') ?>"></script>
 
     <!-- FOUC Prevention: Reveal content after CSS is ready -->
     <script>
@@ -130,7 +131,6 @@
         <?php endif; ?>
     </script>
 
-    <!-- Theme script removed - always light theme -->
     <script src="/assets/js/dropdown.js?v=<?= filemtime(__DIR__ . '/../assets/js/dropdown.js') ?>"></script>
 
     <!-- Viewport System - dynamic vh/vw for responsive heights -->
