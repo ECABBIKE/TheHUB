@@ -127,11 +127,11 @@ $userTheme = 'light';
     window.HUB.isLoggedIn = <?= $isLoggedIn ? 'true' : 'false' ?>;
     </script>
 
-    <!-- CRITICAL: Inline CSS for light theme and FOUC prevention -->
+    <!-- CRITICAL: Inline CSS for FOUC prevention -->
     <style>
         html, body {
-            background: #ebeced;
-            color: #1A1A1A;
+            background: var(--color-bg-page);
+            color: var(--color-text-primary);
             margin: 0;
             padding: 0;
         }
@@ -175,8 +175,8 @@ $userTheme = 'light';
                 transform: translateX(0) !important;
                 transition: none !important;
                 z-index: 100 !important;
-                background: #ebeced !important;
-                border-right: 1px solid rgba(55, 212, 214, 0.15) !important;
+                background: var(--color-bg-surface) !important;
+                border-right: 1px solid var(--color-border) !important;
             }
 
             /* Hide overlay completely on desktop */
@@ -210,8 +210,8 @@ $userTheme = 'light';
             display: none;
             align-items: center;
             justify-content: center;
-            background: var(--color-bg-surface, #fff);
-            border: 1px solid var(--color-border, #e5e7eb);
+            background: var(--color-bg-surface);
+            border: 1px solid var(--color-border);
             border-radius: 8px;
             cursor: pointer;
             box-shadow: 0 2px 8px rgba(0,0,0,0.1);
@@ -246,7 +246,7 @@ $userTheme = 'light';
                 width: 260px !important;
                 height: 100vh !important;
                 height: 100dvh !important;
-                background: var(--color-bg-surface, #fff) !important;
+                background: var(--color-bg-surface) !important;
                 transform: translateX(-100%) !important;
                 transition: transform 0.3s ease !important;
                 z-index: 1100 !important;
@@ -284,13 +284,13 @@ $userTheme = 'light';
                 width: 64px !important;
                 height: calc(100vh - var(--header-height, 60px)) !important;
                 height: calc(100dvh - var(--header-height, 60px)) !important;
-                background: var(--color-bg-surface, #fff) !important;
+                background: var(--color-bg-surface) !important;
                 transform: translateX(0) !important;
                 z-index: 200 !important;
                 padding: 4px 0 !important;
                 display: flex !important;
                 flex-direction: column !important;
-                border-right: 1px solid var(--color-border, #e5e7eb) !important;
+                border-right: 1px solid var(--color-border) !important;
             }
 
             .sidebar .sidebar-nav {
@@ -346,6 +346,9 @@ $userTheme = 'light';
 
     <!-- 3. Theme Variables (Light/Dark/Auto Support) -->
     <link rel="stylesheet" href="/assets/css/theme.css?v=<?= filemtime(__DIR__ . '/../assets/css/theme.css') ?>">
+    
+    <!-- 3.5. Branding Overrides (from uploads/branding.json) - MUST come after theme.css -->
+    <?= generateBrandingCSS() ?>
 
     <!-- 4. Layout System -->
     <link rel="stylesheet" href="/assets/css/layout.css?v=<?= filemtime(__DIR__ . '/../assets/css/layout.css') ?>">

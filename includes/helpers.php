@@ -82,6 +82,50 @@ function getBranding($key = null) {
     return $value;
 }
 
+/**
+ * Generate inline CSS from branding.json that overrides theme.css defaults
+ * This is the BRIDGE between branding.json and the visual theme
+ */
+function generateBrandingCSS() {
+    $branding = getBranding();
+
+    // If no custom branding, return empty string (use theme.css defaults)
+    if (empty($branding['colors'])) {
+        return '';
+    }
+
+    $css = '<style id="branding-overrides">';
+
+    // Generate CSS for dark theme
+    if (!empty($branding['colors']['dark'])) {
+        $css .= "\n:root, html[data-theme=\"dark\"] {\n";
+        foreach ($branding['colors']['dark'] as $varName => $value) {
+            // SECURITY: Variable name must start with --
+            if (strpos($varName, '--') !== 0) continue;
+            // SECURITY: Remove dangerous characters from value
+            $safeValue = preg_replace('/[;<>{}]/', '', $value);
+            $css .= "  {$varName}: {$safeValue};\n";
+        }
+        $css .= "}\n";
+    }
+
+    // Generate CSS for light theme
+    if (!empty($branding['colors']['light'])) {
+        $css .= "\nhtml[data-theme=\"light\"] {\n";
+        foreach ($branding['colors']['light'] as $varName => $value) {
+            // SECURITY: Variable name must start with --
+            if (strpos($varName, '--') !== 0) continue;
+            // SECURITY: Remove dangerous characters from value
+            $safeValue = preg_replace('/[;<>{}]/', '', $value);
+            $css .= "  {$varName}: {$safeValue};\n";
+        }
+        $css .= "}\n";
+    }
+
+    $css .= '</style>';
+    return $css;
+}
+
 function checkLicense($rider) {
   $currentYear = (int)date('Y');
 
