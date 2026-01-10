@@ -521,7 +521,7 @@ foreach ($globalTexts as $gt) {
     $globalTextMap[$gt['field_key']] = $gt['content'];
 }
 
-// Get configured classes for this event
+// Get configured classes for this event (from event_pricing_rules)
 $eventClasses = [];
 try {
     $eventClasses = $db->getAll("
@@ -533,6 +533,26 @@ try {
     ", [$id]);
 } catch (Exception $e) {
     error_log("EVENT EDIT: Could not load event classes: " . $e->getMessage());
+}
+
+// Get pricing template and its prices if a template is assigned
+$assignedTemplate = null;
+$templatePrices = [];
+if (!empty($event['pricing_template_id'])) {
+    try {
+        $assignedTemplate = $db->getRow("SELECT * FROM pricing_templates WHERE id = ?", [$event['pricing_template_id']]);
+        if ($assignedTemplate) {
+            $templatePrices = $db->getAll("
+                SELECT ptr.*, c.id as class_id, c.name as class_name, c.display_name, c.gender
+                FROM pricing_template_rules ptr
+                JOIN classes c ON c.id = ptr.class_id
+                WHERE ptr.template_id = ?
+                ORDER BY c.sort_order ASC, c.name ASC
+            ", [$event['pricing_template_id']]);
+        }
+    } catch (Exception $e) {
+        error_log("EVENT EDIT: Could not load pricing template: " . $e->getMessage());
+    }
 }
 
 // Get all sponsors for selection
@@ -784,46 +804,118 @@ include __DIR__ . '/components/unified-layout.php';
         </fieldset>
     </details>
 
-    <!-- EVENT CLASSES - Hidden for promotors -->
+    <!-- EVENT CLASSES & PRICING - Hidden for promotors -->
     <?php if (!$isPromotorOnly): ?>
-    <details class="admin-card mb-lg">
-        <summary class="admin-card-header collapsible-header flex justify-between items-center">
-            <h2>Klasser</h2>
-            <span class="flex items-center gap-sm">
-                <span class="text-secondary text-sm">Klicka för att expandera</span>
-                <a href="/admin/event-pricing.php?id=<?= $id ?>" class="btn-admin btn-admin-sm btn-admin-secondary" onclick="event.stopPropagation()">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
-                    Hantera klasser
-                </a>
-            </span>
+    <details class="admin-card mb-lg" open>
+        <summary class="admin-card-header collapsible-header">
+            <h2>Klasser och Startavgifter</h2>
+            <span class="text-secondary text-sm">Klicka för att expandera/minimera</span>
         </summary>
         <div class="admin-card-body">
-            <?php if (empty($eventClasses)): ?>
-                <div class="text-secondary text-center p-lg">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-xl mb-sm opacity-50"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-                    <p class="mb-sm">Inga klasser konfigurerade för detta event.</p>
-                    <a href="/admin/event-pricing.php?id=<?= $id ?>" class="btn-admin btn-admin-primary">
-                        Konfigurera klasser & priser
+            <?php if ($assignedTemplate && !empty($templatePrices)): ?>
+                <!-- Show assigned template info -->
+                <div class="flex items-center justify-between mb-md pb-md" style="border-bottom: 1px solid var(--color-border);">
+                    <div class="flex items-center gap-sm">
+                        <i data-lucide="file-text" class="icon-md" style="color: var(--color-accent);"></i>
+                        <div>
+                            <span class="font-medium">Prismall:</span>
+                            <span class="admin-badge admin-badge-success ml-sm"><?= htmlspecialchars($assignedTemplate['name']) ?></span>
+                        </div>
+                    </div>
+                    <a href="/admin/pricing-templates.php" class="btn-admin btn-admin-sm btn-admin-ghost">
+                        <i data-lucide="settings"></i> Hantera mallar
                     </a>
                 </div>
-            <?php else: ?>
-                <div class="tag-list">
-                    <?php foreach ($eventClasses as $class): ?>
-                        <div class="tag-item">
-                            <span class="font-medium"><?= htmlspecialchars($class['display_name'] ?? $class['name']) ?></span>
-                            <?php if ($class['gender'] === 'M'): ?>
-                                <span class="admin-badge admin-badge-info text-xs">H</span>
-                            <?php elseif ($class['gender'] === 'K' || $class['gender'] === 'F'): ?>
-                                <span class="admin-badge admin-badge-info text-xs">D</span>
-                            <?php endif; ?>
-                            <span class="text-secondary"><?= number_format($class['base_price'], 0) ?> kr</span>
-                        </div>
-                    <?php endforeach; ?>
+
+                <!-- Price table -->
+                <div class="admin-table-container">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>Klass</th>
+                                <th style="text-align: center; width: 60px;">Kön</th>
+                                <th style="text-align: right; width: 120px;">Pris</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($templatePrices as $price): ?>
+                            <tr>
+                                <td>
+                                    <strong><?= htmlspecialchars($price['display_name'] ?? $price['class_name']) ?></strong>
+                                    <?php if ($price['class_name'] !== ($price['display_name'] ?? $price['class_name'])): ?>
+                                    <span class="text-secondary text-sm ml-sm">(<?= htmlspecialchars($price['class_name']) ?>)</span>
+                                    <?php endif; ?>
+                                </td>
+                                <td style="text-align: center;">
+                                    <?php if ($price['gender'] === 'M'): ?>
+                                        <span class="admin-badge admin-badge-info">Herr</span>
+                                    <?php elseif ($price['gender'] === 'K' || $price['gender'] === 'F'): ?>
+                                        <span class="admin-badge admin-badge-warning">Dam</span>
+                                    <?php else: ?>
+                                        <span class="text-secondary">-</span>
+                                    <?php endif; ?>
+                                </td>
+                                <td style="text-align: right;">
+                                    <strong style="font-size: 1.1em; color: var(--color-accent);"><?= number_format($price['base_price'], 0) ?> kr</strong>
+                                </td>
+                            </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
                 </div>
-                <p class="mt-md text-sm text-secondary">
-                    <?= count($eventClasses) ?> klass<?= count($eventClasses) !== 1 ? 'er' : '' ?> konfigurerade.
-                    <a href="/admin/event-pricing.php?id=<?= $id ?>" class="text-accent">Redigera priser och klasser</a>
-                </p>
+
+                <!-- Early bird info if available -->
+                <?php if (!empty($assignedTemplate['early_bird_percent']) && $assignedTemplate['early_bird_percent'] > 0): ?>
+                <div class="alert alert-info mt-md" style="display: flex; align-items: center; gap: var(--space-sm);">
+                    <i data-lucide="clock"></i>
+                    <div>
+                        <strong>Early-bird rabatt:</strong> <?= (int)$assignedTemplate['early_bird_percent'] ?>%
+                        <?php if (!empty($assignedTemplate['early_bird_days_before'])): ?>
+                        (aktiveras <?= (int)$assignedTemplate['early_bird_days_before'] ?> dagar innan eventet)
+                        <?php endif; ?>
+                    </div>
+                </div>
+                <?php endif; ?>
+
+                <!-- Summary -->
+                <div class="mt-md pt-md" style="border-top: 1px solid var(--color-border);">
+                    <div class="flex items-center justify-between">
+                        <span class="text-secondary">
+                            <strong><?= count($templatePrices) ?></strong> klass<?= count($templatePrices) !== 1 ? 'er' : '' ?> tillgängliga för anmälan
+                        </span>
+                        <span class="text-secondary text-sm">
+                            Byt mall i <strong>Tävlingsinställningar</strong> ovan
+                        </span>
+                    </div>
+                </div>
+
+            <?php elseif ($assignedTemplate): ?>
+                <!-- Template assigned but no prices defined -->
+                <div class="text-center p-lg">
+                    <i data-lucide="alert-triangle" style="width: 48px; height: 48px; color: var(--color-warning); margin-bottom: var(--space-md); display: block; margin-left: auto; margin-right: auto;"></i>
+                    <h3>Prismallen saknar priser</h3>
+                    <p class="text-secondary mb-md">
+                        Mallen "<?= htmlspecialchars($assignedTemplate['name']) ?>" är tilldelad men har inga klasspriser.
+                    </p>
+                    <a href="/admin/pricing-templates.php" class="btn-admin btn-admin-primary">
+                        <i data-lucide="settings"></i> Konfigurera prismall
+                    </a>
+                </div>
+
+            <?php else: ?>
+                <!-- No template assigned -->
+                <div class="text-center p-lg">
+                    <i data-lucide="tag" style="width: 48px; height: 48px; color: var(--color-text-muted); opacity: 0.5; margin-bottom: var(--space-md); display: block; margin-left: auto; margin-right: auto;"></i>
+                    <h3>Ingen prismall tilldelad</h3>
+                    <p class="text-secondary mb-md">
+                        Välj en prismall i <strong>Tävlingsinställningar</strong> ovan för att aktivera klasser och priser.
+                    </p>
+                    <div class="flex gap-sm justify-center">
+                        <a href="/admin/pricing-templates.php" class="btn-admin btn-admin-secondary">
+                            <i data-lucide="file-text"></i> Hantera prismallar
+                        </a>
+                    </div>
+                </div>
             <?php endif; ?>
         </div>
     </details>
