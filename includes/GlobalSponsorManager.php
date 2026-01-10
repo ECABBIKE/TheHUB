@@ -290,7 +290,8 @@ class GlobalSponsorManager {
 
         $html = '<section class="sponsor-section sponsor-section-' . htmlspecialchars($position) . '">';
 
-        if ($title && $position !== 'header_banner') {
+        // Don't show title for inline header positions
+        if ($title && !in_array($position, ['header_banner', 'header_inline'])) {
             $html .= '<h3 class="sponsor-section-title">' . htmlspecialchars($title) . '</h3>';
         }
 
