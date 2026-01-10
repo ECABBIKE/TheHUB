@@ -64,21 +64,17 @@ if (!function_exists('render_event_map')) {
 
         // POI type to Lucide icon mapping
         $poiIconMap = [
+            'tech_zone' => 'settings',
             'parking' => 'car',
             'start' => 'play',
             'finish' => 'flag',
-            'food' => 'utensils',
             'water' => 'droplet',
-            'wc' => 'door-open',
+            'food' => 'utensils',
+            'bike_wash' => 'spray-can',
+            'secretariat' => 'clipboard-list',
+            'medical' => 'heart-pulse',
             'toilet' => 'door-open',
-            'medical' => 'cross',
-            'first_aid' => 'cross',
-            'info' => 'info',
-            'camping' => 'tent',
-            'lift' => 'cable-car',
-            'arena' => 'map-pin',
-            'spectator' => 'eye',
-            'photo' => 'camera',
+            'shower' => 'droplets',
         ];
 
         // Group POIs by type
@@ -354,28 +350,29 @@ if (!function_exists('render_event_map')) {
     overflow-y: auto;
 }
 /* POI items - simple clickable list */
-.emap-poi-group { margin-bottom: var(--space-xs); }
-.emap-poi-toggle-row {
+.emap-poi-item {
     display: flex;
     align-items: center;
     gap: var(--space-sm);
-    padding: var(--space-xs) 0;
-    font-size: 0.8rem;
-    font-weight: 500;
-    color: var(--color-text-secondary);
-}
-.emap-poi-toggle-row input { display: none; }
-.emap-poi-toggle-row i { width: 14px; height: 14px; }
-.emap-poi-item {
-    padding: var(--space-2xs) var(--space-xs);
-    padding-left: var(--space-lg);
-    font-size: 0.8rem;
-    color: var(--color-accent);
+    padding: var(--space-xs) var(--space-sm);
+    font-size: 0.85rem;
+    color: var(--color-text);
     cursor: pointer;
     border-radius: var(--radius-sm);
-    text-decoration: none;
+    transition: background 0.15s ease;
 }
-.emap-poi-item:hover { background: var(--color-bg-hover, #f0f0f0); text-decoration: underline; }
+.emap-poi-item i {
+    width: 16px;
+    height: 16px;
+    color: var(--color-accent);
+    flex-shrink: 0;
+}
+.emap-poi-item:hover {
+    background: var(--color-bg-hover, #f0f0f0);
+}
+.emap-poi-item:hover span {
+    color: var(--color-accent);
+}
 .emap-section-title {
     font-size: 0.75rem;
     font-weight: 600;
@@ -442,23 +439,7 @@ if (!function_exists('render_event_map')) {
     border-radius: 2px;
     flex-shrink: 0;
 }
-/* POI items */
-.emap-poi-group { margin-bottom: var(--space-xs); }
-.emap-poi-items {
-    margin-left: var(--space-lg);
-    max-height: 0;
-    overflow: hidden;
-    transition: max-height 0.3s ease;
-}
-.emap-poi-group:hover .emap-poi-items,
-.emap-poi-items.expanded { max-height: 150px; overflow-y: auto; }
-.emap-poi-item {
-    font-size: 0.8rem;
-    padding: var(--space-2xs) var(--space-xs);
-    cursor: pointer;
-    border-radius: var(--radius-sm);
-}
-.emap-poi-item:hover { background: var(--color-border); }
+/* POI items - mobile overrides handled by main styles above */
 .emap-location-btn {
     position: absolute;
     bottom: var(--space-lg);
@@ -737,13 +718,7 @@ if (!function_exists('render_event_map')) {
                         <div class="emap-segment-info">
                             <div class="emap-segment-name">
                                 <?= htmlspecialchars($segName) ?>
-                                <?php if ($segSponsorLogo):
-                                    // Handle both media library paths (uploads/media/...) and legacy paths
-                                    $logoPath = strpos($segSponsorLogo, 'uploads/') === 0 ? '/' . $segSponsorLogo : '/uploads/sponsors/' . $segSponsorLogo;
-                                ?>
-                                <span style="color: var(--color-text-secondary); font-weight: 400;">By</span>
-                                <img src="<?= htmlspecialchars($logoPath) ?>" alt="<?= htmlspecialchars($segSponsorName) ?>" class="emap-segment-sponsor">
-                                <?php elseif ($segSponsorName): ?>
+                                <?php if ($segSponsorName): ?>
                                 <span style="color: var(--color-text-secondary); font-weight: 400; font-size: 0.75rem;">By <?= htmlspecialchars($segSponsorName) ?></span>
                                 <?php endif; ?>
                             </div>
@@ -755,7 +730,7 @@ if (!function_exists('render_event_map')) {
             </details>
             <?php endif; ?>
 
-            <?php if (!empty($poiGroups)): ?>
+            <?php if (!empty($pois)): ?>
             <details class="emap-collapsible">
                 <summary class="emap-collapsible-header">
                     <i data-lucide="chevron-down" class="emap-collapse-icon"></i>
@@ -763,18 +738,13 @@ if (!function_exists('render_event_map')) {
                     <span>Platser (<?= count($pois) ?>)</span>
                 </summary>
                 <div class="emap-collapsible-content">
-                    <?php foreach ($poiGroups as $type => $group): ?>
-                    <div class="emap-poi-group">
-                        <label class="emap-poi-toggle-row">
-                            <input type="checkbox" checked data-poi-type="<?= htmlspecialchars($type) ?>" onchange="<?= $mapId ?>_togglePoiType('<?= htmlspecialchars($type) ?>')">
-                            <i data-lucide="<?= htmlspecialchars($group['icon']) ?>"></i>
-                            <span><?= htmlspecialchars($group['label']) ?> (<?= count($group['items']) ?>)</span>
-                        </label>
-                        <?php foreach ($group['items'] as $poi): ?>
-                        <div class="emap-poi-item" onclick="<?= $mapId ?>_zoomToPoi(<?= $poi['lat'] ?>, <?= $poi['lng'] ?>)">
-                            <?= htmlspecialchars($poi['label'] ?: $group['label']) ?>
-                        </div>
-                        <?php endforeach; ?>
+                    <?php foreach ($pois as $poi):
+                        $poiIcon = $poiIconMap[$poi['poi_type']] ?? ($poi['type_icon'] ?? 'map-pin');
+                        $poiLabel = $poi['label'] ?: ($poi['type_label'] ?? $poi['poi_type']);
+                    ?>
+                    <div class="emap-poi-item" onclick="<?= $mapId ?>_zoomToPoi(<?= $poi['lat'] ?>, <?= $poi['lng'] ?>)">
+                        <i data-lucide="<?= htmlspecialchars($poiIcon) ?>"></i>
+                        <span><?= htmlspecialchars($poiLabel) ?></span>
                     </div>
                     <?php endforeach; ?>
                 </div>
@@ -1111,16 +1081,7 @@ if (!function_exists('render_event_map')) {
                     const titleEl = document.getElementById(mapId + '-elevation-title');
                     const clearBtn = document.getElementById(mapId + '-elevation-clear');
                     if (titleEl) {
-                        if (segSponsorLogo) {
-                            // Handle both media library paths and legacy paths
-                            let logoPath = segSponsorLogo;
-                            if (segSponsorLogo.startsWith('uploads/')) {
-                                logoPath = '/' + segSponsorLogo;
-                            } else if (!segSponsorLogo.startsWith('/')) {
-                                logoPath = '/uploads/sponsors/' + segSponsorLogo;
-                            }
-                            titleEl.innerHTML = segName + ' <span class="emap-title-sponsor">By <img src="' + logoPath + '" alt="' + (segSponsorName || 'Sponsor') + '"></span>';
-                        } else if (segSponsorName) {
+                        if (segSponsorName) {
                             titleEl.innerHTML = segName + ' <span class="emap-title-sponsor">By ' + segSponsorName + '</span>';
                         } else {
                             titleEl.textContent = segName;

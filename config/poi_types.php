@@ -15,92 +15,74 @@ if (!defined('THEHUB_INIT')) {
 
 /**
  * POI Types Definition
- * Each type has: label (Swedish), icon (emoji), color (hex), description
+ * Each type has: label (Swedish), icon (Lucide), color (hex), description
  */
 define('POI_TYPES', [
-    'start' => [
-        'label' => 'Start',
-        'icon' => 'flag',
-        'emoji' => '🏁',
-        'color' => '#61CE70',
-        'description' => 'Startplats'
-    ],
-    'finish' => [
-        'label' => 'Mal',
-        'icon' => 'trophy',
-        'emoji' => '🏆',
-        'color' => '#61CE70',
-        'description' => 'Malgang'
-    ],
-    'water' => [
-        'label' => 'Vatten',
-        'icon' => 'droplet',
-        'emoji' => '💧',
-        'color' => '#3C78D8',
-        'description' => 'Vattenpunkt'
-    ],
-    'depot' => [
-        'label' => 'Depa',
-        'icon' => 'wrench',
-        'emoji' => '🔧',
-        'color' => '#F4B400',
-        'description' => 'Service/depaomrade'
-    ],
-    'spectator' => [
-        'label' => 'Publikplats',
-        'icon' => 'users',
-        'emoji' => '👥',
-        'color' => '#0F9D58',
-        'description' => 'Rekommenderad publikplats'
-    ],
-    'food' => [
-        'label' => 'Mat',
-        'icon' => 'utensils',
-        'emoji' => '🍔',
-        'color' => '#674EA7',
-        'description' => 'Restaurang/matstalle'
-    ],
-    'bike_wash' => [
-        'label' => 'Cykeltvatt',
-        'icon' => 'spray-can',
-        'emoji' => '🚿',
-        'color' => '#46BDC6',
-        'description' => 'Cykeltvattstation'
-    ],
     'tech_zone' => [
         'label' => 'Teknisk zon',
         'icon' => 'settings',
-        'emoji' => '⚙️',
         'color' => '#EA4335',
         'description' => 'Teknisk assistans'
-    ],
-    'feed_zone' => [
-        'label' => 'Langning',
-        'icon' => 'package',
-        'emoji' => '🍌',
-        'color' => '#FBBC04',
-        'description' => 'Langningszon'
     ],
     'parking' => [
         'label' => 'Parkering',
         'icon' => 'car',
-        'emoji' => '🅿️',
         'color' => '#0B5394',
         'description' => 'Parkeringsplats'
     ],
-    'aid_station' => [
-        'label' => 'Hjalpstation',
-        'icon' => 'heart-pulse',
-        'emoji' => '➕',
-        'color' => '#990000',
-        'description' => 'Forsta hjalpen'
+    'start' => [
+        'label' => 'Start',
+        'icon' => 'play',
+        'color' => '#61CE70',
+        'description' => 'Startplats'
     ],
-    'information' => [
-        'label' => 'Information',
-        'icon' => 'info',
-        'emoji' => 'ℹ️',
-        'color' => '#0B5394',
-        'description' => 'Informationspunkt'
+    'finish' => [
+        'label' => 'Mål',
+        'icon' => 'flag',
+        'color' => '#61CE70',
+        'description' => 'Målgång'
+    ],
+    'water' => [
+        'label' => 'Vatten',
+        'icon' => 'droplet',
+        'color' => '#3C78D8',
+        'description' => 'Vattenpunkt'
+    ],
+    'food' => [
+        'label' => 'Mat',
+        'icon' => 'utensils',
+        'color' => '#674EA7',
+        'description' => 'Matställe'
+    ],
+    'bike_wash' => [
+        'label' => 'Cykeltvätt',
+        'icon' => 'spray-can',
+        'color' => '#46BDC6',
+        'description' => 'Cykeltvättstation'
+    ],
+    'secretariat' => [
+        'label' => 'Sekretariat',
+        'icon' => 'clipboard-list',
+        'color' => '#F4B400',
+        'description' => 'Registrering och information'
+    ],
+    'medical' => [
+        'label' => 'Sjukvård',
+        'icon' => 'heart-pulse',
+        'color' => '#990000',
+        'description' => 'Första hjälpen'
+    ],
+    'toilet' => [
+        'label' => 'Toalett',
+        'icon' => 'door-open',
+        'color' => '#6B7280',
+        'description' => 'WC'
+    ],
+    'shower' => [
+        'label' => 'Dusch',
+        'icon' => 'droplets',
+        'color' => '#46BDC6',
+        'description' => 'Dusch'
     ]
 ]);
 

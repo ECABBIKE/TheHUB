@@ -624,9 +624,9 @@ include __DIR__ . '/components/unified-layout.php';
                         <?php endif; ?>
                         <span class="admin-text-muted segment-distance"><?= number_format($seg['distance_km'], 1) ?>km</span>
                         <select onclick="event.stopPropagation()" onchange="changeSegmentType(<?= $seg['id'] ?>, this.value)" class="admin-form-select admin-form-select-xs">
-                            <option value="liaison" <?= $seg['segment_type'] === 'liaison' ? 'selected' : '' ?>>T</option>
-                            <option value="stage" <?= $seg['segment_type'] === 'stage' ? 'selected' : '' ?>>SS</option>
-                            <option value="lift" <?= $seg['segment_type'] === 'lift' ? 'selected' : '' ?>>L</option>
+                            <option value="liaison" <?= $seg['segment_type'] === 'liaison' ? 'selected' : '' ?>>Transport</option>
+                            <option value="stage" <?= $seg['segment_type'] === 'stage' ? 'selected' : '' ?>>Sträcka</option>
+                            <option value="lift" <?= $seg['segment_type'] === 'lift' ? 'selected' : '' ?>>Lift</option>
                         </select>
                         <?php if ($sponsorColumnExists && !empty($sponsors) && $seg['segment_type'] === 'stage'): ?>
                         <select onclick="event.stopPropagation()" onchange="changeSegmentSponsor(<?= $seg['id'] ?>, this.value)" class="admin-form-select admin-form-select-xs" title="Sträcksponsor">
@@ -838,7 +838,15 @@ include __DIR__ . '/components/unified-layout.php';
     padding: var(--space-xs) var(--space-sm);
     font-size: var(--text-sm);
     border-radius: var(--radius-sm);
-    min-width: 70px;
+    min-width: 90px;
+}
+.segment-type-select {
+    padding: var(--space-xs) var(--space-sm);
+    font-size: var(--text-sm);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    background: white;
+    min-width: 90px;
 }
 .admin-checkbox-inline {
     display: flex;
@@ -1064,16 +1072,15 @@ include __DIR__ . '/components/unified-layout.php';
 
 /* Selected segment in list */
 .admin-segment-item.selected {
-    background: var(--color-accent) !important;
-    color: white;
+    background: rgba(97, 206, 112, 0.15) !important;
+    border-left: 3px solid var(--color-accent);
     border-radius: var(--radius-sm);
 }
-.admin-segment-item.selected .admin-text-muted,
-.admin-segment-item.selected .sponsor-by {
-    color: rgba(255,255,255,0.8);
+.admin-segment-item.selected .admin-text-muted {
+    color: var(--color-text-secondary);
 }
 .admin-segment-item.selected .color-dot {
-    border: 2px solid white;
+    box-shadow: 0 0 0 2px var(--color-accent);
 }
 
 /* Tablet responsive */
@@ -1106,9 +1113,8 @@ include __DIR__ . '/components/unified-layout.php';
         padding: var(--space-md);
     }
     .admin-segment-item.selected {
-        margin: 0 calc(var(--space-sm) * -1);
-        padding-left: var(--space-md);
-        padding-right: var(--space-md);
+        margin: 0;
+        padding-left: calc(var(--space-md) - 3px);
     }
     .admin-segment-name {
         width: 100%;
@@ -1416,9 +1422,9 @@ function updateUI() {
             <span class="admin-segment-name">${SEGMENT_ICONS[type]} Sektion ${i + 1}</span>
             <span class="admin-text-muted">${dist}km</span>
             <select onclick="event.stopPropagation()" onchange="changeType(${i}, this.value)" class="segment-type-select">
-                <option value="liaison" ${type === 'liaison' ? 'selected' : ''}>T</option>
-                <option value="stage" ${type === 'stage' ? 'selected' : ''}>SS</option>
-                <option value="lift" ${type === 'lift' ? 'selected' : ''}>L</option>
+                <option value="liaison" ${type === 'liaison' ? 'selected' : ''}>Transport</option>
+                <option value="stage" ${type === 'stage' ? 'selected' : ''}>Sträcka</option>
+                <option value="lift" ${type === 'lift' ? 'selected' : ''}>Lift</option>
             </select>
         </div>`;
 

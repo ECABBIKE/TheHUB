@@ -36,39 +36,6 @@ $ADMIN_TABS = [
                 'pages' => ['results.php', 'edit-results.php', 'clear-event-results.php']
             ],
             [
-                // EKONOMI - Samlar allt betalningsrelaterat på ett ställe
-                'id' => 'economy',
-                'label' => 'Ekonomi',
-                'icon' => 'wallet',
-                'url' => '/admin/ekonomi.php',
-                'pages' => [
-                    // Huvudpanel
-                    'ekonomi.php',
-                    // Ordrar & betalningar
-                    'orders.php',
-                    'payment-settings.php',
-                    'payment-recipients.php',
-                    'gateway-settings.php',
-                    'certificates.php',
-                    // Event-specifika
-                    'event-payment.php',
-                    'event-orders.php',
-                    'event-registrations.php',
-                    'event-ticketing.php',
-                    'event-pricing.php',
-                    // Biljetter & prismallar
-                    'ticketing.php',
-                    'event-tickets.php',
-                    'refund-requests.php',
-                    'pricing-templates.php',
-                    'pricing-template-edit.php',
-                    // Anmälningsregler
-                    'registration-rules.php',
-                    // Promotor
-                    'promotor-payments.php'
-                ]
-            ],
-            [
                 'id' => 'sponsors',
                 'label' => 'Sponsorer',
                 'icon' => 'heart-handshake',
@@ -176,6 +143,39 @@ $ADMIN_TABS = [
         'title' => 'Konfiguration',
         'icon' => 'sliders',
         'tabs' => [
+            [
+                // EKONOMI - Samlar allt betalningsrelaterat på ett ställe
+                'id' => 'economy',
+                'label' => 'Ekonomi',
+                'icon' => 'wallet',
+                'url' => '/admin/ekonomi.php',
+                'pages' => [
+                    // Huvudpanel
+                    'ekonomi.php',
+                    // Ordrar & betalningar
+                    'orders.php',
+                    'payment-settings.php',
+                    'payment-recipients.php',
+                    'gateway-settings.php',
+                    'certificates.php',
+                    // Event-specifika
+                    'event-payment.php',
+                    'event-orders.php',
+                    'event-registrations.php',
+                    'event-ticketing.php',
+                    'event-pricing.php',
+                    // Biljetter & prismallar
+                    'ticketing.php',
+                    'event-tickets.php',
+                    'refund-requests.php',
+                    'pricing-templates.php',
+                    'pricing-template-edit.php',
+                    // Anmälningsregler
+                    'registration-rules.php',
+                    // Promotor
+                    'promotor-payments.php'
+                ]
+            ],
             [
                 'id' => 'classes',
                 'label' => 'Klasser',
