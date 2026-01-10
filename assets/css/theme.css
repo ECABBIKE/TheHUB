@@ -80,12 +80,12 @@ html[data-theme="dark"] {
    LIGHT MODE - Samma visuella stil
    ============================================ */
 html[data-theme="light"] {
-  /* ===== BAKGRUNDER - Clean Gray Base ===== */
-  --color-bg-page: #ebeced;
-  --color-bg-surface: #ebeced;
+  /* ===== BAKGRUNDER - Tydlig separation för kontrast ===== */
+  --color-bg-page: #e4e6e8;
+  --color-bg-surface: #ffffff;
   --color-bg-card: #ffffff;
   --color-bg-elevated: #ffffff;
-  --color-bg-sunken: #e2e3e5;
+  --color-bg-sunken: #d8dadc;
   --color-bg-hover: rgba(55, 212, 214, 0.04);
   --color-bg-active: rgba(55, 212, 214, 0.08);
 
@@ -100,11 +100,11 @@ html[data-theme="light"] {
   --color-text-muted: #868e96;
   --color-text-inverse: #ffffff;
 
-  /* ===== BORDERS - Subtila Cyan Accents ===== */
-  --color-border: rgba(55, 212, 214, 0.15);
-  --color-border-strong: rgba(55, 212, 214, 0.25);
+  /* ===== BORDERS - Tydligare gråa kanter ===== */
+  --color-border: rgba(0, 0, 0, 0.12);
+  --color-border-strong: rgba(0, 0, 0, 0.18);
   --color-border-light: rgba(0, 0, 0, 0.08);
-  --color-divider: rgba(0, 0, 0, 0.1);
+  --color-divider: rgba(0, 0, 0, 0.12);
 
   /* ===== ACCENT - Cyan/Turquoise (ljusare i light mode) ===== */
   --color-accent: #2bc4c6;
@@ -131,10 +131,10 @@ html[data-theme="light"] {
   --color-info-light: #e0f2fe;
   --color-info-bg: rgba(2, 132, 199, 0.1);
 
-  /* ===== SHADOWS & EFFECTS ===== */
-  --shadow-sm: 0 1px 3px rgba(0, 0, 0, 0.08);
-  --shadow-md: 0 4px 12px rgba(0, 0, 0, 0.1);
-  --shadow-lg: 0 8px 24px rgba(0, 0, 0, 0.12);
+  /* ===== SHADOWS & EFFECTS - Djupare för tydligare lager ===== */
+  --shadow-sm: 0 2px 8px rgba(0, 0, 0, 0.1);
+  --shadow-md: 0 4px 16px rgba(0, 0, 0, 0.12);
+  --shadow-lg: 0 8px 32px rgba(0, 0, 0, 0.15);
   --shadow-glow: 0 0 24px var(--color-accent-glow);
   --shadow-glow-strong: 0 0 48px var(--color-accent-glow-strong);
 
