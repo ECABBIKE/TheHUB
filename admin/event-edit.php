@@ -1252,18 +1252,11 @@ include __DIR__ . '/components/unified-layout.php';
                     Visas i en egen sektion längst ner på event-sidan. 4 i bredd på desktop, 2 på mobil.
                 </small>
 
-                <!-- Quick add sponsor button - Links to media for promotors -->
-                <?php if ($isPromotorOnly): ?>
-                <a href="/admin/media" class="btn btn-secondary mt-md">
+                <!-- Link to media management for all users -->
+                <a href="/admin/media.php" class="btn btn-secondary mt-md">
                     <i data-lucide="image" class="icon-sm"></i>
                     Hantera sponsorlogotyper
                 </a>
-                <?php else: ?>
-                <button type="button" class="btn btn-secondary mt-md" onclick="openQuickSponsorModal()">
-                    <i data-lucide="plus" class="icon-sm"></i>
-                    Lägg till ny partner
-                </button>
-                <?php endif; ?>
             </div>
         </div>
     </details>
