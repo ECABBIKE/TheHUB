@@ -92,12 +92,75 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         header("Location: /admin/event-pricing.php?id=$eventId");
         exit;
     }
+
+    // Apply pricing template to event
+    if ($action === 'apply_template') {
+        $templateId = intval($_POST['template_id'] ?? 0);
+
+        if ($templateId > 0) {
+            // Fetch template settings
+            $template = $db->getRow("SELECT * FROM pricing_templates WHERE id = ?", [$templateId]);
+
+            if ($template) {
+                // Fetch template rules
+                $templateRules = $db->getAll("
+                    SELECT class_id, base_price
+                    FROM pricing_template_rules
+                    WHERE template_id = ?
+                ", [$templateId]);
+
+                // Calculate default early-bird end date
+                $eventDate = new DateTime($event['date']);
+                $ebDays = $template['early_bird_days_before'] ?? 21;
+                $earlyBirdEnd = clone $eventDate;
+                $earlyBirdEnd->modify("-{$ebDays} days");
+                $ebEndDate = $earlyBirdEnd->format('Y-m-d');
+
+                $ebPercent = $template['early_bird_percent'] ?? 15;
+
+                $applied = 0;
+                foreach ($templateRules as $rule) {
+                    // Check if rule already exists
+                    $existing = $db->getRow("
+                        SELECT id FROM event_pricing_rules
+                        WHERE event_id = ? AND class_id = ?
+                    ", [$eventId, $rule['class_id']]);
+
+                    if ($existing) {
+                        $db->execute("
+                            UPDATE event_pricing_rules
+                            SET base_price = ?, early_bird_discount_percent = ?, early_bird_end_date = ?, updated_at = NOW()
+                            WHERE id = ?
+                        ", [$rule['base_price'], $ebPercent, $ebEndDate, $existing['id']]);
+                    } else {
+                        $db->execute("
+                            INSERT INTO event_pricing_rules
+                            (event_id, class_id, base_price, early_bird_discount_percent, early_bird_end_date, created_at)
+                            VALUES (?, ?, ?, ?, ?, NOW())
+                        ", [$eventId, $rule['class_id'], $rule['base_price'], $ebPercent, $ebEndDate]);
+                    }
+                    $applied++;
+                }
+
+                // Update event's pricing_template_id
+                $db->execute("UPDATE events SET pricing_template_id = ? WHERE id = ?", [$templateId, $eventId]);
+
+                set_flash('success', "Applicerade {$applied} priser från mallen '{$template['name']}'");
+            } else {
+                set_flash('error', 'Prismallen hittades inte');
+            }
+        }
+
+        header("Location: /admin/event-pricing.php?id=$eventId");
+        exit;
+    }
 }
 
-// Fetch all classes
+// Fetch only ACTIVE classes
 $classes = $db->getAll("
     SELECT id, name, display_name, sort_order
     FROM classes
+    WHERE active = 1
     ORDER BY sort_order ASC
 ");
 
@@ -118,11 +181,55 @@ $eventDate = new DateTime($event['date']);
 $defaultEarlyBirdEnd = clone $eventDate;
 $defaultEarlyBirdEnd->modify('-20 days');
 
+// Fetch available pricing templates
+$pricingTemplates = $db->getAll("
+    SELECT id, name, is_default
+    FROM pricing_templates
+    ORDER BY is_default DESC, name ASC
+");
+
+// Get current template for event
+$currentTemplateId = $event['pricing_template_id'] ?? null;
+
 // Set page variables for economy layout
 $economy_page_title = 'Prissättning';
 
 include __DIR__ . '/components/economy-layout.php';
 ?>
+
+<?php if (!empty($pricingTemplates)): ?>
+<!-- Apply Template -->
+<div class="card mb-lg">
+    <div class="card-header">
+        <h3><i data-lucide="file-text"></i> Applicera prismall</h3>
+    </div>
+    <div class="card-body">
+        <form method="POST" class="flex gap-md items-end flex-wrap">
+            <?= csrf_field() ?>
+            <input type="hidden" name="action" value="apply_template">
+            <div class="form-group" style="margin-bottom: 0;">
+                <label class="form-label">Välj prismall</label>
+                <select name="template_id" class="form-select" style="min-width: 200px;">
+                    <option value="">-- Välj mall --</option>
+                    <?php foreach ($pricingTemplates as $tpl): ?>
+                    <option value="<?= $tpl['id'] ?>" <?= $currentTemplateId == $tpl['id'] ? 'selected' : '' ?>>
+                        <?= htmlspecialchars($tpl['name']) ?>
+                        <?= $tpl['is_default'] ? '(Standard)' : '' ?>
+                    </option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <button type="submit" class="btn btn-secondary" onclick="return confirm('Detta ersätter befintliga priser. Fortsätta?')">
+                <i data-lucide="copy"></i>
+                Applicera mall
+            </button>
+        </form>
+        <p class="text-secondary text-sm mt-sm">
+            Kopierar priser från vald mall till detta event. Befintliga priser ersätts.
+        </p>
+    </div>
+</div>
+<?php endif; ?>
 
 <!-- Pricing Rules -->
 <div class="card">

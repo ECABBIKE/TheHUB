@@ -152,8 +152,8 @@ $templates = $db->getAll("
  ORDER BY t.is_default DESC, t.name ASC
 ");
 
-// Fetch all classes for pricing form
-$classes = $db->getAll("SELECT id, name, display_name FROM classes ORDER BY sort_order ASC");
+// Fetch only ACTIVE classes for pricing form
+$classes = $db->getAll("SELECT id, name, display_name FROM classes WHERE active = 1 ORDER BY sort_order ASC");
 
 // Page config for unified layout
 $page_title = $editTemplate ? 'Redigera Prismall - ' . $editTemplate['name'] : 'Prismallar';
