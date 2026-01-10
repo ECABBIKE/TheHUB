@@ -249,23 +249,26 @@ include __DIR__ . '/components/unified-layout.php';
     border-bottom: none;
 }
 
-.color-swatch {
-    width: 40px;
-    height: 40px;
+/* Color swatch button - opens advanced picker */
+.color-swatch-btn {
+    width: 44px;
+    height: 44px;
     border-radius: var(--radius-md);
     border: 2px solid var(--color-border);
     flex-shrink: 0;
     cursor: pointer;
-    position: relative;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease, transform 0.1s ease;
 }
 
-.color-swatch input[type="color"] {
-    position: absolute;
-    inset: 0;
-    width: 100%;
-    height: 100%;
-    opacity: 0;
-    cursor: pointer;
+.color-swatch-btn:hover {
+    border-color: var(--color-accent);
+    transform: scale(1.05);
+}
+
+.color-swatch-btn:focus {
+    outline: none;
+    border-color: var(--color-accent);
+    box-shadow: 0 0 0 3px var(--color-accent-light);
 }
 
 .color-info {
@@ -622,14 +625,17 @@ include __DIR__ . '/components/unified-layout.php';
                             $fullVar = '--color-' . $varKey;
                             $currentValue = $savedDarkColors[$fullVar] ?? $colorInfo['dark'];
                             $inputName = 'dark_color_' . str_replace('-', '_', $varKey);
+                            $isHex = preg_match('/^#[0-9A-Fa-f]{6}$/', $currentValue);
                         ?>
                         <div class="color-item">
-                            <div class="color-swatch" style="background: <?= h($currentValue) ?>;">
-                                <input type="color"
-                                       name="<?= $inputName ?>"
-                                       value="<?= h(preg_match('/^#/', $currentValue) ? $currentValue : '#000000') ?>"
-                                       onchange="updateColorPreview(this, '<?= $varKey ?>', 'dark')">
-                            </div>
+                            <button type="button"
+                                    class="color-swatch-btn"
+                                    style="background: <?= h($currentValue) ?>;"
+                                    data-var="<?= $varKey ?>"
+                                    data-theme="dark"
+                                    onclick="openColorPicker(this, 'dark', '<?= $varKey ?>')">
+                            </button>
+                            <input type="hidden" name="<?= $inputName ?>" value="<?= h($currentValue) ?>">
                             <div class="color-info">
                                 <div class="color-label"><?= h($colorInfo['label']) ?></div>
                             </div>
@@ -659,14 +665,17 @@ include __DIR__ . '/components/unified-layout.php';
                             $fullVar = '--color-' . $varKey;
                             $currentValue = $savedLightColors[$fullVar] ?? $colorInfo['light'];
                             $inputName = 'light_color_' . str_replace('-', '_', $varKey);
+                            $isHex = preg_match('/^#[0-9A-Fa-f]{6}$/', $currentValue);
                         ?>
                         <div class="color-item">
-                            <div class="color-swatch" style="background: <?= h($currentValue) ?>;">
-                                <input type="color"
-                                       name="<?= $inputName ?>"
-                                       value="<?= h(preg_match('/^#/', $currentValue) ? $currentValue : '#FFFFFF') ?>"
-                                       onchange="updateColorPreview(this, '<?= $varKey ?>', 'light')">
-                            </div>
+                            <button type="button"
+                                    class="color-swatch-btn"
+                                    style="background: <?= h($currentValue) ?>;"
+                                    data-var="<?= $varKey ?>"
+                                    data-theme="light"
+                                    onclick="openColorPicker(this, 'light', '<?= $varKey ?>')">
+                            </button>
+                            <input type="hidden" name="<?= $inputName ?>" value="<?= h($currentValue) ?>">
                             <div class="color-info">
                                 <div class="color-label"><?= h($colorInfo['label']) ?></div>
                             </div>
@@ -1049,6 +1058,10 @@ include __DIR__ . '/components/unified-layout.php';
         </div>
     </div>
 
+<!-- Color Picker CSS & JS -->
+<link rel="stylesheet" href="/assets/css/color-picker.css">
+<script src="/assets/js/color-picker.js"></script>
+
 <script>
 // Theme tab switching
 function switchThemeTab(theme) {
@@ -1067,38 +1080,52 @@ function switchThemeTab(theme) {
     }
 }
 
-function updateColorPreview(input, varKey, theme) {
-    const swatch = input.closest('.color-swatch');
-    swatch.style.background = input.value;
-
-    // Update text input
-    const row = input.closest('.color-item');
+// Open advanced color picker
+function openColorPicker(btn, theme, varKey) {
+    const currentValue = btn.style.backgroundColor;
+    const row = btn.closest('.color-item');
+    const hiddenInput = row.querySelector('input[type="hidden"]');
     const textInput = row.querySelector('.color-input');
-    textInput.value = input.value;
 
-    // Apply live preview only if we're editing the current active theme
-    const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
-    if (theme === currentTheme) {
-        document.documentElement.style.setProperty('--color-' + varKey, input.value);
+    // Get hex value from text input or convert from rgb
+    let hexValue = textInput.value;
+    if (!hexValue.startsWith('#')) {
+        hexValue = '#000000';
     }
+
+    HubColorPicker.open(hexValue, (newColor) => {
+        // Update swatch
+        btn.style.backgroundColor = newColor;
+
+        // Update hidden input (for form submission)
+        hiddenInput.value = newColor;
+
+        // Update text input
+        textInput.value = newColor;
+
+        // Apply live preview if editing current theme
+        const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
+        if (theme === currentTheme) {
+            document.documentElement.style.setProperty('--color-' + varKey, newColor);
+        }
+    }, btn);
 }
 
+// Update from text input
 function updateFromText(input, theme) {
     const varKey = input.dataset.var;
     const value = input.value;
-
-    // Update swatch
     const row = input.closest('.color-item');
-    const swatch = row.querySelector('.color-swatch');
-    swatch.style.background = value;
+    const swatch = row.querySelector('.color-swatch-btn');
+    const hiddenInput = row.querySelector('input[type="hidden"]');
 
-    // Update color input if it's a hex color
-    if (/^#[0-9A-Fa-f]{6}$/.test(value)) {
-        const colorInput = row.querySelector('input[type="color"]');
-        colorInput.value = value;
-    }
+    // Update swatch background
+    swatch.style.backgroundColor = value;
 
-    // Apply live preview only if we're editing the current active theme
+    // Update hidden input
+    hiddenInput.value = value;
+
+    // Apply live preview if editing current theme
     const currentTheme = document.documentElement.getAttribute('data-theme') || 'dark';
     if (theme === currentTheme) {
         document.documentElement.style.setProperty('--color-' + varKey, value);
