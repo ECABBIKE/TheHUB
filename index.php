@@ -79,7 +79,7 @@ if (hub_is_ajax()) {
 }
 ?>
 <!DOCTYPE html>
-<html lang="sv" data-theme="light">
+<html lang="sv">
 <head>
     <?php include __DIR__ . '/components/head.php'; ?>
 </head>
@@ -113,7 +113,7 @@ if (hub_is_ajax()) {
     <!-- Toast Container -->
     <div id="toast-container" class="toast-container"></div>
 
-    <!-- Theme.js removed - always light theme -->
+    <script src="<?= hub_asset('js/theme.js') ?>"></script>
     <script src="<?= hub_asset('js/router.js') ?>"></script>
     <script src="<?= hub_asset('js/app.js') ?>"></script>
     <script src="<?= hub_asset('js/search.js') ?>"></script>
