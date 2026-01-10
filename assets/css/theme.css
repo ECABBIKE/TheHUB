@@ -81,8 +81,8 @@ html[data-theme="dark"] {
    ============================================ */
 html[data-theme="light"] {
   /* ===== BAKGRUNDER - Clean Gray Base ===== */
-  --color-bg-page: #ff0000;
-  --color-bg-surface: #ff0000;
+  --color-bg-page: #ebeced;
+  --color-bg-surface: #ebeced;
   --color-bg-card: #ffffff;
   --color-bg-elevated: #ffffff;
   --color-bg-sunken: #e2e3e5;
