@@ -211,6 +211,9 @@ if (empty($clubRankings)) {
     <p class="page-subtitle">Sök bland åkare och klubbar</p>
 </div>
 
+<!-- Global Sponsor: Header Banner -->
+<?= render_global_sponsors('database', 'header_banner', '') ?>
+
 <!-- Stats Cards -->
 <div class="stats-grid">
     <div class="stat-card">
@@ -321,6 +324,9 @@ if (empty($clubRankings)) {
         </div>
     </div>
 </div>
+
+<!-- Global Sponsor: Content Bottom -->
+<?= render_global_sponsors('database', 'content_bottom', 'Tack till våra partners') ?>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {

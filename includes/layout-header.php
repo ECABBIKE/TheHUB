@@ -371,6 +371,8 @@ $userTheme = 'light';
     <!-- 9. GS Compatibility Layer (maps old gs-* classes to V1.0) -->
     <link rel="stylesheet" href="/assets/css/compatibility.css?v=<?= filemtime(__DIR__ . '/../assets/css/compatibility.css') ?>">
 
+    <!-- 10. Global Sponsors & Blog System -->
+    <link rel="stylesheet" href="/assets/css/sponsors-blog.css?v=<?= filemtime(__DIR__ . '/../assets/css/sponsors-blog.css') ?>">
 
     <!-- PWA Support -->
     <link rel="manifest" href="/manifest.php">

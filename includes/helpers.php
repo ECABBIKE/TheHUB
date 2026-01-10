@@ -446,4 +446,59 @@ function getVersionInfo() {
     'commit' => $commitHash
   ];
 }
+
+/**
+ * Render global sponsors for a page
+ * Only shows to admins unless public_enabled is on
+ *
+ * @param string $pageType Page type (home, results, series_list, etc)
+ * @param string $position Position (header_banner, sidebar_top, etc)
+ * @param string $title Optional section title
+ * @return string HTML output
+ */
+function render_global_sponsors($pageType, $position, $title = 'Sponsorer') {
+    global $pdo;
+
+    // Check if user can see sponsors
+    $isAdmin = function_exists('hasRole') && hasRole('admin');
+
+    // Check public_enabled setting
+    $publicEnabled = false;
+    try {
+        $stmt = $pdo->query("SELECT setting_value FROM sponsor_settings WHERE setting_key = 'public_enabled'");
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        $publicEnabled = ($row && $row['setting_value'] == '1');
+    } catch (Exception $e) {
+        // Table might not exist yet
+        return '';
+    }
+
+    // Only show if admin OR public is enabled
+    if (!$isAdmin && !$publicEnabled) {
+        return '';
+    }
+
+    // Load sponsor manager
+    require_once __DIR__ . '/GlobalSponsorManager.php';
+    $sponsorManager = new GlobalSponsorManager($pdo);
+
+    // Get sponsors for this placement
+    $sponsors = $sponsorManager->getSponsorsForPlacement($pageType, $position);
+
+    if (empty($sponsors)) {
+        // Show placeholder for admin if no sponsors configured
+        if ($isAdmin) {
+            return '<div class="sponsor-section sponsor-section-' . h($position) . '" style="border: 2px dashed var(--color-border); padding: var(--space-md); text-align: center; opacity: 0.6;">
+                <small style="color: var(--color-text-muted);">
+                    <i data-lucide="image" style="width: 16px; height: 16px; vertical-align: middle;"></i>
+                    Sponsorplats: ' . h($pageType) . ' / ' . h($position) . '
+                </small>
+            </div>';
+        }
+        return '';
+    }
+
+    // Render sponsors
+    return $sponsorManager->renderSection($pageType, $position, $title);
+}
 ?>

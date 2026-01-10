@@ -143,6 +143,9 @@ if ($filterSeriesName && !empty($seriesList)) {
     <p class="page-subtitle">Alla tävlingsserier</p>
 </div>
 
+<!-- Global Sponsor: Header Banner -->
+<?= render_global_sponsors('series', 'header_banner', '') ?>
+
 <!-- Filters -->
 <div class="filter-bar">
     <div class="filter-group">
@@ -241,6 +244,9 @@ if ($filterSeriesName && !empty($seriesList)) {
         <?php endforeach; ?>
     </div>
 <?php endif; ?>
+
+<!-- Global Sponsor: Content Bottom -->
+<?= render_global_sponsors('series', 'content_bottom', 'Tack till våra partners') ?>
 
 <script>
 function applyFilters() {

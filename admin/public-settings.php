@@ -13,13 +13,39 @@ $messageType = 'info';
 $settingsFile = __DIR__ . '/../config/public_settings.php';
 $currentSettings = require $settingsFile;
 
+// Load sponsor settings from database
+$sponsorPublicEnabled = false;
+try {
+    $sponsorSetting = $db->getRow("SELECT setting_value FROM sponsor_settings WHERE setting_key = 'public_enabled'");
+    $sponsorPublicEnabled = ($sponsorSetting && $sponsorSetting['setting_value'] == '1');
+} catch (Exception $e) {
+    // Table might not exist yet
+}
+
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
  checkCsrf();
 
  $action = $_POST['action'] ?? '';
 
- if ($action === 'save_settings') {
+ if ($action === 'save_sponsor_visibility') {
+     $enabled = isset($_POST['sponsor_public_enabled']) ? 1 : 0;
+     try {
+         // Check if row exists
+         $exists = $db->getRow("SELECT id FROM sponsor_settings WHERE setting_key = 'public_enabled'");
+         if ($exists) {
+             $db->query("UPDATE sponsor_settings SET setting_value = ? WHERE setting_key = 'public_enabled'", [$enabled]);
+         } else {
+             $db->query("INSERT INTO sponsor_settings (setting_key, setting_value) VALUES ('public_enabled', ?)", [$enabled]);
+         }
+         $sponsorPublicEnabled = ($enabled == 1);
+         $message = $enabled ? 'Sponsorer/Reklam är nu synliga för alla besökare!' : 'Sponsorer/Reklam är nu endast synliga för administratörer.';
+         $messageType = 'success';
+     } catch (Exception $e) {
+         $message = 'Kunde inte spara inställning: ' . $e->getMessage();
+         $messageType = 'error';
+     }
+ } elseif ($action === 'save_settings') {
  $public_riders_display = $_POST['public_riders_display'] ?? 'with_results';
  $min_results_to_show = intval($_POST['min_results_to_show'] ?? 1);
 
@@ -245,6 +271,79 @@ include __DIR__ . '/components/unified-layout.php';
    <i data-lucide="eye"></i>
    Öppna Publika Deltagarsidan
   </a>
+  </div>
+ </div>
+
+ <!-- Sponsor/Ad Visibility Settings -->
+ <div class="card mt-lg">
+  <div class="card-header">
+   <h2 class="">
+    <i data-lucide="megaphone"></i>
+    Synlighet för Sponsorer &amp; Reklam
+   </h2>
+  </div>
+  <form method="POST" class="card-body">
+   <?= csrf_field() ?>
+   <input type="hidden" name="action" value="save_sponsor_visibility">
+
+   <div class="mb-lg">
+    <p class="text-secondary mb-md">
+     Styr om sponsorbanners och reklamplatser ska visas för alla besökare eller endast för administratörer.
+     Detta påverkar alla sidor där sponsorplatser har aktiverats (startsidan, resultat, ranking, serier, databas, kalender).
+    </p>
+
+    <div class="alert alert--<?= $sponsorPublicEnabled ? 'success' : 'warning' ?> mb-md">
+     <i data-lucide="<?= $sponsorPublicEnabled ? 'eye' : 'eye-off' ?>"></i>
+     <strong>Nuvarande status:</strong>
+     <?php if ($sponsorPublicEnabled): ?>
+      Sponsorer och reklam är <strong>synliga för alla besökare</strong>
+     <?php else: ?>
+      Sponsorer och reklam är <strong>endast synliga för administratörer</strong> (testläge)
+     <?php endif; ?>
+    </div>
+   </div>
+
+   <div class="mb-lg">
+    <label class="gs-toggle-label">
+     <input
+      type="checkbox"
+      name="sponsor_public_enabled"
+      class="gs-toggle"
+      <?= $sponsorPublicEnabled ? 'checked' : '' ?>
+     >
+     <span class="gs-toggle-slider"></span>
+     <span class="gs-toggle-text">Visa sponsorer för alla besökare</span>
+    </label>
+    <small class="text-muted d-block mt-xs">
+     När denna är avstängd visas sponsorplatser endast för inloggade administratörer (för testning och förhandsvisning).
+    </small>
+   </div>
+
+   <div class="flex gs-justify-end gap-md gs-pt-md border-top">
+    <button type="submit" class="btn btn--primary">
+     <i data-lucide="save"></i>
+     Spara Synlighet
+    </button>
+   </div>
+  </form>
+ </div>
+
+ <!-- Sponsor Management Link -->
+ <div class="card mt-lg">
+  <div class="card-header">
+   <h2 class="">
+    <i data-lucide="settings"></i>
+    Hantera Sponsorer
+   </h2>
+  </div>
+  <div class="card-body">
+   <p class="text-secondary mb-md">
+    Lägg till, redigera och hantera sponsorplaceringar och reklambanners.
+   </p>
+   <a href="/admin/sponsor-placements.php" class="btn btn--secondary">
+    <i data-lucide="megaphone"></i>
+    Öppna Sponsorhantering
+   </a>
   </div>
  </div>
 </div>

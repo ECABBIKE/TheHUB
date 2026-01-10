@@ -124,6 +124,9 @@ if (!function_exists('getDeadlineInfo')) {
     <p class="page-subtitle">Kommande tävlingar och event</p>
 </div>
 
+<!-- Global Sponsor: Header Banner -->
+<?= render_global_sponsors('calendar', 'header_banner', '') ?>
+
 <!-- Filters -->
 <div class="filter-bar">
     <div class="filter-group">
@@ -237,6 +240,9 @@ if (!function_exists('getDeadlineInfo')) {
         <?php endforeach; ?>
     <?php endif; ?>
 </div>
+
+<!-- Global Sponsor: Content Bottom -->
+<?= render_global_sponsors('calendar', 'content_bottom', 'Tack till våra partners') ?>
 
 <script>
 function applyFilters() {
