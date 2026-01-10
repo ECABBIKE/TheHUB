@@ -217,6 +217,13 @@ $headerLogo = function_exists('getBranding') ? getBranding('logos.sidebar') : nu
     object-fit: contain;
 }
 
+.sponsor-section-header_inline .sponsor-banner {
+    max-height: 36px;
+    max-width: 300px;
+    width: auto;
+    object-fit: contain;
+}
+
 .sponsor-section-header_inline .sponsor-name {
     font-size: var(--text-xs);
     color: var(--color-text-muted);
