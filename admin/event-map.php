@@ -757,7 +757,7 @@ include __DIR__ . '/components/unified-layout.php';
 /* Compact map editor styles */
 .admin-grid-sidebar {
     display: grid;
-    grid-template-columns: 300px 1fr;
+    grid-template-columns: 400px 1fr;
     gap: var(--space-lg);
 }
 .admin-sidebar-narrow {
@@ -835,9 +835,10 @@ include __DIR__ . '/components/unified-layout.php';
     font-size: var(--text-sm);
 }
 .admin-form-select-xs {
-    padding: 2px 4px;
-    font-size: var(--text-xs);
+    padding: var(--space-xs) var(--space-sm);
+    font-size: var(--text-sm);
     border-radius: var(--radius-sm);
+    min-width: 70px;
 }
 .admin-checkbox-inline {
     display: flex;
@@ -850,8 +851,8 @@ include __DIR__ . '/components/unified-layout.php';
     width: 100%;
 }
 .btn-admin-xs {
-    padding: 2px 6px;
-    font-size: var(--text-xs);
+    padding: var(--space-xs) var(--space-sm);
+    font-size: var(--text-sm);
 }
 .inline-form {
     display: inline;
@@ -897,17 +898,17 @@ include __DIR__ . '/components/unified-layout.php';
     gap: var(--space-xs);
 }
 .admin-segment-list {
-    max-height: 300px;
+    max-height: 400px;
     overflow-y: auto;
     border: 1px solid var(--color-border);
     border-radius: var(--radius-sm);
 }
 .admin-segment-item {
-    display: grid;
-    grid-template-columns: auto auto 1fr auto auto auto auto;
+    display: flex;
+    flex-wrap: wrap;
     align-items: center;
     gap: var(--space-sm);
-    padding: var(--space-sm);
+    padding: var(--space-md);
     border-bottom: 1px solid var(--color-border);
     font-size: var(--text-sm);
     transition: background-color 0.15s ease;
@@ -970,16 +971,17 @@ include __DIR__ . '/components/unified-layout.php';
 }
 .admin-segment-name-input {
     flex: 1;
-    padding: 2px 6px;
-    font-size: var(--text-xs);
+    padding: var(--space-xs) var(--space-sm);
+    font-size: var(--text-sm);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-sm);
-    min-width: 60px;
-    max-width: 100px;
+    min-width: 100px;
+    max-width: 160px;
 }
 .admin-segment-name-input:focus {
     outline: none;
     border-color: var(--color-accent);
+    box-shadow: 0 0 0 2px rgba(97, 206, 112, 0.15);
 }
 
 /* Sponsor Banner */
@@ -1054,6 +1056,11 @@ include __DIR__ . '/components/unified-layout.php';
     opacity: 0.7;
     font-weight: normal;
 }
+.segment-distance {
+    font-weight: var(--weight-medium);
+    color: var(--color-text-secondary);
+    white-space: nowrap;
+}
 
 /* Selected segment in list */
 .admin-segment-item.selected {
@@ -1067,6 +1074,13 @@ include __DIR__ . '/components/unified-layout.php';
 }
 .admin-segment-item.selected .color-dot {
     border: 2px solid white;
+}
+
+/* Tablet responsive */
+@media (max-width: 1024px) {
+    .admin-grid-sidebar {
+        grid-template-columns: 350px 1fr;
+    }
 }
 
 /* Mobile responsive */
@@ -1088,8 +1102,8 @@ include __DIR__ . '/components/unified-layout.php';
     }
     .admin-segment-item {
         flex-wrap: wrap;
-        gap: var(--space-xs);
-        padding: var(--space-sm);
+        gap: var(--space-sm);
+        padding: var(--space-md);
     }
     .admin-segment-item.selected {
         margin: 0 calc(var(--space-sm) * -1);
@@ -1105,7 +1119,7 @@ include __DIR__ . '/components/unified-layout.php';
         flex: 1;
     }
     .segment-distance {
-        display: none;
+        display: block;
     }
     .sponsor-banner {
         margin: 0 calc(var(--space-md) * -1) var(--space-sm);
