@@ -489,17 +489,14 @@
 
   .filter-bar {
     flex-direction: column;
-    align-items: center;
     background: var(--color-bg-card);
-    padding: var(--space-lg);
+    padding: var(--space-sm);
     border-radius: var(--radius-lg);
-    gap: var(--space-md);
+    gap: var(--space-sm);
   }
 
   .filter-group {
     width: 100%;
-    max-width: 280px;
-    text-align: center;
   }
 
   .filter-label {
