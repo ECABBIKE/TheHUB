@@ -1072,16 +1072,15 @@ include __DIR__ . '/components/unified-layout.php';
 
 /* Selected segment in list */
 .admin-segment-item.selected {
-    background: var(--color-accent) !important;
-    color: white;
+    background: rgba(97, 206, 112, 0.15) !important;
+    border-left: 3px solid var(--color-accent);
     border-radius: var(--radius-sm);
 }
-.admin-segment-item.selected .admin-text-muted,
-.admin-segment-item.selected .sponsor-by {
-    color: rgba(255,255,255,0.8);
+.admin-segment-item.selected .admin-text-muted {
+    color: var(--color-text-secondary);
 }
 .admin-segment-item.selected .color-dot {
-    border: 2px solid white;
+    box-shadow: 0 0 0 2px var(--color-accent);
 }
 
 /* Tablet responsive */
@@ -1114,9 +1113,8 @@ include __DIR__ . '/components/unified-layout.php';
         padding: var(--space-md);
     }
     .admin-segment-item.selected {
-        margin: 0 calc(var(--space-sm) * -1);
-        padding-left: var(--space-md);
-        padding-right: var(--space-md);
+        margin: 0;
+        padding-left: calc(var(--space-md) - 3px);
     }
     .admin-segment-name {
         width: 100%;
