@@ -73,15 +73,19 @@ if ($userTheme === 'auto') {
 
     <!-- CRITICAL: Inline CSS to prevent flash -->
     <style>
-        html { background: #ebeced; }
-        html[data-theme="light"] { background: #ebeced; }
-        html[data-theme="dark"] { background: #0b131e; }
+        html { background: var(--color-bg-page, #ebeced); }
+        html[data-theme="light"] { background: var(--color-bg-page, #ebeced); }
+        html[data-theme="dark"] { background: var(--color-bg-page, #0b131e); }
     </style>
 
     <!-- V3 CSS -->
     <link rel="stylesheet" href="/assets/css/reset.css">
     <link rel="stylesheet" href="/assets/css/tokens.css">
     <link rel="stylesheet" href="/assets/css/theme.css">
+
+    <!-- Branding Overrides (from uploads/branding.json) - MUST come after theme.css -->
+    <?= generateBrandingCSS() ?>
+
     <link rel="stylesheet" href="/assets/css/effects.css">
     <link rel="stylesheet" href="/assets/css/layout.css">
     <link rel="stylesheet" href="/assets/css/components.css">
