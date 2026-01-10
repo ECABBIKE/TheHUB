@@ -5,9 +5,21 @@
  * Uses Economy Tab System
  */
 
-require_once __DIR__ . '/../config.php';
+// Enable error reporting for debugging
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
 
-$db = getDB();
+try {
+    require_once __DIR__ . '/../config.php';
+} catch (Throwable $e) {
+    die('Config error: ' . $e->getMessage());
+}
+
+try {
+    $db = getDB();
+} catch (Throwable $e) {
+    die('Database error: ' . $e->getMessage());
+}
 
 // Get event ID (supports both 'id' and 'event_id')
 $eventId = isset($_GET['id']) ? intval($_GET['id']) : (isset($_GET['event_id']) ? intval($_GET['event_id']) : 0);
@@ -258,7 +270,11 @@ $currentTemplateId = $event['pricing_template_id'] ?? null;
 // Set page variables for economy layout
 $economy_page_title = 'Prissättning';
 
-include __DIR__ . '/components/economy-layout.php';
+try {
+    include __DIR__ . '/components/economy-layout.php';
+} catch (Throwable $e) {
+    die('Layout error: ' . $e->getMessage() . ' in ' . $e->getFile() . ':' . $e->getLine());
+}
 ?>
 
 <?php if (!empty($pricingTemplates)): ?>
