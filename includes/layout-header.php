@@ -175,8 +175,8 @@ $userTheme = 'light';
                 transform: translateX(0) !important;
                 transition: none !important;
                 z-index: 100 !important;
-                background: #FFFFFF !important;
-                border-right: 1px solid #E5E7EB !important;
+                background: #ebeced !important;
+                border-right: 1px solid rgba(55, 212, 214, 0.15) !important;
             }
 
             /* Hide overlay completely on desktop */

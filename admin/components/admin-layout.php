@@ -21,17 +21,17 @@ $current_admin_dir = basename(dirname($_SERVER['PHP_SELF']));
 $admin_user = getCurrentAdmin();
 $admin_name = $admin_user['name'] ?? 'Admin';
 
-// Get theme from user profile or default to dark
-$userTheme = 'dark';
+// Get theme from user profile or default to light (dark theme disabled)
+$userTheme = 'light';
 if (function_exists('get_current_rider')) {
     $currentUser = get_current_rider();
     if (isset($currentUser['theme_preference'])) {
         $userTheme = $currentUser['theme_preference'];
     }
 }
-// Resolve 'auto' to actual theme on server side (default dark)
+// Resolve 'auto' to light theme (dark theme disabled)
 if ($userTheme === 'auto') {
-    $userTheme = 'dark';
+    $userTheme = 'light';
 }
 ?>
 <!DOCTYPE html>
@@ -66,19 +66,16 @@ if ($userTheme === 'auto') {
     <!-- CRITICAL: Anti-FOUC - Must run BEFORE any CSS loads -->
     <script>
     (function() {
-        const saved = localStorage.getItem('thehub-theme');
-        let theme = saved || '<?= $userTheme ?>';
-        if (theme === 'auto') {
-            theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-        }
-        document.documentElement.setAttribute('data-theme', theme);
+        // Force light theme (dark theme disabled)
+        document.documentElement.setAttribute('data-theme', 'light');
     })();
     </script>
 
-    <!-- CRITICAL: Inline CSS to prevent white flash -->
+    <!-- CRITICAL: Inline CSS to prevent flash -->
     <style>
-        html { background: #0A0C14; }
-        html[data-theme="light"] { background: #F4F5F7; }
+        html { background: #ebeced; }
+        html[data-theme="light"] { background: #ebeced; }
+        html[data-theme="dark"] { background: #0b131e; }
     </style>
 
     <!-- V3 CSS -->
