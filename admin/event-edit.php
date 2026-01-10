@@ -812,109 +812,76 @@ include __DIR__ . '/components/unified-layout.php';
             <span class="text-secondary text-sm">Klicka för att expandera/minimera</span>
         </summary>
         <div class="admin-card-body">
-            <?php if ($assignedTemplate && !empty($templatePrices)): ?>
-                <!-- Show assigned template info -->
-                <div class="flex items-center justify-between mb-md pb-md" style="border-bottom: 1px solid var(--color-border);">
+            <?php if ($assignedTemplate && !empty($templatePrices)):
+                // Get pricing settings
+                $ebPercent = $assignedTemplate['early_bird_percent'] ?? 15;
+                $latePercent = $assignedTemplate['late_fee_percent'] ?? 25;
+                $ebDays = $assignedTemplate['early_bird_days_before'] ?? 21;
+                $lateDays = $assignedTemplate['late_fee_days_before'] ?? 3;
+            ?>
+                <!-- Template header -->
+                <div class="flex items-center justify-between mb-md">
                     <div class="flex items-center gap-sm">
-                        <i data-lucide="file-text" class="icon-md" style="color: var(--color-accent);"></i>
-                        <div>
-                            <span class="font-medium">Prismall:</span>
-                            <span class="admin-badge admin-badge-success ml-sm"><?= htmlspecialchars($assignedTemplate['name']) ?></span>
-                        </div>
+                        <span class="text-secondary">Prismall:</span>
+                        <span class="admin-badge admin-badge-success"><?= htmlspecialchars($assignedTemplate['name']) ?></span>
                     </div>
-                    <a href="/admin/pricing-templates.php" class="btn-admin btn-admin-sm btn-admin-ghost">
-                        <i data-lucide="settings"></i> Hantera mallar
-                    </a>
+                    <a href="/admin/pricing-templates.php?edit=<?= $event['pricing_template_id'] ?>" class="text-accent text-sm">Redigera mall</a>
                 </div>
 
-                <!-- Price table -->
+                <!-- Compact price table -->
                 <div class="admin-table-container">
-                    <table class="admin-table">
+                    <table class="admin-table" style="font-size: 0.875rem;">
                         <thead>
                             <tr>
                                 <th>Klass</th>
-                                <th style="text-align: center; width: 60px;">Kön</th>
-                                <th style="text-align: right; width: 120px;">Pris</th>
+                                <th style="text-align: right; color: var(--color-success);">Early Bird (-<?= $ebPercent ?>%)</th>
+                                <th style="text-align: right;">Ordinarie</th>
+                                <th style="text-align: right; color: var(--color-warning);">Efteranmälan (+<?= $latePercent ?>%)</th>
                             </tr>
                         </thead>
                         <tbody>
-                            <?php foreach ($templatePrices as $price): ?>
+                            <?php foreach ($templatePrices as $price):
+                                $basePrice = $price['base_price'];
+                                $ebPrice = round($basePrice * (1 - $ebPercent / 100));
+                                $latePrice = round($basePrice * (1 + $latePercent / 100));
+                            ?>
                             <tr>
                                 <td>
-                                    <strong><?= htmlspecialchars($price['display_name'] ?? $price['class_name']) ?></strong>
-                                    <?php if ($price['class_name'] !== ($price['display_name'] ?? $price['class_name'])): ?>
-                                    <span class="text-secondary text-sm ml-sm">(<?= htmlspecialchars($price['class_name']) ?>)</span>
-                                    <?php endif; ?>
-                                </td>
-                                <td style="text-align: center;">
+                                    <?= htmlspecialchars($price['display_name'] ?? $price['class_name']) ?>
                                     <?php if ($price['gender'] === 'M'): ?>
-                                        <span class="admin-badge admin-badge-info">Herr</span>
+                                        <span class="text-xs text-secondary">(H)</span>
                                     <?php elseif ($price['gender'] === 'K' || $price['gender'] === 'F'): ?>
-                                        <span class="admin-badge admin-badge-warning">Dam</span>
-                                    <?php else: ?>
-                                        <span class="text-secondary">-</span>
+                                        <span class="text-xs text-secondary">(D)</span>
                                     <?php endif; ?>
                                 </td>
-                                <td style="text-align: right;">
-                                    <strong style="font-size: 1.1em; color: var(--color-accent);"><?= number_format($price['base_price'], 0) ?> kr</strong>
-                                </td>
+                                <td style="text-align: right; color: var(--color-success); font-weight: 600;"><?= number_format($ebPrice, 0) ?> kr</td>
+                                <td style="text-align: right; font-weight: 600;"><?= number_format($basePrice, 0) ?> kr</td>
+                                <td style="text-align: right; color: var(--color-warning); font-weight: 600;"><?= number_format($latePrice, 0) ?> kr</td>
                             </tr>
                             <?php endforeach; ?>
                         </tbody>
                     </table>
                 </div>
 
-                <!-- Early bird info if available -->
-                <?php if (!empty($assignedTemplate['early_bird_percent']) && $assignedTemplate['early_bird_percent'] > 0): ?>
-                <div class="alert alert-info mt-md" style="display: flex; align-items: center; gap: var(--space-sm);">
-                    <i data-lucide="clock"></i>
-                    <div>
-                        <strong>Early-bird rabatt:</strong> <?= (int)$assignedTemplate['early_bird_percent'] ?>%
-                        <?php if (!empty($assignedTemplate['early_bird_days_before'])): ?>
-                        (aktiveras <?= (int)$assignedTemplate['early_bird_days_before'] ?> dagar innan eventet)
-                        <?php endif; ?>
-                    </div>
-                </div>
-                <?php endif; ?>
-
-                <!-- Summary -->
-                <div class="mt-md pt-md" style="border-top: 1px solid var(--color-border);">
-                    <div class="flex items-center justify-between">
-                        <span class="text-secondary">
-                            <strong><?= count($templatePrices) ?></strong> klass<?= count($templatePrices) !== 1 ? 'er' : '' ?> tillgängliga för anmälan
-                        </span>
-                        <span class="text-secondary text-sm">
-                            Byt mall i <strong>Tävlingsinställningar</strong> ovan
-                        </span>
+                <!-- Pricing rules info -->
+                <div class="mt-md p-sm" style="background: var(--color-bg-hover); border-radius: var(--radius-sm); font-size: 0.8rem;">
+                    <div class="flex gap-lg flex-wrap">
+                        <span><strong style="color: var(--color-success);">Early Bird:</strong> När anmälan öppnar t.o.m. <?= $ebDays ?> dagar före</span>
+                        <span><strong>Ordinarie:</strong> <?= $ebDays ?>-<?= $lateDays ?> dagar före</span>
+                        <span><strong style="color: var(--color-warning);">Efteranmälan:</strong> Sista <?= $lateDays ?> dagarna</span>
                     </div>
                 </div>
 
             <?php elseif ($assignedTemplate): ?>
-                <!-- Template assigned but no prices defined -->
-                <div class="text-center p-lg">
-                    <i data-lucide="alert-triangle" style="width: 48px; height: 48px; color: var(--color-warning); margin-bottom: var(--space-md); display: block; margin-left: auto; margin-right: auto;"></i>
-                    <h3>Prismallen saknar priser</h3>
-                    <p class="text-secondary mb-md">
-                        Mallen "<?= htmlspecialchars($assignedTemplate['name']) ?>" är tilldelad men har inga klasspriser.
-                    </p>
-                    <a href="/admin/pricing-templates.php" class="btn-admin btn-admin-primary">
-                        <i data-lucide="settings"></i> Konfigurera prismall
-                    </a>
+                <div class="text-center p-md">
+                    <p class="text-secondary mb-sm">Mallen "<?= htmlspecialchars($assignedTemplate['name']) ?>" saknar klasspriser.</p>
+                    <a href="/admin/pricing-templates.php?edit=<?= $event['pricing_template_id'] ?>" class="btn-admin btn-admin-sm btn-admin-primary">Konfigurera priser</a>
                 </div>
 
             <?php else: ?>
-                <!-- No template assigned -->
-                <div class="text-center p-lg">
-                    <i data-lucide="tag" style="width: 48px; height: 48px; color: var(--color-text-muted); opacity: 0.5; margin-bottom: var(--space-md); display: block; margin-left: auto; margin-right: auto;"></i>
-                    <h3>Ingen prismall tilldelad</h3>
-                    <p class="text-secondary mb-md">
-                        Välj en prismall i <strong>Tävlingsinställningar</strong> ovan för att aktivera klasser och priser.
-                    </p>
-                    <div class="flex gap-sm justify-center">
-                        <a href="/admin/pricing-templates.php" class="btn-admin btn-admin-secondary">
-                            <i data-lucide="file-text"></i> Hantera prismallar
-                        </a>
-                    </div>
+                <div class="text-center p-md">
+                    <p class="text-secondary mb-sm">Ingen prismall tilldelad. Välj en mall i <strong>Tävlingsinställningar</strong> ovan.</p>
+                    <a href="/admin/pricing-templates.php" class="text-accent text-sm">Hantera prismallar</a>
                 </div>
             <?php endif; ?>
         </div>

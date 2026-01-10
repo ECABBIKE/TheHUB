@@ -7,7 +7,7 @@
 .welcome-page {
     max-width: var(--content-max-width, 1400px);
     margin: 0 auto;
-    padding: var(--container-padding);
+    /* No extra padding - main-content already provides container-padding */
     text-align: center;
 }
 
@@ -438,10 +438,6 @@
 }
 
 @media (max-width: 480px) {
-    .welcome-page {
-        padding: var(--space-xs);
-    }
-
     .welcome-header {
         padding: 0;
     }
