@@ -50,7 +50,7 @@ class GlobalSponsorManager {
                         s.logo_dark,
                         s.website,
                         s.tier,
-                        s.banner_image,
+                        COALESCE(mb.filepath, s.banner_image) as banner_image,
                         sp.id as placement_id,
                         sp.position,
                         sp.display_order,
@@ -61,6 +61,7 @@ class GlobalSponsorManager {
                     FROM sponsors s
                     INNER JOIN sponsor_placements sp ON s.id = sp.sponsor_id
                     LEFT JOIN media m ON s.logo_media_id = m.id
+                    LEFT JOIN media mb ON s.logo_banner_id = mb.id
                     WHERE sp.page_type IN (:page_type, 'all')
                     AND sp.position = :position
                     AND sp.is_active = 1
@@ -254,8 +255,9 @@ class GlobalSponsorManager {
                          onclick="trackSponsorClick(' . intval($sponsor['id']) . ', ' . intval($sponsor['placement_id'] ?? 0) . ')">';
         }
 
-        // Använd banner för header, annars logo
-        if ($position === 'header_banner' && !empty($sponsor['banner_image'])) {
+        // Använd banner för breda positioner (header_banner, header_inline, content_top, content_bottom)
+        $useBanner = in_array($position, ['header_banner', 'header_inline', 'content_top', 'content_bottom', 'footer']);
+        if ($useBanner && !empty($sponsor['banner_image'])) {
             $html .= '<img src="' . htmlspecialchars($sponsor['banner_image']) . '"
                          alt="' . htmlspecialchars($sponsor['name']) . '"
                          class="sponsor-banner">';

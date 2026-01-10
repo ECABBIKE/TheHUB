@@ -106,9 +106,10 @@ $pageTypes = [
 ];
 
 // Note: sidebar positions only work on pages with sidebar layout
-// Currently working positions: header_banner, content_top, content_bottom, footer
+// Currently working positions: header_inline, header_banner, content_top, content_bottom, footer
 $positions = [
-    'header_banner' => 'Header Banner',
+    'header_inline' => 'Header (mitt i menyraden)',
+    'header_banner' => 'Header Banner (under sidrubrik)',
     'content_top' => 'Innehåll Topp',
     'content_bottom' => 'Innehåll Botten',
     'footer' => 'Footer (via layout)'

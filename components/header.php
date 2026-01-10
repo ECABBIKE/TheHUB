@@ -31,6 +31,13 @@ $headerLogo = function_exists('getBranding') ? getBranding('logos.sidebar') : nu
         <span class="header-title">TheHUB</span>
     </a>
 
+    <!-- Header Inline Sponsor (between logo and actions) -->
+    <?php
+    if (function_exists('render_global_sponsors')) {
+        echo render_global_sponsors('all', 'header_inline', '');
+    }
+    ?>
+
     <div class="header-actions">
         <?php if ($isLoggedIn && $currentUser): ?>
 
@@ -179,6 +186,49 @@ $headerLogo = function_exists('getBranding') ? getBranding('logos.sidebar') : nu
 </header>
 
 <style>
+/* Header Inline Sponsor */
+.sponsor-section-header_inline {
+    flex: 1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    max-height: 40px;
+    overflow: hidden;
+    margin: 0 var(--space-md);
+}
+
+.sponsor-section-header_inline .sponsor-grid {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-sm);
+}
+
+.sponsor-section-header_inline .sponsor-item {
+    max-height: 32px;
+    display: flex;
+    align-items: center;
+}
+
+.sponsor-section-header_inline .sponsor-logo {
+    max-height: 28px;
+    max-width: 120px;
+    width: auto;
+    object-fit: contain;
+}
+
+.sponsor-section-header_inline .sponsor-name {
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+}
+
+/* Hide on mobile */
+@media (max-width: 768px) {
+    .sponsor-section-header_inline {
+        display: none;
+    }
+}
+
 /* Header User Actions */
 .header-actions {
     display: flex;
