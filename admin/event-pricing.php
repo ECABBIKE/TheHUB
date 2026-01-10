@@ -109,12 +109,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     WHERE template_id = ?
                 ", [$templateId]);
 
-                // Calculate default early-bird end date
-                $eventDate = new DateTime($event['date']);
-                $ebDays = $template['early_bird_days_before'] ?? 21;
-                $earlyBirdEnd = clone $eventDate;
-                $earlyBirdEnd->modify("-{$ebDays} days");
-                $ebEndDate = $earlyBirdEnd->format('Y-m-d');
+                // Calculate default early-bird end date (handle null date)
+                $ebEndDate = null;
+                if (!empty($event['date'])) {
+                    $eventDate = new DateTime($event['date']);
+                    $ebDays = $template['early_bird_days_before'] ?? 21;
+                    $earlyBirdEnd = clone $eventDate;
+                    $earlyBirdEnd->modify("-{$ebDays} days");
+                    $ebEndDate = $earlyBirdEnd->format('Y-m-d');
+                }
 
                 $ebPercent = $template['early_bird_percent'] ?? 15;
 
@@ -176,10 +179,56 @@ foreach ($existingRules as $rule) {
     $rulesMap[$rule['class_id']] = $rule;
 }
 
+// AUTO-APPLY: If event has template but no pricing rules, apply template automatically
+if (!empty($event['pricing_template_id']) && empty($existingRules)) {
+    $templateId = $event['pricing_template_id'];
+    $template = $db->getRow("SELECT * FROM pricing_templates WHERE id = ?", [$templateId]);
+
+    if ($template) {
+        $templateRules = $db->getAll("
+            SELECT class_id, base_price
+            FROM pricing_template_rules
+            WHERE template_id = ?
+        ", [$templateId]);
+
+        // Calculate early-bird end date
+        $ebEndDate = null;
+        if (!empty($event['date'])) {
+            $eventDate = new DateTime($event['date']);
+            $ebDays = $template['early_bird_days_before'] ?? 21;
+            $earlyBirdEnd = clone $eventDate;
+            $earlyBirdEnd->modify("-{$ebDays} days");
+            $ebEndDate = $earlyBirdEnd->format('Y-m-d');
+        }
+
+        $ebPercent = $template['early_bird_percent'] ?? 15;
+
+        foreach ($templateRules as $rule) {
+            $db->execute("
+                INSERT INTO event_pricing_rules
+                (event_id, class_id, base_price, early_bird_discount_percent, early_bird_end_date, created_at)
+                VALUES (?, ?, ?, ?, ?, NOW())
+            ", [$eventId, $rule['class_id'], $rule['base_price'], $ebPercent, $ebEndDate]);
+        }
+
+        // Reload the rules
+        $existingRules = $db->getAll("SELECT * FROM event_pricing_rules WHERE event_id = ?", [$eventId]);
+        foreach ($existingRules as $rule) {
+            $rulesMap[$rule['class_id']] = $rule;
+        }
+
+        // Show message
+        set_flash('info', "Priser från mallen '{$template['name']}' har applicerats automatiskt.");
+    }
+}
+
 // Calculate default early-bird end date (event date - 20 days)
-$eventDate = new DateTime($event['date']);
-$defaultEarlyBirdEnd = clone $eventDate;
-$defaultEarlyBirdEnd->modify('-20 days');
+$defaultEarlyBirdEnd = null;
+if (!empty($event['date'])) {
+    $eventDate = new DateTime($event['date']);
+    $defaultEarlyBirdEnd = clone $eventDate;
+    $defaultEarlyBirdEnd->modify('-20 days');
+}
 
 // Fetch available pricing templates
 $pricingTemplates = $db->getAll("
@@ -290,7 +339,7 @@ include __DIR__ . '/components/economy-layout.php';
                                 <input type="date"
                                        name="early_bird_end_date[]"
                                        class="form-input"
-                                       value="<?= $rule && $rule['early_bird_end_date'] ? htmlspecialchars($rule['early_bird_end_date']) : $defaultEarlyBirdEnd->format('Y-m-d') ?>"
+                                       value="<?= $rule && $rule['early_bird_end_date'] ? htmlspecialchars($rule['early_bird_end_date']) : ($defaultEarlyBirdEnd ? $defaultEarlyBirdEnd->format('Y-m-d') : '') ?>"
                                        style="width: 150px;">
                             </td>
                             <td>
