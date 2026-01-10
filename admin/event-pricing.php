@@ -6,7 +6,17 @@
 
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../includes/auth.php';
-requireAdmin();
+
+// Ensure session is started
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+
+// Check admin login
+if (!isLoggedIn()) {
+    header('Location: /admin/login.php');
+    exit;
+}
 
 $db = getDB();
 
@@ -14,7 +24,7 @@ $db = getDB();
 $eventId = isset($_GET['id']) ? intval($_GET['id']) : (isset($_GET['event_id']) ? intval($_GET['event_id']) : 0);
 
 if ($eventId <= 0) {
-    set_flash('error', 'Ogiltigt event-ID');
+    $_SESSION['flash_error'] = 'Ogiltigt event-ID';
     header('Location: /admin/events.php');
     exit;
 }
@@ -23,7 +33,7 @@ if ($eventId <= 0) {
 $event = $db->getRow("SELECT * FROM events WHERE id = ?", [$eventId]);
 
 if (!$event) {
-    set_flash('error', 'Event hittades inte');
+    $_SESSION['flash_error'] = 'Event hittades inte';
     header('Location: /admin/events.php');
     exit;
 }
@@ -34,37 +44,46 @@ $templatePrices = [];
 
 if (!empty($event['pricing_template_id'])) {
     // Fetch template
-    $template = $db->getRow("SELECT * FROM pricing_templates WHERE id = ?", [$event['pricing_template_id']]);
+    try {
+        $template = $db->getRow("SELECT * FROM pricing_templates WHERE id = ?", [$event['pricing_template_id']]);
 
-    if ($template) {
-        // Fetch prices from template
-        $templatePrices = $db->getAll("
-            SELECT ptr.*, c.name as class_name, c.display_name
-            FROM pricing_template_rules ptr
-            JOIN classes c ON c.id = ptr.class_id
-            WHERE ptr.template_id = ?
-            ORDER BY c.sort_order ASC, c.name ASC
-        ", [$event['pricing_template_id']]);
+        if ($template) {
+            // Fetch prices from template
+            $templatePrices = $db->getAll("
+                SELECT ptr.*, c.name as class_name, c.display_name
+                FROM pricing_template_rules ptr
+                JOIN classes c ON c.id = ptr.class_id
+                WHERE ptr.template_id = ?
+                ORDER BY c.sort_order ASC, c.name ASC
+            ", [$event['pricing_template_id']]);
+        }
+    } catch (Exception $e) {
+        // Tables might not exist
+        $template = null;
+        $templatePrices = [];
     }
 }
 
 // Page setup
-$page_title = 'Priser - ' . htmlspecialchars($event['name']);
-include __DIR__ . '/components/unified-layout.php';
+$pageTitle = 'Priser - ' . htmlspecialchars($event['name']);
+include __DIR__ . '/../includes/admin-header.php';
 ?>
 
 <div class="admin-content">
     <!-- Back link -->
-    <div class="mb-md">
-        <a href="/admin/events.php" class="btn btn-ghost">
-            <i data-lucide="arrow-left"></i> Tillbaka till events
-        </a>
+    <div class="page-header">
+        <div>
+            <a href="/admin/events.php" class="btn btn-ghost btn-sm mb-sm">
+                <i data-lucide="arrow-left"></i> Tillbaka
+            </a>
+            <h1><?= htmlspecialchars($event['name']) ?></h1>
+        </div>
     </div>
 
     <!-- Event info -->
     <div class="card mb-lg">
         <div class="card-header">
-            <h3><i data-lucide="calendar"></i> <?= htmlspecialchars($event['name']) ?></h3>
+            <h3><i data-lucide="calendar"></i> Event-information</h3>
         </div>
         <div class="card-body">
             <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--space-md);">
@@ -92,7 +111,7 @@ include __DIR__ . '/components/unified-layout.php';
         <!-- No template assigned -->
         <div class="card">
             <div class="card-body" style="text-align: center; padding: var(--space-xl);">
-                <i data-lucide="alert-circle" style="width: 48px; height: 48px; color: var(--color-warning); margin-bottom: var(--space-md);"></i>
+                <i data-lucide="alert-circle" style="width: 48px; height: 48px; color: var(--color-warning); margin-bottom: var(--space-md); display: block; margin-left: auto; margin-right: auto;"></i>
                 <h2>Ingen prismall tilldelad</h2>
                 <p style="color: var(--color-text-secondary); margin: var(--space-md) 0;">
                     Detta event har ingen prismall. Tilldela en prismall i event-inställningarna för att aktivera prissättning.
@@ -106,7 +125,7 @@ include __DIR__ . '/components/unified-layout.php';
         <!-- Template exists but no prices -->
         <div class="card">
             <div class="card-body" style="text-align: center; padding: var(--space-xl);">
-                <i data-lucide="tag" style="width: 48px; height: 48px; color: var(--color-text-muted); margin-bottom: var(--space-md);"></i>
+                <i data-lucide="tag" style="width: 48px; height: 48px; color: var(--color-text-muted); margin-bottom: var(--space-md); display: block; margin-left: auto; margin-right: auto;"></i>
                 <h2>Inga priser i mallen</h2>
                 <p style="color: var(--color-text-secondary); margin: var(--space-md) 0;">
                     Prismallen "<?= htmlspecialchars($template['name']) ?>" har inga klasspriser definierade.
@@ -177,7 +196,5 @@ include __DIR__ . '/components/unified-layout.php';
         </div>
     <?php endif; ?>
 </div>
-
-<script>if(typeof lucide !== 'undefined') lucide.createIcons();</script>
 
 <?php include __DIR__ . '/../includes/admin-footer.php'; ?>
