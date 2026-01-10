@@ -267,9 +267,10 @@ function generateOrderNumber(): string {
  * @param array $registrationIds Array of registration IDs
  * @param int $riderId Rider making the purchase
  * @param int $eventId Event ID
+ * @param string|null $discountCode Optional discount code
  * @return array Order data with order_id and payment info
  */
-function createOrder(array $registrationIds, int $riderId, int $eventId): array {
+function createOrder(array $registrationIds, int $riderId, int $eventId, ?string $discountCode = null): array {
     $pdo = hub_db();
 
     // Get rider info
@@ -297,9 +298,45 @@ function createOrder(array $registrationIds, int $riderId, int $eventId): array 
     $stmt->execute($registrationIds);
     $registrations = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // Calculate total
+    // Calculate subtotal
     $subtotal = array_sum(array_column($registrations, 'price'));
-    $total = $subtotal; // No discount for now
+
+    // Initialize discount tracking
+    $discountCodeId = null;
+    $discountCodeAmount = 0;
+    $gravityIdAmount = 0;
+    $appliedDiscounts = [];
+
+    // Check for Gravity ID discount
+    $gravityCheck = checkGravityIdDiscount($riderId, $eventId);
+    if ($gravityCheck['has_gravity_id'] && $gravityCheck['discount'] > 0) {
+        $gravityIdAmount = $gravityCheck['discount'];
+        $appliedDiscounts[] = [
+            'type' => 'gravity_id',
+            'label' => 'Gravity ID-rabatt',
+            'amount' => $gravityIdAmount,
+            'gravity_id' => $gravityCheck['gravity_id']
+        ];
+    }
+
+    // Validate and apply discount code (if provided)
+    if ($discountCode) {
+        $codeValidation = validateDiscountCode($discountCode, $eventId, $riderId, $subtotal);
+        if ($codeValidation['valid']) {
+            $discountCodeId = $codeValidation['discount']['id'];
+            $discountCodeAmount = calculateDiscountAmount($codeValidation['discount'], $subtotal);
+            $appliedDiscounts[] = [
+                'type' => 'discount_code',
+                'label' => 'Rabattkod: ' . $codeValidation['discount']['code'],
+                'amount' => $discountCodeAmount,
+                'code' => $codeValidation['discount']['code']
+            ];
+        }
+    }
+
+    // Calculate total discount and final amount
+    $totalDiscount = $discountCodeAmount + $gravityIdAmount;
+    $total = max(0, $subtotal - $totalDiscount);
 
     // Generate order number and Swish message
     $orderNumber = generateOrderNumber();
@@ -308,18 +345,20 @@ function createOrder(array $registrationIds, int $riderId, int $eventId): array 
     $pdo->beginTransaction();
 
     try {
-        // Create order
+        // Create order with discount information
         $stmt = $pdo->prepare("
             INSERT INTO orders (
                 order_number, rider_id, customer_email, customer_name,
                 event_id, subtotal, discount, total_amount, currency,
                 payment_method, payment_status,
+                discount_code_id, gravity_id_discount,
                 swish_number, swish_message,
                 expires_at, created_at
             ) VALUES (
                 ?, ?, ?, ?,
-                ?, ?, 0, ?, 'SEK',
+                ?, ?, ?, ?, 'SEK',
                 'swish', 'pending',
+                ?, ?,
                 ?, ?,
                 DATE_ADD(NOW(), INTERVAL 24 HOUR), NOW()
             )
@@ -331,7 +370,10 @@ function createOrder(array $registrationIds, int $riderId, int $eventId): array 
             $rider['firstname'] . ' ' . $rider['lastname'],
             $eventId,
             $subtotal,
+            $totalDiscount,
             $total,
+            $discountCodeId,
+            $gravityIdAmount > 0 ? $gravityIdAmount : null,
             $paymentConfig['swish_number'] ?? null,
             $swishMessage
         ]);
@@ -365,6 +407,11 @@ function createOrder(array $registrationIds, int $riderId, int $eventId): array 
         ");
         $stmt->execute(array_merge([$orderId], $registrationIds));
 
+        // Record discount code usage if applicable
+        if ($discountCodeId && $discountCodeAmount > 0) {
+            recordDiscountUsage($discountCodeId, $orderId, $riderId, $discountCodeAmount);
+        }
+
         $pdo->commit();
 
         // Generate payment links
@@ -388,7 +435,10 @@ function createOrder(array $registrationIds, int $riderId, int $eventId): array 
             'success' => true,
             'order_id' => $orderId,
             'order_number' => $orderNumber,
+            'subtotal' => $subtotal,
+            'discount' => $totalDiscount,
             'total' => $total,
+            'applied_discounts' => $appliedDiscounts,
             'swish_available' => $swishUrl !== null,
             'swish_url' => $swishUrl,
             'swish_qr' => $swishQR,
@@ -510,4 +560,280 @@ function getPendingOrders(int $eventId): array {
     ");
     $stmt->execute([$eventId]);
     return $stmt->fetchAll(PDO::FETCH_ASSOC);
+}
+
+// ============================================================================
+// DISCOUNT & GRAVITY ID FUNCTIONS
+// ============================================================================
+
+/**
+ * Validate and get discount code details
+ *
+ * @param string $code The discount code to validate
+ * @param int $eventId Event ID (for event-specific codes)
+ * @param int|null $riderId Rider ID (for per-user limits)
+ * @param float $orderAmount Order subtotal (for minimum amount check)
+ * @return array ['valid' => bool, 'discount' => array|null, 'error' => string|null]
+ */
+function validateDiscountCode(string $code, int $eventId, ?int $riderId = null, float $orderAmount = 0): array {
+    $pdo = hub_db();
+
+    // Check if discount_codes table exists
+    try {
+        $check = $pdo->query("SHOW TABLES LIKE 'discount_codes'");
+        if ($check->rowCount() === 0) {
+            return ['valid' => false, 'discount' => null, 'error' => 'Rabattkodssystemet är inte aktiverat'];
+        }
+    } catch (Exception $e) {
+        return ['valid' => false, 'discount' => null, 'error' => 'Rabattkodssystemet är inte tillgängligt'];
+    }
+
+    // Look up the code
+    $stmt = $pdo->prepare("
+        SELECT dc.*, e.series_id
+        FROM discount_codes dc
+        LEFT JOIN events e ON e.id = ?
+        WHERE dc.code = ? AND dc.is_active = 1
+    ");
+    $stmt->execute([$eventId, strtoupper(trim($code))]);
+    $discount = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$discount) {
+        return ['valid' => false, 'discount' => null, 'error' => 'Ogiltig rabattkod'];
+    }
+
+    // Check validity period
+    $now = date('Y-m-d H:i:s');
+    if ($discount['valid_from'] && $now < $discount['valid_from']) {
+        return ['valid' => false, 'discount' => null, 'error' => 'Rabattkoden har inte börjat gälla ännu'];
+    }
+    if ($discount['valid_until'] && $now > $discount['valid_until']) {
+        return ['valid' => false, 'discount' => null, 'error' => 'Rabattkoden har gått ut'];
+    }
+
+    // Check max uses
+    if ($discount['max_uses'] !== null && $discount['current_uses'] >= $discount['max_uses']) {
+        return ['valid' => false, 'discount' => null, 'error' => 'Rabattkoden har använts för många gånger'];
+    }
+
+    // Check per-user limit
+    if ($riderId && $discount['max_uses_per_user']) {
+        $stmt = $pdo->prepare("
+            SELECT COUNT(*) FROM discount_code_usage
+            WHERE discount_code_id = ? AND rider_id = ?
+        ");
+        $stmt->execute([$discount['id'], $riderId]);
+        $userUses = $stmt->fetchColumn();
+        if ($userUses >= $discount['max_uses_per_user']) {
+            return ['valid' => false, 'discount' => null, 'error' => 'Du har redan använt denna rabattkod'];
+        }
+    }
+
+    // Check minimum order amount
+    if ($discount['min_order_amount'] && $orderAmount < $discount['min_order_amount']) {
+        return [
+            'valid' => false,
+            'discount' => null,
+            'error' => 'Minsta orderbelopp är ' . number_format($discount['min_order_amount'], 0) . ' kr'
+        ];
+    }
+
+    // Check event/series restriction
+    if ($discount['applicable_to'] === 'event' && $discount['event_id'] && $discount['event_id'] != $eventId) {
+        return ['valid' => false, 'discount' => null, 'error' => 'Rabattkoden gäller inte för detta event'];
+    }
+    if ($discount['applicable_to'] === 'series' && $discount['series_id'] && $discount['series_id'] != $discount['series_id']) {
+        return ['valid' => false, 'discount' => null, 'error' => 'Rabattkoden gäller inte för denna serie'];
+    }
+
+    return ['valid' => true, 'discount' => $discount, 'error' => null];
+}
+
+/**
+ * Calculate discount amount from a discount code
+ *
+ * @param array $discount Discount code data
+ * @param float $subtotal Order subtotal
+ * @return float Discount amount in SEK
+ */
+function calculateDiscountAmount(array $discount, float $subtotal): float {
+    if ($discount['discount_type'] === 'percentage') {
+        return round($subtotal * ($discount['discount_value'] / 100), 2);
+    }
+    // Fixed amount - but never more than subtotal
+    return min($discount['discount_value'], $subtotal);
+}
+
+/**
+ * Check if rider has valid Gravity ID and calculate discount
+ *
+ * @param int $riderId Rider ID
+ * @param int $eventId Event ID (to check if Gravity ID discount applies)
+ * @return array ['has_gravity_id' => bool, 'discount' => float, 'gravity_id' => string|null]
+ */
+function checkGravityIdDiscount(int $riderId, int $eventId): array {
+    $pdo = hub_db();
+
+    // Check if Gravity ID system is enabled and columns exist
+    try {
+        $stmt = $pdo->query("SELECT setting_value FROM gravity_id_settings WHERE setting_key = 'enabled'");
+        $enabled = $stmt->fetchColumn();
+        if ($enabled !== '1') {
+            return ['has_gravity_id' => false, 'discount' => 0, 'gravity_id' => null];
+        }
+    } catch (Exception $e) {
+        // Table doesn't exist - system not set up
+        return ['has_gravity_id' => false, 'discount' => 0, 'gravity_id' => null];
+    }
+
+    // Check if rider has valid Gravity ID
+    try {
+        $stmt = $pdo->prepare("
+            SELECT gravity_id, gravity_id_valid_until
+            FROM riders
+            WHERE id = ? AND gravity_id IS NOT NULL
+        ");
+        $stmt->execute([$riderId]);
+        $rider = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$rider || !$rider['gravity_id']) {
+            return ['has_gravity_id' => false, 'discount' => 0, 'gravity_id' => null];
+        }
+
+        // Check if expired
+        if ($rider['gravity_id_valid_until'] && strtotime($rider['gravity_id_valid_until']) < time()) {
+            return ['has_gravity_id' => false, 'discount' => 0, 'gravity_id' => $rider['gravity_id'], 'expired' => true];
+        }
+    } catch (Exception $e) {
+        // gravity_id column doesn't exist
+        return ['has_gravity_id' => false, 'discount' => 0, 'gravity_id' => null];
+    }
+
+    // Get discount amount for this event
+    $discount = 0;
+    try {
+        // First check event-specific discount
+        $stmt = $pdo->prepare("SELECT gravity_id_discount FROM events WHERE id = ?");
+        $stmt->execute([$eventId]);
+        $eventDiscount = $stmt->fetchColumn();
+
+        if ($eventDiscount !== false && $eventDiscount !== null) {
+            $discount = floatval($eventDiscount);
+        } else {
+            // Fall back to global default
+            $stmt = $pdo->query("SELECT setting_value FROM gravity_id_settings WHERE setting_key = 'default_discount'");
+            $defaultDiscount = $stmt->fetchColumn();
+            $discount = $defaultDiscount ? floatval($defaultDiscount) : 50.0;
+        }
+    } catch (Exception $e) {
+        $discount = 50.0; // Default fallback
+    }
+
+    return [
+        'has_gravity_id' => true,
+        'discount' => $discount,
+        'gravity_id' => $rider['gravity_id']
+    ];
+}
+
+/**
+ * Record discount code usage
+ *
+ * @param int $discountCodeId Discount code ID
+ * @param int $orderId Order ID
+ * @param int|null $riderId Rider ID
+ * @param float $discountAmount Amount discounted
+ */
+function recordDiscountUsage(int $discountCodeId, int $orderId, ?int $riderId, float $discountAmount): void {
+    $pdo = hub_db();
+
+    try {
+        // Insert usage record
+        $stmt = $pdo->prepare("
+            INSERT INTO discount_code_usage (discount_code_id, order_id, rider_id, discount_amount)
+            VALUES (?, ?, ?, ?)
+        ");
+        $stmt->execute([$discountCodeId, $orderId, $riderId, $discountAmount]);
+
+        // Increment usage counter
+        $stmt = $pdo->prepare("
+            UPDATE discount_codes SET current_uses = current_uses + 1 WHERE id = ?
+        ");
+        $stmt->execute([$discountCodeId]);
+    } catch (Exception $e) {
+        // Log but don't fail the order
+        error_log("Failed to record discount usage: " . $e->getMessage());
+    }
+}
+
+/**
+ * Apply a discount code to an existing pending order
+ *
+ * @param int $orderId Order ID
+ * @param string $code Discount code
+ * @param int|null $riderId Rider ID (for validation)
+ * @return array ['success' => bool, 'error' => string|null, 'new_total' => float|null]
+ */
+function applyDiscountToOrder(int $orderId, string $code, ?int $riderId = null): array {
+    $pdo = hub_db();
+
+    // Get the order
+    $order = getOrder($orderId);
+    if (!$order) {
+        return ['success' => false, 'error' => 'Order hittades inte'];
+    }
+
+    // Check if already paid
+    if ($order['payment_status'] === 'paid') {
+        return ['success' => false, 'error' => 'Ordern är redan betald'];
+    }
+
+    // Check if discount already applied
+    if (!empty($order['discount_code_id'])) {
+        return ['success' => false, 'error' => 'En rabattkod är redan använd på denna order'];
+    }
+
+    // Validate the discount code
+    $validation = validateDiscountCode($code, $order['event_id'], $riderId, $order['subtotal']);
+    if (!$validation['valid']) {
+        return ['success' => false, 'error' => $validation['error']];
+    }
+
+    $discount = $validation['discount'];
+    $discountAmount = calculateDiscountAmount($discount, $order['subtotal']);
+
+    // Calculate new totals
+    $currentDiscount = floatval($order['discount'] ?? 0);
+    $newDiscount = $currentDiscount + $discountAmount;
+    $newTotal = max(0, $order['subtotal'] - $newDiscount);
+
+    $pdo->beginTransaction();
+
+    try {
+        // Update order
+        $stmt = $pdo->prepare("
+            UPDATE orders
+            SET discount = ?,
+                total_amount = ?,
+                discount_code_id = ?
+            WHERE id = ? AND payment_status = 'pending'
+        ");
+        $stmt->execute([$newDiscount, $newTotal, $discount['id'], $orderId]);
+
+        // Record usage
+        recordDiscountUsage($discount['id'], $orderId, $riderId, $discountAmount);
+
+        $pdo->commit();
+
+        return [
+            'success' => true,
+            'discount_amount' => $discountAmount,
+            'new_discount' => $newDiscount,
+            'new_total' => $newTotal
+        ];
+
+    } catch (Exception $e) {
+        $pdo->rollBack();
+        return ['success' => false, 'error' => 'Kunde inte tillämpa rabattkod: ' . $e->getMessage()];
+    }
 }

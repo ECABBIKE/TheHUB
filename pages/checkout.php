@@ -5,6 +5,7 @@
  * Displays payment options for event registrations:
  * - Swish (direct link on mobile, QR on desktop)
  * - Card via WooCommerce (fallback)
+ * - Discount codes and Gravity ID discounts
  */
 
 require_once __DIR__ . '/../hub-config.php';
@@ -17,8 +18,14 @@ $orderId = isset($_GET['order']) ? intval($_GET['order']) : 0;
 $registrationIds = isset($_GET['registration']) ? explode(',', $_GET['registration']) : [];
 $registrationIds = array_filter(array_map('intval', $registrationIds));
 
+// Discount code from form
+$discountCode = isset($_POST['discount_code']) ? trim($_POST['discount_code']) : null;
+$discountCode = $discountCode ?: (isset($_GET['discount_code']) ? trim($_GET['discount_code']) : null);
+
 $order = null;
 $error = null;
+$appliedDiscounts = [];
+$gravityIdInfo = null;
 
 try {
     if ($orderId) {
@@ -61,6 +68,11 @@ try {
             }
 
             if (!$error) {
+                $eventId = $registrations[0]['event_id'];
+
+                // Check for Gravity ID (for display before order creation)
+                $gravityIdInfo = checkGravityIdDiscount($currentUser['id'], $eventId);
+
                 // Check if order already exists
                 $stmt = $pdo->prepare("
                     SELECT order_id FROM event_registrations
@@ -73,16 +85,17 @@ try {
                     // Use existing order
                     $order = getOrder($existingOrderId);
                 } else {
-                    // Create new order
-                    $eventId = $registrations[0]['event_id'];
-                    $orderData = createOrder($registrationIds, $currentUser['id'], $eventId);
+                    // Create new order with discount code
+                    $orderData = createOrder($registrationIds, $currentUser['id'], $eventId, $discountCode);
                     $order = getOrder($orderData['order_id']);
+                    $appliedDiscounts = $orderData['applied_discounts'] ?? [];
 
                     // Add payment URLs to order
                     $order['swish_url'] = $orderData['swish_url'];
                     $order['swish_qr'] = $orderData['swish_qr'];
                     $order['swish_available'] = $orderData['swish_available'];
                     $order['card_available'] = $orderData['card_available'];
+                    $order['applied_discounts'] = $appliedDiscounts;
                 }
             }
         }
@@ -181,9 +194,48 @@ include __DIR__ . '/../components/header.php';
                         <?php endforeach; ?>
                     </div>
 
+                    <!-- Subtotal -->
+                    <div class="flex justify-between items-center py-sm border-top">
+                        <span>Delsumma</span>
+                        <span class="font-medium"><?= number_format($order['subtotal'], 0) ?> kr</span>
+                    </div>
+
+                    <!-- Applied discounts -->
+                    <?php if (!empty($order['applied_discounts']) || !empty($appliedDiscounts)): ?>
+                        <?php $discounts = !empty($order['applied_discounts']) ? $order['applied_discounts'] : $appliedDiscounts; ?>
+                        <?php foreach ($discounts as $discount): ?>
+                        <div class="flex justify-between items-center py-sm text-success">
+                            <span>
+                                <i data-lucide="<?= $discount['type'] === 'gravity_id' ? 'badge-check' : 'tag' ?>" class="icon-sm"></i>
+                                <?= htmlspecialchars($discount['label']) ?>
+                            </span>
+                            <span class="font-medium">-<?= number_format($discount['amount'], 0) ?> kr</span>
+                        </div>
+                        <?php endforeach; ?>
+                    <?php elseif ($order['discount'] > 0): ?>
+                        <div class="flex justify-between items-center py-sm text-success">
+                            <span>
+                                <i data-lucide="tag" class="icon-sm"></i>
+                                Rabatt
+                            </span>
+                            <span class="font-medium">-<?= number_format($order['discount'], 0) ?> kr</span>
+                        </div>
+                    <?php endif; ?>
+
+                    <!-- Show Gravity ID badge if applicable but no discount yet applied -->
+                    <?php if ($gravityIdInfo && $gravityIdInfo['has_gravity_id'] && empty($appliedDiscounts)): ?>
+                    <div class="flex justify-between items-center py-sm text-success">
+                        <span>
+                            <i data-lucide="badge-check" class="icon-sm"></i>
+                            Gravity ID: <?= htmlspecialchars($gravityIdInfo['gravity_id']) ?>
+                        </span>
+                        <span class="font-medium">-<?= number_format($gravityIdInfo['discount'], 0) ?> kr</span>
+                    </div>
+                    <?php endif; ?>
+
                     <!-- Total -->
                     <div class="flex justify-between items-center pt-md border-top">
-                        <span class="font-semibold">Totalt</span>
+                        <span class="font-semibold">Att betala</span>
                         <span class="text-xl font-bold"><?= number_format($order['total_amount'], 0) ?> kr</span>
                     </div>
 
@@ -193,6 +245,35 @@ include __DIR__ . '/../components/header.php';
                     </div>
                 </div>
             </div>
+
+            <!-- Discount code input (if order not yet paid) -->
+            <?php if ($order['payment_status'] !== 'paid' && empty($order['discount_code_id'])): ?>
+            <div class="card mb-lg">
+                <div class="card-header">
+                    <h2 class="text-lg">
+                        <i data-lucide="tag"></i>
+                        Rabattkod
+                    </h2>
+                </div>
+                <div class="card-body">
+                    <form method="GET" action="/checkout" id="discount-form" class="flex gap-sm">
+                        <input type="hidden" name="order" value="<?= $order['id'] ?>">
+                        <input type="text"
+                               name="discount_code"
+                               id="discount-code-input"
+                               placeholder="Ange rabattkod"
+                               class="form-input flex-1"
+                               value="<?= htmlspecialchars($discountCode ?? '') ?>"
+                               style="text-transform: uppercase;">
+                        <button type="submit" class="btn btn--secondary" id="apply-discount-btn">
+                            <i data-lucide="check"></i>
+                            Använd
+                        </button>
+                    </form>
+                    <div id="discount-message" class="mt-sm text-sm" style="display: none;"></div>
+                </div>
+            </div>
+            <?php endif; ?>
 
             <!-- Payment options -->
             <div class="card">
@@ -307,5 +388,68 @@ include __DIR__ . '/../components/header.php';
         <?php endif; ?>
     </div>
 </main>
+
+<script>
+// Discount code AJAX handling
+document.addEventListener('DOMContentLoaded', function() {
+    const discountForm = document.getElementById('discount-form');
+    const discountInput = document.getElementById('discount-code-input');
+    const discountMessage = document.getElementById('discount-message');
+    const applyBtn = document.getElementById('apply-discount-btn');
+
+    if (discountForm) {
+        discountForm.addEventListener('submit', async function(e) {
+            e.preventDefault();
+
+            const code = discountInput.value.trim().toUpperCase();
+            if (!code) {
+                showMessage('Ange en rabattkod', 'error');
+                return;
+            }
+
+            // Disable button while processing
+            applyBtn.disabled = true;
+            applyBtn.innerHTML = '<i data-lucide="loader" class="spin"></i> Kontrollerar...';
+            lucide.createIcons();
+
+            try {
+                const formData = new FormData();
+                formData.append('order_id', '<?= $order['id'] ?? 0 ?>');
+                formData.append('code', code);
+
+                const response = await fetch('/api/apply-discount.php', {
+                    method: 'POST',
+                    body: formData
+                });
+
+                const data = await response.json();
+
+                if (data.success) {
+                    showMessage('Rabattkod tillämpad! Du sparade ' + data.discount_amount + ' kr', 'success');
+
+                    // Reload page to show updated totals
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1000);
+                } else {
+                    showMessage(data.error || 'Ogiltig rabattkod', 'error');
+                }
+            } catch (error) {
+                showMessage('Något gick fel. Försök igen.', 'error');
+            }
+
+            applyBtn.disabled = false;
+            applyBtn.innerHTML = '<i data-lucide="check"></i> Använd';
+            lucide.createIcons();
+        });
+    }
+
+    function showMessage(text, type) {
+        discountMessage.textContent = text;
+        discountMessage.className = 'mt-sm text-sm ' + (type === 'success' ? 'text-success' : 'text-error');
+        discountMessage.style.display = 'block';
+    }
+});
+</script>
 
 <?php include __DIR__ . '/../components/footer.php'; ?>
