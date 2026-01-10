@@ -52,7 +52,7 @@ const HubTheme = (function() {
     document.documentElement.setAttribute('data-theme', resolved);
     
     // Uppdatera alla theme-knappar
-    document.querySelectorAll('.theme-btn').forEach(btn => {
+    document.querySelectorAll('.theme-btn, .theme-option-btn, [data-theme-set]').forEach(btn => {
       const btnTheme = btn.getAttribute('data-theme-set');
       if (btnTheme === theme) {
         btn.classList.add('is-active');
@@ -125,7 +125,7 @@ const HubTheme = (function() {
     
     // Lyssna på alla theme-btn klick
     document.addEventListener('click', (e) => {
-      const btn = e.target.closest('.theme-btn');
+      const btn = e.target.closest('.theme-btn, .theme-option-btn, [data-theme-set]');
       if (btn && btn.hasAttribute('data-theme-set')) {
         e.preventDefault();
         e.stopPropagation();
