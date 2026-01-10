@@ -160,8 +160,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 // Fetch classes based on template OR all active classes
+$classes = [];
 if (!empty($event['pricing_template_id'])) {
-    // Event has template - only show classes defined in template
+    // Event has template - try to get classes defined in template
     $classes = $db->getAll("
         SELECT c.id, c.name, c.display_name, c.sort_order
         FROM classes c
@@ -169,8 +170,10 @@ if (!empty($event['pricing_template_id'])) {
         WHERE ptr.template_id = ? AND c.active = 1
         ORDER BY c.sort_order ASC
     ", [$event['pricing_template_id']]);
-} else {
-    // No template - show all active classes
+}
+
+// Fallback: if no template or template has no classes, show all active classes
+if (empty($classes)) {
     $classes = $db->getAll("
         SELECT id, name, display_name, sort_order
         FROM classes
