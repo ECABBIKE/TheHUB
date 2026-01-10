@@ -10,6 +10,9 @@ if ($isPromotorOnly) {
 }
 $hubUrl = defined('HUB_V3_URL') ? HUB_V3_URL : '';
 
+// Check if super admin (for theme switcher access)
+$isSuperAdmin = function_exists('hasRole') && hasRole('super_admin');
+
 // Get sidebar logo from branding settings
 $headerLogo = function_exists('getBranding') ? getBranding('logos.sidebar') : null;
 ?>
@@ -119,7 +122,8 @@ $headerLogo = function_exists('getBranding') ? getBranding('logos.sidebar') : nu
                     <div class="header-dropdown-divider"></div>
                     <?php endif; ?>
 
-                    <!-- NYTT: Theme Switcher i dropdown -->
+                    <?php if ($isSuperAdmin): ?>
+                    <!-- Theme Switcher - only for super admins -->
                     <div class="header-dropdown-theme">
                         <div class="theme-label">
                             <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
@@ -151,6 +155,7 @@ $headerLogo = function_exists('getBranding') ? getBranding('logos.sidebar') : nu
                     </div>
 
                     <div class="header-dropdown-divider"></div>
+                    <?php endif; ?>
 
                     <a href="<?= $hubUrl ?>/logout" class="header-dropdown-item text-error">
                         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" width="18" height="18">
