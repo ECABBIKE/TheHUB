@@ -113,27 +113,39 @@ if ($userTheme === 'auto') {
 }
 ?>
 <!DOCTYPE html>
-<html lang="sv" data-theme="light">
+<html lang="sv" data-theme="<?= h($userTheme) ?>">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
     <title><?= h($pageTitle) ?><?= $titleSuffix ?></title>
 
-    <!-- Force light theme always - no switcher to prevent flash -->
+    <!-- Theme initialization - check localStorage/cookie first, then use server theme -->
     <script>
     (function() {
-        // Always use light theme
-        document.documentElement.setAttribute('data-theme', 'light');
+        // Check localStorage for saved theme
+        var saved = null;
+        try { saved = localStorage.getItem('thehub-theme'); } catch(e) {}
+        // Fallback to cookie
+        if (!saved) {
+            var match = document.cookie.match(/(^| )hub_theme=([^;]+)/);
+            saved = match ? match[2] : null;
+        }
+        // Apply saved theme or server-side theme, default to dark
+        var theme = saved || '<?= $userTheme ?>';
+        if (theme === 'auto') {
+            theme = window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+        }
+        document.documentElement.setAttribute('data-theme', theme);
     })();
     window.HUB = window.HUB || {};
     window.HUB.isLoggedIn = <?= $isLoggedIn ? 'true' : 'false' ?>;
     </script>
 
-    <!-- CRITICAL: Inline CSS for light theme and FOUC prevention -->
+    <!-- CRITICAL: Inline CSS for FOUC prevention (uses CSS variables for theme) -->
     <style>
         html, body {
-            background: #F4F5F7;
-            color: #1A1A1A;
+            background: var(--color-bg-page, #0b131e);
+            color: var(--color-text-primary, #f8f2f0);
             margin: 0;
             padding: 0;
         }

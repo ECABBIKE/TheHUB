@@ -30,19 +30,20 @@
    PROFILE CARD V4 - Portrait Style (Inspired Design)
    ============================================================================ */
 .profile-card-v4 {
-    background: white;
+    background: var(--color-bg-surface);
     border-radius: var(--radius-lg);
     padding: 0;
     overflow: hidden;
     display: flex;
     flex-direction: column;
-    box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08);
+    box-shadow: var(--shadow-md);
+    border: 1px solid var(--color-border);
 }
 
 .profile-photo-hero {
     width: 100%;
     aspect-ratio: 1 / 1;
-    background: linear-gradient(180deg, #f0f0f0 0%, #e5e5e5 100%);
+    background: var(--color-bg-sunken);
     overflow: hidden;
 }
 
@@ -216,8 +217,8 @@
     padding: var(--space-xs) var(--space-sm);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-sm);
-    background: white;
-    color: var(--color-primary);
+    background: var(--color-bg-surface);
+    color: var(--color-text-primary);
     font-size: 0.8125rem;
     font-weight: 500;
     display: flex;
@@ -1766,9 +1767,10 @@
 }
 
 .ranking-modal {
-    background: #ffffff;
+    background: var(--color-bg-surface);
     border-radius: var(--radius-xl);
-    box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    box-shadow: var(--shadow-lg);
+    border: 1px solid var(--color-border);
     max-width: 500px;
     width: 100%;
     max-height: 85vh;
@@ -1786,15 +1788,15 @@
     align-items: center;
     justify-content: space-between;
     padding: var(--space-md) var(--space-lg);
-    border-bottom: 1px solid #e5e7eb;
-    background: linear-gradient(135deg, #f9fafb, #ffffff);
+    border-bottom: 1px solid var(--color-border);
+    background: var(--color-bg-elevated);
 }
 
 .ranking-modal-header h3 {
     margin: 0;
     font-size: 1rem;
     font-weight: 700;
-    color: #171717;
+    color: var(--color-text-primary);
     display: flex;
     align-items: center;
     gap: var(--space-sm);
@@ -2001,7 +2003,7 @@
     gap: var(--space-xs);
     flex-wrap: wrap;
     padding: var(--space-sm);
-    background: white;
+    background: var(--color-bg-sunken);
     border-radius: var(--radius-sm);
     font-size: var(--text-xs);
 }
@@ -2013,12 +2015,12 @@
 }
 
 .modal-calc-label {
-    color: #4b5563;
+    color: var(--color-text-secondary);
     font-weight: 500;
 }
 
 .modal-calc-value {
-    color: #171717;
+    color: var(--color-text-primary);
     font-weight: 600;
 }
 
@@ -2397,7 +2399,7 @@
         padding: var(--space-sm) var(--space-md);
         flex-shrink: 0;
         z-index: 10;
-        background: #ffffff;
+        background: var(--color-bg-surface);
     }
 
     .ranking-modal-header h3 {

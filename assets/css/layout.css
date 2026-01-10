@@ -79,6 +79,7 @@
 .sidebar-link[aria-current="page"]{
   background:var(--color-accent-light);
   color:var(--color-accent-text);
+  box-shadow:0 0 16px var(--color-accent-glow);
 }
 .sidebar-link.is-active .sidebar-icon-svg,
 .sidebar-link[aria-current="page"] .sidebar-icon-svg{color:var(--color-accent-text)}
@@ -95,6 +96,7 @@
   height:24px;
   background:var(--color-accent);
   border-radius:0 2px 2px 0;
+  box-shadow:0 0 12px var(--color-accent-glow-strong);
 }
 
 /* Sidebar icon */
