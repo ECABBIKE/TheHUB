@@ -2,13 +2,13 @@
 -- Date: 2026-01-10
 -- Description: Adds global sponsor placements and race reports/blog functionality
 --
--- IMPORTANT: Run this via PHP migration script for proper column existence checks:
+-- NOTE: This migration only creates tables. For column additions to the
+-- sponsors table, run the PHP migration instead:
 -- /admin/migrations/100_global_sponsors_race_reports.php
 
 -- ============================================================================
 -- 1. SPONSOR PLACEMENTS TABLE
 -- ============================================================================
--- Manages where sponsors appear across the site
 
 CREATE TABLE IF NOT EXISTS sponsor_placements (
     id INT AUTO_INCREMENT PRIMARY KEY,
@@ -24,9 +24,9 @@ CREATE TABLE IF NOT EXISTS sponsor_placements (
     clicks INT DEFAULT 0,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (sponsor_id) REFERENCES sponsors(id) ON DELETE CASCADE,
     INDEX idx_placement_page (page_type, position),
-    INDEX idx_placement_active (is_active, start_date, end_date)
+    INDEX idx_placement_active (is_active, start_date, end_date),
+    INDEX idx_sponsor (sponsor_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================================================
@@ -41,28 +41,6 @@ CREATE TABLE IF NOT EXISTS sponsor_tier_benefits (
     display_order INT DEFAULT 0,
     UNIQUE KEY unique_tier_benefit (tier, benefit_key)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
-
--- Default tier benefits
-INSERT IGNORE INTO sponsor_tier_benefits (tier, benefit_key, benefit_value, display_order) VALUES
-('title_gravityseries', 'branding', 'Varumärke i GravitySeries logotyp', 1),
-('title_gravityseries', 'placement', 'Exklusiv startsidesplacering (header banner)', 2),
-('title_gravityseries', 'all_pages', 'Header-placering på alla sidor', 3),
-('title_gravityseries', 'max_placements', 'Max 10 sponsorplatser', 4),
-('title_gravityseries', 'analytics', 'Dedikerad analytics-dashboard', 5),
-('title_series', 'branding', 'Varumärke i serienamnet', 1),
-('title_series', 'placement', 'Banner på seriesidor', 2),
-('title_series', 'events', 'Branding på seriens evenemang', 3),
-('title_series', 'max_placements', 'Max 5 sponsorplatser', 4),
-('gold', 'sidebar', 'Sidebar startsida', 1),
-('gold', 'results', 'Alla resultsidor', 2),
-('gold', 'ranking', 'Ranking sidebar', 3),
-('gold', 'max_placements', 'Max 3 sponsorplatser', 4),
-('silver', 'selected', 'Valda sidor', 1),
-('silver', 'content', 'Content bottom', 2),
-('silver', 'max_placements', 'Max 2 sponsorplatser', 3),
-('branch', 'database', 'Databas sidebar (relevant för cykelbutiker)', 1),
-('branch', 'footer', 'Footer rotation', 2),
-('branch', 'max_placements', 'Max 2 sponsorplatser', 3);
 
 -- ============================================================================
 -- 3. SPONSOR ANALYTICS TABLE
@@ -98,17 +76,6 @@ CREATE TABLE IF NOT EXISTS sponsor_settings (
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Default settings
-INSERT IGNORE INTO sponsor_settings (setting_key, setting_value, description) VALUES
-('max_sponsors_per_page', '5', 'Max antal sponsorer per sida'),
-('banner_rotation_seconds', '10', 'Rotation banner (sekunder)'),
-('enable_analytics', '1', 'Aktivera sponsorstatistik'),
-('require_approval_race_reports', '0', 'Kräv godkännande för race reports'),
-('featured_reports_count', '3', 'Antal featured reports på startsida'),
-('instagram_auto_import', '0', 'Auto-importera från Instagram'),
-('public_enabled', '0', 'Visa globala sponsorer för besökare (0=endast admin, 1=alla)'),
-('race_reports_public', '0', 'Visa race reports för besökare (0=endast admin, 1=alla)');
-
 -- ============================================================================
 -- 5. RACE REPORTS TABLE
 -- ============================================================================
@@ -134,7 +101,6 @@ CREATE TABLE IF NOT EXISTS race_reports (
     published_at DATETIME NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
-    FOREIGN KEY (rider_id) REFERENCES riders(id) ON DELETE CASCADE,
     INDEX idx_reports_status (status, published_at),
     INDEX idx_reports_rider (rider_id),
     INDEX idx_reports_event (event_id),
@@ -153,17 +119,6 @@ CREATE TABLE IF NOT EXISTS race_report_tags (
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- Default tags
-INSERT IGNORE INTO race_report_tags (name, slug) VALUES
-('Enduro', 'enduro'),
-('Downhill', 'downhill'),
-('XC', 'xc'),
-('Gravel', 'gravel'),
-('Träning', 'traning'),
-('Tävling', 'tavling'),
-('Teknik', 'teknik'),
-('Utrustning', 'utrustning');
-
 -- ============================================================================
 -- 7. RACE REPORT TAG RELATIONS TABLE
 -- ============================================================================
@@ -172,8 +127,7 @@ CREATE TABLE IF NOT EXISTS race_report_tag_relations (
     report_id INT NOT NULL,
     tag_id INT NOT NULL,
     PRIMARY KEY (report_id, tag_id),
-    FOREIGN KEY (report_id) REFERENCES race_reports(id) ON DELETE CASCADE,
-    FOREIGN KEY (tag_id) REFERENCES race_report_tags(id) ON DELETE CASCADE
+    INDEX idx_tag (tag_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================================================
@@ -188,10 +142,8 @@ CREATE TABLE IF NOT EXISTS race_report_comments (
     comment_text TEXT NOT NULL,
     is_approved TINYINT(1) DEFAULT 1,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    FOREIGN KEY (report_id) REFERENCES race_reports(id) ON DELETE CASCADE,
-    FOREIGN KEY (rider_id) REFERENCES riders(id) ON DELETE SET NULL,
-    FOREIGN KEY (parent_comment_id) REFERENCES race_report_comments(id) ON DELETE CASCADE,
-    INDEX idx_comments_report (report_id, is_approved)
+    INDEX idx_comments_report (report_id, is_approved),
+    INDEX idx_comments_parent (parent_comment_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================================================
@@ -203,19 +155,50 @@ CREATE TABLE IF NOT EXISTS race_report_likes (
     rider_id INT NOT NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     PRIMARY KEY (report_id, rider_id),
-    FOREIGN KEY (report_id) REFERENCES race_reports(id) ON DELETE CASCADE,
-    FOREIGN KEY (rider_id) REFERENCES riders(id) ON DELETE CASCADE
+    INDEX idx_rider (rider_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================================================
--- NOTE: SPONSORS TABLE MODIFICATIONS
+-- 10. INSERT DEFAULT DATA (uses INSERT IGNORE to avoid duplicates)
 -- ============================================================================
--- The sponsors table needs additional columns:
--- - is_global (TINYINT(1))
--- - display_priority (INT)
--- - contact_email (VARCHAR(255))
--- - contact_phone (VARCHAR(50))
---
--- Run the PHP migration for safe column additions:
--- /admin/migrations/100_global_sponsors_race_reports.php
--- ============================================================================
+
+INSERT IGNORE INTO sponsor_settings (setting_key, setting_value, description) VALUES
+('max_sponsors_per_page', '5', 'Max antal sponsorer per sida'),
+('banner_rotation_seconds', '10', 'Rotation banner (sekunder)'),
+('enable_analytics', '1', 'Aktivera sponsorstatistik'),
+('require_approval_race_reports', '0', 'Krav godkannande for race reports'),
+('featured_reports_count', '3', 'Antal featured reports pa startsida'),
+('instagram_auto_import', '0', 'Auto-importera fran Instagram'),
+('public_enabled', '0', 'Visa globala sponsorer for besokare (0=endast admin, 1=alla)'),
+('race_reports_public', '0', 'Visa race reports for besokare (0=endast admin, 1=alla)');
+
+INSERT IGNORE INTO sponsor_tier_benefits (tier, benefit_key, benefit_value, display_order) VALUES
+('title_gravityseries', 'branding', 'Varumarke i GravitySeries logotyp', 1),
+('title_gravityseries', 'placement', 'Exklusiv startsidesplacering (header banner)', 2),
+('title_gravityseries', 'all_pages', 'Header-placering pa alla sidor', 3),
+('title_gravityseries', 'max_placements', 'Max 10 sponsorplatser', 4),
+('title_gravityseries', 'analytics', 'Dedikerad analytics-dashboard', 5),
+('title_series', 'branding', 'Varumarke i serienamnet', 1),
+('title_series', 'placement', 'Banner pa seriesidor', 2),
+('title_series', 'events', 'Branding pa seriens evenemang', 3),
+('title_series', 'max_placements', 'Max 5 sponsorplatser', 4),
+('gold', 'sidebar', 'Sidebar startsida', 1),
+('gold', 'results', 'Alla resultsidor', 2),
+('gold', 'ranking', 'Ranking sidebar', 3),
+('gold', 'max_placements', 'Max 3 sponsorplatser', 4),
+('silver', 'selected', 'Valda sidor', 1),
+('silver', 'content', 'Content bottom', 2),
+('silver', 'max_placements', 'Max 2 sponsorplatser', 3),
+('branch', 'database', 'Databas sidebar (relevant for cykelbutiker)', 1),
+('branch', 'footer', 'Footer rotation', 2),
+('branch', 'max_placements', 'Max 2 sponsorplatser', 3);
+
+INSERT IGNORE INTO race_report_tags (name, slug) VALUES
+('Enduro', 'enduro'),
+('Downhill', 'downhill'),
+('XC', 'xc'),
+('Gravel', 'gravel'),
+('Traning', 'traning'),
+('Tavling', 'tavling'),
+('Teknik', 'teknik'),
+('Utrustning', 'utrustning');
