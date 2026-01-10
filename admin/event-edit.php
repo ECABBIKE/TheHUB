@@ -1426,6 +1426,5 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 
 </script>
-<?php endif; ?>
 
 <?php include __DIR__ . '/components/unified-layout-footer.php'; ?>
