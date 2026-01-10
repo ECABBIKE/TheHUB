@@ -3,6 +3,11 @@
  * V3 Single Rider Page - Redesigned Profile with Achievements & Series Standings
  */
 
+// Define page type for sponsor placements
+if (!defined('HUB_PAGE_TYPE')) {
+    define('HUB_PAGE_TYPE', 'rider');
+}
+
 $db = hub_db();
 $riderId = intval($pageInfo['params']['id'] ?? $_GET['id'] ?? 0);
 
@@ -755,6 +760,12 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
     }
 }
 </style>
+
+<!-- Global Sponsor: Header Banner -->
+<?= render_global_sponsors('rider', 'header_banner', '') ?>
+
+<!-- Global Sponsor: Content Top -->
+<?= render_global_sponsors('rider', 'content_top', '') ?>
 
 <!-- New 2-Column Layout -->
 <div class="rider-profile-layout">
@@ -2830,6 +2841,9 @@ function initSeriesTabs() {
 // Init on page load
 document.addEventListener('DOMContentLoaded', initSeriesTabs);
 </script>
+
+<!-- Global Sponsor: Content Bottom -->
+<?= render_global_sponsors('rider', 'content_bottom', 'Tack till våra partners') ?>
 
 <!-- Delete Club Season (superadmin) -->
 <?php if ($isSuperAdmin): ?>

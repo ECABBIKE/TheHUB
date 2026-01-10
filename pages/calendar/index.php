@@ -4,6 +4,11 @@
  * Visar kommande event med filter (månad, serie, format)
  */
 
+// Define page type for sponsor placements
+if (!defined('HUB_PAGE_TYPE')) {
+    define('HUB_PAGE_TYPE', 'calendar');
+}
+
 $pdo = hub_db();
 $currentUser = hub_current_user();
 
@@ -126,6 +131,9 @@ if (!function_exists('getDeadlineInfo')) {
 
 <!-- Global Sponsor: Header Banner -->
 <?= render_global_sponsors('calendar', 'header_banner', '') ?>
+
+<!-- Global Sponsor: Content Top -->
+<?= render_global_sponsors('calendar', 'content_top', '') ?>
 
 <!-- Filters -->
 <div class="filter-bar">

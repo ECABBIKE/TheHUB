@@ -10,6 +10,9 @@ if (!defined('HUB_V3_ROOT')) {
     exit;
 }
 
+// Define page type for sponsor placements
+define('HUB_PAGE_TYPE', 'home');
+
 require_once HUB_V3_ROOT . '/components/icons.php';
 
 $isLoggedIn = hub_is_logged_in();
@@ -121,6 +124,9 @@ $homepageLogo = getBranding('logos.homepage');
 
     <!-- Global Sponsor: Header Banner -->
     <?= render_global_sponsors('home', 'header_banner', '') ?>
+
+    <!-- Global Sponsor: Content Top -->
+    <?= render_global_sponsors('home', 'content_top', '') ?>
 
     <!-- About Section with Title -->
     <div class="welcome-about text-center">

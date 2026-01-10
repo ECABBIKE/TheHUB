@@ -313,6 +313,25 @@ class GlobalSponsorManager {
     }
 
     /**
+     * Hämta enskild placering
+     */
+    public function getPlacement(int $id): ?array {
+        try {
+            $stmt = $this->pdo->prepare("
+                SELECT sp.*, s.name as sponsor_name, s.tier as sponsor_tier
+                FROM sponsor_placements sp
+                INNER JOIN sponsors s ON sp.sponsor_id = s.id
+                WHERE sp.id = :id
+            ");
+            $stmt->execute([':id' => $id]);
+            return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+        } catch (PDOException $e) {
+            error_log("getPlacement error: " . $e->getMessage());
+            return null;
+        }
+    }
+
+    /**
      * Hämta alla placeringar
      */
     public function getAllPlacements(): array {

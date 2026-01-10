@@ -10,6 +10,9 @@ if (!defined('HUB_V3_ROOT')) {
     exit;
 }
 
+// Define page type for sponsor placements
+define('HUB_PAGE_TYPE', 'database');
+
 $pdo = hub_db();
 $tab = $_GET['tab'] ?? 'riders';
 
@@ -213,6 +216,9 @@ if (empty($clubRankings)) {
 
 <!-- Global Sponsor: Header Banner -->
 <?= render_global_sponsors('database', 'header_banner', '') ?>
+
+<!-- Global Sponsor: Content Top -->
+<?= render_global_sponsors('database', 'content_top', '') ?>
 
 <!-- Stats Cards -->
 <div class="stats-grid">

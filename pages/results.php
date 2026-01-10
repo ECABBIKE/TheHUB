@@ -4,6 +4,11 @@
  * Matching calendar page design with brand colors
  */
 
+// Define page type for sponsor placements
+if (!defined('HUB_PAGE_TYPE')) {
+    define('HUB_PAGE_TYPE', 'results');
+}
+
 $pdo = hub_db();
 
 // Get filter parameters
@@ -99,6 +104,9 @@ try {
 
 <!-- Global Sponsor: Header Banner -->
 <?= render_global_sponsors('results', 'header_banner', '') ?>
+
+<!-- Global Sponsor: Content Top -->
+<?= render_global_sponsors('results', 'content_top', '') ?>
 
 <!-- Filters -->
 <div class="filter-bar">

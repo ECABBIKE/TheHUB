@@ -10,6 +10,9 @@ if (!defined('HUB_V3_ROOT')) {
     exit;
 }
 
+// Define page type for sponsor placements
+define('HUB_PAGE_TYPE', 'series_list');
+
 $pdo = hub_db();
 
 // Check if series_events table exists
@@ -144,7 +147,10 @@ if ($filterSeriesName && !empty($seriesList)) {
 </div>
 
 <!-- Global Sponsor: Header Banner -->
-<?= render_global_sponsors('series', 'header_banner', '') ?>
+<?= render_global_sponsors('series_list', 'header_banner', '') ?>
+
+<!-- Global Sponsor: Content Top -->
+<?= render_global_sponsors('series_list', 'content_top', '') ?>
 
 <!-- Filters -->
 <div class="filter-bar">
@@ -246,7 +252,7 @@ if ($filterSeriesName && !empty($seriesList)) {
 <?php endif; ?>
 
 <!-- Global Sponsor: Content Bottom -->
-<?= render_global_sponsors('series', 'content_bottom', 'Tack till våra partners') ?>
+<?= render_global_sponsors('series_list', 'content_bottom', 'Tack till våra partners') ?>
 
 <script>
 function applyFilters() {

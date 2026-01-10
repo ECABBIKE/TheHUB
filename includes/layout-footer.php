@@ -10,6 +10,18 @@
 ?>
     </main>
 
+    <!-- Global Sponsor: Footer Position -->
+    <?php
+    // Determine page type for footer sponsors
+    $footerPageType = 'all';
+    if (defined('HUB_PAGE_TYPE')) {
+        $footerPageType = HUB_PAGE_TYPE;
+    }
+    if (function_exists('render_global_sponsors')) {
+        echo render_global_sponsors($footerPageType, 'footer', '');
+    }
+    ?>
+
     <!-- Footer -->
     <footer class="footer">
         <div class="container">
