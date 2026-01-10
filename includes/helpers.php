@@ -459,8 +459,9 @@ function getVersionInfo() {
 function render_global_sponsors($pageType, $position, $title = 'Sponsorer') {
     global $pdo;
 
-    // Check if user can see sponsors
-    $isAdmin = function_exists('hasRole') && hasRole('admin');
+    // Check user roles - super_admin ALWAYS sees sponsors
+    $isSuperAdmin = function_exists('hasRole') && hasRole('super_admin');
+    $isAdmin = function_exists('hasRole') && (hasRole('admin') || hasRole('super_admin'));
 
     // Check public_enabled setting
     $publicEnabled = false;
@@ -469,12 +470,15 @@ function render_global_sponsors($pageType, $position, $title = 'Sponsorer') {
         $row = $stmt->fetch(PDO::FETCH_ASSOC);
         $publicEnabled = ($row && $row['setting_value'] == '1');
     } catch (Exception $e) {
-        // Table might not exist yet
-        return '';
+        // Table might not exist yet - super_admin can still see placeholders
+        if (!$isSuperAdmin) {
+            return '';
+        }
     }
 
-    // Only show if admin OR public is enabled
-    if (!$isAdmin && !$publicEnabled) {
+    // Super admin ALWAYS sees sponsors (for testing)
+    // Others only see if public is enabled
+    if (!$isSuperAdmin && !$publicEnabled) {
         return '';
     }
 
@@ -486,12 +490,12 @@ function render_global_sponsors($pageType, $position, $title = 'Sponsorer') {
     $sponsors = $sponsorManager->getSponsorsForPlacement($pageType, $position);
 
     if (empty($sponsors)) {
-        // Show placeholder for admin if no sponsors configured
-        if ($isAdmin) {
+        // Show placeholder for super_admin if no sponsors configured
+        if ($isSuperAdmin) {
             return '<div class="sponsor-section sponsor-section-' . h($position) . '" style="border: 2px dashed var(--color-border); padding: var(--space-md); text-align: center; opacity: 0.6;">
                 <small style="color: var(--color-text-muted);">
                     <i data-lucide="image" style="width: 16px; height: 16px; vertical-align: middle;"></i>
-                    Sponsorplats: ' . h($pageType) . ' / ' . h($position) . '
+                    Sponsorplats: ' . h($pageType) . ' / ' . h($position) . ' (endast synlig för super_admin)
                 </small>
             </div>';
         }
