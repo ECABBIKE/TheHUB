@@ -163,11 +163,28 @@ $ADMIN_TABS = [
                     'refund-requests.php',
                     'pricing-templates.php',
                     'pricing-template-edit.php',
+                    // Rabatter
+                    'discount-codes.php',
+                    'gravity-id.php',
                     // Anmälningsregler
                     'registration-rules.php',
                     // Promotor
                     'promotor-payments.php'
                 ]
+            ],
+            [
+                'id' => 'discount-codes',
+                'label' => 'Rabattkoder',
+                'icon' => 'tag',
+                'url' => '/admin/discount-codes.php',
+                'pages' => ['discount-codes.php']
+            ],
+            [
+                'id' => 'gravity-id',
+                'label' => 'Gravity ID',
+                'icon' => 'badge-check',
+                'url' => '/admin/gravity-id.php',
+                'pages' => ['gravity-id.php']
             ],
             [
                 'id' => 'classes',
