@@ -66,13 +66,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
  }
 }
 
-// Get all license types from database
+// Get all license types from database (exclude Swe ID)
 $licenseTypes = [];
 try {
  $licenseTypes = $db->getAll("
  SELECT code, name, description, priority
  FROM license_types
  WHERE is_active = 1
+   AND code NOT LIKE '%swe%'
+   AND name NOT LIKE '%Swe ID%'
  ORDER BY priority DESC
 ");
 } catch (Exception $e) {
@@ -261,14 +263,26 @@ include __DIR__ . '/components/unified-layout.php';
      <?php endforeach; ?>
     </div>
 
-    <!-- Save Button -->
-    <div style="margin-top: var(--space-lg); padding-top: var(--space-lg); border-top: 1px solid var(--color-border); display: flex; justify-content: flex-end;">
+    <!-- Buttons -->
+    <div style="margin-top: var(--space-lg); padding-top: var(--space-lg); border-top: 1px solid var(--color-border); display: flex; justify-content: space-between; align-items: center;">
+     <button type="button" class="btn btn--secondary" onclick="clearAll()">
+      <i data-lucide="x"></i>
+      Rensa allt
+     </button>
      <button type="submit" class="btn btn--primary">
       <i data-lucide="save"></i>
       Spara matris
      </button>
     </div>
    </form>
+
+   <script>
+   function clearAll() {
+    if (confirm('Vill du verkligen rensa alla markeringar?')) {
+     document.querySelectorAll('.matrix-checkbox').forEach(cb => cb.checked = false);
+    }
+   }
+   </script>
   </div>
  </div>
 
