@@ -38,6 +38,7 @@ try {
 $possibleDirs = [
     __DIR__ . '/../database/migrations/',
     __DIR__ . '/../migrations/',
+    __DIR__ . '/migrations/',
 ];
 
 $migrationsDir = null;
@@ -53,18 +54,33 @@ $todaysMigrations = [];
 $today = date('Y-m-d');
 
 if ($migrationsDir && is_dir($migrationsDir)) {
-    $files = glob($migrationsDir . '*.sql');
-    foreach ($files as $file) {
+    // Get both .sql and .php migration files
+    $sqlFiles = glob($migrationsDir . '*.sql') ?: [];
+    $phpFiles = glob($migrationsDir . '*.php') ?: [];
+
+    // Filter out non-migration PHP files
+    $phpFiles = array_filter($phpFiles, function($file) {
+        $filename = basename($file);
+        // Only include numbered migrations (e.g., 099_xxx.php, 100_xxx.php)
+        return preg_match('/^\d{3}_/', $filename);
+    });
+
+    $allFiles = array_merge($sqlFiles, $phpFiles);
+    sort($allFiles);
+
+    foreach ($allFiles as $file) {
         $filename = basename($file);
         $isExecuted = in_array($filename, $executedMigrations);
         $fileDate = date('Y-m-d', filemtime($file));
+        $ext = pathinfo($file, PATHINFO_EXTENSION);
 
         $migrationData = [
             'file' => $filename,
             'path' => $file,
             'name' => pathinfo($file, PATHINFO_FILENAME),
             'executed' => $isExecuted,
-            'date' => $fileDate
+            'date' => $fileDate,
+            'type' => $ext
         ];
 
         $migrations[] = $migrationData;
@@ -74,7 +90,6 @@ if ($migrationsDir && is_dir($migrationsDir)) {
             $todaysMigrations[] = $migrationData;
         }
     }
-    sort($migrations);
 }
 
 // Handle migration execution
@@ -89,83 +104,110 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['run_migration'])) {
         if (!file_exists($fullPath)) {
             $error = 'Migrationsfilen hittades inte.';
         } else {
+            $ext = pathinfo($fullPath, PATHINFO_EXTENSION);
+
             try {
-                $sql = file_get_contents($fullPath);
+                if ($ext === 'php') {
+                    // PHP migration - include and run
+                    ob_start();
+                    include $fullPath;
+                    $output = ob_get_clean();
 
-                // Remove comment lines (lines starting with --)
-                $sqlLines = explode("\n", $sql);
-                $sqlLines = array_filter($sqlLines, fn($line) => !preg_match('/^\s*--/', $line));
-                $sql = implode("\n", $sqlLines);
-
-                // Split into individual statements
-                $statements = array_filter(
-                    array_map('trim', explode(';', $sql)),
-                    fn($s) => !empty($s)
-                );
-
-                $successCount = 0;
-                $errorCount = 0;
-
-                foreach ($statements as $statement) {
-                    if (empty(trim($statement))) continue;
-
-                    try {
-                        $pdo->exec($statement);
-                        $successCount++;
+                    $results[] = [
+                        'status' => 'success',
+                        'message' => 'PHP-migration kördes'
+                    ];
+                    if (!empty($output)) {
                         $results[] = [
-                            'status' => 'success',
-                            'message' => substr($statement, 0, 80) . '...'
+                            'status' => 'info',
+                            'message' => $output
                         ];
-                    } catch (Exception $e) {
-                        $errMsg = $e->getMessage();
-                        // Ignore common "already exists" errors
-                        $ignorableErrors = [
-                            'Duplicate column',      // Column already exists
-                            'Duplicate key name',    // Index already exists
-                            'Duplicate entry',       // Row already exists
-                            'already exists',        // Generic already exists
-                            'check that column/key exists', // Column doesn't exist for DROP
-                            'Unknown column',        // Column doesn't exist
-                            'Can\'t DROP',           // Can't drop non-existent
-                            'BLOB/TEXT column',      // Index on text column
-                        ];
-
-                        $isIgnorable = false;
-                        foreach ($ignorableErrors as $pattern) {
-                            if (stripos($errMsg, $pattern) !== false) {
-                                $isIgnorable = true;
-                                break;
-                            }
-                        }
-
-                        if ($isIgnorable) {
-                            $results[] = [
-                                'status' => 'skipped',
-                                'message' => 'Redan utförd: ' . substr($statement, 0, 60) . '...'
-                            ];
-                        } else {
-                            $errorCount++;
-                            $results[] = [
-                                'status' => 'error',
-                                'message' => $errMsg
-                            ];
-                        }
                     }
-                }
 
-                if ($errorCount === 0) {
-                    // Log the successful migration
+                    // Log successful migration
                     try {
                         $logStmt = $pdo->prepare("INSERT IGNORE INTO migrations_log (migration_file) VALUES (?)");
                         $logStmt->execute([$migrationFile]);
-                    } catch (Exception $e) {
-                        // Ignore logging errors
-                    }
-                    $message = "Migration '{$migrationFile}' kördes framgångsrikt! ({$successCount} statements)";
-                    // Refresh executed migrations list
+                    } catch (Exception $e) {}
+
+                    $message = "PHP-migration '{$migrationFile}' kördes framgångsrikt!";
                     $executedMigrations[] = $migrationFile;
+
                 } else {
-                    $error = "Migration kördes med {$errorCount} fel.";
+                    // SQL migration
+                    $sql = file_get_contents($fullPath);
+
+                    // Remove comment lines (lines starting with --)
+                    $sqlLines = explode("\n", $sql);
+                    $sqlLines = array_filter($sqlLines, fn($line) => !preg_match('/^\s*--/', $line));
+                    $sql = implode("\n", $sqlLines);
+
+                    // Split into individual statements
+                    $statements = array_filter(
+                        array_map('trim', explode(';', $sql)),
+                        fn($s) => !empty($s)
+                    );
+
+                    $successCount = 0;
+                    $errorCount = 0;
+
+                    foreach ($statements as $statement) {
+                        if (empty(trim($statement))) continue;
+
+                        try {
+                            $pdo->exec($statement);
+                            $successCount++;
+                            $results[] = [
+                                'status' => 'success',
+                                'message' => substr($statement, 0, 80) . '...'
+                            ];
+                        } catch (Exception $e) {
+                            $errMsg = $e->getMessage();
+                            // Ignore common "already exists" errors
+                            $ignorableErrors = [
+                                'Duplicate column',
+                                'Duplicate key name',
+                                'Duplicate entry',
+                                'already exists',
+                                'check that column/key exists',
+                                'Unknown column',
+                                'Can\'t DROP',
+                                'BLOB/TEXT column',
+                            ];
+
+                            $isIgnorable = false;
+                            foreach ($ignorableErrors as $pattern) {
+                                if (stripos($errMsg, $pattern) !== false) {
+                                    $isIgnorable = true;
+                                    break;
+                                }
+                            }
+
+                            if ($isIgnorable) {
+                                $results[] = [
+                                    'status' => 'skipped',
+                                    'message' => 'Redan utförd: ' . substr($statement, 0, 60) . '...'
+                                ];
+                            } else {
+                                $errorCount++;
+                                $results[] = [
+                                    'status' => 'error',
+                                    'message' => $errMsg
+                                ];
+                            }
+                        }
+                    }
+
+                    if ($errorCount === 0) {
+                        try {
+                            $logStmt = $pdo->prepare("INSERT IGNORE INTO migrations_log (migration_file) VALUES (?)");
+                            $logStmt->execute([$migrationFile]);
+                        } catch (Exception $e) {}
+                        $message = "Migration '{$migrationFile}' kördes framgångsrikt! ({$successCount} statements)";
+                        $executedMigrations[] = $migrationFile;
+                    } else {
+                        $error = "Migration kördes med {$errorCount} fel.";
+                    }
                 }
 
             } catch (Exception $e) {
@@ -295,7 +337,10 @@ include __DIR__ . '/components/unified-layout.php';
                             <?php endif; ?>
                         </div>
                         <div class="migration-info">
-                            <div class="migration-name"><?= htmlspecialchars($migration['name']) ?></div>
+                            <div class="migration-name">
+                                <?= htmlspecialchars($migration['name']) ?>
+                                <span class="badge" style="background: <?= ($migration['type'] ?? 'sql') === 'php' ? 'var(--color-info)' : 'var(--color-accent)' ?>; color: white; font-size: 10px; margin-left: 4px;"><?= strtoupper($migration['type'] ?? 'sql') ?></span>
+                            </div>
                         </div>
                         <div class="migration-actions">
                             <?php if (!$migration['executed']): ?>
@@ -368,7 +413,10 @@ include __DIR__ . '/components/unified-layout.php';
                                     <?php endif; ?>
                                 </div>
                                 <div class="migration-info">
-                                    <label class="migration-name" for="mig_<?= md5($migration['name']) ?>"><?= htmlspecialchars($migration['name']) ?></label>
+                                    <label class="migration-name" for="mig_<?= md5($migration['name']) ?>">
+                                        <?= htmlspecialchars($migration['name']) ?>
+                                        <span class="badge" style="background: <?= ($migration['type'] ?? 'sql') === 'php' ? 'var(--color-info)' : 'var(--color-accent)' ?>; color: white; font-size: 10px; margin-left: 4px;"><?= strtoupper($migration['type'] ?? 'sql') ?></span>
+                                    </label>
                                     <div class="migration-meta"><?= $migration['date'] ?></div>
                                 </div>
                                 <div class="migration-actions">
