@@ -148,92 +148,158 @@ include __DIR__ . '/components/unified-layout.php';
   </div>
  <?php else: ?>
 
+ <style>
+  .matrix-grid {
+   display: grid;
+   gap: 2px;
+   background: var(--color-border);
+   border-radius: var(--radius-md);
+   overflow: hidden;
+  }
+  .matrix-header-row {
+   display: contents;
+  }
+  .matrix-row {
+   display: contents;
+  }
+  .matrix-cell {
+   background: var(--color-bg-card);
+   padding: var(--space-sm);
+   display: flex;
+   align-items: center;
+   justify-content: center;
+   min-height: 48px;
+  }
+  .matrix-cell-header {
+   background: var(--color-bg-surface);
+   font-weight: 600;
+   font-size: 0.75rem;
+   text-transform: uppercase;
+   letter-spacing: 0.5px;
+   color: var(--color-text-secondary);
+   text-align: center;
+   padding: var(--space-sm) var(--space-xs);
+  }
+  .matrix-cell-class {
+   background: var(--color-bg-surface);
+   justify-content: flex-start;
+   font-weight: 500;
+   gap: var(--space-xs);
+   padding: var(--space-sm) var(--space-md);
+  }
+  .matrix-checkbox {
+   width: 28px;
+   height: 28px;
+   cursor: pointer;
+   accent-color: var(--color-accent);
+   border-radius: var(--radius-sm);
+  }
+  .matrix-cell:has(.matrix-checkbox:checked) {
+   background: rgba(55, 212, 214, 0.15);
+  }
+  .gender-badge {
+   font-size: 0.7rem;
+   padding: 2px 6px;
+   border-radius: var(--radius-sm);
+   font-weight: 600;
+  }
+  .gender-m { background: rgba(59, 130, 246, 0.2); color: #3b82f6; }
+  .gender-f { background: rgba(236, 72, 153, 0.2); color: #ec4899; }
+  .gender-mix { background: rgba(156, 163, 175, 0.2); color: var(--color-text-muted); }
+  .quick-actions {
+   display: flex;
+   flex-wrap: wrap;
+   gap: var(--space-xs);
+   margin-bottom: var(--space-md);
+  }
+  .quick-btn {
+   padding: var(--space-xs) var(--space-sm);
+   font-size: 0.75rem;
+   border-radius: var(--radius-sm);
+   background: var(--color-bg-hover);
+   border: 1px solid var(--color-border);
+   color: var(--color-text-secondary);
+   cursor: pointer;
+   transition: all 0.15s;
+  }
+  .quick-btn:hover {
+   background: var(--color-accent-light);
+   border-color: var(--color-accent);
+   color: var(--color-accent);
+  }
+ </style>
+
  <div class="card">
-  <div class="card-header">
-  <h2 class="">
-   <i data-lucide="grid-3x3"></i>
-   <?= h($eventLicenseClasses[$currentTab]['name']) ?>-matris
-  </h2>
+  <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: var(--space-sm);">
+   <h2>
+    <i data-lucide="grid-3x3"></i>
+    <?= h($eventLicenseClasses[$currentTab]['name']) ?>
+   </h2>
+   <p class="text-secondary text-sm" style="margin: 0;"><?= h($eventLicenseClasses[$currentTab]['desc']) ?></p>
   </div>
   <div class="card-body">
-  <form method="POST" id="matrixForm">
-   <?= csrf_field() ?>
-   <input type="hidden" name="action" value="save_matrix">
-   <input type="hidden" name="event_license_class" value="<?= h($currentTab) ?>">
+   <form method="POST" id="matrixForm">
+    <?= csrf_field() ?>
+    <input type="hidden" name="action" value="save_matrix">
+    <input type="hidden" name="event_license_class" value="<?= h($currentTab) ?>">
 
-   <div class="table-responsive" style="max-height: 60vh; overflow: auto;">
-   <table class="table table-compact" style="font-size: 0.85rem;">
-    <thead style="position: sticky; top: 0; background: var(--gs-bg); z-index: 10;">
-    <tr>
-     <th style="position: sticky; left: 0; background: var(--gs-bg); z-index: 11; min-width: 140px;">
-     Klass
-     </th>
+    <!-- Quick Actions -->
+    <div class="quick-actions">
+     <button type="button" class="quick-btn" onclick="selectAll()">Markera alla</button>
+     <button type="button" class="quick-btn" onclick="deselectAll()">Avmarkera alla</button>
      <?php foreach ($licenseTypes as $license): ?>
-     <th class="text-center" style="min-width: 80px; padding: 8px 4px;">
-      <?= h($license['name']) ?>
-     </th>
+      <button type="button" class="quick-btn" onclick="toggleColumn('<?= h($license['code']) ?>')">
+       <?= h($license['name']) ?>
+      </button>
      <?php endforeach; ?>
-    </tr>
-    </thead>
-    <tbody>
-    <?php foreach ($classes as $class): ?>
-     <tr>
-     <td style="position: sticky; left: 0; background: var(--gs-bg); z-index: 1;">
-      <strong><?= h($class['display_name'] ?: $class['name']) ?></strong>
-      <?php if ($class['gender'] === 'M'): ?>
-      <span class="badge badge-info gs-ml-xs">♂</span>
-      <?php elseif ($class['gender'] === 'K' || $class['gender'] === 'F'): ?>
-      <span class="badge badge-error gs-ml-xs">♀</span>
-      <?php else: ?>
-      <span class="badge gs-ml-xs">Mix</span>
-      <?php endif; ?>
-     </td>
-     <?php foreach ($licenseTypes as $license): ?>
-      <td class="text-center" style="padding: 4px;">
-      <input type="hidden"
-       name="mapping[<?= $class['id'] ?>][<?= h($license['code']) ?>]"
-       value="0">
-      <label style="cursor: pointer; display: block; padding: 4px;">
-       <input type="checkbox"
-        name="mapping[<?= $class['id'] ?>][<?= h($license['code']) ?>]"
-        value="1"
-        <?= isset($currentMappings[$class['id']][$license['code']]) ? 'checked' : '' ?>
-        style="width: 18px; height: 18px; cursor: pointer;">
-      </label>
-      </td>
-     <?php endforeach; ?>
-     </tr>
-    <?php endforeach; ?>
-    </tbody>
-   </table>
-   </div>
+    </div>
 
-   <div class="flex justify-between items-center mt-lg gs-pt-lg" style="border-top: 1px solid var(--border);">
-   <div class="flex gap-sm">
-    <button type="button" class="btn btn--secondary btn--sm" onclick="selectAll()">
-    <i data-lucide="check-square"></i>
-    Markera alla
-    </button>
-    <button type="button" class="btn btn--secondary btn--sm" onclick="deselectAll()">
-    <i data-lucide="square"></i>
-    Avmarkera alla
-    </button>
-    <button type="button" class="btn btn--secondary btn--sm" onclick="selectColumn('engangslicens')">
-    Alla Engångs
-    </button>
-    <button type="button" class="btn btn--secondary btn--sm" onclick="selectColumn('motionslicens')">
-    Alla Motion
-    </button>
-    <button type="button" class="btn btn--secondary btn--sm" onclick="selectColumn('tavlingslicens')">
-    Alla Tävling
-    </button>
-   </div>
-   <button type="submit" class="btn btn--primary">
-    <i data-lucide="save"></i>
-    Spara <?= h($eventLicenseClasses[$currentTab]['name']) ?>-matris
-   </button>
-   </div>
-  </form>
+    <!-- Matrix Grid -->
+    <div class="matrix-grid" style="grid-template-columns: minmax(160px, 1fr) repeat(<?= count($licenseTypes) ?>, minmax(70px, 100px));">
+     <!-- Header Row -->
+     <div class="matrix-header-row">
+      <div class="matrix-cell matrix-cell-header" style="justify-content: flex-start;">Klass</div>
+      <?php foreach ($licenseTypes as $license): ?>
+       <div class="matrix-cell matrix-cell-header"><?= h($license['name']) ?></div>
+      <?php endforeach; ?>
+     </div>
+
+     <!-- Class Rows -->
+     <?php foreach ($classes as $class): ?>
+      <div class="matrix-row">
+       <div class="matrix-cell matrix-cell-class">
+        <?= h($class['display_name'] ?: $class['name']) ?>
+        <?php if ($class['gender'] === 'M'): ?>
+         <span class="gender-badge gender-m">M</span>
+        <?php elseif ($class['gender'] === 'K' || $class['gender'] === 'F'): ?>
+         <span class="gender-badge gender-f">K</span>
+        <?php else: ?>
+         <span class="gender-badge gender-mix">Mix</span>
+        <?php endif; ?>
+       </div>
+       <?php foreach ($licenseTypes as $license): ?>
+        <div class="matrix-cell">
+         <input type="hidden" name="mapping[<?= $class['id'] ?>][<?= h($license['code']) ?>]" value="0">
+         <input type="checkbox"
+          class="matrix-checkbox"
+          name="mapping[<?= $class['id'] ?>][<?= h($license['code']) ?>]"
+          value="1"
+          data-license="<?= h($license['code']) ?>"
+          <?= isset($currentMappings[$class['id']][$license['code']]) ? 'checked' : '' ?>>
+        </div>
+       <?php endforeach; ?>
+      </div>
+     <?php endforeach; ?>
+    </div>
+
+    <!-- Save Button -->
+    <div style="margin-top: var(--space-lg); padding-top: var(--space-lg); border-top: 1px solid var(--color-border); display: flex; justify-content: flex-end;">
+     <button type="submit" class="btn btn--primary">
+      <i data-lucide="save"></i>
+      Spara matris
+     </button>
+    </div>
+   </form>
   </div>
  </div>
 
@@ -242,15 +308,17 @@ include __DIR__ . '/components/unified-layout.php';
 
 <script>
 function selectAll() {
- document.querySelectorAll('#matrixForm input[type="checkbox"]').forEach(cb => cb.checked = true);
+ document.querySelectorAll('.matrix-checkbox').forEach(cb => cb.checked = true);
 }
 
 function deselectAll() {
- document.querySelectorAll('#matrixForm input[type="checkbox"]').forEach(cb => cb.checked = false);
+ document.querySelectorAll('.matrix-checkbox').forEach(cb => cb.checked = false);
 }
 
-function selectColumn(licenseCode) {
- document.querySelectorAll(`#matrixForm input[type="checkbox"][name*="[${licenseCode}]"]`).forEach(cb => cb.checked = true);
+function toggleColumn(licenseCode) {
+ const checkboxes = document.querySelectorAll(`.matrix-checkbox[data-license="${licenseCode}"]`);
+ const allChecked = Array.from(checkboxes).every(cb => cb.checked);
+ checkboxes.forEach(cb => cb.checked = !allChecked);
 }
 </script>
 
