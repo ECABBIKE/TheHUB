@@ -115,35 +115,35 @@ $positions = [
     'footer' => 'Footer (via layout)'
 ];
 
-// Format guidelines for each position (4:1 ratio standard, matches site image format 1200x150 / 600x150)
+// Format guidelines for each position (4:1 ratio, same as event sponsor format: 240x60px, max 5 per row)
 $positionFormats = [
     'header_inline' => [
         'logo' => '200 x 50 px',
         'banner' => '200 x 50 px',
-        'desc' => 'Liten logo mellan header-logga och användarmeny. Transparent bakgrund rekommenderas. (4:1 ratio)',
+        'desc' => 'Liten logo mellan header-logga och användarmeny. Transparent bakgrund rekommenderas.',
         'type' => 'Logo (PNG/SVG)'
     ],
     'header_banner' => [
         'logo' => '300 x 75 px',
         'banner' => '1200 x 150 px',
-        'desc' => 'Bred banner under sidrubriken. Använd 600x150 eller 1200x150 för bästa resultat. (4:1/8:1 ratio)',
+        'desc' => 'Bred banner under sidrubriken. Använd 600x150 eller 1200x150 för bästa resultat.',
         'type' => 'Banner (PNG/JPG)'
     ],
     'content_top' => [
-        'logo' => '200 x 50 px',
-        'banner' => '600 x 150 px',
-        'desc' => 'Visas överst i innehållsområdet. Flera sponsorer visas i grid. (4:1 ratio)',
+        'logo' => '240 x 60 px',
+        'banner' => '240 x 60 px',
+        'desc' => 'Visas överst i innehållsområdet. Max 5 sponsorer i bredd. (4:1 ratio)',
         'type' => 'Logo eller banner'
     ],
     'content_bottom' => [
-        'logo' => '200 x 50 px',
-        'banner' => '600 x 150 px',
-        'desc' => 'Visas nederst i innehållsområdet före footer. (4:1 ratio)',
+        'logo' => '240 x 60 px',
+        'banner' => '240 x 60 px',
+        'desc' => 'Visas nederst i innehållsområdet. Max 5 sponsorer i bredd. (4:1 ratio)',
         'type' => 'Logo eller banner'
     ],
     'footer' => [
-        'logo' => '150 x 40 px',
-        'banner' => '300 x 75 px',
+        'logo' => '180 x 45 px',
+        'banner' => '180 x 45 px',
         'desc' => 'Kompakt visning i footer. Flera sponsorer i rad. (4:1 ratio)',
         'type' => 'Logo (PNG/SVG)'
     ]

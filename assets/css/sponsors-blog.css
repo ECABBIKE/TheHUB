@@ -40,7 +40,7 @@
 
 .sponsor-grid-content_top,
 .sponsor-grid-content_bottom {
-    grid-template-columns: repeat(auto-fit, minmax(200px, 320px));
+    grid-template-columns: repeat(auto-fit, minmax(180px, 240px));
     justify-content: center;
 }
 
@@ -97,7 +97,7 @@
 .sponsor-logo {
     max-width: 100%;
     height: auto;
-    max-height: 80px;
+    max-height: 60px;
     object-fit: contain;
     filter: grayscale(20%);
     transition: filter 0.3s ease;
@@ -109,9 +109,9 @@
 
 .sponsor-banner {
     width: 100%;
-    max-width: 600px;
+    max-width: 240px;
     height: auto;
-    max-height: 150px;
+    max-height: 60px;
     object-fit: contain;
     border-radius: var(--radius-sm);
 }
