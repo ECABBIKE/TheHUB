@@ -466,69 +466,52 @@ foreach ($myReports['reports'] as $r) {
 </div>
 
 <style>
-/* Race Reports Page Styles */
-.rr-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: var(--space-lg);
-    margin-bottom: var(--space-xl);
-    flex-wrap: wrap;
-}
+/* Race Reports Page - Clean Modern Design */
 
-.rr-header-content {
-    display: flex;
-    align-items: center;
+/* Stats Cards Grid */
+.rr-stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, 1fr);
     gap: var(--space-md);
+    margin-bottom: var(--space-xl);
 }
 
-.rr-header-icon {
-    width: 56px;
-    height: 56px;
+.rr-stat-card {
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: var(--space-lg);
+    text-align: center;
+    transition: all 0.2s ease;
+}
+
+.rr-stat-card:hover {
+    border-color: var(--color-accent);
+    transform: translateY(-2px);
+}
+
+.rr-stat-icon {
+    width: 40px;
+    height: 40px;
+    margin: 0 auto var(--space-sm);
     display: flex;
     align-items: center;
     justify-content: center;
     background: var(--color-accent-light);
-    border-radius: var(--radius-lg);
+    border-radius: var(--radius-md);
     color: var(--color-accent);
 }
 
-.rr-header-icon i {
-    width: 28px;
-    height: 28px;
-}
-
-.rr-title {
-    font-size: 1.75rem;
-    font-weight: 700;
-    margin: 0;
-    color: var(--color-text-primary);
-}
-
-.rr-subtitle {
-    margin: var(--space-xs) 0 0;
-    color: var(--color-text-secondary);
-    font-size: 0.95rem;
-}
-
-.rr-stats {
-    display: flex;
-    gap: var(--space-lg);
-    background: var(--color-bg-card);
-    padding: var(--space-md) var(--space-lg);
-    border-radius: var(--radius-lg);
-    border: 1px solid var(--color-border);
-}
-
-.rr-stat {
-    text-align: center;
+.rr-stat-icon i {
+    width: 20px;
+    height: 20px;
 }
 
 .rr-stat-value {
-    display: block;
-    font-size: 1.5rem;
+    font-size: 2rem;
     font-weight: 700;
-    color: var(--color-accent);
+    color: var(--color-text-primary);
+    line-height: 1;
 }
 
 .rr-stat-label {
@@ -536,25 +519,47 @@ foreach ($myReports['reports'] as $r) {
     color: var(--color-text-muted);
     text-transform: uppercase;
     letter-spacing: 0.05em;
+    margin-top: var(--space-xs);
 }
 
-/* Layout */
+/* Main Layout - Single Column for Focus */
 .rr-layout {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xl);
+}
+
+/* Tips Row - Horizontal on Desktop */
+.rr-tips-row {
     display: grid;
-    grid-template-columns: 1fr 300px;
-    gap: var(--space-lg);
+    grid-template-columns: repeat(5, 1fr);
+    gap: var(--space-sm);
+    padding: var(--space-md);
+    background: linear-gradient(135deg, var(--color-bg-card), var(--color-accent-light));
+    border-radius: var(--radius-lg);
+    border: 1px solid var(--color-border);
+    margin-bottom: var(--space-lg);
 }
 
-.rr-main {
+.rr-tip {
     display: flex;
     flex-direction: column;
-    gap: var(--space-lg);
+    align-items: center;
+    text-align: center;
+    gap: var(--space-xs);
+    padding: var(--space-sm);
 }
 
-.rr-sidebar {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-lg);
+.rr-tip i {
+    width: 24px;
+    height: 24px;
+    color: var(--color-accent);
+}
+
+.rr-tip span {
+    font-size: 0.75rem;
+    color: var(--color-text-secondary);
+    line-height: 1.3;
 }
 
 /* Form Card */
