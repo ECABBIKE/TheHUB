@@ -63,8 +63,8 @@ try {
     // Table might not exist yet
 }
 
-$defaultDiscount = $settings['default_discount'] ?? 50;
-$enabled = ($settings['enabled'] ?? '1') === '1';
+$defaultDiscount = $settings['default_discount'] ?? 0;
+$enabled = ($settings['enabled'] ?? '0') === '1';
 
 // Get members with Gravity ID
 $members = [];
