@@ -667,6 +667,9 @@ function calculateDiscountAmount(array $discount, float $subtotal): float {
 /**
  * Check if rider has valid Gravity ID and calculate discount
  *
+ * Works with existing gravity_id column in riders table.
+ * Default discount is 50 kr unless configured otherwise.
+ *
  * @param int $riderId Rider ID
  * @param int $eventId Event ID (to check if Gravity ID discount applies)
  * @return array ['has_gravity_id' => bool, 'discount' => float, 'gravity_id' => string|null]
@@ -674,59 +677,49 @@ function calculateDiscountAmount(array $discount, float $subtotal): float {
 function checkGravityIdDiscount(int $riderId, int $eventId): array {
     $pdo = hub_db();
 
-    // Check if Gravity ID system is enabled and columns exist
-    try {
-        $stmt = $pdo->query("SELECT setting_value FROM gravity_id_settings WHERE setting_key = 'enabled'");
-        $enabled = $stmt->fetchColumn();
-        if ($enabled !== '1') {
-            return ['has_gravity_id' => false, 'discount' => 0, 'gravity_id' => null];
-        }
-    } catch (Exception $e) {
-        // Table doesn't exist - system not set up
-        return ['has_gravity_id' => false, 'discount' => 0, 'gravity_id' => null];
-    }
-
-    // Check if rider has valid Gravity ID
+    // Check if rider has Gravity ID (existing column in riders table)
+    $rider = null;
     try {
         $stmt = $pdo->prepare("
-            SELECT gravity_id, gravity_id_valid_until
-            FROM riders
-            WHERE id = ? AND gravity_id IS NOT NULL
+            SELECT gravity_id FROM riders
+            WHERE id = ? AND gravity_id IS NOT NULL AND gravity_id != ''
         ");
         $stmt->execute([$riderId]);
         $rider = $stmt->fetch(PDO::FETCH_ASSOC);
-
-        if (!$rider || !$rider['gravity_id']) {
-            return ['has_gravity_id' => false, 'discount' => 0, 'gravity_id' => null];
-        }
-
-        // Check if expired
-        if ($rider['gravity_id_valid_until'] && strtotime($rider['gravity_id_valid_until']) < time()) {
-            return ['has_gravity_id' => false, 'discount' => 0, 'gravity_id' => $rider['gravity_id'], 'expired' => true];
-        }
     } catch (Exception $e) {
-        // gravity_id column doesn't exist
         return ['has_gravity_id' => false, 'discount' => 0, 'gravity_id' => null];
     }
 
-    // Get discount amount for this event
-    $discount = 0;
+    if (!$rider || empty($rider['gravity_id'])) {
+        return ['has_gravity_id' => false, 'discount' => 0, 'gravity_id' => null];
+    }
+
+    // Default discount is 50 kr
+    $discount = 50.0;
+
+    // Try to get event-specific or global discount settings
     try {
-        // First check event-specific discount
+        // First check event-specific discount (if column exists)
         $stmt = $pdo->prepare("SELECT gravity_id_discount FROM events WHERE id = ?");
         $stmt->execute([$eventId]);
         $eventDiscount = $stmt->fetchColumn();
 
-        if ($eventDiscount !== false && $eventDiscount !== null) {
+        if ($eventDiscount !== false && $eventDiscount !== null && floatval($eventDiscount) > 0) {
             $discount = floatval($eventDiscount);
         } else {
-            // Fall back to global default
-            $stmt = $pdo->query("SELECT setting_value FROM gravity_id_settings WHERE setting_key = 'default_discount'");
-            $defaultDiscount = $stmt->fetchColumn();
-            $discount = $defaultDiscount ? floatval($defaultDiscount) : 50.0;
+            // Try to get from settings table (if exists)
+            try {
+                $stmt = $pdo->query("SELECT setting_value FROM gravity_id_settings WHERE setting_key = 'default_discount'");
+                $defaultDiscount = $stmt->fetchColumn();
+                if ($defaultDiscount && floatval($defaultDiscount) > 0) {
+                    $discount = floatval($defaultDiscount);
+                }
+            } catch (Exception $e) {
+                // Settings table doesn't exist, use default
+            }
         }
     } catch (Exception $e) {
-        $discount = 50.0; // Default fallback
+        // gravity_id_discount column doesn't exist in events, use default
     }
 
     return [
