@@ -115,36 +115,36 @@ $positions = [
     'footer' => 'Footer (via layout)'
 ];
 
-// Format guidelines for each position
+// Format guidelines for each position (4:1 ratio standard, matches site image format 1200x150 / 600x150)
 $positionFormats = [
     'header_inline' => [
-        'logo' => '200 x 36 px',
-        'banner' => '200 x 36 px',
-        'desc' => 'Liten logo mellan header-logga och användarmeny. Transparent bakgrund rekommenderas.',
+        'logo' => '200 x 50 px',
+        'banner' => '200 x 50 px',
+        'desc' => 'Liten logo mellan header-logga och användarmeny. Transparent bakgrund rekommenderas. (4:1 ratio)',
         'type' => 'Logo (PNG/SVG)'
     ],
     'header_banner' => [
-        'logo' => '300 x 80 px',
-        'banner' => '728 x 90 px',
-        'desc' => 'Bred banner under sidrubriken. Standard leaderboard-format.',
+        'logo' => '300 x 75 px',
+        'banner' => '1200 x 150 px',
+        'desc' => 'Bred banner under sidrubriken. Använd 600x150 eller 1200x150 för bästa resultat. (4:1/8:1 ratio)',
         'type' => 'Banner (PNG/JPG)'
     ],
     'content_top' => [
-        'logo' => '150 x 80 px',
-        'banner' => '468 x 60 px',
-        'desc' => 'Visas överst i innehållsområdet. Flera sponsorer visas i grid.',
+        'logo' => '200 x 50 px',
+        'banner' => '600 x 150 px',
+        'desc' => 'Visas överst i innehållsområdet. Flera sponsorer visas i grid. (4:1 ratio)',
         'type' => 'Logo eller banner'
     ],
     'content_bottom' => [
-        'logo' => '150 x 80 px',
-        'banner' => '468 x 60 px',
-        'desc' => 'Visas nederst i innehållsområdet före footer.',
+        'logo' => '200 x 50 px',
+        'banner' => '600 x 150 px',
+        'desc' => 'Visas nederst i innehållsområdet före footer. (4:1 ratio)',
         'type' => 'Logo eller banner'
     ],
     'footer' => [
-        'logo' => '120 x 60 px',
-        'banner' => '300 x 50 px',
-        'desc' => 'Kompakt visning i footer. Flera sponsorer i rad.',
+        'logo' => '150 x 40 px',
+        'banner' => '300 x 75 px',
+        'desc' => 'Kompakt visning i footer. Flera sponsorer i rad. (4:1 ratio)',
         'type' => 'Logo (PNG/SVG)'
     ]
 ];

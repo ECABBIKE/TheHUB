@@ -40,11 +40,13 @@
 
 .sponsor-grid-content_top,
 .sponsor-grid-content_bottom {
-    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(200px, 320px));
+    justify-content: center;
 }
 
 .sponsor-grid-footer {
-    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(120px, 180px));
+    justify-content: center;
     gap: var(--space-sm);
 }
 
@@ -107,7 +109,10 @@
 
 .sponsor-banner {
     width: 100%;
+    max-width: 600px;
     height: auto;
+    max-height: 150px;
+    object-fit: contain;
     border-radius: var(--radius-sm);
 }
 
@@ -185,13 +190,13 @@
 }
 
 .sponsor-section-header_banner .sponsor-item {
-    max-width: 728px;
+    max-width: 1200px;
     width: 100%;
 }
 
 .sponsor-section-header_banner .sponsor-banner {
     max-width: 100%;
-    max-height: 90px;
+    max-height: 150px;
     object-fit: contain;
 }
 
