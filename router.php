@@ -41,7 +41,9 @@ function hub_requires_auth(string $page): bool {
         // Public content pages
         'calendar', 'results', 'series', 'database', 'ranking',
         'rider', 'riders', 'event', 'club', 'clubs',
-        'rider-register', 'club-points', 'achievements'
+        'rider-register', 'club-points', 'achievements',
+        // Registration pages (login required but handled in page)
+        'register'
     ];
 
     // Pages that require login
@@ -130,7 +132,13 @@ function hub_get_current_page(): array {
             'results' => '/pages/profile/results.php',
             'receipts' => '/pages/profile/receipts.php',
             'race-reports' => '/pages/profile/race-reports.php',
+            'tickets' => '/pages/profile/tickets.php',
             'login' => '/pages/profile/login.php'
+        ],
+        'register' => [
+            'index' => '/pages/register/index.php',
+            'series' => '/pages/register/series.php',
+            'event' => '/pages/register/event.php'
         ]
     ];
 
@@ -145,7 +153,8 @@ function hub_get_current_page(): array {
                 'results' => 'event',
                 'series' => 'show',
                 'database' => 'rider',
-                'ranking' => 'riders'
+                'ranking' => 'riders',
+                'register' => 'series'  // /register/5 -> /register/series/5
             ];
             $subpage = $detailPages[$section] ?? 'index';
         } elseif (isset($segments[1]) && !is_numeric($segments[1])) {
