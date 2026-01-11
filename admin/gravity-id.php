@@ -74,18 +74,39 @@ $enabled = ($settings['enabled'] ?? '1') === '1';
 
 // Get members with Gravity ID
 $members = [];
+$hasExtendedColumns = true;
+$queryError = null;
+
 try {
+    // Try with extended columns first (after migration 103)
     $members = $db->getAll("
         SELECT r.id, r.firstname, r.lastname, r.gravity_id, r.gravity_id_since, r.gravity_id_valid_until,
                r.email, r.club_id, c.name as club_name,
-               (SELECT COUNT(*) FROM event_registrations er WHERE er.rider_id = r.id AND er.status = 'confirmed') as reg_count
+               0 as reg_count
         FROM riders r
         LEFT JOIN clubs c ON r.club_id = c.id
-        WHERE r.gravity_id IS NOT NULL
-        ORDER BY r.gravity_id_since DESC
+        WHERE r.gravity_id IS NOT NULL AND r.gravity_id != ''
+        ORDER BY r.lastname ASC
     ");
 } catch (Exception $e) {
-    // Columns might not exist yet
+    // Extended columns don't exist - try basic query
+    $hasExtendedColumns = false;
+    try {
+        $members = $db->getAll("
+            SELECT r.id, r.firstname, r.lastname, r.gravity_id,
+                   NULL as gravity_id_since, NULL as gravity_id_valid_until,
+                   r.email, r.club_id, c.name as club_name,
+                   0 as reg_count
+            FROM riders r
+            LEFT JOIN clubs c ON r.club_id = c.id
+            WHERE r.gravity_id IS NOT NULL AND r.gravity_id != ''
+            ORDER BY r.lastname ASC
+        ");
+    } catch (Exception $e2) {
+        // gravity_id column doesn't exist at all
+        $queryError = $e2->getMessage();
+        $error = "Databasfel: " . $e2->getMessage();
+    }
 }
 
 // Get stats
@@ -334,10 +355,25 @@ include __DIR__ . '/components/unified-layout.php';
     <h3><i data-lucide="users"></i> Medlemmar med Gravity ID (<?= $totalMembers ?>)</h3>
 
     <?php if (empty($members)): ?>
-        <p style="color: var(--color-text-muted); text-align: center; padding: var(--space-lg);">
-            Inga medlemmar med Gravity ID ännu. Kör migrering 103 först, sedan kan du lägga till medlemmar ovan
-            eller importera via <a href="/admin/import-gravity-id.php" style="color: var(--color-accent);">CSV-import</a>.
-        </p>
+        <div style="text-align: center; padding: var(--space-lg);">
+            <i data-lucide="badge-check" style="width: 48px; height: 48px; color: var(--color-text-muted); margin-bottom: var(--space-md); display: block; margin-left: auto; margin-right: auto;"></i>
+            <p style="color: var(--color-text-muted); margin-bottom: var(--space-md);">
+                Inga medlemmar med Gravity ID ännu.
+            </p>
+            <div style="display: flex; gap: var(--space-sm); justify-content: center; flex-wrap: wrap;">
+                <a href="/admin/import-gravity-id.php" class="btn btn-primary">
+                    <i data-lucide="upload"></i> Importera via CSV
+                </a>
+                <?php if (!$hasExtendedColumns): ?>
+                <a href="/admin/migrations/103_gravity_id_discount_codes.php" class="btn btn-secondary">
+                    <i data-lucide="database"></i> Kör migration 103
+                </a>
+                <?php endif; ?>
+            </div>
+            <p style="color: var(--color-text-muted); font-size: 0.875rem; margin-top: var(--space-md);">
+                Eller sök efter en åkare ovan och lägg till Gravity ID manuellt.
+            </p>
+        </div>
     <?php else: ?>
         <div style="overflow-x: auto;">
             <table class="member-table">
