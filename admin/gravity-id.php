@@ -211,6 +211,26 @@ include __DIR__ . '/components/unified-layout.php';
     padding: 2px 8px;
     border-radius: var(--radius-sm);
 }
+.sortable {
+    cursor: pointer;
+    user-select: none;
+    white-space: nowrap;
+}
+.sortable:hover {
+    color: var(--color-accent);
+}
+.sortable .sort-icon {
+    width: 14px;
+    height: 14px;
+    vertical-align: middle;
+    opacity: 0.5;
+    margin-left: 4px;
+}
+.sortable.asc .sort-icon,
+.sortable.desc .sort-icon {
+    opacity: 1;
+    color: var(--color-accent);
+}
 .search-results {
     background: var(--color-bg-surface);
     border: 1px solid var(--color-border);
@@ -347,16 +367,18 @@ include __DIR__ . '/components/unified-layout.php';
             <table class="member-table">
                 <thead>
                     <tr>
-                        <th>Gravity ID</th>
-                        <th>Namn</th>
-                        <th>Klubb</th>
+                        <th class="sortable" data-sort="gid" data-type="string">Gravity ID <i data-lucide="chevrons-up-down" class="sort-icon"></i></th>
+                        <th class="sortable" data-sort="name" data-type="string">Namn <i data-lucide="chevrons-up-down" class="sort-icon"></i></th>
+                        <th class="sortable" data-sort="club" data-type="string">Klubb <i data-lucide="chevrons-up-down" class="sort-icon"></i></th>
                         <th>E-post</th>
                         <th></th>
                     </tr>
                 </thead>
                 <tbody>
                     <?php foreach ($members as $member): ?>
-                        <tr>
+                        <tr data-gid="<?= htmlspecialchars($member['gravity_id']) ?>"
+                            data-name="<?= htmlspecialchars($member['lastname'] . ' ' . $member['firstname']) ?>"
+                            data-club="<?= htmlspecialchars($member['club_name'] ?? '') ?>">
                             <td><span class="gid-badge"><?= htmlspecialchars($member['gravity_id']) ?></span></td>
                             <td>
                                 <a href="/rider/<?= $member['id'] ?>" style="color: var(--color-text-primary);">
@@ -384,6 +406,44 @@ include __DIR__ . '/components/unified-layout.php';
 </div>
 
 <script>
+// Table sorting
+document.querySelectorAll('.sortable').forEach(header => {
+    header.addEventListener('click', function() {
+        const table = this.closest('table');
+        const tbody = table.querySelector('tbody');
+        const rows = Array.from(tbody.querySelectorAll('tr'));
+        const sortKey = this.dataset.sort;
+        const isAsc = this.classList.contains('asc');
+
+        // Remove sort classes from all headers
+        table.querySelectorAll('.sortable').forEach(h => h.classList.remove('asc', 'desc'));
+
+        // Add sort class to clicked header
+        this.classList.add(isAsc ? 'desc' : 'asc');
+
+        // Sort rows
+        rows.sort((a, b) => {
+            let aVal = a.dataset[sortKey] || '';
+            let bVal = b.dataset[sortKey] || '';
+
+            // Natural sort for GID numbers
+            if (sortKey === 'gid') {
+                const aNum = parseInt(aVal.replace(/\D/g, '')) || 0;
+                const bNum = parseInt(bVal.replace(/\D/g, '')) || 0;
+                return isAsc ? bNum - aNum : aNum - bNum;
+            }
+
+            // String sort for name/club
+            return isAsc
+                ? bVal.localeCompare(aVal, 'sv')
+                : aVal.localeCompare(bVal, 'sv');
+        });
+
+        // Reorder rows
+        rows.forEach(row => tbody.appendChild(row));
+    });
+});
+
 lucide.createIcons();
 </script>
 
