@@ -27,7 +27,8 @@ echo "<h1>Kör väntande migrationer</h1>";
 $migrations = [
     '105_add_series_registration_settings.sql',
     '106_add_championship_fee_to_pricing.sql',
-    '108_update_registration_rule_types.sql'
+    '108_update_registration_rule_types.sql',
+    '109_add_event_license_class_to_series.sql'
 ];
 
 $migrationsDir = __DIR__ . '/migrations/';
