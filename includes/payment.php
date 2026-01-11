@@ -678,7 +678,7 @@ function calculateDiscountAmount(array $discount, float $subtotal): float {
 function checkGravityIdDiscount(int $riderId, int $eventId): array {
     $pdo = hub_db();
 
-    // Check if rider has Gravity ID (existing column in riders table)
+    // Check if rider has Gravity ID
     $rider = null;
     try {
         $stmt = $pdo->prepare("
@@ -695,48 +695,27 @@ function checkGravityIdDiscount(int $riderId, int $eventId): array {
         return ['has_gravity_id' => false, 'discount' => 0, 'gravity_id' => null, 'enabled' => false];
     }
 
-    // Default discount is 50 kr (used if migration not run yet)
-    $discount = 50.0;
-    $columnExists = false;
+    // Default is 0 (inactive) - must be explicitly enabled per event or series
+    $discount = 0.0;
 
-    // Try to get event-specific discount (if column exists)
+    // Priority: 1. Event setting, 2. Series setting, 3. Global setting
     try {
         $stmt = $pdo->prepare("SELECT gravity_id_discount, series_id FROM events WHERE id = ?");
         $stmt->execute([$eventId]);
         $event = $stmt->fetch(PDO::FETCH_ASSOC);
-        $columnExists = true;
 
         if ($event) {
-            // Check if event has explicit setting
-            if ($event['gravity_id_discount'] !== null) {
-                $eventDiscount = floatval($event['gravity_id_discount']);
-                if ($eventDiscount == 0) {
-                    // Explicitly disabled for this event
-                    return [
-                        'has_gravity_id' => true,
-                        'discount' => 0,
-                        'gravity_id' => $rider['gravity_id'],
-                        'enabled' => false
-                    ];
-                }
-                $discount = $eventDiscount;
-            } elseif (!empty($event['series_id'])) {
-                // Check series setting
+            // Check event-specific setting first
+            if ($event['gravity_id_discount'] !== null && floatval($event['gravity_id_discount']) > 0) {
+                $discount = floatval($event['gravity_id_discount']);
+            }
+            // If event has no setting, check series
+            elseif (!empty($event['series_id'])) {
                 try {
                     $stmt = $pdo->prepare("SELECT gravity_id_discount FROM series WHERE id = ?");
                     $stmt->execute([$event['series_id']]);
                     $seriesDiscount = $stmt->fetchColumn();
-
-                    if ($seriesDiscount !== false && $seriesDiscount !== null) {
-                        if (floatval($seriesDiscount) == 0) {
-                            // Disabled for this series
-                            return [
-                                'has_gravity_id' => true,
-                                'discount' => 0,
-                                'gravity_id' => $rider['gravity_id'],
-                                'enabled' => false
-                            ];
-                        }
+                    if ($seriesDiscount !== false && floatval($seriesDiscount) > 0) {
                         $discount = floatval($seriesDiscount);
                     }
                 } catch (Exception $e) {
@@ -745,16 +724,16 @@ function checkGravityIdDiscount(int $riderId, int $eventId): array {
             }
         }
     } catch (Exception $e) {
-        // gravity_id_discount column doesn't exist in events, use default 50 kr
+        // gravity_id_discount column doesn't exist in events
     }
 
-    // If column exists but no specific setting, try global settings
-    if ($columnExists && $discount == 50.0) {
+    // If still 0, check global setting (but global default is also 0)
+    if ($discount == 0) {
         try {
             $stmt = $pdo->query("SELECT setting_value FROM gravity_id_settings WHERE setting_key = 'default_discount'");
-            $defaultDiscount = $stmt->fetchColumn();
-            if ($defaultDiscount && floatval($defaultDiscount) > 0) {
-                $discount = floatval($defaultDiscount);
+            $globalDiscount = $stmt->fetchColumn();
+            if ($globalDiscount && floatval($globalDiscount) > 0) {
+                $discount = floatval($globalDiscount);
             }
         } catch (Exception $e) {
             // Settings table doesn't exist
