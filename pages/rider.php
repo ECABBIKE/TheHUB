@@ -609,6 +609,9 @@ try {
         }
     }
 
+    // Check Gravity ID status
+    $hasGravityId = !empty($rider['gravity_id']);
+
     // Check if this profile can be claimed or needs activation
     // Available to ALL visitors - not just logged in users
     $canClaimProfile = false;      // Profile without email - can connect email
@@ -1190,11 +1193,23 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
                 <?php endif; ?>
             </div>
 
-            <!-- License Badge - only show if rider has license data -->
-            <?php if (!empty($rider['license_year']) || !empty($rider['license_type'])): ?>
-            <div class="profile-license-badge <?= $licenseActive ? '' : 'license-inactive' ?>">
-                <span class="license-label">Licens</span>
-                <span class="license-year"><?= $rider['license_year'] ?: '-' ?></span>
+            <!-- Status Badges Row - License and/or Gravity ID -->
+            <?php if ($hasLicense || $hasGravityId): ?>
+            <div class="profile-badges-row">
+                <?php if ($hasLicense): ?>
+                <div class="profile-status-badge <?= $licenseActive ? 'badge-active' : 'badge-inactive' ?>">
+                    <i data-lucide="award" class="badge-icon"></i>
+                    <span class="badge-label">Licens</span>
+                    <span class="badge-value"><?= $rider['license_year'] ?: '-' ?></span>
+                </div>
+                <?php endif; ?>
+                <?php if ($hasGravityId): ?>
+                <div class="profile-status-badge badge-gravity-id">
+                    <i data-lucide="badge-check" class="badge-icon"></i>
+                    <span class="badge-label">Gravity ID</span>
+                    <span class="badge-value"><?= htmlspecialchars($rider['gravity_id']) ?></span>
+                </div>
+                <?php endif; ?>
             </div>
             <?php endif; ?>
 

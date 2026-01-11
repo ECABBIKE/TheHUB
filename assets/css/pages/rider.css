@@ -130,7 +130,68 @@
     margin-top: 2px;
 }
 
-/* License Badge - Compact */
+/* Status Badges Row - License & Gravity ID */
+.profile-badges-row {
+    display: flex;
+    justify-content: center;
+    gap: var(--space-sm);
+    margin: 0 var(--space-md);
+    flex-wrap: wrap;
+}
+
+.profile-status-badge {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    padding: var(--space-xs) var(--space-sm);
+    background: linear-gradient(135deg, rgba(97, 206, 112, 0.15) 0%, rgba(97, 206, 112, 0.08) 100%);
+    border-radius: var(--radius-sm);
+    border: 1px solid rgba(97, 206, 112, 0.2);
+}
+
+.profile-status-badge .badge-icon {
+    width: 14px;
+    height: 14px;
+    color: var(--color-primary);
+    flex-shrink: 0;
+}
+
+.profile-status-badge .badge-label {
+    font-size: 0.6875rem;
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.profile-status-badge .badge-value {
+    font-size: 0.875rem;
+    font-weight: 700;
+    color: var(--color-primary);
+}
+
+/* Inactive license styling */
+.profile-status-badge.badge-inactive {
+    background: linear-gradient(135deg, rgba(122, 122, 122, 0.15) 0%, rgba(122, 122, 122, 0.08) 100%);
+    border-color: rgba(122, 122, 122, 0.2);
+}
+
+.profile-status-badge.badge-inactive .badge-icon,
+.profile-status-badge.badge-inactive .badge-value {
+    color: var(--color-text-muted);
+}
+
+/* Gravity ID special styling - cyan/turquoise accent */
+.profile-status-badge.badge-gravity-id {
+    background: linear-gradient(135deg, rgba(55, 212, 214, 0.15) 0%, rgba(55, 212, 214, 0.08) 100%);
+    border-color: rgba(55, 212, 214, 0.25);
+}
+
+.profile-status-badge.badge-gravity-id .badge-icon,
+.profile-status-badge.badge-gravity-id .badge-value {
+    color: var(--color-accent);
+}
+
+/* Legacy License Badge - backwards compatibility */
 .profile-license-badge {
     margin: 0 var(--space-md);
     padding: var(--space-xs) var(--space-sm);
