@@ -75,16 +75,18 @@ $enabled = ($settings['enabled'] ?? '1') === '1';
 // Get members with Gravity ID
 $members = [];
 $hasExtendedColumns = true;
+$queryError = null;
+
 try {
     // Try with extended columns first (after migration 103)
     $members = $db->getAll("
         SELECT r.id, r.firstname, r.lastname, r.gravity_id, r.gravity_id_since, r.gravity_id_valid_until,
                r.email, r.club_id, c.name as club_name,
-               (SELECT COUNT(*) FROM event_registrations er WHERE er.rider_id = r.id AND er.status = 'confirmed') as reg_count
+               0 as reg_count
         FROM riders r
         LEFT JOIN clubs c ON r.club_id = c.id
         WHERE r.gravity_id IS NOT NULL AND r.gravity_id != ''
-        ORDER BY r.gravity_id_since DESC, r.lastname ASC
+        ORDER BY r.lastname ASC
     ");
 } catch (Exception $e) {
     // Extended columns don't exist - try basic query
@@ -94,7 +96,7 @@ try {
             SELECT r.id, r.firstname, r.lastname, r.gravity_id,
                    NULL as gravity_id_since, NULL as gravity_id_valid_until,
                    r.email, r.club_id, c.name as club_name,
-                   (SELECT COUNT(*) FROM event_registrations er WHERE er.rider_id = r.id AND er.status = 'confirmed') as reg_count
+                   0 as reg_count
             FROM riders r
             LEFT JOIN clubs c ON r.club_id = c.id
             WHERE r.gravity_id IS NOT NULL AND r.gravity_id != ''
@@ -102,7 +104,8 @@ try {
         ");
     } catch (Exception $e2) {
         // gravity_id column doesn't exist at all
-        $error = "Kör migration 103 för att aktivera Gravity ID-funktionen.";
+        $queryError = $e2->getMessage();
+        $error = "Databasfel: " . $e2->getMessage();
     }
 }
 
