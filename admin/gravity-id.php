@@ -18,14 +18,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     if ($action === 'update_settings') {
         $defaultDiscount = floatval($_POST['default_discount'] ?? 50);
-        $validYears = intval($_POST['valid_for_years'] ?? 1);
         $enabled = isset($_POST['enabled']) ? '1' : '0';
 
         try {
             $db->query("INSERT INTO gravity_id_settings (setting_key, setting_value) VALUES ('default_discount', ?)
                         ON DUPLICATE KEY UPDATE setting_value = ?", [$defaultDiscount, $defaultDiscount]);
-            $db->query("INSERT INTO gravity_id_settings (setting_key, setting_value) VALUES ('valid_for_years', ?)
-                        ON DUPLICATE KEY UPDATE setting_value = ?", [$validYears, $validYears]);
             $db->query("INSERT INTO gravity_id_settings (setting_key, setting_value) VALUES ('enabled', ?)
                         ON DUPLICATE KEY UPDATE setting_value = ?", [$enabled, $enabled]);
             $message = "Inställningar sparade!";
@@ -35,12 +32,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($action === 'add_gravity_id') {
         $riderId = intval($_POST['rider_id']);
         $gravityId = trim($_POST['gravity_id']);
-        $validUntil = $_POST['valid_until'] ?: null;
 
         if ($riderId && $gravityId) {
             try {
-                $db->query("UPDATE riders SET gravity_id = ?, gravity_id_since = CURDATE(), gravity_id_valid_until = ? WHERE id = ?",
-                    [$gravityId, $validUntil, $riderId]);
+                $db->query("UPDATE riders SET gravity_id = ? WHERE id = ?", [$gravityId, $riderId]);
                 $message = "Gravity ID tilldelat!";
             } catch (Exception $e) {
                 $error = "Kunde inte tilldela: " . $e->getMessage();
@@ -49,7 +44,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($action === 'remove_gravity_id') {
         $riderId = intval($_POST['rider_id']);
         try {
-            $db->query("UPDATE riders SET gravity_id = NULL, gravity_id_since = NULL, gravity_id_valid_until = NULL WHERE id = ?", [$riderId]);
+            $db->query("UPDATE riders SET gravity_id = NULL WHERE id = ?", [$riderId]);
             $message = "Gravity ID borttaget";
         } catch (Exception $e) {
             $error = "Kunde inte ta bort: " . $e->getMessage();
@@ -69,7 +64,6 @@ try {
 }
 
 $defaultDiscount = $settings['default_discount'] ?? 50;
-$validYears = $settings['valid_for_years'] ?? 1;
 $enabled = ($settings['enabled'] ?? '1') === '1';
 
 // Get members with Gravity ID
@@ -111,8 +105,6 @@ try {
 
 // Get stats
 $totalMembers = count($members);
-$activeMembers = count(array_filter($members, fn($m) => !$m['gravity_id_valid_until'] || strtotime($m['gravity_id_valid_until']) >= time()));
-$expiredMembers = $totalMembers - $activeMembers;
 
 // For search
 $searchRiders = [];
@@ -219,12 +211,6 @@ include __DIR__ . '/components/unified-layout.php';
     padding: 2px 8px;
     border-radius: var(--radius-sm);
 }
-.status-active {
-    color: var(--color-success);
-}
-.status-expired {
-    color: var(--color-error);
-}
 .search-results {
     background: var(--color-bg-surface);
     border: 1px solid var(--color-border);
@@ -259,15 +245,7 @@ include __DIR__ . '/components/unified-layout.php';
 <div class="gid-stats">
     <div class="gid-stat">
         <div class="gid-stat-value"><?= $totalMembers ?></div>
-        <div class="gid-stat-label">Totalt medlemmar</div>
-    </div>
-    <div class="gid-stat">
-        <div class="gid-stat-value" style="color: var(--color-success);"><?= $activeMembers ?></div>
-        <div class="gid-stat-label">Aktiva</div>
-    </div>
-    <div class="gid-stat">
-        <div class="gid-stat-value" style="color: var(--color-error);"><?= $expiredMembers ?></div>
-        <div class="gid-stat-label">Utgångna</div>
+        <div class="gid-stat-label">Medlemmar</div>
     </div>
     <div class="gid-stat">
         <div class="gid-stat-value"><?= number_format($defaultDiscount, 0) ?> kr</div>
@@ -285,12 +263,8 @@ include __DIR__ . '/components/unified-layout.php';
 
         <div class="form-row">
             <div class="form-group">
-                <label>Standard rabatt (SEK)</label>
+                <label>Rabatt per event (SEK)</label>
                 <input type="number" name="default_discount" value="<?= $defaultDiscount ?>" min="0" step="1">
-            </div>
-            <div class="form-group">
-                <label>Giltighetstid (år)</label>
-                <input type="number" name="valid_for_years" value="<?= $validYears ?>" min="1" max="5">
             </div>
             <div class="form-group">
                 <label style="display: flex; align-items: center; gap: var(--space-sm); margin-top: var(--space-md);">
@@ -334,8 +308,6 @@ include __DIR__ . '/components/unified-layout.php';
                         <input type="hidden" name="rider_id" value="<?= $rider['id'] ?>">
                         <input type="text" name="gravity_id" placeholder="GID-XXXXX" required
                                style="width: 120px; padding: var(--space-xs);">
-                        <input type="date" name="valid_until" placeholder="Giltig till"
-                               style="width: 140px; padding: var(--space-xs);">
                         <button type="submit" class="btn btn-primary btn-sm">
                             <i data-lucide="plus"></i>
                         </button>
@@ -352,26 +324,22 @@ include __DIR__ . '/components/unified-layout.php';
 
 <!-- Members List -->
 <div class="settings-card">
-    <h3><i data-lucide="users"></i> Medlemmar med Gravity ID (<?= $totalMembers ?>)</h3>
+    <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: var(--space-sm); margin-bottom: var(--space-md);">
+        <h3 style="margin: 0;"><i data-lucide="users"></i> Medlemmar med Gravity ID (<?= $totalMembers ?>)</h3>
+        <a href="/admin/import-gravity-id.php" class="btn btn-secondary btn-sm">
+            <i data-lucide="upload"></i> Importera CSV
+        </a>
+    </div>
 
     <?php if (empty($members)): ?>
-        <div style="text-align: center; padding: var(--space-lg);">
+        <div style="text-align: center; padding: var(--space-xl); background: var(--color-bg-page); border-radius: var(--radius-md);">
             <i data-lucide="badge-check" style="width: 48px; height: 48px; color: var(--color-text-muted); margin-bottom: var(--space-md); display: block; margin-left: auto; margin-right: auto;"></i>
             <p style="color: var(--color-text-muted); margin-bottom: var(--space-md);">
                 Inga medlemmar med Gravity ID ännu.
             </p>
-            <div style="display: flex; gap: var(--space-sm); justify-content: center; flex-wrap: wrap;">
-                <a href="/admin/import-gravity-id.php" class="btn btn-primary">
-                    <i data-lucide="upload"></i> Importera via CSV
-                </a>
-                <?php if (!$hasExtendedColumns): ?>
-                <a href="/admin/migrations/103_gravity_id_discount_codes.php" class="btn btn-secondary">
-                    <i data-lucide="database"></i> Kör migration 103
-                </a>
-                <?php endif; ?>
-            </div>
-            <p style="color: var(--color-text-muted); font-size: 0.875rem; margin-top: var(--space-md);">
-                Eller sök efter en åkare ovan och lägg till Gravity ID manuellt.
+            <p style="color: var(--color-text-muted); font-size: 0.875rem;">
+                Sök efter en åkare ovan och lägg till Gravity ID manuellt,<br>
+                eller importera flera via CSV-knappen.
             </p>
         </div>
     <?php else: ?>
@@ -382,35 +350,21 @@ include __DIR__ . '/components/unified-layout.php';
                         <th>Gravity ID</th>
                         <th>Namn</th>
                         <th>Klubb</th>
-                        <th>Sedan</th>
-                        <th>Giltig till</th>
-                        <th>Status</th>
-                        <th>Anmälningar</th>
+                        <th>E-post</th>
                         <th></th>
                     </tr>
                 </thead>
                 <tbody>
-                    <?php foreach ($members as $member):
-                        $isExpired = $member['gravity_id_valid_until'] && strtotime($member['gravity_id_valid_until']) < time();
-                    ?>
+                    <?php foreach ($members as $member): ?>
                         <tr>
                             <td><span class="gid-badge"><?= htmlspecialchars($member['gravity_id']) ?></span></td>
                             <td>
-                                <a href="/admin/rider-edit.php?id=<?= $member['id'] ?>" style="color: var(--color-text-primary);">
+                                <a href="/rider/<?= $member['id'] ?>" style="color: var(--color-text-primary);">
                                     <?= htmlspecialchars($member['firstname'] . ' ' . $member['lastname']) ?>
                                 </a>
                             </td>
                             <td><?= htmlspecialchars($member['club_name'] ?? '-') ?></td>
-                            <td><?= $member['gravity_id_since'] ? date('Y-m-d', strtotime($member['gravity_id_since'])) : '-' ?></td>
-                            <td><?= $member['gravity_id_valid_until'] ? date('Y-m-d', strtotime($member['gravity_id_valid_until'])) : 'Obegränsat' ?></td>
-                            <td>
-                                <?php if ($isExpired): ?>
-                                    <span class="status-expired"><i data-lucide="x-circle"></i> Utgånget</span>
-                                <?php else: ?>
-                                    <span class="status-active"><i data-lucide="check-circle"></i> Aktivt</span>
-                                <?php endif; ?>
-                            </td>
-                            <td><?= $member['reg_count'] ?></td>
+                            <td style="color: var(--color-text-muted); font-size: 0.875rem;"><?= htmlspecialchars($member['email'] ?? '-') ?></td>
                             <td>
                                 <form method="POST" style="display: inline;" onsubmit="return confirm('Ta bort Gravity ID för denna åkare?');">
                                     <?= csrf_field() ?>
@@ -427,16 +381,6 @@ include __DIR__ . '/components/unified-layout.php';
             </table>
         </div>
     <?php endif; ?>
-</div>
-
-<!-- Quick Links -->
-<div style="display: flex; gap: var(--space-md); flex-wrap: wrap;">
-    <a href="/admin/import-gravity-id.php" class="btn btn-secondary">
-        <i data-lucide="upload"></i> Importera CSV
-    </a>
-    <a href="/admin/migrations/103_gravity_id_discount_codes.php" class="btn btn-ghost">
-        <i data-lucide="database"></i> Kör migrering 103
-    </a>
 </div>
 
 <script>
