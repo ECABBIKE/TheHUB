@@ -115,6 +115,40 @@ $positions = [
     'footer' => 'Footer (via layout)'
 ];
 
+// Format guidelines for each position
+$positionFormats = [
+    'header_inline' => [
+        'logo' => '200 x 36 px',
+        'banner' => '200 x 36 px',
+        'desc' => 'Liten logo mellan header-logga och användarmeny. Transparent bakgrund rekommenderas.',
+        'type' => 'Logo (PNG/SVG)'
+    ],
+    'header_banner' => [
+        'logo' => '300 x 80 px',
+        'banner' => '728 x 90 px',
+        'desc' => 'Bred banner under sidrubriken. Standard leaderboard-format.',
+        'type' => 'Banner (PNG/JPG)'
+    ],
+    'content_top' => [
+        'logo' => '150 x 80 px',
+        'banner' => '468 x 60 px',
+        'desc' => 'Visas överst i innehållsområdet. Flera sponsorer visas i grid.',
+        'type' => 'Logo eller banner'
+    ],
+    'content_bottom' => [
+        'logo' => '150 x 80 px',
+        'banner' => '468 x 60 px',
+        'desc' => 'Visas nederst i innehållsområdet före footer.',
+        'type' => 'Logo eller banner'
+    ],
+    'footer' => [
+        'logo' => '120 x 60 px',
+        'banner' => '300 x 50 px',
+        'desc' => 'Kompakt visning i footer. Flera sponsorer i rad.',
+        'type' => 'Logo (PNG/SVG)'
+    ]
+];
+
 $tierLabels = [
     'title_gravityseries' => ['name' => 'Titelsponsor GS', 'color' => '#8B5CF6'],
     'title_series' => ['name' => 'Titelsponsor Serie', 'color' => '#6366F1'],
@@ -374,6 +408,31 @@ input:checked + .toggle-slider:before {
     </div>
 </div>
 
+<!-- Format Guide -->
+<div class="settings-section">
+    <h3><i data-lucide="image"></i> Bildformat per position</h3>
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: var(--space-md);">
+        <?php foreach ($positionFormats as $posKey => $format): ?>
+        <div style="background: var(--color-bg-page); padding: var(--space-md); border-radius: var(--radius-sm); border: 1px solid var(--color-border);">
+            <strong style="color: var(--color-text-primary);"><?= $positions[$posKey] ?></strong>
+            <div style="margin-top: var(--space-xs); font-size: 0.875rem;">
+                <div style="display: flex; justify-content: space-between; color: var(--color-text-secondary);">
+                    <span>Logo:</span>
+                    <span style="font-family: monospace; color: var(--color-accent);"><?= $format['logo'] ?></span>
+                </div>
+                <div style="display: flex; justify-content: space-between; color: var(--color-text-secondary);">
+                    <span>Banner:</span>
+                    <span style="font-family: monospace; color: var(--color-accent);"><?= $format['banner'] ?></span>
+                </div>
+                <div style="margin-top: var(--space-xs); font-size: 0.75rem; color: var(--color-text-muted);">
+                    <?= $format['desc'] ?>
+                </div>
+            </div>
+        </div>
+        <?php endforeach; ?>
+    </div>
+</div>
+
 <!-- Create New Placement -->
 <div class="create-form">
     <h3><i data-lucide="plus"></i> Skapa ny placering</h3>
@@ -406,12 +465,18 @@ input:checked + .toggle-slider:before {
 
             <div class="form-group">
                 <label>Position</label>
-                <select name="position" required>
+                <select name="position" id="position-select" required onchange="showFormatInfo()">
                     <?php foreach ($positions as $key => $label): ?>
                         <option value="<?= $key ?>"><?= $label ?></option>
                     <?php endforeach; ?>
                 </select>
             </div>
+        </div>
+
+        <!-- Dynamic format info -->
+        <div id="format-info" class="alert" style="background: var(--color-accent-light); border: 1px solid var(--color-accent); margin-bottom: var(--space-md); display: none;">
+            <strong>Rekommenderat format:</strong>
+            <span id="format-text"></span>
         </div>
 
         <div class="form-row">
@@ -609,6 +674,29 @@ function toggleEdit(placementId) {
         lucide.createIcons();
     }
 }
+
+// Position format data
+const positionFormats = <?= json_encode($positionFormats) ?>;
+
+function showFormatInfo() {
+    const select = document.getElementById('position-select');
+    const formatInfo = document.getElementById('format-info');
+    const formatText = document.getElementById('format-text');
+
+    if (select && formatInfo && formatText) {
+        const pos = select.value;
+        if (positionFormats[pos]) {
+            const f = positionFormats[pos];
+            formatText.innerHTML = `Logo: <code>${f.logo}</code> | Banner: <code>${f.banner}</code> - ${f.type}`;
+            formatInfo.style.display = 'block';
+        } else {
+            formatInfo.style.display = 'none';
+        }
+    }
+}
+
+// Show format info on page load
+document.addEventListener('DOMContentLoaded', showFormatInfo);
 </script>
 
 <!-- Tier Benefits -->

@@ -120,10 +120,79 @@
 
 /* Sponsor Links */
 .sponsor-link {
-    display: block;
+    display: flex;
+    align-items: center;
+    justify-content: center;
     width: 100%;
     height: 100%;
     text-decoration: none;
+}
+
+/* =============================================
+   HEADER INLINE SPONSOR POSITION
+   Compact display between logo and user menu
+   ============================================= */
+.sponsor-section-header_inline {
+    margin: 0;
+    padding: 0;
+    background: transparent;
+    border: none;
+    flex: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.sponsor-grid-header_inline {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-md);
+}
+
+.sponsor-section-header_inline .sponsor-item {
+    background: transparent;
+    border: none;
+    padding: 0;
+}
+
+.sponsor-section-header_inline .sponsor-item:hover {
+    transform: none;
+    box-shadow: none;
+}
+
+.sponsor-section-header_inline .sponsor-logo,
+.sponsor-section-header_inline .sponsor-banner {
+    max-height: 36px;
+    max-width: 200px;
+    width: auto;
+    height: auto;
+    object-fit: contain;
+    filter: none;
+}
+
+/* Header Banner (under page title) */
+.sponsor-section-header_banner {
+    margin: var(--space-md) 0;
+    padding: var(--space-sm);
+    text-align: center;
+}
+
+.sponsor-grid-header_banner {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.sponsor-section-header_banner .sponsor-item {
+    max-width: 728px;
+    width: 100%;
+}
+
+.sponsor-section-header_banner .sponsor-banner {
+    max-width: 100%;
+    max-height: 90px;
+    object-fit: contain;
 }
 
 /* Responsive Banner */
