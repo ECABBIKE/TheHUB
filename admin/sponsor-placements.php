@@ -115,36 +115,38 @@ $positions = [
     'footer' => 'Footer (via layout)'
 ];
 
-// Format guidelines for each position
+// Format guidelines - RESPONSIVT SYSTEM
+// Standardformat: Logo 600x150 (4:1), Banner 1200x150 (8:1)
+// Skalas automatiskt: Mobil → Tablet → Desktop (max 1600px) → PWA
 $positionFormats = [
     'header_inline' => [
-        'logo' => '200 x 36 px',
-        'banner' => '200 x 36 px',
-        'desc' => 'Liten logo mellan header-logga och användarmeny. Transparent bakgrund rekommenderas.',
+        'logo' => '600 x 150 px',
+        'banner' => '600 x 150 px',
+        'desc' => 'Kompakt logo i menyraden. Skalas ner automatiskt. Transparent bakgrund rekommenderas.',
         'type' => 'Logo (PNG/SVG)'
     ],
     'header_banner' => [
-        'logo' => '300 x 80 px',
-        'banner' => '728 x 90 px',
-        'desc' => 'Bred banner under sidrubriken. Standard leaderboard-format.',
+        'logo' => '600 x 150 px',
+        'banner' => '1200 x 150 px',
+        'desc' => 'Fullbreddsbanner. Skalas responsivt från mobil till 1600px desktop.',
         'type' => 'Banner (PNG/JPG)'
     ],
     'content_top' => [
-        'logo' => '150 x 80 px',
-        'banner' => '468 x 60 px',
-        'desc' => 'Visas överst i innehållsområdet. Flera sponsorer visas i grid.',
-        'type' => 'Logo eller banner'
+        'logo' => '600 x 150 px',
+        'banner' => '600 x 150 px',
+        'desc' => 'Responsivt grid (4:1). Desktop: 5/rad, Tablet: 4/rad, Mobil: 2/rad.',
+        'type' => 'Logo (4:1)'
     ],
     'content_bottom' => [
-        'logo' => '150 x 80 px',
-        'banner' => '468 x 60 px',
-        'desc' => 'Visas nederst i innehållsområdet före footer.',
-        'type' => 'Logo eller banner'
+        'logo' => '600 x 150 px',
+        'banner' => '600 x 150 px',
+        'desc' => 'Responsivt grid (4:1). Desktop: 5/rad, Tablet: 4/rad, Mobil: 2/rad.',
+        'type' => 'Logo (4:1)'
     ],
     'footer' => [
-        'logo' => '120 x 60 px',
-        'banner' => '300 x 50 px',
-        'desc' => 'Kompakt visning i footer. Flera sponsorer i rad.',
+        'logo' => '600 x 150 px',
+        'banner' => '600 x 150 px',
+        'desc' => 'Kompakt grid (4:1). Desktop: 6/rad, Tablet: 5/rad, Mobil: 3/rad.',
         'type' => 'Logo (PNG/SVG)'
     ]
 ];

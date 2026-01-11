@@ -81,12 +81,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $earlyBirdDays = intval($_POST['early_bird_days'] ?? 21);
         $lateFeePercent = floatval($_POST['late_fee_percent'] ?? 25);
         $lateFeeDays = intval($_POST['late_fee_days'] ?? 3);
+        $championshipFee = floatval($_POST['championship_fee'] ?? 0);
+        $championshipFeeDesc = trim($_POST['championship_fee_description'] ?? '');
 
         $db->update('pricing_templates', [
             'early_bird_percent' => $earlyBirdPercent,
             'early_bird_days_before' => $earlyBirdDays,
             'late_fee_percent' => $lateFeePercent,
-            'late_fee_days_before' => $lateFeeDays
+            'late_fee_days_before' => $lateFeeDays,
+            'championship_fee' => $championshipFee,
+            'championship_fee_description' => $championshipFeeDesc ?: null
         ], 'id = ?', [$templateId]);
 
         // Reload template
@@ -219,6 +223,30 @@ input[type="number"] {
                             min="0" max="30" style="width: 80px;">
                         <span>dagar före event</span>
                     </div>
+                </div>
+            </div>
+
+            <!-- Championship Fee -->
+            <div class="card p-md mt-md" style="background: var(--color-accent-light, rgba(55, 212, 214, 0.1)); border: 1px solid var(--color-accent);">
+                <label class="label" style="color: var(--color-accent);">
+                    <i data-lucide="trophy"></i>
+                    SM-tillägg (Svenska Mästerskap)
+                </label>
+                <p class="text-sm text-secondary mb-sm">
+                    Automatiskt pristillägg för events markerade som Svenska Mästerskap.
+                </p>
+                <div class="flex gap-sm items-center mt-sm flex-wrap">
+                    <input type="number" name="championship_fee" class="input"
+                        value="<?= $template['championship_fee'] ?? 0 ?>"
+                        min="0" step="1" style="width: 100px;">
+                    <span>kr tillägg per anmälan</span>
+                </div>
+                <div class="mt-sm">
+                    <label class="label text-sm">Beskrivning (visas för deltagare)</label>
+                    <input type="text" name="championship_fee_description" class="input"
+                        value="<?= htmlspecialchars($template['championship_fee_description'] ?? '') ?>"
+                        placeholder="T.ex. 'SM-avgift till Svenska Cykelförbundet'"
+                        style="width: 100%; max-width: 400px;">
                 </div>
             </div>
 
