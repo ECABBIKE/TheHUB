@@ -1,12 +1,28 @@
 <?php
 /**
- * Discount Codes Management - Admin Page
+ * Discount Codes Management - Admin & Promotor Page
  * TheHUB - Manage discount codes for event registrations
+ * Promotors can only see/manage codes for their own events/series
  */
 require_once __DIR__ . '/../config.php';
 require_admin();
 
 $db = getDB();
+
+// Determine user access level
+$isAdmin = hasRole('admin');
+$userId = $_SESSION['admin_id'] ?? null;
+
+// Get promotor's accessible series and events (if not admin)
+$promotorSeriesIds = [];
+$promotorEventIds = [];
+if (!$isAdmin && $userId) {
+    $promotorSeries = getPromotorSeries();
+    $promotorSeriesIds = array_column($promotorSeries, 'id');
+
+    $promotorEvents = getPromotorEvents();
+    $promotorEventIds = array_column($promotorEvents, 'id');
+}
 
 // Handle form submissions
 $message = '';
@@ -30,7 +46,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $seriesId = !empty($_POST['series_id']) ? intval($_POST['series_id']) : null;
         $isActive = isset($_POST['is_active']) ? 1 : 0;
 
-        if (empty($code)) {
+        // Validate access for promotors
+        $accessError = false;
+        if (!$isAdmin) {
+            if ($applicableTo === 'all') {
+                $accessError = true;
+                $error = 'Du kan endast skapa koder för dina egna event eller serier';
+            } elseif ($applicableTo === 'event' && $eventId && !in_array($eventId, $promotorEventIds)) {
+                $accessError = true;
+                $error = 'Du har inte behörighet till detta event';
+            } elseif ($applicableTo === 'series' && $seriesId && !in_array($seriesId, $promotorSeriesIds)) {
+                $accessError = true;
+                $error = 'Du har inte behörighet till denna serie';
+            }
+        }
+
+        if ($accessError) {
+            // Error already set
+        } elseif (empty($code)) {
             $error = 'Rabattkod är obligatorisk';
         } elseif ($discountValue <= 0) {
             $error = 'Rabattvärde måste vara större än 0';
@@ -62,29 +95,94 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     } elseif ($action === 'toggle') {
         $id = intval($_POST['id']);
-        $db->query("UPDATE discount_codes SET is_active = NOT is_active WHERE id = ?", [$id]);
-        $message = "Status uppdaterad";
+        // Check access for promotors
+        if (!$isAdmin) {
+            $code = $db->getRow("SELECT event_id, series_id FROM discount_codes WHERE id = ?", [$id]);
+            if ($code) {
+                $canAccess = ($code['event_id'] && in_array($code['event_id'], $promotorEventIds)) ||
+                             ($code['series_id'] && in_array($code['series_id'], $promotorSeriesIds));
+                if (!$canAccess) {
+                    $error = "Du har inte behörighet att ändra denna rabattkod";
+                }
+            }
+        }
+        if (!$error) {
+            $db->query("UPDATE discount_codes SET is_active = NOT is_active WHERE id = ?", [$id]);
+            $message = "Status uppdaterad";
+        }
     } elseif ($action === 'delete') {
         $id = intval($_POST['id']);
-        $db->query("DELETE FROM discount_codes WHERE id = ?", [$id]);
-        $message = "Rabattkod borttagen";
+        // Check access for promotors
+        if (!$isAdmin) {
+            $code = $db->getRow("SELECT event_id, series_id FROM discount_codes WHERE id = ?", [$id]);
+            if ($code) {
+                $canAccess = ($code['event_id'] && in_array($code['event_id'], $promotorEventIds)) ||
+                             ($code['series_id'] && in_array($code['series_id'], $promotorSeriesIds));
+                if (!$canAccess) {
+                    $error = "Du har inte behörighet att ta bort denna rabattkod";
+                }
+            }
+        }
+        if (!$error) {
+            $db->query("DELETE FROM discount_codes WHERE id = ?", [$id]);
+            $message = "Rabattkod borttagen";
+        }
     }
 }
 
-// Fetch all discount codes
-$codes = $db->getAll("
-    SELECT dc.*,
-           e.name as event_name,
-           s.name as series_name
-    FROM discount_codes dc
-    LEFT JOIN events e ON dc.event_id = e.id
-    LEFT JOIN series s ON dc.series_id = s.id
-    ORDER BY dc.created_at DESC
-");
+// Fetch discount codes - filtered for promotors
+if ($isAdmin) {
+    // Admins see all codes
+    $codes = $db->getAll("
+        SELECT dc.*,
+               e.name as event_name,
+               s.name as series_name
+        FROM discount_codes dc
+        LEFT JOIN events e ON dc.event_id = e.id
+        LEFT JOIN series s ON dc.series_id = s.id
+        ORDER BY dc.created_at DESC
+    ");
+} else {
+    // Promotors see only their codes (linked to their events/series)
+    $codes = [];
+    if (!empty($promotorEventIds) || !empty($promotorSeriesIds)) {
+        $eventPlaceholders = !empty($promotorEventIds) ? implode(',', array_fill(0, count($promotorEventIds), '?')) : '0';
+        $seriesPlaceholders = !empty($promotorSeriesIds) ? implode(',', array_fill(0, count($promotorSeriesIds), '?')) : '0';
 
-// Fetch events and series for dropdowns
-$events = $db->getAll("SELECT id, name, date FROM events WHERE date >= CURDATE() ORDER BY date ASC LIMIT 50");
-$seriesList = $db->getAll("SELECT id, name, year FROM series WHERE status = 'active' ORDER BY year DESC, name ASC");
+        $params = array_merge($promotorEventIds, $promotorSeriesIds);
+        $codes = $db->getAll("
+            SELECT dc.*,
+                   e.name as event_name,
+                   s.name as series_name
+            FROM discount_codes dc
+            LEFT JOIN events e ON dc.event_id = e.id
+            LEFT JOIN series s ON dc.series_id = s.id
+            WHERE dc.event_id IN ($eventPlaceholders)
+               OR dc.series_id IN ($seriesPlaceholders)
+            ORDER BY dc.created_at DESC
+        ", $params);
+    }
+}
+
+// Fetch events and series for dropdowns - filtered for promotors
+if ($isAdmin) {
+    $events = $db->getAll("SELECT id, name, date FROM events WHERE date >= CURDATE() ORDER BY date ASC LIMIT 50");
+    $seriesList = $db->getAll("SELECT id, name, year FROM series WHERE status = 'active' ORDER BY year DESC, name ASC");
+} else {
+    // Promotors see only their events/series
+    $events = [];
+    $seriesList = [];
+
+    if (!empty($promotorEventIds)) {
+        $placeholders = implode(',', array_fill(0, count($promotorEventIds), '?'));
+        $events = $db->getAll("SELECT id, name, date FROM events WHERE id IN ($placeholders) AND date >= CURDATE() ORDER BY date ASC", $promotorEventIds);
+    }
+
+    if (!empty($promotorSeriesIds)) {
+        $placeholders = implode(',', array_fill(0, count($promotorSeriesIds), '?'));
+        $seriesList = $db->getAll("SELECT id, name, year FROM series WHERE id IN ($placeholders) ORDER BY year DESC, name ASC", $promotorSeriesIds);
+    }
+}
 
 // Page config
 $page_title = 'Rabattkoder';
@@ -282,8 +380,10 @@ include __DIR__ . '/components/unified-layout.php';
             <div class="form-group">
                 <label>Gäller för</label>
                 <select name="applicable_to" onchange="toggleRestriction(this.value)">
+                    <?php if ($isAdmin): ?>
                     <option value="all">Alla anmälningar</option>
-                    <option value="event">Specifikt event</option>
+                    <?php endif; ?>
+                    <option value="event" <?= !$isAdmin ? 'selected' : '' ?>>Specifikt event</option>
                     <option value="series">Specifik serie</option>
                 </select>
             </div>
@@ -414,6 +514,14 @@ function toggleRestriction(value) {
     document.getElementById('event-select').style.display = value === 'event' ? 'block' : 'none';
     document.getElementById('series-select').style.display = value === 'series' ? 'block' : 'none';
 }
+
+// Initialize on page load
+document.addEventListener('DOMContentLoaded', function() {
+    const select = document.querySelector('select[name="applicable_to"]');
+    if (select) {
+        toggleRestriction(select.value);
+    }
+});
 
 lucide.createIcons();
 </script>
