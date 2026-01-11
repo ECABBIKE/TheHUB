@@ -261,6 +261,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $seriesData['payment_recipient_id'] = !empty($_POST['payment_recipient_id']) ? intval($_POST['payment_recipient_id']) : null;
         }
 
+        // Add gravity_id_discount (0 = disabled, >0 = discount amount in SEK)
+        $seriesData['gravity_id_discount'] = floatval($_POST['gravity_id_discount'] ?? 0);
+
         // Add historical_data_verified
         $seriesData['historical_data_verified'] = isset($_POST['historical_data_verified']) ? 1 : 0;
 
@@ -695,6 +698,44 @@ include __DIR__ . '/components/unified-layout.php';
         </div>
     </div>
     <?php endif; ?>
+
+    <!-- Gravity ID Discount -->
+    <div class="admin-card">
+        <div class="admin-card-header">
+            <h2>
+                <i data-lucide="badge-check" class="icon-md"></i>
+                Gravity ID-rabatt
+            </h2>
+        </div>
+        <div class="admin-card-body">
+            <p class="text-secondary mb-md">
+                Sätt rabatt för deltagare med Gravity ID. Lämna 0 för att inaktivera rabatten för denna serie.
+            </p>
+            <div class="admin-form-row">
+                <div class="admin-form-group">
+                    <label for="gravity_id_discount" class="admin-form-label">Rabatt (SEK)</label>
+                    <input type="number" id="gravity_id_discount" name="gravity_id_discount" class="admin-form-input"
+                           value="<?= htmlspecialchars($series['gravity_id_discount'] ?? 0) ?>"
+                           min="0" step="1" placeholder="0">
+                    <small class="text-secondary">0 = inaktiverat, t.ex. 50 = 50 kr rabatt</small>
+                </div>
+            </div>
+            <?php
+            // Show info about GID members
+            try {
+                $gidCount = $db->getRow("SELECT COUNT(*) as cnt FROM riders WHERE gravity_id IS NOT NULL AND gravity_id != ''");
+                if ($gidCount && $gidCount['cnt'] > 0):
+            ?>
+            <div class="info-box mt-md">
+                <span class="text-accent font-semibold"><?= $gidCount['cnt'] ?></span> åkare har Gravity ID.
+                <a href="/admin/gravity-id.php" class="text-accent ml-sm">Hantera medlemmar</a>
+            </div>
+            <?php
+                endif;
+            } catch (Exception $e) {}
+            ?>
+        </div>
+    </div>
 
     <!-- Sponsors -->
     <?php if (!empty($allSponsors)): ?>

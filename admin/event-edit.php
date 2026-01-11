@@ -410,6 +410,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             }
 
+            // Update gravity_id_discount (0 = use series setting, >0 = specific discount)
+            try {
+                $gravityIdDiscount = floatval($_POST['gravity_id_discount'] ?? 0);
+                $db->query("UPDATE events SET gravity_id_discount = ? WHERE id = ?", [$gravityIdDiscount, $id]);
+            } catch (Exception $gidEx) {
+                error_log("EVENT EDIT: gravity_id_discount update failed: " . $gidEx->getMessage());
+            }
+
             // Sync series_events junction table with events.series_id
             try {
                 $newSeriesId = !empty($_POST['series_id']) ? intval($_POST['series_id']) : null;
@@ -972,6 +980,44 @@ include __DIR__ . '/components/unified-layout.php';
         </fieldset>
     </details>
     <?php endif; ?>
+
+    <!-- GRAVITY ID DISCOUNT -->
+    <details class="admin-card mb-lg">
+        <summary class="admin-card-header collapsible-header">
+            <h2><i data-lucide="badge-check" class="icon-md"></i> Gravity ID-rabatt</h2>
+            <span class="text-secondary text-sm">Klicka för att expandera/minimera</span>
+        </summary>
+        <div class="admin-card-body">
+            <p class="text-secondary text-sm mb-md">
+                Sätt rabatt för deltagare med Gravity ID. Lämna 0 för att använda seriens inställning.
+            </p>
+            <div class="admin-form-group">
+                <label class="admin-form-label">Rabatt (SEK)</label>
+                <input type="number" name="gravity_id_discount" class="admin-form-input" style="max-width: 200px;"
+                       value="<?= h($event['gravity_id_discount'] ?? 0) ?>"
+                       min="0" step="1" placeholder="0">
+                <small class="form-help">
+                    0 = använd seriens inställning, >0 = specifik rabatt för detta event
+                </small>
+            </div>
+            <?php
+            // Get series GID discount if available
+            if (!empty($event['series_id'])) {
+                try {
+                    $seriesGid = $db->getRow("SELECT gravity_id_discount FROM series WHERE id = ?", [$event['series_id']]);
+                    $seriesDiscount = floatval($seriesGid['gravity_id_discount'] ?? 0);
+                    if ($seriesDiscount > 0):
+            ?>
+            <div class="info-box mt-sm">
+                Seriens rabatt: <strong><?= $seriesDiscount ?> kr</strong>
+            </div>
+            <?php
+                    endif;
+                } catch (Exception $e) {}
+            }
+            ?>
+        </div>
+    </details>
 
     <!-- LOCATION DETAILS - Editable for promotors -->
     <details class="admin-card mb-lg" open>
