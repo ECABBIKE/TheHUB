@@ -495,14 +495,18 @@ input[type="number"] {
 
  <script>
  function openCreateModal() {
- document.getElementById('createModal').style.display = 'flex';
- if (typeof lucide !== 'undefined') lucide.createIcons();
+     const modal = document.getElementById('createModal');
+     modal.classList.remove('hidden');
+     modal.style.display = 'flex';
+     if (typeof lucide !== 'undefined') lucide.createIcons();
  }
  function closeCreateModal() {
- document.getElementById('createModal').style.display = 'none';
+     const modal = document.getElementById('createModal');
+     modal.classList.add('hidden');
+     modal.style.display = 'none';
  }
  document.addEventListener('keydown', function(e) {
- if (e.key === 'Escape') closeCreateModal();
+     if (e.key === 'Escape') closeCreateModal();
  });
  </script>
  <?php endif; ?>
