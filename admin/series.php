@@ -480,8 +480,8 @@ include __DIR__ . '/components/unified-layout.php';
                                                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>
                                             </a>
                                         <?php endif; ?>
-                                        <a href="/admin/series/pricing?series_id=<?= $serie['id'] ?>" class="btn-admin btn-admin-sm btn-admin-secondary" title="Priser">
-                                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="20" height="14" x="2" y="5" rx="2"/><line x1="2" x2="22" y1="10" y2="10"/></svg>
+                                        <a href="/admin/series/pricing?id=<?= $serie['id'] ?>" class="btn-admin btn-admin-sm btn-admin-secondary" title="Anmälan & Priser">
+                                            <i data-lucide="clipboard-list"></i>
                                         </a>
                                         <a href="/admin/series/edit/<?= $serie['id'] ?>" class="btn-admin btn-admin-sm btn-admin-secondary" title="Redigera">
                                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
