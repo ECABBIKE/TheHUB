@@ -28,7 +28,8 @@ $migrations = [
     '105_add_series_registration_settings.sql',
     '106_add_championship_fee_to_pricing.sql',
     '108_update_registration_rule_types.sql',
-    '109_add_event_license_class_to_series.sql'
+    '109_add_event_license_class_to_series.sql',
+    '110_add_youtube_to_race_reports.sql'
 ];
 
 $migrationsDir = __DIR__ . '/migrations/';

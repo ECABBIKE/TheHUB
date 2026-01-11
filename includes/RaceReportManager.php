@@ -43,6 +43,7 @@ class RaceReportManager {
             $content = $data['content'];
             $event_id = $data['event_id'] ?? null;
             $instagram_url = $data['instagram_url'] ?? null;
+            $youtube_url = $data['youtube_url'] ?? null;
             $featured_image = $data['featured_image'] ?? null;
             $status = $data['status'] ?? 'draft';
 
@@ -59,16 +60,27 @@ class RaceReportManager {
             $is_from_instagram = !empty($instagram_url) ? 1 : 0;
             $instagram_embed = $is_from_instagram ? $this->getInstagramEmbed($instagram_url) : null;
 
+            // Kolla om YouTube-import
+            $is_from_youtube = !empty($youtube_url) ? 1 : 0;
+            $youtube_video_id = $is_from_youtube ? $this->getYoutubeVideoId($youtube_url) : null;
+
+            // Set featured image from YouTube thumbnail if not set
+            if ($is_from_youtube && !$featured_image && $youtube_video_id) {
+                $featured_image = "https://img.youtube.com/vi/{$youtube_video_id}/maxresdefault.jpg";
+            }
+
             $published_at = ($status === 'published') ? date('Y-m-d H:i:s') : null;
 
             $stmt = $this->pdo->prepare("
                 INSERT INTO race_reports
                 (rider_id, event_id, title, slug, content, excerpt,
                  featured_image, status, instagram_url, instagram_embed_code,
-                 is_from_instagram, reading_time_minutes, published_at)
+                 is_from_instagram, youtube_url, youtube_video_id, is_from_youtube,
+                 reading_time_minutes, published_at)
                 VALUES (:rider_id, :event_id, :title, :slug, :content, :excerpt,
                         :featured_image, :status, :instagram_url, :instagram_embed_code,
-                        :is_from_instagram, :reading_time_minutes, :published_at)
+                        :is_from_instagram, :youtube_url, :youtube_video_id, :is_from_youtube,
+                        :reading_time_minutes, :published_at)
             ");
 
             $stmt->execute([
@@ -83,6 +95,9 @@ class RaceReportManager {
                 ':instagram_url' => $instagram_url,
                 ':instagram_embed_code' => $instagram_embed,
                 ':is_from_instagram' => $is_from_instagram,
+                ':youtube_url' => $youtube_url,
+                ':youtube_video_id' => $youtube_video_id,
+                ':is_from_youtube' => $is_from_youtube,
                 ':reading_time_minutes' => $reading_time,
                 ':published_at' => $published_at
             ]);
@@ -109,7 +124,7 @@ class RaceReportManager {
             // Bygg dynamisk UPDATE-query baserat på vad som finns i $data
             $allowed_fields = [
                 'title', 'content', 'excerpt', 'featured_image', 'status',
-                'event_id', 'instagram_url', 'is_featured', 'allow_comments'
+                'event_id', 'instagram_url', 'youtube_url', 'is_featured', 'allow_comments'
             ];
 
             $updates = [];
@@ -527,6 +542,40 @@ class RaceReportManager {
         // Här kan man integrera med Instagram oEmbed API
         // För nu returnerar vi bara URL:en
         return $url;
+    }
+
+    /**
+     * Extrahera YouTube video ID från URL
+     */
+    private function getYoutubeVideoId(string $url): ?string {
+        // Stöder olika YouTube URL-format:
+        // https://www.youtube.com/watch?v=VIDEO_ID
+        // https://youtu.be/VIDEO_ID
+        // https://www.youtube.com/embed/VIDEO_ID
+        // https://www.youtube.com/shorts/VIDEO_ID
+
+        $patterns = [
+            '/youtube\.com\/watch\?v=([^&\s]+)/',
+            '/youtu\.be\/([^?\s]+)/',
+            '/youtube\.com\/embed\/([^?\s]+)/',
+            '/youtube\.com\/shorts\/([^?\s]+)/',
+        ];
+
+        foreach ($patterns as $pattern) {
+            if (preg_match($pattern, $url, $matches)) {
+                return $matches[1];
+            }
+        }
+
+        return null;
+    }
+
+    /**
+     * Hämta YouTube thumbnail URL
+     */
+    public function getYoutubeThumbnail(string $videoId, string $quality = 'maxresdefault'): string {
+        // Kvaliteter: default, mqdefault, hqdefault, sddefault, maxresdefault
+        return "https://img.youtube.com/vi/{$videoId}/{$quality}.jpg";
     }
 
     private function incrementViews(int $report_id): void {
