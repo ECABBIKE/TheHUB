@@ -668,11 +668,12 @@ function calculateDiscountAmount(array $discount, float $subtotal): float {
  * Check if rider has valid Gravity ID and calculate discount
  *
  * Works with existing gravity_id column in riders table.
- * Default discount is 50 kr unless configured otherwise.
+ * Discount can be configured per event, per series, or globally.
+ * If gravity_id_discount = 0, the discount is explicitly disabled for that event.
  *
  * @param int $riderId Rider ID
  * @param int $eventId Event ID (to check if Gravity ID discount applies)
- * @return array ['has_gravity_id' => bool, 'discount' => float, 'gravity_id' => string|null]
+ * @return array ['has_gravity_id' => bool, 'discount' => float, 'gravity_id' => string|null, 'enabled' => bool]
  */
 function checkGravityIdDiscount(int $riderId, int $eventId): array {
     $pdo = hub_db();
@@ -687,45 +688,84 @@ function checkGravityIdDiscount(int $riderId, int $eventId): array {
         $stmt->execute([$riderId]);
         $rider = $stmt->fetch(PDO::FETCH_ASSOC);
     } catch (Exception $e) {
-        return ['has_gravity_id' => false, 'discount' => 0, 'gravity_id' => null];
+        return ['has_gravity_id' => false, 'discount' => 0, 'gravity_id' => null, 'enabled' => false];
     }
 
     if (!$rider || empty($rider['gravity_id'])) {
-        return ['has_gravity_id' => false, 'discount' => 0, 'gravity_id' => null];
+        return ['has_gravity_id' => false, 'discount' => 0, 'gravity_id' => null, 'enabled' => false];
     }
 
-    // Default discount is 50 kr
+    // Default discount is 50 kr (used if migration not run yet)
     $discount = 50.0;
+    $columnExists = false;
 
-    // Try to get event-specific or global discount settings
+    // Try to get event-specific discount (if column exists)
     try {
-        // First check event-specific discount (if column exists)
-        $stmt = $pdo->prepare("SELECT gravity_id_discount FROM events WHERE id = ?");
+        $stmt = $pdo->prepare("SELECT gravity_id_discount, series_id FROM events WHERE id = ?");
         $stmt->execute([$eventId]);
-        $eventDiscount = $stmt->fetchColumn();
+        $event = $stmt->fetch(PDO::FETCH_ASSOC);
+        $columnExists = true;
 
-        if ($eventDiscount !== false && $eventDiscount !== null && floatval($eventDiscount) > 0) {
-            $discount = floatval($eventDiscount);
-        } else {
-            // Try to get from settings table (if exists)
-            try {
-                $stmt = $pdo->query("SELECT setting_value FROM gravity_id_settings WHERE setting_key = 'default_discount'");
-                $defaultDiscount = $stmt->fetchColumn();
-                if ($defaultDiscount && floatval($defaultDiscount) > 0) {
-                    $discount = floatval($defaultDiscount);
+        if ($event) {
+            // Check if event has explicit setting
+            if ($event['gravity_id_discount'] !== null) {
+                $eventDiscount = floatval($event['gravity_id_discount']);
+                if ($eventDiscount == 0) {
+                    // Explicitly disabled for this event
+                    return [
+                        'has_gravity_id' => true,
+                        'discount' => 0,
+                        'gravity_id' => $rider['gravity_id'],
+                        'enabled' => false
+                    ];
                 }
-            } catch (Exception $e) {
-                // Settings table doesn't exist, use default
+                $discount = $eventDiscount;
+            } elseif (!empty($event['series_id'])) {
+                // Check series setting
+                try {
+                    $stmt = $pdo->prepare("SELECT gravity_id_discount FROM series WHERE id = ?");
+                    $stmt->execute([$event['series_id']]);
+                    $seriesDiscount = $stmt->fetchColumn();
+
+                    if ($seriesDiscount !== false && $seriesDiscount !== null) {
+                        if (floatval($seriesDiscount) == 0) {
+                            // Disabled for this series
+                            return [
+                                'has_gravity_id' => true,
+                                'discount' => 0,
+                                'gravity_id' => $rider['gravity_id'],
+                                'enabled' => false
+                            ];
+                        }
+                        $discount = floatval($seriesDiscount);
+                    }
+                } catch (Exception $e) {
+                    // series.gravity_id_discount column doesn't exist
+                }
             }
         }
     } catch (Exception $e) {
-        // gravity_id_discount column doesn't exist in events, use default
+        // gravity_id_discount column doesn't exist in events, use default 50 kr
+    }
+
+    // If column exists but no specific setting, try global settings
+    if ($columnExists && $discount == 50.0) {
+        try {
+            $stmt = $pdo->query("SELECT setting_value FROM gravity_id_settings WHERE setting_key = 'default_discount'");
+            $defaultDiscount = $stmt->fetchColumn();
+            if ($defaultDiscount && floatval($defaultDiscount) > 0) {
+                $discount = floatval($defaultDiscount);
+            }
+        } catch (Exception $e) {
+            // Settings table doesn't exist
+        }
     }
 
     return [
         'has_gravity_id' => true,
         'discount' => $discount,
-        'gravity_id' => $rider['gravity_id']
+        'gravity_id' => $rider['gravity_id'],
+        'enabled' => $discount > 0
     ];
 }
 
