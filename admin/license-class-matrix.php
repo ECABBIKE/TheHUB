@@ -206,27 +206,6 @@ include __DIR__ . '/components/unified-layout.php';
   .gender-m { background: rgba(59, 130, 246, 0.2); color: #3b82f6; }
   .gender-f { background: rgba(236, 72, 153, 0.2); color: #ec4899; }
   .gender-mix { background: rgba(156, 163, 175, 0.2); color: var(--color-text-muted); }
-  .quick-actions {
-   display: flex;
-   flex-wrap: wrap;
-   gap: var(--space-xs);
-   margin-bottom: var(--space-md);
-  }
-  .quick-btn {
-   padding: var(--space-xs) var(--space-sm);
-   font-size: 0.75rem;
-   border-radius: var(--radius-sm);
-   background: var(--color-bg-hover);
-   border: 1px solid var(--color-border);
-   color: var(--color-text-secondary);
-   cursor: pointer;
-   transition: all 0.15s;
-  }
-  .quick-btn:hover {
-   background: var(--color-accent-light);
-   border-color: var(--color-accent);
-   color: var(--color-accent);
-  }
  </style>
 
  <div class="card">
@@ -243,16 +222,6 @@ include __DIR__ . '/components/unified-layout.php';
     <input type="hidden" name="action" value="save_matrix">
     <input type="hidden" name="event_license_class" value="<?= h($currentTab) ?>">
 
-    <!-- Quick Actions -->
-    <div class="quick-actions">
-     <button type="button" class="quick-btn" onclick="selectAll()">Markera alla</button>
-     <button type="button" class="quick-btn" onclick="deselectAll()">Avmarkera alla</button>
-     <?php foreach ($licenseTypes as $license): ?>
-      <button type="button" class="quick-btn" onclick="toggleColumn('<?= h($license['code']) ?>')">
-       <?= h($license['name']) ?>
-      </button>
-     <?php endforeach; ?>
-    </div>
 
     <!-- Matrix Grid -->
     <div class="matrix-grid" style="grid-template-columns: minmax(160px, 1fr) repeat(<?= count($licenseTypes) ?>, minmax(70px, 100px));">
@@ -306,20 +275,5 @@ include __DIR__ . '/components/unified-layout.php';
  <?php endif; ?>
 
 
-<script>
-function selectAll() {
- document.querySelectorAll('.matrix-checkbox').forEach(cb => cb.checked = true);
-}
-
-function deselectAll() {
- document.querySelectorAll('.matrix-checkbox').forEach(cb => cb.checked = false);
-}
-
-function toggleColumn(licenseCode) {
- const checkboxes = document.querySelectorAll(`.matrix-checkbox[data-license="${licenseCode}"]`);
- const allChecked = Array.from(checkboxes).every(cb => cb.checked);
- checkboxes.forEach(cb => cb.checked = !allChecked);
-}
-</script>
 
 <?php include __DIR__ . '/components/unified-layout-footer.php'; ?>
