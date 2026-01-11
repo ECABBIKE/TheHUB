@@ -124,19 +124,13 @@ include __DIR__ . '/components/unified-layout.php';
  <?php endif; ?>
 
  <!-- Event License Class Tabs -->
- <div class="card mb-md">
-  <div class="card-body gs-p-0">
-  <nav class="admin-tabs" role="tablist">
-   <?php foreach ($eventLicenseClasses as $key => $info): ?>
-   <a href="?tab=<?= $key ?>"
-    class="admin-tabs__tab <?= $currentTab === $key ? 'admin-tabs__tab--active' : '' ?>"
-    role="tab">
-    <i data-lucide="<?= $info['icon'] ?>"></i>
-    <span><?= h($info['name']) ?></span>
-   </a>
-   <?php endforeach; ?>
-  </nav>
-  </div>
+ <div class="admin-tabs">
+  <?php foreach ($eventLicenseClasses as $key => $info): ?>
+  <a href="?tab=<?= $key ?>" class="admin-tab <?= $currentTab === $key ? 'active' : '' ?>">
+   <i data-lucide="<?= $info['icon'] ?>"></i>
+   <?= h($info['name']) ?>
+  </a>
+  <?php endforeach; ?>
  </div>
 
 

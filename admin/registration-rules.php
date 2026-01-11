@@ -226,14 +226,13 @@ include __DIR__ . '/components/unified-layout.php';
   <input type="hidden" name="action" value="set_series_rule_type">
   <input type="hidden" name="series_id" value="<?= $selectedSeriesId ?>">
 
-  <div class="grid grid-cols-1 md-grid-cols-2 gap-lg">
-  <div class="form-group">
+  <div class="form-group" style="max-width: 400px;">
   <label for="rule_type_id" class="label">
    <i data-lucide="shield"></i>
-   Registreringstyp
+   Eventklass
   </label>
   <select name="rule_type_id" id="rule_type_id" class="input">
-   <option value="">-- Ingen vald --</option>
+   <option value="">-- Välj eventklass --</option>
    <?php foreach ($ruleTypes as $rt): ?>
    <option value="<?= $rt['id'] ?>" <?= $selectedSeries['registration_rule_type_id'] == $rt['id'] ? 'selected' : '' ?>>
    <?= h($rt['name']) ?>
@@ -241,21 +240,9 @@ include __DIR__ . '/components/unified-layout.php';
    <?php endforeach; ?>
   </select>
   <small class="text-secondary">
-   Nationell = strikta licens- och åldersregler<br>
-   Sport/Motion = milda regler, främst könsbegränsning
+   Styr vilka licenstyper som får anmäla sig till respektive klass.<br>
+   Se <a href="/admin/license-class-matrix.php">Licens-Klass Matris</a> för detaljer.
   </small>
-  </div>
-
-  <div class="form-group">
-  <label class="label">&nbsp;</label>
-  <div class="flex items-center gap-sm">
-   <input type="checkbox" name="apply_defaults" id="apply_defaults" value="1">
-   <label for="apply_defaults">Tillämpa standardregler på alla klasser</label>
-  </div>
-  <small class="text-secondary mt-sm">
-   Skapar basregler för alla klasser baserat på regeltypen.
-  </small>
-  </div>
   </div>
 
   <div class="mt-lg">
