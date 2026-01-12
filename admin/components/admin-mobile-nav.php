@@ -2,7 +2,12 @@
 /**
  * TheHUB Admin Mobile Navigation
  * Horizontally scrollable bottom nav for admin pages
- * MUST match admin-sidebar.php exactly!
+ *
+ * NOTE: Primary navigation is defined in /includes/config/admin-tabs-config.php
+ * and rendered via /components/sidebar.php
+ *
+ * This mobile nav should be kept in sync with admin-tabs-config.php
+ * (admin-sidebar.php has been deprecated - 2026-01-12)
  *
  * Role-based access:
  * - promotor: Dashboard, Tävlingar, Serier
@@ -17,7 +22,7 @@ $isPromotor = ($currentAdminRole === 'promotor');
 $roleHierarchy = ['promotor' => 1, 'admin' => 2, 'super_admin' => 3];
 $userRoleLevel = $roleHierarchy[$currentAdminRole] ?? 0;
 
-// Admin navigation - IDENTICAL to admin-sidebar.php
+// Admin navigation - should match /includes/config/admin-tabs-config.php
 $adminNav = [
     ['id' => 'dashboard', 'label' => 'Dashboard', 'icon' => 'layout-dashboard', 'url' => $isPromotor ? '/admin/promotor' : '/admin/dashboard', 'min_role' => 'promotor'],
     ['id' => 'events', 'label' => 'Tävlingar', 'icon' => 'calendar', 'url' => '/admin/events', 'min_role' => 'promotor'],
