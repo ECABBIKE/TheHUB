@@ -15,9 +15,13 @@ $currentSettings = require $settingsFile;
 
 // Load sponsor settings from database
 $sponsorPublicEnabled = false;
+$hideEmptyForAdmin = false;
 try {
     $sponsorSetting = $db->getRow("SELECT setting_value FROM sponsor_settings WHERE setting_key = 'public_enabled'");
     $sponsorPublicEnabled = ($sponsorSetting && $sponsorSetting['setting_value'] == '1');
+
+    $hideEmptySetting = $db->getRow("SELECT setting_value FROM sponsor_settings WHERE setting_key = 'hide_empty_for_admin'");
+    $hideEmptyForAdmin = ($hideEmptySetting && $hideEmptySetting['setting_value'] == '1');
 } catch (Exception $e) {
     // Table might not exist yet
 }
@@ -30,8 +34,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
  if ($action === 'save_sponsor_visibility') {
      $enabled = isset($_POST['sponsor_public_enabled']) ? 1 : 0;
+     $hideEmpty = isset($_POST['hide_empty_for_admin']) ? 1 : 0;
      try {
-         // Check if row exists
+         // Save public_enabled setting
          $exists = $db->getRow("SELECT id FROM sponsor_settings WHERE setting_key = 'public_enabled'");
          if ($exists) {
              $db->query("UPDATE sponsor_settings SET setting_value = ? WHERE setting_key = 'public_enabled'", [$enabled]);
@@ -39,7 +44,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
              $db->query("INSERT INTO sponsor_settings (setting_key, setting_value) VALUES ('public_enabled', ?)", [$enabled]);
          }
          $sponsorPublicEnabled = ($enabled == 1);
-         $message = $enabled ? 'Sponsorer/Reklam är nu synliga för alla besökare!' : 'Sponsorer/Reklam är nu endast synliga för administratörer.';
+
+         // Save hide_empty_for_admin setting
+         $existsHideEmpty = $db->getRow("SELECT id FROM sponsor_settings WHERE setting_key = 'hide_empty_for_admin'");
+         if ($existsHideEmpty) {
+             $db->query("UPDATE sponsor_settings SET setting_value = ? WHERE setting_key = 'hide_empty_for_admin'", [$hideEmpty]);
+         } else {
+             $db->query("INSERT INTO sponsor_settings (setting_key, setting_value) VALUES ('hide_empty_for_admin', ?)", [$hideEmpty]);
+         }
+         $hideEmptyForAdmin = ($hideEmpty == 1);
+
+         $message = 'Sponsorinställningar sparade!';
          $messageType = 'success';
      } catch (Exception $e) {
          $message = 'Kunde inte spara inställning: ' . $e->getMessage();
@@ -316,6 +331,22 @@ include __DIR__ . '/components/unified-layout.php';
     </label>
     <small class="text-muted d-block mt-xs">
      När denna är avstängd visas sponsorplatser endast för inloggade administratörer (för testning och förhandsvisning).
+    </small>
+   </div>
+
+   <div class="mb-lg">
+    <label class="gs-toggle-label">
+     <input
+      type="checkbox"
+      name="hide_empty_for_admin"
+      class="gs-toggle"
+      <?= $hideEmptyForAdmin ? 'checked' : '' ?>
+     >
+     <span class="gs-toggle-slider"></span>
+     <span class="gs-toggle-text">Dölj tomma sponsorplatser för admin</span>
+    </label>
+    <small class="text-muted d-block mt-xs">
+     När denna är aktiverad visas endast sponsorplatser som har en logotyp uppladdad. Tomma platser döljs även för administratörer.
     </small>
    </div>
 
