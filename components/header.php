@@ -8,7 +8,7 @@ $isPromotorOnly = function_exists('isRole') && isRole('promotor');
 if ($isPromotorOnly) {
     $isAdmin = false;
 }
-$hubUrl = defined('HUB_V3_URL') ? HUB_V3_URL : '';
+$hubUrl = defined('HUB_URL') ? HUB_URL : '';
 
 // Check if super admin (for theme switcher access)
 $isSuperAdmin = function_exists('hasRole') && hasRole('super_admin');
@@ -176,7 +176,7 @@ $headerLogo = function_exists('getBranding') ? getBranding('logos.sidebar') : nu
 
         <?php else: ?>
             <a href="<?= $hubUrl ?>/login?redirect=<?= urlencode($_SERVER['REQUEST_URI']) ?>" class="btn btn-primary btn-sm">
-                <?php require_once HUB_V3_ROOT . '/components/icons.php'; ?>
+                <?php require_once HUB_ROOT . '/components/icons.php'; ?>
                 <?= hub_icon('log-in', 'icon-sm') ?>
                 <span class="header-login-text">Logga in</span>
             </a>

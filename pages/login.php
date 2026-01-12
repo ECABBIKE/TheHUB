@@ -5,12 +5,12 @@
  */
 
 // Prevent direct access
-if (!defined('HUB_V3_ROOT')) {
+if (!defined('HUB_ROOT')) {
     header('Location: /');
     exit;
 }
 
-require_once HUB_V3_ROOT . '/components/icons.php';
+require_once HUB_ROOT . '/components/icons.php';
 
 /**
  * Clean redirect URL - prevent redirect loops to login page
@@ -88,7 +88,7 @@ $redirect = clean_redirect_url($_GET['redirect'] ?? '');
 
             <!-- Logo -->
             <div class="login-header">
-                <a href="<?= HUB_V3_URL ?>/" class="login-logo">
+                <a href="<?= HUB_URL ?>/" class="login-logo">
                     <?= hub_icon('trophy', 'icon-xl') ?>
                     <span>TheHUB</span>
                 </a>

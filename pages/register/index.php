@@ -9,7 +9,7 @@
  */
 
 // Prevent direct access
-if (!defined('HUB_V3_ROOT')) {
+if (!defined('HUB_ROOT')) {
     require_once dirname(dirname(__DIR__)) . '/hub-config.php';
 }
 
@@ -57,7 +57,7 @@ $pageInfo = [
     'section' => 'register'
 ];
 
-include HUB_V3_ROOT . '/components/header.php';
+include HUB_ROOT . '/components/header.php';
 ?>
 
 <style>
@@ -275,4 +275,4 @@ include HUB_V3_ROOT . '/components/header.php';
     </div>
 </main>
 
-<?php include HUB_V3_ROOT . '/components/footer.php'; ?>
+<?php include HUB_ROOT . '/components/footer.php'; ?>

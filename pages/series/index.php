@@ -5,7 +5,7 @@
  */
 
 // Prevent direct access
-if (!defined('HUB_V3_ROOT')) {
+if (!defined('HUB_ROOT')) {
     header('Location: /series');
     exit;
 }

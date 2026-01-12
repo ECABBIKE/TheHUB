@@ -84,7 +84,7 @@ try {
     $club = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if (!$club) {
-        include HUB_V3_ROOT . '/pages/404.php';
+        include HUB_ROOT . '/pages/404.php';
         return;
     }
 
@@ -342,7 +342,7 @@ try {
 }
 
 if (!$club) {
-    include HUB_V3_ROOT . '/pages/404.php';
+    include HUB_ROOT . '/pages/404.php';
     return;
 }
 

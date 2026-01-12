@@ -2,7 +2,7 @@
 $pageTitle = ucfirst($pageInfo['page'] ?? 'Dashboard') . ' – TheHUB';
 $currentTheme = function_exists('hub_get_theme') ? hub_get_theme() : 'dark';
 $themeColor = $currentTheme === 'dark' ? '#0b131e' : '#f8f9fa';
-$hubUrl = defined('HUB_V3_URL') ? HUB_V3_URL : '';
+$hubUrl = defined('HUB_URL') ? HUB_URL : '';
 
 // Fallback for hub_asset if not defined
 if (!function_exists('hub_asset')) {

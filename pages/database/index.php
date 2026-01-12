@@ -5,7 +5,7 @@
  */
 
 // Prevent direct access
-if (!defined('HUB_V3_ROOT')) {
+if (!defined('HUB_ROOT')) {
     header('Location: /database');
     exit;
 }
@@ -17,7 +17,7 @@ $pdo = hub_db();
 $tab = $_GET['tab'] ?? 'riders';
 
 // Load filter setting from admin configuration
-$publicSettings = require HUB_V3_ROOT . '/config/public_settings.php';
+$publicSettings = require HUB_ROOT . '/config/public_settings.php';
 $filter = $publicSettings['public_riders_display'] ?? 'all';
 
 // Get stats based on filter from admin settings

@@ -6,7 +6,7 @@
 $db = hub_db();
 
 // Load filter setting from admin configuration
-$publicSettings = require HUB_V3_ROOT . '/config/public_settings.php';
+$publicSettings = require HUB_ROOT . '/config/public_settings.php';
 $filter = $publicSettings['public_riders_display'] ?? 'all';
 
 // Get search query

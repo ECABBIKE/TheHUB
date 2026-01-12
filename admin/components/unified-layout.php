@@ -174,10 +174,10 @@ if (!isset($current_admin_page)) {
 <body>
     <a href="#main-content" class="skip-link">Hoppa till huvudinnehåll</a>
 
-    <?php include HUB_V3_ROOT . '/components/header.php'; ?>
+    <?php include HUB_ROOT . '/components/header.php'; ?>
 
     <div class="app-layout">
-        <?php include HUB_V3_ROOT . '/components/sidebar.php'; ?>
+        <?php include HUB_ROOT . '/components/sidebar.php'; ?>
 
         <main id="main-content" class="main-content" role="main">
             <!-- Admin Submenu (automatic based on current page) -->

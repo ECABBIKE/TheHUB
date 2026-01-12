@@ -12,7 +12,7 @@
  */
 
 require_once dirname(__DIR__) . '/config.php';
-require_once HUB_V2_ROOT . '/includes/registration-validator.php';
+require_once HUB_ROOT . '/includes/registration-validator.php';
 
 header('Content-Type: application/json');
 header('Cache-Control: no-store');

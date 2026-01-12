@@ -14,7 +14,7 @@ if (!$currentUser) {
 $pdo = hub_db();
 
 // Include the race report manager
-require_once HUB_V3_ROOT . '/includes/RaceReportManager.php';
+require_once HUB_ROOT . '/includes/RaceReportManager.php';
 $reportManager = new RaceReportManager($pdo);
 
 // Handle form submissions

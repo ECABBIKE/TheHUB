@@ -13,7 +13,7 @@
  */
 
 require_once dirname(__DIR__) . '/config.php';
-require_once HUB_V2_ROOT . '/includes/series-registration.php';
+require_once HUB_ROOT . '/includes/series-registration.php';
 
 header('Content-Type: application/json');
 header('Cache-Control: no-store');

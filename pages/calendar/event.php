@@ -5,12 +5,12 @@
  */
 
 // Prevent direct access
-if (!defined('HUB_V3_ROOT')) {
+if (!defined('HUB_ROOT')) {
     header('Location: /calendar');
     exit;
 }
 
-require_once HUB_V3_ROOT . '/components/icons.php';
+require_once HUB_ROOT . '/components/icons.php';
 
 $pdo = hub_db();
 

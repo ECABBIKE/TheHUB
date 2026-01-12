@@ -5,7 +5,7 @@
  */
 
 // Prevent direct access
-if (!defined('HUB_V3_ROOT')) {
+if (!defined('HUB_ROOT')) {
     header('Location: /');
     exit;
 }
@@ -13,7 +13,7 @@ if (!defined('HUB_V3_ROOT')) {
 // Define page type for sponsor placements
 define('HUB_PAGE_TYPE', 'home');
 
-require_once HUB_V3_ROOT . '/components/icons.php';
+require_once HUB_ROOT . '/components/icons.php';
 
 $isLoggedIn = hub_is_logged_in();
 
@@ -28,7 +28,7 @@ $upcomingDH = [];
 $recentResults = [];
 
 // Load filter setting from admin configuration
-$publicSettings = @include(HUB_V3_ROOT . '/config/public_settings.php');
+$publicSettings = @include(HUB_ROOT . '/config/public_settings.php');
 $filter = $publicSettings['public_riders_display'] ?? 'all';
 
 // Get current statistics

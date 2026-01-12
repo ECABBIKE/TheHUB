@@ -111,7 +111,7 @@ try {
     $event = $stmt->fetch(PDO::FETCH_ASSOC);
 
     if (!$event) {
-        include HUB_V3_ROOT . '/pages/404.php';
+        include HUB_ROOT . '/pages/404.php';
         return;
     }
 
@@ -872,7 +872,7 @@ try {
 }
 
 if (!$event) {
-    include HUB_V3_ROOT . '/pages/404.php';
+    include HUB_ROOT . '/pages/404.php';
     return;
 }
 ?>
@@ -2222,7 +2222,7 @@ if ($isLoggedIn && $currentUser) {
 // Get eligible classes if user is logged in
 $eligibleClasses = [];
 if ($isLoggedIn && $currentUser && !$existingRegistration) {
-    require_once HUB_V2_ROOT . '/includes/registration-validator.php';
+    require_once HUB_ROOT . '/includes/registration-validator.php';
     $eligibleClasses = getEligibleClasses($db, $eventId, $currentUser['id']);
 }
 
