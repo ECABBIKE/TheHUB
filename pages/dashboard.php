@@ -4,7 +4,7 @@
  */
 
 // Load filter setting from admin configuration
-$publicSettings = @include(HUB_V3_ROOT . '/config/public_settings.php');
+$publicSettings = @include(HUB_ROOT . '/config/public_settings.php');
 $filter = $publicSettings['public_riders_display'] ?? 'all';
 
 try {

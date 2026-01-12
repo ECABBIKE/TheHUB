@@ -79,7 +79,7 @@ $message = $_GET['msg'] ?? '';
             $searchType = 'riders';
             $placeholder = 'Sök barnets namn...';
             $onSelect = 'handleChildSelect';
-            include HUB_V3_ROOT . '/components/search-live.php';
+            include HUB_ROOT . '/components/search-live.php';
             ?>
         </div>
 

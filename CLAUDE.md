@@ -29,6 +29,37 @@ Version visas som: `v1.0 [2026-01-08.XXX] - Release`
 Pushat: TheHUB v1.0 [2026-01-08.XXX]
 ```
 
+## INGA VERSIONSPREFIX - ALDRIG
+
+**ANVÄND ALDRIG versionsnummer (V2, V3, V4) i filnamn, konstanter eller kod.**
+
+Detta projekt har EN version. Alla gamla versionsreferenser är borttagna.
+
+```php
+// FEL - ALDRIG SÅ HÄR
+HUB_V2_ROOT
+HUB_V3_ROOT
+HUB_V3_URL
+include 'v2/pages/event.php';
+
+// RÄTT - ALLTID SÅ HÄR
+HUB_ROOT
+HUB_URL
+include 'pages/event.php';
+```
+
+### Korrekta konstanter:
+- `HUB_ROOT` - Projektets rotmapp
+- `HUB_URL` - Projektets bas-URL
+- `ROOT_PATH` - Alias för HUB_ROOT (legacy)
+- `INCLUDES_PATH` - `/includes` mappen
+
+### Historik:
+Projektet hade tidigare separata versioner (V2, V3) men dessa slogs samman 2026-01.
+Alla V2/V3/V4-prefix är FÖRBJUDNA i ny kod.
+
+---
+
 ## INGA EMOJIS - ALDRIG
 
 **ANVÄND ALDRIG EMOJIS I KOD.** Använd alltid Lucide-ikoner istället.

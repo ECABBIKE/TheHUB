@@ -24,10 +24,6 @@ if (!function_exists('hub_is_logged_in')) {
 if (!defined('HUB_ROOT')) {
     define('HUB_ROOT', __DIR__);
 }
-// Backward compatibility
-if (!defined('HUB_V3_ROOT')) {
-    define('HUB_V3_ROOT', HUB_ROOT);
-}
 
 /**
  * Check if the current page requires authentication
@@ -71,7 +67,7 @@ function hub_get_current_page(): array {
     // Root route - show welcome page for ALL users (same great design for everyone)
     // Welcome page adapts content based on login status
     if ($raw === '' || $raw === 'index.php') {
-        return ['page' => 'welcome', 'section' => null, 'params' => [], 'file' => HUB_V3_ROOT . '/pages/welcome.php'];
+        return ['page' => 'welcome', 'section' => null, 'params' => [], 'file' => HUB_ROOT . '/pages/welcome.php'];
     }
 
     $segments = explode('/', $raw);
@@ -94,7 +90,7 @@ function hub_get_current_page(): array {
             'page' => $section,
             'section' => $section,
             'params' => [],
-            'file' => HUB_V3_ROOT . $simplePages[$section]
+            'file' => HUB_ROOT . $simplePages[$section]
         ];
     }
 
@@ -164,7 +160,7 @@ function hub_get_current_page(): array {
             $subpage = 'index';
         }
 
-        $file = HUB_V3_ROOT . ($sectionRoutes[$section][$subpage] ?? $sectionRoutes[$section]['index']);
+        $file = HUB_ROOT . ($sectionRoutes[$section][$subpage] ?? $sectionRoutes[$section]['index']);
 
         return [
             'page' => $section . '-' . $subpage,
@@ -181,7 +177,7 @@ function hub_get_current_page(): array {
             'page' => 'rider-register',
             'section' => 'database',
             'params' => ['id' => $segments[1]],
-            'file' => HUB_V3_ROOT . '/pages/rider-register.php'
+            'file' => HUB_ROOT . '/pages/rider-register.php'
         ];
     }
 
@@ -192,7 +188,7 @@ function hub_get_current_page(): array {
             'page' => $section,
             'section' => $section === 'rider' || $section === 'club' ? 'database' : 'results',
             'params' => ['id' => $segments[1]],
-            'file' => HUB_V3_ROOT . '/pages/' . $section . '.php'
+            'file' => HUB_ROOT . '/pages/' . $section . '.php'
         ];
     }
 
@@ -211,17 +207,17 @@ function hub_get_current_page(): array {
             'page' => $section,
             'section' => $legacyPages[$section]['section'],
             'params' => [],
-            'file' => HUB_V3_ROOT . $legacyPages[$section]['file']
+            'file' => HUB_ROOT . $legacyPages[$section]['file']
         ];
     }
 
     // Dashboard
     if ($section === 'dashboard') {
-        return ['page' => 'dashboard', 'section' => 'dashboard', 'params' => [], 'file' => HUB_V3_ROOT . '/pages/dashboard.php'];
+        return ['page' => 'dashboard', 'section' => 'dashboard', 'params' => [], 'file' => HUB_ROOT . '/pages/dashboard.php'];
     }
 
     // 404
-    return ['page' => '404', 'section' => null, 'params' => ['requested' => $raw], 'file' => HUB_V3_ROOT . '/pages/404.php'];
+    return ['page' => '404', 'section' => null, 'params' => ['requested' => $raw], 'file' => HUB_ROOT . '/pages/404.php'];
 }
 
 function hub_is_ajax(): bool {

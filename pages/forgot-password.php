@@ -13,7 +13,7 @@ if (hub_is_logged_in()) {
 }
 
 // Include mail helper
-require_once HUB_V3_ROOT . '/includes/mail.php';
+require_once HUB_ROOT . '/includes/mail.php';
 
 $pdo = hub_db();
 $message = '';

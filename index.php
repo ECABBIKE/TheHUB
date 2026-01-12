@@ -73,7 +73,7 @@ if (hub_is_ajax()) {
     if (file_exists($pageInfo['file'])) {
         include $pageInfo['file'];
     } else {
-        include HUB_V3_ROOT . '/pages/404.php';
+        include HUB_ROOT . '/pages/404.php';
     }
     exit;
 }
@@ -99,7 +99,7 @@ if (hub_is_ajax()) {
                 if (file_exists($pageInfo['file'])) {
                     include $pageInfo['file'];
                 } else {
-                    include HUB_V3_ROOT . '/pages/404.php';
+                    include HUB_ROOT . '/pages/404.php';
                 }
                 ?>
             </div>

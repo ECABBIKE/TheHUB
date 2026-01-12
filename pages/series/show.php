@@ -5,7 +5,7 @@
  */
 
 // Prevent direct access
-if (!defined('HUB_V3_ROOT')) {
+if (!defined('HUB_ROOT')) {
     header('Location: /series');
     exit;
 }
@@ -14,7 +14,7 @@ $pdo = hub_db();
 $seriesId = $pageInfo['params']['id'] ?? 0;
 
 if (!$seriesId) {
-    include HUB_V3_ROOT . '/pages/404.php';
+    include HUB_ROOT . '/pages/404.php';
     return;
 }
 
@@ -32,7 +32,7 @@ $stmt->execute([$seriesId]);
 $series = $stmt->fetch(PDO::FETCH_ASSOC);
 
 if (!$series) {
-    include HUB_V3_ROOT . '/pages/404.php';
+    include HUB_ROOT . '/pages/404.php';
     return;
 }
 

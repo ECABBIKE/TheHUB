@@ -35,10 +35,6 @@ if (!defined('JS_VERSION')) define('JS_VERSION', '1.0.0');
 if (!defined('HUB_ROOT')) define('HUB_ROOT', __DIR__);
 if (!defined('HUB_URL')) define('HUB_URL', '');
 
-// Backward compatibility aliases (will be removed in future versions)
-if (!defined('HUB_V3_ROOT')) define('HUB_V3_ROOT', HUB_ROOT);
-if (!defined('HUB_V3_URL')) define('HUB_V3_URL', HUB_URL);
-
 // WooCommerce integration
 if (!defined('WC_CHECKOUT_URL')) define('WC_CHECKOUT_URL', '/checkout');
 
@@ -147,7 +143,7 @@ if (!function_exists('hub_get_theme')) {
 if (!function_exists('hub_asset')) {
     function hub_asset(string $path): string {
         $version = (strpos($path, '.css') !== false) ? CSS_VERSION : JS_VERSION;
-        return HUB_V3_URL . '/assets/' . $path . '?v=' . $version;
+        return HUB_URL . '/assets/' . $path . '?v=' . $version;
     }
 }
 
@@ -716,7 +712,7 @@ if (!function_exists('hub_require_login')) {
     function hub_require_login(?string $redirect = null): void {
         if (!hub_is_logged_in()) {
             $redirect = $redirect ?? $_SERVER['REQUEST_URI'];
-            header('Location: ' . HUB_V3_URL . '/login?redirect=' . urlencode($redirect));
+            header('Location: ' . HUB_URL . '/login?redirect=' . urlencode($redirect));
             exit;
         }
     }
@@ -730,7 +726,7 @@ if (!function_exists('hub_require_admin')) {
         hub_require_login();
 
         if (!hub_is_admin()) {
-            header('Location: ' . HUB_V3_URL . '/?error=access_denied');
+            header('Location: ' . HUB_URL . '/?error=access_denied');
             exit;
         }
     }
@@ -929,7 +925,7 @@ if (!function_exists('hub_require_role')) {
         hub_require_login();
 
         if (!hub_has_role($role)) {
-            $redirect = $redirect ?? HUB_V3_URL . '/?error=access_denied';
+            $redirect = $redirect ?? HUB_URL . '/?error=access_denied';
             header('Location: ' . $redirect);
             exit;
         }
@@ -944,7 +940,7 @@ if (!function_exists('hub_require_event_access')) {
         hub_require_login();
 
         if (!hub_can_manage_event($eventId)) {
-            header('Location: ' . HUB_V3_URL . '/admin?error=no_access');
+            header('Location: ' . HUB_URL . '/admin?error=no_access');
             exit;
         }
     }
@@ -1040,11 +1036,11 @@ if (!function_exists('hub_get_image')) {
 
         // If only one image or same for both, return simple URL
         if ($light === $dark && $default) {
-            return HUB_V3_URL . '/uploads/images/' . $default;
+            return HUB_URL . '/uploads/images/' . $default;
         }
 
         // Return the default/light version as src, with data attributes for JS
-        $src = HUB_V3_URL . '/uploads/images/' . ($light ?: $default);
+        $src = HUB_URL . '/uploads/images/' . ($light ?: $default);
         return $src;
     }
 }
@@ -1081,7 +1077,7 @@ if (!function_exists('hub_get_image_attrs')) {
             return ['src' => $fallback, 'light' => '', 'dark' => ''];
         }
 
-        $baseUrl = HUB_V3_URL . '/uploads/images/';
+        $baseUrl = HUB_URL . '/uploads/images/';
         $default = isset($images['default']) ? $baseUrl . $images['default'] : $fallback;
         $light = isset($images['light']) ? $baseUrl . $images['light'] : $default;
         $dark = isset($images['dark']) ? $baseUrl . $images['dark'] : $default;

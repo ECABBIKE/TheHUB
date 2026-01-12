@@ -19,7 +19,7 @@ if (!$clubId || !$seriesId) {
 }
 
 // Include club-points-system
-require_once HUB_V3_ROOT . '/includes/club-points-system.php';
+require_once HUB_ROOT . '/includes/club-points-system.php';
 
 // Get detailed breakdown using the system functions
 // We need to convert from PDO to the DB wrapper
@@ -32,7 +32,7 @@ $stmt->execute([$clubId]);
 $club = $stmt->fetch(PDO::FETCH_ASSOC);
 
 if (!$club) {
-    include HUB_V3_ROOT . '/pages/404.php';
+    include HUB_ROOT . '/pages/404.php';
     return;
 }
 
@@ -47,7 +47,7 @@ $stmt->execute([$seriesId]);
 $series = $stmt->fetch(PDO::FETCH_ASSOC);
 
 if (!$series) {
-    include HUB_V3_ROOT . '/pages/404.php';
+    include HUB_ROOT . '/pages/404.php';
     return;
 }
 

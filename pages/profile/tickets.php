@@ -17,7 +17,7 @@ if (!$currentUser) {
 
 $pdo = hub_db();
 
-require_once HUB_V2_ROOT . '/includes/series-registration.php';
+require_once HUB_ROOT . '/includes/series-registration.php';
 
 // Get series registrations
 $seriesRegistrations = getRiderSeriesRegistrations($pdo, $currentUser['id']);

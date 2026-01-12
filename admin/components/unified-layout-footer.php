@@ -3,7 +3,7 @@
     </div>
 
     <?php include __DIR__ . '/admin-mobile-nav.php'; ?>
-    <?php include HUB_V3_ROOT . '/components/footer.php'; ?>
+    <?php include HUB_ROOT . '/components/footer.php'; ?>
 
     <!-- Toast Container -->
     <div id="toast-container" class="toast-container"></div>
