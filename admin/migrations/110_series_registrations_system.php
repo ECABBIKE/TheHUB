@@ -237,10 +237,49 @@ try {
     echo "</div>";
 
     // =========================================
-    // PART 4: CREATE VIEW FOR EASY QUERYING
+    // PART 4: ADD SERIES_ID TO ORDERS TABLE
     // =========================================
     echo "<div class='box'>";
-    echo "<h3>4. Skapa vy för serie-registreringar</h3>";
+    echo "<h3>4. Lägg till series_id i orders-tabellen</h3>";
+    echo "<p>Möjliggör beställningar för serie-registreringar</p>";
+
+    // Add series_id to orders
+    if (!columnExists($db, 'orders', 'series_id')) {
+        $db->query("ALTER TABLE orders ADD COLUMN series_id INT NULL AFTER event_id");
+        $db->query("ALTER TABLE orders ADD FOREIGN KEY (series_id) REFERENCES series(id) ON DELETE SET NULL");
+        $db->query("ALTER TABLE orders ADD INDEX idx_series (series_id)");
+        echo "<p class='success'>✓ Lade till kolumn <code>series_id</code> i orders</p>";
+        $columnsAdded++;
+    } else {
+        echo "<p class='info'>ℹ Kolumn <code>series_id</code> finns redan i orders</p>";
+    }
+
+    // Add series_registration_id to order_items
+    if (!columnExists($db, 'order_items', 'series_registration_id')) {
+        $db->query("ALTER TABLE order_items ADD COLUMN series_registration_id INT NULL AFTER registration_id");
+        $db->query("ALTER TABLE order_items ADD FOREIGN KEY (series_registration_id) REFERENCES series_registrations(id) ON DELETE SET NULL");
+        $db->query("ALTER TABLE order_items ADD INDEX idx_series_reg (series_registration_id)");
+        echo "<p class='success'>✓ Lade till kolumn <code>series_registration_id</code> i order_items</p>";
+        $columnsAdded++;
+    } else {
+        echo "<p class='info'>ℹ Kolumn <code>series_registration_id</code> finns redan i order_items</p>";
+    }
+
+    // Update item_type enum to include series_registration
+    try {
+        $db->query("ALTER TABLE order_items MODIFY COLUMN item_type ENUM('registration', 'series_registration', 'ticket', 'merchandise', 'other') DEFAULT 'registration'");
+        echo "<p class='success'>✓ Uppdaterade <code>item_type</code> enum med 'series_registration'</p>";
+    } catch (Exception $e) {
+        echo "<p class='info'>ℹ <code>item_type</code> enum är redan uppdaterad eller fel vid uppdatering</p>";
+    }
+
+    echo "</div>";
+
+    // =========================================
+    // PART 5: CREATE VIEW FOR EASY QUERYING
+    // =========================================
+    echo "<div class='box'>";
+    echo "<h3>5. Skapa vy för serie-registreringar</h3>";
 
     $db->query("DROP VIEW IF EXISTS v_series_registrations_complete");
     $db->query("

@@ -14,9 +14,12 @@ require_once __DIR__ . '/../includes/payment.php';
 // Get order ID from URL
 $orderId = isset($_GET['order']) ? intval($_GET['order']) : 0;
 
-// Or create order from registration IDs
+// Or create order from registration IDs (event registrations)
 $registrationIds = isset($_GET['registration']) ? explode(',', $_GET['registration']) : [];
 $registrationIds = array_filter(array_map('intval', $registrationIds));
+
+// Or handle series registration
+$seriesRegistrationId = isset($_GET['type']) && $_GET['type'] === 'series' ? intval($_GET['id'] ?? 0) : 0;
 
 // Discount code from form
 $discountCode = isset($_POST['discount_code']) ? trim($_POST['discount_code']) : null;
@@ -26,6 +29,8 @@ $order = null;
 $error = null;
 $appliedDiscounts = [];
 $gravityIdInfo = null;
+$isSeries = false;
+$seriesInfo = null;
 
 try {
     if ($orderId) {
@@ -33,6 +38,54 @@ try {
         $order = getOrder($orderId);
         if (!$order) {
             $error = 'Order hittades inte.';
+        }
+    } elseif ($seriesRegistrationId) {
+        // Handle series registration checkout
+        if (!hub_is_logged_in()) {
+            header('Location: /login?redirect=' . urlencode($_SERVER['REQUEST_URI']));
+            exit;
+        }
+
+        $currentUser = hub_current_user();
+        $pdo = hub_db();
+
+        // Get series registration
+        $stmt = $pdo->prepare("
+            SELECT sr.*, s.name as series_name, s.logo as series_logo,
+                   c.name as class_name, c.display_name as class_display_name
+            FROM series_registrations sr
+            JOIN series s ON sr.series_id = s.id
+            JOIN classes c ON sr.class_id = c.id
+            WHERE sr.id = ?
+        ");
+        $stmt->execute([$seriesRegistrationId]);
+        $seriesReg = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$seriesReg) {
+            $error = 'Serie-registrering hittades inte.';
+        } elseif ($seriesReg['rider_id'] !== $currentUser['id'] &&
+                  !hub_is_parent_of($currentUser['id'], $seriesReg['rider_id'])) {
+            $error = 'Du har inte behörighet att betala för denna registrering.';
+        } else {
+            $isSeries = true;
+            $seriesInfo = $seriesReg;
+
+            // Check if order already exists
+            if (!empty($seriesReg['order_id'])) {
+                $order = getOrder($seriesReg['order_id']);
+            }
+
+            if (!$order) {
+                // Create new series order
+                $orderData = createSeriesOrder($seriesRegistrationId, $seriesReg['rider_id']);
+                $order = getOrder($orderData['order_id']);
+
+                // Add payment URLs to order
+                $order['swish_url'] = $orderData['swish_url'];
+                $order['swish_qr'] = $orderData['swish_qr'];
+                $order['swish_available'] = $orderData['swish_available'];
+                $order['card_available'] = $orderData['card_available'];
+            }
         }
     } elseif (!empty($registrationIds)) {
         // Check user is logged in
@@ -172,8 +225,24 @@ include __DIR__ . '/../components/header.php';
                     </h1>
                 </div>
                 <div class="card-body">
+                    <!-- Series info (for series registration) -->
+                    <?php if ($isSeries && $seriesInfo): ?>
+                    <div class="mb-md pb-md border-bottom">
+                        <div class="flex items-center gap-md">
+                            <?php if (!empty($seriesInfo['series_logo'])): ?>
+                            <img src="<?= htmlspecialchars($seriesInfo['series_logo']) ?>" alt="" style="width:48px;height:48px;object-fit:contain;">
+                            <?php endif; ?>
+                            <div>
+                                <div class="text-sm text-secondary">Serie-pass</div>
+                                <div class="font-medium"><?= htmlspecialchars($seriesInfo['series_name']) ?></div>
+                                <div class="text-sm text-secondary">
+                                    <?= htmlspecialchars($seriesInfo['class_display_name'] ?: $seriesInfo['class_name']) ?>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <?php elseif (!empty($order['event_name'])): ?>
                     <!-- Event info -->
-                    <?php if (!empty($order['event_name'])): ?>
                     <div class="mb-md pb-md border-bottom">
                         <div class="text-sm text-secondary">Event</div>
                         <div class="font-medium"><?= htmlspecialchars($order['event_name']) ?></div>
