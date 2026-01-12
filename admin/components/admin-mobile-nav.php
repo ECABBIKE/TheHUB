@@ -23,22 +23,34 @@ $roleHierarchy = ['promotor' => 1, 'admin' => 2, 'super_admin' => 3];
 $userRoleLevel = $roleHierarchy[$currentAdminRole] ?? 0;
 
 // Admin navigation - should match /includes/config/admin-tabs-config.php
-$adminNav = [
-    ['id' => 'dashboard', 'label' => 'Dashboard', 'icon' => 'layout-dashboard', 'url' => $isPromotor ? '/admin/promotor' : '/admin/dashboard', 'min_role' => 'promotor'],
-    ['id' => 'events', 'label' => 'Tävlingar', 'icon' => 'calendar', 'url' => '/admin/events', 'min_role' => 'promotor'],
-    ['id' => 'series', 'label' => 'Serier', 'icon' => 'trophy', 'url' => '/admin/series', 'min_role' => 'promotor'],
-    ['id' => 'ekonomi', 'label' => 'Ekonomi', 'icon' => 'wallet', 'url' => '/admin/ekonomi', 'min_role' => 'admin'],
-    ['id' => 'config', 'label' => 'Konfig', 'icon' => 'sliders', 'url' => '/admin/classes', 'min_role' => 'admin'],
-    ['id' => 'riders', 'label' => 'Databas', 'icon' => 'users', 'url' => '/admin/riders', 'min_role' => 'admin'],
-    ['id' => 'import', 'label' => 'Import', 'icon' => 'upload', 'url' => '/admin/import', 'min_role' => 'admin'],
-    ['id' => 'settings', 'label' => 'System', 'icon' => 'settings', 'url' => '/admin/settings', 'min_role' => 'admin'],
-];
+// Promotors get different URLs than admins
+$adminNav = [];
 
-// Filter navigation based on user role
-$adminNav = array_filter($adminNav, function($item) use ($roleHierarchy, $userRoleLevel) {
-    $requiredLevel = $roleHierarchy[$item['min_role'] ?? 'admin'] ?? 2;
-    return $userRoleLevel >= $requiredLevel;
-});
+if ($isPromotor) {
+    // PROMOTOR navigation - specific pages for promotors
+    $adminNav = [
+        ['id' => 'dashboard', 'label' => 'Tävlingar', 'icon' => 'calendar', 'url' => '/admin/promotor.php'],
+        ['id' => 'series', 'label' => 'Serier', 'icon' => 'trophy', 'url' => '/admin/promotor-series.php'],
+        ['id' => 'sponsors', 'label' => 'Sponsorer', 'icon' => 'heart-handshake', 'url' => '/admin/sponsors.php'],
+        ['id' => 'onsite', 'label' => 'Direktanmälan', 'icon' => 'user-plus', 'url' => '/admin/onsite-registration.php'],
+    ];
+} else {
+    // ADMIN navigation - full admin access
+    $adminNav = [
+        ['id' => 'dashboard', 'label' => 'Dashboard', 'icon' => 'layout-dashboard', 'url' => '/admin/dashboard.php'],
+        ['id' => 'events', 'label' => 'Tävlingar', 'icon' => 'calendar', 'url' => '/admin/events.php'],
+        ['id' => 'series', 'label' => 'Serier', 'icon' => 'trophy', 'url' => '/admin/series.php'],
+        ['id' => 'ekonomi', 'label' => 'Ekonomi', 'icon' => 'wallet', 'url' => '/admin/ekonomi.php'],
+        ['id' => 'config', 'label' => 'Konfig', 'icon' => 'sliders', 'url' => '/admin/classes.php'],
+        ['id' => 'riders', 'label' => 'Databas', 'icon' => 'users', 'url' => '/admin/riders.php'],
+        ['id' => 'import', 'label' => 'Import', 'icon' => 'upload', 'url' => '/admin/import.php'],
+    ];
+
+    // System only for super_admin
+    if ($currentAdminRole === 'super_admin') {
+        $adminNav[] = ['id' => 'settings', 'label' => 'System', 'icon' => 'settings', 'url' => '/admin/users.php'];
+    }
+}
 
 // Determine active page from URL
 $requestUri = $_SERVER['REQUEST_URI'] ?? '';
