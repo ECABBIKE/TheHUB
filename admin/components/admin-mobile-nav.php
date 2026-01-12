@@ -31,7 +31,7 @@ if ($isPromotor) {
     $adminNav = [
         ['id' => 'dashboard', 'label' => 'Tävlingar', 'icon' => 'calendar', 'url' => '/admin/promotor.php'],
         ['id' => 'series', 'label' => 'Serier', 'icon' => 'trophy', 'url' => '/admin/promotor-series.php'],
-        ['id' => 'sponsors', 'label' => 'Sponsorer', 'icon' => 'heart-handshake', 'url' => '/admin/sponsors.php'],
+        ['id' => 'media', 'label' => 'Media', 'icon' => 'image', 'url' => '/admin/sponsors.php'],
         ['id' => 'onsite', 'label' => 'Direktanmälan', 'icon' => 'user-plus', 'url' => '/admin/onsite-registration.php'],
     ];
 } else {

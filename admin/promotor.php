@@ -158,6 +158,30 @@ include __DIR__ . '/components/unified-layout.php';
         grid-template-columns: repeat(2, 1fr);
     }
 }
+
+/* Mobile edge-to-edge design */
+@media (max-width: 767px) {
+    .event-card,
+    .series-card {
+        margin-left: calc(-1 * var(--space-md));
+        margin-right: calc(-1 * var(--space-md));
+        border-radius: 0;
+        border-left: none;
+        border-right: none;
+        width: calc(100% + var(--space-md) * 2);
+    }
+    .series-grid,
+    .promotor-grid {
+        gap: 0;
+    }
+    .series-grid {
+        grid-template-columns: 1fr;
+    }
+    .event-card + .event-card,
+    .series-card + .series-card {
+        border-top: none;
+    }
+}
 .stat-box {
     background: var(--color-bg-sunken);
     padding: var(--space-md);
@@ -167,7 +191,7 @@ include __DIR__ . '/components/unified-layout.php';
 .stat-value {
     font-size: var(--text-2xl);
     font-weight: 700;
-    color: var(--color-text-primary);
+    color: var(--color-accent);
 }
 .stat-value.success {
     color: var(--color-success);
