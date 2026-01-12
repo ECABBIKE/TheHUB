@@ -128,6 +128,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         if ($seriesId) {
             try {
                 $currentAdmin = getCurrentAdmin();
+
+                // First: Add to promotor_series for series-level access
+                $existingSeries = $db->getRow(
+                    "SELECT id FROM promotor_series WHERE user_id = ? AND series_id = ?",
+                    [$id, $seriesId]
+                );
+
+                if (!$existingSeries) {
+                    $db->insert('promotor_series', [
+                        'user_id' => $id,
+                        'series_id' => $seriesId,
+                        'granted_by' => $currentAdmin['id']
+                    ]);
+                }
+
+                // Second: Also add individual events for backward compatibility
                 $seriesEvents = $db->getAll("SELECT id FROM events WHERE series_id = ?", [$seriesId]);
                 $addedCount = 0;
 
@@ -154,16 +170,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         }
                     }
                 }
+
+                $seriesName = $db->getValue("SELECT name FROM series WHERE id = ?", [$seriesId]);
                 if ($failedCount > 0) {
                     $message = "Kunde inte lägga till events. Kontrollera att tabellen promotor_events finns.";
                     $messageType = 'error';
-                } elseif ($addedCount > 0) {
-                    $message = "$addedCount event från serien tillagda!";
-                    $messageType = 'success';
                 } else {
-                    $message = "Alla events i serien var redan tilldelade.";
-                    $messageType = 'info';
+                    $message = "Serie '{$seriesName}' tilldelad! " . ($addedCount > 0 ? "$addedCount event tillagda." : "Alla events fanns redan.");
+                    $messageType = 'success';
                 }
+            } catch (Exception $e) {
+                $message = 'Ett fel uppstod: ' . $e->getMessage();
+                $messageType = 'error';
+            }
+        }
+    } elseif ($action === 'remove_series') {
+        $seriesId = isset($_POST['series_id']) ? intval($_POST['series_id']) : 0;
+        if ($seriesId) {
+            try {
+                // Remove from promotor_series
+                $db->delete('promotor_series', 'user_id = ? AND series_id = ?', [$id, $seriesId]);
+
+                // Also remove all events from this series
+                $db->query("
+                    DELETE pe FROM promotor_events pe
+                    JOIN events e ON pe.event_id = e.id
+                    WHERE pe.user_id = ? AND e.series_id = ?
+                ", [$id, $seriesId]);
+
+                $message = 'Serie och alla dess events borttagna!';
+                $messageType = 'success';
             } catch (Exception $e) {
                 $message = 'Ett fel uppstod: ' . $e->getMessage();
                 $messageType = 'error';
@@ -197,14 +233,28 @@ $availableEvents = $db->getAll("
     LIMIT 100
 ", [$id]);
 
-// Get all series for bulk add
+// Get user's assigned series (full series access)
+$assignedSeries = $db->getAll("
+    SELECT ps.*, s.name as series_name, s.year as series_year,
+           au.full_name as granted_by_name,
+           (SELECT COUNT(*) FROM events WHERE series_id = s.id) as event_count
+    FROM promotor_series ps
+    JOIN series s ON ps.series_id = s.id
+    LEFT JOIN admin_users au ON ps.granted_by = au.id
+    WHERE ps.user_id = ?
+    ORDER BY s.year DESC, s.name
+", [$id]);
+$assignedSeriesIds = array_column($assignedSeries, 'series_id');
+
+// Get all series for bulk add (exclude already assigned)
 $allSeries = $db->getAll("
     SELECT s.id, s.name, s.year, COUNT(e.id) as event_count
     FROM series s
     LEFT JOIN events e ON s.id = e.series_id
+    WHERE s.id NOT IN (SELECT series_id FROM promotor_series WHERE user_id = ?)
     GROUP BY s.id
     ORDER BY s.year DESC, s.name
-");
+", [$id]);
 
 // Set up page for unified layout
 $page_title = 'Event-tilldelning: ' . h($user['full_name'] ?: $user['username']);
@@ -357,11 +407,71 @@ include __DIR__ . '/components/unified-layout.php';
     </div>
 </div>
 
-<!-- Add Series -->
+<!-- Series Management -->
 <div class="card mt-lg">
     <div class="card-header">
         <h2>
             <i data-lucide="layers"></i>
+            Tilldelade serier (<?= count($assignedSeries) ?>)
+        </h2>
+    </div>
+    <div class="card-body" style="padding: 0;">
+        <?php if (empty($assignedSeries)): ?>
+        <div class="text-center text-secondary" style="padding: var(--space-xl);">
+            <i data-lucide="layers" style="width: 48px; height: 48px; margin-bottom: var(--space-md); opacity: 0.5;"></i>
+            <p>Inga serier tilldelade</p>
+            <p class="text-xs mt-sm">Tilldela en serie för att ge tillgång till alla dess events + Swish-inställningar</p>
+        </div>
+        <?php else: ?>
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Serie</th>
+                        <th class="text-center">Events</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($assignedSeries as $series): ?>
+                    <tr>
+                        <td>
+                            <div class="font-medium"><?= h($series['series_name']) ?></div>
+                            <div class="text-xs text-secondary">
+                                <?= $series['series_year'] ? $series['series_year'] : '' ?>
+                                <?php if ($series['granted_by_name']): ?>
+                                - Tilldelad av <?= h($series['granted_by_name']) ?>
+                                <?php endif; ?>
+                            </div>
+                        </td>
+                        <td class="text-center">
+                            <span class="badge badge-info"><?= $series['event_count'] ?></span>
+                        </td>
+                        <td class="text-right">
+                            <form method="POST" style="display: inline;">
+                                <?= csrf_field() ?>
+                                <input type="hidden" name="action" value="remove_series">
+                                <input type="hidden" name="series_id" value="<?= $series['series_id'] ?>">
+                                <button type="submit" class="btn btn--sm btn--danger" onclick="return confirm('Ta bort hela serien och alla dess events?')">
+                                    <i data-lucide="x"></i>
+                                </button>
+                            </form>
+                        </td>
+                    </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+        <?php endif; ?>
+    </div>
+</div>
+
+<!-- Add Series -->
+<?php if (!empty($allSeries)): ?>
+<div class="card mt-lg">
+    <div class="card-header">
+        <h2>
+            <i data-lucide="plus-circle"></i>
             Lägg till hel serie
         </h2>
     </div>
@@ -383,9 +493,9 @@ include __DIR__ . '/components/unified-layout.php';
                     </select>
                 </div>
                 <div style="display: flex; align-items: flex-end;">
-                    <button type="submit" class="btn btn--secondary">
+                    <button type="submit" class="btn btn--primary">
                         <i data-lucide="plus"></i>
-                        Lägg till alla event
+                        Tilldela serie
                     </button>
                 </div>
             </div>
@@ -410,11 +520,18 @@ include __DIR__ . '/components/unified-layout.php';
         </form>
     </div>
 </div>
+<?php endif; ?>
 
 <!-- Help Text -->
 <div class="card mt-lg">
     <div class="card-body">
-        <h3 style="font-weight: 500; margin-bottom: var(--space-sm);">Om behörigheter</h3>
+        <h3 style="font-weight: 500; margin-bottom: var(--space-sm);">Om tilldelningar</h3>
+        <ul class="text-sm text-secondary" style="list-style: disc; padding-left: 1.5rem;">
+            <li><strong>Serie-tilldelning</strong> - Ger tillgång till ALLA events i serien (även framtida) + Swish-inställningar</li>
+            <li><strong>Event-tilldelning</strong> - Ger tillgång till specifika events (för finkornig kontroll)</li>
+        </ul>
+
+        <h3 style="font-weight: 500; margin: var(--space-md) 0 var(--space-sm);">Om behörigheter</h3>
         <ul class="text-sm text-secondary" style="list-style: disc; padding-left: 1.5rem;">
             <li><strong>Redigera</strong> - Kan ändra eventinformation (namn, datum, plats, beskrivning, etc.)</li>
             <li><strong>Resultat</strong> - Kan importera, redigera och publicera resultat</li>

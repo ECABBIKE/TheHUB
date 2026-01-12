@@ -18,29 +18,22 @@ $promotorEventIds = [];
 $promotorSeriesIds = [];
 
 if ($isPromotorOnly) {
-    $currentUser = getCurrentAdmin();
-    $userId = $currentUser['id'] ?? 0;
+    $currentAdmin = getCurrentAdmin();
+    $userId = $currentAdmin['id'];
 
-    // Get series IDs from BOTH promotor_events AND promotor_series tables
-    $stmt = $pdo->prepare("
-        SELECT DISTINCT s.id
+    // Get series using same query as promotor-series.php (which works)
+    $seriesResult = $pdo->prepare("
+        SELECT DISTINCT s.id, s.name, s.short_name
         FROM series s
-        WHERE s.id IN (
-            -- Series from direct event assignments
-            SELECT DISTINCT e.series_id
-            FROM events e
-            JOIN promotor_events pe ON pe.event_id = e.id
-            WHERE pe.user_id = ? AND e.series_id IS NOT NULL
-        )
-        OR s.id IN (
-            -- Series from series-wide assignments
-            SELECT ps.series_id
-            FROM promotor_series ps
-            WHERE ps.user_id = ?
-        )
+        LEFT JOIN promotor_series ps ON ps.series_id = s.id AND ps.user_id = ?
+        LEFT JOIN events e ON e.series_id = s.id
+        LEFT JOIN promotor_events pe ON pe.event_id = e.id AND pe.user_id = ?
+        WHERE ps.user_id IS NOT NULL OR pe.user_id IS NOT NULL
+        ORDER BY s.name
     ");
-    $stmt->execute([$userId, $userId]);
-    $promotorSeriesIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
+    $seriesResult->execute([$userId, $userId]);
+    $promotorSeriesData = $seriesResult->fetchAll(PDO::FETCH_ASSOC);
+    $promotorSeriesIds = array_column($promotorSeriesData, 'id');
 
     // Get event IDs for promotor (for backward compatibility)
     $promotorEvents = getPromotorEvents();
@@ -56,12 +49,10 @@ $searchQuery = $_GET['search'] ?? '';
 // Get series for filter and form (limited for promotors)
 $allSeries = [];
 try {
-    if ($isPromotorOnly && !empty($promotorSeriesIds)) {
-        $placeholders = implode(',', array_fill(0, count($promotorSeriesIds), '?'));
-        $seriesStmt = $pdo->prepare("SELECT id, name, short_name FROM series WHERE id IN ($placeholders) ORDER BY name");
-        $seriesStmt->execute($promotorSeriesIds);
-        $allSeries = $seriesStmt->fetchAll(PDO::FETCH_ASSOC);
-    } elseif (!$isPromotorOnly) {
+    if ($isPromotorOnly) {
+        // Use the series data we already fetched
+        $allSeries = $promotorSeriesData ?? [];
+    } else {
         $seriesStmt = $pdo->query("SELECT id, name, short_name FROM series ORDER BY name");
         $allSeries = $seriesStmt->fetchAll(PDO::FETCH_ASSOC);
     }
