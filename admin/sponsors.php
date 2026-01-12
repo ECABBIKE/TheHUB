@@ -7,6 +7,7 @@
  * Promotors can only see/edit sponsors for their own events
  */
 require_once __DIR__ . '/../config.php';
+require_admin();
 require_once __DIR__ . '/../includes/sponsor-functions.php';
 require_once __DIR__ . '/../includes/media-functions.php';
 
