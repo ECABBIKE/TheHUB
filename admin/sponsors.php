@@ -622,30 +622,45 @@ include __DIR__ . '/components/unified-layout.php';
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
         Ladda upp bilder
     </h3>
-    <p style="color: var(--color-text-secondary); margin-bottom: var(--space-md); font-size: 0.875rem;">
-        Ladda upp event-banners och sponsorlogos här. De blir tillgängliga i mediabiblioteket.
-    </p>
+
+    <!-- Serie-val för uppladdningar -->
+    <div class="form-group" style="margin-bottom: var(--space-lg);">
+        <label class="form-label">Välj serie för uppladdning</label>
+        <select id="uploadSeriesSelect" class="form-select" style="max-width: 300px;">
+            <?php if (count($allSeries) === 1): ?>
+                <option value="<?= $allSeries[0]['id'] ?>"><?= htmlspecialchars($allSeries[0]['name']) ?></option>
+            <?php else: ?>
+                <option value="">-- Välj serie --</option>
+                <?php foreach ($allSeries as $series): ?>
+                <option value="<?= $series['id'] ?>"><?= htmlspecialchars($series['name']) ?></option>
+                <?php endforeach; ?>
+            <?php endif; ?>
+        </select>
+        <small style="color: var(--color-text-secondary); display: block; margin-top: var(--space-xs);">
+            Uppladdade filer knyts till vald serie och sparas i serie-mappen.
+        </small>
+    </div>
 
     <div class="upload-grid">
-        <div class="upload-box" onclick="document.getElementById('eventBannerUpload').click()">
+        <div class="upload-box" onclick="triggerUpload('eventBannerUpload')">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
             <div class="upload-box-label">Event-banner</div>
             <div class="upload-box-hint">1200×150px</div>
-            <input type="file" id="eventBannerUpload" accept="image/*" style="display:none" onchange="uploadToFolder(this, 'events', 'banners')">
+            <input type="file" id="eventBannerUpload" accept="image/*" style="display:none" onchange="uploadToFolder(this, 'events')">
         </div>
 
-        <div class="upload-box" onclick="document.getElementById('sponsorBannerUpload').click()">
+        <div class="upload-box" onclick="triggerUpload('sponsorBannerUpload')">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
             <div class="upload-box-label">Sponsor-banner</div>
             <div class="upload-box-hint">1200×150px</div>
-            <input type="file" id="sponsorBannerUpload" accept="image/*" style="display:none" onchange="uploadToFolder(this, 'sponsors', 'banners')">
+            <input type="file" id="sponsorBannerUpload" accept="image/*" style="display:none" onchange="uploadToFolder(this, 'sponsors')">
         </div>
 
-        <div class="upload-box" onclick="document.getElementById('sponsorLogoUpload').click()">
+        <div class="upload-box" onclick="triggerUpload('sponsorLogoUpload')">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
             <div class="upload-box-label">Sponsor-logo</div>
             <div class="upload-box-hint">600×150px</div>
-            <input type="file" id="sponsorLogoUpload" accept="image/*" style="display:none" onchange="uploadToFolder(this, 'sponsors', 'logos')">
+            <input type="file" id="sponsorLogoUpload" accept="image/*" style="display:none" onchange="uploadToFolder(this, 'sponsors')">
         </div>
     </div>
 
@@ -1258,10 +1273,32 @@ function clearLogoField(field) {
     `;
 }
 
-// Upload to specific folder (for promotor upload section)
-async function uploadToFolder(input, folder, subfolder = '') {
+// Check series selection and trigger file upload
+function triggerUpload(inputId) {
+    const seriesSelect = document.getElementById('uploadSeriesSelect');
+    if (seriesSelect && !seriesSelect.value) {
+        alert('Välj en serie innan du laddar upp filer.');
+        seriesSelect.focus();
+        return;
+    }
+    document.getElementById(inputId).click();
+}
+
+// Upload to specific folder with series association (for promotor upload section)
+async function uploadToFolder(input, folder) {
     const file = input.files[0];
     if (!file) return;
+
+    // Get selected series
+    const seriesSelect = document.getElementById('uploadSeriesSelect');
+    const seriesId = seriesSelect ? seriesSelect.value : null;
+    const seriesName = seriesSelect ? seriesSelect.options[seriesSelect.selectedIndex].text : '';
+
+    if (!seriesId) {
+        alert('Välj en serie innan du laddar upp filer.');
+        input.value = '';
+        return;
+    }
 
     if (!file.type.startsWith('image/')) {
         alert('Välj en bildfil (JPG, PNG, etc.)');
@@ -1285,7 +1322,7 @@ async function uploadToFolder(input, folder, subfolder = '') {
         const formData = new FormData();
         formData.append('file', file);
         formData.append('folder', folder);
-        if (subfolder) formData.append('subfolder', subfolder);
+        formData.append('series_id', seriesId);
 
         const response = await fetch('/api/media.php?action=upload', {
             method: 'POST',
@@ -1298,7 +1335,7 @@ async function uploadToFolder(input, folder, subfolder = '') {
             // Show success and add to recent uploads
             uploadBox.innerHTML = originalContent;
             showRecentUpload(result.media);
-            alert('Uppladdning lyckades! Filen finns nu i mediabiblioteket under mappen "' + folder + '".');
+            alert('Uppladdning lyckades!\nFil: ' + file.name + '\nSerie: ' + seriesName + '\nMapp: ' + folder);
         } else {
             uploadBox.innerHTML = originalContent;
             alert('Uppladdning misslyckades: ' + (result.error || 'Okänt fel'));
