@@ -22,10 +22,11 @@ if (!$series) {
 
 // AUTO-SYNC: Add events locked to this series (events.series_id) to series_events table
 // This ensures events with series_id set always appear in the series
+// Note: We don't filter by active - admin should see ALL events in the series
 $lockedEvents = $db->getAll("
     SELECT e.id, e.date
     FROM events e
-    WHERE e.series_id = ? AND e.active = 1
+    WHERE e.series_id = ?
     AND e.id NOT IN (SELECT event_id FROM series_events WHERE series_id = ?)
 ", [$seriesId, $seriesId]);
 
