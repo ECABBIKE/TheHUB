@@ -61,15 +61,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 // Get promotor's series with their events
+// Include series from both:
+// 1. promotor_series (direct series assignment - can edit Swish)
+// 2. promotor_events (via assigned events - read-only view)
 $series = $db->getAll("
-    SELECT s.id, s.name, s.year, s.logo,
-           pc.swish_number, pc.swish_name, pc.swish_enabled
+    SELECT DISTINCT s.id, s.name, s.year, s.logo,
+           pc.swish_number, pc.swish_name, pc.swish_enabled,
+           CASE WHEN ps.user_id IS NOT NULL THEN 1 ELSE 0 END as can_edit_swish
     FROM series s
-    JOIN promotor_series ps ON ps.series_id = s.id
+    LEFT JOIN promotor_series ps ON ps.series_id = s.id AND ps.user_id = ?
     LEFT JOIN payment_configs pc ON pc.series_id = s.id
-    WHERE ps.user_id = ?
+    LEFT JOIN events e ON e.series_id = s.id
+    LEFT JOIN promotor_events pe ON pe.event_id = e.id AND pe.user_id = ?
+    WHERE ps.user_id IS NOT NULL OR pe.user_id IS NOT NULL
     ORDER BY s.year DESC, s.name
-", [$userId]);
+", [$userId, $userId]);
 
 // Get events for each series
 $seriesEvents = [];
@@ -112,6 +118,7 @@ include __DIR__ . '/components/unified-layout.php';
     </div>
     <div class="card-body">
         <!-- Swish Settings -->
+        <?php if ($s['can_edit_swish']): ?>
         <form method="POST" class="mb-lg">
             <?= csrf_field() ?>
             <input type="hidden" name="action" value="save_series_swish">
@@ -146,6 +153,20 @@ include __DIR__ . '/components/unified-layout.php';
             <span class="badge badge-success ml-md">Swish aktivt</span>
             <?php endif; ?>
         </form>
+        <?php else: ?>
+        <div class="mb-lg">
+            <p class="text-muted" style="font-size: 0.9rem;">
+                <i data-lucide="info" style="width: 16px; height: 16px; vertical-align: middle;"></i>
+                Du har tillgång via tilldelade tävlingar. Kontakta admin för att få serie-behörighet om du behöver ändra Swish-inställningar.
+            </p>
+            <?php if ($s['swish_number']): ?>
+            <p style="margin-top: var(--space-sm);">
+                <strong>Swish:</strong> <?= h($s['swish_number']) ?>
+                <?php if ($s['swish_name']): ?> (<?= h($s['swish_name']) ?>)<?php endif; ?>
+            </p>
+            <?php endif; ?>
+        </div>
+        <?php endif; ?>
 
         <!-- Events in this series -->
         <?php if (!empty($seriesEvents[$s['id']])): ?>

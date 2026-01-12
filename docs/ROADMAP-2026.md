@@ -100,6 +100,28 @@
 
 ---
 
+### 5. Promotor kan inte ladda upp event-banners
+**Problem:** I sponsor-uppladdningen saknas möjlighet att ladda upp banners till specifika tävlingar. När en banner laddas upp hamnar den som "logo" i media-biblioteket istället för att kopplas till eventet.
+
+**Påverkade roller:** Promotor
+
+**Förväntat beteende:**
+- Promotor ska kunna ladda upp banner (1200x150px) för sina tilldelade events
+- Banner ska visas på event-sidan och i anmälningsflödet
+- Ska kunna ändras per event, inte bara per serie
+
+**Nuvarande status:**
+- `admin/promotor.php` har "Redigera event" som leder till `event-edit.php`
+- `event-edit.php` har banner-uppladdning men promotor kanske inte kan nå alla fält
+
+**Fix:**
+1. Verifiera att promotor kan redigera banner i event-edit.php
+2. Alternativt: Skapa enkel banner-uppladdning i promotor.php
+
+**Prioritet:** HOG (promotors behöver kunna branda sina events)
+
+---
+
 ## 3-VECKORS IMPLEMENTATIONSPLAN
 
 ### VECKA 1: Stabilisering (5-8 timmar)
