@@ -1,12 +1,17 @@
 <?php
 /**
  * Sponsor Management - Admin Page
- * TheHUB V3 - Media & Sponsor System
+ * TheHUB - Media & Sponsor System
  *
  * Manage sponsors, tiers, and assignments
  * Promotors can only see/edit sponsors for their own events
  */
 require_once __DIR__ . '/../config.php';
+
+// Temporär felsökning - ta bort när problemet är löst
+error_reporting(E_ALL);
+ini_set('display_errors', '1');
+
 require_admin();
 require_once __DIR__ . '/../includes/sponsor-functions.php';
 require_once __DIR__ . '/../includes/media-functions.php';
