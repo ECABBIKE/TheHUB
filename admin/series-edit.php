@@ -460,6 +460,36 @@ include __DIR__ . '/components/unified-layout.php';
 </div>
 <?php endif; ?>
 
+<?php
+// Get current tab
+$currentTab = $_GET['tab'] ?? 'info';
+if (!in_array($currentTab, ['info', 'events', 'rules'])) {
+    $currentTab = 'info';
+}
+
+// For new series, only show info tab
+if ($isNew) {
+    $currentTab = 'info';
+}
+?>
+
+<!-- Tab Navigation -->
+<?php if (!$isNew): ?>
+<div class="admin-tabs mb-lg">
+    <a href="?id=<?= $id ?>&tab=info" class="admin-tab <?= $currentTab === 'info' ? 'active' : '' ?>">
+        <i data-lucide="settings"></i> Info
+    </a>
+    <a href="?id=<?= $id ?>&tab=events" class="admin-tab <?= $currentTab === 'events' ? 'active' : '' ?>">
+        <i data-lucide="calendar"></i> Events (<?= $eventsCount ?>)
+    </a>
+    <a href="?id=<?= $id ?>&tab=rules" class="admin-tab <?= $currentTab === 'rules' ? 'active' : '' ?>">
+        <i data-lucide="shield"></i> Regler
+    </a>
+</div>
+<?php endif; ?>
+
+<?php if ($currentTab === 'info'): ?>
+<!-- INFO TAB -->
 <form method="POST">
     <?= csrf_field() ?>
     <input type="hidden" name="calculate_champions" id="calculate_champions" value="0">
@@ -933,6 +963,412 @@ include __DIR__ . '/components/unified-layout.php';
         </div>
     </div>
 </form>
+<?php endif; // End INFO TAB ?>
+
+<?php if ($currentTab === 'events' && !$isNew): ?>
+<!-- EVENTS TAB -->
+<?php
+require_once __DIR__ . '/../includes/series-points.php';
+
+// AUTO-SYNC: Add events locked to this series to series_events table
+$lockedEvents = $db->getAll("
+    SELECT e.id, e.date
+    FROM events e
+    WHERE e.series_id = ?
+    AND e.id NOT IN (SELECT event_id FROM series_events WHERE series_id = ?)
+", [$id, $id]);
+
+foreach ($lockedEvents as $ev) {
+    $existingCount = $db->getRow("SELECT COUNT(*) as cnt FROM series_events WHERE series_id = ?", [$id]);
+    $db->insert('series_events', [
+        'series_id' => $id,
+        'event_id' => $ev['id'],
+        'template_id' => null,
+        'sort_order' => ($existingCount['cnt'] ?? 0) + 1
+    ]);
+}
+
+// Re-sort all events by date
+if (!empty($lockedEvents)) {
+    $allSeriesEvents = $db->getAll("
+        SELECT se.id, e.date
+        FROM series_events se
+        JOIN events e ON se.event_id = e.id
+        WHERE se.series_id = ?
+        ORDER BY e.date ASC
+    ", [$id]);
+    $sortOrder = 1;
+    foreach ($allSeriesEvents as $se) {
+        $db->update('series_events', ['sort_order' => $sortOrder], 'id = ?', [$se['id']]);
+        $sortOrder++;
+    }
+}
+
+// Handle events tab form submissions
+if ($_SERVER['REQUEST_METHOD'] === 'POST') {
+    checkCsrf();
+    $action = $_POST['action'] ?? '';
+
+    if ($action === 'add_event') {
+        $eventId = intval($_POST['event_id']);
+        $templateId = !empty($_POST['template_id']) ? intval($_POST['template_id']) : null;
+        $existing = $db->getRow("SELECT id FROM series_events WHERE series_id = ? AND event_id = ?", [$id, $eventId]);
+        if (!$existing) {
+            $maxOrder = $db->getRow("SELECT MAX(sort_order) as max_order FROM series_events WHERE series_id = ?", [$id]);
+            $db->insert('series_events', [
+                'series_id' => $id,
+                'event_id' => $eventId,
+                'template_id' => $templateId,
+                'sort_order' => ($maxOrder['max_order'] ?? 0) + 1
+            ]);
+            $event = $db->getRow("SELECT series_id FROM events WHERE id = ?", [$eventId]);
+            if (empty($event['series_id'])) {
+                $db->update('events', ['series_id' => $id], 'id = ?', [$eventId]);
+            }
+            if ($templateId) {
+                recalculateSeriesEventPoints($db, $id, $eventId);
+            }
+        }
+        header("Location: /admin/series/edit/{$id}?tab=events&saved=1");
+        exit;
+    } elseif ($action === 'update_template') {
+        $seriesEventId = intval($_POST['series_event_id']);
+        $templateId = !empty($_POST['template_id']) ? intval($_POST['template_id']) : null;
+        $seriesEvent = $db->getRow("SELECT event_id FROM series_events WHERE id = ? AND series_id = ?", [$seriesEventId, $id]);
+        if ($seriesEvent) {
+            $db->update('series_events', ['template_id' => $templateId], 'id = ? AND series_id = ?', [$seriesEventId, $id]);
+            recalculateSeriesEventPoints($db, $id, $seriesEvent['event_id']);
+        }
+        header("Location: /admin/series/edit/{$id}?tab=events&saved=1");
+        exit;
+    } elseif ($action === 'remove_event') {
+        $seriesEventId = intval($_POST['series_event_id']);
+        $seriesEvent = $db->getRow("SELECT event_id FROM series_events WHERE id = ? AND series_id = ?", [$seriesEventId, $id]);
+        $db->delete('series_events', 'id = ? AND series_id = ?', [$seriesEventId, $id]);
+        if ($seriesEvent) {
+            $db->query("UPDATE events SET series_id = NULL WHERE id = ? AND series_id = ?", [$seriesEvent['event_id'], $id]);
+        }
+        header("Location: /admin/series/edit/{$id}?tab=events&saved=1");
+        exit;
+    } elseif ($action === 'update_count_best') {
+        $countBest = $_POST['count_best_results'];
+        $countBestValue = ($countBest === '' || $countBest === 'null') ? null : intval($countBest);
+        $db->update('series', ['count_best_results' => $countBestValue], 'id = ?', [$id]);
+        $series = $db->getRow("SELECT * FROM series WHERE id = ?", [$id]);
+        header("Location: /admin/series/edit/{$id}?tab=events&saved=1");
+        exit;
+    } elseif ($action === 'recalculate_all') {
+        recalculateAllSeriesPoints($db, $id);
+        header("Location: /admin/series/edit/{$id}?tab=events&saved=1");
+        exit;
+    }
+}
+
+// Get events in this series
+$seriesEvents = $db->getAll("
+    SELECT se.*, e.name as event_name, e.date as event_date, e.location, e.discipline,
+           e.series_id as event_series_id, e.active as event_active,
+           ps.name as template_name
+    FROM series_events se
+    JOIN events e ON se.event_id = e.id
+    LEFT JOIN point_scales ps ON se.template_id = ps.id
+    WHERE se.series_id = ?
+    ORDER BY e.date ASC
+", [$id]);
+
+// Get events not in this series (for adding)
+$seriesYear = $series['year'] ?? null;
+$eventsNotInSeries = $db->getAll("
+    SELECT e.id, e.name, e.date, e.location, YEAR(e.date) as event_year
+    FROM events e
+    WHERE e.id NOT IN (SELECT event_id FROM series_events WHERE series_id = ?)
+    AND e.active = 1
+    ORDER BY e.date DESC
+", [$id]);
+
+$matchingYearEvents = [];
+$otherYearEvents = [];
+foreach ($eventsNotInSeries as $ev) {
+    if ($seriesYear && $ev['event_year'] == $seriesYear) {
+        $matchingYearEvents[] = $ev;
+    } else {
+        $otherYearEvents[] = $ev;
+    }
+}
+
+// Get all point scales
+$templates = $db->getAll("SELECT id, name FROM point_scales WHERE active = 1 ORDER BY name");
+?>
+
+<?php if (isset($_GET['saved'])): ?>
+<div class="alert alert-success mb-lg">
+    <i data-lucide="check-circle"></i> Ändringarna har sparats!
+</div>
+<?php endif; ?>
+
+<div class="grid grid-cols-1 gs-lg-grid-cols-3 gap-lg">
+    <!-- Left Column: Settings -->
+    <div>
+        <!-- Count Best Results -->
+        <div class="admin-card mb-lg">
+            <div class="admin-card-header">
+                <h2><i data-lucide="calculator"></i> Poängräkning</h2>
+            </div>
+            <div class="admin-card-body">
+                <form method="POST">
+                    <?= csrf_field() ?>
+                    <input type="hidden" name="action" value="update_count_best">
+                    <div class="admin-form-group">
+                        <label class="admin-form-label">Räkna bästa resultat</label>
+                        <select name="count_best_results" class="admin-form-select" onchange="this.form.submit()">
+                            <option value="null" <?= ($series['count_best_results'] ?? null) === null ? 'selected' : '' ?>>Alla resultat</option>
+                            <?php for ($i = 1; $i <= 10; $i++): ?>
+                            <option value="<?= $i ?>" <?= ($series['count_best_results'] ?? null) == $i ? 'selected' : '' ?>>
+                                Bästa <?= $i ?> av <?= count($seriesEvents) ?>
+                            </option>
+                            <?php endfor; ?>
+                        </select>
+                        <small class="text-secondary text-xs">Övriga resultat visas med överstrykning</small>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+        <!-- Add Event -->
+        <div class="admin-card">
+            <div class="admin-card-header">
+                <h2><i data-lucide="plus"></i> Lägg till Event</h2>
+            </div>
+            <div class="admin-card-body">
+                <?php if (empty($eventsNotInSeries)): ?>
+                <p class="text-secondary text-sm">Alla events är redan tillagda.</p>
+                <?php else: ?>
+                <form method="POST">
+                    <?= csrf_field() ?>
+                    <input type="hidden" name="action" value="add_event">
+                    <div class="admin-form-group">
+                        <label class="admin-form-label">Event</label>
+                        <select name="event_id" class="admin-form-select" required>
+                            <option value="">-- Välj event --</option>
+                            <?php if (!empty($matchingYearEvents)): ?>
+                            <optgroup label="Matchar serieåret (<?= $seriesYear ?>)">
+                                <?php foreach ($matchingYearEvents as $event): ?>
+                                <option value="<?= $event['id'] ?>">
+                                    <?= h($event['name']) ?> (<?= date('Y-m-d', strtotime($event['date'])) ?>)
+                                </option>
+                                <?php endforeach; ?>
+                            </optgroup>
+                            <?php endif; ?>
+                            <?php if (!empty($otherYearEvents)): ?>
+                            <optgroup label="Andra år">
+                                <?php foreach ($otherYearEvents as $event): ?>
+                                <option value="<?= $event['id'] ?>">
+                                    <?= h($event['name']) ?> (<?= date('Y-m-d', strtotime($event['date'])) ?>)
+                                </option>
+                                <?php endforeach; ?>
+                            </optgroup>
+                            <?php endif; ?>
+                        </select>
+                    </div>
+                    <div class="admin-form-group">
+                        <label class="admin-form-label">Poängmall</label>
+                        <select name="template_id" class="admin-form-select">
+                            <option value="">-- Ingen mall --</option>
+                            <?php foreach ($templates as $template): ?>
+                            <option value="<?= $template['id'] ?>"><?= h($template['name']) ?></option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <button type="submit" class="btn-admin btn-admin-primary w-full">
+                        <i data-lucide="plus"></i> Lägg till
+                    </button>
+                </form>
+                <?php endif; ?>
+            </div>
+        </div>
+    </div>
+
+    <!-- Right Column: Events List -->
+    <div class="gs-lg-col-span-2">
+        <div class="admin-card">
+            <div class="admin-card-header flex items-center justify-between">
+                <h2><i data-lucide="list"></i> Events i serien (<?= count($seriesEvents) ?>)</h2>
+                <form method="POST" class="inline">
+                    <?= csrf_field() ?>
+                    <input type="hidden" name="action" value="recalculate_all">
+                    <button type="submit" class="btn-admin btn-admin-secondary btn-admin-sm" onclick="return confirm('Beräkna om alla seriepoäng?')">
+                        <i data-lucide="refresh-cw"></i> Beräkna om poäng
+                    </button>
+                </form>
+            </div>
+            <div class="admin-card-body">
+                <?php if (empty($seriesEvents)): ?>
+                <p class="text-secondary">Inga events i serien än.</p>
+                <?php else: ?>
+                <div class="admin-table-container">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>#</th>
+                                <th>Event</th>
+                                <th>Datum</th>
+                                <th>Status</th>
+                                <th>Poängmall</th>
+                                <th></th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php $eventNum = 1; foreach ($seriesEvents as $se): ?>
+                            <tr>
+                                <td><span class="badge badge-primary">#<?= $eventNum ?></span></td>
+                                <td>
+                                    <strong><?= h($se['event_name']) ?></strong>
+                                    <?php if ($se['event_series_id'] == $id): ?>
+                                    <span class="badge badge-success badge-sm"><i data-lucide="lock" style="width:10px;height:10px;"></i></span>
+                                    <?php endif; ?>
+                                </td>
+                                <td><?= $se['event_date'] ? date('Y-m-d', strtotime($se['event_date'])) : '-' ?></td>
+                                <td>
+                                    <?php if ($se['event_active']): ?>
+                                    <span class="badge badge-success">Aktiv</span>
+                                    <?php else: ?>
+                                    <span class="badge badge-warning">Inaktiv</span>
+                                    <?php endif; ?>
+                                </td>
+                                <td>
+                                    <form method="POST" class="flex gap-xs">
+                                        <?= csrf_field() ?>
+                                        <input type="hidden" name="action" value="update_template">
+                                        <input type="hidden" name="series_event_id" value="<?= $se['id'] ?>">
+                                        <select name="template_id" class="admin-form-select admin-form-select-sm" style="min-width:120px;">
+                                            <option value="">-- Ingen --</option>
+                                            <?php foreach ($templates as $template): ?>
+                                            <option value="<?= $template['id'] ?>" <?= $se['template_id'] == $template['id'] ? 'selected' : '' ?>>
+                                                <?= h($template['name']) ?>
+                                            </option>
+                                            <?php endforeach; ?>
+                                        </select>
+                                        <button type="submit" class="btn-admin btn-admin-primary btn-admin-sm" title="Spara">
+                                            <i data-lucide="save"></i>
+                                        </button>
+                                    </form>
+                                </td>
+                                <td>
+                                    <div class="flex gap-xs">
+                                        <a href="/admin/event-edit.php?id=<?= $se['event_id'] ?>" class="btn-admin btn-admin-secondary btn-admin-sm" title="Redigera event">
+                                            <i data-lucide="pencil"></i>
+                                        </a>
+                                        <form method="POST" class="inline" onsubmit="return confirm('Ta bort från serien?')">
+                                            <?= csrf_field() ?>
+                                            <input type="hidden" name="action" value="remove_event">
+                                            <input type="hidden" name="series_event_id" value="<?= $se['id'] ?>">
+                                            <button type="submit" class="btn-admin btn-admin-danger btn-admin-sm" title="Ta bort">
+                                                <i data-lucide="trash-2"></i>
+                                            </button>
+                                        </form>
+                                    </div>
+                                </td>
+                            </tr>
+                            <?php $eventNum++; endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+                <?php endif; ?>
+            </div>
+        </div>
+    </div>
+</div>
+<?php endif; // End EVENTS TAB ?>
+
+<?php if ($currentTab === 'rules' && !$isNew): ?>
+<!-- RULES TAB -->
+<?php
+// Event classes
+$eventClasses = [
+    'national' => ['name' => 'Nationellt', 'desc' => 'Nationella tävlingar med full rankingpoäng och strikta licensregler', 'icon' => 'trophy', 'color' => 'warning'],
+    'sportmotion' => ['name' => 'Sportmotion', 'desc' => 'Sportmotion-event med 50% rankingpoäng', 'icon' => 'bike', 'color' => 'info'],
+    'motion' => ['name' => 'Motion', 'desc' => 'Motion-event utan rankingpoäng, öppet för alla', 'icon' => 'heart', 'color' => 'success']
+];
+
+// Handle form submission
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['event_class'])) {
+    checkCsrf();
+    $eventClass = $_POST['event_class'] ?? '';
+    if (array_key_exists($eventClass, $eventClasses)) {
+        $db->update('series', ['event_license_class' => $eventClass], 'id = ?', [$id]);
+        $series = $db->getRow("SELECT * FROM series WHERE id = ?", [$id]);
+        header("Location: /admin/series/edit/{$id}?tab=rules&saved=1");
+        exit;
+    }
+}
+?>
+
+<?php if (isset($_GET['saved'])): ?>
+<div class="alert alert-success mb-lg">
+    <i data-lucide="check-circle"></i> Ändringarna har sparats!
+</div>
+<?php endif; ?>
+
+<!-- Event Class Selection -->
+<div class="admin-card mb-lg">
+    <div class="admin-card-header">
+        <h2><i data-lucide="shield"></i> Eventklass för <?= h($series['name']) ?></h2>
+    </div>
+    <div class="admin-card-body">
+        <p class="text-secondary mb-lg">
+            Välj vilken eventklass som gäller för serien. Detta styr vilka licenstyper som får anmäla sig.
+        </p>
+
+        <form method="POST">
+            <?= csrf_field() ?>
+            <div class="grid gap-md" style="grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));">
+                <?php foreach ($eventClasses as $key => $info):
+                    $isSelected = ($series['event_license_class'] ?? '') === $key;
+                ?>
+                <label class="admin-card" style="cursor: pointer; border: 2px solid <?= $isSelected ? 'var(--color-accent)' : 'var(--color-border)' ?>; background: <?= $isSelected ? 'var(--color-accent-light)' : 'var(--color-bg-surface)' ?>;">
+                    <div class="admin-card-body">
+                        <div class="flex gap-md items-start">
+                            <input type="radio" name="event_class" value="<?= $key ?>" <?= $isSelected ? 'checked' : '' ?> style="margin-top: 4px;">
+                            <div>
+                                <div class="flex items-center gap-sm mb-xs">
+                                    <i data-lucide="<?= $info['icon'] ?>" style="width: 20px; height: 20px;"></i>
+                                    <strong style="font-size: 1.1rem;"><?= h($info['name']) ?></strong>
+                                </div>
+                                <p class="text-secondary text-sm" style="margin: 0;"><?= h($info['desc']) ?></p>
+                            </div>
+                        </div>
+                    </div>
+                </label>
+                <?php endforeach; ?>
+            </div>
+
+            <div class="mt-lg">
+                <button type="submit" class="btn-admin btn-admin-primary">
+                    <i data-lucide="save"></i> Spara eventklass
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Link to License Matrix -->
+<div class="admin-card">
+    <div class="admin-card-header">
+        <h2><i data-lucide="grid-3x3"></i> Licensregler</h2>
+    </div>
+    <div class="admin-card-body">
+        <p class="text-secondary mb-lg">
+            Licensreglerna (vilka licenstyper som får anmäla sig till vilka klasser) hanteras i
+            <strong>Licens-Klass Matrisen</strong>. Samma regler gäller för alla serier med samma eventklass.
+        </p>
+        <?php $currentClass = $series['event_license_class'] ?? 'sportmotion'; ?>
+        <a href="/admin/license-class-matrix.php?tab=<?= h($currentClass) ?>" class="btn-admin btn-admin-secondary">
+            <i data-lucide="external-link"></i>
+            Öppna Licens-Klass Matris (<?= h($eventClasses[$currentClass]['name'] ?? 'Sportmotion') ?>)
+        </a>
+    </div>
+</div>
+<?php endif; // End RULES TAB ?>
 
 <script>
 const csrfToken = '<?= htmlspecialchars(generate_csrf_token()) ?>';
