@@ -2227,10 +2227,10 @@ if (!empty($event['late_fee_start'])) {
 $existingRegistration = null;
 if ($isLoggedIn && $currentUser) {
     try {
+        // Note: event_registrations uses 'category' (VARCHAR) instead of class_id
         $checkStmt = $db->prepare("
-            SELECT er.*, c.name as class_name
+            SELECT er.*, er.category as class_name
             FROM event_registrations er
-            LEFT JOIN classes c ON er.class_id = c.id
             WHERE er.event_id = ? AND er.rider_id = ? AND er.status != 'cancelled'
         ");
         $checkStmt->execute([$eventId, $currentUser['id']]);
