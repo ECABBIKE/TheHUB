@@ -72,7 +72,7 @@ $ADMIN_TABS = [
                 'label' => 'Serier',
                 'icon' => 'award',
                 'url' => '/admin/series.php',
-                'pages' => ['series.php', 'series-events.php', 'series-pricing.php', 'series-manage.php', 'series-edit.php']
+                'pages' => ['series.php', 'series-events.php', 'series-pricing.php', 'series-edit.php']
             ],
             [
                 'id' => 'ranking',
