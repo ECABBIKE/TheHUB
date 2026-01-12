@@ -2401,6 +2401,159 @@ if (!empty($event['series_id'])) {
         padding-left: 36px;
     }
 }
+
+/* Multi-rider cart styles */
+.reg-cart {
+    background: var(--color-bg-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--space-lg);
+}
+
+.reg-cart__header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    padding: var(--space-md);
+    border-bottom: 1px solid var(--color-border);
+}
+
+.reg-cart__header h3 {
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+}
+
+.reg-cart__items {
+    padding: var(--space-sm);
+}
+
+.reg-cart__item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    padding: var(--space-sm) var(--space-md);
+    background: var(--color-bg-card);
+    border-radius: var(--radius-sm);
+    margin-bottom: var(--space-xs);
+}
+
+.reg-cart__item:last-child {
+    margin-bottom: 0;
+}
+
+.reg-cart__item-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.reg-cart__item-rider {
+    font-weight: 600;
+    color: var(--color-text-primary);
+}
+
+.reg-cart__item-class {
+    font-size: 0.875rem;
+    color: var(--color-text-muted);
+}
+
+.reg-cart__item-price {
+    font-weight: 600;
+    color: var(--color-accent);
+    white-space: nowrap;
+}
+
+.reg-cart__item-remove {
+    background: none;
+    border: none;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    padding: var(--space-xs);
+    border-radius: var(--radius-sm);
+    transition: all 0.2s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.reg-cart__item-remove:hover {
+    color: var(--color-error);
+    background: rgba(239, 68, 68, 0.1);
+}
+
+.reg-cart__summary {
+    padding: var(--space-md);
+    border-top: 1px solid var(--color-border);
+    background: var(--color-bg-hover);
+}
+
+.reg-cart__savings {
+    background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(16, 185, 129, 0.05));
+    border: 1px solid var(--color-success);
+    border-radius: var(--radius-sm);
+    padding: var(--space-sm) var(--space-md);
+    margin-top: var(--space-sm);
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    color: var(--color-success);
+    font-weight: 500;
+}
+
+.reg-cart__actions {
+    padding: var(--space-md);
+    border-top: 1px solid var(--color-border);
+}
+
+/* Add rider section */
+.reg-add-rider {
+    background: var(--color-bg-surface);
+    border: 2px dashed var(--color-border);
+    border-radius: var(--radius-md);
+    padding: var(--space-lg);
+}
+
+.reg-add-rider__header {
+    margin-bottom: var(--space-md);
+}
+
+.reg-add-rider__header h4 {
+    margin: 0 0 var(--space-xs) 0;
+    font-weight: 600;
+}
+
+.reg-rider-select {
+    display: grid;
+    gap: var(--space-md);
+}
+
+.reg-rider-select .form-group {
+    margin: 0;
+}
+
+/* Create rider inline form */
+.reg-create-rider {
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: var(--space-md);
+    margin-top: var(--space-md);
+}
+
+.reg-create-rider__fields {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-md);
+}
+
+@media (max-width: 599px) {
+    .reg-create-rider__fields {
+        grid-template-columns: 1fr;
+    }
+}
 </style>
 
 <section class="card">
@@ -2469,197 +2622,365 @@ if (!empty($event['series_id'])) {
             </div>
 
         <?php else: ?>
-            <!-- Registration form -->
-            <form class="reg-form" id="registrationForm">
-                <?php if ($isEarlyBird): ?>
-                    <div class="alert alert--success">
-                        <i data-lucide="clock"></i>
-                        <strong>Early Bird!</strong> Boka före <?= date('j M', $earlyBirdDeadline) ?> och spara pengar.
-                    </div>
-                <?php elseif ($isLateFee): ?>
-                    <div class="alert alert--warning">
-                        <i data-lucide="alert-triangle"></i>
-                        <strong>Efteranmälan</strong> - extra avgift tillkommer.
-                    </div>
-                <?php endif; ?>
-
-                <div>
-                    <label class="form-label">Välj klass</label>
-                    <div class="reg-class-list">
-                        <?php foreach ($eventPricing as $class):
-                            // Calculate price based on timing
-                            $basePrice = $class['base_price'];
-                            $currentPrice = $basePrice;
-                            $originalPrice = null;
-
-                            if ($isEarlyBird && $class['early_bird_price']) {
-                                $currentPrice = $class['early_bird_price'];
-                                $originalPrice = $basePrice;
-                            } elseif ($isLateFee && $class['late_fee']) {
-                                $currentPrice = $basePrice + $class['late_fee'];
-                            }
-
-                            // Check eligibility
-                            $isEligible = false;
-                            foreach ($eligibleClasses as $ec) {
-                                if ($ec['class_id'] == $class['class_id']) {
-                                    $isEligible = true;
-                                    break;
-                                }
-                            }
-
-                            $classDesc = [];
-                            if ($class['gender'] === 'M') $classDesc[] = 'Herrar';
-                            if ($class['gender'] === 'F') $classDesc[] = 'Damer';
-                            if ($class['min_age'] || $class['max_age']) {
-                                if ($class['min_age'] && $class['max_age']) {
-                                    $classDesc[] = $class['min_age'] . '-' . $class['max_age'] . ' år';
-                                } elseif ($class['min_age']) {
-                                    $classDesc[] = $class['min_age'] . '+ år';
-                                } elseif ($class['max_age']) {
-                                    $classDesc[] = 'max ' . $class['max_age'] . ' år';
-                                }
-                            }
-                        ?>
-                        <label class="reg-class-item <?= !$isEligible ? 'disabled' : '' ?>" data-price="<?= $currentPrice ?>">
-                            <input type="radio" name="class_id" value="<?= $class['class_id'] ?>"
-                                   class="reg-class-radio"
-                                   <?= !$isEligible ? 'disabled' : '' ?>
-                                   data-price="<?= $currentPrice ?>"
-                                   data-name="<?= h($class['display_name'] ?: $class['class_name']) ?>">
-                            <div class="reg-class-info">
-                                <div class="reg-class-name"><?= h($class['display_name'] ?: $class['class_name']) ?></div>
-                                <?php if (!empty($classDesc)): ?>
-                                    <div class="reg-class-desc"><?= implode(' &middot; ', $classDesc) ?></div>
-                                <?php endif; ?>
-                                <?php if (!$isEligible): ?>
-                                    <div class="reg-class-desc text-warning">Ej valbar för din profil</div>
-                                <?php endif; ?>
-                            </div>
-                            <div class="reg-class-price">
-                                <div class="reg-class-price__current"><?= number_format($currentPrice, 0, ',', ' ') ?> kr</div>
-                                <?php if ($originalPrice): ?>
-                                    <div class="reg-class-price__original"><?= number_format($originalPrice, 0, ',', ' ') ?> kr</div>
-                                <?php endif; ?>
-                            </div>
-                        </label>
-                        <?php endforeach; ?>
-                    </div>
+            <!-- Multi-Rider Registration Form -->
+            <?php if ($isEarlyBird): ?>
+                <div class="alert alert--success mb-md">
+                    <i data-lucide="clock"></i>
+                    <strong>Early Bird!</strong> Boka före <?= date('j M', $earlyBirdDeadline) ?> och spara pengar.
                 </div>
-
-                <?php if ($seriesPassAvailable && $seriesInfo): ?>
-                <div class="reg-series-upsell">
-                    <div class="reg-series-upsell__header">
-                        <?php if ($seriesInfo['logo']): ?>
-                            <img src="<?= h($seriesInfo['logo']) ?>" alt="" class="reg-series-upsell__logo">
-                        <?php endif; ?>
-                        <div>
-                            <div class="reg-series-upsell__title">Köp Serie-pass istället?</div>
-                            <div class="reg-series-upsell__savings">
-                                <i data-lucide="tag"></i>
-                                Spara <?= $seriesInfo['series_discount_percent'] ?>% på alla event
-                            </div>
-                        </div>
-                    </div>
-                    <p class="text-sm text-secondary mb-sm">
-                        Med ett serie-pass för <?= h($seriesInfo['name']) ?> får du tillgång till alla säsongens event till rabatterat pris.
-                    </p>
-                    <a href="/register/series?id=<?= $seriesInfo['id'] ?>" class="btn btn--outline btn--sm">
-                        <i data-lucide="ticket"></i>
-                        Se serie-pass
-                    </a>
+            <?php elseif ($isLateFee): ?>
+                <div class="alert alert--warning mb-md">
+                    <i data-lucide="alert-triangle"></i>
+                    <strong>Efteranmälan</strong> - extra avgift tillkommer.
                 </div>
-                <?php endif; ?>
+            <?php endif; ?>
 
-                <div class="reg-summary" id="regSummary" style="display:none;">
+            <!-- Cart (hidden until items added) -->
+            <div id="registrationCart" class="reg-cart" style="display:none;">
+                <div class="reg-cart__header">
+                    <h3><i data-lucide="shopping-cart"></i> Anmälningar</h3>
+                </div>
+                <div id="cartItems" class="reg-cart__items"></div>
+                <div class="reg-cart__summary">
                     <div class="reg-summary__row">
-                        <span>Startavgift</span>
-                        <span id="summaryClassName">-</span>
+                        <span>Antal deltagare</span>
+                        <span id="cartCount">0</span>
                     </div>
                     <div class="reg-summary__row reg-summary__total">
-                        <span>Att betala</span>
-                        <span id="summaryTotal">0 kr</span>
+                        <span>Totalt</span>
+                        <span id="cartTotal">0 kr</span>
+                    </div>
+                    <div id="cartSavings" class="reg-cart__savings" style="display:none;">
+                        <i data-lucide="piggy-bank"></i>
+                        <span>Du sparar <strong id="savingsAmount">0 kr</strong> i Swish-avgifter!</span>
                     </div>
                 </div>
-
-                <button type="submit" class="btn btn--primary btn--lg" id="submitBtn" disabled>
+                <button type="button" id="checkoutBtn" class="btn btn--primary btn--lg btn--block">
                     <i data-lucide="credit-card"></i>
                     Gå till betalning
                 </button>
-            </form>
+            </div>
+
+            <!-- Add Rider Section -->
+            <div id="addRiderSection" class="reg-add-rider">
+                <h3 class="mb-md">Lägg till deltagare</h3>
+
+                <!-- Rider Selector -->
+                <div class="form-group">
+                    <label class="form-label">Välj vem som ska anmälas</label>
+                    <select id="riderSelect" class="form-select">
+                        <option value="">-- Välj deltagare --</option>
+                        <option value="<?= $currentUser['id'] ?>">
+                            <?= h($currentUser['firstname'] . ' ' . $currentUser['lastname']) ?> (du själv)
+                        </option>
+                        <!-- Family members loaded via JS -->
+                    </select>
+                </div>
+
+                <!-- Class Selection (shown after rider selected) -->
+                <div id="classSelection" style="display:none;">
+                    <label class="form-label">Välj klass</label>
+                    <div id="classList" class="reg-class-list"></div>
+
+                    <button type="button" id="addToCartBtn" class="btn btn--secondary btn--block mt-md" disabled>
+                        <i data-lucide="plus"></i>
+                        Lägg till i anmälan
+                    </button>
+                </div>
+
+                <div class="reg-add-more mt-md">
+                    <button type="button" id="addAnotherBtn" class="btn btn--ghost btn--sm" style="display:none;">
+                        <i data-lucide="user-plus"></i>
+                        Lägg till fler deltagare
+                    </button>
+                </div>
+            </div>
+
+            <?php if ($seriesPassAvailable && $seriesInfo): ?>
+            <div class="reg-series-upsell mt-lg">
+                <div class="reg-series-upsell__header">
+                    <?php if ($seriesInfo['logo']): ?>
+                        <img src="<?= h($seriesInfo['logo']) ?>" alt="" class="reg-series-upsell__logo">
+                    <?php endif; ?>
+                    <div>
+                        <div class="reg-series-upsell__title">Köp Serie-pass istället?</div>
+                        <div class="reg-series-upsell__savings">
+                            <i data-lucide="tag"></i>
+                            Spara <?= $seriesInfo['series_discount_percent'] ?>% på alla event
+                        </div>
+                    </div>
+                </div>
+                <p class="text-sm text-secondary mb-sm">
+                    Med ett serie-pass för <?= h($seriesInfo['name']) ?> får du tillgång till alla säsongens event till rabatterat pris.
+                </p>
+                <a href="/register/series?id=<?= $seriesInfo['id'] ?>" class="btn btn--outline btn--sm">
+                    <i data-lucide="ticket"></i>
+                    Se serie-pass
+                </a>
+            </div>
+            <?php endif; ?>
 
             <script>
             (function() {
-                const form = document.getElementById('registrationForm');
-                const summary = document.getElementById('regSummary');
-                const submitBtn = document.getElementById('submitBtn');
-                const classRadios = form.querySelectorAll('input[name="class_id"]');
+                const eventId = <?= $eventId ?>;
+                const currentUserId = <?= $currentUser['id'] ?? 0 ?>;
+                const isEarlyBird = <?= $isEarlyBird ? 'true' : 'false' ?>;
+                const isLateFee = <?= $isLateFee ? 'true' : 'false' ?>;
 
-                // Handle class selection
-                classRadios.forEach(radio => {
-                    radio.addEventListener('change', function() {
-                        // Update visual selection
-                        document.querySelectorAll('.reg-class-item').forEach(item => {
-                            item.classList.remove('selected');
-                        });
-                        this.closest('.reg-class-item').classList.add('selected');
+                // Cart state
+                let cart = [];
+                let availableRiders = [];
+                let selectedRiderId = null;
+                let selectedClassId = null;
+                let selectedClassData = null;
 
-                        // Update summary
-                        const price = parseInt(this.dataset.price);
-                        const className = this.dataset.name;
-                        document.getElementById('summaryClassName').textContent = className;
-                        document.getElementById('summaryTotal').textContent = price.toLocaleString('sv-SE') + ' kr';
-                        summary.style.display = 'block';
-                        submitBtn.disabled = false;
+                // DOM elements
+                const riderSelect = document.getElementById('riderSelect');
+                const classSelection = document.getElementById('classSelection');
+                const classList = document.getElementById('classList');
+                const addToCartBtn = document.getElementById('addToCartBtn');
+                const addAnotherBtn = document.getElementById('addAnotherBtn');
+                const registrationCart = document.getElementById('registrationCart');
+                const cartItems = document.getElementById('cartItems');
+                const cartCount = document.getElementById('cartCount');
+                const cartTotal = document.getElementById('cartTotal');
+                const cartSavings = document.getElementById('cartSavings');
+                const savingsAmount = document.getElementById('savingsAmount');
+                const checkoutBtn = document.getElementById('checkoutBtn');
+
+                // Load available riders
+                async function loadRiders() {
+                    try {
+                        const response = await fetch('/api/orders.php?action=my_riders');
+                        const data = await response.json();
+                        if (data.success) {
+                            availableRiders = data.riders;
+                            updateRiderSelect();
+                        }
+                    } catch (e) {
+                        console.error('Failed to load riders:', e);
+                    }
+                }
+
+                function updateRiderSelect() {
+                    // Clear and rebuild options
+                    riderSelect.innerHTML = '<option value="">-- Välj deltagare --</option>';
+
+                    availableRiders.forEach(rider => {
+                        // Check if already in cart
+                        const inCart = cart.some(item => item.rider_id === rider.id);
+                        if (!inCart) {
+                            const opt = document.createElement('option');
+                            opt.value = rider.id;
+                            opt.textContent = rider.firstname + ' ' + rider.lastname +
+                                (rider.relation === 'self' ? ' (du själv)' : '');
+                            riderSelect.appendChild(opt);
+                        }
                     });
-                });
+                }
 
-                // Handle form submit
-                form.addEventListener('submit', async function(e) {
-                    e.preventDefault();
+                // Load classes for selected rider
+                async function loadClasses(riderId) {
+                    classList.innerHTML = '<p class="text-muted">Laddar klasser...</p>';
+                    classSelection.style.display = 'block';
 
-                    const selectedClass = form.querySelector('input[name="class_id"]:checked');
-                    if (!selectedClass) {
-                        alert('Välj en klass');
+                    try {
+                        const response = await fetch(`/api/orders.php?action=event_classes&event_id=${eventId}&rider_id=${riderId}`);
+                        const data = await response.json();
+
+                        if (data.success) {
+                            renderClasses(data.classes);
+                        } else {
+                            classList.innerHTML = '<p class="text-error">Kunde inte ladda klasser</p>';
+                        }
+                    } catch (e) {
+                        console.error('Failed to load classes:', e);
+                        classList.innerHTML = '<p class="text-error">Ett fel uppstod</p>';
+                    }
+                }
+
+                function renderClasses(classes) {
+                    classList.innerHTML = '';
+
+                    classes.forEach(cls => {
+                        const div = document.createElement('label');
+                        div.className = 'reg-class-item' + (!cls.eligible ? ' disabled' : '');
+                        div.dataset.classId = cls.class_id;
+                        div.dataset.price = cls.current_price;
+                        div.dataset.name = cls.name;
+
+                        div.innerHTML = `
+                            <input type="radio" name="class_select" value="${cls.class_id}"
+                                   class="reg-class-radio" ${!cls.eligible ? 'disabled' : ''}
+                                   data-price="${cls.current_price}" data-name="${cls.name}">
+                            <div class="reg-class-info">
+                                <div class="reg-class-name">${cls.name}</div>
+                                ${!cls.eligible ? `<div class="reg-class-desc text-warning">${cls.reason}</div>` : ''}
+                            </div>
+                            <div class="reg-class-price">
+                                <div class="reg-class-price__current">${cls.current_price.toLocaleString('sv-SE')} kr</div>
+                                ${cls.price_type === 'early_bird' ? `<div class="reg-class-price__original">${cls.base_price.toLocaleString('sv-SE')} kr</div>` : ''}
+                            </div>
+                        `;
+
+                        if (cls.eligible) {
+                            div.addEventListener('click', () => selectClass(cls));
+                        }
+
+                        classList.appendChild(div);
+                    });
+                }
+
+                function selectClass(cls) {
+                    // Update visual selection
+                    document.querySelectorAll('.reg-class-item').forEach(item => {
+                        item.classList.remove('selected');
+                    });
+                    event.currentTarget.classList.add('selected');
+
+                    selectedClassId = cls.class_id;
+                    selectedClassData = cls;
+                    addToCartBtn.disabled = false;
+                }
+
+                function addToCart() {
+                    if (!selectedRiderId || !selectedClassId) return;
+
+                    const rider = availableRiders.find(r => r.id == selectedRiderId);
+                    if (!rider) return;
+
+                    cart.push({
+                        type: 'event',
+                        rider_id: rider.id,
+                        rider_name: rider.firstname + ' ' + rider.lastname,
+                        event_id: eventId,
+                        class_id: selectedClassId,
+                        class_name: selectedClassData.name,
+                        price: selectedClassData.current_price
+                    });
+
+                    // Reset form
+                    selectedRiderId = null;
+                    selectedClassId = null;
+                    selectedClassData = null;
+                    riderSelect.value = '';
+                    classSelection.style.display = 'none';
+                    addToCartBtn.disabled = true;
+
+                    updateCart();
+                    updateRiderSelect();
+                }
+
+                function removeFromCart(index) {
+                    cart.splice(index, 1);
+                    updateCart();
+                    updateRiderSelect();
+                }
+
+                function updateCart() {
+                    if (cart.length === 0) {
+                        registrationCart.style.display = 'none';
+                        addAnotherBtn.style.display = 'none';
                         return;
                     }
 
-                    submitBtn.disabled = true;
-                    submitBtn.innerHTML = '<i data-lucide="loader-2" class="spin"></i> Bearbetar...';
+                    registrationCart.style.display = 'block';
+                    addAnotherBtn.style.display = 'inline-flex';
+
+                    // Render cart items
+                    cartItems.innerHTML = cart.map((item, index) => `
+                        <div class="reg-cart__item">
+                            <div class="reg-cart__item-info">
+                                <strong>${item.rider_name}</strong>
+                                <span class="text-muted">${item.class_name}</span>
+                            </div>
+                            <div class="reg-cart__item-price">${item.price.toLocaleString('sv-SE')} kr</div>
+                            <button type="button" class="reg-cart__item-remove" onclick="window.removeCartItem(${index})">
+                                <i data-lucide="x"></i>
+                            </button>
+                        </div>
+                    `).join('');
+
+                    // Update totals
+                    const total = cart.reduce((sum, item) => sum + item.price, 0);
+                    cartCount.textContent = cart.length;
+                    cartTotal.textContent = total.toLocaleString('sv-SE') + ' kr';
+
+                    // Show savings if multiple riders
+                    if (cart.length > 1) {
+                        const savings = (cart.length - 1) * 1; // 1 kr per extra Swish fee saved
+                        savingsAmount.textContent = savings + ' kr';
+                        cartSavings.style.display = 'flex';
+                    } else {
+                        cartSavings.style.display = 'none';
+                    }
+
+                    if (typeof lucide !== 'undefined') lucide.createIcons();
+                }
+
+                // Global function for remove button
+                window.removeCartItem = removeFromCart;
+
+                async function checkout() {
+                    if (cart.length === 0) return;
+
+                    checkoutBtn.disabled = true;
+                    checkoutBtn.innerHTML = '<i data-lucide="loader-2" class="spin"></i> Bearbetar...';
                     if (typeof lucide !== 'undefined') lucide.createIcons();
 
                     try {
-                        const response = await fetch('/api/registration.php', {
+                        const response = await fetch('/api/orders.php', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
-                                event_id: <?= $eventId ?>,
-                                participants: [{
-                                    rider_id: <?= $currentUser['id'] ?? 0 ?>,
-                                    class_id: parseInt(selectedClass.value),
-                                    price: parseInt(selectedClass.dataset.price)
-                                }]
+                                action: 'create',
+                                buyer: {
+                                    name: '<?= h($currentUser['firstname'] . ' ' . $currentUser['lastname']) ?>',
+                                    email: '<?= h($currentUser['email'] ?? '') ?>'
+                                },
+                                items: cart
                             })
                         });
 
                         const data = await response.json();
 
                         if (data.success) {
-                            window.location.href = data.checkout_url;
+                            window.location.href = data.order.checkout_url;
                         } else {
-                            alert(data.errors ? data.errors.join('\n') : data.error || 'Ett fel uppstod');
-                            submitBtn.disabled = false;
-                            submitBtn.innerHTML = '<i data-lucide="credit-card"></i> Gå till betalning';
+                            alert(data.error || 'Ett fel uppstod');
+                            checkoutBtn.disabled = false;
+                            checkoutBtn.innerHTML = '<i data-lucide="credit-card"></i> Gå till betalning';
                             if (typeof lucide !== 'undefined') lucide.createIcons();
                         }
                     } catch (error) {
-                        console.error('Registration error:', error);
+                        console.error('Checkout error:', error);
                         alert('Ett fel uppstod. Försök igen.');
-                        submitBtn.disabled = false;
-                        submitBtn.innerHTML = '<i data-lucide="credit-card"></i> Gå till betalning';
+                        checkoutBtn.disabled = false;
+                        checkoutBtn.innerHTML = '<i data-lucide="credit-card"></i> Gå till betalning';
                         if (typeof lucide !== 'undefined') lucide.createIcons();
                     }
+                }
+
+                // Event listeners
+                riderSelect.addEventListener('change', function() {
+                    selectedRiderId = this.value;
+                    if (selectedRiderId) {
+                        loadClasses(selectedRiderId);
+                    } else {
+                        classSelection.style.display = 'none';
+                    }
+                    selectedClassId = null;
+                    addToCartBtn.disabled = true;
                 });
+
+                addToCartBtn.addEventListener('click', addToCart);
+                checkoutBtn.addEventListener('click', checkout);
+                addAnotherBtn.addEventListener('click', function() {
+                    document.getElementById('addRiderSection').scrollIntoView({ behavior: 'smooth' });
+                });
+
+                // Initialize
+                loadRiders();
             })();
             </script>
         <?php endif; ?>
