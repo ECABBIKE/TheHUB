@@ -1,164 +1,157 @@
 <?php
 /**
- * Sponsors API Endpoint
- * TheHUB V3 - Media & Sponsor System
- * 
- * Handles: create, get, update, delete, list
+ * DEBUG VERSION - sponsors.php
+ * Run this instead of sponsors.php to see where it fails
  */
-header('Content-Type: application/json');
 
-require_once __DIR__ . '/../config.php';
-require_once __DIR__ . '/../includes/sponsor-functions.php';
-require_once __DIR__ . '/../includes/media-functions.php';
+// Enable all errors
+error_reporting(E_ALL);
+ini_set('display_errors', 1);
+ini_set('log_errors', 1);
 
-// Get action from query string
-$action = $_GET['action'] ?? '';
+echo "<!DOCTYPE html><html><head><title>Sponsors Debug</title></head><body>";
+echo "<h1>Sponsors.php Debug</h1>";
+echo "<pre>";
 
+// Step 1: Check config
+echo "STEP 1: Loading config.php...\n";
 try {
-    switch ($action) {
-        case 'create':
-            handleCreate();
-            break;
-            
-        case 'get':
-            handleGet();
-            break;
-            
-        case 'update':
-            handleUpdate();
-            break;
-            
-        case 'delete':
-            handleDelete();
-            break;
-            
-        case 'list':
-            handleList();
-            break;
-            
-        case 'stats':
-            handleStats();
-            break;
-            
-        default:
-            echo json_encode(['success' => false, 'error' => 'Ogiltig action']);
+    require_once __DIR__ . '/../config.php';
+    echo "✓ config.php loaded successfully\n";
+    echo "  - ROOT_PATH: " . (defined('ROOT_PATH') ? ROOT_PATH : 'NOT DEFINED') . "\n";
+    echo "  - DB connected: " . (isset($pdo) ? 'YES' : 'NO') . "\n";
+} catch (Exception $e) {
+    echo "✗ FAILED: " . $e->getMessage() . "\n";
+    die("</pre></body></html>");
+}
+
+// Step 2: Check auth
+echo "\nSTEP 2: Checking authentication...\n";
+try {
+    if (!function_exists('require_admin')) {
+        echo "✗ require_admin() function NOT FOUND!\n";
+        echo "  Looking in includes/auth.php...\n";
+        if (file_exists(__DIR__ . '/../includes/auth.php')) {
+            echo "  - auth.php EXISTS\n";
+            require_once __DIR__ . '/../includes/auth.php';
+            echo "  - auth.php loaded\n";
+        } else {
+            echo "  - auth.php MISSING!\n";
+        }
+    }
+    
+    if (function_exists('require_admin')) {
+        echo "✓ require_admin() function found\n";
+        // Don't actually call it yet
+        echo "  (Not calling require_admin() in debug mode)\n";
+    } else {
+        echo "✗ require_admin() still not found after loading auth.php!\n";
     }
 } catch (Exception $e) {
-    error_log("Sponsors API error: " . $e->getMessage());
-    echo json_encode(['success' => false, 'error' => 'Serverfel']);
+    echo "✗ FAILED: " . $e->getMessage() . "\n";
 }
 
-/**
- * Create new sponsor
- */
-function handleCreate() {
-    if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
-        echo json_encode(['success' => false, 'error' => 'POST krävs']);
-        return;
-    }
-    
-    $input = json_decode(file_get_contents('php://input'), true);
-    
-    if (!$input || empty($input['name'])) {
-        echo json_encode(['success' => false, 'error' => 'Namn krävs']);
-        return;
-    }
-    
-    $result = create_sponsor($input);
-    echo json_encode($result);
-}
-
-/**
- * Get single sponsor with all logo URLs
- */
-function handleGet() {
-    $id = $_GET['id'] ?? null;
-
-    if (!$id) {
-        echo json_encode(['success' => false, 'error' => 'ID saknas']);
-        return;
-    }
-
-    // Use get_sponsor_with_logos to get all logo URLs
-    $sponsor = get_sponsor_with_logos($id);
-
-    // If new function fails, fallback to basic get_sponsor
-    if (!$sponsor) {
-        $sponsor = get_sponsor($id);
-    }
-
-    if (!$sponsor) {
-        echo json_encode(['success' => false, 'error' => 'Sponsor hittades inte']);
-        return;
-    }
-
-    echo json_encode(['success' => true, 'data' => $sponsor]);
-}
-
-/**
- * Update sponsor
- */
-function handleUpdate() {
-    if ($_SERVER['REQUEST_METHOD'] !== 'PUT' && $_SERVER['REQUEST_METHOD'] !== 'POST') {
-        echo json_encode(['success' => false, 'error' => 'PUT/POST krävs']);
-        return;
-    }
-    
-    $input = json_decode(file_get_contents('php://input'), true);
-    
-    if (!$input || !isset($input['id'])) {
-        echo json_encode(['success' => false, 'error' => 'ID saknas']);
-        return;
-    }
-    
-    $result = update_sponsor($input['id'], $input);
-    echo json_encode($result);
-}
-
-/**
- * Delete sponsor
- */
-function handleDelete() {
-    $id = $_GET['id'] ?? null;
-    
-    if (!$id) {
-        echo json_encode(['success' => false, 'error' => 'ID saknas']);
-        return;
-    }
-    
-    $result = delete_sponsor($id);
-    echo json_encode($result);
-}
-
-/**
- * List sponsors with filters
- */
-function handleList() {
-    $tier = $_GET['tier'] ?? null;
-    $activeOnly = !isset($_GET['active']) || $_GET['active'] !== '0';
-    $search = $_GET['search'] ?? '';
-    
-    if ($search) {
-        $sponsors = search_sponsors($search);
+// Step 3: Check sponsor functions
+echo "\nSTEP 3: Loading sponsor-functions.php...\n";
+try {
+    if (file_exists(__DIR__ . '/../includes/sponsor-functions.php')) {
+        require_once __DIR__ . '/../includes/sponsor-functions.php';
+        echo "✓ sponsor-functions.php loaded\n";
+        echo "  - search_sponsors exists: " . (function_exists('search_sponsors') ? 'YES' : 'NO') . "\n";
     } else {
-        $sponsors = get_sponsors($activeOnly, $tier);
+        echo "✗ sponsor-functions.php MISSING!\n";
     }
-    
-    echo json_encode([
-        'success' => true,
-        'data' => $sponsors,
-        'count' => count($sponsors)
-    ]);
+} catch (Exception $e) {
+    echo "✗ FAILED: " . $e->getMessage() . "\n";
 }
 
-/**
- * Get sponsor statistics
- */
-function handleStats() {
-    $stats = get_sponsor_stats();
-    
-    echo json_encode([
-        'success' => true,
-        'data' => $stats
-    ]);
+// Step 4: Check media functions
+echo "\nSTEP 4: Loading media-functions.php...\n";
+try {
+    if (file_exists(__DIR__ . '/../includes/media-functions.php')) {
+        require_once __DIR__ . '/../includes/media-functions.php';
+        echo "✓ media-functions.php loaded\n";
+    } else {
+        echo "✗ media-functions.php MISSING!\n";
+    }
+} catch (Exception $e) {
+    echo "✗ FAILED: " . $e->getMessage() . "\n";
 }
+
+// Step 5: Check database
+echo "\nSTEP 5: Testing database connection...\n";
+try {
+    global $pdo;
+    if (!$pdo) {
+        echo "✗ \$pdo not set!\n";
+    } else {
+        echo "✓ \$pdo is set\n";
+        $stmt = $pdo->query("SELECT COUNT(*) as cnt FROM sponsors");
+        $result = $stmt->fetch();
+        echo "  - Sponsors in database: " . $result['cnt'] . "\n";
+    }
+} catch (Exception $e) {
+    echo "✗ Database query FAILED: " . $e->getMessage() . "\n";
+}
+
+// Step 6: Check layout
+echo "\nSTEP 6: Checking unified-layout.php...\n";
+try {
+    if (file_exists(__DIR__ . '/components/unified-layout.php')) {
+        echo "✓ unified-layout.php EXISTS\n";
+        // Check for errors in layout file
+        $layoutContent = file_get_contents(__DIR__ . '/components/unified-layout.php');
+        if (strpos($layoutContent, '<?php') !== false) {
+            echo "  - File contains PHP code\n";
+        }
+    } else {
+        echo "✗ unified-layout.php MISSING!\n";
+    }
+} catch (Exception $e) {
+    echo "✗ FAILED: " . $e->getMessage() . "\n";
+}
+
+// Step 7: Check user role
+echo "\nSTEP 7: Checking user role...\n";
+try {
+    if (function_exists('isRole')) {
+        echo "✓ isRole() function exists\n";
+        if (function_exists('getCurrentAdmin')) {
+            $admin = getCurrentAdmin();
+            echo "  - Current admin: " . ($admin ? $admin['username'] : 'NOT LOGGED IN') . "\n";
+            if ($admin) {
+                echo "  - Is promotor: " . (isRole('promotor') ? 'YES' : 'NO') . "\n";
+                echo "  - Is admin: " . (isRole('admin') ? 'YES' : 'NO') . "\n";
+            }
+        }
+    } else {
+        echo "✗ isRole() function not found\n";
+    }
+} catch (Exception $e) {
+    echo "✗ FAILED: " . $e->getMessage() . "\n";
+}
+
+echo "\n===========================================\n";
+echo "DEBUG COMPLETE\n";
+echo "===========================================\n";
+
+// Try to load actual sponsors page
+echo "\n\nAttempting to load sponsors.php...\n";
+try {
+    ob_start();
+    include __DIR__ . '/sponsors.php';
+    $output = ob_get_clean();
+    echo "✓ sponsors.php loaded successfully!\n";
+    echo "\nOutput preview (first 500 chars):\n";
+    echo substr(strip_tags($output), 0, 500) . "...\n";
+} catch (Exception $e) {
+    echo "✗ sponsors.php FAILED TO LOAD:\n";
+    echo "Error: " . $e->getMessage() . "\n";
+    echo "File: " . $e->getFile() . "\n";
+    echo "Line: " . $e->getLine() . "\n";
+    echo "\nStack trace:\n";
+    echo $e->getTraceAsString() . "\n";
+}
+
+echo "</pre></body></html>";
+?>
