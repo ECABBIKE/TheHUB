@@ -18,17 +18,33 @@ $promotorEventIds = [];
 $promotorSeriesIds = [];
 
 if ($isPromotorOnly) {
-    // Get promotor's events
+    $currentUser = getCurrentAdmin();
+    $userId = $currentUser['id'] ?? 0;
+
+    // Get series IDs from BOTH promotor_events AND promotor_series tables
+    $stmt = $pdo->prepare("
+        SELECT DISTINCT s.id
+        FROM series s
+        WHERE s.id IN (
+            -- Series from direct event assignments
+            SELECT DISTINCT e.series_id
+            FROM events e
+            JOIN promotor_events pe ON pe.event_id = e.id
+            WHERE pe.user_id = ? AND e.series_id IS NOT NULL
+        )
+        OR s.id IN (
+            -- Series from series-wide assignments
+            SELECT ps.series_id
+            FROM promotor_series ps
+            WHERE ps.user_id = ?
+        )
+    ");
+    $stmt->execute([$userId, $userId]);
+    $promotorSeriesIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+    // Get event IDs for promotor (for backward compatibility)
     $promotorEvents = getPromotorEvents();
     $promotorEventIds = array_column($promotorEvents, 'id');
-
-    // Get series IDs from promotor's events
-    if (!empty($promotorEventIds)) {
-        $placeholders = implode(',', array_fill(0, count($promotorEventIds), '?'));
-        $stmt = $pdo->prepare("SELECT DISTINCT series_id FROM events WHERE id IN ($placeholders) AND series_id IS NOT NULL");
-        $stmt->execute($promotorEventIds);
-        $promotorSeriesIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
-    }
 }
 
 // Get filter parameters
@@ -660,7 +676,7 @@ include __DIR__ . '/components/unified-layout.php';
 
 <!-- Filters -->
 <div class="sponsor-filters">
-    <form method="get" action="/admin/sponsors">
+    <form method="get" action="/admin/sponsors.php">
         <input type="text" name="search" placeholder="Sök sponsorer..." value="<?= htmlspecialchars($searchQuery) ?>">
         <button type="submit" class="btn btn-secondary">Sök</button>
     </form>
