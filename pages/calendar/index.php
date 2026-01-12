@@ -48,29 +48,38 @@ if ($filterFormat) {
 
 $sql .= " GROUP BY e.id ORDER BY e.date ASC LIMIT 50";
 
-$stmt = $pdo->prepare($sql);
-$stmt->execute($params);
-$events = $stmt->fetchAll(PDO::FETCH_ASSOC);
+$events = [];
+$seriesList = [];
+$formatList = [];
 
-// Get series for filter - only series that have upcoming events (color from brand)
-$seriesStmt = $pdo->query("
-    SELECT DISTINCT s.id, s.name, sb.accent_color
-    FROM series s
-    LEFT JOIN series_brands sb ON s.brand_id = sb.id
-    INNER JOIN events e ON s.id = e.series_id
-    WHERE e.date >= CURDATE() AND e.active = 1 AND s.active = 1
-    ORDER BY s.name
-");
-$seriesList = $seriesStmt->fetchAll(PDO::FETCH_ASSOC);
+try {
+    $stmt = $pdo->prepare($sql);
+    $stmt->execute($params);
+    $events = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Get formats for filter - only formats that have upcoming events
-$formatStmt = $pdo->query("
-    SELECT DISTINCT discipline
-    FROM events
-    WHERE date >= CURDATE() AND active = 1 AND discipline IS NOT NULL AND discipline != ''
-    ORDER BY discipline
-");
-$formatList = $formatStmt->fetchAll(PDO::FETCH_ASSOC);
+    // Get series for filter - only series that have upcoming events (color from brand)
+    $seriesStmt = $pdo->query("
+        SELECT DISTINCT s.id, s.name, sb.accent_color
+        FROM series s
+        LEFT JOIN series_brands sb ON s.brand_id = sb.id
+        INNER JOIN events e ON s.id = e.series_id
+        WHERE e.date >= CURDATE() AND e.active = 1 AND s.active = 1
+        ORDER BY s.name
+    ");
+    $seriesList = $seriesStmt->fetchAll(PDO::FETCH_ASSOC);
+
+    // Get formats for filter - only formats that have upcoming events
+    $formatStmt = $pdo->query("
+        SELECT DISTINCT discipline
+        FROM events
+        WHERE date >= CURDATE() AND active = 1 AND discipline IS NOT NULL AND discipline != ''
+        ORDER BY discipline
+    ");
+    $formatList = $formatStmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (PDOException $e) {
+    // Database error - show empty state
+    error_log("Calendar index database error: " . $e->getMessage());
+}
 
 // Format display names
 $formatNames = [

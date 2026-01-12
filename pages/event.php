@@ -116,10 +116,14 @@ try {
     }
 
     // Fetch global texts for use_global functionality
-    $globalTexts = $db->query("SELECT field_key, content FROM global_texts WHERE is_active = 1")->fetchAll(PDO::FETCH_ASSOC);
     $globalTextMap = [];
-    foreach ($globalTexts as $gt) {
-        $globalTextMap[$gt['field_key']] = $gt['content'];
+    try {
+        $globalTexts = $db->query("SELECT field_key, content FROM global_texts WHERE is_active = 1")->fetchAll(PDO::FETCH_ASSOC);
+        foreach ($globalTexts as $gt) {
+            $globalTextMap[$gt['field_key']] = $gt['content'];
+        }
+    } catch (PDOException $e) {
+        // Table might not exist yet
     }
 
     // Check for interactive map (GPX data)
