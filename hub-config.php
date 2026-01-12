@@ -38,6 +38,7 @@ if (!defined('HUB_URL')) define('HUB_URL', '');
 // Backward compatibility aliases (will be removed in future versions)
 if (!defined('HUB_V3_ROOT')) define('HUB_V3_ROOT', HUB_ROOT);
 if (!defined('HUB_V3_URL')) define('HUB_V3_URL', HUB_URL);
+if (!defined('HUB_V2_ROOT')) define('HUB_V2_ROOT', HUB_ROOT);
 
 // WooCommerce integration
 if (!defined('WC_CHECKOUT_URL')) define('WC_CHECKOUT_URL', '/checkout');
