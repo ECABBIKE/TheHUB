@@ -779,18 +779,31 @@ try {
         });
     }
 
-    // Fetch registrations
+    // Fetch registrations with class info
     $registrations = $db->prepare("
-        SELECT reg.*, r.firstname, r.lastname, c.name as club_name
+        SELECT reg.*, r.firstname, r.lastname, c.name as club_name,
+               COALESCE(cl.display_name, cl.name, reg.category) as class_name,
+               cl.sort_order as class_sort_order
         FROM event_registrations reg
         LEFT JOIN riders r ON reg.rider_id = r.id
         LEFT JOIN clubs c ON r.club_id = c.id
-        WHERE reg.event_id = ?
-        ORDER BY reg.registration_date ASC
+        LEFT JOIN classes cl ON cl.name = reg.category OR cl.id = reg.class_id
+        WHERE reg.event_id = ? AND reg.status != 'cancelled'
+        ORDER BY cl.sort_order ASC, cl.name ASC, reg.registration_date ASC
     ");
     $registrations->execute([$eventId]);
     $registrations = $registrations->fetchAll(PDO::FETCH_ASSOC);
     $totalRegistrations = count($registrations);
+
+    // Group registrations by class
+    $registrationsByClass = [];
+    foreach ($registrations as $reg) {
+        $className = $reg['class_name'] ?: $reg['category'] ?: 'Okänd klass';
+        if (!isset($registrationsByClass[$className])) {
+            $registrationsByClass[$className] = [];
+        }
+        $registrationsByClass[$className][] = $reg;
+    }
 
     // Check if event is in the past
     $eventDate = strtotime($event['date']);
@@ -2097,44 +2110,52 @@ render_event_map($eventId, $db, [
         </h2>
     </div>
     <div class="card-body">
-        <?php if (empty($registrations)): ?>
+        <?php if (empty($registrationsByClass)): ?>
             <p class="text-muted">Inga anmälningar ännu.</p>
         <?php else: ?>
-        <div class="table-wrapper">
-            <table class="table table--striped">
-                <thead>
-                    <tr>
-                        <th>#</th>
-                        <th>Namn</th>
-                        <th>Klubb</th>
-                        <th>Status</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php foreach ($registrations as $index => $reg): ?>
-                    <tr>
-                        <td><?= $index + 1 ?></td>
-                        <td><strong><?= h($reg['firstname'] . ' ' . $reg['lastname']) ?></strong></td>
-                        <td><?= h($reg['club_name'] ?? '-') ?></td>
-                        <td>
-                            <?php
-                            $statusClass = 'badge--secondary';
-                            $statusText = ucfirst($reg['status']);
-                            if ($reg['status'] === 'confirmed') {
-                                $statusClass = 'badge--success';
-                                $statusText = 'Bekräftad';
-                            } elseif ($reg['status'] === 'pending') {
-                                $statusClass = 'badge--warning';
-                                $statusText = 'Väntande';
-                            }
-                            ?>
-                            <span class="badge <?= $statusClass ?>"><?= $statusText ?></span>
-                        </td>
-                    </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
+        <?php foreach ($registrationsByClass as $className => $classRegs): ?>
+        <div class="reg-class-group mb-lg">
+            <h3 class="reg-class-group__title">
+                <?= h($className) ?>
+                <span class="badge badge--neutral ml-sm"><?= count($classRegs) ?></span>
+            </h3>
+            <div class="table-wrapper">
+                <table class="table table--striped table--compact">
+                    <thead>
+                        <tr>
+                            <th style="width:40px">#</th>
+                            <th>Namn</th>
+                            <th>Klubb</th>
+                            <th style="width:100px">Status</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($classRegs as $index => $reg): ?>
+                        <tr>
+                            <td class="text-muted"><?= $index + 1 ?></td>
+                            <td><strong><?= h(($reg['firstname'] ?? $reg['first_name'] ?? '') . ' ' . ($reg['lastname'] ?? $reg['last_name'] ?? '')) ?></strong></td>
+                            <td class="text-secondary"><?= h($reg['club_name'] ?? '-') ?></td>
+                            <td>
+                                <?php
+                                $statusClass = 'badge--secondary';
+                                $statusText = ucfirst($reg['status'] ?? 'pending');
+                                if ($reg['status'] === 'confirmed' || $reg['payment_status'] === 'paid') {
+                                    $statusClass = 'badge--success';
+                                    $statusText = 'Betald';
+                                } elseif ($reg['status'] === 'pending') {
+                                    $statusClass = 'badge--warning';
+                                    $statusText = 'Väntande';
+                                }
+                                ?>
+                                <span class="badge <?= $statusClass ?>"><?= $statusText ?></span>
+                            </td>
+                        </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
         </div>
+        <?php endforeach; ?>
         <?php endif; ?>
     </div>
 </section>
@@ -2553,6 +2574,38 @@ if (!empty($event['series_id'])) {
     .reg-create-rider__fields {
         grid-template-columns: 1fr;
     }
+}
+
+/* Registered participants by class */
+.reg-class-group {
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+}
+
+.reg-class-group__title {
+    background: var(--color-bg-surface);
+    padding: var(--space-sm) var(--space-md);
+    margin: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    border-bottom: 1px solid var(--color-border);
+}
+
+.reg-class-group .table-wrapper {
+    margin: 0;
+}
+
+.reg-class-group .table {
+    margin: 0;
+}
+
+.table--compact th,
+.table--compact td {
+    padding: var(--space-xs) var(--space-sm);
 }
 </style>
 
