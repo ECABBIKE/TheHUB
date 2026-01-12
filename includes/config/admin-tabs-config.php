@@ -72,7 +72,7 @@ $ADMIN_TABS = [
                 'label' => 'Serier',
                 'icon' => 'award',
                 'url' => '/admin/series.php',
-                'pages' => ['series.php', 'series-events.php', 'series-pricing.php']
+                'pages' => ['series.php', 'series-events.php', 'series-pricing.php', 'series-manage.php', 'series-edit.php']
             ],
             [
                 'id' => 'ranking',
@@ -151,6 +151,7 @@ $ADMIN_TABS = [
                     'payment-recipients.php',
                     'gateway-settings.php',
                     'certificates.php',
+                    'swish-accounts.php',
                     // Event-specifika
                     'event-payment.php',
                     'event-orders.php',

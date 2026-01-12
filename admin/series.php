@@ -475,16 +475,9 @@ include __DIR__ . '/components/unified-layout.php';
                                 </td>
                                 <td>
                                     <div class="table-actions">
-                                        <?php if ($seriesEventsTableExists): ?>
-                                            <a href="/admin/series/events?series_id=<?= $serie['id'] ?>" class="btn-admin btn-admin-sm btn-admin-secondary" title="Hantera events">
-                                                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>
-                                            </a>
-                                        <?php endif; ?>
-                                        <a href="/admin/series/pricing?id=<?= $serie['id'] ?>" class="btn-admin btn-admin-sm btn-admin-secondary" title="Anmälan & Priser">
-                                            <i data-lucide="clipboard-list"></i>
-                                        </a>
-                                        <a href="/admin/series/edit/<?= $serie['id'] ?>" class="btn-admin btn-admin-sm btn-admin-secondary" title="Redigera">
-                                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
+                                        <a href="/admin/series/manage/<?= $serie['id'] ?>" class="btn-admin btn-admin-sm btn-admin-primary" title="Hantera serie">
+                                            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
+                                            Hantera
                                         </a>
                                         <?php if (!$isPromotorOnly): ?>
                                         <button onclick="deleteSeries(<?= $serie['id'] ?>, '<?= addslashes($serie['name']) ?>')" class="btn-admin btn-admin-sm btn-admin-danger" title="Ta bort">
