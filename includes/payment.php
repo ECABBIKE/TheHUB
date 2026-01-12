@@ -482,10 +482,18 @@ function markOrderPaid(int $orderId, string $paymentReference = ''): bool {
             return false;
         }
 
-        // Update linked registrations
+        // Update linked event registrations
         $stmt = $pdo->prepare("
             UPDATE event_registrations
             SET payment_status = 'paid', status = 'confirmed', confirmed_date = NOW()
+            WHERE order_id = ?
+        ");
+        $stmt->execute([$orderId]);
+
+        // Update linked series registrations
+        $stmt = $pdo->prepare("
+            UPDATE series_registrations
+            SET payment_status = 'paid', status = 'confirmed', paid_at = NOW()
             WHERE order_id = ?
         ");
         $stmt->execute([$orderId]);
@@ -500,15 +508,198 @@ function markOrderPaid(int $orderId, string $paymentReference = ''): bool {
 }
 
 /**
+ * Create order for series registration
+ *
+ * @param int $seriesRegistrationId Series registration ID
+ * @param int $riderId Rider ID
+ * @return array Order data
+ */
+function createSeriesOrder(int $seriesRegistrationId, int $riderId): array {
+    $pdo = hub_db();
+
+    // Get series registration
+    $stmt = $pdo->prepare("
+        SELECT sr.*, s.name as series_name, s.id as series_id,
+               c.name as class_name, c.display_name as class_display_name
+        FROM series_registrations sr
+        JOIN series s ON sr.series_id = s.id
+        JOIN classes c ON sr.class_id = c.id
+        WHERE sr.id = ?
+    ");
+    $stmt->execute([$seriesRegistrationId]);
+    $registration = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$registration) {
+        throw new Exception('Series registration not found');
+    }
+
+    // Check if order already exists
+    if (!empty($registration['order_id'])) {
+        $existingOrder = getOrder($registration['order_id']);
+        if ($existingOrder) {
+            return [
+                'success' => true,
+                'order_id' => $registration['order_id'],
+                'order_number' => $existingOrder['order_number'],
+                'existing' => true
+            ];
+        }
+    }
+
+    // Get rider info
+    $stmt = $pdo->prepare("SELECT firstname, lastname, email FROM riders WHERE id = ?");
+    $stmt->execute([$riderId]);
+    $rider = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$rider) {
+        throw new Exception('Rider not found');
+    }
+
+    // Get payment config for series (use first event or series config)
+    $paymentConfig = null;
+    try {
+        // Try to get payment recipient from series
+        $stmt = $pdo->prepare("
+            SELECT pr.*, 'series_recipient' as config_source, s.name as source_name, 1 as swish_enabled
+            FROM series s
+            JOIN payment_recipients pr ON s.payment_recipient_id = pr.id
+            WHERE s.id = ? AND pr.active = 1
+        ");
+        $stmt->execute([$registration['series_id']]);
+        $paymentConfig = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        // Fallback: try first event in series
+        if (!$paymentConfig) {
+            $stmt = $pdo->prepare("
+                SELECT e.id FROM events e
+                WHERE e.series_id = ?
+                ORDER BY e.date ASC LIMIT 1
+            ");
+            $stmt->execute([$registration['series_id']]);
+            $firstEventId = $stmt->fetchColumn();
+            if ($firstEventId) {
+                $paymentConfig = getPaymentConfig($firstEventId);
+            }
+        }
+    } catch (Exception $e) {}
+
+    // Generate order
+    $subtotal = $registration['final_price'];
+    $total = $subtotal;
+    $orderNumber = generateOrderNumber();
+    $swishMessage = substr($orderNumber, 4);
+
+    $pdo->beginTransaction();
+
+    try {
+        // Create order (series_id instead of event_id)
+        $stmt = $pdo->prepare("
+            INSERT INTO orders (
+                order_number, rider_id, customer_email, customer_name,
+                series_id, subtotal, discount, total_amount, currency,
+                payment_method, payment_status,
+                swish_number, swish_message,
+                expires_at, created_at
+            ) VALUES (
+                ?, ?, ?, ?,
+                ?, ?, 0, ?, 'SEK',
+                'swish', 'pending',
+                ?, ?,
+                DATE_ADD(NOW(), INTERVAL 24 HOUR), NOW()
+            )
+        ");
+        $stmt->execute([
+            $orderNumber,
+            $riderId,
+            $rider['email'],
+            $rider['firstname'] . ' ' . $rider['lastname'],
+            $registration['series_id'],
+            $subtotal,
+            $total,
+            $paymentConfig['swish_number'] ?? null,
+            $swishMessage
+        ]);
+
+        $orderId = $pdo->lastInsertId();
+
+        // Create order item
+        $description = $registration['series_name'] . ' - Serie-pass - ' .
+                       ($registration['class_display_name'] ?: $registration['class_name']);
+
+        $stmt = $pdo->prepare("
+            INSERT INTO order_items (
+                order_id, item_type, series_registration_id,
+                description, unit_price, quantity, total_price
+            ) VALUES (?, 'series_registration', ?, ?, ?, 1, ?)
+        ");
+        $stmt->execute([
+            $orderId,
+            $seriesRegistrationId,
+            $description,
+            $subtotal,
+            $subtotal
+        ]);
+
+        // Update series registration with order_id
+        $stmt = $pdo->prepare("
+            UPDATE series_registrations SET order_id = ? WHERE id = ?
+        ");
+        $stmt->execute([$orderId, $seriesRegistrationId]);
+
+        $pdo->commit();
+
+        // Generate Swish links
+        $swishUrl = null;
+        $swishQR = null;
+
+        if ($paymentConfig && !empty($paymentConfig['swish_number'])) {
+            $swishUrl = generateSwishUrl(
+                $paymentConfig['swish_number'],
+                $total,
+                $swishMessage
+            );
+            $swishQR = generateSwishQR(
+                $paymentConfig['swish_number'],
+                $total,
+                $swishMessage
+            );
+        }
+
+        return [
+            'success' => true,
+            'order_id' => $orderId,
+            'order_number' => $orderNumber,
+            'subtotal' => $subtotal,
+            'discount' => 0,
+            'total' => $total,
+            'swish_available' => $swishUrl !== null,
+            'swish_url' => $swishUrl,
+            'swish_qr' => $swishQR,
+            'swish_number' => $paymentConfig['swish_number'] ?? null,
+            'swish_name' => $paymentConfig['swish_name'] ?? null,
+            'swish_message' => $swishMessage,
+            'card_available' => false
+        ];
+
+    } catch (Exception $e) {
+        $pdo->rollBack();
+        throw $e;
+    }
+}
+
+/**
  * Get order by ID
  */
 function getOrder(int $orderId): ?array {
     $pdo = hub_db();
 
     $stmt = $pdo->prepare("
-        SELECT o.*, e.name as event_name, e.date as event_date
+        SELECT o.*,
+               e.name as event_name, e.date as event_date,
+               s.name as series_name, s.logo as series_logo
         FROM orders o
         LEFT JOIN events e ON o.event_id = e.id
+        LEFT JOIN series s ON o.series_id = s.id
         WHERE o.id = ?
     ");
     $stmt->execute([$orderId]);

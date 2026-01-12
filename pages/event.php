@@ -803,7 +803,21 @@ try {
         $deadlineTime = !empty($event['registration_deadline_time']) ? $event['registration_deadline_time'] : '23:59:59';
         $registrationDeadline = strtotime($deadlineDate . ' ' . $deadlineTime);
     }
-    $registrationOpen = $registrationDeadline && $registrationDeadline >= time();
+
+    // Registration is only "open" if deadline is set, hasn't passed, AND pricing is configured
+    $hasPricingRules = false;
+    try {
+        $priceCheck = $db->prepare("SELECT COUNT(*) as cnt FROM event_pricing_rules WHERE event_id = ?");
+        $priceCheck->execute([$eventId]);
+        $priceRow = $priceCheck->fetch(PDO::FETCH_ASSOC);
+        $hasPricingRules = ($priceRow && $priceRow['cnt'] > 0);
+    } catch (Exception $e) {
+        $hasPricingRules = false;
+    }
+
+    // Registration tab is shown if: has pricing rules AND either has valid deadline OR has external URL
+    $registrationConfigured = $hasPricingRules || !empty($event['registration_url']);
+    $registrationOpen = $registrationConfigured && ($registrationDeadline === null || $registrationDeadline >= time());
 
     // Check publish dates for starttider, karta and PM
     $starttiderPublished = empty($event['starttider_publish_at']) || strtotime($event['starttider_publish_at']) <= time();
@@ -2148,6 +2162,247 @@ render_event_map($eventId, $db, [
 
 <?php elseif ($activeTab === 'anmalan'): ?>
 <!-- REGISTRATION TAB -->
+<?php
+// Load registration-related data
+$currentUser = hub_current_user();
+$isLoggedIn = hub_is_logged_in();
+
+// Get pricing info for this event
+$eventPricing = [];
+try {
+    $pricingStmt = $db->prepare("
+        SELECT epr.class_id, epr.base_price, epr.early_bird_price, epr.late_fee,
+               c.name as class_name, c.display_name, c.gender, c.min_age, c.max_age
+        FROM event_pricing_rules epr
+        JOIN classes c ON epr.class_id = c.id
+        WHERE epr.event_id = ?
+        ORDER BY c.sort_order, c.name
+    ");
+    $pricingStmt->execute([$eventId]);
+    $eventPricing = $pricingStmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (PDOException $e) {
+    // Pricing rules might not exist
+}
+
+// Check early bird / late fee status
+$now = time();
+$isEarlyBird = false;
+$isLateFee = false;
+$earlyBirdDeadline = null;
+$lateFeeStart = null;
+
+if (!empty($event['early_bird_deadline'])) {
+    $earlyBirdDeadline = strtotime($event['early_bird_deadline']);
+    $isEarlyBird = $now < $earlyBirdDeadline;
+}
+if (!empty($event['late_fee_start'])) {
+    $lateFeeStart = strtotime($event['late_fee_start']);
+    $isLateFee = $now >= $lateFeeStart;
+}
+
+// Check if user already registered
+$existingRegistration = null;
+if ($isLoggedIn && $currentUser) {
+    try {
+        $checkStmt = $db->prepare("
+            SELECT er.*, c.name as class_name
+            FROM event_registrations er
+            LEFT JOIN classes c ON er.class_id = c.id
+            WHERE er.event_id = ? AND er.rider_id = ? AND er.status != 'cancelled'
+        ");
+        $checkStmt->execute([$eventId, $currentUser['id']]);
+        $existingRegistration = $checkStmt->fetch(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {}
+}
+
+// Get eligible classes if user is logged in
+$eligibleClasses = [];
+if ($isLoggedIn && $currentUser && !$existingRegistration) {
+    require_once HUB_V2_ROOT . '/includes/registration-validator.php';
+    $eligibleClasses = getEligibleClasses($db, $eventId, $currentUser['id']);
+}
+
+// Check if event is part of a series with series registration
+$seriesPassAvailable = false;
+$seriesInfo = null;
+if (!empty($event['series_id'])) {
+    try {
+        $seriesStmt = $db->prepare("
+            SELECT s.id, s.name, s.logo, s.allow_series_registration,
+                   s.series_discount_percent, s.registration_opens, s.registration_closes
+            FROM series s
+            WHERE s.id = ? AND s.allow_series_registration = 1
+        ");
+        $seriesStmt->execute([$event['series_id']]);
+        $seriesInfo = $seriesStmt->fetch(PDO::FETCH_ASSOC);
+        if ($seriesInfo) {
+            $seriesOpen = true;
+            if ($seriesInfo['registration_opens'] && strtotime($seriesInfo['registration_opens']) > $now) {
+                $seriesOpen = false;
+            }
+            if ($seriesInfo['registration_closes'] && strtotime($seriesInfo['registration_closes']) < $now) {
+                $seriesOpen = false;
+            }
+            $seriesPassAvailable = $seriesOpen;
+        }
+    } catch (PDOException $e) {}
+}
+?>
+
+<style>
+/* Registration form styles - mobile first */
+.reg-form {
+    display: grid;
+    gap: var(--space-md);
+}
+
+.reg-class-list {
+    display: grid;
+    gap: var(--space-sm);
+}
+
+.reg-class-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    padding: var(--space-md);
+    background: var(--color-bg-surface);
+    border: 2px solid var(--color-border);
+    border-radius: var(--radius-md);
+    cursor: pointer;
+    transition: all 0.2s ease;
+}
+
+.reg-class-item:hover {
+    border-color: var(--color-accent);
+}
+
+.reg-class-item.selected {
+    border-color: var(--color-accent);
+    background: var(--color-accent-light);
+}
+
+.reg-class-item.disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.reg-class-radio {
+    width: 20px;
+    height: 20px;
+    flex-shrink: 0;
+}
+
+.reg-class-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.reg-class-name {
+    font-weight: 600;
+    color: var(--color-text-primary);
+}
+
+.reg-class-desc {
+    font-size: 0.875rem;
+    color: var(--color-text-muted);
+}
+
+.reg-class-price {
+    text-align: right;
+    flex-shrink: 0;
+}
+
+.reg-class-price__current {
+    font-weight: 700;
+    font-size: 1.125rem;
+    color: var(--color-accent);
+}
+
+.reg-class-price__original {
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+    text-decoration: line-through;
+}
+
+.reg-series-upsell {
+    background: linear-gradient(135deg, var(--color-accent-light) 0%, var(--color-bg-surface) 100%);
+    border: 1px solid var(--color-accent);
+    border-radius: var(--radius-md);
+    padding: var(--space-md);
+    margin-top: var(--space-md);
+}
+
+.reg-series-upsell__header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    margin-bottom: var(--space-sm);
+}
+
+.reg-series-upsell__logo {
+    width: 40px;
+    height: 40px;
+    object-fit: contain;
+}
+
+.reg-series-upsell__title {
+    font-weight: 600;
+    color: var(--color-text-primary);
+}
+
+.reg-series-upsell__savings {
+    font-size: 0.875rem;
+    color: var(--color-success);
+    font-weight: 600;
+}
+
+.reg-summary {
+    background: var(--color-bg-surface);
+    border-radius: var(--radius-md);
+    padding: var(--space-md);
+    margin-top: var(--space-md);
+}
+
+.reg-summary__row {
+    display: flex;
+    justify-content: space-between;
+    padding: var(--space-xs) 0;
+}
+
+.reg-summary__total {
+    border-top: 1px solid var(--color-border);
+    padding-top: var(--space-sm);
+    margin-top: var(--space-sm);
+    font-weight: 700;
+    font-size: 1.25rem;
+}
+
+.reg-existing {
+    padding: var(--space-lg);
+    text-align: center;
+}
+
+.reg-existing__icon {
+    width: 48px;
+    height: 48px;
+    color: var(--color-success);
+    margin-bottom: var(--space-md);
+}
+
+@media (max-width: 767px) {
+    .reg-class-item {
+        flex-wrap: wrap;
+    }
+    .reg-class-price {
+        width: 100%;
+        text-align: left;
+        margin-top: var(--space-xs);
+        padding-left: 36px;
+    }
+}
+</style>
+
 <section class="card">
     <div class="card-header">
         <h2 class="card-title"><i data-lucide="user-plus"></i> Anmälan</h2>
@@ -2160,14 +2415,253 @@ render_event_map($eventId, $db, [
                 <p>Anmälan stängde <?= date('j F Y', strtotime($event['registration_deadline'])) ?>.</p>
                 <?php endif; ?>
             </div>
+
         <?php elseif (!empty($event['registration_url'])): ?>
             <p>Anmälan sker via extern länk:</p>
             <a href="<?= h($event['registration_url']) ?>" target="_blank" class="btn btn--primary mt-md">
                 <i data-lucide="external-link"></i>
                 Gå till anmälan
             </a>
+
+        <?php elseif (!$isLoggedIn): ?>
+            <!-- Not logged in -->
+            <div class="text-center py-lg">
+                <i data-lucide="log-in" style="width:48px;height:48px;color:var(--color-text-muted);margin-bottom:var(--space-md);"></i>
+                <h3 class="mb-sm">Logga in för att anmäla dig</h3>
+                <p class="text-secondary mb-lg">Du måste vara inloggad för att kunna anmäla dig till eventet.</p>
+                <a href="/login?redirect=<?= urlencode('/event/' . $eventId . '?tab=anmalan') ?>" class="btn btn--primary">
+                    <i data-lucide="log-in"></i>
+                    Logga in
+                </a>
+                <p class="text-sm text-muted mt-md">
+                    Har du inget konto? <a href="/register?redirect=<?= urlencode('/event/' . $eventId . '?tab=anmalan') ?>">Registrera dig här</a>
+                </p>
+            </div>
+
+        <?php elseif ($existingRegistration): ?>
+            <!-- Already registered -->
+            <div class="reg-existing">
+                <i data-lucide="check-circle" class="reg-existing__icon"></i>
+                <h3 class="mb-sm">Du är anmäld!</h3>
+                <p class="text-secondary mb-md">
+                    Du är anmäld i <strong><?= h($existingRegistration['class_name'] ?: $existingRegistration['category']) ?></strong>
+                </p>
+                <?php if ($existingRegistration['payment_status'] !== 'paid'): ?>
+                    <div class="alert alert--warning mb-md">
+                        <i data-lucide="credit-card"></i>
+                        Betalning saknas. <a href="/checkout?registration=<?= $existingRegistration['id'] ?>">Betala nu</a>
+                    </div>
+                <?php else: ?>
+                    <span class="badge badge-success">Betald</span>
+                <?php endif; ?>
+                <div class="mt-lg">
+                    <a href="/profile/tickets" class="btn btn--ghost">
+                        <i data-lucide="ticket"></i>
+                        Mina biljetter
+                    </a>
+                </div>
+            </div>
+
+        <?php elseif (empty($eventPricing)): ?>
+            <div class="alert alert--info">
+                <i data-lucide="info"></i>
+                Priserna för detta event är inte konfigurerade ännu. Kontakta arrangören.
+            </div>
+
         <?php else: ?>
-            <p class="text-muted">Anmälningssystemet är inte konfigurerat för detta event ännu.</p>
+            <!-- Registration form -->
+            <form class="reg-form" id="registrationForm">
+                <?php if ($isEarlyBird): ?>
+                    <div class="alert alert--success">
+                        <i data-lucide="clock"></i>
+                        <strong>Early Bird!</strong> Boka före <?= date('j M', $earlyBirdDeadline) ?> och spara pengar.
+                    </div>
+                <?php elseif ($isLateFee): ?>
+                    <div class="alert alert--warning">
+                        <i data-lucide="alert-triangle"></i>
+                        <strong>Efteranmälan</strong> - extra avgift tillkommer.
+                    </div>
+                <?php endif; ?>
+
+                <div>
+                    <label class="form-label">Välj klass</label>
+                    <div class="reg-class-list">
+                        <?php foreach ($eventPricing as $class):
+                            // Calculate price based on timing
+                            $basePrice = $class['base_price'];
+                            $currentPrice = $basePrice;
+                            $originalPrice = null;
+
+                            if ($isEarlyBird && $class['early_bird_price']) {
+                                $currentPrice = $class['early_bird_price'];
+                                $originalPrice = $basePrice;
+                            } elseif ($isLateFee && $class['late_fee']) {
+                                $currentPrice = $basePrice + $class['late_fee'];
+                            }
+
+                            // Check eligibility
+                            $isEligible = false;
+                            foreach ($eligibleClasses as $ec) {
+                                if ($ec['class_id'] == $class['class_id']) {
+                                    $isEligible = true;
+                                    break;
+                                }
+                            }
+
+                            $classDesc = [];
+                            if ($class['gender'] === 'M') $classDesc[] = 'Herrar';
+                            if ($class['gender'] === 'F') $classDesc[] = 'Damer';
+                            if ($class['min_age'] || $class['max_age']) {
+                                if ($class['min_age'] && $class['max_age']) {
+                                    $classDesc[] = $class['min_age'] . '-' . $class['max_age'] . ' år';
+                                } elseif ($class['min_age']) {
+                                    $classDesc[] = $class['min_age'] . '+ år';
+                                } elseif ($class['max_age']) {
+                                    $classDesc[] = 'max ' . $class['max_age'] . ' år';
+                                }
+                            }
+                        ?>
+                        <label class="reg-class-item <?= !$isEligible ? 'disabled' : '' ?>" data-price="<?= $currentPrice ?>">
+                            <input type="radio" name="class_id" value="<?= $class['class_id'] ?>"
+                                   class="reg-class-radio"
+                                   <?= !$isEligible ? 'disabled' : '' ?>
+                                   data-price="<?= $currentPrice ?>"
+                                   data-name="<?= h($class['display_name'] ?: $class['class_name']) ?>">
+                            <div class="reg-class-info">
+                                <div class="reg-class-name"><?= h($class['display_name'] ?: $class['class_name']) ?></div>
+                                <?php if (!empty($classDesc)): ?>
+                                    <div class="reg-class-desc"><?= implode(' &middot; ', $classDesc) ?></div>
+                                <?php endif; ?>
+                                <?php if (!$isEligible): ?>
+                                    <div class="reg-class-desc text-warning">Ej valbar för din profil</div>
+                                <?php endif; ?>
+                            </div>
+                            <div class="reg-class-price">
+                                <div class="reg-class-price__current"><?= number_format($currentPrice, 0, ',', ' ') ?> kr</div>
+                                <?php if ($originalPrice): ?>
+                                    <div class="reg-class-price__original"><?= number_format($originalPrice, 0, ',', ' ') ?> kr</div>
+                                <?php endif; ?>
+                            </div>
+                        </label>
+                        <?php endforeach; ?>
+                    </div>
+                </div>
+
+                <?php if ($seriesPassAvailable && $seriesInfo): ?>
+                <div class="reg-series-upsell">
+                    <div class="reg-series-upsell__header">
+                        <?php if ($seriesInfo['logo']): ?>
+                            <img src="<?= h($seriesInfo['logo']) ?>" alt="" class="reg-series-upsell__logo">
+                        <?php endif; ?>
+                        <div>
+                            <div class="reg-series-upsell__title">Köp Serie-pass istället?</div>
+                            <div class="reg-series-upsell__savings">
+                                <i data-lucide="tag"></i>
+                                Spara <?= $seriesInfo['series_discount_percent'] ?>% på alla event
+                            </div>
+                        </div>
+                    </div>
+                    <p class="text-sm text-secondary mb-sm">
+                        Med ett serie-pass för <?= h($seriesInfo['name']) ?> får du tillgång till alla säsongens event till rabatterat pris.
+                    </p>
+                    <a href="/register/series?id=<?= $seriesInfo['id'] ?>" class="btn btn--outline btn--sm">
+                        <i data-lucide="ticket"></i>
+                        Se serie-pass
+                    </a>
+                </div>
+                <?php endif; ?>
+
+                <div class="reg-summary" id="regSummary" style="display:none;">
+                    <div class="reg-summary__row">
+                        <span>Startavgift</span>
+                        <span id="summaryClassName">-</span>
+                    </div>
+                    <div class="reg-summary__row reg-summary__total">
+                        <span>Att betala</span>
+                        <span id="summaryTotal">0 kr</span>
+                    </div>
+                </div>
+
+                <button type="submit" class="btn btn--primary btn--lg" id="submitBtn" disabled>
+                    <i data-lucide="credit-card"></i>
+                    Gå till betalning
+                </button>
+            </form>
+
+            <script>
+            (function() {
+                const form = document.getElementById('registrationForm');
+                const summary = document.getElementById('regSummary');
+                const submitBtn = document.getElementById('submitBtn');
+                const classRadios = form.querySelectorAll('input[name="class_id"]');
+
+                // Handle class selection
+                classRadios.forEach(radio => {
+                    radio.addEventListener('change', function() {
+                        // Update visual selection
+                        document.querySelectorAll('.reg-class-item').forEach(item => {
+                            item.classList.remove('selected');
+                        });
+                        this.closest('.reg-class-item').classList.add('selected');
+
+                        // Update summary
+                        const price = parseInt(this.dataset.price);
+                        const className = this.dataset.name;
+                        document.getElementById('summaryClassName').textContent = className;
+                        document.getElementById('summaryTotal').textContent = price.toLocaleString('sv-SE') + ' kr';
+                        summary.style.display = 'block';
+                        submitBtn.disabled = false;
+                    });
+                });
+
+                // Handle form submit
+                form.addEventListener('submit', async function(e) {
+                    e.preventDefault();
+
+                    const selectedClass = form.querySelector('input[name="class_id"]:checked');
+                    if (!selectedClass) {
+                        alert('Välj en klass');
+                        return;
+                    }
+
+                    submitBtn.disabled = true;
+                    submitBtn.innerHTML = '<i data-lucide="loader-2" class="spin"></i> Bearbetar...';
+                    if (typeof lucide !== 'undefined') lucide.createIcons();
+
+                    try {
+                        const response = await fetch('/api/registration.php', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                event_id: <?= $eventId ?>,
+                                participants: [{
+                                    rider_id: <?= $currentUser['id'] ?? 0 ?>,
+                                    class_id: parseInt(selectedClass.value),
+                                    price: parseInt(selectedClass.dataset.price)
+                                }]
+                            })
+                        });
+
+                        const data = await response.json();
+
+                        if (data.success) {
+                            window.location.href = data.checkout_url;
+                        } else {
+                            alert(data.errors ? data.errors.join('\n') : data.error || 'Ett fel uppstod');
+                            submitBtn.disabled = false;
+                            submitBtn.innerHTML = '<i data-lucide="credit-card"></i> Gå till betalning';
+                            if (typeof lucide !== 'undefined') lucide.createIcons();
+                        }
+                    } catch (error) {
+                        console.error('Registration error:', error);
+                        alert('Ett fel uppstod. Försök igen.');
+                        submitBtn.disabled = false;
+                        submitBtn.innerHTML = '<i data-lucide="credit-card"></i> Gå till betalning';
+                        if (typeof lucide !== 'undefined') lucide.createIcons();
+                    }
+                });
+            })();
+            </script>
         <?php endif; ?>
     </div>
 </section>
