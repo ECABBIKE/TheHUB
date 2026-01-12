@@ -13,14 +13,114 @@
 }
 
 /* ========================================================================
-   ADMIN SIDEBAR - Fix hårdkodade färger och matcha publik sidebar
+   SIDEBAR - Enhetlig design för BÅDE admin och publik
+   Sidebar använder .sidebar-link med .is-active klass
    ======================================================================== */
+
+/* Sidebar container - samma för alla */
+.sidebar,
 .admin-sidebar {
     background: var(--color-bg-card) !important;
     border-right: 1px solid var(--color-border) !important;
 }
 
-/* Nav item - matcha .sidebar-link från public */
+/* Sidebar link - grundstil */
+.sidebar-link {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: 2px;
+    padding: var(--space-sm) var(--space-xs);
+    color: var(--color-text-secondary) !important;
+    text-decoration: none;
+    border-radius: var(--radius-md);
+    transition: all 0.2s ease;
+    position: relative;
+}
+
+.sidebar-link:hover {
+    background: var(--color-bg-hover) !important;
+    color: var(--color-text-primary) !important;
+}
+
+.sidebar-link:hover .sidebar-icon-svg,
+.sidebar-link:hover svg {
+    color: var(--color-text-primary) !important;
+}
+
+/* Active state - .is-active klass */
+.sidebar-link.is-active,
+.sidebar-link[aria-current="page"] {
+    background: var(--color-accent-light) !important;
+    color: var(--color-accent-text) !important;
+}
+
+.sidebar-link.is-active .sidebar-icon-svg,
+.sidebar-link.is-active svg,
+.sidebar-link[aria-current="page"] .sidebar-icon-svg,
+.sidebar-link[aria-current="page"] svg {
+    color: var(--color-accent-text) !important;
+}
+
+/* Active indicator bar */
+.sidebar-link.is-active::before,
+.sidebar-link[aria-current="page"]::before {
+    content: '';
+    position: absolute;
+    left: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    width: 3px;
+    height: 24px;
+    background: var(--color-accent) !important;
+    border-radius: 0 2px 2px 0;
+}
+
+/* Sidebar icon */
+.sidebar-icon,
+.sidebar-icon-svg {
+    width: 22px;
+    height: 22px;
+    color: inherit;
+}
+
+/* Sidebar label */
+.sidebar-label {
+    display: block;
+    font-size: 10px;
+    font-weight: var(--weight-medium);
+    line-height: 1.2;
+    text-align: center;
+    color: inherit;
+}
+
+/* Section title */
+.sidebar-section-title {
+    font-size: 9px;
+    font-weight: var(--weight-semibold);
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    padding: var(--space-xs) var(--space-sm);
+    text-align: center;
+}
+
+/* Divider */
+.sidebar-divider {
+    height: 1px;
+    background: var(--color-border) !important;
+    margin: var(--space-xs) var(--space-sm);
+}
+
+/* Admin link accent color */
+.sidebar-link--admin {
+    color: var(--color-accent-text) !important;
+}
+
+/* ========================================================================
+   LEGACY: .nav-item stöd (för bakåtkompatibilitet)
+   ======================================================================== */
 .nav-item {
     color: var(--color-text-secondary) !important;
     border-radius: var(--radius-md);
@@ -37,7 +137,6 @@
     color: var(--color-text-primary) !important;
 }
 
-/* Active state - FIX hårdkodad orange (rgba(245, 158, 11, 0.15)) till cyan */
 .nav-item.active {
     background: var(--color-accent-light) !important;
     color: var(--color-accent-text) !important;
@@ -47,22 +146,18 @@
     color: var(--color-accent-text) !important;
 }
 
-/* Active indicator bar */
 .nav-item.active::before {
     background: var(--color-accent) !important;
 }
 
-/* Nav label styling */
 .nav-label {
     color: inherit;
 }
 
-/* Nav separator */
 .nav-separator {
     background: var(--color-border) !important;
 }
 
-/* Public nav items in admin sidebar */
 .nav-item--public {
     opacity: 0.7;
 }
