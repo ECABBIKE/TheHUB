@@ -123,6 +123,67 @@ include __DIR__ . '/components/unified-layout.php';
 </div>
 
 <?php if ($selectedSeries): ?>
+
+<?php
+// Fetch events in this series
+$seriesEvents = $db->getAll("
+    SELECT e.id, e.name, e.date, e.location, e.active,
+           e.registration_opens, e.registration_deadline
+    FROM events e
+    WHERE e.series_id = ?
+    ORDER BY e.date ASC
+", [$selectedSeriesId]);
+?>
+
+<!-- Events in Series -->
+<div class="admin-card mb-lg">
+    <div class="admin-card-header">
+        <h2><i data-lucide="calendar-days"></i> Events i serien (<?= count($seriesEvents) ?>)</h2>
+    </div>
+    <div class="admin-card-body">
+        <?php if (empty($seriesEvents)): ?>
+            <p class="text-secondary">Inga events kopplade till denna serie.</p>
+        <?php else: ?>
+            <div class="admin-table-container">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>Event</th>
+                            <th>Datum</th>
+                            <th>Plats</th>
+                            <th>Status</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($seriesEvents as $evt): ?>
+                        <tr>
+                            <td>
+                                <strong><?= h($evt['name']) ?></strong>
+                            </td>
+                            <td><?= date('Y-m-d', strtotime($evt['date'])) ?></td>
+                            <td><?= h($evt['location'] ?? '-') ?></td>
+                            <td>
+                                <?php if ($evt['active']): ?>
+                                    <span class="badge badge-success">Aktiv</span>
+                                <?php else: ?>
+                                    <span class="badge badge-warning">Inaktiv</span>
+                                <?php endif; ?>
+                            </td>
+                            <td>
+                                <a href="/admin/event-edit.php?id=<?= $evt['id'] ?>" class="btn-admin btn-admin-sm btn-admin-secondary">
+                                    <i data-lucide="pencil"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        <?php endif; ?>
+    </div>
+</div>
+
 <!-- Event Class Selection -->
 <div class="admin-card mb-lg">
     <div class="admin-card-header">

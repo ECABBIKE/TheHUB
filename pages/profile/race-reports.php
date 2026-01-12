@@ -231,16 +231,19 @@ foreach ($myReports['reports'] as $r) {
                     </div>
                 </div>
 
-                <!-- Instagram eller egen text -->
+                <!-- Instagram, YouTube eller egen text -->
                 <div class="rr-content-toggle">
                     <div class="rr-toggle-header">
                         <span class="rr-toggle-label">Välj innehållstyp:</span>
                         <div class="rr-toggle-buttons">
                             <button type="button" class="rr-toggle-btn active" data-content="instagram" onclick="toggleContentType('instagram')">
-                                <i data-lucide="instagram"></i> Instagram-inlägg
+                                <i data-lucide="instagram"></i> Instagram
+                            </button>
+                            <button type="button" class="rr-toggle-btn" data-content="youtube" onclick="toggleContentType('youtube')">
+                                <i data-lucide="youtube"></i> YouTube
                             </button>
                             <button type="button" class="rr-toggle-btn" data-content="text" onclick="toggleContentType('text')">
-                                <i data-lucide="file-text"></i> Skriv egen text
+                                <i data-lucide="file-text"></i> Egen text
                             </button>
                         </div>
                     </div>
@@ -270,6 +273,33 @@ foreach ($myReports['reports'] as $r) {
                                   rows="3"
                                   id="content_short"
                                   placeholder="Lägg till en kort intro om du vill (visas innan Instagram-inlägget)"><?= htmlspecialchars($editReport['content'] ?? '') ?></textarea>
+                    </div>
+                </div>
+
+                <!-- YouTube Content -->
+                <div id="content-youtube" class="rr-content-section" style="display: none;">
+                    <div class="form-group">
+                        <label class="form-label">YouTube-länk</label>
+                        <input type="url"
+                               name="youtube_url"
+                               id="youtube_url"
+                               class="form-input"
+                               placeholder="https://www.youtube.com/watch?v=..."
+                               value="<?= htmlspecialchars($editReport['youtube_url'] ?? '') ?>"
+                               onchange="previewYoutube(this.value)">
+                        <small class="form-help">Klistra in länken till din YouTube-video. Thumbnail och länk visas automatiskt.</small>
+                    </div>
+                    <div id="youtube-preview" class="rr-youtube-preview" style="display: none;">
+                        <div class="rr-preview-label"><i data-lucide="eye"></i> Förhandsgranskning</div>
+                        <div id="youtube-embed" class="rr-youtube-embed"></div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Beskrivning (valfritt)</label>
+                        <textarea name="content_youtube"
+                                  class="form-textarea"
+                                  rows="3"
+                                  id="content_youtube"
+                                  placeholder="Lägg till en kort beskrivning av videon..."><?= htmlspecialchars($editReport['content'] ?? '') ?></textarea>
                     </div>
                 </div>
 
@@ -419,19 +449,19 @@ foreach ($myReports['reports'] as $r) {
                 <ul class="rr-tips">
                     <li>
                         <i data-lucide="instagram"></i>
-                        <span>Klistra in länk till ditt Instagram-inlägg</span>
+                        <span>Klistra in länk till Instagram-inlägg</span>
                     </li>
                     <li>
-                        <i data-lucide="link"></i>
-                        <span>Välj ett event du deltog i</span>
-                    </li>
-                    <li>
-                        <i data-lucide="message-circle"></i>
-                        <span>Lägg till en kort intro (valfritt)</span>
+                        <i data-lucide="youtube"></i>
+                        <span>Eller dela en YouTube-video</span>
                     </li>
                     <li>
                         <i data-lucide="file-text"></i>
-                        <span>Eller skriv egen text om du vill</span>
+                        <span>Eller skriv egen text</span>
+                    </li>
+                    <li>
+                        <i data-lucide="link"></i>
+                        <span>Koppla till ett event du deltog i</span>
                     </li>
                     <li>
                         <i data-lucide="clock"></i>
@@ -948,6 +978,74 @@ foreach ($myReports['reports'] as $r) {
     border-radius: var(--radius-md) !important;
 }
 
+/* YouTube Preview */
+.rr-youtube-preview {
+    margin: var(--space-md) 0;
+    padding: var(--space-md);
+    background: var(--color-bg-page);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--color-border);
+}
+
+.rr-youtube-card {
+    display: block;
+    text-decoration: none;
+    max-width: 540px;
+    margin: 0 auto;
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    background: var(--color-bg-surface);
+    border: 1px solid var(--color-border);
+    transition: all 0.2s ease;
+}
+
+.rr-youtube-card:hover {
+    border-color: var(--color-accent);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.rr-youtube-thumbnail {
+    position: relative;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    background: #000;
+}
+
+.rr-youtube-thumbnail img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.rr-youtube-play {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    opacity: 0.9;
+    transition: opacity 0.2s, transform 0.2s;
+}
+
+.rr-youtube-card:hover .rr-youtube-play {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1.1);
+}
+
+.rr-youtube-info {
+    padding: var(--space-md);
+    text-align: center;
+}
+
+.rr-youtube-link {
+    color: var(--color-text-secondary);
+    font-size: 0.875rem;
+}
+
+.rr-youtube-card:hover .rr-youtube-link {
+    color: var(--color-accent);
+}
+
 /* Mobile Responsive */
 @media (max-width: 1024px) {
     .rr-layout {
@@ -1053,16 +1151,17 @@ function toggleContentType(type) {
 
     // Show/hide sections
     document.getElementById('content-instagram').style.display = type === 'instagram' ? 'block' : 'none';
+    document.getElementById('content-youtube').style.display = type === 'youtube' ? 'block' : 'none';
     document.getElementById('content-text').style.display = type === 'text' ? 'block' : 'none';
 
     // Update hidden field
     document.getElementById('content_type').value = type;
 
     // Update required fields
-    if (type === 'instagram') {
-        document.getElementById('content_full').removeAttribute('required');
-    } else {
+    if (type === 'text') {
         document.getElementById('content_full').setAttribute('required', 'required');
+    } else {
+        document.getElementById('content_full').removeAttribute('required');
     }
 
     // Re-init Lucide icons
@@ -1139,6 +1238,67 @@ function previewInstagram(url) {
     }
 }
 
+// YouTube preview
+function previewYoutube(url) {
+    const previewContainer = document.getElementById('youtube-preview');
+    const embedContainer = document.getElementById('youtube-embed');
+
+    if (!url) {
+        previewContainer.style.display = 'none';
+        embedContainer.innerHTML = '';
+        return;
+    }
+
+    // Extract video ID from URL
+    let videoId = null;
+    const patterns = [
+        /youtube\.com\/watch\?v=([^&\s]+)/,
+        /youtu\.be\/([^?\s]+)/,
+        /youtube\.com\/embed\/([^?\s]+)/,
+        /youtube\.com\/shorts\/([^?\s]+)/
+    ];
+
+    for (const pattern of patterns) {
+        const match = url.match(pattern);
+        if (match) {
+            videoId = match[1];
+            break;
+        }
+    }
+
+    if (!videoId) {
+        previewContainer.style.display = 'block';
+        embedContainer.innerHTML = '<p class="text-muted">Kunde inte tolka YouTube-länken. Kontrollera att det är en giltig länk.</p>';
+        return;
+    }
+
+    previewContainer.style.display = 'block';
+
+    // Show YouTube thumbnail with play overlay
+    embedContainer.innerHTML = `
+        <a href="${url}" target="_blank" class="rr-youtube-card">
+            <div class="rr-youtube-thumbnail">
+                <img src="https://img.youtube.com/vi/${videoId}/maxresdefault.jpg"
+                     alt="YouTube video"
+                     onerror="this.src='https://img.youtube.com/vi/${videoId}/hqdefault.jpg'">
+                <div class="rr-youtube-play">
+                    <svg viewBox="0 0 68 48" width="68" height="48">
+                        <path fill="#f00" d="M66.52 7.74c-.78-2.93-2.49-5.41-5.42-6.19C55.79.13 34 0 34 0S12.21.13 6.9 1.55c-2.93.78-4.63 3.26-5.42 6.19C.06 13.05 0 24 0 24s.06 10.95 1.48 16.26c.78 2.93 2.49 5.41 5.42 6.19C12.21 47.87 34 48 34 48s21.79-.13 27.1-1.55c2.93-.78 4.64-3.26 5.42-6.19C67.94 34.95 68 24 68 24s-.06-10.95-1.48-16.26z"/>
+                        <path fill="#fff" d="M45 24L27 14v20"/>
+                    </svg>
+                </div>
+            </div>
+            <div class="rr-youtube-info">
+                <span class="rr-youtube-link">Klicka för att öppna på YouTube</span>
+            </div>
+        </a>
+    `;
+
+    if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+    }
+}
+
 // Form submission handling
 document.querySelector('.rr-form-card form').addEventListener('submit', function(e) {
     const contentType = document.getElementById('content_type').value;
@@ -1158,6 +1318,22 @@ document.querySelector('.rr-form-card form').addEventListener('submit', function
         const contentField = document.querySelector('textarea[name="content"]');
         if (contentField && !contentField.value && shortContent) {
             contentField.value = shortContent;
+        }
+    } else if (contentType === 'youtube') {
+        // Use YouTube content
+        const youtubeContent = document.getElementById('content_youtube').value;
+        const youtubeUrl = document.getElementById('youtube_url').value;
+
+        if (!youtubeUrl) {
+            e.preventDefault();
+            alert('Ange en YouTube-länk eller byt till en annan innehållstyp');
+            return;
+        }
+
+        // Copy content to main content field
+        const contentField = document.querySelector('textarea[name="content"]');
+        if (contentField) {
+            contentField.value = youtubeContent || '';
         }
     } else {
         // Use full content for text posts
