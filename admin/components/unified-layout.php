@@ -104,6 +104,7 @@ if (!isset($current_admin_page)) {
 
     <!-- Admin-specific CSS -->
     <link rel="stylesheet" href="/admin/assets/css/admin.css?v=<?= filemtime(__DIR__ . '/../assets/css/admin.css') ?>">
+    <link rel="stylesheet" href="/admin/assets/css/admin-theme-fix.css?v=<?= filemtime(__DIR__ . '/../assets/css/admin-theme-fix.css') ?>">
 
     <!-- Dynamic Branding CSS (from /uploads/branding.json) -->
     <?php
