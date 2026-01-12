@@ -22,15 +22,18 @@ $upcomingEvents = [];
 try {
     if ($isPromotorOnly) {
         // Get promotor's assigned events that haven't happened yet
+        // Check both promotor_events (direct assignment) and promotor_series (series-wide)
         $upcomingEvents = $db->getAll("
-            SELECT e.id, e.name, e.date, e.location, s.name as series_name
+            SELECT DISTINCT e.id, e.name, e.date, e.location, s.name as series_name
             FROM events e
             LEFT JOIN series s ON e.series_id = s.id
-            JOIN promotor_series ps ON e.series_id = ps.series_id
-            WHERE ps.user_id = ? AND e.date >= CURDATE()
+            LEFT JOIN promotor_events pe ON pe.event_id = e.id AND pe.user_id = ?
+            LEFT JOIN promotor_series ps ON e.series_id = ps.series_id AND ps.user_id = ?
+            WHERE (pe.user_id IS NOT NULL OR ps.user_id IS NOT NULL)
+              AND e.date >= CURDATE()
             ORDER BY e.date ASC
             LIMIT 20
-        ", [$userId]);
+        ", [$userId, $userId]);
     } else {
         // Admins see all upcoming events
         $upcomingEvents = $db->getAll("
