@@ -84,7 +84,9 @@ if (!function_exists('getEventContent')) {
 }
 
 try {
-    // Fetch event details with venue info, header banner, and organizer club
+    // Fetch event details with venue info
+    // Note: Uses only core columns that exist in base schema
+    // organizer_club_id might not exist if migration 053 not run
     $stmt = $db->prepare("
         SELECT
             e.*,
@@ -96,19 +98,29 @@ try {
             s.organizer as series_organizer,
             v.name as venue_name,
             v.city as venue_city,
-            v.address as venue_address,
-            hb.filepath as header_banner_url,
-            oc.name as organizer_club_name,
-            oc.id as organizer_club_id_ref
+            v.address as venue_address
         FROM events e
         LEFT JOIN series s ON e.series_id = s.id
         LEFT JOIN venues v ON e.venue_id = v.id
-        LEFT JOIN media hb ON e.header_banner_media_id = hb.id
-        LEFT JOIN clubs oc ON e.organizer_club_id = oc.id
         WHERE e.id = ?
     ");
     $stmt->execute([$eventId]);
     $event = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    // Try to get organizer club info if the column exists
+    if ($event && isset($event['organizer_club_id']) && $event['organizer_club_id']) {
+        try {
+            $clubStmt = $db->prepare("SELECT id, name FROM clubs WHERE id = ?");
+            $clubStmt->execute([$event['organizer_club_id']]);
+            $orgClub = $clubStmt->fetch(PDO::FETCH_ASSOC);
+            if ($orgClub) {
+                $event['organizer_club_name'] = $orgClub['name'];
+                $event['organizer_club_id_ref'] = $orgClub['id'];
+            }
+        } catch (PDOException $e) {
+            // Column or table doesn't exist
+        }
+    }
 
     if (!$event) {
         include HUB_ROOT . '/pages/404.php';
@@ -881,20 +893,27 @@ try {
 
 } catch (Exception $e) {
     $error = $e->getMessage();
+    error_log("EVENT PAGE ERROR (ID: {$eventId}): " . $error);
     $event = null;
 }
 
+// Show database error if one occurred
+if (isset($error) && $error): ?>
+<div class="alert alert--error mb-lg">
+    <p><strong>Databasfel:</strong> <?= htmlspecialchars($error) ?></p>
+    <p class="text-muted text-sm">Event ID: <?= $eventId ?></p>
+</div>
+<?php
+endif;
+
 if (!$event) {
-    include HUB_ROOT . '/pages/404.php';
+    // Only show 404 if there was no database error (event simply doesn't exist)
+    if (!isset($error)) {
+        include HUB_ROOT . '/pages/404.php';
+    }
     return;
 }
 ?>
-
-<?php if (isset($error)): ?>
-<div class="alert alert--error mb-lg">
-    <p><?= h($error) ?></p>
-</div>
-<?php endif; ?>
 
 <?php
 // Event Header Banner (uploaded image, not sponsor) - Full width at top

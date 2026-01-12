@@ -7,6 +7,22 @@
 
 ---
 
+## KRITISK REGEL: INGA VERSIONSPREFIX
+
+**Anvand ALDRIG versionsnummer (V2, V3, V4) i filnamn, konstanter eller kod.**
+
+```php
+// FEL
+HUB_V2_ROOT, HUB_V3_ROOT, HUB_V3_URL
+
+// RATT
+HUB_ROOT, HUB_URL, ROOT_PATH, INCLUDES_PATH
+```
+
+Alla gamla V2/V3-prefix togs bort 2026-01-12.
+
+---
+
 ## AKTUELL STATUS: VAD SOM FINNS
 
 ### Orderhantering
