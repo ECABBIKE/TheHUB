@@ -373,6 +373,10 @@ include __DIR__ . '/components/unified-layout.php';
             <p>Konfigurera hur deltagare kan betala för anmälningar. Stöd för Swish Handel (automatisk), Stripe (kort) och manuell betalning.</p>
         </div>
         <div class="ekonomi-card-links">
+            <a href="/admin/swish-accounts" class="ekonomi-card-link">
+                <i data-lucide="smartphone"></i>
+                Swish-konton (Alla)
+            </a>
             <?php if ($isSuperAdmin): ?>
             <a href="/admin/gateway-settings" class="ekonomi-card-link">
                 <i data-lucide="sliders"></i>
