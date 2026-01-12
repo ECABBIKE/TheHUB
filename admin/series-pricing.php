@@ -66,6 +66,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $messageType = 'success';
     }
 
+    // Save series pass (season pass) settings
+    elseif ($action === 'save_series_pass') {
+        $allowSeriesRegistration = isset($_POST['allow_series_registration']) ? 1 : 0;
+        $seriesPriceType = $_POST['series_price_type'] ?? 'calculated';
+        $seriesDiscountPercent = floatval($_POST['series_discount_percent'] ?? 15);
+        $fullSeriesPrice = !empty($_POST['full_series_price']) ? floatval($_POST['full_series_price']) : null;
+
+        $db->update('series', [
+            'allow_series_registration' => $allowSeriesRegistration,
+            'series_price_type' => $seriesPriceType,
+            'series_discount_percent' => $seriesDiscountPercent,
+            'full_series_price' => $fullSeriesPrice
+        ], 'id = ?', [$seriesId]);
+
+        // Refresh series data
+        $series = $db->getRow("SELECT * FROM series WHERE id = ?", [$seriesId]);
+
+        $message = 'Serie-pass inställningar sparade!';
+        $messageType = 'success';
+    }
+
     // Save individual event registration times
     elseif ($action === 'save_event_registration') {
         $eventIds = $_POST['event_id'] ?? [];
@@ -275,6 +296,101 @@ include __DIR__ . '/components/unified-layout.php';
         </form>
     </div>
 </div>
+
+<!-- Serie-pass (Season Pass) Settings -->
+<div class="admin-card mb-lg">
+    <div class="admin-card-header">
+        <h2>
+            <i data-lucide="ticket"></i>
+            Serie-pass (Hela säsongen)
+        </h2>
+    </div>
+    <div class="admin-card-body">
+        <form method="POST">
+            <?= csrf_field() ?>
+            <input type="hidden" name="action" value="save_series_pass">
+
+            <div class="admin-form-group mb-lg">
+                <label class="admin-form-label" style="display: flex; align-items: center; gap: var(--space-sm);">
+                    <input type="checkbox" name="allow_series_registration" value="1"
+                        <?= ($series['allow_series_registration'] ?? 0) ? 'checked' : '' ?>>
+                    <strong>Tillåt köp av serie-pass</strong>
+                </label>
+                <small class="admin-form-help">
+                    När aktiverat kan deltagare köpa ett pass för ALLA events i serien till rabatterat pris.
+                </small>
+            </div>
+
+            <div class="admin-form-row">
+                <div class="admin-form-group">
+                    <label class="admin-form-label">Prismodell</label>
+                    <select name="series_price_type" class="admin-form-select" id="series_price_type" onchange="togglePriceFields()">
+                        <option value="calculated" <?= ($series['series_price_type'] ?? 'calculated') === 'calculated' ? 'selected' : '' ?>>
+                            Beräknat (summa av alla event minus rabatt)
+                        </option>
+                        <option value="fixed" <?= ($series['series_price_type'] ?? '') === 'fixed' ? 'selected' : '' ?>>
+                            Fast pris
+                        </option>
+                    </select>
+                </div>
+
+                <div class="admin-form-group" id="discount_field">
+                    <label class="admin-form-label">Rabatt vid serieanmälan (%)</label>
+                    <input type="number" name="series_discount_percent" class="admin-form-input"
+                           value="<?= htmlspecialchars($series['series_discount_percent'] ?? 15) ?>"
+                           min="0" max="50" step="1">
+                    <small class="admin-form-help">
+                        T.ex. 15% = betala 85% av totalpriset för alla events
+                    </small>
+                </div>
+
+                <div class="admin-form-group" id="fixed_price_field" style="display: none;">
+                    <label class="admin-form-label">Fast pris för hela serien (kr)</label>
+                    <input type="number" name="full_series_price" class="admin-form-input"
+                           value="<?= htmlspecialchars($series['full_series_price'] ?? '') ?>"
+                           min="0" step="50" placeholder="T.ex. 2500">
+                    <small class="admin-form-help">
+                        Samma pris oavsett klass
+                    </small>
+                </div>
+            </div>
+
+            <?php
+            // Calculate example prices
+            $eventCount = count($seriesEvents);
+            $exampleEventPrice = 450; // Typical price
+            $discountPercent = floatval($series['series_discount_percent'] ?? 15);
+            $totalWithoutDiscount = $eventCount * $exampleEventPrice;
+            $totalWithDiscount = $totalWithoutDiscount * (1 - $discountPercent / 100);
+            ?>
+            <?php if ($eventCount > 0): ?>
+            <div class="p-md mb-lg" style="background: var(--color-bg-tertiary); border-radius: var(--radius-md);">
+                <strong>Exempel:</strong> <?= $eventCount ?> events × <?= $exampleEventPrice ?> kr = <?= number_format($totalWithoutDiscount, 0) ?> kr
+                <br>
+                Med <?= $discountPercent ?>% rabatt: <strong><?= number_format($totalWithDiscount, 0) ?> kr</strong>
+                (spara <?= number_format($totalWithoutDiscount - $totalWithDiscount, 0) ?> kr)
+            </div>
+            <?php endif; ?>
+
+            <div class="mt-md">
+                <button type="submit" class="btn-admin btn-admin-primary">
+                    <i data-lucide="save"></i>
+                    Spara serie-pass inställningar
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function togglePriceFields() {
+    const priceType = document.getElementById('series_price_type').value;
+    document.getElementById('discount_field').style.display = priceType === 'calculated' ? 'block' : 'none';
+    document.getElementById('fixed_price_field').style.display = priceType === 'fixed' ? 'block' : 'none';
+}
+// Run on page load
+document.addEventListener('DOMContentLoaded', togglePriceFields);
+</script>
 
 <!-- Event-specific registration times -->
 <div class="admin-card">
