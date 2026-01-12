@@ -31,15 +31,11 @@
 45e6421 fix: Remove duplicate series-manage.php page  <-- DETTA VAR FEL
 ```
 
-### Att återställa
+### Återställt
 
-```bash
-# Återställ series-manage.php
-git checkout eba3793 -- admin/series-manage.php
-
-# Lägg till routing igen i .htaccess
-# RewriteRule ^admin/series/manage/([0-9]+)/?$ admin/series-manage.php?id=$1 [QSA,L]
-```
+- [x] `series-manage.php` återställd från commit eba3793
+- [x] Routing tillagd i .htaccess
+- [x] admin-tabs-config.php uppdaterad
 
 ---
 
@@ -67,7 +63,7 @@ git checkout eba3793 -- admin/series-manage.php
 |-----|--------|-----------|
 | `/admin/series.php` | Fungerar | Lista alla serier |
 | `/admin/series-edit.php` | Fungerar | Gammal enkel redigering |
-| `/admin/series-manage.php` | RADERAD | Behöver återställas! |
+| `/admin/series-manage.php` | ÅTERSTÄLLD | Fliksystem (Info, Events, Anmälan, Betalning, Resultat) |
 | `/admin/series-events.php` | Fungerar | Hantera events i serie |
 | `/admin/series-pricing.php` | Finns | Prissättning |
 
@@ -95,10 +91,11 @@ Dessa filer/funktioner finns redan - skapa inte dubbletter:
 
 ## Nästa session - ATT GÖRA
 
-1. [ ] Återställ `series-manage.php` från git
+1. [x] Återställ `series-manage.php` från git - KLART
 2. [ ] Undersök CSS cyan borders - vad är fel?
 3. [ ] Koppla betalningsintegrationer till checkout
 4. [ ] Verifiera att alla admin-länkar fungerar
+5. [ ] Bestäm om series-edit.php eller series-manage.php ska användas (eller båda)
 
 ---
 
