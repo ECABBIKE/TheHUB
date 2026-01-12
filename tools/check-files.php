@@ -18,7 +18,8 @@ $filesToCheck = [
  '/admin/migrations/add_series_format.php' => 'Format column migration (NEW)',
  '/admin/migrations/create_series_events_and_point_templates.php' => 'Series-events migration (NEW)',
  '/admin/debug-series.php' => 'Debug script (NEW)',
- '/includes/navigation.php' => 'Navigation menu',
+ '/components/sidebar.php' => 'Navigation sidebar (PRIMARY)',
+ '/includes/config/admin-tabs-config.php' => 'Admin tabs configuration',
 ];
 
 echo"<table border='1' cellpadding='10'>";
