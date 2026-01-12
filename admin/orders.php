@@ -98,12 +98,15 @@ if (!$isSuperAdmin) {
 
 $whereClause = !empty($whereConditions) ? 'WHERE ' . implode(' AND ', $whereConditions) : '';
 
-// Get orders
+// Get orders with item count for multi-rider support
 $orders = $db->getAll("
     SELECT o.*, e.name as event_name, e.date as event_date,
-           r.firstname, r.lastname
+           r.firstname, r.lastname,
+           s.name as series_name,
+           (SELECT COUNT(*) FROM order_items oi WHERE oi.order_id = o.id) as item_count
     FROM orders o
     LEFT JOIN events e ON o.event_id = e.id
+    LEFT JOIN series s ON o.series_id = s.id
     LEFT JOIN riders r ON o.rider_id = r.id
     {$whereClause}
     ORDER BY o.created_at DESC
@@ -249,7 +252,8 @@ include __DIR__ . '/components/unified-layout.php';
                     <tr>
                         <th>Order</th>
                         <th>Kund</th>
-                        <th>Event</th>
+                        <th>Event/Serie</th>
+                        <th>Deltagare</th>
                         <th>Belopp</th>
                         <th>Swish-ref</th>
                         <th>Status</th>
@@ -270,9 +274,22 @@ include __DIR__ . '/components/unified-layout.php';
                             <div class="text-xs text-secondary"><?= h($order['customer_email']) ?></div>
                         </td>
                         <td>
-                            <?php if ($order['event_name']): ?>
+                            <?php if ($order['series_name']): ?>
+                            <div><span class="admin-badge admin-badge-info">Serie</span> <?= h($order['series_name']) ?></div>
+                            <?php elseif ($order['event_name']): ?>
                             <div><?= h($order['event_name']) ?></div>
                             <div class="text-xs text-secondary"><?= date('Y-m-d', strtotime($order['event_date'])) ?></div>
+                            <?php else: ?>
+                            <span class="text-secondary">-</span>
+                            <?php endif; ?>
+                        </td>
+                        <td class="text-center">
+                            <?php if ($order['item_count'] > 1): ?>
+                            <span class="admin-badge admin-badge-accent"><?= $order['item_count'] ?> st</span>
+                            <?php elseif ($order['item_count'] == 1): ?>
+                            <span class="text-secondary">1</span>
+                            <?php else: ?>
+                            <span class="text-secondary">-</span>
                             <?php endif; ?>
                         </td>
                         <td class="font-medium">
@@ -397,6 +414,8 @@ include __DIR__ . '/components/unified-layout.php';
 .admin-modal-footer { display: flex; justify-content: flex-end; gap: var(--space-sm); padding: var(--space-lg); border-top: 1px solid var(--color-border); }
 .admin-badge-warning { background: rgba(234, 179, 8, 0.2); color: #ca8a04; }
 .admin-badge-error { background: rgba(239, 68, 68, 0.2); color: #dc2626; }
+.admin-badge-info { background: rgba(56, 189, 248, 0.2); color: #0284c7; }
+.admin-badge-accent { background: rgba(55, 212, 214, 0.2); color: var(--color-accent); font-weight: 600; }
 </style>
 
 <script>
