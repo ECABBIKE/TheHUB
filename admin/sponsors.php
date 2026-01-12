@@ -108,10 +108,10 @@ $tiers = [
     'bronze' => ['name' => 'Bronssponsor', 'color' => '#D97706']
 ];
 
-// Page config
-$page_title = 'Sponsorer';
+// Page config - promotors see "Media", admins see "Sponsorer"
+$page_title = $isPromotorOnly ? 'Media' : 'Sponsorer';
 $breadcrumbs = [
-    ['label' => 'Sponsorer']
+    ['label' => $page_title]
 ];
 
 // Include unified layout
@@ -485,7 +485,159 @@ include __DIR__ . '/components/unified-layout.php';
     margin: 0 auto var(--space-md);
     opacity: 0.5;
 }
+
+/* Event banner upload section for promotors */
+.upload-section {
+    background: var(--color-bg-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: var(--space-lg);
+    margin-bottom: var(--space-xl);
+}
+.upload-section-title {
+    font-size: 1rem;
+    font-weight: 600;
+    margin: 0 0 var(--space-md) 0;
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+}
+.upload-section-title svg {
+    width: 20px;
+    height: 20px;
+    color: var(--color-accent);
+}
+.upload-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: var(--space-md);
+}
+.upload-box {
+    background: var(--color-bg-sunken);
+    border: 2px dashed var(--color-border);
+    border-radius: var(--radius-md);
+    padding: var(--space-lg);
+    text-align: center;
+    cursor: pointer;
+    transition: all 0.2s;
+}
+.upload-box:hover {
+    border-color: var(--color-accent);
+    background: var(--color-bg-hover);
+}
+.upload-box svg {
+    width: 32px;
+    height: 32px;
+    color: var(--color-text-secondary);
+    margin-bottom: var(--space-sm);
+}
+.upload-box-label {
+    font-weight: 500;
+    margin-bottom: var(--space-2xs);
+}
+.upload-box-hint {
+    font-size: 0.75rem;
+    color: var(--color-text-secondary);
+}
+.upload-gallery {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+    gap: var(--space-sm);
+    margin-top: var(--space-md);
+}
+.upload-gallery-item {
+    position: relative;
+    background: var(--color-bg-sunken);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    aspect-ratio: 8/1;
+}
+.upload-gallery-item.logo {
+    aspect-ratio: 4/1;
+}
+.upload-gallery-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: contain;
+}
+.upload-gallery-item .delete-btn {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    background: rgba(0,0,0,0.7);
+    border: none;
+    border-radius: 50%;
+    width: 24px;
+    height: 24px;
+    cursor: pointer;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    opacity: 0;
+    transition: opacity 0.2s;
+}
+.upload-gallery-item:hover .delete-btn {
+    opacity: 1;
+}
+
+/* Mobile edge-to-edge */
+@media (max-width: 767px) {
+    .upload-section,
+    .sponsor-card {
+        margin-left: calc(-1 * var(--space-md));
+        margin-right: calc(-1 * var(--space-md));
+        border-radius: 0;
+        border-left: none;
+        border-right: none;
+        width: calc(100% + var(--space-md) * 2);
+    }
+    .sponsor-grid {
+        gap: 0;
+        grid-template-columns: 1fr;
+    }
+}
 </style>
+
+<?php if ($isPromotorOnly): ?>
+<!-- Event Banner Upload Section -->
+<div class="upload-section">
+    <h3 class="upload-section-title">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+        Ladda upp bilder
+    </h3>
+    <p style="color: var(--color-text-secondary); margin-bottom: var(--space-md); font-size: 0.875rem;">
+        Ladda upp event-banners och sponsorlogos här. De blir tillgängliga i mediabiblioteket.
+    </p>
+
+    <div class="upload-grid">
+        <div class="upload-box" onclick="document.getElementById('eventBannerUpload').click()">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
+            <div class="upload-box-label">Event-banner</div>
+            <div class="upload-box-hint">1200×150px</div>
+            <input type="file" id="eventBannerUpload" accept="image/*" style="display:none" onchange="uploadToFolder(this, 'events', 'banners')">
+        </div>
+
+        <div class="upload-box" onclick="document.getElementById('sponsorBannerUpload').click()">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
+            <div class="upload-box-label">Sponsor-banner</div>
+            <div class="upload-box-hint">1200×150px</div>
+            <input type="file" id="sponsorBannerUpload" accept="image/*" style="display:none" onchange="uploadToFolder(this, 'sponsors', 'banners')">
+        </div>
+
+        <div class="upload-box" onclick="document.getElementById('sponsorLogoUpload').click()">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
+            <div class="upload-box-label">Sponsor-logo</div>
+            <div class="upload-box-hint">600×150px</div>
+            <input type="file" id="sponsorLogoUpload" accept="image/*" style="display:none" onchange="uploadToFolder(this, 'sponsors', 'logos')">
+        </div>
+    </div>
+
+    <div id="recentUploads" class="upload-gallery" style="display: none;">
+        <!-- Recent uploads will appear here -->
+    </div>
+</div>
+<?php endif; ?>
 
 <!-- Header -->
 <div class="sponsor-header">
@@ -1088,6 +1240,74 @@ function clearLogoField(field) {
     if (preview) preview.innerHTML = `
         <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
     `;
+}
+
+// Upload to specific folder (for promotor upload section)
+async function uploadToFolder(input, folder, subfolder = '') {
+    const file = input.files[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+        alert('Välj en bildfil (JPG, PNG, etc.)');
+        input.value = '';
+        return;
+    }
+
+    if (file.size > 10 * 1024 * 1024) {
+        alert('Filen är för stor. Max 10MB.');
+        input.value = '';
+        return;
+    }
+
+    // Show uploading state
+    const uploadBox = input.parentElement;
+    const originalContent = uploadBox.innerHTML;
+    uploadBox.innerHTML = '<span style="color: var(--color-text-secondary);">Laddar upp...</span>' +
+        '<input type="file" style="display:none">';
+
+    try {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('folder', folder);
+        if (subfolder) formData.append('subfolder', subfolder);
+
+        const response = await fetch('/api/media.php?action=upload', {
+            method: 'POST',
+            body: formData
+        });
+
+        const result = await response.json();
+
+        if (result.success && result.media) {
+            // Show success and add to recent uploads
+            uploadBox.innerHTML = originalContent;
+            showRecentUpload(result.media);
+            alert('Uppladdning lyckades! Filen finns nu i mediabiblioteket under mappen "' + folder + '".');
+        } else {
+            uploadBox.innerHTML = originalContent;
+            alert('Uppladdning misslyckades: ' + (result.error || 'Okänt fel'));
+        }
+    } catch (error) {
+        console.error('Upload error:', error);
+        uploadBox.innerHTML = originalContent;
+        alert('Ett fel uppstod vid uppladdning');
+    }
+
+    input.value = '';
+}
+
+function showRecentUpload(media) {
+    const gallery = document.getElementById('recentUploads');
+    if (!gallery) return;
+
+    gallery.style.display = 'grid';
+
+    const item = document.createElement('div');
+    item.className = 'upload-gallery-item' + (media.filepath.includes('logo') ? ' logo' : '');
+    item.innerHTML = `
+        <img src="/${media.filepath}" alt="${media.original_filename || 'Uploaded image'}">
+    `;
+    gallery.insertBefore(item, gallery.firstChild);
 }
 
 // Close modals on escape

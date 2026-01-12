@@ -157,7 +157,7 @@ function isAdminPageActive($item, $requestUri) {
         $promotorNav = [
             ['id' => 'events', 'label' => 'Tävlingar', 'icon' => 'calendar', 'url' => '/admin/promotor.php', 'match' => '/admin/promotor.php'],
             ['id' => 'series', 'label' => 'Serier', 'icon' => 'medal', 'url' => '/admin/promotor-series.php', 'match' => '/admin/promotor-series'],
-            ['id' => 'sponsors', 'label' => 'Sponsorer', 'icon' => 'image', 'url' => '/admin/sponsors.php', 'match' => '/admin/sponsor'],
+            ['id' => 'media', 'label' => 'Media', 'icon' => 'image', 'url' => '/admin/sponsors.php', 'match' => '/admin/sponsor'],
             ['id' => 'onsite', 'label' => 'Direktanmälan', 'icon' => 'user-plus', 'url' => '/admin/onsite-registration.php', 'match' => '/admin/onsite'],
         ];
         foreach ($promotorNav as $item):
