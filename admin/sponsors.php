@@ -7,11 +7,6 @@
  * Promotors can only see/edit sponsors for their own events
  */
 require_once __DIR__ . '/../config.php';
-
-// Temporär felsökning - ta bort när problemet är löst
-error_reporting(E_ALL);
-ini_set('display_errors', '1');
-
 require_admin();
 require_once __DIR__ . '/../includes/sponsor-functions.php';
 require_once __DIR__ . '/../includes/media-functions.php';
@@ -29,7 +24,7 @@ if ($isPromotorOnly) {
 
     // Get series using same query as promotor-series.php (which works)
     $seriesResult = $pdo->prepare("
-        SELECT DISTINCT s.id, s.name, s.short_name
+        SELECT DISTINCT s.id, s.name
         FROM series s
         LEFT JOIN promotor_series ps ON ps.series_id = s.id AND ps.user_id = ?
         LEFT JOIN events e ON e.series_id = s.id
@@ -59,7 +54,7 @@ try {
         // Use the series data we already fetched
         $allSeries = $promotorSeriesData ?? [];
     } else {
-        $seriesStmt = $pdo->query("SELECT id, name, short_name FROM series ORDER BY name");
+        $seriesStmt = $pdo->query("SELECT id, name FROM series ORDER BY name");
         $allSeries = $seriesStmt->fetchAll(PDO::FETCH_ASSOC);
     }
 } catch (Exception $e) {
@@ -697,7 +692,7 @@ include __DIR__ . '/components/unified-layout.php';
         <option value="">Alla serier</option>
         <?php foreach ($allSeries as $series): ?>
         <option value="<?= $series['id'] ?>" <?= $filterSeries === (int)$series['id'] ? 'selected' : '' ?>>
-            <?= htmlspecialchars($series['short_name'] ?: $series['name']) ?>
+            <?= htmlspecialchars($series['name']) ?>
         </option>
         <?php endforeach; ?>
     </select>
@@ -830,7 +825,7 @@ include __DIR__ . '/components/unified-layout.php';
                         <?php foreach ($allSeries as $series): ?>
                         <label style="display: inline-flex; align-items: center; gap: 4px; padding: 4px 8px; background: var(--color-bg-sunken); border-radius: var(--radius-sm); cursor: pointer; font-size: 0.875rem;">
                             <input type="checkbox" name="series[]" value="<?= $series['id'] ?>" class="series-checkbox">
-                            <?= htmlspecialchars($series['short_name'] ?: $series['name']) ?>
+                            <?= htmlspecialchars($series['name']) ?>
                         </label>
                         <?php endforeach; ?>
                     </div>
