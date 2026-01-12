@@ -803,7 +803,7 @@ try {
         FROM event_registrations reg
         LEFT JOIN riders r ON reg.rider_id = r.id
         LEFT JOIN clubs c ON r.club_id = c.id
-        LEFT JOIN classes cl ON cl.name = reg.category OR cl.id = reg.class_id
+        LEFT JOIN classes cl ON cl.name = reg.category
         WHERE reg.event_id = ? AND reg.status != 'cancelled'
         ORDER BY cl.sort_order ASC, cl.name ASC, reg.registration_date ASC
     ");
