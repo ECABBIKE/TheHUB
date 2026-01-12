@@ -77,15 +77,27 @@ $series = $db->getAll("
     ORDER BY s.year DESC, s.name
 ", [$userId, $userId]);
 
-// Get events for each series
+// Get events for each series - ONLY events the promotor has access to
 $seriesEvents = [];
 foreach ($series as $s) {
-    $seriesEvents[$s['id']] = $db->getAll("
-        SELECT e.id, e.name, e.date, e.location
-        FROM events e
-        WHERE e.series_id = ?
-        ORDER BY e.date DESC
-    ", [$s['id']]);
+    if ($s['can_edit_swish']) {
+        // Has series-level access - show all events in series
+        $seriesEvents[$s['id']] = $db->getAll("
+            SELECT e.id, e.name, e.date, e.location
+            FROM events e
+            WHERE e.series_id = ?
+            ORDER BY e.date DESC
+        ", [$s['id']]);
+    } else {
+        // Only event-level access - show only assigned events
+        $seriesEvents[$s['id']] = $db->getAll("
+            SELECT e.id, e.name, e.date, e.location
+            FROM events e
+            JOIN promotor_events pe ON pe.event_id = e.id AND pe.user_id = ?
+            WHERE e.series_id = ?
+            ORDER BY e.date DESC
+        ", [$userId, $s['id']]);
+    }
 }
 
 $page_title = 'Serie-inställningar';
