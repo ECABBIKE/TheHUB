@@ -9,31 +9,43 @@
  */
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../includes/auth.php';
-requireAdmin();
+require_admin();
 
 global $pdo;
+
+// Satt query timeout
+$pdo->setAttribute(PDO::ATTR_TIMEOUT, 10);
 
 $diagnostics = [];
 $errors = [];
 
-// 1. Kolla om nodvandiga tabeller/views finns
-$requiredObjects = [
-    'rider_yearly_stats' => 'TABLE',
-    'series_participation' => 'TABLE',
-    'v_canonical_riders' => 'VIEW',
-    'rider_merge_map' => 'TABLE'
-];
-
-foreach ($requiredObjects as $name => $type) {
+// Hjalpfunktion for att kolla om tabell finns
+function tableExists($pdo, $name) {
     try {
-        $check = $pdo->query("SHOW TABLES LIKE '$name'")->fetch();
-        $diagnostics['objects'][$name] = $check ? 'EXISTS' : 'MISSING';
+        $result = $pdo->query("SHOW TABLES LIKE '$name'")->fetch();
+        return (bool)$result;
     } catch (Exception $e) {
-        $diagnostics['objects'][$name] = 'ERROR: ' . $e->getMessage();
+        return false;
     }
 }
 
-// 2. Jamfor faktiska deltagare med rider_yearly_stats per ar
+// 1. Kolla om nodvandiga tabeller/views finns
+$requiredObjects = [
+    'rider_yearly_stats',
+    'series_participation',
+    'v_canonical_riders',
+    'rider_merge_map',
+    'analytics_cron_runs'
+];
+
+foreach ($requiredObjects as $name) {
+    $diagnostics['objects'][$name] = tableExists($pdo, $name) ? 'EXISTS' : 'MISSING';
+}
+
+$hasCanonicalView = $diagnostics['objects']['v_canonical_riders'] === 'EXISTS';
+$hasYearlyStats = $diagnostics['objects']['rider_yearly_stats'] === 'EXISTS';
+
+// 2. Hamta faktiska deltagare fran results/events (ALLTID)
 try {
     $stmt = $pdo->query("
         SELECT
@@ -49,34 +61,42 @@ try {
     $diagnostics['actual_data'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (Exception $e) {
     $errors[] = "Kunde inte hamta faktisk data: " . $e->getMessage();
+    $diagnostics['actual_data'] = [];
 }
 
-// 3. Hamta rider_yearly_stats per ar
-try {
-    $stmt = $pdo->query("
-        SELECT
-            season_year as year,
-            COUNT(*) as analytics_riders
-        FROM rider_yearly_stats
-        GROUP BY season_year
-        ORDER BY season_year DESC
-    ");
-    $diagnostics['analytics_data'] = $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
-} catch (Exception $e) {
-    $errors[] = "Kunde inte hamta analytics data: " . $e->getMessage();
+// 3. Hamta rider_yearly_stats per ar (om tabellen finns)
+if ($hasYearlyStats) {
+    try {
+        $stmt = $pdo->query("
+            SELECT season_year as year, COUNT(*) as analytics_riders
+            FROM rider_yearly_stats
+            GROUP BY season_year
+            ORDER BY season_year DESC
+        ");
+        $diagnostics['analytics_data'] = $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
+    } catch (Exception $e) {
+        $errors[] = "Kunde inte hamta analytics data: " . $e->getMessage();
+        $diagnostics['analytics_data'] = [];
+    }
+} else {
     $diagnostics['analytics_data'] = [];
+    $errors[] = "Tabellen rider_yearly_stats saknas - kor setup-tables.php";
 }
 
-// 4. Kolla v_canonical_riders VIEW
-try {
-    $stmt = $pdo->query("SELECT COUNT(*) FROM v_canonical_riders");
-    $diagnostics['canonical_riders_count'] = $stmt->fetchColumn();
-} catch (Exception $e) {
-    $errors[] = "v_canonical_riders VIEW saknas eller ar trasig: " . $e->getMessage();
-    $diagnostics['canonical_riders_count'] = 'ERROR';
+// 4. Kolla v_canonical_riders (om VIEW finns)
+if ($hasCanonicalView) {
+    try {
+        $stmt = $pdo->query("SELECT COUNT(*) FROM v_canonical_riders");
+        $diagnostics['canonical_riders_count'] = $stmt->fetchColumn();
+    } catch (Exception $e) {
+        $errors[] = "v_canonical_riders VIEW ar trasig: " . $e->getMessage();
+        $diagnostics['canonical_riders_count'] = 'ERROR';
+    }
+} else {
+    $diagnostics['canonical_riders_count'] = 'MISSING';
 }
 
-// 5. Kolla total riders i riders-tabellen
+// 5. Total riders
 try {
     $stmt = $pdo->query("SELECT COUNT(*) FROM riders");
     $diagnostics['total_riders'] = $stmt->fetchColumn();
@@ -84,23 +104,24 @@ try {
     $diagnostics['total_riders'] = 'ERROR';
 }
 
-// 6. Storsta event per ar (for referens)
+// 6. Storsta event per ar (enkel query utan v_canonical_riders)
 try {
     $stmt = $pdo->query("
         SELECT
             YEAR(e.date) as year,
             e.name as event_name,
             e.date,
-            COUNT(DISTINCT r.cyclist_id) as participants
+            COUNT(r.id) as participants
         FROM results r
         JOIN events e ON r.event_id = e.id
         WHERE e.date IS NOT NULL
         GROUP BY e.id
+        HAVING participants > 50
         ORDER BY year DESC, participants DESC
+        LIMIT 50
     ");
     $allEvents = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // Gruppera och ta max per ar
     $maxPerYear = [];
     foreach ($allEvents as $ev) {
         $y = $ev['year'];
@@ -111,47 +132,24 @@ try {
     $diagnostics['largest_events'] = $maxPerYear;
 } catch (Exception $e) {
     $errors[] = "Kunde inte hamta event-data: " . $e->getMessage();
+    $diagnostics['largest_events'] = [];
 }
 
-// 7. Kolla cron-runs status
-try {
-    $stmt = $pdo->query("
-        SELECT job_name, run_key, status, started_at, finished_at, rows_affected
-        FROM analytics_cron_runs
-        ORDER BY started_at DESC
-        LIMIT 20
-    ");
-    $diagnostics['cron_runs'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
-} catch (Exception $e) {
+// 7. Cron-runs (om tabellen finns)
+if (tableExists($pdo, 'analytics_cron_runs')) {
+    try {
+        $stmt = $pdo->query("
+            SELECT job_name, run_key, status, started_at, finished_at, rows_affected
+            FROM analytics_cron_runs
+            ORDER BY started_at DESC
+            LIMIT 15
+        ");
+        $diagnostics['cron_runs'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (Exception $e) {
+        $diagnostics['cron_runs'] = [];
+    }
+} else {
     $diagnostics['cron_runs'] = [];
-}
-
-// 8. Testa JOIN mellan results och v_canonical_riders for 2024
-try {
-    $testYear = 2024;
-    $stmt = $pdo->prepare("
-        SELECT COUNT(DISTINCT v.canonical_rider_id)
-        FROM results res
-        JOIN events e ON res.event_id = e.id
-        JOIN v_canonical_riders v ON res.cyclist_id = v.original_rider_id
-        WHERE YEAR(e.date) = ?
-    ");
-    $stmt->execute([$testYear]);
-    $diagnostics['join_test_2024'] = $stmt->fetchColumn();
-
-    // Hur manga saknar mappning?
-    $stmt = $pdo->prepare("
-        SELECT COUNT(DISTINCT res.cyclist_id)
-        FROM results res
-        JOIN events e ON res.event_id = e.id
-        LEFT JOIN v_canonical_riders v ON res.cyclist_id = v.original_rider_id
-        WHERE YEAR(e.date) = ?
-          AND v.original_rider_id IS NULL
-    ");
-    $stmt->execute([$testYear]);
-    $diagnostics['unmapped_2024'] = $stmt->fetchColumn();
-} catch (Exception $e) {
-    $errors[] = "Join-test misslyckades: " . $e->getMessage();
 }
 
 $page_title = 'Analytics Diagnostik';
@@ -189,7 +187,7 @@ include __DIR__ . '/components/unified-layout.php';
 }
 .info-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
     gap: var(--space-md);
 }
 .info-box {
@@ -201,6 +199,7 @@ include __DIR__ . '/components/unified-layout.php';
 .info-box .label {
     font-size: var(--text-sm);
     color: var(--color-text-muted);
+    word-break: break-all;
 }
 </style>
 
@@ -208,7 +207,7 @@ include __DIR__ . '/components/unified-layout.php';
 <div class="alert alert-danger">
     <i data-lucide="alert-circle"></i>
     <div>
-        <strong>Fel upptackta:</strong>
+        <strong>Problem upptackta:</strong>
         <ul style="margin: var(--space-sm) 0 0; padding-left: var(--space-lg);">
             <?php foreach ($errors as $err): ?>
                 <li><?= htmlspecialchars($err) ?></li>
@@ -226,40 +225,38 @@ include __DIR__ . '/components/unified-layout.php';
         <div class="info-box">
             <div class="label"><?= htmlspecialchars($name) ?></div>
             <div class="<?= $status === 'EXISTS' ? 'status-ok' : 'status-error' ?>">
-                <?= htmlspecialchars($status) ?>
+                <?= $status === 'EXISTS' ? 'OK' : 'SAKNAS' ?>
             </div>
         </div>
         <?php endforeach; ?>
     </div>
 
-    <?php if (isset($diagnostics['canonical_riders_count'])): ?>
     <div style="margin-top: var(--space-md);">
-        <strong>v_canonical_riders:</strong>
-        <?= is_numeric($diagnostics['canonical_riders_count'])
-            ? number_format($diagnostics['canonical_riders_count']) . ' rader'
-            : '<span class="status-error">' . $diagnostics['canonical_riders_count'] . '</span>' ?>
-
-        <?php if (isset($diagnostics['total_riders'])): ?>
-        | <strong>riders-tabell:</strong> <?= number_format($diagnostics['total_riders']) ?> rader
+        <strong>riders-tabell:</strong> <?= is_numeric($diagnostics['total_riders']) ? number_format($diagnostics['total_riders']) : $diagnostics['total_riders'] ?> rader
+        <?php if ($hasCanonicalView && is_numeric($diagnostics['canonical_riders_count'])): ?>
+        | <strong>v_canonical_riders:</strong> <?= number_format($diagnostics['canonical_riders_count']) ?> rader
         <?php endif; ?>
     </div>
-    <?php endif; ?>
 </div>
 
 <!-- JAMFORELSE -->
 <div class="diag-card">
     <h3>2. Jamforelse: Faktiska deltagare vs Analytics</h3>
-    <p style="color: var(--color-text-secondary); margin-bottom: var(--space-md);">
-        Rodfargade rader indikerar stor diskrepans (analytics < 50% av faktiska deltagare)
-    </p>
+
+    <?php if (!$hasYearlyStats): ?>
+    <div class="alert alert-warning">
+        <i data-lucide="alert-triangle"></i>
+        rider_yearly_stats-tabellen saknas. Kor setup forst.
+    </div>
+    <?php else: ?>
 
     <div class="admin-table-container">
         <table class="admin-table compare-table">
             <thead>
                 <tr>
                     <th>Ar</th>
-                    <th>Faktiska deltagare</th>
-                    <th>Analytics (rider_yearly_stats)</th>
+                    <th>Faktiska</th>
+                    <th>Analytics</th>
                     <th>Differens</th>
                     <th>Storsta event</th>
                 </tr>
@@ -271,7 +268,7 @@ include __DIR__ . '/components/unified-layout.php';
                     $analytics = (int)($diagnostics['analytics_data'][$year] ?? 0);
                     $diff = $analytics - $actual;
                     $pct = $actual > 0 ? round($analytics / $actual * 100, 1) : 0;
-                    $isDiscrepancy = $pct < 50 || $actual > 0 && $analytics === 0;
+                    $isDiscrepancy = $pct < 50 || ($actual > 0 && $analytics === 0);
 
                     $largestEvent = $diagnostics['largest_events'][$year] ?? null;
                 ?>
@@ -280,7 +277,7 @@ include __DIR__ . '/components/unified-layout.php';
                     <td><?= number_format($actual) ?></td>
                     <td>
                         <?= number_format($analytics) ?>
-                        <?php if ($analytics === 0): ?>
+                        <?php if ($analytics === 0 && $actual > 0): ?>
                             <span class="status-error">(SAKNAS!)</span>
                         <?php endif; ?>
                     </td>
@@ -289,7 +286,6 @@ include __DIR__ . '/components/unified-layout.php';
                             <span class="<?= $pct >= 90 ? 'status-ok' : ($pct >= 50 ? 'status-warning' : 'status-error') ?>">
                                 <?= $pct ?>%
                             </span>
-                            (<?= $diff >= 0 ? '+' : '' ?><?= $diff ?>)
                         <?php else: ?>
                             -
                         <?php endif; ?>
@@ -307,50 +303,23 @@ include __DIR__ . '/components/unified-layout.php';
             </tbody>
         </table>
     </div>
-</div>
 
-<!-- JOIN-TEST -->
-<?php if (isset($diagnostics['join_test_2024'])): ?>
-<div class="diag-card">
-    <h3>3. Join-test for 2024</h3>
-    <div class="info-grid">
-        <div class="info-box">
-            <div class="label">Riders via v_canonical_riders JOIN</div>
-            <div class="big-number"><?= number_format($diagnostics['join_test_2024']) ?></div>
-        </div>
-        <div class="info-box">
-            <div class="label">Riders UTAN mappning</div>
-            <div class="big-number <?= $diagnostics['unmapped_2024'] > 0 ? 'status-error' : 'status-ok' ?>">
-                <?= number_format($diagnostics['unmapped_2024'] ?? 0) ?>
-            </div>
-        </div>
-    </div>
-
-    <?php if (($diagnostics['unmapped_2024'] ?? 0) > 0): ?>
-    <div class="alert alert-warning" style="margin-top: var(--space-md);">
-        <i data-lucide="alert-triangle"></i>
-        <div>
-            <strong>Problem:</strong> <?= number_format($diagnostics['unmapped_2024']) ?> riders i 2024 har cyclist_id som inte finns i v_canonical_riders.<br>
-            Detta kan bero pa att results.cyclist_id refererar till riders som inte langre finns, eller att VIEW:en inte ar korrekt.
-        </div>
-    </div>
     <?php endif; ?>
 </div>
-<?php endif; ?>
 
 <!-- CRON-KORNINGAR -->
 <?php if (!empty($diagnostics['cron_runs'])): ?>
 <div class="diag-card">
-    <h3>4. Senaste Analytics-korningar</h3>
+    <h3>3. Senaste Analytics-korningar</h3>
     <div class="admin-table-container">
         <table class="admin-table">
             <thead>
                 <tr>
                     <th>Jobb</th>
-                    <th>Ar/Key</th>
+                    <th>Ar</th>
                     <th>Status</th>
                     <th>Rader</th>
-                    <th>Startad</th>
+                    <th>Tid</th>
                 </tr>
             </thead>
             <tbody>
@@ -375,52 +344,52 @@ include __DIR__ . '/components/unified-layout.php';
 
 <!-- ATGARDER -->
 <div class="diag-card">
-    <h3>5. Rekommenderade atgarder</h3>
+    <h3>4. Atgarder</h3>
 
     <?php
-    $hasViewIssue = ($diagnostics['objects']['v_canonical_riders'] ?? '') !== 'EXISTS';
+    $missingObjects = array_filter($diagnostics['objects'], fn($s) => $s !== 'EXISTS');
     $hasDataIssue = false;
     foreach ($diagnostics['actual_data'] ?? [] as $row) {
         $year = $row['year'];
         $actual = (int)$row['actual_unique_riders'];
         $analytics = (int)($diagnostics['analytics_data'][$year] ?? 0);
-        if ($actual > 0 && ($analytics === 0 || $analytics < $actual * 0.5)) {
+        if ($actual > 100 && $analytics < $actual * 0.5) {
             $hasDataIssue = true;
             break;
         }
     }
     ?>
 
-    <?php if ($hasViewIssue): ?>
-    <div class="alert alert-danger">
+    <?php if (!empty($missingObjects)): ?>
+    <div class="alert alert-danger" style="margin-bottom: var(--space-md);">
         <i data-lucide="database"></i>
         <div>
-            <strong>1. Skapa v_canonical_riders VIEW</strong><br>
-            Kor migrations for att skapa nodvandiga tabeller och views:<br>
-            <code>php analytics/setup-governance.php</code><br>
-            <code>php analytics/setup-tables.php</code>
+            <strong>1. Skapa saknade tabeller/views</strong><br>
+            Kor dessa kommandon (SSH eller via migrations):<br>
+            <code style="display: block; margin-top: var(--space-xs);">php analytics/setup-governance.php</code>
+            <code style="display: block;">php analytics/setup-tables.php</code>
         </div>
     </div>
     <?php endif; ?>
 
-    <?php if ($hasDataIssue): ?>
-    <div class="alert alert-warning">
+    <?php if ($hasDataIssue || (!empty($diagnostics['analytics_data']) && empty(array_filter($diagnostics['analytics_data'])))): ?>
+    <div class="alert alert-warning" style="margin-bottom: var(--space-md);">
         <i data-lucide="refresh-cw"></i>
         <div>
-            <strong><?= $hasViewIssue ? '2' : '1' ?>. Kor populate-historical med --force</strong><br>
-            For att regenerera all analytics-data:<br>
-            <code>php analytics/populate-historical.php --force</code><br>
-            Eller via webben: <a href="/analytics/populate-historical.php?force=1">Kor med force</a>
+            <strong><?= !empty($missingObjects) ? '2' : '1' ?>. Regenerera analytics-data</strong><br>
+            <a href="/analytics/populate-historical.php?force=1" class="btn-admin btn-admin-warning" style="margin-top: var(--space-sm);">
+                Kor populate-historical (Force)
+            </a>
         </div>
     </div>
     <?php endif; ?>
 
-    <?php if (!$hasViewIssue && !$hasDataIssue): ?>
+    <?php if (empty($missingObjects) && !$hasDataIssue): ?>
     <div class="alert alert-success">
         <i data-lucide="check-circle"></i>
         <div>
             <strong>Allt ser bra ut!</strong><br>
-            Tabeller och data matchar.
+            Tabeller finns och data matchar.
         </div>
     </div>
     <?php endif; ?>
