@@ -1050,8 +1050,12 @@ class AnalyticsEngine {
 
     /**
      * Snabb version av refreshAllStats som anvander bulk-metoder
+     * Rensar forst alla cron-runs for aret sa att allt kors om
      */
     public function refreshAllStatsFast(int $year): array {
+        // Rensa ALLA cron-runs for detta ar sa att inget hoppas over
+        $this->pdo->prepare("DELETE FROM analytics_cron_runs WHERE run_key = ?")->execute([(string)$year]);
+
         $results = [];
         $results['yearly_stats'] = $this->calculateYearlyStatsBulk($year);
         $results['series_participation'] = $this->calculateSeriesParticipation($year);
