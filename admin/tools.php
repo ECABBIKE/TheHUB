@@ -406,6 +406,55 @@ include __DIR__ . '/components/unified-layout.php';
 
 </div>
 
+<!-- ========== ANALYTICS ========== -->
+<h3 class="section-title">Analytics</h3>
+<div class="tools-grid">
+
+    <!-- Populate Historical -->
+    <div class="tool-card">
+        <div class="tool-card-header">
+            <div class="tool-icon"><i data-lucide="database"></i></div>
+            <div>
+                <h4 class="tool-title">Populate Historical</h4>
+                <p class="tool-description">Generera historisk analytics-data</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/analytics/populate-historical.php" class="btn-admin btn-admin-primary">Kör</a>
+            <a href="/analytics/populate-historical.php?force=1" class="btn-admin btn-admin-warning">Kör (Force)</a>
+        </div>
+    </div>
+
+    <!-- Historical Trends -->
+    <div class="tool-card">
+        <div class="tool-card-header">
+            <div class="tool-icon"><i data-lucide="trending-up"></i></div>
+            <div>
+                <h4 class="tool-title">Historiska Trender</h4>
+                <p class="tool-description">Analysera trender över flera säsonger</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/analytics-trends.php" class="btn-admin btn-admin-primary">Visa</a>
+        </div>
+    </div>
+
+    <!-- Analytics Dashboard -->
+    <div class="tool-card">
+        <div class="tool-card-header">
+            <div class="tool-icon"><i data-lucide="bar-chart-3"></i></div>
+            <div>
+                <h4 class="tool-title">Analytics Dashboard</h4>
+                <p class="tool-description">KPI-översikt och statistik</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/analytics-dashboard.php" class="btn-admin btn-admin-secondary">Öppna</a>
+        </div>
+    </div>
+
+</div>
+
 <!-- ========== SYSTEM ========== -->
 <h3 class="section-title">System</h3>
 <div class="tools-grid">
