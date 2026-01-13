@@ -25,6 +25,7 @@ class AnalyticsEngine {
     private ?string $currentJobName = null;
     private ?int $currentJobId = null;
     private bool $nonBlockingMode = false;
+    private bool $forceRerun = false;
 
     /**
      * Constructor
@@ -56,6 +57,21 @@ class AnalyticsEngine {
         $this->nonBlockingMode = false;
     }
 
+    /**
+     * Satt force-rerun flagga
+     * Om true, kors jobb om aven om de redan ar klara
+     */
+    public function setForceRerun(bool $force): void {
+        $this->forceRerun = $force;
+    }
+
+    /**
+     * Hamta force-rerun flagga
+     */
+    public function getForceRerun(): bool {
+        return $this->forceRerun;
+    }
+
     // =========================================================================
     // JOBB-HANTERING
     // =========================================================================
@@ -65,38 +81,53 @@ class AnalyticsEngine {
      *
      * @param string $jobName Jobbnamn (t.ex. 'yearly-stats')
      * @param string $runKey Unik nyckel (t.ex. '2025')
-     * @return int|false Job ID eller false om redan kors
+     * @param bool $force Tvinga omkorning aven om redan klar
+     * @return int|false Job ID eller false om redan kors/klar
      */
-    public function startJob(string $jobName, string $runKey): int|false {
-        // Kolla om jobb redan kors (las mot dubbelkorning)
+    public function startJob(string $jobName, string $runKey, bool $force = false): int|false {
+        // Kolla om jobb redan kors eller ar klart
         $stmt = $this->pdo->prepare("
             SELECT id, status FROM analytics_cron_runs
-            WHERE job_name = ? AND run_key = ? AND status = 'started'
+            WHERE job_name = ? AND run_key = ?
         ");
         $stmt->execute([$jobName, $runKey]);
         $existing = $stmt->fetch();
 
         if ($existing) {
-            return false; // Redan pagar
+            // Om jobbet pagar, avbryt
+            if ($existing['status'] === 'started') {
+                return false;
+            }
+
+            // Om jobbet ar klart och vi inte tvingas om, hoppa over
+            if ($existing['status'] === 'success' && !$force) {
+                return false;
+            }
+
+            // Uppdatera befintligt jobb (force eller failed)
+            $stmt = $this->pdo->prepare("
+                UPDATE analytics_cron_runs
+                SET status = 'started',
+                    started_at = CURRENT_TIMESTAMP,
+                    finished_at = NULL,
+                    duration_ms = NULL,
+                    rows_affected = 0,
+                    log = NULL
+                WHERE id = ?
+            ");
+            $stmt->execute([$existing['id']]);
+            $this->currentJobId = (int)$existing['id'];
+        } else {
+            // Skapa nytt jobb
+            $stmt = $this->pdo->prepare("
+                INSERT INTO analytics_cron_runs (job_name, run_key, status)
+                VALUES (?, ?, 'started')
+            ");
+            $stmt->execute([$jobName, $runKey]);
+            $this->currentJobId = (int)$this->pdo->lastInsertId();
         }
 
-        // Skapa nytt jobb
-        $stmt = $this->pdo->prepare("
-            INSERT INTO analytics_cron_runs (job_name, run_key, status)
-            VALUES (?, ?, 'started')
-            ON DUPLICATE KEY UPDATE
-                status = 'started',
-                started_at = CURRENT_TIMESTAMP,
-                finished_at = NULL,
-                duration_ms = NULL,
-                rows_affected = 0,
-                log = NULL
-        ");
-        $stmt->execute([$jobName, $runKey]);
-
         $this->currentJobName = $jobName;
-        $this->currentJobId = (int)$this->pdo->lastInsertId();
-
         return $this->currentJobId;
     }
 
@@ -148,9 +179,9 @@ class AnalyticsEngine {
      * @return int Antal rader skapade/uppdaterade
      */
     public function calculateYearlyStats(int $year, ?callable $progressCallback = null): int {
-        $jobId = $this->startJob('yearly-stats', (string)$year);
+        $jobId = $this->startJob('yearly-stats', (string)$year, $this->forceRerun);
         if ($jobId === false) {
-            // Job already running - return 0 instead of blocking
+            // Job already running or completed - skip
             return 0;
         }
 
@@ -330,7 +361,7 @@ class AnalyticsEngine {
      * @return int Antal rader skapade
      */
     public function calculateSeriesParticipation(int $year, ?callable $progressCallback = null): int {
-        $jobId = $this->startJob('series-participation', (string)$year);
+        $jobId = $this->startJob('series-participation', (string)$year, $this->forceRerun);
         if ($jobId === false) {
             return 0;
         }
@@ -421,7 +452,7 @@ class AnalyticsEngine {
      * @return int Antal rader skapade
      */
     public function calculateSeriesCrossover(int $year): int {
-        $jobId = $this->startJob('series-crossover', (string)$year);
+        $jobId = $this->startJob('series-crossover', (string)$year, $this->forceRerun);
         if ($jobId === false) {
             return 0;
         }
@@ -529,7 +560,7 @@ class AnalyticsEngine {
      * @return int Antal rader skapade
      */
     public function calculateClubStats(int $year, ?callable $progressCallback = null): int {
-        $jobId = $this->startJob('club-stats', (string)$year);
+        $jobId = $this->startJob('club-stats', (string)$year, $this->forceRerun);
         if ($jobId === false) {
             return 0;
         }
@@ -728,7 +759,7 @@ class AnalyticsEngine {
      * @return int Antal rader skapade
      */
     public function calculateVenueStats(int $year): int {
-        $jobId = $this->startJob('venue-stats', (string)$year);
+        $jobId = $this->startJob('venue-stats', (string)$year, $this->forceRerun);
         if ($jobId === false) {
             return 0;
         }

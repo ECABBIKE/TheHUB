@@ -17,6 +17,7 @@ if (!defined('HUB_ROOT')) {
 }
 
 require_once __DIR__ . '/icons.php';
+require_once __DIR__ . '/../includes/auth.php';
 
 $currentPage = $pageInfo['page'] ?? 'dashboard';
 $currentSection = $pageInfo['section'] ?? '';
