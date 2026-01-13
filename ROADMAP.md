@@ -10,7 +10,7 @@
 |------|-------------|--------|-----------|
 | 0 | Governance & Identity Foundation | [x] KLAR | Grunden for datakvalitet |
 | 1 | Databas & Analytics-tabeller | [x] KLAR | |
-| 2 | Analytics Engine (karnlogik) | [ ] Ej paborjad | |
+| 2 | Analytics Engine (karnlogik) | [x] KLAR | |
 | 3 | KPI Dashboard (admin) | [ ] Ej paborjad | |
 | 4 | Serieflodeanalys | [ ] Ej paborjad | NYCKELFUNKTION |
 | 5 | Rapportgenerator | [ ] Ej paborjad | |
@@ -77,14 +77,14 @@
 
 **Mal:** PHP-klasser som beraknar och lagrar all statistik
 **Tid:** ~4-6 timmar
-**Status:** EJ PABORJAD
+**Status:** KLAR
 
 ### Uppgifter
 
-- [ ] Skapa `analytics/includes/AnalyticsEngine.php`
-- [ ] Skapa `analytics/includes/KPICalculator.php`
-- [ ] Skapa `analytics/populate-historical.php`
-- [ ] Historisk data genererad for 2019-2025
+- [x] Skapa `analytics/includes/AnalyticsEngine.php`
+- [x] Skapa `analytics/includes/KPICalculator.php`
+- [x] Skapa `analytics/populate-historical.php`
+- [ ] Historisk data genererad (kor populate-historical.php)
 - [ ] Verifiera att siffror ar rimliga
 
 ---
@@ -215,4 +215,8 @@
   - Skapade 002_series_extensions.php (series_level, region, etc.)
   - Skapade 003_seed_series_levels.sql (kategorisering)
   - Skapade setup-tables.php
+- Steg 2 KLAR: Analytics Engine (karnlogik)
+  - Skapade AnalyticsEngine.php (beraknar all statistik)
+  - Skapade KPICalculator.php (KPI-metoder for dashboard)
+  - Skapade populate-historical.php (genererar historisk data)
 
