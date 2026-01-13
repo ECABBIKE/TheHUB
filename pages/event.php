@@ -1042,11 +1042,36 @@ if (!empty($event['header_banner_url'])): ?>
 </section>
 
 <?php
-// Sponsor Banner (from sponsor with banner logo)
+// Event Header Banner (direct media upload on event)
+$eventHeaderBanner = null;
+if (!empty($event['header_banner_media_id'])) {
+    try {
+        $bannerStmt = $db->prepare("SELECT filepath FROM media WHERE id = ?");
+        $bannerStmt->execute([$event['header_banner_media_id']]);
+        $bannerRow = $bannerStmt->fetch(PDO::FETCH_ASSOC);
+        if ($bannerRow && !empty($bannerRow['filepath'])) {
+            $eventHeaderBanner = '/' . ltrim($bannerRow['filepath'], '/');
+        }
+    } catch (Exception $e) {
+        error_log("EVENT PAGE: Error loading header banner: " . $e->getMessage());
+    }
+}
+
+// Show event's own header banner first
+if ($eventHeaderBanner): ?>
+<section class="event-sponsor-banner mb-sm">
+    <div class="sponsor-banner-link">
+        <img src="<?= h($eventHeaderBanner) ?>" alt="<?= h($event['name']) ?> banner" class="sponsor-banner-logo">
+    </div>
+</section>
+<?php endif; ?>
+
+<?php
+// Sponsor Banner (from sponsor with banner logo) - only show if no event banner
 $headerSponsorsWithLogos = array_filter($eventSponsors['header'] ?? [], function($s) {
     return get_sponsor_logo_for_placement($s, 'header') !== null;
 });
-if (!empty($headerSponsorsWithLogos)): ?>
+if (!$eventHeaderBanner && !empty($headerSponsorsWithLogos)): ?>
 <section class="event-sponsor-banner mb-sm">
     <?php foreach ($headerSponsorsWithLogos as $sponsor):
         $bannerLogo = get_sponsor_logo_for_placement($sponsor, 'header');

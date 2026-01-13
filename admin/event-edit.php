@@ -814,7 +814,7 @@ include __DIR__ . '/components/unified-layout.php';
 
     <!-- EVENT CLASSES & PRICING - Hidden for promotors -->
     <?php if (!$isPromotorOnly): ?>
-    <details class="admin-card mb-lg" open>
+    <details class="admin-card mb-lg">
         <summary class="admin-card-header collapsible-header">
             <h2>Klasser och Startavgifter</h2>
             <span class="text-secondary text-sm">Klicka för att expandera/minimera</span>
@@ -897,7 +897,7 @@ include __DIR__ . '/components/unified-layout.php';
     <?php endif; /* End hide Klasser for promotors */ ?>
 
     <!-- ORGANIZER & CONTACT - Editable for promotors -->
-    <details class="admin-card mb-lg" open>
+    <details class="admin-card mb-lg">
         <summary class="admin-card-header collapsible-header">
             <h2>Arrangör & Kontakt</h2>
             <span class="text-secondary text-sm">Klicka för att expandera/minimera</span>
@@ -1020,7 +1020,7 @@ include __DIR__ . '/components/unified-layout.php';
     </details>
 
     <!-- LOCATION DETAILS - Editable for promotors -->
-    <details class="admin-card mb-lg" open>
+    <details class="admin-card mb-lg">
         <summary class="admin-card-header collapsible-header">
             <h2>Platsdetaljer</h2>
             <span class="text-secondary text-sm">Klicka för att expandera/minimera</span>
@@ -1046,7 +1046,7 @@ include __DIR__ . '/components/unified-layout.php';
     </details>
 
     <!-- INVITATION & FACILITIES - Editable for promotors -->
-    <details class="admin-card mb-lg" open>
+    <details class="admin-card mb-lg">
         <summary class="admin-card-header collapsible-header">
             <h2>Inbjudan</h2>
             <span class="text-secondary text-sm">Klicka för att expandera/minimera</span>
@@ -1241,7 +1241,7 @@ include __DIR__ . '/components/unified-layout.php';
 
     <!-- SPONSORS - Editable for promotors -->
     <?php if (!empty($allSponsors)): ?>
-    <details class="admin-card mb-lg" open>
+    <details class="admin-card mb-lg">
         <summary class="admin-card-header collapsible-header">
             <h2>
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-md"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
@@ -1325,7 +1325,7 @@ include __DIR__ . '/components/unified-layout.php';
     </details>
 
     <!-- SAMARBETSPARTNERS - Partner logo row at bottom -->
-    <details class="admin-card mb-lg" open>
+    <details class="admin-card mb-lg">
         <summary class="admin-card-header collapsible-header">
             <h2>
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-md"><path d="M11 17a1 1 0 0 1 2 0c0 .5-.34 3-.5 4.5a.5.5 0 0 1-1 0c-.16-1.5-.5-4-.5-4.5Z"/><path d="M8 14a6 6 0 1 1 8 0"/><path d="M12 2v1"/><path d="m4.93 4.93.71.71"/><path d="M2 12h1"/><path d="m4.93 19.07.71-.71"/><path d="m19.07 4.93-.71.71"/><path d="M22 12h-1"/><path d="m19.07 19.07-.71-.71"/></svg>
