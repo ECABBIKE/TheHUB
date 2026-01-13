@@ -133,7 +133,20 @@ $seriesEvents = $db->getAll("
     WHERE e.series_id = ?
     ORDER BY e.date ASC
 ", [$selectedSeriesId]);
+
+// DEBUG: Kolla om events finns med raw PDO
+$debugStmt = $pdo->prepare("SELECT COUNT(*) as cnt FROM events WHERE series_id = ?");
+$debugStmt->execute([$selectedSeriesId]);
+$debugCount = $debugStmt->fetch(PDO::FETCH_ASSOC);
+error_log("REGISTRATION-RULES DEBUG: series_id={$selectedSeriesId}, events found via getAll=" . count($seriesEvents) . ", raw count=" . ($debugCount['cnt'] ?? 'error'));
 ?>
+
+<!-- DEBUG INFO -->
+<div class="alert alert-info mb-md" style="font-size: 0.8rem;">
+    <strong>Debug:</strong> series_id=<?= $selectedSeriesId ?>,
+    events via getAll=<?= count($seriesEvents) ?>,
+    raw SQL count=<?= $debugCount['cnt'] ?? 'error' ?>
+</div>
 
 <!-- Events in Series -->
 <div class="admin-card mb-lg">
