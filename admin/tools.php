@@ -453,6 +453,20 @@ include __DIR__ . '/components/unified-layout.php';
         </div>
     </div>
 
+    <!-- Analytics Diagnostik -->
+    <div class="tool-card">
+        <div class="tool-card-header">
+            <div class="tool-icon warning"><i data-lucide="stethoscope"></i></div>
+            <div>
+                <h4 class="tool-title">Analytics Diagnostik</h4>
+                <p class="tool-description">Felsök datadiskrepanser</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/analytics-diagnose.php" class="btn-admin btn-admin-warning">Diagnostisera</a>
+        </div>
+    </div>
+
 </div>
 
 <!-- ========== SYSTEM ========== -->
