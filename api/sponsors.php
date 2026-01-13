@@ -73,6 +73,7 @@ function handleCreate() {
  */
 function handleGet() {
     $id = $_GET['id'] ?? null;
+    error_log("SPONSORS API: handleGet called, id=" . ($id ?? 'null'));
 
     if (!$id) {
         echo json_encode(['success' => false, 'error' => 'ID saknas']);
@@ -84,14 +85,17 @@ function handleGet() {
 
     // If new function fails, fallback to basic get_sponsor
     if (!$sponsor) {
+        error_log("SPONSORS API: get_sponsor_with_logos returned null, trying get_sponsor");
         $sponsor = get_sponsor($id);
     }
 
     if (!$sponsor) {
+        error_log("SPONSORS API: sponsor not found");
         echo json_encode(['success' => false, 'error' => 'Sponsor hittades inte']);
         return;
     }
 
+    error_log("SPONSORS API: returning sponsor " . ($sponsor['name'] ?? 'unknown'));
     echo json_encode(['success' => true, 'data' => $sponsor]);
 }
 
@@ -99,19 +103,23 @@ function handleGet() {
  * Update sponsor
  */
 function handleUpdate() {
+    error_log("SPONSORS API: handleUpdate called, method=" . $_SERVER['REQUEST_METHOD']);
+
     if ($_SERVER['REQUEST_METHOD'] !== 'PUT' && $_SERVER['REQUEST_METHOD'] !== 'POST') {
         echo json_encode(['success' => false, 'error' => 'PUT/POST krävs']);
         return;
     }
-    
+
     $input = json_decode(file_get_contents('php://input'), true);
-    
+    error_log("SPONSORS API: update input=" . json_encode($input));
+
     if (!$input || !isset($input['id'])) {
         echo json_encode(['success' => false, 'error' => 'ID saknas']);
         return;
     }
-    
+
     $result = update_sponsor($input['id'], $input);
+    error_log("SPONSORS API: update_sponsor result=" . json_encode($result));
     echo json_encode($result);
 }
 
@@ -120,13 +128,15 @@ function handleUpdate() {
  */
 function handleDelete() {
     $id = $_GET['id'] ?? null;
-    
+    error_log("SPONSORS API: handleDelete called, id=" . ($id ?? 'null') . ", method=" . $_SERVER['REQUEST_METHOD']);
+
     if (!$id) {
         echo json_encode(['success' => false, 'error' => 'ID saknas']);
         return;
     }
-    
+
     $result = delete_sponsor($id);
+    error_log("SPONSORS API: delete_sponsor result=" . json_encode($result));
     echo json_encode($result);
 }
 
