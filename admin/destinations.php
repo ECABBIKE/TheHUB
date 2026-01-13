@@ -189,7 +189,7 @@ include __DIR__ . '/components/unified-layout.php';
 <?php endif; ?>
 
 <!-- Stats Cards -->
-<div class="grid grid-cols-4 gap-md mb-lg">
+<div class="grid grid-stats grid-gap-md mb-lg">
     <div class="card" style="background: var(--color-bg-hover);">
         <div class="card-body text-center">
             <div class="text-3xl font-bold text-accent"><?= $totalDestinations ?></div>
@@ -225,7 +225,7 @@ include __DIR__ . '/components/unified-layout.php';
         </h2>
     </div>
     <div class="card-body">
-        <div class="grid grid-cols-2 gap-lg">
+        <div class="grid grid-2 grid-gap-lg">
             <!-- Quick Create -->
             <form method="POST" class="flex gap-sm items-end">
                 <?= csrf_field() ?>

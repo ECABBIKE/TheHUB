@@ -174,7 +174,7 @@ include __DIR__ . '/../components/unified-layout.php';
             Du kan skapa destinations automatiskt baserat pa platsnamnet och koppla events till dem.
         </p>
 
-        <div class="grid grid-cols-3 gap-md mb-lg">
+        <div class="grid grid-stats grid-gap-md mb-lg">
             <div class="card" style="background: var(--color-bg-hover);">
                 <div class="card-body text-center">
                     <div class="text-3xl font-bold text-accent"><?= $totalLocations ?></div>
@@ -308,7 +308,7 @@ function selectAll(checked) {
         </h2>
     </div>
     <div class="card-body">
-        <div class="grid grid-cols-2 gap-lg">
+        <div class="grid grid-2 grid-gap-lg">
             <div>
                 <h3 class="text-accent mb-sm">Skapa nya destinations</h3>
                 <ol class="text-secondary" style="padding-left: var(--space-md);">
