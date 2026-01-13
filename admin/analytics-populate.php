@@ -31,21 +31,9 @@ if (isset($_GET['run_year'])) {
         $engine->enableNonBlockingMode();
         $engine->setForceRerun($force);
 
-        $results = [
-            'year' => $year,
-            'yearly_stats' => 0,
-            'series_participation' => 0,
-            'series_crossover' => 0,
-            'club_stats' => 0,
-            'venue_stats' => 0
-        ];
-
-        // Kor varje berakning
-        $results['yearly_stats'] = $engine->calculateYearlyStats($year);
-        $results['series_participation'] = $engine->calculateSeriesParticipation($year);
-        $results['series_crossover'] = $engine->calculateSeriesCrossover($year);
-        $results['club_stats'] = $engine->calculateClubStats($year);
-        $results['venue_stats'] = $engine->calculateVenueStats($year);
+        // Anvand den snabba bulk-versionen
+        $results = $engine->refreshAllStatsFast($year);
+        $results['year'] = $year;
 
         $results['success'] = true;
         $results['total'] = array_sum(array_filter($results, 'is_numeric'));

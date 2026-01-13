@@ -930,6 +930,138 @@ class AnalyticsEngine {
     }
 
     // =========================================================================
+    // BULK-METODER (SNABBA)
+    // =========================================================================
+
+    /**
+     * Berakna yearly stats med EN stor query istallet for per-rider
+     * Mycket snabbare for stora datamangder
+     *
+     * @param int $year Sasong
+     * @return int Antal rader
+     */
+    public function calculateYearlyStatsBulk(int $year): int {
+        $jobId = $this->startJob('yearly-stats', (string)$year, $this->forceRerun);
+        if ($jobId === false) {
+            return 0;
+        }
+
+        try {
+            // Rensa befintlig data for detta ar (for att undvika dubbletter)
+            $this->pdo->prepare("DELETE FROM rider_yearly_stats WHERE season_year = ?")->execute([$year]);
+
+            // En stor INSERT...SELECT som beraknar allt pa en gang
+            $sql = "
+                INSERT INTO rider_yearly_stats (
+                    rider_id, season_year, total_events, total_series, total_points,
+                    best_position, avg_position, primary_discipline, primary_series_id,
+                    is_rookie, is_retained, calculation_version, calculated_at
+                )
+                SELECT
+                    stats.rider_id,
+                    $year as season_year,
+                    stats.total_events,
+                    stats.total_series,
+                    stats.total_points,
+                    stats.best_position,
+                    stats.avg_position,
+                    disc.discipline as primary_discipline,
+                    ser.series_id as primary_series_id,
+                    CASE WHEN first_year.first_year = $year THEN 1 ELSE 0 END as is_rookie,
+                    CASE WHEN prev_year.rider_id IS NOT NULL THEN 1 ELSE 0 END as is_retained,
+                    '{$this->calculationVersion}' as calculation_version,
+                    NOW() as calculated_at
+                FROM (
+                    -- Grundstatistik per rider
+                    SELECT
+                        v.canonical_rider_id as rider_id,
+                        COUNT(DISTINCT res.event_id) as total_events,
+                        COUNT(DISTINCT e.series_id) as total_series,
+                        SUM(COALESCE(res.points, 0)) as total_points,
+                        MIN(CASE WHEN res.position > 0 THEN res.position END) as best_position,
+                        AVG(CASE WHEN res.position > 0 THEN res.position END) as avg_position
+                    FROM results res
+                    JOIN events e ON res.event_id = e.id
+                    JOIN v_canonical_riders v ON res.cyclist_id = v.original_rider_id
+                    WHERE YEAR(e.date) = $year
+                    GROUP BY v.canonical_rider_id
+                ) stats
+                -- Primary discipline (mest deltaganden)
+                LEFT JOIN (
+                    SELECT rider_id, discipline FROM (
+                        SELECT
+                            v.canonical_rider_id as rider_id,
+                            e.discipline,
+                            COUNT(*) as cnt,
+                            ROW_NUMBER() OVER (PARTITION BY v.canonical_rider_id ORDER BY COUNT(*) DESC) as rn
+                        FROM results res
+                        JOIN events e ON res.event_id = e.id
+                        JOIN v_canonical_riders v ON res.cyclist_id = v.original_rider_id
+                        WHERE YEAR(e.date) = $year AND e.discipline IS NOT NULL
+                        GROUP BY v.canonical_rider_id, e.discipline
+                    ) ranked WHERE rn = 1
+                ) disc ON stats.rider_id = disc.rider_id
+                -- Primary series (mest deltaganden)
+                LEFT JOIN (
+                    SELECT rider_id, series_id FROM (
+                        SELECT
+                            v.canonical_rider_id as rider_id,
+                            e.series_id,
+                            COUNT(*) as cnt,
+                            ROW_NUMBER() OVER (PARTITION BY v.canonical_rider_id ORDER BY COUNT(*) DESC) as rn
+                        FROM results res
+                        JOIN events e ON res.event_id = e.id
+                        JOIN v_canonical_riders v ON res.cyclist_id = v.original_rider_id
+                        WHERE YEAR(e.date) = $year AND e.series_id IS NOT NULL
+                        GROUP BY v.canonical_rider_id, e.series_id
+                    ) ranked WHERE rn = 1
+                ) ser ON stats.rider_id = ser.rider_id
+                -- First year (for is_rookie)
+                LEFT JOIN (
+                    SELECT
+                        v.canonical_rider_id as rider_id,
+                        MIN(YEAR(e.date)) as first_year
+                    FROM results res
+                    JOIN events e ON res.event_id = e.id
+                    JOIN v_canonical_riders v ON res.cyclist_id = v.original_rider_id
+                    GROUP BY v.canonical_rider_id
+                ) first_year ON stats.rider_id = first_year.rider_id
+                -- Previous year participation (for is_retained)
+                LEFT JOIN (
+                    SELECT DISTINCT v.canonical_rider_id as rider_id
+                    FROM results res
+                    JOIN events e ON res.event_id = e.id
+                    JOIN v_canonical_riders v ON res.cyclist_id = v.original_rider_id
+                    WHERE YEAR(e.date) = " . ($year - 1) . "
+                ) prev_year ON stats.rider_id = prev_year.rider_id
+            ";
+
+            $this->pdo->exec($sql);
+            $count = $this->pdo->query("SELECT COUNT(*) FROM rider_yearly_stats WHERE season_year = $year")->fetchColumn();
+
+            $this->endJob('success', $count, ['year' => $year]);
+            return (int)$count;
+
+        } catch (Exception $e) {
+            $this->endJob('failed', 0, ['error' => $e->getMessage()]);
+            throw $e;
+        }
+    }
+
+    /**
+     * Snabb version av refreshAllStats som anvander bulk-metoder
+     */
+    public function refreshAllStatsFast(int $year): array {
+        $results = [];
+        $results['yearly_stats'] = $this->calculateYearlyStatsBulk($year);
+        $results['series_participation'] = $this->calculateSeriesParticipation($year);
+        $results['series_crossover'] = $this->calculateSeriesCrossover($year);
+        $results['club_stats'] = $this->calculateClubStats($year);
+        $results['venue_stats'] = $this->calculateVenueStats($year);
+        return $results;
+    }
+
+    // =========================================================================
     // REFRESH-METODER
     // =========================================================================
 
