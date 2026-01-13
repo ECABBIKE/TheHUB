@@ -249,11 +249,12 @@ $ADMIN_TABS = [
     ],
 
     // ========================================
-    // ANALYTICS
+    // ANALYTICS (super_admin eller statistics-behorighet)
     // ========================================
     'analytics' => [
         'title' => 'Analytics',
         'icon' => 'bar-chart-3',
+        'super_admin_only' => true,  // Visas bara for super_admin (eller statistics-behorighet via hasPermission)
         'tabs' => [
             [
                 'id' => 'dashboard',

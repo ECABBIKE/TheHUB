@@ -8,11 +8,17 @@
  * - Serie-lojalitet
  * - Entry points
  *
+ * Behorighet: super_admin ELLER statistics-permission
+ *
  * @package TheHUB Analytics
  * @version 1.0
  */
 require_once __DIR__ . '/../config.php';
+require_once __DIR__ . '/../includes/auth.php';
 require_once __DIR__ . '/../analytics/includes/KPICalculator.php';
+
+// Kraver super_admin eller statistics-behorighet
+requireAnalyticsAccess();
 
 global $pdo;
 

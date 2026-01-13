@@ -752,6 +752,46 @@ function requireRole($role) {
 }
 
 /**
+ * Require Analytics access
+ * Access granted if: super_admin OR has 'statistics' permission
+ */
+function requireAnalyticsAccess() {
+    requireLogin();
+
+    // Super admin always has access
+    if (isRole('super_admin')) {
+        return true;
+    }
+
+    // Check for statistics permission
+    if (hasPermission('statistics')) {
+        return true;
+    }
+
+    // No access
+    http_response_code(403);
+    die('Access denied: Analytics kraver super_admin eller statistics-behorighet');
+}
+
+/**
+ * Check if user has Analytics access (without dying)
+ * @return bool
+ */
+function hasAnalyticsAccess() {
+    if (!isLoggedIn()) {
+        return false;
+    }
+
+    // Super admin always has access
+    if (isRole('super_admin')) {
+        return true;
+    }
+
+    // Check for statistics permission
+    return hasPermission('statistics');
+}
+
+/**
  * Require permission to continue
  */
 function requirePermission($permissionName) {
