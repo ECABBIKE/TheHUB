@@ -13,7 +13,9 @@ $db = getDB();
 // Migration directories
 $migrationDirs = [
     'database/migrations' => __DIR__ . '/../../database/migrations',
-    'admin/migrations' => __DIR__
+    'admin/migrations' => __DIR__,
+    'Tools/migrations' => __DIR__ . '/../../Tools/migrations',
+    'analytics/migrations' => __DIR__ . '/../../analytics/migrations'
 ];
 
 // Get all migration files
@@ -275,6 +277,36 @@ include __DIR__ . '/../components/unified-layout.php';
     </div>
 </div>
 
+<!-- Analytics Migrations (Quickstart) -->
+<?php
+$analyticsMigrations = array_filter($migrations, fn($m) => $m['dir'] === 'Tools/migrations' || $m['dir'] === 'analytics/migrations');
+if (!empty($analyticsMigrations)):
+?>
+<div class="admin-card" style="margin-bottom: var(--space-lg); border: 2px solid var(--color-accent);">
+    <div class="admin-card-header" style="background: var(--color-accent-light);">
+        <h2 style="color: var(--color-accent);">
+            <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 20px; height: 20px; vertical-align: middle;">
+                <path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/>
+            </svg>
+            Analytics Migrations
+        </h2>
+    </div>
+    <div class="admin-card-body">
+        <p style="margin-bottom: var(--space-md);">Kor alla analytics-migrations i ratt ordning:</p>
+        <div style="display: flex; gap: var(--space-md); flex-wrap: wrap;">
+            <a href="/Tools/migrations/run-migrations.php" target="_blank" class="btn-admin btn-admin-primary">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                Kor alla migrations
+            </a>
+            <a href="/analytics/populate-historical.php" target="_blank" class="btn-admin btn-admin-secondary">
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5V19A9 3 0 0 0 21 19V5"/><path d="M3 12A9 3 0 0 0 21 12"/></svg>
+                Generera historisk data
+            </a>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
+
 <!-- Database Migrations -->
 <div class="section-header">
     <h3>SQL-migrationer (database/migrations)</h3>
@@ -384,6 +416,115 @@ include __DIR__ . '/../components/unified-layout.php';
                     </button>
                 </form>
                 <?php endif; ?>
+            </div>
+        </div>
+        <?php endforeach; ?>
+    <?php endif; ?>
+</div>
+
+<!-- Tools/migrations -->
+<div class="section-header" style="margin-top: var(--space-xl);">
+    <h3>Analytics Migrations (Tools/migrations)</h3>
+    <span class="dir-label"><?= count(array_filter($migrations, fn($m) => $m['dir'] === 'Tools/migrations')) ?> filer</span>
+</div>
+
+<div class="migration-list" style="margin-bottom: var(--space-xl);">
+    <?php
+    $toolsMigrations = array_filter($migrations, fn($m) => $m['dir'] === 'Tools/migrations');
+    if (empty($toolsMigrations)):
+    ?>
+        <div class="migration-item">
+            <em style="color: var(--color-text-secondary);">Inga migrations hittades</em>
+        </div>
+    <?php else: ?>
+        <?php foreach ($toolsMigrations as $m): ?>
+        <div class="migration-item">
+            <div class="migration-icon <?= isset($m['type']) && $m['type'] === 'php' ? 'php' : 'sql' ?>">
+                <?php if (isset($m['type']) && $m['type'] === 'php'): ?>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="m18 16 4-4-4-4"/><path d="m6 8-4 4 4 4"/><path d="m14.5 4-5 16"/>
+                </svg>
+                <?php else: ?>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <ellipse cx="12" cy="5" rx="9" ry="3"/>
+                    <path d="M3 5V19A9 3 0 0 0 21 19V5"/>
+                </svg>
+                <?php endif; ?>
+            </div>
+            <div class="migration-info">
+                <div class="migration-name"><?= htmlspecialchars($m['filename']) ?></div>
+                <div class="migration-meta">
+                    <?= number_format($m['size']) ?> bytes ·
+                    <?= date('Y-m-d H:i', $m['modified']) ?>
+                </div>
+            </div>
+            <div class="migration-actions">
+                <a href="?view=<?= urlencode($m['filename']) ?>" class="btn-admin btn-admin-sm btn-admin-secondary">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                    Visa
+                </a>
+                <?php if (isset($m['type']) && $m['type'] === 'php'): ?>
+                <a href="/Tools/migrations/<?= htmlspecialchars($m['filename']) ?>" class="btn-admin btn-admin-sm btn-admin-warning" target="_blank">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                    Kor
+                </a>
+                <?php else: ?>
+                <form method="POST" style="display: inline;" onsubmit="return confirm('Ar du saker pa att du vill kora denna migrering?');">
+                    <?php if (function_exists('csrf_field')) echo csrf_field(); ?>
+                    <input type="hidden" name="run" value="<?= htmlspecialchars($m['filename']) ?>">
+                    <button type="submit" class="btn-admin btn-admin-sm btn-admin-danger">
+                        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;"><polygon points="5 3 19 12 5 21 5 3"/></svg>
+                        Kor
+                    </button>
+                </form>
+                <?php endif; ?>
+            </div>
+        </div>
+        <?php endforeach; ?>
+    <?php endif; ?>
+</div>
+
+<!-- analytics/migrations -->
+<div class="section-header">
+    <h3>Analytics Source (analytics/migrations)</h3>
+    <span class="dir-label"><?= count(array_filter($migrations, fn($m) => $m['dir'] === 'analytics/migrations')) ?> filer</span>
+</div>
+
+<div class="migration-list">
+    <?php
+    $analyticsSrcMigrations = array_filter($migrations, fn($m) => $m['dir'] === 'analytics/migrations');
+    if (empty($analyticsSrcMigrations)):
+    ?>
+        <div class="migration-item">
+            <em style="color: var(--color-text-secondary);">Inga migrations hittades</em>
+        </div>
+    <?php else: ?>
+        <?php foreach ($analyticsSrcMigrations as $m): ?>
+        <div class="migration-item">
+            <div class="migration-icon <?= isset($m['type']) && $m['type'] === 'php' ? 'php' : 'sql' ?>">
+                <?php if (isset($m['type']) && $m['type'] === 'php'): ?>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <path d="m18 16 4-4-4-4"/><path d="m6 8-4 4 4 4"/><path d="m14.5 4-5 16"/>
+                </svg>
+                <?php else: ?>
+                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                    <ellipse cx="12" cy="5" rx="9" ry="3"/>
+                    <path d="M3 5V19A9 3 0 0 0 21 19V5"/>
+                </svg>
+                <?php endif; ?>
+            </div>
+            <div class="migration-info">
+                <div class="migration-name"><?= htmlspecialchars($m['filename']) ?></div>
+                <div class="migration-meta">
+                    <?= number_format($m['size']) ?> bytes ·
+                    <?= date('Y-m-d H:i', $m['modified']) ?>
+                </div>
+            </div>
+            <div class="migration-actions">
+                <a href="?view=<?= urlencode($m['filename']) ?>" class="btn-admin btn-admin-sm btn-admin-secondary">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
+                    Visa
+                </a>
             </div>
         </div>
         <?php endforeach; ?>
