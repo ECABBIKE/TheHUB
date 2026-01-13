@@ -120,11 +120,11 @@ $ADMIN_TABS = [
                 'pages' => ['clubs.php', 'club-edit.php']
             ],
             [
-                'id' => 'venues',
-                'label' => 'Anläggningar',
+                'id' => 'destinations',
+                'label' => 'Destinations',
                 'icon' => 'mountain',
-                'url' => '/admin/venues.php',
-                'pages' => ['venues.php', 'venue-edit.php']
+                'url' => '/admin/destinations.php',
+                'pages' => ['destinations.php', 'destination-edit.php', 'venues.php', 'venue-edit.php', 'destination-duplicates.php']
             ]
         ]
     ],
@@ -399,7 +399,8 @@ $ADMIN_TABS = [
                     'tools/diagnose-class-errors.php',
                     'tools/diagnose-club-times.php',
                     'tools/fix-club-times.php',
-                    'tools/fix-uci-conflicts.php'
+                    'tools/fix-uci-conflicts.php',
+                    'tools/auto-create-venues.php'
                 ]
             ],
             [
