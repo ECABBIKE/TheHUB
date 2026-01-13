@@ -11,6 +11,7 @@
  */
 
 // Check if user is promotor-only (not admin)
+require_once __DIR__ . '/../auth.php';
 $isPromotorOnly = function_exists('isRole') && isRole('promotor');
 
 // Promotors get simplified navigation
