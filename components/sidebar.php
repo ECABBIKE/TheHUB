@@ -81,8 +81,16 @@ $adminNav = [$dashboardItem];
 foreach ($ADMIN_TABS as $groupId => $group) {
     // Skip super_admin_only groups for non-super admins
     if (isset($group['super_admin_only']) && $group['super_admin_only']) {
-        if (!function_exists('hasRole') || !hasRole('super_admin')) {
-            continue;
+        // Special case: Analytics group - also allow users with statistics permission
+        if ($groupId === 'analytics') {
+            if (!function_exists('hasAnalyticsAccess') || !hasAnalyticsAccess()) {
+                continue;
+            }
+        } else {
+            // Default: require super_admin role
+            if (!function_exists('hasRole') || !hasRole('super_admin')) {
+                continue;
+            }
         }
     }
 

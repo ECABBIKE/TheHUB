@@ -139,8 +139,17 @@ $group = $ADMIN_TABS[$current_group];
 $active_tab = get_active_tab($current_group, $current_page);
 
 // Check super admin restriction
-if (isset($group['super_admin_only']) && $group['super_admin_only'] && !hasRole('super_admin')) {
-    return;
+if (isset($group['super_admin_only']) && $group['super_admin_only']) {
+    // Special case: Analytics group - also allow users with statistics permission
+    if ($current_group === 'analytics') {
+        if (!function_exists('hasAnalyticsAccess') || !hasAnalyticsAccess()) {
+            return;
+        }
+    } else {
+        if (!hasRole('super_admin')) {
+            return;
+        }
+    }
 }
 
 // Don't show submenu for single-page sections (they have their own sidebar entry)
