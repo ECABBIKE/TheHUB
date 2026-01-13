@@ -410,6 +410,21 @@ include __DIR__ . '/components/unified-layout.php';
 <h3 class="section-title">Analytics</h3>
 <div class="tools-grid">
 
+    <!-- Analytics Setup -->
+    <div class="tool-card">
+        <div class="tool-card-header">
+            <div class="tool-icon warning"><i data-lucide="settings"></i></div>
+            <div>
+                <h4 class="tool-title">Analytics Setup</h4>
+                <p class="tool-description">Skapa tabeller och views (kör först!)</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/analytics/setup-governance.php" class="btn-admin btn-admin-warning">1. Governance</a>
+            <a href="/analytics/setup-tables.php" class="btn-admin btn-admin-warning">2. Tabeller</a>
+        </div>
+    </div>
+
     <!-- Populate Historical -->
     <div class="tool-card">
         <div class="tool-card-header">
