@@ -18,8 +18,8 @@
  */
 
 // Okning av tidsgrans for langa korningar
-set_time_limit(600); // 10 minuter
-ini_set('memory_limit', '256M');
+set_time_limit(1800); // 30 minuter (stora ar tar lang tid)
+ini_set('memory_limit', '512M');
 
 // Bestam om vi kor i CLI eller web
 $isCli = (php_sapi_name() === 'cli');
@@ -35,8 +35,19 @@ if (!$isCli) {
         die('Atkomst nekad: Endast admin kan kora populate');
     }
 
+    // Disable all output buffering for real-time output
+    while (ob_get_level()) {
+        ob_end_flush();
+    }
+
     header('Content-Type: text/plain; charset=utf-8');
+    header('X-Accel-Buffering: no'); // Disable nginx buffering
+    header('Cache-Control: no-cache');
     ob_implicit_flush(true);
+
+    // Disable PHP output buffering
+    ini_set('output_buffering', 'off');
+    ini_set('zlib.output_compression', false);
 }
 
 // Ladda beroenden
@@ -44,18 +55,26 @@ require_once __DIR__ . '/includes/AnalyticsEngine.php';
 require_once __DIR__ . '/includes/KPICalculator.php';
 
 // Skapa output-funktion
-function output(string $message): void {
+function output(string $message, bool $newline = true): void {
     global $isCli;
     $timestamp = date('H:i:s');
     $line = "[$timestamp] $message";
 
     if ($isCli) {
-        echo $line . "\n";
+        echo $line . ($newline ? "\n" : "\r");
     } else {
-        echo $line . "\n";
-        ob_flush();
+        echo $line . ($newline ? "\n" : "                    \r");
+        @ob_flush();
         flush();
     }
+}
+
+// Progress callback for long operations
+function createProgressCallback(string $operation): callable {
+    return function(int $current, int $total) use ($operation) {
+        $pct = $total > 0 ? round(($current / $total) * 100) : 0;
+        output("      [$pct%] $operation: $current / $total", false);
+    };
 }
 
 output("=== TheHUB Analytics: Populate Historical Data ===");
@@ -136,13 +155,17 @@ try {
         try {
             // 1. Yearly Stats
             output("  1/5 Beraknar rider_yearly_stats...");
-            $count = $engine->calculateYearlyStats($year);
+            $progressCallback = createProgressCallback("riders");
+            $count = $engine->calculateYearlyStats($year, $progressCallback);
+            output(""); // Clear progress line
             output("      $count riders bearbetade");
             $totalStats['yearly_stats'] += $count;
 
             // 2. Series Participation
             output("  2/5 Beraknar series_participation...");
-            $count = $engine->calculateSeriesParticipation($year);
+            $progressCallback = createProgressCallback("participations");
+            $count = $engine->calculateSeriesParticipation($year, $progressCallback);
+            output(""); // Clear progress line
             output("      $count participations skapade");
             $totalStats['series_participation'] += $count;
 
@@ -154,7 +177,9 @@ try {
 
             // 4. Club Stats
             output("  4/5 Beraknar club_yearly_stats...");
-            $count = $engine->calculateClubStats($year);
+            $progressCallback = createProgressCallback("klubbar");
+            $count = $engine->calculateClubStats($year, $progressCallback);
+            output(""); // Clear progress line
             output("      $count klubbar bearbetade");
             $totalStats['club_stats'] += $count;
 

@@ -123,12 +123,13 @@ class AnalyticsEngine {
      * - is_rookie, is_retained
      *
      * @param int $year Sasong att berakna
+     * @param callable|null $progressCallback Callback for progress (int $current, int $total)
      * @return int Antal rader skapade/uppdaterade
      */
-    public function calculateYearlyStats(int $year): int {
+    public function calculateYearlyStats(int $year, ?callable $progressCallback = null): int {
         $jobId = $this->startJob('yearly-stats', (string)$year);
         if ($jobId === false) {
-            logAnalytics($this->pdo, 'warn', "Jobb yearly-stats for $year pagar redan", 'AnalyticsEngine');
+            // Job already running - return 0 instead of blocking
             return 0;
         }
 
@@ -144,12 +145,22 @@ class AnalyticsEngine {
                 WHERE YEAR(e.date) = $year
             ")->fetchAll(PDO::FETCH_COLUMN);
 
+            $total = count($riders);
+            $processed = 0;
+
             foreach ($riders as $riderId) {
                 $stats = $this->calculateSingleRiderYearlyStats($riderId, $year);
 
                 if ($stats) {
                     $this->upsertRiderYearlyStats($riderId, $year, $stats);
                     $count++;
+                }
+
+                $processed++;
+
+                // Report progress every 100 riders
+                if ($progressCallback && ($processed % 100 === 0 || $processed === $total)) {
+                    $progressCallback($processed, $total);
                 }
             }
 
@@ -294,9 +305,10 @@ class AnalyticsEngine {
      * Berakna series participation for ett ar
      *
      * @param int $year Sasong
+     * @param callable|null $progressCallback Callback for progress (int $current, int $total)
      * @return int Antal rader skapade
      */
-    public function calculateSeriesParticipation(int $year): int {
+    public function calculateSeriesParticipation(int $year, ?callable $progressCallback = null): int {
         $jobId = $this->startJob('series-participation', (string)$year);
         if ($jobId === false) {
             return 0;
@@ -321,6 +333,9 @@ class AnalyticsEngine {
                   AND e.series_id IS NOT NULL
                 GROUP BY v.canonical_rider_id, e.series_id
             ")->fetchAll();
+
+            $total = count($participations);
+            $processed = 0;
 
             foreach ($participations as $p) {
                 // Ar detta riders forsta serie nagonsin?
@@ -355,6 +370,12 @@ class AnalyticsEngine {
                 ]);
 
                 $count++;
+                $processed++;
+
+                // Report progress every 100 items
+                if ($progressCallback && ($processed % 100 === 0 || $processed === $total)) {
+                    $progressCallback($processed, $total);
+                }
             }
 
             $this->endJob('success', $count);
@@ -483,9 +504,10 @@ class AnalyticsEngine {
      * Berakna club yearly stats
      *
      * @param int $year Sasong
+     * @param callable|null $progressCallback Callback for progress (int $current, int $total)
      * @return int Antal rader skapade
      */
-    public function calculateClubStats(int $year): int {
+    public function calculateClubStats(int $year, ?callable $progressCallback = null): int {
         $jobId = $this->startJob('club-stats', (string)$year);
         if ($jobId === false) {
             return 0;
@@ -505,12 +527,22 @@ class AnalyticsEngine {
                   AND YEAR(e.date) = $year
             ")->fetchAll(PDO::FETCH_COLUMN);
 
+            $total = count($clubs);
+            $processed = 0;
+
             foreach ($clubs as $clubId) {
                 $stats = $this->calculateSingleClubYearlyStats($clubId, $year);
 
                 if ($stats) {
                     $this->upsertClubYearlyStats($clubId, $year, $stats);
                     $count++;
+                }
+
+                $processed++;
+
+                // Report progress every 10 clubs
+                if ($progressCallback && ($processed % 10 === 0 || $processed === $total)) {
+                    $progressCallback($processed, $total);
                 }
             }
 
