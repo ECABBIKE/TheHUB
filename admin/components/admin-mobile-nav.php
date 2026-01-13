@@ -15,12 +15,16 @@
  */
 require_once __DIR__ . '/../../hub-config.php';
 require_once __DIR__ . '/../../components/icons.php';
+require_once __DIR__ . '/../../includes/auth.php';
 
 // Get current user's role for filtering
 $currentAdminRole = $_SESSION['admin_role'] ?? 'admin';
 $isPromotor = ($currentAdminRole === 'promotor');
 $roleHierarchy = ['promotor' => 1, 'admin' => 2, 'super_admin' => 3];
 $userRoleLevel = $roleHierarchy[$currentAdminRole] ?? 0;
+
+// Check analytics access
+$hasAnalytics = function_exists('hasAnalyticsAccess') && hasAnalyticsAccess();
 
 // Admin navigation - should match /includes/config/admin-tabs-config.php
 // Promotors get different URLs than admins
@@ -46,6 +50,11 @@ if ($isPromotor) {
         ['id' => 'import', 'label' => 'Import', 'icon' => 'upload', 'url' => '/admin/import.php'],
     ];
 
+    // Analytics for super_admin or statistics permission
+    if ($hasAnalytics) {
+        $adminNav[] = ['id' => 'analytics', 'label' => 'Analytics', 'icon' => 'bar-chart-3', 'url' => '/admin/analytics-dashboard.php'];
+    }
+
     // System only for super_admin
     if ($currentAdminRole === 'super_admin') {
         $adminNav[] = ['id' => 'settings', 'label' => 'System', 'icon' => 'settings', 'url' => '/admin/users.php'];
@@ -65,6 +74,11 @@ function isAdminNavActive($item, $currentPath) {
                $currentPath === '/admin/promotor' ||
                $currentPath === '/admin/' ||
                $currentPath === '/admin';
+    }
+
+    // Analytics special case - match all analytics pages
+    if ($item['id'] === 'analytics') {
+        return strpos($currentPath, '/admin/analytics') === 0;
     }
 
     // Check if current path starts with this item's path
