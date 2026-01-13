@@ -482,6 +482,20 @@ include __DIR__ . '/components/unified-layout.php';
         </div>
     </div>
 
+    <!-- Reset Analytics -->
+    <div class="tool-card">
+        <div class="tool-card-header">
+            <div class="tool-icon danger"><i data-lucide="rotate-ccw"></i></div>
+            <div>
+                <h4 class="tool-title">Reset Analytics</h4>
+                <p class="tool-description">Rensa och kor om berakningar</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/analytics-reset.php" class="btn-admin btn-admin-danger">Reset</a>
+        </div>
+    </div>
+
 </div>
 
 <!-- ========== SYSTEM ========== -->
