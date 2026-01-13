@@ -9,13 +9,13 @@
 | Steg | Beskrivning | Status | Kommentar |
 |------|-------------|--------|-----------|
 | 0 | Governance & Identity Foundation | [x] KLAR | Grunden for datakvalitet |
-| 1 | Databas & Analytics-tabeller | [x] KLAR | |
+| 1 | Databas & Analytics-tabeller | [x] KLAR | Migrationer korda |
 | 2 | Analytics Engine (karnlogik) | [x] KLAR | |
-| 3 | KPI Dashboard (admin) | [ ] Ej paborjad | |
-| 4 | Serieflodeanalys | [ ] Ej paborjad | NYCKELFUNKTION |
-| 5 | Rapportgenerator | [ ] Ej paborjad | |
-| 6 | Publika Insikter | [ ] Ej paborjad | |
-| 7 | Automatisering & Cron | [ ] Ej paborjad | |
+| 3 | KPI Dashboard (admin) | [x] KLAR | |
+| 4 | Serieflodeanalys | [x] KLAR | NYCKELFUNKTION |
+| 5 | Rapportgenerator | [x] KLAR | CSV-export |
+| 6 | Publika Insikter | [x] KLAR | GDPR-kompatibel |
+| 7 | Automatisering & Cron | [x] KLAR | Daglig refresh |
 
 ---
 
@@ -93,16 +93,19 @@
 
 **Mal:** Visuellt admin-dashboard med KPI-kort och grafer
 **Tid:** ~4-5 timmar
-**Status:** EJ PABORJAD
+**Status:** KLAR
 
 ### Uppgifter
 
-- [ ] Skapa `analytics/index.php` (dashboard)
-- [ ] Skapa `assets/css/analytics.css`
-- [ ] Skapa `assets/js/analytics-charts.js`
-- [ ] Skapa `analytics/api/kpi.php`
-- [ ] Skapa `analytics/api/charts.php`
-- [ ] System Health Widget
+- [x] Skapa `admin/analytics-dashboard.php`
+- [x] KPI-kort (total riders, nya, retention, tillvaxt)
+- [x] Arsjamforelse med trendpilar
+- [x] Tillvaxttrender (5 ar)
+- [x] Aldersfordelning
+- [x] Disciplinfordelning
+- [x] Entry points-lista
+- [x] Top klubbar-tabell
+- [x] Feeder matrix preview
 
 ---
 
@@ -110,16 +113,17 @@
 
 **Mal:** Visualisera hur cyklister ror sig mellan serier
 **Tid:** ~3-4 timmar
-**Status:** EJ PABORJAD
+**Status:** KLAR
 
 **OBS: DETTA AR NYCKELFUNKTIONEN!**
 
 ### Uppgifter
 
-- [ ] Skapa `analytics/reports/series-flow.php`
-- [ ] Utoka KPICalculator med flodesmetoder
-- [ ] Skapa API-endpoint for serieflode
-- [ ] Skapa `assets/css/series-flow.css`
+- [x] Skapa `admin/analytics-flow.php`
+- [x] Flodesmatris (regional -> nationell)
+- [x] Seriejamforelse-verktyg (overlapp)
+- [x] Serie-statistiktabell (lojalitet, exklusivitet)
+- [x] Entry points-visualisering
 
 ---
 
@@ -127,15 +131,17 @@
 
 **Mal:** Exportera rapporter som PDF (via HTML) och Excel (via CSV)
 **Tid:** ~3-4 timmar
-**Status:** EJ PABORJAD
+**Status:** KLAR
 
 ### Uppgifter
 
-- [ ] Skapa `analytics/includes/ReportGenerator.php`
-- [ ] Skapa rapportmallar i `analytics/templates/`
-- [ ] Skapa `assets/css/report-print.css`
-- [ ] Skapa `analytics/reports/index.php`
-- [ ] Skapa `analytics/api/export.php`
+- [x] Skapa `admin/analytics-reports.php`
+- [x] Arssammanfattning-rapport
+- [x] Retention-rapport
+- [x] Serie-rapport
+- [x] Klubb-rapport
+- [x] Demografi-rapport
+- [x] CSV-export for alla rapporter
 
 ---
 
@@ -143,14 +149,19 @@
 
 **Mal:** Publik sida med aggregerad statistik (GDPR-saker)
 **Tid:** ~2-3 timmar
-**Status:** EJ PABORJAD
+**Status:** KLAR
 
 ### Uppgifter
 
-- [ ] Skapa `public/insights/index.php`
-- [ ] Skapa `assets/css/insights.css`
-- [ ] SEO & Meta tags
-- [ ] Sponsor CTA
+- [x] Skapa `pages/insights.php`
+- [x] Arsvalare (senaste 5 ar)
+- [x] Huvudstatistik (riders, nya, retention, tillvaxt)
+- [x] Tillvaxttrender (stapeldiagram)
+- [x] Aldersfordelning (GDPR: < 10 doljs)
+- [x] Disciplinfordelning
+- [x] Cross-participation highlight
+- [x] Top klubbar (GDPR: < 10 doljs)
+- [x] Data-disclaimer
 
 ---
 
@@ -158,16 +169,22 @@
 
 **Mal:** Automatisk uppdatering av analytics-data
 **Tid:** ~2-3 timmar
-**Status:** EJ PABORJAD
+**Status:** KLAR
 
 ### Uppgifter
 
-- [ ] Skapa `analytics/cron/daily-stats.php`
-- [ ] Skapa `analytics/cron/monthly-snapshot.php`
-- [ ] Skapa `analytics/cron/yearly-rollup.php`
-- [ ] Skapa `analytics/cron/integrity-check.php`
-- [ ] System Health i Dashboard
-- [ ] Dokumentera cron-instruktioner
+- [x] Skapa `analytics/cron/refresh-analytics.php`
+- [x] Daglig refresh av alla analytics-tabeller
+- [x] Loggning till analytics_cron_runs
+- [x] Daglig snapshot till analytics_snapshots
+- [x] Felhantering med exit-koder
+
+### Cron-instruktioner
+
+```
+# Daglig analytics-uppdatering kl 03:00
+0 3 * * * php /path/to/analytics/cron/refresh-analytics.php >> /var/log/thehub-analytics.log 2>&1
+```
 
 ---
 
@@ -219,4 +236,32 @@
   - Skapade AnalyticsEngine.php (beraknar all statistik)
   - Skapade KPICalculator.php (KPI-metoder for dashboard)
   - Skapade populate-historical.php (genererar historisk data)
+- Migrationer korda pa produktion
+  - 25 SQL-statements utan fel
+  - 9 nationella, 20 regionala serier kategoriserade
+- Steg 3 KLAR: KPI Dashboard
+  - Skapade admin/analytics-dashboard.php
+  - KPI-kort med arsjamforelse
+  - Tillvaxttrender, aldersfordelning, discipliner
+  - Top klubbar och entry points
+- Steg 4 KLAR: Series Flow Analysis (NYCKELFUNKTION)
+  - Skapade admin/analytics-flow.php
+  - Flodesmatris (regional -> nationell)
+  - Seriejamforelse med overlappvisualisering
+  - Serie-lojalitet och exklusivitet
+- Steg 5 KLAR: Report Generator
+  - Skapade admin/analytics-reports.php
+  - 5 rapporttyper med CSV-export
+  - Arssammanfattning, retention, serier, klubbar, demografi
+- Steg 6 KLAR: Public Insights
+  - Skapade pages/insights.php
+  - GDPR-kompatibel (< 10 maskeras)
+  - Publik statistiksida for svensk cykling
+- Steg 7 KLAR: Automation & Cron
+  - Skapade analytics/cron/refresh-analytics.php
+  - Daglig refresh med loggning
+  - Daglig snapshot till analytics_snapshots
+- Admin-navigation uppdaterad med Analytics-grupp
+
+**ANALYTICS PLATFORM KOMPLETT!**
 

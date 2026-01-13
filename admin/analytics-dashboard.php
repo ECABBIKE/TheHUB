@@ -1,0 +1,747 @@
+<?php
+/**
+ * Analytics Dashboard - KPI Oversikt
+ *
+ * Visar nyckeltal for cykelsporten i Sverige:
+ * - Retention & Growth
+ * - Demographics
+ * - Series Flow
+ * - Club stats
+ *
+ * @package TheHUB Analytics
+ * @version 1.0
+ */
+require_once __DIR__ . '/../config.php';
+require_once __DIR__ . '/../analytics/includes/KPICalculator.php';
+
+global $pdo;
+
+// Arval - default till innevarande ar
+$currentYear = (int)date('Y');
+$selectedYear = isset($_GET['year']) ? (int)$_GET['year'] : $currentYear;
+$compareYear = isset($_GET['compare']) ? (int)$_GET['compare'] : null;
+
+// Hamta tillgangliga ar
+$availableYears = [];
+try {
+    $stmt = $pdo->query("SELECT DISTINCT season_year FROM rider_yearly_stats ORDER BY season_year DESC");
+    $availableYears = $stmt->fetchAll(PDO::FETCH_COLUMN);
+} catch (Exception $e) {
+    $availableYears = range($currentYear, $currentYear - 5);
+}
+
+// Initiera KPI Calculator
+$kpiCalc = new KPICalculator($pdo);
+
+// Hamta alla KPIs
+$kpis = [];
+$comparison = null;
+$trends = [];
+$topClubs = [];
+$ageDistribution = [];
+$disciplineDistribution = [];
+$entryPoints = [];
+$feederMatrix = [];
+
+try {
+    $kpis = $kpiCalc->getAllKPIs($selectedYear);
+
+    if ($compareYear) {
+        $comparison = $kpiCalc->compareYears($compareYear, $selectedYear);
+    }
+
+    $trends = $kpiCalc->getGrowthTrend(5);
+    $topClubs = $kpiCalc->getTopClubs($selectedYear, 10);
+    $ageDistribution = $kpiCalc->getAgeDistribution($selectedYear);
+    $disciplineDistribution = $kpiCalc->getDisciplineDistribution($selectedYear);
+    $entryPoints = $kpiCalc->getEntryPointDistribution($selectedYear);
+    $feederMatrix = $kpiCalc->calculateFeederMatrix($selectedYear);
+} catch (Exception $e) {
+    // Tabellerna kanske inte ar befolkade an
+    $error = $e->getMessage();
+}
+
+// Page config
+$page_title = 'Analytics Dashboard';
+$breadcrumbs = [
+    ['label' => 'Dashboard', 'url' => '/admin/dashboard.php'],
+    ['label' => 'Analytics']
+];
+
+$page_actions = '
+<div class="btn-group">
+    <a href="/admin/analytics-reports.php" class="btn-admin btn-admin-secondary">
+        <i data-lucide="file-text"></i> Rapporter
+    </a>
+    <a href="/admin/analytics-flow.php" class="btn-admin btn-admin-secondary">
+        <i data-lucide="git-branch"></i> Series Flow
+    </a>
+</div>
+';
+
+// Include unified layout
+include __DIR__ . '/components/unified-layout.php';
+?>
+
+<!-- Year Selector -->
+<div class="filter-bar">
+    <form method="get" class="filter-form">
+        <div class="filter-group">
+            <label class="filter-label">Sasong</label>
+            <select name="year" class="form-select" onchange="this.form.submit()">
+                <?php foreach ($availableYears as $year): ?>
+                    <option value="<?= $year ?>" <?= $year == $selectedYear ? 'selected' : '' ?>>
+                        <?= $year ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+        <div class="filter-group">
+            <label class="filter-label">Jamfor med</label>
+            <select name="compare" class="form-select" onchange="this.form.submit()">
+                <option value="">-- Ingen jamforelse --</option>
+                <?php foreach ($availableYears as $year): ?>
+                    <?php if ($year != $selectedYear): ?>
+                        <option value="<?= $year ?>" <?= $year == $compareYear ? 'selected' : '' ?>>
+                            <?= $year ?>
+                        </option>
+                    <?php endif; ?>
+                <?php endforeach; ?>
+            </select>
+        </div>
+    </form>
+</div>
+
+<?php if (isset($error)): ?>
+<div class="alert alert-warning">
+    <i data-lucide="alert-triangle"></i>
+    <div>
+        <strong>Ingen data tillganglig</strong><br>
+        Kor <code>php analytics/populate-historical.php</code> for att generera historisk data.
+        <br><small><?= htmlspecialchars($error) ?></small>
+    </div>
+</div>
+<?php else: ?>
+
+<!-- Key Metrics -->
+<div class="dashboard-metrics">
+    <div class="metric-card metric-card--primary">
+        <div class="metric-icon">
+            <i data-lucide="users"></i>
+        </div>
+        <div class="metric-content">
+            <div class="metric-value"><?= number_format($kpis['total_riders'] ?? 0) ?></div>
+            <div class="metric-label">Aktiva riders</div>
+            <?php if ($comparison && isset($comparison['total_riders'])): ?>
+                <div class="metric-trend <?= $comparison['total_riders']['trend'] ?>">
+                    <i data-lucide="<?= $comparison['total_riders']['trend'] === 'up' ? 'trending-up' : ($comparison['total_riders']['trend'] === 'down' ? 'trending-down' : 'minus') ?>"></i>
+                    <?= $comparison['total_riders']['difference_pct'] ?>%
+                </div>
+            <?php endif; ?>
+        </div>
+    </div>
+
+    <div class="metric-card metric-card--success">
+        <div class="metric-icon">
+            <i data-lucide="user-plus"></i>
+        </div>
+        <div class="metric-content">
+            <div class="metric-value"><?= number_format($kpis['new_riders'] ?? 0) ?></div>
+            <div class="metric-label">Nya riders</div>
+            <?php if ($comparison && isset($comparison['new_riders'])): ?>
+                <div class="metric-trend <?= $comparison['new_riders']['trend'] ?>">
+                    <i data-lucide="<?= $comparison['new_riders']['trend'] === 'up' ? 'trending-up' : 'trending-down' ?>"></i>
+                    <?= $comparison['new_riders']['difference_pct'] ?>%
+                </div>
+            <?php endif; ?>
+        </div>
+    </div>
+
+    <div class="metric-card">
+        <div class="metric-icon">
+            <i data-lucide="refresh-cw"></i>
+        </div>
+        <div class="metric-content">
+            <div class="metric-value"><?= number_format($kpis['retention_rate'] ?? 0, 1) ?>%</div>
+            <div class="metric-label">Retention rate</div>
+            <?php if ($comparison && isset($comparison['retention_rate'])): ?>
+                <div class="metric-trend <?= $comparison['retention_rate']['trend'] ?>">
+                    <i data-lucide="<?= $comparison['retention_rate']['trend'] === 'up' ? 'trending-up' : 'trending-down' ?>"></i>
+                    <?= abs($comparison['retention_rate']['difference']) ?>pp
+                </div>
+            <?php endif; ?>
+        </div>
+    </div>
+
+    <div class="metric-card <?= ($kpis['growth_rate'] ?? 0) >= 0 ? 'metric-card--success' : 'metric-card--warning' ?>">
+        <div class="metric-icon">
+            <i data-lucide="<?= ($kpis['growth_rate'] ?? 0) >= 0 ? 'trending-up' : 'trending-down' ?>"></i>
+        </div>
+        <div class="metric-content">
+            <div class="metric-value"><?= ($kpis['growth_rate'] ?? 0) >= 0 ? '+' : '' ?><?= number_format($kpis['growth_rate'] ?? 0, 1) ?>%</div>
+            <div class="metric-label">Tillvaxt</div>
+        </div>
+    </div>
+</div>
+
+<!-- Secondary Metrics -->
+<div class="dashboard-metrics" style="margin-bottom: var(--space-xl);">
+    <div class="metric-card metric-card--small">
+        <div class="metric-content">
+            <div class="metric-value"><?= number_format($kpis['cross_participation_rate'] ?? 0, 1) ?>%</div>
+            <div class="metric-label">Cross-participation</div>
+        </div>
+    </div>
+
+    <div class="metric-card metric-card--small">
+        <div class="metric-content">
+            <div class="metric-value"><?= number_format($kpis['average_age'] ?? 0, 0) ?> ar</div>
+            <div class="metric-label">Snittålder</div>
+        </div>
+    </div>
+
+    <div class="metric-card metric-card--small">
+        <div class="metric-content">
+            <?php
+            $genderDist = $kpis['gender_distribution'] ?? ['M' => 0, 'F' => 0];
+            $total = ($genderDist['M'] + $genderDist['F']) ?: 1;
+            $femalePct = round($genderDist['F'] / $total * 100, 1);
+            ?>
+            <div class="metric-value"><?= $femalePct ?>%</div>
+            <div class="metric-label">Kvinnor</div>
+        </div>
+    </div>
+
+    <div class="metric-card metric-card--small">
+        <div class="metric-content">
+            <div class="metric-value"><?= number_format($kpis['retained_riders'] ?? 0) ?></div>
+            <div class="metric-label">Atervandare</div>
+        </div>
+    </div>
+</div>
+
+<!-- Growth Trend Chart -->
+<?php if (!empty($trends)): ?>
+<div class="admin-card">
+    <div class="admin-card-header">
+        <h2>Tillvaxttrender</h2>
+    </div>
+    <div class="admin-card-body">
+        <div class="trend-chart">
+            <div class="trend-bars">
+                <?php
+                $maxRiders = max(array_column($trends, 'total_riders')) ?: 1;
+                foreach ($trends as $t):
+                    $height = ($t['total_riders'] / $maxRiders) * 100;
+                ?>
+                <div class="trend-bar-group">
+                    <div class="trend-bar-container">
+                        <div class="trend-bar" style="height: <?= $height ?>%;">
+                            <span class="trend-bar-value"><?= number_format($t['total_riders']) ?></span>
+                        </div>
+                    </div>
+                    <div class="trend-bar-label"><?= $t['season_year'] ?></div>
+                    <div class="trend-bar-sub">
+                        <span class="badge badge-success"><?= $t['new_riders'] ?> nya</span>
+                    </div>
+                </div>
+                <?php endforeach; ?>
+            </div>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
+
+<!-- Two Column Layout -->
+<div class="grid grid-2 grid-gap-lg">
+    <!-- Age Distribution -->
+    <?php if (!empty($ageDistribution)): ?>
+    <div class="admin-card">
+        <div class="admin-card-header">
+            <h2>Aldersfordelning</h2>
+        </div>
+        <div class="admin-card-body">
+            <?php
+            $totalAge = array_sum(array_column($ageDistribution, 'count')) ?: 1;
+            foreach ($ageDistribution as $age):
+                $pct = ($age['count'] / $totalAge) * 100;
+            ?>
+            <div class="distribution-row">
+                <span class="distribution-label"><?= htmlspecialchars($age['age_group']) ?></span>
+                <div class="distribution-bar-container">
+                    <div class="distribution-bar" style="width: <?= $pct ?>%;"></div>
+                </div>
+                <span class="distribution-value"><?= number_format($age['count']) ?> (<?= round($pct, 1) ?>%)</span>
+            </div>
+            <?php endforeach; ?>
+        </div>
+    </div>
+    <?php endif; ?>
+
+    <!-- Discipline Distribution -->
+    <?php if (!empty($disciplineDistribution)): ?>
+    <div class="admin-card">
+        <div class="admin-card-header">
+            <h2>Disciplinfordelning</h2>
+        </div>
+        <div class="admin-card-body">
+            <?php
+            $totalDisc = array_sum(array_column($disciplineDistribution, 'count')) ?: 1;
+            foreach (array_slice($disciplineDistribution, 0, 6) as $disc):
+                $pct = ($disc['count'] / $totalDisc) * 100;
+            ?>
+            <div class="distribution-row">
+                <span class="distribution-label"><?= htmlspecialchars($disc['discipline']) ?></span>
+                <div class="distribution-bar-container">
+                    <div class="distribution-bar distribution-bar--accent" style="width: <?= $pct ?>%;"></div>
+                </div>
+                <span class="distribution-value"><?= number_format($disc['count']) ?> (<?= round($pct, 1) ?>%)</span>
+            </div>
+            <?php endforeach; ?>
+        </div>
+    </div>
+    <?php endif; ?>
+</div>
+
+<!-- Entry Points -->
+<?php if (!empty($entryPoints)): ?>
+<div class="admin-card">
+    <div class="admin-card-header">
+        <h2>Entry Points - Var borjar nya riders?</h2>
+        <span class="badge"><?= $selectedYear ?></span>
+    </div>
+    <div class="admin-card-body" style="padding: 0;">
+        <div class="admin-table-container">
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>Serie</th>
+                        <th>Niva</th>
+                        <th>Nya riders</th>
+                        <th>Andel</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php
+                    $totalEntry = array_sum(array_column($entryPoints, 'rider_count')) ?: 1;
+                    foreach (array_slice($entryPoints, 0, 10) as $ep):
+                        $pct = ($ep['rider_count'] / $totalEntry) * 100;
+                    ?>
+                    <tr>
+                        <td>
+                            <a href="/series/<?= $ep['series_id'] ?>" class="text-link">
+                                <?= htmlspecialchars($ep['series_name']) ?>
+                            </a>
+                        </td>
+                        <td>
+                            <span class="badge badge-<?= $ep['series_level'] === 'national' ? 'primary' : 'secondary' ?>">
+                                <?= ucfirst($ep['series_level']) ?>
+                            </span>
+                        </td>
+                        <td><?= number_format($ep['rider_count']) ?></td>
+                        <td>
+                            <div class="inline-bar">
+                                <div class="inline-bar-fill" style="width: <?= min($pct * 2, 100) ?>%;"></div>
+                            </div>
+                            <?= round($pct, 1) ?>%
+                        </td>
+                    </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
+
+<!-- Top Clubs -->
+<?php if (!empty($topClubs)): ?>
+<div class="admin-card">
+    <div class="admin-card-header">
+        <h2>Top Klubbar</h2>
+        <a href="/admin/analytics-clubs.php" class="btn-admin btn-admin-sm btn-admin-secondary">
+            Visa alla
+        </a>
+    </div>
+    <div class="admin-card-body" style="padding: 0;">
+        <div class="admin-table-container">
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>#</th>
+                        <th>Klubb</th>
+                        <th>Stad</th>
+                        <th>Aktiva</th>
+                        <th>Poang</th>
+                        <th>Vinster</th>
+                        <th>Pallplatser</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($topClubs as $i => $club): ?>
+                    <tr>
+                        <td><?= $i + 1 ?></td>
+                        <td>
+                            <a href="/club/<?= $club['club_id'] ?>" class="text-link">
+                                <?= htmlspecialchars($club['club_name']) ?>
+                            </a>
+                        </td>
+                        <td><?= htmlspecialchars($club['city'] ?? '-') ?></td>
+                        <td><strong><?= number_format($club['active_riders']) ?></strong></td>
+                        <td><?= number_format($club['total_points']) ?></td>
+                        <td><?= number_format($club['wins']) ?></td>
+                        <td><?= number_format($club['podiums']) ?></td>
+                    </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
+
+<!-- Feeder Matrix Preview -->
+<?php if (!empty($feederMatrix)): ?>
+<div class="admin-card">
+    <div class="admin-card-header">
+        <h2>Series Flow (Topp 10)</h2>
+        <a href="/admin/analytics-flow.php" class="btn-admin btn-admin-sm btn-admin-primary">
+            <i data-lucide="git-branch"></i> Detaljerad analys
+        </a>
+    </div>
+    <div class="admin-card-body" style="padding: 0;">
+        <div class="admin-table-container">
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>Fran serie</th>
+                        <th></th>
+                        <th>Till serie</th>
+                        <th>Antal</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach (array_slice($feederMatrix, 0, 10) as $flow): ?>
+                    <tr>
+                        <td>
+                            <?= htmlspecialchars($flow['from_name']) ?>
+                            <span class="badge badge-sm"><?= ucfirst($flow['from_level']) ?></span>
+                        </td>
+                        <td class="text-center">
+                            <i data-lucide="arrow-right" class="icon-sm"></i>
+                        </td>
+                        <td>
+                            <?= htmlspecialchars($flow['to_name']) ?>
+                            <span class="badge badge-sm"><?= ucfirst($flow['to_level']) ?></span>
+                        </td>
+                        <td><strong><?= number_format($flow['flow_count']) ?></strong></td>
+                    </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
+
+<?php endif; // end if no error ?>
+
+<style>
+/* Filter Bar */
+.filter-bar {
+    display: flex;
+    gap: var(--space-lg);
+    margin-bottom: var(--space-xl);
+    padding: var(--space-md);
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+}
+
+.filter-form {
+    display: flex;
+    gap: var(--space-lg);
+    align-items: flex-end;
+}
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+}
+
+.filter-label {
+    font-size: var(--text-sm);
+    color: var(--color-text-secondary);
+    font-weight: var(--weight-medium);
+}
+
+/* Metric Cards with Trends */
+.metric-card--small {
+    padding: var(--space-md);
+}
+
+.metric-card--small .metric-value {
+    font-size: var(--text-xl);
+}
+
+.metric-trend {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    margin-top: var(--space-xs);
+    padding: 2px 8px;
+    border-radius: var(--radius-full);
+    font-size: var(--text-xs);
+    font-weight: var(--weight-semibold);
+}
+
+.metric-trend.up {
+    background: rgba(34, 197, 94, 0.15);
+    color: var(--color-success);
+}
+
+.metric-trend.down {
+    background: rgba(239, 68, 68, 0.15);
+    color: var(--color-error);
+}
+
+.metric-trend.stable {
+    background: var(--color-bg-hover);
+    color: var(--color-text-secondary);
+}
+
+.metric-trend i {
+    width: 14px;
+    height: 14px;
+}
+
+/* Trend Chart */
+.trend-chart {
+    padding: var(--space-md) 0;
+}
+
+.trend-bars {
+    display: flex;
+    justify-content: space-around;
+    align-items: flex-end;
+    height: 200px;
+    gap: var(--space-md);
+}
+
+.trend-bar-group {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    max-width: 100px;
+}
+
+.trend-bar-container {
+    width: 100%;
+    height: 150px;
+    display: flex;
+    align-items: flex-end;
+}
+
+.trend-bar {
+    width: 100%;
+    background: linear-gradient(180deg, var(--color-accent), var(--color-accent-hover));
+    border-radius: var(--radius-sm) var(--radius-sm) 0 0;
+    display: flex;
+    justify-content: center;
+    align-items: flex-start;
+    padding-top: var(--space-xs);
+    min-height: 20px;
+    transition: height 0.3s ease;
+}
+
+.trend-bar-value {
+    font-size: var(--text-xs);
+    font-weight: var(--weight-bold);
+    color: white;
+    text-shadow: 0 1px 2px rgba(0,0,0,0.3);
+}
+
+.trend-bar-label {
+    margin-top: var(--space-xs);
+    font-weight: var(--weight-semibold);
+    color: var(--color-text-primary);
+}
+
+.trend-bar-sub {
+    margin-top: 4px;
+}
+
+/* Distribution Rows */
+.distribution-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    padding: var(--space-sm) 0;
+    border-bottom: 1px solid var(--color-border);
+}
+
+.distribution-row:last-child {
+    border-bottom: none;
+}
+
+.distribution-label {
+    flex: 0 0 80px;
+    font-size: var(--text-sm);
+    color: var(--color-text-secondary);
+}
+
+.distribution-bar-container {
+    flex: 1;
+    height: 8px;
+    background: var(--color-bg-hover);
+    border-radius: var(--radius-full);
+    overflow: hidden;
+}
+
+.distribution-bar {
+    height: 100%;
+    background: var(--color-success);
+    border-radius: var(--radius-full);
+    transition: width 0.3s ease;
+}
+
+.distribution-bar--accent {
+    background: var(--color-accent);
+}
+
+.distribution-value {
+    flex: 0 0 100px;
+    text-align: right;
+    font-size: var(--text-sm);
+    font-weight: var(--weight-medium);
+}
+
+/* Inline Bar */
+.inline-bar {
+    display: inline-block;
+    width: 60px;
+    height: 6px;
+    background: var(--color-bg-hover);
+    border-radius: var(--radius-full);
+    overflow: hidden;
+    vertical-align: middle;
+    margin-right: var(--space-xs);
+}
+
+.inline-bar-fill {
+    height: 100%;
+    background: var(--color-accent);
+    border-radius: var(--radius-full);
+}
+
+/* Icon sizes */
+.icon-sm {
+    width: 16px;
+    height: 16px;
+    color: var(--color-text-muted);
+}
+
+/* Text link */
+.text-link {
+    color: var(--color-accent);
+    text-decoration: none;
+    font-weight: var(--weight-medium);
+}
+
+.text-link:hover {
+    text-decoration: underline;
+}
+
+/* Badge variants */
+.badge-primary {
+    background: var(--color-accent-light);
+    color: var(--color-accent);
+}
+
+.badge-secondary {
+    background: var(--color-bg-hover);
+    color: var(--color-text-secondary);
+}
+
+.badge-success {
+    background: rgba(34, 197, 94, 0.15);
+    color: var(--color-success);
+}
+
+.badge-sm {
+    font-size: 10px;
+    padding: 2px 6px;
+}
+
+/* Grid */
+.grid-2 {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+}
+
+.grid-gap-lg {
+    gap: var(--space-lg);
+}
+
+/* Button group */
+.btn-group {
+    display: flex;
+    gap: var(--space-sm);
+}
+
+/* Responsive */
+@media (max-width: 899px) {
+    .filter-form {
+        flex-direction: column;
+        width: 100%;
+    }
+
+    .filter-group {
+        width: 100%;
+    }
+
+    .filter-group select {
+        width: 100%;
+    }
+
+    .grid-2 {
+        grid-template-columns: 1fr;
+    }
+
+    .trend-bars {
+        height: 150px;
+    }
+
+    .trend-bar-container {
+        height: 100px;
+    }
+
+    .btn-group {
+        flex-direction: column;
+    }
+}
+
+@media (max-width: 767px) {
+    .filter-bar {
+        margin-left: calc(-1 * var(--container-padding, 16px));
+        margin-right: calc(-1 * var(--container-padding, 16px));
+        border-radius: 0;
+        border-left: none;
+        border-right: none;
+    }
+
+    .distribution-label {
+        flex: 0 0 60px;
+        font-size: var(--text-xs);
+    }
+
+    .distribution-value {
+        flex: 0 0 80px;
+        font-size: var(--text-xs);
+    }
+}
+</style>
+
+<?php include __DIR__ . '/components/unified-layout-footer.php'; ?>

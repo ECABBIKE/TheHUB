@@ -249,6 +249,44 @@ $ADMIN_TABS = [
     ],
 
     // ========================================
+    // ANALYTICS
+    // ========================================
+    'analytics' => [
+        'title' => 'Analytics',
+        'icon' => 'bar-chart-3',
+        'tabs' => [
+            [
+                'id' => 'dashboard',
+                'label' => 'Dashboard',
+                'icon' => 'layout-dashboard',
+                'url' => '/admin/analytics-dashboard.php',
+                'pages' => ['analytics-dashboard.php']
+            ],
+            [
+                'id' => 'flow',
+                'label' => 'Series Flow',
+                'icon' => 'git-branch',
+                'url' => '/admin/analytics-flow.php',
+                'pages' => ['analytics-flow.php']
+            ],
+            [
+                'id' => 'reports',
+                'label' => 'Rapporter',
+                'icon' => 'file-text',
+                'url' => '/admin/analytics-reports.php',
+                'pages' => ['analytics-reports.php']
+            ],
+            [
+                'id' => 'clubs',
+                'label' => 'Klubbar',
+                'icon' => 'building-2',
+                'url' => '/admin/analytics-clubs.php',
+                'pages' => ['analytics-clubs.php']
+            ]
+        ]
+    ],
+
+    // ========================================
     // IMPORT
     // ========================================
     'import' => [
