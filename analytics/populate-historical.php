@@ -115,6 +115,11 @@ try {
     // Skapa engine
     $engine = new AnalyticsEngine($pdo);
 
+    // Aktivera icke-blockerande lage - forhindrar att analytics lasar tabeller
+    // och blockerar resten av sidan under berakning
+    $engine->enableNonBlockingMode();
+    output("Icke-blockerande lage aktiverat (READ UNCOMMITTED)");
+
     // Bestam ar att bearbeta
     $availableYears = $engine->getAvailableYears();
 
