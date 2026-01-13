@@ -180,9 +180,9 @@ include __DIR__ . '/components/unified-layout.php';
 <form method="POST">
   <?= csrf_field() ?>
 
-  <div class="grid grid-cols-1 gs-lg-grid-cols-3 gap-lg">
+  <div class="grid grid-3 grid-gap-lg">
   <!-- Main Content (2 columns) -->
-  <div class="gs-lg-col-span-2">
+  <div class="lg:span-2">
    <!-- Basic Information -->
    <div class="card mb-lg">
    <div class="card-header">
@@ -192,7 +192,7 @@ include __DIR__ . '/components/unified-layout.php';
     </h2>
    </div>
    <div class="card-body">
-    <div class="grid grid-cols-1 gap-md">
+    <div class="grid grid-gap-md">
     <!-- Name -->
     <div>
      <label for="name" class="admin-form-label">
@@ -210,7 +210,7 @@ include __DIR__ . '/components/unified-layout.php';
     </div>
 
     <!-- City and Region -->
-    <div class="grid grid-cols-2 gap-md">
+    <div class="grid grid-2 grid-gap-md">
      <div>
      <label for="city" class="admin-form-label">Stad</label>
      <input
@@ -236,7 +236,7 @@ include __DIR__ . '/components/unified-layout.php';
     </div>
 
     <!-- Country and Address -->
-    <div class="grid grid-cols-2 gap-md">
+    <div class="grid grid-2 grid-gap-md">
      <div>
      <label for="country" class="admin-form-label">Land</label>
      <input
@@ -275,7 +275,7 @@ include __DIR__ . '/components/unified-layout.php';
     <p class="text-secondary mb-md">
     Används för att visa anläggningen på kartor och navigering.
     </p>
-    <div class="grid grid-cols-2 gap-md">
+    <div class="grid grid-2 grid-gap-md">
      <div>
      <label for="gps_lat" class="admin-form-label">Latitud</label>
      <input
@@ -364,7 +364,7 @@ include __DIR__ . '/components/unified-layout.php';
     </h2>
    </div>
    <div class="card-body">
-    <div class="grid grid-cols-1 gap-md">
+    <div class="grid grid-gap-md">
     <!-- Contact Person -->
     <div>
      <label for="contact_person" class="admin-form-label">Kontaktperson</label>
@@ -379,7 +379,7 @@ include __DIR__ . '/components/unified-layout.php';
     </div>
 
     <!-- Email and Phone -->
-    <div class="grid grid-cols-2 gap-md">
+    <div class="grid grid-2 grid-gap-md">
      <div>
      <label for="email" class="admin-form-label">E-post</label>
      <input
@@ -429,7 +429,7 @@ include __DIR__ . '/components/unified-layout.php';
     </h2>
    </div>
    <div class="card-body">
-    <div class="grid grid-cols-2 gap-md">
+    <div class="grid grid-2 grid-gap-md">
      <div>
      <label for="facebook" class="admin-form-label">
       <i data-lucide="facebook" class="icon-sm"></i>
