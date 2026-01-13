@@ -127,9 +127,37 @@ try {
         throw new Exception("Inga ar med data hittades i events-tabellen");
     }
 
-    // CLI-argument for specifika ar
-    $startYear = $isCli && isset($argv[1]) ? (int)$argv[1] : min($availableYears);
-    $endYear = $isCli && isset($argv[2]) ? (int)$argv[2] : max($availableYears);
+    // CLI-argument for specifika ar och force-flagga
+    // Anvandning: php populate-historical.php [start_year] [end_year] [--force]
+    $forceRerun = false;
+    $startYear = min($availableYears);
+    $endYear = max($availableYears);
+
+    if ($isCli) {
+        foreach ($argv as $i => $arg) {
+            if ($arg === '--force' || $arg === '-f') {
+                $forceRerun = true;
+            } elseif ($i === 1 && is_numeric($arg)) {
+                $startYear = (int)$arg;
+            } elseif ($i === 2 && is_numeric($arg)) {
+                $endYear = (int)$arg;
+            }
+        }
+    }
+
+    // Web-mode: kolla for force-parameter
+    if (!$isCli && isset($_GET['force'])) {
+        $forceRerun = true;
+    }
+
+    // Spara force-flaggan i engine for att kunna anvanda den
+    $engine->setForceRerun($forceRerun);
+
+    if ($forceRerun) {
+        output("FORCE-LAGE: Alla jobb kors om oavsett tidigare status");
+    } else {
+        output("NORMAL LAGE: Redan klara jobb hoppas over (anvand --force for att kora om)");
+    }
 
     // Filtrera ar
     $yearsToProcess = array_filter($availableYears, function($y) use ($startYear, $endYear) {
@@ -158,44 +186,76 @@ try {
         output("--- Ar $year ---");
 
         try {
+            $yearSkipped = true;
+
             // 1. Yearly Stats
-            output("  1/5 Beraknar rider_yearly_stats...");
+            output("  1/5 rider_yearly_stats...");
             $progressCallback = createProgressCallback("riders");
             $count = $engine->calculateYearlyStats($year, $progressCallback);
-            output(""); // Clear progress line
-            output("      $count riders bearbetade");
-            $totalStats['yearly_stats'] += $count;
+            if ($count > 0) {
+                output(""); // Clear progress line
+                output("      $count riders bearbetade");
+                $totalStats['yearly_stats'] += $count;
+                $yearSkipped = false;
+            } else {
+                output("      [HOPPAS OVER - redan klar]");
+            }
 
             // 2. Series Participation
-            output("  2/5 Beraknar series_participation...");
+            output("  2/5 series_participation...");
             $progressCallback = createProgressCallback("participations");
             $count = $engine->calculateSeriesParticipation($year, $progressCallback);
-            output(""); // Clear progress line
-            output("      $count participations skapade");
-            $totalStats['series_participation'] += $count;
+            if ($count > 0) {
+                output(""); // Clear progress line
+                output("      $count participations skapade");
+                $totalStats['series_participation'] += $count;
+                $yearSkipped = false;
+            } else {
+                output("      [HOPPAS OVER - redan klar]");
+            }
 
             // 3. Series Crossover
-            output("  3/5 Beraknar series_crossover...");
+            output("  3/5 series_crossover...");
             $count = $engine->calculateSeriesCrossover($year);
-            output("      $count crossovers skapade");
-            $totalStats['series_crossover'] += $count;
+            if ($count > 0) {
+                output("      $count crossovers skapade");
+                $totalStats['series_crossover'] += $count;
+                $yearSkipped = false;
+            } else {
+                output("      [HOPPAS OVER - redan klar]");
+            }
 
             // 4. Club Stats
-            output("  4/5 Beraknar club_yearly_stats...");
+            output("  4/5 club_yearly_stats...");
             $progressCallback = createProgressCallback("klubbar");
             $count = $engine->calculateClubStats($year, $progressCallback);
-            output(""); // Clear progress line
-            output("      $count klubbar bearbetade");
-            $totalStats['club_stats'] += $count;
+            if ($count > 0) {
+                output(""); // Clear progress line
+                output("      $count klubbar bearbetade");
+                $totalStats['club_stats'] += $count;
+                $yearSkipped = false;
+            } else {
+                output("      [HOPPAS OVER - redan klar]");
+            }
 
             // 5. Venue Stats
-            output("  5/5 Beraknar venue_yearly_stats...");
+            output("  5/5 venue_yearly_stats...");
             $count = $engine->calculateVenueStats($year);
-            output("      $count venues bearbetade");
-            $totalStats['venue_stats'] += $count;
+            if ($count > 0) {
+                output("      $count venues bearbetade");
+                $totalStats['venue_stats'] += $count;
+                $yearSkipped = false;
+            } else {
+                output("      [HOPPAS OVER - redan klar]");
+            }
 
-            $totalStats['years_processed']++;
-            output("  [OK] Ar $year klart");
+            if ($yearSkipped) {
+                output("  [HOPPAS OVER] Ar $year redan beraknat");
+                $totalStats['years_skipped'] = ($totalStats['years_skipped'] ?? 0) + 1;
+            } else {
+                $totalStats['years_processed']++;
+                output("  [OK] Ar $year klart");
+            }
             output("");
 
         } catch (Exception $e) {
@@ -213,8 +273,12 @@ try {
     output("");
     output("Tid: {$duration}s");
     output("Ar bearbetade: {$totalStats['years_processed']}");
+    $skipped = $totalStats['years_skipped'] ?? 0;
+    if ($skipped > 0) {
+        output("Ar hoppade over (redan klara): $skipped");
+    }
     output("");
-    output("Rader skapade:");
+    output("Rader skapade/uppdaterade:");
     output("  - rider_yearly_stats: {$totalStats['yearly_stats']}");
     output("  - series_participation: {$totalStats['series_participation']}");
     output("  - series_crossover: {$totalStats['series_crossover']}");
