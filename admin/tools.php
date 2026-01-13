@@ -435,8 +435,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/analytics/populate-historical.php" class="btn-admin btn-admin-primary">Kör</a>
-            <a href="/analytics/populate-historical.php?force=1" class="btn-admin btn-admin-warning">Kör (Force)</a>
+            <a href="/admin/analytics-populate.php" class="btn-admin btn-admin-primary">Öppna</a>
         </div>
     </div>
 
