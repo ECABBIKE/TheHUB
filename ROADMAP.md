@@ -9,7 +9,7 @@
 | Steg | Beskrivning | Status | Kommentar |
 |------|-------------|--------|-----------|
 | 0 | Governance & Identity Foundation | [x] KLAR | Grunden for datakvalitet |
-| 1 | Databas & Analytics-tabeller | [ ] Ej paborjad | |
+| 1 | Databas & Analytics-tabeller | [x] KLAR | |
 | 2 | Analytics Engine (karnlogik) | [ ] Ej paborjad | |
 | 3 | KPI Dashboard (admin) | [ ] Ej paborjad | |
 | 4 | Serieflodeanalys | [ ] Ej paborjad | NYCKELFUNKTION |
@@ -51,16 +51,16 @@
 
 **Mal:** Skapa databastabeller for pre-beraknad statistik
 **Tid:** ~2-3 timmar
-**Status:** EJ PABORJAD
+**Status:** KLAR
 
 ### Uppgifter
 
-- [ ] Skapa `analytics/migrations/001_analytics_tables.sql`
-- [ ] Skapa `analytics/migrations/002_series_extensions.php`
-- [ ] Skapa `analytics/migrations/003_seed_series_levels.sql`
-- [ ] Skapa `analytics/setup-tables.php`
-- [ ] Alla 6 analytics-tabeller finns
-- [ ] `series_level` ar satt pa alla serier
+- [x] Skapa `analytics/migrations/001_analytics_tables.sql`
+- [x] Skapa `analytics/migrations/002_series_extensions.php`
+- [x] Skapa `analytics/migrations/003_seed_series_levels.sql`
+- [x] Skapa `analytics/setup-tables.php`
+- [ ] Alla 6 analytics-tabeller finns (kor setup-tables.php)
+- [ ] `series_level` ar satt pa alla serier (kor setup-tables.php)
 
 ### Tabeller som skapas
 
@@ -210,4 +210,9 @@
   - Skapade governance-tabeller (migrations)
   - Skapade IdentityResolver for dubblett-hantering
   - Skapade analytics auth.php med CSRF och rollkontroll
+- Steg 1 KLAR: Databas & Analytics-tabeller
+  - Skapade 001_analytics_tables.sql (6 tabeller)
+  - Skapade 002_series_extensions.php (series_level, region, etc.)
+  - Skapade 003_seed_series_levels.sql (kategorisering)
+  - Skapade setup-tables.php
 
