@@ -1,10 +1,10 @@
 <?php
 /**
- * Admin Venues - V3 Design System
- * List view with link to separate edit page
+ * Admin Venues - REDIRECT till Destinations
+ * Behalles for bakatkompatibilitet
  */
-require_once __DIR__ . '/../config.php';
-require_admin();
+header('Location: /admin/destinations.php');
+exit;
 
 $db = getDB();
 

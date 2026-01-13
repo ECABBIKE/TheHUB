@@ -1,10 +1,11 @@
 <?php
 /**
- * Venue Edit Page - V3 Unified Layout
- * Supports both editing existing venues and creating new ones
+ * Venue Edit - REDIRECT till Destination Edit
+ * Behalles for bakatkompatibilitet
  */
-require_once __DIR__ . '/../config.php';
-require_admin();
+$id = isset($_GET['id']) ? '?id=' . intval($_GET['id']) : '';
+header('Location: /admin/destination-edit.php' . $id);
+exit;
 
 $db = getDB();
 

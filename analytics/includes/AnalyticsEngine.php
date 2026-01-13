@@ -24,6 +24,7 @@ class AnalyticsEngine {
     private string $calculationVersion = 'v1';
     private ?string $currentJobName = null;
     private ?int $currentJobId = null;
+    private bool $nonBlockingMode = false;
 
     /**
      * Constructor
@@ -33,6 +34,26 @@ class AnalyticsEngine {
     public function __construct(PDO $pdo) {
         $this->pdo = $pdo;
         $this->identityResolver = new IdentityResolver($pdo);
+    }
+
+    /**
+     * Aktivera icke-blockerande lage
+     *
+     * Satter READ UNCOMMITTED isolation level sa att analytics-fragor
+     * inte lasar tabeller och blockerar resten av sidan.
+     * Dirty reads ar OK for analytics - vi behover inte exakt precision.
+     */
+    public function enableNonBlockingMode(): void {
+        $this->pdo->exec("SET SESSION TRANSACTION ISOLATION LEVEL READ UNCOMMITTED");
+        $this->nonBlockingMode = true;
+    }
+
+    /**
+     * Aterstall normal isolation level
+     */
+    public function disableNonBlockingMode(): void {
+        $this->pdo->exec("SET SESSION TRANSACTION ISOLATION LEVEL REPEATABLE READ");
+        $this->nonBlockingMode = false;
     }
 
     // =========================================================================
