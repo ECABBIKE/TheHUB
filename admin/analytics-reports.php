@@ -218,7 +218,7 @@ if ($export && !isset($error)) {
             break;
 
         case 'rookies':
-            fputcsv($output, ['Rider ID', 'Fornamn', 'Efternamn', 'Alder', 'Fodelsear', 'Kon', 'Klubb', 'Serie', 'Events', 'Starter', 'Poang', 'Basta Placering', 'Disciplin', 'Profil URL']);
+            fputcsv($output, ['Rider ID', 'Fornamn', 'Efternamn', 'Alder', 'Fodelsear', 'Kon', 'Klubb', 'Serie', 'Events', 'Poang', 'Basta Placering', 'Disciplin', 'Profil URL']);
             foreach ($reportData['list'] as $rookie) {
                 $profileUrl = 'https://thehub.se/rider/' . $rookie['rider_id'];
                 fputcsv($output, [
@@ -231,7 +231,6 @@ if ($export && !isset($error)) {
                     $rookie['club_name'] ?? 'Ingen klubb',
                     $rookie['series_name'] ?? '-',
                     $rookie['total_events'],
-                    $rookie['total_starts'],
                     $rookie['total_points'],
                     $rookie['best_position'],
                     $rookie['primary_discipline'] ?? '-',

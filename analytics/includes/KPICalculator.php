@@ -370,7 +370,6 @@ class KPICalculator {
                 c.id as club_id,
                 c.name as club_name,
                 rys.total_events,
-                rys.total_starts,
                 rys.total_points,
                 rys.best_position,
                 rys.primary_discipline,
