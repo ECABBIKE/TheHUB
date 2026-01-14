@@ -19,16 +19,20 @@ requireAnalyticsAccess();
 
 global $pdo;
 
-$currentYear = (int)date('Y');
-$selectedYear = isset($_GET['year']) ? (int)$_GET['year'] : $currentYear;
-
+// Hamta tillgangliga ar (gor detta forst for att kunna satta default)
 $availableYears = [];
 try {
     $stmt = $pdo->query("SELECT DISTINCT season_year FROM rider_yearly_stats ORDER BY season_year DESC");
     $availableYears = $stmt->fetchAll(PDO::FETCH_COLUMN);
 } catch (Exception $e) {
+    $currentYear = (int)date('Y');
     $availableYears = range($currentYear, $currentYear - 5);
 }
+
+// Arval - default till senaste ar MED DATA (inte kalenderaret)
+// Viktigt: Geografisk analys baseras pa avslutade sasonger
+$latestDataYear = !empty($availableYears) ? (int)$availableYears[0] : (int)date('Y') - 1;
+$selectedYear = isset($_GET['year']) ? (int)$_GET['year'] : $latestDataYear;
 
 $kpiCalc = new KPICalculator($pdo);
 
@@ -205,7 +209,8 @@ $regionsWithRiders = count(array_filter($ridersByRegion, fn($r) => $r['rider_cou
                     </thead>
                     <tbody>
                         <?php
-                        $maxPerCapita = max(array_filter(array_column($underservedRegions, 'riders_per_100k'))) ?: 1;
+                        $perCapitaValues = array_filter(array_column($underservedRegions, 'riders_per_100k'));
+                        $maxPerCapita = !empty($perCapitaValues) ? max($perCapitaValues) : 1;
                         foreach ($underservedRegions as $region):
                             if ($region['riders_per_100k'] === null) continue;
                             $barWidth = ($region['riders_per_100k'] / $maxPerCapita) * 100;
