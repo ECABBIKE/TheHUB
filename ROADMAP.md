@@ -313,10 +313,12 @@ Geografi-metoder:
 - [ ] Forbattra is_rookie logik for edge-cases
 
 ### Funktionalitet
-- [x] Lagg till filtrering per serie i rookie-rapporten
+- [x] Lagg till filtrering per serie i rookie-rapporten (fungerar for ALL data nu)
 - [x] Lagg till disciplin-specifik rookie-analys
-- [ ] Lagg till geografisk analys (var kommer rookies ifran?)
+- [x] Lagg till geografisk analys (analytics-geography.php)
 - [x] Lagg till trendanalys for rookies over tid (5 ar med graf)
+- [x] Finare aldersgrupper (5-12, 13-14, 15-16, 17-18, etc)
+- [x] Karriarvags-analys (feeder pipeline, national-to-regional flow)
 
 ### Statistik-precision
 - [x] Disciplinfordelning visar nu BADE primary_discipline OCH faktiskt deltagande
@@ -455,6 +457,47 @@ HUB_ROOT, HUB_URL, ROOT_PATH, INCLUDES_PATH
 ---
 
 # CHANGELOG
+
+### 2026-01-14 (Phase 2 - Fortsattning)
+- **Aldersfordelning uppdelad i finare grupper:**
+  - Tidigare: Under 18, 18-25, 26-35, 36-45, 46-55, Over 55
+  - Nu: 5-12, 13-14, 15-16, 17-18, 19-30, 31-35, 36-45, 46-50, 50+
+  - Uppdaterat i getAgeDistribution(), getRookieAgeDistribution(), getChurnBySegment()
+
+- **Serie-filter fungerar nu for ALL rookie-data:**
+  - Tidigare: Serie-filter paverkade bara listan, inte statistiken
+  - Nu: Seriefilter appliceras pa alla metoder:
+    - getRookieAgeDistribution(), getRookieClassDistribution()
+    - getRookieGenderDistribution(), getRookieAverageAge()
+    - getRookieDisciplineParticipation()
+    - getEventsWithMostRookies(), getClubsWithMostRookies()
+
+- **Skapade analytics-clubs.php:**
+  - Saknades (404) trots lankar i navigation
+  - Visar: Top klubbar, aktiva riders, rookies per klubb
+
+- **Nya KPICalculator-metoder for karriarvagar:**
+  - getFeederPipeline() - Regionala starters som gar nationellt
+  - getNationalToRegionalFlow() - Nationella som provar regionalt
+  - getCareerPathsAnalysis() - Karriarvag-kategorisering
+  - getFirstRaceEntryPoints() - Forsta tilling instegspunkter
+  - getGraduationTrend() - Arlig "graduation" till nationella serier
+
+- **Fixade PDO-parameterproblem:**
+  - Konverterade alla duplicerade named params till positional (?)
+  - Paverkade: getComebackRiders(), getInactiveByDuration(), getChurnBySegment()
+
+- **Fixade analytics-geography.php:**
+  - max() med tom array kraschade sidan
+  - Anvander nu senaste ar med DATA, inte kalendararet
+  - Region-data kommer nu fran klubb/rider istallet for serie
+
+- **Fixade cohort-analys 0% aktiva:**
+  - Jamforde mot 2026 nar ingen 2026-data finns
+  - Nu anvands getLatestSeasonYear() for korrekt jamforelse
+
+- **Andrade analytics-ikon:**
+  - Fran bar-chart-3 till chart-line for tydligare distinktion
 
 ### 2026-01-14 (Phase 2)
 - Steg 11 KLAR: Analytics Phase 2 - Avancerade moduler
