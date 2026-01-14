@@ -899,6 +899,300 @@ $ncf_clubs = [
     'You Never Bike Alone SK, Bærum'
 ];
 
+// DCU (Danmarks Cykle Union) clubs - organized by district
+$dcu_districts = [
+    'Distrikt Jylland/Fyn' => [
+        'Aalborg Cykle-Ring',
+        'Aalborg Cykle-Ring Motion',
+        'Aalborg Mountainbikeklub',
+        'Aarhus Cyklebane',
+        'Aarhus MTB',
+        'Aarhus Studenternes Cykelklub',
+        'Aars BMX Klub - Lynet',
+        'Aarup Motions Cykle Klub',
+        'Ærø Cykle Motion CC Flying Heroes',
+        'Agerskov Cykel Klub af 1991',
+        'Askov Mudeaters',
+        'Assentoft Cykelmotion',
+        'Billund Cykelmotion',
+        'Bjerggedernes Cykelklub',
+        'Bjerringbro BMX Klub',
+        'BMX Limfjord',
+        'Bogense Cykelklub',
+        'Bording Cykel Motion',
+        'Børkop Motion Cyklister',
+        'Bov Cykle Club',
+        'Brande Motion',
+        'Breakaway Cycling Club',
+        'Bredballe Idrætsforening',
+        'Broby Idrætsforening',
+        'Brønderslev Motions Cykelklub',
+        'Brørup Cykel Klub',
+        'Christiansfeld Cykelmotion',
+        'Cycling DS',
+        'Cycling Langeland',
+        'Cykel Klubben Aars',
+        'Cykel Klubben Djurs',
+        'Cykel Motion Biersted',
+        'Cykelglæden',
+        'Cykelmotion Viborg',
+        'Cykle Clubben Hjørring',
+        'Cykle Klubben Aarhus',
+        'Cyklemotion Odense',
+        'Cyklemotion Sønderborg',
+        'Cykling Odense',
+        'Danfoss Cykel Klub',
+        'Dansk Håndcykelklub',
+        'Distrikt Jylland Fyn',
+        'Dragon BMX',
+        'Dronninglund Motions Ck',
+        'eCykle Klub Danmark',
+        'ED Elite',
+        'Elev-Nye Idrætsforening - Cykling',
+        'Ellum BMX Klub',
+        'Esbjerg Cykle Motion',
+        'Esbjerg Cykle Ring Sport af 1919',
+        'Faaborg Sport og Motion',
+        'Falcon BMX',
+        'Feldborg BMX',
+        'Filskov Cykel Klub',
+        'Fjends Motionscykelklub',
+        'Fjordager Idrætsforening',
+        'FK 73 - Kragelund Cykelmotion',
+        'FLUIF-MORS',
+        'Fredericia Cycle Club',
+        'Fredericia Trihjulet',
+        'Frederikshøj Cycling Club',
+        'Galten Cykel Klub',
+        'Give Cykelklub',
+        'Gl Rye MTB',
+        'Gram Cykelklub',
+        'Gråsten Cykelklub',
+        'Grenaa Cykle Club',
+        'Grindsted Cykel Motion',
+        'Haderslev BMX-klub',
+        'Haderslev Starup Cykelklub',
+        'Hald Ege – Ravnstrup KFUM',
+        'Hammel Cykle Klub',
+        'Hammerum Gjellerup Cykelklub',
+        'Hedensted Cykel Klub',
+        'Herning Cykle Klub',
+        'HMIF (Hoptrup-Marstrup Idrætsforening)',
+        'Hobro Cykle Club af 1938',
+        'Holstebro Cycleclub af 1960',
+        'Holstebro Cykelmotion af 1994',
+        'Holsted Cykel Motion',
+        'Horsens Amatør Cykleklub',
+        'Hurup Thy Cykel Motion',
+        'Ikast Atletik- og Motionsforening',
+        'Ikast BMX Klub',
+        'Ilbro-Lørslev Idrætsforening',
+        'Jegerup Omegns Cykelklub (JOCK)',
+        'Jernbanernes Idrætsforening Århus',
+        'KÆDEN Nr Lyndelse',
+        'Kerteminde Cykelklub',
+        'Kjellerup Cykelklub',
+        'Knaber Cyklisterne',
+        'Kolding Bicycle Club',
+        'Korup-Motion-Cykling (Korup IF)',
+        'Le Pedaleur De Charme',
+        'Lemvig Cykle Klub',
+        'Linak Cykleklub',
+        'Løgstør Håndboldklub',
+        'Mejrup Cykleclub',
+        'Middelfart Cykel Club',
+        'Midtfyns Cykle Club',
+        'miKKen Cycling',
+        'Møldrup BMX Klub',
+        'Morsø Cykel Klub',
+        'Motionscykelklubben Himmerland',
+        'Motionscykelklubben Ringe Cykelklub',
+        'Motionscykle Klubben Baghjulet',
+        'Mountain Bike Klub Silkeborg',
+        'Mountainbike Club Vejle',
+        'MTB 6000',
+        'MTB Esbjerg',
+        'MTB Frederikshavn',
+        'MTB Kolding',
+        'MTB Randers',
+        'MTB Sønderborg',
+        'Multi Motion Assens',
+        'Næsby Cykel Motion',
+        'Nibe Motions Cykel Club',
+        'Nordjysk Bicycle Club - Frederikshavn Motion',
+        'Notmark Sogns Ungdomsforening',
+        'Nr Hostrup Ungdomsforening',
+        'Nr Søby Cykel Klub',
+        'Nyborg Cykle Klub',
+        'Odder Cykel Klub',
+        'Odense Cycling Masters',
+        'Odense Triathlon Klub - Motion',
+        'Oksbøl Cykel Team',
+        'Ølgod Cykelmotion',
+        'Ølsted Cykelmotion',
+        'Østjysk BMX',
+        'Østsalling Idrætsforening',
+        'Pandrup Mountainbike Klub',
+        'Politiets Idrætsforening, Århus',
+        'Racing Bjerringbro',
+        'Racing Kolding',
+        'Racing89ers',
+        'Randers BMX',
+        'Randers Cykelmotion',
+        'Randers Cykleklub af 1910',
+        'Ribe Cycle Club',
+        'Ringkøbing Cykle Club',
+        'Rødekro Cykle Club RKCC',
+        'Rold Skov MTB',
+        'Ry CC',
+        'Sæby Motions Cykel Club',
+        'Sallingsund Cykelmotion',
+        'Saltum Trim',
+        'Sidevinden',
+        'Silkeborg Cr Motion',
+        'Silkeborg IF Cykling',
+        'Skanderborg BMX Klub',
+        'Skanderborg Cykleklub',
+        'Skive Cykle Klub',
+        'Skjern Gymnastikforening af 1916',
+        'Snedsted GIF – Motionsforening',
+        'Snejbjerg Cykelmotion',
+        'Solbjerg IF Cycling',
+        'Sønderborg Cykle Klub',
+        'Søvind Cykel-Motion',
+        'Stjær e-Cycling',
+        'Støvring Motions Cykleklub',
+        'Strada Cycling',
+        'Struer Cykelklub',
+        'Sunds Cykelmotion',
+        'Svendborg Cykle Club',
+        'Svendborg Mountainbike Klub',
+        'Sydbyens Cykelklub Kolding',
+        'Tarp Cykel-Motion',
+        'Team 9280',
+        'Team Asmussen Cykling',
+        'Team Egtved',
+        'Team Hjallerup',
+        'Team Taasinge',
+        'Testrup Mårslet Gymnastikforening',
+        'Thy BMX',
+        'Thy Cykle Ring',
+        'Tistrup Cykelmotion',
+        'Tjæreborg Cycling',
+        'Tjørring Cykelmotion',
+        'Toftlund Cykelmotion',
+        'Tønder Amatør Cykle Ring',
+        'Tønder BMX',
+        'Tønder Cykle Motion - TCM',
+        'TSIF Cykling - Taulov BMX',
+        'TST Tilst Cykling',
+        'Varde BMX',
+        'Varde Cykelklub',
+        'Vejen Bicycle Club',
+        'Vejgaard Cykelmotion',
+        'Vejle Cykel Klub',
+        'Vejle Cykel Motion',
+        'Velo Cycling Club',
+        'Viborg MTB',
+        'Viborg Trial Klub',
+        'Vodskov Motions Cykel Club',
+    ],
+    'Distrikt Sjælland' => [
+        'ABC København',
+        'Allerød Cykle Klub',
+        'Allerød Orienteringsklub',
+        'Amager Cykle Ring',
+        'Audax Randonneurs Danemark',
+        'Birkerød Bicycle Club',
+        'Boldklubben Frem Sakskøbing',
+        'Bornholms Cycle Club',
+        'Brandvæsenets Idrætsforening',
+        'Brøndby Cykel Motion',
+        'BSR-Cykelmotion',
+        'CK Kronborg',
+        'CK Nordsjælland',
+        'Copenhagen Virtual Cycling (Grøndal MultiCent',
+        'Cycling Club Hillerød (CC Hillerød)',
+        'Cykleklubben Fix Rødovre',
+        'Cykleklubben Viking',
+        'Danish Zwift Racers',
+        'Dansk Mountainbike Klub',
+        'DBC Ballerup',
+        'Den Blå Mur',
+        'Distrikt Sjælland Moderklub',
+        'Dragør Cykelklub',
+        'FIF Atletik og Motion',
+        'FL Smidth-Cykelmotion',
+        'Frederiksværk Motions Cykelklub',
+        'Frederiksberg Bane-& Landevejsklub',
+        'Furesø Cykle Club',
+        'Gentofte CC',
+        'Greve Cykle Club',
+        'Gribskov Cykel Motion',
+        'Hareskov Cykelklub (Team Hareskov Cykler af 2',
+        'Haslev Cykelmotion',
+        'Hillerød MTB Klub',
+        'Holbæk Cykelsport',
+        'Holbæk Trial Klub',
+        'Holte MTB Klub',
+        'Hvidovre Cykle Klub',
+        'Hvidovre Trail',
+        'Ishøj Motion Cykle Club',
+        'Johnny Cash Cykelklub',
+        'K C K Herlev',
+        'Kalundborg BMX klub',
+        'Kalundborg Cykle Club',
+        'Kirke Hyllinge Cykelmotion',
+        'Klampenborg CC',
+        'Københavns BMX Klub',
+        'Køge BMX Klub',
+        'Køge Cykel Ring',
+        'Lolland-Falster Cykle Klub',
+        'Lyngby Cycle Club',
+        'Motionscykelklubben i Skævinge Komm',
+        'Motionscykelklubben Ventoux',
+        'Næstved Bicycle Club',
+        'Næstved Cykel-Motion',
+        'Nakskov Cykle Club',
+        'Nexø Motion Cykel Club',
+        'Nørrebro Cykleklub',
+        'Nykøbing Sjælland Cykelmotion',
+        'Ølsemagle Motion',
+        'Ølstykke Cykle Klub',
+        'Ordrup Cykle Club',
+        'Pedal-Atleterne Fredensborg',
+        'Politiets IF Kbh-Cykling',
+        'Rigspolitiets Idrætsforening (RPIF)',
+        'Ringsted Motionsklub',
+        'Rønnede If Cykelmotion',
+        'Roskilde BMX Klub',
+        'Roskilde Cykel Motion',
+        'Roskilde Cykle Ring',
+        'Roskilde Mountainbike Klub',
+        'SCC - Skrænten Cyclecross Club',
+        'SCC Zealand',
+        'SemiProTour',
+        'Skiklubben Hareskov',
+        'Slagelse Cykle Ring',
+        'Slagelse Cykle Ring Motion',
+        'Slagelse MTB',
+        'Slangerup Cykel Klub',
+        'Sorø Bicycle Club',
+        'Sorø BMX',
+        'Stevns MTB',
+        'Sydkystens Cycling',
+        'Sydhavs BMX',
+        'Taastrup TIK - Motionscykling',
+        'Team Compendium',
+        'Team Cycling Ringsted',
+        'Tryg Cykelforening',
+        'Ulkestrup Cycling Club ("UCC")',
+        'Værløse-Farum Cykleklub',
+        'VHG Cykelsport',
+        'Vordingborg Motions Cykleklub',
+    ]
+];
+
 // Check if columns exist, if not run migration
 try {
     $stmt = $pdo->query("SHOW COLUMNS FROM clubs LIKE 'rf_registered'");
@@ -1210,6 +1504,100 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         $messageType = 'success';
     }
 
+    if ($_POST['action'] === 'sync_dcu') {
+        $matched = 0;
+        $created = 0;
+        $notFound = [];
+
+        $createMissing = isset($_POST['create_missing']) && $_POST['create_missing'] === '1';
+        $updateNames = isset($_POST['update_names']) && $_POST['update_names'] === '1';
+
+        // Reset Danish RF registrations only
+        $pdo->exec("UPDATE clubs SET rf_registered = 0, rf_registered_year = NULL, scf_district = NULL WHERE country = 'Danmark' OR scf_district LIKE 'DCU%' OR scf_district LIKE 'Distrikt%'");
+
+        // Cache all existing clubs for faster matching
+        $stmt = $pdo->query("SELECT id, name, country FROM clubs ORDER BY name");
+        $existingClubs = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        foreach ($dcu_districts as $district => $clubs) {
+            foreach ($clubs as $clubName) {
+                // Find best match
+                $bestMatch = null;
+                $bestScore = 0;
+
+                foreach ($existingClubs as $club) {
+                    $score = clubNameSimilarity($clubName, $club['name']);
+                    if ($score > $bestScore && $score >= 70) {
+                        $bestScore = $score;
+                        $bestMatch = $club;
+                    }
+                }
+
+                if ($bestMatch) {
+                    // Update existing club
+                    $stmt = $pdo->prepare("UPDATE clubs SET rf_registered = 1, rf_registered_year = 2025, scf_district = ?, country = 'Danmark' WHERE id = ?");
+                    $stmt->execute(['DCU ' . $district, $bestMatch['id']]);
+
+                    // Optionally update the name to official DCU spelling
+                    if ($updateNames && $bestMatch['name'] !== $clubName) {
+                        $stmt = $pdo->prepare("UPDATE clubs SET name = ? WHERE id = ?");
+                        $stmt->execute([$clubName, $bestMatch['id']]);
+                    }
+
+                    $matched++;
+                    $results[] = [
+                        'status' => 'matched',
+                        'rf_name' => $clubName,
+                        'hub_name' => $bestMatch['name'],
+                        'hub_id' => $bestMatch['id'],
+                        'district' => 'DCU ' . $district,
+                        'score' => round($bestScore)
+                    ];
+                } else {
+                    // Club not found
+                    if ($createMissing) {
+                        // Create new club
+                        $stmt = $pdo->prepare("INSERT INTO clubs (name, rf_registered, rf_registered_year, scf_district, country, active, created_at) VALUES (?, 1, 2025, ?, 'Danmark', 1, NOW())");
+                        $stmt->execute([$clubName, 'DCU ' . $district]);
+                        $newId = $pdo->lastInsertId();
+
+                        // Add to cache for potential future matches in this run
+                        $existingClubs[] = ['id' => $newId, 'name' => $clubName, 'country' => 'Danmark'];
+
+                        $created++;
+                        $results[] = [
+                            'status' => 'created',
+                            'rf_name' => $clubName,
+                            'hub_name' => $clubName,
+                            'hub_id' => $newId,
+                            'district' => 'DCU ' . $district,
+                            'score' => 100
+                        ];
+                    } else {
+                        $notFound[] = ['name' => $clubName, 'district' => 'DCU ' . $district];
+                        $results[] = [
+                            'status' => 'not_found',
+                            'rf_name' => $clubName,
+                            'hub_name' => null,
+                            'district' => 'DCU ' . $district,
+                            'score' => 0
+                        ];
+                    }
+                }
+            }
+        }
+
+        $parts = ["$matched klubbar matchade"];
+        if ($created > 0) {
+            $parts[] = "$created nya klubbar skapade";
+        }
+        if (count($notFound) > 0) {
+            $parts[] = count($notFound) . " ej hittade";
+        }
+        $message = "DCU-synkronisering (Danmark) klar: " . implode(', ', $parts) . ".";
+        $messageType = 'success';
+    }
+
     if ($_POST['action'] === 'manual_match' && isset($_POST['club_id']) && isset($_POST['rf_name']) && isset($_POST['district'])) {
         if (!empty($_POST['club_id'])) {
             $stmt = $pdo->prepare("UPDATE clubs SET rf_registered = 1, rf_registered_year = 2025, scf_district = ? WHERE id = ?");
@@ -1261,6 +1649,11 @@ foreach ($scf_districts as $clubs) {
 }
 $totalNcfClubs = count($ncf_clubs);
 
+$totalDcuClubs = 0;
+foreach ($dcu_districts as $clubs) {
+    $totalDcuClubs += count($clubs);
+}
+
 // Include unified layout
 include __DIR__ . '/components/unified-layout.php';
 ?>
@@ -1286,6 +1679,10 @@ include __DIR__ . '/components/unified-layout.php';
                     <div class="text-muted">Norska klubbar (NCF)</div>
                 </div>
                 <div class="stat-card" style="background: var(--color-bg-hover); padding: var(--space-md); border-radius: var(--radius-md);">
+                    <div style="font-size: 2rem; font-weight: bold; color: #c60c30;"><?= $totalDcuClubs ?></div>
+                    <div class="text-muted">Danska klubbar (DCU)</div>
+                </div>
+                <div class="stat-card" style="background: var(--color-bg-hover); padding: var(--space-md); border-radius: var(--radius-md);">
                     <div style="font-size: 2rem; font-weight: bold; color: var(--color-success);"><?= $stats['rf_registered'] ?? 0 ?></div>
                     <div class="text-muted">Matchade i TheHUB</div>
                 </div>
@@ -1294,7 +1691,7 @@ include __DIR__ . '/components/unified-layout.php';
                     <div class="text-muted">Ej registrerade</div>
                 </div>
                 <div class="stat-card" style="background: var(--color-bg-hover); padding: var(--space-md); border-radius: var(--radius-md);">
-                    <div style="font-size: 2rem; font-weight: bold; color: var(--color-text-primary);"><?= count($scf_districts) + 1 ?></div>
+                    <div style="font-size: 2rem; font-weight: bold; color: var(--color-text-primary);"><?= count($scf_districts) + count($dcu_districts) + 1 ?></div>
                     <div class="text-muted">Förbund/distrikt</div>
                 </div>
             </div>
@@ -1364,6 +1761,39 @@ include __DIR__ . '/components/unified-layout.php';
                     <button type="submit" class="btn btn-primary" style="width: 100%; background: #ba0c2f; border-color: #ba0c2f;">
                         <i data-lucide="refresh-cw"></i>
                         Synka norska klubbar
+                    </button>
+                </form>
+            </div>
+        </div>
+
+        <!-- Danish DCU Sync -->
+        <div class="card">
+            <div class="card-header" style="background: linear-gradient(135deg, #c60c30 0%, #fff 100%);">
+                <h3 style="color: #c60c30;">Danmark - DCU</h3>
+            </div>
+            <div class="card-body">
+                <p class="text-sm text-muted mb-md"><?= $totalDcuClubs ?> klubbar i <?= count($dcu_districts) ?> distrikt</p>
+
+                <form method="POST">
+                    <input type="hidden" name="action" value="sync_dcu">
+
+                    <div class="form-group" style="margin-bottom: var(--space-sm);">
+                        <label class="checkbox-label" style="display: flex; align-items: center; gap: var(--space-sm); cursor: pointer; font-size: 0.875rem;">
+                            <input type="checkbox" name="create_missing" value="1" checked style="width: 16px; height: 16px;">
+                            <span>Skapa saknade klubbar</span>
+                        </label>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: var(--space-md);">
+                        <label class="checkbox-label" style="display: flex; align-items: center; gap: var(--space-sm); cursor: pointer; font-size: 0.875rem;">
+                            <input type="checkbox" name="update_names" value="1" style="width: 16px; height: 16px;">
+                            <span>Uppdatera stavning</span>
+                        </label>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary" style="width: 100%; background: #c60c30; border-color: #c60c30;">
+                        <i data-lucide="refresh-cw"></i>
+                        Synka danska klubbar
                     </button>
                 </form>
             </div>
