@@ -264,6 +264,27 @@ $ADMIN_TABS = [
                 'pages' => ['analytics-dashboard.php']
             ],
             [
+                'id' => 'cohorts',
+                'label' => 'Kohorter',
+                'icon' => 'users',
+                'url' => '/admin/analytics-cohorts.php',
+                'pages' => ['analytics-cohorts.php']
+            ],
+            [
+                'id' => 'atrisk',
+                'label' => 'At-Risk',
+                'icon' => 'alert-triangle',
+                'url' => '/admin/analytics-atrisk.php',
+                'pages' => ['analytics-atrisk.php']
+            ],
+            [
+                'id' => 'geography',
+                'label' => 'Geografi',
+                'icon' => 'map',
+                'url' => '/admin/analytics-geography.php',
+                'pages' => ['analytics-geography.php']
+            ],
+            [
                 'id' => 'flow',
                 'label' => 'Series Flow',
                 'icon' => 'git-branch',
