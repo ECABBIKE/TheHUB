@@ -2,11 +2,11 @@
 /**
  * Analytics Series Compare - Jämför Varumärken
  *
- * Samma layout som Trender men för enskilda varumärken.
- * Välj 1-3 varumärken och se dem jämförda i samma grafer.
+ * Välj valfritt antal varumärken per grupp (A, B, C) och jämför dem.
+ * Varje grupp aggregerar alla valda varumärken.
  *
  * @package TheHUB Analytics
- * @version 1.2
+ * @version 2.0
  */
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../includes/auth.php';
@@ -21,7 +21,7 @@ $numYears = isset($_GET['years']) ? max(3, min(15, (int)$_GET['years'])) : 10;
 // Hämta tillgängliga år
 $availableYears = [];
 try {
-    $stmt = $pdo->query("SELECT DISTINCT season_year FROM rider_yearly_stats ORDER BY season_year ASC");
+    $stmt = $pdo->query("SELECT DISTINCT season_year FROM series_participation ORDER BY season_year ASC");
     $availableYears = $stmt->fetchAll(PDO::FETCH_COLUMN);
 } catch (Exception $e) {
     $error = $e->getMessage();
@@ -38,11 +38,7 @@ try {
             sb.name,
             sb.accent_color,
             sb.active,
-            COUNT(DISTINCT s.id) as series_count,
-            (SELECT COUNT(DISTINCT sp.rider_id)
-             FROM series_participation sp
-             JOIN series ser ON sp.series_id = ser.id
-             WHERE ser.brand_id = sb.id) as total_participants
+            COUNT(DISTINCT s.id) as series_count
         FROM series_brands sb
         LEFT JOIN series s ON s.brand_id = sb.id
         GROUP BY sb.id
@@ -50,30 +46,48 @@ try {
     ");
     $allBrands = $stmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (Exception $e) {
-    // Tabellen kanske inte finns
     $error = "Kunde inte hämta varumärken: " . $e->getMessage();
 }
 
-// Valda varumärken (max 3)
-$selected = [];
-if (isset($_GET['b1']) && $_GET['b1']) $selected[] = (int)$_GET['b1'];
-if (isset($_GET['b2']) && $_GET['b2']) $selected[] = (int)$_GET['b2'];
-if (isset($_GET['b3']) && $_GET['b3']) $selected[] = (int)$_GET['b3'];
+// Parse valda varumärken per grupp (kommaseparerade IDs)
+$groupA = isset($_GET['a']) ? array_filter(array_map('intval', explode(',', $_GET['a']))) : [];
+$groupB = isset($_GET['b']) ? array_filter(array_map('intval', explode(',', $_GET['b']))) : [];
+$groupC = isset($_GET['c']) ? array_filter(array_map('intval', explode(',', $_GET['c']))) : [];
+
+// Gruppnamn baserade på valda varumärken
+function getGroupName($brandIds, $allBrands) {
+    if (empty($brandIds)) return '';
+    $names = [];
+    foreach ($brandIds as $id) {
+        foreach ($allBrands as $b) {
+            if ($b['id'] == $id) {
+                $names[] = $b['name'];
+                break;
+            }
+        }
+    }
+    if (count($names) <= 2) {
+        return implode(' + ', $names);
+    }
+    return $names[0] . ' +' . (count($names) - 1);
+}
 
 /**
- * Hämta alla series_id för ett varumärke
+ * Hämta alla series_id för flera varumärken
  */
-function getSeriesIdsForBrand($pdo, $brandId) {
-    $stmt = $pdo->prepare("SELECT id FROM series WHERE brand_id = ?");
-    $stmt->execute([$brandId]);
+function getSeriesIdsForBrands($pdo, $brandIds) {
+    if (empty($brandIds)) return [];
+    $placeholders = implode(',', array_fill(0, count($brandIds), '?'));
+    $stmt = $pdo->prepare("SELECT id FROM series WHERE brand_id IN ($placeholders)");
+    $stmt->execute($brandIds);
     return $stmt->fetchAll(PDO::FETCH_COLUMN);
 }
 
 /**
- * Beräkna KPIs för ett varumärke (alla serier under varumärket)
+ * Beräkna KPIs för en grupp av varumärken (aggregerat)
  */
-function getBrandKPIs($pdo, $brandId, $year) {
-    $seriesIds = getSeriesIdsForBrand($pdo, $brandId);
+function getGroupKPIs($pdo, $brandIds, $year) {
+    $seriesIds = getSeriesIdsForBrands($pdo, $brandIds);
 
     if (empty($seriesIds)) {
         return [
@@ -91,7 +105,7 @@ function getBrandKPIs($pdo, $brandId, $year) {
 
     $placeholders = implode(',', array_fill(0, count($seriesIds), '?'));
 
-    // Totalt antal unika deltagare i varumärkets serier detta år
+    // Totalt antal unika deltagare i gruppens serier detta år
     $stmt = $pdo->prepare("
         SELECT COUNT(DISTINCT rider_id)
         FROM series_participation
@@ -100,20 +114,19 @@ function getBrandKPIs($pdo, $brandId, $year) {
     $stmt->execute([...$seriesIds, $year]);
     $totalRiders = (int)$stmt->fetchColumn();
 
-    // Nya riders (första året i NÅGON serie i systemet)
+    // Nya riders (första året i NÅGON serie - använd riders.first_season)
     $stmt = $pdo->prepare("
         SELECT COUNT(DISTINCT sp.rider_id)
         FROM series_participation sp
+        JOIN riders r ON sp.rider_id = r.id
         WHERE sp.series_id IN ($placeholders)
         AND sp.season_year = ?
-        AND sp.rider_id IN (
-            SELECT rider_id FROM rider_yearly_stats WHERE first_year = ?
-        )
+        AND r.first_season = ?
     ");
     $stmt->execute([...$seriesIds, $year, $year]);
     $newRiders = (int)$stmt->fetchColumn();
 
-    // Retained - deltog i varumärkets serier både detta och förra året
+    // Retained - deltog i gruppens serier både detta och förra året
     $stmt = $pdo->prepare("
         SELECT COUNT(DISTINCT sp1.rider_id)
         FROM series_participation sp1
@@ -147,7 +160,8 @@ function getBrandKPIs($pdo, $brandId, $year) {
     // Growth rate
     $growthRate = $prevYearRiders > 0 ? round(($totalRiders - $prevYearRiders) / $prevYearRiders * 100, 1) : 0;
 
-    // Cross-participation (deltar i andra varumärken/serier)
+    // Cross-participation (deltar även i serier UTANFÖR denna grupp)
+    $brandPlaceholders = implode(',', array_fill(0, count($brandIds), '?'));
     $stmt = $pdo->prepare("
         SELECT COUNT(DISTINCT sp1.rider_id)
         FROM series_participation sp1
@@ -157,10 +171,10 @@ function getBrandKPIs($pdo, $brandId, $year) {
             JOIN series s2 ON sp2.series_id = s2.id
             WHERE sp2.rider_id = sp1.rider_id
             AND sp2.season_year = sp1.season_year
-            AND (s2.brand_id IS NULL OR s2.brand_id != ?)
+            AND (s2.brand_id IS NULL OR s2.brand_id NOT IN ($brandPlaceholders))
         )
     ");
-    $stmt->execute([...$seriesIds, $year, $brandId]);
+    $stmt->execute([...$seriesIds, $year, ...$brandIds]);
     $crossCount = (int)$stmt->fetchColumn();
     $crossParticipation = $totalRiders > 0 ? round($crossCount / $totalRiders * 100, 1) : 0;
 
@@ -206,40 +220,53 @@ function getBrandKPIs($pdo, $brandId, $year) {
     ];
 }
 
-// Samla trenddata för valda varumärken
-$brandTrends = [];
-$brandLabels = [];
-$brandColors = [];
-$defaultColors = ['#37d4d6', '#f97316', '#a855f7']; // Fallback färger
+// Samla trenddata för valda grupper
+$groupTrends = [];
+$groupLabels = [];
+$groupColors = ['#37d4d6', '#f97316', '#a855f7'];
+$activeGroups = [];
 
 try {
-    foreach ($selected as $idx => $brandId) {
-        // Hämta varumärkesinfo
-        $brandName = '';
-        $brandColor = $defaultColors[$idx];
-        foreach ($allBrands as $b) {
-            if ($b['id'] == $brandId) {
-                $brandName = $b['name'];
-                $brandColor = $b['accent_color'] ?: $defaultColors[$idx];
-                break;
-            }
-        }
-        $brandLabels[$idx] = $brandName;
-        $brandColors[$idx] = $brandColor;
-
-        // Hämta data för varje år
+    // Grupp A
+    if (!empty($groupA)) {
+        $activeGroups[] = 0;
+        $groupLabels[0] = getGroupName($groupA, $allBrands);
         $trends = [];
         foreach ($yearsToShow as $year) {
-            $kpis = getBrandKPIs($pdo, $brandId, $year);
+            $kpis = getGroupKPIs($pdo, $groupA, $year);
             $trends[] = array_merge(['year' => $year], $kpis);
         }
-        $brandTrends[$idx] = $trends;
+        $groupTrends[0] = $trends;
+    }
+
+    // Grupp B
+    if (!empty($groupB)) {
+        $activeGroups[] = 1;
+        $groupLabels[1] = getGroupName($groupB, $allBrands);
+        $trends = [];
+        foreach ($yearsToShow as $year) {
+            $kpis = getGroupKPIs($pdo, $groupB, $year);
+            $trends[] = array_merge(['year' => $year], $kpis);
+        }
+        $groupTrends[1] = $trends;
+    }
+
+    // Grupp C
+    if (!empty($groupC)) {
+        $activeGroups[] = 2;
+        $groupLabels[2] = getGroupName($groupC, $allBrands);
+        $trends = [];
+        foreach ($yearsToShow as $year) {
+            $kpis = getGroupKPIs($pdo, $groupC, $year);
+            $trends[] = array_merge(['year' => $year], $kpis);
+        }
+        $groupTrends[2] = $trends;
     }
 } catch (Exception $e) {
-    $error = $e->getMessage();
+    $error = "Fel vid datahämtning: " . $e->getMessage();
 }
 
-$hasData = !empty($selected) && !empty($brandTrends);
+$hasData = !empty($activeGroups) && !empty($groupTrends);
 
 // Page config
 $page_title = 'Jämför Varumärken';
@@ -253,9 +280,6 @@ $page_actions = '
 <div class="btn-group">
     <a href="/admin/analytics-trends.php" class="btn-admin btn-admin-secondary">
         <i data-lucide="trending-up"></i> Trender (Totalt)
-    </a>
-    <a href="/admin/analytics-dashboard.php" class="btn-admin btn-admin-secondary">
-        <i data-lucide="bar-chart-3"></i> Dashboard
     </a>
 </div>
 ';
@@ -278,66 +302,77 @@ include __DIR__ . '/components/unified-layout.php';
                 Inga varumärken hittades. Skapa varumärken under <a href="/admin/series-brands.php">Serie-varumärken</a>.
             </div>
         <?php else: ?>
+        <p class="text-muted mb-md">Välj ett eller flera varumärken per grupp. Varje grupp visas som en linje i graferna.</p>
+
         <form method="get" id="compareForm">
             <input type="hidden" name="years" value="<?= $numYears ?>">
+            <input type="hidden" name="a" id="inputA" value="<?= htmlspecialchars($_GET['a'] ?? '') ?>">
+            <input type="hidden" name="b" id="inputB" value="<?= htmlspecialchars($_GET['b'] ?? '') ?>">
+            <input type="hidden" name="c" id="inputC" value="<?= htmlspecialchars($_GET['c'] ?? '') ?>">
 
-            <div class="brand-selector">
-                <!-- Varumärke 1 -->
-                <div class="brand-slot">
-                    <div class="slot-header">
-                        <span class="slot-color" style="background: <?= $brandColors[0] ?? $defaultColors[0] ?>"></span>
-                        <span class="slot-label">Varumärke 1</span>
+            <div class="brand-groups">
+                <!-- Grupp A -->
+                <div class="brand-group" data-group="a">
+                    <div class="group-header">
+                        <span class="group-color" style="background: <?= $groupColors[0] ?>"></span>
+                        <span class="group-label">Grupp A</span>
+                        <span class="group-count"><?= count($groupA) ?> valda</span>
                     </div>
-                    <select name="b1" class="form-select" onchange="this.form.submit()">
-                        <option value="">-- Välj varumärke --</option>
+                    <div class="brand-checkboxes">
                         <?php foreach ($allBrands as $brand): ?>
-                            <option value="<?= $brand['id'] ?>" <?= (isset($_GET['b1']) && $_GET['b1'] == $brand['id']) ? 'selected' : '' ?>>
-                                <?= htmlspecialchars($brand['name']) ?>
-                            </option>
+                        <label class="brand-checkbox <?= in_array($brand['id'], $groupA) ? 'checked' : '' ?>">
+                            <input type="checkbox" value="<?= $brand['id'] ?>" <?= in_array($brand['id'], $groupA) ? 'checked' : '' ?>>
+                            <span class="brand-name"><?= htmlspecialchars($brand['name']) ?></span>
+                        </label>
                         <?php endforeach; ?>
-                    </select>
+                    </div>
                 </div>
 
-                <!-- Varumärke 2 -->
-                <div class="brand-slot">
-                    <div class="slot-header">
-                        <span class="slot-color" style="background: <?= $brandColors[1] ?? $defaultColors[1] ?>"></span>
-                        <span class="slot-label">Varumärke 2 (valfritt)</span>
+                <!-- Grupp B -->
+                <div class="brand-group" data-group="b">
+                    <div class="group-header">
+                        <span class="group-color" style="background: <?= $groupColors[1] ?>"></span>
+                        <span class="group-label">Grupp B</span>
+                        <span class="group-count"><?= count($groupB) ?> valda</span>
                     </div>
-                    <select name="b2" class="form-select" onchange="this.form.submit()">
-                        <option value="">-- Välj varumärke --</option>
+                    <div class="brand-checkboxes">
                         <?php foreach ($allBrands as $brand): ?>
-                            <option value="<?= $brand['id'] ?>" <?= (isset($_GET['b2']) && $_GET['b2'] == $brand['id']) ? 'selected' : '' ?>>
-                                <?= htmlspecialchars($brand['name']) ?>
-                            </option>
+                        <label class="brand-checkbox <?= in_array($brand['id'], $groupB) ? 'checked' : '' ?>">
+                            <input type="checkbox" value="<?= $brand['id'] ?>" <?= in_array($brand['id'], $groupB) ? 'checked' : '' ?>>
+                            <span class="brand-name"><?= htmlspecialchars($brand['name']) ?></span>
+                        </label>
                         <?php endforeach; ?>
-                    </select>
+                    </div>
                 </div>
 
-                <!-- Varumärke 3 -->
-                <div class="brand-slot">
-                    <div class="slot-header">
-                        <span class="slot-color" style="background: <?= $brandColors[2] ?? $defaultColors[2] ?>"></span>
-                        <span class="slot-label">Varumärke 3 (valfritt)</span>
+                <!-- Grupp C -->
+                <div class="brand-group" data-group="c">
+                    <div class="group-header">
+                        <span class="group-color" style="background: <?= $groupColors[2] ?>"></span>
+                        <span class="group-label">Grupp C</span>
+                        <span class="group-count"><?= count($groupC) ?> valda</span>
                     </div>
-                    <select name="b3" class="form-select" onchange="this.form.submit()">
-                        <option value="">-- Välj varumärke --</option>
+                    <div class="brand-checkboxes">
                         <?php foreach ($allBrands as $brand): ?>
-                            <option value="<?= $brand['id'] ?>" <?= (isset($_GET['b3']) && $_GET['b3'] == $brand['id']) ? 'selected' : '' ?>>
-                                <?= htmlspecialchars($brand['name']) ?>
-                            </option>
+                        <label class="brand-checkbox <?= in_array($brand['id'], $groupC) ? 'checked' : '' ?>">
+                            <input type="checkbox" value="<?= $brand['id'] ?>" <?= in_array($brand['id'], $groupC) ? 'checked' : '' ?>>
+                            <span class="brand-name"><?= htmlspecialchars($brand['name']) ?></span>
+                        </label>
                         <?php endforeach; ?>
-                    </select>
+                    </div>
                 </div>
             </div>
 
-            <?php if (!empty($selected)): ?>
-            <div class="selected-info">
-                <a href="?years=<?= $numYears ?>" class="btn btn-secondary btn-sm">
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary">
+                    <i data-lucide="refresh-cw"></i> Uppdatera jämförelse
+                </button>
+                <?php if ($hasData): ?>
+                <a href="?years=<?= $numYears ?>" class="btn btn-secondary">
                     <i data-lucide="x"></i> Rensa val
                 </a>
+                <?php endif; ?>
             </div>
-            <?php endif; ?>
         </form>
         <?php endif; ?>
     </div>
@@ -346,9 +381,9 @@ include __DIR__ . '/components/unified-layout.php';
 <!-- Year Range Selector -->
 <div class="filter-bar">
     <form method="get" class="filter-form">
-        <?php if (isset($_GET['b1'])): ?><input type="hidden" name="b1" value="<?= htmlspecialchars($_GET['b1']) ?>"><?php endif; ?>
-        <?php if (isset($_GET['b2'])): ?><input type="hidden" name="b2" value="<?= htmlspecialchars($_GET['b2']) ?>"><?php endif; ?>
-        <?php if (isset($_GET['b3'])): ?><input type="hidden" name="b3" value="<?= htmlspecialchars($_GET['b3']) ?>"><?php endif; ?>
+        <input type="hidden" name="a" value="<?= htmlspecialchars($_GET['a'] ?? '') ?>">
+        <input type="hidden" name="b" value="<?= htmlspecialchars($_GET['b'] ?? '') ?>">
+        <input type="hidden" name="c" value="<?= htmlspecialchars($_GET['c'] ?? '') ?>">
         <div class="filter-group">
             <label class="filter-label">Antal år</label>
             <select name="years" class="form-select" onchange="this.form.submit()">
@@ -379,17 +414,17 @@ include __DIR__ . '/components/unified-layout.php';
     <i data-lucide="info"></i>
     <div>
         <strong>Välj minst ett varumärke</strong><br>
-        Använd dropdown-menyerna ovan för att välja 1-3 varumärken att jämföra.
+        Kryssa i varumärken i minst en grupp ovan och klicka på "Uppdatera jämförelse".
     </div>
 </div>
 <?php else: ?>
 
 <!-- Legend -->
 <div class="chart-legend-bar">
-    <?php foreach ($selected as $idx => $brandId): ?>
+    <?php foreach ($activeGroups as $idx): ?>
     <div class="legend-item">
-        <span class="legend-color" style="background: <?= $brandColors[$idx] ?>"></span>
-        <span class="legend-label"><?= htmlspecialchars($brandLabels[$idx]) ?></span>
+        <span class="legend-color" style="background: <?= $groupColors[$idx] ?>"></span>
+        <span class="legend-label"><?= htmlspecialchars($groupLabels[$idx]) ?></span>
     </div>
     <?php endforeach; ?>
 </div>
@@ -444,7 +479,7 @@ include __DIR__ . '/components/unified-layout.php';
             <div class="chart-container" style="height: 280px;">
                 <canvas id="crossParticipationChart"></canvas>
             </div>
-            <p class="chart-description">Andel riders som även deltar i andra varumärken</p>
+            <p class="chart-description">Andel riders som även deltar i ANDRA varumärken</p>
         </div>
     </div>
 
@@ -489,12 +524,12 @@ include __DIR__ . '/components/unified-layout.php';
 </div>
 
 <!-- SAMMANFATTNINGSTABELLER -->
-<?php foreach ($selected as $idx => $brandId): ?>
+<?php foreach ($activeGroups as $idx): ?>
 <div class="admin-card">
     <div class="admin-card-header">
         <h2>
-            <span class="legend-color-inline" style="background: <?= $brandColors[$idx] ?>"></span>
-            <?= htmlspecialchars($brandLabels[$idx]) ?>
+            <span class="legend-color-inline" style="background: <?= $groupColors[$idx] ?>"></span>
+            <?= htmlspecialchars($groupLabels[$idx]) ?>
         </h2>
     </div>
     <div class="admin-card-body" style="padding: 0;">
@@ -514,7 +549,7 @@ include __DIR__ . '/components/unified-layout.php';
                     </tr>
                 </thead>
                 <tbody>
-                    <?php foreach (array_reverse($brandTrends[$idx]) as $row): ?>
+                    <?php foreach (array_reverse($groupTrends[$idx]) as $row): ?>
                     <tr>
                         <td><strong><?= $row['year'] ?></strong></td>
                         <td class="text-right"><?= number_format($row['total_riders']) ?></td>
@@ -545,42 +580,88 @@ include __DIR__ . '/components/unified-layout.php';
 <?php endif; ?>
 
 <style>
-/* Brand Selector */
-.brand-selector {
+/* Brand Groups */
+.brand-groups {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: var(--space-lg);
+    margin-bottom: var(--space-lg);
 }
 
-.brand-slot {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-sm);
+.brand-group {
+    background: var(--color-bg-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: var(--space-md);
 }
 
-.slot-header {
+.group-header {
     display: flex;
     align-items: center;
     gap: var(--space-sm);
-    font-weight: var(--weight-medium);
+    margin-bottom: var(--space-md);
+    padding-bottom: var(--space-sm);
+    border-bottom: 1px solid var(--color-border);
 }
 
-.slot-color {
+.group-color {
     width: 16px;
     height: 16px;
     border-radius: var(--radius-sm);
+    flex-shrink: 0;
 }
 
-.slot-label {
+.group-label {
+    font-weight: var(--weight-semibold);
+    flex-grow: 1;
+}
+
+.group-count {
     font-size: var(--text-sm);
-    color: var(--color-text-secondary);
+    color: var(--color-text-muted);
 }
 
-.selected-info {
-    margin-top: var(--space-lg);
+.brand-checkboxes {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+    max-height: 250px;
+    overflow-y: auto;
+}
+
+.brand-checkbox {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    padding: var(--space-xs) var(--space-sm);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: background 0.15s;
+}
+
+.brand-checkbox:hover {
+    background: var(--color-bg-hover);
+}
+
+.brand-checkbox.checked {
+    background: var(--color-accent-light);
+}
+
+.brand-checkbox input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    cursor: pointer;
+}
+
+.brand-name {
+    font-size: var(--text-sm);
+}
+
+.form-actions {
+    display: flex;
+    gap: var(--space-md);
     padding-top: var(--space-lg);
     border-top: 1px solid var(--color-border);
-    text-align: center;
 }
 
 /* Legend Bar */
@@ -726,12 +807,18 @@ include __DIR__ . '/components/unified-layout.php';
     margin-bottom: var(--space-lg);
 }
 
+.mb-md {
+    margin-bottom: var(--space-md);
+}
+
 /* Responsive */
-@media (max-width: 899px) {
-    .brand-selector {
+@media (max-width: 1099px) {
+    .brand-groups {
         grid-template-columns: 1fr;
     }
+}
 
+@media (max-width: 899px) {
     .filter-bar {
         flex-direction: column;
         align-items: stretch;
@@ -772,17 +859,58 @@ include __DIR__ . '/components/unified-layout.php';
     .admin-table td {
         padding: var(--space-xs);
     }
+
+    .form-actions {
+        flex-direction: column;
+    }
 }
 </style>
+
+<script>
+// Checkbox handler
+document.addEventListener('DOMContentLoaded', function() {
+    const groups = document.querySelectorAll('.brand-group');
+
+    groups.forEach(group => {
+        const groupKey = group.dataset.group;
+        const checkboxes = group.querySelectorAll('input[type="checkbox"]');
+        const countSpan = group.querySelector('.group-count');
+        const hiddenInput = document.getElementById('input' + groupKey.toUpperCase());
+
+        function updateGroup() {
+            const selected = [];
+            checkboxes.forEach(cb => {
+                const label = cb.closest('.brand-checkbox');
+                if (cb.checked) {
+                    selected.push(cb.value);
+                    label.classList.add('checked');
+                } else {
+                    label.classList.remove('checked');
+                }
+            });
+            countSpan.textContent = selected.length + ' valda';
+            hiddenInput.value = selected.join(',');
+        }
+
+        checkboxes.forEach(cb => {
+            cb.addEventListener('change', updateGroup);
+        });
+    });
+});
+</script>
 
 <?php if ($hasData): ?>
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Data från PHP
-    const brandTrends = <?= json_encode($brandTrends) ?>;
-    const brandLabels = <?= json_encode($brandLabels) ?>;
-    const brandColors = <?= json_encode($brandColors) ?>;
-    const years = brandTrends[0] ? brandTrends[0].map(d => d.year) : [];
+    const groupTrends = <?= json_encode($groupTrends) ?>;
+    const groupLabels = <?= json_encode($groupLabels) ?>;
+    const groupColors = <?= json_encode($groupColors) ?>;
+    const activeGroups = <?= json_encode($activeGroups) ?>;
+
+    // Hämta years från första aktiva gruppen
+    const firstGroup = activeGroups[0];
+    const years = groupTrends[firstGroup] ? groupTrends[firstGroup].map(d => d.year) : [];
 
     // Gemensamma chart-options
     const commonOptions = {
@@ -831,16 +959,16 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     };
 
-    // Skapa datasets för alla valda varumärken
+    // Skapa datasets för alla aktiva grupper
     function createDatasets(dataKey, suffix = '') {
         const datasets = [];
-        Object.keys(brandTrends).forEach((idx) => {
-            const data = brandTrends[idx];
+        activeGroups.forEach((idx) => {
+            const data = groupTrends[idx];
             datasets.push({
-                label: brandLabels[idx] + suffix,
+                label: groupLabels[idx] + suffix,
                 data: data.map(d => d[dataKey]),
-                borderColor: brandColors[idx],
-                backgroundColor: brandColors[idx] + '20',
+                borderColor: groupColors[idx],
+                backgroundColor: groupColors[idx] + '20',
                 fill: false,
                 tension: 0.3,
                 borderWidth: 3,
@@ -913,13 +1041,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // 3. GROWTH CHART
     const growthDatasets = [];
-    Object.keys(brandTrends).forEach((idx) => {
-        const data = brandTrends[idx];
+    activeGroups.forEach((idx) => {
+        const data = groupTrends[idx];
         growthDatasets.push({
-            label: brandLabels[idx],
+            label: groupLabels[idx],
             data: data.map(d => d.growth_rate),
-            backgroundColor: brandColors[idx] + '80',
-            borderColor: brandColors[idx],
+            backgroundColor: groupColors[idx] + '80',
+            borderColor: groupColors[idx],
             borderWidth: 2,
             borderRadius: 4
         });
