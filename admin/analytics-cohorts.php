@@ -38,6 +38,11 @@ if (isset($_GET['compare'])) {
 // Initiera KPI Calculator
 $kpiCalc = new KPICalculator($pdo);
 
+// Hamta senaste sasong med data (anvands for att avgora aktiv/churn status)
+// Viktigt: Vi anvander senaste avslutade sasong, inte kalenderaret,
+// for att undvika att rakna pagaende sasong som "inaktiv"
+$latestSeasonYear = $kpiCalc->getLatestSeasonYear();
+
 // Hamta tillgangliga kohorter
 $availableCohorts = [];
 $cohortRetention = [];
@@ -50,12 +55,12 @@ try {
     $availableCohorts = $kpiCalc->getAvailableCohorts(AnalyticsConfig::COHORT_MIN_SIZE);
 
     if ($selectedCohort) {
-        $cohortRetention = $kpiCalc->getCohortRetention($selectedCohort, $currentYear);
-        $cohortStatus = $kpiCalc->getCohortStatusBreakdown($selectedCohort, $currentYear);
+        $cohortRetention = $kpiCalc->getCohortRetention($selectedCohort, $latestSeasonYear);
+        $cohortStatus = $kpiCalc->getCohortStatusBreakdown($selectedCohort, $latestSeasonYear);
         $avgLifespan = $kpiCalc->getCohortAverageLifespan($selectedCohort);
 
         // Hamta rider-lista (begransad for prestanda)
-        $cohortRiders = $kpiCalc->getCohortRiders($selectedCohort, 'all', $currentYear);
+        $cohortRiders = $kpiCalc->getCohortRiders($selectedCohort, 'all', $latestSeasonYear);
     }
 
     // Multi-cohort comparison
@@ -125,6 +130,10 @@ include __DIR__ . '/components/unified-layout.php';
     <div class="info-box-content">
         <strong>Vad ar en kohort?</strong>
         <p>En kohort ar en grupp riders som borjade samma ar. T.ex. "Kohort 2023" ar alla som hade sin <em>forsta tavling</em> 2023. Har kan du folja hur manga som fortsatter aktiva over tid (retention) och hur manga som slutar (churn).</p>
+        <p style="margin-top: var(--space-xs); font-size: var(--text-xs); color: var(--color-text-muted);">
+            <i data-lucide="calendar" style="width: 12px; height: 12px; display: inline-block; vertical-align: middle;"></i>
+            Data baseras pa sasong <strong><?= $latestSeasonYear ?></strong> (senaste avslutade sasong med data)
+        </p>
     </div>
 </div>
 

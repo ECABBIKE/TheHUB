@@ -432,6 +432,70 @@ include __DIR__ . '/components/unified-layout.php';
 <?php endif; // end if no error ?>
 
 <style>
+/* Dashboard Metrics Grid */
+.dashboard-metrics {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--space-md);
+    margin-bottom: var(--space-lg);
+}
+
+/* Metric Card Base */
+.metric-card {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-md);
+    padding: var(--space-lg);
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    transition: all 0.15s ease;
+}
+
+.metric-card:hover {
+    border-color: var(--color-accent);
+    box-shadow: var(--shadow-sm);
+}
+
+.metric-card--primary {
+    border-left: 3px solid var(--color-accent);
+}
+
+.metric-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 48px;
+    height: 48px;
+    background: var(--color-accent-light);
+    border-radius: var(--radius-md);
+    color: var(--color-accent);
+    flex-shrink: 0;
+}
+
+.metric-icon i {
+    width: 24px;
+    height: 24px;
+}
+
+.metric-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.metric-value {
+    font-size: var(--text-2xl);
+    font-weight: var(--weight-bold);
+    color: var(--color-text-primary);
+    line-height: 1.2;
+}
+
+.metric-label {
+    font-size: var(--text-sm);
+    color: var(--color-text-secondary);
+    margin-top: var(--space-2xs);
+}
+
 /* Filter Bar */
 .filter-bar {
     display: flex;
@@ -833,6 +897,29 @@ include __DIR__ . '/components/unified-layout.php';
 
     .entry-points-grid {
         grid-template-columns: 1fr;
+    }
+
+    /* Mobile horizontal scroll for metrics */
+    .dashboard-metrics {
+        display: flex;
+        overflow-x: auto;
+        scroll-snap-type: x mandatory;
+        -webkit-overflow-scrolling: touch;
+        gap: var(--space-md);
+        padding-bottom: var(--space-sm);
+        margin-left: calc(-1 * var(--container-padding, 16px));
+        margin-right: calc(-1 * var(--container-padding, 16px));
+        padding-left: var(--space-md);
+        padding-right: var(--space-md);
+    }
+
+    .metric-card {
+        flex: 0 0 240px;
+        scroll-snap-align: start;
+    }
+
+    .metric-value {
+        font-size: var(--text-xl);
     }
 }
 </style>
