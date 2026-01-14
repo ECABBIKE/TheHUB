@@ -131,9 +131,13 @@ Rookie-rapporten visar:
 
 ### Funktionalitet
 - [x] Lagg till filtrering per serie i rookie-rapporten
-- [ ] Lagg till disciplin-specifik rookie-analys
+- [x] Lagg till disciplin-specifik rookie-analys
 - [ ] Lagg till geografisk analys (var kommer rookies ifran?)
 - [x] Lagg till trendanalys for rookies over tid (5 ar med graf)
+
+### Statistik-precision
+- [x] Disciplinfordelning visar nu BADE primary_discipline OCH faktiskt deltagande
+- [x] getDisciplineParticipation() raknar unika deltagare per disciplin fran results/events
 
 ### Integration
 - [ ] Integrera rookie-data i publik insights-sida
@@ -279,9 +283,20 @@ HUB_ROOT, HUB_URL, ROOT_PATH, INCLUDES_PATH
   - Optimerade calculateYearlyStatsBulk() - en SQL-query istallet for tusentals
   - Fixade refreshAllStatsFast() att rensa cron-runs fore berakning
 - Steg 9 KLAR: Rookie-analys
-  - La till 7 nya metoder i KPICalculator.php for rookie-statistik
+  - La till 7+ nya metoder i KPICalculator.php for rookie-statistik
   - La till "Nya Deltagare" rapporttyp i analytics-reports.php
   - CSV-export med profillankningar for alla rookies
+  - Seriefiltrering i rookie-rapporten
+  - 5-ars trendgraf med Chart.js
+  - Disciplin-specifik rookie-analys
+- Fixade statistik-precision:
+  - getDisciplineParticipation() - raknar faktiskt deltagande per disciplin
+  - getRookieDisciplineParticipation() - samma for rookies
+  - Demographics-rapporten visar nu BADE primary_discipline OCH faktiskt deltagande
+  - Loste problemet dar Dual Slalom visade 10 ist for 43 deltagare
+- Fixade buggar:
+  - Tog bort referens till icke-existerande total_starts-kolumn
+  - Forbattrad felhantering visar faktiska exception-meddelanden
 - Sammanslog ROADMAP.md och ROADMAP-2026.md till en fil
 
 ### 2026-01-13
