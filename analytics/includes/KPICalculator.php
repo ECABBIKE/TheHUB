@@ -241,6 +241,231 @@ class KPICalculator {
     }
 
     // =========================================================================
+    // ROOKIE ANALYSIS
+    // =========================================================================
+
+    /**
+     * Hamta aldersfordelning for rookies
+     *
+     * @param int $year Ar
+     * @return array Aldersgrupper med antal
+     */
+    public function getRookieAgeDistribution(int $year): array {
+        $stmt = $this->pdo->prepare("
+            SELECT
+                CASE
+                    WHEN $year - r.birth_year < 15 THEN 'Under 15'
+                    WHEN $year - r.birth_year BETWEEN 15 AND 17 THEN '15-17'
+                    WHEN $year - r.birth_year BETWEEN 18 AND 25 THEN '18-25'
+                    WHEN $year - r.birth_year BETWEEN 26 AND 35 THEN '26-35'
+                    WHEN $year - r.birth_year BETWEEN 36 AND 45 THEN '36-45'
+                    WHEN $year - r.birth_year BETWEEN 46 AND 55 THEN '46-55'
+                    WHEN $year - r.birth_year > 55 THEN 'Over 55'
+                    ELSE 'Okand'
+                END as age_group,
+                COUNT(*) as count
+            FROM rider_yearly_stats rys
+            JOIN riders r ON rys.rider_id = r.id
+            WHERE rys.season_year = ?
+              AND rys.is_rookie = 1
+              AND r.birth_year IS NOT NULL
+              AND r.birth_year > 1900
+            GROUP BY age_group
+            ORDER BY
+                CASE age_group
+                    WHEN 'Under 15' THEN 1
+                    WHEN '15-17' THEN 2
+                    WHEN '18-25' THEN 3
+                    WHEN '26-35' THEN 4
+                    WHEN '36-45' THEN 5
+                    WHEN '46-55' THEN 6
+                    WHEN 'Over 55' THEN 7
+                    ELSE 8
+                END
+        ");
+        $stmt->execute([$year]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Hamta klassfordelning for rookies
+     * Vilka klasser startar nya deltagare i?
+     *
+     * @param int $year Ar
+     * @return array Klasser med antal
+     */
+    public function getRookieClassDistribution(int $year): array {
+        $stmt = $this->pdo->prepare("
+            SELECT
+                COALESCE(c.name, 'Okand klass') as class_name,
+                COUNT(DISTINCT res.cyclist_id) as rookie_count
+            FROM results res
+            JOIN events e ON res.event_id = e.id
+            JOIN rider_yearly_stats rys ON res.cyclist_id = rys.rider_id AND rys.season_year = ?
+            LEFT JOIN classes c ON res.class_id = c.id
+            WHERE YEAR(e.date) = ?
+              AND rys.is_rookie = 1
+            GROUP BY res.class_id, c.name
+            ORDER BY rookie_count DESC
+        ");
+        $stmt->execute([$year, $year]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Hamta events med flest rookies
+     *
+     * @param int $year Ar
+     * @param int $limit Max antal events
+     * @return array Events med rookie-antal
+     */
+    public function getEventsWithMostRookies(int $year, int $limit = 20): array {
+        $stmt = $this->pdo->prepare("
+            SELECT
+                e.id as event_id,
+                e.name as event_name,
+                e.date as event_date,
+                s.name as series_name,
+                COUNT(DISTINCT res.cyclist_id) as total_participants,
+                COUNT(DISTINCT CASE WHEN rys.is_rookie = 1 THEN res.cyclist_id END) as rookie_count,
+                ROUND(
+                    COUNT(DISTINCT CASE WHEN rys.is_rookie = 1 THEN res.cyclist_id END) * 100.0 /
+                    NULLIF(COUNT(DISTINCT res.cyclist_id), 0), 1
+                ) as rookie_percentage
+            FROM events e
+            JOIN results res ON res.event_id = e.id
+            LEFT JOIN series s ON e.series_id = s.id
+            LEFT JOIN rider_yearly_stats rys ON res.cyclist_id = rys.rider_id AND rys.season_year = ?
+            WHERE YEAR(e.date) = ?
+            GROUP BY e.id
+            HAVING rookie_count > 0
+            ORDER BY rookie_count DESC
+            LIMIT ?
+        ");
+        $stmt->execute([$year, $year, $limit]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Hamta komplett lista over alla rookies
+     * Med detaljer for profillankningar
+     *
+     * @param int $year Ar
+     * @return array Lista med rookies
+     */
+    public function getRookiesList(int $year): array {
+        $stmt = $this->pdo->prepare("
+            SELECT
+                r.id as rider_id,
+                r.firstname,
+                r.lastname,
+                CASE
+                    WHEN r.birth_year IS NOT NULL AND r.birth_year > 1900
+                    THEN $year - r.birth_year
+                    ELSE NULL
+                END as age,
+                r.birth_year,
+                r.gender,
+                c.id as club_id,
+                c.name as club_name,
+                rys.total_events,
+                rys.total_starts,
+                rys.total_points,
+                rys.best_position,
+                rys.primary_discipline,
+                rys.primary_series_id
+            FROM rider_yearly_stats rys
+            JOIN riders r ON rys.rider_id = r.id
+            LEFT JOIN clubs c ON r.club_id = c.id
+            WHERE rys.season_year = ?
+              AND rys.is_rookie = 1
+            ORDER BY r.lastname, r.firstname
+        ");
+        $stmt->execute([$year]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Hamta genomsnittsalder for rookies
+     *
+     * @param int $year Ar
+     * @return float Genomsnittsalder
+     */
+    public function getRookieAverageAge(int $year): float {
+        $stmt = $this->pdo->prepare("
+            SELECT AVG($year - r.birth_year) as avg_age
+            FROM rider_yearly_stats rys
+            JOIN riders r ON rys.rider_id = r.id
+            WHERE rys.season_year = ?
+              AND rys.is_rookie = 1
+              AND r.birth_year IS NOT NULL
+              AND r.birth_year > 1900
+        ");
+        $stmt->execute([$year]);
+        return round((float)($stmt->fetchColumn() ?: 0), 1);
+    }
+
+    /**
+     * Hamta konsfordelning for rookies
+     *
+     * @param int $year Ar
+     * @return array ['M' => X, 'F' => Y, 'unknown' => Z]
+     */
+    public function getRookieGenderDistribution(int $year): array {
+        $stmt = $this->pdo->prepare("
+            SELECT
+                COALESCE(r.gender, 'unknown') as gender,
+                COUNT(*) as count
+            FROM rider_yearly_stats rys
+            JOIN riders r ON rys.rider_id = r.id
+            WHERE rys.season_year = ?
+              AND rys.is_rookie = 1
+            GROUP BY COALESCE(r.gender, 'unknown')
+        ");
+        $stmt->execute([$year]);
+
+        $result = ['M' => 0, 'F' => 0, 'unknown' => 0];
+        while ($row = $stmt->fetch()) {
+            $g = $row['gender'];
+            if ($g === 'M' || $g === 'male' || $g === 'man') {
+                $result['M'] += $row['count'];
+            } elseif ($g === 'F' || $g === 'female' || $g === 'kvinna' || $g === 'woman') {
+                $result['F'] += $row['count'];
+            } else {
+                $result['unknown'] += $row['count'];
+            }
+        }
+        return $result;
+    }
+
+    /**
+     * Hamta klubbar med flest rookies
+     *
+     * @param int $year Ar
+     * @param int $limit Max antal
+     * @return array Klubbar med rookie-antal
+     */
+    public function getClubsWithMostRookies(int $year, int $limit = 20): array {
+        $stmt = $this->pdo->prepare("
+            SELECT
+                c.id as club_id,
+                c.name as club_name,
+                c.city,
+                COUNT(*) as rookie_count
+            FROM rider_yearly_stats rys
+            JOIN riders r ON rys.rider_id = r.id
+            JOIN clubs c ON r.club_id = c.id
+            WHERE rys.season_year = ?
+              AND rys.is_rookie = 1
+            GROUP BY c.id
+            ORDER BY rookie_count DESC
+            LIMIT ?
+        ");
+        $stmt->execute([$year, $limit]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    // =========================================================================
     // SERIES FLOW (NYCKELFUNKTIONER)
     // =========================================================================
 
