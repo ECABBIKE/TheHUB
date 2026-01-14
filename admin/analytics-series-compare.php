@@ -1,12 +1,12 @@
 <?php
 /**
- * Analytics Series Compare - Jämför Serier/Varumärken
+ * Analytics Series Compare - Jämför Varumärken
  *
- * Samma layout som Trender men för enskilda serier.
+ * Samma layout som Trender men för enskilda varumärken.
  * Välj 1-3 varumärken och se dem jämförda i samma grafer.
  *
  * @package TheHUB Analytics
- * @version 1.1
+ * @version 1.2
  */
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../includes/auth.php';
@@ -29,85 +29,113 @@ try {
 
 $yearsToShow = array_slice($availableYears, -$numYears);
 
-// Hämta alla serier (varumärken) med statistik - sorterade efter popularitet
-$allSeries = [];
+// Hämta alla varumärken från series_brands
+$allBrands = [];
 try {
     $stmt = $pdo->query("
         SELECT
-            s.id,
-            s.name,
-            s.series_level,
-            s.region,
-            COALESCE(
-                (SELECT e.discipline FROM events e WHERE e.series_id = s.id AND e.discipline IS NOT NULL LIMIT 1),
-                'Okänd'
-            ) as discipline,
-            (SELECT COUNT(DISTINCT sp.rider_id) FROM series_participation sp WHERE sp.series_id = s.id) as total_participants,
-            (SELECT MAX(sp.season_year) FROM series_participation sp WHERE sp.series_id = s.id) as last_year
-        FROM series s
-        WHERE s.id IN (SELECT DISTINCT series_id FROM series_participation)
-        ORDER BY total_participants DESC, s.name
+            sb.id,
+            sb.name,
+            sb.accent_color,
+            sb.active,
+            COUNT(DISTINCT s.id) as series_count,
+            (SELECT COUNT(DISTINCT sp.rider_id)
+             FROM series_participation sp
+             JOIN series ser ON sp.series_id = ser.id
+             WHERE ser.brand_id = sb.id) as total_participants
+        FROM series_brands sb
+        LEFT JOIN series s ON s.brand_id = sb.id
+        GROUP BY sb.id
+        ORDER BY sb.display_order ASC, sb.name ASC
     ");
-    $allSeries = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    $allBrands = $stmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (Exception $e) {
-    // Ignore
+    // Tabellen kanske inte finns
+    $error = "Kunde inte hämta varumärken: " . $e->getMessage();
 }
 
-// Valda serier (max 3)
+// Valda varumärken (max 3)
 $selected = [];
-if (isset($_GET['s1']) && $_GET['s1']) $selected[] = (int)$_GET['s1'];
-if (isset($_GET['s2']) && $_GET['s2']) $selected[] = (int)$_GET['s2'];
-if (isset($_GET['s3']) && $_GET['s3']) $selected[] = (int)$_GET['s3'];
+if (isset($_GET['b1']) && $_GET['b1']) $selected[] = (int)$_GET['b1'];
+if (isset($_GET['b2']) && $_GET['b2']) $selected[] = (int)$_GET['b2'];
+if (isset($_GET['b3']) && $_GET['b3']) $selected[] = (int)$_GET['b3'];
 
 /**
- * Beräkna KPIs för en serie
+ * Hämta alla series_id för ett varumärke
  */
-function getSeriesKPIs($pdo, $seriesId, $year) {
-    // Totalt antal unika deltagare i serien detta år
+function getSeriesIdsForBrand($pdo, $brandId) {
+    $stmt = $pdo->prepare("SELECT id FROM series WHERE brand_id = ?");
+    $stmt->execute([$brandId]);
+    return $stmt->fetchAll(PDO::FETCH_COLUMN);
+}
+
+/**
+ * Beräkna KPIs för ett varumärke (alla serier under varumärket)
+ */
+function getBrandKPIs($pdo, $brandId, $year) {
+    $seriesIds = getSeriesIdsForBrand($pdo, $brandId);
+
+    if (empty($seriesIds)) {
+        return [
+            'total_riders' => 0,
+            'new_riders' => 0,
+            'retained_riders' => 0,
+            'retention_rate' => 0,
+            'churn_rate' => 0,
+            'growth_rate' => 0,
+            'cross_participation' => 0,
+            'average_age' => 0,
+            'female_pct' => 0
+        ];
+    }
+
+    $placeholders = implode(',', array_fill(0, count($seriesIds), '?'));
+
+    // Totalt antal unika deltagare i varumärkets serier detta år
     $stmt = $pdo->prepare("
         SELECT COUNT(DISTINCT rider_id)
         FROM series_participation
-        WHERE series_id = ? AND season_year = ?
+        WHERE series_id IN ($placeholders) AND season_year = ?
     ");
-    $stmt->execute([$seriesId, $year]);
+    $stmt->execute([...$seriesIds, $year]);
     $totalRiders = (int)$stmt->fetchColumn();
 
     // Nya riders (första året i NÅGON serie i systemet)
     $stmt = $pdo->prepare("
         SELECT COUNT(DISTINCT sp.rider_id)
         FROM series_participation sp
-        WHERE sp.series_id = ?
+        WHERE sp.series_id IN ($placeholders)
         AND sp.season_year = ?
         AND sp.rider_id IN (
             SELECT rider_id FROM rider_yearly_stats WHERE first_year = ?
         )
     ");
-    $stmt->execute([$seriesId, $year, $year]);
+    $stmt->execute([...$seriesIds, $year, $year]);
     $newRiders = (int)$stmt->fetchColumn();
 
-    // Retained - deltog i serien både detta och förra året
+    // Retained - deltog i varumärkets serier både detta och förra året
     $stmt = $pdo->prepare("
         SELECT COUNT(DISTINCT sp1.rider_id)
         FROM series_participation sp1
-        WHERE sp1.series_id = ?
+        WHERE sp1.series_id IN ($placeholders)
         AND sp1.season_year = ?
         AND EXISTS (
             SELECT 1 FROM series_participation sp2
             WHERE sp2.rider_id = sp1.rider_id
-            AND sp2.series_id = ?
+            AND sp2.series_id IN ($placeholders)
             AND sp2.season_year = ?
         )
     ");
-    $stmt->execute([$seriesId, $year, $seriesId, $year - 1]);
+    $stmt->execute([...$seriesIds, $year, ...$seriesIds, $year - 1]);
     $retainedRiders = (int)$stmt->fetchColumn();
 
     // Förra årets deltagare (för retention rate)
     $stmt = $pdo->prepare("
         SELECT COUNT(DISTINCT rider_id)
         FROM series_participation
-        WHERE series_id = ? AND season_year = ?
+        WHERE series_id IN ($placeholders) AND season_year = ?
     ");
-    $stmt->execute([$seriesId, $year - 1]);
+    $stmt->execute([...$seriesIds, $year - 1]);
     $prevYearRiders = (int)$stmt->fetchColumn();
 
     // Retention rate
@@ -119,19 +147,20 @@ function getSeriesKPIs($pdo, $seriesId, $year) {
     // Growth rate
     $growthRate = $prevYearRiders > 0 ? round(($totalRiders - $prevYearRiders) / $prevYearRiders * 100, 1) : 0;
 
-    // Cross-participation (deltar i fler än en serie)
+    // Cross-participation (deltar i andra varumärken/serier)
     $stmt = $pdo->prepare("
         SELECT COUNT(DISTINCT sp1.rider_id)
         FROM series_participation sp1
-        WHERE sp1.series_id = ? AND sp1.season_year = ?
+        WHERE sp1.series_id IN ($placeholders) AND sp1.season_year = ?
         AND EXISTS (
             SELECT 1 FROM series_participation sp2
+            JOIN series s2 ON sp2.series_id = s2.id
             WHERE sp2.rider_id = sp1.rider_id
             AND sp2.season_year = sp1.season_year
-            AND sp2.series_id != sp1.series_id
+            AND (s2.brand_id IS NULL OR s2.brand_id != ?)
         )
     ");
-    $stmt->execute([$seriesId, $year]);
+    $stmt->execute([...$seriesIds, $year, $brandId]);
     $crossCount = (int)$stmt->fetchColumn();
     $crossParticipation = $totalRiders > 0 ? round($crossCount / $totalRiders * 100, 1) : 0;
 
@@ -141,11 +170,11 @@ function getSeriesKPIs($pdo, $seriesId, $year) {
         FROM riders r
         WHERE r.id IN (
             SELECT DISTINCT rider_id FROM series_participation
-            WHERE series_id = ? AND season_year = ?
+            WHERE series_id IN ($placeholders) AND season_year = ?
         )
         AND r.birth_year IS NOT NULL AND r.birth_year > 1900
     ");
-    $stmt->execute([$year, $seriesId, $year]);
+    $stmt->execute([$year, ...$seriesIds, $year]);
     $avgAge = round((float)$stmt->fetchColumn(), 1);
 
     // Andel kvinnor
@@ -156,11 +185,11 @@ function getSeriesKPIs($pdo, $seriesId, $year) {
         FROM riders r
         WHERE r.id IN (
             SELECT DISTINCT rider_id FROM series_participation
-            WHERE series_id = ? AND season_year = ?
+            WHERE series_id IN ($placeholders) AND season_year = ?
         )
         AND r.gender IN ('M', 'F')
     ");
-    $stmt->execute([$seriesId, $year]);
+    $stmt->execute([...$seriesIds, $year]);
     $genderRow = $stmt->fetch();
     $femalePct = $genderRow['total'] > 0 ? round($genderRow['female'] / $genderRow['total'] * 100, 1) : 0;
 
@@ -177,43 +206,47 @@ function getSeriesKPIs($pdo, $seriesId, $year) {
     ];
 }
 
-// Samla trenddata för valda serier
-$seriesTrends = [];
-$seriesLabels = [];
-$seriesColors = ['#37d4d6', '#f97316', '#a855f7']; // Cyan, Orange, Lila
+// Samla trenddata för valda varumärken
+$brandTrends = [];
+$brandLabels = [];
+$brandColors = [];
+$defaultColors = ['#37d4d6', '#f97316', '#a855f7']; // Fallback färger
 
 try {
-    foreach ($selected as $idx => $seriesId) {
-        // Hämta serienamn
-        $seriesName = '';
-        foreach ($allSeries as $s) {
-            if ($s['id'] == $seriesId) {
-                $seriesName = $s['name'];
+    foreach ($selected as $idx => $brandId) {
+        // Hämta varumärkesinfo
+        $brandName = '';
+        $brandColor = $defaultColors[$idx];
+        foreach ($allBrands as $b) {
+            if ($b['id'] == $brandId) {
+                $brandName = $b['name'];
+                $brandColor = $b['accent_color'] ?: $defaultColors[$idx];
                 break;
             }
         }
-        $seriesLabels[$idx] = $seriesName;
+        $brandLabels[$idx] = $brandName;
+        $brandColors[$idx] = $brandColor;
 
         // Hämta data för varje år
         $trends = [];
         foreach ($yearsToShow as $year) {
-            $kpis = getSeriesKPIs($pdo, $seriesId, $year);
+            $kpis = getBrandKPIs($pdo, $brandId, $year);
             $trends[] = array_merge(['year' => $year], $kpis);
         }
-        $seriesTrends[$idx] = $trends;
+        $brandTrends[$idx] = $trends;
     }
 } catch (Exception $e) {
     $error = $e->getMessage();
 }
 
-$hasData = !empty($selected) && !empty($seriesTrends);
+$hasData = !empty($selected) && !empty($brandTrends);
 
 // Page config
-$page_title = 'Jämför Serier';
+$page_title = 'Jämför Varumärken';
 $breadcrumbs = [
     ['label' => 'Dashboard', 'url' => '/admin/dashboard.php'],
     ['label' => 'Analytics', 'url' => '/admin/analytics-dashboard.php'],
-    ['label' => 'Jämför Serier']
+    ['label' => 'Jämför Varumärken']
 ];
 
 $page_actions = '
@@ -239,53 +272,59 @@ include __DIR__ . '/components/unified-layout.php';
         <h3><i data-lucide="layers"></i> Välj varumärken att jämföra</h3>
     </div>
     <div class="card-body">
+        <?php if (empty($allBrands)): ?>
+            <div class="alert alert-warning">
+                <i data-lucide="alert-triangle"></i>
+                Inga varumärken hittades. Skapa varumärken under <a href="/admin/series-brands.php">Serie-varumärken</a>.
+            </div>
+        <?php else: ?>
         <form method="get" id="compareForm">
             <input type="hidden" name="years" value="<?= $numYears ?>">
 
-            <div class="series-selector">
-                <!-- Serie 1 -->
-                <div class="series-slot">
+            <div class="brand-selector">
+                <!-- Varumärke 1 -->
+                <div class="brand-slot">
                     <div class="slot-header">
-                        <span class="slot-color" style="background: <?= $seriesColors[0] ?>"></span>
+                        <span class="slot-color" style="background: <?= $brandColors[0] ?? $defaultColors[0] ?>"></span>
                         <span class="slot-label">Varumärke 1</span>
                     </div>
-                    <select name="s1" class="form-select" onchange="this.form.submit()">
-                        <option value="">-- Välj serie --</option>
-                        <?php foreach ($allSeries as $series): ?>
-                            <option value="<?= $series['id'] ?>" <?= (isset($_GET['s1']) && $_GET['s1'] == $series['id']) ? 'selected' : '' ?>>
-                                <?= htmlspecialchars($series['name']) ?> (<?= number_format($series['total_participants']) ?>)
+                    <select name="b1" class="form-select" onchange="this.form.submit()">
+                        <option value="">-- Välj varumärke --</option>
+                        <?php foreach ($allBrands as $brand): ?>
+                            <option value="<?= $brand['id'] ?>" <?= (isset($_GET['b1']) && $_GET['b1'] == $brand['id']) ? 'selected' : '' ?>>
+                                <?= htmlspecialchars($brand['name']) ?>
                             </option>
                         <?php endforeach; ?>
                     </select>
                 </div>
 
-                <!-- Serie 2 -->
-                <div class="series-slot">
+                <!-- Varumärke 2 -->
+                <div class="brand-slot">
                     <div class="slot-header">
-                        <span class="slot-color" style="background: <?= $seriesColors[1] ?>"></span>
+                        <span class="slot-color" style="background: <?= $brandColors[1] ?? $defaultColors[1] ?>"></span>
                         <span class="slot-label">Varumärke 2 (valfritt)</span>
                     </div>
-                    <select name="s2" class="form-select" onchange="this.form.submit()">
-                        <option value="">-- Välj serie --</option>
-                        <?php foreach ($allSeries as $series): ?>
-                            <option value="<?= $series['id'] ?>" <?= (isset($_GET['s2']) && $_GET['s2'] == $series['id']) ? 'selected' : '' ?>>
-                                <?= htmlspecialchars($series['name']) ?> (<?= number_format($series['total_participants']) ?>)
+                    <select name="b2" class="form-select" onchange="this.form.submit()">
+                        <option value="">-- Välj varumärke --</option>
+                        <?php foreach ($allBrands as $brand): ?>
+                            <option value="<?= $brand['id'] ?>" <?= (isset($_GET['b2']) && $_GET['b2'] == $brand['id']) ? 'selected' : '' ?>>
+                                <?= htmlspecialchars($brand['name']) ?>
                             </option>
                         <?php endforeach; ?>
                     </select>
                 </div>
 
-                <!-- Serie 3 -->
-                <div class="series-slot">
+                <!-- Varumärke 3 -->
+                <div class="brand-slot">
                     <div class="slot-header">
-                        <span class="slot-color" style="background: <?= $seriesColors[2] ?>"></span>
+                        <span class="slot-color" style="background: <?= $brandColors[2] ?? $defaultColors[2] ?>"></span>
                         <span class="slot-label">Varumärke 3 (valfritt)</span>
                     </div>
-                    <select name="s3" class="form-select" onchange="this.form.submit()">
-                        <option value="">-- Välj serie --</option>
-                        <?php foreach ($allSeries as $series): ?>
-                            <option value="<?= $series['id'] ?>" <?= (isset($_GET['s3']) && $_GET['s3'] == $series['id']) ? 'selected' : '' ?>>
-                                <?= htmlspecialchars($series['name']) ?> (<?= number_format($series['total_participants']) ?>)
+                    <select name="b3" class="form-select" onchange="this.form.submit()">
+                        <option value="">-- Välj varumärke --</option>
+                        <?php foreach ($allBrands as $brand): ?>
+                            <option value="<?= $brand['id'] ?>" <?= (isset($_GET['b3']) && $_GET['b3'] == $brand['id']) ? 'selected' : '' ?>>
+                                <?= htmlspecialchars($brand['name']) ?>
                             </option>
                         <?php endforeach; ?>
                     </select>
@@ -300,15 +339,16 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
             <?php endif; ?>
         </form>
+        <?php endif; ?>
     </div>
 </div>
 
 <!-- Year Range Selector -->
 <div class="filter-bar">
     <form method="get" class="filter-form">
-        <?php if (isset($_GET['s1'])): ?><input type="hidden" name="s1" value="<?= htmlspecialchars($_GET['s1']) ?>"><?php endif; ?>
-        <?php if (isset($_GET['s2'])): ?><input type="hidden" name="s2" value="<?= htmlspecialchars($_GET['s2']) ?>"><?php endif; ?>
-        <?php if (isset($_GET['s3'])): ?><input type="hidden" name="s3" value="<?= htmlspecialchars($_GET['s3']) ?>"><?php endif; ?>
+        <?php if (isset($_GET['b1'])): ?><input type="hidden" name="b1" value="<?= htmlspecialchars($_GET['b1']) ?>"><?php endif; ?>
+        <?php if (isset($_GET['b2'])): ?><input type="hidden" name="b2" value="<?= htmlspecialchars($_GET['b2']) ?>"><?php endif; ?>
+        <?php if (isset($_GET['b3'])): ?><input type="hidden" name="b3" value="<?= htmlspecialchars($_GET['b3']) ?>"><?php endif; ?>
         <div class="filter-group">
             <label class="filter-label">Antal år</label>
             <select name="years" class="form-select" onchange="this.form.submit()">
@@ -339,17 +379,17 @@ include __DIR__ . '/components/unified-layout.php';
     <i data-lucide="info"></i>
     <div>
         <strong>Välj minst ett varumärke</strong><br>
-        Använd dropdown-menyerna ovan för att välja 1-3 serier att jämföra.
+        Använd dropdown-menyerna ovan för att välja 1-3 varumärken att jämföra.
     </div>
 </div>
 <?php else: ?>
 
 <!-- Legend -->
 <div class="chart-legend-bar">
-    <?php foreach ($selected as $idx => $seriesId): ?>
+    <?php foreach ($selected as $idx => $brandId): ?>
     <div class="legend-item">
-        <span class="legend-color" style="background: <?= $seriesColors[$idx] ?>"></span>
-        <span class="legend-label"><?= htmlspecialchars($seriesLabels[$idx]) ?></span>
+        <span class="legend-color" style="background: <?= $brandColors[$idx] ?>"></span>
+        <span class="legend-label"><?= htmlspecialchars($brandLabels[$idx]) ?></span>
     </div>
     <?php endforeach; ?>
 </div>
@@ -363,14 +403,6 @@ include __DIR__ . '/components/unified-layout.php';
     <div class="admin-card-body">
         <div class="chart-container" style="height: 350px;">
             <canvas id="participantChart"></canvas>
-        </div>
-        <div class="chart-legend-custom">
-            <?php foreach ($selected as $idx => $seriesId): ?>
-            <div class="legend-item">
-                <span class="legend-color" style="background: <?= $seriesColors[$idx] ?>"></span>
-                <?= htmlspecialchars($seriesLabels[$idx]) ?>
-            </div>
-            <?php endforeach; ?>
         </div>
     </div>
 </div>
@@ -412,7 +444,7 @@ include __DIR__ . '/components/unified-layout.php';
             <div class="chart-container" style="height: 280px;">
                 <canvas id="crossParticipationChart"></canvas>
             </div>
-            <p class="chart-description">Andel riders som även deltar i andra serier</p>
+            <p class="chart-description">Andel riders som även deltar i andra varumärken</p>
         </div>
     </div>
 
@@ -457,12 +489,12 @@ include __DIR__ . '/components/unified-layout.php';
 </div>
 
 <!-- SAMMANFATTNINGSTABELLER -->
-<?php foreach ($selected as $idx => $seriesId): ?>
+<?php foreach ($selected as $idx => $brandId): ?>
 <div class="admin-card">
     <div class="admin-card-header">
         <h2>
-            <span class="legend-color-inline" style="background: <?= $seriesColors[$idx] ?>"></span>
-            <?= htmlspecialchars($seriesLabels[$idx]) ?>
+            <span class="legend-color-inline" style="background: <?= $brandColors[$idx] ?>"></span>
+            <?= htmlspecialchars($brandLabels[$idx]) ?>
         </h2>
     </div>
     <div class="admin-card-body" style="padding: 0;">
@@ -482,7 +514,7 @@ include __DIR__ . '/components/unified-layout.php';
                     </tr>
                 </thead>
                 <tbody>
-                    <?php foreach (array_reverse($seriesTrends[$idx]) as $row): ?>
+                    <?php foreach (array_reverse($brandTrends[$idx]) as $row): ?>
                     <tr>
                         <td><strong><?= $row['year'] ?></strong></td>
                         <td class="text-right"><?= number_format($row['total_riders']) ?></td>
@@ -513,14 +545,14 @@ include __DIR__ . '/components/unified-layout.php';
 <?php endif; ?>
 
 <style>
-/* Series Selector */
-.series-selector {
+/* Brand Selector */
+.brand-selector {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: var(--space-lg);
 }
 
-.series-slot {
+.brand-slot {
     display: flex;
     flex-direction: column;
     gap: var(--space-sm);
@@ -636,29 +668,6 @@ include __DIR__ . '/components/unified-layout.php';
     text-align: center;
 }
 
-/* Custom Legend */
-.chart-legend-custom {
-    display: flex;
-    justify-content: center;
-    gap: var(--space-lg);
-    margin-top: var(--space-md);
-    flex-wrap: wrap;
-}
-
-.chart-legend-custom .legend-item {
-    display: flex;
-    align-items: center;
-    gap: var(--space-xs);
-    font-size: var(--text-sm);
-    color: var(--color-text-secondary);
-}
-
-.chart-legend-custom .legend-color {
-    width: 12px;
-    height: 12px;
-    border-radius: var(--radius-sm);
-}
-
 /* Grid */
 .grid-2 {
     display: grid;
@@ -719,7 +728,7 @@ include __DIR__ . '/components/unified-layout.php';
 
 /* Responsive */
 @media (max-width: 899px) {
-    .series-selector {
+    .brand-selector {
         grid-template-columns: 1fr;
     }
 
@@ -770,10 +779,10 @@ include __DIR__ . '/components/unified-layout.php';
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Data från PHP
-    const seriesTrends = <?= json_encode($seriesTrends) ?>;
-    const seriesLabels = <?= json_encode($seriesLabels) ?>;
-    const seriesColors = <?= json_encode($seriesColors) ?>;
-    const years = seriesTrends[0] ? seriesTrends[0].map(d => d.year) : [];
+    const brandTrends = <?= json_encode($brandTrends) ?>;
+    const brandLabels = <?= json_encode($brandLabels) ?>;
+    const brandColors = <?= json_encode($brandColors) ?>;
+    const years = brandTrends[0] ? brandTrends[0].map(d => d.year) : [];
 
     // Gemensamma chart-options
     const commonOptions = {
@@ -822,16 +831,16 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     };
 
-    // Skapa datasets för alla valda serier
+    // Skapa datasets för alla valda varumärken
     function createDatasets(dataKey, suffix = '') {
         const datasets = [];
-        Object.keys(seriesTrends).forEach((idx) => {
-            const data = seriesTrends[idx];
+        Object.keys(brandTrends).forEach((idx) => {
+            const data = brandTrends[idx];
             datasets.push({
-                label: seriesLabels[idx] + suffix,
+                label: brandLabels[idx] + suffix,
                 data: data.map(d => d[dataKey]),
-                borderColor: seriesColors[idx],
-                backgroundColor: seriesColors[idx] + '20',
+                borderColor: brandColors[idx],
+                backgroundColor: brandColors[idx] + '20',
                 fill: false,
                 tension: 0.3,
                 borderWidth: 3,
@@ -904,13 +913,13 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // 3. GROWTH CHART
     const growthDatasets = [];
-    Object.keys(seriesTrends).forEach((idx) => {
-        const data = seriesTrends[idx];
+    Object.keys(brandTrends).forEach((idx) => {
+        const data = brandTrends[idx];
         growthDatasets.push({
-            label: seriesLabels[idx],
+            label: brandLabels[idx],
             data: data.map(d => d.growth_rate),
-            backgroundColor: seriesColors[idx] + '80',
-            borderColor: seriesColors[idx],
+            backgroundColor: brandColors[idx] + '80',
+            borderColor: brandColors[idx],
             borderWidth: 2,
             borderRadius: 4
         });
