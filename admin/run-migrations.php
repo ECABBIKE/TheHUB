@@ -223,12 +223,13 @@ include __DIR__ . '/components/unified-layout.php';
 ?>
 
 <style>
-/* Mobile-friendly migrations page */
+/* Migration list */
 .migration-list {
     display: flex;
     flex-direction: column;
     gap: var(--space-sm);
 }
+
 .migration-item {
     display: flex;
     align-items: center;
@@ -238,69 +239,169 @@ include __DIR__ . '/components/unified-layout.php';
     border: 1px solid var(--color-border);
     border-radius: var(--radius-md);
 }
+
 .migration-item.not-executed {
     background: rgba(239, 68, 68, 0.05);
-    border-color: rgba(239, 68, 68, 0.2);
+    border-color: rgba(239, 68, 68, 0.3);
 }
+
 .migration-item.today {
     border: 2px solid var(--color-warning);
 }
+
 .migration-radio {
     flex-shrink: 0;
 }
+
 .migration-radio input[type="radio"] {
-    width: 20px;
-    height: 20px;
+    width: 24px;
+    height: 24px;
     cursor: pointer;
+    accent-color: var(--color-accent);
 }
+
 .migration-info {
     flex: 1;
     min-width: 0;
 }
+
 .migration-name {
     font-weight: 600;
     word-break: break-word;
     margin-bottom: 4px;
+    cursor: pointer;
+    display: block;
 }
+
 .migration-meta {
     font-size: var(--text-xs);
     color: var(--color-text-muted);
 }
+
 .migration-actions {
     display: flex;
     gap: var(--space-xs);
     flex-shrink: 0;
 }
+
 .migration-status {
     flex-shrink: 0;
 }
-@media (max-width: 600px) {
+
+/* Form actions */
+.form-actions {
+    padding: var(--space-md) 0;
+}
+
+/* Preview code */
+.preview-code {
+    background: var(--color-bg-page);
+    padding: var(--space-md);
+    border-radius: var(--radius-md);
+    overflow-x: auto;
+    font-size: 12px;
+    line-height: 1.5;
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+/* Mobile responsiveness */
+@media (max-width: 767px) {
+    /* Edge-to-edge cards */
+    .card,
+    .alert {
+        margin-left: -16px;
+        margin-right: -16px;
+        border-radius: 0 !important;
+        border-left: none !important;
+        border-right: none !important;
+        width: calc(100% + 32px);
+    }
+
     .migration-item {
-        flex-wrap: wrap;
+        flex-direction: column;
+        align-items: stretch;
+        gap: var(--space-sm);
+        padding: var(--space-md);
     }
-    .migration-info {
-        order: 1;
-        width: calc(100% - 80px);
-    }
-    .migration-status {
-        order: 2;
-    }
-    .migration-radio {
-        order: 3;
-    }
-    .migration-actions {
-        order: 4;
+
+    .migration-item > * {
         width: 100%;
+    }
+
+    .migration-radio {
+        position: absolute;
+        right: var(--space-md);
+        top: var(--space-md);
+    }
+
+    .migration-item {
+        position: relative;
+        padding-right: 60px;
+    }
+
+    .migration-status {
+        order: -1;
+    }
+
+    .migration-actions {
+        display: flex;
+        gap: var(--space-sm);
         margin-top: var(--space-sm);
     }
-    .migration-actions .btn {
+
+    .migration-actions .btn,
+    .migration-actions button {
         flex: 1;
+        text-align: center;
+        padding: var(--space-sm) var(--space-md);
     }
-    .result-table {
-        font-size: var(--text-xs);
+
+    .form-actions {
+        padding: var(--space-md);
+        margin-left: -16px;
+        margin-right: -16px;
+        width: calc(100% + 32px);
+        background: var(--color-bg-surface);
+        border-top: 1px solid var(--color-border);
+        position: sticky;
+        bottom: 0;
     }
-    .result-table code {
-        word-break: break-all;
+
+    .form-actions .btn {
+        width: 100%;
+        padding: var(--space-md);
+        font-size: var(--text-base);
+    }
+
+    .preview-code {
+        font-size: 11px;
+        padding: var(--space-sm);
+        max-height: 300px;
+    }
+
+    .content-header {
+        padding: var(--space-md) 0;
+    }
+
+    .content-header h1 {
+        font-size: var(--text-xl);
+    }
+}
+
+/* Extra small screens */
+@media (max-width: 479px) {
+    .migration-name {
+        font-size: var(--text-sm);
+    }
+
+    .badge {
+        font-size: 10px;
+        padding: 2px 6px;
+    }
+
+    .preview-code {
+        font-size: 10px;
     }
 }
 </style>
@@ -447,7 +548,7 @@ include __DIR__ . '/components/unified-layout.php';
                 <h3>Förhandsgranskning: <?= htmlspecialchars(basename($_GET['preview'])) ?></h3>
             </div>
             <div class="card-body">
-                <pre style="background: var(--color-bg-sunken); padding: 1rem; border-radius: 8px; overflow-x: auto; font-size: 13px;"><?= htmlspecialchars($previewContent) ?></pre>
+                <pre class="preview-code"><?= htmlspecialchars($previewContent) ?></pre>
             </div>
         </div>
         <?php endif; ?>

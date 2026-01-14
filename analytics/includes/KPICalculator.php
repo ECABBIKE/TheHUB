@@ -1550,9 +1550,9 @@ class KPICalculator {
                 cohort.total_seasons,
                 cohort.last_active_year,
                 CASE
-                    WHEN cohort.last_active_year >= :asOfYear THEN 'active'
-                    WHEN :asOfYear - cohort.last_active_year = 1 THEN 'soft_churn'
-                    WHEN :asOfYear - cohort.last_active_year = 2 THEN 'medium_churn'
+                    WHEN cohort.last_active_year >= ? THEN 'active'
+                    WHEN ? - cohort.last_active_year = 1 THEN 'soft_churn'
+                    WHEN ? - cohort.last_active_year = 2 THEN 'medium_churn'
                     ELSE 'hard_churn'
                 END as current_status
             FROM (
@@ -1566,29 +1566,26 @@ class KPICalculator {
                      ORDER BY season_year ASC LIMIT 1) as first_discipline
                 FROM rider_yearly_stats rys
                 GROUP BY rider_id
-                HAVING cohort_year = :cohortYear
+                HAVING cohort_year = ?
             ) cohort
             JOIN riders r ON cohort.rider_id = r.id
             LEFT JOIN clubs c ON r.club_id = c.id
         ";
 
+        $params = [$asOfYear, $asOfYear, $asOfYear, $cohortYear];
+
         if ($status === 'active') {
-            $sql .= " WHERE cohort.last_active_year >= :asOfYear2";
+            $sql .= " WHERE cohort.last_active_year >= ?";
+            $params[] = $asOfYear;
         } elseif ($status === 'churned') {
-            $sql .= " WHERE cohort.last_active_year < :asOfYear2";
+            $sql .= " WHERE cohort.last_active_year < ?";
+            $params[] = $asOfYear;
         }
 
         $sql .= " ORDER BY r.lastname, r.firstname";
 
         $stmt = $this->pdo->prepare($sql);
-        $stmt->bindValue(':cohortYear', $cohortYear, PDO::PARAM_INT);
-        $stmt->bindValue(':asOfYear', $asOfYear, PDO::PARAM_INT);
-
-        if ($status !== 'all') {
-            $stmt->bindValue(':asOfYear2', $asOfYear, PDO::PARAM_INT);
-        }
-
-        $stmt->execute();
+        $stmt->execute($params);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
@@ -1654,9 +1651,9 @@ class KPICalculator {
         $stmt = $this->pdo->prepare("
             SELECT
                 CASE
-                    WHEN last_year >= :asOfYear THEN 'active'
-                    WHEN :asOfYear - last_year = 1 THEN 'soft_churn'
-                    WHEN :asOfYear - last_year = 2 THEN 'medium_churn'
+                    WHEN last_year >= ? THEN 'active'
+                    WHEN ? - last_year = 1 THEN 'soft_churn'
+                    WHEN ? - last_year = 2 THEN 'medium_churn'
                     ELSE 'hard_churn'
                 END as status,
                 COUNT(*) as count
@@ -1669,7 +1666,7 @@ class KPICalculator {
                     SELECT rider_id
                     FROM rider_yearly_stats
                     GROUP BY rider_id
-                    HAVING MIN(season_year) = :cohortYear
+                    HAVING MIN(season_year) = ?
                 )
                 GROUP BY rider_id
             ) rider_careers
@@ -1682,9 +1679,7 @@ class KPICalculator {
                     ELSE 4
                 END
         ");
-        $stmt->bindValue(':cohortYear', $cohortYear, PDO::PARAM_INT);
-        $stmt->bindValue(':asOfYear', $asOfYear, PDO::PARAM_INT);
-        $stmt->execute();
+        $stmt->execute([$asOfYear, $asOfYear, $asOfYear, $cohortYear]);
 
         $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
