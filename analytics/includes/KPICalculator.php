@@ -121,12 +121,15 @@ class KPICalculator {
      * @param int $year Ar
      * @return int Antal nya riders
      */
-    public function getNewRidersCount(int $year): int {
+    public function getNewRidersCount(int $year, ?int $seriesId = null): int {
+        $seriesFilter = $seriesId !== null ? " AND primary_series_id = ?" : "";
         $stmt = $this->pdo->prepare("
             SELECT COUNT(*) FROM rider_yearly_stats
-            WHERE season_year = ? AND is_rookie = 1
+            WHERE season_year = ? AND is_rookie = 1 $seriesFilter
         ");
-        $stmt->execute([$year]);
+        $params = [$year];
+        if ($seriesId !== null) $params[] = $seriesId;
+        $stmt->execute($params);
         return (int)$stmt->fetchColumn();
     }
 
@@ -134,14 +137,18 @@ class KPICalculator {
      * Hamta totalt antal aktiva riders
      *
      * @param int $year Ar
+     * @param int|null $seriesId Filtrera pa serie (optional)
      * @return int Antal aktiva riders
      */
-    public function getTotalActiveRiders(int $year): int {
+    public function getTotalActiveRiders(int $year, ?int $seriesId = null): int {
+        $seriesFilter = $seriesId !== null ? " AND primary_series_id = ?" : "";
         $stmt = $this->pdo->prepare("
             SELECT COUNT(*) FROM rider_yearly_stats
-            WHERE season_year = ?
+            WHERE season_year = ? $seriesFilter
         ");
-        $stmt->execute([$year]);
+        $params = [$year];
+        if ($seriesId !== null) $params[] = $seriesId;
+        $stmt->execute($params);
         return (int)$stmt->fetchColumn();
     }
 
@@ -556,9 +563,10 @@ class KPICalculator {
      * @param int $years Antal ar att visa
      * @return array Trenddata per ar
      */
-    public function getRookieTrend(int $years = 5): array {
+    public function getRookieTrend(int $years = 5, ?int $seriesId = null): array {
         $currentYear = (int)date('Y');
         $startYear = $currentYear - $years + 1;
+        $seriesFilter = $seriesId !== null ? " AND rys.primary_series_id = ?" : "";
 
         $stmt = $this->pdo->prepare("
             SELECT
@@ -571,10 +579,13 @@ class KPICalculator {
                 ) as rookie_percentage
             FROM rider_yearly_stats rys
             WHERE rys.season_year >= ? AND rys.season_year <= ?
+            $seriesFilter
             GROUP BY rys.season_year
             ORDER BY rys.season_year ASC
         ");
-        $stmt->execute([$startYear, $currentYear]);
+        $params = [$startYear, $currentYear];
+        if ($seriesId !== null) $params[] = $seriesId;
+        $stmt->execute($params);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
@@ -582,11 +593,13 @@ class KPICalculator {
      * Hamta genomsnittsalder for rookies per ar (trend)
      *
      * @param int $years Antal ar
+     * @param int|null $seriesId Filtrera pa serie (optional)
      * @return array Snittålder per ar
      */
-    public function getRookieAgeTrend(int $years = 5): array {
+    public function getRookieAgeTrend(int $years = 5, ?int $seriesId = null): array {
         $currentYear = (int)date('Y');
         $startYear = $currentYear - $years + 1;
+        $seriesFilter = $seriesId !== null ? " AND rys.primary_series_id = ?" : "";
 
         $stmt = $this->pdo->prepare("
             SELECT
@@ -599,10 +612,13 @@ class KPICalculator {
               AND rys.is_rookie = 1
               AND r.birth_year IS NOT NULL
               AND r.birth_year > 1900
+              $seriesFilter
             GROUP BY rys.season_year
             ORDER BY rys.season_year ASC
         ");
-        $stmt->execute([$startYear, $currentYear]);
+        $params = [$startYear, $currentYear];
+        if ($seriesId !== null) $params[] = $seriesId;
+        $stmt->execute($params);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 

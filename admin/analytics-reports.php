@@ -141,8 +141,8 @@ try {
 
             $reportTitle = "Nya Deltagare (Rookies) $selectedYear" . $seriesName;
             $reportData = [
-                'total_rookies' => $kpiCalc->getNewRidersCount($selectedYear),
-                'total_riders' => $kpiCalc->getTotalActiveRiders($selectedYear),
+                'total_rookies' => $kpiCalc->getNewRidersCount($selectedYear, $selectedSeries),
+                'total_riders' => $kpiCalc->getTotalActiveRiders($selectedYear, $selectedSeries),
                 'average_age' => $kpiCalc->getRookieAverageAge($selectedYear, $selectedSeries),
                 'gender' => $kpiCalc->getRookieGenderDistribution($selectedYear, $selectedSeries),
                 'ages' => $kpiCalc->getRookieAgeDistribution($selectedYear, $selectedSeries),
@@ -152,8 +152,8 @@ try {
                 'clubs' => $kpiCalc->getClubsWithMostRookies($selectedYear, 20, $selectedSeries),
                 'list' => $kpiCalc->getRookiesList($selectedYear, $selectedSeries),
                 'series_filter' => $seriesWithRookies,
-                'trend' => $kpiCalc->getRookieTrend(5),
-                'age_trend' => $kpiCalc->getRookieAgeTrend(5)
+                'trend' => $kpiCalc->getRookieTrend(5, $selectedSeries),
+                'age_trend' => $kpiCalc->getRookieAgeTrend(5, $selectedSeries)
             ];
             break;
     }
