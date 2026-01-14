@@ -23,7 +23,17 @@ global $pdo;
 // Arval
 $currentYear = (int)date('Y');
 $selectedCohort = isset($_GET['cohort']) ? (int)$_GET['cohort'] : $currentYear - 3;
-$compareYears = isset($_GET['compare']) ? array_map('intval', explode(',', $_GET['compare'])) : [];
+
+// Compare kan komma som array (checkboxes) eller som kommaseparerad strang
+$compareYears = [];
+if (isset($_GET['compare'])) {
+    if (is_array($_GET['compare'])) {
+        $compareYears = array_map('intval', $_GET['compare']);
+    } else {
+        $compareYears = array_map('intval', explode(',', $_GET['compare']));
+    }
+    $compareYears = array_filter($compareYears); // Ta bort tomma/noll-varden
+}
 
 // Initiera KPI Calculator
 $kpiCalc = new KPICalculator($pdo);
@@ -106,6 +116,17 @@ $page_actions = '
 // Include unified layout
 include __DIR__ . '/components/unified-layout.php';
 ?>
+
+<!-- Info Box - Forklaring -->
+<div class="info-box">
+    <div class="info-box-icon">
+        <i data-lucide="info"></i>
+    </div>
+    <div class="info-box-content">
+        <strong>Vad ar en kohort?</strong>
+        <p>En kohort ar en grupp riders som borjade samma ar. T.ex. "Kohort 2023" ar alla som hade sin <em>forsta tavling</em> 2023. Har kan du folja hur manga som fortsatter aktiva over tid (retention) och hur manga som slutar (churn).</p>
+    </div>
+</div>
 
 <!-- Cohort Selector -->
 <div class="filter-bar">
@@ -508,6 +529,51 @@ function filterRiders(status) {
 <?php endif; ?>
 
 <style>
+/* Info Box */
+.info-box {
+    display: flex;
+    gap: var(--space-md);
+    padding: var(--space-md);
+    margin-bottom: var(--space-lg);
+    background: var(--color-accent-light);
+    border: 1px solid var(--color-accent);
+    border-radius: var(--radius-md);
+}
+
+.info-box-icon {
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--color-accent);
+    border-radius: var(--radius-sm);
+    color: white;
+}
+
+.info-box-icon i {
+    width: 18px;
+    height: 18px;
+}
+
+.info-box-content {
+    flex: 1;
+}
+
+.info-box-content strong {
+    display: block;
+    margin-bottom: var(--space-xs);
+    color: var(--color-text-primary);
+}
+
+.info-box-content p {
+    margin: 0;
+    font-size: var(--text-sm);
+    color: var(--color-text-secondary);
+    line-height: 1.5;
+}
+
 /* Filter Bar */
 .filter-bar {
     display: flex;
@@ -547,6 +613,72 @@ function filterRiders(status) {
 .filter-inline label {
     font-size: var(--text-sm);
     color: var(--color-text-secondary);
+}
+
+/* Dashboard Metrics Grid */
+.dashboard-metrics {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--space-md);
+    margin-bottom: var(--space-xl);
+}
+
+/* Metric Cards */
+.metric-card {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-md);
+    padding: var(--space-lg);
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+}
+
+.metric-card--primary {
+    border-left: 3px solid var(--color-accent);
+}
+
+.metric-card--success {
+    border-left: 3px solid var(--color-success);
+}
+
+.metric-card--warning {
+    border-left: 3px solid var(--color-warning);
+}
+
+.metric-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    background: var(--color-bg-hover);
+    border-radius: var(--radius-md);
+    color: var(--color-accent);
+    flex-shrink: 0;
+}
+
+.metric-icon i {
+    width: 20px;
+    height: 20px;
+}
+
+.metric-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.metric-value {
+    font-size: var(--text-2xl);
+    font-weight: var(--weight-bold);
+    color: var(--color-text-primary);
+    line-height: 1.2;
+}
+
+.metric-label {
+    font-size: var(--text-sm);
+    color: var(--color-text-secondary);
+    margin-top: var(--space-2xs);
 }
 
 /* Progress Cell */
@@ -673,7 +805,8 @@ function filterRiders(status) {
     /* Edge-to-edge for all cards and components */
     .filter-bar,
     .admin-card,
-    .alert {
+    .alert,
+    .info-box {
         margin-left: -16px;
         margin-right: -16px;
         border-radius: 0 !important;
