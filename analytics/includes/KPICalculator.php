@@ -958,14 +958,21 @@ class KPICalculator {
      * @return array Regioner med antal
      */
     public function getRidersByRegion(int $year): array {
+        // Anvand klubbens region, alternativt ryttarens district
+        // Fallback till 'Okand' om inget finns
         $stmt = $this->pdo->prepare("
             SELECT
-                COALESCE(s.region, 'Okand') as region,
-                COUNT(DISTINCT sp.rider_id) as rider_count
-            FROM series_participation sp
-            JOIN series s ON sp.series_id = s.id
-            WHERE sp.season_year = ?
-            GROUP BY s.region
+                COALESCE(
+                    NULLIF(c.region, ''),
+                    NULLIF(r.district, ''),
+                    'Okand'
+                ) as region,
+                COUNT(DISTINCT rys.rider_id) as rider_count
+            FROM rider_yearly_stats rys
+            JOIN riders r ON rys.rider_id = r.id
+            LEFT JOIN clubs c ON r.club_id = c.id
+            WHERE rys.season_year = ?
+            GROUP BY region
             ORDER BY rider_count DESC
         ");
         $stmt->execute([$year]);

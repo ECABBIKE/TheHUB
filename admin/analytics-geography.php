@@ -19,16 +19,20 @@ requireAnalyticsAccess();
 
 global $pdo;
 
-$currentYear = (int)date('Y');
-$selectedYear = isset($_GET['year']) ? (int)$_GET['year'] : $currentYear;
-
+// Hamta tillgangliga ar (gor detta forst for att kunna satta default)
 $availableYears = [];
 try {
     $stmt = $pdo->query("SELECT DISTINCT season_year FROM rider_yearly_stats ORDER BY season_year DESC");
     $availableYears = $stmt->fetchAll(PDO::FETCH_COLUMN);
 } catch (Exception $e) {
+    $currentYear = (int)date('Y');
     $availableYears = range($currentYear, $currentYear - 5);
 }
+
+// Arval - default till senaste ar MED DATA (inte kalenderaret)
+// Viktigt: Geografisk analys baseras pa avslutade sasonger
+$latestDataYear = !empty($availableYears) ? (int)$availableYears[0] : (int)date('Y') - 1;
+$selectedYear = isset($_GET['year']) ? (int)$_GET['year'] : $latestDataYear;
 
 $kpiCalc = new KPICalculator($pdo);
 
@@ -99,8 +103,35 @@ include __DIR__ . '/components/unified-layout.php';
     <div class="info-box-content">
         <strong>Geografisk analys</strong>
         <p>Se hur riders ar fordelade over Sveriges 21 lan. "Riders per 100k" visar hur manga riders det finns per 100 000 invanare - anvandbart for att hitta regioner med tillvaxtpotential.</p>
+        <p style="margin-top: var(--space-xs); font-size: var(--text-xs); color: var(--color-text-muted);">
+            <i data-lucide="info" style="width: 12px; height: 12px; display: inline-block; vertical-align: middle;"></i>
+            Baseras pa klubbens region. Riders utan klubb eller med klubb utan region visas som "Okand".
+        </p>
     </div>
 </div>
+
+<?php
+// Kolla datakvalitet - hur manga ar "Okand"?
+$unknownCount = 0;
+$totalCount = 0;
+foreach ($ridersByRegion as $r) {
+    $totalCount += $r['rider_count'];
+    if ($r['region'] === 'Okand') {
+        $unknownCount = $r['rider_count'];
+    }
+}
+$unknownPct = $totalCount > 0 ? round($unknownCount / $totalCount * 100) : 0;
+if ($unknownPct > 50):
+?>
+<div class="alert alert-warning" style="margin-bottom: var(--space-lg);">
+    <i data-lucide="alert-triangle"></i>
+    <div>
+        <strong>Bristfallig data</strong><br>
+        <?= $unknownPct ?>% av riders saknar regiondata (<?= number_format($unknownCount) ?> av <?= number_format($totalCount) ?>).
+        For battre geografisk analys, uppdatera klubbars region-falt i <a href="/admin/clubs.php">klubbhanteringen</a>.
+    </div>
+</div>
+<?php endif; ?>
 
 <!-- Year Selector -->
 <div class="filter-bar">
@@ -205,7 +236,8 @@ $regionsWithRiders = count(array_filter($ridersByRegion, fn($r) => $r['rider_cou
                     </thead>
                     <tbody>
                         <?php
-                        $maxPerCapita = max(array_filter(array_column($underservedRegions, 'riders_per_100k'))) ?: 1;
+                        $perCapitaValues = array_filter(array_column($underservedRegions, 'riders_per_100k'));
+                        $maxPerCapita = !empty($perCapitaValues) ? max($perCapitaValues) : 1;
                         foreach ($underservedRegions as $region):
                             if ($region['riders_per_100k'] === null) continue;
                             $barWidth = ($region['riders_per_100k'] / $maxPerCapita) * 100;
