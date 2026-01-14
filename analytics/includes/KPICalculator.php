@@ -29,6 +29,56 @@ class KPICalculator {
     }
 
     // =========================================================================
+    // UTILITY METHODS
+    // =========================================================================
+
+    /**
+     * Hamta senaste sasong med data (avslutad sasong)
+     *
+     * Returnerar det senaste aret som har rider_yearly_stats data.
+     * Anvands for att undvika att rakna pagaende sasong som "inaktiv".
+     *
+     * @return int Senaste ar med data, eller foregaende ar om inget hittas
+     */
+    public function getLatestSeasonYear(): int {
+        $stmt = $this->pdo->query("
+            SELECT MAX(season_year) FROM rider_yearly_stats
+        ");
+        $result = $stmt->fetchColumn();
+
+        if ($result) {
+            return (int)$result;
+        }
+
+        // Fallback till foregaende ar om ingen data finns
+        return (int)date('Y') - 1;
+    }
+
+    /**
+     * Hamta senaste sasong med tillracklig data
+     *
+     * Returnerar det senaste aret som har minst X antal riders.
+     * Anvands for att sakerstalla att vi har meningsfull data.
+     *
+     * @param int $minRiders Minimum antal riders for att raknas
+     * @return int Senaste ar med tillracklig data
+     */
+    public function getLatestCompleteSeasonYear(int $minRiders = 100): int {
+        $stmt = $this->pdo->prepare("
+            SELECT season_year
+            FROM rider_yearly_stats
+            GROUP BY season_year
+            HAVING COUNT(*) >= ?
+            ORDER BY season_year DESC
+            LIMIT 1
+        ");
+        $stmt->execute([$minRiders]);
+        $result = $stmt->fetchColumn();
+
+        return $result ? (int)$result : $this->getLatestSeasonYear();
+    }
+
+    // =========================================================================
     // RETENTION & GROWTH
     // =========================================================================
 
