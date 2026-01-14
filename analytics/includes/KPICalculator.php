@@ -1148,7 +1148,7 @@ class KPICalculator {
                 prev.total_events as last_year_events,
                 prev.total_points as last_year_points,
                 prev.primary_discipline as last_discipline,
-                :year - r.birth_year as age,
+                :year1 - r.birth_year as age,
                 (SELECT MIN(rys2.season_year) FROM rider_yearly_stats rys2 WHERE rys2.rider_id = r.id) as first_season,
                 (SELECT MAX(rys2.season_year) FROM rider_yearly_stats rys2 WHERE rys2.rider_id = r.id) as last_season,
                 (SELECT COUNT(DISTINCT rys2.season_year) FROM rider_yearly_stats rys2 WHERE rys2.rider_id = r.id) as total_seasons
@@ -1157,13 +1157,14 @@ class KPICalculator {
             LEFT JOIN clubs c ON r.club_id = c.id
             LEFT JOIN rider_yearly_stats curr
                 ON prev.rider_id = curr.rider_id
-                AND curr.season_year = :year
+                AND curr.season_year = :year2
             WHERE prev.season_year = :prevyear
               AND curr.rider_id IS NULL
             ORDER BY prev.total_events DESC, prev.total_points DESC
             LIMIT :limit
         ");
-        $stmt->bindValue(':year', $year, PDO::PARAM_INT);
+        $stmt->bindValue(':year1', $year, PDO::PARAM_INT);
+        $stmt->bindValue(':year2', $year, PDO::PARAM_INT);
         $stmt->bindValue(':prevyear', $year - 1, PDO::PARAM_INT);
         $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
         $stmt->execute();
@@ -1186,7 +1187,7 @@ class KPICalculator {
                 r.birth_year,
                 r.gender,
                 c.name as club_name,
-                :year - r.birth_year as age,
+                :year1 - r.birth_year as age,
                 total.total_events,
                 total.first_season,
                 total.last_season,
@@ -1204,10 +1205,11 @@ class KPICalculator {
             ) total
             JOIN riders r ON total.rider_id = r.id
             LEFT JOIN clubs c ON r.club_id = c.id
-            WHERE total.last_season <= :year
+            WHERE total.last_season <= :year2
             ORDER BY total.last_season DESC, total.total_events DESC
         ");
-        $stmt->bindValue(':year', $year, PDO::PARAM_INT);
+        $stmt->bindValue(':year1', $year, PDO::PARAM_INT);
+        $stmt->bindValue(':year2', $year, PDO::PARAM_INT);
         $stmt->bindValue(':maxstarts', $maxStarts, PDO::PARAM_INT);
         $stmt->execute();
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -1493,12 +1495,12 @@ class KPICalculator {
                 r.birth_year,
                 r.gender,
                 c.name as club_name,
-                :year - r.birth_year as age,
+                :year1 - r.birth_year as age,
                 stats.total_seasons,
                 stats.total_events_all_time,
                 stats.total_points_all_time,
                 stats.last_season,
-                :year - stats.last_season as years_inactive,
+                :year2 - stats.last_season as years_inactive,
                 stats.primary_disciplines,
                 CASE
                     WHEN stats.total_seasons >= 3 AND stats.total_events_all_time >= 10 THEN 'Hog'
@@ -1520,9 +1522,9 @@ class KPICalculator {
             LEFT JOIN clubs c ON r.club_id = c.id
             LEFT JOIN rider_yearly_stats curr
                 ON stats.rider_id = curr.rider_id
-                AND curr.season_year = :year
+                AND curr.season_year = :year3
             WHERE curr.rider_id IS NULL
-              AND stats.last_season >= :year - 3
+              AND stats.last_season >= :year4 - 3
             ORDER BY
                 CASE
                     WHEN stats.total_seasons >= 3 AND stats.total_events_all_time >= 10 THEN 1
@@ -1532,7 +1534,10 @@ class KPICalculator {
                 stats.total_events_all_time DESC
             LIMIT :limit
         ");
-        $stmt->bindValue(':year', $year, PDO::PARAM_INT);
+        $stmt->bindValue(':year1', $year, PDO::PARAM_INT);
+        $stmt->bindValue(':year2', $year, PDO::PARAM_INT);
+        $stmt->bindValue(':year3', $year, PDO::PARAM_INT);
+        $stmt->bindValue(':year4', $year, PDO::PARAM_INT);
         $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
         $stmt->execute();
         return $stmt->fetchAll(PDO::FETCH_ASSOC);

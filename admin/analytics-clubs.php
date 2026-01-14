@@ -300,4 +300,4 @@ include __DIR__ . '/components/unified-layout.php';
 
 <?php endif; ?>
 
-<?php include __DIR__ . '/../includes/admin-footer.php'; ?>
+<?php include __DIR__ . '/components/unified-layout-footer.php'; ?>
