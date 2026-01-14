@@ -103,8 +103,35 @@ include __DIR__ . '/components/unified-layout.php';
     <div class="info-box-content">
         <strong>Geografisk analys</strong>
         <p>Se hur riders ar fordelade over Sveriges 21 lan. "Riders per 100k" visar hur manga riders det finns per 100 000 invanare - anvandbart for att hitta regioner med tillvaxtpotential.</p>
+        <p style="margin-top: var(--space-xs); font-size: var(--text-xs); color: var(--color-text-muted);">
+            <i data-lucide="info" style="width: 12px; height: 12px; display: inline-block; vertical-align: middle;"></i>
+            Baseras pa klubbens region. Riders utan klubb eller med klubb utan region visas som "Okand".
+        </p>
     </div>
 </div>
+
+<?php
+// Kolla datakvalitet - hur manga ar "Okand"?
+$unknownCount = 0;
+$totalCount = 0;
+foreach ($ridersByRegion as $r) {
+    $totalCount += $r['rider_count'];
+    if ($r['region'] === 'Okand') {
+        $unknownCount = $r['rider_count'];
+    }
+}
+$unknownPct = $totalCount > 0 ? round($unknownCount / $totalCount * 100) : 0;
+if ($unknownPct > 50):
+?>
+<div class="alert alert-warning" style="margin-bottom: var(--space-lg);">
+    <i data-lucide="alert-triangle"></i>
+    <div>
+        <strong>Bristfallig data</strong><br>
+        <?= $unknownPct ?>% av riders saknar regiondata (<?= number_format($unknownCount) ?> av <?= number_format($totalCount) ?>).
+        For battre geografisk analys, uppdatera klubbars region-falt i <a href="/admin/clubs.php">klubbhanteringen</a>.
+    </div>
+</div>
+<?php endif; ?>
 
 <!-- Year Selector -->
 <div class="filter-bar">
