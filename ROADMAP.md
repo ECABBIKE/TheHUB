@@ -1,6 +1,8 @@
-# TheHUB - Development Roadmap 2026
+# TheHUB - Development Roadmap
 
 > Senast uppdaterad: 2026-01-14
+>
+> **OBS:** All projektinformation ska dokumenteras i denna fil!
 
 ---
 
@@ -159,6 +161,150 @@ Retention-rapporten visar nu:
 
 ---
 
+## STEG 11: ANALYTICS PHASE 2 - AVANCERADE MODULER
+
+**Mal:** Djupgaende analytics med kohort-analys, riskprediktion och geografisk analys
+**Status:** KLAR
+
+### Arkitektur
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    Analytics Platform v2.0                       │
+├─────────────────────────────────────────────────────────────────┤
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐         │
+│  │ Cohort   │  │ At-Risk  │  │ Feeder   │  │ Geography│         │
+│  │ Analysis │  │ Predict  │  │ Trends   │  │ Analysis │         │
+│  └────┬─────┘  └────┬─────┘  └────┬─────┘  └────┬─────┘         │
+│       └─────────────┴─────────────┴─────────────┘                │
+│                           │                                      │
+│              ┌────────────┴────────────┐                         │
+│              │      KPICalculator      │                         │
+│              │    + AnalyticsConfig    │                         │
+│              └─────────────────────────┘                         │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### 11.1 Central konfiguration (AnalyticsConfig.php)
+
+- Aktiv-definition: minst 1 start per sasong
+- Churn-definitioner: soft=1ar, medium=2ar, hard=3+ar
+- Klass-ranking per ar (Elite=100 ner till Kids=5)
+- Riskfaktorer med vikter (totalt 100p)
+- Feature flags for valfri funktionalitet
+- Regioner med befolkningsdata
+
+### 11.2 Cohort Analysis (admin/analytics-cohorts.php)
+
+- [x] Kohort-baserad retention tracking
+- [x] Retention-kurva per kohort (line chart)
+- [x] Status breakdown (active, soft/medium/hard churn)
+- [x] Jamfor flera kohorter samtidigt
+- [x] Average lifespan per kohort
+- [x] CSV-export med GDPR-loggning
+
+### 11.3 Rider Journey
+
+- [x] Individuell progressionsvy
+- [x] Klassforandringar over tid
+- [x] Liknande ryttare-matchning
+- [x] Integration med befintligt flow-system
+
+### 11.4 At-Risk/Churn Prediction (admin/analytics-atrisk.php)
+
+6-faktor riskmodell:
+- Declining events (minskande deltagande) - 30p
+- No recent activity (ingen aktivitet) - 25p
+- Class downgrade (nedflyttning) - 15p
+- Single series (bara en serie) - 10p
+- Low tenure (kort karriar) - 10p
+- High age in class (hog alder) - 10p
+
+- [x] Risk score 0-100 → Low/Medium/High/Critical
+- [x] Cron-jobb for daglig caching (refresh-risk-scores.php)
+- [x] Filtrering per serie och riskniva
+- [x] CSV-export for kampanjer
+
+### 11.5 Feeder Trends
+
+- [x] Tidsserie for serie-overgångar
+- [x] Year-over-year jamforelser
+- [x] Emerging flows detektion
+- [x] Integration med analytics-flow.php
+
+### 11.6 Geographic Analysis (admin/analytics-geography.php)
+
+- [x] Riders per region (21 svenska lan)
+- [x] Per capita tackning (riders per 100k inv)
+- [x] Events per region
+- [x] Regional tillvaxttend (5 ar)
+- [x] Underservicerade regioner
+
+### Nya databastabeller (Phase 2)
+
+```sql
+rider_cohorts          -- Kohort-lookup (cohort_year, status)
+rider_risk_scores      -- Cachade riskpoang med faktorer
+regions                -- Svenska lan med befolkningsdata
+region_yearly_stats    -- Regional statistik per ar
+feeder_trends          -- Historik for serie-floden
+analytics_exports      -- GDPR-loggning av exporter
+```
+
+### Nya filer (Phase 2)
+
+```
+analytics/includes/AnalyticsConfig.php     -- Central konfiguration
+analytics/migrations/005_phase2_tables.sql -- Databas-schema
+analytics/cron/refresh-risk-scores.php     -- Cron-jobb for risk scores
+admin/analytics-cohorts.php                -- Kohort-sida
+admin/analytics-atrisk.php                 -- At-risk-sida
+admin/analytics-geography.php              -- Geografi-sida
+```
+
+### Cron-jobb setup
+
+```bash
+# Daglig risk score-uppdatering (kl 03:00)
+0 3 * * * /usr/bin/php /path/to/thehub/analytics/cron/refresh-risk-scores.php
+
+# Manuell korning
+php analytics/cron/refresh-risk-scores.php --year=2025 --force
+```
+
+### KPICalculator - nya metoder (Phase 2)
+
+Cohort-metoder:
+- `getCohortRetention()` - Retention per kohort over tid
+- `compareCohorts()` - Jamfor flera kohorter
+- `getCohortRiders()` - Lista riders i en kohort
+- `getCohortStatusBreakdown()` - Status per kohort
+- `getCohortAverageLifespan()` - Snittlivslangd
+- `getAvailableCohorts()` - Tillgangliga kohorter
+
+Journey-metoder:
+- `getRiderJourney()` - Individuell resa
+- `getRiderProgression()` - Klassforandringar
+- `getSimilarRiders()` - Hitta liknande riders
+- `getRiderLastActiveYear()` - Senaste aktiva ar
+
+At-Risk-metoder:
+- `getAtRiskRiders()` - Lista hogriskreyttare
+- `calculateChurnRisk()` - Berakna risk for enskild rider
+- `getRiskDistribution()` - Fordelning per riskniva
+
+Feeder-metoder:
+- `getFeederTrend()` - Trenddata for serie-flode
+- `getFeederTrendsOverview()` - Oversikt alla floden
+- `getEmergingFlows()` - Vaxande floden
+
+Geografi-metoder:
+- `getRegionalGrowthTrend()` - Regional tillvaxt
+- `getUnderservedRegions()` - Underservicerade omraden
+- `getEventsByRegion()` - Events per region
+
+---
+
 ## POTENTIELLA FORBATTRINGAR (ANALYTICS)
 
 ### Datakvalitet
@@ -309,6 +455,19 @@ HUB_ROOT, HUB_URL, ROOT_PATH, INCLUDES_PATH
 ---
 
 # CHANGELOG
+
+### 2026-01-14 (Phase 2)
+- Steg 11 KLAR: Analytics Phase 2 - Avancerade moduler
+  - AnalyticsConfig.php - Central konfigurationsfil
+  - Cohort Analysis - Retention per kohort med trend
+  - At-Risk Prediction - 6-faktor riskmodell
+  - Geographic Analysis - Regional statistik
+  - Feeder Trends - Historisk serie-flodesdata
+  - 5 nya databastabeller
+  - 20+ nya KPICalculator-metoder
+  - Cron-jobb for daglig risk score-uppdatering
+  - GDPR-loggning for exporter
+- Fixade duplicerad getRetentionTrend()-metod (orsakade vit sida)
 
 ### 2026-01-14
 - Steg 10 KLAR: Retention & Churn-analys

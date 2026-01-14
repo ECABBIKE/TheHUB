@@ -1193,38 +1193,6 @@ class KPICalculator {
     }
 
     /**
-     * Hamta retention-trend over flera ar
-     *
-     * @param int $years Antal ar att visa
-     * @return array Retention per ar
-     */
-    public function getRetentionTrend(int $years = 5): array {
-        $result = [];
-        $currentYear = (int)date('Y');
-
-        for ($i = 0; $i < $years; $i++) {
-            $year = $currentYear - $i;
-            $retention = $this->getRetentionRate($year);
-            $churned = $this->getChurnRate($year);
-            $total = $this->getTotalActiveRiders($year);
-            $prevTotal = $this->getTotalActiveRiders($year - 1);
-
-            // Antal som churnat (slutat)
-            $churnedCount = $prevTotal > 0 ? round($prevTotal * $churned / 100) : 0;
-
-            $result[] = [
-                'year' => $year,
-                'retention_rate' => $retention,
-                'churn_rate' => $churned,
-                'total_riders' => $total,
-                'churned_count' => $churnedCount
-            ];
-        }
-
-        return array_reverse($result);
-    }
-
-    /**
      * Analysera churn per segment (alder, disciplin, klubb)
      *
      * @param int $year Ar att analysera
