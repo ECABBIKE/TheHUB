@@ -311,6 +311,13 @@ $ADMIN_TABS = [
                 'icon' => 'trending-up',
                 'url' => '/admin/analytics-trends.php',
                 'pages' => ['analytics-trends.php']
+            ],
+            [
+                'id' => 'series-compare',
+                'label' => 'Jämför Serier',
+                'icon' => 'git-compare',
+                'url' => '/admin/analytics-series-compare.php',
+                'pages' => ['analytics-series-compare.php']
             ]
         ]
     ],
