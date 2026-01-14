@@ -1027,4 +1027,442 @@ class KPICalculator {
 
         return $result;
     }
+
+    // =========================================================================
+    // CHURN & RETENTION DEEP ANALYSIS
+    // =========================================================================
+
+    /**
+     * Hamta deltagare som slutat (churned) - deltog forra aret men inte i ar
+     *
+     * @param int $year Aktuellt ar
+     * @param int $limit Max antal att hamta
+     * @return array Lista med churned riders
+     */
+    public function getChurnedRiders(int $year, int $limit = 500): array {
+        $stmt = $this->pdo->prepare("
+            SELECT
+                r.id,
+                r.firstname,
+                r.lastname,
+                r.birth_year,
+                r.gender,
+                c.name as club_name,
+                prev.total_events as last_year_events,
+                prev.total_points as last_year_points,
+                prev.primary_discipline as last_discipline,
+                :year - r.birth_year as age,
+                (SELECT MIN(rys2.season_year) FROM rider_yearly_stats rys2 WHERE rys2.rider_id = r.id) as first_season,
+                (SELECT MAX(rys2.season_year) FROM rider_yearly_stats rys2 WHERE rys2.rider_id = r.id) as last_season,
+                (SELECT COUNT(DISTINCT rys2.season_year) FROM rider_yearly_stats rys2 WHERE rys2.rider_id = r.id) as total_seasons
+            FROM rider_yearly_stats prev
+            JOIN riders r ON prev.rider_id = r.id
+            LEFT JOIN clubs c ON r.club_id = c.id
+            LEFT JOIN rider_yearly_stats curr
+                ON prev.rider_id = curr.rider_id
+                AND curr.season_year = :year
+            WHERE prev.season_year = :prevyear
+              AND curr.rider_id IS NULL
+            ORDER BY prev.total_events DESC, prev.total_points DESC
+            LIMIT :limit
+        ");
+        $stmt->bindValue(':year', $year, PDO::PARAM_INT);
+        $stmt->bindValue(':prevyear', $year - 1, PDO::PARAM_INT);
+        $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Hamta "one-timers" - deltagare som bara startade 1-2 ggr totalt
+     *
+     * @param int $year Ar att analysera
+     * @param int $maxStarts Max antal starter (default 2)
+     * @return array Lista med one-time deltagare
+     */
+    public function getOneTimers(int $year, int $maxStarts = 2): array {
+        $stmt = $this->pdo->prepare("
+            SELECT
+                r.id,
+                r.firstname,
+                r.lastname,
+                r.birth_year,
+                r.gender,
+                c.name as club_name,
+                :year - r.birth_year as age,
+                total.total_events,
+                total.first_season,
+                total.last_season,
+                total.disciplines
+            FROM (
+                SELECT
+                    rider_id,
+                    SUM(total_events) as total_events,
+                    MIN(season_year) as first_season,
+                    MAX(season_year) as last_season,
+                    GROUP_CONCAT(DISTINCT primary_discipline) as disciplines
+                FROM rider_yearly_stats
+                GROUP BY rider_id
+                HAVING SUM(total_events) <= :maxstarts
+            ) total
+            JOIN riders r ON total.rider_id = r.id
+            LEFT JOIN clubs c ON r.club_id = c.id
+            WHERE total.last_season <= :year
+            ORDER BY total.last_season DESC, total.total_events DESC
+        ");
+        $stmt->bindValue(':year', $year, PDO::PARAM_INT);
+        $stmt->bindValue(':maxstarts', $maxStarts, PDO::PARAM_INT);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Hamta comeback-riders - de som aterkom efter uppehall
+     *
+     * @param int $year Ar att analysera
+     * @param int $minGapYears Minsta antal ars uppehall (default 1)
+     * @return array Lista med comeback riders
+     */
+    public function getComebackRiders(int $year, int $minGapYears = 1): array {
+        $stmt = $this->pdo->prepare("
+            SELECT
+                r.id,
+                r.firstname,
+                r.lastname,
+                r.birth_year,
+                r.gender,
+                c.name as club_name,
+                :year - r.birth_year as age,
+                curr.total_events as current_events,
+                curr.primary_discipline,
+                prev_max.last_active_before as previous_last_season,
+                :year - prev_max.last_active_before as years_away,
+                (SELECT MIN(season_year) FROM rider_yearly_stats WHERE rider_id = r.id) as first_season_ever
+            FROM rider_yearly_stats curr
+            JOIN riders r ON curr.rider_id = r.id
+            LEFT JOIN clubs c ON r.club_id = c.id
+            JOIN (
+                SELECT
+                    rider_id,
+                    MAX(season_year) as last_active_before
+                FROM rider_yearly_stats
+                WHERE season_year < :year
+                GROUP BY rider_id
+                HAVING MAX(season_year) < :year - :mingap
+            ) prev_max ON curr.rider_id = prev_max.rider_id
+            WHERE curr.season_year = :year
+            ORDER BY years_away DESC, curr.total_events DESC
+        ");
+        $stmt->bindValue(':year', $year, PDO::PARAM_INT);
+        $stmt->bindValue(':mingap', $minGapYears, PDO::PARAM_INT);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Hamta inaktiva riders grupperade efter hur lange de varit borta
+     *
+     * @param int $year Aktuellt ar
+     * @return array Gruppering per antal ar inaktiv
+     */
+    public function getInactiveByDuration(int $year): array {
+        $stmt = $this->pdo->prepare("
+            SELECT
+                :year - last_active.last_season as years_inactive,
+                COUNT(*) as count,
+                AVG(:year - r.birth_year) as avg_age
+            FROM (
+                SELECT
+                    rider_id,
+                    MAX(season_year) as last_season
+                FROM rider_yearly_stats
+                WHERE season_year < :year
+                GROUP BY rider_id
+            ) last_active
+            JOIN riders r ON last_active.rider_id = r.id
+            LEFT JOIN rider_yearly_stats curr
+                ON last_active.rider_id = curr.rider_id
+                AND curr.season_year = :year
+            WHERE curr.rider_id IS NULL
+            GROUP BY years_inactive
+            ORDER BY years_inactive ASC
+        ");
+        $stmt->bindValue(':year', $year, PDO::PARAM_INT);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Hamta retention-trend over flera ar
+     *
+     * @param int $years Antal ar att visa
+     * @return array Retention per ar
+     */
+    public function getRetentionTrend(int $years = 5): array {
+        $result = [];
+        $currentYear = (int)date('Y');
+
+        for ($i = 0; $i < $years; $i++) {
+            $year = $currentYear - $i;
+            $retention = $this->getRetentionRate($year);
+            $churned = $this->getChurnRate($year);
+            $total = $this->getTotalActiveRiders($year);
+            $prevTotal = $this->getTotalActiveRiders($year - 1);
+
+            // Antal som churnat (slutat)
+            $churnedCount = $prevTotal > 0 ? round($prevTotal * $churned / 100) : 0;
+
+            $result[] = [
+                'year' => $year,
+                'retention_rate' => $retention,
+                'churn_rate' => $churned,
+                'total_riders' => $total,
+                'churned_count' => $churnedCount
+            ];
+        }
+
+        return array_reverse($result);
+    }
+
+    /**
+     * Analysera churn per segment (alder, disciplin, klubb)
+     *
+     * @param int $year Ar att analysera
+     * @return array Segmenterad churn-data
+     */
+    public function getChurnBySegment(int $year): array {
+        // Churn per aldersgrupp
+        $ageStmt = $this->pdo->prepare("
+            SELECT
+                CASE
+                    WHEN :year - r.birth_year < 18 THEN 'Under 18'
+                    WHEN :year - r.birth_year BETWEEN 18 AND 25 THEN '18-25'
+                    WHEN :year - r.birth_year BETWEEN 26 AND 35 THEN '26-35'
+                    WHEN :year - r.birth_year BETWEEN 36 AND 45 THEN '36-45'
+                    WHEN :year - r.birth_year > 45 THEN 'Over 45'
+                    ELSE 'Okand'
+                END as age_group,
+                COUNT(*) as churned_count,
+                (SELECT COUNT(*) FROM rider_yearly_stats rys2
+                 JOIN riders r2 ON rys2.rider_id = r2.id
+                 WHERE rys2.season_year = :prevyear
+                 AND CASE
+                    WHEN :year - r2.birth_year < 18 THEN 'Under 18'
+                    WHEN :year - r2.birth_year BETWEEN 18 AND 25 THEN '18-25'
+                    WHEN :year - r2.birth_year BETWEEN 26 AND 35 THEN '26-35'
+                    WHEN :year - r2.birth_year BETWEEN 36 AND 45 THEN '36-45'
+                    WHEN :year - r2.birth_year > 45 THEN 'Over 45'
+                    ELSE 'Okand'
+                 END = age_group
+                ) as total_in_group
+            FROM rider_yearly_stats prev
+            JOIN riders r ON prev.rider_id = r.id
+            LEFT JOIN rider_yearly_stats curr
+                ON prev.rider_id = curr.rider_id
+                AND curr.season_year = :year
+            WHERE prev.season_year = :prevyear
+              AND curr.rider_id IS NULL
+            GROUP BY age_group
+            ORDER BY churned_count DESC
+        ");
+        $ageStmt->bindValue(':year', $year, PDO::PARAM_INT);
+        $ageStmt->bindValue(':prevyear', $year - 1, PDO::PARAM_INT);
+        $ageStmt->execute();
+        $byAge = $ageStmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Berakna churn rate per grupp
+        foreach ($byAge as &$row) {
+            $row['churn_rate'] = $row['total_in_group'] > 0
+                ? round($row['churned_count'] / $row['total_in_group'] * 100, 1)
+                : 0;
+        }
+
+        // Churn per disciplin
+        $discStmt = $this->pdo->prepare("
+            SELECT
+                COALESCE(prev.primary_discipline, 'Okand') as discipline,
+                COUNT(*) as churned_count
+            FROM rider_yearly_stats prev
+            LEFT JOIN rider_yearly_stats curr
+                ON prev.rider_id = curr.rider_id
+                AND curr.season_year = :year
+            WHERE prev.season_year = :prevyear
+              AND curr.rider_id IS NULL
+            GROUP BY prev.primary_discipline
+            ORDER BY churned_count DESC
+        ");
+        $discStmt->bindValue(':year', $year, PDO::PARAM_INT);
+        $discStmt->bindValue(':prevyear', $year - 1, PDO::PARAM_INT);
+        $discStmt->execute();
+        $byDiscipline = $discStmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Top 10 klubbar med flest churned
+        $clubStmt = $this->pdo->prepare("
+            SELECT
+                COALESCE(c.name, 'Ingen klubb') as club_name,
+                COUNT(*) as churned_count
+            FROM rider_yearly_stats prev
+            JOIN riders r ON prev.rider_id = r.id
+            LEFT JOIN clubs c ON r.club_id = c.id
+            LEFT JOIN rider_yearly_stats curr
+                ON prev.rider_id = curr.rider_id
+                AND curr.season_year = :year
+            WHERE prev.season_year = :prevyear
+              AND curr.rider_id IS NULL
+            GROUP BY c.id, c.name
+            ORDER BY churned_count DESC
+            LIMIT 10
+        ");
+        $clubStmt->bindValue(':year', $year, PDO::PARAM_INT);
+        $clubStmt->bindValue(':prevyear', $year - 1, PDO::PARAM_INT);
+        $clubStmt->execute();
+        $byClub = $clubStmt->fetchAll(PDO::FETCH_ASSOC);
+
+        return [
+            'by_age' => $byAge,
+            'by_discipline' => $byDiscipline,
+            'by_club' => $byClub
+        ];
+    }
+
+    /**
+     * Hamta sammanfattning av inaktiva/churned for att na ut till
+     *
+     * @param int $year Aktuellt ar
+     * @return array Sammanfattande statistik
+     */
+    public function getChurnSummary(int $year): array {
+        // Antal som slutat (forra aret men inte i ar)
+        $churnedStmt = $this->pdo->prepare("
+            SELECT COUNT(*)
+            FROM rider_yearly_stats prev
+            LEFT JOIN rider_yearly_stats curr
+                ON prev.rider_id = curr.rider_id
+                AND curr.season_year = :year
+            WHERE prev.season_year = :prevyear
+              AND curr.rider_id IS NULL
+        ");
+        $churnedStmt->bindValue(':year', $year, PDO::PARAM_INT);
+        $churnedStmt->bindValue(':prevyear', $year - 1, PDO::PARAM_INT);
+        $churnedStmt->execute();
+        $churnedLastYear = (int)$churnedStmt->fetchColumn();
+
+        // One-timers totalt
+        $oneTimersStmt = $this->pdo->prepare("
+            SELECT COUNT(*)
+            FROM (
+                SELECT rider_id
+                FROM rider_yearly_stats
+                GROUP BY rider_id
+                HAVING SUM(total_events) <= 2
+            ) t
+        ");
+        $oneTimersStmt->execute();
+        $oneTimersTotal = (int)$oneTimersStmt->fetchColumn();
+
+        // Comebacks i ar
+        $comebacksStmt = $this->pdo->prepare("
+            SELECT COUNT(*)
+            FROM rider_yearly_stats curr
+            JOIN (
+                SELECT rider_id, MAX(season_year) as last_active
+                FROM rider_yearly_stats
+                WHERE season_year < :year
+                GROUP BY rider_id
+                HAVING MAX(season_year) < :year - 1
+            ) prev ON curr.rider_id = prev.rider_id
+            WHERE curr.season_year = :year
+        ");
+        $comebacksStmt->bindValue(':year', $year, PDO::PARAM_INT);
+        $comebacksStmt->execute();
+        $comebacksThisYear = (int)$comebacksStmt->fetchColumn();
+
+        // Inaktiva 2+ ar (ej i ar, senast aktiva for 2+ ar sedan)
+        $longInactiveStmt = $this->pdo->prepare("
+            SELECT COUNT(*)
+            FROM (
+                SELECT rider_id, MAX(season_year) as last_season
+                FROM rider_yearly_stats
+                GROUP BY rider_id
+                HAVING MAX(season_year) < :year - 1
+            ) inactive
+            LEFT JOIN rider_yearly_stats curr
+                ON inactive.rider_id = curr.rider_id
+                AND curr.season_year = :year
+            WHERE curr.rider_id IS NULL
+        ");
+        $longInactiveStmt->bindValue(':year', $year, PDO::PARAM_INT);
+        $longInactiveStmt->execute();
+        $longInactive = (int)$longInactiveStmt->fetchColumn();
+
+        return [
+            'churned_last_year' => $churnedLastYear,
+            'one_timers_total' => $oneTimersTotal,
+            'comebacks_this_year' => $comebacksThisYear,
+            'inactive_2plus_years' => $longInactive,
+            'retention_rate' => $this->getRetentionRate($year),
+            'churn_rate' => $this->getChurnRate($year)
+        ];
+    }
+
+    /**
+     * Hamta riders att "vinna tillbaka" - sorterade efter potentiell varde
+     *
+     * @param int $year Aktuellt ar
+     * @param int $limit Max antal
+     * @return array Lista med riders att kontakta
+     */
+    public function getWinBackTargets(int $year, int $limit = 100): array {
+        $stmt = $this->pdo->prepare("
+            SELECT
+                r.id,
+                r.firstname,
+                r.lastname,
+                r.birth_year,
+                r.gender,
+                c.name as club_name,
+                :year - r.birth_year as age,
+                stats.total_seasons,
+                stats.total_events_all_time,
+                stats.total_points_all_time,
+                stats.last_season,
+                :year - stats.last_season as years_inactive,
+                stats.primary_disciplines,
+                CASE
+                    WHEN stats.total_seasons >= 3 AND stats.total_events_all_time >= 10 THEN 'Hog'
+                    WHEN stats.total_seasons >= 2 OR stats.total_events_all_time >= 5 THEN 'Medium'
+                    ELSE 'Lag'
+                END as priority
+            FROM (
+                SELECT
+                    rider_id,
+                    COUNT(DISTINCT season_year) as total_seasons,
+                    SUM(total_events) as total_events_all_time,
+                    SUM(total_points) as total_points_all_time,
+                    MAX(season_year) as last_season,
+                    GROUP_CONCAT(DISTINCT primary_discipline) as primary_disciplines
+                FROM rider_yearly_stats
+                GROUP BY rider_id
+            ) stats
+            JOIN riders r ON stats.rider_id = r.id
+            LEFT JOIN clubs c ON r.club_id = c.id
+            LEFT JOIN rider_yearly_stats curr
+                ON stats.rider_id = curr.rider_id
+                AND curr.season_year = :year
+            WHERE curr.rider_id IS NULL
+              AND stats.last_season >= :year - 3
+            ORDER BY
+                CASE
+                    WHEN stats.total_seasons >= 3 AND stats.total_events_all_time >= 10 THEN 1
+                    WHEN stats.total_seasons >= 2 OR stats.total_events_all_time >= 5 THEN 2
+                    ELSE 3
+                END,
+                stats.total_events_all_time DESC
+            LIMIT :limit
+        ");
+        $stmt->bindValue(':year', $year, PDO::PARAM_INT);
+        $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
 }

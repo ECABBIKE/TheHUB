@@ -29,6 +29,7 @@
 | 7 | Automatisering & Cron | [x] KLAR | Daglig refresh |
 | 8 | Admin-verktyg | [x] KLAR | Populate, Reset, Diagnose, Trends |
 | 9 | Rookie-analys | [x] KLAR | Detaljerad nyborjarstatistik |
+| 10 | Retention & Churn | [x] KLAR | Identifiera inaktiva, win-back |
 
 ---
 
@@ -119,6 +120,42 @@ Rookie-rapporten visar:
 - Events med flest nya deltagare
 - Klubbar med flest nya deltagare
 - Komplett lista over alla rookies med lankar till profiler
+
+---
+
+## STEG 10: RETENTION & CHURN-ANALYS
+
+**Mal:** Identifiera och na ut till inaktiva deltagare
+**Status:** KLAR
+
+### Funktioner
+
+Retention-rapporten visar nu:
+- **Oversikt**: Retention rate, churn rate, antal slutat, antal comebacks
+- **Trend-graf**: 5-ars retention/churn trend med Chart.js
+- **Inaktivitetsanalys**: Hur lange har de varit borta? (1 ar, 2 ar, 3+ ar)
+- **Churn per segment**: Vilka aldersgrupper/discipliner tappar vi flest fran?
+- **Churned-lista**: Deltagare som slutade forra aret (exporterbar)
+- **Comebacks**: Deltagare som atervande efter uppehall (exporterbar)
+- **Win-Back Targets**: Prioriterad lista over vardefulla inaktiva att kontakta
+- **One-Timers**: Deltagare med bara 1-2 starter totalt
+
+### Nya metoder i KPICalculator
+
+- `getChurnedRiders()` - Lista deltagare som slutat
+- `getOneTimers()` - Deltagare med 1-2 starter
+- `getComebackRiders()` - Atervandare efter uppehall
+- `getInactiveByDuration()` - Gruppering per ar inaktiv
+- `getRetentionTrend()` - 5-ars trend
+- `getChurnBySegment()` - Churn per alder/disciplin/klubb
+- `getChurnSummary()` - Sammanfattande nyckeltal
+- `getWinBackTargets()` - Prioriterad kontaktlista
+
+### CSV-exporter
+
+- Win-Back Targets (prioriterad lista med profillänkar)
+- Churned Riders (forra arets avhoppare)
+- Comebacks (atervändare)
 
 ---
 
@@ -274,6 +311,16 @@ HUB_ROOT, HUB_URL, ROOT_PATH, INCLUDES_PATH
 # CHANGELOG
 
 ### 2026-01-14
+- Steg 10 KLAR: Retention & Churn-analys
+  - 8 nya metoder i KPICalculator for churn/retention-analys
+  - Churned riders-lista (de som slutat)
+  - One-timers-lista (1-2 starter totalt)
+  - Comeback riders (atervandare efter uppehall)
+  - Win-Back Targets (prioriterad kontaktlista)
+  - Inaktivitetsanalys (hur lange borta?)
+  - Churn per segment (alder, disciplin, klubb)
+  - 3 nya CSV-exporter (win-back, churned, comebacks)
+  - Retention/churn trend-graf med Chart.js
 - Steg 8 KLAR: Admin-verktyg
   - Skapade admin/analytics-populate.php (interaktiv AJAX-baserad populate)
   - Skapade admin/analytics-reset.php (rensa analytics-data)
