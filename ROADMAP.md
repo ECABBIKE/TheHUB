@@ -456,7 +456,63 @@ HUB_ROOT, HUB_URL, ROOT_PATH, INCLUDES_PATH
 
 ---
 
+# DEL 3: KLUBB RF-REGISTRERING
+
+**Mal:** Synkronisera klubbar med Riksidrottsförbundets officiella register
+**Status:** KLAR
+
+## FUNKTIONER
+
+### RF-registreringsverktyg (admin/club-rf-registration.php)
+- [x] Komplett lista over alla 20 SCF-distrikt
+- [x] ~400 RF-registrerade klubbar inlagda
+- [x] En-klicks synkronisering mot TheHUB-klubbar
+- [x] Manuell koppling for klubbar som inte matchas automatiskt
+- [x] Statistik per distrikt (klubbar, riders)
+
+### Klubbprofil-badges
+- [x] RF-badge visar "RF-registrerad 2025" for aktiva klubbar
+- [x] Distriktsbadge visar SCF-tillhorighet (t.ex. "Stockholms")
+- [x] CSS-styling for badges (dark/light mode)
+
+### Databasfalt
+- `rf_registered` (TINYINT) - 1 om RF-registrerad
+- `rf_registered_year` (INT) - Registreringsar
+- `scf_district` (VARCHAR) - SCF-distriktstillhorighet
+
+### SCF-distrikt inkluderade
+1. Bohuslän-Dals Cykelförbund
+2. Dalarnas Cykelförbund
+3. Gästriklands Cykelförbund
+4. Göteborgs Cykelförbund
+5. Hallands Cykelförbund
+6. Hälsinglands Cykelförbund
+7. Jämtland-Härjedalens Cykelförbund
+8. Norrbottens Cykelförbund
+9. Skånes Cykelförbund
+10. Smålands Cykelförbund
+11. Stockholms Cykelförbund
+12. Södermanlands Cykelförbund
+13. Upplands Cykelförbund
+14. Värmlands Cykelförbund
+15. Västerbottens Cykelförbund
+16. Västergötlands Cykelförbund
+17. Västernorrlands Cykelförbund
+18. Västmanlands Cykelförbund
+19. Örebro Läns Cykelförbund
+20. Östergötlands Cykelförbund
+
+---
+
 # CHANGELOG
+
+### 2026-01-14 (RF-registrering)
+- **Ny funktion: RF-klubbregistrering**
+  - Skapade admin/club-rf-registration.php
+  - Alla 20 SCF-distrikt med ~400 klubbar
+  - RF-badge pa klubbprofiler for registrerade klubbar
+  - Distriktsbadge visar SCF-tillhorighet
+  - Manuell koppling for omatchade klubbar
 
 ### 2026-01-14 (Phase 2 - Fortsattning)
 - **Aldersfordelning uppdelad i finare grupper:**

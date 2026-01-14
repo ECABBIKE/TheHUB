@@ -6,9 +6,9 @@
  * and marks them as RF-registered active clubs.
  */
 
-require_once __DIR__ . '/../config/database.php';
+require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../includes/auth.php';
-requireAdmin();
+requireLogin();
 
 $pageTitle = 'RF-registrering av Klubbar';
 include __DIR__ . '/../includes/admin-header.php';
