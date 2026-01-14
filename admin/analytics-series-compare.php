@@ -1,14 +1,12 @@
 <?php
 /**
- * Analytics Series Compare - Jämför Serier & Format
+ * Analytics Series Compare - Jämför Serier/Varumärken
  *
- * Samma layout som Trender men med möjlighet att jämföra:
- * - Enskilda serier (Capital, GGS, SweCup etc.)
- * - Format/discipliner (Enduro, DH, XC)
- * - Kombinerade grupper (t.ex. "Alla regionala" vs "Nationella")
+ * Samma layout som Trender men för enskilda serier.
+ * Välj 1-3 varumärken och se dem jämförda i samma grafer.
  *
  * @package TheHUB Analytics
- * @version 1.0
+ * @version 1.1
  */
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../includes/auth.php';
@@ -31,7 +29,7 @@ try {
 
 $yearsToShow = array_slice($availableYears, -$numYears);
 
-// Hämta alla serier med statistik
+// Hämta alla serier (varumärken) med statistik - sorterade efter popularitet
 $allSeries = [];
 try {
     $stmt = $pdo->query("
@@ -44,7 +42,8 @@ try {
                 (SELECT e.discipline FROM events e WHERE e.series_id = s.id AND e.discipline IS NOT NULL LIMIT 1),
                 'Okänd'
             ) as discipline,
-            (SELECT COUNT(DISTINCT sp.rider_id) FROM series_participation sp WHERE sp.series_id = s.id) as total_participants
+            (SELECT COUNT(DISTINCT sp.rider_id) FROM series_participation sp WHERE sp.series_id = s.id) as total_participants,
+            (SELECT MAX(sp.season_year) FROM series_participation sp WHERE sp.series_id = s.id) as last_year
         FROM series s
         WHERE s.id IN (SELECT DISTINCT series_id FROM series_participation)
         ORDER BY total_participants DESC, s.name
@@ -54,81 +53,61 @@ try {
     // Ignore
 }
 
-// Hämta alla discipliner
-$allDisciplines = [];
-try {
-    $stmt = $pdo->query("
-        SELECT DISTINCT discipline, COUNT(DISTINCT id) as event_count
-        FROM events
-        WHERE discipline IS NOT NULL AND discipline != ''
-        GROUP BY discipline
-        ORDER BY event_count DESC
-    ");
-    $allDisciplines = $stmt->fetchAll(PDO::FETCH_ASSOC);
-} catch (Exception $e) {
-    // Ignore
-}
-
-// Valda serier/grupper från GET
-$groupA = isset($_GET['groupA']) ? (array)$_GET['groupA'] : [];
-$groupB = isset($_GET['groupB']) ? (array)$_GET['groupB'] : [];
-$compareMode = $_GET['mode'] ?? 'series'; // 'series' eller 'discipline'
-$disciplineA = $_GET['discA'] ?? '';
-$disciplineB = $_GET['discB'] ?? '';
+// Valda serier (max 3)
+$selected = [];
+if (isset($_GET['s1']) && $_GET['s1']) $selected[] = (int)$_GET['s1'];
+if (isset($_GET['s2']) && $_GET['s2']) $selected[] = (int)$_GET['s2'];
+if (isset($_GET['s3']) && $_GET['s3']) $selected[] = (int)$_GET['s3'];
 
 /**
- * Beräkna KPIs för en grupp serier
+ * Beräkna KPIs för en serie
  */
-function getSeriesGroupKPIs($pdo, $seriesIds, $year) {
-    if (empty($seriesIds)) return null;
-
-    $placeholders = implode(',', array_fill(0, count($seriesIds), '?'));
-
-    // Totalt antal unika deltagare i gruppen detta år
+function getSeriesKPIs($pdo, $seriesId, $year) {
+    // Totalt antal unika deltagare i serien detta år
     $stmt = $pdo->prepare("
         SELECT COUNT(DISTINCT rider_id)
         FROM series_participation
-        WHERE series_id IN ($placeholders) AND season_year = ?
+        WHERE series_id = ? AND season_year = ?
     ");
-    $stmt->execute([...$seriesIds, $year]);
+    $stmt->execute([$seriesId, $year]);
     $totalRiders = (int)$stmt->fetchColumn();
 
     // Nya riders (första året i NÅGON serie i systemet)
     $stmt = $pdo->prepare("
         SELECT COUNT(DISTINCT sp.rider_id)
         FROM series_participation sp
-        WHERE sp.series_id IN ($placeholders)
+        WHERE sp.series_id = ?
         AND sp.season_year = ?
         AND sp.rider_id IN (
             SELECT rider_id FROM rider_yearly_stats WHERE first_year = ?
         )
     ");
-    $stmt->execute([...$seriesIds, $year, $year]);
+    $stmt->execute([$seriesId, $year, $year]);
     $newRiders = (int)$stmt->fetchColumn();
 
-    // Retained - deltog i gruppen både detta och förra året
+    // Retained - deltog i serien både detta och förra året
     $stmt = $pdo->prepare("
         SELECT COUNT(DISTINCT sp1.rider_id)
         FROM series_participation sp1
-        WHERE sp1.series_id IN ($placeholders)
+        WHERE sp1.series_id = ?
         AND sp1.season_year = ?
         AND EXISTS (
             SELECT 1 FROM series_participation sp2
             WHERE sp2.rider_id = sp1.rider_id
-            AND sp2.series_id IN ($placeholders)
+            AND sp2.series_id = ?
             AND sp2.season_year = ?
         )
     ");
-    $stmt->execute([...$seriesIds, $year, ...$seriesIds, $year - 1]);
+    $stmt->execute([$seriesId, $year, $seriesId, $year - 1]);
     $retainedRiders = (int)$stmt->fetchColumn();
 
     // Förra årets deltagare (för retention rate)
     $stmt = $pdo->prepare("
         SELECT COUNT(DISTINCT rider_id)
         FROM series_participation
-        WHERE series_id IN ($placeholders) AND season_year = ?
+        WHERE series_id = ? AND season_year = ?
     ");
-    $stmt->execute([...$seriesIds, $year - 1]);
+    $stmt->execute([$seriesId, $year - 1]);
     $prevYearRiders = (int)$stmt->fetchColumn();
 
     // Retention rate
@@ -140,17 +119,33 @@ function getSeriesGroupKPIs($pdo, $seriesIds, $year) {
     // Growth rate
     $growthRate = $prevYearRiders > 0 ? round(($totalRiders - $prevYearRiders) / $prevYearRiders * 100, 1) : 0;
 
+    // Cross-participation (deltar i fler än en serie)
+    $stmt = $pdo->prepare("
+        SELECT COUNT(DISTINCT sp1.rider_id)
+        FROM series_participation sp1
+        WHERE sp1.series_id = ? AND sp1.season_year = ?
+        AND EXISTS (
+            SELECT 1 FROM series_participation sp2
+            WHERE sp2.rider_id = sp1.rider_id
+            AND sp2.season_year = sp1.season_year
+            AND sp2.series_id != sp1.series_id
+        )
+    ");
+    $stmt->execute([$seriesId, $year]);
+    $crossCount = (int)$stmt->fetchColumn();
+    $crossParticipation = $totalRiders > 0 ? round($crossCount / $totalRiders * 100, 1) : 0;
+
     // Genomsnittsålder
     $stmt = $pdo->prepare("
         SELECT AVG(? - r.birth_year) as avg_age
         FROM riders r
         WHERE r.id IN (
             SELECT DISTINCT rider_id FROM series_participation
-            WHERE series_id IN ($placeholders) AND season_year = ?
+            WHERE series_id = ? AND season_year = ?
         )
         AND r.birth_year IS NOT NULL AND r.birth_year > 1900
     ");
-    $stmt->execute([$year, ...$seriesIds, $year]);
+    $stmt->execute([$year, $seriesId, $year]);
     $avgAge = round((float)$stmt->fetchColumn(), 1);
 
     // Andel kvinnor
@@ -161,11 +156,11 @@ function getSeriesGroupKPIs($pdo, $seriesIds, $year) {
         FROM riders r
         WHERE r.id IN (
             SELECT DISTINCT rider_id FROM series_participation
-            WHERE series_id IN ($placeholders) AND season_year = ?
+            WHERE series_id = ? AND season_year = ?
         )
         AND r.gender IN ('M', 'F')
     ");
-    $stmt->execute([...$seriesIds, $year]);
+    $stmt->execute([$seriesId, $year]);
     $genderRow = $stmt->fetch();
     $femalePct = $genderRow['total'] > 0 ? round($genderRow['female'] / $genderRow['total'] * 100, 1) : 0;
 
@@ -176,187 +171,45 @@ function getSeriesGroupKPIs($pdo, $seriesIds, $year) {
         'retention_rate' => $retentionRate,
         'churn_rate' => $churnRate,
         'growth_rate' => $growthRate,
+        'cross_participation' => $crossParticipation,
         'average_age' => $avgAge,
         'female_pct' => $femalePct
     ];
 }
 
-/**
- * Beräkna KPIs för en disciplin
- */
-function getDisciplineKPIs($pdo, $discipline, $year) {
-    if (empty($discipline)) return null;
-
-    // Totalt antal unika deltagare i disciplinen detta år
-    $stmt = $pdo->prepare("
-        SELECT COUNT(DISTINCT r.rider_id)
-        FROM results r
-        JOIN events e ON r.event_id = e.id
-        WHERE e.discipline = ? AND YEAR(e.date) = ?
-    ");
-    $stmt->execute([$discipline, $year]);
-    $totalRiders = (int)$stmt->fetchColumn();
-
-    // Nya riders
-    $stmt = $pdo->prepare("
-        SELECT COUNT(DISTINCT r.rider_id)
-        FROM results r
-        JOIN events e ON r.event_id = e.id
-        WHERE e.discipline = ? AND YEAR(e.date) = ?
-        AND r.rider_id IN (
-            SELECT rider_id FROM rider_yearly_stats WHERE first_year = ?
-        )
-    ");
-    $stmt->execute([$discipline, $year, $year]);
-    $newRiders = (int)$stmt->fetchColumn();
-
-    // Retained - deltog i disciplinen både detta och förra året
-    $stmt = $pdo->prepare("
-        SELECT COUNT(DISTINCT r1.rider_id)
-        FROM results r1
-        JOIN events e1 ON r1.event_id = e1.id
-        WHERE e1.discipline = ? AND YEAR(e1.date) = ?
-        AND EXISTS (
-            SELECT 1 FROM results r2
-            JOIN events e2 ON r2.event_id = e2.id
-            WHERE r2.rider_id = r1.rider_id
-            AND e2.discipline = ?
-            AND YEAR(e2.date) = ?
-        )
-    ");
-    $stmt->execute([$discipline, $year, $discipline, $year - 1]);
-    $retainedRiders = (int)$stmt->fetchColumn();
-
-    // Förra årets deltagare
-    $stmt = $pdo->prepare("
-        SELECT COUNT(DISTINCT r.rider_id)
-        FROM results r
-        JOIN events e ON r.event_id = e.id
-        WHERE e.discipline = ? AND YEAR(e.date) = ?
-    ");
-    $stmt->execute([$discipline, $year - 1]);
-    $prevYearRiders = (int)$stmt->fetchColumn();
-
-    $retentionRate = $prevYearRiders > 0 ? round($retainedRiders / $prevYearRiders * 100, 1) : 0;
-    $churnRate = 100 - $retentionRate;
-    $growthRate = $prevYearRiders > 0 ? round(($totalRiders - $prevYearRiders) / $prevYearRiders * 100, 1) : 0;
-
-    // Genomsnittsålder
-    $stmt = $pdo->prepare("
-        SELECT AVG(? - rid.birth_year) as avg_age
-        FROM riders rid
-        WHERE rid.id IN (
-            SELECT DISTINCT r.rider_id FROM results r
-            JOIN events e ON r.event_id = e.id
-            WHERE e.discipline = ? AND YEAR(e.date) = ?
-        )
-        AND rid.birth_year IS NOT NULL AND rid.birth_year > 1900
-    ");
-    $stmt->execute([$year, $discipline, $year]);
-    $avgAge = round((float)$stmt->fetchColumn(), 1);
-
-    // Andel kvinnor
-    $stmt = $pdo->prepare("
-        SELECT
-            SUM(CASE WHEN rid.gender = 'F' THEN 1 ELSE 0 END) as female,
-            COUNT(*) as total
-        FROM riders rid
-        WHERE rid.id IN (
-            SELECT DISTINCT r.rider_id FROM results r
-            JOIN events e ON r.event_id = e.id
-            WHERE e.discipline = ? AND YEAR(e.date) = ?
-        )
-        AND rid.gender IN ('M', 'F')
-    ");
-    $stmt->execute([$discipline, $year]);
-    $genderRow = $stmt->fetch();
-    $femalePct = $genderRow['total'] > 0 ? round($genderRow['female'] / $genderRow['total'] * 100, 1) : 0;
-
-    return [
-        'total_riders' => $totalRiders,
-        'new_riders' => $newRiders,
-        'retained_riders' => $retainedRiders,
-        'retention_rate' => $retentionRate,
-        'churn_rate' => $churnRate,
-        'growth_rate' => $growthRate,
-        'average_age' => $avgAge,
-        'female_pct' => $femalePct
-    ];
-}
-
-// Samla trenddata för valda grupper
-$trendsA = [];
-$trendsB = [];
-$hasData = false;
+// Samla trenddata för valda serier
+$seriesTrends = [];
+$seriesLabels = [];
+$seriesColors = ['#37d4d6', '#f97316', '#a855f7']; // Cyan, Orange, Lila
 
 try {
-    if ($compareMode === 'discipline' && ($disciplineA || $disciplineB)) {
-        foreach ($yearsToShow as $year) {
-            if ($disciplineA) {
-                $kpis = getDisciplineKPIs($pdo, $disciplineA, $year);
-                if ($kpis) {
-                    $trendsA[] = array_merge(['year' => $year], $kpis);
-                    $hasData = true;
-                }
-            }
-            if ($disciplineB) {
-                $kpis = getDisciplineKPIs($pdo, $disciplineB, $year);
-                if ($kpis) {
-                    $trendsB[] = array_merge(['year' => $year], $kpis);
-                }
+    foreach ($selected as $idx => $seriesId) {
+        // Hämta serienamn
+        $seriesName = '';
+        foreach ($allSeries as $s) {
+            if ($s['id'] == $seriesId) {
+                $seriesName = $s['name'];
+                break;
             }
         }
-    } elseif (!empty($groupA) || !empty($groupB)) {
+        $seriesLabels[$idx] = $seriesName;
+
+        // Hämta data för varje år
+        $trends = [];
         foreach ($yearsToShow as $year) {
-            if (!empty($groupA)) {
-                $kpis = getSeriesGroupKPIs($pdo, $groupA, $year);
-                if ($kpis) {
-                    $trendsA[] = array_merge(['year' => $year], $kpis);
-                    $hasData = true;
-                }
-            }
-            if (!empty($groupB)) {
-                $kpis = getSeriesGroupKPIs($pdo, $groupB, $year);
-                if ($kpis) {
-                    $trendsB[] = array_merge(['year' => $year], $kpis);
-                }
-            }
+            $kpis = getSeriesKPIs($pdo, $seriesId, $year);
+            $trends[] = array_merge(['year' => $year], $kpis);
         }
+        $seriesTrends[$idx] = $trends;
     }
 } catch (Exception $e) {
     $error = $e->getMessage();
 }
 
-// Skapa labels för grupperna
-$labelA = 'Grupp A';
-$labelB = 'Grupp B';
-
-if ($compareMode === 'discipline') {
-    $labelA = $disciplineA ?: 'Välj disciplin';
-    $labelB = $disciplineB ?: 'Välj disciplin';
-} else {
-    if (!empty($groupA)) {
-        $names = array_filter(array_map(function($id) use ($allSeries) {
-            foreach ($allSeries as $s) {
-                if ($s['id'] == $id) return $s['name'];
-            }
-            return null;
-        }, $groupA));
-        $labelA = count($names) > 2 ? count($names) . ' serier' : implode(' + ', $names);
-    }
-    if (!empty($groupB)) {
-        $names = array_filter(array_map(function($id) use ($allSeries) {
-            foreach ($allSeries as $s) {
-                if ($s['id'] == $id) return $s['name'];
-            }
-            return null;
-        }, $groupB));
-        $labelB = count($names) > 2 ? count($names) . ' serier' : implode(' + ', $names);
-    }
-}
+$hasData = !empty($selected) && !empty($seriesTrends);
 
 // Page config
-$page_title = 'Jämför Serier & Format';
+$page_title = 'Jämför Serier';
 $breadcrumbs = [
     ['label' => 'Dashboard', 'url' => '/admin/dashboard.php'],
     ['label' => 'Analytics', 'url' => '/admin/analytics-dashboard.php'],
@@ -366,7 +219,7 @@ $breadcrumbs = [
 $page_actions = '
 <div class="btn-group">
     <a href="/admin/analytics-trends.php" class="btn-admin btn-admin-secondary">
-        <i data-lucide="trending-up"></i> Trender
+        <i data-lucide="trending-up"></i> Trender (Totalt)
     </a>
     <a href="/admin/analytics-dashboard.php" class="btn-admin btn-admin-secondary">
         <i data-lucide="bar-chart-3"></i> Dashboard
@@ -383,99 +236,69 @@ include __DIR__ . '/components/unified-layout.php';
 <!-- Selection Panel -->
 <div class="card mb-lg">
     <div class="card-header">
-        <h3><i data-lucide="sliders"></i> Välj vad du vill jämföra</h3>
+        <h3><i data-lucide="layers"></i> Välj varumärken att jämföra</h3>
     </div>
     <div class="card-body">
         <form method="get" id="compareForm">
-            <!-- Mode Toggle -->
-            <div class="mode-toggle mb-lg">
-                <label class="mode-option <?= $compareMode === 'series' ? 'active' : '' ?>">
-                    <input type="radio" name="mode" value="series" <?= $compareMode === 'series' ? 'checked' : '' ?> onchange="this.form.submit()">
-                    <i data-lucide="layers"></i> Jämför Serier
-                </label>
-                <label class="mode-option <?= $compareMode === 'discipline' ? 'active' : '' ?>">
-                    <input type="radio" name="mode" value="discipline" <?= $compareMode === 'discipline' ? 'checked' : '' ?> onchange="this.form.submit()">
-                    <i data-lucide="bike"></i> Jämför Format/Discipliner
-                </label>
-            </div>
-
             <input type="hidden" name="years" value="<?= $numYears ?>">
 
-            <?php if ($compareMode === 'discipline'): ?>
-            <!-- Discipline Selection -->
-            <div class="compare-grid">
-                <div class="compare-group compare-group-a">
-                    <h4><span class="group-indicator group-a"></span> Disciplin A</h4>
-                    <select name="discA" class="form-select" onchange="this.form.submit()">
-                        <option value="">-- Välj disciplin --</option>
-                        <?php foreach ($allDisciplines as $disc): ?>
-                            <option value="<?= htmlspecialchars($disc['discipline']) ?>" <?= $disciplineA === $disc['discipline'] ? 'selected' : '' ?>>
-                                <?= htmlspecialchars($disc['discipline']) ?> (<?= $disc['event_count'] ?> events)
+            <div class="series-selector">
+                <!-- Serie 1 -->
+                <div class="series-slot">
+                    <div class="slot-header">
+                        <span class="slot-color" style="background: <?= $seriesColors[0] ?>"></span>
+                        <span class="slot-label">Varumärke 1</span>
+                    </div>
+                    <select name="s1" class="form-select" onchange="this.form.submit()">
+                        <option value="">-- Välj serie --</option>
+                        <?php foreach ($allSeries as $series): ?>
+                            <option value="<?= $series['id'] ?>" <?= (isset($_GET['s1']) && $_GET['s1'] == $series['id']) ? 'selected' : '' ?>>
+                                <?= htmlspecialchars($series['name']) ?> (<?= number_format($series['total_participants']) ?>)
                             </option>
                         <?php endforeach; ?>
                     </select>
                 </div>
-                <div class="compare-vs">VS</div>
-                <div class="compare-group compare-group-b">
-                    <h4><span class="group-indicator group-b"></span> Disciplin B</h4>
-                    <select name="discB" class="form-select" onchange="this.form.submit()">
-                        <option value="">-- Välj disciplin --</option>
-                        <?php foreach ($allDisciplines as $disc): ?>
-                            <option value="<?= htmlspecialchars($disc['discipline']) ?>" <?= $disciplineB === $disc['discipline'] ? 'selected' : '' ?>>
-                                <?= htmlspecialchars($disc['discipline']) ?> (<?= $disc['event_count'] ?> events)
+
+                <!-- Serie 2 -->
+                <div class="series-slot">
+                    <div class="slot-header">
+                        <span class="slot-color" style="background: <?= $seriesColors[1] ?>"></span>
+                        <span class="slot-label">Varumärke 2 (valfritt)</span>
+                    </div>
+                    <select name="s2" class="form-select" onchange="this.form.submit()">
+                        <option value="">-- Välj serie --</option>
+                        <?php foreach ($allSeries as $series): ?>
+                            <option value="<?= $series['id'] ?>" <?= (isset($_GET['s2']) && $_GET['s2'] == $series['id']) ? 'selected' : '' ?>>
+                                <?= htmlspecialchars($series['name']) ?> (<?= number_format($series['total_participants']) ?>)
+                            </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+
+                <!-- Serie 3 -->
+                <div class="series-slot">
+                    <div class="slot-header">
+                        <span class="slot-color" style="background: <?= $seriesColors[2] ?>"></span>
+                        <span class="slot-label">Varumärke 3 (valfritt)</span>
+                    </div>
+                    <select name="s3" class="form-select" onchange="this.form.submit()">
+                        <option value="">-- Välj serie --</option>
+                        <?php foreach ($allSeries as $series): ?>
+                            <option value="<?= $series['id'] ?>" <?= (isset($_GET['s3']) && $_GET['s3'] == $series['id']) ? 'selected' : '' ?>>
+                                <?= htmlspecialchars($series['name']) ?> (<?= number_format($series['total_participants']) ?>)
                             </option>
                         <?php endforeach; ?>
                     </select>
                 </div>
             </div>
 
-            <?php else: ?>
-            <!-- Series Selection -->
-            <div class="compare-grid">
-                <div class="compare-group compare-group-a">
-                    <h4><span class="group-indicator group-a"></span> Grupp A (välj en eller flera)</h4>
-                    <div class="series-checkboxes">
-                        <?php foreach ($allSeries as $series): ?>
-                            <label class="series-checkbox <?= in_array($series['id'], $groupA) ? 'checked' : '' ?>">
-                                <input type="checkbox" name="groupA[]" value="<?= $series['id'] ?>"
-                                    <?= in_array($series['id'], $groupA) ? 'checked' : '' ?>>
-                                <span class="series-name"><?= htmlspecialchars($series['name']) ?></span>
-                                <span class="series-meta">
-                                    <?= htmlspecialchars($series['discipline'] ?? '') ?>
-                                    <span class="badge badge-sm"><?= number_format($series['total_participants']) ?></span>
-                                </span>
-                            </label>
-                        <?php endforeach; ?>
-                    </div>
-                </div>
-                <div class="compare-vs">VS</div>
-                <div class="compare-group compare-group-b">
-                    <h4><span class="group-indicator group-b"></span> Grupp B (välj en eller flera)</h4>
-                    <div class="series-checkboxes">
-                        <?php foreach ($allSeries as $series): ?>
-                            <label class="series-checkbox <?= in_array($series['id'], $groupB) ? 'checked' : '' ?>">
-                                <input type="checkbox" name="groupB[]" value="<?= $series['id'] ?>"
-                                    <?= in_array($series['id'], $groupB) ? 'checked' : '' ?>>
-                                <span class="series-name"><?= htmlspecialchars($series['name']) ?></span>
-                                <span class="series-meta">
-                                    <?= htmlspecialchars($series['discipline'] ?? '') ?>
-                                    <span class="badge badge-sm"><?= number_format($series['total_participants']) ?></span>
-                                </span>
-                            </label>
-                        <?php endforeach; ?>
-                    </div>
-                </div>
-            </div>
-            <?php endif; ?>
-
-            <div class="form-actions">
-                <button type="submit" class="btn btn-primary">
-                    <i data-lucide="refresh-cw"></i> Uppdatera jämförelse
-                </button>
-                <a href="?mode=<?= $compareMode ?>&years=<?= $numYears ?>" class="btn btn-secondary">
+            <?php if (!empty($selected)): ?>
+            <div class="selected-info">
+                <a href="?years=<?= $numYears ?>" class="btn btn-secondary btn-sm">
                     <i data-lucide="x"></i> Rensa val
                 </a>
             </div>
+            <?php endif; ?>
         </form>
     </div>
 </div>
@@ -483,18 +306,9 @@ include __DIR__ . '/components/unified-layout.php';
 <!-- Year Range Selector -->
 <div class="filter-bar">
     <form method="get" class="filter-form">
-        <input type="hidden" name="mode" value="<?= $compareMode ?>">
-        <?php if ($compareMode === 'discipline'): ?>
-            <input type="hidden" name="discA" value="<?= htmlspecialchars($disciplineA) ?>">
-            <input type="hidden" name="discB" value="<?= htmlspecialchars($disciplineB) ?>">
-        <?php else: ?>
-            <?php foreach ($groupA as $id): ?>
-                <input type="hidden" name="groupA[]" value="<?= $id ?>">
-            <?php endforeach; ?>
-            <?php foreach ($groupB as $id): ?>
-                <input type="hidden" name="groupB[]" value="<?= $id ?>">
-            <?php endforeach; ?>
-        <?php endif; ?>
+        <?php if (isset($_GET['s1'])): ?><input type="hidden" name="s1" value="<?= htmlspecialchars($_GET['s1']) ?>"><?php endif; ?>
+        <?php if (isset($_GET['s2'])): ?><input type="hidden" name="s2" value="<?= htmlspecialchars($_GET['s2']) ?>"><?php endif; ?>
+        <?php if (isset($_GET['s3'])): ?><input type="hidden" name="s3" value="<?= htmlspecialchars($_GET['s3']) ?>"><?php endif; ?>
         <div class="filter-group">
             <label class="filter-label">Antal år</label>
             <select name="years" class="form-select" onchange="this.form.submit()">
@@ -524,24 +338,20 @@ include __DIR__ . '/components/unified-layout.php';
 <div class="alert alert-info">
     <i data-lucide="info"></i>
     <div>
-        <strong>Välj serier eller discipliner att jämföra</strong><br>
-        Använd panelen ovan för att välja vad du vill jämföra. Du kan välja enskilda serier eller kombinera flera.
+        <strong>Välj minst ett varumärke</strong><br>
+        Använd dropdown-menyerna ovan för att välja 1-3 serier att jämföra.
     </div>
 </div>
 <?php else: ?>
 
-<!-- Comparison Legend -->
-<div class="comparison-legend">
-    <div class="legend-item legend-a">
-        <span class="legend-color"></span>
-        <span class="legend-label"><?= htmlspecialchars($labelA) ?></span>
+<!-- Legend -->
+<div class="chart-legend-bar">
+    <?php foreach ($selected as $idx => $seriesId): ?>
+    <div class="legend-item">
+        <span class="legend-color" style="background: <?= $seriesColors[$idx] ?>"></span>
+        <span class="legend-label"><?= htmlspecialchars($seriesLabels[$idx]) ?></span>
     </div>
-    <?php if (!empty($trendsB)): ?>
-    <div class="legend-item legend-b">
-        <span class="legend-color"></span>
-        <span class="legend-label"><?= htmlspecialchars($labelB) ?></span>
-    </div>
-    <?php endif; ?>
+    <?php endforeach; ?>
 </div>
 
 <!-- DELTAGARTRENDER -->
@@ -555,10 +365,12 @@ include __DIR__ . '/components/unified-layout.php';
             <canvas id="participantChart"></canvas>
         </div>
         <div class="chart-legend-custom">
-            <div class="legend-item"><span class="legend-color" style="background: #37d4d6;"></span> <?= htmlspecialchars($labelA) ?> - Totalt</div>
-            <?php if (!empty($trendsB)): ?>
-            <div class="legend-item"><span class="legend-color" style="background: #f97316;"></span> <?= htmlspecialchars($labelB) ?> - Totalt</div>
-            <?php endif; ?>
+            <?php foreach ($selected as $idx => $seriesId): ?>
+            <div class="legend-item">
+                <span class="legend-color" style="background: <?= $seriesColors[$idx] ?>"></span>
+                <?= htmlspecialchars($seriesLabels[$idx]) ?>
+            </div>
+            <?php endforeach; ?>
         </div>
     </div>
 </div>
@@ -590,8 +402,20 @@ include __DIR__ . '/components/unified-layout.php';
     </div>
 </div>
 
-<!-- NYA RIDERS & DEMOGRAPHICS -->
+<!-- CROSS-PARTICIPATION & NYA RIDERS -->
 <div class="grid grid-2 grid-gap-lg">
+    <div class="admin-card">
+        <div class="admin-card-header">
+            <h2><i data-lucide="git-branch"></i> Cross-Participation</h2>
+        </div>
+        <div class="admin-card-body">
+            <div class="chart-container" style="height: 280px;">
+                <canvas id="crossParticipationChart"></canvas>
+            </div>
+            <p class="chart-description">Andel riders som även deltar i andra serier</p>
+        </div>
+    </div>
+
     <div class="admin-card">
         <div class="admin-card-header">
             <h2><i data-lucide="user-plus"></i> Nya Riders (Rekrytering)</h2>
@@ -603,7 +427,10 @@ include __DIR__ . '/components/unified-layout.php';
             <p class="chart-description">Antal helt nya deltagare per år</p>
         </div>
     </div>
+</div>
 
+<!-- DEMOGRAPHICS -->
+<div class="grid grid-2 grid-gap-lg">
     <div class="admin-card">
         <div class="admin-card-header">
             <h2><i data-lucide="users"></i> Könsfördelning</h2>
@@ -615,25 +442,28 @@ include __DIR__ . '/components/unified-layout.php';
             <p class="chart-description">Andel kvinnliga deltagare över tid</p>
         </div>
     </div>
-</div>
 
-<!-- GENOMSNITTSÅLDER -->
-<div class="admin-card">
-    <div class="admin-card-header">
-        <h2><i data-lucide="calendar"></i> Genomsnittsålder</h2>
-    </div>
-    <div class="admin-card-body">
-        <div class="chart-container" style="height: 280px;">
-            <canvas id="ageChart"></canvas>
+    <div class="admin-card">
+        <div class="admin-card-header">
+            <h2><i data-lucide="calendar"></i> Genomsnittsålder</h2>
         </div>
-        <p class="chart-description">Genomsnittsålder för aktiva deltagare per säsong</p>
+        <div class="admin-card-body">
+            <div class="chart-container" style="height: 280px;">
+                <canvas id="ageChart"></canvas>
+            </div>
+            <p class="chart-description">Genomsnittsålder för aktiva deltagare per säsong</p>
+        </div>
     </div>
 </div>
 
-<!-- SAMMANFATTNINGSTABELL -->
+<!-- SAMMANFATTNINGSTABELLER -->
+<?php foreach ($selected as $idx => $seriesId): ?>
 <div class="admin-card">
     <div class="admin-card-header">
-        <h2><i data-lucide="table"></i> Detaljerad Data - <?= htmlspecialchars($labelA) ?></h2>
+        <h2>
+            <span class="legend-color-inline" style="background: <?= $seriesColors[$idx] ?>"></span>
+            <?= htmlspecialchars($seriesLabels[$idx]) ?>
+        </h2>
     </div>
     <div class="admin-card-body" style="padding: 0;">
         <div class="admin-table-container">
@@ -646,12 +476,13 @@ include __DIR__ . '/components/unified-layout.php';
                         <th class="text-right">Återvändare</th>
                         <th class="text-right">Retention</th>
                         <th class="text-right">Tillväxt</th>
+                        <th class="text-right">Cross-Part.</th>
                         <th class="text-right">Snittålder</th>
                         <th class="text-right">Kvinnor</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <?php foreach (array_reverse($trendsA) as $row): ?>
+                    <?php foreach (array_reverse($seriesTrends[$idx]) as $row): ?>
                     <tr>
                         <td><strong><?= $row['year'] ?></strong></td>
                         <td class="text-right"><?= number_format($row['total_riders']) ?></td>
@@ -667,6 +498,7 @@ include __DIR__ . '/components/unified-layout.php';
                                 <?= $row['growth_rate'] >= 0 ? '+' : '' ?><?= $row['growth_rate'] ?>%
                             </span>
                         </td>
+                        <td class="text-right"><?= $row['cross_participation'] ?>%</td>
                         <td class="text-right"><?= $row['average_age'] ?> år</td>
                         <td class="text-right"><?= $row['female_pct'] ?>%</td>
                     </tr>
@@ -676,204 +508,51 @@ include __DIR__ . '/components/unified-layout.php';
         </div>
     </div>
 </div>
-
-<?php if (!empty($trendsB)): ?>
-<div class="admin-card">
-    <div class="admin-card-header">
-        <h2><i data-lucide="table"></i> Detaljerad Data - <?= htmlspecialchars($labelB) ?></h2>
-    </div>
-    <div class="admin-card-body" style="padding: 0;">
-        <div class="admin-table-container">
-            <table class="admin-table">
-                <thead>
-                    <tr>
-                        <th>Säsong</th>
-                        <th class="text-right">Totalt</th>
-                        <th class="text-right">Nya</th>
-                        <th class="text-right">Återvändare</th>
-                        <th class="text-right">Retention</th>
-                        <th class="text-right">Tillväxt</th>
-                        <th class="text-right">Snittålder</th>
-                        <th class="text-right">Kvinnor</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php foreach (array_reverse($trendsB) as $row): ?>
-                    <tr>
-                        <td><strong><?= $row['year'] ?></strong></td>
-                        <td class="text-right"><?= number_format($row['total_riders']) ?></td>
-                        <td class="text-right"><?= number_format($row['new_riders']) ?></td>
-                        <td class="text-right"><?= number_format($row['retained_riders']) ?></td>
-                        <td class="text-right">
-                            <span class="badge <?= $row['retention_rate'] >= 60 ? 'badge-success' : ($row['retention_rate'] >= 40 ? 'badge-warning' : 'badge-danger') ?>">
-                                <?= $row['retention_rate'] ?>%
-                            </span>
-                        </td>
-                        <td class="text-right">
-                            <span class="trend-indicator <?= $row['growth_rate'] >= 0 ? 'positive' : 'negative' ?>">
-                                <?= $row['growth_rate'] >= 0 ? '+' : '' ?><?= $row['growth_rate'] ?>%
-                            </span>
-                        </td>
-                        <td class="text-right"><?= $row['average_age'] ?> år</td>
-                        <td class="text-right"><?= $row['female_pct'] ?>%</td>
-                    </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
-        </div>
-    </div>
-</div>
-<?php endif; ?>
+<?php endforeach; ?>
 
 <?php endif; ?>
 
 <style>
-/* Mode Toggle */
-.mode-toggle {
-    display: flex;
-    gap: var(--space-md);
-    justify-content: center;
-}
-
-.mode-option {
-    display: flex;
-    align-items: center;
-    gap: var(--space-sm);
-    padding: var(--space-md) var(--space-lg);
-    background: var(--color-bg-hover);
-    border: 2px solid var(--color-border);
-    border-radius: var(--radius-md);
-    cursor: pointer;
-    transition: all 0.2s;
-    font-weight: var(--weight-medium);
-}
-
-.mode-option:hover {
-    border-color: var(--color-accent);
-}
-
-.mode-option.active {
-    background: var(--color-accent-light);
-    border-color: var(--color-accent);
-    color: var(--color-accent);
-}
-
-.mode-option input {
-    display: none;
-}
-
-/* Compare Grid */
-.compare-grid {
+/* Series Selector */
+.series-selector {
     display: grid;
-    grid-template-columns: 1fr auto 1fr;
+    grid-template-columns: repeat(3, 1fr);
     gap: var(--space-lg);
-    align-items: start;
 }
 
-.compare-vs {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    font-size: 1.5rem;
-    font-weight: bold;
-    color: var(--color-text-muted);
-    padding-top: 40px;
-}
-
-.compare-group h4 {
-    display: flex;
-    align-items: center;
-    gap: var(--space-sm);
-    margin-bottom: var(--space-md);
-    font-size: 1rem;
-}
-
-.group-indicator {
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-}
-
-.group-indicator.group-a,
-.compare-group-a .group-indicator {
-    background: #37d4d6;
-}
-
-.group-indicator.group-b,
-.compare-group-b .group-indicator {
-    background: #f97316;
-}
-
-/* Series Checkboxes */
-.series-checkboxes {
+.series-slot {
     display: flex;
     flex-direction: column;
-    gap: var(--space-xs);
-    max-height: 300px;
-    overflow-y: auto;
-    padding: var(--space-sm);
-    background: var(--color-bg-page);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-md);
+    gap: var(--space-sm);
 }
 
-.series-checkbox {
+.slot-header {
     display: flex;
     align-items: center;
     gap: var(--space-sm);
-    padding: var(--space-sm);
-    background: var(--color-bg-card);
-    border: 1px solid transparent;
-    border-radius: var(--radius-sm);
-    cursor: pointer;
-    transition: all 0.15s;
-}
-
-.series-checkbox:hover {
-    background: var(--color-bg-hover);
-}
-
-.series-checkbox.checked {
-    background: var(--color-accent-light);
-    border-color: var(--color-accent);
-}
-
-.series-checkbox input {
-    width: 16px;
-    height: 16px;
-    accent-color: var(--color-accent);
-}
-
-.series-name {
-    flex: 1;
     font-weight: var(--weight-medium);
 }
 
-.series-meta {
-    display: flex;
-    align-items: center;
-    gap: var(--space-xs);
+.slot-color {
+    width: 16px;
+    height: 16px;
+    border-radius: var(--radius-sm);
+}
+
+.slot-label {
     font-size: var(--text-sm);
-    color: var(--color-text-muted);
+    color: var(--color-text-secondary);
 }
 
-.badge-sm {
-    font-size: 0.7rem;
-    padding: 2px 6px;
-}
-
-/* Form Actions */
-.form-actions {
-    display: flex;
-    gap: var(--space-md);
-    justify-content: center;
+.selected-info {
     margin-top: var(--space-lg);
     padding-top: var(--space-lg);
     border-top: 1px solid var(--color-border);
+    text-align: center;
 }
 
-/* Comparison Legend */
-.comparison-legend {
+/* Legend Bar */
+.chart-legend-bar {
     display: flex;
     justify-content: center;
     gap: var(--space-xl);
@@ -884,25 +563,27 @@ include __DIR__ . '/components/unified-layout.php';
     border-radius: var(--radius-md);
 }
 
-.comparison-legend .legend-item {
+.chart-legend-bar .legend-item {
     display: flex;
     align-items: center;
     gap: var(--space-sm);
-    font-weight: var(--weight-medium);
+    font-weight: var(--weight-semibold);
+    font-size: var(--text-base);
 }
 
-.comparison-legend .legend-color {
-    width: 16px;
-    height: 16px;
+.chart-legend-bar .legend-color {
+    width: 20px;
+    height: 20px;
     border-radius: var(--radius-sm);
 }
 
-.legend-a .legend-color {
-    background: #37d4d6;
-}
-
-.legend-b .legend-color {
-    background: #f97316;
+.legend-color-inline {
+    display: inline-block;
+    width: 16px;
+    height: 16px;
+    border-radius: var(--radius-sm);
+    margin-right: var(--space-sm);
+    vertical-align: middle;
 }
 
 /* Filter Bar */
@@ -1038,16 +719,8 @@ include __DIR__ . '/components/unified-layout.php';
 
 /* Responsive */
 @media (max-width: 899px) {
-    .compare-grid {
+    .series-selector {
         grid-template-columns: 1fr;
-    }
-
-    .compare-vs {
-        padding: var(--space-md) 0;
-    }
-
-    .mode-toggle {
-        flex-direction: column;
     }
 
     .filter-bar {
@@ -1064,7 +737,7 @@ include __DIR__ . '/components/unified-layout.php';
         grid-template-columns: 1fr;
     }
 
-    .comparison-legend {
+    .chart-legend-bar {
         flex-direction: column;
         align-items: center;
         gap: var(--space-sm);
@@ -1073,7 +746,8 @@ include __DIR__ . '/components/unified-layout.php';
 
 @media (max-width: 767px) {
     .filter-bar,
-    .card {
+    .card,
+    .chart-legend-bar {
         margin-left: calc(-1 * var(--container-padding, 16px));
         margin-right: calc(-1 * var(--container-padding, 16px));
         border-radius: 0;
@@ -1089,10 +763,6 @@ include __DIR__ . '/components/unified-layout.php';
     .admin-table td {
         padding: var(--space-xs);
     }
-
-    .form-actions {
-        flex-direction: column;
-    }
 }
 </style>
 
@@ -1100,21 +770,10 @@ include __DIR__ . '/components/unified-layout.php';
 <script>
 document.addEventListener('DOMContentLoaded', function() {
     // Data från PHP
-    const trendsA = <?= json_encode($trendsA) ?>;
-    const trendsB = <?= json_encode($trendsB) ?>;
-    const labelA = <?= json_encode($labelA) ?>;
-    const labelB = <?= json_encode($labelB) ?>;
-    const years = trendsA.map(d => d.year);
-
-    // Färgschema
-    const colorA = '#37d4d6';
-    const colorB = '#f97316';
-    const colors = {
-        success: '#10b981',
-        warning: '#fbbf24',
-        error: '#ef4444',
-        blue: '#38bdf8'
-    };
+    const seriesTrends = <?= json_encode($seriesTrends) ?>;
+    const seriesLabels = <?= json_encode($seriesLabels) ?>;
+    const seriesColors = <?= json_encode($seriesColors) ?>;
+    const years = seriesTrends[0] ? seriesTrends[0].map(d => d.year) : [];
 
     // Gemensamma chart-options
     const commonOptions = {
@@ -1163,34 +822,23 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     };
 
-    // Skapa datasets beroende på om vi har B-data
-    function createDatasets(dataKey, labelSuffix = '') {
-        const datasets = [{
-            label: labelA + labelSuffix,
-            data: trendsA.map(d => d[dataKey]),
-            borderColor: colorA,
-            backgroundColor: colorA + '20',
-            fill: true,
-            tension: 0.3,
-            borderWidth: 3,
-            pointRadius: 4,
-            pointHoverRadius: 6
-        }];
-
-        if (trendsB.length > 0) {
+    // Skapa datasets för alla valda serier
+    function createDatasets(dataKey, suffix = '') {
+        const datasets = [];
+        Object.keys(seriesTrends).forEach((idx) => {
+            const data = seriesTrends[idx];
             datasets.push({
-                label: labelB + labelSuffix,
-                data: trendsB.map(d => d[dataKey]),
-                borderColor: colorB,
-                backgroundColor: colorB + '20',
-                fill: true,
+                label: seriesLabels[idx] + suffix,
+                data: data.map(d => d[dataKey]),
+                borderColor: seriesColors[idx],
+                backgroundColor: seriesColors[idx] + '20',
+                fill: false,
                 tension: 0.3,
                 borderWidth: 3,
                 pointRadius: 4,
                 pointHoverRadius: 6
             });
-        }
-
+        });
         return datasets;
     }
 
@@ -1254,26 +902,19 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // 3. GROWTH CHART (Bar)
-    const growthDatasets = [{
-        label: labelA,
-        data: trendsA.map(d => d.growth_rate),
-        backgroundColor: colorA + '80',
-        borderColor: colorA,
-        borderWidth: 2,
-        borderRadius: 4
-    }];
-
-    if (trendsB.length > 0) {
+    // 3. GROWTH CHART
+    const growthDatasets = [];
+    Object.keys(seriesTrends).forEach((idx) => {
+        const data = seriesTrends[idx];
         growthDatasets.push({
-            label: labelB,
-            data: trendsB.map(d => d.growth_rate),
-            backgroundColor: colorB + '80',
-            borderColor: colorB,
+            label: seriesLabels[idx],
+            data: data.map(d => d.growth_rate),
+            backgroundColor: seriesColors[idx] + '80',
+            borderColor: seriesColors[idx],
             borderWidth: 2,
             borderRadius: 4
         });
-    }
+    });
 
     new Chart(document.getElementById('growthChart'), {
         type: 'bar',
@@ -1309,7 +950,42 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // 4. NEW RIDERS CHART
+    // 4. CROSS-PARTICIPATION CHART
+    new Chart(document.getElementById('crossParticipationChart'), {
+        type: 'line',
+        data: {
+            labels: years,
+            datasets: createDatasets('cross_participation')
+        },
+        options: {
+            ...commonOptions,
+            scales: {
+                ...commonOptions.scales,
+                y: {
+                    ...commonOptions.scales.y,
+                    min: 0,
+                    ticks: {
+                        ...commonOptions.scales.y.ticks,
+                        callback: value => value + '%'
+                    }
+                }
+            },
+            plugins: {
+                ...commonOptions.plugins,
+                tooltip: {
+                    ...commonOptions.plugins.tooltip,
+                    callbacks: {
+                        ...commonOptions.plugins.tooltip.callbacks,
+                        label: function(context) {
+                            return context.dataset.label + ': ' + context.parsed.y + '%';
+                        }
+                    }
+                }
+            }
+        }
+    });
+
+    // 5. NEW RIDERS CHART
     new Chart(document.getElementById('newRidersChart'), {
         type: 'line',
         data: {
@@ -1325,7 +1001,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     callbacks: {
                         ...commonOptions.plugins.tooltip.callbacks,
                         label: function(context) {
-                            return context.dataset.label + ': ' + context.parsed.y.toLocaleString() + ' nya riders';
+                            return context.dataset.label + ': ' + context.parsed.y.toLocaleString() + ' nya';
                         }
                     }
                 }
@@ -1333,7 +1009,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // 5. GENDER CHART
+    // 6. GENDER CHART
     new Chart(document.getElementById('genderChart'), {
         type: 'line',
         data: {
@@ -1369,7 +1045,7 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // 6. AGE CHART
+    // 7. AGE CHART
     new Chart(document.getElementById('ageChart'), {
         type: 'line',
         data: {
@@ -1401,13 +1077,6 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             }
         }
-    });
-});
-
-// Checkbox styling
-document.querySelectorAll('.series-checkbox input').forEach(cb => {
-    cb.addEventListener('change', function() {
-        this.closest('.series-checkbox').classList.toggle('checked', this.checked);
     });
 });
 </script>
