@@ -279,6 +279,20 @@ include __DIR__ . '/components/unified-layout.php';
         </div>
     </div>
 
+    <!-- RF Registration -->
+    <div class="tool-card">
+        <div class="tool-card-header">
+            <div class="tool-icon" style="background: linear-gradient(135deg, #006aa7 50%, #fecc00 50%);"><i data-lucide="shield-check" style="color: #fff;"></i></div>
+            <div>
+                <h4 class="tool-title">RF-registrering</h4>
+                <p class="tool-description">Synka klubbar med SCF/NCF</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/club-rf-registration.php" class="btn-admin btn-admin-primary">Synka</a>
+        </div>
+    </div>
+
 </div>
 
 <!-- ========== IMPORT & RESULTAT ========== -->
