@@ -244,26 +244,56 @@ class KPICalculator {
      * @return array Aldersgrupper med antal
      */
     public function getAgeDistribution(int $year): array {
+        // Hamta aldersfordelning for alla riders
+        // Anvander birth_year om tillgangligt, annars infererar fran klassens min_age
         $stmt = $this->pdo->prepare("
             SELECT
                 CASE
-                    WHEN $year - r.birth_year <= 12 THEN '5-12'
-                    WHEN $year - r.birth_year BETWEEN 13 AND 14 THEN '13-14'
-                    WHEN $year - r.birth_year BETWEEN 15 AND 16 THEN '15-16'
-                    WHEN $year - r.birth_year BETWEEN 17 AND 18 THEN '17-18'
-                    WHEN $year - r.birth_year BETWEEN 19 AND 30 THEN '19-30'
-                    WHEN $year - r.birth_year BETWEEN 31 AND 35 THEN '31-35'
-                    WHEN $year - r.birth_year BETWEEN 36 AND 45 THEN '36-45'
-                    WHEN $year - r.birth_year BETWEEN 46 AND 50 THEN '46-50'
-                    WHEN $year - r.birth_year > 50 THEN '50+'
+                    -- Om birth_year finns, berakna alder direkt
+                    WHEN r.birth_year IS NOT NULL AND r.birth_year > 1900 THEN
+                        CASE
+                            WHEN $year - r.birth_year <= 12 THEN '5-12'
+                            WHEN $year - r.birth_year BETWEEN 13 AND 14 THEN '13-14'
+                            WHEN $year - r.birth_year BETWEEN 15 AND 16 THEN '15-16'
+                            WHEN $year - r.birth_year BETWEEN 17 AND 18 THEN '17-18'
+                            WHEN $year - r.birth_year BETWEEN 19 AND 30 THEN '19-30'
+                            WHEN $year - r.birth_year BETWEEN 31 AND 35 THEN '31-35'
+                            WHEN $year - r.birth_year BETWEEN 36 AND 45 THEN '36-45'
+                            WHEN $year - r.birth_year BETWEEN 46 AND 50 THEN '46-50'
+                            WHEN $year - r.birth_year > 50 THEN '50+'
+                            ELSE 'Okand'
+                        END
+                    -- Om birth_year saknas, inferera fran klassens min_age
+                    WHEN inferred_age.min_age IS NOT NULL THEN
+                        CASE
+                            WHEN inferred_age.min_age <= 12 THEN '5-12'
+                            WHEN inferred_age.min_age BETWEEN 13 AND 14 THEN '13-14'
+                            WHEN inferred_age.min_age BETWEEN 15 AND 16 THEN '15-16'
+                            WHEN inferred_age.min_age BETWEEN 17 AND 18 THEN '17-18'
+                            WHEN inferred_age.min_age BETWEEN 19 AND 30 THEN '19-30'
+                            WHEN inferred_age.min_age BETWEEN 31 AND 35 THEN '31-35'
+                            WHEN inferred_age.min_age BETWEEN 36 AND 45 THEN '36-45'
+                            WHEN inferred_age.min_age BETWEEN 46 AND 50 THEN '46-50'
+                            WHEN inferred_age.min_age > 50 THEN '50+'
+                            ELSE 'Okand'
+                        END
                     ELSE 'Okand'
                 END as age_group,
-                COUNT(*) as count
+                COUNT(DISTINCT rys.rider_id) as count
             FROM rider_yearly_stats rys
             JOIN riders r ON rys.rider_id = r.id
+            LEFT JOIN (
+                -- Subquery for att hamta klassens min_age for riders utan birth_year
+                SELECT res2.cyclist_id, MIN(c2.min_age) as min_age
+                FROM results res2
+                JOIN events e2 ON res2.event_id = e2.id
+                JOIN classes c2 ON res2.class_id = c2.id
+                WHERE YEAR(e2.date) = ?
+                  AND c2.min_age IS NOT NULL
+                GROUP BY res2.cyclist_id
+            ) inferred_age ON inferred_age.cyclist_id = rys.rider_id
+                          AND (r.birth_year IS NULL OR r.birth_year <= 1900)
             WHERE rys.season_year = ?
-              AND r.birth_year IS NOT NULL
-              AND r.birth_year > 1900
             GROUP BY age_group
             ORDER BY
                 CASE age_group
@@ -279,7 +309,7 @@ class KPICalculator {
                     ELSE 10
                 END
         ");
-        $stmt->execute([$year]);
+        $stmt->execute([$year, $year]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
@@ -340,28 +370,60 @@ class KPICalculator {
      * @return array Aldersgrupper med antal
      */
     public function getRookieAgeDistribution(int $year, ?int $seriesId = null): array {
-        $seriesFilter = $seriesId !== null ? " AND rys.primary_series_id = ?" : "";
+        // Hamta aldersfordelning for rookies
+        // Anvander birth_year om tillgangligt, annars infererar fran klassens min_age
+        $seriesFilter = $seriesId !== null ? " AND e.series_id = ?" : "";
         $stmt = $this->pdo->prepare("
             SELECT
                 CASE
-                    WHEN $year - r.birth_year <= 12 THEN '5-12'
-                    WHEN $year - r.birth_year BETWEEN 13 AND 14 THEN '13-14'
-                    WHEN $year - r.birth_year BETWEEN 15 AND 16 THEN '15-16'
-                    WHEN $year - r.birth_year BETWEEN 17 AND 18 THEN '17-18'
-                    WHEN $year - r.birth_year BETWEEN 19 AND 30 THEN '19-30'
-                    WHEN $year - r.birth_year BETWEEN 31 AND 35 THEN '31-35'
-                    WHEN $year - r.birth_year BETWEEN 36 AND 45 THEN '36-45'
-                    WHEN $year - r.birth_year BETWEEN 46 AND 50 THEN '46-50'
-                    WHEN $year - r.birth_year > 50 THEN '50+'
+                    -- Om birth_year finns, berakna alder direkt
+                    WHEN r.birth_year IS NOT NULL AND r.birth_year > 1900 THEN
+                        CASE
+                            WHEN $year - r.birth_year <= 12 THEN '5-12'
+                            WHEN $year - r.birth_year BETWEEN 13 AND 14 THEN '13-14'
+                            WHEN $year - r.birth_year BETWEEN 15 AND 16 THEN '15-16'
+                            WHEN $year - r.birth_year BETWEEN 17 AND 18 THEN '17-18'
+                            WHEN $year - r.birth_year BETWEEN 19 AND 30 THEN '19-30'
+                            WHEN $year - r.birth_year BETWEEN 31 AND 35 THEN '31-35'
+                            WHEN $year - r.birth_year BETWEEN 36 AND 45 THEN '36-45'
+                            WHEN $year - r.birth_year BETWEEN 46 AND 50 THEN '46-50'
+                            WHEN $year - r.birth_year > 50 THEN '50+'
+                            ELSE 'Okand'
+                        END
+                    -- Om birth_year saknas, inferera fran klassens min_age
+                    WHEN inferred_age.min_age IS NOT NULL THEN
+                        CASE
+                            WHEN inferred_age.min_age <= 12 THEN '5-12'
+                            WHEN inferred_age.min_age BETWEEN 13 AND 14 THEN '13-14'
+                            WHEN inferred_age.min_age BETWEEN 15 AND 16 THEN '15-16'
+                            WHEN inferred_age.min_age BETWEEN 17 AND 18 THEN '17-18'
+                            WHEN inferred_age.min_age BETWEEN 19 AND 30 THEN '19-30'
+                            WHEN inferred_age.min_age BETWEEN 31 AND 35 THEN '31-35'
+                            WHEN inferred_age.min_age BETWEEN 36 AND 45 THEN '36-45'
+                            WHEN inferred_age.min_age BETWEEN 46 AND 50 THEN '46-50'
+                            WHEN inferred_age.min_age > 50 THEN '50+'
+                            ELSE 'Okand'
+                        END
                     ELSE 'Okand'
                 END as age_group,
-                COUNT(*) as count
+                COUNT(DISTINCT rys.rider_id) as count
             FROM rider_yearly_stats rys
             JOIN riders r ON rys.rider_id = r.id
+            LEFT JOIN (
+                -- Subquery for att hamta klassens min_age for riders utan birth_year
+                SELECT res2.cyclist_id, MIN(c2.min_age) as min_age
+                FROM results res2
+                JOIN events e2 ON res2.event_id = e2.id
+                JOIN classes c2 ON res2.class_id = c2.id
+                WHERE YEAR(e2.date) = ?
+                  AND c2.min_age IS NOT NULL
+                GROUP BY res2.cyclist_id
+            ) inferred_age ON inferred_age.cyclist_id = rys.rider_id
+                          AND (r.birth_year IS NULL OR r.birth_year <= 1900)
+            LEFT JOIN results res ON res.cyclist_id = rys.rider_id
+            LEFT JOIN events e ON res.event_id = e.id AND YEAR(e.date) = ?
             WHERE rys.season_year = ?
               AND rys.is_rookie = 1
-              AND r.birth_year IS NOT NULL
-              AND r.birth_year > 1900
               $seriesFilter
             GROUP BY age_group
             ORDER BY
@@ -378,7 +440,7 @@ class KPICalculator {
                     ELSE 10
                 END
         ");
-        $params = [$year];
+        $params = [$year, $year, $year];
         if ($seriesId !== null) $params[] = $seriesId;
         $stmt->execute($params);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -395,7 +457,7 @@ class KPICalculator {
         $seriesFilter = $seriesId !== null ? " AND e.series_id = ?" : "";
         $stmt = $this->pdo->prepare("
             SELECT
-                COALESCE(c.name, 'Okand klass') as class_name,
+                COALESCE(c.display_name, c.name, 'Okand klass') as class_name,
                 COUNT(DISTINCT res.cyclist_id) as rookie_count
             FROM results res
             JOIN events e ON res.event_id = e.id
@@ -404,7 +466,7 @@ class KPICalculator {
             WHERE YEAR(e.date) = ?
               AND rys.is_rookie = 1
               $seriesFilter
-            GROUP BY res.class_id, c.name
+            GROUP BY res.class_id, c.display_name, c.name
             ORDER BY rookie_count DESC
         ");
         $params = [$year, $year];
