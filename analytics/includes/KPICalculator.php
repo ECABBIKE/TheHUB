@@ -226,6 +226,10 @@ class KPICalculator {
      * @param int $year Ar
      * @return array Discipliner med antal
      */
+    /**
+     * Hamta disciplinfordelning baserat pa primary_discipline
+     * OBS: Detta visar EN disciplin per rider (den de deltagit i mest)
+     */
     public function getDisciplineDistribution(int $year): array {
         $stmt = $this->pdo->prepare("
             SELECT
@@ -235,6 +239,28 @@ class KPICalculator {
             WHERE season_year = ?
             GROUP BY primary_discipline
             ORDER BY count DESC
+        ");
+        $stmt->execute([$year]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Hamta faktiskt deltagande per disciplin
+     * Visar hur manga unika deltagare som deltagit i varje disciplin,
+     * baserat pa faktiska resultat (inte primary_discipline).
+     * En person kan raknas i flera discipliner om de deltagit i flera.
+     */
+    public function getDisciplineParticipation(int $year): array {
+        $stmt = $this->pdo->prepare("
+            SELECT
+                COALESCE(e.discipline, 'Okand') as discipline,
+                COUNT(DISTINCT res.cyclist_id) as unique_riders,
+                COUNT(*) as total_starts
+            FROM results res
+            JOIN events e ON res.event_id = e.id
+            WHERE YEAR(e.date) = ?
+            GROUP BY e.discipline
+            ORDER BY unique_riders DESC
         ");
         $stmt->execute([$year]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -417,6 +443,32 @@ class KPICalculator {
             ORDER BY rookie_count DESC
         ");
         $stmt->execute([$year]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Hamta rookie-deltagande per disciplin (baserat pa faktiska starter)
+     * Till skillnad fran primary_discipline som bara visar EN disciplin per rider,
+     * visar denna hur manga rookies som faktiskt deltagit i varje disciplin.
+     *
+     * @param int $year Ar
+     * @return array Discipliner med antal rookies och starter
+     */
+    public function getRookieDisciplineParticipation(int $year): array {
+        $stmt = $this->pdo->prepare("
+            SELECT
+                COALESCE(e.discipline, 'Okand') as discipline,
+                COUNT(DISTINCT res.cyclist_id) as rookie_count,
+                COUNT(*) as total_starts
+            FROM results res
+            JOIN events e ON res.event_id = e.id
+            JOIN rider_yearly_stats rys ON res.cyclist_id = rys.rider_id AND rys.season_year = ?
+            WHERE YEAR(e.date) = ?
+              AND rys.is_rookie = 1
+            GROUP BY e.discipline
+            ORDER BY rookie_count DESC
+        ");
+        $stmt->execute([$year, $year]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 

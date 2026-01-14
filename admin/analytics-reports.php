@@ -113,7 +113,8 @@ try {
                 'average_age' => $kpiCalc->getAverageAge($selectedYear),
                 'gender' => $kpiCalc->getGenderDistribution($selectedYear),
                 'ages' => $kpiCalc->getAgeDistribution($selectedYear),
-                'disciplines' => $kpiCalc->getDisciplineDistribution($selectedYear)
+                'disciplines' => $kpiCalc->getDisciplineDistribution($selectedYear),
+                'discipline_participation' => $kpiCalc->getDisciplineParticipation($selectedYear)
             ];
             break;
 
@@ -139,6 +140,7 @@ try {
                 'gender' => $kpiCalc->getRookieGenderDistribution($selectedYear),
                 'ages' => $kpiCalc->getRookieAgeDistribution($selectedYear),
                 'classes' => $kpiCalc->getRookieClassDistribution($selectedYear),
+                'disciplines' => $kpiCalc->getRookieDisciplineParticipation($selectedYear),
                 'events' => $kpiCalc->getEventsWithMostRookies($selectedYear, 20),
                 'clubs' => $kpiCalc->getClubsWithMostRookies($selectedYear, 20),
                 'list' => $kpiCalc->getRookiesList($selectedYear, $selectedSeries),
@@ -610,7 +612,39 @@ include __DIR__ . '/components/unified-layout.php';
     </div>
 
     <div class="report-section">
-        <h3>Disciplinfordelning</h3>
+        <h3>Deltagande per Disciplin (faktiskt)</h3>
+        <p style="color: var(--color-text-secondary); font-size: var(--text-sm); margin-bottom: var(--space-md);">
+            Antal unika deltagare som faktiskt deltagit i varje disciplin. En person kan raknas i flera discipliner.
+        </p>
+        <?php if (!empty($reportData['discipline_participation'])): ?>
+        <table class="report-table">
+            <thead>
+                <tr>
+                    <th>Disciplin</th>
+                    <th>Unika Deltagare</th>
+                    <th>Totalt Starter</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ($reportData['discipline_participation'] as $disc): ?>
+                <tr>
+                    <td><?= htmlspecialchars($disc['discipline']) ?></td>
+                    <td><strong><?= number_format($disc['unique_riders']) ?></strong></td>
+                    <td><?= number_format($disc['total_starts']) ?></td>
+                </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+        <?php else: ?>
+        <p>Ingen data tillganglig.</p>
+        <?php endif; ?>
+    </div>
+
+    <div class="report-section">
+        <h3>Huvuddisciplin (primary)</h3>
+        <p style="color: var(--color-text-secondary); font-size: var(--text-sm); margin-bottom: var(--space-md);">
+            Den disciplin varje akare deltagit i MEST. En person raknas bara en gang.
+        </p>
         <table class="report-table">
             <thead>
                 <tr>
