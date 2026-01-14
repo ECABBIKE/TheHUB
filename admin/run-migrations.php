@@ -34,39 +34,33 @@ try {
     // Table might not exist yet
 }
 
-// Get available migrations - check both possible directories
-$possibleDirs = [
-    __DIR__ . '/../database/migrations/',
-    __DIR__ . '/../migrations/',
-    __DIR__ . '/migrations/',
+// Get available migrations - check ALL directories and merge
+$migrationDirs = [
+    'database' => __DIR__ . '/../database/migrations/',
+    'analytics' => __DIR__ . '/../analytics/migrations/',
+    'root' => __DIR__ . '/../migrations/',
+    'admin' => __DIR__ . '/migrations/',
 ];
-
-$migrationsDir = null;
-foreach ($possibleDirs as $dir) {
-    if (is_dir($dir)) {
-        $migrationsDir = $dir;
-        break;
-    }
-}
 
 $migrations = [];
 $todaysMigrations = [];
 $today = date('Y-m-d');
+$dirSources = []; // Track which dir each file came from
 
-if ($migrationsDir && is_dir($migrationsDir)) {
+foreach ($migrationDirs as $source => $dir) {
+    if (!is_dir($dir)) continue;
+
     // Get both .sql and .php migration files
-    $sqlFiles = glob($migrationsDir . '*.sql') ?: [];
-    $phpFiles = glob($migrationsDir . '*.php') ?: [];
+    $sqlFiles = glob($dir . '*.sql') ?: [];
+    $phpFiles = glob($dir . '*.php') ?: [];
 
     // Filter out non-migration PHP files
     $phpFiles = array_filter($phpFiles, function($file) {
         $filename = basename($file);
-        // Only include numbered migrations (e.g., 099_xxx.php, 100_xxx.php)
         return preg_match('/^\d{3}_/', $filename);
     });
 
     $allFiles = array_merge($sqlFiles, $phpFiles);
-    sort($allFiles);
 
     foreach ($allFiles as $file) {
         $filename = basename($file);
@@ -80,17 +74,22 @@ if ($migrationsDir && is_dir($migrationsDir)) {
             'name' => pathinfo($file, PATHINFO_FILENAME),
             'executed' => $isExecuted,
             'date' => $fileDate,
-            'type' => $ext
+            'type' => $ext,
+            'source' => $source
         ];
 
         $migrations[] = $migrationData;
+        $dirSources[$filename] = $dir;
 
-        // Collect today's migrations (created today)
         if ($fileDate === $today) {
             $todaysMigrations[] = $migrationData;
         }
     }
 }
+
+// Sort by filename
+usort($migrations, fn($a, $b) => strcmp($a['file'], $b['file']));
+usort($todaysMigrations, fn($a, $b) => strcmp($a['file'], $b['file']));
 
 // Handle migration execution
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['run_migration'])) {
@@ -99,10 +98,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['run_migration'])) {
     if (empty($migrationFile)) {
         $error = 'Ingen migration vald.';
     } else {
-        $fullPath = $migrationsDir . basename($migrationFile);
+        // Find the full path from dirSources or search all dirs
+        $fullPath = null;
+        if (isset($dirSources[$migrationFile])) {
+            $fullPath = $dirSources[$migrationFile] . basename($migrationFile);
+        } else {
+            // Search all directories
+            foreach ($migrationDirs as $dir) {
+                $testPath = $dir . basename($migrationFile);
+                if (file_exists($testPath)) {
+                    $fullPath = $testPath;
+                    break;
+                }
+            }
+        }
 
-        if (!file_exists($fullPath)) {
-            $error = 'Migrationsfilen hittades inte.';
+        if (!$fullPath || !file_exists($fullPath)) {
+            $error = 'Migrationsfilen hittades inte: ' . htmlspecialchars($migrationFile);
         } else {
             $ext = pathinfo($fullPath, PATHINFO_EXTENSION);
 
@@ -516,9 +528,12 @@ include __DIR__ . '/components/unified-layout.php';
                                 <div class="migration-info">
                                     <label class="migration-name" for="mig_<?= md5($migration['name']) ?>">
                                         <?= htmlspecialchars($migration['name']) ?>
-                                        <span class="badge" style="background: <?= ($migration['type'] ?? 'sql') === 'php' ? 'var(--color-info)' : 'var(--color-accent)' ?>; color: white; font-size: 10px; margin-left: 4px;"><?= strtoupper($migration['type'] ?? 'sql') ?></span>
                                     </label>
-                                    <div class="migration-meta"><?= $migration['date'] ?></div>
+                                    <div class="migration-meta">
+                                        <span class="badge" style="background: <?= ($migration['type'] ?? 'sql') === 'php' ? 'var(--color-info)' : 'var(--color-accent)' ?>; color: white; font-size: 10px;"><?= strtoupper($migration['type'] ?? 'sql') ?></span>
+                                        <span class="badge" style="background: var(--color-bg-hover); font-size: 10px;"><?= htmlspecialchars($migration['source'] ?? '') ?></span>
+                                        <?= $migration['date'] ?>
+                                    </div>
                                 </div>
                                 <div class="migration-actions">
                                     <a href="?preview=<?= urlencode($migration['file']) ?>" class="btn btn-sm btn-outline">Visa</a>
@@ -539,18 +554,39 @@ include __DIR__ . '/components/unified-layout.php';
 
     <?php if (isset($_GET['preview']) && !empty($_GET['preview'])): ?>
         <?php
-        $previewFile = $migrationsDir . basename($_GET['preview']);
-        if (file_exists($previewFile)):
+        $previewFilename = basename($_GET['preview']);
+        $previewFile = null;
+        $previewSource = '';
+
+        // Search all directories for the file
+        if (isset($dirSources[$previewFilename])) {
+            $previewFile = $dirSources[$previewFilename] . $previewFilename;
+            $previewSource = array_search($dirSources[$previewFilename], $migrationDirs);
+        } else {
+            foreach ($migrationDirs as $src => $dir) {
+                $testPath = $dir . $previewFilename;
+                if (file_exists($testPath)) {
+                    $previewFile = $testPath;
+                    $previewSource = $src;
+                    break;
+                }
+            }
+        }
+
+        if ($previewFile && file_exists($previewFile)):
             $previewContent = file_get_contents($previewFile);
         ?>
         <div class="card mt-lg">
             <div class="card-header">
-                <h3>Förhandsgranskning: <?= htmlspecialchars(basename($_GET['preview'])) ?></h3>
+                <h3>Förhandsgranskning: <?= htmlspecialchars($previewFilename) ?></h3>
+                <span class="badge"><?= htmlspecialchars($previewSource) ?></span>
             </div>
             <div class="card-body">
                 <pre class="preview-code"><?= htmlspecialchars($previewContent) ?></pre>
             </div>
         </div>
+        <?php else: ?>
+        <div class="alert alert-warning">Filen hittades inte: <?= htmlspecialchars($previewFilename) ?></div>
         <?php endif; ?>
     <?php endif; ?>
 </div>
