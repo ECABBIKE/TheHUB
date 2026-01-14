@@ -614,12 +614,17 @@ document.addEventListener('DOMContentLoaded', function() {
 }
 
 @media (max-width: 767px) {
-    .filter-bar {
-        margin-left: calc(-1 * var(--container-padding, 16px));
-        margin-right: calc(-1 * var(--container-padding, 16px));
-        border-radius: 0;
-        border-left: none;
-        border-right: none;
+    /* Edge-to-edge for all cards and components */
+    .filter-bar,
+    .admin-card,
+    .alert,
+    .cache-info {
+        margin-left: -16px;
+        margin-right: -16px;
+        border-radius: 0 !important;
+        border-left: none !important;
+        border-right: none !important;
+        width: calc(100% + 32px);
     }
 
     .filter-form {
@@ -629,6 +634,114 @@ document.addEventListener('DOMContentLoaded', function() {
 
     .filter-group {
         width: 100%;
+    }
+
+    .filter-group select {
+        width: 100%;
+    }
+
+    /* Dashboard metrics - horizontal scroll */
+    .dashboard-metrics {
+        display: flex;
+        gap: var(--space-sm);
+        overflow-x: auto;
+        padding-bottom: var(--space-sm);
+        margin-left: -16px;
+        margin-right: -16px;
+        padding-left: 16px;
+        padding-right: 16px;
+        -webkit-overflow-scrolling: touch;
+        scrollbar-width: none;
+    }
+
+    .dashboard-metrics::-webkit-scrollbar {
+        display: none;
+    }
+
+    .metric-card {
+        flex: 0 0 auto;
+        min-width: 130px;
+    }
+
+    /* Table adjustments for mobile */
+    .admin-table th,
+    .admin-table td {
+        padding: var(--space-sm);
+        font-size: var(--text-sm);
+    }
+
+    /* Hide less important columns on mobile */
+    .admin-table th:nth-child(3),
+    .admin-table td:nth-child(3),
+    .admin-table th:nth-child(5),
+    .admin-table td:nth-child(5) {
+        display: none;
+    }
+
+    /* Risk score - more compact */
+    .risk-cell {
+        flex-direction: column;
+        gap: 4px;
+    }
+
+    .risk-score {
+        font-size: var(--text-base);
+    }
+
+    /* Factor chips - wrap more */
+    .factor-chips {
+        gap: 2px;
+    }
+
+    .chip {
+        padding: 2px 6px;
+        font-size: 10px;
+    }
+
+    /* Chart sizing */
+    canvas {
+        max-height: 200px !important;
+    }
+
+    /* Factor list in card */
+    .factor-item {
+        padding: var(--space-xs);
+    }
+
+    .factor-name {
+        font-size: var(--text-xs);
+    }
+
+    /* Grid gap adjustment */
+    .grid-gap-lg {
+        gap: var(--space-md);
+    }
+}
+
+/* Extra small screens */
+@media (max-width: 479px) {
+    .metric-card {
+        min-width: 110px;
+        padding: var(--space-sm);
+    }
+
+    .metric-value {
+        font-size: var(--text-lg);
+    }
+
+    .metric-label {
+        font-size: var(--text-xs);
+    }
+
+    /* Hide even more columns */
+    .admin-table th:nth-child(4),
+    .admin-table td:nth-child(4) {
+        display: none;
+    }
+
+    /* Factor chips hidden on extra small */
+    .factor-chips {
+        display: none;
     }
 }
 </style>
