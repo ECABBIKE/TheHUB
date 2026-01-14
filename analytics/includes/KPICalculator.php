@@ -1465,4 +1465,1090 @@ class KPICalculator {
         $stmt->execute();
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
+
+    // =========================================================================
+    // COHORT ANALYSIS (Phase 2)
+    // =========================================================================
+
+    /**
+     * Hamta cohort retention over tid
+     * Foljer en kohort (riders som borjade ar X) och ser hur manga som ar kvar
+     *
+     * @param int $cohortYear Startaret for kohorten
+     * @param int|null $endYear Slutar (default: current year)
+     * @return array Retention per ar
+     */
+    public function getCohortRetention(int $cohortYear, ?int $endYear = null): array {
+        $endYear = $endYear ?? (int)date('Y');
+
+        // Hamta alla riders som hade sitt forsta ar = cohortYear
+        $stmt = $this->pdo->prepare("
+            SELECT rider_id
+            FROM rider_yearly_stats
+            WHERE rider_id IN (
+                SELECT rider_id
+                FROM rider_yearly_stats
+                GROUP BY rider_id
+                HAVING MIN(season_year) = ?
+            )
+            AND season_year = ?
+        ");
+        $stmt->execute([$cohortYear, $cohortYear]);
+        $cohortRiders = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+        $cohortSize = count($cohortRiders);
+        if ($cohortSize === 0) {
+            return [];
+        }
+
+        $result = [];
+
+        // For varje ar, rakna hur manga fran kohorten som ar aktiva
+        for ($year = $cohortYear; $year <= $endYear; $year++) {
+            $yearsFromStart = $year - $cohortYear;
+
+            if (empty($cohortRiders)) {
+                $activeCount = 0;
+            } else {
+                $placeholders = implode(',', array_fill(0, count($cohortRiders), '?'));
+                $stmt = $this->pdo->prepare("
+                    SELECT COUNT(DISTINCT rider_id)
+                    FROM rider_yearly_stats
+                    WHERE season_year = ?
+                    AND rider_id IN ($placeholders)
+                ");
+                $stmt->execute(array_merge([$year], $cohortRiders));
+                $activeCount = (int)$stmt->fetchColumn();
+            }
+
+            $result[] = [
+                'year' => $year,
+                'years_from_start' => $yearsFromStart,
+                'active_count' => $activeCount,
+                'cohort_size' => $cohortSize,
+                'retention_rate' => round($activeCount / $cohortSize * 100, 1),
+            ];
+        }
+
+        return $result;
+    }
+
+    /**
+     * Jamfor flera kohorter
+     *
+     * @param array $cohortYears Array av ar att jamfora
+     * @param int $maxYears Max antal ar att folja varje kohort
+     * @return array Jamforelsedata
+     */
+    public function compareCohorts(array $cohortYears, int $maxYears = 5): array {
+        $result = [];
+
+        foreach ($cohortYears as $cohortYear) {
+            $endYear = min($cohortYear + $maxYears - 1, (int)date('Y'));
+            $retention = $this->getCohortRetention($cohortYear, $endYear);
+
+            if (!empty($retention)) {
+                $result[$cohortYear] = [
+                    'cohort_year' => $cohortYear,
+                    'cohort_size' => $retention[0]['cohort_size'] ?? 0,
+                    'retention_data' => $retention,
+                ];
+            }
+        }
+
+        return $result;
+    }
+
+    /**
+     * Hamta riders i en kohort
+     *
+     * @param int $cohortYear Kohort-ar
+     * @param string $status 'all', 'active', 'churned'
+     * @param int|null $asOfYear Ar att kolla status for (default: current)
+     * @return array Lista med riders
+     */
+    public function getCohortRiders(int $cohortYear, string $status = 'all', ?int $asOfYear = null): array {
+        $asOfYear = $asOfYear ?? (int)date('Y');
+
+        $sql = "
+            SELECT
+                r.id as rider_id,
+                r.firstname,
+                r.lastname,
+                r.birth_year,
+                r.gender,
+                c.name as club_name,
+                cohort.first_discipline,
+                cohort.total_seasons,
+                cohort.last_active_year,
+                CASE
+                    WHEN cohort.last_active_year >= :asOfYear THEN 'active'
+                    WHEN :asOfYear - cohort.last_active_year = 1 THEN 'soft_churn'
+                    WHEN :asOfYear - cohort.last_active_year = 2 THEN 'medium_churn'
+                    ELSE 'hard_churn'
+                END as current_status
+            FROM (
+                SELECT
+                    rider_id,
+                    MIN(season_year) as cohort_year,
+                    MAX(season_year) as last_active_year,
+                    COUNT(DISTINCT season_year) as total_seasons,
+                    (SELECT primary_discipline FROM rider_yearly_stats rys2
+                     WHERE rys2.rider_id = rys.rider_id
+                     ORDER BY season_year ASC LIMIT 1) as first_discipline
+                FROM rider_yearly_stats rys
+                GROUP BY rider_id
+                HAVING cohort_year = :cohortYear
+            ) cohort
+            JOIN riders r ON cohort.rider_id = r.id
+            LEFT JOIN clubs c ON r.club_id = c.id
+        ";
+
+        if ($status === 'active') {
+            $sql .= " WHERE cohort.last_active_year >= :asOfYear2";
+        } elseif ($status === 'churned') {
+            $sql .= " WHERE cohort.last_active_year < :asOfYear2";
+        }
+
+        $sql .= " ORDER BY r.lastname, r.firstname";
+
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->bindValue(':cohortYear', $cohortYear, PDO::PARAM_INT);
+        $stmt->bindValue(':asOfYear', $asOfYear, PDO::PARAM_INT);
+
+        if ($status !== 'all') {
+            $stmt->bindValue(':asOfYear2', $asOfYear, PDO::PARAM_INT);
+        }
+
+        $stmt->execute();
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Hamta kohort-storlek
+     *
+     * @param int $cohortYear Kohort-ar
+     * @return int Antal riders
+     */
+    public function getCohortSize(int $cohortYear): int {
+        $stmt = $this->pdo->prepare("
+            SELECT COUNT(DISTINCT rider_id)
+            FROM rider_yearly_stats
+            WHERE rider_id IN (
+                SELECT rider_id
+                FROM rider_yearly_stats
+                GROUP BY rider_id
+                HAVING MIN(season_year) = ?
+            )
+            AND season_year = ?
+        ");
+        $stmt->execute([$cohortYear, $cohortYear]);
+        return (int)$stmt->fetchColumn();
+    }
+
+    /**
+     * Hamta genomsnittlig karriarlangd for en kohort
+     *
+     * @param int $cohortYear Kohort-ar
+     * @return float Genomsnittlig antal sasonger
+     */
+    public function getCohortAverageLifespan(int $cohortYear): float {
+        $stmt = $this->pdo->prepare("
+            SELECT AVG(seasons) as avg_lifespan
+            FROM (
+                SELECT
+                    rider_id,
+                    COUNT(DISTINCT season_year) as seasons
+                FROM rider_yearly_stats
+                WHERE rider_id IN (
+                    SELECT rider_id
+                    FROM rider_yearly_stats
+                    GROUP BY rider_id
+                    HAVING MIN(season_year) = ?
+                )
+                GROUP BY rider_id
+            ) career_lengths
+        ");
+        $stmt->execute([$cohortYear]);
+        return round((float)($stmt->fetchColumn() ?: 0), 2);
+    }
+
+    /**
+     * Hamta status-breakdown for en kohort
+     *
+     * @param int $cohortYear Kohort-ar
+     * @param int|null $asOfYear Ar att kolla status for
+     * @return array Status-fordelning
+     */
+    public function getCohortStatusBreakdown(int $cohortYear, ?int $asOfYear = null): array {
+        $asOfYear = $asOfYear ?? (int)date('Y');
+
+        $stmt = $this->pdo->prepare("
+            SELECT
+                CASE
+                    WHEN last_year >= :asOfYear THEN 'active'
+                    WHEN :asOfYear - last_year = 1 THEN 'soft_churn'
+                    WHEN :asOfYear - last_year = 2 THEN 'medium_churn'
+                    ELSE 'hard_churn'
+                END as status,
+                COUNT(*) as count
+            FROM (
+                SELECT
+                    rider_id,
+                    MAX(season_year) as last_year
+                FROM rider_yearly_stats
+                WHERE rider_id IN (
+                    SELECT rider_id
+                    FROM rider_yearly_stats
+                    GROUP BY rider_id
+                    HAVING MIN(season_year) = :cohortYear
+                )
+                GROUP BY rider_id
+            ) rider_careers
+            GROUP BY status
+            ORDER BY
+                CASE status
+                    WHEN 'active' THEN 1
+                    WHEN 'soft_churn' THEN 2
+                    WHEN 'medium_churn' THEN 3
+                    ELSE 4
+                END
+        ");
+        $stmt->bindValue(':cohortYear', $cohortYear, PDO::PARAM_INT);
+        $stmt->bindValue(':asOfYear', $asOfYear, PDO::PARAM_INT);
+        $stmt->execute();
+
+        $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Ensure all statuses are represented
+        $statusMap = [
+            'active' => 0,
+            'soft_churn' => 0,
+            'medium_churn' => 0,
+            'hard_churn' => 0,
+        ];
+
+        foreach ($results as $row) {
+            $statusMap[$row['status']] = (int)$row['count'];
+        }
+
+        $total = array_sum($statusMap);
+
+        return [
+            'cohort_year' => $cohortYear,
+            'as_of_year' => $asOfYear,
+            'total' => $total,
+            'active' => $statusMap['active'],
+            'active_pct' => $total > 0 ? round($statusMap['active'] / $total * 100, 1) : 0,
+            'soft_churn' => $statusMap['soft_churn'],
+            'soft_churn_pct' => $total > 0 ? round($statusMap['soft_churn'] / $total * 100, 1) : 0,
+            'medium_churn' => $statusMap['medium_churn'],
+            'medium_churn_pct' => $total > 0 ? round($statusMap['medium_churn'] / $total * 100, 1) : 0,
+            'hard_churn' => $statusMap['hard_churn'],
+            'hard_churn_pct' => $total > 0 ? round($statusMap['hard_churn'] / $total * 100, 1) : 0,
+        ];
+    }
+
+    /**
+     * Hamta tillgangliga kohort-ar
+     *
+     * @param int $minSize Minsta kohort-storlek att inkludera
+     * @return array Lista med ar och storlekar
+     */
+    public function getAvailableCohorts(int $minSize = 10): array {
+        $stmt = $this->pdo->prepare("
+            SELECT
+                cohort_year,
+                COUNT(*) as cohort_size
+            FROM (
+                SELECT rider_id, MIN(season_year) as cohort_year
+                FROM rider_yearly_stats
+                GROUP BY rider_id
+            ) cohorts
+            GROUP BY cohort_year
+            HAVING cohort_size >= ?
+            ORDER BY cohort_year DESC
+        ");
+        $stmt->execute([$minSize]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    // =========================================================================
+    // RIDER JOURNEY (Phase 2)
+    // =========================================================================
+
+    /**
+     * Hamta en riders kompletta resa/historik
+     *
+     * @param int $riderId Rider ID
+     * @return array Journey-data
+     */
+    public function getRiderJourney(int $riderId): array {
+        // Hamta arlig statistik
+        $stmt = $this->pdo->prepare("
+            SELECT
+                rys.season_year as year,
+                rys.total_events,
+                rys.total_series,
+                rys.total_points,
+                rys.best_position,
+                rys.avg_position,
+                rys.primary_discipline,
+                rys.primary_series_id,
+                s.name as primary_series_name,
+                rys.is_rookie
+            FROM rider_yearly_stats rys
+            LEFT JOIN series s ON rys.primary_series_id = s.id
+            WHERE rys.rider_id = ?
+            ORDER BY rys.season_year ASC
+        ");
+        $stmt->execute([$riderId]);
+        $yearlyStats = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        if (empty($yearlyStats)) {
+            return [];
+        }
+
+        // Hamta serier per ar
+        $stmt = $this->pdo->prepare("
+            SELECT
+                sp.season_year as year,
+                sp.series_id,
+                s.name as series_name,
+                sp.events_attended,
+                sp.total_points
+            FROM series_participation sp
+            JOIN series s ON sp.series_id = s.id
+            WHERE sp.rider_id = ?
+            ORDER BY sp.season_year ASC, sp.events_attended DESC
+        ");
+        $stmt->execute([$riderId]);
+        $seriesData = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Gruppera serier per ar
+        $seriesByYear = [];
+        foreach ($seriesData as $row) {
+            $seriesByYear[$row['year']][] = [
+                'series_id' => $row['series_id'],
+                'series_name' => $row['series_name'],
+                'events' => $row['events_attended'],
+                'points' => $row['total_points'],
+            ];
+        }
+
+        // Bygg journey
+        $journey = [];
+        $prevDiscipline = null;
+        $prevSeriesIds = [];
+
+        foreach ($yearlyStats as $stat) {
+            $year = $stat['year'];
+            $currentSeriesIds = array_column($seriesByYear[$year] ?? [], 'series_id');
+
+            // Detektera andringar
+            $changedDiscipline = $prevDiscipline !== null && $prevDiscipline !== $stat['primary_discipline'];
+            $changedSeries = !empty($prevSeriesIds) &&
+                             count(array_diff($currentSeriesIds, $prevSeriesIds)) > 0;
+
+            $journey[] = [
+                'year' => $year,
+                'is_rookie' => (bool)$stat['is_rookie'],
+                'total_events' => $stat['total_events'],
+                'total_series' => $stat['total_series'],
+                'total_points' => $stat['total_points'],
+                'best_position' => $stat['best_position'],
+                'avg_position' => $stat['avg_position'],
+                'primary_discipline' => $stat['primary_discipline'],
+                'primary_series' => $stat['primary_series_name'],
+                'series' => $seriesByYear[$year] ?? [],
+                'changed_discipline' => $changedDiscipline,
+                'changed_series' => $changedSeries,
+            ];
+
+            $prevDiscipline = $stat['primary_discipline'];
+            $prevSeriesIds = $currentSeriesIds;
+        }
+
+        return $journey;
+    }
+
+    /**
+     * Hamta riders progression (hur de utvecklats over tid)
+     *
+     * @param int $riderId Rider ID
+     * @return array Progression-data
+     */
+    public function getRiderProgression(int $riderId): array {
+        $journey = $this->getRiderJourney($riderId);
+
+        if (count($journey) < 2) {
+            return [
+                'has_progression' => false,
+                'years_active' => count($journey),
+            ];
+        }
+
+        $first = $journey[0];
+        $last = $journey[count($journey) - 1];
+
+        // Berakna progression
+        $eventsChange = $last['total_events'] - $first['total_events'];
+        $pointsChange = $last['total_points'] - $first['total_points'];
+        $positionChange = null;
+
+        if ($first['best_position'] && $last['best_position']) {
+            $positionChange = $first['best_position'] - $last['best_position']; // Positiv = forbattring
+        }
+
+        // Hitta basta sasong
+        $bestYear = null;
+        $bestPoints = 0;
+        foreach ($journey as $year) {
+            if ($year['total_points'] > $bestPoints) {
+                $bestPoints = $year['total_points'];
+                $bestYear = $year['year'];
+            }
+        }
+
+        return [
+            'has_progression' => true,
+            'first_year' => $first['year'],
+            'last_year' => $last['year'],
+            'years_active' => count($journey),
+            'total_seasons' => count($journey),
+            'first_discipline' => $first['primary_discipline'],
+            'current_discipline' => $last['primary_discipline'],
+            'discipline_changed' => $first['primary_discipline'] !== $last['primary_discipline'],
+            'events_first_year' => $first['total_events'],
+            'events_last_year' => $last['total_events'],
+            'events_change' => $eventsChange,
+            'points_change' => $pointsChange,
+            'position_improvement' => $positionChange,
+            'best_season_year' => $bestYear,
+            'best_season_points' => $bestPoints,
+        ];
+    }
+
+    /**
+     * Hamta liknande riders baserat pa karriarmonster
+     *
+     * @param int $riderId Rider att hitta liknande for
+     * @param int $limit Max antal att returnera
+     * @return array Lista med liknande riders
+     */
+    public function getSimilarRiders(int $riderId, int $limit = 10): array {
+        // Hamta basinformation om target rider
+        $stmt = $this->pdo->prepare("
+            SELECT
+                MIN(season_year) as start_year,
+                COUNT(DISTINCT season_year) as total_seasons,
+                SUM(total_events) as total_events,
+                (SELECT primary_discipline FROM rider_yearly_stats
+                 WHERE rider_id = ? ORDER BY season_year DESC LIMIT 1) as current_discipline
+            FROM rider_yearly_stats
+            WHERE rider_id = ?
+        ");
+        $stmt->execute([$riderId, $riderId]);
+        $target = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$target || !$target['start_year']) {
+            return [];
+        }
+
+        // Hamta serier for target
+        $stmt = $this->pdo->prepare("
+            SELECT DISTINCT series_id FROM series_participation WHERE rider_id = ?
+        ");
+        $stmt->execute([$riderId]);
+        $targetSeries = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+        // Definiera buckets
+        $tenureBucket = $target['total_seasons'] <= 2 ? 'new' :
+                       ($target['total_seasons'] <= 5 ? 'established' : 'veteran');
+        $eventBucket = $target['total_events'] <= 10 ? 'casual' :
+                      ($target['total_events'] <= 30 ? 'regular' : 'active');
+
+        // Hitta liknande riders
+        $stmt = $this->pdo->prepare("
+            SELECT
+                r.id as rider_id,
+                r.firstname,
+                r.lastname,
+                c.name as club_name,
+                stats.start_year,
+                stats.total_seasons,
+                stats.total_events,
+                stats.current_discipline,
+                0 as similarity_score
+            FROM (
+                SELECT
+                    rider_id,
+                    MIN(season_year) as start_year,
+                    COUNT(DISTINCT season_year) as total_seasons,
+                    SUM(total_events) as total_events,
+                    (SELECT primary_discipline FROM rider_yearly_stats rys2
+                     WHERE rys2.rider_id = rys.rider_id
+                     ORDER BY season_year DESC LIMIT 1) as current_discipline
+                FROM rider_yearly_stats rys
+                WHERE rider_id != ?
+                GROUP BY rider_id
+            ) stats
+            JOIN riders r ON stats.rider_id = r.id
+            LEFT JOIN clubs c ON r.club_id = c.id
+            WHERE
+                ABS(stats.start_year - ?) <= 2
+                OR stats.current_discipline = ?
+                OR (stats.total_seasons BETWEEN ? AND ?)
+            ORDER BY
+                CASE WHEN stats.current_discipline = ? THEN 0 ELSE 1 END,
+                ABS(stats.start_year - ?),
+                ABS(stats.total_seasons - ?)
+            LIMIT ?
+        ");
+
+        $tenureMin = max(1, $target['total_seasons'] - 2);
+        $tenureMax = $target['total_seasons'] + 2;
+
+        $stmt->execute([
+            $riderId,
+            $target['start_year'],
+            $target['current_discipline'],
+            $tenureMin,
+            $tenureMax,
+            $target['current_discipline'],
+            $target['start_year'],
+            $target['total_seasons'],
+            $limit * 2 // Fetch more to filter
+        ]);
+
+        $candidates = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Score candidates
+        foreach ($candidates as &$candidate) {
+            $score = 0;
+
+            // Start year similarity (max 20)
+            $yearDiff = abs($candidate['start_year'] - $target['start_year']);
+            $score += max(0, 20 - $yearDiff * 5);
+
+            // Discipline match (25)
+            if ($candidate['current_discipline'] === $target['current_discipline']) {
+                $score += 25;
+            }
+
+            // Tenure bucket (20)
+            $candTenure = $candidate['total_seasons'] <= 2 ? 'new' :
+                         ($candidate['total_seasons'] <= 5 ? 'established' : 'veteran');
+            if ($candTenure === $tenureBucket) {
+                $score += 20;
+            }
+
+            // Event bucket (15)
+            $candEvents = $candidate['total_events'] <= 10 ? 'casual' :
+                         ($candidate['total_events'] <= 30 ? 'regular' : 'active');
+            if ($candEvents === $eventBucket) {
+                $score += 15;
+            }
+
+            $candidate['similarity_score'] = $score;
+        }
+
+        // Sort by score and limit
+        usort($candidates, fn($a, $b) => $b['similarity_score'] - $a['similarity_score']);
+
+        return array_slice($candidates, 0, $limit);
+    }
+
+    /**
+     * Hamta senaste aktiva ar for en rider
+     *
+     * @param int $riderId Rider ID
+     * @return int|null Senaste ar eller null
+     */
+    public function getRiderLastActiveYear(int $riderId): ?int {
+        $stmt = $this->pdo->prepare("
+            SELECT MAX(season_year) FROM rider_yearly_stats WHERE rider_id = ?
+        ");
+        $stmt->execute([$riderId]);
+        $result = $stmt->fetchColumn();
+        return $result ? (int)$result : null;
+    }
+
+    // =========================================================================
+    // AT-RISK / CHURN PREDICTION (Phase 2)
+    // =========================================================================
+
+    /**
+     * Hamta at-risk riders for ett ar
+     *
+     * @param int $year Ar
+     * @param int $limit Max antal
+     * @return array Lista med at-risk riders
+     */
+    public function getAtRiskRiders(int $year, int $limit = 100): array {
+        // Forst, kolla om vi har cachad data
+        $stmt = $this->pdo->prepare("
+            SELECT
+                rrs.rider_id,
+                r.firstname,
+                r.lastname,
+                c.name as club_name,
+                rrs.risk_score,
+                rrs.risk_level,
+                rrs.factors,
+                rrs.declining_events,
+                rrs.no_recent_activity,
+                rrs.class_downgrade,
+                rrs.single_series,
+                rrs.low_tenure,
+                rrs.high_age_in_class,
+                rys.total_events,
+                rys.primary_discipline,
+                rys.primary_series_id,
+                s.name as series_name
+            FROM rider_risk_scores rrs
+            JOIN riders r ON rrs.rider_id = r.id
+            LEFT JOIN clubs c ON r.club_id = c.id
+            LEFT JOIN rider_yearly_stats rys ON rrs.rider_id = rys.rider_id AND rys.season_year = ?
+            LEFT JOIN series s ON rys.primary_series_id = s.id
+            WHERE rrs.season_year = ?
+            ORDER BY rrs.risk_score DESC
+            LIMIT ?
+        ");
+
+        try {
+            $stmt->execute([$year, $year, $limit]);
+            $cached = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            if (!empty($cached)) {
+                // Decode JSON factors
+                foreach ($cached as &$row) {
+                    $row['factors'] = $row['factors'] ? json_decode($row['factors'], true) : [];
+                }
+                return $cached;
+            }
+        } catch (PDOException $e) {
+            // Table might not exist yet
+        }
+
+        // Fallback: berakna on-the-fly (langsammare)
+        return $this->calculateAtRiskRidersOnTheFly($year, $limit);
+    }
+
+    /**
+     * Berakna risk on-the-fly (fallback om cache saknas)
+     */
+    private function calculateAtRiskRidersOnTheFly(int $year, int $limit): array {
+        // Hamta riders som var aktiva forra aret
+        $stmt = $this->pdo->prepare("
+            SELECT
+                rys.rider_id,
+                r.firstname,
+                r.lastname,
+                c.name as club_name,
+                rys.total_events as current_events,
+                prev.total_events as prev_events,
+                rys.primary_discipline,
+                rys.primary_series_id,
+                s.name as series_name,
+                (SELECT COUNT(DISTINCT season_year) FROM rider_yearly_stats WHERE rider_id = rys.rider_id) as total_seasons,
+                (SELECT COUNT(DISTINCT series_id) FROM series_participation WHERE rider_id = rys.rider_id AND season_year = ?) as series_count
+            FROM rider_yearly_stats rys
+            JOIN riders r ON rys.rider_id = r.id
+            LEFT JOIN clubs c ON r.club_id = c.id
+            LEFT JOIN rider_yearly_stats prev ON rys.rider_id = prev.rider_id AND prev.season_year = ? - 1
+            LEFT JOIN series s ON rys.primary_series_id = s.id
+            WHERE rys.season_year = ?
+            ORDER BY rys.total_events ASC
+            LIMIT ?
+        ");
+        $stmt->execute([$year, $year, $year, $limit * 2]);
+        $riders = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $results = [];
+        foreach ($riders as $rider) {
+            $risk = $this->calculateChurnRisk($rider['rider_id'], $year);
+            if ($risk['risk_score'] >= 30) { // Only include medium+ risk
+                $results[] = array_merge($rider, $risk);
+            }
+        }
+
+        usort($results, fn($a, $b) => $b['risk_score'] - $a['risk_score']);
+        return array_slice($results, 0, $limit);
+    }
+
+    /**
+     * Berakna churn-risk for en specifik rider
+     *
+     * @param int $riderId Rider ID
+     * @param int $year Ar
+     * @return array Risk-data
+     */
+    public function calculateChurnRisk(int $riderId, int $year): array {
+        $factors = [];
+        $totalScore = 0;
+
+        // Hamta rider-data
+        $stmt = $this->pdo->prepare("
+            SELECT
+                rys.total_events,
+                rys.primary_discipline,
+                (SELECT total_events FROM rider_yearly_stats WHERE rider_id = ? AND season_year = ? - 1) as prev_events,
+                (SELECT COUNT(DISTINCT season_year) FROM rider_yearly_stats WHERE rider_id = ?) as total_seasons,
+                (SELECT COUNT(DISTINCT series_id) FROM series_participation WHERE rider_id = ? AND season_year = ?) as series_count
+            FROM rider_yearly_stats rys
+            WHERE rys.rider_id = ? AND rys.season_year = ?
+        ");
+        $stmt->execute([$riderId, $year, $riderId, $riderId, $year, $riderId, $year]);
+        $data = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$data) {
+            return ['risk_score' => 0, 'risk_level' => 'unknown', 'factors' => []];
+        }
+
+        // Factor 1: Declining events (30 points)
+        $decliningEvents = false;
+        if ($data['prev_events'] && $data['total_events'] < $data['prev_events']) {
+            $decline = ($data['prev_events'] - $data['total_events']) / $data['prev_events'];
+            if ($decline >= 0.3) {
+                $decliningEvents = true;
+                $score = min(30, round($decline * 30));
+                $totalScore += $score;
+                $factors['declining_events'] = [
+                    'score' => $score,
+                    'detail' => "Minskade fran {$data['prev_events']} till {$data['total_events']} events",
+                ];
+            }
+        }
+
+        // Factor 2: Single series (10 points)
+        $singleSeries = $data['series_count'] <= 1;
+        if ($singleSeries) {
+            $totalScore += 10;
+            $factors['single_series'] = [
+                'score' => 10,
+                'detail' => 'Deltar endast i en serie',
+            ];
+        }
+
+        // Factor 3: Low tenure (10 points)
+        $lowTenure = $data['total_seasons'] <= 2;
+        if ($lowTenure) {
+            $totalScore += 10;
+            $factors['low_tenure'] = [
+                'score' => 10,
+                'detail' => "Endast {$data['total_seasons']} sasonger",
+            ];
+        }
+
+        // Determine risk level
+        $riskLevel = 'low';
+        if ($totalScore >= 70) {
+            $riskLevel = 'critical';
+        } elseif ($totalScore >= 50) {
+            $riskLevel = 'high';
+        } elseif ($totalScore >= 30) {
+            $riskLevel = 'medium';
+        }
+
+        return [
+            'risk_score' => $totalScore,
+            'risk_level' => $riskLevel,
+            'factors' => $factors,
+            'declining_events' => $decliningEvents,
+            'single_series' => $singleSeries,
+            'low_tenure' => $lowTenure,
+            'no_recent_activity' => false,
+            'class_downgrade' => false,
+            'high_age_in_class' => false,
+        ];
+    }
+
+    /**
+     * Hamta risk-distribution for ett ar
+     *
+     * @param int $year Ar
+     * @return array Distribution per risk-niva
+     */
+    public function getRiskDistribution(int $year): array {
+        // Forst kolla cache
+        $stmt = $this->pdo->prepare("
+            SELECT
+                risk_level,
+                COUNT(*) as count
+            FROM rider_risk_scores
+            WHERE season_year = ?
+            GROUP BY risk_level
+        ");
+
+        try {
+            $stmt->execute([$year]);
+            $results = $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
+
+            if (!empty($results)) {
+                return [
+                    'low' => $results['low'] ?? 0,
+                    'medium' => $results['medium'] ?? 0,
+                    'high' => $results['high'] ?? 0,
+                    'critical' => $results['critical'] ?? 0,
+                    'total' => array_sum($results),
+                ];
+            }
+        } catch (PDOException $e) {
+            // Table might not exist
+        }
+
+        // Return empty if no cache
+        return [
+            'low' => 0,
+            'medium' => 0,
+            'high' => 0,
+            'critical' => 0,
+            'total' => 0,
+            'cache_missing' => true,
+        ];
+    }
+
+    // =========================================================================
+    // FEEDER TRENDS (Phase 2)
+    // =========================================================================
+
+    /**
+     * Hamta feeder-trend over tid for ett specifikt flode
+     *
+     * @param int $fromSeriesId Ursprungsserie
+     * @param int $toSeriesId Malserie
+     * @param int $years Antal ar
+     * @return array Trend-data
+     */
+    public function getFeederTrend(int $fromSeriesId, int $toSeriesId, int $years = 5): array {
+        $currentYear = (int)date('Y');
+        $startYear = $currentYear - $years + 1;
+
+        $result = [];
+
+        for ($year = $startYear; $year <= $currentYear; $year++) {
+            // Antal i from-serie
+            $stmt = $this->pdo->prepare("
+                SELECT COUNT(DISTINCT rider_id) FROM series_participation
+                WHERE series_id = ? AND season_year = ?
+            ");
+            $stmt->execute([$fromSeriesId, $year]);
+            $fromCount = (int)$stmt->fetchColumn();
+
+            // Antal som ocksa deltog i to-serie (same year)
+            $stmt = $this->pdo->prepare("
+                SELECT COUNT(DISTINCT sc.rider_id)
+                FROM series_crossover sc
+                WHERE sc.from_series_id = ? AND sc.to_series_id = ?
+                AND sc.from_year = ? AND sc.crossover_type = 'same_year'
+            ");
+            $stmt->execute([$fromSeriesId, $toSeriesId, $year]);
+            $flowCount = (int)$stmt->fetchColumn();
+
+            $result[] = [
+                'year' => $year,
+                'from_count' => $fromCount,
+                'flow_count' => $flowCount,
+                'conversion_rate' => $fromCount > 0 ? round($flowCount / $fromCount * 100, 1) : 0,
+            ];
+        }
+
+        // Berakna trend
+        if (count($result) >= 2) {
+            $first = $result[0]['conversion_rate'];
+            $last = $result[count($result) - 1]['conversion_rate'];
+            $trend = $last - $first;
+
+            foreach ($result as &$r) {
+                $r['overall_trend'] = $trend > 1 ? 'growing' : ($trend < -1 ? 'declining' : 'stable');
+            }
+        }
+
+        return $result;
+    }
+
+    /**
+     * Hamta oversikt av feeder-trends
+     *
+     * @param int $year Ar
+     * @return array Alla floden med trend-indikatorer
+     */
+    public function getFeederTrendsOverview(int $year): array {
+        $matrix = $this->calculateFeederMatrix($year);
+        $prevMatrix = $this->calculateFeederMatrix($year - 1);
+
+        // Skapa lookup for foregaende ar
+        $prevLookup = [];
+        foreach ($prevMatrix as $flow) {
+            $key = $flow['from_series_id'] . '-' . $flow['to_series_id'];
+            $prevLookup[$key] = $flow['flow_count'];
+        }
+
+        // Lagg till trend-info
+        foreach ($matrix as &$flow) {
+            $key = $flow['from_series_id'] . '-' . $flow['to_series_id'];
+            $prevCount = $prevLookup[$key] ?? 0;
+
+            $change = $flow['flow_count'] - $prevCount;
+            $changePct = $prevCount > 0 ? round($change / $prevCount * 100, 1) : ($flow['flow_count'] > 0 ? 100 : 0);
+
+            $flow['prev_count'] = $prevCount;
+            $flow['change'] = $change;
+            $flow['change_pct'] = $changePct;
+            $flow['trend'] = $change > 2 ? 'growing' : ($change < -2 ? 'declining' : 'stable');
+        }
+
+        return $matrix;
+    }
+
+    /**
+     * Hamta framvaxande floden (snabb tillvaxt)
+     *
+     * @param int $year Ar
+     * @param float $minGrowth Minsta tillvaxt i procent
+     * @return array Framvaxande floden
+     */
+    public function getEmergingFlows(int $year, float $minGrowth = 20.0): array {
+        $trends = $this->getFeederTrendsOverview($year);
+
+        $emerging = array_filter($trends, function($flow) use ($minGrowth) {
+            return $flow['change_pct'] >= $minGrowth && $flow['flow_count'] >= 5;
+        });
+
+        usort($emerging, fn($a, $b) => $b['change_pct'] - $a['change_pct']);
+
+        return $emerging;
+    }
+
+    // =========================================================================
+    // GEOGRAPHIC ANALYSIS (Phase 2)
+    // =========================================================================
+
+    /**
+     * Hamta regional tillvaxttend
+     *
+     * @param int $years Antal ar
+     * @return array Trend per region
+     */
+    public function getRegionalGrowthTrend(int $years = 5): array {
+        $currentYear = (int)date('Y');
+        $startYear = $currentYear - $years + 1;
+
+        $stmt = $this->pdo->prepare("
+            SELECT
+                rys.season_year as year,
+                COALESCE(s.region, 'Okand') as region,
+                COUNT(DISTINCT rys.rider_id) as rider_count
+            FROM rider_yearly_stats rys
+            LEFT JOIN series s ON rys.primary_series_id = s.id
+            WHERE rys.season_year >= ? AND rys.season_year <= ?
+            GROUP BY rys.season_year, s.region
+            ORDER BY rys.season_year ASC, rider_count DESC
+        ");
+        $stmt->execute([$startYear, $currentYear]);
+
+        $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Gruppera per region
+        $byRegion = [];
+        foreach ($results as $row) {
+            $byRegion[$row['region']][] = [
+                'year' => $row['year'],
+                'count' => $row['rider_count'],
+            ];
+        }
+
+        // Berakna tillvaxt
+        $trends = [];
+        foreach ($byRegion as $region => $years) {
+            $firstYear = $years[0]['count'] ?? 0;
+            $lastYear = $years[count($years) - 1]['count'] ?? 0;
+
+            $growth = $firstYear > 0
+                ? round(($lastYear - $firstYear) / $firstYear * 100, 1)
+                : ($lastYear > 0 ? 100 : 0);
+
+            $trends[$region] = [
+                'region' => $region,
+                'years' => $years,
+                'first_year_count' => $firstYear,
+                'last_year_count' => $lastYear,
+                'growth_pct' => $growth,
+                'trend' => $growth > 5 ? 'growing' : ($growth < -5 ? 'declining' : 'stable'),
+            ];
+        }
+
+        // Sortera efter senaste antal
+        uasort($trends, fn($a, $b) => $b['last_year_count'] - $a['last_year_count']);
+
+        return $trends;
+    }
+
+    /**
+     * Hamta underservade regioner (lag tackning per capita)
+     *
+     * @param int $year Ar
+     * @return array Regioner sorterade efter tackning
+     */
+    public function getUnderservedRegions(int $year): array {
+        // Hamta riders per region
+        $regions = $this->getRidersByRegion($year);
+
+        // Lagg till befolkningsdata fran config
+        require_once __DIR__ . '/AnalyticsConfig.php';
+
+        $result = [];
+        foreach ($regions as $region) {
+            $regionName = $region['region'];
+            $population = AnalyticsConfig::SWEDISH_REGIONS[$regionName]['population'] ?? null;
+
+            $ridersPerCapita = null;
+            if ($population && $population > 0) {
+                $ridersPerCapita = round($region['rider_count'] / $population * 100000, 2);
+            }
+
+            $result[] = [
+                'region' => $regionName,
+                'rider_count' => $region['rider_count'],
+                'population' => $population,
+                'riders_per_100k' => $ridersPerCapita,
+            ];
+        }
+
+        // Sortera efter riders per capita (lagst forst)
+        usort($result, function($a, $b) {
+            if ($a['riders_per_100k'] === null) return 1;
+            if ($b['riders_per_100k'] === null) return -1;
+            return $a['riders_per_100k'] - $b['riders_per_100k'];
+        });
+
+        return $result;
+    }
+
+    /**
+     * Hamta events per region
+     *
+     * @param int $year Ar
+     * @return array Events per region
+     */
+    public function getEventsByRegion(int $year): array {
+        $stmt = $this->pdo->prepare("
+            SELECT
+                COALESCE(s.region, v.region, 'Okand') as region,
+                COUNT(DISTINCT e.id) as event_count,
+                COUNT(DISTINCT res.cyclist_id) as participant_count,
+                SUM(CASE WHEN e.discipline = 'Enduro' THEN 1 ELSE 0 END) as enduro_events,
+                SUM(CASE WHEN e.discipline = 'DH' THEN 1 ELSE 0 END) as dh_events
+            FROM events e
+            LEFT JOIN series s ON e.series_id = s.id
+            LEFT JOIN venues v ON e.venue_id = v.id
+            LEFT JOIN results res ON e.id = res.event_id
+            WHERE YEAR(e.date) = ?
+            GROUP BY region
+            ORDER BY event_count DESC
+        ");
+        $stmt->execute([$year]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
 }
