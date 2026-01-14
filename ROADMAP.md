@@ -130,15 +130,19 @@ Rookie-rapporten visar:
 - [ ] Forbattra is_rookie logik for edge-cases
 
 ### Funktionalitet
-- [ ] Lagg till filtrering per serie i rookie-rapporten
+- [x] Lagg till filtrering per serie i rookie-rapporten
 - [ ] Lagg till disciplin-specifik rookie-analys
 - [ ] Lagg till geografisk analys (var kommer rookies ifran?)
-- [ ] Lagg till trendanalys for rookies over tid
+- [x] Lagg till trendanalys for rookies over tid (5 ar med graf)
 
 ### Integration
 - [ ] Integrera rookie-data i publik insights-sida
 - [ ] Lagg till rookie-statistik pa klubbsidor
 - [ ] Lagg till "Ny deltagar"-badge pa rider-profiler
+
+### Felhantering
+- [x] Visa faktiska felmeddelanden i analytics-reports (inte bara "ingen data")
+- [x] Smart fallback vid tomma analytics-tabeller (visar ar fran events)
 
 ---
 
