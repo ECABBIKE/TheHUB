@@ -133,6 +133,17 @@ $page_actions = '
 include __DIR__ . '/components/unified-layout.php';
 ?>
 
+<!-- Info Box - Forklaring -->
+<div class="info-box">
+    <div class="info-box-icon">
+        <i data-lucide="alert-triangle"></i>
+    </div>
+    <div class="info-box-content">
+        <strong>Vad ar At-Risk?</strong>
+        <p>At-Risk identifierar riders som riskerar att sluta. Systemet analyserar 6 faktorer: minskande deltagande, ingen recent aktivitet, klassnedflytt, enbart en serie, kort karriar och hog alder i klassen. Varje faktor ger poang (0-100) - ju hogre, desto storre risk att de slutar.</p>
+    </div>
+</div>
+
 <!-- Year/Filter Selector -->
 <div class="filter-bar">
     <form method="get" class="filter-form">
@@ -415,6 +426,121 @@ document.addEventListener('DOMContentLoaded', function() {
 <?php endif; ?>
 
 <style>
+/* Info Box */
+.info-box {
+    display: flex;
+    gap: var(--space-md);
+    padding: var(--space-md);
+    margin-bottom: var(--space-lg);
+    background: var(--color-accent-light);
+    border: 1px solid var(--color-accent);
+    border-radius: var(--radius-md);
+}
+
+.info-box-icon {
+    flex-shrink: 0;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--color-warning);
+    border-radius: var(--radius-sm);
+    color: white;
+}
+
+.info-box-icon i {
+    width: 18px;
+    height: 18px;
+}
+
+.info-box-content {
+    flex: 1;
+}
+
+.info-box-content strong {
+    display: block;
+    margin-bottom: var(--space-xs);
+    color: var(--color-text-primary);
+}
+
+.info-box-content p {
+    margin: 0;
+    font-size: var(--text-sm);
+    color: var(--color-text-secondary);
+    line-height: 1.5;
+}
+
+/* Dashboard Metrics Grid */
+.dashboard-metrics {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: var(--space-md);
+    margin-bottom: var(--space-xl);
+}
+
+/* Metric Cards */
+.metric-card {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-md);
+    padding: var(--space-lg);
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+}
+
+.metric-card--primary {
+    border-left: 3px solid var(--color-accent);
+}
+
+.metric-card--success {
+    border-left: 3px solid var(--color-success);
+}
+
+.metric-card--warning {
+    border-left: 3px solid var(--color-warning);
+}
+
+.metric-card--danger {
+    border-left: 3px solid var(--color-error);
+}
+
+.metric-icon {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    background: var(--color-bg-hover);
+    border-radius: var(--radius-md);
+    color: var(--color-accent);
+    flex-shrink: 0;
+}
+
+.metric-icon i {
+    width: 20px;
+    height: 20px;
+}
+
+.metric-content {
+    flex: 1;
+    min-width: 0;
+}
+
+.metric-value {
+    font-size: var(--text-2xl);
+    font-weight: var(--weight-bold);
+    color: var(--color-text-primary);
+    line-height: 1.2;
+}
+
+.metric-label {
+    font-size: var(--text-sm);
+    color: var(--color-text-secondary);
+    margin-top: var(--space-2xs);
+}
+
 /* Filter Bar */
 .filter-bar {
     display: flex;
@@ -618,7 +744,8 @@ document.addEventListener('DOMContentLoaded', function() {
     .filter-bar,
     .admin-card,
     .alert,
-    .cache-info {
+    .cache-info,
+    .info-box {
         margin-left: -16px;
         margin-right: -16px;
         border-radius: 0 !important;
