@@ -1,8 +1,19 @@
-# TheHUB Analytics Platform - ROADMAP
+# TheHUB - Development Roadmap 2026
 
-> Senast uppdaterad: 2026-01-13
+> Senast uppdaterad: 2026-01-14
 
 ---
+
+## PROJEKTOMRADEN
+
+| Omrade | Status | Beskrivning |
+|--------|--------|-------------|
+| Analytics Platform | KLAR | Statistik, KPI:er, trender, rapporter |
+| Betalningssystem | 80% KLAR | Swish, Stripe, ordrar, checkout |
+
+---
+
+# DEL 1: ANALYTICS PLATFORM
 
 ## STATUSOVERSIKT
 
@@ -10,33 +21,23 @@
 |------|-------------|--------|-----------|
 | 0 | Governance & Identity Foundation | [x] KLAR | Grunden for datakvalitet |
 | 1 | Databas & Analytics-tabeller | [x] KLAR | Migrationer korda |
-| 2 | Analytics Engine (karnlogik) | [x] KLAR | |
+| 2 | Analytics Engine (karnlogik) | [x] KLAR | Bulk-optimerad |
 | 3 | KPI Dashboard (admin) | [x] KLAR | |
 | 4 | Serieflodeanalys | [x] KLAR | NYCKELFUNKTION |
-| 5 | Rapportgenerator | [x] KLAR | CSV-export |
+| 5 | Rapportgenerator | [x] KLAR | 6 rapporttyper inkl rookies |
 | 6 | Publika Insikter | [x] KLAR | GDPR-kompatibel |
 | 7 | Automatisering & Cron | [x] KLAR | Daglig refresh |
+| 8 | Admin-verktyg | [x] KLAR | Populate, Reset, Diagnose, Trends |
+| 9 | Rookie-analys | [x] KLAR | Detaljerad nyborjarstatistik |
 
 ---
 
 ## STEG 0: GOVERNANCE & IDENTITY FOUNDATION
 
 **Mal:** Saker datagrund med identity resolution, historik och KPI-versionering
-**Tid:** ~2-3 timmar
 **Status:** KLAR
 
-### Uppgifter
-
-- [x] Skapa `analytics/includes/sql-runner.php` (FORST!)
-- [x] Skapa `analytics/migrations/000_governance_core.sql`
-- [x] Skapa `analytics/setup-governance.php`
-- [ ] Alla governance-tabeller finns i databasen (kor setup-governance.php)
-- [ ] `v_canonical_riders` VIEW fungerar (kor setup-governance.php)
-- [x] Skapa `analytics/includes/IdentityResolver.php`
-- [x] Skapa `analytics/includes/auth.php` (ingen global $pdo!)
-- [x] Verifiera att allt fungerar
-
-### Tabeller som skapas
+### Tabeller som skapats
 
 - `rider_merge_map` - Hantera dubbletter
 - `rider_identity_audit` - Audit-logg for identity-andringar
@@ -50,19 +51,9 @@
 ## STEG 1: DATABAS & ANALYTICS-TABELLER
 
 **Mal:** Skapa databastabeller for pre-beraknad statistik
-**Tid:** ~2-3 timmar
 **Status:** KLAR
 
-### Uppgifter
-
-- [x] Skapa `analytics/migrations/001_analytics_tables.sql`
-- [x] Skapa `analytics/migrations/002_series_extensions.php`
-- [x] Skapa `analytics/migrations/003_seed_series_levels.sql`
-- [x] Skapa `analytics/setup-tables.php`
-- [ ] Alla 6 analytics-tabeller finns (kor setup-tables.php)
-- [ ] `series_level` ar satt pa alla serier (kor setup-tables.php)
-
-### Tabeller som skapas
+### Tabeller som skapats
 
 - `rider_yearly_stats`
 - `series_participation`
@@ -73,195 +64,233 @@
 
 ---
 
-## STEG 2: ANALYTICS ENGINE (KARNLOGIK)
+## STEG 2: ANALYTICS ENGINE
 
 **Mal:** PHP-klasser som beraknar och lagrar all statistik
-**Tid:** ~4-6 timmar
 **Status:** KLAR
 
-### Uppgifter
+### Filer
 
-- [x] Skapa `analytics/includes/AnalyticsEngine.php`
-- [x] Skapa `analytics/includes/KPICalculator.php`
-- [x] Skapa `analytics/populate-historical.php`
-- [ ] Historisk data genererad (kor populate-historical.php)
-- [ ] Verifiera att siffror ar rimliga
+- `analytics/includes/AnalyticsEngine.php` - Beraknar all statistik
+- `analytics/includes/KPICalculator.php` - KPI-metoder for dashboard
+- `analytics/populate-historical.php` - Genererar historisk data
 
 ---
 
-## STEG 3: KPI DASHBOARD (ADMIN)
+## STEG 3-7: DASHBOARD, FLOW, RAPPORTER, INSIKTER, CRON
 
-**Mal:** Visuellt admin-dashboard med KPI-kort och grafer
-**Tid:** ~4-5 timmar
 **Status:** KLAR
 
-### Uppgifter
+### Filer
 
-- [x] Skapa `admin/analytics-dashboard.php`
-- [x] KPI-kort (total riders, nya, retention, tillvaxt)
-- [x] Arsjamforelse med trendpilar
-- [x] Tillvaxttrender (5 ar)
-- [x] Aldersfordelning
-- [x] Disciplinfordelning
-- [x] Entry points-lista
-- [x] Top klubbar-tabell
-- [x] Feeder matrix preview
+- `admin/analytics-dashboard.php` - KPI-kort, trender, grafer
+- `admin/analytics-flow.php` - Serieflode (NYCKELFUNKTION)
+- `admin/analytics-reports.php` - 6 rapporttyper med CSV-export
+- `pages/insights.php` - Publik statistiksida (GDPR-kompatibel)
+- `analytics/cron/refresh-analytics.php` - Daglig refresh
 
 ---
 
-## STEG 4: SERIEFLODEANALYS
+## STEG 8: ADMIN-VERKTYG
 
-**Mal:** Visualisera hur cyklister ror sig mellan serier
-**Tid:** ~3-4 timmar
+**Mal:** Verktyg for att hantera och diagnostisera analytics-data
 **Status:** KLAR
 
-**OBS: DETTA AR NYCKELFUNKTIONEN!**
+### Filer som skapats
 
-### Uppgifter
-
-- [x] Skapa `admin/analytics-flow.php`
-- [x] Flodesmatris (regional -> nationell)
-- [x] Seriejamforelse-verktyg (overlapp)
-- [x] Serie-statistiktabell (lojalitet, exklusivitet)
-- [x] Entry points-visualisering
+- `admin/analytics-populate.php` - Interaktiv populate med progress
+- `admin/analytics-reset.php` - Rensa cron-runs eller all data
+- `admin/analytics-diagnose.php` - Jamfor events-data med analytics
+- `admin/analytics-trends.php` - Chart.js grafer for trender
 
 ---
 
-## STEG 5: RAPPORTGENERATOR
+## STEG 9: ROOKIE-ANALYS
 
-**Mal:** Exportera rapporter som PDF (via HTML) och Excel (via CSV)
-**Tid:** ~3-4 timmar
+**Mal:** Detaljerad analys av nya deltagare (rookies)
 **Status:** KLAR
 
-### Uppgifter
+### Funktioner
 
-- [x] Skapa `admin/analytics-reports.php`
-- [x] Arssammanfattning-rapport
-- [x] Retention-rapport
-- [x] Serie-rapport
-- [x] Klubb-rapport
-- [x] Demografi-rapport
-- [x] CSV-export for alla rapporter
+Rookie-rapporten visar:
+- Oversikt (antal, andel, snittålder, konsfordelning)
+- Aldersfordelning for nya deltagare
+- Vilka klasser nya deltagare startar i
+- Events med flest nya deltagare
+- Klubbar med flest nya deltagare
+- Komplett lista over alla rookies med lankar till profiler
 
 ---
 
-## STEG 6: PUBLIKA INSIKTER
+## POTENTIELLA FORBATTRINGAR (ANALYTICS)
 
-**Mal:** Publik sida med aggregerad statistik (GDPR-saker)
-**Tid:** ~2-3 timmar
-**Status:** KLAR
+### Datakvalitet
+- [ ] Verifiera rookie-berakningar mot manuella kontroller
+- [ ] Jamfor med forsta-start i results-tabellen
+- [ ] Forbattra is_rookie logik for edge-cases
 
-### Uppgifter
+### Funktionalitet
+- [ ] Lagg till filtrering per serie i rookie-rapporten
+- [ ] Lagg till disciplin-specifik rookie-analys
+- [ ] Lagg till geografisk analys (var kommer rookies ifran?)
+- [ ] Lagg till trendanalys for rookies over tid
 
-- [x] Skapa `pages/insights.php`
-- [x] Arsvalare (senaste 5 ar)
-- [x] Huvudstatistik (riders, nya, retention, tillvaxt)
-- [x] Tillvaxttrender (stapeldiagram)
-- [x] Aldersfordelning (GDPR: < 10 doljs)
-- [x] Disciplinfordelning
-- [x] Cross-participation highlight
-- [x] Top klubbar (GDPR: < 10 doljs)
-- [x] Data-disclaimer
-
----
-
-## STEG 7: AUTOMATISERING & CRON
-
-**Mal:** Automatisk uppdatering av analytics-data
-**Tid:** ~2-3 timmar
-**Status:** KLAR
-
-### Uppgifter
-
-- [x] Skapa `analytics/cron/refresh-analytics.php`
-- [x] Daglig refresh av alla analytics-tabeller
-- [x] Loggning till analytics_cron_runs
-- [x] Daglig snapshot till analytics_snapshots
-- [x] Felhantering med exit-koder
-
-### Cron-instruktioner
-
-```
-# Daglig analytics-uppdatering kl 03:00
-0 3 * * * php /path/to/analytics/cron/refresh-analytics.php >> /var/log/thehub-analytics.log 2>&1
-```
+### Integration
+- [ ] Integrera rookie-data i publik insights-sida
+- [ ] Lagg till rookie-statistik pa klubbsidor
+- [ ] Lagg till "Ny deltagar"-badge pa rider-profiler
 
 ---
 
-## TEKNISKA BESLUT
+# DEL 2: BETALNINGSSYSTEM
 
-### Beslut 1: Source of Truth
-- `results` + `events` ar grunddata
-- Analytics-tabeller kan alltid rebuildas fran dessa
+**Mal:** Lansera biljettforsaljning
+**Status:** 80% KLAR - redo for stabilisering
 
-### Beslut 2: Identity Resolution
+## AKTUELL STATUS
+
+### Orderhantering
+| Komponent | Fil | Status |
+|-----------|-----|--------|
+| Order CRUD | `includes/payment.php` | Fungerar |
+| Order items | `includes/payment.php` | Fungerar |
+| Multi-rider ordrar | `includes/order-manager.php` | Fungerar |
+| Admin orderlista | `admin/orders.php` | Fungerar |
+
+### Gateway-arkitektur
+| Gateway | Implementation | Status |
+|---------|----------------|--------|
+| Manuell Swish | `gateways/ManualGateway.php` | **REDO ATT ANVANDA** |
+| Swish Handel | `gateways/SwishGateway.php` + `SwishClient.php` | Implementerad, saknar certifikat |
+| Stripe Connect | `gateways/StripeGateway.php` + `StripeClient.php` | Implementerad, saknar API-nycklar |
+| Gateway interface | `GatewayInterface.php` | Fungerar |
+| PaymentManager | `PaymentManager.php` | Fungerar |
+
+### Frontend
+| Sida | Fil | Status |
+|------|-----|--------|
+| Checkout | `pages/checkout.php` | Fungerar (Swish QR + deeplink) |
+| Mina biljetter | `pages/profile/tickets.php` | Finns |
+| Mina anmalningar | `pages/profile/registrations.php` | Finns |
+
+---
+
+## KRITISKA BUGGAR ATT FIXA
+
+### 1. Webhooks anvander fel databas-wrapper
+**Filer:**
+- `api/webhooks/swish-callback.php`
+- `api/webhooks/stripe-webhook.php`
+
+**Problem:** Anvander `$GLOBALS['pdo']` istallet for `hub_db()`
+**Prioritet:** HOG
+
+### 2. Email-notifieringar saknas
+**Problem:** Ingen kod for att skicka bekraftelse-email vid betalning
+**Prioritet:** HOG
+
+### 3. Promotor event-banners
+**Problem:** Promotor kan inte ladda upp banners till specifika events
+**Prioritet:** HOG
+
+### 4. Discount_codes-tabeller saknas
+**Problem:** Kod refererar till tabeller som inte finns
+**Prioritet:** MEDIUM
+
+---
+
+## LANSERINGS-CHECKLISTA
+
+### Vecka 1: Stabilisering
+- [ ] Fixa webhook databas-wrapper
+- [ ] Verifiera discount_codes-tabeller
+- [ ] Konfigurera Manuell Swish for test-event
+- [ ] Testa hela anmalan-flode
+
+### Vecka 2: Email & UX
+- [ ] Installera PHPMailer / SMTP
+- [ ] Skapa email-template for bekraftelse
+- [ ] Forbattra checkout-instruktioner
+- [ ] Skapa QR-kod pa Mina biljetter
+
+### Vecka 3: Test & Lansering
+- [ ] Pilot-test med riktiga anvandare
+- [ ] Konfigurera production Swish-nummer
+- [ ] **LANSERING**
+
+---
+
+## FRAMTIDA FEATURES (BETALNING)
+
+### v1.1
+- [ ] Early bird / Late fee automatik
+- [ ] Check-in med QR-kod
+- [ ] Swish Handel (om certifikat finns)
+
+### v1.2
+- [ ] Stripe kortbetalning
+- [ ] Familjeanmalan
+- [ ] Automatisk startnummer-tilldelning
+
+---
+
+# TEKNISKA BESLUT
+
+### Analytics
+- `results` + `events` ar grunddata (source of truth)
 - `rider_merge_map` hanterar dubbletter
-- Alla analytics-queries gar via `IdentityResolver`
-- Canonical rider_id anvands ALLTID
+- GDPR: Publika insikter visar EJ segment < 10 deltagare
+- Chart.js for visualiseringar
 
-### Beslut 3: Klubbhistorik
-- `rider_affiliations` med valid_from/valid_to
-- Ersatter riders.club_id for historisk analys
-
-### Beslut 4: KPI-versionering
-- Alla berakningar marks med `calculation_version`
-- Startar pa v1
-
-### Beslut 5: GDPR - Public N=10
-- Publika insikter visar EJ segment < 10 deltagare
-- Anvand `maskSmallSegments()` for all publik data
-
-### Beslut 6: Serieflode (Sankey)
-- Chart.js for linje/doughnut/bar
-- Pseudo-Sankey (HTML/CSS) for flodesvisualisering
-- Ingen extern sankey-lib
+### Betalning
+- PaymentManager + GatewayInterface-arkitektur
+- Manuell Swish forst, Swish Handel/Stripe senare
+- Webhooks for asynkrona callbacks
 
 ---
 
-## CHANGELOG
+# KRITISK REGEL: INGA VERSIONSPREFIX
+
+**Anvand ALDRIG versionsnummer (V2, V3, V4) i filnamn, konstanter eller kod.**
+
+```php
+// FEL
+HUB_V2_ROOT, HUB_V3_ROOT, HUB_V3_URL
+
+// RATT
+HUB_ROOT, HUB_URL, ROOT_PATH, INCLUDES_PATH
+```
+
+---
+
+# CHANGELOG
+
+### 2026-01-14
+- Steg 8 KLAR: Admin-verktyg
+  - Skapade admin/analytics-populate.php (interaktiv AJAX-baserad populate)
+  - Skapade admin/analytics-reset.php (rensa analytics-data)
+  - Skapade admin/analytics-diagnose.php (jamfor faktisk vs analytics)
+  - Skapade admin/analytics-trends.php (trender over flera sasonger med Chart.js)
+  - La till Analytics-sektion i admin/tools.php
+  - Optimerade calculateYearlyStatsBulk() - en SQL-query istallet for tusentals
+  - Fixade refreshAllStatsFast() att rensa cron-runs fore berakning
+- Steg 9 KLAR: Rookie-analys
+  - La till 7 nya metoder i KPICalculator.php for rookie-statistik
+  - La till "Nya Deltagare" rapporttyp i analytics-reports.php
+  - CSV-export med profillankningar for alla rookies
+- Sammanslog ROADMAP.md och ROADMAP-2026.md till en fil
 
 ### 2026-01-13
-- Projekt startat
-- Steg 0 KLAR: Governance & Identity Foundation
-  - Skapade sql-runner.php med robust SQL-parsing
-  - Skapade governance-tabeller (migrations)
-  - Skapade IdentityResolver for dubblett-hantering
-  - Skapade analytics auth.php med CSRF och rollkontroll
-- Steg 1 KLAR: Databas & Analytics-tabeller
-  - Skapade 001_analytics_tables.sql (6 tabeller)
-  - Skapade 002_series_extensions.php (series_level, region, etc.)
-  - Skapade 003_seed_series_levels.sql (kategorisering)
-  - Skapade setup-tables.php
-- Steg 2 KLAR: Analytics Engine (karnlogik)
-  - Skapade AnalyticsEngine.php (beraknar all statistik)
-  - Skapade KPICalculator.php (KPI-metoder for dashboard)
-  - Skapade populate-historical.php (genererar historisk data)
+- Analytics Platform startat
+- Steg 0-7 KLAR pa en dag
 - Migrationer korda pa produktion
-  - 25 SQL-statements utan fel
-  - 9 nationella, 20 regionala serier kategoriserade
-- Steg 3 KLAR: KPI Dashboard
-  - Skapade admin/analytics-dashboard.php
-  - KPI-kort med arsjamforelse
-  - Tillvaxttrender, aldersfordelning, discipliner
-  - Top klubbar och entry points
-- Steg 4 KLAR: Series Flow Analysis (NYCKELFUNKTION)
-  - Skapade admin/analytics-flow.php
-  - Flodesmatris (regional -> nationell)
-  - Seriejamforelse med overlappvisualisering
-  - Serie-lojalitet och exklusivitet
-- Steg 5 KLAR: Report Generator
-  - Skapade admin/analytics-reports.php
-  - 5 rapporttyper med CSV-export
-  - Arssammanfattning, retention, serier, klubbar, demografi
-- Steg 6 KLAR: Public Insights
-  - Skapade pages/insights.php
-  - GDPR-kompatibel (< 10 maskeras)
-  - Publik statistiksida for svensk cykling
-- Steg 7 KLAR: Automation & Cron
-  - Skapade analytics/cron/refresh-analytics.php
-  - Daglig refresh med loggning
-  - Daglig snapshot till analytics_snapshots
 - Admin-navigation uppdaterad med Analytics-grupp
 
-**ANALYTICS PLATFORM KOMPLETT!**
+### 2026-01-12
+- Betalningssystem inventering
+- Tog bort alla V2/V3-prefix fran koden
 
+---
+
+**ANALYTICS PLATFORM KOMPLETT!**
+**BETALNINGSSYSTEM REDO FOR LANSERING**

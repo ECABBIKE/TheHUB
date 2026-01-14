@@ -97,6 +97,21 @@ try {
                 'disciplines' => $kpiCalc->getDisciplineDistribution($selectedYear)
             ];
             break;
+
+        case 'rookies':
+            $reportTitle = "Nya Deltagare (Rookies) $selectedYear";
+            $reportData = [
+                'total_rookies' => $kpiCalc->getNewRidersCount($selectedYear),
+                'total_riders' => $kpiCalc->getTotalActiveRiders($selectedYear),
+                'average_age' => $kpiCalc->getRookieAverageAge($selectedYear),
+                'gender' => $kpiCalc->getRookieGenderDistribution($selectedYear),
+                'ages' => $kpiCalc->getRookieAgeDistribution($selectedYear),
+                'classes' => $kpiCalc->getRookieClassDistribution($selectedYear),
+                'events' => $kpiCalc->getEventsWithMostRookies($selectedYear, 20),
+                'clubs' => $kpiCalc->getClubsWithMostRookies($selectedYear, 20),
+                'list' => $kpiCalc->getRookiesList($selectedYear)
+            ];
+            break;
     }
 } catch (Exception $e) {
     $error = $e->getMessage();
@@ -166,6 +181,28 @@ if ($export && !isset($error)) {
                 fputcsv($output, [$age['age_group'], $age['count']]);
             }
             break;
+
+        case 'rookies':
+            fputcsv($output, ['Rider ID', 'Fornamn', 'Efternamn', 'Alder', 'Fodelsear', 'Kon', 'Klubb', 'Events', 'Starter', 'Poang', 'Basta Placering', 'Disciplin', 'Profil URL']);
+            foreach ($reportData['list'] as $rookie) {
+                $profileUrl = 'https://thehub.se/rider/' . $rookie['rider_id'];
+                fputcsv($output, [
+                    $rookie['rider_id'],
+                    $rookie['firstname'],
+                    $rookie['lastname'],
+                    $rookie['age'] ?? '-',
+                    $rookie['birth_year'] ?? '-',
+                    $rookie['gender'] ?? '-',
+                    $rookie['club_name'] ?? 'Ingen klubb',
+                    $rookie['total_events'],
+                    $rookie['total_starts'],
+                    $rookie['total_points'],
+                    $rookie['best_position'],
+                    $rookie['primary_discipline'] ?? '-',
+                    $profileUrl
+                ]);
+            }
+            break;
     }
 
     fclose($output);
@@ -215,6 +252,12 @@ include __DIR__ . '/components/unified-layout.php';
                 <input type="radio" name="report" value="demographics" <?= $reportType === 'demographics' ? 'checked' : '' ?> onchange="this.form.submit()">
                 <i data-lucide="users"></i>
                 <span>Demografi</span>
+            </label>
+
+            <label class="report-option <?= $reportType === 'rookies' ? 'active' : '' ?>">
+                <input type="radio" name="report" value="rookies" <?= $reportType === 'rookies' ? 'checked' : '' ?> onchange="this.form.submit()">
+                <i data-lucide="user-plus"></i>
+                <span>Nya Deltagare</span>
             </label>
         </div>
 
@@ -535,6 +578,197 @@ include __DIR__ . '/components/unified-layout.php';
                 <?php endforeach; ?>
             </tbody>
         </table>
+    </div>
+
+    <?php elseif ($reportType === 'rookies'): ?>
+    <!-- Rookies Report -->
+    <div class="report-section">
+        <h3>Oversikt</h3>
+        <?php
+        $rookiePct = $reportData['total_riders'] > 0
+            ? round($reportData['total_rookies'] / $reportData['total_riders'] * 100, 1)
+            : 0;
+        $totalGender = $reportData['gender']['M'] + $reportData['gender']['F'];
+        $femalePct = $totalGender > 0 ? round($reportData['gender']['F'] / $totalGender * 100, 1) : 0;
+        ?>
+        <div class="kpi-grid">
+            <div class="kpi-item">
+                <span class="kpi-value"><?= number_format($reportData['total_rookies']) ?></span>
+                <span class="kpi-label">Nya Deltagare</span>
+            </div>
+            <div class="kpi-item">
+                <span class="kpi-value"><?= $rookiePct ?>%</span>
+                <span class="kpi-label">Andel av totalt</span>
+            </div>
+            <div class="kpi-item">
+                <span class="kpi-value"><?= number_format($reportData['average_age'], 0) ?> ar</span>
+                <span class="kpi-label">Snittålder</span>
+            </div>
+            <div class="kpi-item">
+                <span class="kpi-value"><?= $femalePct ?>%</span>
+                <span class="kpi-label">Andel kvinnor</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="report-section">
+        <h3>Aldersfordelning - Nya Deltagare</h3>
+        <table class="report-table">
+            <thead>
+                <tr>
+                    <th>Aldersgrupp</th>
+                    <th>Antal</th>
+                    <th>Andel</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php
+                $totalAge = array_sum(array_column($reportData['ages'], 'count')) ?: 1;
+                foreach ($reportData['ages'] as $age):
+                    $pct = ($age['count'] / $totalAge) * 100;
+                ?>
+                <tr>
+                    <td><?= htmlspecialchars($age['age_group']) ?></td>
+                    <td><?= number_format($age['count']) ?></td>
+                    <td>
+                        <div class="progress-cell">
+                            <div class="progress-bar-mini">
+                                <div class="progress-fill" style="width: <?= $pct ?>%;"></div>
+                            </div>
+                            <span><?= round($pct, 1) ?>%</span>
+                        </div>
+                    </td>
+                </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="report-section">
+        <h3>Klasser - Var startar nya deltagare?</h3>
+        <table class="report-table">
+            <thead>
+                <tr>
+                    <th>Klass</th>
+                    <th>Antal Rookies</th>
+                    <th>Andel</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php
+                $totalClass = array_sum(array_column($reportData['classes'], 'rookie_count')) ?: 1;
+                foreach ($reportData['classes'] as $class):
+                    $pct = ($class['rookie_count'] / $totalClass) * 100;
+                ?>
+                <tr>
+                    <td><?= htmlspecialchars($class['class_name']) ?></td>
+                    <td><?= number_format($class['rookie_count']) ?></td>
+                    <td><?= round($pct, 1) ?>%</td>
+                </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="report-section">
+        <h3>Events med flest nya deltagare</h3>
+        <table class="report-table">
+            <thead>
+                <tr>
+                    <th>Event</th>
+                    <th>Serie</th>
+                    <th>Datum</th>
+                    <th>Rookies</th>
+                    <th>Totalt</th>
+                    <th>Andel</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ($reportData['events'] as $event): ?>
+                <tr>
+                    <td>
+                        <a href="/event/<?= $event['event_id'] ?>" target="_blank">
+                            <?= htmlspecialchars($event['event_name']) ?>
+                        </a>
+                    </td>
+                    <td><?= htmlspecialchars($event['series_name'] ?? '-') ?></td>
+                    <td><?= date('Y-m-d', strtotime($event['event_date'])) ?></td>
+                    <td><strong><?= number_format($event['rookie_count']) ?></strong></td>
+                    <td><?= number_format($event['total_participants']) ?></td>
+                    <td><?= $event['rookie_percentage'] ?>%</td>
+                </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="report-section">
+        <h3>Klubbar med flest nya deltagare</h3>
+        <table class="report-table">
+            <thead>
+                <tr>
+                    <th>Klubb</th>
+                    <th>Stad</th>
+                    <th>Antal Rookies</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ($reportData['clubs'] as $club): ?>
+                <tr>
+                    <td>
+                        <a href="/club/<?= $club['club_id'] ?>" target="_blank">
+                            <?= htmlspecialchars($club['club_name']) ?>
+                        </a>
+                    </td>
+                    <td><?= htmlspecialchars($club['city'] ?? '-') ?></td>
+                    <td><strong><?= number_format($club['rookie_count']) ?></strong></td>
+                </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+    </div>
+
+    <div class="report-section">
+        <h3>Alla Nya Deltagare (<?= number_format(count($reportData['list'])) ?> st)</h3>
+        <p style="color: var(--color-text-secondary); margin-bottom: var(--space-md);">
+            Klicka pa "Exportera CSV" for att ladda ner listan med profillänkar.
+        </p>
+        <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
+        <table class="report-table">
+            <thead>
+                <tr>
+                    <th>Namn</th>
+                    <th>Alder</th>
+                    <th>Klubb</th>
+                    <th>Events</th>
+                    <th>Poang</th>
+                    <th>Basta</th>
+                    <th></th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ($reportData['list'] as $rookie): ?>
+                <tr>
+                    <td>
+                        <a href="/rider/<?= $rookie['rider_id'] ?>" target="_blank">
+                            <?= htmlspecialchars($rookie['firstname'] . ' ' . $rookie['lastname']) ?>
+                        </a>
+                    </td>
+                    <td><?= $rookie['age'] ?? '-' ?></td>
+                    <td><?= htmlspecialchars($rookie['club_name'] ?? '-') ?></td>
+                    <td><?= $rookie['total_events'] ?></td>
+                    <td><?= $rookie['total_points'] ?></td>
+                    <td><?= $rookie['best_position'] ? '#' . $rookie['best_position'] : '-' ?></td>
+                    <td>
+                        <a href="/rider/<?= $rookie['rider_id'] ?>" target="_blank" class="btn-icon" title="Visa profil">
+                            <i data-lucide="external-link" style="width:16px;height:16px;"></i>
+                        </a>
+                    </td>
+                </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+        </div>
     </div>
     <?php endif; ?>
 
