@@ -80,13 +80,20 @@ try {
             break;
 
         case 'retention':
-            $reportTitle = "Retention-analys $selectedYear";
+            $reportTitle = "Retention & Churn-analys $selectedYear";
             $reportData = [
                 'retention_rate' => $kpiCalc->getRetentionRate($selectedYear),
                 'churn_rate' => $kpiCalc->getChurnRate($selectedYear),
                 'new_riders' => $kpiCalc->getNewRidersCount($selectedYear),
                 'retained_riders' => $kpiCalc->getRetainedRidersCount($selectedYear),
-                'trend' => $kpiCalc->getRetentionTrend(5)
+                'trend' => $kpiCalc->getRetentionTrend(5),
+                'summary' => $kpiCalc->getChurnSummary($selectedYear),
+                'by_segment' => $kpiCalc->getChurnBySegment($selectedYear),
+                'inactive_duration' => $kpiCalc->getInactiveByDuration($selectedYear),
+                'churned_list' => $kpiCalc->getChurnedRiders($selectedYear, 100),
+                'one_timers' => $kpiCalc->getOneTimers($selectedYear, 2),
+                'comebacks' => $kpiCalc->getComebackRiders($selectedYear),
+                'win_back' => $kpiCalc->getWinBackTargets($selectedYear, 50)
             ];
             break;
 
@@ -155,7 +162,79 @@ try {
 }
 
 // Export to CSV
+$exportType = $_GET['export'] ?? '';
 if ($export && !isset($error)) {
+    // Special export types
+    if ($exportType === 'winback' && $reportType === 'retention') {
+        header('Content-Type: text/csv; charset=utf-8');
+        header('Content-Disposition: attachment; filename="thehub-winback-targets-' . $selectedYear . '.csv"');
+        $output = fopen('php://output', 'w');
+        fprintf($output, chr(0xEF).chr(0xBB).chr(0xBF)); // UTF-8 BOM
+        fputcsv($output, ['Prioritet', 'Fornamn', 'Efternamn', 'Klubb', 'Alder', 'Sasonger', 'Totalt starter', 'Ar inaktiv', 'Discipliner', 'Profil']);
+        foreach ($reportData['win_back'] as $rider) {
+            fputcsv($output, [
+                $rider['priority'],
+                $rider['firstname'],
+                $rider['lastname'],
+                $rider['club_name'] ?? '',
+                $rider['age'] ?? '',
+                $rider['total_seasons'],
+                $rider['total_events_all_time'],
+                $rider['years_inactive'],
+                $rider['primary_disciplines'] ?? '',
+                'https://svenskmtb.se/rider/' . $rider['id']
+            ]);
+        }
+        fclose($output);
+        exit;
+    }
+
+    if ($exportType === 'churned' && $reportType === 'retention') {
+        header('Content-Type: text/csv; charset=utf-8');
+        header('Content-Disposition: attachment; filename="thehub-churned-' . $selectedYear . '.csv"');
+        $output = fopen('php://output', 'w');
+        fprintf($output, chr(0xEF).chr(0xBB).chr(0xBF)); // UTF-8 BOM
+        fputcsv($output, ['Fornamn', 'Efternamn', 'Klubb', 'Alder', 'Starter ' . ($selectedYear-1), 'Disciplin', 'Forsta sasong', 'Sista sasong', 'Sasonger totalt', 'Profil']);
+        foreach ($reportData['churned_list'] as $rider) {
+            fputcsv($output, [
+                $rider['firstname'],
+                $rider['lastname'],
+                $rider['club_name'] ?? '',
+                $rider['age'] ?? '',
+                $rider['last_year_events'] ?? '',
+                $rider['last_discipline'] ?? '',
+                $rider['first_season'] ?? '',
+                $rider['last_season'] ?? '',
+                $rider['total_seasons'] ?? '',
+                'https://svenskmtb.se/rider/' . $rider['id']
+            ]);
+        }
+        fclose($output);
+        exit;
+    }
+
+    if ($exportType === 'comebacks' && $reportType === 'retention') {
+        header('Content-Type: text/csv; charset=utf-8');
+        header('Content-Disposition: attachment; filename="thehub-comebacks-' . $selectedYear . '.csv"');
+        $output = fopen('php://output', 'w');
+        fprintf($output, chr(0xEF).chr(0xBB).chr(0xBF)); // UTF-8 BOM
+        fputcsv($output, ['Fornamn', 'Efternamn', 'Klubb', 'Alder', 'Ar borta', 'Forsta sasong ever', 'Starter ' . $selectedYear, 'Profil']);
+        foreach ($reportData['comebacks'] as $rider) {
+            fputcsv($output, [
+                $rider['firstname'],
+                $rider['lastname'],
+                $rider['club_name'] ?? '',
+                $rider['age'] ?? '',
+                $rider['years_away'],
+                $rider['first_season_ever'] ?? '',
+                $rider['current_events'],
+                'https://svenskmtb.se/rider/' . $rider['id']
+            ]);
+        }
+        fclose($output);
+        exit;
+    }
+
     header('Content-Type: text/csv; charset=utf-8');
     header('Content-Disposition: attachment; filename="thehub-' . $reportType . '-' . $selectedYear . '.csv"');
 
@@ -404,17 +483,25 @@ include __DIR__ . '/components/unified-layout.php';
     </div>
 
     <?php elseif ($reportType === 'retention'): ?>
-    <!-- Retention Report -->
+    <!-- Retention & Churn Report -->
     <div class="report-section">
-        <h3>Retention Oversikt</h3>
+        <h3>Retention & Churn Oversikt</h3>
         <div class="kpi-grid">
             <div class="kpi-item kpi-item--large">
                 <span class="kpi-value"><?= number_format($reportData['retention_rate'], 1) ?>%</span>
                 <span class="kpi-label">Retention Rate</span>
             </div>
-            <div class="kpi-item kpi-item--large">
+            <div class="kpi-item kpi-item--large" style="--kpi-color: var(--color-error);">
                 <span class="kpi-value"><?= number_format($reportData['churn_rate'], 1) ?>%</span>
                 <span class="kpi-label">Churn Rate</span>
+            </div>
+            <div class="kpi-item">
+                <span class="kpi-value"><?= number_format($reportData['summary']['churned_last_year'] ?? 0) ?></span>
+                <span class="kpi-label">Slutade <?= $selectedYear - 1 ?></span>
+            </div>
+            <div class="kpi-item" style="--kpi-color: var(--color-success);">
+                <span class="kpi-value"><?= number_format($reportData['summary']['comebacks_this_year'] ?? 0) ?></span>
+                <span class="kpi-label">Comebacks i ar</span>
             </div>
         </div>
 
@@ -423,38 +510,130 @@ include __DIR__ . '/components/unified-layout.php';
                 <i data-lucide="user-plus"></i>
                 <div>
                     <span class="retention-value"><?= number_format($reportData['new_riders']) ?></span>
-                    <span class="retention-label">Nya riders detta ar</span>
+                    <span class="retention-label">Nya riders <?= $selectedYear ?></span>
                 </div>
             </div>
             <div class="retention-stat">
                 <i data-lucide="refresh-cw"></i>
                 <div>
                     <span class="retention-value"><?= number_format($reportData['retained_riders']) ?></span>
-                    <span class="retention-label">Atervandare fran forriga ar</span>
+                    <span class="retention-label">Atervandare fran <?= $selectedYear - 1 ?></span>
+                </div>
+            </div>
+            <div class="retention-stat">
+                <i data-lucide="user-x"></i>
+                <div>
+                    <span class="retention-value"><?= number_format($reportData['summary']['one_timers_total'] ?? 0) ?></span>
+                    <span class="retention-label">One-timers (1-2 starter totalt)</span>
+                </div>
+            </div>
+            <div class="retention-stat">
+                <i data-lucide="clock"></i>
+                <div>
+                    <span class="retention-value"><?= number_format($reportData['summary']['inactive_2plus_years'] ?? 0) ?></span>
+                    <span class="retention-label">Inaktiva 2+ ar</span>
                 </div>
             </div>
         </div>
     </div>
 
+    <!-- Retention Trend Chart -->
     <div class="report-section">
-        <h3>Retention Trend (5 ar)</h3>
+        <h3>Retention & Churn Trend (5 ar)</h3>
+        <div style="max-width: 600px; margin-bottom: var(--space-lg);">
+            <canvas id="retentionChart"></canvas>
+        </div>
+        <script>
+        document.addEventListener('DOMContentLoaded', function() {
+            const ctx = document.getElementById('retentionChart');
+            if (ctx) {
+                new Chart(ctx, {
+                    type: 'line',
+                    data: {
+                        labels: <?= json_encode(array_column($reportData['trend'], 'year')) ?>,
+                        datasets: [{
+                            label: 'Retention Rate %',
+                            data: <?= json_encode(array_column($reportData['trend'], 'retention_rate')) ?>,
+                            borderColor: 'rgb(16, 185, 129)',
+                            backgroundColor: 'rgba(16, 185, 129, 0.1)',
+                            fill: true,
+                            tension: 0.3
+                        }, {
+                            label: 'Churn Rate %',
+                            data: <?= json_encode(array_column($reportData['trend'], 'churn_rate')) ?>,
+                            borderColor: 'rgb(239, 68, 68)',
+                            backgroundColor: 'rgba(239, 68, 68, 0.1)',
+                            fill: true,
+                            tension: 0.3
+                        }]
+                    },
+                    options: {
+                        responsive: true,
+                        plugins: { legend: { position: 'bottom' } },
+                        scales: {
+                            y: { min: 0, max: 100, title: { display: true, text: '%' } }
+                        }
+                    }
+                });
+            }
+        });
+        </script>
+    </div>
+
+    <!-- Inaktiva per duration -->
+    <?php if (!empty($reportData['inactive_duration'])): ?>
+    <div class="report-section">
+        <h3>Hur lange har de varit borta?</h3>
+        <p style="color: var(--color-text-secondary); font-size: var(--text-sm); margin-bottom: var(--space-md);">
+            Deltagare som inte tavlat <?= $selectedYear ?>, grupperade efter antal ar sedan senaste start.
+        </p>
         <table class="report-table">
             <thead>
                 <tr>
-                    <th>Ar</th>
-                    <th>Retention Rate</th>
+                    <th>Ar sedan senast</th>
+                    <th>Antal</th>
+                    <th>Snittålder</th>
                 </tr>
             </thead>
             <tbody>
-                <?php foreach ($reportData['trend'] as $t): ?>
+                <?php foreach ($reportData['inactive_duration'] as $row): ?>
                 <tr>
-                    <td><?= $t['year'] ?></td>
+                    <td><?= $row['years_inactive'] ?> ar</td>
+                    <td><strong><?= number_format($row['count']) ?></strong></td>
+                    <td><?= $row['avg_age'] ? number_format($row['avg_age'], 0) . ' ar' : '-' ?></td>
+                </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+    </div>
+    <?php endif; ?>
+
+    <!-- Churn per segment -->
+    <?php if (!empty($reportData['by_segment'])): ?>
+    <div class="report-section">
+        <h3>Churn per Aldersgrupp</h3>
+        <p style="color: var(--color-text-secondary); font-size: var(--text-sm); margin-bottom: var(--space-md);">
+            Vilka aldersgrupper tappar vi flest deltagare fran?
+        </p>
+        <table class="report-table">
+            <thead>
+                <tr>
+                    <th>Aldersgrupp</th>
+                    <th>Antal slutat</th>
+                    <th>Churn Rate</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ($reportData['by_segment']['by_age'] as $row): ?>
+                <tr>
+                    <td><?= htmlspecialchars($row['age_group']) ?></td>
+                    <td><strong><?= number_format($row['churned_count']) ?></strong></td>
                     <td>
                         <div class="progress-cell">
-                            <div class="progress-bar-mini">
-                                <div class="progress-fill" style="width: <?= $t['retention_rate'] ?>%;"></div>
+                            <div class="progress-bar-mini" style="--bar-color: var(--color-error);">
+                                <div class="progress-fill" style="width: <?= min($row['churn_rate'], 100) ?>%; background: var(--color-error);"></div>
                             </div>
-                            <span><?= number_format($t['retention_rate'], 1) ?>%</span>
+                            <span><?= number_format($row['churn_rate'], 1) ?>%</span>
                         </div>
                     </td>
                 </tr>
@@ -462,6 +641,202 @@ include __DIR__ . '/components/unified-layout.php';
             </tbody>
         </table>
     </div>
+
+    <div class="report-section">
+        <h3>Churn per Disciplin</h3>
+        <table class="report-table">
+            <thead>
+                <tr>
+                    <th>Disciplin</th>
+                    <th>Antal slutat</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ($reportData['by_segment']['by_discipline'] as $row): ?>
+                <tr>
+                    <td><?= htmlspecialchars($row['discipline']) ?></td>
+                    <td><strong><?= number_format($row['churned_count']) ?></strong></td>
+                </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+    </div>
+    <?php endif; ?>
+
+    <!-- Comeback Riders -->
+    <?php if (!empty($reportData['comebacks'])): ?>
+    <div class="report-section">
+        <h3><i data-lucide="rotate-ccw" style="width: 20px; height: 20px;"></i> Comebacks <?= $selectedYear ?></h3>
+        <p style="color: var(--color-text-secondary); font-size: var(--text-sm); margin-bottom: var(--space-md);">
+            Deltagare som aterkom efter minst ett ars uppehall. Dessa ar vardefulla - de valde att komma tillbaka!
+        </p>
+        <a href="?report=retention&year=<?= $selectedYear ?>&export=comebacks" class="btn btn-secondary" style="margin-bottom: var(--space-md);">
+            <i data-lucide="download"></i> Exportera Comebacks (CSV)
+        </a>
+        <table class="report-table">
+            <thead>
+                <tr>
+                    <th>Namn</th>
+                    <th>Klubb</th>
+                    <th>Alder</th>
+                    <th>Ar borta</th>
+                    <th>Forsta sasong</th>
+                    <th>Starter <?= $selectedYear ?></th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach (array_slice($reportData['comebacks'], 0, 50) as $rider): ?>
+                <tr>
+                    <td>
+                        <a href="/rider/<?= $rider['id'] ?>" style="color: var(--color-accent);">
+                            <?= htmlspecialchars($rider['firstname'] . ' ' . $rider['lastname']) ?>
+                        </a>
+                    </td>
+                    <td><?= htmlspecialchars($rider['club_name'] ?? '-') ?></td>
+                    <td><?= $rider['age'] ?? '-' ?></td>
+                    <td><strong><?= $rider['years_away'] ?> ar</strong></td>
+                    <td><?= $rider['first_season_ever'] ?? '-' ?></td>
+                    <td><?= $rider['current_events'] ?></td>
+                </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+    </div>
+    <?php endif; ?>
+
+    <!-- Win-Back Targets -->
+    <?php if (!empty($reportData['win_back'])): ?>
+    <div class="report-section">
+        <h3><i data-lucide="target" style="width: 20px; height: 20px;"></i> Win-Back Targets</h3>
+        <p style="color: var(--color-text-secondary); font-size: var(--text-sm); margin-bottom: var(--space-md);">
+            Inaktiva deltagare med hog potential att atervanda. Prioriterade efter tidigare engagemang.
+        </p>
+        <a href="?report=retention&year=<?= $selectedYear ?>&export=winback" class="btn btn-secondary" style="margin-bottom: var(--space-md);">
+            <i data-lucide="download"></i> Exportera Win-Back Lista (CSV)
+        </a>
+        <table class="report-table">
+            <thead>
+                <tr>
+                    <th>Prioritet</th>
+                    <th>Namn</th>
+                    <th>Klubb</th>
+                    <th>Alder</th>
+                    <th>Sasonger</th>
+                    <th>Totalt starter</th>
+                    <th>Ar inaktiv</th>
+                    <th>Discipliner</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ($reportData['win_back'] as $rider): ?>
+                <tr>
+                    <td>
+                        <span class="badge badge-<?= $rider['priority'] === 'Hog' ? 'success' : ($rider['priority'] === 'Medium' ? 'warning' : 'secondary') ?>">
+                            <?= $rider['priority'] ?>
+                        </span>
+                    </td>
+                    <td>
+                        <a href="/rider/<?= $rider['id'] ?>" style="color: var(--color-accent);">
+                            <?= htmlspecialchars($rider['firstname'] . ' ' . $rider['lastname']) ?>
+                        </a>
+                    </td>
+                    <td><?= htmlspecialchars($rider['club_name'] ?? '-') ?></td>
+                    <td><?= $rider['age'] ?? '-' ?></td>
+                    <td><?= $rider['total_seasons'] ?></td>
+                    <td><?= $rider['total_events_all_time'] ?></td>
+                    <td><?= $rider['years_inactive'] ?> ar</td>
+                    <td><?= htmlspecialchars($rider['primary_disciplines'] ?? '-') ?></td>
+                </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+    </div>
+    <?php endif; ?>
+
+    <!-- Churned Riders (slutade forra aret) -->
+    <?php if (!empty($reportData['churned_list'])): ?>
+    <div class="report-section">
+        <h3><i data-lucide="user-x" style="width: 20px; height: 20px;"></i> Slutade <?= $selectedYear - 1 ?></h3>
+        <p style="color: var(--color-text-secondary); font-size: var(--text-sm); margin-bottom: var(--space-md);">
+            Deltagare som tavlade <?= $selectedYear - 1 ?> men inte <?= $selectedYear ?>.
+            Top <?= min(count($reportData['churned_list']), 100) ?> sorterade efter antal starter.
+        </p>
+        <a href="?report=retention&year=<?= $selectedYear ?>&export=churned" class="btn btn-secondary" style="margin-bottom: var(--space-md);">
+            <i data-lucide="download"></i> Exportera Churned Lista (CSV)
+        </a>
+        <table class="report-table">
+            <thead>
+                <tr>
+                    <th>Namn</th>
+                    <th>Klubb</th>
+                    <th>Alder</th>
+                    <th>Starter <?= $selectedYear - 1 ?></th>
+                    <th>Disciplin</th>
+                    <th>Aktiv sedan</th>
+                    <th>Sasonger</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach ($reportData['churned_list'] as $rider): ?>
+                <tr>
+                    <td>
+                        <a href="/rider/<?= $rider['id'] ?>" style="color: var(--color-accent);">
+                            <?= htmlspecialchars($rider['firstname'] . ' ' . $rider['lastname']) ?>
+                        </a>
+                    </td>
+                    <td><?= htmlspecialchars($rider['club_name'] ?? '-') ?></td>
+                    <td><?= $rider['age'] ?? '-' ?></td>
+                    <td><strong><?= $rider['last_year_events'] ?? '-' ?></strong></td>
+                    <td><?= htmlspecialchars($rider['last_discipline'] ?? '-') ?></td>
+                    <td><?= $rider['first_season'] ?? '-' ?></td>
+                    <td><?= $rider['total_seasons'] ?? '-' ?></td>
+                </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+    </div>
+    <?php endif; ?>
+
+    <!-- One-Timers -->
+    <?php if (!empty($reportData['one_timers'])): ?>
+    <div class="report-section">
+        <h3><i data-lucide="user-minus" style="width: 20px; height: 20px;"></i> One-Timers (1-2 starter)</h3>
+        <p style="color: var(--color-text-secondary); font-size: var(--text-sm); margin-bottom: var(--space-md);">
+            Deltagare som bara startat 1-2 ganger totalt. Dessa provade sporten men fortsatte inte.
+            Senaste <?= min(count($reportData['one_timers']), 100) ?> visas.
+        </p>
+        <table class="report-table">
+            <thead>
+                <tr>
+                    <th>Namn</th>
+                    <th>Klubb</th>
+                    <th>Alder</th>
+                    <th>Starter</th>
+                    <th>Forsta sasong</th>
+                    <th>Sista sasong</th>
+                    <th>Discipliner</th>
+                </tr>
+            </thead>
+            <tbody>
+                <?php foreach (array_slice($reportData['one_timers'], 0, 100) as $rider): ?>
+                <tr>
+                    <td>
+                        <a href="/rider/<?= $rider['id'] ?>" style="color: var(--color-accent);">
+                            <?= htmlspecialchars($rider['firstname'] . ' ' . $rider['lastname']) ?>
+                        </a>
+                    </td>
+                    <td><?= htmlspecialchars($rider['club_name'] ?? '-') ?></td>
+                    <td><?= $rider['age'] ?? '-' ?></td>
+                    <td><?= $rider['total_events'] ?></td>
+                    <td><?= $rider['first_season'] ?></td>
+                    <td><?= $rider['last_season'] ?></td>
+                    <td><?= htmlspecialchars($rider['disciplines'] ?? '-') ?></td>
+                </tr>
+                <?php endforeach; ?>
+            </tbody>
+        </table>
+    </div>
+    <?php endif; ?>
 
     <?php elseif ($reportType === 'series'): ?>
     <!-- Series Report -->
