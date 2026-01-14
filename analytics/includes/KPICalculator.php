@@ -240,12 +240,15 @@ class KPICalculator {
         $stmt = $this->pdo->prepare("
             SELECT
                 CASE
-                    WHEN $year - r.birth_year < 18 THEN 'Under 18'
-                    WHEN $year - r.birth_year BETWEEN 18 AND 25 THEN '18-25'
-                    WHEN $year - r.birth_year BETWEEN 26 AND 35 THEN '26-35'
+                    WHEN $year - r.birth_year <= 12 THEN '5-12'
+                    WHEN $year - r.birth_year BETWEEN 13 AND 14 THEN '13-14'
+                    WHEN $year - r.birth_year BETWEEN 15 AND 16 THEN '15-16'
+                    WHEN $year - r.birth_year BETWEEN 17 AND 18 THEN '17-18'
+                    WHEN $year - r.birth_year BETWEEN 19 AND 30 THEN '19-30'
+                    WHEN $year - r.birth_year BETWEEN 31 AND 35 THEN '31-35'
                     WHEN $year - r.birth_year BETWEEN 36 AND 45 THEN '36-45'
-                    WHEN $year - r.birth_year BETWEEN 46 AND 55 THEN '46-55'
-                    WHEN $year - r.birth_year > 55 THEN 'Over 55'
+                    WHEN $year - r.birth_year BETWEEN 46 AND 50 THEN '46-50'
+                    WHEN $year - r.birth_year > 50 THEN '50+'
                     ELSE 'Okand'
                 END as age_group,
                 COUNT(*) as count
@@ -257,13 +260,16 @@ class KPICalculator {
             GROUP BY age_group
             ORDER BY
                 CASE age_group
-                    WHEN 'Under 18' THEN 1
-                    WHEN '18-25' THEN 2
-                    WHEN '26-35' THEN 3
-                    WHEN '36-45' THEN 4
-                    WHEN '46-55' THEN 5
-                    WHEN 'Over 55' THEN 6
-                    ELSE 7
+                    WHEN '5-12' THEN 1
+                    WHEN '13-14' THEN 2
+                    WHEN '15-16' THEN 3
+                    WHEN '17-18' THEN 4
+                    WHEN '19-30' THEN 5
+                    WHEN '31-35' THEN 6
+                    WHEN '36-45' THEN 7
+                    WHEN '46-50' THEN 8
+                    WHEN '50+' THEN 9
+                    ELSE 10
                 END
         ");
         $stmt->execute([$year]);
@@ -326,17 +332,20 @@ class KPICalculator {
      * @param int $year Ar
      * @return array Aldersgrupper med antal
      */
-    public function getRookieAgeDistribution(int $year): array {
+    public function getRookieAgeDistribution(int $year, ?int $seriesId = null): array {
+        $seriesFilter = $seriesId !== null ? " AND rys.primary_series_id = ?" : "";
         $stmt = $this->pdo->prepare("
             SELECT
                 CASE
-                    WHEN $year - r.birth_year < 15 THEN 'Under 15'
-                    WHEN $year - r.birth_year BETWEEN 15 AND 17 THEN '15-17'
-                    WHEN $year - r.birth_year BETWEEN 18 AND 25 THEN '18-25'
-                    WHEN $year - r.birth_year BETWEEN 26 AND 35 THEN '26-35'
+                    WHEN $year - r.birth_year <= 12 THEN '5-12'
+                    WHEN $year - r.birth_year BETWEEN 13 AND 14 THEN '13-14'
+                    WHEN $year - r.birth_year BETWEEN 15 AND 16 THEN '15-16'
+                    WHEN $year - r.birth_year BETWEEN 17 AND 18 THEN '17-18'
+                    WHEN $year - r.birth_year BETWEEN 19 AND 30 THEN '19-30'
+                    WHEN $year - r.birth_year BETWEEN 31 AND 35 THEN '31-35'
                     WHEN $year - r.birth_year BETWEEN 36 AND 45 THEN '36-45'
-                    WHEN $year - r.birth_year BETWEEN 46 AND 55 THEN '46-55'
-                    WHEN $year - r.birth_year > 55 THEN 'Over 55'
+                    WHEN $year - r.birth_year BETWEEN 46 AND 50 THEN '46-50'
+                    WHEN $year - r.birth_year > 50 THEN '50+'
                     ELSE 'Okand'
                 END as age_group,
                 COUNT(*) as count
@@ -346,20 +355,25 @@ class KPICalculator {
               AND rys.is_rookie = 1
               AND r.birth_year IS NOT NULL
               AND r.birth_year > 1900
+              $seriesFilter
             GROUP BY age_group
             ORDER BY
                 CASE age_group
-                    WHEN 'Under 15' THEN 1
-                    WHEN '15-17' THEN 2
-                    WHEN '18-25' THEN 3
-                    WHEN '26-35' THEN 4
-                    WHEN '36-45' THEN 5
-                    WHEN '46-55' THEN 6
-                    WHEN 'Over 55' THEN 7
-                    ELSE 8
+                    WHEN '5-12' THEN 1
+                    WHEN '13-14' THEN 2
+                    WHEN '15-16' THEN 3
+                    WHEN '17-18' THEN 4
+                    WHEN '19-30' THEN 5
+                    WHEN '31-35' THEN 6
+                    WHEN '36-45' THEN 7
+                    WHEN '46-50' THEN 8
+                    WHEN '50+' THEN 9
+                    ELSE 10
                 END
         ");
-        $stmt->execute([$year]);
+        $params = [$year];
+        if ($seriesId !== null) $params[] = $seriesId;
+        $stmt->execute($params);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
@@ -370,7 +384,8 @@ class KPICalculator {
      * @param int $year Ar
      * @return array Klasser med antal
      */
-    public function getRookieClassDistribution(int $year): array {
+    public function getRookieClassDistribution(int $year, ?int $seriesId = null): array {
+        $seriesFilter = $seriesId !== null ? " AND e.series_id = ?" : "";
         $stmt = $this->pdo->prepare("
             SELECT
                 COALESCE(c.name, 'Okand klass') as class_name,
@@ -381,10 +396,13 @@ class KPICalculator {
             LEFT JOIN classes c ON res.class_id = c.id
             WHERE YEAR(e.date) = ?
               AND rys.is_rookie = 1
+              $seriesFilter
             GROUP BY res.class_id, c.name
             ORDER BY rookie_count DESC
         ");
-        $stmt->execute([$year, $year]);
+        $params = [$year, $year];
+        if ($seriesId !== null) $params[] = $seriesId;
+        $stmt->execute($params);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
@@ -395,7 +413,8 @@ class KPICalculator {
      * @param int $limit Max antal events
      * @return array Events med rookie-antal
      */
-    public function getEventsWithMostRookies(int $year, int $limit = 20): array {
+    public function getEventsWithMostRookies(int $year, int $limit = 20, ?int $seriesId = null): array {
+        $seriesFilter = $seriesId !== null ? " AND e.series_id = ?" : "";
         $stmt = $this->pdo->prepare("
             SELECT
                 e.id as event_id,
@@ -413,12 +432,16 @@ class KPICalculator {
             LEFT JOIN series s ON e.series_id = s.id
             LEFT JOIN rider_yearly_stats rys ON res.cyclist_id = rys.rider_id AND rys.season_year = ?
             WHERE YEAR(e.date) = ?
+            $seriesFilter
             GROUP BY e.id
             HAVING rookie_count > 0
             ORDER BY rookie_count DESC
             LIMIT ?
         ");
-        $stmt->execute([$year, $year, $limit]);
+        $params = [$year, $year];
+        if ($seriesId !== null) $params[] = $seriesId;
+        $params[] = $limit;
+        $stmt->execute($params);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
@@ -504,7 +527,8 @@ class KPICalculator {
      * @param int $year Ar
      * @return array Discipliner med antal rookies och starter
      */
-    public function getRookieDisciplineParticipation(int $year): array {
+    public function getRookieDisciplineParticipation(int $year, ?int $seriesId = null): array {
+        $seriesFilter = $seriesId !== null ? " AND e.series_id = ?" : "";
         $stmt = $this->pdo->prepare("
             SELECT
                 COALESCE(e.discipline, 'Okand') as discipline,
@@ -515,10 +539,13 @@ class KPICalculator {
             JOIN rider_yearly_stats rys ON res.cyclist_id = rys.rider_id AND rys.season_year = ?
             WHERE YEAR(e.date) = ?
               AND rys.is_rookie = 1
+              $seriesFilter
             GROUP BY e.discipline
             ORDER BY rookie_count DESC
         ");
-        $stmt->execute([$year, $year]);
+        $params = [$year, $year];
+        if ($seriesId !== null) $params[] = $seriesId;
+        $stmt->execute($params);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
@@ -585,7 +612,8 @@ class KPICalculator {
      * @param int $year Ar
      * @return float Genomsnittsalder
      */
-    public function getRookieAverageAge(int $year): float {
+    public function getRookieAverageAge(int $year, ?int $seriesId = null): float {
+        $seriesFilter = $seriesId !== null ? " AND rys.primary_series_id = ?" : "";
         $stmt = $this->pdo->prepare("
             SELECT AVG($year - r.birth_year) as avg_age
             FROM rider_yearly_stats rys
@@ -594,8 +622,11 @@ class KPICalculator {
               AND rys.is_rookie = 1
               AND r.birth_year IS NOT NULL
               AND r.birth_year > 1900
+              $seriesFilter
         ");
-        $stmt->execute([$year]);
+        $params = [$year];
+        if ($seriesId !== null) $params[] = $seriesId;
+        $stmt->execute($params);
         return round((float)($stmt->fetchColumn() ?: 0), 1);
     }
 
@@ -605,7 +636,8 @@ class KPICalculator {
      * @param int $year Ar
      * @return array ['M' => X, 'F' => Y, 'unknown' => Z]
      */
-    public function getRookieGenderDistribution(int $year): array {
+    public function getRookieGenderDistribution(int $year, ?int $seriesId = null): array {
+        $seriesFilter = $seriesId !== null ? " AND rys.primary_series_id = ?" : "";
         $stmt = $this->pdo->prepare("
             SELECT
                 COALESCE(r.gender, 'unknown') as gender,
@@ -614,9 +646,12 @@ class KPICalculator {
             JOIN riders r ON rys.rider_id = r.id
             WHERE rys.season_year = ?
               AND rys.is_rookie = 1
+              $seriesFilter
             GROUP BY COALESCE(r.gender, 'unknown')
         ");
-        $stmt->execute([$year]);
+        $params = [$year];
+        if ($seriesId !== null) $params[] = $seriesId;
+        $stmt->execute($params);
 
         $result = ['M' => 0, 'F' => 0, 'unknown' => 0];
         while ($row = $stmt->fetch()) {
@@ -639,7 +674,8 @@ class KPICalculator {
      * @param int $limit Max antal
      * @return array Klubbar med rookie-antal
      */
-    public function getClubsWithMostRookies(int $year, int $limit = 20): array {
+    public function getClubsWithMostRookies(int $year, int $limit = 20, ?int $seriesId = null): array {
+        $seriesFilter = $seriesId !== null ? " AND rys.primary_series_id = ?" : "";
         $stmt = $this->pdo->prepare("
             SELECT
                 c.id as club_id,
@@ -651,11 +687,15 @@ class KPICalculator {
             JOIN clubs c ON r.club_id = c.id
             WHERE rys.season_year = ?
               AND rys.is_rookie = 1
+              $seriesFilter
             GROUP BY c.id
             ORDER BY rookie_count DESC
             LIMIT ?
         ");
-        $stmt->execute([$year, $limit]);
+        $params = [$year];
+        if ($seriesId !== null) $params[] = $seriesId;
+        $params[] = $limit;
+        $stmt->execute($params);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
@@ -1181,6 +1221,7 @@ class KPICalculator {
      * @return array Lista med comeback riders
      */
     public function getComebackRiders(int $year, int $minGapYears = 1): array {
+        // Positional params - PDO tillater inte ateranvandning av named params
         $stmt = $this->pdo->prepare("
             SELECT
                 r.id,
@@ -1189,11 +1230,11 @@ class KPICalculator {
                 r.birth_year,
                 r.gender,
                 c.name as club_name,
-                :year - r.birth_year as age,
+                ? - r.birth_year as age,
                 curr.total_events as current_events,
                 curr.primary_discipline,
                 prev_max.last_active_before as previous_last_season,
-                :year - prev_max.last_active_before as years_away,
+                ? - prev_max.last_active_before as years_away,
                 (SELECT MIN(season_year) FROM rider_yearly_stats WHERE rider_id = r.id) as first_season_ever
             FROM rider_yearly_stats curr
             JOIN riders r ON curr.rider_id = r.id
@@ -1203,16 +1244,14 @@ class KPICalculator {
                     rider_id,
                     MAX(season_year) as last_active_before
                 FROM rider_yearly_stats
-                WHERE season_year < :year
+                WHERE season_year < ?
                 GROUP BY rider_id
-                HAVING MAX(season_year) < :year - :mingap
+                HAVING MAX(season_year) < ? - ?
             ) prev_max ON curr.rider_id = prev_max.rider_id
-            WHERE curr.season_year = :year
+            WHERE curr.season_year = ?
             ORDER BY years_away DESC, curr.total_events DESC
         ");
-        $stmt->bindValue(':year', $year, PDO::PARAM_INT);
-        $stmt->bindValue(':mingap', $minGapYears, PDO::PARAM_INT);
-        $stmt->execute();
+        $stmt->execute([$year, $year, $year, $year, $minGapYears, $year]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
@@ -1223,29 +1262,29 @@ class KPICalculator {
      * @return array Gruppering per antal ar inaktiv
      */
     public function getInactiveByDuration(int $year): array {
+        // Positional params - PDO tillater inte ateranvandning av named params
         $stmt = $this->pdo->prepare("
             SELECT
-                :year - last_active.last_season as years_inactive,
+                ? - last_active.last_season as years_inactive,
                 COUNT(*) as count,
-                AVG(:year - r.birth_year) as avg_age
+                AVG(? - r.birth_year) as avg_age
             FROM (
                 SELECT
                     rider_id,
                     MAX(season_year) as last_season
                 FROM rider_yearly_stats
-                WHERE season_year < :year
+                WHERE season_year < ?
                 GROUP BY rider_id
             ) last_active
             JOIN riders r ON last_active.rider_id = r.id
             LEFT JOIN rider_yearly_stats curr
                 ON last_active.rider_id = curr.rider_id
-                AND curr.season_year = :year
+                AND curr.season_year = ?
             WHERE curr.rider_id IS NULL
             GROUP BY years_inactive
             ORDER BY years_inactive ASC
         ");
-        $stmt->bindValue(':year', $year, PDO::PARAM_INT);
-        $stmt->execute();
+        $stmt->execute([$year, $year, $year, $year]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
@@ -1256,27 +1295,37 @@ class KPICalculator {
      * @return array Segmenterad churn-data
      */
     public function getChurnBySegment(int $year): array {
-        // Churn per aldersgrupp
+        $prevYear = $year - 1;
+
+        // Churn per aldersgrupp - positional params for PDO compatibility
         $ageStmt = $this->pdo->prepare("
             SELECT
                 CASE
-                    WHEN :year - r.birth_year < 18 THEN 'Under 18'
-                    WHEN :year - r.birth_year BETWEEN 18 AND 25 THEN '18-25'
-                    WHEN :year - r.birth_year BETWEEN 26 AND 35 THEN '26-35'
-                    WHEN :year - r.birth_year BETWEEN 36 AND 45 THEN '36-45'
-                    WHEN :year - r.birth_year > 45 THEN 'Over 45'
+                    WHEN ? - r.birth_year <= 12 THEN '5-12'
+                    WHEN ? - r.birth_year BETWEEN 13 AND 14 THEN '13-14'
+                    WHEN ? - r.birth_year BETWEEN 15 AND 16 THEN '15-16'
+                    WHEN ? - r.birth_year BETWEEN 17 AND 18 THEN '17-18'
+                    WHEN ? - r.birth_year BETWEEN 19 AND 30 THEN '19-30'
+                    WHEN ? - r.birth_year BETWEEN 31 AND 35 THEN '31-35'
+                    WHEN ? - r.birth_year BETWEEN 36 AND 45 THEN '36-45'
+                    WHEN ? - r.birth_year BETWEEN 46 AND 50 THEN '46-50'
+                    WHEN ? - r.birth_year > 50 THEN '50+'
                     ELSE 'Okand'
                 END as age_group,
                 COUNT(*) as churned_count,
                 (SELECT COUNT(*) FROM rider_yearly_stats rys2
                  JOIN riders r2 ON rys2.rider_id = r2.id
-                 WHERE rys2.season_year = :prevyear
+                 WHERE rys2.season_year = ?
                  AND CASE
-                    WHEN :year - r2.birth_year < 18 THEN 'Under 18'
-                    WHEN :year - r2.birth_year BETWEEN 18 AND 25 THEN '18-25'
-                    WHEN :year - r2.birth_year BETWEEN 26 AND 35 THEN '26-35'
-                    WHEN :year - r2.birth_year BETWEEN 36 AND 45 THEN '36-45'
-                    WHEN :year - r2.birth_year > 45 THEN 'Over 45'
+                    WHEN ? - r2.birth_year <= 12 THEN '5-12'
+                    WHEN ? - r2.birth_year BETWEEN 13 AND 14 THEN '13-14'
+                    WHEN ? - r2.birth_year BETWEEN 15 AND 16 THEN '15-16'
+                    WHEN ? - r2.birth_year BETWEEN 17 AND 18 THEN '17-18'
+                    WHEN ? - r2.birth_year BETWEEN 19 AND 30 THEN '19-30'
+                    WHEN ? - r2.birth_year BETWEEN 31 AND 35 THEN '31-35'
+                    WHEN ? - r2.birth_year BETWEEN 36 AND 45 THEN '36-45'
+                    WHEN ? - r2.birth_year BETWEEN 46 AND 50 THEN '46-50'
+                    WHEN ? - r2.birth_year > 50 THEN '50+'
                     ELSE 'Okand'
                  END = age_group
                 ) as total_in_group
@@ -1284,15 +1333,19 @@ class KPICalculator {
             JOIN riders r ON prev.rider_id = r.id
             LEFT JOIN rider_yearly_stats curr
                 ON prev.rider_id = curr.rider_id
-                AND curr.season_year = :year
-            WHERE prev.season_year = :prevyear
+                AND curr.season_year = ?
+            WHERE prev.season_year = ?
               AND curr.rider_id IS NULL
             GROUP BY age_group
             ORDER BY churned_count DESC
         ");
-        $ageStmt->bindValue(':year', $year, PDO::PARAM_INT);
-        $ageStmt->bindValue(':prevyear', $year - 1, PDO::PARAM_INT);
-        $ageStmt->execute();
+        $ageStmt->execute([
+            $year, $year, $year, $year, $year, $year, $year, $year, $year,  // outer CASE (9)
+            $prevYear,                                                       // subquery year
+            $year, $year, $year, $year, $year, $year, $year, $year, $year,  // subquery CASE (9)
+            $year,                                                           // curr.season_year
+            $prevYear                                                        // prev.season_year
+        ]);
         $byAge = $ageStmt->fetchAll(PDO::FETCH_ASSOC);
 
         // Berakna churn rate per grupp
@@ -1310,15 +1363,13 @@ class KPICalculator {
             FROM rider_yearly_stats prev
             LEFT JOIN rider_yearly_stats curr
                 ON prev.rider_id = curr.rider_id
-                AND curr.season_year = :year
-            WHERE prev.season_year = :prevyear
+                AND curr.season_year = ?
+            WHERE prev.season_year = ?
               AND curr.rider_id IS NULL
             GROUP BY prev.primary_discipline
             ORDER BY churned_count DESC
         ");
-        $discStmt->bindValue(':year', $year, PDO::PARAM_INT);
-        $discStmt->bindValue(':prevyear', $year - 1, PDO::PARAM_INT);
-        $discStmt->execute();
+        $discStmt->execute([$year, $prevYear]);
         $byDiscipline = $discStmt->fetchAll(PDO::FETCH_ASSOC);
 
         // Top 10 klubbar med flest churned
@@ -1331,16 +1382,14 @@ class KPICalculator {
             LEFT JOIN clubs c ON r.club_id = c.id
             LEFT JOIN rider_yearly_stats curr
                 ON prev.rider_id = curr.rider_id
-                AND curr.season_year = :year
-            WHERE prev.season_year = :prevyear
+                AND curr.season_year = ?
+            WHERE prev.season_year = ?
               AND curr.rider_id IS NULL
             GROUP BY c.id, c.name
             ORDER BY churned_count DESC
             LIMIT 10
         ");
-        $clubStmt->bindValue(':year', $year, PDO::PARAM_INT);
-        $clubStmt->bindValue(':prevyear', $year - 1, PDO::PARAM_INT);
-        $clubStmt->execute();
+        $clubStmt->execute([$year, $prevYear]);
         $byClub = $clubStmt->fetchAll(PDO::FETCH_ASSOC);
 
         return [
@@ -1385,21 +1434,20 @@ class KPICalculator {
         $oneTimersStmt->execute();
         $oneTimersTotal = (int)$oneTimersStmt->fetchColumn();
 
-        // Comebacks i ar
+        // Comebacks i ar (positional params - PDO tillater inte ateranvandning av named params)
         $comebacksStmt = $this->pdo->prepare("
             SELECT COUNT(*)
             FROM rider_yearly_stats curr
             JOIN (
                 SELECT rider_id, MAX(season_year) as last_active
                 FROM rider_yearly_stats
-                WHERE season_year < :year
+                WHERE season_year < ?
                 GROUP BY rider_id
-                HAVING MAX(season_year) < :year - 1
+                HAVING MAX(season_year) < ? - 1
             ) prev ON curr.rider_id = prev.rider_id
-            WHERE curr.season_year = :year
+            WHERE curr.season_year = ?
         ");
-        $comebacksStmt->bindValue(':year', $year, PDO::PARAM_INT);
-        $comebacksStmt->execute();
+        $comebacksStmt->execute([$year, $year, $year]);
         $comebacksThisYear = (int)$comebacksStmt->fetchColumn();
 
         // Inaktiva 2+ ar (ej i ar, senast aktiva for 2+ ar sedan)
@@ -1409,15 +1457,14 @@ class KPICalculator {
                 SELECT rider_id, MAX(season_year) as last_season
                 FROM rider_yearly_stats
                 GROUP BY rider_id
-                HAVING MAX(season_year) < :year - 1
+                HAVING MAX(season_year) < ? - 1
             ) inactive
             LEFT JOIN rider_yearly_stats curr
                 ON inactive.rider_id = curr.rider_id
-                AND curr.season_year = :year
+                AND curr.season_year = ?
             WHERE curr.rider_id IS NULL
         ");
-        $longInactiveStmt->bindValue(':year', $year, PDO::PARAM_INT);
-        $longInactiveStmt->execute();
+        $longInactiveStmt->execute([$year, $year]);
         $longInactive = (int)$longInactiveStmt->fetchColumn();
 
         return [
@@ -2570,5 +2617,294 @@ class KPICalculator {
         ");
         $stmt->execute([$year]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    // =========================================================================
+    // CAREER PATH ANALYSIS - Feeder Pipeline & Series Level Transitions
+    // =========================================================================
+
+    /**
+     * Hamta "feeder pipeline" - riders som startade regionalt och sen gick till nationellt
+     *
+     * Returnerar riders vars FORSTA tavling var i en regional serie,
+     * och som sedan nagon gang deltog i en nationell serie.
+     *
+     * @param int|null $maxYear Senaste ar att inkludera (default: senaste data)
+     * @return array Pipeline data uppdelat per feeder-serie
+     */
+    public function getFeederPipeline(?int $maxYear = null): array {
+        $maxYear = $maxYear ?? $this->getLatestSeasonYear();
+
+        $stmt = $this->pdo->prepare("
+            SELECT
+                first_series.series_id as feeder_series_id,
+                s.name as feeder_series_name,
+                s.region as feeder_region,
+                COUNT(DISTINCT first_series.rider_id) as total_starters,
+                COUNT(DISTINCT CASE WHEN nat.rider_id IS NOT NULL THEN first_series.rider_id END) as went_national,
+                ROUND(
+                    COUNT(DISTINCT CASE WHEN nat.rider_id IS NOT NULL THEN first_series.rider_id END) * 100.0 /
+                    NULLIF(COUNT(DISTINCT first_series.rider_id), 0),
+                1) as conversion_rate
+            FROM (
+                -- Hitta forsta serien for varje rider (maste vara regional)
+                SELECT
+                    sp.rider_id,
+                    sp.series_id,
+                    sp.season_year as first_year
+                FROM series_participation sp
+                JOIN series ser ON sp.series_id = ser.id
+                WHERE ser.series_level = 'regional'
+                AND (sp.rider_id, sp.season_year) IN (
+                    SELECT rider_id, MIN(season_year)
+                    FROM series_participation
+                    GROUP BY rider_id
+                )
+            ) first_series
+            JOIN series s ON first_series.series_id = s.id
+            LEFT JOIN (
+                -- Riders som nagonsin deltog i en nationell serie
+                SELECT DISTINCT sp.rider_id
+                FROM series_participation sp
+                JOIN series ser ON sp.series_id = ser.id
+                WHERE ser.series_level = 'national'
+                AND sp.season_year <= ?
+            ) nat ON first_series.rider_id = nat.rider_id
+            WHERE first_series.first_year <= ?
+            GROUP BY first_series.series_id, s.name, s.region
+            ORDER BY went_national DESC
+        ");
+        $stmt->execute([$maxYear, $maxYear]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Hamta riders som startade nationellt och sen provade regionalt
+     *
+     * Returnerar statistik for riders vars FORSTA tavling var i en nationell serie.
+     *
+     * @param int|null $maxYear Senaste ar att inkludera
+     * @return array Flow data
+     */
+    public function getNationalToRegionalFlow(?int $maxYear = null): array {
+        $maxYear = $maxYear ?? $this->getLatestSeasonYear();
+
+        $stmt = $this->pdo->prepare("
+            SELECT
+                -- Totalt som startade nationellt
+                COUNT(DISTINCT first_nat.rider_id) as started_national,
+
+                -- Av dessa: provade regional
+                COUNT(DISTINCT CASE WHEN reg.rider_id IS NOT NULL THEN first_nat.rider_id END) as tried_regional,
+
+                -- Av dessa: slutade nationellt men fortsatte regionalt
+                COUNT(DISTINCT CASE
+                    WHEN reg.rider_id IS NOT NULL
+                    AND last_nat.last_national_year < ?
+                    AND last_reg.last_regional_year >= ?
+                    THEN first_nat.rider_id
+                END) as quit_national_kept_regional,
+
+                -- Av dessa: fortsatter bade nationellt och regionalt
+                COUNT(DISTINCT CASE
+                    WHEN reg.rider_id IS NOT NULL
+                    AND last_nat.last_national_year >= ?
+                    THEN first_nat.rider_id
+                END) as still_both
+
+            FROM (
+                -- Riders vars forsta tavling var nationell
+                SELECT sp.rider_id, MIN(sp.season_year) as first_year
+                FROM series_participation sp
+                JOIN series ser ON sp.series_id = ser.id
+                WHERE ser.series_level = 'national'
+                AND (sp.rider_id, sp.season_year) IN (
+                    SELECT rider_id, MIN(season_year)
+                    FROM series_participation
+                    GROUP BY rider_id
+                )
+                GROUP BY sp.rider_id
+            ) first_nat
+
+            -- Vilka av dessa provade regional nagon gang?
+            LEFT JOIN (
+                SELECT DISTINCT sp.rider_id
+                FROM series_participation sp
+                JOIN series ser ON sp.series_id = ser.id
+                WHERE ser.series_level = 'regional'
+            ) reg ON first_nat.rider_id = reg.rider_id
+
+            -- Senaste ar de tavlade nationellt
+            LEFT JOIN (
+                SELECT sp.rider_id, MAX(sp.season_year) as last_national_year
+                FROM series_participation sp
+                JOIN series ser ON sp.series_id = ser.id
+                WHERE ser.series_level = 'national'
+                GROUP BY sp.rider_id
+            ) last_nat ON first_nat.rider_id = last_nat.rider_id
+
+            -- Senaste ar de tavlade regionalt
+            LEFT JOIN (
+                SELECT sp.rider_id, MAX(sp.season_year) as last_regional_year
+                FROM series_participation sp
+                JOIN series ser ON sp.series_id = ser.id
+                WHERE ser.series_level = 'regional'
+                GROUP BY sp.rider_id
+            ) last_reg ON first_nat.rider_id = last_reg.rider_id
+
+            WHERE first_nat.first_year <= ?
+        ");
+        // Anvand maxYear - 1 for "slutade nationellt" (maste ha minst 1 ar utan)
+        $stmt->execute([$maxYear, $maxYear - 1, $maxYear - 1, $maxYear]);
+        return $stmt->fetch(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Hamta detaljerad karriarvags-analys
+     *
+     * Kategoriserar alla riders baserat pa deras serie-niva-historia:
+     * - regional_only: Bara regionalt
+     * - national_only: Bara nationellt
+     * - regional_to_national: Startade regionalt, gick till nationellt
+     * - national_to_regional: Startade nationellt, provade regionalt
+     * - mixed: Startade med bada samma ar
+     *
+     * @param int|null $maxYear Senaste ar
+     * @return array Karriarvagar med antal
+     */
+    public function getCareerPathsAnalysis(?int $maxYear = null): array {
+        $maxYear = $maxYear ?? $this->getLatestSeasonYear();
+
+        $stmt = $this->pdo->prepare("
+            SELECT
+                CASE
+                    WHEN first_regional IS NULL AND first_national IS NOT NULL THEN 'national_only'
+                    WHEN first_national IS NULL AND first_regional IS NOT NULL THEN 'regional_only'
+                    WHEN first_regional < first_national THEN 'regional_to_national'
+                    WHEN first_national < first_regional THEN 'national_to_regional'
+                    WHEN first_regional = first_national THEN 'started_both'
+                    ELSE 'unknown'
+                END as career_path,
+                COUNT(*) as rider_count
+            FROM (
+                SELECT
+                    r.id as rider_id,
+                    reg.first_regional,
+                    nat.first_national
+                FROM riders r
+                LEFT JOIN (
+                    SELECT sp.rider_id, MIN(sp.season_year) as first_regional
+                    FROM series_participation sp
+                    JOIN series ser ON sp.series_id = ser.id
+                    WHERE ser.series_level = 'regional'
+                    GROUP BY sp.rider_id
+                ) reg ON r.id = reg.rider_id
+                LEFT JOIN (
+                    SELECT sp.rider_id, MIN(sp.season_year) as first_national
+                    FROM series_participation sp
+                    JOIN series ser ON sp.series_id = ser.id
+                    WHERE ser.series_level = 'national'
+                    GROUP BY sp.rider_id
+                ) nat ON r.id = nat.rider_id
+                WHERE reg.first_regional IS NOT NULL OR nat.first_national IS NOT NULL
+                AND COALESCE(reg.first_regional, nat.first_national) <= ?
+            ) paths
+            GROUP BY career_path
+            ORDER BY rider_count DESC
+        ");
+        $stmt->execute([$maxYear]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Hamta forsta-tavlings-statistik per serie (entry points for first-timers)
+     *
+     * Visar vilka serier som ar "gateway" serier dar riders har sin forsta tavling.
+     *
+     * @param int $year Ar att analysera
+     * @return array Entry point data per serie
+     */
+    public function getFirstRaceEntryPoints(int $year): array {
+        $stmt = $this->pdo->prepare("
+            SELECT
+                s.id as series_id,
+                s.name as series_name,
+                s.series_level,
+                s.region,
+                COUNT(DISTINCT first_race.rider_id) as first_timers,
+                -- Av dessa: hur manga fortsatte nasta ar?
+                COUNT(DISTINCT CASE WHEN next_year.rider_id IS NOT NULL THEN first_race.rider_id END) as returned_next_year,
+                ROUND(
+                    COUNT(DISTINCT CASE WHEN next_year.rider_id IS NOT NULL THEN first_race.rider_id END) * 100.0 /
+                    NULLIF(COUNT(DISTINCT first_race.rider_id), 0),
+                1) as first_year_retention
+            FROM (
+                -- Riders vars forsta tavlingsdeltagande var detta ar
+                SELECT sp.rider_id, sp.series_id
+                FROM series_participation sp
+                WHERE sp.season_year = ?
+                AND (sp.rider_id, sp.season_year) IN (
+                    SELECT rider_id, MIN(season_year)
+                    FROM series_participation
+                    GROUP BY rider_id
+                )
+            ) first_race
+            JOIN series s ON first_race.series_id = s.id
+            LEFT JOIN (
+                -- Deltog de nasta ar (i nagon serie)?
+                SELECT DISTINCT rider_id
+                FROM series_participation
+                WHERE season_year = ?
+            ) next_year ON first_race.rider_id = next_year.rider_id
+            GROUP BY s.id, s.name, s.series_level, s.region
+            ORDER BY first_timers DESC
+        ");
+        $stmt->execute([$year, $year + 1]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Hamta "graduation" statistik - riders som gick fran regional till national
+     *
+     * @param int $fromYear Startår
+     * @param int $toYear Slutår
+     * @return array Årlig graduation data
+     */
+    public function getGraduationTrend(int $fromYear, int $toYear): array {
+        $result = [];
+
+        for ($year = $fromYear; $year <= $toYear; $year++) {
+            $stmt = $this->pdo->prepare("
+                SELECT COUNT(DISTINCT sp.rider_id) as graduated
+                FROM series_participation sp
+                JOIN series ser ON sp.series_id = ser.id
+                WHERE ser.series_level = 'national'
+                AND sp.season_year = ?
+                AND sp.rider_id IN (
+                    -- Riders som tavlade regionalt foregaende ar men INTE nationellt
+                    SELECT DISTINCT sp2.rider_id
+                    FROM series_participation sp2
+                    JOIN series ser2 ON sp2.series_id = ser2.id
+                    WHERE ser2.series_level = 'regional'
+                    AND sp2.season_year = ?
+                    AND sp2.rider_id NOT IN (
+                        SELECT DISTINCT sp3.rider_id
+                        FROM series_participation sp3
+                        JOIN series ser3 ON sp3.series_id = ser3.id
+                        WHERE ser3.series_level = 'national'
+                        AND sp3.season_year = ?
+                    )
+                )
+            ");
+            $stmt->execute([$year, $year - 1, $year - 1]);
+            $graduated = (int)$stmt->fetchColumn();
+
+            $result[] = [
+                'year' => $year,
+                'graduated' => $graduated
+            ];
+        }
+
+        return $result;
     }
 }

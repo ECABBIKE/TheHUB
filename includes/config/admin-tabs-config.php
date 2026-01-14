@@ -253,7 +253,7 @@ $ADMIN_TABS = [
     // ========================================
     'analytics' => [
         'title' => 'Analytics',
-        'icon' => 'bar-chart-3',
+        'icon' => 'chart-line',
         'super_admin_only' => true,  // Visas bara for super_admin (eller statistics-behorighet via hasPermission)
         'tabs' => [
             [

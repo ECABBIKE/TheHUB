@@ -97,6 +97,22 @@ try {
     // Cross-participation rate
     $crossRate = $kpiCalc->getCrossParticipationRate($selectedYear);
 
+    // === NYA KARRIARVAGS-ANALYSER ===
+    // Feeder Pipeline - riders som startade regionalt och gick till nationellt
+    $feederPipeline = $kpiCalc->getFeederPipeline($selectedYear);
+
+    // National to Regional flow - riders som startade nationellt
+    $nationalToRegional = $kpiCalc->getNationalToRegionalFlow($selectedYear);
+
+    // Karriarvags-fordelning
+    $careerPaths = $kpiCalc->getCareerPathsAnalysis($selectedYear);
+
+    // Entry points for forsta-gangs-tavlande detta ar
+    $entryPointsThisYear = $kpiCalc->getFirstRaceEntryPoints($selectedYear);
+
+    // Graduation trend (senaste 5 aren)
+    $graduationTrend = $kpiCalc->getGraduationTrend($selectedYear - 4, $selectedYear);
+
 } catch (Exception $e) {
     $error = $e->getMessage();
 }
