@@ -66,9 +66,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['merge'])) {
  try {
   $movedCount = 0;
   $deletedCount = 0;
+  $rfProtectedCount = 0;
 
   // Move all riders from each merge club to keep club
   foreach ($mergeIds as $mergeId) {
+  // Check if club is RF-registered (cannot be deleted)
+  $club = $db->getRow("SELECT rf_registered FROM clubs WHERE id = ?", [$mergeId]);
+  if ($club && !empty($club['rf_registered'])) {
+   $rfProtectedCount++;
+   continue;
+  }
+
   // Count riders to move
   $count = $db->getRow("SELECT COUNT(*) as cnt FROM riders WHERE club_id = ?", [$mergeId])['cnt'] ?? 0;
   $movedCount += $count;
@@ -83,8 +91,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['merge'])) {
   $deletedCount++;
   }
 
-  $message ="Flyttade $movedCount deltagare och tog bort $deletedCount dubblettklubbar";
-  $messageType = 'success';
+  $messageParts = [];
+  if ($movedCount > 0) $messageParts[] = "flyttade $movedCount deltagare";
+  if ($deletedCount > 0) $messageParts[] = "tog bort $deletedCount dubblettklubbar";
+  if ($rfProtectedCount > 0) $messageParts[] = "skyddade $rfProtectedCount RF-registrerade klubbar";
+
+  $message = ucfirst(implode(' och ', $messageParts));
+  $messageType = $rfProtectedCount > 0 ? 'warning' : 'success';
  } catch (Exception $e) {
   $message = 'Fel vid sammanslagning: ' . $e->getMessage();
   $messageType = 'error';
@@ -98,21 +111,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_club'])) {
 
  $deleteId = (int)$_POST['delete_club'];
 
- // Check if club has riders
- $riderCount = $db->getRow("SELECT COUNT(*) as cnt FROM riders WHERE club_id = ?", [$deleteId])['cnt'] ?? 0;
-
- if ($riderCount == 0) {
- try {
-  $db->delete('clubs', 'id = ?', [$deleteId]);
-  $message = 'Klubb borttagen';
-  $messageType = 'success';
- } catch (Exception $e) {
-  $message = 'Fel vid borttagning: ' . $e->getMessage();
+ // Check if club is RF-registered
+ $club = $db->getRow("SELECT name, rf_registered FROM clubs WHERE id = ?", [$deleteId]);
+ if ($club && !empty($club['rf_registered'])) {
+  $message = "Kan inte ta bort RF-registrerad klubb: " . ($club['name'] ?? '');
   $messageType = 'error';
- }
  } else {
- $message ="Kan inte ta bort klubb med $riderCount deltagare";
- $messageType = 'error';
+  // Check if club has riders
+  $riderCount = $db->getRow("SELECT COUNT(*) as cnt FROM riders WHERE club_id = ?", [$deleteId])['cnt'] ?? 0;
+
+  if ($riderCount == 0) {
+   try {
+    $db->delete('clubs', 'id = ?', [$deleteId]);
+    $message = 'Klubb borttagen';
+    $messageType = 'success';
+   } catch (Exception $e) {
+    $message = 'Fel vid borttagning: ' . $e->getMessage();
+    $messageType = 'error';
+   }
+  } else {
+   $message ="Kan inte ta bort klubb med $riderCount deltagare";
+   $messageType = 'error';
+  }
  }
 }
 
@@ -123,10 +143,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_all_empty'])) 
  $clubIds = array_map('intval', $_POST['merge_clubs'] ?? []);
  $deletedCount = 0;
  $skippedCount = 0;
+ $rfProtectedCount = 0;
 
  if (!empty($clubIds)) {
  try {
   foreach ($clubIds as $clubId) {
+  // Check if club is RF-registered
+  $club = $db->getRow("SELECT rf_registered FROM clubs WHERE id = ?", [$clubId]);
+  if ($club && !empty($club['rf_registered'])) {
+   $rfProtectedCount++;
+   continue;
+  }
+
   // Verify club is actually empty
   $riderCount = $db->getRow("SELECT COUNT(*) as cnt FROM riders WHERE club_id = ?", [$clubId])['cnt'] ?? 0;
 
@@ -138,13 +166,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_all_empty'])) 
   }
   }
 
-  if ($skippedCount > 0) {
-  $message ="Tog bort $deletedCount tomma klubbar, hoppade över $skippedCount klubbar med deltagare";
-  $messageType = 'warning';
-  } else {
-  $message ="Tog bort $deletedCount tomma klubbar";
-  $messageType = 'success';
-  }
+  $messageParts = [];
+  if ($deletedCount > 0) $messageParts[] = "tog bort $deletedCount tomma klubbar";
+  if ($skippedCount > 0) $messageParts[] = "hoppade över $skippedCount klubbar med deltagare";
+  if ($rfProtectedCount > 0) $messageParts[] = "skyddade $rfProtectedCount RF-registrerade klubbar";
+
+  $message = ucfirst(implode(', ', $messageParts));
+  $messageType = ($skippedCount > 0 || $rfProtectedCount > 0) ? 'warning' : 'success';
  } catch (Exception $e) {
   $message = 'Fel vid borttagning: ' . $e->getMessage();
   $messageType = 'error';
@@ -155,6 +183,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['delete_all_empty'])) 
 // Get all clubs with rider counts
 $clubs = $db->getAll("
  SELECT c.id, c.name, c.short_name, c.city, c.region, c.country,
+  c.rf_registered, c.scf_district,
   COUNT(r.id) as rider_count
  FROM clubs c
  LEFT JOIN riders r ON c.id = r.club_id
@@ -252,9 +281,14 @@ uasort($duplicateGroups, function($a, $b) {
  return $totalB - $totalA;
 });
 
-// Also find empty clubs
+// Also find empty clubs (excluding RF-registered which are protected)
 $emptyClubs = array_filter($clubs, function($club) {
- return $club['rider_count'] == 0;
+ return $club['rider_count'] == 0 && empty($club['rf_registered']);
+});
+
+// RF-registered empty clubs (for info)
+$rfEmptyClubs = array_filter($clubs, function($club) {
+ return $club['rider_count'] == 0 && !empty($club['rf_registered']);
 });
 
 /**
@@ -395,6 +429,18 @@ include __DIR__ . '/components/unified-layout.php';
  </div>
  <?php endif; ?>
 
+ <?php if (!empty($rfEmptyClubs)): ?>
+ <!-- Info about RF-protected empty clubs -->
+ <div class="card mb-lg" style="background: var(--color-success-light, #d1fae5);">
+  <div class="card-body flex items-center justify-between">
+   <div>
+    <strong class="text-success"><i data-lucide="shield-check" class="icon-sm"></i> <?= count($rfEmptyClubs) ?> RF-skyddade tomma klubbar</strong>
+    <p class="text-sm text-secondary gs-mb-0">Dessa klubbar är RF-registrerade och kan inte raderas, även om de saknar deltagare</p>
+   </div>
+  </div>
+ </div>
+ <?php endif; ?>
+
  <?php if ($ignoredCount > 0): ?>
   <!-- Ignored groups info -->
   <div class="card mb-lg" style="background: var(--color-bg-sunken, #f5f5f5);">
@@ -455,21 +501,28 @@ include __DIR__ . '/components/unified-layout.php';
      $first = true;
      foreach ($group as $club):
      ?>
-      <tr class="<?= $club['rider_count'] == 0 ? 'gs-bg-danger-light' : '' ?>">
+      <tr class="<?= $club['rider_count'] == 0 && empty($club['rf_registered']) ? 'gs-bg-danger-light' : '' ?>">
       <td>
        <input type="radio" name="keep_club" value="<?= $club['id'] ?>"
         <?= $first ? 'checked' : '' ?>>
       </td>
       <td>
        <?php if (!$first): ?>
+       <?php if (!empty($club['rf_registered'])): ?>
+       <span class="text-muted" title="RF-registrerade klubbar kan inte raderas"><i data-lucide="shield-check" class="icon-sm text-success"></i></span>
+       <?php else: ?>
        <input type="checkbox" name="merge_clubs[]" value="<?= $club['id'] ?>"
         <?= $club['rider_count'] == 0 ? 'checked' : '' ?>>
+       <?php endif; ?>
        <?php else: ?>
        <span class="text-secondary">-</span>
        <?php endif; ?>
       </td>
       <td>
        <strong><?= h($club['name']) ?></strong>
+       <?php if (!empty($club['rf_registered'])): ?>
+       <span class="badge badge-success badge-sm" title="RF-registrerad <?= h($club['scf_district'] ?? '') ?>">RF</span>
+       <?php endif; ?>
        <?php if ($club['rider_count'] > 0): ?>
        <span class="badge badge-success badge-sm">Huvudklubb</span>
        <?php endif; ?>

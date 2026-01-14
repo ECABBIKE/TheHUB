@@ -304,6 +304,13 @@ $ADMIN_TABS = [
                 'icon' => 'building-2',
                 'url' => '/admin/analytics-clubs.php',
                 'pages' => ['analytics-clubs.php']
+            ],
+            [
+                'id' => 'trends',
+                'label' => 'Trender',
+                'icon' => 'trending-up',
+                'url' => '/admin/analytics-trends.php',
+                'pages' => ['analytics-trends.php']
             ]
         ]
     ],
