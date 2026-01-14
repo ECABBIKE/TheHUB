@@ -351,10 +351,11 @@ class KPICalculator {
      * Med detaljer for profillankningar
      *
      * @param int $year Ar
+     * @param int|null $seriesId Filtrera pa serie (optional)
      * @return array Lista med rookies
      */
-    public function getRookiesList(int $year): array {
-        $stmt = $this->pdo->prepare("
+    public function getRookiesList(int $year, ?int $seriesId = null): array {
+        $sql = "
             SELECT
                 r.id as rider_id,
                 r.firstname,
@@ -373,15 +374,107 @@ class KPICalculator {
                 rys.total_points,
                 rys.best_position,
                 rys.primary_discipline,
-                rys.primary_series_id
+                rys.primary_series_id,
+                s.name as series_name
             FROM rider_yearly_stats rys
             JOIN riders r ON rys.rider_id = r.id
             LEFT JOIN clubs c ON r.club_id = c.id
+            LEFT JOIN series s ON rys.primary_series_id = s.id
             WHERE rys.season_year = ?
               AND rys.is_rookie = 1
-            ORDER BY r.lastname, r.firstname
+        ";
+        $params = [$year];
+
+        if ($seriesId !== null) {
+            $sql .= " AND rys.primary_series_id = ?";
+            $params[] = $seriesId;
+        }
+
+        $sql .= " ORDER BY r.lastname, r.firstname";
+
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Hamta serier som har rookies for ett ar
+     *
+     * @param int $year Ar
+     * @return array Serier med rookie-antal
+     */
+    public function getSeriesWithRookies(int $year): array {
+        $stmt = $this->pdo->prepare("
+            SELECT
+                s.id,
+                s.name,
+                COUNT(*) as rookie_count
+            FROM rider_yearly_stats rys
+            JOIN series s ON rys.primary_series_id = s.id
+            WHERE rys.season_year = ?
+              AND rys.is_rookie = 1
+              AND rys.primary_series_id IS NOT NULL
+            GROUP BY s.id, s.name
+            ORDER BY rookie_count DESC
         ");
         $stmt->execute([$year]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Hamta rookie-trend over flera ar
+     * Visar antal nya deltagare, totalt deltagare, och andel per ar
+     *
+     * @param int $years Antal ar att visa
+     * @return array Trenddata per ar
+     */
+    public function getRookieTrend(int $years = 5): array {
+        $currentYear = (int)date('Y');
+        $startYear = $currentYear - $years + 1;
+
+        $stmt = $this->pdo->prepare("
+            SELECT
+                rys.season_year as year,
+                COUNT(*) as total_riders,
+                SUM(CASE WHEN rys.is_rookie = 1 THEN 1 ELSE 0 END) as rookie_count,
+                ROUND(
+                    SUM(CASE WHEN rys.is_rookie = 1 THEN 1 ELSE 0 END) * 100.0 / NULLIF(COUNT(*), 0),
+                    1
+                ) as rookie_percentage
+            FROM rider_yearly_stats rys
+            WHERE rys.season_year >= ? AND rys.season_year <= ?
+            GROUP BY rys.season_year
+            ORDER BY rys.season_year ASC
+        ");
+        $stmt->execute([$startYear, $currentYear]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Hamta genomsnittsalder for rookies per ar (trend)
+     *
+     * @param int $years Antal ar
+     * @return array Snittålder per ar
+     */
+    public function getRookieAgeTrend(int $years = 5): array {
+        $currentYear = (int)date('Y');
+        $startYear = $currentYear - $years + 1;
+
+        $stmt = $this->pdo->prepare("
+            SELECT
+                rys.season_year as year,
+                ROUND(AVG(rys.season_year - r.birth_year), 1) as avg_age,
+                COUNT(*) as rookie_count
+            FROM rider_yearly_stats rys
+            JOIN riders r ON rys.rider_id = r.id
+            WHERE rys.season_year >= ? AND rys.season_year <= ?
+              AND rys.is_rookie = 1
+              AND r.birth_year IS NOT NULL
+              AND r.birth_year > 1900
+            GROUP BY rys.season_year
+            ORDER BY rys.season_year ASC
+        ");
+        $stmt->execute([$startYear, $currentYear]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 

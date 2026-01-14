@@ -29,19 +29,38 @@ $selectedYear = isset($_GET['year']) ? (int)$_GET['year'] : $currentYear;
 
 // Hamta tillgangliga ar
 $availableYears = [];
+$dataWarning = null;
 try {
     $stmt = $pdo->query("SELECT DISTINCT season_year FROM rider_yearly_stats ORDER BY season_year DESC");
     $availableYears = $stmt->fetchAll(PDO::FETCH_COLUMN);
+    if (empty($availableYears)) {
+        // Tabellen finns men ar tom - kolla om events finns
+        $eventStmt = $pdo->query("SELECT DISTINCT YEAR(date) as year FROM events WHERE date IS NOT NULL ORDER BY year DESC LIMIT 10");
+        $eventYears = $eventStmt->fetchAll(PDO::FETCH_COLUMN);
+        if (!empty($eventYears)) {
+            $availableYears = $eventYears;
+            $dataWarning = "Analytics-data saknas. Visar ar med events - kor Populate for att generera statistik.";
+        }
+    }
 } catch (Exception $e) {
+    $availableYears = range($currentYear, $currentYear - 5);
+}
+
+// Fallback om fortfarande tomt
+if (empty($availableYears)) {
     $availableYears = range($currentYear, $currentYear - 5);
 }
 
 // Rapporttyp
 $reportType = $_GET['report'] ?? 'summary';
 $export = isset($_GET['export']);
+$selectedSeries = isset($_GET['series']) ? (int)$_GET['series'] : null;
 
 // Initiera KPI Calculator
 $kpiCalc = new KPICalculator($pdo);
+
+// Hamta serier med rookies for filtrering
+$seriesWithRookies = [];
 
 // Hamta data baserat pa rapport
 $reportData = [];
@@ -99,7 +118,20 @@ try {
             break;
 
         case 'rookies':
-            $reportTitle = "Nya Deltagare (Rookies) $selectedYear";
+            // Hamta serier for filtrering
+            $seriesWithRookies = $kpiCalc->getSeriesWithRookies($selectedYear);
+
+            $seriesName = '';
+            if ($selectedSeries) {
+                foreach ($seriesWithRookies as $s) {
+                    if ((int)$s['id'] === $selectedSeries) {
+                        $seriesName = ' - ' . $s['name'];
+                        break;
+                    }
+                }
+            }
+
+            $reportTitle = "Nya Deltagare (Rookies) $selectedYear" . $seriesName;
             $reportData = [
                 'total_rookies' => $kpiCalc->getNewRidersCount($selectedYear),
                 'total_riders' => $kpiCalc->getTotalActiveRiders($selectedYear),
@@ -109,12 +141,15 @@ try {
                 'classes' => $kpiCalc->getRookieClassDistribution($selectedYear),
                 'events' => $kpiCalc->getEventsWithMostRookies($selectedYear, 20),
                 'clubs' => $kpiCalc->getClubsWithMostRookies($selectedYear, 20),
-                'list' => $kpiCalc->getRookiesList($selectedYear)
+                'list' => $kpiCalc->getRookiesList($selectedYear, $selectedSeries),
+                'series_filter' => $seriesWithRookies,
+                'trend' => $kpiCalc->getRookieTrend(5),
+                'age_trend' => $kpiCalc->getRookieAgeTrend(5)
             ];
             break;
     }
-} catch (Exception $e) {
-    $error = $e->getMessage();
+} catch (Throwable $e) {
+    $error = $e->getMessage() . ' (Line: ' . $e->getLine() . ' in ' . basename($e->getFile()) . ')';
 }
 
 // Export to CSV
@@ -183,7 +218,7 @@ if ($export && !isset($error)) {
             break;
 
         case 'rookies':
-            fputcsv($output, ['Rider ID', 'Fornamn', 'Efternamn', 'Alder', 'Fodelsear', 'Kon', 'Klubb', 'Events', 'Starter', 'Poang', 'Basta Placering', 'Disciplin', 'Profil URL']);
+            fputcsv($output, ['Rider ID', 'Fornamn', 'Efternamn', 'Alder', 'Fodelsear', 'Kon', 'Klubb', 'Serie', 'Events', 'Starter', 'Poang', 'Basta Placering', 'Disciplin', 'Profil URL']);
             foreach ($reportData['list'] as $rookie) {
                 $profileUrl = 'https://thehub.se/rider/' . $rookie['rider_id'];
                 fputcsv($output, [
@@ -194,6 +229,7 @@ if ($export && !isset($error)) {
                     $rookie['birth_year'] ?? '-',
                     $rookie['gender'] ?? '-',
                     $rookie['club_name'] ?? 'Ingen klubb',
+                    $rookie['series_name'] ?? '-',
                     $rookie['total_events'],
                     $rookie['total_starts'],
                     $rookie['total_points'],
@@ -277,12 +313,32 @@ include __DIR__ . '/components/unified-layout.php';
     </form>
 </div>
 
+<?php if (isset($dataWarning)): ?>
+<div class="alert alert-info" style="margin-bottom: var(--space-lg);">
+    <i data-lucide="info"></i>
+    <div>
+        <?= htmlspecialchars($dataWarning) ?>
+        <a href="/admin/analytics-populate.php" class="btn-admin btn-admin-sm" style="margin-left: var(--space-md);">Populate Data</a>
+    </div>
+</div>
+<?php endif; ?>
+
 <?php if (isset($error)): ?>
 <div class="alert alert-warning">
     <i data-lucide="alert-triangle"></i>
     <div>
+        <strong>Fel vid inlasning av data</strong><br>
+        <?= htmlspecialchars($error) ?>
+        <br><br>
+        <small>Kor <a href="/admin/analytics-populate.php">Populate Historical</a> for att generera data.</small>
+    </div>
+</div>
+<?php elseif (empty($availableYears)): ?>
+<div class="alert alert-warning">
+    <i data-lucide="alert-triangle"></i>
+    <div>
         <strong>Ingen data tillganglig</strong><br>
-        Kor <code>php analytics/populate-historical.php</code> for att generera historisk data.
+        Kor <a href="/admin/analytics-populate.php">Populate Historical</a> for att generera historisk data.
     </div>
 </div>
 <?php else: ?>
@@ -582,8 +638,30 @@ include __DIR__ . '/components/unified-layout.php';
 
     <?php elseif ($reportType === 'rookies'): ?>
     <!-- Rookies Report -->
+
+    <?php if (!empty($reportData['series_filter'])): ?>
+    <div class="report-section" style="padding-bottom: 0;">
+        <div class="series-filter-row" style="display: flex; align-items: center; gap: var(--space-md); flex-wrap: wrap;">
+            <label style="font-weight: var(--weight-medium);">Filtrera pa serie:</label>
+            <select onchange="window.location.href='?report=rookies&year=<?= $selectedYear ?>&series=' + this.value" class="form-select" style="width: auto; min-width: 200px;">
+                <option value="">Alla serier</option>
+                <?php foreach ($reportData['series_filter'] as $series): ?>
+                <option value="<?= $series['id'] ?>" <?= $selectedSeries == $series['id'] ? 'selected' : '' ?>>
+                    <?= htmlspecialchars($series['name']) ?> (<?= $series['rookie_count'] ?> rookies)
+                </option>
+                <?php endforeach; ?>
+            </select>
+            <?php if ($selectedSeries): ?>
+            <a href="?report=rookies&year=<?= $selectedYear ?>" class="btn-admin btn-admin-ghost btn-admin-sm">
+                <i data-lucide="x" style="width:14px;height:14px;"></i> Rensa filter
+            </a>
+            <?php endif; ?>
+        </div>
+    </div>
+    <?php endif; ?>
+
     <div class="report-section">
-        <h3>Oversikt</h3>
+        <h3>Oversikt <?= $selectedSeries ? '(filtrerad)' : '' ?></h3>
         <?php
         $rookiePct = $reportData['total_riders'] > 0
             ? round($reportData['total_rookies'] / $reportData['total_riders'] * 100, 1)
@@ -610,6 +688,76 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
     </div>
+
+    <?php if (!empty($reportData['trend'])): ?>
+    <div class="report-section">
+        <h3>Rookie-trend (5 ar)</h3>
+        <div class="trend-chart-container" style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-lg);">
+            <div>
+                <canvas id="rookieTrendChart" height="200"></canvas>
+            </div>
+            <div>
+                <table class="report-table">
+                    <thead>
+                        <tr>
+                            <th>Ar</th>
+                            <th>Nya</th>
+                            <th>Totalt</th>
+                            <th>Andel</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($reportData['trend'] as $t): ?>
+                        <tr>
+                            <td><?= $t['year'] ?></td>
+                            <td><strong><?= number_format($t['rookie_count']) ?></strong></td>
+                            <td><?= number_format($t['total_riders']) ?></td>
+                            <td><?= $t['rookie_percentage'] ?>%</td>
+                        </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const ctx = document.getElementById('rookieTrendChart');
+        if (ctx) {
+            new Chart(ctx, {
+                type: 'bar',
+                data: {
+                    labels: <?= json_encode(array_column($reportData['trend'], 'year')) ?>,
+                    datasets: [{
+                        label: 'Nya deltagare',
+                        data: <?= json_encode(array_map('intval', array_column($reportData['trend'], 'rookie_count'))) ?>,
+                        backgroundColor: 'rgba(55, 212, 214, 0.8)',
+                        borderColor: 'rgba(55, 212, 214, 1)',
+                        borderWidth: 1
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    plugins: {
+                        legend: { display: false }
+                    },
+                    scales: {
+                        y: {
+                            beginAtZero: true,
+                            grid: { color: 'rgba(255,255,255,0.1)' }
+                        },
+                        x: {
+                            grid: { display: false }
+                        }
+                    }
+                }
+            });
+        }
+    });
+    </script>
+    <?php endif; ?>
 
     <div class="report-section">
         <h3>Aldersfordelning - Nya Deltagare</h3>
@@ -740,6 +888,7 @@ include __DIR__ . '/components/unified-layout.php';
                     <th>Namn</th>
                     <th>Alder</th>
                     <th>Klubb</th>
+                    <th>Serie</th>
                     <th>Events</th>
                     <th>Poang</th>
                     <th>Basta</th>
@@ -756,6 +905,7 @@ include __DIR__ . '/components/unified-layout.php';
                     </td>
                     <td><?= $rookie['age'] ?? '-' ?></td>
                     <td><?= htmlspecialchars($rookie['club_name'] ?? '-') ?></td>
+                    <td><?= htmlspecialchars($rookie['series_name'] ?? '-') ?></td>
                     <td><?= $rookie['total_events'] ?></td>
                     <td><?= $rookie['total_points'] ?></td>
                     <td><?= $rookie['best_position'] ? '#' . $rookie['best_position'] : '-' ?></td>
