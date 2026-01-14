@@ -269,6 +269,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // Handle search and filters
 $search = $_GET['search'] ?? '';
 $countryFilter = $_GET['country'] ?? '';
+$rfFilter = $_GET['rf'] ?? '';
+$memberFilter = $_GET['members'] ?? '';
 
 // Handle URL messages
 if (isset($_GET['msg'])) {
@@ -293,7 +295,23 @@ if ($countryFilter) {
     $params[] = $countryFilter;
 }
 
+if ($rfFilter === '1') {
+    $where[] = "cl.rf_registered = 1";
+} elseif ($rfFilter === '0') {
+    $where[] = "(cl.rf_registered = 0 OR cl.rf_registered IS NULL)";
+}
+
 $whereClause = $where ? 'WHERE ' . implode(' AND ', $where) : '';
+
+// Member filter is applied after grouping via HAVING
+$havingClause = '';
+if ($memberFilter === 'few') {
+    $havingClause = 'HAVING rider_count BETWEEN 1 AND 2';
+} elseif ($memberFilter === 'many') {
+    $havingClause = 'HAVING rider_count >= 3';
+} elseif ($memberFilter === 'none') {
+    $havingClause = 'HAVING rider_count = 0';
+}
 
 // Get list of countries for filter dropdown
 $countries = $db->getAll("SELECT DISTINCT country FROM clubs WHERE country IS NOT NULL AND country != '' ORDER BY country");
@@ -307,11 +325,14 @@ $sql = "SELECT
     cl.country,
     cl.logo,
     cl.active,
+    cl.rf_registered,
+    cl.scf_district,
     COUNT(DISTINCT c.id) as rider_count
 FROM clubs cl
 LEFT JOIN riders c ON cl.id = c.club_id AND c.active = 1
 $whereClause
 GROUP BY cl.id
+$havingClause
 ORDER BY cl.name";
 
 $clubs = $db->getAll($sql, $params);
@@ -399,8 +420,8 @@ include __DIR__ . '/components/unified-layout.php';
 <!-- Search & Filters -->
 <div class="admin-card">
     <div class="admin-card-body">
-        <form method="GET" id="searchForm" class="admin-form-row" style="align-items: flex-end;">
-            <div class="admin-form-group" style="flex: 1; margin-bottom: 0;">
+        <form method="GET" id="searchForm" class="admin-form-row" style="align-items: flex-end; flex-wrap: wrap; gap: var(--space-sm);">
+            <div class="admin-form-group" style="flex: 1; min-width: 200px; margin-bottom: 0;">
                 <label for="searchInput" class="admin-form-label">Sök</label>
                 <input
                     type="text"
@@ -412,7 +433,7 @@ include __DIR__ . '/components/unified-layout.php';
                     autocomplete="off"
                 >
             </div>
-            <div class="admin-form-group" style="width: 180px; margin-bottom: 0;">
+            <div class="admin-form-group" style="width: 150px; margin-bottom: 0;">
                 <label for="countryFilter" class="admin-form-label">Land</label>
                 <select name="country" id="countryFilter" class="admin-form-select" onchange="this.form.submit()">
                     <option value="">Alla länder</option>
@@ -423,8 +444,25 @@ include __DIR__ . '/components/unified-layout.php';
                     <?php endforeach; ?>
                 </select>
             </div>
-            <?php if ($search || $countryFilter): ?>
-                <a href="/admin/clubs" class="btn-admin btn-admin-sm btn-admin-secondary">
+            <div class="admin-form-group" style="width: 150px; margin-bottom: 0;">
+                <label for="rfFilter" class="admin-form-label">RF-status</label>
+                <select name="rf" id="rfFilter" class="admin-form-select" onchange="this.form.submit()">
+                    <option value="">Alla</option>
+                    <option value="1" <?= $rfFilter === '1' ? 'selected' : '' ?>>RF-ansluten</option>
+                    <option value="0" <?= $rfFilter === '0' ? 'selected' : '' ?>>Ej RF-ansluten</option>
+                </select>
+            </div>
+            <div class="admin-form-group" style="width: 150px; margin-bottom: 0;">
+                <label for="memberFilter" class="admin-form-label">Medlemmar</label>
+                <select name="members" id="memberFilter" class="admin-form-select" onchange="this.form.submit()">
+                    <option value="">Alla</option>
+                    <option value="none" <?= $memberFilter === 'none' ? 'selected' : '' ?>>0 (tomma)</option>
+                    <option value="few" <?= $memberFilter === 'few' ? 'selected' : '' ?>>1-2 medlemmar</option>
+                    <option value="many" <?= $memberFilter === 'many' ? 'selected' : '' ?>>3+ medlemmar</option>
+                </select>
+            </div>
+            <?php if ($search || $countryFilter || $rfFilter || $memberFilter): ?>
+                <a href="/admin/clubs" class="btn-admin btn-admin-sm btn-admin-secondary" style="margin-top: auto;">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
                     Rensa
                 </a>
@@ -505,6 +543,9 @@ include __DIR__ . '/components/unified-layout.php';
                                     <a href="/admin/club-edit.php?id=<?= $club['id'] ?>" style="color: var(--color-accent); text-decoration: none; font-weight: 500;">
                                         <?= htmlspecialchars($club['name']) ?>
                                     </a>
+                                    <?php if (!empty($club['rf_registered'])): ?>
+                                    <span class="admin-badge admin-badge-success" title="<?= htmlspecialchars($club['scf_district'] ?? 'RF-registrerad') ?>" style="font-size: 0.65rem; padding: 2px 4px;">RF</span>
+                                    <?php endif; ?>
                                 </td>
                                 <td>
                                     <span class="admin-badge admin-badge-info">

@@ -1114,7 +1114,99 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
         if (count($notFound) > 0) {
             $parts[] = count($notFound) . " ej hittade";
         }
-        $message = "RF-synkronisering klar: " . implode(', ', $parts) . ".";
+        $message = "RF-synkronisering (Sverige) klar: " . implode(', ', $parts) . ".";
+        $messageType = 'success';
+    }
+
+    if ($_POST['action'] === 'sync_ncf') {
+        $matched = 0;
+        $created = 0;
+        $notFound = [];
+
+        $createMissing = isset($_POST['create_missing']) && $_POST['create_missing'] === '1';
+        $updateNames = isset($_POST['update_names']) && $_POST['update_names'] === '1';
+
+        // Reset Norwegian RF registrations only
+        $pdo->exec("UPDATE clubs SET rf_registered = 0, rf_registered_year = NULL, scf_district = NULL WHERE country = 'Norge' OR scf_district = 'Norges Cykleforbund'");
+
+        // Cache all existing clubs for faster matching
+        $stmt = $pdo->query("SELECT id, name, country FROM clubs ORDER BY name");
+        $existingClubs = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        foreach ($ncf_clubs as $clubName) {
+            // Find best match
+            $bestMatch = null;
+            $bestScore = 0;
+
+            foreach ($existingClubs as $club) {
+                $score = clubNameSimilarity($clubName, $club['name']);
+                if ($score > $bestScore && $score >= 70) {
+                    $bestScore = $score;
+                    $bestMatch = $club;
+                }
+            }
+
+            if ($bestMatch) {
+                // Update existing club
+                $stmt = $pdo->prepare("UPDATE clubs SET rf_registered = 1, rf_registered_year = 2025, scf_district = 'Norges Cykleforbund', country = 'Norge' WHERE id = ?");
+                $stmt->execute([$bestMatch['id']]);
+
+                // Optionally update the name to official NCF spelling
+                if ($updateNames && $bestMatch['name'] !== $clubName) {
+                    $stmt = $pdo->prepare("UPDATE clubs SET name = ? WHERE id = ?");
+                    $stmt->execute([$clubName, $bestMatch['id']]);
+                }
+
+                $matched++;
+                $results[] = [
+                    'status' => 'matched',
+                    'rf_name' => $clubName,
+                    'hub_name' => $bestMatch['name'],
+                    'hub_id' => $bestMatch['id'],
+                    'district' => 'Norges Cykleforbund',
+                    'score' => round($bestScore)
+                ];
+            } else {
+                // Club not found
+                if ($createMissing) {
+                    // Create new club
+                    $stmt = $pdo->prepare("INSERT INTO clubs (name, rf_registered, rf_registered_year, scf_district, country, active, created_at) VALUES (?, 1, 2025, 'Norges Cykleforbund', 'Norge', 1, NOW())");
+                    $stmt->execute([$clubName]);
+                    $newId = $pdo->lastInsertId();
+
+                    // Add to cache for potential future matches in this run
+                    $existingClubs[] = ['id' => $newId, 'name' => $clubName, 'country' => 'Norge'];
+
+                    $created++;
+                    $results[] = [
+                        'status' => 'created',
+                        'rf_name' => $clubName,
+                        'hub_name' => $clubName,
+                        'hub_id' => $newId,
+                        'district' => 'Norges Cykleforbund',
+                        'score' => 100
+                    ];
+                } else {
+                    $notFound[] = ['name' => $clubName, 'district' => 'Norges Cykleforbund'];
+                    $results[] = [
+                        'status' => 'not_found',
+                        'rf_name' => $clubName,
+                        'hub_name' => null,
+                        'district' => 'Norges Cykleforbund',
+                        'score' => 0
+                    ];
+                }
+            }
+        }
+
+        $parts = ["$matched klubbar matchade"];
+        if ($created > 0) {
+            $parts[] = "$created nya klubbar skapade";
+        }
+        if (count($notFound) > 0) {
+            $parts[] = count($notFound) . " ej hittade";
+        }
+        $message = "NCF-synkronisering (Norge) klar: " . implode(', ', $parts) . ".";
         $messageType = 'success';
     }
 
@@ -1167,6 +1259,7 @@ $totalRfClubs = 0;
 foreach ($scf_districts as $clubs) {
     $totalRfClubs += count($clubs);
 }
+$totalNcfClubs = count($ncf_clubs);
 
 // Include unified layout
 include __DIR__ . '/components/unified-layout.php';
@@ -1183,10 +1276,14 @@ include __DIR__ . '/components/unified-layout.php';
             <h3>Statistik</h3>
         </div>
         <div class="card-body">
-            <div class="stats-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--space-md);">
+            <div class="stats-grid" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: var(--space-md);">
                 <div class="stat-card" style="background: var(--color-bg-hover); padding: var(--space-md); border-radius: var(--radius-md);">
-                    <div style="font-size: 2rem; font-weight: bold; color: var(--color-accent);"><?= $totalRfClubs ?></div>
-                    <div class="text-muted">Klubbar i RF-registret</div>
+                    <div style="font-size: 2rem; font-weight: bold; color: #006aa7;"><?= $totalRfClubs ?></div>
+                    <div class="text-muted">Svenska klubbar (SCF)</div>
+                </div>
+                <div class="stat-card" style="background: var(--color-bg-hover); padding: var(--space-md); border-radius: var(--radius-md);">
+                    <div style="font-size: 2rem; font-weight: bold; color: #ba0c2f;"><?= $totalNcfClubs ?></div>
+                    <div class="text-muted">Norska klubbar (NCF)</div>
                 </div>
                 <div class="stat-card" style="background: var(--color-bg-hover); padding: var(--space-md); border-radius: var(--radius-md);">
                     <div style="font-size: 2rem; font-weight: bold; color: var(--color-success);"><?= $stats['rf_registered'] ?? 0 ?></div>
@@ -1194,46 +1291,82 @@ include __DIR__ . '/components/unified-layout.php';
                 </div>
                 <div class="stat-card" style="background: var(--color-bg-hover); padding: var(--space-md); border-radius: var(--radius-md);">
                     <div style="font-size: 2rem; font-weight: bold; color: var(--color-warning);"><?= $stats['not_registered'] ?? 0 ?></div>
-                    <div class="text-muted">Ej RF-registrerade</div>
+                    <div class="text-muted">Ej registrerade</div>
                 </div>
                 <div class="stat-card" style="background: var(--color-bg-hover); padding: var(--space-md); border-radius: var(--radius-md);">
-                    <div style="font-size: 2rem; font-weight: bold; color: var(--color-text-primary);"><?= count($scf_districts) ?></div>
-                    <div class="text-muted">SCF-distrikt</div>
+                    <div style="font-size: 2rem; font-weight: bold; color: var(--color-text-primary);"><?= count($scf_districts) + 1 ?></div>
+                    <div class="text-muted">Förbund/distrikt</div>
                 </div>
             </div>
         </div>
     </div>
 
-    <!-- Sync Button -->
-    <div class="card mb-4">
-        <div class="card-header">
-            <h3>Synkronisera med RF</h3>
+    <!-- Sync Buttons -->
+    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: var(--space-md); margin-bottom: var(--space-lg);">
+        <!-- Swedish SCF Sync -->
+        <div class="card">
+            <div class="card-header" style="background: linear-gradient(135deg, #006aa7 0%, #fecc00 100%);">
+                <h3 style="color: #fff;">Sverige - SCF</h3>
+            </div>
+            <div class="card-body">
+                <p class="text-sm text-muted mb-md"><?= $totalRfClubs ?> klubbar i <?= count($scf_districts) ?> distrikt</p>
+
+                <form method="POST">
+                    <input type="hidden" name="action" value="sync_rf">
+
+                    <div class="form-group" style="margin-bottom: var(--space-sm);">
+                        <label class="checkbox-label" style="display: flex; align-items: center; gap: var(--space-sm); cursor: pointer; font-size: 0.875rem;">
+                            <input type="checkbox" name="create_missing" value="1" checked style="width: 16px; height: 16px;">
+                            <span>Skapa saknade klubbar</span>
+                        </label>
+                    </div>
+
+                    <div class="form-group" style="margin-bottom: var(--space-md);">
+                        <label class="checkbox-label" style="display: flex; align-items: center; gap: var(--space-sm); cursor: pointer; font-size: 0.875rem;">
+                            <input type="checkbox" name="update_names" value="1" style="width: 16px; height: 16px;">
+                            <span>Uppdatera stavning</span>
+                        </label>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary" style="width: 100%;">
+                        <i data-lucide="refresh-cw"></i>
+                        Synka svenska klubbar
+                    </button>
+                </form>
+            </div>
         </div>
-        <div class="card-body">
-            <p>Matchar klubbar i TheHUB med den officiella RF-registerlistan för 2025. Fuzzy-matchning används för att hitta klubbar även med stavningsvariationer.</p>
 
-            <form method="POST">
-                <input type="hidden" name="action" value="sync_rf">
+        <!-- Norwegian NCF Sync -->
+        <div class="card">
+            <div class="card-header" style="background: linear-gradient(135deg, #ba0c2f 0%, #00205b 100%);">
+                <h3 style="color: #fff;">Norge - NCF</h3>
+            </div>
+            <div class="card-body">
+                <p class="text-sm text-muted mb-md"><?= $totalNcfClubs ?> klubbar i Norges Cykleforbund</p>
 
-                <div class="form-group" style="margin-bottom: var(--space-md);">
-                    <label class="checkbox-label" style="display: flex; align-items: center; gap: var(--space-sm); cursor: pointer;">
-                        <input type="checkbox" name="create_missing" value="1" checked style="width: 18px; height: 18px;">
-                        <span><strong>Skapa saknade klubbar</strong> - Alla RF-klubbar som inte hittas skapas automatiskt</span>
-                    </label>
-                </div>
+                <form method="POST">
+                    <input type="hidden" name="action" value="sync_ncf">
 
-                <div class="form-group" style="margin-bottom: var(--space-lg);">
-                    <label class="checkbox-label" style="display: flex; align-items: center; gap: var(--space-sm); cursor: pointer;">
-                        <input type="checkbox" name="update_names" value="1" style="width: 18px; height: 18px;">
-                        <span><strong>Uppdatera stavning</strong> - Rätta klubbnamn till officiell RF-stavning</span>
-                    </label>
-                </div>
+                    <div class="form-group" style="margin-bottom: var(--space-sm);">
+                        <label class="checkbox-label" style="display: flex; align-items: center; gap: var(--space-sm); cursor: pointer; font-size: 0.875rem;">
+                            <input type="checkbox" name="create_missing" value="1" checked style="width: 16px; height: 16px;">
+                            <span>Skapa saknade klubbar</span>
+                        </label>
+                    </div>
 
-                <button type="submit" class="btn btn-primary">
-                    <i data-lucide="refresh-cw"></i>
-                    Synkronisera RF-registrering
-                </button>
-            </form>
+                    <div class="form-group" style="margin-bottom: var(--space-md);">
+                        <label class="checkbox-label" style="display: flex; align-items: center; gap: var(--space-sm); cursor: pointer; font-size: 0.875rem;">
+                            <input type="checkbox" name="update_names" value="1" style="width: 16px; height: 16px;">
+                            <span>Uppdatera stavning</span>
+                        </label>
+                    </div>
+
+                    <button type="submit" class="btn btn-primary" style="width: 100%; background: #ba0c2f; border-color: #ba0c2f;">
+                        <i data-lucide="refresh-cw"></i>
+                        Synka norska klubbar
+                    </button>
+                </form>
+            </div>
         </div>
     </div>
 
