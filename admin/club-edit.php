@@ -34,6 +34,9 @@ $club = [
     'tiktok' => '',
     'org_number' => '',
     'scf_id' => '',
+    'scf_district' => '',
+    'rf_registered' => 0,
+    'rf_registered_year' => null,
     'swish_number' => '',
     'swish_name' => '',
     'payment_enabled' => 0,
@@ -112,6 +115,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'tiktok' => trim($_POST['tiktok'] ?? ''),
                 'org_number' => trim($_POST['org_number'] ?? ''),
                 'scf_id' => trim($_POST['scf_id'] ?? ''),
+                'scf_district' => trim($_POST['scf_district'] ?? '') ?: null,
+                'rf_registered' => isset($_POST['rf_registered']) ? 1 : 0,
+                'rf_registered_year' => !empty($_POST['rf_registered_year']) ? (int)$_POST['rf_registered_year'] : null,
                 'swish_number' => trim($_POST['swish_number'] ?? '') ?: null,
                 'swish_name' => trim($_POST['swish_name'] ?? '') ?: null,
                 'payment_enabled' => isset($_POST['payment_enabled']) ? 1 : 0,
@@ -496,6 +502,88 @@ include __DIR__ . '/components/unified-layout.php';
      </select>
      </div>
     </div>
+    </div>
+   </div>
+   </div>
+
+   <!-- RF/SCF Registration -->
+   <div class="card mb-lg">
+   <div class="card-header">
+    <h2 class="text-primary">
+    <i data-lucide="award"></i>
+    Förbundsregistrering
+    </h2>
+   </div>
+   <div class="card-body">
+    <div class="grid grid-cols-1 gap-md">
+
+    <!-- SCF District -->
+    <div>
+     <label for="scf_district" class="label">SCF Distrikt</label>
+     <select id="scf_district" name="scf_district" class="input">
+      <option value="">-- Välj distrikt --</option>
+      <?php
+      $scfDistricts = [
+          'Bohuslän-Dals Cykelförbund',
+          'Dalarnas Cykelförbund',
+          'Gästriklands Cykelförbund',
+          'Göteborgs Cykelförbund',
+          'Hallands Cykelförbund',
+          'Hälsinglands Cykelförbund',
+          'Jämtland-Härjedalens Cykelförbund',
+          'Norrbottens Cykelförbund',
+          'Skånes Cykelförbund',
+          'Smålands Cykelförbund',
+          'Stockholms Cykelförbund',
+          'Södermanlands Cykelförbund',
+          'Upplands Cykelförbund',
+          'Värmlands Cykelförbund',
+          'Västerbottens Cykelförbund',
+          'Västergötlands Cykelförbund',
+          'Västernorrlands Cykelförbund',
+          'Västmanlands Cykelförbund',
+          'Örebro Läns Cykelförbund',
+          'Östergötlands Cykelförbund'
+      ];
+      foreach ($scfDistricts as $district):
+      ?>
+      <option value="<?= h($district) ?>" <?= ($club['scf_district'] ?? '') === $district ? 'selected' : '' ?>><?= h($district) ?></option>
+      <?php endforeach; ?>
+     </select>
+     <p class="form-help">Svenska Cykelförbundets distriktstillhörighet</p>
+    </div>
+
+    <!-- RF Registration -->
+    <div class="grid grid-cols-2 gap-md">
+     <div>
+      <label class="checkbox-label" style="display: flex; align-items: center; gap: var(--space-sm); cursor: pointer;">
+       <input
+        type="checkbox"
+        id="rf_registered"
+        name="rf_registered"
+        value="1"
+        <?= !empty($club['rf_registered']) ? 'checked' : '' ?>
+        style="width: 18px; height: 18px;"
+       >
+       <span><strong>RF-registrerad</strong></span>
+      </label>
+      <p class="form-help">Aktiv klubb hos Riksidrottsförbundet</p>
+     </div>
+     <div>
+      <label for="rf_registered_year" class="label">Registreringsår</label>
+      <input
+       type="number"
+       id="rf_registered_year"
+       name="rf_registered_year"
+       class="input"
+       value="<?= h($club['rf_registered_year'] ?? '') ?>"
+       placeholder="<?= date('Y') ?>"
+       min="2000"
+       max="<?= date('Y') + 1 ?>"
+      >
+     </div>
+    </div>
+
     </div>
    </div>
    </div>

@@ -10,8 +10,15 @@ require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../includes/auth.php';
 requireLogin();
 
-$pageTitle = 'RF-registrering av Klubbar';
-include __DIR__ . '/../includes/admin-header.php';
+// Page setup for unified layout
+$page_title = 'RF-registrering av Klubbar';
+$breadcrumbs = [
+    ['label' => 'Admin', 'url' => '/admin'],
+    ['label' => 'Klubbar', 'url' => '/admin/clubs.php'],
+    ['label' => 'RF-registrering']
+];
+
+global $pdo;
 
 // SCF Districts with their registered clubs
 $scf_districts = [
@@ -518,65 +525,223 @@ try {
     // Columns might already exist
 }
 
+/**
+ * Normalize club name for better matching
+ */
+function normalizeClubName($name) {
+    $name = mb_strtolower($name, 'UTF-8');
+
+    // Replace common abbreviations
+    $replacements = [
+        'cykelklubb' => 'ck',
+        'cykelförening' => 'ck',
+        'idrottsförening' => 'if',
+        'idrottsklubb' => 'ik',
+        'sportklubb' => 'sk',
+        'orienteringsklubb' => 'ok',
+        'skidklubb' => 'sk',
+        'mountainbike' => 'mtb',
+        'mountainbikeklubb' => 'mtb',
+        'bergscykelklubb' => 'mtb',
+        'bergscyklister' => 'mtb',
+        'stigcyklister' => 'mtb',
+        'terrängcyklister' => 'mtb',
+        'idrottssällskap' => 'is',
+        'gymnastik' => 'gym',
+        ' och ' => ' o ',
+        ' & ' => ' o ',
+        '-klubb' => 'klubb',
+        'sports club' => 'sc',
+        'athletic club' => 'ac',
+        'cycling club' => 'cc',
+        'cycle club' => 'cc',
+    ];
+
+    foreach ($replacements as $search => $replace) {
+        $name = str_replace($search, $replace, $name);
+    }
+
+    // Remove common suffixes for comparison
+    $suffixes = [' ck', ' if', ' ik', ' sk', ' ok', ' is', ' sc', ' ac', ' cc', ' mtb', ' bc'];
+    foreach ($suffixes as $suffix) {
+        if (substr($name, -strlen($suffix)) === $suffix) {
+            $name = substr($name, 0, -strlen($suffix));
+            break;
+        }
+    }
+
+    // Remove special characters and extra spaces
+    $name = preg_replace('/[^\p{L}\p{N}\s]/u', '', $name);
+    $name = preg_replace('/\s+/', ' ', $name);
+    $name = trim($name);
+
+    return $name;
+}
+
+/**
+ * Calculate similarity between two club names
+ */
+function clubNameSimilarity($name1, $name2) {
+    $norm1 = normalizeClubName($name1);
+    $norm2 = normalizeClubName($name2);
+
+    // Exact normalized match
+    if ($norm1 === $norm2) {
+        return 100;
+    }
+
+    // Check if one contains the other
+    if (strpos($norm1, $norm2) !== false || strpos($norm2, $norm1) !== false) {
+        return 90;
+    }
+
+    // Levenshtein distance (for small strings)
+    if (strlen($norm1) < 50 && strlen($norm2) < 50) {
+        $lev = levenshtein($norm1, $norm2);
+        $maxLen = max(strlen($norm1), strlen($norm2));
+        $similarity = (1 - ($lev / $maxLen)) * 100;
+        return $similarity;
+    }
+
+    // similar_text percentage
+    similar_text($norm1, $norm2, $percent);
+    return $percent;
+}
+
+/**
+ * Find best matching club in database
+ */
+function findBestMatch($pdo, $rfClubName, $threshold = 70) {
+    // Get all clubs from database
+    $stmt = $pdo->query("SELECT id, name FROM clubs ORDER BY name");
+    $allClubs = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    $bestMatch = null;
+    $bestScore = 0;
+
+    foreach ($allClubs as $club) {
+        $score = clubNameSimilarity($rfClubName, $club['name']);
+        if ($score > $bestScore && $score >= $threshold) {
+            $bestScore = $score;
+            $bestMatch = $club;
+        }
+    }
+
+    return $bestMatch ? ['club' => $bestMatch, 'score' => $bestScore] : null;
+}
+
 // Handle form submission
 $message = '';
 $messageType = '';
 $results = [];
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
+
     if ($_POST['action'] === 'sync_rf') {
         $matched = 0;
+        $created = 0;
         $notFound = [];
-        $updated = 0;
+
+        $createMissing = isset($_POST['create_missing']) && $_POST['create_missing'] === '1';
+        $updateNames = isset($_POST['update_names']) && $_POST['update_names'] === '1';
 
         // First, reset all RF registrations
         $pdo->exec("UPDATE clubs SET rf_registered = 0, rf_registered_year = NULL, scf_district = NULL");
 
+        // Cache all existing clubs for faster matching
+        $stmt = $pdo->query("SELECT id, name FROM clubs ORDER BY name");
+        $existingClubs = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
         foreach ($scf_districts as $district => $clubs) {
             foreach ($clubs as $clubName) {
-                // Try exact match first
-                $stmt = $pdo->prepare("SELECT id, name FROM clubs WHERE name = ?");
-                $stmt->execute([$clubName]);
-                $club = $stmt->fetch();
+                // Find best match
+                $bestMatch = null;
+                $bestScore = 0;
 
-                if (!$club) {
-                    // Try fuzzy match - remove common suffixes and try again
-                    $normalized = preg_replace('/\s+(cykelklubb|cykelklubb|ck|if|ik|sk|ok|idrottsförening|idrottsförening|sportklubb|cykelförening|idrottsklubb)\s*$/i', '', $clubName);
-                    $stmt = $pdo->prepare("SELECT id, name FROM clubs WHERE name LIKE ? OR name LIKE ?");
-                    $stmt->execute(["%$normalized%", "%$clubName%"]);
-                    $club = $stmt->fetch();
+                foreach ($existingClubs as $club) {
+                    $score = clubNameSimilarity($clubName, $club['name']);
+                    if ($score > $bestScore && $score >= 70) {
+                        $bestScore = $score;
+                        $bestMatch = $club;
+                    }
                 }
 
-                if ($club) {
+                if ($bestMatch) {
+                    // Update existing club
                     $stmt = $pdo->prepare("UPDATE clubs SET rf_registered = 1, rf_registered_year = 2025, scf_district = ? WHERE id = ?");
-                    $stmt->execute([$district, $club['id']]);
+                    $stmt->execute([$district, $bestMatch['id']]);
+
+                    // Optionally update the name to official RF spelling
+                    if ($updateNames && $bestMatch['name'] !== $clubName) {
+                        $stmt = $pdo->prepare("UPDATE clubs SET name = ? WHERE id = ?");
+                        $stmt->execute([$clubName, $bestMatch['id']]);
+                    }
+
                     $matched++;
                     $results[] = [
                         'status' => 'matched',
                         'rf_name' => $clubName,
-                        'hub_name' => $club['name'],
-                        'district' => $district
+                        'hub_name' => $bestMatch['name'],
+                        'hub_id' => $bestMatch['id'],
+                        'district' => $district,
+                        'score' => round($bestScore)
                     ];
                 } else {
-                    $notFound[] = ['name' => $clubName, 'district' => $district];
-                    $results[] = [
-                        'status' => 'not_found',
-                        'rf_name' => $clubName,
-                        'hub_name' => null,
-                        'district' => $district
-                    ];
+                    // Club not found
+                    if ($createMissing) {
+                        // Create new club
+                        $stmt = $pdo->prepare("INSERT INTO clubs (name, rf_registered, rf_registered_year, scf_district, active, created_at) VALUES (?, 1, 2025, ?, 1, NOW())");
+                        $stmt->execute([$clubName, $district]);
+                        $newId = $pdo->lastInsertId();
+
+                        // Add to cache for potential future matches in this run
+                        $existingClubs[] = ['id' => $newId, 'name' => $clubName];
+
+                        $created++;
+                        $results[] = [
+                            'status' => 'created',
+                            'rf_name' => $clubName,
+                            'hub_name' => $clubName,
+                            'hub_id' => $newId,
+                            'district' => $district,
+                            'score' => 100
+                        ];
+                    } else {
+                        $notFound[] = ['name' => $clubName, 'district' => $district];
+                        $results[] = [
+                            'status' => 'not_found',
+                            'rf_name' => $clubName,
+                            'hub_name' => null,
+                            'district' => $district,
+                            'score' => 0
+                        ];
+                    }
                 }
             }
         }
 
-        $message = "RF-synkronisering klar: $matched klubbar matchade, " . count($notFound) . " ej hittade.";
+        $parts = ["$matched klubbar matchade"];
+        if ($created > 0) {
+            $parts[] = "$created nya klubbar skapade";
+        }
+        if (count($notFound) > 0) {
+            $parts[] = count($notFound) . " ej hittade";
+        }
+        $message = "RF-synkronisering klar: " . implode(', ', $parts) . ".";
         $messageType = 'success';
     }
 
     if ($_POST['action'] === 'manual_match' && isset($_POST['club_id']) && isset($_POST['rf_name']) && isset($_POST['district'])) {
-        $stmt = $pdo->prepare("UPDATE clubs SET rf_registered = 1, rf_registered_year = 2025, scf_district = ? WHERE id = ?");
-        $stmt->execute([$_POST['district'], $_POST['club_id']]);
-        $message = "Manuell koppling sparad.";
+        if (!empty($_POST['club_id'])) {
+            $stmt = $pdo->prepare("UPDATE clubs SET rf_registered = 1, rf_registered_year = 2025, scf_district = ? WHERE id = ?");
+            $stmt->execute([$_POST['district'], $_POST['club_id']]);
+            $message = "Manuell koppling sparad.";
+        } else {
+            // Create new club
+            $stmt = $pdo->prepare("INSERT INTO clubs (name, rf_registered, rf_registered_year, scf_district, active, created_at) VALUES (?, 1, 2025, ?, 1, NOW())");
+            $stmt->execute([$_POST['rf_name'], $_POST['district']]);
+            $message = "Ny klubb skapad: " . htmlspecialchars($_POST['rf_name']);
+        }
         $messageType = 'success';
     }
 }
@@ -615,16 +780,14 @@ $totalRfClubs = 0;
 foreach ($scf_districts as $clubs) {
     $totalRfClubs += count($clubs);
 }
+
+// Include unified layout
+include __DIR__ . '/components/unified-layout.php';
 ?>
 
-<div class="admin-content">
-    <div class="page-header">
-        <h1><?= $pageTitle ?></h1>
-        <p class="text-muted">Synkronisera klubbar med Svenska Cykelförbundets distriktsregister</p>
-    </div>
-
+<div class="container py-lg">
     <?php if ($message): ?>
-        <div class="alert alert-<?= $messageType ?>"><?= htmlspecialchars($message) ?></div>
+        <div class="alert alert-<?= $messageType ?> mb-lg"><?= htmlspecialchars($message) ?></div>
     <?php endif; ?>
 
     <!-- Statistics -->
@@ -660,9 +823,25 @@ foreach ($scf_districts as $clubs) {
             <h3>Synkronisera med RF</h3>
         </div>
         <div class="card-body">
-            <p>Klicka på knappen nedan för att matcha klubbar i TheHUB med den officiella RF-registerlistan för 2025.</p>
+            <p>Matchar klubbar i TheHUB med den officiella RF-registerlistan för 2025. Fuzzy-matchning används för att hitta klubbar även med stavningsvariationer.</p>
+
             <form method="POST">
                 <input type="hidden" name="action" value="sync_rf">
+
+                <div class="form-group" style="margin-bottom: var(--space-md);">
+                    <label class="checkbox-label" style="display: flex; align-items: center; gap: var(--space-sm); cursor: pointer;">
+                        <input type="checkbox" name="create_missing" value="1" checked style="width: 18px; height: 18px;">
+                        <span><strong>Skapa saknade klubbar</strong> - Alla RF-klubbar som inte hittas skapas automatiskt</span>
+                    </label>
+                </div>
+
+                <div class="form-group" style="margin-bottom: var(--space-lg);">
+                    <label class="checkbox-label" style="display: flex; align-items: center; gap: var(--space-sm); cursor: pointer;">
+                        <input type="checkbox" name="update_names" value="1" style="width: 18px; height: 18px;">
+                        <span><strong>Uppdatera stavning</strong> - Rätta klubbnamn till officiell RF-stavning</span>
+                    </label>
+                </div>
+
                 <button type="submit" class="btn btn-primary">
                     <i data-lucide="refresh-cw"></i>
                     Synkronisera RF-registrering
@@ -671,7 +850,11 @@ foreach ($scf_districts as $clubs) {
         </div>
     </div>
 
-    <?php if (!empty($results)): ?>
+    <?php if (!empty($results)):
+        $matchedResults = array_filter($results, fn($r) => $r['status'] === 'matched');
+        $createdResults = array_filter($results, fn($r) => $r['status'] === 'created');
+        $notFoundResults = array_filter($results, fn($r) => $r['status'] === 'not_found');
+    ?>
     <!-- Sync Results -->
     <div class="card mb-4">
         <div class="card-header">
@@ -680,8 +863,13 @@ foreach ($scf_districts as $clubs) {
         <div class="card-body">
             <div class="tabs">
                 <nav class="tabs-nav">
-                    <button class="tab-btn active" data-tab="matched">Matchade (<?= count(array_filter($results, fn($r) => $r['status'] === 'matched')) ?>)</button>
-                    <button class="tab-btn" data-tab="not-found">Ej hittade (<?= count(array_filter($results, fn($r) => $r['status'] === 'not_found')) ?>)</button>
+                    <button class="tab-btn active" data-tab="matched">Matchade (<?= count($matchedResults) ?>)</button>
+                    <?php if (count($createdResults) > 0): ?>
+                    <button class="tab-btn" data-tab="created">Skapade (<?= count($createdResults) ?>)</button>
+                    <?php endif; ?>
+                    <?php if (count($notFoundResults) > 0): ?>
+                    <button class="tab-btn" data-tab="not-found">Ej hittade (<?= count($notFoundResults) ?>)</button>
+                    <?php endif; ?>
                 </nav>
 
                 <div class="tab-content active" id="matched">
@@ -691,24 +879,62 @@ foreach ($scf_districts as $clubs) {
                                 <tr>
                                     <th>RF-namn</th>
                                     <th>TheHUB-namn</th>
+                                    <th>Match</th>
                                     <th>Distrikt</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                <?php foreach ($results as $r): ?>
-                                    <?php if ($r['status'] === 'matched'): ?>
-                                    <tr>
-                                        <td><?= htmlspecialchars($r['rf_name']) ?></td>
-                                        <td><span class="badge badge-success"><?= htmlspecialchars($r['hub_name']) ?></span></td>
-                                        <td><?= htmlspecialchars($r['district']) ?></td>
-                                    </tr>
-                                    <?php endif; ?>
+                                <?php foreach ($matchedResults as $r): ?>
+                                <tr>
+                                    <td><?= htmlspecialchars($r['rf_name']) ?></td>
+                                    <td>
+                                        <a href="/club/<?= $r['hub_id'] ?>" target="_blank" class="badge badge-success">
+                                            <?= htmlspecialchars($r['hub_name']) ?>
+                                        </a>
+                                    </td>
+                                    <td>
+                                        <span class="badge <?= $r['score'] >= 90 ? 'badge-success' : ($r['score'] >= 80 ? 'badge-warning' : 'badge-danger') ?>">
+                                            <?= $r['score'] ?>%
+                                        </span>
+                                    </td>
+                                    <td><?= htmlspecialchars(str_replace(' Cykelförbund', '', $r['district'])) ?></td>
+                                </tr>
                                 <?php endforeach; ?>
                             </tbody>
                         </table>
                     </div>
                 </div>
 
+                <?php if (count($createdResults) > 0): ?>
+                <div class="tab-content" id="created">
+                    <div class="table-responsive">
+                        <table class="table">
+                            <thead>
+                                <tr>
+                                    <th>Klubbnamn</th>
+                                    <th>Distrikt</th>
+                                    <th>Länk</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                <?php foreach ($createdResults as $r): ?>
+                                <tr>
+                                    <td><?= htmlspecialchars($r['rf_name']) ?></td>
+                                    <td><?= htmlspecialchars(str_replace(' Cykelförbund', '', $r['district'])) ?></td>
+                                    <td>
+                                        <a href="/club/<?= $r['hub_id'] ?>" target="_blank" class="btn btn-sm btn-secondary">
+                                            <i data-lucide="external-link"></i> Visa
+                                        </a>
+                                    </td>
+                                </tr>
+                                <?php endforeach; ?>
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+                <?php endif; ?>
+
+                <?php if (count($notFoundResults) > 0): ?>
                 <div class="tab-content" id="not-found">
                     <div class="table-responsive">
                         <table class="table">
@@ -716,36 +942,35 @@ foreach ($scf_districts as $clubs) {
                                 <tr>
                                     <th>RF-namn</th>
                                     <th>Distrikt</th>
-                                    <th>Manuell koppling</th>
+                                    <th>Åtgärd</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                <?php foreach ($results as $r): ?>
-                                    <?php if ($r['status'] === 'not_found'): ?>
-                                    <tr>
-                                        <td><?= htmlspecialchars($r['rf_name']) ?></td>
-                                        <td><?= htmlspecialchars($r['district']) ?></td>
-                                        <td>
-                                            <form method="POST" style="display: flex; gap: var(--space-xs);">
-                                                <input type="hidden" name="action" value="manual_match">
-                                                <input type="hidden" name="rf_name" value="<?= htmlspecialchars($r['rf_name']) ?>">
-                                                <input type="hidden" name="district" value="<?= htmlspecialchars($r['district']) ?>">
-                                                <select name="club_id" class="form-select" style="max-width: 200px;">
-                                                    <option value="">-- Välj klubb --</option>
-                                                    <?php foreach ($unmatchedClubs as $club): ?>
-                                                        <option value="<?= $club['id'] ?>"><?= htmlspecialchars($club['name']) ?></option>
-                                                    <?php endforeach; ?>
-                                                </select>
-                                                <button type="submit" class="btn btn-secondary btn-sm">Koppla</button>
-                                            </form>
-                                        </td>
-                                    </tr>
-                                    <?php endif; ?>
+                                <?php foreach ($notFoundResults as $r): ?>
+                                <tr>
+                                    <td><?= htmlspecialchars($r['rf_name']) ?></td>
+                                    <td><?= htmlspecialchars(str_replace(' Cykelförbund', '', $r['district'])) ?></td>
+                                    <td>
+                                        <form method="POST" style="display: flex; gap: var(--space-xs); flex-wrap: wrap;">
+                                            <input type="hidden" name="action" value="manual_match">
+                                            <input type="hidden" name="rf_name" value="<?= htmlspecialchars($r['rf_name']) ?>">
+                                            <input type="hidden" name="district" value="<?= htmlspecialchars($r['district']) ?>">
+                                            <select name="club_id" class="form-select" style="max-width: 200px;">
+                                                <option value="">-- Skapa ny --</option>
+                                                <?php foreach ($unmatchedClubs as $club): ?>
+                                                    <option value="<?= $club['id'] ?>"><?= htmlspecialchars($club['name']) ?></option>
+                                                <?php endforeach; ?>
+                                            </select>
+                                            <button type="submit" class="btn btn-secondary btn-sm">Spara</button>
+                                        </form>
+                                    </td>
+                                </tr>
                                 <?php endforeach; ?>
                             </tbody>
                         </table>
                     </div>
                 </div>
+                <?php endif; ?>
             </div>
         </div>
     </div>
@@ -797,4 +1022,4 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
 });
 </script>
 
-<?php include __DIR__ . '/../includes/admin-footer.php'; ?>
+<?php include __DIR__ . '/components/unified-layout-footer.php'; ?>
