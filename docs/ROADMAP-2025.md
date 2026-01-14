@@ -1,5 +1,5 @@
 # TheHUB - Komplett Projektsammanställning
-**Senast uppdaterad: 2025-12-28**
+**Senast uppdaterad: 2026-01-14**
 **Projektägare: JALLE**
 **Status: Aktiv utveckling**
 **Version:** v1.0
@@ -79,6 +79,107 @@ KVAL (2 åk, bästa tid) → Seedning (1-32) → BRACKET → FINAL + 3-4:e plats
 2. Importera kvalresultat (CSV med Startnr, Namn, Kval 1, Kval 2)
 3. Generera bracket (välj storlek 8/16/32)
 4. Mata in heat-resultat
+
+### ✅ Analytics Platform - Phase 2 (Jan 2026)
+
+Komplett analytics-plattform med 5 moduler för djupgående insikter om ryttarbasen.
+
+**Arkitektur:**
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                    Analytics Platform v2.0                       │
+├─────────────────────────────────────────────────────────────────┤
+│  ┌──────────┐  ┌──────────┐  ┌──────────┐  ┌──────────┐         │
+│  │ Cohort   │  │ At-Risk  │  │ Feeder   │  │ Geography│         │
+│  │ Analysis │  │ Predict  │  │ Trends   │  │ Analysis │         │
+│  └────┬─────┘  └────┬─────┘  └────┬─────┘  └────┬─────┘         │
+│       │             │             │             │                │
+│       └─────────────┴─────────────┴─────────────┘                │
+│                           │                                      │
+│              ┌────────────┴────────────┐                         │
+│              │      KPICalculator      │                         │
+│              │    + AnalyticsConfig    │                         │
+│              └────────────┬────────────┘                         │
+│                           │                                      │
+│              ┌────────────┴────────────┐                         │
+│              │   IdentityResolver      │                         │
+│              │   (rider_merge_map)     │                         │
+│              └─────────────────────────┘                         │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+**Implementerade moduler:**
+
+#### 1. Cohort Analysis (admin/analytics-cohorts.php)
+- [x] Kohort-baserad retention tracking
+- [x] Retention-kurva per kohort (line chart)
+- [x] Status breakdown (active, soft/medium/hard churn)
+- [x] Jämför flera kohorter samtidigt
+- [x] Average lifespan per kohort
+- [x] CSV-export med GDPR-loggning
+
+#### 2. Rider Journey
+- [x] Individuell progressionsvy
+- [x] Klassförändringar över tid
+- [x] Liknande ryttare-matchning
+- [x] Integration med befintligt flow-system
+
+#### 3. At-Risk/Churn Prediction (admin/analytics-atrisk.php)
+- [x] 6-faktor riskmodell:
+  - Declining events (minskande deltagande)
+  - No recent activity (ingen aktivitet)
+  - Class downgrade (nedflyttning)
+  - Single series (bara en serie)
+  - Low tenure (kort karriär)
+  - High age in class (hög ålder)
+- [x] Risk score 0-100 → Low/Medium/High/Critical
+- [x] Cron-jobb för daglig caching (refresh-risk-scores.php)
+- [x] Filtrering per serie och risknivå
+- [x] CSV-export för kampanjer
+
+#### 4. Feeder Trends
+- [x] Tidsserie för serie-övergångar
+- [x] Year-over-year jämförelser
+- [x] Emerging flows detektion
+- [x] Integration med analytics-flow.php
+
+#### 5. Geographic Analysis (admin/analytics-geography.php)
+- [x] Riders per region (21 svenska län)
+- [x] Per capita täckning (riders per 100k inv)
+- [x] Events per region
+- [x] Regional tillväxttrend (5 år)
+- [x] Underservicerade regioner
+
+**Nya databastabeller:**
+```sql
+rider_cohorts          -- Kohort-lookup (cohort_year, status)
+rider_risk_scores      -- Cachade riskpoäng med faktorer
+regions                -- Svenska län med befolkningsdata
+region_yearly_stats    -- Regional statistik per år
+feeder_trends          -- Historik för serie-flöden
+analytics_exports      -- GDPR-loggning av exporter
+```
+
+**Nya filer:**
+```
+analytics/includes/AnalyticsConfig.php     -- Central konfiguration
+analytics/migrations/005_phase2_tables.sql -- Databas-schema
+analytics/cron/refresh-risk-scores.php     -- Cron-jobb
+admin/analytics-cohorts.php                -- Kohort-sida
+admin/analytics-atrisk.php                 -- At-risk-sida
+admin/analytics-geography.php              -- Geografi-sida
+```
+
+**Cron-jobb setup:**
+```bash
+# Daglig risk score-uppdatering (kl 03:00)
+0 3 * * * /usr/bin/php /path/to/thehub/analytics/cron/refresh-risk-scores.php
+
+# Manuell körning
+php analytics/cron/refresh-risk-scores.php --year=2025 --force
+```
+
+**Teknisk dokumentation:** Se `/home/user/TheHUB/analytics.md`
 
 ---
 
