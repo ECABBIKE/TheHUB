@@ -701,6 +701,23 @@ if (strlen($clubInitials) < 2 && strlen($club['name']) >= 2) {
                     <?= htmlspecialchars($club['city']) ?>
                 </span>
                 <?php endif; ?>
+
+                <?php if (!empty($club['rf_registered']) && $club['rf_registered']): ?>
+                <div class="rf-badge-container">
+                    <span class="rf-badge" title="Aktiv klubb registrerad hos Riksidrottsförbundet <?= $club['rf_registered_year'] ?? date('Y') ?>">
+                        <svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor">
+                            <path d="M9 16.17L4.83 12l-1.42 1.41L9 19 21 7l-1.41-1.41z"/>
+                        </svg>
+                        RF-registrerad <?= $club['rf_registered_year'] ?? date('Y') ?>
+                    </span>
+                    <?php if (!empty($club['scf_district'])): ?>
+                    <span class="scf-district-badge" title="<?= htmlspecialchars($club['scf_district']) ?>">
+                        <i data-lucide="map"></i>
+                        <?= htmlspecialchars(str_replace(' Cykelförbund', '', $club['scf_district'])) ?>
+                    </span>
+                    <?php endif; ?>
+                </div>
+                <?php endif; ?>
             </div>
 
             <!-- Stats Row -->
