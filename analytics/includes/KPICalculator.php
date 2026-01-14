@@ -1186,7 +1186,7 @@ class KPICalculator {
                 r.birth_year,
                 r.gender,
                 c.name as club_name,
-                :year - r.birth_year as age,
+                ? - r.birth_year as age,
                 total.total_events,
                 total.first_season,
                 total.last_season,
@@ -1200,16 +1200,14 @@ class KPICalculator {
                     GROUP_CONCAT(DISTINCT primary_discipline) as disciplines
                 FROM rider_yearly_stats
                 GROUP BY rider_id
-                HAVING SUM(total_events) <= :maxstarts
+                HAVING SUM(total_events) <= ?
             ) total
             JOIN riders r ON total.rider_id = r.id
             LEFT JOIN clubs c ON r.club_id = c.id
-            WHERE total.last_season <= :year
+            WHERE total.last_season <= ?
             ORDER BY total.last_season DESC, total.total_events DESC
         ");
-        $stmt->bindValue(':year', $year, PDO::PARAM_INT);
-        $stmt->bindValue(':maxstarts', $maxStarts, PDO::PARAM_INT);
-        $stmt->execute();
+        $stmt->execute([$year, $maxStarts, $year]);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 

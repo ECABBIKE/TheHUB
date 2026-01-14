@@ -23,7 +23,6 @@ global $pdo;
 
 // Arval
 $currentYear = (int)date('Y');
-$selectedYear = isset($_GET['year']) ? (int)$_GET['year'] : $currentYear;
 
 // Hamta tillgangliga ar
 $availableYears = [];
@@ -38,6 +37,10 @@ try {
 if (empty($availableYears)) {
     $availableYears = range($currentYear, $currentYear - 5);
 }
+
+// Default till senaste ar med data
+$latestDataYear = !empty($availableYears) ? (int)$availableYears[0] : $currentYear - 1;
+$selectedYear = isset($_GET['year']) ? (int)$_GET['year'] : $latestDataYear;
 
 // Initiera KPI Calculator
 $kpiCalc = new KPICalculator($pdo);
@@ -300,4 +303,4 @@ include __DIR__ . '/components/unified-layout.php';
 
 <?php endif; ?>
 
-<?php include __DIR__ . '/../includes/admin-footer.php'; ?>
+<?php include __DIR__ . '/components/unified-layout-footer.php'; ?>
