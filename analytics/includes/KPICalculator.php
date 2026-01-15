@@ -992,19 +992,18 @@ class KPICalculator {
     // =========================================================================
 
     /**
-     * Hamta riders per region (baserat pa serie-region)
+     * Hamta riders per region (baserat pa klubbens SCF-distrikt)
      *
      * @param int $year Ar
      * @return array Regioner med antal
      */
     public function getRidersByRegion(int $year): array {
-        // Anvand klubbens region, alternativt ryttarens district
+        // Anvand klubbens SCF-distrikt (fran RF-registrering)
         // Fallback till 'Okand' om inget finns
         $stmt = $this->pdo->prepare("
             SELECT
                 COALESCE(
-                    NULLIF(c.region, ''),
-                    NULLIF(r.district, ''),
+                    NULLIF(c.scf_district, ''),
                     'Okand'
                 ) as region,
                 COUNT(DISTINCT rys.rider_id) as rider_count
@@ -2510,12 +2509,13 @@ class KPICalculator {
         $stmt = $this->pdo->prepare("
             SELECT
                 rys.season_year as year,
-                COALESCE(s.region, 'Okand') as region,
+                COALESCE(NULLIF(c.scf_district, ''), 'Okand') as region,
                 COUNT(DISTINCT rys.rider_id) as rider_count
             FROM rider_yearly_stats rys
-            LEFT JOIN series s ON rys.primary_series_id = s.id
+            JOIN riders r ON rys.rider_id = r.id
+            LEFT JOIN clubs c ON r.club_id = c.id
             WHERE rys.season_year >= ? AND rys.season_year <= ?
-            GROUP BY rys.season_year, s.region
+            GROUP BY rys.season_year, region
             ORDER BY rys.season_year ASC, rider_count DESC
         ");
         $stmt->execute([$startYear, $currentYear]);
@@ -2599,7 +2599,7 @@ class KPICalculator {
     }
 
     /**
-     * Hamta events per region
+     * Hamta events per region (baserat pa arrangorsklubbens distrikt)
      *
      * @param int $year Ar
      * @return array Events per region
@@ -2607,14 +2607,13 @@ class KPICalculator {
     public function getEventsByRegion(int $year): array {
         $stmt = $this->pdo->prepare("
             SELECT
-                COALESCE(s.region, v.region, 'Okand') as region,
+                COALESCE(NULLIF(c.scf_district, ''), 'Okand') as region,
                 COUNT(DISTINCT e.id) as event_count,
                 COUNT(DISTINCT res.cyclist_id) as participant_count,
                 SUM(CASE WHEN e.discipline = 'Enduro' THEN 1 ELSE 0 END) as enduro_events,
                 SUM(CASE WHEN e.discipline = 'DH' THEN 1 ELSE 0 END) as dh_events
             FROM events e
-            LEFT JOIN series s ON e.series_id = s.id
-            LEFT JOIN venues v ON e.venue_id = v.id
+            LEFT JOIN clubs c ON e.organizer_club_id = c.id
             LEFT JOIN results res ON e.id = res.event_id
             WHERE YEAR(e.date) = ?
             GROUP BY region
