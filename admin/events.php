@@ -330,8 +330,8 @@ include __DIR__ . '/components/unified-layout.php';
                 <table class="admin-table">
                     <thead>
                         <tr>
-                            <th>Datum</th>
-                            <th>Namn</th>
+                            <th class="sticky-col sticky-col-1">Datum</th>
+                            <th class="sticky-col sticky-col-2">Namn</th>
                             <th class="event-field">Serie</th>
                             <th>Plats</th>
                             <th class="event-field">Format</th>
@@ -352,8 +352,8 @@ include __DIR__ . '/components/unified-layout.php';
                     <tbody>
                         <?php foreach ($events as $event): ?>
                             <tr>
-                                <td><?= htmlspecialchars($event['date'] ?? '-') ?></td>
-                                <td>
+                                <td class="sticky-col sticky-col-1"><?= htmlspecialchars($event['date'] ?? '-') ?></td>
+                                <td class="sticky-col sticky-col-2">
                                     <a href="/admin/events/edit/<?= $event['id'] ?>" style="color: var(--color-accent); text-decoration: none; font-weight: 500;">
                                         <?= htmlspecialchars($event['name']) ?>
                                     </a>
@@ -828,6 +828,28 @@ document.addEventListener('DOMContentLoaded', function() {
         /* Make the table horizontally scrollable */
         .admin-table-container {
             overflow-x: auto;
+        }
+        /* Sticky columns for Datum and Namn */
+        .sticky-col {
+            position: sticky;
+            background: var(--color-bg-card);
+            z-index: 2;
+        }
+        .sticky-col-1 {
+            left: 0;
+            min-width: 100px;
+        }
+        .sticky-col-2 {
+            left: 100px;
+            min-width: 200px;
+            border-right: 2px solid var(--color-border-strong);
+        }
+        thead .sticky-col {
+            z-index: 3;
+            background: var(--color-bg-surface);
+        }
+        tr:hover .sticky-col {
+            background: var(--color-bg-hover);
         }
         /* Compact styling for visible fields */
         .admin-table .admin-form-select,
