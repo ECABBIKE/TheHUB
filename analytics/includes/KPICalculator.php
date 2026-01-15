@@ -240,7 +240,8 @@ class KPICalculator {
         $stmt = $this->pdo->prepare("
             SELECT
                 CASE
-                    WHEN $year - r.birth_year <= 12 THEN '5-12'
+                    WHEN $year - r.birth_year <= 9 THEN '5-9'
+                    WHEN $year - r.birth_year BETWEEN 10 AND 12 THEN '10-12'
                     WHEN $year - r.birth_year BETWEEN 13 AND 14 THEN '13-14'
                     WHEN $year - r.birth_year BETWEEN 15 AND 16 THEN '15-16'
                     WHEN $year - r.birth_year BETWEEN 17 AND 18 THEN '17-18'
@@ -260,16 +261,17 @@ class KPICalculator {
             GROUP BY age_group
             ORDER BY
                 CASE age_group
-                    WHEN '5-12' THEN 1
-                    WHEN '13-14' THEN 2
-                    WHEN '15-16' THEN 3
-                    WHEN '17-18' THEN 4
-                    WHEN '19-30' THEN 5
-                    WHEN '31-35' THEN 6
-                    WHEN '36-45' THEN 7
-                    WHEN '46-50' THEN 8
-                    WHEN '50+' THEN 9
-                    ELSE 10
+                    WHEN '5-9' THEN 1
+                    WHEN '10-12' THEN 2
+                    WHEN '13-14' THEN 3
+                    WHEN '15-16' THEN 4
+                    WHEN '17-18' THEN 5
+                    WHEN '19-30' THEN 6
+                    WHEN '31-35' THEN 7
+                    WHEN '36-45' THEN 8
+                    WHEN '46-50' THEN 9
+                    WHEN '50+' THEN 10
+                    ELSE 11
                 END
         ");
         $stmt->execute([$year]);
@@ -337,7 +339,8 @@ class KPICalculator {
         $stmt = $this->pdo->prepare("
             SELECT
                 CASE
-                    WHEN $year - r.birth_year <= 12 THEN '5-12'
+                    WHEN $year - r.birth_year <= 9 THEN '5-9'
+                    WHEN $year - r.birth_year BETWEEN 10 AND 12 THEN '10-12'
                     WHEN $year - r.birth_year BETWEEN 13 AND 14 THEN '13-14'
                     WHEN $year - r.birth_year BETWEEN 15 AND 16 THEN '15-16'
                     WHEN $year - r.birth_year BETWEEN 17 AND 18 THEN '17-18'
@@ -359,16 +362,17 @@ class KPICalculator {
             GROUP BY age_group
             ORDER BY
                 CASE age_group
-                    WHEN '5-12' THEN 1
-                    WHEN '13-14' THEN 2
-                    WHEN '15-16' THEN 3
-                    WHEN '17-18' THEN 4
-                    WHEN '19-30' THEN 5
-                    WHEN '31-35' THEN 6
-                    WHEN '36-45' THEN 7
-                    WHEN '46-50' THEN 8
-                    WHEN '50+' THEN 9
-                    ELSE 10
+                    WHEN '5-9' THEN 1
+                    WHEN '10-12' THEN 2
+                    WHEN '13-14' THEN 3
+                    WHEN '15-16' THEN 4
+                    WHEN '17-18' THEN 5
+                    WHEN '19-30' THEN 6
+                    WHEN '31-35' THEN 7
+                    WHEN '36-45' THEN 8
+                    WHEN '46-50' THEN 9
+                    WHEN '50+' THEN 10
+                    ELSE 11
                 END
         ");
         $params = [$year];
@@ -1302,7 +1306,8 @@ class KPICalculator {
         $ageStmt = $this->pdo->prepare("
             SELECT
                 CASE
-                    WHEN ? - r.birth_year <= 12 THEN '5-12'
+                    WHEN ? - r.birth_year <= 9 THEN '5-9'
+                    WHEN ? - r.birth_year BETWEEN 10 AND 12 THEN '10-12'
                     WHEN ? - r.birth_year BETWEEN 13 AND 14 THEN '13-14'
                     WHEN ? - r.birth_year BETWEEN 15 AND 16 THEN '15-16'
                     WHEN ? - r.birth_year BETWEEN 17 AND 18 THEN '17-18'
@@ -1318,7 +1323,8 @@ class KPICalculator {
                  JOIN riders r2 ON rys2.rider_id = r2.id
                  WHERE rys2.season_year = ?
                  AND CASE
-                    WHEN ? - r2.birth_year <= 12 THEN '5-12'
+                    WHEN ? - r2.birth_year <= 9 THEN '5-9'
+                    WHEN ? - r2.birth_year BETWEEN 10 AND 12 THEN '10-12'
                     WHEN ? - r2.birth_year BETWEEN 13 AND 14 THEN '13-14'
                     WHEN ? - r2.birth_year BETWEEN 15 AND 16 THEN '15-16'
                     WHEN ? - r2.birth_year BETWEEN 17 AND 18 THEN '17-18'
@@ -1341,11 +1347,11 @@ class KPICalculator {
             ORDER BY churned_count DESC
         ");
         $ageStmt->execute([
-            $year, $year, $year, $year, $year, $year, $year, $year, $year,  // outer CASE (9)
-            $prevYear,                                                       // subquery year
-            $year, $year, $year, $year, $year, $year, $year, $year, $year,  // subquery CASE (9)
-            $year,                                                           // curr.season_year
-            $prevYear                                                        // prev.season_year
+            $year, $year, $year, $year, $year, $year, $year, $year, $year, $year,  // outer CASE (10)
+            $prevYear,                                                              // subquery year
+            $year, $year, $year, $year, $year, $year, $year, $year, $year, $year,  // subquery CASE (10)
+            $year,                                                                  // curr.season_year
+            $prevYear                                                               // prev.season_year
         ]);
         $byAge = $ageStmt->fetchAll(PDO::FETCH_ASSOC);
 
