@@ -77,6 +77,23 @@ try {
     $stmt = $pdo->query("SELECT COUNT(*) FROM clubs WHERE active = 1");
     $diagnostics['clubs_total'] = (int)$stmt->fetchColumn();
 
+    // 5. Vilka distrikt finns och hur många riders per distrikt? (direkt SQL)
+    $stmt = $pdo->prepare("
+        SELECT
+            c.scf_district,
+            COUNT(DISTINCT rys.rider_id) as cnt
+        FROM rider_yearly_stats rys
+        JOIN riders r ON rys.rider_id = r.id
+        JOIN clubs c ON r.club_id = c.id
+        WHERE rys.season_year = ?
+          AND c.scf_district IS NOT NULL
+          AND c.scf_district != ''
+        GROUP BY c.scf_district
+        ORDER BY cnt DESC
+    ");
+    $stmt->execute([$selectedYear]);
+    $diagnostics['districts'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
 } catch (Exception $e) {
     // Ignorera diagnostikfel
 }
@@ -174,6 +191,19 @@ include __DIR__ . '/components/unified-layout.php';
                 <div style="font-size: var(--text-xs); color: var(--color-text-muted);">Klubbar med distrikt</div>
             </div>
         </div>
+        <?php if (!empty($diagnostics['districts'])): ?>
+        <div style="margin-top: var(--space-md); padding-top: var(--space-md); border-top: 1px solid var(--color-border);">
+            <strong style="font-size: var(--text-sm);">Riders per distrikt (direkt SQL):</strong>
+            <div style="font-size: var(--text-xs); margin-top: var(--space-xs); max-height: 200px; overflow-y: auto;">
+                <?php foreach ($diagnostics['districts'] as $d): ?>
+                <div style="display: flex; justify-content: space-between; padding: 2px 0;">
+                    <span><?= htmlspecialchars($d['scf_district']) ?></span>
+                    <strong><?= number_format($d['cnt']) ?></strong>
+                </div>
+                <?php endforeach; ?>
+            </div>
+        </div>
+        <?php endif; ?>
     </div>
 </div>
 <?php endif; ?>
