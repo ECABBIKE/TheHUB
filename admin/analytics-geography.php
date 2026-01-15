@@ -102,10 +102,10 @@ include __DIR__ . '/components/unified-layout.php';
     </div>
     <div class="info-box-content">
         <strong>Geografisk analys</strong>
-        <p>Se hur riders ar fordelade over Sveriges 21 lan. "Riders per 100k" visar hur manga riders det finns per 100 000 invanare - anvandbart for att hitta regioner med tillvaxtpotential.</p>
+        <p>Se hur riders ar fordelade over SCF-distrikten. Baseras pa klubbarnas RF-registrering och distrikt.</p>
         <p style="margin-top: var(--space-xs); font-size: var(--text-xs); color: var(--color-text-muted);">
             <i data-lucide="info" style="width: 12px; height: 12px; display: inline-block; vertical-align: middle;"></i>
-            Baseras pa klubbens region. Riders utan klubb eller med klubb utan region visas som "Okand".
+            Riders utan klubb eller med klubb som saknar distrikt visas som "Okand". Kor RF-synkronisering for att uppdatera.
         </p>
     </div>
 </div>
@@ -127,8 +127,8 @@ if ($unknownPct > 50):
     <i data-lucide="alert-triangle"></i>
     <div>
         <strong>Bristfallig data</strong><br>
-        <?= $unknownPct ?>% av riders saknar regiondata (<?= number_format($unknownCount) ?> av <?= number_format($totalCount) ?>).
-        For battre geografisk analys, uppdatera klubbars region-falt i <a href="/admin/clubs.php">klubbhanteringen</a>.
+        <?= $unknownPct ?>% av riders saknar distriktsdata (<?= number_format($unknownCount) ?> av <?= number_format($totalCount) ?>).
+        For battre geografisk analys, kor <a href="/admin/club-rf-registration.php">RF-synkroniseringen</a> och koppla klubbar till riders.
     </div>
 </div>
 <?php endif; ?>
@@ -207,10 +207,10 @@ $regionsWithRiders = count(array_filter($ridersByRegion, fn($r) => $r['rider_cou
 
 <!-- Main Grid -->
 <div class="grid grid-2 grid-gap-lg">
-    <!-- Riders per Region -->
+    <!-- Riders per Distrikt -->
     <div class="admin-card">
         <div class="admin-card-header">
-            <h2>Riders per region <?= $selectedYear ?></h2>
+            <h2>Riders per distrikt <?= $selectedYear ?></h2>
         </div>
         <div class="admin-card-body">
             <canvas id="ridersChart" height="300"></canvas>
@@ -228,7 +228,7 @@ $regionsWithRiders = count(array_filter($ridersByRegion, fn($r) => $r['rider_cou
                 <table class="admin-table">
                     <thead>
                         <tr>
-                            <th>Region</th>
+                            <th>Distrikt</th>
                             <th>Riders</th>
                             <th>Per 100k</th>
                             <th>Tackning</th>
@@ -262,16 +262,16 @@ $regionsWithRiders = count(array_filter($ridersByRegion, fn($r) => $r['rider_cou
     </div>
 </div>
 
-<!-- Events by Region -->
+<!-- Events by Distrikt -->
 <div class="admin-card">
     <div class="admin-card-header">
-        <h2>Events per region <?= $selectedYear ?></h2>
+        <h2>Events per distrikt <?= $selectedYear ?></h2>
     </div>
     <div class="admin-card-body" style="padding: 0;">
         <table class="admin-table">
             <thead>
                 <tr>
-                    <th>Region</th>
+                    <th>Distrikt</th>
                     <th>Events</th>
                     <th>Deltagare</th>
                     <th>Enduro</th>
