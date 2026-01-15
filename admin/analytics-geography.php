@@ -392,7 +392,9 @@ $regionsWithRiders = count(array_filter($ridersByRegion, fn($r) => $r['rider_cou
 </div>
 
 <!-- Regional Trends -->
-<?php if (!empty($regionalTrends)): ?>
+<?php
+$currentYear = (int)date('Y');
+if (!empty($regionalTrends)): ?>
 <div class="admin-card">
     <div class="admin-card-header">
         <h2>Regional tillvaxttend (5 ar)</h2>
@@ -402,11 +404,9 @@ $regionsWithRiders = count(array_filter($ridersByRegion, fn($r) => $r['rider_cou
             <thead>
                 <tr>
                     <th>Region</th>
-                    <th>2020</th>
-                    <th>2021</th>
-                    <th>2022</th>
-                    <th>2023</th>
-                    <th>2024</th>
+                    <?php for ($y = $currentYear - 4; $y <= $currentYear; $y++): ?>
+                    <th><?= $y ?></th>
+                    <?php endfor; ?>
                     <th>Tillvaxt</th>
                     <th>Trend</th>
                 </tr>

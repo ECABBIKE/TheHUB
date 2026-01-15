@@ -1006,16 +1006,13 @@ class KPICalculator {
         // Fallback till 'Okand' om inget finns
         $stmt = $this->pdo->prepare("
             SELECT
-                COALESCE(
-                    NULLIF(c.scf_district, ''),
-                    'Okand'
-                ) as region,
+                COALESCE(NULLIF(c.scf_district, ''), 'Okand') as region,
                 COUNT(DISTINCT rys.rider_id) as rider_count
             FROM rider_yearly_stats rys
             JOIN riders r ON rys.rider_id = r.id
             LEFT JOIN clubs c ON r.club_id = c.id
             WHERE rys.season_year = ?
-            GROUP BY region
+            GROUP BY COALESCE(NULLIF(c.scf_district, ''), 'Okand')
             ORDER BY rider_count DESC
         ");
         $stmt->execute([$year]);
@@ -2521,7 +2518,7 @@ class KPICalculator {
             JOIN riders r ON rys.rider_id = r.id
             LEFT JOIN clubs c ON r.club_id = c.id
             WHERE rys.season_year >= ? AND rys.season_year <= ?
-            GROUP BY rys.season_year, region
+            GROUP BY rys.season_year, COALESCE(NULLIF(c.scf_district, ''), 'Okand')
             ORDER BY rys.season_year ASC, rider_count DESC
         ");
         $stmt->execute([$startYear, $currentYear]);
@@ -2622,7 +2619,7 @@ class KPICalculator {
             LEFT JOIN clubs c ON e.organizer_club_id = c.id
             LEFT JOIN results res ON e.id = res.event_id
             WHERE YEAR(e.date) = ?
-            GROUP BY region
+            GROUP BY COALESCE(NULLIF(c.scf_district, ''), 'Okand')
             ORDER BY event_count DESC
         ");
         $stmt->execute([$year]);
