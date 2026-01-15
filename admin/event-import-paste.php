@@ -137,7 +137,14 @@ function parsePastedResults($text, $db) {
             }
         }
 
-        // Laps (column 6) - ignore for now
+        // Laps (column 6) - number of completed laps for XC
+        $laps = null;
+        if (isset($cols[6])) {
+            $lapsRaw = trim($cols[6]);
+            if (is_numeric($lapsRaw) && (int)$lapsRaw > 0) {
+                $laps = (int)$lapsRaw;
+            }
+        }
 
         // Finish time (column 7)
         $finishTime = isset($cols[7]) ? trim($cols[7]) : '';
@@ -170,6 +177,7 @@ function parsePastedResults($text, $db) {
             'uci_id' => $uciId,
             'club_name' => $clubName,
             'nationality' => $nationality,
+            'laps' => $laps,
             'finish_time' => $finishTime,
             'split_times' => $splitTimes
         ];
@@ -381,6 +389,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         'position' => $row['position'],
                         'finish_time' => $row['finish_time'],
                         'status' => $row['status'],
+                        'laps' => $row['laps'],
                         'points' => $points
                     ];
 
@@ -500,6 +509,7 @@ include __DIR__ . '/components/unified-layout.php';
                         <th>UCI-ID</th>
                         <th>Klubb</th>
                         <th style="width: 80px;">Land</th>
+                        <th style="width: 60px;">Varv</th>
                         <th>Tid</th>
                         <th style="width: 100px;">Match</th>
                     </tr>
@@ -519,6 +529,7 @@ include __DIR__ . '/components/unified-layout.php';
                         <td><code class="text-sm"><?= h($row['uci_id']) ?></code></td>
                         <td><?= h($row['club_name']) ?></td>
                         <td><?= h($row['nationality']) ?></td>
+                        <td><?= $row['laps'] ?? '-' ?></td>
                         <td><?= h($row['finish_time'] ?? '-') ?></td>
                         <td>
                             <?php if ($row['rider_match'] === 'Ny'): ?>
@@ -682,6 +693,11 @@ DNS  533  Christian NILSSON  10058874031  CK Master  Sverige SWE  0"
                         <td><code>Land</code></td>
                         <td>Nationalitet (extraherar 3-bokstavskod)</td>
                         <td>Sverige SWE</td>
+                    </tr>
+                    <tr>
+                        <td><code>Varv</code></td>
+                        <td>Antal genomförda varv (XC/MTB)</td>
+                        <td>5</td>
                     </tr>
                     <tr>
                         <td><code>Tid</code></td>
