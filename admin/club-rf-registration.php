@@ -1271,9 +1271,14 @@ function clubNameSimilarity($name1, $name2) {
         return 100;
     }
 
-    // Check if one contains the other
-    if (strpos($norm1, $norm2) !== false || strpos($norm2, $norm1) !== false) {
-        return 90;
+    // STRICT: Only give 90% if one is EXACTLY contained AND lengths are similar
+    // This prevents "Arvika CK" matching "Arvika Idrottsällskap"
+    $lenRatio = min(strlen($norm1), strlen($norm2)) / max(strlen($norm1), strlen($norm2));
+    if ($lenRatio > 0.7) {
+        // Only check contains if lengths are similar
+        if (strpos($norm1, $norm2) !== false || strpos($norm2, $norm1) !== false) {
+            return 90;
+        }
     }
 
     // Levenshtein distance (for small strings)
@@ -1654,6 +1659,15 @@ foreach ($dcu_districts as $clubs) {
     $totalDcuClubs += count($clubs);
 }
 
+// Get all RF-registered clubs from database
+$rfRegisteredClubs = $pdo->query("
+    SELECT c.id, c.name, c.scf_district, c.rf_registered_year, c.country,
+           (SELECT COUNT(*) FROM riders r WHERE r.club_id = c.id) as rider_count
+    FROM clubs c
+    WHERE c.rf_registered = 1
+    ORDER BY c.scf_district, c.name
+")->fetchAll();
+
 // Include unified layout
 include __DIR__ . '/components/unified-layout.php';
 ?>
@@ -1698,6 +1712,75 @@ include __DIR__ . '/components/unified-layout.php';
         </div>
     </div>
 
+    <!-- SCF Source Data - The imported RF list -->
+    <div class="card mb-4">
+        <div class="card-header" style="display: flex; justify-content: space-between; align-items: center; background: linear-gradient(135deg, #006aa7 0%, #fecc00 100%);">
+            <h3 style="color: #fff;">SCF-listan (källa: <?= $totalRfClubs ?> klubbar)</h3>
+            <button type="button" class="btn btn-sm btn-secondary" onclick="document.getElementById('scf-source-list').classList.toggle('hidden')" style="background: rgba(255,255,255,0.2); border: none; color: #fff;">
+                <i data-lucide="eye"></i> Visa/Dölj
+            </button>
+        </div>
+        <div class="card-body hidden" id="scf-source-list">
+            <p class="text-muted mb-md">Detta är listan som används vid synkning - inte databasen.</p>
+            <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: var(--space-md); max-height: 600px; overflow-y: auto;">
+                <?php foreach ($scf_districts as $district => $clubs): ?>
+                <div style="background: var(--color-bg-hover); padding: var(--space-md); border-radius: var(--radius-md);">
+                    <h4 style="margin-bottom: var(--space-sm); color: var(--color-accent);"><?= htmlspecialchars(str_replace(' Cykelförbund', '', $district)) ?></h4>
+                    <ul style="margin: 0; padding-left: var(--space-md); font-size: 0.85rem;">
+                        <?php foreach ($clubs as $club): ?>
+                        <li><?= htmlspecialchars($club) ?></li>
+                        <?php endforeach; ?>
+                    </ul>
+                </div>
+                <?php endforeach; ?>
+            </div>
+        </div>
+    </div>
+
+    <!-- RF-registered clubs in database -->
+    <div class="card mb-4">
+        <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+            <h3>RF-anslutna klubbar i TheHUB (<?= count($rfRegisteredClubs) ?>)</h3>
+            <button type="button" class="btn btn-sm btn-secondary" onclick="document.getElementById('rf-clubs-list').classList.toggle('hidden')">
+                <i data-lucide="eye"></i> Visa/Dölj
+            </button>
+        </div>
+        <div class="card-body hidden" id="rf-clubs-list">
+            <div class="table-responsive" style="max-height: 500px; overflow-y: auto;">
+                <table class="table table-sm">
+                    <thead style="position: sticky; top: 0; background: var(--color-bg-surface);">
+                        <tr>
+                            <th>Klubbnamn</th>
+                            <th>Distrikt</th>
+                            <th>Land</th>
+                            <th>Åkare</th>
+                            <th>Åtgärd</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($rfRegisteredClubs as $club): ?>
+                        <tr>
+                            <td>
+                                <a href="/admin/club-edit.php?id=<?= $club['id'] ?>" style="color: var(--color-accent);">
+                                    <?= htmlspecialchars($club['name']) ?>
+                                </a>
+                            </td>
+                            <td><?= htmlspecialchars(str_replace(' Cykelförbund', '', $club['scf_district'] ?? '-')) ?></td>
+                            <td><?= htmlspecialchars($club['country'] ?? 'Sverige') ?></td>
+                            <td><?= $club['rider_count'] ?></td>
+                            <td>
+                                <a href="/admin/club-edit.php?id=<?= $club['id'] ?>" class="btn btn-sm btn-secondary">
+                                    <i data-lucide="pencil"></i>
+                                </a>
+                            </td>
+                        </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
     <!-- Sync Buttons -->
     <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(400px, 1fr)); gap: var(--space-md); margin-bottom: var(--space-lg);">
         <!-- Swedish SCF Sync -->
@@ -1719,9 +1802,9 @@ include __DIR__ . '/components/unified-layout.php';
                     </div>
 
                     <div class="form-group" style="margin-bottom: var(--space-md);">
-                        <label class="checkbox-label" style="display: flex; align-items: center; gap: var(--space-sm); cursor: pointer; font-size: 0.875rem;">
+                        <label class="checkbox-label" style="display: flex; align-items: center; gap: var(--space-sm); cursor: pointer; font-size: 0.875rem; color: var(--color-warning);">
                             <input type="checkbox" name="update_names" value="1" style="width: 16px; height: 16px;">
-                            <span>Uppdatera stavning</span>
+                            <span>Uppdatera stavning (VARNING: döper om klubbar!)</span>
                         </label>
                     </div>
 
@@ -1752,9 +1835,9 @@ include __DIR__ . '/components/unified-layout.php';
                     </div>
 
                     <div class="form-group" style="margin-bottom: var(--space-md);">
-                        <label class="checkbox-label" style="display: flex; align-items: center; gap: var(--space-sm); cursor: pointer; font-size: 0.875rem;">
+                        <label class="checkbox-label" style="display: flex; align-items: center; gap: var(--space-sm); cursor: pointer; font-size: 0.875rem; color: var(--color-warning);">
                             <input type="checkbox" name="update_names" value="1" style="width: 16px; height: 16px;">
-                            <span>Uppdatera stavning</span>
+                            <span>Uppdatera stavning (VARNING: döper om klubbar!)</span>
                         </label>
                     </div>
 
@@ -1785,9 +1868,9 @@ include __DIR__ . '/components/unified-layout.php';
                     </div>
 
                     <div class="form-group" style="margin-bottom: var(--space-md);">
-                        <label class="checkbox-label" style="display: flex; align-items: center; gap: var(--space-sm); cursor: pointer; font-size: 0.875rem;">
+                        <label class="checkbox-label" style="display: flex; align-items: center; gap: var(--space-sm); cursor: pointer; font-size: 0.875rem; color: var(--color-warning);">
                             <input type="checkbox" name="update_names" value="1" style="width: 16px; height: 16px;">
-                            <span>Uppdatera stavning</span>
+                            <span>Uppdatera stavning (VARNING: döper om klubbar!)</span>
                         </label>
                     </div>
 
