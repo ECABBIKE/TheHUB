@@ -825,9 +825,21 @@ document.addEventListener('DOMContentLoaded', function() {
         .bulk-edit-organizer-mode .organizer-field {
             display: table-cell;
         }
-        /* Make the table horizontally scrollable */
+        /* Make the table scrollable in both directions */
         .admin-table-container {
-            overflow-x: auto;
+            overflow: auto;
+            max-height: calc(100vh - 280px);
+            border: 1px solid var(--color-border);
+            border-radius: var(--radius-md);
+        }
+        /* Sticky header row */
+        .admin-table thead {
+            position: sticky;
+            top: 0;
+            z-index: 4;
+        }
+        .admin-table thead th {
+            background: var(--color-bg-surface);
         }
         /* Sticky columns for Datum and Namn */
         .sticky-col {
@@ -845,7 +857,7 @@ document.addEventListener('DOMContentLoaded', function() {
             border-right: 2px solid var(--color-border-strong);
         }
         thead .sticky-col {
-            z-index: 3;
+            z-index: 5;
             background: var(--color-bg-surface);
         }
         tr:hover .sticky-col {
