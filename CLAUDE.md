@@ -29,6 +29,27 @@ Version visas som: `v1.0 [2026-01-08.XXX] - Release`
 Pushat: TheHUB v1.0 [2026-01-08.XXX]
 ```
 
+## MIGRATIONER - ALLTID I Tools/migrations
+
+**ALLA databasmigrationer ska ligga i `/Tools/migrations/` - INGEN annanstans.**
+
+```
+Tools/
+└── migrations/
+    ├── 001_analytics_tables.sql
+    ├── 002_...sql
+    └── 012_event_participation_analysis.sql   ← RÄTT
+```
+
+```
+analytics/
+└── migrations/   ← FEL! Använd INTE denna mapp
+```
+
+Migrationsverktyget (`/admin/run-migrations.php`) läser från `Tools/migrations/`.
+
+---
+
 ## INGA VERSIONSPREFIX - ALDRIG
 
 **ANVÄND ALDRIG versionsnummer (V2, V3, V4) i filnamn, konstanter eller kod.**
