@@ -75,14 +75,9 @@ $breadcrumbs = [
 ];
 
 $page_actions = '
-<div class="btn-group">
-    <a href="/admin/analytics-reports.php" class="btn-admin btn-admin-secondary">
-        <i data-lucide="file-text"></i> Rapporter
-    </a>
-    <a href="/admin/analytics-flow.php" class="btn-admin btn-admin-secondary">
-        <i data-lucide="git-branch"></i> Series Flow
-    </a>
-</div>
+<a href="/admin/analytics-export-center.php" class="btn-admin btn-admin-secondary">
+    <i data-lucide="download"></i> Export
+</a>
 ';
 
 // Include unified layout
@@ -116,6 +111,58 @@ include __DIR__ . '/components/unified-layout.php';
             </select>
         </div>
     </form>
+</div>
+
+<!-- Analytics Modules Navigation -->
+<div class="analytics-nav-grid">
+    <a href="/admin/analytics-trends.php" class="analytics-nav-item">
+        <i data-lucide="trending-up"></i>
+        <span>Trender</span>
+    </a>
+    <a href="/admin/analytics-first-season.php" class="analytics-nav-item">
+        <i data-lucide="baby"></i>
+        <span>First Season</span>
+    </a>
+    <a href="/admin/analytics-event-participation.php" class="analytics-nav-item">
+        <i data-lucide="calendar-days"></i>
+        <span>Event Deltagande</span>
+    </a>
+    <a href="/admin/analytics-cohorts.php" class="analytics-nav-item">
+        <i data-lucide="users"></i>
+        <span>Kohorter</span>
+    </a>
+    <a href="/admin/analytics-clubs.php" class="analytics-nav-item">
+        <i data-lucide="building-2"></i>
+        <span>Klubbar</span>
+    </a>
+    <a href="/admin/analytics-geography.php" class="analytics-nav-item">
+        <i data-lucide="map"></i>
+        <span>Geografi</span>
+    </a>
+    <a href="/admin/analytics-series-compare.php" class="analytics-nav-item">
+        <i data-lucide="git-compare"></i>
+        <span>Jämför Serier</span>
+    </a>
+    <a href="/admin/analytics-flow.php" class="analytics-nav-item">
+        <i data-lucide="workflow"></i>
+        <span>Flöden</span>
+    </a>
+    <a href="/admin/analytics-reports.php" class="analytics-nav-item">
+        <i data-lucide="file-text"></i>
+        <span>Rapporter</span>
+    </a>
+    <a href="/admin/analytics-data-quality.php" class="analytics-nav-item analytics-nav-item--muted">
+        <i data-lucide="check-circle"></i>
+        <span>Datakvalitet</span>
+    </a>
+    <a href="/admin/analytics-diagnose.php" class="analytics-nav-item analytics-nav-item--muted">
+        <i data-lucide="stethoscope"></i>
+        <span>Diagnostik</span>
+    </a>
+    <a href="/admin/migrations.php" class="analytics-nav-item analytics-nav-item--muted">
+        <i data-lucide="database"></i>
+        <span>Migrationer</span>
+    </a>
 </div>
 
 <?php if (isset($error)): ?>
@@ -453,6 +500,81 @@ include __DIR__ . '/components/unified-layout.php';
 <?php endif; // end if no error ?>
 
 <style>
+/* Analytics Navigation Grid */
+.analytics-nav-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(110px, 1fr));
+    gap: var(--space-sm);
+    margin-bottom: var(--space-xl);
+    padding: var(--space-md);
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+}
+
+.analytics-nav-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-xs);
+    padding: var(--space-sm) var(--space-xs);
+    background: var(--color-bg-surface);
+    border: 1px solid transparent;
+    border-radius: var(--radius-sm);
+    text-decoration: none;
+    color: var(--color-text-primary);
+    font-size: var(--text-xs);
+    font-weight: var(--weight-medium);
+    text-align: center;
+    transition: all 0.15s ease;
+}
+
+.analytics-nav-item i {
+    width: 20px;
+    height: 20px;
+    color: var(--color-accent);
+}
+
+.analytics-nav-item:hover {
+    background: var(--color-accent-light);
+    border-color: var(--color-accent);
+    transform: translateY(-1px);
+}
+
+.analytics-nav-item--muted {
+    opacity: 0.7;
+}
+
+.analytics-nav-item--muted i {
+    color: var(--color-text-muted);
+}
+
+.analytics-nav-item--muted:hover {
+    opacity: 1;
+}
+
+@media (max-width: 767px) {
+    .analytics-nav-grid {
+        grid-template-columns: repeat(4, 1fr);
+        margin-left: calc(-1 * var(--container-padding, 16px));
+        margin-right: calc(-1 * var(--container-padding, 16px));
+        border-radius: 0;
+        border-left: none;
+        border-right: none;
+    }
+
+    .analytics-nav-item {
+        padding: var(--space-xs);
+        font-size: 10px;
+    }
+
+    .analytics-nav-item i {
+        width: 18px;
+        height: 18px;
+    }
+}
+
 /* Dashboard Metrics Grid */
 .dashboard-metrics {
     display: grid;

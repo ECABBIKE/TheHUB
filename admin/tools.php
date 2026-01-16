@@ -434,8 +434,8 @@ include __DIR__ . '/components/unified-layout.php';
 
 </div>
 
-<!-- ========== ANALYTICS ========== -->
-<h3 class="section-title">Analytics</h3>
+<!-- ========== ANALYTICS - SETUP ========== -->
+<h3 class="section-title">Analytics - Setup</h3>
 <div class="tools-grid">
 
     <!-- Analytics Setup -->
@@ -467,34 +467,6 @@ include __DIR__ . '/components/unified-layout.php';
         </div>
     </div>
 
-    <!-- Historical Trends -->
-    <div class="tool-card">
-        <div class="tool-card-header">
-            <div class="tool-icon"><i data-lucide="trending-up"></i></div>
-            <div>
-                <h4 class="tool-title">Historiska Trender</h4>
-                <p class="tool-description">Analysera trender över flera säsonger</p>
-            </div>
-        </div>
-        <div class="tool-actions">
-            <a href="/admin/analytics-trends.php" class="btn-admin btn-admin-primary">Visa</a>
-        </div>
-    </div>
-
-    <!-- Analytics Dashboard -->
-    <div class="tool-card">
-        <div class="tool-card-header">
-            <div class="tool-icon"><i data-lucide="bar-chart-3"></i></div>
-            <div>
-                <h4 class="tool-title">Analytics Dashboard</h4>
-                <p class="tool-description">KPI-översikt och statistik</p>
-            </div>
-        </div>
-        <div class="tool-actions">
-            <a href="/admin/analytics-dashboard.php" class="btn-admin btn-admin-secondary">Öppna</a>
-        </div>
-    </div>
-
     <!-- Analytics Diagnostik -->
     <div class="tool-card">
         <div class="tool-card-header">
@@ -509,17 +481,191 @@ include __DIR__ . '/components/unified-layout.php';
         </div>
     </div>
 
+    <!-- Data Quality -->
+    <div class="tool-card">
+        <div class="tool-card-header">
+            <div class="tool-icon"><i data-lucide="check-circle"></i></div>
+            <div>
+                <h4 class="tool-title">Datakvalitet</h4>
+                <p class="tool-description">Analysera datakvalitet för analytics</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/analytics-data-quality.php" class="btn-admin btn-admin-secondary">Analysera</a>
+        </div>
+    </div>
+
     <!-- Reset Analytics -->
     <div class="tool-card">
         <div class="tool-card-header">
             <div class="tool-icon danger"><i data-lucide="rotate-ccw"></i></div>
             <div>
                 <h4 class="tool-title">Reset Analytics</h4>
-                <p class="tool-description">Rensa och kor om berakningar</p>
+                <p class="tool-description">Rensa och kör om beräkningar</p>
             </div>
         </div>
         <div class="tool-actions">
             <a href="/admin/analytics-reset.php" class="btn-admin btn-admin-danger">Reset</a>
+        </div>
+    </div>
+
+</div>
+
+<!-- ========== ANALYTICS - RAPPORTER ========== -->
+<h3 class="section-title">Analytics - Rapporter</h3>
+<div class="tools-grid">
+
+    <!-- Analytics Dashboard -->
+    <div class="tool-card">
+        <div class="tool-card-header">
+            <div class="tool-icon"><i data-lucide="layout-dashboard"></i></div>
+            <div>
+                <h4 class="tool-title">Dashboard</h4>
+                <p class="tool-description">KPI-översikt och statistik</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/analytics-dashboard.php" class="btn-admin btn-admin-primary">Öppna</a>
+        </div>
+    </div>
+
+    <!-- Historical Trends -->
+    <div class="tool-card">
+        <div class="tool-card-header">
+            <div class="tool-icon"><i data-lucide="trending-up"></i></div>
+            <div>
+                <h4 class="tool-title">Historiska Trender</h4>
+                <p class="tool-description">Analysera trender över flera säsonger</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/analytics-trends.php" class="btn-admin btn-admin-primary">Visa</a>
+        </div>
+    </div>
+
+    <!-- First Season Journey -->
+    <div class="tool-card">
+        <div class="tool-card-header">
+            <div class="tool-icon"><i data-lucide="baby"></i></div>
+            <div>
+                <h4 class="tool-title">First Season Journey</h4>
+                <p class="tool-description">Analysera nya deltagares första säsong</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/analytics-first-season.php" class="btn-admin btn-admin-primary">Öppna</a>
+        </div>
+    </div>
+
+    <!-- Event Participation -->
+    <div class="tool-card">
+        <div class="tool-card-header">
+            <div class="tool-icon"><i data-lucide="calendar-days"></i></div>
+            <div>
+                <h4 class="tool-title">Event Participation</h4>
+                <p class="tool-description">Deltagarmönster per event och serie</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/analytics-event-participation.php" class="btn-admin btn-admin-primary">Öppna</a>
+        </div>
+    </div>
+
+    <!-- Cohort Analysis -->
+    <div class="tool-card">
+        <div class="tool-card-header">
+            <div class="tool-icon"><i data-lucide="users"></i></div>
+            <div>
+                <h4 class="tool-title">Kohorter</h4>
+                <p class="tool-description">Kohortanalys och retention</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/analytics-cohorts.php" class="btn-admin btn-admin-primary">Öppna</a>
+        </div>
+    </div>
+
+    <!-- Club Analytics -->
+    <div class="tool-card">
+        <div class="tool-card-header">
+            <div class="tool-icon"><i data-lucide="building-2"></i></div>
+            <div>
+                <h4 class="tool-title">Klubbanalys</h4>
+                <p class="tool-description">Statistik per klubb</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/analytics-clubs.php" class="btn-admin btn-admin-primary">Öppna</a>
+        </div>
+    </div>
+
+    <!-- Geography -->
+    <div class="tool-card">
+        <div class="tool-card-header">
+            <div class="tool-icon"><i data-lucide="map"></i></div>
+            <div>
+                <h4 class="tool-title">Geografi</h4>
+                <p class="tool-description">Geografisk spridning och analys</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/analytics-geography.php" class="btn-admin btn-admin-primary">Öppna</a>
+        </div>
+    </div>
+
+    <!-- Series Compare -->
+    <div class="tool-card">
+        <div class="tool-card-header">
+            <div class="tool-icon"><i data-lucide="git-compare"></i></div>
+            <div>
+                <h4 class="tool-title">Jämför Serier</h4>
+                <p class="tool-description">Jämför statistik mellan serier</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/analytics-series-compare.php" class="btn-admin btn-admin-primary">Öppna</a>
+        </div>
+    </div>
+
+    <!-- Flow Analysis -->
+    <div class="tool-card">
+        <div class="tool-card-header">
+            <div class="tool-icon"><i data-lucide="workflow"></i></div>
+            <div>
+                <h4 class="tool-title">Flödesanalys</h4>
+                <p class="tool-description">Deltagarflöden mellan serier/event</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/analytics-flow.php" class="btn-admin btn-admin-primary">Öppna</a>
+        </div>
+    </div>
+
+    <!-- Reports -->
+    <div class="tool-card">
+        <div class="tool-card-header">
+            <div class="tool-icon"><i data-lucide="file-text"></i></div>
+            <div>
+                <h4 class="tool-title">Rapporter</h4>
+                <p class="tool-description">Generera och hantera rapporter</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/analytics-reports.php" class="btn-admin btn-admin-primary">Öppna</a>
+        </div>
+    </div>
+
+    <!-- Export Center -->
+    <div class="tool-card">
+        <div class="tool-card-header">
+            <div class="tool-icon"><i data-lucide="download"></i></div>
+            <div>
+                <h4 class="tool-title">Export Center</h4>
+                <p class="tool-description">Exportera analytics-data</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/analytics-export-center.php" class="btn-admin btn-admin-secondary">Öppna</a>
         </div>
     </div>
 
@@ -557,31 +703,17 @@ include __DIR__ . '/components/unified-layout.php';
         </div>
     </div>
 
-    <!-- Run Migrations -->
+    <!-- Migrations -->
     <div class="tool-card">
         <div class="tool-card-header">
             <div class="tool-icon"><i data-lucide="database"></i></div>
             <div>
-                <h4 class="tool-title">SQL-migrationer</h4>
-                <p class="tool-description">Kör SQL-databasmigrationer</p>
+                <h4 class="tool-title">Databasmigrationer</h4>
+                <p class="tool-description">Kör och hantera SQL-migrationer</p>
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/run-migrations.php" class="btn-admin btn-admin-secondary">Kör</a>
-        </div>
-    </div>
-
-    <!-- PHP Migrations Browser -->
-    <div class="tool-card">
-        <div class="tool-card-header">
-            <div class="tool-icon"><i data-lucide="file-code"></i></div>
-            <div>
-                <h4 class="tool-title">PHP-migrationer</h4>
-                <p class="tool-description">Alla migrationer (SQL + PHP)</p>
-            </div>
-        </div>
-        <div class="tool-actions">
-            <a href="/admin/migrations/migration-browser.php" class="btn-admin btn-admin-secondary">Visa</a>
+            <a href="/admin/migrations.php" class="btn-admin btn-admin-primary">Öppna</a>
         </div>
     </div>
 
