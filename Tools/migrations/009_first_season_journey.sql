@@ -100,8 +100,8 @@ CREATE TABLE IF NOT EXISTS rider_first_season (
     UNIQUE KEY uk_rider_cohort (rider_id, cohort_year),
 
     FOREIGN KEY (rider_id) REFERENCES riders(id) ON DELETE CASCADE,
-    FOREIGN KEY (club_id) REFERENCES clubs(id) ON DELETE SET NULL,
-    FOREIGN KEY (snapshot_id) REFERENCES analytics_snapshots(id) ON DELETE SET NULL
+    FOREIGN KEY (club_id) REFERENCES clubs(id) ON DELETE SET NULL
+    -- NOTE: snapshot_id FK removed - analytics_snapshots may not exist yet
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================================================
@@ -159,9 +159,8 @@ CREATE TABLE IF NOT EXISTS first_season_aggregates (
     INDEX idx_segment_value (segment_type, segment_value),
     INDEX idx_snapshot (snapshot_id),
 
-    UNIQUE KEY uk_cohort_segment (cohort_year, segment_type, segment_value, snapshot_id),
-
-    FOREIGN KEY (snapshot_id) REFERENCES analytics_snapshots(id) ON DELETE SET NULL
+    UNIQUE KEY uk_cohort_segment (cohort_year, segment_type, segment_value, snapshot_id)
+    -- NOTE: snapshot_id FK removed - analytics_snapshots may not exist yet
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================================================
@@ -275,6 +274,29 @@ SELECT
 FROM rider_first_season
 GROUP BY cohort_year
 ORDER BY cohort_year DESC;
+
+-- ============================================================================
+-- CREATE STUB TABLES IF NOT EXISTS (for independence)
+-- ============================================================================
+CREATE TABLE IF NOT EXISTS analytics_kpi_audit (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    kpi_key VARCHAR(100) NOT NULL,
+    old_definition TEXT,
+    new_definition TEXT,
+    change_type VARCHAR(50),
+    changed_by VARCHAR(100),
+    rationale TEXT,
+    changed_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    UNIQUE KEY uk_kpi_key (kpi_key)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
+
+CREATE TABLE IF NOT EXISTS analytics_system_config (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+    config_key VARCHAR(100) NOT NULL UNIQUE,
+    config_value TEXT,
+    description TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4;
 
 -- ============================================================================
 -- INSERT: Analytics KPI audit for new journey KPIs
