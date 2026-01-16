@@ -223,7 +223,7 @@ First Season Journey analyserar rookies (forstagangsdeltagare) under deras forst
 | cohort_year | YEAR | Forsta sasongen (MIN(season_year)) |
 | total_starts | INT | Antal starter |
 | total_events | INT | Antal unika events |
-| total_finished | INT | Antal fullbordade |
+| total_finishes | INT | Antal fullbordade |
 | first_discipline | VARCHAR(50) | Forsta disciplin |
 | club_id | INT | Klubb forsta sasongen |
 | first_brand_id | INT | Brand forsta sasongen (v3.1.1) |

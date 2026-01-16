@@ -64,8 +64,8 @@ CREATE TABLE IF NOT EXISTS series_participation_distribution (
 
     UNIQUE KEY uk_series_year_brand (series_id, season_year, brand_id, snapshot_id),
 
-    FOREIGN KEY (series_id) REFERENCES series(id) ON DELETE CASCADE,
-    FOREIGN KEY (snapshot_id) REFERENCES analytics_snapshots(id) ON DELETE SET NULL
+    FOREIGN KEY (series_id) REFERENCES series(id) ON DELETE CASCADE
+    -- NOTE: snapshot_id FK removed - analytics_snapshots may not exist yet
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================================================
@@ -112,9 +112,8 @@ CREATE TABLE IF NOT EXISTS event_unique_participants (
     UNIQUE KEY uk_event_snapshot (event_id, snapshot_id),
 
     FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE,
-    FOREIGN KEY (series_id) REFERENCES series(id) ON DELETE SET NULL,
-    FOREIGN KEY (venue_id) REFERENCES venues(id) ON DELETE SET NULL,
-    FOREIGN KEY (snapshot_id) REFERENCES analytics_snapshots(id) ON DELETE SET NULL
+    FOREIGN KEY (series_id) REFERENCES series(id) ON DELETE SET NULL
+    -- NOTE: venue_id and snapshot_id FKs removed - tables may not exist yet
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================================================
@@ -168,9 +167,8 @@ CREATE TABLE IF NOT EXISTS event_retention_yearly (
 
     FOREIGN KEY (event_id) REFERENCES events(id) ON DELETE CASCADE,
     FOREIGN KEY (matched_event_id) REFERENCES events(id) ON DELETE SET NULL,
-    FOREIGN KEY (series_id) REFERENCES series(id) ON DELETE SET NULL,
-    FOREIGN KEY (venue_id) REFERENCES venues(id) ON DELETE SET NULL,
-    FOREIGN KEY (snapshot_id) REFERENCES analytics_snapshots(id) ON DELETE SET NULL
+    FOREIGN KEY (series_id) REFERENCES series(id) ON DELETE SET NULL
+    -- NOTE: venue_id and snapshot_id FKs removed - tables may not exist yet
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================================================
@@ -220,9 +218,8 @@ CREATE TABLE IF NOT EXISTS event_loyal_riders (
 
     FOREIGN KEY (rider_id) REFERENCES riders(id) ON DELETE CASCADE,
     FOREIGN KEY (event_base_id) REFERENCES events(id) ON DELETE CASCADE,
-    FOREIGN KEY (venue_id) REFERENCES venues(id) ON DELETE SET NULL,
-    FOREIGN KEY (series_id) REFERENCES series(id) ON DELETE SET NULL,
-    FOREIGN KEY (snapshot_id) REFERENCES analytics_snapshots(id) ON DELETE SET NULL
+    FOREIGN KEY (series_id) REFERENCES series(id) ON DELETE SET NULL
+    -- NOTE: venue_id and snapshot_id FKs removed - tables may not exist yet
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================================================

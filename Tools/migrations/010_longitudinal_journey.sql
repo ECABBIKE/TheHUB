@@ -92,8 +92,8 @@ CREATE TABLE IF NOT EXISTS rider_journey_years (
     UNIQUE KEY uk_rider_year (rider_id, cohort_year, year_offset),
 
     FOREIGN KEY (rider_id) REFERENCES riders(id) ON DELETE CASCADE,
-    FOREIGN KEY (club_id) REFERENCES clubs(id) ON DELETE SET NULL,
-    FOREIGN KEY (snapshot_id) REFERENCES analytics_snapshots(id) ON DELETE SET NULL
+    FOREIGN KEY (club_id) REFERENCES clubs(id) ON DELETE SET NULL
+    -- NOTE: snapshot_id FK removed - analytics_snapshots may not exist yet
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================================================
@@ -154,9 +154,8 @@ CREATE TABLE IF NOT EXISTS cohort_longitudinal_aggregates (
     INDEX idx_segment (segment_type, segment_value),
     INDEX idx_snapshot (snapshot_id),
 
-    UNIQUE KEY uk_cohort_segment_offset (cohort_year, year_offset, segment_type, segment_value, snapshot_id),
-
-    FOREIGN KEY (snapshot_id) REFERENCES analytics_snapshots(id) ON DELETE SET NULL
+    UNIQUE KEY uk_cohort_segment_offset (cohort_year, year_offset, segment_type, segment_value, snapshot_id)
+    -- NOTE: snapshot_id FK removed - analytics_snapshots may not exist yet
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================================================
@@ -217,8 +216,8 @@ CREATE TABLE IF NOT EXISTS rider_journey_summary (
 
     UNIQUE KEY uk_rider_cohort (rider_id, cohort_year),
 
-    FOREIGN KEY (rider_id) REFERENCES riders(id) ON DELETE CASCADE,
-    FOREIGN KEY (snapshot_id) REFERENCES analytics_snapshots(id) ON DELETE SET NULL
+    FOREIGN KEY (rider_id) REFERENCES riders(id) ON DELETE CASCADE
+    -- NOTE: snapshot_id FK removed - analytics_snapshots may not exist yet
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================================================
