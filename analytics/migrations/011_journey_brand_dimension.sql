@@ -2,6 +2,7 @@
 -- Migration 011: Brand Dimension for Journey Analysis
 -- Version: 3.1.1
 -- Created: 2026-01-16
+-- Fixed: 2026-01-16 - Removed DELIMITER/stored procedures for PHP compatibility
 --
 -- PURPOSE:
 -- Adds brand filtering capability to First Season Journey and Longitudinal
@@ -12,6 +13,9 @@
 -- - brand_series_map links series_id to brand_id
 -- - Riders can participate in multiple brands over time
 --
+-- NOTE: Stored procedure sp_populate_brand_from_series removed
+--       Brand population logic is now in KPICalculator.php
+--
 -- CHANGES:
 -- - rider_first_season: +first_brand_id
 -- - rider_journey_years: +primary_brand_id
@@ -20,27 +24,125 @@
 
 -- ============================================================================
 -- ALTER: rider_first_season - Add brand tracking
+-- Wrapped in procedure to handle "column exists" gracefully
 -- ============================================================================
-ALTER TABLE rider_first_season
-    ADD COLUMN first_brand_id INT NULL AFTER club_id,
-    ADD COLUMN first_series_id INT NULL AFTER first_brand_id,
-    ADD INDEX idx_first_brand (first_brand_id),
-    ADD INDEX idx_cohort_brand (cohort_year, first_brand_id);
+
+-- Check if column exists before adding (MySQL doesn't support IF NOT EXISTS for columns)
+-- Using a simple approach: the ALTER will fail silently if column already exists
+SET @sql = (SELECT IF(
+    (SELECT COUNT(*) FROM information_schema.COLUMNS
+     WHERE TABLE_SCHEMA = DATABASE()
+     AND TABLE_NAME = 'rider_first_season'
+     AND COLUMN_NAME = 'first_brand_id') = 0,
+    'ALTER TABLE rider_first_season ADD COLUMN first_brand_id INT NULL AFTER club_id',
+    'SELECT 1'
+));
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @sql = (SELECT IF(
+    (SELECT COUNT(*) FROM information_schema.COLUMNS
+     WHERE TABLE_SCHEMA = DATABASE()
+     AND TABLE_NAME = 'rider_first_season'
+     AND COLUMN_NAME = 'first_series_id') = 0,
+    'ALTER TABLE rider_first_season ADD COLUMN first_series_id INT NULL AFTER first_brand_id',
+    'SELECT 1'
+));
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+-- Add indexes (ignore if exists)
+SET @sql = (SELECT IF(
+    (SELECT COUNT(*) FROM information_schema.STATISTICS
+     WHERE TABLE_SCHEMA = DATABASE()
+     AND TABLE_NAME = 'rider_first_season'
+     AND INDEX_NAME = 'idx_first_brand') = 0,
+    'ALTER TABLE rider_first_season ADD INDEX idx_first_brand (first_brand_id)',
+    'SELECT 1'
+));
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @sql = (SELECT IF(
+    (SELECT COUNT(*) FROM information_schema.STATISTICS
+     WHERE TABLE_SCHEMA = DATABASE()
+     AND TABLE_NAME = 'rider_first_season'
+     AND INDEX_NAME = 'idx_cohort_brand') = 0,
+    'ALTER TABLE rider_first_season ADD INDEX idx_cohort_brand (cohort_year, first_brand_id)',
+    'SELECT 1'
+));
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 
 -- ============================================================================
 -- ALTER: rider_journey_years - Add brand tracking per year
 -- ============================================================================
-ALTER TABLE rider_journey_years
-    ADD COLUMN primary_brand_id INT NULL AFTER primary_discipline,
-    ADD COLUMN primary_series_id INT NULL AFTER primary_brand_id,
-    ADD INDEX idx_brand (primary_brand_id),
-    ADD INDEX idx_cohort_offset_brand (cohort_year, year_offset, primary_brand_id);
+SET @sql = (SELECT IF(
+    (SELECT COUNT(*) FROM information_schema.COLUMNS
+     WHERE TABLE_SCHEMA = DATABASE()
+     AND TABLE_NAME = 'rider_journey_years'
+     AND COLUMN_NAME = 'primary_brand_id') = 0,
+    'ALTER TABLE rider_journey_years ADD COLUMN primary_brand_id INT NULL AFTER primary_discipline',
+    'SELECT 1'
+));
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @sql = (SELECT IF(
+    (SELECT COUNT(*) FROM information_schema.COLUMNS
+     WHERE TABLE_SCHEMA = DATABASE()
+     AND TABLE_NAME = 'rider_journey_years'
+     AND COLUMN_NAME = 'primary_series_id') = 0,
+    'ALTER TABLE rider_journey_years ADD COLUMN primary_series_id INT NULL AFTER primary_brand_id',
+    'SELECT 1'
+));
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @sql = (SELECT IF(
+    (SELECT COUNT(*) FROM information_schema.STATISTICS
+     WHERE TABLE_SCHEMA = DATABASE()
+     AND TABLE_NAME = 'rider_journey_years'
+     AND INDEX_NAME = 'idx_brand') = 0,
+    'ALTER TABLE rider_journey_years ADD INDEX idx_brand (primary_brand_id)',
+    'SELECT 1'
+));
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
+
+SET @sql = (SELECT IF(
+    (SELECT COUNT(*) FROM information_schema.STATISTICS
+     WHERE TABLE_SCHEMA = DATABASE()
+     AND TABLE_NAME = 'rider_journey_years'
+     AND INDEX_NAME = 'idx_cohort_offset_brand') = 0,
+    'ALTER TABLE rider_journey_years ADD INDEX idx_cohort_offset_brand (cohort_year, year_offset, primary_brand_id)',
+    'SELECT 1'
+));
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 
 -- ============================================================================
 -- ALTER: rider_journey_summary - Add first brand reference
 -- ============================================================================
-ALTER TABLE rider_journey_summary
-    ADD COLUMN fs_first_brand_id INT NULL AFTER fs_activity_pattern;
+SET @sql = (SELECT IF(
+    (SELECT COUNT(*) FROM information_schema.COLUMNS
+     WHERE TABLE_SCHEMA = DATABASE()
+     AND TABLE_NAME = 'rider_journey_summary'
+     AND COLUMN_NAME = 'fs_first_brand_id') = 0,
+    'ALTER TABLE rider_journey_summary ADD COLUMN fs_first_brand_id INT NULL AFTER fs_activity_pattern',
+    'SELECT 1'
+));
+PREPARE stmt FROM @sql;
+EXECUTE stmt;
+DEALLOCATE PREPARE stmt;
 
 -- ============================================================================
 -- VIEW: brand_journey_comparison
@@ -160,88 +262,6 @@ CREATE TABLE IF NOT EXISTS brand_journey_aggregates (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================================================
--- STORED PROCEDURE: sp_populate_brand_from_series
--- Backfills brand_id for existing journey data
--- ============================================================================
-DELIMITER //
-
-CREATE PROCEDURE sp_populate_brand_from_series()
-BEGIN
-    -- Update rider_first_season with first_brand_id
-    UPDATE rider_first_season rfs
-    LEFT JOIN (
-        -- Get first series per rider in cohort year
-        SELECT
-            v.canonical_rider_id AS rider_id,
-            MIN(YEAR(e.date)) AS cohort_year,
-            (
-                SELECT res2.event_id
-                FROM results res2
-                JOIN events e2 ON res2.event_id = e2.id
-                JOIN v_canonical_riders v2 ON res2.cyclist_id = v2.original_rider_id
-                WHERE v2.canonical_rider_id = v.canonical_rider_id
-                ORDER BY e2.date ASC
-                LIMIT 1
-            ) AS first_event_id
-        FROM results res
-        JOIN events e ON res.event_id = e.id
-        JOIN v_canonical_riders v ON res.cyclist_id = v.original_rider_id
-        GROUP BY v.canonical_rider_id
-    ) first_ev ON first_ev.rider_id = rfs.rider_id AND first_ev.cohort_year = rfs.cohort_year
-    LEFT JOIN events e ON e.id = first_ev.first_event_id
-    LEFT JOIN brand_series_map bsm ON bsm.series_id = e.series_id
-        AND (bsm.relationship_type = 'owner' OR bsm.relationship_type IS NULL)
-        AND (bsm.valid_from IS NULL OR bsm.valid_from <= rfs.cohort_year)
-        AND (bsm.valid_until IS NULL OR bsm.valid_until >= rfs.cohort_year)
-    SET
-        rfs.first_series_id = e.series_id,
-        rfs.first_brand_id = bsm.brand_id
-    WHERE rfs.first_brand_id IS NULL;
-
-    -- Update rider_journey_years with primary_brand_id
-    UPDATE rider_journey_years rjy
-    LEFT JOIN (
-        SELECT
-            res.cyclist_id,
-            YEAR(e.date) AS cal_year,
-            e.series_id,
-            COUNT(*) AS cnt
-        FROM results res
-        JOIN events e ON res.event_id = e.id
-        GROUP BY res.cyclist_id, YEAR(e.date), e.series_id
-    ) series_usage ON series_usage.cyclist_id = rjy.rider_id
-        AND series_usage.cal_year = rjy.calendar_year
-    LEFT JOIN brand_series_map bsm ON bsm.series_id = series_usage.series_id
-        AND (bsm.relationship_type = 'owner' OR bsm.relationship_type IS NULL)
-        AND (bsm.valid_from IS NULL OR bsm.valid_from <= rjy.calendar_year)
-        AND (bsm.valid_until IS NULL OR bsm.valid_until >= rjy.calendar_year)
-    SET
-        rjy.primary_series_id = series_usage.series_id,
-        rjy.primary_brand_id = bsm.brand_id
-    WHERE rjy.primary_brand_id IS NULL
-      AND series_usage.cnt = (
-          SELECT MAX(cnt2)
-          FROM (
-              SELECT COUNT(*) AS cnt2
-              FROM results r2
-              JOIN events e2 ON r2.event_id = e2.id
-              WHERE r2.cyclist_id = rjy.rider_id
-                AND YEAR(e2.date) = rjy.calendar_year
-              GROUP BY e2.series_id
-          ) max_series
-      );
-
-    -- Update rider_journey_summary with first brand
-    UPDATE rider_journey_summary rjs
-    JOIN rider_first_season rfs ON rjs.rider_id = rfs.rider_id AND rjs.cohort_year = rfs.cohort_year
-    SET rjs.fs_first_brand_id = rfs.first_brand_id
-    WHERE rjs.fs_first_brand_id IS NULL;
-
-END //
-
-DELIMITER ;
-
--- ============================================================================
 -- Migration complete marker
 -- ============================================================================
 INSERT INTO analytics_system_config (config_key, config_value, description)
@@ -253,4 +273,5 @@ ON DUPLICATE KEY UPDATE config_value = VALUES(config_value);
 
 -- Record migration
 INSERT INTO analytics_kpi_audit (kpi_key, old_definition, new_definition, change_type, changed_by, rationale)
-VALUES ('_migration_011', NULL, 'Brand dimension for Journey Analysis', 'migration', 'system', 'Migration 011 completed');
+VALUES ('_migration_011', NULL, 'Brand dimension for Journey Analysis', 'migration', 'system', 'Migration 011 completed')
+ON DUPLICATE KEY UPDATE changed_at = NOW();
