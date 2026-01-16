@@ -3698,7 +3698,7 @@ class KPICalculator {
                 AVG(CASE WHEN rjy.was_active = 1 THEN rjy.total_starts END) AS avg_starts,
                 AVG(CASE WHEN rjy.was_active = 1 THEN rjy.total_events END) AS avg_events,
                 AVG(CASE WHEN rjy.was_active = 1 THEN rjy.result_percentile END) AS avg_percentile,
-                SUM(CASE WHEN rjy.was_active = 1 AND rjy.has_improved = 1 THEN 1 ELSE 0 END) AS improved_count
+                SUM(CASE WHEN rjy.was_active = 1 AND rjy.percentile_delta > 0 THEN 1 ELSE 0 END) AS improved_count
             FROM rider_journey_years rjy
             " . (empty($brandFilter['clause']) ? '' : "
             JOIN rider_first_season rfs ON rjy.rider_id = rfs.rider_id AND rjy.cohort_year = rfs.cohort_year
