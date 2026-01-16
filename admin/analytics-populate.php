@@ -78,20 +78,30 @@ if (isset($_GET['diagnose'])) {
         $results['cohort_error'] = $e->getMessage();
     }
 
-    // Test 3: Enkel rookie-count for 2020
+    // Test 3: DIREKT kontroll av rider_first_season tabellen
     try {
         $stmt = $pdo->query("
-            SELECT COUNT(*) FROM (
-                SELECT res.cyclist_id, MIN(YEAR(e.date)) as first_year
-                FROM results res
-                JOIN events e ON res.event_id = e.id
-                GROUP BY res.cyclist_id
-                HAVING first_year = 2020
-            ) t
+            SELECT cohort_year, COUNT(*) as cnt
+            FROM rider_first_season
+            GROUP BY cohort_year
+            ORDER BY cohort_year DESC
         ");
-        $results['rookies_2020'] = $stmt->fetchColumn();
+        $results['rider_first_season'] = $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
     } catch (Exception $e) {
-        $results['rookie_error'] = $e->getMessage();
+        $results['rfs_error'] = $e->getMessage();
+    }
+
+    // Test 4: Kontroll av rider_journey_years
+    try {
+        $stmt = $pdo->query("
+            SELECT cohort_year, COUNT(*) as cnt
+            FROM rider_journey_years
+            GROUP BY cohort_year
+            ORDER BY cohort_year DESC
+        ");
+        $results['rider_journey_years'] = $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
+    } catch (Exception $e) {
+        $results['rjy_error'] = $e->getMessage();
     }
 
     echo json_encode($results, JSON_PRETTY_PRINT);
