@@ -1,6 +1,6 @@
 # TheHUB - Development Roadmap
 
-> Senast uppdaterad: 2026-01-14
+> Senast uppdaterad: 2026-01-16
 >
 > **OBS:** All projektinformation ska dokumenteras i denna fil!
 
@@ -458,17 +458,28 @@ HUB_ROOT, HUB_URL, ROOT_PATH, INCLUDES_PATH
 
 # DEL 3: KLUBB RF-REGISTRERING
 
-**Mal:** Synkronisera klubbar med Riksidrottsförbundets officiella register
+**Mal:** Synkronisera klubbar med officiella förbundsregister (SCF, NCF, DCU)
 **Status:** KLAR
 
 ## FUNKTIONER
 
 ### RF-registreringsverktyg (admin/club-rf-registration.php)
 - [x] Komplett lista over alla 20 SCF-distrikt
-- [x] ~400 RF-registrerade klubbar inlagda
+- [x] ~400 SCF-registrerade klubbar inlagda
+- [x] ~385 NCF-klubbar (Norges Cykleforbund)
+- [x] ~290 DCU-klubbar (Danmarks Cykle Union)
 - [x] En-klicks synkronisering mot TheHUB-klubbar
 - [x] Manuell koppling for klubbar som inte matchas automatiskt
 - [x] Statistik per distrikt (klubbar, riders)
+- [x] Striktare matching-algoritm (langdkvot > 0.7)
+
+### Stavningskontroll (admin/club-rf-spelling.php) - NY!
+- [x] Jämför klubbnamn mot officiella SCF/NCF/DCU-register
+- [x] Förbundsbadges (SCF blå, NCF röd, DCU gul)
+- [x] Bulk-uppdatering av stavningar till officiell version
+- [x] Låsning av namn (name_locked) för att förhindra automatiska ändringar
+- [x] Statistik: korrekt stavning, avvikande, ej i registret
+- [x] Delad datafil för förbundsklubbar
 
 ### Klubbprofil-badges
 - [x] RF-badge visar "RF-registrerad 2025" for aktiva klubbar
@@ -476,9 +487,15 @@ HUB_ROOT, HUB_URL, ROOT_PATH, INCLUDES_PATH
 - [x] CSS-styling for badges (dark/light mode)
 
 ### Databasfalt
-- `rf_registered` (TINYINT) - 1 om RF-registrerad
+- `rf_registered` (TINYINT) - 1 om förbundsregistrerad
 - `rf_registered_year` (INT) - Registreringsar
 - `scf_district` (VARCHAR) - SCF-distriktstillhorighet
+- `federation` (VARCHAR) - Förbund (SCF, NCF, DCU) - NY!
+- `name_locked` (TINYINT) - 1 om namn är låst - NY!
+
+### Migrationer
+- Migration 112: Återställ klubbnamn från backup (706 klubbar)
+- Migration 113: Lägg till name_locked och federation kolumner
 
 ### SCF-distrikt inkluderade
 1. Bohuslän-Dals Cykelförbund
@@ -505,6 +522,27 @@ HUB_ROOT, HUB_URL, ROOT_PATH, INCLUDES_PATH
 ---
 
 # CHANGELOG
+
+### 2026-01-16 (Förbundets Stavningskontroll)
+- **Nytt verktyg: club-rf-spelling.php**
+  - Jämför klubbnamn mot officiella SCF/NCF/DCU-register
+  - Visar förbundsbadges (SCF blå, NCF röd, DCU gul)
+  - Bulk-uppdatering av stavningar till officiell version
+  - Låsning av namn för att förhindra automatiska ändringar
+  - Statistik: korrekt stavning, avvikande, ej i registret
+
+- **Nya migrationer:**
+  - Migration 112: Återställ 706 klubbnamn från backup
+  - Migration 113: Lägg till name_locked och federation kolumner
+
+- **Nya filer:**
+  - `admin/club-rf-spelling.php` - Stavningskontroll
+  - `admin/includes/federation-clubs-data.php` - Delad data för förbund
+  - `admin/migrations/112_restore_club_names.php`
+  - `admin/migrations/113_add_name_locked.php`
+
+- **Bugfix:**
+  - Striktare matching-algoritm (längdkvot > 0.7) för att undvika felaktiga namnändringar
 
 ### 2026-01-14 (RF-registrering)
 - **Ny funktion: RF-klubbregistrering**
