@@ -316,7 +316,17 @@ if ($memberFilter === 'few') {
 // Get list of countries for filter dropdown
 $countries = $db->getAll("SELECT DISTINCT country FROM clubs WHERE country IS NOT NULL AND country != '' ORDER BY country");
 
+// Check if federation column exists
+$hasFederationColumn = false;
+try {
+    $db->getRow("SELECT federation FROM clubs LIMIT 1");
+    $hasFederationColumn = true;
+} catch (Exception $e) {
+    // Column doesn't exist yet
+}
+
 // Get clubs with rider count
+$federationSelect = $hasFederationColumn ? "cl.federation," : "NULL as federation,";
 $sql = "SELECT
     cl.id,
     cl.name,
@@ -327,7 +337,7 @@ $sql = "SELECT
     cl.active,
     cl.rf_registered,
     cl.scf_district,
-    cl.federation,
+    $federationSelect
     COUNT(DISTINCT c.id) as rider_count
 FROM clubs cl
 LEFT JOIN riders c ON cl.id = c.club_id AND c.active = 1

@@ -1848,6 +1848,348 @@ class KPICalculator {
     }
 
     // =========================================================================
+    // BRAND-FILTERED COHORT METHODS
+    // =========================================================================
+
+    /**
+     * Hamta rider IDs for en kohort filtrerat pa varumarke
+     *
+     * Returnerar riders vars FORSTA serie-deltagande var i en serie
+     * som tillhor det angivna varumarket.
+     *
+     * @param int $cohortYear Kohort-ar (forsta aktiva ar)
+     * @param int|null $brandId Varumarkes-ID (null = alla)
+     * @return array Lista med rider_ids
+     */
+    private function getCohortRiderIdsByBrand(int $cohortYear, ?int $brandId = null): array {
+        if ($brandId === null) {
+            // Ingen brand-filtrering - anvand standard-logik
+            $stmt = $this->pdo->prepare("
+                SELECT rider_id
+                FROM rider_yearly_stats
+                GROUP BY rider_id
+                HAVING MIN(season_year) = ?
+            ");
+            $stmt->execute([$cohortYear]);
+        } else {
+            // Filtrera pa riders vars forsta serie-deltagande var i valt varumarke
+            $stmt = $this->pdo->prepare("
+                SELECT DISTINCT sp.rider_id
+                FROM series_participation sp
+                JOIN series s ON sp.series_id = s.id
+                WHERE s.brand_id = ?
+                AND sp.season_year = ?
+                AND sp.rider_id IN (
+                    -- Endast riders vars forsta ar overhuvudtaget var detta ar
+                    SELECT rider_id
+                    FROM rider_yearly_stats
+                    GROUP BY rider_id
+                    HAVING MIN(season_year) = ?
+                )
+                AND sp.rider_id IN (
+                    -- Och vars forsta serie i detta varumarke var detta ar
+                    SELECT sp2.rider_id
+                    FROM series_participation sp2
+                    JOIN series s2 ON sp2.series_id = s2.id
+                    WHERE s2.brand_id = ?
+                    GROUP BY sp2.rider_id
+                    HAVING MIN(sp2.season_year) = ?
+                )
+            ");
+            $stmt->execute([$brandId, $cohortYear, $cohortYear, $brandId, $cohortYear]);
+        }
+        return $stmt->fetchAll(PDO::FETCH_COLUMN);
+    }
+
+    /**
+     * Hamta tillgangliga kohort-ar for ett specifikt varumarke
+     *
+     * @param int|null $brandId Varumarkes-ID (null = alla)
+     * @param int $minSize Minsta kohort-storlek att inkludera
+     * @return array Lista med ar och storlekar
+     */
+    public function getAvailableCohortsByBrand(?int $brandId = null, int $minSize = 10): array {
+        if ($brandId === null) {
+            return $this->getAvailableCohorts($minSize);
+        }
+
+        $stmt = $this->pdo->prepare("
+            SELECT
+                cohort_year,
+                COUNT(*) as cohort_size
+            FROM (
+                SELECT sp.rider_id, MIN(sp.season_year) as cohort_year
+                FROM series_participation sp
+                JOIN series s ON sp.series_id = s.id
+                WHERE s.brand_id = ?
+                AND sp.rider_id IN (
+                    SELECT rider_id
+                    FROM rider_yearly_stats
+                    GROUP BY rider_id
+                    HAVING MIN(season_year) = (
+                        SELECT MIN(sp2.season_year)
+                        FROM series_participation sp2
+                        JOIN series s2 ON sp2.series_id = s2.id
+                        WHERE sp2.rider_id = sp.rider_id
+                        AND s2.brand_id = ?
+                    )
+                )
+                GROUP BY sp.rider_id
+            ) cohorts
+            GROUP BY cohort_year
+            HAVING cohort_size >= ?
+            ORDER BY cohort_year DESC
+        ");
+        $stmt->execute([$brandId, $brandId, $minSize]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Hamta kohort-retention filtrerat pa varumarke
+     *
+     * @param int $cohortYear Kohort-ar
+     * @param int|null $brandId Varumarkes-ID (null = alla)
+     * @param int|null $endYear Slutar
+     * @return array Retention per ar
+     */
+    public function getCohortRetentionByBrand(int $cohortYear, ?int $brandId = null, ?int $endYear = null): array {
+        if ($brandId === null) {
+            return $this->getCohortRetention($cohortYear, $endYear);
+        }
+
+        $endYear = $endYear ?? (int)date('Y');
+        $cohortRiders = $this->getCohortRiderIdsByBrand($cohortYear, $brandId);
+        $cohortSize = count($cohortRiders);
+
+        if ($cohortSize === 0) {
+            return [];
+        }
+
+        $result = [];
+
+        for ($year = $cohortYear; $year <= $endYear; $year++) {
+            $yearsFromStart = $year - $cohortYear;
+
+            $placeholders = implode(',', array_fill(0, count($cohortRiders), '?'));
+            $stmt = $this->pdo->prepare("
+                SELECT COUNT(DISTINCT rider_id)
+                FROM rider_yearly_stats
+                WHERE season_year = ?
+                AND rider_id IN ($placeholders)
+            ");
+            $stmt->execute(array_merge([$year], $cohortRiders));
+            $activeCount = (int)$stmt->fetchColumn();
+
+            $result[] = [
+                'year' => $year,
+                'years_from_start' => $yearsFromStart,
+                'active_count' => $activeCount,
+                'cohort_size' => $cohortSize,
+                'retention_rate' => round($activeCount / $cohortSize * 100, 1),
+            ];
+        }
+
+        return $result;
+    }
+
+    /**
+     * Hamta kohort status-breakdown filtrerat pa varumarke
+     *
+     * @param int $cohortYear Kohort-ar
+     * @param int|null $brandId Varumarkes-ID (null = alla)
+     * @param int|null $asOfYear Ar att kolla status for
+     * @return array Status-fordelning
+     */
+    public function getCohortStatusBreakdownByBrand(int $cohortYear, ?int $brandId = null, ?int $asOfYear = null): array {
+        if ($brandId === null) {
+            return $this->getCohortStatusBreakdown($cohortYear, $asOfYear);
+        }
+
+        $asOfYear = $asOfYear ?? (int)date('Y');
+        $cohortRiders = $this->getCohortRiderIdsByBrand($cohortYear, $brandId);
+
+        if (empty($cohortRiders)) {
+            return [
+                'cohort_year' => $cohortYear,
+                'as_of_year' => $asOfYear,
+                'total' => 0,
+                'active' => 0, 'active_pct' => 0,
+                'soft_churn' => 0, 'soft_churn_pct' => 0,
+                'medium_churn' => 0, 'medium_churn_pct' => 0,
+                'hard_churn' => 0, 'hard_churn_pct' => 0,
+            ];
+        }
+
+        $placeholders = implode(',', array_fill(0, count($cohortRiders), '?'));
+        $stmt = $this->pdo->prepare("
+            SELECT
+                CASE
+                    WHEN last_year >= ? THEN 'active'
+                    WHEN ? - last_year = 1 THEN 'soft_churn'
+                    WHEN ? - last_year = 2 THEN 'medium_churn'
+                    ELSE 'hard_churn'
+                END as status,
+                COUNT(*) as count
+            FROM (
+                SELECT rider_id, MAX(season_year) as last_year
+                FROM rider_yearly_stats
+                WHERE rider_id IN ($placeholders)
+                GROUP BY rider_id
+            ) rider_careers
+            GROUP BY status
+        ");
+        $stmt->execute(array_merge([$asOfYear, $asOfYear, $asOfYear], $cohortRiders));
+
+        $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $statusMap = [
+            'active' => 0,
+            'soft_churn' => 0,
+            'medium_churn' => 0,
+            'hard_churn' => 0,
+        ];
+
+        foreach ($results as $row) {
+            $statusMap[$row['status']] = (int)$row['count'];
+        }
+
+        $total = array_sum($statusMap);
+
+        return [
+            'cohort_year' => $cohortYear,
+            'as_of_year' => $asOfYear,
+            'total' => $total,
+            'active' => $statusMap['active'],
+            'active_pct' => $total > 0 ? round($statusMap['active'] / $total * 100, 1) : 0,
+            'soft_churn' => $statusMap['soft_churn'],
+            'soft_churn_pct' => $total > 0 ? round($statusMap['soft_churn'] / $total * 100, 1) : 0,
+            'medium_churn' => $statusMap['medium_churn'],
+            'medium_churn_pct' => $total > 0 ? round($statusMap['medium_churn'] / $total * 100, 1) : 0,
+            'hard_churn' => $statusMap['hard_churn'],
+            'hard_churn_pct' => $total > 0 ? round($statusMap['hard_churn'] / $total * 100, 1) : 0,
+        ];
+    }
+
+    /**
+     * Hamta kohort-riders filtrerat pa varumarke
+     *
+     * @param int $cohortYear Kohort-ar
+     * @param int|null $brandId Varumarkes-ID (null = alla)
+     * @param string $status 'all', 'active', 'churned'
+     * @param int|null $asOfYear Ar att kolla status for
+     * @return array Lista med riders
+     */
+    public function getCohortRidersByBrand(int $cohortYear, ?int $brandId = null, string $status = 'all', ?int $asOfYear = null): array {
+        if ($brandId === null) {
+            return $this->getCohortRiders($cohortYear, $status, $asOfYear);
+        }
+
+        $asOfYear = $asOfYear ?? (int)date('Y');
+        $cohortRiderIds = $this->getCohortRiderIdsByBrand($cohortYear, $brandId);
+
+        if (empty($cohortRiderIds)) {
+            return [];
+        }
+
+        $placeholders = implode(',', array_fill(0, count($cohortRiderIds), '?'));
+
+        $sql = "
+            SELECT
+                r.id as rider_id,
+                r.firstname,
+                r.lastname,
+                r.birth_year,
+                r.gender,
+                c.name as club_name,
+                cohort.first_discipline,
+                cohort.total_seasons,
+                cohort.last_active_year,
+                CASE
+                    WHEN cohort.last_active_year >= ? THEN 'active'
+                    WHEN ? - cohort.last_active_year = 1 THEN 'soft_churn'
+                    WHEN ? - cohort.last_active_year = 2 THEN 'medium_churn'
+                    ELSE 'hard_churn'
+                END as current_status
+            FROM (
+                SELECT
+                    rider_id,
+                    MAX(season_year) as last_active_year,
+                    COUNT(DISTINCT season_year) as total_seasons,
+                    (SELECT primary_discipline FROM rider_yearly_stats rys2
+                     WHERE rys2.rider_id = rys.rider_id
+                     ORDER BY season_year ASC LIMIT 1) as first_discipline
+                FROM rider_yearly_stats rys
+                WHERE rider_id IN ($placeholders)
+                GROUP BY rider_id
+            ) cohort
+            JOIN riders r ON cohort.rider_id = r.id
+            LEFT JOIN clubs c ON r.club_id = c.id
+        ";
+
+        $params = array_merge([$asOfYear, $asOfYear, $asOfYear], $cohortRiderIds);
+
+        if ($status === 'active') {
+            $sql .= " WHERE cohort.last_active_year >= ?";
+            $params[] = $asOfYear;
+        } elseif ($status === 'churned') {
+            $sql .= " WHERE cohort.last_active_year < ?";
+            $params[] = $asOfYear;
+        }
+
+        $sql .= " ORDER BY r.lastname, r.firstname";
+
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Hamta genomsnittlig livslangd for en kohort filtrerat pa varumarke
+     *
+     * @param int $cohortYear Kohort-ar
+     * @param int|null $brandId Varumarkes-ID (null = alla)
+     * @return float Genomsnittligt antal sasonger
+     */
+    public function getCohortAverageLifespanByBrand(int $cohortYear, ?int $brandId = null): float {
+        if ($brandId === null) {
+            return $this->getCohortAverageLifespan($cohortYear);
+        }
+
+        $cohortRiders = $this->getCohortRiderIdsByBrand($cohortYear, $brandId);
+
+        if (empty($cohortRiders)) {
+            return 0;
+        }
+
+        $placeholders = implode(',', array_fill(0, count($cohortRiders), '?'));
+        $stmt = $this->pdo->prepare("
+            SELECT AVG(seasons) as avg_lifespan
+            FROM (
+                SELECT rider_id, COUNT(DISTINCT season_year) as seasons
+                FROM rider_yearly_stats
+                WHERE rider_id IN ($placeholders)
+                GROUP BY rider_id
+            ) career_lengths
+        ");
+        $stmt->execute($cohortRiders);
+        return round((float)($stmt->fetchColumn() ?: 0), 2);
+    }
+
+    /**
+     * Hamta alla varumarken
+     *
+     * @return array Lista med varumarken
+     */
+    public function getAllBrands(): array {
+        $stmt = $this->pdo->query("
+            SELECT id, name, accent_color, active
+            FROM series_brands
+            ORDER BY display_order ASC, name ASC
+        ");
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    // =========================================================================
     // RIDER JOURNEY (Phase 2)
     // =========================================================================
 

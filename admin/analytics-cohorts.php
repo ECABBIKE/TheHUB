@@ -23,6 +23,7 @@ global $pdo;
 // Arval
 $currentYear = (int)date('Y');
 $selectedCohort = isset($_GET['cohort']) ? (int)$_GET['cohort'] : $currentYear - 3;
+$selectedBrand = isset($_GET['brand']) && $_GET['brand'] !== '' ? (int)$_GET['brand'] : null;
 
 // Compare kan komma som array (checkboxes) eller som kommaseparerad strang
 $compareYears = [];
@@ -38,6 +39,14 @@ if (isset($_GET['compare'])) {
 // Initiera KPI Calculator
 $kpiCalc = new KPICalculator($pdo);
 
+// Hamta alla varumarken for dropdown
+$allBrands = [];
+try {
+    $allBrands = $kpiCalc->getAllBrands();
+} catch (Exception $e) {
+    // Tabellen kanske inte finns annu
+}
+
 // Hamta senaste sasong med data (anvands for att avgora aktiv/churn status)
 // Viktigt: Vi anvander senaste avslutade sasong, inte kalenderaret,
 // for att undvika att rakna pagaende sasong som "inaktiv"
@@ -52,18 +61,19 @@ $cohortComparison = [];
 $avgLifespan = 0;
 
 try {
-    $availableCohorts = $kpiCalc->getAvailableCohorts(AnalyticsConfig::COHORT_MIN_SIZE);
+    // Hamta kohorter - filtrerat pa varumarke om valt
+    $availableCohorts = $kpiCalc->getAvailableCohortsByBrand($selectedBrand, AnalyticsConfig::COHORT_MIN_SIZE);
 
     if ($selectedCohort) {
-        $cohortRetention = $kpiCalc->getCohortRetention($selectedCohort, $latestSeasonYear);
-        $cohortStatus = $kpiCalc->getCohortStatusBreakdown($selectedCohort, $latestSeasonYear);
-        $avgLifespan = $kpiCalc->getCohortAverageLifespan($selectedCohort);
+        $cohortRetention = $kpiCalc->getCohortRetentionByBrand($selectedCohort, $selectedBrand, $latestSeasonYear);
+        $cohortStatus = $kpiCalc->getCohortStatusBreakdownByBrand($selectedCohort, $selectedBrand, $latestSeasonYear);
+        $avgLifespan = $kpiCalc->getCohortAverageLifespanByBrand($selectedCohort, $selectedBrand);
 
         // Hamta rider-lista (begransad for prestanda)
-        $cohortRiders = $kpiCalc->getCohortRiders($selectedCohort, 'all', $latestSeasonYear);
+        $cohortRiders = $kpiCalc->getCohortRidersByBrand($selectedCohort, $selectedBrand, 'all', $latestSeasonYear);
     }
 
-    // Multi-cohort comparison
+    // Multi-cohort comparison (TODO: add brand filtering)
     if (!empty($compareYears)) {
         $cohortComparison = $kpiCalc->compareCohorts($compareYears, 5);
     }
@@ -140,6 +150,21 @@ include __DIR__ . '/components/unified-layout.php';
 <!-- Cohort Selector -->
 <div class="filter-bar">
     <form method="get" class="filter-form">
+        <?php if (!empty($allBrands)): ?>
+        <div class="filter-group">
+            <label class="filter-label">Varumarke</label>
+            <select name="brand" class="form-select" onchange="this.form.submit()">
+                <option value="">Alla varumarken</option>
+                <?php foreach ($allBrands as $brand): ?>
+                    <option value="<?= $brand['id'] ?>" <?= $selectedBrand == $brand['id'] ? 'selected' : '' ?>
+                        <?php if (!empty($brand['accent_color'])): ?>style="border-left: 3px solid <?= htmlspecialchars($brand['accent_color']) ?>"<?php endif; ?>>
+                        <?= htmlspecialchars($brand['name']) ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+        <?php endif; ?>
+
         <div class="filter-group">
             <label class="filter-label">Valj Kohort (startår)</label>
             <select name="cohort" class="form-select" onchange="this.form.submit()">
@@ -154,7 +179,7 @@ include __DIR__ . '/components/unified-layout.php';
 
         <?php if ($selectedCohort && !empty($cohortRiders)): ?>
         <div class="filter-group">
-            <a href="?cohort=<?= $selectedCohort ?>&export=csv" class="btn-admin btn-admin-secondary">
+            <a href="?cohort=<?= $selectedCohort ?><?= $selectedBrand ? '&brand=' . $selectedBrand : '' ?>&export=csv" class="btn-admin btn-admin-secondary">
                 <i data-lucide="download"></i> Exportera CSV
             </a>
         </div>
@@ -180,6 +205,26 @@ include __DIR__ . '/components/unified-layout.php';
 </div>
 <?php elseif ($selectedCohort && !empty($cohortRetention)): ?>
 
+<!-- Selected Brand Indicator -->
+<?php if ($selectedBrand): ?>
+    <?php
+    $brandName = '';
+    foreach ($allBrands as $b) {
+        if ($b['id'] == $selectedBrand) {
+            $brandName = $b['name'];
+            break;
+        }
+    }
+    ?>
+<div class="alert alert-info" style="margin-bottom: var(--space-lg);">
+    <i data-lucide="filter"></i>
+    <div>
+        Visar endast riders som <strong>borjade i <?= htmlspecialchars($brandName) ?></strong>.
+        <a href="?cohort=<?= $selectedCohort ?>">Visa alla varumarken</a>
+    </div>
+</div>
+<?php endif; ?>
+
 <!-- Cohort Overview -->
 <div class="dashboard-metrics">
     <div class="metric-card metric-card--primary">
@@ -188,7 +233,7 @@ include __DIR__ . '/components/unified-layout.php';
         </div>
         <div class="metric-content">
             <div class="metric-value"><?= number_format($cohortStatus['total']) ?></div>
-            <div class="metric-label">Kohort <?= $selectedCohort ?></div>
+            <div class="metric-label">Kohort <?= $selectedCohort ?><?= $selectedBrand && isset($brandName) ? ' (' . $brandName . ')' : '' ?></div>
         </div>
     </div>
 
@@ -226,7 +271,7 @@ include __DIR__ . '/components/unified-layout.php';
 <!-- Retention Chart -->
 <div class="admin-card">
     <div class="admin-card-header">
-        <h2>Retention over tid - Kohort <?= $selectedCohort ?></h2>
+        <h2>Retention over tid - Kohort <?= $selectedCohort ?><?= $selectedBrand && isset($brandName) ? ' (' . $brandName . ')' : '' ?></h2>
     </div>
     <div class="admin-card-body">
         <div style="max-width: 800px; margin: 0 auto;">
@@ -286,7 +331,7 @@ include __DIR__ . '/components/unified-layout.php';
 <?php if (!empty($cohortRiders)): ?>
 <div class="admin-card">
     <div class="admin-card-header">
-        <h2>Riders i kohort <?= $selectedCohort ?> (<?= number_format(count($cohortRiders)) ?> st)</h2>
+        <h2>Riders i kohort <?= $selectedCohort ?><?= $selectedBrand && isset($brandName) ? ' (' . $brandName . ')' : '' ?> (<?= number_format(count($cohortRiders)) ?> st)</h2>
         <div class="filter-inline">
             <label>Filter:</label>
             <select id="statusFilter" onchange="filterRiders(this.value)">
@@ -368,6 +413,9 @@ include __DIR__ . '/components/unified-layout.php';
     <div class="admin-card-body">
         <form method="get" class="compare-form">
             <input type="hidden" name="cohort" value="<?= $selectedCohort ?>">
+            <?php if ($selectedBrand): ?>
+            <input type="hidden" name="brand" value="<?= $selectedBrand ?>">
+            <?php endif; ?>
             <div class="compare-checkboxes">
                 <?php
                 $recentCohorts = array_slice($availableCohorts, 0, 8);
