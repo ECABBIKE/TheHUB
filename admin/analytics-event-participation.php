@@ -727,4 +727,4 @@ include __DIR__ . '/components/unified-layout.php';
 }
 </style>
 
-<?php include __DIR__ . '/components/unified-footer.php'; ?>
+<?php include __DIR__ . '/components/unified-layout-footer.php'; ?>
