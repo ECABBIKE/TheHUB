@@ -10,8 +10,7 @@
  * @version 1.0
  */
 require_once __DIR__ . '/../config.php';
-require_once __DIR__ . '/../includes/auth.php';
-requireAdmin();
+require_admin();
 
 $pdo = $GLOBALS['pdo'];
 
