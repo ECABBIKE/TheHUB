@@ -11,8 +11,10 @@
  * - Markerar alla berakningar med calculation_version
  * - Loggar alla korningar till analytics_cron_runs
  *
+ * v3.0.1: Heartbeat, timeout handling, recalc queue processing
+ *
  * @package TheHUB Analytics
- * @version 1.0
+ * @version 3.0.1
  */
 
 require_once __DIR__ . '/IdentityResolver.php';
@@ -1104,5 +1106,277 @@ class AnalyticsEngine {
      */
     public function getIdentityResolver(): IdentityResolver {
         return $this->identityResolver;
+    }
+
+    // =========================================================================
+    // v3.0.1: HEARTBEAT & TIMEOUT HANDLING
+    // =========================================================================
+
+    /**
+     * Skicka heartbeat for pagaende jobb
+     *
+     * Anropas regelbundet under langa jobb for att visa att de lever.
+     * checkTimeout() kan anvandas for att hitta jobb som slutat skicka heartbeat.
+     */
+    public function heartbeat(): void {
+        if (!$this->currentJobId) return;
+
+        $stmt = $this->pdo->prepare("
+            UPDATE analytics_cron_runs
+            SET heartbeat_at = NOW()
+            WHERE id = ?
+        ");
+        $stmt->execute([$this->currentJobId]);
+    }
+
+    /**
+     * Kontrollera om ett jobb har timeout
+     *
+     * @param string $jobName Jobbnamn
+     * @param int $timeoutSeconds Timeout i sekunder (default 1 timme)
+     * @return array|null Jobb-info om timeout, annars null
+     */
+    public function checkTimeout(string $jobName, int $timeoutSeconds = 3600): ?array {
+        $stmt = $this->pdo->prepare("
+            SELECT id, job_name, run_key, started_at, heartbeat_at
+            FROM analytics_cron_runs
+            WHERE job_name = ?
+              AND status = 'started'
+              AND (
+                  -- Om vi har heartbeat, kolla mot det
+                  (heartbeat_at IS NOT NULL AND heartbeat_at < DATE_SUB(NOW(), INTERVAL ? SECOND))
+                  OR
+                  -- Om ingen heartbeat, kolla mot started_at
+                  (heartbeat_at IS NULL AND started_at < DATE_SUB(NOW(), INTERVAL ? SECOND))
+              )
+            LIMIT 1
+        ");
+        $stmt->execute([$jobName, $timeoutSeconds, $timeoutSeconds]);
+        $timedOut = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($timedOut) {
+            // Markera som timeout
+            $this->markJobTimedOut($timedOut['id']);
+            return $timedOut;
+        }
+
+        return null;
+    }
+
+    /**
+     * Markera ett jobb som timeout
+     *
+     * @param int $jobId Job ID
+     */
+    private function markJobTimedOut(int $jobId): void {
+        $stmt = $this->pdo->prepare("
+            UPDATE analytics_cron_runs
+            SET status = 'failed',
+                finished_at = NOW(),
+                timeout_detected = 1,
+                error_text = 'Job timed out (no heartbeat received)'
+            WHERE id = ?
+        ");
+        $stmt->execute([$jobId]);
+    }
+
+    /**
+     * Hamta alla timed out jobs for en period
+     *
+     * @param int $days Antal dagar bakåt
+     * @return array Lista med timed out jobs
+     */
+    public function getTimedOutJobs(int $days = 7): array {
+        $stmt = $this->pdo->prepare("
+            SELECT *
+            FROM analytics_cron_runs
+            WHERE timeout_detected = 1
+              AND finished_at >= DATE_SUB(NOW(), INTERVAL ? DAY)
+            ORDER BY finished_at DESC
+        ");
+        $stmt->execute([$days]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    // =========================================================================
+    // v3.0.1: RECALC QUEUE PROCESSING (Merge→Recalc Policy)
+    // =========================================================================
+
+    /**
+     * Processa recalc-kon
+     *
+     * Hamtar jobb fran analytics_recalc_queue och kor om berakningar
+     * for de paverkade riders och aren.
+     *
+     * @param int $maxJobs Max antal jobb att processa
+     * @return array Resultat per jobb
+     */
+    public function processRecalcQueue(int $maxJobs = 10): array {
+        $results = [];
+        $pendingJobs = $this->identityResolver->getPendingRecalcJobs($maxJobs);
+
+        foreach ($pendingJobs as $job) {
+            $jobId = (int)$job['id'];
+            $startTime = microtime(true);
+
+            // Markera som processing
+            if (!$this->identityResolver->markRecalcStarted($jobId)) {
+                continue; // Already taken by another process
+            }
+
+            try {
+                $affectedRiders = json_decode($job['affected_rider_ids'], true) ?? [];
+                $affectedYears = json_decode($job['affected_years'], true) ?? [];
+
+                $rowsAffected = 0;
+
+                foreach ($affectedYears as $year) {
+                    // Recalculate yearly stats for affected riders
+                    foreach ($affectedRiders as $riderId) {
+                        $stats = $this->calculateSingleRiderYearlyStats($riderId, $year);
+                        if ($stats) {
+                            $this->upsertRiderYearlyStats($riderId, $year, $stats);
+                            $rowsAffected++;
+                        }
+                    }
+                }
+
+                $executionTimeMs = (int)((microtime(true) - $startTime) * 1000);
+
+                $this->identityResolver->markRecalcCompleted($jobId, $rowsAffected, $executionTimeMs);
+
+                $results[] = [
+                    'job_id' => $jobId,
+                    'status' => 'completed',
+                    'rows_affected' => $rowsAffected,
+                    'execution_time_ms' => $executionTimeMs,
+                ];
+
+            } catch (Exception $e) {
+                $this->identityResolver->markRecalcFailed($jobId, $e->getMessage());
+
+                $results[] = [
+                    'job_id' => $jobId,
+                    'status' => 'failed',
+                    'error' => $e->getMessage(),
+                ];
+            }
+        }
+
+        return $results;
+    }
+
+    /**
+     * Hamta recalc queue status
+     *
+     * @return array Queue statistik
+     */
+    public function getRecalcQueueStatus(): array {
+        return $this->identityResolver->getRecalcQueueStats();
+    }
+
+    // =========================================================================
+    // v3.0.1: SNAPSHOT CREATION
+    // =========================================================================
+
+    /**
+     * Skapa en snapshot av nuvarande analytics-data
+     *
+     * @param string $description Beskrivning av snapshot
+     * @param string|null $createdBy Anvandare som skapade
+     * @return int Snapshot ID
+     */
+    public function createSnapshot(string $description = '', ?string $createdBy = null): int {
+        // Hamta max updated_at fran sources
+        $sourceMaxUpdated = $this->pdo->query("
+            SELECT MAX(updated_at) FROM (
+                SELECT MAX(updated_at) as updated_at FROM rider_yearly_stats
+                UNION ALL
+                SELECT MAX(updated_at) FROM results
+                UNION ALL
+                SELECT MAX(updated_at) FROM events
+            ) sources
+        ")->fetchColumn();
+
+        // Berakna fingerprint
+        $fingerprint = hash('sha256', json_encode([
+            'rider_yearly_stats' => $this->getTableChecksum('rider_yearly_stats'),
+            'series_participation' => $this->getTableChecksum('series_participation'),
+            'club_yearly_stats' => $this->getTableChecksum('club_yearly_stats'),
+            'timestamp' => $sourceMaxUpdated,
+        ]));
+
+        $stmt = $this->pdo->prepare("
+            INSERT INTO analytics_snapshots (
+                snapshot_type, description, source_max_updated_at,
+                fingerprint, created_by
+            ) VALUES (
+                'full', ?, ?, ?, ?
+            )
+        ");
+
+        $stmt->execute([
+            $description ?: 'Auto-generated snapshot',
+            $sourceMaxUpdated,
+            $fingerprint,
+            $createdBy,
+        ]);
+
+        return (int)$this->pdo->lastInsertId();
+    }
+
+    /**
+     * Hamta checksum for en tabell (for fingerprint)
+     *
+     * @param string $table Tabellnamn
+     * @return string Checksum
+     */
+    private function getTableChecksum(string $table): string {
+        // Sanitize table name
+        $table = preg_replace('/[^a-z_]/', '', $table);
+
+        $result = $this->pdo->query("CHECKSUM TABLE $table")->fetch();
+        return (string)($result['Checksum'] ?? '0');
+    }
+
+    /**
+     * Hamta senaste snapshot
+     *
+     * @return array|null Snapshot data eller null
+     */
+    public function getLatestSnapshot(): ?array {
+        $stmt = $this->pdo->query("
+            SELECT * FROM analytics_snapshots
+            ORDER BY created_at DESC
+            LIMIT 1
+        ");
+        $snapshot = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        return $snapshot ?: null;
+    }
+
+    /**
+     * Hamta eller skapa snapshot
+     *
+     * Returnerar senaste snapshot om den ar tillrackligt ny (inom intervall),
+     * annars skapas en ny.
+     *
+     * @param int $maxAgeMinutes Max alder i minuter
+     * @param string|null $createdBy Anvandare
+     * @return int Snapshot ID
+     */
+    public function getOrCreateSnapshot(int $maxAgeMinutes = 60, ?string $createdBy = null): int {
+        $latest = $this->getLatestSnapshot();
+
+        if ($latest) {
+            $createdAt = strtotime($latest['created_at']);
+            $ageMinutes = (time() - $createdAt) / 60;
+
+            if ($ageMinutes <= $maxAgeMinutes) {
+                return (int)$latest['id'];
+            }
+        }
+
+        return $this->createSnapshot('Auto-generated for export', $createdBy);
     }
 }

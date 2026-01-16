@@ -10,12 +10,13 @@
  * - Registrering av merges (sammanslagning av dubbletter)
  * - Klubbhistorik (vilken klubb en rider tillhorde vid en viss tid)
  * - Hitta potentiella dubbletter for manuell granskning
+ * - v3.0.1: Queue recalc efter merge (Merge→Recalc policy)
  *
  * KRITISKT: AnalyticsEngine far ALDRIG skriva original rider_id till
  * analytics-tabeller. ALLA writes maste ga via getCanonicalId().
  *
  * @package TheHUB Analytics
- * @version 1.0
+ * @version 3.0.1
  */
 
 class IdentityResolver {
@@ -150,6 +151,15 @@ class IdentityResolver {
             // Rensa cache
             unset($this->cache[$mergedId]);
 
+            // v3.0.1: Queue recalc for affected riders
+            $this->queueRecalc(
+                'merge',
+                'rider',
+                $mergedId,
+                [$canonicalId, $mergedId],
+                $by
+            );
+
             return true;
         } catch (Exception $e) {
             $this->pdo->rollBack();
@@ -202,6 +212,15 @@ class IdentityResolver {
 
             // Rensa cache
             unset($this->cache[$mergedId]);
+
+            // v3.0.1: Queue recalc for unmerged riders
+            $this->queueRecalc(
+                'merge',
+                'rider',
+                $mergedId,
+                [$canonical, $mergedId],
+                $by
+            );
 
             return true;
         } catch (Exception $e) {
@@ -417,5 +436,224 @@ class IdentityResolver {
      */
     public function clearCache(): void {
         $this->cache = [];
+    }
+
+    // =========================================================================
+    // v3.0.1: Recalc Queue Methods (Merge→Recalc Policy)
+    // =========================================================================
+
+    /**
+     * Queue en recalculation for analytics-tabeller
+     *
+     * Denna metod koas automatiskt efter merge/unmerge for att
+     * sakerstalla att analytics-data ar korrekt efter identitetsandringar.
+     *
+     * @param string $triggerType Vad som triggade (merge, import, manual, correction)
+     * @param string $triggerEntity Entitetstyp (rider, event, result)
+     * @param int $triggerEntityId Entitetens ID
+     * @param array $affectedRiderIds Lista med paverkade rider IDs
+     * @param string|null $createdBy Anvandare som skapade
+     * @return int Queue entry ID
+     */
+    public function queueRecalc(
+        string $triggerType,
+        string $triggerEntity,
+        int $triggerEntityId,
+        array $affectedRiderIds,
+        ?string $createdBy = null
+    ): int {
+        // Hitta alla paverkade ar for de paverkade riders
+        $affectedYears = $this->findAffectedYears($affectedRiderIds);
+
+        // Skapa checksum for deduplication
+        $checksum = hash('sha256', json_encode([
+            'type' => $triggerType,
+            'entity' => $triggerEntity,
+            'entity_id' => $triggerEntityId,
+            'riders' => $affectedRiderIds,
+        ]));
+
+        // Kolla om samma recalc redan finns i kon (pending)
+        $existsStmt = $this->pdo->prepare("
+            SELECT id FROM analytics_recalc_queue
+            WHERE checksum = ? AND status = 'pending'
+        ");
+        $existsStmt->execute([$checksum]);
+
+        if ($existsStmt->fetch()) {
+            // Redan i kon, returnera -1 for att indikera skip
+            return -1;
+        }
+
+        // Satt in i kon
+        $stmt = $this->pdo->prepare("
+            INSERT INTO analytics_recalc_queue (
+                trigger_type, trigger_entity, trigger_entity_id,
+                affected_rider_ids, affected_years,
+                priority, status, created_by, checksum
+            ) VALUES (
+                ?, ?, ?,
+                ?, ?,
+                ?, 'pending', ?, ?
+            )
+        ");
+
+        // Prioritet: merge = 3 (hog), import = 5, manual = 5, correction = 4
+        $priority = match($triggerType) {
+            'merge' => 3,
+            'correction' => 4,
+            default => 5,
+        };
+
+        $stmt->execute([
+            $triggerType,
+            $triggerEntity,
+            $triggerEntityId,
+            json_encode($affectedRiderIds),
+            json_encode($affectedYears),
+            $priority,
+            $createdBy,
+            $checksum,
+        ]);
+
+        return (int)$this->pdo->lastInsertId();
+    }
+
+    /**
+     * Hitta alla ar som paverkas av andringar for givna riders
+     *
+     * @param array $riderIds Lista med rider IDs
+     * @return array Lista med ar (t.ex. [2024, 2025])
+     */
+    private function findAffectedYears(array $riderIds): array {
+        if (empty($riderIds)) {
+            return [];
+        }
+
+        $placeholders = implode(',', array_fill(0, count($riderIds), '?'));
+
+        $stmt = $this->pdo->prepare("
+            SELECT DISTINCT season_year
+            FROM rider_yearly_stats
+            WHERE rider_id IN ($placeholders)
+            ORDER BY season_year DESC
+        ");
+        $stmt->execute($riderIds);
+
+        return $stmt->fetchAll(PDO::FETCH_COLUMN);
+    }
+
+    /**
+     * Hamta pending recalc jobs
+     *
+     * @param int $limit Max antal
+     * @return array Lista med jobs
+     */
+    public function getPendingRecalcJobs(int $limit = 10): array {
+        $stmt = $this->pdo->prepare("
+            SELECT *
+            FROM analytics_recalc_queue
+            WHERE status = 'pending'
+            ORDER BY priority ASC, created_at ASC
+            LIMIT ?
+        ");
+        $stmt->execute([$limit]);
+
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Markera ett recalc job som processing
+     *
+     * @param int $jobId Job ID
+     * @return bool Success
+     */
+    public function markRecalcStarted(int $jobId): bool {
+        $stmt = $this->pdo->prepare("
+            UPDATE analytics_recalc_queue
+            SET status = 'processing', started_at = NOW()
+            WHERE id = ? AND status = 'pending'
+        ");
+        $stmt->execute([$jobId]);
+
+        return $stmt->rowCount() > 0;
+    }
+
+    /**
+     * Markera ett recalc job som completed
+     *
+     * @param int $jobId Job ID
+     * @param int $rowsAffected Antal rader som paverkades
+     * @param int $executionTimeMs Kortid i millisekunder
+     * @return bool Success
+     */
+    public function markRecalcCompleted(int $jobId, int $rowsAffected, int $executionTimeMs): bool {
+        $stmt = $this->pdo->prepare("
+            UPDATE analytics_recalc_queue
+            SET status = 'completed',
+                completed_at = NOW(),
+                rows_affected = ?,
+                execution_time_ms = ?
+            WHERE id = ?
+        ");
+        $stmt->execute([$rowsAffected, $executionTimeMs, $jobId]);
+
+        return $stmt->rowCount() > 0;
+    }
+
+    /**
+     * Markera ett recalc job som failed
+     *
+     * @param int $jobId Job ID
+     * @param string $errorMessage Felmeddelande
+     * @return bool Success
+     */
+    public function markRecalcFailed(int $jobId, string $errorMessage): bool {
+        $stmt = $this->pdo->prepare("
+            UPDATE analytics_recalc_queue
+            SET status = 'failed',
+                completed_at = NOW(),
+                error_message = ?
+            WHERE id = ?
+        ");
+        $stmt->execute([$errorMessage, $jobId]);
+
+        return $stmt->rowCount() > 0;
+    }
+
+    /**
+     * Hamta recalc queue statistik
+     *
+     * @return array Statistik
+     */
+    public function getRecalcQueueStats(): array {
+        $stmt = $this->pdo->query("
+            SELECT
+                status,
+                COUNT(*) as count,
+                AVG(execution_time_ms) as avg_time_ms,
+                SUM(rows_affected) as total_rows
+            FROM analytics_recalc_queue
+            GROUP BY status
+        ");
+
+        $stats = [
+            'pending' => 0,
+            'processing' => 0,
+            'completed' => 0,
+            'failed' => 0,
+            'total_processed_rows' => 0,
+            'avg_execution_time_ms' => 0,
+        ];
+
+        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            $stats[$row['status']] = (int)$row['count'];
+            if ($row['status'] === 'completed') {
+                $stats['total_processed_rows'] = (int)$row['total_rows'];
+                $stats['avg_execution_time_ms'] = round((float)$row['avg_time_ms'], 2);
+            }
+        }
+
+        return $stats;
     }
 }
