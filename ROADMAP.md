@@ -32,6 +32,8 @@
 | 8 | Admin-verktyg | [x] KLAR | Populate, Reset, Diagnose, Trends |
 | 9 | Rookie-analys | [x] KLAR | Detaljerad nyborjarstatistik |
 | 10 | Retention & Churn | [x] KLAR | Identifiera inaktiva, win-back |
+| 11 | Avancerade moduler | [x] KLAR | Cohort, At-Risk, Geography |
+| 12 | Production Readiness | [x] KLAR | KPI-definitioner, Export logging, Datakvalitet |
 
 ---
 
@@ -522,6 +524,58 @@ HUB_ROOT, HUB_URL, ROOT_PATH, INCLUDES_PATH
 ---
 
 # CHANGELOG
+
+### 2026-01-16 (Analytics Production Readiness)
+- **Steg 12 KLAR: Production Readiness Improvements**
+  - Baserat pa extern granskning for SCF-nivå-rapportering
+
+- **Prio 1 - Korrekthet & Exporter:**
+  - Tydliggjorda KPI-definitioner i AnalyticsConfig.php
+    - `retention_from_prev` vs `returning_share_of_current`
+    - Dokumenterade formler och skillnader
+  - Snapshot v2: Nya kolumner for reproducerbarhet
+    - `generated_at`, `season_year`, `source_max_updated_at`, `code_version`
+    - `data_fingerprint` for verifiering
+  - Export logging med GDPR-sparbarhet
+    - Ny tabell `analytics_exports`
+    - Manifest med fingerprint
+    - Ny klass `ExportLogger.php`
+  - KPI-definitionstabell `analytics_kpi_definitions`
+
+- **Prio 2 - At-Risk & Klasslogik:**
+  - CLASS_RANKING_BY_YEAR med ars-versionering
+  - Fallback for okanda klasser (ignorerar class_downgrade)
+  - Ny metod `isClassDowngrade()` i AnalyticsConfig
+  - Dynamisk serie-cutoff baserat pa `last_event_date`
+  - Konfigurerbart via `USE_DYNAMIC_SERIES_CUTOFF`
+
+- **Prio 3 - Skalbarhet:**
+  - Datakvalitetspanel: `admin/analytics-data-quality.php`
+    - Matning av coverage per falt
+    - Potentiella dubbletter
+    - Rekommendationer och troskelvarningar
+  - Ny tabell `data_quality_metrics`
+  - SVG ChartRenderer for PDF-export utan Node.js
+    - Line, Bar, Donut, Sparkline, Stacked Bar
+    - TheHUB designsystem-farger
+
+- **Nya metoder i KPICalculator:**
+  - `getReturningShareOfCurrent()` - Alternativ retention-metric
+  - `getRookieRate()` - Andel nya deltagare
+  - `getRetentionMetrics()` - Alla retention-KPIs samlat
+  - `getDataQualityMetrics()` - Datakvalitetsmatning
+  - `saveDataQualityMetrics()` - Spara till databas
+
+- **Nya filer:**
+  - `analytics/includes/AnalyticsConfig.php` - Utokad v3.0
+  - `analytics/includes/SVGChartRenderer.php`
+  - `analytics/includes/ExportLogger.php`
+  - `analytics/migrations/006_production_readiness.sql`
+  - `admin/analytics-data-quality.php`
+  - `api/analytics/save-quality-metrics.php`
+
+- **Backup:**
+  - Full backup av analytics skapad i `backups/analytics-2026-01-16/`
 
 ### 2026-01-16 (Förbundets Stavningskontroll)
 - **Nytt verktyg: club-rf-spelling.php**
