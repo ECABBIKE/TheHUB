@@ -557,31 +557,17 @@ include __DIR__ . '/components/unified-layout.php';
         </div>
     </div>
 
-    <!-- Run Migrations -->
+    <!-- Migrations -->
     <div class="tool-card">
         <div class="tool-card-header">
             <div class="tool-icon"><i data-lucide="database"></i></div>
             <div>
-                <h4 class="tool-title">SQL-migrationer</h4>
-                <p class="tool-description">Kör SQL-databasmigrationer</p>
+                <h4 class="tool-title">Databasmigrationer</h4>
+                <p class="tool-description">Kör och hantera SQL-migrationer</p>
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/run-migrations.php" class="btn-admin btn-admin-secondary">Kör</a>
-        </div>
-    </div>
-
-    <!-- PHP Migrations Browser -->
-    <div class="tool-card">
-        <div class="tool-card-header">
-            <div class="tool-icon"><i data-lucide="file-code"></i></div>
-            <div>
-                <h4 class="tool-title">PHP-migrationer</h4>
-                <p class="tool-description">Alla migrationer (SQL + PHP)</p>
-            </div>
-        </div>
-        <div class="tool-actions">
-            <a href="/admin/migrations/migration-browser.php" class="btn-admin btn-admin-secondary">Visa</a>
+            <a href="/admin/migrations.php" class="btn-admin btn-admin-primary">Öppna</a>
         </div>
     </div>
 
