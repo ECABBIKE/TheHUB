@@ -38,15 +38,32 @@ Tools/
 └── migrations/
     ├── 001_analytics_tables.sql
     ├── 002_...sql
-    └── 012_event_participation_analysis.sql   ← RÄTT
+    ├── 009_first_season_journey.sql
+    ├── 010_longitudinal_journey.sql
+    ├── 011_journey_brand_dimension.sql
+    └── 012_event_participation_analysis.sql
 ```
 
+### FÖRBJUDNA platser för migrationer:
 ```
-analytics/
-└── migrations/   ← FEL! Använd INTE denna mapp
+analytics/migrations/   ← FEL! Arkiverad
+admin/migrations/       ← FEL! Arkiverad
+migrations/             ← FEL! Arkiverad
 ```
 
-Migrationsverktyget (`/admin/run-migrations.php`) läser från `Tools/migrations/`.
+### Migreringsverktyg:
+**ETT verktyg:** `/admin/migrations.php`
+
+- Auto-detekterar vilka migrationer som körts (kollar databasstruktur)
+- Visar status: Körd / Ej körd
+- Kör migrationer direkt från UI
+- Mobilanpassat
+
+### Regler för nya migrationer:
+1. Filnamn: `NNN_beskrivande_namn.sql` (t.ex. `013_ny_feature.sql`)
+2. Ingen DELIMITER-syntax (funkar inte med PHP PDO)
+3. Ingen dynamisk SQL (SET @sql / PREPARE / EXECUTE)
+4. Endast standard SQL-statements
 
 ---
 

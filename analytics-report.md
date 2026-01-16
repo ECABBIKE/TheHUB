@@ -1,10 +1,10 @@
 # TheHUB Analytics Platform - Teknisk Dokumentation
 
-> Komplett guide till analytics-systemet v3.1, dess komponenter och SCF-nivå-rapportering
+> Komplett guide till analytics-systemet v3.2, dess komponenter och SCF-nivå-rapportering
 
-**Version:** 3.1.0 (Journey Analysis + Brand Dimension)
+**Version:** 3.2.0 (Event Participation Analysis)
 **Senast uppdaterad:** 2026-01-16
-**Status:** Production Ready - Journey Analysis Complete
+**Status:** Production Ready - Event Participation Complete
 **Implementation Status:** KOMPLETT
 
 ---
@@ -12,11 +12,12 @@
 ## Innehallsforteckning
 
 1. [Oversikt](#oversikt)
-2. [Revision Notes v3.1](#revision-notes-v31)
-3. [First Season Journey (NY v3.1)](#first-season-journey-ny-v31)
-4. [Longitudinal Journey (NY v3.1)](#longitudinal-journey-ny-v31)
-5. [Brand Dimension (NY v3.1)](#brand-dimension-ny-v31)
-6. [Production Ready Checklist](#production-ready-checklist)
+2. [Revision Notes v3.2](#revision-notes-v32)
+3. [Event Participation Analysis (NY v3.2)](#event-participation-analysis-ny-v32)
+4. [First Season Journey (v3.1)](#first-season-journey-v31)
+5. [Longitudinal Journey (v3.1)](#longitudinal-journey-v31)
+6. [Brand Dimension (v3.1)](#brand-dimension-v31)
+7. [Production Ready Checklist](#production-ready-checklist)
 7. [Arkitektur](#arkitektur)
 8. [KPI-definitioner (KRITISKT)](#kpi-definitioner-kritiskt)
 9. [Snapshot → Export-modell](#snapshot--export-modell)
@@ -53,8 +54,9 @@ TheHUB Analytics ar ett komplett analysverktyg for svensk cykelsport med **10+ a
 | **Data Quality** | Hur komplett ar var data? | `analytics-data-quality.php` |
 | **Export Center** | Hantera och verifiera exporter | `analytics-export-center.php` |
 | **First Season Journey** | Rookies forsta sasong - retention predictors | `analytics-first-season.php` |
+| **Event Participation** | Event-deltagande, single-event riders, event loyalty | `analytics-event-participation.php` |
 
-### Revisionsprinciper (v3.1)
+### Revisionsprinciper (v3.2)
 
 1. **Snapshot-baserad reproducerbarhet** - Varje export MASTE ha `snapshot_id`
 2. **EVENT-baserad aktivitet** - `active_rider` mats via eventdeltagande, INTE resultatrader
@@ -65,7 +67,22 @@ TheHUB Analytics ar ett komplett analysverktyg for svensk cykelsport med **10+ a
 
 ---
 
-## Revision Notes v3.1
+## Revision Notes v3.2
+
+### Nya funktioner i v3.2
+
+| Funktion | Beskrivning |
+|----------|-------------|
+| **Event Participation Analysis** | Analyserar deltagarmönster per event inom serier |
+| **Single-Event Riders** | Identifierar deltagare som bara kommer till 1 event per serie |
+| **Event Loyalty** | Spårar återkommande deltagare till samma event år efter år |
+| **Event Retention** | År-till-år retention på event-nivå |
+| **Brand Filtering** | Filtrera alla analyser per varumärke (1-12 brands) |
+| **Unified Migration Tool** | ETT verktyg för alla migrationer (/admin/migrations.php) |
+
+### Migration Path Change (v3.2)
+
+**VIKTIGT:** Alla migrationer finns nu i `Tools/migrations/` (ej analytics/migrations/).
 
 ### Nya funktioner i v3.1
 
@@ -104,7 +121,91 @@ En snapshot laser **INTE**:
 
 ---
 
-## First Season Journey (NY v3.1)
+## Event Participation Analysis (NY v3.2)
+
+### Översikt
+
+Event Participation Analysis analyserar deltagarmönster på event-nivå inom serier. Modulen besvarar frågor som:
+- Hur många event deltar en typisk deltagare i per serie?
+- Vilka event har flest "unika" deltagare (som bara kommer till just det eventet)?
+- Återkommer single-event deltagare till samma event år efter år?
+- Vilka event har bäst retention?
+
+### Databas-schema
+
+**Migration:** `Tools/migrations/012_event_participation_analysis.sql`
+
+#### series_participation_distribution
+
+| Kolumn | Typ | Beskrivning |
+|--------|-----|-------------|
+| series_id | INT | Serie-referens |
+| season_year | YEAR | Säsongsår |
+| brand_id | INT | Brand-filter (NULL = alla) |
+| total_events_in_series | INT | Antal event i serien |
+| total_participants | INT | Unika deltagare |
+| distribution | JSON | {\"1\": {\"count\": 450, \"pct\": 45.0}, ...} |
+| avg_events_per_rider | DECIMAL | Snitt event per deltagare |
+| single_event_pct | DECIMAL | Andel single-event deltagare |
+| full_series_pct | DECIMAL | Andel som deltar i alla event |
+
+#### event_unique_participants
+
+| Kolumn | Typ | Beskrivning |
+|--------|-----|-------------|
+| event_id | INT | Event-referens |
+| total_participants | INT | Alla deltagare |
+| unique_to_event | INT | Bara detta event i serien |
+| unique_pct | DECIMAL | Andel unika |
+| unique_retention_rate | DECIMAL | Återkom nästa år? |
+
+#### event_retention_yearly
+
+| Kolumn | Typ | Beskrivning |
+|--------|-----|-------------|
+| event_id | INT | Base event |
+| from_year/to_year | YEAR | Jämförelseår |
+| same_event_retention_rate | DECIMAL | Samma event retention |
+| series_retention_rate | DECIMAL | Serie retention |
+| new_to_event | INT | Nya till eventet |
+
+#### event_loyal_riders
+
+| Kolumn | Typ | Beskrivning |
+|--------|-----|-------------|
+| rider_id | INT | Rider-referens |
+| event_base_id | INT | Event-referens |
+| consecutive_years | INT | År i rad |
+| is_single_event_loyalist | TINYINT | Bara detta event i serien? |
+
+### KPI-metoder (KPICalculator)
+
+| Metod | Beskrivning |
+|-------|-------------|
+| `getSeriesParticipationDistribution($series, $year, $brands)` | Distribution inom serie |
+| `getEventsWithUniqueParticipants($series, $year)` | Event med unika deltagare |
+| `getEventRetention($event, $fromYear, $toYear)` | Event-retention |
+| `getEventLoyalRiders($event, $minYears)` | Lojala deltagare |
+
+### Admin-sida
+
+**Fil:** `admin/analytics-event-participation.php`
+
+Fyra vyer:
+1. **Distribution** - Hur många event per deltagare per serie
+2. **Unique** - Event med flest single-event deltagare
+3. **Retention** - År-till-år retention per event
+4. **Loyalty** - Lojala deltagare (multi-year same event)
+
+### GDPR-hantering
+
+- Minimum 10 individer per segment
+- Ingen PII exponeras
+- Brand-filter begränsas till max 12
+
+---
+
+## First Season Journey (v3.1)
 
 ### Oversikt
 
@@ -112,7 +213,7 @@ First Season Journey analyserar rookies (forstagangsdeltagare) under deras forst
 
 ### Databas-schema
 
-**Migration:** `analytics/migrations/009_first_season_journey.sql`
+**Migration:** `Tools/migrations/009_first_season_journey.sql`
 
 #### rider_first_season
 
@@ -175,7 +276,7 @@ Longitudinal Journey foljer rookies genom ar 1-4 for att se retention funnel och
 
 ### Databas-schema
 
-**Migration:** `analytics/migrations/010_longitudinal_journey.sql`
+**Migration:** `Tools/migrations/010_longitudinal_journey.sql`
 
 #### rider_journey_years
 
@@ -246,7 +347,7 @@ Brand Dimension mojliggor filtrering och jamforelse av journey-analys per varuma
 
 ### Databas-schema
 
-**Migration:** `analytics/migrations/011_journey_brand_dimension.sql`
+**Migration:** `Tools/migrations/011_journey_brand_dimension.sql`
 
 #### Brand Resolution
 
@@ -1009,12 +1110,45 @@ var_dump(PdfExportBuilder::getPdfEngineStatus());
 
 ## Changelog
 
+### v3.2.0 (2026-01-16) - Event Participation Analysis
+
+**Nya filer:**
+- `Tools/migrations/012_event_participation_analysis.sql` - Event participation schema
+- `admin/analytics-event-participation.php` - Event Participation UI
+- `admin/migrations.php` - Unified migration tool (ersätter alla gamla)
+- `api/analytics/event-participation-export.php` - Event participation API
+
+**Uppdaterade filer:**
+- `analytics/includes/KPICalculator.php`
+  - `getSeriesParticipationDistribution()` - Distribution inom serie
+  - `getEventsWithUniqueParticipants()` - Event med unika deltagare
+  - `getEventRetention()` - Event-retention år-till-år
+  - `getEventLoyalRiders()` - Multi-year same-event deltagare
+
+- `admin/analytics-dashboard.php` - Navigation grid till alla analytics-moduler
+- `admin/tools.php` - Reorganiserad Analytics-sektion
+
+**Databas-ändringar:**
+- Nya tabeller: `series_participation_distribution`, `event_unique_participants`, `event_retention_yearly`, `event_loyal_riders`, `event_participation_kpi_definitions`
+- Nya vyer: `event_participation_overview`, `top_unique_events`, `event_retention_leaders`, `loyal_rider_summary`
+
+**Migration Path Change:**
+- ALLA migrationer finns nu i `Tools/migrations/`
+- ETT migrationsverktyg: `/admin/migrations.php`
+- Alla gamla migrationsverktyg arkiverade
+
+**GDPR:**
+- Minimum 10 individer per segment
+- Brand-filter stöd (1-12 brands)
+
+---
+
 ### v3.1.0 (2026-01-16) - Journey Analysis + Brand Dimension
 
 **Nya filer:**
-- `analytics/migrations/009_first_season_journey.sql` - First Season Journey schema
-- `analytics/migrations/010_longitudinal_journey.sql` - Longitudinal Journey schema
-- `analytics/migrations/011_journey_brand_dimension.sql` - Brand dimension for journey
+- `Tools/migrations/009_first_season_journey.sql` - First Season Journey schema
+- `Tools/migrations/010_longitudinal_journey.sql` - Longitudinal Journey schema
+- `Tools/migrations/011_journey_brand_dimension.sql` - Brand dimension for journey
 - `admin/analytics-first-season.php` - First Season Journey UI
 - `api/analytics/journey-export.php` - Journey export API
 

@@ -34,6 +34,10 @@
 | 10 | Retention & Churn | [x] KLAR | Identifiera inaktiva, win-back |
 | 11 | Avancerade moduler | [x] KLAR | Cohort, At-Risk, Geography |
 | 12 | Production Readiness | [x] KLAR | KPI-definitioner, Export logging, Datakvalitet |
+| 13 | First Season Journey | [x] KLAR | Rookie-analys, retention predictors |
+| 14 | Longitudinal Journey | [x] KLAR | År 1-4 tracking, career patterns |
+| 15 | Brand Dimension | [x] KLAR | Multi-brand filtering (1-12 brands) |
+| 16 | Event Participation | [x] KLAR | Single-event riders, event loyalty, retention |
 
 ---
 
@@ -524,6 +528,43 @@ HUB_ROOT, HUB_URL, ROOT_PATH, INCLUDES_PATH
 ---
 
 # CHANGELOG
+
+### 2026-01-16 (Analytics v3.2 - Event Participation)
+- **Steg 16 KLAR: Event Participation Analysis**
+  - Migration: `Tools/migrations/012_event_participation_analysis.sql`
+  - Admin UI: `admin/analytics-event-participation.php`
+  - 4 vyer: Distribution, Unique, Retention, Loyalty
+  - Brand filtering support (1-12 brands)
+  - GDPR-kompatibelt (min 10 individer per segment)
+
+- **Unified Migration Tool**
+  - ETT verktyg: `/admin/migrations.php`
+  - Auto-detektion av körda migrationer
+  - Mobilanpassat
+  - Alla gamla migrationsverktyg arkiverade (50+ filer)
+
+- **Analytics Dashboard Navigation**
+  - Ny navigation grid med alla analytics-moduler
+  - Snabbnavigering mellan alla analys-sidor
+
+- **Nya filer:**
+  - `admin/migrations.php` - Unified migration tool
+  - `admin/analytics-event-participation.php` - Event Participation UI
+  - `api/analytics/event-participation-export.php` - Export API
+  - `Tools/migrations/012_event_participation_analysis.sql`
+
+- **Nya KPICalculator-metoder:**
+  - `getSeriesParticipationDistribution()` - Distribution per serie
+  - `getEventsWithUniqueParticipants()` - Event med unika deltagare
+  - `getEventRetention()` - År-till-år event retention
+  - `getEventLoyalRiders()` - Multi-year same-event deltagare
+
+### 2026-01-16 (Analytics v3.1 - Journey Analysis)
+- **Steg 13-15 KLAR: Journey Analysis + Brand Dimension**
+  - First Season Journey: Rookie-analys och retention predictors
+  - Longitudinal Journey: År 1-4 tracking
+  - Brand Dimension: Multi-brand filtering
+  - Migrations: 009-011 i `Tools/migrations/`
 
 ### 2026-01-16 (Analytics Production Readiness)
 - **Steg 12 KLAR: Production Readiness Improvements**
