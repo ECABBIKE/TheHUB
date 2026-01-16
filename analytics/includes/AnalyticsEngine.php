@@ -2537,6 +2537,15 @@ class AnalyticsEngine {
         array $metrics,
         ?int $snapshotId
     ): void {
+        // Validate club_id exists in clubs table (fix for FK constraint)
+        if (!empty($metrics['club_id'])) {
+            $clubCheck = $this->pdo->prepare("SELECT id FROM clubs WHERE id = ?");
+            $clubCheck->execute([$metrics['club_id']]);
+            if (!$clubCheck->fetchColumn()) {
+                $metrics['club_id'] = null;
+            }
+        }
+
         $stmt = $this->pdo->prepare("
             INSERT INTO rider_journey_years (
                 rider_id, cohort_year, year_offset, calendar_year,
