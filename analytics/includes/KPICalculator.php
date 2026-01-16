@@ -175,6 +175,330 @@ class KPICalculator {
         return (int)$stmt->fetchColumn();
     }
 
+    /**
+     * Berakna "Returning Share of Current Year"
+     *
+     * DEFINITION: Andel av ARETS riders som OCKSA deltog forra aret.
+     * Formel: (riders i bade N och N-1) / (riders i N) * 100
+     *
+     * Svarar pa: "Hur stor andel av arets deltagare ar aterkommande?"
+     *
+     * SKILLNAD MOT getRetentionRate():
+     * - getRetentionRate() har denominator = forra arets riders
+     * - getReturningShareOfCurrent() har denominator = arets riders
+     *
+     * @param int $year Ar att berakna for
+     * @return float Procent (0-100)
+     */
+    public function getReturningShareOfCurrent(int $year): float {
+        $stmt = $this->pdo->prepare("
+            SELECT
+                ROUND(
+                    COUNT(DISTINCT CASE WHEN prev.rider_id IS NOT NULL THEN curr.rider_id END) * 100.0 /
+                    NULLIF(COUNT(DISTINCT curr.rider_id), 0), 1
+                ) as returning_share
+            FROM rider_yearly_stats curr
+            LEFT JOIN rider_yearly_stats prev
+                ON curr.rider_id = prev.rider_id
+                AND prev.season_year = curr.season_year - 1
+            WHERE curr.season_year = ?
+        ");
+        $stmt->execute([$year]);
+        return (float)($stmt->fetchColumn() ?: 0);
+    }
+
+    /**
+     * Berakna rookie rate (andel nya deltagare)
+     *
+     * DEFINITION: Andel av arets riders som ar nya (forsta aret).
+     * Formel: (riders med is_rookie=1) / (alla riders ar N) * 100
+     *
+     * @param int $year Ar
+     * @return float Procent (0-100)
+     */
+    public function getRookieRate(int $year): float {
+        $total = $this->getTotalActiveRiders($year);
+        if ($total == 0) return 0;
+
+        $rookies = $this->getNewRidersCount($year);
+        return round($rookies / $total * 100, 1);
+    }
+
+    /**
+     * Hamta kompletta retention-nyckeltal for ett ar
+     *
+     * Returnerar alla retention-relaterade KPIs pa ett stalle
+     * for tydlighet och dokumentation.
+     *
+     * @param int $year Ar
+     * @return array Alla retention-KPIs
+     */
+    public function getRetentionMetrics(int $year): array {
+        $totalCurrent = $this->getTotalActiveRiders($year);
+        $totalPrev = $this->getTotalActiveRiders($year - 1);
+        $retained = $this->getRetainedRidersCount($year);
+        $rookies = $this->getNewRidersCount($year);
+
+        return [
+            // Grunddata
+            'year' => $year,
+            'total_riders_current' => $totalCurrent,
+            'total_riders_previous' => $totalPrev,
+            'retained_count' => $retained,
+            'rookie_count' => $rookies,
+            'churned_count' => $totalPrev - $retained,
+
+            // KPIs med tydliga namn och definitioner
+            'retention_from_prev' => [
+                'value' => $this->getRetentionRate($year),
+                'definition' => 'Andel av forra arets riders som aterkommer',
+                'formula' => 'retained / prev_total * 100',
+            ],
+            'returning_share_of_current' => [
+                'value' => $this->getReturningShareOfCurrent($year),
+                'definition' => 'Andel av arets riders som ocksa deltog forra aret',
+                'formula' => 'retained / current_total * 100',
+            ],
+            'churn_rate' => [
+                'value' => $this->getChurnRate($year),
+                'definition' => 'Andel av forra arets riders som INTE aterkommer',
+                'formula' => '100 - retention_from_prev',
+            ],
+            'rookie_rate' => [
+                'value' => $this->getRookieRate($year),
+                'definition' => 'Andel av arets riders som ar nya',
+                'formula' => 'rookies / current_total * 100',
+            ],
+            'growth_rate' => [
+                'value' => $this->getGrowthRate($year),
+                'definition' => 'Procentuell forandring i antal riders',
+                'formula' => '(current - prev) / prev * 100',
+            ],
+        ];
+    }
+
+    // =========================================================================
+    // DATA QUALITY METRICS
+    // =========================================================================
+
+    /**
+     * Berakna datakvalitetsmatningar for ett ar
+     *
+     * Returnerar procentuell tackning for varje viktigt falt
+     * samt absoluta tal for saknade varden.
+     *
+     * @param int $year Sasong att mata
+     * @return array Datakvalitetsdata
+     */
+    public function getDataQualityMetrics(int $year): array {
+        // Total antal riders for aret
+        $totalRiders = $this->getTotalActiveRiders($year);
+
+        if ($totalRiders == 0) {
+            return [
+                'year' => $year,
+                'total_riders' => 0,
+                'error' => 'Ingen data for aret',
+            ];
+        }
+
+        // Birth year coverage
+        $stmt = $this->pdo->prepare("
+            SELECT COUNT(DISTINCT rys.rider_id) as with_birth_year
+            FROM rider_yearly_stats rys
+            JOIN riders r ON rys.rider_id = r.id
+            WHERE rys.season_year = ?
+              AND r.birth_year IS NOT NULL
+              AND r.birth_year > 1900
+        ");
+        $stmt->execute([$year]);
+        $withBirthYear = (int)$stmt->fetchColumn();
+
+        // Club coverage
+        $stmt = $this->pdo->prepare("
+            SELECT COUNT(DISTINCT rys.rider_id) as with_club
+            FROM rider_yearly_stats rys
+            JOIN riders r ON rys.rider_id = r.id
+            WHERE rys.season_year = ?
+              AND r.club_id IS NOT NULL
+        ");
+        $stmt->execute([$year]);
+        $withClub = (int)$stmt->fetchColumn();
+
+        // Gender coverage
+        $stmt = $this->pdo->prepare("
+            SELECT COUNT(DISTINCT rys.rider_id) as with_gender
+            FROM rider_yearly_stats rys
+            JOIN riders r ON rys.rider_id = r.id
+            WHERE rys.season_year = ?
+              AND r.gender IS NOT NULL
+              AND r.gender != ''
+        ");
+        $stmt->execute([$year]);
+        $withGender = (int)$stmt->fetchColumn();
+
+        // Results with class
+        $stmt = $this->pdo->prepare("
+            SELECT
+                COUNT(*) as total_results,
+                SUM(CASE WHEN class_id IS NOT NULL THEN 1 ELSE 0 END) as with_class
+            FROM results res
+            JOIN events e ON res.event_id = e.id
+            WHERE YEAR(e.date) = ?
+        ");
+        $stmt->execute([$year]);
+        $resultsData = $stmt->fetch();
+        $totalResults = (int)$resultsData['total_results'];
+        $withClass = (int)$resultsData['with_class'];
+
+        // Events with date
+        $stmt = $this->pdo->prepare("
+            SELECT
+                COUNT(*) as total_events,
+                SUM(CASE WHEN date IS NOT NULL THEN 1 ELSE 0 END) as with_date
+            FROM events
+            WHERE YEAR(date) = ? OR date IS NULL
+        ");
+        $stmt->execute([$year]);
+        $eventsData = $stmt->fetch();
+        $totalEvents = (int)$eventsData['total_events'];
+        $eventsWithDate = (int)$eventsData['with_date'];
+
+        // Potential duplicates (simplified check)
+        $stmt = $this->pdo->prepare("
+            SELECT COUNT(*) as potential_dupes
+            FROM (
+                SELECT firstname, lastname, birth_year
+                FROM riders r
+                JOIN rider_yearly_stats rys ON r.id = rys.rider_id
+                WHERE rys.season_year = ?
+                  AND r.firstname IS NOT NULL
+                  AND r.lastname IS NOT NULL
+                GROUP BY LOWER(firstname), LOWER(lastname), birth_year
+                HAVING COUNT(*) > 1
+            ) dupes
+        ");
+        $stmt->execute([$year]);
+        $potentialDupes = (int)$stmt->fetchColumn();
+
+        // Merged riders
+        $stmt = $this->pdo->query("SELECT COUNT(*) FROM rider_merge_map");
+        $mergedRiders = (int)$stmt->fetchColumn();
+
+        return [
+            'year' => $year,
+            'measured_at' => date('Y-m-d H:i:s'),
+            'total_riders' => $totalRiders,
+
+            // Procentuell tackning
+            'birth_year_coverage' => round($withBirthYear / $totalRiders * 100, 1),
+            'club_coverage' => round($withClub / $totalRiders * 100, 1),
+            'gender_coverage' => round($withGender / $totalRiders * 100, 1),
+            'class_coverage' => $totalResults > 0 ? round($withClass / $totalResults * 100, 1) : 0,
+            'event_date_coverage' => $totalEvents > 0 ? round($eventsWithDate / $totalEvents * 100, 1) : 0,
+
+            // Absoluta tal (saknade)
+            'riders_missing_birth_year' => $totalRiders - $withBirthYear,
+            'riders_missing_club' => $totalRiders - $withClub,
+            'riders_missing_gender' => $totalRiders - $withGender,
+            'results_missing_class' => $totalResults - $withClass,
+
+            // Identitetsproblem
+            'potential_duplicates' => $potentialDupes,
+            'merged_riders' => $mergedRiders,
+
+            // Status
+            'quality_status' => $this->assessQualityStatus(
+                $withBirthYear / $totalRiders,
+                $withClub / $totalRiders,
+                $totalResults > 0 ? $withClass / $totalResults : 0
+            ),
+        ];
+    }
+
+    /**
+     * Bedom datakvalitetsstatus
+     *
+     * @param float $birthYearCov Birth year coverage (0-1)
+     * @param float $clubCov Club coverage (0-1)
+     * @param float $classCov Class coverage (0-1)
+     * @return string Status: good, warning, critical
+     */
+    private function assessQualityStatus(float $birthYearCov, float $clubCov, float $classCov): string {
+        // Ladda thresholds fran config
+        require_once __DIR__ . '/AnalyticsConfig.php';
+        $thresholds = AnalyticsConfig::DATA_QUALITY_THRESHOLDS;
+
+        $issues = 0;
+        if ($birthYearCov < $thresholds['birth_year_coverage']) $issues++;
+        if ($clubCov < $thresholds['club_coverage']) $issues++;
+        if ($classCov < ($thresholds['class_coverage'] ?? 0.7)) $issues++;
+
+        if ($issues >= 2) return 'critical';
+        if ($issues >= 1) return 'warning';
+        return 'good';
+    }
+
+    /**
+     * Spara datakvalitetsmatning till databas
+     *
+     * @param int $year Sasong
+     * @return bool Lyckades
+     */
+    public function saveDataQualityMetrics(int $year): bool {
+        $metrics = $this->getDataQualityMetrics($year);
+
+        if (isset($metrics['error'])) {
+            return false;
+        }
+
+        require_once __DIR__ . '/AnalyticsConfig.php';
+
+        $stmt = $this->pdo->prepare("
+            INSERT INTO data_quality_metrics (
+                season_year, measured_at,
+                birth_year_coverage, club_coverage, gender_coverage,
+                class_coverage, event_date_coverage,
+                total_riders, riders_missing_birth_year, riders_missing_club,
+                riders_missing_gender, results_missing_class,
+                potential_duplicates, merged_riders,
+                calculation_version
+            ) VALUES (?, NOW(), ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+            ON DUPLICATE KEY UPDATE
+                birth_year_coverage = VALUES(birth_year_coverage),
+                club_coverage = VALUES(club_coverage),
+                gender_coverage = VALUES(gender_coverage),
+                class_coverage = VALUES(class_coverage),
+                event_date_coverage = VALUES(event_date_coverage),
+                total_riders = VALUES(total_riders),
+                riders_missing_birth_year = VALUES(riders_missing_birth_year),
+                riders_missing_club = VALUES(riders_missing_club),
+                riders_missing_gender = VALUES(riders_missing_gender),
+                results_missing_class = VALUES(results_missing_class),
+                potential_duplicates = VALUES(potential_duplicates),
+                merged_riders = VALUES(merged_riders),
+                calculation_version = VALUES(calculation_version),
+                measured_at = NOW()
+        ");
+
+        return $stmt->execute([
+            $year,
+            $metrics['birth_year_coverage'],
+            $metrics['club_coverage'],
+            $metrics['gender_coverage'],
+            $metrics['class_coverage'],
+            $metrics['event_date_coverage'],
+            $metrics['total_riders'],
+            $metrics['riders_missing_birth_year'],
+            $metrics['riders_missing_club'],
+            $metrics['riders_missing_gender'],
+            $metrics['results_missing_class'],
+            $metrics['potential_duplicates'],
+            $metrics['merged_riders'],
+            AnalyticsConfig::CALCULATION_VERSION,
+        ]);
+    }
+
     // =========================================================================
     // DEMOGRAPHICS
     // =========================================================================

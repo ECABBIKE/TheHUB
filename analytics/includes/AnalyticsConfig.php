@@ -8,20 +8,67 @@
  * KRITISKT: Alla analytics-komponenter ska anvanda dessa definitioner
  * for att sakerstalla konsekvent datahantering.
  *
+ * ========================= KPI-DEFINITIONER =========================
+ *
+ * ACTIVE (Aktiv):
+ *   Definition: En rider ar "aktiv ar Y" om rider har minst 1 registrerad
+ *   start (unik event_id) under season_year=Y, oavsett serie.
+ *   Metod: COUNT(DISTINCT event_id) >= ACTIVE_MIN_EVENTS
+ *
+ * EVENT_COUNT (Antal events):
+ *   Definition: Antal unika event_id dar rider startat under aret.
+ *   INTE antal heat, starter eller resultatrader.
+ *
+ * RETENTION_FROM_PREV (Retention fran forriga aret):
+ *   Definition: Andel av riders_year_(N-1) som ocksa finns i riders_year_N.
+ *   Formel: (riders i bade N och N-1) / (riders i N-1) * 100
+ *   Svarar pa: "Hur manga av forra arets riders kom tillbaka?"
+ *
+ * RETURNING_SHARE_OF_CURRENT (Aterkommande andel av aktuellt ar):
+ *   Definition: Andel av riders_year_N som ocksa fanns i riders_year_(N-1).
+ *   Formel: (riders i bade N och N-1) / (riders i N) * 100
+ *   Svarar pa: "Hur stor del av arets riders ar aterkommande?"
+ *
+ * CHURN_RATE (Churn fran forriga aret):
+ *   Definition: Andel av riders_year_(N-1) som INTE finns i riders_year_N.
+ *   Formel: 100 - RETENTION_FROM_PREV
+ *   Svarar pa: "Hur manga av forra arets riders forsvann?"
+ *
+ * ROOKIE (Nyborjare):
+ *   Definition: Rider vars MIN(season_year) = aktuellt ar.
+ *   Rider har aldrig deltagit fore detta ar.
+ *
  * @package TheHUB Analytics
- * @version 2.0
+ * @version 3.0
  */
 
 class AnalyticsConfig {
+    // =========================================================================
+    // PLATFORM VERSION - For snapshot reproducerbarhet
+    // =========================================================================
+
+    /**
+     * Aktuell plattformsversion
+     * Andras vid stora andringar i berakningslogik
+     */
+    public const PLATFORM_VERSION = '3.0.0';
+
+    /**
+     * Aktuell berakningsversion (for backwards compat)
+     */
+    public const CALCULATION_VERSION = 'v3';
+
     // =========================================================================
     // ACTIVE DEFINITION
     // =========================================================================
 
     /**
-     * Definition: "Active ar Y" = rider har minst 1 registrerad start
-     * under season_year=Y (oavsett serie)
+     * Definition: "Active ar Y" = rider har minst N registrerade events
+     * (unika event_id) under season_year=Y (oavsett serie)
+     *
+     * OBS: Detta ar EVENTS, inte starter/heat/resultatrader.
      */
-    public const ACTIVE_MIN_STARTS = 1;
+    public const ACTIVE_MIN_EVENTS = 1;
 
     // =========================================================================
     // EVENT COUNT DEFINITION
@@ -29,9 +76,41 @@ class AnalyticsConfig {
 
     /**
      * Definition: event_count = antal unika event_id dar rider startat
-     * under aret (inte antal heat/starter)
+     * under aret (INTE antal heat/starter/resultatrader)
+     *
+     * Metod: COUNT(DISTINCT event_id)
      */
-    public const EVENT_COUNT_METHOD = 'unique_events'; // 'unique_events' or 'total_starts'
+    public const EVENT_COUNT_METHOD = 'unique_events';
+
+    // =========================================================================
+    // RETENTION/CHURN DEFINITIONS - Tydligt dokumenterade
+    // =========================================================================
+
+    /**
+     * RETENTION_FROM_PREV - "Classic retention"
+     *
+     * Numerator: riders som finns i BADE ar N och ar N-1
+     * Denominator: riders som finns i ar N-1
+     * Formel: (retained / prev_total) * 100
+     *
+     * Svarar pa: "Hur manga procent av forra arets riders kom tillbaka?"
+     *
+     * Implementerad i: KPICalculator::getRetentionRate()
+     */
+    public const RETENTION_TYPE_FROM_PREV = 'retention_from_prev';
+
+    /**
+     * RETURNING_SHARE_OF_CURRENT - "Andel aterkommande"
+     *
+     * Numerator: riders som finns i BADE ar N och ar N-1
+     * Denominator: riders som finns i ar N
+     * Formel: (retained / current_total) * 100
+     *
+     * Svarar pa: "Hur stor andel av arets deltagare ar aterkommande?"
+     *
+     * Implementerad i: KPICalculator::getReturningShareOfCurrent()
+     */
+    public const RETENTION_TYPE_RETURNING_SHARE = 'returning_share_of_current';
 
     // =========================================================================
     // CHURN DEFINITIONS
@@ -125,6 +204,11 @@ class AnalyticsConfig {
     /**
      * Hamta rank for en specifik klass
      *
+     * FALLBACK-LOGIK (for okanda klasser):
+     * - Om klass inte finns i ranking, returnera null
+     * - At-Risk berakningar IGNORERAR class_downgrade for okanda klasser
+     * - Detta forhindrar falska "downgrades" nar SCF andrar klasser
+     *
      * @param string $className Klassnamn
      * @param int $year Sasong
      * @return int|null Rank eller null om okand klass
@@ -145,7 +229,39 @@ class AnalyticsConfig {
             }
         }
 
-        return null; // Okand klass
+        // VIKTIGT: Returnera null for okanda klasser
+        // At-Risk berakningar ska ignorera class_downgrade for dessa
+        return null;
+    }
+
+    /**
+     * Kolla om en klassandring ar en "downgrade"
+     *
+     * Returnerar false om nagon av klasserna ar okand (null rank)
+     * Detta forhindrar falska downgrades nar SCF andrar klassnamn.
+     *
+     * @param string $fromClass Ursprungsklass
+     * @param string $toClass Ny klass
+     * @param int $fromYear Ursprungsar
+     * @param int $toYear Nytt ar
+     * @return bool|null True=downgrade, False=upgrade/same, Null=okand
+     */
+    public static function isClassDowngrade(
+        string $fromClass,
+        string $toClass,
+        int $fromYear,
+        int $toYear
+    ): ?bool {
+        $fromRank = self::getClassRank($fromClass, $fromYear);
+        $toRank = self::getClassRank($toClass, $toYear);
+
+        // Om nagon klass ar okand, ignorera (returnera null)
+        if ($fromRank === null || $toRank === null) {
+            return null;
+        }
+
+        // Lagre rank = downgrade
+        return $toRank < $fromRank;
     }
 
     // =========================================================================
@@ -212,7 +328,7 @@ class AnalyticsConfig {
     }
 
     // =========================================================================
-    // SEASON ACTIVITY CUTOFF
+    // SEASON ACTIVITY CUTOFF - For "ingen aktivitet" berakning
     // =========================================================================
 
     /**
@@ -223,27 +339,84 @@ class AnalyticsConfig {
     public const DEFAULT_SEASON_CUTOFF_DAY = 1;
 
     /**
-     * Serie-specifika cutoff-datum (om serien slutar tidigare)
+     * Serie-specifika cutoff-datum (om serien slutar tidigare/senare)
+     * Overrider default cutoff for specifika serier
      */
     public const SERIES_CUTOFF_OVERRIDES = [
         // Format: series_id => ['month' => X, 'day' => Y]
-        // Exempel: 5 => ['month' => 6, 'day' => 15], // DH-serien slutar 15 juni
+        // Lagg till serier som har annorlunda sasongslut
     ];
+
+    /**
+     * Anvand dynamisk cutoff baserat pa seriens last_event_date?
+     * Om true, anvands MAX(last_event_date) fran series_participation
+     * istallet for statiskt cutoff-datum.
+     */
+    public const USE_DYNAMIC_SERIES_CUTOFF = true;
+
+    /**
+     * Cache for dynamiska cutoff-datum
+     * @var array<string, string>
+     */
+    private static array $dynamicCutoffCache = [];
 
     /**
      * Hamta cutoff-datum for aktivitetsberakning
      *
+     * Prioritetsordning:
+     * 1. Serie-specifik override (SERIES_CUTOFF_OVERRIDES)
+     * 2. Dynamiskt fran last_event_date (om USE_DYNAMIC_SERIES_CUTOFF)
+     * 3. Default cutoff
+     *
      * @param int $year Sasong
      * @param int|null $seriesId Serie (optional)
+     * @param PDO|null $pdo Databasanslutning (for dynamisk cutoff)
      * @return string Datum (Y-m-d format)
      */
-    public static function getSeasonActivityCutoffDate(int $year, ?int $seriesId = null): string {
+    public static function getSeasonActivityCutoffDate(
+        int $year,
+        ?int $seriesId = null,
+        ?PDO $pdo = null
+    ): string {
+        // 1. Kolla serie-specifik override forst
         if ($seriesId && isset(self::SERIES_CUTOFF_OVERRIDES[$seriesId])) {
             $override = self::SERIES_CUTOFF_OVERRIDES[$seriesId];
             return sprintf('%d-%02d-%02d', $year, $override['month'], $override['day']);
         }
 
+        // 2. Dynamisk cutoff baserat pa seriens faktiska last_event_date
+        if (self::USE_DYNAMIC_SERIES_CUTOFF && $seriesId && $pdo) {
+            $cacheKey = "{$year}_{$seriesId}";
+            if (!isset(self::$dynamicCutoffCache[$cacheKey])) {
+                $stmt = $pdo->prepare("
+                    SELECT MAX(last_event_date) as cutoff
+                    FROM series_participation
+                    WHERE series_id = ? AND season_year = ?
+                ");
+                $stmt->execute([$seriesId, $year]);
+                $result = $stmt->fetchColumn();
+
+                if ($result) {
+                    // Lagg till 14 dagar efter sista event som cutoff
+                    $cutoffDate = date('Y-m-d', strtotime($result . ' +14 days'));
+                    self::$dynamicCutoffCache[$cacheKey] = $cutoffDate;
+                }
+            }
+
+            if (isset(self::$dynamicCutoffCache[$cacheKey])) {
+                return self::$dynamicCutoffCache[$cacheKey];
+            }
+        }
+
+        // 3. Default cutoff
         return sprintf('%d-%02d-%02d', $year, self::DEFAULT_SEASON_CUTOFF_MONTH, self::DEFAULT_SEASON_CUTOFF_DAY);
+    }
+
+    /**
+     * Rensa dynamisk cutoff-cache
+     */
+    public static function clearCutoffCache(): void {
+        self::$dynamicCutoffCache = [];
     }
 
     // =========================================================================
@@ -403,15 +576,31 @@ class AnalyticsConfig {
         'birth_year_coverage' => 0.5,  // 50% av riders maste ha birth_year
         'club_coverage' => 0.3,        // 30% av riders maste ha club
         'event_date_coverage' => 0.9,  // 90% av events maste ha datum
+        'class_coverage' => 0.7,       // 70% av results maste ha klass
+        'region_coverage' => 0.3,      // 30% av riders maste ha region
     ];
 
     // =========================================================================
-    // CALCULATION VERSION
+    // BRAND/SERIES GROUP DEFINITIONS
     // =========================================================================
 
     /**
-     * Aktuell berakningsversion
-     * Andras vid stora andringar i berakningslogik
+     * Varumarkes-mappning for cohort-filtrering
+     * Mappar brand_id till series_ids
+     *
+     * OBS: Utoka denna med faktiska brand-serie mappningar
      */
-    public const CALCULATION_VERSION = 'v2';
+    public const BRAND_SERIES_MAP = [
+        // Format: brand_id => [series_id1, series_id2, ...]
+        // Exempel:
+        // 1 => [1, 2, 3], // GES brand -> GES series
+        // 2 => [4, 5],    // Swedish Enduro Series
+    ];
+
+    /**
+     * Hamta series_ids for ett brand
+     */
+    public static function getSeriesForBrand(int $brandId): array {
+        return self::BRAND_SERIES_MAP[$brandId] ?? [];
+    }
 }
