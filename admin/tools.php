@@ -293,6 +293,20 @@ include __DIR__ . '/components/unified-layout.php';
         </div>
     </div>
 
+    <!-- RF Spelling Check -->
+    <div class="tool-card">
+        <div class="tool-card-header">
+            <div class="tool-icon" style="background: linear-gradient(135deg, #006aa7 50%, #fecc00 50%);"><i data-lucide="spell-check" style="color: #fff;"></i></div>
+            <div>
+                <h4 class="tool-title">RF Stavningskontroll</h4>
+                <p class="tool-description">Jämför klubbnamn mot officiellt register</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/club-rf-spelling.php" class="btn-admin btn-admin-secondary">Kontrollera</a>
+        </div>
+    </div>
+
 </div>
 
 <!-- ========== IMPORT & RESULTAT ========== -->
