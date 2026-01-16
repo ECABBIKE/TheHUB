@@ -46,6 +46,58 @@ if (isset($_GET['run_year'])) {
     exit;
 }
 
+// Diagnostik-endpoint
+if (isset($_GET['diagnose'])) {
+    header('Content-Type: application/json');
+    global $pdo;
+
+    $results = [];
+
+    // Test 1: Kolla om view finns
+    try {
+        $stmt = $pdo->query("SELECT COUNT(*) FROM v_canonical_riders LIMIT 1");
+        $results['view_exists'] = true;
+        $results['view_count'] = $stmt->fetchColumn();
+    } catch (Exception $e) {
+        $results['view_exists'] = false;
+        $results['view_error'] = $e->getMessage();
+    }
+
+    // Test 2: Kolla kohorter
+    try {
+        $stmt = $pdo->query("
+            SELECT YEAR(e.date) as yr, COUNT(DISTINCT res.cyclist_id) as cnt
+            FROM results res
+            JOIN events e ON res.event_id = e.id
+            WHERE e.date IS NOT NULL
+            GROUP BY YEAR(e.date)
+            ORDER BY yr
+        ");
+        $results['cohorts'] = $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
+    } catch (Exception $e) {
+        $results['cohort_error'] = $e->getMessage();
+    }
+
+    // Test 3: Enkel rookie-count for 2020
+    try {
+        $stmt = $pdo->query("
+            SELECT COUNT(*) FROM (
+                SELECT res.cyclist_id, MIN(YEAR(e.date)) as first_year
+                FROM results res
+                JOIN events e ON res.event_id = e.id
+                GROUP BY res.cyclist_id
+                HAVING first_year = 2020
+            ) t
+        ");
+        $results['rookies_2020'] = $stmt->fetchColumn();
+    } catch (Exception $e) {
+        $results['rookie_error'] = $e->getMessage();
+    }
+
+    echo json_encode($results, JSON_PRETTY_PRINT);
+    exit;
+}
+
 // Hantera AJAX-request for kohort journey-analys
 if (isset($_GET['run_cohort'])) {
     // Extend timeout for heavy calculations
