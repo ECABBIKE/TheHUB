@@ -1,10 +1,10 @@
 # TheHUB Analytics Platform - Teknisk Dokumentation
 
-> Komplett guide till analytics-systemet v3.0.1, dess komponenter och SCF-nivå-rapportering
+> Komplett guide till analytics-systemet v3.0.2, dess komponenter och SCF-nivå-rapportering
 
-**Version:** 3.0.1 (100% Production Ready)
+**Version:** 3.0.2 (Fully Revision-Safe)
 **Senast uppdaterad:** 2026-01-16
-**Status:** Production Ready - Revision Grade
+**Status:** Production Ready - Fully Revision-Safe
 **Implementation Status:** KOMPLETT
 
 ---
@@ -12,28 +12,31 @@
 ## Innehallsforteckning
 
 1. [Oversikt](#oversikt)
-2. [Production Ready Checklist](#production-ready-checklist)
-3. [Arkitektur](#arkitektur)
-4. [Brand/Varumarke-dimension](#brandvarumarke-dimension)
-5. [Databas-struktur](#databas-struktur)
-6. [Karnkomponenter](#karnkomponenter)
-7. [KPI-definitioner (VIKTIGT)](#kpi-definitioner)
-8. [Export och Reproducerbarhet](#export-och-reproducerbarhet)
-9. [Identity Resolution och Recalc](#identity-resolution-och-recalc)
-10. [Datakvalitet](#datakvalitet)
-11. [Drift och Cron](#drift-och-cron)
-12. [Sakerhet och GDPR](#sakerhet-och-gdpr)
-13. [Analytics-sidor](#analytics-sidor)
-14. [API-endpoints](#api-endpoints)
-15. [Setup och Underhall](#setup-och-underhall)
-16. [Changelog](#changelog)
-17. [Open Questions / Assumptions](#open-questions--assumptions)
+2. [Revision Notes v3.0.2](#revision-notes-v302)
+3. [Production Ready Checklist](#production-ready-checklist)
+4. [Arkitektur](#arkitektur)
+5. [KPI-definitioner (KRITISKT)](#kpi-definitioner-kritiskt)
+6. [Snapshot → Export-modell](#snapshot--export-modell)
+7. [PDF-policy (TCPDF Mandatory)](#pdf-policy-tcpdf-mandatory)
+8. [Identity Resolution och Recalc](#identity-resolution-och-recalc)
+9. [Rate Limiting (DB-baserat)](#rate-limiting-db-baserat)
+10. [Databas-struktur](#databas-struktur)
+11. [Karnkomponenter](#karnkomponenter)
+12. [Export och Reproducerbarhet](#export-och-reproducerbarhet)
+13. [Datakvalitet](#datakvalitet)
+14. [Drift och Cron](#drift-och-cron)
+15. [Sakerhet och GDPR](#sakerhet-och-gdpr)
+16. [Analytics-sidor](#analytics-sidor)
+17. [API-endpoints](#api-endpoints)
+18. [Setup och Underhall](#setup-och-underhall)
+19. [Changelog](#changelog)
+20. [Revision Audit Trail](#revision-audit-trail)
 
 ---
 
 ## Oversikt
 
-TheHUB Analytics ar ett komplett analysverktyg for svensk cykelsport med **10+ ars data** och stod for SCF-nivå-rapportering. Systemet ar designat for **revision-grade reproducerbarhet** - varje export kan aterskaps exakt.
+TheHUB Analytics ar ett komplett analysverktyg for svensk cykelsport med **10+ ars data** och stod for SCF-nivå-rapportering. Version 3.0.2 ar **Fully Revision-Safe** - varje export kan aterskaps exakt och tål extern granskning.
 
 | Omrade | Beskrivning | Huvudsida |
 |--------|-------------|-----------|
@@ -47,71 +50,85 @@ TheHUB Analytics ar ett komplett analysverktyg for svensk cykelsport med **10+ a
 | **Data Quality** | Hur komplett ar var data? | `analytics-data-quality.php` |
 | **Export Center** | Hantera och verifiera exporter | `analytics-export-center.php` |
 
-### Behorigheter
+### Revisionsprinciper (v3.0.2)
 
-Analytics kraver en av foljande:
-- `super_admin` roll
-- `statistics` permission (kan tilldelas utan admin-rattigheter)
+1. **Snapshot-baserad reproducerbarhet** - Varje export MASTE ha `snapshot_id`
+2. **EVENT-baserad aktivitet** - `active_rider` mats via eventdeltagande, INTE resultatrader
+3. **TCPDF OBLIGATORISK** - Ingen HTML-fallback i production
+4. **DB-baserade rate limits** - Configurable via `export_rate_limits` tabell
+5. **Deterministisk fingerprint** - Sorterad JSON + stabil encoding
+6. **Heuristikmarkeringar** - `at_risk_rider` och `winback_candidate` markeras explicit
 
-### Principer
+---
 
-1. **Pre-aggregerad data** - Tunga berakningar gors en gang och sparas
-2. **Identity Resolution** - Dubbletter hanteras automatiskt via canonical IDs
-3. **Reproducerbarhet** - Alla exporter bygger pa snapshot_id och kan aterskaps
-4. **GDPR-kompatibel** - Aggregerad data publikt, persondata bakom behorighet
-5. **Revision Grade** - Varje export har fingerprint, manifest och provenance
+## Revision Notes v3.0.2
+
+### Kritiska korrigeringar fran v3.0.1
+
+| Problem | Losning i v3.0.2 |
+|---------|------------------|
+| `active_rider` definierades som resultat-baserad | **Korrigerat**: Nu EVENT-baserad (`COUNT(DISTINCT event_id) >= 1`) |
+| `at_risk_rider` framstod som definitiv | **Korrigerat**: Markerad som HEURISTIC |
+| `winback_candidate` framstod som definitiv | **Korrigerat**: Markerad som HEURISTIC |
+| Rate limits hardkodade (50/h, 200/d) | **Korrigerat**: DB-styrt via `export_rate_limits` |
+| PDF fallback till HTML tillatet | **Korrigerat**: TCPDF OBLIGATORISK, exception om saknas |
+| Snapshot→Export-modell otydlig | **Korrigerat**: Tydlig dokumentation av vad snapshot laser |
+| affected_years-bestamning otydlig | **Korrigerat**: Dokumenterad prioritet (stats→results→manual) |
+
+### Vad en Snapshot laser
+
+En snapshot i v3.0.2 laser:
+- **KPI-varden** beraknade vid snapshot-tidpunkten
+- **Pre-aggregerade tabeller** (`rider_yearly_stats`, `series_participation`, `club_yearly_stats`)
+- **Metadata** (`source_max_updated_at`, `data_fingerprint`, `tables_included`)
+
+En snapshot laser **INTE**:
+- Versionerade kopior av tabeller (ingen historiktabell skapas)
+- Radata (results, events) - dessa lasas alltid live
+
+**Reproducerbarhet**: Export kan reproduceras exakt sa lange pre-aggregaten INTE har omraknats sedan snapshot skapades.
 
 ---
 
 ## Production Ready Checklist
 
-**Status: IMPLEMENTERAT 2026-01-16**
+**Status: IMPLEMENTERAT 2026-01-16 (v3.0.2)**
 
 ### Databas
-- [x] Migration `007_production_ready.sql` skapad
+- [x] Migration `007_production_ready.sql` - Grundstruktur
   - Fil: `analytics/migrations/007_production_ready.sql`
-- [x] Tabell `brands` och `brand_series_map` definierad med seed-data
-- [x] Tabell `analytics_recalc_queue` skapad med deduplication via checksum
-- [x] Tabell `analytics_exports` uppdaterad med `export_uid`, `filters_json`, `status`
-- [x] Tabell `analytics_cron_runs` uppdaterad med `heartbeat_at`, `duration_ms`, `error_text`
-- [x] Tabell `analytics_cron_config` skapad for jobbkonfiguration
-- [x] Tabell `export_rate_limits` skapad for GDPR compliance
-- [x] Index pa alla foreign keys och vanliga queries
+- [x] Migration `008_revision_grade_fixes.sql` - Revision-safe korrigeringar (NY)
+  - Fil: `analytics/migrations/008_revision_grade_fixes.sql`
+- [x] KPI-definitioner korrigerade (`active_rider` EVENT-baserad)
+- [x] `at_risk_rider` och `winback_candidate` markerade som HEURISTIC
+- [x] `export_rate_limits` tabell med scope (global/user/ip/role)
+- [x] `analytics_recalc_queue.years_source` kolumn tillagd
+- [x] `analytics_snapshots.data_fingerprint` kolumn tillagd
+- [x] `analytics_kpi_audit` tabell skapad (revisionskrav)
+- [x] `analytics_system_config` tabell for PDF-policy
 
 ### Kod
-- [x] `ExportLogger` kraver `snapshot_id` for alla exporter
+- [x] `ExportLogger` - DB-baserade rate limits
   - Fil: `analytics/includes/ExportLogger.php`
-  - Metod: `logExport()` kastar `InvalidArgumentException` om snapshot saknas
-  - Rate limiting: 50/timme, 200/dag per anvandare
-- [x] `IdentityResolver::merge()` laggar jobb i `analytics_recalc_queue`
+  - Metod: `loadRateLimitsFromDb()` laddar fran `export_rate_limits`
+  - Metod: `calculateDeterministicFingerprint()` med stabil encoding
+- [x] `PdfExportBuilder` - TCPDF OBLIGATORISK
+  - Fil: `analytics/includes/PdfExportBuilder.php`
+  - Kastar `PdfEngineException` om TCPDF saknas
+  - Ingen HTML-fallback
+  - Metod: `getPdfEngineStatus()` returnerar OK/MISSING (CRITICAL)
+- [x] `IdentityResolver` - Forbattrad affected_years
   - Fil: `analytics/includes/IdentityResolver.php`
-  - Metod: `queueRecalc()` anropas automatiskt efter merge/unmerge
-- [x] `AnalyticsEngine::processRecalcQueue()` implementerad
-  - Fil: `analytics/includes/AnalyticsEngine.php`
-  - Heartbeat: `heartbeat()` metod
-  - Timeout: `checkTimeout()` metod
-  - Snapshot: `createSnapshot()`, `getOrCreateSnapshot()` metoder
-- [x] `SVGChartRenderer::svgToPng()` returnerar `null` om Imagick saknas
-  - Fil: `analytics/includes/SVGChartRenderer.php`
-  - Metod: `canConvertToPng()` for tillganglighetskontroll
-  - Metod: `getChartAsImage()` med graceful fallback till SVG
-  - Metod: `getPngSupportInfo()` for diagnostik
-- [x] `PdfExportBuilder` genererar "Definitions & Provenance" block
-  - Fil: `analytics/includes/PdfExportBuilder.php` (NY)
-  - Mandatory Definition Box i alla PDF-exporter
-  - Stod for wkhtmltopdf med HTML-fallback
-
-### Drift
-- [x] Heartbeat-logik implementerad i `AnalyticsEngine`
-- [x] Timeout-hantering implementerad via `checkTimeout()`
-- [x] `analytics_cron_config` tabell for jobbkonfiguration
-- [x] Recalc queue stod via `processRecalcQueue()`
+  - Metod: `findAffectedYearsWithSource()` med prioritet stats→results→manual
+  - Kolumn `years_source` sparas i recalc_queue
+- [x] Export Center visar PDF ENGINE STATUS
+  - Fil: `admin/analytics-export-center.php`
+  - Blockerar PDF-knappar om TCPDF saknas
 
 ### Sakerhet/GDPR
-- [x] `contains_pii` flaggas automatiskt via `ExportLogger::containsPII()`
-- [x] Rate limit implementerat (50/timme, 200/dag)
-- [x] Export Center visar exporthistorik och manifest
-  - Fil: `admin/analytics-export-center.php` (NY)
+- [x] Rate limits lasas fran databas (ej hardkodade)
+- [x] `snapshot_id` ALLTID obligatorisk (ingen overstyrning)
+- [x] KPI-audit trail for definitionsandringar
 
 ---
 
@@ -122,7 +139,7 @@ Analytics kraver en av foljande:
 │                           PRESENTATION LAYER                                 │
 │  analytics-dashboard │ analytics-cohorts │ analytics-export-center          │
 │                                                                              │
-│  PdfExportBuilder.php ─── PDF med SVG-grafer + Definitions block            │
+│  PdfExportBuilder.php ─── PDF via TCPDF (MANDATORY) + Definitions block     │
 │  SVGChartRenderer.php ─── Grafer (PNG via Imagick om tillganglig)           │
 └─────────────────────────────────┬───────────────────────────────────────────┘
                                   │
@@ -131,18 +148,12 @@ Analytics kraver en av foljande:
 │                                                                              │
 │  ┌─────────────────────┐     ┌─────────────────────┐                        │
 │  │   KPICalculator     │     │   ExportLogger      │                        │
-│  │   ~2500 rader       │     │   v3.0.1            │                        │
-│  │                     │     │   - snapshot_id REQ │                        │
-│  │  - getRetentionRate │     │   - export_uid      │                        │
-│  │  - getCohortData    │     │   - fingerprint     │                        │
-│  │  - getByBrand()     │     │   - rate limiting   │                        │
+│  │                     │     │   v3.0.2            │                        │
+│  │  - EVENT-baserad    │     │   - snapshot_id REQ │                        │
+│  │    active_rider     │     │   - DB rate limits  │                        │
+│  │  - Heuristic KPIs   │     │   - Deterministic   │                        │
+│  │    markerade        │     │     fingerprint     │                        │
 │  └─────────────────────┘     └─────────────────────┘                        │
-│                              ┌─────────────────────┐                        │
-│                              │  AnalyticsConfig    │                        │
-│                              │  v3.0.1             │                        │
-│                              │  - PLATFORM_VERSION │                        │
-│                              │  - KPI_DEFINITIONS  │                        │
-│                              └─────────────────────┘                        │
 └─────────────────────────────────┬───────────────────────────────────────────┘
                                   │
 ┌─────────────────────────────────▼───────────────────────────────────────────┐
@@ -150,16 +161,16 @@ Analytics kraver en av foljande:
 │                                                                              │
 │  ┌─────────────────────┐     ┌─────────────────────┐                        │
 │  │  AnalyticsEngine    │     │  IdentityResolver   │                        │
-│  │  v3.0.1             │     │  v3.0.1             │                        │
+│  │  v3.0.2             │     │  v3.0.2             │                        │
 │  │  - calculateYearly  │────▶│  - merge()          │───┐                    │
 │  │  - processRecalc()  │     │  - queueRecalc()    │   │                    │
-│  │  - heartbeat()      │     │  - getPendingJobs() │   │                    │
-│  │  - createSnapshot() │     └─────────────────────┘   │                    │
-│  └─────────────────────┘                               │                    │
+│  │  - heartbeat()      │     │  - affected_years   │   │                    │
+│  │  - createSnapshot() │     │    med source       │   │                    │
+│  └─────────────────────┘     └─────────────────────┘   │                    │
 │                                                        │                    │
 │  ┌─────────────────────────────────────────────────────▼──────────────────┐│
 │  │  analytics_recalc_queue                                                 ││
-│  │  - trigger_type, trigger_entity_id, affected_rider_ids, status         ││
+│  │  + years_source (stats/results/manual)                                  ││
 │  └─────────────────────────────────────────────────────────────────────────┘│
 └─────────────────────────────────┬───────────────────────────────────────────┘
                                   │
@@ -168,433 +179,98 @@ Analytics kraver en av foljande:
 │                                                                              │
 │  PRE-AGGREGATED TABLES              │  REFERENCE TABLES                     │
 │  ─────────────────────              │  ────────────────                     │
-│  rider_yearly_stats                 │  brands                               │
-│  series_participation               │  brand_series_map                     │
-│  series_crossover                   │  analytics_kpi_definitions            │
-│  club_yearly_stats                  │  analytics_cron_config                │
-│  analytics_snapshots                │                                       │
-│  analytics_exports                  │  RAW TABLES                           │
-│  data_quality_metrics               │  ──────────                           │
+│  rider_yearly_stats                 │  analytics_kpi_definitions (v3.0.2)  │
+│  series_participation               │  analytics_kpi_audit (NY v3.0.2)     │
+│  club_yearly_stats                  │  analytics_system_config (NY v3.0.2) │
+│  analytics_snapshots (+fingerprint) │  export_rate_limits (v3.0.2)         │
+│  analytics_exports                  │                                       │
+│                                     │  RAW TABLES                           │
+│                                     │  ──────────                           │
 │                                     │  results, events, riders, clubs       │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### Dataflode (Revision Grade)
+---
 
-1. **Radata** lagras i `results`, `events`, `riders`, `clubs`
-2. **IdentityResolver** matchar riders mot canonical IDs
-3. **AnalyticsEngine** beraknar och sparar till pre-aggregerade tabeller
-4. **Snapshot** skapas med unik ID, timestamp och fingerprint
-5. **Export** kraver `snapshot_id` - all data hamtas fran snapshot-tidpunkten
-6. **ExportLogger** skapar `export_uid`, beraknar fingerprint, sparar manifest
-7. **PDF** innehaller "Definitions & Provenance" block med alla metadata
+## KPI-definitioner (KRITISKT)
+
+**KRITISKT:** Dessa definitioner ar **obligatoriska** i alla PDF-exporter och maste vara **exakt korrekta** for revisionsandamal.
+
+### active_rider (KORRIGERAD v3.0.2)
+
+| Attribut | Varde |
+|----------|-------|
+| **Key** | `active_rider` |
+| **Namn (SV)** | Aktiv deltagare |
+| **Definition** | En deltagare som deltog i **minst 1 event** under angiven period |
+| **Formel** | `COUNT(DISTINCT event_id) >= ACTIVE_MIN_EVENTS` |
+| **Implementation** | Baserat pa `rider_yearly_stats.total_events` |
+| **ACTIVE_MIN_EVENTS** | 1 (konfigurerbart i `analytics_kpi_definitions`) |
+
+**FEL i v3.0.1:** Definierades som "minst 1 registrerat resultat" (resultatrad-baserad).
+**KORRIGERING:** Aktivitet mats via **unika eventdeltaganden**, inte resultatrader.
+
+### Heuristiska KPIs (MARKERADE v3.0.2)
+
+Foljande KPIs ar **prediktiva indikatorer**, INTE definitiva klassificeringar:
+
+| KPI | Markning | Definition |
+|-----|----------|------------|
+| `at_risk_rider` | **HEURISTIC** | Aktiv forra aret men visar minskat eventdeltagande |
+| `winback_candidate` | **HEURISTIC** | Deltagare aktiv for 2+ ar sedan men noll events forra aret |
+
+**Formel (at_risk_rider):**
+```
+total_events_current < total_events_previous
+OR (active_prev_year AND total_events_current = 0)
+```
+
+**Formel (winback_candidate):**
+```
+MAX(season_year WHERE total_events > 0) <= current_year - 2
+```
+
+### Alla KPI-definitioner
+
+| kpi_key | definition_sv | formula | category |
+|---------|---------------|---------|----------|
+| `retention_from_prev` | Andel av förra årets deltagare som också tävlade i år | `(riders_in_both / riders_in_Y-1) * 100` | retention |
+| `returning_share_of_current` | Andel av årets deltagare som även tävlade förra året | `(riders_in_both / riders_in_Y) * 100` | retention |
+| `churn_rate` | Andel av förra årets deltagare som INTE tävlade i år | `100 - retention_from_prev` | retention |
+| `rookie_rate` | Andel av årets deltagare som är förstagångsdeltagare | `(new_riders / total_riders) * 100` | acquisition |
+| `active_rider` | **EVENT-BASERAD:** Deltagare med minst 1 event under perioden | `COUNT(DISTINCT event_id) >= 1` | definition |
+| `at_risk_rider` | **HEURISTIC:** Aktiv förra året men visar nedgång | Se ovan | definition |
+| `winback_candidate` | **HEURISTIC:** Aktiv 2+ år sedan men inte förra året | Se ovan | definition |
+| `ltv_events` | Totalt antal events en deltagare har deltagit i | `SUM(events_per_year)` | value |
+| `cohort_year` | Första året en deltagare deltog i något event | `MIN(season_year)` | definition |
+| `ACTIVE_MIN_EVENTS` | **CONFIG:** Minsta antal events för aktiv | `1` | config |
 
 ---
 
-## Brand/Varumarke-dimension
+## Snapshot → Export-modell
 
-### Definition
+### Modell A: Snapshot laser KPI + pre-aggregat
 
-**Brand** (varumarke) ar ett overordnat koncept som grupperar en eller flera **serier**.
-
-Exempel:
-- Brand "GravitySeries" → Serier: GES Enduro Cup, GES Junior
-- Brand "Svenska Cykelförbundet" → Serier: SM DH, SM XC
-
-### Datamodell
+v3.0.2 anvander **Modell A**:
 
 ```
-┌─────────────┐         ┌─────────────────────┐         ┌─────────────┐
-│   brands    │ 1───N   │  brand_series_map   │   N───1 │   series    │
-├─────────────┤         ├─────────────────────┤         ├─────────────┤
-│ id (PK)     │         │ brand_id (FK)       │         │ id (PK)     │
-│ name        │         │ series_id (FK)      │         │ name        │
-│ short_code  │         │ relationship_type   │         │ year        │
-│ logo_url    │         │ valid_from          │         │ ...         │
-│ active      │         │ valid_until         │         └─────────────┘
-└─────────────┘         └─────────────────────┘
-```
-
-**Seed-data i migration 007:**
-```sql
-INSERT INTO brands (name, short_code, description, color_primary, active, display_order)
-VALUES
-    ('GravitySeries', 'GS', 'Sveriges största gravity MTB-serie', '#37d4d6', 1, 1),
-    ('Svenska Cykelförbundet', 'SCF', 'Nationella mästerskapstävlingar', '#0066cc', 1, 2);
-```
-
----
-
-## Databas-struktur
-
-### Migration 007: Nya/Uppdaterade Tabeller
-
-#### `analytics_exports` (uppdaterad)
-
-```sql
-ALTER TABLE analytics_exports
-    ADD COLUMN export_uid VARCHAR(36) NOT NULL,
-    ADD COLUMN filters_json JSON NULL,
-    ADD COLUMN requested_at DATETIME NULL,
-    ADD COLUMN completed_at DATETIME NULL,
-    ADD COLUMN status ENUM('pending', 'processing', 'completed', 'failed') DEFAULT 'completed',
-    ADD COLUMN error_message TEXT NULL;
-```
-
-**Index:**
-- `UNIQUE(export_uid)`
-- `INDEX(snapshot_id)`
-- `INDEX(export_type, season_year)`
-- `INDEX(exported_by, exported_at)`
-- `INDEX(status)`
-
-#### `brands` (NY)
-
-| Kolumn | Typ | Beskrivning |
-|--------|-----|-------------|
-| id | INT UNSIGNED | Auto-increment PK |
-| name | VARCHAR(100) | Varumarkesnamn |
-| short_code | VARCHAR(20) | Kort kod (GS, SCF) |
-| description | TEXT | Beskrivning |
-| logo_url | VARCHAR(255) | URL till logotyp |
-| website_url | VARCHAR(255) | Webbplats |
-| color_primary | VARCHAR(7) | Hex farg |
-| active | TINYINT(1) | DEFAULT 1 |
-| display_order | INT | Sortering |
-
-#### `brand_series_map` (NY)
-
-| Kolumn | Typ | Beskrivning |
-|--------|-----|-------------|
-| id | INT UNSIGNED | Auto-increment PK |
-| brand_id | INT UNSIGNED | FK till brands |
-| series_id | INT UNSIGNED | FK till series |
-| relationship_type | ENUM | 'owner', 'partner', 'sponsor' |
-| valid_from | DATE | Relation giltig fran |
-| valid_until | DATE | Relation giltig till (NULL=pagaende) |
-
-#### `analytics_recalc_queue` (NY)
-
-| Kolumn | Typ | Beskrivning |
-|--------|-----|-------------|
-| id | INT UNSIGNED | Auto-increment PK |
-| trigger_type | ENUM | 'merge', 'import', 'manual', 'correction' |
-| trigger_entity | VARCHAR(50) | 'rider', 'event', 'result' |
-| trigger_entity_id | INT UNSIGNED | Entitetens ID |
-| affected_rider_ids | JSON | Lista med paverkade rider IDs |
-| affected_years | JSON | Lista med paverkade ar |
-| priority | TINYINT UNSIGNED | 1=hogst, 10=lagst (DEFAULT 5) |
-| status | ENUM | 'pending', 'processing', 'completed', 'failed', 'skipped' |
-| checksum | VARCHAR(64) | SHA256 for deduplication |
-| rows_affected | INT UNSIGNED | Antal rader processade |
-| execution_time_ms | INT UNSIGNED | Kortid i millisekunder |
-| error_message | TEXT | Felmeddelande om failed |
-
-#### `analytics_cron_runs` (uppdaterad)
-
-```sql
-ALTER TABLE analytics_cron_runs
-    ADD COLUMN heartbeat_at DATETIME NULL,
-    ADD COLUMN duration_ms INT UNSIGNED NULL,
-    ADD COLUMN error_text TEXT NULL,
-    ADD COLUMN rows_processed INT UNSIGNED NULL,
-    ADD COLUMN memory_peak_mb DECIMAL(8,2) NULL,
-    ADD COLUMN timeout_detected TINYINT(1) DEFAULT 0;
-```
-
-#### `analytics_cron_config` (NY)
-
-| Kolumn | Typ | Beskrivning |
-|--------|-----|-------------|
-| id | INT UNSIGNED | Auto-increment PK |
-| job_name | VARCHAR(100) | Jobbnamn (UNIQUE) |
-| enabled | TINYINT(1) | DEFAULT 1 |
-| schedule_cron | VARCHAR(50) | Cron expression |
-| timeout_seconds | INT UNSIGNED | Max kortid (DEFAULT 3600) |
-| heartbeat_interval_seconds | INT UNSIGNED | Heartbeat-intervall (DEFAULT 60) |
-| retry_on_failure | TINYINT(1) | DEFAULT 1 |
-| max_retries | INT UNSIGNED | DEFAULT 3 |
-| notify_on_failure | TINYINT(1) | DEFAULT 1 |
-| notify_email | VARCHAR(255) | Notifieringsmail |
-
-**Default-konfiguration:**
-```sql
-INSERT INTO analytics_cron_config (job_name, schedule_cron, timeout_seconds)
-VALUES
-    ('daily_aggregation', '0 2 * * *', 3600),
-    ('weekly_snapshot', '0 3 * * 0', 7200),
-    ('data_quality_check', '0 4 * * *', 1800),
-    ('export_cleanup', '0 5 * * *', 900);
-```
-
-#### `export_rate_limits` (NY)
-
-| Kolumn | Typ | Beskrivning |
-|--------|-----|-------------|
-| id | INT UNSIGNED | Auto-increment PK |
-| user_id | INT UNSIGNED | NULL = galler alla |
-| ip_address | VARCHAR(45) | NULL = galler alla IPs |
-| limit_type | ENUM | 'hourly', 'daily', 'monthly' |
-| max_exports | INT UNSIGNED | DEFAULT 100 |
-| max_rows | INT UNSIGNED | Max rader per period |
-| current_count | INT UNSIGNED | Nuvarande antal |
-| period_start | DATETIME | Periodens start |
-| period_end | DATETIME | Periodens slut |
-
----
-
-## Karnkomponenter
-
-### 1. ExportLogger.php (v3.0.1)
-
-**Fil:** `analytics/includes/ExportLogger.php`
-
-**Nyckelfunktioner:**
-- **Mandatory snapshot_id:** Kastar `InvalidArgumentException` om saknas
-- **UUID-generering:** Varje export far unik `export_uid`
-- **Rate limiting:** 50/timme, 200/dag per anvandare
-- **Fingerprint:** SHA256 pa sorterad JSON for verifiering
-
-```php
-// Huvudmetod
-public function logExport(string $exportType, array $data, array $options = []): int
-
-// Validering
-if ($this->requireSnapshotId && empty($options['snapshot_id'])) {
-    throw new InvalidArgumentException(
-        'snapshot_id is required for all exports in v3.0.1+'
-    );
-}
-
-// Rate limit
-if (!$this->checkRateLimit($userId, $ipAddress)) {
-    throw new RuntimeException('Export rate limit exceeded');
+Snapshot = {
+    id: 1234,
+    created_at: "2026-01-16 14:30:00",
+    source_max_updated_at: "2026-01-16 14:29:00",
+    data_fingerprint: "sha256:abc123...",
+    tables_included: ["rider_yearly_stats", "series_participation", "club_yearly_stats"]
 }
 ```
 
-**Nya metoder i v3.0.1:**
-- `checkRateLimit(?int $userId, ?string $ipAddress): bool`
-- `getRateLimitStatus(?int $userId, ?string $ipAddress): array`
-- `getExportByUid(string $exportUid): ?array`
-- `verifyExportByUid(string $exportUid, array $data): array`
-- `getManifestByUid(string $exportUid): ?array`
+**Vad snapshot laser:**
+1. KPI-varden beraknade vid tidpunkten
+2. Checksums pa pre-aggregerade tabeller
+3. Max updated_at fran kalltabeller
 
-### 2. IdentityResolver.php (v3.0.1)
-
-**Fil:** `analytics/includes/IdentityResolver.php`
-
-**Nya funktioner - Merge→Recalc Policy:**
-
-```php
-// Automatisk recalc-koande efter merge
-public function merge(int $canonicalId, int $mergedId, ...): bool {
-    // ... merge-logik ...
-
-    // v3.0.1: Queue recalc for affected riders
-    $this->queueRecalc(
-        'merge',
-        'rider',
-        $mergedId,
-        [$canonicalId, $mergedId],
-        $by
-    );
-}
-
-// Koa recalc-jobb
-public function queueRecalc(
-    string $triggerType,
-    string $triggerEntity,
-    int $triggerEntityId,
-    array $affectedRiderIds,
-    ?string $createdBy = null
-): int
-
-// Hamta pending jobb
-public function getPendingRecalcJobs(int $limit = 10): array
-
-// Markera jobb
-public function markRecalcStarted(int $jobId): bool
-public function markRecalcCompleted(int $jobId, int $rowsAffected, int $executionTimeMs): bool
-public function markRecalcFailed(int $jobId, string $errorMessage): bool
-
-// Statistik
-public function getRecalcQueueStats(): array
-```
-
-### 3. AnalyticsEngine.php (v3.0.1)
-
-**Fil:** `analytics/includes/AnalyticsEngine.php`
-
-**Nya metoder - Heartbeat & Timeout:**
-
-```php
-// Skicka heartbeat for pagaende jobb
-public function heartbeat(): void {
-    if (!$this->currentJobId) return;
-    // UPDATE analytics_cron_runs SET heartbeat_at = NOW() WHERE id = ?
-}
-
-// Kolla timeout
-public function checkTimeout(string $jobName, int $timeoutSeconds = 3600): ?array
-
-// Hamta timed out jobb
-public function getTimedOutJobs(int $days = 7): array
-```
-
-**Nya metoder - Recalc Queue:**
-
-```php
-// Processa recalc-kon
-public function processRecalcQueue(int $maxJobs = 10): array {
-    $results = [];
-    $pendingJobs = $this->identityResolver->getPendingRecalcJobs($maxJobs);
-
-    foreach ($pendingJobs as $job) {
-        // Markera som processing
-        // Omberakna affected riders for affected years
-        // Markera som completed/failed
-    }
-
-    return $results;
-}
-
-// Hamta queue status
-public function getRecalcQueueStatus(): array
-```
-
-**Nya metoder - Snapshot:**
-
-```php
-// Skapa snapshot
-public function createSnapshot(string $description = '', ?string $createdBy = null): int
-
-// Hamta senaste snapshot
-public function getLatestSnapshot(): ?array
-
-// Hamta eller skapa snapshot (med max age)
-public function getOrCreateSnapshot(int $maxAgeMinutes = 60, ?string $createdBy = null): int
-```
-
-### 4. SVGChartRenderer.php (v3.0.1)
-
-**Fil:** `analytics/includes/SVGChartRenderer.php`
-
-**Nya metoder - PNG Fallback:**
-
-```php
-// Kontrollera tillganglighet (static, cached)
-public static function canConvertToPng(): bool
-
-// Konvertera med graceful fallback
-public function svgToPng(string $svg, int $scale = 2): ?string
-
-// Hamta som bild (PNG eller SVG fallback)
-public function getChartAsImage(string $svg, int $scale = 2): array
-// Returns: ['format' => 'png'|'svg', 'data' => binary, 'mime' => ..., 'base64' => ...]
-
-// Spara som bild (PNG eller SVG fallback)
-public function saveAsImage(string $svg, string $path, int $scale = 2): array
-
-// Data URI for embedding
-public function toDataUri(string $svg, bool $preferPng = false): string
-
-// Systeminformation
-public static function getPngSupportInfo(): array
-```
-
-### 5. PdfExportBuilder.php (NY)
-
-**Fil:** `analytics/includes/PdfExportBuilder.php`
-
-**Syfte:** Bygger PDF-exporter med obligatorisk "Definitions & Provenance" block.
-
-```php
-class PdfExportBuilder {
-    public function __construct(PDO $pdo, int $snapshotId)
-
-    // Byggmetoder
-    public function setTitle(string $title, string $subtitle = ''): self
-    public function setSeasonYear(int $year): self
-    public function addSection(string $heading, string $content): self
-    public function addTable(string $heading, array $headers, array $rows): self
-    public function addChart(string $heading, string $chartType, array $data, array $options = []): self
-    public function addKpiDefinition(string $kpiKey, ?string $customDefinition = null): self
-    public function addStandardKpiDefinitions(array $kpiKeys): self
-
-    // Output
-    public function buildHtml(): string
-    public function exportToPdf(?string $outputPath = null): string|bool
-    public function logExport(string $exportType, array $data, array $options = []): int
-}
-```
-
-**Mandatory Definition Box:**
-Varje PDF innehaller automatiskt:
-- KPI Definitions (fran `analytics_kpi_definitions` tabellen)
-- Report Metadata (generated_at, platform_version, calculation_version)
-- Snapshot ID och fingerprint
-- Reproducibility note
-- GDPR compliance note
-
----
-
-## KPI-definitioner
-
-**KRITISKT:** Dessa definitioner ar **obligatoriska** i alla PDF-exporter.
-
-### KPI-definitioner i databas
-
-Migration 007 skapar `analytics_kpi_definitions` med foljande v3-definitioner:
-
-| kpi_key | definition_sv | formula |
-|---------|---------------|---------|
-| `retention_from_prev` | Andel av förra årets deltagare som också tävlade i år | `(riders_in_both / riders_in_Y-1) * 100` |
-| `returning_share_of_current` | Andel av årets deltagare som även tävlade förra året | `(riders_in_both / riders_in_Y) * 100` |
-| `churn_rate` | Andel av förra årets deltagare som INTE tävlade i år | `100 - retention_from_prev` |
-| `rookie_rate` | Andel av årets deltagare som är förstagångsdeltagare | `(new_riders / total_riders) * 100` |
-| `active_rider` | En deltagare med minst 1 registrerat resultat under perioden | `COUNT(results) >= 1` |
-| `at_risk_rider` | Aktiv förra året men visar nedgång | `events_current < events_previous` |
-| `winback_candidate` | Deltagare aktiv för 2+ år sedan men inte förra året | `last_active_year <= current_year - 2` |
-| `ltv_events` | Totalt antal events en deltagare har deltagit i | `SUM(events_per_year)` |
-| `cohort_year` | Första året en deltagare deltog i något event | `MIN(season_year)` |
-
-### Definition Box Format (PDF)
-
-```
-┌─────────────────────────────────────────────────────────────────────────────┐
-│ DEFINITIONS & PROVENANCE                                                    │
-├─────────────────────────────────────────────────────────────────────────────┤
-│ REPORT METADATA:                                                            │
-│   Generated:        2026-01-16 14:30:00                                    │
-│   Platform Version: 3.0.1                                                   │
-│   Calculation Ver:  v3                                                      │
-│   Snapshot ID:      #1234                                                   │
-│   Season:           2025                                                    │
-│                                                                             │
-│ KPI DEFINITIONS:                                                            │
-│   Retention Rate:   Andel av förra årets deltagare som kom tillbaka        │
-│   Rookie Rate:      Andel förstagångsdeltagare                             │
-│   ...                                                                       │
-│                                                                             │
-│ REPRODUCIBILITY:                                                            │
-│   This report can be reproduced using snapshot #1234.                      │
-│                                                                             │
-│ GDPR:                                                                       │
-│   Data processed in accordance with GDPR.                                  │
-└─────────────────────────────────────────────────────────────────────────────┘
-```
-
----
-
-## Export och Reproducerbarhet
-
-### Principer (v3.0.1)
-
-1. **Alla exporter MASTE ha snapshot_id** - kastar exception om saknas
-2. **export_uid** (UUID) genereras automatiskt
-3. **Fingerprint** (SHA256) pa sorterad JSON
-4. **Rate limiting** 50/timme, 200/dag
-5. **Definition Box** obligatorisk i PDF
+**Vad snapshot INTE laser:**
+- Versionerade tabellkopior (ingen "rider_yearly_stats_snapshot_1234")
+- Radatatabeller
 
 ### Export-flode
 
@@ -602,38 +278,107 @@ Migration 007 skapar `analytics_kpi_definitions` med foljande v3-definitioner:
 1. Anvandare begar export
          │
          ▼
-2. ExportLogger::logExport() anropas
+2. Hamta/skapa snapshot (getOrCreateSnapshot)
          │
          ▼
-3. Validera snapshot_id (REQUIRED) → Exception om saknas
+3. Validera snapshot_id (REQUIRED) → PdfEngineException/InvalidArgumentException
          │
          ▼
-4. Kontrollera rate limit → RuntimeException om overskriden
+4. Hamta data fran pre-aggregerade tabeller
          │
          ▼
-5. Generera export_uid (UUID v4)
+5. Berakna DETERMINISTISK fingerprint:
+   - Sortera nycklar rekursivt
+   - JSON_UNESCAPED_UNICODE | JSON_NUMERIC_CHECK
+   - SHA256
          │
          ▼
-6. Berakna fingerprint (SHA256)
+6. Skapa manifest:
+   {
+     snapshot_id: 1234,
+     generated_at: "2026-01-16T14:30:00Z",
+     season_year: 2025,
+     source_max_updated_at: "2026-01-16T14:29:00",
+     platform_version: "3.0.2",
+     calculation_version: "v3",
+     data_fingerprint: "sha256:..."
+   }
          │
          ▼
-7. Skapa manifest med all metadata
+7. Spara till analytics_exports
          │
          ▼
-8. Spara till analytics_exports
-         │
-         ▼
-9. Om PDF: PdfExportBuilder laggar Definition Box
-         │
-         ▼
-10. Returnera fil/data
+8. Om PDF: PdfExportBuilder (TCPDF) med Definition Box
 ```
+
+### Reproducerbarhet
+
+**Export kan reproduceras EXAKT** om:
+1. Snapshot fortfarande finns
+2. Pre-aggregerade tabeller INTE har omraknats sedan snapshot skapades
+
+**Om pre-aggregat omraknats:**
+- Ny export med samma parametrar kan ge annorlunda data
+- Ursprunglig export manifest visar `source_max_updated_at` for jamforelse
+
+---
+
+## PDF-policy (TCPDF Mandatory)
+
+### Policy (v3.0.2)
+
+| Attribut | Varde |
+|----------|-------|
+| **PDF Engine** | TCPDF (OBLIGATORISK) |
+| **Fallback** | INGEN (exception kastas) |
+| **HTML-fallback** | FORBJUDEN i production |
+| **wkhtmltopdf** | DEPRECATED (returnerar alltid null) |
+
+### Implementation
+
+```php
+// PdfExportBuilder constructor
+public function __construct(PDO $pdo, int $snapshotId) {
+    // v3.0.2: Verifiera att TCPDF ar tillganglig
+    if (!self::isTcpdfAvailable()) {
+        throw new PdfEngineException(
+            'TCPDF is required for PDF export in v3.0.2. ' .
+            'Install TCPDF: composer require tecnickcom/tcpdf'
+        );
+    }
+    // ...
+}
+```
+
+### Export Center visning
+
+```
+PDF ENGINE STATUS:
+  [x] OK (TCPDF 6.x)
+    - PDF-export tillganglig
+    - Alla knappar aktiverade
+
+  [ ] MISSING (CRITICAL)
+    - PDF-export BLOCKERAD
+    - Installera: composer require tecnickcom/tcpdf
+```
+
+### Installation
+
+```bash
+composer require tecnickcom/tcpdf
+```
+
+TCPDF soker automatiskt i:
+- `vendor/tecnickcom/tcpdf/tcpdf.php`
+- `/usr/share/php/tcpdf/tcpdf.php`
+- `analytics/includes/tcpdf/tcpdf.php`
 
 ---
 
 ## Identity Resolution och Recalc
 
-### Merge → Recalc Policy (v3.0.1)
+### Merge → Recalc Policy (v3.0.2)
 
 ```
 1. IdentityResolver::merge() anropas
@@ -642,33 +387,272 @@ Migration 007 skapar `analytics_kpi_definitions` med foljande v3-definitioner:
 2. Merge-record skapas i rider_merge_map
          │
          ▼
-3. queueRecalc() anropas automatiskt:
+3. findAffectedYearsWithSource() anropas:
+   PRIORITET:
+   a) rider_yearly_stats (source='stats') - SNABBAST
+   b) raw results (source='results') - FALLBACK
+   c) tom lista (source='manual')
+         │
+         ▼
+4. queueRecalc() med:
+   - Sorterade rider IDs (deterministisk checksum)
+   - affected_years med source
+   - years_source kolumn satt
+         │
+         ▼
+5. Checksum beraknas for deduplication (SHA256)
+         │
+         ▼
+6. Jobb laggs i analytics_recalc_queue:
    - trigger_type = 'merge'
-   - affected_rider_ids = [canonical, merged]
-   - affected_years = alla ar rider deltog
+   - priority = 3 (hog)
+   - years_source = 'stats'/'results'/'manual'
          │
          ▼
-4. Checksum beraknas for deduplication
-         │
-         ▼
-5. Jobb laggs i analytics_recalc_queue (priority=3)
-         │
-         ▼
-6. Nasta cron: AnalyticsEngine::processRecalcQueue()
-   - Hamtar pending jobb sorterat pa prioritet
-   - Omberaknar yearly stats for affected riders
-   - Markerar jobb som completed/failed
+7. Nasta cron: processRecalcQueue()
+   - Omberaknar yearly stats for affected riders/years
+   - IDEMPOTENT (samma input → samma resultat)
 ```
 
-### Deduplication
+### affected_years bestamning
 
-Varje recalc-jobb far en SHA256 checksum baserad pa:
-- trigger_type
-- trigger_entity
-- trigger_entity_id
-- affected_rider_ids
+```php
+public function findAffectedYearsWithSource(array $riderIds): array {
+    // 1. Forsoker rider_yearly_stats (primär, snabb)
+    $years = query("SELECT DISTINCT season_year FROM rider_yearly_stats WHERE rider_id IN (...)");
+    if (!empty($years)) {
+        return ['years' => $years, 'source' => 'stats'];
+    }
 
-Om samma checksum redan finns som 'pending' skippas det nya jobbet.
+    // 2. Fallback till raw results (om stats saknas)
+    $years = query("SELECT DISTINCT YEAR(e.date) FROM results JOIN events...");
+    if (!empty($years)) {
+        return ['years' => $years, 'source' => 'results'];
+    }
+
+    // 3. Tom lista (manuell hantering kravs)
+    return ['years' => [], 'source' => 'manual'];
+}
+```
+
+---
+
+## Rate Limiting (DB-baserat)
+
+### Tabellstruktur (v3.0.2)
+
+```sql
+CREATE TABLE export_rate_limits (
+    id INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
+    scope ENUM('global', 'user', 'ip', 'role') NOT NULL DEFAULT 'user',
+    scope_value VARCHAR(100) NULL,
+    max_exports INT UNSIGNED NOT NULL DEFAULT 50,
+    window_seconds INT UNSIGNED NOT NULL DEFAULT 3600,
+    max_rows_per_export INT UNSIGNED NULL,
+    max_rows_per_window INT UNSIGNED NULL,
+    current_count INT UNSIGNED DEFAULT 0,
+    window_start DATETIME NULL,
+    window_end DATETIME NULL,
+    enabled TINYINT(1) DEFAULT 1,
+    UNIQUE INDEX idx_rate_unique_scope (scope, scope_value)
+);
+```
+
+### Default-varden
+
+| Scope | Scope Value | Max Exports | Window |
+|-------|-------------|-------------|--------|
+| global | NULL | 50 | 1 timme |
+| global | daily | 200 | 24 timmar |
+| role | super_admin | 500 | 1 timme |
+
+### Prioritetsordning
+
+1. **User-specific** (scope='user', scope_value=user_id)
+2. **Role-specific** (scope='role', scope_value=role_name)
+3. **IP-specific** (scope='ip', scope_value=ip_address)
+4. **Global** (scope='global')
+
+### Anvandning
+
+```php
+// ExportLogger laddar automatiskt fran DB
+$logger = new ExportLogger($pdo);
+
+// Kontrollera (med roll-stod)
+$status = $logger->getRateLimitStatus($userId, $ipAddress, $role);
+// Returns:
+// [
+//   'primary' => ['current' => 5, 'limit' => 50, 'window_seconds' => 3600],
+//   'hourly' => ['current' => 5, 'limit' => 50],
+//   'daily' => ['current' => 12, 'limit' => 200],
+//   'can_export' => true
+// ]
+
+// Andra via DB
+$logger->setRateLimits(100, 500, 'role', 'analytics_admin');
+```
+
+---
+
+## Databas-struktur
+
+### Migration 008: Revision Grade Fixes
+
+#### `analytics_exports` (uppdaterad)
+
+```sql
+ALTER TABLE analytics_exports
+    MODIFY COLUMN snapshot_id INT UNSIGNED NOT NULL,
+    MODIFY COLUMN status ENUM('pending', 'processing', 'completed', 'failed') NOT NULL DEFAULT 'pending';
+```
+
+#### `analytics_kpi_definitions` (uppdaterad)
+
+```sql
+-- active_rider korrigerad
+UPDATE analytics_kpi_definitions
+SET definition = 'A rider who participated in at least 1 event...',
+    formula = 'COUNT(DISTINCT event_id) >= 1'
+WHERE kpi_key = 'active_rider';
+
+-- at_risk_rider markerad som HEURISTIC
+UPDATE analytics_kpi_definitions
+SET definition = 'HEURISTIC: Active last year but showing decline...'
+WHERE kpi_key = 'at_risk_rider';
+```
+
+#### `export_rate_limits` (NY struktur)
+
+| Kolumn | Typ | Beskrivning |
+|--------|-----|-------------|
+| scope | ENUM | 'global', 'user', 'ip', 'role' |
+| scope_value | VARCHAR(100) | Varde for scope |
+| max_exports | INT UNSIGNED | Max antal exporter per window |
+| window_seconds | INT UNSIGNED | Fonsterstorlek (3600=1h, 86400=1d) |
+
+#### `analytics_recalc_queue` (uppdaterad)
+
+```sql
+ALTER TABLE analytics_recalc_queue
+    ADD COLUMN years_source ENUM('stats', 'results', 'manual') DEFAULT 'stats';
+```
+
+#### `analytics_snapshots` (uppdaterad)
+
+```sql
+ALTER TABLE analytics_snapshots
+    ADD COLUMN data_fingerprint VARCHAR(64) NULL,
+    ADD COLUMN tables_included JSON NULL;
+```
+
+#### `analytics_kpi_audit` (NY)
+
+| Kolumn | Typ | Beskrivning |
+|--------|-----|-------------|
+| kpi_key | VARCHAR(50) | KPI-nyckel |
+| action | ENUM | 'create', 'update', 'deprecate' |
+| old_definition | TEXT | Tidigare definition |
+| new_definition | TEXT | Ny definition |
+| changed_by | VARCHAR(100) | Vem andrade |
+| change_reason | TEXT | Varfor |
+
+#### `analytics_system_config` (NY)
+
+| Kolumn | Typ | Beskrivning |
+|--------|-----|-------------|
+| config_key | VARCHAR(100) | Konfigurationsnyckel |
+| config_value | TEXT | Varde |
+| config_type | ENUM | 'string', 'int', 'bool', 'json' |
+| editable | TINYINT(1) | Om andringsbar via UI |
+
+**Nyckelvarden:**
+- `pdf_engine` = 'tcpdf'
+- `pdf_fallback_allowed` = '0'
+- `snapshot_required_for_export` = '1'
+- `rate_limit_source` = 'database'
+
+---
+
+## Karnkomponenter
+
+### 1. ExportLogger.php (v3.0.2)
+
+**Fil:** `analytics/includes/ExportLogger.php`
+
+**Andringar i v3.0.2:**
+- DB-baserade rate limits via `loadRateLimitsFromDb()`
+- Deterministisk fingerprint via `calculateDeterministicFingerprint()`
+- Roll-baserad rate limit support
+- Enhanced manifest med alla mandatory fields
+
+```php
+// Manifest innehaller (MANDATORY v3.0.2):
+[
+    'snapshot_id' => 1234,
+    'generated_at' => '2026-01-16T14:30:00Z',
+    'season_year' => 2025,
+    'source_max_updated_at' => '2026-01-16T14:29:00',
+    'platform_version' => '3.0.2',
+    'calculation_version' => 'v3',
+    'data_fingerprint' => 'sha256:abc123...',
+    // ...
+]
+```
+
+### 2. PdfExportBuilder.php (v3.0.2)
+
+**Fil:** `analytics/includes/PdfExportBuilder.php`
+
+**Andringar i v3.0.2:**
+- `PdfEngineException` kastas om TCPDF saknas
+- `isTcpdfAvailable()` kontrollerar tillganglighet
+- `getPdfEngineStatus()` for diagnostik
+- wkhtmltopdf-stod BORTTAGET
+
+```php
+// Kastar exception om TCPDF saknas
+throw new PdfEngineException(
+    'TCPDF is required for PDF export in v3.0.2. ' .
+    'Install TCPDF: composer require tecnickcom/tcpdf'
+);
+```
+
+### 3. IdentityResolver.php (v3.0.2)
+
+**Fil:** `analytics/includes/IdentityResolver.php`
+
+**Andringar i v3.0.2:**
+- `findAffectedYearsWithSource()` returnerar source-info
+- `queueRecalc()` sparar `years_source`
+- Deterministisk checksum (sorterade rider IDs)
+
+```php
+// Returnerar bade ar och kalla
+$result = $resolver->findAffectedYearsWithSource([123, 456]);
+// ['years' => [2024, 2025], 'source' => 'stats']
+```
+
+### 4. admin/analytics-export-center.php (v3.0.2)
+
+**Fil:** `admin/analytics-export-center.php`
+
+**Andringar i v3.0.2:**
+- Visar PDF ENGINE STATUS (OK/MISSING CRITICAL)
+- Blockerar PDF-knappar om TCPDF saknas
+- Visar Rate Limit Source (database/config)
+
+---
+
+## Datakvalitet
+
+Se `KPICalculator::getDataQualityMetrics()` for matningar av:
+- Birth year coverage
+- Club coverage
+- Gender coverage
+- Class coverage
+- Potential duplicates
+- Merged riders
 
 ---
 
@@ -677,37 +661,20 @@ Om samma checksum redan finns som 'pending' skippas det nya jobbet.
 ### Heartbeat-logik
 
 ```php
-// I AnalyticsEngine under langa operationer
 foreach ($riders as $i => $rider) {
     if ($i % 100 === 0) {
-        $engine->heartbeat();  // UPDATE heartbeat_at = NOW()
-
-        // Kolla timeout (optional)
-        if ($engine->checkTimeout('daily-refresh')) {
-            // Jobb har kortat for lange - avbryt
-            break;
-        }
+        $engine->heartbeat();
     }
-    // ... processRider() ...
 }
 ```
 
 ### Cron-konfiguration
 
 Tabell `analytics_cron_config` innehaller:
-- `timeout_seconds`: Max kortid innan timeout
-- `heartbeat_interval_seconds`: Hur ofta heartbeat ska skickas
-- `retry_on_failure`: Om jobb ska koras om vid fel
-- `max_retries`: Max antal retry
-
-### Timeout Detection
-
-```php
-public function checkTimeout(string $jobName, int $timeoutSeconds = 3600): ?array {
-    // Hitta jobb som ar 'started' men saknar heartbeat langre an timeout
-    // Markera som failed med timeout_detected = 1
-}
-```
+- `timeout_seconds`: Max kortid
+- `heartbeat_interval_seconds`: Heartbeat-intervall
+- `retry_on_failure`: Auto-retry
+- `max_retries`: Max forsok
 
 ---
 
@@ -715,126 +682,51 @@ public function checkTimeout(string $jobName, int $timeoutSeconds = 3600): ?arra
 
 ### PII-identifiering
 
-`ExportLogger::containsPII()` kontrollerar om data innehaller nagot av:
-- firstname, lastname
-- email, phone
-- birth_year, birth_date
-- address, license_number
+`ExportLogger::containsPII()` kontrollerar: firstname, lastname, email, phone, birth_year, address, license_number
 
 ### Rate Limiting
 
-- **Hourly:** Max 50 exporter per timme per anvandare
-- **Daily:** Max 200 exporter per dag per anvandare
-- Implementerat i `ExportLogger::checkRateLimit()`
-- Status via `ExportLogger::getRateLimitStatus()`
-
-### Export-typer med PII
-
-| Export Type | contains_pii |
-|-------------|--------------|
-| riders_at_risk | 1 |
-| cohort_riders | 1 |
-| winback_targets | 1 |
-| summary | 0 |
-| retention_stats | 0 |
-| demographics | 0 |
+Nu DB-baserat med scope-stod (global/user/ip/role).
 
 ---
 
 ## Analytics-sidor
 
-### Export Center (`admin/analytics-export-center.php`) - NY
+### Export Center (`admin/analytics-export-center.php`)
 
-**Syfte:** Central oversikt over alla analytics-exporter
-
-**Funktioner:**
-- **Statistik-oversikt:** Exporter senaste 30 dagar, rader exporterade, reproducerbarhetsgrad
-- **Snabbexporter:** Retention, At-Risk, Cohort, Winback, Club Stats
-- **PDF-rapporter:** Sasongsammanfattning, Retentionsrapport
-- **Exporthistorik:** Lista over egna exporter med typ, datum, rader, snapshot
-- **Manifest-visning:** Klicka for att se komplett manifest
-- **Rate limit-display:** Visuell progress bar for hourly/daily limits
-- **Systemstatus:** Platform version, PNG support, recalc queue status
-
-**JavaScript-funktioner:**
-- `exportData(type)` - Hamtar och laddar ner CSV
-- `generatePdf(type)` - Genererar PDF-rapport
-- `createSnapshot()` - Skapar ny analytics-snapshot
-- `viewManifest(exportId)` - Visar export-manifest i modal
+**Funktioner (v3.0.2):**
+- **PDF ENGINE STATUS**: OK/MISSING (CRITICAL)
+- **Rate Limit Source**: database/config
+- PDF-knappar blockerade om TCPDF saknas
 
 ---
 
 ## API-endpoints
 
-### Befintliga endpoints (att utoka)
-
 | Endpoint | Metod | Beskrivning |
 |----------|-------|-------------|
 | `/api/analytics/export.php` | POST | Generera CSV-export |
-| `/api/analytics/save-quality-metrics.php` | POST | Spara datakvalitetsmatning |
-| `/api/analytics/create-snapshot.php` | POST | Skapa ny snapshot (NY) |
-| `/api/analytics/get-manifest.php` | GET | Hamta manifest for export (NY) |
-
-### Rekommenderade nya endpoints
-
-```
-/api/analytics/create-snapshot.php
-POST - Skapa ny snapshot
-Response: { success: true, snapshot_id: 1234 }
-
-/api/analytics/get-manifest.php?id={exportId}
-GET - Hamta manifest
-Response: { success: true, manifest: {...} }
-
-/api/analytics/verify-export.php
-POST - Verifiera export fingerprint
-Body: { export_uid: "...", data: [...] }
-Response: { valid: true/false }
-```
+| `/api/analytics/create-snapshot.php` | POST | Skapa ny snapshot |
+| `/api/analytics/get-manifest.php` | GET | Hamta manifest for export |
 
 ---
 
 ## Setup och Underhall
 
-### Initial Setup (v3.0.1)
+### Initial Setup (v3.0.2)
 
-1. **Kor migration:**
 ```bash
+# 1. Kor migrationer
 mysql -u user -p database < analytics/migrations/007_production_ready.sql
-```
+mysql -u user -p database < analytics/migrations/008_revision_grade_fixes.sql
 
-2. **Populera brands:**
-```sql
--- Seed-data finns i migration, men anpassa efter era serier
-INSERT INTO brand_series_map (brand_id, series_id, relationship_type)
-SELECT 1, id, 'owner' FROM series WHERE name LIKE '%GES%';
-```
+# 2. Installera TCPDF
+composer require tecnickcom/tcpdf
 
-3. **Verifiera:**
-```sql
--- Kolla att tabeller finns
-SHOW TABLES LIKE 'brand%';
-SHOW TABLES LIKE 'analytics_%';
-DESCRIBE analytics_exports;
-```
-
-### Underhall
-
-```bash
-# Processa recalc queue manuellt
+# 3. Verifiera
 php -r "
-require 'config/database.php';
-require 'analytics/includes/AnalyticsEngine.php';
-\$engine = new AnalyticsEngine(hub_db());
-print_r(\$engine->processRecalcQueue(100));
-"
-
-# Skapa snapshot manuellt
-php -r "
-require 'config/database.php';
-require 'analytics/includes/AnalyticsEngine.php';
-\$engine = new AnalyticsEngine(hub_db());
-echo 'Snapshot ID: ' . \$engine->createSnapshot('Manual snapshot') . PHP_EOL;
+require 'analytics/includes/PdfExportBuilder.php';
+var_dump(PdfExportBuilder::getPdfEngineStatus());
 "
 ```
 
@@ -842,63 +734,82 @@ echo 'Snapshot ID: ' . \$engine->createSnapshot('Manual snapshot') . PHP_EOL;
 
 ## Changelog
 
-### v3.0.1 (2026-01-16) - 100% Production Ready - IMPLEMENTERAT
+### v3.0.2 (2026-01-16) - Fully Revision-Safe
 
 **Nya filer:**
-- `analytics/migrations/007_production_ready.sql` - Komplett databasschema
-- `analytics/includes/PdfExportBuilder.php` - PDF med Definition Box
-- `admin/analytics-export-center.php` - Admin Export Center
+- `analytics/migrations/008_revision_grade_fixes.sql` - Revision grade korrigeringar
 
 **Uppdaterade filer:**
 - `analytics/includes/ExportLogger.php`
-  - Mandatory snapshot_id
-  - UUID-baserad export_uid
-  - Rate limiting (50/h, 200/d)
-  - Nya metoder: checkRateLimit, getRateLimitStatus, getExportByUid, verifyExportByUid
+  - DB-baserade rate limits
+  - Deterministisk fingerprint (`calculateDeterministicFingerprint()`)
+  - Enhanced manifest med mandatory fields
+  - Roll-baserad rate limit support
+
+- `analytics/includes/PdfExportBuilder.php`
+  - TCPDF OBLIGATORISK
+  - `PdfEngineException` om TCPDF saknas
+  - `getPdfEngineStatus()` metod
+  - wkhtmltopdf BORTTAGET
 
 - `analytics/includes/IdentityResolver.php`
-  - Merge→Recalc policy
-  - Nya metoder: queueRecalc, getPendingRecalcJobs, markRecalcStarted/Completed/Failed, getRecalcQueueStats
+  - `findAffectedYearsWithSource()` med prioritet stats→results→manual
+  - Deterministisk checksum (sorterade rider IDs)
+  - `years_source` sparas i recalc_queue
 
-- `analytics/includes/AnalyticsEngine.php`
-  - Heartbeat & timeout handling
-  - Recalc queue processing
-  - Snapshot creation
-  - Nya metoder: heartbeat, checkTimeout, getTimedOutJobs, processRecalcQueue, getRecalcQueueStatus, createSnapshot, getLatestSnapshot, getOrCreateSnapshot
-
-- `analytics/includes/SVGChartRenderer.php`
-  - Graceful PNG fallback
-  - Nya metoder: canConvertToPng (static), getChartAsImage, saveAsImage, toDataUri, getPngSupportInfo
+- `admin/analytics-export-center.php`
+  - PDF ENGINE STATUS visning
+  - PDF-knappar blockerade om TCPDF saknas
+  - Rate Limit Source visning
 
 **Databas-andringar:**
-- Nya tabeller: brands, brand_series_map, analytics_recalc_queue, analytics_cron_config, export_rate_limits, analytics_kpi_definitions
-- Uppdaterade tabeller: analytics_exports (export_uid, filters_json, status), analytics_cron_runs (heartbeat_at, duration_ms, error_text, timeout_detected), analytics_snapshots (is_baseline, retention_days), data_quality_metrics (quality_score)
+- Nya tabeller: `analytics_kpi_audit`, `analytics_system_config`, `v_export_validation`
+- Uppdaterade tabeller: `export_rate_limits` (ny struktur med scope), `analytics_recalc_queue` (+years_source), `analytics_snapshots` (+data_fingerprint, +tables_included)
+- KPI-definitioner: `active_rider` korrigerad till EVENT-baserad, `at_risk_rider`/`winback_candidate` markerade som HEURISTIC
+
+### v3.0.1 (2026-01-16) - 100% Production Ready
+
+- Initial production readiness
+- Mandatory snapshot_id
+- Rate limiting (hardkodat)
+- PdfExportBuilder med wkhtmltopdf
+- Recalc queue
 
 ### v3.0.0 (2026-01-16)
 
-- Initial production readiness
-- KPI-definitioner tydliggjorda
-- Export logging med fingerprint
-- SVG ChartRenderer
-- Data Quality panel
+- Initial implementation
 
 ---
 
-## Open Questions / Assumptions
+## Revision Audit Trail
 
-1. **Brand-data:** Migration 007 innehaller seed-data for GravitySeries och SCF. Ytterligare brands och brand_series_map mappningar maste laggas till manuellt.
+### KPI-definitionsandringar (loggade i analytics_kpi_audit)
 
-2. **PDF-bibliotek:** PdfExportBuilder forsoker anvanda wkhtmltopdf. Om det saknas returneras HTML istallet. For full PDF-support, installera wkhtmltopdf.
+| Datum | KPI | Andring | Anledning |
+|-------|-----|---------|-----------|
+| 2026-01-16 | `active_rider` | Formel: `COUNT(results) >= 1` → `COUNT(DISTINCT event_id) >= 1` | Korrigerat till EVENT-baserad definition for revision-grade compliance |
+| 2026-01-16 | `at_risk_rider` | Markerad som HEURISTIC | Tydliggora att det ar en prediktiv indikator |
+| 2026-01-16 | `winback_candidate` | Markerad som HEURISTIC | Tydliggora att det ar en prediktiv indikator |
 
-3. **Imagick:** SVG→PNG kraver Imagick med SVG-stod. `canConvertToPng()` returnerar false om saknas, och SVG anvands istallet.
+### Verifieringsquery
 
-4. **Recalc-frekvens:** Recalc queue processas i `processRecalcQueue()`. Rekommendation: Kor efter daglig aggregation.
+```sql
+-- Kontrollera att alla exporter har snapshot_id
+SELECT COUNT(*) as orphan_exports FROM analytics_exports WHERE snapshot_id IS NULL;
+-- Forvantad: 0
 
-5. **API-endpoints:** `create-snapshot.php` och `get-manifest.php` maste implementeras. Export Center antar att de finns.
+-- Kontrollera KPI-definitioner
+SELECT kpi_key, definition_sv, formula FROM analytics_kpi_definitions
+WHERE kpi_key IN ('active_rider', 'at_risk_rider', 'winback_candidate') AND calculation_version = 'v3';
+
+-- Kontrollera PDF-policy
+SELECT config_key, config_value FROM analytics_system_config WHERE config_key LIKE 'pdf%';
+-- Forvantad: pdf_engine='tcpdf', pdf_fallback_allowed='0'
+```
 
 ---
 
 *Dokumentation skapad: 2026-01-16*
-*Analytics Platform Version: 3.0.1*
+*Analytics Platform Version: 3.0.2 (Fully Revision-Safe)*
 *Calculation Version: v3*
 *Implementation Status: KOMPLETT*

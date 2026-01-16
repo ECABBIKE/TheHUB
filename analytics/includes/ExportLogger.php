@@ -5,10 +5,10 @@
  * Hanterar loggning av alla analytics-exporter for GDPR och reproducerbarhet.
  * Skapar manifest med fingerprint for varje export.
  *
- * v3.0.1: Mandatory snapshot_id, export_uid, rate limiting
+ * v3.0.2: DB-baserade rate limits, mandatory snapshot_id, deterministic fingerprint
  *
  * @package TheHUB Analytics
- * @version 3.0.1
+ * @version 3.0.2
  */
 
 require_once __DIR__ . '/AnalyticsConfig.php';
@@ -16,17 +16,82 @@ require_once __DIR__ . '/AnalyticsConfig.php';
 class ExportLogger {
     private PDO $pdo;
 
-    /** @var bool Om snapshot_id ar obligatoriskt */
+    /** @var bool Om snapshot_id ar obligatoriskt (ALLTID true i v3.0.2) */
     private bool $requireSnapshotId = true;
 
-    /** @var int Max exporter per timme per anvandare */
-    private int $hourlyRateLimit = 50;
+    /** @var array|null Cachade rate limits fran DB */
+    private ?array $rateLimitsCache = null;
 
-    /** @var int Max exporter per dag per anvandare */
-    private int $dailyRateLimit = 200;
+    /** @var string Rate limit source: 'database' eller 'config' */
+    private string $rateLimitSource = 'database';
 
     public function __construct(PDO $pdo) {
         $this->pdo = $pdo;
+        $this->loadRateLimitsFromDb();
+    }
+
+    /**
+     * Ladda rate limits fran databas
+     */
+    private function loadRateLimitsFromDb(): void {
+        try {
+            $stmt = $this->pdo->query("
+                SELECT scope, scope_value, max_exports, window_seconds, max_rows_per_export
+                FROM export_rate_limits
+                WHERE enabled = 1
+                ORDER BY
+                    CASE scope
+                        WHEN 'user' THEN 1
+                        WHEN 'role' THEN 2
+                        WHEN 'ip' THEN 3
+                        WHEN 'global' THEN 4
+                    END
+            ");
+            $this->rateLimitsCache = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $this->rateLimitSource = 'database';
+        } catch (PDOException $e) {
+            // Fallback till default om tabellen inte finns
+            $this->rateLimitsCache = null;
+            $this->rateLimitSource = 'config';
+            error_log('ExportLogger: Could not load rate limits from DB: ' . $e->getMessage());
+        }
+    }
+
+    /**
+     * Hamta applicerbar rate limit for en anvandare
+     *
+     * @param int|null $userId
+     * @param string|null $role
+     * @return array Rate limit config
+     */
+    private function getApplicableRateLimit(?int $userId, ?string $role = null): array {
+        // Default fallback
+        $default = ['max_exports' => 50, 'window_seconds' => 3600];
+
+        if ($this->rateLimitsCache === null) {
+            return $default;
+        }
+
+        // Prioritetsordning: user > role > global
+        foreach ($this->rateLimitsCache as $limit) {
+            // User-specific
+            if ($limit['scope'] === 'user' && $userId !== null && $limit['scope_value'] == $userId) {
+                return $limit;
+            }
+            // Role-specific
+            if ($limit['scope'] === 'role' && $role !== null && $limit['scope_value'] === $role) {
+                return $limit;
+            }
+        }
+
+        // Global fallback
+        foreach ($this->rateLimitsCache as $limit) {
+            if ($limit['scope'] === 'global' && $limit['scope_value'] === null) {
+                return $limit;
+            }
+        }
+
+        return $default;
     }
 
     /**
@@ -137,37 +202,33 @@ class ExportLogger {
     /**
      * Kontrollera rate limit for anvandare/IP
      *
-     * @param int|null $userId
-     * @param string|null $ipAddress
-     * @return bool True om under limit
-     */
-    public function checkRateLimit(?int $userId, ?string $ipAddress): bool {
-        // Kolla hourly limit
-        $hourlyCount = $this->getExportCount($userId, $ipAddress, 'hour');
-        if ($hourlyCount >= $this->hourlyRateLimit) {
-            return false;
-        }
-
-        // Kolla daily limit
-        $dailyCount = $this->getExportCount($userId, $ipAddress, 'day');
-        if ($dailyCount >= $this->dailyRateLimit) {
-            return false;
-        }
-
-        return true;
-    }
-
-    /**
-     * Hamta antal exporter for period
+     * v3.0.2: Anvander DB-baserade rate limits
      *
      * @param int|null $userId
      * @param string|null $ipAddress
-     * @param string $period 'hour' eller 'day'
+     * @param string|null $role Anvandarens roll (for roll-baserade limits)
+     * @return bool True om under limit
+     */
+    public function checkRateLimit(?int $userId, ?string $ipAddress, ?string $role = null): bool {
+        $limit = $this->getApplicableRateLimit($userId, $role);
+        $windowSeconds = (int)($limit['window_seconds'] ?? 3600);
+        $maxExports = (int)($limit['max_exports'] ?? 50);
+
+        // Kolla inom window
+        $count = $this->getExportCountInWindow($userId, $ipAddress, $windowSeconds);
+
+        return $count < $maxExports;
+    }
+
+    /**
+     * Hamta antal exporter inom ett tidsfönster
+     *
+     * @param int|null $userId
+     * @param string|null $ipAddress
+     * @param int $windowSeconds Fönsterstorlek i sekunder
      * @return int Antal exporter
      */
-    private function getExportCount(?int $userId, ?string $ipAddress, string $period): int {
-        $interval = $period === 'hour' ? '1 HOUR' : '1 DAY';
-
+    private function getExportCountInWindow(?int $userId, ?string $ipAddress, int $windowSeconds): int {
         $conditions = [];
         $params = [];
 
@@ -189,38 +250,125 @@ class ExportLogger {
         $stmt = $this->pdo->prepare("
             SELECT COUNT(*) FROM analytics_exports
             WHERE ($whereClause)
-            AND exported_at >= DATE_SUB(NOW(), INTERVAL $interval)
+            AND exported_at >= DATE_SUB(NOW(), INTERVAL ? SECOND)
         ");
+        $params[] = $windowSeconds;
         $stmt->execute($params);
 
         return (int)$stmt->fetchColumn();
     }
 
     /**
+     * Hamta antal exporter for period (legacy wrapper)
+     *
+     * @deprecated Anvand getExportCountInWindow() istallet
+     * @param int|null $userId
+     * @param string|null $ipAddress
+     * @param string $period 'hour' eller 'day'
+     * @return int Antal exporter
+     */
+    private function getExportCount(?int $userId, ?string $ipAddress, string $period): int {
+        $windowSeconds = $period === 'hour' ? 3600 : 86400;
+        return $this->getExportCountInWindow($userId, $ipAddress, $windowSeconds);
+    }
+
+    /**
      * Hamta rate limit status for en anvandare
+     *
+     * v3.0.2: Stodjer DB-baserade rate limits med olika tidsfönster
      *
      * @param int|null $userId
      * @param string|null $ipAddress
+     * @param string|null $role Anvandarens roll
      * @return array Status med counts och limits
      */
-    public function getRateLimitStatus(?int $userId, ?string $ipAddress = null): array {
+    public function getRateLimitStatus(?int $userId, ?string $ipAddress = null, ?string $role = null): array {
         $ipAddress = $ipAddress ?? $this->getClientIP();
+        $limit = $this->getApplicableRateLimit($userId, $role);
+
+        $windowSeconds = (int)($limit['window_seconds'] ?? 3600);
+        $maxExports = (int)($limit['max_exports'] ?? 50);
+        $currentCount = $this->getExportCountInWindow($userId, $ipAddress, $windowSeconds);
+
+        // Formattera window for display
+        $windowDisplay = $this->formatWindow($windowSeconds);
+
+        // Hamta även daily för bakåtkompatibilitet
+        $dailyCount = $this->getExportCountInWindow($userId, $ipAddress, 86400);
+        $dailyLimit = $this->getDailyLimit($userId, $role);
 
         return [
+            // Primary limit (from DB config)
+            'primary' => [
+                'current' => $currentCount,
+                'limit' => $maxExports,
+                'window_seconds' => $windowSeconds,
+                'window_display' => $windowDisplay,
+                'source' => $this->rateLimitSource,
+            ],
+            // Legacy format for backward compatibility
             'hourly' => [
-                'current' => $this->getExportCount($userId, $ipAddress, 'hour'),
-                'limit' => $this->hourlyRateLimit,
+                'current' => $windowSeconds <= 3600 ? $currentCount : $this->getExportCountInWindow($userId, $ipAddress, 3600),
+                'limit' => $windowSeconds <= 3600 ? $maxExports : 50,
             ],
             'daily' => [
-                'current' => $this->getExportCount($userId, $ipAddress, 'day'),
-                'limit' => $this->dailyRateLimit,
+                'current' => $dailyCount,
+                'limit' => $dailyLimit,
             ],
-            'can_export' => $this->checkRateLimit($userId, $ipAddress),
+            'can_export' => $this->checkRateLimit($userId, $ipAddress, $role),
         ];
     }
 
     /**
+     * Formattera window seconds to display string
+     *
+     * @param int $seconds
+     * @return string
+     */
+    private function formatWindow(int $seconds): string {
+        if ($seconds < 60) return $seconds . ' sekunder';
+        if ($seconds < 3600) return round($seconds / 60) . ' minuter';
+        if ($seconds < 86400) return round($seconds / 3600) . ' timmar';
+        return round($seconds / 86400) . ' dagar';
+    }
+
+    /**
+     * Hamta daily limit (for backwards compatibility)
+     *
+     * @param int|null $userId
+     * @param string|null $role
+     * @return int
+     */
+    private function getDailyLimit(?int $userId, ?string $role): int {
+        if ($this->rateLimitsCache === null) {
+            return 200; // Default
+        }
+
+        foreach ($this->rateLimitsCache as $limit) {
+            if ($limit['window_seconds'] == 86400) {
+                if ($limit['scope'] === 'user' && $userId && $limit['scope_value'] == $userId) {
+                    return (int)$limit['max_exports'];
+                }
+                if ($limit['scope'] === 'global') {
+                    return (int)$limit['max_exports'];
+                }
+            }
+        }
+
+        return 200; // Default
+    }
+
+    /**
      * Skapa komplett manifest for en export
+     *
+     * v3.0.2: Mandatory fields for revision-grade compliance:
+     * - snapshot_id
+     * - generated_at
+     * - season_year
+     * - source_max_updated_at
+     * - platform_version
+     * - calculation_version
+     * - data_fingerprint (deterministic)
      *
      * @param string $exportType Typ
      * @param array $data Data
@@ -228,61 +376,150 @@ class ExportLogger {
      * @return array Manifest
      */
     public function createManifest(string $exportType, array $data, array $options = []): array {
-        $dataFingerprint = $this->calculateFingerprint($data);
         $snapshotId = $options['snapshot_id'] ?? null;
+        $seasonYear = $options['year'] ?? null;
+
+        // v3.0.2: Deterministic fingerprint (sorterad JSON + stabil encoding)
+        $dataFingerprint = $this->calculateDeterministicFingerprint($data);
+
+        // Hamta snapshot-info for source_max_updated_at
+        $sourceMaxUpdatedAt = $options['source_max_updated'] ?? null;
+        if ($snapshotId && !$sourceMaxUpdatedAt) {
+            $sourceMaxUpdatedAt = $this->getSnapshotSourceTimestamp($snapshotId);
+        }
 
         return [
-            // Metadata
-            'export_type' => $exportType,
-            'exported_at' => date('Y-m-d H:i:s'),
-            'exported_at_utc' => gmdate('Y-m-d\TH:i:s\Z'),
-            'timezone' => date_default_timezone_get(),
-
-            // Platform
+            // ===== MANDATORY FIELDS (v3.0.2 Revision Grade) =====
+            'snapshot_id' => $snapshotId,
+            'generated_at' => gmdate('Y-m-d\TH:i:s\Z'),
+            'season_year' => $seasonYear,
+            'source_max_updated_at' => $sourceMaxUpdatedAt,
             'platform_version' => AnalyticsConfig::PLATFORM_VERSION,
             'calculation_version' => AnalyticsConfig::CALCULATION_VERSION,
-
-            // Data
-            'row_count' => count($data),
             'data_fingerprint' => $dataFingerprint,
+
+            // ===== EXPORT METADATA =====
+            'export_type' => $exportType,
+            'exported_at_local' => date('Y-m-d H:i:s'),
+            'timezone' => date_default_timezone_get(),
+
+            // ===== DATA SUMMARY =====
+            'row_count' => count($data),
             'columns' => $this->extractColumns($data),
 
-            // Filters/parametrar
-            'season_year' => $options['year'] ?? null,
+            // ===== FILTERS & PARAMETERS =====
             'series_id' => $options['series_id'] ?? null,
             'filters' => $options['filters'] ?? [],
             'query_hash' => $options['query_hash'] ?? null,
 
-            // Reproducerbarhet (v3.0.1 enhanced)
-            'source_max_updated_at' => $options['source_max_updated'] ?? null,
-            'snapshot_id' => $snapshotId,
+            // ===== REPRODUCIBILITY =====
             'can_reproduce' => !empty($snapshotId),
             'reproducibility_note' => empty($snapshotId)
-                ? 'WARNING: No snapshot_id. Export cannot be reproduced.'
-                : 'Export can be reproduced from snapshot #' . $snapshotId,
+                ? 'ERROR: No snapshot_id. Export cannot be reproduced.'
+                : 'Export kan reproduceras från snapshot #' . $snapshotId .
+                  ' så länge pre-aggregaten inte har omräknats.',
 
-            // GDPR
+            // ===== GDPR & COMPLIANCE =====
             'contains_pii' => $this->containsPII($data),
             'pii_fields' => $this->identifyPIIFields($data),
             'data_retention_days' => 365,
             'gdpr_compliant' => true,
 
-            // Validering
+            // ===== VALIDATION =====
             'checksum_algorithm' => 'sha256',
-            'manifest_version' => '3.0.1',
+            'encoding' => 'JSON_UNESCAPED_UNICODE | JSON_NUMERIC_CHECK',
+            'manifest_version' => '3.0.2',
         ];
+    }
+
+    /**
+     * Hamta source_max_updated_at fran snapshot
+     *
+     * @param int $snapshotId
+     * @return string|null
+     */
+    private function getSnapshotSourceTimestamp(int $snapshotId): ?string {
+        try {
+            $stmt = $this->pdo->prepare("
+                SELECT source_max_updated_at FROM analytics_snapshots WHERE id = ?
+            ");
+            $stmt->execute([$snapshotId]);
+            return $stmt->fetchColumn() ?: null;
+        } catch (PDOException $e) {
+            return null;
+        }
+    }
+
+    /**
+     * Berakna DETERMINISTISK fingerprint for data
+     *
+     * v3.0.2: Garanterar samma hash for samma data oavsett PHP-version
+     * - Sorterar nycklar rekursivt
+     * - Anvander stabil JSON encoding
+     * - Hanterar floats konsekvent
+     *
+     * @param array $data Data
+     * @return string SHA256 hash
+     */
+    public function calculateDeterministicFingerprint(array $data): string {
+        // Sortera data rekursivt
+        $normalized = $this->normalizeForFingerprint($data);
+
+        // Stabil JSON encoding
+        $json = json_encode(
+            $normalized,
+            JSON_UNESCAPED_UNICODE | JSON_NUMERIC_CHECK | JSON_PRESERVE_ZERO_FRACTION
+        );
+
+        return hash('sha256', $json);
+    }
+
+    /**
+     * Normalisera data for fingerprint-berakning
+     *
+     * @param mixed $data
+     * @return mixed
+     */
+    private function normalizeForFingerprint($data) {
+        if (is_array($data)) {
+            // Sortera associativa arrayer efter nyckel
+            if ($this->isAssociativeArray($data)) {
+                ksort($data, SORT_STRING);
+            }
+
+            // Rekursivt normalisera alla element
+            foreach ($data as $key => $value) {
+                $data[$key] = $this->normalizeForFingerprint($value);
+            }
+        } elseif (is_float($data)) {
+            // Avrunda floats for konsekvent precision
+            $data = round($data, 10);
+        }
+
+        return $data;
+    }
+
+    /**
+     * Kolla om array ar associativ
+     *
+     * @param array $arr
+     * @return bool
+     */
+    private function isAssociativeArray(array $arr): bool {
+        if (empty($arr)) return false;
+        return array_keys($arr) !== range(0, count($arr) - 1);
     }
 
     /**
      * Berakna fingerprint for data
      *
+     * @deprecated Anvand calculateDeterministicFingerprint() for revision-grade
      * @param array $data Data
      * @return string SHA256 hash
      */
     public function calculateFingerprint(array $data): string {
-        // Sortera och normalisera data for konsekvent hash
-        $normalized = json_encode($data, JSON_SORT_KEYS | JSON_NUMERIC_CHECK);
-        return hash('sha256', $normalized);
+        // v3.0.2: Redirect to deterministic method
+        return $this->calculateDeterministicFingerprint($data);
     }
 
     /**
@@ -550,20 +787,65 @@ class ExportLogger {
     /**
      * Satt rate limits (for admin/testing)
      *
-     * @param int $hourly
-     * @param int $daily
+     * v3.0.2: Uppdaterar databas-baserade rate limits
+     *
+     * @param int $hourly Max per timme
+     * @param int $daily Max per dag
+     * @param string $scope 'global', 'user', 'ip', 'role'
+     * @param string|null $scopeValue Scope-varde (user_id, roll, etc)
      */
-    public function setRateLimits(int $hourly, int $daily): void {
-        $this->hourlyRateLimit = $hourly;
-        $this->dailyRateLimit = $daily;
+    public function setRateLimits(int $hourly, int $daily, string $scope = 'global', ?string $scopeValue = null): void {
+        try {
+            // Uppdatera hourly
+            $stmt = $this->pdo->prepare("
+                INSERT INTO export_rate_limits (scope, scope_value, max_exports, window_seconds, description)
+                VALUES (?, ?, ?, 3600, 'Set via setRateLimits()')
+                ON DUPLICATE KEY UPDATE max_exports = VALUES(max_exports), updated_at = NOW()
+            ");
+            $stmt->execute([$scope, $scopeValue, $hourly]);
+
+            // Uppdatera daily
+            $stmt = $this->pdo->prepare("
+                INSERT INTO export_rate_limits (scope, scope_value, max_exports, window_seconds, description)
+                VALUES (?, ?, ?, 86400, 'Set via setRateLimits()')
+                ON DUPLICATE KEY UPDATE max_exports = VALUES(max_exports), updated_at = NOW()
+            ");
+            $stmt->execute([$scope, $scopeValue === null ? 'daily' : $scopeValue . '_daily', $daily]);
+
+            // Reload cache
+            $this->loadRateLimitsFromDb();
+        } catch (PDOException $e) {
+            error_log('ExportLogger::setRateLimits failed: ' . $e->getMessage());
+        }
     }
 
     /**
-     * Inaktivera snapshot requirement (for migration/legacy)
+     * Inaktivera snapshot requirement
      *
+     * @deprecated I v3.0.2 ar snapshot_id ALLTID obligatoriskt. Denna metod loggar varning.
      * @param bool $require
      */
     public function setRequireSnapshotId(bool $require): void {
-        $this->requireSnapshotId = $require;
+        if (!$require) {
+            error_log('WARNING: setRequireSnapshotId(false) called. In v3.0.2, snapshot_id is ALWAYS required.');
+        }
+        // I v3.0.2 ar detta ignorerat - snapshot_id ar alltid obligatoriskt
+        $this->requireSnapshotId = true;
+    }
+
+    /**
+     * Hamta rate limit source (for diagnostik)
+     *
+     * @return string 'database' eller 'config'
+     */
+    public function getRateLimitSource(): string {
+        return $this->rateLimitSource;
+    }
+
+    /**
+     * Reload rate limits fran databas
+     */
+    public function reloadRateLimits(): void {
+        $this->loadRateLimitsFromDb();
     }
 }
