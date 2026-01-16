@@ -1,10 +1,10 @@
 # TheHUB Analytics Platform - Teknisk Dokumentation
 
-> Komplett guide till analytics-systemet v3.0.2, dess komponenter och SCF-nivå-rapportering
+> Komplett guide till analytics-systemet v3.1, dess komponenter och SCF-nivå-rapportering
 
-**Version:** 3.0.2 (Fully Revision-Safe)
+**Version:** 3.1.0 (Journey Analysis + Brand Dimension)
 **Senast uppdaterad:** 2026-01-16
-**Status:** Production Ready - Fully Revision-Safe
+**Status:** Production Ready - Journey Analysis Complete
 **Implementation Status:** KOMPLETT
 
 ---
@@ -12,25 +12,28 @@
 ## Innehallsforteckning
 
 1. [Oversikt](#oversikt)
-2. [Revision Notes v3.0.2](#revision-notes-v302)
-3. [Production Ready Checklist](#production-ready-checklist)
-4. [Arkitektur](#arkitektur)
-5. [KPI-definitioner (KRITISKT)](#kpi-definitioner-kritiskt)
-6. [Snapshot → Export-modell](#snapshot--export-modell)
-7. [PDF-policy (TCPDF Mandatory)](#pdf-policy-tcpdf-mandatory)
-8. [Identity Resolution och Recalc](#identity-resolution-och-recalc)
-9. [Rate Limiting (DB-baserat)](#rate-limiting-db-baserat)
-10. [Databas-struktur](#databas-struktur)
-11. [Karnkomponenter](#karnkomponenter)
-12. [Export och Reproducerbarhet](#export-och-reproducerbarhet)
-13. [Datakvalitet](#datakvalitet)
-14. [Drift och Cron](#drift-och-cron)
-15. [Sakerhet och GDPR](#sakerhet-och-gdpr)
-16. [Analytics-sidor](#analytics-sidor)
-17. [API-endpoints](#api-endpoints)
-18. [Setup och Underhall](#setup-och-underhall)
-19. [Changelog](#changelog)
-20. [Revision Audit Trail](#revision-audit-trail)
+2. [Revision Notes v3.1](#revision-notes-v31)
+3. [First Season Journey (NY v3.1)](#first-season-journey-ny-v31)
+4. [Longitudinal Journey (NY v3.1)](#longitudinal-journey-ny-v31)
+5. [Brand Dimension (NY v3.1)](#brand-dimension-ny-v31)
+6. [Production Ready Checklist](#production-ready-checklist)
+7. [Arkitektur](#arkitektur)
+8. [KPI-definitioner (KRITISKT)](#kpi-definitioner-kritiskt)
+9. [Snapshot → Export-modell](#snapshot--export-modell)
+10. [PDF-policy (TCPDF Mandatory)](#pdf-policy-tcpdf-mandatory)
+11. [Identity Resolution och Recalc](#identity-resolution-och-recalc)
+12. [Rate Limiting (DB-baserat)](#rate-limiting-db-baserat)
+13. [Databas-struktur](#databas-struktur)
+14. [Karnkomponenter](#karnkomponenter)
+15. [Export och Reproducerbarhet](#export-och-reproducerbarhet)
+16. [Datakvalitet](#datakvalitet)
+17. [Drift och Cron](#drift-och-cron)
+18. [Sakerhet och GDPR](#sakerhet-och-gdpr)
+19. [Analytics-sidor](#analytics-sidor)
+20. [API-endpoints](#api-endpoints)
+21. [Setup och Underhall](#setup-och-underhall)
+22. [Changelog](#changelog)
+23. [Revision Audit Trail](#revision-audit-trail)
 
 ---
 
@@ -49,8 +52,9 @@ TheHUB Analytics ar ett komplett analysverktyg for svensk cykelsport med **10+ a
 | **At-Risk Prediction** | Vilka riders riskerar att sluta? | `analytics-atrisk.php` |
 | **Data Quality** | Hur komplett ar var data? | `analytics-data-quality.php` |
 | **Export Center** | Hantera och verifiera exporter | `analytics-export-center.php` |
+| **First Season Journey** | Rookies forsta sasong - retention predictors | `analytics-first-season.php` |
 
-### Revisionsprinciper (v3.0.2)
+### Revisionsprinciper (v3.1)
 
 1. **Snapshot-baserad reproducerbarhet** - Varje export MASTE ha `snapshot_id`
 2. **EVENT-baserad aktivitet** - `active_rider` mats via eventdeltagande, INTE resultatrader
@@ -61,9 +65,19 @@ TheHUB Analytics ar ett komplett analysverktyg for svensk cykelsport med **10+ a
 
 ---
 
-## Revision Notes v3.0.2
+## Revision Notes v3.1
 
-### Kritiska korrigeringar fran v3.0.1
+### Nya funktioner i v3.1
+
+| Funktion | Beskrivning |
+|----------|-------------|
+| **First Season Journey** | Analyserar rookies forsta sasong - engagemang, retention predictors |
+| **Longitudinal Journey** | Foljer riders genom ar 1-4, retention funnel |
+| **Brand Dimension** | Filtrera journey-analys per varumarke (max 12) |
+| **Journey Patterns** | Klassificerar riders: continuous_4yr, one_and_done, gap_returner etc |
+| **GDPR-sakrad export** | Minimum 10 individer per segment for aggregat |
+
+### Kritiska korrigeringar fran v3.0.2
 
 | Problem | Losning i v3.0.2 |
 |---------|------------------|
@@ -87,6 +101,213 @@ En snapshot laser **INTE**:
 - Radata (results, events) - dessa lasas alltid live
 
 **Reproducerbarhet**: Export kan reproduceras exakt sa lange pre-aggregaten INTE har omraknats sedan snapshot skapades.
+
+---
+
+## First Season Journey (NY v3.1)
+
+### Oversikt
+
+First Season Journey analyserar rookies (forstagangsdeltagare) under deras forsta sasong for att identifiera retention predictors. Modulen svarar pa fragan: "Vilka faktorer i forsta sasongen paverkar om en rider kommer tillbaka?"
+
+### Databas-schema
+
+**Migration:** `analytics/migrations/009_first_season_journey.sql`
+
+#### rider_first_season
+
+| Kolumn | Typ | Beskrivning |
+|--------|-----|-------------|
+| rider_id | INT | Rider-referens |
+| cohort_year | YEAR | Forsta sasongen (MIN(season_year)) |
+| total_starts | INT | Antal starter |
+| total_events | INT | Antal unika events |
+| total_finished | INT | Antal fullbordade |
+| first_discipline | VARCHAR(50) | Forsta disciplin |
+| club_id | INT | Klubb forsta sasongen |
+| first_brand_id | INT | Brand forsta sasongen (v3.1.1) |
+| result_percentile | DECIMAL(5,2) | Snitt resultat-percentil |
+| engagement_score | DECIMAL(5,2) | Engagemangsvarde (0-100) |
+| activity_pattern | ENUM | high_engagement, moderate, low_engagement |
+| returned_year2 | TINYINT(1) | Aterkom ar 2? |
+| returned_year3 | TINYINT(1) | Aterkom ar 3? |
+| total_career_seasons | TINYINT | Total antal sasonger |
+
+#### Engagement Score Formula
+
+```
+engagement_score = (
+    starts_normalized * 0.3 +
+    events_normalized * 0.2 +
+    season_spread * 0.2 +
+    percentile_normalized * 0.3
+) * 100
+
+// season_spread = entropy-baserad (0-1) - hur jamt fordelat over sasongen
+// Klassificering:
+// >= 70: high_engagement
+// >= 40: moderate
+// < 40: low_engagement
+```
+
+### KPI-metoder (KPICalculator)
+
+| Metod | Beskrivning |
+|-------|-------------|
+| `getFirstSeasonJourneySummary($cohort, $brands)` | Aggregerad sammanfattning |
+| `getRetentionByStartCount($cohort, $brands)` | Retention per antal starter |
+| `getJourneyTypeDistribution($cohort, $brands)` | Journey pattern fordelning |
+| `exportJourneyData($cohort, $brands, $format)` | GDPR-sakrad export |
+
+### GDPR-hantering
+
+- Alla aggregat kraver minimum **10 individer** per segment
+- Om < 10: returnerar `suppressed: true, reason: "Insufficient data (GDPR minimum 10)"`
+- Ingen PII exponeras (endast aggregat och percentiler)
+
+---
+
+## Longitudinal Journey (NY v3.1)
+
+### Oversikt
+
+Longitudinal Journey foljer rookies genom ar 1-4 for att se retention funnel och karriarutveckling over tid. Bygger pa First Season Journey-data.
+
+### Databas-schema
+
+**Migration:** `analytics/migrations/010_longitudinal_journey.sql`
+
+#### rider_journey_years
+
+| Kolumn | Typ | Beskrivning |
+|--------|-----|-------------|
+| rider_id | INT | Rider-referens |
+| cohort_year | YEAR | Kohort-ar (forsta sasongen) |
+| year_offset | TINYINT | 1=rookie, 2=andra ar, etc |
+| calendar_year | YEAR | Faktiskt kalender-ar |
+| was_active | TINYINT(1) | Var aktiv detta ar? |
+| total_starts | INT | Antal starter |
+| total_events | INT | Antal events |
+| primary_discipline | VARCHAR(50) | Huvuddisciplin |
+| primary_brand_id | INT | Huvudvarumarke (v3.1.1) |
+| result_percentile | DECIMAL(5,2) | Snitt percentil |
+| delta_events | INT | Forandring fran foregaende ar |
+| delta_percentile | DECIMAL(5,2) | Percentil-forandring |
+| has_improved | TINYINT(1) | Forbattrad percentil? |
+
+#### rider_journey_summary
+
+| Kolumn | Typ | Beskrivning |
+|--------|-----|-------------|
+| rider_id | INT | Rider-referens |
+| cohort_year | YEAR | Kohort-ar |
+| journey_pattern | ENUM | Se Journey Patterns nedan |
+| years_active | TINYINT | Totalt antal aktiva ar |
+| final_year_offset | TINYINT | Sista aktiva ar-offset |
+| fs_engagement_score | DECIMAL(5,2) | Engagement fran forsta sasongen |
+| career_trajectory | ENUM | improving, stable, declining |
+
+### Journey Patterns
+
+| Pattern | Beskrivning |
+|---------|-------------|
+| `continuous_4yr` | Aktiv alla 4 aren (ar 1-4) |
+| `continuous_3yr` | Aktiv 3 ar i rad, sedan slut |
+| `continuous_2yr` | Aktiv 2 ar i rad, sedan slut |
+| `one_and_done` | Endast forsta sasongen |
+| `gap_returner` | Tog paus, kom tillbaka |
+| `late_dropout` | Aktiv 2-3 ar, sedan borta |
+
+### Retention Funnel
+
+```
+Kohort 2022: 500 rookies
+├── Ar 1: 500 aktiva (100%)
+├── Ar 2: 325 aktiva (65%)
+├── Ar 3: 225 aktiva (45%)
+└── Ar 4: 175 aktiva (35%)
+```
+
+### KPI-metoder (KPICalculator)
+
+| Metod | Beskrivning |
+|-------|-------------|
+| `getCohortLongitudinalOverview($cohort, $brands)` | Retention funnel |
+| `getBrandRetentionFunnel($brandId, $cohort)` | Per-brand funnel |
+| `getAvailableCohortYears($brands)` | Tillgangliga kohorter |
+
+---
+
+## Brand Dimension (NY v3.1)
+
+### Oversikt
+
+Brand Dimension mojliggor filtrering och jamforelse av journey-analys per varumarke. Stodjer upp till 12 varumarken samtidigt.
+
+### Databas-schema
+
+**Migration:** `analytics/migrations/011_journey_brand_dimension.sql`
+
+#### Brand Resolution
+
+Brands resolvas via `brand_series_map` med prioritet:
+1. `relationship_type = 'owner'`
+2. `valid_from/valid_until` datum-check
+3. Fallback till null om inget matchas
+
+```sql
+-- Resolve brand for a series in a specific year
+SELECT brand_id FROM brand_series_map
+WHERE series_id = ?
+AND (relationship_type = 'owner' OR relationship_type IS NULL)
+AND (valid_from IS NULL OR valid_from <= ?)
+AND (valid_until IS NULL OR valid_until >= ?)
+LIMIT 1
+```
+
+#### Nya kolumner
+
+```sql
+ALTER TABLE rider_first_season
+    ADD COLUMN first_brand_id INT NULL,
+    ADD COLUMN first_series_id INT NULL;
+
+ALTER TABLE rider_journey_years
+    ADD COLUMN primary_brand_id INT NULL,
+    ADD COLUMN primary_series_id INT NULL;
+```
+
+#### brand_journey_aggregates
+
+Pre-beraknade aggregat per brand for snabb rapportering.
+
+| Kolumn | Typ | Beskrivning |
+|--------|-----|-------------|
+| brand_id | INT | Brand-referens |
+| cohort_year | YEAR | Kohort-ar |
+| year_offset | TINYINT | 1-4 |
+| total_riders | INT | Antal riders |
+| active_riders | INT | Aktiva detta ar |
+| retention_rate | DECIMAL(5,4) | Retention % |
+| pct_continuous_4yr | DECIMAL(5,4) | % continuous 4 ar |
+| pct_one_and_done | DECIMAL(5,4) | % one-and-done |
+
+### KPI-metoder (KPICalculator)
+
+| Metod | Beskrivning |
+|-------|-------------|
+| `getBrandJourneyComparison($cohort, $brandIds)` | Multi-brand jamforelse |
+| `getJourneyPatternsByBrand($cohort, $brandIds)` | Patterns per brand |
+| `getAvailableBrandsForJourney($cohort)` | Tillgangliga brands |
+| `buildBrandFilter($brandIds)` | PRIVATE: Bygger safe IN-clause |
+
+### Brand Comparison UI
+
+Admin-sidan `analytics-first-season.php` inkluderar:
+- Multi-select brand chips (max 12)
+- Side-by-side jamforelse av retention rates
+- Brand-fargade grafer
+- CSV/JSON export med brand-filter
 
 ---
 
@@ -708,6 +929,60 @@ Nu DB-baserat med scope-stod (global/user/ip/role).
 | `/api/analytics/export.php` | POST | Generera CSV-export |
 | `/api/analytics/create-snapshot.php` | POST | Skapa ny snapshot |
 | `/api/analytics/get-manifest.php` | GET | Hamta manifest for export |
+| `/api/analytics/journey-export.php` | GET | Journey-analys export (NY v3.1) |
+
+### Journey Export API (NY v3.1)
+
+**Endpoint:** `/api/analytics/journey-export.php`
+
+**Autentisering:** Kraver `super_admin` eller `statistics` permission.
+
+| Action | Parametrar | Beskrivning |
+|--------|------------|-------------|
+| `summary` | `cohort`, `brands` | First Season Journey sammanfattning |
+| `longitudinal` | `cohort`, `brands` | Retention funnel (ar 1-4) |
+| `patterns` | `cohort`, `brands` | Journey pattern fordelning |
+| `retention_starts` | `cohort`, `brands` | Retention per antal starter |
+| `brands` | `cohort`, `brands` | Multi-brand jamforelse (min 2 brands) |
+| `brand_funnel` | `cohort`, `brand_id` | Single brand retention funnel |
+| `brand_patterns` | `cohort`, `brands` | Patterns per brand |
+| `full` | `cohort`, `brands`, `format` | Full export (csv/json) |
+| `available` | `brands` | Tillgangliga kohorter och brands |
+
+**Exempel:**
+
+```bash
+# Summary for cohort 2023
+GET /api/analytics/journey-export.php?action=summary&cohort=2023
+
+# Brand comparison
+GET /api/analytics/journey-export.php?action=brands&cohort=2023&brands=1,2,3
+
+# Full CSV export
+GET /api/analytics/journey-export.php?action=full&cohort=2023&format=csv
+
+# With brand filter
+GET /api/analytics/journey-export.php?action=longitudinal&cohort=2023&brands=1,2
+```
+
+**Response format:**
+
+```json
+{
+    "success": true,
+    "action": "summary",
+    "timestamp": "2026-01-16 14:30:00",
+    "gdpr_compliant": true,
+    "cohort": 2023,
+    "brand_filter": [1, 2],
+    "data": {
+        "total_rookies": 500,
+        "avg_starts": 4.2,
+        "return_rate_y2": 65.0,
+        "suppressed": false
+    }
+}
+```
 
 ---
 
@@ -733,6 +1008,50 @@ var_dump(PdfExportBuilder::getPdfEngineStatus());
 ---
 
 ## Changelog
+
+### v3.1.0 (2026-01-16) - Journey Analysis + Brand Dimension
+
+**Nya filer:**
+- `analytics/migrations/009_first_season_journey.sql` - First Season Journey schema
+- `analytics/migrations/010_longitudinal_journey.sql` - Longitudinal Journey schema
+- `analytics/migrations/011_journey_brand_dimension.sql` - Brand dimension for journey
+- `admin/analytics-first-season.php` - First Season Journey UI
+- `api/analytics/journey-export.php` - Journey export API
+
+**Uppdaterade filer:**
+- `analytics/includes/AnalyticsEngine.php`
+  - `calculateFirstSeasonJourney()` - Berakna forsta sasong-data
+  - `calculateLongitudinalJourney()` - Berakna ar 2-4 data
+  - `resolveBrandIdForSeries()` - Brand resolution
+  - `calculateBrandJourneyAggregates()` - Pre-berakna brand-aggregat
+  - `calculateEngagementScore()` - Engagement formula
+  - `classifyJourneyPattern()` - Journey pattern klassificering
+
+- `analytics/includes/KPICalculator.php`
+  - `getFirstSeasonJourneySummary()` - Journey sammanfattning
+  - `getCohortLongitudinalOverview()` - Retention funnel
+  - `getJourneyTypeDistribution()` - Pattern fordelning
+  - `getRetentionByStartCount()` - Retention per starter
+  - `getBrandJourneyComparison()` - Multi-brand jamforelse
+  - `getBrandRetentionFunnel()` - Per-brand funnel
+  - `getJourneyPatternsByBrand()` - Patterns per brand
+  - `getAvailableBrandsForJourney()` - Tillgangliga brands
+  - `getAvailableCohortYears()` - Tillgangliga kohorter
+  - `exportJourneyData()` - GDPR-sakrad export
+  - `buildBrandFilter()` - Safe IN-clause builder
+
+**Databas-andringar:**
+- Nya tabeller: `rider_first_season`, `first_season_aggregates`, `rider_journey_years`, `rider_journey_summary`, `cohort_longitudinal_aggregates`, `brand_journey_aggregates`
+- Nya vyer: `first_season_report_safe`, `cohort_overview`, `longitudinal_cohort_funnel`, `journey_pattern_distribution`, `brand_journey_comparison`, `brand_retention_funnel`
+- Nya kolumner: `first_brand_id`, `first_series_id`, `primary_brand_id`, `primary_series_id`
+- Stored procedures: `sp_calculate_rider_first_season`, `sp_calculate_first_season_aggregates`, `sp_calculate_rider_journey_years`, `sp_populate_brand_from_series`
+
+**GDPR:**
+- Alla aggregat kraver minimum 10 individer per segment
+- Suppression returnerar `suppressed: true` med anledning
+- Brand-filter begransas till max 12 varumarken
+
+---
 
 ### v3.0.2 (2026-01-16) - Fully Revision-Safe
 
