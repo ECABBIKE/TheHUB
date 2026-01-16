@@ -46,6 +46,36 @@ if (isset($_GET['run_year'])) {
     exit;
 }
 
+// Hantera AJAX-request for kohort journey-analys
+if (isset($_GET['run_cohort'])) {
+    header('Content-Type: application/json');
+
+    $cohortYear = (int)$_GET['run_cohort'];
+
+    if ($cohortYear < 2000 || $cohortYear > 2050) {
+        echo json_encode(['error' => 'Ogiltigt kohort-ar']);
+        exit;
+    }
+
+    try {
+        require_once __DIR__ . '/../analytics/includes/AnalyticsEngine.php';
+
+        global $pdo;
+        $engine = new AnalyticsEngine($pdo);
+
+        // Kor full journey-analys for kohorten
+        $results = $engine->calculateFullJourneyAnalysis($cohortYear);
+        $results['cohort_year'] = $cohortYear;
+        $results['success'] = true;
+
+        echo json_encode($results);
+
+    } catch (Exception $e) {
+        echo json_encode(['error' => $e->getMessage()]);
+    }
+    exit;
+}
+
 // Hamta tillgangliga ar
 global $pdo;
 $years = [];
@@ -201,12 +231,47 @@ include __DIR__ . '/components/unified-layout.php';
 </div>
 
 <div class="populate-card">
+    <h3>Journey-analys (Kohorter)</h3>
+    <p style="color: var(--color-text-secondary);">
+        Beraknar First Season Journey och Longitudinal Journey per kohort (startar).
+        <strong>Krav:</strong> Kor "Generera Analytics-data" ovan forst.
+    </p>
+
+    <div class="controls">
+        <button id="startCohortBtn" class="btn-admin btn-admin-primary" onclick="startCohortAnalysis()">
+            <i data-lucide="users"></i> Generera Journey-data
+        </button>
+        <button id="stopCohortBtn" class="btn-admin btn-admin-secondary" onclick="stopCohortAnalysis()" disabled>
+            <i data-lucide="square"></i> Stoppa
+        </button>
+        <span id="cohortStatusText" style="color: var(--color-text-muted);"></span>
+    </div>
+
+    <div class="progress-bar">
+        <div class="progress-bar-fill" id="cohortProgressFill"></div>
+    </div>
+    <div class="progress-text" id="cohortProgressText">Klicka for att starta</div>
+
+    <div class="year-list" id="cohortList">
+        <?php foreach ($years as $year): ?>
+        <div class="year-item pending" id="cohort-<?= $year ?>" data-year="<?= $year ?>">
+            <div class="year-label"><?= $year ?></div>
+            <div class="year-status">Vantar...</div>
+        </div>
+        <?php endforeach; ?>
+    </div>
+</div>
+
+<div class="populate-card">
     <h3>Nasta steg</h3>
     <div class="controls">
+        <a href="/admin/analytics-first-season.php" class="btn-admin btn-admin-primary">
+            <i data-lucide="baby"></i> First Season Journey
+        </a>
         <a href="/admin/analytics-diagnose.php" class="btn-admin btn-admin-secondary">
             <i data-lucide="stethoscope"></i> Diagnostisera
         </a>
-        <a href="/admin/analytics-trends.php" class="btn-admin btn-admin-primary">
+        <a href="/admin/analytics-trends.php" class="btn-admin btn-admin-secondary">
             <i data-lucide="trending-up"></i> Visa Trender
         </a>
     </div>
@@ -324,6 +389,103 @@ function stopPopulate() {
     isRunning = false;
     document.getElementById('statusText').textContent = 'Stoppad';
     log('--- Stoppad av anvandaren ---');
+}
+
+// ===== COHORT JOURNEY ANALYSIS =====
+let isCohortRunning = false;
+let cohortIndex = 0;
+
+function setCohortStatus(year, status, text) {
+    const el = document.getElementById('cohort-' + year);
+    if (el) {
+        el.className = 'year-item ' + status;
+        el.querySelector('.year-status').textContent = text;
+    }
+}
+
+function updateCohortProgress() {
+    const pct = years.length > 0 ? (cohortIndex / years.length * 100) : 0;
+    document.getElementById('cohortProgressFill').style.width = pct + '%';
+    document.getElementById('cohortProgressText').textContent = `${cohortIndex} / ${years.length} kohorter`;
+}
+
+async function processCohort(year) {
+    setCohortStatus(year, 'running', 'Bearbetar...');
+
+    try {
+        const url = `/admin/analytics-populate.php?run_cohort=${year}`;
+        const response = await fetch(url);
+        const data = await response.json();
+
+        if (data.error) {
+            setCohortStatus(year, 'error', data.error.substring(0, 30));
+            log(`Kohort ${year}: FEL - ${data.error}`);
+            return false;
+        }
+
+        const fs = data.first_season || 0;
+        const fsa = data.first_season_aggregates || 0;
+        const long = data.longitudinal || 0;
+        const brand = data.brand_aggregates || 0;
+
+        setCohortStatus(year, 'done', `${fs} riders`);
+        log(`Kohort ${year}: first_season=${fs}, aggregates=${fsa}, longitudinal=${long}, brand=${brand}`);
+        return true;
+
+    } catch (e) {
+        setCohortStatus(year, 'error', 'Natverksfel');
+        log(`Kohort ${year}: FEL - ${e.message}`);
+        return false;
+    }
+}
+
+async function runCohortLoop() {
+    while (isCohortRunning && cohortIndex < years.length) {
+        const year = years[cohortIndex];
+        await processCohort(year);
+        cohortIndex++;
+        updateCohortProgress();
+
+        // Langre paus for tunga berakningar
+        await new Promise(r => setTimeout(r, 500));
+    }
+
+    if (cohortIndex >= years.length) {
+        log('=== JOURNEY-ANALYS KLAR! ===');
+        document.getElementById('cohortStatusText').textContent = 'Klar!';
+    }
+
+    isCohortRunning = false;
+    document.getElementById('startCohortBtn').disabled = false;
+    document.getElementById('stopCohortBtn').disabled = true;
+}
+
+function startCohortAnalysis() {
+    if (isCohortRunning) return;
+
+    isCohortRunning = true;
+    cohortIndex = 0;
+
+    // Reset UI
+    years.forEach(y => setCohortStatus(y, 'pending', 'Vantar...'));
+
+    document.getElementById('startCohortBtn').disabled = true;
+    document.getElementById('stopCohortBtn').disabled = false;
+    document.getElementById('cohortStatusText').textContent = 'Kor journey-analys...';
+
+    log('');
+    log('=== STARTAR JOURNEY-ANALYS ===');
+    log(`Bearbetar ${years.length} kohorter...`);
+    log('');
+
+    updateCohortProgress();
+    runCohortLoop();
+}
+
+function stopCohortAnalysis() {
+    isCohortRunning = false;
+    document.getElementById('cohortStatusText').textContent = 'Stoppad';
+    log('--- Journey-analys stoppad ---');
 }
 </script>
 
