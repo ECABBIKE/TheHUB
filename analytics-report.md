@@ -1,6 +1,10 @@
 # TheHUB Analytics Platform - Teknisk Dokumentation
 
-> Komplett guide till analytics-systemet, dess komponenter och framtida forbattringar
+> Komplett guide till analytics-systemet v3.0, dess komponenter och SCF-nivå-rapportering
+
+**Version:** 3.0.0
+**Senast uppdaterad:** 2026-01-16
+**Status:** Production Ready
 
 ---
 
@@ -10,75 +14,120 @@
 2. [Arkitektur](#arkitektur)
 3. [Databas-struktur](#databas-struktur)
 4. [Karnkomponenter](#karnkomponenter)
-5. [Analytics-sidor](#analytics-sidor)
-6. [KPI-definitioner](#kpi-definitioner)
-7. [Setup och Underhall](#setup-och-underhall)
-8. [Forbattringsforslag](#forbattringsforslag)
+5. [KPI-definitioner (VIKTIGT)](#kpi-definitioner)
+6. [Analytics-sidor](#analytics-sidor)
+7. [Datakvalitet](#datakvalitet)
+8. [Export och Reproducerbarhet](#export-och-reproducerbarhet)
+9. [Setup och Underhall](#setup-och-underhall)
+10. [Changelog](#changelog)
 
 ---
 
 ## Oversikt
 
-TheHUB Analytics ar ett komplett analysverktyg for svensk cykelsport. Systemet beraknar och visualiserar nyckeltal (KPIs) for:
+TheHUB Analytics ar ett komplett analysverktyg for svensk cykelsport med **10+ ars data** och stod for SCF-nivå-rapportering. Systemet beraknar och visualiserar nyckeltal (KPIs) for:
 
-- **Retention & Growth** - Hur manga riders kommer tillbaka varje ar?
-- **Demographics** - Alders- och konsfordelning
-- **Series Flow** - Hur rör sig riders mellan serier?
-- **Club Performance** - Klubbarnas tillvaxt och framgang
-- **Geographic Distribution** - Var finns riders geografiskt?
-- **Cohort Analysis** - Hur utvecklas en årgång over tid?
-- **At-Risk Prediction** - Vilka riders riskerar att sluta?
+| Omrade | Beskrivning | Huvudsida |
+|--------|-------------|-----------|
+| **Retention & Growth** | Hur manga riders kommer tillbaka varje ar? | `analytics-dashboard.php` |
+| **Demographics** | Alders- och konsfordelning | `analytics-reports.php` |
+| **Series Flow** | Hur ror sig riders mellan serier? | `analytics-flow.php` |
+| **Club Performance** | Klubbarnas tillvaxt och framgang | `analytics-clubs.php` |
+| **Geographic Distribution** | Var finns riders geografiskt? | `analytics-geography.php` |
+| **Cohort Analysis** | Hur utvecklas en argang over tid? | `analytics-cohorts.php` |
+| **At-Risk Prediction** | Vilka riders riskerar att sluta? | `analytics-atrisk.php` |
+| **Data Quality** | Hur komplett ar var data? | `analytics-data-quality.php` |
 
 ### Behorigheter
 
-Analytics kräver en av följande:
+Analytics kraver en av foljande:
 - `super_admin` roll
 - `statistics` permission (kan tilldelas utan admin-rattigheter)
+
+### Principer
+
+1. **Pre-aggregerad data** - Tunga berakningar gors en gang och sparas
+2. **Identity Resolution** - Dubbletter hanteras automatiskt via canonical IDs
+3. **Reproducerbarhet** - Alla exporter loggas med fingerprint
+4. **GDPR-kompatibel** - Aggregerad data publikt, persondata bakom behorighet
 
 ---
 
 ## Arkitektur
 
 ```
-┌─────────────────────────────────────────────────────────────────┐
-│                        ADMIN UI LAYER                           │
-│  analytics-dashboard.php  │  analytics-cohorts.php  │  etc.     │
-└───────────────────────────┬─────────────────────────────────────┘
-                            │
-┌───────────────────────────▼─────────────────────────────────────┐
-│                     KPICalculator.php                           │
-│  - getAllKPIs()          - getCohortRetention()                 │
-│  - getRetentionRate()    - getRiskScores()                      │
-│  - getGrowthTrend()      - getTopClubs()                        │
-└───────────────────────────┬─────────────────────────────────────┘
-                            │
-┌───────────────────────────▼─────────────────────────────────────┐
-│                    AnalyticsEngine.php                          │
-│  - Beraknar och sparar pre-aggregerad data                      │
-│  - Hanterar jobb-körningar och loggning                         │
-│  - Använder IdentityResolver för rider-matching                 │
-└───────────────────────────┬─────────────────────────────────────┘
-                            │
-┌───────────────────────────▼─────────────────────────────────────┐
-│                     PRE-AGGREGATED TABLES                       │
-│  rider_yearly_stats  │  series_participation  │  club_yearly_   │
-│  series_crossover    │  venue_yearly_stats    │  analytics_     │
-└─────────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────────────────┐
+│                           PRESENTATION LAYER                                 │
+│  analytics-dashboard │ analytics-cohorts │ analytics-atrisk │ etc.          │
+│                                                                              │
+│  SVGChartRenderer.php ─── Grafer for PDF (ingen Node.js)                    │
+└─────────────────────────────────┬───────────────────────────────────────────┘
+                                  │
+┌─────────────────────────────────▼───────────────────────────────────────────┐
+│                           CALCULATION LAYER                                  │
+│                                                                              │
+│  ┌─────────────────────┐     ┌─────────────────────┐                        │
+│  │   KPICalculator     │     │   ExportLogger      │                        │
+│  │   ~2500 rader       │     │   GDPR-loggning     │                        │
+│  │                     │     │   Manifest          │                        │
+│  │  - getRetentionRate │     │   Fingerprint       │                        │
+│  │  - getCohortData    │     └─────────────────────┘                        │
+│  │  - getRiskScores    │                                                    │
+│  │  - getDataQuality   │     ┌─────────────────────┐                        │
+│  └─────────────────────┘     │  AnalyticsConfig    │                        │
+│                              │  v3.0               │                        │
+│                              │  - KPI-definitioner │                        │
+│                              │  - Klassrankning    │                        │
+│                              │  - Riskfaktorer     │                        │
+│                              │  - Troskel          │                        │
+│                              └─────────────────────┘                        │
+└─────────────────────────────────┬───────────────────────────────────────────┘
+                                  │
+┌─────────────────────────────────▼───────────────────────────────────────────┐
+│                           ENGINE LAYER                                       │
+│                                                                              │
+│  ┌─────────────────────┐     ┌─────────────────────┐                        │
+│  │  AnalyticsEngine    │     │  IdentityResolver   │                        │
+│  │                     │     │                     │                        │
+│  │  - calculateYearly  │────▶│  - resolveRider()   │                        │
+│  │  - calculateSeries  │     │  - getCanonicalId() │                        │
+│  │  - calculateClubs   │     │  - mergeRiders()    │                        │
+│  │  - Job management   │     └─────────────────────┘                        │
+│  └─────────────────────┘                                                    │
+└─────────────────────────────────┬───────────────────────────────────────────┘
+                                  │
+┌─────────────────────────────────▼───────────────────────────────────────────┐
+│                           DATA LAYER                                         │
+│                                                                              │
+│  PRE-AGGREGATED TABLES              │  RAW TABLES                           │
+│  ─────────────────────              │  ──────────                           │
+│  rider_yearly_stats                 │  results                              │
+│  series_participation               │  events                               │
+│  series_crossover                   │  riders                               │
+│  club_yearly_stats                  │  clubs                                │
+│  venue_yearly_stats                 │  series                               │
+│  analytics_snapshots (v2)           │                                       │
+│  analytics_exports                  │                                       │
+│  data_quality_metrics               │                                       │
+│  analytics_kpi_definitions          │                                       │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
 
 ### Dataflode
 
 1. **Radata** lagras i `results`, `events`, `riders`, `clubs`
-2. **AnalyticsEngine** processerar och aggregerar data
-3. **Pre-aggregerade tabeller** ger snabb åtkomst
-4. **KPICalculator** anvands av UI för berakningar
-5. **Admin-sidor** visualiserar med Chart.js
+2. **IdentityResolver** matchar riders mot canonical IDs
+3. **AnalyticsEngine** beraknar och aggregerar data till pre-aggregerade tabeller
+4. **KPICalculator** laser fran pre-aggregerade tabeller (snabbt)
+5. **ExportLogger** loggar alla exporter med manifest och fingerprint
+6. **SVGChartRenderer** skapar grafer for PDF-export
+7. **Admin-sidor** visualiserar med Chart.js (web) eller SVG (PDF)
 
 ---
 
 ## Databas-struktur
 
-### Kärntabeller
+### Karntabeller
 
 #### `rider_yearly_stats`
 Per-rider, per-ar aggregerad statistik.
@@ -87,15 +136,17 @@ Per-rider, per-ar aggregerad statistik.
 |--------|-----|-------------|
 | rider_id | INT | Canonical rider ID |
 | season_year | INT | Sasong (t.ex. 2025) |
-| total_events | INT | Antal events deltagit i |
+| total_events | INT | Antal unika events deltagit i |
 | total_series | INT | Antal unika serier |
 | total_points | DECIMAL | Totala poang |
 | best_position | INT | Basta placering |
 | avg_position | DECIMAL | Genomsnittsplacering |
-| primary_discipline | VARCHAR | Huvuddisciplin |
+| primary_discipline | VARCHAR | Huvuddisciplin (mest deltaganden) |
 | primary_series_id | INT | Huvudserie |
-| is_rookie | TINYINT | 1 = forsta aret |
-| is_retained | TINYINT | 1 = återkom från förra året |
+| is_rookie | TINYINT | 1 = forsta aret nagonsin |
+| is_retained | TINYINT | 1 = aterkom fran forriga aret |
+| calculation_version | VARCHAR | Vilken version som beraknade |
+| calculated_at | TIMESTAMP | Nar berakningen gjordes |
 
 #### `series_participation`
 Detaljerat seriedeltagande per rider och ar.
@@ -106,148 +157,471 @@ Detaljerat seriedeltagande per rider och ar.
 | series_id | INT | Serie-ID |
 | season_year | INT | Sasong |
 | events_attended | INT | Antal events i serien |
-| first_event_date | DATE | Forsta event |
-| last_event_date | DATE | Sista event |
+| first_event_date | DATE | Forsta event i serien detta ar |
+| last_event_date | DATE | Sista event i serien detta ar |
 | total_points | DECIMAL | Poang i serien |
 | final_rank | INT | Slutplacering |
-| is_entry_series | TINYINT | 1 = forsta serien nagonsin |
+| is_entry_series | TINYINT | 1 = forsta serien nagonsin for ridern |
 
 #### `series_crossover`
-Rider-flöden mellan serier.
+Rider-floden mellan serier.
 
 | Kolumn | Typ | Beskrivning |
 |--------|-----|-------------|
 | rider_id | INT | Canonical rider ID |
 | from_series_id | INT | Ursprungsserie |
-| to_series_id | INT | Målserie |
-| from_year | INT | År från |
-| to_year | INT | År till |
-| crossover_type | ENUM | same_year, next_year, multi_year |
+| to_series_id | INT | Malserie |
+| from_year | INT | Ar fran |
+| to_year | INT | Ar till |
+| crossover_type | ENUM | `same_year`, `next_year`, `multi_year` |
 
-#### `club_yearly_stats`
-Klubbstatistik per ar.
-
-| Kolumn | Typ | Beskrivning |
-|--------|-----|-------------|
-| club_id | INT | Klubb-ID |
-| season_year | INT | Sasong |
-| active_riders | INT | Aktiva medlemmar |
-| new_riders | INT | Nya detta år |
-| retained_riders | INT | Återkommande |
-| churned_riders | INT | Förlorade |
-| total_points | DECIMAL | Totala poang |
-| wins | INT | Antal segrar |
-
-#### `analytics_snapshots`
-Historiska KPI-ogonblicksbilder.
+#### `analytics_snapshots` (v2)
+Historiska KPI-ogonblicksbilder med reproducerbarhet.
 
 | Kolumn | Typ | Beskrivning |
 |--------|-----|-------------|
+| id | INT | Unik ID |
 | snapshot_date | DATE | Datum |
 | snapshot_type | ENUM | daily/weekly/monthly/quarterly/yearly |
 | metrics | JSON | Alla KPIs |
+| **generated_at** | TIMESTAMP | Exakt tidpunkt for generering |
+| **season_year** | INT | Vilken sasong snapshot galler |
+| **source_max_updated_at** | TIMESTAMP | MAX(updated_at) fran kalldata |
+| **code_version** | VARCHAR | Platform-version (t.ex. 3.0.0) |
+| **data_fingerprint** | VARCHAR(64) | SHA256 hash for verifiering |
+
+#### `analytics_exports` (NY)
+GDPR-loggning av alla exporter.
+
+| Kolumn | Typ | Beskrivning |
+|--------|-----|-------------|
+| id | INT | Unik export-ID |
+| export_type | VARCHAR | Typ: riders_at_risk, cohort, winback, etc. |
+| export_format | VARCHAR | Format: csv, pdf, json |
+| exported_by | INT | User ID |
+| exported_at | TIMESTAMP | Tidpunkt |
+| ip_address | VARCHAR | IP for GDPR |
+| season_year | INT | Vilket ar som exporterades |
+| row_count | INT | Antal rader |
+| contains_pii | TINYINT | 1 om persondata ingår |
+| data_fingerprint | VARCHAR(64) | SHA256 hash av data |
+| manifest | JSON | Komplett manifest |
+
+#### `data_quality_metrics` (NY)
+Daglig datakvalitetsmatning per sasong.
+
+| Kolumn | Typ | Beskrivning |
+|--------|-----|-------------|
+| season_year | INT | Sasong |
+| measured_at | TIMESTAMP | Matningstidpunkt |
+| birth_year_coverage | DECIMAL | % riders med fodelseår |
+| club_coverage | DECIMAL | % riders med klubb |
+| gender_coverage | DECIMAL | % riders med kon |
+| class_coverage | DECIMAL | % results med klass |
+| potential_duplicates | INT | Antal potentiella dubbletter |
+| merged_riders | INT | Antal sammanslagna riders |
+
+#### `analytics_kpi_definitions` (NY)
+Dokumentation av alla KPI-definitioner.
+
+| Kolumn | Typ | Beskrivning |
+|--------|-----|-------------|
+| kpi_code | VARCHAR | Unik kod (t.ex. retention_from_prev) |
+| kpi_name | VARCHAR | Lasbart namn |
+| description | TEXT | Fullstandig beskrivning |
+| formula | TEXT | Matematisk formel |
+| numerator_desc | VARCHAR | Beskrivning av taljare |
+| denominator_desc | VARCHAR | Beskrivning av namnare |
+| implementation_method | VARCHAR | PHP-metod som implementerar KPI |
 
 ---
 
 ## Karnkomponenter
 
-### 1. AnalyticsConfig.php
+### 1. AnalyticsConfig.php (v3.0)
 
-Centraliserad konfiguration för hela analytics-plattformen.
+Centraliserad konfiguration for hela analytics-plattformen.
 
-**Nyckelkonstanter:**
-
+**Platform-information:**
 ```php
-// Aktivitetsdefinition
-ACTIVE_MIN_STARTS = 1;  // Minst 1 start = aktiv
-
-// Churn-definitioner
-SOFT_CHURN_YEARS = 1;   // 1 år inaktiv
-MEDIUM_CHURN_YEARS = 2; // 2 år inaktiv
-HARD_CHURN_YEARS = 3;   // 3+ år inaktiv
-
-// Kohort-inställningar
-COHORT_MIN_SIZE = 10;           // Minsta kohort att visa
-COHORT_MAX_DISPLAY_YEARS = 10;  // Max år i trendvisning
+PLATFORM_VERSION = '3.0.0';
+CALCULATION_VERSION = 'v3';
 ```
 
-**Klass-rankning:**
-Hierarkiskt system för att avgöra upgrade/downgrade:
-- Elite = 100 (högst)
-- Senior = 80
-- Junior = 60
-- Sport = 30
-- Fun = 10 (lägst)
+**Aktivitetsdefinition:**
+```php
+// "Active ar Y" = rider har minst N unika events under season_year=Y
+// OBS: Detta ar EVENTS (unika event_id), inte starter/heat/resultatrader
+ACTIVE_MIN_EVENTS = 1;
+```
 
-**Riskfaktorer för At-Risk:**
+**Retention-typer (VIKTIGT):**
+```php
+// Typ 1: Classic retention - "Hur manga av forra arets riders kom tillbaka?"
+RETENTION_TYPE_FROM_PREV = 'retention_from_prev';
+// Formel: (riders i bade N och N-1) / (riders i N-1) * 100
+
+// Typ 2: Returning share - "Hur stor andel av arets riders ar aterkommande?"
+RETENTION_TYPE_RETURNING_SHARE = 'returning_share_of_current';
+// Formel: (riders i bade N och N-1) / (riders i N) * 100
+```
+
+**Churn-nivåer:**
+```php
+SOFT_CHURN_YEARS = 1;   // 1 ar inaktiv
+MEDIUM_CHURN_YEARS = 2; // 2 ar inaktiv
+HARD_CHURN_YEARS = 3;   // 3+ ar inaktiv
+```
+
+**Klassrankning (ars-versionerad):**
+```php
+CLASS_RANKING_2024 = [
+    'Elite' => 100,    // Hogst
+    'Senior' => 80,
+    'Junior' => 60,
+    'Sport' => 30,
+    'Fun' => 10,       // Lagst
+];
+
+// FALLBACK: Om klass ar okand, returnerar getClassRank() null
+// At-Risk ignorerar class_downgrade for okanda klasser
+```
+
+**Dynamisk serie-cutoff:**
+```php
+USE_DYNAMIC_SERIES_CUTOFF = true;
+
+// Cutoff baserat pa MAX(last_event_date) + 14 dagar
+// istallet for statiskt datum
+getSeasonActivityCutoffDate($year, $seriesId, $pdo);
+```
+
+**Riskfaktorer for At-Risk:**
 | Faktor | Vikt | Beskrivning |
 |--------|------|-------------|
-| declining_events | 30 | Minskande starter |
+| declining_events | 30 | Minskande starter over tid |
 | no_recent_activity | 25 | Ingen aktivitet efter cutoff |
-| class_downgrade | 15 | Gått ner i klass |
+| class_downgrade | 15 | Gatt ner i klass (ignoreras for okanda klasser) |
 | single_series | 10 | Endast en serie |
-| low_tenure | 10 | Kort karriär (1-2 år) |
-| high_age_in_class | 10 | Hög ålder i klassen |
+| low_tenure | 10 | Kort karriar (1-2 ar) |
+| high_age_in_class | 10 | Hog alder i klassen |
 
-### 2. KPICalculator.php
+**Datakvalitetstrosklar:**
+```php
+DATA_QUALITY_THRESHOLDS = [
+    'birth_year_coverage' => 0.5,  // 50% av riders maste ha birth_year
+    'club_coverage' => 0.3,        // 30% maste ha club
+    'class_coverage' => 0.7,       // 70% av results maste ha klass
+];
+```
 
-Huvudklass för alla KPI-beräkningar. ~2200 rader kod.
+### 2. KPICalculator.php (~2500 rader)
+
+Huvudklass for alla KPI-berakningar.
 
 **Retention & Growth:**
-- `getRetentionRate($year)` - % som återkom
-- `getChurnRate($year)` - % som slutade
-- `getNewRidersCount($year)` - Antal rookies
-- `getGrowthTrend($years)` - Tillväxt över tid
+```php
+// Classic retention (forra arets perspektiv)
+getRetentionRate($year): float  // 0-100%
 
-**Demographics:**
-- `getAgeDistribution($year)` - Åldersfördelning
-- `getGenderDistribution($year)` - Könsfördelning
-- `getDisciplineDistribution($year)` - Per disciplin
+// Returning share (arets perspektiv) - NY
+getReturningShareOfCurrent($year): float  // 0-100%
 
-**Cohort (med varumärkesfilter):**
-- `getCohortRetention($year)` - Kohort-retention
-- `getCohortRetentionByBrand($year, $brandId)` - Filtrerat på varumärke
-- `getCohortStatusBreakdown($year)` - Active/Soft/Medium/Hard churn
-- `getCohortRiders($year)` - Lista på riders
-- `getCohortAverageLifespan($year)` - Snitt säsonger
+// Churn (inverterad retention)
+getChurnRate($year): float  // 100 - retention
+
+// Samlade metrics - NY
+getRetentionMetrics($year): array
+// Returnerar:
+// [
+//     'retention_from_prev' => ['value' => X, 'definition' => '...', 'formula' => '...'],
+//     'returning_share_of_current' => [...],
+//     'churn_rate' => [...],
+//     'rookie_rate' => [...],
+//     'growth_rate' => [...],
+// ]
+
+// Tillvaxt
+getGrowthRate($year): float
+getGrowthTrend($years): array
+
+// Rookies
+getNewRidersCount($year): int
+getRookieRate($year): float  // NY - andel nya
+```
+
+**Datakvalitet (NY):**
+```php
+// Hamta datakvalitetsmetrics
+getDataQualityMetrics($year): array
+// Returnerar:
+// [
+//     'birth_year_coverage' => 72.5,  // %
+//     'club_coverage' => 85.2,
+//     'gender_coverage' => 68.1,
+//     'class_coverage' => 91.0,
+//     'potential_duplicates' => 15,
+//     'quality_status' => 'good'|'warning'|'critical',
+// ]
+
+// Spara till databas
+saveDataQualityMetrics($year): bool
+```
+
+**Cohort:**
+```php
+getCohortRetention($year, $maxYears = 5): array
+getCohortRetentionByBrand($year, $brandId): array
+getCohortStatusBreakdown($year): array
+getCohortRiders($year, $status = null): array
+getCohortAverageLifespan($year): float
+```
 
 **Series Flow:**
-- `getEntryPointDistribution($year)` - Var börjar riders?
-- `calculateFeederMatrix($year)` - Flöden mellan serier
-- `getSeriesLoyalty($year)` - Lojalitet per serie
-
-**Club:**
-- `getTopClubs($year, $limit)` - Största klubbar
-- `getClubGrowth($clubId)` - Klubbens tillväxt
-- `getClubRetention($clubId)` - Klubbens retention
+```php
+getEntryPointDistribution($year): array
+calculateFeederMatrix($year): array
+getSeriesLoyaltyRate($seriesId, $year): float
+getSeriesOverlap($series1, $series2, $year): array
+```
 
 **At-Risk:**
-- `getRidersAtRisk($year)` - Riders med hög churn-risk
-- `calculateRiskScore($riderId)` - Individuell riskscore
+```php
+getRidersAtRisk($year, $limit = 100): array
+calculateRiskScore($riderId, $year): int  // 0-100
+```
 
 ### 3. AnalyticsEngine.php
 
-Motor för databeräkning och lagring.
+Motor for databerakning och lagring.
 
-**Huvudfunktioner:**
-- `populateRiderYearlyStats($year)` - Fyll rider_yearly_stats
-- `populateSeriesParticipation($year)` - Fyll series_participation
-- `populateSeriesCrossover($year)` - Beräkna flöden
-- `populateClubStats($year)` - Klubbstatistik
+**Berakningsmetoder:**
+```php
+calculateYearlyStats($year): int
+calculateYearlyStatsBulk($year): int  // Snabbare, en SQL
+calculateSeriesParticipation($year): int
+calculateSeriesCrossover($year): int
+calculateClubStats($year): int
+calculateVenueStats($year): int
+
+// Kor allt
+refreshAllStats($year): array
+refreshAllStatsFast($year): array  // Anvander bulk-metoder
+```
 
 **Jobbhantering:**
-- `startJob($name, $key)` - Starta jobb med låsning
-- `completeJob($jobId, $stats)` - Markera klart
-- `failJob($jobId, $error)` - Markera misslyckat
+```php
+startJob($name, $key, $force = false): int|false
+endJob($status, $rowsAffected, $log = []): void
+```
 
-### 4. IdentityResolver.php
+### 4. SVGChartRenderer.php (NY)
+
+PHP-baserad grafrendering utan Node.js-beroenden.
+
+**Graftyper:**
+```php
+$renderer = new SVGChartRenderer(['width' => 600, 'height' => 300]);
+
+// Linjediagram (trender)
+$svg = $renderer->lineChart([
+    'labels' => ['2020', '2021', '2022', '2023', '2024'],
+    'datasets' => [
+        ['label' => 'Retention', 'data' => [65, 70, 68, 72, 75], 'color' => '#37d4d6'],
+    ]
+]);
+
+// Stapeldiagram
+$svg = $renderer->barChart([
+    'labels' => ['U15', '15-25', '26-35', '36-45', '46+'],
+    'values' => [120, 350, 480, 320, 150],
+]);
+
+// Donut-diagram
+$svg = $renderer->donutChart([
+    'labels' => ['Enduro', 'DH', 'XC'],
+    'values' => [450, 230, 180],
+]);
+
+// Sparkline (mini-trend)
+$svg = $renderer->sparkline([65, 70, 68, 72, 75], ['width' => 100, 'height' => 30]);
+
+// Stacked bar
+$svg = $renderer->stackedBarChart([
+    'labels' => ['2022', '2023', '2024'],
+    'datasets' => [
+        ['label' => 'Active', 'data' => [500, 520, 550], 'color' => '#10b981'],
+        ['label' => 'Churned', 'data' => [100, 90, 80], 'color' => '#ef4444'],
+    ]
+]);
+```
+
+**Farger:** Anvander TheHUB designsystem automatiskt.
+
+**PNG-export:**
+```php
+$png = $renderer->svgToPng($svg, 2);  // 2x scale for retina
+file_put_contents('chart.png', $png);
+```
+
+### 5. ExportLogger.php (NY)
+
+GDPR-kompatibel loggning av alla exporter.
+
+**Logga export:**
+```php
+$logger = new ExportLogger($pdo);
+
+$exportId = $logger->logExport('riders_at_risk', $data, [
+    'year' => 2024,
+    'format' => 'csv',
+    'user_id' => $_SESSION['user_id'],
+    'filters' => ['min_risk' => 60],
+]);
+```
+
+**Skapa manifest:**
+```php
+$manifest = $logger->createManifest('cohort_export', $data, [
+    'year' => 2020,
+    'snapshot_id' => 123,
+]);
+// Returnerar:
+// [
+//     'export_type' => 'cohort_export',
+//     'exported_at' => '2026-01-16 14:30:00',
+//     'platform_version' => '3.0.0',
+//     'row_count' => 450,
+//     'data_fingerprint' => 'sha256...',
+//     'contains_pii' => true,
+//     'pii_fields' => ['firstname', 'lastname'],
+//     ...
+// ]
+```
+
+**Verifiera export:**
+```php
+$isValid = $logger->verifyExport($exportId, $data);  // true/false
+```
+
+**Statistik:**
+```php
+$stats = $logger->getExportStats('month');
+// [
+//     'total_exports' => 45,
+//     'unique_users' => 8,
+//     'pii_exports' => 12,
+//     'top_types' => [...]
+// ]
+```
+
+### 6. IdentityResolver.php
 
 Hanterar rider-identitet och sammanslagning av dubbletter.
 
-**Funktioner:**
-- `resolveRider($firstName, $lastName, $birthYear)` - Hitta canonical ID
-- `getCanonicalId($riderId)` - Hämta master-ID
-- `mergeRiders($keepId, $mergeId)` - Slå samman
+```php
+$resolver = new IdentityResolver($pdo);
+
+// Hitta canonical ID
+$canonicalId = $resolver->getCanonicalId($riderId);
+
+// Sla samman dubbletter
+$resolver->mergeRiders($keepId, $mergeId, $adminId, $reason);
+```
+
+---
+
+## KPI-definitioner
+
+**KRITISKT:** Dessa definitioner maste anvandas konsekvent i alla rapporter.
+
+### Retention Rate (retention_from_prev)
+
+**Fraga:** "Hur manga procent av forra arets riders kom tillbaka?"
+
+```
+Taljare:   Riders som deltog BADE ar N OCH ar N-1
+Namnare:   Riders som deltog ar N-1
+Formel:    (retained / prev_total) * 100
+```
+
+**Exempel:**
+- 2023 hade 1000 riders
+- 2024 har 800 av dessa 1000 tillbaka
+- Retention = 800/1000 = **80%**
+
+**Implementation:** `KPICalculator::getRetentionRate($year)`
+
+---
+
+### Returning Share (returning_share_of_current)
+
+**Fraga:** "Hur stor andel av ARETS deltagare ar aterkommande?"
+
+```
+Taljare:   Riders som deltog BADE ar N OCH ar N-1
+Namnare:   Riders som deltog ar N
+Formel:    (retained / current_total) * 100
+```
+
+**Exempel:**
+- 2024 har 1100 riders totalt
+- 800 av dessa deltog aven 2023
+- Returning share = 800/1100 = **72.7%**
+
+**Implementation:** `KPICalculator::getReturningShareOfCurrent($year)`
+
+---
+
+### Churn Rate
+
+**Fraga:** "Hur manga procent av forra arets riders SLUTADE?"
+
+```
+Formel:    100 - retention_from_prev
+```
+
+**Exempel:**
+- Retention = 80%
+- Churn = 100 - 80 = **20%**
+
+**Implementation:** `KPICalculator::getChurnRate($year)`
+
+---
+
+### Rookie Rate
+
+**Fraga:** "Hur stor andel av arets riders ar NYBORJARE?"
+
+```
+Taljare:   Riders dar MIN(season_year) = aktuellt ar
+Namnare:   Alla riders ar N
+Formel:    (rookies / total) * 100
+```
+
+**Implementation:** `KPICalculator::getRookieRate($year)`
+
+---
+
+### Growth Rate
+
+**Fraga:** "Hur mycket vaxte/minskade deltagarantalet?"
+
+```
+Formel:    ((riders_N - riders_N-1) / riders_N-1) * 100
+```
+
+**Implementation:** `KPICalculator::getGrowthRate($year)`
+
+---
+
+### Active Rider
+
+**Definition:** En rider ar "aktiv ar Y" om:
+- Rider har minst **1 registrerad event** (unik event_id) under season_year=Y
+- **OBS:** "Event" = unik event_id, INTE antal starter/heat/resultatrader
+
+**Konstant:** `AnalyticsConfig::ACTIVE_MIN_EVENTS = 1`
 
 ---
 
@@ -255,40 +629,30 @@ Hanterar rider-identitet och sammanslagning av dubbletter.
 
 ### Dashboard (`analytics-dashboard.php`)
 
-**Syfte:** Huvudöversikt med alla nyckeltal
+**Syfte:** Huvudoversikt med alla nyckeltal
 
 **Visar:**
-- KPI-sammanfattning (retention, churn, growth)
-- Tillväxttrend (5 år)
+- KPI-sammanfattning (retention, churn, growth, rookies)
+- Tillvaxttrend (5 ar)
 - Top 10 klubbar
-- Åldersfördelning (donut chart)
-- Disciplinfördelning
-- Entry points (var börjar riders)
+- Aldersfordelning (donut chart)
+- Disciplinfordelning
+- Entry points (var borjar riders)
 
-**Filter:**
-- År (dropdown)
-- Jämför med annat år
+**Filter:** Ar, Jamfor med annat ar
 
 ---
 
 ### Kohort-analys (`analytics-cohorts.php`)
 
-**Syfte:** Följ hur en årgång utvecklas över tid
+**Syfte:** Folj hur en argang utvecklas over tid
 
 **Nyckelkoncept:**
-- Kohort = alla som började samma år
-- Retention = % som fortfarande är aktiva
-- Churn-kategorier: soft (1 år), medium (2 år), hard (3+ år)
+- Kohort = alla som borjade samma ar
+- Retention = % som fortfarande ar aktiva
+- Churn-kategorier: soft (1 ar), medium (2 ar), hard (3+ ar)
 
-**Filter:**
-- Varumärke (GES, Swedish Enduro Series, etc.)
-- Kohort-år
-- Multi-kohort jämförelse
-
-**Visualisering:**
-- Retention-kurva (linje)
-- Status-fördelning (donut)
-- Rider-lista med status
+**Filter:** Varumarke, Kohort-ar, Multi-kohort jamforelse
 
 ---
 
@@ -296,135 +660,123 @@ Hanterar rider-identitet och sammanslagning av dubbletter.
 
 **Syfte:** Identifiera riders som riskerar att sluta
 
-**Riskfaktorer:**
-| Faktor | Poäng | Indikation |
-|--------|-------|------------|
-| Minskande starter | 30p | Tappar intresse |
-| Ingen aktivitet | 25p | Har inte startat på länge |
-| Klassförändring | 15p | Gått ner i klass |
-| En serie | 10p | Låg investering |
-| Kort karriär | 10p | Lättare att sluta |
-| Hög ålder | 10p | Naturlig avgång |
-
-**Risk-nivåer:**
-- 0-39: Låg risk (grön)
+**Risk-nivaer:**
+- 0-39: Lag risk (gron)
 - 40-59: Medel risk (gul)
-- 60-79: Hög risk (orange)
-- 80+: Kritisk (röd)
+- 60-79: Hog risk (orange)
+- 80+: Kritisk (rod)
+
+---
+
+### Datakvalitet (`analytics-data-quality.php`) - NY
+
+**Syfte:** Analysera och forbattra datakvaliteten
+
+**Visar:**
+- Overall status (good/warning/critical)
+- Coverage per falt med procent och troskel
+- Potentiella dubbletter
+- Matningshistorik
+- Rekommendationer
+
+**Trosklar:**
+- Birth year: 50%
+- Club: 30%
+- Class: 70%
+- Event date: 90%
 
 ---
 
 ### Series Flow (`analytics-flow.php`)
 
-**Syfte:** Visualisera rider-flöden mellan serier
-
-**Visar:**
-- Sankey-diagram med flöden
-- Entry points (första serien)
-- Crossover-mönster
-- Feeder-analys (vilka serier "matar" andra)
-
----
-
-### Series Compare (`analytics-series-compare.php`)
-
-**Syfte:** Jämför varumärken/serier
-
-**Funktioner:**
-- Välj upp till 3 grupper av varumärken
-- Aggregerar statistik per grupp
-- Visar retention, growth, demografi
-
----
-
-### Club Analytics (`analytics-clubs.php`)
-
-**Syfte:** Klubbspecifik analys
-
-**Visar:**
-- Klubbens tillväxt över tid
-- Retention vs genomsnitt
-- Aktiva riders per år
-- Top performers
-
----
-
-### Geography (`analytics-geography.php`)
-
-**Syfte:** Geografisk fördelning
-
-**Visar:**
-- Riders per region/län
-- Penetration per capita
-- Trendanalys per region
-
----
-
-### Trends (`analytics-trends.php`)
-
-**Syfte:** Historiska trender
-
-**Visar:**
-- Långsiktiga KPI-trender
-- Jämförelser över flera säsonger
-- Säsongsmönster
+**Syfte:** Visualisera rider-floden mellan serier
 
 ---
 
 ### Reports (`analytics-reports.php`)
 
-**Syfte:** Generera och exportera rapporter
+**Rapporttyper:**
+1. Arssammanfattning (Summary)
+2. Retention & Churn-analys
+3. Serie-analys
+4. Klubbrapport
+5. Demografisk Oversikt
+6. Nya Deltagare (Rookies)
 
-**Format:**
-- PDF-rapporter
-- CSV-export
-- Scheduled reports (planerat)
-
----
-
-### Diagnostics (`analytics-diagnose.php`)
-
-**Syfte:** Felsökning av analytics-data
-
-**Visar:**
-- Datakvalitetsanalys
-- Saknade fält
-- Beräkningsstatus
-- Diskrepanser
+**Export:**
+- CSV (alla rapporter)
+- PDF (med SVGChartRenderer)
 
 ---
 
-## KPI-definitioner
+## Datakvalitet
 
-### Retention Rate
-```
-retention_rate = (riders_year_N som finns i year_N-1) / riders_year_N-1 × 100
-```
+### Varfor datakvalitet ar viktigt
 
-### Churn Rate
-```
-churn_rate = 100 - retention_rate
-```
+Analyser ar bara sa bra som underliggande data. Om 50% av riders saknar fodelseår blir aldersbaserade analyser otillforlitliga.
 
-### Growth Rate
-```
-growth_rate = (riders_year_N - riders_year_N-1) / riders_year_N-1 × 100
+### Matning
+
+**Automatiskt:**
+```php
+$kpi = new KPICalculator($pdo);
+$metrics = $kpi->getDataQualityMetrics(2024);
 ```
 
-### Rookie Rate
-```
-rookie_rate = new_riders / total_active × 100
-```
-
-### Series Loyalty
-```
-loyalty = riders_som_återkommer_till_serie / riders_förra_året × 100
+**Spara till databas:**
+```php
+$kpi->saveDataQualityMetrics(2024);  // Sparar till data_quality_metrics
 ```
 
-### Risk Score
+### Kvalitetsstatus
+
+| Status | Kriterier |
+|--------|-----------|
+| **Good** | Alla falt over troskel |
+| **Warning** | 1 falt under troskel |
+| **Critical** | 2+ falt under troskel |
+
+### Rekommendationer
+
+Systemet ger automatiska rekommendationer baserat pa data:
+
+- **Lat fodelseår-tackning:** At-Risk berakningar som anvander alder kan bli opalitliga
+- **Lat klubb-tackning:** Klubbstatistik och geografisk analys blir ofullstandig
+- **Potentiella dubbletter:** Anvand Rider Merge-verktyget for att granska
+
+---
+
+## Export och Reproducerbarhet
+
+### Principer
+
+1. **Alla exporter loggas** med fullstandig metadata
+2. **Fingerprint** (SHA256) sparas for verifiering
+3. **Manifest** innehaller alla parametrar for reproducerbarhet
+4. **PII-flagga** markerar exporter med persondata
+
+### Anvandning
+
+**Logga export:**
+```php
+$logger = new ExportLogger($pdo);
+$exportId = $logger->logExport('riders_at_risk', $data, [
+    'year' => 2024,
+    'user_id' => $_SESSION['user_id'],
+]);
 ```
-risk_score = Σ(faktor_vikt × faktor_applicerar) / total_möjlig_vikt × 100
+
+**Verifiera tidigare export:**
+```php
+$manifest = $logger->getManifest($exportId);
+$isValid = $logger->verifyExport($exportId, $currentData);
 ```
+
+### GDPR
+
+- Exporter med persondata (`contains_pii = 1`) loggas separat
+- IP-adress sparas for sparbarhet
+- Statistik tillganglig: `$logger->getExportStats('month')`
 
 ---
 
@@ -432,244 +784,97 @@ risk_score = Σ(faktor_vikt × faktor_applicerar) / total_möjlig_vikt × 100
 
 ### Initial Setup
 
-1. **Kör governance-migration:**
+1. **Kor migrationer:**
 ```bash
-/analytics/setup-governance.php
+mysql -u user -p database < analytics/migrations/001_analytics_tables.sql
+mysql -u user -p database < analytics/migrations/006_production_readiness.sql
 ```
 
-2. **Kör tabell-migration:**
+2. **Populera historisk data:**
 ```bash
-/analytics/setup-tables.php
+php analytics/populate-historical.php
 ```
+Eller via admin: `/admin/analytics-populate.php`
 
-3. **Populera historisk data:**
-```bash
-/admin/analytics-populate.php
-```
-
-### Dagligt Underhåll
+### Dagligt Underhall
 
 **Cron-jobb** (`analytics/cron/refresh-analytics.php`):
-- Körs dagligen
+```bash
+0 4 * * * /usr/bin/php /var/www/thehub/analytics/cron/refresh-analytics.php
+```
+
+Kor dagligen och:
 - Uppdaterar rider_yearly_stats
-- Räknar om risk scores
+- Beraknar series_participation
+- Uppdaterar club_stats
 - Skapar snapshots
 
 ### Reset
 
-**Vid behov av omberäkning:**
+**Vid behov av omberakning:**
 ```bash
 /admin/analytics-reset.php
 ```
-- Rensar alla analytics-tabeller
-- Kräver ombefolkning efteråt
+
+**OBS:** Kraver ombefolkning efterat!
 
 ---
 
-## Forbattringsforslag
+## Changelog
 
-### 1. Performance-optimering
+### v3.0.0 (2026-01-16) - Production Readiness
 
-**Problem:** Stora kohorter kan ta lång tid att beräkna
+**Prio 1 - Korrekthet & Exporter:**
+- Tydliggjorda KPI-definitioner med separata metoder
+  - `getRetentionRate()` vs `getReturningShareOfCurrent()`
+- Snapshot v2 med reproducerbarhet
+  - `generated_at`, `season_year`, `source_max_updated_at`, `code_version`, `data_fingerprint`
+- Export logging med GDPR-sparbarhet
+  - Ny tabell `analytics_exports`
+  - `ExportLogger.php` klass
+- KPI-definitionstabell `analytics_kpi_definitions`
 
-**Lösning:**
-- Materialiserade vyer för vanliga queries
-- Asynkron beräkning med jobb-kö
-- Caching av tunga beräkningar
+**Prio 2 - At-Risk & Klasslogik:**
+- Ars-versionerad klassrankning (`CLASS_RANKING_BY_YEAR`)
+- Fallback for okanda klasser (ignorerar `class_downgrade`)
+- Ny metod `isClassDowngrade()`
+- Dynamisk serie-cutoff baserat pa `last_event_date`
 
-```php
-// Exempel: Cache kohort-data
-$cacheKey = "cohort_{$year}_{$brandId}";
-$data = $cache->get($cacheKey);
-if (!$data) {
-    $data = $kpiCalc->getCohortRetentionByBrand($year, $brandId);
-    $cache->set($cacheKey, $data, 3600); // 1 timme
-}
-```
+**Prio 3 - Skalbarhet:**
+- Datakvalitetspanel (`admin/analytics-data-quality.php`)
+- Ny tabell `data_quality_metrics`
+- SVG ChartRenderer for PDF-export utan Node.js
+  - Line, Bar, Donut, Sparkline, Stacked Bar
 
-### 2. Realtidsuppdateringar
+**Nya metoder i KPICalculator:**
+- `getReturningShareOfCurrent()`
+- `getRookieRate()`
+- `getRetentionMetrics()`
+- `getDataQualityMetrics()`
+- `saveDataQualityMetrics()`
 
-**Problem:** Data uppdateras bara via cron
+**Nya filer:**
+- `analytics/includes/SVGChartRenderer.php`
+- `analytics/includes/ExportLogger.php`
+- `analytics/migrations/006_production_readiness.sql`
+- `admin/analytics-data-quality.php`
+- `api/analytics/save-quality-metrics.php`
 
-**Lösning:**
-- Event-driven uppdateringar
-- Trigger vid nytt resultat
-- WebSocket för live-dashboard
+### v2.0.0 (2026-01-14)
 
-### 3. Prediktiv Analys
+- Cohort-analys med varumarkesfilter
+- At-Risk prediction
+- Series flow-visualisering
+- Geography-analys
 
-**Problem:** At-Risk är reaktiv, inte prediktiv
+### v1.0.0 (2025)
 
-**Lösning:**
-- Machine learning-modell för churn-prediction
-- Tidsserieanalys för säsongsmönster
-- Clustering för rider-segmentering
-
-```python
-# Exempel: Sklearn churn-modell
-from sklearn.ensemble import RandomForestClassifier
-
-features = ['events_last_year', 'events_this_year', 'tenure',
-            'class_change', 'series_count']
-model = RandomForestClassifier()
-model.fit(X_train, y_train)
-predictions = model.predict_proba(X_current)
-```
-
-### 4. Jämförelse med Benchmark
-
-**Problem:** Svårt att veta om siffror är "bra"
-
-**Lösning:**
-- Branschjämförelser
-- Historiska genomsnitt
-- Målsättningar med alerts
-
-### 5. Förbättrad Visualisering
-
-**Problem:** Statiska grafer
-
-**Lösning:**
-- Interaktiva drill-down
-- Animated transitions
-- Mobile-first design
-- Export till PowerPoint
-
-### 6. Varumärkes-jämförelse i Cohort Compare
-
-**Problem:** Multi-kohort jämförelse saknar varumärkesfilter
-
-**Lösning:**
-```php
-// Lägg till i KPICalculator
-public function compareCohortsByBrand(array $cohortYears, int $brandId, int $maxYears = 5): array {
-    $result = [];
-    foreach ($cohortYears as $cohortYear) {
-        $retention = $this->getCohortRetentionByBrand($cohortYear, $brandId, $cohortYear + $maxYears);
-        $result[$cohortYear] = [
-            'cohort_year' => $cohortYear,
-            'retention_data' => $retention,
-        ];
-    }
-    return $result;
-}
-```
-
-### 7. Automatiska Alerts
-
-**Problem:** Måste manuellt kolla dashboard
-
-**Lösning:**
-- E-post vid signifikanta ändringar
-- Slack-integration
-- Tröskelvärden för KPIs
-
-```php
-if ($kpis['retention_rate'] < 50) {
-    sendAlert("Retention under 50%! Nuvarande: {$kpis['retention_rate']}%");
-}
-```
-
-### 8. A/B-testning för Retention
-
-**Problem:** Svårt att mäta effekt av åtgärder
-
-**Lösning:**
-- Experimentramverk
-- Kontrollgrupper
-- Statistisk signifikans
-
-### 9. Integration med Externa Datakällor
-
-**Problem:** Begränsad data
-
-**Lösning:**
-- Väder-data (påverkar deltagande?)
-- Ekonomiska indikatorer
-- Sociala medier-sentiment
-
-### 10. Dokumentation och Utbildning
-
-**Problem:** Komplex data kräver tolkning
-
-**Lösning:**
-- Inbyggda förklaringar
-- Video-tutorials
-- Glossary med definitioner
-
----
-
-## Sammanfattning
-
-TheHUB Analytics är ett kraftfullt system med:
-
-**Styrkor:**
-- Omfattande KPI-beräkningar
-- Pre-aggregerad data för snabb åtkomst
-- Flexibel konfiguration (AnalyticsConfig)
-- Varumärkesfiltrering i kohort-analys
-- Identity resolution för dubbletthantering
-
-**Förbättringsområden:**
-- Performance vid stora dataset
-- Realtidsuppdateringar
-- Prediktiv analys
-- Benchmark-jämförelser
-- Automatiserade alerts
-
----
-
-## Production Readiness Improvements (2026-01-16)
-
-Foljande forbattringar har implementerats baserat pa granskning:
-
-### Prio 1 - Korrekthet & Exporter
-
-1. **KPI-definitioner tydliggjorda**
-   - `retention_from_prev` - Andel av forra arets riders som aterkommer
-   - `returning_share_of_current` - Andel av arets riders som ar aterkommande
-   - `churn_rate` - 100 - retention_from_prev
-   - Dokumenterat i `AnalyticsConfig.php`
-
-2. **Snapshot v2**
-   - Nya kolumner: `generated_at`, `season_year`, `source_max_updated_at`, `code_version`
-   - Data fingerprint for verifiering
-   - Migration: `006_production_readiness.sql`
-
-3. **Export Logging**
-   - Ny tabell `analytics_exports`
-   - Manifest med fingerprint
-   - GDPR-loggning
-   - Klass: `ExportLogger.php`
-
-### Prio 2 - At-Risk & Klasslogik
-
-4. **CLASS_RANKING_BY_YEAR**
-   - Ars-versionerad klassrankning
-   - Fallback for okanda klasser (ignorerar class_downgrade)
-   - `isClassDowngrade()` metod
-
-5. **Dynamisk Serie-Cutoff**
-   - Cutoff baserat pa `last_event_date` i `series_participation`
-   - 14 dagars marginal efter sista event
-   - Konfigurerbart via `USE_DYNAMIC_SERIES_CUTOFF`
-
-### Prio 3 - Skalbarhet
-
-6. **Datakvalitetspanel**
-   - Ny sida: `admin/analytics-data-quality.php`
-   - Matning av: birth_year, club, gender, class coverage
-   - Potentiella dubbletter
-   - Rekommendationer
-   - Tabell: `data_quality_metrics`
-
-7. **SVG ChartRenderer**
-   - PHP-baserad grafrendering utan Node.js
-   - Line, Bar, Donut, Sparkline, Stacked Bar
-   - TheHUB designsystem-farger
-   - Klass: `SVGChartRenderer.php`
+- Initial release
+- Basic KPI-berakningar
+- Pre-aggregerade tabeller
 
 ---
 
 *Dokumentation skapad: 2026-01-16*
-*Analytics Platform Version: 3.0*
+*Analytics Platform Version: 3.0.0*
+*Calculation Version: v3*
