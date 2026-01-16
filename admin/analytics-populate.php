@@ -48,6 +48,10 @@ if (isset($_GET['run_year'])) {
 
 // Hantera AJAX-request for kohort journey-analys
 if (isset($_GET['run_cohort'])) {
+    // Extend timeout for heavy calculations
+    set_time_limit(300);
+    ini_set('max_execution_time', 300);
+
     header('Content-Type: application/json');
 
     $cohortYear = (int)$_GET['run_cohort'];
@@ -62,6 +66,7 @@ if (isset($_GET['run_cohort'])) {
 
         global $pdo;
         $engine = new AnalyticsEngine($pdo);
+        $engine->setForceRerun(true); // Always recalculate
 
         // Kor full journey-analys for kohorten
         $results = $engine->calculateFullJourneyAnalysis($cohortYear);
@@ -72,6 +77,8 @@ if (isset($_GET['run_cohort'])) {
 
     } catch (Exception $e) {
         echo json_encode(['error' => $e->getMessage()]);
+    } catch (Throwable $t) {
+        echo json_encode(['error' => 'Fatal: ' . $t->getMessage()]);
     }
     exit;
 }
@@ -414,7 +421,11 @@ async function processCohort(year) {
 
     try {
         const url = `/admin/analytics-populate.php?run_cohort=${year}`;
-        const response = await fetch(url);
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 300000); // 5 min timeout
+
+        const response = await fetch(url, { signal: controller.signal });
+        clearTimeout(timeoutId);
         const data = await response.json();
 
         if (data.error) {
