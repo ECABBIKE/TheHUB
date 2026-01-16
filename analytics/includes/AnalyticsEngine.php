@@ -2042,6 +2042,15 @@ class AnalyticsEngine {
      * Spara rider first season data
      */
     private function upsertRiderFirstSeason(int $riderId, int $cohortYear, array $metrics, ?int $snapshotId): void {
+        // Validate club_id exists in clubs table (fix for FK constraint)
+        if (!empty($metrics['club_id'])) {
+            $clubCheck = $this->pdo->prepare("SELECT id FROM clubs WHERE id = ?");
+            $clubCheck->execute([$metrics['club_id']]);
+            if (!$clubCheck->fetchColumn()) {
+                $metrics['club_id'] = null; // Set to NULL if club doesn't exist
+            }
+        }
+
         $stmt = $this->pdo->prepare("
             INSERT INTO rider_first_season (
                 rider_id, cohort_year,
