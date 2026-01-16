@@ -3580,4 +3580,670 @@ class KPICalculator {
 
         return $result;
     }
+
+    // =========================================================================
+    // FIRST SEASON JOURNEY ANALYSIS (v3.1)
+    // =========================================================================
+
+    /**
+     * Build safe IN clause for brand filtering
+     *
+     * @param array|null $brandIds Brand IDs to filter (max 12)
+     * @return array ['clause' => string, 'params' => array]
+     */
+    private function buildBrandFilter(?array $brandIds): array {
+        if (empty($brandIds)) {
+            return ['clause' => '', 'params' => []];
+        }
+
+        // Max 12 brands
+        $brandIds = array_slice(array_filter($brandIds, 'is_numeric'), 0, 12);
+        if (empty($brandIds)) {
+            return ['clause' => '', 'params' => []];
+        }
+
+        $placeholders = implode(',', array_fill(0, count($brandIds), '?'));
+        return [
+            'clause' => "AND first_brand_id IN ($placeholders)",
+            'params' => array_map('intval', $brandIds)
+        ];
+    }
+
+    /**
+     * Get First Season Journey summary statistics
+     *
+     * @param int $cohortYear Cohort year
+     * @param array|null $brandIds Optional brand filter (max 12)
+     * @return array Summary statistics
+     */
+    public function getFirstSeasonJourneySummary(int $cohortYear, ?array $brandIds = null): array {
+        $brandFilter = $this->buildBrandFilter($brandIds);
+
+        $sql = "
+            SELECT
+                COUNT(*) AS total_rookies,
+                AVG(total_starts) AS avg_starts,
+                AVG(total_events) AS avg_events,
+                AVG(total_finished) AS avg_finishes,
+                AVG(CASE WHEN total_starts > 0 THEN (total_starts - total_finished) / total_starts END) AS avg_dnf_rate,
+                AVG(result_percentile) AS avg_percentile,
+                AVG(engagement_score) AS avg_engagement,
+                SUM(returned_year2) / COUNT(*) AS return_rate_y2,
+                SUM(returned_year3) / COUNT(*) AS return_rate_y3,
+                AVG(total_career_seasons) AS avg_career_length,
+                SUM(CASE WHEN activity_pattern = 'high_engagement' THEN 1 ELSE 0 END) AS high_engagement_count,
+                SUM(CASE WHEN activity_pattern = 'moderate' THEN 1 ELSE 0 END) AS moderate_count,
+                SUM(CASE WHEN activity_pattern = 'low_engagement' THEN 1 ELSE 0 END) AS low_engagement_count
+            FROM rider_first_season
+            WHERE cohort_year = ?
+            {$brandFilter['clause']}
+        ";
+
+        $params = array_merge([$cohortYear], $brandFilter['params']);
+
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
+        $data = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        // Apply GDPR check
+        if (!$data || $data['total_rookies'] < 10) {
+            return [
+                'suppressed' => true,
+                'reason' => 'Insufficient data (GDPR minimum 10)',
+                'cohort_year' => $cohortYear
+            ];
+        }
+
+        return [
+            'cohort_year' => $cohortYear,
+            'total_rookies' => (int)$data['total_rookies'],
+            'avg_starts' => round((float)$data['avg_starts'], 2),
+            'avg_events' => round((float)$data['avg_events'], 2),
+            'avg_finishes' => round((float)$data['avg_finishes'], 2),
+            'avg_dnf_rate' => round((float)$data['avg_dnf_rate'] * 100, 1),
+            'avg_percentile' => round((float)$data['avg_percentile'], 1),
+            'avg_engagement' => round((float)$data['avg_engagement'], 1),
+            'return_rate_y2' => round((float)$data['return_rate_y2'] * 100, 1),
+            'return_rate_y3' => round((float)$data['return_rate_y3'] * 100, 1),
+            'avg_career_length' => round((float)$data['avg_career_length'], 2),
+            'engagement_distribution' => [
+                'high' => (int)$data['high_engagement_count'],
+                'moderate' => (int)$data['moderate_count'],
+                'low' => (int)$data['low_engagement_count']
+            ],
+            'suppressed' => false
+        ];
+    }
+
+    /**
+     * Get cohort longitudinal overview (retention funnel)
+     *
+     * @param int $cohortYear Cohort year
+     * @param array|null $brandIds Optional brand filter
+     * @return array Retention funnel data
+     */
+    public function getCohortLongitudinalOverview(int $cohortYear, ?array $brandIds = null): array {
+        $brandFilter = $this->buildBrandFilter($brandIds);
+
+        // Use brand filter on rider_first_season join
+        $brandJoin = empty($brandFilter['clause']) ? '' :
+            "JOIN rider_first_season rfs ON rjy.rider_id = rfs.rider_id AND rjy.cohort_year = rfs.cohort_year";
+
+        $sql = "
+            SELECT
+                rjy.year_offset,
+                COUNT(*) AS cohort_size,
+                SUM(rjy.was_active) AS active_count,
+                SUM(rjy.was_active) / COUNT(*) AS retention_rate,
+                AVG(CASE WHEN rjy.was_active = 1 THEN rjy.total_starts END) AS avg_starts,
+                AVG(CASE WHEN rjy.was_active = 1 THEN rjy.total_events END) AS avg_events,
+                AVG(CASE WHEN rjy.was_active = 1 THEN rjy.result_percentile END) AS avg_percentile,
+                SUM(CASE WHEN rjy.was_active = 1 AND rjy.has_improved = 1 THEN 1 ELSE 0 END) AS improved_count
+            FROM rider_journey_years rjy
+            " . (empty($brandFilter['clause']) ? '' : "
+            JOIN rider_first_season rfs ON rjy.rider_id = rfs.rider_id AND rjy.cohort_year = rfs.cohort_year
+            ") . "
+            WHERE rjy.cohort_year = ?
+            " . str_replace('first_brand_id', 'rfs.first_brand_id', $brandFilter['clause']) . "
+            GROUP BY rjy.year_offset
+            ORDER BY rjy.year_offset
+        ";
+
+        $params = array_merge([$cohortYear], $brandFilter['params']);
+
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
+        $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // GDPR check on base cohort
+        if (empty($results) || $results[0]['cohort_size'] < 10) {
+            return [
+                'suppressed' => true,
+                'reason' => 'Insufficient data (GDPR minimum 10)',
+                'cohort_year' => $cohortYear
+            ];
+        }
+
+        $funnel = [];
+        foreach ($results as $row) {
+            $funnel[] = [
+                'year_offset' => (int)$row['year_offset'],
+                'cohort_size' => (int)$row['cohort_size'],
+                'active_count' => (int)$row['active_count'],
+                'retention_rate' => round((float)$row['retention_rate'] * 100, 1),
+                'avg_starts' => round((float)$row['avg_starts'], 2),
+                'avg_events' => round((float)$row['avg_events'], 2),
+                'avg_percentile' => round((float)$row['avg_percentile'], 1),
+                'improved_count' => (int)$row['improved_count']
+            ];
+        }
+
+        return [
+            'cohort_year' => $cohortYear,
+            'funnel' => $funnel,
+            'suppressed' => false
+        ];
+    }
+
+    /**
+     * Get journey type distribution
+     *
+     * @param int $cohortYear Cohort year
+     * @param array|null $brandIds Optional brand filter
+     * @return array Journey pattern distribution
+     */
+    public function getJourneyTypeDistribution(int $cohortYear, ?array $brandIds = null): array {
+        $brandFilter = $this->buildBrandFilter($brandIds);
+
+        $sql = "
+            SELECT
+                rjs.journey_pattern,
+                COUNT(*) AS rider_count,
+                AVG(rjs.fs_engagement_score) AS avg_engagement,
+                AVG(rjs.fs_result_percentile) AS avg_percentile
+            FROM rider_journey_summary rjs
+            " . (empty($brandFilter['clause']) ? '' : "
+            JOIN rider_first_season rfs ON rjs.rider_id = rfs.rider_id AND rjs.cohort_year = rfs.cohort_year
+            ") . "
+            WHERE rjs.cohort_year = ?
+            " . str_replace('first_brand_id', 'rfs.first_brand_id', $brandFilter['clause']) . "
+            GROUP BY rjs.journey_pattern
+            HAVING COUNT(*) >= 10
+            ORDER BY rider_count DESC
+        ";
+
+        $params = array_merge([$cohortYear], $brandFilter['params']);
+
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
+        $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $total = array_sum(array_column($results, 'rider_count'));
+
+        if ($total < 10) {
+            return [
+                'suppressed' => true,
+                'reason' => 'Insufficient data (GDPR minimum 10)',
+                'cohort_year' => $cohortYear
+            ];
+        }
+
+        $distribution = [];
+        foreach ($results as $row) {
+            $distribution[] = [
+                'pattern' => $row['journey_pattern'],
+                'count' => (int)$row['rider_count'],
+                'percentage' => round((int)$row['rider_count'] / $total * 100, 1),
+                'avg_engagement' => round((float)$row['avg_engagement'], 1),
+                'avg_percentile' => round((float)$row['avg_percentile'], 1)
+            ];
+        }
+
+        return [
+            'cohort_year' => $cohortYear,
+            'total_classified' => $total,
+            'distribution' => $distribution,
+            'suppressed' => false
+        ];
+    }
+
+    /**
+     * Get retention by first season start count
+     *
+     * @param int $cohortYear Cohort year
+     * @param array|null $brandIds Optional brand filter
+     * @return array Retention data by start count
+     */
+    public function getRetentionByStartCount(int $cohortYear, ?array $brandIds = null): array {
+        $brandFilter = $this->buildBrandFilter($brandIds);
+
+        $sql = "
+            SELECT
+                CASE
+                    WHEN total_starts = 1 THEN '1 start'
+                    WHEN total_starts BETWEEN 2 AND 3 THEN '2-3 starts'
+                    WHEN total_starts BETWEEN 4 AND 6 THEN '4-6 starts'
+                    WHEN total_starts BETWEEN 7 AND 10 THEN '7-10 starts'
+                    ELSE '11+ starts'
+                END AS start_bucket,
+                COUNT(*) AS rider_count,
+                SUM(returned_year2) / COUNT(*) AS return_rate_y2,
+                SUM(returned_year3) / COUNT(*) AS return_rate_y3,
+                AVG(total_career_seasons) AS avg_career
+            FROM rider_first_season
+            WHERE cohort_year = ?
+            {$brandFilter['clause']}
+            GROUP BY
+                CASE
+                    WHEN total_starts = 1 THEN '1 start'
+                    WHEN total_starts BETWEEN 2 AND 3 THEN '2-3 starts'
+                    WHEN total_starts BETWEEN 4 AND 6 THEN '4-6 starts'
+                    WHEN total_starts BETWEEN 7 AND 10 THEN '7-10 starts'
+                    ELSE '11+ starts'
+                END
+            HAVING COUNT(*) >= 10
+            ORDER BY MIN(total_starts)
+        ";
+
+        $params = array_merge([$cohortYear], $brandFilter['params']);
+
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
+        $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        if (empty($results)) {
+            return [
+                'suppressed' => true,
+                'reason' => 'Insufficient data (GDPR minimum 10)',
+                'cohort_year' => $cohortYear
+            ];
+        }
+
+        $buckets = [];
+        foreach ($results as $row) {
+            $buckets[] = [
+                'bucket' => $row['start_bucket'],
+                'rider_count' => (int)$row['rider_count'],
+                'return_rate_y2' => round((float)$row['return_rate_y2'] * 100, 1),
+                'return_rate_y3' => round((float)$row['return_rate_y3'] * 100, 1),
+                'avg_career' => round((float)$row['avg_career'], 2)
+            ];
+        }
+
+        return [
+            'cohort_year' => $cohortYear,
+            'buckets' => $buckets,
+            'suppressed' => false
+        ];
+    }
+
+    // =========================================================================
+    // BRAND COMPARISON (v3.1)
+    // =========================================================================
+
+    /**
+     * Get multi-brand journey comparison
+     *
+     * @param int $cohortYear Cohort year
+     * @param array $brandIds Brand IDs to compare (max 12)
+     * @return array Brand comparison data
+     */
+    public function getBrandJourneyComparison(int $cohortYear, array $brandIds): array {
+        if (empty($brandIds)) {
+            return ['error' => 'No brands specified'];
+        }
+
+        // Max 12 brands
+        $brandIds = array_slice(array_filter($brandIds, 'is_numeric'), 0, 12);
+        $placeholders = implode(',', array_fill(0, count($brandIds), '?'));
+
+        $sql = "
+            SELECT
+                b.id AS brand_id,
+                b.name AS brand_name,
+                b.short_code,
+                b.color_primary,
+                COUNT(*) AS rookie_count,
+                AVG(rfs.total_starts) AS avg_starts,
+                AVG(rfs.total_events) AS avg_events,
+                AVG(rfs.result_percentile) AS avg_percentile,
+                AVG(rfs.engagement_score) AS avg_engagement,
+                SUM(rfs.returned_year2) / COUNT(*) AS return_rate_y2,
+                SUM(rfs.returned_year3) / COUNT(*) AS return_rate_y3,
+                AVG(rfs.total_career_seasons) AS avg_career_seasons
+            FROM rider_first_season rfs
+            JOIN brands b ON rfs.first_brand_id = b.id
+            WHERE rfs.cohort_year = ?
+            AND rfs.first_brand_id IN ($placeholders)
+            GROUP BY b.id, b.name, b.short_code, b.color_primary
+            HAVING COUNT(*) >= 10
+            ORDER BY rookie_count DESC
+        ";
+
+        $params = array_merge([$cohortYear], array_map('intval', $brandIds));
+
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
+        $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        $brands = [];
+        foreach ($results as $row) {
+            $brands[] = [
+                'brand_id' => (int)$row['brand_id'],
+                'brand_name' => $row['brand_name'],
+                'short_code' => $row['short_code'],
+                'color' => $row['color_primary'],
+                'rookie_count' => (int)$row['rookie_count'],
+                'avg_starts' => round((float)$row['avg_starts'], 2),
+                'avg_events' => round((float)$row['avg_events'], 2),
+                'avg_percentile' => round((float)$row['avg_percentile'], 1),
+                'avg_engagement' => round((float)$row['avg_engagement'], 1),
+                'return_rate_y2' => round((float)$row['return_rate_y2'] * 100, 1),
+                'return_rate_y3' => round((float)$row['return_rate_y3'] * 100, 1),
+                'avg_career_seasons' => round((float)$row['avg_career_seasons'], 2)
+            ];
+        }
+
+        return [
+            'cohort_year' => $cohortYear,
+            'brands' => $brands,
+            'brand_count' => count($brands)
+        ];
+    }
+
+    /**
+     * Get brand-specific retention funnel
+     *
+     * @param int $brandId Brand ID
+     * @param int $cohortYear Cohort year
+     * @return array Retention funnel for brand
+     */
+    public function getBrandRetentionFunnel(int $brandId, int $cohortYear): array {
+        $sql = "
+            SELECT
+                rjy.year_offset,
+                COUNT(*) AS cohort_size,
+                SUM(rjy.was_active) AS active_count,
+                SUM(rjy.was_active) / COUNT(*) AS retention_rate,
+                AVG(CASE WHEN rjy.was_active = 1 THEN rjy.total_starts END) AS avg_starts,
+                AVG(CASE WHEN rjy.was_active = 1 THEN rjy.result_percentile END) AS avg_percentile
+            FROM rider_journey_years rjy
+            JOIN rider_first_season rfs ON rjy.rider_id = rfs.rider_id AND rjy.cohort_year = rfs.cohort_year
+            WHERE rjy.cohort_year = ?
+            AND rfs.first_brand_id = ?
+            GROUP BY rjy.year_offset
+            ORDER BY rjy.year_offset
+        ";
+
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute([$cohortYear, $brandId]);
+        $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Get brand info
+        $brandStmt = $this->pdo->prepare("SELECT name, short_code, color_primary FROM brands WHERE id = ?");
+        $brandStmt->execute([$brandId]);
+        $brand = $brandStmt->fetch(PDO::FETCH_ASSOC);
+
+        if (empty($results) || $results[0]['cohort_size'] < 10) {
+            return [
+                'suppressed' => true,
+                'reason' => 'Insufficient data (GDPR minimum 10)',
+                'brand_id' => $brandId,
+                'cohort_year' => $cohortYear
+            ];
+        }
+
+        $funnel = [];
+        foreach ($results as $row) {
+            $funnel[] = [
+                'year_offset' => (int)$row['year_offset'],
+                'cohort_size' => (int)$row['cohort_size'],
+                'active_count' => (int)$row['active_count'],
+                'retention_rate' => round((float)$row['retention_rate'] * 100, 1),
+                'avg_starts' => round((float)$row['avg_starts'], 2),
+                'avg_percentile' => round((float)$row['avg_percentile'], 1)
+            ];
+        }
+
+        return [
+            'brand_id' => $brandId,
+            'brand_name' => $brand['name'] ?? 'Unknown',
+            'short_code' => $brand['short_code'] ?? null,
+            'color' => $brand['color_primary'] ?? null,
+            'cohort_year' => $cohortYear,
+            'funnel' => $funnel,
+            'suppressed' => false
+        ];
+    }
+
+    /**
+     * Get journey patterns by brand
+     *
+     * @param int $cohortYear Cohort year
+     * @param array $brandIds Brand IDs to analyze
+     * @return array Journey patterns per brand
+     */
+    public function getJourneyPatternsByBrand(int $cohortYear, array $brandIds): array {
+        if (empty($brandIds)) {
+            return ['error' => 'No brands specified'];
+        }
+
+        $brandIds = array_slice(array_filter($brandIds, 'is_numeric'), 0, 12);
+        $placeholders = implode(',', array_fill(0, count($brandIds), '?'));
+
+        $sql = "
+            SELECT
+                b.id AS brand_id,
+                b.name AS brand_name,
+                b.short_code,
+                rjs.journey_pattern,
+                COUNT(*) AS rider_count
+            FROM rider_journey_summary rjs
+            JOIN rider_first_season rfs ON rjs.rider_id = rfs.rider_id AND rjs.cohort_year = rfs.cohort_year
+            JOIN brands b ON rfs.first_brand_id = b.id
+            WHERE rjs.cohort_year = ?
+            AND rfs.first_brand_id IN ($placeholders)
+            GROUP BY b.id, b.name, b.short_code, rjs.journey_pattern
+            HAVING COUNT(*) >= 10
+            ORDER BY b.name, rider_count DESC
+        ";
+
+        $params = array_merge([$cohortYear], array_map('intval', $brandIds));
+
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
+        $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Organize by brand
+        $byBrand = [];
+        foreach ($results as $row) {
+            $brandId = (int)$row['brand_id'];
+            if (!isset($byBrand[$brandId])) {
+                $byBrand[$brandId] = [
+                    'brand_id' => $brandId,
+                    'brand_name' => $row['brand_name'],
+                    'short_code' => $row['short_code'],
+                    'patterns' => [],
+                    'total' => 0
+                ];
+            }
+            $byBrand[$brandId]['patterns'][] = [
+                'pattern' => $row['journey_pattern'],
+                'count' => (int)$row['rider_count']
+            ];
+            $byBrand[$brandId]['total'] += (int)$row['rider_count'];
+        }
+
+        // Calculate percentages
+        foreach ($byBrand as &$brand) {
+            foreach ($brand['patterns'] as &$pattern) {
+                $pattern['percentage'] = round($pattern['count'] / $brand['total'] * 100, 1);
+            }
+        }
+
+        return [
+            'cohort_year' => $cohortYear,
+            'brands' => array_values($byBrand)
+        ];
+    }
+
+    /**
+     * Get available brands for journey filtering
+     *
+     * @param int|null $cohortYear Optional cohort year filter
+     * @return array Available brands with rookie counts
+     */
+    public function getAvailableBrandsForJourney(?int $cohortYear = null): array {
+        $whereClause = $cohortYear ? 'WHERE rfs.cohort_year = ?' : '';
+        $params = $cohortYear ? [$cohortYear] : [];
+
+        $sql = "
+            SELECT
+                b.id,
+                b.name,
+                b.short_code,
+                b.color_primary,
+                COUNT(DISTINCT rfs.rider_id) AS rookie_count
+            FROM brands b
+            JOIN rider_first_season rfs ON rfs.first_brand_id = b.id
+            $whereClause
+            GROUP BY b.id, b.name, b.short_code, b.color_primary
+            HAVING COUNT(DISTINCT rfs.rider_id) >= 10
+            ORDER BY rookie_count DESC
+        ";
+
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
+
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Get available cohort years with optional brand filter
+     *
+     * @param array|null $brandIds Optional brand filter
+     * @return array Available cohort years
+     */
+    public function getAvailableCohortYears(?array $brandIds = null): array {
+        $brandFilter = $this->buildBrandFilter($brandIds);
+
+        $sql = "
+            SELECT
+                cohort_year,
+                COUNT(*) AS rookie_count
+            FROM rider_first_season
+            WHERE 1=1
+            {$brandFilter['clause']}
+            GROUP BY cohort_year
+            HAVING COUNT(*) >= 10
+            ORDER BY cohort_year DESC
+        ";
+
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($brandFilter['params']);
+
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Export journey data (respects GDPR)
+     *
+     * @param int $cohortYear Cohort year
+     * @param array|null $brandIds Optional brand filter
+     * @param string $format Export format ('csv' or 'json')
+     * @return array Export data with metadata
+     */
+    public function exportJourneyData(int $cohortYear, ?array $brandIds = null, string $format = 'csv'): array {
+        $summary = $this->getFirstSeasonJourneySummary($cohortYear, $brandIds);
+        $longitudinal = $this->getCohortLongitudinalOverview($cohortYear, $brandIds);
+        $patterns = $this->getJourneyTypeDistribution($cohortYear, $brandIds);
+        $retention = $this->getRetentionByStartCount($cohortYear, $brandIds);
+
+        // Build export data
+        $exportData = [
+            'metadata' => [
+                'cohort_year' => $cohortYear,
+                'brand_filter' => $brandIds,
+                'exported_at' => date('Y-m-d H:i:s'),
+                'gdpr_compliant' => true
+            ],
+            'summary' => $summary,
+            'retention_funnel' => $longitudinal,
+            'journey_patterns' => $patterns,
+            'retention_by_starts' => $retention
+        ];
+
+        if ($format === 'csv') {
+            return [
+                'format' => 'csv',
+                'data' => $this->convertToCSV($exportData),
+                'filename' => "journey_cohort_{$cohortYear}_" . date('Ymd') . ".csv"
+            ];
+        }
+
+        return [
+            'format' => 'json',
+            'data' => $exportData,
+            'filename' => "journey_cohort_{$cohortYear}_" . date('Ymd') . ".json"
+        ];
+    }
+
+    /**
+     * Convert journey data to CSV format
+     *
+     * @param array $data Journey data
+     * @return string CSV content
+     */
+    private function convertToCSV(array $data): string {
+        $lines = [];
+
+        // Summary section
+        $lines[] = "# First Season Journey Summary";
+        $lines[] = "Cohort Year," . $data['metadata']['cohort_year'];
+        $lines[] = "";
+
+        if (!empty($data['summary']) && empty($data['summary']['suppressed'])) {
+            $lines[] = "Metric,Value";
+            $lines[] = "Total Rookies," . $data['summary']['total_rookies'];
+            $lines[] = "Avg Starts," . $data['summary']['avg_starts'];
+            $lines[] = "Avg Events," . $data['summary']['avg_events'];
+            $lines[] = "Avg DNF Rate (%)," . $data['summary']['avg_dnf_rate'];
+            $lines[] = "Avg Percentile," . $data['summary']['avg_percentile'];
+            $lines[] = "Year 2 Return Rate (%)," . $data['summary']['return_rate_y2'];
+            $lines[] = "Year 3 Return Rate (%)," . $data['summary']['return_rate_y3'];
+            $lines[] = "";
+        }
+
+        // Retention funnel section
+        if (!empty($data['retention_funnel']) && empty($data['retention_funnel']['suppressed'])) {
+            $lines[] = "# Retention Funnel";
+            $lines[] = "Year Offset,Cohort Size,Active Count,Retention Rate (%),Avg Starts";
+            foreach ($data['retention_funnel']['funnel'] as $row) {
+                $lines[] = implode(',', [
+                    $row['year_offset'],
+                    $row['cohort_size'],
+                    $row['active_count'],
+                    $row['retention_rate'],
+                    $row['avg_starts']
+                ]);
+            }
+            $lines[] = "";
+        }
+
+        // Journey patterns section
+        if (!empty($data['journey_patterns']) && empty($data['journey_patterns']['suppressed'])) {
+            $lines[] = "# Journey Patterns";
+            $lines[] = "Pattern,Count,Percentage (%)";
+            foreach ($data['journey_patterns']['distribution'] as $row) {
+                $lines[] = implode(',', [
+                    $row['pattern'],
+                    $row['count'],
+                    $row['percentage']
+                ]);
+            }
+            $lines[] = "";
+        }
+
+        return implode("\n", $lines);
+    }
 }

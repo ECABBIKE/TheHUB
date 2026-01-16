@@ -445,15 +445,17 @@ class IdentityResolver {
     /**
      * Queue en recalculation for analytics-tabeller
      *
-     * Denna metod koas automatiskt efter merge/unmerge for att
-     * sakerstalla att analytics-data ar korrekt efter identitetsandringar.
+     * v3.0.2: Deterministisk och idempotent
+     * - Checksum for deduplication
+     * - Spårar years_source (stats/results/manual)
+     * - Prioritet baserad på trigger_type
      *
      * @param string $triggerType Vad som triggade (merge, import, manual, correction)
      * @param string $triggerEntity Entitetstyp (rider, event, result)
      * @param int $triggerEntityId Entitetens ID
      * @param array $affectedRiderIds Lista med paverkade rider IDs
      * @param string|null $createdBy Anvandare som skapade
-     * @return int Queue entry ID
+     * @return int Queue entry ID (-1 om redan i kö)
      */
     public function queueRecalc(
         string $triggerType,
@@ -462,16 +464,20 @@ class IdentityResolver {
         array $affectedRiderIds,
         ?string $createdBy = null
     ): int {
-        // Hitta alla paverkade ar for de paverkade riders
-        $affectedYears = $this->findAffectedYears($affectedRiderIds);
+        // v3.0.2: Hitta ar med source-spårning
+        $yearsResult = $this->findAffectedYearsWithSource($affectedRiderIds);
+        $affectedYears = $yearsResult['years'];
+        $yearsSource = $yearsResult['source'];
 
-        // Skapa checksum for deduplication
+        // Skapa DETERMINISTISK checksum for deduplication
+        // Sortera rider IDs för konsekvent hash
+        sort($affectedRiderIds, SORT_NUMERIC);
         $checksum = hash('sha256', json_encode([
             'type' => $triggerType,
             'entity' => $triggerEntity,
             'entity_id' => $triggerEntityId,
             'riders' => $affectedRiderIds,
-        ]));
+        ], JSON_NUMERIC_CHECK));
 
         // Kolla om samma recalc redan finns i kon (pending)
         $existsStmt = $this->pdo->prepare("
@@ -481,24 +487,24 @@ class IdentityResolver {
         $existsStmt->execute([$checksum]);
 
         if ($existsStmt->fetch()) {
-            // Redan i kon, returnera -1 for att indikera skip
+            // Redan i kon - IDEMPOTENT beteende
             return -1;
         }
 
-        // Satt in i kon
+        // v3.0.2: Inkludera years_source i INSERT
         $stmt = $this->pdo->prepare("
             INSERT INTO analytics_recalc_queue (
                 trigger_type, trigger_entity, trigger_entity_id,
-                affected_rider_ids, affected_years,
+                affected_rider_ids, affected_years, years_source,
                 priority, status, created_by, checksum
             ) VALUES (
                 ?, ?, ?,
-                ?, ?,
+                ?, ?, ?,
                 ?, 'pending', ?, ?
             )
         ");
 
-        // Prioritet: merge = 3 (hog), import = 5, manual = 5, correction = 4
+        // Prioritet: merge = 3 (hög), correction = 4, import/manual = 5
         $priority = match($triggerType) {
             'merge' => 3,
             'correction' => 4,
@@ -511,6 +517,7 @@ class IdentityResolver {
             $triggerEntityId,
             json_encode($affectedRiderIds),
             json_encode($affectedYears),
+            $yearsSource,
             $priority,
             $createdBy,
             $checksum,
@@ -522,6 +529,11 @@ class IdentityResolver {
     /**
      * Hitta alla ar som paverkas av andringar for givna riders
      *
+     * v3.0.2: Deterministisk logik med fallback
+     * 1. Forsoker hamta fran rider_yearly_stats (snabbt)
+     * 2. Fallback till raw results om stats saknas
+     * 3. Returnerar ocksa source-info for spårbarhet
+     *
      * @param array $riderIds Lista med rider IDs
      * @return array Lista med ar (t.ex. [2024, 2025])
      */
@@ -530,8 +542,24 @@ class IdentityResolver {
             return [];
         }
 
+        $result = $this->findAffectedYearsWithSource($riderIds);
+        return $result['years'];
+    }
+
+    /**
+     * Hitta affected years med source-information
+     *
+     * @param array $riderIds Lista med rider IDs
+     * @return array ['years' => [...], 'source' => 'stats'|'results'|'manual']
+     */
+    public function findAffectedYearsWithSource(array $riderIds): array {
+        if (empty($riderIds)) {
+            return ['years' => [], 'source' => 'manual'];
+        }
+
         $placeholders = implode(',', array_fill(0, count($riderIds), '?'));
 
+        // Forst: Forsoker hamta fran rider_yearly_stats (primär källa)
         $stmt = $this->pdo->prepare("
             SELECT DISTINCT season_year
             FROM rider_yearly_stats
@@ -539,8 +567,39 @@ class IdentityResolver {
             ORDER BY season_year DESC
         ");
         $stmt->execute($riderIds);
+        $years = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
-        return $stmt->fetchAll(PDO::FETCH_COLUMN);
+        if (!empty($years)) {
+            return [
+                'years' => array_map('intval', $years),
+                'source' => 'stats',
+            ];
+        }
+
+        // Fallback: Hamta fran raw results om stats saknas
+        $stmt = $this->pdo->prepare("
+            SELECT DISTINCT YEAR(e.date) as year
+            FROM results res
+            JOIN events e ON res.event_id = e.id
+            JOIN v_canonical_riders v ON res.cyclist_id = v.original_rider_id
+            WHERE v.canonical_rider_id IN ($placeholders)
+               OR res.cyclist_id IN ($placeholders)
+            ORDER BY year DESC
+        ");
+        // Dubbla parameters for bade canonical och original
+        $params = array_merge($riderIds, $riderIds);
+        $stmt->execute($params);
+        $years = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+        if (!empty($years)) {
+            return [
+                'years' => array_map('intval', array_filter($years)),
+                'source' => 'results',
+            ];
+        }
+
+        // Inget hittat - returnera tomt
+        return ['years' => [], 'source' => 'manual'];
     }
 
     /**

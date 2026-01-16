@@ -5,15 +5,25 @@
  * Bygger professionella PDF-exporter med obligatorisk "Definitions & Provenance" box.
  * Alla PDF-exporter ska inkludera metadata for reproducerbarhet och GDPR-compliance.
  *
- * v3.0.1: Mandatory Definition Box, snapshot_id, KPI-definitioner
+ * v3.0.2: TCPDF ar OBLIGATORISK PDF-motor. Ingen HTML-fallback i production.
+ *
+ * PDF ENGINE POLICY:
+ * - TCPDF ar den enda stodda PDF-motorn
+ * - Om TCPDF saknas kastas PdfEngineException
+ * - HTML-fallback ar INTE tillaten i production
  *
  * @package TheHUB Analytics
- * @version 3.0.1
+ * @version 3.0.2
  */
 
 require_once __DIR__ . '/AnalyticsConfig.php';
 require_once __DIR__ . '/ExportLogger.php';
 require_once __DIR__ . '/SVGChartRenderer.php';
+
+/**
+ * Exception for PDF engine errors
+ */
+class PdfEngineException extends RuntimeException {}
 
 class PdfExportBuilder {
     private PDO $pdo;
@@ -30,11 +40,18 @@ class PdfExportBuilder {
     /** @var array KPI-definitioner att inkludera */
     private array $kpiDefinitions = [];
 
+    /** @var bool Om TCPDF ar tillganglig */
+    private static ?bool $tcpdfAvailable = null;
+
+    /** @var string|null Path till TCPDF */
+    private static ?string $tcpdfPath = null;
+
     /**
      * Constructor
      *
      * @param PDO $pdo Databasanslutning
      * @param int $snapshotId Obligatorisk snapshot ID
+     * @throws PdfEngineException Om TCPDF saknas
      */
     public function __construct(PDO $pdo, int $snapshotId) {
         $this->pdo = $pdo;
@@ -42,12 +59,102 @@ class PdfExportBuilder {
         $this->logger = new ExportLogger($pdo);
         $this->chartRenderer = new SVGChartRenderer();
 
+        // v3.0.2: Verifiera att TCPDF ar tillganglig
+        if (!self::isTcpdfAvailable()) {
+            throw new PdfEngineException(
+                'TCPDF is required for PDF export in v3.0.2. ' .
+                'Install TCPDF: composer require tecnickcom/tcpdf'
+            );
+        }
+
         $this->metadata = [
             'platform_version' => AnalyticsConfig::PLATFORM_VERSION,
             'calculation_version' => AnalyticsConfig::CALCULATION_VERSION,
             'snapshot_id' => $snapshotId,
             'generated_at' => date('Y-m-d H:i:s'),
             'generated_at_utc' => gmdate('Y-m-d\TH:i:s\Z'),
+            'pdf_engine' => 'TCPDF',
+            'pdf_engine_version' => self::getTcpdfVersion(),
+        ];
+    }
+
+    /**
+     * Kontrollera om TCPDF ar tillganglig
+     *
+     * @return bool
+     */
+    public static function isTcpdfAvailable(): bool {
+        if (self::$tcpdfAvailable !== null) {
+            return self::$tcpdfAvailable;
+        }
+
+        // Kolla om TCPDF ar installerat via Composer
+        $composerAutoload = __DIR__ . '/../../vendor/autoload.php';
+        if (file_exists($composerAutoload)) {
+            require_once $composerAutoload;
+        }
+
+        // Kolla kanda platser for TCPDF
+        $paths = [
+            __DIR__ . '/../../vendor/tecnickcom/tcpdf/tcpdf.php',
+            __DIR__ . '/../../../vendor/tecnickcom/tcpdf/tcpdf.php',
+            '/usr/share/php/tcpdf/tcpdf.php',
+            __DIR__ . '/tcpdf/tcpdf.php',
+        ];
+
+        foreach ($paths as $path) {
+            if (file_exists($path)) {
+                self::$tcpdfPath = $path;
+                self::$tcpdfAvailable = true;
+                return true;
+            }
+        }
+
+        // Kolla om klassen redan ar laddad
+        if (class_exists('TCPDF', false)) {
+            self::$tcpdfAvailable = true;
+            return true;
+        }
+
+        self::$tcpdfAvailable = false;
+        return false;
+    }
+
+    /**
+     * Hamta TCPDF version
+     *
+     * @return string
+     */
+    public static function getTcpdfVersion(): string {
+        if (!self::isTcpdfAvailable()) {
+            return 'NOT_INSTALLED';
+        }
+
+        if (self::$tcpdfPath && !class_exists('TCPDF', false)) {
+            require_once self::$tcpdfPath;
+        }
+
+        if (defined('TCPDF_VERSION')) {
+            return TCPDF_VERSION;
+        }
+
+        return 'UNKNOWN';
+    }
+
+    /**
+     * Hamta PDF engine status for diagnostik
+     *
+     * @return array
+     */
+    public static function getPdfEngineStatus(): array {
+        return [
+            'engine' => 'TCPDF',
+            'available' => self::isTcpdfAvailable(),
+            'version' => self::getTcpdfVersion(),
+            'path' => self::$tcpdfPath,
+            'status' => self::isTcpdfAvailable() ? 'OK' : 'MISSING (CRITICAL)',
+            'fallback_allowed' => false,
+            'policy' => 'TCPDF is MANDATORY in v3.0.2. No HTML fallback.',
         ];
     }
 
@@ -554,100 +661,261 @@ class PdfExportBuilder {
     }
 
     /**
-     * Exportera till PDF (kraver wkhtmltopdf eller liknande)
+     * Exportera till PDF
+     *
+     * v3.0.2: TCPDF ar OBLIGATORISK. Ingen fallback.
      *
      * @param string|null $outputPath Filsokvag (null = returnera binart)
      * @return string|bool PDF-data eller true vid fil-export
+     * @throws PdfEngineException Om TCPDF saknas
      */
     public function exportToPdf(?string $outputPath = null): string|bool {
-        $html = $this->buildHtml();
-
-        // Forsok anvanda wkhtmltopdf
-        $wkhtmltopdf = $this->findWkhtmltopdf();
-
-        if ($wkhtmltopdf) {
-            return $this->exportWithWkhtmltopdf($html, $outputPath, $wkhtmltopdf);
+        // v3.0.2: Strikt validering
+        if (!self::isTcpdfAvailable()) {
+            throw new PdfEngineException(
+                'TCPDF is required for PDF export. HTML fallback is NOT allowed in v3.0.2. ' .
+                'Install TCPDF: composer require tecnickcom/tcpdf'
+            );
         }
 
-        // Fallback: Returnera HTML med instruktion om print to PDF
+        return $this->exportWithTcpdf($outputPath);
+    }
+
+    /**
+     * Exportera med TCPDF
+     *
+     * @param string|null $outputPath Utfil
+     * @return string|bool PDF data eller true
+     */
+    private function exportWithTcpdf(?string $outputPath): string|bool {
+        // Ladda TCPDF
+        if (self::$tcpdfPath && !class_exists('TCPDF', false)) {
+            require_once self::$tcpdfPath;
+        }
+
+        // Skapa TCPDF-instans
+        $pdf = new \TCPDF('P', 'mm', 'A4', true, 'UTF-8', false);
+
+        // Metadata
+        $pdf->SetCreator('TheHUB Analytics Platform');
+        $pdf->SetAuthor('GravitySeries');
+        $pdf->SetTitle($this->title);
+        $pdf->SetSubject('Analytics Report');
+        $pdf->SetKeywords('analytics, report, gravityseries, thehub');
+
+        // Ta bort default header/footer
+        $pdf->setPrintHeader(false);
+        $pdf->setPrintFooter(false);
+
+        // Marginaler
+        $pdf->SetMargins(15, 15, 15);
+        $pdf->SetAutoPageBreak(true, 15);
+
+        // Lagg till sida
+        $pdf->AddPage();
+
+        // Generera HTML
+        $html = $this->buildHtmlForTcpdf();
+
+        // Skriv HTML till PDF
+        $pdf->writeHTML($html, true, false, true, false, '');
+
+        // Output
         if ($outputPath) {
-            // Spara som HTML med .html extension
-            $htmlPath = preg_replace('/\.pdf$/i', '.html', $outputPath);
-            file_put_contents($htmlPath, $html);
+            $pdf->Output($outputPath, 'F');
+            return true;
+        }
 
-            // Logga att PDF-konvertering inte ar tillganglig
-            error_log('PdfExportBuilder: wkhtmltopdf not available, saved as HTML');
+        return $pdf->Output('', 'S');
+    }
 
-            return false;
+    /**
+     * Bygg HTML optimerad for TCPDF
+     *
+     * TCPDF har begransat CSS-stod, sa vi anvander enklare markup.
+     *
+     * @return string HTML
+     */
+    private function buildHtmlForTcpdf(): string {
+        $html = '<style>
+            h1 { color: #37d4d6; font-size: 24pt; margin-bottom: 5mm; }
+            h2 { color: #37d4d6; font-size: 14pt; margin-top: 8mm; margin-bottom: 3mm; border-bottom: 1px solid #37d4d6; }
+            h3 { color: #333; font-size: 12pt; margin-top: 5mm; }
+            h4 { color: #333; font-size: 10pt; margin-top: 3mm; }
+            p { font-size: 10pt; line-height: 1.4; }
+            .subtitle { color: #666; font-size: 12pt; }
+            .meta { color: #888; font-size: 9pt; }
+            table { border-collapse: collapse; width: 100%; }
+            th { background-color: #37d4d6; color: #fff; padding: 3mm; text-align: left; font-size: 9pt; }
+            td { padding: 2mm; border-bottom: 1px solid #ddd; font-size: 9pt; }
+            .definition-box { background-color: #f5f5f5; border: 1px solid #37d4d6; padding: 5mm; margin-top: 10mm; }
+            .small { font-size: 8pt; color: #666; }
+            dt { font-weight: bold; margin-top: 2mm; }
+            dd { margin-left: 5mm; color: #444; }
+        </style>';
+
+        // Titel
+        $html .= '<h1>' . htmlspecialchars($this->title) . '</h1>';
+        if ($this->subtitle) {
+            $html .= '<p class="subtitle">' . htmlspecialchars($this->subtitle) . '</p>';
+        }
+        $html .= '<p class="meta">Genererad: ' . $this->metadata['generated_at'] . '</p>';
+
+        // Sektioner
+        foreach ($this->sections as $section) {
+            $html .= $this->renderSectionForTcpdf($section);
+        }
+
+        // MANDATORY: Definition Box
+        $html .= $this->renderDefinitionBoxForTcpdf();
+
+        // Footer
+        $html .= '<br><p class="small" style="text-align: center;">TheHUB Analytics Platform ' .
+                 AnalyticsConfig::PLATFORM_VERSION . ' | GravitySeries</p>';
+
+        return $html;
+    }
+
+    /**
+     * Rendera sektion for TCPDF
+     *
+     * @param array $section
+     * @return string HTML
+     */
+    private function renderSectionForTcpdf(array $section): string {
+        $html = '';
+
+        if (!empty($section['heading'])) {
+            $html .= '<h2>' . htmlspecialchars($section['heading']) . '</h2>';
+        }
+
+        switch ($section['type']) {
+            case 'text':
+                $html .= '<p>' . $section['content'] . '</p>';
+                break;
+
+            case 'table':
+                $html .= $this->renderTableForTcpdf($section['headers'], $section['rows']);
+                break;
+
+            case 'chart':
+                // TCPDF stodjer SVG begransat - vi embeddar som base64 bild
+                $html .= $this->renderChartForTcpdf($section['chart_type'], $section['data'], $section['options']);
+                break;
         }
 
         return $html;
     }
 
     /**
-     * Hitta wkhtmltopdf binary
+     * Rendera tabell for TCPDF
      *
-     * @return string|null Sokvag eller null
+     * @param array $headers
+     * @param array $rows
+     * @return string HTML
      */
-    private function findWkhtmltopdf(): ?string {
-        $paths = [
-            '/usr/bin/wkhtmltopdf',
-            '/usr/local/bin/wkhtmltopdf',
-            'C:\\Program Files\\wkhtmltopdf\\bin\\wkhtmltopdf.exe',
-        ];
+    private function renderTableForTcpdf(array $headers, array $rows): string {
+        $html = '<table border="0" cellpadding="3">';
+        $html .= '<tr>';
+        foreach ($headers as $header) {
+            $html .= '<th>' . htmlspecialchars($header) . '</th>';
+        }
+        $html .= '</tr>';
 
-        foreach ($paths as $path) {
-            if (file_exists($path) && is_executable($path)) {
-                return $path;
+        foreach ($rows as $row) {
+            $html .= '<tr>';
+            foreach ($row as $cell) {
+                $html .= '<td>' . htmlspecialchars((string)$cell) . '</td>';
             }
+            $html .= '</tr>';
         }
 
-        // Forsok hitta i PATH
-        $which = shell_exec('which wkhtmltopdf 2>/dev/null');
-        if ($which) {
-            return trim($which);
-        }
-
-        return null;
+        $html .= '</table>';
+        return $html;
     }
 
     /**
-     * Exportera med wkhtmltopdf
+     * Rendera diagram for TCPDF
      *
-     * @param string $html HTML-innehall
-     * @param string|null $outputPath Utfil
-     * @param string $wkhtmltopdf Sokvag till wkhtmltopdf
-     * @return string|bool
+     * @param string $type
+     * @param array $data
+     * @param array $options
+     * @return string HTML
      */
-    private function exportWithWkhtmltopdf(string $html, ?string $outputPath, string $wkhtmltopdf): string|bool {
-        $tempHtml = tempnam(sys_get_temp_dir(), 'pdf_') . '.html';
-        file_put_contents($tempHtml, $html);
+    private function renderChartForTcpdf(string $type, array $data, array $options): string {
+        $svg = match($type) {
+            'line' => $this->chartRenderer->lineChart($data, $options),
+            'bar' => $this->chartRenderer->barChart($data, $options),
+            'donut' => $this->chartRenderer->donutChart($data, $options),
+            'stackedBar' => $this->chartRenderer->stackedBarChart($data, $options),
+            'sparkline' => $this->chartRenderer->sparkline($data['values'] ?? [], $options),
+            default => '',
+        };
 
-        $tempPdf = $outputPath ?? tempnam(sys_get_temp_dir(), 'pdf_') . '.pdf';
-
-        $cmd = sprintf(
-            '%s --quiet --enable-local-file-access --page-size A4 --margin-top 15mm --margin-bottom 15mm --margin-left 15mm --margin-right 15mm %s %s 2>&1',
-            escapeshellarg($wkhtmltopdf),
-            escapeshellarg($tempHtml),
-            escapeshellarg($tempPdf)
-        );
-
-        exec($cmd, $output, $returnCode);
-        unlink($tempHtml);
-
-        if ($returnCode !== 0) {
-            error_log('wkhtmltopdf failed: ' . implode("\n", $output));
-            return false;
+        if (!$svg) {
+            return '<p><em>[Diagram kunde inte renderas]</em></p>';
         }
 
-        if ($outputPath) {
-            return true;
+        // Konvertera till base64 for embedding
+        $base64 = base64_encode($svg);
+        return '<p><img src="@' . $base64 . '" width="400" /></p>';
+    }
+
+    /**
+     * Rendera Definition Box for TCPDF
+     *
+     * @return string HTML
+     */
+    private function renderDefinitionBoxForTcpdf(): string {
+        $html = '<div class="definition-box">';
+        $html .= '<h3>DEFINITIONS &amp; PROVENANCE</h3>';
+
+        // Metadata
+        $html .= '<h4>Report Metadata</h4>';
+        $html .= '<ul>';
+        $html .= '<li><strong>Generated:</strong> ' . $this->metadata['generated_at'] . '</li>';
+        $html .= '<li><strong>Platform Version:</strong> ' . $this->metadata['platform_version'] . '</li>';
+        $html .= '<li><strong>Calculation Version:</strong> ' . $this->metadata['calculation_version'] . '</li>';
+        $html .= '<li><strong>Snapshot ID:</strong> #' . $this->snapshotId . '</li>';
+        $html .= '<li><strong>PDF Engine:</strong> TCPDF ' . self::getTcpdfVersion() . '</li>';
+        if ($this->seasonYear) {
+            $html .= '<li><strong>Season:</strong> ' . $this->seasonYear . '</li>';
+        }
+        $html .= '</ul>';
+
+        // KPI Definitions
+        if (!empty($this->kpiDefinitions)) {
+            $html .= '<h4>KPI Definitions</h4>';
+            $html .= '<dl>';
+            foreach ($this->kpiDefinitions as $key => $definition) {
+                $html .= '<dt>' . htmlspecialchars($this->formatKpiName($key)) . '</dt>';
+                $html .= '<dd>' . htmlspecialchars($definition) . '</dd>';
+            }
+            $html .= '</dl>';
         }
 
-        $pdf = file_get_contents($tempPdf);
-        unlink($tempPdf);
+        // Reproducibility
+        $html .= '<h4>Reproducibility</h4>';
+        $html .= '<p>This report can be reproduced using snapshot #' . $this->snapshotId . '. ';
+        $html .= 'Contact system administrator for verification.</p>';
 
-        return $pdf;
+        // GDPR
+        $html .= '<p class="small">Data processed in accordance with GDPR. Personal data is anonymized where applicable.</p>';
+
+        $html .= '</div>';
+        return $html;
+    }
+
+    /**
+     * Hitta wkhtmltopdf binary
+     *
+     * @deprecated Anvand TCPDF istallet (v3.0.2)
+     * @return string|null Sokvag eller null
+     */
+    private function findWkhtmltopdf(): ?string {
+        // wkhtmltopdf ar DEPRECATED i v3.0.2
+        // Returnerar alltid null for att tvinga TCPDF-anvandning
+        return null;
     }
 
     /**

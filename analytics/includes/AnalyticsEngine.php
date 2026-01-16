@@ -12,9 +12,10 @@
  * - Loggar alla korningar till analytics_cron_runs
  *
  * v3.0.1: Heartbeat, timeout handling, recalc queue processing
+ * v3.1.0: First Season Journey + Longitudinal Journey analysis
  *
  * @package TheHUB Analytics
- * @version 3.0.1
+ * @version 3.1.0
  */
 
 require_once __DIR__ . '/IdentityResolver.php';
@@ -1378,5 +1379,1500 @@ class AnalyticsEngine {
         }
 
         return $this->createSnapshot('Auto-generated for export', $createdBy);
+    }
+
+    // =========================================================================
+    // v3.1.1: BRAND RESOLUTION FOR JOURNEY ANALYSIS
+    // =========================================================================
+
+    /**
+     * Resolve brand ID for a series in a given year
+     *
+     * Uses brand_series_map with priority:
+     * 1. relationship_type = 'owner'
+     * 2. Valid date range (valid_from/valid_until)
+     * 3. Any mapping if no owner found
+     *
+     * @param int $seriesId Series ID
+     * @param int $year Year for date validation
+     * @return int|null Brand ID or null if not found
+     */
+    private function resolveBrandIdForSeries(int $seriesId, int $year): ?int {
+        // First try to find owner relationship with valid dates
+        $stmt = $this->pdo->prepare("
+            SELECT brand_id
+            FROM brand_series_map
+            WHERE series_id = ?
+              AND (valid_from IS NULL OR valid_from <= ?)
+              AND (valid_until IS NULL OR valid_until >= ?)
+            ORDER BY
+                CASE WHEN relationship_type = 'owner' THEN 0 ELSE 1 END,
+                valid_from DESC
+            LIMIT 1
+        ");
+        $stmt->execute([$seriesId, $year, $year]);
+        $brandId = $stmt->fetchColumn();
+
+        return $brandId ? (int)$brandId : null;
+    }
+
+    /**
+     * Resolve brand ID for a rider's first event
+     *
+     * @param int $riderId Rider ID
+     * @param int $cohortYear Cohort year
+     * @return array ['brand_id' => int|null, 'series_id' => int|null]
+     */
+    private function resolveFirstBrandForRider(int $riderId, int $cohortYear): array {
+        // Get first event series
+        $stmt = $this->pdo->prepare("
+            SELECT e.series_id, e.date
+            FROM results res
+            JOIN events e ON res.event_id = e.id
+            JOIN v_canonical_riders v ON res.cyclist_id = v.original_rider_id
+            WHERE v.canonical_rider_id = ?
+              AND YEAR(e.date) = ?
+            ORDER BY e.date ASC
+            LIMIT 1
+        ");
+        $stmt->execute([$riderId, $cohortYear]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$row || !$row['series_id']) {
+            return ['brand_id' => null, 'series_id' => null];
+        }
+
+        $brandId = $this->resolveBrandIdForSeries((int)$row['series_id'], $cohortYear);
+
+        return [
+            'brand_id' => $brandId,
+            'series_id' => (int)$row['series_id']
+        ];
+    }
+
+    /**
+     * Resolve primary brand for a rider in a specific year
+     *
+     * Uses the series with most starts in that year
+     *
+     * @param int $riderId Rider ID
+     * @param int $year Calendar year
+     * @return array ['brand_id' => int|null, 'series_id' => int|null]
+     */
+    private function resolvePrimaryBrandForYear(int $riderId, int $year): array {
+        // Get series with most starts
+        $stmt = $this->pdo->prepare("
+            SELECT e.series_id, COUNT(*) as cnt
+            FROM results res
+            JOIN events e ON res.event_id = e.id
+            JOIN v_canonical_riders v ON res.cyclist_id = v.original_rider_id
+            WHERE v.canonical_rider_id = ?
+              AND YEAR(e.date) = ?
+              AND e.series_id IS NOT NULL
+            GROUP BY e.series_id
+            ORDER BY cnt DESC
+            LIMIT 1
+        ");
+        $stmt->execute([$riderId, $year]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$row || !$row['series_id']) {
+            return ['brand_id' => null, 'series_id' => null];
+        }
+
+        $brandId = $this->resolveBrandIdForSeries((int)$row['series_id'], $year);
+
+        return [
+            'brand_id' => $brandId,
+            'series_id' => (int)$row['series_id']
+        ];
+    }
+
+    /**
+     * Calculate brand journey aggregates for a cohort
+     *
+     * @param int $cohortYear Cohort year
+     * @param int|null $snapshotId Snapshot ID
+     * @return int Number of aggregates created
+     */
+    public function calculateBrandJourneyAggregates(int $cohortYear, ?int $snapshotId = null): int {
+        $minSize = 10;
+        $count = 0;
+
+        // Get all brands with riders in this cohort
+        $stmt = $this->pdo->prepare("
+            SELECT DISTINCT first_brand_id
+            FROM rider_first_season
+            WHERE cohort_year = ?
+              AND first_brand_id IS NOT NULL
+        ");
+        $stmt->execute([$cohortYear]);
+        $brandIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+        // Clear existing aggregates for this cohort
+        $this->pdo->prepare("
+            DELETE FROM brand_journey_aggregates
+            WHERE cohort_year = ?
+        ")->execute([$cohortYear]);
+
+        foreach ($brandIds as $brandId) {
+            // For each year offset 1-4
+            for ($offset = 1; $offset <= 4; $offset++) {
+                $calendarYear = $cohortYear + $offset - 1;
+                if ($calendarYear > (int)date('Y')) continue;
+
+                $stmt = $this->pdo->prepare("
+                    SELECT
+                        COUNT(*) as total_riders,
+                        SUM(rjy.was_active) as active_riders,
+                        AVG(CASE WHEN rjy.was_active = 1 THEN rjy.total_starts END) as avg_starts,
+                        AVG(CASE WHEN rjy.was_active = 1 THEN rjy.total_events END) as avg_events,
+                        AVG(CASE WHEN rjy.was_active = 1 THEN rjy.dnf_rate END) as avg_dnf,
+                        AVG(CASE WHEN rjy.was_active = 1 THEN rjy.result_percentile END) as avg_perc,
+                        SUM(CASE WHEN rjy.was_active = 1 AND rjy.podium_count > 0 THEN 1 ELSE 0 END) /
+                            NULLIF(SUM(rjy.was_active), 0) as pct_podium
+                    FROM rider_journey_years rjy
+                    JOIN rider_first_season rfs ON rjy.rider_id = rfs.rider_id AND rjy.cohort_year = rfs.cohort_year
+                    WHERE rfs.cohort_year = ?
+                      AND rfs.first_brand_id = ?
+                      AND rjy.year_offset = ?
+                ");
+                $stmt->execute([$cohortYear, $brandId, $offset]);
+                $data = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                if (!$data || (int)$data['total_riders'] < $minSize) continue;
+
+                $retention = (int)$data['total_riders'] > 0
+                    ? (int)$data['active_riders'] / (int)$data['total_riders']
+                    : null;
+
+                // Journey patterns (only for max offset with data)
+                $pctContinuous = null;
+                $pctOneAndDone = null;
+                $pctGapReturner = null;
+
+                if ($offset === 4 || $calendarYear >= (int)date('Y')) {
+                    $stmt = $this->pdo->prepare("
+                        SELECT
+                            SUM(CASE WHEN rjs.journey_pattern = 'continuous_4yr' THEN 1 ELSE 0 END) / COUNT(*) as pct_cont,
+                            SUM(CASE WHEN rjs.journey_pattern = 'one_and_done' THEN 1 ELSE 0 END) / COUNT(*) as pct_oad,
+                            SUM(CASE WHEN rjs.journey_pattern = 'gap_returner' THEN 1 ELSE 0 END) / COUNT(*) as pct_gap
+                        FROM rider_journey_summary rjs
+                        JOIN rider_first_season rfs ON rjs.rider_id = rfs.rider_id AND rjs.cohort_year = rfs.cohort_year
+                        WHERE rfs.cohort_year = ? AND rfs.first_brand_id = ?
+                    ");
+                    $stmt->execute([$cohortYear, $brandId]);
+                    $patterns = $stmt->fetch(PDO::FETCH_ASSOC);
+                    if ($patterns) {
+                        $pctContinuous = $patterns['pct_cont'] ? round($patterns['pct_cont'], 4) : null;
+                        $pctOneAndDone = $patterns['pct_oad'] ? round($patterns['pct_oad'], 4) : null;
+                        $pctGapReturner = $patterns['pct_gap'] ? round($patterns['pct_gap'], 4) : null;
+                    }
+                }
+
+                $insert = $this->pdo->prepare("
+                    INSERT INTO brand_journey_aggregates (
+                        brand_id, cohort_year, year_offset,
+                        total_riders, active_riders, retention_rate,
+                        avg_starts, avg_events, avg_dnf_rate, avg_percentile, pct_with_podium,
+                        pct_continuous_4yr, pct_one_and_done, pct_gap_returner,
+                        calculated_at, snapshot_id
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?)
+                ");
+
+                $insert->execute([
+                    $brandId,
+                    $cohortYear,
+                    $offset,
+                    $data['total_riders'],
+                    $data['active_riders'],
+                    $retention ? round($retention, 4) : null,
+                    $data['avg_starts'] ? round($data['avg_starts'], 2) : null,
+                    $data['avg_events'] ? round($data['avg_events'], 2) : null,
+                    $data['avg_dnf'] ? round($data['avg_dnf'], 4) : null,
+                    $data['avg_perc'] ? round($data['avg_perc'], 2) : null,
+                    $data['pct_podium'] ? round($data['pct_podium'], 4) : null,
+                    $pctContinuous,
+                    $pctOneAndDone,
+                    $pctGapReturner,
+                    $snapshotId
+                ]);
+
+                $count++;
+            }
+        }
+
+        return $count;
+    }
+
+    // =========================================================================
+    // v3.1.0: FIRST SEASON JOURNEY ANALYSIS
+    // =========================================================================
+
+    /**
+     * Berakna First Season Journey for en kohort
+     *
+     * Analyserar rookies forsta sasong och beraknar metrics som:
+     * - Aktivitet (starter, events, finishes)
+     * - Resultat (percentil, podier, DNF)
+     * - Timing (dagar i sasongen, gap mellan starter)
+     * - Social kontext (klubbkamrater)
+     * - Outcome (aterkom ar 2-3)
+     *
+     * GDPR: All data aggregeras - inga individuella prognoser.
+     *
+     * @param int $cohortYear Kohortar (forsta sasongen)
+     * @param int|null $snapshotId Snapshot for reproducerbarhet
+     * @param callable|null $progressCallback Progress callback
+     * @return int Antal riders processade
+     */
+    public function calculateFirstSeasonJourney(
+        int $cohortYear,
+        ?int $snapshotId = null,
+        ?callable $progressCallback = null
+    ): int {
+        $jobId = $this->startJob('first-season-journey', (string)$cohortYear, $this->forceRerun);
+        if ($jobId === false) {
+            return 0;
+        }
+
+        $count = 0;
+
+        try {
+            // Hitta alla rookies for detta ar (forsta gang de hade resultat)
+            $rookies = $this->pdo->prepare("
+                SELECT
+                    v.canonical_rider_id as rider_id,
+                    r.club_id,
+                    r.gender,
+                    r.birth_year
+                FROM v_canonical_riders v
+                JOIN riders r ON v.canonical_rider_id = r.id
+                WHERE v.canonical_rider_id IN (
+                    SELECT v2.canonical_rider_id
+                    FROM results res
+                    JOIN events e ON res.event_id = e.id
+                    JOIN v_canonical_riders v2 ON res.cyclist_id = v2.original_rider_id
+                    GROUP BY v2.canonical_rider_id
+                    HAVING MIN(YEAR(e.date)) = ?
+                )
+            ");
+            $rookies->execute([$cohortYear]);
+            $rookieList = $rookies->fetchAll(PDO::FETCH_ASSOC);
+
+            $total = count($rookieList);
+            $processed = 0;
+
+            foreach ($rookieList as $rookie) {
+                $riderId = (int)$rookie['rider_id'];
+
+                // Berakna first season metrics
+                $metrics = $this->calculateSingleRiderFirstSeason($riderId, $cohortYear);
+
+                if ($metrics) {
+                    // Lagg till rider-specifik data
+                    $metrics['club_id'] = $rookie['club_id'];
+                    $metrics['gender'] = $rookie['gender'] ?? 'U';
+                    $metrics['age_at_first_start'] = $rookie['birth_year']
+                        ? $cohortYear - (int)$rookie['birth_year']
+                        : null;
+
+                    // Kolla om aterkom ar 2 och 3
+                    $metrics['returned_year2'] = $this->hadActivityInYear($riderId, $cohortYear + 1) ? 1 : 0;
+                    $metrics['returned_year3'] = $this->hadActivityInYear($riderId, $cohortYear + 2) ? 1 : 0;
+
+                    // Resolve first brand (v3.1.1)
+                    $brandData = $this->resolveFirstBrandForRider($riderId, $cohortYear);
+                    $metrics['first_brand_id'] = $brandData['brand_id'];
+                    $metrics['first_series_id'] = $brandData['series_id'];
+
+                    // Berakna total career seasons
+                    $metrics['total_career_seasons'] = $this->getTotalCareerSeasons($riderId);
+                    $metrics['last_active_year'] = $this->getLastActiveYear($riderId);
+
+                    // Berakna engagement score och pattern
+                    $metrics['engagement_score'] = $this->calculateEngagementScore($metrics);
+                    $metrics['activity_pattern'] = $this->classifyActivityPattern($metrics['engagement_score']);
+
+                    // Spara till databas
+                    $this->upsertRiderFirstSeason($riderId, $cohortYear, $metrics, $snapshotId);
+                    $count++;
+                }
+
+                $processed++;
+                if ($progressCallback && ($processed % 50 === 0 || $processed === $total)) {
+                    $progressCallback($processed, $total);
+                }
+
+                // Heartbeat var 100:e rider
+                if ($processed % 100 === 0) {
+                    $this->heartbeat();
+                }
+            }
+
+            // Berakna klubb-kontext (hur manga andra rookies i samma klubb)
+            $this->updateClubRookieContext($cohortYear);
+
+            $this->endJob('success', $count, [
+                'cohort_year' => $cohortYear,
+                'rookies_found' => $total,
+                'processed' => $count
+            ]);
+
+        } catch (Exception $e) {
+            $this->endJob('failed', $count, ['error' => $e->getMessage()]);
+            throw $e;
+        }
+
+        return $count;
+    }
+
+    /**
+     * Berakna first season metrics for en enskild rider
+     */
+    private function calculateSingleRiderFirstSeason(int $riderId, int $cohortYear): ?array {
+        // Grundlaggande aktivitetsdata
+        $stmt = $this->pdo->prepare("
+            SELECT
+                COUNT(*) as total_starts,
+                COUNT(DISTINCT res.event_id) as total_events,
+                SUM(CASE WHEN res.status = 'finished' OR res.position IS NOT NULL THEN 1 ELSE 0 END) as total_finishes,
+                SUM(CASE WHEN res.status = 'DNF' THEN 1 ELSE 0 END) as total_dnf,
+                MIN(CASE WHEN res.position > 0 THEN res.position END) as best_position,
+                AVG(CASE WHEN res.position > 0 THEN res.position END) as avg_position,
+                SUM(CASE WHEN res.position <= 3 THEN 1 ELSE 0 END) as podium_count,
+                SUM(CASE WHEN res.position <= 10 THEN 1 ELSE 0 END) as top10_count,
+                MIN(e.date) as first_event_date,
+                MAX(e.date) as last_event_date
+            FROM results res
+            JOIN events e ON res.event_id = e.id
+            JOIN v_canonical_riders v ON res.cyclist_id = v.original_rider_id
+            WHERE v.canonical_rider_id = ?
+              AND YEAR(e.date) = ?
+        ");
+        $stmt->execute([$riderId, $cohortYear]);
+        $basic = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$basic || $basic['total_starts'] == 0) {
+            return null;
+        }
+
+        // Berakna percentil inom klass (genomsnitt)
+        $stmt = $this->pdo->prepare("
+            SELECT AVG(
+                (class_count - position + 1) / class_count * 100
+            ) as avg_percentile
+            FROM (
+                SELECT
+                    res.position,
+                    (SELECT COUNT(*) FROM results r2 WHERE r2.event_id = res.event_id AND r2.class_id = res.class_id) as class_count
+                FROM results res
+                JOIN events e ON res.event_id = e.id
+                JOIN v_canonical_riders v ON res.cyclist_id = v.original_rider_id
+                WHERE v.canonical_rider_id = ?
+                  AND YEAR(e.date) = ?
+                  AND res.position IS NOT NULL
+                  AND res.position > 0
+            ) percentiles
+            WHERE class_count > 1
+        ");
+        $stmt->execute([$riderId, $cohortYear]);
+        $percentile = $stmt->fetchColumn();
+
+        // Berakna timing-metrics
+        $stmt = $this->pdo->prepare("
+            SELECT e.date
+            FROM results res
+            JOIN events e ON res.event_id = e.id
+            JOIN v_canonical_riders v ON res.cyclist_id = v.original_rider_id
+            WHERE v.canonical_rider_id = ?
+              AND YEAR(e.date) = ?
+            ORDER BY e.date
+        ");
+        $stmt->execute([$riderId, $cohortYear]);
+        $dates = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+        $avgGap = null;
+        $maxGap = 0;
+        if (count($dates) > 1) {
+            $gaps = [];
+            for ($i = 1; $i < count($dates); $i++) {
+                $gap = (strtotime($dates[$i]) - strtotime($dates[$i-1])) / 86400;
+                $gaps[] = $gap;
+                if ($gap > $maxGap) $maxGap = (int)$gap;
+            }
+            $avgGap = count($gaps) > 0 ? array_sum($gaps) / count($gaps) : null;
+        }
+
+        // Berakna sasongsspridning (early/mid/late)
+        $spreadData = $this->calculateSeasonSpread($dates, $cohortYear);
+
+        // Hamta primar klass och disciplin
+        $stmt = $this->pdo->prepare("
+            SELECT res.class_id, COUNT(*) as cnt
+            FROM results res
+            JOIN events e ON res.event_id = e.id
+            JOIN v_canonical_riders v ON res.cyclist_id = v.original_rider_id
+            WHERE v.canonical_rider_id = ?
+              AND YEAR(e.date) = ?
+              AND res.class_id IS NOT NULL
+            GROUP BY res.class_id
+            ORDER BY cnt DESC
+            LIMIT 1
+        ");
+        $stmt->execute([$riderId, $cohortYear]);
+        $classRow = $stmt->fetch();
+
+        $stmt = $this->pdo->prepare("
+            SELECT e.discipline, COUNT(*) as cnt
+            FROM results res
+            JOIN events e ON res.event_id = e.id
+            JOIN v_canonical_riders v ON res.cyclist_id = v.original_rider_id
+            WHERE v.canonical_rider_id = ?
+              AND YEAR(e.date) = ?
+              AND e.discipline IS NOT NULL
+            GROUP BY e.discipline
+            ORDER BY cnt DESC
+            LIMIT 1
+        ");
+        $stmt->execute([$riderId, $cohortYear]);
+        $discRow = $stmt->fetch();
+
+        // Antal olika discipliner
+        $stmt = $this->pdo->prepare("
+            SELECT COUNT(DISTINCT e.discipline) as disc_count
+            FROM results res
+            JOIN events e ON res.event_id = e.id
+            JOIN v_canonical_riders v ON res.cyclist_id = v.original_rider_id
+            WHERE v.canonical_rider_id = ?
+              AND YEAR(e.date) = ?
+              AND e.discipline IS NOT NULL
+        ");
+        $stmt->execute([$riderId, $cohortYear]);
+        $discCount = $stmt->fetchColumn() ?: 1;
+
+        return [
+            'total_starts' => (int)$basic['total_starts'],
+            'total_events' => (int)$basic['total_events'],
+            'total_finishes' => (int)$basic['total_finishes'],
+            'total_dnf' => (int)$basic['total_dnf'],
+            'dnf_rate' => $basic['total_starts'] > 0
+                ? round($basic['total_dnf'] / $basic['total_starts'], 4)
+                : null,
+            'best_position' => $basic['best_position'] ? (int)$basic['best_position'] : null,
+            'avg_position' => $basic['avg_position'] ? round($basic['avg_position'], 2) : null,
+            'result_percentile' => $percentile ? round($percentile, 2) : null,
+            'podium_count' => (int)$basic['podium_count'],
+            'top10_count' => (int)$basic['top10_count'],
+            'first_event_date' => $basic['first_event_date'],
+            'last_event_date' => $basic['last_event_date'],
+            'days_in_season' => $basic['first_event_date'] && $basic['last_event_date']
+                ? (strtotime($basic['last_event_date']) - strtotime($basic['first_event_date'])) / 86400
+                : 0,
+            'avg_days_between_starts' => $avgGap ? round($avgGap, 2) : null,
+            'max_gap_days' => $maxGap ?: null,
+            'early_season_starts' => $spreadData['early'],
+            'mid_season_starts' => $spreadData['mid'],
+            'late_season_starts' => $spreadData['late'],
+            'season_spread_score' => $spreadData['spread_score'],
+            'class_id' => $classRow ? (int)$classRow['class_id'] : null,
+            'primary_discipline' => $discRow ? $discRow['discipline'] : null,
+            'discipline_count' => (int)$discCount,
+        ];
+    }
+
+    /**
+     * Berakna sasongsspridning (hur jamt fordelat over sasongen)
+     */
+    private function calculateSeasonSpread(array $dates, int $year): array {
+        $early = 0;  // Apr-May
+        $mid = 0;    // Jun-Jul
+        $late = 0;   // Aug-Oct
+
+        foreach ($dates as $date) {
+            $month = (int)date('n', strtotime($date));
+            if ($month <= 5) {
+                $early++;
+            } elseif ($month <= 7) {
+                $mid++;
+            } else {
+                $late++;
+            }
+        }
+
+        $total = count($dates);
+        if ($total === 0) {
+            return ['early' => 0, 'mid' => 0, 'late' => 0, 'spread_score' => 0];
+        }
+
+        // Berakna entropy-baserad spread score (0-1, hoger = mer jamt)
+        $proportions = [$early/$total, $mid/$total, $late/$total];
+        $entropy = 0;
+        foreach ($proportions as $p) {
+            if ($p > 0) {
+                $entropy -= $p * log($p);
+            }
+        }
+        // Normalisera till 0-1 (max entropy for 3 kategorier = ln(3))
+        $maxEntropy = log(3);
+        $spreadScore = $maxEntropy > 0 ? $entropy / $maxEntropy : 0;
+
+        return [
+            'early' => $early,
+            'mid' => $mid,
+            'late' => $late,
+            'spread_score' => round($spreadScore, 4)
+        ];
+    }
+
+    /**
+     * Kontrollera om rider hade aktivitet ett visst ar
+     */
+    private function hadActivityInYear(int $riderId, int $year): bool {
+        $stmt = $this->pdo->prepare("
+            SELECT 1
+            FROM results res
+            JOIN events e ON res.event_id = e.id
+            JOIN v_canonical_riders v ON res.cyclist_id = v.original_rider_id
+            WHERE v.canonical_rider_id = ?
+              AND YEAR(e.date) = ?
+            LIMIT 1
+        ");
+        $stmt->execute([$riderId, $year]);
+        return (bool)$stmt->fetch();
+    }
+
+    /**
+     * Hamta totalt antal sasonger for en rider
+     */
+    private function getTotalCareerSeasons(int $riderId): int {
+        $stmt = $this->pdo->prepare("
+            SELECT COUNT(DISTINCT YEAR(e.date)) as seasons
+            FROM results res
+            JOIN events e ON res.event_id = e.id
+            JOIN v_canonical_riders v ON res.cyclist_id = v.original_rider_id
+            WHERE v.canonical_rider_id = ?
+        ");
+        $stmt->execute([$riderId]);
+        return (int)$stmt->fetchColumn();
+    }
+
+    /**
+     * Hamta senaste aktiva ar for en rider
+     */
+    private function getLastActiveYear(int $riderId): ?int {
+        $stmt = $this->pdo->prepare("
+            SELECT MAX(YEAR(e.date)) as last_year
+            FROM results res
+            JOIN events e ON res.event_id = e.id
+            JOIN v_canonical_riders v ON res.cyclist_id = v.original_rider_id
+            WHERE v.canonical_rider_id = ?
+        ");
+        $stmt->execute([$riderId]);
+        $year = $stmt->fetchColumn();
+        return $year ? (int)$year : null;
+    }
+
+    /**
+     * Berakna engagement score (sammansatt metric)
+     *
+     * Kombinerar flera faktorer till ett 0-100 score:
+     * - Antal starter (30%)
+     * - Antal events (20%)
+     * - Sasongsspridning (20%)
+     * - Resultatpercentil (30%)
+     */
+    private function calculateEngagementScore(array $metrics): float {
+        $score = 0;
+
+        // Starter: 1 start = 10, 5+ = 30
+        $startsScore = min(30, ($metrics['total_starts'] ?? 0) * 6);
+        $score += $startsScore;
+
+        // Events: 1 event = 5, 5+ = 20
+        $eventsScore = min(20, ($metrics['total_events'] ?? 0) * 4);
+        $score += $eventsScore;
+
+        // Spread: 0-1 * 20
+        $spreadScore = ($metrics['season_spread_score'] ?? 0) * 20;
+        $score += $spreadScore;
+
+        // Percentil: 0-100 * 0.3
+        $percentileScore = ($metrics['result_percentile'] ?? 50) * 0.3;
+        $score += $percentileScore;
+
+        return round($score, 2);
+    }
+
+    /**
+     * Klassificera activity pattern baserat pa engagement score
+     */
+    private function classifyActivityPattern(float $engagementScore): string {
+        if ($engagementScore >= 70) {
+            return 'high_engagement';
+        } elseif ($engagementScore >= 40) {
+            return 'moderate';
+        } else {
+            return 'low_engagement';
+        }
+    }
+
+    /**
+     * Uppdatera klubb-kontext (antal rookies i samma klubb)
+     */
+    private function updateClubRookieContext(int $cohortYear): void {
+        // Berakna antal rookies per klubb
+        $this->pdo->prepare("
+            UPDATE rider_first_season rfs
+            JOIN (
+                SELECT club_id, COUNT(*) as rookie_count
+                FROM rider_first_season
+                WHERE cohort_year = ?
+                  AND club_id IS NOT NULL
+                GROUP BY club_id
+            ) counts ON rfs.club_id = counts.club_id
+            SET
+                rfs.club_rookie_count = counts.rookie_count,
+                rfs.club_had_other_rookies = CASE WHEN counts.rookie_count > 1 THEN 1 ELSE 0 END
+            WHERE rfs.cohort_year = ?
+        ")->execute([$cohortYear, $cohortYear]);
+    }
+
+    /**
+     * Spara rider first season data
+     */
+    private function upsertRiderFirstSeason(int $riderId, int $cohortYear, array $metrics, ?int $snapshotId): void {
+        $stmt = $this->pdo->prepare("
+            INSERT INTO rider_first_season (
+                rider_id, cohort_year,
+                total_starts, total_events, total_finishes, total_dnf, dnf_rate,
+                best_position, avg_position, result_percentile, podium_count, top10_count,
+                first_event_date, last_event_date, days_in_season,
+                avg_days_between_starts, max_gap_days,
+                early_season_starts, mid_season_starts, late_season_starts, season_spread_score,
+                club_id, first_brand_id, first_series_id,
+                gender, age_at_first_start, class_id, primary_discipline, discipline_count,
+                returned_year2, returned_year3, total_career_seasons, last_active_year,
+                engagement_score, activity_pattern,
+                calculated_at, snapshot_id
+            ) VALUES (
+                ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?
+            )
+            ON DUPLICATE KEY UPDATE
+                total_starts = VALUES(total_starts),
+                total_events = VALUES(total_events),
+                total_finishes = VALUES(total_finishes),
+                total_dnf = VALUES(total_dnf),
+                dnf_rate = VALUES(dnf_rate),
+                best_position = VALUES(best_position),
+                avg_position = VALUES(avg_position),
+                result_percentile = VALUES(result_percentile),
+                podium_count = VALUES(podium_count),
+                top10_count = VALUES(top10_count),
+                first_event_date = VALUES(first_event_date),
+                last_event_date = VALUES(last_event_date),
+                days_in_season = VALUES(days_in_season),
+                avg_days_between_starts = VALUES(avg_days_between_starts),
+                max_gap_days = VALUES(max_gap_days),
+                early_season_starts = VALUES(early_season_starts),
+                mid_season_starts = VALUES(mid_season_starts),
+                late_season_starts = VALUES(late_season_starts),
+                season_spread_score = VALUES(season_spread_score),
+                club_id = VALUES(club_id),
+                first_brand_id = VALUES(first_brand_id),
+                first_series_id = VALUES(first_series_id),
+                gender = VALUES(gender),
+                age_at_first_start = VALUES(age_at_first_start),
+                class_id = VALUES(class_id),
+                primary_discipline = VALUES(primary_discipline),
+                discipline_count = VALUES(discipline_count),
+                returned_year2 = VALUES(returned_year2),
+                returned_year3 = VALUES(returned_year3),
+                total_career_seasons = VALUES(total_career_seasons),
+                last_active_year = VALUES(last_active_year),
+                engagement_score = VALUES(engagement_score),
+                activity_pattern = VALUES(activity_pattern),
+                calculated_at = NOW(),
+                snapshot_id = VALUES(snapshot_id)
+        ");
+
+        $stmt->execute([
+            $riderId,
+            $cohortYear,
+            $metrics['total_starts'],
+            $metrics['total_events'],
+            $metrics['total_finishes'],
+            $metrics['total_dnf'],
+            $metrics['dnf_rate'],
+            $metrics['best_position'],
+            $metrics['avg_position'],
+            $metrics['result_percentile'],
+            $metrics['podium_count'],
+            $metrics['top10_count'],
+            $metrics['first_event_date'],
+            $metrics['last_event_date'],
+            $metrics['days_in_season'],
+            $metrics['avg_days_between_starts'],
+            $metrics['max_gap_days'],
+            $metrics['early_season_starts'],
+            $metrics['mid_season_starts'],
+            $metrics['late_season_starts'],
+            $metrics['season_spread_score'],
+            $metrics['club_id'],
+            $metrics['first_brand_id'] ?? null,
+            $metrics['first_series_id'] ?? null,
+            $metrics['gender'],
+            $metrics['age_at_first_start'],
+            $metrics['class_id'],
+            $metrics['primary_discipline'],
+            $metrics['discipline_count'],
+            $metrics['returned_year2'],
+            $metrics['returned_year3'],
+            $metrics['total_career_seasons'],
+            $metrics['last_active_year'],
+            $metrics['engagement_score'],
+            $metrics['activity_pattern'],
+            $snapshotId,
+        ]);
+    }
+
+    /**
+     * Berakna First Season Aggregates for en kohort
+     *
+     * Aggregerar data fran rider_first_season till first_season_aggregates.
+     * Endast segment med >= 10 riders inkluderas (GDPR).
+     *
+     * @param int $cohortYear Kohortar
+     * @param int|null $snapshotId Snapshot ID
+     * @return int Antal aggregat skapade
+     */
+    public function calculateFirstSeasonAggregates(int $cohortYear, ?int $snapshotId = null): int {
+        $jobId = $this->startJob('first-season-aggregates', (string)$cohortYear, $this->forceRerun);
+        if ($jobId === false) {
+            return 0;
+        }
+
+        $count = 0;
+        $minSegmentSize = 10; // GDPR minimum
+
+        try {
+            // Rensa gamla aggregat for denna kohort
+            $this->pdo->prepare("
+                DELETE FROM first_season_aggregates
+                WHERE cohort_year = ? AND (snapshot_id = ? OR snapshot_id IS NULL)
+            ")->execute([$cohortYear, $snapshotId]);
+
+            // Overall aggregates
+            $count += $this->insertFirstSeasonAggregate($cohortYear, 'overall', null, $snapshotId, $minSegmentSize);
+
+            // Gender aggregates
+            foreach (['M', 'F'] as $gender) {
+                $count += $this->insertFirstSeasonAggregate($cohortYear, 'gender', $gender, $snapshotId, $minSegmentSize);
+            }
+
+            // Engagement level aggregates
+            foreach (['high_engagement', 'moderate', 'low_engagement'] as $pattern) {
+                $count += $this->insertFirstSeasonAggregate($cohortYear, 'engagement_level', $pattern, $snapshotId, $minSegmentSize);
+            }
+
+            // Discipline aggregates
+            $disciplines = $this->pdo->prepare("
+                SELECT DISTINCT primary_discipline
+                FROM rider_first_season
+                WHERE cohort_year = ? AND primary_discipline IS NOT NULL
+            ");
+            $disciplines->execute([$cohortYear]);
+            foreach ($disciplines->fetchAll(PDO::FETCH_COLUMN) as $disc) {
+                $count += $this->insertFirstSeasonAggregate($cohortYear, 'discipline', $disc, $snapshotId, $minSegmentSize);
+            }
+
+            $this->endJob('success', $count, [
+                'cohort_year' => $cohortYear,
+                'aggregates_created' => $count
+            ]);
+
+        } catch (Exception $e) {
+            $this->endJob('failed', $count, ['error' => $e->getMessage()]);
+            throw $e;
+        }
+
+        return $count;
+    }
+
+    /**
+     * Skapa ett aggregat for ett segment
+     */
+    private function insertFirstSeasonAggregate(
+        int $cohortYear,
+        string $segmentType,
+        ?string $segmentValue,
+        ?int $snapshotId,
+        int $minSize
+    ): int {
+        // Bygg WHERE-klausul
+        $where = "cohort_year = ?";
+        $params = [$cohortYear];
+
+        if ($segmentType === 'gender' && $segmentValue) {
+            $where .= " AND gender = ?";
+            $params[] = $segmentValue;
+        } elseif ($segmentType === 'engagement_level' && $segmentValue) {
+            $where .= " AND activity_pattern = ?";
+            $params[] = $segmentValue;
+        } elseif ($segmentType === 'discipline' && $segmentValue) {
+            $where .= " AND primary_discipline = ?";
+            $params[] = $segmentValue;
+        }
+
+        // Hamta aggregat
+        $stmt = $this->pdo->prepare("
+            SELECT
+                COUNT(*) as total_riders,
+                AVG(total_starts) as avg_total_starts,
+                AVG(total_events) as avg_total_events,
+                AVG(dnf_rate) as avg_dnf_rate,
+                AVG(result_percentile) as avg_result_percentile,
+                SUM(CASE WHEN podium_count > 0 THEN 1 ELSE 0 END) / COUNT(*) as pct_with_podium,
+                SUM(CASE WHEN top10_count > 0 THEN 1 ELSE 0 END) / COUNT(*) as pct_with_top10,
+                AVG(days_in_season) as avg_days_in_season,
+                AVG(season_spread_score) as avg_season_spread,
+                AVG(returned_year2) as pct_returned_year2,
+                AVG(returned_year3) as pct_returned_year3,
+                AVG(total_career_seasons) as avg_career_seasons
+            FROM rider_first_season
+            WHERE $where
+        ");
+        $stmt->execute($params);
+        $agg = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        // Skip if below minimum size
+        if (!$agg || (int)$agg['total_riders'] < $minSize) {
+            return 0;
+        }
+
+        // Berakna startfordelning
+        $stmt = $this->pdo->prepare("
+            SELECT
+                SUM(CASE WHEN total_starts = 1 THEN 1 ELSE 0 END) as s1,
+                SUM(CASE WHEN total_starts BETWEEN 2 AND 3 THEN 1 ELSE 0 END) as s2_3,
+                SUM(CASE WHEN total_starts BETWEEN 4 AND 5 THEN 1 ELSE 0 END) as s4_5,
+                SUM(CASE WHEN total_starts >= 6 THEN 1 ELSE 0 END) as s6plus
+            FROM rider_first_season
+            WHERE $where
+        ");
+        $stmt->execute($params);
+        $dist = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        $startsDistribution = json_encode([
+            '1' => (int)$dist['s1'],
+            '2-3' => (int)$dist['s2_3'],
+            '4-5' => (int)$dist['s4_5'],
+            '6+' => (int)$dist['s6plus']
+        ]);
+
+        // Insert aggregat
+        $stmt = $this->pdo->prepare("
+            INSERT INTO first_season_aggregates (
+                cohort_year, segment_type, segment_value, total_riders,
+                avg_total_starts, avg_total_events, avg_dnf_rate,
+                avg_result_percentile, pct_with_podium, pct_with_top10,
+                avg_days_in_season, avg_season_spread,
+                pct_returned_year2, pct_returned_year3, avg_career_seasons,
+                starts_distribution, calculated_at, snapshot_id
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?)
+        ");
+
+        $stmt->execute([
+            $cohortYear,
+            $segmentType,
+            $segmentValue,
+            $agg['total_riders'],
+            round($agg['avg_total_starts'], 2),
+            round($agg['avg_total_events'], 2),
+            $agg['avg_dnf_rate'] ? round($agg['avg_dnf_rate'], 4) : null,
+            $agg['avg_result_percentile'] ? round($agg['avg_result_percentile'], 2) : null,
+            $agg['pct_with_podium'] ? round($agg['pct_with_podium'], 4) : null,
+            $agg['pct_with_top10'] ? round($agg['pct_with_top10'], 4) : null,
+            $agg['avg_days_in_season'] ? round($agg['avg_days_in_season'], 2) : null,
+            $agg['avg_season_spread'] ? round($agg['avg_season_spread'], 4) : null,
+            $agg['pct_returned_year2'] ? round($agg['pct_returned_year2'], 4) : null,
+            $agg['pct_returned_year3'] ? round($agg['pct_returned_year3'], 4) : null,
+            $agg['avg_career_seasons'] ? round($agg['avg_career_seasons'], 2) : null,
+            $startsDistribution,
+            $snapshotId
+        ]);
+
+        return 1;
+    }
+
+    // =========================================================================
+    // v3.1.0: LONGITUDINAL JOURNEY ANALYSIS (Years 2-4)
+    // =========================================================================
+
+    /**
+     * Berakna Longitudinal Journey for en kohort
+     *
+     * Foljer rookies genom ar 2-4 och beraknar:
+     * - Aktivitet per ar
+     * - Progression/regression
+     * - Retention/churn
+     * - Journey patterns
+     *
+     * @param int $cohortYear Kohortar (forsta sasongen)
+     * @param int|null $snapshotId Snapshot
+     * @param callable|null $progressCallback Progress
+     * @return int Antal records
+     */
+    public function calculateLongitudinalJourney(
+        int $cohortYear,
+        ?int $snapshotId = null,
+        ?callable $progressCallback = null
+    ): int {
+        $jobId = $this->startJob('longitudinal-journey', (string)$cohortYear, $this->forceRerun);
+        if ($jobId === false) {
+            return 0;
+        }
+
+        $count = 0;
+
+        try {
+            // Hamta alla riders fran kohorten
+            $stmt = $this->pdo->prepare("
+                SELECT rider_id, cohort_year
+                FROM rider_first_season
+                WHERE cohort_year = ?
+            ");
+            $stmt->execute([$cohortYear]);
+            $riders = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+            $total = count($riders);
+            $processed = 0;
+            $currentYear = (int)date('Y');
+
+            foreach ($riders as $rider) {
+                $riderId = (int)$rider['rider_id'];
+
+                // Berakna metrics for ar 1-4
+                for ($yearOffset = 1; $yearOffset <= 4; $yearOffset++) {
+                    $calendarYear = $cohortYear + $yearOffset - 1;
+
+                    // Hoppa over framtida ar
+                    if ($calendarYear > $currentYear) {
+                        continue;
+                    }
+
+                    $yearMetrics = $this->calculateRiderYearMetrics($riderId, $calendarYear);
+                    $this->upsertRiderJourneyYear($riderId, $cohortYear, $yearOffset, $calendarYear, $yearMetrics, $snapshotId);
+                    $count++;
+                }
+
+                // Berakna journey summary
+                $this->updateRiderJourneySummary($riderId, $cohortYear, $snapshotId);
+
+                $processed++;
+                if ($progressCallback && ($processed % 50 === 0 || $processed === $total)) {
+                    $progressCallback($processed, $total);
+                }
+
+                if ($processed % 100 === 0) {
+                    $this->heartbeat();
+                }
+            }
+
+            // Berakna longitudinal aggregates
+            $this->calculateCohortLongitudinalAggregates($cohortYear, $snapshotId);
+
+            $this->endJob('success', $count, [
+                'cohort_year' => $cohortYear,
+                'riders' => $total,
+                'year_records' => $count
+            ]);
+
+        } catch (Exception $e) {
+            $this->endJob('failed', $count, ['error' => $e->getMessage()]);
+            throw $e;
+        }
+
+        return $count;
+    }
+
+    /**
+     * Berakna ar-metrics for en rider
+     */
+    private function calculateRiderYearMetrics(int $riderId, int $year): array {
+        $stmt = $this->pdo->prepare("
+            SELECT
+                COUNT(*) as total_starts,
+                COUNT(DISTINCT res.event_id) as total_events,
+                SUM(CASE WHEN res.status = 'finished' OR res.position IS NOT NULL THEN 1 ELSE 0 END) as total_finishes,
+                SUM(CASE WHEN res.status = 'DNF' THEN 1 ELSE 0 END) as total_dnf,
+                MIN(CASE WHEN res.position > 0 THEN res.position END) as best_position,
+                AVG(CASE WHEN res.position > 0 THEN res.position END) as avg_position,
+                SUM(CASE WHEN res.position <= 3 THEN 1 ELSE 0 END) as podium_count,
+                SUM(CASE WHEN res.position <= 10 THEN 1 ELSE 0 END) as top10_count,
+                SUM(COALESCE(res.points, 0)) as total_points,
+                MIN(e.date) as first_event_date,
+                MAX(e.date) as last_event_date
+            FROM results res
+            JOIN events e ON res.event_id = e.id
+            JOIN v_canonical_riders v ON res.cyclist_id = v.original_rider_id
+            WHERE v.canonical_rider_id = ?
+              AND YEAR(e.date) = ?
+        ");
+        $stmt->execute([$riderId, $year]);
+        $data = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        $wasActive = $data && (int)$data['total_starts'] > 0;
+
+        // Berakna percentil
+        $percentile = null;
+        if ($wasActive) {
+            $stmt = $this->pdo->prepare("
+                SELECT AVG(
+                    (class_count - position + 1) / class_count * 100
+                ) as avg_percentile
+                FROM (
+                    SELECT
+                        res.position,
+                        (SELECT COUNT(*) FROM results r2 WHERE r2.event_id = res.event_id AND r2.class_id = res.class_id) as class_count
+                    FROM results res
+                    JOIN events e ON res.event_id = e.id
+                    JOIN v_canonical_riders v ON res.cyclist_id = v.original_rider_id
+                    WHERE v.canonical_rider_id = ?
+                      AND YEAR(e.date) = ?
+                      AND res.position IS NOT NULL AND res.position > 0
+                ) p WHERE class_count > 1
+            ");
+            $stmt->execute([$riderId, $year]);
+            $percentile = $stmt->fetchColumn();
+        }
+
+        // Hamta klubb och klass
+        $clubId = null;
+        $classId = null;
+        $discipline = null;
+
+        if ($wasActive) {
+            $stmt = $this->pdo->prepare("
+                SELECT r.club_id
+                FROM riders r
+                WHERE r.id = ?
+            ");
+            $stmt->execute([$riderId]);
+            $clubId = $stmt->fetchColumn() ?: null;
+
+            $stmt = $this->pdo->prepare("
+                SELECT res.class_id, COUNT(*) as cnt
+                FROM results res
+                JOIN events e ON res.event_id = e.id
+                JOIN v_canonical_riders v ON res.cyclist_id = v.original_rider_id
+                WHERE v.canonical_rider_id = ? AND YEAR(e.date) = ? AND res.class_id IS NOT NULL
+                GROUP BY res.class_id ORDER BY cnt DESC LIMIT 1
+            ");
+            $stmt->execute([$riderId, $year]);
+            $row = $stmt->fetch();
+            $classId = $row ? (int)$row['class_id'] : null;
+
+            $stmt = $this->pdo->prepare("
+                SELECT e.discipline, COUNT(*) as cnt
+                FROM results res
+                JOIN events e ON res.event_id = e.id
+                JOIN v_canonical_riders v ON res.cyclist_id = v.original_rider_id
+                WHERE v.canonical_rider_id = ? AND YEAR(e.date) = ? AND e.discipline IS NOT NULL
+                GROUP BY e.discipline ORDER BY cnt DESC LIMIT 1
+            ");
+            $stmt->execute([$riderId, $year]);
+            $row = $stmt->fetch();
+            $discipline = $row ? $row['discipline'] : null;
+        }
+
+        // Resolve primary brand for this year (v3.1.1)
+        $brandData = $wasActive ? $this->resolvePrimaryBrandForYear($riderId, $year) : ['brand_id' => null, 'series_id' => null];
+
+        return [
+            'total_starts' => $wasActive ? (int)$data['total_starts'] : 0,
+            'total_events' => $wasActive ? (int)$data['total_events'] : 0,
+            'total_finishes' => $wasActive ? (int)$data['total_finishes'] : 0,
+            'total_dnf' => $wasActive ? (int)$data['total_dnf'] : 0,
+            'dnf_rate' => $wasActive && $data['total_starts'] > 0
+                ? round($data['total_dnf'] / $data['total_starts'], 4)
+                : null,
+            'best_position' => $wasActive && $data['best_position'] ? (int)$data['best_position'] : null,
+            'avg_position' => $wasActive && $data['avg_position'] ? round($data['avg_position'], 2) : null,
+            'result_percentile' => $percentile ? round($percentile, 2) : null,
+            'podium_count' => $wasActive ? (int)$data['podium_count'] : 0,
+            'top10_count' => $wasActive ? (int)$data['top10_count'] : 0,
+            'total_points' => $wasActive ? (int)$data['total_points'] : 0,
+            'was_active' => $wasActive ? 1 : 0,
+            'first_event_date' => $wasActive ? $data['first_event_date'] : null,
+            'last_event_date' => $wasActive ? $data['last_event_date'] : null,
+            'days_active' => $wasActive && $data['first_event_date'] && $data['last_event_date']
+                ? (int)((strtotime($data['last_event_date']) - strtotime($data['first_event_date'])) / 86400)
+                : null,
+            'club_id' => $clubId,
+            'class_id' => $classId,
+            'primary_discipline' => $discipline,
+            'primary_brand_id' => $brandData['brand_id'],
+            'primary_series_id' => $brandData['series_id'],
+        ];
+    }
+
+    /**
+     * Spara rider journey year data
+     */
+    private function upsertRiderJourneyYear(
+        int $riderId,
+        int $cohortYear,
+        int $yearOffset,
+        int $calendarYear,
+        array $metrics,
+        ?int $snapshotId
+    ): void {
+        $stmt = $this->pdo->prepare("
+            INSERT INTO rider_journey_years (
+                rider_id, cohort_year, year_offset, calendar_year,
+                total_starts, total_events, total_finishes, total_dnf, dnf_rate,
+                best_position, avg_position, result_percentile,
+                podium_count, top10_count, total_points,
+                was_active, first_event_date, last_event_date, days_active,
+                club_id, class_id, primary_discipline,
+                primary_brand_id, primary_series_id,
+                calculated_at, snapshot_id
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?)
+            ON DUPLICATE KEY UPDATE
+                total_starts = VALUES(total_starts),
+                total_events = VALUES(total_events),
+                total_finishes = VALUES(total_finishes),
+                total_dnf = VALUES(total_dnf),
+                dnf_rate = VALUES(dnf_rate),
+                best_position = VALUES(best_position),
+                avg_position = VALUES(avg_position),
+                result_percentile = VALUES(result_percentile),
+                podium_count = VALUES(podium_count),
+                top10_count = VALUES(top10_count),
+                total_points = VALUES(total_points),
+                was_active = VALUES(was_active),
+                first_event_date = VALUES(first_event_date),
+                last_event_date = VALUES(last_event_date),
+                days_active = VALUES(days_active),
+                club_id = VALUES(club_id),
+                class_id = VALUES(class_id),
+                primary_discipline = VALUES(primary_discipline),
+                primary_brand_id = VALUES(primary_brand_id),
+                primary_series_id = VALUES(primary_series_id),
+                calculated_at = NOW(),
+                snapshot_id = VALUES(snapshot_id)
+        ");
+
+        $stmt->execute([
+            $riderId,
+            $cohortYear,
+            $yearOffset,
+            $calendarYear,
+            $metrics['total_starts'],
+            $metrics['total_events'],
+            $metrics['total_finishes'],
+            $metrics['total_dnf'],
+            $metrics['dnf_rate'],
+            $metrics['best_position'],
+            $metrics['avg_position'],
+            $metrics['result_percentile'],
+            $metrics['podium_count'],
+            $metrics['top10_count'],
+            $metrics['total_points'],
+            $metrics['was_active'],
+            $metrics['first_event_date'],
+            $metrics['last_event_date'],
+            $metrics['days_active'],
+            $metrics['club_id'],
+            $metrics['class_id'],
+            $metrics['primary_discipline'],
+            $metrics['primary_brand_id'] ?? null,
+            $metrics['primary_series_id'] ?? null,
+            $snapshotId
+        ]);
+    }
+
+    /**
+     * Uppdatera rider journey summary
+     */
+    private function updateRiderJourneySummary(int $riderId, int $cohortYear, ?int $snapshotId): void {
+        // Hamta alla ar-data
+        $stmt = $this->pdo->prepare("
+            SELECT year_offset, was_active, total_starts, result_percentile
+            FROM rider_journey_years
+            WHERE rider_id = ? AND cohort_year = ?
+            ORDER BY year_offset
+        ");
+        $stmt->execute([$riderId, $cohortYear]);
+        $years = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        if (empty($years)) return;
+
+        // Berakna pattern
+        $y = [1 => 0, 2 => 0, 3 => 0, 4 => 0];
+        $totalSeasons = 0;
+        $lastActiveOffset = 0;
+
+        foreach ($years as $yr) {
+            $offset = (int)$yr['year_offset'];
+            $y[$offset] = (int)$yr['was_active'];
+            if ($y[$offset]) {
+                $totalSeasons++;
+                $lastActiveOffset = $offset;
+            }
+        }
+
+        // Klassificera pattern
+        $pattern = 'one_and_done';
+        if ($y[1] && $y[2] && $y[3] && $y[4]) {
+            $pattern = 'continuous_4yr';
+        } elseif ($y[1] && $y[2] && $y[3]) {
+            $pattern = 'continuous_3yr';
+        } elseif ($y[1] && $y[2] && !$y[3] && !$y[4]) {
+            $pattern = 'continuous_2yr';
+        } elseif ($y[1] && !$y[2] && !$y[3] && !$y[4]) {
+            $pattern = 'one_and_done';
+        } elseif (($y[1] && !$y[2] && $y[3]) || ($y[1] && !$y[2] && $y[4]) || ($y[2] && !$y[3] && $y[4])) {
+            $pattern = 'gap_returner';
+        } elseif ($totalSeasons >= 2 && $lastActiveOffset < 4) {
+            $pattern = 'late_dropout';
+        }
+
+        // Hamta aggregerade karriardata
+        $stmt = $this->pdo->prepare("
+            SELECT
+                SUM(total_starts) as career_starts,
+                SUM(total_events) as career_events,
+                SUM(total_finishes) as career_finishes,
+                MIN(best_position) as career_best,
+                AVG(CASE WHEN result_percentile IS NOT NULL THEN result_percentile END) as career_percentile,
+                SUM(podium_count) as career_podiums,
+                SUM(total_points) as career_points
+            FROM rider_journey_years
+            WHERE rider_id = ? AND cohort_year = ?
+        ");
+        $stmt->execute([$riderId, $cohortYear]);
+        $career = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        // Hamta first season data
+        $stmt = $this->pdo->prepare("
+            SELECT total_starts, result_percentile, engagement_score, activity_pattern
+            FROM rider_first_season
+            WHERE rider_id = ? AND cohort_year = ?
+        ");
+        $stmt->execute([$riderId, $cohortYear]);
+        $fs = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        // Berakna trajektorier
+        $percTrajectory = 'insufficient_data';
+        $actTrajectory = 'sporadic';
+
+        if ($totalSeasons >= 2) {
+            // Percentil trajectory
+            $firstPerc = null;
+            $lastPerc = null;
+            foreach ($years as $yr) {
+                if ($yr['result_percentile'] !== null) {
+                    if ($firstPerc === null) $firstPerc = (float)$yr['result_percentile'];
+                    $lastPerc = (float)$yr['result_percentile'];
+                }
+            }
+            if ($firstPerc !== null && $lastPerc !== null) {
+                $percDiff = $lastPerc - $firstPerc;
+                if ($percDiff > 5) $percTrajectory = 'improving';
+                elseif ($percDiff < -5) $percTrajectory = 'declining';
+                else $percTrajectory = 'stable';
+            }
+
+            // Activity trajectory
+            $y1Starts = 0;
+            $laterStarts = 0;
+            $laterCount = 0;
+            foreach ($years as $yr) {
+                if ((int)$yr['year_offset'] === 1) {
+                    $y1Starts = (int)$yr['total_starts'];
+                } elseif ((int)$yr['was_active']) {
+                    $laterStarts += (int)$yr['total_starts'];
+                    $laterCount++;
+                }
+            }
+            if ($laterCount > 0) {
+                $avgLater = $laterStarts / $laterCount;
+                if ($avgLater > $y1Starts + 1) $actTrajectory = 'increasing';
+                elseif ($avgLater < $y1Starts - 1) $actTrajectory = 'decreasing';
+                else $actTrajectory = 'stable';
+            }
+        }
+
+        // Upsert summary
+        $stmt = $this->pdo->prepare("
+            INSERT INTO rider_journey_summary (
+                rider_id, cohort_year,
+                total_seasons_active, last_active_year_offset,
+                journey_pattern,
+                total_career_starts, total_career_events, total_career_finishes,
+                career_dnf_rate, career_best_position, career_avg_percentile,
+                career_podium_count,
+                percentile_trajectory, activity_trajectory,
+                fs_total_starts, fs_result_percentile, fs_engagement_score, fs_activity_pattern,
+                calculated_at, snapshot_id
+            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?)
+            ON DUPLICATE KEY UPDATE
+                total_seasons_active = VALUES(total_seasons_active),
+                last_active_year_offset = VALUES(last_active_year_offset),
+                journey_pattern = VALUES(journey_pattern),
+                total_career_starts = VALUES(total_career_starts),
+                total_career_events = VALUES(total_career_events),
+                total_career_finishes = VALUES(total_career_finishes),
+                career_dnf_rate = VALUES(career_dnf_rate),
+                career_best_position = VALUES(career_best_position),
+                career_avg_percentile = VALUES(career_avg_percentile),
+                career_podium_count = VALUES(career_podium_count),
+                percentile_trajectory = VALUES(percentile_trajectory),
+                activity_trajectory = VALUES(activity_trajectory),
+                fs_total_starts = VALUES(fs_total_starts),
+                fs_result_percentile = VALUES(fs_result_percentile),
+                fs_engagement_score = VALUES(fs_engagement_score),
+                fs_activity_pattern = VALUES(fs_activity_pattern),
+                calculated_at = NOW(),
+                snapshot_id = VALUES(snapshot_id)
+        ");
+
+        $careerDnfRate = $career['career_starts'] > 0
+            ? round(($career['career_starts'] - $career['career_finishes']) / $career['career_starts'], 4)
+            : null;
+
+        $stmt->execute([
+            $riderId,
+            $cohortYear,
+            $totalSeasons,
+            $lastActiveOffset,
+            $pattern,
+            $career['career_starts'] ?: 0,
+            $career['career_events'] ?: 0,
+            $career['career_finishes'] ?: 0,
+            $careerDnfRate,
+            $career['career_best'],
+            $career['career_percentile'] ? round($career['career_percentile'], 2) : null,
+            $career['career_podiums'] ?: 0,
+            $percTrajectory,
+            $actTrajectory,
+            $fs['total_starts'] ?? null,
+            $fs['result_percentile'] ?? null,
+            $fs['engagement_score'] ?? null,
+            $fs['activity_pattern'] ?? null,
+            $snapshotId
+        ]);
+    }
+
+    /**
+     * Berakna cohort longitudinal aggregates
+     */
+    private function calculateCohortLongitudinalAggregates(int $cohortYear, ?int $snapshotId): void {
+        $minSize = 10;
+
+        // Hamta kohort-storlek
+        $cohortSize = $this->pdo->prepare("
+            SELECT COUNT(*) FROM rider_first_season WHERE cohort_year = ?
+        ");
+        $cohortSize->execute([$cohortYear]);
+        $totalCohort = (int)$cohortSize->fetchColumn();
+
+        if ($totalCohort < $minSize) return;
+
+        // Rensa gamla aggregat
+        $this->pdo->prepare("
+            DELETE FROM cohort_longitudinal_aggregates WHERE cohort_year = ?
+        ")->execute([$cohortYear]);
+
+        // For varje year_offset (1-4)
+        for ($offset = 1; $offset <= 4; $offset++) {
+            $calendarYear = $cohortYear + $offset - 1;
+            if ($calendarYear > (int)date('Y')) continue;
+
+            $stmt = $this->pdo->prepare("
+                SELECT
+                    SUM(was_active) as active_count,
+                    AVG(CASE WHEN was_active = 1 THEN total_starts END) as avg_starts,
+                    AVG(CASE WHEN was_active = 1 THEN total_events END) as avg_events,
+                    AVG(CASE WHEN was_active = 1 THEN dnf_rate END) as avg_dnf,
+                    AVG(CASE WHEN was_active = 1 THEN result_percentile END) as avg_perc
+                FROM rider_journey_years
+                WHERE cohort_year = ? AND year_offset = ?
+            ");
+            $stmt->execute([$cohortYear, $offset]);
+            $data = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            $activeCount = (int)($data['active_count'] ?? 0);
+            $retention = $totalCohort > 0 ? $activeCount / $totalCohort : 0;
+
+            $insert = $this->pdo->prepare("
+                INSERT INTO cohort_longitudinal_aggregates (
+                    cohort_year, year_offset, segment_type, segment_value,
+                    total_riders_in_cohort, active_riders_this_year,
+                    retention_rate, churn_rate,
+                    avg_starts, avg_events, avg_dnf_rate, avg_percentile,
+                    calculated_at, snapshot_id
+                ) VALUES (?, ?, 'overall', NULL, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?)
+            ");
+
+            $insert->execute([
+                $cohortYear,
+                $offset,
+                $totalCohort,
+                $activeCount,
+                round($retention, 4),
+                round(1 - $retention, 4),
+                $data['avg_starts'] ? round($data['avg_starts'], 2) : null,
+                $data['avg_events'] ? round($data['avg_events'], 2) : null,
+                $data['avg_dnf'] ? round($data['avg_dnf'], 4) : null,
+                $data['avg_perc'] ? round($data['avg_perc'], 2) : null,
+                $snapshotId
+            ]);
+        }
+    }
+
+    /**
+     * Kor alla journey-berakningar for en kohort
+     *
+     * @param int $cohortYear
+     * @param int|null $snapshotId
+     * @return array Resultat
+     */
+    public function calculateFullJourneyAnalysis(int $cohortYear, ?int $snapshotId = null): array {
+        $results = [];
+
+        $results['first_season'] = $this->calculateFirstSeasonJourney($cohortYear, $snapshotId);
+        $results['first_season_aggregates'] = $this->calculateFirstSeasonAggregates($cohortYear, $snapshotId);
+        $results['longitudinal'] = $this->calculateLongitudinalJourney($cohortYear, $snapshotId);
+        $results['brand_aggregates'] = $this->calculateBrandJourneyAggregates($cohortYear, $snapshotId);
+
+        return $results;
+    }
+
+    /**
+     * Hamta tillgangliga kohortar
+     *
+     * @return array Lista med kohortar (year => count)
+     */
+    public function getAvailableCohorts(): array {
+        $stmt = $this->pdo->query("
+            SELECT
+                cohort_year,
+                COUNT(*) as rookie_count
+            FROM (
+                SELECT
+                    v.canonical_rider_id,
+                    MIN(YEAR(e.date)) as cohort_year
+                FROM results res
+                JOIN events e ON res.event_id = e.id
+                JOIN v_canonical_riders v ON res.cyclist_id = v.original_rider_id
+                GROUP BY v.canonical_rider_id
+            ) cohorts
+            GROUP BY cohort_year
+            ORDER BY cohort_year DESC
+        ");
+        return $stmt->fetchAll(PDO::FETCH_KEY_PAIR);
     }
 }

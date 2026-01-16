@@ -5,7 +5,7 @@
  * Centraliserad exporthantering for alla analytics-rapporter.
  * Visar exporthistorik, rate limits, och genererar nya exporter.
  *
- * v3.0.1: Med mandatory snapshot_id, rate limiting, och reproducerbarhet.
+ * v3.0.2: Med PDF engine status, DB-baserade rate limits, och revision-grade compliance.
  *
  * @package TheHUB Admin
  */
@@ -19,6 +19,7 @@ require_once __DIR__ . '/../analytics/includes/ExportLogger.php';
 require_once __DIR__ . '/../analytics/includes/KPICalculator.php';
 require_once __DIR__ . '/../analytics/includes/AnalyticsConfig.php';
 require_once __DIR__ . '/../analytics/includes/SVGChartRenderer.php';
+require_once __DIR__ . '/../analytics/includes/PdfExportBuilder.php';
 
 $pageTitle = 'Export Center';
 include __DIR__ . '/../includes/admin-header.php';
@@ -44,8 +45,9 @@ $exportStats = $logger->getExportStats('month');
 $userId = $_SESSION['user_id'] ?? 1;
 $myExports = $logger->getUserExports($userId, 20);
 
-// Hamta rate limit status
-$rateLimitStatus = $logger->getRateLimitStatus($userId);
+// Hamta rate limit status (v3.0.2: med role-support)
+$userRole = $_SESSION['role'] ?? null;
+$rateLimitStatus = $logger->getRateLimitStatus($userId, null, $userRole);
 
 // Hamta senaste snapshot
 $latestSnapshot = $engine->getLatestSnapshot();
@@ -53,8 +55,14 @@ $latestSnapshot = $engine->getLatestSnapshot();
 // PNG support info
 $pngSupport = SVGChartRenderer::getPngSupportInfo();
 
+// v3.0.2: PDF engine status (CRITICAL)
+$pdfStatus = PdfExportBuilder::getPdfEngineStatus();
+
 // Hamta recalc queue status
 $recalcStatus = $engine->getRecalcQueueStatus();
+
+// Rate limit source
+$rateLimitSource = $logger->getRateLimitSource();
 ?>
 
 <div class="admin-content">
@@ -139,14 +147,26 @@ $recalcStatus = $engine->getRecalcQueueStatus();
                     <h3><i data-lucide="file-text"></i> PDF-rapporter</h3>
                 </div>
                 <div class="card-body">
+                    <?php if (!$pdfStatus['available']): ?>
+                    <div class="alert alert-danger mb-md">
+                        <i data-lucide="alert-octagon"></i>
+                        <strong>PDF ENGINE MISSING (CRITICAL)</strong><br>
+                        TCPDF ar obligatorisk for PDF-export i v3.0.2. Installera via:<br>
+                        <code>composer require tecnickcom/tcpdf</code>
+                    </div>
+                    <?php else: ?>
                     <p class="text-muted mb-md">
                         PDF-rapporter inkluderar alltid "Definitions & Provenance" box for fullstandig reproducerbarhet.
+                        <br><small>Motor: TCPDF <?= $pdfStatus['version'] ?></small>
                     </p>
+                    <?php endif; ?>
                     <div class="export-buttons">
-                        <button type="button" class="btn btn-primary" onclick="generatePdf('season_summary')" <?= !$rateLimitStatus['can_export'] ? 'disabled' : '' ?>>
+                        <button type="button" class="btn btn-primary" onclick="generatePdf('season_summary')"
+                                <?= (!$rateLimitStatus['can_export'] || !$pdfStatus['available']) ? 'disabled' : '' ?>>
                             <i data-lucide="file-text"></i> Sasongsammanfattning
                         </button>
-                        <button type="button" class="btn btn-primary" onclick="generatePdf('retention_report')" <?= !$rateLimitStatus['can_export'] ? 'disabled' : '' ?>>
+                        <button type="button" class="btn btn-primary" onclick="generatePdf('retention_report')"
+                                <?= (!$rateLimitStatus['can_export'] || !$pdfStatus['available']) ? 'disabled' : '' ?>>
                             <i data-lucide="trending-up"></i> Retentionsrapport
                         </button>
                     </div>
@@ -169,12 +189,34 @@ $recalcStatus = $engine->getRecalcQueueStatus();
                             <td><?= AnalyticsConfig::CALCULATION_VERSION ?></td>
                         </tr>
                         <tr>
+                            <td><strong>PDF ENGINE</strong></td>
+                            <td>
+                                <?php if ($pdfStatus['available']): ?>
+                                    <span class="badge badge-success">OK</span>
+                                    <small class="text-muted">(TCPDF <?= $pdfStatus['version'] ?>)</small>
+                                <?php else: ?>
+                                    <span class="badge badge-danger">MISSING (CRITICAL)</span>
+                                    <br><small class="text-warning">PDF-export blockerad! Installera TCPDF.</small>
+                                <?php endif; ?>
+                            </td>
+                        </tr>
+                        <tr>
                             <td>PNG Export</td>
                             <td>
                                 <?php if ($pngSupport['can_convert']): ?>
                                     <span class="badge badge-success">Tillganglig</span>
                                 <?php else: ?>
                                     <span class="badge badge-warning">SVG Fallback</span>
+                                <?php endif; ?>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>Rate Limit Source</td>
+                            <td>
+                                <?php if ($rateLimitSource === 'database'): ?>
+                                    <span class="badge badge-success">Database</span>
+                                <?php else: ?>
+                                    <span class="badge badge-warning">Config (fallback)</span>
                                 <?php endif; ?>
                             </td>
                         </tr>
