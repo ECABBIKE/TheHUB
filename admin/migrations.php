@@ -54,6 +54,9 @@ $migrationChecks = [
     '012_event_participation_analysis.sql' => [
         'tables' => ['series_participation_distribution', 'event_unique_participants', 'event_retention_yearly']
     ],
+    '014_performance_indexes.sql' => [
+        'columns' => [] // Index check not needed, just run it
+    ],
 ];
 
 // ============================================================================
