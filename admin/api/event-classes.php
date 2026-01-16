@@ -2,9 +2,8 @@
 /**
  * API endpoint to get classes for a specific event
  */
-require_once __DIR__ . '/../../config/database.php';
-require_once __DIR__ . '/../../includes/auth.php';
-requireAdmin();
+require_once __DIR__ . '/../../config.php';
+require_admin();
 
 header('Content-Type: application/json');
 
