@@ -327,6 +327,7 @@ $sql = "SELECT
     cl.active,
     cl.rf_registered,
     cl.scf_district,
+    cl.federation,
     COUNT(DISTINCT c.id) as rider_count
 FROM clubs cl
 LEFT JOIN riders c ON cl.id = c.club_id AND c.active = 1
@@ -544,7 +545,23 @@ include __DIR__ . '/components/unified-layout.php';
                                         <?= htmlspecialchars($club['name']) ?>
                                     </a>
                                     <?php if (!empty($club['rf_registered'])): ?>
-                                    <span class="admin-badge admin-badge-success" title="<?= htmlspecialchars($club['scf_district'] ?? 'RF-registrerad') ?>" style="font-size: 0.65rem; padding: 2px 4px;">RF</span>
+                                        <?php
+                                        // Determine federation badge
+                                        $fed = $club['federation'] ?? 'SCF';
+                                        $fedColors = [
+                                            'SCF' => 'admin-badge-info',      // Swedish - blue
+                                            'NCF' => 'admin-badge-error',     // Norwegian - red
+                                            'DCU' => 'admin-badge-warning'    // Danish - yellow
+                                        ];
+                                        $fedClass = $fedColors[$fed] ?? 'admin-badge-success';
+                                        $fedTitle = match($fed) {
+                                            'SCF' => $club['scf_district'] ?? 'Svenska Cykelförbundet',
+                                            'NCF' => 'Norges Cykleforbund',
+                                            'DCU' => 'Danmarks Cykle Union',
+                                            default => 'RF-registrerad'
+                                        };
+                                        ?>
+                                    <span class="admin-badge <?= $fedClass ?>" title="<?= htmlspecialchars($fedTitle) ?>" style="font-size: 0.65rem; padding: 2px 4px;"><?= $fed ?></span>
                                     <?php endif; ?>
                                 </td>
                                 <td>
