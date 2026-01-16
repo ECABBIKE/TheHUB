@@ -13,13 +13,11 @@
 $isCli = php_sapi_name() === 'cli';
 
 if (!$isCli) {
-    require_once __DIR__ . '/../../config/database.php';
-    require_once __DIR__ . '/../../includes/auth.php';
-    requireAdmin();
+    require_once __DIR__ . '/../../config.php';
+    require_admin();
     header('Content-Type: text/plain; charset=utf-8');
 } else {
     require_once __DIR__ . '/../../config.php';
-    require_once __DIR__ . '/../../config/database.php';
 }
 
 try {

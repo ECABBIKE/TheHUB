@@ -10,9 +10,8 @@
  * @package TheHUB Admin
  */
 
-require_once __DIR__ . '/../config/database.php';
-require_once __DIR__ . '/../includes/auth.php';
-requireAdmin();
+require_once __DIR__ . '/../config.php';
+require_admin();
 
 require_once __DIR__ . '/../analytics/includes/AnalyticsEngine.php';
 require_once __DIR__ . '/../analytics/includes/ExportLogger.php';
