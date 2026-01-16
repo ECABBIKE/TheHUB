@@ -4246,4 +4246,568 @@ class KPICalculator {
 
         return implode("\n", $lines);
     }
+
+    // =========================================================================
+    // EVENT PARTICIPATION ANALYSIS (v3.2)
+    // =========================================================================
+
+    /**
+     * Build brand filter for series-based queries
+     * Resolves brands via brand_series_map
+     *
+     * @param array|null $brandIds Brand IDs to filter
+     * @return array ['clause' => string, 'params' => array, 'join' => string]
+     */
+    private function buildSeriesBrandFilter(?array $brandIds): array {
+        if (empty($brandIds)) {
+            return ['clause' => '', 'params' => [], 'join' => ''];
+        }
+
+        // Max 12 brands
+        $brandIds = array_slice(array_filter($brandIds, 'is_numeric'), 0, 12);
+        if (empty($brandIds)) {
+            return ['clause' => '', 'params' => [], 'join' => ''];
+        }
+
+        $placeholders = implode(',', array_fill(0, count($brandIds), '?'));
+        return [
+            'join' => "JOIN brand_series_map bsm ON e.series_id = bsm.series_id
+                       AND (bsm.relationship_type = 'owner' OR bsm.relationship_type IS NULL)",
+            'clause' => "AND bsm.brand_id IN ($placeholders)",
+            'params' => array_map('intval', $brandIds)
+        ];
+    }
+
+    /**
+     * Get participation distribution for a series
+     * Shows how many participants attend 1, 2, 3... N events
+     *
+     * @param int $seriesId Series ID
+     * @param int $year Season year
+     * @param array|null $brandIds Optional brand filter
+     * @return array Distribution data
+     */
+    public function getSeriesParticipationDistribution(int $seriesId, int $year, ?array $brandIds = null): array {
+        $brandFilter = $this->buildSeriesBrandFilter($brandIds);
+
+        // Get total events in series for this year
+        $stmt = $this->pdo->prepare("
+            SELECT COUNT(*) FROM events e
+            {$brandFilter['join']}
+            WHERE e.series_id = ? AND YEAR(e.date) = ?
+            {$brandFilter['clause']}
+        ");
+        $params = array_merge([$seriesId, $year], $brandFilter['params']);
+        $stmt->execute($params);
+        $totalEvents = (int)$stmt->fetchColumn();
+
+        if ($totalEvents === 0) {
+            return [
+                'suppressed' => true,
+                'reason' => 'No events found for this series/year'
+            ];
+        }
+
+        // Get participation distribution
+        $sql = "
+            SELECT
+                events_attended,
+                COUNT(*) AS participant_count
+            FROM (
+                SELECT
+                    r.cyclist_id,
+                    COUNT(DISTINCT r.event_id) AS events_attended
+                FROM results r
+                JOIN events e ON r.event_id = e.id
+                {$brandFilter['join']}
+                WHERE e.series_id = ? AND YEAR(e.date) = ?
+                {$brandFilter['clause']}
+                GROUP BY r.cyclist_id
+            ) rider_counts
+            GROUP BY events_attended
+            ORDER BY events_attended
+        ";
+
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
+        $rawDistribution = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Get total participants
+        $stmt = $this->pdo->prepare("
+            SELECT COUNT(DISTINCT r.cyclist_id)
+            FROM results r
+            JOIN events e ON r.event_id = e.id
+            {$brandFilter['join']}
+            WHERE e.series_id = ? AND YEAR(e.date) = ?
+            {$brandFilter['clause']}
+        ");
+        $stmt->execute($params);
+        $totalParticipants = (int)$stmt->fetchColumn();
+
+        if ($totalParticipants < 10) {
+            return [
+                'suppressed' => true,
+                'reason' => 'Insufficient data (GDPR minimum 10)'
+            ];
+        }
+
+        // Build distribution with percentages
+        $distribution = [];
+        $singleEventCount = 0;
+        $fullSeriesCount = 0;
+        $totalEventsAttended = 0;
+
+        foreach ($rawDistribution as $row) {
+            $count = (int)$row['events_attended'];
+            $participants = (int)$row['participant_count'];
+            $pct = round(100 * $participants / $totalParticipants, 1);
+
+            $distribution[$count] = [
+                'events' => $count,
+                'count' => $participants,
+                'percentage' => $pct
+            ];
+
+            $totalEventsAttended += $count * $participants;
+
+            if ($count === 1) {
+                $singleEventCount = $participants;
+            }
+            if ($count === $totalEvents) {
+                $fullSeriesCount = $participants;
+            }
+        }
+
+        return [
+            'series_id' => $seriesId,
+            'season_year' => $year,
+            'total_events_in_series' => $totalEvents,
+            'total_participants' => $totalParticipants,
+            'distribution' => $distribution,
+            'avg_events_per_rider' => round($totalEventsAttended / $totalParticipants, 2),
+            'single_event_count' => $singleEventCount,
+            'single_event_pct' => round(100 * $singleEventCount / $totalParticipants, 1),
+            'full_series_count' => $fullSeriesCount,
+            'full_series_pct' => round(100 * $fullSeriesCount / $totalParticipants, 1),
+            'brand_filter' => $brandIds
+        ];
+    }
+
+    /**
+     * Get events with unique (single-event) participants
+     * Shows which events attract participants who ONLY attend that event
+     *
+     * @param int $seriesId Series ID
+     * @param int $year Season year
+     * @param array|null $brandIds Optional brand filter
+     * @return array Events ranked by unique participant percentage
+     */
+    public function getEventsWithUniqueParticipants(int $seriesId, int $year, ?array $brandIds = null): array {
+        $brandFilter = $this->buildSeriesBrandFilter($brandIds);
+
+        $sql = "
+            SELECT
+                e.id AS event_id,
+                e.name AS event_name,
+                e.date AS event_date,
+                e.venue_id,
+                v.name AS venue_name,
+                v.city AS venue_city,
+                total_stats.total_participants,
+                unique_stats.unique_count,
+                ROUND(100 * unique_stats.unique_count / total_stats.total_participants, 1) AS unique_pct
+            FROM events e
+            LEFT JOIN venues v ON e.venue_id = v.id
+            {$brandFilter['join']}
+            -- Total participants per event
+            JOIN (
+                SELECT event_id, COUNT(DISTINCT cyclist_id) AS total_participants
+                FROM results
+                GROUP BY event_id
+            ) total_stats ON total_stats.event_id = e.id
+            -- Unique participants (only this event in series)
+            LEFT JOIN (
+                SELECT
+                    r.event_id,
+                    COUNT(DISTINCT r.cyclist_id) AS unique_count
+                FROM results r
+                JOIN events e2 ON r.event_id = e2.id
+                WHERE r.cyclist_id IN (
+                    -- Riders who only attended 1 event in this series this year
+                    SELECT cyclist_id
+                    FROM results r3
+                    JOIN events e3 ON r3.event_id = e3.id
+                    WHERE e3.series_id = ? AND YEAR(e3.date) = ?
+                    GROUP BY cyclist_id
+                    HAVING COUNT(DISTINCT r3.event_id) = 1
+                )
+                AND e2.series_id = ? AND YEAR(e2.date) = ?
+                GROUP BY r.event_id
+            ) unique_stats ON unique_stats.event_id = e.id
+            WHERE e.series_id = ? AND YEAR(e.date) = ?
+            {$brandFilter['clause']}
+            AND total_stats.total_participants >= 10
+            ORDER BY unique_pct DESC
+        ";
+
+        $params = array_merge(
+            [$seriesId, $year, $seriesId, $year, $seriesId, $year],
+            $brandFilter['params']
+        );
+
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
+        $events = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        if (empty($events)) {
+            return [
+                'suppressed' => true,
+                'reason' => 'No events with sufficient data'
+            ];
+        }
+
+        return [
+            'series_id' => $seriesId,
+            'season_year' => $year,
+            'events' => $events,
+            'brand_filter' => $brandIds
+        ];
+    }
+
+    /**
+     * Get event retention year-over-year
+     * Shows how many participants return to the same event next year
+     *
+     * @param int $eventId Event ID (from year)
+     * @param int $fromYear From year
+     * @param int $toYear To year (usually fromYear + 1)
+     * @return array Retention statistics
+     */
+    public function getEventRetention(int $eventId, int $fromYear, int $toYear): array {
+        // Get event info
+        $stmt = $this->pdo->prepare("
+            SELECT e.*, s.name AS series_name, v.name AS venue_name, v.city AS venue_city
+            FROM events e
+            LEFT JOIN series s ON e.series_id = s.id
+            LEFT JOIN venues v ON e.venue_id = v.id
+            WHERE e.id = ?
+        ");
+        $stmt->execute([$eventId]);
+        $event = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$event) {
+            return ['error' => 'Event not found'];
+        }
+
+        // Find matching event in to_year (same series, same venue or similar name)
+        $stmt = $this->pdo->prepare("
+            SELECT id FROM events
+            WHERE series_id = ?
+              AND YEAR(date) = ?
+              AND (venue_id = ? OR name LIKE ?)
+            ORDER BY
+                CASE WHEN venue_id = ? THEN 0 ELSE 1 END,
+                date ASC
+            LIMIT 1
+        ");
+        $likeName = '%' . substr($event['name'], 0, 20) . '%';
+        $stmt->execute([$event['series_id'], $toYear, $event['venue_id'], $likeName, $event['venue_id']]);
+        $matchedEventId = $stmt->fetchColumn();
+
+        // Get participants from from_year event
+        $stmt = $this->pdo->prepare("
+            SELECT DISTINCT cyclist_id FROM results WHERE event_id = ?
+        ");
+        $stmt->execute([$eventId]);
+        $fromYearParticipants = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+        $participantCount = count($fromYearParticipants);
+        if ($participantCount < 10) {
+            return [
+                'suppressed' => true,
+                'reason' => 'Insufficient data (GDPR minimum 10)'
+            ];
+        }
+
+        // Check how many returned to same event
+        $returnedSameEvent = 0;
+        if ($matchedEventId) {
+            $placeholders = implode(',', array_fill(0, count($fromYearParticipants), '?'));
+            $stmt = $this->pdo->prepare("
+                SELECT COUNT(DISTINCT cyclist_id)
+                FROM results
+                WHERE event_id = ? AND cyclist_id IN ($placeholders)
+            ");
+            $stmt->execute(array_merge([$matchedEventId], $fromYearParticipants));
+            $returnedSameEvent = (int)$stmt->fetchColumn();
+        }
+
+        // Check how many returned to series (any event)
+        $stmt = $this->pdo->prepare("
+            SELECT COUNT(DISTINCT r.cyclist_id)
+            FROM results r
+            JOIN events e ON r.event_id = e.id
+            WHERE e.series_id = ?
+              AND YEAR(e.date) = ?
+              AND r.cyclist_id IN ($placeholders)
+        ");
+        $stmt->execute(array_merge([$event['series_id'], $toYear], $fromYearParticipants));
+        $returnedSeries = (int)$stmt->fetchColumn();
+
+        // Check how many returned to ANY event
+        $stmt = $this->pdo->prepare("
+            SELECT COUNT(DISTINCT r.cyclist_id)
+            FROM results r
+            JOIN events e ON r.event_id = e.id
+            WHERE YEAR(e.date) = ?
+              AND r.cyclist_id IN ($placeholders)
+        ");
+        $stmt->execute(array_merge([$toYear], $fromYearParticipants));
+        $returnedAny = (int)$stmt->fetchColumn();
+
+        return [
+            'event_id' => $eventId,
+            'event_name' => $event['name'],
+            'series_name' => $event['series_name'],
+            'venue_name' => $event['venue_name'],
+            'from_year' => $fromYear,
+            'to_year' => $toYear,
+            'matched_event_id' => $matchedEventId,
+            'participants_from_year' => $participantCount,
+            'returned_same_event' => $returnedSameEvent,
+            'returned_same_series' => $returnedSeries,
+            'returned_any_event' => $returnedAny,
+            'not_returned' => $participantCount - $returnedAny,
+            'same_event_retention_rate' => round(100 * $returnedSameEvent / $participantCount, 1),
+            'series_retention_rate' => round(100 * $returnedSeries / $participantCount, 1),
+            'overall_retention_rate' => round(100 * $returnedAny / $participantCount, 1)
+        ];
+    }
+
+    /**
+     * Get multi-year loyal riders for an event/venue
+     * Identifies riders who attend the same event year after year
+     *
+     * @param int $seriesId Series ID
+     * @param int|null $venueId Optional venue filter
+     * @param int $minYears Minimum consecutive years
+     * @return array Loyalty statistics
+     */
+    public function getEventLoyalRiders(int $seriesId, ?int $venueId = null, int $minYears = 2): array {
+        $venueClause = $venueId ? "AND e.venue_id = ?" : "";
+        $params = $venueId ? [$seriesId, $venueId] : [$seriesId];
+
+        // Find riders who attended events in this series/venue for multiple years
+        $sql = "
+            SELECT
+                r.cyclist_id,
+                GROUP_CONCAT(DISTINCT YEAR(e.date) ORDER BY YEAR(e.date)) AS years_attended,
+                COUNT(DISTINCT YEAR(e.date)) AS total_years,
+                MIN(YEAR(e.date)) AS first_year,
+                MAX(YEAR(e.date)) AS last_year,
+                COUNT(DISTINCT r.event_id) AS total_events_attended
+            FROM results r
+            JOIN events e ON r.event_id = e.id
+            WHERE e.series_id = ?
+            $venueClause
+            GROUP BY r.cyclist_id
+            HAVING COUNT(DISTINCT YEAR(e.date)) >= ?
+            ORDER BY total_years DESC, first_year ASC
+        ";
+
+        $params[] = $minYears;
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
+        $loyalRiders = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        if (count($loyalRiders) < 10) {
+            return [
+                'suppressed' => true,
+                'reason' => 'Insufficient data (GDPR minimum 10)'
+            ];
+        }
+
+        // Calculate consecutive years for each rider
+        foreach ($loyalRiders as &$rider) {
+            $years = array_map('intval', explode(',', $rider['years_attended']));
+            $rider['consecutive_years'] = $this->calculateConsecutiveYears($years);
+        }
+
+        // Aggregate statistics
+        $totalLoyalRiders = count($loyalRiders);
+        $avgConsecutive = array_sum(array_column($loyalRiders, 'consecutive_years')) / $totalLoyalRiders;
+        $avgTotalYears = array_sum(array_column($loyalRiders, 'total_years')) / $totalLoyalRiders;
+        $maxConsecutive = max(array_column($loyalRiders, 'consecutive_years'));
+
+        // Check how many are "single-event loyalists" (only attend one event in series per year)
+        $singleEventLoyalists = 0;
+        foreach ($loyalRiders as $rider) {
+            // Rider attends same number of events as years = single event per year
+            if ($rider['total_events_attended'] == $rider['total_years']) {
+                $singleEventLoyalists++;
+            }
+        }
+
+        return [
+            'series_id' => $seriesId,
+            'venue_id' => $venueId,
+            'min_years' => $minYears,
+            'total_loyal_riders' => $totalLoyalRiders,
+            'avg_consecutive_years' => round($avgConsecutive, 1),
+            'avg_total_years' => round($avgTotalYears, 1),
+            'max_consecutive_years' => $maxConsecutive,
+            'single_event_loyalists' => $singleEventLoyalists,
+            'single_event_loyalist_pct' => round(100 * $singleEventLoyalists / $totalLoyalRiders, 1),
+            'riders' => array_slice($loyalRiders, 0, 100) // Limit for privacy
+        ];
+    }
+
+    /**
+     * Calculate maximum consecutive years from a list of years
+     */
+    private function calculateConsecutiveYears(array $years): int {
+        if (empty($years)) return 0;
+
+        sort($years);
+        $maxConsecutive = 1;
+        $currentConsecutive = 1;
+
+        for ($i = 1; $i < count($years); $i++) {
+            if ($years[$i] == $years[$i-1] + 1) {
+                $currentConsecutive++;
+                $maxConsecutive = max($maxConsecutive, $currentConsecutive);
+            } else {
+                $currentConsecutive = 1;
+            }
+        }
+
+        return $maxConsecutive;
+    }
+
+    /**
+     * Get available series for event participation analysis
+     *
+     * @param array|null $brandIds Optional brand filter
+     * @return array Series with event counts
+     */
+    public function getAvailableSeriesForEventAnalysis(?array $brandIds = null): array {
+        $brandFilter = $this->buildSeriesBrandFilter($brandIds);
+
+        $sql = "
+            SELECT
+                s.id,
+                s.name,
+                COUNT(DISTINCT e.id) AS event_count,
+                COUNT(DISTINCT YEAR(e.date)) AS year_count,
+                MIN(YEAR(e.date)) AS first_year,
+                MAX(YEAR(e.date)) AS last_year,
+                COUNT(DISTINCT r.cyclist_id) AS total_participants
+            FROM series s
+            JOIN events e ON e.series_id = s.id
+            {$brandFilter['join']}
+            LEFT JOIN results r ON r.event_id = e.id
+            WHERE e.date IS NOT NULL
+            " . ($brandFilter['clause'] ? str_replace('AND bsm.', 'AND bsm.', $brandFilter['clause']) : "") . "
+            GROUP BY s.id, s.name
+            HAVING event_count >= 2 AND total_participants >= 10
+            ORDER BY total_participants DESC
+        ";
+
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($brandFilter['params']);
+
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Get available years for a series
+     *
+     * @param int $seriesId Series ID
+     * @return array Years with event/participant counts
+     */
+    public function getAvailableYearsForSeries(int $seriesId): array {
+        $stmt = $this->pdo->prepare("
+            SELECT
+                YEAR(e.date) AS year,
+                COUNT(DISTINCT e.id) AS event_count,
+                COUNT(DISTINCT r.cyclist_id) AS participant_count
+            FROM events e
+            LEFT JOIN results r ON r.event_id = e.id
+            WHERE e.series_id = ? AND e.date IS NOT NULL
+            GROUP BY YEAR(e.date)
+            HAVING participant_count >= 10
+            ORDER BY year DESC
+        ");
+        $stmt->execute([$seriesId]);
+
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Get series-level retention overview
+     * Compares retention across events in a series
+     *
+     * @param int $seriesId Series ID
+     * @param int $fromYear From year
+     * @param int $toYear To year
+     * @param array|null $brandIds Optional brand filter
+     * @return array Per-event retention comparison
+     */
+    public function getSeriesEventRetentionComparison(int $seriesId, int $fromYear, int $toYear, ?array $brandIds = null): array {
+        $brandFilter = $this->buildSeriesBrandFilter($brandIds);
+
+        // Get all events in from_year for this series
+        $sql = "
+            SELECT e.id, e.name, e.date, e.venue_id, v.name AS venue_name
+            FROM events e
+            LEFT JOIN venues v ON e.venue_id = v.id
+            {$brandFilter['join']}
+            WHERE e.series_id = ? AND YEAR(e.date) = ?
+            {$brandFilter['clause']}
+            ORDER BY e.date
+        ";
+
+        $params = array_merge([$seriesId, $fromYear], $brandFilter['params']);
+        $stmt = $this->pdo->prepare($sql);
+        $stmt->execute($params);
+        $events = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        if (empty($events)) {
+            return [
+                'suppressed' => true,
+                'reason' => 'No events found'
+            ];
+        }
+
+        $results = [];
+        foreach ($events as $event) {
+            $retention = $this->getEventRetention($event['id'], $fromYear, $toYear);
+            if (!isset($retention['suppressed'])) {
+                $results[] = array_merge($event, [
+                    'retention' => $retention
+                ]);
+            }
+        }
+
+        if (empty($results)) {
+            return [
+                'suppressed' => true,
+                'reason' => 'No events with sufficient data'
+            ];
+        }
+
+        // Sort by retention rate
+        usort($results, function($a, $b) {
+            return ($b['retention']['same_event_retention_rate'] ?? 0)
+                 - ($a['retention']['same_event_retention_rate'] ?? 0);
+        });
+
+        return [
+            'series_id' => $seriesId,
+            'from_year' => $fromYear,
+            'to_year' => $toYear,
+            'events' => $results,
+            'brand_filter' => $brandIds
+        ];
+    }
 }
