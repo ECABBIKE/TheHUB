@@ -527,4 +527,4 @@ include __DIR__ . '/components/unified-layout.php';
     <?php endif; ?>
 </div>
 
-<?php include __DIR__ . '/components/unified-footer.php'; ?>
+<?php include __DIR__ . '/components/unified-layout-footer.php'; ?>
