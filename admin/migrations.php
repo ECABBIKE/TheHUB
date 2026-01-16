@@ -38,6 +38,9 @@ $migrationChecks = [
     '003_seed_series_levels.sql' => [
         'data' => ['series.series_level IS NOT NULL']
     ],
+    '007_brands_tables.sql' => [
+        'tables' => ['brands', 'brand_series_map']
+    ],
     '009_first_season_journey.sql' => [
         'tables' => ['rider_first_season', 'first_season_aggregates', 'first_season_kpi_definitions']
     ],
