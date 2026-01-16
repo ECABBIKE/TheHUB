@@ -652,23 +652,65 @@ class SVGChartRenderer {
     }
 
     // =========================================================================
-    // PNG EXPORT (for PDF)
+    // v3.0.1: PNG EXPORT WITH GRACEFUL FALLBACK
     // =========================================================================
+
+    /** @var bool|null Cache for Imagick availability */
+    private static ?bool $imagickAvailable = null;
+
+    /**
+     * Kontrollera om PNG-konvertering ar tillganglig
+     *
+     * @return bool True om Imagick ar tillganglig och fungerar
+     */
+    public static function canConvertToPng(): bool {
+        if (self::$imagickAvailable !== null) {
+            return self::$imagickAvailable;
+        }
+
+        if (!extension_loaded('imagick')) {
+            self::$imagickAvailable = false;
+            return false;
+        }
+
+        // Testa faktisk konvertering
+        try {
+            $testSvg = '<svg xmlns="http://www.w3.org/2000/svg" width="10" height="10"><rect fill="red" width="10" height="10"/></svg>';
+            $im = new \Imagick();
+            $im->readImageBlob($testSvg);
+            $im->setImageFormat('png');
+            $im->getImageBlob();
+            $im->destroy();
+
+            self::$imagickAvailable = true;
+        } catch (\Exception $e) {
+            self::$imagickAvailable = false;
+        }
+
+        return self::$imagickAvailable;
+    }
 
     /**
      * Konvertera SVG till PNG med Imagick (om tillganglig)
      *
+     * v3.0.1: Forbattrad felhantering och graceful fallback
+     *
      * @param string $svg SVG-kod
      * @param int $scale Skalningsfaktor (2 = 2x resolution)
-     * @return string|null PNG data eller null om Imagick saknas
+     * @return string|null PNG data eller null om konvertering misslyckades
      */
     public function svgToPng(string $svg, int $scale = 2): ?string {
-        if (!extension_loaded('imagick')) {
+        if (!self::canConvertToPng()) {
             return null;
         }
 
         try {
             $im = new \Imagick();
+
+            // Satt bakgrundsfargen for transparens
+            $im->setBackgroundColor(new \ImagickPixel('transparent'));
+
+            // Las SVG
             $im->readImageBlob($svg);
             $im->setImageFormat('png');
 
@@ -679,10 +721,46 @@ class SVGChartRenderer {
                 $im->resizeImage($w, $h, \Imagick::FILTER_LANCZOS, 1);
             }
 
-            return $im->getImageBlob();
+            $png = $im->getImageBlob();
+            $im->destroy();
+
+            return $png;
         } catch (\Exception $e) {
+            // Logga fel men returnera null for graceful fallback
+            error_log('SVGChartRenderer::svgToPng failed: ' . $e->getMessage());
             return null;
         }
+    }
+
+    /**
+     * Hamta chart som PNG eller SVG (graceful fallback)
+     *
+     * v3.0.1: Om Imagick saknas, returneras SVG istallet med en flagga
+     *
+     * @param string $svg SVG-kod
+     * @param int $scale Skalningsfaktor
+     * @return array ['format' => 'png'|'svg', 'data' => binary data, 'mime' => 'image/png'|'image/svg+xml']
+     */
+    public function getChartAsImage(string $svg, int $scale = 2): array {
+        $png = $this->svgToPng($svg, $scale);
+
+        if ($png !== null) {
+            return [
+                'format' => 'png',
+                'data' => $png,
+                'mime' => 'image/png',
+                'base64' => base64_encode($png),
+            ];
+        }
+
+        // Graceful fallback to SVG
+        return [
+            'format' => 'svg',
+            'data' => $svg,
+            'mime' => 'image/svg+xml',
+            'base64' => base64_encode($svg),
+            'fallback_reason' => 'Imagick not available',
+        ];
     }
 
     /**
@@ -694,5 +772,74 @@ class SVGChartRenderer {
      */
     public function saveToFile(string $svg, string $path): bool {
         return file_put_contents($path, $svg) !== false;
+    }
+
+    /**
+     * Spara som PNG till fil (eller SVG om PNG inte tillgangligt)
+     *
+     * v3.0.1: Graceful fallback - sparar som SVG om Imagick saknas
+     *
+     * @param string $svg SVG-kod
+     * @param string $path Filsokvag (utan extension)
+     * @param int $scale Skalningsfaktor
+     * @return array ['success' => bool, 'path' => string, 'format' => 'png'|'svg']
+     */
+    public function saveAsImage(string $svg, string $path, int $scale = 2): array {
+        $image = $this->getChartAsImage($svg, $scale);
+
+        if ($image['format'] === 'png') {
+            $fullPath = $path . '.png';
+            $success = file_put_contents($fullPath, $image['data']) !== false;
+        } else {
+            $fullPath = $path . '.svg';
+            $success = file_put_contents($fullPath, $image['data']) !== false;
+        }
+
+        return [
+            'success' => $success,
+            'path' => $fullPath,
+            'format' => $image['format'],
+            'fallback_reason' => $image['fallback_reason'] ?? null,
+        ];
+    }
+
+    /**
+     * Generera inline data URI for HTML/PDF embedding
+     *
+     * @param string $svg SVG-kod
+     * @param bool $preferPng Forsok konvertera till PNG om mojligt
+     * @return string Data URI (data:image/...)
+     */
+    public function toDataUri(string $svg, bool $preferPng = false): string {
+        if ($preferPng) {
+            $image = $this->getChartAsImage($svg);
+            return 'data:' . $image['mime'] . ';base64,' . $image['base64'];
+        }
+
+        return 'data:image/svg+xml;base64,' . base64_encode($svg);
+    }
+
+    /**
+     * Hamta systeminformation om PNG-support
+     *
+     * @return array Information om Imagick-tillganglighet
+     */
+    public static function getPngSupportInfo(): array {
+        $info = [
+            'imagick_extension' => extension_loaded('imagick'),
+            'can_convert' => self::canConvertToPng(),
+            'php_version' => PHP_VERSION,
+        ];
+
+        if (extension_loaded('imagick')) {
+            try {
+                $info['imagick_version'] = \Imagick::getVersion()['versionString'] ?? 'unknown';
+                $info['supported_formats'] = \Imagick::queryFormats('SVG') ? ['SVG'] : [];
+            } catch (\Exception $e) {
+                $info['imagick_error'] = $e->getMessage();
+            }
+        }
+
+        return $info;
     }
 }

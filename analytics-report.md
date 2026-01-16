@@ -1,31 +1,37 @@
 # TheHUB Analytics Platform - Teknisk Dokumentation
 
-> Komplett guide till analytics-systemet v3.0, dess komponenter och SCF-nivå-rapportering
+> Komplett guide till analytics-systemet v3.0.1, dess komponenter och SCF-nivå-rapportering
 
-**Version:** 3.0.0
+**Version:** 3.0.1 (100% Production Ready)
 **Senast uppdaterad:** 2026-01-16
-**Status:** Production Ready
+**Status:** Production Ready - Revision Grade
 
 ---
 
 ## Innehallsforteckning
 
 1. [Oversikt](#oversikt)
-2. [Arkitektur](#arkitektur)
-3. [Databas-struktur](#databas-struktur)
-4. [Karnkomponenter](#karnkomponenter)
-5. [KPI-definitioner (VIKTIGT)](#kpi-definitioner)
-6. [Analytics-sidor](#analytics-sidor)
-7. [Datakvalitet](#datakvalitet)
+2. [Production Ready Checklist](#production-ready-checklist)
+3. [Arkitektur](#arkitektur)
+4. [Brand/Varumarke-dimension](#brandvarumarke-dimension)
+5. [Databas-struktur](#databas-struktur)
+6. [Karnkomponenter](#karnkomponenter)
+7. [KPI-definitioner (VIKTIGT)](#kpi-definitioner)
 8. [Export och Reproducerbarhet](#export-och-reproducerbarhet)
-9. [Setup och Underhall](#setup-och-underhall)
-10. [Changelog](#changelog)
+9. [Identity Resolution och Recalc](#identity-resolution-och-recalc)
+10. [Datakvalitet](#datakvalitet)
+11. [Drift och Cron](#drift-och-cron)
+12. [Sakerhet och GDPR](#sakerhet-och-gdpr)
+13. [Analytics-sidor](#analytics-sidor)
+14. [Setup och Underhall](#setup-och-underhall)
+15. [Changelog](#changelog)
+16. [Open Questions / Assumptions](#open-questions--assumptions)
 
 ---
 
 ## Oversikt
 
-TheHUB Analytics ar ett komplett analysverktyg for svensk cykelsport med **10+ ars data** och stod for SCF-nivå-rapportering. Systemet beraknar och visualiserar nyckeltal (KPIs) for:
+TheHUB Analytics ar ett komplett analysverktyg for svensk cykelsport med **10+ ars data** och stod for SCF-nivå-rapportering. Systemet ar designat for **revision-grade reproducerbarhet** - varje export kan aterskaps exakt.
 
 | Omrade | Beskrivning | Huvudsida |
 |--------|-------------|-----------|
@@ -37,6 +43,7 @@ TheHUB Analytics ar ett komplett analysverktyg for svensk cykelsport med **10+ a
 | **Cohort Analysis** | Hur utvecklas en argang over tid? | `analytics-cohorts.php` |
 | **At-Risk Prediction** | Vilka riders riskerar att sluta? | `analytics-atrisk.php` |
 | **Data Quality** | Hur komplett ar var data? | `analytics-data-quality.php` |
+| **Export Center** | Hantera och verifiera exporter | `analytics-export-center.php` |
 
 ### Behorigheter
 
@@ -48,8 +55,43 @@ Analytics kraver en av foljande:
 
 1. **Pre-aggregerad data** - Tunga berakningar gors en gang och sparas
 2. **Identity Resolution** - Dubbletter hanteras automatiskt via canonical IDs
-3. **Reproducerbarhet** - Alla exporter loggas med fingerprint
+3. **Reproducerbarhet** - Alla exporter bygger pa snapshot_id och kan aterskaps
 4. **GDPR-kompatibel** - Aggregerad data publikt, persondata bakom behorighet
+5. **Revision Grade** - Varje export har fingerprint, manifest och provenance
+
+---
+
+## Production Ready Checklist
+
+**Innan systemet ar 100% production ready, bocka av foljande:**
+
+### Databas
+- [ ] Migration `007_production_ready.sql` kord
+- [ ] Tabell `brands` och `brand_series_map` finns och ar populerad
+- [ ] Tabell `analytics_recalc_queue` finns
+- [ ] Tabell `analytics_exports` har `snapshot_id NOT NULL` och `export_uid`
+- [ ] Tabell `analytics_cron_runs` har `heartbeat_at` och `error_text`
+- [ ] Index pa alla foreign keys och vanliga queries
+
+### Kod
+- [ ] `ExportLogger` kraver `snapshot_id` for alla exporter
+- [ ] `IdentityResolver::mergeRiders()` laggar jobb i `analytics_recalc_queue`
+- [ ] `AnalyticsEngine::processRecalcQueue()` implementerad och testad
+- [ ] `SVGChartRenderer::svgToPng()` returnerar `null` om Imagick saknas (graceful fallback)
+- [ ] `PdfExportBuilder` genererar "Definitions & Provenance" block i alla PDF-exporter
+- [ ] Alla export-endpoints validerar `snapshot_id` (default: senaste for aret)
+
+### Drift
+- [ ] Cron-jobb `refresh-analytics.php` har heartbeat-logik (var 60:e sekund)
+- [ ] Cron-jobb har timeout (max 30 min) och failure recovery
+- [ ] Log retention konfigurerad (90 dagar for analytics_cron_runs)
+- [ ] Recalc queue processas dagligen efter huvudjobbet
+
+### Sakerhet/GDPR
+- [ ] `contains_pii` flaggas korrekt pa alla exporttyper
+- [ ] IP-adresser hashas eller tas bort efter 90 dagar
+- [ ] Rate limit for PII-exporter (max 10 per timme per anvandare)
+- [ ] Export Center visar audit trail
 
 ---
 
@@ -58,9 +100,10 @@ Analytics kraver en av foljande:
 ```
 ┌─────────────────────────────────────────────────────────────────────────────┐
 │                           PRESENTATION LAYER                                 │
-│  analytics-dashboard │ analytics-cohorts │ analytics-atrisk │ etc.          │
+│  analytics-dashboard │ analytics-cohorts │ analytics-export-center          │
 │                                                                              │
-│  SVGChartRenderer.php ─── Grafer for PDF (ingen Node.js)                    │
+│  PdfExportBuilder.php ─── PDF med SVG-grafer + Definitions block            │
+│  SVGChartRenderer.php ─── Grafer (PNG via Imagick om tillganglig)           │
 └─────────────────────────────────┬───────────────────────────────────────────┘
                                   │
 ┌─────────────────────────────────▼───────────────────────────────────────────┐
@@ -68,18 +111,17 @@ Analytics kraver en av foljande:
 │                                                                              │
 │  ┌─────────────────────┐     ┌─────────────────────┐                        │
 │  │   KPICalculator     │     │   ExportLogger      │                        │
-│  │   ~2500 rader       │     │   GDPR-loggning     │                        │
-│  │                     │     │   Manifest          │                        │
-│  │  - getRetentionRate │     │   Fingerprint       │                        │
-│  │  - getCohortData    │     └─────────────────────┘                        │
-│  │  - getRiskScores    │                                                    │
-│  │  - getDataQuality   │     ┌─────────────────────┐                        │
-│  └─────────────────────┘     │  AnalyticsConfig    │                        │
-│                              │  v3.0               │                        │
-│                              │  - KPI-definitioner │                        │
-│                              │  - Klassrankning    │                        │
-│                              │  - Riskfaktorer     │                        │
-│                              │  - Troskel          │                        │
+│  │   ~2500 rader       │     │   - snapshot_id REQ │                        │
+│  │                     │     │   - export_uid      │                        │
+│  │  - getRetentionRate │     │   - fingerprint     │                        │
+│  │  - getCohortData    │     │   - manifest        │                        │
+│  │  - getByBrand()     │     └─────────────────────┘                        │
+│  └─────────────────────┘                                                    │
+│                              ┌─────────────────────┐                        │
+│                              │  AnalyticsConfig    │                        │
+│                              │  v3.0.1             │                        │
+│                              │  - PLATFORM_VERSION │                        │
+│                              │  - KPI_DEFINITIONS  │                        │
 │                              └─────────────────────┘                        │
 └─────────────────────────────────┬───────────────────────────────────────────┘
                                   │
@@ -89,39 +131,105 @@ Analytics kraver en av foljande:
 │  ┌─────────────────────┐     ┌─────────────────────┐                        │
 │  │  AnalyticsEngine    │     │  IdentityResolver   │                        │
 │  │                     │     │                     │                        │
-│  │  - calculateYearly  │────▶│  - resolveRider()   │                        │
-│  │  - calculateSeries  │     │  - getCanonicalId() │                        │
-│  │  - calculateClubs   │     │  - mergeRiders()    │                        │
-│  │  - Job management   │     └─────────────────────┘                        │
-│  └─────────────────────┘                                                    │
+│  │  - calculateYearly  │────▶│  - mergeRiders()    │───┐                    │
+│  │  - processRecalc()  │     │  → recalc_queue     │   │                    │
+│  └─────────────────────┘     └─────────────────────┘   │                    │
+│                                                         │                    │
+│  ┌──────────────────────────────────────────────────────▼──────────────────┐│
+│  │  analytics_recalc_queue                                                 ││
+│  │  - rider_id, year_from, year_to, reason, status                        ││
+│  └─────────────────────────────────────────────────────────────────────────┘│
 └─────────────────────────────────┬───────────────────────────────────────────┘
                                   │
 ┌─────────────────────────────────▼───────────────────────────────────────────┐
 │                           DATA LAYER                                         │
 │                                                                              │
-│  PRE-AGGREGATED TABLES              │  RAW TABLES                           │
-│  ─────────────────────              │  ──────────                           │
-│  rider_yearly_stats                 │  results                              │
-│  series_participation               │  events                               │
-│  series_crossover                   │  riders                               │
-│  club_yearly_stats                  │  clubs                                │
-│  venue_yearly_stats                 │  series                               │
-│  analytics_snapshots (v2)           │                                       │
-│  analytics_exports                  │                                       │
-│  data_quality_metrics               │                                       │
-│  analytics_kpi_definitions          │                                       │
+│  PRE-AGGREGATED TABLES              │  REFERENCE TABLES                     │
+│  ─────────────────────              │  ────────────────                     │
+│  rider_yearly_stats                 │  brands                               │
+│  series_participation               │  brand_series_map                     │
+│  series_crossover                   │  analytics_kpi_definitions            │
+│  club_yearly_stats                  │                                       │
+│  analytics_snapshots                │  RAW TABLES                           │
+│  analytics_exports                  │  ──────────                           │
+│  data_quality_metrics               │  results, events, riders, clubs       │
 └─────────────────────────────────────────────────────────────────────────────┘
 ```
 
-### Dataflode
+### Dataflode (Revision Grade)
 
 1. **Radata** lagras i `results`, `events`, `riders`, `clubs`
 2. **IdentityResolver** matchar riders mot canonical IDs
-3. **AnalyticsEngine** beraknar och aggregerar data till pre-aggregerade tabeller
-4. **KPICalculator** laser fran pre-aggregerade tabeller (snabbt)
-5. **ExportLogger** loggar alla exporter med manifest och fingerprint
-6. **SVGChartRenderer** skapar grafer for PDF-export
-7. **Admin-sidor** visualiserar med Chart.js (web) eller SVG (PDF)
+3. **AnalyticsEngine** beraknar och sparar till pre-aggregerade tabeller
+4. **Snapshot** skapas med unik ID, timestamp och fingerprint
+5. **Export** kraver `snapshot_id` - all data hamtas fran snapshot-tidpunkten
+6. **ExportLogger** skapar `export_uid`, beraknar fingerprint, sparar manifest
+7. **PDF** innehaller "Definitions & Provenance" block med alla metadata
+
+---
+
+## Brand/Varumarke-dimension
+
+### Definition
+
+**Brand** (varumarke) ar ett overordnat koncept som grupperar en eller flera **serier**.
+
+Exempel:
+- Brand "GES" → Serier: GES Enduro Cup, GES Junior
+- Brand "Swedish Enduro Series" → Serier: SES National, SES Regional
+- Brand "Downhill SM" → Serier: SM DH Elite, SM DH Junior
+
+### Datamodell
+
+```
+┌─────────────┐         ┌─────────────────────┐         ┌─────────────┐
+│   brands    │ 1───N   │  brand_series_map   │   N───1 │   series    │
+├─────────────┤         ├─────────────────────┤         ├─────────────┤
+│ id (PK)     │         │ brand_id (FK)       │         │ id (PK)     │
+│ name        │         │ series_id (FK)      │         │ name        │
+│ short_code  │         │ valid_from_year     │         │ year        │
+│ logo_url    │         │ valid_to_year       │         │ ...         │
+│ active      │         └─────────────────────┘         └─────────────┘
+└─────────────┘
+```
+
+**Motivering for brand_series_map (inte brand_event_map):**
+- Serier ar stabila over tid, events ar efemera
+- En serie tillhor alltid ett brand (1:N)
+- Historisk koppling: `valid_from_year`, `valid_to_year` hanterar omorganisationer
+- Mindre data att underhalla (100 serier vs 10000 events)
+
+### Anvandning i KPICalculator
+
+```php
+// Hamta alla serier for ett brand
+$seriesIds = $this->getSeriesForBrand($brandId, $year);
+
+// Hamta cohort-data filtrerat pa brand
+public function getCohortRetentionByBrand(int $cohortYear, int $brandId, int $maxYears = 5): array {
+    $seriesIds = $this->getSeriesForBrand($brandId, $cohortYear);
+    if (empty($seriesIds)) {
+        return [];
+    }
+
+    // Filtrera pa riders som deltog i nagon av brandets serier
+    $placeholders = implode(',', array_fill(0, count($seriesIds), '?'));
+    // ... resten av logiken
+}
+
+// Privat helper
+private function getSeriesForBrand(int $brandId, int $year): array {
+    $stmt = $this->pdo->prepare("
+        SELECT series_id
+        FROM brand_series_map
+        WHERE brand_id = ?
+          AND (valid_from_year IS NULL OR valid_from_year <= ?)
+          AND (valid_to_year IS NULL OR valid_to_year >= ?)
+    ");
+    $stmt->execute([$brandId, $year, $year]);
+    return $stmt->fetchAll(PDO::FETCH_COLUMN);
+}
+```
 
 ---
 
@@ -148,733 +256,1096 @@ Per-rider, per-ar aggregerad statistik.
 | calculation_version | VARCHAR | Vilken version som beraknade |
 | calculated_at | TIMESTAMP | Nar berakningen gjordes |
 
-#### `series_participation`
-Detaljerat seriedeltagande per rider och ar.
-
-| Kolumn | Typ | Beskrivning |
-|--------|-----|-------------|
-| rider_id | INT | Canonical rider ID |
-| series_id | INT | Serie-ID |
-| season_year | INT | Sasong |
-| events_attended | INT | Antal events i serien |
-| first_event_date | DATE | Forsta event i serien detta ar |
-| last_event_date | DATE | Sista event i serien detta ar |
-| total_points | DECIMAL | Poang i serien |
-| final_rank | INT | Slutplacering |
-| is_entry_series | TINYINT | 1 = forsta serien nagonsin for ridern |
-
-#### `series_crossover`
-Rider-floden mellan serier.
-
-| Kolumn | Typ | Beskrivning |
-|--------|-----|-------------|
-| rider_id | INT | Canonical rider ID |
-| from_series_id | INT | Ursprungsserie |
-| to_series_id | INT | Malserie |
-| from_year | INT | Ar fran |
-| to_year | INT | Ar till |
-| crossover_type | ENUM | `same_year`, `next_year`, `multi_year` |
-
-#### `analytics_snapshots` (v2)
+#### `analytics_snapshots`
 Historiska KPI-ogonblicksbilder med reproducerbarhet.
 
 | Kolumn | Typ | Beskrivning |
 |--------|-----|-------------|
-| id | INT | Unik ID |
+| id | INT | Unik snapshot ID |
 | snapshot_date | DATE | Datum |
 | snapshot_type | ENUM | daily/weekly/monthly/quarterly/yearly |
+| season_year | INT | Vilken sasong snapshot galler |
 | metrics | JSON | Alla KPIs |
-| **generated_at** | TIMESTAMP | Exakt tidpunkt for generering |
-| **season_year** | INT | Vilken sasong snapshot galler |
-| **source_max_updated_at** | TIMESTAMP | MAX(updated_at) fran kalldata |
-| **code_version** | VARCHAR | Platform-version (t.ex. 3.0.0) |
-| **data_fingerprint** | VARCHAR(64) | SHA256 hash for verifiering |
+| generated_at | TIMESTAMP | Exakt tidpunkt for generering |
+| source_max_updated_at | TIMESTAMP | MAX(updated_at) fran kalldata |
+| code_version | VARCHAR | Platform-version (t.ex. 3.0.1) |
+| data_fingerprint | VARCHAR(64) | SHA256 hash for verifiering |
+| calculation_params | JSON | Parametrar som anvandes |
 
-#### `analytics_exports` (NY)
-GDPR-loggning av alla exporter.
+#### `analytics_exports` (v3.0.1)
+GDPR-loggning av alla exporter med full reproducerbarhet.
 
-| Kolumn | Typ | Beskrivning |
-|--------|-----|-------------|
-| id | INT | Unik export-ID |
-| export_type | VARCHAR | Typ: riders_at_risk, cohort, winback, etc. |
-| export_format | VARCHAR | Format: csv, pdf, json |
-| exported_by | INT | User ID |
-| exported_at | TIMESTAMP | Tidpunkt |
-| ip_address | VARCHAR | IP for GDPR |
-| season_year | INT | Vilket ar som exporterades |
-| row_count | INT | Antal rader |
-| contains_pii | TINYINT | 1 om persondata ingår |
-| data_fingerprint | VARCHAR(64) | SHA256 hash av data |
-| manifest | JSON | Komplett manifest |
+| Kolumn | Typ | Null | Beskrivning |
+|--------|-----|------|-------------|
+| id | INT | NO | Auto-increment PK |
+| **export_uid** | VARCHAR(36) | NO | UUID for delning/filsystem |
+| **snapshot_id** | INT | NO | FK till analytics_snapshots |
+| export_type | VARCHAR(50) | NO | Typ: riders_at_risk, cohort, winback |
+| export_format | VARCHAR(20) | NO | Format: csv, pdf, json |
+| filename | VARCHAR(255) | YES | Genererat filnamn |
+| exported_by | INT | YES | User ID |
+| exported_at | TIMESTAMP | NO | DEFAULT CURRENT_TIMESTAMP |
+| ip_address | VARCHAR(45) | YES | IP for GDPR |
+| ip_hash | VARCHAR(64) | YES | SHA256 av IP (for anonymisering) |
+| season_year | INT | YES | Vilket ar som exporterades |
+| series_id | INT | YES | Filtrering pa serie |
+| brand_id | INT | YES | Filtrering pa brand |
+| **filters_json** | JSON | YES | Alla filter som anvandes |
+| row_count | INT | NO | Antal rader |
+| contains_pii | TINYINT(1) | NO | 1 om persondata ingar |
+| data_fingerprint | VARCHAR(64) | YES | SHA256 hash av exportdata |
+| source_query_hash | VARCHAR(64) | YES | Hash av SQL-query |
+| manifest | JSON | YES | Komplett manifest |
+| created_at | TIMESTAMP | NO | DEFAULT CURRENT_TIMESTAMP |
+| updated_at | TIMESTAMP | YES | ON UPDATE CURRENT_TIMESTAMP |
 
-#### `data_quality_metrics` (NY)
-Daglig datakvalitetsmatning per sasong.
+**Index:**
+- UNIQUE(export_uid)
+- INDEX(snapshot_id)
+- INDEX(season_year, export_type)
+- INDEX(exported_by, exported_at)
+- INDEX(contains_pii, exported_at)
 
-| Kolumn | Typ | Beskrivning |
-|--------|-----|-------------|
-| season_year | INT | Sasong |
-| measured_at | TIMESTAMP | Matningstidpunkt |
-| birth_year_coverage | DECIMAL | % riders med fodelseår |
-| club_coverage | DECIMAL | % riders med klubb |
-| gender_coverage | DECIMAL | % riders med kon |
-| class_coverage | DECIMAL | % results med klass |
-| potential_duplicates | INT | Antal potentiella dubbletter |
-| merged_riders | INT | Antal sammanslagna riders |
+#### `brands` (NY)
+Varumarken som grupperar serier.
 
-#### `analytics_kpi_definitions` (NY)
-Dokumentation av alla KPI-definitioner.
+| Kolumn | Typ | Null | Beskrivning |
+|--------|-----|------|-------------|
+| id | INT | NO | Auto-increment PK |
+| name | VARCHAR(100) | NO | Fullstandigt namn |
+| short_code | VARCHAR(20) | YES | Kort kod (t.ex. GES, SES) |
+| logo_url | VARCHAR(255) | YES | URL till logotyp |
+| description | TEXT | YES | Beskrivning |
+| active | TINYINT(1) | NO | DEFAULT 1 |
+| created_at | TIMESTAMP | NO | DEFAULT CURRENT_TIMESTAMP |
 
-| Kolumn | Typ | Beskrivning |
-|--------|-----|-------------|
-| kpi_code | VARCHAR | Unik kod (t.ex. retention_from_prev) |
-| kpi_name | VARCHAR | Lasbart namn |
-| description | TEXT | Fullstandig beskrivning |
-| formula | TEXT | Matematisk formel |
-| numerator_desc | VARCHAR | Beskrivning av taljare |
-| denominator_desc | VARCHAR | Beskrivning av namnare |
-| implementation_method | VARCHAR | PHP-metod som implementerar KPI |
+#### `brand_series_map` (NY)
+Koppling mellan brands och serier.
+
+| Kolumn | Typ | Null | Beskrivning |
+|--------|-----|------|-------------|
+| id | INT | NO | Auto-increment PK |
+| brand_id | INT | NO | FK till brands |
+| series_id | INT | NO | FK till series |
+| valid_from_year | INT | YES | Giltig fran ar (NULL=alltid) |
+| valid_to_year | INT | YES | Giltig till ar (NULL=fortfarande) |
+| is_primary | TINYINT(1) | NO | DEFAULT 0, 1=huvudserie |
+
+**Index:**
+- UNIQUE(brand_id, series_id)
+- INDEX(series_id)
+- INDEX(brand_id, valid_from_year, valid_to_year)
+
+#### `analytics_recalc_queue` (NY)
+Ko for omberakning efter merge eller dataandring.
+
+| Kolumn | Typ | Null | Beskrivning |
+|--------|-----|------|-------------|
+| id | INT | NO | Auto-increment PK |
+| reason | VARCHAR(50) | NO | Anledning: rider_merge, data_fix, manual |
+| rider_id | INT | YES | Canonical rider ID (NULL=alla) |
+| year_from | INT | NO | Forsta ar att omberakna |
+| year_to | INT | NO | Sista ar att omberakna |
+| priority | TINYINT | NO | DEFAULT 5 (1=hogst, 10=lagst) |
+| status | ENUM | NO | pending, processing, completed, failed |
+| error_text | TEXT | YES | Felmeddelande om failed |
+| created_at | TIMESTAMP | NO | DEFAULT CURRENT_TIMESTAMP |
+| processed_at | TIMESTAMP | YES | Nar jobbet processades |
+| created_by | INT | YES | User ID som skapade jobbet |
+
+**Index:**
+- INDEX(status, priority, created_at)
+- INDEX(rider_id)
+
+#### `analytics_cron_runs` (uppdaterad)
+Cron-korningslogg med heartbeat.
+
+| Kolumn | Typ | Null | Beskrivning |
+|--------|-----|------|-------------|
+| id | INT | NO | Auto-increment PK |
+| job_name | VARCHAR(50) | NO | Jobbnamn |
+| run_key | VARCHAR(50) | NO | Unik nyckel (t.ex. ar) |
+| status | ENUM | NO | started, success, failed, timeout |
+| started_at | TIMESTAMP | NO | DEFAULT CURRENT_TIMESTAMP |
+| finished_at | TIMESTAMP | YES | Avslutad |
+| **heartbeat_at** | TIMESTAMP | YES | Senaste heartbeat |
+| **duration_ms** | INT | YES | Total tid i millisekunder |
+| rows_affected | INT | YES | Antal rader |
+| **error_text** | TEXT | YES | Felmeddelande |
+| log | JSON | YES | Extra loggdata |
+
+**Index:**
+- UNIQUE(job_name, run_key)
+- INDEX(status, started_at)
+- INDEX(heartbeat_at)
 
 ---
 
 ## Karnkomponenter
 
-### 1. AnalyticsConfig.php (v3.0)
+### 1. AnalyticsConfig.php (v3.0.1)
 
-Centraliserad konfiguration for hela analytics-plattformen.
-
-**Platform-information:**
 ```php
-PLATFORM_VERSION = '3.0.0';
-CALCULATION_VERSION = 'v3';
+// Platform
+public const PLATFORM_VERSION = '3.0.1';
+public const CALCULATION_VERSION = 'v3';
+
+// Export krav
+public const EXPORT_REQUIRE_SNAPSHOT = true;  // Alla exporter MASTE ha snapshot_id
+
+// Cron
+public const CRON_HEARTBEAT_INTERVAL = 60;    // Sekunder mellan heartbeats
+public const CRON_TIMEOUT_MINUTES = 30;       // Max tid for ett jobb
+public const CRON_LOG_RETENTION_DAYS = 90;    // Behall loggar i 90 dagar
+
+// GDPR
+public const IP_RETENTION_DAYS = 90;          // Ta bort/hasha IP efter 90 dagar
+public const PII_EXPORT_RATE_LIMIT = 10;      // Max PII-exporter per timme
+public const PII_EXPORT_RATE_WINDOW = 3600;   // 1 timme i sekunder
 ```
 
-**Aktivitetsdefinition:**
+### 2. KPICalculator.php
+
+**Nya metoder for brand:**
 ```php
-// "Active ar Y" = rider har minst N unika events under season_year=Y
-// OBS: Detta ar EVENTS (unika event_id), inte starter/heat/resultatrader
-ACTIVE_MIN_EVENTS = 1;
+public function getSeriesForBrand(int $brandId, int $year): array
+public function getCohortRetentionByBrand(int $cohortYear, int $brandId, int $maxYears = 5): array
+public function getRidersForBrand(int $brandId, int $year): array
+public function getRetentionRateByBrand(int $year, int $brandId): float
 ```
 
-**Retention-typer (VIKTIGT):**
+**Retention-metoder (oforandrade):**
 ```php
-// Typ 1: Classic retention - "Hur manga av forra arets riders kom tillbaka?"
-RETENTION_TYPE_FROM_PREV = 'retention_from_prev';
-// Formel: (riders i bade N och N-1) / (riders i N-1) * 100
-
-// Typ 2: Returning share - "Hur stor andel av arets riders ar aterkommande?"
-RETENTION_TYPE_RETURNING_SHARE = 'returning_share_of_current';
-// Formel: (riders i bade N och N-1) / (riders i N) * 100
-```
-
-**Churn-nivåer:**
-```php
-SOFT_CHURN_YEARS = 1;   // 1 ar inaktiv
-MEDIUM_CHURN_YEARS = 2; // 2 ar inaktiv
-HARD_CHURN_YEARS = 3;   // 3+ ar inaktiv
-```
-
-**Klassrankning (ars-versionerad):**
-```php
-CLASS_RANKING_2024 = [
-    'Elite' => 100,    // Hogst
-    'Senior' => 80,
-    'Junior' => 60,
-    'Sport' => 30,
-    'Fun' => 10,       // Lagst
-];
-
-// FALLBACK: Om klass ar okand, returnerar getClassRank() null
-// At-Risk ignorerar class_downgrade for okanda klasser
-```
-
-**Dynamisk serie-cutoff:**
-```php
-USE_DYNAMIC_SERIES_CUTOFF = true;
-
-// Cutoff baserat pa MAX(last_event_date) + 14 dagar
-// istallet for statiskt datum
-getSeasonActivityCutoffDate($year, $seriesId, $pdo);
-```
-
-**Riskfaktorer for At-Risk:**
-| Faktor | Vikt | Beskrivning |
-|--------|------|-------------|
-| declining_events | 30 | Minskande starter over tid |
-| no_recent_activity | 25 | Ingen aktivitet efter cutoff |
-| class_downgrade | 15 | Gatt ner i klass (ignoreras for okanda klasser) |
-| single_series | 10 | Endast en serie |
-| low_tenure | 10 | Kort karriar (1-2 ar) |
-| high_age_in_class | 10 | Hog alder i klassen |
-
-**Datakvalitetstrosklar:**
-```php
-DATA_QUALITY_THRESHOLDS = [
-    'birth_year_coverage' => 0.5,  // 50% av riders maste ha birth_year
-    'club_coverage' => 0.3,        // 30% maste ha club
-    'class_coverage' => 0.7,       // 70% av results maste ha klass
-];
-```
-
-### 2. KPICalculator.php (~2500 rader)
-
-Huvudklass for alla KPI-berakningar.
-
-**Retention & Growth:**
-```php
-// Classic retention (forra arets perspektiv)
-getRetentionRate($year): float  // 0-100%
-
-// Returning share (arets perspektiv) - NY
-getReturningShareOfCurrent($year): float  // 0-100%
-
-// Churn (inverterad retention)
-getChurnRate($year): float  // 100 - retention
-
-// Samlade metrics - NY
-getRetentionMetrics($year): array
-// Returnerar:
-// [
-//     'retention_from_prev' => ['value' => X, 'definition' => '...', 'formula' => '...'],
-//     'returning_share_of_current' => [...],
-//     'churn_rate' => [...],
-//     'rookie_rate' => [...],
-//     'growth_rate' => [...],
-// ]
-
-// Tillvaxt
-getGrowthRate($year): float
-getGrowthTrend($years): array
-
-// Rookies
-getNewRidersCount($year): int
-getRookieRate($year): float  // NY - andel nya
-```
-
-**Datakvalitet (NY):**
-```php
-// Hamta datakvalitetsmetrics
-getDataQualityMetrics($year): array
-// Returnerar:
-// [
-//     'birth_year_coverage' => 72.5,  // %
-//     'club_coverage' => 85.2,
-//     'gender_coverage' => 68.1,
-//     'class_coverage' => 91.0,
-//     'potential_duplicates' => 15,
-//     'quality_status' => 'good'|'warning'|'critical',
-// ]
-
-// Spara till databas
-saveDataQualityMetrics($year): bool
-```
-
-**Cohort:**
-```php
-getCohortRetention($year, $maxYears = 5): array
-getCohortRetentionByBrand($year, $brandId): array
-getCohortStatusBreakdown($year): array
-getCohortRiders($year, $status = null): array
-getCohortAverageLifespan($year): float
-```
-
-**Series Flow:**
-```php
-getEntryPointDistribution($year): array
-calculateFeederMatrix($year): array
-getSeriesLoyaltyRate($seriesId, $year): float
-getSeriesOverlap($series1, $series2, $year): array
-```
-
-**At-Risk:**
-```php
-getRidersAtRisk($year, $limit = 100): array
-calculateRiskScore($riderId, $year): int  // 0-100
+getRetentionRate($year): float           // retention_from_prev
+getReturningShareOfCurrent($year): float // returning_share_of_current
+getChurnRate($year): float               // 100 - retention
+getRookieRate($year): float              // rookies / total * 100
+getGrowthRate($year): float              // (current - prev) / prev * 100
+getRetentionMetrics($year): array        // Alla KPIs samlat med definitioner
 ```
 
 ### 3. AnalyticsEngine.php
 
-Motor for databerakning och lagring.
-
-**Berakningsmetoder:**
+**Nya metoder:**
 ```php
-calculateYearlyStats($year): int
-calculateYearlyStatsBulk($year): int  // Snabbare, en SQL
-calculateSeriesParticipation($year): int
-calculateSeriesCrossover($year): int
-calculateClubStats($year): int
-calculateVenueStats($year): int
+/**
+ * Processa recalc-kon
+ * Kors efter huvudjobbet i cron
+ */
+public function processRecalcQueue(int $limit = 100): array {
+    $results = ['processed' => 0, 'failed' => 0];
 
-// Kor allt
-refreshAllStats($year): array
-refreshAllStatsFast($year): array  // Anvander bulk-metoder
+    // Hamta pending jobb sorterat pa prioritet
+    $jobs = $this->pdo->query("
+        SELECT * FROM analytics_recalc_queue
+        WHERE status = 'pending'
+        ORDER BY priority ASC, created_at ASC
+        LIMIT $limit
+    ")->fetchAll();
+
+    foreach ($jobs as $job) {
+        $this->markRecalcJob($job['id'], 'processing');
+
+        try {
+            for ($year = $job['year_from']; $year <= $job['year_to']; $year++) {
+                if ($job['rider_id']) {
+                    // Omberakna specifik rider
+                    $this->recalculateRider($job['rider_id'], $year);
+                } else {
+                    // Omberakna hela aret
+                    $this->refreshAllStatsFast($year);
+                }
+            }
+            $this->markRecalcJob($job['id'], 'completed');
+            $results['processed']++;
+        } catch (Exception $e) {
+            $this->markRecalcJob($job['id'], 'failed', $e->getMessage());
+            $results['failed']++;
+        }
+    }
+
+    return $results;
+}
+
+/**
+ * Heartbeat for langt korande jobb
+ */
+public function heartbeat(): void {
+    if ($this->currentJobId) {
+        $this->pdo->prepare("
+            UPDATE analytics_cron_runs
+            SET heartbeat_at = CURRENT_TIMESTAMP
+            WHERE id = ?
+        ")->execute([$this->currentJobId]);
+    }
+}
+
+/**
+ * Kolla om jobbet ar timeout
+ */
+public function checkTimeout(): bool {
+    $timeoutMinutes = AnalyticsConfig::CRON_TIMEOUT_MINUTES;
+    $stmt = $this->pdo->prepare("
+        SELECT 1 FROM analytics_cron_runs
+        WHERE id = ?
+          AND started_at < DATE_SUB(NOW(), INTERVAL ? MINUTE)
+    ");
+    $stmt->execute([$this->currentJobId, $timeoutMinutes]);
+    return (bool)$stmt->fetch();
+}
 ```
 
-**Jobbhantering:**
+### 4. IdentityResolver.php
+
+**Uppdaterad mergeRiders:**
 ```php
-startJob($name, $key, $force = false): int|false
-endJob($status, $rowsAffected, $log = []): void
+/**
+ * Sla samman tva riders och schemalägg omberakning
+ */
+public function mergeRiders(int $keepId, int $mergeId, int $adminId, string $reason = ''): bool {
+    $this->pdo->beginTransaction();
+
+    try {
+        // 1. Hamta min/max ar for berorda riders
+        $stmt = $this->pdo->prepare("
+            SELECT MIN(season_year) as min_year, MAX(season_year) as max_year
+            FROM rider_yearly_stats
+            WHERE rider_id IN (?, ?)
+        ");
+        $stmt->execute([$keepId, $mergeId]);
+        $years = $stmt->fetch();
+
+        // 2. Skapa merge-record
+        $stmt = $this->pdo->prepare("
+            INSERT INTO rider_merge_map (original_rider_id, canonical_rider_id, merged_at, merged_by, reason)
+            VALUES (?, ?, CURRENT_TIMESTAMP, ?, ?)
+        ");
+        $stmt->execute([$mergeId, $keepId, $adminId, $reason]);
+
+        // 3. Lagg i recalc-ko
+        if ($years['min_year'] && $years['max_year']) {
+            $stmt = $this->pdo->prepare("
+                INSERT INTO analytics_recalc_queue
+                (reason, rider_id, year_from, year_to, priority, status, created_by)
+                VALUES ('rider_merge', ?, ?, ?, 1, 'pending', ?)
+            ");
+            $stmt->execute([$keepId, $years['min_year'], $years['max_year'], $adminId]);
+        }
+
+        // 4. Logga i audit
+        $stmt = $this->pdo->prepare("
+            INSERT INTO rider_identity_audit
+            (action, rider_id, affected_rider_id, performed_by, details)
+            VALUES ('merge', ?, ?, ?, ?)
+        ");
+        $stmt->execute(['merge', $keepId, $mergeId, $adminId, json_encode([
+            'reason' => $reason,
+            'recalc_years' => [$years['min_year'], $years['max_year']]
+        ])]);
+
+        $this->pdo->commit();
+        return true;
+
+    } catch (Exception $e) {
+        $this->pdo->rollBack();
+        throw $e;
+    }
+}
 ```
 
-### 4. SVGChartRenderer.php (NY)
+### 5. SVGChartRenderer.php
 
-PHP-baserad grafrendering utan Node.js-beroenden.
-
-**Graftyper:**
+**PNG fallback policy:**
 ```php
-$renderer = new SVGChartRenderer(['width' => 600, 'height' => 300]);
+/**
+ * Konvertera SVG till PNG
+ *
+ * FALLBACK POLICY:
+ * - Om Imagick finns och fungerar: returnera PNG binary
+ * - Om Imagick saknas: returnera null
+ * - Anropande kod (PdfExportBuilder) maste hantera null och
+ *   istallet inbadda SVG direkt i PDF
+ *
+ * @param string $svg SVG-kod
+ * @param int $scale Skalningsfaktor (2 = 2x resolution)
+ * @return string|null PNG data eller null om konvertering ej mojlig
+ */
+public function svgToPng(string $svg, int $scale = 2): ?string {
+    // Kolla om Imagick finns
+    if (!extension_loaded('imagick')) {
+        return null;  // Graceful fallback
+    }
 
-// Linjediagram (trender)
-$svg = $renderer->lineChart([
-    'labels' => ['2020', '2021', '2022', '2023', '2024'],
-    'datasets' => [
-        ['label' => 'Retention', 'data' => [65, 70, 68, 72, 75], 'color' => '#37d4d6'],
-    ]
-]);
+    // Kolla om Imagick kan lasa SVG
+    if (!in_array('SVG', \Imagick::queryFormats('SVG'))) {
+        return null;  // SVG-stod saknas
+    }
 
-// Stapeldiagram
-$svg = $renderer->barChart([
-    'labels' => ['U15', '15-25', '26-35', '36-45', '46+'],
-    'values' => [120, 350, 480, 320, 150],
-]);
+    try {
+        $im = new \Imagick();
+        $im->setBackgroundColor(new \ImagickPixel('transparent'));
+        $im->readImageBlob($svg);
+        $im->setImageFormat('png');
 
-// Donut-diagram
-$svg = $renderer->donutChart([
-    'labels' => ['Enduro', 'DH', 'XC'],
-    'values' => [450, 230, 180],
-]);
+        if ($scale > 1) {
+            $w = $im->getImageWidth() * $scale;
+            $h = $im->getImageHeight() * $scale;
+            $im->resizeImage($w, $h, \Imagick::FILTER_LANCZOS, 1);
+        }
 
-// Sparkline (mini-trend)
-$svg = $renderer->sparkline([65, 70, 68, 72, 75], ['width' => 100, 'height' => 30]);
+        return $im->getImageBlob();
 
-// Stacked bar
-$svg = $renderer->stackedBarChart([
-    'labels' => ['2022', '2023', '2024'],
-    'datasets' => [
-        ['label' => 'Active', 'data' => [500, 520, 550], 'color' => '#10b981'],
-        ['label' => 'Churned', 'data' => [100, 90, 80], 'color' => '#ef4444'],
-    ]
-]);
+    } catch (\Exception $e) {
+        // Logga felet men returnera null for graceful fallback
+        error_log("SVGChartRenderer::svgToPng failed: " . $e->getMessage());
+        return null;
+    }
+}
+
+/**
+ * Kolla om PNG-konvertering ar tillganglig
+ */
+public function canConvertToPng(): bool {
+    return extension_loaded('imagick') &&
+           in_array('SVG', \Imagick::queryFormats('SVG'));
+}
 ```
 
-**Farger:** Anvander TheHUB designsystem automatiskt.
+### 6. ExportLogger.php (v3.0.1)
 
-**PNG-export:**
+**Uppdaterad med obligatorisk snapshot_id:**
 ```php
-$png = $renderer->svgToPng($svg, 2);  // 2x scale for retina
-file_put_contents('chart.png', $png);
+/**
+ * Logga en export
+ *
+ * @param string $exportType Typ av export
+ * @param array $data Exporterad data
+ * @param array $options MASTE innehalla 'snapshot_id'
+ * @throws InvalidArgumentException Om snapshot_id saknas
+ */
+public function logExport(string $exportType, array $data, array $options = []): int {
+    // KRAV: snapshot_id maste finnas
+    if (empty($options['snapshot_id'])) {
+        throw new InvalidArgumentException(
+            'snapshot_id is required for all exports. Use getLatestSnapshotId() if needed.'
+        );
+    }
+
+    // Generera export_uid
+    $exportUid = $this->generateExportUid();
+
+    // Berakna fingerprint deterministiskt
+    $fingerprint = $this->calculateFingerprint($data);
+
+    // Bygg manifest
+    $manifest = $this->createManifest($exportType, $data, $options);
+    $manifest['export_uid'] = $exportUid;
+    $manifest['snapshot_id'] = $options['snapshot_id'];
+
+    // Kolla PII
+    $containsPii = $this->containsPII($data);
+
+    // Rate limit for PII
+    if ($containsPii) {
+        $this->checkPiiRateLimit($options['user_id'] ?? null);
+    }
+
+    $stmt = $this->pdo->prepare("
+        INSERT INTO analytics_exports (
+            export_uid, snapshot_id, export_type, export_format, filename,
+            exported_by, ip_address, ip_hash,
+            season_year, series_id, brand_id, filters_json,
+            row_count, contains_pii,
+            data_fingerprint, source_query_hash, manifest
+        ) VALUES (
+            ?, ?, ?, ?, ?,
+            ?, ?, ?,
+            ?, ?, ?, ?,
+            ?, ?,
+            ?, ?, ?
+        )
+    ");
+
+    $ipAddress = $this->getClientIP();
+    $ipHash = $ipAddress ? hash('sha256', $ipAddress . date('Y-m')) : null;
+
+    $stmt->execute([
+        $exportUid,
+        $options['snapshot_id'],
+        $exportType,
+        $options['format'] ?? 'csv',
+        $options['filename'] ?? null,
+        $options['user_id'] ?? null,
+        $ipAddress,
+        $ipHash,
+        $options['year'] ?? null,
+        $options['series_id'] ?? null,
+        $options['brand_id'] ?? null,
+        json_encode($options['filters'] ?? []),
+        count($data),
+        $containsPii ? 1 : 0,
+        $fingerprint,
+        $options['query_hash'] ?? null,
+        json_encode($manifest),
+    ]);
+
+    return (int)$this->pdo->lastInsertId();
+}
+
+/**
+ * Hamta senaste snapshot for ett ar
+ */
+public function getLatestSnapshotId(int $year): ?int {
+    $stmt = $this->pdo->prepare("
+        SELECT id FROM analytics_snapshots
+        WHERE season_year = ?
+        ORDER BY generated_at DESC
+        LIMIT 1
+    ");
+    $stmt->execute([$year]);
+    return $stmt->fetchColumn() ?: null;
+}
+
+/**
+ * Generera UUID for export
+ */
+private function generateExportUid(): string {
+    return sprintf('%04x%04x-%04x-%04x-%04x-%04x%04x%04x',
+        mt_rand(0, 0xffff), mt_rand(0, 0xffff),
+        mt_rand(0, 0xffff),
+        mt_rand(0, 0x0fff) | 0x4000,
+        mt_rand(0, 0x3fff) | 0x8000,
+        mt_rand(0, 0xffff), mt_rand(0, 0xffff), mt_rand(0, 0xffff)
+    );
+}
+
+/**
+ * Kolla PII rate limit
+ */
+private function checkPiiRateLimit(?int $userId): void {
+    if (!$userId) return;
+
+    $limit = AnalyticsConfig::PII_EXPORT_RATE_LIMIT;
+    $window = AnalyticsConfig::PII_EXPORT_RATE_WINDOW;
+
+    $stmt = $this->pdo->prepare("
+        SELECT COUNT(*) FROM analytics_exports
+        WHERE exported_by = ?
+          AND contains_pii = 1
+          AND exported_at > DATE_SUB(NOW(), INTERVAL ? SECOND)
+    ");
+    $stmt->execute([$userId, $window]);
+    $count = (int)$stmt->fetchColumn();
+
+    if ($count >= $limit) {
+        throw new RateLimitException(
+            "PII export rate limit exceeded. Max {$limit} per hour."
+        );
+    }
+}
 ```
 
-### 5. ExportLogger.php (NY)
-
-GDPR-kompatibel loggning av alla exporter.
-
-**Logga export:**
-```php
-$logger = new ExportLogger($pdo);
-
-$exportId = $logger->logExport('riders_at_risk', $data, [
-    'year' => 2024,
-    'format' => 'csv',
-    'user_id' => $_SESSION['user_id'],
-    'filters' => ['min_risk' => 60],
-]);
-```
-
-**Skapa manifest:**
-```php
-$manifest = $logger->createManifest('cohort_export', $data, [
-    'year' => 2020,
-    'snapshot_id' => 123,
-]);
-// Returnerar:
-// [
-//     'export_type' => 'cohort_export',
-//     'exported_at' => '2026-01-16 14:30:00',
-//     'platform_version' => '3.0.0',
-//     'row_count' => 450,
-//     'data_fingerprint' => 'sha256...',
-//     'contains_pii' => true,
-//     'pii_fields' => ['firstname', 'lastname'],
-//     ...
-// ]
-```
-
-**Verifiera export:**
-```php
-$isValid = $logger->verifyExport($exportId, $data);  // true/false
-```
-
-**Statistik:**
-```php
-$stats = $logger->getExportStats('month');
-// [
-//     'total_exports' => 45,
-//     'unique_users' => 8,
-//     'pii_exports' => 12,
-//     'top_types' => [...]
-// ]
-```
-
-### 6. IdentityResolver.php
-
-Hanterar rider-identitet och sammanslagning av dubbletter.
+### 7. PdfExportBuilder.php (NY)
 
 ```php
-$resolver = new IdentityResolver($pdo);
+<?php
+/**
+ * PdfExportBuilder
+ *
+ * Bygger PDF-exporter med "Definitions & Provenance" block.
+ * Anvander SVGChartRenderer for grafer (PNG om Imagick finns, annars SVG).
+ */
 
-// Hitta canonical ID
-$canonicalId = $resolver->getCanonicalId($riderId);
+class PdfExportBuilder {
+    private PDO $pdo;
+    private SVGChartRenderer $chartRenderer;
+    private ExportLogger $exportLogger;
+    private string $exportUid;
+    private int $snapshotId;
 
-// Sla samman dubbletter
-$resolver->mergeRiders($keepId, $mergeId, $adminId, $reason);
+    // KPI-definitioner som MASTE finnas i varje export
+    private const REQUIRED_KPI_DEFINITIONS = [
+        'active' => 'Rider med minst 1 event (unik event_id) under aret',
+        'retention_from_prev' => 'Andel av forra arets riders som aterkommer: (retained/prev_total)*100',
+        'returning_share' => 'Andel av arets riders som deltog forra aret: (retained/current_total)*100',
+        'rookie_rate' => 'Andel av arets riders som ar nya: (rookies/total)*100',
+        'growth_rate' => 'Forandring i antal riders: ((current-prev)/prev)*100',
+    ];
+
+    public function __construct(PDO $pdo, int $snapshotId) {
+        $this->pdo = $pdo;
+        $this->snapshotId = $snapshotId;
+        $this->chartRenderer = new SVGChartRenderer();
+        $this->exportLogger = new ExportLogger($pdo);
+        $this->exportUid = ''; // Satts vid build()
+    }
+
+    /**
+     * Bygg PDF med Definitions & Provenance block
+     */
+    public function build(string $reportType, array $data, array $options = []): string {
+        // Logga exporten och hamta export_uid
+        $exportId = $this->exportLogger->logExport($reportType, $data, array_merge($options, [
+            'snapshot_id' => $this->snapshotId,
+            'format' => 'pdf',
+        ]));
+
+        // Hamta export_uid
+        $stmt = $this->pdo->prepare("SELECT export_uid FROM analytics_exports WHERE id = ?");
+        $stmt->execute([$exportId]);
+        $this->exportUid = $stmt->fetchColumn();
+
+        // Hamta snapshot metadata
+        $snapshot = $this->getSnapshotMetadata();
+
+        // Starta PDF (anvander TCPDF eller Dompdf)
+        $pdf = $this->initPdf();
+
+        // Lagg till rubrik
+        $pdf->addPage();
+        $pdf->setTitle($options['title'] ?? 'Analytics Export');
+
+        // === DEFINITIONS & PROVENANCE BLOCK (OBLIGATORISKT) ===
+        $pdf->addSection('Definitions & Provenance');
+
+        // KPI-definitioner
+        $pdf->addSubSection('KPI Definitions');
+        foreach (self::REQUIRED_KPI_DEFINITIONS as $kpi => $definition) {
+            $pdf->addDefinition($kpi, $definition);
+        }
+
+        // Snapshot metadata
+        $pdf->addSubSection('Data Provenance');
+        $pdf->addMetadata('Export UID', $this->exportUid);
+        $pdf->addMetadata('Snapshot ID', $this->snapshotId);
+        $pdf->addMetadata('Snapshot Date', $snapshot['generated_at']);
+        $pdf->addMetadata('Season Year', $snapshot['season_year']);
+        $pdf->addMetadata('Platform Version', $snapshot['code_version']);
+        $pdf->addMetadata('Data Fingerprint', $snapshot['data_fingerprint']);
+        $pdf->addMetadata('Generated', date('Y-m-d H:i:s'));
+
+        // === RAPPORT-INNEHALL ===
+        $pdf->addSection('Report Data');
+
+        // Lagg till grafer
+        if (!empty($options['charts'])) {
+            foreach ($options['charts'] as $chart) {
+                $svg = $this->renderChart($chart);
+                $png = $this->chartRenderer->svgToPng($svg);
+
+                if ($png) {
+                    // Imagick finns - anvand PNG
+                    $pdf->addImage($png, 'png');
+                } else {
+                    // Fallback - inbadda SVG
+                    $pdf->addSvg($svg);
+                }
+            }
+        }
+
+        // Lagg till tabelldata
+        if (!empty($data)) {
+            $pdf->addTable($data);
+        }
+
+        // === FOOTER MED FINGERPRINT ===
+        $fingerprint = $this->exportLogger->calculateFingerprint($data);
+        $pdf->setFooter("Export: {$this->exportUid} | Fingerprint: " . substr($fingerprint, 0, 16) . "...");
+
+        return $pdf->output();
+    }
+
+    private function getSnapshotMetadata(): array {
+        $stmt = $this->pdo->prepare("SELECT * FROM analytics_snapshots WHERE id = ?");
+        $stmt->execute([$this->snapshotId]);
+        return $stmt->fetch() ?: [];
+    }
+
+    private function renderChart(array $chartConfig): string {
+        $type = $chartConfig['type'] ?? 'line';
+        $data = $chartConfig['data'] ?? [];
+        $options = $chartConfig['options'] ?? [];
+
+        return match($type) {
+            'line' => $this->chartRenderer->lineChart($data, $options),
+            'bar' => $this->chartRenderer->barChart($data, $options),
+            'donut' => $this->chartRenderer->donutChart($data, $options),
+            'stacked' => $this->chartRenderer->stackedBarChart($data, $options),
+            default => $this->chartRenderer->lineChart($data, $options),
+        };
+    }
+
+    private function initPdf() {
+        // Anvand TCPDF eller Dompdf beroende pa vad som finns
+        if (class_exists('TCPDF')) {
+            return new TcpdfWrapper();
+        } elseif (class_exists('Dompdf\Dompdf')) {
+            return new DompdfWrapper();
+        }
+        throw new RuntimeException('No PDF library available (TCPDF or Dompdf required)');
+    }
+}
 ```
 
 ---
 
 ## KPI-definitioner
 
-**KRITISKT:** Dessa definitioner maste anvandas konsekvent i alla rapporter.
+**KRITISKT:** Dessa definitioner ar **obligatoriska** i alla PDF-exporter.
 
-### Retention Rate (retention_from_prev)
-
-**Fraga:** "Hur manga procent av forra arets riders kom tillbaka?"
+### Definition Box (MASTE finnas i varje PDF)
 
 ```
-Taljare:   Riders som deltog BADE ar N OCH ar N-1
-Namnare:   Riders som deltog ar N-1
-Formel:    (retained / prev_total) * 100
+┌─────────────────────────────────────────────────────────────────────────────┐
+│ DEFINITIONS & PROVENANCE                                                    │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ KPI DEFINITIONS:                                                            │
+│                                                                             │
+│ Active Rider:                                                               │
+│   Rider med minst 1 event (unik event_id) under aret.                      │
+│   Konstant: ACTIVE_MIN_EVENTS = 1                                          │
+│                                                                             │
+│ Retention Rate (retention_from_prev):                                       │
+│   Andel av FORRA arets riders som aterkommer.                              │
+│   Formel: (riders i bade N och N-1) / (riders i N-1) * 100                 │
+│   Svarar pa: "Hur manga av forra arets deltagare kom tillbaka?"            │
+│                                                                             │
+│ Returning Share (returning_share_of_current):                               │
+│   Andel av ARETS riders som deltog forra aret.                             │
+│   Formel: (riders i bade N och N-1) / (riders i N) * 100                   │
+│   Svarar pa: "Hur stor del av arets deltagare ar aterkommande?"            │
+│                                                                             │
+│ Rookie Rate:                                                                │
+│   Andel av arets riders som ar nya (forsta aret).                          │
+│   Formel: (rookies) / (total) * 100                                        │
+│                                                                             │
+│ Growth Rate:                                                                │
+│   Procentuell forandring i antal riders.                                   │
+│   Formel: ((riders_N - riders_N-1) / riders_N-1) * 100                     │
+│                                                                             │
+├─────────────────────────────────────────────────────────────────────────────┤
+│ DATA PROVENANCE:                                                            │
+│                                                                             │
+│ Export UID:       a1b2c3d4-e5f6-7890-abcd-ef1234567890                     │
+│ Snapshot ID:      1234                                                      │
+│ Snapshot Date:    2026-01-16 04:00:00                                      │
+│ Season Year:      2025                                                      │
+│ Platform Version: 3.0.1                                                     │
+│ Data Fingerprint: sha256:abc123def456...                                   │
+│ Generated:        2026-01-16 14:30:00                                      │
+└─────────────────────────────────────────────────────────────────────────────┘
 ```
-
-**Exempel:**
-- 2023 hade 1000 riders
-- 2024 har 800 av dessa 1000 tillbaka
-- Retention = 800/1000 = **80%**
-
-**Implementation:** `KPICalculator::getRetentionRate($year)`
-
----
-
-### Returning Share (returning_share_of_current)
-
-**Fraga:** "Hur stor andel av ARETS deltagare ar aterkommande?"
-
-```
-Taljare:   Riders som deltog BADE ar N OCH ar N-1
-Namnare:   Riders som deltog ar N
-Formel:    (retained / current_total) * 100
-```
-
-**Exempel:**
-- 2024 har 1100 riders totalt
-- 800 av dessa deltog aven 2023
-- Returning share = 800/1100 = **72.7%**
-
-**Implementation:** `KPICalculator::getReturningShareOfCurrent($year)`
-
----
-
-### Churn Rate
-
-**Fraga:** "Hur manga procent av forra arets riders SLUTADE?"
-
-```
-Formel:    100 - retention_from_prev
-```
-
-**Exempel:**
-- Retention = 80%
-- Churn = 100 - 80 = **20%**
-
-**Implementation:** `KPICalculator::getChurnRate($year)`
-
----
-
-### Rookie Rate
-
-**Fraga:** "Hur stor andel av arets riders ar NYBORJARE?"
-
-```
-Taljare:   Riders dar MIN(season_year) = aktuellt ar
-Namnare:   Alla riders ar N
-Formel:    (rookies / total) * 100
-```
-
-**Implementation:** `KPICalculator::getRookieRate($year)`
-
----
-
-### Growth Rate
-
-**Fraga:** "Hur mycket vaxte/minskade deltagarantalet?"
-
-```
-Formel:    ((riders_N - riders_N-1) / riders_N-1) * 100
-```
-
-**Implementation:** `KPICalculator::getGrowthRate($year)`
-
----
-
-### Active Rider
-
-**Definition:** En rider ar "aktiv ar Y" om:
-- Rider har minst **1 registrerad event** (unik event_id) under season_year=Y
-- **OBS:** "Event" = unik event_id, INTE antal starter/heat/resultatrader
-
-**Konstant:** `AnalyticsConfig::ACTIVE_MIN_EVENTS = 1`
-
----
-
-## Analytics-sidor
-
-### Dashboard (`analytics-dashboard.php`)
-
-**Syfte:** Huvudoversikt med alla nyckeltal
-
-**Visar:**
-- KPI-sammanfattning (retention, churn, growth, rookies)
-- Tillvaxttrend (5 ar)
-- Top 10 klubbar
-- Aldersfordelning (donut chart)
-- Disciplinfordelning
-- Entry points (var borjar riders)
-
-**Filter:** Ar, Jamfor med annat ar
-
----
-
-### Kohort-analys (`analytics-cohorts.php`)
-
-**Syfte:** Folj hur en argang utvecklas over tid
-
-**Nyckelkoncept:**
-- Kohort = alla som borjade samma ar
-- Retention = % som fortfarande ar aktiva
-- Churn-kategorier: soft (1 ar), medium (2 ar), hard (3+ ar)
-
-**Filter:** Varumarke, Kohort-ar, Multi-kohort jamforelse
-
----
-
-### At-Risk (`analytics-atrisk.php`)
-
-**Syfte:** Identifiera riders som riskerar att sluta
-
-**Risk-nivaer:**
-- 0-39: Lag risk (gron)
-- 40-59: Medel risk (gul)
-- 60-79: Hog risk (orange)
-- 80+: Kritisk (rod)
-
----
-
-### Datakvalitet (`analytics-data-quality.php`) - NY
-
-**Syfte:** Analysera och forbattra datakvaliteten
-
-**Visar:**
-- Overall status (good/warning/critical)
-- Coverage per falt med procent och troskel
-- Potentiella dubbletter
-- Matningshistorik
-- Rekommendationer
-
-**Trosklar:**
-- Birth year: 50%
-- Club: 30%
-- Class: 70%
-- Event date: 90%
-
----
-
-### Series Flow (`analytics-flow.php`)
-
-**Syfte:** Visualisera rider-floden mellan serier
-
----
-
-### Reports (`analytics-reports.php`)
-
-**Rapporttyper:**
-1. Arssammanfattning (Summary)
-2. Retention & Churn-analys
-3. Serie-analys
-4. Klubbrapport
-5. Demografisk Oversikt
-6. Nya Deltagare (Rookies)
-
-**Export:**
-- CSV (alla rapporter)
-- PDF (med SVGChartRenderer)
-
----
-
-## Datakvalitet
-
-### Varfor datakvalitet ar viktigt
-
-Analyser ar bara sa bra som underliggande data. Om 50% av riders saknar fodelseår blir aldersbaserade analyser otillforlitliga.
-
-### Matning
-
-**Automatiskt:**
-```php
-$kpi = new KPICalculator($pdo);
-$metrics = $kpi->getDataQualityMetrics(2024);
-```
-
-**Spara till databas:**
-```php
-$kpi->saveDataQualityMetrics(2024);  // Sparar till data_quality_metrics
-```
-
-### Kvalitetsstatus
-
-| Status | Kriterier |
-|--------|-----------|
-| **Good** | Alla falt over troskel |
-| **Warning** | 1 falt under troskel |
-| **Critical** | 2+ falt under troskel |
-
-### Rekommendationer
-
-Systemet ger automatiska rekommendationer baserat pa data:
-
-- **Lat fodelseår-tackning:** At-Risk berakningar som anvander alder kan bli opalitliga
-- **Lat klubb-tackning:** Klubbstatistik och geografisk analys blir ofullstandig
-- **Potentiella dubbletter:** Anvand Rider Merge-verktyget for att granska
 
 ---
 
 ## Export och Reproducerbarhet
 
-### Principer
+### Principer (v3.0.1)
 
-1. **Alla exporter loggas** med fullstandig metadata
-2. **Fingerprint** (SHA256) sparas for verifiering
-3. **Manifest** innehaller alla parametrar for reproducerbarhet
-4. **PII-flagga** markerar exporter med persondata
+1. **Alla exporter MASTE ha snapshot_id** - inga "live" exporter tillats
+2. **export_uid** genereras for varje export - anvands for filnamn och delning
+3. **Fingerprint** (SHA256) beraknas deterministiskt pa sorterad JSON
+4. **Manifest** innehaller alla parametrar for full reproducerbarhet
+5. **PII-flagga** markerar exporter med persondata
+6. **Definition Box** ar obligatorisk i alla PDF-exporter
 
-### Anvandning
+### Export-flode
 
-**Logga export:**
-```php
-$logger = new ExportLogger($pdo);
-$exportId = $logger->logExport('riders_at_risk', $data, [
-    'year' => 2024,
-    'user_id' => $_SESSION['user_id'],
-]);
+```
+1. Anvandare begär export
+         │
+         ▼
+2. System hamtar senaste snapshot_id for aret
+   (eller anvander specifikt snapshot_id)
+         │
+         ▼
+3. ExportLogger validerar snapshot_id (REQUIRED)
+         │
+         ▼
+4. Om PII: kolla rate limit (max 10/timme)
+         │
+         ▼
+5. Generera export_uid (UUID)
+         │
+         ▼
+6. Berakna data_fingerprint (SHA256)
+         │
+         ▼
+7. Bygg manifest med:
+   - export_uid, snapshot_id
+   - alla filter
+   - KPI definition versions
+   - platform_version
+         │
+         ▼
+8. Spara till analytics_exports
+         │
+         ▼
+9. Om PDF: PdfExportBuilder laggar till
+   Definitions & Provenance block
+         │
+         ▼
+10. Returnera fil med namn: {export_type}_{export_uid}.{format}
 ```
 
-**Verifiera tidigare export:**
+### Verifiera export
+
 ```php
-$manifest = $logger->getManifest($exportId);
-$isValid = $logger->verifyExport($exportId, $currentData);
+// Hamta export via UID
+$export = $logger->getExportByUid('a1b2c3d4-e5f6-7890-abcd-ef1234567890');
+
+// Aterskap data fran samma snapshot
+$data = $kpi->getDataFromSnapshot($export['snapshot_id'], $export['filters_json']);
+
+// Verifiera fingerprint
+$currentFingerprint = $logger->calculateFingerprint($data);
+$isValid = ($currentFingerprint === $export['data_fingerprint']);
 ```
 
-### GDPR
+---
 
-- Exporter med persondata (`contains_pii = 1`) loggas separat
-- IP-adress sparas for sparbarhet
-- Statistik tillganglig: `$logger->getExportStats('month')`
+## Identity Resolution och Recalc
+
+### Merge → Recalc Policy
+
+Nar tva riders slas samman sker foljande automatiskt:
+
+```
+1. mergeRiders(keepId=100, mergeId=200) anropas
+         │
+         ▼
+2. Hamta min/max year for bada riders
+   → year_from = 2018, year_to = 2025
+         │
+         ▼
+3. Skapa merge record i rider_merge_map
+         │
+         ▼
+4. Lagg jobb i analytics_recalc_queue:
+   - rider_id = 100 (canonical)
+   - year_from = 2018
+   - year_to = 2025
+   - priority = 1 (hogst)
+   - reason = 'rider_merge'
+         │
+         ▼
+5. Logga i rider_identity_audit
+         │
+         ▼
+6. Nasta cron-korning processar recalc_queue:
+   - Omberaknar rider_yearly_stats for rider 100, ar 2018-2025
+   - Omberaknar series_participation
+   - Markerar jobb som completed
+```
+
+### Recalc Queue Processing
+
+Kors dagligen efter huvudjobbet:
+
+```php
+// I cron/refresh-analytics.php
+$engine = new AnalyticsEngine($pdo);
+
+// 1. Kor huvudjobb
+$engine->refreshAllStatsFast($currentYear);
+
+// 2. Processa recalc-ko (max 100 jobb)
+$recalcResults = $engine->processRecalcQueue(100);
+echo "Recalc: {$recalcResults['processed']} processed, {$recalcResults['failed']} failed\n";
+```
+
+---
+
+## Drift och Cron
+
+### Heartbeat-logik
+
+For att detektera hangande jobb anvands heartbeat:
+
+```php
+// I refresh-analytics.php
+$engine = new AnalyticsEngine($pdo);
+$jobId = $engine->startJob('daily-refresh', date('Y-m-d'));
+
+// Registrera shutdown handler for graceful failure
+register_shutdown_function(function() use ($engine, $jobId) {
+    if ($engine->currentJobId) {
+        $engine->endJob('failed', 0, ['error' => 'Unexpected shutdown']);
+    }
+});
+
+$riders = getRidersToProcess();
+$total = count($riders);
+
+foreach ($riders as $i => $rider) {
+    // Skicka heartbeat var 60:e sekund
+    if ($i % 100 === 0) {
+        $engine->heartbeat();
+
+        // Kolla timeout
+        if ($engine->checkTimeout()) {
+            $engine->endJob('timeout', $i, ['error' => 'Job exceeded 30 min limit']);
+            exit(1);
+        }
+    }
+
+    processRider($rider);
+}
+
+$engine->endJob('success', $total);
+```
+
+### Failure Recovery
+
+Jobb som ar "started" men saknar heartbeat >5 min markeras som failed:
+
+```sql
+-- Kor i separat cleanup-cron (var 10:e minut)
+UPDATE analytics_cron_runs
+SET status = 'failed',
+    error_text = 'No heartbeat received - presumed dead',
+    finished_at = NOW()
+WHERE status = 'started'
+  AND (heartbeat_at IS NULL AND started_at < DATE_SUB(NOW(), INTERVAL 5 MINUTE))
+  OR (heartbeat_at < DATE_SUB(NOW(), INTERVAL 5 MINUTE));
+```
+
+### Log Retention
+
+```sql
+-- Kor veckovis
+DELETE FROM analytics_cron_runs
+WHERE finished_at < DATE_SUB(NOW(), INTERVAL 90 DAY)
+  AND status IN ('success', 'failed');
+
+-- Behall timeout-entries langre for analys
+DELETE FROM analytics_cron_runs
+WHERE finished_at < DATE_SUB(NOW(), INTERVAL 180 DAY)
+  AND status = 'timeout';
+```
+
+### Cron Schedule
+
+```bash
+# Daglig refresh kl 04:00
+0 4 * * * /usr/bin/php /var/www/thehub/analytics/cron/refresh-analytics.php >> /var/log/thehub/analytics.log 2>&1
+
+# Cleanup hangande jobb var 10:e minut
+*/10 * * * * /usr/bin/php /var/www/thehub/analytics/cron/cleanup-stale-jobs.php >> /var/log/thehub/analytics.log 2>&1
+
+# Log retention veckovis (sondag 03:00)
+0 3 * * 0 /usr/bin/php /var/www/thehub/analytics/cron/cleanup-old-logs.php >> /var/log/thehub/analytics.log 2>&1
+
+# IP anonymisering dagligen (02:00)
+0 2 * * * /usr/bin/php /var/www/thehub/analytics/cron/anonymize-old-ips.php >> /var/log/thehub/analytics.log 2>&1
+```
+
+---
+
+## Sakerhet och GDPR
+
+### Exporttyper med PII (contains_pii=1)
+
+| Export Type | PII-flagga | Anledning |
+|-------------|------------|-----------|
+| `riders_at_risk` | 1 | Innehaller namn, kontaktinfo |
+| `cohort_riders` | 1 | Lista med rider-ID och namn |
+| `winback_targets` | 1 | Kontaktlista |
+| `rider_journey` | 1 | Individuell historik |
+| `churned_riders` | 1 | Lista med namn |
+| `comebacks` | 1 | Lista med namn |
+| `rookies_list` | 1 | Lista med namn |
+| `club_members` | 1 | Medlemslista |
+| --- | --- | --- |
+| `summary` | 0 | Aggregerat |
+| `retention_stats` | 0 | Aggregerat |
+| `demographics` | 0 | Aggregerat |
+| `series_flow` | 0 | Aggregerat |
+| `club_stats` | 0 | Aggregerat (inga individer) |
+| `data_quality` | 0 | Systemdata |
+
+### IP-adress Retention
+
+```php
+// I AnalyticsConfig
+public const IP_RETENTION_DAYS = 90;
+
+// I anonymize-old-ips.php
+$stmt = $pdo->prepare("
+    UPDATE analytics_exports
+    SET ip_address = NULL
+    WHERE ip_address IS NOT NULL
+      AND exported_at < DATE_SUB(NOW(), INTERVAL ? DAY)
+");
+$stmt->execute([AnalyticsConfig::IP_RETENTION_DAYS]);
+```
+
+**Alternativ: Hash IP direkt**
+```php
+// Vid export
+$ipHash = hash('sha256', $ipAddress . date('Y-m'));  // Saltat med manad
+```
+
+### Rate Limit for PII-exporter
+
+```php
+// Max 10 PII-exporter per timme per anvandare
+public const PII_EXPORT_RATE_LIMIT = 10;
+public const PII_EXPORT_RATE_WINDOW = 3600; // sekunder
+
+// Implementerat i ExportLogger::checkPiiRateLimit()
+```
+
+### Audit Trail
+
+```php
+// Logga nar nagon oppnar/laddar ner PII-export
+$stmt = $pdo->prepare("
+    INSERT INTO analytics_export_access_log
+    (export_id, accessed_by, access_type, ip_address, accessed_at)
+    VALUES (?, ?, ?, ?, NOW())
+");
+$stmt->execute([$exportId, $userId, 'download', $ipAddress]);
+```
+
+---
+
+## Analytics-sidor
+
+### Export Center (`analytics-export-center.php`) - NY
+
+**Syfte:** Central oversikt over alla exporter
+
+**Visar:**
+- Lista over alla exporter med:
+  - export_uid (klickbar)
+  - snapshot_id
+  - export_type
+  - format
+  - row_count
+  - contains_pii (badge)
+  - fingerprint (trunkerad)
+  - exported_at
+  - exported_by
+- Filter: datum, typ, PII-flagga, anvandare
+- Detaljer: klicka pa export for manifest
+- Verifiering: knapp for att verifiera fingerprint
+- Re-export: knapp for att skapa ny export fran samma snapshot
+
+**Behorigheter:**
+- `super_admin`: ser alla exporter
+- `statistics`: ser endast egna exporter
 
 ---
 
 ## Setup och Underhall
 
-### Initial Setup
+### Initial Setup (v3.0.1)
 
 1. **Kor migrationer:**
 ```bash
 mysql -u user -p database < analytics/migrations/001_analytics_tables.sql
 mysql -u user -p database < analytics/migrations/006_production_readiness.sql
+mysql -u user -p database < analytics/migrations/007_production_ready.sql
 ```
 
-2. **Populera historisk data:**
+2. **Populera brands:**
+```sql
+INSERT INTO brands (name, short_code) VALUES
+('Gravity Enduro Series', 'GES'),
+('Swedish Enduro Series', 'SES'),
+('Downhill SM', 'DHSM'),
+('XC Cup', 'XCC');
+
+-- Mappa serier till brands (anpassa series_id efter er data)
+INSERT INTO brand_series_map (brand_id, series_id, is_primary) VALUES
+(1, 1, 1),  -- GES -> GES main series
+(1, 2, 0),  -- GES -> GES Junior
+(2, 3, 1),  -- SES -> SES National
+-- etc.
+```
+
+3. **Populera historisk data:**
 ```bash
 php analytics/populate-historical.php
 ```
-Eller via admin: `/admin/analytics-populate.php`
 
-### Dagligt Underhall
-
-**Cron-jobb** (`analytics/cron/refresh-analytics.php`):
-```bash
-0 4 * * * /usr/bin/php /var/www/thehub/analytics/cron/refresh-analytics.php
-```
-
-Kor dagligen och:
-- Uppdaterar rider_yearly_stats
-- Beraknar series_participation
-- Uppdaterar club_stats
-- Skapar snapshots
-
-### Reset
-
-**Vid behov av omberakning:**
-```bash
-/admin/analytics-reset.php
-```
-
-**OBS:** Kraver ombefolkning efterat!
+4. **Verifiera Production Ready Checklist** (se ovan)
 
 ---
 
 ## Changelog
 
-### v3.0.0 (2026-01-16) - Production Readiness
+### v3.0.1 (2026-01-16) - 100% Production Ready
 
-**Prio 1 - Korrekthet & Exporter:**
-- Tydliggjorda KPI-definitioner med separata metoder
-  - `getRetentionRate()` vs `getReturningShareOfCurrent()`
-- Snapshot v2 med reproducerbarhet
-  - `generated_at`, `season_year`, `source_max_updated_at`, `code_version`, `data_fingerprint`
-- Export logging med GDPR-sparbarhet
-  - Ny tabell `analytics_exports`
-  - `ExportLogger.php` klass
-- KPI-definitionstabell `analytics_kpi_definitions`
+**Export Reproducerbarhet:**
+- `snapshot_id` ar nu OBLIGATORISKT for alla exporter
+- `export_uid` (UUID) genereras for varje export
+- Alla export-endpoints validerar snapshot_id
+- "Live" exporter ar forbjudna
 
-**Prio 2 - At-Risk & Klasslogik:**
-- Ars-versionerad klassrankning (`CLASS_RANKING_BY_YEAR`)
-- Fallback for okanda klasser (ignorerar `class_downgrade`)
-- Ny metod `isClassDowngrade()`
-- Dynamisk serie-cutoff baserat pa `last_event_date`
+**Brand/Varumarke-dimension:**
+- Ny tabell `brands` for varumarken
+- Ny tabell `brand_series_map` for koppling brand↔serie
+- `KPICalculator::getSeriesForBrand()` metod
+- `getCohortRetentionByBrand()` anvander brand_series_map
 
-**Prio 3 - Skalbarhet:**
-- Datakvalitetspanel (`admin/analytics-data-quality.php`)
-- Ny tabell `data_quality_metrics`
-- SVG ChartRenderer for PDF-export utan Node.js
-  - Line, Bar, Donut, Sparkline, Stacked Bar
+**Identity Resolution → Recalc:**
+- `IdentityResolver::mergeRiders()` laggar jobb i recalc_queue
+- Ny tabell `analytics_recalc_queue`
+- `AnalyticsEngine::processRecalcQueue()` metod
+- Automatisk omberakning efter merge
 
-**Nya metoder i KPICalculator:**
-- `getReturningShareOfCurrent()`
-- `getRookieRate()`
-- `getRetentionMetrics()`
-- `getDataQualityMetrics()`
-- `saveDataQualityMetrics()`
+**Drift och Cron:**
+- Heartbeat-logik (var 60:e sekund)
+- Timeout-hantering (max 30 min)
+- Failure recovery for hangande jobb
+- Log retention (90 dagar)
 
-**Nya filer:**
-- `analytics/includes/SVGChartRenderer.php`
-- `analytics/includes/ExportLogger.php`
-- `analytics/migrations/006_production_readiness.sql`
-- `admin/analytics-data-quality.php`
-- `api/analytics/save-quality-metrics.php`
+**SVG/PNG:**
+- Tydlig fallback-policy i `SVGChartRenderer::svgToPng()`
+- Returnerar `null` om Imagick saknas (graceful)
+- `canConvertToPng()` metod for att kolla tillganglighet
 
-### v2.0.0 (2026-01-14)
+**PDF Export:**
+- Ny `PdfExportBuilder` klass
+- Obligatorisk "Definitions & Provenance" block
+- KPI-definitioner + snapshot metadata i varje PDF
 
-- Cohort-analys med varumarkesfilter
-- At-Risk prediction
-- Series flow-visualisering
-- Geography-analys
+**GDPR/Sakerhet:**
+- Lista over PII-exporttyper dokumenterad
+- IP-adress retention (90 dagar)
+- Rate limit for PII-exporter (10/timme)
+- Export Center for audit trail
 
-### v1.0.0 (2025)
+**Admin:**
+- Ny sida `analytics-export-center.php`
+- Production Ready Checklist i dokumentation
 
-- Initial release
-- Basic KPI-berakningar
-- Pre-aggregerade tabeller
+### v3.0.0 (2026-01-16)
+
+- Initial production readiness
+- KPI-definitioner tydliggjorda
+- Export logging med fingerprint
+- SVG ChartRenderer
+
+---
+
+## Open Questions / Assumptions
+
+1. **Brand-data saknas:** Tabellerna `brands` och `brand_series_map` maste populeras manuellt med korrekt data. Vilka brands/serier finns och hur mappas de?
+
+2. **PDF-bibliotek:** Dokumentet antar att TCPDF eller Dompdf finns. Om inget av dessa finns kan PDF-export inte anvandas. Vilket bibliotek ska installeras?
+
+3. **Imagick krav:** SVG→PNG konvertering kraver Imagick med SVG-stod. Om detta saknas inbaddas SVG direkt i PDF. Ar detta acceptabelt for mottagarna?
+
+4. **Recalc-frekvens:** Dokumentet antar att recalc_queue processas dagligen. Om merges sker ofta kan detta behova okas. Hur ofta sker rider-merges?
+
+5. **Export Center behorighet:** Dokumentet foreslår att `statistics`-anvandare endast ser egna exporter. Ska de kunna se alla icke-PII exporter?
 
 ---
 
 *Dokumentation skapad: 2026-01-16*
-*Analytics Platform Version: 3.0.0*
+*Analytics Platform Version: 3.0.1*
 *Calculation Version: v3*
+*Status: 100% Production Ready (efter checklist)*
