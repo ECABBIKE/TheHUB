@@ -23,19 +23,19 @@ global $pdo;
 // Parameters
 $currentYear = (int)date('Y');
 $selectedCohort = isset($_GET['cohort']) ? (int)$_GET['cohort'] : $currentYear - 2;
-$selectedBrands = [];
-if (isset($_GET['brands'])) {
-    if (is_array($_GET['brands'])) {
-        $selectedBrands = array_map('intval', $_GET['brands']);
-    } else {
-        $selectedBrands = array_map('intval', explode(',', $_GET['brands']));
-    }
-    $selectedBrands = array_filter($selectedBrands);
-}
+$selectedBrand = isset($_GET['brand']) && $_GET['brand'] !== '' ? (int)$_GET['brand'] : null;
 $viewMode = $_GET['view'] ?? 'overview'; // overview, retention, patterns, brands
 
 // Initialize KPI Calculator
 $kpiCalc = new KPICalculator($pdo);
+
+// Hamta alla varumarken for dropdown
+$allBrands = [];
+try {
+    $allBrands = $kpiCalc->getAllBrands();
+} catch (Exception $e) {
+    // Tabellen kanske inte finns annu
+}
 
 // Fetch available data
 $availableCohorts = [];
@@ -49,22 +49,17 @@ $error = null;
 
 try {
     // Get available cohorts and brands
-    $availableCohorts = $kpiCalc->getAvailableCohortYears($selectedBrands ?: null);
+    $availableCohorts = $kpiCalc->getAvailableCohortYears($selectedBrand ? [$selectedBrand] : null);
     $availableBrands = $kpiCalc->getAvailableBrandsForJourney($selectedCohort);
 
     if ($selectedCohort) {
         // Fetch journey data with optional brand filter
-        $brandFilter = !empty($selectedBrands) ? $selectedBrands : null;
+        $brandFilter = $selectedBrand ? [$selectedBrand] : null;
 
         $summary = $kpiCalc->getFirstSeasonJourneySummary($selectedCohort, $brandFilter);
         $longitudinal = $kpiCalc->getCohortLongitudinalOverview($selectedCohort, $brandFilter);
         $patterns = $kpiCalc->getJourneyTypeDistribution($selectedCohort, $brandFilter);
         $retentionByStarts = $kpiCalc->getRetentionByStartCount($selectedCohort, $brandFilter);
-
-        // Brand comparison if multiple brands selected
-        if (count($selectedBrands) >= 2) {
-            $brandComparison = $kpiCalc->getBrandJourneyComparison($selectedCohort, $selectedBrands);
-        }
     }
 } catch (Exception $e) {
     $error = $e->getMessage();
@@ -74,7 +69,7 @@ try {
 if (isset($_GET['export']) && in_array($_GET['export'], ['csv', 'json']) && !$error) {
     $exportData = $kpiCalc->exportJourneyData(
         $selectedCohort,
-        !empty($selectedBrands) ? $selectedBrands : null,
+        $selectedBrand ? [$selectedBrand] : null,
         $_GET['export']
     );
 
@@ -94,7 +89,7 @@ if (isset($_GET['export']) && in_array($_GET['export'], ['csv', 'json']) && !$er
         $stmt = $pdo->prepare("INSERT INTO analytics_exports (export_type, export_params, exported_by, row_count, ip_address) VALUES (?, ?, ?, ?, ?)");
         $stmt->execute([
             'first_season_journey',
-            json_encode(['cohort' => $selectedCohort, 'brands' => $selectedBrands]),
+            json_encode(['cohort' => $selectedCohort, 'brand' => $selectedBrand]),
             $_SESSION['user_id'] ?? null,
             $summary['total_rookies'] ?? 0,
             $_SERVER['REMOTE_ADDR'] ?? null
@@ -141,8 +136,23 @@ include __DIR__ . '/components/unified-layout.php';
 <!-- Filter Bar -->
 <div class="filter-bar">
     <form method="get" class="filter-form" id="filterForm">
+        <?php if (!empty($allBrands)): ?>
         <div class="filter-group">
-            <label class="filter-label">Kohort (startår)</label>
+            <label class="filter-label">Varumarke</label>
+            <select name="brand" class="form-select" onchange="this.form.submit()">
+                <option value="">Alla varumarken</option>
+                <?php foreach ($allBrands as $brand): ?>
+                    <option value="<?= $brand['id'] ?>" <?= $selectedBrand == $brand['id'] ? 'selected' : '' ?>
+                        <?php if (!empty($brand['accent_color'])): ?>style="border-left: 3px solid <?= htmlspecialchars($brand['accent_color']) ?>"<?php endif; ?>>
+                        <?= htmlspecialchars($brand['name']) ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+        <?php endif; ?>
+
+        <div class="filter-group">
+            <label class="filter-label">Kohort (startar)</label>
             <select name="cohort" class="form-select" onchange="this.form.submit()">
                 <option value="">-- Valj kohort --</option>
                 <?php foreach ($availableCohorts as $c): ?>
@@ -153,32 +163,14 @@ include __DIR__ . '/components/unified-layout.php';
             </select>
         </div>
 
-        <?php if (!empty($availableBrands)): ?>
-        <div class="filter-group filter-group--brands">
-            <label class="filter-label">Varumarken (max 12)</label>
-            <div class="brand-selector">
-                <?php foreach (array_slice($availableBrands, 0, 12) as $brand): ?>
-                <label class="brand-chip <?= in_array($brand['id'], $selectedBrands) ? 'selected' : '' ?>"
-                       style="<?= $brand['color_primary'] ? '--chip-color: ' . htmlspecialchars($brand['color_primary']) : '' ?>">
-                    <input type="checkbox" name="brands[]" value="<?= $brand['id'] ?>"
-                           <?= in_array($brand['id'], $selectedBrands) ? 'checked' : '' ?>
-                           onchange="document.getElementById('filterForm').submit()">
-                    <span class="brand-chip-name"><?= htmlspecialchars($brand['short_code'] ?? $brand['name']) ?></span>
-                    <span class="brand-chip-count"><?= number_format($brand['rookie_count']) ?></span>
-                </label>
-                <?php endforeach; ?>
-            </div>
-        </div>
-        <?php endif; ?>
-
         <div class="filter-group filter-group--actions">
             <?php if ($selectedCohort && !empty($summary) && empty($summary['suppressed'])): ?>
             <div class="export-buttons">
-                <a href="?cohort=<?= $selectedCohort ?><?= !empty($selectedBrands) ? '&brands=' . implode(',', $selectedBrands) : '' ?>&export=csv"
+                <a href="?cohort=<?= $selectedCohort ?><?= $selectedBrand ? '&brand=' . $selectedBrand : '' ?>&export=csv"
                    class="btn-admin btn-admin-secondary btn-sm">
                     <i data-lucide="download"></i> CSV
                 </a>
-                <a href="?cohort=<?= $selectedCohort ?><?= !empty($selectedBrands) ? '&brands=' . implode(',', $selectedBrands) : '' ?>&export=json"
+                <a href="?cohort=<?= $selectedCohort ?><?= $selectedBrand ? '&brand=' . $selectedBrand : '' ?>&export=json"
                    class="btn-admin btn-admin-secondary btn-sm">
                     <i data-lucide="download"></i> JSON
                 </a>
@@ -208,13 +200,22 @@ include __DIR__ . '/components/unified-layout.php';
 
 <?php elseif (!empty($summary) && empty($summary['suppressed'])): ?>
 
-<!-- Selected Brands Indicator -->
-<?php if (!empty($selectedBrands)): ?>
+<!-- Selected Brand Indicator -->
+<?php if ($selectedBrand): ?>
+    <?php
+    $brandName = '';
+    foreach ($allBrands as $b) {
+        if ($b['id'] == $selectedBrand) {
+            $brandName = $b['name'];
+            break;
+        }
+    }
+    ?>
 <div class="alert alert-info" style="margin-bottom: var(--space-lg);">
     <i data-lucide="filter"></i>
     <div>
-        Filtrerar pa <?= count($selectedBrands) ?> varumarke(n).
-        <a href="?cohort=<?= $selectedCohort ?>">Visa alla</a>
+        Visar endast rookies som <strong>borjade i <?= htmlspecialchars($brandName) ?></strong>.
+        <a href="?cohort=<?= $selectedCohort ?>">Visa alla varumarken</a>
     </div>
 </div>
 <?php endif; ?>
@@ -227,7 +228,7 @@ include __DIR__ . '/components/unified-layout.php';
         </div>
         <div class="metric-content">
             <div class="metric-value"><?= number_format($summary['total_rookies']) ?></div>
-            <div class="metric-label">Rookies <?= $selectedCohort ?></div>
+            <div class="metric-label">Rookies <?= $selectedCohort ?><?= $selectedBrand && isset($brandName) ? ' (' . $brandName . ')' : '' ?></div>
         </div>
     </div>
 
@@ -425,71 +426,6 @@ include __DIR__ . '/components/unified-layout.php';
 </div>
 <?php endif; ?>
 
-<!-- Brand Comparison (if multiple brands selected) -->
-<?php if (!empty($brandComparison) && !empty($brandComparison['brands'])): ?>
-<div class="admin-card">
-    <div class="admin-card-header">
-        <h2><i data-lucide="git-compare"></i> Brand Comparison</h2>
-        <span class="badge"><?= $brandComparison['brand_count'] ?> varumarken</span>
-    </div>
-    <div class="admin-card-body" style="padding: 0;">
-        <div class="admin-table-container" style="overflow-x: auto;">
-            <table class="admin-table">
-                <thead>
-                    <tr>
-                        <th>Varumarke</th>
-                        <th style="text-align: right;">Rookies</th>
-                        <th style="text-align: right;">Snitt starter</th>
-                        <th style="text-align: right;">Snitt percentil</th>
-                        <th style="text-align: right;">Engagemang</th>
-                        <th style="text-align: right;">Return Y2</th>
-                        <th style="text-align: right;">Return Y3</th>
-                        <th style="text-align: right;">Snitt karriar</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php foreach ($brandComparison['brands'] as $brand): ?>
-                    <tr>
-                        <td>
-                            <span class="brand-indicator" style="background: <?= htmlspecialchars($brand['color'] ?? 'var(--color-accent)') ?>;"></span>
-                            <?= htmlspecialchars($brand['brand_name']) ?>
-                            <?php if ($brand['short_code']): ?>
-                            <span class="text-muted">(<?= htmlspecialchars($brand['short_code']) ?>)</span>
-                            <?php endif; ?>
-                        </td>
-                        <td style="text-align: right;"><?= number_format($brand['rookie_count']) ?></td>
-                        <td style="text-align: right;"><?= $brand['avg_starts'] ?></td>
-                        <td style="text-align: right;"><?= $brand['avg_percentile'] ?></td>
-                        <td style="text-align: right;"><?= $brand['avg_engagement'] ?></td>
-                        <td style="text-align: right;">
-                            <span class="<?= $brand['return_rate_y2'] >= 50 ? 'text-success' : ($brand['return_rate_y2'] < 30 ? 'text-warning' : '') ?>">
-                                <?= $brand['return_rate_y2'] ?>%
-                            </span>
-                        </td>
-                        <td style="text-align: right;">
-                            <span class="<?= $brand['return_rate_y3'] >= 40 ? 'text-success' : ($brand['return_rate_y3'] < 20 ? 'text-warning' : '') ?>">
-                                <?= $brand['return_rate_y3'] ?>%
-                            </span>
-                        </td>
-                        <td style="text-align: right;"><?= $brand['avg_career_seasons'] ?> ar</td>
-                    </tr>
-                    <?php endforeach; ?>
-                </tbody>
-            </table>
-        </div>
-    </div>
-</div>
-
-<!-- Brand Comparison Chart -->
-<div class="admin-card">
-    <div class="admin-card-header">
-        <h2><i data-lucide="bar-chart-horizontal"></i> Brand Retention Comparison</h2>
-    </div>
-    <div class="admin-card-body">
-        <canvas id="brandComparisonChart" height="300"></canvas>
-    </div>
-</div>
-<?php endif; ?>
 
 <!-- Charts -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
@@ -524,48 +460,6 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     }
 
-    <?php if (!empty($brandComparison) && !empty($brandComparison['brands'])): ?>
-    // Brand Comparison Chart
-    const brandCtx = document.getElementById('brandComparisonChart');
-    if (brandCtx) {
-        const brandData = <?= json_encode($brandComparison['brands']) ?>;
-        new Chart(brandCtx, {
-            type: 'bar',
-            data: {
-                labels: brandData.map(b => b.short_code || b.brand_name),
-                datasets: [
-                    {
-                        label: 'Return Year 2 (%)',
-                        data: brandData.map(b => b.return_rate_y2),
-                        backgroundColor: 'rgba(55, 212, 214, 0.8)',
-                        borderColor: 'rgb(55, 212, 214)',
-                        borderWidth: 1
-                    },
-                    {
-                        label: 'Return Year 3 (%)',
-                        data: brandData.map(b => b.return_rate_y3),
-                        backgroundColor: 'rgba(16, 185, 129, 0.8)',
-                        borderColor: 'rgb(16, 185, 129)',
-                        borderWidth: 1
-                    }
-                ]
-            },
-            options: {
-                responsive: true,
-                plugins: {
-                    legend: { position: 'bottom' }
-                },
-                scales: {
-                    y: {
-                        min: 0,
-                        max: 100,
-                        title: { display: true, text: '%' }
-                    }
-                }
-            }
-        });
-    }
-    <?php endif; ?>
 });
 </script>
 
@@ -650,11 +544,6 @@ document.addEventListener('DOMContentLoaded', function() {
     gap: var(--space-xs);
 }
 
-.filter-group--brands {
-    flex: 1;
-    min-width: 300px;
-}
-
 .filter-group--actions {
     margin-left: auto;
     justify-content: flex-end;
@@ -664,45 +553,6 @@ document.addEventListener('DOMContentLoaded', function() {
     font-size: var(--text-sm);
     color: var(--color-text-secondary);
     font-weight: var(--weight-medium);
-}
-
-/* Brand Selector */
-.brand-selector {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--space-xs);
-}
-
-.brand-chip {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--space-xs);
-    padding: var(--space-xs) var(--space-sm);
-    background: var(--color-bg-surface);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-full);
-    cursor: pointer;
-    font-size: var(--text-sm);
-    transition: all 0.15s ease;
-}
-
-.brand-chip:hover {
-    border-color: var(--chip-color, var(--color-accent));
-}
-
-.brand-chip.selected {
-    background: var(--chip-color, var(--color-accent));
-    border-color: var(--chip-color, var(--color-accent));
-    color: white;
-}
-
-.brand-chip input {
-    display: none;
-}
-
-.brand-chip-count {
-    font-size: var(--text-xs);
-    opacity: 0.7;
 }
 
 /* Export buttons */
@@ -985,24 +835,8 @@ document.addEventListener('DOMContentLoaded', function() {
         width: 100%;
     }
 
-    .filter-group--brands {
-        min-width: unset;
-    }
-
     .filter-group--actions {
         margin-left: 0;
-    }
-
-    .brand-selector {
-        overflow-x: auto;
-        flex-wrap: nowrap;
-        padding-bottom: var(--space-sm);
-        -webkit-overflow-scrolling: touch;
-    }
-
-    .brand-chip {
-        flex: 0 0 auto;
-        white-space: nowrap;
     }
 
     .dashboard-metrics {

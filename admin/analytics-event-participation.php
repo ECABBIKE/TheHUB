@@ -158,68 +158,34 @@ include __DIR__ . '/components/unified-layout.php';
 ?>
 
 <style>
-.brand-selector {
+/* Filter Bar */
+.filter-bar {
     display: flex;
-    gap: var(--space-sm);
-    flex-wrap: wrap;
-    margin-bottom: var(--space-md);
-}
-
-.brand-btn {
-    padding: var(--space-sm) var(--space-md);
-    border-radius: var(--radius-md);
-    border: 2px solid var(--color-border);
+    gap: var(--space-lg);
+    margin-bottom: var(--space-xl);
+    padding: var(--space-md);
     background: var(--color-bg-card);
-    color: var(--color-text-primary);
-    cursor: pointer;
-    transition: all 0.2s;
-    text-decoration: none;
-    display: inline-flex;
-    align-items: center;
-    gap: var(--space-xs);
-}
-
-.brand-btn:hover {
-    border-color: var(--color-accent);
-}
-
-.brand-btn.active {
-    border-color: var(--color-accent);
-    background: var(--color-accent-light);
-}
-
-.brand-btn .brand-dot {
-    width: 12px;
-    height: 12px;
-    border-radius: 50%;
-}
-
-.year-selector {
-    display: flex;
-    gap: var(--space-xs);
-    flex-wrap: wrap;
-}
-
-.year-btn {
-    padding: var(--space-xs) var(--space-sm);
-    border-radius: var(--radius-sm);
     border: 1px solid var(--color-border);
-    background: var(--color-bg-card);
-    color: var(--color-text-secondary);
-    cursor: pointer;
-    transition: all 0.2s;
-    text-decoration: none;
+    border-radius: var(--radius-md);
+}
+
+.filter-form {
+    display: flex;
+    gap: var(--space-lg);
+    align-items: flex-end;
+    flex-wrap: wrap;
+}
+
+.filter-group {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+}
+
+.filter-label {
     font-size: var(--text-sm);
-}
-
-.year-btn:hover {
-    border-color: var(--color-accent);
-}
-
-.year-btn.active {
-    border-color: var(--color-accent);
-    background: var(--color-accent);
-    color: white;
+    color: var(--color-text-secondary);
+    font-weight: var(--weight-medium);
 }
 
 .stats-grid {
@@ -293,42 +259,82 @@ include __DIR__ . '/components/unified-layout.php';
     font-size: var(--text-sm);
     font-weight: 500;
 }
+
+/* Responsive */
+@media (max-width: 767px) {
+    .filter-bar {
+        margin-left: -16px;
+        margin-right: -16px;
+        border-radius: 0;
+        border-left: none;
+        border-right: none;
+        width: calc(100% + 32px);
+    }
+
+    .filter-form {
+        flex-direction: column;
+        width: 100%;
+    }
+
+    .filter-group {
+        width: 100%;
+    }
+
+    .filter-group select {
+        width: 100%;
+    }
+}
 </style>
 
-<!-- Filter Section -->
-<div class="card" style="margin-bottom: var(--space-lg);">
-    <div class="card-body">
-        <!-- Brand Selection -->
-        <div style="margin-bottom: var(--space-md);">
-            <label class="form-label">Varumarke</label>
-            <div class="brand-selector">
-                <a href="?year=<?= $selectedYear ?>" class="brand-btn <?= !$selectedBrandId ? 'active' : '' ?>">
-                    Alla
-                </a>
+<!-- Filter Bar -->
+<div class="filter-bar">
+    <form method="get" class="filter-form">
+        <?php if (!empty($brands)): ?>
+        <div class="filter-group">
+            <label class="filter-label">Varumarke</label>
+            <select name="brand" class="form-select" onchange="this.form.submit()">
+                <option value="">Alla varumarken</option>
                 <?php foreach ($brands as $brand): ?>
-                <a href="?year=<?= $selectedYear ?>&brand=<?= $brand['id'] ?>"
-                   class="brand-btn <?= $selectedBrandId == $brand['id'] ? 'active' : '' ?>">
-                    <span class="brand-dot" style="background: <?= $brand['color_primary'] ?: 'var(--color-accent)' ?>;"></span>
-                    <?= htmlspecialchars($brand['short_code'] ?: $brand['name']) ?>
-                </a>
+                    <option value="<?= $brand['id'] ?>" <?= $selectedBrandId == $brand['id'] ? 'selected' : '' ?>
+                        <?php if (!empty($brand['color_primary'])): ?>style="border-left: 3px solid <?= htmlspecialchars($brand['color_primary']) ?>"<?php endif; ?>>
+                        <?= htmlspecialchars($brand['name']) ?>
+                    </option>
                 <?php endforeach; ?>
-            </div>
+            </select>
         </div>
+        <?php endif; ?>
 
-        <!-- Year Selection -->
-        <div>
-            <label class="form-label">Artal</label>
-            <div class="year-selector">
+        <div class="filter-group">
+            <label class="filter-label">Artal</label>
+            <select name="year" class="form-select" onchange="this.form.submit()">
                 <?php foreach ($years as $y): ?>
-                <a href="?year=<?= $y['year'] ?><?= $selectedBrandId ? '&brand=' . $selectedBrandId : '' ?>"
-                   class="year-btn <?= $selectedYear == $y['year'] ? 'active' : '' ?>">
-                    <?= $y['year'] ?>
-                </a>
+                    <option value="<?= $y['year'] ?>" <?= $selectedYear == $y['year'] ? 'selected' : '' ?>>
+                        <?= $y['year'] ?>
+                    </option>
                 <?php endforeach; ?>
-            </div>
+            </select>
         </div>
+    </form>
+</div>
+
+<?php if ($selectedBrandId): ?>
+    <?php
+    $brandName = '';
+    foreach ($brands as $b) {
+        if ($b['id'] == $selectedBrandId) {
+            $brandName = $b['name'];
+            break;
+        }
+    }
+    ?>
+<div class="alert alert-info" style="margin-bottom: var(--space-lg);">
+    <i data-lucide="filter"></i>
+    <div>
+        Visar event for <strong><?= htmlspecialchars($brandName) ?></strong>.
+        <a href="?year=<?= $selectedYear ?>">Visa alla varumarken</a>
     </div>
 </div>
+<?php endif; ?>
 
 <?php if ($error): ?>
 <div class="alert alert-danger">
