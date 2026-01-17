@@ -58,7 +58,7 @@ $genderData = [];
 try {
     // Grundlaggande tillvaxtdata
     foreach ($yearsToShow as $year) {
-        $kpis = $kpiCalc->getAllKPIs($year);
+        $kpis = $kpiCalc->getAllKPIs($year, $selectedBrand);
         $trendsData[] = [
             'year' => $year,
             'total_riders' => $kpis['total_riders'],

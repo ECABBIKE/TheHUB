@@ -60,10 +60,10 @@ $entryPoints = [];
 $feederMatrix = [];
 
 try {
-    $kpis = $kpiCalc->getAllKPIs($selectedYear);
+    $kpis = $kpiCalc->getAllKPIs($selectedYear, $selectedBrand);
 
     if ($compareYear) {
-        $comparison = $kpiCalc->compareYears($compareYear, $selectedYear);
+        $comparison = $kpiCalc->compareYears($compareYear, $selectedYear, $selectedBrand);
     }
 
     $trends = $kpiCalc->getGrowthTrend(5);
