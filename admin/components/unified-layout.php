@@ -59,7 +59,7 @@ if (!isset($current_admin_page)) {
 }
 ?>
 <!DOCTYPE html>
-<html lang="sv" data-theme="light">
+<html lang="sv" data-theme="dark">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
