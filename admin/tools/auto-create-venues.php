@@ -15,14 +15,18 @@ require_once __DIR__ . '/../../config.php';
 require_admin();
 
 $db = getDB();
-$message = '';
-$messageType = 'info';
+
+// Handle message from redirect (PRG pattern)
+$message = isset($_GET['msg']) ? $_GET['msg'] : '';
+$messageType = isset($_GET['type']) ? $_GET['type'] : 'info';
 
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     checkCsrf();
 
     $action = $_POST['action'] ?? '';
+    $redirectMsg = '';
+    $redirectType = 'info';
 
     // =========================================================================
     // CREATE VENUES - Batch create from selected locations
@@ -31,8 +35,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $selectedLocations = $_POST['locations'] ?? [];
 
         if (empty($selectedLocations)) {
-            $message = 'Inga platser valda';
-            $messageType = 'warning';
+            $redirectMsg = 'Inga platser valda';
+            $redirectType = 'warning';
         } else {
             $created = 0;
             $linked = 0;
@@ -77,13 +81,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
 
             if ($created > 0 || $linked > 0) {
-                $message = "Skapade $created nya destinations och kopplade $linked events.";
-                $messageType = 'success';
+                $redirectMsg = "Skapade $created nya destinations och kopplade $linked events.";
+                $redirectType = 'success';
             }
 
             if (!empty($errors)) {
-                $message .= " Fel: " . implode(', ', $errors);
-                $messageType = $created > 0 ? 'warning' : 'error';
+                $redirectMsg .= " Fel: " . implode(', ', $errors);
+                $redirectType = $created > 0 ? 'warning' : 'error';
             }
         }
     }
@@ -96,8 +100,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $venueId = (int)($_POST['venue_id'] ?? 0);
 
         if (empty($location) || $venueId <= 0) {
-            $message = 'Ogiltig plats eller destination';
-            $messageType = 'error';
+            $redirectMsg = 'Ogiltig plats eller destination';
+            $redirectType = 'error';
         } else {
             try {
                 $result = $db->query(
@@ -105,14 +109,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     [$venueId, $location]
                 );
                 $linked = $result->rowCount();
-                $message = "Kopplade $linked events till vald destination.";
-                $messageType = 'success';
+                $redirectMsg = "Kopplade $linked events till vald destination.";
+                $redirectType = 'success';
             } catch (Exception $e) {
-                $message = 'Fel: ' . $e->getMessage();
-                $messageType = 'error';
+                $redirectMsg = 'Fel: ' . $e->getMessage();
+                $redirectType = 'error';
             }
         }
     }
+
+    // PRG pattern - redirect to avoid form resubmission and white page issue
+    $redirectUrl = '/admin/tools/auto-create-venues.php';
+    if ($redirectMsg) {
+        $redirectUrl .= '?msg=' . urlencode($redirectMsg) . '&type=' . $redirectType;
+    }
+    header('Location: ' . $redirectUrl);
+    exit;
 }
 
 // Fetch events grouped by location (without venue)
