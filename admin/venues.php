@@ -88,11 +88,11 @@ $totalEvents = array_sum(array_column($venues, 'event_count'));
 
 // Page config
 $page_title = 'Anläggningar';
-$page_actions = '<a href="/admin/import-venues.php" class="btn-admin btn-admin-secondary mr-sm">
+$page_actions = '<a href="/admin/import-venues.php" class="btn btn--secondary mr-sm">
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
     Importera
 </a>
-<a href="/admin/venue-edit.php" class="btn-admin btn-admin-primary">
+<a href="/admin/venue-edit.php" class="btn btn--primary">
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
     Ny Anläggning
 </a>';
@@ -113,70 +113,70 @@ include __DIR__ . '/components/unified-layout.php';
 <?php endif; ?>
 
 <!-- Stats Grid -->
-<div class="admin-stats-grid">
-    <div class="admin-stat-card">
-        <div class="admin-stat-icon" style="background: var(--color-info-light); color: var(--color-info);">
+<div class="grid grid-stats">
+    <div class="stat-card">
+        <div class="stat-icon" style="background: var(--color-info-light); color: var(--color-info);">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m8 3 4 8 5-5 5 15H2L8 3z"/></svg>
         </div>
-        <div class="admin-stat-content">
-            <div class="admin-stat-value"><?= $totalVenues ?></div>
-            <div class="admin-stat-label">Totalt anläggningar</div>
+        <div class="stat-content">
+            <div class="stat-value"><?= $totalVenues ?></div>
+            <div class="stat-label">Totalt anläggningar</div>
         </div>
     </div>
 
-    <div class="admin-stat-card">
-        <div class="admin-stat-icon" style="background: var(--color-success-light); color: var(--color-success);">
+    <div class="stat-card">
+        <div class="stat-icon" style="background: var(--color-success-light); color: var(--color-success);">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
         </div>
-        <div class="admin-stat-content">
-            <div class="admin-stat-value"><?= $activeCount ?></div>
-            <div class="admin-stat-label">Aktiva</div>
+        <div class="stat-content">
+            <div class="stat-value"><?= $activeCount ?></div>
+            <div class="stat-label">Aktiva</div>
         </div>
     </div>
 
-    <div class="admin-stat-card">
-        <div class="admin-stat-icon" style="background: var(--color-accent-light); color: var(--color-accent);">
+    <div class="stat-card">
+        <div class="stat-icon" style="background: var(--color-accent-light); color: var(--color-accent);">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>
         </div>
-        <div class="admin-stat-content">
-            <div class="admin-stat-value"><?= $totalEvents ?></div>
-            <div class="admin-stat-label">Totalt events</div>
+        <div class="stat-content">
+            <div class="stat-value"><?= $totalEvents ?></div>
+            <div class="stat-label">Totalt events</div>
         </div>
     </div>
 </div>
 
 <!-- Search -->
-<div class="admin-card mb-lg">
-    <div class="admin-card-body">
+<div class="card mb-lg">
+    <div class="card-body">
         <form method="GET" class="flex gap-md items-end">
             <div class="flex-1">
-                <label class="admin-form-label">Sök anläggning</label>
-                <input type="text" name="search" class="admin-form-input" placeholder="Sök på namn, stad eller region..." value="<?= htmlspecialchars($search) ?>">
+                <label class="label">Sök anläggning</label>
+                <input type="text" name="search" class="input" placeholder="Sök på namn, stad eller region..." value="<?= htmlspecialchars($search) ?>">
             </div>
-            <button type="submit" class="btn-admin btn-admin-primary">Sök</button>
+            <button type="submit" class="btn btn--primary">Sök</button>
             <?php if ($search): ?>
-                <a href="/admin/venues.php" class="btn-admin btn-admin-secondary">Rensa</a>
+                <a href="/admin/venues.php" class="btn btn--secondary">Rensa</a>
             <?php endif; ?>
         </form>
     </div>
 </div>
 
 <!-- Venues Table -->
-<div class="admin-card">
-    <div class="admin-card-header">
+<div class="card">
+    <div class="card-header">
         <h2><?= count($venues) ?> anläggningar<?= $search ? ' (filtrerat)' : '' ?></h2>
     </div>
-    <div class="admin-card-body" style="padding: 0;">
+    <div class="card-body" style="padding: 0;">
         <?php if (empty($venues)): ?>
-            <div class="admin-empty-state">
+            <div class="empty-state">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m8 3 4 8 5-5 5 15H2L8 3z"/></svg>
                 <h3>Inga anläggningar hittades</h3>
                 <p>Skapa en ny anläggning för att komma igång.</p>
-                <a href="/admin/venue-edit.php" class="btn-admin btn-admin-primary">Skapa anläggning</a>
+                <a href="/admin/venue-edit.php" class="btn btn--primary">Skapa anläggning</a>
             </div>
         <?php else: ?>
-            <div class="admin-table-container">
-                <table class="admin-table">
+            <div class="table-container">
+                <table class="table">
                     <thead>
                         <tr>
                             <th>Anläggning</th>
@@ -222,7 +222,7 @@ include __DIR__ . '/components/unified-layout.php';
                                 </td>
                                 <td>
                                     <?php if ($venue['event_count'] > 0): ?>
-                                        <a href="/admin/events.php?venue_id=<?= $venue['id'] ?>" class="btn-admin btn-admin-sm btn-admin-secondary">
+                                        <a href="/admin/events.php?venue_id=<?= $venue['id'] ?>" class="btn btn--sm btn--secondary">
                                             <?= $venue['event_count'] ?>
                                         </a>
                                     <?php else: ?>
@@ -230,13 +230,13 @@ include __DIR__ . '/components/unified-layout.php';
                                     <?php endif; ?>
                                 </td>
                                 <td>
-                                    <span class="admin-badge <?= $venue['active'] ? 'admin-badge-success' : 'admin-badge-secondary' ?>">
+                                    <span class="badge <?= $venue['active'] ? 'badge badge--success' : 'badge badge--secondary' ?>">
                                         <?= $venue['active'] ? 'Aktiv' : 'Inaktiv' ?>
                                     </span>
                                 </td>
                                 <td>
                                     <div class="table-actions">
-                                        <a href="/admin/venue-edit.php?id=<?= $venue['id'] ?>" class="btn-admin btn-admin-sm btn-admin-secondary" title="Redigera">
+                                        <a href="/admin/venue-edit.php?id=<?= $venue['id'] ?>" class="btn btn--sm btn--secondary" title="Redigera">
                                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
                                         </a>
                                         <?php if ($venue['event_count'] == 0): ?>
@@ -244,7 +244,7 @@ include __DIR__ . '/components/unified-layout.php';
                                             <?= csrf_field() ?>
                                             <input type="hidden" name="action" value="delete">
                                             <input type="hidden" name="id" value="<?= $venue['id'] ?>">
-                                            <button type="submit" class="btn-admin btn-admin-sm btn-admin-danger" title="Ta bort">
+                                            <button type="submit" class="btn btn--sm btn--danger" title="Ta bort">
                                                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
                                             </button>
                                         </form>

@@ -232,24 +232,24 @@ if ($isPromotorOnly) {
     $page_actions = ''; // No admin actions for promotors
 } else {
     $page_actions = '
-    <button id="bulk-edit-toggle" class="btn-admin btn-admin-secondary mr-sm" onclick="toggleBulkEdit(\'event\')">
+    <button id="bulk-edit-toggle" class="btn btn--secondary mr-sm" onclick="toggleBulkEdit(\'event\')">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.375 2.625a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4Z"/></svg>
         <span id="bulk-edit-label">Massandra tavlingsfalt</span>
     </button>
-    <button id="bulk-edit-organizer-toggle" class="btn-admin btn-admin-secondary mr-sm" onclick="toggleBulkEdit(\'organizer\')">
+    <button id="bulk-edit-organizer-toggle" class="btn btn--secondary mr-sm" onclick="toggleBulkEdit(\'organizer\')">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
         <span id="bulk-edit-organizer-label">Visa arrangorsfalt</span>
     </button>
-    <button id="bulk-edit-destination-toggle" class="btn-admin btn-admin-secondary mr-sm" onclick="toggleBulkEdit(\'destination\')">
+    <button id="bulk-edit-destination-toggle" class="btn btn--secondary mr-sm" onclick="toggleBulkEdit(\'destination\')">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
         <span id="bulk-edit-destination-label">Visa destinationsfalt</span>
     </button>
     ' . ($eventsWithoutVenue > 0 ? '
-    <a href="/admin/tools/auto-create-venues.php" class="btn-admin btn-admin-warning mr-sm" title="' . $eventsWithoutVenue . ' events saknar destination">
+    <a href="/admin/tools/auto-create-venues.php" class="btn btn--warning mr-sm" title="' . $eventsWithoutVenue . ' events saknar destination">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></svg>
         Auto-skapa (' . $eventsWithoutVenue . ')
     </a>' : '') . '
-    <a href="/admin/events/create" class="btn-admin btn-admin-primary">
+    <a href="/admin/events/create" class="btn btn--primary">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
         Nytt Event
     </a>';
@@ -267,13 +267,13 @@ include __DIR__ . '/components/unified-layout.php';
 <?php endif; ?>
 
 <!-- Filter Section -->
-<div class="admin-card">
-    <div class="admin-card-body">
-        <form method="GET" action="/admin/events" class="admin-form-row" id="filter-form">
+<div class="card">
+    <div class="card-body">
+        <form method="GET" action="/admin/events" class="form-row" id="filter-form">
             <!-- Brand Filter -->
-            <div class="admin-form-group mb-0">
-                <label for="brand-filter" class="admin-form-label">Varumärke<?= $filterYear ? ' (' . $filterYear . ')' : '' ?></label>
-                <select id="brand-filter" name="brand" class="admin-form-select" onchange="this.form.submit()">
+            <div class="form-group mb-0">
+                <label for="brand-filter" class="label">Varumärke<?= $filterYear ? ' (' . $filterYear . ')' : '' ?></label>
+                <select id="brand-filter" name="brand" class="input" onchange="this.form.submit()">
                     <option value="">Alla varumärken</option>
                     <?php foreach ($allBrands as $brand): ?>
                         <option value="<?= htmlspecialchars($brand) ?>" <?= $filterBrand === $brand ? 'selected' : '' ?>>
@@ -284,9 +284,9 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
 
             <!-- Year Filter -->
-            <div class="admin-form-group mb-0">
-                <label for="year-filter" class="admin-form-label">År</label>
-                <select id="year-filter" name="year" class="admin-form-select" onchange="this.form.submit()">
+            <div class="form-group mb-0">
+                <label for="year-filter" class="label">År</label>
+                <select id="year-filter" name="year" class="input" onchange="this.form.submit()">
                     <option value="">Alla år</option>
                     <?php foreach ($allYears as $yearRow): ?>
                         <option value="<?= $yearRow['year'] ?>" <?= $filterYear == $yearRow['year'] ? 'selected' : '' ?>>
@@ -297,9 +297,9 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
 
             <!-- Discipline Filter -->
-            <div class="admin-form-group mb-0">
-                <label for="discipline-filter" class="admin-form-label">Format</label>
-                <select id="discipline-filter" name="discipline" class="admin-form-select" onchange="this.form.submit()">
+            <div class="form-group mb-0">
+                <label for="discipline-filter" class="label">Format</label>
+                <select id="discipline-filter" name="discipline" class="input" onchange="this.form.submit()">
                     <option value="">Alla format</option>
                     <?php foreach ($allDisciplines as $code => $displayName): ?>
                         <option value="<?= htmlspecialchars($code) ?>" <?= $filterDiscipline === $code ? 'selected' : '' ?>>
@@ -315,15 +315,15 @@ include __DIR__ . '/components/unified-layout.php';
             <div class="mt-md flex items-center gap-sm flex-wrap" style="padding-top: var(--space-md); border-top: 1px solid var(--color-border);">
                 <span class="text-sm text-secondary">Visar:</span>
                 <?php if ($filterBrand): ?>
-                    <span class="admin-badge admin-badge-info"><?= htmlspecialchars($filterBrand) ?></span>
+                    <span class="badge badge badge--info"><?= htmlspecialchars($filterBrand) ?></span>
                 <?php endif; ?>
                 <?php if ($filterYear): ?>
-                    <span class="admin-badge admin-badge-warning"><?= $filterYear ?></span>
+                    <span class="badge badge badge--warning"><?= $filterYear ?></span>
                 <?php endif; ?>
                 <?php if ($filterDiscipline): ?>
-                    <span class="admin-badge admin-badge-success"><?= htmlspecialchars($disciplineMapping[$filterDiscipline] ?? $filterDiscipline) ?></span>
+                    <span class="badge badge badge--success"><?= htmlspecialchars($disciplineMapping[$filterDiscipline] ?? $filterDiscipline) ?></span>
                 <?php endif; ?>
-                <a href="/admin/events" class="btn-admin btn-admin-sm btn-admin-secondary">
+                <a href="/admin/events" class="btn btn--sm btn--secondary">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon-xs"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
                     Visa alla
                 </a>
@@ -333,13 +333,13 @@ include __DIR__ . '/components/unified-layout.php';
 </div>
 
 <!-- Events Table -->
-<div class="admin-card">
-    <div class="admin-card-header">
+<div class="card">
+    <div class="card-header">
         <h2><?= count($events) ?> events</h2>
     </div>
-    <div class="admin-card-body p-0">
+    <div class="card-body p-0">
         <?php if (empty($events)): ?>
-            <div class="admin-empty-state">
+            <div class="empty-state">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>
                 <?php if (isset($noEventsMessage)): ?>
                     <h3>Inga tilldelade events</h3>
@@ -347,12 +347,12 @@ include __DIR__ . '/components/unified-layout.php';
                 <?php else: ?>
                     <h3>Inga events hittades</h3>
                     <p>Prova att ändra filtren eller skapa ett nytt event.</p>
-                    <a href="/admin/events/create" class="btn-admin btn-admin-primary">Skapa event</a>
+                    <a href="/admin/events/create" class="btn btn--primary">Skapa event</a>
                 <?php endif; ?>
             </div>
         <?php else: ?>
-            <div class="admin-table-container">
-                <table class="admin-table">
+            <div class="table-container">
+                <table class="table">
                     <thead>
                         <tr>
                             <th class="sticky-col sticky-col-1">Datum</th>
@@ -394,7 +394,7 @@ include __DIR__ . '/components/unified-layout.php';
                                         }
                                     }
                                     ?>
-                                    <select class="admin-form-select" style="min-width: 200px; padding: var(--space-xs) var(--space-sm); font-size: 0.875rem;" onchange="updateSeries(<?= $event['id'] ?>, this.value)">
+                                    <select class="input" style="min-width: 200px; padding: var(--space-xs) var(--space-sm); font-size: 0.875rem;" onchange="updateSeries(<?= $event['id'] ?>, this.value)">
                                         <option value="">-</option>
                                         <?php foreach ($filteredSeries as $series): ?>
                                             <option value="<?= $series['id'] ?>" <?= ($event['series_id'] ?? '') == $series['id'] ? 'selected' : '' ?>>
@@ -404,7 +404,7 @@ include __DIR__ . '/components/unified-layout.php';
                                     </select>
                                 </td>
                                 <td class="destination-field">
-                                    <select class="admin-form-select" style="min-width: 180px; padding: var(--space-xs) var(--space-sm); font-size: 0.875rem;" onchange="updateVenue(<?= $event['id'] ?>, this.value)">
+                                    <select class="input" style="min-width: 180px; padding: var(--space-xs) var(--space-sm); font-size: 0.875rem;" onchange="updateVenue(<?= $event['id'] ?>, this.value)">
                                         <option value="">- Valj destination -</option>
                                         <?php foreach ($allVenues as $venue): ?>
                                             <option value="<?= $venue['id'] ?>" <?= ($event['venue_id'] ?? '') == $venue['id'] ? 'selected' : '' ?>>
@@ -420,7 +420,7 @@ include __DIR__ . '/components/unified-layout.php';
                                     <?php endif; ?>
                                 </td>
                                 <td class="event-field">
-                                    <select class="admin-form-select" style="min-width: 120px; padding: var(--space-xs) var(--space-sm);" onchange="updateDiscipline(<?= $event['id'] ?>, this.value)">
+                                    <select class="input" style="min-width: 120px; padding: var(--space-xs) var(--space-sm);" onchange="updateDiscipline(<?= $event['id'] ?>, this.value)">
                                         <option value="">-</option>
                                         <option value="ENDURO" <?= ($event['discipline'] ?? '') === 'ENDURO' ? 'selected' : '' ?>>Enduro</option>
                                         <option value="DH" <?= ($event['discipline'] ?? '') === 'DH' ? 'selected' : '' ?>>Downhill</option>
@@ -434,14 +434,14 @@ include __DIR__ . '/components/unified-layout.php';
                                     </select>
                                 </td>
                                 <td class="event-field">
-                                    <select class="admin-form-select" style="min-width: 130px; padding: var(--space-xs) var(--space-sm);" onchange="updateEventLevel(<?= $event['id'] ?>, this.value)">
+                                    <select class="input" style="min-width: 130px; padding: var(--space-xs) var(--space-sm);" onchange="updateEventLevel(<?= $event['id'] ?>, this.value)">
                                         <option value="">-</option>
                                         <option value="national" <?= ($event['event_level'] ?? '') === 'national' ? 'selected' : '' ?>>Nationell (100%)</option>
                                         <option value="sportmotion" <?= ($event['event_level'] ?? '') === 'sportmotion' ? 'selected' : '' ?>>Sportmotion (50%)</option>
                                     </select>
                                 </td>
                                 <td class="event-field">
-                                    <select class="admin-form-select" style="min-width: 150px; padding: var(--space-xs) var(--space-sm);" onchange="updateEventFormat(<?= $event['id'] ?>, this.value)">
+                                    <select class="input" style="min-width: 150px; padding: var(--space-xs) var(--space-sm);" onchange="updateEventFormat(<?= $event['id'] ?>, this.value)">
                                         <option value="">-</option>
                                         <option value="ENDURO" <?= ($event['event_format'] ?? '') === 'ENDURO' ? 'selected' : '' ?>>Enduro</option>
                                         <option value="DH_STANDARD" <?= ($event['event_format'] ?? '') === 'DH_STANDARD' ? 'selected' : '' ?>>DH Standard</option>
@@ -450,7 +450,7 @@ include __DIR__ . '/components/unified-layout.php';
                                     </select>
                                 </td>
                                 <td class="event-field">
-                                    <select class="admin-form-select" style="min-width: 140px; padding: var(--space-xs) var(--space-sm); font-size: 0.875rem;" onchange="updatePointScale(<?= $event['id'] ?>, this.value)">
+                                    <select class="input" style="min-width: 140px; padding: var(--space-xs) var(--space-sm); font-size: 0.875rem;" onchange="updatePointScale(<?= $event['id'] ?>, this.value)">
                                         <option value="">-</option>
                                         <?php foreach ($allPointScales as $scale): ?>
                                             <option value="<?= $scale['id'] ?>" <?= ($event['point_scale_id'] ?? '') == $scale['id'] ? 'selected' : '' ?>>
@@ -460,7 +460,7 @@ include __DIR__ . '/components/unified-layout.php';
                                     </select>
                                 </td>
                                 <td class="event-field">
-                                    <select class="admin-form-select" style="min-width: 150px; padding: var(--space-xs) var(--space-sm); font-size: 0.875rem;" onchange="updatePricingTemplate(<?= $event['id'] ?>, this.value)">
+                                    <select class="input" style="min-width: 150px; padding: var(--space-xs) var(--space-sm); font-size: 0.875rem;" onchange="updatePricingTemplate(<?= $event['id'] ?>, this.value)">
                                         <option value="">-</option>
                                         <?php foreach ($allPricingTemplates as $template): ?>
                                             <option value="<?= $template['id'] ?>" <?= ($event['pricing_template_id'] ?? '') == $template['id'] ? 'selected' : '' ?>>
@@ -470,13 +470,13 @@ include __DIR__ . '/components/unified-layout.php';
                                     </select>
                                 </td>
                                 <td class="event-field">
-                                    <input type="text" class="admin-form-input" style="min-width: 80px; padding: var(--space-xs) var(--space-sm); font-size: 0.7rem;"
+                                    <input type="text" class="input" style="min-width: 80px; padding: var(--space-xs) var(--space-sm); font-size: 0.7rem;"
                                            value="<?= htmlspecialchars($event['advent_id'] ?? '') ?>"
                                            onblur="updateAdventId(<?= $event['id'] ?>, this.value)"
                                            placeholder="-">
                                 </td>
                                 <td class="destination-field organizer-field">
-                                    <select class="admin-form-select" style="min-width: 150px; padding: var(--space-xs) var(--space-sm); font-size: 0.875rem;" onchange="updateOrganizerClub(<?= $event['id'] ?>, this.value)">
+                                    <select class="input" style="min-width: 150px; padding: var(--space-xs) var(--space-sm); font-size: 0.875rem;" onchange="updateOrganizerClub(<?= $event['id'] ?>, this.value)">
                                         <option value="">-</option>
                                         <?php foreach ($allClubs as $club): ?>
                                             <option value="<?= $club['id'] ?>" <?= ($event['organizer_club_id'] ?? '') == $club['id'] ? 'selected' : '' ?>>
@@ -486,41 +486,41 @@ include __DIR__ . '/components/unified-layout.php';
                                     </select>
                                 </td>
                                 <td class="organizer-field">
-                                    <input type="text" class="admin-form-input organizer-input" style="min-width: 120px; padding: var(--space-xs) var(--space-sm); font-size: 0.875rem;"
+                                    <input type="text" class="input organizer-input" style="min-width: 120px; padding: var(--space-xs) var(--space-sm); font-size: 0.875rem;"
                                            value="<?= htmlspecialchars($event['website'] ?? '') ?>"
                                            onblur="updateOrganizerField(<?= $event['id'] ?>, 'website', this.value)"
                                            placeholder="https://">
                                 </td>
                                 <td class="organizer-field">
-                                    <input type="email" class="admin-form-input organizer-input" style="min-width: 150px; padding: var(--space-xs) var(--space-sm); font-size: 0.875rem;"
+                                    <input type="email" class="input organizer-input" style="min-width: 150px; padding: var(--space-xs) var(--space-sm); font-size: 0.875rem;"
                                            value="<?= htmlspecialchars($event['contact_email'] ?? '') ?>"
                                            onblur="updateOrganizerField(<?= $event['id'] ?>, 'contact_email', this.value)"
                                            placeholder="mail@example.com">
                                 </td>
                                 <td class="organizer-field">
-                                    <input type="tel" class="admin-form-input organizer-input" style="min-width: 120px; padding: var(--space-xs) var(--space-sm); font-size: 0.875rem;"
+                                    <input type="tel" class="input organizer-input" style="min-width: 120px; padding: var(--space-xs) var(--space-sm); font-size: 0.875rem;"
                                            value="<?= htmlspecialchars($event['contact_phone'] ?? '') ?>"
                                            onblur="updateOrganizerField(<?= $event['id'] ?>, 'contact_phone', this.value)"
                                            placeholder="070-123 45 67">
                                 </td>
                                 <td class="organizer-field">
-                                    <input type="date" class="admin-form-input organizer-input" style="min-width: 130px; padding: var(--space-xs) var(--space-sm); font-size: 0.875rem;"
+                                    <input type="date" class="input organizer-input" style="min-width: 130px; padding: var(--space-xs) var(--space-sm); font-size: 0.875rem;"
                                            value="<?= htmlspecialchars($event['registration_deadline'] ?? '') ?>"
                                            onblur="updateOrganizerField(<?= $event['id'] ?>, 'registration_deadline', this.value)">
                                 </td>
                                 <td class="organizer-field">
-                                    <input type="time" class="admin-form-input organizer-input" style="min-width: 100px; padding: var(--space-xs) var(--space-sm); font-size: 0.875rem;"
+                                    <input type="time" class="input organizer-input" style="min-width: 100px; padding: var(--space-xs) var(--space-sm); font-size: 0.875rem;"
                                            value="<?= htmlspecialchars($event['registration_deadline_time'] ?? '23:59') ?>"
                                            onblur="updateOrganizerField(<?= $event['id'] ?>, 'registration_deadline_time', this.value)"
                                            placeholder="23:59">
                                 </td>
                                 <td>
                                     <div class="table-actions">
-                                        <a href="/admin/events/edit/<?= $event['id'] ?>" class="btn-admin btn-admin-sm btn-admin-secondary" title="<?= $isPromotorOnly ? 'Visa' : 'Redigera' ?>">
+                                        <a href="/admin/events/edit/<?= $event['id'] ?>" class="btn btn--sm btn--secondary" title="<?= $isPromotorOnly ? 'Visa' : 'Redigera' ?>">
                                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><?php if ($isPromotorOnly): ?><path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"/><circle cx="12" cy="12" r="3"/><?php else: ?><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/><?php endif; ?></svg>
                                         </a>
                                         <?php if (!$isPromotorOnly): ?>
-                                        <button onclick="deleteEvent(<?= $event['id'] ?>, '<?= addslashes($event['name']) ?>')" class="btn-admin btn-admin-sm btn-admin-danger" title="Ta bort">
+                                        <button onclick="deleteEvent(<?= $event['id'] ?>, '<?= addslashes($event['name']) ?>')" class="btn btn--sm btn--danger" title="Ta bort">
                                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
                                         </button>
                                         <?php endif; ?>
@@ -903,19 +903,19 @@ document.addEventListener('DOMContentLoaded', function() {
             display: none;
         }
         /* Make the table scrollable in both directions */
-        .admin-table-container {
+        .table-container {
             overflow: auto;
             max-height: calc(100vh - 280px);
             border: 1px solid var(--color-border);
             border-radius: var(--radius-md);
         }
         /* Sticky header row */
-        .admin-table thead {
+        .table thead {
             position: sticky;
             top: 0;
             z-index: 4;
         }
-        .admin-table thead th {
+        .table thead th {
             background: var(--color-bg-surface);
         }
         /* Sticky columns for Datum and Namn */
@@ -941,8 +941,8 @@ document.addEventListener('DOMContentLoaded', function() {
             background: var(--color-bg-hover);
         }
         /* Compact styling for visible fields */
-        .admin-table .admin-form-select,
-        .admin-table .admin-form-input {
+        .table .input,
+        .table .input {
             font-size: 0.75rem;
             padding: 4px 8px;
         }
@@ -957,23 +957,23 @@ function toggleBulkEdit(mode) {
     const organizerLabel = document.getElementById('bulk-edit-organizer-label');
     const destinationBtn = document.getElementById('bulk-edit-destination-toggle');
     const destinationLabel = document.getElementById('bulk-edit-destination-label');
-    const table = document.querySelector('.admin-table');
+    const table = document.querySelector('.table');
 
     // If clicking the same mode again, turn it off
     if (bulkEditMode === mode) {
         bulkEditMode = null;
 
         // Reset all buttons
-        eventBtn.classList.remove('btn-admin-primary');
-        eventBtn.classList.add('btn-admin-secondary');
+        eventBtn.classList.remove('btn--primary');
+        eventBtn.classList.add('btn--secondary');
         eventLabel.textContent = 'Massandra tavlingsfalt';
 
-        organizerBtn.classList.remove('btn-admin-primary');
-        organizerBtn.classList.add('btn-admin-secondary');
+        organizerBtn.classList.remove('btn--primary');
+        organizerBtn.classList.add('btn--secondary');
         organizerLabel.textContent = 'Visa arrangorsfalt';
 
-        destinationBtn.classList.remove('btn-admin-primary');
-        destinationBtn.classList.add('btn-admin-secondary');
+        destinationBtn.classList.remove('btn--primary');
+        destinationBtn.classList.add('btn--secondary');
         destinationLabel.textContent = 'Visa destinationsfalt';
 
         // Remove mode classes
@@ -987,34 +987,34 @@ function toggleBulkEdit(mode) {
         bulkEditMode = mode;
 
         // Reset all buttons first
-        eventBtn.classList.remove('btn-admin-primary');
-        eventBtn.classList.add('btn-admin-secondary');
+        eventBtn.classList.remove('btn--primary');
+        eventBtn.classList.add('btn--secondary');
         eventLabel.textContent = 'Massandra tavlingsfalt';
 
-        organizerBtn.classList.remove('btn-admin-primary');
-        organizerBtn.classList.add('btn-admin-secondary');
+        organizerBtn.classList.remove('btn--primary');
+        organizerBtn.classList.add('btn--secondary');
         organizerLabel.textContent = 'Visa arrangorsfalt';
 
-        destinationBtn.classList.remove('btn-admin-primary');
-        destinationBtn.classList.add('btn-admin-secondary');
+        destinationBtn.classList.remove('btn--primary');
+        destinationBtn.classList.add('btn--secondary');
         destinationLabel.textContent = 'Visa destinationsfalt';
 
         // Remove all mode classes
         table.classList.remove('bulk-edit-event-mode', 'bulk-edit-organizer-mode', 'bulk-edit-destination-mode');
 
         if (mode === 'event') {
-            eventBtn.classList.remove('btn-admin-secondary');
-            eventBtn.classList.add('btn-admin-primary');
+            eventBtn.classList.remove('btn--secondary');
+            eventBtn.classList.add('btn--primary');
             eventLabel.textContent = 'Avsluta massredigering';
             table.classList.add('bulk-edit-event-mode');
         } else if (mode === 'organizer') {
-            organizerBtn.classList.remove('btn-admin-secondary');
-            organizerBtn.classList.add('btn-admin-primary');
+            organizerBtn.classList.remove('btn--secondary');
+            organizerBtn.classList.add('btn--primary');
             organizerLabel.textContent = 'Avsluta massredigering';
             table.classList.add('bulk-edit-organizer-mode');
         } else if (mode === 'destination') {
-            destinationBtn.classList.remove('btn-admin-secondary');
-            destinationBtn.classList.add('btn-admin-primary');
+            destinationBtn.classList.remove('btn--secondary');
+            destinationBtn.classList.add('btn--primary');
             destinationLabel.textContent = 'Avsluta destinationsvy';
             table.classList.add('bulk-edit-destination-mode');
         }
@@ -1056,7 +1056,7 @@ function enableBulkEdit(mode) {
 
 function disableBulkEdit() {
     // Re-enable individual onchange/onblur handlers for all fields
-    document.querySelectorAll('.admin-table select').forEach(select => {
+    document.querySelectorAll('.table select').forEach(select => {
         if (select.dataset.originalOnchange) {
             select.setAttribute('onchange', select.dataset.originalOnchange);
             delete select.dataset.originalOnchange;
@@ -1066,7 +1066,7 @@ function disableBulkEdit() {
         select.style.backgroundColor = '';
     });
 
-    document.querySelectorAll('.admin-table input').forEach(input => {
+    document.querySelectorAll('.table input').forEach(input => {
         if (input.dataset.originalOnblur) {
             input.setAttribute('onblur', input.dataset.originalOnblur);
             delete input.dataset.originalOnblur;
@@ -1149,11 +1149,11 @@ function showBulkSaveButton() {
 
         container.innerHTML = `
             <span id="bulk-change-count" style="font-weight: 500; color: var(--color-text);">0 ändringar</span>
-            <button onclick="saveBulkChanges()" class="btn-admin btn-admin-primary" id="bulk-save-btn" disabled>
+            <button onclick="saveBulkChanges()" class="btn btn--primary" id="bulk-save-btn" disabled>
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
                 Spara alla ändringar
             </button>
-            <button onclick="cancelBulkEdit()" class="btn-admin btn-admin-secondary">Avbryt</button>
+            <button onclick="cancelBulkEdit()" class="btn btn--secondary">Avbryt</button>
         `;
 
         document.body.appendChild(container);
@@ -1241,7 +1241,7 @@ async function saveBulkChanges() {
             updateBulkSaveButton();
 
             // Reset visual feedback
-            document.querySelectorAll('.admin-table select').forEach(select => {
+            document.querySelectorAll('.table select').forEach(select => {
                 select.style.backgroundColor = '';
             });
 

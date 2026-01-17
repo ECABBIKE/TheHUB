@@ -31,8 +31,8 @@ if (!$tableExists) {
         <i data-lucide="alert-triangle"></i>
         Tabellen <code>series_brands</code> finns inte. Kör migrationen först.
     </div>
-    <div class="admin-card">
-        <div class="admin-card-body">
+    <div class="card">
+        <div class="card-body">
             <p>Kör följande migration för att skapa tabellen:</p>
             <code>database/migrations/050_add_series_brands.sql</code>
         </div>
@@ -85,7 +85,7 @@ $unassignedSeries = $unassignedCount['cnt'] ?? 0;
 // Page config
 $page_title = 'Serie-varumärken';
 $page_group = 'standings';
-$page_actions = '<a href="/admin/series-brands-create.php" class="btn-admin btn-admin-primary">
+$page_actions = '<a href="/admin/series-brands-create.php" class="btn btn--primary">
     <i data-lucide="plus"></i>
     Nytt varumärke
 </a>';
@@ -102,53 +102,53 @@ include __DIR__ . '/components/unified-layout.php';
 
 <!-- Stats Grid -->
 <div class="grid grid-stats grid-gap-md">
-    <div class="admin-stat-card">
-        <div class="admin-stat-icon" style="background: var(--color-info-light); color: var(--color-info);">
+    <div class="stat-card">
+        <div class="stat-icon" style="background: var(--color-info-light); color: var(--color-info);">
             <i data-lucide="trophy"></i>
         </div>
-        <div class="admin-stat-content">
-            <div class="admin-stat-value"><?= count($brands) ?></div>
-            <div class="admin-stat-label">Varumärken</div>
+        <div class="stat-content">
+            <div class="stat-value"><?= count($brands) ?></div>
+            <div class="stat-label">Varumärken</div>
         </div>
     </div>
 
-    <div class="admin-stat-card">
-        <div class="admin-stat-icon" style="background: var(--color-success-light); color: var(--color-success);">
+    <div class="stat-card">
+        <div class="stat-icon" style="background: var(--color-success-light); color: var(--color-success);">
             <i data-lucide="check-circle"></i>
         </div>
-        <div class="admin-stat-content">
-            <div class="admin-stat-value"><?= count(array_filter($brands, fn($b) => $b['active'])) ?></div>
-            <div class="admin-stat-label">Aktiva</div>
+        <div class="stat-content">
+            <div class="stat-value"><?= count(array_filter($brands, fn($b) => $b['active'])) ?></div>
+            <div class="stat-label">Aktiva</div>
         </div>
     </div>
 
-    <div class="admin-stat-card">
-        <div class="admin-stat-icon" style="background: var(--color-warning-light); color: var(--color-warning);">
+    <div class="stat-card">
+        <div class="stat-icon" style="background: var(--color-warning-light); color: var(--color-warning);">
             <i data-lucide="alert-circle"></i>
         </div>
-        <div class="admin-stat-content">
-            <div class="admin-stat-value"><?= $unassignedSeries ?></div>
-            <div class="admin-stat-label">Otilldelade serier</div>
+        <div class="stat-content">
+            <div class="stat-value"><?= $unassignedSeries ?></div>
+            <div class="stat-label">Otilldelade serier</div>
         </div>
     </div>
 </div>
 
 <!-- Brands Table -->
-<div class="admin-card">
-    <div class="admin-card-header">
+<div class="card">
+    <div class="card-header">
         <h2><?= count($brands) ?> varumärken</h2>
     </div>
-    <div class="admin-card-body" style="padding: 0;">
+    <div class="card-body" style="padding: 0;">
         <?php if (empty($brands)): ?>
-            <div class="admin-empty-state">
+            <div class="empty-state">
                 <i data-lucide="trophy" style="width: 48px; height: 48px; opacity: 0.5;"></i>
                 <h3>Inga varumärken hittades</h3>
                 <p>Skapa ett varumärke för att gruppera serier.</p>
-                <a href="/admin/series-brands-create.php" class="btn-admin btn-admin-primary">Skapa varumärke</a>
+                <a href="/admin/series-brands-create.php" class="btn btn--primary">Skapa varumärke</a>
             </div>
         <?php else: ?>
-            <div class="admin-table-container">
-                <table class="admin-table">
+            <div class="table-container">
+                <table class="table">
                     <thead>
                         <tr>
                             <th style="width: 60px;">Logo</th>
@@ -179,22 +179,22 @@ include __DIR__ . '/components/unified-layout.php';
                                     <div class="color-swatch-mini" style="background: <?= htmlspecialchars($brand['accent_color'] ?? $brand['gradient_start'] ?? '#004A98') ?>;"></div>
                                 </td>
                                 <td>
-                                    <span class="admin-badge admin-badge-info"><?= $brand['series_count'] ?></span>
+                                    <span class="badge badge badge--info"><?= $brand['series_count'] ?></span>
                                 </td>
                                 <td>
                                     <?php if ($brand['active']): ?>
-                                        <span class="admin-badge admin-badge-success">Aktiv</span>
+                                        <span class="badge badge badge--success">Aktiv</span>
                                     <?php else: ?>
-                                        <span class="admin-badge admin-badge-secondary">Inaktiv</span>
+                                        <span class="badge badge badge--secondary">Inaktiv</span>
                                     <?php endif; ?>
                                 </td>
                                 <td><?= $brand['display_order'] ?></td>
                                 <td>
                                     <div class="table-actions">
-                                        <a href="/admin/series-brands-edit.php?id=<?= $brand['id'] ?>" class="btn-admin btn-admin-sm btn-admin-secondary" title="Redigera">
+                                        <a href="/admin/series-brands-edit.php?id=<?= $brand['id'] ?>" class="btn btn--sm btn--secondary" title="Redigera">
                                             <i data-lucide="pencil"></i>
                                         </a>
-                                        <button onclick="deleteBrand(<?= $brand['id'] ?>, '<?= addslashes($brand['name']) ?>')" class="btn-admin btn-admin-sm btn-admin-danger" title="Ta bort">
+                                        <button onclick="deleteBrand(<?= $brand['id'] ?>, '<?= addslashes($brand['name']) ?>')" class="btn btn--sm btn--danger" title="Ta bort">
                                             <i data-lucide="trash-2"></i>
                                         </button>
                                     </div>
@@ -225,18 +225,18 @@ include __DIR__ . '/components/unified-layout.php';
     border: 2px solid var(--color-border);
 }
 
-.admin-empty-state {
+.empty-state {
     padding: var(--space-2xl);
     text-align: center;
     color: var(--color-text-secondary);
 }
 
-.admin-empty-state h3 {
+.empty-state h3 {
     margin: var(--space-md) 0 var(--space-xs);
     color: var(--color-text);
 }
 
-.admin-empty-state p {
+.empty-state p {
     margin: 0 0 var(--space-lg);
 }
 </style>

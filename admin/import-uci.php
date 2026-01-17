@@ -661,14 +661,14 @@ include __DIR__ . '/components/unified-layout.php';
 <?php endif; ?>
 
 <!-- Format Information -->
-<div class="admin-card mb-lg">
-    <div class="admin-card-header">
+<div class="card mb-lg">
+    <div class="card-header">
         <h2>
             <i data-lucide="info"></i>
             Anmälningsexport-format
         </h2>
     </div>
-    <div class="admin-card-body">
+    <div class="card-body">
         <p class="mb-md">
             Denna import uppdaterar befintliga riders med UCI-ID, e-post och födelseår.
             Klubbtillhörighet sätts för valt säsongsår.
@@ -724,35 +724,35 @@ include __DIR__ . '/components/unified-layout.php';
 </div>
 
 <!-- Upload Form -->
-<div class="admin-card mb-lg">
-    <div class="admin-card-header">
+<div class="card mb-lg">
+    <div class="card-header">
         <h2>
             <i data-lucide="upload"></i>
             Ladda upp fil
         </h2>
     </div>
-    <div class="admin-card-body">
+    <div class="card-body">
         <form method="POST" enctype="multipart/form-data">
             <?= csrf_field() ?>
 
             <div class="grid-2-col">
-                <div class="admin-form-group">
-                    <label class="admin-form-label">
+                <div class="form-group">
+                    <label class="label">
                         <i data-lucide="file-text"></i>
                         CSV-fil med anmälningar
                     </label>
-                    <input type="file" name="rider_file" accept=".csv" class="admin-form-input" required>
+                    <input type="file" name="rider_file" accept=".csv" class="input" required>
                     <small class="text-secondary">
                         Endast CSV-filer. Max <?= MAX_UPLOAD_SIZE / 1024 / 1024 ?>MB.
                     </small>
                 </div>
 
-                <div class="admin-form-group">
-                    <label class="admin-form-label">
+                <div class="form-group">
+                    <label class="label">
                         <i data-lucide="calendar"></i>
                         Säsongsår för klubbtillhörighet
                     </label>
-                    <select name="season_year" class="admin-form-select">
+                    <select name="season_year" class="input">
                         <?php foreach ($availableYears as $year): ?>
                         <option value="<?= $year ?>" <?= $year === $currentYear ? 'selected' : '' ?>>
                             <?= $year ?>
@@ -765,7 +765,7 @@ include __DIR__ . '/components/unified-layout.php';
                 </div>
             </div>
 
-            <div class="admin-form-group mt-md">
+            <div class="form-group mt-md">
                 <label class="flex items-center gap-sm cursor-pointer">
                     <input type="checkbox" name="create_missing" checked>
                     <span>Skapa nya riders om de inte hittas</span>
@@ -776,11 +776,11 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
 
             <div class="flex gap-md mt-lg">
-                <button type="submit" class="btn-admin btn-admin-primary">
+                <button type="submit" class="btn btn--primary">
                     <i data-lucide="upload"></i>
                     Importera och uppdatera
                 </button>
-                <a href="/admin/riders.php" class="btn-admin btn-admin-secondary">
+                <a href="/admin/riders.php" class="btn btn--secondary">
                     <i data-lucide="arrow-left"></i>
                     Tillbaka till riders
                 </a>
@@ -791,8 +791,8 @@ include __DIR__ . '/components/unified-layout.php';
 
 <!-- Quick Links -->
 <div class="grid" style="grid-template-columns: repeat(2, 1fr); gap: var(--space-lg);">
-    <div class="admin-card">
-        <div class="admin-card-body">
+    <div class="card">
+        <div class="card-body">
             <h4 class="mb-sm">
                 <i data-lucide="history"></i>
                 Importhistorik
@@ -800,15 +800,15 @@ include __DIR__ . '/components/unified-layout.php';
             <p class="text-secondary text-sm" class="mb-md">
                 Se tidigare importer och ångra vid behov.
             </p>
-            <a href="/admin/import-history.php" class="btn-admin btn-admin-secondary btn-admin-sm">
+            <a href="/admin/import-history.php" class="btn btn--secondary btn--sm">
                 <i data-lucide="history"></i>
                 Visa historik
             </a>
         </div>
     </div>
 
-    <div class="admin-card">
-        <div class="admin-card-body">
+    <div class="card">
+        <div class="card-body">
             <h4 class="mb-sm">
                 <i data-lucide="users"></i>
                 Alla riders
@@ -816,7 +816,7 @@ include __DIR__ . '/components/unified-layout.php';
             <p class="text-secondary text-sm" class="mb-md">
                 Granska och redigera riders manuellt.
             </p>
-            <a href="/admin/riders.php" class="btn-admin btn-admin-secondary btn-admin-sm">
+            <a href="/admin/riders.php" class="btn btn--secondary btn--sm">
                 <i data-lucide="users"></i>
                 Visa riders
             </a>

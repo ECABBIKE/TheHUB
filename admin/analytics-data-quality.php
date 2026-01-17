@@ -19,7 +19,7 @@ require_once __DIR__ . '/../analytics/includes/KPICalculator.php';
 require_once __DIR__ . '/../analytics/includes/AnalyticsConfig.php';
 
 $pageTitle = 'Datakvalitet';
-include __DIR__ . '/../includes/admin-header.php';
+include __DIR__ . '/../includes/page-header.php';
 
 $pdo = hub_db();
 $kpi = new KPICalculator($pdo);
@@ -51,7 +51,7 @@ $history = $historyStmt->fetchAll(PDO::FETCH_ASSOC);
 $thresholds = AnalyticsConfig::DATA_QUALITY_THRESHOLDS;
 ?>
 
-<div class="admin-content">
+<div class="main-content">
     <div class="page-header">
         <h1><i data-lucide="shield-check"></i> <?= $pageTitle ?></h1>
         <p class="text-muted">Analysera och forbattra datakvaliteten i analytics-plattformen</p>

@@ -463,7 +463,7 @@ include __DIR__ . '/components/unified-layout.php';
   $initials = strtoupper(substr($rider['firstname'] ?? '', 0, 1) . substr($rider['lastname'] ?? '', 0, 1));
   $imageUrl = $rider['avatar_url'] ?? $rider['profile_image_url'] ?? '';
   ?>
-  <div class="admin-avatar-container" style="position: relative;">
+  <div class="avatar-container" style="position: relative;">
    <div class="profile-image-preview" id="adminAvatarPreview" style="width: 120px; height: 120px; border-radius: var(--radius-md); background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); display: flex; align-items: center; justify-content: center; overflow: hidden; color: white; font-size: 2.5rem; font-weight: 700; cursor: pointer;" onclick="document.getElementById('adminAvatarInput').click()">
    <?php if ($imageUrl): ?>
    <img src="<?= h($imageUrl) ?>" alt="Profilbild" id="adminAvatarImage" style="width: 100%; height: 100%; object-fit: cover;" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">

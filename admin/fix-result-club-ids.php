@@ -130,11 +130,11 @@ include __DIR__ . '/components/unified-layout.php';
 </div>
 <?php endif; ?>
 
-<div class="admin-card">
-    <div class="admin-card-header">
+<div class="card">
+    <div class="card-header">
         <h3>Hur det fungerar</h3>
     </div>
-    <div class="admin-card-body">
+    <div class="card-body">
         <p>Detta verktyg går igenom alla resultat och kontrollerar:</p>
         <ol>
             <li>Vilken säsong (år) tävlingen ägde rum</li>
@@ -145,17 +145,17 @@ include __DIR__ . '/components/unified-layout.php';
     </div>
 </div>
 
-<div class="admin-card">
-    <div class="admin-card-header">
+<div class="card">
+    <div class="card-header">
         <h3>Kör verktyget</h3>
     </div>
-    <div class="admin-card-body">
+    <div class="card-body">
         <form method="post" class="flex gap-md">
-            <button type="submit" class="btn-admin btn-admin-secondary" name="simulate">
+            <button type="submit" class="btn btn--secondary" name="simulate">
                 <i data-lucide="search"></i>
                 Simulera (visa vad som skulle ändras)
             </button>
-            <button type="submit" class="btn-admin btn-admin-primary" name="execute" onclick="return confirm('Är du säker? Detta kommer uppdatera databasen.')">
+            <button type="submit" class="btn btn--primary" name="execute" onclick="return confirm('Är du säker? Detta kommer uppdatera databasen.')">
                 <i data-lucide="zap"></i>
                 Kör på riktigt
             </button>
@@ -164,11 +164,11 @@ include __DIR__ . '/components/unified-layout.php';
 </div>
 
 <?php if (!empty($stats)): ?>
-<div class="admin-card">
-    <div class="admin-card-header">
+<div class="card">
+    <div class="card-header">
         <h3>Resultat</h3>
     </div>
-    <div class="admin-card-body">
+    <div class="card-body">
         <div class="stats-grid" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-md); margin-bottom: var(--space-lg);">
             <div class="stat-card" style="background: var(--color-bg-secondary); padding: var(--space-md); border-radius: var(--radius-md); text-align: center;">
                 <div style="font-size: var(--text-2xl); font-weight: 700;"><?= number_format($stats['total_results']) ?></div>
@@ -190,8 +190,8 @@ include __DIR__ . '/components/unified-layout.php';
 
         <?php if (!empty($stats['details'])): ?>
         <h4>Detaljerade ändringar (visar max 100)</h4>
-        <div class="admin-table-container">
-            <table class="admin-table">
+        <div class="table-container">
+            <table class="table">
                 <thead>
                     <tr>
                         <th>Åkare</th>

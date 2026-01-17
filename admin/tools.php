@@ -106,7 +106,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/tools/yearly-rebuild.php" class="btn-admin btn-admin-warning">Öppna</a>
+            <a href="/admin/tools/yearly-rebuild.php" class="btn btn--warning">Öppna</a>
         </div>
     </div>
 
@@ -120,7 +120,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/tools/yearly-import-review.php" class="btn-admin btn-admin-secondary">Granska</a>
+            <a href="/admin/tools/yearly-import-review.php" class="btn btn--secondary">Granska</a>
         </div>
     </div>
 
@@ -140,7 +140,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/sync-club-membership.php" class="btn-admin btn-admin-primary">Synka</a>
+            <a href="/admin/sync-club-membership.php" class="btn btn--primary">Synka</a>
         </div>
     </div>
 
@@ -154,7 +154,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/sync-rider-clubs.php" class="btn-admin btn-admin-primary">Synka</a>
+            <a href="/admin/sync-rider-clubs.php" class="btn btn--primary">Synka</a>
         </div>
     </div>
 
@@ -168,7 +168,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/fix-result-club-ids.php" class="btn-admin btn-admin-warning">Fixa</a>
+            <a href="/admin/fix-result-club-ids.php" class="btn btn--warning">Fixa</a>
         </div>
     </div>
 
@@ -182,7 +182,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/normalize-names.php" class="btn-admin btn-admin-secondary">Normalisera</a>
+            <a href="/admin/normalize-names.php" class="btn btn--secondary">Normalisera</a>
         </div>
     </div>
 
@@ -196,7 +196,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/search-uci-id.php" class="btn-admin btn-admin-secondary">Sök</a>
+            <a href="/admin/search-uci-id.php" class="btn btn--secondary">Sök</a>
         </div>
     </div>
 
@@ -210,7 +210,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/tools/fix-uci-conflicts.php" class="btn-admin btn-admin-warning">Fixa</a>
+            <a href="/admin/tools/fix-uci-conflicts.php" class="btn btn--warning">Fixa</a>
         </div>
     </div>
 
@@ -230,7 +230,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/data-explorer.php" class="btn-admin btn-admin-primary">Öppna</a>
+            <a href="/admin/data-explorer.php" class="btn btn--primary">Öppna</a>
         </div>
     </div>
 
@@ -244,7 +244,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/rebuild-stats.php" class="btn-admin btn-admin-primary">Kör</a>
+            <a href="/admin/rebuild-stats.php" class="btn btn--primary">Kör</a>
         </div>
     </div>
 
@@ -261,8 +261,8 @@ include __DIR__ . '/components/unified-layout.php';
         <div class="tool-stat warning"><?= number_format($stats['potential_duplicates']) ?> möjliga dubbletter</div>
         <?php endif; ?>
         <div class="tool-actions">
-            <a href="/admin/find-duplicates.php" class="btn-admin btn-admin-secondary">Sök</a>
-            <a href="/admin/cleanup-duplicates.php" class="btn-admin btn-admin-secondary">Hantera</a>
+            <a href="/admin/find-duplicates.php" class="btn btn--secondary">Sök</a>
+            <a href="/admin/cleanup-duplicates.php" class="btn btn--secondary">Hantera</a>
         </div>
     </div>
 
@@ -279,7 +279,7 @@ include __DIR__ . '/components/unified-layout.php';
         <div class="tool-stat warning"><?= number_format($stats['empty_clubs']) ?> tomma klubbar</div>
         <?php endif; ?>
         <div class="tool-actions">
-            <a href="/admin/cleanup-clubs.php" class="btn-admin btn-admin-secondary">Rensa</a>
+            <a href="/admin/cleanup-clubs.php" class="btn btn--secondary">Rensa</a>
         </div>
     </div>
 
@@ -293,7 +293,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/club-rf-registration.php" class="btn-admin btn-admin-primary">Synka</a>
+            <a href="/admin/club-rf-registration.php" class="btn btn--primary">Synka</a>
         </div>
     </div>
 
@@ -307,7 +307,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/club-rf-spelling.php" class="btn-admin btn-admin-secondary">Kontrollera</a>
+            <a href="/admin/club-rf-spelling.php" class="btn btn--secondary">Kontrollera</a>
         </div>
     </div>
 
@@ -327,7 +327,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/import-results.php" class="btn-admin btn-admin-primary">Importera</a>
+            <a href="/admin/import-results.php" class="btn btn--primary">Importera</a>
         </div>
     </div>
 
@@ -341,7 +341,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/clear-event-results.php" class="btn-admin btn-admin-danger">Rensa</a>
+            <a href="/admin/clear-event-results.php" class="btn btn--danger">Rensa</a>
         </div>
     </div>
 
@@ -355,7 +355,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/import-history.php" class="btn-admin btn-admin-secondary">Visa</a>
+            <a href="/admin/import-history.php" class="btn btn--secondary">Visa</a>
         </div>
     </div>
 
@@ -369,7 +369,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/recalculate-all-points.php" class="btn-admin btn-admin-warning">Kör</a>
+            <a href="/admin/recalculate-all-points.php" class="btn btn--warning">Kör</a>
         </div>
     </div>
 
@@ -389,7 +389,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/tools/analyze-data-quality.php" class="btn-admin btn-admin-danger">Analysera</a>
+            <a href="/admin/tools/analyze-data-quality.php" class="btn btn--danger">Analysera</a>
         </div>
     </div>
 
@@ -403,7 +403,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/fix-series-points.php" class="btn-admin btn-admin-warning">Fixa</a>
+            <a href="/admin/fix-series-points.php" class="btn btn--warning">Fixa</a>
         </div>
     </div>
 
@@ -417,7 +417,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/fix-time-format.php" class="btn-admin btn-admin-warning">Fixa</a>
+            <a href="/admin/fix-time-format.php" class="btn btn--warning">Fixa</a>
         </div>
     </div>
 
@@ -431,8 +431,8 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/diagnose-series.php" class="btn-admin btn-admin-secondary">Serier</a>
-            <a href="/admin/tools/diagnose-class-errors.php" class="btn-admin btn-admin-secondary">Klasser</a>
+            <a href="/admin/diagnose-series.php" class="btn btn--secondary">Serier</a>
+            <a href="/admin/tools/diagnose-class-errors.php" class="btn btn--secondary">Klasser</a>
         </div>
     </div>
 
@@ -452,8 +452,8 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/analytics/setup-governance.php" class="btn-admin btn-admin-warning">1. Governance</a>
-            <a href="/analytics/setup-tables.php" class="btn-admin btn-admin-warning">2. Tabeller</a>
+            <a href="/analytics/setup-governance.php" class="btn btn--warning">1. Governance</a>
+            <a href="/analytics/setup-tables.php" class="btn btn--warning">2. Tabeller</a>
         </div>
     </div>
 
@@ -467,7 +467,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/analytics-populate.php" class="btn-admin btn-admin-primary">Öppna</a>
+            <a href="/admin/analytics-populate.php" class="btn btn--primary">Öppna</a>
         </div>
     </div>
 
@@ -481,7 +481,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/analytics-diagnose.php" class="btn-admin btn-admin-warning">Diagnostisera</a>
+            <a href="/admin/analytics-diagnose.php" class="btn btn--warning">Diagnostisera</a>
         </div>
     </div>
 
@@ -495,7 +495,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/analytics-data-quality.php" class="btn-admin btn-admin-secondary">Analysera</a>
+            <a href="/admin/analytics-data-quality.php" class="btn btn--secondary">Analysera</a>
         </div>
     </div>
 
@@ -509,7 +509,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/analytics-reset.php" class="btn-admin btn-admin-danger">Reset</a>
+            <a href="/admin/analytics-reset.php" class="btn btn--danger">Reset</a>
         </div>
     </div>
 
@@ -529,7 +529,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/analytics-dashboard.php" class="btn-admin btn-admin-primary">Öppna</a>
+            <a href="/admin/analytics-dashboard.php" class="btn btn--primary">Öppna</a>
         </div>
     </div>
 
@@ -543,7 +543,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/analytics-trends.php" class="btn-admin btn-admin-primary">Visa</a>
+            <a href="/admin/analytics-trends.php" class="btn btn--primary">Visa</a>
         </div>
     </div>
 
@@ -557,7 +557,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/analytics-first-season.php" class="btn-admin btn-admin-primary">Öppna</a>
+            <a href="/admin/analytics-first-season.php" class="btn btn--primary">Öppna</a>
         </div>
     </div>
 
@@ -571,7 +571,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/analytics-event-participation.php" class="btn-admin btn-admin-primary">Öppna</a>
+            <a href="/admin/analytics-event-participation.php" class="btn btn--primary">Öppna</a>
         </div>
     </div>
 
@@ -585,7 +585,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/analytics-cohorts.php" class="btn-admin btn-admin-primary">Öppna</a>
+            <a href="/admin/analytics-cohorts.php" class="btn btn--primary">Öppna</a>
         </div>
     </div>
 
@@ -599,7 +599,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/analytics-clubs.php" class="btn-admin btn-admin-primary">Öppna</a>
+            <a href="/admin/analytics-clubs.php" class="btn btn--primary">Öppna</a>
         </div>
     </div>
 
@@ -613,7 +613,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/analytics-geography.php" class="btn-admin btn-admin-primary">Öppna</a>
+            <a href="/admin/analytics-geography.php" class="btn btn--primary">Öppna</a>
         </div>
     </div>
 
@@ -627,7 +627,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/analytics-series-compare.php" class="btn-admin btn-admin-primary">Öppna</a>
+            <a href="/admin/analytics-series-compare.php" class="btn btn--primary">Öppna</a>
         </div>
     </div>
 
@@ -641,7 +641,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/analytics-flow.php" class="btn-admin btn-admin-primary">Öppna</a>
+            <a href="/admin/analytics-flow.php" class="btn btn--primary">Öppna</a>
         </div>
     </div>
 
@@ -655,7 +655,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/analytics-reports.php" class="btn-admin btn-admin-primary">Öppna</a>
+            <a href="/admin/analytics-reports.php" class="btn btn--primary">Öppna</a>
         </div>
     </div>
 
@@ -669,7 +669,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/analytics-export-center.php" class="btn-admin btn-admin-secondary">Öppna</a>
+            <a href="/admin/analytics-export-center.php" class="btn btn--secondary">Öppna</a>
         </div>
     </div>
 
@@ -689,7 +689,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/clear-cache.php" class="btn-admin btn-admin-secondary">Rensa</a>
+            <a href="/admin/clear-cache.php" class="btn btn--secondary">Rensa</a>
         </div>
     </div>
 
@@ -703,7 +703,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/backup.php" class="btn-admin btn-admin-primary">Skapa</a>
+            <a href="/admin/backup.php" class="btn btn--primary">Skapa</a>
         </div>
     </div>
 
@@ -717,7 +717,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/migrations.php" class="btn-admin btn-admin-primary">Öppna</a>
+            <a href="/admin/migrations.php" class="btn btn--primary">Öppna</a>
         </div>
     </div>
 
@@ -731,7 +731,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/reset-data.php" class="btn-admin btn-admin-danger">Återställ</a>
+            <a href="/admin/reset-data.php" class="btn btn--danger">Återställ</a>
         </div>
     </div>
 

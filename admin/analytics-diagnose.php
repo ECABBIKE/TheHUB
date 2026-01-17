@@ -250,8 +250,8 @@ include __DIR__ . '/components/unified-layout.php';
     </div>
     <?php else: ?>
 
-    <div class="admin-table-container">
-        <table class="admin-table compare-table">
+    <div class="table-container">
+        <table class="table compare-table">
             <thead>
                 <tr>
                     <th>Ar</th>
@@ -311,8 +311,8 @@ include __DIR__ . '/components/unified-layout.php';
 <?php if (!empty($diagnostics['cron_runs'])): ?>
 <div class="diag-card">
     <h3>3. Senaste Analytics-korningar</h3>
-    <div class="admin-table-container">
-        <table class="admin-table">
+    <div class="table-container">
+        <table class="table">
             <thead>
                 <tr>
                     <th>Jobb</th>
@@ -377,7 +377,7 @@ include __DIR__ . '/components/unified-layout.php';
         <i data-lucide="refresh-cw"></i>
         <div>
             <strong><?= !empty($missingObjects) ? '2' : '1' ?>. Regenerera analytics-data</strong><br>
-            <a href="/analytics/populate-historical.php?force=1" class="btn-admin btn-admin-warning" style="margin-top: var(--space-sm);">
+            <a href="/analytics/populate-historical.php?force=1" class="btn btn--warning" style="margin-top: var(--space-sm);">
                 Kor populate-historical (Force)
             </a>
         </div>

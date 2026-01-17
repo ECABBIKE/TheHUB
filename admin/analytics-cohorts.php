@@ -122,7 +122,7 @@ $breadcrumbs = [
 
 $page_actions = '
 <div class="btn-group">
-    <a href="/admin/analytics-dashboard.php" class="btn-admin btn-admin-secondary">
+    <a href="/admin/analytics-dashboard.php" class="btn btn--secondary">
         <i data-lucide="arrow-left"></i> Dashboard
     </a>
 </div>
@@ -179,7 +179,7 @@ include __DIR__ . '/components/unified-layout.php';
 
         <?php if ($selectedCohort && !empty($cohortRiders)): ?>
         <div class="filter-group">
-            <a href="?cohort=<?= $selectedCohort ?><?= $selectedBrand ? '&brand=' . $selectedBrand : '' ?>&export=csv" class="btn-admin btn-admin-secondary">
+            <a href="?cohort=<?= $selectedCohort ?><?= $selectedBrand ? '&brand=' . $selectedBrand : '' ?>&export=csv" class="btn btn--secondary">
                 <i data-lucide="download"></i> Exportera CSV
             </a>
         </div>
@@ -269,11 +269,11 @@ include __DIR__ . '/components/unified-layout.php';
 </div>
 
 <!-- Retention Chart -->
-<div class="admin-card">
-    <div class="admin-card-header">
+<div class="card">
+    <div class="card-header">
         <h2>Retention over tid - Kohort <?= $selectedCohort ?><?= $selectedBrand && isset($brandName) ? ' (' . $brandName . ')' : '' ?></h2>
     </div>
-    <div class="admin-card-body">
+    <div class="card-body">
         <div style="max-width: 800px; margin: 0 auto;">
             <canvas id="retentionChart" height="300"></canvas>
         </div>
@@ -282,21 +282,21 @@ include __DIR__ . '/components/unified-layout.php';
 
 <!-- Status Breakdown -->
 <div class="grid grid-2 grid-gap-lg">
-    <div class="admin-card">
-        <div class="admin-card-header">
+    <div class="card">
+        <div class="card-header">
             <h2>Status-fordelning</h2>
         </div>
-        <div class="admin-card-body">
+        <div class="card-body">
             <canvas id="statusChart" height="250"></canvas>
         </div>
     </div>
 
-    <div class="admin-card">
-        <div class="admin-card-header">
+    <div class="card">
+        <div class="card-header">
             <h2>Retention per ar</h2>
         </div>
-        <div class="admin-card-body" style="padding: 0;">
-            <table class="admin-table">
+        <div class="card-body" style="padding: 0;">
+            <table class="table">
                 <thead>
                     <tr>
                         <th>Ar</th>
@@ -329,8 +329,8 @@ include __DIR__ . '/components/unified-layout.php';
 
 <!-- Cohort Riders List -->
 <?php if (!empty($cohortRiders)): ?>
-<div class="admin-card">
-    <div class="admin-card-header">
+<div class="card">
+    <div class="card-header">
         <h2>Riders i kohort <?= $selectedCohort ?><?= $selectedBrand && isset($brandName) ? ' (' . $brandName . ')' : '' ?> (<?= number_format(count($cohortRiders)) ?> st)</h2>
         <div class="filter-inline">
             <label>Filter:</label>
@@ -343,9 +343,9 @@ include __DIR__ . '/components/unified-layout.php';
             </select>
         </div>
     </div>
-    <div class="admin-card-body" style="padding: 0;">
-        <div class="admin-table-container" style="max-height: 500px; overflow-y: auto;">
-            <table class="admin-table" id="ridersTable">
+    <div class="card-body" style="padding: 0;">
+        <div class="table-container" style="max-height: 500px; overflow-y: auto;">
+            <table class="table" id="ridersTable">
                 <thead>
                     <tr>
                         <th>Namn</th>
@@ -406,11 +406,11 @@ include __DIR__ . '/components/unified-layout.php';
 <?php endif; ?>
 
 <!-- Multi-Cohort Comparison -->
-<div class="admin-card">
-    <div class="admin-card-header">
+<div class="card">
+    <div class="card-header">
         <h2>Jamfor kohorter</h2>
     </div>
-    <div class="admin-card-body">
+    <div class="card-body">
         <form method="get" class="compare-form">
             <input type="hidden" name="cohort" value="<?= $selectedCohort ?>">
             <?php if ($selectedBrand): ?>
@@ -428,7 +428,7 @@ include __DIR__ . '/components/unified-layout.php';
                 </label>
                 <?php endforeach; ?>
             </div>
-            <button type="submit" class="btn-admin btn-admin-primary">
+            <button type="submit" class="btn btn--primary">
                 <i data-lucide="bar-chart-2"></i> Jamfor valda
             </button>
         </form>
@@ -861,7 +861,7 @@ function filterRiders(status) {
 @media (max-width: 767px) {
     /* Edge-to-edge for all cards and components */
     .filter-bar,
-    .admin-card,
+    .card,
     .alert,
     .info-box {
         margin-left: -16px;
@@ -913,17 +913,17 @@ function filterRiders(status) {
     }
 
     /* Table adjustments for mobile */
-    .admin-table th,
-    .admin-table td {
+    .table th,
+    .table td {
         padding: var(--space-sm);
         font-size: var(--text-sm);
     }
 
     /* Hide less important columns on mobile */
-    .admin-table th:nth-child(3),
-    .admin-table td:nth-child(3),
-    .admin-table th:nth-child(7),
-    .admin-table td:nth-child(7) {
+    .table th:nth-child(3),
+    .table td:nth-child(3),
+    .table th:nth-child(7),
+    .table td:nth-child(7) {
         display: none;
     }
 
@@ -972,8 +972,8 @@ function filterRiders(status) {
     }
 
     /* Hide even more columns */
-    .admin-table th:nth-child(2),
-    .admin-table td:nth-child(2) {
+    .table th:nth-child(2),
+    .table td:nth-child(2) {
         display: none;
     }
 }

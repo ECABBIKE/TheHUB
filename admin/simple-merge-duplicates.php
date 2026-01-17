@@ -74,10 +74,10 @@ foreach ($duplicates as $dup) {
 }
 
 $pageTitle = 'Snabb dubblettsammanslagning';
-include __DIR__ . '/../includes/admin-header.php';
+include __DIR__ . '/../includes/page-header.php';
 ?>
 
-<div class="admin-content">
+<div class="main-content">
     <div class="page-header">
         <h1><i data-lucide="git-merge"></i> <?= $pageTitle ?></h1>
     </div>

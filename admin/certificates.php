@@ -127,9 +127,9 @@ $breadcrumbs = [
 include __DIR__ . '/components/unified-layout.php';
 ?>
 
-<div class="admin-header mb-lg">
-    <div class="admin-header-content">
-        <a href="/admin/gateway-settings.php?id=<?= $recipientId ?>" class="btn-admin btn-admin-ghost">
+<div class="page-header mb-lg">
+    <div class="page-header-content">
+        <a href="/admin/gateway-settings.php?id=<?= $recipientId ?>" class="btn btn--ghost">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm">
                 <path d="M19 12H5M12 19l-7-7 7-7"/>
             </svg>
@@ -145,8 +145,8 @@ include __DIR__ . '/components/unified-layout.php';
 <?php endif; ?>
 
 <!-- Info -->
-<div class="admin-card mb-lg">
-    <div class="admin-card-body">
+<div class="card mb-lg">
+    <div class="card-body">
         <div class="flex items-start gap-md">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-lg flex-shrink-0" style="color: var(--color-accent);">
                 <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
@@ -166,8 +166,8 @@ include __DIR__ . '/components/unified-layout.php';
 </div>
 
 <!-- Upload form -->
-<div class="admin-card mb-lg">
-    <div class="admin-card-header">
+<div class="card mb-lg">
+    <div class="card-header">
         <h2>
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-md">
                 <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
@@ -177,34 +177,34 @@ include __DIR__ . '/components/unified-layout.php';
             Ladda upp certifikat
         </h2>
     </div>
-    <div class="admin-card-body">
+    <div class="card-body">
         <form method="post" enctype="multipart/form-data">
             <?= csrf_field() ?>
 
-            <div class="admin-form-row">
-                <div class="admin-form-group">
-                    <label class="admin-form-label">Certifikat-typ</label>
-                    <select name="cert_type" class="admin-form-select">
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="label">Certifikat-typ</label>
+                    <select name="cert_type" class="input">
                         <option value="swish_test">Test (MSS)</option>
                         <option value="swish_production" selected>Produktion</option>
                     </select>
                 </div>
 
-                <div class="admin-form-group">
-                    <label class="admin-form-label">Certifikat-lösenord</label>
-                    <input type="password" name="cert_password" class="admin-form-input"
+                <div class="form-group">
+                    <label class="label">Certifikat-lösenord</label>
+                    <input type="password" name="cert_password" class="input"
                            placeholder="Lösenord från banken">
                 </div>
             </div>
 
-            <div class="admin-form-group">
-                <label class="admin-form-label">Certifikat-fil (.p12 / .pfx)</label>
-                <input type="file" name="certificate" class="admin-form-input" accept=".p12,.pfx" required>
+            <div class="form-group">
+                <label class="label">Certifikat-fil (.p12 / .pfx)</label>
+                <input type="file" name="certificate" class="input" accept=".p12,.pfx" required>
                 <small class="text-secondary">Max 1MB</small>
             </div>
 
-            <div class="admin-form-actions">
-                <button type="submit" class="btn-admin btn-admin-primary">
+            <div class="form-actions">
+                <button type="submit" class="btn btn--primary">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm">
                         <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
                         <polyline points="17 8 12 3 7 8"/>
@@ -219,8 +219,8 @@ include __DIR__ . '/components/unified-layout.php';
 
 <!-- Existing certificates -->
 <?php if (!empty($certificates)): ?>
-<div class="admin-card">
-    <div class="admin-card-header">
+<div class="card">
+    <div class="card-header">
         <h2>
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-md">
                 <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
@@ -229,9 +229,9 @@ include __DIR__ . '/components/unified-layout.php';
             Uppladdade certifikat (<?= count($certificates) ?>)
         </h2>
     </div>
-    <div class="admin-card-body gs-p-0">
+    <div class="card-body gs-p-0">
         <div class="table-responsive">
-            <table class="admin-table">
+            <table class="table">
                 <thead>
                     <tr>
                         <th>Typ</th>
@@ -264,7 +264,7 @@ include __DIR__ . '/components/unified-layout.php';
                             <form method="POST" class="inline">
                                 <?= csrf_field() ?>
                                 <input type="hidden" name="delete_cert" value="<?= $cert['id'] ?>">
-                                <button type="submit" class="btn-admin btn-admin-danger btn-admin-sm"
+                                <button type="submit" class="btn btn--danger btn--sm"
                                         onclick="return confirm('Ta bort detta certifikat?')">
                                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-xs">
                                         <path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
@@ -282,19 +282,19 @@ include __DIR__ . '/components/unified-layout.php';
 <?php endif; ?>
 
 <style>
-.admin-form-row {
+.form-row {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: var(--space-md);
 }
 
 @media (max-width: 600px) {
-    .admin-form-row {
+    .form-row {
         grid-template-columns: 1fr;
     }
 }
 
-.btn-admin-sm {
+.btn--sm {
     padding: var(--space-xs) var(--space-sm);
 }
 </style>

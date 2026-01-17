@@ -124,9 +124,9 @@ include __DIR__ . '/components/unified-layout.php';
  <?php endif; ?>
 
  <!-- Event License Class Tabs -->
- <div class="admin-tabs">
+ <div class="tabs">
   <?php foreach ($eventLicenseClasses as $key => $info): ?>
-  <a href="?tab=<?= $key ?>" class="admin-tab <?= $currentTab === $key ? 'active' : '' ?>">
+  <a href="?tab=<?= $key ?>" class="tab-btn <?= $currentTab === $key ? 'active' : '' ?>">
    <i data-lucide="<?= $info['icon'] ?>"></i>
    <?= h($info['name']) ?>
   </a>

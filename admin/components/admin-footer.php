@@ -1,4 +1,4 @@
-            </div><!-- end admin-content -->
+            </div><!-- end main-content -->
         </main><!-- end admin-main -->
     </div><!-- end admin-layout -->
 

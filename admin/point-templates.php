@@ -282,16 +282,16 @@ include __DIR__ . '/components/unified-layout.php';
 
 <!-- Actions -->
 <div class="mb-lg" style="display: flex; justify-content: space-between; align-items: center;">
-    <a href="/admin/point-scales.php" class="btn-admin btn-admin-secondary">
+    <a href="/admin/point-scales.php" class="btn btn--secondary">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
         Tillbaka till Poängmallar
     </a>
     <div class="flex gap-sm">
-        <button type="button" class="btn-admin btn-admin-secondary" onclick="openImportModal()">
+        <button type="button" class="btn btn--secondary" onclick="openImportModal()">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
             Importera
         </button>
-        <button type="button" class="btn-admin btn-admin-primary" onclick="openTemplateModal()">
+        <button type="button" class="btn btn--primary" onclick="openTemplateModal()">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm"><line x1="12" x2="12" y1="5" y2="19"/><line x1="5" x2="19" y1="12" y2="12"/></svg>
             Ny Mall
         </button>
@@ -299,16 +299,16 @@ include __DIR__ . '/components/unified-layout.php';
 </div>
 
 <!-- Templates List -->
-<div class="admin-card">
-    <div class="admin-card-header">
+<div class="card">
+    <div class="card-header">
         <h2>Kvalpoängmallar för Serier</h2>
         <span class="text-secondary text-sm"><?= count($templates) ?> mallar</span>
     </div>
-    <div class="admin-card-body">
+    <div class="card-body">
         <?php if (empty($templates)): ?>
             <div class="text-secondary" style="text-align: center; padding: var(--space-xl);">
                 <p>Inga kvalpoängmallar hittades.</p>
-                <button type="button" class="btn-admin btn-admin-primary mt-lg" onclick="openTemplateModal()">
+                <button type="button" class="btn btn--primary mt-lg" onclick="openTemplateModal()">
                     Skapa första kvalpoängmallen
                 </button>
             </div>
@@ -324,17 +324,17 @@ include __DIR__ . '/components/unified-layout.php';
                             <?php endif; ?>
                         </div>
                         <div style="display: flex; gap: var(--space-xs);">
-                            <button type="button" class="btn-admin btn-admin-sm btn-admin-secondary" onclick="exportTemplate(<?= $template['id'] ?>)" title="Exportera">
+                            <button type="button" class="btn btn--sm btn--secondary" onclick="exportTemplate(<?= $template['id'] ?>)" title="Exportera">
                                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-xs"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
                             </button>
-                            <a href="?edit=<?= $template['id'] ?>" class="btn-admin btn-admin-sm btn-admin-secondary" title="Redigera">
+                            <a href="?edit=<?= $template['id'] ?>" class="btn btn--sm btn--secondary" title="Redigera">
                                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-xs"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
                             </a>
                             <form method="POST" style="display: inline;" onsubmit="return confirm('Är du säker på att du vill ta bort \'<?= htmlspecialchars($template['name']) ?>\'?');">
                                 <?= csrf_field() ?>
                                 <input type="hidden" name="action" value="delete">
                                 <input type="hidden" name="id" value="<?= $template['id'] ?>">
-                                <button type="submit" class="btn-admin btn-admin-sm btn-admin-danger" title="Ta bort">
+                                <button type="submit" class="btn btn--sm btn--danger" title="Ta bort">
                                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-xs"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
                                 </button>
                             </form>
@@ -364,7 +364,7 @@ include __DIR__ . '/components/unified-layout.php';
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-md"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg>
                 <span id="modalTitleText">Ny Kvalpoängmall</span>
             </h3>
-            <button type="button" onclick="closeTemplateModal()" class="btn-admin btn-admin-sm btn-admin-secondary">
+            <button type="button" onclick="closeTemplateModal()" class="btn btn--sm btn--secondary">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm"><line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/></svg>
             </button>
         </div>
@@ -374,20 +374,20 @@ include __DIR__ . '/components/unified-layout.php';
             <input type="hidden" name="id" id="templateId" value="">
 
             <div class="modal-body">
-                <div class="admin-form-group">
-                    <label class="admin-form-label">Namn <span class="text-error">*</span></label>
-                    <input type="text" id="templateName" name="name" class="admin-form-input" required>
+                <div class="form-group">
+                    <label class="label">Namn <span class="text-error">*</span></label>
+                    <input type="text" id="templateName" name="name" class="input" required>
                 </div>
 
-                <div class="admin-form-group">
-                    <label class="admin-form-label">Beskrivning</label>
-                    <textarea id="templateDescription" name="description" class="admin-form-input" rows="2"></textarea>
+                <div class="form-group">
+                    <label class="label">Beskrivning</label>
+                    <textarea id="templateDescription" name="description" class="input" rows="2"></textarea>
                 </div>
 
-                <div class="admin-form-group">
+                <div class="form-group">
                     <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-sm);">
-                        <label class="admin-form-label" class="m-0">Poängfördelning per placering</label>
-                        <button type="button" class="btn-admin btn-admin-sm btn-admin-secondary" onclick="addPointRow()">
+                        <label class="label" class="m-0">Poängfördelning per placering</label>
+                        <button type="button" class="btn btn--sm btn--secondary" onclick="addPointRow()">
                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 12px; height: 12px;"><line x1="12" x2="12" y1="5" y2="19"/><line x1="5" x2="19" y1="12" y2="12"/></svg>
                             Lägg till rad
                         </button>
@@ -399,10 +399,10 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
 
             <div class="modal-footer">
-                <button type="button" onclick="closeTemplateModal()" class="btn-admin btn-admin-secondary">
+                <button type="button" onclick="closeTemplateModal()" class="btn btn--secondary">
                     Avbryt
                 </button>
-                <button type="submit" class="btn-admin btn-admin-primary">
+                <button type="submit" class="btn btn--primary">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm"><polyline points="20 6 9 17 4 12"/></svg>
                     <span id="submitButtonText">Skapa</span>
                 </button>
@@ -419,7 +419,7 @@ include __DIR__ . '/components/unified-layout.php';
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-md"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
                 Importera Kvalpoängmall
             </h3>
-            <button type="button" onclick="closeImportModal()" class="btn-admin btn-admin-sm btn-admin-secondary">
+            <button type="button" onclick="closeImportModal()" class="btn btn--sm btn--secondary">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm"><line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/></svg>
             </button>
         </div>
@@ -428,9 +428,9 @@ include __DIR__ . '/components/unified-layout.php';
             <input type="hidden" name="action" value="import">
 
             <div class="modal-body">
-                <div class="admin-form-group">
-                    <label class="admin-form-label">Importera data (JSON eller CSV)</label>
-                    <textarea name="import_data" class="admin-form-input" rows="12" placeholder='JSON format:
+                <div class="form-group">
+                    <label class="label">Importera data (JSON eller CSV)</label>
+                    <textarea name="import_data" class="input" rows="12" placeholder='JSON format:
 {
   "name": "Min mall",
   "description": "Beskrivning",
@@ -459,10 +459,10 @@ CSV format:
             </div>
 
             <div class="modal-footer">
-                <button type="button" onclick="closeImportModal()" class="btn-admin btn-admin-secondary">
+                <button type="button" onclick="closeImportModal()" class="btn btn--secondary">
                     Avbryt
                 </button>
-                <button type="submit" class="btn-admin btn-admin-primary">
+                <button type="submit" class="btn btn--primary">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
                     Importera
                 </button>
@@ -512,8 +512,8 @@ function addPointRow(position = null, points = '') {
     row.className = 'point-row';
     row.innerHTML = `
         <label>Plats #${nextPosition}</label>
-        <input type="number" name="points[${nextPosition}]" class="admin-form-input" value="${points}" min="0" placeholder="Poäng">
-        <button type="button" class="btn-admin btn-admin-sm btn-admin-danger" onclick="this.parentElement.remove()">
+        <input type="number" name="points[${nextPosition}]" class="input" value="${points}" min="0" placeholder="Poäng">
+        <button type="button" class="btn btn--sm btn--danger" onclick="this.parentElement.remove()">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 12px; height: 12px;"><line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/></svg>
         </button>
     `;

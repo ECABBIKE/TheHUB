@@ -369,7 +369,7 @@ $breadcrumbs = [
     ['label' => htmlspecialchars($event['name']), 'url' => '/admin/events/edit/' . $eventId],
     ['label' => 'Karta']
 ];
-$page_actions = '<a href="/admin/events/edit/' . $eventId . '" class="btn-admin btn-admin-secondary">Tillbaka</a>';
+$page_actions = '<a href="/admin/events/edit/' . $eventId . '" class="btn btn--secondary">Tillbaka</a>';
 
 include __DIR__ . '/components/unified-layout.php';
 ?>
@@ -383,8 +383,8 @@ include __DIR__ . '/components/unified-layout.php';
 <?php endif; ?>
 
 <!-- Map Publish Settings -->
-<div class="admin-card" class="mb-md">
-    <div class="admin-card-body" style="display: flex; align-items: center; gap: var(--space-lg); flex-wrap: wrap;">
+<div class="card" class="mb-md">
+    <div class="card-body" style="display: flex; align-items: center; gap: var(--space-lg); flex-wrap: wrap;">
         <div class="flex-1" style="min-width: 200px;">
             <strong><i data-lucide="calendar-clock" class="icon-sm"></i> Karta publiceras</strong>
             <p class="text-sm text-secondary" class="m-0">
@@ -403,20 +403,20 @@ include __DIR__ . '/components/unified-layout.php';
         <form method="POST" class="flex gap-sm" class="items-center">
             <?= csrf_field() ?>
             <input type="hidden" name="action" value="update_publish_date">
-            <input type="datetime-local" name="karta_publish_at" class="admin-form-input admin-form-input-sm"
+            <input type="datetime-local" name="karta_publish_at" class="input input-sm"
                    class="w-auto"
                    value="<?= !empty($event['karta_publish_at']) ? date('Y-m-d\TH:i', strtotime($event['karta_publish_at'])) : '' ?>">
-            <button type="submit" class="btn-admin btn-admin-primary btn-admin-sm">Spara</button>
+            <button type="submit" class="btn btn--primary btn--sm">Spara</button>
             <?php if (!empty($event['karta_publish_at'])): ?>
-            <button type="submit" class="btn-admin btn-admin-ghost btn-admin-sm" onclick="this.form.querySelector('[name=karta_publish_at]').value=''">Rensa</button>
+            <button type="submit" class="btn btn--ghost btn--sm" onclick="this.form.querySelector('[name=karta_publish_at]').value=''">Rensa</button>
             <?php endif; ?>
         </form>
     </div>
 </div>
 
 <!-- Static Map Image Section -->
-<div class="admin-card mb-md">
-    <div class="admin-card-body">
+<div class="card mb-md">
+    <div class="card-body">
         <div class="flex justify-between items-start gap-lg flex-wrap">
             <div class="flex-1" style="min-width: 250px;">
                 <strong><i data-lucide="image" class="icon-sm"></i> Statisk kartbild</strong>
@@ -435,7 +435,7 @@ include __DIR__ . '/components/unified-layout.php';
                         <form method="POST" class="mt-sm">
                             <?= csrf_field() ?>
                             <input type="hidden" name="action" value="remove_static_map">
-                            <button type="submit" class="btn-admin btn-admin-danger btn-admin-xs" onclick="return confirm('Ta bort kartbild?')">
+                            <button type="submit" class="btn btn--danger btn-xs" onclick="return confirm('Ta bort kartbild?')">
                                 <i data-lucide="trash-2" class="icon-xs"></i> Ta bort
                             </button>
                         </form>
@@ -450,16 +450,16 @@ include __DIR__ . '/components/unified-layout.php';
                         <div class="form-group mb-0" style="flex: 1; min-width: 200px;">
                             <label class="form-label text-sm mb-xs">Ladda upp bild</label>
                             <input type="file" name="static_map_image" accept="image/png,image/jpeg,image/webp"
-                                   class="admin-form-input admin-form-input-sm">
+                                   class="input input-sm">
                         </div>
                         <span class="text-secondary text-sm">eller</span>
                         <div class="form-group mb-0" style="flex: 1; min-width: 200px;">
                             <label class="form-label text-sm mb-xs">Ange URL</label>
                             <input type="url" name="map_image_url" placeholder="https://... eller /media/..."
-                                   class="admin-form-input admin-form-input-sm"
+                                   class="input input-sm"
                                    value="<?= htmlspecialchars($event['map_image_url'] ?? '') ?>">
                         </div>
-                        <button type="submit" class="btn-admin btn-admin-primary btn-admin-sm">
+                        <button type="submit" class="btn btn--primary btn--sm">
                             <i data-lucide="upload" class="icon-sm"></i> Spara
                         </button>
                     </div>
@@ -470,59 +470,59 @@ include __DIR__ . '/components/unified-layout.php';
     </div>
 </div>
 
-<div class="admin-grid admin-grid-sidebar">
+<div class="grid grid-sidebar">
     <!-- Sidebar: Controls -->
-    <div class="admin-sidebar-narrow">
+    <div class="sidebar-narrow">
         <!-- Banor -->
-        <div class="admin-card admin-card-compact">
-            <div class="admin-card-header">
+        <div class="card card-compact">
+            <div class="card-header">
                 <h2>Banor (<?= count($allTracks) ?>)</h2>
             </div>
-            <div class="admin-card-body">
+            <div class="card-body">
                 <?php if (!empty($allTracks)): ?>
-                <div class="admin-list admin-list-compact">
+                <div class="list list-compact">
                     <?php foreach ($allTracks as $t): ?>
-                    <div class="admin-list-item <?= $t['id'] == $selectedTrackId ? 'active' : '' ?>">
+                    <div class="list-item <?= $t['id'] == $selectedTrackId ? 'active' : '' ?>">
                         <span class="color-dot" style="background: <?= htmlspecialchars($t['color'] ?? '#3B82F6') ?>;"></span>
-                        <span class="admin-list-item-text"><?= htmlspecialchars($t['route_label'] ?? $t['name']) ?></span>
-                        <span class="admin-text-muted"><?= number_format($t['total_distance_km'], 1) ?>km</span>
+                        <span class="list-item-text"><?= htmlspecialchars($t['route_label'] ?? $t['name']) ?></span>
+                        <span class="text-muted"><?= number_format($t['total_distance_km'], 1) ?>km</span>
                         <?php if ($t['id'] != $selectedTrackId): ?>
-                        <a href="?id=<?= $eventId ?>&track=<?= $t['id'] ?>" class="btn-admin btn-admin-ghost btn-admin-xs">Välj</a>
+                        <a href="?id=<?= $eventId ?>&track=<?= $t['id'] ?>" class="btn btn--ghost btn-xs">Välj</a>
                         <?php endif; ?>
                         <form method="POST" class="inline-form">
                             <?= csrf_field() ?>
                             <input type="hidden" name="action" value="delete_track">
                             <input type="hidden" name="track_id" value="<?= $t['id'] ?>">
-                            <button type="submit" class="btn-admin btn-admin-ghost btn-admin-xs btn-admin-danger" onclick="return confirm('Ta bort?')">×</button>
+                            <button type="submit" class="btn btn--ghost btn-xs btn--danger" onclick="return confirm('Ta bort?')">×</button>
                         </form>
                     </div>
                     <?php endforeach; ?>
                 </div>
                 <?php endif; ?>
 
-                <details class="admin-details" <?= empty($allTracks) ? 'open' : '' ?>>
+                <details class="details" <?= empty($allTracks) ? 'open' : '' ?>>
                     <summary>+ Ladda upp GPX</summary>
-                    <form method="POST" enctype="multipart/form-data" class="admin-form-compact">
+                    <form method="POST" enctype="multipart/form-data" class="form-compact">
                         <?= csrf_field() ?>
                         <input type="hidden" name="action" value="upload_gpx">
-                        <div class="admin-form-group">
-                            <input type="text" name="track_name" class="admin-form-input admin-form-input-sm" placeholder="Bannamn">
+                        <div class="form-group">
+                            <input type="text" name="track_name" class="input input-sm" placeholder="Bannamn">
                         </div>
-                        <div class="admin-form-row">
-                            <select name="track_color" class="admin-form-select admin-form-select-sm">
+                        <div class="form-row">
+                            <select name="track_color" class="input input-sm">
                                 <?php foreach ($trackColors as $hex => $name): ?>
                                 <option value="<?= $hex ?>"><?= $name ?></option>
                                 <?php endforeach; ?>
                             </select>
-                            <label class="admin-checkbox-inline">
+                            <label class="checkbox-inline">
                                 <input type="checkbox" name="is_primary" value="1" <?= empty($allTracks) ? 'checked' : '' ?>>
                                 Primär
                             </label>
                         </div>
-                        <div class="admin-form-group">
-                            <input type="file" name="gpx_file" accept=".gpx" required class="admin-form-input admin-form-input-sm">
+                        <div class="form-group">
+                            <input type="file" name="gpx_file" accept=".gpx" required class="input input-sm">
                         </div>
-                        <button type="submit" class="btn-admin btn-admin-primary btn-admin-sm btn-admin-block">Ladda upp</button>
+                        <button type="submit" class="btn btn--primary btn--sm btn-block">Ladda upp</button>
                     </form>
                 </details>
             </div>
@@ -530,71 +530,71 @@ include __DIR__ . '/components/unified-layout.php';
 
         <?php if ($currentTrack): ?>
         <!-- Redigera bana -->
-        <div class="admin-card admin-card-compact">
-            <div class="admin-card-header">
+        <div class="card card-compact">
+            <div class="card-header">
                 <h2>
                     <span class="color-dot" style="background: <?= htmlspecialchars($currentTrack['color'] ?? '#3B82F6') ?>;"></span>
                     <?= htmlspecialchars($currentTrack['route_label'] ?? $currentTrack['name']) ?>
                 </h2>
             </div>
-            <div class="admin-card-body">
-                <details class="admin-details">
+            <div class="card-body">
+                <details class="details">
                     <summary>⚙️ Inställningar</summary>
-                    <form method="POST" class="admin-form-compact">
+                    <form method="POST" class="form-compact">
                         <?= csrf_field() ?>
                         <input type="hidden" name="action" value="update_track">
                         <input type="hidden" name="track_id" value="<?= $currentTrack['id'] ?>">
-                        <div class="admin-form-group">
-                            <input type="text" name="track_name" class="admin-form-input admin-form-input-sm" value="<?= htmlspecialchars($currentTrack['name']) ?>">
+                        <div class="form-group">
+                            <input type="text" name="track_name" class="input input-sm" value="<?= htmlspecialchars($currentTrack['name']) ?>">
                         </div>
-                        <div class="admin-form-row">
-                            <select name="track_color" class="admin-form-select admin-form-select-sm">
+                        <div class="form-row">
+                            <select name="track_color" class="input input-sm">
                                 <?php foreach ($trackColors as $hex => $name): ?>
                                 <option value="<?= $hex ?>" <?= ($currentTrack['color'] ?? '#3B82F6') === $hex ? 'selected' : '' ?>><?= $name ?></option>
                                 <?php endforeach; ?>
                             </select>
-                            <label class="admin-checkbox-inline">
+                            <label class="checkbox-inline">
                                 <input type="checkbox" name="is_primary" value="1" <?= $currentTrack['is_primary'] ? 'checked' : '' ?>>
                                 Primär
                             </label>
                         </div>
-                        <button type="submit" class="btn-admin btn-admin-secondary btn-admin-sm btn-admin-block">Spara</button>
+                        <button type="submit" class="btn btn--secondary btn--sm btn-block">Spara</button>
                     </form>
                 </details>
             </div>
         </div>
 
         <!-- Sektioner - Multi-point editor -->
-        <div class="admin-card admin-card-compact">
-            <div class="admin-card-header">
+        <div class="card card-compact">
+            <div class="card-header">
                 <h2>Sektioner</h2>
             </div>
-            <div class="admin-card-body">
-                <div id="segment-status" class="admin-status-box">
+            <div class="card-body">
+                <div id="segment-status" class="status-box">
                     <strong>Steg 1:</strong> Klicka på banan för att sätta ut delningspunkter
                 </div>
 
-                <div id="markers-info" class="admin-info-box" class="hidden">
+                <div id="markers-info" class="list-info-box" class="hidden">
                     <span id="markers-count">0 punkter</span>
-                    <button type="button" onclick="clearAllMarkers()" class="btn-admin btn-admin-ghost btn-admin-xs">Rensa alla</button>
+                    <button type="button" onclick="clearAllMarkers()" class="btn btn--ghost btn-xs">Rensa alla</button>
                 </div>
 
                 <!-- Segment list - dynamically updated -->
-                <div id="segments-list" class="admin-segment-list">
-                    <p class="admin-text-muted admin-text-sm">Sätt ut minst 1 punkt för att skapa sektioner</p>
+                <div id="segments-list" class="segment-list">
+                    <p class="text-muted text-sm">Sätt ut minst 1 punkt för att skapa sektioner</p>
                 </div>
 
                 <!-- Save button -->
                 <div id="save-actions" style="display: none; margin-top: var(--space-sm);">
-                    <button type="button" onclick="saveAllSegments()" class="btn-admin btn-admin-primary btn-admin-block">
+                    <button type="button" onclick="saveAllSegments()" class="btn btn--primary btn-block">
                         <i data-lucide="save" class="icon-xs"></i> Spara alla sektioner
                     </button>
                 </div>
 
                 <!-- Existing segments (saved) -->
                 <?php if (!empty($currentTrack['segments'])): ?>
-                <div class="admin-existing-segments" style="margin-top: var(--space-md); padding-top: var(--space-md); border-top: 1px solid var(--color-border);">
-                    <div class="admin-text-muted admin-text-sm" class="mb-xs">Sparade sektioner:</div>
+                <div class="existing-segments" style="margin-top: var(--space-md); padding-top: var(--space-md); border-top: 1px solid var(--color-border);">
+                    <div class="text-muted text-sm" class="mb-xs">Sparade sektioner:</div>
                     <?php foreach ($currentTrack['segments'] as $segIdx => $seg):
                         $iconName = $seg['segment_type'] === 'stage' ? 'flag' : ($seg['segment_type'] === 'lift' ? 'cable-car' : 'route');
                         $hasSponsor = !empty($seg['sponsor_name']);
@@ -603,7 +603,7 @@ include __DIR__ . '/components/unified-layout.php';
                         $typeLabel = $seg['segment_type'] === 'stage' ? 'SS' : ($seg['segment_type'] === 'lift' ? 'Lift' : 'Transport');
                         $segDisplayName = !empty($seg['segment_name']) ? $seg['segment_name'] : "Sektion " . ($segIdx + 1);
                     ?>
-                    <div class="admin-segment-item <?= $hasSponsor ? 'has-sponsor' : '' ?>"
+                    <div class="segment-item <?= $hasSponsor ? 'has-sponsor' : '' ?>"
                          onclick="selectSegment(<?= $segIdx ?>, <?= $segStart ?>, <?= $segEnd ?>)"
                          style="cursor: pointer;"
                          data-start="<?= $segStart ?>"
@@ -611,7 +611,7 @@ include __DIR__ . '/components/unified-layout.php';
                          data-segment-id="<?= $seg['id'] ?>">
                         <span class="color-dot" style="background: <?= htmlspecialchars($seg['color']) ?>;"></span>
                         <i data-lucide="<?= $iconName ?>" class="icon-xs" style="flex-shrink: 0;"></i>
-                        <input type="text" class="admin-segment-name-input" value="<?= htmlspecialchars($seg['segment_name'] ?? '') ?>" placeholder="Namn..." onclick="event.stopPropagation()" onchange="changeSegmentName(<?= $seg['id'] ?>, this.value)" title="Segmentnamn (t.ex. SS1, Powerstage)">
+                        <input type="text" class="segment-name-input" value="<?= htmlspecialchars($seg['segment_name'] ?? '') ?>" placeholder="Namn..." onclick="event.stopPropagation()" onchange="changeSegmentName(<?= $seg['id'] ?>, this.value)" title="Segmentnamn (t.ex. SS1, Powerstage)">
                         <?php if ($hasSponsor): ?>
                         <span class="segment-sponsor-badge" title="<?= htmlspecialchars($seg['sponsor_name']) ?>">
                             <span class="sponsor-by">by</span>
@@ -622,14 +622,14 @@ include __DIR__ . '/components/unified-layout.php';
                             <?php endif; ?>
                         </span>
                         <?php endif; ?>
-                        <span class="admin-text-muted segment-distance"><?= number_format($seg['distance_km'], 1) ?>km</span>
-                        <select onclick="event.stopPropagation()" onchange="changeSegmentType(<?= $seg['id'] ?>, this.value)" class="admin-form-select admin-form-select-xs">
+                        <span class="text-muted segment-distance"><?= number_format($seg['distance_km'], 1) ?>km</span>
+                        <select onclick="event.stopPropagation()" onchange="changeSegmentType(<?= $seg['id'] ?>, this.value)" class="input input-xs">
                             <option value="liaison" <?= $seg['segment_type'] === 'liaison' ? 'selected' : '' ?>>Transport</option>
                             <option value="stage" <?= $seg['segment_type'] === 'stage' ? 'selected' : '' ?>>Sträcka</option>
                             <option value="lift" <?= $seg['segment_type'] === 'lift' ? 'selected' : '' ?>>Lift</option>
                         </select>
                         <?php if ($sponsorColumnExists && !empty($sponsors) && $seg['segment_type'] === 'stage'): ?>
-                        <select onclick="event.stopPropagation()" onchange="changeSegmentSponsor(<?= $seg['id'] ?>, this.value)" class="admin-form-select admin-form-select-xs" title="Sträcksponsor">
+                        <select onclick="event.stopPropagation()" onchange="changeSegmentSponsor(<?= $seg['id'] ?>, this.value)" class="input input-xs" title="Sträcksponsor">
                             <option value="">Sponsor</option>
                             <?php foreach ($sponsors as $sp): ?>
                             <option value="<?= $sp['id'] ?>" <?= ($seg['sponsor_id'] ?? '') == $sp['id'] ? 'selected' : '' ?>><?= htmlspecialchars($sp['name']) ?></option>
@@ -640,11 +640,11 @@ include __DIR__ . '/components/unified-layout.php';
                             <?= csrf_field() ?>
                             <input type="hidden" name="action" value="delete_segment">
                             <input type="hidden" name="segment_id" value="<?= $seg['id'] ?>">
-                            <button type="submit" class="btn-admin btn-admin-ghost btn-admin-xs btn-admin-danger" onclick="return confirm('Ta bort?')">×</button>
+                            <button type="submit" class="btn btn--ghost btn-xs btn--danger" onclick="return confirm('Ta bort?')">×</button>
                         </form>
                     </div>
                     <?php endforeach; ?>
-                    <button type="button" onclick="editExistingSegments()" class="btn-admin btn-admin-secondary btn-admin-sm btn-admin-block" class="mt-sm">
+                    <button type="button" onclick="editExistingSegments()" class="btn btn--secondary btn--sm btn-block" class="mt-sm">
                         <i data-lucide="pencil" class="icon-xs"></i> Redigera sektioner
                     </button>
                 </div>
@@ -680,46 +680,46 @@ include __DIR__ . '/components/unified-layout.php';
         <?php endif; ?>
 
         <!-- POIs -->
-        <div class="admin-card admin-card-compact">
-            <div class="admin-card-header">
+        <div class="card card-compact">
+            <div class="card-header">
                 <h2>POIs (<?= count($pois) ?>)</h2>
             </div>
-            <div class="admin-card-body">
+            <div class="card-body">
                 <?php if (!empty($pois)): ?>
-                <div class="admin-list admin-list-compact">
+                <div class="list list-compact">
                     <?php foreach ($pois as $poi): ?>
-                    <div class="admin-list-item">
+                    <div class="list-item">
                         <i data-lucide="<?= htmlspecialchars($poi['type_icon'] ?? 'map-pin') ?>" class="icon-xs"></i>
-                        <span class="admin-list-item-text"><?= htmlspecialchars($poi['label'] ?: $poi['type_label'] ?? $poi['poi_type']) ?></span>
+                        <span class="list-item-text"><?= htmlspecialchars($poi['label'] ?: $poi['type_label'] ?? $poi['poi_type']) ?></span>
                         <form method="POST" class="inline-form">
                             <?= csrf_field() ?>
                             <input type="hidden" name="action" value="delete_poi">
                             <input type="hidden" name="poi_id" value="<?= $poi['id'] ?>">
-                            <button type="submit" class="btn-admin btn-admin-ghost btn-admin-xs btn-admin-danger" onclick="return confirm('Ta bort?')">×</button>
+                            <button type="submit" class="btn btn--ghost btn-xs btn--danger" onclick="return confirm('Ta bort?')">×</button>
                         </form>
                     </div>
                     <?php endforeach; ?>
                 </div>
                 <?php endif; ?>
 
-                <details class="admin-details">
+                <details class="details">
                     <summary>+ Lägg till POI</summary>
-                    <form method="POST" id="poi-form" class="admin-form-compact">
+                    <form method="POST" id="poi-form" class="form-compact">
                         <?= csrf_field() ?>
                         <input type="hidden" name="action" value="add_poi">
                         <input type="hidden" name="poi_lat" id="poi-lat">
                         <input type="hidden" name="poi_lng" id="poi-lng">
-                        <div class="admin-form-row">
-                            <select name="poi_type" class="admin-form-select admin-form-select-sm" required>
+                        <div class="form-row">
+                            <select name="poi_type" class="input input-sm" required>
                                 <option value="">Typ...</option>
                                 <?php foreach ($poiTypes as $key => $label): ?>
                                 <option value="<?= htmlspecialchars($key) ?>"><?= htmlspecialchars($label) ?></option>
                                 <?php endforeach; ?>
                             </select>
-                            <input type="text" name="poi_label" class="admin-form-input admin-form-input-sm" placeholder="Etikett">
+                            <input type="text" name="poi_label" class="input input-sm" placeholder="Etikett">
                         </div>
-                        <p class="admin-text-muted admin-text-sm">Klicka på kartan för position</p>
-                        <button type="submit" id="poi-btn" disabled class="btn-admin btn-admin-primary btn-admin-sm btn-admin-block">Lägg till</button>
+                        <p class="text-muted text-sm">Klicka på kartan för position</p>
+                        <button type="submit" id="poi-btn" disabled class="btn btn--primary btn--sm btn-block">Lägg till</button>
                     </form>
                 </details>
             </div>
@@ -727,7 +727,7 @@ include __DIR__ . '/components/unified-layout.php';
     </div>
 
     <!-- Main: Map -->
-    <div class="admin-main-content">
+    <div class="main-content">
         <!-- Sponsor Banner (shown when segment with sponsor is selected) -->
         <div id="sponsor-banner" class="sponsor-banner" class="hidden">
             <div class="sponsor-banner-content">
@@ -737,8 +737,8 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
 
-        <div class="admin-card">
-            <div class="admin-card-body p-0" style="position: relative;">
+        <div class="card">
+            <div class="card-body p-0" style="position: relative;">
                 <!-- Segment info overlay (mobile) -->
                 <div id="segment-info-overlay" class="segment-info-overlay" class="hidden">
                     <div class="segment-info-content">
@@ -755,26 +755,26 @@ include __DIR__ . '/components/unified-layout.php';
 
 <style>
 /* Compact map editor styles */
-.admin-grid-sidebar {
+.grid-sidebar {
     display: grid;
     grid-template-columns: 400px 1fr;
     gap: var(--space-lg);
 }
-.admin-sidebar-narrow {
+.sidebar-narrow {
     display: flex;
     flex-direction: column;
     gap: var(--space-md);
 }
-.admin-card-compact .admin-card-header {
+.card-compact .card-header {
     padding: var(--space-sm) var(--space-md);
 }
-.admin-card-compact .admin-card-header h2 {
+.card-compact .card-header h2 {
     font-size: var(--text-sm);
     display: flex;
     align-items: center;
     gap: var(--space-sm);
 }
-.admin-card-compact .admin-card-body {
+.card-compact .card-body {
     padding: var(--space-md);
 }
 .color-dot {
@@ -783,13 +783,13 @@ include __DIR__ . '/components/unified-layout.php';
     border-radius: 2px;
     flex-shrink: 0;
 }
-.admin-list-compact {
+.list-compact {
     display: flex;
     flex-direction: column;
     gap: var(--space-xs);
     margin-bottom: var(--space-md);
 }
-.admin-list-item {
+.list-item {
     display: flex;
     align-items: center;
     gap: var(--space-sm);
@@ -798,43 +798,43 @@ include __DIR__ . '/components/unified-layout.php';
     border-radius: var(--radius-sm);
     font-size: var(--text-sm);
 }
-.admin-list-item.active {
+.list-item.active {
     border-color: var(--color-accent);
     background: rgba(97, 206, 112, 0.1);
 }
-.admin-list-item-text {
+.list-item-text {
     flex: 1;
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
 }
-.admin-details {
+.details {
     margin-top: var(--space-sm);
 }
-.admin-details summary {
+.details summary {
     cursor: pointer;
     color: var(--color-accent);
     font-size: var(--text-sm);
     font-weight: var(--weight-medium);
 }
-.admin-details[open] summary {
+.details[open] summary {
     margin-bottom: var(--space-sm);
 }
-.admin-form-compact .admin-form-group {
+.form-compact .form-group {
     margin-bottom: var(--space-sm);
 }
-.admin-form-row {
+.form-row {
     display: flex;
     gap: var(--space-sm);
     align-items: center;
     margin-bottom: var(--space-sm);
 }
-.admin-form-input-sm,
-.admin-form-select-sm {
+.input-sm,
+.input-sm {
     padding: var(--space-xs) var(--space-sm);
     font-size: var(--text-sm);
 }
-.admin-form-select-xs {
+.input-xs {
     padding: var(--space-xs) var(--space-sm);
     font-size: var(--text-sm);
     border-radius: var(--radius-sm);
@@ -848,17 +848,17 @@ include __DIR__ . '/components/unified-layout.php';
     background: white;
     min-width: 90px;
 }
-.admin-checkbox-inline {
+.checkbox-inline {
     display: flex;
     align-items: center;
     gap: var(--space-xs);
     font-size: var(--text-sm);
     white-space: nowrap;
 }
-.btn-admin-block {
+.btn-block {
     width: 100%;
 }
-.btn-admin-xs {
+.btn-xs {
     padding: var(--space-xs) var(--space-sm);
     font-size: var(--text-sm);
 }
@@ -866,14 +866,14 @@ include __DIR__ . '/components/unified-layout.php';
     display: inline;
     margin: 0;
 }
-.admin-status-box {
+.status-box {
     padding: var(--space-xs) var(--space-sm);
     background: var(--color-bg-sunken);
     border-radius: var(--radius-sm);
     font-size: var(--text-sm);
     margin-bottom: var(--space-sm);
 }
-.admin-info-box {
+.list-info-box {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -905,13 +905,13 @@ include __DIR__ . '/components/unified-layout.php';
     display: flex;
     gap: var(--space-xs);
 }
-.admin-segment-list {
+.segment-list {
     max-height: 400px;
     overflow-y: auto;
     border: 1px solid var(--color-border);
     border-radius: var(--radius-sm);
 }
-.admin-segment-item {
+.segment-item {
     display: flex;
     flex-wrap: wrap;
     align-items: center;
@@ -921,13 +921,13 @@ include __DIR__ . '/components/unified-layout.php';
     font-size: var(--text-sm);
     transition: background-color 0.15s ease;
 }
-.admin-segment-item:hover {
+.segment-item:hover {
     background-color: var(--color-star-fade);
 }
-.admin-segment-item:last-child {
+.segment-item:last-child {
     border-bottom: none;
 }
-.admin-segment-item.has-sponsor {
+.segment-item.has-sponsor {
     background: rgba(97, 206, 112, 0.05);
 }
 .segment-sponsor-badge {
@@ -959,7 +959,7 @@ include __DIR__ . '/components/unified-layout.php';
     text-overflow: ellipsis;
     white-space: nowrap;
 }
-.admin-segment-name {
+.segment-name {
     flex: 1;
     overflow: hidden;
     text-overflow: ellipsis;
@@ -968,16 +968,16 @@ include __DIR__ . '/components/unified-layout.php';
     align-items: center;
     gap: var(--space-xs);
 }
-.admin-segment-name svg {
+.segment-name svg {
     flex-shrink: 0;
 }
-.admin-text-sm {
+.text-sm {
     font-size: var(--text-sm);
 }
 .admin-text-xs {
     font-size: var(--text-xs);
 }
-.admin-segment-name-input {
+.segment-name-input {
     flex: 1;
     padding: var(--space-xs) var(--space-sm);
     font-size: var(--text-sm);
@@ -986,7 +986,7 @@ include __DIR__ . '/components/unified-layout.php';
     min-width: 100px;
     max-width: 160px;
 }
-.admin-segment-name-input:focus {
+.segment-name-input:focus {
     outline: none;
     border-color: var(--color-accent);
     box-shadow: 0 0 0 2px rgba(97, 206, 112, 0.15);
@@ -1071,56 +1071,56 @@ include __DIR__ . '/components/unified-layout.php';
 }
 
 /* Selected segment in list */
-.admin-segment-item.selected {
+.segment-item.selected {
     background: rgba(97, 206, 112, 0.15) !important;
     border-left: 3px solid var(--color-accent);
     border-radius: var(--radius-sm);
 }
-.admin-segment-item.selected .admin-text-muted {
+.segment-item.selected .text-muted {
     color: var(--color-text-secondary);
 }
-.admin-segment-item.selected .color-dot {
+.segment-item.selected .color-dot {
     box-shadow: 0 0 0 2px var(--color-accent);
 }
 
 /* Tablet responsive */
 @media (max-width: 1024px) {
-    .admin-grid-sidebar {
+    .grid-sidebar {
         grid-template-columns: 350px 1fr;
     }
 }
 
 /* Mobile responsive */
 @media (max-width: 768px) {
-    .admin-grid-sidebar {
+    .grid-sidebar {
         display: flex;
         flex-direction: column;
         gap: var(--space-md);
     }
-    .admin-sidebar-narrow {
+    .sidebar-narrow {
         order: 2;
     }
-    .admin-main-content {
+    .main-content {
         order: 1;
     }
     #map {
         height: 50vh !important;
         min-height: 300px !important;
     }
-    .admin-segment-item {
+    .segment-item {
         flex-wrap: wrap;
         gap: var(--space-sm);
         padding: var(--space-md);
     }
-    .admin-segment-item.selected {
+    .segment-item.selected {
         margin: 0;
         padding-left: calc(var(--space-md) - 3px);
     }
-    .admin-segment-name {
+    .segment-name {
         width: 100%;
         order: 1;
     }
-    .admin-segment-name-input {
+    .segment-name-input {
         max-width: none;
         flex: 1;
     }
@@ -1139,15 +1139,15 @@ include __DIR__ . '/components/unified-layout.php';
 
 <!-- Elevation Profile -->
 <?php if ($currentTrack): ?>
-<div class="admin-card mt-lg" id="elevation-card">
-    <div class="admin-card-header" style="display: flex; justify-content: space-between; align-items: center;">
+<div class="card mt-lg" id="elevation-card">
+    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
         <h2 id="elevation-title">Höjdprofil</h2>
         <button type="button" onclick="showFullTrack()" class="btn btn-ghost btn-sm" style="display: flex; align-items: center; gap: var(--space-xs);">
             <i data-lucide="maximize-2" class="icon-xs"></i>
             Visa hela
         </button>
     </div>
-    <div class="admin-card-body" style="padding: var(--space-sm);">
+    <div class="card-body" style="padding: var(--space-sm);">
         <canvas id="elevation-canvas" style="width: 100%; height: 150px; display: block;"></canvas>
     </div>
 </div>
@@ -1399,7 +1399,7 @@ function updateUI() {
     if (splitMarkers.length === 0) {
         markersInfo.style.display = 'none';
         saveActions.style.display = 'none';
-        segmentsList.innerHTML = '<p class="admin-text-muted admin-text-sm">Sätt ut minst 1 punkt för att skapa sektioner</p>';
+        segmentsList.innerHTML = '<p class="text-muted text-sm">Sätt ut minst 1 punkt för att skapa sektioner</p>';
         statusBox.innerHTML = '<strong>Steg 1:</strong> Klicka på banan för att sätta ut delningspunkter';
         return;
     }
@@ -1417,10 +1417,10 @@ function updateUI() {
         const dist = (waypoints[end].distance_km - waypoints[start].distance_km).toFixed(1);
 
         html += `
-        <div class="admin-segment-item" data-segment-idx="${i}" onclick="zoomToSegment(${i})" style="cursor: pointer;">
+        <div class="segment-item" data-segment-idx="${i}" onclick="zoomToSegment(${i})" style="cursor: pointer;">
             <span class="color-dot" style="background: ${SEGMENT_COLORS[type]};"></span>
-            <span class="admin-segment-name">${SEGMENT_ICONS[type]} Sektion ${i + 1}</span>
-            <span class="admin-text-muted">${dist}km</span>
+            <span class="segment-name">${SEGMENT_ICONS[type]} Sektion ${i + 1}</span>
+            <span class="text-muted">${dist}km</span>
             <select onclick="event.stopPropagation()" onchange="changeType(${i}, this.value)" class="segment-type-select">
                 <option value="liaison" ${type === 'liaison' ? 'selected' : ''}>Transport</option>
                 <option value="stage" ${type === 'stage' ? 'selected' : ''}>Sträcka</option>
@@ -1451,7 +1451,7 @@ function zoomToSegment(idx) {
         drawElevationProfile(start, end, `Sektion ${idx + 1} (${typeLabel})`);
 
         // Highlight selected segment in list
-        document.querySelectorAll('.admin-segment-item').forEach((item, i) => {
+        document.querySelectorAll('.segment-item').forEach((item, i) => {
             item.style.background = i === idx ? 'var(--color-star-fade)' : '';
         });
     }
@@ -1472,7 +1472,7 @@ function showFullTrack() {
 function clearSegmentSelection() {
     selectedSegmentIdx = null;
     // Remove highlight from list
-    document.querySelectorAll('.admin-segment-item').forEach(item => {
+    document.querySelectorAll('.segment-item').forEach(item => {
         item.classList.remove('selected');
     });
     // Hide sponsor banner
@@ -1513,7 +1513,7 @@ function selectSegment(segIdx, startIdx, endIdx) {
     if (startIdx >= endIdx) return;
 
     // Highlight in list
-    document.querySelectorAll('.admin-existing-segments .admin-segment-item').forEach((item, idx) => {
+    document.querySelectorAll('.existing-segments .segment-item').forEach((item, idx) => {
         if (idx === segIdx) {
             item.classList.add('selected');
         } else {
@@ -1627,7 +1627,7 @@ function zoomToExistingSegment(startIdx, endIdx, title) {
     drawElevationProfile(startIdx, endIdx, title || 'Sektion');
 
     // Highlight selected segment in list (for existing segments only)
-    document.querySelectorAll('.admin-existing-segments .admin-segment-item').forEach(item => {
+    document.querySelectorAll('.existing-segments .segment-item').forEach(item => {
         const itemStart = parseInt(item.dataset.start || '0');
         const itemEnd = parseInt(item.dataset.end || '0');
         if (itemStart === startIdx && itemEnd === endIdx) {
@@ -1646,7 +1646,7 @@ function updateSegmentListDistances() {
     items.forEach((item, i) => {
         const end = i < splitMarkers.length ? splitMarkers[i].index : waypoints.length - 1;
         const dist = (waypoints[end].distance_km - waypoints[start].distance_km).toFixed(1);
-        const distSpan = item.querySelector('.admin-text-muted');
+        const distSpan = item.querySelector('.text-muted');
         if (distSpan) distSpan.textContent = dist + 'km';
         start = end;
     });

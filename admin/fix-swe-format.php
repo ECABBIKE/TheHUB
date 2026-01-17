@@ -412,11 +412,11 @@ include __DIR__ . '/components/unified-layout.php';
                     <span class="badge-count" id="selected-count">0 valda</span>
                 </div>
                 <div style="display: flex; gap: var(--space-sm);">
-                    <button type="submit" class="btn-admin btn-admin-primary" id="convert-selected-btn" disabled>
+                    <button type="submit" class="btn btn--primary" id="convert-selected-btn" disabled>
                         <i data-lucide="check"></i>
                         Konvertera valda
                     </button>
-                    <button type="button" class="btn-admin btn-convert-all" onclick="convertAll()">
+                    <button type="button" class="btn btn-convert-all" onclick="convertAll()">
                         <i data-lucide="refresh-cw"></i>
                         Konvertera alla (<?= count($problematicRiders) ?>)
                     </button>

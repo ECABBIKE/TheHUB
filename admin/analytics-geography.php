@@ -143,7 +143,7 @@ $breadcrumbs = [
 
 $page_actions = '
 <div class="btn-group">
-    <a href="/admin/analytics-dashboard.php" class="btn-admin btn-admin-secondary">
+    <a href="/admin/analytics-dashboard.php" class="btn btn--secondary">
         <i data-lucide="arrow-left"></i> Dashboard
     </a>
 </div>
@@ -247,7 +247,7 @@ if ($unknownPct > 50):
 
         <?php if (!empty($underservedRegions)): ?>
         <div class="filter-group">
-            <a href="?year=<?= $selectedYear ?>&export=csv" class="btn-admin btn-admin-secondary">
+            <a href="?year=<?= $selectedYear ?>&export=csv" class="btn btn--secondary">
                 <i data-lucide="download"></i> Exportera CSV
             </a>
         </div>
@@ -306,24 +306,24 @@ $regionsWithRiders = count(array_filter($ridersByRegion, fn($r) => $r['rider_cou
 <!-- Main Grid -->
 <div class="grid grid-2 grid-gap-lg">
     <!-- Riders per Distrikt -->
-    <div class="admin-card">
-        <div class="admin-card-header">
+    <div class="card">
+        <div class="card-header">
             <h2>Riders per distrikt <?= $selectedYear ?></h2>
         </div>
-        <div class="admin-card-body">
+        <div class="card-body">
             <canvas id="ridersChart" height="300"></canvas>
         </div>
     </div>
 
     <!-- Per Capita Coverage -->
-    <div class="admin-card">
-        <div class="admin-card-header">
+    <div class="card">
+        <div class="card-header">
             <h2>Tackning per capita</h2>
             <span class="badge badge-secondary">Riders per 100k inv</span>
         </div>
-        <div class="admin-card-body" style="padding: 0;">
+        <div class="card-body" style="padding: 0;">
             <div class="table-responsive" style="max-height: 350px;">
-                <table class="admin-table">
+                <table class="table">
                     <thead>
                         <tr>
                             <th>Distrikt</th>
@@ -361,12 +361,12 @@ $regionsWithRiders = count(array_filter($ridersByRegion, fn($r) => $r['rider_cou
 </div>
 
 <!-- Events by Distrikt -->
-<div class="admin-card">
-    <div class="admin-card-header">
+<div class="card">
+    <div class="card-header">
         <h2>Events per distrikt <?= $selectedYear ?></h2>
     </div>
-    <div class="admin-card-body" style="padding: 0;">
-        <table class="admin-table">
+    <div class="card-body" style="padding: 0;">
+        <table class="table">
             <thead>
                 <tr>
                     <th>Distrikt</th>
@@ -395,12 +395,12 @@ $regionsWithRiders = count(array_filter($ridersByRegion, fn($r) => $r['rider_cou
 <?php
 $currentYear = (int)date('Y');
 if (!empty($regionalTrends)): ?>
-<div class="admin-card">
-    <div class="admin-card-header">
+<div class="card">
+    <div class="card-header">
         <h2>Regional tillvaxttend (5 ar)</h2>
     </div>
-    <div class="admin-card-body" style="padding: 0;">
-        <table class="admin-table">
+    <div class="card-body" style="padding: 0;">
+        <table class="table">
             <thead>
                 <tr>
                     <th>Region</th>
@@ -678,7 +678,7 @@ document.addEventListener('DOMContentLoaded', function() {
 @media (max-width: 767px) {
     /* Edge-to-edge for all cards and components */
     .filter-bar,
-    .admin-card,
+    .card,
     .alert,
     .info-box {
         margin-left: -16px;
@@ -726,15 +726,15 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     /* Table adjustments for mobile */
-    .admin-table th,
-    .admin-table td {
+    .table th,
+    .table td {
         padding: var(--space-sm);
         font-size: var(--text-sm);
     }
 
     /* Hide less important columns on mobile */
-    .admin-table th:nth-child(4),
-    .admin-table td:nth-child(4) {
+    .table th:nth-child(4),
+    .table td:nth-child(4) {
         display: none;
     }
 
@@ -770,8 +770,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     /* Hide even more columns */
-    .admin-table th:nth-child(3),
-    .admin-table td:nth-child(3) {
+    .table th:nth-child(3),
+    .table td:nth-child(3) {
         display: none;
     }
 }

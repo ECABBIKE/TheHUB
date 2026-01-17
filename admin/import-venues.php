@@ -224,58 +224,58 @@ include __DIR__ . '/components/unified-layout.php';
 
 <?php if ($stats): ?>
 <!-- Stats Grid -->
-<div class="admin-stats-grid mb-lg">
-    <div class="admin-stat-card">
-        <div class="admin-stat-icon" style="background: var(--color-info-light); color: var(--color-info);">
+<div class="grid grid-stats mb-lg">
+    <div class="stat-card">
+        <div class="stat-icon" style="background: var(--color-info-light); color: var(--color-info);">
             <i data-lucide="file-text"></i>
         </div>
-        <div class="admin-stat-content">
-            <div class="admin-stat-value"><?= $stats['total'] ?></div>
-            <div class="admin-stat-label">Totalt rader</div>
+        <div class="stat-content">
+            <div class="stat-value"><?= $stats['total'] ?></div>
+            <div class="stat-label">Totalt rader</div>
         </div>
     </div>
-    <div class="admin-stat-card">
-        <div class="admin-stat-icon" style="background: var(--color-success-light); color: var(--color-success);">
+    <div class="stat-card">
+        <div class="stat-icon" style="background: var(--color-success-light); color: var(--color-success);">
             <i data-lucide="plus-circle"></i>
         </div>
-        <div class="admin-stat-content">
-            <div class="admin-stat-value"><?= $stats['success'] ?></div>
-            <div class="admin-stat-label">Nya</div>
+        <div class="stat-content">
+            <div class="stat-value"><?= $stats['success'] ?></div>
+            <div class="stat-label">Nya</div>
         </div>
     </div>
-    <div class="admin-stat-card">
-        <div class="admin-stat-icon" style="background: var(--color-accent-light); color: var(--color-accent);">
+    <div class="stat-card">
+        <div class="stat-icon" style="background: var(--color-accent-light); color: var(--color-accent);">
             <i data-lucide="refresh-cw"></i>
         </div>
-        <div class="admin-stat-content">
-            <div class="admin-stat-value"><?= $stats['updated'] ?></div>
-            <div class="admin-stat-label">Uppdaterade</div>
+        <div class="stat-content">
+            <div class="stat-value"><?= $stats['updated'] ?></div>
+            <div class="stat-label">Uppdaterade</div>
         </div>
     </div>
-    <div class="admin-stat-card">
-        <div class="admin-stat-icon" style="background: var(--color-error-light, rgba(239, 68, 68, 0.1)); color: var(--color-error);">
+    <div class="stat-card">
+        <div class="stat-icon" style="background: var(--color-error-light, rgba(239, 68, 68, 0.1)); color: var(--color-error);">
             <i data-lucide="x-circle"></i>
         </div>
-        <div class="admin-stat-content">
-            <div class="admin-stat-value"><?= $stats['failed'] ?></div>
-            <div class="admin-stat-label">Misslyckade</div>
+        <div class="stat-content">
+            <div class="stat-value"><?= $stats['failed'] ?></div>
+            <div class="stat-label">Misslyckade</div>
         </div>
     </div>
 </div>
 
-<div class="admin-card mb-lg">
-    <div class="admin-card-body">
+<div class="card mb-lg">
+    <div class="card-body">
         <p><strong>Totalt i databasen:</strong> <?= $stats['total_in_db'] ?> anläggningar</p>
     </div>
 </div>
 <?php endif; ?>
 
 <!-- Upload Form -->
-<div class="admin-card mb-lg">
-    <div class="admin-card-header">
+<div class="card mb-lg">
+    <div class="card-header">
         <h2>Bulk-import av anläggningar från CSV-fil</h2>
     </div>
-    <div class="admin-card-body">
+    <div class="card-body">
         <form method="POST" enctype="multipart/form-data">
             <?= csrf_field() ?>
 
@@ -284,25 +284,25 @@ include __DIR__ . '/components/unified-layout.php';
                 <strong>CSV-format:</strong> Första raden ska innehålla kolumnnamn.
             </div>
 
-            <div class="admin-form-group">
-                <label class="admin-form-label">
+            <div class="form-group">
+                <label class="label">
                     <i data-lucide="upload"></i>
                     Välj CSV-fil
                 </label>
-                <input type="file" name="csv_file" accept=".csv" required class="admin-form-input">
+                <input type="file" name="csv_file" accept=".csv" required class="input">
                 <small class="text-secondary">Max 10 MB. Format: CSV (komma-separerad)</small>
             </div>
 
             <div class="flex gap-md">
-                <button type="submit" class="btn-admin btn-admin-primary">
+                <button type="submit" class="btn btn--primary">
                     <i data-lucide="upload"></i>
                     Importera Anläggningar
                 </button>
-                <a href="/admin/venues.php" class="btn-admin btn-admin-secondary">
+                <a href="/admin/venues.php" class="btn btn--secondary">
                     <i data-lucide="arrow-left"></i>
                     Tillbaka
                 </a>
-                <a href="/templates/import-venues-template.csv" class="btn-admin btn-admin-secondary" download>
+                <a href="/templates/import-venues-template.csv" class="btn btn--secondary" download>
                     <i data-lucide="download"></i>
                     Ladda ner mall
                 </a>
@@ -312,13 +312,13 @@ include __DIR__ . '/components/unified-layout.php';
 </div>
 
 <!-- CSV Format Info -->
-<div class="admin-card">
-    <div class="admin-card-header">
+<div class="card">
+    <div class="card-header">
         <h2>CSV-kolumner</h2>
     </div>
-    <div class="admin-card-body" style="padding: 0;">
-        <div class="admin-table-container">
-            <table class="admin-table">
+    <div class="card-body" style="padding: 0;">
+        <div class="table-container">
+            <table class="table">
                 <thead>
                     <tr>
                         <th>Kolumn</th>
@@ -331,49 +331,49 @@ include __DIR__ . '/components/unified-layout.php';
                     <tr>
                         <td><code>name</code></td>
                         <td>Anläggningsnamn</td>
-                        <td><span class="admin-badge admin-badge-success">Ja</span></td>
+                        <td><span class="badge badge badge--success">Ja</span></td>
                         <td>Åre Bike Park</td>
                     </tr>
                     <tr>
                         <td><code>city</code></td>
                         <td>Ort</td>
-                        <td><span class="admin-badge admin-badge-secondary">Nej</span></td>
+                        <td><span class="badge badge badge--secondary">Nej</span></td>
                         <td>Åre</td>
                     </tr>
                     <tr>
                         <td><code>region</code></td>
                         <td>Region/län</td>
-                        <td><span class="admin-badge admin-badge-secondary">Nej</span></td>
+                        <td><span class="badge badge badge--secondary">Nej</span></td>
                         <td>Jämtland</td>
                     </tr>
                     <tr>
                         <td><code>country</code></td>
                         <td>Land</td>
-                        <td><span class="admin-badge admin-badge-secondary">Nej</span></td>
+                        <td><span class="badge badge badge--secondary">Nej</span></td>
                         <td>Sverige</td>
                     </tr>
                     <tr>
                         <td><code>address</code></td>
                         <td>Adress</td>
-                        <td><span class="admin-badge admin-badge-secondary">Nej</span></td>
+                        <td><span class="badge badge badge--secondary">Nej</span></td>
                         <td>Årevägen 1, 837 52 Åre</td>
                     </tr>
                     <tr>
                         <td><code>coordinates</code></td>
                         <td>Koordinater (lat,lon)</td>
-                        <td><span class="admin-badge admin-badge-secondary">Nej</span></td>
+                        <td><span class="badge badge badge--secondary">Nej</span></td>
                         <td>63.3989,13.0819</td>
                     </tr>
                     <tr>
                         <td><code>description</code></td>
                         <td>Beskrivning</td>
-                        <td><span class="admin-badge admin-badge-secondary">Nej</span></td>
+                        <td><span class="badge badge badge--secondary">Nej</span></td>
                         <td>Sveriges största bike park</td>
                     </tr>
                     <tr>
                         <td><code>website</code></td>
                         <td>Hemsida</td>
-                        <td><span class="admin-badge admin-badge-secondary">Nej</span></td>
+                        <td><span class="badge badge badge--secondary">Nej</span></td>
                         <td>https://skistar.com/arebike</td>
                     </tr>
                 </tbody>
