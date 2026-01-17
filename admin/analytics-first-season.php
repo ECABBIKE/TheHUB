@@ -22,7 +22,7 @@ global $pdo;
 
 // Parameters
 $currentYear = (int)date('Y');
-$selectedCohort = isset($_GET['cohort']) ? (int)$_GET['cohort'] : $currentYear - 2;
+$selectedCohort = isset($_GET['cohort']) && $_GET['cohort'] !== '' ? (int)$_GET['cohort'] : $currentYear - 2;
 $selectedBrand = isset($_GET['brand']) && $_GET['brand'] !== '' ? (int)$_GET['brand'] : null;
 $viewMode = $_GET['view'] ?? 'overview'; // overview, retention, patterns, brands
 
