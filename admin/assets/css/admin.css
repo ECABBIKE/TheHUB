@@ -640,6 +640,12 @@
     stroke-width: 2;
 }
 
+.admin-stat-card .stat-content {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-2xs);
+}
+
 .admin-stat-card .stat-value {
     font-size: var(--text-2xl);
     font-weight: var(--weight-bold);
@@ -649,6 +655,37 @@
 .admin-stat-card .stat-label {
     font-size: var(--text-sm);
     color: var(--color-text-secondary);
+}
+
+/* Stat icon color variants */
+.stat-icon-accent,
+.admin-stat-icon.stat-icon-accent {
+    background: var(--color-accent-light);
+    color: var(--color-accent);
+}
+
+.stat-icon-error,
+.admin-stat-icon.stat-icon-error {
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--color-error);
+}
+
+.stat-icon-warning,
+.admin-stat-icon.stat-icon-warning {
+    background: rgba(245, 158, 11, 0.1);
+    color: var(--color-warning);
+}
+
+.stat-icon-info,
+.admin-stat-icon.stat-icon-info {
+    background: rgba(59, 130, 246, 0.1);
+    color: var(--color-info);
+}
+
+.stat-icon-success,
+.admin-stat-icon.stat-icon-success {
+    background: rgba(16, 185, 129, 0.1);
+    color: var(--color-success);
 }
 
 /* ========================================================================
