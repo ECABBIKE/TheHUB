@@ -145,5 +145,62 @@ foreach ($allSwecup as $e) {
 }
 echo "\n   TOTALT: {$total} starter (ej unika)\n";
 
+// 6. Bryt ner per klass för att se om det är hobby vs tävling
+echo "6. GÖTEBORG/LACKAREBACKEN - UPPDELAT PER KLASS:\n";
+echo str_repeat("-", 60) . "\n";
+
+$stmt = $pdo->prepare("
+    SELECT e.id, e.name, e.date
+    FROM events e
+    WHERE (e.location LIKE '%Lackarebacken%' OR e.name LIKE '%Göteborg%')
+    AND YEAR(e.date) = 2024
+    LIMIT 1
+");
+$stmt->execute();
+$gbgEvent = $stmt->fetch(PDO::FETCH_ASSOC);
+
+if ($gbgEvent) {
+    echo "   Event: {$gbgEvent['name']} (ID: {$gbgEvent['id']})\n\n";
+
+    $stmt = $pdo->prepare("
+        SELECT
+            c.name as class_name,
+            c.id as class_id,
+            COUNT(DISTINCT r.cyclist_id) as riders
+        FROM results r
+        LEFT JOIN classes c ON c.id = r.class_id
+        WHERE r.event_id = ?
+        GROUP BY r.class_id
+        ORDER BY riders DESC
+    ");
+    $stmt->execute([$gbgEvent['id']]);
+    $classes = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    $totalCompetition = 0;
+    $totalHobby = 0;
+
+    foreach ($classes as $c) {
+        $className = $c['class_name'] ?? 'Okänd klass';
+        $isHobby = (stripos($className, 'hobby') !== false ||
+                    stripos($className, 'motion') !== false ||
+                    stripos($className, 'open') !== false ||
+                    stripos($className, 'öppen') !== false);
+
+        $type = $isHobby ? '[HOBBY/MOTION]' : '[TÄVLING]';
+        echo "   {$type} {$className}: {$c['riders']} deltagare\n";
+
+        if ($isHobby) {
+            $totalHobby += $c['riders'];
+        } else {
+            $totalCompetition += $c['riders'];
+        }
+    }
+
+    echo "\n   SUMMERING:\n";
+    echo "   - Tävlingsklasser: {$totalCompetition} deltagare\n";
+    echo "   - Hobby/Motion: {$totalHobby} deltagare\n";
+    echo "   - TOTALT: " . ($totalCompetition + $totalHobby) . " deltagare\n";
+}
+
 echo "\n=== SLUT ===\n";
 echo "</pre>";
