@@ -22,18 +22,19 @@ requireAnalyticsAccess();
 
 global $pdo;
 
-// Arval
-$currentYear = (int)date('Y');
-$selectedYear = isset($_GET['year']) ? (int)$_GET['year'] : $currentYear;
-
-// Hamta tillgangliga ar
+// Hamta tillgangliga ar FORST for att kunna valja ratt default
 $availableYears = [];
 try {
     $stmt = $pdo->query("SELECT DISTINCT season_year FROM series_participation ORDER BY season_year DESC");
     $availableYears = $stmt->fetchAll(PDO::FETCH_COLUMN);
 } catch (Exception $e) {
+    $currentYear = (int)date('Y');
     $availableYears = range($currentYear, $currentYear - 5);
 }
+
+// Arval - default till senaste aret med data
+$latestYearWithData = !empty($availableYears) ? (int)$availableYears[0] : (int)date('Y');
+$selectedYear = isset($_GET['year']) ? (int)$_GET['year'] : $latestYearWithData;
 
 // Hamta serier med analytics aktiverat
 $series = [];
@@ -354,6 +355,14 @@ include __DIR__ . '/components/unified-layout.php';
 <div class="admin-card">
     <div class="admin-card-header">
         <h2>Serie-statistik</h2>
+        <span class="badge"><?= $selectedYear ?></span>
+    </div>
+    <div class="admin-card-body" style="padding: var(--space-md); padding-bottom: 0;">
+        <p class="text-muted" style="font-size: var(--text-sm); margin: 0;">
+            <strong>Lojalitet</strong> = Andel av <?= $selectedYear - 1 ?>-deltagare som aterkom <?= $selectedYear ?>.
+            Visar 0% om data fran <?= $selectedYear - 1 ?> saknas.
+            <strong>Exklusivitet</strong> = Andel som endast deltar i denna serie.
+        </p>
     </div>
     <div class="admin-card-body" style="padding: 0;">
         <div class="admin-table-container">
@@ -363,8 +372,8 @@ include __DIR__ . '/components/unified-layout.php';
                         <th>Serie</th>
                         <th>Niva</th>
                         <th>Deltagare</th>
-                        <th>Lojalitet</th>
-                        <th>Exklusivitet</th>
+                        <th title="Andel av forra arets deltagare som aterkom detta ar. Kraver data fran foregaende ar.">Lojalitet <i data-lucide="info" style="width: 12px; height: 12px; opacity: 0.5;"></i></th>
+                        <th title="Andel deltagare som ENDAST deltar i denna serie (inte andra serier).">Exklusivitet <i data-lucide="info" style="width: 12px; height: 12px; opacity: 0.5;"></i></th>
                     </tr>
                 </thead>
                 <tbody>
