@@ -67,16 +67,16 @@ include __DIR__ . '/components/unified-layout.php';
 <?php endif; ?>
 
 <!-- Public Display Settings -->
-<div class="card">
-    <div class="card-header">
+<div class="admin-card">
+    <div class="admin-card-header">
         <h2>Publik Visning</h2>
     </div>
-    <div class="card-body">
+    <div class="admin-card-body">
         <form method="POST">
             <?= csrf_field() ?>
 
-            <div class="form-group">
-                <label class="label">
+            <div class="admin-form-group">
+                <label class="admin-form-label">
                     Visa deltagare publikt
                 </label>
                 <p style="color: var(--color-text-secondary); font-size: var(--text-sm); margin-bottom: var(--space-md);">
@@ -114,12 +114,12 @@ include __DIR__ . '/components/unified-layout.php';
                 </div>
             </div>
 
-            <div class="form-actions">
-                <button type="submit" class="btn btn--primary">
+            <div class="admin-form-actions">
+                <button type="submit" class="btn-admin btn-admin-primary">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
                     Spara Inställningar
                 </button>
-                <a href="/admin/dashboard" class="btn btn--secondary">
+                <a href="/admin/dashboard" class="btn-admin btn-admin-secondary">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
                     Tillbaka
                 </a>

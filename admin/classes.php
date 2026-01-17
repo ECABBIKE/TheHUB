@@ -247,16 +247,16 @@ $page_title = 'Klasser';
 $breadcrumbs = [['label' => 'Klasser']];
 $page_actions = '';
 if ($emptyClassCount > 0) {
-    $page_actions .= '<button onclick="deleteEmptyClasses()" class="btn btn--danger">
+    $page_actions .= '<button onclick="deleteEmptyClasses()" class="btn-admin btn-admin-danger">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
         Ta bort tomma (' . $emptyClassCount . ')
     </button>';
 }
-$page_actions .= '<a href="/admin/import/classes" class="btn btn--secondary">
+$page_actions .= '<a href="/admin/import/classes" class="btn-admin btn-admin-secondary">
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
     Importera CSV
 </a>
-<button onclick="openClassModal()" class="btn btn--primary">
+<button onclick="openClassModal()" class="btn-admin btn-admin-primary">
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
     Ny Klass
 </button>';
@@ -271,16 +271,16 @@ include __DIR__ . '/components/unified-layout.php';
 <?php endif; ?>
 
 <!-- Search and Filter -->
-<div class="card">
-    <div class="card-body">
-        <form method="GET" class="form-row" style="align-items: flex-end;">
-            <div class="form-group" style="flex: 1; margin-bottom: 0;">
-                <label class="label">Sök</label>
-                <input type="text" name="search" class="input" placeholder="Klassnamn..." value="<?= htmlspecialchars($search) ?>">
+<div class="admin-card">
+    <div class="admin-card-body">
+        <form method="GET" class="admin-form-row" style="align-items: flex-end;">
+            <div class="admin-form-group" style="flex: 1; margin-bottom: 0;">
+                <label class="admin-form-label">Sök</label>
+                <input type="text" name="search" class="admin-form-input" placeholder="Klassnamn..." value="<?= htmlspecialchars($search) ?>">
             </div>
-            <div class="form-group" style="margin-bottom: 0;">
-                <label class="label">Disciplin</label>
-                <select name="discipline" class="input">
+            <div class="admin-form-group" style="margin-bottom: 0;">
+                <label class="admin-form-label">Disciplin</label>
+                <select name="discipline" class="admin-form-select">
                     <option value="">Alla discipliner</option>
                     <?php foreach ($disciplinesList as $disc): ?>
                         <option value="<?= htmlspecialchars($disc['discipline']) ?>" <?= $disciplineFilter === $disc['discipline'] ? 'selected' : '' ?>>
@@ -289,30 +289,30 @@ include __DIR__ . '/components/unified-layout.php';
                     <?php endforeach; ?>
                 </select>
             </div>
-            <button type="submit" class="btn btn--primary">Filtrera</button>
+            <button type="submit" class="btn-admin btn-admin-primary">Filtrera</button>
             <?php if ($search || $disciplineFilter): ?>
-                <a href="/admin/classes" class="btn btn--secondary">Rensa</a>
+                <a href="/admin/classes" class="btn-admin btn-admin-secondary">Rensa</a>
             <?php endif; ?>
         </form>
     </div>
 </div>
 
 <!-- Classes Table -->
-<div class="card">
-    <div class="card-header">
+<div class="admin-card">
+    <div class="admin-card-header">
         <h2><?= count($classes) ?> klasser</h2>
     </div>
-    <div class="card-body" style="padding: 0;">
+    <div class="admin-card-body" style="padding: 0;">
         <?php if (empty($classes)): ?>
-            <div class="empty-state">
+            <div class="admin-empty-state">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m12.83 2.18a2 2 0 0 0-1.66 0L2.6 6.08a1 1 0 0 0 0 1.83l8.58 3.91a2 2 0 0 0 1.66 0l8.58-3.9a1 1 0 0 0 0-1.83Z"/><path d="m22 17.65-9.17 4.16a2 2 0 0 1-1.66 0L2 17.65"/><path d="m22 12.65-9.17 4.16a2 2 0 0 1-1.66 0L2 12.65"/></svg>
                 <h3>Inga klasser hittades</h3>
                 <p>Prova att ändra filter eller skapa en ny klass.</p>
-                <button onclick="openClassModal()" class="btn btn--primary">Skapa klass</button>
+                <button onclick="openClassModal()" class="btn-admin btn-admin-primary">Skapa klass</button>
             </div>
         <?php else: ?>
-            <div class="table-container">
-                <table class="table">
+            <div class="admin-table-container">
+                <table class="admin-table">
                     <thead>
                         <tr>
                             <th>Visningsnamn</th>
@@ -337,11 +337,11 @@ include __DIR__ . '/components/unified-layout.php';
                                         foreach ($discs as $disc):
                                             $disc = trim($disc);
                                             if ($disc): ?>
-                                                <span class="badge badge badge--secondary"><?= htmlspecialchars($disc) ?></span>
+                                                <span class="admin-badge admin-badge-secondary"><?= htmlspecialchars($disc) ?></span>
                                             <?php endif;
                                         endforeach;
                                     else: ?>
-                                        <span class="badge badge badge--info">Alla</span>
+                                        <span class="admin-badge admin-badge-info">Alla</span>
                                     <?php endif; ?>
                                 </td>
                                 <td>
@@ -362,10 +362,10 @@ include __DIR__ . '/components/unified-layout.php';
                                         <span style="color: var(--color-text-tertiary);">-</span>
                                     <?php else: ?>
                                         <?php if (!$class['awards_points']): ?>
-                                            <span class="badge badge badge--secondary">Ej poäng</span>
+                                            <span class="admin-badge admin-badge-secondary">Ej poäng</span>
                                         <?php endif; ?>
                                         <?php if (!$class['series_eligible']): ?>
-                                            <span class="badge badge badge--secondary">Ej serie</span>
+                                            <span class="admin-badge admin-badge-secondary">Ej serie</span>
                                         <?php endif; ?>
                                     <?php endif; ?>
                                 </td>
@@ -391,21 +391,21 @@ include __DIR__ . '/components/unified-layout.php';
                                     <?php endif; ?>
                                 </td>
                                 <td>
-                                    <span class="badge <?= $class['active'] ? 'badge badge--success' : 'badge badge--secondary' ?>">
+                                    <span class="admin-badge <?= $class['active'] ? 'admin-badge-success' : 'admin-badge-secondary' ?>">
                                         <?= $class['active'] ? 'Aktiv' : 'Inaktiv' ?>
                                     </span>
                                 </td>
                                 <td>
                                     <div class="table-actions">
-                                        <button type="button" class="btn btn--sm btn--secondary" onclick='editClass(<?= json_encode($class) ?>)' title="Redigera">
+                                        <button type="button" class="btn-admin btn-admin-sm btn-admin-secondary" onclick='editClass(<?= json_encode($class) ?>)' title="Redigera">
                                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
                                         </button>
                                         <?php if ($class['result_count'] > 0): ?>
-                                            <button onclick="openMergeModal(<?= $class['id'] ?>, '<?= addslashes($class['display_name']) ?>')" class="btn btn--sm btn--warning" title="Slå ihop med annan klass">
+                                            <button onclick="openMergeModal(<?= $class['id'] ?>, '<?= addslashes($class['display_name']) ?>')" class="btn-admin btn-admin-sm btn-admin-warning" title="Slå ihop med annan klass">
                                                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m8 6 4-4 4 4"/><path d="M12 2v10.3a4 4 0 0 1-1.172 2.872L4 22"/><path d="m20 22-5-5"/></svg>
                                             </button>
                                         <?php else: ?>
-                                            <button onclick="deleteClass(<?= $class['id'] ?>, '<?= addslashes($class['display_name']) ?>')" class="btn btn--sm btn--danger" title="Ta bort">
+                                            <button onclick="deleteClass(<?= $class['id'] ?>, '<?= addslashes($class['display_name']) ?>')" class="btn-admin btn-admin-sm btn-admin-danger" title="Ta bort">
                                                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
                                             </button>
                                         <?php endif; ?>
@@ -421,12 +421,12 @@ include __DIR__ . '/components/unified-layout.php';
 </div>
 
 <!-- Class Modal -->
-<div id="classModal" class="modal" style="display: none;">
-    <div class="modal-overlay" onclick="closeClassModal()"></div>
-    <div class="modal-content" style="max-width: 700px;">
-        <div class="modal-header">
+<div id="classModal" class="admin-modal" style="display: none;">
+    <div class="admin-modal-overlay" onclick="closeClassModal()"></div>
+    <div class="admin-modal-content" style="max-width: 700px;">
+        <div class="admin-modal-header">
             <h2 id="modalTitle">Ny Klass</h2>
-            <button type="button" class="modal-close" onclick="closeClassModal()">
+            <button type="button" class="admin-modal-close" onclick="closeClassModal()">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
             </button>
         </div>
@@ -435,22 +435,22 @@ include __DIR__ . '/components/unified-layout.php';
             <input type="hidden" name="action" id="formAction" value="create">
             <input type="hidden" name="id" id="classId" value="">
 
-            <div class="modal-body">
-                <div class="form-group">
-                    <label class="label">Visningsnamn <span style="color: var(--color-error);">*</span></label>
-                    <input type="text" name="display_name" id="displayName" class="input" required placeholder="t.ex. Elite Herr">
+            <div class="admin-modal-body">
+                <div class="admin-form-group">
+                    <label class="admin-form-label">Visningsnamn <span style="color: var(--color-error);">*</span></label>
+                    <input type="text" name="display_name" id="displayName" class="admin-form-input" required placeholder="t.ex. Elite Herr">
                 </div>
 
-                <div class="form-group">
-                    <label class="label">Namn <span style="color: var(--color-error);">*</span></label>
-                    <input type="text" name="name" id="name" class="input" required placeholder="t.ex. ELITE_M">
+                <div class="admin-form-group">
+                    <label class="admin-form-label">Namn <span style="color: var(--color-error);">*</span></label>
+                    <input type="text" name="name" id="name" class="admin-form-input" required placeholder="t.ex. ELITE_M">
                 </div>
 
-                <div class="form-group">
-                    <label class="label">Discipliner</label>
+                <div class="admin-form-group">
+                    <label class="admin-form-label">Discipliner</label>
                     <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: var(--space-sm);">
                         <?php foreach (['XC', 'DH', 'ENDURO', 'ROAD', 'TRACK', 'BMX', 'CX', 'GRAVEL'] as $disc): ?>
-                            <label class="checkbox-label">
+                            <label class="admin-checkbox-label">
                                 <input type="checkbox" name="disciplines[]" value="<?= $disc ?>" class="discipline-checkbox">
                                 <span><?= $disc ?></span>
                             </label>
@@ -458,32 +458,32 @@ include __DIR__ . '/components/unified-layout.php';
                     </div>
                 </div>
 
-                <div class="form-row">
-                    <div class="form-group">
-                        <label class="label">Kön</label>
-                        <select name="gender" id="gender" class="input">
+                <div class="admin-form-row">
+                    <div class="admin-form-group">
+                        <label class="admin-form-label">Kön</label>
+                        <select name="gender" id="gender" class="admin-form-select">
                             <option value="">Alla</option>
                             <option value="M">Herr</option>
                             <option value="K">Dam</option>
                         </select>
                     </div>
-                    <div class="form-group">
-                        <label class="label">Min ålder</label>
-                        <input type="number" name="min_age" id="minAge" class="input" placeholder="19">
+                    <div class="admin-form-group">
+                        <label class="admin-form-label">Min ålder</label>
+                        <input type="number" name="min_age" id="minAge" class="admin-form-input" placeholder="19">
                     </div>
-                    <div class="form-group">
-                        <label class="label">Max ålder</label>
-                        <input type="number" name="max_age" id="maxAge" class="input" placeholder="29">
+                    <div class="admin-form-group">
+                        <label class="admin-form-label">Max ålder</label>
+                        <input type="number" name="max_age" id="maxAge" class="admin-form-input" placeholder="29">
                     </div>
                 </div>
 
-                <div class="form-group">
-                    <label class="label">Sorteringsordning</label>
-                    <input type="number" name="sort_order" id="sortOrder" class="input" value="999" min="0">
+                <div class="admin-form-group">
+                    <label class="admin-form-label">Sorteringsordning</label>
+                    <input type="number" name="sort_order" id="sortOrder" class="admin-form-input" value="999" min="0">
                 </div>
 
-                <div class="form-group">
-                    <label class="checkbox-label">
+                <div class="admin-form-group">
+                    <label class="admin-checkbox-label">
                         <input type="checkbox" name="active" id="active" checked>
                         <span>Aktiv</span>
                     </label>
@@ -492,40 +492,40 @@ include __DIR__ . '/components/unified-layout.php';
                 <div style="border-top: 1px solid var(--color-border); padding-top: var(--space-md); margin-top: var(--space-md);">
                     <h4 class="mb-md">Klassinställningar</h4>
 
-                    <div class="form-group">
-                        <label class="checkbox-label">
+                    <div class="admin-form-group">
+                        <label class="admin-checkbox-label">
                             <input type="checkbox" name="awards_points" id="awardsPoints" checked>
                             <span>Ger seriepoäng</span>
                         </label>
                     </div>
 
-                    <div class="form-group">
-                        <label class="label">Sortering i resultat</label>
-                        <select name="ranking_type" id="rankingType" class="input">
+                    <div class="admin-form-group">
+                        <label class="admin-form-label">Sortering i resultat</label>
+                        <select name="ranking_type" id="rankingType" class="admin-form-select">
                             <option value="time">Tid (snabbast först)</option>
                             <option value="name">Namn (alfabetiskt)</option>
                             <option value="bib">Startnummer (lägst först)</option>
                         </select>
                     </div>
 
-                    <div class="form-group">
-                        <label class="checkbox-label">
+                    <div class="admin-form-group">
+                        <label class="admin-checkbox-label">
                             <input type="checkbox" name="series_eligible" id="seriesEligible" checked>
                             <span>Räknas i serien</span>
                         </label>
                     </div>
 
-                    <div class="form-group">
-                        <label class="checkbox-label">
+                    <div class="admin-form-group">
+                        <label class="admin-checkbox-label">
                             <input type="checkbox" name="is_championship_class" id="isChampionshipClass">
                             <span>SM-klass (ger SM-medalj vid mästerskapstävling)</span>
                         </label>
                     </div>
 
                     <?php if (!empty($classCategories)): ?>
-                        <div class="form-group">
-                            <label class="label">Licenskategori</label>
-                            <select name="class_category_code" id="classCategoryCode" class="input">
+                        <div class="admin-form-group">
+                            <label class="admin-form-label">Licenskategori</label>
+                            <select name="class_category_code" id="classCategoryCode" class="admin-form-select">
                                 <option value="">-- Ingen kategori --</option>
                                 <?php foreach ($classCategories as $cat): ?>
                                     <option value="<?= htmlspecialchars($cat['code']) ?>"><?= htmlspecialchars($cat['name']) ?></option>
@@ -536,21 +536,21 @@ include __DIR__ . '/components/unified-layout.php';
                 </div>
             </div>
 
-            <div class="modal-footer">
-                <button type="button" class="btn btn--secondary" onclick="closeClassModal()">Avbryt</button>
-                <button type="submit" class="btn btn--primary" id="submitButton">Skapa Klass</button>
+            <div class="admin-modal-footer">
+                <button type="button" class="btn-admin btn-admin-secondary" onclick="closeClassModal()">Avbryt</button>
+                <button type="submit" class="btn-admin btn-admin-primary" id="submitButton">Skapa Klass</button>
             </div>
         </form>
     </div>
 </div>
 
 <!-- Merge Modal -->
-<div id="mergeModal" class="modal" style="display: none;">
-    <div class="modal-overlay" onclick="closeMergeModal()"></div>
-    <div class="modal-content" style="max-width: 500px;">
-        <div class="modal-header">
+<div id="mergeModal" class="admin-modal" style="display: none;">
+    <div class="admin-modal-overlay" onclick="closeMergeModal()"></div>
+    <div class="admin-modal-content" style="max-width: 500px;">
+        <div class="admin-modal-header">
             <h2>Slå ihop klass</h2>
-            <button type="button" class="modal-close" onclick="closeMergeModal()">
+            <button type="button" class="admin-modal-close" onclick="closeMergeModal()">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
             </button>
         </div>
@@ -559,15 +559,15 @@ include __DIR__ . '/components/unified-layout.php';
             <input type="hidden" name="action" value="merge">
             <input type="hidden" name="source_id" id="mergeSourceId" value="">
 
-            <div class="modal-body">
+            <div class="admin-modal-body">
                 <p class="mb-md">
                     Flytta alla resultat från <strong id="mergeSourceName"></strong> till en annan klass.
                     <br><span class="text-secondary">Källklassen tas bort efter sammanslagningen.</span>
                 </p>
 
-                <div class="form-group">
-                    <label class="label">Slå ihop med klass</label>
-                    <select name="target_id" id="mergeTargetId" class="input" required>
+                <div class="admin-form-group">
+                    <label class="admin-form-label">Slå ihop med klass</label>
+                    <select name="target_id" id="mergeTargetId" class="admin-form-select" required>
                         <option value="">-- Välj målklass --</option>
                         <?php foreach ($classes as $c): ?>
                             <option value="<?= $c['id'] ?>" data-name="<?= htmlspecialchars($c['display_name']) ?>">
@@ -583,9 +583,9 @@ include __DIR__ . '/components/unified-layout.php';
                 </div>
             </div>
 
-            <div class="modal-footer">
-                <button type="button" class="btn btn--secondary" onclick="closeMergeModal()">Avbryt</button>
-                <button type="submit" class="btn btn--warning">Slå ihop klasser</button>
+            <div class="admin-modal-footer">
+                <button type="button" class="btn-admin btn-admin-secondary" onclick="closeMergeModal()">Avbryt</button>
+                <button type="submit" class="btn-admin btn-admin-warning">Slå ihop klasser</button>
             </div>
         </form>
     </div>
@@ -715,27 +715,27 @@ document.addEventListener('keydown', function(e) {
 </script>
 
 <style>
-.modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 1000; display: flex; align-items: center; justify-content: center; }
-.modal-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.5); }
-.modal-content { position: relative; background: var(--color-bg-surface, #ffffff); border-radius: var(--radius-lg); box-shadow: var(--shadow-xl); width: 90%; max-width: 600px; max-height: 90vh; overflow: hidden; display: flex; flex-direction: column; }
-.modal-header { display: flex; align-items: center; justify-content: space-between; padding: var(--space-lg); border-bottom: 1px solid var(--color-border); }
-.modal-header h2 { margin: 0; font-size: var(--text-xl); }
-.modal-close { background: none; border: none; padding: var(--space-xs); cursor: pointer; color: var(--color-text-secondary); border-radius: var(--radius-sm); }
-.modal-close:hover { background: var(--color-bg-tertiary); color: var(--color-text); }
-.modal-close svg { width: 20px; height: 20px; }
-.modal-body { padding: var(--space-lg); overflow-y: auto; -webkit-overflow-scrolling: touch; flex: 1; }
-.modal-footer { display: flex; justify-content: flex-end; gap: var(--space-sm); padding: var(--space-lg); border-top: 1px solid var(--color-border); }
-.checkbox-label { display: flex; align-items: center; gap: var(--space-xs); cursor: pointer; font-size: var(--text-sm); }
-.checkbox-label input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--color-accent); }
+.admin-modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 1000; display: flex; align-items: center; justify-content: center; }
+.admin-modal-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.5); }
+.admin-modal-content { position: relative; background: var(--color-bg-surface, #ffffff); border-radius: var(--radius-lg); box-shadow: var(--shadow-xl); width: 90%; max-width: 600px; max-height: 90vh; overflow: hidden; display: flex; flex-direction: column; }
+.admin-modal-header { display: flex; align-items: center; justify-content: space-between; padding: var(--space-lg); border-bottom: 1px solid var(--color-border); }
+.admin-modal-header h2 { margin: 0; font-size: var(--text-xl); }
+.admin-modal-close { background: none; border: none; padding: var(--space-xs); cursor: pointer; color: var(--color-text-secondary); border-radius: var(--radius-sm); }
+.admin-modal-close:hover { background: var(--color-bg-tertiary); color: var(--color-text); }
+.admin-modal-close svg { width: 20px; height: 20px; }
+.admin-modal-body { padding: var(--space-lg); overflow-y: auto; -webkit-overflow-scrolling: touch; flex: 1; }
+.admin-modal-footer { display: flex; justify-content: flex-end; gap: var(--space-sm); padding: var(--space-lg); border-top: 1px solid var(--color-border); }
+.admin-checkbox-label { display: flex; align-items: center; gap: var(--space-xs); cursor: pointer; font-size: var(--text-sm); }
+.admin-checkbox-label input[type="checkbox"] { width: 16px; height: 16px; accent-color: var(--color-accent); }
 
 /* Mobile: Fullscreen modal */
 @media (max-width: 599px) {
-    .modal { padding: 0; }
-    .modal-content { width: 100%; max-width: 100%; height: 100%; max-height: 100%; border-radius: 0; }
-    .modal-header { padding-top: calc(var(--space-lg) + env(safe-area-inset-top, 0px)); }
-    .modal-footer { padding-bottom: calc(var(--space-lg) + env(safe-area-inset-bottom, 0px)); flex-wrap: wrap; }
-    .modal-footer .btn { flex: 1; min-width: 120px; justify-content: center; }
-    .modal-close { min-width: 44px; min-height: 44px; }
+    .admin-modal { padding: 0; }
+    .admin-modal-content { width: 100%; max-width: 100%; height: 100%; max-height: 100%; border-radius: 0; }
+    .admin-modal-header { padding-top: calc(var(--space-lg) + env(safe-area-inset-top, 0px)); }
+    .admin-modal-footer { padding-bottom: calc(var(--space-lg) + env(safe-area-inset-bottom, 0px)); flex-wrap: wrap; }
+    .admin-modal-footer .btn-admin { flex: 1; min-width: 120px; justify-content: center; }
+    .admin-modal-close { min-width: 44px; min-height: 44px; }
 }
 
 /* Class events dropdown */
@@ -754,8 +754,8 @@ document.addEventListener('keydown', function(e) {
 }
 
 /* Warning button style */
-.btn--warning { background: var(--color-warning, #f59e0b); color: white; }
-.btn--warning:hover { background: #d97706; }
+.btn-admin-warning { background: var(--color-warning, #f59e0b); color: white; }
+.btn-admin-warning:hover { background: #d97706; }
 </style>
 
 <?php include __DIR__ . '/components/unified-layout-footer.php'; ?>

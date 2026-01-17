@@ -267,13 +267,13 @@ include __DIR__ . '/components/unified-layout.php';
     </p>
 
     <div class="controls">
-        <button id="startBtn" class="btn btn--primary" onclick="startPopulate(false)">
+        <button id="startBtn" class="btn-admin btn-admin-primary" onclick="startPopulate(false)">
             <i data-lucide="play"></i> Starta
         </button>
-        <button id="forceBtn" class="btn btn--warning" onclick="startPopulate(true)">
+        <button id="forceBtn" class="btn-admin btn-admin-warning" onclick="startPopulate(true)">
             <i data-lucide="refresh-cw"></i> Starta (Force)
         </button>
-        <button id="stopBtn" class="btn btn--secondary" onclick="stopPopulate()" disabled>
+        <button id="stopBtn" class="btn-admin btn-admin-secondary" onclick="stopPopulate()" disabled>
             <i data-lucide="square"></i> Stoppa
         </button>
         <span id="statusText" style="color: var(--color-text-muted);"></span>
@@ -307,10 +307,10 @@ include __DIR__ . '/components/unified-layout.php';
     </p>
 
     <div class="controls">
-        <button id="startCohortBtn" class="btn btn--primary" onclick="startCohortAnalysis()">
+        <button id="startCohortBtn" class="btn-admin btn-admin-primary" onclick="startCohortAnalysis()">
             <i data-lucide="users"></i> Generera Journey-data
         </button>
-        <button id="stopCohortBtn" class="btn btn--secondary" onclick="stopCohortAnalysis()" disabled>
+        <button id="stopCohortBtn" class="btn-admin btn-admin-secondary" onclick="stopCohortAnalysis()" disabled>
             <i data-lucide="square"></i> Stoppa
         </button>
         <span id="cohortStatusText" style="color: var(--color-text-muted);"></span>
@@ -334,13 +334,13 @@ include __DIR__ . '/components/unified-layout.php';
 <div class="populate-card">
     <h3>Nasta steg</h3>
     <div class="controls">
-        <a href="/admin/analytics-first-season.php" class="btn btn--primary">
+        <a href="/admin/analytics-first-season.php" class="btn-admin btn-admin-primary">
             <i data-lucide="baby"></i> First Season Journey
         </a>
-        <a href="/admin/analytics-diagnose.php" class="btn btn--secondary">
+        <a href="/admin/analytics-diagnose.php" class="btn-admin btn-admin-secondary">
             <i data-lucide="stethoscope"></i> Diagnostisera
         </a>
-        <a href="/admin/analytics-trends.php" class="btn btn--secondary">
+        <a href="/admin/analytics-trends.php" class="btn-admin btn-admin-secondary">
             <i data-lucide="trending-up"></i> Visa Trender
         </a>
     </div>

@@ -454,7 +454,7 @@ include __DIR__ . '/components/unified-layout.php';
         </div>
     </div>
     <button type="button" onclick="document.getElementById('status').value='completed'; document.getElementById('status').dispatchEvent(new Event('change'));"
-            class="btn btn--warning nowrap">
+            class="btn-admin btn-admin-warning nowrap">
         Markera avslutad
     </button>
 </div>
@@ -475,14 +475,14 @@ if ($isNew) {
 
 <!-- Tab Navigation -->
 <?php if (!$isNew): ?>
-<div class="tabs mb-lg">
-    <a href="?id=<?= $id ?>&tab=info" class="tab-btn <?= $currentTab === 'info' ? 'active' : '' ?>">
+<div class="admin-tabs mb-lg">
+    <a href="?id=<?= $id ?>&tab=info" class="admin-tab <?= $currentTab === 'info' ? 'active' : '' ?>">
         <i data-lucide="settings"></i> Info
     </a>
-    <a href="?id=<?= $id ?>&tab=events" class="tab-btn <?= $currentTab === 'events' ? 'active' : '' ?>">
+    <a href="?id=<?= $id ?>&tab=events" class="admin-tab <?= $currentTab === 'events' ? 'active' : '' ?>">
         <i data-lucide="calendar"></i> Events (<?= $eventsCount ?>)
     </a>
-    <a href="?id=<?= $id ?>&tab=rules" class="tab-btn <?= $currentTab === 'rules' ? 'active' : '' ?>">
+    <a href="?id=<?= $id ?>&tab=rules" class="admin-tab <?= $currentTab === 'rules' ? 'active' : '' ?>">
         <i data-lucide="shield"></i> Regler
     </a>
 </div>
@@ -495,21 +495,21 @@ if ($isNew) {
     <input type="hidden" name="calculate_champions" id="calculate_champions" value="0">
 
     <!-- Basic Info -->
-    <div class="card">
-        <div class="card-header">
+    <div class="admin-card">
+        <div class="admin-card-header">
             <h2>
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 20px; height: 20px;"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>
                 Grundläggande information
             </h2>
         </div>
-        <div class="card-body">
+        <div class="admin-card-body">
             <?php if ($brandColumnExists && !empty($brands)): ?>
-            <div class="form-group form-group--highlight mb-md">
-                <label for="brand_id" class="label font-semibold">
+            <div class="admin-form-group admin-form-group--highlight mb-md">
+                <label for="brand_id" class="admin-form-label font-semibold">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm inline align-middle mr-xs"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>
                     Huvudserie (Varumärke) <span class="text-error">*</span>
                 </label>
-                <select id="brand_id" name="brand_id" class="input" required onchange="updateSeriesName()">
+                <select id="brand_id" name="brand_id" class="admin-form-select" required onchange="updateSeriesName()">
                     <option value="">-- Välj huvudserie --</option>
                     <?php foreach ($brands as $brand): ?>
                     <option value="<?= $brand['id'] ?>" data-name="<?= htmlspecialchars($brand['name']) ?>" <?= ($series['brand_id'] ?? '') == $brand['id'] ? 'selected' : '' ?>>
@@ -524,21 +524,21 @@ if ($isNew) {
             </div>
             <?php endif; ?>
 
-            <div class="form-row">
-                <div class="form-group flex-1">
-                    <label for="year" class="label">
+            <div class="admin-form-row">
+                <div class="admin-form-group flex-1">
+                    <label for="year" class="admin-form-label">
                         Säsong/År <span class="text-error">*</span>
                     </label>
-                    <input type="number" id="year" name="year" class="input" required
+                    <input type="number" id="year" name="year" class="admin-form-input" required
                            value="<?= htmlspecialchars($series['year'] ?? date('Y')) ?>"
                            min="2000" max="2100">
                     <small class="text-secondary text-xs">
                         Vilket år gäller denna säsong? Avgör vilka event som tillhör serien.
                     </small>
                 </div>
-                <div class="form-group flex-2">
-                    <label for="name" class="label">Serienamn <span class="text-error">*</span></label>
-                    <input type="text" id="name" name="name" class="input" required
+                <div class="admin-form-group flex-2">
+                    <label for="name" class="admin-form-label">Serienamn <span class="text-error">*</span></label>
+                    <input type="text" id="name" name="name" class="admin-form-input" required
                            value="<?= htmlspecialchars($series['name'] ?? '') ?>"
                            placeholder="T.ex. Swecup">
                     <small class="text-secondary text-xs">
@@ -547,25 +547,25 @@ if ($isNew) {
                 </div>
             </div>
 
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="type" class="label">Typ</label>
-                    <input type="text" id="type" name="type" class="input"
+            <div class="admin-form-row">
+                <div class="admin-form-group">
+                    <label for="type" class="admin-form-label">Typ</label>
+                    <input type="text" id="type" name="type" class="admin-form-input"
                            value="<?= htmlspecialchars($series['type'] ?? '') ?>"
                            placeholder="T.ex. Enduro, DH, XC">
                 </div>
                 <?php if ($formatColumnExists): ?>
-                <div class="form-group">
-                    <label for="format" class="label">Format</label>
-                    <select id="format" name="format" class="input">
+                <div class="admin-form-group">
+                    <label for="format" class="admin-form-label">Format</label>
+                    <select id="format" name="format" class="admin-form-select">
                         <option value="Championship" <?= ($series['format'] ?? '') === 'Championship' ? 'selected' : '' ?>>Championship</option>
                         <option value="Team" <?= ($series['format'] ?? '') === 'Team' ? 'selected' : '' ?>>Team</option>
                     </select>
                 </div>
                 <?php endif; ?>
-                <div class="form-group">
-                    <label for="status" class="label">Status</label>
-                    <select id="status" name="status" class="input">
+                <div class="admin-form-group">
+                    <label for="status" class="admin-form-label">Status</label>
+                    <select id="status" name="status" class="admin-form-select">
                         <option value="planning" <?= ($series['status'] ?? '') === 'planning' ? 'selected' : '' ?>>Planering</option>
                         <option value="active" <?= ($series['status'] ?? '') === 'active' ? 'selected' : '' ?>>Aktiv</option>
                         <option value="completed" <?= ($series['status'] ?? '') === 'completed' ? 'selected' : '' ?>>Avslutad</option>
@@ -578,7 +578,7 @@ if ($isNew) {
             </div>
 
             <?php if (($series['year'] ?? date('Y')) <= 2024): ?>
-            <div class="form-group mt-md">
+            <div class="admin-form-group mt-md">
                 <label class="checkbox-label">
                     <input type="checkbox" name="historical_data_verified" value="1"
                            <?= !empty($series['historical_data_verified']) ? 'checked' : '' ?>>
@@ -594,18 +594,18 @@ if ($isNew) {
                 <summary class="cursor-pointer text-secondary text-sm">
                     Valfritt: Specifika datum (normalt beräknas detta från events)
                 </summary>
-                <div class="form-row mt-sm">
-                    <div class="form-group">
-                        <label for="start_date" class="label">Startdatum</label>
-                        <input type="date" id="start_date" name="start_date" class="input"
+                <div class="admin-form-row mt-sm">
+                    <div class="admin-form-group">
+                        <label for="start_date" class="admin-form-label">Startdatum</label>
+                        <input type="date" id="start_date" name="start_date" class="admin-form-input"
                                value="<?= htmlspecialchars($series['start_date'] ?? '') ?>">
                         <small class="text-secondary text-xs">
                             Lämna tomt för att använda första eventets datum
                         </small>
                     </div>
-                    <div class="form-group">
-                        <label for="end_date" class="label">Slutdatum</label>
-                        <input type="date" id="end_date" name="end_date" class="input"
+                    <div class="admin-form-group">
+                        <label for="end_date" class="admin-form-label">Slutdatum</label>
+                        <input type="date" id="end_date" name="end_date" class="admin-form-input"
                                value="<?= htmlspecialchars($series['end_date'] ?? '') ?>">
                         <small class="text-secondary text-xs">
                             Lämna tomt för att använda sista eventets datum
@@ -617,24 +617,24 @@ if ($isNew) {
     </div>
 
     <!-- Organizer & Description -->
-    <div class="card">
-        <div class="card-header">
+    <div class="admin-card">
+        <div class="admin-card-header">
             <h2>
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 20px; height: 20px;"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                 Arrangör & Beskrivning
             </h2>
         </div>
-        <div class="card-body">
-            <div class="form-group">
-                <label for="organizer" class="label">Arrangör</label>
-                <input type="text" id="organizer" name="organizer" class="input"
+        <div class="admin-card-body">
+            <div class="admin-form-group">
+                <label for="organizer" class="admin-form-label">Arrangör</label>
+                <input type="text" id="organizer" name="organizer" class="admin-form-input"
                        value="<?= htmlspecialchars($series['organizer'] ?? '') ?>"
                        placeholder="T.ex. Svenska Cykelförbundet">
             </div>
 
-            <div class="form-group">
-                <label for="description" class="label">Beskrivning</label>
-                <textarea id="description" name="description" class="input" rows="4"
+            <div class="admin-form-group">
+                <label for="description" class="admin-form-label">Beskrivning</label>
+                <textarea id="description" name="description" class="admin-form-textarea" rows="4"
                           placeholder="Beskriv serien..."><?= htmlspecialchars($series['description'] ?? '') ?></textarea>
             </div>
         </div>
@@ -642,20 +642,20 @@ if ($isNew) {
 
     <?php if ($paymentRecipientColumnExists && !empty($paymentRecipients)): ?>
     <!-- Payment Recipient (dropdown) -->
-    <div class="card">
-        <div class="card-header">
+    <div class="admin-card">
+        <div class="admin-card-header">
             <h2>
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-md"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></svg>
                 Betalningsmottagare (Swish)
             </h2>
         </div>
-        <div class="card-body">
+        <div class="admin-card-body">
             <p class="text-secondary mb-md">
                 Välj vem som tar emot Swish-betalningar för denna serie. Event utan egen mottagare använder seriens.
             </p>
-            <div class="form-group">
-                <label for="payment_recipient_id" class="label">Betalningsmottagare</label>
-                <select id="payment_recipient_id" name="payment_recipient_id" class="input">
+            <div class="admin-form-group">
+                <label for="payment_recipient_id" class="admin-form-label">Betalningsmottagare</label>
+                <select id="payment_recipient_id" name="payment_recipient_id" class="admin-form-select">
                     <option value="">-- Ingen (betalning inaktiverad) --</option>
                     <?php foreach ($paymentRecipients as $recipient): ?>
                     <option value="<?= $recipient['id'] ?>" <?= ($series['payment_recipient_id'] ?? '') == $recipient['id'] ? 'selected' : '' ?>>
@@ -698,28 +698,28 @@ if ($isNew) {
     </div>
     <?php elseif ($swishColumnsExist): ?>
     <!-- Fallback: Manual Swish fields -->
-    <div class="card">
-        <div class="card-header">
+    <div class="admin-card">
+        <div class="admin-card-header">
             <h2>
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-md"><rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/></svg>
                 Betalning (Swish)
             </h2>
         </div>
-        <div class="card-body">
+        <div class="admin-card-body">
             <p class="text-secondary mb-md">
                 Swish-uppgifter för serieanmälningar. Event kan välja att betalning går till serien.
             </p>
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="swish_number" class="label">Swish-nummer</label>
-                    <input type="text" id="swish_number" name="swish_number" class="input"
+            <div class="admin-form-row">
+                <div class="admin-form-group">
+                    <label for="swish_number" class="admin-form-label">Swish-nummer</label>
+                    <input type="text" id="swish_number" name="swish_number" class="admin-form-input"
                            value="<?= htmlspecialchars($series['swish_number'] ?? '') ?>"
                            placeholder="070-123 45 67 eller 123-456 78 90">
                     <small class="text-secondary">Mobilnummer eller Swish-företagsnummer</small>
                 </div>
-                <div class="form-group">
-                    <label for="swish_name" class="label">Mottagarnamn</label>
-                    <input type="text" id="swish_name" name="swish_name" class="input"
+                <div class="admin-form-group">
+                    <label for="swish_name" class="admin-form-label">Mottagarnamn</label>
+                    <input type="text" id="swish_name" name="swish_name" class="admin-form-input"
                            value="<?= htmlspecialchars($series['swish_name'] ?? '') ?>"
                            placeholder="Seriens namn">
                     <small class="text-secondary">Visas för deltagare vid betalning</small>
@@ -730,21 +730,21 @@ if ($isNew) {
     <?php endif; ?>
 
     <!-- Gravity ID Discount -->
-    <div class="card">
-        <div class="card-header">
+    <div class="admin-card">
+        <div class="admin-card-header">
             <h2>
                 <i data-lucide="badge-check" class="icon-md"></i>
                 Gravity ID-rabatt
             </h2>
         </div>
-        <div class="card-body">
+        <div class="admin-card-body">
             <p class="text-secondary mb-md">
                 Sätt rabatt för deltagare med Gravity ID. Lämna 0 för att inaktivera rabatten för denna serie.
             </p>
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="gravity_id_discount" class="label">Rabatt (SEK)</label>
-                    <input type="number" id="gravity_id_discount" name="gravity_id_discount" class="input"
+            <div class="admin-form-row">
+                <div class="admin-form-group">
+                    <label for="gravity_id_discount" class="admin-form-label">Rabatt (SEK)</label>
+                    <input type="number" id="gravity_id_discount" name="gravity_id_discount" class="admin-form-input"
                            value="<?= htmlspecialchars($series['gravity_id_discount'] ?? 0) ?>"
                            min="0" step="1" placeholder="0">
                     <small class="text-secondary">0 = inaktiverat, t.ex. 50 = 50 kr rabatt</small>
@@ -769,23 +769,23 @@ if ($isNew) {
 
     <!-- Sponsors -->
     <?php if (!empty($allSponsors)): ?>
-    <div class="card">
-        <div class="card-header">
+    <div class="admin-card">
+        <div class="admin-card-header">
             <h2>
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-md"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
                 Sponsorer
             </h2>
         </div>
-        <div class="card-body">
+        <div class="admin-card-body">
             <p class="text-secondary text-sm mb-md">
                 Välj sponsorer för denna serie. De visas på alla events i serien.
             </p>
 
             <div class="flex flex-col gap-lg">
                 <!-- Header Banner Sponsor -->
-                <div class="form-group">
-                    <label class="label">Header-banner (stor banner högst upp)</label>
-                    <select name="sponsor_header" class="input">
+                <div class="admin-form-group">
+                    <label class="admin-form-label">Header-banner (stor banner högst upp)</label>
+                    <select name="sponsor_header" class="admin-form-select">
                         <option value="">-- Ingen --</option>
                         <?php foreach ($allSponsors as $sp): ?>
                         <option value="<?= $sp['id'] ?>" <?= in_array((int)$sp['id'], $seriesSponsors['header']) ? 'selected' : '' ?>>
@@ -796,8 +796,8 @@ if ($isNew) {
                 </div>
 
                 <!-- Content Logo Row -->
-                <div class="form-group">
-                    <label class="label">Logo-rad (under event-info)</label>
+                <div class="admin-form-group">
+                    <label class="admin-form-label">Logo-rad (under event-info)</label>
                     <div class="flex flex-wrap gap-sm">
                         <?php foreach ($allSponsors as $sp): ?>
                         <label class="checkbox-chip">
@@ -809,9 +809,9 @@ if ($isNew) {
                 </div>
 
                 <!-- Results Sponsor -->
-                <div class="form-group">
-                    <label class="label">Resultat-sponsor ("Resultat sponsrat av")</label>
-                    <select name="sponsor_sidebar" class="input">
+                <div class="admin-form-group">
+                    <label class="admin-form-label">Resultat-sponsor ("Resultat sponsrat av")</label>
+                    <select name="sponsor_sidebar" class="admin-form-select">
                         <option value="">-- Ingen --</option>
                         <?php foreach ($allSponsors as $sp): ?>
                         <option value="<?= $sp['id'] ?>" <?= in_array((int)$sp['id'], $seriesSponsors['sidebar']) ? 'selected' : '' ?>>
@@ -838,19 +838,19 @@ if ($isNew) {
     $stageBonusScale = $currentStageBonus['scale'] ?? 'top3';
     $stageBonusClassIds = $currentStageBonus['class_ids'] ?? [];
     ?>
-    <div class="card">
-        <div class="card-header">
+    <div class="admin-card">
+        <div class="admin-card-header">
             <h2>
                 <i data-lucide="trophy" class="icon-md"></i>
                 Sträckbonus (automatisk)
             </h2>
         </div>
-        <div class="card-body">
+        <div class="admin-card-body">
             <p class="text-secondary text-sm mb-md">
                 Ge automatiskt bonuspoäng till snabbaste på en sträcka när resultat importeras.
             </p>
 
-            <div class="form-group mb-md">
+            <div class="admin-form-group mb-md">
                 <label class="checkbox-label">
                     <input type="checkbox" name="stage_bonus_enabled" value="1"
                            <?= $stageBonusEnabled ? 'checked' : '' ?>
@@ -860,10 +860,10 @@ if ($isNew) {
             </div>
 
             <div id="stage-bonus-config" style="<?= $stageBonusEnabled ? '' : 'display: none;' ?>">
-                <div class="form-row">
-                    <div class="form-group">
-                        <label class="label">Sträcka</label>
-                        <select name="stage_bonus_stage" class="input">
+                <div class="admin-form-row">
+                    <div class="admin-form-group">
+                        <label class="admin-form-label">Sträcka</label>
+                        <select name="stage_bonus_stage" class="admin-form-select">
                             <?php for ($i = 1; $i <= 8; $i++): ?>
                             <option value="ss<?= $i ?>" <?= $stageBonusStage === "ss{$i}" ? 'selected' : '' ?>>
                                 SS<?= $i ?> / PS<?= $i ?>
@@ -871,9 +871,9 @@ if ($isNew) {
                             <?php endfor; ?>
                         </select>
                     </div>
-                    <div class="form-group">
-                        <label class="label">Poängskala</label>
-                        <select name="stage_bonus_scale" class="input">
+                    <div class="admin-form-group">
+                        <label class="admin-form-label">Poängskala</label>
+                        <select name="stage_bonus_scale" class="admin-form-select">
                             <?php foreach ($stageBonusScales as $key => $scale): ?>
                             <option value="<?= $key ?>" <?= $stageBonusScale === $key ? 'selected' : '' ?>>
                                 <?= htmlspecialchars($scale['name']) ?> (<?= implode(', ', $scale['points']) ?>)
@@ -883,8 +883,8 @@ if ($isNew) {
                     </div>
                 </div>
 
-                <div class="form-group mt-md">
-                    <label class="label">Klasser (lämna tomt för alla)</label>
+                <div class="admin-form-group mt-md">
+                    <label class="admin-form-label">Klasser (lämna tomt för alla)</label>
                     <div class="checkbox-grid">
                         <?php foreach ($allClasses as $class): ?>
                         <label class="checkbox-chip">
@@ -907,31 +907,31 @@ if ($isNew) {
 
     <!-- Stats (only for existing series) -->
     <?php if (!$isNew): ?>
-    <div class="card">
-        <div class="card-header">
+    <div class="admin-card">
+        <div class="admin-card-header">
             <h2>
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-md"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
                 Statistik
             </h2>
         </div>
-        <div class="card-body">
+        <div class="admin-card-body">
             <div class="grid grid-stats grid-gap-md">
-                <div class="stat-card">
-                    <div class="stat-content">
-                        <div class="stat-value"><?= $eventsCount ?></div>
-                        <div class="stat-label">Events</div>
+                <div class="admin-stat-card">
+                    <div class="admin-stat-content">
+                        <div class="admin-stat-value"><?= $eventsCount ?></div>
+                        <div class="admin-stat-label">Events</div>
                     </div>
                 </div>
-                <div class="stat-card">
-                    <div class="stat-content">
-                        <div class="stat-value"><?= htmlspecialchars($series['year'] ?? '-') ?></div>
-                        <div class="stat-label">År</div>
+                <div class="admin-stat-card">
+                    <div class="admin-stat-content">
+                        <div class="admin-stat-value"><?= htmlspecialchars($series['year'] ?? '-') ?></div>
+                        <div class="admin-stat-label">År</div>
                     </div>
                 </div>
             </div>
 
             <div class="mt-lg">
-                <a href="/admin/events?series_id=<?= $id ?>" class="btn btn--secondary">
+                <a href="/admin/events?series_id=<?= $id ?>" class="btn-admin btn-admin-secondary">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>
                     Visa events i denna serie
                 </a>
@@ -941,12 +941,12 @@ if ($isNew) {
     <?php endif; ?>
 
     <!-- Actions -->
-    <div class="card">
-        <div class="card-body">
+    <div class="admin-card">
+        <div class="admin-card-body">
             <div class="flex items-center justify-between flex-wrap gap-md">
                 <div class="flex gap-sm">
-                    <a href="/admin/series" class="btn btn--secondary">Avbryt</a>
-                    <button type="submit" class="btn btn--primary">
+                    <a href="/admin/series" class="btn-admin btn-admin-secondary">Avbryt</a>
+                    <button type="submit" class="btn-admin btn-admin-primary">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
                         <?= $isNew ? 'Skapa Serie' : 'Spara Ändringar' ?>
                     </button>
@@ -954,7 +954,7 @@ if ($isNew) {
 
                 <?php if (!$isNew): ?>
                 <button type="button" onclick="deleteSeries(<?= $id ?>, '<?= addslashes($series['name']) ?>')"
-                        class="btn btn--danger">
+                        class="btn-admin btn-admin-danger">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
                     Ta bort serie
                 </button>
@@ -1110,17 +1110,17 @@ $templates = $db->getAll("SELECT id, name FROM point_scales WHERE active = 1 ORD
     <!-- Left Column: Settings -->
     <div>
         <!-- Count Best Results -->
-        <div class="card mb-lg">
-            <div class="card-header">
+        <div class="admin-card mb-lg">
+            <div class="admin-card-header">
                 <h2><i data-lucide="calculator"></i> Poängräkning</h2>
             </div>
-            <div class="card-body">
+            <div class="admin-card-body">
                 <form method="POST">
                     <?= csrf_field() ?>
                     <input type="hidden" name="action" value="update_count_best">
-                    <div class="form-group">
-                        <label class="label">Räkna bästa resultat</label>
-                        <select name="count_best_results" class="input" onchange="this.form.submit()">
+                    <div class="admin-form-group">
+                        <label class="admin-form-label">Räkna bästa resultat</label>
+                        <select name="count_best_results" class="admin-form-select" onchange="this.form.submit()">
                             <option value="null" <?= ($series['count_best_results'] ?? null) === null ? 'selected' : '' ?>>Alla resultat</option>
                             <?php for ($i = 1; $i <= 10; $i++): ?>
                             <option value="<?= $i ?>" <?= ($series['count_best_results'] ?? null) == $i ? 'selected' : '' ?>>
@@ -1135,20 +1135,20 @@ $templates = $db->getAll("SELECT id, name FROM point_scales WHERE active = 1 ORD
         </div>
 
         <!-- Add Event -->
-        <div class="card">
-            <div class="card-header">
+        <div class="admin-card">
+            <div class="admin-card-header">
                 <h2><i data-lucide="plus"></i> Lägg till Event</h2>
             </div>
-            <div class="card-body">
+            <div class="admin-card-body">
                 <?php if (empty($eventsNotInSeries)): ?>
                 <p class="text-secondary text-sm">Alla events är redan tillagda.</p>
                 <?php else: ?>
                 <form method="POST">
                     <?= csrf_field() ?>
                     <input type="hidden" name="action" value="add_event">
-                    <div class="form-group">
-                        <label class="label">Event</label>
-                        <select name="event_id" class="input" required>
+                    <div class="admin-form-group">
+                        <label class="admin-form-label">Event</label>
+                        <select name="event_id" class="admin-form-select" required>
                             <option value="">-- Välj event --</option>
                             <?php if (!empty($matchingYearEvents)): ?>
                             <optgroup label="Matchar serieåret (<?= $seriesYear ?>)">
@@ -1170,16 +1170,16 @@ $templates = $db->getAll("SELECT id, name FROM point_scales WHERE active = 1 ORD
                             <?php endif; ?>
                         </select>
                     </div>
-                    <div class="form-group">
-                        <label class="label">Poängmall</label>
-                        <select name="template_id" class="input">
+                    <div class="admin-form-group">
+                        <label class="admin-form-label">Poängmall</label>
+                        <select name="template_id" class="admin-form-select">
                             <option value="">-- Ingen mall --</option>
                             <?php foreach ($templates as $template): ?>
                             <option value="<?= $template['id'] ?>"><?= h($template['name']) ?></option>
                             <?php endforeach; ?>
                         </select>
                     </div>
-                    <button type="submit" class="btn btn--primary w-full">
+                    <button type="submit" class="btn-admin btn-admin-primary w-full">
                         <i data-lucide="plus"></i> Lägg till
                     </button>
                 </form>
@@ -1190,23 +1190,23 @@ $templates = $db->getAll("SELECT id, name FROM point_scales WHERE active = 1 ORD
 
     <!-- Right Column: Events List -->
     <div class="gs-lg-col-span-2">
-        <div class="card">
-            <div class="card-header flex items-center justify-between">
+        <div class="admin-card">
+            <div class="admin-card-header flex items-center justify-between">
                 <h2><i data-lucide="list"></i> Events i serien (<?= count($seriesEvents) ?>)</h2>
                 <form method="POST" class="inline">
                     <?= csrf_field() ?>
                     <input type="hidden" name="action" value="recalculate_all">
-                    <button type="submit" class="btn btn--secondary btn--sm" onclick="return confirm('Beräkna om alla seriepoäng?')">
+                    <button type="submit" class="btn-admin btn-admin-secondary btn-admin-sm" onclick="return confirm('Beräkna om alla seriepoäng?')">
                         <i data-lucide="refresh-cw"></i> Beräkna om poäng
                     </button>
                 </form>
             </div>
-            <div class="card-body">
+            <div class="admin-card-body">
                 <?php if (empty($seriesEvents)): ?>
                 <p class="text-secondary">Inga events i serien än.</p>
                 <?php else: ?>
-                <div class="table-container">
-                    <table class="table">
+                <div class="admin-table-container">
+                    <table class="admin-table">
                         <thead>
                             <tr>
                                 <th>#</th>
@@ -1240,7 +1240,7 @@ $templates = $db->getAll("SELECT id, name FROM point_scales WHERE active = 1 ORD
                                         <?= csrf_field() ?>
                                         <input type="hidden" name="action" value="update_template">
                                         <input type="hidden" name="series_event_id" value="<?= $se['id'] ?>">
-                                        <select name="template_id" class="input input-sm" style="min-width:120px;">
+                                        <select name="template_id" class="admin-form-select admin-form-select-sm" style="min-width:120px;">
                                             <option value="">-- Ingen --</option>
                                             <?php foreach ($templates as $template): ?>
                                             <option value="<?= $template['id'] ?>" <?= $se['template_id'] == $template['id'] ? 'selected' : '' ?>>
@@ -1248,21 +1248,21 @@ $templates = $db->getAll("SELECT id, name FROM point_scales WHERE active = 1 ORD
                                             </option>
                                             <?php endforeach; ?>
                                         </select>
-                                        <button type="submit" class="btn btn--primary btn--sm" title="Spara">
+                                        <button type="submit" class="btn-admin btn-admin-primary btn-admin-sm" title="Spara">
                                             <i data-lucide="save"></i>
                                         </button>
                                     </form>
                                 </td>
                                 <td>
                                     <div class="flex gap-xs">
-                                        <a href="/admin/event-edit.php?id=<?= $se['event_id'] ?>" class="btn btn--secondary btn--sm" title="Redigera event">
+                                        <a href="/admin/event-edit.php?id=<?= $se['event_id'] ?>" class="btn-admin btn-admin-secondary btn-admin-sm" title="Redigera event">
                                             <i data-lucide="pencil"></i>
                                         </a>
                                         <form method="POST" class="inline" onsubmit="return confirm('Ta bort från serien?')">
                                             <?= csrf_field() ?>
                                             <input type="hidden" name="action" value="remove_event">
                                             <input type="hidden" name="series_event_id" value="<?= $se['id'] ?>">
-                                            <button type="submit" class="btn btn--danger btn--sm" title="Ta bort">
+                                            <button type="submit" class="btn-admin btn-admin-danger btn-admin-sm" title="Ta bort">
                                                 <i data-lucide="trash-2"></i>
                                             </button>
                                         </form>
@@ -1310,11 +1310,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['event_class'])) {
 <?php endif; ?>
 
 <!-- Event Class Selection -->
-<div class="card mb-lg">
-    <div class="card-header">
+<div class="admin-card mb-lg">
+    <div class="admin-card-header">
         <h2><i data-lucide="shield"></i> Eventklass för <?= h($series['name']) ?></h2>
     </div>
-    <div class="card-body">
+    <div class="admin-card-body">
         <p class="text-secondary mb-lg">
             Välj vilken eventklass som gäller för serien. Detta styr vilka licenstyper som får anmäla sig.
         </p>
@@ -1325,8 +1325,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['event_class'])) {
                 <?php foreach ($eventClasses as $key => $info):
                     $isSelected = ($series['event_license_class'] ?? '') === $key;
                 ?>
-                <label class="card" style="cursor: pointer; border: 2px solid <?= $isSelected ? 'var(--color-accent)' : 'var(--color-border)' ?>; background: <?= $isSelected ? 'var(--color-accent-light)' : 'var(--color-bg-surface)' ?>;">
-                    <div class="card-body">
+                <label class="admin-card" style="cursor: pointer; border: 2px solid <?= $isSelected ? 'var(--color-accent)' : 'var(--color-border)' ?>; background: <?= $isSelected ? 'var(--color-accent-light)' : 'var(--color-bg-surface)' ?>;">
+                    <div class="admin-card-body">
                         <div class="flex gap-md items-start">
                             <input type="radio" name="event_class" value="<?= $key ?>" <?= $isSelected ? 'checked' : '' ?> style="margin-top: 4px;">
                             <div>
@@ -1343,7 +1343,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['event_class'])) {
             </div>
 
             <div class="mt-lg">
-                <button type="submit" class="btn btn--primary">
+                <button type="submit" class="btn-admin btn-admin-primary">
                     <i data-lucide="save"></i> Spara eventklass
                 </button>
             </div>
@@ -1352,17 +1352,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['event_class'])) {
 </div>
 
 <!-- Link to License Matrix -->
-<div class="card">
-    <div class="card-header">
+<div class="admin-card">
+    <div class="admin-card-header">
         <h2><i data-lucide="grid-3x3"></i> Licensregler</h2>
     </div>
-    <div class="card-body">
+    <div class="admin-card-body">
         <p class="text-secondary mb-lg">
             Licensreglerna (vilka licenstyper som får anmäla sig till vilka klasser) hanteras i
             <strong>Licens-Klass Matrisen</strong>. Samma regler gäller för alla serier med samma eventklass.
         </p>
         <?php $currentClass = $series['event_license_class'] ?? 'sportmotion'; ?>
-        <a href="/admin/license-class-matrix.php?tab=<?= h($currentClass) ?>" class="btn btn--secondary">
+        <a href="/admin/license-class-matrix.php?tab=<?= h($currentClass) ?>" class="btn-admin btn-admin-secondary">
             <i data-lucide="external-link"></i>
             Öppna Licens-Klass Matris (<?= h($eventClasses[$currentClass]['name'] ?? 'Sportmotion') ?>)
         </a>
@@ -1440,7 +1440,7 @@ function deleteSeries(id, name) {
 </script>
 
 <style>
-.input {
+.admin-form-textarea {
     width: 100%;
     padding: var(--space-sm) var(--space-md);
     border: 1px solid var(--color-border);
@@ -1452,7 +1452,7 @@ function deleteSeries(id, name) {
     resize: vertical;
 }
 
-.input:focus {
+.admin-form-textarea:focus {
     outline: none;
     border-color: var(--color-accent);
     box-shadow: 0 0 0 3px var(--color-accent-alpha);
@@ -1481,16 +1481,16 @@ function deleteSeries(id, name) {
 
 /* Mobile adjustments */
 @media (max-width: 600px) {
-    .form-row {
+    .admin-form-row {
         flex-direction: column;
     }
 
-    .card-body > div[style*="display: flex"] {
+    .admin-card-body > div[style*="display: flex"] {
         flex-direction: column;
         align-items: stretch !important;
     }
 
-    .card-body > div[style*="display: flex"] > div {
+    .admin-card-body > div[style*="display: flex"] > div {
         width: 100%;
     }
 }

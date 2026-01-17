@@ -280,7 +280,7 @@ if (!$hideNavigation) {
             <?php endforeach; ?>
         </select>
     </form>
-    <a href="?year=<?= $selectedYear ?>&print=1" target="_blank" class="btn btn--primary">
+    <a href="?year=<?= $selectedYear ?>&print=1" target="_blank" class="btn-admin btn-admin-primary">
         <i data-lucide="printer"></i> Skriv ut / PDF
     </a>
 </div>

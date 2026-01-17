@@ -205,7 +205,7 @@ include __DIR__ . '/components/unified-layout.php';
     </p>
     <form method="post" onsubmit="return confirm('Rensa jobb-status?');">
         <input type="hidden" name="action" value="reset_cron">
-        <button type="submit" class="btn btn--warning">Rensa jobb-status</button>
+        <button type="submit" class="btn-admin btn-admin-warning">Rensa jobb-status</button>
     </form>
 </div>
 
@@ -222,7 +222,7 @@ include __DIR__ . '/components/unified-layout.php';
                 <option value="<?= $y ?>"><?= $y ?></option>
                 <?php endforeach; ?>
             </select>
-            <button type="submit" class="btn btn--warning">Rensa valt ar</button>
+            <button type="submit" class="btn-admin btn-admin-warning">Rensa valt ar</button>
         </div>
     </form>
 </div>
@@ -234,7 +234,7 @@ include __DIR__ . '/components/unified-layout.php';
     </p>
     <form method="post" onsubmit="return confirm('AR DU SAKER? Detta tar bort ALL analytics-data!');">
         <input type="hidden" name="action" value="reset_all">
-        <button type="submit" class="btn btn--danger">Rensa ALL analytics-data</button>
+        <button type="submit" class="btn-admin btn-admin-danger">Rensa ALL analytics-data</button>
     </form>
 </div>
 
@@ -245,10 +245,10 @@ include __DIR__ . '/components/unified-layout.php';
         Efter att du rensat data, kor Populate Historical for att generera ny statistik:
     </p>
     <div class="action-buttons">
-        <a href="/analytics/populate-historical.php?force=1" class="btn btn--primary">
+        <a href="/analytics/populate-historical.php?force=1" class="btn-admin btn-admin-primary">
             Kor Populate Historical (Force)
         </a>
-        <a href="/admin/analytics-diagnose.php" class="btn btn--secondary">
+        <a href="/admin/analytics-diagnose.php" class="btn-admin btn-admin-secondary">
             Diagnostisera
         </a>
     </div>

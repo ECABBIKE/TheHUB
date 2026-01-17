@@ -108,7 +108,7 @@ $breadcrumbs = [
 
 $page_actions = '
 <div class="btn-group">
-    <a href="/admin/analytics-dashboard.php" class="btn btn--secondary">
+    <a href="/admin/analytics-dashboard.php" class="btn-admin btn-admin-secondary">
         <i data-lucide="arrow-left"></i> Dashboard
     </a>
 </div>
@@ -167,11 +167,11 @@ include __DIR__ . '/components/unified-layout.php';
             <?php if ($selectedCohort && !empty($summary) && empty($summary['suppressed'])): ?>
             <div class="export-buttons">
                 <a href="?cohort=<?= $selectedCohort ?><?= $selectedBrand ? '&brand=' . $selectedBrand : '' ?>&export=csv"
-                   class="btn btn--secondary btn-sm">
+                   class="btn-admin btn-admin-secondary btn-sm">
                     <i data-lucide="download"></i> CSV
                 </a>
                 <a href="?cohort=<?= $selectedCohort ?><?= $selectedBrand ? '&brand=' . $selectedBrand : '' ?>&export=json"
-                   class="btn btn--secondary btn-sm">
+                   class="btn-admin btn-admin-secondary btn-sm">
                     <i data-lucide="download"></i> JSON
                 </a>
             </div>
@@ -286,11 +286,11 @@ include __DIR__ . '/components/unified-layout.php';
 <!-- Main Content Grid -->
 <div class="grid grid-2 grid-gap-lg">
     <!-- Retention Funnel -->
-    <div class="card">
-        <div class="card-header">
+    <div class="admin-card">
+        <div class="admin-card-header">
             <h2><i data-lucide="filter"></i> Retention Funnel</h2>
         </div>
-        <div class="card-body">
+        <div class="admin-card-body">
             <?php if (!empty($longitudinal) && empty($longitudinal['suppressed'])): ?>
             <div class="retention-funnel">
                 <?php
@@ -318,11 +318,11 @@ include __DIR__ . '/components/unified-layout.php';
     </div>
 
     <!-- Engagement Distribution -->
-    <div class="card">
-        <div class="card-header">
+    <div class="admin-card">
+        <div class="admin-card-header">
             <h2><i data-lucide="pie-chart"></i> Engagemang-fordelning</h2>
         </div>
-        <div class="card-body">
+        <div class="admin-card-body">
             <canvas id="engagementChart" height="250"></canvas>
         </div>
     </div>
@@ -330,13 +330,13 @@ include __DIR__ . '/components/unified-layout.php';
 
 <!-- Journey Patterns -->
 <?php if (!empty($patterns) && empty($patterns['suppressed'])): ?>
-<div class="card">
-    <div class="card-header">
+<div class="admin-card">
+    <div class="admin-card-header">
         <h2><i data-lucide="git-branch"></i> Journey Patterns</h2>
         <span class="badge"><?= $patterns['total_classified'] ?> klassificerade</span>
     </div>
-    <div class="card-body" style="padding: 0;">
-        <table class="table">
+    <div class="admin-card-body" style="padding: 0;">
+        <table class="admin-table">
             <thead>
                 <tr>
                     <th>Monster</th>
@@ -392,11 +392,11 @@ include __DIR__ . '/components/unified-layout.php';
 
 <!-- Retention by Start Count -->
 <?php if (!empty($retentionByStarts) && empty($retentionByStarts['suppressed'])): ?>
-<div class="card">
-    <div class="card-header">
+<div class="admin-card">
+    <div class="admin-card-header">
         <h2><i data-lucide="bar-chart-2"></i> Retention per antal starter (forsta sasong)</h2>
     </div>
-    <div class="card-body">
+    <div class="admin-card-body">
         <div class="retention-bars">
             <?php foreach ($retentionByStarts['buckets'] as $bucket): ?>
             <div class="retention-bar-group">
@@ -815,7 +815,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
 @media (max-width: 767px) {
     .filter-bar,
-    .card,
+    .admin-card,
     .alert,
     .info-box {
         margin-left: -16px;
@@ -861,16 +861,16 @@ document.addEventListener('DOMContentLoaded', function() {
         min-width: 140px;
     }
 
-    .table th,
-    .table td {
+    .admin-table th,
+    .admin-table td {
         padding: var(--space-sm);
         font-size: var(--text-sm);
     }
 
-    .table th:nth-child(2),
-    .table td:nth-child(2),
-    .table th:nth-child(5),
-    .table td:nth-child(5) {
+    .admin-table th:nth-child(2),
+    .admin-table td:nth-child(2),
+    .admin-table th:nth-child(5),
+    .admin-table td:nth-child(5) {
         display: none;
     }
 

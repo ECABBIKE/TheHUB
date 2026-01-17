@@ -406,27 +406,27 @@ include __DIR__ . '/components/unified-layout.php';
 
 <!-- Actions -->
 <div class="flex gap-sm justify-end mb-lg">
-    <button type="button" class="btn btn--secondary" onclick="openImportModal()">
+    <button type="button" class="btn-admin btn-admin-secondary" onclick="openImportModal()">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
         Importera CSV
     </button>
-    <button type="button" class="btn btn--primary" onclick="openCreateModal()">
+    <button type="button" class="btn-admin btn-admin-primary" onclick="openCreateModal()">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm"><line x1="12" x2="12" y1="5" y2="19"/><line x1="5" x2="19" y1="12" y2="12"/></svg>
         Ny Poängmall
     </button>
 </div>
 
 <!-- Point Scales Table -->
-<div class="card">
-    <div class="card-header">
+<div class="admin-card">
+    <div class="admin-card-header">
         <h2>Poängmallar för Event</h2>
         <span class="text-secondary text-sm"><?= count($scales) ?> mallar</span>
     </div>
-    <div class="card-body p-0">
+    <div class="admin-card-body p-0">
         <?php if (empty($scales)): ?>
             <div style="padding: var(--space-xl); text-align: center; color: var(--color-text-secondary);">
                 <p>Inga poängmallar hittades.</p>
-                <button type="button" class="btn btn--primary" onclick="openCreateModal()" class="mt-md">
+                <button type="button" class="btn-admin btn-admin-primary" onclick="openCreateModal()" class="mt-md">
                     Skapa första poängmallen
                 </button>
             </div>
@@ -474,7 +474,7 @@ include __DIR__ . '/components/unified-layout.php';
                         </td>
                         <td class="text-right">
                             <div class="flex gap-xs justify-end" style="flex-wrap: wrap;">
-                                <a href="/admin/point-scale-edit.php?id=<?= $scale['id'] ?>" class="btn btn--sm btn--secondary">
+                                <a href="/admin/point-scale-edit.php?id=<?= $scale['id'] ?>" class="btn-admin btn-admin-sm btn-admin-secondary">
                                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-xs"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
                                     Redigera
                                 </a>
@@ -483,7 +483,7 @@ include __DIR__ . '/components/unified-layout.php';
                                         <?= csrf_field() ?>
                                         <input type="hidden" name="action" value="set_default">
                                         <input type="hidden" name="scale_id" value="<?= $scale['id'] ?>">
-                                        <button type="submit" class="btn btn--sm btn--secondary" title="Sätt som standard">
+                                        <button type="submit" class="btn-admin btn-admin-sm btn-admin-secondary" title="Sätt som standard">
                                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-xs"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
                                         </button>
                                     </form>
@@ -492,7 +492,7 @@ include __DIR__ . '/components/unified-layout.php';
                                     <?= csrf_field() ?>
                                     <input type="hidden" name="action" value="delete_scale">
                                     <input type="hidden" name="scale_id" value="<?= $scale['id'] ?>">
-                                    <button type="submit" class="btn btn--sm btn--danger">
+                                    <button type="submit" class="btn-admin btn-admin-sm btn-admin-danger">
                                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-xs"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
                                     </button>
                                 </form>
@@ -507,8 +507,8 @@ include __DIR__ . '/components/unified-layout.php';
 </div>
 
 <!-- Link to Qualification Point Templates -->
-<div class="card mt-lg">
-    <div class="card-body">
+<div class="admin-card mt-lg">
+    <div class="admin-card-body">
         <div style="display: flex; align-items: center; justify-content: space-between;">
             <div>
                 <h3 style="margin: 0 0 var(--space-xs) 0;">Kvalpoängmallar</h3>
@@ -516,7 +516,7 @@ include __DIR__ . '/components/unified-layout.php';
                     Hantera poängmallar för seriekvalificering
                 </p>
             </div>
-            <a href="/admin/point-templates.php" class="btn btn--secondary">
+            <a href="/admin/point-templates.php" class="btn-admin btn-admin-secondary">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm"><circle cx="12" cy="8" r="6"/><path d="M15.477 12.89 17 22l-5-3-5 3 1.523-9.11"/></svg>
                 Hantera Kvalpoängmallar
             </a>
@@ -532,7 +532,7 @@ include __DIR__ . '/components/unified-layout.php';
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-md"><line x1="12" x2="12" y1="5" y2="19"/><line x1="5" x2="19" y1="12" y2="12"/></svg>
                 Skapa Ny Poängmall
             </h3>
-            <button type="button" onclick="closeCreateModal()" class="btn btn--sm btn--secondary">
+            <button type="button" onclick="closeCreateModal()" class="btn-admin btn-admin-sm btn-admin-secondary">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm"><line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/></svg>
             </button>
         </div>
@@ -543,14 +543,14 @@ include __DIR__ . '/components/unified-layout.php';
 
             <div class="modal-body">
                 <div class="grid-2-col mb-lg">
-                    <div class="form-group">
-                        <label class="label">Namn <span class="text-error">*</span></label>
-                        <input type="text" name="name" class="input" required>
+                    <div class="admin-form-group">
+                        <label class="admin-form-label">Namn <span class="text-error">*</span></label>
+                        <input type="text" name="name" class="admin-form-input" required>
                     </div>
 
-                    <div class="form-group">
-                        <label class="label">Disciplin</label>
-                        <select name="discipline" class="input">
+                    <div class="admin-form-group">
+                        <label class="admin-form-label">Disciplin</label>
+                        <select name="discipline" class="admin-form-input">
                             <option value="ALL">Alla</option>
                             <option value="ENDURO">Enduro</option>
                             <option value="DH">Downhill</option>
@@ -560,20 +560,20 @@ include __DIR__ . '/components/unified-layout.php';
                     </div>
                 </div>
 
-                <div class="form-group mb-lg">
-                    <label class="label">Beskrivning</label>
-                    <textarea name="description" class="input" rows="2"></textarea>
+                <div class="admin-form-group mb-lg">
+                    <label class="admin-form-label">Beskrivning</label>
+                    <textarea name="description" class="admin-form-input" rows="2"></textarea>
                 </div>
 
-                <div class="form-group mb-lg">
+                <div class="admin-form-group mb-lg">
                     <label style="display: flex; align-items: center; gap: var(--space-sm); cursor: pointer;">
                         <input type="checkbox" name="is_dh_scale" value="1" id="isDHScale" onchange="toggleDHColumns()">
                         <span><strong>DH-mall med dubbla poäng</strong> (För SweCUP DH där både Kval och Final ger poäng)</span>
                     </label>
                 </div>
 
-                <div class="form-group">
-                    <label class="label">Poängvärden</label>
+                <div class="admin-form-group">
+                    <label class="admin-form-label">Poängvärden</label>
                     <div class="points-table-container">
                         <table class="points-table">
                             <thead>
@@ -588,16 +588,16 @@ include __DIR__ . '/components/unified-layout.php';
                                 <?php for ($i = 1; $i <= 50; $i++): ?>
                                 <tr>
                                     <td>
-                                        <input type="number" name="positions[]" value="<?= $i ?>" class="input" readonly style="width: 60px; text-align: center;">
+                                        <input type="number" name="positions[]" value="<?= $i ?>" class="admin-form-input" readonly style="width: 60px; text-align: center;">
                                     </td>
                                     <td class="standard-points-col">
-                                        <input type="number" name="points[]" step="0.01" class="input" placeholder="0">
+                                        <input type="number" name="points[]" step="0.01" class="admin-form-input" placeholder="0">
                                     </td>
                                     <td class="dh-points-col hidden">
-                                        <input type="number" name="run_1_points[]" step="0.01" class="input" placeholder="0">
+                                        <input type="number" name="run_1_points[]" step="0.01" class="admin-form-input" placeholder="0">
                                     </td>
                                     <td class="dh-points-col hidden">
-                                        <input type="number" name="run_2_points[]" step="0.01" class="input" placeholder="0">
+                                        <input type="number" name="run_2_points[]" step="0.01" class="admin-form-input" placeholder="0">
                                     </td>
                                 </tr>
                                 <?php endfor; ?>
@@ -608,10 +608,10 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
 
             <div class="modal-footer">
-                <button type="button" onclick="closeCreateModal()" class="btn btn--secondary">
+                <button type="button" onclick="closeCreateModal()" class="btn-admin btn-admin-secondary">
                     Avbryt
                 </button>
-                <button type="submit" class="btn btn--primary">
+                <button type="submit" class="btn-admin btn-admin-primary">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
                     Skapa Poängmall
                 </button>
@@ -628,7 +628,7 @@ include __DIR__ . '/components/unified-layout.php';
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-md"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
                 Importera Poängmall från CSV
             </h3>
-            <button type="button" onclick="closeImportModal()" class="btn btn--sm btn--secondary">
+            <button type="button" onclick="closeImportModal()" class="btn-admin btn-admin-sm btn-admin-secondary">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm"><line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/></svg>
             </button>
         </div>
@@ -637,14 +637,14 @@ include __DIR__ . '/components/unified-layout.php';
             <input type="hidden" name="action" value="import_scale">
 
             <div class="modal-body">
-                <div class="form-group">
-                    <label class="label">Mallnamn *</label>
-                    <input type="text" name="import_name" class="input" required placeholder="Ex: SweCup Enduro 2025">
+                <div class="admin-form-group">
+                    <label class="admin-form-label">Mallnamn *</label>
+                    <input type="text" name="import_name" class="admin-form-input" required placeholder="Ex: SweCup Enduro 2025">
                 </div>
 
-                <div class="form-group">
-                    <label class="label">Disciplin</label>
-                    <select name="import_discipline" class="input">
+                <div class="admin-form-group">
+                    <label class="admin-form-label">Disciplin</label>
+                    <select name="import_discipline" class="admin-form-input">
                         <option value="ALL">Alla</option>
                         <option value="ENDURO">Enduro</option>
                         <option value="DH">Downhill</option>
@@ -653,16 +653,16 @@ include __DIR__ . '/components/unified-layout.php';
                     </select>
                 </div>
 
-                <div class="form-group">
+                <div class="admin-form-group">
                     <label style="display: flex; align-items: center; gap: var(--space-sm); cursor: pointer;">
                         <input type="checkbox" name="import_is_dh" value="1">
                         <span><strong>DH-mall</strong> (använd Kval/Final kolumner)</span>
                     </label>
                 </div>
 
-                <div class="form-group">
-                    <label class="label">CSV-fil *</label>
-                    <input type="file" name="import_file" class="input" accept=".csv,.txt" required>
+                <div class="admin-form-group">
+                    <label class="admin-form-label">CSV-fil *</label>
+                    <input type="file" name="import_file" class="admin-form-input" accept=".csv,.txt" required>
                     <small style="color: var(--color-text-secondary); display: block; margin-top: var(--space-xs);">
                         Kolumner: Position;Poäng eller Position;Kval;Final (semikolon-separerad)
                     </small>
@@ -680,10 +680,10 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
 
             <div class="modal-footer">
-                <button type="button" onclick="closeImportModal()" class="btn btn--secondary">
+                <button type="button" onclick="closeImportModal()" class="btn-admin btn-admin-secondary">
                     Avbryt
                 </button>
-                <button type="submit" class="btn btn--primary">
+                <button type="submit" class="btn-admin btn-admin-primary">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
                     Importera
                 </button>

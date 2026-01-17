@@ -179,10 +179,10 @@ include __DIR__ . '/components/unified-layout.php';
         <?php if (empty($promotors)): ?>
             <p class="text-secondary">Inga promotörer.</p>
         <?php else: ?>
-            <div class="list">
+            <div class="admin-list">
                 <?php foreach ($promotors as $p): ?>
-                <div class="list-row">
-                    <div class="list-info">
+                <div class="admin-row">
+                    <div class="admin-info">
                         <strong><?= h($p['full_name'] ?: $p['username']) ?></strong>
                         <span class="text-secondary"><?= h($p['email']) ?></span>
                     </div>
@@ -224,15 +224,15 @@ include __DIR__ . '/components/unified-layout.php';
 .selected-box .club { color: var(--color-text-secondary); }
 .selected-box .clear { float: right; cursor: pointer; color: var(--color-text-secondary); }
 .selected-box .clear:hover { color: var(--color-danger); }
-.list { display: flex; flex-direction: column; gap: var(--space-sm); }
-.list-row {
+.admin-list { display: flex; flex-direction: column; gap: var(--space-sm); }
+.admin-row {
     display: flex; justify-content: space-between; align-items: center;
     padding: var(--space-sm) var(--space-md);
     background: var(--color-bg-sunken); border-radius: var(--radius-sm);
 }
-.list-info { display: flex; flex-direction: column; gap: 2px; }
+.admin-info { display: flex; flex-direction: column; gap: 2px; }
 @media (min-width: 600px) {
-    .list-info { flex-direction: row; gap: var(--space-md); align-items: center; }
+    .admin-info { flex-direction: row; gap: var(--space-md); align-items: center; }
 }
 .badge-sm { font-size: 0.75rem; padding: 2px 6px; }
 </style>

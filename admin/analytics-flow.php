@@ -213,12 +213,12 @@ include __DIR__ . '/components/unified-layout.php';
 </div>
 
 <!-- Feeder Flow Matrix -->
-<div class="card">
-    <div class="card-header">
+<div class="admin-card">
+    <div class="admin-card-header">
         <h2>Flodesmatris - Regional till Nationell</h2>
         <span class="badge badge-info"><?= $selectedYear ?></span>
     </div>
-    <div class="card-body">
+    <div class="admin-card-body">
         <p class="text-muted" style="margin-bottom: var(--space-md);">
             Visar hur manga riders fran regionala serier som ocksa deltar i nationella serier samma ar.
             Hog conversion rate indikerar en stark feeder-pipeline.
@@ -268,11 +268,11 @@ include __DIR__ . '/components/unified-layout.php';
 </div>
 
 <!-- Series Comparison Tool -->
-<div class="card">
-    <div class="card-header">
+<div class="admin-card">
+    <div class="admin-card-header">
         <h2>Jamfor Serier - Overlapp</h2>
     </div>
-    <div class="card-body">
+    <div class="admin-card-body">
         <form method="get" class="comparison-form">
             <input type="hidden" name="year" value="<?= $selectedYear ?>">
 
@@ -311,7 +311,7 @@ include __DIR__ . '/components/unified-layout.php';
                     </select>
                 </div>
 
-                <button type="submit" class="btn btn--primary">
+                <button type="submit" class="btn-admin btn-admin-primary">
                     <i data-lucide="search"></i> Jamfor
                 </button>
             </div>
@@ -352,21 +352,21 @@ include __DIR__ . '/components/unified-layout.php';
 </div>
 
 <!-- Series Stats Table -->
-<div class="card">
-    <div class="card-header">
+<div class="admin-card">
+    <div class="admin-card-header">
         <h2>Serie-statistik</h2>
         <span class="badge"><?= $selectedYear ?></span>
     </div>
-    <div class="card-body" style="padding: var(--space-md); padding-bottom: 0;">
+    <div class="admin-card-body" style="padding: var(--space-md); padding-bottom: 0;">
         <p class="text-muted" style="font-size: var(--text-sm); margin: 0;">
             <strong>Lojalitet</strong> = Andel av <?= $selectedYear - 1 ?>-deltagare som aterkom <?= $selectedYear ?>.
             Visar 0% om data fran <?= $selectedYear - 1 ?> saknas.
             <strong>Exklusivitet</strong> = Andel som endast deltar i denna serie.
         </p>
     </div>
-    <div class="card-body" style="padding: 0;">
-        <div class="table-container">
-            <table class="table">
+    <div class="admin-card-body" style="padding: 0;">
+        <div class="admin-table-container">
+            <table class="admin-table">
                 <thead>
                     <tr>
                         <th>Serie</th>
@@ -422,11 +422,11 @@ include __DIR__ . '/components/unified-layout.php';
 
 <!-- Entry Points -->
 <?php if (!empty($entryPoints)): ?>
-<div class="card">
-    <div class="card-header">
+<div class="admin-card">
+    <div class="admin-card-header">
         <h2>Entry Points - Var borjar nya riders?</h2>
     </div>
-    <div class="card-body">
+    <div class="admin-card-body">
         <div class="entry-points-grid">
             <?php
             $totalEntries = array_sum(array_column($entryPoints, 'rider_count')) ?: 1;

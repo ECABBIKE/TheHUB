@@ -113,23 +113,23 @@ include __DIR__ . '/components/unified-layout.php';
             baserat på historiska resultat eller rider_club_seasons-tabellen.
         </p>
 
-        <div class="grid grid-stats mb-lg">
-            <div class="stat-card">
-                <div class="stat-content">
-                    <div class="stat-value"><?= number_format($totalRiders) ?></div>
-                    <div class="stat-label">Totalt ryttare</div>
+        <div class="admin-stats-grid mb-lg">
+            <div class="admin-stat-card">
+                <div class="admin-stat-content">
+                    <div class="admin-stat-value"><?= number_format($totalRiders) ?></div>
+                    <div class="admin-stat-label">Totalt ryttare</div>
                 </div>
             </div>
-            <div class="stat-card">
-                <div class="stat-content">
-                    <div class="stat-value text-success"><?= number_format($ridersWithClub) ?></div>
-                    <div class="stat-label">Med klubbkoppling</div>
+            <div class="admin-stat-card">
+                <div class="admin-stat-content">
+                    <div class="admin-stat-value text-success"><?= number_format($ridersWithClub) ?></div>
+                    <div class="admin-stat-label">Med klubbkoppling</div>
                 </div>
             </div>
-            <div class="stat-card">
-                <div class="stat-content">
-                    <div class="stat-value text-warning"><?= number_format($ridersWithoutClub) ?></div>
-                    <div class="stat-label">Utan klubbkoppling</div>
+            <div class="admin-stat-card">
+                <div class="admin-stat-content">
+                    <div class="admin-stat-value text-warning"><?= number_format($ridersWithoutClub) ?></div>
+                    <div class="admin-stat-label">Utan klubbkoppling</div>
                 </div>
             </div>
         </div>

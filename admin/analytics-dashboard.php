@@ -85,7 +85,7 @@ $breadcrumbs = [
 ];
 
 $page_actions = '
-<a href="/admin/analytics-export-center.php" class="btn btn--secondary">
+<a href="/admin/analytics-export-center.php" class="btn-admin btn-admin-secondary">
     <i data-lucide="download"></i> Export
 </a>
 ';
@@ -319,11 +319,11 @@ include __DIR__ . '/components/unified-layout.php';
 
 <!-- Growth Trend Chart -->
 <?php if (!empty($trends)): ?>
-<div class="card">
-    <div class="card-header">
+<div class="admin-card">
+    <div class="admin-card-header">
         <h2>Tillvaxttrender</h2>
     </div>
-    <div class="card-body">
+    <div class="admin-card-body">
         <div class="trend-chart">
             <div class="trend-bars">
                 <?php
@@ -353,11 +353,11 @@ include __DIR__ . '/components/unified-layout.php';
 <div class="grid grid-2 grid-gap-lg">
     <!-- Age Distribution -->
     <?php if (!empty($ageDistribution)): ?>
-    <div class="card">
-        <div class="card-header">
+    <div class="admin-card">
+        <div class="admin-card-header">
             <h2>Aldersfordelning</h2>
         </div>
-        <div class="card-body">
+        <div class="admin-card-body">
             <?php
             $totalAge = array_sum(array_column($ageDistribution, 'count')) ?: 1;
             foreach ($ageDistribution as $age):
@@ -377,11 +377,11 @@ include __DIR__ . '/components/unified-layout.php';
 
     <!-- Discipline Distribution -->
     <?php if (!empty($disciplineDistribution)): ?>
-    <div class="card">
-        <div class="card-header">
+    <div class="admin-card">
+        <div class="admin-card-header">
             <h2>Disciplinfordelning</h2>
         </div>
-        <div class="card-body">
+        <div class="admin-card-body">
             <?php
             $totalDisc = array_sum(array_column($disciplineDistribution, 'count')) ?: 1;
             foreach (array_slice($disciplineDistribution, 0, 6) as $disc):
@@ -402,14 +402,14 @@ include __DIR__ . '/components/unified-layout.php';
 
 <!-- Entry Points -->
 <?php if (!empty($entryPoints)): ?>
-<div class="card">
-    <div class="card-header">
+<div class="admin-card">
+    <div class="admin-card-header">
         <h2>Entry Points - Var borjar nya riders?</h2>
         <span class="badge"><?= $selectedYear ?></span>
     </div>
-    <div class="card-body" style="padding: 0;">
-        <div class="table-container">
-            <table class="table">
+    <div class="admin-card-body" style="padding: 0;">
+        <div class="admin-table-container">
+            <table class="admin-table">
                 <thead>
                     <tr>
                         <th>Serie</th>
@@ -453,16 +453,16 @@ include __DIR__ . '/components/unified-layout.php';
 
 <!-- Top Clubs -->
 <?php if (!empty($topClubs)): ?>
-<div class="card">
-    <div class="card-header">
+<div class="admin-card">
+    <div class="admin-card-header">
         <h2>Top Klubbar</h2>
-        <a href="/admin/analytics-clubs.php" class="btn btn--sm btn--secondary">
+        <a href="/admin/analytics-clubs.php" class="btn-admin btn-admin-sm btn-admin-secondary">
             Visa alla
         </a>
     </div>
-    <div class="card-body" style="padding: 0;">
-        <div class="table-container">
-            <table class="table">
+    <div class="admin-card-body" style="padding: 0;">
+        <div class="admin-table-container">
+            <table class="admin-table">
                 <thead>
                     <tr>
                         <th>#</th>
@@ -499,16 +499,16 @@ include __DIR__ . '/components/unified-layout.php';
 
 <!-- Feeder Matrix Preview -->
 <?php if (!empty($feederMatrix)): ?>
-<div class="card">
-    <div class="card-header">
+<div class="admin-card">
+    <div class="admin-card-header">
         <h2>Series Flow (Topp 10)</h2>
-        <a href="/admin/analytics-flow.php" class="btn btn--sm btn--primary">
+        <a href="/admin/analytics-flow.php" class="btn-admin btn-admin-sm btn-admin-primary">
             <i data-lucide="git-branch"></i> Detaljerad analys
         </a>
     </div>
-    <div class="card-body" style="padding: 0;">
-        <div class="table-container">
-            <table class="table">
+    <div class="admin-card-body" style="padding: 0;">
+        <div class="admin-table-container">
+            <table class="admin-table">
                 <thead>
                     <tr>
                         <th>Fran serie</th>

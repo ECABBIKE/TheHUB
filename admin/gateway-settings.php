@@ -96,9 +96,9 @@ $breadcrumbs = [
 include __DIR__ . '/components/unified-layout.php';
 ?>
 
-<div class="page-header mb-lg">
-    <div class="page-header-content">
-        <a href="/admin/payment-recipients.php" class="btn btn--ghost">
+<div class="admin-header mb-lg">
+    <div class="admin-header-content">
+        <a href="/admin/payment-recipients.php" class="btn-admin btn-admin-ghost">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm">
                 <path d="M19 12H5M12 19l-7-7 7-7"/>
             </svg>
@@ -113,8 +113,8 @@ include __DIR__ . '/components/unified-layout.php';
 </div>
 <?php endif; ?>
 
-<div class="card mb-lg">
-    <div class="card-header">
+<div class="admin-card mb-lg">
+    <div class="admin-card-header">
         <h2>
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-md">
                 <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
@@ -123,13 +123,13 @@ include __DIR__ . '/components/unified-layout.php';
             Gateway-inställningar för <?= h($recipient['name']) ?>
         </h2>
     </div>
-    <div class="card-body">
+    <div class="admin-card-body">
         <form method="post">
             <?= csrf_field() ?>
 
-            <div class="form-group">
-                <label class="label">Betalningsgateway</label>
-                <select name="gateway_type" class="input" id="gatewayTypeSelect">
+            <div class="admin-form-group">
+                <label class="admin-form-label">Betalningsgateway</label>
+                <select name="gateway_type" class="admin-form-select" id="gatewayTypeSelect">
                     <option value="manual" <?= ($recipient['gateway_type'] ?? 'manual') === 'manual' ? 'selected' : '' ?>>
                         Manuell Swish (standard)
                     </option>
@@ -143,8 +143,8 @@ include __DIR__ . '/components/unified-layout.php';
                 <small class="text-secondary">Välj hur betalningar ska hanteras för denna mottagare</small>
             </div>
 
-            <div class="form-group">
-                <label class="label flex items-center gap-sm cursor-pointer">
+            <div class="admin-form-group">
+                <label class="admin-form-label flex items-center gap-sm cursor-pointer">
                     <input type="checkbox" name="gateway_enabled" value="1"
                         <?= ($recipient['gateway_enabled'] ?? 0) ? 'checked' : '' ?>>
                     Gateway aktiverad
@@ -166,10 +166,10 @@ include __DIR__ . '/components/unified-layout.php';
                 <hr class="my-lg">
                 <h3 class="mb-md">Swish Handel API</h3>
 
-                <div class="form-row">
-                    <div class="form-group">
-                        <label class="label">Miljö</label>
-                        <select name="swish_environment" class="input">
+                <div class="admin-form-row">
+                    <div class="admin-form-group">
+                        <label class="admin-form-label">Miljö</label>
+                        <select name="swish_environment" class="admin-form-select">
                             <option value="test" <?= ($gatewayConfig['environment'] ?? '') === 'test' ? 'selected' : '' ?>>
                                 Test (MSS - Merchant Swish Simulator)
                             </option>
@@ -179,9 +179,9 @@ include __DIR__ . '/components/unified-layout.php';
                         </select>
                     </div>
 
-                    <div class="form-group">
-                        <label class="label">Swish-nummer (Payee Alias)</label>
-                        <input type="text" name="swish_payee_alias" class="input"
+                    <div class="admin-form-group">
+                        <label class="admin-form-label">Swish-nummer (Payee Alias)</label>
+                        <input type="text" name="swish_payee_alias" class="admin-form-input"
                                value="<?= h($gatewayConfig['payee_alias'] ?? $recipient['swish_number'] ?? '') ?>"
                                placeholder="1234567890">
                         <small class="text-secondary">10-siffrigt nummer (endast siffror)</small>
@@ -204,7 +204,7 @@ include __DIR__ . '/components/unified-layout.php';
                     </svg>
                     <strong>Certifikat krävs!</strong>
                     Swish Handel kräver ett .p12-certifikat från din bank.
-                    <a href="/admin/certificates.php?id=<?= $recipientId ?>" class="btn btn--primary btn--sm ml-md">
+                    <a href="/admin/certificates.php?id=<?= $recipientId ?>" class="btn-admin btn-admin-primary btn-admin-sm ml-md">
                         Ladda upp certifikat
                     </a>
                 </div>
@@ -234,23 +234,23 @@ include __DIR__ . '/components/unified-layout.php';
                         <strong>Stripe-konto inte anslutet</strong><br>
                         För att ta emot kortbetalningar behöver organisationen genomgå Stripe onboarding.
                         <br><br>
-                        <a href="/admin/stripe-onboarding.php?id=<?= $recipientId ?>" class="btn btn--primary">
+                        <a href="/admin/stripe-onboarding.php?id=<?= $recipientId ?>" class="btn-admin btn-admin-primary">
                             Starta Stripe Onboarding
                         </a>
                     </div>
                 <?php endif; ?>
 
-                <div class="form-group mt-md">
-                    <label class="label">Plattformsavgift (%)</label>
-                    <input type="number" name="stripe_platform_fee" class="input" style="max-width: 100px;"
+                <div class="admin-form-group mt-md">
+                    <label class="admin-form-label">Plattformsavgift (%)</label>
+                    <input type="number" name="stripe_platform_fee" class="admin-form-input" style="max-width: 100px;"
                            value="<?= h($gatewayConfig['platform_fee_percent'] ?? 2) ?>"
                            min="0" max="50" step="0.1">
                     <small class="text-secondary">Avgift som går till TheHUB (default 2%)</small>
                 </div>
             </div>
 
-            <div class="form-actions mt-lg">
-                <button type="submit" class="btn btn--primary">
+            <div class="admin-form-actions mt-lg">
+                <button type="submit" class="btn-admin btn-admin-primary">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm">
                         <path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/>
                         <polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/>
@@ -263,14 +263,14 @@ include __DIR__ . '/components/unified-layout.php';
 </div>
 
 <style>
-.form-row {
+.admin-form-row {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: var(--space-md);
 }
 
 @media (max-width: 600px) {
-    .form-row {
+    .admin-form-row {
         grid-template-columns: 1fr;
     }
 }

@@ -274,11 +274,11 @@ include __DIR__ . '/components/unified-layout.php';
 </div>
 
 <!-- Quick Actions -->
-<div class="card">
-    <div class="card-header">
+<div class="admin-card">
+    <div class="admin-card-header">
         <h2>Snabbåtgärder</h2>
     </div>
-    <div class="card-body">
+    <div class="admin-card-body">
         <div class="quick-actions">
             <a href="/admin/event-create.php" class="quick-action quick-action--primary">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
@@ -311,20 +311,20 @@ include __DIR__ . '/components/unified-layout.php';
 <!-- Two Column Layout -->
 <div class="grid grid-wide grid-gap-lg">
     <!-- Upcoming Events -->
-    <div class="card">
-        <div class="card-header">
+    <div class="admin-card">
+        <div class="admin-card-header">
             <h2>Kommande events</h2>
-            <a href="/admin/events.php" class="btn btn--sm btn--secondary">Visa alla</a>
+            <a href="/admin/events.php" class="btn-admin btn-admin-sm btn-admin-secondary">Visa alla</a>
         </div>
-        <div class="card-body" style="padding: 0;">
+        <div class="admin-card-body" style="padding: 0;">
             <?php if (empty($upcomingEvents)): ?>
-                <div class="empty-state" style="padding: var(--space-xl);">
+                <div class="admin-empty-state" style="padding: var(--space-xl);">
                     <p>Inga kommande events</p>
-                    <a href="/admin/event-create.php" class="btn btn--primary">Skapa event</a>
+                    <a href="/admin/event-create.php" class="btn-admin btn-admin-primary">Skapa event</a>
                 </div>
             <?php else: ?>
-                <div class="table-container">
-                    <table class="table">
+                <div class="admin-table-container">
+                    <table class="admin-table">
                         <thead>
                             <tr>
                                 <th>Event</th>
@@ -359,20 +359,20 @@ include __DIR__ . '/components/unified-layout.php';
     </div>
 
     <!-- Pending Payments -->
-    <div class="card">
-        <div class="card-header">
+    <div class="admin-card">
+        <div class="admin-card-header">
             <h2>Väntande betalningar</h2>
-            <a href="/admin/orders.php?status=pending" class="btn btn--sm btn--secondary">Visa alla</a>
+            <a href="/admin/orders.php?status=pending" class="btn-admin btn-admin-sm btn-admin-secondary">Visa alla</a>
         </div>
-        <div class="card-body" style="padding: 0;">
+        <div class="admin-card-body" style="padding: 0;">
             <?php if (empty($pendingOrders)): ?>
-                <div class="empty-state" style="padding: var(--space-xl);">
+                <div class="admin-empty-state" style="padding: var(--space-xl);">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 48px; height: 48px; color: var(--color-success); margin-bottom: var(--space-md);"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
                     <p>Inga väntande betalningar</p>
                 </div>
             <?php else: ?>
-                <div class="table-container">
-                    <table class="table">
+                <div class="admin-table-container">
+                    <table class="admin-table">
                         <thead>
                             <tr>
                                 <th>Order</th>
@@ -403,7 +403,7 @@ include __DIR__ . '/components/unified-layout.php';
 
 <!-- Overview Stats -->
 <div class="grid grid-stats grid-gap-md" class="mt-lg">
-    <div class="stat-card">
+    <div class="admin-stat-card">
         <div class="stat-icon">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
         </div>
@@ -411,7 +411,7 @@ include __DIR__ . '/components/unified-layout.php';
         <div class="stat-label">Deltagare totalt</div>
     </div>
 
-    <div class="stat-card">
+    <div class="admin-stat-card">
         <div class="stat-icon">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>
         </div>
@@ -419,7 +419,7 @@ include __DIR__ . '/components/unified-layout.php';
         <div class="stat-label">Events totalt</div>
     </div>
 
-    <div class="stat-card">
+    <div class="admin-stat-card">
         <div class="stat-icon">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>
         </div>
@@ -427,7 +427,7 @@ include __DIR__ . '/components/unified-layout.php';
         <div class="stat-label">Serier</div>
     </div>
 
-    <div class="stat-card">
+    <div class="admin-stat-card">
         <div class="stat-icon">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/></svg>
         </div>
@@ -435,7 +435,7 @@ include __DIR__ . '/components/unified-layout.php';
         <div class="stat-label">Klubbar</div>
     </div>
 
-    <div class="stat-card">
+    <div class="admin-stat-card">
         <div class="stat-icon">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
         </div>
@@ -672,7 +672,7 @@ include __DIR__ . '/components/unified-layout.php';
     }
 
     /* Admin card edge-to-edge */
-    .card {
+    .admin-card {
         margin-left: calc(-1 * var(--container-padding, 16px));
         margin-right: calc(-1 * var(--container-padding, 16px));
         width: auto;
@@ -682,31 +682,31 @@ include __DIR__ . '/components/unified-layout.php';
     }
 
     /* Restore internal padding for card content */
-    .card-body,
-    .card-header {
+    .admin-card-body,
+    .admin-card-header {
         padding-left: var(--container-padding, 16px);
         padding-right: var(--container-padding, 16px);
     }
 
     /* Tables inside cards - ensure proper scrolling */
-    .card-body .table-container {
+    .admin-card-body .admin-table-container {
         margin-left: calc(-1 * var(--container-padding, 16px));
         margin-right: calc(-1 * var(--container-padding, 16px));
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
     }
 
-    .card-body .table-container .table {
+    .admin-card-body .admin-table-container .admin-table {
         min-width: 400px;
     }
 
-    .card-body .table-container .table th:first-child,
-    .card-body .table-container .table td:first-child {
+    .admin-card-body .admin-table-container .admin-table th:first-child,
+    .admin-card-body .admin-table-container .admin-table td:first-child {
         padding-left: var(--container-padding, 16px);
     }
 
-    .card-body .table-container .table th:last-child,
-    .card-body .table-container .table td:last-child {
+    .admin-card-body .admin-table-container .admin-table th:last-child,
+    .admin-card-body .admin-table-container .admin-table td:last-child {
         padding-right: var(--container-padding, 16px);
     }
 
@@ -716,11 +716,11 @@ include __DIR__ . '/components/unified-layout.php';
         gap: var(--space-sm);
     }
 
-    .stat-card {
+    .admin-stat-card {
         padding: var(--space-md);
     }
 
-    .stat-card .stat-value {
+    .admin-stat-card .stat-value {
         font-size: var(--text-lg);
     }
 }

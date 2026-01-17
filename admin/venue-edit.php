@@ -195,14 +195,14 @@ include __DIR__ . '/components/unified-layout.php';
     <div class="grid grid-cols-1 gap-md">
     <!-- Name -->
     <div>
-     <label for="name" class="label">
+     <label for="name" class="admin-form-label">
      Namn <span class="text-error">*</span>
      </label>
      <input
      type="text"
      id="name"
      name="name"
-     class="input"
+     class="admin-form-input"
      required
      value="<?= h($venue['name']) ?>"
      placeholder="T.ex. Järvsö Bergscykelpark"
@@ -212,23 +212,23 @@ include __DIR__ . '/components/unified-layout.php';
     <!-- City and Region -->
     <div class="grid grid-cols-2 gap-md">
      <div>
-     <label for="city" class="label">Stad</label>
+     <label for="city" class="admin-form-label">Stad</label>
      <input
       type="text"
       id="city"
       name="city"
-      class="input"
+      class="admin-form-input"
       value="<?= h($venue['city'] ?? '') ?>"
       placeholder="T.ex. Järvsö"
      >
      </div>
      <div>
-     <label for="region" class="label">Region/Län</label>
+     <label for="region" class="admin-form-label">Region/Län</label>
      <input
       type="text"
       id="region"
       name="region"
-      class="input"
+      class="admin-form-input"
       value="<?= h($venue['region'] ?? '') ?>"
       placeholder="T.ex. Gävleborg"
      >
@@ -238,22 +238,22 @@ include __DIR__ . '/components/unified-layout.php';
     <!-- Country and Address -->
     <div class="grid grid-cols-2 gap-md">
      <div>
-     <label for="country" class="label">Land</label>
+     <label for="country" class="admin-form-label">Land</label>
      <input
       type="text"
       id="country"
       name="country"
-      class="input"
+      class="admin-form-input"
       value="<?= h($venue['country'] ?? 'Sverige') ?>"
      >
      </div>
      <div>
-     <label for="address" class="label">Adress</label>
+     <label for="address" class="admin-form-label">Adress</label>
      <input
       type="text"
       id="address"
       name="address"
-      class="input"
+      class="admin-form-input"
       value="<?= h($venue['address'] ?? '') ?>"
       placeholder="Gatuadress"
      >
@@ -277,25 +277,25 @@ include __DIR__ . '/components/unified-layout.php';
     </p>
     <div class="grid grid-cols-2 gap-md">
      <div>
-     <label for="gps_lat" class="label">Latitud</label>
+     <label for="gps_lat" class="admin-form-label">Latitud</label>
      <input
       type="number"
       step="0.0000001"
       id="gps_lat"
       name="gps_lat"
-      class="input"
+      class="admin-form-input"
       value="<?= h($venue['gps_lat'] ?? '') ?>"
       placeholder="61.7218"
      >
      </div>
      <div>
-     <label for="gps_lng" class="label">Longitud</label>
+     <label for="gps_lng" class="admin-form-label">Longitud</label>
      <input
       type="number"
       step="0.0000001"
       id="gps_lng"
       name="gps_lng"
-      class="input"
+      class="admin-form-input"
       value="<?= h($venue['gps_lng'] ?? '') ?>"
       placeholder="16.1506"
      >
@@ -324,11 +324,11 @@ include __DIR__ . '/components/unified-layout.php';
     <div class="grid gap-lg">
     <!-- Description -->
     <div>
-     <label for="description" class="label">Beskrivning</label>
+     <label for="description" class="admin-form-label">Beskrivning</label>
      <textarea
      id="description"
      name="description"
-     class="input"
+     class="admin-form-input"
      rows="4"
      placeholder="Beskriv anläggningen, banorna, terrängen..."
      ><?= h($venue['description'] ?? '') ?></textarea>
@@ -336,12 +336,12 @@ include __DIR__ . '/components/unified-layout.php';
 
     <!-- Logo URL -->
     <div>
-     <label for="logo" class="label">Logotyp (URL)</label>
+     <label for="logo" class="admin-form-label">Logotyp (URL)</label>
      <input
      type="url"
      id="logo"
      name="logo"
-     class="input"
+     class="admin-form-input"
      value="<?= h($venue['logo'] ?? '') ?>"
      placeholder="https://example.com/logo.png"
      >
@@ -367,12 +367,12 @@ include __DIR__ . '/components/unified-layout.php';
     <div class="grid grid-cols-1 gap-md">
     <!-- Contact Person -->
     <div>
-     <label for="contact_person" class="label">Kontaktperson</label>
+     <label for="contact_person" class="admin-form-label">Kontaktperson</label>
      <input
      type="text"
      id="contact_person"
      name="contact_person"
-     class="input"
+     class="admin-form-input"
      value="<?= h($venue['contact_person'] ?? '') ?>"
      placeholder="Namn på kontaktperson"
      >
@@ -381,23 +381,23 @@ include __DIR__ . '/components/unified-layout.php';
     <!-- Email and Phone -->
     <div class="grid grid-cols-2 gap-md">
      <div>
-     <label for="email" class="label">E-post</label>
+     <label for="email" class="admin-form-label">E-post</label>
      <input
       type="email"
       id="email"
       name="email"
-      class="input"
+      class="admin-form-input"
       value="<?= h($venue['email'] ?? '') ?>"
       placeholder="info@anlaggning.se"
      >
      </div>
      <div>
-     <label for="phone" class="label">Telefon</label>
+     <label for="phone" class="admin-form-label">Telefon</label>
      <input
       type="tel"
       id="phone"
       name="phone"
-      class="input"
+      class="admin-form-input"
       value="<?= h($venue['phone'] ?? '') ?>"
       placeholder="070-123 45 67"
      >
@@ -406,12 +406,12 @@ include __DIR__ . '/components/unified-layout.php';
 
     <!-- Website -->
     <div>
-     <label for="website" class="label">Webbplats</label>
+     <label for="website" class="admin-form-label">Webbplats</label>
      <input
      type="url"
      id="website"
      name="website"
-     class="input"
+     class="admin-form-input"
      value="<?= h($venue['website'] ?? '') ?>"
      placeholder="https://anlaggning.se"
      >
@@ -431,7 +431,7 @@ include __DIR__ . '/components/unified-layout.php';
    <div class="card-body">
     <div class="grid grid-cols-2 gap-md">
      <div>
-     <label for="facebook" class="label">
+     <label for="facebook" class="admin-form-label">
       <i data-lucide="facebook" class="icon-sm"></i>
       Facebook
      </label>
@@ -439,13 +439,13 @@ include __DIR__ . '/components/unified-layout.php';
       type="url"
       id="facebook"
       name="facebook"
-      class="input"
+      class="admin-form-input"
       value="<?= h($venue['facebook'] ?? '') ?>"
       placeholder="https://facebook.com/..."
      >
      </div>
      <div>
-     <label for="instagram" class="label">
+     <label for="instagram" class="admin-form-label">
       <i data-lucide="instagram" class="icon-sm"></i>
       Instagram
      </label>
@@ -453,13 +453,13 @@ include __DIR__ . '/components/unified-layout.php';
       type="url"
       id="instagram"
       name="instagram"
-      class="input"
+      class="admin-form-input"
       value="<?= h($venue['instagram'] ?? '') ?>"
       placeholder="https://instagram.com/..."
      >
      </div>
      <div>
-     <label for="trailforks_url" class="label">
+     <label for="trailforks_url" class="admin-form-label">
       <i data-lucide="map" class="icon-sm"></i>
       Trailforks
      </label>
@@ -467,13 +467,13 @@ include __DIR__ . '/components/unified-layout.php';
       type="url"
       id="trailforks_url"
       name="trailforks_url"
-      class="input"
+      class="admin-form-input"
       value="<?= h($venue['trailforks_url'] ?? '') ?>"
       placeholder="https://trailforks.com/region/..."
      >
      </div>
      <div>
-     <label for="strava_segment" class="label">
+     <label for="strava_segment" class="admin-form-label">
       <i data-lucide="activity" class="icon-sm"></i>
       Strava Segment
      </label>
@@ -481,7 +481,7 @@ include __DIR__ . '/components/unified-layout.php';
       type="url"
       id="strava_segment"
       name="strava_segment"
-      class="input"
+      class="admin-form-input"
       value="<?= h($venue['strava_segment'] ?? '') ?>"
       placeholder="https://strava.com/segments/..."
      >
@@ -501,21 +501,21 @@ include __DIR__ . '/components/unified-layout.php';
    <div class="card-body">
     <div class="grid gap-md">
      <div>
-     <label for="parking_info" class="label">Parkering</label>
+     <label for="parking_info" class="admin-form-label">Parkering</label>
      <textarea
       id="parking_info"
       name="parking_info"
-      class="input"
+      class="admin-form-input"
       rows="2"
       placeholder="Information om parkering..."
      ><?= h($venue['parking_info'] ?? '') ?></textarea>
      </div>
      <div>
-     <label for="facilities" class="label">Faciliteter</label>
+     <label for="facilities" class="admin-form-label">Faciliteter</label>
      <textarea
       id="facilities"
       name="facilities"
-      class="input"
+      class="admin-form-input"
       rows="3"
       placeholder="Beskriv faciliteter (omklädningsrum, dusch, café, etc.)..."
      ><?= h($venue['facilities'] ?? '') ?></textarea>

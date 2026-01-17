@@ -126,7 +126,7 @@ $breadcrumbs = [
 
 $page_actions = '
 <div class="btn-group">
-    <a href="/admin/analytics-dashboard.php" class="btn btn--secondary">
+    <a href="/admin/analytics-dashboard.php" class="btn-admin btn-admin-secondary">
         <i data-lucide="arrow-left"></i> Dashboard
     </a>
 </div>
@@ -185,7 +185,7 @@ include __DIR__ . '/components/unified-layout.php';
 
         <?php if (!empty($atRiskRiders)): ?>
         <div class="filter-group">
-            <a href="?year=<?= $selectedYear ?>&level=<?= $filterLevel ?>&series=<?= $filterSeries ?>&export=csv" class="btn btn--secondary">
+            <a href="?year=<?= $selectedYear ?>&level=<?= $filterLevel ?>&series=<?= $filterSeries ?>&export=csv" class="btn-admin btn-admin-secondary">
                 <i data-lucide="download"></i> Exportera CSV
             </a>
         </div>
@@ -265,20 +265,20 @@ include __DIR__ . '/components/unified-layout.php';
 
 <!-- Risk Distribution Chart -->
 <div class="grid grid-2 grid-gap-lg">
-    <div class="card">
-        <div class="card-header">
+    <div class="admin-card">
+        <div class="admin-card-header">
             <h2>Risk-fordelning <?= $selectedYear ?></h2>
         </div>
-        <div class="card-body">
+        <div class="admin-card-body">
             <canvas id="riskDistChart" height="250"></canvas>
         </div>
     </div>
 
-    <div class="card">
-        <div class="card-header">
+    <div class="admin-card">
+        <div class="admin-card-header">
             <h2>Riskfaktorer (konfiguration)</h2>
         </div>
-        <div class="card-body">
+        <div class="admin-card-body">
             <div class="factor-list">
                 <?php foreach (AnalyticsConfig::RISK_FACTORS as $key => $factor): ?>
                 <div class="factor-item <?= $factor['enabled'] ? '' : 'disabled' ?>">
@@ -299,13 +299,13 @@ include __DIR__ . '/components/unified-layout.php';
 
 <!-- At-Risk Riders List -->
 <?php if (!empty($atRiskRiders)): ?>
-<div class="card">
-    <div class="card-header">
+<div class="admin-card">
+    <div class="admin-card-header">
         <h2>At-Risk Riders (<?= number_format(count($atRiskRiders)) ?> st)</h2>
     </div>
-    <div class="card-body" style="padding: 0;">
-        <div class="table-container">
-            <table class="table">
+    <div class="admin-card-body" style="padding: 0;">
+        <div class="admin-table-container">
+            <table class="admin-table">
                 <thead>
                     <tr>
                         <th>Risk</th>
@@ -744,7 +744,7 @@ document.addEventListener('DOMContentLoaded', function() {
 @media (max-width: 767px) {
     /* Edge-to-edge for all cards and components */
     .filter-bar,
-    .card,
+    .admin-card,
     .alert,
     .cache-info,
     .info-box {
@@ -793,17 +793,17 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     /* Table adjustments for mobile */
-    .table th,
-    .table td {
+    .admin-table th,
+    .admin-table td {
         padding: var(--space-sm);
         font-size: var(--text-sm);
     }
 
     /* Hide less important columns on mobile */
-    .table th:nth-child(3),
-    .table td:nth-child(3),
-    .table th:nth-child(5),
-    .table td:nth-child(5) {
+    .admin-table th:nth-child(3),
+    .admin-table td:nth-child(3),
+    .admin-table th:nth-child(5),
+    .admin-table td:nth-child(5) {
         display: none;
     }
 
@@ -863,8 +863,8 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     /* Hide even more columns */
-    .table th:nth-child(4),
-    .table td:nth-child(4) {
+    .admin-table th:nth-child(4),
+    .admin-table td:nth-child(4) {
         display: none;
     }
 

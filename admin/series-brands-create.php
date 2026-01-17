@@ -114,44 +114,44 @@ include __DIR__ . '/components/unified-layout.php';
 <form method="POST" enctype="multipart/form-data">
     <?= csrf_field() ?>
 
-    <div class="card">
-        <div class="card-header">
+    <div class="admin-card">
+        <div class="admin-card-header">
             <h2>
                 <i data-lucide="info"></i>
                 Grunduppgifter
             </h2>
         </div>
-        <div class="card-body">
-            <div class="form-grid">
-                <div class="form-group form-full">
-                    <label for="name" class="label">Namn <span class="required">*</span></label>
-                    <input type="text" id="name" name="name" class="input" required
+        <div class="admin-card-body">
+            <div class="admin-form-grid">
+                <div class="admin-form-group admin-form-full">
+                    <label for="name" class="admin-form-label">Namn <span class="required">*</span></label>
+                    <input type="text" id="name" name="name" class="admin-form-input" required
                            placeholder="T.ex. Swecup, GravitySeries Enduro"
                            value="<?= htmlspecialchars($_POST['name'] ?? '') ?>">
                 </div>
 
-                <div class="form-group form-full">
-                    <label for="description" class="label">Beskrivning</label>
-                    <textarea id="description" name="description" class="input" rows="3"
+                <div class="admin-form-group admin-form-full">
+                    <label for="description" class="admin-form-label">Beskrivning</label>
+                    <textarea id="description" name="description" class="admin-form-textarea" rows="3"
                               placeholder="Kort beskrivning av varumärket..."><?= htmlspecialchars($_POST['description'] ?? '') ?></textarea>
                 </div>
 
-                <div class="form-group">
-                    <label for="website" class="label">Webbsida</label>
-                    <input type="url" id="website" name="website" class="input"
+                <div class="admin-form-group">
+                    <label for="website" class="admin-form-label">Webbsida</label>
+                    <input type="url" id="website" name="website" class="admin-form-input"
                            placeholder="https://..."
                            value="<?= htmlspecialchars($_POST['website'] ?? '') ?>">
                 </div>
 
-                <div class="form-group">
-                    <label for="display_order" class="label">Visningsordning</label>
-                    <input type="number" id="display_order" name="display_order" class="input"
+                <div class="admin-form-group">
+                    <label for="display_order" class="admin-form-label">Visningsordning</label>
+                    <input type="number" id="display_order" name="display_order" class="admin-form-input"
                            value="<?= intval($_POST['display_order'] ?? 0) ?>" min="0">
                 </div>
 
-                <div class="form-group">
-                    <label class="label">Status</label>
-                    <label class="checkbox">
+                <div class="admin-form-group">
+                    <label class="admin-form-label">Status</label>
+                    <label class="admin-checkbox">
                         <input type="checkbox" name="active" <?= !isset($_POST['active']) || $_POST['active'] ? 'checked' : '' ?>>
                         <span>Aktiv</span>
                     </label>
@@ -160,25 +160,25 @@ include __DIR__ . '/components/unified-layout.php';
         </div>
     </div>
 
-    <div class="card">
-        <div class="card-header">
+    <div class="admin-card">
+        <div class="admin-card-header">
             <h2>
                 <i data-lucide="palette"></i>
                 Färg
             </h2>
         </div>
-        <div class="card-body">
+        <div class="admin-card-body">
             <p class="text-secondary mb-lg">Välj en huvudfärg - gradienten skapas automatiskt.</p>
 
             <div class="color-preview-bar" id="colorPreview" style="height: 80px; border-radius: var(--radius-md); margin-bottom: var(--space-lg);"></div>
 
-            <div class="form-group">
-                <label for="brand_color" class="label">Huvudfärg</label>
+            <div class="admin-form-group">
+                <label for="brand_color" class="admin-form-label">Huvudfärg</label>
                 <div style="display: flex; gap: var(--space-md); align-items: center;">
-                    <input type="color" id="brand_color" name="brand_color" class="form-color"
+                    <input type="color" id="brand_color" name="brand_color" class="admin-form-color"
                            value="<?= htmlspecialchars($_POST['brand_color'] ?? '#004A98') ?>"
                            onchange="updateColorPreview()" style="width: 80px; height: 50px;">
-                    <input type="text" id="brand_color_text" class="input" style="width: 120px; font-family: monospace;"
+                    <input type="text" id="brand_color_text" class="admin-form-input" style="width: 120px; font-family: monospace;"
                            value="<?= htmlspecialchars($_POST['brand_color'] ?? '#004A98') ?>"
                            onchange="document.getElementById('brand_color').value = this.value; updateColorPreview();">
                     <span class="text-secondary" style="font-size: var(--text-sm);">Gradienten skapas automatiskt</span>
@@ -192,29 +192,29 @@ include __DIR__ . '/components/unified-layout.php';
         </div>
     </div>
 
-    <div class="card">
-        <div class="card-header">
+    <div class="admin-card">
+        <div class="admin-card-header">
             <h2>
                 <i data-lucide="image"></i>
                 Logotyp
             </h2>
         </div>
-        <div class="card-body">
-            <div class="form-group">
-                <label for="logo" class="label">Ladda upp logotyp</label>
-                <input type="file" id="logo" name="logo" class="input" accept="image/*">
-                <small class="form-hint">Tillåtna format: JPG, PNG, GIF, WebP, SVG. Max 10MB.</small>
+        <div class="admin-card-body">
+            <div class="admin-form-group">
+                <label for="logo" class="admin-form-label">Ladda upp logotyp</label>
+                <input type="file" id="logo" name="logo" class="admin-form-input" accept="image/*">
+                <small class="admin-form-hint">Tillåtna format: JPG, PNG, GIF, WebP, SVG. Max 10MB.</small>
             </div>
         </div>
     </div>
 
     <!-- Action Buttons -->
-    <div class="form-actions">
-        <a href="/admin/series-brands.php" class="btn btn--secondary">
+    <div class="admin-form-actions">
+        <a href="/admin/series-brands.php" class="btn-admin btn-admin-secondary">
             <i data-lucide="x"></i>
             Avbryt
         </a>
-        <button type="submit" class="btn btn--primary">
+        <button type="submit" class="btn-admin btn-admin-primary">
             <i data-lucide="save"></i>
             Skapa varumärke
         </button>
@@ -222,17 +222,17 @@ include __DIR__ . '/components/unified-layout.php';
 </form>
 
 <style>
-.form-grid {
+.admin-form-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
     gap: var(--space-lg);
 }
 
-.form-full {
+.admin-form-full {
     grid-column: 1 / -1;
 }
 
-.input {
+.admin-form-textarea {
     width: 100%;
     padding: var(--space-sm) var(--space-md);
     border: 1px solid var(--color-border);
@@ -244,13 +244,13 @@ include __DIR__ . '/components/unified-layout.php';
     resize: vertical;
 }
 
-.input:focus {
+.admin-form-textarea:focus {
     outline: none;
     border-color: var(--color-accent);
     box-shadow: 0 0 0 3px var(--color-accent-alpha);
 }
 
-.form-color {
+.admin-form-color {
     width: 50px;
     height: 40px;
     padding: 4px;
@@ -259,7 +259,7 @@ include __DIR__ . '/components/unified-layout.php';
     cursor: pointer;
 }
 
-.checkbox {
+.admin-checkbox {
     display: flex;
     align-items: center;
     gap: var(--space-sm);
@@ -267,20 +267,20 @@ include __DIR__ . '/components/unified-layout.php';
     padding: var(--space-sm) 0;
 }
 
-.checkbox input[type="checkbox"] {
+.admin-checkbox input[type="checkbox"] {
     width: 18px;
     height: 18px;
     accent-color: var(--color-accent);
 }
 
-.form-hint {
+.admin-form-hint {
     display: block;
     margin-top: var(--space-xs);
     font-size: var(--text-xs);
     color: var(--color-text-secondary);
 }
 
-.form-actions {
+.admin-form-actions {
     display: flex;
     justify-content: flex-end;
     gap: var(--space-md);

@@ -418,7 +418,7 @@ include __DIR__ . '/components/unified-layout.php';
 }
 </style>
 
-<div class="main-content">
+<div class="admin-content">
     <div class="content-header">
         <h1>Kör Migrationer</h1>
         <p class="text-muted">Uppdatera databasstrukturen</p>

@@ -98,15 +98,15 @@ include __DIR__ . '/components/unified-layout.php';
 <?php endif; ?>
 
 <!-- Series Selector -->
-<div class="card mb-lg">
-    <div class="card-header">
+<div class="admin-card mb-lg">
+    <div class="admin-card-header">
         <h2><i data-lucide="calendar"></i> Välj serie</h2>
     </div>
-    <div class="card-body">
+    <div class="admin-card-body">
         <form method="GET" class="flex gap-md items-end">
-            <div class="form-group" style="flex: 1; max-width: 400px;">
-                <label class="label">Serie</label>
-                <select name="series_id" class="input" onchange="this.form.submit()">
+            <div class="admin-form-group" style="flex: 1; max-width: 400px;">
+                <label class="admin-form-label">Serie</label>
+                <select name="series_id" class="admin-form-select" onchange="this.form.submit()">
                     <option value="">-- Välj serie --</option>
                     <?php foreach ($series as $s): ?>
                     <option value="<?= $s['id'] ?>" <?= $selectedSeriesId == $s['id'] ? 'selected' : '' ?>>
@@ -149,16 +149,16 @@ error_log("REGISTRATION-RULES DEBUG: series_id={$selectedSeriesId}, events found
 </div>
 
 <!-- Events in Series -->
-<div class="card mb-lg">
-    <div class="card-header">
+<div class="admin-card mb-lg">
+    <div class="admin-card-header">
         <h2><i data-lucide="calendar-days"></i> Events i serien (<?= count($seriesEvents) ?>)</h2>
     </div>
-    <div class="card-body">
+    <div class="admin-card-body">
         <?php if (empty($seriesEvents)): ?>
             <p class="text-secondary">Inga events kopplade till denna serie.</p>
         <?php else: ?>
-            <div class="table-container">
-                <table class="table">
+            <div class="admin-table-container">
+                <table class="admin-table">
                     <thead>
                         <tr>
                             <th>Event</th>
@@ -184,7 +184,7 @@ error_log("REGISTRATION-RULES DEBUG: series_id={$selectedSeriesId}, events found
                                 <?php endif; ?>
                             </td>
                             <td>
-                                <a href="/admin/event-edit.php?id=<?= $evt['id'] ?>" class="btn btn--sm btn--secondary">
+                                <a href="/admin/event-edit.php?id=<?= $evt['id'] ?>" class="btn-admin btn-admin-sm btn-admin-secondary">
                                     <i data-lucide="pencil"></i>
                                 </a>
                             </td>
@@ -198,11 +198,11 @@ error_log("REGISTRATION-RULES DEBUG: series_id={$selectedSeriesId}, events found
 </div>
 
 <!-- Event Class Selection -->
-<div class="card mb-lg">
-    <div class="card-header">
+<div class="admin-card mb-lg">
+    <div class="admin-card-header">
         <h2><i data-lucide="shield"></i> Eventklass: <?= h($selectedSeries['name']) ?></h2>
     </div>
-    <div class="card-body">
+    <div class="admin-card-body">
         <form method="POST">
             <?= csrf_field() ?>
             <input type="hidden" name="series_id" value="<?= $selectedSeriesId ?>">
@@ -211,8 +211,8 @@ error_log("REGISTRATION-RULES DEBUG: series_id={$selectedSeriesId}, events found
                 <?php foreach ($eventClasses as $key => $info):
                     $isSelected = ($selectedSeries['event_license_class'] ?? '') === $key;
                 ?>
-                <label class="card" style="cursor: pointer; border: 2px solid <?= $isSelected ? 'var(--color-accent)' : 'var(--color-border)' ?>; background: <?= $isSelected ? 'var(--color-accent-light)' : 'var(--color-bg-surface)' ?>;">
-                    <div class="card-body">
+                <label class="admin-card" style="cursor: pointer; border: 2px solid <?= $isSelected ? 'var(--color-accent)' : 'var(--color-border)' ?>; background: <?= $isSelected ? 'var(--color-accent-light)' : 'var(--color-bg-surface)' ?>;">
+                    <div class="admin-card-body">
                         <div class="flex gap-md items-start">
                             <input type="radio" name="event_class" value="<?= $key ?>"
                                 <?= $isSelected ? 'checked' : '' ?>
@@ -233,7 +233,7 @@ error_log("REGISTRATION-RULES DEBUG: series_id={$selectedSeriesId}, events found
             </div>
 
             <div class="mt-lg">
-                <button type="submit" class="btn btn--primary">
+                <button type="submit" class="btn-admin btn-admin-primary">
                     <i data-lucide="save"></i>
                     Spara eventklass
                 </button>
@@ -243,11 +243,11 @@ error_log("REGISTRATION-RULES DEBUG: series_id={$selectedSeriesId}, events found
 </div>
 
 <!-- Link to License Matrix -->
-<div class="card">
-    <div class="card-header">
+<div class="admin-card">
+    <div class="admin-card-header">
         <h2><i data-lucide="grid-3x3"></i> Licensregler</h2>
     </div>
-    <div class="card-body">
+    <div class="admin-card-body">
         <p class="text-secondary mb-lg">
             Licensreglerna (vilka licenstyper som får anmäla sig till vilka klasser) hanteras i
             <strong>Licens-Klass Matrisen</strong>. Samma regler gäller för alla serier med samma eventklass.
@@ -256,7 +256,7 @@ error_log("REGISTRATION-RULES DEBUG: series_id={$selectedSeriesId}, events found
         <?php
         $currentClass = $selectedSeries['event_license_class'] ?? 'sportmotion';
         ?>
-        <a href="/admin/license-class-matrix.php?tab=<?= h($currentClass) ?>" class="btn btn--secondary">
+        <a href="/admin/license-class-matrix.php?tab=<?= h($currentClass) ?>" class="btn-admin btn-admin-secondary">
             <i data-lucide="external-link"></i>
             Öppna Licens-Klass Matris (<?= h($eventClasses[$currentClass]['name'] ?? 'Sportmotion') ?>)
         </a>

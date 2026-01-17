@@ -494,50 +494,50 @@ include __DIR__ . '/components/unified-layout.php';
 <?php endif; ?>
 
 <!-- Summary Stats -->
-<div class="card mb-lg">
-    <div class="card-header">
+<div class="admin-card mb-lg">
+    <div class="admin-card-header">
         <h2>
             <i data-lucide="bar-chart-2"></i>
             Sammanfattning
         </h2>
     </div>
-    <div class="card-body">
+    <div class="admin-card-body">
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: var(--space-md);">
-            <div class="stat-card">
-                <div class="stat-value"><?= number_format($matchingStats['total_rows']) ?></div>
-                <div class="stat-label">Totalt rader</div>
+            <div class="admin-stat-card">
+                <div class="admin-stat-value"><?= number_format($matchingStats['total_rows']) ?></div>
+                <div class="admin-stat-label">Totalt rader</div>
             </div>
-            <div class="stat-card">
-                <div class="stat-value text-success"><?= number_format($matchingStats['riders_existing']) ?></div>
-                <div class="stat-label">Befintliga deltagare</div>
+            <div class="admin-stat-card">
+                <div class="admin-stat-value text-success"><?= number_format($matchingStats['riders_existing']) ?></div>
+                <div class="admin-stat-label">Befintliga deltagare</div>
             </div>
-            <div class="stat-card">
-                <div class="stat-value" style="color: var(--color-gs-blue);"><?= number_format($matchingStats['riders_new']) ?></div>
-                <div class="stat-label">Nya deltagare</div>
+            <div class="admin-stat-card">
+                <div class="admin-stat-value" style="color: var(--color-gs-blue);"><?= number_format($matchingStats['riders_new']) ?></div>
+                <div class="admin-stat-label">Nya deltagare</div>
             </div>
-            <div class="stat-card">
-                <div class="stat-value"><?= number_format($matchingStats['clubs_existing']) ?></div>
-                <div class="stat-label">Befintliga klubbar</div>
+            <div class="admin-stat-card">
+                <div class="admin-stat-value"><?= number_format($matchingStats['clubs_existing']) ?></div>
+                <div class="admin-stat-label">Befintliga klubbar</div>
             </div>
-            <div class="stat-card">
-                <div class="stat-value" style="color: var(--color-warning);"><?= number_format($matchingStats['clubs_new']) ?></div>
-                <div class="stat-label">Nya klubbar</div>
+            <div class="admin-stat-card">
+                <div class="admin-stat-value" style="color: var(--color-warning);"><?= number_format($matchingStats['clubs_new']) ?></div>
+                <div class="admin-stat-label">Nya klubbar</div>
             </div>
         </div>
 
         <!-- UCI ID Stats -->
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: var(--space-md); margin-top: var(--space-md); padding-top: var(--space-md); border-top: 1px solid var(--color-border);">
-            <div class="stat-card">
-                <div class="stat-value"><?= number_format($matchingStats['uci_existing']) ?></div>
-                <div class="stat-label">UCI-ID i fil</div>
+            <div class="admin-stat-card">
+                <div class="admin-stat-value"><?= number_format($matchingStats['uci_existing']) ?></div>
+                <div class="admin-stat-label">UCI-ID i fil</div>
             </div>
-            <div class="stat-card">
-                <div class="stat-value text-success"><?= number_format($matchingStats['uci_found']) ?></div>
-                <div class="stat-label">UCI-ID hittade</div>
+            <div class="admin-stat-card">
+                <div class="admin-stat-value text-success"><?= number_format($matchingStats['uci_found']) ?></div>
+                <div class="admin-stat-label">UCI-ID hittade</div>
             </div>
-            <div class="stat-card">
-                <div class="stat-value text-secondary"><?= number_format($matchingStats['uci_not_found']) ?></div>
-                <div class="stat-label">UCI-ID saknas</div>
+            <div class="admin-stat-card">
+                <div class="admin-stat-value text-secondary"><?= number_format($matchingStats['uci_not_found']) ?></div>
+                <div class="admin-stat-label">UCI-ID saknas</div>
             </div>
         </div>
 
@@ -552,8 +552,8 @@ include __DIR__ . '/components/unified-layout.php';
 
 <!-- Column Mapping -->
 <?php if (isset($columnInfo)): ?>
-<div class="card mb-lg">
-    <div class="card-header">
+<div class="admin-card mb-lg">
+    <div class="admin-card-header">
         <h2>
             <i data-lucide="columns"></i>
             Kolumnmappning
@@ -565,7 +565,7 @@ include __DIR__ . '/components/unified-layout.php';
             <?php endif; ?>
         </h2>
     </div>
-    <div class="card-body">
+    <div class="admin-card-body">
         <p class="text-sm text-secondary mb-md">
             Systemet detekterade följande kolumner automatiskt. Om det ser fel ut kan du ändra mappningen nedan.
         </p>
@@ -632,14 +632,14 @@ include __DIR__ . '/components/unified-layout.php';
 
 <!-- Clubs Analysis -->
 <?php if (!empty($matchingStats['clubs_list'])): ?>
-<div class="card mb-lg">
-    <div class="card-header">
+<div class="admin-card mb-lg">
+    <div class="admin-card-header">
         <h2>
             <i data-lucide="building"></i>
             Klubbar (<?= count($matchingStats['clubs_list']) ?>)
         </h2>
     </div>
-    <div class="card-body">
+    <div class="admin-card-body">
         <div class="table-responsive">
             <table class="table text-sm">
                 <thead>
@@ -671,14 +671,14 @@ include __DIR__ . '/components/unified-layout.php';
 <?php endif; ?>
 
 <!-- Preview Data -->
-<div class="card mb-lg">
-    <div class="card-header">
+<div class="admin-card mb-lg">
+    <div class="admin-card-header">
         <h2>
             <i data-lucide="users"></i>
             Deltagare (första 100)
         </h2>
     </div>
-    <div class="card-body">
+    <div class="admin-card-body">
         <div class="table-responsive">
             <table class="table text-sm">
                 <thead>
@@ -754,17 +754,17 @@ include __DIR__ . '/components/unified-layout.php';
 </div>
 
 <!-- Actions -->
-<div class="card">
-    <div class="card-body">
+<div class="admin-card">
+    <div class="admin-card-body">
         <form method="POST" style="display: flex; gap: var(--space-md); align-items: center;">
             <?= csrf_field() ?>
 
-            <button type="submit" name="confirm_import" class="btn btn--primary">
+            <button type="submit" name="confirm_import" class="btn-admin btn-admin-primary">
                 <i data-lucide="check"></i>
                 Bekräfta och importera
             </button>
 
-            <a href="?cancel=1" class="btn btn--secondary">
+            <a href="?cancel=1" class="btn-admin btn-admin-secondary">
                 <i data-lucide="x"></i>
                 Avbryt
             </a>

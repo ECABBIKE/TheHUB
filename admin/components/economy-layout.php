@@ -197,7 +197,7 @@ $theme = hub_get_theme();
             <?php endif; ?>
 
             <!-- Page Content -->
-            <div class="page-content main-content">
+            <div class="page-content admin-content">
 
 <style>
 /* ============================================================================

@@ -1093,21 +1093,21 @@ include __DIR__ . '/components/unified-layout.php';
 <?php endif; ?>
 
 <?php if (!$tablesExist): ?>
-    <div class="card">
-        <div class="card-body">
+    <div class="admin-card">
+        <div class="admin-card-body">
             <div class="alert alert-warning">
                 <i data-lucide="database"></i>
                 <strong>Databastabeller saknas!</strong>
                 <p>Elimination-tabellerna har inte skapats än. Kör migrationen först:</p>
-                <a href="/admin/run-migrations.php" class="btn btn--primary mt-md">Kör Migrationer</a>
+                <a href="/admin/run-migrations.php" class="btn-admin btn-admin-primary mt-md">Kör Migrationer</a>
             </div>
         </div>
     </div>
 <?php else: ?>
 
 <!-- Event Info Header -->
-<div class="card mb-lg">
-    <div class="card-body">
+<div class="admin-card mb-lg">
+    <div class="admin-card-body">
         <div class="flex items-center justify-between flex-wrap gap-md">
             <div>
                 <h2 style="margin: 0;"><?= h($event['name']) ?></h2>
@@ -1119,10 +1119,10 @@ include __DIR__ . '/components/unified-layout.php';
                 </p>
             </div>
             <div class="flex gap-sm">
-                <a href="/admin/elimination-live.php?event_id=<?= $eventId ?>&class_id=<?= $selectedClassId ?>" class="btn btn--primary">
+                <a href="/admin/elimination-live.php?event_id=<?= $eventId ?>&class_id=<?= $selectedClassId ?>" class="btn-admin btn-admin-primary">
                     <i data-lucide="radio"></i> Live Entry
                 </a>
-                <a href="/event/<?= $eventId ?>?tab=elimination" class="btn btn--secondary">
+                <a href="/event/<?= $eventId ?>?tab=elimination" class="btn-admin btn-admin-secondary">
                     <i data-lucide="eye"></i> Visa publikt
                 </a>
             </div>
@@ -1149,8 +1149,8 @@ if ($tablesExist) {
 }
 $hasBrackets = !empty($brackets);
 ?>
-<div class="card mb-lg" style="background: linear-gradient(135deg, var(--color-bg) 0%, rgba(97,206,112,0.1) 100%); border: 2px solid var(--color-accent);">
-    <div class="card-body">
+<div class="admin-card mb-lg" style="background: linear-gradient(135deg, var(--color-bg) 0%, rgba(97,206,112,0.1) 100%); border: 2px solid var(--color-accent);">
+    <div class="admin-card-body">
         <div class="flex items-center justify-between flex-wrap gap-md">
             <div>
                 <h3 style="margin: 0; display: flex; align-items: center; gap: var(--space-sm);">
@@ -1168,13 +1168,13 @@ $hasBrackets = !empty($brackets);
                 <?php endif; ?>
             </div>
             <div class="flex gap-sm flex-wrap">
-                <a href="/admin/elimination-import-qualifying.php?event_id=<?= $eventId ?>" class="btn btn--secondary">
+                <a href="/admin/elimination-import-qualifying.php?event_id=<?= $eventId ?>" class="btn-admin btn-admin-secondary">
                     <i data-lucide="upload"></i> Importera kvalresultat
                 </a>
                 <?php if ($totalQualifiers >= 2): ?>
                     <form method="POST" style="display: inline;" id="generate-brackets-form">
                         <input type="hidden" name="action" value="generate_brackets">
-                        <button type="button" onclick="confirmGenerateBrackets()" class="btn btn--primary" style="background: var(--color-accent);">
+                        <button type="button" onclick="confirmGenerateBrackets()" class="btn-admin btn-admin-primary" style="background: var(--color-accent);">
                             <i data-lucide="play"></i> Generera bracket för alla klasser
                         </button>
                     </form>
@@ -1206,8 +1206,8 @@ function confirmClearAll() {
 
 <!-- Clear All Results -->
 <?php if ($totalQualifiers > 0): ?>
-<div class="card mb-lg" style="border-color: var(--color-error);">
-    <div class="card-body">
+<div class="admin-card mb-lg" style="border-color: var(--color-error);">
+    <div class="admin-card-body">
         <div class="flex items-center justify-between flex-wrap gap-md">
             <div>
                 <h4 style="margin: 0; color: var(--color-error);">
@@ -1219,7 +1219,7 @@ function confirmClearAll() {
             </div>
             <form method="POST" style="display: inline;" id="clear-all-form">
                 <input type="hidden" name="action" value="clear_all_results">
-                <button type="button" onclick="confirmClearAll()" class="btn btn--danger">
+                <button type="button" onclick="confirmClearAll()" class="btn-admin btn-admin-danger">
                     <i data-lucide="trash-2"></i> Rensa allt
                 </button>
             </form>
@@ -1247,8 +1247,8 @@ foreach ($allFinalResultsByClass as $cdata) {
 
 <!-- Clear Brackets Only (keep qualifying) -->
 <?php if ($totalBracketCount > 0): ?>
-<div class="card mb-lg" style="border-color: var(--color-warning);">
-    <div class="card-body">
+<div class="admin-card mb-lg" style="border-color: var(--color-warning);">
+    <div class="admin-card-body">
         <div class="flex items-center justify-between flex-wrap gap-md">
             <div>
                 <h4 style="margin: 0; color: var(--color-warning);">
@@ -1264,7 +1264,7 @@ foreach ($allFinalResultsByClass as $cdata) {
                         <?= csrf_field() ?>
                         <input type="hidden" name="action" value="clear_brackets">
                         <input type="hidden" name="class_id" value="<?= $classId ?>">
-                        <button type="submit" class="btn btn--warning" onclick="return confirm('Rensa bracket för <?= h($classData['name'] ?? 'denna klass') ?>?\n\nKvalificeringsresultat behålls.')">
+                        <button type="submit" class="btn-admin btn-admin-warning" onclick="return confirm('Rensa bracket för <?= h($classData['name'] ?? 'denna klass') ?>?\n\nKvalificeringsresultat behålls.')">
                             <i data-lucide="trash"></i> <?= h($classData['name'] ?? 'Klass ' . $classId) ?>
                         </button>
                     </form>
@@ -1280,28 +1280,28 @@ foreach ($allFinalResultsByClass as $cdata) {
     <nav class="tabs-nav">
         <button class="tab-btn active" data-tab="qualifying">
             <i data-lucide="timer"></i> Kvalificering
-            <span class="badge badge-<?= $totalQualCount > 0 ? 'success' : 'secondary' ?> ml-sm"><?= $totalQualCount ?></span>
+            <span class="admin-badge admin-badge-<?= $totalQualCount > 0 ? 'success' : 'secondary' ?> ml-sm"><?= $totalQualCount ?></span>
         </button>
         <button class="tab-btn" data-tab="brackets">
             <i data-lucide="git-branch"></i> Bracket
-            <span class="badge badge-<?= $totalBracketCount > 0 ? 'success' : 'secondary' ?> ml-sm"><?= $totalBracketCount ?></span>
+            <span class="admin-badge admin-badge-<?= $totalBracketCount > 0 ? 'success' : 'secondary' ?> ml-sm"><?= $totalBracketCount ?></span>
         </button>
         <button class="tab-btn" data-tab="results">
             <i data-lucide="trophy"></i> Resultat
-            <span class="badge badge-<?= $totalResultCount > 0 ? 'success' : 'secondary' ?> ml-sm"><?= $totalResultCount ?></span>
+            <span class="admin-badge admin-badge-<?= $totalResultCount > 0 ? 'success' : 'secondary' ?> ml-sm"><?= $totalResultCount ?></span>
         </button>
     </nav>
 
     <!-- QUALIFYING TAB - Shows ALL classes -->
     <div class="tab-content active" id="qualifying">
         <?php if (empty($allQualifyingByClass)): ?>
-            <div class="card">
-                <div class="card-body">
-                    <div class="empty-state">
+            <div class="admin-card">
+                <div class="admin-card-body">
+                    <div class="admin-empty-state">
                         <i data-lucide="timer"></i>
                         <h3>Inga kvalresultat</h3>
                         <p>Importera kvalificeringsresultat för att komma igång.</p>
-                        <a href="/admin/elimination-import-qualifying.php?event_id=<?= $eventId ?>" class="btn btn--primary mt-md">
+                        <a href="/admin/elimination-import-qualifying.php?event_id=<?= $eventId ?>" class="btn-admin btn-admin-primary mt-md">
                             <i data-lucide="upload"></i> Importera kvalresultat
                         </a>
                     </div>
@@ -1311,19 +1311,19 @@ foreach ($allFinalResultsByClass as $cdata) {
             <form method="POST" id="series-class-form">
                 <input type="hidden" name="action" value="save_series_classes">
                 <div class="mb-md flex justify-end">
-                    <button type="submit" class="btn btn--primary">
+                    <button type="submit" class="btn-admin btn-admin-primary">
                         <i data-lucide="save"></i> Spara seriepoängklasser
                     </button>
                 </div>
             <?php foreach ($allQualifyingByClass as $classId => $classData): ?>
-                <div class="card mb-lg">
-                    <div class="card-header">
+                <div class="admin-card mb-lg">
+                    <div class="admin-card-header">
                         <h3><?= h($classData['name']) ?></h3>
-                        <span class="badge badge badge--success"><?= count($classData['results']) ?> åkare</span>
+                        <span class="admin-badge admin-badge-success"><?= count($classData['results']) ?> åkare</span>
                     </div>
-                    <div class="card-body" style="padding: 0;">
-                        <div class="table-container">
-                            <table class="table">
+                    <div class="admin-card-body" style="padding: 0;">
+                        <div class="admin-table-container">
+                            <table class="admin-table">
                                 <thead>
                                     <tr>
                                         <th>Seed</th>
@@ -1344,7 +1344,7 @@ foreach ($allFinalResultsByClass as $cdata) {
                                             <td><?= h($qr['club_name'] ?? '-') ?></td>
                                             <td class="text-right"><strong><?= $qr['best_time'] ? number_format($qr['best_time'], 3) : '-' ?></strong></td>
                                             <td>
-                                                <select name="series_class[<?= $qr['id'] ?>]" class="input" style="min-width: 150px; font-size: var(--text-sm);">
+                                                <select name="series_class[<?= $qr['id'] ?>]" class="admin-form-select" style="min-width: 150px; font-size: var(--text-sm);">
                                                     <option value="">-- DS-klass --</option>
                                                     <?php foreach ($allSeriesClasses as $sc): ?>
                                                         <option value="<?= $sc['id'] ?>" <?= ($qr['series_class_id'] ?? '') == $sc['id'] ? 'selected' : '' ?>>
@@ -1355,9 +1355,9 @@ foreach ($allFinalResultsByClass as $cdata) {
                                             </td>
                                             <td class="text-center">
                                             <?php if ($qr['advances_to_bracket']): ?>
-                                                <span class="badge badge badge--success">Ja</span>
+                                                <span class="admin-badge admin-badge-success">Ja</span>
                                             <?php else: ?>
-                                                <span class="badge badge badge--secondary">Nej</span>
+                                                <span class="admin-badge admin-badge-secondary">Nej</span>
                                             <?php endif; ?>
                                         </td>
                                     </tr>
@@ -1375,9 +1375,9 @@ foreach ($allFinalResultsByClass as $cdata) {
     <!-- BRACKETS TAB - Shows ALL classes -->
     <div class="tab-content" id="brackets">
         <?php if (empty($allBracketsByClass)): ?>
-            <div class="card">
-                <div class="card-body">
-                    <div class="empty-state">
+            <div class="admin-card">
+                <div class="admin-card-body">
+                    <div class="admin-empty-state">
                         <i data-lucide="git-branch"></i>
                         <h3>Ingen bracket genererad</h3>
                         <p>Generera bracket från kvalificeringsresultaten.</p>
@@ -1396,21 +1396,21 @@ foreach ($allFinalResultsByClass as $cdata) {
             ];
             ?>
             <?php foreach ($allBracketsByClass as $classId => $classData): ?>
-                <div class="card mb-lg">
-                    <div class="card-header">
+                <div class="admin-card mb-lg">
+                    <div class="admin-card-header">
                         <h3><?= h($classData['name']) ?></h3>
                     </div>
-                    <div class="card-body">
+                    <div class="admin-card-body">
                         <?php foreach ($classData['rounds'] as $roundName => $heats): ?>
                         <div class="bracket-round mb-lg">
                             <h4 class="mb-md"><?= $roundNames[$roundName] ?? ucfirst($roundName) ?></h4>
                             <div class="bracket-heats">
                                 <?php foreach ($heats as $heat): ?>
-                                    <div class="bracket-heat card mb-sm" style="background: var(--color-bg-secondary);">
-                                        <div class="card-body" style="padding: var(--space-sm);">
+                                    <div class="bracket-heat admin-card mb-sm" style="background: var(--color-bg-secondary);">
+                                        <div class="admin-card-body" style="padding: var(--space-sm);">
                                             <div class="flex justify-between items-center mb-sm">
                                                 <span class="text-sm text-secondary">Heat <?= $heat['heat_number'] ?></span>
-                                                <span class="badge badge-<?= $heat['status'] === 'completed' ? 'success' : ($heat['status'] === 'bye' ? 'warning' : 'secondary') ?>">
+                                                <span class="admin-badge admin-badge-<?= $heat['status'] === 'completed' ? 'success' : ($heat['status'] === 'bye' ? 'warning' : 'secondary') ?>">
                                                     <?= $heat['status'] === 'completed' ? 'Klar' : ($heat['status'] === 'bye' ? 'BYE' : 'Väntar') ?>
                                                 </span>
                                             </div>
@@ -1449,10 +1449,10 @@ foreach ($allFinalResultsByClass as $cdata) {
                                                     </div>
 
                                                     <div class="flex gap-sm mt-sm">
-                                                        <button type="submit" class="btn btn--primary btn--sm">
+                                                        <button type="submit" class="btn-admin btn-admin-primary btn-admin-sm">
                                                             <i data-lucide="save"></i> Spara tider
                                                         </button>
-                                                        <button type="submit" name="skip_bye" value="1" class="btn btn--secondary btn--sm">
+                                                        <button type="submit" name="skip_bye" value="1" class="btn-admin btn-admin-secondary btn-admin-sm">
                                                             <i data-lucide="skip-forward"></i> Gå vidare
                                                         </button>
                                                     </div>
@@ -1486,7 +1486,7 @@ foreach ($allFinalResultsByClass as $cdata) {
                                                         </div>
                                                     </div>
 
-                                                    <button type="submit" class="btn btn--primary btn--sm mt-sm">
+                                                    <button type="submit" class="btn-admin btn-admin-primary btn-admin-sm mt-sm">
                                                         <i data-lucide="save"></i> Spara
                                                     </button>
                                                 </form>
@@ -1506,9 +1506,9 @@ foreach ($allFinalResultsByClass as $cdata) {
     <!-- RESULTS TAB - Shows ALL classes -->
     <div class="tab-content" id="results">
         <?php if (empty($allFinalResultsByClass)): ?>
-            <div class="card">
-                <div class="card-body">
-                    <div class="empty-state">
+            <div class="admin-card">
+                <div class="admin-card-body">
+                    <div class="admin-empty-state">
                         <i data-lucide="trophy"></i>
                         <h3>Inga slutresultat</h3>
                         <p>Slutresultat genereras automatiskt när alla heats är klara.</p>
@@ -1517,21 +1517,21 @@ foreach ($allFinalResultsByClass as $cdata) {
             </div>
         <?php else: ?>
             <?php foreach ($allFinalResultsByClass as $classId => $classData): ?>
-                <div class="card mb-lg">
-                    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+                <div class="admin-card mb-lg">
+                    <div class="admin-card-header" style="display: flex; justify-content: space-between; align-items: center;">
                         <h3><?= h($classData['name']) ?></h3>
                         <form method="POST" style="display: inline;">
                             <?= csrf_field() ?>
                             <input type="hidden" name="action" value="resync_results">
                             <input type="hidden" name="class_id" value="<?= $classId ?>">
-                            <button type="submit" class="btn btn--sm btn--secondary" title="Synka om resultat från brackets till resultattabellen">
+                            <button type="submit" class="btn-admin btn-admin-sm btn-admin-secondary" title="Synka om resultat från brackets till resultattabellen">
                                 <i data-lucide="refresh-cw"></i> Synka om
                             </button>
                         </form>
                     </div>
-                    <div class="card-body" style="padding: 0;">
-                        <div class="table-container">
-                            <table class="table">
+                    <div class="admin-card-body" style="padding: 0;">
+                        <div class="admin-table-container">
+                            <table class="admin-table">
                                 <thead>
                                     <tr>
                                         <th>Plac</th>
@@ -1557,9 +1557,9 @@ foreach ($allFinalResultsByClass as $cdata) {
                                             <td><?= $result['qualifying_position'] ?? '-' ?></td>
                                             <td>
                                                 <?php if ($result['bracket_type'] === 'consolation'): ?>
-                                                    <span class="badge badge badge--warning">B</span>
+                                                    <span class="admin-badge admin-badge-warning">B</span>
                                                 <?php else: ?>
-                                                    <span class="badge badge badge--success">A</span>
+                                                    <span class="admin-badge admin-badge-success">A</span>
                                                 <?php endif; ?>
                                             </td>
                                             <td class="text-right"><?= $result['points'] ?></td>

@@ -215,13 +215,13 @@ include __DIR__ . '/components/unified-layout.php';
 ?>
 
 <?php if (!$tablesExist): ?>
-    <div class="card">
-        <div class="card-body">
+    <div class="admin-card">
+        <div class="admin-card-body">
             <div class="alert alert-warning">
                 <i data-lucide="database"></i>
                 <strong>Databastabeller saknas!</strong>
                 <p>Kör migrationen först.</p>
-                <a href="/admin/run-migrations.php" class="btn btn--primary mt-md">Kör Migrationer</a>
+                <a href="/admin/run-migrations.php" class="btn-admin btn-admin-primary mt-md">Kör Migrationer</a>
             </div>
         </div>
     </div>
@@ -229,8 +229,8 @@ include __DIR__ . '/components/unified-layout.php';
 
 <div class="live-entry-container">
     <!-- Header with event info and mode switcher -->
-    <div class="card mb-md">
-        <div class="card-body">
+    <div class="admin-card mb-md">
+        <div class="admin-card-body">
             <div class="flex items-center justify-between flex-wrap gap-md">
                 <div>
                     <h2 style="margin: 0; display: flex; align-items: center; gap: var(--space-sm);">
@@ -242,7 +242,7 @@ include __DIR__ . '/components/unified-layout.php';
                     </p>
                 </div>
                 <div class="flex gap-sm flex-wrap">
-                    <select id="class-select" class="input" style="min-width: 150px;">
+                    <select id="class-select" class="admin-form-select" style="min-width: 150px;">
                         <?php foreach ($classes as $class): ?>
                             <option value="<?= $class['id'] ?>" <?= $selectedClassId == $class['id'] ? 'selected' : '' ?>>
                                 <?= h($class['display_name'] ?? $class['name']) ?>
@@ -250,10 +250,10 @@ include __DIR__ . '/components/unified-layout.php';
                         <?php endforeach; ?>
                     </select>
                     <div class="btn-group">
-                        <button type="button" class="btn btn-<?= $mode === 'qualifying' ? 'primary' : 'secondary' ?>" id="mode-qualifying">
+                        <button type="button" class="btn-admin btn-admin-<?= $mode === 'qualifying' ? 'primary' : 'secondary' ?>" id="mode-qualifying">
                             <i data-lucide="timer"></i> Kval
                         </button>
-                        <button type="button" class="btn btn-<?= $mode === 'bracket' ? 'primary' : 'secondary' ?>" id="mode-bracket">
+                        <button type="button" class="btn-admin btn-admin-<?= $mode === 'bracket' ? 'primary' : 'secondary' ?>" id="mode-bracket">
                             <i data-lucide="git-branch"></i> Bracket
                         </button>
                     </div>
@@ -265,16 +265,16 @@ include __DIR__ . '/components/unified-layout.php';
     <!-- QUALIFYING MODE -->
     <div id="qualifying-mode" class="<?= $mode !== 'qualifying' ? 'hidden' : '' ?>">
         <!-- Quick Entry Form -->
-        <div class="card mb-md">
-            <div class="card-header">
+        <div class="admin-card mb-md">
+            <div class="admin-card-header">
                 <h3><i data-lucide="plus-circle"></i> Lägg till kvalresultat</h3>
             </div>
-            <div class="card-body">
+            <div class="admin-card-body">
                 <form id="qualifying-form" class="live-entry-form">
                     <div class="form-row">
                         <div class="form-group flex-2">
-                            <label class="label">Åkare</label>
-                            <select id="rider-select" class="input" required>
+                            <label class="admin-form-label">Åkare</label>
+                            <select id="rider-select" class="admin-form-select" required>
                                 <option value="">Välj åkare...</option>
                                 <?php foreach ($riders as $rider): ?>
                                     <option value="<?= $rider['id'] ?>" data-name="<?= h($rider['firstname'] . ' ' . $rider['lastname']) ?>">
@@ -285,16 +285,16 @@ include __DIR__ . '/components/unified-layout.php';
                             </select>
                         </div>
                         <div class="form-group">
-                            <label class="label">Run 1</label>
-                            <input type="text" id="run1-input" class="input time-input" placeholder="00:00.000" pattern="[\d:.]+">
+                            <label class="admin-form-label">Run 1</label>
+                            <input type="text" id="run1-input" class="admin-form-input time-input" placeholder="00:00.000" pattern="[\d:.]+">
                         </div>
                         <div class="form-group">
-                            <label class="label">Run 2</label>
-                            <input type="text" id="run2-input" class="input time-input" placeholder="00:00.000" pattern="[\d:.]+">
+                            <label class="admin-form-label">Run 2</label>
+                            <input type="text" id="run2-input" class="admin-form-input time-input" placeholder="00:00.000" pattern="[\d:.]+">
                         </div>
                         <div class="form-group">
-                            <label class="label">Status</label>
-                            <select id="status-select" class="input">
+                            <label class="admin-form-label">Status</label>
+                            <select id="status-select" class="admin-form-select">
                                 <option value="finished">Finished</option>
                                 <option value="dnf">DNF</option>
                                 <option value="dns">DNS</option>
@@ -302,7 +302,7 @@ include __DIR__ . '/components/unified-layout.php';
                             </select>
                         </div>
                         <div class="form-group form-group-btn">
-                            <button type="submit" class="btn btn--primary">
+                            <button type="submit" class="btn-admin btn-admin-primary">
                                 <i data-lucide="save"></i> Spara
                             </button>
                         </div>
@@ -312,21 +312,21 @@ include __DIR__ . '/components/unified-layout.php';
         </div>
 
         <!-- Current Results List -->
-        <div class="card">
-            <div class="card-header">
+        <div class="admin-card">
+            <div class="admin-card-header">
                 <h3><i data-lucide="list-ordered"></i> Kvalresultat</h3>
                 <div class="flex gap-sm">
-                    <button type="button" class="btn btn--secondary btn--sm" id="refresh-qualifying">
+                    <button type="button" class="btn-admin btn-admin-secondary btn-admin-sm" id="refresh-qualifying">
                         <i data-lucide="refresh-cw"></i> Uppdatera
                     </button>
-                    <a href="/admin/elimination-import-qualifying.php?event_id=<?= $eventId ?>&class_id=<?= $selectedClassId ?>" class="btn btn--secondary btn--sm">
+                    <a href="/admin/elimination-import-qualifying.php?event_id=<?= $eventId ?>&class_id=<?= $selectedClassId ?>" class="btn-admin btn-admin-secondary btn-admin-sm">
                         <i data-lucide="upload"></i> Importera CSV
                     </a>
                 </div>
             </div>
-            <div class="card-body" style="padding: 0;">
-                <div id="qualifying-list" class="table-container">
-                    <table class="table">
+            <div class="admin-card-body" style="padding: 0;">
+                <div id="qualifying-list" class="admin-table-container">
+                    <table class="admin-table">
                         <thead>
                             <tr>
                                 <th style="width: 50px;">#</th>
@@ -349,14 +349,14 @@ include __DIR__ . '/components/unified-layout.php';
 
     <!-- BRACKET MODE -->
     <div id="bracket-mode" class="<?= $mode !== 'bracket' ? 'hidden' : '' ?>">
-        <div class="card">
-            <div class="card-header">
+        <div class="admin-card">
+            <div class="admin-card-header">
                 <h3><i data-lucide="git-branch"></i> Bracket Heats</h3>
-                <button type="button" class="btn btn--secondary btn--sm" id="refresh-brackets">
+                <button type="button" class="btn-admin btn-admin-secondary btn-admin-sm" id="refresh-brackets">
                     <i data-lucide="refresh-cw"></i> Uppdatera
                 </button>
             </div>
-            <div class="card-body">
+            <div class="admin-card-body">
                 <div id="brackets-container">
                     <p class="text-center" style="padding: var(--space-lg); color: var(--color-text-secondary);">
                         Laddar brackets...
@@ -416,11 +416,11 @@ include __DIR__ . '/components/unified-layout.php';
     display: flex;
 }
 
-.btn-group .btn:first-child {
+.btn-group .btn-admin:first-child {
     border-radius: var(--radius-md) 0 0 var(--radius-md);
 }
 
-.btn-group .btn:last-child {
+.btn-group .btn-admin:last-child {
     border-radius: 0 var(--radius-md) var(--radius-md) 0;
     margin-left: -1px;
 }
@@ -595,18 +595,18 @@ document.addEventListener('DOMContentLoaded', function() {
         if (mode === 'qualifying') {
             qualifyingMode.classList.remove('hidden');
             bracketMode.classList.add('hidden');
-            modeQualifying.classList.add('btn--primary');
-            modeQualifying.classList.remove('btn--secondary');
-            modeBracket.classList.remove('btn--primary');
-            modeBracket.classList.add('btn--secondary');
+            modeQualifying.classList.add('btn-admin-primary');
+            modeQualifying.classList.remove('btn-admin-secondary');
+            modeBracket.classList.remove('btn-admin-primary');
+            modeBracket.classList.add('btn-admin-secondary');
             loadQualifying();
         } else {
             qualifyingMode.classList.add('hidden');
             bracketMode.classList.remove('hidden');
-            modeBracket.classList.add('btn--primary');
-            modeBracket.classList.remove('btn--secondary');
-            modeQualifying.classList.remove('btn--primary');
-            modeQualifying.classList.add('btn--secondary');
+            modeBracket.classList.add('btn-admin-primary');
+            modeBracket.classList.remove('btn-admin-secondary');
+            modeQualifying.classList.remove('btn-admin-primary');
+            modeQualifying.classList.add('btn-admin-secondary');
             loadBrackets();
         }
     }
@@ -645,7 +645,7 @@ document.addEventListener('DOMContentLoaded', function() {
                         <td class="text-right font-mono">${formatTime(r.run_1_time)}</td>
                         <td class="text-right font-mono">${formatTime(r.run_2_time)}</td>
                         <td class="text-right font-mono" style="font-weight: 600; color: var(--color-success);">${formatTime(r.best_time)}</td>
-                        <td><span class="badge badge-${r.status === 'finished' ? 'success' : 'warning'}">${r.status.toUpperCase()}</span></td>
+                        <td><span class="admin-badge admin-badge-${r.status === 'finished' ? 'success' : 'warning'}">${r.status.toUpperCase()}</span></td>
                     </tr>
                 `).join('');
             } else {
@@ -708,8 +708,8 @@ document.addEventListener('DOMContentLoaded', function() {
                                     <span class="heat-rider-seed">Seed #${heat.rider_1_seed || '?'}</span>
                                     <span class="heat-rider-name">${heat.rider1_firstname || '?'} ${heat.rider1_lastname || ''}</span>
                                     <div class="heat-times">
-                                        <input type="text" class="input" placeholder="Run 1" value="${heat.rider_1_run1 || ''}" data-field="rider1_run1">
-                                        <input type="text" class="input" placeholder="Run 2" value="${heat.rider_1_run2 || ''}" data-field="rider1_run2">
+                                        <input type="text" class="admin-form-input" placeholder="Run 1" value="${heat.rider_1_run1 || ''}" data-field="rider1_run1">
+                                        <input type="text" class="admin-form-input" placeholder="Run 2" value="${heat.rider_1_run2 || ''}" data-field="rider1_run2">
                                     </div>
                                     <div class="heat-total ${r1Winner ? 'winner' : ''}">${heat.rider_1_total ? formatTime(heat.rider_1_total) : '-'}</div>
                                 </div>
@@ -718,14 +718,14 @@ document.addEventListener('DOMContentLoaded', function() {
                                     <span class="heat-rider-seed">Seed #${heat.rider_2_seed || '?'}</span>
                                     <span class="heat-rider-name">${heat.rider2_firstname || '?'} ${heat.rider2_lastname || ''}</span>
                                     <div class="heat-times" style="justify-content: flex-end;">
-                                        <input type="text" class="input" placeholder="Run 1" value="${heat.rider_2_run1 || ''}" data-field="rider2_run1">
-                                        <input type="text" class="input" placeholder="Run 2" value="${heat.rider_2_run2 || ''}" data-field="rider2_run2">
+                                        <input type="text" class="admin-form-input" placeholder="Run 1" value="${heat.rider_2_run1 || ''}" data-field="rider2_run1">
+                                        <input type="text" class="admin-form-input" placeholder="Run 2" value="${heat.rider_2_run2 || ''}" data-field="rider2_run2">
                                     </div>
                                     <div class="heat-total ${r2Winner ? 'winner' : ''}">${heat.rider_2_total ? formatTime(heat.rider_2_total) : '-'}</div>
                                 </div>
                             </div>
                             <div style="margin-top: var(--space-md); text-align: center;">
-                                <button type="button" class="btn btn--primary btn--sm save-heat-btn">
+                                <button type="button" class="btn-admin btn-admin-primary btn-admin-sm save-heat-btn">
                                     <i data-lucide="save"></i> Spara
                                 </button>
                             </div>
@@ -775,11 +775,11 @@ document.addEventListener('DOMContentLoaded', function() {
                 });
 
             } else {
-                container.innerHTML = `<div class="empty-state">
+                container.innerHTML = `<div class="admin-empty-state">
                     <i data-lucide="git-branch"></i>
                     <h3>Inget bracket</h3>
                     <p>Generera bracket från kvalresultaten först.</p>
-                    <a href="/admin/elimination-manage.php?event_id=${eventId}&class_id=${currentClassId}" class="btn btn--primary mt-md">
+                    <a href="/admin/elimination-manage.php?event_id=${eventId}&class_id=${currentClassId}" class="btn-admin btn-admin-primary mt-md">
                         Gå till Hantera Elimination
                     </a>
                 </div>`;

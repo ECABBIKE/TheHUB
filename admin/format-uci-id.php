@@ -250,13 +250,13 @@ Exempel:
             ><?= htmlspecialchars($input) ?></textarea>
             <p class="format-hint">Accepterar siffror med eller utan bindestreck/mellanslag. Kan klistra in flera på en gång.</p>
             <div class="btn-actions">
-                <button type="submit" class="btn btn--primary">
+                <button type="submit" class="btn-admin btn-admin-primary">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;">
                         <path d="M4 7V4h16v3"/><path d="M9 20h6"/><path d="M12 4v16"/>
                     </svg>
                     Formatera
                 </button>
-                <button type="button" class="btn btn--secondary" onclick="document.querySelector('.uci-textarea').value=''; document.querySelector('form').submit();">
+                <button type="button" class="btn-admin btn-admin-secondary" onclick="document.querySelector('.uci-textarea').value=''; document.querySelector('form').submit();">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;">
                         <path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/>
                     </svg>
@@ -308,7 +308,7 @@ Exempel:
             <span style="font-size: var(--text-sm); color: var(--color-text-secondary);">
                 <?= count($validResults) ?> giltiga UCI-ID
             </span>
-            <button class="btn btn--secondary" onclick="copyToClipboard('<?= htmlspecialchars($allFormatted) ?>', this)">
+            <button class="btn-admin btn-admin-secondary" onclick="copyToClipboard('<?= htmlspecialchars($allFormatted) ?>', this)">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;">
                     <rect width="14" height="14" x="8" y="8" rx="2" ry="2"/><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"/>
                 </svg>

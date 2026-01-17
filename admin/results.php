@@ -99,7 +99,7 @@ $breadcrumbs = [
 if ($isPromotorOnly) {
     $page_actions = '';
 } else {
-    $page_actions = '<a href="/admin/import-results.php" class="btn btn--primary">
+    $page_actions = '<a href="/admin/import-results.php" class="btn-admin btn-admin-primary">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
         Importera Resultat
     </a>';
@@ -127,13 +127,13 @@ include __DIR__ . '/components/unified-layout.php';
 <?php endif; ?>
 
 <!-- Filter Section -->
-<div class="card">
-    <div class="card-body">
-        <form method="GET" class="form-row">
+<div class="admin-card">
+    <div class="admin-card-body">
+        <form method="GET" class="admin-form-row">
             <!-- Year Filter -->
-            <div class="form-group" style="margin-bottom: 0;">
-                <label for="year-filter" class="label">År</label>
-                <select id="year-filter" name="year" class="input" onchange="this.form.submit()">
+            <div class="admin-form-group" style="margin-bottom: 0;">
+                <label for="year-filter" class="admin-form-label">År</label>
+                <select id="year-filter" name="year" class="admin-form-select" onchange="this.form.submit()">
                     <option value="">Alla år</option>
                     <?php foreach ($allYears as $yearRow): ?>
                         <option value="<?= $yearRow['year'] ?>" <?= $filterYear == $yearRow['year'] ? 'selected' : '' ?>>
@@ -144,9 +144,9 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
 
             <!-- Series Filter -->
-            <div class="form-group" style="margin-bottom: 0;">
-                <label for="series-filter" class="label">Serie<?= $filterYear ? ' (' . $filterYear . ')' : '' ?></label>
-                <select id="series-filter" name="series_id" class="input" onchange="this.form.submit()">
+            <div class="admin-form-group" style="margin-bottom: 0;">
+                <label for="series-filter" class="admin-form-label">Serie<?= $filterYear ? ' (' . $filterYear . ')' : '' ?></label>
+                <select id="series-filter" name="series_id" class="admin-form-select" onchange="this.form.submit()">
                     <option value="">Alla serier</option>
                     <?php foreach ($allSeries as $series): ?>
                         <option value="<?= $series['id'] ?>" <?= $filterSeries == $series['id'] ? 'selected' : '' ?>>
@@ -163,7 +163,7 @@ include __DIR__ . '/components/unified-layout.php';
                 <div class="flex items-center gap-sm flex-wrap">
                     <span class="text-sm text-secondary">Visar:</span>
                     <?php if ($filterSeries): ?>
-                        <span class="badge badge badge--info">
+                        <span class="admin-badge admin-badge-info">
                             <?php
                             $seriesName = array_filter($allSeries, function($s) use ($filterSeries) {
                                 return $s['id'] == $filterSeries;
@@ -173,9 +173,9 @@ include __DIR__ . '/components/unified-layout.php';
                         </span>
                     <?php endif; ?>
                     <?php if ($filterYear): ?>
-                        <span class="badge badge badge--warning"><?= $filterYear ?></span>
+                        <span class="admin-badge admin-badge-warning"><?= $filterYear ?></span>
                     <?php endif; ?>
-                    <a href="/admin/results.php" class="btn btn--secondary btn--sm">
+                    <a href="/admin/results.php" class="btn-admin btn-admin-secondary btn-admin-sm">
                         Visa alla
                     </a>
                 </div>
@@ -185,21 +185,21 @@ include __DIR__ . '/components/unified-layout.php';
 </div>
 
 <?php if (empty($events)): ?>
-    <div class="card">
-        <div class="card-body">
-            <div class="empty-state">
+    <div class="admin-card">
+        <div class="admin-card-body">
+            <div class="admin-empty-state">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>
                 <h3>Inga event hittades</h3>
                 <p>Skapa ett event först eller ändra filtren.</p>
-                <a href="/admin/events/create" class="btn btn--primary">Skapa Event</a>
+                <a href="/admin/events/create" class="btn-admin btn-admin-primary">Skapa Event</a>
             </div>
         </div>
     </div>
 <?php else: ?>
     <!-- Events Table -->
-    <div class="card">
-        <div class="table-container">
-            <table class="table">
+    <div class="admin-card">
+        <div class="admin-table-container">
+            <table class="admin-table">
                 <thead>
                     <tr>
                         <th>Datum</th>
@@ -228,7 +228,7 @@ include __DIR__ . '/components/unified-layout.php';
                             <td><?= h($event['location'] ?? '-') ?></td>
                             <td><?= h($event['series_name'] ?? '-') ?></td>
                             <td class="text-center">
-                                <span class="badge badge-<?= $event['result_count'] > 0 ? 'success' : 'info' ?>" title="Totalt antal resultat">
+                                <span class="admin-badge admin-badge-<?= $event['result_count'] > 0 ? 'success' : 'info' ?>" title="Totalt antal resultat">
                                     <?= $event['result_count'] ?>
                                 </span>
                                 <?php if ($event['dnf_count'] > 0 || $event['dns_count'] > 0): ?>
@@ -238,15 +238,15 @@ include __DIR__ . '/components/unified-layout.php';
                                 <?php endif; ?>
                             </td>
                             <td class="table-actions">
-                                <a href="/event/<?= $event['id'] ?>" class="btn btn--secondary btn--sm" title="Visa">
+                                <a href="/event/<?= $event['id'] ?>" class="btn-admin btn-admin-secondary btn-admin-sm" title="Visa">
                                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
                                 </a>
                                 <?php if ($event['result_count'] > 0): ?>
-                                    <a href="/admin/edit-results.php?event_id=<?= $event['id'] ?>" class="btn btn--primary btn--sm" title="Editera">
+                                    <a href="/admin/edit-results.php?event_id=<?= $event['id'] ?>" class="btn-admin btn-admin-primary btn-admin-sm" title="Editera">
                                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
                                     </a>
                                 <?php else: ?>
-                                    <a href="/admin/import-results.php" class="btn btn--secondary btn--sm" title="Importera">
+                                    <a href="/admin/import-results.php" class="btn-admin btn-admin-secondary btn-admin-sm" title="Importera">
                                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
                                     </a>
                                 <?php endif; ?>

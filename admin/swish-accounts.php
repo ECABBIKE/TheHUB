@@ -276,31 +276,31 @@ include __DIR__ . '/components/unified-layout.php';
         <?php endif; ?>
 
         <div class="form-grid">
-            <div class="form-group">
-                <label class="label">Namn *</label>
-                <input type="text" name="name" class="input" required
+            <div class="admin-form-group">
+                <label class="admin-form-label">Namn *</label>
+                <input type="text" name="name" class="admin-form-input" required
                        value="<?= htmlspecialchars($editRecipient['name'] ?? '') ?>"
                        placeholder="T.ex. Arrangörsnamn">
             </div>
 
-            <div class="form-group">
-                <label class="label">Swish-nummer *</label>
-                <input type="text" name="swish_number" class="input" required
+            <div class="admin-form-group">
+                <label class="admin-form-label">Swish-nummer *</label>
+                <input type="text" name="swish_number" class="admin-form-input" required
                        value="<?= htmlspecialchars($editRecipient['swish_number'] ?? '') ?>"
                        placeholder="1234567890">
                 <small class="text-secondary">10 siffror (mobilnr eller företagsnr)</small>
             </div>
 
-            <div class="form-group">
-                <label class="label">Visningsnamn</label>
-                <input type="text" name="swish_name" class="input"
+            <div class="admin-form-group">
+                <label class="admin-form-label">Visningsnamn</label>
+                <input type="text" name="swish_name" class="admin-form-input"
                        value="<?= htmlspecialchars($editRecipient['swish_name'] ?? '') ?>"
                        placeholder="Visas vid betalning">
             </div>
 
-            <div class="form-group">
-                <label class="label">Betalningstyp</label>
-                <select name="gateway_type" class="input">
+            <div class="admin-form-group">
+                <label class="admin-form-label">Betalningstyp</label>
+                <select name="gateway_type" class="admin-form-select">
                     <option value="manual" <?= ($editRecipient['gateway_type'] ?? 'manual') === 'manual' ? 'selected' : '' ?>>
                         Manuell Swish (användare verifierar)
                     </option>
@@ -311,8 +311,8 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
 
             <?php if ($editRecipient): ?>
-            <div class="form-group">
-                <label class="label flex items-center gap-sm">
+            <div class="admin-form-group">
+                <label class="admin-form-label flex items-center gap-sm">
                     <input type="checkbox" name="is_active" value="1"
                            <?= ($editRecipient['is_active'] ?? 1) ? 'checked' : '' ?>>
                     Aktiv
@@ -322,12 +322,12 @@ include __DIR__ . '/components/unified-layout.php';
         </div>
 
         <div class="flex gap-md mt-lg">
-            <button type="submit" class="btn btn--primary">
+            <button type="submit" class="btn-admin btn-admin-primary">
                 <i data-lucide="<?= $editRecipient ? 'save' : 'plus' ?>"></i>
                 <?= $editRecipient ? 'Spara ändringar' : 'Skapa konto' ?>
             </button>
             <?php if ($editRecipient): ?>
-            <a href="/admin/swish-accounts" class="btn btn--secondary">Avbryt</a>
+            <a href="/admin/swish-accounts" class="btn-admin btn-admin-secondary">Avbryt</a>
             <?php endif; ?>
         </div>
     </form>
@@ -403,11 +403,11 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
 
             <div class="swish-card-actions mt-md">
-                <a href="?edit=<?= $r['id'] ?>" class="btn btn--sm btn--secondary">
+                <a href="?edit=<?= $r['id'] ?>" class="btn-admin btn-admin-sm btn-admin-secondary">
                     <i data-lucide="edit"></i> Redigera
                 </a>
                 <?php if ($isAuto && $isSuperAdmin): ?>
-                <a href="/admin/certificates?id=<?= $r['id'] ?>" class="btn btn--sm btn--secondary">
+                <a href="/admin/certificates?id=<?= $r['id'] ?>" class="btn-admin btn-admin-sm btn-admin-secondary">
                     <i data-lucide="shield-check"></i> Certifikat
                 </a>
                 <?php endif; ?>
@@ -416,7 +416,7 @@ include __DIR__ . '/components/unified-layout.php';
                     <?= csrf_field() ?>
                     <input type="hidden" name="action" value="delete">
                     <input type="hidden" name="recipient_id" value="<?= $r['id'] ?>">
-                    <button type="submit" class="btn btn--sm btn--danger">
+                    <button type="submit" class="btn-admin btn-admin-sm btn-admin-danger">
                         <i data-lucide="trash-2"></i>
                     </button>
                 </form>
@@ -429,11 +429,11 @@ include __DIR__ . '/components/unified-layout.php';
 <?php endif; ?>
 
 <!-- Help Section -->
-<div class="card mt-xl">
-    <div class="card-header">
+<div class="admin-card mt-xl">
+    <div class="admin-card-header">
         <h2><i data-lucide="help-circle"></i> Hur fungerar Swish-betalningar?</h2>
     </div>
-    <div class="card-body">
+    <div class="admin-card-body">
         <div class="grid grid-cols-1 gs-md-grid-cols-2 gap-lg">
             <div>
                 <h4 class="text-accent mb-sm">Manuell Swish</h4>
