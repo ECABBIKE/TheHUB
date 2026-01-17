@@ -1654,14 +1654,16 @@ class AnalyticsEngine {
 
         try {
             // Hitta alla rookies for detta ar (forsta gang de hade resultat)
+            // LEFT JOIN med clubs for att validera att club_id finns (FK constraint)
             $rookies = $this->pdo->prepare("
                 SELECT
                     v.canonical_rider_id as rider_id,
-                    r.club_id,
+                    CASE WHEN c.id IS NOT NULL THEN r.club_id ELSE NULL END as club_id,
                     r.gender,
                     r.birth_year
                 FROM v_canonical_riders v
                 JOIN riders r ON v.canonical_rider_id = r.id
+                LEFT JOIN clubs c ON r.club_id = c.id
                 WHERE v.canonical_rider_id IN (
                     SELECT v2.canonical_rider_id
                     FROM results res
@@ -2483,9 +2485,11 @@ class AnalyticsEngine {
         $discipline = null;
 
         if ($wasActive) {
+            // Validera att club_id finns i clubs-tabellen (FK constraint)
             $stmt = $this->pdo->prepare("
-                SELECT r.club_id
+                SELECT CASE WHEN c.id IS NOT NULL THEN r.club_id ELSE NULL END as club_id
                 FROM riders r
+                LEFT JOIN clubs c ON r.club_id = c.id
                 WHERE r.id = ?
             ");
             $stmt->execute([$riderId]);
