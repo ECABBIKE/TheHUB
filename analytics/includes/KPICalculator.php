@@ -86,9 +86,13 @@ class KPICalculator {
      * Berakna retention rate (andel som aterkom fran forra aret)
      *
      * @param int $year Ar att berakna for
+     * @param int|null $brandId Filtrera pa varumarke
      * @return float Retention rate i procent (0-100)
      */
-    public function getRetentionRate(int $year): float {
+    public function getRetentionRate(int $year, ?int $brandId = null): float {
+        $brandJoin = $brandId !== null ? "JOIN series s ON prev.primary_series_id = s.id" : "";
+        $brandFilter = $brandId !== null ? "AND s.brand_id = ?" : "";
+
         $stmt = $this->pdo->prepare("
             SELECT
                 ROUND(
@@ -96,12 +100,16 @@ class KPICalculator {
                     NULLIF(COUNT(DISTINCT prev.rider_id), 0), 1
                 ) as retention_rate
             FROM rider_yearly_stats prev
+            $brandJoin
             LEFT JOIN rider_yearly_stats curr
                 ON prev.rider_id = curr.rider_id
                 AND curr.season_year = prev.season_year + 1
             WHERE prev.season_year = ?
+            $brandFilter
         ");
-        $stmt->execute([$year - 1]);
+        $params = [$year - 1];
+        if ($brandId !== null) $params[] = $brandId;
+        $stmt->execute($params);
         return (float)($stmt->fetchColumn() ?: 0);
     }
 
@@ -109,24 +117,33 @@ class KPICalculator {
      * Berakna churn rate (andel som forsvann fran forra aret)
      *
      * @param int $year Ar att berakna for
+     * @param int|null $brandId Filtrera pa varumarke
      * @return float Churn rate i procent (0-100)
      */
-    public function getChurnRate(int $year): float {
-        return 100 - $this->getRetentionRate($year);
+    public function getChurnRate(int $year, ?int $brandId = null): float {
+        return 100 - $this->getRetentionRate($year, $brandId);
     }
 
     /**
      * Hamta antal nya riders (rookies)
      *
      * @param int $year Ar
+     * @param int|null $brandId Filtrera pa varumarke
      * @return int Antal nya riders
      */
-    public function getNewRidersCount(int $year): int {
+    public function getNewRidersCount(int $year, ?int $brandId = null): int {
+        $brandJoin = $brandId !== null ? "JOIN series s ON rys.primary_series_id = s.id" : "";
+        $brandFilter = $brandId !== null ? "AND s.brand_id = ?" : "";
+
         $stmt = $this->pdo->prepare("
-            SELECT COUNT(*) FROM rider_yearly_stats
-            WHERE season_year = ? AND is_rookie = 1
+            SELECT COUNT(*) FROM rider_yearly_stats rys
+            $brandJoin
+            WHERE rys.season_year = ? AND rys.is_rookie = 1
+            $brandFilter
         ");
-        $stmt->execute([$year]);
+        $params = [$year];
+        if ($brandId !== null) $params[] = $brandId;
+        $stmt->execute($params);
         return (int)$stmt->fetchColumn();
     }
 
@@ -134,14 +151,22 @@ class KPICalculator {
      * Hamta totalt antal aktiva riders
      *
      * @param int $year Ar
+     * @param int|null $brandId Filtrera pa varumarke
      * @return int Antal aktiva riders
      */
-    public function getTotalActiveRiders(int $year): int {
+    public function getTotalActiveRiders(int $year, ?int $brandId = null): int {
+        $brandJoin = $brandId !== null ? "JOIN series s ON rys.primary_series_id = s.id" : "";
+        $brandFilter = $brandId !== null ? "AND s.brand_id = ?" : "";
+
         $stmt = $this->pdo->prepare("
-            SELECT COUNT(*) FROM rider_yearly_stats
-            WHERE season_year = ?
+            SELECT COUNT(*) FROM rider_yearly_stats rys
+            $brandJoin
+            WHERE rys.season_year = ?
+            $brandFilter
         ");
-        $stmt->execute([$year]);
+        $params = [$year];
+        if ($brandId !== null) $params[] = $brandId;
+        $stmt->execute($params);
         return (int)$stmt->fetchColumn();
     }
 
@@ -149,11 +174,12 @@ class KPICalculator {
      * Berakna tillvaxtrate jamfort med forriga aret
      *
      * @param int $year Ar
+     * @param int|null $brandId Filtrera pa varumarke
      * @return float Tillvaxt i procent (kan vara negativ)
      */
-    public function getGrowthRate(int $year): float {
-        $current = $this->getTotalActiveRiders($year);
-        $previous = $this->getTotalActiveRiders($year - 1);
+    public function getGrowthRate(int $year, ?int $brandId = null): float {
+        $current = $this->getTotalActiveRiders($year, $brandId);
+        $previous = $this->getTotalActiveRiders($year - 1, $brandId);
 
         if ($previous == 0) return 0;
 
@@ -164,14 +190,22 @@ class KPICalculator {
      * Hamta retained riders count
      *
      * @param int $year Ar
+     * @param int|null $brandId Filtrera pa varumarke
      * @return int Antal
      */
-    public function getRetainedRidersCount(int $year): int {
+    public function getRetainedRidersCount(int $year, ?int $brandId = null): int {
+        $brandJoin = $brandId !== null ? "JOIN series s ON rys.primary_series_id = s.id" : "";
+        $brandFilter = $brandId !== null ? "AND s.brand_id = ?" : "";
+
         $stmt = $this->pdo->prepare("
-            SELECT COUNT(*) FROM rider_yearly_stats
-            WHERE season_year = ? AND is_retained = 1
+            SELECT COUNT(*) FROM rider_yearly_stats rys
+            $brandJoin
+            WHERE rys.season_year = ? AND rys.is_retained = 1
+            $brandFilter
         ");
-        $stmt->execute([$year]);
+        $params = [$year];
+        if ($brandId !== null) $params[] = $brandId;
+        $stmt->execute($params);
         return (int)$stmt->fetchColumn();
     }
 
@@ -507,18 +541,26 @@ class KPICalculator {
      * Berakna genomsnittsalder
      *
      * @param int $year Ar
+     * @param int|null $brandId Filtrera pa varumarke
      * @return float Genomsnittsalder
      */
-    public function getAverageAge(int $year): float {
+    public function getAverageAge(int $year, ?int $brandId = null): float {
+        $brandJoin = $brandId !== null ? "JOIN series s ON rys.primary_series_id = s.id" : "";
+        $brandFilter = $brandId !== null ? "AND s.brand_id = ?" : "";
+
         $stmt = $this->pdo->prepare("
             SELECT AVG($year - r.birth_year) as avg_age
             FROM rider_yearly_stats rys
             JOIN riders r ON rys.rider_id = r.id
+            $brandJoin
             WHERE rys.season_year = ?
               AND r.birth_year IS NOT NULL
               AND r.birth_year > 1900
+            $brandFilter
         ");
-        $stmt->execute([$year]);
+        $params = [$year];
+        if ($brandId !== null) $params[] = $brandId;
+        $stmt->execute($params);
         return round((float)($stmt->fetchColumn() ?: 0), 1);
     }
 
@@ -526,19 +568,27 @@ class KPICalculator {
      * Hamta konsfordelning
      *
      * @param int $year Ar
+     * @param int|null $brandId Filtrera pa varumarke
      * @return array ['M' => X, 'F' => Y, 'unknown' => Z]
      */
-    public function getGenderDistribution(int $year): array {
+    public function getGenderDistribution(int $year, ?int $brandId = null): array {
+        $brandJoin = $brandId !== null ? "JOIN series s ON rys.primary_series_id = s.id" : "";
+        $brandFilter = $brandId !== null ? "AND s.brand_id = ?" : "";
+
         $stmt = $this->pdo->prepare("
             SELECT
                 COALESCE(r.gender, 'unknown') as gender,
                 COUNT(*) as count
             FROM rider_yearly_stats rys
             JOIN riders r ON rys.rider_id = r.id
+            $brandJoin
             WHERE rys.season_year = ?
+            $brandFilter
             GROUP BY COALESCE(r.gender, 'unknown')
         ");
-        $stmt->execute([$year]);
+        $params = [$year];
+        if ($brandId !== null) $params[] = $brandId;
+        $stmt->execute($params);
 
         $result = ['M' => 0, 'F' => 0, 'unknown' => 0];
         while ($row = $stmt->fetch()) {
@@ -1073,25 +1123,33 @@ class KPICalculator {
      * Andel riders som deltar i mer an en serie
      *
      * @param int $year Ar
+     * @param int|null $brandId Filtrera pa varumarke
      * @return float Rate i procent
      */
-    public function getCrossParticipationRate(int $year): float {
+    public function getCrossParticipationRate(int $year, ?int $brandId = null): float {
         // Total aktiva
-        $total = $this->getTotalActiveRiders($year);
+        $total = $this->getTotalActiveRiders($year, $brandId);
         if ($total == 0) return 0;
 
-        // Riders med mer an 1 serie
+        // Riders med mer an 1 serie (inom varumårket om angett)
+        $brandJoin = $brandId !== null ? "JOIN series s ON sp.series_id = s.id" : "";
+        $brandFilter = $brandId !== null ? "AND s.brand_id = ?" : "";
+
         $stmt = $this->pdo->prepare("
             SELECT COUNT(DISTINCT rider_id)
             FROM (
-                SELECT rider_id, COUNT(DISTINCT series_id) as series_count
-                FROM series_participation
-                WHERE season_year = ?
-                GROUP BY rider_id
+                SELECT sp.rider_id, COUNT(DISTINCT sp.series_id) as series_count
+                FROM series_participation sp
+                $brandJoin
+                WHERE sp.season_year = ?
+                $brandFilter
+                GROUP BY sp.rider_id
                 HAVING series_count > 1
             ) as multi_series
         ");
-        $stmt->execute([$year]);
+        $params = [$year];
+        if ($brandId !== null) $params[] = $brandId;
+        $stmt->execute($params);
         $multiCount = (int)$stmt->fetchColumn();
 
         return round($multiCount / $total * 100, 1);
@@ -1397,19 +1455,20 @@ class KPICalculator {
      * Hamta alla nyckeltal for ett ar (for dashboard)
      *
      * @param int $year Ar
+     * @param int|null $brandId Filtrera pa varumarke
      * @return array Alla KPIs
      */
-    public function getAllKPIs(int $year): array {
+    public function getAllKPIs(int $year, ?int $brandId = null): array {
         return [
-            'total_riders' => $this->getTotalActiveRiders($year),
-            'new_riders' => $this->getNewRidersCount($year),
-            'retained_riders' => $this->getRetainedRidersCount($year),
-            'retention_rate' => $this->getRetentionRate($year),
-            'churn_rate' => $this->getChurnRate($year),
-            'growth_rate' => $this->getGrowthRate($year),
-            'cross_participation_rate' => $this->getCrossParticipationRate($year),
-            'average_age' => $this->getAverageAge($year),
-            'gender_distribution' => $this->getGenderDistribution($year)
+            'total_riders' => $this->getTotalActiveRiders($year, $brandId),
+            'new_riders' => $this->getNewRidersCount($year, $brandId),
+            'retained_riders' => $this->getRetainedRidersCount($year, $brandId),
+            'retention_rate' => $this->getRetentionRate($year, $brandId),
+            'churn_rate' => $this->getChurnRate($year, $brandId),
+            'growth_rate' => $this->getGrowthRate($year, $brandId),
+            'cross_participation_rate' => $this->getCrossParticipationRate($year, $brandId),
+            'average_age' => $this->getAverageAge($year, $brandId),
+            'gender_distribution' => $this->getGenderDistribution($year, $brandId)
         ];
     }
 
@@ -1418,11 +1477,12 @@ class KPICalculator {
      *
      * @param int $year1 Forsta ar
      * @param int $year2 Andra ar
+     * @param int|null $brandId Filtrera pa varumarke
      * @return array Jamforelsedata
      */
-    public function compareYears(int $year1, int $year2): array {
-        $kpi1 = $this->getAllKPIs($year1);
-        $kpi2 = $this->getAllKPIs($year2);
+    public function compareYears(int $year1, int $year2, ?int $brandId = null): array {
+        $kpi1 = $this->getAllKPIs($year1, $brandId);
+        $kpi2 = $this->getAllKPIs($year2, $brandId);
 
         $result = [];
         foreach ($kpi1 as $key => $value1) {
