@@ -1679,41 +1679,192 @@ class AnalyticsEngine {
             $total = count($rookieList);
             $processed = 0;
 
+            if ($total === 0) {
+                $this->endJob('success', 0, ['cohort_year' => $cohortYear, 'rookies_found' => 0]);
+                return 0;
+            }
+
+            // === BATCH PRE-COMPUTE ALL DATA ===
+            $riderIds = array_column($rookieList, 'rider_id');
+            $placeholders = implode(',', array_fill(0, count($riderIds), '?'));
+
+            // 1. Batch: Activity in year+1 and year+2 (retention)
+            $activityMap = [];
+            $activityStmt = $this->pdo->prepare("
+                SELECT
+                    v.canonical_rider_id as rider_id,
+                    GROUP_CONCAT(DISTINCT YEAR(e.date)) as active_years
+                FROM results res
+                JOIN events e ON res.event_id = e.id
+                JOIN v_canonical_riders v ON res.cyclist_id = v.original_rider_id
+                WHERE v.canonical_rider_id IN ($placeholders)
+                  AND YEAR(e.date) IN (?, ?)
+                GROUP BY v.canonical_rider_id
+            ");
+            $activityStmt->execute(array_merge($riderIds, [$cohortYear + 1, $cohortYear + 2]));
+            while ($row = $activityStmt->fetch(PDO::FETCH_ASSOC)) {
+                $years = explode(',', $row['active_years']);
+                $activityMap[$row['rider_id']] = [
+                    'year2' => in_array((string)($cohortYear + 1), $years),
+                    'year3' => in_array((string)($cohortYear + 2), $years)
+                ];
+            }
+
+            // 2. Batch: First brand/series for each rider
+            $brandMap = [];
+            $brandStmt = $this->pdo->prepare("
+                SELECT
+                    v.canonical_rider_id as rider_id,
+                    (
+                        SELECT s.brand_id
+                        FROM results r2
+                        JOIN events e2 ON r2.event_id = e2.id
+                        JOIN series_events se2 ON se2.event_id = e2.id
+                        JOIN series s ON s.id = se2.series_id
+                        JOIN v_canonical_riders v2 ON r2.cyclist_id = v2.original_rider_id
+                        WHERE v2.canonical_rider_id = v.canonical_rider_id
+                          AND YEAR(e2.date) = ?
+                        ORDER BY e2.date ASC
+                        LIMIT 1
+                    ) as first_brand_id,
+                    (
+                        SELECT se3.series_id
+                        FROM results r3
+                        JOIN events e3 ON r3.event_id = e3.id
+                        JOIN series_events se3 ON se3.event_id = e3.id
+                        JOIN v_canonical_riders v3 ON r3.cyclist_id = v3.original_rider_id
+                        WHERE v3.canonical_rider_id = v.canonical_rider_id
+                          AND YEAR(e3.date) = ?
+                        ORDER BY e3.date ASC
+                        LIMIT 1
+                    ) as first_series_id
+                FROM v_canonical_riders v
+                WHERE v.canonical_rider_id IN ($placeholders)
+                GROUP BY v.canonical_rider_id
+            ");
+            $brandStmt->execute(array_merge([$cohortYear, $cohortYear], $riderIds));
+            while ($row = $brandStmt->fetch(PDO::FETCH_ASSOC)) {
+                $brandMap[$row['rider_id']] = [
+                    'brand_id' => $row['first_brand_id'] ? (int)$row['first_brand_id'] : null,
+                    'series_id' => $row['first_series_id'] ? (int)$row['first_series_id'] : null
+                ];
+            }
+
+            // 3. Batch: Career seasons and last active year
+            $careerMap = [];
+            $careerStmt = $this->pdo->prepare("
+                SELECT
+                    v.canonical_rider_id as rider_id,
+                    COUNT(DISTINCT YEAR(e.date)) as total_seasons,
+                    MAX(YEAR(e.date)) as last_active_year
+                FROM results res
+                JOIN events e ON res.event_id = e.id
+                JOIN v_canonical_riders v ON res.cyclist_id = v.original_rider_id
+                WHERE v.canonical_rider_id IN ($placeholders)
+                GROUP BY v.canonical_rider_id
+            ");
+            $careerStmt->execute($riderIds);
+            while ($row = $careerStmt->fetch(PDO::FETCH_ASSOC)) {
+                $careerMap[$row['rider_id']] = [
+                    'total_seasons' => (int)$row['total_seasons'],
+                    'last_active_year' => $row['last_active_year'] ? (int)$row['last_active_year'] : null
+                ];
+            }
+
+            // 4. Batch: First season metrics for ALL rookies at once
+            $metricsMap = [];
+            $metricsStmt = $this->pdo->prepare("
+                SELECT
+                    v.canonical_rider_id as rider_id,
+                    COUNT(*) as total_starts,
+                    COUNT(DISTINCT res.event_id) as total_events,
+                    SUM(CASE WHEN res.status = 'finished' OR res.position IS NOT NULL THEN 1 ELSE 0 END) as total_finishes,
+                    SUM(CASE WHEN res.status = 'DNF' THEN 1 ELSE 0 END) as total_dnf,
+                    MIN(CASE WHEN res.position > 0 THEN res.position END) as best_position,
+                    AVG(CASE WHEN res.position > 0 THEN res.position END) as avg_position,
+                    SUM(CASE WHEN res.position <= 3 THEN 1 ELSE 0 END) as podium_count,
+                    SUM(CASE WHEN res.position <= 10 THEN 1 ELSE 0 END) as top10_count,
+                    MIN(e.date) as first_event_date,
+                    MAX(e.date) as last_event_date
+                FROM results res
+                JOIN events e ON res.event_id = e.id
+                JOIN v_canonical_riders v ON res.cyclist_id = v.original_rider_id
+                WHERE v.canonical_rider_id IN ($placeholders)
+                  AND YEAR(e.date) = ?
+                GROUP BY v.canonical_rider_id
+            ");
+            $metricsStmt->execute(array_merge($riderIds, [$cohortYear]));
+            while ($row = $metricsStmt->fetch(PDO::FETCH_ASSOC)) {
+                $metricsMap[$row['rider_id']] = $row;
+            }
+
+            // === NOW LOOP WITH LOOKUPS ONLY (no queries!) ===
             foreach ($rookieList as $rookie) {
                 $riderId = (int)$rookie['rider_id'];
 
-                // Berakna first season metrics
-                $metrics = $this->calculateSingleRiderFirstSeason($riderId, $cohortYear);
-
-                if ($metrics) {
-                    // Lagg till rider-specifik data
-                    $metrics['club_id'] = $rookie['club_id'];
-                    $metrics['gender'] = $rookie['gender'] ?? 'U';
-                    $metrics['age_at_first_start'] = $rookie['birth_year']
-                        ? $cohortYear - (int)$rookie['birth_year']
-                        : null;
-
-                    // Kolla om aterkom ar 2 och 3
-                    $metrics['returned_year2'] = $this->hadActivityInYear($riderId, $cohortYear + 1) ? 1 : 0;
-                    $metrics['returned_year3'] = $this->hadActivityInYear($riderId, $cohortYear + 2) ? 1 : 0;
-
-                    // Resolve first brand (v3.1.1)
-                    $brandData = $this->resolveFirstBrandForRider($riderId, $cohortYear);
-                    $metrics['first_brand_id'] = $brandData['brand_id'];
-                    $metrics['first_series_id'] = $brandData['series_id'];
-
-                    // Berakna total career seasons
-                    $metrics['total_career_seasons'] = $this->getTotalCareerSeasons($riderId);
-                    $metrics['last_active_year'] = $this->getLastActiveYear($riderId);
-
-                    // Berakna engagement score och pattern
-                    $metrics['engagement_score'] = $this->calculateEngagementScore($metrics);
-                    $metrics['activity_pattern'] = $this->classifyActivityPattern($metrics['engagement_score']);
-
-                    // Spara till databas
-                    $this->upsertRiderFirstSeason($riderId, $cohortYear, $metrics, $snapshotId);
-                    $count++;
+                // Lookup pre-computed metrics
+                $rawMetrics = $metricsMap[$riderId] ?? null;
+                if (!$rawMetrics || $rawMetrics['total_starts'] == 0) {
+                    $processed++;
+                    continue;
                 }
+
+                // Build metrics from pre-computed data
+                $metrics = [
+                    'total_starts' => (int)$rawMetrics['total_starts'],
+                    'total_events' => (int)$rawMetrics['total_events'],
+                    'total_finishes' => (int)$rawMetrics['total_finishes'],
+                    'total_dnf' => (int)$rawMetrics['total_dnf'],
+                    'best_position' => $rawMetrics['best_position'] ? (int)$rawMetrics['best_position'] : null,
+                    'avg_position' => $rawMetrics['avg_position'] ? round((float)$rawMetrics['avg_position'], 2) : null,
+                    'podium_count' => (int)$rawMetrics['podium_count'],
+                    'top10_count' => (int)$rawMetrics['top10_count'],
+                    'first_event_date' => $rawMetrics['first_event_date'],
+                    'last_event_date' => $rawMetrics['last_event_date'],
+                ];
+
+                // Calculate derived metrics
+                $metrics['dnf_rate'] = $metrics['total_starts'] > 0
+                    ? round($metrics['total_dnf'] / $metrics['total_starts'], 4)
+                    : 0;
+
+                if ($metrics['first_event_date'] && $metrics['last_event_date']) {
+                    $first = new DateTime($metrics['first_event_date']);
+                    $last = new DateTime($metrics['last_event_date']);
+                    $metrics['season_span_days'] = $first->diff($last)->days;
+                } else {
+                    $metrics['season_span_days'] = 0;
+                }
+
+                // Add rider-specific data
+                $metrics['club_id'] = $rookie['club_id'];
+                $metrics['gender'] = $rookie['gender'] ?? 'U';
+                $metrics['age_at_first_start'] = $rookie['birth_year']
+                    ? $cohortYear - (int)$rookie['birth_year']
+                    : null;
+
+                // Lookup pre-computed activity (no query!)
+                $activity = $activityMap[$riderId] ?? ['year2' => false, 'year3' => false];
+                $metrics['returned_year2'] = $activity['year2'] ? 1 : 0;
+                $metrics['returned_year3'] = $activity['year3'] ? 1 : 0;
+
+                // Lookup pre-computed brand (no query!)
+                $brand = $brandMap[$riderId] ?? ['brand_id' => null, 'series_id' => null];
+                $metrics['first_brand_id'] = $brand['brand_id'];
+                $metrics['first_series_id'] = $brand['series_id'];
+
+                // Lookup pre-computed career stats (no query!)
+                $career = $careerMap[$riderId] ?? ['total_seasons' => 1, 'last_active_year' => $cohortYear];
+                $metrics['total_career_seasons'] = $career['total_seasons'];
+                $metrics['last_active_year'] = $career['last_active_year'];
+
+                // Calculate engagement score and pattern
+                $metrics['engagement_score'] = $this->calculateEngagementScore($metrics);
+                $metrics['activity_pattern'] = $this->classifyActivityPattern($metrics['engagement_score']);
+
+                // Spara till databas
+                $this->upsertRiderFirstSeason($riderId, $cohortYear, $metrics, $snapshotId);
+                $count++;
 
                 $processed++;
                 if ($progressCallback && ($processed % 50 === 0 || $processed === $total)) {
