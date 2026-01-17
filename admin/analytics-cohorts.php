@@ -22,7 +22,7 @@ global $pdo;
 
 // Arval
 $currentYear = (int)date('Y');
-$selectedCohort = isset($_GET['cohort']) ? (int)$_GET['cohort'] : $currentYear - 3;
+$selectedCohort = isset($_GET['cohort']) && $_GET['cohort'] !== '' ? (int)$_GET['cohort'] : $currentYear - 3;
 $selectedBrand = isset($_GET['brand']) && $_GET['brand'] !== '' ? (int)$_GET['brand'] : null;
 
 // Compare kan komma som array (checkboxes) eller som kommaseparerad strang
