@@ -99,6 +99,70 @@ try {
     $stmt->execute($params);
     $events = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+    // För varje event, beräkna exklusiva deltagare (som ENDAST tävlade på detta event)
+    // samt hur många av dem som även tävlade i annan serie
+    foreach ($events as &$event) {
+        // Hitta deltagare som ENDAST tävlade på detta event under året (inom vald serie/brand)
+        $exclusiveSql = "
+            SELECT r.cyclist_id
+            FROM results r
+            WHERE r.event_id = ?
+            AND r.cyclist_id IN (
+                -- Deltagare som endast har 1 event under året inom samma brand/serie
+                SELECT sub_r.cyclist_id
+                FROM results sub_r
+                JOIN events sub_e ON sub_e.id = sub_r.event_id
+                " . ($selectedBrandId ? "
+                    JOIN series_events sub_se ON sub_se.event_id = sub_e.id
+                    JOIN series sub_s ON sub_s.id = sub_se.series_id
+                " : "") . "
+                WHERE YEAR(sub_e.date) = ?
+                " . ($selectedBrandId ? "AND sub_s.brand_id = ?" : "") . "
+                GROUP BY sub_r.cyclist_id
+                HAVING COUNT(DISTINCT sub_r.event_id) = 1
+            )
+        ";
+
+        $exclusiveParams = [$event['id'], $selectedYear];
+        if ($selectedBrandId) {
+            $exclusiveParams[] = $selectedBrandId;
+        }
+
+        $stmt = $pdo->prepare($exclusiveSql);
+        $stmt->execute($exclusiveParams);
+        $exclusiveRiders = $stmt->fetchAll(PDO::FETCH_COLUMN);
+        $event['exclusive_count'] = count($exclusiveRiders);
+
+        // Av dessa exklusiva, hur många tävlade i ANNAN serie under året?
+        $event['exclusive_other_series'] = 0;
+        if (!empty($exclusiveRiders)) {
+            $placeholders = implode(',', array_fill(0, count($exclusiveRiders), '?'));
+
+            // Hitta deltagare som har resultat i en annan serie under samma år
+            $otherSeriesSql = "
+                SELECT COUNT(DISTINCT r.cyclist_id)
+                FROM results r
+                JOIN events e ON e.id = r.event_id
+                JOIN series_events se ON se.event_id = e.id
+                JOIN series s ON s.id = se.series_id
+                WHERE YEAR(e.date) = ?
+                AND r.cyclist_id IN ($placeholders)
+                " . ($selectedBrandId ? "AND s.brand_id != ?" : "") . "
+            ";
+
+            $otherParams = [$selectedYear];
+            $otherParams = array_merge($otherParams, $exclusiveRiders);
+            if ($selectedBrandId) {
+                $otherParams[] = $selectedBrandId;
+            }
+
+            $stmt = $pdo->prepare($otherSeriesSql);
+            $stmt->execute($otherParams);
+            $event['exclusive_other_series'] = (int)$stmt->fetchColumn();
+        }
+    }
+    unset($event); // Bryt referensen
+
     // Beräkna statistik
     $totalParticipants = 0;
     $uniqueRiders = [];
@@ -404,6 +468,7 @@ include __DIR__ . '/components/unified-layout.php';
                     <th>Datum</th>
                     <th>Plats</th>
                     <th class="text-right">Deltagare</th>
+                    <th class="text-right" title="Deltagare som ENDAST tävlade på detta event (i annan serie)">Endast detta</th>
                 </tr>
             </thead>
             <tbody>
@@ -413,6 +478,12 @@ include __DIR__ . '/components/unified-layout.php';
                     <td><?= date('Y-m-d', strtotime($event['date'])) ?></td>
                     <td><?= htmlspecialchars($event['location'] ?: '-') ?></td>
                     <td class="text-right"><?= number_format($event['participants']) ?></td>
+                    <td class="text-right">
+                        <?= number_format($event['exclusive_count']) ?>
+                        <?php if ($event['exclusive_other_series'] > 0): ?>
+                            <span class="text-muted" title="Av dessa tävlade <?= $event['exclusive_other_series'] ?> i annan serie">(<?= $event['exclusive_other_series'] ?>)</span>
+                        <?php endif; ?>
+                    </td>
                 </tr>
                 <?php endforeach; ?>
             </tbody>
