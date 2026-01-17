@@ -22,20 +22,21 @@ requireAnalyticsAccess();
 
 global $pdo;
 
-// Arval - default till innevarande ar
-$currentYear = (int)date('Y');
-$selectedYear = isset($_GET['year']) ? (int)$_GET['year'] : $currentYear;
-$compareYear = isset($_GET['compare']) ? (int)$_GET['compare'] : null;
-$selectedBrand = isset($_GET['brand']) && $_GET['brand'] !== '' ? (int)$_GET['brand'] : null;
-
-// Hamta tillgangliga ar
+// Hamta tillgangliga ar FORST for att kunna valja ratt default
 $availableYears = [];
 try {
     $stmt = $pdo->query("SELECT DISTINCT season_year FROM rider_yearly_stats ORDER BY season_year DESC");
     $availableYears = $stmt->fetchAll(PDO::FETCH_COLUMN);
 } catch (Exception $e) {
+    $currentYear = (int)date('Y');
     $availableYears = range($currentYear, $currentYear - 5);
 }
+
+// Arval - default till senaste aret med data (inte innevarande ar som kanske saknar data)
+$latestYearWithData = !empty($availableYears) ? (int)$availableYears[0] : (int)date('Y');
+$selectedYear = isset($_GET['year']) ? (int)$_GET['year'] : $latestYearWithData;
+$compareYear = isset($_GET['compare']) ? (int)$_GET['compare'] : null;
+$selectedBrand = isset($_GET['brand']) && $_GET['brand'] !== '' ? (int)$_GET['brand'] : null;
 
 // Initiera KPI Calculator
 $kpiCalc = new KPICalculator($pdo);

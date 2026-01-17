@@ -22,6 +22,18 @@ global $pdo;
 
 // Antal ar att visa (kan stallas in via URL)
 $numYears = isset($_GET['years']) ? max(3, min(15, (int)$_GET['years'])) : 10;
+$selectedBrand = isset($_GET['brand']) && $_GET['brand'] !== '' ? (int)$_GET['brand'] : null;
+
+// Initiera KPI Calculator
+$kpiCalc = new KPICalculator($pdo);
+
+// Hamta alla varumarken for dropdown
+$allBrands = [];
+try {
+    $allBrands = $kpiCalc->getAllBrands();
+} catch (Exception $e) {
+    // Tabellen kanske inte finns annu
+}
 
 // Hamta tillgangliga ar
 $availableYears = [];
@@ -34,9 +46,6 @@ try {
 
 // Begransar till senaste N ar
 $yearsToShow = array_slice($availableYears, -$numYears);
-
-// Initiera KPI Calculator
-$kpiCalc = new KPICalculator($pdo);
 
 // Hamta all trenddata
 $trendsData = [];
@@ -113,9 +122,24 @@ include __DIR__ . '/components/unified-layout.php';
 <!-- Chart.js -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
-<!-- Year Range Selector -->
+<!-- Filter Bar -->
 <div class="filter-bar">
     <form method="get" class="filter-form">
+        <?php if (!empty($allBrands)): ?>
+        <div class="filter-group">
+            <label class="filter-label">Varumarke</label>
+            <select name="brand" class="form-select" onchange="this.form.submit()">
+                <option value="">Alla varumarken</option>
+                <?php foreach ($allBrands as $brand): ?>
+                    <option value="<?= $brand['id'] ?>" <?= $selectedBrand == $brand['id'] ? 'selected' : '' ?>
+                        <?php if (!empty($brand['accent_color'])): ?>style="border-left: 3px solid <?= htmlspecialchars($brand['accent_color']) ?>"<?php endif; ?>>
+                        <?= htmlspecialchars($brand['name']) ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+        <?php endif; ?>
+
         <div class="filter-group">
             <label class="filter-label">Antal ar</label>
             <select name="years" class="form-select" onchange="this.form.submit()">
@@ -132,6 +156,25 @@ include __DIR__ . '/components/unified-layout.php';
         </div>
     </form>
 </div>
+
+<?php if ($selectedBrand): ?>
+    <?php
+    $brandName = '';
+    foreach ($allBrands as $b) {
+        if ($b['id'] == $selectedBrand) {
+            $brandName = $b['name'];
+            break;
+        }
+    }
+    ?>
+<div class="alert alert-info" style="margin-bottom: var(--space-lg);">
+    <i data-lucide="filter"></i>
+    <div>
+        Visar trender for <strong><?= htmlspecialchars($brandName) ?></strong>.
+        <a href="?years=<?= $numYears ?>">Visa alla varumarken</a>
+    </div>
+</div>
+<?php endif; ?>
 
 <?php if (isset($error)): ?>
 <div class="alert alert-warning">

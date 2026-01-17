@@ -162,6 +162,22 @@ try {
     $allPointScales = [];
 }
 
+// Get all venues for destination dropdown
+try {
+    $allVenues = $pdo->query("SELECT id, name, city FROM venues WHERE active = 1 ORDER BY name")->fetchAll(PDO::FETCH_ASSOC);
+} catch (Exception $e) {
+    $allVenues = [];
+}
+
+// Count events without venue
+$eventsWithoutVenue = 0;
+try {
+    $stmt = $pdo->query("SELECT COUNT(*) FROM events WHERE (venue_id IS NULL OR venue_id = 0) AND location IS NOT NULL AND location != ''");
+    $eventsWithoutVenue = (int)$stmt->fetchColumn();
+} catch (Exception $e) {
+    // Ignore
+}
+
 // Get unique brands (series names without year) for filter
 try {
     if ($filterYear) {
@@ -218,12 +234,21 @@ if ($isPromotorOnly) {
     $page_actions = '
     <button id="bulk-edit-toggle" class="btn-admin btn-admin-secondary mr-sm" onclick="toggleBulkEdit(\'event\')">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"/><path d="M18.375 2.625a2.121 2.121 0 1 1 3 3L12 15l-4 1 1-4Z"/></svg>
-        <span id="bulk-edit-label">Massändra tävlingsfält</span>
+        <span id="bulk-edit-label">Massandra tavlingsfalt</span>
     </button>
     <button id="bulk-edit-organizer-toggle" class="btn-admin btn-admin-secondary mr-sm" onclick="toggleBulkEdit(\'organizer\')">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
-        <span id="bulk-edit-organizer-label">Visa arrangörsfält</span>
+        <span id="bulk-edit-organizer-label">Visa arrangorsfalt</span>
     </button>
+    <button id="bulk-edit-destination-toggle" class="btn-admin btn-admin-secondary mr-sm" onclick="toggleBulkEdit(\'destination\')">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+        <span id="bulk-edit-destination-label">Visa destinationsfalt</span>
+    </button>
+    ' . ($eventsWithoutVenue > 0 ? '
+    <a href="/admin/tools/auto-create-venues.php" class="btn-admin btn-admin-warning mr-sm" title="' . $eventsWithoutVenue . ' events saknar destination">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></svg>
+        Auto-skapa (' . $eventsWithoutVenue . ')
+    </a>' : '') . '
     <a href="/admin/events/create" class="btn-admin btn-admin-primary">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
         Nytt Event
@@ -332,21 +357,21 @@ include __DIR__ . '/components/unified-layout.php';
                         <tr>
                             <th class="sticky-col sticky-col-1">Datum</th>
                             <th class="sticky-col sticky-col-2">Namn</th>
-                            <th class="event-field">Serie</th>
-                            <th>Plats</th>
+                            <th class="event-field destination-field">Serie</th>
+                            <th class="destination-field">Destination</th>
+                            <th class="destination-field organizer-field">Arrangor</th>
                             <th class="event-field">Format</th>
                             <th class="event-field">Rankingklass</th>
                             <th class="event-field">Event Format</th>
-                            <th class="event-field">Poängskala</th>
+                            <th class="event-field">Poangskala</th>
                             <th class="event-field">Prismall</th>
                             <th class="event-field">Advent ID</th>
-                            <th class="organizer-field">Arrangör</th>
                             <th class="organizer-field">Webbplats</th>
                             <th class="organizer-field">Kontakt e-post</th>
                             <th class="organizer-field">Kontakt telefon</th>
-                            <th class="organizer-field">Anmälningsfrist</th>
+                            <th class="organizer-field">Anmalningsfrist</th>
                             <th class="organizer-field">Klockslag</th>
-                            <th style="width: 100px;">Åtgärder</th>
+                            <th style="width: 100px;">Atgarder</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -358,7 +383,7 @@ include __DIR__ . '/components/unified-layout.php';
                                         <?= htmlspecialchars($event['name']) ?>
                                     </a>
                                 </td>
-                                <td class="event-field">
+                                <td class="event-field destination-field">
                                     <?php
                                     // Filter series to only show those from the same year as the event
                                     $eventYear = $event['date'] ? date('Y', strtotime($event['date'])) : null;
@@ -378,7 +403,22 @@ include __DIR__ . '/components/unified-layout.php';
                                         <?php endforeach; ?>
                                     </select>
                                 </td>
-                                <td><?= htmlspecialchars($event['location'] ?? '-') ?></td>
+                                <td class="destination-field">
+                                    <select class="admin-form-select" style="min-width: 180px; padding: var(--space-xs) var(--space-sm); font-size: 0.875rem;" onchange="updateVenue(<?= $event['id'] ?>, this.value)">
+                                        <option value="">- Valj destination -</option>
+                                        <?php foreach ($allVenues as $venue): ?>
+                                            <option value="<?= $venue['id'] ?>" <?= ($event['venue_id'] ?? '') == $venue['id'] ? 'selected' : '' ?>>
+                                                <?= htmlspecialchars($venue['name']) ?>
+                                            </option>
+                                        <?php endforeach; ?>
+                                    </select>
+                                    <?php if (empty($event['venue_id']) && !empty($event['location'])): ?>
+                                    <div class="text-xs text-warning mt-xs" title="Event har location men ingen destination">
+                                        <i data-lucide="alert-triangle" style="width: 12px; height: 12px;"></i>
+                                        <?= htmlspecialchars(mb_substr($event['location'], 0, 20)) ?>...
+                                    </div>
+                                    <?php endif; ?>
+                                </td>
                                 <td class="event-field">
                                     <select class="admin-form-select" style="min-width: 120px; padding: var(--space-xs) var(--space-sm);" onchange="updateDiscipline(<?= $event['id'] ?>, this.value)">
                                         <option value="">-</option>
@@ -435,7 +475,7 @@ include __DIR__ . '/components/unified-layout.php';
                                            onblur="updateAdventId(<?= $event['id'] ?>, this.value)"
                                            placeholder="-">
                                 </td>
-                                <td class="organizer-field">
+                                <td class="destination-field organizer-field">
                                     <select class="admin-form-select" style="min-width: 150px; padding: var(--space-xs) var(--space-sm); font-size: 0.875rem;" onchange="updateOrganizerClub(<?= $event['id'] ?>, this.value)">
                                         <option value="">-</option>
                                         <?php foreach ($allClubs as $club): ?>
@@ -700,6 +740,33 @@ async function updateAdventId(eventId, adventId) {
     }
 }
 
+async function updateVenue(eventId, venueId) {
+    try {
+        const response = await fetch('/admin/api/update-event-field.php', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+                event_id: eventId,
+                field: 'venue_id',
+                value: venueId,
+                csrf_token: csrfToken
+            })
+        });
+
+        const result = await response.json();
+        if (!result.success) {
+            alert('Fel: ' + (result.error || 'Kunde inte uppdatera destination'));
+        } else {
+            showToast('Destination uppdaterad', 'success');
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        alert('Fel vid uppdatering av destination');
+    }
+}
+
 async function updateOrganizerClub(eventId, clubId) {
     try {
         const response = await fetch('/admin/api/update-organizer-field.php', {
@@ -814,16 +881,26 @@ if (!document.getElementById('toast-animations')) {
 let bulkEditMode = null;
 let bulkChanges = {};
 
-// Show event fields by default on desktop, hide organizer fields until activated
+// Show event fields by default on desktop, hide organizer and destination fields until activated
 document.addEventListener('DOMContentLoaded', function() {
     const style = document.createElement('style');
     style.textContent = `
-        /* Show event fields by default, hide organizer fields */
+        /* Show event fields by default, hide organizer and destination fields */
         .organizer-field {
+            display: none;
+        }
+        .destination-field {
             display: none;
         }
         .bulk-edit-organizer-mode .organizer-field {
             display: table-cell;
+        }
+        .bulk-edit-destination-mode .destination-field {
+            display: table-cell;
+        }
+        /* In destination mode, hide event-only fields that don't have destination-field class */
+        .bulk-edit-destination-mode .event-field:not(.destination-field) {
+            display: none;
         }
         /* Make the table scrollable in both directions */
         .admin-table-container {
@@ -878,23 +955,29 @@ function toggleBulkEdit(mode) {
     const eventLabel = document.getElementById('bulk-edit-label');
     const organizerBtn = document.getElementById('bulk-edit-organizer-toggle');
     const organizerLabel = document.getElementById('bulk-edit-organizer-label');
+    const destinationBtn = document.getElementById('bulk-edit-destination-toggle');
+    const destinationLabel = document.getElementById('bulk-edit-destination-label');
     const table = document.querySelector('.admin-table');
 
     // If clicking the same mode again, turn it off
     if (bulkEditMode === mode) {
         bulkEditMode = null;
 
-        // Reset both buttons
+        // Reset all buttons
         eventBtn.classList.remove('btn-admin-primary');
         eventBtn.classList.add('btn-admin-secondary');
-        eventLabel.textContent = 'Massändra tävlingsfält';
+        eventLabel.textContent = 'Massandra tavlingsfalt';
 
         organizerBtn.classList.remove('btn-admin-primary');
         organizerBtn.classList.add('btn-admin-secondary');
-        organizerLabel.textContent = 'Visa arrangörsfält';
+        organizerLabel.textContent = 'Visa arrangorsfalt';
+
+        destinationBtn.classList.remove('btn-admin-primary');
+        destinationBtn.classList.add('btn-admin-secondary');
+        destinationLabel.textContent = 'Visa destinationsfalt';
 
         // Remove mode classes
-        table.classList.remove('bulk-edit-event-mode', 'bulk-edit-organizer-mode');
+        table.classList.remove('bulk-edit-event-mode', 'bulk-edit-organizer-mode', 'bulk-edit-destination-mode');
 
         disableBulkEdit();
         hideBulkSaveButton();
@@ -903,34 +986,37 @@ function toggleBulkEdit(mode) {
         // Switch to new mode
         bulkEditMode = mode;
 
+        // Reset all buttons first
+        eventBtn.classList.remove('btn-admin-primary');
+        eventBtn.classList.add('btn-admin-secondary');
+        eventLabel.textContent = 'Massandra tavlingsfalt';
+
+        organizerBtn.classList.remove('btn-admin-primary');
+        organizerBtn.classList.add('btn-admin-secondary');
+        organizerLabel.textContent = 'Visa arrangorsfalt';
+
+        destinationBtn.classList.remove('btn-admin-primary');
+        destinationBtn.classList.add('btn-admin-secondary');
+        destinationLabel.textContent = 'Visa destinationsfalt';
+
+        // Remove all mode classes
+        table.classList.remove('bulk-edit-event-mode', 'bulk-edit-organizer-mode', 'bulk-edit-destination-mode');
+
         if (mode === 'event') {
-            // Activate event mode
             eventBtn.classList.remove('btn-admin-secondary');
             eventBtn.classList.add('btn-admin-primary');
             eventLabel.textContent = 'Avsluta massredigering';
-
-            // Deactivate organizer mode
-            organizerBtn.classList.remove('btn-admin-primary');
-            organizerBtn.classList.add('btn-admin-secondary');
-            organizerLabel.textContent = 'Visa arrangörsfält';
-
-            // Show event fields
-            table.classList.remove('bulk-edit-organizer-mode');
             table.classList.add('bulk-edit-event-mode');
         } else if (mode === 'organizer') {
-            // Activate organizer mode
             organizerBtn.classList.remove('btn-admin-secondary');
             organizerBtn.classList.add('btn-admin-primary');
             organizerLabel.textContent = 'Avsluta massredigering';
-
-            // Deactivate event mode
-            eventBtn.classList.remove('btn-admin-primary');
-            eventBtn.classList.add('btn-admin-secondary');
-            eventLabel.textContent = 'Massändra tävlingsfält';
-
-            // Show organizer fields
-            table.classList.remove('bulk-edit-event-mode');
             table.classList.add('bulk-edit-organizer-mode');
+        } else if (mode === 'destination') {
+            destinationBtn.classList.remove('btn-admin-secondary');
+            destinationBtn.classList.add('btn-admin-primary');
+            destinationLabel.textContent = 'Avsluta destinationsvy';
+            table.classList.add('bulk-edit-destination-mode');
         }
 
         enableBulkEdit(mode);
@@ -941,7 +1027,16 @@ function toggleBulkEdit(mode) {
 
 function enableBulkEdit(mode) {
     // Get selector for fields based on mode
-    const fieldSelector = mode === 'event' ? '.event-field' : '.organizer-field';
+    let fieldSelector;
+    if (mode === 'event') {
+        fieldSelector = '.event-field';
+    } else if (mode === 'organizer') {
+        fieldSelector = '.organizer-field';
+    } else if (mode === 'destination') {
+        fieldSelector = '.destination-field';
+    } else {
+        fieldSelector = '.event-field';
+    }
 
     // Disable individual onchange/onblur handlers and add bulk edit tracking for visible fields only
     document.querySelectorAll(`${fieldSelector} select`).forEach(select => {
