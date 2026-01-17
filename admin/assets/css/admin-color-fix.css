@@ -888,4 +888,380 @@ textarea,
     border-radius: var(--radius-lg, 14px) !important;
 }
 
+/* ========================================================================
+   27. ADMIN-SPECIFIC CLASS NAMES
+   ======================================================================== */
+
+/* Admin stats grid */
+.admin-stats-grid {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr)) !important;
+    gap: var(--space-md, 16px) !important;
+    margin-bottom: var(--space-lg, 24px) !important;
+}
+
+/* Admin stat card - horizontal layout */
+.admin-stat-card {
+    display: flex !important;
+    align-items: center !important;
+    gap: var(--space-md, 16px) !important;
+    padding: var(--space-md, 16px) !important;
+    background: var(--color-bg-card) !important;
+    border: 1px solid var(--color-border) !important;
+    border-radius: var(--radius-lg, 14px) !important;
+    text-decoration: none !important;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease !important;
+}
+
+.admin-stat-card:hover {
+    border-color: var(--color-accent) !important;
+    box-shadow: var(--shadow-sm) !important;
+}
+
+/* Admin stat icon */
+.admin-stat-icon {
+    display: flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    width: 48px !important;
+    height: 48px !important;
+    border-radius: var(--radius-md, 10px) !important;
+    flex-shrink: 0 !important;
+}
+
+.admin-stat-icon svg {
+    width: 24px !important;
+    height: 24px !important;
+}
+
+/* Stat icon color variants */
+.stat-icon-error,
+.admin-stat-icon.stat-icon-error {
+    background: var(--color-error-light, rgba(239, 68, 68, 0.15)) !important;
+    color: var(--color-error) !important;
+}
+
+.stat-icon-accent,
+.admin-stat-icon.stat-icon-accent {
+    background: var(--color-accent-light) !important;
+    color: var(--color-accent) !important;
+}
+
+.stat-icon-info,
+.admin-stat-icon.stat-icon-info {
+    background: var(--color-info-light, rgba(56, 189, 248, 0.15)) !important;
+    color: var(--color-info) !important;
+}
+
+.stat-icon-warning,
+.admin-stat-icon.stat-icon-warning {
+    background: var(--color-warning-light, rgba(251, 191, 36, 0.15)) !important;
+    color: var(--color-warning) !important;
+}
+
+.stat-icon-success,
+.admin-stat-icon.stat-icon-success {
+    background: var(--color-success-light, rgba(16, 185, 129, 0.15)) !important;
+    color: var(--color-success) !important;
+}
+
+/* Stat content */
+.stat-content {
+    display: flex !important;
+    flex-direction: column !important;
+    min-width: 0 !important;
+}
+
+.stat-content .stat-value {
+    font-size: var(--text-xl, 1.25rem) !important;
+    font-weight: var(--weight-bold, 700) !important;
+    color: var(--color-text-primary) !important;
+    line-height: 1.2 !important;
+}
+
+.stat-content .stat-label {
+    font-size: var(--text-sm, 0.8125rem) !important;
+    color: var(--color-text-secondary) !important;
+    text-transform: none !important;
+    letter-spacing: 0 !important;
+}
+
+/* ========================================================================
+   28. ADMIN BUTTONS
+   ======================================================================== */
+
+/* Admin button base */
+.btn-admin {
+    display: inline-flex !important;
+    align-items: center !important;
+    justify-content: center !important;
+    gap: var(--space-xs, 8px) !important;
+    padding: var(--space-sm, 12px) var(--space-md, 16px) !important;
+    font-size: var(--text-sm, 0.875rem) !important;
+    font-weight: 500 !important;
+    line-height: 1.5 !important;
+    text-decoration: none !important;
+    border-radius: var(--radius-md, 10px) !important;
+    cursor: pointer !important;
+    transition: all 0.2s ease !important;
+    border: 1px solid transparent !important;
+    white-space: nowrap !important;
+}
+
+.btn-admin svg {
+    width: 16px !important;
+    height: 16px !important;
+    flex-shrink: 0 !important;
+}
+
+/* Admin button primary */
+.btn-admin-primary,
+.btn-admin.btn-admin-primary {
+    background: var(--color-accent) !important;
+    border-color: var(--color-accent) !important;
+    color: white !important;
+}
+
+.btn-admin-primary:hover,
+.btn-admin.btn-admin-primary:hover {
+    background: var(--color-accent-hover) !important;
+    border-color: var(--color-accent-hover) !important;
+}
+
+/* Admin button secondary */
+.btn-admin-secondary,
+.btn-admin.btn-admin-secondary {
+    background: transparent !important;
+    border-color: var(--color-border-strong) !important;
+    color: var(--color-text-primary) !important;
+}
+
+.btn-admin-secondary:hover,
+.btn-admin.btn-admin-secondary:hover {
+    background: var(--color-bg-hover) !important;
+    border-color: var(--color-accent) !important;
+    color: var(--color-accent) !important;
+}
+
+/* Admin button danger */
+.btn-admin-danger,
+.btn-admin.btn-admin-danger {
+    background: var(--color-error) !important;
+    border-color: var(--color-error) !important;
+    color: white !important;
+}
+
+.btn-admin-danger:hover,
+.btn-admin.btn-admin-danger:hover {
+    background: #c82333 !important;
+    border-color: #c82333 !important;
+}
+
+/* Admin button sizes */
+.btn-admin-sm,
+.btn-admin.btn-admin-sm {
+    padding: var(--space-xs, 8px) var(--space-sm, 12px) !important;
+    font-size: var(--text-xs, 0.75rem) !important;
+}
+
+.btn-admin-sm svg {
+    width: 14px !important;
+    height: 14px !important;
+}
+
+.btn-admin-lg,
+.btn-admin.btn-admin-lg {
+    padding: var(--space-md, 16px) var(--space-lg, 24px) !important;
+    font-size: var(--text-base, 1rem) !important;
+}
+
+/* ========================================================================
+   29. ADMIN FORMS
+   ======================================================================== */
+
+/* Admin form row */
+.admin-form-row {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: var(--space-md, 16px) !important;
+    align-items: flex-end !important;
+}
+
+/* Admin form group */
+.admin-form-group {
+    display: flex !important;
+    flex-direction: column !important;
+    gap: var(--space-xs, 8px) !important;
+}
+
+.admin-form-group.flex-1 {
+    flex: 1 !important;
+    min-width: 200px !important;
+}
+
+/* Admin form label */
+.admin-form-label {
+    font-size: var(--text-sm, 0.8125rem) !important;
+    font-weight: var(--weight-medium, 500) !important;
+    color: var(--color-text-primary) !important;
+}
+
+/* Admin form inputs */
+.admin-form-input,
+.admin-form-select,
+.admin-form-textarea {
+    padding: var(--space-sm, 12px) var(--space-md, 16px) !important;
+    font-size: var(--text-sm, 0.8125rem) !important;
+    border: 1px solid var(--color-border) !important;
+    border-radius: var(--radius-md, 10px) !important;
+    background: var(--color-bg-surface) !important;
+    color: var(--color-text-primary) !important;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease !important;
+}
+
+.admin-form-input:focus,
+.admin-form-select:focus,
+.admin-form-textarea:focus {
+    border-color: var(--color-accent) !important;
+    box-shadow: 0 0 0 3px var(--color-accent-light) !important;
+    outline: none !important;
+}
+
+/* Min-width utilities for selects */
+.min-w-120 {
+    min-width: 120px !important;
+}
+
+.min-w-140 {
+    min-width: 140px !important;
+}
+
+/* ========================================================================
+   30. CARD BODY PADDING RESET
+   ======================================================================== */
+
+.card-body.p-0,
+.card-body.p-none {
+    padding: 0 !important;
+}
+
+/* ========================================================================
+   31. ADMIN EMPTY STATE
+   ======================================================================== */
+
+.admin-empty-state {
+    display: flex !important;
+    flex-direction: column !important;
+    align-items: center !important;
+    justify-content: center !important;
+    padding: var(--space-2xl, 48px) var(--space-lg, 24px) !important;
+    text-align: center !important;
+    color: var(--color-text-muted) !important;
+}
+
+.admin-empty-state svg {
+    width: 48px !important;
+    height: 48px !important;
+    margin-bottom: var(--space-md, 16px) !important;
+    opacity: 0.5 !important;
+}
+
+.admin-empty-state h3 {
+    font-size: var(--text-lg, 1.125rem) !important;
+    font-weight: var(--weight-semibold, 600) !important;
+    color: var(--color-text-primary) !important;
+    margin-bottom: var(--space-xs, 8px) !important;
+}
+
+.admin-empty-state p {
+    font-size: var(--text-sm, 0.8125rem) !important;
+    color: var(--color-text-secondary) !important;
+    margin: 0 !important;
+}
+
+/* ========================================================================
+   32. ICON SIZE UTILITIES
+   ======================================================================== */
+
+.icon-xs {
+    width: 14px !important;
+    height: 14px !important;
+}
+
+.icon-sm {
+    width: 16px !important;
+    height: 16px !important;
+}
+
+.icon-md {
+    width: 20px !important;
+    height: 20px !important;
+}
+
+.icon-lg {
+    width: 24px !important;
+    height: 24px !important;
+}
+
+.icon-xl {
+    width: 32px !important;
+    height: 32px !important;
+}
+
+/* ========================================================================
+   33. MOBILE RESPONSIVE FOR ADMIN COMPONENTS
+   ======================================================================== */
+
+@media (max-width: 768px) {
+    .admin-stats-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
+
+    .admin-stat-card {
+        flex-direction: column !important;
+        text-align: center !important;
+        padding: var(--space-sm, 12px) !important;
+    }
+
+    .admin-stat-icon {
+        width: 40px !important;
+        height: 40px !important;
+    }
+
+    .admin-stat-icon svg {
+        width: 20px !important;
+        height: 20px !important;
+    }
+
+    .stat-content .stat-value {
+        font-size: var(--text-lg, 1.125rem) !important;
+    }
+
+    .admin-form-row {
+        flex-direction: column !important;
+    }
+
+    .admin-form-group.flex-1 {
+        width: 100% !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .admin-stats-grid {
+        gap: var(--space-xs, 8px) !important;
+    }
+
+    .admin-stat-card {
+        padding: var(--space-xs, 8px) !important;
+    }
+
+    .stat-content .stat-value {
+        font-size: var(--text-md, 1rem) !important;
+    }
+
+    .stat-content .stat-label {
+        font-size: var(--text-xs, 0.75rem) !important;
+    }
+}
+
 /* End of complete fix */
