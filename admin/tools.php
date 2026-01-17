@@ -47,13 +47,16 @@ include __DIR__ . '/components/unified-layout.php';
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
     gap: var(--space-md);
 }
-.tool-card {
-    background: var(--color-bg-surface);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-lg);
-    padding: var(--space-lg);
+@media (max-width: 767px) {
+    .tools-grid {
+        grid-template-columns: 1fr;
+        gap: var(--space-sm);
+    }
 }
-.tool-card-header {
+.tools-grid .card {
+    margin-bottom: 0;
+}
+.tool-header {
     display: flex;
     align-items: flex-start;
     gap: var(--space-md);
@@ -71,19 +74,20 @@ include __DIR__ . '/components/unified-layout.php';
     flex-shrink: 0;
 }
 .tool-icon svg { width: 20px; height: 20px; }
-.tool-icon.warning { background: #FEF3C7; color: #D97706; }
-.tool-icon.danger { background: #FEE2E2; color: #DC2626; }
-.tool-title { font-weight: 600; margin: 0 0 var(--space-2xs); }
+.tool-icon.warning { background: rgba(217, 119, 6, 0.15); color: var(--color-warning); }
+.tool-icon.danger { background: rgba(239, 68, 68, 0.15); color: var(--color-error); }
+.tool-title { font-weight: 600; margin: 0 0 var(--space-2xs); color: var(--color-text-primary); }
 .tool-description { color: var(--color-text-secondary); font-size: var(--text-sm); margin: 0; }
 .tool-stat { display: inline-block; padding: var(--space-xs) var(--space-sm); background: var(--color-bg-hover); border-radius: var(--radius-sm); font-size: var(--text-sm); margin-top: var(--space-sm); }
-.tool-stat.warning { background: #FEF3C7; color: #D97706; }
-.tool-actions { margin-top: var(--space-md); }
+.tool-stat.warning { background: rgba(217, 119, 6, 0.15); color: var(--color-warning); }
+.tool-actions { margin-top: var(--space-md); display: flex; flex-wrap: wrap; gap: var(--space-xs); }
 .section-title {
     font-size: var(--text-lg);
     font-weight: 600;
     margin: var(--space-xl) 0 var(--space-md);
     padding-bottom: var(--space-sm);
     border-bottom: 2px solid var(--color-border);
+    color: var(--color-text-primary);
 }
 .section-title:first-child { margin-top: 0; }
 </style>
@@ -93,8 +97,8 @@ include __DIR__ . '/components/unified-layout.php';
 <div class="tools-grid">
 
     <!-- Yearly Rebuild -->
-    <div class="tool-card">
-        <div class="tool-card-header">
+    <div class="card">
+        <div class="tool-header">
             <div class="tool-icon warning"><i data-lucide="calendar-cog"></i></div>
             <div>
                 <h4 class="tool-title">Årsåterställning</h4>
@@ -107,8 +111,8 @@ include __DIR__ . '/components/unified-layout.php';
     </div>
 
     <!-- Yearly Import Review -->
-    <div class="tool-card">
-        <div class="tool-card-header">
+    <div class="card">
+        <div class="tool-header">
             <div class="tool-icon"><i data-lucide="file-search"></i></div>
             <div>
                 <h4 class="tool-title">Granska årsimport</h4>
@@ -127,8 +131,8 @@ include __DIR__ . '/components/unified-layout.php';
 <div class="tools-grid">
 
     <!-- Sync Club Membership -->
-    <div class="tool-card">
-        <div class="tool-card-header">
+    <div class="card">
+        <div class="tool-header">
             <div class="tool-icon"><i data-lucide="link"></i></div>
             <div>
                 <h4 class="tool-title">Synka klubbtillhörighet</h4>
@@ -141,8 +145,8 @@ include __DIR__ . '/components/unified-layout.php';
     </div>
 
     <!-- Sync Rider Clubs -->
-    <div class="tool-card">
-        <div class="tool-card-header">
+    <div class="card">
+        <div class="tool-header">
             <div class="tool-icon"><i data-lucide="users"></i></div>
             <div>
                 <h4 class="tool-title">Synka åkare-klubbar</h4>
@@ -155,8 +159,8 @@ include __DIR__ . '/components/unified-layout.php';
     </div>
 
     <!-- Fix Result Club IDs -->
-    <div class="tool-card">
-        <div class="tool-card-header">
+    <div class="card">
+        <div class="tool-header">
             <div class="tool-icon warning"><i data-lucide="wrench"></i></div>
             <div>
                 <h4 class="tool-title">Fixa klubb-ID i resultat</h4>
@@ -169,8 +173,8 @@ include __DIR__ . '/components/unified-layout.php';
     </div>
 
     <!-- Normalize Names -->
-    <div class="tool-card">
-        <div class="tool-card-header">
+    <div class="card">
+        <div class="tool-header">
             <div class="tool-icon"><i data-lucide="case-sensitive"></i></div>
             <div>
                 <h4 class="tool-title">Normalisera namn</h4>
@@ -183,8 +187,8 @@ include __DIR__ . '/components/unified-layout.php';
     </div>
 
     <!-- Search UCI ID -->
-    <div class="tool-card">
-        <div class="tool-card-header">
+    <div class="card">
+        <div class="tool-header">
             <div class="tool-icon"><i data-lucide="globe"></i></div>
             <div>
                 <h4 class="tool-title">Sök UCI-ID</h4>
@@ -197,8 +201,8 @@ include __DIR__ . '/components/unified-layout.php';
     </div>
 
     <!-- Fix UCI Conflicts -->
-    <div class="tool-card">
-        <div class="tool-card-header">
+    <div class="card">
+        <div class="tool-header">
             <div class="tool-icon warning"><i data-lucide="alert-triangle"></i></div>
             <div>
                 <h4 class="tool-title">Fixa UCI-konflikter</h4>
@@ -217,8 +221,8 @@ include __DIR__ . '/components/unified-layout.php';
 <div class="tools-grid">
 
     <!-- Data Explorer -->
-    <div class="tool-card">
-        <div class="tool-card-header">
+    <div class="card">
+        <div class="tool-header">
             <div class="tool-icon"><i data-lucide="table-2"></i></div>
             <div>
                 <h4 class="tool-title">Data Explorer</h4>
@@ -231,8 +235,8 @@ include __DIR__ . '/components/unified-layout.php';
     </div>
 
     <!-- Rebuild Stats -->
-    <div class="tool-card">
-        <div class="tool-card-header">
+    <div class="card">
+        <div class="tool-header">
             <div class="tool-icon"><i data-lucide="refresh-cw"></i></div>
             <div>
                 <h4 class="tool-title">Uppdatera statistik</h4>
@@ -245,8 +249,8 @@ include __DIR__ . '/components/unified-layout.php';
     </div>
 
     <!-- Find Duplicates -->
-    <div class="tool-card">
-        <div class="tool-card-header">
+    <div class="card">
+        <div class="tool-header">
             <div class="tool-icon warning"><i data-lucide="copy"></i></div>
             <div>
                 <h4 class="tool-title">Hitta dubbletter</h4>
@@ -263,8 +267,8 @@ include __DIR__ . '/components/unified-layout.php';
     </div>
 
     <!-- Cleanup Clubs -->
-    <div class="tool-card">
-        <div class="tool-card-header">
+    <div class="card">
+        <div class="tool-header">
             <div class="tool-icon"><i data-lucide="building"></i></div>
             <div>
                 <h4 class="tool-title">Rensa klubbar</h4>
@@ -280,8 +284,8 @@ include __DIR__ . '/components/unified-layout.php';
     </div>
 
     <!-- RF Registration -->
-    <div class="tool-card">
-        <div class="tool-card-header">
+    <div class="card">
+        <div class="tool-header">
             <div class="tool-icon" style="background: linear-gradient(135deg, #006aa7 50%, #fecc00 50%);"><i data-lucide="shield-check" style="color: #fff;"></i></div>
             <div>
                 <h4 class="tool-title">RF-registrering</h4>
@@ -294,8 +298,8 @@ include __DIR__ . '/components/unified-layout.php';
     </div>
 
     <!-- RF Spelling Check -->
-    <div class="tool-card">
-        <div class="tool-card-header">
+    <div class="card">
+        <div class="tool-header">
             <div class="tool-icon" style="background: linear-gradient(135deg, #006aa7 50%, #fecc00 50%);"><i data-lucide="spell-check" style="color: #fff;"></i></div>
             <div>
                 <h4 class="tool-title">RF Stavningskontroll</h4>
@@ -314,8 +318,8 @@ include __DIR__ . '/components/unified-layout.php';
 <div class="tools-grid">
 
     <!-- Import Results -->
-    <div class="tool-card">
-        <div class="tool-card-header">
+    <div class="card">
+        <div class="tool-header">
             <div class="tool-icon"><i data-lucide="upload"></i></div>
             <div>
                 <h4 class="tool-title">Importera resultat</h4>
@@ -328,8 +332,8 @@ include __DIR__ . '/components/unified-layout.php';
     </div>
 
     <!-- Clear Event Results -->
-    <div class="tool-card">
-        <div class="tool-card-header">
+    <div class="card">
+        <div class="tool-header">
             <div class="tool-icon danger"><i data-lucide="trash-2"></i></div>
             <div>
                 <h4 class="tool-title">Rensa resultat</h4>
@@ -342,8 +346,8 @@ include __DIR__ . '/components/unified-layout.php';
     </div>
 
     <!-- Import History -->
-    <div class="tool-card">
-        <div class="tool-card-header">
+    <div class="card">
+        <div class="tool-header">
             <div class="tool-icon"><i data-lucide="history"></i></div>
             <div>
                 <h4 class="tool-title">Import-historik</h4>
@@ -356,8 +360,8 @@ include __DIR__ . '/components/unified-layout.php';
     </div>
 
     <!-- Recalculate Points -->
-    <div class="tool-card">
-        <div class="tool-card-header">
+    <div class="card">
+        <div class="tool-header">
             <div class="tool-icon warning"><i data-lucide="calculator"></i></div>
             <div>
                 <h4 class="tool-title">Räkna om poäng</h4>
@@ -376,8 +380,8 @@ include __DIR__ . '/components/unified-layout.php';
 <div class="tools-grid">
 
     <!-- Data Quality -->
-    <div class="tool-card">
-        <div class="tool-card-header">
+    <div class="card">
+        <div class="tool-header">
             <div class="tool-icon danger"><i data-lucide="search-x"></i></div>
             <div>
                 <h4 class="tool-title">Datakvalitetsanalys</h4>
@@ -390,8 +394,8 @@ include __DIR__ . '/components/unified-layout.php';
     </div>
 
     <!-- Fix Series Points -->
-    <div class="tool-card">
-        <div class="tool-card-header">
+    <div class="card">
+        <div class="tool-header">
             <div class="tool-icon warning"><i data-lucide="wrench"></i></div>
             <div>
                 <h4 class="tool-title">Fixa seriepoäng</h4>
@@ -404,8 +408,8 @@ include __DIR__ . '/components/unified-layout.php';
     </div>
 
     <!-- Fix Time Format -->
-    <div class="tool-card">
-        <div class="tool-card-header">
+    <div class="card">
+        <div class="tool-header">
             <div class="tool-icon warning"><i data-lucide="clock"></i></div>
             <div>
                 <h4 class="tool-title">Fixa tidsformat</h4>
@@ -418,8 +422,8 @@ include __DIR__ . '/components/unified-layout.php';
     </div>
 
     <!-- Diagnose Series -->
-    <div class="tool-card">
-        <div class="tool-card-header">
+    <div class="card">
+        <div class="tool-header">
             <div class="tool-icon"><i data-lucide="stethoscope"></i></div>
             <div>
                 <h4 class="tool-title">Diagnostik</h4>
@@ -439,8 +443,8 @@ include __DIR__ . '/components/unified-layout.php';
 <div class="tools-grid">
 
     <!-- Analytics Setup -->
-    <div class="tool-card">
-        <div class="tool-card-header">
+    <div class="card">
+        <div class="tool-header">
             <div class="tool-icon warning"><i data-lucide="settings"></i></div>
             <div>
                 <h4 class="tool-title">Analytics Setup</h4>
@@ -454,8 +458,8 @@ include __DIR__ . '/components/unified-layout.php';
     </div>
 
     <!-- Populate Historical -->
-    <div class="tool-card">
-        <div class="tool-card-header">
+    <div class="card">
+        <div class="tool-header">
             <div class="tool-icon"><i data-lucide="database"></i></div>
             <div>
                 <h4 class="tool-title">Populate Historical</h4>
@@ -468,8 +472,8 @@ include __DIR__ . '/components/unified-layout.php';
     </div>
 
     <!-- Analytics Diagnostik -->
-    <div class="tool-card">
-        <div class="tool-card-header">
+    <div class="card">
+        <div class="tool-header">
             <div class="tool-icon warning"><i data-lucide="stethoscope"></i></div>
             <div>
                 <h4 class="tool-title">Analytics Diagnostik</h4>
@@ -482,8 +486,8 @@ include __DIR__ . '/components/unified-layout.php';
     </div>
 
     <!-- Data Quality -->
-    <div class="tool-card">
-        <div class="tool-card-header">
+    <div class="card">
+        <div class="tool-header">
             <div class="tool-icon"><i data-lucide="check-circle"></i></div>
             <div>
                 <h4 class="tool-title">Datakvalitet</h4>
@@ -496,8 +500,8 @@ include __DIR__ . '/components/unified-layout.php';
     </div>
 
     <!-- Reset Analytics -->
-    <div class="tool-card">
-        <div class="tool-card-header">
+    <div class="card">
+        <div class="tool-header">
             <div class="tool-icon danger"><i data-lucide="rotate-ccw"></i></div>
             <div>
                 <h4 class="tool-title">Reset Analytics</h4>
@@ -516,8 +520,8 @@ include __DIR__ . '/components/unified-layout.php';
 <div class="tools-grid">
 
     <!-- Analytics Dashboard -->
-    <div class="tool-card">
-        <div class="tool-card-header">
+    <div class="card">
+        <div class="tool-header">
             <div class="tool-icon"><i data-lucide="layout-dashboard"></i></div>
             <div>
                 <h4 class="tool-title">Dashboard</h4>
@@ -530,8 +534,8 @@ include __DIR__ . '/components/unified-layout.php';
     </div>
 
     <!-- Historical Trends -->
-    <div class="tool-card">
-        <div class="tool-card-header">
+    <div class="card">
+        <div class="tool-header">
             <div class="tool-icon"><i data-lucide="trending-up"></i></div>
             <div>
                 <h4 class="tool-title">Historiska Trender</h4>
@@ -544,8 +548,8 @@ include __DIR__ . '/components/unified-layout.php';
     </div>
 
     <!-- First Season Journey -->
-    <div class="tool-card">
-        <div class="tool-card-header">
+    <div class="card">
+        <div class="tool-header">
             <div class="tool-icon"><i data-lucide="baby"></i></div>
             <div>
                 <h4 class="tool-title">First Season Journey</h4>
@@ -558,8 +562,8 @@ include __DIR__ . '/components/unified-layout.php';
     </div>
 
     <!-- Event Participation -->
-    <div class="tool-card">
-        <div class="tool-card-header">
+    <div class="card">
+        <div class="tool-header">
             <div class="tool-icon"><i data-lucide="calendar-days"></i></div>
             <div>
                 <h4 class="tool-title">Event Participation</h4>
@@ -572,8 +576,8 @@ include __DIR__ . '/components/unified-layout.php';
     </div>
 
     <!-- Cohort Analysis -->
-    <div class="tool-card">
-        <div class="tool-card-header">
+    <div class="card">
+        <div class="tool-header">
             <div class="tool-icon"><i data-lucide="users"></i></div>
             <div>
                 <h4 class="tool-title">Kohorter</h4>
@@ -586,8 +590,8 @@ include __DIR__ . '/components/unified-layout.php';
     </div>
 
     <!-- Club Analytics -->
-    <div class="tool-card">
-        <div class="tool-card-header">
+    <div class="card">
+        <div class="tool-header">
             <div class="tool-icon"><i data-lucide="building-2"></i></div>
             <div>
                 <h4 class="tool-title">Klubbanalys</h4>
@@ -600,8 +604,8 @@ include __DIR__ . '/components/unified-layout.php';
     </div>
 
     <!-- Geography -->
-    <div class="tool-card">
-        <div class="tool-card-header">
+    <div class="card">
+        <div class="tool-header">
             <div class="tool-icon"><i data-lucide="map"></i></div>
             <div>
                 <h4 class="tool-title">Geografi</h4>
@@ -614,8 +618,8 @@ include __DIR__ . '/components/unified-layout.php';
     </div>
 
     <!-- Series Compare -->
-    <div class="tool-card">
-        <div class="tool-card-header">
+    <div class="card">
+        <div class="tool-header">
             <div class="tool-icon"><i data-lucide="git-compare"></i></div>
             <div>
                 <h4 class="tool-title">Jämför Serier</h4>
@@ -628,8 +632,8 @@ include __DIR__ . '/components/unified-layout.php';
     </div>
 
     <!-- Flow Analysis -->
-    <div class="tool-card">
-        <div class="tool-card-header">
+    <div class="card">
+        <div class="tool-header">
             <div class="tool-icon"><i data-lucide="workflow"></i></div>
             <div>
                 <h4 class="tool-title">Flödesanalys</h4>
@@ -642,8 +646,8 @@ include __DIR__ . '/components/unified-layout.php';
     </div>
 
     <!-- Reports -->
-    <div class="tool-card">
-        <div class="tool-card-header">
+    <div class="card">
+        <div class="tool-header">
             <div class="tool-icon"><i data-lucide="file-text"></i></div>
             <div>
                 <h4 class="tool-title">Rapporter</h4>
@@ -656,8 +660,8 @@ include __DIR__ . '/components/unified-layout.php';
     </div>
 
     <!-- Export Center -->
-    <div class="tool-card">
-        <div class="tool-card-header">
+    <div class="card">
+        <div class="tool-header">
             <div class="tool-icon"><i data-lucide="download"></i></div>
             <div>
                 <h4 class="tool-title">Export Center</h4>
@@ -676,8 +680,8 @@ include __DIR__ . '/components/unified-layout.php';
 <div class="tools-grid">
 
     <!-- Clear Cache -->
-    <div class="tool-card">
-        <div class="tool-card-header">
+    <div class="card">
+        <div class="tool-header">
             <div class="tool-icon"><i data-lucide="refresh-cw"></i></div>
             <div>
                 <h4 class="tool-title">Rensa cache</h4>
@@ -690,8 +694,8 @@ include __DIR__ . '/components/unified-layout.php';
     </div>
 
     <!-- Backup -->
-    <div class="tool-card">
-        <div class="tool-card-header">
+    <div class="card">
+        <div class="tool-header">
             <div class="tool-icon"><i data-lucide="hard-drive-download"></i></div>
             <div>
                 <h4 class="tool-title">Backup</h4>
@@ -704,8 +708,8 @@ include __DIR__ . '/components/unified-layout.php';
     </div>
 
     <!-- Migrations -->
-    <div class="tool-card">
-        <div class="tool-card-header">
+    <div class="card">
+        <div class="tool-header">
             <div class="tool-icon"><i data-lucide="database"></i></div>
             <div>
                 <h4 class="tool-title">Databasmigrationer</h4>
@@ -718,8 +722,8 @@ include __DIR__ . '/components/unified-layout.php';
     </div>
 
     <!-- Reset Data -->
-    <div class="tool-card">
-        <div class="tool-card-header">
+    <div class="card">
+        <div class="tool-header">
             <div class="tool-icon danger"><i data-lucide="trash-2"></i></div>
             <div>
                 <h4 class="tool-title">Återställ data</h4>
