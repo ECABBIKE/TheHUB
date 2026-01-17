@@ -608,9 +608,13 @@ class KPICalculator {
      * Hamta aldersfordelning i grupper
      *
      * @param int $year Ar
+     * @param int|null $brandId Filtrera pa varumarke
      * @return array Aldersgrupper med antal
      */
-    public function getAgeDistribution(int $year): array {
+    public function getAgeDistribution(int $year, ?int $brandId = null): array {
+        $brandJoin = $brandId !== null ? "JOIN series s ON rys.primary_series_id = s.id" : "";
+        $brandFilter = $brandId !== null ? "AND s.brand_id = ?" : "";
+
         $stmt = $this->pdo->prepare("
             SELECT
                 CASE
@@ -629,9 +633,11 @@ class KPICalculator {
                 COUNT(*) as count
             FROM rider_yearly_stats rys
             JOIN riders r ON rys.rider_id = r.id
+            $brandJoin
             WHERE rys.season_year = ?
               AND r.birth_year IS NOT NULL
               AND r.birth_year > 1900
+            $brandFilter
             GROUP BY age_group
             ORDER BY
                 CASE age_group
@@ -648,31 +654,38 @@ class KPICalculator {
                     ELSE 11
                 END
         ");
-        $stmt->execute([$year]);
+        $params = [$year];
+        if ($brandId !== null) $params[] = $brandId;
+        $stmt->execute($params);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
     /**
-     * Hamta disciplinfordelning
-     *
-     * @param int $year Ar
-     * @return array Discipliner med antal
-     */
-    /**
      * Hamta disciplinfordelning baserat pa primary_discipline
      * OBS: Detta visar EN disciplin per rider (den de deltagit i mest)
+     *
+     * @param int $year Ar
+     * @param int|null $brandId Filtrera pa varumarke
+     * @return array Discipliner med antal
      */
-    public function getDisciplineDistribution(int $year): array {
+    public function getDisciplineDistribution(int $year, ?int $brandId = null): array {
+        $brandJoin = $brandId !== null ? "JOIN series s ON rys.primary_series_id = s.id" : "";
+        $brandFilter = $brandId !== null ? "AND s.brand_id = ?" : "";
+
         $stmt = $this->pdo->prepare("
             SELECT
-                COALESCE(primary_discipline, 'Okand') as discipline,
+                COALESCE(rys.primary_discipline, 'Okand') as discipline,
                 COUNT(*) as count
-            FROM rider_yearly_stats
-            WHERE season_year = ?
-            GROUP BY primary_discipline
+            FROM rider_yearly_stats rys
+            $brandJoin
+            WHERE rys.season_year = ?
+            $brandFilter
+            GROUP BY rys.primary_discipline
             ORDER BY count DESC
         ");
-        $stmt->execute([$year]);
+        $params = [$year];
+        if ($brandId !== null) $params[] = $brandId;
+        $stmt->execute($params);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
@@ -1234,9 +1247,12 @@ class KPICalculator {
      * Vilken serie borjar nya riders i?
      *
      * @param int $year Ar
+     * @param int|null $brandId Filtrera pa varumarke
      * @return array Serie-fordelning for rookies
      */
-    public function getEntryPointDistribution(int $year): array {
+    public function getEntryPointDistribution(int $year, ?int $brandId = null): array {
+        $brandFilter = $brandId !== null ? "AND s.brand_id = ?" : "";
+
         $stmt = $this->pdo->prepare("
             SELECT
                 s.id as series_id,
@@ -1247,10 +1263,17 @@ class KPICalculator {
             JOIN series s ON sp.series_id = s.id
             WHERE sp.is_entry_series = 1
               AND sp.season_year = ?
+              $brandFilter
             GROUP BY s.id
             ORDER BY rider_count DESC
         ");
-        $stmt->execute([$year]);
+
+        $params = [$year];
+        if ($brandId !== null) {
+            $params[] = $brandId;
+        }
+
+        $stmt->execute($params);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
@@ -1259,9 +1282,12 @@ class KPICalculator {
      * Visar flodet mellan alla serier
      *
      * @param int $year Ar
+     * @param int|null $brandId Filtrera pa varumarke
      * @return array Matrix med from/to/count
      */
-    public function calculateFeederMatrix(int $year): array {
+    public function calculateFeederMatrix(int $year, ?int $brandId = null): array {
+        $brandFilter = $brandId !== null ? "AND (s_from.brand_id = ? OR s_to.brand_id = ?)" : "";
+
         $stmt = $this->pdo->prepare("
             SELECT
                 sc.from_series_id,
@@ -1276,10 +1302,18 @@ class KPICalculator {
             JOIN series s_to ON sc.to_series_id = s_to.id
             WHERE sc.from_year = ?
               AND sc.crossover_type = 'same_year'
+              $brandFilter
             GROUP BY sc.from_series_id, sc.to_series_id
             ORDER BY flow_count DESC
         ");
-        $stmt->execute([$year]);
+
+        $params = [$year];
+        if ($brandId !== null) {
+            $params[] = $brandId;
+            $params[] = $brandId;  // Used twice in the OR condition
+        }
+
+        $stmt->execute($params);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
@@ -1327,25 +1361,51 @@ class KPICalculator {
      *
      * @param int $year Ar
      * @param int $limit Max antal
+     * @param int|null $brandId Filtrera pa varumarke
      * @return array Top klubbar
      */
-    public function getTopClubs(int $year, int $limit = 10): array {
-        $stmt = $this->pdo->prepare("
-            SELECT
-                cys.club_id,
-                c.name as club_name,
-                c.city,
-                cys.active_riders,
-                cys.total_points,
-                cys.wins,
-                cys.podiums
-            FROM club_yearly_stats cys
-            JOIN clubs c ON cys.club_id = c.id
-            WHERE cys.season_year = ?
-            ORDER BY cys.active_riders DESC
-            LIMIT ?
-        ");
-        $stmt->execute([$year, $limit]);
+    public function getTopClubs(int $year, int $limit = 10, ?int $brandId = null): array {
+        // When filtering by brand, count riders from rider_yearly_stats instead
+        if ($brandId !== null) {
+            $stmt = $this->pdo->prepare("
+                SELECT
+                    c.id as club_id,
+                    c.name as club_name,
+                    c.city,
+                    COUNT(DISTINCT rys.rider_id) as active_riders,
+                    SUM(rys.total_points) as total_points,
+                    SUM(rys.wins) as wins,
+                    SUM(rys.podiums) as podiums
+                FROM rider_yearly_stats rys
+                JOIN riders r ON rys.rider_id = r.id
+                JOIN clubs c ON r.club_id = c.id
+                JOIN series s ON rys.primary_series_id = s.id
+                WHERE rys.season_year = ?
+                  AND s.brand_id = ?
+                  AND c.id IS NOT NULL
+                GROUP BY c.id
+                ORDER BY active_riders DESC
+                LIMIT ?
+            ");
+            $stmt->execute([$year, $brandId, $limit]);
+        } else {
+            $stmt = $this->pdo->prepare("
+                SELECT
+                    cys.club_id,
+                    c.name as club_name,
+                    c.city,
+                    cys.active_riders,
+                    cys.total_points,
+                    cys.wins,
+                    cys.podiums
+                FROM club_yearly_stats cys
+                JOIN clubs c ON cys.club_id = c.id
+                WHERE cys.season_year = ?
+                ORDER BY cys.active_riders DESC
+                LIMIT ?
+            ");
+            $stmt->execute([$year, $limit]);
+        }
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
@@ -1409,21 +1469,34 @@ class KPICalculator {
      * Hamta tillvaxttrend over tid
      *
      * @param int $years Antal ar
+     * @param int|null $brandId Filtrera pa varumarke
      * @return array Arlig data
      */
-    public function getGrowthTrend(int $years = 5): array {
+    public function getGrowthTrend(int $years = 5, ?int $brandId = null): array {
+        $brandJoin = $brandId !== null ? "JOIN series s ON rys.primary_series_id = s.id" : "";
+        $brandFilter = $brandId !== null ? "AND s.brand_id = ?" : "";
+
         $stmt = $this->pdo->prepare("
             SELECT
-                season_year,
+                rys.season_year,
                 COUNT(*) as total_riders,
-                SUM(is_rookie) as new_riders,
-                SUM(is_retained) as retained_riders
-            FROM rider_yearly_stats
-            GROUP BY season_year
-            ORDER BY season_year DESC
+                SUM(rys.is_rookie) as new_riders,
+                SUM(rys.is_retained) as retained_riders
+            FROM rider_yearly_stats rys
+            $brandJoin
+            WHERE 1=1 $brandFilter
+            GROUP BY rys.season_year
+            ORDER BY rys.season_year DESC
             LIMIT ?
         ");
-        $stmt->execute([$years]);
+
+        $params = [];
+        if ($brandId !== null) {
+            $params[] = $brandId;
+        }
+        $params[] = $years;
+
+        $stmt->execute($params);
         return array_reverse($stmt->fetchAll(PDO::FETCH_ASSOC));
     }
 

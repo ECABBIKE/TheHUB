@@ -66,12 +66,12 @@ try {
         $comparison = $kpiCalc->compareYears($compareYear, $selectedYear, $selectedBrand);
     }
 
-    $trends = $kpiCalc->getGrowthTrend(5);
-    $topClubs = $kpiCalc->getTopClubs($selectedYear, 10);
-    $ageDistribution = $kpiCalc->getAgeDistribution($selectedYear);
-    $disciplineDistribution = $kpiCalc->getDisciplineDistribution($selectedYear);
-    $entryPoints = $kpiCalc->getEntryPointDistribution($selectedYear);
-    $feederMatrix = $kpiCalc->calculateFeederMatrix($selectedYear);
+    $trends = $kpiCalc->getGrowthTrend(5, $selectedBrand);
+    $topClubs = $kpiCalc->getTopClubs($selectedYear, 10, $selectedBrand);
+    $ageDistribution = $kpiCalc->getAgeDistribution($selectedYear, $selectedBrand);
+    $disciplineDistribution = $kpiCalc->getDisciplineDistribution($selectedYear, $selectedBrand);
+    $entryPoints = $kpiCalc->getEntryPointDistribution($selectedYear, $selectedBrand);
+    $feederMatrix = $kpiCalc->calculateFeederMatrix($selectedYear, $selectedBrand);
 } catch (Exception $e) {
     // Tabellerna kanske inte ar befolkade an
     $error = $e->getMessage();
