@@ -1578,6 +1578,20 @@ class AnalyticsEngine {
                         pct_continuous_4yr, pct_one_and_done, pct_gap_returner,
                         calculated_at, snapshot_id
                     ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?)
+                    ON DUPLICATE KEY UPDATE
+                        total_riders = VALUES(total_riders),
+                        active_riders = VALUES(active_riders),
+                        retention_rate = VALUES(retention_rate),
+                        avg_starts = VALUES(avg_starts),
+                        avg_events = VALUES(avg_events),
+                        avg_dnf_rate = VALUES(avg_dnf_rate),
+                        avg_percentile = VALUES(avg_percentile),
+                        pct_with_podium = VALUES(pct_with_podium),
+                        pct_continuous_4yr = VALUES(pct_continuous_4yr),
+                        pct_one_and_done = VALUES(pct_one_and_done),
+                        pct_gap_returner = VALUES(pct_gap_returner),
+                        calculated_at = NOW(),
+                        snapshot_id = VALUES(snapshot_id)
                 ");
 
                 $insert->execute([
@@ -2280,6 +2294,22 @@ class AnalyticsEngine {
                 pct_returned_year2, pct_returned_year3, avg_career_seasons,
                 starts_distribution, calculated_at, snapshot_id
             ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?)
+            ON DUPLICATE KEY UPDATE
+                total_riders = VALUES(total_riders),
+                avg_total_starts = VALUES(avg_total_starts),
+                avg_total_events = VALUES(avg_total_events),
+                avg_dnf_rate = VALUES(avg_dnf_rate),
+                avg_result_percentile = VALUES(avg_result_percentile),
+                pct_with_podium = VALUES(pct_with_podium),
+                pct_with_top10 = VALUES(pct_with_top10),
+                avg_days_in_season = VALUES(avg_days_in_season),
+                avg_season_spread = VALUES(avg_season_spread),
+                pct_returned_year2 = VALUES(pct_returned_year2),
+                pct_returned_year3 = VALUES(pct_returned_year3),
+                avg_career_seasons = VALUES(avg_career_seasons),
+                starts_distribution = VALUES(starts_distribution),
+                calculated_at = NOW(),
+                snapshot_id = VALUES(snapshot_id)
         ");
 
         $stmt->execute([
@@ -2815,6 +2845,17 @@ class AnalyticsEngine {
                     avg_starts, avg_events, avg_dnf_rate, avg_percentile,
                     calculated_at, snapshot_id
                 ) VALUES (?, ?, 'overall', NULL, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), ?)
+                ON DUPLICATE KEY UPDATE
+                    total_riders_in_cohort = VALUES(total_riders_in_cohort),
+                    active_riders_this_year = VALUES(active_riders_this_year),
+                    retention_rate = VALUES(retention_rate),
+                    churn_rate = VALUES(churn_rate),
+                    avg_starts = VALUES(avg_starts),
+                    avg_events = VALUES(avg_events),
+                    avg_dnf_rate = VALUES(avg_dnf_rate),
+                    avg_percentile = VALUES(avg_percentile),
+                    calculated_at = NOW(),
+                    snapshot_id = VALUES(snapshot_id)
             ");
 
             $insert->execute([
