@@ -75,7 +75,7 @@ try {
 
     // Aldersfordelning per ar
     foreach ($yearsToShow as $year) {
-        $ageDist = $kpiCalc->getAgeDistribution($year);
+        $ageDist = $kpiCalc->getAgeDistribution($year, $selectedBrand);
         $demographicsData[$year] = [];
         foreach ($ageDist as $ag) {
             $demographicsData[$year][$ag['age_group']] = $ag['count'];
@@ -84,7 +84,7 @@ try {
 
     // Disciplinfordelning per ar (top 5)
     foreach ($yearsToShow as $year) {
-        $discDist = $kpiCalc->getDisciplineDistribution($year);
+        $discDist = $kpiCalc->getDisciplineDistribution($year, $selectedBrand);
         $disciplineData[$year] = array_slice($discDist, 0, 5);
     }
 
