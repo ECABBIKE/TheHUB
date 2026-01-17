@@ -547,4 +547,345 @@ textarea:focus {
     color: var(--color-error) !important;
 }
 
+/* ========================================================================
+   16. CONSISTENCY FIX - Match public pages padding, borders, radius
+   ======================================================================== */
+
+/* Admin main content - match public page container padding */
+.admin-main {
+    padding: var(--container-padding, 16px) !important;
+}
+
+/* Responsive padding - match public pages exactly */
+@media (min-width: 768px) {
+    .admin-main {
+        padding: 24px !important;
+    }
+}
+
+@media (min-width: 1024px) {
+    .admin-main {
+        padding: 32px !important;
+    }
+}
+
+/* ========================================================================
+   17. CARDS - Match public page card styling
+   ======================================================================== */
+
+/* Card padding - use same as public (16px) */
+.card,
+.admin-card,
+.stat-card,
+.admin-stat-card {
+    padding: var(--card-padding, 16px) !important;
+    border-radius: var(--radius-lg, 14px) !important;
+    box-shadow: var(--shadow-sm) !important;
+}
+
+/* Card title - match public text size (1rem) */
+.card-title,
+.admin-card-title {
+    font-size: var(--text-md, 1rem) !important;
+    font-weight: var(--weight-semibold, 600) !important;
+    margin: 0 !important;
+}
+
+/* Card subtitle */
+.card-subtitle {
+    font-size: var(--text-sm, 0.8125rem) !important;
+    color: var(--color-text-secondary) !important;
+    margin-top: var(--space-2xs, 4px) !important;
+}
+
+/* Card header - consistent spacing */
+.card-header,
+.admin-card-header {
+    display: flex !important;
+    align-items: flex-start !important;
+    justify-content: space-between !important;
+    margin-bottom: var(--space-md, 16px) !important;
+    padding-bottom: 0 !important;
+    border-bottom: none !important;
+}
+
+/* Card body */
+.card-body,
+.admin-card-body {
+    color: var(--color-text-secondary) !important;
+}
+
+/* Card footer */
+.card-footer,
+.admin-card-footer {
+    margin-top: var(--space-md, 16px) !important;
+    padding-top: var(--space-md, 16px) !important;
+    border-top: 1px solid var(--color-divider, var(--color-border)) !important;
+}
+
+/* ========================================================================
+   18. PAGE HEADER - Match public styling
+   ======================================================================== */
+
+.page-header {
+    margin-bottom: var(--space-lg, 24px) !important;
+    padding-bottom: 0 !important;
+    border-bottom: none !important;
+}
+
+.page-header h1,
+.page-title {
+    font-size: var(--text-2xl, 1.5rem) !important;
+    font-weight: var(--weight-bold, 700) !important;
+    color: var(--color-text-primary) !important;
+    margin: 0 0 var(--space-xs, 8px) 0 !important;
+}
+
+.page-subtitle {
+    font-size: var(--text-md, 1rem) !important;
+    color: var(--color-text-secondary) !important;
+    margin: 0 !important;
+}
+
+/* ========================================================================
+   19. STATS - Match public stat card styling
+   ======================================================================== */
+
+.stats-grid {
+    display: grid !important;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)) !important;
+    gap: var(--space-md, 16px) !important;
+    margin-bottom: var(--space-lg, 24px) !important;
+}
+
+.stat-card,
+.admin-stat-card {
+    text-align: center !important;
+}
+
+.stat-value {
+    display: block !important;
+    font-size: var(--text-2xl, 1.5rem) !important;
+    font-weight: var(--weight-bold, 700) !important;
+    color: var(--color-accent) !important;
+    line-height: 1.2 !important;
+    font-variant-numeric: tabular-nums !important;
+}
+
+.stat-label {
+    display: block !important;
+    font-size: var(--text-sm, 0.8125rem) !important;
+    color: var(--color-text-secondary) !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.05em !important;
+    margin-top: var(--space-2xs, 4px) !important;
+}
+
+/* ========================================================================
+   20. FORMS - Consistent input styling
+   ======================================================================== */
+
+input[type="text"],
+input[type="email"],
+input[type="password"],
+input[type="number"],
+input[type="date"],
+input[type="search"],
+input[type="tel"],
+input[type="url"],
+select,
+textarea,
+.form-input,
+.form-select,
+.form-textarea,
+.admin-input,
+.admin-select,
+.admin-textarea {
+    padding: var(--space-sm, 12px) var(--space-md, 16px) !important;
+    font-size: var(--text-sm, 0.8125rem) !important;
+    border: 1px solid var(--color-border) !important;
+    border-radius: var(--radius-md, 10px) !important;
+    background: var(--color-bg-surface) !important;
+    color: var(--color-text-primary) !important;
+    transition: border-color 0.15s ease, box-shadow 0.15s ease !important;
+    width: 100% !important;
+}
+
+/* Form labels */
+.form-label,
+label {
+    font-size: var(--text-sm, 0.8125rem) !important;
+    font-weight: var(--weight-medium, 500) !important;
+    color: var(--color-text-primary) !important;
+    margin-bottom: var(--space-xs, 8px) !important;
+    display: block !important;
+}
+
+/* Form groups */
+.form-group {
+    margin-bottom: var(--space-md, 16px) !important;
+}
+
+/* ========================================================================
+   21. TABLES - Consistent cell padding
+   ======================================================================== */
+
+.table th,
+.table td,
+.admin-table th,
+.admin-table td {
+    padding: var(--table-cell-padding-y, 12px) var(--table-cell-padding-x, 16px) !important;
+    font-size: var(--text-sm, 0.8125rem) !important;
+}
+
+.table th,
+.admin-table th {
+    font-weight: var(--weight-semibold, 600) !important;
+    text-transform: uppercase !important;
+    letter-spacing: 0.05em !important;
+    font-size: var(--text-xs, 0.75rem) !important;
+}
+
+/* ========================================================================
+   22. SPACING UTILITIES - Consistent gaps
+   ======================================================================== */
+
+.gap-xs { gap: var(--space-xs, 8px) !important; }
+.gap-sm { gap: var(--space-sm, 12px) !important; }
+.gap-md { gap: var(--space-md, 16px) !important; }
+.gap-lg { gap: var(--space-lg, 24px) !important; }
+.gap-xl { gap: var(--space-xl, 32px) !important; }
+
+/* ========================================================================
+   23. FILTER BAR - Match public styling
+   ======================================================================== */
+
+.filter-bar,
+.filters-bar,
+.filter-row {
+    display: flex !important;
+    flex-wrap: wrap !important;
+    gap: var(--space-md, 16px) !important;
+    align-items: flex-end !important;
+    margin-bottom: var(--space-lg, 24px) !important;
+    padding: var(--space-md, 16px) !important;
+    background: var(--color-bg-card) !important;
+    border-radius: var(--radius-lg, 14px) !important;
+    border: 1px solid var(--color-border) !important;
+}
+
+/* ========================================================================
+   24. MOBILE RESPONSIVE - Consistent padding on mobile
+   ======================================================================== */
+
+@media (max-width: 768px) {
+    .card,
+    .admin-card,
+    .stat-card,
+    .admin-stat-card {
+        padding: var(--space-md, 16px) !important;
+    }
+
+    .stat-value {
+        font-size: var(--text-xl, 1.25rem) !important;
+    }
+
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .card,
+    .admin-card,
+    .stat-card,
+    .admin-stat-card {
+        padding: var(--space-sm, 12px) var(--space-xs, 8px) !important;
+        border-radius: var(--radius-md, 10px) !important;
+    }
+
+    .stat-value {
+        font-size: var(--text-lg, 1.125rem) !important;
+        line-height: 1 !important;
+    }
+
+    .stat-label {
+        font-size: 9px !important;
+        letter-spacing: 0 !important;
+        line-height: 1.2 !important;
+        margin-top: 2px !important;
+    }
+
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+        gap: var(--space-xs, 8px) !important;
+    }
+}
+
+/* ========================================================================
+   25. TYPOGRAPHY - Consistent text sizes
+   ======================================================================== */
+
+/* Ensure admin uses same text scale as public */
+.admin-content {
+    font-size: var(--text-base, 0.875rem) !important;
+    line-height: 1.6 !important;
+}
+
+.admin-content h1 {
+    font-size: var(--text-2xl, 1.5rem) !important;
+}
+
+.admin-content h2 {
+    font-size: var(--text-xl, 1.25rem) !important;
+}
+
+.admin-content h3 {
+    font-size: var(--text-lg, 1.125rem) !important;
+}
+
+.admin-content h4 {
+    font-size: var(--text-md, 1rem) !important;
+}
+
+.admin-content p,
+.admin-content li {
+    font-size: var(--text-sm, 0.8125rem) !important;
+}
+
+/* Text muted/secondary */
+.text-muted,
+.text-secondary {
+    color: var(--color-text-secondary) !important;
+}
+
+/* ========================================================================
+   26. BORDER RADIUS - Consistent rounded corners
+   ======================================================================== */
+
+/* Small elements: 6px */
+.badge,
+.chip,
+.tag {
+    border-radius: var(--radius-sm, 6px) !important;
+}
+
+/* Medium elements: 10px */
+.btn,
+input,
+select,
+textarea,
+.alert {
+    border-radius: var(--radius-md, 10px) !important;
+}
+
+/* Large elements: 14px */
+.card,
+.admin-card,
+.stat-card,
+.modal,
+.dropdown-menu {
+    border-radius: var(--radius-lg, 14px) !important;
+}
+
 /* End of complete fix */
