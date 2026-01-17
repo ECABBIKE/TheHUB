@@ -60,7 +60,13 @@ $showIgnored = isset($_GET['show_ignored']);
 $limit = isset($_GET['limit']) ? (int)$_GET['limit'] : 100;
 
 // Get duplicate groups
-$groups = $duplicateService->findAllDuplicates($limit);
+$queryError = null;
+try {
+    $groups = $duplicateService->findAllDuplicates($limit);
+} catch (Exception $e) {
+    $groups = [];
+    $queryError = $e->getMessage();
+}
 
 // Filter out ignored pairs unless requested
 if (!$showIgnored) {
@@ -92,6 +98,12 @@ include __DIR__ . '/components/unified-layout.php';
 
 <?php if ($msg): ?>
 <div class="alert alert-<?= $msgType ?> mb-lg"><?= h($msg) ?></div>
+<?php endif; ?>
+
+<?php if ($queryError): ?>
+<div class="alert alert-danger mb-lg">
+    <strong>SQL-fel:</strong> <?= h($queryError) ?>
+</div>
 <?php endif; ?>
 
 <div class="card mb-lg">

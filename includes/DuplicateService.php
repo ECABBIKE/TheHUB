@@ -351,7 +351,7 @@ class DuplicateService
             FROM riders
             WHERE firstname IS NOT NULL AND lastname IS NOT NULL
               AND firstname != '' AND lastname != ''
-            GROUP BY name_key
+            GROUP BY LOWER(CONCAT(firstname, ' ', lastname))
             HAVING cnt > 1
             ORDER BY cnt DESC
             LIMIT {$limit}
