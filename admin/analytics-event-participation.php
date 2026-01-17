@@ -460,6 +460,12 @@ include __DIR__ . '/components/unified-layout.php';
     <div class="card-header">
         <h3>Event <?= $selectedYear ?></h3>
     </div>
+    <div class="card-body" style="padding-bottom:0;">
+        <p class="text-muted" style="font-size:var(--text-sm);margin:0 0 var(--space-sm) 0;">
+            <strong>Endast detta:</strong> Antal deltagare som enbart tävlade på just detta event inom valt varumärke.
+            <span style="opacity:0.8;">Siffran inom parentes anger hur många av dessa som även deltog i en annan serie.</span>
+        </p>
+    </div>
     <div class="table-responsive">
         <table class="table">
             <thead>
@@ -468,7 +474,12 @@ include __DIR__ . '/components/unified-layout.php';
                     <th>Datum</th>
                     <th>Plats</th>
                     <th class="text-right">Deltagare</th>
-                    <th class="text-right" title="Deltagare som ENDAST tävlade på detta event (i annan serie)">Endast detta</th>
+                    <th class="text-right">
+                        Endast detta
+                        <span class="help-icon" title="Antal deltagare som ENDAST tävlade på just detta event inom vald serie/varumärke. Siffran inom parentes visar hur många av dessa som även tävlade i en annan serie.">
+                            <i data-lucide="help-circle" style="width:14px;height:14px;opacity:0.6;vertical-align:middle;"></i>
+                        </span>
+                    </th>
                 </tr>
             </thead>
             <tbody>
