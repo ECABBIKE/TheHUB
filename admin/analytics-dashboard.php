@@ -26,6 +26,7 @@ global $pdo;
 $currentYear = (int)date('Y');
 $selectedYear = isset($_GET['year']) ? (int)$_GET['year'] : $currentYear;
 $compareYear = isset($_GET['compare']) ? (int)$_GET['compare'] : null;
+$selectedBrand = isset($_GET['brand']) && $_GET['brand'] !== '' ? (int)$_GET['brand'] : null;
 
 // Hamta tillgangliga ar
 $availableYears = [];
@@ -38,6 +39,14 @@ try {
 
 // Initiera KPI Calculator
 $kpiCalc = new KPICalculator($pdo);
+
+// Hamta alla varumarken for dropdown
+$allBrands = [];
+try {
+    $allBrands = $kpiCalc->getAllBrands();
+} catch (Exception $e) {
+    // Tabellen kanske inte finns annu
+}
 
 // Hamta alla KPIs
 $kpis = [];
@@ -84,9 +93,24 @@ $page_actions = '
 include __DIR__ . '/components/unified-layout.php';
 ?>
 
-<!-- Year Selector -->
+<!-- Filter Bar -->
 <div class="filter-bar">
     <form method="get" class="filter-form">
+        <?php if (!empty($allBrands)): ?>
+        <div class="filter-group">
+            <label class="filter-label">Varumarke</label>
+            <select name="brand" class="form-select" onchange="this.form.submit()">
+                <option value="">Alla varumarken</option>
+                <?php foreach ($allBrands as $brand): ?>
+                    <option value="<?= $brand['id'] ?>" <?= $selectedBrand == $brand['id'] ? 'selected' : '' ?>
+                        <?php if (!empty($brand['accent_color'])): ?>style="border-left: 3px solid <?= htmlspecialchars($brand['accent_color']) ?>"<?php endif; ?>>
+                        <?= htmlspecialchars($brand['name']) ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+        <?php endif; ?>
+
         <div class="filter-group">
             <label class="filter-label">Sasong</label>
             <select name="year" class="form-select" onchange="this.form.submit()">
@@ -112,6 +136,25 @@ include __DIR__ . '/components/unified-layout.php';
         </div>
     </form>
 </div>
+
+<?php if ($selectedBrand): ?>
+    <?php
+    $brandName = '';
+    foreach ($allBrands as $b) {
+        if ($b['id'] == $selectedBrand) {
+            $brandName = $b['name'];
+            break;
+        }
+    }
+    ?>
+<div class="alert alert-info" style="margin-bottom: var(--space-lg);">
+    <i data-lucide="filter"></i>
+    <div>
+        Visar data for <strong><?= htmlspecialchars($brandName) ?></strong>.
+        <a href="?year=<?= $selectedYear ?><?= $compareYear ? '&compare=' . $compareYear : '' ?>">Visa alla varumarken</a>
+    </div>
+</div>
+<?php endif; ?>
 
 <!-- Analytics Modules Navigation -->
 <div class="analytics-nav-grid">
