@@ -263,11 +263,8 @@ include __DIR__ . '/../components/unified-layout.php';
                                 <?= htmlspecialchars($loc['years']) ?>
                             </td>
                             <td>
-                                <form method="POST" class="inline-form" style="display: inline-flex; gap: 4px;">
-                                    <?= csrf_field() ?>
-                                    <input type="hidden" name="action" value="link_to_venue">
-                                    <input type="hidden" name="location" value="<?= htmlspecialchars($loc['location']) ?>">
-                                    <select name="venue_id" class="input input--sm" style="width: 120px;">
+                                <div class="flex gap-xs items-center">
+                                    <select class="input input--sm link-venue-select" data-location="<?= htmlspecialchars($loc['location']) ?>" style="width: 120px;">
                                         <option value="">Valj...</option>
                                         <?php foreach ($venues as $v): ?>
                                         <option value="<?= $v['id'] ?>">
@@ -275,10 +272,10 @@ include __DIR__ . '/../components/unified-layout.php';
                                         </option>
                                         <?php endforeach; ?>
                                     </select>
-                                    <button type="submit" class="btn btn--secondary btn--sm" title="Koppla">
+                                    <button type="button" class="btn btn--secondary btn--sm link-venue-btn" data-location="<?= htmlspecialchars($loc['location']) ?>" title="Koppla">
                                         <i data-lucide="link"></i>
                                     </button>
-                                </form>
+                                </div>
                             </td>
                         </tr>
                         <?php endforeach; ?>
@@ -289,6 +286,14 @@ include __DIR__ . '/../components/unified-layout.php';
     </div>
 </form>
 
+<!-- Separate hidden form for linking to existing venue -->
+<form method="POST" id="link-form" style="display: none;">
+    <?= csrf_field() ?>
+    <input type="hidden" name="action" value="link_to_venue">
+    <input type="hidden" name="location" id="link-location" value="">
+    <input type="hidden" name="venue_id" id="link-venue-id" value="">
+</form>
+
 <script>
 function selectAll(checked) {
     document.querySelectorAll('.location-checkbox').forEach(cb => {
@@ -296,6 +301,25 @@ function selectAll(checked) {
     });
     document.getElementById('select-all').checked = checked;
 }
+
+// Handle link to existing venue buttons
+document.querySelectorAll('.link-venue-btn').forEach(btn => {
+    btn.addEventListener('click', function() {
+        const location = this.dataset.location;
+        const row = this.closest('tr');
+        const select = row.querySelector('.link-venue-select');
+        const venueId = select.value;
+
+        if (!venueId) {
+            alert('Valj en destination forst');
+            return;
+        }
+
+        document.getElementById('link-location').value = location;
+        document.getElementById('link-venue-id').value = venueId;
+        document.getElementById('link-form').submit();
+    });
+});
 </script>
 <?php endif; ?>
 
