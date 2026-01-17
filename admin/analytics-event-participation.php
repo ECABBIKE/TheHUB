@@ -662,7 +662,7 @@ function openExclusiveModal(eventId, eventName, year, brandId) {
                 data.riders.forEach(rider => {
                     html += '<div class="rider-item">';
                     html += '<div>';
-                    html += '<a href="/admin/rider-edit.php?id=' + rider.id + '">' + rider.name + '</a>';
+                    html += '<a href="/rider/' + rider.id + '" target="_blank">' + rider.name + '</a>';
                     if (rider.class_name) {
                         html += ' <span class="class-badge">(' + rider.class_name + ')</span>';
                     }
