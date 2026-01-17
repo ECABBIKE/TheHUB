@@ -1057,6 +1057,62 @@ textarea,
     border-color: #c82333 !important;
 }
 
+/* Admin button warning */
+.btn-admin-warning,
+.btn-admin.btn-admin-warning {
+    background: var(--color-warning) !important;
+    border-color: var(--color-warning) !important;
+    color: #1a1a1a !important;
+}
+
+.btn-admin-warning:hover,
+.btn-admin.btn-admin-warning:hover {
+    background: #d97706 !important;
+    border-color: #d97706 !important;
+}
+
+/* Admin button success */
+.btn-admin-success,
+.btn-admin.btn-admin-success {
+    background: var(--color-success) !important;
+    border-color: var(--color-success) !important;
+    color: white !important;
+}
+
+.btn-admin-success:hover,
+.btn-admin.btn-admin-success:hover {
+    background: #059669 !important;
+    border-color: #059669 !important;
+}
+
+/* Admin button info */
+.btn-admin-info,
+.btn-admin.btn-admin-info {
+    background: var(--color-info) !important;
+    border-color: var(--color-info) !important;
+    color: white !important;
+}
+
+.btn-admin-info:hover,
+.btn-admin.btn-admin-info:hover {
+    background: #0284c7 !important;
+    border-color: #0284c7 !important;
+}
+
+/* Admin button ghost */
+.btn-admin-ghost,
+.btn-admin.btn-admin-ghost {
+    background: transparent !important;
+    border-color: transparent !important;
+    color: var(--color-text-secondary) !important;
+}
+
+.btn-admin-ghost:hover,
+.btn-admin.btn-admin-ghost:hover {
+    background: var(--color-bg-hover) !important;
+    color: var(--color-accent) !important;
+}
+
 /* Admin button sizes */
 .btn-admin-sm,
 .btn-admin.btn-admin-sm {
@@ -1262,6 +1318,61 @@ textarea,
     .stat-content .stat-label {
         font-size: var(--text-xs, 0.75rem) !important;
     }
+}
+
+/* ========================================================================
+   34. MARGIN AND SPACING UTILITIES
+   ======================================================================== */
+
+.mr-xs { margin-right: var(--space-xs, 8px) !important; }
+.mr-sm { margin-right: var(--space-sm, 12px) !important; }
+.mr-md { margin-right: var(--space-md, 16px) !important; }
+.mr-lg { margin-right: var(--space-lg, 24px) !important; }
+
+.ml-xs { margin-left: var(--space-xs, 8px) !important; }
+.ml-sm { margin-left: var(--space-sm, 12px) !important; }
+.ml-md { margin-left: var(--space-md, 16px) !important; }
+.ml-lg { margin-left: var(--space-lg, 24px) !important; }
+
+.mb-xs { margin-bottom: var(--space-xs, 8px) !important; }
+.mb-sm { margin-bottom: var(--space-sm, 12px) !important; }
+.mb-md { margin-bottom: var(--space-md, 16px) !important; }
+.mb-lg { margin-bottom: var(--space-lg, 24px) !important; }
+
+.mt-xs { margin-top: var(--space-xs, 8px) !important; }
+.mt-sm { margin-top: var(--space-sm, 12px) !important; }
+.mt-md { margin-top: var(--space-md, 16px) !important; }
+.mt-lg { margin-top: var(--space-lg, 24px) !important; }
+
+/* ========================================================================
+   35. FLEX UTILITIES
+   ======================================================================== */
+
+.flex { display: flex !important; }
+.flex-1 { flex: 1 !important; }
+.flex-wrap { flex-wrap: wrap !important; }
+.flex-col { flex-direction: column !important; }
+.items-center { align-items: center !important; }
+.items-start { align-items: flex-start !important; }
+.items-end { align-items: flex-end !important; }
+.justify-center { justify-content: center !important; }
+.justify-between { justify-content: space-between !important; }
+.justify-end { justify-content: flex-end !important; }
+
+/* ========================================================================
+   36. DISABLED STATE
+   ======================================================================== */
+
+.btn-admin:disabled,
+.btn-admin[disabled],
+button:disabled,
+button[disabled],
+input:disabled,
+select:disabled,
+textarea:disabled {
+    opacity: 0.5 !important;
+    cursor: not-allowed !important;
+    pointer-events: none !important;
 }
 
 /* End of complete fix */
