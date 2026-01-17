@@ -261,63 +261,26 @@ $ADMIN_TABS = [
                 'label' => 'Dashboard',
                 'icon' => 'layout-dashboard',
                 'url' => '/admin/analytics-dashboard.php',
-                'pages' => ['analytics-dashboard.php']
-            ],
-            [
-                'id' => 'cohorts',
-                'label' => 'Kohorter',
-                'icon' => 'users',
-                'url' => '/admin/analytics-cohorts.php',
-                'pages' => ['analytics-cohorts.php']
-            ],
-            [
-                'id' => 'atrisk',
-                'label' => 'At-Risk',
-                'icon' => 'alert-triangle',
-                'url' => '/admin/analytics-atrisk.php',
-                'pages' => ['analytics-atrisk.php']
-            ],
-            [
-                'id' => 'geography',
-                'label' => 'Geografi',
-                'icon' => 'map',
-                'url' => '/admin/analytics-geography.php',
-                'pages' => ['analytics-geography.php']
-            ],
-            [
-                'id' => 'flow',
-                'label' => 'Series Flow',
-                'icon' => 'git-branch',
-                'url' => '/admin/analytics-flow.php',
-                'pages' => ['analytics-flow.php']
-            ],
-            [
-                'id' => 'reports',
-                'label' => 'Rapporter',
-                'icon' => 'file-text',
-                'url' => '/admin/analytics-reports.php',
-                'pages' => ['analytics-reports.php']
-            ],
-            [
-                'id' => 'clubs',
-                'label' => 'Klubbar',
-                'icon' => 'building-2',
-                'url' => '/admin/analytics-clubs.php',
-                'pages' => ['analytics-clubs.php']
-            ],
-            [
-                'id' => 'trends',
-                'label' => 'Trender',
-                'icon' => 'trending-up',
-                'url' => '/admin/analytics-trends.php',
-                'pages' => ['analytics-trends.php']
-            ],
-            [
-                'id' => 'series-compare',
-                'label' => 'Jämför Serier',
-                'icon' => 'git-compare',
-                'url' => '/admin/analytics-series-compare.php',
-                'pages' => ['analytics-series-compare.php']
+                // Alla analytics-sidor nås via dashboard navigation grid
+                'pages' => [
+                    'analytics-dashboard.php',
+                    'analytics-cohorts.php',
+                    'analytics-atrisk.php',
+                    'analytics-geography.php',
+                    'analytics-flow.php',
+                    'analytics-reports.php',
+                    'analytics-clubs.php',
+                    'analytics-trends.php',
+                    'analytics-series-compare.php',
+                    'analytics-first-season.php',
+                    'analytics-event-participation.php',
+                    'analytics-data-quality.php',
+                    'analytics-diagnose.php',
+                    'analytics-export-center.php',
+                    'analytics-populate.php',
+                    'analytics-reset.php',
+                    'analytics-report.php'
+                ]
             ]
         ]
     ],
