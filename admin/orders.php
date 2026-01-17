@@ -160,43 +160,43 @@ include __DIR__ . '/components/unified-layout.php';
 <?php endif; ?>
 
 <!-- Stats -->
-<div class="admin-stats-grid">
-    <div class="admin-stat-card">
-        <div class="admin-stat-icon stat-icon-warning">
+<div class="grid grid-stats">
+    <div class="stat-card">
+        <div class="stat-icon stat-icon-warning">
             <i data-lucide="clock"></i>
         </div>
-        <div class="admin-stat-content">
-            <div class="admin-stat-value"><?= $stats['pending_count'] ?? 0 ?></div>
-            <div class="admin-stat-label">Väntar på betalning</div>
+        <div class="stat-content">
+            <div class="stat-value"><?= $stats['pending_count'] ?? 0 ?></div>
+            <div class="stat-label">Väntar på betalning</div>
         </div>
     </div>
-    <div class="admin-stat-card">
-        <div class="admin-stat-icon stat-icon-success">
+    <div class="stat-card">
+        <div class="stat-icon stat-icon-success">
             <i data-lucide="check-circle"></i>
         </div>
-        <div class="admin-stat-content">
-            <div class="admin-stat-value"><?= $stats['paid_count'] ?? 0 ?></div>
-            <div class="admin-stat-label">Betalda ordrar</div>
+        <div class="stat-content">
+            <div class="stat-value"><?= $stats['paid_count'] ?? 0 ?></div>
+            <div class="stat-label">Betalda ordrar</div>
         </div>
     </div>
-    <div class="admin-stat-card">
-        <div class="admin-stat-icon stat-icon-accent">
+    <div class="stat-card">
+        <div class="stat-icon stat-icon-accent">
             <i data-lucide="wallet"></i>
         </div>
-        <div class="admin-stat-content">
-            <div class="admin-stat-value"><?= number_format($stats['total_revenue'] ?? 0, 0, ',', ' ') ?> kr</div>
-            <div class="admin-stat-label">Totalt inbetalt</div>
+        <div class="stat-content">
+            <div class="stat-value"><?= number_format($stats['total_revenue'] ?? 0, 0, ',', ' ') ?> kr</div>
+            <div class="stat-label">Totalt inbetalt</div>
         </div>
     </div>
 </div>
 
 <!-- Filters -->
-<div class="admin-card mb-lg">
-    <div class="admin-card-body">
+<div class="card mb-lg">
+    <div class="card-body">
         <form method="GET" class="flex flex-wrap gap-md items-end">
-            <div class="admin-form-group mb-0">
-                <label class="admin-form-label">Status</label>
-                <select name="status" class="admin-form-select" onchange="this.form.submit()">
+            <div class="form-group mb-0">
+                <label class="label">Status</label>
+                <select name="status" class="input" onchange="this.form.submit()">
                     <option value="pending" <?= $filterStatus === 'pending' ? 'selected' : '' ?>>Väntar</option>
                     <option value="paid" <?= $filterStatus === 'paid' ? 'selected' : '' ?>>Betalda</option>
                     <option value="cancelled" <?= $filterStatus === 'cancelled' ? 'selected' : '' ?>>Avbrutna</option>
@@ -205,9 +205,9 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
 
             <?php if (!empty($events)): ?>
-            <div class="admin-form-group mb-0">
-                <label class="admin-form-label">Event</label>
-                <select name="event_id" class="admin-form-select" onchange="this.form.submit()">
+            <div class="form-group mb-0">
+                <label class="label">Event</label>
+                <select name="event_id" class="input" onchange="this.form.submit()">
                     <option value="">Alla event</option>
                     <?php foreach ($events as $event): ?>
                     <option value="<?= $event['id'] ?>" <?= $filterEvent == $event['id'] ? 'selected' : '' ?>>
@@ -218,14 +218,14 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
             <?php endif; ?>
 
-            <div class="admin-form-group mb-0 flex-1 min-w-200">
-                <label class="admin-form-label">Sök</label>
-                <input type="text" name="search" class="admin-form-input"
+            <div class="form-group mb-0 flex-1 min-w-200">
+                <label class="label">Sök</label>
+                <input type="text" name="search" class="input"
                        value="<?= h($search) ?>"
                        placeholder="Ordernummer, namn, Swish-ref...">
             </div>
 
-            <button type="submit" class="btn-admin btn-admin-primary">
+            <button type="submit" class="btn btn--primary">
                 <i data-lucide="search"></i>
                 Sök
             </button>
@@ -234,20 +234,20 @@ include __DIR__ . '/components/unified-layout.php';
 </div>
 
 <!-- Orders list -->
-<div class="admin-card">
-    <div class="admin-card-header">
+<div class="card">
+    <div class="card-header">
         <h2><?= count($orders) ?> ordrar</h2>
     </div>
-    <div class="admin-card-body p-0">
+    <div class="card-body p-0">
         <?php if (empty($orders)): ?>
-        <div class="admin-empty-state">
+        <div class="empty-state">
             <i data-lucide="inbox"></i>
             <h3>Inga ordrar hittades</h3>
             <p>Justera filtren för att se fler ordrar.</p>
         </div>
         <?php else: ?>
-        <div class="admin-table-container">
-            <table class="admin-table">
+        <div class="table-container">
+            <table class="table">
                 <thead>
                     <tr>
                         <th>Order</th>
@@ -275,7 +275,7 @@ include __DIR__ . '/components/unified-layout.php';
                         </td>
                         <td>
                             <?php if ($order['series_name']): ?>
-                            <div><span class="admin-badge admin-badge-info">Serie</span> <?= h($order['series_name']) ?></div>
+                            <div><span class="badge badge badge--info">Serie</span> <?= h($order['series_name']) ?></div>
                             <?php elseif ($order['event_name']): ?>
                             <div><?= h($order['event_name']) ?></div>
                             <div class="text-xs text-secondary"><?= date('Y-m-d', strtotime($order['event_date'])) ?></div>
@@ -285,7 +285,7 @@ include __DIR__ . '/components/unified-layout.php';
                         </td>
                         <td class="text-center">
                             <?php if ($order['item_count'] > 1): ?>
-                            <span class="admin-badge admin-badge-accent"><?= $order['item_count'] ?> st</span>
+                            <span class="badge badge badge--accent"><?= $order['item_count'] ?> st</span>
                             <?php elseif ($order['item_count'] == 1): ?>
                             <span class="text-secondary">1</span>
                             <?php else: ?>
@@ -303,12 +303,12 @@ include __DIR__ . '/components/unified-layout.php';
                         <td>
                             <?php
                             $statusClass = [
-                                'pending' => 'admin-badge-warning',
-                                'paid' => 'admin-badge-success',
-                                'cancelled' => 'admin-badge-secondary',
-                                'refunded' => 'admin-badge-error',
-                                'failed' => 'admin-badge-error'
-                            ][$order['payment_status']] ?? 'admin-badge-secondary';
+                                'pending' => 'badge badge--warning',
+                                'paid' => 'badge badge--success',
+                                'cancelled' => 'badge badge--secondary',
+                                'refunded' => 'badge-error',
+                                'failed' => 'badge-error'
+                            ][$order['payment_status']] ?? 'badge badge--secondary';
 
                             $statusText = [
                                 'pending' => 'Väntar',
@@ -318,7 +318,7 @@ include __DIR__ . '/components/unified-layout.php';
                                 'failed' => 'Misslyckad'
                             ][$order['payment_status']] ?? $order['payment_status'];
                             ?>
-                            <span class="admin-badge <?= $statusClass ?>"><?= $statusText ?></span>
+                            <span class="badge <?= $statusClass ?>"><?= $statusText ?></span>
                         </td>
                         <td class="text-sm text-secondary">
                             <?= date('Y-m-d H:i', strtotime($order['created_at'])) ?>
@@ -326,7 +326,7 @@ include __DIR__ . '/components/unified-layout.php';
                         <td>
                             <?php if ($order['payment_status'] === 'pending'): ?>
                             <div class="table-actions">
-                                <button type="button" class="btn-admin btn-admin-sm" style="background: var(--color-success); color: white;"
+                                <button type="button" class="btn btn--sm" style="background: var(--color-success); color: white;"
                                         onclick="openConfirmModal(<?= $order['id'] ?>, '<?= h($order['order_number']) ?>', '<?= h($order['swish_message']) ?>')">
                                     <i data-lucide="check"></i>
                                 </button>
@@ -334,7 +334,7 @@ include __DIR__ . '/components/unified-layout.php';
                                     <?= csrf_field() ?>
                                     <input type="hidden" name="action" value="cancel_order">
                                     <input type="hidden" name="order_id" value="<?= $order['id'] ?>">
-                                    <button type="submit" class="btn-admin btn-admin-sm btn-admin-secondary"
+                                    <button type="submit" class="btn btn--sm btn--secondary"
                                             onclick="return confirm('Avbryt denna order?')">
                                         <i data-lucide="x"></i>
                                     </button>
@@ -356,12 +356,12 @@ include __DIR__ . '/components/unified-layout.php';
 </div>
 
 <!-- Confirm Payment Modal -->
-<div id="confirm-modal" class="admin-modal hidden">
-    <div class="admin-modal-overlay" onclick="closeModal('confirm-modal')"></div>
-    <div class="admin-modal-content" style="max-width: 500px;">
-        <div class="admin-modal-header">
+<div id="confirm-modal" class="modal hidden">
+    <div class="modal-overlay" onclick="closeModal('confirm-modal')"></div>
+    <div class="modal-content" style="max-width: 500px;">
+        <div class="modal-header">
             <h2>Bekräfta betalning</h2>
-            <button type="button" class="admin-modal-close" onclick="closeModal('confirm-modal')">
+            <button type="button" class="modal-close" onclick="closeModal('confirm-modal')">
                 <i data-lucide="x"></i>
             </button>
         </div>
@@ -370,7 +370,7 @@ include __DIR__ . '/components/unified-layout.php';
             <input type="hidden" name="action" value="confirm_payment">
             <input type="hidden" name="order_id" id="confirm-order-id">
 
-            <div class="admin-modal-body">
+            <div class="modal-body">
                 <p class="mb-md">
                     Bekräfta att betalning mottagits för order
                     <strong id="confirm-order-number"></strong>
@@ -381,17 +381,17 @@ include __DIR__ . '/components/unified-layout.php';
                     <code class="text-lg" id="confirm-swish-ref"></code>
                 </div>
 
-                <div class="admin-form-group">
-                    <label class="admin-form-label">Betalningsreferens (valfritt)</label>
-                    <input type="text" name="payment_reference" class="admin-form-input"
+                <div class="form-group">
+                    <label class="label">Betalningsreferens (valfritt)</label>
+                    <input type="text" name="payment_reference" class="input"
                            placeholder="T.ex. Swish-transaktions-ID">
                     <small class="text-secondary">Ange referens från Swish eller kontoutdrag</small>
                 </div>
             </div>
 
-            <div class="admin-modal-footer">
-                <button type="button" class="btn-admin btn-admin-secondary" onclick="closeModal('confirm-modal')">Avbryt</button>
-                <button type="submit" class="btn-admin" style="background: var(--color-success); color: white;">
+            <div class="modal-footer">
+                <button type="button" class="btn btn--secondary" onclick="closeModal('confirm-modal')">Avbryt</button>
+                <button type="submit" class="btn" style="background: var(--color-success); color: white;">
                     <i data-lucide="check"></i>
                     Bekräfta betalning
                 </button>
@@ -401,21 +401,21 @@ include __DIR__ . '/components/unified-layout.php';
 </div>
 
 <style>
-.admin-modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 1000; display: flex; align-items: center; justify-content: center; }
-.admin-modal.hidden { display: none; }
-.admin-modal-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.5); }
-.admin-modal-content { position: relative; background: white; border-radius: var(--radius-lg); box-shadow: var(--shadow-xl); width: 90%; max-width: 500px; max-height: 90vh; overflow: hidden; display: flex; flex-direction: column; }
-.admin-modal-header { display: flex; align-items: center; justify-content: space-between; padding: var(--space-lg); border-bottom: 1px solid var(--color-border); }
-.admin-modal-header h2 { margin: 0; font-size: var(--text-xl); }
-.admin-modal-close { background: none; border: none; padding: var(--space-xs); cursor: pointer; color: var(--color-text-secondary); border-radius: var(--radius-sm); }
-.admin-modal-close:hover { background: var(--color-bg-tertiary); color: var(--color-text); }
-.admin-modal-close svg, .admin-modal-close i { width: 20px; height: 20px; }
-.admin-modal-body { padding: var(--space-lg); overflow-y: auto; flex: 1; }
-.admin-modal-footer { display: flex; justify-content: flex-end; gap: var(--space-sm); padding: var(--space-lg); border-top: 1px solid var(--color-border); }
-.admin-badge-warning { background: rgba(234, 179, 8, 0.2); color: #ca8a04; }
-.admin-badge-error { background: rgba(239, 68, 68, 0.2); color: #dc2626; }
-.admin-badge-info { background: rgba(56, 189, 248, 0.2); color: #0284c7; }
-.admin-badge-accent { background: rgba(55, 212, 214, 0.2); color: var(--color-accent); font-weight: 600; }
+.modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 1000; display: flex; align-items: center; justify-content: center; }
+.modal.hidden { display: none; }
+.modal-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.5); }
+.modal-content { position: relative; background: white; border-radius: var(--radius-lg); box-shadow: var(--shadow-xl); width: 90%; max-width: 500px; max-height: 90vh; overflow: hidden; display: flex; flex-direction: column; }
+.modal-header { display: flex; align-items: center; justify-content: space-between; padding: var(--space-lg); border-bottom: 1px solid var(--color-border); }
+.modal-header h2 { margin: 0; font-size: var(--text-xl); }
+.modal-close { background: none; border: none; padding: var(--space-xs); cursor: pointer; color: var(--color-text-secondary); border-radius: var(--radius-sm); }
+.modal-close:hover { background: var(--color-bg-tertiary); color: var(--color-text); }
+.modal-close svg, .modal-close i { width: 20px; height: 20px; }
+.modal-body { padding: var(--space-lg); overflow-y: auto; flex: 1; }
+.modal-footer { display: flex; justify-content: flex-end; gap: var(--space-sm); padding: var(--space-lg); border-top: 1px solid var(--color-border); }
+.badge badge--warning { background: rgba(234, 179, 8, 0.2); color: #ca8a04; }
+.badge-error { background: rgba(239, 68, 68, 0.2); color: #dc2626; }
+.badge badge--info { background: rgba(56, 189, 248, 0.2); color: #0284c7; }
+.badge badge--accent { background: rgba(55, 212, 214, 0.2); color: var(--color-accent); font-weight: 600; }
 </style>
 
 <script>
@@ -432,7 +432,7 @@ function closeModal(modalId) {
 
 document.addEventListener('keydown', function(e) {
     if (e.key === 'Escape') {
-        document.querySelectorAll('.admin-modal').forEach(m => m.classList.add('hidden'));
+        document.querySelectorAll('.modal').forEach(m => m.classList.add('hidden'));
     }
 });
 </script>

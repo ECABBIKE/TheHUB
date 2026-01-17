@@ -360,11 +360,11 @@ include __DIR__ . '/components/unified-layout.php';
                     <span class="badge-count" id="selected-count">0 valda</span>
                 </div>
                 <div style="display: flex; gap: var(--space-sm);">
-                    <button type="submit" class="btn-admin btn-admin-primary" id="normalize-selected-btn" disabled>
+                    <button type="submit" class="btn btn--primary" id="normalize-selected-btn" disabled>
                         <i data-lucide="check"></i>
                         Normalisera valda
                     </button>
-                    <button type="button" class="btn-admin btn-normalize-all" onclick="normalizeAll()">
+                    <button type="button" class="btn btn-normalize-all" onclick="normalizeAll()">
                         <i data-lucide="refresh-cw"></i>
                         Normalisera alla (<?= count($problematicRiders) ?>)
                     </button>

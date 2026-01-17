@@ -217,7 +217,7 @@ $breadcrumbs = [
     ['label' => 'Serier', 'url' => '/admin/series'],
     ['label' => 'Ranking']
 ];
-$page_actions = '<a href="/ranking/" class="btn-admin btn-admin-secondary" target="_blank">
+$page_actions = '<a href="/ranking/" class="btn btn--secondary" target="_blank">
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
     Publik vy
 </a>';
@@ -226,43 +226,43 @@ include __DIR__ . '/components/unified-layout.php';
 ?>
 
 <?php if ($message): ?>
-<div class="admin-alert admin-alert-<?= $messageType ?>">
+<div class="alert alert-<?= $messageType ?>">
     <?= h($message) ?>
 </div>
 <?php endif; ?>
 
 <!-- Statistics Cards per Discipline -->
-<div class="admin-stats-grid">
-    <div class="admin-stat-card">
-        <div class="admin-stat-value"><?= $disciplineStats['ENDURO']['riders'] ?></div>
-        <div class="admin-stat-label">Enduro åkare</div>
-        <div class="admin-stat-meta"><?= $disciplineStats['ENDURO']['clubs'] ?> klubbar • <?= $disciplineStats['ENDURO']['events'] ?> events</div>
+<div class="grid grid-stats">
+    <div class="stat-card">
+        <div class="stat-value"><?= $disciplineStats['ENDURO']['riders'] ?></div>
+        <div class="stat-label">Enduro åkare</div>
+        <div class="stat-meta"><?= $disciplineStats['ENDURO']['clubs'] ?> klubbar • <?= $disciplineStats['ENDURO']['events'] ?> events</div>
     </div>
-    <div class="admin-stat-card">
-        <div class="admin-stat-value"><?= $disciplineStats['DH']['riders'] ?></div>
-        <div class="admin-stat-label">Downhill åkare</div>
-        <div class="admin-stat-meta"><?= $disciplineStats['DH']['clubs'] ?> klubbar • <?= $disciplineStats['DH']['events'] ?> events</div>
+    <div class="stat-card">
+        <div class="stat-value"><?= $disciplineStats['DH']['riders'] ?></div>
+        <div class="stat-label">Downhill åkare</div>
+        <div class="stat-meta"><?= $disciplineStats['DH']['clubs'] ?> klubbar • <?= $disciplineStats['DH']['events'] ?> events</div>
     </div>
-    <div class="admin-stat-card">
-        <div class="admin-stat-value"><?= $disciplineStats['GRAVITY']['riders'] ?></div>
-        <div class="admin-stat-label">Gravity åkare</div>
-        <div class="admin-stat-meta"><?= $disciplineStats['GRAVITY']['clubs'] ?> klubbar • <?= $disciplineStats['GRAVITY']['events'] ?> events</div>
+    <div class="stat-card">
+        <div class="stat-value"><?= $disciplineStats['GRAVITY']['riders'] ?></div>
+        <div class="stat-label">Gravity åkare</div>
+        <div class="stat-meta"><?= $disciplineStats['GRAVITY']['clubs'] ?> klubbar • <?= $disciplineStats['GRAVITY']['events'] ?> events</div>
     </div>
 </div>
 
 <!-- Active Events in Ranking -->
-<div class="admin-card" style="margin-bottom: 1.5rem;">
-    <div class="admin-card-header">
+<div class="card" style="margin-bottom: 1.5rem;">
+    <div class="card-header">
         <h3>Aktiva events i ranking (<?= count($activeEvents) ?>)</h3>
     </div>
-    <div class="admin-card-body">
-        <p class="admin-help-text">Events inom 24 månader som bidrar till rankingpoäng. Gul = 50% tidsvikt (13-24 mån).</p>
+    <div class="card-body">
+        <p class="help-text">Events inom 24 månader som bidrar till rankingpoäng. Gul = 50% tidsvikt (13-24 mån).</p>
 
         <?php if (empty($activeEvents)): ?>
-        <div class="admin-alert admin-alert-warning">Inga aktiva events hittades.</div>
+        <div class="alert alert alert--warning">Inga aktiva events hittades.</div>
         <?php else: ?>
         <div class="table-responsive">
-            <table class="admin-table">
+            <table class="table">
                 <thead>
                     <tr>
                         <th>Event</th>
@@ -278,7 +278,7 @@ include __DIR__ . '/components/unified-layout.php';
                     <?php foreach ($activeEvents as $event): ?>
                     <tr class="<?= $event['time_weight'] === '50%' ? 'row-faded' : '' ?>">
                         <td>
-                            <a href="/admin/edit-results.php?event_id=<?= $event['id'] ?>" class="admin-link">
+                            <a href="/admin/edit-results.php?event_id=<?= $event['id'] ?>" class="link">
                                 <?= h($event['name']) ?>
                             </a>
                             <?php if ($event['location']): ?>
@@ -287,19 +287,19 @@ include __DIR__ . '/components/unified-layout.php';
                         </td>
                         <td><?= date('Y-m-d', strtotime($event['date'])) ?></td>
                         <td>
-                            <span class="admin-badge admin-badge-<?= $event['discipline'] === 'ENDURO' ? 'primary' : 'secondary' ?>">
+                            <span class="badge badge-<?= $event['discipline'] === 'ENDURO' ? 'primary' : 'secondary' ?>">
                                 <?= $event['discipline'] ?>
                             </span>
                         </td>
                         <td>
-                            <span class="admin-badge admin-badge-<?= $event['event_level'] === 'national' ? 'success' : 'warning' ?>">
+                            <span class="badge badge-<?= $event['event_level'] === 'national' ? 'success' : 'warning' ?>">
                                 <?= $event['event_level'] === 'national' ? 'Nationell' : 'Sportmotion' ?>
                             </span>
                         </td>
                         <td><?= $event['rider_count'] ?></td>
                         <td><?= $event['class_count'] ?></td>
                         <td>
-                            <span class="admin-badge admin-badge-<?= $event['time_weight'] === '100%' ? 'success' : 'warning' ?>">
+                            <span class="badge badge-<?= $event['time_weight'] === '100%' ? 'success' : 'warning' ?>">
                                 <?= $event['time_weight'] ?>
                             </span>
                         </td>
@@ -314,15 +314,15 @@ include __DIR__ . '/components/unified-layout.php';
 
 <!-- Missing Events (Diagnostic) -->
 <?php if (!empty($missingEvents)): ?>
-<div class="admin-card" style="margin-bottom: 1.5rem;">
-    <div class="admin-card-header" style="background: #fef3c7; border-bottom: 1px solid #f59e0b;">
+<div class="card" style="margin-bottom: 1.5rem;">
+    <div class="card-header" style="background: #fef3c7; border-bottom: 1px solid #f59e0b;">
         <h3 style="color: #92400e;">⚠️ Events som saknas i ranking (<?= count($missingEvents) ?>)</h3>
     </div>
-    <div class="admin-card-body">
-        <p class="admin-help-text">Dessa events matchar Enduro/DH eller SweCup men saknas i ranking. Klicka på "Åtgärd" för att fixa.</p>
+    <div class="card-body">
+        <p class="help-text">Dessa events matchar Enduro/DH eller SweCup men saknas i ranking. Klicka på "Åtgärd" för att fixa.</p>
 
         <div class="table-responsive">
-            <table class="admin-table">
+            <table class="table">
                 <thead>
                     <tr>
                         <th>Event</th>
@@ -338,7 +338,7 @@ include __DIR__ . '/components/unified-layout.php';
                     <?php foreach ($missingEvents as $event): ?>
                     <tr style="background: #fffbeb;">
                         <td>
-                            <a href="/admin/event-edit.php?id=<?= $event['id'] ?>" class="admin-link">
+                            <a href="/admin/event-edit.php?id=<?= $event['id'] ?>" class="link">
                                 <?= h($event['name']) ?>
                             </a>
                             <?php if ($event['location']): ?>
@@ -347,12 +347,12 @@ include __DIR__ . '/components/unified-layout.php';
                         </td>
                         <td><?= date('Y-m-d', strtotime($event['date'])) ?></td>
                         <td>
-                            <span class="admin-badge <?= in_array($event['discipline'], ['ENDURO', 'DH']) ? 'admin-badge-success' : 'admin-badge-danger' ?>">
+                            <span class="badge <?= in_array($event['discipline'], ['ENDURO', 'DH']) ? 'badge badge--success' : 'badge badge--danger' ?>">
                                 <?= h($event['discipline'] ?: 'EJ SATT') ?>
                             </span>
                         </td>
                         <td>
-                            <span class="admin-badge admin-badge-secondary">
+                            <span class="badge badge badge--secondary">
                                 <?= h($event['event_format'] ?: '-') ?>
                             </span>
                         </td>
@@ -364,30 +364,30 @@ include __DIR__ . '/components/unified-layout.php';
                             </small>
                         </td>
                         <td>
-                            <span class="admin-badge admin-badge-danger"><?= h($event['issue']) ?></span>
+                            <span class="badge badge badge--danger"><?= h($event['issue']) ?></span>
                             <?php if ($event['classes_info']): ?>
                             <br><small style="font-size: 0.65rem; color: #666;"><?= h($event['classes_info']) ?></small>
                             <?php endif; ?>
                         </td>
                         <td>
                             <?php if ($event['issue'] === 'Fel disciplin'): ?>
-                            <a href="/admin/event-edit.php?id=<?= $event['id'] ?>" class="btn-admin btn-admin-secondary" style="font-size: 0.75rem; padding: 0.25rem 0.5rem;">
+                            <a href="/admin/event-edit.php?id=<?= $event['id'] ?>" class="btn btn--secondary" style="font-size: 0.75rem; padding: 0.25rem 0.5rem;">
                                 Sätt disciplin
                             </a>
                             <?php elseif ($event['issue'] === 'Inga poäng tilldelade'): ?>
                             <form method="POST" style="display: inline;">
                                 <?= csrf_field() ?>
                                 <input type="hidden" name="event_id" value="<?= $event['id'] ?>">
-                                <button type="submit" name="recalc_event_points" class="btn-admin btn-admin-primary" style="font-size: 0.75rem; padding: 0.25rem 0.5rem;">
+                                <button type="submit" name="recalc_event_points" class="btn btn--primary" style="font-size: 0.75rem; padding: 0.25rem 0.5rem;">
                                     Beräkna poäng
                                 </button>
                             </form>
                             <?php elseif ($event['issue'] === 'Inga finished-resultat'): ?>
-                            <a href="/admin/edit-results.php?event_id=<?= $event['id'] ?>" class="btn-admin btn-admin-secondary" style="font-size: 0.75rem; padding: 0.25rem 0.5rem;">
+                            <a href="/admin/edit-results.php?event_id=<?= $event['id'] ?>" class="btn btn--secondary" style="font-size: 0.75rem; padding: 0.25rem 0.5rem;">
                                 Uppdatera status
                             </a>
                             <?php else: ?>
-                            <a href="/admin/event-edit.php?id=<?= $event['id'] ?>" class="btn-admin btn-admin-secondary" style="font-size: 0.75rem; padding: 0.25rem 0.5rem;">
+                            <a href="/admin/event-edit.php?id=<?= $event['id'] ?>" class="btn btn--secondary" style="font-size: 0.75rem; padding: 0.25rem 0.5rem;">
                                 Redigera
                             </a>
                             <?php endif; ?>
@@ -402,13 +402,13 @@ include __DIR__ . '/components/unified-layout.php';
 <?php endif; ?>
 
 <!-- Info and Calculation Cards -->
-<div class="admin-grid-2">
+<div class="grid grid-2">
     <!-- Info Card -->
-    <div class="admin-card">
-        <div class="admin-card-header">
+    <div class="card">
+        <div class="card-header">
             <h3>Om rankingsystemet</h3>
         </div>
-        <div class="admin-card-body">
+        <div class="card-body">
             <ul style="margin: 0; padding-left: 1.25rem; line-height: 1.8;">
                 <li>Tre rankingar: <strong>Enduro</strong>, <strong>Downhill</strong>, <strong>Gravity</strong> (kombinerad)</li>
                 <li>24 månaders rullande fönster</li>
@@ -422,11 +422,11 @@ include __DIR__ . '/components/unified-layout.php';
     </div>
 
     <!-- Calculation Card -->
-    <div class="admin-card">
-        <div class="admin-card-header">
+    <div class="card">
+        <div class="card-header">
             <h3>Beräkning</h3>
         </div>
-        <div class="admin-card-body">
+        <div class="card-body">
             <p style="margin-bottom: 1rem;">
                 <strong>Senaste beräkning:</strong><br>
                 <?= $lastCalc['date'] ? date('Y-m-d H:i', strtotime($lastCalc['date'])) : 'Aldrig' ?>
@@ -441,7 +441,7 @@ include __DIR__ . '/components/unified-layout.php';
 
             <form method="POST" style="display: inline-block;">
                 <?= csrf_field() ?>
-                <button type="submit" name="calculate" class="btn-admin btn-admin-primary"
+                <button type="submit" name="calculate" class="btn btn--primary"
                     onclick="return confirm('Kör fullständig omräkning av alla rankingpoäng?')">
                     Kör beräkning
                 </button>
@@ -451,36 +451,36 @@ include __DIR__ . '/components/unified-layout.php';
 </div>
 
 <!-- Event Level Multipliers -->
-<div class="admin-card">
-    <div class="admin-card-header">
+<div class="card">
+    <div class="card-header">
         <h3>Eventtypsviktning</h3>
     </div>
-    <div class="admin-card-body">
-        <p class="admin-help-text">Nationella tävlingar ger fulla poäng. Sportmotion-event kan viktas ned.</p>
+    <div class="card-body">
+        <p class="help-text">Nationella tävlingar ger fulla poäng. Sportmotion-event kan viktas ned.</p>
 
         <form method="POST">
             <?= csrf_field() ?>
 
-            <div class="admin-form-row">
-                <div class="admin-form-group">
-                    <label class="admin-form-label">Nationell tävling</label>
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="label">Nationell tävling</label>
                     <input type="number" name="level_national"
                         value="<?= number_format($eventLevelMultipliers['national'], 2) ?>"
                         min="0" max="1" step="0.01"
-                        class="admin-form-input">
-                    <span class="admin-form-hint">Standard 1.00 (100%)</span>
+                        class="input">
+                    <span class="form-hint">Standard 1.00 (100%)</span>
                 </div>
-                <div class="admin-form-group">
-                    <label class="admin-form-label">Sportmotion</label>
+                <div class="form-group">
+                    <label class="label">Sportmotion</label>
                     <input type="number" name="level_sportmotion"
                         value="<?= number_format($eventLevelMultipliers['sportmotion'], 2) ?>"
                         min="0" max="1" step="0.01"
-                        class="admin-form-input">
-                    <span class="admin-form-hint">Standard 0.50 (50%)</span>
+                        class="input">
+                    <span class="form-hint">Standard 0.50 (50%)</span>
                 </div>
             </div>
 
-            <button type="submit" name="save_event_level" class="btn-admin btn-admin-primary">
+            <button type="submit" name="save_event_level" class="btn btn--primary">
                 Spara eventtypsviktning
             </button>
         </form>
@@ -488,12 +488,12 @@ include __DIR__ . '/components/unified-layout.php';
 </div>
 
 <!-- Field Multipliers -->
-<div class="admin-card">
-    <div class="admin-card-header">
+<div class="card">
+    <div class="card-header">
         <h3>Fältstorleksmultiplikatorer</h3>
     </div>
-    <div class="admin-card-body">
-        <p class="admin-help-text">Ju fler åkare i klassen, desto mer värda är poängen.</p>
+    <div class="card-body">
+        <p class="help-text">Ju fler åkare i klassen, desto mer värda är poängen.</p>
 
         <form method="POST" id="multipliersForm">
             <?= csrf_field() ?>
@@ -519,13 +519,13 @@ include __DIR__ . '/components/unified-layout.php';
                         id="mult_<?= $i ?>"
                         value="<?= number_format($multipliers[$i] ?? 0.75, 2) ?>"
                         min="0" max="1" step="0.01"
-                        class="admin-form-input"
+                        class="input"
                         oninput="updateBar(<?= $i ?>, this.value)">
                 </div>
                 <?php endfor; ?>
             </div>
 
-            <button type="submit" name="save_multipliers" class="btn-admin btn-admin-primary">
+            <button type="submit" name="save_multipliers" class="btn btn--primary">
                 Spara multiplikatorer
             </button>
         </form>
@@ -533,42 +533,42 @@ include __DIR__ . '/components/unified-layout.php';
 </div>
 
 <!-- Time Decay Settings -->
-<div class="admin-card">
-    <div class="admin-card-header">
+<div class="card">
+    <div class="card-header">
         <h3>Tidsviktning</h3>
     </div>
-    <div class="admin-card-body">
+    <div class="card-body">
         <form method="POST">
             <?= csrf_field() ?>
 
-            <div class="admin-form-row">
-                <div class="admin-form-group">
-                    <label class="admin-form-label">Månad 1-12</label>
+            <div class="form-row">
+                <div class="form-group">
+                    <label class="label">Månad 1-12</label>
                     <input type="number" name="decay_1_12"
                         value="<?= number_format($timeDecay['months_1_12'], 2) ?>"
                         min="0" max="1" step="0.01"
-                        class="admin-form-input">
-                    <span class="admin-form-hint">Senaste 12 månaderna</span>
+                        class="input">
+                    <span class="form-hint">Senaste 12 månaderna</span>
                 </div>
-                <div class="admin-form-group">
-                    <label class="admin-form-label">Månad 13-24</label>
+                <div class="form-group">
+                    <label class="label">Månad 13-24</label>
                     <input type="number" name="decay_13_24"
                         value="<?= number_format($timeDecay['months_13_24'], 2) ?>"
                         min="0" max="1" step="0.01"
-                        class="admin-form-input">
-                    <span class="admin-form-hint">Förra årets resultat</span>
+                        class="input">
+                    <span class="form-hint">Förra årets resultat</span>
                 </div>
-                <div class="admin-form-group">
-                    <label class="admin-form-label">Månad 25+</label>
+                <div class="form-group">
+                    <label class="label">Månad 25+</label>
                     <input type="number" name="decay_25_plus"
                         value="<?= number_format($timeDecay['months_25_plus'], 2) ?>"
                         min="0" max="1" step="0.01"
-                        class="admin-form-input">
-                    <span class="admin-form-hint">Äldre resultat (förfaller)</span>
+                        class="input">
+                    <span class="form-hint">Äldre resultat (förfaller)</span>
                 </div>
             </div>
 
-            <button type="submit" name="save_decay" class="btn-admin btn-admin-primary">
+            <button type="submit" name="save_decay" class="btn btn--primary">
                 Spara tidsviktning
             </button>
         </form>
@@ -576,16 +576,16 @@ include __DIR__ . '/components/unified-layout.php';
 </div>
 
 <!-- Reset Defaults -->
-<div class="admin-card">
-    <div class="admin-card-header">
+<div class="card">
+    <div class="card-header">
         <h3>Återställ</h3>
     </div>
-    <div class="admin-card-body">
-        <p class="admin-help-text">Återställ alla inställningar till standardvärden. Kör ny beräkning efteråt.</p>
+    <div class="card-body">
+        <p class="help-text">Återställ alla inställningar till standardvärden. Kör ny beräkning efteråt.</p>
 
         <form method="POST">
             <?= csrf_field() ?>
-            <button type="submit" name="reset_defaults" class="btn-admin btn-admin-secondary"
+            <button type="submit" name="reset_defaults" class="btn btn--secondary"
                 onclick="return confirm('Återställ alla inställningar till standardvärden?')">
                 Återställ till standard
             </button>
@@ -602,56 +602,56 @@ include __DIR__ . '/components/unified-layout.php';
     padding: 0 1rem;
 }
 
-.admin-table {
+.table {
     width: 100%;
     border-collapse: collapse;
     font-size: 0.875rem;
     min-width: 600px;
 }
 
-.admin-table th,
-.admin-table td {
+.table th,
+.table td {
     padding: 0.75rem 0.5rem;
     text-align: left;
-    border-bottom: 1px solid var(--admin-border, #e2e8f0);
+    border-bottom: 1px solid var(--color-border);
     white-space: nowrap;
 }
 
-.admin-table th {
+.table th {
     font-weight: 600;
-    background: var(--admin-bg-muted, #f7fafc);
-    color: var(--admin-text-muted, #718096);
+    background: var(--color-bg-surface);
+    color: var(--text-muted, #718096);
     font-size: 0.75rem;
     text-transform: uppercase;
     letter-spacing: 0.05em;
 }
 
-.admin-table tbody tr:hover {
-    background: var(--admin-bg-hover, #f7fafc);
+.table tbody tr:hover {
+    background: var(--color-bg-hover);
 }
 
-.admin-table .row-faded {
+.table .row-faded {
     background: #fffbeb;
 }
 
-.admin-table .row-faded:hover {
+.table .row-faded:hover {
     background: #fef3c7;
 }
 
-.admin-link {
-    color: var(--admin-primary, #0066cc);
+.link {
+    color: var(--color-accent);
     text-decoration: none;
 }
 
-.admin-link:hover {
+.link:hover {
     text-decoration: underline;
 }
 
 .text-muted {
-    color: var(--admin-text-muted, #718096);
+    color: var(--text-muted, #718096);
 }
 
-.admin-badge {
+.badge {
     display: inline-block;
     padding: 0.2rem 0.5rem;
     border-radius: 4px;
@@ -660,93 +660,93 @@ include __DIR__ . '/components/unified-layout.php';
     text-transform: uppercase;
 }
 
-.admin-badge-primary {
+.badge badge--primary {
     background: #dbeafe;
     color: #1e40af;
 }
 
-.admin-badge-secondary {
+.badge badge--secondary {
     background: #e2e8f0;
     color: #475569;
 }
 
-.admin-badge-success {
+.badge badge--success {
     background: #dcfce7;
     color: #166534;
 }
 
-.admin-badge-warning {
+.badge badge--warning {
     background: #fef3c7;
     color: #92400e;
 }
 
 @media (max-width: 768px) {
-    .admin-table {
+    .table {
         font-size: 0.75rem;
     }
 
-    .admin-table th,
-    .admin-table td {
+    .table th,
+    .table td {
         padding: 0.5rem 0.4rem;
     }
 
     /* Hide less important columns on mobile */
-    .admin-table th:nth-child(4),
-    .admin-table td:nth-child(4),
-    .admin-table th:nth-child(6),
-    .admin-table td:nth-child(6) {
+    .table th:nth-child(4),
+    .table td:nth-child(4),
+    .table th:nth-child(6),
+    .table td:nth-child(6) {
         display: none;
     }
 }
 
-.admin-stats-grid {
+.grid grid-stats {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: 1rem;
     margin-bottom: 1.5rem;
 }
 
-.admin-stat-card {
-    background: var(--admin-card-bg, #fff);
-    border: 1px solid var(--admin-border, #e2e8f0);
+.stat-card {
+    background: var(--card-bg, #fff);
+    border: 1px solid var(--color-border);
     border-radius: 8px;
     padding: 1.25rem;
     text-align: center;
 }
 
-.admin-stat-value {
+.stat-value {
     font-size: 2rem;
     font-weight: 700;
-    color: var(--admin-primary, #0066cc);
+    color: var(--color-accent);
 }
 
-.admin-stat-label {
+.stat-label {
     font-weight: 600;
-    color: var(--admin-text, #1a202c);
+    color: var(--color-text-primary);
     margin-bottom: 0.25rem;
 }
 
-.admin-stat-meta {
+.stat-meta {
     font-size: 0.75rem;
-    color: var(--admin-text-muted, #718096);
+    color: var(--text-muted, #718096);
 }
 
-.admin-grid-2 {
+.grid grid-2 {
     display: grid;
     grid-template-columns: repeat(2, 1fr);
     gap: 1.5rem;
     margin-bottom: 1.5rem;
 }
 
-.admin-help-text {
-    color: var(--admin-text-muted, #718096);
+.help-text {
+    color: var(--text-muted, #718096);
     font-size: 0.875rem;
     margin-bottom: 1rem;
 }
 
-.admin-form-hint {
+.form-hint {
     font-size: 0.75rem;
-    color: var(--admin-text-muted, #718096);
+    color: var(--text-muted, #718096);
     display: block;
     margin-top: 0.25rem;
 }
@@ -770,7 +770,7 @@ include __DIR__ . '/components/unified-layout.php';
 
 .multiplier-bar {
     width: 100%;
-    background: var(--admin-primary, #0066cc);
+    background: var(--color-accent);
     border-radius: 2px 2px 0 0;
     transition: height 0.2s ease;
     min-height: 5px;
@@ -778,7 +778,7 @@ include __DIR__ . '/components/unified-layout.php';
 
 .multiplier-label {
     font-size: 0.625rem;
-    color: var(--admin-text-muted, #718096);
+    color: var(--text-muted, #718096);
     margin-top: 4px;
 }
 
@@ -797,7 +797,7 @@ include __DIR__ . '/components/unified-layout.php';
 .multiplier-input-col label {
     display: block;
     font-size: 0.625rem;
-    color: var(--admin-text-muted, #718096);
+    color: var(--text-muted, #718096);
     margin-bottom: 2px;
 }
 
@@ -809,11 +809,11 @@ include __DIR__ . '/components/unified-layout.php';
 
 /* Responsive */
 @media (max-width: 768px) {
-    .admin-stats-grid {
+    .grid grid-stats {
         grid-template-columns: 1fr;
     }
 
-    .admin-grid-2 {
+    .grid grid-2 {
         grid-template-columns: 1fr;
     }
 

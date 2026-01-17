@@ -21,7 +21,7 @@ require_once __DIR__ . '/../analytics/includes/SVGChartRenderer.php';
 require_once __DIR__ . '/../analytics/includes/PdfExportBuilder.php';
 
 $pageTitle = 'Export Center';
-include __DIR__ . '/../includes/admin-header.php';
+include __DIR__ . '/../includes/page-header.php';
 
 $pdo = hub_db();
 $engine = new AnalyticsEngine($pdo);
@@ -64,7 +64,7 @@ $recalcStatus = $engine->getRecalcQueueStatus();
 $rateLimitSource = $logger->getRateLimitSource();
 ?>
 
-<div class="admin-content">
+<div class="main-content">
     <div class="page-header">
         <h1><i data-lucide="download"></i> <?= $pageTitle ?></h1>
         <p class="text-muted">Exportera analytics-data med full reproducerbarhet och GDPR-compliance</p>

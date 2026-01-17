@@ -327,7 +327,7 @@ include __DIR__ . '/components/unified-layout.php';
             <input type="hidden" name="action" value="fix_selected" id="form-action">
 
             <div class="action-bar">
-                <button type="submit" class="btn-admin btn-admin-primary">
+                <button type="submit" class="btn btn--primary">
                     <i data-lucide="check"></i>
                     Spara ändringar
                 </button>

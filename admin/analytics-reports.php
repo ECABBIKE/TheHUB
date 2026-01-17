@@ -386,7 +386,7 @@ include __DIR__ . '/components/unified-layout.php';
                 <?php endforeach; ?>
             </select>
 
-            <a href="?report=<?= $reportType ?>&year=<?= $selectedYear ?>&export=1" class="btn-admin btn-admin-primary">
+            <a href="?report=<?= $reportType ?>&year=<?= $selectedYear ?>&export=1" class="btn btn--primary">
                 <i data-lucide="download"></i> Exportera CSV
             </a>
         </div>
@@ -398,7 +398,7 @@ include __DIR__ . '/components/unified-layout.php';
     <i data-lucide="info"></i>
     <div>
         <?= htmlspecialchars($dataWarning) ?>
-        <a href="/admin/analytics-populate.php" class="btn-admin btn-admin-sm" style="margin-left: var(--space-md);">Populate Data</a>
+        <a href="/admin/analytics-populate.php" class="btn btn--sm" style="margin-left: var(--space-md);">Populate Data</a>
     </div>
 </div>
 <?php endif; ?>
@@ -1060,7 +1060,7 @@ include __DIR__ . '/components/unified-layout.php';
                 <?php endforeach; ?>
             </select>
             <?php if ($selectedSeries): ?>
-            <a href="?report=rookies&year=<?= $selectedYear ?>" class="btn-admin btn-admin-ghost btn-admin-sm">
+            <a href="?report=rookies&year=<?= $selectedYear ?>" class="btn btn--ghost btn--sm">
                 <i data-lucide="x" style="width:14px;height:14px;"></i> Rensa filter
             </a>
             <?php endif; ?>

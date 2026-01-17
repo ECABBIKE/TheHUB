@@ -396,57 +396,57 @@ include __DIR__ . '/components/unified-layout.php';
 <?php endif; ?>
 
 <!-- Stats Grid -->
-<div class="admin-stats-grid">
-    <div class="admin-stat-card">
-        <div class="admin-stat-icon" style="background: var(--color-info-light); color: var(--color-info);">
+<div class="grid grid-stats">
+    <div class="stat-card">
+        <div class="stat-icon" style="background: var(--color-info-light); color: var(--color-info);">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 22V4a2 2 0 0 1 2-2h8a2 2 0 0 1 2 2v18Z"/><path d="M6 12H4a2 2 0 0 0-2 2v6a2 2 0 0 0 2 2h2"/><path d="M18 9h2a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-2"/><path d="M10 6h4"/><path d="M10 10h4"/><path d="M10 14h4"/><path d="M10 18h4"/></svg>
         </div>
-        <div class="admin-stat-content">
-            <div class="admin-stat-value"><?= $totalClubs ?></div>
-            <div class="admin-stat-label">Totalt klubbar</div>
+        <div class="stat-content">
+            <div class="stat-value"><?= $totalClubs ?></div>
+            <div class="stat-label">Totalt klubbar</div>
         </div>
     </div>
 
-    <div class="admin-stat-card">
-        <div class="admin-stat-icon" style="background: var(--color-success-light); color: var(--color-success);">
+    <div class="stat-card">
+        <div class="stat-icon" style="background: var(--color-success-light); color: var(--color-success);">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
         </div>
-        <div class="admin-stat-content">
-            <div class="admin-stat-value"><?= $activeCount ?></div>
-            <div class="admin-stat-label">Aktiva</div>
+        <div class="stat-content">
+            <div class="stat-value"><?= $activeCount ?></div>
+            <div class="stat-label">Aktiva</div>
         </div>
     </div>
 
-    <div class="admin-stat-card">
-        <div class="admin-stat-icon" style="background: var(--color-accent-light); color: var(--color-accent);">
+    <div class="stat-card">
+        <div class="stat-icon" style="background: var(--color-accent-light); color: var(--color-accent);">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
         </div>
-        <div class="admin-stat-content">
-            <div class="admin-stat-value"><?= number_format($totalMembers, 0, ',', ' ') ?></div>
-            <div class="admin-stat-label">Totalt medlemmar</div>
+        <div class="stat-content">
+            <div class="stat-value"><?= number_format($totalMembers, 0, ',', ' ') ?></div>
+            <div class="stat-label">Totalt medlemmar</div>
         </div>
     </div>
 </div>
 
 <!-- Search & Filters -->
-<div class="admin-card">
-    <div class="admin-card-body">
-        <form method="GET" id="searchForm" class="admin-form-row" style="align-items: flex-end; flex-wrap: wrap; gap: var(--space-sm);">
-            <div class="admin-form-group" style="flex: 1; min-width: 200px; margin-bottom: 0;">
-                <label for="searchInput" class="admin-form-label">Sök</label>
+<div class="card">
+    <div class="card-body">
+        <form method="GET" id="searchForm" class="form-row" style="align-items: flex-end; flex-wrap: wrap; gap: var(--space-sm);">
+            <div class="form-group" style="flex: 1; min-width: 200px; margin-bottom: 0;">
+                <label for="searchInput" class="label">Sök</label>
                 <input
                     type="text"
                     name="search"
                     id="searchInput"
-                    class="admin-form-input"
+                    class="input"
                     placeholder="Sök efter klubbnamn..."
                     value="<?= htmlspecialchars($search) ?>"
                     autocomplete="off"
                 >
             </div>
-            <div class="admin-form-group" style="width: 150px; margin-bottom: 0;">
-                <label for="countryFilter" class="admin-form-label">Land</label>
-                <select name="country" id="countryFilter" class="admin-form-select" onchange="this.form.submit()">
+            <div class="form-group" style="width: 150px; margin-bottom: 0;">
+                <label for="countryFilter" class="label">Land</label>
+                <select name="country" id="countryFilter" class="input" onchange="this.form.submit()">
                     <option value="">Alla länder</option>
                     <?php foreach ($countries as $c): ?>
                         <option value="<?= htmlspecialchars($c['country']) ?>" <?= $countryFilter === $c['country'] ? 'selected' : '' ?>>
@@ -455,17 +455,17 @@ include __DIR__ . '/components/unified-layout.php';
                     <?php endforeach; ?>
                 </select>
             </div>
-            <div class="admin-form-group" style="width: 150px; margin-bottom: 0;">
-                <label for="rfFilter" class="admin-form-label">RF-status</label>
-                <select name="rf" id="rfFilter" class="admin-form-select" onchange="this.form.submit()">
+            <div class="form-group" style="width: 150px; margin-bottom: 0;">
+                <label for="rfFilter" class="label">RF-status</label>
+                <select name="rf" id="rfFilter" class="input" onchange="this.form.submit()">
                     <option value="">Alla</option>
                     <option value="1" <?= $rfFilter === '1' ? 'selected' : '' ?>>RF-ansluten</option>
                     <option value="0" <?= $rfFilter === '0' ? 'selected' : '' ?>>Ej RF-ansluten</option>
                 </select>
             </div>
-            <div class="admin-form-group" style="width: 150px; margin-bottom: 0;">
-                <label for="memberFilter" class="admin-form-label">Medlemmar</label>
-                <select name="members" id="memberFilter" class="admin-form-select" onchange="this.form.submit()">
+            <div class="form-group" style="width: 150px; margin-bottom: 0;">
+                <label for="memberFilter" class="label">Medlemmar</label>
+                <select name="members" id="memberFilter" class="input" onchange="this.form.submit()">
                     <option value="">Alla</option>
                     <option value="none" <?= $memberFilter === 'none' ? 'selected' : '' ?>>0 (tomma)</option>
                     <option value="few" <?= $memberFilter === 'few' ? 'selected' : '' ?>>1-2 medlemmar</option>
@@ -473,7 +473,7 @@ include __DIR__ . '/components/unified-layout.php';
                 </select>
             </div>
             <?php if ($search || $countryFilter || $rfFilter || $memberFilter): ?>
-                <a href="/admin/clubs" class="btn-admin btn-admin-sm btn-admin-secondary" style="margin-top: auto;">
+                <a href="/admin/clubs" class="btn btn--sm btn--secondary" style="margin-top: auto;">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
                     Rensa
                 </a>
@@ -483,13 +483,13 @@ include __DIR__ . '/components/unified-layout.php';
 </div>
 
 <!-- Clubs Table -->
-<div class="admin-card">
-    <div class="admin-card-header">
+<div class="card">
+    <div class="card-header">
         <h2><?= count($clubs) ?> klubbar</h2>
     </div>
-    <div class="admin-card-body" style="padding: 0;">
+    <div class="card-body" style="padding: 0;">
         <?php if (empty($clubs)): ?>
-            <div class="admin-empty-state">
+            <div class="empty-state">
                 <i data-lucide="building-2" style="width: 48px; height: 48px; opacity: 0.5;"></i>
                 <h3>Inga klubbar hittades</h3>
                 <p>Prova att ändra sökning eller skapa en ny klubb.</p>
@@ -516,8 +516,8 @@ include __DIR__ . '/components/unified-layout.php';
                 </form>
             </div>
 
-            <div class="admin-table-container">
-                <table class="admin-table">
+            <div class="table-container">
+                <table class="table">
                     <thead>
                         <tr>
                             <th style="width: 40px;"><input type="checkbox" id="selectAllClubs" title="Markera alla"></th>
@@ -559,11 +559,11 @@ include __DIR__ . '/components/unified-layout.php';
                                         // Determine federation badge
                                         $fed = $club['federation'] ?? 'SCF';
                                         $fedColors = [
-                                            'SCF' => 'admin-badge-info',      // Swedish - blue
-                                            'NCF' => 'admin-badge-error',     // Norwegian - red
-                                            'DCU' => 'admin-badge-warning'    // Danish - yellow
+                                            'SCF' => 'badge badge--info',      // Swedish - blue
+                                            'NCF' => 'badge-error',     // Norwegian - red
+                                            'DCU' => 'badge badge--warning'    // Danish - yellow
                                         ];
-                                        $fedClass = $fedColors[$fed] ?? 'admin-badge-success';
+                                        $fedClass = $fedColors[$fed] ?? 'badge badge--success';
                                         $fedTitle = match($fed) {
                                             'SCF' => $club['scf_district'] ?? 'Svenska Cykelförbundet',
                                             'NCF' => 'Norges Cykleforbund',
@@ -571,24 +571,24 @@ include __DIR__ . '/components/unified-layout.php';
                                             default => 'RF-registrerad'
                                         };
                                         ?>
-                                    <span class="admin-badge <?= $fedClass ?>" title="<?= htmlspecialchars($fedTitle) ?>" style="font-size: 0.65rem; padding: 2px 4px;"><?= $fed ?></span>
+                                    <span class="badge <?= $fedClass ?>" title="<?= htmlspecialchars($fedTitle) ?>" style="font-size: 0.65rem; padding: 2px 4px;"><?= $fed ?></span>
                                     <?php endif; ?>
                                 </td>
                                 <td>
-                                    <span class="admin-badge admin-badge-info">
+                                    <span class="badge badge badge--info">
                                         <?= htmlspecialchars($club['short_name'] ?? substr($club['name'], 0, 3)) ?>
                                     </span>
                                 </td>
                                 <td class="text-secondary"><?= htmlspecialchars($club['city'] ?? '-') ?></td>
                                 <td class="text-secondary"><?= htmlspecialchars($club['country'] ?? 'Sverige') ?></td>
                                 <td>
-                                    <a href="/admin/riders?club_id=<?= $club['id'] ?>" class="btn-admin btn-admin-sm btn-admin-secondary">
+                                    <a href="/admin/riders?club_id=<?= $club['id'] ?>" class="btn btn--sm btn--secondary">
                                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/></svg>
                                         <?= $club['rider_count'] ?>
                                     </a>
                                 </td>
                                 <td>
-                                    <span class="admin-badge <?= $club['active'] ? 'admin-badge-success' : 'admin-badge-secondary' ?>">
+                                    <span class="badge <?= $club['active'] ? 'badge badge--success' : 'badge badge--secondary' ?>">
                                         <?= $club['active'] ? 'Aktiv' : 'Inaktiv' ?>
                                     </span>
                                 </td>

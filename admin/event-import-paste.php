@@ -453,8 +453,8 @@ include __DIR__ . '/components/unified-layout.php';
 <?php endif; ?>
 
 <!-- Event Info -->
-<div class="admin-card mb-lg">
-    <div class="admin-card-body" style="display: flex; align-items: center; gap: var(--space-lg);">
+<div class="card mb-lg">
+    <div class="card-body" style="display: flex; align-items: center; gap: var(--space-lg);">
         <div>
             <h2 style="margin: 0;"><?= h($event['name']) ?></h2>
             <p class="text-secondary" style="margin: var(--space-xs) 0 0 0;">
@@ -475,14 +475,14 @@ include __DIR__ . '/components/unified-layout.php';
 
 <?php if ($preview): ?>
 <!-- Preview -->
-<div class="admin-card mb-lg">
-    <div class="admin-card-header">
+<div class="card mb-lg">
+    <div class="card-header">
         <h2>
             <i data-lucide="eye"></i>
             Förhandsgranskning - <?= h($preview['class_name']) ?>
         </h2>
     </div>
-    <div class="admin-card-body">
+    <div class="card-body">
         <p class="mb-md">
             <strong><?= count($preview['results']) ?></strong> resultat hittades.
             Granska och bekräfta importen.
@@ -553,11 +553,11 @@ include __DIR__ . '/components/unified-layout.php';
             <input type="hidden" name="action" value="import">
 
             <div style="display: flex; gap: var(--space-md);">
-                <button type="submit" class="btn-admin btn-admin-primary">
+                <button type="submit" class="btn btn--primary">
                     <i data-lucide="download"></i>
                     Importera <?= count($preview['results']) ?> resultat
                 </button>
-                <a href="?event_id=<?= $eventId ?>" class="btn-admin btn-admin-secondary">
+                <a href="?event_id=<?= $eventId ?>" class="btn btn--secondary">
                     <i data-lucide="arrow-left"></i>
                     Tillbaka
                 </a>
@@ -568,26 +568,26 @@ include __DIR__ . '/components/unified-layout.php';
 
 <?php else: ?>
 <!-- Import Form -->
-<div class="admin-card mb-lg">
-    <div class="admin-card-header">
+<div class="card mb-lg">
+    <div class="card-header">
         <h2>
             <i data-lucide="clipboard-paste"></i>
             Klistra in resultat
         </h2>
     </div>
-    <div class="admin-card-body">
+    <div class="card-body">
         <form method="POST">
             <?= csrf_field() ?>
             <input type="hidden" name="action" value="preview">
 
             <!-- Class Selection -->
-            <div class="admin-form-group">
-                <label class="admin-form-label">
+            <div class="form-group">
+                <label class="label">
                     <i data-lucide="tag"></i>
                     Välj klass
                 </label>
                 <div style="display: flex; gap: var(--space-md); flex-wrap: wrap;">
-                    <select name="class_id" class="admin-form-select" style="flex: 1; min-width: 200px;" id="classSelect">
+                    <select name="class_id" class="input" style="flex: 1; min-width: 200px;" id="classSelect">
                         <option value="">-- Välj befintlig klass --</option>
                         <?php if (!empty($eventClasses)): ?>
                         <optgroup label="Klasser i detta event">
@@ -603,7 +603,7 @@ include __DIR__ . '/components/unified-layout.php';
                         </optgroup>
                     </select>
                     <span class="text-secondary" style="align-self: center;">eller</span>
-                    <input type="text" name="new_class_name" class="admin-form-input"
+                    <input type="text" name="new_class_name" class="input"
                            style="flex: 1; min-width: 200px;"
                            placeholder="Skapa ny klass..."
                            id="newClassInput">
@@ -611,12 +611,12 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
 
             <!-- Paste Area -->
-            <div class="admin-form-group">
-                <label class="admin-form-label">
+            <div class="form-group">
+                <label class="label">
                     <i data-lucide="file-text"></i>
                     Klistra in data (tab-separerad)
                 </label>
-                <textarea name="pasted_data" class="admin-form-textarea"
+                <textarea name="pasted_data" class="input"
                           rows="15"
                           placeholder="Klistra in resultat här...
 
@@ -631,7 +631,7 @@ DNS  533  Christian NILSSON  10058874031  CK Master  Sverige SWE  0"
                 ><?= h($_POST['pasted_data'] ?? '') ?></textarea>
             </div>
 
-            <button type="submit" class="btn-admin btn-admin-primary">
+            <button type="submit" class="btn btn--primary">
                 <i data-lucide="eye"></i>
                 Förhandsgranska
             </button>
@@ -640,14 +640,14 @@ DNS  533  Christian NILSSON  10058874031  CK Master  Sverige SWE  0"
 </div>
 
 <!-- Format Help -->
-<div class="admin-card">
-    <div class="admin-card-header">
+<div class="card">
+    <div class="card-header">
         <h2>
             <i data-lucide="help-circle"></i>
             Format
         </h2>
     </div>
-    <div class="admin-card-body">
+    <div class="card-body">
         <p class="text-secondary mb-md">
             Kopiera resultat från timing-system, Excel eller webbsida och klistra in.
             Tab-separerade kolumner stöds.

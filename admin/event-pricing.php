@@ -61,7 +61,7 @@ $breadcrumbs = [
     ['label' => 'Priser']
 ];
 $page_actions = '
-<a href="/admin/events/edit/' . $eventId . '" class="btn-admin btn-admin-secondary">
+<a href="/admin/events/edit/' . $eventId . '" class="btn btn--secondary">
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon-sm"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/></svg>
     Redigera event
 </a>';
@@ -70,11 +70,11 @@ include __DIR__ . '/components/unified-layout.php';
 ?>
 
 <!-- Event info -->
-<div class="admin-card mb-lg">
-    <div class="admin-card-header">
+<div class="card mb-lg">
+    <div class="card-header">
         <h2><i data-lucide="calendar"></i> Event-information</h2>
     </div>
-    <div class="admin-card-body">
+    <div class="card-body">
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--space-md);">
             <div>
                 <strong>Datum:</strong><br>
@@ -87,9 +87,9 @@ include __DIR__ . '/components/unified-layout.php';
             <div>
                 <strong>Prismall:</strong><br>
                 <?php if ($template): ?>
-                    <span class="admin-badge admin-badge-success"><?= htmlspecialchars($template['name']) ?></span>
+                    <span class="badge badge badge--success"><?= htmlspecialchars($template['name']) ?></span>
                 <?php else: ?>
-                    <span class="admin-badge admin-badge-warning">Ingen mall vald</span>
+                    <span class="badge badge badge--warning">Ingen mall vald</span>
                 <?php endif; ?>
             </div>
         </div>
@@ -98,41 +98,41 @@ include __DIR__ . '/components/unified-layout.php';
 
 <?php if (!$template): ?>
     <!-- No template assigned -->
-    <div class="admin-card">
-        <div class="admin-card-body" style="text-align: center; padding: var(--space-2xl);">
+    <div class="card">
+        <div class="card-body" style="text-align: center; padding: var(--space-2xl);">
             <i data-lucide="alert-circle" style="width: 48px; height: 48px; color: var(--color-warning); margin-bottom: var(--space-md); display: block; margin-left: auto; margin-right: auto;"></i>
             <h2>Ingen prismall tilldelad</h2>
             <p style="color: var(--color-text-secondary); margin: var(--space-md) 0;">
                 Detta event har ingen prismall. Tilldela en prismall i event-inställningarna för att aktivera prissättning.
             </p>
-            <a href="/admin/events/edit/<?= $eventId ?>" class="btn-admin btn-admin-primary">
+            <a href="/admin/events/edit/<?= $eventId ?>" class="btn btn--primary">
                 <i data-lucide="settings"></i> Redigera event
             </a>
         </div>
     </div>
 <?php elseif (empty($templatePrices)): ?>
     <!-- Template exists but no prices -->
-    <div class="admin-card">
-        <div class="admin-card-body" style="text-align: center; padding: var(--space-2xl);">
+    <div class="card">
+        <div class="card-body" style="text-align: center; padding: var(--space-2xl);">
             <i data-lucide="tag" style="width: 48px; height: 48px; color: var(--color-text-muted); margin-bottom: var(--space-md); display: block; margin-left: auto; margin-right: auto;"></i>
             <h2>Inga priser i mallen</h2>
             <p style="color: var(--color-text-secondary); margin: var(--space-md) 0;">
                 Prismallen "<?= htmlspecialchars($template['name']) ?>" har inga klasspriser definierade.
             </p>
-            <a href="/admin/pricing-templates.php" class="btn-admin btn-admin-primary">
+            <a href="/admin/pricing-templates.php" class="btn btn--primary">
                 <i data-lucide="file-text"></i> Hantera prismallar
             </a>
         </div>
     </div>
 <?php else: ?>
     <!-- Show prices from template -->
-    <div class="admin-card">
-        <div class="admin-card-header">
+    <div class="card">
+        <div class="card-header">
             <h2><i data-lucide="tag"></i> Priser från mall: <?= htmlspecialchars($template['name']) ?></h2>
         </div>
-        <div class="admin-card-body p-0">
-            <div class="admin-table-container">
-                <table class="admin-table">
+        <div class="card-body p-0">
+            <div class="table-container">
+                <table class="table">
                     <thead>
                         <tr>
                             <th>Klass</th>
@@ -170,11 +170,11 @@ include __DIR__ . '/components/unified-layout.php';
     </div>
 
     <!-- Summary -->
-    <div class="admin-card mt-lg">
-        <div class="admin-card-header">
+    <div class="card mt-lg">
+        <div class="card-header">
             <h2><i data-lucide="info"></i> Sammanfattning</h2>
         </div>
-        <div class="admin-card-body">
+        <div class="card-body">
             <ul style="margin: 0; padding-left: var(--space-lg);">
                 <li><strong><?= count($templatePrices) ?></strong> klasser med prissättning</li>
                 <li>Priser hämtas från mallen <strong>"<?= htmlspecialchars($template['name']) ?>"</strong></li>

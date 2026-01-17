@@ -1001,49 +1001,49 @@ include __DIR__ . '/components/unified-layout.php';
 
   <!-- Statistics -->
   <?php if ($stats): ?>
-  <div class="admin-card mb-lg">
-   <div class="admin-card-header">
+  <div class="card mb-lg">
+   <div class="card-header">
    <h2>
     <i data-lucide="bar-chart"></i>
     Import-statistik
    </h2>
    </div>
-   <div class="admin-card-body">
+   <div class="card-body">
    <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: var(--space-md);">
-    <div class="admin-stat-card">
-    <div class="admin-stat-icon" style="background: var(--color-bg-muted);">
+    <div class="stat-card">
+    <div class="stat-icon" style="background: var(--color-bg-muted);">
      <i data-lucide="file-text"></i>
     </div>
-    <div class="admin-stat-value"><?= number_format($stats['total']) ?></div>
-    <div class="admin-stat-label">Totalt rader</div>
+    <div class="stat-value"><?= number_format($stats['total']) ?></div>
+    <div class="stat-label">Totalt rader</div>
     </div>
-    <div class="admin-stat-card">
-    <div class="admin-stat-icon" style="background: rgba(97, 206, 112, 0.1); color: var(--color-success);">
+    <div class="stat-card">
+    <div class="stat-icon" style="background: rgba(97, 206, 112, 0.1); color: var(--color-success);">
      <i data-lucide="check-circle"></i>
     </div>
-    <div class="admin-stat-value text-success"><?= number_format($stats['success']) ?></div>
-    <div class="admin-stat-label">Nya</div>
+    <div class="stat-value text-success"><?= number_format($stats['success']) ?></div>
+    <div class="stat-label">Nya</div>
     </div>
-    <div class="admin-stat-card">
-    <div class="admin-stat-icon" style="background: rgba(0, 74, 152, 0.1); color: var(--color-gs-blue);">
+    <div class="stat-card">
+    <div class="stat-icon" style="background: rgba(0, 74, 152, 0.1); color: var(--color-gs-blue);">
      <i data-lucide="refresh-cw"></i>
     </div>
-    <div class="admin-stat-value" style="color: var(--color-gs-blue);"><?= number_format($stats['updated']) ?></div>
-    <div class="admin-stat-label">Uppdaterade</div>
+    <div class="stat-value" style="color: var(--color-gs-blue);"><?= number_format($stats['updated']) ?></div>
+    <div class="stat-label">Uppdaterade</div>
     </div>
-    <div class="admin-stat-card">
-    <div class="admin-stat-icon" style="background: rgba(245, 158, 11, 0.1); color: var(--color-warning);">
+    <div class="stat-card">
+    <div class="stat-icon" style="background: rgba(245, 158, 11, 0.1); color: var(--color-warning);">
      <i data-lucide="minus-circle"></i>
     </div>
-    <div class="admin-stat-value" style="color: var(--color-warning);"><?= number_format($stats['skipped']) ?></div>
-    <div class="admin-stat-label">Överhoppade</div>
+    <div class="stat-value" style="color: var(--color-warning);"><?= number_format($stats['skipped']) ?></div>
+    <div class="stat-label">Överhoppade</div>
     </div>
-    <div class="admin-stat-card">
-    <div class="admin-stat-icon" style="background: rgba(239, 68, 68, 0.1); color: var(--color-danger);">
+    <div class="stat-card">
+    <div class="stat-icon" style="background: rgba(239, 68, 68, 0.1); color: var(--color-danger);">
      <i data-lucide="x-circle"></i>
     </div>
-    <div class="admin-stat-value" style="color: var(--color-danger);"><?= number_format($stats['failed']) ?></div>
-    <div class="admin-stat-label">Misslyckade</div>
+    <div class="stat-value" style="color: var(--color-danger);"><?= number_format($stats['failed']) ?></div>
+    <div class="stat-label">Misslyckade</div>
     </div>
    </div>
 
@@ -1054,8 +1054,8 @@ include __DIR__ . '/components/unified-layout.php';
      <i data-lucide="columns"></i>
      Kolumnmappning (<?= count($columnMappings) ?> kolumner)
     </summary>
-    <div class="admin-table-container" style="max-height: 300px; overflow-y: auto;">
-     <table class="admin-table admin-table-sm">
+    <div class="table-container" style="max-height: 300px; overflow-y: auto;">
+     <table class="table table-sm">
      <thead>
       <tr>
       <th>Original kolumnnamn</th>
@@ -1072,9 +1072,9 @@ include __DIR__ . '/components/unified-layout.php';
        <td><code><?= htmlspecialchars($cm['original']) ?></code></td>
        <td>
        <?php if ($nameField): ?>
-        <span class="admin-badge admin-badge-success"><?= htmlspecialchars($cm['mapped']) ?></span>
+        <span class="badge badge badge--success"><?= htmlspecialchars($cm['mapped']) ?></span>
        <?php elseif ($important): ?>
-        <span class="admin-badge admin-badge-info"><?= htmlspecialchars($cm['mapped']) ?></span>
+        <span class="badge badge badge--info"><?= htmlspecialchars($cm['mapped']) ?></span>
        <?php else: ?>
         <span class="text-secondary"><?= htmlspecialchars($cm['mapped']) ?></span>
        <?php endif; ?>
@@ -1111,11 +1111,11 @@ include __DIR__ . '/components/unified-layout.php';
      <strong>Totalt i databasen:</strong> <?= number_format($stats['total_in_db']) ?> cyklister
     </div>
     <div style="display: flex; gap: var(--space-md);">
-     <a href="/admin/riders.php" class="btn-admin btn-admin-primary">
+     <a href="/admin/riders.php" class="btn btn--primary">
      <i data-lucide="users"></i>
      Se alla deltagare
      </a>
-     <a href="/admin/debug-database.php" class="btn-admin btn-admin-secondary">
+     <a href="/admin/debug-database.php" class="btn btn--secondary">
      <i data-lucide="search"></i>
      Debug databas
      </a>
@@ -1195,19 +1195,19 @@ include __DIR__ . '/components/unified-layout.php';
   <?php endif; ?>
 
   <!-- Upload Form -->
-  <div class="admin-card mb-lg">
-  <div class="admin-card-header">
+  <div class="card mb-lg">
+  <div class="card-header">
    <h2>
    <i data-lucide="upload"></i>
    Ladda upp CSV-fil
    </h2>
   </div>
-  <div class="admin-card-body">
+  <div class="card-body">
    <form method="POST" enctype="multipart/form-data" id="uploadForm" style="max-width: 500px;">
    <?= csrf_field() ?>
 
-   <div class="admin-form-group">
-    <label class="admin-form-label">
+   <div class="form-group">
+    <label class="label">
     <i data-lucide="file"></i>
     Välj CSV-fil
     </label>
@@ -1215,7 +1215,7 @@ include __DIR__ . '/components/unified-layout.php';
     type="file"
     id="import_file"
     name="import_file"
-    class="admin-form-input"
+    class="input"
     accept=".csv,.xlsx,.xls"
     required
     >
@@ -1224,8 +1224,8 @@ include __DIR__ . '/components/unified-layout.php';
     </small>
    </div>
 
-   <div class="admin-form-group">
-    <label class="admin-form-label">
+   <div class="form-group">
+    <label class="label">
     <i data-lucide="calendar"></i>
     Säsongsår för klubbtillhörighet
     </label>
@@ -1233,7 +1233,7 @@ include __DIR__ . '/components/unified-layout.php';
     $currentYear = (int)date('Y');
     $availableYears = range($currentYear + 1, $currentYear - 5);
     ?>
-    <select name="season_year" class="admin-form-select">
+    <select name="season_year" class="input">
     <?php foreach ($availableYears as $year): ?>
     <option value="<?= $year ?>" <?= $year === $currentYear ? 'selected' : '' ?>><?= $year ?></option>
     <?php endforeach; ?>
@@ -1243,14 +1243,14 @@ include __DIR__ . '/components/unified-layout.php';
     </small>
    </div>
 
-   <div class="admin-form-group">
+   <div class="form-group">
     <label class="flex items-center gap-sm cursor-pointer">
     <input type="checkbox" name="create_missing" checked>
     <span>Skapa nya deltagare om de inte finns</span>
     </label>
    </div>
 
-   <button type="submit" class="btn-admin btn-admin-primary">
+   <button type="submit" class="btn btn--primary">
     <i data-lucide="eye"></i>
     Förhandsgranska import
    </button>
@@ -1259,14 +1259,14 @@ include __DIR__ . '/components/unified-layout.php';
   </div>
 
   <!-- File Format Guide -->
-  <div class="admin-card">
-  <div class="admin-card-header">
+  <div class="card">
+  <div class="card-header">
    <h2>
    <i data-lucide="info"></i>
    CSV-filformat
    </h2>
   </div>
-  <div class="admin-card-body">
+  <div class="card-body">
    <p class="text-secondary" class="mb-md">
    CSV-filen ska ha följande kolumner i första raden (header):
    </p>

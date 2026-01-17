@@ -33,12 +33,12 @@ if (!$tableExists) {
         </svg>
         Tabellen <code>payment_recipients</code> finns inte. Kör migrationen först.
     </div>
-    <div class="admin-card">
-        <div class="admin-card-body">
+    <div class="card">
+        <div class="card-body">
             <p>Kör följande migration för att skapa tabellen:</p>
             <code>database/migrations/054_payment_recipients_central.sql</code>
             <p class="mt-md">
-                <a href="/admin/migrations" class="btn-admin btn-admin-primary">Gå till migrationer</a>
+                <a href="/admin/migrations" class="btn btn--primary">Gå till migrationer</a>
             </p>
         </div>
     </div>
@@ -153,8 +153,8 @@ include __DIR__ . '/components/unified-layout.php';
 <?php endif; ?>
 
 <!-- Info box -->
-<div class="admin-card mb-lg">
-    <div class="admin-card-body">
+<div class="card mb-lg">
+    <div class="card-body">
         <div class="flex items-start gap-md">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-lg flex-shrink-0" style="color: var(--color-accent);">
                 <rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/>
@@ -172,7 +172,7 @@ include __DIR__ . '/components/unified-layout.php';
 
 <!-- Add new recipient button -->
 <div class="mb-lg">
-    <button type="button" class="btn-admin btn-admin-primary" onclick="showModal('create')">
+    <button type="button" class="btn btn--primary" onclick="showModal('create')">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm">
             <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
         </svg>
@@ -181,8 +181,8 @@ include __DIR__ . '/components/unified-layout.php';
 </div>
 
 <!-- Recipients list -->
-<div class="admin-card">
-    <div class="admin-card-header">
+<div class="card">
+    <div class="card-header">
         <h2>
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-md">
                 <rect width="14" height="20" x="5" y="2" rx="2" ry="2"/><path d="M12 18h.01"/>
@@ -190,7 +190,7 @@ include __DIR__ . '/components/unified-layout.php';
             Betalningsmottagare (<?= count($recipients) ?>)
         </h2>
     </div>
-    <div class="admin-card-body gs-p-0">
+    <div class="card-body gs-p-0">
         <?php if (empty($recipients)): ?>
         <div class="text-center text-secondary" style="padding: var(--space-xl);">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="mb-md" style="width: 48px; height: 48px; opacity: 0.3;">
@@ -201,7 +201,7 @@ include __DIR__ . '/components/unified-layout.php';
         </div>
         <?php else: ?>
         <div class="table-responsive">
-            <table class="admin-table">
+            <table class="table">
                 <thead>
                     <tr>
                         <th>Namn</th>
@@ -245,13 +245,13 @@ include __DIR__ . '/components/unified-layout.php';
                             <?php endif; ?>
                         </td>
                         <td class="text-right">
-                            <a href="/admin/gateway-settings.php?id=<?= $r['id'] ?>" class="btn-admin btn-admin-primary btn-admin-sm" title="Gateway-inställningar">
+                            <a href="/admin/gateway-settings.php?id=<?= $r['id'] ?>" class="btn btn--primary btn--sm" title="Gateway-inställningar">
                                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-xs">
                                     <path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/>
                                     <circle cx="12" cy="12" r="3"/>
                                 </svg>
                             </a>
-                            <button type="button" class="btn-admin btn-admin-secondary btn-admin-sm"
+                            <button type="button" class="btn btn--secondary btn--sm"
                                     onclick='showModal("edit", <?= json_encode($r) ?>)'>
                                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-xs">
                                     <path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/>
@@ -262,7 +262,7 @@ include __DIR__ . '/components/unified-layout.php';
                                 <?= csrf_field() ?>
                                 <input type="hidden" name="action" value="delete">
                                 <input type="hidden" name="id" value="<?= $r['id'] ?>">
-                                <button type="submit" class="btn-admin btn-admin-danger btn-admin-sm"
+                                <button type="submit" class="btn btn--danger btn--sm"
                                         onclick="return confirm('Ta bort <?= htmlspecialchars($r['name']) ?>?')">
                                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-xs">
                                         <path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/>
@@ -294,37 +294,37 @@ include __DIR__ . '/components/unified-layout.php';
             <input type="hidden" name="id" id="formId" value="">
 
             <div class="modal-body">
-                <div class="admin-form-group">
-                    <label class="admin-form-label">Namn <span class="text-error">*</span></label>
-                    <input type="text" name="name" id="formName" class="admin-form-input" required
+                <div class="form-group">
+                    <label class="label">Namn <span class="text-error">*</span></label>
+                    <input type="text" name="name" id="formName" class="input" required
                            placeholder="T.ex. GravitySeries, Järvsö IF">
                     <small class="text-secondary">Internt namn för att identifiera mottagaren</small>
                 </div>
 
-                <div class="admin-form-group">
-                    <label class="admin-form-label">Beskrivning</label>
-                    <input type="text" name="description" id="formDescription" class="admin-form-input"
+                <div class="form-group">
+                    <label class="label">Beskrivning</label>
+                    <input type="text" name="description" id="formDescription" class="input"
                            placeholder="T.ex. Centralt konto för GS-serier">
                 </div>
 
-                <div class="admin-form-row">
-                    <div class="admin-form-group">
-                        <label class="admin-form-label">Swish-nummer <span class="text-error">*</span></label>
-                        <input type="text" name="swish_number" id="formSwishNumber" class="admin-form-input" required
+                <div class="form-row">
+                    <div class="form-group">
+                        <label class="label">Swish-nummer <span class="text-error">*</span></label>
+                        <input type="text" name="swish_number" id="formSwishNumber" class="input" required
                                placeholder="070-123 45 67">
                         <small class="text-secondary">Mobilnummer eller företagsnummer</small>
                     </div>
 
-                    <div class="admin-form-group">
-                        <label class="admin-form-label">Mottagarnamn i Swish <span class="text-error">*</span></label>
-                        <input type="text" name="swish_name" id="formSwishName" class="admin-form-input" required
+                    <div class="form-group">
+                        <label class="label">Mottagarnamn i Swish <span class="text-error">*</span></label>
+                        <input type="text" name="swish_name" id="formSwishName" class="input" required
                                placeholder="GravitySeries">
                         <small class="text-secondary">Visas för betalaren i Swish-appen</small>
                     </div>
                 </div>
 
-                <div class="admin-form-group">
-                    <label class="admin-form-label flex items-center gap-sm cursor-pointer">
+                <div class="form-group">
+                    <label class="label flex items-center gap-sm cursor-pointer">
                         <input type="checkbox" name="active" id="formActive" value="1" checked>
                         Aktiv
                     </label>
@@ -333,8 +333,8 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
 
             <div class="modal-footer">
-                <button type="button" class="btn-admin btn-admin-secondary" onclick="hideModal()">Avbryt</button>
-                <button type="submit" class="btn-admin btn-admin-primary" id="formSubmitBtn">Spara</button>
+                <button type="button" class="btn btn--secondary" onclick="hideModal()">Avbryt</button>
+                <button type="submit" class="btn btn--primary" id="formSubmitBtn">Spara</button>
             </div>
         </form>
     </div>
@@ -410,19 +410,19 @@ include __DIR__ . '/components/unified-layout.php';
     border-top: 1px solid var(--color-border);
 }
 
-.admin-form-row {
+.form-row {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: var(--space-md);
 }
 
 @media (max-width: 600px) {
-    .admin-form-row {
+    .form-row {
         grid-template-columns: 1fr;
     }
 }
 
-.btn-admin-sm {
+.btn--sm {
     padding: var(--space-xs) var(--space-sm);
 }
 </style>

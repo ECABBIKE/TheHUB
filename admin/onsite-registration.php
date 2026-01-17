@@ -53,7 +53,7 @@ $pageTitle = 'Direktanmälan';
 include __DIR__ . '/components/unified-layout.php';
 ?>
 
-<div class="admin-content">
+<div class="main-content">
     <div class="page-header">
         <h1><?= $pageTitle ?></h1>
         <p class="text-muted">Registrera deltagare direkt på tävlingsplatsen</p>

@@ -278,7 +278,7 @@ $breadcrumbs = [
 
 $page_actions = '
 <div class="btn-group">
-    <a href="/admin/analytics-trends.php" class="btn-admin btn-admin-secondary">
+    <a href="/admin/analytics-trends.php" class="btn btn--secondary">
         <i data-lucide="trending-up"></i> Trender (Totalt)
     </a>
 </div>
@@ -430,12 +430,12 @@ include __DIR__ . '/components/unified-layout.php';
 </div>
 
 <!-- DELTAGARTRENDER -->
-<div class="admin-card">
-    <div class="admin-card-header">
+<div class="card">
+    <div class="card-header">
         <h2><i data-lucide="users"></i> Deltagarutveckling</h2>
         <span class="badge badge-primary"><?= count($yearsToShow) ?> säsonger</span>
     </div>
-    <div class="admin-card-body">
+    <div class="card-body">
         <div class="chart-container" style="height: 350px;">
             <canvas id="participantChart"></canvas>
         </div>
@@ -444,11 +444,11 @@ include __DIR__ . '/components/unified-layout.php';
 
 <!-- RETENTION & GROWTH -->
 <div class="grid grid-2 grid-gap-lg">
-    <div class="admin-card">
-        <div class="admin-card-header">
+    <div class="card">
+        <div class="card-header">
             <h2><i data-lucide="refresh-cw"></i> Retention Rate</h2>
         </div>
-        <div class="admin-card-body">
+        <div class="card-body">
             <div class="chart-container" style="height: 280px;">
                 <canvas id="retentionChart"></canvas>
             </div>
@@ -456,11 +456,11 @@ include __DIR__ . '/components/unified-layout.php';
         </div>
     </div>
 
-    <div class="admin-card">
-        <div class="admin-card-header">
+    <div class="card">
+        <div class="card-header">
             <h2><i data-lucide="trending-up"></i> Tillväxt</h2>
         </div>
-        <div class="admin-card-body">
+        <div class="card-body">
             <div class="chart-container" style="height: 280px;">
                 <canvas id="growthChart"></canvas>
             </div>
@@ -471,11 +471,11 @@ include __DIR__ . '/components/unified-layout.php';
 
 <!-- CROSS-PARTICIPATION & NYA RIDERS -->
 <div class="grid grid-2 grid-gap-lg">
-    <div class="admin-card">
-        <div class="admin-card-header">
+    <div class="card">
+        <div class="card-header">
             <h2><i data-lucide="git-branch"></i> Cross-Participation</h2>
         </div>
-        <div class="admin-card-body">
+        <div class="card-body">
             <div class="chart-container" style="height: 280px;">
                 <canvas id="crossParticipationChart"></canvas>
             </div>
@@ -483,11 +483,11 @@ include __DIR__ . '/components/unified-layout.php';
         </div>
     </div>
 
-    <div class="admin-card">
-        <div class="admin-card-header">
+    <div class="card">
+        <div class="card-header">
             <h2><i data-lucide="user-plus"></i> Nya Riders (Rekrytering)</h2>
         </div>
-        <div class="admin-card-body">
+        <div class="card-body">
             <div class="chart-container" style="height: 280px;">
                 <canvas id="newRidersChart"></canvas>
             </div>
@@ -498,11 +498,11 @@ include __DIR__ . '/components/unified-layout.php';
 
 <!-- DEMOGRAPHICS -->
 <div class="grid grid-2 grid-gap-lg">
-    <div class="admin-card">
-        <div class="admin-card-header">
+    <div class="card">
+        <div class="card-header">
             <h2><i data-lucide="users"></i> Könsfördelning</h2>
         </div>
-        <div class="admin-card-body">
+        <div class="card-body">
             <div class="chart-container" style="height: 280px;">
                 <canvas id="genderChart"></canvas>
             </div>
@@ -510,11 +510,11 @@ include __DIR__ . '/components/unified-layout.php';
         </div>
     </div>
 
-    <div class="admin-card">
-        <div class="admin-card-header">
+    <div class="card">
+        <div class="card-header">
             <h2><i data-lucide="calendar"></i> Genomsnittsålder</h2>
         </div>
-        <div class="admin-card-body">
+        <div class="card-body">
             <div class="chart-container" style="height: 280px;">
                 <canvas id="ageChart"></canvas>
             </div>
@@ -525,16 +525,16 @@ include __DIR__ . '/components/unified-layout.php';
 
 <!-- SAMMANFATTNINGSTABELLER -->
 <?php foreach ($activeGroups as $idx): ?>
-<div class="admin-card">
-    <div class="admin-card-header">
+<div class="card">
+    <div class="card-header">
         <h2>
             <span class="legend-color-inline" style="background: <?= $groupColors[$idx] ?>"></span>
             <?= htmlspecialchars($groupLabels[$idx]) ?>
         </h2>
     </div>
-    <div class="admin-card-body" style="padding: 0;">
-        <div class="admin-table-container">
-            <table class="admin-table">
+    <div class="card-body" style="padding: 0;">
+        <div class="table-container">
+            <table class="table">
                 <thead>
                     <tr>
                         <th>Säsong</th>
@@ -851,12 +851,12 @@ include __DIR__ . '/components/unified-layout.php';
         border-right: none;
     }
 
-    .admin-table {
+    .table {
         font-size: var(--text-xs);
     }
 
-    .admin-table th,
-    .admin-table td {
+    .table th,
+    .table td {
         padding: var(--space-xs);
     }
 

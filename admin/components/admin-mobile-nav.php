@@ -3,10 +3,10 @@
  * TheHUB Admin Mobile Navigation
  * Horizontally scrollable bottom nav for admin pages
  *
- * NOTE: Primary navigation is defined in /includes/config/admin-tabs-config.php
+ * NOTE: Primary navigation is defined in /includes/config/tabs-config.php
  * and rendered via /components/sidebar.php
  *
- * This mobile nav should be kept in sync with admin-tabs-config.php
+ * This mobile nav should be kept in sync with tabs-config.php
  * (admin-sidebar.php has been deprecated - 2026-01-12)
  *
  * Role-based access:
@@ -26,7 +26,7 @@ $userRoleLevel = $roleHierarchy[$currentAdminRole] ?? 0;
 // Check analytics access
 $hasAnalytics = function_exists('hasAnalyticsAccess') && hasAnalyticsAccess();
 
-// Admin navigation - should match /includes/config/admin-tabs-config.php
+// Admin navigation - should match /includes/config/tabs-config.php
 // Promotors get different URLs than admins
 $adminNav = [];
 

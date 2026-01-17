@@ -285,19 +285,19 @@ try {
 
 $claimsButton = '';
 if ($pendingClaimsCount > 0) {
-    $claimsButton = '<a href="/admin/rider-claims" class="btn-admin btn-admin-warning" style="position: relative;">
+    $claimsButton = '<a href="/admin/rider-claims" class="btn btn--warning" style="position: relative;">
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><polyline points="16 11 18 13 22 9"/></svg>
     Väntande förfrågningar
     <span style="position: absolute; top: -6px; right: -6px; background: #ef4444; color: white; font-size: 11px; font-weight: 600; padding: 2px 6px; border-radius: 10px;">' . $pendingClaimsCount . '</span>
 </a> ';
 } else {
-    $claimsButton = '<a href="/admin/rider-claims" class="btn-admin btn-admin-secondary">
+    $claimsButton = '<a href="/admin/rider-claims" class="btn btn--secondary">
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><polyline points="16 11 18 13 22 9"/></svg>
     Profilförfrågningar
 </a> ';
 }
 
-$page_actions = $claimsButton . '<a href="/admin/import/riders" class="btn-admin btn-admin-primary">
+$page_actions = $claimsButton . '<a href="/admin/import/riders" class="btn btn--primary">
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" x2="12" y1="3" y2="15"/></svg>
     Importera
 </a>';
@@ -339,7 +339,7 @@ include __DIR__ . '/components/unified-layout.php';
     <div class="alert alert-info">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" x2="12" y1="16" y2="12"/><line x1="12" x2="12.01" y1="8" y2="8"/></svg>
         <span>Visar deltagare från <strong><?= htmlspecialchars($selectedClub['name']) ?></strong></span>
-        <a href="/admin/riders" class="btn-admin btn-admin-sm btn-admin-secondary ml-auto">
+        <a href="/admin/riders" class="btn btn--sm btn--secondary ml-auto">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-xs"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
             Rensa filter
         </a>
@@ -347,29 +347,29 @@ include __DIR__ . '/components/unified-layout.php';
 <?php endif; ?>
 
 <!-- Search and Filter -->
-<div class="admin-card">
-    <div class="admin-card-body">
-        <form method="GET" id="searchForm" class="admin-form-row items-end">
+<div class="card">
+    <div class="card-body">
+        <form method="GET" id="searchForm" class="form-row items-end">
             <?php if ($club_id): ?>
                 <input type="hidden" name="club_id" value="<?= $club_id ?>">
             <?php endif; ?>
 
-            <div class="admin-form-group flex-1 mb-0">
-                <label for="searchInput" class="admin-form-label">Sök</label>
+            <div class="form-group flex-1 mb-0">
+                <label for="searchInput" class="label">Sök</label>
                 <input
                     type="text"
                     name="search"
                     id="searchInput"
-                    class="admin-form-input"
+                    class="input"
                     placeholder="Sök efter namn eller licensnummer..."
                     value="<?= htmlspecialchars($search) ?>"
                     autocomplete="off"
                 >
             </div>
 
-            <div class="admin-form-group mb-0 min-w-140">
-                <label class="admin-form-label">Nationalitet</label>
-                <select name="nationality" class="admin-form-select" onchange="this.form.submit()">
+            <div class="form-group mb-0 min-w-140">
+                <label class="label">Nationalitet</label>
+                <select name="nationality" class="input" onchange="this.form.submit()">
                     <option value="">Alla länder</option>
                     <?php foreach ($nationalities as $nat): ?>
                     <option value="<?= h($nat['nationality']) ?>" <?= $nationality === $nat['nationality'] ? 'selected' : '' ?>>
@@ -379,30 +379,30 @@ include __DIR__ . '/components/unified-layout.php';
                 </select>
             </div>
 
-            <div class="admin-form-group mb-0">
-                <label class="admin-checkbox-label">
+            <div class="form-group mb-0">
+                <label class="checkbox-label">
                     <input type="checkbox" name="with_results" value="1" <?= $onlyWithResults ? 'checked' : '' ?> onchange="this.form.submit()">
                     <span>Endast med resultat</span>
                 </label>
             </div>
 
-            <div class="admin-form-group mb-0">
-                <label class="admin-checkbox-label">
+            <div class="form-group mb-0">
+                <label class="checkbox-label">
                     <input type="checkbox" name="swe_only" value="1" <?= $onlySweId ? 'checked' : '' ?> onchange="this.form.submit()">
                     <span>Endast SWE-ID</span>
                 </label>
             </div>
 
-            <div class="admin-form-group mb-0">
-                <label class="admin-checkbox-label">
+            <div class="form-group mb-0">
+                <label class="checkbox-label">
                     <input type="checkbox" name="activated" value="1" <?= $onlyActivated ? 'checked' : '' ?> onchange="this.form.submit()">
                     <span>Aktiverade konton</span>
                 </label>
             </div>
 
-            <div class="admin-form-group mb-0 min-w-140">
-                <label class="admin-form-label">E-post</label>
-                <select name="has_email" class="admin-form-select" onchange="this.form.submit()">
+            <div class="form-group mb-0 min-w-140">
+                <label class="label">E-post</label>
+                <select name="has_email" class="input" onchange="this.form.submit()">
                     <option value="">Alla</option>
                     <option value="1" <?= $hasEmail === '1' ? 'selected' : '' ?>>Med e-post</option>
                     <option value="0" <?= $hasEmail === '0' ? 'selected' : '' ?>>Utan e-post</option>
@@ -410,7 +410,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
 
             <?php if ($search || $nationality || $onlyWithResults || $onlySweId || $onlyActivated || $hasEmail !== null): ?>
-                <a href="/admin/riders<?= $club_id ? '?club_id=' . $club_id : '' ?>" class="btn-admin btn-admin-sm btn-admin-secondary">
+                <a href="/admin/riders<?= $club_id ? '?club_id=' . $club_id : '' ?>" class="btn btn--sm btn--secondary">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-xs"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
                     Rensa
                 </a>
@@ -420,13 +420,13 @@ include __DIR__ . '/components/unified-layout.php';
 </div>
 
 <!-- Riders Table -->
-<div class="admin-card">
-    <div class="admin-card-header">
+<div class="card">
+    <div class="card-header">
         <h2><?= count($riders) ?> deltagare</h2>
     </div>
-    <div class="admin-card-body p-0">
+    <div class="card-body p-0">
         <?php if (empty($riders)): ?>
-            <div class="admin-empty-state">
+            <div class="empty-state">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
                 <h3>Inga deltagare hittades</h3>
                 <p>Prova att ändra sökning eller filter.</p>
@@ -452,13 +452,13 @@ include __DIR__ . '/components/unified-layout.php';
                 </form>
             </div>
 
-            <div class="admin-table-container">
-                <table class="admin-table">
+            <div class="table-container">
+                <table class="table">
                     <thead>
                         <tr>
                             <th style="width: 40px;"><input type="checkbox" id="selectAllRiders" title="Markera alla"></th>
                             <th>
-                                <a href="<?= buildSortUrl('name', $sortBy, $sortOrder, $search, $club_id, $nationality, $onlyWithResults, $onlySweId, $onlyActivated, $hasEmail) ?>" class="admin-sortable">
+                                <a href="<?= buildSortUrl('name', $sortBy, $sortOrder, $search, $club_id, $nationality, $onlyWithResults, $onlySweId, $onlyActivated, $hasEmail) ?>" class="sortable">
                                     Namn
                                     <?php if ($sortBy === 'name'): ?>
                                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-xs">
@@ -472,7 +472,7 @@ include __DIR__ . '/components/unified-layout.php';
                                 </a>
                             </th>
                             <th>
-                                <a href="<?= buildSortUrl('nationality', $sortBy, $sortOrder, $search, $club_id, $nationality, $onlyWithResults, $onlySweId, $onlyActivated, $hasEmail) ?>" class="admin-sortable">
+                                <a href="<?= buildSortUrl('nationality', $sortBy, $sortOrder, $search, $club_id, $nationality, $onlyWithResults, $onlySweId, $onlyActivated, $hasEmail) ?>" class="sortable">
                                     Land
                                     <?php if ($sortBy === 'nationality'): ?>
                                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-xs">
@@ -486,7 +486,7 @@ include __DIR__ . '/components/unified-layout.php';
                                 </a>
                             </th>
                             <th>
-                                <a href="<?= buildSortUrl('year', $sortBy, $sortOrder, $search, $club_id, $nationality, $onlyWithResults, $onlySweId, $onlyActivated, $hasEmail) ?>" class="admin-sortable">
+                                <a href="<?= buildSortUrl('year', $sortBy, $sortOrder, $search, $club_id, $nationality, $onlyWithResults, $onlySweId, $onlyActivated, $hasEmail) ?>" class="sortable">
                                     År
                                     <?php if ($sortBy === 'year'): ?>
                                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-xs">
@@ -500,7 +500,7 @@ include __DIR__ . '/components/unified-layout.php';
                                 </a>
                             </th>
                             <th>
-                                <a href="<?= buildSortUrl('club', $sortBy, $sortOrder, $search, $club_id, $nationality, $onlyWithResults, $onlySweId, $onlyActivated, $hasEmail) ?>" class="admin-sortable">
+                                <a href="<?= buildSortUrl('club', $sortBy, $sortOrder, $search, $club_id, $nationality, $onlyWithResults, $onlySweId, $onlyActivated, $hasEmail) ?>" class="sortable">
                                     Klubb
                                     <?php if ($sortBy === 'club'): ?>
                                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-xs">
@@ -514,7 +514,7 @@ include __DIR__ . '/components/unified-layout.php';
                                 </a>
                             </th>
                             <th>
-                                <a href="<?= buildSortUrl('license', $sortBy, $sortOrder, $search, $club_id, $nationality, $onlyWithResults, $onlySweId, $onlyActivated, $hasEmail) ?>" class="admin-sortable">
+                                <a href="<?= buildSortUrl('license', $sortBy, $sortOrder, $search, $club_id, $nationality, $onlyWithResults, $onlySweId, $onlyActivated, $hasEmail) ?>" class="sortable">
                                     Licensnummer
                                     <?php if ($sortBy === 'license'): ?>
                                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-xs">
@@ -528,7 +528,7 @@ include __DIR__ . '/components/unified-layout.php';
                                 </a>
                             </th>
                             <th>
-                                <a href="<?= buildSortUrl('results', $sortBy, $sortOrder, $search, $club_id, $nationality, $onlyWithResults, $onlySweId, $onlyActivated, $hasEmail) ?>" class="admin-sortable">
+                                <a href="<?= buildSortUrl('results', $sortBy, $sortOrder, $search, $club_id, $nationality, $onlyWithResults, $onlySweId, $onlyActivated, $hasEmail) ?>" class="sortable">
                                     Resultat
                                     <?php if ($sortBy === 'results'): ?>
                                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-xs">
@@ -552,7 +552,7 @@ include __DIR__ . '/components/unified-layout.php';
                             // Check license status
                             $hasValidLicense = false;
                             $licenseStatusMessage = '-';
-                            $licenseStatusClass = 'admin-badge-secondary';
+                            $licenseStatusClass = 'badge badge--secondary';
 
                             if (!empty($rider['license_number']) && strpos($rider['license_number'], 'SWE') !== 0) {
                                 if (!empty($rider['license_valid_until'])) {
@@ -561,19 +561,19 @@ include __DIR__ . '/components/unified-layout.php';
                                     if ($validUntil >= $today) {
                                         $hasValidLicense = true;
                                         $licenseStatusMessage = 'Aktiv';
-                                        $licenseStatusClass = 'admin-badge-success';
+                                        $licenseStatusClass = 'badge badge--success';
                                     } else {
                                         $licenseStatusMessage = 'Utgången';
-                                        $licenseStatusClass = 'admin-badge-error';
+                                        $licenseStatusClass = 'badge-error';
                                     }
                                 } else {
                                     $hasValidLicense = true;
                                     $licenseStatusMessage = 'Aktiv';
-                                    $licenseStatusClass = 'admin-badge-success';
+                                    $licenseStatusClass = 'badge badge--success';
                                 }
                             } elseif (!empty($rider['license_number']) && strpos($rider['license_number'], 'SWE') === 0) {
                                 $licenseStatusMessage = 'SWE-ID';
-                                $licenseStatusClass = 'admin-badge-warning';
+                                $licenseStatusClass = 'badge badge--warning';
                             }
                             ?>
                             <tr>
@@ -591,7 +591,7 @@ include __DIR__ . '/components/unified-layout.php';
                                 </td>
                                 <td>
                                     <?php if ($rider['nationality']): ?>
-                                        <span class="admin-badge" title="<?= h($nationalityNames[$rider['nationality']] ?? $rider['nationality']) ?>">
+                                        <span class="badge" title="<?= h($nationalityNames[$rider['nationality']] ?? $rider['nationality']) ?>">
                                             <?= h($rider['nationality']) ?>
                                         </span>
                                     <?php else: ?>
@@ -621,7 +621,7 @@ include __DIR__ . '/components/unified-layout.php';
                                 </td>
                                 <td>
                                     <?php if ($rider['license_number']): ?>
-                                        <span class="admin-badge <?= strpos($rider['license_number'], 'SWE') === 0 ? 'admin-badge-warning' : 'admin-badge-info' ?>">
+                                        <span class="badge <?= strpos($rider['license_number'], 'SWE') === 0 ? 'badge badge--warning' : 'badge badge--info' ?>">
                                             <?= htmlspecialchars($rider['license_number']) ?>
                                         </span>
                                     <?php else: ?>
@@ -630,29 +630,29 @@ include __DIR__ . '/components/unified-layout.php';
                                 </td>
                                 <td>
                                     <?php if ($rider['result_count'] > 0): ?>
-                                        <span class="admin-badge admin-badge-info"><?= $rider['result_count'] ?></span>
+                                        <span class="badge badge badge--info"><?= $rider['result_count'] ?></span>
                                     <?php else: ?>
                                         <span class="text-secondary">0</span>
                                     <?php endif; ?>
                                 </td>
                                 <td>
-                                    <span class="admin-badge <?= $licenseStatusClass ?>">
+                                    <span class="badge <?= $licenseStatusClass ?>">
                                         <?= $licenseStatusMessage ?>
                                     </span>
                                 </td>
                                 <td>
                                     <?php if ($rider['discipline']): ?>
-                                        <span class="admin-badge"><?= htmlspecialchars($rider['discipline']) ?></span>
+                                        <span class="badge"><?= htmlspecialchars($rider['discipline']) ?></span>
                                     <?php else: ?>
                                         -
                                     <?php endif; ?>
                                 </td>
                                 <td>
                                     <div class="table-actions">
-                                        <a href="/admin/riders/edit/<?= $rider['id'] ?>" class="btn-admin btn-admin-sm btn-admin-secondary" title="Redigera">
+                                        <a href="/admin/riders/edit/<?= $rider['id'] ?>" class="btn btn--sm btn--secondary" title="Redigera">
                                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
                                         </a>
-                                        <button onclick="deleteRider(<?= $rider['id'] ?>, '<?= addslashes($rider['firstname'] . ' ' . $rider['lastname']) ?>')" class="btn-admin btn-admin-sm btn-admin-danger" title="Ta bort">
+                                        <button onclick="deleteRider(<?= $rider['id'] ?>, '<?= addslashes($rider['firstname'] . ' ' . $rider['lastname']) ?>')" class="btn btn--sm btn--danger" title="Ta bort">
                                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
                                         </button>
                                     </div>
@@ -840,7 +840,7 @@ document.getElementById('mergeForm')?.addEventListener('submit', function(e) {
 </script>
 
 <style>
-.admin-sortable {
+.sortable {
     display: inline-flex;
     align-items: center;
     gap: var(--space-xs);
@@ -848,11 +848,11 @@ document.getElementById('mergeForm')?.addEventListener('submit', function(e) {
     text-decoration: none;
 }
 
-.admin-sortable:hover {
+.sortable:hover {
     color: var(--color-accent);
 }
 
-.admin-checkbox-label {
+.checkbox-label {
     display: flex;
     align-items: center;
     gap: var(--space-xs);
@@ -861,7 +861,7 @@ document.getElementById('mergeForm')?.addEventListener('submit', function(e) {
     white-space: nowrap;
 }
 
-.admin-checkbox-label input[type="checkbox"] {
+.checkbox-label input[type="checkbox"] {
     width: 16px;
     height: 16px;
     accent-color: var(--color-accent);

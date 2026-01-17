@@ -63,33 +63,33 @@ include __DIR__ . '/components/unified-layout.php';
 ?>
 
 <?php if ($message): ?>
-<div class="admin-alert admin-alert-<?= $messageType ?>">
+<div class="alert alert-<?= $messageType ?>">
     <?= h($message) ?>
 </div>
 <?php endif; ?>
 
 <?php if (!file_exists($migrationPath)): ?>
-<div class="admin-alert admin-alert-error">
+<div class="alert alert-error">
     Migrationen "<?= h($file) ?>" finns inte i database/migrations/
 </div>
 <?php else: ?>
 
-<div class="admin-card">
-    <div class="admin-card-header">
+<div class="card">
+    <div class="card-header">
         <h3>Migration: <?= h($file) ?></h3>
     </div>
-    <div class="admin-card-body">
-        <p class="admin-help-text">Granska SQL-koden nedan innan du kör migrationen.</p>
+    <div class="card-body">
+        <p class="help-text">Granska SQL-koden nedan innan du kör migrationen.</p>
 
         <pre style="background: #f5f5f5; padding: 1rem; border-radius: 8px; overflow-x: auto; max-height: 400px; font-size: 0.85rem;"><?= h($migrationContent) ?></pre>
 
         <form method="POST" style="margin-top: 1rem;">
             <?= csrf_field() ?>
-            <button type="submit" name="run_migration" class="btn-admin btn-admin-primary"
+            <button type="submit" name="run_migration" class="btn btn--primary"
                     onclick="return confirm('Kör migrationen nu?\n\nDetta kan göra permanenta ändringar i databasen.')">
                 Kör migration
             </button>
-            <a href="/admin/tools" class="btn-admin btn-admin-secondary" style="margin-left: 0.5rem;">
+            <a href="/admin/tools" class="btn btn--secondary" style="margin-left: 0.5rem;">
                 Avbryt
             </a>
         </form>
