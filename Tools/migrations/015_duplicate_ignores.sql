@@ -9,10 +9,7 @@ CREATE TABLE IF NOT EXISTS rider_duplicate_ignores (
     ignored_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     reason VARCHAR(255) NULL COMMENT 'Optional reason for ignoring',
 
-    -- Ensure rider1_id < rider2_id for consistency
-    CONSTRAINT chk_rider_order CHECK (rider1_id < rider2_id),
-
-    -- Prevent duplicate entries
+    -- Prevent duplicate entries (rider1_id should always be < rider2_id by convention)
     UNIQUE KEY uq_rider_pair (rider1_id, rider2_id),
 
     -- Indexes for lookup
