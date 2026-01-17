@@ -253,11 +253,17 @@ include __DIR__ . '/components/unified-layout.php';
             <!-- Links -->
             <div>
                 <label class="label">Verktyg</label>
-                <div class="flex gap-sm">
+                <div class="flex gap-sm flex-wrap">
                     <?php if ($eventsWithoutDestination > 0): ?>
                     <a href="/admin/tools/auto-create-venues.php" class="btn btn--secondary">
                         <i data-lucide="wand-2"></i>
                         Auto-skapa fran events (<?= $eventsWithoutDestination ?>)
+                    </a>
+                    <?php endif; ?>
+                    <?php if ($destinationsWithoutRegion > 0): ?>
+                    <a href="/admin/tools/auto-map-destination-regions.php" class="btn btn--secondary">
+                        <i data-lucide="map"></i>
+                        Koppla regioner (<?= $destinationsWithoutRegion ?>)
                     </a>
                     <?php endif; ?>
                     <a href="/admin/destination-edit.php" class="btn btn--primary">
