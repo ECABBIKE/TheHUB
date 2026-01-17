@@ -1,0 +1,199 @@
+/**
+ * TheHUB Admin Color Fix
+ * Restores correct design from original screenshot
+ * Load this LAST after all other CSS files
+ * Created: 2026-01-17
+ */
+
+/* ========================================================================
+   1. FIX ACCENT COLOR - From Cyan to Blue
+   ======================================================================== */
+
+:root,
+html[data-theme="dark"] {
+    --color-accent: #0066CC !important;
+    --color-accent-hover: #0052A3 !important;
+    --color-accent-light: rgba(0, 102, 204, 0.1) !important;
+    --color-accent-text: #0066CC !important;
+    --color-accent-glow: rgba(0, 102, 204, 0.3) !important;
+    --color-accent-glow-strong: rgba(0, 102, 204, 0.5) !important;
+
+    --color-border: rgba(255, 255, 255, 0.1) !important;
+    --color-border-strong: rgba(255, 255, 255, 0.15) !important;
+}
+
+html[data-theme="light"] {
+    --color-accent: #0066CC !important;
+    --color-accent-hover: #0052A3 !important;
+    --color-accent-light: rgba(0, 102, 204, 0.08) !important;
+    --color-accent-text: #0066CC !important;
+    --color-accent-glow: rgba(0, 102, 204, 0.2) !important;
+    --color-accent-glow-strong: rgba(0, 102, 204, 0.35) !important;
+
+    --color-border: rgba(0, 0, 0, 0.1) !important;
+    --color-border-strong: rgba(0, 0, 0, 0.15) !important;
+}
+
+/* ========================================================================
+   2. FIX STAT CARDS - White cards instead of colored gradients
+   ======================================================================== */
+
+/* Remove gradient definitions */
+:root {
+    --admin-gradient-primary: transparent !important;
+    --admin-gradient-success: transparent !important;
+    --admin-gradient-warning: transparent !important;
+    --admin-gradient-danger: transparent !important;
+}
+
+/* All stat cards white background */
+.admin-stat-card.stat-primary,
+.admin-stat-card.stat-success,
+.admin-stat-card.stat-warning,
+.admin-stat-card.stat-danger,
+.admin-stat-card.stat-info {
+    background: var(--color-bg-card) !important;
+    color: var(--color-text-primary) !important;
+    border: 1px solid var(--color-border) !important;
+}
+
+.admin-stat-card {
+    background: var(--color-bg-card) !important;
+    border: 1px solid var(--color-border) !important;
+}
+
+.admin-stat-card:hover {
+    border-color: var(--color-accent) !important;
+    background: var(--color-bg-card) !important;
+    transform: none !important;
+}
+
+/* Remove decorative elements */
+.admin-stat-card::before {
+    display: none !important;
+}
+
+/* Fix text colors in stat cards */
+.admin-stat-card .stat-value,
+.admin-stat-card.stat-primary .stat-value,
+.admin-stat-card.stat-success .stat-value,
+.admin-stat-card.stat-warning .stat-value,
+.admin-stat-card.stat-danger .stat-value {
+    color: var(--color-text-primary) !important;
+}
+
+.admin-stat-card .stat-label,
+.admin-stat-card.stat-primary .stat-label,
+.admin-stat-card.stat-success .stat-label,
+.admin-stat-card.stat-warning .stat-label,
+.admin-stat-card.stat-danger .stat-label {
+    color: var(--color-text-secondary) !important;
+}
+
+/* ========================================================================
+   3. FIX ICON SIZES - Small, subtle icons
+   ======================================================================== */
+
+.admin-stat-card .stat-icon,
+.admin-stat-card .admin-stat-icon,
+.admin-stat-card.stat-primary .stat-icon,
+.admin-stat-card.stat-success .stat-icon,
+.admin-stat-card.stat-warning .stat-icon,
+.admin-stat-card.stat-danger .stat-icon {
+    width: 40px !important;
+    height: 40px !important;
+    background: transparent !important;
+    color: var(--color-accent) !important;
+}
+
+.admin-stat-card .stat-icon svg,
+.admin-stat-card .admin-stat-icon svg {
+    width: 24px !important;
+    height: 24px !important;
+    color: var(--color-accent) !important;
+}
+
+/* ========================================================================
+   4. FIX BUTTONS - Blue instead of gradients
+   ======================================================================== */
+
+.btn-admin-primary,
+.admin-btn-primary {
+    background: var(--color-accent) !important;
+    border-color: var(--color-accent) !important;
+    color: white !important;
+    box-shadow: none !important;
+}
+
+.btn-admin-primary:hover,
+.admin-btn-primary:hover {
+    background: var(--color-accent-hover) !important;
+    border-color: var(--color-accent-hover) !important;
+}
+
+/* ========================================================================
+   5. FIX LINKS - Blue accent
+   ======================================================================== */
+
+a.text-primary,
+.admin-link-primary {
+    color: var(--color-accent) !important;
+}
+
+a.text-primary:hover,
+.admin-link-primary:hover {
+    color: var(--color-accent-hover) !important;
+}
+
+/* ========================================================================
+   6. FIX ACTIVE STATES - Blue highlight
+   ======================================================================== */
+
+.sidebar-link.is-active,
+.nav-item.active {
+    background: var(--color-accent-light) !important;
+    color: var(--color-accent) !important;
+}
+
+.sidebar-link.is-active::before,
+.nav-item.active::before {
+    background: var(--color-accent) !important;
+}
+
+/* ========================================================================
+   7. FIX TABS - Blue active state
+   ======================================================================== */
+
+.admin-tab.is-active,
+.tab.is-active {
+    color: var(--color-accent) !important;
+    border-bottom-color: var(--color-accent) !important;
+}
+
+/* ========================================================================
+   8. FIX FORMS - Blue focus states
+   ======================================================================== */
+
+.admin-input:focus,
+.admin-select:focus,
+.admin-textarea:focus,
+.form-input:focus,
+.form-select:focus {
+    border-color: var(--color-accent) !important;
+    box-shadow: 0 0 0 3px var(--color-accent-light) !important;
+}
+
+/* ========================================================================
+   9. OVERRIDE ANY HARDCODED CYAN COLORS
+   ======================================================================== */
+
+[style*="#37d4d6"],
+[style*="#37D4D6"],
+[style*="#2bc4c6"],
+[style*="#2BC4C6"],
+[style*="rgb(55, 212, 214)"] {
+    color: var(--color-accent) !important;
+    border-color: var(--color-accent) !important;
+}
+
+/* End of fix */
