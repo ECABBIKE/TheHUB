@@ -61,14 +61,14 @@ try {
         SELECT
             rid.id,
             CONCAT(rid.firstname, ' ', rid.lastname) as name,
-            c.name as class_name,
+            COALESCE(NULLIF(c.display_name, ''), c.name) as class_name,
             r.position
         FROM results r
         JOIN riders rid ON rid.id = r.cyclist_id
         LEFT JOIN classes c ON c.id = r.class_id
         WHERE r.event_id = ?
         AND r.cyclist_id IN ($placeholders)
-        ORDER BY c.name, rid.lastname, rid.firstname
+        ORDER BY c.display_name, c.name, rid.lastname, rid.firstname
     ";
 
     $riderParams = array_merge([$eventId], $exclusiveRiderIds);
@@ -102,12 +102,33 @@ try {
         }
     }
 
-    // Lägg till other_series info
+    // Lägg till other_series info och räkna per klass
+    $classCounts = [];
     foreach ($riders as &$rider) {
         $rider['other_series'] = $otherSeriesMap[$rider['id']] ?? null;
+
+        // Räkna per klass
+        $className = $rider['class_name'] ?? 'Okänd klass';
+        if (!isset($classCounts[$className])) {
+            $classCounts[$className] = 0;
+        }
+        $classCounts[$className]++;
     }
 
-    echo json_encode(['riders' => $riders]);
+    // Sortera klassräkning efter antal (störst först)
+    arsort($classCounts);
+
+    // Konvertera till array för JSON
+    $classCountsArray = [];
+    foreach ($classCounts as $name => $count) {
+        $classCountsArray[] = ['name' => $name, 'count' => $count];
+    }
+
+    echo json_encode([
+        'riders' => $riders,
+        'class_counts' => $classCountsArray,
+        'total' => count($riders)
+    ]);
 
 } catch (Exception $e) {
     echo json_encode(['error' => 'Databasfel: ' . $e->getMessage()]);
