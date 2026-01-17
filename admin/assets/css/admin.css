@@ -80,7 +80,7 @@
 
 /* Alert badge on logo when there are pending claims */
 .admin-logo.has-alerts svg {
-    color: #ef4444;
+    color: var(--color-error);
 }
 
 .logo-alert-badge {
@@ -92,7 +92,7 @@
     padding: 0 5px;
     font-size: 11px;
     font-weight: 600;
-    background: #ef4444;
+    background: var(--color-error);
     color: white;
     border-radius: 9px;
     margin-left: -4px;
@@ -1499,23 +1499,12 @@
    Added: 2024 - Professional styling updates
    ======================================================================== */
 
-/* Enhanced color palette with CSS custom properties */
-:root {
-    --admin-gradient-primary: linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%);
-    --admin-gradient-success: linear-gradient(135deg, #10B981 0%, #059669 100%);
-    --admin-gradient-warning: linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
-    --admin-gradient-danger: linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
-    --admin-shadow-soft: 0 2px 8px rgba(0, 0, 0, 0.08);
-    --admin-shadow-medium: 0 4px 16px rgba(0, 0, 0, 0.12);
-    --admin-shadow-strong: 0 8px 32px rgba(0, 0, 0, 0.16);
-    --admin-transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-}
-
-[data-theme="dark"] {
-    --admin-shadow-soft: 0 2px 8px rgba(0, 0, 0, 0.24);
-    --admin-shadow-medium: 0 4px 16px rgba(0, 0, 0, 0.32);
-    --admin-shadow-strong: 0 8px 32px rgba(0, 0, 0, 0.48);
-}
+/* Enhanced color palette with CSS custom properties
+ * VARIABLES MOVED TO tokens.css AND theme.css - 2026-01-17
+ * - Admin gradients: tokens.css
+ * - Admin shadows: tokens.css (base) + theme.css (dark mode overrides)
+ * - Admin transition: tokens.css
+ */
 
 /* Enhanced Sidebar */
 .admin-sidebar {
@@ -3610,25 +3599,12 @@ h2 svg.lucide {
 
 /* ------------------------------------------------------------------------
    15. ICON SIZING - Consistent sizing system
+   VARIABLES MOVED TO tokens.css - 2026-01-17
    ------------------------------------------------------------------------ */
 
-:root {
-    --icon-xs: 12px;
-    --icon-sm: 16px;
-    --icon-md: 20px;
-    --icon-lg: 24px;
-    --icon-xl: 32px;
-    --icon-2xl: 48px;
-}
+/* Icon size variables now defined in tokens.css with responsive overrides */
 
 @media (max-width: 599px) {
-    /* Slightly smaller icons on mobile */
-    :root {
-        --icon-lg: 20px;
-        --icon-xl: 28px;
-        --icon-2xl: 40px;
-    }
-
     /* Override inline SVG sizing */
     svg[style*="width: 48px"],
     svg[style*="width:48px"] {

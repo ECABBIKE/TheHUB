@@ -45,6 +45,52 @@
 
   /* Brand colors for UI elements */
   --color-enduro:#FFD700;--color-enduro-hover:#E6BD00;
+
+  /* ============================================
+     ACHIEVEMENT SYSTEM COLORS
+     ============================================ */
+  --achievement-gold:#FFD700;
+  --achievement-silver:#C0C0C0;
+  --achievement-bronze:#CD7F32;
+  --achievement-green:var(--color-accent, #61CE70);
+  --achievement-orange:var(--color-ges-orange, #EF761F);
+  --achievement-blue:var(--color-gs-blue, #004a98);
+  --achievement-yellow:#FFE009;
+  --achievement-purple:#5F1D67;
+  --achievement-steel:#607D8B;
+  --achievement-olive:var(--color-ggs-green, #8A9A5B);
+
+  /* ============================================
+     BADGE SYSTEM
+     ============================================ */
+  --badge-hex-bg:#171717;
+  --badge-transition:0.25s ease;
+
+  /* ============================================
+     ICON SIZING
+     ============================================ */
+  --icon-xs:12px;
+  --icon-sm:16px;
+  --icon-md:20px;
+  --icon-lg:24px;
+  --icon-xl:32px;
+  --icon-2xl:48px;
+
+  /* ============================================
+     ADMIN GRADIENTS
+     ============================================ */
+  --admin-gradient-primary:linear-gradient(135deg, #3B82F6 0%, #1D4ED8 100%);
+  --admin-gradient-success:linear-gradient(135deg, #10B981 0%, #059669 100%);
+  --admin-gradient-warning:linear-gradient(135deg, #F59E0B 0%, #D97706 100%);
+  --admin-gradient-danger:linear-gradient(135deg, #EF4444 0%, #DC2626 100%);
+
+  /* ============================================
+     ADMIN SHADOWS
+     ============================================ */
+  --admin-shadow-soft:0 2px 8px rgba(0, 0, 0, 0.08);
+  --admin-shadow-medium:0 4px 16px rgba(0, 0, 0, 0.12);
+  --admin-shadow-strong:0 8px 32px rgba(0, 0, 0, 0.16);
+  --admin-transition:all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* Container padding - tablet gets more breathing room */
@@ -68,5 +114,14 @@
     --text-2xl:1.25rem;
     --text-3xl:1.5rem;
     --text-4xl:2rem;
+  }
+}
+
+/* Mobile icon sizing - slightly smaller for better mobile UX */
+@media (max-width: 599px) {
+  :root {
+    --icon-lg:20px;
+    --icon-xl:28px;
+    --icon-2xl:40px;
   }
 }

@@ -8,54 +8,15 @@
 
 /* ==========================================================================
    CSS VARIABLES - Using TheHUB design system
+   ALL VARIABLES MOVED TO tokens.css AND theme.css - 2026-01-17
    ========================================================================== */
 
-:root {
-    /* Badge accent colors */
-    --achievement-gold: #FFD700;
-    --achievement-silver: #C0C0C0;
-    --achievement-bronze: #CD7F32;
-    --achievement-green: var(--color-accent, #61CE70);
-    --achievement-orange: var(--color-ges-orange, #EF761F);
-    --achievement-blue: var(--color-gs-blue, #004a98);
-    --achievement-yellow: #FFE009;
-    --achievement-purple: #5F1D67;
-    --achievement-steel: #607D8B;
-    --achievement-olive: var(--color-ggs-green, #8A9A5B);
-
-    /* Badge background - for SVG hexagons */
-    --badge-hex-bg: #171717;
-
-    /* Transitions */
-    --badge-transition: 0.25s ease;
-}
-
-/* ==========================================================================
-   THEME SUPPORT
-   ========================================================================== */
-
-/* Light theme (default) */
-:root,
-[data-theme="light"] {
-    --achievement-card-bg: var(--color-star, #FDFDFD);
-    --achievement-badge-bg: var(--color-star-fade, #F9F9F9);
-    --achievement-text-primary: var(--color-primary, #171717);
-    --achievement-text-muted: var(--color-text, #7A7A7A);
-    --achievement-border: var(--color-border, #e5e7eb);
-    --achievement-slider-inactive: #E5E7EB;
-    --badge-hex-bg: #171717;
-}
-
-/* Dark theme */
-[data-theme="dark"] {
-    --achievement-card-bg: var(--color-bg-card, #0e1621);
-    --achievement-badge-bg: var(--color-bg-sunken, #06080e);
-    --achievement-text-primary: var(--color-text-primary, #f8f2f0);
-    --achievement-text-muted: var(--color-text-muted, #868fa2);
-    --achievement-border: var(--color-border, rgba(55, 212, 214, 0.2));
-    --achievement-slider-inactive: var(--color-bg-hover, rgba(255, 255, 255, 0.06));
-    --badge-hex-bg: var(--color-bg-elevated, rgba(255, 255, 255, 0.04));
-}
+/* Variables now defined in:
+ * - tokens.css: Achievement colors, badge-hex-bg, badge-transition
+ * - theme.css: Achievement theme variables (card-bg, text colors, etc.)
+ *
+ * This centralization improves maintainability and ensures consistency.
+ */
 
 /* ==========================================================================
    BADGES PAGE CONTAINER
