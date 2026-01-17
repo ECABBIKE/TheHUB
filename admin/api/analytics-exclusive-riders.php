@@ -102,12 +102,33 @@ try {
         }
     }
 
-    // Lägg till other_series info
+    // Lägg till other_series info och räkna per klass
+    $classCounts = [];
     foreach ($riders as &$rider) {
         $rider['other_series'] = $otherSeriesMap[$rider['id']] ?? null;
+
+        // Räkna per klass
+        $className = $rider['class_name'] ?? 'Okänd klass';
+        if (!isset($classCounts[$className])) {
+            $classCounts[$className] = 0;
+        }
+        $classCounts[$className]++;
     }
 
-    echo json_encode(['riders' => $riders]);
+    // Sortera klassräkning efter antal (störst först)
+    arsort($classCounts);
+
+    // Konvertera till array för JSON
+    $classCountsArray = [];
+    foreach ($classCounts as $name => $count) {
+        $classCountsArray[] = ['name' => $name, 'count' => $count];
+    }
+
+    echo json_encode([
+        'riders' => $riders,
+        'class_counts' => $classCountsArray,
+        'total' => count($riders)
+    ]);
 
 } catch (Exception $e) {
     echo json_encode(['error' => 'Databasfel: ' . $e->getMessage()]);

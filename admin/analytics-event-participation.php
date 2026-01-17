@@ -630,6 +630,55 @@ include __DIR__ . '/components/unified-layout.php';
     color: var(--color-text-secondary);
     padding: var(--space-xl);
 }
+
+.class-summary {
+    margin-bottom: var(--space-lg);
+    padding-bottom: var(--space-md);
+    border-bottom: 1px solid var(--color-border);
+}
+
+.class-summary h4 {
+    font-size: var(--text-sm);
+    color: var(--color-text-secondary);
+    margin: 0 0 var(--space-sm) 0;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+
+.class-summary-grid {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-xs);
+}
+
+.class-summary-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    padding: var(--space-xs) var(--space-sm);
+    background: var(--color-bg-surface);
+    border-radius: var(--radius-sm);
+    font-size: var(--text-sm);
+}
+
+.class-summary-item .class-name {
+    color: var(--color-text-secondary);
+}
+
+.class-summary-item .class-count {
+    font-weight: 600;
+    color: var(--color-accent);
+    background: var(--color-accent-light);
+    padding: 2px 8px;
+    border-radius: var(--radius-full);
+    font-size: var(--text-xs);
+}
+
+.rider-list h4 {
+    font-size: var(--text-sm);
+    color: var(--color-text-secondary);
+    margin: 0 0 var(--space-sm) 0;
+}
 </style>
 
 <script>
@@ -654,11 +703,28 @@ function openExclusiveModal(eventId, eventName, year, brandId) {
                 return;
             }
 
-            let html = '<div class="rider-list">';
+            let html = '';
             if (data.riders.length === 0) {
                 html += '<p class="text-secondary">Inga exklusiva deltagare hittades.</p>';
             } else {
-                html += '<p class="text-secondary mb-md">' + data.riders.length + ' deltagare som endast tävlade på detta event:</p>';
+                // Sammanställning per klass
+                if (data.class_counts && data.class_counts.length > 0) {
+                    html += '<div class="class-summary">';
+                    html += '<h4>Fördelning per klass</h4>';
+                    html += '<div class="class-summary-grid">';
+                    data.class_counts.forEach(cc => {
+                        html += '<div class="class-summary-item">';
+                        html += '<span class="class-name">' + cc.name + '</span>';
+                        html += '<span class="class-count">' + cc.count + '</span>';
+                        html += '</div>';
+                    });
+                    html += '</div>';
+                    html += '</div>';
+                }
+
+                // Lista med deltagare
+                html += '<div class="rider-list">';
+                html += '<h4>' + data.riders.length + ' deltagare</h4>';
                 data.riders.forEach(rider => {
                     html += '<div class="rider-item">';
                     html += '<div>';
@@ -672,8 +738,8 @@ function openExclusiveModal(eventId, eventName, year, brandId) {
                     html += '</div>';
                     html += '</div>';
                 });
+                html += '</div>';
             }
-            html += '</div>';
             document.getElementById('modalBody').innerHTML = html;
         })
         .catch(err => {
