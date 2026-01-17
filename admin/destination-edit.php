@@ -223,15 +223,38 @@ include __DIR__ . '/components/unified-layout.php';
      >
      </div>
      <div>
-     <label for="region" class="admin-form-label">Region/Län</label>
-     <input
-      type="text"
-      id="region"
-      name="region"
-      class="admin-form-input"
-      value="<?= h($venue['region'] ?? '') ?>"
-      placeholder="T.ex. Gävleborg"
-     >
+     <label for="region" class="admin-form-label">SCF Distrikt</label>
+     <select id="region" name="region" class="admin-form-input">
+      <option value="">-- Välj distrikt --</option>
+      <?php
+      $scfDistricts = [
+          'Bohuslän-Dals Cykelförbund',
+          'Dalarnas Cykelförbund',
+          'Gästriklands Cykelförbund',
+          'Göteborgs Cykelförbund',
+          'Hallands Cykelförbund',
+          'Hälsinglands Cykelförbund',
+          'Jämtland-Härjedalens Cykelförbund',
+          'Norrbottens Cykelförbund',
+          'Skånes Cykelförbund',
+          'Smålands Cykelförbund',
+          'Stockholms Cykelförbund',
+          'Södermanlands Cykelförbund',
+          'Upplands Cykelförbund',
+          'Värmlands Cykelförbund',
+          'Västerbottens Cykelförbund',
+          'Västergötlands Cykelförbund',
+          'Västernorrlands Cykelförbund',
+          'Västmanlands Cykelförbund',
+          'Örebro Läns Cykelförbund',
+          'Östergötlands Cykelförbund'
+      ];
+      foreach ($scfDistricts as $district):
+      ?>
+      <option value="<?= h($district) ?>" <?= ($venue['region'] ?? '') === $district ? 'selected' : '' ?>><?= h($district) ?></option>
+      <?php endforeach; ?>
+     </select>
+     <p class="text-secondary text-sm mt-xs">Används för geografisk analys</p>
      </div>
     </div>
 

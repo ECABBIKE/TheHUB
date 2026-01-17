@@ -41,63 +41,6 @@ $eventsByRegion = [];
 $underservedRegions = [];
 $regionalTrends = [];
 
-// Diagnostik - kolla datakedjan
-$diagnostics = [];
-try {
-    // 1. Hur många i rider_yearly_stats för valt år?
-    $stmt = $pdo->prepare("SELECT COUNT(DISTINCT rider_id) FROM rider_yearly_stats WHERE season_year = ?");
-    $stmt->execute([$selectedYear]);
-    $diagnostics['rys_riders'] = (int)$stmt->fetchColumn();
-
-    // 2. Hur många av dessa har club_id i riders-tabellen?
-    $stmt = $pdo->prepare("
-        SELECT COUNT(DISTINCT rys.rider_id)
-        FROM rider_yearly_stats rys
-        JOIN riders r ON rys.rider_id = r.id
-        WHERE rys.season_year = ? AND r.club_id IS NOT NULL AND r.club_id > 0
-    ");
-    $stmt->execute([$selectedYear]);
-    $diagnostics['with_club'] = (int)$stmt->fetchColumn();
-
-    // 3. Hur många har klubb MED scf_district?
-    $stmt = $pdo->prepare("
-        SELECT COUNT(DISTINCT rys.rider_id)
-        FROM rider_yearly_stats rys
-        JOIN riders r ON rys.rider_id = r.id
-        JOIN clubs c ON r.club_id = c.id
-        WHERE rys.season_year = ? AND c.scf_district IS NOT NULL AND c.scf_district != ''
-    ");
-    $stmt->execute([$selectedYear]);
-    $diagnostics['with_district'] = (int)$stmt->fetchColumn();
-
-    // 4. Hur många klubbar har scf_district?
-    $stmt = $pdo->query("SELECT COUNT(*) FROM clubs WHERE scf_district IS NOT NULL AND scf_district != ''");
-    $diagnostics['clubs_with_district'] = (int)$stmt->fetchColumn();
-
-    $stmt = $pdo->query("SELECT COUNT(*) FROM clubs WHERE active = 1");
-    $diagnostics['clubs_total'] = (int)$stmt->fetchColumn();
-
-    // 5. Vilka distrikt finns och hur många riders per distrikt? (direkt SQL)
-    $stmt = $pdo->prepare("
-        SELECT
-            c.scf_district,
-            COUNT(DISTINCT rys.rider_id) as cnt
-        FROM rider_yearly_stats rys
-        JOIN riders r ON rys.rider_id = r.id
-        JOIN clubs c ON r.club_id = c.id
-        WHERE rys.season_year = ?
-          AND c.scf_district IS NOT NULL
-          AND c.scf_district != ''
-        GROUP BY c.scf_district
-        ORDER BY cnt DESC
-    ");
-    $stmt->execute([$selectedYear]);
-    $diagnostics['districts'] = $stmt->fetchAll(PDO::FETCH_ASSOC);
-
-} catch (Exception $e) {
-    // Ignorera diagnostikfel
-}
-
 try {
     $ridersByRegion = $kpiCalc->getRidersByRegion($selectedYear);
     $eventsByRegion = $kpiCalc->getEventsByRegion($selectedYear);
@@ -152,61 +95,6 @@ $page_actions = '
 include __DIR__ . '/components/unified-layout.php';
 ?>
 
-<!-- Info Box - Forklaring -->
-<div class="info-box">
-    <div class="info-box-icon">
-        <i data-lucide="map"></i>
-    </div>
-    <div class="info-box-content">
-        <strong>Geografisk analys</strong>
-        <p>Se hur riders ar fordelade over SCF-distrikten. Baseras pa klubbarnas RF-registrering och distrikt.</p>
-        <p style="margin-top: var(--space-xs); font-size: var(--text-xs); color: var(--color-text-muted);">
-            <i data-lucide="info" style="width: 12px; height: 12px; display: inline-block; vertical-align: middle;"></i>
-            Riders utan klubb eller med klubb som saknar distrikt visas som "Okand". Kor RF-synkronisering for att uppdatera.
-        </p>
-    </div>
-</div>
-
-<!-- Diagnostik -->
-<?php if (!empty($diagnostics)): ?>
-<div class="alert alert-info" style="margin-bottom: var(--space-lg);">
-    <i data-lucide="activity"></i>
-    <div>
-        <strong>Datakedja för <?= $selectedYear ?></strong>
-        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: var(--space-md); margin-top: var(--space-sm);">
-            <div>
-                <div style="font-size: var(--text-lg); font-weight: bold;"><?= number_format($diagnostics['rys_riders'] ?? 0) ?></div>
-                <div style="font-size: var(--text-xs); color: var(--color-text-muted);">Riders i statistiken</div>
-            </div>
-            <div>
-                <div style="font-size: var(--text-lg); font-weight: bold;"><?= number_format($diagnostics['with_club'] ?? 0) ?></div>
-                <div style="font-size: var(--text-xs); color: var(--color-text-muted);">Med klubb-koppling</div>
-            </div>
-            <div>
-                <div style="font-size: var(--text-lg); font-weight: bold;"><?= number_format($diagnostics['with_district'] ?? 0) ?></div>
-                <div style="font-size: var(--text-xs); color: var(--color-text-muted);">Med SCF-distrikt</div>
-            </div>
-            <div>
-                <div style="font-size: var(--text-lg); font-weight: bold;"><?= ($diagnostics['clubs_with_district'] ?? 0) ?>/<?= ($diagnostics['clubs_total'] ?? 0) ?></div>
-                <div style="font-size: var(--text-xs); color: var(--color-text-muted);">Klubbar med distrikt</div>
-            </div>
-        </div>
-        <?php if (!empty($diagnostics['districts'])): ?>
-        <div style="margin-top: var(--space-md); padding-top: var(--space-md); border-top: 1px solid var(--color-border);">
-            <strong style="font-size: var(--text-sm);">Riders per distrikt (direkt SQL):</strong>
-            <div style="font-size: var(--text-xs); margin-top: var(--space-xs); max-height: 200px; overflow-y: auto;">
-                <?php foreach ($diagnostics['districts'] as $d): ?>
-                <div style="display: flex; justify-content: space-between; padding: 2px 0;">
-                    <span><?= htmlspecialchars($d['scf_district']) ?></span>
-                    <strong><?= number_format($d['cnt']) ?></strong>
-                </div>
-                <?php endforeach; ?>
-            </div>
-        </div>
-        <?php endif; ?>
-    </div>
-</div>
-<?php endif; ?>
 
 <?php
 // Kolla datakvalitet - hur manga ar "Okand"?

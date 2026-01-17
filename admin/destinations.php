@@ -171,6 +171,7 @@ $potentialDuplicates = $db->getAll("
 // Stats
 $totalDestinations = count($destinations);
 $totalEvents = array_sum(array_column($destinations, 'event_count'));
+$destinationsWithoutRegion = count(array_filter($destinations, fn($d) => empty($d['region'])));
 
 // Page config
 $page_title = 'Destinations';
@@ -214,6 +215,12 @@ include __DIR__ . '/components/unified-layout.php';
             <div class="text-sm text-secondary">Potentiella dubbletter</div>
         </div>
     </div>
+    <div class="card" style="background: var(--color-bg-hover);">
+        <div class="card-body text-center">
+            <div class="text-3xl font-bold <?= $destinationsWithoutRegion > 0 ? 'text-warning' : 'text-success' ?>"><?= $destinationsWithoutRegion ?></div>
+            <div class="text-sm text-secondary">Saknar region</div>
+        </div>
+    </div>
 </div>
 
 <!-- Quick Actions -->
@@ -246,11 +253,17 @@ include __DIR__ . '/components/unified-layout.php';
             <!-- Links -->
             <div>
                 <label class="label">Verktyg</label>
-                <div class="flex gap-sm">
+                <div class="flex gap-sm flex-wrap">
                     <?php if ($eventsWithoutDestination > 0): ?>
                     <a href="/admin/tools/auto-create-venues.php" class="btn btn--secondary">
                         <i data-lucide="wand-2"></i>
                         Auto-skapa fran events (<?= $eventsWithoutDestination ?>)
+                    </a>
+                    <?php endif; ?>
+                    <?php if ($destinationsWithoutRegion > 0): ?>
+                    <a href="/admin/tools/auto-map-destination-regions.php" class="btn btn--secondary">
+                        <i data-lucide="map"></i>
+                        Koppla regioner (<?= $destinationsWithoutRegion ?>)
                     </a>
                     <?php endif; ?>
                     <a href="/admin/destination-edit.php" class="btn btn--primary">
@@ -361,9 +374,9 @@ include __DIR__ . '/components/unified-layout.php';
                     <tr>
                         <th>Destination</th>
                         <th>Stad</th>
+                        <th>Region</th>
                         <th style="width: 80px;">Events</th>
-                        <th style="width: 120px;">Ar</th>
-                        <th style="width: 120px;">Senast</th>
+                        <th style="width: 100px;">Senast</th>
                         <th style="width: 80px;">Status</th>
                         <th style="width: 100px;">Atgard</th>
                     </tr>
@@ -391,13 +404,19 @@ include __DIR__ . '/components/unified-layout.php';
                         </td>
                         <td class="text-secondary"><?= htmlspecialchars($dest['city'] ?? '') ?></td>
                         <td>
+                            <?php if (!empty($dest['region'])): ?>
+                            <span class="badge badge--secondary" title="<?= htmlspecialchars($dest['region']) ?>"><?= htmlspecialchars(mb_substr($dest['region'], 0, 12)) ?></span>
+                            <?php else: ?>
+                            <span class="text-warning" title="Saknar region">-</span>
+                            <?php endif; ?>
+                        </td>
+                        <td>
                             <?php if ($dest['event_count'] > 0): ?>
                             <span class="badge badge--accent"><?= $dest['event_count'] ?></span>
                             <?php else: ?>
                             <span class="badge badge--secondary">0</span>
                             <?php endif; ?>
                         </td>
-                        <td class="text-secondary text-sm"><?= htmlspecialchars($dest['years'] ?? '-') ?></td>
                         <td class="text-secondary text-sm">
                             <?= $dest['last_event'] ? date('Y-m-d', strtotime($dest['last_event'])) : '-' ?>
                         </td>
