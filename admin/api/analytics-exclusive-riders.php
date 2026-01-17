@@ -61,14 +61,14 @@ try {
         SELECT
             rid.id,
             CONCAT(rid.firstname, ' ', rid.lastname) as name,
-            c.name as class_name,
+            COALESCE(NULLIF(c.display_name, ''), c.name) as class_name,
             r.position
         FROM results r
         JOIN riders rid ON rid.id = r.cyclist_id
         LEFT JOIN classes c ON c.id = r.class_id
         WHERE r.event_id = ?
         AND r.cyclist_id IN ($placeholders)
-        ORDER BY c.name, rid.lastname, rid.firstname
+        ORDER BY c.display_name, c.name, rid.lastname, rid.firstname
     ";
 
     $riderParams = array_merge([$eventId], $exclusiveRiderIds);
