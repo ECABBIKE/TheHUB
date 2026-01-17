@@ -9,9 +9,9 @@
 
 /* Column Types */
 .col-place{width:48px;min-width:48px;text-align:center;font-weight:var(--weight-semibold)}
-.col-place--1{color:#FFD700}
-.col-place--2{color:#C0C0C0}
-.col-place--3{color:#CD7F32}
+.col-place--1{color:var(--color-medal-gold)}
+.col-place--2{color:var(--color-medal-silver)}
+.col-place--3{color:var(--color-medal-bronze)}
 .col-rider{font-weight:var(--weight-medium);max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .col-club{color:var(--color-text-secondary);max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .col-time{text-align:right;font-family:var(--font-mono);white-space:nowrap;width:80px;min-width:80px}

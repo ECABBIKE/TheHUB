@@ -1214,11 +1214,11 @@
 }
 
 .dashboard-stat-value--green {
-    color: #61CE70;
+    color: var(--color-success);
 }
 
 .dashboard-stat-value--red {
-    color: #ef4444;
+    color: var(--color-error);
 }
 
 .dashboard-stat-label {
@@ -1252,12 +1252,12 @@
 
 /* Green theme border accent */
 .dashboard-chart-card--green {
-    border-top: 3px solid #61CE70;
+    border-top: 3px solid var(--color-success);
 }
 
 /* Red theme border accent */
 .dashboard-chart-card--red {
-    border-top: 3px solid #ef4444;
+    border-top: 3px solid var(--color-error);
 }
 
 /* Stats Tabbed Card (combined Ranking/Form) */
@@ -1410,7 +1410,7 @@
 }
 
 .ranking-stat-value.ranking-best {
-    color: #ef4444;
+    color: var(--color-error);
 }
 
 .ranking-stat-label {

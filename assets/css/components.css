@@ -519,9 +519,9 @@ h1 svg.lucide {
   background:var(--color-bg-sunken);color:var(--color-text-muted);
   border:1px solid var(--color-border);
 }
-.event-position.p1{background:linear-gradient(135deg,#fef3c7,#fde68a);border-color:#FFD700;color:#92400e}
-.event-position.p2{background:linear-gradient(135deg,#f3f4f6,#e5e7eb);border-color:#C0C0C0;color:#4b5563}
-.event-position.p3{background:linear-gradient(135deg,#fed7aa,#fdba74);border-color:#CD7F32;color:#9a3412}
+.event-position.p1{background:linear-gradient(135deg,#fef3c7,#fde68a);border-color:var(--color-medal-gold);color:#92400e}
+.event-position.p2{background:linear-gradient(135deg,#f3f4f6,#e5e7eb);border-color:var(--color-medal-silver);color:#4b5563}
+.event-position.p3{background:linear-gradient(135deg,#fed7aa,#fdba74);border-color:var(--color-medal-bronze);color:#9a3412}
 .event-position.motion{color:var(--color-accent)}
 .event-position.motion i,.event-position.motion svg{width:14px;height:14px}
 .event-position .medal-icon{width:18px;height:18px;display:block}

@@ -127,215 +127,16 @@ $userTheme = 'light';
     window.HUB.isLoggedIn = <?= $isLoggedIn ? 'true' : 'false' ?>;
     </script>
 
-    <!-- CRITICAL: Inline CSS for FOUC prevention -->
-    <style>
-        html, body {
-            background: var(--color-bg-page);
-            color: var(--color-text-primary);
-            margin: 0;
-            padding: 0;
-        }
-        /* FOUC Prevention: Hide main content until CSS is loaded */
-        .main-content {
-            opacity: 0;
-            transition: opacity 0.1s ease-out;
-        }
-        .main-content.css-ready {
-            opacity: 1;
-        }
-        /* Fallback: Show content after 500ms even if JS fails */
-        @keyframes fouc-fallback {
-            to { opacity: 1; }
-        }
-        .main-content {
-            animation: fouc-fallback 0.1s ease-out 0.5s forwards;
-        }
-    </style>
-
-    <!-- CRITICAL CSS - INLINE to ensure it loads FIRST -->
-    <style id="critical-sidebar-css">
-        /* Force sidebar permanent on desktop - INLINE to bypass loading issues */
-        @media (min-width: 1024px) {
-            /* Hide hamburger completely on desktop */
-            .mobile-menu-toggle {
-                display: none !important;
-                visibility: hidden !important;
-                opacity: 0 !important;
-                pointer-events: none !important;
-            }
-
-            /* Show sidebar permanently */
-            .sidebar {
-                display: flex !important;
-                position: fixed !important;
-                left: 0 !important;
-                top: 0 !important;
-                width: 72px !important;
-                height: 100vh !important;
-                transform: translateX(0) !important;
-                transition: none !important;
-                z-index: 100 !important;
-                background: var(--color-bg-surface) !important;
-                border-right: 1px solid var(--color-border) !important;
-            }
-
-            /* Hide overlay completely on desktop */
-            .sidebar-overlay {
-                display: none !important;
-                visibility: hidden !important;
-                opacity: 0 !important;
-                pointer-events: none !important;
-            }
-
-            /* Offset content for sidebar */
-            .main-content {
-                margin-left: 72px !important;
-                width: calc(100% - 72px) !important;
-            }
-
-            /* Prevent body scroll lock */
-            body {
-                overflow: auto !important;
-            }
-        }
-
-        /* Mobile menu toggle button styling */
-        .mobile-menu-toggle {
-            position: fixed;
-            top: 12px;
-            left: 12px;
-            z-index: 1200;
-            width: 44px;
-            height: 44px;
-            display: none;
-            align-items: center;
-            justify-content: center;
-            background: var(--color-bg-surface);
-            border: 1px solid var(--color-border);
-            border-radius: 8px;
-            cursor: pointer;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        }
-        .mobile-menu-toggle svg {
-            width: 24px;
-            height: 24px;
-            stroke: currentColor;
-        }
-
-        /* Sidebar overlay */
-        .sidebar-overlay {
-            position: fixed;
-            inset: 0;
-            background: rgba(0,0,0,0.5);
-            z-index: 1050;
-            opacity: 0;
-            visibility: hidden;
-            transition: opacity 0.3s ease;
-        }
-        .sidebar-overlay.active {
-            opacity: 1;
-            visibility: visible;
-        }
-
-        /* Mobile PORTRAIT behavior - bottom nav, hidden sidebar */
-        @media (max-width: 899px) and (orientation: portrait) {
-            .sidebar {
-                position: fixed !important;
-                left: 0 !important;
-                top: 0 !important;
-                width: 260px !important;
-                height: 100vh !important;
-                height: 100dvh !important;
-                background: var(--color-bg-surface) !important;
-                transform: translateX(-100%) !important;
-                transition: transform 0.3s ease !important;
-                z-index: 1100 !important;
-                padding-top: 70px !important;
-                display: flex !important;
-                flex-direction: column !important;
-            }
-
-            .sidebar.open {
-                transform: translateX(0) !important;
-            }
-
-            .mobile-menu-toggle {
-                display: flex !important;
-            }
-
-            /* Ensure main content has no sidebar offset on mobile portrait */
-            .main-content {
-                margin-left: 0 !important;
-                width: 100% !important;
-            }
-
-            /* Bottom nav visible on portrait */
-            .nav-bottom, .mobile-nav {
-                display: flex !important;
-            }
-        }
-
-        /* Mobile/Tablet LANDSCAPE behavior - compact sidebar (icon only), NO bottom nav */
-        @media (max-width: 1023px) and (orientation: landscape) {
-            .sidebar {
-                position: fixed !important;
-                left: 0 !important;
-                top: var(--header-height, 60px) !important;
-                width: 64px !important;
-                height: calc(100vh - var(--header-height, 60px)) !important;
-                height: calc(100dvh - var(--header-height, 60px)) !important;
-                background: var(--color-bg-surface) !important;
-                transform: translateX(0) !important;
-                z-index: 200 !important;
-                padding: 4px 0 !important;
-                display: flex !important;
-                flex-direction: column !important;
-                border-right: 1px solid var(--color-border) !important;
-            }
-
-            .sidebar .sidebar-nav {
-                gap: 0 !important;
-                padding: 0 4px !important;
-            }
-
-            .sidebar .sidebar-link {
-                padding: 6px 4px !important;
-                gap: 1px !important;
-                flex-direction: column !important;
-            }
-
-            .sidebar .sidebar-label {
-                display: none !important;
-            }
-
-            .sidebar .sidebar-icon svg,
-            .sidebar .sidebar-icon-svg {
-                width: 20px !important;
-                height: 20px !important;
-            }
-
-            .mobile-menu-toggle {
-                display: none !important;
-            }
-
-            /* Main content offset for sidebar on landscape */
-            .main-content {
-                margin-left: 0 !important;
-                padding-left: var(--landscape-sidebar-gap, 4px) !important;
-                width: 100% !important;
-            }
-
-            /* Hide bottom nav on landscape - more vertical space */
-            .nav-bottom, .mobile-nav {
-                display: none !important;
-            }
-        }
-    </style>
+    <!-- CRITICAL CSS - Moved to critical-inline.css for maintainability -->
 
     <!-- Google Fonts - Required for typography -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Cabin+Condensed:wght@400;500;600;700&family=Manrope:wght@300;400;500;600;700&family=Oswald:wght@400;500;600;700&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+
+    <!-- CRITICAL: Inline CSS extracted to file for maintainability -->
+    <!-- MUST load FIRST to prevent FOUC and ensure sidebar visibility -->
+    <link rel="stylesheet" href="/assets/css/critical-inline.css?v=<?= filemtime(__DIR__ . '/../assets/css/critical-inline.css') ?>">
 
     <!-- Design System CSS -->
     <!-- 1. CSS Reset -->
@@ -373,6 +174,52 @@ $userTheme = 'light';
 
     <!-- 10. Global Sponsors & Blog System -->
     <link rel="stylesheet" href="/assets/css/sponsors-blog.css?v=<?= filemtime(__DIR__ . '/../assets/css/sponsors-blog.css') ?>">
+
+    <!-- ============================================================================
+         PAGE-SPECIFIC CSS - Dynamic loading based on current page
+         Automatically loads CSS for current page from /assets/css/pages/
+         Symlinks are supported transparently (e.g., login.css → auth.css)
+         ============================================================================ -->
+    <?php
+    // Get current page slug from filename
+    $pageSlug = basename($_SERVER['PHP_SELF'], '.php');
+    $requestUri = $_SERVER['REQUEST_URI'] ?? '';
+
+    // Special handling for event pages (URL pattern: /event/123, /event/abc)
+    if (preg_match('#^/event/[^/]+#', $requestUri)) {
+        $pageSlug = 'event';
+    }
+
+    // Special handling for calendar event pages
+    if (preg_match('#^/calendar/event/[^/]+#', $requestUri)) {
+        $pageSlug = 'calendar-event';
+    }
+
+    // Map special pages to their CSS files
+    $pageStyleMap = [
+        'index'              => 'welcome',
+        'calendar'           => 'calendar-index',
+        'event'              => 'calendar-event',
+        'results'            => 'results-index',
+        'profile'            => 'profile-index',
+        'login'              => 'auth',
+        'register'           => 'auth',
+        'forgot-password'    => 'auth',
+        'reset-password'     => 'auth',
+        'activate-account'   => 'auth',
+        // Add more mappings as needed
+    ];
+
+    // Determine which CSS file to load
+    $pageStyle = $pageStyleMap[$pageSlug] ?? $pageSlug;
+    $cssPath = __DIR__ . "/../assets/css/pages/{$pageStyle}.css";
+
+    // Check if page-specific CSS exists (follows symlinks automatically)
+    if (file_exists($cssPath)) {
+        $version = filemtime($cssPath);
+        echo "    <link rel=\"stylesheet\" href=\"/assets/css/pages/{$pageStyle}.css?v={$version}\">\n";
+    }
+    ?>
 
     <!-- PWA Support -->
     <link rel="manifest" href="/manifest.php">

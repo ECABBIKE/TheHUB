@@ -153,14 +153,14 @@
   color:white;
 }
 .sidebar-badge--alert{
-  background:#ef4444;
+  background:var(--color-error);
   animation:pulse-badge 2s infinite;
 }
 @keyframes pulse-badge{
   0%,100%{transform:scale(1)}
   50%{transform:scale(1.1)}
 }
-.sidebar-link.has-badge .sidebar-icon-svg{color:#ef4444}
+.sidebar-link.has-badge .sidebar-icon-svg{color:var(--color-error)}
 
 /* Main Content - Uses --container-padding from branding for responsive control */
 .main-content{

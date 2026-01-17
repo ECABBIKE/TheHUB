@@ -211,7 +211,7 @@
     padding: 8px 16px;
     background: rgba(97, 206, 112, 0.2);
     border: 1px solid rgba(97, 206, 112, 0.5);
-    color: #61CE70;
+    color: var(--color-success);
     font-size: 12px;
     font-weight: 700;
     text-transform: uppercase;
@@ -222,9 +222,9 @@
 }
 
 .badge-bold:hover .badge-cta {
-    background: #61CE70;
+    background: var(--color-success);
     color: white;
-    border-color: #61CE70;
+    border-color: var(--color-success);
 }
 
 .badge-cta-arrow {
@@ -531,7 +531,7 @@
 }
 
 .badge-status-live {
-    background: #ef4444;
+    background: var(--color-error);
     color: white;
     animation: badge-pulse 1s ease-in-out infinite;
 }
