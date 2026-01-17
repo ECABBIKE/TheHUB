@@ -62,7 +62,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['merge'])) {
  $keepId = (int)$_POST['keep_club'];
  $mergeIds = array_map('intval', $_POST['merge_clubs'] ?? []);
 
- if ($keepId && !empty($mergeIds)) {
+ // Validation: Need both a target club and clubs to merge
+ if (!$keepId) {
+  $message = 'Välj en klubb att behålla (radioknapp)';
+  $messageType = 'error';
+ } elseif (empty($mergeIds)) {
+  $message = 'Välj minst en klubb att slå samman (kryssruta). Kryssa i klubbarna som ska tas bort.';
+  $messageType = 'error';
+ } elseif ($keepId && !empty($mergeIds)) {
  try {
   $movedCount = 0;
   $deletedCount = 0;
@@ -545,6 +552,10 @@ include __DIR__ . '/components/unified-layout.php';
     </table>
     </div>
 
+    <p class="text-sm text-secondary mb-sm">
+     <i data-lucide="info" class="icon-xs"></i>
+     Välj "Behåll" (radioknapp) för klubben som ska finnas kvar, kryssa i "Slå samman" för de som ska tas bort.
+    </p>
     <div class="flex gap-sm">
      <button type="submit" name="merge" value="1" class="btn btn-warning">
       <i data-lucide="merge"></i>
