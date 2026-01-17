@@ -102,14 +102,11 @@ if (!isset($current_admin_page)) {
     <link rel="stylesheet" href="<?= hub_asset('css/utilities.css') ?>">
     <link rel="stylesheet" href="<?= hub_asset('css/grid.css') ?>">
 
-    <!-- Admin-specific CSS - DISABLED 2026-01-17 -->
-    <!-- Using public CSS (theme.css, tokens.css, components.css) which has better colors and contrast -->
-    <!-- admin.css was overriding with hardcoded dark colors causing poor readability -->
-    <!-- If admin needs specific layout, create minimal admin-layout-only.css with NO color overrides -->
-    <!--
-    <link rel="stylesheet" href="/admin/assets/css/admin.css?v=<?= filemtime(__DIR__ . '/../assets/css/admin.css') ?>">
-    <link rel="stylesheet" href="/admin/assets/css/admin-theme-fix.css?v=<?= filemtime(__DIR__ . '/../assets/css/admin-theme-fix.css') ?>">
-    -->
+    <!-- Admin Layout CSS - ONLY structure, NO color overrides -->
+    <!-- Uses CSS variables from theme.css for all colors -->
+    <!-- Original admin.css (3,784 lines) + admin-theme-fix.css (514 lines) -->
+    <!-- Replaced with minimal layout-only.css (350 lines) -->
+    <link rel="stylesheet" href="/admin/assets/css/admin-layout-only.css?v=<?= filemtime(__DIR__ . '/../assets/css/admin-layout-only.css') ?>">
 
     <!-- Dynamic Branding CSS (from /uploads/branding.json) -->
     <?php
