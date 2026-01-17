@@ -490,9 +490,15 @@ include __DIR__ . '/components/unified-layout.php';
                     <td><?= htmlspecialchars($event['location'] ?: '-') ?></td>
                     <td class="text-right"><?= number_format($event['participants']) ?></td>
                     <td class="text-right">
-                        <?= number_format($event['exclusive_count']) ?>
-                        <?php if ($event['exclusive_other_series'] > 0): ?>
-                            <span class="text-muted" title="Av dessa tävlade <?= $event['exclusive_other_series'] ?> i annan serie">(<?= $event['exclusive_other_series'] ?>)</span>
+                        <?php if ($event['exclusive_count'] > 0): ?>
+                        <a href="#" class="exclusive-link" data-event-id="<?= $event['id'] ?>" data-event-name="<?= htmlspecialchars($event['name']) ?>" data-year="<?= $selectedYear ?>" data-brand="<?= $selectedBrandId ?: '' ?>">
+                            <?= number_format($event['exclusive_count']) ?>
+                            <?php if ($event['exclusive_other_series'] > 0): ?>
+                                <span class="text-muted">(<?= $event['exclusive_other_series'] ?>)</span>
+                            <?php endif; ?>
+                        </a>
+                        <?php else: ?>
+                        0
                         <?php endif; ?>
                     </td>
                 </tr>
@@ -503,5 +509,204 @@ include __DIR__ . '/components/unified-layout.php';
 </div>
 
 <?php endif; ?>
+
+<!-- Modal for exclusive riders -->
+<div id="exclusiveModal" class="modal-overlay" style="display:none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3 id="modalTitle">Exklusiva deltagare</h3>
+            <button type="button" class="modal-close" onclick="closeExclusiveModal()">&times;</button>
+        </div>
+        <div class="modal-body" id="modalBody">
+            <div class="loading">Laddar...</div>
+        </div>
+    </div>
+</div>
+
+<style>
+.exclusive-link {
+    color: var(--color-accent);
+    text-decoration: none;
+    cursor: pointer;
+}
+.exclusive-link:hover {
+    text-decoration: underline;
+}
+
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0,0,0,0.6);
+    z-index: 1000;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-md);
+}
+
+.modal-content {
+    background: var(--color-bg-card);
+    border-radius: var(--radius-lg);
+    max-width: 600px;
+    width: 100%;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+    box-shadow: var(--shadow-lg);
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--space-md) var(--space-lg);
+    border-bottom: 1px solid var(--color-border);
+}
+
+.modal-header h3 {
+    margin: 0;
+    font-size: var(--text-lg);
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 24px;
+    cursor: pointer;
+    color: var(--color-text-secondary);
+    padding: 0;
+    line-height: 1;
+}
+
+.modal-close:hover {
+    color: var(--color-text-primary);
+}
+
+.modal-body {
+    padding: var(--space-lg);
+    overflow-y: auto;
+    flex: 1;
+}
+
+.rider-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+}
+
+.rider-item {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--space-sm);
+    background: var(--color-bg-surface);
+    border-radius: var(--radius-sm);
+}
+
+.rider-item a {
+    color: var(--color-accent);
+    text-decoration: none;
+}
+
+.rider-item a:hover {
+    text-decoration: underline;
+}
+
+.rider-item .class-badge {
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+}
+
+.rider-item .other-series {
+    font-size: var(--text-xs);
+    color: var(--color-warning);
+}
+
+.loading {
+    text-align: center;
+    color: var(--color-text-secondary);
+    padding: var(--space-xl);
+}
+</style>
+
+<script>
+function openExclusiveModal(eventId, eventName, year, brandId) {
+    document.getElementById('exclusiveModal').style.display = 'flex';
+    document.getElementById('modalTitle').textContent = 'Exklusiva deltagare - ' + eventName;
+    document.getElementById('modalBody').innerHTML = '<div class="loading">Laddar...</div>';
+
+    // Fetch riders via AJAX
+    const params = new URLSearchParams({
+        action: 'get_exclusive_riders',
+        event_id: eventId,
+        year: year,
+        brand_id: brandId || ''
+    });
+
+    fetch('/admin/api/analytics-exclusive-riders.php?' + params.toString())
+        .then(response => response.json())
+        .then(data => {
+            if (data.error) {
+                document.getElementById('modalBody').innerHTML = '<div class="alert alert-danger">' + data.error + '</div>';
+                return;
+            }
+
+            let html = '<div class="rider-list">';
+            if (data.riders.length === 0) {
+                html += '<p class="text-secondary">Inga exklusiva deltagare hittades.</p>';
+            } else {
+                html += '<p class="text-secondary mb-md">' + data.riders.length + ' deltagare som endast tävlade på detta event:</p>';
+                data.riders.forEach(rider => {
+                    html += '<div class="rider-item">';
+                    html += '<div>';
+                    html += '<a href="/admin/rider-edit.php?id=' + rider.id + '">' + rider.name + '</a>';
+                    if (rider.class_name) {
+                        html += ' <span class="class-badge">(' + rider.class_name + ')</span>';
+                    }
+                    if (rider.other_series) {
+                        html += ' <span class="other-series" title="Tävlade även i: ' + rider.other_series + '">+annan serie</span>';
+                    }
+                    html += '</div>';
+                    html += '</div>';
+                });
+            }
+            html += '</div>';
+            document.getElementById('modalBody').innerHTML = html;
+        })
+        .catch(err => {
+            document.getElementById('modalBody').innerHTML = '<div class="alert alert-danger">Kunde inte ladda data: ' + err.message + '</div>';
+        });
+}
+
+function closeExclusiveModal() {
+    document.getElementById('exclusiveModal').style.display = 'none';
+}
+
+// Close on overlay click
+document.getElementById('exclusiveModal').addEventListener('click', function(e) {
+    if (e.target === this) closeExclusiveModal();
+});
+
+// Close on ESC
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeExclusiveModal();
+});
+
+// Attach click handlers
+document.querySelectorAll('.exclusive-link').forEach(link => {
+    link.addEventListener('click', function(e) {
+        e.preventDefault();
+        openExclusiveModal(
+            this.dataset.eventId,
+            this.dataset.eventName,
+            this.dataset.year,
+            this.dataset.brand
+        );
+    });
+});
+</script>
 
 <?php include __DIR__ . '/components/unified-layout-footer.php'; ?>
