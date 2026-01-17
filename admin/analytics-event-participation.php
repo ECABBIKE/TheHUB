@@ -18,24 +18,23 @@ $currentYear = (int)date('Y');
 $selectedYear = isset($_GET['year']) ? (int)$_GET['year'] : $currentYear - 1;
 $selectedBrandId = isset($_GET['brand']) ? (int)$_GET['brand'] : null;
 
-// Fetch available brands
+// Fetch available brands from series_brands (the actual brand management table)
 $brands = [];
 try {
     $stmt = $pdo->query("
-        SELECT b.id, b.name, b.short_code, b.color_primary,
+        SELECT sb.id, sb.name, sb.slug as short_code, sb.gradient_start as color_primary,
                COUNT(DISTINCT s.id) as series_count
-        FROM brands b
-        LEFT JOIN brand_series_map bsm ON bsm.brand_id = b.id
-        LEFT JOIN series s ON s.id = bsm.series_id
-        WHERE b.active = 1
-        GROUP BY b.id
-        ORDER BY b.display_order, b.name
+        FROM series_brands sb
+        LEFT JOIN series s ON s.brand_id = sb.id
+        WHERE sb.active = 1
+        GROUP BY sb.id
+        ORDER BY sb.display_order, sb.name
     ");
     $brands = $stmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (Exception $e) {
-    // Fallback - hämta brands utan serie-count
+    // Fallback
     try {
-        $stmt = $pdo->query("SELECT id, name, short_code, color_primary FROM brands WHERE active = 1 ORDER BY name");
+        $stmt = $pdo->query("SELECT id, name, slug as short_code, gradient_start as color_primary FROM series_brands WHERE active = 1 ORDER BY name");
         $brands = $stmt->fetchAll(PDO::FETCH_ASSOC);
     } catch (Exception $e2) {}
 }
@@ -73,9 +72,8 @@ try {
         $brandJoin = "
             JOIN series_events se ON se.event_id = e.id
             JOIN series s ON s.id = se.series_id
-            JOIN brand_series_map bsm ON bsm.series_id = s.id
         ";
-        $brandWhere = "AND bsm.brand_id = ?";
+        $brandWhere = "AND s.brand_id = ?";
         $params[] = $selectedBrandId;
     }
 
