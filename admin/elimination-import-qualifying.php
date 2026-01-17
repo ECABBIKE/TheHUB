@@ -457,11 +457,11 @@ $breadcrumbs = [
 include __DIR__ . '/components/unified-layout.php';
 ?>
 
-<div class="card mb-lg">
-    <div class="card-header">
+<div class="admin-card mb-lg">
+    <div class="admin-card-header">
         <h3>Importera DS-resultat</h3>
     </div>
-    <div class="card-body">
+    <div class="admin-card-body">
         <p class="mb-md">Ladda upp en CSV-fil med kvalificeringstider och/eller slutresultat. Filen ska innehålla kolumner för:</p>
         <ul class="mb-lg" style="margin-left: var(--space-lg); color: var(--color-text-secondary);">
             <li><strong>Startnr</strong> (valfritt) - Startnummer</li>
@@ -478,13 +478,13 @@ include __DIR__ . '/components/unified-layout.php';
         <form method="POST" enctype="multipart/form-data">
             <input type="hidden" name="action" value="preview">
 
-            <div class="form-group">
-                <label class="label">Välj CSV-fil</label>
-                <input type="file" name="csv_file" accept=".csv,.txt" class="input" required>
+            <div class="admin-form-group">
+                <label class="admin-form-label">Välj CSV-fil</label>
+                <input type="file" name="csv_file" accept=".csv,.txt" class="admin-form-input" required>
                 <p class="form-help">Stöder CSV med komma, semikolon eller tab som separator.</p>
             </div>
 
-            <button type="submit" class="btn btn--primary">
+            <button type="submit" class="btn-admin btn-admin-primary">
                 <i data-lucide="eye"></i> Förhandsgranska
             </button>
         </form>
@@ -542,11 +542,11 @@ include __DIR__ . '/components/unified-layout.php';
         }
     }
 ?>
-<div class="card">
-    <div class="card-header">
+<div class="admin-card">
+    <div class="admin-card-header">
         <h3>Förhandsgranskning (<?= count($previewData) ?> rader)</h3>
     </div>
-    <div class="card-body">
+    <div class="admin-card-body">
         <form method="POST">
             <input type="hidden" name="action" value="import">
 
@@ -585,9 +585,9 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
             <input type="hidden" name="class_id" value="0">
             <?php else: ?>
-            <div class="form-group mb-lg">
-                <label class="label">Importera till klass (CSV saknar klassinfo)</label>
-                <select name="class_id" class="input" required>
+            <div class="admin-form-group mb-lg">
+                <label class="admin-form-label">Importera till klass (CSV saknar klassinfo)</label>
+                <select name="class_id" class="admin-form-select" required>
                     <option value="">-- Välj klass --</option>
                     <?php foreach ($classes as $c): ?>
                         <option value="<?= $c['id'] ?>" <?= $classId == $c['id'] ? 'selected' : '' ?>>
@@ -608,8 +608,8 @@ include __DIR__ . '/components/unified-layout.php';
                 }
             }
             ?>
-            <div class="table-container mb-lg">
-                <table class="table">
+            <div class="admin-table-container mb-lg">
+                <table class="admin-table">
                     <thead>
                         <tr>
                             <th>#</th>
@@ -655,8 +655,8 @@ include __DIR__ . '/components/unified-layout.php';
                 </table>
             </div>
 
-            <div class="form-group mb-lg">
-                <label class="label" style="display: flex; align-items: center; gap: var(--space-sm); cursor: pointer;">
+            <div class="admin-form-group mb-lg">
+                <label class="admin-form-label" style="display: flex; align-items: center; gap: var(--space-sm); cursor: pointer;">
                     <input type="checkbox" name="clear_existing" value="1" checked style="width: 18px; height: 18px;">
                     <span>Rensa befintliga resultat för dessa klasser innan import</span>
                 </label>
@@ -664,10 +664,10 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
 
             <div class="flex gap-md">
-                <button type="submit" class="btn btn--primary">
+                <button type="submit" class="btn-admin btn-admin-primary">
                     <i data-lucide="upload"></i> Importera <?= count($previewData) ?> resultat
                 </button>
-                <a href="/admin/elimination-import-qualifying.php?event_id=<?= $eventId ?>" class="btn btn--secondary">
+                <a href="/admin/elimination-import-qualifying.php?event_id=<?= $eventId ?>" class="btn-admin btn-admin-secondary">
                     Avbryt
                 </a>
             </div>
@@ -677,11 +677,11 @@ include __DIR__ . '/components/unified-layout.php';
 <?php endif; ?>
 
 <!-- Example Format -->
-<div class="card mt-lg">
-    <div class="card-header">
+<div class="admin-card mt-lg">
+    <div class="admin-card-header">
         <h3>Exempelformat</h3>
     </div>
-    <div class="card-body">
+    <div class="admin-card-body">
         <p class="mb-md"><strong>Bara kvalificering</strong> (för att sedan köra bracket i systemet):</p>
         <pre style="background: var(--color-bg-secondary); padding: var(--space-md); border-radius: var(--radius-md); overflow-x: auto; font-size: var(--text-sm); margin-bottom: var(--space-md);">Startnr;Namn;Klubb;Klass;Kval 1;Kval 2;Bäst
 5;Theodor Ek;CK Fix;Ungdom Pojkar;12,977;13,051;12,977

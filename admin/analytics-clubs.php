@@ -79,7 +79,7 @@ $breadcrumbs = [
 
 $page_actions = '
 <div class="btn-group">
-    <a href="/admin/analytics-dashboard.php" class="btn btn--secondary">
+    <a href="/admin/analytics-dashboard.php" class="btn-admin btn-admin-secondary">
         <i data-lucide="layout-dashboard"></i> Dashboard
     </a>
 </div>

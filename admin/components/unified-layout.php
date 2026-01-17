@@ -213,4 +213,4 @@ if (!isset($current_admin_page)) {
             <?php endif; ?>
 
             <!-- Page Content -->
-            <div class="page-content main-content">
+            <div class="page-content admin-content">

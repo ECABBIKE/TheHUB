@@ -75,18 +75,18 @@ $breadcrumbs = [
 include __DIR__ . '/components/unified-layout.php';
 ?>
 
-<div class="card mb-lg">
- <div class="card-header">
+<div class="admin-card mb-lg">
+ <div class="admin-card-header">
   <h2>
    <i data-lucide="database"></i>
    Databastabeller
   </h2>
  </div>
- <div class="card-body">
+ <div class="admin-card-body">
   <div style="display: flex; flex-wrap: wrap; gap: var(--space-sm);">
    <?php foreach ($tableNames as $table): ?>
     <a href="?table=<?= urlencode($table) ?>"
-      class="btn <?= $selectedTable === $table ? 'btn--primary' : 'btn--secondary' ?>"
+      class="btn-admin <?= $selectedTable === $table ? 'btn-admin-primary' : 'btn-admin-secondary' ?>"
       style="font-size: var(--text-sm);">
      <?= h($table) ?>
     </a>
@@ -96,8 +96,8 @@ include __DIR__ . '/components/unified-layout.php';
 </div>
 
 <?php if ($selectedTable): ?>
-<div class="card">
- <div class="card-header">
+<div class="admin-card">
+ <div class="admin-card-header">
   <div style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: var(--space-md);">
    <h2>
     <i data-lucide="table"></i>
@@ -112,21 +112,21 @@ include __DIR__ . '/components/unified-layout.php';
     <input type="text"
         name="search"
         value="<?= h($search) ?>"
-        class="input"
+        class="admin-form-input"
         placeholder="Sök..."
         style="width: 200px;">
-    <button type="submit" class="btn btn--secondary">
+    <button type="submit" class="btn-admin btn-admin-secondary">
      <i data-lucide="search"></i>
     </button>
     <?php if ($search): ?>
-     <a href="?table=<?= urlencode($selectedTable) ?>" class="btn btn--ghost">
+     <a href="?table=<?= urlencode($selectedTable) ?>" class="btn-admin btn-admin-ghost">
       <i data-lucide="x"></i>
      </a>
     <?php endif; ?>
    </form>
   </div>
  </div>
- <div class="card-body">
+ <div class="admin-card-body">
   <!-- Column Info -->
   <details class="mb-lg">
    <summary style="cursor: pointer; font-weight: 600; color: var(--color-text-secondary);">
@@ -183,7 +183,7 @@ include __DIR__ . '/components/unified-layout.php';
     <div style="margin-top: var(--space-lg); display: flex; justify-content: center; gap: var(--space-sm);">
      <?php if ($page > 1): ?>
       <a href="?table=<?= urlencode($selectedTable) ?>&page=<?= $page - 1 ?><?= $search ? '&search=' . urlencode($search) : '' ?>"
-        class="btn btn--secondary">
+        class="btn-admin btn-admin-secondary">
        <i data-lucide="chevron-left"></i>
        Föregående
       </a>
@@ -195,7 +195,7 @@ include __DIR__ . '/components/unified-layout.php';
 
      <?php if ($page < $totalPages): ?>
       <a href="?table=<?= urlencode($selectedTable) ?>&page=<?= $page + 1 ?><?= $search ? '&search=' . urlencode($search) : '' ?>"
-        class="btn btn--secondary">
+        class="btn-admin btn-admin-secondary">
        Nästa
        <i data-lucide="chevron-right"></i>
       </a>

@@ -576,15 +576,15 @@ include __DIR__ . '/components/unified-layout.php';
         <?= csrf_field() ?>
         <input type="hidden" name="action" value="save_info">
 
-        <div class="card">
-            <div class="card-header">
+        <div class="admin-card">
+            <div class="admin-card-header">
                 <h2><i data-lucide="settings"></i> Grundinformation</h2>
             </div>
-            <div class="card-body">
+            <div class="admin-card-body">
                 <?php if (!empty($brands)): ?>
-                <div class="form-group mb-md">
-                    <label class="label">Huvudserie (Varumärke)</label>
-                    <select name="brand_id" class="input">
+                <div class="admin-form-group mb-md">
+                    <label class="admin-form-label">Huvudserie (Varumärke)</label>
+                    <select name="brand_id" class="admin-form-select">
                         <option value="">-- Ingen --</option>
                         <?php foreach ($brands as $brand): ?>
                         <option value="<?= $brand['id'] ?>" <?= ($series['brand_id'] ?? '') == $brand['id'] ? 'selected' : '' ?>>
@@ -596,26 +596,26 @@ include __DIR__ . '/components/unified-layout.php';
                 <?php endif; ?>
 
                 <div class="info-grid">
-                    <div class="form-group">
-                        <label class="label">Serienamn *</label>
-                        <input type="text" name="name" class="input" required
+                    <div class="admin-form-group">
+                        <label class="admin-form-label">Serienamn *</label>
+                        <input type="text" name="name" class="admin-form-input" required
                                value="<?= htmlspecialchars($series['name'] ?? '') ?>">
                     </div>
-                    <div class="form-group">
-                        <label class="label">År *</label>
-                        <input type="number" name="year" class="input" required
+                    <div class="admin-form-group">
+                        <label class="admin-form-label">År *</label>
+                        <input type="number" name="year" class="admin-form-input" required
                                value="<?= htmlspecialchars($series['year'] ?? date('Y')) ?>"
                                min="2000" max="2100">
                     </div>
-                    <div class="form-group">
-                        <label class="label">Typ</label>
-                        <input type="text" name="type" class="input"
+                    <div class="admin-form-group">
+                        <label class="admin-form-label">Typ</label>
+                        <input type="text" name="type" class="admin-form-input"
                                value="<?= htmlspecialchars($series['type'] ?? '') ?>"
                                placeholder="Enduro, DH, XC...">
                     </div>
-                    <div class="form-group">
-                        <label class="label">Status</label>
-                        <select name="status" class="input">
+                    <div class="admin-form-group">
+                        <label class="admin-form-label">Status</label>
+                        <select name="status" class="admin-form-select">
                             <option value="planning" <?= ($series['status'] ?? '') === 'planning' ? 'selected' : '' ?>>Planering</option>
                             <option value="active" <?= ($series['status'] ?? '') === 'active' ? 'selected' : '' ?>>Aktiv</option>
                             <option value="completed" <?= ($series['status'] ?? '') === 'completed' ? 'selected' : '' ?>>Avslutad</option>
@@ -624,19 +624,19 @@ include __DIR__ . '/components/unified-layout.php';
                     </div>
                 </div>
 
-                <div class="form-group mt-md">
-                    <label class="label">Arrangör</label>
-                    <input type="text" name="organizer" class="input"
+                <div class="admin-form-group mt-md">
+                    <label class="admin-form-label">Arrangör</label>
+                    <input type="text" name="organizer" class="admin-form-input"
                            value="<?= htmlspecialchars($series['organizer'] ?? '') ?>">
                 </div>
 
-                <div class="form-group">
-                    <label class="label">Beskrivning</label>
-                    <textarea name="description" class="input" rows="3"><?= htmlspecialchars($series['description'] ?? '') ?></textarea>
+                <div class="admin-form-group">
+                    <label class="admin-form-label">Beskrivning</label>
+                    <textarea name="description" class="admin-form-input" rows="3"><?= htmlspecialchars($series['description'] ?? '') ?></textarea>
                 </div>
 
                 <div class="mt-lg">
-                    <button type="submit" class="btn btn--primary">
+                    <button type="submit" class="btn-admin btn-admin-primary">
                         <i data-lucide="save"></i> Spara
                     </button>
                 </div>
@@ -652,11 +652,11 @@ include __DIR__ . '/components/unified-layout.php';
     <div class="grid grid-cols-1 gs-lg-grid-cols-3 gap-lg">
         <!-- Add Event -->
         <div>
-            <div class="card">
-                <div class="card-header">
+            <div class="admin-card">
+                <div class="admin-card-header">
                     <h2><i data-lucide="plus"></i> Lägg till Event</h2>
                 </div>
-                <div class="card-body">
+                <div class="admin-card-body">
                     <?php if (empty($eventsNotInSeries)): ?>
                         <p class="text-secondary">Alla events är redan tillagda.</p>
                     <?php else: ?>
@@ -664,9 +664,9 @@ include __DIR__ . '/components/unified-layout.php';
                         <?= csrf_field() ?>
                         <input type="hidden" name="action" value="add_event">
 
-                        <div class="form-group">
-                            <label class="label">Välj event</label>
-                            <select name="event_id" class="input" required>
+                        <div class="admin-form-group">
+                            <label class="admin-form-label">Välj event</label>
+                            <select name="event_id" class="admin-form-select" required>
                                 <option value="">-- Välj --</option>
                                 <?php if (!empty($matchingYearEvents)): ?>
                                 <optgroup label="Matchar serieåret (<?= $seriesYear ?>)">
@@ -691,9 +691,9 @@ include __DIR__ . '/components/unified-layout.php';
                             </select>
                         </div>
 
-                        <div class="form-group">
-                            <label class="label">Poängmall (valfritt)</label>
-                            <select name="template_id" class="input">
+                        <div class="admin-form-group">
+                            <label class="admin-form-label">Poängmall (valfritt)</label>
+                            <select name="template_id" class="admin-form-select">
                                 <option value="">-- Ingen --</option>
                                 <?php foreach ($pointScales as $scale): ?>
                                 <option value="<?= $scale['id'] ?>"><?= htmlspecialchars($scale['name']) ?></option>
@@ -701,7 +701,7 @@ include __DIR__ . '/components/unified-layout.php';
                             </select>
                         </div>
 
-                        <button type="submit" class="btn btn--primary w-full">
+                        <button type="submit" class="btn-admin btn-admin-primary w-full">
                             <i data-lucide="plus"></i> Lägg till
                         </button>
                     </form>
@@ -712,11 +712,11 @@ include __DIR__ . '/components/unified-layout.php';
 
         <!-- Events List -->
         <div class="gs-lg-col-span-2">
-            <div class="card">
-                <div class="card-header">
+            <div class="admin-card">
+                <div class="admin-card-header">
                     <h2><i data-lucide="list"></i> Events i serien (<?= $eventsCount ?>)</h2>
                 </div>
-                <div class="card-body" style="padding: 0;">
+                <div class="admin-card-body" style="padding: 0;">
                     <?php if (empty($seriesEvents)): ?>
                         <p class="text-secondary p-lg">Inga events tillagda ännu.</p>
                     <?php else: ?>
@@ -747,7 +747,7 @@ include __DIR__ . '/components/unified-layout.php';
                                             <?= csrf_field() ?>
                                             <input type="hidden" name="action" value="update_template">
                                             <input type="hidden" name="series_event_id" value="<?= $se['id'] ?>">
-                                            <select name="template_id" class="input template-select">
+                                            <select name="template_id" class="admin-form-select template-select">
                                                 <option value="">-- Ingen --</option>
                                                 <?php foreach ($pointScales as $scale): ?>
                                                 <option value="<?= $scale['id'] ?>" <?= $se['template_id'] == $scale['id'] ? 'selected' : '' ?>>
@@ -755,7 +755,7 @@ include __DIR__ . '/components/unified-layout.php';
                                                 </option>
                                                 <?php endforeach; ?>
                                             </select>
-                                            <button type="submit" class="btn btn--sm btn--secondary" title="Spara">
+                                            <button type="submit" class="btn-admin btn-admin-sm btn-admin-secondary" title="Spara">
                                                 <i data-lucide="check"></i>
                                             </button>
                                         </form>
@@ -765,7 +765,7 @@ include __DIR__ . '/components/unified-layout.php';
                                             <?= csrf_field() ?>
                                             <input type="hidden" name="action" value="remove_event">
                                             <input type="hidden" name="series_event_id" value="<?= $se['id'] ?>">
-                                            <button type="submit" class="btn btn--sm btn--danger">
+                                            <button type="submit" class="btn-admin btn-admin-sm btn-admin-danger">
                                                 <i data-lucide="trash-2"></i>
                                             </button>
                                         </form>
@@ -787,18 +787,18 @@ include __DIR__ . '/components/unified-layout.php';
 <!-- ============================================================ -->
 <div class="tab-content <?= $activeTab === 'registration' ? 'active' : '' ?>" id="tab-registration">
     <!-- Registration Settings -->
-    <div class="card mb-lg">
-        <div class="card-header">
+    <div class="admin-card mb-lg">
+        <div class="admin-card-header">
             <h2><i data-lucide="settings"></i> Anmälningsinställningar</h2>
         </div>
-        <div class="card-body">
+        <div class="admin-card-body">
             <form method="POST">
                 <?= csrf_field() ?>
                 <input type="hidden" name="action" value="save_registration">
 
                 <div class="info-grid">
-                    <div class="form-group">
-                        <label class="label flex items-center gap-sm">
+                    <div class="admin-form-group">
+                        <label class="admin-form-label flex items-center gap-sm">
                             <input type="checkbox" name="registration_enabled" value="1"
                                    <?= ($series['registration_enabled'] ?? 0) ? 'checked' : '' ?>>
                             Anmälan aktiverad
@@ -806,9 +806,9 @@ include __DIR__ . '/components/unified-layout.php';
                         <small class="text-secondary">Tillåt anmälan till events i serien</small>
                     </div>
 
-                    <div class="form-group">
-                        <label class="label">Prismall</label>
-                        <select name="pricing_template_id" class="input">
+                    <div class="admin-form-group">
+                        <label class="admin-form-label">Prismall</label>
+                        <select name="pricing_template_id" class="admin-form-select">
                             <option value="">-- Välj --</option>
                             <?php foreach ($pricingTemplates as $pt): ?>
                             <option value="<?= $pt['id'] ?>" <?= ($series['pricing_template_id'] ?? '') == $pt['id'] ? 'selected' : '' ?>>
@@ -823,7 +823,7 @@ include __DIR__ . '/components/unified-layout.php';
                 </div>
 
                 <div class="mt-md">
-                    <button type="submit" class="btn btn--primary">
+                    <button type="submit" class="btn-admin btn-admin-primary">
                         <i data-lucide="save"></i> Spara
                     </button>
                 </div>
@@ -833,11 +833,11 @@ include __DIR__ . '/components/unified-layout.php';
 
     <!-- Event Times -->
     <?php if (!empty($seriesEvents)): ?>
-    <div class="card">
-        <div class="card-header">
+    <div class="admin-card">
+        <div class="admin-card-header">
             <h2><i data-lucide="clock"></i> Anmälningstider per event</h2>
         </div>
-        <div class="card-body">
+        <div class="admin-card-body">
             <form method="POST">
                 <?= csrf_field() ?>
                 <input type="hidden" name="action" value="save_event_times">
@@ -858,15 +858,15 @@ include __DIR__ . '/components/unified-layout.php';
                         <div>
                             <label class="text-xs text-secondary">Öppnar</label>
                             <div class="flex gap-xs">
-                                <input type="date" name="opens_date[]" class="input" value="<?= $opensDate ?>">
-                                <input type="time" name="opens_time[]" class="input" value="<?= $opensTime ?>" style="width: 100px;">
+                                <input type="date" name="opens_date[]" class="admin-form-input" value="<?= $opensDate ?>">
+                                <input type="time" name="opens_time[]" class="admin-form-input" value="<?= $opensTime ?>" style="width: 100px;">
                             </div>
                         </div>
                         <div>
                             <label class="text-xs text-secondary">Stänger</label>
                             <div class="flex gap-xs">
-                                <input type="date" name="closes_date[]" class="input" value="<?= $closesDate ?>">
-                                <input type="time" name="closes_time[]" class="input" value="<?= $closesTime ?>" style="width: 100px;">
+                                <input type="date" name="closes_date[]" class="admin-form-input" value="<?= $closesDate ?>">
+                                <input type="time" name="closes_time[]" class="admin-form-input" value="<?= $closesTime ?>" style="width: 100px;">
                             </div>
                         </div>
                         <div></div>
@@ -875,7 +875,7 @@ include __DIR__ . '/components/unified-layout.php';
                 </div>
 
                 <div class="mt-lg">
-                    <button type="submit" class="btn btn--primary">
+                    <button type="submit" class="btn-admin btn-admin-primary">
                         <i data-lucide="save"></i> Spara anmälningstider
                     </button>
                 </div>
@@ -895,18 +895,18 @@ include __DIR__ . '/components/unified-layout.php';
 
         <?php if (!empty($paymentRecipients)): ?>
         <!-- Modern Payment Recipients -->
-        <div class="card mb-lg">
-            <div class="card-header">
+        <div class="admin-card mb-lg">
+            <div class="admin-card-header">
                 <h2><i data-lucide="building-2"></i> Betalningsmottagare</h2>
             </div>
-            <div class="card-body">
+            <div class="admin-card-body">
                 <p class="text-secondary mb-md">
                     Välj vem som tar emot betalningar för denna serie. Event utan egen mottagare använder seriens.
                 </p>
 
-                <div class="form-group">
-                    <label class="label">Mottagare</label>
-                    <select name="payment_recipient_id" class="input">
+                <div class="admin-form-group">
+                    <label class="admin-form-label">Mottagare</label>
+                    <select name="payment_recipient_id" class="admin-form-select">
                         <option value="">-- Ingen (betalning inaktiverad) --</option>
                         <?php foreach ($paymentRecipients as $r): ?>
                         <option value="<?= $r['id'] ?>" <?= ($series['payment_recipient_id'] ?? '') == $r['id'] ? 'selected' : '' ?>>
@@ -923,21 +923,21 @@ include __DIR__ . '/components/unified-layout.php';
         </div>
         <?php elseif ($hasLegacySwish): ?>
         <!-- Legacy Swish Fields -->
-        <div class="card mb-lg">
-            <div class="card-header">
+        <div class="admin-card mb-lg">
+            <div class="admin-card-header">
                 <h2><i data-lucide="smartphone"></i> Swish-betalning</h2>
             </div>
-            <div class="card-body">
+            <div class="admin-card-body">
                 <div class="info-grid">
-                    <div class="form-group">
-                        <label class="label">Swish-nummer</label>
-                        <input type="text" name="swish_number" class="input"
+                    <div class="admin-form-group">
+                        <label class="admin-form-label">Swish-nummer</label>
+                        <input type="text" name="swish_number" class="admin-form-input"
                                value="<?= htmlspecialchars($series['swish_number'] ?? '') ?>"
                                placeholder="070-123 45 67">
                     </div>
-                    <div class="form-group">
-                        <label class="label">Mottagarnamn</label>
-                        <input type="text" name="swish_name" class="input"
+                    <div class="admin-form-group">
+                        <label class="admin-form-label">Mottagarnamn</label>
+                        <input type="text" name="swish_name" class="admin-form-input"
                                value="<?= htmlspecialchars($series['swish_name'] ?? '') ?>"
                                placeholder="Seriens namn">
                     </div>
@@ -952,18 +952,18 @@ include __DIR__ . '/components/unified-layout.php';
         <?php endif; ?>
 
         <!-- Gravity ID Discount -->
-        <div class="card mb-lg">
-            <div class="card-header">
+        <div class="admin-card mb-lg">
+            <div class="admin-card-header">
                 <h2><i data-lucide="badge-check"></i> Gravity ID-rabatt</h2>
             </div>
-            <div class="card-body">
+            <div class="admin-card-body">
                 <p class="text-secondary mb-md">
                     Medlemmar med Gravity ID kan få rabatt på anmälan.
                 </p>
 
-                <div class="form-group">
-                    <label class="label">Rabatt (SEK)</label>
-                    <input type="number" name="gravity_id_discount" class="input" style="max-width: 150px;"
+                <div class="admin-form-group">
+                    <label class="admin-form-label">Rabatt (SEK)</label>
+                    <input type="number" name="gravity_id_discount" class="admin-form-input" style="max-width: 150px;"
                            value="<?= htmlspecialchars($series['gravity_id_discount'] ?? 0) ?>"
                            min="0" step="1">
                     <small class="text-secondary">0 = inaktiverat</small>
@@ -971,7 +971,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
 
-        <button type="submit" class="btn btn--primary">
+        <button type="submit" class="btn-admin btn-admin-primary">
             <i data-lucide="save"></i> Spara betalningsinställningar
         </button>
     </form>
@@ -984,18 +984,18 @@ include __DIR__ . '/components/unified-layout.php';
     <div class="grid grid-cols-1 gs-lg-grid-cols-3 gap-lg">
         <!-- Settings -->
         <div>
-            <div class="card mb-lg">
-                <div class="card-header">
+            <div class="admin-card mb-lg">
+                <div class="admin-card-header">
                     <h2><i data-lucide="calculator"></i> Poängräkning</h2>
                 </div>
-                <div class="card-body">
+                <div class="admin-card-body">
                     <form method="POST">
                         <?= csrf_field() ?>
                         <input type="hidden" name="action" value="update_count_best">
 
-                        <div class="form-group">
-                            <label class="label">Räkna bästa resultat</label>
-                            <select name="count_best_results" class="input" onchange="this.form.submit()">
+                        <div class="admin-form-group">
+                            <label class="admin-form-label">Räkna bästa resultat</label>
+                            <select name="count_best_results" class="admin-form-select" onchange="this.form.submit()">
                                 <option value="null" <?= ($series['count_best_results'] ?? null) === null ? 'selected' : '' ?>>
                                     Alla resultat
                                 </option>
@@ -1013,18 +1013,18 @@ include __DIR__ . '/components/unified-layout.php';
                 </div>
             </div>
 
-            <div class="card">
-                <div class="card-header">
+            <div class="admin-card">
+                <div class="admin-card-header">
                     <h2><i data-lucide="refresh-cw"></i> Omräkna poäng</h2>
                 </div>
-                <div class="card-body">
+                <div class="admin-card-body">
                     <p class="text-secondary mb-md">
                         Beräkna om alla seriepoäng baserat på resultat och poängmallar.
                     </p>
                     <form method="POST">
                         <?= csrf_field() ?>
                         <input type="hidden" name="action" value="recalculate_all">
-                        <button type="submit" class="btn btn--primary w-full"
+                        <button type="submit" class="btn-admin btn-admin-primary w-full"
                                 onclick="return confirm('Beräkna om alla seriepoäng?');">
                             <i data-lucide="refresh-cw"></i> Beräkna om
                         </button>
@@ -1035,30 +1035,30 @@ include __DIR__ . '/components/unified-layout.php';
 
         <!-- Stats & Links -->
         <div class="gs-lg-col-span-2">
-            <div class="card">
-                <div class="card-header">
+            <div class="admin-card">
+                <div class="admin-card-header">
                     <h2><i data-lucide="bar-chart-3"></i> Statistik</h2>
                 </div>
-                <div class="card-body">
+                <div class="admin-card-body">
                     <div class="grid grid-stats grid-gap-md mb-lg">
-                        <div class="stat-card">
-                            <div class="stat-value"><?= $eventsWithResults ?>/<?= $eventsCount ?></div>
-                            <div class="stat-label">Events med resultat</div>
+                        <div class="admin-stat-card">
+                            <div class="admin-stat-value"><?= $eventsWithResults ?>/<?= $eventsCount ?></div>
+                            <div class="admin-stat-label">Events med resultat</div>
                         </div>
-                        <div class="stat-card">
-                            <div class="stat-value"><?= number_format($uniqueParticipants) ?></div>
-                            <div class="stat-label">Unika deltagare</div>
+                        <div class="admin-stat-card">
+                            <div class="admin-stat-value"><?= number_format($uniqueParticipants) ?></div>
+                            <div class="admin-stat-label">Unika deltagare</div>
                         </div>
                     </div>
 
                     <div class="flex gap-md flex-wrap">
-                        <a href="/series/<?= $id ?>" class="btn btn--secondary" target="_blank">
+                        <a href="/series/<?= $id ?>" class="btn-admin btn-admin-secondary" target="_blank">
                             <i data-lucide="external-link"></i> Visa serietabell
                         </a>
-                        <a href="/admin/club-points?series=<?= $id ?>" class="btn btn--secondary">
+                        <a href="/admin/club-points?series=<?= $id ?>" class="btn-admin btn-admin-secondary">
                             <i data-lucide="building-2"></i> Klubbpoäng
                         </a>
-                        <a href="/admin/import-results" class="btn btn--secondary">
+                        <a href="/admin/import-results" class="btn-admin btn-admin-secondary">
                             <i data-lucide="upload"></i> Importera resultat
                         </a>
                     </div>

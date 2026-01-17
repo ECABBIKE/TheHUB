@@ -133,10 +133,10 @@ $maskedApiKey = $apiKeyConfigured
     ? substr($currentApiKey, 0, 8) . str_repeat('*', max(0, strlen($currentApiKey) - 12)) . substr($currentApiKey, -4)
     : '';
 
-include __DIR__ . '/../includes/page-header.php';
+include __DIR__ . '/../includes/admin-header.php';
 ?>
 
-<div class="main-content">
+<div class="admin-content">
     <div class="page-header">
         <h1><i data-lucide="image"></i> <?= $pageTitle ?></h1>
         <p class="text-secondary">Konfigurera ImgBB för profilbildsuppladdning</p>

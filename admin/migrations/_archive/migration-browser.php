@@ -251,15 +251,15 @@ include __DIR__ . '/../components/unified-layout.php';
 
 <?php if ($viewContent !== null): ?>
 <!-- View Migration Content -->
-<div class="card" style="margin-bottom: var(--space-lg);">
-    <div class="card-header">
+<div class="admin-card" style="margin-bottom: var(--space-lg);">
+    <div class="admin-card-header">
         <h2>Innehåll: <?= htmlspecialchars($viewFile) ?></h2>
-        <a href="/admin/migrations/migration-browser.php" class="btn btn--secondary btn--sm">
+        <a href="/admin/migrations/migration-browser.php" class="btn-admin btn-admin-secondary btn-admin-sm">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;"><path d="m12 19-7-7 7-7"/><path d="M19 12H5"/></svg>
             Tillbaka
         </a>
     </div>
-    <div class="card-body" style="padding: 0;">
+    <div class="admin-card-body" style="padding: 0;">
         <pre class="code-preview"><?= htmlspecialchars($viewContent) ?></pre>
     </div>
 </div>
@@ -282,8 +282,8 @@ include __DIR__ . '/../components/unified-layout.php';
 $analyticsMigrations = array_filter($migrations, fn($m) => $m['dir'] === 'Tools/migrations' || $m['dir'] === 'analytics/migrations');
 if (!empty($analyticsMigrations)):
 ?>
-<div class="card" style="margin-bottom: var(--space-lg); border: 2px solid var(--color-accent);">
-    <div class="card-header" style="background: var(--color-accent-light);">
+<div class="admin-card" style="margin-bottom: var(--space-lg); border: 2px solid var(--color-accent);">
+    <div class="admin-card-header" style="background: var(--color-accent-light);">
         <h2 style="color: var(--color-accent);">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 20px; height: 20px; vertical-align: middle;">
                 <path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/>
@@ -291,14 +291,14 @@ if (!empty($analyticsMigrations)):
             Analytics Migrations
         </h2>
     </div>
-    <div class="card-body">
+    <div class="admin-card-body">
         <p style="margin-bottom: var(--space-md);">Kor alla analytics-migrations i ratt ordning:</p>
         <div style="display: flex; gap: var(--space-md); flex-wrap: wrap;">
-            <a href="/Tools/migrations/run-migrations.php" target="_blank" class="btn btn--primary">
+            <a href="/Tools/migrations/run-migrations.php" target="_blank" class="btn-admin btn-admin-primary">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;"><polygon points="5 3 19 12 5 21 5 3"/></svg>
                 Kor alla migrations
             </a>
-            <a href="/analytics/populate-historical.php" target="_blank" class="btn btn--secondary">
+            <a href="/analytics/populate-historical.php" target="_blank" class="btn-admin btn-admin-secondary">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 16px; height: 16px;"><ellipse cx="12" cy="5" rx="9" ry="3"/><path d="M3 5V19A9 3 0 0 0 21 19V5"/><path d="M3 12A9 3 0 0 0 21 12"/></svg>
                 Generera historisk data
             </a>
@@ -339,14 +339,14 @@ if (!empty($analyticsMigrations)):
                 </div>
             </div>
             <div class="migration-actions">
-                <a href="?view=<?= urlencode($m['filename']) ?>" class="btn btn--sm btn--secondary">
+                <a href="?view=<?= urlencode($m['filename']) ?>" class="btn-admin btn-admin-sm btn-admin-secondary">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
                     Visa
                 </a>
                 <form method="POST" style="display: inline;" onsubmit="return confirm('Är du säker på att du vill köra denna migrering?\n\n<?= htmlspecialchars($m['filename']) ?>\n\nDetta kan inte ångras!');">
                     <?php if (function_exists('csrf_field')) echo csrf_field(); ?>
                     <input type="hidden" name="run" value="<?= htmlspecialchars($m['filename']) ?>">
-                    <button type="submit" class="btn btn--sm btn--danger">
+                    <button type="submit" class="btn-admin btn-admin-sm btn-admin-danger">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;"><polygon points="5 3 19 12 5 21 5 3"/></svg>
                         Kör
                     </button>
@@ -397,12 +397,12 @@ if (!empty($analyticsMigrations)):
                 </div>
             </div>
             <div class="migration-actions">
-                <a href="?view=<?= urlencode($m['filename']) ?>" class="btn btn--sm btn--secondary">
+                <a href="?view=<?= urlencode($m['filename']) ?>" class="btn-admin btn-admin-sm btn-admin-secondary">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
                     Visa
                 </a>
                 <?php if (isset($m['type']) && $m['type'] === 'php'): ?>
-                <a href="/admin/migrations/<?= htmlspecialchars($m['filename']) ?>" class="btn btn--sm btn--warning" onclick="return confirm('Öppna PHP-migreringen?\n\nDenna kommer köras direkt när du öppnar sidan!');">
+                <a href="/admin/migrations/<?= htmlspecialchars($m['filename']) ?>" class="btn-admin btn-admin-sm btn-admin-warning" onclick="return confirm('Öppna PHP-migreringen?\n\nDenna kommer köras direkt när du öppnar sidan!');">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
                     Öppna
                 </a>
@@ -410,7 +410,7 @@ if (!empty($analyticsMigrations)):
                 <form method="POST" style="display: inline;" onsubmit="return confirm('Är du säker på att du vill köra denna migrering?');">
                     <?php if (function_exists('csrf_field')) echo csrf_field(); ?>
                     <input type="hidden" name="run" value="<?= htmlspecialchars($m['filename']) ?>">
-                    <button type="submit" class="btn btn--sm btn--danger">
+                    <button type="submit" class="btn-admin btn-admin-sm btn-admin-danger">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;"><polygon points="5 3 19 12 5 21 5 3"/></svg>
                         Kör
                     </button>
@@ -459,12 +459,12 @@ if (!empty($analyticsMigrations)):
                 </div>
             </div>
             <div class="migration-actions">
-                <a href="?view=<?= urlencode($m['filename']) ?>" class="btn btn--sm btn--secondary">
+                <a href="?view=<?= urlencode($m['filename']) ?>" class="btn-admin btn-admin-sm btn-admin-secondary">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
                     Visa
                 </a>
                 <?php if (isset($m['type']) && $m['type'] === 'php'): ?>
-                <a href="/Tools/migrations/<?= htmlspecialchars($m['filename']) ?>" class="btn btn--sm btn--warning" target="_blank">
+                <a href="/Tools/migrations/<?= htmlspecialchars($m['filename']) ?>" class="btn-admin btn-admin-sm btn-admin-warning" target="_blank">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
                     Kor
                 </a>
@@ -472,7 +472,7 @@ if (!empty($analyticsMigrations)):
                 <form method="POST" style="display: inline;" onsubmit="return confirm('Ar du saker pa att du vill kora denna migrering?');">
                     <?php if (function_exists('csrf_field')) echo csrf_field(); ?>
                     <input type="hidden" name="run" value="<?= htmlspecialchars($m['filename']) ?>">
-                    <button type="submit" class="btn btn--sm btn--danger">
+                    <button type="submit" class="btn-admin btn-admin-sm btn-admin-danger">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;"><polygon points="5 3 19 12 5 21 5 3"/></svg>
                         Kor
                     </button>
@@ -521,7 +521,7 @@ if (!empty($analyticsMigrations)):
                 </div>
             </div>
             <div class="migration-actions">
-                <a href="?view=<?= urlencode($m['filename']) ?>" class="btn btn--sm btn--secondary">
+                <a href="?view=<?= urlencode($m['filename']) ?>" class="btn-admin btn-admin-sm btn-admin-secondary">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width: 14px; height: 14px;"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
                     Visa
                 </a>

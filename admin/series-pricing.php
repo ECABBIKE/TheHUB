@@ -214,7 +214,7 @@ include __DIR__ . '/components/unified-layout.php';
             Konfigurera anmälan, priser och klassregler
         </p>
     </div>
-    <a href="/admin/series.php" class="btn btn--secondary">
+    <a href="/admin/series.php" class="btn-admin btn-admin-secondary">
         <i data-lucide="arrow-left"></i>
         Tillbaka
     </a>
@@ -227,16 +227,16 @@ include __DIR__ . '/components/unified-layout.php';
 <?php endif; ?>
 
 <!-- Tabs -->
-<div class="tabs mb-lg">
-    <a href="?id=<?= $seriesId ?>&tab=registration" class="tab-btn <?= $activeTab === 'registration' ? 'active' : '' ?>">
+<div class="admin-tabs mb-lg">
+    <a href="?id=<?= $seriesId ?>&tab=registration" class="admin-tab <?= $activeTab === 'registration' ? 'active' : '' ?>">
         <i data-lucide="clipboard-list"></i>
         Anmälan
     </a>
-    <a href="?id=<?= $seriesId ?>&tab=pricing" class="tab-btn <?= $activeTab === 'pricing' ? 'active' : '' ?>">
+    <a href="?id=<?= $seriesId ?>&tab=pricing" class="admin-tab <?= $activeTab === 'pricing' ? 'active' : '' ?>">
         <i data-lucide="credit-card"></i>
         Priser
     </a>
-    <a href="?id=<?= $seriesId ?>&tab=rules" class="tab-btn <?= $activeTab === 'rules' ? 'active' : '' ?>">
+    <a href="?id=<?= $seriesId ?>&tab=rules" class="admin-tab <?= $activeTab === 'rules' ? 'active' : '' ?>">
         <i data-lucide="shield-check"></i>
         Klassregler
     </a>
@@ -246,31 +246,31 @@ include __DIR__ . '/components/unified-layout.php';
 <!-- Registration Tab -->
 
 <!-- Series-level settings -->
-<div class="card mb-lg">
-    <div class="card-header">
+<div class="admin-card mb-lg">
+    <div class="admin-card-header">
         <h2>
             <i data-lucide="settings"></i>
             Serieinställningar
         </h2>
     </div>
-    <div class="card-body">
+    <div class="admin-card-body">
         <form method="POST">
             <?= csrf_field() ?>
             <input type="hidden" name="action" value="save_series_registration">
 
-            <div class="form-row">
-                <div class="form-group">
-                    <label class="label">
+            <div class="admin-form-row">
+                <div class="admin-form-group">
+                    <label class="admin-form-label">
                         <input type="checkbox" name="registration_enabled" value="1"
                             <?= ($series['registration_enabled'] ?? 0) ? 'checked' : '' ?>>
                         Anmälan aktiverad för serien
                     </label>
-                    <small class="form-help">Aktivera för att tillåta anmälan till events i denna serie</small>
+                    <small class="admin-form-help">Aktivera för att tillåta anmälan till events i denna serie</small>
                 </div>
 
-                <div class="form-group">
-                    <label class="label">Standard prismall</label>
-                    <select name="pricing_template_id" class="input">
+                <div class="admin-form-group">
+                    <label class="admin-form-label">Standard prismall</label>
+                    <select name="pricing_template_id" class="admin-form-select">
                         <option value="">-- Välj prismall --</option>
                         <?php foreach ($pricingTemplates as $template): ?>
                             <option value="<?= $template['id'] ?>"
@@ -280,7 +280,7 @@ include __DIR__ . '/components/unified-layout.php';
                             </option>
                         <?php endforeach; ?>
                     </select>
-                    <small class="form-help">
+                    <small class="admin-form-help">
                         Används som default för alla events i serien.
                         <a href="/admin/pricing-templates.php">Hantera prismallar</a>
                     </small>
@@ -288,7 +288,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
 
             <div class="mt-md">
-                <button type="submit" class="btn btn--primary">
+                <button type="submit" class="btn-admin btn-admin-primary">
                     <i data-lucide="save"></i>
                     Spara serieinställningar
                 </button>
@@ -298,33 +298,33 @@ include __DIR__ . '/components/unified-layout.php';
 </div>
 
 <!-- Serie-pass (Season Pass) Settings -->
-<div class="card mb-lg">
-    <div class="card-header">
+<div class="admin-card mb-lg">
+    <div class="admin-card-header">
         <h2>
             <i data-lucide="ticket"></i>
             Serie-pass (Hela säsongen)
         </h2>
     </div>
-    <div class="card-body">
+    <div class="admin-card-body">
         <form method="POST">
             <?= csrf_field() ?>
             <input type="hidden" name="action" value="save_series_pass">
 
-            <div class="form-group mb-lg">
-                <label class="label" style="display: flex; align-items: center; gap: var(--space-sm);">
+            <div class="admin-form-group mb-lg">
+                <label class="admin-form-label" style="display: flex; align-items: center; gap: var(--space-sm);">
                     <input type="checkbox" name="allow_series_registration" value="1"
                         <?= ($series['allow_series_registration'] ?? 0) ? 'checked' : '' ?>>
                     <strong>Tillåt köp av serie-pass</strong>
                 </label>
-                <small class="form-help">
+                <small class="admin-form-help">
                     När aktiverat kan deltagare köpa ett pass för ALLA events i serien till rabatterat pris.
                 </small>
             </div>
 
-            <div class="form-row">
-                <div class="form-group">
-                    <label class="label">Prismodell</label>
-                    <select name="series_price_type" class="input" id="series_price_type" onchange="togglePriceFields()">
+            <div class="admin-form-row">
+                <div class="admin-form-group">
+                    <label class="admin-form-label">Prismodell</label>
+                    <select name="series_price_type" class="admin-form-select" id="series_price_type" onchange="togglePriceFields()">
                         <option value="calculated" <?= ($series['series_price_type'] ?? 'calculated') === 'calculated' ? 'selected' : '' ?>>
                             Beräknat (summa av alla event minus rabatt)
                         </option>
@@ -334,22 +334,22 @@ include __DIR__ . '/components/unified-layout.php';
                     </select>
                 </div>
 
-                <div class="form-group" id="discount_field">
-                    <label class="label">Rabatt vid serieanmälan (%)</label>
-                    <input type="number" name="series_discount_percent" class="input"
+                <div class="admin-form-group" id="discount_field">
+                    <label class="admin-form-label">Rabatt vid serieanmälan (%)</label>
+                    <input type="number" name="series_discount_percent" class="admin-form-input"
                            value="<?= htmlspecialchars($series['series_discount_percent'] ?? 15) ?>"
                            min="0" max="50" step="1">
-                    <small class="form-help">
+                    <small class="admin-form-help">
                         T.ex. 15% = betala 85% av totalpriset för alla events
                     </small>
                 </div>
 
-                <div class="form-group" id="fixed_price_field" style="display: none;">
-                    <label class="label">Fast pris för hela serien (kr)</label>
-                    <input type="number" name="full_series_price" class="input"
+                <div class="admin-form-group" id="fixed_price_field" style="display: none;">
+                    <label class="admin-form-label">Fast pris för hela serien (kr)</label>
+                    <input type="number" name="full_series_price" class="admin-form-input"
                            value="<?= htmlspecialchars($series['full_series_price'] ?? '') ?>"
                            min="0" step="50" placeholder="T.ex. 2500">
-                    <small class="form-help">
+                    <small class="admin-form-help">
                         Samma pris oavsett klass
                     </small>
                 </div>
@@ -373,7 +373,7 @@ include __DIR__ . '/components/unified-layout.php';
             <?php endif; ?>
 
             <div class="mt-md">
-                <button type="submit" class="btn btn--primary">
+                <button type="submit" class="btn-admin btn-admin-primary">
                     <i data-lucide="save"></i>
                     Spara serie-pass inställningar
                 </button>
@@ -393,14 +393,14 @@ document.addEventListener('DOMContentLoaded', togglePriceFields);
 </script>
 
 <!-- Event-specific registration times -->
-<div class="card">
-    <div class="card-header">
+<div class="admin-card">
+    <div class="admin-card-header">
         <h2>
             <i data-lucide="calendar"></i>
             Anmälningstider per event
         </h2>
     </div>
-    <div class="card-body">
+    <div class="admin-card-body">
         <?php if (empty($seriesEvents)): ?>
             <p class="text-secondary">Inga events finns i denna serie ännu.</p>
         <?php else: ?>
@@ -408,8 +408,8 @@ document.addEventListener('DOMContentLoaded', togglePriceFields);
                 <?= csrf_field() ?>
                 <input type="hidden" name="action" value="save_event_registration">
 
-                <div class="table-container">
-                    <table class="table">
+                <div class="admin-table-container">
+                    <table class="admin-table">
                         <thead>
                             <tr>
                                 <th>Event</th>
@@ -436,17 +436,17 @@ document.addEventListener('DOMContentLoaded', togglePriceFields);
                                 </td>
                                 <td>
                                     <div class="flex gap-xs items-center">
-                                        <input type="date" name="opens_date[]" class="input"
+                                        <input type="date" name="opens_date[]" class="admin-form-input"
                                             value="<?= $opensDate ?>" style="width: 140px;">
-                                        <input type="time" name="opens_time[]" class="input"
+                                        <input type="time" name="opens_time[]" class="admin-form-input"
                                             value="<?= $opensTime ?>" style="width: 100px;">
                                     </div>
                                 </td>
                                 <td>
                                     <div class="flex gap-xs items-center">
-                                        <input type="date" name="closes_date[]" class="input"
+                                        <input type="date" name="closes_date[]" class="admin-form-input"
                                             value="<?= $closesDate ?>" style="width: 140px;">
-                                        <input type="time" name="closes_time[]" class="input"
+                                        <input type="time" name="closes_time[]" class="admin-form-input"
                                             value="<?= $closesTime ?>" style="width: 100px;">
                                     </div>
                                 </td>
@@ -457,7 +457,7 @@ document.addEventListener('DOMContentLoaded', togglePriceFields);
                 </div>
 
                 <div class="mt-lg">
-                    <button type="submit" class="btn btn--primary">
+                    <button type="submit" class="btn-admin btn-admin-primary">
                         <i data-lucide="save"></i>
                         Spara anmälningstider
                     </button>
@@ -469,16 +469,16 @@ document.addEventListener('DOMContentLoaded', togglePriceFields);
 
 <?php elseif ($activeTab === 'pricing'): ?>
 <!-- Pricing Tab -->
-<div class="card">
-    <div class="card-header">
+<div class="admin-card">
+    <div class="admin-card-header">
         <h2>
             <i data-lucide="credit-card"></i>
             Prismall
         </h2>
     </div>
-    <div class="card-body">
+    <div class="admin-card-body">
         <?php if (!$pricingTemplate): ?>
-            <div class="alert alert alert--warning">
+            <div class="admin-alert admin-alert-warning">
                 <i data-lucide="alert-triangle"></i>
                 <div>
                     <strong>Ingen prismall vald</strong><br>
@@ -495,8 +495,8 @@ document.addEventListener('DOMContentLoaded', togglePriceFields);
 
             <!-- Template settings -->
             <div class="grid grid-cols-2 gap-lg mb-lg" style="max-width: 600px;">
-                <div class="card" style="background: var(--color-bg-surface);">
-                    <div class="card-body">
+                <div class="admin-card" style="background: var(--color-bg-surface);">
+                    <div class="admin-card-body">
                         <div class="text-sm text-secondary mb-xs">Early Bird rabatt</div>
                         <div class="text-lg font-bold text-success">
                             <?= $pricingTemplate['early_bird_percent'] ?>%
@@ -506,8 +506,8 @@ document.addEventListener('DOMContentLoaded', togglePriceFields);
                         </div>
                     </div>
                 </div>
-                <div class="card" style="background: var(--color-bg-surface);">
-                    <div class="card-body">
+                <div class="admin-card" style="background: var(--color-bg-surface);">
+                    <div class="admin-card-body">
                         <div class="text-sm text-secondary mb-xs">Sen anmälningsavgift</div>
                         <div class="text-lg font-bold text-warning">
                             +<?= $pricingTemplate['late_fee_percent'] ?>%
@@ -518,8 +518,8 @@ document.addEventListener('DOMContentLoaded', togglePriceFields);
                     </div>
                 </div>
                 <?php if (($pricingTemplate['championship_fee'] ?? 0) > 0): ?>
-                <div class="card" style="background: var(--color-bg-surface);">
-                    <div class="card-body">
+                <div class="admin-card" style="background: var(--color-bg-surface);">
+                    <div class="admin-card-body">
                         <div class="text-sm text-secondary mb-xs">SM-tillägg</div>
                         <div class="text-lg font-bold text-accent">
                             +<?= number_format($pricingTemplate['championship_fee'], 0) ?> kr
@@ -537,8 +537,8 @@ document.addEventListener('DOMContentLoaded', togglePriceFields);
             <!-- Class prices -->
             <?php if (!empty($templatePrices)): ?>
                 <h4 style="margin-bottom: var(--space-md);">Klasspriser</h4>
-                <div class="table-container">
-                    <table class="table">
+                <div class="admin-table-container">
+                    <table class="admin-table">
                         <thead>
                             <tr>
                                 <th>Klass</th>
@@ -572,14 +572,14 @@ document.addEventListener('DOMContentLoaded', togglePriceFields);
                     </table>
                 </div>
             <?php else: ?>
-                <div class="alert alert alert--info">
+                <div class="admin-alert admin-alert-info">
                     <i data-lucide="info"></i>
                     <div>Inga klasspriser har konfigurerats i denna mall ännu.</div>
                 </div>
             <?php endif; ?>
 
             <div class="mt-lg">
-                <a href="/admin/pricing-template-edit.php?id=<?= $pricingTemplate['id'] ?>" class="btn btn--secondary">
+                <a href="/admin/pricing-template-edit.php?id=<?= $pricingTemplate['id'] ?>" class="btn-admin btn-admin-secondary">
                     <i data-lucide="pencil"></i>
                     Redigera prismall
                 </a>
@@ -590,15 +590,15 @@ document.addEventListener('DOMContentLoaded', togglePriceFields);
 
 <?php else: ?>
 <!-- Class Rules Tab -->
-<div class="card">
-    <div class="card-header">
+<div class="admin-card">
+    <div class="admin-card-header">
         <h2>
             <i data-lucide="shield-check"></i>
             Klassregler & Licensmatris
         </h2>
         <span class="badge badge-info ml-md"><?= ucfirst($eventLicenseClass) ?></span>
     </div>
-    <div class="card-body">
+    <div class="admin-card-body">
         <p class="text-secondary mb-lg">
             Nedan visas vilka licenstyper som får anmäla sig till respektive klass enligt
             <a href="/admin/license-class-matrix.php?tab=<?= $eventLicenseClass ?>">licensmatrisen</a>.
@@ -609,8 +609,8 @@ document.addEventListener('DOMContentLoaded', togglePriceFields);
             <?= csrf_field() ?>
             <input type="hidden" name="action" value="save_class_locks">
 
-            <div class="table-container">
-                <table class="table">
+            <div class="admin-table-container">
+                <table class="admin-table">
                     <thead>
                         <tr>
                             <th>Klass</th>
@@ -653,7 +653,7 @@ document.addEventListener('DOMContentLoaded', togglePriceFields);
                 </table>
             </div>
 
-            <div class="alert alert alert--info mt-lg">
+            <div class="admin-alert admin-alert-info mt-lg">
                 <i data-lucide="info"></i>
                 <div>
                     <strong>Låsta klasser</strong> kan inte väljas vid anmälan.
@@ -662,7 +662,7 @@ document.addEventListener('DOMContentLoaded', togglePriceFields);
             </div>
 
             <div class="mt-lg">
-                <button type="submit" class="btn btn--primary">
+                <button type="submit" class="btn-admin btn-admin-primary">
                     <i data-lucide="save"></i>
                     Spara klasslåsningar
                 </button>

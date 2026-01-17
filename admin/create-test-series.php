@@ -20,11 +20,11 @@ $page_title = 'Skapa Testserie';
 include __DIR__ . '/components/unified-layout.php';
 ?>
 
-<div class="card">
-    <div class="card-header">
+<div class="admin-card">
+    <div class="admin-card-header">
         <h2><i data-lucide="flask-conical"></i> Testserie för anmälan</h2>
     </div>
-    <div class="card-body">
+    <div class="admin-card-body">
 
 <?php
 $action = $_GET['action'] ?? '';
@@ -134,7 +134,7 @@ if ($message): ?>
 <?php endif; ?>
 
 <?php if ($testSeries): ?>
-    <div class="alert alert alert--success mb-lg">
+    <div class="admin-alert admin-alert-success mb-lg">
         <i data-lucide="check-circle"></i>
         <div>
             <strong>Testserie aktiv</strong> (ID: <?= $testSeries['id'] ?>)<br>
@@ -143,8 +143,8 @@ if ($message): ?>
     </div>
 
     <h4 class="mb-md">Test-events:</h4>
-    <div class="table-container mb-lg">
-        <table class="table">
+    <div class="admin-table-container mb-lg">
+        <table class="admin-table">
             <thead>
                 <tr>
                     <th>Namn</th>
@@ -181,11 +181,11 @@ if ($message): ?>
     </div>
 
     <div class="flex gap-md">
-        <a href="/admin/series-pricing.php?id=<?= $testSeries['id'] ?>" class="btn btn--primary">
+        <a href="/admin/series-pricing.php?id=<?= $testSeries['id'] ?>" class="btn-admin btn-admin-primary">
             <i data-lucide="settings"></i>
             Anmälan & Priser
         </a>
-        <a href="?action=delete" class="btn btn--danger" onclick="return confirm('Ta bort all testdata?')">
+        <a href="?action=delete" class="btn-admin btn-admin-danger" onclick="return confirm('Ta bort all testdata?')">
             <i data-lucide="trash-2"></i>
             Ta bort testdata
         </a>
@@ -196,7 +196,7 @@ if ($message): ?>
         Ingen testserie finns. Skapa en för att testa anmälningssystemet.
     </p>
 
-    <a href="?action=create" class="btn btn--primary">
+    <a href="?action=create" class="btn-admin btn-admin-primary">
         <i data-lucide="plus"></i>
         Skapa testserie
     </a>

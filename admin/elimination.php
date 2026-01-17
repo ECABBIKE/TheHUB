@@ -67,7 +67,7 @@ $breadcrumbs = [
     ['label' => 'Tävlingar', 'url' => '/admin/events.php'],
     ['label' => 'Elimination']
 ];
-$page_actions = '<a href="/admin/elimination-create.php" class="btn btn--primary">
+$page_actions = '<a href="/admin/elimination-create.php" class="btn-admin btn-admin-primary">
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 5v14"/><path d="M5 12h14"/></svg>
     Nytt Event
 </a>';
@@ -76,8 +76,8 @@ include __DIR__ . '/components/unified-layout.php';
 ?>
 
 <!-- Info Card -->
-<div class="card mb-lg">
-    <div class="card-body">
+<div class="admin-card mb-lg">
+    <div class="admin-card-body">
         <div class="flex items-center gap-md">
             <div style="padding: var(--space-md); background: var(--color-accent); border-radius: var(--radius-md); color: white;">
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M8.21 13.89 7 23l5-3 5 3-1.21-9.12"/><path d="M15 7a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/><path d="M9 7a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/><path d="M15 13a4 4 0 0 0-3-3.87"/><path d="M9 13a4 4 0 0 1 3-3.87"/></svg>
@@ -94,12 +94,12 @@ include __DIR__ . '/components/unified-layout.php';
 </div>
 
 <!-- Filter Section -->
-<div class="card mb-lg">
-    <div class="card-body">
-        <form method="GET" class="form-row">
-            <div class="form-group" style="margin-bottom: 0;">
-                <label for="year-filter" class="label">År</label>
-                <select id="year-filter" name="year" class="input" onchange="this.form.submit()">
+<div class="admin-card mb-lg">
+    <div class="admin-card-body">
+        <form method="GET" class="admin-form-row">
+            <div class="admin-form-group" style="margin-bottom: 0;">
+                <label for="year-filter" class="admin-form-label">År</label>
+                <select id="year-filter" name="year" class="admin-form-select" onchange="this.form.submit()">
                     <?php foreach ($allYears as $yearRow): ?>
                         <option value="<?= $yearRow['year'] ?>" <?= $filterYear == $yearRow['year'] ? 'selected' : '' ?>>
                             <?= $yearRow['year'] ?>
@@ -112,9 +112,9 @@ include __DIR__ . '/components/unified-layout.php';
 </div>
 
 <?php if (empty($events)): ?>
-    <div class="card">
-        <div class="card-body">
-            <div class="empty-state">
+    <div class="admin-card">
+        <div class="admin-card-body">
+            <div class="admin-empty-state">
                 <svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8.21 13.89 7 23l5-3 5 3-1.21-9.12"/><path d="M15 7a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/><path d="M9 7a3 3 0 1 0 0-6 3 3 0 0 0 0 6Z"/></svg>
                 <h3>Inga elimination-events hittades</h3>
                 <p>Det finns inga Dual Slalom eller elimination-events för <?= $filterYear ?>.</p>
@@ -126,9 +126,9 @@ include __DIR__ . '/components/unified-layout.php';
     </div>
 <?php else: ?>
     <!-- Events Table -->
-    <div class="card">
-        <div class="table-container">
-            <table class="table">
+    <div class="admin-card">
+        <div class="admin-table-container">
+            <table class="admin-table">
                 <thead>
                     <tr>
                         <th>Datum</th>
@@ -153,12 +153,12 @@ include __DIR__ . '/components/unified-layout.php';
                             <td><?= h($event['location'] ?? '-') ?></td>
                             <td><?= h($event['series_name'] ?? '-') ?></td>
                             <td class="text-center">
-                                <span class="badge badge-<?= ($event['qualifying_count'] ?? 0) > 0 ? 'success' : 'secondary' ?>">
+                                <span class="admin-badge admin-badge-<?= ($event['qualifying_count'] ?? 0) > 0 ? 'success' : 'secondary' ?>">
                                     <?= $event['qualifying_count'] ?? 0 ?>
                                 </span>
                             </td>
                             <td class="text-center">
-                                <span class="badge badge-<?= ($event['bracket_count'] ?? 0) > 0 ? 'success' : 'secondary' ?>">
+                                <span class="admin-badge admin-badge-<?= ($event['bracket_count'] ?? 0) > 0 ? 'success' : 'secondary' ?>">
                                     <?= $event['bracket_count'] ?? 0 ?>
                                 </span>
                             </td>
@@ -177,13 +177,13 @@ include __DIR__ . '/components/unified-layout.php';
                                     $statusText = 'Kval klart';
                                 }
                                 ?>
-                                <span class="badge badge-<?= $statusClass ?>"><?= $statusText ?></span>
+                                <span class="admin-badge admin-badge-<?= $statusClass ?>"><?= $statusText ?></span>
                             </td>
                             <td class="table-actions">
-                                <a href="/admin/elimination-manage.php?event_id=<?= $event['id'] ?>" class="btn btn--primary btn--sm" title="Hantera">
+                                <a href="/admin/elimination-manage.php?event_id=<?= $event['id'] ?>" class="btn-admin btn-admin-primary btn-admin-sm" title="Hantera">
                                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 3a2.85 2.83 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z"/><path d="m15 5 4 4"/></svg>
                                 </a>
-                                <a href="/event/<?= $event['id'] ?>?tab=elimination" class="btn btn--secondary btn--sm" title="Visa">
+                                <a href="/event/<?= $event['id'] ?>?tab=elimination" class="btn-admin btn-admin-secondary btn-admin-sm" title="Visa">
                                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7Z"/><circle cx="12" cy="12" r="3"/></svg>
                                 </a>
                             </td>

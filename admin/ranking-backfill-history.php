@@ -226,29 +226,29 @@ include __DIR__ . '/components/unified-layout.php';
         </div>
 
         <h3 class="mb-md">Nuvarande snapshots</h3>
-        <div class="grid grid-stats mb-lg">
-            <div class="stat-card">
-                <div class="stat-content">
-                    <div class="stat-value"><?= number_format($snapshotStats['unique_dates'] ?? 0) ?></div>
-                    <div class="stat-label">Unika datum</div>
+        <div class="admin-stats-grid mb-lg">
+            <div class="admin-stat-card">
+                <div class="admin-stat-content">
+                    <div class="admin-stat-value"><?= number_format($snapshotStats['unique_dates'] ?? 0) ?></div>
+                    <div class="admin-stat-label">Unika datum</div>
                 </div>
             </div>
-            <div class="stat-card">
-                <div class="stat-content">
-                    <div class="stat-value"><?= number_format($snapshotStats['total_snapshots'] ?? 0) ?></div>
-                    <div class="stat-label">Ryttare-snapshots</div>
+            <div class="admin-stat-card">
+                <div class="admin-stat-content">
+                    <div class="admin-stat-value"><?= number_format($snapshotStats['total_snapshots'] ?? 0) ?></div>
+                    <div class="admin-stat-label">Ryttare-snapshots</div>
                 </div>
             </div>
-            <div class="stat-card">
-                <div class="stat-content">
-                    <div class="stat-value"><?= number_format($clubSnapshotStats['total'] ?? 0) ?></div>
-                    <div class="stat-label">Klubb-snapshots</div>
+            <div class="admin-stat-card">
+                <div class="admin-stat-content">
+                    <div class="admin-stat-value"><?= number_format($clubSnapshotStats['total'] ?? 0) ?></div>
+                    <div class="admin-stat-label">Klubb-snapshots</div>
                 </div>
             </div>
-            <div class="stat-card">
-                <div class="stat-content">
-                    <div class="stat-value"><?= $snapshotStats['first_date'] ?? '-' ?></div>
-                    <div class="stat-label">Första datum</div>
+            <div class="admin-stat-card">
+                <div class="admin-stat-content">
+                    <div class="admin-stat-value"><?= $snapshotStats['first_date'] ?? '-' ?></div>
+                    <div class="admin-stat-label">Första datum</div>
                 </div>
             </div>
         </div>

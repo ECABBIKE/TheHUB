@@ -442,7 +442,7 @@ include __DIR__ . '/components/unified-layout.php';
 }
 </style>
 
-<div class="main-content">
+<div class="admin-content">
     <h1 style="margin-bottom: var(--space-lg);">Migrationer</h1>
 
     <?php if ($message): ?>

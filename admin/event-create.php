@@ -184,7 +184,7 @@ $breadcrumbs = [
 include __DIR__ . '/components/unified-layout.php';
 ?>
 
-<div class="card">
+<div class="admin-card">
  <div class="container gs-max-w-800">
  <!-- Header -->
  <div class="flex items-center justify-between mb-lg">

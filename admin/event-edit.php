@@ -591,19 +591,19 @@ $breadcrumbs = [
     ['label' => 'Events', 'url' => '/admin/events'],
     ['label' => htmlspecialchars($event['name'])]
 ];
-$page_actions = '<a href="/event/' . $id . '" target="_blank" class="btn btn--secondary">
+$page_actions = '<a href="/event/' . $id . '" target="_blank" class="btn-admin btn-admin-secondary">
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon-sm"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" x2="21" y1="14" y2="3"/></svg>
     Visa event
 </a>
-<a href="/admin/event-pricing.php?id=' . $id . '" class="btn btn--secondary">
+<a href="/admin/event-pricing.php?id=' . $id . '" class="btn-admin btn-admin-secondary">
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon-sm"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
     Klasser &amp; Priser
 </a>
-<a href="/admin/event-map.php?id=' . $id . '" class="btn btn--secondary">
+<a href="/admin/event-map.php?id=' . $id . '" class="btn-admin btn-admin-secondary">
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon-sm"><polygon points="3 6 9 3 15 6 21 3 21 18 15 21 9 18 3 21"/><line x1="9" x2="9" y1="3" y2="18"/><line x1="15" x2="15" y1="6" y2="21"/></svg>
     Karta &amp; POI
 </a>
-<a href="/admin/event-import-paste.php?event_id=' . $id . '" class="btn btn--primary">
+<a href="/admin/event-import-paste.php?event_id=' . $id . '" class="btn-admin btn-admin-primary">
     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon-sm"><path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/><rect width="8" height="4" x="8" y="2" rx="1" ry="1"/><path d="M9 14l2 2 4-4"/></svg>
     Importera resultat
 </a>';
@@ -629,8 +629,8 @@ include __DIR__ . '/components/unified-layout.php';
     <input type="hidden" name="location" value="<?= h($event['location'] ?? '') ?>">
     <input type="hidden" name="venue_id" value="<?= h($event['venue_id'] ?? '') ?>">
     <?php endif; ?>
-    <details class="card mb-lg <?= $isPromotorOnly ? 'locked-section' : '' ?>">
-        <summary class="card-header collapsible-header">
+    <details class="admin-card mb-lg <?= $isPromotorOnly ? 'locked-section' : '' ?>">
+        <summary class="admin-card-header collapsible-header">
             <h2>Grundläggande information</h2>
             <?php if ($isPromotorOnly): ?>
             <span class="locked-badge">
@@ -640,31 +640,31 @@ include __DIR__ . '/components/unified-layout.php';
             <span class="text-secondary text-sm">Klicka för att expandera/minimera</span>
             <?php endif; ?>
         </summary>
-        <fieldset class="card-body fieldset-reset" style="padding: var(--space-lg);" <?= $isPromotorOnly ? 'disabled' : '' ?>>
+        <fieldset class="admin-card-body fieldset-reset" style="padding: var(--space-lg);" <?= $isPromotorOnly ? 'disabled' : '' ?>>
             <div class="form-grid form-grid-2">
-                <div class="form-group form-full-width">
-                    <label class="label">Namn <span class="required">*</span></label>
-                    <input type="text" class="input" <?= $isPromotorOnly ? '' : 'name="name" required' ?> value="<?= h($event['name']) ?>">
+                <div class="admin-form-group form-full-width">
+                    <label class="admin-form-label">Namn <span class="required">*</span></label>
+                    <input type="text" class="admin-form-input" <?= $isPromotorOnly ? '' : 'name="name" required' ?> value="<?= h($event['name']) ?>">
                 </div>
 
-                <div class="form-group">
-                    <label class="label">Datum <span class="required">*</span></label>
-                    <input type="date" class="input" <?= $isPromotorOnly ? '' : 'name="date" required' ?> value="<?= h($event['date']) ?>">
+                <div class="admin-form-group">
+                    <label class="admin-form-label">Datum <span class="required">*</span></label>
+                    <input type="date" class="admin-form-input" <?= $isPromotorOnly ? '' : 'name="date" required' ?> value="<?= h($event['date']) ?>">
                 </div>
 
-                <div class="form-group">
-                    <label class="label">Advent ID</label>
-                    <input type="text" name="advent_id" class="input" value="<?= h($event['advent_id'] ?? '') ?>" placeholder="Externt ID för import">
+                <div class="admin-form-group">
+                    <label class="admin-form-label">Advent ID</label>
+                    <input type="text" name="advent_id" class="admin-form-input" value="<?= h($event['advent_id'] ?? '') ?>" placeholder="Externt ID för import">
                 </div>
 
-                <div class="form-group">
-                    <label class="label">Plats</label>
-                    <input type="text" name="location" class="input" value="<?= h($event['location'] ?? '') ?>" placeholder="T.ex. Järvsö">
+                <div class="admin-form-group">
+                    <label class="admin-form-label">Plats</label>
+                    <input type="text" name="location" class="admin-form-input" value="<?= h($event['location'] ?? '') ?>" placeholder="T.ex. Järvsö">
                 </div>
 
-                <div class="form-group">
-                    <label class="label">Bana/Anläggning</label>
-                    <select name="venue_id" class="input">
+                <div class="admin-form-group">
+                    <label class="admin-form-label">Bana/Anläggning</label>
+                    <select name="venue_id" class="admin-form-select">
                         <option value="">Ingen specifik bana</option>
                         <?php foreach ($venues as $venue): ?>
                             <option value="<?= $venue['id'] ?>" <?= ($event['venue_id'] == $venue['id']) ? 'selected' : '' ?>>
@@ -690,8 +690,8 @@ include __DIR__ . '/components/unified-layout.php';
     <input type="hidden" name="elevation_gain" value="<?= h($event['elevation_gain'] ?? '') ?>">
     <input type="hidden" name="stage_names" value="<?= h($event['stage_names'] ?? '') ?>">
     <?php endif; ?>
-    <details class="card mb-lg <?= $isPromotorOnly ? 'locked-section' : '' ?>">
-        <summary class="card-header collapsible-header">
+    <details class="admin-card mb-lg <?= $isPromotorOnly ? 'locked-section' : '' ?>">
+        <summary class="admin-card-header collapsible-header">
             <h2>Tävlingsinställningar</h2>
             <?php if ($isPromotorOnly): ?>
             <span class="locked-badge">
@@ -701,11 +701,11 @@ include __DIR__ . '/components/unified-layout.php';
             <span class="text-secondary text-sm">Klicka för att expandera/minimera</span>
             <?php endif; ?>
         </summary>
-        <fieldset class="card-body fieldset-reset" style="padding: var(--space-lg);" <?= $isPromotorOnly ? 'disabled' : '' ?>>
+        <fieldset class="admin-card-body fieldset-reset" style="padding: var(--space-lg);" <?= $isPromotorOnly ? 'disabled' : '' ?>>
             <div class="form-grid form-grid-2">
-                <div class="form-group">
-                    <label class="label">Tävlingsformat</label>
-                    <select name="discipline" class="input">
+                <div class="admin-form-group">
+                    <label class="admin-form-label">Tävlingsformat</label>
+                    <select name="discipline" class="admin-form-select">
                         <option value="">Välj format...</option>
                         <option value="ENDURO" <?= ($event['discipline'] ?? '') === 'ENDURO' ? 'selected' : '' ?>>Enduro</option>
                         <option value="DH" <?= ($event['discipline'] ?? '') === 'DH' ? 'selected' : '' ?>>Downhill</option>
@@ -718,15 +718,15 @@ include __DIR__ . '/components/unified-layout.php';
                     </select>
                 </div>
 
-                <div class="form-group">
-                    <label class="label">
+                <div class="admin-form-group">
+                    <label class="admin-form-label">
                         Serie (direktkoppling)
                         <span class="text-xs text-secondary font-normal">
                             - eventet läggs också till via
                             <a href="/admin/series" class="text-accent">seriehantering</a>
                         </span>
                     </label>
-                    <select name="series_id" id="series_id" class="input">
+                    <select name="series_id" id="series_id" class="admin-form-select">
                         <option value="">Ingen serie</option>
                         <?php foreach ($seriesByBrand as $brandName => $brandSeries): ?>
                             <optgroup label="<?= h($brandName) ?>">
@@ -752,18 +752,18 @@ include __DIR__ . '/components/unified-layout.php';
                     </small>
                 </div>
 
-                <div class="form-group">
-                    <label class="label">Rankingklass</label>
-                    <select name="event_level" class="input">
+                <div class="admin-form-group">
+                    <label class="admin-form-label">Rankingklass</label>
+                    <select name="event_level" class="admin-form-select">
                         <option value="national" <?= ($event['event_level'] ?? 'national') === 'national' ? 'selected' : '' ?>>Nationell (100%)</option>
                         <option value="sportmotion" <?= ($event['event_level'] ?? 'national') === 'sportmotion' ? 'selected' : '' ?>>Sportmotion (50%)</option>
                     </select>
                     <small class="form-help">Styr rankingpoäng</small>
                 </div>
 
-                <div class="form-group">
-                    <label class="label">Event-format</label>
-                    <select name="event_format" class="input">
+                <div class="admin-form-group">
+                    <label class="admin-form-label">Event-format</label>
+                    <select name="event_format" class="admin-form-select">
                         <option value="ENDURO" <?= ($event['event_format'] ?? 'ENDURO') === 'ENDURO' ? 'selected' : '' ?>>Enduro (en tid, splittider)</option>
                         <option value="DH_STANDARD" <?= ($event['event_format'] ?? '') === 'DH_STANDARD' ? 'selected' : '' ?>>Downhill Standard (två åk, snabbaste räknas)</option>
                         <option value="DH_SWECUP" <?= ($event['event_format'] ?? '') === 'DH_SWECUP' ? 'selected' : '' ?>>SweCUP Downhill (Kval + Final, ranking efter Final)</option>
@@ -771,9 +771,9 @@ include __DIR__ . '/components/unified-layout.php';
                     </select>
                 </div>
 
-                <div class="form-group">
-                    <label class="label">Poängskala (ranking)</label>
-                    <select name="point_scale_id" class="input">
+                <div class="admin-form-group">
+                    <label class="admin-form-label">Poängskala (ranking)</label>
+                    <select name="point_scale_id" class="admin-form-select">
                         <option value="">Ingen poängskala</option>
                         <?php foreach ($pointScales as $scale): ?>
                             <option value="<?= $scale['id'] ?>" <?= ($event['point_scale_id'] ?? '') == $scale['id'] ? 'selected' : '' ?>>
@@ -784,9 +784,9 @@ include __DIR__ . '/components/unified-layout.php';
                     <small class="form-help">Används för att beräkna rankingpoäng</small>
                 </div>
 
-                <div class="form-group">
-                    <label class="label">Prismall</label>
-                    <select name="pricing_template_id" class="input">
+                <div class="admin-form-group">
+                    <label class="admin-form-label">Prismall</label>
+                    <select name="pricing_template_id" class="admin-form-select">
                         <option value="">Ingen prismall</option>
                         <?php foreach ($pricingTemplates as $template): ?>
                             <option value="<?= $template['id'] ?>" <?= ($event['pricing_template_id'] ?? '') == $template['id'] ? 'selected' : '' ?>>
@@ -797,20 +797,20 @@ include __DIR__ . '/components/unified-layout.php';
                     <small class="form-help">Välj prismall för detta event.<?php if (isRole('super_admin')): ?> <a href="/admin/pricing-templates.php">Hantera prismallar</a><?php elseif (!empty($event['pricing_template_id'])): ?> <a href="/admin/pricing-template-edit.php?id=<?= $event['pricing_template_id'] ?>&event=<?= $id ?>">Redigera prismall</a><?php endif; ?></small>
                 </div>
 
-                <div class="form-group">
-                    <label class="label">Distans (km)</label>
-                    <input type="number" name="distance" class="input" step="0.01" min="0" value="<?= h($event['distance'] ?? '') ?>">
+                <div class="admin-form-group">
+                    <label class="admin-form-label">Distans (km)</label>
+                    <input type="number" name="distance" class="admin-form-input" step="0.01" min="0" value="<?= h($event['distance'] ?? '') ?>">
                 </div>
 
-                <div class="form-group">
-                    <label class="label">Höjdmeter (m)</label>
-                    <input type="number" name="elevation_gain" class="input" min="0" value="<?= h($event['elevation_gain'] ?? '') ?>">
+                <div class="admin-form-group">
+                    <label class="admin-form-label">Höjdmeter (m)</label>
+                    <input type="number" name="elevation_gain" class="admin-form-input" min="0" value="<?= h($event['elevation_gain'] ?? '') ?>">
                 </div>
             </div>
 
-            <div class="form-group mt-md">
-                <label class="label">Sträcknamn (JSON)</label>
-                <input type="text" name="stage_names" class="input" value="<?= h($event['stage_names'] ?? '') ?>" placeholder='{"1":"SS1","2":"SS2","3":"SS3"}'>
+            <div class="admin-form-group mt-md">
+                <label class="admin-form-label">Sträcknamn (JSON)</label>
+                <input type="text" name="stage_names" class="admin-form-input" value="<?= h($event['stage_names'] ?? '') ?>" placeholder='{"1":"SS1","2":"SS2","3":"SS3"}'>
                 <small class="form-help">Anpassade namn. Lämna tomt för standard.</small>
             </div>
         </fieldset>
@@ -818,12 +818,12 @@ include __DIR__ . '/components/unified-layout.php';
 
     <!-- EVENT CLASSES & PRICING - Hidden for promotors -->
     <?php if (!$isPromotorOnly): ?>
-    <details class="card mb-lg">
-        <summary class="card-header collapsible-header">
+    <details class="admin-card mb-lg">
+        <summary class="admin-card-header collapsible-header">
             <h2>Klasser och Startavgifter</h2>
             <span class="text-secondary text-sm">Klicka för att expandera/minimera</span>
         </summary>
-        <div class="card-body">
+        <div class="admin-card-body">
             <?php if ($assignedTemplate && !empty($templatePrices)):
                 // Get pricing settings
                 $ebPercent = $assignedTemplate['early_bird_percent'] ?? 15;
@@ -835,14 +835,14 @@ include __DIR__ . '/components/unified-layout.php';
                 <div class="flex items-center justify-between mb-md">
                     <div class="flex items-center gap-sm">
                         <span class="text-secondary">Prismall:</span>
-                        <span class="badge badge badge--success"><?= htmlspecialchars($assignedTemplate['name']) ?></span>
+                        <span class="admin-badge admin-badge-success"><?= htmlspecialchars($assignedTemplate['name']) ?></span>
                     </div>
                     <a href="/admin/pricing-templates.php?edit=<?= $event['pricing_template_id'] ?>" class="text-accent text-sm">Redigera mall</a>
                 </div>
 
                 <!-- Compact price table -->
-                <div class="table-container">
-                    <table class="table" style="font-size: 0.875rem;">
+                <div class="admin-table-container">
+                    <table class="admin-table" style="font-size: 0.875rem;">
                         <thead>
                             <tr>
                                 <th>Klass</th>
@@ -887,7 +887,7 @@ include __DIR__ . '/components/unified-layout.php';
             <?php elseif ($assignedTemplate): ?>
                 <div class="text-center p-md">
                     <p class="text-secondary mb-sm">Mallen "<?= htmlspecialchars($assignedTemplate['name']) ?>" saknar klasspriser.</p>
-                    <a href="/admin/pricing-templates.php?edit=<?= $event['pricing_template_id'] ?>" class="btn btn--sm btn--primary">Konfigurera priser</a>
+                    <a href="/admin/pricing-templates.php?edit=<?= $event['pricing_template_id'] ?>" class="btn-admin btn-admin-sm btn-admin-primary">Konfigurera priser</a>
                 </div>
 
             <?php else: ?>
@@ -901,16 +901,16 @@ include __DIR__ . '/components/unified-layout.php';
     <?php endif; /* End hide Klasser for promotors */ ?>
 
     <!-- ORGANIZER & CONTACT - Editable for promotors -->
-    <details class="card mb-lg">
-        <summary class="card-header collapsible-header">
+    <details class="admin-card mb-lg">
+        <summary class="admin-card-header collapsible-header">
             <h2>Arrangör & Kontakt</h2>
             <span class="text-secondary text-sm">Klicka för att expandera/minimera</span>
         </summary>
-        <div class="card-body">
+        <div class="admin-card-body">
             <div class="form-grid form-grid-2">
-                <div class="form-group">
-                    <label class="label">Arrangör (klubb)</label>
-                    <select name="organizer_club_id" class="input">
+                <div class="admin-form-group">
+                    <label class="admin-form-label">Arrangör (klubb)</label>
+                    <select name="organizer_club_id" class="admin-form-select">
                         <option value="">Välj klubb...</option>
                         <?php foreach ($clubs as $club): ?>
                             <option value="<?= $club['id'] ?>" <?= ($event['organizer_club_id'] ?? '') == $club['id'] ? 'selected' : '' ?>>
@@ -920,29 +920,29 @@ include __DIR__ . '/components/unified-layout.php';
                     </select>
                 </div>
 
-                <div class="form-group">
-                    <label class="label">Webbplats</label>
-                    <input type="url" name="website" class="input" value="<?= h($event['website'] ?? '') ?>" placeholder="https://...">
+                <div class="admin-form-group">
+                    <label class="admin-form-label">Webbplats</label>
+                    <input type="url" name="website" class="admin-form-input" value="<?= h($event['website'] ?? '') ?>" placeholder="https://...">
                 </div>
 
-                <div class="form-group">
-                    <label class="label">Kontakt e-post</label>
-                    <input type="email" name="contact_email" class="input" value="<?= h($event['contact_email'] ?? '') ?>">
+                <div class="admin-form-group">
+                    <label class="admin-form-label">Kontakt e-post</label>
+                    <input type="email" name="contact_email" class="admin-form-input" value="<?= h($event['contact_email'] ?? '') ?>">
                 </div>
 
-                <div class="form-group">
-                    <label class="label">Kontakt telefon</label>
-                    <input type="tel" name="contact_phone" class="input" value="<?= h($event['contact_phone'] ?? '') ?>">
+                <div class="admin-form-group">
+                    <label class="admin-form-label">Kontakt telefon</label>
+                    <input type="tel" name="contact_phone" class="admin-form-input" value="<?= h($event['contact_phone'] ?? '') ?>">
                 </div>
 
-                <div class="form-group">
-                    <label class="label">Anmälningsfrist (datum)</label>
-                    <input type="date" name="registration_deadline" class="input" value="<?= h($event['registration_deadline'] ?? '') ?>">
+                <div class="admin-form-group">
+                    <label class="admin-form-label">Anmälningsfrist (datum)</label>
+                    <input type="date" name="registration_deadline" class="admin-form-input" value="<?= h($event['registration_deadline'] ?? '') ?>">
                 </div>
 
-                <div class="form-group">
-                    <label class="label">Anmälningsfrist (klockslag)</label>
-                    <input type="time" name="registration_deadline_time" class="input" value="<?= h($event['registration_deadline_time'] ?? '') ?>">
+                <div class="admin-form-group">
+                    <label class="admin-form-label">Anmälningsfrist (klockslag)</label>
+                    <input type="time" name="registration_deadline_time" class="admin-form-input" value="<?= h($event['registration_deadline_time'] ?? '') ?>">
                     <small class="form-help">Lämna tomt för 23:59</small>
                 </div>
             </div>
@@ -954,8 +954,8 @@ include __DIR__ . '/components/unified-layout.php';
     <?php if ($isPromotorOnly): ?>
     <input type="hidden" name="payment_recipient_id" value="<?= h($event['payment_recipient_id'] ?? '') ?>">
     <?php endif; ?>
-    <details class="card mb-lg <?= $isPromotorOnly ? 'locked-section' : '' ?>">
-        <summary class="card-header collapsible-header">
+    <details class="admin-card mb-lg <?= $isPromotorOnly ? 'locked-section' : '' ?>">
+        <summary class="admin-card-header collapsible-header">
             <h2>Betalning</h2>
             <?php if ($isPromotorOnly): ?>
             <span class="locked-badge">
@@ -965,10 +965,10 @@ include __DIR__ . '/components/unified-layout.php';
             <span class="text-secondary text-sm">Klicka för att expandera/minimera</span>
             <?php endif; ?>
         </summary>
-        <fieldset class="card-body fieldset-reset" style="padding: var(--space-lg);" <?= $isPromotorOnly ? 'disabled' : '' ?>>
-            <div class="form-group">
-                <label class="label">Betalningsmottagare (Swish)</label>
-                <select name="payment_recipient_id" class="input">
+        <fieldset class="admin-card-body fieldset-reset" style="padding: var(--space-lg);" <?= $isPromotorOnly ? 'disabled' : '' ?>>
+            <div class="admin-form-group">
+                <label class="admin-form-label">Betalningsmottagare (Swish)</label>
+                <select name="payment_recipient_id" class="admin-form-select">
                     <option value="">Använd seriens mottagare</option>
                     <?php foreach ($paymentRecipients as $recipient): ?>
                         <option value="<?= $recipient['id'] ?>" <?= ($event['payment_recipient_id'] ?? '') == $recipient['id'] ? 'selected' : '' ?>>
@@ -986,18 +986,18 @@ include __DIR__ . '/components/unified-layout.php';
     <?php endif; ?>
 
     <!-- GRAVITY ID DISCOUNT -->
-    <details class="card mb-lg">
-        <summary class="card-header collapsible-header">
+    <details class="admin-card mb-lg">
+        <summary class="admin-card-header collapsible-header">
             <h2><i data-lucide="badge-check" class="icon-md"></i> Gravity ID-rabatt</h2>
             <span class="text-secondary text-sm">Klicka för att expandera/minimera</span>
         </summary>
-        <div class="card-body">
+        <div class="admin-card-body">
             <p class="text-secondary text-sm mb-md">
                 Sätt rabatt för deltagare med Gravity ID. Lämna 0 för att använda seriens inställning.
             </p>
-            <div class="form-group">
-                <label class="label">Rabatt (SEK)</label>
-                <input type="number" name="gravity_id_discount" class="input" style="max-width: 200px;"
+            <div class="admin-form-group">
+                <label class="admin-form-label">Rabatt (SEK)</label>
+                <input type="number" name="gravity_id_discount" class="admin-form-input" style="max-width: 200px;"
                        value="<?= h($event['gravity_id_discount'] ?? 0) ?>"
                        min="0" step="1" placeholder="0">
                 <small class="form-help">
@@ -1024,41 +1024,41 @@ include __DIR__ . '/components/unified-layout.php';
     </details>
 
     <!-- LOCATION DETAILS - Editable for promotors -->
-    <details class="card mb-lg">
-        <summary class="card-header collapsible-header">
+    <details class="admin-card mb-lg">
+        <summary class="admin-card-header collapsible-header">
             <h2>Platsdetaljer</h2>
             <span class="text-secondary text-sm">Klicka för att expandera/minimera</span>
         </summary>
-        <div class="card-body">
+        <div class="admin-card-body">
             <div class="form-grid form-grid-2">
-                <div class="form-group">
-                    <label class="label">GPS-koordinater</label>
-                    <input type="text" name="venue_coordinates" class="input" value="<?= h($event['venue_coordinates'] ?? '') ?>" placeholder="59.3293, 18.0686">
+                <div class="admin-form-group">
+                    <label class="admin-form-label">GPS-koordinater</label>
+                    <input type="text" name="venue_coordinates" class="admin-form-input" value="<?= h($event['venue_coordinates'] ?? '') ?>" placeholder="59.3293, 18.0686">
                 </div>
 
-                <div class="form-group">
-                    <label class="label">Google Maps URL</label>
-                    <input type="url" name="venue_map_url" class="input" value="<?= h($event['venue_map_url'] ?? '') ?>">
+                <div class="admin-form-group">
+                    <label class="admin-form-label">Google Maps URL</label>
+                    <input type="url" name="venue_map_url" class="admin-form-input" value="<?= h($event['venue_map_url'] ?? '') ?>">
                 </div>
 
-                <div class="form-group form-full-width">
-                    <label class="label">Platsdetaljer</label>
-                    <textarea name="venue_details" class="input" rows="3"><?= h($event['venue_details'] ?? '') ?></textarea>
+                <div class="admin-form-group form-full-width">
+                    <label class="admin-form-label">Platsdetaljer</label>
+                    <textarea name="venue_details" class="admin-form-input" rows="3"><?= h($event['venue_details'] ?? '') ?></textarea>
                 </div>
             </div>
         </div>
     </details>
 
     <!-- INVITATION & FACILITIES - Editable for promotors -->
-    <details class="card mb-lg">
-        <summary class="card-header collapsible-header">
+    <details class="admin-card mb-lg">
+        <summary class="admin-card-header collapsible-header">
             <h2>Inbjudan</h2>
             <span class="text-secondary text-sm">Klicka för att expandera/minimera</span>
         </summary>
-        <div class="card-body">
+        <div class="admin-card-body">
             <!-- Invitation field - shown first -->
-            <div class="form-group mb-lg pb-lg border-bottom">
-                <label class="label text-base font-semibold">
+            <div class="admin-form-group mb-lg pb-lg border-bottom">
+                <label class="admin-form-label text-base font-semibold">
                     Inbjudningstext
                     <label class="checkbox-inline">
                         <input type="checkbox" name="invitation_use_global" <?= !empty($event['invitation_use_global']) ? 'checked' : '' ?>>
@@ -1069,7 +1069,7 @@ include __DIR__ . '/components/unified-layout.php';
                         <span class="text-xs">Visa ej</span>
                     </label>
                 </label>
-                <textarea name="invitation" class="input" rows="4" placeholder="Välkommen till... (visas högst upp på Inbjudan-fliken)"><?= h($event['invitation'] ?? '') ?></textarea>
+                <textarea name="invitation" class="admin-form-input" rows="4" placeholder="Välkommen till... (visas högst upp på Inbjudan-fliken)"><?= h($event['invitation'] ?? '') ?></textarea>
                 <small class="form-help">Inledande text som visas högst upp på Inbjudan-fliken på event-sidan.</small>
             </div>
 
@@ -1095,8 +1095,8 @@ include __DIR__ . '/components/unified-layout.php';
 
             <div class="form-grid form-grid-2">
                 <?php foreach ($facilityFields as $field): ?>
-                    <div class="form-group">
-                        <label class="label">
+                    <div class="admin-form-group">
+                        <label class="admin-form-label">
                             <?= $field['label'] ?>
                             <label class="checkbox-inline">
                                 <input type="checkbox" name="<?= $field['global_key'] ?>" <?= !empty($event[$field['global_key']]) ? 'checked' : '' ?>>
@@ -1107,7 +1107,7 @@ include __DIR__ . '/components/unified-layout.php';
                                 <span class="text-xs">Visa ej</span>
                             </label>
                         </label>
-                        <textarea name="<?= $field['key'] ?>" class="input" rows="2"><?= h($event[$field['key']] ?? '') ?></textarea>
+                        <textarea name="<?= $field['key'] ?>" class="admin-form-input" rows="2"><?= h($event[$field['key']] ?? '') ?></textarea>
                     </div>
                 <?php endforeach; ?>
             </div>
@@ -1115,21 +1115,21 @@ include __DIR__ . '/components/unified-layout.php';
     </details>
 
     <!-- PM (PROMEMORIA) - Collapsible -->
-    <details class="card mb-lg">
-        <summary class="card-header collapsible-header">
+    <details class="admin-card mb-lg">
+        <summary class="admin-card-header collapsible-header">
             <h2>PM (Promemoria)</h2>
             <span class="text-secondary text-sm">Klicka för att expandera</span>
         </summary>
-        <div class="card-body">
+        <div class="admin-card-body">
             <!-- Publish date/time for PM -->
-            <div class="form-group mb-lg pb-md border-bottom">
+            <div class="admin-form-group mb-lg pb-md border-bottom">
                 <div class="flex items-center gap-sm flex-wrap">
                     <label class="text-sm font-medium whitespace-nowrap">
                         <i data-lucide="calendar-clock" class="icon-sm inline-block"></i>
                         Publiceras:
                     </label>
                     <input type="datetime-local" name="pm_publish_at"
-                           class="input input-sm"
+                           class="admin-form-input admin-form-input-sm"
                            style="max-width: 220px;"
                            value="<?= !empty($event['pm_publish_at']) ? date('Y-m-d\TH:i', strtotime($event['pm_publish_at'])) : '' ?>">
                     <small class="form-help text-xs">Lämna tomt = synlig direkt</small>
@@ -1157,8 +1157,8 @@ include __DIR__ . '/components/unified-layout.php';
 
             <div class="form-grid form-grid-2">
                 <?php foreach ($pmFields as $field): ?>
-                    <div class="form-group">
-                        <label class="label">
+                    <div class="admin-form-group">
+                        <label class="admin-form-label">
                             <?= $field['label'] ?>
                             <label class="checkbox-inline">
                                 <input type="checkbox" name="<?= $field['global_key'] ?>" <?= !empty($event[$field['global_key']]) ? 'checked' : '' ?>>
@@ -1169,7 +1169,7 @@ include __DIR__ . '/components/unified-layout.php';
                                 <span class="text-xs">Visa ej</span>
                             </label>
                         </label>
-                        <textarea name="<?= $field['key'] ?>" class="input" rows="3"><?= h($event[$field['key']] ?? '') ?></textarea>
+                        <textarea name="<?= $field['key'] ?>" class="admin-form-input" rows="3"><?= h($event[$field['key']] ?? '') ?></textarea>
                     </div>
                 <?php endforeach; ?>
             </div>
@@ -1177,12 +1177,12 @@ include __DIR__ . '/components/unified-layout.php';
     </details>
 
     <!-- ÖVRIGA EVENT-FLIKAR - Collapsible -->
-    <details class="card mb-lg">
-        <summary class="card-header collapsible-header">
+    <details class="admin-card mb-lg">
+        <summary class="admin-card-header collapsible-header">
             <h2>Övriga event-flikar</h2>
             <span class="text-secondary text-sm">Jury, Schema, Starttider</span>
         </summary>
-        <div class="card-body">
+        <div class="admin-card-body">
             <p class="text-secondary text-sm mb-lg">
                 Separata flikar som visas om innehåll finns (eller global text aktiverad).
             </p>
@@ -1197,8 +1197,8 @@ include __DIR__ . '/components/unified-layout.php';
 
             <div class="form-grid form-grid-2">
                 <?php foreach ($otherTabFields as $field): ?>
-                    <div class="form-group">
-                        <label class="label">
+                    <div class="admin-form-group">
+                        <label class="admin-form-label">
                             <?= $field['label'] ?>
                             <label class="checkbox-inline">
                                 <input type="checkbox" name="<?= $field['global_key'] ?>" <?= !empty($event[$field['global_key']]) ? 'checked' : '' ?>>
@@ -1209,7 +1209,7 @@ include __DIR__ . '/components/unified-layout.php';
                                 <span class="text-xs">Visa ej</span>
                             </label>
                         </label>
-                        <textarea name="<?= $field['key'] ?>" class="input" rows="3"><?= h($event[$field['key']] ?? '') ?></textarea>
+                        <textarea name="<?= $field['key'] ?>" class="admin-form-input" rows="3"><?= h($event[$field['key']] ?? '') ?></textarea>
                         <?php if (!empty($field['publish_key'])): ?>
                         <div class="mt-sm flex items-center gap-sm">
                             <label class="text-xs text-secondary whitespace-nowrap">
@@ -1217,7 +1217,7 @@ include __DIR__ . '/components/unified-layout.php';
                                 Publiceras:
                             </label>
                             <input type="datetime-local" name="<?= $field['publish_key'] ?>"
-                                   class="input text-xs"
+                                   class="admin-form-input text-xs"
                                    value="<?= !empty($event[$field['publish_key']]) ? date('Y-m-d\TH:i', strtotime($event[$field['publish_key']])) : '' ?>">
                             <small class="form-help text-xs">Lämna tomt = synlig direkt</small>
                         </div>
@@ -1227,13 +1227,13 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
 
             <!-- Map Link -->
-            <div class="form-group mt-lg">
-                <label class="label">Karta</label>
+            <div class="admin-form-group mt-lg">
+                <label class="admin-form-label">Karta</label>
                 <div class="flex gap-sm items-center">
                     <?php if (!empty($event['map_image_url'])): ?>
                     <span class="badge badge-success">Kartbild aktiv</span>
                     <?php endif; ?>
-                    <a href="/admin/event-map.php?id=<?= $id ?>" class="btn btn--secondary btn--sm">
+                    <a href="/admin/event-map.php?id=<?= $id ?>" class="btn-admin btn-admin-secondary btn-admin-sm">
                         <i data-lucide="map" class="icon-sm"></i>
                         Hantera karta
                     </a>
@@ -1245,24 +1245,24 @@ include __DIR__ . '/components/unified-layout.php';
 
     <!-- SPONSORS - Editable for promotors -->
     <?php if (!empty($allSponsors)): ?>
-    <details class="card mb-lg">
-        <summary class="card-header collapsible-header">
+    <details class="admin-card mb-lg">
+        <summary class="admin-card-header collapsible-header">
             <h2>
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-md"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
                 Sponsorer
             </h2>
             <span class="text-secondary text-sm">Klicka för att expandera/minimera</span>
         </summary>
-        <div class="card-body">
+        <div class="admin-card-body">
             <p class="mb-md text-secondary text-sm">
                 Välj sponsorer specifikt för detta event. <strong>OBS:</strong> Seriens sponsorer visas om inga event-sponsorer anges.
             </p>
 
             <div class="flex flex-col gap-lg">
                 <!-- Header Banner from Media Library -->
-                <div class="form-group">
-                    <label class="label">Header-banner (stor banner högst upp)</label>
-                    <select name="header_banner_media_id" class="input">
+                <div class="admin-form-group">
+                    <label class="admin-form-label">Header-banner (stor banner högst upp)</label>
+                    <select name="header_banner_media_id" class="admin-form-select">
                         <option value="">-- Ingen (använd seriens) --</option>
                         <?php foreach ($eventMediaFiles as $media): ?>
                         <option value="<?= $media['id'] ?>" <?= ($event['header_banner_media_id'] ?? '') == $media['id'] ? 'selected' : '' ?>>
@@ -1276,9 +1276,9 @@ include __DIR__ . '/components/unified-layout.php';
                 </div>
 
                 <!-- Header Banner Sponsor -->
-                <div class="form-group">
-                    <label class="label">Banner-sponsor (bred banner högst upp)</label>
-                    <select name="sponsor_header" class="input">
+                <div class="admin-form-group">
+                    <label class="admin-form-label">Banner-sponsor (bred banner högst upp)</label>
+                    <select name="sponsor_header" class="admin-form-select">
                         <option value="">-- Ingen (använd seriens) --</option>
                         <?php foreach ($allSponsors as $sp): ?>
                         <option value="<?= $sp['id'] ?>" <?= in_array((int)$sp['id'], $eventSponsors['header']) ? 'selected' : '' ?>>
@@ -1292,8 +1292,8 @@ include __DIR__ . '/components/unified-layout.php';
                 </div>
 
                 <!-- Content Logo Row - Max 5 -->
-                <div class="form-group">
-                    <label class="label">
+                <div class="admin-form-group">
+                    <label class="admin-form-label">
                         Logo-rad (under event-info)
                         <span id="logoRowCount" class="font-normal text-secondary ml-sm">
                             (<?= count($eventSponsors['content']) ?>/5 valda)
@@ -1313,9 +1313,9 @@ include __DIR__ . '/components/unified-layout.php';
                 </div>
 
                 <!-- Results Sponsor -->
-                <div class="form-group">
-                    <label class="label">Resultat-sponsor ("Resultat sponsrat av")</label>
-                    <select name="sponsor_sidebar" class="input">
+                <div class="admin-form-group">
+                    <label class="admin-form-label">Resultat-sponsor ("Resultat sponsrat av")</label>
+                    <select name="sponsor_sidebar" class="admin-form-select">
                         <option value="">-- Ingen (använd seriens) --</option>
                         <?php foreach ($allSponsors as $sp): ?>
                         <option value="<?= $sp['id'] ?>" <?= in_array((int)$sp['id'], $eventSponsors['sidebar']) ? 'selected' : '' ?>>
@@ -1329,21 +1329,21 @@ include __DIR__ . '/components/unified-layout.php';
     </details>
 
     <!-- SAMARBETSPARTNERS - Partner logo row at bottom -->
-    <details class="card mb-lg">
-        <summary class="card-header collapsible-header">
+    <details class="admin-card mb-lg">
+        <summary class="admin-card-header collapsible-header">
             <h2>
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-md"><path d="M11 17a1 1 0 0 1 2 0c0 .5-.34 3-.5 4.5a.5.5 0 0 1-1 0c-.16-1.5-.5-4-.5-4.5Z"/><path d="M8 14a6 6 0 1 1 8 0"/><path d="M12 2v1"/><path d="m4.93 4.93.71.71"/><path d="M2 12h1"/><path d="m4.93 19.07.71-.71"/><path d="m19.07 4.93-.71.71"/><path d="M22 12h-1"/><path d="m19.07 19.07-.71-.71"/></svg>
                 Samarbetspartners
             </h2>
             <span class="text-secondary text-sm">Klicka för att expandera/minimera</span>
         </summary>
-        <div class="card-body">
+        <div class="admin-card-body">
             <p class="mb-md text-secondary text-sm">
                 Visa lokala samarbetspartners längst ner på event-sidan.
             </p>
 
-            <div class="form-group">
-                <label class="label">
+            <div class="admin-form-group">
+                <label class="admin-form-label">
                     Partner-logorad (längst ner på sidan)
                     <span id="partnerCount" class="font-normal text-secondary ml-sm">
                         (<?= count($eventSponsors['partner']) ?> valda)
@@ -1372,8 +1372,8 @@ include __DIR__ . '/components/unified-layout.php';
     <?php endif; ?>
 
     <!-- STATUS & ACTIONS -->
-    <div class="card">
-        <div class="card-body">
+    <div class="admin-card">
+        <div class="admin-card-body">
             <div class="flex items-center justify-between flex-wrap gap-md">
                 <?php if ($isPromotorOnly): ?>
                 <!-- Readonly status display for promotors -->
@@ -1385,7 +1385,7 @@ include __DIR__ . '/components/unified-layout.php';
                     <input type="checkbox" disabled <?= !empty($event['is_championship']) ? 'checked' : '' ?>>
                     <span><i data-lucide="trophy" class="icon-sm"></i> Svenskt Mästerskap</span>
                     <?php if (!empty($event['is_championship'])): ?>
-                    <span class="badge badge badge--success text-xs ml-sm">SM</span>
+                    <span class="admin-badge admin-badge-success text-xs ml-sm">SM</span>
                     <?php endif; ?>
                 </div>
                 <!-- Hidden fields to preserve values -->
@@ -1401,14 +1401,14 @@ include __DIR__ . '/components/unified-layout.php';
                     <input type="checkbox" name="is_championship" value="1" <?= !empty($event['is_championship']) ? 'checked' : '' ?>>
                     <span><i data-lucide="trophy" class="icon-sm"></i> Svenskt Mästerskap</span>
                     <?php if (!empty($event['is_championship'])): ?>
-                    <span class="badge badge badge--success text-xs ml-sm">SM</span>
+                    <span class="admin-badge admin-badge-success text-xs ml-sm">SM</span>
                     <?php endif; ?>
                 </label>
                 <?php endif; ?>
 
                 <div class="flex gap-sm">
-                    <a href="/admin/events" class="btn btn--secondary">Avbryt</a>
-                    <button type="submit" class="btn btn--primary">
+                    <a href="/admin/events" class="btn-admin btn-admin-secondary">Avbryt</a>
+                    <button type="submit" class="btn-admin btn-admin-primary">
                         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-sm"><path d="M19 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h11l5 5v11a2 2 0 0 1-2 2z"/><polyline points="17 21 17 13 7 13 7 21"/><polyline points="7 3 7 8 15 8"/></svg>
                         Spara Ändringar
                     </button>
@@ -1421,8 +1421,8 @@ include __DIR__ . '/components/unified-layout.php';
 <!-- Floating Save Button -->
 <div class="floating-save-bar">
     <div class="floating-save-content">
-        <a href="/admin/events" class="btn btn--secondary">Avbryt</a>
-        <button type="submit" form="eventEditForm" class="btn btn--primary">
+        <a href="/admin/events" class="btn-admin btn-admin-secondary">Avbryt</a>
+        <button type="submit" form="eventEditForm" class="btn-admin btn-admin-primary">
             <i data-lucide="save" class="icon-sm"></i>
             Spara Ändringar
         </button>
@@ -1472,12 +1472,12 @@ include __DIR__ . '/components/unified-layout.php';
     }
 }
 /* Add padding at bottom of page to account for floating bar */
-.main-content {
+.admin-content {
     padding-bottom: 80px !important;
 }
 /* Extra padding on mobile for floating bar + mobile nav */
 @media (max-width: 899px) and (orientation: portrait) {
-    .main-content {
+    .admin-content {
         padding-bottom: calc(80px + var(--mobile-nav-height, 64px) + env(safe-area-inset-bottom, 0px)) !important;
     }
 }

@@ -183,9 +183,9 @@ include __DIR__ . '/components/unified-layout.php';
                     </td>
                     <td>
                         <?php if ($isCompleted): ?>
-                            <span class="badge badge badge--success">completed ✓</span>
+                            <span class="admin-badge admin-badge-success">completed ✓</span>
                         <?php else: ?>
-                            <span class="badge badge badge--secondary"><?= h($s['status'] ?? 'N/A') ?></span>
+                            <span class="admin-badge admin-badge-secondary"><?= h($s['status'] ?? 'N/A') ?></span>
                         <?php endif; ?>
                     </td>
                     <td><?= $s['event_count'] ?></td>
@@ -339,7 +339,7 @@ include __DIR__ . '/components/unified-layout.php';
                         <?php endif; ?>
                     </td>
                     <td>
-                        <span class="badge <?= $isCompleted ? 'badge badge--success' : 'badge badge--secondary' ?>">
+                        <span class="admin-badge <?= $isCompleted ? 'admin-badge-success' : 'admin-badge-secondary' ?>">
                             <?= h($pc['status']) ?>
                         </span>
                     </td>

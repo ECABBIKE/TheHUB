@@ -247,11 +247,11 @@ $page_group = 'standings';
 if ($isPromotorOnly) {
     $page_actions = ''; // No actions for promotors
 } else {
-    $page_actions = '<a href="/admin/series/brands" class="btn btn--secondary">
+    $page_actions = '<a href="/admin/series/brands" class="btn-admin btn-admin-secondary">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>
         Varumärken
     </a>
-    <a href="/admin/series/edit?new=1" class="btn btn--primary">
+    <a href="/admin/series/edit?new=1" class="btn-admin btn-admin-primary">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
         Ny Serie
     </a>';
@@ -278,55 +278,55 @@ include __DIR__ . '/components/unified-layout.php';
 
 <!-- Stats Grid -->
 <div class="grid grid-stats grid-gap-md">
-    <div class="stat-card">
-        <div class="stat-icon" style="background: var(--color-info-light); color: var(--color-info);">
+    <div class="admin-stat-card">
+        <div class="admin-stat-icon" style="background: var(--color-info-light); color: var(--color-info);">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>
         </div>
-        <div class="stat-content">
-            <div class="stat-value"><?= count($series) ?></div>
-            <div class="stat-label">Totalt serier</div>
+        <div class="admin-stat-content">
+            <div class="admin-stat-value"><?= count($series) ?></div>
+            <div class="admin-stat-label">Totalt serier</div>
         </div>
     </div>
 
-    <div class="stat-card">
-        <div class="stat-icon" style="background: var(--color-success-light); color: var(--color-success);">
+    <div class="admin-stat-card">
+        <div class="admin-stat-icon" style="background: var(--color-success-light); color: var(--color-success);">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/><polyline points="22 4 12 14.01 9 11.01"/></svg>
         </div>
-        <div class="stat-content">
-            <div class="stat-value"><?= count(array_filter($series, fn($s) => $s['status'] === 'active')) ?></div>
-            <div class="stat-label">Aktiva</div>
+        <div class="admin-stat-content">
+            <div class="admin-stat-value"><?= count(array_filter($series, fn($s) => $s['status'] === 'active')) ?></div>
+            <div class="admin-stat-label">Aktiva</div>
         </div>
     </div>
 
-    <div class="stat-card">
-        <div class="stat-icon" style="background: var(--color-accent-light); color: var(--color-accent);">
+    <div class="admin-stat-card">
+        <div class="admin-stat-icon" style="background: var(--color-accent-light); color: var(--color-accent);">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M8 2v4"/><path d="M16 2v4"/><rect width="18" height="18" x="3" y="4" rx="2"/><path d="M3 10h18"/></svg>
         </div>
-        <div class="stat-content">
-            <div class="stat-value"><?= array_sum(array_column($series, 'events_count')) ?></div>
-            <div class="stat-label">Totalt events</div>
+        <div class="admin-stat-content">
+            <div class="admin-stat-value"><?= array_sum(array_column($series, 'events_count')) ?></div>
+            <div class="admin-stat-label">Totalt events</div>
         </div>
     </div>
 
-    <div class="stat-card">
-        <div class="stat-icon" style="background: var(--color-warning-light); color: var(--color-warning);">
+    <div class="admin-stat-card">
+        <div class="admin-stat-icon" style="background: var(--color-warning-light); color: var(--color-warning);">
             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
         </div>
-        <div class="stat-content">
-            <div class="stat-value"><?= number_format($uniqueParticipants, 0, ',', ' ') ?></div>
-            <div class="stat-label">Unika deltagare</div>
+        <div class="admin-stat-content">
+            <div class="admin-stat-value"><?= number_format($uniqueParticipants, 0, ',', ' ') ?></div>
+            <div class="admin-stat-label">Unika deltagare</div>
         </div>
     </div>
 </div>
 
 <!-- Filter Section -->
-<div class="card">
-    <div class="card-body">
-        <form method="GET" action="/admin/series" class="form-row" style="display: flex; gap: var(--space-md); flex-wrap: wrap; align-items: flex-end;">
+<div class="admin-card">
+    <div class="admin-card-body">
+        <form method="GET" action="/admin/series" class="admin-form-row" style="display: flex; gap: var(--space-md); flex-wrap: wrap; align-items: flex-end;">
             <?php if (!empty($allBrands)): ?>
-            <div class="form-group" style="margin-bottom: 0; min-width: 200px;">
-                <label for="brand-filter" class="label">Huvudserie</label>
-                <select id="brand-filter" name="brand" class="input" onchange="this.form.submit()">
+            <div class="admin-form-group" style="margin-bottom: 0; min-width: 200px;">
+                <label for="brand-filter" class="admin-form-label">Huvudserie</label>
+                <select id="brand-filter" name="brand" class="admin-form-select" onchange="this.form.submit()">
                     <option value="">Alla serier</option>
                     <?php foreach ($allBrands as $brand): ?>
                         <option value="<?= $brand['id'] ?>" <?= $filterBrand == $brand['id'] ? 'selected' : '' ?>>
@@ -336,9 +336,9 @@ include __DIR__ . '/components/unified-layout.php';
                 </select>
             </div>
             <?php endif; ?>
-            <div class="form-group" style="margin-bottom: 0; min-width: 120px;">
-                <label for="year-filter" class="label">År</label>
-                <select id="year-filter" name="year" class="input" onchange="this.form.submit()">
+            <div class="admin-form-group" style="margin-bottom: 0; min-width: 120px;">
+                <label for="year-filter" class="admin-form-label">År</label>
+                <select id="year-filter" name="year" class="admin-form-select" onchange="this.form.submit()">
                     <option value="">Alla år</option>
                     <?php foreach ($allYears as $yearRow): ?>
                         <option value="<?= $yearRow['year'] ?>" <?= $filterYear == $yearRow['year'] ? 'selected' : '' ?>>
@@ -362,12 +362,12 @@ include __DIR__ . '/components/unified-layout.php';
                         }
                     }
                     ?>
-                    <span class="badge badge badge--info"><?= htmlspecialchars($brandName) ?></span>
+                    <span class="admin-badge admin-badge-info"><?= htmlspecialchars($brandName) ?></span>
                 <?php endif; ?>
                 <?php if ($filterYear): ?>
-                    <span class="badge badge badge--warning"><?= $filterYear ?></span>
+                    <span class="admin-badge admin-badge-warning"><?= $filterYear ?></span>
                 <?php endif; ?>
-                <a href="/admin/series" class="btn btn--sm btn--secondary">
+                <a href="/admin/series" class="btn-admin btn-admin-sm btn-admin-secondary">
                     <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="width: 14px; height: 14px;"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
                     Visa alla
                 </a>
@@ -377,21 +377,21 @@ include __DIR__ . '/components/unified-layout.php';
 </div>
 
 <!-- Series Table -->
-<div class="card">
-    <div class="card-header">
+<div class="admin-card">
+    <div class="admin-card-header">
         <h2><?= count($series) ?> serier</h2>
     </div>
-    <div class="card-body" style="padding: 0;">
+    <div class="admin-card-body" style="padding: 0;">
         <?php if (empty($series)): ?>
-            <div class="empty-state">
+            <div class="admin-empty-state">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>
                 <h3>Inga serier hittades</h3>
                 <p>Prova att ändra filtren eller skapa en ny serie.</p>
-                <a href="/admin/series/edit?new=1" class="btn btn--primary">Skapa serie</a>
+                <a href="/admin/series/edit?new=1" class="btn-admin btn-admin-primary">Skapa serie</a>
             </div>
         <?php else: ?>
-            <div class="table-container">
-                <table class="table">
+            <div class="admin-table-container">
+                <table class="admin-table">
                     <thead>
                         <tr>
                             <th>Huvudserie</th>
@@ -406,12 +406,12 @@ include __DIR__ . '/components/unified-layout.php';
                         <?php foreach ($series as $serie): ?>
                             <?php
                             $statusMap = [
-                                'planning' => ['class' => 'badge badge--secondary', 'text' => 'Planering'],
-                                'active' => ['class' => 'badge badge--success', 'text' => 'Aktiv'],
-                                'completed' => ['class' => 'badge badge--info', 'text' => 'Avslutad'],
-                                'cancelled' => ['class' => 'badge badge--secondary', 'text' => 'Inställd']
+                                'planning' => ['class' => 'admin-badge-secondary', 'text' => 'Planering'],
+                                'active' => ['class' => 'admin-badge-success', 'text' => 'Aktiv'],
+                                'completed' => ['class' => 'admin-badge-info', 'text' => 'Avslutad'],
+                                'cancelled' => ['class' => 'admin-badge-secondary', 'text' => 'Inställd']
                             ];
-                            $statusInfo = $statusMap[$serie['status']] ?? ['class' => 'badge badge--secondary', 'text' => ucfirst($serie['status'])];
+                            $statusInfo = $statusMap[$serie['status']] ?? ['class' => 'admin-badge-secondary', 'text' => ucfirst($serie['status'])];
                             ?>
                             <tr>
                                 <td>
@@ -440,7 +440,7 @@ include __DIR__ . '/components/unified-layout.php';
                                 </td>
                                 <td>
                                     <?php if (!empty($serie['year'])): ?>
-                                        <span class="badge badge badge--info"><?= $serie['year'] ?></span>
+                                        <span class="admin-badge admin-badge-info"><?= $serie['year'] ?></span>
                                     <?php else: ?>
                                         <span style="color: var(--color-warning);">Saknas!</span>
                                     <?php endif; ?>
@@ -454,33 +454,33 @@ include __DIR__ . '/components/unified-layout.php';
                                     $readyToComplete = $allHaveResults && $isNotCompleted;
                                     ?>
                                     <?php if ($readyToComplete): ?>
-                                        <span class="badge badge badge--warning" title="Alla events har resultat - redo att avsluta!">
+                                        <span class="admin-badge admin-badge-warning" title="Alla events har resultat - redo att avsluta!">
                                             Redo att avsluta
                                         </span>
                                     <?php else: ?>
-                                        <span class="badge <?= $statusInfo['class'] ?>">
+                                        <span class="admin-badge <?= $statusInfo['class'] ?>">
                                             <?= $statusInfo['text'] ?>
                                         </span>
                                     <?php endif; ?>
                                 </td>
                                 <td>
                                     <?php if ($eventsCount > 0): ?>
-                                        <span class="badge <?= $allHaveResults ? 'badge badge--success' : 'badge badge--secondary' ?>"
+                                        <span class="admin-badge <?= $allHaveResults ? 'admin-badge-success' : 'admin-badge-secondary' ?>"
                                               title="<?= $eventsWithResults ?> av <?= $eventsCount ?> har resultat">
                                             <?= $eventsWithResults ?>/<?= $eventsCount ?>
                                         </span>
                                     <?php else: ?>
-                                        <span class="badge badge badge--secondary">0</span>
+                                        <span class="admin-badge admin-badge-secondary">0</span>
                                     <?php endif; ?>
                                 </td>
                                 <td>
                                     <div class="table-actions">
-                                        <a href="/admin/series/manage/<?= $serie['id'] ?>" class="btn btn--sm btn--primary" title="Hantera serie">
+                                        <a href="/admin/series/manage/<?= $serie['id'] ?>" class="btn-admin btn-admin-sm btn-admin-primary" title="Hantera serie">
                                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/><circle cx="12" cy="12" r="3"/></svg>
                                             Hantera
                                         </a>
                                         <?php if (!$isPromotorOnly): ?>
-                                        <button onclick="deleteSeries(<?= $serie['id'] ?>, '<?= addslashes($serie['name']) ?>')" class="btn btn--sm btn--danger" title="Ta bort">
+                                        <button onclick="deleteSeries(<?= $serie['id'] ?>, '<?= addslashes($serie['name']) ?>')" class="btn-admin btn-admin-sm btn-admin-danger" title="Ta bort">
                                             <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
                                         </button>
                                         <?php endif; ?>
@@ -496,12 +496,12 @@ include __DIR__ . '/components/unified-layout.php';
 </div>
 
 <!-- Series Modal -->
-<div id="seriesModal" class="modal hidden">
-    <div class="modal-overlay" onclick="closeSeriesModal()"></div>
-    <div class="modal-content">
-        <div class="modal-header">
+<div id="seriesModal" class="admin-modal hidden">
+    <div class="admin-modal-overlay" onclick="closeSeriesModal()"></div>
+    <div class="admin-modal-content">
+        <div class="admin-modal-header">
             <h2 id="modalTitle">Ny Serie</h2>
-            <button type="button" class="modal-close" onclick="closeSeriesModal()">
+            <button type="button" class="admin-modal-close" onclick="closeSeriesModal()">
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
             </button>
         </div>
@@ -510,29 +510,29 @@ include __DIR__ . '/components/unified-layout.php';
             <input type="hidden" name="action" id="formAction" value="create">
             <input type="hidden" name="id" id="seriesId" value="">
 
-            <div class="modal-body">
-                <div class="form-group">
-                    <label for="name" class="label">Namn <span style="color: var(--color-error);">*</span></label>
-                    <input type="text" id="name" name="name" class="input" required placeholder="T.ex. GravitySeries 2025">
+            <div class="admin-modal-body">
+                <div class="admin-form-group">
+                    <label for="name" class="admin-form-label">Namn <span style="color: var(--color-error);">*</span></label>
+                    <input type="text" id="name" name="name" class="admin-form-input" required placeholder="T.ex. GravitySeries 2025">
                 </div>
 
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="type" class="label">Typ</label>
-                        <input type="text" id="type" name="type" class="input" placeholder="T.ex. XC, Landsväg, MTB">
+                <div class="admin-form-row">
+                    <div class="admin-form-group">
+                        <label for="type" class="admin-form-label">Typ</label>
+                        <input type="text" id="type" name="type" class="admin-form-input" placeholder="T.ex. XC, Landsväg, MTB">
                     </div>
-                    <div class="form-group">
-                        <label for="format" class="label">Format</label>
-                        <select id="format" name="format" class="input">
+                    <div class="admin-form-group">
+                        <label for="format" class="admin-form-label">Format</label>
+                        <select id="format" name="format" class="admin-form-select">
                             <option value="Championship">Championship</option>
                             <option value="Team">Team</option>
                         </select>
                     </div>
                 </div>
 
-                <div class="form-group">
-                    <label for="status" class="label">Status</label>
-                    <select id="status" name="status" class="input">
+                <div class="admin-form-group">
+                    <label for="status" class="admin-form-label">Status</label>
+                    <select id="status" name="status" class="admin-form-select">
                         <option value="planning">Planering</option>
                         <option value="active">Aktiv</option>
                         <option value="completed">Avslutad</option>
@@ -540,30 +540,30 @@ include __DIR__ . '/components/unified-layout.php';
                     </select>
                 </div>
 
-                <div class="form-row">
-                    <div class="form-group">
-                        <label for="start_date" class="label">Startdatum</label>
-                        <input type="date" id="start_date" name="start_date" class="input">
+                <div class="admin-form-row">
+                    <div class="admin-form-group">
+                        <label for="start_date" class="admin-form-label">Startdatum</label>
+                        <input type="date" id="start_date" name="start_date" class="admin-form-input">
                     </div>
-                    <div class="form-group">
-                        <label for="end_date" class="label">Slutdatum</label>
-                        <input type="date" id="end_date" name="end_date" class="input">
+                    <div class="admin-form-group">
+                        <label for="end_date" class="admin-form-label">Slutdatum</label>
+                        <input type="date" id="end_date" name="end_date" class="admin-form-input">
                     </div>
                 </div>
 
-                <div class="form-group">
-                    <label for="organizer" class="label">Arrangör</label>
-                    <input type="text" id="organizer" name="organizer" class="input" placeholder="T.ex. Svenska Cykelförbundet">
+                <div class="admin-form-group">
+                    <label for="organizer" class="admin-form-label">Arrangör</label>
+                    <input type="text" id="organizer" name="organizer" class="admin-form-input" placeholder="T.ex. Svenska Cykelförbundet">
                 </div>
 
-                <div class="form-group">
-                    <label for="description" class="label">Beskrivning</label>
-                    <textarea id="description" name="description" class="input" rows="3" placeholder="Beskriv serien..."></textarea>
+                <div class="admin-form-group">
+                    <label for="description" class="admin-form-label">Beskrivning</label>
+                    <textarea id="description" name="description" class="admin-form-textarea" rows="3" placeholder="Beskriv serien..."></textarea>
                 </div>
 
-                <div class="form-group">
-                    <label for="logo" class="label">Logotyp</label>
-                    <input type="file" id="logo" name="logo" class="input" accept="image/*">
+                <div class="admin-form-group">
+                    <label for="logo" class="admin-form-label">Logotyp</label>
+                    <input type="file" id="logo" name="logo" class="admin-form-input" accept="image/*">
                     <div id="currentLogo" style="display: none; margin-top: var(--space-sm);">
                         <strong>Nuvarande:</strong><br>
                         <img id="currentLogoImg" src="" alt="Logotyp" style="max-width: 150px; max-height: 80px; margin-top: var(--space-xs);">
@@ -571,9 +571,9 @@ include __DIR__ . '/components/unified-layout.php';
                 </div>
             </div>
 
-            <div class="modal-footer">
-                <button type="button" class="btn btn--secondary" onclick="closeSeriesModal()">Avbryt</button>
-                <button type="submit" class="btn btn--primary" id="submitButton">Skapa</button>
+            <div class="admin-modal-footer">
+                <button type="button" class="btn-admin btn-admin-secondary" onclick="closeSeriesModal()">Avbryt</button>
+                <button type="submit" class="btn-admin btn-admin-primary" id="submitButton">Skapa</button>
             </div>
         </form>
     </div>
@@ -622,7 +622,7 @@ document.addEventListener('keydown', function(e) {
 
 <style>
 /* Modal styles */
-.modal {
+.admin-modal {
     position: fixed;
     top: 0;
     left: 0;
@@ -634,7 +634,7 @@ document.addEventListener('keydown', function(e) {
     justify-content: center;
 }
 
-.modal-overlay {
+.admin-modal-overlay {
     position: absolute;
     top: 0;
     left: 0;
@@ -643,7 +643,7 @@ document.addEventListener('keydown', function(e) {
     background: rgba(0, 0, 0, 0.5);
 }
 
-.modal-content {
+.admin-modal-content {
     position: relative;
     background: var(--color-bg);
     border-radius: var(--radius-lg);
@@ -658,29 +658,29 @@ document.addEventListener('keydown', function(e) {
 
 /* Mobile: Fullscreen modal */
 @media (max-width: 599px) {
-    .modal {
+    .admin-modal {
         padding: 0;
     }
-    .modal-content {
+    .admin-modal-content {
         width: 100%;
         max-width: 100%;
         height: 100%;
         max-height: 100%;
         border-radius: 0;
     }
-    .modal-header {
+    .admin-modal-header {
         padding-top: calc(var(--space-lg) + env(safe-area-inset-top, 0px));
     }
-    .modal-footer {
+    .admin-modal-footer {
         padding-bottom: calc(var(--space-md) + env(safe-area-inset-bottom, 0px));
     }
-    .modal-close {
+    .admin-modal-close {
         min-width: 44px;
         min-height: 44px;
     }
 }
 
-.modal-header {
+.admin-modal-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -688,12 +688,12 @@ document.addEventListener('keydown', function(e) {
     border-bottom: 1px solid var(--color-border);
 }
 
-.modal-header h2 {
+.admin-modal-header h2 {
     margin: 0;
     font-size: var(--text-xl);
 }
 
-.modal-close {
+.admin-modal-close {
     background: none;
     border: none;
     padding: var(--space-xs);
@@ -702,24 +702,24 @@ document.addEventListener('keydown', function(e) {
     border-radius: var(--radius-sm);
 }
 
-.modal-close:hover {
+.admin-modal-close:hover {
     background: var(--color-bg-tertiary);
     color: var(--color-text);
 }
 
-.modal-close svg {
+.admin-modal-close svg {
     width: 20px;
     height: 20px;
 }
 
-.modal-body {
+.admin-modal-body {
     padding: var(--space-lg);
     overflow-y: auto;
     -webkit-overflow-scrolling: touch;
     flex: 1;
 }
 
-.modal-footer {
+.admin-modal-footer {
     display: flex;
     justify-content: flex-end;
     gap: var(--space-sm);
@@ -727,7 +727,7 @@ document.addEventListener('keydown', function(e) {
     border-top: 1px solid var(--color-border);
 }
 
-.input {
+.admin-form-textarea {
     width: 100%;
     padding: var(--space-sm) var(--space-md);
     border: 1px solid var(--color-border);
@@ -739,7 +739,7 @@ document.addEventListener('keydown', function(e) {
     resize: vertical;
 }
 
-.input:focus {
+.admin-form-textarea:focus {
     outline: none;
     border-color: var(--color-accent);
     box-shadow: 0 0 0 3px var(--color-accent-alpha);

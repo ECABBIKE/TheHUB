@@ -129,32 +129,32 @@ include __DIR__ . '/components/unified-layout.php';
 <?php endif; ?>
 
 <!-- Statistics -->
-<div class="grid grid-stats mb-lg">
-    <div class="stat-card">
-        <div class="stat-icon" style="background: var(--color-info-light); color: var(--color-info);">
+<div class="admin-stats-grid mb-lg">
+    <div class="admin-stat-card">
+        <div class="admin-stat-icon" style="background: var(--color-info-light); color: var(--color-info);">
             <i data-lucide="users"></i>
         </div>
-        <div class="stat-content">
-            <div class="stat-value"><?= $total_riders ?></div>
-            <div class="stat-label">Totalt aktiva deltagare</div>
+        <div class="admin-stat-content">
+            <div class="admin-stat-value"><?= $total_riders ?></div>
+            <div class="admin-stat-label">Totalt aktiva deltagare</div>
         </div>
     </div>
-    <div class="stat-card">
-        <div class="stat-icon" style="background: var(--color-success-light); color: var(--color-success);">
+    <div class="admin-stat-card">
+        <div class="admin-stat-icon" style="background: var(--color-success-light); color: var(--color-success);">
             <i data-lucide="trophy"></i>
         </div>
-        <div class="stat-content">
-            <div class="stat-value"><?= $riders_with_results ?></div>
-            <div class="stat-label">Med resultat</div>
+        <div class="admin-stat-content">
+            <div class="admin-stat-value"><?= $riders_with_results ?></div>
+            <div class="admin-stat-label">Med resultat</div>
         </div>
     </div>
-    <div class="stat-card">
-        <div class="stat-icon" style="background: var(--color-bg-tertiary); color: var(--color-text-secondary);">
+    <div class="admin-stat-card">
+        <div class="admin-stat-icon" style="background: var(--color-bg-tertiary); color: var(--color-text-secondary);">
             <i data-lucide="user-x"></i>
         </div>
-        <div class="stat-content">
-            <div class="stat-value"><?= $riders_without_results ?></div>
-            <div class="stat-label">Utan resultat</div>
+        <div class="admin-stat-content">
+            <div class="admin-stat-value"><?= $riders_without_results ?></div>
+            <div class="admin-stat-label">Utan resultat</div>
         </div>
     </div>
 </div>
