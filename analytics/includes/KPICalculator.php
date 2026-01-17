@@ -1374,8 +1374,8 @@ class KPICalculator {
                     c.city,
                     COUNT(DISTINCT rys.rider_id) as active_riders,
                     SUM(rys.total_points) as total_points,
-                    SUM(rys.wins) as wins,
-                    SUM(rys.podiums) as podiums
+                    SUM(CASE WHEN rys.best_position = 1 THEN 1 ELSE 0 END) as wins,
+                    SUM(CASE WHEN rys.best_position <= 3 THEN 1 ELSE 0 END) as podiums
                 FROM rider_yearly_stats rys
                 JOIN riders r ON rys.rider_id = r.id
                 JOIN clubs c ON r.club_id = c.id
