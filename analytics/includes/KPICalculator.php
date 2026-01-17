@@ -3401,7 +3401,10 @@ class KPICalculator {
     }
 
     /**
-     * Hamta events per region (baserat pa arrangorsklubbens distrikt)
+     * Hamta events per region (baserat pa destinationens region)
+     *
+     * Prioriterar venues.region (destinationens SCF-distrikt).
+     * Om destination saknar region, anvands arrangorsklubbens distrikt som fallback.
      *
      * @param int $year Ar
      * @return array Events per region
@@ -3409,16 +3412,25 @@ class KPICalculator {
     public function getEventsByRegion(int $year): array {
         $stmt = $this->pdo->prepare("
             SELECT
-                COALESCE(NULLIF(c.scf_district, ''), 'Okand') as region,
+                COALESCE(
+                    NULLIF(v.region, ''),
+                    NULLIF(c.scf_district, ''),
+                    'Okand'
+                ) as region,
                 COUNT(DISTINCT e.id) as event_count,
                 COUNT(DISTINCT res.cyclist_id) as participant_count,
                 SUM(CASE WHEN e.discipline = 'Enduro' THEN 1 ELSE 0 END) as enduro_events,
                 SUM(CASE WHEN e.discipline = 'DH' THEN 1 ELSE 0 END) as dh_events
             FROM events e
+            LEFT JOIN venues v ON e.venue_id = v.id
             LEFT JOIN clubs c ON e.organizer_club_id = c.id
             LEFT JOIN results res ON e.id = res.event_id
             WHERE YEAR(e.date) = ?
-            GROUP BY COALESCE(NULLIF(c.scf_district, ''), 'Okand')
+            GROUP BY COALESCE(
+                NULLIF(v.region, ''),
+                NULLIF(c.scf_district, ''),
+                'Okand'
+            )
             ORDER BY event_count DESC
         ");
         $stmt->execute([$year]);
