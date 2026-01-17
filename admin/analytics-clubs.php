@@ -106,7 +106,7 @@ include __DIR__ . '/components/unified-layout.php';
     gap: var(--space-md);
 }
 .metric-card--primary .metric-icon {
-    background: var(--color-accent-light);
+    background: rgba(0,0,0,0.05);
     color: var(--color-accent);
 }
 .metric-icon {

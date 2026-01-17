@@ -592,7 +592,7 @@ function filterRiders(status) {
     gap: var(--space-md);
     padding: var(--space-md);
     margin-bottom: var(--space-lg);
-    background: var(--color-accent-light);
+    background: rgba(0,0,0,0.05);
     border: 1px solid var(--color-accent);
     border-radius: var(--radius-md);
 }
@@ -791,7 +791,7 @@ function filterRiders(status) {
 
 .compare-checkbox.checked,
 .compare-checkbox:has(input:checked) {
-    background: var(--color-accent-light);
+    background: rgba(0,0,0,0.05);
     border-color: var(--color-accent);
 }
 

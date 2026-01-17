@@ -471,32 +471,19 @@ include __DIR__ . '/components/unified-layout.php';
     box-shadow: var(--shadow-md);
 }
 
-.metric-card--primary {
-    background: var(--color-accent);
-    border-color: var(--color-accent);
-    color: white;
-}
-
-.metric-card--warning {
-    background: rgba(234, 179, 8, 0.1);
-    border-color: #eab308;
-}
-
-.metric-card--warning .metric-icon {
-    color: #ca8a04;
-}
-
-.metric-card--warning .metric-value {
-    color: #ca8a04;
-}
-
+/* All metric cards use default white background - no color overrides */
+.metric-card--primary,
+.metric-card--warning,
 .metric-card--success {
-    background: rgba(34, 197, 94, 0.1);
-    border-color: #22c55e;
+    background: var(--color-bg-card);
+    border-color: var(--color-border);
+    color: var(--color-text-primary);
 }
 
-.metric-card--success .metric-icon {
-    color: #16a34a;
+.metric-card--primary .metric-label,
+.metric-card--warning .metric-label,
+.metric-card--success .metric-label {
+    color: var(--color-text-secondary);
 }
 
 .metric-icon {
@@ -508,10 +495,6 @@ include __DIR__ . '/components/unified-layout.php';
     border-radius: var(--radius-md);
     background: rgba(0,0,0,0.05);
     flex-shrink: 0;
-}
-
-.metric-card--primary .metric-icon {
-    background: rgba(255,255,255,0.2);
 }
 
 .metric-icon svg {
@@ -529,10 +512,6 @@ include __DIR__ . '/components/unified-layout.php';
     font-size: var(--text-sm);
     color: var(--color-text-secondary);
     margin-top: 2px;
-}
-
-.metric-card--primary .metric-label {
-    color: rgba(255,255,255,0.8);
 }
 
 /* Quick Actions */
@@ -563,15 +542,7 @@ include __DIR__ . '/components/unified-layout.php';
     background: var(--color-bg-hover);
 }
 
-.quick-action--primary {
-    background: var(--color-accent);
-    border-color: var(--color-accent);
-    color: white;
-}
-
-.quick-action--primary:hover {
-    opacity: 0.9;
-}
+/* All quick actions use default styling - no color overrides */
 
 .quick-action svg {
     width: 24px;

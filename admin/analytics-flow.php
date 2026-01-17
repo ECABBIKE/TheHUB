@@ -492,7 +492,7 @@ include __DIR__ . '/components/unified-layout.php';
     justify-content: center;
     width: 48px;
     height: 48px;
-    background: var(--color-accent-light);
+    background: rgba(0,0,0,0.05);
     border-radius: var(--radius-md);
     color: var(--color-accent);
     flex-shrink: 0;
@@ -691,7 +691,7 @@ include __DIR__ . '/components/unified-layout.php';
     width: 100px;
     height: 100px;
     border-radius: 50%;
-    background: var(--color-accent-light);
+    background: rgba(0,0,0,0.05);
     border: 3px solid var(--color-accent);
     z-index: 2;
 }
@@ -783,7 +783,7 @@ include __DIR__ . '/components/unified-layout.php';
     justify-content: center;
     width: 40px;
     height: 40px;
-    background: var(--color-accent-light);
+    background: rgba(0,0,0,0.05);
     border-radius: var(--radius-md);
     color: var(--color-accent);
 }
@@ -840,7 +840,7 @@ include __DIR__ . '/components/unified-layout.php';
 
 /* Badges */
 .badge-primary {
-    background: var(--color-accent-light);
+    background: rgba(0,0,0,0.05);
     color: var(--color-accent);
 }
 

@@ -581,7 +581,7 @@ include __DIR__ . '/components/unified-layout.php';
 }
 
 .analytics-nav-item:hover {
-    background: var(--color-accent-light);
+    background: rgba(0,0,0,0.05);
     border-color: var(--color-accent);
     transform: translateY(-1px);
 }
@@ -662,7 +662,7 @@ include __DIR__ . '/components/unified-layout.php';
     justify-content: center;
     width: 48px;
     height: 48px;
-    background: var(--color-accent-light);
+    background: rgba(0,0,0,0.05);
     border-radius: var(--radius-md);
     color: var(--color-accent);
     flex-shrink: 0;
@@ -900,7 +900,7 @@ include __DIR__ . '/components/unified-layout.php';
 
 /* Badge variants */
 .badge-primary {
-    background: var(--color-accent-light);
+    background: rgba(0,0,0,0.05);
     color: var(--color-accent);
 }
 
