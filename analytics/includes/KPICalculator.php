@@ -148,7 +148,197 @@ class KPICalculator {
     }
 
     /**
-     * Hamta totalt antal aktiva riders
+     * Hämta feeder-serie-breakdown för ett varumärke
+     * Visar varifrån nya riders kommer (vilken serie de tävlade i innan)
+     *
+     * @param int $year År
+     * @param int $brandId Varumärkes-ID
+     * @return array ['true_rookies' => int, 'crossover' => int, 'feeder_series' => [...]]
+     */
+    public function getFeederSeriesBreakdown(int $year, int $brandId): array {
+        // Hitta alla riders som deltog i detta varumärke detta år
+        // och vars första deltagande i varumärket var detta år
+        $stmt = $this->pdo->prepare("
+            SELECT DISTINCT sp.rider_id
+            FROM series_participation sp
+            JOIN series s ON sp.series_id = s.id
+            WHERE s.brand_id = ?
+            AND sp.season_year = ?
+            AND sp.rider_id IN (
+                -- Riders vars första år i detta varumärke var detta år
+                SELECT sp2.rider_id
+                FROM series_participation sp2
+                JOIN series s2 ON sp2.series_id = s2.id
+                WHERE s2.brand_id = ?
+                GROUP BY sp2.rider_id
+                HAVING MIN(sp2.season_year) = ?
+            )
+        ");
+        $stmt->execute([$brandId, $year, $brandId, $year]);
+        $newToBrandRiders = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+        if (empty($newToBrandRiders)) {
+            return [
+                'total_new' => 0,
+                'true_rookies' => 0,
+                'crossover' => 0,
+                'feeder_series' => []
+            ];
+        }
+
+        // Hitta vilka av dessa som är true rookies (aldrig tävlat någonstans innan)
+        $placeholders = implode(',', array_fill(0, count($newToBrandRiders), '?'));
+        $stmt = $this->pdo->prepare("
+            SELECT rider_id
+            FROM rider_yearly_stats
+            WHERE rider_id IN ($placeholders)
+            GROUP BY rider_id
+            HAVING MIN(season_year) = ?
+        ");
+        $params = array_merge($newToBrandRiders, [$year]);
+        $stmt->execute($params);
+        $trueRookies = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+        // Crossover riders = nya i varumärket men inte true rookies
+        $crossoverRiders = array_diff($newToBrandRiders, $trueRookies);
+
+        // Hitta feeder-serier för crossover riders
+        $feederSeries = [];
+        if (!empty($crossoverRiders)) {
+            $placeholders = implode(',', array_fill(0, count($crossoverRiders), '?'));
+            $stmt = $this->pdo->prepare("
+                SELECT
+                    b.id as brand_id,
+                    b.name as brand_name,
+                    COUNT(DISTINCT sp.rider_id) as rider_count
+                FROM series_participation sp
+                JOIN series s ON sp.series_id = s.id
+                JOIN brands b ON s.brand_id = b.id
+                WHERE sp.rider_id IN ($placeholders)
+                AND sp.season_year < ?
+                AND s.brand_id != ?
+                GROUP BY b.id, b.name
+                ORDER BY rider_count DESC
+            ");
+            $params = array_merge(array_values($crossoverRiders), [$year, $brandId]);
+            $stmt->execute($params);
+            $feederSeries = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        }
+
+        return [
+            'total_new' => count($newToBrandRiders),
+            'true_rookies' => count($trueRookies),
+            'crossover' => count($crossoverRiders),
+            'feeder_series' => $feederSeries
+        ];
+    }
+
+    /**
+     * Hämta exit-analys för ett varumärke
+     * Visar vart riders går när de slutar (fortsätter de i andra serier?)
+     *
+     * @param int $year År då de slutade
+     * @param int $brandId Varumärkes-ID
+     * @return array ['total_churned' => int, 'quit_completely' => int, 'continued_elsewhere' => int, 'destination_series' => [...]]
+     */
+    public function getExitDestinationAnalysis(int $year, int $brandId): array {
+        // Hitta riders som var aktiva i varumärket året innan men INTE detta år
+        $prevYear = $year - 1;
+
+        // Riders aktiva i brand förra året
+        $stmt = $this->pdo->prepare("
+            SELECT DISTINCT sp.rider_id
+            FROM series_participation sp
+            JOIN series s ON sp.series_id = s.id
+            WHERE s.brand_id = ?
+            AND sp.season_year = ?
+        ");
+        $stmt->execute([$brandId, $prevYear]);
+        $prevYearRiders = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+        if (empty($prevYearRiders)) {
+            return [
+                'total_churned' => 0,
+                'quit_completely' => 0,
+                'continued_elsewhere' => 0,
+                'destination_series' => []
+            ];
+        }
+
+        // Riders som fortfarande är i samma brand detta år
+        $placeholders = implode(',', array_fill(0, count($prevYearRiders), '?'));
+        $stmt = $this->pdo->prepare("
+            SELECT DISTINCT sp.rider_id
+            FROM series_participation sp
+            JOIN series s ON sp.series_id = s.id
+            WHERE s.brand_id = ?
+            AND sp.season_year = ?
+            AND sp.rider_id IN ($placeholders)
+        ");
+        $params = array_merge([$brandId, $year], $prevYearRiders);
+        $stmt->execute($params);
+        $stillActiveRiders = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+        // Churned riders = var med förra året men inte detta år i samma brand
+        $churnedRiders = array_diff($prevYearRiders, $stillActiveRiders);
+
+        if (empty($churnedRiders)) {
+            return [
+                'total_churned' => 0,
+                'quit_completely' => 0,
+                'continued_elsewhere' => 0,
+                'destination_series' => []
+            ];
+        }
+
+        // Kolla vilka av churned riders som fortsatte i NÅGON serie detta år
+        $placeholders = implode(',', array_fill(0, count($churnedRiders), '?'));
+        $stmt = $this->pdo->prepare("
+            SELECT DISTINCT rider_id
+            FROM rider_yearly_stats
+            WHERE rider_id IN ($placeholders)
+            AND season_year = ?
+        ");
+        $params = array_merge(array_values($churnedRiders), [$year]);
+        $stmt->execute($params);
+        $continuedAnywhere = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+        // Riders som slutade helt
+        $quitCompletely = array_diff($churnedRiders, $continuedAnywhere);
+
+        // Hitta destination-serier för de som fortsatte i andra brands
+        $destinationSeries = [];
+        if (!empty($continuedAnywhere)) {
+            $placeholders = implode(',', array_fill(0, count($continuedAnywhere), '?'));
+            $stmt = $this->pdo->prepare("
+                SELECT
+                    b.id as brand_id,
+                    b.name as brand_name,
+                    COUNT(DISTINCT sp.rider_id) as rider_count
+                FROM series_participation sp
+                JOIN series s ON sp.series_id = s.id
+                JOIN brands b ON s.brand_id = b.id
+                WHERE sp.rider_id IN ($placeholders)
+                AND sp.season_year = ?
+                AND s.brand_id != ?
+                GROUP BY b.id, b.name
+                ORDER BY rider_count DESC
+            ");
+            $params = array_merge(array_values($continuedAnywhere), [$year, $brandId]);
+            $stmt->execute($params);
+            $destinationSeries = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        }
+
+        return [
+            'total_churned' => count($churnedRiders),
+            'quit_completely' => count($quitCompletely),
+            'continued_elsewhere' => count($continuedAnywhere),
+            'destination_series' => $destinationSeries
+        ];
+    }
+
+    /**
+     * Hämta totalt antal aktiva riders
      *
      * @param int $year Ar
      * @param int|null $brandId Filtrera pa varumarke

@@ -59,11 +59,21 @@ $disciplineDistribution = [];
 $entryPoints = [];
 $feederMatrix = [];
 
+// Feeder series breakdown och exit analysis (endast om varumärke är valt)
+$feederBreakdown = null;
+$exitAnalysis = null;
+
 try {
     $kpis = $kpiCalc->getAllKPIs($selectedYear, $selectedBrand);
 
     if ($compareYear) {
         $comparison = $kpiCalc->compareYears($compareYear, $selectedYear, $selectedBrand);
+    }
+
+    // Hämta feeder-breakdown och exit-analysis om varumärke är valt
+    if ($selectedBrand) {
+        $feederBreakdown = $kpiCalc->getFeederSeriesBreakdown($selectedYear, $selectedBrand);
+        $exitAnalysis = $kpiCalc->getExitDestinationAnalysis($selectedYear, $selectedBrand);
     }
 
     $trends = $kpiCalc->getGrowthTrend(5, $selectedBrand);
@@ -251,6 +261,14 @@ include __DIR__ . '/components/unified-layout.php';
                     <?= $comparison['new_riders']['difference_pct'] ?>%
                 </div>
             <?php endif; ?>
+            <?php if ($feederBreakdown && $feederBreakdown['total_new'] > 0): ?>
+                <div class="metric-breakdown" style="margin-top: var(--space-xs); font-size: var(--text-xs); color: var(--color-text-secondary);">
+                    <span title="Helt nya - aldrig tävlat innan"><?= number_format($feederBreakdown['true_rookies']) ?> rookies</span>
+                    <?php if ($feederBreakdown['crossover'] > 0): ?>
+                        + <span title="Kom från andra serier"><?= number_format($feederBreakdown['crossover']) ?> crossover</span>
+                    <?php endif; ?>
+                </div>
+            <?php endif; ?>
         </div>
     </div>
 
@@ -316,6 +334,90 @@ include __DIR__ . '/components/unified-layout.php';
         </div>
     </div>
 </div>
+
+<!-- Feeder Series Breakdown (visas endast när varumärke är valt) -->
+<?php if ($feederBreakdown && $feederBreakdown['crossover'] > 0): ?>
+<div class="admin-card" style="margin-bottom: var(--space-xl);">
+    <div class="admin-card-header">
+        <h2><i data-lucide="git-merge" style="width:20px;height:20px;margin-right:var(--space-sm);"></i> Feeder-serier - Varifrån kom de nya?</h2>
+    </div>
+    <div class="admin-card-body">
+        <div class="feeder-breakdown">
+            <div class="feeder-summary" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: var(--space-lg); margin-bottom: var(--space-lg);">
+                <div class="feeder-stat" style="text-align: center; padding: var(--space-md); background: var(--color-bg-sunken); border-radius: var(--radius-md);">
+                    <div style="font-size: var(--text-2xl); font-weight: var(--weight-bold); color: var(--color-success);"><?= number_format($feederBreakdown['true_rookies']) ?></div>
+                    <div style="font-size: var(--text-sm); color: var(--color-text-secondary);">True Rookies</div>
+                    <div style="font-size: var(--text-xs); color: var(--color-text-muted);">Helt nya - aldrig tävlat</div>
+                </div>
+                <div class="feeder-stat" style="text-align: center; padding: var(--space-md); background: var(--color-bg-sunken); border-radius: var(--radius-md);">
+                    <div style="font-size: var(--text-2xl); font-weight: var(--weight-bold); color: var(--color-info);"><?= number_format($feederBreakdown['crossover']) ?></div>
+                    <div style="font-size: var(--text-sm); color: var(--color-text-secondary);">Crossover</div>
+                    <div style="font-size: var(--text-xs); color: var(--color-text-muted);">Från andra serier</div>
+                </div>
+                <div class="feeder-stat" style="text-align: center; padding: var(--space-md); background: var(--color-bg-sunken); border-radius: var(--radius-md);">
+                    <div style="font-size: var(--text-2xl); font-weight: var(--weight-bold); color: var(--color-text-primary);"><?= number_format($feederBreakdown['total_new']) ?></div>
+                    <div style="font-size: var(--text-sm); color: var(--color-text-secondary);">Totalt nya</div>
+                    <div style="font-size: var(--text-xs); color: var(--color-text-muted);">I detta varumärke</div>
+                </div>
+            </div>
+
+            <?php if (!empty($feederBreakdown['feeder_series'])): ?>
+            <h4 style="margin-bottom: var(--space-md);">Crossover kom från:</h4>
+            <div class="feeder-sources" style="display: flex; flex-wrap: wrap; gap: var(--space-sm);">
+                <?php foreach ($feederBreakdown['feeder_series'] as $feeder): ?>
+                <div class="feeder-badge" style="display: inline-flex; align-items: center; gap: var(--space-xs); padding: var(--space-xs) var(--space-sm); background: var(--color-accent-light); border-radius: var(--radius-sm); font-size: var(--text-sm);">
+                    <span style="font-weight: var(--weight-semibold);"><?= htmlspecialchars($feeder['brand_name']) ?></span>
+                    <span style="background: var(--color-accent); color: white; padding: 2px 6px; border-radius: var(--radius-full); font-size: var(--text-xs);"><?= number_format($feeder['rider_count']) ?></span>
+                </div>
+                <?php endforeach; ?>
+            </div>
+            <?php endif; ?>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
+
+<!-- Exit Destination Analysis (visas endast när varumärke är valt) -->
+<?php if ($exitAnalysis && $exitAnalysis['total_churned'] > 0): ?>
+<div class="admin-card" style="margin-bottom: var(--space-xl);">
+    <div class="admin-card-header">
+        <h2><i data-lucide="log-out" style="width:20px;height:20px;margin-right:var(--space-sm);"></i> Exit-analys - Vart går de som slutar?</h2>
+    </div>
+    <div class="admin-card-body">
+        <div class="exit-breakdown">
+            <div class="exit-summary" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: var(--space-lg); margin-bottom: var(--space-lg);">
+                <div class="exit-stat" style="text-align: center; padding: var(--space-md); background: var(--color-bg-sunken); border-radius: var(--radius-md);">
+                    <div style="font-size: var(--text-2xl); font-weight: var(--weight-bold); color: var(--color-error);"><?= number_format($exitAnalysis['quit_completely']) ?></div>
+                    <div style="font-size: var(--text-sm); color: var(--color-text-secondary);">Slutade helt</div>
+                    <div style="font-size: var(--text-xs); color: var(--color-text-muted);">Ingen serie <?= $selectedYear ?></div>
+                </div>
+                <div class="exit-stat" style="text-align: center; padding: var(--space-md); background: var(--color-bg-sunken); border-radius: var(--radius-md);">
+                    <div style="font-size: var(--text-2xl); font-weight: var(--weight-bold); color: var(--color-warning);"><?= number_format($exitAnalysis['continued_elsewhere']) ?></div>
+                    <div style="font-size: var(--text-sm); color: var(--color-text-secondary);">Bytte serie</div>
+                    <div style="font-size: var(--text-xs); color: var(--color-text-muted);">Fortsatte i annan</div>
+                </div>
+                <div class="exit-stat" style="text-align: center; padding: var(--space-md); background: var(--color-bg-sunken); border-radius: var(--radius-md);">
+                    <div style="font-size: var(--text-2xl); font-weight: var(--weight-bold); color: var(--color-text-primary);"><?= number_format($exitAnalysis['total_churned']) ?></div>
+                    <div style="font-size: var(--text-sm); color: var(--color-text-secondary);">Lämnade serien</div>
+                    <div style="font-size: var(--text-xs); color: var(--color-text-muted);">Från <?= $selectedYear - 1 ?></div>
+                </div>
+            </div>
+
+            <?php if (!empty($exitAnalysis['destination_series'])): ?>
+            <h4 style="margin-bottom: var(--space-md);">De som bytte serie gick till:</h4>
+            <div class="exit-destinations" style="display: flex; flex-wrap: wrap; gap: var(--space-sm);">
+                <?php foreach ($exitAnalysis['destination_series'] as $dest): ?>
+                <div class="exit-badge" style="display: inline-flex; align-items: center; gap: var(--space-xs); padding: var(--space-xs) var(--space-sm); background: rgba(var(--color-warning-rgb, 217, 119, 6), 0.1); border-radius: var(--radius-sm); font-size: var(--text-sm);">
+                    <span style="font-weight: var(--weight-semibold);"><?= htmlspecialchars($dest['brand_name']) ?></span>
+                    <span style="background: var(--color-warning); color: white; padding: 2px 6px; border-radius: var(--radius-full); font-size: var(--text-xs);"><?= number_format($dest['rider_count']) ?></span>
+                </div>
+                <?php endforeach; ?>
+            </div>
+            <?php endif; ?>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
 
 <!-- Growth Trend Chart -->
 <?php if (!empty($trends)): ?>
