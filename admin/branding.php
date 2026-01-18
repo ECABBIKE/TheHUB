@@ -452,6 +452,85 @@ include __DIR__ . '/components/unified-layout.php';
     to { opacity: 1; }
 }
 
+/* Default Colors Reference Section */
+.default-colors-reference {
+    background: var(--color-bg-sunken);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+}
+
+.default-colors-toggle {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    padding: var(--space-md);
+    cursor: pointer;
+    font-weight: var(--weight-medium);
+    color: var(--color-text-secondary);
+    list-style: none;
+    transition: background 0.15s ease;
+}
+
+.default-colors-toggle::-webkit-details-marker {
+    display: none;
+}
+
+.default-colors-toggle:hover {
+    background: var(--color-bg-hover);
+    color: var(--color-text-primary);
+}
+
+.default-colors-toggle .toggle-icon {
+    margin-left: auto;
+    transition: transform 0.2s ease;
+}
+
+.default-colors-reference[open] .toggle-icon {
+    transform: rotate(180deg);
+}
+
+.default-colors-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: var(--space-md);
+    padding: var(--space-md);
+    padding-top: 0;
+    border-top: 1px solid var(--color-border);
+}
+
+.default-color-group h4 {
+    font-size: var(--text-sm);
+    font-weight: var(--weight-semibold);
+    color: var(--color-text-primary);
+    margin: 0 0 var(--space-xs);
+}
+
+.default-color-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    font-size: var(--text-xs);
+    color: var(--color-text-secondary);
+    padding: var(--space-2xs) 0;
+}
+
+.default-swatch {
+    width: 20px;
+    height: 20px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--color-border);
+    flex-shrink: 0;
+}
+
+.default-color-row code {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    background: var(--color-bg-card);
+    padding: 1px 4px;
+    border-radius: 3px;
+}
+
 </style>
 
 <?php if ($message): ?>
@@ -693,14 +772,76 @@ include __DIR__ . '/components/unified-layout.php';
                 </div>
             </div>
 
-            <div class="info-box mt-lg">
-                <p>
-                    <i data-lucide="info"></i>
-                    <span>
-                        <strong>Tips:</strong> Mörkt tema är standard. Ljust tema aktiveras via användarinställningar eller systeminställning.
-                    </span>
-                </p>
-            </div>
+            <!-- Default Colors Reference -->
+            <details class="default-colors-reference mt-lg">
+                <summary class="default-colors-toggle">
+                    <i data-lucide="palette"></i>
+                    <span>Visa standardfärger (referens)</span>
+                    <i data-lucide="chevron-down" class="toggle-icon"></i>
+                </summary>
+                <div class="default-colors-grid">
+                    <div class="default-color-group">
+                        <h4>Bakgrunder</h4>
+                        <div class="default-color-row">
+                            <span class="default-swatch" style="background: #ebeced;"></span>
+                            <span>Sidbakgrund: <code>#ebeced</code></span>
+                        </div>
+                        <div class="default-color-row">
+                            <span class="default-swatch" style="background: #ffffff;"></span>
+                            <span>Kort: <code>#ffffff</code></span>
+                        </div>
+                        <div class="default-color-row">
+                            <span class="default-swatch" style="background: #e2e3e5;"></span>
+                            <span>Nedsänkt: <code>#e2e3e5</code></span>
+                        </div>
+                    </div>
+                    <div class="default-color-group">
+                        <h4>Text</h4>
+                        <div class="default-color-row">
+                            <span class="default-swatch" style="background: #0b131e;"></span>
+                            <span>Primär: <code>#0b131e</code></span>
+                        </div>
+                        <div class="default-color-row">
+                            <span class="default-swatch" style="background: #495057;"></span>
+                            <span>Sekundär: <code>#495057</code></span>
+                        </div>
+                        <div class="default-color-row">
+                            <span class="default-swatch" style="background: #868e96;"></span>
+                            <span>Dämpad: <code>#868e96</code></span>
+                        </div>
+                    </div>
+                    <div class="default-color-group">
+                        <h4>Accent & Knappar</h4>
+                        <div class="default-color-row">
+                            <span class="default-swatch" style="background: #0066CC;"></span>
+                            <span>Accent: <code>#0066CC</code></span>
+                        </div>
+                        <div class="default-color-row">
+                            <span class="default-swatch" style="background: #0052A3;"></span>
+                            <span>Hover: <code>#0052A3</code></span>
+                        </div>
+                    </div>
+                    <div class="default-color-group">
+                        <h4>Status</h4>
+                        <div class="default-color-row">
+                            <span class="default-swatch" style="background: #059669;"></span>
+                            <span>Framgång: <code>#059669</code></span>
+                        </div>
+                        <div class="default-color-row">
+                            <span class="default-swatch" style="background: #d97706;"></span>
+                            <span>Varning: <code>#d97706</code></span>
+                        </div>
+                        <div class="default-color-row">
+                            <span class="default-swatch" style="background: #dc2626;"></span>
+                            <span>Fel: <code>#dc2626</code></span>
+                        </div>
+                        <div class="default-color-row">
+                            <span class="default-swatch" style="background: #0284c7;"></span>
+                            <span>Info: <code>#0284c7</code></span>
+                        </div>
+                    </div>
+                </div>
+            </details>
         </div>
     </div>
 
