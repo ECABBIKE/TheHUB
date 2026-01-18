@@ -1,6 +1,6 @@
 <?php
 /**
- * Populate Historical - Interactive Version
+ * Populate Historical - Interactive Version (FIXED)
  *
  * Kor populate ar for ar med AJAX for att undvika timeout.
  * Visar progress i realtid.
@@ -8,8 +8,8 @@
  * @package TheHUB Analytics
  */
 
-// Timeout for initial page load (30 seconds max)
-set_time_limit(30);
+// CRITICAL FIX: Set timeout limits FIRST before any other code
+set_time_limit(30); // Max 30 seconds for initial page load
 ini_set('max_execution_time', 30);
 
 require_once __DIR__ . '/../config.php';
@@ -18,6 +18,10 @@ require_admin();
 
 // Hantera AJAX-request for ett specifikt ar
 if (isset($_GET['run_year'])) {
+    // Extend timeout for AJAX processing
+    set_time_limit(120);
+    ini_set('max_execution_time', 120);
+
     header('Content-Type: application/json');
 
     $year = (int)$_GET['run_year'];
@@ -150,32 +154,38 @@ if (isset($_GET['run_cohort'])) {
     exit;
 }
 
-// Hamta tillgangliga ar med timeout och felhantering
+// FIX: Hamta tillgangliga ar MED timeout-skydd och felhantering
 global $pdo;
 $years = [];
 $error = null;
+
 try {
-    // Set query timeout (5 seconds)
+    // Add timeout to the query itself
     $pdo->setAttribute(PDO::ATTR_TIMEOUT, 5);
 
-    $stmt = $pdo->query("
+    $stmt = $pdo->prepare("
         SELECT DISTINCT YEAR(date) as year
         FROM events
         WHERE date IS NOT NULL
         ORDER BY year ASC
         LIMIT 50
     ");
+
+    $stmt->execute();
     $years = $stmt->fetchAll(PDO::FETCH_COLUMN);
 
+    // Fallback if no years found
     if (empty($years)) {
         $error = "Inga år hittades i events-tabellen";
-        // Fallback
-        $years = range(2015, (int)date('Y'));
     }
-} catch (Exception $e) {
+
+} catch (PDOException $e) {
     $error = "Databasfel: " . $e->getMessage();
-    // Fallback så sidan inte kraschar
-    $years = range(2015, (int)date('Y'));
+    // Set some default years so page doesn't completely break
+    $years = range(2015, date('Y'));
+} catch (Exception $e) {
+    $error = "Fel vid hämtning av år: " . $e->getMessage();
+    $years = range(2015, date('Y'));
 }
 
 $page_title = 'Populate Historical Data';
@@ -269,6 +279,14 @@ include __DIR__ . '/components/unified-layout.php';
     align-items: center;
     flex-wrap: wrap;
 }
+.warning-box {
+    background: rgba(251, 191, 36, 0.1);
+    border: 1px solid rgba(251, 191, 36, 0.3);
+    border-radius: var(--radius-sm);
+    padding: var(--space-md);
+    margin-bottom: var(--space-lg);
+    color: var(--color-warning);
+}
 </style>
 
 <?php if (isset($error)): ?>
@@ -277,6 +295,11 @@ include __DIR__ . '/components/unified-layout.php';
     <div><?= htmlspecialchars($error) ?></div>
 </div>
 <?php endif; ?>
+
+<div class="warning-box">
+    <strong>OBS:</strong> Denna sida kör tunga databasoperationer.
+    Undvik att köra flera processer samtidigt då det kan låsa databasen.
+</div>
 
 <div class="populate-card">
     <h3>Generera Analytics-data</h3>
@@ -288,8 +311,8 @@ include __DIR__ . '/components/unified-layout.php';
         <button id="startBtn" class="btn-admin btn-admin-primary" onclick="startPopulate(false)">
             <i data-lucide="play"></i> Starta
         </button>
-        <button id="forceBtn" class="btn-admin btn-admin-warning" onclick="startPopulate(true)">
-            <i data-lucide="refresh-cw"></i> Starta (Force)
+        <button id="forceBtn" class="btn-admin btn-admin-secondary" onclick="startPopulate(true)">
+            <i data-lucide="zap"></i> Force Re-run
         </button>
         <button id="stopBtn" class="btn-admin btn-admin-secondary" onclick="stopPopulate()" disabled>
             <i data-lucide="square"></i> Stoppa
@@ -300,21 +323,25 @@ include __DIR__ . '/components/unified-layout.php';
     <div class="progress-bar">
         <div class="progress-bar-fill" id="progressFill"></div>
     </div>
-    <div class="progress-text" id="progressText">0 / <?= count($years) ?> ar</div>
+    <div class="progress-text" id="progressText">Klicka for att starta</div>
 
     <div class="year-list" id="yearList">
-        <?php foreach ($years as $year): ?>
-        <div class="year-item pending" id="year-<?= $year ?>" data-year="<?= $year ?>">
-            <div class="year-label"><?= $year ?></div>
-            <div class="year-status">Vantar...</div>
-        </div>
-        <?php endforeach; ?>
+        <?php if (!empty($years)): ?>
+            <?php foreach ($years as $year): ?>
+            <div class="year-item pending" id="year-<?= $year ?>" data-year="<?= $year ?>">
+                <div class="year-label"><?= $year ?></div>
+                <div class="year-status">Vantar...</div>
+            </div>
+            <?php endforeach; ?>
+        <?php else: ?>
+            <div style="grid-column: 1/-1; text-align: center; padding: var(--space-lg);">
+                Inga år tillgängliga
+            </div>
+        <?php endif; ?>
     </div>
-</div>
 
-<div class="populate-card">
-    <h3>Logg</h3>
-    <div class="log-output" id="logOutput">Klicka "Starta" for att borja...</div>
+    <h4 style="margin-top: var(--space-xl);">Process Log</h4>
+    <div class="log-output" id="logOutput"></div>
 </div>
 
 <div class="populate-card">
@@ -340,12 +367,18 @@ include __DIR__ . '/components/unified-layout.php';
     <div class="progress-text" id="cohortProgressText">Klicka for att starta</div>
 
     <div class="year-list" id="cohortList">
-        <?php foreach ($years as $year): ?>
-        <div class="year-item pending" id="cohort-<?= $year ?>" data-year="<?= $year ?>">
-            <div class="year-label"><?= $year ?></div>
-            <div class="year-status">Vantar...</div>
-        </div>
-        <?php endforeach; ?>
+        <?php if (!empty($years)): ?>
+            <?php foreach ($years as $year): ?>
+            <div class="year-item pending" id="cohort-<?= $year ?>" data-year="<?= $year ?>">
+                <div class="year-label"><?= $year ?></div>
+                <div class="year-status">Vantar...</div>
+            </div>
+            <?php endforeach; ?>
+        <?php else: ?>
+            <div style="grid-column: 1/-1; text-align: center; padding: var(--space-lg);">
+                Inga kohorter tillgängliga
+            </div>
+        <?php endif; ?>
     </div>
 </div>
 
@@ -398,9 +431,9 @@ async function processYear(year) {
     try {
         const url = `/admin/analytics-populate.php?run_year=${year}${forceMode ? '&force=1' : ''}`;
 
-        // Add timeout (2 minutes)
+        // Add timeout to fetch request
         const controller = new AbortController();
-        const timeoutId = setTimeout(() => controller.abort(), 120000);
+        const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 min timeout
 
         const response = await fetch(url, { signal: controller.signal });
         clearTimeout(timeoutId);
@@ -427,8 +460,8 @@ async function processYear(year) {
 
     } catch (e) {
         if (e.name === 'AbortError') {
-            setYearStatus(year, 'error', 'Timeout (2 min)');
-            log(`${year}: FEL - Timeout efter 2 minuter`);
+            setYearStatus(year, 'error', 'Timeout');
+            log(`${year}: TIMEOUT efter 2 minuter`);
         } else {
             setYearStatus(year, 'error', 'Natverksfel');
             log(`${year}: FEL - ${e.message}`);
@@ -536,8 +569,13 @@ async function processCohort(year) {
         return true;
 
     } catch (e) {
-        setCohortStatus(year, 'error', 'Natverksfel');
-        log(`Kohort ${year}: FEL - ${e.message}`);
+        if (e.name === 'AbortError') {
+            setCohortStatus(year, 'error', 'Timeout');
+            log(`Kohort ${year}: TIMEOUT efter 5 minuter`);
+        } else {
+            setCohortStatus(year, 'error', 'Natverksfel');
+            log(`Kohort ${year}: FEL - ${e.message}`);
+        }
         return false;
     }
 }
