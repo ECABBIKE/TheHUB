@@ -202,7 +202,7 @@ class KPICalculator {
         // Crossover riders = nya i varumärket men inte true rookies
         $crossoverRiders = array_diff($newToBrandRiders, $trueRookies);
 
-        // Hitta feeder-serier för crossover riders
+        // Hitta feeder-serier för crossover riders (endast aktiva varumärken)
         $feederSeries = [];
         if (!empty($crossoverRiders)) {
             $placeholders = implode(',', array_fill(0, count($crossoverRiders), '?'));
@@ -217,6 +217,7 @@ class KPICalculator {
                 WHERE sp.rider_id IN ($placeholders)
                 AND sp.season_year < ?
                 AND s.brand_id != ?
+                AND b.active = 1
                 GROUP BY b.id, b.name
                 ORDER BY rider_count DESC
             ");
@@ -306,7 +307,7 @@ class KPICalculator {
         // Riders som slutade helt
         $quitCompletely = array_diff($churnedRiders, $continuedAnywhere);
 
-        // Hitta destination-serier för de som fortsatte i andra brands
+        // Hitta destination-serier för de som fortsatte i andra brands (endast aktiva varumärken)
         $destinationSeries = [];
         if (!empty($continuedAnywhere)) {
             $placeholders = implode(',', array_fill(0, count($continuedAnywhere), '?'));
@@ -321,6 +322,7 @@ class KPICalculator {
                 WHERE sp.rider_id IN ($placeholders)
                 AND sp.season_year = ?
                 AND s.brand_id != ?
+                AND b.active = 1
                 GROUP BY b.id, b.name
                 ORDER BY rider_count DESC
             ");
