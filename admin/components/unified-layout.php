@@ -127,6 +127,24 @@ if (!isset($current_admin_page)) {
         $brandingData = json_decode(file_get_contents($brandingFile), true);
         if (is_array($brandingData)) {
             $cssOutput = '';
+            $colorsCss = '';
+
+            // Process custom colors from branding (use light theme colors for everything)
+            if (!empty($brandingData['colors'])) {
+                $colors = $brandingData['colors'];
+                // Use light theme colors (or fall back to dark if light not set)
+                $colorSource = $colors['light'] ?? $colors['dark'] ?? $colors;
+                if (is_array($colorSource)) {
+                    foreach ($colorSource as $cssVar => $value) {
+                        if (strpos($cssVar, '--') === 0) {
+                            $safeValue = htmlspecialchars($value, ENT_QUOTES, 'UTF-8');
+                            if (preg_match('/^(#[0-9A-Fa-f]{3,8}|rgba?\([^)]+\)|hsla?\([^)]+\)|[a-z]+)$/', $value)) {
+                                $colorsCss .= $cssVar . ':' . $safeValue . ' !important;';
+                            }
+                        }
+                    }
+                }
+            }
 
             // Process layout settings (content-max-width, sidebar-width, header-height)
             $layout = $brandingData['layout'] ?? null;
@@ -167,8 +185,16 @@ if (!isset($current_admin_page)) {
                 }
             }
 
-            if ($cssOutput || $layout || $gradient) {
-                echo '<style id="admin-branding">:root{' . $cssOutput . '}</style>';
+            // Output combined CSS
+            if ($cssOutput || $colorsCss || $layout || $gradient) {
+                echo '<style id="admin-branding">';
+                if ($cssOutput) {
+                    echo ':root{' . $cssOutput . '}';
+                }
+                if ($colorsCss) {
+                    echo ':root{' . $colorsCss . '}';
+                }
+                echo '</style>';
             }
         }
     }
