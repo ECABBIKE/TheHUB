@@ -124,8 +124,7 @@ if (!isset($current_admin_page)) {
 
     <!-- Admin Color Fix - Restores correct blue accent colors (#0066CC) -->
     <!-- Loads LAST to override any remaining cyan colors -->
-    <link rel="stylesheet" href="/admin/assets/css/admin-color-fix.css?v=<?= filemtime(__DIR__ . '/../assets/css/admin-color-fix.css') ?>">
-
+   
     <!-- Dynamic Branding CSS (from /uploads/branding.json) -->
     <?php
     $brandingFile = __DIR__ . '/../../uploads/branding.json';
