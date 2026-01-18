@@ -898,26 +898,6 @@ include __DIR__ . '/components/unified-layout.php';
     text-decoration: underline;
 }
 
-/* Badge variants */
-.badge-primary {
-    background: var(--color-accent-light);
-    color: var(--color-accent);
-}
-
-.badge-secondary {
-    background: var(--color-bg-hover);
-    color: var(--color-text-secondary);
-}
-
-.badge-success {
-    background: rgba(34, 197, 94, 0.15);
-    color: var(--color-success);
-}
-
-.badge-sm {
-    font-size: 10px;
-    padding: 2px 6px;
-}
 
 /* Grid */
 .grid-2 {
