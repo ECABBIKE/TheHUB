@@ -7,7 +7,7 @@
    ======================================================================== */
 
 .admin-body {
-    background: var(--color-bg-base);
+    background: var(--color-bg-page);
     color: var(--color-text-primary);
     min-height: 100vh;
 }
@@ -25,8 +25,8 @@
 
 .admin-header {
     height: 60px;
-    background: #16162a;
-    border-bottom: 1px solid rgba(255, 255, 255, 0.08);
+    background: var(--color-bg-surface);
+    border-bottom: 1px solid var(--color-border);
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -48,14 +48,14 @@
     display: none;
     background: none;
     border: none;
-    color: #fff; /* Always white on dark admin header */
+    color: var(--color-text-primary);
     cursor: pointer;
     padding: var(--space-sm);
     border-radius: var(--radius-md);
 }
 
 .mobile-menu-toggle:hover {
-    background: rgba(255, 255, 255, 0.1);
+    background: var(--color-bg-hover);
 }
 
 .mobile-menu-toggle svg {
@@ -110,10 +110,10 @@
     align-items: center;
     gap: var(--space-sm);
     padding: var(--space-sm) var(--space-md);
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: var(--color-bg-hover);
+    border: 1px solid var(--color-border);
     border-radius: var(--radius-md);
-    color: #fff;
+    color: var(--color-text-primary);
     cursor: pointer;
     transition: all 0.2s ease;
     text-decoration: none;
@@ -121,7 +121,7 @@
 }
 
 .header-action:hover {
-    background: rgba(255, 255, 255, 0.15);
+    background: var(--color-bg-active);
     border-color: var(--color-accent);
     color: var(--color-accent);
 }
@@ -165,22 +165,22 @@
     position: relative;
 }
 
-/* User menu trigger - explicit colors for dark header */
+/* User menu trigger */
 .user-menu-trigger {
     display: flex;
     align-items: center;
     gap: var(--space-sm);
     padding: var(--space-sm) var(--space-md);
-    background: rgba(255, 255, 255, 0.1);
-    border: 1px solid rgba(255, 255, 255, 0.2);
+    background: var(--color-bg-hover);
+    border: 1px solid var(--color-border);
     border-radius: var(--radius-md);
-    color: #fff;
+    color: var(--color-text-primary);
     cursor: pointer;
     transition: all 0.2s ease;
 }
 
 .user-menu-trigger:hover {
-    background: rgba(255, 255, 255, 0.15);
+    background: var(--color-bg-active);
 }
 
 .user-menu-trigger svg {
@@ -774,7 +774,7 @@
     padding: var(--space-md);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-md);
-    background: var(--color-bg-base);
+    background: var(--color-bg-surface);
     color: var(--color-text-primary);
     font-size: var(--text-md);
     transition: all 0.2s ease;
@@ -1650,7 +1650,7 @@
 }
 
 .admin-table thead {
-    background: linear-gradient(135deg, var(--color-bg-sunken) 0%, var(--color-bg-base) 100%);
+    background: linear-gradient(135deg, var(--color-bg-sunken) 0%, var(--color-bg-surface) 100%);
 }
 
 .admin-table th {
@@ -1884,7 +1884,7 @@
     padding-left: 44px;
     border: 1px solid var(--color-border);
     border-radius: var(--radius-lg);
-    background: var(--color-bg-base);
+    background: var(--color-bg-surface);
     color: var(--color-text-primary);
     font-size: var(--text-sm);
     transition: var(--admin-transition);
