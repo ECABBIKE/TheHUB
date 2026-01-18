@@ -180,10 +180,10 @@
     color: var(--color-text-muted);
 }
 
-/* Gravity ID special styling - cyan/turquoise accent */
+/* Gravity ID special styling - blue accent */
 .profile-status-badge.badge-gravity-id {
-    background: linear-gradient(135deg, rgba(55, 212, 214, 0.15) 0%, rgba(55, 212, 214, 0.08) 100%);
-    border-color: rgba(55, 212, 214, 0.25);
+    background: linear-gradient(135deg, rgba(0, 102, 204, 0.15) 0%, rgba(0, 102, 204, 0.08) 100%);
+    border-color: rgba(0, 102, 204, 0.25);
 }
 
 .profile-status-badge.badge-gravity-id .badge-icon,

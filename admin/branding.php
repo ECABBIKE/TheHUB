@@ -148,33 +148,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 // Define color groups for display - MUST match theme.css values exactly!
+// Updated 2026-01-18: Unified colors - same for both dark and light (light theme always)
 $colorGroups = [
     'Bakgrunder' => [
-        'bg-page' => ['label' => 'Sidbakgrund', 'dark' => '#0b131e', 'light' => '#f8f9fa'],
-        'bg-surface' => ['label' => 'Ytor (kort, modals)', 'dark' => '#0d1520', 'light' => '#ffffff'],
-        'bg-card' => ['label' => 'Kort', 'dark' => '#0e1621', 'light' => '#ffffff'],
-        'bg-sunken' => ['label' => 'Nedsänkta ytor', 'dark' => '#06080e', 'light' => '#f0f2f5'],
+        'bg-page' => ['label' => 'Sidbakgrund', 'dark' => '#ebeced', 'light' => '#ebeced'],
+        'bg-surface' => ['label' => 'Ytor (kort, modals)', 'dark' => '#ebeced', 'light' => '#ebeced'],
+        'bg-card' => ['label' => 'Kort', 'dark' => '#ffffff', 'light' => '#ffffff'],
+        'bg-sunken' => ['label' => 'Nedsänkta ytor', 'dark' => '#e2e3e5', 'light' => '#e2e3e5'],
     ],
     'Text' => [
-        'text-primary' => ['label' => 'Primär text', 'dark' => '#f8f2f0', 'light' => '#0b131e'],
-        'text-secondary' => ['label' => 'Sekundär text', 'dark' => '#c7cfdd', 'light' => '#495057'],
-        'text-tertiary' => ['label' => 'Tertiär text', 'dark' => '#9ca3af', 'light' => '#6c757d'],
-        'text-muted' => ['label' => 'Dämpad text', 'dark' => '#868fa2', 'light' => '#868e96'],
+        'text-primary' => ['label' => 'Primär text', 'dark' => '#0b131e', 'light' => '#0b131e'],
+        'text-secondary' => ['label' => 'Sekundär text', 'dark' => '#495057', 'light' => '#495057'],
+        'text-tertiary' => ['label' => 'Tertiär text', 'dark' => '#6c757d', 'light' => '#6c757d'],
+        'text-muted' => ['label' => 'Dämpad text', 'dark' => '#868e96', 'light' => '#868e96'],
     ],
     'Accent & Knappar' => [
-        'accent' => ['label' => 'Accentfärg', 'dark' => '#37d4d6', 'light' => '#2bc4c6'],
-        'accent-hover' => ['label' => 'Accent hover', 'dark' => '#4ae0e2', 'light' => '#37d4d6'],
-        'accent-light' => ['label' => 'Accent ljus', 'dark' => 'rgba(55, 212, 214, 0.15)', 'light' => 'rgba(55, 212, 214, 0.1)'],
+        'accent' => ['label' => 'Accentfärg', 'dark' => '#0066CC', 'light' => '#0066CC'],
+        'accent-hover' => ['label' => 'Accent hover', 'dark' => '#0052A3', 'light' => '#0052A3'],
+        'accent-light' => ['label' => 'Accent ljus', 'dark' => 'rgba(0, 102, 204, 0.08)', 'light' => 'rgba(0, 102, 204, 0.08)'],
     ],
     'Status' => [
-        'success' => ['label' => 'Framgång', 'dark' => '#10b981', 'light' => '#059669'],
-        'warning' => ['label' => 'Varning', 'dark' => '#fbbf24', 'light' => '#d97706'],
-        'error' => ['label' => 'Fel', 'dark' => '#ef4444', 'light' => '#dc2626'],
-        'info' => ['label' => 'Info', 'dark' => '#38bdf8', 'light' => '#0284c7'],
+        'success' => ['label' => 'Framgång', 'dark' => '#059669', 'light' => '#059669'],
+        'warning' => ['label' => 'Varning', 'dark' => '#d97706', 'light' => '#d97706'],
+        'error' => ['label' => 'Fel', 'dark' => '#dc2626', 'light' => '#dc2626'],
+        'info' => ['label' => 'Info', 'dark' => '#0284c7', 'light' => '#0284c7'],
     ],
     'Kanter' => [
-        'border' => ['label' => 'Kant', 'dark' => 'rgba(55, 212, 214, 0.2)', 'light' => 'rgba(55, 212, 214, 0.15)'],
-        'border-strong' => ['label' => 'Stark kant', 'dark' => 'rgba(55, 212, 214, 0.3)', 'light' => 'rgba(55, 212, 214, 0.25)'],
+        'border' => ['label' => 'Kant', 'dark' => 'rgba(0, 0, 0, 0.1)', 'light' => 'rgba(0, 0, 0, 0.1)'],
+        'border-strong' => ['label' => 'Stark kant', 'dark' => 'rgba(0, 0, 0, 0.15)', 'light' => 'rgba(0, 0, 0, 0.15)'],
     ],
 ];
 
