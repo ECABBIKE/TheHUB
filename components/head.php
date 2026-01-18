@@ -115,6 +115,9 @@ $iconType = match($faviconExt) {
 
 <title><?= htmlspecialchars($pageTitle) ?></title>
 
+<?php require_once __DIR__ . '/../includes/theme-loader.php'; ?>
+
+
 <!-- CSS with cache busting (filemtime) -->
 <?php
 $cssDir = __DIR__ . '/../assets/css/';
