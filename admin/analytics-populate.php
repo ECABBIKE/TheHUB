@@ -21,7 +21,7 @@ if (isset($_GET['run_year'])) {
     // Extend timeout for AJAX processing
     set_time_limit(120);
     ini_set('max_execution_time', 120);
-    
+
     header('Content-Type: application/json');
 
     $year = (int)$_GET['run_year'];
@@ -162,7 +162,7 @@ $error = null;
 try {
     // Add timeout to the query itself
     $pdo->setAttribute(PDO::ATTR_TIMEOUT, 5);
-    
+
     $stmt = $pdo->prepare("
         SELECT DISTINCT YEAR(date) as year
         FROM events
@@ -170,15 +170,15 @@ try {
         ORDER BY year ASC
         LIMIT 50
     ");
-    
+
     $stmt->execute();
     $years = $stmt->fetchAll(PDO::FETCH_COLUMN);
-    
+
     // Fallback if no years found
     if (empty($years)) {
         $error = "Inga år hittades i events-tabellen";
     }
-    
+
 } catch (PDOException $e) {
     $error = "Databasfel: " . $e->getMessage();
     // Set some default years so page doesn't completely break
@@ -297,7 +297,7 @@ include __DIR__ . '/components/unified-layout.php';
 <?php endif; ?>
 
 <div class="warning-box">
-    <strong>⚠️ OBS:</strong> Denna sida kör tunga databasoperationer. 
+    <strong>OBS:</strong> Denna sida kör tunga databasoperationer.
     Undvik att köra flera processer samtidigt då det kan låsa databasen.
 </div>
 
@@ -430,14 +430,14 @@ async function processYear(year) {
 
     try {
         const url = `/admin/analytics-populate.php?run_year=${year}${forceMode ? '&force=1' : ''}`;
-        
+
         // Add timeout to fetch request
         const controller = new AbortController();
         const timeoutId = setTimeout(() => controller.abort(), 120000); // 2 min timeout
-        
+
         const response = await fetch(url, { signal: controller.signal });
         clearTimeout(timeoutId);
-        
+
         const data = await response.json();
 
         if (data.error) {
