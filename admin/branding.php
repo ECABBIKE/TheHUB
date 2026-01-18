@@ -787,6 +787,10 @@ include __DIR__ . '/components/unified-layout.php';
                             <span>Sidbakgrund: <code>#ebeced</code></span>
                         </div>
                         <div class="default-color-row">
+                            <span class="default-swatch" style="background: #ebeced;"></span>
+                            <span>Ytor (menyer): <code>#ebeced</code></span>
+                        </div>
+                        <div class="default-color-row">
                             <span class="default-swatch" style="background: #ffffff;"></span>
                             <span>Kort: <code>#ffffff</code></span>
                         </div>
