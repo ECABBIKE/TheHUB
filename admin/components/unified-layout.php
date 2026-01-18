@@ -59,21 +59,17 @@ if (!isset($current_admin_page)) {
 }
 ?>
 <!DOCTYPE html>
-<html lang="sv">
+<html lang="sv" data-theme="light">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title><?= htmlspecialchars($page_title ?? 'Admin') ?> - TheHUB Admin</title>
 
-    <!-- Theme detection - same as public site -->
+    <!-- Force light theme - same as public site -->
     <script>
     (function() {
-        var theme = 'dark';
-        try {
-            var saved = localStorage.getItem('thehub-theme');
-            if (saved) theme = saved;
-        } catch(e) {}
-        document.documentElement.setAttribute('data-theme', theme);
+        // Always use light theme (dark mode disabled)
+        document.documentElement.setAttribute('data-theme', 'light');
     })();
     </script>
 
