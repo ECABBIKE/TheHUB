@@ -59,6 +59,7 @@ $cohortStatus = [];
 $cohortRiders = [];
 $cohortComparison = [];
 $avgLifespan = 0;
+$feederBreakdown = null;
 
 try {
     // Hamta kohorter - filtrerat pa varumarke om valt
@@ -71,6 +72,11 @@ try {
 
         // Hamta rider-lista (begransad for prestanda)
         $cohortRiders = $kpiCalc->getCohortRidersByBrand($selectedCohort, $selectedBrand, 'all', $latestSeasonYear);
+
+        // Hamta feeder-breakdown om varumärke är valt
+        if ($selectedBrand) {
+            $feederBreakdown = $kpiCalc->getFeederSeriesBreakdown($selectedCohort, $selectedBrand);
+        }
     }
 
     // Multi-cohort comparison (TODO: add brand filtering)
@@ -267,6 +273,49 @@ include __DIR__ . '/components/unified-layout.php';
         </div>
     </div>
 </div>
+
+<!-- Feeder Series Breakdown (visas endast när varumärke är valt) -->
+<?php if ($feederBreakdown && $feederBreakdown['total_new'] > 0): ?>
+<div class="admin-card" style="margin-top: var(--space-lg);">
+    <div class="admin-card-header">
+        <h2><i data-lucide="git-merge" style="width:20px;height:20px;margin-right:var(--space-sm);"></i> Kohortens ursprung - Varifrån kom de?</h2>
+    </div>
+    <div class="admin-card-body">
+        <div class="feeder-breakdown">
+            <div class="feeder-summary" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: var(--space-lg); margin-bottom: var(--space-lg);">
+                <div class="feeder-stat" style="text-align: center; padding: var(--space-md); background: var(--color-bg-sunken); border-radius: var(--radius-md);">
+                    <div style="font-size: var(--text-2xl); font-weight: var(--weight-bold); color: var(--color-success);"><?= number_format($feederBreakdown['true_rookies']) ?></div>
+                    <div style="font-size: var(--text-sm); color: var(--color-text-secondary);">True Rookies</div>
+                    <div style="font-size: var(--text-xs); color: var(--color-text-muted);">Helt nya - aldrig tävlat</div>
+                </div>
+                <div class="feeder-stat" style="text-align: center; padding: var(--space-md); background: var(--color-bg-sunken); border-radius: var(--radius-md);">
+                    <div style="font-size: var(--text-2xl); font-weight: var(--weight-bold); color: var(--color-info);"><?= number_format($feederBreakdown['crossover']) ?></div>
+                    <div style="font-size: var(--text-sm); color: var(--color-text-secondary);">Crossover</div>
+                    <div style="font-size: var(--text-xs); color: var(--color-text-muted);">Från andra serier</div>
+                </div>
+                <div class="feeder-stat" style="text-align: center; padding: var(--space-md); background: var(--color-bg-sunken); border-radius: var(--radius-md);">
+                    <?php $rookiePct = $feederBreakdown['total_new'] > 0 ? round($feederBreakdown['true_rookies'] / $feederBreakdown['total_new'] * 100) : 0; ?>
+                    <div style="font-size: var(--text-2xl); font-weight: var(--weight-bold); color: var(--color-text-primary);"><?= $rookiePct ?>%</div>
+                    <div style="font-size: var(--text-sm); color: var(--color-text-secondary);">True Rookie Rate</div>
+                    <div style="font-size: var(--text-xs); color: var(--color-text-muted);">Helt nya av totalt</div>
+                </div>
+            </div>
+
+            <?php if (!empty($feederBreakdown['feeder_series'])): ?>
+            <h4 style="margin-bottom: var(--space-md);">Crossover-riders kom från:</h4>
+            <div class="feeder-sources" style="display: flex; flex-wrap: wrap; gap: var(--space-sm);">
+                <?php foreach ($feederBreakdown['feeder_series'] as $feeder): ?>
+                <div class="feeder-badge" style="display: inline-flex; align-items: center; gap: var(--space-xs); padding: var(--space-xs) var(--space-sm); background: var(--color-accent-light); border-radius: var(--radius-sm); font-size: var(--text-sm);">
+                    <span style="font-weight: var(--weight-semibold);"><?= htmlspecialchars($feeder['brand_name']) ?></span>
+                    <span style="background: var(--color-accent); color: white; padding: 2px 6px; border-radius: var(--radius-full); font-size: var(--text-xs);"><?= number_format($feeder['rider_count']) ?></span>
+                </div>
+                <?php endforeach; ?>
+            </div>
+            <?php endif; ?>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
 
 <!-- Retention Chart -->
 <div class="admin-card">
