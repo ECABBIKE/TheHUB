@@ -253,21 +253,28 @@ include __DIR__ . '/components/unified-layout.php';
             <i data-lucide="user-plus"></i>
         </div>
         <div class="metric-content">
-            <div class="metric-value"><?= number_format($kpis['new_riders'] ?? 0) ?></div>
-            <div class="metric-label">Nya riders</div>
-            <?php if ($comparison && isset($comparison['new_riders'])): ?>
-                <div class="metric-trend <?= $comparison['new_riders']['trend'] ?>">
-                    <i data-lucide="<?= $comparison['new_riders']['trend'] === 'up' ? 'trending-up' : 'trending-down' ?>"></i>
-                    <?= $comparison['new_riders']['difference_pct'] ?>%
-                </div>
-            <?php endif; ?>
-            <?php if ($feederBreakdown && $feederBreakdown['total_new'] > 0): ?>
+            <?php
+            // Om varumärke valt: visa "nya i varumärket" från feeder breakdown
+            // Annars: visa globala rookies från KPI
+            if ($feederBreakdown && $feederBreakdown['total_new'] > 0):
+            ?>
+                <div class="metric-value"><?= number_format($feederBreakdown['total_new']) ?></div>
+                <div class="metric-label">Nya i varumärket</div>
                 <div class="metric-breakdown" style="margin-top: var(--space-xs); font-size: var(--text-xs); color: var(--color-text-secondary);">
                     <span title="Helt nya - aldrig tävlat innan"><?= number_format($feederBreakdown['true_rookies']) ?> rookies</span>
                     <?php if ($feederBreakdown['crossover'] > 0): ?>
-                        + <span title="Kom från andra serier"><?= number_format($feederBreakdown['crossover']) ?> crossover</span>
+                        + <span title="Kom från andra varumärken"><?= number_format($feederBreakdown['crossover']) ?> crossover</span>
                     <?php endif; ?>
                 </div>
+            <?php else: ?>
+                <div class="metric-value"><?= number_format($kpis['new_riders'] ?? 0) ?></div>
+                <div class="metric-label">Nya riders (rookies)</div>
+                <?php if ($comparison && isset($comparison['new_riders'])): ?>
+                    <div class="metric-trend <?= $comparison['new_riders']['trend'] ?>">
+                        <i data-lucide="<?= $comparison['new_riders']['trend'] === 'up' ? 'trending-up' : 'trending-down' ?>"></i>
+                        <?= $comparison['new_riders']['difference_pct'] ?>%
+                    </div>
+                <?php endif; ?>
             <?php endif; ?>
         </div>
     </div>
