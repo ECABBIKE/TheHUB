@@ -7,12 +7,12 @@
 /* DEFAULT - Uses Light Mode colors for consistency across all themes */
 :root,
 html[data-theme="dark"] {
-  /* ===== BAKGRUNDER - Clean Gray Base (same as light) ===== */
-  --color-bg-page: #ebeced;
-  --color-bg-surface: #ebeced;
-  --color-bg-card: #ffffff;
-  --color-bg-elevated: #ffffff;
-  --color-bg-sunken: #e2e3e5;
+  /* ===== BAKGRUNDER - Clean Light Base (same as light) ===== */
+  --color-bg-page: #F9F9F9;
+  --color-bg-surface: #FFFFFF;
+  --color-bg-card: #FFFFFF;
+  --color-bg-elevated: #FFFFFF;
+  --color-bg-sunken: #F0F0F0;
   --color-bg-hover: rgba(0, 102, 204, 0.04);
   --color-bg-active: rgba(0, 102, 204, 0.08);
 
@@ -81,12 +81,12 @@ html[data-theme="dark"] {
    LIGHT MODE - Samma visuella stil
    ============================================ */
 html[data-theme="light"] {
-  /* ===== BAKGRUNDER - Clean Gray Base ===== */
-  --color-bg-page: #ebeced;
-  --color-bg-surface: #ebeced;
-  --color-bg-card: #ffffff;
-  --color-bg-elevated: #ffffff;
-  --color-bg-sunken: #e2e3e5;
+  /* ===== BAKGRUNDER - Clean Light Base ===== */
+  --color-bg-page: #F9F9F9;
+  --color-bg-surface: #FFFFFF;
+  --color-bg-card: #FFFFFF;
+  --color-bg-elevated: #FFFFFF;
+  --color-bg-sunken: #F0F0F0;
   --color-bg-hover: rgba(0, 102, 204, 0.04);
   --color-bg-active: rgba(0, 102, 204, 0.08);
 
