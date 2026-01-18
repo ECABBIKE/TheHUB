@@ -1621,7 +1621,7 @@ class KPICalculator {
         $stmt->execute($params);
         $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        // Fallback: om ingen förberäknad data, hitta rookies direkt
+        // Fallback: om ingen förberäknad data, hitta rookies via rider_yearly_stats
         if (empty($result)) {
             $stmt = $this->pdo->prepare("
                 SELECT
@@ -1631,14 +1631,15 @@ class KPICalculator {
                     COUNT(DISTINCT sp.rider_id) as rider_count
                 FROM series_participation sp
                 JOIN series s ON sp.series_id = s.id
-                JOIN riders r ON sp.rider_id = r.id
+                JOIN rider_yearly_stats rys ON sp.rider_id = rys.rider_id
+                    AND rys.season_year = sp.season_year
                 WHERE sp.season_year = ?
-                  AND r.first_season = ?
+                  AND rys.is_rookie = 1
                   $brandFilter
                 GROUP BY s.id
                 ORDER BY rider_count DESC
             ");
-            $params = [$year, $year];
+            $params = [$year];
             if ($brandId !== null) {
                 $params[] = $brandId;
             }
