@@ -342,23 +342,37 @@ class KPICalculator {
     /**
      * Hämta totalt antal aktiva riders
      *
+     * När brandId anges: räknar alla unika riders som deltog i minst ett
+     * event för varumärket (samma logik som Event Participation).
+     * Utan brandId: räknar från rider_yearly_stats.
+     *
      * @param int $year Ar
      * @param int|null $brandId Filtrera pa varumarke
      * @return int Antal aktiva riders
      */
     public function getTotalActiveRiders(int $year, ?int $brandId = null): int {
-        $brandJoin = $brandId !== null ? "JOIN series s ON rys.primary_series_id = s.id" : "";
-        $brandFilter = $brandId !== null ? "AND s.brand_id = ?" : "";
+        if ($brandId !== null) {
+            // Räkna alla unika deltagare i events för varumärket
+            // Samma logik som Event Participation för att få konsistenta siffror
+            $stmt = $this->pdo->prepare("
+                SELECT COUNT(DISTINCT r.cyclist_id)
+                FROM results r
+                JOIN events e ON e.id = r.event_id
+                JOIN series_events se ON se.event_id = e.id
+                JOIN series s ON s.id = se.series_id
+                WHERE YEAR(e.date) = ?
+                AND s.brand_id = ?
+            ");
+            $stmt->execute([$year, $brandId]);
+            return (int)$stmt->fetchColumn();
+        }
 
+        // Utan brand: använd aggregerad data
         $stmt = $this->pdo->prepare("
             SELECT COUNT(*) FROM rider_yearly_stats rys
-            $brandJoin
             WHERE rys.season_year = ?
-            $brandFilter
         ");
-        $params = [$year];
-        if ($brandId !== null) $params[] = $brandId;
-        $stmt->execute($params);
+        $stmt->execute([$year]);
         return (int)$stmt->fetchColumn();
     }
 
@@ -381,23 +395,47 @@ class KPICalculator {
     /**
      * Hamta retained riders count
      *
+     * När brandId anges: räknar riders som deltog i varumärkets events
+     * både i år och förra året (återkommande till varumärket).
+     *
      * @param int $year Ar
      * @param int|null $brandId Filtrera pa varumarke
      * @return int Antal
      */
     public function getRetainedRidersCount(int $year, ?int $brandId = null): int {
-        $brandJoin = $brandId !== null ? "JOIN series s ON rys.primary_series_id = s.id" : "";
-        $brandFilter = $brandId !== null ? "AND s.brand_id = ?" : "";
+        if ($brandId !== null) {
+            // Riders som deltog i varumärket både i år och förra året
+            $stmt = $this->pdo->prepare("
+                SELECT COUNT(DISTINCT current_year.cyclist_id)
+                FROM (
+                    SELECT DISTINCT r.cyclist_id
+                    FROM results r
+                    JOIN events e ON e.id = r.event_id
+                    JOIN series_events se ON se.event_id = e.id
+                    JOIN series s ON s.id = se.series_id
+                    WHERE YEAR(e.date) = ?
+                    AND s.brand_id = ?
+                ) current_year
+                INNER JOIN (
+                    SELECT DISTINCT r.cyclist_id
+                    FROM results r
+                    JOIN events e ON e.id = r.event_id
+                    JOIN series_events se ON se.event_id = e.id
+                    JOIN series s ON s.id = se.series_id
+                    WHERE YEAR(e.date) = ?
+                    AND s.brand_id = ?
+                ) previous_year ON current_year.cyclist_id = previous_year.cyclist_id
+            ");
+            $stmt->execute([$year, $brandId, $year - 1, $brandId]);
+            return (int)$stmt->fetchColumn();
+        }
 
+        // Utan brand: använd aggregerad data
         $stmt = $this->pdo->prepare("
             SELECT COUNT(*) FROM rider_yearly_stats rys
-            $brandJoin
             WHERE rys.season_year = ? AND rys.is_retained = 1
-            $brandFilter
         ");
-        $params = [$year];
-        if ($brandId !== null) $params[] = $brandId;
-        $stmt->execute($params);
+        $stmt->execute([$year]);
         return (int)$stmt->fetchColumn();
     }
 
