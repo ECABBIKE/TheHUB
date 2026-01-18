@@ -87,8 +87,8 @@ html[data-theme="light"] {
   --color-bg-card: #ffffff;
   --color-bg-elevated: #ffffff;
   --color-bg-sunken: #e2e3e5;
-  --color-bg-hover: rgba(55, 212, 214, 0.04);
-  --color-bg-active: rgba(55, 212, 214, 0.08);
+  --color-bg-hover: rgba(0, 102, 204, 0.04);
+  --color-bg-active: rgba(0, 102, 204, 0.08);
 
   /* Glass morphism backgrounds */
   --color-bg-glass: rgba(255, 255, 255, 0.8);

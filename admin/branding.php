@@ -148,33 +148,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 }
 
 // Define color groups for display - MUST match theme.css values exactly!
+// Updated 2026-01-18: Unified colors - same for both dark and light (light theme always)
 $colorGroups = [
     'Bakgrunder' => [
-        'bg-page' => ['label' => 'Sidbakgrund', 'dark' => '#0b131e', 'light' => '#f8f9fa'],
-        'bg-surface' => ['label' => 'Ytor (kort, modals)', 'dark' => '#0d1520', 'light' => '#ffffff'],
-        'bg-card' => ['label' => 'Kort', 'dark' => '#0e1621', 'light' => '#ffffff'],
-        'bg-sunken' => ['label' => 'Nedsänkta ytor', 'dark' => '#06080e', 'light' => '#f0f2f5'],
+        'bg-page' => ['label' => 'Sidbakgrund', 'dark' => '#ebeced', 'light' => '#ebeced'],
+        'bg-surface' => ['label' => 'Ytor (kort, modals)', 'dark' => '#ebeced', 'light' => '#ebeced'],
+        'bg-card' => ['label' => 'Kort', 'dark' => '#ffffff', 'light' => '#ffffff'],
+        'bg-sunken' => ['label' => 'Nedsänkta ytor', 'dark' => '#e2e3e5', 'light' => '#e2e3e5'],
     ],
     'Text' => [
-        'text-primary' => ['label' => 'Primär text', 'dark' => '#f8f2f0', 'light' => '#0b131e'],
-        'text-secondary' => ['label' => 'Sekundär text', 'dark' => '#c7cfdd', 'light' => '#495057'],
-        'text-tertiary' => ['label' => 'Tertiär text', 'dark' => '#9ca3af', 'light' => '#6c757d'],
-        'text-muted' => ['label' => 'Dämpad text', 'dark' => '#868fa2', 'light' => '#868e96'],
+        'text-primary' => ['label' => 'Primär text', 'dark' => '#0b131e', 'light' => '#0b131e'],
+        'text-secondary' => ['label' => 'Sekundär text', 'dark' => '#495057', 'light' => '#495057'],
+        'text-tertiary' => ['label' => 'Tertiär text', 'dark' => '#6c757d', 'light' => '#6c757d'],
+        'text-muted' => ['label' => 'Dämpad text', 'dark' => '#868e96', 'light' => '#868e96'],
     ],
     'Accent & Knappar' => [
-        'accent' => ['label' => 'Accentfärg', 'dark' => '#37d4d6', 'light' => '#2bc4c6'],
-        'accent-hover' => ['label' => 'Accent hover', 'dark' => '#4ae0e2', 'light' => '#37d4d6'],
-        'accent-light' => ['label' => 'Accent ljus', 'dark' => 'rgba(55, 212, 214, 0.15)', 'light' => 'rgba(55, 212, 214, 0.1)'],
+        'accent' => ['label' => 'Accentfärg', 'dark' => '#0066CC', 'light' => '#0066CC'],
+        'accent-hover' => ['label' => 'Accent hover', 'dark' => '#0052A3', 'light' => '#0052A3'],
+        'accent-light' => ['label' => 'Accent ljus', 'dark' => 'rgba(0, 102, 204, 0.08)', 'light' => 'rgba(0, 102, 204, 0.08)'],
     ],
     'Status' => [
-        'success' => ['label' => 'Framgång', 'dark' => '#10b981', 'light' => '#059669'],
-        'warning' => ['label' => 'Varning', 'dark' => '#fbbf24', 'light' => '#d97706'],
-        'error' => ['label' => 'Fel', 'dark' => '#ef4444', 'light' => '#dc2626'],
-        'info' => ['label' => 'Info', 'dark' => '#38bdf8', 'light' => '#0284c7'],
+        'success' => ['label' => 'Framgång', 'dark' => '#059669', 'light' => '#059669'],
+        'warning' => ['label' => 'Varning', 'dark' => '#d97706', 'light' => '#d97706'],
+        'error' => ['label' => 'Fel', 'dark' => '#dc2626', 'light' => '#dc2626'],
+        'info' => ['label' => 'Info', 'dark' => '#0284c7', 'light' => '#0284c7'],
     ],
     'Kanter' => [
-        'border' => ['label' => 'Kant', 'dark' => 'rgba(55, 212, 214, 0.2)', 'light' => 'rgba(55, 212, 214, 0.15)'],
-        'border-strong' => ['label' => 'Stark kant', 'dark' => 'rgba(55, 212, 214, 0.3)', 'light' => 'rgba(55, 212, 214, 0.25)'],
+        'border' => ['label' => 'Kant', 'dark' => 'rgba(0, 0, 0, 0.1)', 'light' => 'rgba(0, 0, 0, 0.1)'],
+        'border-strong' => ['label' => 'Stark kant', 'dark' => 'rgba(0, 0, 0, 0.15)', 'light' => 'rgba(0, 0, 0, 0.15)'],
     ],
 ];
 
@@ -451,6 +452,85 @@ include __DIR__ . '/components/unified-layout.php';
     to { opacity: 1; }
 }
 
+/* Default Colors Reference Section */
+.default-colors-reference {
+    background: var(--color-bg-sunken);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+}
+
+.default-colors-toggle {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    padding: var(--space-md);
+    cursor: pointer;
+    font-weight: var(--weight-medium);
+    color: var(--color-text-secondary);
+    list-style: none;
+    transition: background 0.15s ease;
+}
+
+.default-colors-toggle::-webkit-details-marker {
+    display: none;
+}
+
+.default-colors-toggle:hover {
+    background: var(--color-bg-hover);
+    color: var(--color-text-primary);
+}
+
+.default-colors-toggle .toggle-icon {
+    margin-left: auto;
+    transition: transform 0.2s ease;
+}
+
+.default-colors-reference[open] .toggle-icon {
+    transform: rotate(180deg);
+}
+
+.default-colors-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: var(--space-md);
+    padding: var(--space-md);
+    padding-top: 0;
+    border-top: 1px solid var(--color-border);
+}
+
+.default-color-group h4 {
+    font-size: var(--text-sm);
+    font-weight: var(--weight-semibold);
+    color: var(--color-text-primary);
+    margin: 0 0 var(--space-xs);
+}
+
+.default-color-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    font-size: var(--text-xs);
+    color: var(--color-text-secondary);
+    padding: var(--space-2xs) 0;
+}
+
+.default-swatch {
+    width: 20px;
+    height: 20px;
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--color-border);
+    flex-shrink: 0;
+}
+
+.default-color-row code {
+    font-family: var(--font-mono);
+    font-size: var(--text-xs);
+    background: var(--color-bg-card);
+    padding: 1px 4px;
+    border-radius: 3px;
+}
+
 </style>
 
 <?php if ($message): ?>
@@ -692,14 +772,76 @@ include __DIR__ . '/components/unified-layout.php';
                 </div>
             </div>
 
-            <div class="info-box mt-lg">
-                <p>
-                    <i data-lucide="info"></i>
-                    <span>
-                        <strong>Tips:</strong> Mörkt tema är standard. Ljust tema aktiveras via användarinställningar eller systeminställning.
-                    </span>
-                </p>
-            </div>
+            <!-- Default Colors Reference -->
+            <details class="default-colors-reference mt-lg">
+                <summary class="default-colors-toggle">
+                    <i data-lucide="palette"></i>
+                    <span>Visa standardfärger (referens)</span>
+                    <i data-lucide="chevron-down" class="toggle-icon"></i>
+                </summary>
+                <div class="default-colors-grid">
+                    <div class="default-color-group">
+                        <h4>Bakgrunder</h4>
+                        <div class="default-color-row">
+                            <span class="default-swatch" style="background: #ebeced;"></span>
+                            <span>Sidbakgrund: <code>#ebeced</code></span>
+                        </div>
+                        <div class="default-color-row">
+                            <span class="default-swatch" style="background: #ffffff;"></span>
+                            <span>Kort: <code>#ffffff</code></span>
+                        </div>
+                        <div class="default-color-row">
+                            <span class="default-swatch" style="background: #e2e3e5;"></span>
+                            <span>Nedsänkt: <code>#e2e3e5</code></span>
+                        </div>
+                    </div>
+                    <div class="default-color-group">
+                        <h4>Text</h4>
+                        <div class="default-color-row">
+                            <span class="default-swatch" style="background: #0b131e;"></span>
+                            <span>Primär: <code>#0b131e</code></span>
+                        </div>
+                        <div class="default-color-row">
+                            <span class="default-swatch" style="background: #495057;"></span>
+                            <span>Sekundär: <code>#495057</code></span>
+                        </div>
+                        <div class="default-color-row">
+                            <span class="default-swatch" style="background: #868e96;"></span>
+                            <span>Dämpad: <code>#868e96</code></span>
+                        </div>
+                    </div>
+                    <div class="default-color-group">
+                        <h4>Accent & Knappar</h4>
+                        <div class="default-color-row">
+                            <span class="default-swatch" style="background: #0066CC;"></span>
+                            <span>Accent: <code>#0066CC</code></span>
+                        </div>
+                        <div class="default-color-row">
+                            <span class="default-swatch" style="background: #0052A3;"></span>
+                            <span>Hover: <code>#0052A3</code></span>
+                        </div>
+                    </div>
+                    <div class="default-color-group">
+                        <h4>Status</h4>
+                        <div class="default-color-row">
+                            <span class="default-swatch" style="background: #059669;"></span>
+                            <span>Framgång: <code>#059669</code></span>
+                        </div>
+                        <div class="default-color-row">
+                            <span class="default-swatch" style="background: #d97706;"></span>
+                            <span>Varning: <code>#d97706</code></span>
+                        </div>
+                        <div class="default-color-row">
+                            <span class="default-swatch" style="background: #dc2626;"></span>
+                            <span>Fel: <code>#dc2626</code></span>
+                        </div>
+                        <div class="default-color-row">
+                            <span class="default-swatch" style="background: #0284c7;"></span>
+                            <span>Info: <code>#0284c7</code></span>
+                        </div>
+                    </div>
+                </div>
+            </details>
         </div>
     </div>
 
