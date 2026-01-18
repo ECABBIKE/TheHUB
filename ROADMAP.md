@@ -1,6 +1,6 @@
 # TheHUB - Development Roadmap
 
-> Senast uppdaterad: 2026-01-16
+> Senast uppdaterad: 2026-01-18
 >
 > **OBS:** All projektinformation ska dokumenteras i denna fil!
 
@@ -528,6 +528,39 @@ HUB_ROOT, HUB_URL, ROOT_PATH, INCLUDES_PATH
 ---
 
 # CHANGELOG
+
+### 2026-01-18 (Analytics Consistency & Data Fixes)
+- **KRITISK FIX: Korrekt brands-tabell**
+  - KPICalculator använde fel tabell (`brands` istället för `series_brands`)
+  - Orsakade att felaktiga varumärken ("Svenska Cykelförbundet", "GravitySeries") visades
+  - Fixat alla JOINs och SELECTs till `series_brands`
+
+- **KRITISK FIX: Rookie-rapporter använder faktiskt deltagande**
+  - Tidigare: Filtrerade på `primary_series_id` (bara riders vars huvudserie matchade)
+  - Nu: Filtrerar på faktiskt deltagande via `results`-tabellen
+  - Fixade metoder:
+    - `getRookiesList()` - Komplett refactoring
+    - `getRookieAgeDistribution()` - Ny subquery-filter
+    - `getRookieAverageAge()` - Ny subquery-filter
+    - `getRookieGenderDistribution()` - Ny subquery-filter
+    - `getClubsWithMostRookies()` - Ny subquery-filter
+
+- **Ny metod: getSeriesParticipants()**
+  - Räknar unika deltagare i en serie via results-tabellen
+  - Används för att visa korrekt "Totalt aktiva" när serie är vald
+
+- **Fix: Cross-Participation NULL handling**
+  - Ändrat från `s2.brand_id != ?` till `(s2.brand_id IS NULL OR s2.brand_id != ?)`
+  - NULL != X returnerar NULL i SQL, inte true
+  - Nu räknas serier utan brand korrekt som "andra varumärken"
+
+- **Fix: Rookies-rapport total counts**
+  - `total_rookies` beräknas nu från filtrerad lista
+  - `total_riders` använder `getSeriesParticipants()` när serie vald
+
+- **Resultat: Konsistenta siffror**
+  - Dashboard och Rookies-rapport visar nu samma antal vid samma filter
+  - Exempel: Swecup Enduro 2025 visar nu korrekt 143 rookies på båda ställen
 
 ### 2026-01-16 (Analytics v3.2 - Event Participation)
 - **Steg 16 KLAR: Event Participation Analysis**
