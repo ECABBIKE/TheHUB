@@ -1278,6 +1278,197 @@ class KPICalculator {
     }
 
     /**
+     * Hämta rookies för ett varumärke (brand)
+     * Räknar alla som är is_rookie=1 OCH deltog i någon serie under varumärket
+     */
+    public function getRookiesListByBrand(int $year, int $brandId): array {
+        $stmt = $this->pdo->prepare("
+            SELECT DISTINCT
+                r.id as rider_id,
+                r.firstname,
+                r.lastname,
+                CASE
+                    WHEN r.birth_year IS NOT NULL AND r.birth_year > 1900
+                    THEN ? - r.birth_year
+                    ELSE NULL
+                END as age,
+                r.birth_year,
+                r.gender,
+                c.id as club_id,
+                c.name as club_name,
+                rys.total_events,
+                rys.total_points,
+                rys.best_position,
+                rys.primary_discipline,
+                rys.primary_series_id,
+                ps.name as series_name
+            FROM rider_yearly_stats rys
+            JOIN riders r ON rys.rider_id = r.id
+            LEFT JOIN clubs c ON r.club_id = c.id
+            LEFT JOIN series ps ON rys.primary_series_id = ps.id
+            WHERE rys.season_year = ?
+              AND rys.is_rookie = 1
+              AND rys.rider_id IN (
+                  SELECT DISTINCT res.cyclist_id
+                  FROM results res
+                  JOIN events e ON e.id = res.event_id
+                  JOIN series_events se ON se.event_id = e.id
+                  JOIN series s ON s.id = se.series_id
+                  WHERE s.brand_id = ?
+                  AND YEAR(e.date) = ?
+              )
+            ORDER BY r.lastname, r.firstname
+        ");
+        $stmt->execute([$year, $year, $brandId, $year]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Hämta genomsnittsålder för rookies i ett varumärke
+     */
+    public function getRookieAverageAgeByBrand(int $year, int $brandId): float {
+        $stmt = $this->pdo->prepare("
+            SELECT AVG(? - r.birth_year) as avg_age
+            FROM rider_yearly_stats rys
+            JOIN riders r ON rys.rider_id = r.id
+            WHERE rys.season_year = ?
+              AND rys.is_rookie = 1
+              AND r.birth_year IS NOT NULL
+              AND r.birth_year > 1900
+              AND rys.rider_id IN (
+                  SELECT DISTINCT res.cyclist_id
+                  FROM results res
+                  JOIN events e ON e.id = res.event_id
+                  JOIN series_events se ON se.event_id = e.id
+                  JOIN series s ON s.id = se.series_id
+                  WHERE s.brand_id = ?
+                  AND YEAR(e.date) = ?
+              )
+        ");
+        $stmt->execute([$year, $year, $brandId, $year]);
+        return round((float)($stmt->fetchColumn() ?: 0), 1);
+    }
+
+    /**
+     * Hämta könsfördelning för rookies i ett varumärke
+     */
+    public function getRookieGenderDistributionByBrand(int $year, int $brandId): array {
+        $stmt = $this->pdo->prepare("
+            SELECT
+                COALESCE(r.gender, 'unknown') as gender,
+                COUNT(*) as count
+            FROM rider_yearly_stats rys
+            JOIN riders r ON rys.rider_id = r.id
+            WHERE rys.season_year = ?
+              AND rys.is_rookie = 1
+              AND rys.rider_id IN (
+                  SELECT DISTINCT res.cyclist_id
+                  FROM results res
+                  JOIN events e ON e.id = res.event_id
+                  JOIN series_events se ON se.event_id = e.id
+                  JOIN series s ON s.id = se.series_id
+                  WHERE s.brand_id = ?
+                  AND YEAR(e.date) = ?
+              )
+            GROUP BY COALESCE(r.gender, 'unknown')
+        ");
+        $stmt->execute([$year, $brandId, $year]);
+
+        $result = ['M' => 0, 'F' => 0, 'unknown' => 0];
+        while ($row = $stmt->fetch()) {
+            $g = $row['gender'];
+            if ($g === 'M' || $g === 'male' || $g === 'man') {
+                $result['M'] += $row['count'];
+            } elseif ($g === 'F' || $g === 'female' || $g === 'kvinna' || $g === 'woman') {
+                $result['F'] += $row['count'];
+            } else {
+                $result['unknown'] += $row['count'];
+            }
+        }
+        return $result;
+    }
+
+    /**
+     * Hämta åldersfördelning för rookies i ett varumärke
+     */
+    public function getRookieAgeDistributionByBrand(int $year, int $brandId): array {
+        $stmt = $this->pdo->prepare("
+            SELECT
+                CASE
+                    WHEN ? - r.birth_year <= 9 THEN '5-9'
+                    WHEN ? - r.birth_year BETWEEN 10 AND 12 THEN '10-12'
+                    WHEN ? - r.birth_year BETWEEN 13 AND 14 THEN '13-14'
+                    WHEN ? - r.birth_year BETWEEN 15 AND 16 THEN '15-16'
+                    WHEN ? - r.birth_year BETWEEN 17 AND 18 THEN '17-18'
+                    WHEN ? - r.birth_year BETWEEN 19 AND 30 THEN '19-30'
+                    WHEN ? - r.birth_year BETWEEN 31 AND 35 THEN '31-35'
+                    WHEN ? - r.birth_year BETWEEN 36 AND 45 THEN '36-45'
+                    WHEN ? - r.birth_year BETWEEN 46 AND 50 THEN '46-50'
+                    WHEN ? - r.birth_year > 50 THEN '50+'
+                    ELSE 'Okand'
+                END as age_group,
+                COUNT(*) as count
+            FROM rider_yearly_stats rys
+            JOIN riders r ON rys.rider_id = r.id
+            WHERE rys.season_year = ?
+              AND rys.is_rookie = 1
+              AND r.birth_year IS NOT NULL
+              AND r.birth_year > 1900
+              AND rys.rider_id IN (
+                  SELECT DISTINCT res.cyclist_id
+                  FROM results res
+                  JOIN events e ON e.id = res.event_id
+                  JOIN series_events se ON se.event_id = e.id
+                  JOIN series s ON s.id = se.series_id
+                  WHERE s.brand_id = ?
+                  AND YEAR(e.date) = ?
+              )
+            GROUP BY age_group
+            ORDER BY
+                CASE age_group
+                    WHEN '5-9' THEN 1 WHEN '10-12' THEN 2 WHEN '13-14' THEN 3
+                    WHEN '15-16' THEN 4 WHEN '17-18' THEN 5 WHEN '19-30' THEN 6
+                    WHEN '31-35' THEN 7 WHEN '36-45' THEN 8 WHEN '46-50' THEN 9
+                    WHEN '50+' THEN 10 ELSE 11
+                END
+        ");
+        $stmt->execute([$year, $year, $year, $year, $year, $year, $year, $year, $year, $year, $year, $brandId, $year]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
+     * Hämta klubbar med flest rookies för ett varumärke
+     */
+    public function getClubsWithMostRookiesByBrand(int $year, int $limit, int $brandId): array {
+        $stmt = $this->pdo->prepare("
+            SELECT
+                c.id as club_id,
+                c.name as club_name,
+                c.city,
+                COUNT(*) as rookie_count
+            FROM rider_yearly_stats rys
+            JOIN riders r ON rys.rider_id = r.id
+            JOIN clubs c ON r.club_id = c.id
+            WHERE rys.season_year = ?
+              AND rys.is_rookie = 1
+              AND rys.rider_id IN (
+                  SELECT DISTINCT res.cyclist_id
+                  FROM results res
+                  JOIN events e ON e.id = res.event_id
+                  JOIN series_events se ON se.event_id = e.id
+                  JOIN series s ON s.id = se.series_id
+                  WHERE s.brand_id = ?
+                  AND YEAR(e.date) = ?
+              )
+            GROUP BY c.id
+            ORDER BY rookie_count DESC
+            LIMIT ?
+        ");
+        $stmt->execute([$year, $brandId, $year, $limit]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    }
+
+    /**
      * Hamta serier som har rookies for ett ar
      *
      * @param int $year Ar
