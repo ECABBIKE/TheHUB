@@ -7,6 +7,11 @@
  *
  * @package TheHUB Analytics
  */
+
+// Timeout for initial page load (30 seconds max)
+set_time_limit(30);
+ini_set('max_execution_time', 30);
+
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../includes/auth.php';
 require_admin();
@@ -145,19 +150,32 @@ if (isset($_GET['run_cohort'])) {
     exit;
 }
 
-// Hamta tillgangliga ar
+// Hamta tillgangliga ar med timeout och felhantering
 global $pdo;
 $years = [];
+$error = null;
 try {
+    // Set query timeout (5 seconds)
+    $pdo->setAttribute(PDO::ATTR_TIMEOUT, 5);
+
     $stmt = $pdo->query("
         SELECT DISTINCT YEAR(date) as year
         FROM events
         WHERE date IS NOT NULL
         ORDER BY year ASC
+        LIMIT 50
     ");
     $years = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+    if (empty($years)) {
+        $error = "Inga år hittades i events-tabellen";
+        // Fallback
+        $years = range(2015, (int)date('Y'));
+    }
 } catch (Exception $e) {
-    $error = $e->getMessage();
+    $error = "Databasfel: " . $e->getMessage();
+    // Fallback så sidan inte kraschar
+    $years = range(2015, (int)date('Y'));
 }
 
 $page_title = 'Populate Historical Data';
@@ -379,7 +397,14 @@ async function processYear(year) {
 
     try {
         const url = `/admin/analytics-populate.php?run_year=${year}${forceMode ? '&force=1' : ''}`;
-        const response = await fetch(url);
+
+        // Add timeout (2 minutes)
+        const controller = new AbortController();
+        const timeoutId = setTimeout(() => controller.abort(), 120000);
+
+        const response = await fetch(url, { signal: controller.signal });
+        clearTimeout(timeoutId);
+
         const data = await response.json();
 
         if (data.error) {
@@ -401,8 +426,13 @@ async function processYear(year) {
         return true;
 
     } catch (e) {
-        setYearStatus(year, 'error', 'Natverksfel');
-        log(`${year}: FEL - ${e.message}`);
+        if (e.name === 'AbortError') {
+            setYearStatus(year, 'error', 'Timeout (2 min)');
+            log(`${year}: FEL - Timeout efter 2 minuter`);
+        } else {
+            setYearStatus(year, 'error', 'Natverksfel');
+            log(`${year}: FEL - ${e.message}`);
+        }
         return false;
     }
 }
