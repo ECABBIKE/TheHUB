@@ -1597,6 +1597,7 @@ class KPICalculator {
     public function getEntryPointDistribution(int $year, ?int $brandId = null): array {
         $brandFilter = $brandId !== null ? "AND s.brand_id = ?" : "";
 
+        // Försök först med förberäknad is_entry_series data
         $stmt = $this->pdo->prepare("
             SELECT
                 s.id as series_id,
@@ -1618,7 +1619,34 @@ class KPICalculator {
         }
 
         $stmt->execute($params);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Fallback: om ingen förberäknad data, hitta rookies direkt
+        if (empty($result)) {
+            $stmt = $this->pdo->prepare("
+                SELECT
+                    s.id as series_id,
+                    s.name as series_name,
+                    COALESCE(s.series_level, 'unknown') as series_level,
+                    COUNT(DISTINCT sp.rider_id) as rider_count
+                FROM series_participation sp
+                JOIN series s ON sp.series_id = s.id
+                JOIN riders r ON sp.rider_id = r.id
+                WHERE sp.season_year = ?
+                  AND r.first_season = ?
+                  $brandFilter
+                GROUP BY s.id
+                ORDER BY rider_count DESC
+            ");
+            $params = [$year, $year];
+            if ($brandId !== null) {
+                $params[] = $brandId;
+            }
+            $stmt->execute($params);
+            $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        }
+
+        return $result;
     }
 
     /**
@@ -1632,6 +1660,7 @@ class KPICalculator {
     public function calculateFeederMatrix(int $year, ?int $brandId = null): array {
         $brandFilter = $brandId !== null ? "AND (s_from.brand_id = ? OR s_to.brand_id = ?)" : "";
 
+        // Försök först med förberäknad series_crossover data
         $stmt = $this->pdo->prepare("
             SELECT
                 sc.from_series_id,
@@ -1658,7 +1687,46 @@ class KPICalculator {
         }
 
         $stmt->execute($params);
-        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Fallback: om ingen förberäknad data, beräkna direkt från series_participation
+        if (empty($result)) {
+            $brandFilter2 = $brandId !== null ? "AND (s1.brand_id = ? OR s2.brand_id = ?)" : "";
+
+            $stmt = $this->pdo->prepare("
+                SELECT
+                    sp1.series_id as from_series_id,
+                    s1.name as from_name,
+                    COALESCE(s1.series_level, 'unknown') as from_level,
+                    sp2.series_id as to_series_id,
+                    s2.name as to_name,
+                    COALESCE(s2.series_level, 'unknown') as to_level,
+                    COUNT(DISTINCT sp1.rider_id) as flow_count
+                FROM series_participation sp1
+                JOIN series_participation sp2 ON sp1.rider_id = sp2.rider_id
+                    AND sp1.season_year = sp2.season_year
+                    AND sp1.series_id < sp2.series_id
+                JOIN series s1 ON sp1.series_id = s1.id
+                JOIN series s2 ON sp2.series_id = s2.id
+                WHERE sp1.season_year = ?
+                $brandFilter2
+                GROUP BY sp1.series_id, sp2.series_id
+                HAVING flow_count > 0
+                ORDER BY flow_count DESC
+                LIMIT 50
+            ");
+
+            $params = [$year];
+            if ($brandId !== null) {
+                $params[] = $brandId;
+                $params[] = $brandId;
+            }
+
+            $stmt->execute($params);
+            $result = $stmt->fetchAll(PDO::FETCH_ASSOC);
+        }
+
+        return $result;
     }
 
     /**
