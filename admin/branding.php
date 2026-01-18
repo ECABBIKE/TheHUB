@@ -151,10 +151,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // Updated 2026-01-18: Unified colors - same for both dark and light (light theme always)
 $colorGroups = [
     'Bakgrunder' => [
-        'bg-page' => ['label' => 'Sidbakgrund', 'dark' => '#ebeced', 'light' => '#ebeced'],
-        'bg-surface' => ['label' => 'Ytor (kort, modals)', 'dark' => '#ebeced', 'light' => '#ebeced'],
-        'bg-card' => ['label' => 'Kort', 'dark' => '#ffffff', 'light' => '#ffffff'],
-        'bg-sunken' => ['label' => 'Nedsänkta ytor', 'dark' => '#e2e3e5', 'light' => '#e2e3e5'],
+        'bg-page' => ['label' => 'Sidbakgrund', 'dark' => '#F9F9F9', 'light' => '#F9F9F9'],
+        'bg-surface' => ['label' => 'Ytor (header, menyer)', 'dark' => '#FFFFFF', 'light' => '#FFFFFF'],
+        'bg-card' => ['label' => 'Kort', 'dark' => '#FFFFFF', 'light' => '#FFFFFF'],
+        'bg-sunken' => ['label' => 'Nedsänkta ytor', 'dark' => '#F0F0F0', 'light' => '#F0F0F0'],
     ],
     'Text' => [
         'text-primary' => ['label' => 'Primär text', 'dark' => '#0b131e', 'light' => '#0b131e'],
@@ -783,20 +783,20 @@ include __DIR__ . '/components/unified-layout.php';
                     <div class="default-color-group">
                         <h4>Bakgrunder</h4>
                         <div class="default-color-row">
-                            <span class="default-swatch" style="background: #ebeced;"></span>
-                            <span>Sidbakgrund: <code>#ebeced</code></span>
+                            <span class="default-swatch" style="background: #F9F9F9;"></span>
+                            <span>Sidbakgrund: <code>#F9F9F9</code></span>
                         </div>
                         <div class="default-color-row">
-                            <span class="default-swatch" style="background: #ebeced;"></span>
-                            <span>Ytor (menyer): <code>#ebeced</code></span>
+                            <span class="default-swatch" style="background: #FFFFFF;"></span>
+                            <span>Ytor (menyer): <code>#FFFFFF</code></span>
                         </div>
                         <div class="default-color-row">
-                            <span class="default-swatch" style="background: #ffffff;"></span>
-                            <span>Kort: <code>#ffffff</code></span>
+                            <span class="default-swatch" style="background: #FFFFFF;"></span>
+                            <span>Kort: <code>#FFFFFF</code></span>
                         </div>
                         <div class="default-color-row">
-                            <span class="default-swatch" style="background: #e2e3e5;"></span>
-                            <span>Nedsänkt: <code>#e2e3e5</code></span>
+                            <span class="default-swatch" style="background: #F0F0F0;"></span>
+                            <span>Nedsänkt: <code>#F0F0F0</code></span>
                         </div>
                     </div>
                     <div class="default-color-group">
