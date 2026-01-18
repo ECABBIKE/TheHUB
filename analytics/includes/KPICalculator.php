@@ -408,6 +408,26 @@ class KPICalculator {
     }
 
     /**
+     * Hämta antal deltagare för en specifik serie
+     *
+     * @param int $year År
+     * @param int $seriesId Serie-ID
+     * @return int Antal unika deltagare
+     */
+    public function getSeriesParticipants(int $year, int $seriesId): int {
+        $stmt = $this->pdo->prepare("
+            SELECT COUNT(DISTINCT r.cyclist_id)
+            FROM results r
+            JOIN events e ON e.id = r.event_id
+            JOIN series_events se ON se.event_id = e.id
+            WHERE se.series_id = ?
+            AND YEAR(e.date) = ?
+        ");
+        $stmt->execute([$seriesId, $year]);
+        return (int)$stmt->fetchColumn();
+    }
+
+    /**
      * Berakna tillvaxtrate jamfort med forriga aret
      *
      * @param int $year Ar
@@ -1044,7 +1064,16 @@ class KPICalculator {
      * @return array Aldersgrupper med antal
      */
     public function getRookieAgeDistribution(int $year, ?int $seriesId = null): array {
-        $seriesFilter = $seriesId !== null ? " AND rys.primary_series_id = ?" : "";
+        $seriesFilter = $seriesId !== null ? "
+            AND rys.rider_id IN (
+                SELECT DISTINCT res.cyclist_id
+                FROM results res
+                JOIN events e ON e.id = res.event_id
+                JOIN series_events se ON se.event_id = e.id
+                WHERE se.series_id = ?
+                AND YEAR(e.date) = ?
+            )
+        " : "";
         $stmt = $this->pdo->prepare("
             SELECT
                 CASE
@@ -1085,7 +1114,10 @@ class KPICalculator {
                 END
         ");
         $params = [$year];
-        if ($seriesId !== null) $params[] = $seriesId;
+        if ($seriesId !== null) {
+            $params[] = $seriesId;
+            $params[] = $year;
+        }
         $stmt->execute($params);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
@@ -1167,41 +1199,78 @@ class KPICalculator {
      * @return array Lista med rookies
      */
     public function getRookiesList(int $year, ?int $seriesId = null): array {
-        $sql = "
-            SELECT
-                r.id as rider_id,
-                r.firstname,
-                r.lastname,
-                CASE
-                    WHEN r.birth_year IS NOT NULL AND r.birth_year > 1900
-                    THEN $year - r.birth_year
-                    ELSE NULL
-                END as age,
-                r.birth_year,
-                r.gender,
-                c.id as club_id,
-                c.name as club_name,
-                rys.total_events,
-                rys.total_points,
-                rys.best_position,
-                rys.primary_discipline,
-                rys.primary_series_id,
-                s.name as series_name
-            FROM rider_yearly_stats rys
-            JOIN riders r ON rys.rider_id = r.id
-            LEFT JOIN clubs c ON r.club_id = c.id
-            LEFT JOIN series s ON rys.primary_series_id = s.id
-            WHERE rys.season_year = ?
-              AND rys.is_rookie = 1
-        ";
-        $params = [$year];
-
         if ($seriesId !== null) {
-            $sql .= " AND rys.primary_series_id = ?";
-            $params[] = $seriesId;
+            // Med serie-filter: använd faktiskt deltagande via results-tabellen
+            $sql = "
+                SELECT DISTINCT
+                    r.id as rider_id,
+                    r.firstname,
+                    r.lastname,
+                    CASE
+                        WHEN r.birth_year IS NOT NULL AND r.birth_year > 1900
+                        THEN $year - r.birth_year
+                        ELSE NULL
+                    END as age,
+                    r.birth_year,
+                    r.gender,
+                    c.id as club_id,
+                    c.name as club_name,
+                    rys.total_events,
+                    rys.total_points,
+                    rys.best_position,
+                    rys.primary_discipline,
+                    rys.primary_series_id,
+                    s.name as series_name
+                FROM rider_yearly_stats rys
+                JOIN riders r ON rys.rider_id = r.id
+                LEFT JOIN clubs c ON r.club_id = c.id
+                LEFT JOIN series s ON rys.primary_series_id = s.id
+                WHERE rys.season_year = ?
+                  AND rys.is_rookie = 1
+                  AND rys.rider_id IN (
+                      -- Riders som faktiskt deltog i denna serie
+                      SELECT DISTINCT res.cyclist_id
+                      FROM results res
+                      JOIN events e ON e.id = res.event_id
+                      JOIN series_events se ON se.event_id = e.id
+                      WHERE se.series_id = ?
+                      AND YEAR(e.date) = ?
+                  )
+                ORDER BY r.lastname, r.firstname
+            ";
+            $params = [$year, $seriesId, $year];
+        } else {
+            // Utan serie-filter: hämta alla rookies
+            $sql = "
+                SELECT
+                    r.id as rider_id,
+                    r.firstname,
+                    r.lastname,
+                    CASE
+                        WHEN r.birth_year IS NOT NULL AND r.birth_year > 1900
+                        THEN $year - r.birth_year
+                        ELSE NULL
+                    END as age,
+                    r.birth_year,
+                    r.gender,
+                    c.id as club_id,
+                    c.name as club_name,
+                    rys.total_events,
+                    rys.total_points,
+                    rys.best_position,
+                    rys.primary_discipline,
+                    rys.primary_series_id,
+                    s.name as series_name
+                FROM rider_yearly_stats rys
+                JOIN riders r ON rys.rider_id = r.id
+                LEFT JOIN clubs c ON r.club_id = c.id
+                LEFT JOIN series s ON rys.primary_series_id = s.id
+                WHERE rys.season_year = ?
+                  AND rys.is_rookie = 1
+                ORDER BY r.lastname, r.firstname
+            ";
+            $params = [$year];
         }
-
-        $sql .= " ORDER BY r.lastname, r.firstname";
 
         $stmt = $this->pdo->prepare($sql);
         $stmt->execute($params);
@@ -1326,7 +1395,16 @@ class KPICalculator {
      * @return float Genomsnittsalder
      */
     public function getRookieAverageAge(int $year, ?int $seriesId = null): float {
-        $seriesFilter = $seriesId !== null ? " AND rys.primary_series_id = ?" : "";
+        $seriesFilter = $seriesId !== null ? "
+            AND rys.rider_id IN (
+                SELECT DISTINCT res.cyclist_id
+                FROM results res
+                JOIN events e ON e.id = res.event_id
+                JOIN series_events se ON se.event_id = e.id
+                WHERE se.series_id = ?
+                AND YEAR(e.date) = ?
+            )
+        " : "";
         $stmt = $this->pdo->prepare("
             SELECT AVG($year - r.birth_year) as avg_age
             FROM rider_yearly_stats rys
@@ -1338,7 +1416,10 @@ class KPICalculator {
               $seriesFilter
         ");
         $params = [$year];
-        if ($seriesId !== null) $params[] = $seriesId;
+        if ($seriesId !== null) {
+            $params[] = $seriesId;
+            $params[] = $year;
+        }
         $stmt->execute($params);
         return round((float)($stmt->fetchColumn() ?: 0), 1);
     }
@@ -1350,7 +1431,16 @@ class KPICalculator {
      * @return array ['M' => X, 'F' => Y, 'unknown' => Z]
      */
     public function getRookieGenderDistribution(int $year, ?int $seriesId = null): array {
-        $seriesFilter = $seriesId !== null ? " AND rys.primary_series_id = ?" : "";
+        $seriesFilter = $seriesId !== null ? "
+            AND rys.rider_id IN (
+                SELECT DISTINCT res.cyclist_id
+                FROM results res
+                JOIN events e ON e.id = res.event_id
+                JOIN series_events se ON se.event_id = e.id
+                WHERE se.series_id = ?
+                AND YEAR(e.date) = ?
+            )
+        " : "";
         $stmt = $this->pdo->prepare("
             SELECT
                 COALESCE(r.gender, 'unknown') as gender,
@@ -1363,7 +1453,10 @@ class KPICalculator {
             GROUP BY COALESCE(r.gender, 'unknown')
         ");
         $params = [$year];
-        if ($seriesId !== null) $params[] = $seriesId;
+        if ($seriesId !== null) {
+            $params[] = $seriesId;
+            $params[] = $year;
+        }
         $stmt->execute($params);
 
         $result = ['M' => 0, 'F' => 0, 'unknown' => 0];
@@ -1388,7 +1481,16 @@ class KPICalculator {
      * @return array Klubbar med rookie-antal
      */
     public function getClubsWithMostRookies(int $year, int $limit = 20, ?int $seriesId = null): array {
-        $seriesFilter = $seriesId !== null ? " AND rys.primary_series_id = ?" : "";
+        $seriesFilter = $seriesId !== null ? "
+            AND rys.rider_id IN (
+                SELECT DISTINCT res.cyclist_id
+                FROM results res
+                JOIN events e ON e.id = res.event_id
+                JOIN series_events se ON se.event_id = e.id
+                WHERE se.series_id = ?
+                AND YEAR(e.date) = ?
+            )
+        " : "";
         $stmt = $this->pdo->prepare("
             SELECT
                 c.id as club_id,
@@ -1406,7 +1508,10 @@ class KPICalculator {
             LIMIT ?
         ");
         $params = [$year];
-        if ($seriesId !== null) $params[] = $seriesId;
+        if ($seriesId !== null) {
+            $params[] = $seriesId;
+            $params[] = $year;
+        }
         $params[] = $limit;
         $stmt->execute($params);
         return $stmt->fetchAll(PDO::FETCH_ASSOC);

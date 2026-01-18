@@ -140,9 +140,15 @@ try {
             }
 
             $reportTitle = "Nya Deltagare (Rookies) $selectedYear" . $seriesName;
+
+            // Hämta listan först så vi kan räkna totaler från den
+            $rookieList = $kpiCalc->getRookiesList($selectedYear, $selectedSeries);
+
             $reportData = [
-                'total_rookies' => $kpiCalc->getNewRidersCount($selectedYear),
-                'total_riders' => $kpiCalc->getTotalActiveRiders($selectedYear),
+                'total_rookies' => count($rookieList),  // Räkna från listan
+                'total_riders' => $selectedSeries
+                    ? $kpiCalc->getSeriesParticipants($selectedYear, $selectedSeries)
+                    : $kpiCalc->getTotalActiveRiders($selectedYear),
                 'average_age' => $kpiCalc->getRookieAverageAge($selectedYear, $selectedSeries),
                 'gender' => $kpiCalc->getRookieGenderDistribution($selectedYear, $selectedSeries),
                 'ages' => $kpiCalc->getRookieAgeDistribution($selectedYear, $selectedSeries),
@@ -150,7 +156,7 @@ try {
                 'disciplines' => $kpiCalc->getRookieDisciplineParticipation($selectedYear, $selectedSeries),
                 'events' => $kpiCalc->getEventsWithMostRookies($selectedYear, 20, $selectedSeries),
                 'clubs' => $kpiCalc->getClubsWithMostRookies($selectedYear, 20, $selectedSeries),
-                'list' => $kpiCalc->getRookiesList($selectedYear, $selectedSeries),
+                'list' => $rookieList,
                 'series_filter' => $seriesWithRookies,
                 'trend' => $kpiCalc->getRookieTrend(5),
                 'age_trend' => $kpiCalc->getRookieAgeTrend(5)
