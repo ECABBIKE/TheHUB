@@ -1,7 +1,7 @@
 <?php
 $pageTitle = ucfirst($pageInfo['page'] ?? 'Dashboard') . ' – TheHUB';
-$currentTheme = function_exists('hub_get_theme') ? hub_get_theme() : 'dark';
-$themeColor = $currentTheme === 'dark' ? '#0b131e' : '#f8f9fa';
+$currentTheme = 'light'; // Unified theme - dark mode disabled
+$themeColor = '#ebeced'; // Unified background color for all themes
 $hubUrl = defined('HUB_URL') ? HUB_URL : '';
 
 // Fallback for hub_asset if not defined
@@ -45,10 +45,8 @@ if (!function_exists('hub_asset')) {
     /* Fallback: show after 300ms if JS fails */
     @keyframes fouc-fallback { to { opacity: 1; } }
     .main-content { animation: fouc-fallback 0.1s ease-out 0.3s forwards; }
-    /* Prevent layout shift - use theme-aware background (must match theme.css) */
-    html, body { margin: 0; padding: 0; }
-    html[data-theme="dark"], html[data-theme="dark"] body { background: #0b131e; }
-    html[data-theme="light"], html[data-theme="light"] body { background: #f8f9fa; }
+    /* Prevent layout shift - unified background for all themes (must match theme.css) */
+    html, body { margin: 0; padding: 0; background: #ebeced; }
 </style>
 
 <!-- PWA Meta Tags -->
