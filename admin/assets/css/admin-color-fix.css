@@ -39,15 +39,16 @@ html[data-theme="light"] {
    2. FIX HEADER & SIDEBAR - Match primary pages background
    ======================================================================== */
 
-/* Admin header - use theme-aware background instead of hardcoded dark */
+/* Header - use theme-aware background instead of hardcoded dark */
+.header,
 .admin-header {
     background: var(--color-bg-surface) !important;
     border-bottom: 1px solid var(--color-border) !important;
 }
 
 /* Sidebar - ensure it matches the page background */
-.admin-sidebar,
-.sidebar {
+.sidebar,
+.admin-sidebar {
     background: var(--color-bg-surface) !important;
     border-right: 1px solid var(--color-border) !important;
 }
