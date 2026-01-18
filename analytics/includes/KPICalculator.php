@@ -244,7 +244,7 @@ class KPICalculator {
                     COUNT(DISTINCT sp.rider_id) as rider_count
                 FROM series_participation sp
                 JOIN series s ON sp.series_id = s.id
-                JOIN brands b ON s.brand_id = b.id
+                JOIN series_brands b ON s.brand_id = b.id
                 WHERE sp.rider_id IN ($placeholders)
                 AND sp.season_year < ?
                 AND s.brand_id != ?
@@ -349,7 +349,7 @@ class KPICalculator {
                     COUNT(DISTINCT sp.rider_id) as rider_count
                 FROM series_participation sp
                 JOIN series s ON sp.series_id = s.id
-                JOIN brands b ON s.brand_id = b.id
+                JOIN series_brands b ON s.brand_id = b.id
                 WHERE sp.rider_id IN ($placeholders)
                 AND sp.season_year = ?
                 AND s.brand_id != ?
@@ -4595,7 +4595,7 @@ class KPICalculator {
                 SUM(rfs.returned_year3) / COUNT(*) AS return_rate_y3,
                 AVG(rfs.total_career_seasons) AS avg_career_seasons
             FROM rider_first_season rfs
-            JOIN brands b ON rfs.first_brand_id = b.id
+            JOIN series_brands b ON rfs.first_brand_id = b.id
             WHERE rfs.cohort_year = ?
             AND rfs.first_brand_id IN ($placeholders)
             GROUP BY b.id, b.name, b.short_code, b.color_primary
@@ -4663,7 +4663,7 @@ class KPICalculator {
         $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         // Get brand info
-        $brandStmt = $this->pdo->prepare("SELECT name, short_code, color_primary FROM brands WHERE id = ?");
+        $brandStmt = $this->pdo->prepare("SELECT name, short_code, color_primary FROM series_brands WHERE id = ?");
         $brandStmt->execute([$brandId]);
         $brand = $brandStmt->fetch(PDO::FETCH_ASSOC);
 
@@ -4723,7 +4723,7 @@ class KPICalculator {
                 COUNT(*) AS rider_count
             FROM rider_journey_summary rjs
             JOIN rider_first_season rfs ON rjs.rider_id = rfs.rider_id AND rjs.cohort_year = rfs.cohort_year
-            JOIN brands b ON rfs.first_brand_id = b.id
+            JOIN series_brands b ON rfs.first_brand_id = b.id
             WHERE rjs.cohort_year = ?
             AND rfs.first_brand_id IN ($placeholders)
             GROUP BY b.id, b.name, b.short_code, rjs.journey_pattern
@@ -4787,7 +4787,7 @@ class KPICalculator {
                 b.short_code,
                 b.color_primary,
                 COUNT(DISTINCT rfs.rider_id) AS rookie_count
-            FROM brands b
+            FROM series_brands b
             JOIN rider_first_season rfs ON rfs.first_brand_id = b.id
             $whereClause
             GROUP BY b.id, b.name, b.short_code, b.color_primary
