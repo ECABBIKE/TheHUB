@@ -55,6 +55,16 @@ if (empty($availableYears)) {
 $reportType = $_GET['report'] ?? 'summary';
 $export = isset($_GET['export']);
 $selectedSeries = isset($_GET['series']) ? (int)$_GET['series'] : null;
+$selectedBrand = isset($_GET['brand']) ? (int)$_GET['brand'] : null;
+
+// Hämta varumärken för filtrering
+$availableBrands = [];
+try {
+    $brandStmt = $pdo->query("SELECT id, name FROM series_brands WHERE active = 1 ORDER BY name");
+    $availableBrands = $brandStmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (Exception $e) {
+    // Ignore
+}
 
 // Initiera KPI Calculator
 $kpiCalc = new KPICalculator($pdo);
@@ -129,35 +139,57 @@ try {
             // Hamta serier for filtrering
             $seriesWithRookies = $kpiCalc->getSeriesWithRookies($selectedYear);
 
-            $seriesName = '';
-            if ($selectedSeries) {
+            $filterName = '';
+            if ($selectedBrand) {
+                foreach ($availableBrands as $b) {
+                    if ((int)$b['id'] === $selectedBrand) {
+                        $filterName = ' - ' . $b['name'];
+                        break;
+                    }
+                }
+            } elseif ($selectedSeries) {
                 foreach ($seriesWithRookies as $s) {
                     if ((int)$s['id'] === $selectedSeries) {
-                        $seriesName = ' - ' . $s['name'];
+                        $filterName = ' - ' . $s['name'];
                         break;
                     }
                 }
             }
 
-            $reportTitle = "Nya Deltagare (Rookies) $selectedYear" . $seriesName;
+            $reportTitle = "Nya Deltagare (Rookies) $selectedYear" . $filterName;
 
             // Hämta listan först så vi kan räkna totaler från den
-            $rookieList = $kpiCalc->getRookiesList($selectedYear, $selectedSeries);
+            // Brand har prioritet över serie
+            $rookieList = $selectedBrand
+                ? $kpiCalc->getRookiesListByBrand($selectedYear, $selectedBrand)
+                : $kpiCalc->getRookiesList($selectedYear, $selectedSeries);
 
             $reportData = [
-                'total_rookies' => count($rookieList),  // Räkna från listan
-                'total_riders' => $selectedSeries
-                    ? $kpiCalc->getSeriesParticipants($selectedYear, $selectedSeries)
-                    : $kpiCalc->getTotalActiveRiders($selectedYear),
-                'average_age' => $kpiCalc->getRookieAverageAge($selectedYear, $selectedSeries),
-                'gender' => $kpiCalc->getRookieGenderDistribution($selectedYear, $selectedSeries),
-                'ages' => $kpiCalc->getRookieAgeDistribution($selectedYear, $selectedSeries),
+                'total_rookies' => count($rookieList),
+                'total_riders' => $selectedBrand
+                    ? $kpiCalc->getTotalActiveRiders($selectedYear, $selectedBrand)
+                    : ($selectedSeries
+                        ? $kpiCalc->getSeriesParticipants($selectedYear, $selectedSeries)
+                        : $kpiCalc->getTotalActiveRiders($selectedYear)),
+                'average_age' => $selectedBrand
+                    ? $kpiCalc->getRookieAverageAgeByBrand($selectedYear, $selectedBrand)
+                    : $kpiCalc->getRookieAverageAge($selectedYear, $selectedSeries),
+                'gender' => $selectedBrand
+                    ? $kpiCalc->getRookieGenderDistributionByBrand($selectedYear, $selectedBrand)
+                    : $kpiCalc->getRookieGenderDistribution($selectedYear, $selectedSeries),
+                'ages' => $selectedBrand
+                    ? $kpiCalc->getRookieAgeDistributionByBrand($selectedYear, $selectedBrand)
+                    : $kpiCalc->getRookieAgeDistribution($selectedYear, $selectedSeries),
                 'classes' => $kpiCalc->getRookieClassDistribution($selectedYear, $selectedSeries),
                 'disciplines' => $kpiCalc->getRookieDisciplineParticipation($selectedYear, $selectedSeries),
                 'events' => $kpiCalc->getEventsWithMostRookies($selectedYear, 20, $selectedSeries),
-                'clubs' => $kpiCalc->getClubsWithMostRookies($selectedYear, 20, $selectedSeries),
+                'clubs' => $selectedBrand
+                    ? $kpiCalc->getClubsWithMostRookiesByBrand($selectedYear, 20, $selectedBrand)
+                    : $kpiCalc->getClubsWithMostRookies($selectedYear, 20, $selectedSeries),
                 'list' => $rookieList,
                 'series_filter' => $seriesWithRookies,
+                'brands_filter' => $availableBrands,
+                'selected_brand' => $selectedBrand,
                 'trend' => $kpiCalc->getRookieTrend(5),
                 'age_trend' => $kpiCalc->getRookieAgeTrend(5)
             ];
@@ -1053,10 +1085,22 @@ include __DIR__ . '/components/unified-layout.php';
     <?php elseif ($reportType === 'rookies'): ?>
     <!-- Rookies Report -->
 
-    <?php if (!empty($reportData['series_filter'])): ?>
     <div class="report-section" style="padding-bottom: 0;">
         <div class="series-filter-row" style="display: flex; align-items: center; gap: var(--space-md); flex-wrap: wrap;">
-            <label style="font-weight: var(--weight-medium);">Filtrera pa serie:</label>
+            <?php if (!empty($reportData['brands_filter'])): ?>
+            <label style="font-weight: var(--weight-medium);">Varumärke:</label>
+            <select onchange="window.location.href='?report=rookies&year=<?= $selectedYear ?>&brand=' + this.value" class="form-select" style="width: auto; min-width: 200px;">
+                <option value="">Alla varumärken</option>
+                <?php foreach ($reportData['brands_filter'] as $brand): ?>
+                <option value="<?= $brand['id'] ?>" <?= $selectedBrand == $brand['id'] ? 'selected' : '' ?>>
+                    <?= htmlspecialchars($brand['name']) ?>
+                </option>
+                <?php endforeach; ?>
+            </select>
+            <?php endif; ?>
+
+            <?php if (!$selectedBrand && !empty($reportData['series_filter'])): ?>
+            <label style="font-weight: var(--weight-medium);">Serie:</label>
             <select onchange="window.location.href='?report=rookies&year=<?= $selectedYear ?>&series=' + this.value" class="form-select" style="width: auto; min-width: 200px;">
                 <option value="">Alla serier</option>
                 <?php foreach ($reportData['series_filter'] as $series): ?>
@@ -1065,17 +1109,18 @@ include __DIR__ . '/components/unified-layout.php';
                 </option>
                 <?php endforeach; ?>
             </select>
-            <?php if ($selectedSeries): ?>
+            <?php endif; ?>
+
+            <?php if ($selectedSeries || $selectedBrand): ?>
             <a href="?report=rookies&year=<?= $selectedYear ?>" class="btn-admin btn-admin-ghost btn-admin-sm">
                 <i data-lucide="x" style="width:14px;height:14px;"></i> Rensa filter
             </a>
             <?php endif; ?>
         </div>
     </div>
-    <?php endif; ?>
 
     <div class="report-section">
-        <h3>Oversikt <?= $selectedSeries ? '(filtrerad)' : '' ?></h3>
+        <h3>Oversikt <?= ($selectedSeries || $selectedBrand) ? '(filtrerad)' : '' ?></h3>
         <?php
         $rookiePct = $reportData['total_riders'] > 0
             ? round($reportData['total_rookies'] / $reportData['total_riders'] * 100, 1)
