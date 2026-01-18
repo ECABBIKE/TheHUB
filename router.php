@@ -38,6 +38,8 @@ function hub_requires_auth(string $page): bool {
         'calendar', 'results', 'series', 'database', 'ranking',
         'rider', 'riders', 'event', 'club', 'clubs',
         'rider-register', 'club-points', 'achievements',
+        // News/Blog
+        'news',
         // Registration pages (login required but handled in page)
         'register'
     ];
@@ -135,6 +137,13 @@ function hub_get_current_page(): array {
             'index' => '/pages/register/index.php',
             'series' => '/pages/register/series.php',
             'event' => '/pages/register/event.php'
+        ],
+        'news' => [
+            'index' => '/pages/news/index.php',
+            'show' => '/pages/news/show.php',
+            'tag' => '/pages/news/index.php',
+            'event' => '/pages/news/index.php',
+            'rider' => '/pages/news/index.php'
         ]
     ];
 
@@ -150,23 +159,36 @@ function hub_get_current_page(): array {
                 'series' => 'show',
                 'database' => 'rider',
                 'ranking' => 'riders',
-                'register' => 'series'  // /register/5 -> /register/series/5
+                'register' => 'series',  // /register/5 -> /register/series/5
+                'news' => 'show'  // /news/slug -> /pages/news/show.php
             ];
             $subpage = $detailPages[$section] ?? 'index';
         } elseif (isset($segments[1]) && !is_numeric($segments[1])) {
             $subpage = $segments[1];
             $id = $segments[2] ?? null;
+
+            // Special handling for news: if subpage is not a known route, treat as slug
+            if ($section === 'news' && !isset($sectionRoutes['news'][$subpage])) {
+                $subpage = 'show';
+                $id = $segments[1]; // The slug
+            }
         } else {
             $subpage = 'index';
         }
 
         $file = HUB_ROOT . ($sectionRoutes[$section][$subpage] ?? $sectionRoutes[$section]['index']);
 
+        // For news show page, pass slug parameter
+        $params = [];
+        if ($id) {
+            $params = ($section === 'news' && $subpage === 'show') ? ['slug' => $id] : ['id' => $id];
+        }
+
         return [
             'page' => $section . '-' . $subpage,
             'section' => $section,
             'subpage' => $subpage,
-            'params' => $id ? ['id' => $id] : [],
+            'params' => $params,
             'file' => $file
         ];
     }
@@ -240,6 +262,7 @@ if (!function_exists('hub_is_nav_active')) {
         if ($navId === 'database' && in_array($currentPage, ['database', 'riders', 'rider', 'clubs', 'club', 'database-rider', 'database-club'])) return true;
         if ($navId === 'ranking' && str_starts_with($currentPage, 'ranking')) return true;
         if ($navId === 'profile' && str_starts_with($currentPage, 'profile')) return true;
+        if ($navId === 'news' && str_starts_with($currentPage, 'news')) return true;
 
         return false;
     }

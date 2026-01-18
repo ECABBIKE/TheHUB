@@ -63,6 +63,7 @@ if (!defined('HUB_NAV')) {
         ['id' => 'calendar', 'label' => 'Kalender', 'icon' => 'calendar', 'url' => '/calendar', 'aria' => 'Visa eventkalender'],
         ['id' => 'results', 'label' => 'Resultat', 'icon' => 'flag', 'url' => '/results', 'aria' => 'Visa tävlingsresultat'],
         ['id' => 'series', 'label' => 'Serier', 'icon' => 'trophy', 'url' => '/series', 'aria' => 'Visa tävlingsserier'],
+        ['id' => 'news', 'label' => 'Nyheter', 'icon' => 'newspaper', 'url' => '/news', 'aria' => 'Visa nyheter och race reports'],
         ['id' => 'database', 'label' => 'Databas', 'icon' => 'search', 'url' => '/database', 'aria' => 'Sök åkare och klubbar'],
         ['id' => 'ranking', 'label' => 'Ranking', 'icon' => 'trending-up', 'url' => '/ranking', 'aria' => 'Visa ranking'],
         // 'Mitt' borttagen - nu i header istället
