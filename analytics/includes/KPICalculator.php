@@ -1481,14 +1481,14 @@ class KPICalculator {
                     AND s.brand_id = ?
                 ) this_brand
                 WHERE this_brand.cyclist_id IN (
-                    -- Riders som också deltog i ett ANNAT varumärke
+                    -- Riders som också deltog i ett ANNAT varumärke (inkl serier utan brand)
                     SELECT DISTINCT r2.cyclist_id
                     FROM results r2
                     JOIN events e2 ON e2.id = r2.event_id
                     JOIN series_events se2 ON se2.event_id = e2.id
                     JOIN series s2 ON s2.id = se2.series_id
                     WHERE YEAR(e2.date) = ?
-                    AND s2.brand_id != ?
+                    AND (s2.brand_id IS NULL OR s2.brand_id != ?)
                 )
             ");
             $stmt->execute([$year, $brandId, $year, $brandId]);
