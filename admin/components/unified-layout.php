@@ -104,6 +104,8 @@ if (!isset($current_admin_page)) {
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="HUB Admin">
 
+<?php require_once __DIR__ . '/../../includes/theme-loader.php'; ?>
+    
     <!-- V3 CSS -->
     <link rel="stylesheet" href="<?= hub_asset('css/reset.css') ?>">
     <link rel="stylesheet" href="<?= hub_asset('css/tokens.css') ?>">
