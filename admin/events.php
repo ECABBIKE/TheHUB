@@ -1083,6 +1083,12 @@ function trackBulkChange(event) {
     const eventId = getEventIdFromRow(row);
     const fieldType = getFieldType(element);
 
+    // Skip unknown fields
+    if (fieldType === 'unknown') {
+        console.warn('Unknown field type for element:', element);
+        return;
+    }
+
     if (!bulkChanges[eventId]) {
         bulkChanges[eventId] = {};
     }
