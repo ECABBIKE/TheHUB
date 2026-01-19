@@ -23,7 +23,7 @@ class RaceReportManager {
     /**
      * Kolla om race reports är aktiverade för publika sidor
      */
-    public function isPublicEnabled(): bool {
+    public function isPublicEnabled() {
         try {
             $stmt = $this->pdo->query("SELECT setting_value FROM sponsor_settings WHERE setting_key = 'race_reports_public'");
             $row = $stmt->fetch(PDO::FETCH_ASSOC);
@@ -121,7 +121,7 @@ class RaceReportManager {
     /**
      * Uppdatera befintligt race report
      */
-    public function updateReport(int $report_id, array $data): bool {
+    public function updateReport(int $report_id, array $data) {
         try {
             // Bygg dynamisk UPDATE-query baserat på vad som finns i $data
             $allowed_fields = [
@@ -178,7 +178,7 @@ class RaceReportManager {
      * @param bool $published_only
      * @return array|null
      */
-    public function getReport($id_or_slug, bool $published_only = true): ?array {
+    public function getReport($id_or_slug, $published_only = true) {
         try {
             $is_numeric = is_numeric($id_or_slug);
 
@@ -225,7 +225,7 @@ class RaceReportManager {
     /**
      * Lista race reports med paginering och filtrering
      */
-    public function listReports(array $filters = []): array {
+    public function listReports(array $filters = []) {
         try {
             $page = $filters['page'] ?? 1;
             $per_page = $filters['per_page'] ?? 12;
@@ -343,7 +343,7 @@ class RaceReportManager {
     /**
      * Ta bort report
      */
-    public function deleteReport(int $report_id): bool {
+    public function deleteReport(int $report_id) {
         try {
             $stmt = $this->pdo->prepare("DELETE FROM race_reports WHERE id = :id");
             return $stmt->execute([':id' => $report_id]);
@@ -361,7 +361,7 @@ class RaceReportManager {
      * @param int|null $parent_id
      * @return int|false
      */
-    public function addComment(int $report_id, ?int $rider_id, string $comment_text, ?int $parent_id = null) {
+    public function addComment($report_id, $rider_id, $comment_text, $parent_id = null) {
         try {
             $stmt = $this->pdo->prepare("
                 INSERT INTO race_report_comments
@@ -386,7 +386,7 @@ class RaceReportManager {
     /**
      * Hämta kommentarer för report
      */
-    public function getComments(int $report_id): array {
+    public function getComments(int $report_id) {
         try {
             $stmt = $this->pdo->prepare("
                 SELECT
@@ -414,7 +414,7 @@ class RaceReportManager {
     /**
      * Like/Unlike report
      */
-    public function toggleLike(int $report_id, int $rider_id): bool {
+    public function toggleLike(int $report_id, int $rider_id) {
         try {
             // Kolla om redan likat
             $stmt = $this->pdo->prepare("
@@ -468,7 +468,7 @@ class RaceReportManager {
     /**
      * Kolla om rider har likat ett report
      */
-    public function hasLiked(int $report_id, int $rider_id): bool {
+    public function hasLiked(int $report_id, int $rider_id) {
         try {
             $stmt = $this->pdo->prepare("
                 SELECT 1 FROM race_report_likes
@@ -484,7 +484,7 @@ class RaceReportManager {
     /**
      * Hämta alla tags
      */
-    public function getAllTags(): array {
+    public function getAllTags() {
         try {
             $stmt = $this->pdo->query("
                 SELECT * FROM race_report_tags
@@ -500,7 +500,7 @@ class RaceReportManager {
      * Hjälpfunktioner
      */
 
-    private function generateSlug(string $title, ?int $exclude_id = null): string {
+    private function generateSlug($title, $exclude_id = null) {
         $slug = strtolower(trim($title));
         // Ersätt svenska tecken
         $slug = str_replace(['å', 'ä', 'ö', 'Å', 'Ä', 'Ö'], ['a', 'a', 'o', 'a', 'a', 'o'], $slug);
@@ -535,7 +535,7 @@ class RaceReportManager {
         return $slug;
     }
 
-    private function generateExcerpt(string $content, int $length = 200): string {
+    private function generateExcerpt(string $content, int $length = 200) {
         $text = strip_tags($content);
         if (strlen($text) <= $length) {
             return $text;
@@ -544,13 +544,13 @@ class RaceReportManager {
         return substr($text, 0, $length) . '...';
     }
 
-    private function calculateReadingTime(string $content): int {
+    private function calculateReadingTime(string $content) {
         $words = str_word_count(strip_tags($content));
         $minutes = ceil($words / 200); // Genomsnitt 200 ord per minut
         return max(1, $minutes);
     }
 
-    private function getInstagramEmbed(string $url): ?string {
+    private function getInstagramEmbed($url) {
         // Här kan man integrera med Instagram oEmbed API
         // För nu returnerar vi bara URL:en
         return $url;
@@ -559,7 +559,7 @@ class RaceReportManager {
     /**
      * Extrahera YouTube video ID från URL
      */
-    private function getYoutubeVideoId(string $url): ?string {
+    private function getYoutubeVideoId($url) {
         // Stöder olika YouTube URL-format:
         // https://www.youtube.com/watch?v=VIDEO_ID
         // https://youtu.be/VIDEO_ID
@@ -585,12 +585,12 @@ class RaceReportManager {
     /**
      * Hämta YouTube thumbnail URL
      */
-    public function getYoutubeThumbnail(string $videoId, string $quality = 'maxresdefault'): string {
+    public function getYoutubeThumbnail(string $videoId, string $quality = 'maxresdefault') {
         // Kvaliteter: default, mqdefault, hqdefault, sddefault, maxresdefault
         return "https://img.youtube.com/vi/{$videoId}/{$quality}.jpg";
     }
 
-    private function incrementViews(int $report_id): void {
+    private function incrementViews(int $report_id) {
         try {
             $stmt = $this->pdo->prepare("UPDATE race_reports SET views = views + 1 WHERE id = :id");
             $stmt->execute([':id' => $report_id]);
@@ -599,7 +599,7 @@ class RaceReportManager {
         }
     }
 
-    private function addTags(int $report_id, array $tags): void {
+    private function addTags(int $report_id, array $tags) {
         foreach ($tags as $tag_name) {
             try {
                 // Skapa tag slug
@@ -636,7 +636,7 @@ class RaceReportManager {
         }
     }
 
-    private function getReportTags(int $report_id): array {
+    private function getReportTags(int $report_id) {
         try {
             $stmt = $this->pdo->prepare("
                 SELECT rrt.*
@@ -652,7 +652,7 @@ class RaceReportManager {
         }
     }
 
-    private function buildCommentTree(array $comments): array {
+    private function buildCommentTree(array $comments) {
         $tree = [];
         $lookup = [];
 
@@ -680,7 +680,7 @@ class RaceReportManager {
     /**
      * Hämta report-statistik för admin
      */
-    public function getStats(): array {
+    public function getStats() {
         try {
             $stmt = $this->pdo->query("
                 SELECT
