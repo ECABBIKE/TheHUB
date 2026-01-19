@@ -214,6 +214,20 @@ include __DIR__ . '/components/unified-layout.php';
         </div>
     </div>
 
+    <!-- Fix UCI Format -->
+    <div class="card">
+        <div class="tool-header">
+            <div class="tool-icon"><i data-lucide="hash"></i></div>
+            <div>
+                <h4 class="tool-title">Normalisera UCI-ID</h4>
+                <p class="tool-description">Konvertera till standardformat XXX XXX XXX XX</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/fix-uci-format.php" class="btn-admin btn-admin-secondary">Normalisera</a>
+        </div>
+    </div>
+
 </div>
 
 <!-- ========== DATAHANTERING ========== -->

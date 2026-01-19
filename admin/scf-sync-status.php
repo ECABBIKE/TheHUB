@@ -30,14 +30,13 @@ if ($scfEnabled) {
 }
 
 // Get general rider statistics
-// license_number contains UCI ID - can be in various formats:
-// - Pure 11 digits: 10012345678
-// - With country prefix: SWE10012345678
-// - With spaces or dashes
+// license_number contains either:
+// - Real UCI ID: 11 digits like 10012345678 (NOT starting with "SWE")
+// - Generated SWE-ID: like SWE2510001 (for riders without real UCI ID)
 $riderStats = [
     'total_riders' => (int)$db->getValue("SELECT COUNT(*) FROM riders"),
-    'with_uci_id' => (int)$db->getValue("SELECT COUNT(*) FROM riders WHERE license_number IS NOT NULL AND license_number != '' AND LENGTH(license_number) >= 11"),
-    'without_uci_id' => (int)$db->getValue("SELECT COUNT(*) FROM riders WHERE license_number IS NULL OR license_number = '' OR LENGTH(license_number) < 11"),
+    'with_uci_id' => (int)$db->getValue("SELECT COUNT(*) FROM riders WHERE license_number IS NOT NULL AND license_number != '' AND license_number NOT LIKE 'SWE%'"),
+    'without_uci_id' => (int)$db->getValue("SELECT COUNT(*) FROM riders WHERE license_number IS NULL OR license_number = '' OR license_number LIKE 'SWE%'"),
     'verified_this_year' => (int)$db->getValue("SELECT COUNT(*) FROM riders WHERE scf_license_year = ?", [(int)date('Y')]),
     'pending_matches' => (int)$db->getValue("SELECT COUNT(*) FROM scf_match_candidates WHERE status = 'pending'")
 ];
