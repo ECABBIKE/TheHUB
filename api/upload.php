@@ -42,7 +42,7 @@ $file = $_FILES['file'];
 $folder = $_POST['folder'] ?? 'uploads';
 
 // Allowed folders
-$allowedFolders = ['sponsors', 'media', 'uploads', 'events', 'series'];
+$allowedFolders = ['sponsors', 'media', 'uploads', 'events', 'series', 'news'];
 if (!in_array($folder, $allowedFolders)) {
     $folder = 'uploads';
 }

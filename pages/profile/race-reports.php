@@ -376,18 +376,51 @@ Tipsa gärna andra åkare om banan eller arrangemanget."><?= htmlspecialchars($e
                     </div>
 
                     <!-- Featured Image -->
-                    <div class="rr-media-card">
+                    <div class="rr-media-card rr-media-card-full">
                         <div class="rr-media-icon rr-media-image">
                             <i data-lucide="image"></i>
                         </div>
                         <div class="rr-media-content">
                             <label class="form-label">Omslagsbild</label>
-                            <input type="url"
-                                   name="featured_image"
-                                   class="form-input"
-                                   placeholder="https://imgur.com/..."
-                                   value="<?= htmlspecialchars($editReport['featured_image'] ?? '') ?>">
-                            <small class="form-help">Länk till bild (Imgur, Google Photos etc)</small>
+
+                            <!-- Upload option -->
+                            <div class="rr-upload-zone" id="upload-zone">
+                                <input type="file"
+                                       id="image-upload"
+                                       accept="image/jpeg,image/png,image/webp"
+                                       style="display: none;">
+                                <div class="rr-upload-placeholder" id="upload-placeholder">
+                                    <i data-lucide="upload-cloud"></i>
+                                    <span>Klicka för att ladda upp bild</span>
+                                    <small>JPG, PNG eller WebP. Max 5 MB.</small>
+                                </div>
+                                <div class="rr-upload-preview" id="upload-preview" style="display: none;">
+                                    <img id="preview-image" src="" alt="Förhandsgranskning">
+                                    <button type="button" class="btn btn-sm btn-ghost rr-remove-image" onclick="removeImage()">
+                                        <i data-lucide="x"></i> Ta bort
+                                    </button>
+                                </div>
+                                <div class="rr-upload-progress" id="upload-progress" style="display: none;">
+                                    <div class="rr-progress-bar"><div class="rr-progress-fill"></div></div>
+                                    <span>Laddar upp...</span>
+                                </div>
+                            </div>
+
+                            <!-- URL fallback -->
+                            <div class="rr-url-fallback">
+                                <small class="form-help">Eller ange URL till extern bild:</small>
+                                <input type="url"
+                                       name="featured_image"
+                                       id="featured-image-url"
+                                       class="form-input form-input-sm"
+                                       placeholder="https://..."
+                                       value="<?= htmlspecialchars($editReport['featured_image'] ?? '') ?>">
+                            </div>
+
+                            <div class="rr-image-specs">
+                                <i data-lucide="info"></i>
+                                <span>Rekommenderat: <strong>1200 × 675 px</strong> (16:9). Visas som header på artikeln.</span>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -1059,6 +1092,171 @@ Tipsa gärna andra åkare om banan eller arrangemanget."><?= htmlspecialchars($e
         grid-column: span 2;
     }
 }
+
+/* Image Upload Zone */
+.rr-media-card-full {
+    grid-column: 1 / -1;
+}
+
+.rr-upload-zone {
+    border: 2px dashed var(--color-border);
+    border-radius: var(--radius-md);
+    padding: var(--space-lg);
+    margin-bottom: var(--space-sm);
+    transition: all 0.2s ease;
+    cursor: pointer;
+    background: var(--color-bg-surface);
+}
+
+.rr-upload-zone:hover {
+    border-color: var(--color-accent);
+    background: var(--color-accent-light);
+}
+
+.rr-upload-zone.drag-over {
+    border-color: var(--color-accent);
+    background: var(--color-accent-light);
+    transform: scale(1.01);
+}
+
+.rr-upload-placeholder {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-xs);
+    color: var(--color-text-muted);
+    text-align: center;
+    padding: var(--space-md);
+}
+
+.rr-upload-placeholder i {
+    width: 40px;
+    height: 40px;
+    color: var(--color-accent);
+    margin-bottom: var(--space-xs);
+}
+
+.rr-upload-placeholder span {
+    font-size: 0.9375rem;
+    color: var(--color-text-secondary);
+}
+
+.rr-upload-placeholder small {
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+}
+
+.rr-upload-preview {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-md);
+}
+
+.rr-upload-preview img {
+    max-width: 100%;
+    max-height: 200px;
+    border-radius: var(--radius-sm);
+    object-fit: contain;
+}
+
+.rr-remove-image {
+    color: var(--color-error) !important;
+}
+
+.rr-upload-progress {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-sm);
+    padding: var(--space-lg);
+}
+
+.rr-progress-bar {
+    width: 100%;
+    max-width: 200px;
+    height: 6px;
+    background: var(--color-bg-page);
+    border-radius: var(--radius-full);
+    overflow: hidden;
+}
+
+.rr-progress-fill {
+    width: 100%;
+    height: 100%;
+    background: var(--color-accent);
+    animation: progress-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes progress-pulse {
+    0%, 100% { opacity: 0.4; transform: translateX(-100%); }
+    50% { opacity: 1; transform: translateX(0); }
+}
+
+.rr-upload-progress span {
+    font-size: 0.8125rem;
+    color: var(--color-text-muted);
+}
+
+.rr-url-fallback {
+    margin-top: var(--space-sm);
+    padding-top: var(--space-sm);
+    border-top: 1px solid var(--color-border);
+}
+
+.rr-url-fallback .form-help {
+    margin-bottom: var(--space-xs);
+    margin-top: 0;
+}
+
+.rr-url-fallback .form-input-sm {
+    font-size: 0.8125rem;
+    padding: var(--space-xs) var(--space-sm);
+}
+
+.rr-image-specs {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    padding: var(--space-sm);
+    background: var(--color-bg-page);
+    border-radius: var(--radius-sm);
+    margin-top: var(--space-sm);
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+}
+
+.rr-image-specs i {
+    width: 14px;
+    height: 14px;
+    color: var(--color-accent);
+    flex-shrink: 0;
+}
+
+.rr-image-specs strong {
+    color: var(--color-text-secondary);
+}
+
+/* Mobile responsive for upload */
+@media (max-width: 767px) {
+    .rr-upload-zone {
+        padding: var(--space-md);
+    }
+
+    .rr-upload-placeholder {
+        padding: var(--space-sm);
+    }
+
+    .rr-upload-placeholder i {
+        width: 32px;
+        height: 32px;
+    }
+
+    .rr-image-specs {
+        flex-wrap: wrap;
+    }
+}
 </style>
 
 <script>
@@ -1125,5 +1323,121 @@ document.addEventListener('DOMContentLoaded', function() {
     if (youtubeInput && youtubeInput.value) {
         previewYoutube(youtubeInput.value);
     }
+
+    // Check existing featured image on load
+    const featuredImageUrl = document.getElementById('featured-image-url');
+    if (featuredImageUrl && featuredImageUrl.value) {
+        showImagePreview(featuredImageUrl.value);
+    }
 });
+
+// Image upload functionality
+const uploadZone = document.getElementById('upload-zone');
+const imageInput = document.getElementById('image-upload');
+const uploadPlaceholder = document.getElementById('upload-placeholder');
+const uploadPreview = document.getElementById('upload-preview');
+const uploadProgress = document.getElementById('upload-progress');
+const previewImage = document.getElementById('preview-image');
+const featuredImageInput = document.getElementById('featured-image-url');
+
+if (uploadZone && imageInput) {
+    // Click to upload
+    uploadPlaceholder.addEventListener('click', function() {
+        imageInput.click();
+    });
+
+    // Drag and drop
+    uploadZone.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        uploadZone.classList.add('drag-over');
+    });
+
+    uploadZone.addEventListener('dragleave', function(e) {
+        e.preventDefault();
+        uploadZone.classList.remove('drag-over');
+    });
+
+    uploadZone.addEventListener('drop', function(e) {
+        e.preventDefault();
+        uploadZone.classList.remove('drag-over');
+        const files = e.dataTransfer.files;
+        if (files.length > 0) {
+            handleImageUpload(files[0]);
+        }
+    });
+
+    // File input change
+    imageInput.addEventListener('change', function() {
+        if (this.files.length > 0) {
+            handleImageUpload(this.files[0]);
+        }
+    });
+}
+
+function handleImageUpload(file) {
+    // Validate file type
+    const allowedTypes = ['image/jpeg', 'image/png', 'image/webp'];
+    if (!allowedTypes.includes(file.type)) {
+        alert('Endast JPG, PNG och WebP-bilder tillåtna.');
+        return;
+    }
+
+    // Validate file size (5MB)
+    if (file.size > 5 * 1024 * 1024) {
+        alert('Bilden är för stor. Max 5 MB.');
+        return;
+    }
+
+    // Show progress
+    uploadPlaceholder.style.display = 'none';
+    uploadPreview.style.display = 'none';
+    uploadProgress.style.display = 'flex';
+
+    // Upload via AJAX
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('folder', 'news');
+
+    fetch('/api/upload.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(function(response) { return response.json(); })
+    .then(function(data) {
+        uploadProgress.style.display = 'none';
+
+        if (data.success) {
+            featuredImageInput.value = data.path;
+            showImagePreview(data.path);
+        } else {
+            alert('Uppladdning misslyckades: ' + data.error);
+            uploadPlaceholder.style.display = 'flex';
+        }
+    })
+    .catch(function(error) {
+        uploadProgress.style.display = 'none';
+        uploadPlaceholder.style.display = 'flex';
+        alert('Uppladdning misslyckades. Försök igen.');
+        console.error('Upload error:', error);
+    });
+}
+
+function showImagePreview(url) {
+    if (!url) return;
+    previewImage.src = url;
+    uploadPlaceholder.style.display = 'none';
+    uploadProgress.style.display = 'none';
+    uploadPreview.style.display = 'flex';
+    if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+    }
+}
+
+function removeImage() {
+    featuredImageInput.value = '';
+    previewImage.src = '';
+    uploadPreview.style.display = 'none';
+    uploadPlaceholder.style.display = 'flex';
+    imageInput.value = '';
+}
 </script>
