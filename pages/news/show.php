@@ -82,7 +82,8 @@ $pageTitle = $report['title'];
 $pageDescription = $report['meta_description'] ?? $report['excerpt'] ?? substr(strip_tags($report['content']), 0, 160);
 
 // Author info
-$authorName = $report['firstname'] . ' ' . $report['lastname'];
+$authorName = $report['firstname'] ? $report['firstname'] . ' ' . $report['lastname'] : 'TheHUB';
+$authorInitials = $report['firstname'] ? strtoupper(substr($report['firstname'], 0, 1) . substr($report['lastname'] ?? '', 0, 1)) : 'TH';
 
 // Time helpers
 function formatPublishDate($datetime) {
@@ -135,9 +136,13 @@ function formatPublishDate($datetime) {
 
         <!-- Meta -->
         <div class="news-article-meta">
+            <?php if ($report['rider_id']): ?>
             <a href="/rider/<?= $report['rider_id'] ?>" class="news-article-author">
+            <?php else: ?>
+            <span class="news-article-author">
+            <?php endif; ?>
                 <div class="news-article-author-avatar">
-                    <?= strtoupper(substr($report['firstname'], 0, 1) . substr($report['lastname'], 0, 1)) ?>
+                    <?= $authorInitials ?>
                 </div>
                 <div class="news-article-author-info">
                     <span class="news-article-author-name"><?= htmlspecialchars($authorName) ?></span>
@@ -145,7 +150,11 @@ function formatPublishDate($datetime) {
                     <span class="news-article-author-club"><?= htmlspecialchars($report['club_name']) ?></span>
                     <?php endif; ?>
                 </div>
+            <?php if ($report['rider_id']): ?>
             </a>
+            <?php else: ?>
+            </span>
+            <?php endif; ?>
 
             <div class="news-article-meta-sep"></div>
 
@@ -309,12 +318,13 @@ function formatPublishDate($datetime) {
             <!-- Author Card -->
             <div class="news-author-card">
                 <div class="news-author-card-avatar">
-                    <?= strtoupper(substr($report['firstname'], 0, 1) . substr($report['lastname'], 0, 1)) ?>
+                    <?= $authorInitials ?>
                 </div>
                 <h3 class="news-author-card-name"><?= htmlspecialchars($authorName) ?></h3>
                 <?php if ($report['club_name']): ?>
                 <p class="news-author-card-club"><?= htmlspecialchars($report['club_name']) ?></p>
                 <?php endif; ?>
+                <?php if ($report['rider_id']): ?>
                 <a href="/rider/<?= $report['rider_id'] ?>" class="btn btn-secondary btn-sm btn-block">
                     <i data-lucide="user"></i>
                     Visa profil
@@ -323,6 +333,7 @@ function formatPublishDate($datetime) {
                     <i data-lucide="file-text"></i>
                     Fler inlagg
                 </a>
+                <?php endif; ?>
             </div>
 
             <!-- Sponsor Sidebar Mid -->
