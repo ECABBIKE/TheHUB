@@ -46,7 +46,8 @@ $message = '';
 $messageType = '';
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
-    if (!check_csrf()) {
+    $csrfToken = $_POST['csrf_token'] ?? '';
+    if (!verify_csrf_token($csrfToken)) {
         $message = 'CSRF-validering misslyckades.';
         $messageType = 'danger';
     } else {
