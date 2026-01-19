@@ -224,7 +224,7 @@ $currentUser = function_exists('hub_current_user') ? hub_current_user() : null;
                     <div class="news-featured-meta">
                         <span class="news-meta-author">
                             <i data-lucide="user"></i>
-                            <?= htmlspecialchars($featuredReport['firstname'] . ' ' . $featuredReport['lastname']) ?>
+                            <?= htmlspecialchars($featuredReport['firstname'] ? $featuredReport['firstname'] . ' ' . $featuredReport['lastname'] : 'TheHUB') ?>
                         </span>
                         <span class="news-meta-date">
                             <i data-lucide="calendar"></i>
@@ -298,7 +298,7 @@ $currentUser = function_exists('hub_current_user') ? hub_current_user() : null;
 
                         <div class="news-card-meta">
                             <span class="news-meta-author">
-                                <?= htmlspecialchars($report['firstname'] . ' ' . substr($report['lastname'], 0, 1) . '.') ?>
+                                <?= htmlspecialchars($report['firstname'] ? $report['firstname'] . ' ' . substr($report['lastname'] ?? '', 0, 1) . '.' : 'TheHUB') ?>
                             </span>
                             <span class="news-meta-dot">·</span>
                             <span class="news-meta-time">
