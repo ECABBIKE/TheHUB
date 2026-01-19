@@ -253,14 +253,22 @@ class SCFLicenseService {
             }
         }
 
+        // Extract birth year from birthdate
+        $birthYear = null;
+        if (!empty($data['birthdate'])) {
+            $birthYear = (int)substr($data['birthdate'], 0, 4);
+        }
+
         return [
             'uci_id' => $this->normalizeUciId($data['uci_id'] ?? ''),
             'firstname' => $data['firstname'] ?? null,
             'lastname' => $data['lastname'] ?? null,
             'gender' => $data['gender'] ?? null,
             'birthdate' => $data['birthdate'] ?? null,
+            'birth_year' => $birthYear,
             'nationality' => $data['nationality'] ?? null,
             'club_name' => $data['club_name'] ?? $data['club'] ?? null,
+            'district' => $data['district'] ?? null,
             'license_type' => $data['license_type'] ?? $data['type'] ?? null,
             'disciplines' => $disciplines,
             'expires_at' => $data['expires_at'] ?? $data['valid_until'] ?? null,
@@ -318,33 +326,66 @@ class SCFLicenseService {
     /**
      * Update rider with SCF license data
      *
+     * Updates rider profile with verified data from SCF:
+     * - License verification fields (scf_license_year, etc.)
+     * - Birth year, gender, nationality (if missing)
+     * - District from SCF
+     * - Correctly spelled name from SCF
+     *
      * @param int $riderId
      * @param array $licenseData
      * @param int $year
      * @return bool Success
      */
     public function updateRiderLicense(int $riderId, array $licenseData, int $year): bool {
-        // Update rider's SCF fields
-        $result = $this->db->update('riders', [
+        // Get current rider data to check what needs updating
+        $rider = $this->db->getRow("SELECT * FROM riders WHERE id = ?", [$riderId]);
+        if (!$rider) {
+            return false;
+        }
+
+        // Build update array with SCF verified fields
+        $updates = [
             'scf_license_verified_at' => date('Y-m-d H:i:s'),
             'scf_license_year' => $year,
             'scf_license_type' => $licenseData['license_type'],
             'scf_disciplines' => json_encode($licenseData['disciplines']),
             'scf_club_name' => $licenseData['club_name']
-        ], 'id = ?', [$riderId]);
+        ];
+
+        // Update birth year if we have it from SCF
+        if (!empty($licenseData['birth_year']) && $licenseData['birth_year'] > 1900) {
+            $updates['birth_year'] = $licenseData['birth_year'];
+        }
+
+        // Update gender if we have it from SCF
+        if (!empty($licenseData['gender'])) {
+            $updates['gender'] = strtoupper($licenseData['gender']);
+        }
+
+        // Update nationality if missing
+        if (!empty($licenseData['nationality']) && empty($rider['nationality'])) {
+            $updates['nationality'] = $licenseData['nationality'];
+        }
+
+        // Update district from SCF
+        if (!empty($licenseData['district'])) {
+            $updates['district'] = $licenseData['district'];
+        }
+
+        // Update name with correctly spelled version from SCF
+        if (!empty($licenseData['firstname'])) {
+            $updates['firstname'] = $licenseData['firstname'];
+        }
+        if (!empty($licenseData['lastname'])) {
+            $updates['lastname'] = $licenseData['lastname'];
+        }
+
+        // Perform update
+        $result = $this->db->update('riders', $updates, 'id = ?', [$riderId]);
 
         if ($result === false) {
             return false;
-        }
-
-        // Also update nationality if we have it and rider doesn't
-        if (!empty($licenseData['nationality'])) {
-            $rider = $this->db->getRow("SELECT nationality FROM riders WHERE id = ?", [$riderId]);
-            if (empty($rider['nationality'])) {
-                $this->db->update('riders', [
-                    'nationality' => $licenseData['nationality']
-                ], 'id = ?', [$riderId]);
-            }
         }
 
         // Record in history

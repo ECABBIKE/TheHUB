@@ -218,6 +218,20 @@ function findOrCreateRider($db, $firstname, $lastname, $uciId, $nationality, $cl
         return $rider['id'];
     }
 
+    // Check if this name was previously merged (to prevent recreating deleted duplicates)
+    try {
+        $mergedRider = $db->getRow(
+            "SELECT canonical_rider_id FROM rider_merge_map
+             WHERE UPPER(merged_firstname) = UPPER(?) AND UPPER(merged_lastname) = UPPER(?)
+             AND status = 'approved'",
+            [$firstname, $lastname]
+        );
+        if ($mergedRider) {
+            // This rider was previously merged - return the canonical rider instead
+            return $mergedRider['canonical_rider_id'];
+        }
+    } catch (Exception $e) { /* Table might not exist yet */ }
+
     // Create new rider
     $licenseNumber = !empty($uciId) ? $uciId : generateSweId($db);
 

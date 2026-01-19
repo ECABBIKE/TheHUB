@@ -106,6 +106,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $pdo->prepare("UPDATE rider_claims SET requesting_rider_id = ? WHERE requesting_rider_id = ?")->execute([$keepId, $removeId]);
                     } catch (Exception $e) { /* Table might not exist */ }
 
+                    // Record merge in rider_merge_map (to prevent recreating merged riders on import)
+                    try {
+                        $mergedRiderInfo = $db->getRow("SELECT firstname, lastname, license_number FROM riders WHERE id = ?", [$removeId]);
+                        if ($mergedRiderInfo) {
+                            $pdo->prepare("
+                                INSERT INTO rider_merge_map (canonical_rider_id, merged_rider_id, merged_firstname, merged_lastname, merged_license_number, reason, status)
+                                VALUES (?, ?, ?, ?, ?, 'manual_merge', 'approved')
+                                ON DUPLICATE KEY UPDATE canonical_rider_id = VALUES(canonical_rider_id), merged_firstname = VALUES(merged_firstname), merged_lastname = VALUES(merged_lastname), merged_license_number = VALUES(merged_license_number)
+                            ")->execute([$keepId, $removeId, $mergedRiderInfo['firstname'], $mergedRiderInfo['lastname'], $mergedRiderInfo['license_number']]);
+                        }
+                    } catch (Exception $e) { /* Table might not exist yet */ }
+
                     // Delete the merged rider
                     $pdo->prepare("DELETE FROM riders WHERE id = ?")->execute([$removeId]);
                 }
@@ -136,7 +148,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // Handle search and filters
 $search = $_GET['search'] ?? '';
 $club_id = isset($_GET['club_id']) && is_numeric($_GET['club_id']) ? intval($_GET['club_id']) : null;
-$nationality = isset($_GET['nationality']) && strlen($_GET['nationality']) === 3 ? strtoupper($_GET['nationality']) : null;
+$nationality = isset($_GET['nationality']) && strlen($_GET['nationality']) >= 2 && strlen($_GET['nationality']) <= 3 ? strtoupper($_GET['nationality']) : null;
 $onlyWithResults = isset($_GET['with_results']) && $_GET['with_results'] == '1';
 $onlySweId = isset($_GET['swe_only']) && $_GET['swe_only'] == '1';
 $onlyActivated = isset($_GET['activated']) && $_GET['activated'] == '1';
@@ -208,10 +220,19 @@ if ($hasEmail === '1') {
 
 $whereClause = $where ? 'WHERE ' . implode(' AND ', $where) : '';
 
+// Check if scf_license_year column exists
+$hasScfColumn = false;
+try {
+    $columns = $db->getAll("SHOW COLUMNS FROM riders LIKE 'scf_license_year'");
+    $hasScfColumn = !empty($columns);
+} catch (Exception $e) {}
+
+$scfSelect = $hasScfColumn ? "c.scf_license_year," : "NULL as scf_license_year,";
+
 $sql = "SELECT
     c.id, c.firstname, c.lastname, c.birth_year, c.gender, c.nationality,
     c.license_number, c.license_type, c.license_category, c.license_valid_until, c.discipline, c.active,
-    c.scf_license_year,
+    {$scfSelect}
     COALESCE(cl.name, cl_season.name) as club_name,
     COALESCE(cl.id, rcs_latest.club_id) as club_id,
     (SELECT COUNT(*) FROM results r WHERE r.cyclist_id = c.id) as result_count
