@@ -140,6 +140,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['test_type'])) {
                 // Test name search
                 $firstname = trim($_POST['firstname'] ?? '');
                 $lastname = trim($_POST['lastname'] ?? '');
+                $gender = trim($_POST['gender'] ?? 'M');
+                $birthdate = trim($_POST['birthdate'] ?? '');
                 if (empty($firstname) || empty($lastname)) {
                     $testError = 'Ange både förnamn och efternamn.';
                 } else {
@@ -147,8 +149,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['test_type'])) {
                     $params = [
                         'firstname' => $firstname,
                         'lastname' => $lastname,
+                        'gender' => $gender,
                         'year' => date('Y')
                     ];
+                    if (!empty($birthdate)) {
+                        $params['birthdate'] = $birthdate;
+                    }
                 }
                 break;
         }
@@ -264,7 +270,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['test_type'])) {
         <form method="post">
             <?= csrf_field() ?>
             <input type="hidden" name="test_type" value="search_name">
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-md);">
+            <div style="display: grid; grid-template-columns: 1fr 1fr 100px; gap: var(--space-md);">
                 <div class="form-group">
                     <label class="form-label">Förnamn</label>
                     <input type="text" name="firstname" class="form-input" placeholder="t.ex. Erik"
@@ -275,6 +281,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['test_type'])) {
                     <input type="text" name="lastname" class="form-input" placeholder="t.ex. Svensson"
                            value="<?= htmlspecialchars($_POST['lastname'] ?? '') ?>">
                 </div>
+                <div class="form-group">
+                    <label class="form-label">Kön</label>
+                    <select name="gender" class="form-select">
+                        <option value="M" <?= ($_POST['gender'] ?? 'M') === 'M' ? 'selected' : '' ?>>Man</option>
+                        <option value="F" <?= ($_POST['gender'] ?? '') === 'F' ? 'selected' : '' ?>>Kvinna</option>
+                    </select>
+                </div>
+            </div>
+            <div class="form-group">
+                <label class="form-label">Födelsedatum (valfritt)</label>
+                <input type="date" name="birthdate" class="form-input" style="max-width: 200px;"
+                       value="<?= htmlspecialchars($_POST['birthdate'] ?? '') ?>">
+                <small class="text-secondary">Rekommenderas för bättre träffsäkerhet</small>
             </div>
             <button type="submit" class="btn btn-primary">Sök i SCF</button>
         </form>
