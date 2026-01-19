@@ -234,15 +234,17 @@ $userTheme = 'light';
 
     // Detect favicon MIME type from extension
     $faviconExt = strtolower(pathinfo($faviconUrl, PATHINFO_EXTENSION));
-    $faviconMime = match($faviconExt) {
+    // PHP 5.x/7.x compatible - use array lookup instead of match()
+    $faviconMimeMap = array(
         'svg' => 'image/svg+xml',
         'png' => 'image/png',
-        'jpg', 'jpeg' => 'image/jpeg',
+        'jpg' => 'image/jpeg',
+        'jpeg' => 'image/jpeg',
         'ico' => 'image/x-icon',
         'gif' => 'image/gif',
-        'webp' => 'image/webp',
-        default => 'image/png'
-    };
+        'webp' => 'image/webp'
+    );
+    $faviconMime = isset($faviconMimeMap[$faviconExt]) ? $faviconMimeMap[$faviconExt] : 'image/png';
 
     // Use branding favicon for apple-touch-icon - use favicon URL regardless of format
     // iOS modern Safari supports SVG, older versions will use manifest icons
