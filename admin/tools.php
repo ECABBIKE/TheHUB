@@ -730,6 +730,20 @@ include __DIR__ . '/components/unified-layout.php';
         </div>
     </div>
 
+    <!-- SCF API Test -->
+    <div class="card">
+        <div class="tool-header">
+            <div class="tool-icon warning"><i data-lucide="plug"></i></div>
+            <div>
+                <h4 class="tool-title">API Test</h4>
+                <p class="tool-description">Testa SCF API-anslutning</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/scf-api-test.php" class="btn-admin btn-admin-warning">Testa</a>
+        </div>
+    </div>
+
 </div>
 
 <!-- ========== SYSTEM ========== -->
