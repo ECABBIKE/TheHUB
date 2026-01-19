@@ -42,20 +42,31 @@ $pageInfo = [
 // Auto-detect current admin page from URL for sidebar highlighting
 if (!isset($current_admin_page)) {
     $scriptName = basename($_SERVER['SCRIPT_NAME'] ?? '', '.php');
-    $current_admin_page = match($scriptName) {
+    // PHP 5.x/7.x compatible - use array lookup instead of match()
+    $pageMap = array(
         'promotor' => 'events',
-        'event-edit', 'event-create', 'events' => 'events',
-        'media', 'media-archive' => 'media',
-        'sponsors', 'sponsor-edit' => 'sponsors',
+        'event-edit' => 'events',
+        'event-create' => 'events',
+        'events' => 'events',
+        'media' => 'media',
+        'media-archive' => 'media',
+        'sponsors' => 'sponsors',
+        'sponsor-edit' => 'sponsors',
         'dashboard' => 'dashboard',
-        'series', 'series-events', 'series-pricing' => 'series',
-        'riders', 'rider-edit' => 'riders',
-        'clubs', 'club-edit' => 'clubs',
+        'series' => 'series',
+        'series-events' => 'series',
+        'series-pricing' => 'series',
+        'riders' => 'riders',
+        'rider-edit' => 'riders',
+        'clubs' => 'clubs',
+        'club-edit' => 'clubs',
         'import' => 'import',
         'ranking' => 'ranking',
-        'settings', 'system-settings', 'role-permissions' => 'settings',
-        default => $scriptName
-    };
+        'settings' => 'settings',
+        'system-settings' => 'settings',
+        'role-permissions' => 'settings'
+    );
+    $current_admin_page = isset($pageMap[$scriptName]) ? $pageMap[$scriptName] : $scriptName;
 }
 ?>
 <!DOCTYPE html>
@@ -84,12 +95,13 @@ if (!isset($current_admin_page)) {
         }
     }
     $faviconExt = strtolower(pathinfo($faviconUrl, PATHINFO_EXTENSION));
-    $faviconMime = match($faviconExt) {
+    // PHP 5.x/7.x compatible - use array lookup instead of match()
+    $faviconMimeMap = array(
         'svg' => 'image/svg+xml',
         'png' => 'image/png',
-        'ico' => 'image/x-icon',
-        default => 'image/png'
-    };
+        'ico' => 'image/x-icon'
+    );
+    $faviconMime = isset($faviconMimeMap[$faviconExt]) ? $faviconMimeMap[$faviconExt] : 'image/png';
     ?>
     <link rel="icon" type="<?= $faviconMime ?>" href="<?= htmlspecialchars($faviconUrl) ?>">
     <link rel="icon" type="<?= $faviconMime ?>" sizes="32x32" href="<?= htmlspecialchars($faviconUrl) ?>">
