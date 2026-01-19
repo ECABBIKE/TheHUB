@@ -1437,6 +1437,7 @@
     }
 
     /* Edge-to-edge cards on mobile */
+    .news-filter-bar,
     .news-card,
     .news-featured,
     .news-sidebar-section,
