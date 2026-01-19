@@ -52,10 +52,65 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
     } else {
         switch ($_POST['action']) {
             case 'trigger_sync':
-                // This would normally trigger a background job
-                // For now, we'll just show a message
-                $message = 'Synkronisering startas i bakgrunden. Uppdatera sidan om några minuter för att se resultatet.';
-                $messageType = 'info';
+                if (!$scfEnabled) {
+                    $message = 'SCF API är inte konfigurerat. Lägg till SCF_API_KEY i .env-filen.';
+                    $messageType = 'danger';
+                    break;
+                }
+
+                $year = (int)date('Y');
+                $batchSize = 50; // Process 50 riders at a time for web request
+
+                try {
+                    // Count how many need syncing
+                    $totalToSync = $scfService->countRidersToSync($year, true);
+
+                    if ($totalToSync === 0) {
+                        $message = 'Alla deltagare med UCI ID är redan verifierade för ' . $year . '.';
+                        $messageType = 'success';
+                        break;
+                    }
+
+                    // Get a batch of riders to sync
+                    $riders = $scfService->getRidersToSync($year, $batchSize, 0, true);
+
+                    if (empty($riders)) {
+                        $message = 'Inga deltagare att synkronisera.';
+                        $messageType = 'info';
+                        break;
+                    }
+
+                    // Start sync log
+                    $scfService->startSync('manual_batch', $year, count($riders));
+
+                    // Sync the batch
+                    $result = $scfService->syncRiderBatch($riders, $year);
+
+                    // Complete sync
+                    $scfService->completeSync('completed');
+
+                    // Refresh stats
+                    $riderStats['verified_this_year'] = (int)$db->getValue(
+                        "SELECT COUNT(*) FROM riders WHERE scf_license_year = ?",
+                        [$year]
+                    );
+
+                    $message = sprintf(
+                        'Synkronisering klar! Bearbetade: %d, Hittade licenser: %d, Uppdaterade: %d, Fel: %d. Totalt kvar: %d',
+                        $result['processed'],
+                        $result['found'],
+                        $result['updated'],
+                        $result['errors'],
+                        $totalToSync - $result['processed']
+                    );
+                    $messageType = $result['errors'] > 0 ? 'warning' : 'success';
+
+                } catch (Exception $e) {
+                    $scfService->completeSync('failed', $e->getMessage());
+                    $message = 'Synkronisering misslyckades: ' . $e->getMessage();
+                    $messageType = 'danger';
+                    error_log('SCF Sync error: ' . $e->getMessage());
+                }
                 break;
         }
     }
