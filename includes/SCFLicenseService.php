@@ -536,7 +536,7 @@ class SCFLicenseService {
      * @return array Stats [processed, found, updated, errors]
      */
     public function syncRiderBatch(array $riders, int $year): array {
-        $stats = ['processed' => 0, 'found' => 0, 'updated' => 0, 'errors' => 0];
+        $stats = ['processed' => 0, 'found' => 0, 'updated' => 0, 'errors' => 0, 'name_fallback' => 0];
 
         if (empty($riders)) {
             return $stats;
@@ -544,26 +544,29 @@ class SCFLicenseService {
 
         // Collect UCI IDs from license_number field
         $uciIdMap = [];
+        $ridersById = [];
         foreach ($riders as $rider) {
+            $ridersById[$rider['id']] = $rider;
             $normalizedId = $this->normalizeUciId($rider['license_number'] ?? '');
             if (strlen($normalizedId) === 11) {
                 $uciIdMap[$normalizedId] = $rider;
             }
         }
 
-        if (empty($uciIdMap)) {
-            return $stats;
+        // Batch lookup by UCI ID
+        $licenses = [];
+        if (!empty($uciIdMap)) {
+            $licenses = $this->lookupByUciIds(array_keys($uciIdMap), $year);
         }
 
-        // Batch lookup
-        $licenses = $this->lookupByUciIds(array_keys($uciIdMap), $year);
-
-        // Process results
+        // Process results - first by UCI ID
+        $foundRiderIds = [];
         foreach ($uciIdMap as $uciId => $rider) {
             $stats['processed']++;
 
             if (isset($licenses[$uciId])) {
                 $stats['found']++;
+                $foundRiderIds[$rider['id']] = true;
                 $licenseData = $licenses[$uciId];
 
                 // Cache the license data
@@ -577,9 +580,58 @@ class SCFLicenseService {
                     $stats['errors']++;
                     $this->log("Error updating rider #{$rider['id']}");
                 }
-            } else {
-                $this->log("Not found in SCF: {$rider['firstname']} {$rider['lastname']} (UCI: $uciId)");
             }
+        }
+
+        // Fallback: Try name search for riders not found by UCI ID
+        foreach ($riders as $rider) {
+            if (isset($foundRiderIds[$rider['id']])) {
+                continue; // Already found by UCI ID
+            }
+
+            // Only count as processed if not already counted
+            if (!isset($uciIdMap[$this->normalizeUciId($rider['license_number'] ?? '')])) {
+                $stats['processed']++;
+            }
+
+            // Try name search
+            $gender = strtoupper(substr($rider['gender'] ?? 'M', 0, 1));
+            $birthdate = null;
+            if (!empty($rider['birth_year'])) {
+                $birthdate = $rider['birth_year'] . '-01-01';
+            }
+
+            $this->log("Trying name search for: {$rider['firstname']} {$rider['lastname']}");
+
+            $licenseData = $this->lookupByName(
+                $rider['firstname'],
+                $rider['lastname'],
+                $gender,
+                $birthdate,
+                $year
+            );
+
+            if ($licenseData) {
+                $stats['found']++;
+                $stats['name_fallback']++;
+
+                // Cache the license data
+                $this->cacheLicense($licenseData, $year);
+
+                // Update rider
+                if ($this->updateRiderLicense($rider['id'], $licenseData, $year)) {
+                    $stats['updated']++;
+                    $this->log("Updated rider #{$rider['id']} via name search: {$rider['firstname']} {$rider['lastname']}");
+                } else {
+                    $stats['errors']++;
+                    $this->log("Error updating rider #{$rider['id']}");
+                }
+            } else {
+                $this->log("Not found in SCF: {$rider['firstname']} {$rider['lastname']}");
+            }
+
+            // Rate limit for name searches
+            usleep(self::REQUEST_DELAY_MS * 1000);
         }
 
         return $stats;
