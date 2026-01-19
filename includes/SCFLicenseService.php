@@ -446,12 +446,13 @@ class SCFLicenseService {
      * @return array
      */
     public function getRidersToSync(int $year, int $limit = 100, int $offset = 0, bool $onlyUnverified = true): array {
-        // license_number contains UCI ID in TheHUB database
+        // license_number contains either real UCI ID (NOT starting with SWE) or generated SWE-ID
+        // Real UCI IDs can be formatted with spaces like "XXX XXX XXX XX"
         $sql = "SELECT id, firstname, lastname, license_number, gender, birth_year, nationality
                 FROM riders
                 WHERE license_number IS NOT NULL
                   AND license_number != ''
-                  AND license_number REGEXP '^[0-9]{11}$'";
+                  AND license_number NOT LIKE 'SWE%'";
 
         if ($onlyUnverified) {
             $sql .= " AND (scf_license_year IS NULL OR scf_license_year != ?)";
@@ -472,11 +473,11 @@ class SCFLicenseService {
      * @return int
      */
     public function countRidersToSync(int $year, bool $onlyUnverified = true): int {
-        // license_number contains UCI ID in TheHUB database
+        // license_number contains either real UCI ID (NOT starting with SWE) or generated SWE-ID
         $sql = "SELECT COUNT(*) FROM riders
                 WHERE license_number IS NOT NULL
                   AND license_number != ''
-                  AND license_number REGEXP '^[0-9]{11}$'";
+                  AND license_number NOT LIKE 'SWE%'";
 
         if ($onlyUnverified) {
             $sql .= " AND (scf_license_year IS NULL OR scf_license_year != ?)";
@@ -551,12 +552,12 @@ class SCFLicenseService {
      * @return array
      */
     public function getRidersWithoutUciId(int $limit = 100, int $offset = 0): array {
-        // license_number contains UCI ID in TheHUB database
+        // license_number contains either real UCI ID (NOT starting with SWE) or generated SWE-ID
         return $this->db->getAll(
             "SELECT r.id, r.firstname, r.lastname, r.gender, r.birth_year, r.nationality, c.name as club_name
              FROM riders r
              LEFT JOIN clubs c ON r.club_id = c.id
-             WHERE (r.license_number IS NULL OR r.license_number = '' OR r.license_number NOT REGEXP '^[0-9]{11}$')
+             WHERE (r.license_number IS NULL OR r.license_number = '' OR r.license_number LIKE 'SWE%')
                AND r.id NOT IN (SELECT rider_id FROM scf_match_candidates WHERE status = 'pending')
              ORDER BY r.id
              LIMIT ? OFFSET ?",
