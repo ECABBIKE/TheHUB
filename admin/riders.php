@@ -211,6 +211,7 @@ $whereClause = $where ? 'WHERE ' . implode(' AND ', $where) : '';
 $sql = "SELECT
     c.id, c.firstname, c.lastname, c.birth_year, c.gender, c.nationality,
     c.license_number, c.license_type, c.license_category, c.license_valid_until, c.discipline, c.active,
+    c.scf_license_year,
     COALESCE(cl.name, cl_season.name) as club_name,
     COALESCE(cl.id, rcs_latest.club_id) as club_id,
     (SELECT COUNT(*) FROM results r WHERE r.cyclist_id = c.id) as result_count
@@ -549,31 +550,31 @@ include __DIR__ . '/components/unified-layout.php';
                     <tbody>
                         <?php foreach ($riders as $rider): ?>
                             <?php
-                            // Check license status
-                            $hasValidLicense = false;
+                            // Check license status - three states:
+                            // 1. SWE-ID (yellow) - Generated SWE ID, no real UCI ID
+                            // 2. Ej aktiv (red) - Has UCI ID but not verified for current year
+                            // 3. Aktiv (green) - Has UCI ID and verified for current year
+                            $currentYear = (int)date('Y');
                             $licenseStatusMessage = '-';
                             $licenseStatusClass = 'admin-badge-secondary';
 
-                            if (!empty($rider['license_number']) && strpos($rider['license_number'], 'SWE') !== 0) {
-                                if (!empty($rider['license_valid_until'])) {
-                                    $validUntil = strtotime($rider['license_valid_until']);
-                                    $today = time();
-                                    if ($validUntil >= $today) {
-                                        $hasValidLicense = true;
+                            if (!empty($rider['license_number'])) {
+                                if (strpos($rider['license_number'], 'SWE') === 0) {
+                                    // Generated SWE-ID (no real UCI ID)
+                                    $licenseStatusMessage = 'SWE-ID';
+                                    $licenseStatusClass = 'admin-badge-warning';
+                                } else {
+                                    // Has real UCI ID - check if verified this year
+                                    if (!empty($rider['scf_license_year']) && (int)$rider['scf_license_year'] === $currentYear) {
+                                        // Verified for current year
                                         $licenseStatusMessage = 'Aktiv';
                                         $licenseStatusClass = 'admin-badge-success';
                                     } else {
-                                        $licenseStatusMessage = 'Utgången';
+                                        // Has UCI ID but not verified
+                                        $licenseStatusMessage = 'Ej aktiv';
                                         $licenseStatusClass = 'admin-badge-error';
                                     }
-                                } else {
-                                    $hasValidLicense = true;
-                                    $licenseStatusMessage = 'Aktiv';
-                                    $licenseStatusClass = 'admin-badge-success';
                                 }
-                            } elseif (!empty($rider['license_number']) && strpos($rider['license_number'], 'SWE') === 0) {
-                                $licenseStatusMessage = 'SWE-ID';
-                                $licenseStatusClass = 'admin-badge-warning';
                             }
                             ?>
                             <tr>
