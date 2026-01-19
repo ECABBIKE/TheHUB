@@ -814,6 +814,13 @@ function require_admin() {
 }
 
 /**
+ * Alias for requireLogin() - camelCase version
+ */
+function requireAdmin() {
+    return requireLogin();
+}
+
+/**
  * Alias for isLoggedIn()
  */
 function is_admin() {
