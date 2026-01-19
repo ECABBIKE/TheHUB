@@ -142,6 +142,16 @@ try {
     require_once INCLUDES_PATH . '/map_functions.php';
     $hasInteractiveMap = eventHasMap($db, $eventId);
 
+    // Check for race reports/news linked to this event
+    $eventReportsCount = 0;
+    try {
+        $reportsStmt = $db->prepare("SELECT COUNT(*) FROM race_reports WHERE event_id = ? AND status = 'published'");
+        $reportsStmt->execute([$eventId]);
+        $eventReportsCount = (int)$reportsStmt->fetchColumn();
+    } catch (PDOException $e) {
+        // Table might not exist yet
+    }
+
     // Fetch sponsors - series sponsors take priority over event sponsors
     // Include all logo fields for placement-specific logos
     require_once INCLUDES_PATH . '/sponsor-functions.php';
@@ -1172,6 +1182,14 @@ if (!empty($eventSponsors['content'])): ?>
         </a>
         <?php endif; ?>
 
+        <?php if ($eventReportsCount > 0): ?>
+        <a href="?id=<?= $eventId ?>&tab=nyheter" class="event-tab <?= $activeTab === 'nyheter' ? 'active' : '' ?>">
+            <i data-lucide="newspaper"></i>
+            Media
+            <span class="tab-badge tab-badge--accent"><?= $eventReportsCount ?></span>
+        </a>
+        <?php endif; ?>
+
         <?php if ($showAllTabs && !$isPastEvent && $totalRegistrations > 0): ?>
         <a href="?id=<?= $eventId ?>&tab=anmalda" class="event-tab <?= $activeTab === 'anmalda' ? 'active' : '' ?>">
             <i data-lucide="users"></i>
@@ -2138,6 +2156,214 @@ render_event_map($eventId, $db, [
 <?php else: ?>
 <p class="text-muted">Ingen interaktiv karta tillgänglig.</p>
 <?php endif; ?>
+
+<?php elseif ($activeTab === 'nyheter'): ?>
+<!-- NEWS/MEDIA TAB -->
+<?php
+// Fetch race reports for this event
+$eventReports = [];
+try {
+    require_once HUB_ROOT . '/includes/RaceReportManager.php';
+    $reportManager = new RaceReportManager($db);
+    $reportsResult = $reportManager->listReports([
+        'event_id' => $eventId,
+        'per_page' => 20
+    ]);
+    $eventReports = $reportsResult['reports'];
+} catch (Exception $e) {
+    // Ignore
+}
+?>
+<section class="card">
+    <div class="card-header">
+        <h2 class="card-title">
+            <i data-lucide="newspaper"></i>
+            Media och nyheter
+            <span class="badge badge--primary ml-sm"><?= count($eventReports) ?></span>
+        </h2>
+        <a href="/news?event=<?= $eventId ?>" class="btn btn-sm btn-secondary">
+            <i data-lucide="external-link"></i>
+            Visa alla
+        </a>
+    </div>
+    <div class="card-body">
+        <?php if (empty($eventReports)): ?>
+            <p class="text-muted">Inga nyheter eller media fran detta event an.</p>
+        <?php else: ?>
+        <div class="event-news-grid">
+            <?php foreach ($eventReports as $report): ?>
+            <a href="/news/<?= htmlspecialchars($report['slug']) ?>" class="event-news-card">
+                <div class="event-news-card__image">
+                    <?php if ($report['featured_image']): ?>
+                    <img src="<?= htmlspecialchars($report['featured_image']) ?>" alt="" loading="lazy">
+                    <?php elseif ($report['youtube_video_id']): ?>
+                    <img src="https://img.youtube.com/vi/<?= htmlspecialchars($report['youtube_video_id']) ?>/hqdefault.jpg" alt="" loading="lazy">
+                    <div class="event-news-card__play"><i data-lucide="play"></i></div>
+                    <?php else: ?>
+                    <div class="event-news-card__placeholder"><i data-lucide="image"></i></div>
+                    <?php endif; ?>
+                </div>
+                <div class="event-news-card__content">
+                    <h3 class="event-news-card__title"><?= htmlspecialchars($report['title']) ?></h3>
+                    <div class="event-news-card__meta">
+                        <span><?= htmlspecialchars($report['firstname'] . ' ' . $report['lastname']) ?></span>
+                        <span><?= date('j M Y', strtotime($report['published_at'])) ?></span>
+                    </div>
+                    <div class="event-news-card__stats">
+                        <span><i data-lucide="eye"></i> <?= number_format($report['views']) ?></span>
+                        <span><i data-lucide="heart"></i> <?= number_format($report['likes']) ?></span>
+                    </div>
+                </div>
+            </a>
+            <?php endforeach; ?>
+        </div>
+        <?php endif; ?>
+
+        <?php if (function_exists('hub_current_user') && hub_current_user()): ?>
+        <div class="event-news-cta">
+            <p>Deltog du i denna tavling? Dela din upplevelse!</p>
+            <a href="/profile/race-reports" class="btn btn-primary">
+                <i data-lucide="pen-tool"></i>
+                Skriv Race Report
+            </a>
+        </div>
+        <?php endif; ?>
+    </div>
+</section>
+
+<style>
+.event-news-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: var(--space-md);
+    margin-bottom: var(--space-lg);
+}
+
+.event-news-card {
+    display: flex;
+    flex-direction: column;
+    background: var(--color-bg-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+    text-decoration: none;
+    transition: all 0.15s ease;
+}
+
+.event-news-card:hover {
+    border-color: var(--color-accent);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.event-news-card__image {
+    position: relative;
+    aspect-ratio: 16 / 9;
+    background: var(--color-bg-page);
+    overflow: hidden;
+}
+
+.event-news-card__image img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.event-news-card__placeholder {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: var(--color-text-muted);
+}
+
+.event-news-card__placeholder i {
+    width: 32px;
+    height: 32px;
+}
+
+.event-news-card__play {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 40px;
+    height: 40px;
+    background: rgba(0,0,0,0.7);
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: white;
+}
+
+.event-news-card__play i {
+    width: 18px;
+    height: 18px;
+    margin-left: 2px;
+}
+
+.event-news-card__content {
+    padding: var(--space-md);
+}
+
+.event-news-card__title {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--color-text-primary);
+    margin: 0 0 var(--space-xs);
+    line-height: 1.3;
+    display: -webkit-box;
+    -webkit-line-clamp: 2;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+}
+
+.event-news-card__meta {
+    display: flex;
+    justify-content: space-between;
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+    margin-bottom: var(--space-xs);
+}
+
+.event-news-card__stats {
+    display: flex;
+    gap: var(--space-md);
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+}
+
+.event-news-card__stats span {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2xs);
+}
+
+.event-news-card__stats i {
+    width: 12px;
+    height: 12px;
+}
+
+.event-news-cta {
+    text-align: center;
+    padding: var(--space-lg);
+    background: var(--color-accent-light);
+    border-radius: var(--radius-md);
+}
+
+.event-news-cta p {
+    margin: 0 0 var(--space-md);
+    color: var(--color-text-secondary);
+}
+
+@media (max-width: 767px) {
+    .event-news-grid {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
 
 <?php elseif ($activeTab === 'anmalda'): ?>
 <!-- REGISTERED PARTICIPANTS TAB -->
