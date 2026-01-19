@@ -437,7 +437,7 @@ class SCFLicenseService {
     }
 
     /**
-     * Get riders with UCI ID that need license verification
+     * Get riders with UCI ID (license_number) that need license verification
      *
      * @param int $year
      * @param int $limit
@@ -446,11 +446,12 @@ class SCFLicenseService {
      * @return array
      */
     public function getRidersToSync(int $year, int $limit = 100, int $offset = 0, bool $onlyUnverified = true): array {
-        $sql = "SELECT id, firstname, lastname, uci_id, gender, birth_year, nationality
+        // license_number contains UCI ID in TheHUB database
+        $sql = "SELECT id, firstname, lastname, license_number, gender, birth_year, nationality
                 FROM riders
-                WHERE uci_id IS NOT NULL
-                  AND uci_id != ''
-                  AND LENGTH(REPLACE(uci_id, ' ', '')) = 11";
+                WHERE license_number IS NOT NULL
+                  AND license_number != ''
+                  AND license_number REGEXP '^[0-9]{11}$'";
 
         if ($onlyUnverified) {
             $sql .= " AND (scf_license_year IS NULL OR scf_license_year != ?)";
@@ -471,10 +472,11 @@ class SCFLicenseService {
      * @return int
      */
     public function countRidersToSync(int $year, bool $onlyUnverified = true): int {
+        // license_number contains UCI ID in TheHUB database
         $sql = "SELECT COUNT(*) FROM riders
-                WHERE uci_id IS NOT NULL
-                  AND uci_id != ''
-                  AND LENGTH(REPLACE(uci_id, ' ', '')) = 11";
+                WHERE license_number IS NOT NULL
+                  AND license_number != ''
+                  AND license_number REGEXP '^[0-9]{11}$'";
 
         if ($onlyUnverified) {
             $sql .= " AND (scf_license_year IS NULL OR scf_license_year != ?)";
@@ -498,10 +500,10 @@ class SCFLicenseService {
             return $stats;
         }
 
-        // Collect UCI IDs
+        // Collect UCI IDs from license_number field
         $uciIdMap = [];
         foreach ($riders as $rider) {
-            $normalizedId = $this->normalizeUciId($rider['uci_id']);
+            $normalizedId = $this->normalizeUciId($rider['license_number'] ?? '');
             if (strlen($normalizedId) === 11) {
                 $uciIdMap[$normalizedId] = $rider;
             }
@@ -542,18 +544,19 @@ class SCFLicenseService {
     }
 
     /**
-     * Get riders without UCI ID for potential matching
+     * Get riders without UCI ID (license_number) for potential matching
      *
      * @param int $limit
      * @param int $offset
      * @return array
      */
     public function getRidersWithoutUciId(int $limit = 100, int $offset = 0): array {
+        // license_number contains UCI ID in TheHUB database
         return $this->db->getAll(
             "SELECT r.id, r.firstname, r.lastname, r.gender, r.birth_year, r.nationality, c.name as club_name
              FROM riders r
              LEFT JOIN clubs c ON r.club_id = c.id
-             WHERE (r.uci_id IS NULL OR r.uci_id = '' OR LENGTH(REPLACE(r.uci_id, ' ', '')) != 11)
+             WHERE (r.license_number IS NULL OR r.license_number = '' OR r.license_number NOT REGEXP '^[0-9]{11}$')
                AND r.id NOT IN (SELECT rider_id FROM scf_match_candidates WHERE status = 'pending')
              ORDER BY r.id
              LIMIT ? OFFSET ?",
@@ -809,7 +812,7 @@ class SCFLicenseService {
     }
 
     /**
-     * Confirm a match candidate (assigns UCI ID to rider)
+     * Confirm a match candidate (assigns UCI ID to rider's license_number field)
      *
      * @param int $matchId
      * @param int $adminUserId
@@ -827,9 +830,9 @@ class SCFLicenseService {
 
         $this->db->beginTransaction();
         try {
-            // Update rider with UCI ID
+            // Update rider with UCI ID in license_number field
             $this->db->update('riders', [
-                'uci_id' => $this->formatUciIdDisplay($match['scf_uci_id'])
+                'license_number' => $this->normalizeUciId($match['scf_uci_id'])
             ], 'id = ?', [$match['rider_id']]);
 
             // Mark match as confirmed
@@ -890,11 +893,12 @@ class SCFLicenseService {
             'pending_matches' => (int)$this->db->getValue(
                 "SELECT COUNT(*) FROM scf_match_candidates WHERE status = 'pending'"
             ),
+            // license_number contains UCI ID in TheHUB database (11 digit number)
             'riders_with_uci' => (int)$this->db->getValue(
-                "SELECT COUNT(*) FROM riders WHERE uci_id IS NOT NULL AND uci_id != ''"
+                "SELECT COUNT(*) FROM riders WHERE license_number IS NOT NULL AND license_number != '' AND license_number REGEXP '^[0-9]{11}$'"
             ),
             'riders_without_uci' => (int)$this->db->getValue(
-                "SELECT COUNT(*) FROM riders WHERE uci_id IS NULL OR uci_id = ''"
+                "SELECT COUNT(*) FROM riders WHERE license_number IS NULL OR license_number = '' OR license_number NOT REGEXP '^[0-9]{11}$'"
             )
         ];
     }

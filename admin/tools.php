@@ -675,6 +675,49 @@ include __DIR__ . '/components/unified-layout.php';
 
 </div>
 
+<!-- ========== SCF LICENSSYNK ========== -->
+<h3 class="section-title">SCF Licenssynk</h3>
+<div class="tools-grid">
+
+    <!-- SCF Sync Status -->
+    <div class="card">
+        <div class="tool-header">
+            <div class="tool-icon" style="background: linear-gradient(135deg, #006aa7 50%, #fecc00 50%);"><i data-lucide="badge-check" style="color: #fff;"></i></div>
+            <div>
+                <h4 class="tool-title">Synkstatus</h4>
+                <p class="tool-description">SCF License Portal integration</p>
+            </div>
+        </div>
+        <?php
+        $scfPending = 0;
+        try {
+            $result = $db->query("SELECT COUNT(*) FROM scf_match_candidates WHERE status = 'pending'");
+            if ($result) $scfPending = $result->fetchColumn() ?: 0;
+        } catch (Exception $e) {}
+        if ($scfPending > 0): ?>
+        <div class="tool-stat warning"><?= number_format($scfPending) ?> matchningar att granska</div>
+        <?php endif; ?>
+        <div class="tool-actions">
+            <a href="/admin/scf-sync-status.php" class="btn-admin btn-admin-primary">Öppna</a>
+        </div>
+    </div>
+
+    <!-- SCF Match Review -->
+    <div class="card">
+        <div class="tool-header">
+            <div class="tool-icon"><i data-lucide="user-check"></i></div>
+            <div>
+                <h4 class="tool-title">Granska matchningar</h4>
+                <p class="tool-description">Bekräfta/avvisa UCI ID-matchningar</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/scf-match-review.php" class="btn-admin btn-admin-secondary">Granska</a>
+        </div>
+    </div>
+
+</div>
+
 <!-- ========== SYSTEM ========== -->
 <h3 class="section-title">System</h3>
 <div class="tools-grid">

@@ -247,10 +247,17 @@ class RaceReportManager {
                 $params[':rider_id'] = $filters['rider_id'];
             }
 
-            // Admin user filter
+            // Admin user filter - with optional linked_rider_id for OR query
             if (!empty($filters['admin_user_id'])) {
-                $where[] = "rr.admin_user_id = :admin_user_id";
-                $params[':admin_user_id'] = $filters['admin_user_id'];
+                if (!empty($filters['linked_rider_id'])) {
+                    // Admin has a linked rider account - check both with OR
+                    $where[] = "(rr.admin_user_id = :admin_user_id OR rr.rider_id = :linked_rider_id)";
+                    $params[':admin_user_id'] = $filters['admin_user_id'];
+                    $params[':linked_rider_id'] = $filters['linked_rider_id'];
+                } else {
+                    $where[] = "rr.admin_user_id = :admin_user_id";
+                    $params[':admin_user_id'] = $filters['admin_user_id'];
+                }
             }
 
             if (!empty($filters['event_id'])) {

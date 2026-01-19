@@ -52,10 +52,11 @@ migrations/             ← FEL! Arkiverad
 ```
 
 ### Migreringsverktyg:
-**ETT verktyg:** `/admin/migrations.php`
+**ETT verktyg:** `/admin/migrations.php` (https://thehub.gravityseries.se/admin/migrations.php)
 
 - Auto-detekterar vilka migrationer som körts (kollar databasstruktur)
 - Visar status: Körd / Ej körd
+- **Körda migrationer visas GRÖNMARKERADE**
 - Kör migrationer direkt från UI
 - Mobilanpassat
 
@@ -64,6 +65,47 @@ migrations/             ← FEL! Arkiverad
 2. Ingen DELIMITER-syntax (funkar inte med PHP PDO)
 3. Ingen dynamisk SQL (SET @sql / PREPARE / EXECUTE)
 4. Endast standard SQL-statements
+5. **Migrationer ska vara körbara via admin/migrations.php**
+
+---
+
+## ADMIN-VERKTYG - ALLTID I tools.php
+
+**ALLA nya admin-verktyg ska länkas från `/admin/tools.php`**
+
+URL: https://thehub.gravityseries.se/admin/tools.php
+
+### Befintliga sektioner i tools.php:
+- **Säsongshantering** - Årsåterställning, importgranskning
+- **Klubbar & Åkare** - Synka klubbar, normalisera namn, UCI-ID
+- **Datahantering** - Data Explorer, statistik, dubbletter, RF-registrering
+- **Import & Resultat** - Importera, rensa, räkna om poäng
+- **Felsökning** - Datakvalitet, diagnostik, fixa fel
+- **Analytics - Setup** - Tabeller, historisk data
+- **Analytics - Rapporter** - Dashboard, trender, kohorter
+- **SCF Licenssynk** - SCF License Portal integration
+- **System** - Cache, backup, migrationer
+
+### När du skapar nya verktyg:
+1. Skapa verktygets PHP-fil i `/admin/` eller `/admin/tools/`
+2. **LÄGG ALLTID TILL länk i `/admin/tools.php`**
+3. Placera under rätt sektion baserat på vad verktyget gör
+4. Använd samma kortformat som befintliga verktyg:
+
+```html
+<div class="card">
+    <div class="tool-header">
+        <div class="tool-icon"><i data-lucide="ICON"></i></div>
+        <div>
+            <h4 class="tool-title">Verktygsnamn</h4>
+            <p class="tool-description">Kort beskrivning</p>
+        </div>
+    </div>
+    <div class="tool-actions">
+        <a href="/admin/VERKTYG.php" class="btn-admin btn-admin-primary">Öppna</a>
+    </div>
+</div>
+```
 
 ---
 
@@ -533,13 +575,24 @@ Om du behöver:
 
 ### riders (deltagare)
 ```sql
-id, firstname, lastname, birth_year, gender,
-license_number, license_type, license_year, license_valid_until,
-gravity_id, uci_id, club_id, nationality, active,
+id, firstname, lastname, birth_year, gender, nationality, active,
+club_id,                    -- Koppling till clubs-tabellen
+license_number,             -- UCI ID (t.ex. "10012345678") - DETTA ÄR UCI-NUMRET!
+license_type,               -- Licenstyp (Elite, Junior, etc)
+license_category,           -- Kön/kategori för licensen
+license_year,               -- År licensen gäller till (avslutas 31 dec)
+license_valid_until,        -- Datum licensen gäller till
+discipline,                 -- Disciplin (MTB, Road, etc)
+district,                   -- SCF-distrikt klubben tillhör
 first_season, experience_level,
 stats_total_starts, stats_total_finished, stats_total_wins, stats_total_podiums, stats_total_points,
 created_at, updated_at
 ```
+
+**VIKTIGT om license_number:**
+- `license_number` innehåller UCI ID (11 siffror, t.ex. "10012345678")
+- Svenska licenser börjar ofta med "SWE" prefix
+- Detta är kolumnen som ska användas för SCF API-validering
 
 ### results (resultat)
 ```sql

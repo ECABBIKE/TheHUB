@@ -81,12 +81,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $report = $reportManager->getReport($reportId, false);
 
-        // Check permission - rider owns post OR admin owns post
+        // Check permission - rider owns post OR admin owns post OR admin's linked rider owns post
         $isAdminUser = !empty($currentUser['is_admin']) && empty($_SESSION['rider_id']);
         $adminId = $_SESSION['admin_id'] ?? $currentUser['id'];
+
+        // Find linked rider for admin
+        $updateLinkedRiderId = null;
+        if ($isAdminUser && !empty($currentUser['email'])) {
+            try {
+                $stmt = $pdo->prepare("SELECT id FROM riders WHERE email = ? LIMIT 1");
+                $stmt->execute([$currentUser['email']]);
+                $lr = $stmt->fetch(PDO::FETCH_ASSOC);
+                if ($lr) $updateLinkedRiderId = $lr['id'];
+            } catch (Exception $e) {}
+        }
+
         $canEdit = $report && (
             ($report['rider_id'] && $report['rider_id'] == $currentUser['id']) ||
-            ($report['admin_user_id'] && $report['admin_user_id'] == $adminId)
+            ($report['admin_user_id'] && $report['admin_user_id'] == $adminId) ||
+            ($isAdminUser && $updateLinkedRiderId && $report['rider_id'] == $updateLinkedRiderId)
         );
 
         if (!$canEdit) {
@@ -120,12 +133,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $report = $reportManager->getReport($reportId, false);
 
-        // Check permission - rider owns post OR admin owns post
+        // Check permission - rider owns post OR admin owns post OR admin's linked rider owns post
         $isAdminUser = !empty($currentUser['is_admin']) && empty($_SESSION['rider_id']);
         $adminId = $_SESSION['admin_id'] ?? $currentUser['id'];
+
+        // Find linked rider for admin
+        $deleteLinkedRiderId = null;
+        if ($isAdminUser && !empty($currentUser['email'])) {
+            try {
+                $stmt = $pdo->prepare("SELECT id FROM riders WHERE email = ? LIMIT 1");
+                $stmt->execute([$currentUser['email']]);
+                $lr = $stmt->fetch(PDO::FETCH_ASSOC);
+                if ($lr) $deleteLinkedRiderId = $lr['id'];
+            } catch (Exception $e) {}
+        }
+
         $canDelete = $report && (
             ($report['rider_id'] && $report['rider_id'] == $currentUser['id']) ||
-            ($report['admin_user_id'] && $report['admin_user_id'] == $adminId)
+            ($report['admin_user_id'] && $report['admin_user_id'] == $adminId) ||
+            ($isAdminUser && $deleteLinkedRiderId && $report['rider_id'] == $deleteLinkedRiderId)
         );
 
         if (!$canDelete) {
@@ -144,12 +170,34 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
 // Get rider's reports (or admin's reports)
 $isAdminUser = !empty($currentUser['is_admin']) && empty($_SESSION['rider_id']);
+
+// For admin users, find linked rider_id via matching email
+$linkedRiderId = null;
+if ($isAdminUser && !empty($currentUser['email'])) {
+    try {
+        $stmt = $pdo->prepare("SELECT id FROM riders WHERE email = ? LIMIT 1");
+        $stmt->execute([$currentUser['email']]);
+        $linkedRider = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($linkedRider) {
+            $linkedRiderId = $linkedRider['id'];
+        }
+    } catch (Exception $e) {
+        // Ignore
+    }
+}
+
+// Build filters - for admin users we need to check both admin_user_id AND linked rider_id
 $reportFilters = [
     'include_drafts' => true,
     'per_page' => 50
 ];
+
 if ($isAdminUser) {
+    // Admin user - pass both IDs for OR query
     $reportFilters['admin_user_id'] = $_SESSION['admin_id'] ?? $currentUser['id'];
+    if ($linkedRiderId) {
+        $reportFilters['linked_rider_id'] = $linkedRiderId;
+    }
 } else {
     $reportFilters['rider_id'] = $currentUser['id'];
 }
@@ -177,11 +225,12 @@ $editReport = null;
 if (isset($_GET['edit']) && is_numeric($_GET['edit'])) {
     $editReport = $reportManager->getReport((int)$_GET['edit'], false);
     if ($editReport) {
-        // Check permission - rider owns post OR admin owns post
+        // Check permission - rider owns post OR admin owns post OR admin's linked rider owns post
         $adminId = $_SESSION['admin_id'] ?? $currentUser['id'];
         $canEdit = (
             ($editReport['rider_id'] && $editReport['rider_id'] == $currentUser['id']) ||
-            ($editReport['admin_user_id'] && $editReport['admin_user_id'] == $adminId)
+            ($editReport['admin_user_id'] && $editReport['admin_user_id'] == $adminId) ||
+            ($isAdminUser && $linkedRiderId && $editReport['rider_id'] == $linkedRiderId)
         );
         if (!$canEdit) {
             $editReport = null;
@@ -503,13 +552,20 @@ Tipsa gärna andra åkare om banan eller arrangemanget."><?= htmlspecialchars($e
 <?php endif; ?>
 
 <style>
-/* Race Reports Page - Clean Single Column Design */
+/* Race Reports Page - Premium Desktop & Mobile Design */
 
-/* Tips Bar */
+/* Container for max-width on desktop */
+.rr-container {
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+/* Tips Bar - Compact horizontal strip */
 .rr-tips-bar {
     display: flex;
     justify-content: center;
-    gap: var(--space-lg);
+    flex-wrap: wrap;
+    gap: var(--space-md) var(--space-xl);
     padding: var(--space-md) var(--space-lg);
     background: var(--color-bg-card);
     border: 1px solid var(--color-border);
@@ -523,26 +579,45 @@ Tipsa gärna andra åkare om banan eller arrangemanget."><?= htmlspecialchars($e
     gap: var(--space-xs);
     font-size: 0.8125rem;
     color: var(--color-text-secondary);
+    white-space: nowrap;
 }
 
 .rr-tip i {
-    width: 18px;
-    height: 18px;
+    width: 16px;
+    height: 16px;
     color: var(--color-accent);
+    flex-shrink: 0;
 }
 
-/* Form Card */
+/* Form Card - Clean white card */
 .rr-form-card {
     margin-bottom: var(--space-xl);
+    border-radius: var(--radius-lg);
+    overflow: hidden;
 }
 
 .rr-form-card .card-header {
     display: flex;
     justify-content: space-between;
     align-items: center;
+    padding: var(--space-lg) var(--space-xl);
+    background: var(--color-bg-surface);
+    border-bottom: 1px solid var(--color-border);
 }
 
-/* Sections */
+.rr-form-card .card-header h2 {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    margin: 0;
+    font-size: 1.25rem;
+}
+
+.rr-form-card .card-body {
+    padding: var(--space-xl);
+}
+
+/* Sections - Clear visual separation */
 .rr-section {
     margin-bottom: var(--space-xl);
     padding-bottom: var(--space-xl);
@@ -566,34 +641,35 @@ Tipsa gärna andra åkare om banan eller arrangemanget."><?= htmlspecialchars($e
     display: flex;
     align-items: center;
     justify-content: center;
-    width: 32px;
-    height: 32px;
+    width: 28px;
+    height: 28px;
     background: var(--color-accent);
     color: white;
     font-weight: 700;
-    font-size: 0.875rem;
+    font-size: 0.8125rem;
     border-radius: 50%;
     flex-shrink: 0;
 }
 
 .rr-section-header h3 {
     margin: 0;
-    font-size: 1.125rem;
+    font-size: 1rem;
     font-weight: 600;
     color: var(--color-text-primary);
 }
 
 .rr-optional {
     font-weight: 400;
-    font-size: 0.875rem;
+    font-size: 0.8125rem;
     color: var(--color-text-muted);
+    margin-left: var(--space-xs);
 }
 
 .rr-section-content {
-    padding-left: calc(32px + var(--space-md));
+    padding-left: calc(28px + var(--space-md));
 }
 
-/* Form Elements */
+/* Form Elements - Clean inputs */
 .form-row {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -601,15 +677,17 @@ Tipsa gärna andra åkare om banan eller arrangemanget."><?= htmlspecialchars($e
 }
 
 .form-input-lg {
-    font-size: 1.125rem;
-    padding: var(--space-md) var(--space-lg);
+    font-size: 1rem;
+    padding: var(--space-sm) var(--space-md);
+    border-radius: var(--radius-md);
 }
 
 .rr-content-textarea {
-    font-size: 1rem;
+    font-size: 0.9375rem;
     line-height: 1.7;
-    min-height: 280px;
+    min-height: 200px;
     resize: vertical;
+    border-radius: var(--radius-md);
 }
 
 .form-help {
@@ -619,7 +697,7 @@ Tipsa gärna andra åkare om banan eller arrangemanget."><?= htmlspecialchars($e
     color: var(--color-text-muted);
 }
 
-/* Media Grid */
+/* Media Grid - 3-column on desktop, stacked on mobile */
 .rr-media-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
@@ -628,26 +706,38 @@ Tipsa gärna andra åkare om banan eller arrangemanget."><?= htmlspecialchars($e
 
 .rr-media-card {
     display: flex;
-    gap: var(--space-md);
+    flex-direction: column;
+    gap: var(--space-sm);
     padding: var(--space-md);
-    background: var(--color-bg-page);
+    background: var(--color-bg-hover);
     border-radius: var(--radius-md);
-    border: 1px solid var(--color-border);
+    border: 1px solid transparent;
+    transition: border-color 0.2s ease;
+}
+
+.rr-media-card:focus-within {
+    border-color: var(--color-accent);
+}
+
+.rr-media-card-header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
 }
 
 .rr-media-icon {
-    width: 44px;
-    height: 44px;
+    width: 36px;
+    height: 36px;
     display: flex;
     align-items: center;
     justify-content: center;
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-sm);
     flex-shrink: 0;
 }
 
 .rr-media-icon i {
-    width: 22px;
-    height: 22px;
+    width: 18px;
+    height: 18px;
 }
 
 .rr-media-youtube {
@@ -656,7 +746,7 @@ Tipsa gärna andra åkare om banan eller arrangemanget."><?= htmlspecialchars($e
 }
 
 .rr-media-instagram {
-    background: linear-gradient(135deg, rgba(131, 58, 180, 0.1), rgba(253, 29, 29, 0.1));
+    background: linear-gradient(135deg, rgba(131, 58, 180, 0.15), rgba(253, 29, 29, 0.15));
     color: #c13584;
 }
 
@@ -672,18 +762,22 @@ Tipsa gärna andra åkare om banan eller arrangemanget."><?= htmlspecialchars($e
 
 .rr-media-content .form-label {
     font-size: 0.8125rem;
-    margin-bottom: var(--space-xs);
+    font-weight: 500;
+    margin-bottom: 0;
+    color: var(--color-text-primary);
 }
 
 .rr-media-content .form-input {
-    font-size: 0.875rem;
+    font-size: 0.8125rem;
+    padding: var(--space-xs) var(--space-sm);
+    margin-top: var(--space-xs);
 }
 
 /* Preview */
 .rr-preview {
     margin-top: var(--space-lg);
-    padding: var(--space-lg);
-    background: var(--color-bg-page);
+    padding: var(--space-md);
+    background: var(--color-bg-surface);
     border-radius: var(--radius-md);
     border: 1px solid var(--color-border);
 }
@@ -692,16 +786,16 @@ Tipsa gärna andra åkare om banan eller arrangemanget."><?= htmlspecialchars($e
     display: flex;
     align-items: center;
     gap: var(--space-xs);
-    font-size: 0.75rem;
+    font-size: 0.6875rem;
     text-transform: uppercase;
     letter-spacing: 0.05em;
     color: var(--color-text-muted);
-    margin-bottom: var(--space-md);
+    margin-bottom: var(--space-sm);
 }
 
 .rr-preview-label i {
-    width: 14px;
-    height: 14px;
+    width: 12px;
+    height: 12px;
 }
 
 /* Submit Section */
@@ -717,21 +811,23 @@ Tipsa gärna andra åkare om banan eller arrangemanget."><?= htmlspecialchars($e
 
 .btn-xl {
     padding: var(--space-md) var(--space-2xl);
-    font-size: 1.125rem;
+    font-size: 1rem;
+    font-weight: 600;
+    border-radius: var(--radius-md);
 }
 
 .rr-submit-notice {
     display: flex;
     align-items: center;
     gap: var(--space-sm);
-    font-size: 0.875rem;
+    font-size: 0.8125rem;
     color: var(--color-text-muted);
     margin: 0;
 }
 
 .rr-submit-notice i {
-    width: 18px;
-    height: 18px;
+    width: 16px;
+    height: 16px;
     color: var(--color-accent);
 }
 
