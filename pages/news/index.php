@@ -69,7 +69,9 @@ if ($page === 1 && !$filterTag && !$filterType && !$searchQuery) {
     if (!empty($featuredResult['reports'])) {
         $featuredReport = $featuredResult['reports'][0];
         // Remove from main list if present
-        $reports = array_filter($reports, fn($r) => $r['id'] !== $featuredReport['id']);
+        // PHP 5.x/7.x compatible
+        $featuredId = $featuredReport['id'];
+        $reports = array_filter($reports, function($r) use ($featuredId) { return $r['id'] !== $featuredId; });
     }
 }
 

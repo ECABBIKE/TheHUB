@@ -30,6 +30,7 @@ $navIcons = [
     'calendar' => 'calendar',
     'results' => 'flag',
     'series' => 'trophy',
+    'news' => 'newspaper',
     'database' => 'search',
     'ranking' => 'trending-up',
     'profile' => 'user',

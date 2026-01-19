@@ -1,6 +1,6 @@
 # TheHUB - Development Roadmap
 
-> Senast uppdaterad: 2026-01-18
+> Senast uppdaterad: 2026-01-19
 >
 > **OBS:** All projektinformation ska dokumenteras i denna fil!
 
@@ -583,6 +583,44 @@ HUB_ROOT, HUB_URL, ROOT_PATH, INCLUDES_PATH
 ---
 
 # CHANGELOG
+
+### 2026-01-19 (PHP 7 Kompatibilitet & Bugfixar)
+- **Branch: claude/add-event-ratings-dj5ED**
+
+- **KRITISK FIX: PHP 7 Kompatibilitet**
+  - Servern kör PHP 7.x, inte PHP 8.0+
+  - Ersatte alla `match()` expressions (PHP 8.0+) med array lookups:
+    - `admin/components/unified-layout.php` (2 st)
+    - `includes/layout-header.php` (favicon MIME)
+  - Ersatte arrow functions `fn()` (PHP 7.4+) med traditional functions:
+    - `pages/news/index.php`
+    - `pages/profile/event-ratings.php`
+
+- **FIX: Saknad funktion i auth.php**
+  - `news-moderation.php` anropade `requireAdmin()` som inte fanns
+  - Lade till `requireAdmin()` som alias för `requireLogin()`
+  - Fixade anropet i `news-moderation.php`
+
+- **FIX: Event-ratings route saknades**
+  - Lade till `'event-ratings' => '/pages/profile/event-ratings.php'` i router.php
+
+- **FIX: Fel ikon för Nyheter i mobil-navigation**
+  - `mobile-nav.php` saknade `'news' => 'newspaper'` i icon-mappningen
+  - Föll tillbaka till 'info'-ikonen istället för 'newspaper'
+
+- **FIX: News-sidan mobilanpassning**
+  - Lade till `.news-filter-bar` i edge-to-edge CSS (per Claude.md)
+
+- **Filer ändrade:**
+  - `admin/components/unified-layout.php`
+  - `includes/layout-header.php`
+  - `includes/auth.php`
+  - `admin/news-moderation.php`
+  - `pages/news/index.php`
+  - `pages/profile/event-ratings.php`
+  - `router.php`
+  - `components/mobile-nav.php`
+  - `assets/css/pages/news.css`
 
 ### 2026-01-18 (Event Ratings System)
 - **Ny funktion: Event Ratings**
