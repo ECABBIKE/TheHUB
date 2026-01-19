@@ -414,6 +414,13 @@ $ADMIN_TABS = [
                 'icon' => 'palette',
                 'url' => '/admin/branding.php',
                 'pages' => ['branding.php']
+            ],
+            [
+                'id' => 'scf-license',
+                'label' => 'SCF Licens',
+                'icon' => 'badge-check',
+                'url' => '/admin/scf-sync-status.php',
+                'pages' => ['scf-sync-status.php', 'scf-match-review.php']
             ]
         ]
     ]

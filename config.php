@@ -91,7 +91,7 @@ if (APP_ENV === 'development') {
 define('APP_VERSION', '1.0');
 define('APP_VERSION_NAME', 'Release');
 define('APP_BUILD', '2026-01-19');
-define('DEPLOYMENT_OFFSET', 589); // Total deployment count (update before each push if git not available on server)
+define('DEPLOYMENT_OFFSET', 590); // Total deployment count (update before each push if git not available on server)
 
 try {
     $pdo = new PDO(
