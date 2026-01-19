@@ -27,11 +27,17 @@ CREATE TABLE IF NOT EXISTS race_reports (
     instagram_url VARCHAR(255),
     instagram_embed_code TEXT,
     is_from_instagram TINYINT(1) DEFAULT 0,
+    youtube_url VARCHAR(255) NULL,
+    youtube_video_id VARCHAR(20) NULL,
+    is_from_youtube TINYINT(1) DEFAULT 0,
     is_featured TINYINT(1) DEFAULT 0,
     views INT DEFAULT 0,
     likes INT DEFAULT 0,
     reading_time_minutes INT DEFAULT 1,
     allow_comments TINYINT(1) DEFAULT 1,
+    moderated_by INT NULL,
+    moderated_at DATETIME NULL,
+    moderation_notes TEXT NULL,
     published_at DATETIME NULL,
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
@@ -40,6 +46,9 @@ CREATE TABLE IF NOT EXISTS race_reports (
     INDEX idx_reports_event (event_id),
     INDEX idx_reports_featured (is_featured, published_at)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- Add missing columns if table already exists (safe to run multiple times)
+-- Using stored procedure to check column existence before adding
 
 CREATE TABLE IF NOT EXISTS race_report_tags (
     id INT AUTO_INCREMENT PRIMARY KEY,

@@ -66,6 +66,9 @@ $migrationChecks = [
     '017_news_hub_system.sql' => [
         'tables' => ['race_reports', 'race_report_tags', 'race_report_tag_relations', 'race_report_comments', 'race_report_likes', 'news_page_views', 'sponsor_settings']
     ],
+    '018_news_hub_columns.sql' => [
+        'columns' => ['race_reports.youtube_url', 'race_reports.moderated_by']
+    ],
 ];
 
 // ============================================================================
