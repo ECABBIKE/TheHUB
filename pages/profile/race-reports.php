@@ -378,12 +378,12 @@ Tipsa gärna andra åkare om banan eller arrangemanget."><?= htmlspecialchars($e
         <div class="rr-list">
             <?php foreach ($myReports['reports'] as $report): ?>
                 <?php
-                $statusConfig = match($report['status']) {
+                $statusConfigs = [
                     'published' => ['class' => 'rr-status-published', 'icon' => 'check-circle', 'text' => 'Publicerad'],
                     'draft' => ['class' => 'rr-status-draft', 'icon' => 'clock', 'text' => 'Väntar'],
-                    'archived' => ['class' => 'rr-status-archived', 'icon' => 'archive', 'text' => 'Arkiverad'],
-                    default => ['class' => '', 'icon' => 'circle', 'text' => $report['status']]
-                };
+                    'archived' => ['class' => 'rr-status-archived', 'icon' => 'archive', 'text' => 'Arkiverad']
+                ];
+                $statusConfig = $statusConfigs[$report['status']] ?? ['class' => '', 'icon' => 'circle', 'text' => $report['status']];
                 ?>
                 <div class="rr-item <?= $statusConfig['class'] ?>">
                     <div class="rr-item-thumb">
