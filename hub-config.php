@@ -406,12 +406,8 @@ if (!function_exists('hub_attempt_login')) {
     function hub_attempt_login(string $email, string $password, bool $rememberMe = false): array {
         $pdo = hub_db();
 
-        // If remember me, extend session lifetime to 30 days
-        if ($rememberMe) {
-            $lifetime = 60 * 60 * 24 * 30; // 30 days
-            session_set_cookie_params($lifetime);
-            ini_set('session.gc_maxlifetime', $lifetime);
-        }
+        // NOTE: Remember me is handled in hub_set_user_session() where we
+        // set $_SESSION['remember_me'] and extend the session cookie
 
         // =====================================================================
         // FALLBACK: Check default admin credentials from config.php
@@ -434,7 +430,7 @@ if (!function_exists('hub_attempt_login')) {
                     'is_admin' => 1,
                     'role_id' => ROLE_SUPER_ADMIN
                 ];
-                hub_set_user_session($adminUser);
+                hub_set_user_session($adminUser, [], $rememberMe);
                 return ['success' => true, 'user' => $adminUser];
             }
         }
@@ -509,7 +505,7 @@ if (!function_exists('hub_attempt_login')) {
                         'admin_role' => $adminUser['role']
                     ];
 
-                    hub_set_user_session($user);
+                    hub_set_user_session($user, [], $rememberMe);
 
                     // Update last login
                     $stmt = $pdo->prepare("UPDATE admin_users SET last_login = NOW() WHERE id = ?");
@@ -586,7 +582,7 @@ if (!function_exists('hub_attempt_login')) {
                     }
 
                     // Create session with linked profiles
-                    hub_set_user_session($rider, $linkedProfiles);
+                    hub_set_user_session($rider, $linkedProfiles, $rememberMe);
 
                     // Update last login
                     $stmt = $pdo->prepare("UPDATE riders SET last_login = NOW() WHERE id = ?");
@@ -613,8 +609,9 @@ if (!function_exists('hub_set_user_session')) {
      *
      * @param array $user Primary user data
      * @param array $linkedProfiles Optional array of linked rider profiles
+     * @param bool $rememberMe If true, extends session to 30 days
      */
-    function hub_set_user_session(array $user, array $linkedProfiles = []): void {
+    function hub_set_user_session(array $user, array $linkedProfiles = [], bool $rememberMe = false): void {
         $roleId = (int) ($user['role_id'] ?? ROLE_RIDER);
         $userName = ($user['firstname'] ?? '') . ' ' . ($user['lastname'] ?? '');
 
@@ -624,6 +621,26 @@ if (!function_exists('hub_set_user_session')) {
         $_SESSION['hub_user_name'] = $userName;
         $_SESSION['hub_user_role'] = $roleId;
         $_SESSION['hub_logged_in_at'] = time();
+
+        // Remember me - CRITICAL for session persistence
+        $_SESSION['remember_me'] = $rememberMe;
+        if ($rememberMe) {
+            // Extend session cookie to 30 days
+            $lifetime = 30 * 24 * 60 * 60;
+            $params = session_get_cookie_params();
+            setcookie(
+                session_name(),
+                session_id(),
+                [
+                    'expires' => time() + $lifetime,
+                    'path' => $params['path'],
+                    'domain' => $params['domain'],
+                    'secure' => $params['secure'],
+                    'httponly' => $params['httponly'],
+                    'samesite' => $params['samesite'] ?? 'Lax'
+                ]
+            );
+        }
 
         // Store linked profiles for profile switching
         $_SESSION['hub_linked_profiles'] = $linkedProfiles;
