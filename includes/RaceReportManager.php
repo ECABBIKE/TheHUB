@@ -38,7 +38,7 @@ class RaceReportManager {
      * @param array $data
      * @return int|false
      */
-    public function createReport(array $data) {
+    public function createReport($data) {
         try {
             $rider_id = $data['rider_id'];
             $title = $data['title'];
@@ -121,7 +121,7 @@ class RaceReportManager {
     /**
      * Uppdatera befintligt race report
      */
-    public function updateReport(int $report_id, array $data) {
+    public function updateReport($report_id, $data) {
         try {
             // Bygg dynamisk UPDATE-query baserat på vad som finns i $data
             $allowed_fields = [
@@ -225,7 +225,7 @@ class RaceReportManager {
     /**
      * Lista race reports med paginering och filtrering
      */
-    public function listReports(array $filters = []) {
+    public function listReports($filters = array()) {
         try {
             $page = $filters['page'] ?? 1;
             $per_page = $filters['per_page'] ?? 12;
@@ -343,7 +343,7 @@ class RaceReportManager {
     /**
      * Ta bort report
      */
-    public function deleteReport(int $report_id) {
+    public function deleteReport($report_id) {
         try {
             $stmt = $this->pdo->prepare("DELETE FROM race_reports WHERE id = :id");
             return $stmt->execute([':id' => $report_id]);
@@ -386,7 +386,7 @@ class RaceReportManager {
     /**
      * Hämta kommentarer för report
      */
-    public function getComments(int $report_id) {
+    public function getComments($report_id) {
         try {
             $stmt = $this->pdo->prepare("
                 SELECT
@@ -414,7 +414,7 @@ class RaceReportManager {
     /**
      * Like/Unlike report
      */
-    public function toggleLike(int $report_id, int $rider_id) {
+    public function toggleLike($report_id, $rider_id) {
         try {
             // Kolla om redan likat
             $stmt = $this->pdo->prepare("
@@ -468,7 +468,7 @@ class RaceReportManager {
     /**
      * Kolla om rider har likat ett report
      */
-    public function hasLiked(int $report_id, int $rider_id) {
+    public function hasLiked($report_id, $rider_id) {
         try {
             $stmt = $this->pdo->prepare("
                 SELECT 1 FROM race_report_likes
@@ -535,7 +535,7 @@ class RaceReportManager {
         return $slug;
     }
 
-    private function generateExcerpt(string $content, int $length = 200) {
+    private function generateExcerpt($content, $length = 200) {
         $text = strip_tags($content);
         if (strlen($text) <= $length) {
             return $text;
@@ -544,7 +544,7 @@ class RaceReportManager {
         return substr($text, 0, $length) . '...';
     }
 
-    private function calculateReadingTime(string $content) {
+    private function calculateReadingTime($content) {
         $words = str_word_count(strip_tags($content));
         $minutes = ceil($words / 200); // Genomsnitt 200 ord per minut
         return max(1, $minutes);
@@ -585,12 +585,12 @@ class RaceReportManager {
     /**
      * Hämta YouTube thumbnail URL
      */
-    public function getYoutubeThumbnail(string $videoId, string $quality = 'maxresdefault') {
+    public function getYoutubeThumbnail($videoId, $quality = 'maxresdefault') {
         // Kvaliteter: default, mqdefault, hqdefault, sddefault, maxresdefault
         return "https://img.youtube.com/vi/{$videoId}/{$quality}.jpg";
     }
 
-    private function incrementViews(int $report_id) {
+    private function incrementViews($report_id) {
         try {
             $stmt = $this->pdo->prepare("UPDATE race_reports SET views = views + 1 WHERE id = :id");
             $stmt->execute([':id' => $report_id]);
@@ -599,7 +599,7 @@ class RaceReportManager {
         }
     }
 
-    private function addTags(int $report_id, array $tags) {
+    private function addTags($report_id, $tags) {
         foreach ($tags as $tag_name) {
             try {
                 // Skapa tag slug
@@ -636,7 +636,7 @@ class RaceReportManager {
         }
     }
 
-    private function getReportTags(int $report_id) {
+    private function getReportTags($report_id) {
         try {
             $stmt = $this->pdo->prepare("
                 SELECT rrt.*
@@ -652,7 +652,7 @@ class RaceReportManager {
         }
     }
 
-    private function buildCommentTree(array $comments) {
+    private function buildCommentTree($comments) {
         $tree = [];
         $lookup = [];
 
