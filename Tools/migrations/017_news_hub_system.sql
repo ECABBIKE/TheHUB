@@ -1,5 +1,5 @@
--- Migration 016: News Hub System
--- Date: 2026-01-18
+-- Migration 017: News Hub System
+-- Date: 2026-01-19
 -- Description: Extends race_reports for full News Hub functionality
 --
 -- This migration adds:
@@ -46,9 +46,10 @@ CREATE TABLE IF NOT EXISTS race_report_tags (
     name VARCHAR(100) NOT NULL,
     slug VARCHAR(100) NOT NULL UNIQUE,
     usage_count INT DEFAULT 0,
-    color VARCHAR(7) NULL COMMENT 'Hex color for tag display',
-    icon VARCHAR(50) NULL COMMENT 'Lucide icon name',
-    is_system TINYINT(1) DEFAULT 0 COMMENT 'System tags cannot be deleted',
+    color VARCHAR(7) NULL,
+    icon VARCHAR(50) NULL,
+    is_system TINYINT(1) DEFAULT 0,
+    tag_type ENUM('discipline', 'event', 'series', 'location', 'general') DEFAULT 'general',
     created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
@@ -79,84 +80,25 @@ CREATE TABLE IF NOT EXISTS race_report_likes (
     INDEX idx_rider (rider_id)
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
--- ============================================================================
--- 2. ADD NEW COLUMNS TO race_reports (safe - uses ALTER IGNORE pattern)
--- ============================================================================
-
--- Content type for distinguishing different post types
-ALTER TABLE race_reports
-ADD COLUMN IF NOT EXISTS content_type ENUM('race_report', 'photo_gallery', 'news', 'video')
-DEFAULT 'race_report' AFTER status;
-
--- Series connection for automatic tagging
-ALTER TABLE race_reports
-ADD COLUMN IF NOT EXISTS series_id INT NULL AFTER event_id;
-
--- YouTube support
-ALTER TABLE race_reports
-ADD COLUMN IF NOT EXISTS youtube_url VARCHAR(255) NULL AFTER instagram_embed_code;
-
-ALTER TABLE race_reports
-ADD COLUMN IF NOT EXISTS youtube_video_id VARCHAR(20) NULL AFTER youtube_url;
-
-ALTER TABLE race_reports
-ADD COLUMN IF NOT EXISTS is_from_youtube TINYINT(1) DEFAULT 0 AFTER youtube_video_id;
-
--- Admin moderation
-ALTER TABLE race_reports
-ADD COLUMN IF NOT EXISTS moderation_notes TEXT NULL AFTER allow_comments;
-
-ALTER TABLE race_reports
-ADD COLUMN IF NOT EXISTS moderated_by INT NULL AFTER moderation_notes;
-
-ALTER TABLE race_reports
-ADD COLUMN IF NOT EXISTS moderated_at DATETIME NULL AFTER moderated_by;
-
--- Photo gallery support
-ALTER TABLE race_reports
-ADD COLUMN IF NOT EXISTS gallery_images JSON NULL COMMENT 'Array of image URLs for galleries' AFTER featured_image;
-
--- SEO meta
-ALTER TABLE race_reports
-ADD COLUMN IF NOT EXISTS meta_description VARCHAR(160) NULL AFTER excerpt;
-
-ALTER TABLE race_reports
-ADD COLUMN IF NOT EXISTS meta_keywords VARCHAR(255) NULL AFTER meta_description;
-
--- Discipline for filtering (enduro, dh, xc, gravel etc)
-ALTER TABLE race_reports
-ADD COLUMN IF NOT EXISTS discipline VARCHAR(50) NULL AFTER content_type;
-
--- Add index for series
-ALTER TABLE race_reports ADD INDEX IF NOT EXISTS idx_reports_series (series_id);
-
--- Add index for content_type
-ALTER TABLE race_reports ADD INDEX IF NOT EXISTS idx_reports_content_type (content_type, status, published_at);
-
--- Add index for discipline
-ALTER TABLE race_reports ADD INDEX IF NOT EXISTS idx_reports_discipline (discipline, status, published_at);
+CREATE TABLE IF NOT EXISTS news_page_views (
+    id BIGINT AUTO_INCREMENT PRIMARY KEY,
+    report_id INT NOT NULL,
+    visitor_hash VARCHAR(64) NOT NULL,
+    session_id VARCHAR(100) NULL,
+    user_id INT NULL,
+    referer VARCHAR(255) NULL,
+    user_agent VARCHAR(500) NULL,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    INDEX idx_report_date (report_id, created_at),
+    INDEX idx_visitor (visitor_hash, report_id),
+    INDEX idx_date (created_at)
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
 
 -- ============================================================================
--- 3. EXTEND race_report_tags WITH ADDITIONAL FIELDS
+-- 2. INSERT DEFAULT TAGS (ignore duplicates)
 -- ============================================================================
 
-ALTER TABLE race_report_tags
-ADD COLUMN IF NOT EXISTS color VARCHAR(7) NULL COMMENT 'Hex color for tag display';
-
-ALTER TABLE race_report_tags
-ADD COLUMN IF NOT EXISTS icon VARCHAR(50) NULL COMMENT 'Lucide icon name';
-
-ALTER TABLE race_report_tags
-ADD COLUMN IF NOT EXISTS is_system TINYINT(1) DEFAULT 0 COMMENT 'System tags cannot be deleted';
-
-ALTER TABLE race_report_tags
-ADD COLUMN IF NOT EXISTS tag_type ENUM('discipline', 'event', 'series', 'location', 'general') DEFAULT 'general';
-
--- ============================================================================
--- 4. INSERT/UPDATE DEFAULT TAGS
--- ============================================================================
-
-INSERT INTO race_report_tags (name, slug, color, icon, is_system, tag_type) VALUES
+INSERT IGNORE INTO race_report_tags (name, slug, color, icon, is_system, tag_type) VALUES
 ('Enduro', 'enduro', '#FFE009', 'mountain', 1, 'discipline'),
 ('Downhill', 'downhill', '#FF6B35', 'arrow-down', 1, 'discipline'),
 ('XC', 'xc', '#2E7D32', 'bike', 1, 'discipline'),
@@ -171,39 +113,15 @@ INSERT INTO race_report_tags (name, slug, color, icon, is_system, tag_type) VALU
 ('Utrustning', 'utrustning', '#607D8B', 'wrench', 1, 'general'),
 ('Are', 'are', '#00BCD4', 'map-pin', 0, 'location'),
 ('Isaberg', 'isaberg', '#00BCD4', 'map-pin', 0, 'location'),
-('Kungsbacka', 'kungsbacka', '#00BCD4', 'map-pin', 0, 'location')
-ON DUPLICATE KEY UPDATE
-    color = VALUES(color),
-    icon = VALUES(icon),
-    is_system = VALUES(is_system),
-    tag_type = VALUES(tag_type);
+('Kungsbacka', 'kungsbacka', '#00BCD4', 'map-pin', 0, 'location');
 
 -- ============================================================================
--- 5. SPONSOR SETTINGS FOR NEWS HUB
+-- 3. SPONSOR SETTINGS FOR NEWS HUB (ignore duplicates)
 -- ============================================================================
 
-INSERT INTO sponsor_settings (setting_key, setting_value, description) VALUES
+INSERT IGNORE INTO sponsor_settings (setting_key, setting_value, description) VALUES
 ('news_ads_enabled', '1', 'Enable ads on news pages'),
 ('news_ads_frequency', '4', 'Show ad every N posts in feed'),
-('news_google_adsense_client', '', 'Google AdSense client ID (ca-pub-xxx)'),
-('news_google_adsense_slot', '', 'Google AdSense slot ID for news pages'),
-('race_reports_public', '1', 'Show news/race reports to all visitors')
-ON DUPLICATE KEY UPDATE description = VALUES(description);
-
--- ============================================================================
--- 6. CREATE NEWS PAGE VIEW TRACKING TABLE
--- ============================================================================
-
-CREATE TABLE IF NOT EXISTS news_page_views (
-    id BIGINT AUTO_INCREMENT PRIMARY KEY,
-    report_id INT NOT NULL,
-    visitor_hash VARCHAR(64) NOT NULL COMMENT 'Hashed IP for unique visitor tracking',
-    session_id VARCHAR(100) NULL,
-    user_id INT NULL,
-    referer VARCHAR(255) NULL,
-    user_agent VARCHAR(500) NULL,
-    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    INDEX idx_report_date (report_id, created_at),
-    INDEX idx_visitor (visitor_hash, report_id),
-    INDEX idx_date (created_at)
-) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+('news_google_adsense_client', '', 'Google AdSense client ID'),
+('news_google_adsense_slot', '', 'Google AdSense slot ID'),
+('race_reports_public', '1', 'Show news/race reports to all visitors');
