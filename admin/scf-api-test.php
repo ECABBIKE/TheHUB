@@ -104,8 +104,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['test_type'])) {
                 } else {
                     // Remove spaces and formatting
                     $uciIdClean = preg_replace('/[^0-9]/', '', $uciId);
-                    $url = $baseUrl . '/license/' . $uciIdClean;
-                    $params = ['year' => date('Y')];
+                    $url = $baseUrl . '/ucilicenselookup';
+                    $params = [
+                        'uciids' => $uciIdClean,
+                        'year' => date('Y')
+                    ];
                 }
                 break;
 
@@ -125,9 +128,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['test_type'])) {
                     foreach ($riders as $r) {
                         $uciIds[] = preg_replace('/[^0-9]/', '', $r['license_number']);
                     }
-                    $url = $baseUrl . '/licenses';
+                    $url = $baseUrl . '/ucilicenselookup';
                     $params = [
-                        'uci_ids' => implode(',', $uciIds),
+                        'uciids' => implode(',', $uciIds),
                         'year' => date('Y')
                     ];
                 }
@@ -140,7 +143,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['test_type'])) {
                 if (empty($firstname) || empty($lastname)) {
                     $testError = 'Ange både förnamn och efternamn.';
                 } else {
-                    $url = $baseUrl . '/licenses/search';
+                    $url = $baseUrl . '/licenselookup';
                     $params = [
                         'firstname' => $firstname,
                         'lastname' => $lastname,
