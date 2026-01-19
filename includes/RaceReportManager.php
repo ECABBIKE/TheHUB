@@ -299,7 +299,7 @@ class RaceReportManager {
                         c.name as club_name,
                         e.name as event_name
                     FROM race_reports rr
-                    INNER JOIN riders r ON rr.rider_id = r.id
+                    LEFT JOIN riders r ON rr.rider_id = r.id
                     LEFT JOIN clubs c ON r.club_id = c.id
                     LEFT JOIN events e ON rr.event_id = e.id
                     {$where_clause}
