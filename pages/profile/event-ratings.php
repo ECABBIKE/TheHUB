@@ -163,7 +163,8 @@ try {
 // Count stats
 $totalRatings = count($pastRatings);
 $avgRating = $totalRatings > 0 ? round(array_sum(array_column($pastRatings, 'overall_rating')) / $totalRatings, 1) : 0;
-$unratedCount = count(array_filter($ratableEvents, fn($e) => !$e['already_rated']));
+// PHP 5.x/7.x compatible - use traditional function instead of arrow function
+$unratedCount = count(array_filter($ratableEvents, function($e) { return !$e['already_rated']; }));
 
 // Check if rating a specific event
 $ratingEvent = null;
