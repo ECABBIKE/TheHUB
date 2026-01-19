@@ -176,8 +176,16 @@ try {
 $editReport = null;
 if (isset($_GET['edit']) && is_numeric($_GET['edit'])) {
     $editReport = $reportManager->getReport((int)$_GET['edit'], false);
-    if ($editReport && $editReport['rider_id'] != $currentUser['id']) {
-        $editReport = null;
+    if ($editReport) {
+        // Check permission - rider owns post OR admin owns post
+        $adminId = $_SESSION['admin_id'] ?? $currentUser['id'];
+        $canEdit = (
+            ($editReport['rider_id'] && $editReport['rider_id'] == $currentUser['id']) ||
+            ($editReport['admin_user_id'] && $editReport['admin_user_id'] == $adminId)
+        );
+        if (!$canEdit) {
+            $editReport = null;
+        }
     }
 }
 
