@@ -208,10 +208,19 @@ if ($hasEmail === '1') {
 
 $whereClause = $where ? 'WHERE ' . implode(' AND ', $where) : '';
 
+// Check if scf_license_year column exists
+$hasScfColumn = false;
+try {
+    $columns = $db->getAll("SHOW COLUMNS FROM riders LIKE 'scf_license_year'");
+    $hasScfColumn = !empty($columns);
+} catch (Exception $e) {}
+
+$scfSelect = $hasScfColumn ? "c.scf_license_year," : "NULL as scf_license_year,";
+
 $sql = "SELECT
     c.id, c.firstname, c.lastname, c.birth_year, c.gender, c.nationality,
     c.license_number, c.license_type, c.license_category, c.license_valid_until, c.discipline, c.active,
-    c.scf_license_year,
+    {$scfSelect}
     COALESCE(cl.name, cl_season.name) as club_name,
     COALESCE(cl.id, rcs_latest.club_id) as club_id,
     (SELECT COUNT(*) FROM results r WHERE r.cyclist_id = c.id) as result_count
