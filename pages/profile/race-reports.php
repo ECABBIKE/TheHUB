@@ -464,21 +464,20 @@ Tipsa gärna andra åkare om banan eller arrangemanget."><?= htmlspecialchars($e
                     </div>
                     <div class="rr-item-actions">
                         <?php if ($report['status'] === 'published'): ?>
-                            <a href="/news/<?= htmlspecialchars($report['slug']) ?>" class="btn btn-sm btn-primary" target="_blank">
+                            <a href="/news/<?= htmlspecialchars($report['slug']) ?>" class="btn btn-sm btn-primary" target="_blank" title="Visa">
                                 <i data-lucide="external-link"></i>
                             </a>
-                        <?php else: ?>
-                            <a href="?edit=<?= $report['id'] ?>" class="btn btn-sm btn-secondary">
-                                <i data-lucide="edit-2"></i>
-                            </a>
-                            <form method="POST" style="display: inline;" onsubmit="return confirm('Ta bort denna report?');">
-                                <input type="hidden" name="action" value="delete_report">
-                                <input type="hidden" name="report_id" value="<?= $report['id'] ?>">
-                                <button type="submit" class="btn btn-sm btn-ghost text-error">
-                                    <i data-lucide="trash-2"></i>
-                                </button>
-                            </form>
                         <?php endif; ?>
+                        <a href="?edit=<?= $report['id'] ?>" class="btn btn-sm btn-secondary" title="Redigera">
+                            <i data-lucide="edit-2"></i>
+                        </a>
+                        <form method="POST" style="display: inline;" onsubmit="return confirm('Ta bort denna report?');">
+                            <input type="hidden" name="action" value="delete_report">
+                            <input type="hidden" name="report_id" value="<?= $report['id'] ?>">
+                            <button type="submit" class="btn btn-sm btn-ghost text-error" title="Ta bort">
+                                <i data-lucide="trash-2"></i>
+                            </button>
+                        </form>
                     </div>
                 </div>
             <?php endforeach; ?>
