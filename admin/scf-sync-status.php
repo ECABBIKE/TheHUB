@@ -255,7 +255,7 @@ include __DIR__ . '/components/unified-layout.php';
             </a>
             <?php if ($scfEnabled): ?>
             <form method="post" style="display: inline;">
-                <?= get_csrf_field() ?>
+                <?= csrf_field() ?>
                 <input type="hidden" name="action" value="trigger_sync">
                 <button type="submit" class="btn btn-secondary">
                     <i data-lucide="refresh-cw"></i>

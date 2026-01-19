@@ -301,7 +301,7 @@ include __DIR__ . '/components/unified-layout.php';
 
 <!-- Bulk Actions -->
 <form method="post" id="bulkForm">
-    <?= get_csrf_field() ?>
+    <?= csrf_field() ?>
     <div class="bulk-actions">
         <label class="form-check">
             <input type="checkbox" id="selectAll" onchange="toggleSelectAll(this)">
