@@ -228,6 +228,20 @@ include __DIR__ . '/components/unified-layout.php';
         </div>
     </div>
 
+    <!-- Assign Missing SWE-ID -->
+    <div class="card">
+        <div class="tool-header">
+            <div class="tool-icon warning"><i data-lucide="id-card"></i></div>
+            <div>
+                <h4 class="tool-title">Tilldela SWE-ID</h4>
+                <p class="tool-description">Ge SWE-ID till deltagare som saknar licens</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/assign-missing-swe-id.php" class="btn-admin btn-admin-warning">Tilldela</a>
+        </div>
+    </div>
+
 </div>
 
 <!-- ========== DATAHANTERING ========== -->

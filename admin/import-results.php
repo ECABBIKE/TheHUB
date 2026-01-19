@@ -283,12 +283,25 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['import_ds_final'])) {
                 // Find/create rider
                 $rider = $db->getRow("SELECT id FROM riders WHERE UPPER(firstname) = UPPER(?) AND UPPER(lastname) = UPPER(?)", [$firstName, $lastName]);
                 if (!$rider) {
-                    $clubId = null;
-                    if (!empty($clubName)) {
-                        $club = $db->getRow("SELECT id FROM clubs WHERE LOWER(name) = LOWER(?)", [$clubName]);
-                        $clubId = $club ? $club['id'] : $db->insert('clubs', ['name' => $clubName, 'active' => 1]);
+                    // Check if this name was previously merged (to prevent recreating deleted duplicates)
+                    $mergedRider = null;
+                    try {
+                        $mergedRider = $db->getRow(
+                            "SELECT canonical_rider_id FROM rider_merge_map WHERE UPPER(merged_firstname) = UPPER(?) AND UPPER(merged_lastname) = UPPER(?) AND status = 'approved'",
+                            [$firstName, $lastName]
+                        );
+                    } catch (Exception $e) { /* Table might not exist yet */ }
+
+                    if ($mergedRider) {
+                        $riderId = $mergedRider['canonical_rider_id'];
+                    } else {
+                        $clubId = null;
+                        if (!empty($clubName)) {
+                            $club = $db->getRow("SELECT id FROM clubs WHERE LOWER(name) = LOWER(?)", [$clubName]);
+                            $clubId = $club ? $club['id'] : $db->insert('clubs', ['name' => $clubName, 'active' => 1]);
+                        }
+                        $riderId = $db->insert('riders', ['firstname' => $firstName, 'lastname' => $lastName, 'club_id' => $clubId, 'active' => 1]);
                     }
-                    $riderId = $db->insert('riders', ['firstname' => $firstName, 'lastname' => $lastName, 'club_id' => $clubId, 'active' => 1]);
                 } else {
                     $riderId = $rider['id'];
                 }

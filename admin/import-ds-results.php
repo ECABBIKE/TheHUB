@@ -183,22 +183,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['import'])) {
                 );
 
                 if (!$rider) {
-                    $clubId = null;
-                    if (!empty($clubName)) {
-                        $club = $db->getRow("SELECT id FROM clubs WHERE LOWER(name) = LOWER(?)", [$clubName]);
-                        if (!$club) {
-                            $clubId = $db->insert('clubs', ['name' => $clubName, 'active' => 1]);
-                        } else {
-                            $clubId = $club['id'];
-                        }
-                    }
+                    // Check if this name was previously merged
+                    $mergedRider = null;
+                    try {
+                        $mergedRider = $db->getRow(
+                            "SELECT canonical_rider_id FROM rider_merge_map WHERE UPPER(merged_firstname) = UPPER(?) AND UPPER(merged_lastname) = UPPER(?) AND status = 'approved'",
+                            [$firstName, $lastName]
+                        );
+                    } catch (Exception $e) { /* Table might not exist yet */ }
 
-                    $riderId = $db->insert('riders', [
-                        'firstname' => $firstName,
-                        'lastname' => $lastName,
-                        'club_id' => $clubId,
-                        'active' => 1
-                    ]);
+                    if ($mergedRider) {
+                        $riderId = $mergedRider['canonical_rider_id'];
+                    } else {
+                        $clubId = null;
+                        if (!empty($clubName)) {
+                            $club = $db->getRow("SELECT id FROM clubs WHERE LOWER(name) = LOWER(?)", [$clubName]);
+                            if (!$club) {
+                                $clubId = $db->insert('clubs', ['name' => $clubName, 'active' => 1]);
+                            } else {
+                                $clubId = $club['id'];
+                            }
+                        }
+
+                        $riderId = $db->insert('riders', [
+                            'firstname' => $firstName,
+                            'lastname' => $lastName,
+                            'club_id' => $clubId,
+                            'active' => 1
+                        ]);
+                    }
                 } else {
                     $riderId = $rider['id'];
                 }
