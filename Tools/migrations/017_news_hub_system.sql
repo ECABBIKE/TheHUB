@@ -116,7 +116,18 @@ INSERT IGNORE INTO race_report_tags (name, slug, color, icon, is_system, tag_typ
 ('Kungsbacka', 'kungsbacka', '#00BCD4', 'map-pin', 0, 'location');
 
 -- ============================================================================
--- 3. SPONSOR SETTINGS FOR NEWS HUB (ignore duplicates)
+-- 3. SPONSOR SETTINGS TABLE (if not exists)
+-- ============================================================================
+
+CREATE TABLE IF NOT EXISTS sponsor_settings (
+    setting_key VARCHAR(100) PRIMARY KEY,
+    setting_value TEXT NOT NULL,
+    description TEXT,
+    updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP
+) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+
+-- ============================================================================
+-- 4. SPONSOR SETTINGS FOR NEWS HUB (ignore duplicates)
 -- ============================================================================
 
 INSERT IGNORE INTO sponsor_settings (setting_key, setting_value, description) VALUES
