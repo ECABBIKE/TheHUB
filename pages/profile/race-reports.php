@@ -80,19 +80,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $featuredImage = trim($_POST['featured_image'] ?? '');
 
         $report = $reportManager->getReport($reportId, false);
-        if (!$report || $report['rider_id'] != $currentUser['id']) {
+
+        // Check permission - rider owns post OR admin owns post
+        $isAdminUser = !empty($currentUser['is_admin']) && empty($_SESSION['rider_id']);
+        $adminId = $_SESSION['admin_id'] ?? $currentUser['id'];
+        $canEdit = $report && (
+            ($report['rider_id'] && $report['rider_id'] == $currentUser['id']) ||
+            ($report['admin_user_id'] && $report['admin_user_id'] == $adminId)
+        );
+
+        if (!$canEdit) {
             $error = 'Du har inte behörighet att redigera denna report.';
-        } elseif ($report['status'] === 'published') {
-            $error = 'Publicerade reports kan inte redigeras.';
         } else {
-            $result = $reportManager->updateReport($reportId, [
+            $updateData = [
                 'title' => $title,
                 'content' => $content,
                 'event_id' => $eventId,
                 'featured_image' => $featuredImage ?: null
-            ]);
+            ];
+
+            // Rider posts go back to draft after editing, admin posts stay published
+            if (!$isAdminUser && $report['status'] === 'published') {
+                $updateData['status'] = 'draft';
+            }
+
+            $result = $reportManager->updateReport($reportId, $updateData);
             if ($result) {
-                $message = 'Race report uppdaterad!';
+                if (!$isAdminUser && $report['status'] === 'published') {
+                    $message = 'Race report uppdaterad! Den måste godkännas igen innan publicering.';
+                } else {
+                    $message = 'Race report uppdaterad!';
+                }
             } else {
                 $error = 'Kunde inte uppdatera.';
             }
@@ -101,9 +119,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $reportId = (int)$_POST['report_id'];
 
         $report = $reportManager->getReport($reportId, false);
-        if (!$report || $report['rider_id'] != $currentUser['id']) {
+
+        // Check permission - rider owns post OR admin owns post
+        $isAdminUser = !empty($currentUser['is_admin']) && empty($_SESSION['rider_id']);
+        $adminId = $_SESSION['admin_id'] ?? $currentUser['id'];
+        $canDelete = $report && (
+            ($report['rider_id'] && $report['rider_id'] == $currentUser['id']) ||
+            ($report['admin_user_id'] && $report['admin_user_id'] == $adminId)
+        );
+
+        if (!$canDelete) {
             $error = 'Du har inte behörighet att ta bort denna report.';
-        } elseif ($report['status'] === 'published') {
+        } elseif (!$isAdminUser && $report['status'] === 'published') {
             $error = 'Publicerade reports kan inte tas bort.';
         } else {
             if ($reportManager->deleteReport($reportId)) {
