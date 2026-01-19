@@ -893,12 +893,12 @@ class SCFLicenseService {
             'pending_matches' => (int)$this->db->getValue(
                 "SELECT COUNT(*) FROM scf_match_candidates WHERE status = 'pending'"
             ),
-            // license_number contains UCI ID in TheHUB database (11 digit number)
+            // license_number contains UCI ID in various formats (11+ chars)
             'riders_with_uci' => (int)$this->db->getValue(
-                "SELECT COUNT(*) FROM riders WHERE license_number IS NOT NULL AND license_number != '' AND license_number REGEXP '^[0-9]{11}$'"
+                "SELECT COUNT(*) FROM riders WHERE license_number IS NOT NULL AND license_number != '' AND LENGTH(license_number) >= 11"
             ),
             'riders_without_uci' => (int)$this->db->getValue(
-                "SELECT COUNT(*) FROM riders WHERE license_number IS NULL OR license_number = '' OR license_number NOT REGEXP '^[0-9]{11}$'"
+                "SELECT COUNT(*) FROM riders WHERE license_number IS NULL OR license_number = '' OR LENGTH(license_number) < 11"
             )
         ];
     }
