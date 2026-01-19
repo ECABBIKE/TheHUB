@@ -131,8 +131,11 @@ try {
     $pendingCount = $pdo->query("SELECT COUNT(*) FROM race_reports WHERE status = 'draft'")->fetchColumn();
 } catch (Exception $e) {}
 
-$pageTitle = 'Nyheter & Race Reports';
-include __DIR__ . '/../includes/admin-header.php';
+$page_title = 'Nyheter & Race Reports';
+$breadcrumbs = [
+    ['label' => 'Nyheter & Race Reports']
+];
+include __DIR__ . '/components/unified-layout.php';
 ?>
 
 <div class="admin-content">
@@ -756,4 +759,4 @@ document.addEventListener('keydown', function(e) {
 });
 </script>
 
-<?php include __DIR__ . '/../includes/admin-footer.php'; ?>
+<?php include __DIR__ . '/components/unified-layout-footer.php'; ?>
