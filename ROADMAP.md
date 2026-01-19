@@ -12,6 +12,7 @@
 |--------|--------|-------------|
 | Analytics Platform | KLAR | Statistik, KPI:er, trender, rapporter |
 | Betalningssystem | 80% KLAR | Swish, Stripe, ordrar, checkout |
+| Event Ratings | KLAR | Deltagarfeedback pa events |
 
 ---
 
@@ -527,7 +528,71 @@ HUB_ROOT, HUB_URL, ROOT_PATH, INCLUDES_PATH
 
 ---
 
+# DEL 4: EVENT RATINGS
+
+**Mal:** Deltagare kan betygsatta events for att ge arrangorerna feedback
+**Status:** KLAR
+
+## FUNKTIONER
+
+### Event Rating System
+- [x] Deltagare med resultat kan betygsatta events
+- [x] 10 standardfragor (banmarkeringar, sakerhet, faciliteter, etc.)
+- [x] Overgripande betyg 1-10
+- [x] Valfri anonym kommentar
+- [x] Tidsfonstrer: 30 dagar efter event
+- [x] En rating per deltagare per event
+
+### Profil-integration (pages/profile/event-ratings.php)
+- [x] Lista over events att betygsatta
+- [x] Formulär med slider for varje fraga
+- [x] Oversikt over tidigare betyg
+- [x] Quick-link fran Min Sida
+
+### Admin-rapport (admin/analytics-event-ratings.php)
+- [x] Aggregerade betyg per event (anonymiserade)
+- [x] Genomsnitt per fraga med visuella staplar
+- [x] Filtrering per ar och serie
+- [x] Sammanfattande statistik
+
+### Databastabeller
+- `event_ratings` - Huvudtabell for betyg
+- `event_rating_questions` - Fragedefinitioner
+- `event_rating_answers` - Svar per fraga
+- `v_event_ratings_summary` - Aggregerad vy
+- `v_event_question_averages` - Snitt per fraga
+
+### Standardfragor
+1. Banmarkeringar och skyltning
+2. Banans kvalitet och underhall
+3. Sakerhet och sjukvardsberedskap
+4. Anmalan och incheckningsprocess
+5. Tidtagning och resultathantering
+6. Tidsschema och punktlighet
+7. Faciliteter (parkering, toaletter, etc)
+8. Stamning och upplevelse
+9. Varde for pengarna
+10. Skulle rekommendera till andra
+
+### Framtida forbattringar
+- [ ] Notis till deltagare efter event
+- [ ] Visa aggregerade betyg offentligt (nar tillrackligt med data)
+- [ ] Export till CSV for arrangor
+- [ ] Jamforelse mot serie-snitt
+
+---
+
 # CHANGELOG
+
+### 2026-01-18 (Event Ratings System)
+- **Ny funktion: Event Ratings**
+  - Deltagare kan betygsatta events de deltagit i
+  - 10 standardfragor + overgripande betyg + kommentar
+  - Anonym feedback for arrangorerna
+  - Migration: `Tools/migrations/016_event_ratings.sql`
+  - Profil-sida: `pages/profile/event-ratings.php`
+  - Admin-rapport: `admin/analytics-event-ratings.php`
+  - Quick-link tillagd pa Min Sida
 
 ### 2026-01-18 (Analytics Consistency & Data Fixes)
 - **KRITISK FIX: Korrekt brands-tabell**
