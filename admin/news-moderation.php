@@ -143,7 +143,7 @@ include __DIR__ . '/components/unified-layout.php';
         <div class="page-header-content">
             <h1>
                 <i data-lucide="newspaper"></i>
-                <?= $pageTitle ?>
+                <?= $page_title ?>
             </h1>
             <p class="page-subtitle">Moderera och hantera inlagg fran communityn</p>
         </div>

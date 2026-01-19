@@ -49,7 +49,7 @@ try {
 
     // Pending news/race reports
     try {
-        $stats['pending_news'] = $pdo->query("SELECT COUNT(*) FROM race_reports WHERE status = 'pending'")->fetchColumn();
+        $stats['pending_news'] = $pdo->query("SELECT COUNT(*) FROM race_reports WHERE status = 'draft'")->fetchColumn();
     } catch (Exception $e) {
         $stats['pending_news'] = 0;
     }
@@ -74,7 +74,7 @@ if (!isset($stats['pending_claims'])) {
 // Ensure pending_news is always set
 if (!isset($stats['pending_news'])) {
     try {
-        $stats['pending_news'] = $pdo->query("SELECT COUNT(*) FROM race_reports WHERE status = 'pending'")->fetchColumn();
+        $stats['pending_news'] = $pdo->query("SELECT COUNT(*) FROM race_reports WHERE status = 'draft'")->fetchColumn();
     } catch (Exception $e) {
         $stats['pending_news'] = 0;
     }
