@@ -194,7 +194,7 @@ class RaceReportManager {
                         e.name as event_name,
                         e.date as event_date
                     FROM race_reports rr
-                    INNER JOIN riders r ON rr.rider_id = r.id
+                    LEFT JOIN riders r ON rr.rider_id = r.id
                     LEFT JOIN clubs c ON r.club_id = c.id
                     LEFT JOIN events e ON rr.event_id = e.id
                     WHERE rr." . ($is_numeric ? "id" : "slug") . " = :identifier";
@@ -245,6 +245,12 @@ class RaceReportManager {
             if (!empty($filters['rider_id'])) {
                 $where[] = "rr.rider_id = :rider_id";
                 $params[':rider_id'] = $filters['rider_id'];
+            }
+
+            // Admin user filter
+            if (!empty($filters['admin_user_id'])) {
+                $where[] = "rr.admin_user_id = :admin_user_id";
+                $params[':admin_user_id'] = $filters['admin_user_id'];
             }
 
             if (!empty($filters['event_id'])) {

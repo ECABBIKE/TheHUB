@@ -115,12 +115,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// Get rider's reports
-$myReports = $reportManager->listReports([
-    'rider_id' => $currentUser['id'],
+// Get rider's reports (or admin's reports)
+$isAdminUser = !empty($currentUser['is_admin']) && empty($_SESSION['rider_id']);
+$reportFilters = [
     'include_drafts' => true,
     'per_page' => 50
-]);
+];
+if ($isAdminUser) {
+    $reportFilters['admin_user_id'] = $_SESSION['admin_id'] ?? $currentUser['id'];
+} else {
+    $reportFilters['rider_id'] = $currentUser['id'];
+}
+$myReports = $reportManager->listReports($reportFilters);
 
 // Get rider's recent events for dropdown
 $recentEvents = [];
