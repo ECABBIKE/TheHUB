@@ -304,12 +304,12 @@ include __DIR__ . '/components/unified-layout.php';
                             </td>
                             <td>
                                 <?php
-                                $statusConfig = match($report['status']) {
+                                $statusConfigs = [
                                     'published' => ['class' => 'badge-success', 'text' => 'Publicerad'],
                                     'draft' => ['class' => 'badge-warning', 'text' => 'Vantar'],
-                                    'archived' => ['class' => 'badge-muted', 'text' => 'Arkiverad'],
-                                    default => ['class' => '', 'text' => $report['status']]
-                                };
+                                    'archived' => ['class' => 'badge-muted', 'text' => 'Arkiverad']
+                                ];
+                                $statusConfig = $statusConfigs[$report['status']] ?? ['class' => '', 'text' => $report['status']];
                                 ?>
                                 <span class="badge <?= $statusConfig['class'] ?>"><?= $statusConfig['text'] ?></span>
                                 <br>
