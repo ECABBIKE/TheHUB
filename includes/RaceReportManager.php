@@ -35,8 +35,10 @@ class RaceReportManager {
 
     /**
      * Skapa ett nytt race report
+     * @param array $data
+     * @return int|false
      */
-    public function createReport(array $data): int|false {
+    public function createReport(array $data) {
         try {
             $rider_id = $data['rider_id'];
             $title = $data['title'];
@@ -172,8 +174,11 @@ class RaceReportManager {
 
     /**
      * Hämta race report
+     * @param string|int $id_or_slug
+     * @param bool $published_only
+     * @return array|null
      */
-    public function getReport(string|int $id_or_slug, bool $published_only = true): ?array {
+    public function getReport($id_or_slug, bool $published_only = true): ?array {
         try {
             $is_numeric = is_numeric($id_or_slug);
 
@@ -350,8 +355,13 @@ class RaceReportManager {
 
     /**
      * Lägg till kommentar
+     * @param int $report_id
+     * @param int|null $rider_id
+     * @param string $comment_text
+     * @param int|null $parent_id
+     * @return int|false
      */
-    public function addComment(int $report_id, ?int $rider_id, string $comment_text, ?int $parent_id = null): int|false {
+    public function addComment(int $report_id, ?int $rider_id, string $comment_text, ?int $parent_id = null) {
         try {
             $stmt = $this->pdo->prepare("
                 INSERT INTO race_report_comments
