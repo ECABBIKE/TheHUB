@@ -40,7 +40,8 @@ class RaceReportManager {
      */
     public function createReport($data) {
         try {
-            $rider_id = $data['rider_id'];
+            $rider_id = $data['rider_id'] ?? null;
+            $admin_user_id = $data['admin_user_id'] ?? null;
             $title = $data['title'];
             $content = $data['content'];
             $event_id = $data['event_id'] ?? null;
@@ -75,11 +76,11 @@ class RaceReportManager {
 
             $stmt = $this->pdo->prepare("
                 INSERT INTO race_reports
-                (rider_id, event_id, title, slug, content, excerpt,
+                (rider_id, admin_user_id, event_id, title, slug, content, excerpt,
                  featured_image, status, instagram_url, instagram_embed_code,
                  is_from_instagram, youtube_url, youtube_video_id, is_from_youtube,
                  reading_time_minutes, published_at)
-                VALUES (:rider_id, :event_id, :title, :slug, :content, :excerpt,
+                VALUES (:rider_id, :admin_user_id, :event_id, :title, :slug, :content, :excerpt,
                         :featured_image, :status, :instagram_url, :instagram_embed_code,
                         :is_from_instagram, :youtube_url, :youtube_video_id, :is_from_youtube,
                         :reading_time_minutes, :published_at)
@@ -87,6 +88,7 @@ class RaceReportManager {
 
             $stmt->execute([
                 ':rider_id' => $rider_id,
+                ':admin_user_id' => $admin_user_id,
                 ':event_id' => $event_id,
                 ':title' => $title,
                 ':slug' => $slug,

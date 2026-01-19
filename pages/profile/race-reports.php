@@ -38,19 +38,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } elseif (empty($content) && empty($youtubeUrl) && empty($instagramUrl)) {
             $error = 'Lägg till innehåll, en YouTube-länk eller Instagram-länk';
         } else {
-            $reportId = $reportManager->createReport([
-                'rider_id' => $currentUser['id'],
+            // Check if user is admin (not a regular rider)
+            $isAdminUser = !empty($currentUser['is_admin']) && empty($_SESSION['rider_id']);
+
+            $reportData = [
                 'event_id' => $eventId,
                 'title' => $title,
                 'content' => $content,
                 'featured_image' => $featuredImage ?: null,
                 'youtube_url' => $youtubeUrl ?: null,
                 'instagram_url' => $instagramUrl ?: null,
-                'status' => 'draft'
-            ], $tags);
+                'status' => $isAdminUser ? 'published' : 'draft'
+            ];
+
+            if ($isAdminUser) {
+                // Admin user - use admin_user_id, no rider_id
+                $reportData['admin_user_id'] = $_SESSION['admin_id'] ?? $currentUser['id'];
+                $reportData['rider_id'] = null;
+            } else {
+                // Regular rider
+                $reportData['rider_id'] = $currentUser['id'];
+            }
+
+            $reportId = $reportManager->createReport($reportData, $tags);
 
             if ($reportId) {
-                $message = 'Race report skapad! Den granskas av admin innan publicering.';
+                if ($isAdminUser) {
+                    $message = 'Nyhet publicerad!';
+                } else {
+                    $message = 'Race report skapad! Den granskas av admin innan publicering.';
+                }
             } else {
                 $error = 'Kunde inte skapa race report.';
             }
