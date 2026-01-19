@@ -60,6 +60,9 @@ $migrationChecks = [
     '015_duplicate_ignores.sql' => [
         'tables' => ['rider_duplicate_ignores']
     ],
+    '016_event_ratings.sql' => [
+        'tables' => ['event_ratings', 'event_rating_questions', 'event_rating_answers']
+    ],
 ];
 
 // ============================================================================
