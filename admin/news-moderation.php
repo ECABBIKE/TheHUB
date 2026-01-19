@@ -98,12 +98,12 @@ $filterPage = max(1, (int)($_GET['page'] ?? 1));
 $perPage = 20;
 
 // Map status filter to actual values
-$statusFilter = match($filterStatus) {
+$statusMap = [
     'pending' => 'draft',
     'published' => 'published',
-    'archived' => 'archived',
-    default => null
-};
+    'archived' => 'archived'
+];
+$statusFilter = $statusMap[$filterStatus] ?? null;
 
 // Get reports
 $filters = [

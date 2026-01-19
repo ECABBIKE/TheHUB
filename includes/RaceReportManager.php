@@ -275,12 +275,14 @@ class RaceReportManager {
             $where_clause = !empty($where) ? 'WHERE ' . implode(' AND ', $where) : '';
 
             // Sortering
-            $order = match($filters['order_by'] ?? 'recent') {
+            $orderMap = [
                 'popular' => 'rr.views DESC',
                 'liked' => 'rr.likes DESC',
                 'oldest' => 'rr.published_at ASC',
-                default => 'rr.published_at DESC'
-            };
+                'recent' => 'rr.published_at DESC'
+            ];
+            $orderBy = $filters['order_by'] ?? 'recent';
+            $order = $orderMap[$orderBy] ?? 'rr.published_at DESC';
 
             $sql = "SELECT
                         rr.*,
