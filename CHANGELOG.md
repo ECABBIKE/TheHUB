@@ -6,6 +6,66 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ## [Unreleased]
 
+### Added - SCF License Portal Integration (2026-01-20)
+
+#### **SCF License Sync System**
+- **SCFLicenseService** (`includes/SCFLicenseService.php`)
+  - Complete API integration with Svenska Cykelförbundet's License Portal
+  - UCI ID verification via `/ucilicenselookup` endpoint
+  - Name-based search via `/licenselookup` endpoint
+  - License data parsing with field mapping:
+    - `license_type` = Age/skill class (Elite, U11, U13, etc.)
+    - `license_category` = Gender (Men, Women)
+    - `discipline` = Primary discipline (MTB, Road, etc.)
+  - Gender derivation from license_category when direct field unavailable
+  - Automatic club linking and creation
+  - Year-based club membership tracking via `rider_club_seasons` table
+  - License caching in `scf_license_cache` table
+  - Match candidate system for manual review
+
+#### **Admin Tools**
+- **SCF Batch Verify** (`admin/scf-batch-verify.php`)
+  - Batch verification of riders with UCI ID against SCF
+  - "Verifiera ALLA" auto-continue with progress tracking
+  - Statistics dashboard (total, verified, not verified)
+  - Timeout handling (5 min PHP, 120s JS fetch)
+  - Retry logic (up to 2 retries on failure)
+
+- **SCF Name Search** (`admin/scf-name-search.php`)
+  - Search riders without UCI ID (including SWE-ID) by name
+  - Creates match candidates for manual review
+  - "Sök ALLA" auto-continue functionality
+  - Confirm/reject workflow for matches
+  - Rate limiting between API calls
+
+- **SCF Import Riders** (`admin/scf-import-riders.php`)
+  - Manual search and import of new riders from SCF
+  - Duplicate detection by UCI ID and name/birthyear
+
+- **SCF API Test** (`admin/scf-api-test.php`)
+  - Test tool for API connectivity
+  - Single UCI lookup, batch lookup, and name search tests
+
+#### **Database Migration**
+- **Migration 019** (`Tools/migrations/019_scf_license_sync.sql`)
+  - Added `scf_license_*` columns to `riders` table
+  - Created `scf_license_cache` table
+  - Created `scf_license_history` table
+  - Created `scf_match_candidates` table
+  - Created `scf_sync_log` table
+
+#### **UI Enhancements**
+- Added "Aktiv licens (2026)" filter on riders list
+- Added SCF verification status to rider edit page
+- Added yearly club membership display from rider_club_seasons
+- Tools linked in admin/tools.php under "SCF Licenssynk" section
+
+### Fixed (2026-01-20)
+
+- **Rider Profile Results Count**
+  - Fixed club history showing incorrect result count
+  - Count now excludes DNS (Did Not Start) results to match displayed list
+
 ### Changed - Privacy Improvements (2025-12-01)
 
 - **Removed personnummer column from database**
