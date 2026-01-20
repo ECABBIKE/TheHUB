@@ -11,7 +11,7 @@
 
 class SCFLicenseService {
     /**
-     * Default API base URL
+     * API base URL
      */
     const API_BASE_URL = 'https://licens.scf.se/api/1.0';
 
@@ -44,11 +44,6 @@ class SCFLicenseService {
     private $apiKey;
 
     /**
-     * @var string API base URL (can be overridden via env SCF_API_URL)
-     */
-    private $apiBaseUrl;
-
-    /**
      * @var DatabaseWrapper Database connection
      */
     private $db;
@@ -64,39 +59,6 @@ class SCFLicenseService {
     private $currentSyncId = null;
 
     /**
-     * Try to resolve a club ID from a club name (SCF string)
-     *
-     * @param string $clubName
-     * @return array|null ['id' => int, 'scf_district' => ?string]
-     */
-    private function resolveClubByName(string $clubName): ?array {
-        $clubName = trim($clubName);
-        if ($clubName === '') return null;
-
-        // 1) Exact match
-        $row = $this->db->getRow(
-            "SELECT id, scf_district FROM clubs WHERE name = ? LIMIT 1",
-            [$clubName]
-        );
-        if ($row) return $row;
-
-        // 2) Case-insensitive exact match
-        $row = $this->db->getRow(
-            "SELECT id, scf_district FROM clubs WHERE LOWER(name) = LOWER(?) LIMIT 1",
-            [$clubName]
-        );
-        if ($row) return $row;
-
-        // 3) Soft match: starts with / contains
-        $like = '%' . str_replace(['%', '_'], ['\\%', '\\_'], $clubName) . '%';
-        $row = $this->db->getRow(
-            "SELECT id, scf_district FROM clubs WHERE name LIKE ? ORDER BY (name = ?) DESC, CHAR_LENGTH(name) ASC LIMIT 1",
-            [$like, $clubName]
-        );
-        return $row ?: null;
-    }
-
-    /**
      * Constructor
      *
      * @param string $apiKey SCF API key
@@ -105,16 +67,6 @@ class SCFLicenseService {
     public function __construct(string $apiKey, $db) {
         $this->apiKey = $apiKey;
         $this->db = $db;
-
-        // Allow overriding API URL via .env
-        // (config.php defines env())
-        $this->apiBaseUrl = self::API_BASE_URL;
-        if (function_exists('env')) {
-            $override = env('SCF_API_URL', '');
-            if (!empty($override)) {
-                $this->apiBaseUrl = rtrim($override, '/');
-            }
-        }
     }
 
     /**
@@ -147,7 +99,7 @@ class SCFLicenseService {
      * @return array|null Response data or null on error
      */
     private function apiRequest(string $endpoint, array $params = []): ?array {
-        $url = $this->apiBaseUrl . $endpoint;
+        $url = self::API_BASE_URL . $endpoint;
         if (!empty($params)) {
             $url .= '?' . http_build_query($params);
         }
@@ -233,22 +185,42 @@ class SCFLicenseService {
 
         // Normalize and limit
         $uciIds = array_slice($uciIds, 0, self::MAX_BATCH_SIZE);
-        $normalizedIds = array_map([$this, 'normalizeUciId'], $uciIds);
+        $normalizedIds = array_values(array_filter(array_map([$this, 'normalizeUciId'], $uciIds)));
 
         $response = $this->apiRequest('/ucilicenselookup', [
             'year' => $year,
             'uciids' => implode(',', $normalizedIds)
         ]);
 
-        if (!$response || !isset($response['licenses'])) {
+        if (!$response) {
             return [];
         }
 
         $results = [];
-        foreach ($response['licenses'] as $license) {
-            $id = $this->normalizeUciId($license['uci_id'] ?? '');
-            if ($id) {
-                $results[$id] = $this->parseLicenseData($license);
+
+        /**
+         * API schema notes:
+         * Newer SCF responses return: {"results": [ { uciid, firstname, lastname, birthdate, nationality_code, licenses: [...] }, ... ] }
+         * Older/alternative schema may return: {"licenses": [ ... ] }
+         */
+        if (isset($response['results']) && is_array($response['results'])) {
+            foreach ($response['results'] as $person) {
+                $uci = $this->normalizeUciId((string)($person['uciid'] ?? ''));
+                if (!$uci) {
+                    continue;
+                }
+                $results[$uci] = $this->parseLicenseData($person);
+            }
+            return $results;
+        }
+
+        // Backwards-compatible fallback
+        if (isset($response['licenses']) && is_array($response['licenses'])) {
+            foreach ($response['licenses'] as $license) {
+                $id = $this->normalizeUciId((string)($license['uci_id'] ?? $license['uciid'] ?? ''));
+                if ($id) {
+                    $results[$id] = $this->parseLicenseData($license);
+                }
             }
         }
 
@@ -279,12 +251,21 @@ class SCFLicenseService {
 
         $response = $this->apiRequest('/licenselookup', $params);
 
-        if (!$response || empty($response['licenses'])) {
+        if (!$response) {
             return null;
         }
 
-        // Return first match (API may return multiple for ambiguous queries)
-        return $this->parseLicenseData($response['licenses'][0]);
+        // Newer schema
+        if (isset($response['results']) && is_array($response['results']) && !empty($response['results'])) {
+            return $this->parseLicenseData($response['results'][0]);
+        }
+
+        // Older schema
+        if (isset($response['licenses']) && is_array($response['licenses']) && !empty($response['licenses'])) {
+            return $this->parseLicenseData($response['licenses'][0]);
+        }
+
+        return null;
     }
 
     /**
@@ -294,30 +275,67 @@ class SCFLicenseService {
      * @return array Normalized license data
      */
     private function parseLicenseData(array $data): array {
-        $disciplines = [];
-        foreach (self::DISCIPLINES as $disc) {
-            if (!empty($data[$disc])) {
-                $disciplines[] = $disc;
-            }
-        }
+        // Newer schema uses: uciid + nationality_code + licenses[] (with discipline_identifier, membership, club_name, year)
+        $uciId = $this->normalizeUciId((string)($data['uci_id'] ?? $data['uciid'] ?? ''));
 
         // Extract birth year from birthdate
         $birthYear = null;
-        if (!empty($data['birthdate'])) {
-            $birthYear = (int)substr($data['birthdate'], 0, 4);
+        $birthdate = $data['birthdate'] ?? null;
+        if (!empty($birthdate) && is_string($birthdate) && strlen($birthdate) >= 4) {
+            $birthYear = (int)substr($birthdate, 0, 4);
         }
 
+        // Disciplines + best club/type from licenses array (new schema)
+        $disciplines = [];
+        $clubName = $data['club_name'] ?? $data['club'] ?? null;
+        $licenseType = $data['license_type'] ?? $data['type'] ?? null;
+
+        if (!empty($data['licenses']) && is_array($data['licenses'])) {
+            foreach ($data['licenses'] as $lic) {
+                $di = $lic['discipline_identifier'] ?? null;
+                if ($di) {
+                    $disciplines[] = $di;
+                }
+            }
+            $disciplines = array_values(array_unique($disciplines));
+
+            // Prefer MTB club if present, else first license
+            $preferred = null;
+            foreach ($data['licenses'] as $lic) {
+                if (($lic['discipline_identifier'] ?? '') === 'uci_mtb') {
+                    $preferred = $lic;
+                    break;
+                }
+            }
+            if (!$preferred) {
+                $preferred = $data['licenses'][0] ?? null;
+            }
+            if ($preferred) {
+                $clubName = $preferred['club_name'] ?? $clubName;
+                $licenseType = $preferred['membership'] ?? $licenseType;
+            }
+        } else {
+            // Older schema (booleans per discipline)
+            foreach (self::DISCIPLINES as $disc) {
+                if (!empty($data[$disc])) {
+                    $disciplines[] = $disc;
+                }
+            }
+        }
+
+        $nationality = $data['nationality_code'] ?? $data['nationality'] ?? null;
+
         return [
-            'uci_id' => $this->normalizeUciId($data['uci_id'] ?? ''),
+            'uci_id' => $uciId,
             'firstname' => $data['firstname'] ?? null,
             'lastname' => $data['lastname'] ?? null,
             'gender' => $data['gender'] ?? null,
-            'birthdate' => $data['birthdate'] ?? null,
+            'birthdate' => $birthdate,
             'birth_year' => $birthYear,
-            'nationality' => $data['nationality'] ?? null,
-            'club_name' => $data['club_name'] ?? $data['club'] ?? null,
+            'nationality' => $nationality,
+            'club_name' => $clubName,
             'district' => $data['district'] ?? null,
-            'license_type' => $data['license_type'] ?? $data['type'] ?? null,
+            'license_type' => $licenseType,
             'disciplines' => $disciplines,
             'expires_at' => $data['expires_at'] ?? $data['valid_until'] ?? null,
             'raw_data' => $data
@@ -416,40 +434,9 @@ class SCFLicenseService {
             $updates['nationality'] = $licenseData['nationality'];
         }
 
-        // Club + district handling
-        // API payload may not contain district. We derive district from matched club if possible.
-        if (!empty($licenseData['club_name'])) {
-            $resolvedClub = $this->resolveClubByName($licenseData['club_name']);
-
-            // Only overwrite club_id if rider currently has no club, or is a placeholder.
-            // (Many solostartare will have club_id NULL/0. Some installs use a dedicated "Solostartare" club.)
-            $shouldUpdateClubId = empty($rider['club_id']);
-            if (!$shouldUpdateClubId && !empty($rider['club_id'])) {
-                try {
-                    $currentClubName = (string)$this->db->getValue("SELECT name FROM clubs WHERE id = ?", [$rider['club_id']]);
-                    if ($currentClubName && mb_strtolower(trim($currentClubName)) === 'solostartare') {
-                        $shouldUpdateClubId = true;
-                    }
-                } catch (Exception $e) {
-                    // Ignore lookup errors; do not block sync
-                }
-            }
-
-            if ($resolvedClub && $shouldUpdateClubId) {
-                $updates['club_id'] = (int)$resolvedClub['id'];
-            }
-
-            // District: prefer explicit district from API (if present), otherwise from club.
-            if (!empty($licenseData['district'])) {
-                $updates['district'] = $licenseData['district'];
-            } elseif (!empty($resolvedClub['scf_district'])) {
-                $updates['district'] = $resolvedClub['scf_district'];
-            }
-        } else {
-            // Update district from SCF if present even without club
-            if (!empty($licenseData['district'])) {
-                $updates['district'] = $licenseData['district'];
-            }
+        // Update district from SCF
+        if (!empty($licenseData['district'])) {
+            $updates['district'] = $licenseData['district'];
         }
 
         // Update name with correctly spelled version from SCF
