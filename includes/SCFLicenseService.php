@@ -509,6 +509,27 @@ class SCFLicenseService {
             $updates['lastname'] = $licenseData['lastname'];
         }
 
+        // Link to club - find or create based on SCF club name
+        if (!empty($licenseData['club_name'])) {
+            $clubName = trim($licenseData['club_name']);
+            // Look for existing club (case-insensitive)
+            $existingClub = $this->db->getRow(
+                "SELECT id FROM clubs WHERE LOWER(name) = LOWER(?)",
+                [$clubName]
+            );
+
+            if ($existingClub) {
+                $updates['club_id'] = $existingClub['id'];
+            } else {
+                // Create new club
+                $this->db->query(
+                    "INSERT INTO clubs (name, country, active, created_at) VALUES (?, 'SWE', 1, NOW())",
+                    [$clubName]
+                );
+                $updates['club_id'] = $this->db->lastInsertId();
+            }
+        }
+
         // Set updated_at timestamp
         $updates['updated_at'] = date('Y-m-d H:i:s');
 
