@@ -275,7 +275,7 @@ class SCFLicenseService {
      * @return array Normalized license data
      */
     private function parseLicenseData(array $data): array {
-        // Newer schema uses: uciid + nationality_code + licenses[] (with discipline_identifier, membership, club_name, year)
+        // Newer schema uses: uciid + nationality_code + licenses[] (with discipline_identifier, membership, club_name, year, classes)
         $uciId = $this->normalizeUciId((string)($data['uci_id'] ?? $data['uciid'] ?? ''));
 
         // Extract birth year from birthdate
@@ -289,6 +289,8 @@ class SCFLicenseService {
         $disciplines = [];
         $clubName = $data['club_name'] ?? $data['club'] ?? null;
         $licenseType = $data['license_type'] ?? $data['type'] ?? null;
+        $licenseCategory = null; // e.g., "Men/U11", "Women/Elite"
+        $licenseYear = null;
 
         if (!empty($data['licenses']) && is_array($data['licenses'])) {
             foreach ($data['licenses'] as $lic) {
@@ -299,7 +301,7 @@ class SCFLicenseService {
             }
             $disciplines = array_values(array_unique($disciplines));
 
-            // Prefer MTB club if present, else first license
+            // Prefer MTB license if present, else first license
             $preferred = null;
             foreach ($data['licenses'] as $lic) {
                 if (($lic['discipline_identifier'] ?? '') === 'uci_mtb') {
@@ -313,6 +315,12 @@ class SCFLicenseService {
             if ($preferred) {
                 $clubName = $preferred['club_name'] ?? $clubName;
                 $licenseType = $preferred['membership'] ?? $licenseType;
+                $licenseYear = $preferred['year'] ?? null;
+
+                // Extract license category from classes array (e.g., "Men/U11")
+                if (!empty($preferred['classes']) && is_array($preferred['classes'])) {
+                    $licenseCategory = $preferred['classes'][0] ?? null;
+                }
             }
         } else {
             // Older schema (booleans per discipline)
@@ -323,12 +331,36 @@ class SCFLicenseService {
             }
         }
 
-        $nationality = $data['nationality_code'] ?? $data['nationality'] ?? null;
+        // Handle nationality - could be code (string) or ID (int)
+        $nationality = $data['nationality_code'] ?? null;
+        if (empty($nationality) && isset($data['nationality'])) {
+            // If nationality is numeric, it's an ID - keep nationality_code
+            if (!is_numeric($data['nationality'])) {
+                $nationality = $data['nationality'];
+            }
+        }
+
+        // Map discipline identifier to human-readable discipline
+        $disciplineMap = [
+            'uci_mtb' => 'MTB',
+            'uci_road' => 'Road',
+            'uci_cross' => 'Cross',
+            'uci_track' => 'Track',
+            'uci_bmx' => 'BMX',
+            'uci_gravel' => 'Gravel',
+            'uci_ecycling' => 'eCycling'
+        ];
+        $primaryDiscipline = null;
+        if (!empty($disciplines)) {
+            // Prefer MTB, otherwise first discipline
+            $primaryDiscipline = in_array('uci_mtb', $disciplines) ? 'MTB' : ($disciplineMap[$disciplines[0]] ?? $disciplines[0]);
+        }
 
         return [
             'uci_id' => $uciId,
             'firstname' => $data['firstname'] ?? null,
             'lastname' => $data['lastname'] ?? null,
+            'email' => $data['email'] ?? null,
             'gender' => $data['gender'] ?? null,
             'birthdate' => $birthdate,
             'birth_year' => $birthYear,
@@ -336,6 +368,9 @@ class SCFLicenseService {
             'club_name' => $clubName,
             'district' => $data['district'] ?? null,
             'license_type' => $licenseType,
+            'license_category' => $licenseCategory,
+            'license_year' => $licenseYear,
+            'discipline' => $primaryDiscipline,
             'disciplines' => $disciplines,
             'expires_at' => $data['expires_at'] ?? $data['valid_until'] ?? null,
             'raw_data' => $data
@@ -371,6 +406,13 @@ class SCFLicenseService {
                     expires_at = VALUES(expires_at),
                     verified_at = NOW()";
 
+        // Build disciplines data with category info
+        $disciplinesData = [
+            'identifiers' => $licenseData['disciplines'] ?? [],
+            'category' => $licenseData['license_category'] ?? null,
+            'primary' => $licenseData['discipline'] ?? null
+        ];
+
         $stmt = $this->db->query($sql, [
             $licenseData['uci_id'],
             $year,
@@ -381,7 +423,7 @@ class SCFLicenseService {
             $licenseData['nationality'],
             $licenseData['club_name'],
             $licenseData['license_type'],
-            json_encode($licenseData['disciplines']),
+            json_encode($disciplinesData),
             json_encode($licenseData['raw_data']),
             $licenseData['expires_at']
         ]);
@@ -393,8 +435,9 @@ class SCFLicenseService {
      * Update rider with SCF license data
      *
      * Updates rider profile with verified data from SCF:
-     * - License verification fields (scf_license_year, etc.)
-     * - Birth year, gender, nationality (if missing)
+     * - SCF verification tracking fields (scf_license_year, etc.)
+     * - Legacy license fields (license_type, license_category, etc.)
+     * - Birth year, gender, nationality
      * - District from SCF
      * - Correctly spelled name from SCF
      *
@@ -410,7 +453,7 @@ class SCFLicenseService {
             return false;
         }
 
-        // Build update array with SCF verified fields
+        // Build update array with SCF verified tracking fields
         $updates = [
             'scf_license_verified_at' => date('Y-m-d H:i:s'),
             'scf_license_year' => $year,
@@ -418,6 +461,25 @@ class SCFLicenseService {
             'scf_disciplines' => json_encode($licenseData['disciplines']),
             'scf_club_name' => $licenseData['club_name']
         ];
+
+        // Also update legacy license fields that are actively used
+        // These map SCF data to the standard riders columns
+        if (!empty($licenseData['license_type'])) {
+            $updates['license_type'] = $licenseData['license_type'];
+        }
+
+        // license_category = class from SCF (e.g., "Men/U11", "Women/Elite")
+        if (!empty($licenseData['license_category'])) {
+            $updates['license_category'] = $licenseData['license_category'];
+        }
+
+        // license_year = year the license is valid for
+        $updates['license_year'] = $year;
+
+        // discipline = primary discipline (MTB, Road, etc.)
+        if (!empty($licenseData['discipline'])) {
+            $updates['discipline'] = $licenseData['discipline'];
+        }
 
         // Update birth year if we have it from SCF
         if (!empty($licenseData['birth_year']) && $licenseData['birth_year'] > 1900) {
@@ -429,8 +491,8 @@ class SCFLicenseService {
             $updates['gender'] = strtoupper($licenseData['gender']);
         }
 
-        // Update nationality if missing
-        if (!empty($licenseData['nationality']) && empty($rider['nationality'])) {
+        // Update nationality - always update from SCF as it's authoritative
+        if (!empty($licenseData['nationality'])) {
             $updates['nationality'] = $licenseData['nationality'];
         }
 
@@ -446,6 +508,9 @@ class SCFLicenseService {
         if (!empty($licenseData['lastname'])) {
             $updates['lastname'] = $licenseData['lastname'];
         }
+
+        // Set updated_at timestamp
+        $updates['updated_at'] = date('Y-m-d H:i:s');
 
         // Perform update
         $result = $this->db->update('riders', $updates, 'id = ?', [$riderId]);
@@ -478,12 +543,22 @@ class SCFLicenseService {
                     nationality = VALUES(nationality),
                     recorded_at = NOW()";
 
+        // Include license_category in disciplines JSON if available
+        $disciplinesData = $licenseData['disciplines'] ?? [];
+        if (!empty($licenseData['license_category'])) {
+            $disciplinesData = [
+                'identifiers' => $disciplinesData,
+                'category' => $licenseData['license_category'],
+                'primary' => $licenseData['discipline'] ?? null
+            ];
+        }
+
         $this->db->query($sql, [
             $riderId,
             $licenseData['uci_id'],
             $year,
             $licenseData['license_type'],
-            json_encode($licenseData['disciplines']),
+            json_encode($disciplinesData),
             $licenseData['club_name'],
             $licenseData['nationality']
         ]);
