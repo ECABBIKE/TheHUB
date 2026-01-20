@@ -16,7 +16,7 @@ $year = (int)($_GET['year'] ?? date('Y'));
 require_once __DIR__ . '/../includes/SCFLicenseService.php';
 $scfService = null;
 if ($apiKey) {
-    $scfService = new SCFLicenseService($db, $apiKey);
+    $scfService = new SCFLicenseService($apiKey, $db);
 }
 
 $page_title = 'Importera fran SCF';
