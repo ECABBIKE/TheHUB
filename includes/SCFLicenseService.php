@@ -11,7 +11,7 @@
 
 class SCFLicenseService {
     /**
-     * API base URL
+     * Default API base URL
      */
     const API_BASE_URL = 'https://licens.scf.se/api/1.0';
 
@@ -44,6 +44,11 @@ class SCFLicenseService {
     private $apiKey;
 
     /**
+     * @var string API base URL (can be overridden via env SCF_API_URL)
+     */
+    private $apiBaseUrl;
+
+    /**
      * @var DatabaseWrapper Database connection
      */
     private $db;
@@ -59,6 +64,39 @@ class SCFLicenseService {
     private $currentSyncId = null;
 
     /**
+     * Try to resolve a club ID from a club name (SCF string)
+     *
+     * @param string $clubName
+     * @return array|null ['id' => int, 'scf_district' => ?string]
+     */
+    private function resolveClubByName(string $clubName): ?array {
+        $clubName = trim($clubName);
+        if ($clubName === '') return null;
+
+        // 1) Exact match
+        $row = $this->db->getRow(
+            "SELECT id, scf_district FROM clubs WHERE name = ? LIMIT 1",
+            [$clubName]
+        );
+        if ($row) return $row;
+
+        // 2) Case-insensitive exact match
+        $row = $this->db->getRow(
+            "SELECT id, scf_district FROM clubs WHERE LOWER(name) = LOWER(?) LIMIT 1",
+            [$clubName]
+        );
+        if ($row) return $row;
+
+        // 3) Soft match: starts with / contains
+        $like = '%' . str_replace(['%', '_'], ['\\%', '\\_'], $clubName) . '%';
+        $row = $this->db->getRow(
+            "SELECT id, scf_district FROM clubs WHERE name LIKE ? ORDER BY (name = ?) DESC, CHAR_LENGTH(name) ASC LIMIT 1",
+            [$like, $clubName]
+        );
+        return $row ?: null;
+    }
+
+    /**
      * Constructor
      *
      * @param string $apiKey SCF API key
@@ -67,6 +105,16 @@ class SCFLicenseService {
     public function __construct(string $apiKey, $db) {
         $this->apiKey = $apiKey;
         $this->db = $db;
+
+        // Allow overriding API URL via .env
+        // (config.php defines env())
+        $this->apiBaseUrl = self::API_BASE_URL;
+        if (function_exists('env')) {
+            $override = env('SCF_API_URL', '');
+            if (!empty($override)) {
+                $this->apiBaseUrl = rtrim($override, '/');
+            }
+        }
     }
 
     /**
@@ -99,7 +147,7 @@ class SCFLicenseService {
      * @return array|null Response data or null on error
      */
     private function apiRequest(string $endpoint, array $params = []): ?array {
-        $url = self::API_BASE_URL . $endpoint;
+        $url = $this->apiBaseUrl . $endpoint;
         if (!empty($params)) {
             $url .= '?' . http_build_query($params);
         }
@@ -368,9 +416,40 @@ class SCFLicenseService {
             $updates['nationality'] = $licenseData['nationality'];
         }
 
-        // Update district from SCF
-        if (!empty($licenseData['district'])) {
-            $updates['district'] = $licenseData['district'];
+        // Club + district handling
+        // API payload may not contain district. We derive district from matched club if possible.
+        if (!empty($licenseData['club_name'])) {
+            $resolvedClub = $this->resolveClubByName($licenseData['club_name']);
+
+            // Only overwrite club_id if rider currently has no club, or is a placeholder.
+            // (Many solostartare will have club_id NULL/0. Some installs use a dedicated "Solostartare" club.)
+            $shouldUpdateClubId = empty($rider['club_id']);
+            if (!$shouldUpdateClubId && !empty($rider['club_id'])) {
+                try {
+                    $currentClubName = (string)$this->db->getValue("SELECT name FROM clubs WHERE id = ?", [$rider['club_id']]);
+                    if ($currentClubName && mb_strtolower(trim($currentClubName)) === 'solostartare') {
+                        $shouldUpdateClubId = true;
+                    }
+                } catch (Exception $e) {
+                    // Ignore lookup errors; do not block sync
+                }
+            }
+
+            if ($resolvedClub && $shouldUpdateClubId) {
+                $updates['club_id'] = (int)$resolvedClub['id'];
+            }
+
+            // District: prefer explicit district from API (if present), otherwise from club.
+            if (!empty($licenseData['district'])) {
+                $updates['district'] = $licenseData['district'];
+            } elseif (!empty($resolvedClub['scf_district'])) {
+                $updates['district'] = $resolvedClub['scf_district'];
+            }
+        } else {
+            // Update district from SCF if present even without club
+            if (!empty($licenseData['district'])) {
+                $updates['district'] = $licenseData['district'];
+            }
         }
 
         // Update name with correctly spelled version from SCF
@@ -536,7 +615,7 @@ class SCFLicenseService {
      * @return array Stats [processed, found, updated, errors]
      */
     public function syncRiderBatch(array $riders, int $year): array {
-        $stats = ['processed' => 0, 'found' => 0, 'updated' => 0, 'errors' => 0, 'name_fallback' => 0];
+        $stats = ['processed' => 0, 'found' => 0, 'updated' => 0, 'errors' => 0];
 
         if (empty($riders)) {
             return $stats;
@@ -544,29 +623,26 @@ class SCFLicenseService {
 
         // Collect UCI IDs from license_number field
         $uciIdMap = [];
-        $ridersById = [];
         foreach ($riders as $rider) {
-            $ridersById[$rider['id']] = $rider;
             $normalizedId = $this->normalizeUciId($rider['license_number'] ?? '');
             if (strlen($normalizedId) === 11) {
                 $uciIdMap[$normalizedId] = $rider;
             }
         }
 
-        // Batch lookup by UCI ID
-        $licenses = [];
-        if (!empty($uciIdMap)) {
-            $licenses = $this->lookupByUciIds(array_keys($uciIdMap), $year);
+        if (empty($uciIdMap)) {
+            return $stats;
         }
 
-        // Process results - first by UCI ID
-        $foundRiderIds = [];
+        // Batch lookup
+        $licenses = $this->lookupByUciIds(array_keys($uciIdMap), $year);
+
+        // Process results
         foreach ($uciIdMap as $uciId => $rider) {
             $stats['processed']++;
 
             if (isset($licenses[$uciId])) {
                 $stats['found']++;
-                $foundRiderIds[$rider['id']] = true;
                 $licenseData = $licenses[$uciId];
 
                 // Cache the license data
@@ -580,58 +656,9 @@ class SCFLicenseService {
                     $stats['errors']++;
                     $this->log("Error updating rider #{$rider['id']}");
                 }
-            }
-        }
-
-        // Fallback: Try name search for riders not found by UCI ID
-        foreach ($riders as $rider) {
-            if (isset($foundRiderIds[$rider['id']])) {
-                continue; // Already found by UCI ID
-            }
-
-            // Only count as processed if not already counted
-            if (!isset($uciIdMap[$this->normalizeUciId($rider['license_number'] ?? '')])) {
-                $stats['processed']++;
-            }
-
-            // Try name search
-            $gender = strtoupper(substr($rider['gender'] ?? 'M', 0, 1));
-            $birthdate = null;
-            if (!empty($rider['birth_year'])) {
-                $birthdate = $rider['birth_year'] . '-01-01';
-            }
-
-            $this->log("Trying name search for: {$rider['firstname']} {$rider['lastname']}");
-
-            $licenseData = $this->lookupByName(
-                $rider['firstname'],
-                $rider['lastname'],
-                $gender,
-                $birthdate,
-                $year
-            );
-
-            if ($licenseData) {
-                $stats['found']++;
-                $stats['name_fallback']++;
-
-                // Cache the license data
-                $this->cacheLicense($licenseData, $year);
-
-                // Update rider
-                if ($this->updateRiderLicense($rider['id'], $licenseData, $year)) {
-                    $stats['updated']++;
-                    $this->log("Updated rider #{$rider['id']} via name search: {$rider['firstname']} {$rider['lastname']}");
-                } else {
-                    $stats['errors']++;
-                    $this->log("Error updating rider #{$rider['id']}");
-                }
             } else {
-                $this->log("Not found in SCF: {$rider['firstname']} {$rider['lastname']}");
+                $this->log("Not found in SCF: {$rider['firstname']} {$rider['lastname']} (UCI: $uciId)");
             }
-
-            // Rate limit for name searches
-            usleep(self::REQUEST_DELAY_MS * 1000);
         }
 
         return $stats;
