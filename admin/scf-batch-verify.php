@@ -49,6 +49,9 @@ $results = [];
 $progress = null;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $apiKey) {
+    // Extend timeout for batch operations
+    set_time_limit(300); // 5 minutes
+
     $csrfToken = $_POST['csrf_token'] ?? '';
     if (!verify_csrf_token($csrfToken)) {
         $message = 'CSRF-validering misslyckades.';
@@ -315,8 +318,9 @@ include __DIR__ . '/components/unified-layout.php';
                 <div class="form-group" style="margin: 0;">
                     <label class="form-label">Batch-storlek</label>
                     <select name="batch_size" id="batchSize" class="form-select" style="width: 100px;">
-                        <option value="10">10</option>
-                        <option value="20" selected>20</option>
+                        <option value="5">5</option>
+                        <option value="10" selected>10</option>
+                        <option value="20">20</option>
                         <option value="50">50</option>
                     </select>
                 </div>
@@ -409,34 +413,57 @@ function updateProgress(verified, total) {
     document.getElementById('progressText').innerHTML = pct + '% verifierade (<span id="verifiedCount">' + verified + '</span> av ' + total + ')';
 }
 
+let retryCount = 0;
+const MAX_RETRIES = 2;
+
 async function runNextBatch() {
     if (!isRunning) return;
 
     const form = document.getElementById('batchForm');
     const formData = new FormData(form);
+    const currentOffset = formData.get('offset');
 
-    updateStatus('Verifierar batch fran position ' + formData.get('offset') + '...');
+    updateStatus('Verifierar batch fran position ' + currentOffset + '...');
+
+    // Create abort controller with 120 second timeout
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 120000);
 
     try {
         const response = await fetch(window.location.href, {
             method: 'POST',
-            body: formData
+            body: formData,
+            signal: controller.signal
         });
 
+        clearTimeout(timeoutId);
+
+        if (!response.ok) {
+            throw new Error('Server returnerade ' + response.status);
+        }
+
         const html = await response.text();
+
+        // Reset retry count on success
+        retryCount = 0;
 
         // Parse the response to get progress info
         const parser = new DOMParser();
         const doc = parser.parseFromString(html, 'text/html');
 
+        // Check for error message in response
+        const errorAlert = doc.querySelector('.alert-danger');
+        if (errorAlert) {
+            console.error('Server error:', errorAlert.textContent);
+            updateStatus('Server-fel: ' + errorAlert.textContent.trim());
+            // Continue anyway with next batch
+        }
+
         // Check if there are results (meaning more to process)
         const resultRows = doc.querySelectorAll('.result-row');
-        const alertSuccess = doc.querySelector('.alert-success, .alert-warning');
 
         // Update stats from response
         const newVerifiedEl = doc.querySelector('.stat-card.success .stat-value');
-        const newNotVerifiedEl = doc.querySelector('.stat-card.error:last-of-type .stat-value');
-
         if (newVerifiedEl) {
             currentVerified = parseInt(newVerifiedEl.textContent.replace(/[^0-9]/g, ''));
             updateProgress(currentVerified, totalWithUci);
@@ -446,13 +473,21 @@ async function runNextBatch() {
         const newOffsetInput = doc.querySelector('[name="offset"]');
         const nextOffset = newOffsetInput ? parseInt(newOffsetInput.value) : 0;
 
-        if (resultRows.length > 0 && isRunning) {
+        // Check remaining count
+        const newNotVerifiedEl = doc.querySelectorAll('.stat-card.error .stat-value');
+        let remaining = 0;
+        if (newNotVerifiedEl.length >= 2) {
+            remaining = parseInt(newNotVerifiedEl[1].textContent.replace(/[^0-9]/g, ''));
+        }
+
+        if (resultRows.length > 0 && isRunning && remaining > 0) {
             // More results, continue
             document.getElementById('offsetInput').value = nextOffset;
-            updateStatus('Klar med batch. Fortsatter om 1 sekund...');
+            const batchSize = parseInt(document.getElementById('batchSize').value);
+            updateStatus('Klar med batch (' + resultRows.length + ' st). Fortsatter om 2 sek... (' + remaining + ' kvar)');
 
-            // Small delay to not overload API
-            setTimeout(runNextBatch, 1000);
+            // Delay to not overload API
+            setTimeout(runNextBatch, 2000);
         } else {
             // No more results
             stopAutoVerify();
@@ -461,9 +496,24 @@ async function runNextBatch() {
             location.reload();
         }
     } catch (error) {
+        clearTimeout(timeoutId);
         console.error('Error:', error);
-        updateStatus('Fel uppstod: ' + error.message);
-        stopAutoVerify();
+
+        if (error.name === 'AbortError') {
+            updateStatus('Timeout - forsoker igen...');
+        } else {
+            updateStatus('Fel: ' + error.message);
+        }
+
+        // Retry logic
+        retryCount++;
+        if (retryCount <= MAX_RETRIES && isRunning) {
+            updateStatus('Fel uppstod. Forsoker igen (' + retryCount + '/' + MAX_RETRIES + ')...');
+            setTimeout(runNextBatch, 3000);
+        } else {
+            updateStatus('Avbrot efter ' + MAX_RETRIES + ' misslyckade forsok.');
+            stopAutoVerify();
+        }
     }
 }
 </script>
