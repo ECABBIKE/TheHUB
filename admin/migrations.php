@@ -69,6 +69,10 @@ $migrationChecks = [
     '018_news_hub_columns.sql' => [
         'columns' => ['race_reports.youtube_url', 'race_reports.moderated_by']
     ],
+    '019_scf_license_sync.sql' => [
+        'tables' => ['scf_license_cache', 'scf_license_history', 'scf_sync_log', 'scf_match_candidates'],
+        'columns' => ['riders.scf_license_verified_at', 'riders.scf_license_year', 'riders.scf_license_type', 'riders.scf_disciplines', 'riders.scf_club_name']
+    ],
 ];
 
 // ============================================================================

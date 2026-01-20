@@ -744,6 +744,48 @@ include __DIR__ . '/components/unified-layout.php';
         </div>
     </div>
 
+    <!-- SCF Batch Verify -->
+    <div class="card">
+        <div class="tool-header">
+            <div class="tool-icon success"><i data-lucide="check-circle"></i></div>
+            <div>
+                <h4 class="tool-title">Batch-verifiering</h4>
+                <p class="tool-description">Verifiera alla UCI ID mot SCF</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/scf-batch-verify.php" class="btn-admin btn-admin-success">Verifiera</a>
+        </div>
+    </div>
+
+    <!-- SCF Name Search -->
+    <div class="card">
+        <div class="tool-header">
+            <div class="tool-icon"><i data-lucide="search"></i></div>
+            <div>
+                <h4 class="tool-title">Namnsok</h4>
+                <p class="tool-description">Sok cyklister utan UCI ID via namn</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/scf-name-search.php" class="btn-admin btn-admin-primary">Sok</a>
+        </div>
+    </div>
+
+    <!-- SCF Import Riders -->
+    <div class="card">
+        <div class="tool-header">
+            <div class="tool-icon"><i data-lucide="user-plus"></i></div>
+            <div>
+                <h4 class="tool-title">Importera fran SCF</h4>
+                <p class="tool-description">Sok och importera nya cyklister</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/scf-import-riders.php" class="btn-admin btn-admin-primary">Importera</a>
+        </div>
+    </div>
+
     <!-- SCF API Test -->
     <div class="card">
         <div class="tool-header">
