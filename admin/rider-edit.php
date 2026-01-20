@@ -756,6 +756,45 @@ include __DIR__ . '/components/unified-layout.php';
   </h2>
   </div>
 
+  <!-- SCF Verification Status -->
+  <div class="col-span-2" style="background: var(--color-bg-hover); padding: var(--space-md); border-radius: var(--radius-md); margin-bottom: var(--space-md);">
+  <div style="display: flex; align-items: center; gap: var(--space-sm); margin-bottom: var(--space-sm);">
+    <i data-lucide="badge-check" style="color: var(--color-accent);"></i>
+    <strong>SCF Licensverifiering</strong>
+    <?php if (!empty($rider['scf_license_year']) && $rider['scf_license_year'] == date('Y')): ?>
+    <span class="badge badge-success">Verifierad <?= $rider['scf_license_year'] ?></span>
+    <?php elseif (!empty($rider['scf_license_year'])): ?>
+    <span class="badge badge-warning">Verifierad <?= $rider['scf_license_year'] ?> (ej aktuellt år)</span>
+    <?php else: ?>
+    <span class="badge badge-danger">Ej verifierad</span>
+    <?php endif; ?>
+  </div>
+  <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: var(--space-md); font-size: var(--text-sm);">
+    <div>
+      <span class="text-muted">Licenstyp:</span>
+      <strong><?= h($rider['scf_license_type'] ?? $rider['license_type'] ?? '-') ?></strong>
+    </div>
+    <div>
+      <span class="text-muted">Licensklass:</span>
+      <strong><?= h($rider['license_category'] ?? '-') ?></strong>
+    </div>
+    <div>
+      <span class="text-muted">Disciplin:</span>
+      <strong><?= h($rider['discipline'] ?? '-') ?></strong>
+    </div>
+    <div>
+      <span class="text-muted">SCF Klubb:</span>
+      <strong><?= h($rider['scf_club_name'] ?? '-') ?></strong>
+    </div>
+    <?php if (!empty($rider['scf_license_verified_at'])): ?>
+    <div>
+      <span class="text-muted">Senast verifierad:</span>
+      <strong><?= date('Y-m-d H:i', strtotime($rider['scf_license_verified_at'])) ?></strong>
+    </div>
+    <?php endif; ?>
+  </div>
+  </div>
+
   <!-- License Year (read-only) -->
   <div>
   <label class="label">
