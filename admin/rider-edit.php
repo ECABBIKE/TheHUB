@@ -21,6 +21,15 @@ if (!$rider) {
  exit;
 }
 
+// Get club membership for current year from rider_club_seasons
+$currentYear = (int)date('Y');
+$yearlyClub = $db->getRow("
+    SELECT rcs.*, c.name as club_name
+    FROM rider_club_seasons rcs
+    JOIN clubs c ON rcs.club_id = c.id
+    WHERE rcs.rider_id = ? AND rcs.season_year = ?
+", [$id, $currentYear]);
+
 // Check if rider has a linked user account
 $riderUser = $db->getRow("
  SELECT au.*, rp.can_edit_profile, rp.can_manage_club
@@ -786,6 +795,15 @@ include __DIR__ . '/components/unified-layout.php';
       <span class="text-muted">SCF Klubb:</span>
       <strong><?= h($rider['scf_club_name'] ?? '-') ?></strong>
     </div>
+    <?php if ($yearlyClub): ?>
+    <div>
+      <span class="text-muted">Klubb <?= $currentYear ?>:</span>
+      <strong><?= h($yearlyClub['club_name']) ?></strong>
+      <?php if ($yearlyClub['locked']): ?>
+      <span class="badge badge-success" style="margin-left: 4px; font-size: 10px;">Låst</span>
+      <?php endif; ?>
+    </div>
+    <?php endif; ?>
     <?php if (!empty($rider['scf_license_verified_at'])): ?>
     <div>
       <span class="text-muted">Senast verifierad:</span>
