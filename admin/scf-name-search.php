@@ -42,8 +42,12 @@ $stats['confirmed_matches'] = (int)$db->getValue("SELECT COUNT(*) FROM scf_match
 $message = '';
 $messageType = 'info';
 $searchResults = [];
+$progress = null;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && $apiKey) {
+    // Extend timeout for batch operations
+    set_time_limit(300); // 5 minutes
+
     $csrfToken = $_POST['csrf_token'] ?? '';
     if (!verify_csrf_token($csrfToken)) {
         $message = 'CSRF-validering misslyckades.';
@@ -147,6 +151,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $apiKey) {
                 $gender = $rider['gender'] ?: 'M';
                 $birthdate = $rider['birth_year'] ? $rider['birth_year'] . '-01-01' : null;
 
+                // Rate limiting - wait between API calls
+                $scfService->rateLimit();
+
                 $apiResults = $scfService->lookupByName(
                     $rider['firstname'],
                     $rider['lastname'],
@@ -194,6 +201,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $apiKey) {
 
             $message = "Sokade " . count($riders) . " cyklister. Hittade matchningar for $found, $notFound utan matchning.";
             $messageType = $found > 0 ? 'success' : 'warning';
+
+            // Track progress for auto-continue
+            $progress = [
+                'processed' => count($riders),
+                'found' => $found,
+                'not_found' => $notFound,
+                'next_offset' => $offset + $batchSize,
+                'has_more' => count($riders) >= $batchSize
+            ];
         }
 
         if ($action === 'confirm_match') {
@@ -464,17 +480,19 @@ include __DIR__ . '/components/unified-layout.php';
     </div>
     <div class="card-body">
         <p class="text-secondary" style="margin-bottom: var(--space-md);">
-            Soker efter cyklister utan UCI ID i SCF baserat pa namn och fodelsear.
+            Soker efter cyklister utan UCI ID (inklusive SWE-ID) i SCF baserat pa namn och fodelsear.
+            Namnsok gar langsamt (en per request) - ca 10 cyklister tar ~6 sekunder.
         </p>
 
-        <form method="post">
+        <form method="post" id="batchForm">
             <?= csrf_field() ?>
             <input type="hidden" name="action" value="search_batch">
+            <input type="hidden" name="offset" id="offsetInput" value="<?= $progress['next_offset'] ?? 0 ?>">
 
             <div style="display: flex; gap: var(--space-md); flex-wrap: wrap; align-items: end;">
                 <div class="form-group" style="margin: 0;">
-                    <label class="form-label">Antal</label>
-                    <select name="batch_size" class="form-select" style="width: 100px;">
+                    <label class="form-label">Antal per batch</label>
+                    <select name="batch_size" id="batchSize" class="form-select" style="width: 100px;">
                         <option value="5">5</option>
                         <option value="10" selected>10</option>
                         <option value="20">20</option>
@@ -482,12 +500,173 @@ include __DIR__ . '/components/unified-layout.php';
                 </div>
 
                 <button type="submit" class="btn btn-primary">
-                    <i data-lucide="search"></i> Sok i SCF
+                    <i data-lucide="search"></i> Sok batch
+                </button>
+
+                <button type="button" id="searchAllBtn" class="btn btn-success" onclick="startAutoSearch()">
+                    <i data-lucide="zap"></i> Sok ALLA
+                </button>
+
+                <button type="button" id="stopBtn" class="btn btn-danger" style="display: none;" onclick="stopAutoSearch()">
+                    <i data-lucide="square"></i> Stoppa
                 </button>
             </div>
         </form>
+
+        <?php if ($stats['without_uci'] > 0): ?>
+        <div class="progress-bar" style="margin-top: var(--space-md);">
+            <div class="progress-fill" id="progressFill" style="width: 0%;"></div>
+        </div>
+        <p class="text-secondary text-sm" style="margin-top: var(--space-xs);" id="progressText">
+            <?= number_format($stats['without_uci']) ?> cyklister utan UCI ID att soka
+        </p>
+        <?php endif; ?>
+
+        <div id="autoStatus" style="display: none; margin-top: var(--space-md); padding: var(--space-md); background: var(--color-bg-hover); border-radius: var(--radius-md);">
+            <div style="display: flex; align-items: center; gap: var(--space-sm);">
+                <div class="spinner" style="width: 20px; height: 20px; border: 2px solid var(--color-border); border-top-color: var(--color-accent); border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                <span id="autoStatusText">Forbereder...</span>
+            </div>
+        </div>
     </div>
 </div>
+
+<style>
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+.progress-bar {
+    background: var(--color-bg-hover);
+    border-radius: var(--radius-full);
+    height: 8px;
+    overflow: hidden;
+}
+.progress-fill {
+    background: var(--color-accent);
+    height: 100%;
+    transition: width 0.3s ease;
+}
+</style>
+
+<script>
+let isRunning = false;
+let totalToSearch = <?= $stats['without_uci'] - $stats['pending_matches'] ?>;
+let totalFound = 0;
+let totalProcessed = 0;
+let retryCount = 0;
+const MAX_RETRIES = 2;
+
+function startAutoSearch() {
+    if (isRunning) return;
+    isRunning = true;
+    totalFound = 0;
+    totalProcessed = 0;
+
+    document.getElementById('searchAllBtn').style.display = 'none';
+    document.getElementById('stopBtn').style.display = 'inline-flex';
+    document.getElementById('autoStatus').style.display = 'block';
+    document.getElementById('offsetInput').value = '0';
+
+    runNextBatch();
+}
+
+function stopAutoSearch() {
+    isRunning = false;
+    document.getElementById('searchAllBtn').style.display = 'inline-flex';
+    document.getElementById('stopBtn').style.display = 'none';
+    document.getElementById('autoStatus').style.display = 'none';
+}
+
+function updateStatus(text) {
+    document.getElementById('autoStatusText').textContent = text;
+}
+
+function updateProgress(processed, total) {
+    const pct = total > 0 ? Math.round(processed / total * 100) : 0;
+    document.getElementById('progressFill').style.width = pct + '%';
+    document.getElementById('progressText').textContent = processed + ' av ' + total + ' sokta (' + pct + '%)';
+}
+
+async function runNextBatch() {
+    if (!isRunning) return;
+
+    const form = document.getElementById('batchForm');
+    const formData = new FormData(form);
+
+    updateStatus('Soker batch fran position ' + formData.get('offset') + '...');
+
+    const controller = new AbortController();
+    const timeoutId = setTimeout(() => controller.abort(), 120000);
+
+    try {
+        const response = await fetch(window.location.href, {
+            method: 'POST',
+            body: formData,
+            signal: controller.signal
+        });
+
+        clearTimeout(timeoutId);
+
+        if (!response.ok) {
+            throw new Error('Server returnerade ' + response.status);
+        }
+
+        const html = await response.text();
+        retryCount = 0;
+
+        // Parse the response
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+
+        // Check for alert message
+        const alertEl = doc.querySelector('.alert-success, .alert-warning');
+        if (alertEl) {
+            console.log('Batch result:', alertEl.textContent);
+        }
+
+        // Get new offset from response
+        const newOffsetInput = doc.querySelector('[name="offset"]');
+        const nextOffset = newOffsetInput ? parseInt(newOffsetInput.value) : 0;
+
+        // Check remaining count from stats
+        const statsCards = doc.querySelectorAll('.stat-card .stat-value');
+        let remaining = 0;
+        if (statsCards.length >= 1) {
+            remaining = parseInt(statsCards[0].textContent.replace(/[^0-9]/g, ''));
+        }
+
+        // Check if we got results (processed riders)
+        const tableRows = doc.querySelectorAll('.table tbody tr');
+        const hasMore = tableRows.length > 0 || remaining > 0;
+
+        totalProcessed += parseInt(document.getElementById('batchSize').value);
+        updateProgress(totalProcessed, totalToSearch);
+
+        if (hasMore && isRunning && nextOffset > 0) {
+            document.getElementById('offsetInput').value = nextOffset;
+            updateStatus('Klar med batch. Fortsatter om 2 sek... (' + remaining + ' cyklister kvar)');
+            setTimeout(runNextBatch, 2000);
+        } else {
+            stopAutoSearch();
+            updateStatus('Klart! Alla cyklister har sokts.');
+            alert('Sokning klar! Ga igenom "Vantande matchningar" for att bekrafta.');
+            location.reload();
+        }
+    } catch (error) {
+        clearTimeout(timeoutId);
+        console.error('Error:', error);
+
+        retryCount++;
+        if (retryCount <= MAX_RETRIES && isRunning) {
+            updateStatus('Fel uppstod. Forsoker igen (' + retryCount + '/' + MAX_RETRIES + ')...');
+            setTimeout(runNextBatch, 3000);
+        } else {
+            updateStatus('Avbrot efter ' + MAX_RETRIES + ' misslyckade forsok.');
+            stopAutoSearch();
+        }
+    }
+}
+</script>
 
 <!-- Pending Matches -->
 <?php if (!empty($pendingMatches)): ?>

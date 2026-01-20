@@ -177,7 +177,7 @@ try {
         SELECT rcs.season_year, rcs.club_id, c.name as club_name, rcs.locked,
                (SELECT COUNT(*) FROM results res
                 JOIN events e ON res.event_id = e.id
-                WHERE res.cyclist_id = ? AND YEAR(e.date) = rcs.season_year) as results_count
+                WHERE res.cyclist_id = ? AND YEAR(e.date) = rcs.season_year AND res.status != 'dns') as results_count
         FROM rider_club_seasons rcs
         JOIN clubs c ON rcs.club_id = c.id
         WHERE rcs.rider_id = ?
