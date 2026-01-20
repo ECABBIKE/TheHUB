@@ -500,9 +500,17 @@ class SCFLicenseService {
             $updates['birth_year'] = $licenseData['birth_year'];
         }
 
-        // Update gender if we have it from SCF
+        // Update gender - from direct gender field or derive from license_category
         if (!empty($licenseData['gender'])) {
             $updates['gender'] = strtoupper($licenseData['gender']);
+        } elseif (!empty($licenseData['license_category'])) {
+            // Derive gender from license_category: "Men" -> M, "Women" -> F
+            $cat = strtolower($licenseData['license_category']);
+            if ($cat === 'men' || $cat === 'man' || $cat === 'herr' || $cat === 'herrar') {
+                $updates['gender'] = 'M';
+            } elseif ($cat === 'women' || $cat === 'woman' || $cat === 'dam' || $cat === 'damer') {
+                $updates['gender'] = 'F';
+            }
         }
 
         // Update nationality - always update from SCF as it's authoritative
