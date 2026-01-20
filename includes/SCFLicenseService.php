@@ -510,6 +510,7 @@ class SCFLicenseService {
         }
 
         // Link to club - find or create based on SCF club name
+        $clubId = null;
         if (!empty($licenseData['club_name'])) {
             $clubName = trim($licenseData['club_name']);
             // Look for existing club (case-insensitive)
@@ -519,15 +520,16 @@ class SCFLicenseService {
             );
 
             if ($existingClub) {
-                $updates['club_id'] = $existingClub['id'];
+                $clubId = $existingClub['id'];
             } else {
                 // Create new club
                 $this->db->query(
                     "INSERT INTO clubs (name, country, active, created_at) VALUES (?, 'SWE', 1, NOW())",
                     [$clubName]
                 );
-                $updates['club_id'] = $this->db->lastInsertId();
+                $clubId = $this->db->lastInsertId();
             }
+            $updates['club_id'] = $clubId;
         }
 
         // Set updated_at timestamp
@@ -538,6 +540,18 @@ class SCFLicenseService {
 
         if ($result === false) {
             return false;
+        }
+
+        // Also set club for the license year in rider_club_seasons
+        // This locks the club membership for that specific year
+        if ($clubId) {
+            $this->db->query("
+                INSERT INTO rider_club_seasons (rider_id, club_id, season_year, locked)
+                VALUES (?, ?, ?, 1)
+                ON DUPLICATE KEY UPDATE
+                    club_id = VALUES(club_id),
+                    locked = 1
+            ", [$riderId, $clubId, $year]);
         }
 
         // Record in history
