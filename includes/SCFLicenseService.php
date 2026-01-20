@@ -288,8 +288,9 @@ class SCFLicenseService {
         // Disciplines + best club/type from licenses array (new schema)
         $disciplines = [];
         $clubName = $data['club_name'] ?? $data['club'] ?? null;
-        $licenseType = $data['license_type'] ?? $data['type'] ?? null;
-        $licenseCategory = null; // e.g., "Men/U11", "Women/Elite"
+        $membershipType = null; // "Tävlingslicens", "Motionslicens", etc.
+        $licenseType = null;    // Age/skill class: "Elite", "U11", "U13", etc.
+        $licenseCategory = null; // Gender: "Men", "Women"
         $licenseYear = null;
 
         if (!empty($data['licenses']) && is_array($data['licenses'])) {
@@ -314,12 +315,23 @@ class SCFLicenseService {
             }
             if ($preferred) {
                 $clubName = $preferred['club_name'] ?? $clubName;
-                $licenseType = $preferred['membership'] ?? $licenseType;
+                $membershipType = $preferred['membership'] ?? null; // "Tävlingslicens"
                 $licenseYear = $preferred['year'] ?? null;
 
-                // Extract license category from classes array (e.g., "Men/U11")
+                // Parse classes array (e.g., "Men/U11" -> gender="Men", type="U11")
                 if (!empty($preferred['classes']) && is_array($preferred['classes'])) {
-                    $licenseCategory = $preferred['classes'][0] ?? null;
+                    $classStr = $preferred['classes'][0] ?? '';
+                    if (!empty($classStr)) {
+                        // Split "Men/U11" or "Women/Elite" into parts
+                        if (strpos($classStr, '/') !== false) {
+                            $parts = explode('/', $classStr, 2);
+                            $licenseCategory = trim($parts[0]); // "Men" or "Women"
+                            $licenseType = trim($parts[1]);     // "U11", "Elite", etc.
+                        } else {
+                            // No slash - might be just the class
+                            $licenseType = $classStr;
+                        }
+                    }
                 }
             }
         } else {
@@ -367,8 +379,9 @@ class SCFLicenseService {
             'nationality' => $nationality,
             'club_name' => $clubName,
             'district' => $data['district'] ?? null,
-            'license_type' => $licenseType,
-            'license_category' => $licenseCategory,
+            'membership_type' => $membershipType,  // "Tävlingslicens", "Motionslicens", etc.
+            'license_type' => $licenseType,        // Age class: "Elite", "U11", etc.
+            'license_category' => $licenseCategory, // Gender: "Men", "Women"
             'license_year' => $licenseYear,
             'discipline' => $primaryDiscipline,
             'disciplines' => $disciplines,
@@ -464,11 +477,12 @@ class SCFLicenseService {
 
         // Also update legacy license fields that are actively used
         // These map SCF data to the standard riders columns
+        // license_type = age/skill class (Elite, U11, U13, etc.)
         if (!empty($licenseData['license_type'])) {
             $updates['license_type'] = $licenseData['license_type'];
         }
 
-        // license_category = class from SCF (e.g., "Men/U11", "Women/Elite")
+        // license_category = gender (Men, Women)
         if (!empty($licenseData['license_category'])) {
             $updates['license_category'] = $licenseData['license_category'];
         }
