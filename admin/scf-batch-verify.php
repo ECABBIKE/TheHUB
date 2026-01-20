@@ -309,11 +309,12 @@ include __DIR__ . '/components/unified-layout.php';
         <form method="post" id="batchForm">
             <?= csrf_field() ?>
             <input type="hidden" name="action" value="verify_batch">
+            <input type="hidden" name="auto_continue" id="autoContinueInput" value="0">
 
             <div style="display: flex; gap: var(--space-md); flex-wrap: wrap; align-items: end;">
                 <div class="form-group" style="margin: 0;">
                     <label class="form-label">Batch-storlek</label>
-                    <select name="batch_size" class="form-select" style="width: 100px;">
+                    <select name="batch_size" id="batchSize" class="form-select" style="width: 100px;">
                         <option value="10">10</option>
                         <option value="20" selected>20</option>
                         <option value="50">50</option>
@@ -322,12 +323,12 @@ include __DIR__ . '/components/unified-layout.php';
 
                 <div class="form-group" style="margin: 0;">
                     <label class="form-label">Starta fran</label>
-                    <input type="number" name="offset" class="form-input" style="width: 100px;" value="<?= $progress['next_offset'] ?? 0 ?>">
+                    <input type="number" name="offset" id="offsetInput" class="form-input" style="width: 100px;" value="<?= $progress['next_offset'] ?? 0 ?>">
                 </div>
 
                 <div class="form-group" style="margin: 0;">
                     <label class="admin-checkbox-label">
-                        <input type="checkbox" name="only_unverified" checked>
+                        <input type="checkbox" name="only_unverified" id="onlyUnverified" checked>
                         <span>Endast overifierade</span>
                     </label>
                 </div>
@@ -336,24 +337,136 @@ include __DIR__ . '/components/unified-layout.php';
                     <i data-lucide="search"></i> Verifiera batch
                 </button>
 
-                <?php if ($progress): ?>
-                <button type="submit" class="btn btn-secondary" onclick="document.querySelector('[name=offset]').value = <?= $progress['next_offset'] ?>">
-                    <i data-lucide="chevron-right"></i> Nasta batch
+                <button type="button" id="verifyAllBtn" class="btn btn-success" onclick="startAutoVerify()">
+                    <i data-lucide="zap"></i> Verifiera ALLA
                 </button>
-                <?php endif; ?>
+
+                <button type="button" id="stopBtn" class="btn btn-danger" style="display: none;" onclick="stopAutoVerify()">
+                    <i data-lucide="square"></i> Stoppa
+                </button>
             </div>
         </form>
 
         <?php if ($stats['not_verified'] > 0): ?>
         <div class="progress-bar" style="margin-top: var(--space-md);">
-            <div class="progress-fill" style="width: <?= round($stats['verified_this_year'] / $stats['with_uci_id'] * 100) ?>%;"></div>
+            <div class="progress-fill" id="progressFill" style="width: <?= round($stats['verified_this_year'] / $stats['with_uci_id'] * 100) ?>%;"></div>
         </div>
-        <p class="text-secondary text-sm" style="margin-top: var(--space-xs);">
+        <p class="text-secondary text-sm" style="margin-top: var(--space-xs);" id="progressText">
             <?= round($stats['verified_this_year'] / $stats['with_uci_id'] * 100, 1) ?>% verifierade
+            (<span id="verifiedCount"><?= $stats['verified_this_year'] ?></span> av <?= $stats['with_uci_id'] ?>)
         </p>
         <?php endif; ?>
+
+        <div id="autoStatus" style="display: none; margin-top: var(--space-md); padding: var(--space-md); background: var(--color-bg-hover); border-radius: var(--radius-md);">
+            <div style="display: flex; align-items: center; gap: var(--space-sm);">
+                <div class="spinner" style="width: 20px; height: 20px; border: 2px solid var(--color-border); border-top-color: var(--color-accent); border-radius: 50%; animation: spin 1s linear infinite;"></div>
+                <span id="autoStatusText">Forbereder...</span>
+            </div>
+        </div>
     </div>
 </div>
+
+<style>
+@keyframes spin {
+    to { transform: rotate(360deg); }
+}
+</style>
+
+<script>
+let isRunning = false;
+let totalToVerify = <?= $stats['not_verified'] ?>;
+let totalWithUci = <?= $stats['with_uci_id'] ?>;
+let currentVerified = <?= $stats['verified_this_year'] ?>;
+
+function startAutoVerify() {
+    if (isRunning) return;
+    isRunning = true;
+
+    document.getElementById('verifyAllBtn').style.display = 'none';
+    document.getElementById('stopBtn').style.display = 'inline-flex';
+    document.getElementById('autoStatus').style.display = 'block';
+    document.getElementById('autoContinueInput').value = '1';
+    document.getElementById('offsetInput').value = '0';
+
+    runNextBatch();
+}
+
+function stopAutoVerify() {
+    isRunning = false;
+    document.getElementById('verifyAllBtn').style.display = 'inline-flex';
+    document.getElementById('stopBtn').style.display = 'none';
+    document.getElementById('autoStatus').style.display = 'none';
+    document.getElementById('autoContinueInput').value = '0';
+}
+
+function updateStatus(text) {
+    document.getElementById('autoStatusText').textContent = text;
+}
+
+function updateProgress(verified, total) {
+    const pct = Math.round(verified / total * 100);
+    document.getElementById('progressFill').style.width = pct + '%';
+    document.getElementById('progressText').innerHTML = pct + '% verifierade (<span id="verifiedCount">' + verified + '</span> av ' + total + ')';
+}
+
+async function runNextBatch() {
+    if (!isRunning) return;
+
+    const form = document.getElementById('batchForm');
+    const formData = new FormData(form);
+
+    updateStatus('Verifierar batch fran position ' + formData.get('offset') + '...');
+
+    try {
+        const response = await fetch(window.location.href, {
+            method: 'POST',
+            body: formData
+        });
+
+        const html = await response.text();
+
+        // Parse the response to get progress info
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(html, 'text/html');
+
+        // Check if there are results (meaning more to process)
+        const resultRows = doc.querySelectorAll('.result-row');
+        const alertSuccess = doc.querySelector('.alert-success, .alert-warning');
+
+        // Update stats from response
+        const newVerifiedEl = doc.querySelector('.stat-card.success .stat-value');
+        const newNotVerifiedEl = doc.querySelector('.stat-card.error:last-of-type .stat-value');
+
+        if (newVerifiedEl) {
+            currentVerified = parseInt(newVerifiedEl.textContent.replace(/[^0-9]/g, ''));
+            updateProgress(currentVerified, totalWithUci);
+        }
+
+        // Get new offset from response
+        const newOffsetInput = doc.querySelector('[name="offset"]');
+        const nextOffset = newOffsetInput ? parseInt(newOffsetInput.value) : 0;
+
+        if (resultRows.length > 0 && isRunning) {
+            // More results, continue
+            document.getElementById('offsetInput').value = nextOffset;
+            updateStatus('Klar med batch. Fortsatter om 1 sekund...');
+
+            // Small delay to not overload API
+            setTimeout(runNextBatch, 1000);
+        } else {
+            // No more results
+            stopAutoVerify();
+            updateStatus('Klart! Alla cyklister har verifierats.');
+            alert('Verifiering klar! Alla cyklister med UCI ID har kontrollerats mot SCF.');
+            location.reload();
+        }
+    } catch (error) {
+        console.error('Error:', error);
+        updateStatus('Fel uppstod: ' + error.message);
+        stopAutoVerify();
+    }
+}
+</script>
 
 <!-- Results from current batch -->
 <?php if (!empty($results)): ?>
