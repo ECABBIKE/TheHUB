@@ -701,6 +701,20 @@ include __DIR__ . '/components/unified-layout.php';
         </div>
     </div>
 
+    <!-- Participant Analysis -->
+    <div class="card">
+        <div class="tool-header">
+            <div class="tool-icon"><i data-lucide="user-search"></i></div>
+            <div>
+                <h4 class="tool-title">Deltagaranalys</h4>
+                <p class="tool-description">Hitta churned riders och serie-luckor</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/participant-analysis.php" class="btn-admin btn-admin-primary">Oppna</a>
+        </div>
+    </div>
+
 </div>
 
 <!-- ========== SCF LICENSSYNK ========== -->
