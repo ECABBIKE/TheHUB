@@ -29,6 +29,36 @@ Version visas som: `v1.0 [2026-01-08.XXX] - Release`
 Pushat: TheHUB v1.0 [2026-01-08.XXX]
 ```
 
+---
+
+## ROADMAP - UPPDATERA EFTER VARJE IMPLEMENTATION
+
+**Uppdatera ALLTID `/ROADMAP.md` efter varje implementerad funktion.**
+
+### Vid varje avslutad uppgift:
+1. Uppdatera status i ROADMAP.md (markera som KLAR)
+2. Lägg till changelog-entry med datum och beskrivning
+3. Dokumentera nya filer som skapats
+4. Notera eventuella framtida förbättringar
+
+### Format för changelog:
+```markdown
+### YYYY-MM-DD (Funktionsnamn)
+- **Branch:** namn-på-branch
+
+- **Ny funktion: Beskrivning**
+  - Punkt 1
+  - Punkt 2
+
+- **Nya filer:**
+  - `path/to/file.php` - Beskrivning
+```
+
+### Interaktiv roadmap:
+Se `/admin/roadmap.php` för en visuell översikt av projektets status.
+
+---
+
 ## MIGRATIONER - ALLTID I Tools/migrations
 
 **ALLA databasmigrationer ska ligga i `/Tools/migrations/` - INGEN annanstans.**

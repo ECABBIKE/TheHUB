@@ -1,8 +1,9 @@
 # TheHUB - Development Roadmap
 
-> Senast uppdaterad: 2026-01-19
+> Senast uppdaterad: 2026-01-21
 >
-> **OBS:** All projektinformation ska dokumenteras i denna fil!
+> **OBS:** Uppdatera denna fil efter varje implementerad funktion!
+> **Se även:** `/admin/roadmap.php` för en interaktiv vy
 
 ---
 
@@ -13,6 +14,7 @@
 | Analytics Platform | KLAR | Statistik, KPI:er, trender, rapporter |
 | Betalningssystem | 80% KLAR | Swish, Stripe, ordrar, checkout |
 | Event Ratings | KLAR | Deltagarfeedback pa events |
+| Win-Back System | KLAR | Återengagera churnade deltagare |
 
 ---
 
@@ -582,7 +584,90 @@ HUB_ROOT, HUB_URL, ROOT_PATH, INCLUDES_PATH
 
 ---
 
+# DEL 5: WIN-BACK SURVEY SYSTEM
+
+**Mal:** Aterengagera deltagare som slutat tavla
+**Status:** KLAR
+
+## FUNKTIONER
+
+### Participant Analysis (admin/participant-analysis.php)
+- [x] Identifiera "churnade" deltagare (tavlade historiskt men ej 2025)
+- [x] Identifiera deltagare som ej tavlat i SweCup Enduro
+- [x] CSV-export av malgrupper
+
+### Win-Back Campaigns (admin/winback-campaigns.php)
+- [x] Kampanjhantering med varumarkesfilter
+- [x] Fragor: flerval, enkelval, skala 1-10, fritext
+- [x] Fragor kan vara globala eller kampanjspecifika
+- [x] Automatisk rabattkod vid avslutad enkat
+- [x] Inbjudningssystem via email direkt fran TheHUB
+- [x] Kontaktstatistik (har email / saknar email)
+- [x] Svarsstatistik och resultatvisning (anonymiserat)
+
+### Promotor Access Control
+- [x] Kampanjer kan tilldelas en agare (promotor)
+- [x] Promotors kan hantera sina egna kampanjer
+- [x] Valfri delning av resultat till alla promotors
+- [x] Administratorer kan redigera alla kampanjer
+
+### Survey Form (pages/profile/winback-survey.php)
+- [x] Automatisk kvalificeringskontroll
+- [x] Anonym enkat (som event ratings)
+- [x] Generering av unik rabattkod vid avslutande
+- [x] Kopiera rabattkod till urklipp
+
+### Databastabeller
+- `winback_campaigns` - Kampanjer med varumarkesfilter
+- `winback_questions` - Fragor med typ och alternativ
+- `winback_responses` - Enkatsvar
+- `winback_answers` - Svar per fraga
+- `winback_invitations` - Inbjudningsspårning
+
+### Migrationer
+- `021_winback_survey.sql` - Grundtabeller och standardfragor
+- `022_winback_invitations.sql` - Inbjudningar och promotor-atkomst
+
+### Framtida forbattringar
+- [ ] Automatiska paminelser till deltagare som ej svarat
+- [ ] SMS-inbjudningar (integration med SMS-gateway)
+- [ ] Tracking av oppnade email
+- [ ] Koppling till anmalningssystem for rabattkoder
+
+---
+
 # CHANGELOG
+
+### 2026-01-21 (Win-Back Survey System)
+- **Branch: claude/participant-analysis-tool-v8luL**
+
+- **Ny funktion: Win-Back Survey System**
+  - Identifiering av churnade deltagare (ej tavlat 2025)
+  - Kampanjhantering med varumarkesfilter
+  - Enkatsystem med fragor (flerval, enkelval, skala, fritext)
+  - Automatisk rabattkod vid avslutad enkat
+  - Inbjudningssystem via email direkt fran TheHUB
+  - Kontaktstatistik (har email / saknar email)
+  - Svarsstatistik och resultatvisning
+
+- **Promotor Access Control**
+  - Kampanjer kan tilldelas agare (promotor)
+  - Promotors kan hantera sina kampanjer
+  - Valfri delning av resultat till alla promotors
+
+- **Nya filer:**
+  - `admin/participant-analysis.php` - Enkel analysvy
+  - `admin/winback-campaigns.php` - Kampanjhantering
+  - `pages/profile/winback-survey.php` - Enkatformular
+  - `admin/roadmap.php` - Interaktiv roadmap-vy
+  - `Tools/migrations/021_winback_survey.sql`
+  - `Tools/migrations/022_winback_invitations.sql`
+
+- **Uppdaterade filer:**
+  - `admin/migrations.php` - Lagt till auto-detektion for nya migrationer
+  - `admin/tools.php` - Lankar till nya verktyg
+  - `ROADMAP.md` - Dokumentation
+  - `CLAUDE.md` - Instruktion om roadmap-uppdatering
 
 ### 2026-01-19 (PHP 7 Kompatibilitet & Bugfixar)
 - **Branch: claude/add-event-ratings-dj5ED**

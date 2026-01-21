@@ -435,6 +435,10 @@ include __DIR__ . '/components/unified-layout.php';
                 <i data-lucide="newspaper"></i>
                 <span>Nyheter</span>
             </a>
+            <a href="/admin/roadmap.php" class="quick-action">
+                <i data-lucide="map"></i>
+                <span>Roadmap</span>
+            </a>
         </div>
     </div>
 </div>
