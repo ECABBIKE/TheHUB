@@ -10,30 +10,22 @@
  */
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../includes/auth.php';
+require_once __DIR__ . '/../analytics/includes/KPICalculator.php';
 requireLogin();
 
-// Get database connection
 global $pdo;
-if (!$pdo) {
-    $pdo = $GLOBALS['pdo'] ?? null;
-}
 
 // Get current user info
 $currentUser = getCurrentAdmin();
 $isAdmin = hasRole('admin');
 
-// Get available brands from series_brands (the actual brands table used everywhere)
+// Get available brands using KPICalculator (same as dashboard)
 $brands = [];
 try {
-    $brands = $pdo->query("
-        SELECT id, name, short_code, color_primary
-        FROM series_brands
-        WHERE active = 1
-        ORDER BY display_order ASC, name ASC
-    ")->fetchAll(PDO::FETCH_ASSOC);
+    $kpiCalc = new KPICalculator($pdo);
+    $brands = $kpiCalc->getAllBrands();
 } catch (Exception $e) {
-    // Log error for debugging
-    error_log("Win-Back Analytics brand query error: " . $e->getMessage());
+    error_log("Win-Back Analytics brand error: " . $e->getMessage());
 }
 
 // Parameters
@@ -551,13 +543,10 @@ include __DIR__ . '/components/unified-layout.php';
             <?php else: ?>
             <?php foreach ($brands as $b): ?>
             <label class="brand-checkbox <?= in_array($b['id'], $selectedBrands) ? 'checked' : '' ?>"
-                   style="<?= !empty($b['color_primary']) ? '--brand-color:' . htmlspecialchars($b['color_primary']) : '' ?>">
+                   style="<?= !empty($b['accent_color']) ? '--brand-color:' . htmlspecialchars($b['accent_color']) : '' ?>">
                 <input type="checkbox" name="brands[]" value="<?= $b['id'] ?>"
                        <?= in_array($b['id'], $selectedBrands) ? 'checked' : '' ?>>
                 <span class="brand-name"><?= htmlspecialchars($b['name']) ?></span>
-                <?php if (!empty($b['short_code'])): ?>
-                <span class="brand-code"><?= htmlspecialchars($b['short_code']) ?></span>
-                <?php endif; ?>
             </label>
             <?php endforeach; ?>
             <?php endif; ?>
