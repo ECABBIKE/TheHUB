@@ -75,6 +75,25 @@ try {
         ");
         $stmt->execute([$riderId]);
         $rider = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        // Try to fetch artist name columns separately (may not exist)
+        try {
+            $anonStmt = $db->prepare("SELECT is_anonymous, anonymous_source, merged_into_rider_id FROM riders WHERE id = ?");
+            $anonStmt->execute([$riderId]);
+            $anonData = $anonStmt->fetch(PDO::FETCH_ASSOC);
+            if ($anonData && $rider) {
+                $rider['is_anonymous'] = $anonData['is_anonymous'];
+                $rider['anonymous_source'] = $anonData['anonymous_source'];
+                $rider['merged_into_rider_id'] = $anonData['merged_into_rider_id'];
+            }
+        } catch (PDOException $e2) {
+            // Columns don't exist - set defaults
+            if ($rider) {
+                $rider['is_anonymous'] = 0;
+                $rider['anonymous_source'] = null;
+                $rider['merged_into_rider_id'] = null;
+            }
+        }
     } catch (PDOException $e) {
         // New columns don't exist yet - use basic query
         $hasNewColumns = false;
@@ -109,6 +128,9 @@ try {
             $rider['experience_level'] = 1;
             $rider['profile_image_url'] = null;
             $rider['avatar_url'] = null;
+            $rider['is_anonymous'] = 0;
+            $rider['anonymous_source'] = null;
+            $rider['merged_into_rider_id'] = null;
         }
     }
 
@@ -617,11 +639,46 @@ try {
     $canClaimProfile = false;      // Profile without email - can connect email
     $canActivateProfile = false;   // Profile with email but no password - can activate
     $hasPendingClaim = false;
+    $isArtistName = false;         // Is this an artist name / anonymous profile?
+    $canClaimArtistName = false;   // Can logged-in user claim this artist name?
+    $hasPendingArtistClaim = false;
 
     // Check super admin status for admin-only features
     $isSuperAdmin = function_exists('hub_is_super_admin') && hub_is_super_admin();
     if (!$isSuperAdmin && isset($_SESSION['admin_logged_in']) && $_SESSION['admin_logged_in'] === true) {
         $isSuperAdmin = ($_SESSION['admin_role'] ?? '') === 'super_admin';
+    }
+
+    // Check if this is an artist name / anonymous profile
+    // Either by is_anonymous flag or by criteria (only firstname, no lastname/birthyear/club)
+    $isArtistName = !empty($rider['is_anonymous']);
+    if (!$isArtistName) {
+        // Fallback: detect by criteria if column doesn't exist
+        $isArtistName = !empty($rider['firstname'])
+            && (empty($rider['lastname']) || $rider['lastname'] === '')
+            && (empty($rider['birth_year']) || $rider['birth_year'] === 0)
+            && empty($rider['club_id'])
+            && empty($rider['email']);
+    }
+
+    // If artist name, check for claiming options
+    if ($isArtistName) {
+        // Check for pending artist name claims
+        try {
+            $artistClaimCheck = $db->prepare("
+                SELECT id FROM artist_name_claims
+                WHERE anonymous_rider_id = ? AND status = 'pending'
+            ");
+            $artistClaimCheck->execute([$riderId]);
+            $hasPendingArtistClaim = $artistClaimCheck->fetch() !== false;
+        } catch (Exception $e) {
+            // Table might not exist yet
+        }
+
+        // Logged-in users can claim if no pending claim
+        if (!$hasPendingArtistClaim && $currentUser && !$isOwnProfile) {
+            $canClaimArtistName = true;
+        }
     }
 
     // Anyone can see claim/activate buttons - the process requires email verification
@@ -1254,6 +1311,24 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
                     <span>Väntande förfrågan</span>
                 </button>
                 <?php endif; ?>
+
+                <?php if ($isArtistName && $canClaimArtistName): ?>
+                <button type="button" class="btn-action-outline btn-artist-claim" onclick="openArtistClaimModal()" title="Gor ansprak pa detta artistnamn">
+                    <i data-lucide="link"></i>
+                    <span>Mitt artistnamn</span>
+                </button>
+                <?php elseif ($isArtistName && !$currentUser): ?>
+                <button type="button" class="btn-action-outline btn-artist-claim" onclick="openArtistActivateModal()" title="Aktivera denna profil">
+                    <i data-lucide="user-plus"></i>
+                    <span>Aktivera profil</span>
+                </button>
+                <?php elseif ($isArtistName && $hasPendingArtistClaim): ?>
+                <button type="button" class="btn-action-outline btn-claim-pending" disabled>
+                    <i data-lucide="clock"></i>
+                    <span>Claim väntar</span>
+                </button>
+                <?php endif; ?>
+
                 <?php if (function_exists('hub_is_admin') && hub_is_admin()): ?>
                 <a href="/admin/rider-edit.php?id=<?= $riderId ?>" class="btn-action-outline">
                     <i data-lucide="pencil"></i>
@@ -2112,6 +2187,266 @@ document.addEventListener('keydown', function(e) {
         </div>
     </div>
 </div>
+<?php endif; ?>
+
+<?php if ($isArtistName): ?>
+<!-- Artist Name Claim Modal (Logged-in Users) -->
+<div id="artistClaimModal" class="claim-modal-overlay">
+    <div class="claim-modal">
+        <div class="claim-modal-header">
+            <h3>
+                <i data-lucide="link"></i>
+                Koppla artistnamn till din profil
+            </h3>
+            <button type="button" class="claim-modal-close" onclick="closeArtistClaimModal()">
+                <i data-lucide="x"></i>
+            </button>
+        </div>
+        <form id="artistClaimForm" class="claim-modal-body">
+            <div class="claim-info-box claim-info-admin">
+                <i data-lucide="info"></i>
+                <p><strong>Hur fungerar det?</strong> Om detta artistnamn ar ditt, kan du koppla det till din profil. Dina gamla resultat fran artistnamnet sammanfogas med dina nuvarande resultat efter admin-granskning.</p>
+            </div>
+
+            <div class="claim-profile-card claim-profile-target">
+                <span class="claim-profile-label">Artistnamn</span>
+                <span class="claim-profile-name"><?= htmlspecialchars($rider['firstname']) ?></span>
+                <span class="claim-profile-meta"><?= count($results) ?> resultat</span>
+            </div>
+
+            <?php if ($currentUser): ?>
+            <div class="claim-profile-card" style="background: var(--color-accent-light); border-color: var(--color-accent);">
+                <span class="claim-profile-label">Kopplas till din profil</span>
+                <span class="claim-profile-name"><?= htmlspecialchars($currentUser['firstname'] . ' ' . $currentUser['lastname']) ?></span>
+            </div>
+            <?php endif; ?>
+
+            <div class="claim-form-group">
+                <label for="artistEvidence">Motivering <span class="required">*</span></label>
+                <textarea id="artistEvidence" name="evidence" rows="3" class="claim-textarea" required placeholder="Forklara varfor detta artistnamn ar ditt, t.ex. 'Tavlade under detta namn 2015-2017 i XYZ-serien'"></textarea>
+            </div>
+
+            <input type="hidden" name="anonymous_rider_id" value="<?= $riderId ?>">
+            <input type="hidden" name="claiming_rider_id" value="<?= $currentUser['id'] ?? '' ?>">
+            <input type="hidden" name="action" value="claim">
+
+            <!-- GDPR Consent -->
+            <div class="claim-consent-group">
+                <label class="claim-consent-label">
+                    <input type="checkbox" id="artistClaimConsent" name="gdpr_consent" value="1" required>
+                    <span class="claim-consent-checkmark"></span>
+                    <span class="claim-consent-text">
+                        Jag intygar att detta artistnamn ar mitt och godkanner att resultaten sammanfogas med min profil.
+                    </span>
+                </label>
+            </div>
+
+            <div class="claim-form-actions">
+                <button type="button" class="btn-secondary" onclick="closeArtistClaimModal()">Avbryt</button>
+                <button type="submit" class="btn-primary">
+                    <i data-lucide="send"></i>
+                    Skicka forfragan
+                </button>
+            </div>
+        </form>
+        <div id="artistClaimSuccess" class="claim-success" style="display: none;">
+            <i data-lucide="check-circle"></i>
+            <h4>Forfragan skickad!</h4>
+            <p>En admin kommer granska din forfragan. Nar den godkanns sammanfogas dina resultat automatiskt.</p>
+            <button type="button" class="btn-primary" onclick="closeArtistClaimModal();">Stang</button>
+        </div>
+    </div>
+</div>
+
+<!-- Artist Name Activate Modal (Non-logged-in Users) -->
+<div id="artistActivateModal" class="claim-modal-overlay">
+    <div class="claim-modal">
+        <div class="claim-modal-header">
+            <h3>
+                <i data-lucide="user-plus"></i>
+                Aktivera artistnamn-profil
+            </h3>
+            <button type="button" class="claim-modal-close" onclick="closeArtistActivateModal()">
+                <i data-lucide="x"></i>
+            </button>
+        </div>
+        <form id="artistActivateForm" class="claim-modal-body">
+            <div class="claim-info-box claim-info-admin">
+                <i data-lucide="info"></i>
+                <p><strong>Aktivera din profil:</strong> Om detta artistnamn ar ditt, fyll i dina uppgifter for att aktivera profilen. En admin granskar forfragan innan aktiveringen genomfors.</p>
+            </div>
+
+            <div class="claim-profile-card claim-profile-target">
+                <span class="claim-profile-label">Artistnamn</span>
+                <span class="claim-profile-name"><?= htmlspecialchars($rider['firstname']) ?></span>
+                <span class="claim-profile-meta"><?= count($results) ?> resultat bevaras</span>
+            </div>
+
+            <div class="claim-form-group">
+                <label for="activateEmail">E-postadress <span class="required">*</span></label>
+                <input type="email" id="activateEmail" name="email" class="claim-input" required placeholder="din@email.se">
+            </div>
+
+            <div class="claim-form-divider">
+                <span>Dina uppgifter</span>
+            </div>
+
+            <div class="claim-social-grid">
+                <div class="claim-form-group">
+                    <label for="activateFirstname">Fornamn</label>
+                    <input type="text" id="activateFirstname" name="firstname" class="claim-input" value="<?= htmlspecialchars($rider['firstname']) ?>">
+                </div>
+                <div class="claim-form-group">
+                    <label for="activateLastname">Efternamn <span class="required">*</span></label>
+                    <input type="text" id="activateLastname" name="lastname" class="claim-input" required placeholder="Efternamn">
+                </div>
+            </div>
+
+            <div class="claim-social-grid">
+                <div class="claim-form-group">
+                    <label for="activateBirthYear">Fodelsear</label>
+                    <input type="number" id="activateBirthYear" name="birth_year" class="claim-input" min="1940" max="<?= date('Y') - 5 ?>" placeholder="t.ex. 1990">
+                </div>
+                <div class="claim-form-group">
+                    <label for="activatePhone">Telefon</label>
+                    <input type="tel" id="activatePhone" name="phone" class="claim-input" placeholder="070-123 45 67">
+                </div>
+            </div>
+
+            <input type="hidden" name="anonymous_rider_id" value="<?= $riderId ?>">
+            <input type="hidden" name="action" value="activate">
+
+            <!-- GDPR Consent -->
+            <div class="claim-consent-group">
+                <label class="claim-consent-label">
+                    <input type="checkbox" id="activateConsent" name="gdpr_consent" value="1" required>
+                    <span class="claim-consent-checkmark"></span>
+                    <span class="claim-consent-text">
+                        Jag intygar att detta artistnamn ar mitt och godkanner att mina uppgifter sparas enligt
+                        <a href="/integritetspolicy" target="_blank">integritetspolicyn</a>.
+                    </span>
+                </label>
+            </div>
+
+            <div class="claim-form-actions">
+                <button type="button" class="btn-secondary" onclick="closeArtistActivateModal()">Avbryt</button>
+                <button type="submit" class="btn-primary">
+                    <i data-lucide="send"></i>
+                    Skicka forfragan
+                </button>
+            </div>
+        </form>
+        <div id="artistActivateSuccess" class="claim-success" style="display: none;">
+            <i data-lucide="check-circle"></i>
+            <h4>Forfragan skickad!</h4>
+            <p>En admin kommer granska din forfragan. Du far ett mail nar profilen ar aktiverad.</p>
+            <button type="button" class="btn-primary" onclick="closeArtistActivateModal();">Stang</button>
+        </div>
+    </div>
+</div>
+
+<script>
+// Artist Name Claim Modal Functions
+function openArtistClaimModal() {
+    document.getElementById('artistClaimModal')?.classList.add('active');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeArtistClaimModal() {
+    document.getElementById('artistClaimModal')?.classList.remove('active');
+    document.body.style.overflow = '';
+}
+
+function openArtistActivateModal() {
+    document.getElementById('artistActivateModal')?.classList.add('active');
+    document.body.style.overflow = 'hidden';
+}
+
+function closeArtistActivateModal() {
+    document.getElementById('artistActivateModal')?.classList.remove('active');
+    document.body.style.overflow = '';
+}
+
+// Handle Artist Claim Form Submission
+document.getElementById('artistClaimForm')?.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const form = e.target;
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+
+    submitBtn.innerHTML = '<i data-lucide="loader-2" class="spin"></i> Skickar...';
+    submitBtn.disabled = true;
+
+    try {
+        const formData = new FormData(form);
+        const response = await fetch('/api/artist-name-claim.php', {
+            method: 'POST',
+            body: formData
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            form.style.display = 'none';
+            document.getElementById('artistClaimSuccess').style.display = 'block';
+        } else {
+            alert(result.error || 'Ett fel uppstod. Forsok igen.');
+            submitBtn.innerHTML = originalText;
+            submitBtn.disabled = false;
+        }
+    } catch (err) {
+        alert('Ett fel uppstod. Forsok igen.');
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
+    }
+
+    lucide.createIcons();
+});
+
+// Handle Artist Activate Form Submission
+document.getElementById('artistActivateForm')?.addEventListener('submit', async function(e) {
+    e.preventDefault();
+    const form = e.target;
+    const submitBtn = form.querySelector('button[type="submit"]');
+    const originalText = submitBtn.innerHTML;
+
+    submitBtn.innerHTML = '<i data-lucide="loader-2" class="spin"></i> Skickar...';
+    submitBtn.disabled = true;
+
+    try {
+        const formData = new FormData(form);
+        const response = await fetch('/api/artist-name-claim.php', {
+            method: 'POST',
+            body: formData
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+            form.style.display = 'none';
+            document.getElementById('artistActivateSuccess').style.display = 'block';
+        } else {
+            alert(result.error || 'Ett fel uppstod. Forsok igen.');
+            submitBtn.innerHTML = originalText;
+            submitBtn.disabled = false;
+        }
+    } catch (err) {
+        alert('Ett fel uppstod. Forsok igen.');
+        submitBtn.innerHTML = originalText;
+        submitBtn.disabled = false;
+    }
+
+    lucide.createIcons();
+});
+
+// Close modals on overlay click
+document.getElementById('artistClaimModal')?.addEventListener('click', function(e) {
+    if (e.target === this) closeArtistClaimModal();
+});
+document.getElementById('artistActivateModal')?.addEventListener('click', function(e) {
+    if (e.target === this) closeArtistActivateModal();
+});
+</script>
 <?php endif; ?>
 
 <!-- Modal CSS - Always loaded for both claim and activate modals -->

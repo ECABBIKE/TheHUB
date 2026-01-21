@@ -86,6 +86,10 @@ $migrationChecks = [
     '023_winback_audience_type.sql' => [
         'columns' => ['winback_campaigns.audience_type']
     ],
+    '024_artist_name_linking.sql' => [
+        'tables' => ['artist_name_claims'],
+        'columns' => ['riders.is_anonymous', 'riders.anonymous_source', 'riders.merged_into_rider_id']
+    ],
 ];
 
 // ============================================================================

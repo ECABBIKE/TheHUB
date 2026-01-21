@@ -242,6 +242,20 @@ include __DIR__ . '/components/unified-layout.php';
         </div>
     </div>
 
+    <!-- Artist Name Linking -->
+    <div class="card">
+        <div class="tool-header">
+            <div class="tool-icon"><i data-lucide="user-round-search"></i></div>
+            <div>
+                <h4 class="tool-title">Artistnamn-koppling</h4>
+                <p class="tool-description">Koppla anonyma artistnamn till riktiga profiler</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/artist-name-linking.php" class="btn-admin btn-admin-primary">Oppna</a>
+        </div>
+    </div>
+
 </div>
 
 <!-- ========== DATAHANTERING ========== -->
