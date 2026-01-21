@@ -441,7 +441,7 @@ if ($tablesExist) {
                 ORDER BY role DESC, full_name ASC
             ")->fetchAll(PDO::FETCH_ASSOC);
         }
-        $brands = $pdo->query("SELECT id, name, short_code FROM brands WHERE active = 1 ORDER BY display_order")->fetchAll(PDO::FETCH_ASSOC);
+        $brands = $pdo->query("SELECT id, name, short_code, color_primary FROM series_brands WHERE active = 1 ORDER BY display_order ASC, name ASC")->fetchAll(PDO::FETCH_ASSOC);
 
         // Get response stats per campaign
         foreach ($campaigns as &$c) {
@@ -463,9 +463,8 @@ if ($tablesExist) {
                         FROM results r
                         JOIN events e ON r.event_id = e.id
                         JOIN series s ON e.series_id = s.id
-                        JOIN brand_series_map bsm ON s.id = bsm.series_id
                         WHERE YEAR(e.date) = ?
-                          AND bsm.brand_id IN ($placeholders)
+                          AND s.brand_id IN ($placeholders)
                     ");
                     $params = array_merge([$c['target_year']], $brandIds);
                 } else {
@@ -475,17 +474,15 @@ if ($tablesExist) {
                         FROM results r
                         JOIN events e ON r.event_id = e.id
                         JOIN series s ON e.series_id = s.id
-                        JOIN brand_series_map bsm ON s.id = bsm.series_id
                         WHERE YEAR(e.date) BETWEEN ? AND ?
-                          AND bsm.brand_id IN ($placeholders)
+                          AND s.brand_id IN ($placeholders)
                           AND r.cyclist_id NOT IN (
                               SELECT DISTINCT r2.cyclist_id
                               FROM results r2
                               JOIN events e2 ON r2.event_id = e2.id
                               JOIN series s2 ON e2.series_id = s2.id
-                              JOIN brand_series_map bsm2 ON s2.id = bsm2.series_id
                               WHERE YEAR(e2.date) = ?
-                                AND bsm2.brand_id IN ($placeholders)
+                                AND s2.brand_id IN ($placeholders)
                           )
                     ");
                     $params = array_merge([$c['start_year'], $c['end_year']], $brandIds, [$c['target_year']], $brandIds);
@@ -1085,10 +1082,9 @@ if ($selectedCampData) {
                 JOIN results res ON r.id = res.cyclist_id
                 JOIN events e ON res.event_id = e.id
                 JOIN series s ON e.series_id = s.id
-                JOIN brand_series_map bsm ON s.id = bsm.series_id
                 LEFT JOIN clubs c ON r.club_id = c.id
                 WHERE YEAR(e.date) = ?
-                  AND bsm.brand_id IN ($placeholders)
+                  AND s.brand_id IN ($placeholders)
                 GROUP BY r.id
                 ORDER BY events_2025 DESC, r.lastname, r.firstname
                 LIMIT 500
@@ -1109,18 +1105,16 @@ if ($selectedCampData) {
                 JOIN results res ON r.id = res.cyclist_id
                 JOIN events e ON res.event_id = e.id
                 JOIN series s ON e.series_id = s.id
-                JOIN brand_series_map bsm ON s.id = bsm.series_id
                 LEFT JOIN clubs c ON r.club_id = c.id
                 WHERE YEAR(e.date) BETWEEN ? AND ?
-                  AND bsm.brand_id IN ($placeholders)
+                  AND s.brand_id IN ($placeholders)
                   AND r.id NOT IN (
                       SELECT DISTINCT res2.cyclist_id
                       FROM results res2
                       JOIN events e2 ON res2.event_id = e2.id
                       JOIN series s2 ON e2.series_id = s2.id
-                      JOIN brand_series_map bsm2 ON s2.id = bsm2.series_id
                       WHERE YEAR(e2.date) = ?
-                        AND bsm2.brand_id IN ($placeholders)
+                        AND s2.brand_id IN ($placeholders)
                   )
                 GROUP BY r.id
                 ORDER BY last_active_year DESC, r.lastname, r.firstname

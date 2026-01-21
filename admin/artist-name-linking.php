@@ -390,6 +390,52 @@ include __DIR__ . '/components/unified-layout.php';
 }
 .search-result:last-child { border-bottom: none; }
 .search-result:hover { background: var(--color-bg-hover); }
+
+/* Mobile Edge-to-Edge */
+@media (max-width: 767px) {
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: var(--space-sm);
+    }
+    .stat-box {
+        padding: var(--space-md);
+    }
+    .stat-value {
+        font-size: 1.5rem;
+    }
+    .admin-card {
+        margin-left: -16px;
+        margin-right: -16px;
+        border-radius: 0;
+        border-left: none;
+        border-right: none;
+    }
+    .anonymous-card {
+        margin-left: -16px;
+        margin-right: -16px;
+        border-radius: 0;
+        border-left: none;
+        border-right: none;
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .anonymous-actions {
+        margin-top: var(--space-sm);
+        justify-content: flex-end;
+    }
+    .claim-card {
+        margin-left: -16px;
+        margin-right: -16px;
+        border-radius: 0;
+        border-left: none;
+        border-right: none;
+    }
+    .admin-table-container {
+        margin-left: -16px;
+        margin-right: -16px;
+        overflow-x: auto;
+    }
+}
 </style>
 
 <?php if (!$tablesExist): ?>
