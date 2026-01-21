@@ -95,6 +95,9 @@ $breadcrumbs = [
 ];
 
 $page_actions = '
+<a href="/admin/winback-analytics.php" class="btn-admin btn-admin-secondary">
+    <i data-lucide="user-minus"></i> Win-Back
+</a>
 <a href="/admin/analytics-export-center.php" class="btn-admin btn-admin-secondary">
     <i data-lucide="download"></i> Export
 </a>
