@@ -2,12 +2,57 @@
 /**
  * Win-Back Campaigns Management
  * Manage survey campaigns and view responses
+ * Accessible by: admin, super_admin, and promotors with campaign ownership
  */
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../includes/auth.php';
-requireAdmin();
+requireLogin(); // Allow promotors, admins, and super_admins
 
 global $pdo;
+
+// Get current user info
+$currentUser = getCurrentAdmin();
+$currentUserId = $currentUser['id'] ?? null;
+$isAdmin = hasRole('admin'); // admin or super_admin
+$isPromotor = isRole('promotor');
+
+/**
+ * Check if current user can access a specific campaign
+ * Admins can access all, promotors only their owned campaigns or those with allow_promotor_access
+ */
+function canAccessCampaign($campaign) {
+    global $isAdmin, $currentUserId;
+
+    if ($isAdmin) {
+        return true;
+    }
+
+    // Promotor can access if they own it or if promotor access is allowed
+    if ($campaign['owner_user_id'] == $currentUserId) {
+        return true;
+    }
+
+    if ($campaign['allow_promotor_access']) {
+        return true;
+    }
+
+    return false;
+}
+
+/**
+ * Check if current user can edit a specific campaign
+ * Admins can edit all, promotors only their owned campaigns
+ */
+function canEditCampaign($campaign) {
+    global $isAdmin, $currentUserId;
+
+    if ($isAdmin) {
+        return true;
+    }
+
+    // Promotor can only edit if they own it
+    return $campaign['owner_user_id'] == $currentUserId;
+}
 
 // Check if tables exist
 $tablesExist = false;
@@ -33,16 +78,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $tablesExist) {
         $discountType = $_POST['discount_type'] ?? 'fixed';
         $discountValue = (float)($_POST['discount_value'] ?? 100);
         $validUntil = $_POST['valid_until'] ?? null;
+        $ownerId = !empty($_POST['owner_user_id']) ? (int)$_POST['owner_user_id'] : $currentUserId;
+        $allowPromotorAccess = isset($_POST['allow_promotor_access']) ? 1 : 0;
 
         if ($name && !empty($brandIds)) {
             $stmt = $pdo->prepare("
-                INSERT INTO winback_campaigns (name, target_type, brand_ids, discount_type, discount_value, discount_valid_until, is_active)
-                VALUES (?, 'multi_brand', ?, ?, ?, ?, 1)
+                INSERT INTO winback_campaigns (name, target_type, brand_ids, discount_type, discount_value, discount_valid_until, owner_user_id, allow_promotor_access, is_active)
+                VALUES (?, 'multi_brand', ?, ?, ?, ?, ?, ?, 1)
             ");
-            $stmt->execute([$name, json_encode(array_map('intval', $brandIds)), $discountType, $discountValue, $validUntil ?: null]);
+            $stmt->execute([$name, json_encode(array_map('intval', $brandIds)), $discountType, $discountValue, $validUntil ?: null, $ownerId, $allowPromotorAccess]);
             $message = 'Kampanj skapad!';
         } else {
             $error = 'Namn och varumarken kravs';
+        }
+    } elseif ($action === 'update_campaign_owner') {
+        // Only admins can change campaign ownership
+        if (!$isAdmin) {
+            $error = 'Endast administratorer kan andra agare';
+        } else {
+            $id = (int)$_POST['id'];
+            $ownerId = !empty($_POST['owner_user_id']) ? (int)$_POST['owner_user_id'] : null;
+            $allowPromotorAccess = isset($_POST['allow_promotor_access']) ? 1 : 0;
+
+            $stmt = $pdo->prepare("UPDATE winback_campaigns SET owner_user_id = ?, allow_promotor_access = ? WHERE id = ?");
+            $stmt->execute([$ownerId, $allowPromotorAccess, $id]);
+            $message = 'Kampanjinställningar uppdaterade';
         }
     } elseif ($action === 'create_question') {
         $questionText = trim($_POST['question_text'] ?? '');
@@ -125,6 +185,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $tablesExist) {
 
             if (!$campaign) {
                 $error = 'Kampanj hittades inte';
+            } elseif (!canEditCampaign($campaign)) {
+                $error = 'Du har inte behörighet att skicka inbjudningar för denna kampanj';
             } else {
                 $sentCount = 0;
                 $failedCount = 0;
@@ -240,10 +302,36 @@ $campaigns = [];
 $responses = [];
 $brands = [];
 $stats = [];
+$promotors = []; // List of promotors for owner assignment
 
 if ($tablesExist) {
     try {
-        $campaigns = $pdo->query("SELECT * FROM winback_campaigns ORDER BY is_active DESC, id DESC")->fetchAll(PDO::FETCH_ASSOC);
+        // Get campaigns with owner info
+        $campaignsSql = "
+            SELECT wc.*, au.full_name as owner_name, au.username as owner_username
+            FROM winback_campaigns wc
+            LEFT JOIN admin_users au ON wc.owner_user_id = au.id
+            ORDER BY wc.is_active DESC, wc.id DESC
+        ";
+        $allCampaigns = $pdo->query($campaignsSql)->fetchAll(PDO::FETCH_ASSOC);
+
+        // Filter campaigns based on user access
+        $campaigns = [];
+        foreach ($allCampaigns as $c) {
+            if (canAccessCampaign($c)) {
+                $campaigns[] = $c;
+            }
+        }
+
+        // Get promotors list (for admin to assign ownership)
+        if ($isAdmin) {
+            $promotors = $pdo->query("
+                SELECT id, username, full_name, email, role
+                FROM admin_users
+                WHERE active = 1 AND role IN ('promotor', 'admin', 'super_admin')
+                ORDER BY role DESC, full_name ASC
+            ")->fetchAll(PDO::FETCH_ASSOC);
+        }
         $brands = $pdo->query("SELECT id, name, short_code FROM brands WHERE active = 1 ORDER BY display_order")->fetchAll(PDO::FETCH_ASSOC);
 
         // Get response stats per campaign
@@ -595,10 +683,12 @@ include __DIR__ . '/components/unified-layout.php';
         <i data-lucide="megaphone" style="width:16px;height:16px;vertical-align:middle;margin-right:var(--space-xs);"></i>
         Kampanjer
     </a>
+    <?php if ($isAdmin): ?>
     <a href="?view=questions" class="tab-link <?= $viewMode === 'questions' ? 'active' : '' ?>">
         <i data-lucide="help-circle" style="width:16px;height:16px;vertical-align:middle;margin-right:var(--space-xs);"></i>
         Fragor (<?= $stats['total_questions'] ?? 0 ?>)
     </a>
+    <?php endif; ?>
     <?php if ($selectedCampaign): ?>
     <a href="?view=audience&campaign=<?= $selectedCampaign ?>" class="tab-link <?= $viewMode === 'audience' ? 'active' : '' ?>">
         <i data-lucide="users" style="width:16px;height:16px;vertical-align:middle;margin-right:var(--space-xs);"></i>
@@ -621,6 +711,13 @@ foreach ($campaigns as $c) {
         break;
     }
 }
+
+// Access check - redirect if no access to this campaign
+if (!$selectedCampData || !canAccessCampaign($selectedCampData)) {
+    echo '<div class="alert alert-danger">Du har inte behörighet att se denna kampanj.</div>';
+} else {
+
+$canEditThisCampaign = canEditCampaign($selectedCampData);
 
 // Get target audience for this campaign
 $audienceRiders = [];
@@ -765,6 +862,7 @@ if ($selectedCampData) {
                 <input type="hidden" name="action" value="send_invitations">
                 <input type="hidden" name="campaign_id" value="<?= $selectedCampaign ?>">
 
+                <?php if ($canEditThisCampaign): ?>
                 <div class="audience-actions">
                     <div class="audience-select-all">
                         <label style="display:flex;align-items:center;gap:var(--space-xs);cursor:pointer;">
@@ -779,12 +877,18 @@ if ($selectedCampData) {
                         </button>
                     </div>
                 </div>
+                <?php else: ?>
+                <div class="alert alert-info" style="margin-bottom:var(--space-md);">
+                    <i data-lucide="info"></i>
+                    Du kan se malgruppen men endast kampanjens agare eller administratorer kan skicka inbjudningar.
+                </div>
+                <?php endif; ?>
 
                 <div class="admin-table-container" style="max-height:500px;overflow-y:auto;">
                     <table class="admin-table">
                         <thead>
                             <tr>
-                                <th style="width:40px;"></th>
+                                <?php if ($canEditThisCampaign): ?><th style="width:40px;"></th><?php endif; ?>
                                 <th>Namn</th>
                                 <th>Email</th>
                                 <th>Klubb</th>
@@ -795,11 +899,13 @@ if ($selectedCampData) {
                         <tbody>
                             <?php foreach ($audienceRiders as $rider): ?>
                             <tr class="<?= $rider['has_responded'] ? 'responded-row' : ($rider['is_invited'] ? 'invited-row' : '') ?>">
+                                <?php if ($canEditThisCampaign): ?>
                                 <td>
                                     <?php if (!empty($rider['email']) && !$rider['has_responded'] && !$rider['is_invited']): ?>
                                     <input type="checkbox" name="rider_ids[]" value="<?= $rider['id'] ?>" class="rider-checkbox" onchange="updateSelectedCount()">
                                     <?php endif; ?>
                                 </td>
+                                <?php endif; ?>
                                 <td>
                                     <a href="/rider/<?= $rider['id'] ?>" target="_blank">
                                         <?= htmlspecialchars($rider['firstname'] . ' ' . $rider['lastname']) ?>
@@ -913,8 +1019,16 @@ document.getElementById('invitation-form')?.addEventListener('submit', function(
 });
 </script>
 
+<?php } // End access check ?>
+
 <?php elseif ($viewMode === 'questions'): ?>
-<!-- Questions View -->
+<!-- Questions View (Admin only) -->
+<?php if (!$isAdmin): ?>
+<div class="alert alert-warning">
+    <i data-lucide="lock"></i>
+    Endast administratorer kan hantera fragor.
+</div>
+<?php else: ?>
 <div class="admin-card" style="margin-bottom: var(--space-lg);">
     <div class="admin-card-header">
         <h2><i data-lucide="plus"></i> Lagg till fraga</h2>
@@ -1166,6 +1280,8 @@ document.getElementById('edit-question-modal').addEventListener('click', functio
 }
 </style>
 
+<?php endif; // End admin check for questions ?>
+
 <?php elseif ($viewMode === 'results' && $selectedCampaign): ?>
 <!-- Results View -->
 <?php
@@ -1176,7 +1292,12 @@ foreach ($campaigns as $c) {
         break;
     }
 }
+
+// Access check
+if (!$selectedCampData || !canAccessCampaign($selectedCampData)):
 ?>
+<div class="alert alert-danger">Du har inte behörighet att se denna kampanj.</div>
+<?php else: ?>
 
 <div class="admin-card">
     <div class="admin-card-header">
@@ -1250,6 +1371,8 @@ foreach ($campaigns as $c) {
     </div>
 </div>
 
+<?php endif; // End results access check ?>
+
 <?php else: ?>
 <!-- Campaigns View -->
 
@@ -1296,6 +1419,30 @@ foreach ($campaigns as $c) {
                 </div>
             </div>
 
+            <?php if ($isAdmin && !empty($promotors)): ?>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:var(--space-md);margin-bottom:var(--space-md);padding-top:var(--space-md);border-top:1px solid var(--color-border);">
+                <div class="form-group">
+                    <label class="form-label">Agare (promotor)</label>
+                    <select name="owner_user_id" class="form-select">
+                        <option value="">Valj agare...</option>
+                        <?php foreach ($promotors as $p): ?>
+                        <option value="<?= $p['id'] ?>" <?= $p['id'] == $currentUserId ? 'selected' : '' ?>>
+                            <?= htmlspecialchars($p['full_name'] ?: $p['username']) ?>
+                            (<?= $p['role'] ?>)
+                        </option>
+                        <?php endforeach; ?>
+                    </select>
+                    <small style="color:var(--color-text-muted);">Agaren kan hantera kampanjen och se resultat</small>
+                </div>
+                <div class="form-group" style="display:flex;align-items:center;">
+                    <label style="display:flex;align-items:center;gap:var(--space-xs);cursor:pointer;">
+                        <input type="checkbox" name="allow_promotor_access" value="1">
+                        Tillat alla promotors att se resultat
+                    </label>
+                </div>
+            </div>
+            <?php endif; ?>
+
             <button type="submit" class="btn-admin btn-admin-primary">
                 <i data-lucide="plus"></i> Skapa kampanj
             </button>
@@ -1317,21 +1464,40 @@ foreach ($campaigns as $c) {
     </div>
 <?php else: ?>
     <?php foreach ($campaigns as $c): ?>
-        <?php $brandIds = json_decode($c['brand_ids'] ?? '[]', true) ?: []; ?>
+        <?php
+        $brandIds = json_decode($c['brand_ids'] ?? '[]', true) ?: [];
+        $canEdit = canEditCampaign($c);
+        $ownerName = $c['owner_name'] ?: $c['owner_username'] ?: null;
+        ?>
         <div class="campaign-card <?= $c['is_active'] ? '' : 'inactive' ?>">
             <div class="campaign-header">
                 <div>
                     <div class="campaign-name"><?= htmlspecialchars($c['name']) ?></div>
-                    <div style="margin-top:var(--space-xs);">
+                    <div style="margin-top:var(--space-xs);display:flex;gap:var(--space-xs);flex-wrap:wrap;">
                         <span class="badge <?= $c['is_active'] ? 'badge-success' : 'badge-secondary' ?>">
                             <?= $c['is_active'] ? 'Aktiv' : 'Inaktiv' ?>
                         </span>
+                        <?php if ($ownerName): ?>
+                        <span class="badge badge-info" title="Kampanjagare">
+                            <i data-lucide="user" style="width:12px;height:12px;"></i>
+                            <?= htmlspecialchars($ownerName) ?>
+                        </span>
+                        <?php endif; ?>
+                        <?php if ($c['allow_promotor_access']): ?>
+                        <span class="badge badge-warning" title="Synlig for alla promotors">
+                            <i data-lucide="users" style="width:12px;height:12px;"></i>
+                        </span>
+                        <?php endif; ?>
                     </div>
                 </div>
                 <div style="display:flex;gap:var(--space-xs);">
+                    <a href="?view=audience&campaign=<?= $c['id'] ?>" class="btn-admin btn-admin-secondary btn-sm">
+                        <i data-lucide="users"></i> Malgrupp
+                    </a>
                     <a href="?view=results&campaign=<?= $c['id'] ?>" class="btn-admin btn-admin-secondary btn-sm">
                         <i data-lucide="bar-chart-2"></i> Resultat
                     </a>
+                    <?php if ($canEdit): ?>
                     <form method="POST" style="display:inline;">
                         <input type="hidden" name="action" value="toggle_campaign">
                         <input type="hidden" name="id" value="<?= $c['id'] ?>">
@@ -1339,6 +1505,12 @@ foreach ($campaigns as $c) {
                             <i data-lucide="<?= $c['is_active'] ? 'pause' : 'play' ?>"></i>
                         </button>
                     </form>
+                    <?php endif; ?>
+                    <?php if ($isAdmin): ?>
+                    <button type="button" class="btn-admin btn-admin-ghost btn-sm" onclick="editCampaignOwner(<?= htmlspecialchars(json_encode($c)) ?>)" title="Hantera agare">
+                        <i data-lucide="settings"></i>
+                    </button>
+                    <?php endif; ?>
                 </div>
             </div>
 
@@ -1387,6 +1559,77 @@ foreach ($campaigns as $c) {
 <?php endif; ?>
 
 <?php endif; // viewMode ?>
+
+<?php if ($isAdmin && !empty($promotors)): ?>
+<!-- Edit Campaign Owner Modal -->
+<div id="edit-owner-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center;">
+    <div style="background:var(--color-bg-surface);border-radius:var(--radius-lg);padding:var(--space-xl);max-width:500px;width:90%;max-height:90vh;overflow-y:auto;">
+        <h3 style="margin-bottom:var(--space-lg);">
+            <i data-lucide="settings" style="width:20px;height:20px;vertical-align:middle;margin-right:var(--space-xs);"></i>
+            Kampanjinstallningar
+        </h3>
+        <form method="POST" id="edit-owner-form">
+            <input type="hidden" name="action" value="update_campaign_owner">
+            <input type="hidden" name="id" id="edit-campaign-id">
+
+            <div class="form-group" style="margin-bottom:var(--space-md);">
+                <label class="form-label">Kampanj</label>
+                <input type="text" id="edit-campaign-name" class="form-input" readonly style="background:var(--color-bg-page);">
+            </div>
+
+            <div class="form-group" style="margin-bottom:var(--space-md);">
+                <label class="form-label">Agare (promotor)</label>
+                <select name="owner_user_id" id="edit-owner-id" class="form-select">
+                    <option value="">Ingen agare</option>
+                    <?php foreach ($promotors as $p): ?>
+                    <option value="<?= $p['id'] ?>">
+                        <?= htmlspecialchars($p['full_name'] ?: $p['username']) ?>
+                        (<?= $p['role'] ?>)
+                    </option>
+                    <?php endforeach; ?>
+                </select>
+                <small style="color:var(--color-text-muted);">Agaren kan hantera kampanjen, se malgrupp och skicka inbjudningar</small>
+            </div>
+
+            <div class="form-group" style="margin-bottom:var(--space-lg);">
+                <label style="display:flex;align-items:center;gap:var(--space-xs);cursor:pointer;">
+                    <input type="checkbox" name="allow_promotor_access" id="edit-promotor-access" value="1">
+                    Tillat alla promotors att se resultat
+                </label>
+                <small style="color:var(--color-text-muted);display:block;margin-top:var(--space-xs);">
+                    Om aktiverad kan alla inloggade promotors se svar och statistik for denna kampanj
+                </small>
+            </div>
+
+            <div style="display:flex;gap:var(--space-md);justify-content:flex-end;">
+                <button type="button" class="btn-admin btn-admin-secondary" onclick="closeOwnerModal()">Avbryt</button>
+                <button type="submit" class="btn-admin btn-admin-primary">
+                    <i data-lucide="save"></i> Spara
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function editCampaignOwner(campaign) {
+    document.getElementById('edit-campaign-id').value = campaign.id;
+    document.getElementById('edit-campaign-name').value = campaign.name;
+    document.getElementById('edit-owner-id').value = campaign.owner_user_id || '';
+    document.getElementById('edit-promotor-access').checked = campaign.allow_promotor_access == 1;
+    document.getElementById('edit-owner-modal').style.display = 'flex';
+}
+
+function closeOwnerModal() {
+    document.getElementById('edit-owner-modal').style.display = 'none';
+}
+
+// Close modal on outside click
+document.getElementById('edit-owner-modal')?.addEventListener('click', function(e) {
+    if (e.target === this) closeOwnerModal();
+});
+</script>
+<?php endif; ?>
 
 <?php endif; // tablesExist ?>
 
