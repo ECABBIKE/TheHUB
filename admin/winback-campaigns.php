@@ -80,13 +80,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $tablesExist) {
         $validUntil = $_POST['valid_until'] ?? null;
         $ownerId = !empty($_POST['owner_user_id']) ? (int)$_POST['owner_user_id'] : $currentUserId;
         $allowPromotorAccess = isset($_POST['allow_promotor_access']) ? 1 : 0;
+        $audienceType = $_POST['audience_type'] ?? 'churned';
+
+        // Validate audience type
+        if (!in_array($audienceType, ['churned', 'active'])) {
+            $audienceType = 'churned';
+        }
 
         if ($name && !empty($brandIds)) {
-            $stmt = $pdo->prepare("
-                INSERT INTO winback_campaigns (name, target_type, brand_ids, discount_type, discount_value, discount_valid_until, owner_user_id, allow_promotor_access, is_active)
-                VALUES (?, 'multi_brand', ?, ?, ?, ?, ?, ?, 1)
-            ");
-            $stmt->execute([$name, json_encode(array_map('intval', $brandIds)), $discountType, $discountValue, $validUntil ?: null, $ownerId, $allowPromotorAccess]);
+            // Check if audience_type column exists (migration 023)
+            $hasAudienceType = false;
+            try {
+                $check = $pdo->query("SHOW COLUMNS FROM winback_campaigns LIKE 'audience_type'");
+                $hasAudienceType = $check->rowCount() > 0;
+            } catch (Exception $e) {}
+
+            if ($hasAudienceType) {
+                $stmt = $pdo->prepare("
+                    INSERT INTO winback_campaigns (name, target_type, audience_type, brand_ids, discount_type, discount_value, discount_valid_until, owner_user_id, allow_promotor_access, is_active)
+                    VALUES (?, 'multi_brand', ?, ?, ?, ?, ?, ?, ?, 1)
+                ");
+                $stmt->execute([$name, $audienceType, json_encode(array_map('intval', $brandIds)), $discountType, $discountValue, $validUntil ?: null, $ownerId, $allowPromotorAccess]);
+            } else {
+                // Fallback if migration not run yet
+                $stmt = $pdo->prepare("
+                    INSERT INTO winback_campaigns (name, target_type, brand_ids, discount_type, discount_value, discount_valid_until, owner_user_id, allow_promotor_access, is_active)
+                    VALUES (?, 'multi_brand', ?, ?, ?, ?, ?, ?, 1)
+                ");
+                $stmt->execute([$name, json_encode(array_map('intval', $brandIds)), $discountType, $discountValue, $validUntil ?: null, $ownerId, $allowPromotorAccess]);
+            }
             $message = 'Kampanj skapad!';
         } else {
             $error = 'Namn och varumarken kravs';
@@ -385,29 +407,47 @@ if ($tablesExist) {
             $stmt->execute([$c['id']]);
             $c['response_count'] = (int)$stmt->fetchColumn();
 
-            // Get potential audience size
+            // Get potential audience size based on audience type
             $brandIds = json_decode($c['brand_ids'] ?? '[]', true) ?: [];
+            $audienceType = $c['audience_type'] ?? 'churned';
+
             if (!empty($brandIds)) {
                 $placeholders = implode(',', array_fill(0, count($brandIds), '?'));
-                $stmt = $pdo->prepare("
-                    SELECT COUNT(DISTINCT r.cyclist_id)
-                    FROM results r
-                    JOIN events e ON r.event_id = e.id
-                    JOIN series s ON e.series_id = s.id
-                    JOIN brand_series_map bsm ON s.id = bsm.series_id
-                    WHERE YEAR(e.date) BETWEEN ? AND ?
-                      AND bsm.brand_id IN ($placeholders)
-                      AND r.cyclist_id NOT IN (
-                          SELECT DISTINCT r2.cyclist_id
-                          FROM results r2
-                          JOIN events e2 ON r2.event_id = e2.id
-                          JOIN series s2 ON e2.series_id = s2.id
-                          JOIN brand_series_map bsm2 ON s2.id = bsm2.series_id
-                          WHERE YEAR(e2.date) = ?
-                            AND bsm2.brand_id IN ($placeholders)
-                      )
-                ");
-                $params = array_merge([$c['start_year'], $c['end_year']], $brandIds, [$c['target_year']], $brandIds);
+
+                if ($audienceType === 'active') {
+                    // ACTIVE: Count people who competed IN target_year
+                    $stmt = $pdo->prepare("
+                        SELECT COUNT(DISTINCT r.cyclist_id)
+                        FROM results r
+                        JOIN events e ON r.event_id = e.id
+                        JOIN series s ON e.series_id = s.id
+                        JOIN brand_series_map bsm ON s.id = bsm.series_id
+                        WHERE YEAR(e.date) = ?
+                          AND bsm.brand_id IN ($placeholders)
+                    ");
+                    $params = array_merge([$c['target_year']], $brandIds);
+                } else {
+                    // CHURNED: Count people who competed in start-end but NOT in target_year
+                    $stmt = $pdo->prepare("
+                        SELECT COUNT(DISTINCT r.cyclist_id)
+                        FROM results r
+                        JOIN events e ON r.event_id = e.id
+                        JOIN series s ON e.series_id = s.id
+                        JOIN brand_series_map bsm ON s.id = bsm.series_id
+                        WHERE YEAR(e.date) BETWEEN ? AND ?
+                          AND bsm.brand_id IN ($placeholders)
+                          AND r.cyclist_id NOT IN (
+                              SELECT DISTINCT r2.cyclist_id
+                              FROM results r2
+                              JOIN events e2 ON r2.event_id = e2.id
+                              JOIN series s2 ON e2.series_id = s2.id
+                              JOIN brand_series_map bsm2 ON s2.id = bsm2.series_id
+                              WHERE YEAR(e2.date) = ?
+                                AND bsm2.brand_id IN ($placeholders)
+                          )
+                    ");
+                    $params = array_merge([$c['start_year'], $c['end_year']], $brandIds, [$c['target_year']], $brandIds);
+                }
                 $stmt->execute($params);
                 $c['potential_audience'] = (int)$stmt->fetchColumn();
             } else {
@@ -663,6 +703,16 @@ include __DIR__ . '/components/unified-layout.php';
     color: var(--color-text-muted);
     font-size: 0.875rem;
 }
+/* Audience type radio selection */
+.audience-option:hover {
+    border-color: var(--color-accent) !important;
+    background: var(--color-bg-hover) !important;
+}
+.audience-option:has(input:checked) {
+    border-color: var(--color-accent) !important;
+    background: var(--color-accent-light) !important;
+}
+
 .tabs-nav {
     display: flex;
     gap: var(--space-xs);
@@ -772,44 +822,72 @@ $audienceStats = ['total' => 0, 'with_email' => 0, 'without_email' => 0, 'invite
 
 if ($selectedCampData) {
     $brandIds = json_decode($selectedCampData['brand_ids'] ?? '[]', true) ?: [];
+    $audienceType = $selectedCampData['audience_type'] ?? 'churned';
 
     if (!empty($brandIds)) {
         $placeholders = implode(',', array_fill(0, count($brandIds), '?'));
 
-        // Get all riders who match the criteria
-        $sql = "
-            SELECT DISTINCT
-                r.id, r.firstname, r.lastname, r.email,
-                c.name as club_name,
-                MAX(YEAR(e.date)) as last_active_year,
-                COUNT(DISTINCT YEAR(e.date)) as total_seasons
-            FROM riders r
-            JOIN results res ON r.id = res.cyclist_id
-            JOIN events e ON res.event_id = e.id
-            JOIN series s ON e.series_id = s.id
-            JOIN brand_series_map bsm ON s.id = bsm.series_id
-            LEFT JOIN clubs c ON r.club_id = c.id
-            WHERE YEAR(e.date) BETWEEN ? AND ?
-              AND bsm.brand_id IN ($placeholders)
-              AND r.id NOT IN (
-                  SELECT DISTINCT res2.cyclist_id
-                  FROM results res2
-                  JOIN events e2 ON res2.event_id = e2.id
-                  JOIN series s2 ON e2.series_id = s2.id
-                  JOIN brand_series_map bsm2 ON s2.id = bsm2.series_id
-                  WHERE YEAR(e2.date) = ?
-                    AND bsm2.brand_id IN ($placeholders)
-              )
-            GROUP BY r.id
-            ORDER BY last_active_year DESC, r.lastname, r.firstname
-            LIMIT 500
-        ";
-        $params = array_merge(
-            [$selectedCampData['start_year'], $selectedCampData['end_year']],
-            $brandIds,
-            [$selectedCampData['target_year']],
-            $brandIds
-        );
+        if ($audienceType === 'active') {
+            // ACTIVE: Get riders who competed IN target_year for these brands
+            $sql = "
+                SELECT DISTINCT
+                    r.id, r.firstname, r.lastname, r.email,
+                    c.name as club_name,
+                    COUNT(DISTINCT e.id) as events_2025,
+                    COUNT(DISTINCT YEAR(e.date)) as total_seasons
+                FROM riders r
+                JOIN results res ON r.id = res.cyclist_id
+                JOIN events e ON res.event_id = e.id
+                JOIN series s ON e.series_id = s.id
+                JOIN brand_series_map bsm ON s.id = bsm.series_id
+                LEFT JOIN clubs c ON r.club_id = c.id
+                WHERE YEAR(e.date) = ?
+                  AND bsm.brand_id IN ($placeholders)
+                GROUP BY r.id
+                ORDER BY events_2025 DESC, r.lastname, r.firstname
+                LIMIT 500
+            ";
+            $params = array_merge(
+                [$selectedCampData['target_year']],
+                $brandIds
+            );
+        } else {
+            // CHURNED: Get riders who competed in start_year-end_year but NOT in target_year
+            $sql = "
+                SELECT DISTINCT
+                    r.id, r.firstname, r.lastname, r.email,
+                    c.name as club_name,
+                    MAX(YEAR(e.date)) as last_active_year,
+                    COUNT(DISTINCT YEAR(e.date)) as total_seasons
+                FROM riders r
+                JOIN results res ON r.id = res.cyclist_id
+                JOIN events e ON res.event_id = e.id
+                JOIN series s ON e.series_id = s.id
+                JOIN brand_series_map bsm ON s.id = bsm.series_id
+                LEFT JOIN clubs c ON r.club_id = c.id
+                WHERE YEAR(e.date) BETWEEN ? AND ?
+                  AND bsm.brand_id IN ($placeholders)
+                  AND r.id NOT IN (
+                      SELECT DISTINCT res2.cyclist_id
+                      FROM results res2
+                      JOIN events e2 ON res2.event_id = e2.id
+                      JOIN series s2 ON e2.series_id = s2.id
+                      JOIN brand_series_map bsm2 ON s2.id = bsm2.series_id
+                      WHERE YEAR(e2.date) = ?
+                        AND bsm2.brand_id IN ($placeholders)
+                  )
+                GROUP BY r.id
+                ORDER BY last_active_year DESC, r.lastname, r.firstname
+                LIMIT 500
+            ";
+            $params = array_merge(
+                [$selectedCampData['start_year'], $selectedCampData['end_year']],
+                $brandIds,
+                [$selectedCampData['target_year']],
+                $brandIds
+            );
+        }
+
         $stmt = $pdo->prepare($sql);
         $stmt->execute($params);
         $audienceRiders = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -868,9 +946,13 @@ if ($selectedCampData) {
 }
 ?>
 
+<?php $isActiveAudience = ($selectedCampData['audience_type'] ?? 'churned') === 'active'; ?>
 <div class="admin-card">
     <div class="admin-card-header">
         <h2>Malgrupp: <?= htmlspecialchars($selectedCampData['name'] ?? 'Okand') ?></h2>
+        <span class="badge <?= $isActiveAudience ? 'badge-success' : 'badge-warning' ?>">
+            <?= $isActiveAudience ? 'Aktiva ' . $selectedCampData['target_year'] : 'Churnade (ej ' . $selectedCampData['target_year'] . ')' ?>
+        </span>
     </div>
     <div class="admin-card-body">
         <!-- Contact Stats -->
@@ -939,7 +1021,7 @@ if ($selectedCampData) {
                                 <th>Namn</th>
                                 <th>Email</th>
                                 <th>Klubb</th>
-                                <th>Senast aktiv</th>
+                                <th><?= $isActiveAudience ? 'Events ' . $selectedCampData['target_year'] : 'Senast aktiv' ?></th>
                                 <th>Status</th>
                             </tr>
                         </thead>
@@ -966,7 +1048,7 @@ if ($selectedCampData) {
                                     <?php endif; ?>
                                 </td>
                                 <td><?= htmlspecialchars($rider['club_name'] ?? '-') ?></td>
-                                <td><?= $rider['last_active_year'] ?></td>
+                                <td><?= $isActiveAudience ? ($rider['events_2025'] ?? '-') : ($rider['last_active_year'] ?? '-') ?></td>
                                 <td>
                                     <?php if ($rider['has_responded']): ?>
                                         <span class="badge badge-success">Svarat</span>
@@ -1432,6 +1514,33 @@ if (!$selectedCampData || !canAccessCampaign($selectedCampData)):
         <form method="POST">
             <input type="hidden" name="action" value="create_campaign">
 
+            <!-- Audience Type Selection -->
+            <div class="form-group" style="margin-bottom:var(--space-md);">
+                <label class="form-label">Malgrupp *</label>
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:var(--space-md);">
+                    <label class="audience-option" style="display:flex;align-items:flex-start;gap:var(--space-sm);padding:var(--space-md);background:var(--color-bg-page);border:2px solid var(--color-border);border-radius:var(--radius-md);cursor:pointer;transition:all 0.15s;">
+                        <input type="radio" name="audience_type" value="churned" checked style="margin-top:3px;">
+                        <div>
+                            <strong style="color:var(--color-text-primary);">Churnade deltagare</strong>
+                            <p style="margin:var(--space-2xs) 0 0;font-size:0.875rem;color:var(--color-text-secondary);">
+                                Tavlade tidigare (2021-2024) men INTE 2025.<br>
+                                <em>Syfte: Fa tillbaka inaktiva deltagare</em>
+                            </p>
+                        </div>
+                    </label>
+                    <label class="audience-option" style="display:flex;align-items:flex-start;gap:var(--space-sm);padding:var(--space-md);background:var(--color-bg-page);border:2px solid var(--color-border);border-radius:var(--radius-md);cursor:pointer;transition:all 0.15s;">
+                        <input type="radio" name="audience_type" value="active" style="margin-top:3px;">
+                        <div>
+                            <strong style="color:var(--color-text-primary);">Aktiva 2025-deltagare</strong>
+                            <p style="margin:var(--space-2xs) 0 0;font-size:0.875rem;color:var(--color-text-secondary);">
+                                Tavlade minst en gang 2025.<br>
+                                <em>Syfte: Feedback + rabatt for 2026</em>
+                            </p>
+                        </div>
+                    </label>
+                </div>
+            </div>
+
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:var(--space-md);margin-bottom:var(--space-md);">
                 <div class="form-group">
                     <label class="form-label">Kampanjnamn *</label>
@@ -1515,6 +1624,7 @@ if (!$selectedCampData || !canAccessCampaign($selectedCampData)):
         $brandIds = json_decode($c['brand_ids'] ?? '[]', true) ?: [];
         $canEdit = canEditCampaign($c);
         $ownerName = $c['owner_name'] ?: $c['owner_username'] ?: null;
+        $campAudienceType = $c['audience_type'] ?? 'churned';
         ?>
         <div class="campaign-card <?= $c['is_active'] ? '' : 'inactive' ?>">
             <div class="campaign-header">
@@ -1523,6 +1633,9 @@ if (!$selectedCampData || !canAccessCampaign($selectedCampData)):
                     <div style="margin-top:var(--space-xs);display:flex;gap:var(--space-xs);flex-wrap:wrap;">
                         <span class="badge <?= $c['is_active'] ? 'badge-success' : 'badge-secondary' ?>">
                             <?= $c['is_active'] ? 'Aktiv' : 'Inaktiv' ?>
+                        </span>
+                        <span class="badge <?= $campAudienceType === 'active' ? 'badge-primary' : 'badge-warning' ?>" title="Malgrupp">
+                            <?= $campAudienceType === 'active' ? 'Aktiva ' . $c['target_year'] : 'Churnade' ?>
                         </span>
                         <?php if ($ownerName): ?>
                         <span class="badge badge-info" title="Kampanjagare">
@@ -1561,8 +1674,12 @@ if (!$selectedCampData || !canAccessCampaign($selectedCampData)):
 
             <div class="campaign-meta">
                 <span class="campaign-meta-item">
-                    <i data-lucide="calendar"></i>
-                    Malgrupp: Tavlade <?= $c['start_year'] ?>-<?= $c['end_year'] ?>, ej <?= $c['target_year'] ?>
+                    <i data-lucide="<?= $campAudienceType === 'active' ? 'users' : 'user-minus' ?>"></i>
+                    <?php if ($campAudienceType === 'active'): ?>
+                        Malgrupp: Tavlade <?= $c['target_year'] ?>
+                    <?php else: ?>
+                        Malgrupp: Tavlade <?= $c['start_year'] ?>-<?= $c['end_year'] ?>, ej <?= $c['target_year'] ?>
+                    <?php endif; ?>
                 </span>
                 <span class="campaign-meta-item">
                     <i data-lucide="tag"></i>

@@ -83,6 +83,9 @@ $migrationChecks = [
         'tables' => ['winback_invitations'],
         'columns' => ['winback_campaigns.owner_user_id', 'winback_campaigns.allow_promotor_access']
     ],
+    '023_winback_audience_type.sql' => [
+        'columns' => ['winback_campaigns.audience_type']
+    ],
 ];
 
 // ============================================================================
