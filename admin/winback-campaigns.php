@@ -6,13 +6,10 @@
  */
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../includes/auth.php';
+require_once __DIR__ . '/../analytics/includes/KPICalculator.php';
 requireLogin(); // Allow promotors, admins, and super_admins
 
-// Get database connection
 global $pdo;
-if (!$pdo) {
-    $pdo = $GLOBALS['pdo'] ?? null;
-}
 
 // Get current user info
 $currentUser = getCurrentAdmin();
@@ -445,7 +442,9 @@ if ($tablesExist) {
                 ORDER BY role DESC, full_name ASC
             ")->fetchAll(PDO::FETCH_ASSOC);
         }
-        $brands = $pdo->query("SELECT id, name, short_code, color_primary FROM series_brands WHERE active = 1 ORDER BY display_order ASC, name ASC")->fetchAll(PDO::FETCH_ASSOC);
+        // Get brands using KPICalculator (same as dashboard)
+        $kpiCalc = new KPICalculator($pdo);
+        $brands = $kpiCalc->getAllBrands();
 
         // Get response stats per campaign
         foreach ($campaigns as &$c) {
@@ -1924,7 +1923,7 @@ if (!$selectedCampData || !canAccessCampaign($selectedCampData)):
                     <?php foreach ($brands as $b): ?>
                     <label style="display:flex;align-items:center;gap:var(--space-xs);padding:var(--space-sm);background:var(--color-bg-page);border-radius:var(--radius-sm);cursor:pointer;">
                         <input type="checkbox" name="brand_ids[]" value="<?= $b['id'] ?>">
-                        <?= htmlspecialchars($b['name']) ?> (<?= htmlspecialchars($b['short_code']) ?>)
+                        <?= htmlspecialchars($b['name']) ?>
                     </label>
                     <?php endforeach; ?>
                 </div>
@@ -2043,7 +2042,7 @@ if (!$selectedCampData || !canAccessCampaign($selectedCampData)):
                     $brandNames = [];
                     foreach ($brands as $b) {
                         if (in_array($b['id'], $brandIds)) {
-                            $brandNames[] = $b['short_code'];
+                            $brandNames[] = $b['name'];
                         }
                     }
                     echo implode(', ', $brandNames) ?: 'Alla';
