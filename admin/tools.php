@@ -631,6 +631,20 @@ include __DIR__ . '/components/unified-layout.php';
         </div>
     </div>
 
+    <!-- Win-Back Analytics -->
+    <div class="card">
+        <div class="tool-header">
+            <div class="tool-icon"><i data-lucide="user-minus"></i></div>
+            <div>
+                <h4 class="tool-title">Win-Back</h4>
+                <p class="tool-description">Churned vs aktiva deltagare</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/winback-analytics.php" class="btn-admin btn-admin-primary">Öppna</a>
+        </div>
+    </div>
+
     <!-- Club Analytics -->
     <div class="card">
         <div class="tool-header">
