@@ -625,8 +625,8 @@ HUB_ROOT, HUB_URL, ROOT_PATH, INCLUDES_PATH
 - `winback_invitations` - Inbjudningsspårning
 
 ### Migrationer
-- `014_winback_survey.sql` - Grundtabeller och standardfragor
-- `015_winback_invitations.sql` - Inbjudningar och promotor-atkomst
+- `021_winback_survey.sql` - Grundtabeller och standardfragor
+- `022_winback_invitations.sql` - Inbjudningar och promotor-atkomst
 
 ### Framtida forbattringar
 - [ ] Automatiska paminelser till deltagare som ej svarat
@@ -660,8 +660,8 @@ HUB_ROOT, HUB_URL, ROOT_PATH, INCLUDES_PATH
   - `admin/winback-campaigns.php` - Kampanjhantering
   - `pages/profile/winback-survey.php` - Enkatformular
   - `admin/roadmap.php` - Interaktiv roadmap-vy
-  - `Tools/migrations/014_winback_survey.sql`
-  - `Tools/migrations/015_winback_invitations.sql`
+  - `Tools/migrations/021_winback_survey.sql`
+  - `Tools/migrations/022_winback_invitations.sql`
 
 - **Uppdaterade filer:**
   - `admin/migrations.php` - Lagt till auto-detektion for nya migrationer
