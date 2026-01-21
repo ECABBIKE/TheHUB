@@ -94,14 +94,7 @@ $breadcrumbs = [
     ['label' => 'Analytics']
 ];
 
-$page_actions = '
-<a href="/admin/winback-analytics.php" class="btn-admin btn-admin-secondary">
-    <i data-lucide="user-minus"></i> Win-Back
-</a>
-<a href="/admin/analytics-export-center.php" class="btn-admin btn-admin-secondary">
-    <i data-lucide="download"></i> Export
-</a>
-';
+$page_actions = '';
 
 // Include unified layout
 include __DIR__ . '/components/unified-layout.php';
@@ -207,6 +200,14 @@ include __DIR__ . '/components/unified-layout.php';
     <a href="/admin/analytics-reports.php" class="analytics-nav-item">
         <i data-lucide="file-text"></i>
         <span>Rapporter</span>
+    </a>
+    <a href="/admin/winback-analytics.php" class="analytics-nav-item">
+        <i data-lucide="user-minus"></i>
+        <span>Win-Back</span>
+    </a>
+    <a href="/admin/analytics-export-center.php" class="analytics-nav-item">
+        <i data-lucide="download"></i>
+        <span>Export</span>
     </a>
     <a href="/admin/analytics-data-quality.php" class="analytics-nav-item analytics-nav-item--muted">
         <i data-lucide="check-circle"></i>
