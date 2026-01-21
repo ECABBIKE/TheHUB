@@ -18,12 +18,13 @@ global $pdo;
 $currentUser = getCurrentAdmin();
 $isAdmin = hasRole('admin');
 
-// Get available brands (same as winback-campaigns.php)
+// Get available brands from series_brands (the actual brands table used everywhere)
 $brands = [];
 try {
     $brands = $pdo->query("
         SELECT id, name, short_code, color_primary
-        FROM brands
+        FROM series_brands
+        WHERE active = 1
         ORDER BY display_order ASC, name ASC
     ")->fetchAll(PDO::FETCH_ASSOC);
 } catch (Exception $e) {}
