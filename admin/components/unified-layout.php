@@ -236,7 +236,7 @@ if (!isset($current_admin_page)) {
             <?php include __DIR__ . '/../../includes/components/admin-submenu.php'; ?>
 
             <!-- Page Header -->
-            <div class="page-header">
+            <div class="page-header admin-page-header">
                 <h1 class="page-title"><?= htmlspecialchars($page_title ?? 'Admin') ?></h1>
                 <?php if (isset($page_actions)): ?>
                     <div class="page-actions">
