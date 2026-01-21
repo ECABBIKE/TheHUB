@@ -5,13 +5,12 @@
  * Centraliserad exporthantering for alla analytics-rapporter.
  * Visar exporthistorik, rate limits, och genererar nya exporter.
  *
- * v3.0.2: Med PDF engine status, DB-baserade rate limits, och revision-grade compliance.
- *
  * @package TheHUB Admin
  */
 
 require_once __DIR__ . '/../config.php';
-require_admin();
+require_once __DIR__ . '/../includes/auth.php';
+requireAnalyticsAccess();
 
 require_once __DIR__ . '/../analytics/includes/AnalyticsEngine.php';
 require_once __DIR__ . '/../analytics/includes/ExportLogger.php';
@@ -20,58 +19,66 @@ require_once __DIR__ . '/../analytics/includes/AnalyticsConfig.php';
 require_once __DIR__ . '/../analytics/includes/SVGChartRenderer.php';
 require_once __DIR__ . '/../analytics/includes/PdfExportBuilder.php';
 
-$pageTitle = 'Export Center';
-include __DIR__ . '/../includes/admin-header.php';
+global $pdo;
 
-$pdo = hub_db();
 $engine = new AnalyticsEngine($pdo);
 $logger = new ExportLogger($pdo);
 $kpi = new KPICalculator($pdo);
 
 // Hamta tillgangliga ar
-$years = $pdo->query("
-    SELECT DISTINCT season_year
-    FROM rider_yearly_stats
-    ORDER BY season_year DESC
-")->fetchAll(PDO::FETCH_COLUMN);
+$years = [];
+try {
+    $years = $pdo->query("
+        SELECT DISTINCT season_year
+        FROM rider_yearly_stats
+        ORDER BY season_year DESC
+    ")->fetchAll(PDO::FETCH_COLUMN);
+} catch (Exception $e) {
+    // Table might not exist yet
+}
 
 $selectedYear = isset($_GET['year']) ? (int)$_GET['year'] : ($years[0] ?? date('Y'));
 
 // Hamta export statistik
-$exportStats = $logger->getExportStats('month');
+$exportStats = ['total_exports' => 0, 'total_rows' => 0, 'reproducibility_rate' => 0];
+$myExports = [];
+$rateLimitStatus = ['can_export' => true, 'hourly' => ['current' => 0, 'limit' => 100], 'daily' => ['current' => 0, 'limit' => 1000]];
+$latestSnapshot = null;
+$pngSupport = ['can_convert' => false];
+$pdfStatus = ['available' => false, 'version' => ''];
+$recalcStatus = ['pending' => 0];
+$rateLimitSource = 'config';
 
-// Hamta senaste exporter
-$userId = $_SESSION['user_id'] ?? 1;
-$myExports = $logger->getUserExports($userId, 20);
+try {
+    $exportStats = $logger->getExportStats('month');
+    $userId = $_SESSION['user_id'] ?? 1;
+    $myExports = $logger->getUserExports($userId, 20);
+    $userRole = $_SESSION['role'] ?? null;
+    $rateLimitStatus = $logger->getRateLimitStatus($userId, null, $userRole);
+    $latestSnapshot = $engine->getLatestSnapshot();
+    $pngSupport = SVGChartRenderer::getPngSupportInfo();
+    $pdfStatus = PdfExportBuilder::getPdfEngineStatus();
+    $recalcStatus = $engine->getRecalcQueueStatus();
+    $rateLimitSource = $logger->getRateLimitSource();
+} catch (Exception $e) {
+    // Components might not be fully set up
+}
 
-// Hamta rate limit status (v3.0.2: med role-support)
-$userRole = $_SESSION['role'] ?? null;
-$rateLimitStatus = $logger->getRateLimitStatus($userId, null, $userRole);
+// Page config
+$page_title = 'Export Center';
+$breadcrumbs = [
+    ['label' => 'Dashboard', 'url' => '/admin/dashboard.php'],
+    ['label' => 'Analytics', 'url' => '/admin/analytics-dashboard.php'],
+    ['label' => 'Export Center']
+];
 
-// Hamta senaste snapshot
-$latestSnapshot = $engine->getLatestSnapshot();
+$page_actions = '';
 
-// PNG support info
-$pngSupport = SVGChartRenderer::getPngSupportInfo();
-
-// v3.0.2: PDF engine status (CRITICAL)
-$pdfStatus = PdfExportBuilder::getPdfEngineStatus();
-
-// Hamta recalc queue status
-$recalcStatus = $engine->getRecalcQueueStatus();
-
-// Rate limit source
-$rateLimitSource = $logger->getRateLimitSource();
+include __DIR__ . '/components/unified-layout.php';
 ?>
 
-<div class="admin-content">
-    <div class="page-header">
-        <h1><i data-lucide="download"></i> <?= $pageTitle ?></h1>
-        <p class="text-muted">Exportera analytics-data med full reproducerbarhet och GDPR-compliance</p>
-    </div>
-
-    <!-- Status Overview -->
-    <div class="grid grid-cols-4 gap-md mb-lg">
+<!-- Status Overview -->
+<div class="grid grid-cols-4 gap-md mb-lg">
         <div class="stat-card">
             <div class="stat-value"><?= number_format($exportStats['total_exports'] ?? 0) ?></div>
             <div class="stat-label">Exporter (30 dagar)</div>
@@ -461,12 +468,33 @@ $rateLimitSource = $logger->getRateLimitSource();
     color: var(--color-text-secondary);
 }
 
-@media (max-width: 768px) {
+@media (max-width: 767px) {
     .grid-cols-2, .grid-cols-4 {
         grid-template-columns: 1fr;
     }
     .export-buttons .btn {
         flex: 1 1 100%;
+    }
+    .card {
+        margin-left: -16px;
+        margin-right: -16px;
+        border-radius: 0;
+        border-left: none;
+        border-right: none;
+    }
+    .stat-card {
+        margin-left: -16px;
+        margin-right: -16px;
+        border-radius: 0;
+        border-left: none;
+        border-right: none;
+    }
+    .alert {
+        margin-left: -16px;
+        margin-right: -16px;
+        border-radius: 0;
+        border-left: none;
+        border-right: none;
     }
 }
 </style>
@@ -549,4 +577,4 @@ document.getElementById('manifestModal')?.addEventListener('click', function(e) 
 });
 </script>
 
-<?php include __DIR__ . '/../includes/admin-footer.php'; ?>
+<?php include __DIR__ . '/components/unified-layout-footer.php'; ?>
