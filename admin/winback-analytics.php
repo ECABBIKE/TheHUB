@@ -18,14 +18,13 @@ global $pdo;
 $currentUser = getCurrentAdmin();
 $isAdmin = hasRole('admin');
 
-// Get available brands
+// Get available brands (same as winback-campaigns.php)
 $brands = [];
 try {
     $brands = $pdo->query("
-        SELECT b.id, b.name
-        FROM brands b
-        WHERE b.active = 1
-        ORDER BY b.name
+        SELECT id, name, short_code, color_primary
+        FROM brands
+        ORDER BY display_order ASC, name ASC
     ")->fetchAll(PDO::FETCH_ASSOC);
 } catch (Exception $e) {}
 
@@ -200,10 +199,28 @@ $breadcrumbs = [
     ['label' => 'Win-Back']
 ];
 
-include __DIR__ . '/components/unified-layout-header.php';
+$page_actions = '
+<a href="/admin/winback-campaigns.php" class="btn-admin btn-admin-primary">
+    <i data-lucide="mail"></i> Kampanjer
+</a>
+';
+
+include __DIR__ . '/components/unified-layout.php';
 ?>
 
 <style>
+/* Ensure icons render correctly */
+[data-lucide] {
+    width: 18px;
+    height: 18px;
+    stroke-width: 2;
+}
+.stat-card [data-lucide],
+.analytics-card-header [data-lucide] {
+    width: 20px;
+    height: 20px;
+}
+
 .winback-filters {
     display: flex;
     flex-wrap: wrap;
@@ -217,11 +234,50 @@ include __DIR__ . '/components/unified-layout-header.php';
 }
 .winback-filters .form-group {
     flex: 1;
-    min-width: 150px;
+    min-width: 120px;
 }
-.winback-filters .form-group.brands {
-    flex: 2;
-    min-width: 250px;
+
+/* Brand Checkboxes */
+.brand-checkboxes {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-xs);
+}
+.brand-checkbox {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-xs);
+    padding: var(--space-xs) var(--space-sm);
+    background: var(--color-bg-page);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    transition: all 0.15s;
+    font-size: 0.875rem;
+}
+.brand-checkbox:hover {
+    border-color: var(--brand-color, var(--color-accent));
+    background: var(--color-bg-hover);
+}
+.brand-checkbox.checked,
+.brand-checkbox:has(input:checked) {
+    background: var(--color-accent-light);
+    border-color: var(--brand-color, var(--color-accent));
+}
+.brand-checkbox input {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--brand-color, var(--color-accent));
+}
+.brand-checkbox .brand-name {
+    color: var(--color-text-primary);
+}
+.brand-checkbox .brand-code {
+    font-size: 0.7rem;
+    color: var(--color-text-muted);
+    background: var(--color-bg-surface);
+    padding: 1px 4px;
+    border-radius: var(--radius-sm);
 }
 
 .stats-overview {
@@ -481,20 +537,31 @@ include __DIR__ . '/components/unified-layout-header.php';
 
 <!-- Filters -->
 <form method="GET" class="winback-filters">
-    <div class="form-group brands">
-        <label class="form-label">Varumarken</label>
-        <select name="brands[]" class="form-select" multiple size="3">
+    <!-- Brand Checkboxes -->
+    <div class="form-group" style="flex:0 0 100%;margin-bottom:var(--space-md);">
+        <label class="form-label" style="margin-bottom:var(--space-sm);">Valj varumarken (<?= count($brands) ?> st)</label>
+        <div class="brand-checkboxes">
+            <?php if (empty($brands)): ?>
+            <p style="color:var(--color-text-muted);font-size:0.875rem;">Inga varumarken hittades i databasen.</p>
+            <?php else: ?>
             <?php foreach ($brands as $b): ?>
-            <option value="<?= $b['id'] ?>" <?= in_array($b['id'], $selectedBrands) ? 'selected' : '' ?>>
-                <?= htmlspecialchars($b['name']) ?>
-            </option>
+            <label class="brand-checkbox <?= in_array($b['id'], $selectedBrands) ? 'checked' : '' ?>"
+                   style="<?= !empty($b['color_primary']) ? '--brand-color:' . htmlspecialchars($b['color_primary']) : '' ?>">
+                <input type="checkbox" name="brands[]" value="<?= $b['id'] ?>"
+                       <?= in_array($b['id'], $selectedBrands) ? 'checked' : '' ?>>
+                <span class="brand-name"><?= htmlspecialchars($b['name']) ?></span>
+                <?php if (!empty($b['short_code'])): ?>
+                <span class="brand-code"><?= htmlspecialchars($b['short_code']) ?></span>
+                <?php endif; ?>
+            </label>
             <?php endforeach; ?>
-        </select>
-        <small style="color:var(--color-text-muted);">Ctrl+klick for flera</small>
+            <?php endif; ?>
+        </div>
     </div>
 
+    <!-- Year Filters -->
     <div class="form-group">
-        <label class="form-label">Aktiv period fran</label>
+        <label class="form-label">Aktiv fran</label>
         <select name="start_year" class="form-select">
             <?php for ($y = 2010; $y <= (int)date('Y'); $y++): ?>
             <option value="<?= $y ?>" <?= $y == $startYear ? 'selected' : '' ?>><?= $y ?></option>
@@ -514,7 +581,7 @@ include __DIR__ . '/components/unified-layout-header.php';
     <div class="form-group">
         <label class="form-label">Malar</label>
         <select name="target_year" class="form-select">
-            <?php for ($y = (int)date('Y'); $y >= 2020; $y--): ?>
+            <?php for ($y = (int)date('Y'); $y >= 2015; $y--): ?>
             <option value="<?= $y ?>" <?= $y == $targetYear ? 'selected' : '' ?>><?= $y ?></option>
             <?php endfor; ?>
         </select>
