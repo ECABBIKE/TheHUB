@@ -715,6 +715,20 @@ include __DIR__ . '/components/unified-layout.php';
         </div>
     </div>
 
+    <!-- Win-Back Campaigns -->
+    <div class="card">
+        <div class="tool-header">
+            <div class="tool-icon"><i data-lucide="heart-handshake"></i></div>
+            <div>
+                <h4 class="tool-title">Win-Back Kampanjer</h4>
+                <p class="tool-description">Enkater och rabattkoder for churned riders</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/winback-campaigns.php" class="btn-admin btn-admin-primary">Oppna</a>
+        </div>
+    </div>
+
 </div>
 
 <!-- ========== SCF LICENSSYNK ========== -->
