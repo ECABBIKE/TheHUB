@@ -486,11 +486,16 @@ $selectedCampaign = isset($_GET['campaign']) ? (int)$_GET['campaign'] : null;
 // Get responses for selected campaign
 $campaignResponses = [];
 $answerStats = [];
+$demographicStats = ['experience' => [], 'age' => []];
 
 if ($selectedCampaign && $tablesExist) {
     try {
         $stmt = $pdo->prepare("
-            SELECT wr.*, r.firstname, r.lastname, c.name as club_name
+            SELECT wr.*, r.firstname, r.lastname, r.birth_year, c.name as club_name,
+                   (SELECT COUNT(DISTINCT YEAR(e.date))
+                    FROM results res
+                    JOIN events e ON res.event_id = e.id
+                    WHERE res.cyclist_id = r.id) as total_seasons
             FROM winback_responses wr
             JOIN riders r ON wr.rider_id = r.id
             LEFT JOIN clubs c ON r.club_id = c.id
@@ -499,6 +504,39 @@ if ($selectedCampaign && $tablesExist) {
         ");
         $stmt->execute([$selectedCampaign]);
         $campaignResponses = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Calculate demographic breakdowns (anonymized)
+        $currentYear = (int)date('Y');
+        foreach ($campaignResponses as $resp) {
+            // Experience groups
+            $seasons = (int)($resp['total_seasons'] ?? 0);
+            if ($seasons <= 1) {
+                $expGroup = '1 sasong';
+            } elseif ($seasons <= 3) {
+                $expGroup = '2-3 sasonger';
+            } else {
+                $expGroup = '4+ sasonger';
+            }
+            $demographicStats['experience'][$expGroup] = ($demographicStats['experience'][$expGroup] ?? 0) + 1;
+
+            // Age groups
+            $birthYear = (int)($resp['birth_year'] ?? 0);
+            if ($birthYear > 0) {
+                $age = $currentYear - $birthYear;
+                if ($age < 18) {
+                    $ageGroup = 'Under 18';
+                } elseif ($age <= 30) {
+                    $ageGroup = '18-30 ar';
+                } elseif ($age <= 45) {
+                    $ageGroup = '31-45 ar';
+                } else {
+                    $ageGroup = '46+ ar';
+                }
+            } else {
+                $ageGroup = 'Okant';
+            }
+            $demographicStats['age'][$ageGroup] = ($demographicStats['age'][$ageGroup] ?? 0) + 1;
+        }
 
         // Get answer statistics (anonymized)
         $questions = $pdo->prepare("
@@ -702,6 +740,52 @@ include __DIR__ . '/components/unified-layout.php';
     text-align: center;
     color: var(--color-text-muted);
     font-size: 0.875rem;
+}
+/* Demographic Cards */
+.demographic-card {
+    background: var(--color-bg-page);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: var(--space-lg);
+}
+.demographic-card h4 {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    margin-bottom: var(--space-md);
+    color: var(--color-text-primary);
+    font-size: 1rem;
+}
+.demographic-bar {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    margin-bottom: var(--space-sm);
+}
+.demographic-label {
+    flex: 0 0 100px;
+    font-size: 0.875rem;
+    color: var(--color-text-secondary);
+}
+.demographic-bar-track {
+    flex: 1;
+    height: 24px;
+    background: var(--color-bg-surface);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+}
+.demographic-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--color-accent), var(--color-accent-hover));
+    border-radius: var(--radius-sm);
+    transition: width 0.3s ease;
+}
+.demographic-value {
+    flex: 0 0 80px;
+    text-align: right;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--color-text-primary);
 }
 /* Audience type radio selection */
 .audience-option:hover {
@@ -1467,6 +1551,67 @@ if (!$selectedCampData || !canAccessCampaign($selectedCampData)):
                     <?php endif; ?>
                 </div>
             <?php endforeach; ?>
+
+            <!-- Demographic Trends (Anonymized) -->
+            <?php if (!empty($demographicStats['experience']) || !empty($demographicStats['age'])): ?>
+            <h3 style="margin: var(--space-xl) 0 var(--space-lg);">
+                <i data-lucide="bar-chart-3" style="width:20px;height:20px;vertical-align:middle;margin-right:var(--space-xs);"></i>
+                Demografiska trender (anonymiserade)
+            </h3>
+            <p style="color:var(--color-text-muted);margin-bottom:var(--space-lg);font-size:0.875rem;">
+                Baserat pa svarandes erfarenhet och alder - inga individuella svar visas.
+            </p>
+
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:var(--space-xl);">
+                <!-- Experience Breakdown -->
+                <?php if (!empty($demographicStats['experience'])): ?>
+                <div class="demographic-card">
+                    <h4><i data-lucide="trophy" style="width:16px;height:16px;"></i> Erfarenhetsniva</h4>
+                    <?php
+                    $totalExp = array_sum($demographicStats['experience']);
+                    $expOrder = ['1 sasong' => 0, '2-3 sasonger' => 1, '4+ sasonger' => 2];
+                    uksort($demographicStats['experience'], function($a, $b) use ($expOrder) {
+                        return ($expOrder[$a] ?? 99) - ($expOrder[$b] ?? 99);
+                    });
+                    foreach ($demographicStats['experience'] as $group => $count):
+                        $pct = $totalExp > 0 ? round(($count / $totalExp) * 100) : 0;
+                    ?>
+                    <div class="demographic-bar">
+                        <div class="demographic-label"><?= htmlspecialchars($group) ?></div>
+                        <div class="demographic-bar-track">
+                            <div class="demographic-bar-fill" style="width:<?= $pct ?>%;"></div>
+                        </div>
+                        <div class="demographic-value"><?= $count ?> (<?= $pct ?>%)</div>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
+                <?php endif; ?>
+
+                <!-- Age Breakdown -->
+                <?php if (!empty($demographicStats['age'])): ?>
+                <div class="demographic-card">
+                    <h4><i data-lucide="users" style="width:16px;height:16px;"></i> Aldersfordelning</h4>
+                    <?php
+                    $totalAge = array_sum($demographicStats['age']);
+                    $ageOrder = ['Under 18' => 0, '18-30 ar' => 1, '31-45 ar' => 2, '46+ ar' => 3, 'Okant' => 4];
+                    uksort($demographicStats['age'], function($a, $b) use ($ageOrder) {
+                        return ($ageOrder[$a] ?? 99) - ($ageOrder[$b] ?? 99);
+                    });
+                    foreach ($demographicStats['age'] as $group => $count):
+                        $pct = $totalAge > 0 ? round(($count / $totalAge) * 100) : 0;
+                    ?>
+                    <div class="demographic-bar">
+                        <div class="demographic-label"><?= htmlspecialchars($group) ?></div>
+                        <div class="demographic-bar-track">
+                            <div class="demographic-bar-fill" style="width:<?= $pct ?>%;"></div>
+                        </div>
+                        <div class="demographic-value"><?= $count ?> (<?= $pct ?>%)</div>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
+                <?php endif; ?>
+            </div>
+            <?php endif; ?>
 
             <!-- Response list (for admin tracking) -->
             <h3 style="margin: var(--space-xl) 0 var(--space-lg);">Svarande (<?= count($campaignResponses) ?>)</h3>
