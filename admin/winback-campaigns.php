@@ -8,7 +8,11 @@ require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../includes/auth.php';
 requireLogin(); // Allow promotors, admins, and super_admins
 
+// Get database connection
 global $pdo;
+if (!$pdo) {
+    $pdo = $GLOBALS['pdo'] ?? null;
+}
 
 // Get current user info
 $currentUser = getCurrentAdmin();

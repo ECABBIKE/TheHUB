@@ -12,7 +12,11 @@ require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../includes/auth.php';
 requireLogin();
 
+// Get database connection
 global $pdo;
+if (!$pdo) {
+    $pdo = $GLOBALS['pdo'] ?? null;
+}
 
 // Get current user info
 $currentUser = getCurrentAdmin();
@@ -27,7 +31,10 @@ try {
         WHERE active = 1
         ORDER BY display_order ASC, name ASC
     ")->fetchAll(PDO::FETCH_ASSOC);
-} catch (Exception $e) {}
+} catch (Exception $e) {
+    // Log error for debugging
+    error_log("Win-Back Analytics brand query error: " . $e->getMessage());
+}
 
 // Parameters
 $selectedBrands = isset($_GET['brands']) ? array_map('intval', (array)$_GET['brands']) : [];
