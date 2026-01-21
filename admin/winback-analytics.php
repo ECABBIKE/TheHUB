@@ -56,12 +56,12 @@ $stats = [
 $participants = [];
 
 try {
-    // Build brand filter
+    // Build brand filter - series has brand_id that links directly to series_brands
     $brandFilter = '';
     $brandParams = [];
     if (!empty($selectedBrands)) {
         $placeholders = implode(',', array_fill(0, count($selectedBrands), '?'));
-        $brandFilter = "AND bsm.brand_id IN ($placeholders)";
+        $brandFilter = "AND s.brand_id IN ($placeholders)";
         $brandParams = $selectedBrands;
     }
 
@@ -78,7 +78,6 @@ try {
         JOIN results res ON res.cyclist_id = r.id
         JOIN events e ON res.event_id = e.id
         JOIN series s ON e.series_id = s.id
-        JOIN brand_series_map bsm ON s.id = bsm.series_id
         LEFT JOIN clubs c ON r.club_id = c.id
         WHERE YEAR(e.date) BETWEEN ? AND ?
         $brandFilter
@@ -87,9 +86,8 @@ try {
             FROM results res2
             JOIN events e2 ON res2.event_id = e2.id
             JOIN series s2 ON e2.series_id = s2.id
-            JOIN brand_series_map bsm2 ON s2.id = bsm2.series_id
             WHERE YEAR(e2.date) = ?
-            " . (!empty($selectedBrands) ? "AND bsm2.brand_id IN ($placeholders)" : "") . "
+            " . (!empty($selectedBrands) ? "AND s2.brand_id IN ($placeholders)" : "") . "
         )
         GROUP BY r.id
         ORDER BY last_season DESC, total_results DESC
@@ -113,7 +111,6 @@ try {
         JOIN results res ON res.cyclist_id = r.id
         JOIN events e ON res.event_id = e.id
         JOIN series s ON e.series_id = s.id
-        JOIN brand_series_map bsm ON s.id = bsm.series_id
         LEFT JOIN clubs c ON r.club_id = c.id
         WHERE YEAR(e.date) = ?
         $brandFilter
