@@ -716,10 +716,12 @@ include __DIR__ . '/components/unified-layout.php';
         <div class="stat-value"><?= $stats['total_questions'] ?? 0 ?></div>
         <div class="stat-label">Aktiva fragor</div>
     </div>
-    <div class="stat-box">
-        <div class="stat-value"><?= count($campaigns) ?></div>
-        <div class="stat-label">Totalt kampanjer</div>
-    </div>
+    <a href="/admin/participant-analysis.php" class="stat-box" style="text-decoration:none;cursor:pointer;">
+        <div class="stat-value" style="display:flex;align-items:center;justify-content:center;gap:var(--space-xs);">
+            <i data-lucide="database" style="width:24px;height:24px;"></i>
+        </div>
+        <div class="stat-label">Analysera data</div>
+    </a>
 </div>
 
 <!-- Tabs -->
