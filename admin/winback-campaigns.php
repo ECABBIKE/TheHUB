@@ -441,7 +441,7 @@ if ($tablesExist) {
                 ORDER BY role DESC, full_name ASC
             ")->fetchAll(PDO::FETCH_ASSOC);
         }
-        $brands = $pdo->query("SELECT id, name, short_code FROM brands WHERE active = 1 ORDER BY display_order")->fetchAll(PDO::FETCH_ASSOC);
+        $brands = $pdo->query("SELECT id, name, short_code, color_primary FROM series_brands WHERE active = 1 ORDER BY display_order ASC, name ASC")->fetchAll(PDO::FETCH_ASSOC);
 
         // Get response stats per campaign
         foreach ($campaigns as &$c) {
