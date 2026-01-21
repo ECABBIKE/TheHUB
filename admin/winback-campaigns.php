@@ -2,12 +2,57 @@
 /**
  * Win-Back Campaigns Management
  * Manage survey campaigns and view responses
+ * Accessible by: admin, super_admin, and promotors with campaign ownership
  */
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../includes/auth.php';
-requireAdmin();
+requireLogin(); // Allow promotors, admins, and super_admins
 
 global $pdo;
+
+// Get current user info
+$currentUser = getCurrentAdmin();
+$currentUserId = $currentUser['id'] ?? null;
+$isAdmin = hasRole('admin'); // admin or super_admin
+$isPromotor = isRole('promotor');
+
+/**
+ * Check if current user can access a specific campaign
+ * Admins can access all, promotors only their owned campaigns or those with allow_promotor_access
+ */
+function canAccessCampaign($campaign) {
+    global $isAdmin, $currentUserId;
+
+    if ($isAdmin) {
+        return true;
+    }
+
+    // Promotor can access if they own it or if promotor access is allowed
+    if ($campaign['owner_user_id'] == $currentUserId) {
+        return true;
+    }
+
+    if ($campaign['allow_promotor_access']) {
+        return true;
+    }
+
+    return false;
+}
+
+/**
+ * Check if current user can edit a specific campaign
+ * Admins can edit all, promotors only their owned campaigns
+ */
+function canEditCampaign($campaign) {
+    global $isAdmin, $currentUserId;
+
+    if ($isAdmin) {
+        return true;
+    }
+
+    // Promotor can only edit if they own it
+    return $campaign['owner_user_id'] == $currentUserId;
+}
 
 // Check if tables exist
 $tablesExist = false;
@@ -33,18 +78,223 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $tablesExist) {
         $discountType = $_POST['discount_type'] ?? 'fixed';
         $discountValue = (float)($_POST['discount_value'] ?? 100);
         $validUntil = $_POST['valid_until'] ?? null;
+        $ownerId = !empty($_POST['owner_user_id']) ? (int)$_POST['owner_user_id'] : $currentUserId;
+        $allowPromotorAccess = isset($_POST['allow_promotor_access']) ? 1 : 0;
 
         if ($name && !empty($brandIds)) {
             $stmt = $pdo->prepare("
-                INSERT INTO winback_campaigns (name, target_type, brand_ids, discount_type, discount_value, discount_valid_until, is_active)
-                VALUES (?, 'multi_brand', ?, ?, ?, ?, 1)
+                INSERT INTO winback_campaigns (name, target_type, brand_ids, discount_type, discount_value, discount_valid_until, owner_user_id, allow_promotor_access, is_active)
+                VALUES (?, 'multi_brand', ?, ?, ?, ?, ?, ?, 1)
             ");
-            $stmt->execute([$name, json_encode(array_map('intval', $brandIds)), $discountType, $discountValue, $validUntil ?: null]);
+            $stmt->execute([$name, json_encode(array_map('intval', $brandIds)), $discountType, $discountValue, $validUntil ?: null, $ownerId, $allowPromotorAccess]);
             $message = 'Kampanj skapad!';
         } else {
             $error = 'Namn och varumarken kravs';
         }
+    } elseif ($action === 'update_campaign_owner') {
+        // Only admins can change campaign ownership
+        if (!$isAdmin) {
+            $error = 'Endast administratorer kan andra agare';
+        } else {
+            $id = (int)$_POST['id'];
+            $ownerId = !empty($_POST['owner_user_id']) ? (int)$_POST['owner_user_id'] : null;
+            $allowPromotorAccess = isset($_POST['allow_promotor_access']) ? 1 : 0;
+
+            $stmt = $pdo->prepare("UPDATE winback_campaigns SET owner_user_id = ?, allow_promotor_access = ? WHERE id = ?");
+            $stmt->execute([$ownerId, $allowPromotorAccess, $id]);
+            $message = 'Kampanjinställningar uppdaterade';
+        }
+    } elseif ($action === 'create_question') {
+        $questionText = trim($_POST['question_text'] ?? '');
+        $questionType = $_POST['question_type'] ?? 'checkbox';
+        $options = trim($_POST['options'] ?? '');
+        $sortOrder = (int)($_POST['sort_order'] ?? 0);
+        $isRequired = isset($_POST['is_required']) ? 1 : 0;
+        $campaignId = !empty($_POST['campaign_id']) ? (int)$_POST['campaign_id'] : null;
+
+        if ($questionText) {
+            $optionsJson = null;
+            if ($questionType === 'checkbox' || $questionType === 'radio') {
+                $optionsArray = array_filter(array_map('trim', explode("\n", $options)));
+                $optionsJson = json_encode(array_values($optionsArray));
+            }
+
+            $stmt = $pdo->prepare("
+                INSERT INTO winback_questions (campaign_id, question_text, question_type, options, sort_order, is_required, active)
+                VALUES (?, ?, ?, ?, ?, ?, 1)
+            ");
+            $stmt->execute([$campaignId, $questionText, $questionType, $optionsJson, $sortOrder, $isRequired]);
+            $message = 'Fraga skapad!';
+        } else {
+            $error = 'Fragetext kravs';
+        }
+    } elseif ($action === 'update_question') {
+        $id = (int)$_POST['id'];
+        $questionText = trim($_POST['question_text'] ?? '');
+        $questionType = $_POST['question_type'] ?? 'checkbox';
+        $options = trim($_POST['options'] ?? '');
+        $sortOrder = (int)($_POST['sort_order'] ?? 0);
+        $isRequired = isset($_POST['is_required']) ? 1 : 0;
+
+        if ($questionText) {
+            $optionsJson = null;
+            if ($questionType === 'checkbox' || $questionType === 'radio') {
+                $optionsArray = array_filter(array_map('trim', explode("\n", $options)));
+                $optionsJson = json_encode(array_values($optionsArray));
+            }
+
+            $stmt = $pdo->prepare("
+                UPDATE winback_questions
+                SET question_text = ?, question_type = ?, options = ?, sort_order = ?, is_required = ?
+                WHERE id = ?
+            ");
+            $stmt->execute([$questionText, $questionType, $optionsJson, $sortOrder, $isRequired, $id]);
+            $message = 'Fraga uppdaterad!';
+        } else {
+            $error = 'Fragetext kravs';
+        }
+    } elseif ($action === 'toggle_question') {
+        $id = (int)$_POST['id'];
+        $pdo->prepare("UPDATE winback_questions SET active = NOT active WHERE id = ?")->execute([$id]);
+        $message = 'Fragestatus uppdaterad';
+    } elseif ($action === 'delete_question') {
+        $id = (int)$_POST['id'];
+        // Check if question has answers
+        $stmt = $pdo->prepare("SELECT COUNT(*) FROM winback_answers WHERE question_id = ?");
+        $stmt->execute([$id]);
+        if ($stmt->fetchColumn() > 0) {
+            $error = 'Kan inte ta bort fraga som har svar. Inaktivera istallet.';
+        } else {
+            $pdo->prepare("DELETE FROM winback_questions WHERE id = ?")->execute([$id]);
+            $message = 'Fraga borttagen';
+        }
+    } elseif ($action === 'send_invitations') {
+        // Send invitations to selected riders
+        $campaignId = (int)$_POST['campaign_id'];
+        $riderIds = $_POST['rider_ids'] ?? [];
+
+        if (empty($riderIds)) {
+            $error = 'Valj minst en deltagare att bjuda in';
+        } else {
+            require_once __DIR__ . '/../includes/mail.php';
+
+            // Get campaign info
+            $stmt = $pdo->prepare("SELECT * FROM winback_campaigns WHERE id = ?");
+            $stmt->execute([$campaignId]);
+            $campaign = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$campaign) {
+                $error = 'Kampanj hittades inte';
+            } elseif (!canEditCampaign($campaign)) {
+                $error = 'Du har inte behörighet att skicka inbjudningar för denna kampanj';
+            } else {
+                $sentCount = 0;
+                $failedCount = 0;
+                $skippedCount = 0;
+
+                // Check if invitations table exists
+                $invTableExists = false;
+                try {
+                    $check = $pdo->query("SHOW TABLES LIKE 'winback_invitations'");
+                    $invTableExists = $check->rowCount() > 0;
+                } catch (Exception $e) {}
+
+                foreach ($riderIds as $riderId) {
+                    $riderId = (int)$riderId;
+
+                    // Get rider info
+                    $stmt = $pdo->prepare("SELECT id, firstname, lastname, email FROM riders WHERE id = ?");
+                    $stmt->execute([$riderId]);
+                    $rider = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                    if (!$rider || empty($rider['email'])) {
+                        $skippedCount++;
+                        continue;
+                    }
+
+                    // Check if already invited (if table exists)
+                    if ($invTableExists) {
+                        $stmt = $pdo->prepare("SELECT id FROM winback_invitations WHERE campaign_id = ? AND rider_id = ?");
+                        $stmt->execute([$campaignId, $riderId]);
+                        if ($stmt->fetch()) {
+                            $skippedCount++;
+                            continue;
+                        }
+                    }
+
+                    // Generate tracking token
+                    $trackingToken = bin2hex(random_bytes(32));
+
+                    // Build email
+                    $surveyUrl = 'https://thehub.gravityseries.se/profile/winback-survey?t=' . $trackingToken;
+                    $discountText = $campaign['discount_type'] === 'percentage'
+                        ? intval($campaign['discount_value']) . '% rabatt'
+                        : number_format($campaign['discount_value'], 0) . ' kr rabatt';
+
+                    $subject = 'Vi saknar dig! - TheHUB';
+                    $body = hub_email_template('winback_invitation', [
+                        'name' => $rider['firstname'],
+                        'campaign_name' => $campaign['name'],
+                        'discount_text' => $discountText,
+                        'survey_link' => $surveyUrl
+                    ]);
+
+                    // Send email
+                    $sent = hub_send_email($rider['email'], $subject, $body);
+
+                    // Log invitation (if table exists)
+                    if ($invTableExists) {
+                        $stmt = $pdo->prepare("
+                            INSERT INTO winback_invitations (campaign_id, rider_id, email_address, invitation_method, invitation_status, sent_at, sent_by, tracking_token)
+                            VALUES (?, ?, ?, 'email', ?, NOW(), ?, ?)
+                        ");
+                        $stmt->execute([
+                            $campaignId,
+                            $riderId,
+                            $rider['email'],
+                            $sent ? 'sent' : 'failed',
+                            $_SESSION['admin_id'] ?? null,
+                            $trackingToken
+                        ]);
+                    }
+
+                    if ($sent) {
+                        $sentCount++;
+                    } else {
+                        $failedCount++;
+                    }
+                }
+
+                if ($sentCount > 0) {
+                    $message = "Skickade $sentCount inbjudningar";
+                    if ($skippedCount > 0) $message .= ", hoppade over $skippedCount (redan inbjudna eller saknar email)";
+                    if ($failedCount > 0) $message .= ", $failedCount misslyckades";
+                } else {
+                    $error = "Inga inbjudningar skickades. $skippedCount hoppades over, $failedCount misslyckades.";
+                }
+            }
+        }
     }
+}
+
+// Add winback invitation template to mail system (inline)
+if (!function_exists('hub_email_template_winback')) {
+    // Extend the email template function with winback template
+    $GLOBALS['winback_email_templates'] = [
+        'winback_invitation' => '
+            <div class="header">
+                <div class="logo">TheHUB</div>
+            </div>
+            <h1>Vi saknar dig!</h1>
+            <p>Hej {{name}},</p>
+            <p>Vi har markt att du inte tavlat pa ett tag och vill garna hora hur du mar och vad vi kan gora battre.</p>
+            <p>Svara pa en kort enkat (tar bara 2 minuter) sa far du en <strong>{{discount_text}}</strong> pa din nasta anmalan som tack!</p>
+            <p class="text-center">
+                <a href="{{survey_link}}" class="btn">Svara pa enkaten</a>
+            </p>
+            <p class="note">Din feedback ar anonym och hjalper oss att skapa battre tavlingar.</p>
+        '
+    ];
 }
 
 // Get data
@@ -52,10 +302,36 @@ $campaigns = [];
 $responses = [];
 $brands = [];
 $stats = [];
+$promotors = []; // List of promotors for owner assignment
 
 if ($tablesExist) {
     try {
-        $campaigns = $pdo->query("SELECT * FROM winback_campaigns ORDER BY is_active DESC, id DESC")->fetchAll(PDO::FETCH_ASSOC);
+        // Get campaigns with owner info
+        $campaignsSql = "
+            SELECT wc.*, au.full_name as owner_name, au.username as owner_username
+            FROM winback_campaigns wc
+            LEFT JOIN admin_users au ON wc.owner_user_id = au.id
+            ORDER BY wc.is_active DESC, wc.id DESC
+        ";
+        $allCampaigns = $pdo->query($campaignsSql)->fetchAll(PDO::FETCH_ASSOC);
+
+        // Filter campaigns based on user access
+        $campaigns = [];
+        foreach ($allCampaigns as $c) {
+            if (canAccessCampaign($c)) {
+                $campaigns[] = $c;
+            }
+        }
+
+        // Get promotors list (for admin to assign ownership)
+        if ($isAdmin) {
+            $promotors = $pdo->query("
+                SELECT id, username, full_name, email, role
+                FROM admin_users
+                WHERE active = 1 AND role IN ('promotor', 'admin', 'super_admin')
+                ORDER BY role DESC, full_name ASC
+            ")->fetchAll(PDO::FETCH_ASSOC);
+        }
         $brands = $pdo->query("SELECT id, name, short_code FROM brands WHERE active = 1 ORDER BY display_order")->fetchAll(PDO::FETCH_ASSOC);
 
         // Get response stats per campaign
@@ -98,10 +374,24 @@ if ($tablesExist) {
         // Overall stats
         $stats['total_responses'] = (int)$pdo->query("SELECT COUNT(*) FROM winback_responses")->fetchColumn();
         $stats['active_campaigns'] = count(array_filter($campaigns, fn($c) => $c['is_active']));
+        $stats['total_questions'] = (int)$pdo->query("SELECT COUNT(*) FROM winback_questions WHERE active = 1")->fetchColumn();
 
     } catch (Exception $e) {
         $error = $e->getMessage();
     }
+}
+
+// Get all questions for question management view
+$allQuestions = [];
+if ($tablesExist) {
+    try {
+        $allQuestions = $pdo->query("
+            SELECT q.*, c.name as campaign_name
+            FROM winback_questions q
+            LEFT JOIN winback_campaigns c ON q.campaign_id = c.id
+            ORDER BY q.sort_order ASC, q.id ASC
+        ")->fetchAll(PDO::FETCH_ASSOC);
+    } catch (Exception $e) {}
 }
 
 // View mode
@@ -378,6 +668,10 @@ include __DIR__ . '/components/unified-layout.php';
         <div class="stat-label">Aktiva kampanjer</div>
     </div>
     <div class="stat-box">
+        <div class="stat-value"><?= $stats['total_questions'] ?? 0 ?></div>
+        <div class="stat-label">Aktiva fragor</div>
+    </div>
+    <div class="stat-box">
         <div class="stat-value"><?= count($campaigns) ?></div>
         <div class="stat-label">Totalt kampanjer</div>
     </div>
@@ -389,7 +683,17 @@ include __DIR__ . '/components/unified-layout.php';
         <i data-lucide="megaphone" style="width:16px;height:16px;vertical-align:middle;margin-right:var(--space-xs);"></i>
         Kampanjer
     </a>
+    <?php if ($isAdmin): ?>
+    <a href="?view=questions" class="tab-link <?= $viewMode === 'questions' ? 'active' : '' ?>">
+        <i data-lucide="help-circle" style="width:16px;height:16px;vertical-align:middle;margin-right:var(--space-xs);"></i>
+        Fragor (<?= $stats['total_questions'] ?? 0 ?>)
+    </a>
+    <?php endif; ?>
     <?php if ($selectedCampaign): ?>
+    <a href="?view=audience&campaign=<?= $selectedCampaign ?>" class="tab-link <?= $viewMode === 'audience' ? 'active' : '' ?>">
+        <i data-lucide="users" style="width:16px;height:16px;vertical-align:middle;margin-right:var(--space-xs);"></i>
+        Malgrupp
+    </a>
     <a href="?view=results&campaign=<?= $selectedCampaign ?>" class="tab-link <?= $viewMode === 'results' ? 'active' : '' ?>">
         <i data-lucide="bar-chart-2" style="width:16px;height:16px;vertical-align:middle;margin-right:var(--space-xs);"></i>
         Resultat
@@ -397,7 +701,588 @@ include __DIR__ . '/components/unified-layout.php';
     <?php endif; ?>
 </nav>
 
-<?php if ($viewMode === 'results' && $selectedCampaign): ?>
+<?php if ($viewMode === 'audience' && $selectedCampaign): ?>
+<!-- Audience View -->
+<?php
+$selectedCampData = null;
+foreach ($campaigns as $c) {
+    if ($c['id'] == $selectedCampaign) {
+        $selectedCampData = $c;
+        break;
+    }
+}
+
+// Access check - redirect if no access to this campaign
+if (!$selectedCampData || !canAccessCampaign($selectedCampData)) {
+    echo '<div class="alert alert-danger">Du har inte behörighet att se denna kampanj.</div>';
+} else {
+
+$canEditThisCampaign = canEditCampaign($selectedCampData);
+
+// Get target audience for this campaign
+$audienceRiders = [];
+$audienceStats = ['total' => 0, 'with_email' => 0, 'without_email' => 0, 'invited' => 0, 'responded' => 0];
+
+if ($selectedCampData) {
+    $brandIds = json_decode($selectedCampData['brand_ids'] ?? '[]', true) ?: [];
+
+    if (!empty($brandIds)) {
+        $placeholders = implode(',', array_fill(0, count($brandIds), '?'));
+
+        // Get all riders who match the criteria
+        $sql = "
+            SELECT DISTINCT
+                r.id, r.firstname, r.lastname, r.email,
+                c.name as club_name,
+                MAX(YEAR(e.date)) as last_active_year,
+                COUNT(DISTINCT YEAR(e.date)) as total_seasons
+            FROM riders r
+            JOIN results res ON r.id = res.cyclist_id
+            JOIN events e ON res.event_id = e.id
+            JOIN series s ON e.series_id = s.id
+            JOIN brand_series_map bsm ON s.id = bsm.series_id
+            LEFT JOIN clubs c ON r.club_id = c.id
+            WHERE YEAR(e.date) BETWEEN ? AND ?
+              AND bsm.brand_id IN ($placeholders)
+              AND r.id NOT IN (
+                  SELECT DISTINCT res2.cyclist_id
+                  FROM results res2
+                  JOIN events e2 ON res2.event_id = e2.id
+                  JOIN series s2 ON e2.series_id = s2.id
+                  JOIN brand_series_map bsm2 ON s2.id = bsm2.series_id
+                  WHERE YEAR(e2.date) = ?
+                    AND bsm2.brand_id IN ($placeholders)
+              )
+            GROUP BY r.id
+            ORDER BY last_active_year DESC, r.lastname, r.firstname
+            LIMIT 500
+        ";
+        $params = array_merge(
+            [$selectedCampData['start_year'], $selectedCampData['end_year']],
+            $brandIds,
+            [$selectedCampData['target_year']],
+            $brandIds
+        );
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        $audienceRiders = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Calculate stats
+        foreach ($audienceRiders as $rider) {
+            $audienceStats['total']++;
+            if (!empty($rider['email'])) {
+                $audienceStats['with_email']++;
+            } else {
+                $audienceStats['without_email']++;
+            }
+        }
+
+        // Check invited status (if table exists)
+        $invTableExists = false;
+        try {
+            $check = $pdo->query("SHOW TABLES LIKE 'winback_invitations'");
+            $invTableExists = $check->rowCount() > 0;
+        } catch (Exception $e) {}
+
+        if ($invTableExists) {
+            $stmt = $pdo->prepare("SELECT COUNT(*) FROM winback_invitations WHERE campaign_id = ?");
+            $stmt->execute([$selectedCampaign]);
+            $audienceStats['invited'] = (int)$stmt->fetchColumn();
+        }
+
+        // Check responded
+        $stmt = $pdo->prepare("SELECT COUNT(*) FROM winback_responses WHERE campaign_id = ?");
+        $stmt->execute([$selectedCampaign]);
+        $audienceStats['responded'] = (int)$stmt->fetchColumn();
+
+        // Mark which riders are already invited/responded
+        if ($invTableExists) {
+            $invitedIds = [];
+            $stmt = $pdo->prepare("SELECT rider_id FROM winback_invitations WHERE campaign_id = ?");
+            $stmt->execute([$selectedCampaign]);
+            while ($row = $stmt->fetch()) {
+                $invitedIds[$row['rider_id']] = true;
+            }
+        }
+
+        $respondedIds = [];
+        $stmt = $pdo->prepare("SELECT rider_id FROM winback_responses WHERE campaign_id = ?");
+        $stmt->execute([$selectedCampaign]);
+        while ($row = $stmt->fetch()) {
+            $respondedIds[$row['rider_id']] = true;
+        }
+
+        foreach ($audienceRiders as &$rider) {
+            $rider['is_invited'] = isset($invitedIds[$rider['id']]);
+            $rider['has_responded'] = isset($respondedIds[$rider['id']]);
+        }
+        unset($rider);
+    }
+}
+?>
+
+<div class="admin-card">
+    <div class="admin-card-header">
+        <h2>Malgrupp: <?= htmlspecialchars($selectedCampData['name'] ?? 'Okand') ?></h2>
+    </div>
+    <div class="admin-card-body">
+        <!-- Contact Stats -->
+        <div class="audience-stats">
+            <div class="audience-stat">
+                <div class="audience-stat-value"><?= number_format($audienceStats['total']) ?></div>
+                <div class="audience-stat-label">Totalt i malgruppen</div>
+            </div>
+            <div class="audience-stat has-email">
+                <div class="audience-stat-value"><?= number_format($audienceStats['with_email']) ?></div>
+                <div class="audience-stat-label">Har email</div>
+                <div class="audience-stat-pct"><?= $audienceStats['total'] > 0 ? round(($audienceStats['with_email'] / $audienceStats['total']) * 100) : 0 ?>%</div>
+            </div>
+            <div class="audience-stat no-email">
+                <div class="audience-stat-value"><?= number_format($audienceStats['without_email']) ?></div>
+                <div class="audience-stat-label">Saknar email</div>
+                <div class="audience-stat-pct"><?= $audienceStats['total'] > 0 ? round(($audienceStats['without_email'] / $audienceStats['total']) * 100) : 0 ?>%</div>
+            </div>
+            <div class="audience-stat invited">
+                <div class="audience-stat-value"><?= number_format($audienceStats['invited']) ?></div>
+                <div class="audience-stat-label">Inbjudna</div>
+            </div>
+            <div class="audience-stat responded">
+                <div class="audience-stat-value"><?= number_format($audienceStats['responded']) ?></div>
+                <div class="audience-stat-label">Svarat</div>
+            </div>
+        </div>
+
+        <?php if (empty($audienceRiders)): ?>
+            <p style="text-align:center;color:var(--color-text-muted);padding:var(--space-2xl);">
+                Ingen malgrupp hittades for denna kampanj.
+            </p>
+        <?php else: ?>
+            <!-- Invitation Form -->
+            <form method="POST" id="invitation-form">
+                <input type="hidden" name="action" value="send_invitations">
+                <input type="hidden" name="campaign_id" value="<?= $selectedCampaign ?>">
+
+                <?php if ($canEditThisCampaign): ?>
+                <div class="audience-actions">
+                    <div class="audience-select-all">
+                        <label style="display:flex;align-items:center;gap:var(--space-xs);cursor:pointer;">
+                            <input type="checkbox" id="select-all-riders" onchange="toggleAllRiders(this.checked)">
+                            <strong>Valj alla med email</strong>
+                        </label>
+                    </div>
+                    <div class="audience-buttons">
+                        <span id="selected-count">0 valda</span>
+                        <button type="submit" class="btn-admin btn-admin-primary" id="send-btn" disabled>
+                            <i data-lucide="send"></i> Skicka inbjudningar
+                        </button>
+                    </div>
+                </div>
+                <?php else: ?>
+                <div class="alert alert-info" style="margin-bottom:var(--space-md);">
+                    <i data-lucide="info"></i>
+                    Du kan se malgruppen men endast kampanjens agare eller administratorer kan skicka inbjudningar.
+                </div>
+                <?php endif; ?>
+
+                <div class="admin-table-container" style="max-height:500px;overflow-y:auto;">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <?php if ($canEditThisCampaign): ?><th style="width:40px;"></th><?php endif; ?>
+                                <th>Namn</th>
+                                <th>Email</th>
+                                <th>Klubb</th>
+                                <th>Senast aktiv</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($audienceRiders as $rider): ?>
+                            <tr class="<?= $rider['has_responded'] ? 'responded-row' : ($rider['is_invited'] ? 'invited-row' : '') ?>">
+                                <?php if ($canEditThisCampaign): ?>
+                                <td>
+                                    <?php if (!empty($rider['email']) && !$rider['has_responded'] && !$rider['is_invited']): ?>
+                                    <input type="checkbox" name="rider_ids[]" value="<?= $rider['id'] ?>" class="rider-checkbox" onchange="updateSelectedCount()">
+                                    <?php endif; ?>
+                                </td>
+                                <?php endif; ?>
+                                <td>
+                                    <a href="/rider/<?= $rider['id'] ?>" target="_blank">
+                                        <?= htmlspecialchars($rider['firstname'] . ' ' . $rider['lastname']) ?>
+                                    </a>
+                                </td>
+                                <td>
+                                    <?php if (!empty($rider['email'])): ?>
+                                        <span style="color:var(--color-success);"><?= htmlspecialchars($rider['email']) ?></span>
+                                    <?php else: ?>
+                                        <span style="color:var(--color-text-muted);">-</span>
+                                    <?php endif; ?>
+                                </td>
+                                <td><?= htmlspecialchars($rider['club_name'] ?? '-') ?></td>
+                                <td><?= $rider['last_active_year'] ?></td>
+                                <td>
+                                    <?php if ($rider['has_responded']): ?>
+                                        <span class="badge badge-success">Svarat</span>
+                                    <?php elseif ($rider['is_invited']): ?>
+                                        <span class="badge badge-info">Inbjuden</span>
+                                    <?php elseif (empty($rider['email'])): ?>
+                                        <span class="badge badge-warning">Saknar email</span>
+                                    <?php else: ?>
+                                        <span class="badge badge-secondary">Ej kontaktad</span>
+                                    <?php endif; ?>
+                                </td>
+                            </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </form>
+        <?php endif; ?>
+    </div>
+</div>
+
+<style>
+.audience-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: var(--space-md);
+    margin-bottom: var(--space-xl);
+}
+.audience-stat {
+    text-align: center;
+    padding: var(--space-md);
+    background: var(--color-bg-page);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--color-border);
+}
+.audience-stat.has-email { border-color: var(--color-success); }
+.audience-stat.no-email { border-color: var(--color-warning); }
+.audience-stat.invited { border-color: var(--color-info); }
+.audience-stat.responded { border-color: var(--color-accent); }
+.audience-stat-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--color-text-primary);
+}
+.audience-stat-label {
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+}
+.audience-stat-pct {
+    font-size: 0.875rem;
+    color: var(--color-text-secondary);
+    margin-top: var(--space-2xs);
+}
+.audience-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--space-md);
+    background: var(--color-bg-page);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--space-md);
+}
+.audience-buttons {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+}
+#selected-count {
+    color: var(--color-text-secondary);
+    font-size: 0.875rem;
+}
+.invited-row { background: rgba(56, 189, 248, 0.05); }
+.responded-row { background: rgba(16, 185, 129, 0.05); }
+</style>
+
+<script>
+function toggleAllRiders(checked) {
+    document.querySelectorAll('.rider-checkbox').forEach(cb => {
+        cb.checked = checked;
+    });
+    updateSelectedCount();
+}
+
+function updateSelectedCount() {
+    const count = document.querySelectorAll('.rider-checkbox:checked').length;
+    document.getElementById('selected-count').textContent = count + ' valda';
+    document.getElementById('send-btn').disabled = count === 0;
+}
+
+// Confirm before sending
+document.getElementById('invitation-form')?.addEventListener('submit', function(e) {
+    const count = document.querySelectorAll('.rider-checkbox:checked').length;
+    if (!confirm('Skicka inbjudningar till ' + count + ' deltagare?')) {
+        e.preventDefault();
+    }
+});
+</script>
+
+<?php } // End access check ?>
+
+<?php elseif ($viewMode === 'questions'): ?>
+<!-- Questions View (Admin only) -->
+<?php if (!$isAdmin): ?>
+<div class="alert alert-warning">
+    <i data-lucide="lock"></i>
+    Endast administratorer kan hantera fragor.
+</div>
+<?php else: ?>
+<div class="admin-card" style="margin-bottom: var(--space-lg);">
+    <div class="admin-card-header">
+        <h2><i data-lucide="plus"></i> Lagg till fraga</h2>
+    </div>
+    <div class="admin-card-body">
+        <form method="POST">
+            <input type="hidden" name="action" value="create_question">
+
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:var(--space-md);margin-bottom:var(--space-md);">
+                <div class="form-group" style="grid-column: span 2;">
+                    <label class="form-label">Fragetext *</label>
+                    <input type="text" name="question_text" class="form-input" required placeholder="T.ex. Vad skulle fa dig att tavla igen?">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Fragetyp</label>
+                    <select name="question_type" class="form-select" onchange="toggleOptionsField(this.value)">
+                        <option value="checkbox">Flerval (checkbox)</option>
+                        <option value="radio">Enkelval (radio)</option>
+                        <option value="scale">Skala 1-10</option>
+                        <option value="text">Fritext</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Sorteringsordning</label>
+                    <input type="number" name="sort_order" class="form-input" value="<?= count($allQuestions) + 1 ?>" min="0">
+                </div>
+            </div>
+
+            <div class="form-group" id="options-group" style="margin-bottom:var(--space-md);">
+                <label class="form-label">Svarsalternativ (ett per rad)</label>
+                <textarea name="options" class="form-textarea" rows="5" placeholder="Alternativ 1&#10;Alternativ 2&#10;Alternativ 3"></textarea>
+                <small style="color:var(--color-text-muted);">Skriv ett alternativ per rad. Galler for flerval och enkelval.</small>
+            </div>
+
+            <div style="display:flex;gap:var(--space-lg);margin-bottom:var(--space-md);">
+                <div class="form-group">
+                    <label style="display:flex;align-items:center;gap:var(--space-xs);cursor:pointer;">
+                        <input type="checkbox" name="is_required" value="1">
+                        Obligatorisk fraga
+                    </label>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Kampanj (valfritt)</label>
+                    <select name="campaign_id" class="form-select">
+                        <option value="">Alla kampanjer (global)</option>
+                        <?php foreach ($campaigns as $c): ?>
+                        <option value="<?= $c['id'] ?>"><?= htmlspecialchars($c['name']) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+            </div>
+
+            <button type="submit" class="btn-admin btn-admin-primary">
+                <i data-lucide="plus"></i> Lagg till fraga
+            </button>
+        </form>
+    </div>
+</div>
+
+<!-- Questions List -->
+<div class="admin-card">
+    <div class="admin-card-header">
+        <h2>Befintliga fragor (<?= count($allQuestions) ?>)</h2>
+    </div>
+    <div class="admin-card-body" style="padding:0;">
+        <?php if (empty($allQuestions)): ?>
+            <p style="text-align:center;color:var(--color-text-muted);padding:var(--space-2xl);">
+                Inga fragor skapade. Kor migrering 014 for att ladda standardfragor.
+            </p>
+        <?php else: ?>
+            <div class="admin-table-container">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th style="width:40px;">#</th>
+                            <th>Fraga</th>
+                            <th>Typ</th>
+                            <th>Kampanj</th>
+                            <th>Status</th>
+                            <th style="width:150px;">Atgarder</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($allQuestions as $q): ?>
+                        <tr class="<?= $q['active'] ? '' : 'inactive-row' ?>">
+                            <td><?= $q['sort_order'] ?></td>
+                            <td>
+                                <strong><?= htmlspecialchars($q['question_text']) ?></strong>
+                                <?php if ($q['is_required']): ?>
+                                    <span class="badge badge-warning" style="margin-left:var(--space-xs);">Obligatorisk</span>
+                                <?php endif; ?>
+                                <?php if ($q['options']): ?>
+                                    <br><small style="color:var(--color-text-muted);">
+                                        <?= count(json_decode($q['options'], true) ?: []) ?> alternativ
+                                    </small>
+                                <?php endif; ?>
+                            </td>
+                            <td>
+                                <?php
+                                $typeLabels = [
+                                    'checkbox' => 'Flerval',
+                                    'radio' => 'Enkelval',
+                                    'scale' => 'Skala 1-10',
+                                    'text' => 'Fritext'
+                                ];
+                                echo $typeLabels[$q['question_type']] ?? $q['question_type'];
+                                ?>
+                            </td>
+                            <td><?= $q['campaign_name'] ? htmlspecialchars($q['campaign_name']) : '<span style="color:var(--color-text-muted);">Alla</span>' ?></td>
+                            <td>
+                                <span class="badge <?= $q['active'] ? 'badge-success' : 'badge-secondary' ?>">
+                                    <?= $q['active'] ? 'Aktiv' : 'Inaktiv' ?>
+                                </span>
+                            </td>
+                            <td>
+                                <div style="display:flex;gap:var(--space-xs);">
+                                    <button type="button" class="btn-admin btn-admin-ghost btn-sm" onclick="editQuestion(<?= htmlspecialchars(json_encode($q)) ?>)">
+                                        <i data-lucide="edit-2"></i>
+                                    </button>
+                                    <form method="POST" style="display:inline;">
+                                        <input type="hidden" name="action" value="toggle_question">
+                                        <input type="hidden" name="id" value="<?= $q['id'] ?>">
+                                        <button type="submit" class="btn-admin btn-admin-ghost btn-sm">
+                                            <i data-lucide="<?= $q['active'] ? 'eye-off' : 'eye' ?>"></i>
+                                        </button>
+                                    </form>
+                                    <?php if (!$q['active']): ?>
+                                    <form method="POST" style="display:inline;" onsubmit="return confirm('Ta bort denna fraga?');">
+                                        <input type="hidden" name="action" value="delete_question">
+                                        <input type="hidden" name="id" value="<?= $q['id'] ?>">
+                                        <button type="submit" class="btn-admin btn-admin-ghost btn-sm" style="color:var(--color-error);">
+                                            <i data-lucide="trash-2"></i>
+                                        </button>
+                                    </form>
+                                    <?php endif; ?>
+                                </div>
+                            </td>
+                        </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        <?php endif; ?>
+    </div>
+</div>
+
+<!-- Edit Question Modal -->
+<div id="edit-question-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center;">
+    <div style="background:var(--color-bg-surface);border-radius:var(--radius-lg);padding:var(--space-xl);max-width:600px;width:90%;max-height:90vh;overflow-y:auto;">
+        <h3 style="margin-bottom:var(--space-lg);">Redigera fraga</h3>
+        <form method="POST" id="edit-question-form">
+            <input type="hidden" name="action" value="update_question">
+            <input type="hidden" name="id" id="edit-q-id">
+
+            <div class="form-group" style="margin-bottom:var(--space-md);">
+                <label class="form-label">Fragetext *</label>
+                <input type="text" name="question_text" id="edit-q-text" class="form-input" required>
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-md);margin-bottom:var(--space-md);">
+                <div class="form-group">
+                    <label class="form-label">Fragetyp</label>
+                    <select name="question_type" id="edit-q-type" class="form-select">
+                        <option value="checkbox">Flerval (checkbox)</option>
+                        <option value="radio">Enkelval (radio)</option>
+                        <option value="scale">Skala 1-10</option>
+                        <option value="text">Fritext</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Sorteringsordning</label>
+                    <input type="number" name="sort_order" id="edit-q-order" class="form-input" min="0">
+                </div>
+            </div>
+
+            <div class="form-group" style="margin-bottom:var(--space-md);">
+                <label class="form-label">Svarsalternativ (ett per rad)</label>
+                <textarea name="options" id="edit-q-options" class="form-textarea" rows="5"></textarea>
+            </div>
+
+            <div class="form-group" style="margin-bottom:var(--space-lg);">
+                <label style="display:flex;align-items:center;gap:var(--space-xs);cursor:pointer;">
+                    <input type="checkbox" name="is_required" id="edit-q-required" value="1">
+                    Obligatorisk fraga
+                </label>
+            </div>
+
+            <div style="display:flex;gap:var(--space-md);justify-content:flex-end;">
+                <button type="button" class="btn-admin btn-admin-secondary" onclick="closeEditModal()">Avbryt</button>
+                <button type="submit" class="btn-admin btn-admin-primary">Spara</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function toggleOptionsField(type) {
+    const optionsGroup = document.getElementById('options-group');
+    if (type === 'checkbox' || type === 'radio') {
+        optionsGroup.style.display = 'block';
+    } else {
+        optionsGroup.style.display = 'none';
+    }
+}
+
+function editQuestion(q) {
+    document.getElementById('edit-q-id').value = q.id;
+    document.getElementById('edit-q-text').value = q.question_text;
+    document.getElementById('edit-q-type').value = q.question_type;
+    document.getElementById('edit-q-order').value = q.sort_order;
+    document.getElementById('edit-q-required').checked = q.is_required == 1;
+
+    // Parse options
+    if (q.options) {
+        try {
+            const opts = JSON.parse(q.options);
+            document.getElementById('edit-q-options').value = opts.join('\n');
+        } catch (e) {
+            document.getElementById('edit-q-options').value = '';
+        }
+    } else {
+        document.getElementById('edit-q-options').value = '';
+    }
+
+    document.getElementById('edit-question-modal').style.display = 'flex';
+}
+
+function closeEditModal() {
+    document.getElementById('edit-question-modal').style.display = 'none';
+}
+
+// Close modal on outside click
+document.getElementById('edit-question-modal').addEventListener('click', function(e) {
+    if (e.target === this) closeEditModal();
+});
+</script>
+
+<style>
+.inactive-row { opacity: 0.5; }
+.form-textarea {
+    width: 100%;
+    padding: var(--space-sm);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    background: var(--color-bg-page);
+    color: var(--color-text-primary);
+    font-family: inherit;
+    resize: vertical;
+}
+</style>
+
+<?php endif; // End admin check for questions ?>
+
+<?php elseif ($viewMode === 'results' && $selectedCampaign): ?>
 <!-- Results View -->
 <?php
 $selectedCampData = null;
@@ -407,7 +1292,12 @@ foreach ($campaigns as $c) {
         break;
     }
 }
+
+// Access check
+if (!$selectedCampData || !canAccessCampaign($selectedCampData)):
 ?>
+<div class="alert alert-danger">Du har inte behörighet att se denna kampanj.</div>
+<?php else: ?>
 
 <div class="admin-card">
     <div class="admin-card-header">
@@ -481,6 +1371,8 @@ foreach ($campaigns as $c) {
     </div>
 </div>
 
+<?php endif; // End results access check ?>
+
 <?php else: ?>
 <!-- Campaigns View -->
 
@@ -527,6 +1419,30 @@ foreach ($campaigns as $c) {
                 </div>
             </div>
 
+            <?php if ($isAdmin && !empty($promotors)): ?>
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:var(--space-md);margin-bottom:var(--space-md);padding-top:var(--space-md);border-top:1px solid var(--color-border);">
+                <div class="form-group">
+                    <label class="form-label">Agare (promotor)</label>
+                    <select name="owner_user_id" class="form-select">
+                        <option value="">Valj agare...</option>
+                        <?php foreach ($promotors as $p): ?>
+                        <option value="<?= $p['id'] ?>" <?= $p['id'] == $currentUserId ? 'selected' : '' ?>>
+                            <?= htmlspecialchars($p['full_name'] ?: $p['username']) ?>
+                            (<?= $p['role'] ?>)
+                        </option>
+                        <?php endforeach; ?>
+                    </select>
+                    <small style="color:var(--color-text-muted);">Agaren kan hantera kampanjen och se resultat</small>
+                </div>
+                <div class="form-group" style="display:flex;align-items:center;">
+                    <label style="display:flex;align-items:center;gap:var(--space-xs);cursor:pointer;">
+                        <input type="checkbox" name="allow_promotor_access" value="1">
+                        Tillat alla promotors att se resultat
+                    </label>
+                </div>
+            </div>
+            <?php endif; ?>
+
             <button type="submit" class="btn-admin btn-admin-primary">
                 <i data-lucide="plus"></i> Skapa kampanj
             </button>
@@ -548,21 +1464,40 @@ foreach ($campaigns as $c) {
     </div>
 <?php else: ?>
     <?php foreach ($campaigns as $c): ?>
-        <?php $brandIds = json_decode($c['brand_ids'] ?? '[]', true) ?: []; ?>
+        <?php
+        $brandIds = json_decode($c['brand_ids'] ?? '[]', true) ?: [];
+        $canEdit = canEditCampaign($c);
+        $ownerName = $c['owner_name'] ?: $c['owner_username'] ?: null;
+        ?>
         <div class="campaign-card <?= $c['is_active'] ? '' : 'inactive' ?>">
             <div class="campaign-header">
                 <div>
                     <div class="campaign-name"><?= htmlspecialchars($c['name']) ?></div>
-                    <div style="margin-top:var(--space-xs);">
+                    <div style="margin-top:var(--space-xs);display:flex;gap:var(--space-xs);flex-wrap:wrap;">
                         <span class="badge <?= $c['is_active'] ? 'badge-success' : 'badge-secondary' ?>">
                             <?= $c['is_active'] ? 'Aktiv' : 'Inaktiv' ?>
                         </span>
+                        <?php if ($ownerName): ?>
+                        <span class="badge badge-info" title="Kampanjagare">
+                            <i data-lucide="user" style="width:12px;height:12px;"></i>
+                            <?= htmlspecialchars($ownerName) ?>
+                        </span>
+                        <?php endif; ?>
+                        <?php if ($c['allow_promotor_access']): ?>
+                        <span class="badge badge-warning" title="Synlig for alla promotors">
+                            <i data-lucide="users" style="width:12px;height:12px;"></i>
+                        </span>
+                        <?php endif; ?>
                     </div>
                 </div>
                 <div style="display:flex;gap:var(--space-xs);">
+                    <a href="?view=audience&campaign=<?= $c['id'] ?>" class="btn-admin btn-admin-secondary btn-sm">
+                        <i data-lucide="users"></i> Malgrupp
+                    </a>
                     <a href="?view=results&campaign=<?= $c['id'] ?>" class="btn-admin btn-admin-secondary btn-sm">
                         <i data-lucide="bar-chart-2"></i> Resultat
                     </a>
+                    <?php if ($canEdit): ?>
                     <form method="POST" style="display:inline;">
                         <input type="hidden" name="action" value="toggle_campaign">
                         <input type="hidden" name="id" value="<?= $c['id'] ?>">
@@ -570,6 +1505,12 @@ foreach ($campaigns as $c) {
                             <i data-lucide="<?= $c['is_active'] ? 'pause' : 'play' ?>"></i>
                         </button>
                     </form>
+                    <?php endif; ?>
+                    <?php if ($isAdmin): ?>
+                    <button type="button" class="btn-admin btn-admin-ghost btn-sm" onclick="editCampaignOwner(<?= htmlspecialchars(json_encode($c)) ?>)" title="Hantera agare">
+                        <i data-lucide="settings"></i>
+                    </button>
+                    <?php endif; ?>
                 </div>
             </div>
 
@@ -618,6 +1559,77 @@ foreach ($campaigns as $c) {
 <?php endif; ?>
 
 <?php endif; // viewMode ?>
+
+<?php if ($isAdmin && !empty($promotors)): ?>
+<!-- Edit Campaign Owner Modal -->
+<div id="edit-owner-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center;">
+    <div style="background:var(--color-bg-surface);border-radius:var(--radius-lg);padding:var(--space-xl);max-width:500px;width:90%;max-height:90vh;overflow-y:auto;">
+        <h3 style="margin-bottom:var(--space-lg);">
+            <i data-lucide="settings" style="width:20px;height:20px;vertical-align:middle;margin-right:var(--space-xs);"></i>
+            Kampanjinstallningar
+        </h3>
+        <form method="POST" id="edit-owner-form">
+            <input type="hidden" name="action" value="update_campaign_owner">
+            <input type="hidden" name="id" id="edit-campaign-id">
+
+            <div class="form-group" style="margin-bottom:var(--space-md);">
+                <label class="form-label">Kampanj</label>
+                <input type="text" id="edit-campaign-name" class="form-input" readonly style="background:var(--color-bg-page);">
+            </div>
+
+            <div class="form-group" style="margin-bottom:var(--space-md);">
+                <label class="form-label">Agare (promotor)</label>
+                <select name="owner_user_id" id="edit-owner-id" class="form-select">
+                    <option value="">Ingen agare</option>
+                    <?php foreach ($promotors as $p): ?>
+                    <option value="<?= $p['id'] ?>">
+                        <?= htmlspecialchars($p['full_name'] ?: $p['username']) ?>
+                        (<?= $p['role'] ?>)
+                    </option>
+                    <?php endforeach; ?>
+                </select>
+                <small style="color:var(--color-text-muted);">Agaren kan hantera kampanjen, se malgrupp och skicka inbjudningar</small>
+            </div>
+
+            <div class="form-group" style="margin-bottom:var(--space-lg);">
+                <label style="display:flex;align-items:center;gap:var(--space-xs);cursor:pointer;">
+                    <input type="checkbox" name="allow_promotor_access" id="edit-promotor-access" value="1">
+                    Tillat alla promotors att se resultat
+                </label>
+                <small style="color:var(--color-text-muted);display:block;margin-top:var(--space-xs);">
+                    Om aktiverad kan alla inloggade promotors se svar och statistik for denna kampanj
+                </small>
+            </div>
+
+            <div style="display:flex;gap:var(--space-md);justify-content:flex-end;">
+                <button type="button" class="btn-admin btn-admin-secondary" onclick="closeOwnerModal()">Avbryt</button>
+                <button type="submit" class="btn-admin btn-admin-primary">
+                    <i data-lucide="save"></i> Spara
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function editCampaignOwner(campaign) {
+    document.getElementById('edit-campaign-id').value = campaign.id;
+    document.getElementById('edit-campaign-name').value = campaign.name;
+    document.getElementById('edit-owner-id').value = campaign.owner_user_id || '';
+    document.getElementById('edit-promotor-access').checked = campaign.allow_promotor_access == 1;
+    document.getElementById('edit-owner-modal').style.display = 'flex';
+}
+
+function closeOwnerModal() {
+    document.getElementById('edit-owner-modal').style.display = 'none';
+}
+
+// Close modal on outside click
+document.getElementById('edit-owner-modal')?.addEventListener('click', function(e) {
+    if (e.target === this) closeOwnerModal();
+});
+</script>
+<?php endif; ?>
 
 <?php endif; // tablesExist ?>
 
