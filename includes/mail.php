@@ -390,6 +390,22 @@ function hub_email_template(string $template, array $vars = []): string {
                 <a href="{{activation_link}}" class="btn">Aktivera konto</a>
             </p>
             <p class="note">Länken är giltig i {{expires}}.</p>
+        ',
+
+        'winback_invitation' => '
+            <div class="header">
+                <div class="logo">TheHUB</div>
+            </div>
+            <h1>Vi saknar dig!</h1>
+            <p>Hej {{name}},</p>
+            <p>Vi har märkt att du inte tävlat på ett tag och vill gärna höra hur du mår och vad vi kan göra bättre.</p>
+            <p>Svara på en kort enkät (tar bara 2 minuter) så får du en <strong>{{discount_text}}</strong> på din nästa anmälan som tack!</p>
+            <p class="text-center">
+                <a href="{{survey_link}}" class="btn">Svara på enkäten</a>
+            </p>
+            <p class="note">Din feedback är anonym och hjälper oss att skapa bättre tävlingar.</p>
+            <p class="note">Eller kopiera och klistra in denna länk i din webbläsare:</p>
+            <div class="link">{{survey_link}}</div>
         '
     ];
 

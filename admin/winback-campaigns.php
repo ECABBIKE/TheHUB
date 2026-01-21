@@ -108,7 +108,131 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $tablesExist) {
             $pdo->prepare("DELETE FROM winback_questions WHERE id = ?")->execute([$id]);
             $message = 'Fraga borttagen';
         }
+    } elseif ($action === 'send_invitations') {
+        // Send invitations to selected riders
+        $campaignId = (int)$_POST['campaign_id'];
+        $riderIds = $_POST['rider_ids'] ?? [];
+
+        if (empty($riderIds)) {
+            $error = 'Valj minst en deltagare att bjuda in';
+        } else {
+            require_once __DIR__ . '/../includes/mail.php';
+
+            // Get campaign info
+            $stmt = $pdo->prepare("SELECT * FROM winback_campaigns WHERE id = ?");
+            $stmt->execute([$campaignId]);
+            $campaign = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$campaign) {
+                $error = 'Kampanj hittades inte';
+            } else {
+                $sentCount = 0;
+                $failedCount = 0;
+                $skippedCount = 0;
+
+                // Check if invitations table exists
+                $invTableExists = false;
+                try {
+                    $check = $pdo->query("SHOW TABLES LIKE 'winback_invitations'");
+                    $invTableExists = $check->rowCount() > 0;
+                } catch (Exception $e) {}
+
+                foreach ($riderIds as $riderId) {
+                    $riderId = (int)$riderId;
+
+                    // Get rider info
+                    $stmt = $pdo->prepare("SELECT id, firstname, lastname, email FROM riders WHERE id = ?");
+                    $stmt->execute([$riderId]);
+                    $rider = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                    if (!$rider || empty($rider['email'])) {
+                        $skippedCount++;
+                        continue;
+                    }
+
+                    // Check if already invited (if table exists)
+                    if ($invTableExists) {
+                        $stmt = $pdo->prepare("SELECT id FROM winback_invitations WHERE campaign_id = ? AND rider_id = ?");
+                        $stmt->execute([$campaignId, $riderId]);
+                        if ($stmt->fetch()) {
+                            $skippedCount++;
+                            continue;
+                        }
+                    }
+
+                    // Generate tracking token
+                    $trackingToken = bin2hex(random_bytes(32));
+
+                    // Build email
+                    $surveyUrl = 'https://thehub.gravityseries.se/profile/winback-survey?t=' . $trackingToken;
+                    $discountText = $campaign['discount_type'] === 'percentage'
+                        ? intval($campaign['discount_value']) . '% rabatt'
+                        : number_format($campaign['discount_value'], 0) . ' kr rabatt';
+
+                    $subject = 'Vi saknar dig! - TheHUB';
+                    $body = hub_email_template('winback_invitation', [
+                        'name' => $rider['firstname'],
+                        'campaign_name' => $campaign['name'],
+                        'discount_text' => $discountText,
+                        'survey_link' => $surveyUrl
+                    ]);
+
+                    // Send email
+                    $sent = hub_send_email($rider['email'], $subject, $body);
+
+                    // Log invitation (if table exists)
+                    if ($invTableExists) {
+                        $stmt = $pdo->prepare("
+                            INSERT INTO winback_invitations (campaign_id, rider_id, email_address, invitation_method, invitation_status, sent_at, sent_by, tracking_token)
+                            VALUES (?, ?, ?, 'email', ?, NOW(), ?, ?)
+                        ");
+                        $stmt->execute([
+                            $campaignId,
+                            $riderId,
+                            $rider['email'],
+                            $sent ? 'sent' : 'failed',
+                            $_SESSION['admin_id'] ?? null,
+                            $trackingToken
+                        ]);
+                    }
+
+                    if ($sent) {
+                        $sentCount++;
+                    } else {
+                        $failedCount++;
+                    }
+                }
+
+                if ($sentCount > 0) {
+                    $message = "Skickade $sentCount inbjudningar";
+                    if ($skippedCount > 0) $message .= ", hoppade over $skippedCount (redan inbjudna eller saknar email)";
+                    if ($failedCount > 0) $message .= ", $failedCount misslyckades";
+                } else {
+                    $error = "Inga inbjudningar skickades. $skippedCount hoppades over, $failedCount misslyckades.";
+                }
+            }
+        }
     }
+}
+
+// Add winback invitation template to mail system (inline)
+if (!function_exists('hub_email_template_winback')) {
+    // Extend the email template function with winback template
+    $GLOBALS['winback_email_templates'] = [
+        'winback_invitation' => '
+            <div class="header">
+                <div class="logo">TheHUB</div>
+            </div>
+            <h1>Vi saknar dig!</h1>
+            <p>Hej {{name}},</p>
+            <p>Vi har markt att du inte tavlat pa ett tag och vill garna hora hur du mar och vad vi kan gora battre.</p>
+            <p>Svara pa en kort enkat (tar bara 2 minuter) sa far du en <strong>{{discount_text}}</strong> pa din nasta anmalan som tack!</p>
+            <p class="text-center">
+                <a href="{{survey_link}}" class="btn">Svara pa enkaten</a>
+            </p>
+            <p class="note">Din feedback ar anonym och hjalper oss att skapa battre tavlingar.</p>
+        '
+    ];
 }
 
 // Get data
@@ -476,6 +600,10 @@ include __DIR__ . '/components/unified-layout.php';
         Fragor (<?= $stats['total_questions'] ?? 0 ?>)
     </a>
     <?php if ($selectedCampaign): ?>
+    <a href="?view=audience&campaign=<?= $selectedCampaign ?>" class="tab-link <?= $viewMode === 'audience' ? 'active' : '' ?>">
+        <i data-lucide="users" style="width:16px;height:16px;vertical-align:middle;margin-right:var(--space-xs);"></i>
+        Malgrupp
+    </a>
     <a href="?view=results&campaign=<?= $selectedCampaign ?>" class="tab-link <?= $viewMode === 'results' ? 'active' : '' ?>">
         <i data-lucide="bar-chart-2" style="width:16px;height:16px;vertical-align:middle;margin-right:var(--space-xs);"></i>
         Resultat
@@ -483,7 +611,309 @@ include __DIR__ . '/components/unified-layout.php';
     <?php endif; ?>
 </nav>
 
-<?php if ($viewMode === 'questions'): ?>
+<?php if ($viewMode === 'audience' && $selectedCampaign): ?>
+<!-- Audience View -->
+<?php
+$selectedCampData = null;
+foreach ($campaigns as $c) {
+    if ($c['id'] == $selectedCampaign) {
+        $selectedCampData = $c;
+        break;
+    }
+}
+
+// Get target audience for this campaign
+$audienceRiders = [];
+$audienceStats = ['total' => 0, 'with_email' => 0, 'without_email' => 0, 'invited' => 0, 'responded' => 0];
+
+if ($selectedCampData) {
+    $brandIds = json_decode($selectedCampData['brand_ids'] ?? '[]', true) ?: [];
+
+    if (!empty($brandIds)) {
+        $placeholders = implode(',', array_fill(0, count($brandIds), '?'));
+
+        // Get all riders who match the criteria
+        $sql = "
+            SELECT DISTINCT
+                r.id, r.firstname, r.lastname, r.email,
+                c.name as club_name,
+                MAX(YEAR(e.date)) as last_active_year,
+                COUNT(DISTINCT YEAR(e.date)) as total_seasons
+            FROM riders r
+            JOIN results res ON r.id = res.cyclist_id
+            JOIN events e ON res.event_id = e.id
+            JOIN series s ON e.series_id = s.id
+            JOIN brand_series_map bsm ON s.id = bsm.series_id
+            LEFT JOIN clubs c ON r.club_id = c.id
+            WHERE YEAR(e.date) BETWEEN ? AND ?
+              AND bsm.brand_id IN ($placeholders)
+              AND r.id NOT IN (
+                  SELECT DISTINCT res2.cyclist_id
+                  FROM results res2
+                  JOIN events e2 ON res2.event_id = e2.id
+                  JOIN series s2 ON e2.series_id = s2.id
+                  JOIN brand_series_map bsm2 ON s2.id = bsm2.series_id
+                  WHERE YEAR(e2.date) = ?
+                    AND bsm2.brand_id IN ($placeholders)
+              )
+            GROUP BY r.id
+            ORDER BY last_active_year DESC, r.lastname, r.firstname
+            LIMIT 500
+        ";
+        $params = array_merge(
+            [$selectedCampData['start_year'], $selectedCampData['end_year']],
+            $brandIds,
+            [$selectedCampData['target_year']],
+            $brandIds
+        );
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute($params);
+        $audienceRiders = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Calculate stats
+        foreach ($audienceRiders as $rider) {
+            $audienceStats['total']++;
+            if (!empty($rider['email'])) {
+                $audienceStats['with_email']++;
+            } else {
+                $audienceStats['without_email']++;
+            }
+        }
+
+        // Check invited status (if table exists)
+        $invTableExists = false;
+        try {
+            $check = $pdo->query("SHOW TABLES LIKE 'winback_invitations'");
+            $invTableExists = $check->rowCount() > 0;
+        } catch (Exception $e) {}
+
+        if ($invTableExists) {
+            $stmt = $pdo->prepare("SELECT COUNT(*) FROM winback_invitations WHERE campaign_id = ?");
+            $stmt->execute([$selectedCampaign]);
+            $audienceStats['invited'] = (int)$stmt->fetchColumn();
+        }
+
+        // Check responded
+        $stmt = $pdo->prepare("SELECT COUNT(*) FROM winback_responses WHERE campaign_id = ?");
+        $stmt->execute([$selectedCampaign]);
+        $audienceStats['responded'] = (int)$stmt->fetchColumn();
+
+        // Mark which riders are already invited/responded
+        if ($invTableExists) {
+            $invitedIds = [];
+            $stmt = $pdo->prepare("SELECT rider_id FROM winback_invitations WHERE campaign_id = ?");
+            $stmt->execute([$selectedCampaign]);
+            while ($row = $stmt->fetch()) {
+                $invitedIds[$row['rider_id']] = true;
+            }
+        }
+
+        $respondedIds = [];
+        $stmt = $pdo->prepare("SELECT rider_id FROM winback_responses WHERE campaign_id = ?");
+        $stmt->execute([$selectedCampaign]);
+        while ($row = $stmt->fetch()) {
+            $respondedIds[$row['rider_id']] = true;
+        }
+
+        foreach ($audienceRiders as &$rider) {
+            $rider['is_invited'] = isset($invitedIds[$rider['id']]);
+            $rider['has_responded'] = isset($respondedIds[$rider['id']]);
+        }
+        unset($rider);
+    }
+}
+?>
+
+<div class="admin-card">
+    <div class="admin-card-header">
+        <h2>Malgrupp: <?= htmlspecialchars($selectedCampData['name'] ?? 'Okand') ?></h2>
+    </div>
+    <div class="admin-card-body">
+        <!-- Contact Stats -->
+        <div class="audience-stats">
+            <div class="audience-stat">
+                <div class="audience-stat-value"><?= number_format($audienceStats['total']) ?></div>
+                <div class="audience-stat-label">Totalt i malgruppen</div>
+            </div>
+            <div class="audience-stat has-email">
+                <div class="audience-stat-value"><?= number_format($audienceStats['with_email']) ?></div>
+                <div class="audience-stat-label">Har email</div>
+                <div class="audience-stat-pct"><?= $audienceStats['total'] > 0 ? round(($audienceStats['with_email'] / $audienceStats['total']) * 100) : 0 ?>%</div>
+            </div>
+            <div class="audience-stat no-email">
+                <div class="audience-stat-value"><?= number_format($audienceStats['without_email']) ?></div>
+                <div class="audience-stat-label">Saknar email</div>
+                <div class="audience-stat-pct"><?= $audienceStats['total'] > 0 ? round(($audienceStats['without_email'] / $audienceStats['total']) * 100) : 0 ?>%</div>
+            </div>
+            <div class="audience-stat invited">
+                <div class="audience-stat-value"><?= number_format($audienceStats['invited']) ?></div>
+                <div class="audience-stat-label">Inbjudna</div>
+            </div>
+            <div class="audience-stat responded">
+                <div class="audience-stat-value"><?= number_format($audienceStats['responded']) ?></div>
+                <div class="audience-stat-label">Svarat</div>
+            </div>
+        </div>
+
+        <?php if (empty($audienceRiders)): ?>
+            <p style="text-align:center;color:var(--color-text-muted);padding:var(--space-2xl);">
+                Ingen malgrupp hittades for denna kampanj.
+            </p>
+        <?php else: ?>
+            <!-- Invitation Form -->
+            <form method="POST" id="invitation-form">
+                <input type="hidden" name="action" value="send_invitations">
+                <input type="hidden" name="campaign_id" value="<?= $selectedCampaign ?>">
+
+                <div class="audience-actions">
+                    <div class="audience-select-all">
+                        <label style="display:flex;align-items:center;gap:var(--space-xs);cursor:pointer;">
+                            <input type="checkbox" id="select-all-riders" onchange="toggleAllRiders(this.checked)">
+                            <strong>Valj alla med email</strong>
+                        </label>
+                    </div>
+                    <div class="audience-buttons">
+                        <span id="selected-count">0 valda</span>
+                        <button type="submit" class="btn-admin btn-admin-primary" id="send-btn" disabled>
+                            <i data-lucide="send"></i> Skicka inbjudningar
+                        </button>
+                    </div>
+                </div>
+
+                <div class="admin-table-container" style="max-height:500px;overflow-y:auto;">
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th style="width:40px;"></th>
+                                <th>Namn</th>
+                                <th>Email</th>
+                                <th>Klubb</th>
+                                <th>Senast aktiv</th>
+                                <th>Status</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <?php foreach ($audienceRiders as $rider): ?>
+                            <tr class="<?= $rider['has_responded'] ? 'responded-row' : ($rider['is_invited'] ? 'invited-row' : '') ?>">
+                                <td>
+                                    <?php if (!empty($rider['email']) && !$rider['has_responded'] && !$rider['is_invited']): ?>
+                                    <input type="checkbox" name="rider_ids[]" value="<?= $rider['id'] ?>" class="rider-checkbox" onchange="updateSelectedCount()">
+                                    <?php endif; ?>
+                                </td>
+                                <td>
+                                    <a href="/rider/<?= $rider['id'] ?>" target="_blank">
+                                        <?= htmlspecialchars($rider['firstname'] . ' ' . $rider['lastname']) ?>
+                                    </a>
+                                </td>
+                                <td>
+                                    <?php if (!empty($rider['email'])): ?>
+                                        <span style="color:var(--color-success);"><?= htmlspecialchars($rider['email']) ?></span>
+                                    <?php else: ?>
+                                        <span style="color:var(--color-text-muted);">-</span>
+                                    <?php endif; ?>
+                                </td>
+                                <td><?= htmlspecialchars($rider['club_name'] ?? '-') ?></td>
+                                <td><?= $rider['last_active_year'] ?></td>
+                                <td>
+                                    <?php if ($rider['has_responded']): ?>
+                                        <span class="badge badge-success">Svarat</span>
+                                    <?php elseif ($rider['is_invited']): ?>
+                                        <span class="badge badge-info">Inbjuden</span>
+                                    <?php elseif (empty($rider['email'])): ?>
+                                        <span class="badge badge-warning">Saknar email</span>
+                                    <?php else: ?>
+                                        <span class="badge badge-secondary">Ej kontaktad</span>
+                                    <?php endif; ?>
+                                </td>
+                            </tr>
+                            <?php endforeach; ?>
+                        </tbody>
+                    </table>
+                </div>
+            </form>
+        <?php endif; ?>
+    </div>
+</div>
+
+<style>
+.audience-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: var(--space-md);
+    margin-bottom: var(--space-xl);
+}
+.audience-stat {
+    text-align: center;
+    padding: var(--space-md);
+    background: var(--color-bg-page);
+    border-radius: var(--radius-md);
+    border: 1px solid var(--color-border);
+}
+.audience-stat.has-email { border-color: var(--color-success); }
+.audience-stat.no-email { border-color: var(--color-warning); }
+.audience-stat.invited { border-color: var(--color-info); }
+.audience-stat.responded { border-color: var(--color-accent); }
+.audience-stat-value {
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: var(--color-text-primary);
+}
+.audience-stat-label {
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+}
+.audience-stat-pct {
+    font-size: 0.875rem;
+    color: var(--color-text-secondary);
+    margin-top: var(--space-2xs);
+}
+.audience-actions {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--space-md);
+    background: var(--color-bg-page);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--space-md);
+}
+.audience-buttons {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+}
+#selected-count {
+    color: var(--color-text-secondary);
+    font-size: 0.875rem;
+}
+.invited-row { background: rgba(56, 189, 248, 0.05); }
+.responded-row { background: rgba(16, 185, 129, 0.05); }
+</style>
+
+<script>
+function toggleAllRiders(checked) {
+    document.querySelectorAll('.rider-checkbox').forEach(cb => {
+        cb.checked = checked;
+    });
+    updateSelectedCount();
+}
+
+function updateSelectedCount() {
+    const count = document.querySelectorAll('.rider-checkbox:checked').length;
+    document.getElementById('selected-count').textContent = count + ' valda';
+    document.getElementById('send-btn').disabled = count === 0;
+}
+
+// Confirm before sending
+document.getElementById('invitation-form')?.addEventListener('submit', function(e) {
+    const count = document.querySelectorAll('.rider-checkbox:checked').length;
+    if (!confirm('Skicka inbjudningar till ' + count + ' deltagare?')) {
+        e.preventDefault();
+    }
+});
+</script>
+
+<?php elseif ($viewMode === 'questions'): ?>
 <!-- Questions View -->
 <div class="admin-card" style="margin-bottom: var(--space-lg);">
     <div class="admin-card-header">
