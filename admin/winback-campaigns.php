@@ -104,6 +104,51 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $tablesExist) {
             $stmt->execute([$ownerId, $allowPromotorAccess, $id]);
             $message = 'Kampanjinställningar uppdaterade';
         }
+    } elseif ($action === 'update_campaign') {
+        $id = (int)$_POST['id'];
+
+        // Get campaign to check permissions
+        $stmt = $pdo->prepare("SELECT * FROM winback_campaigns WHERE id = ?");
+        $stmt->execute([$id]);
+        $campaignToEdit = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$campaignToEdit) {
+            $error = 'Kampanj hittades inte';
+        } elseif (!canEditCampaign($campaignToEdit)) {
+            $error = 'Du har inte behörighet att redigera denna kampanj';
+        } else {
+            $name = trim($_POST['name'] ?? '');
+            $discountType = $_POST['discount_type'] ?? $campaignToEdit['discount_type'];
+            $discountValue = (float)($_POST['discount_value'] ?? $campaignToEdit['discount_value']);
+            $validUntil = $_POST['valid_until'] ?? $campaignToEdit['discount_valid_until'];
+
+            if (empty($name)) {
+                $error = 'Kampanjnamn krävs';
+            } else {
+                // Admin can also update owner settings
+                if ($isAdmin) {
+                    $ownerId = !empty($_POST['owner_user_id']) ? (int)$_POST['owner_user_id'] : null;
+                    $allowPromotorAccess = isset($_POST['allow_promotor_access']) ? 1 : 0;
+
+                    $stmt = $pdo->prepare("
+                        UPDATE winback_campaigns
+                        SET name = ?, discount_type = ?, discount_value = ?, discount_valid_until = ?,
+                            owner_user_id = ?, allow_promotor_access = ?
+                        WHERE id = ?
+                    ");
+                    $stmt->execute([$name, $discountType, $discountValue, $validUntil ?: null, $ownerId, $allowPromotorAccess, $id]);
+                } else {
+                    // Non-admin (promotor) can only update basic settings
+                    $stmt = $pdo->prepare("
+                        UPDATE winback_campaigns
+                        SET name = ?, discount_type = ?, discount_value = ?, discount_valid_until = ?
+                        WHERE id = ?
+                    ");
+                    $stmt->execute([$name, $discountType, $discountValue, $validUntil ?: null, $id]);
+                }
+                $message = 'Kampanj uppdaterad';
+            }
+        }
     } elseif ($action === 'create_question') {
         $questionText = trim($_POST['question_text'] ?? '');
         $questionType = $_POST['question_type'] ?? 'checkbox';
@@ -1498,18 +1543,16 @@ if (!$selectedCampData || !canAccessCampaign($selectedCampData)):
                         <i data-lucide="bar-chart-2"></i> Resultat
                     </a>
                     <?php if ($canEdit): ?>
+                    <button type="button" class="btn-admin btn-admin-ghost btn-sm" onclick="editCampaign(<?= htmlspecialchars(json_encode($c)) ?>)" title="Redigera kampanj">
+                        <i data-lucide="edit-2"></i>
+                    </button>
                     <form method="POST" style="display:inline;">
                         <input type="hidden" name="action" value="toggle_campaign">
                         <input type="hidden" name="id" value="<?= $c['id'] ?>">
-                        <button type="submit" class="btn-admin btn-admin-ghost btn-sm">
+                        <button type="submit" class="btn-admin btn-admin-ghost btn-sm" title="<?= $c['is_active'] ? 'Pausa' : 'Aktivera' ?>">
                             <i data-lucide="<?= $c['is_active'] ? 'pause' : 'play' ?>"></i>
                         </button>
                     </form>
-                    <?php endif; ?>
-                    <?php if ($isAdmin): ?>
-                    <button type="button" class="btn-admin btn-admin-ghost btn-sm" onclick="editCampaignOwner(<?= htmlspecialchars(json_encode($c)) ?>)" title="Hantera agare">
-                        <i data-lucide="settings"></i>
-                    </button>
                     <?php endif; ?>
                 </div>
             </div>
@@ -1560,49 +1603,71 @@ if (!$selectedCampData || !canAccessCampaign($selectedCampData)):
 
 <?php endif; // viewMode ?>
 
-<?php if ($isAdmin && !empty($promotors)): ?>
-<!-- Edit Campaign Owner Modal -->
-<div id="edit-owner-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center;">
+<!-- Edit Campaign Modal -->
+<div id="edit-campaign-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center;">
     <div style="background:var(--color-bg-surface);border-radius:var(--radius-lg);padding:var(--space-xl);max-width:500px;width:90%;max-height:90vh;overflow-y:auto;">
         <h3 style="margin-bottom:var(--space-lg);">
-            <i data-lucide="settings" style="width:20px;height:20px;vertical-align:middle;margin-right:var(--space-xs);"></i>
-            Kampanjinstallningar
+            <i data-lucide="edit-2" style="width:20px;height:20px;vertical-align:middle;margin-right:var(--space-xs);"></i>
+            Redigera kampanj
         </h3>
-        <form method="POST" id="edit-owner-form">
-            <input type="hidden" name="action" value="update_campaign_owner">
+        <form method="POST" id="edit-campaign-form">
+            <input type="hidden" name="action" value="update_campaign">
             <input type="hidden" name="id" id="edit-campaign-id">
 
             <div class="form-group" style="margin-bottom:var(--space-md);">
-                <label class="form-label">Kampanj</label>
-                <input type="text" id="edit-campaign-name" class="form-input" readonly style="background:var(--color-bg-page);">
+                <label class="form-label">Kampanjnamn *</label>
+                <input type="text" name="name" id="edit-campaign-name" class="form-input" required>
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-md);margin-bottom:var(--space-md);">
+                <div class="form-group">
+                    <label class="form-label">Rabatttyp</label>
+                    <select name="discount_type" id="edit-discount-type" class="form-select">
+                        <option value="fixed">Fast belopp (SEK)</option>
+                        <option value="percentage">Procent (%)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Rabattvarde</label>
+                    <input type="number" name="discount_value" id="edit-discount-value" class="form-input" min="1">
+                </div>
             </div>
 
             <div class="form-group" style="margin-bottom:var(--space-md);">
-                <label class="form-label">Agare (promotor)</label>
-                <select name="owner_user_id" id="edit-owner-id" class="form-select">
-                    <option value="">Ingen agare</option>
-                    <?php foreach ($promotors as $p): ?>
-                    <option value="<?= $p['id'] ?>">
-                        <?= htmlspecialchars($p['full_name'] ?: $p['username']) ?>
-                        (<?= $p['role'] ?>)
-                    </option>
-                    <?php endforeach; ?>
-                </select>
-                <small style="color:var(--color-text-muted);">Agaren kan hantera kampanjen, se malgrupp och skicka inbjudningar</small>
+                <label class="form-label">Giltig t.o.m.</label>
+                <input type="date" name="valid_until" id="edit-valid-until" class="form-input">
             </div>
 
-            <div class="form-group" style="margin-bottom:var(--space-lg);">
-                <label style="display:flex;align-items:center;gap:var(--space-xs);cursor:pointer;">
-                    <input type="checkbox" name="allow_promotor_access" id="edit-promotor-access" value="1">
-                    Tillat alla promotors att se resultat
-                </label>
-                <small style="color:var(--color-text-muted);display:block;margin-top:var(--space-xs);">
-                    Om aktiverad kan alla inloggade promotors se svar och statistik for denna kampanj
-                </small>
+            <?php if ($isAdmin && !empty($promotors)): ?>
+            <div style="padding-top:var(--space-md);border-top:1px solid var(--color-border);margin-bottom:var(--space-md);">
+                <div class="form-group" style="margin-bottom:var(--space-md);">
+                    <label class="form-label">Agare (promotor)</label>
+                    <select name="owner_user_id" id="edit-owner-id" class="form-select">
+                        <option value="">Ingen agare</option>
+                        <?php foreach ($promotors as $p): ?>
+                        <option value="<?= $p['id'] ?>">
+                            <?= htmlspecialchars($p['full_name'] ?: $p['username']) ?>
+                            (<?= $p['role'] ?>)
+                        </option>
+                        <?php endforeach; ?>
+                    </select>
+                    <small style="color:var(--color-text-muted);">Agaren kan hantera kampanjen, se malgrupp och skicka inbjudningar</small>
+                </div>
+
+                <div class="form-group" style="margin-bottom:var(--space-md);">
+                    <label style="display:flex;align-items:center;gap:var(--space-xs);cursor:pointer;">
+                        <input type="checkbox" name="allow_promotor_access" id="edit-promotor-access" value="1">
+                        Tillat alla promotors att se resultat
+                    </label>
+                    <small style="color:var(--color-text-muted);display:block;margin-top:var(--space-xs);">
+                        Om aktiverad kan alla inloggade promotors se svar och statistik for denna kampanj
+                    </small>
+                </div>
             </div>
+            <?php endif; ?>
 
             <div style="display:flex;gap:var(--space-md);justify-content:flex-end;">
-                <button type="button" class="btn-admin btn-admin-secondary" onclick="closeOwnerModal()">Avbryt</button>
+                <button type="button" class="btn-admin btn-admin-secondary" onclick="closeEditCampaignModal()">Avbryt</button>
                 <button type="submit" class="btn-admin btn-admin-primary">
                     <i data-lucide="save"></i> Spara
                 </button>
@@ -1612,24 +1677,30 @@ if (!$selectedCampData || !canAccessCampaign($selectedCampData)):
 </div>
 
 <script>
-function editCampaignOwner(campaign) {
+function editCampaign(campaign) {
     document.getElementById('edit-campaign-id').value = campaign.id;
     document.getElementById('edit-campaign-name').value = campaign.name;
+    document.getElementById('edit-discount-type').value = campaign.discount_type || 'fixed';
+    document.getElementById('edit-discount-value').value = campaign.discount_value || 100;
+    document.getElementById('edit-valid-until').value = campaign.discount_valid_until ? campaign.discount_valid_until.split(' ')[0] : '';
+
+    <?php if ($isAdmin && !empty($promotors)): ?>
     document.getElementById('edit-owner-id').value = campaign.owner_user_id || '';
     document.getElementById('edit-promotor-access').checked = campaign.allow_promotor_access == 1;
-    document.getElementById('edit-owner-modal').style.display = 'flex';
+    <?php endif; ?>
+
+    document.getElementById('edit-campaign-modal').style.display = 'flex';
 }
 
-function closeOwnerModal() {
-    document.getElementById('edit-owner-modal').style.display = 'none';
+function closeEditCampaignModal() {
+    document.getElementById('edit-campaign-modal').style.display = 'none';
 }
 
 // Close modal on outside click
-document.getElementById('edit-owner-modal')?.addEventListener('click', function(e) {
-    if (e.target === this) closeOwnerModal();
+document.getElementById('edit-campaign-modal')?.addEventListener('click', function(e) {
+    if (e.target === this) closeEditCampaignModal();
 });
 </script>
-<?php endif; ?>
 
 <?php endif; // tablesExist ?>
 
