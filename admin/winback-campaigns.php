@@ -44,6 +44,70 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $tablesExist) {
         } else {
             $error = 'Namn och varumarken kravs';
         }
+    } elseif ($action === 'create_question') {
+        $questionText = trim($_POST['question_text'] ?? '');
+        $questionType = $_POST['question_type'] ?? 'checkbox';
+        $options = trim($_POST['options'] ?? '');
+        $sortOrder = (int)($_POST['sort_order'] ?? 0);
+        $isRequired = isset($_POST['is_required']) ? 1 : 0;
+        $campaignId = !empty($_POST['campaign_id']) ? (int)$_POST['campaign_id'] : null;
+
+        if ($questionText) {
+            $optionsJson = null;
+            if ($questionType === 'checkbox' || $questionType === 'radio') {
+                $optionsArray = array_filter(array_map('trim', explode("\n", $options)));
+                $optionsJson = json_encode(array_values($optionsArray));
+            }
+
+            $stmt = $pdo->prepare("
+                INSERT INTO winback_questions (campaign_id, question_text, question_type, options, sort_order, is_required, active)
+                VALUES (?, ?, ?, ?, ?, ?, 1)
+            ");
+            $stmt->execute([$campaignId, $questionText, $questionType, $optionsJson, $sortOrder, $isRequired]);
+            $message = 'Fraga skapad!';
+        } else {
+            $error = 'Fragetext kravs';
+        }
+    } elseif ($action === 'update_question') {
+        $id = (int)$_POST['id'];
+        $questionText = trim($_POST['question_text'] ?? '');
+        $questionType = $_POST['question_type'] ?? 'checkbox';
+        $options = trim($_POST['options'] ?? '');
+        $sortOrder = (int)($_POST['sort_order'] ?? 0);
+        $isRequired = isset($_POST['is_required']) ? 1 : 0;
+
+        if ($questionText) {
+            $optionsJson = null;
+            if ($questionType === 'checkbox' || $questionType === 'radio') {
+                $optionsArray = array_filter(array_map('trim', explode("\n", $options)));
+                $optionsJson = json_encode(array_values($optionsArray));
+            }
+
+            $stmt = $pdo->prepare("
+                UPDATE winback_questions
+                SET question_text = ?, question_type = ?, options = ?, sort_order = ?, is_required = ?
+                WHERE id = ?
+            ");
+            $stmt->execute([$questionText, $questionType, $optionsJson, $sortOrder, $isRequired, $id]);
+            $message = 'Fraga uppdaterad!';
+        } else {
+            $error = 'Fragetext kravs';
+        }
+    } elseif ($action === 'toggle_question') {
+        $id = (int)$_POST['id'];
+        $pdo->prepare("UPDATE winback_questions SET active = NOT active WHERE id = ?")->execute([$id]);
+        $message = 'Fragestatus uppdaterad';
+    } elseif ($action === 'delete_question') {
+        $id = (int)$_POST['id'];
+        // Check if question has answers
+        $stmt = $pdo->prepare("SELECT COUNT(*) FROM winback_answers WHERE question_id = ?");
+        $stmt->execute([$id]);
+        if ($stmt->fetchColumn() > 0) {
+            $error = 'Kan inte ta bort fraga som har svar. Inaktivera istallet.';
+        } else {
+            $pdo->prepare("DELETE FROM winback_questions WHERE id = ?")->execute([$id]);
+            $message = 'Fraga borttagen';
+        }
     }
 }
 
@@ -98,10 +162,24 @@ if ($tablesExist) {
         // Overall stats
         $stats['total_responses'] = (int)$pdo->query("SELECT COUNT(*) FROM winback_responses")->fetchColumn();
         $stats['active_campaigns'] = count(array_filter($campaigns, fn($c) => $c['is_active']));
+        $stats['total_questions'] = (int)$pdo->query("SELECT COUNT(*) FROM winback_questions WHERE active = 1")->fetchColumn();
 
     } catch (Exception $e) {
         $error = $e->getMessage();
     }
+}
+
+// Get all questions for question management view
+$allQuestions = [];
+if ($tablesExist) {
+    try {
+        $allQuestions = $pdo->query("
+            SELECT q.*, c.name as campaign_name
+            FROM winback_questions q
+            LEFT JOIN winback_campaigns c ON q.campaign_id = c.id
+            ORDER BY q.sort_order ASC, q.id ASC
+        ")->fetchAll(PDO::FETCH_ASSOC);
+    } catch (Exception $e) {}
 }
 
 // View mode
@@ -378,6 +456,10 @@ include __DIR__ . '/components/unified-layout.php';
         <div class="stat-label">Aktiva kampanjer</div>
     </div>
     <div class="stat-box">
+        <div class="stat-value"><?= $stats['total_questions'] ?? 0 ?></div>
+        <div class="stat-label">Aktiva fragor</div>
+    </div>
+    <div class="stat-box">
         <div class="stat-value"><?= count($campaigns) ?></div>
         <div class="stat-label">Totalt kampanjer</div>
     </div>
@@ -389,6 +471,10 @@ include __DIR__ . '/components/unified-layout.php';
         <i data-lucide="megaphone" style="width:16px;height:16px;vertical-align:middle;margin-right:var(--space-xs);"></i>
         Kampanjer
     </a>
+    <a href="?view=questions" class="tab-link <?= $viewMode === 'questions' ? 'active' : '' ?>">
+        <i data-lucide="help-circle" style="width:16px;height:16px;vertical-align:middle;margin-right:var(--space-xs);"></i>
+        Fragor (<?= $stats['total_questions'] ?? 0 ?>)
+    </a>
     <?php if ($selectedCampaign): ?>
     <a href="?view=results&campaign=<?= $selectedCampaign ?>" class="tab-link <?= $viewMode === 'results' ? 'active' : '' ?>">
         <i data-lucide="bar-chart-2" style="width:16px;height:16px;vertical-align:middle;margin-right:var(--space-xs);"></i>
@@ -397,7 +483,260 @@ include __DIR__ . '/components/unified-layout.php';
     <?php endif; ?>
 </nav>
 
-<?php if ($viewMode === 'results' && $selectedCampaign): ?>
+<?php if ($viewMode === 'questions'): ?>
+<!-- Questions View -->
+<div class="admin-card" style="margin-bottom: var(--space-lg);">
+    <div class="admin-card-header">
+        <h2><i data-lucide="plus"></i> Lagg till fraga</h2>
+    </div>
+    <div class="admin-card-body">
+        <form method="POST">
+            <input type="hidden" name="action" value="create_question">
+
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:var(--space-md);margin-bottom:var(--space-md);">
+                <div class="form-group" style="grid-column: span 2;">
+                    <label class="form-label">Fragetext *</label>
+                    <input type="text" name="question_text" class="form-input" required placeholder="T.ex. Vad skulle fa dig att tavla igen?">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Fragetyp</label>
+                    <select name="question_type" class="form-select" onchange="toggleOptionsField(this.value)">
+                        <option value="checkbox">Flerval (checkbox)</option>
+                        <option value="radio">Enkelval (radio)</option>
+                        <option value="scale">Skala 1-10</option>
+                        <option value="text">Fritext</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Sorteringsordning</label>
+                    <input type="number" name="sort_order" class="form-input" value="<?= count($allQuestions) + 1 ?>" min="0">
+                </div>
+            </div>
+
+            <div class="form-group" id="options-group" style="margin-bottom:var(--space-md);">
+                <label class="form-label">Svarsalternativ (ett per rad)</label>
+                <textarea name="options" class="form-textarea" rows="5" placeholder="Alternativ 1&#10;Alternativ 2&#10;Alternativ 3"></textarea>
+                <small style="color:var(--color-text-muted);">Skriv ett alternativ per rad. Galler for flerval och enkelval.</small>
+            </div>
+
+            <div style="display:flex;gap:var(--space-lg);margin-bottom:var(--space-md);">
+                <div class="form-group">
+                    <label style="display:flex;align-items:center;gap:var(--space-xs);cursor:pointer;">
+                        <input type="checkbox" name="is_required" value="1">
+                        Obligatorisk fraga
+                    </label>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Kampanj (valfritt)</label>
+                    <select name="campaign_id" class="form-select">
+                        <option value="">Alla kampanjer (global)</option>
+                        <?php foreach ($campaigns as $c): ?>
+                        <option value="<?= $c['id'] ?>"><?= htmlspecialchars($c['name']) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+            </div>
+
+            <button type="submit" class="btn-admin btn-admin-primary">
+                <i data-lucide="plus"></i> Lagg till fraga
+            </button>
+        </form>
+    </div>
+</div>
+
+<!-- Questions List -->
+<div class="admin-card">
+    <div class="admin-card-header">
+        <h2>Befintliga fragor (<?= count($allQuestions) ?>)</h2>
+    </div>
+    <div class="admin-card-body" style="padding:0;">
+        <?php if (empty($allQuestions)): ?>
+            <p style="text-align:center;color:var(--color-text-muted);padding:var(--space-2xl);">
+                Inga fragor skapade. Kor migrering 014 for att ladda standardfragor.
+            </p>
+        <?php else: ?>
+            <div class="admin-table-container">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th style="width:40px;">#</th>
+                            <th>Fraga</th>
+                            <th>Typ</th>
+                            <th>Kampanj</th>
+                            <th>Status</th>
+                            <th style="width:150px;">Atgarder</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php foreach ($allQuestions as $q): ?>
+                        <tr class="<?= $q['active'] ? '' : 'inactive-row' ?>">
+                            <td><?= $q['sort_order'] ?></td>
+                            <td>
+                                <strong><?= htmlspecialchars($q['question_text']) ?></strong>
+                                <?php if ($q['is_required']): ?>
+                                    <span class="badge badge-warning" style="margin-left:var(--space-xs);">Obligatorisk</span>
+                                <?php endif; ?>
+                                <?php if ($q['options']): ?>
+                                    <br><small style="color:var(--color-text-muted);">
+                                        <?= count(json_decode($q['options'], true) ?: []) ?> alternativ
+                                    </small>
+                                <?php endif; ?>
+                            </td>
+                            <td>
+                                <?php
+                                $typeLabels = [
+                                    'checkbox' => 'Flerval',
+                                    'radio' => 'Enkelval',
+                                    'scale' => 'Skala 1-10',
+                                    'text' => 'Fritext'
+                                ];
+                                echo $typeLabels[$q['question_type']] ?? $q['question_type'];
+                                ?>
+                            </td>
+                            <td><?= $q['campaign_name'] ? htmlspecialchars($q['campaign_name']) : '<span style="color:var(--color-text-muted);">Alla</span>' ?></td>
+                            <td>
+                                <span class="badge <?= $q['active'] ? 'badge-success' : 'badge-secondary' ?>">
+                                    <?= $q['active'] ? 'Aktiv' : 'Inaktiv' ?>
+                                </span>
+                            </td>
+                            <td>
+                                <div style="display:flex;gap:var(--space-xs);">
+                                    <button type="button" class="btn-admin btn-admin-ghost btn-sm" onclick="editQuestion(<?= htmlspecialchars(json_encode($q)) ?>)">
+                                        <i data-lucide="edit-2"></i>
+                                    </button>
+                                    <form method="POST" style="display:inline;">
+                                        <input type="hidden" name="action" value="toggle_question">
+                                        <input type="hidden" name="id" value="<?= $q['id'] ?>">
+                                        <button type="submit" class="btn-admin btn-admin-ghost btn-sm">
+                                            <i data-lucide="<?= $q['active'] ? 'eye-off' : 'eye' ?>"></i>
+                                        </button>
+                                    </form>
+                                    <?php if (!$q['active']): ?>
+                                    <form method="POST" style="display:inline;" onsubmit="return confirm('Ta bort denna fraga?');">
+                                        <input type="hidden" name="action" value="delete_question">
+                                        <input type="hidden" name="id" value="<?= $q['id'] ?>">
+                                        <button type="submit" class="btn-admin btn-admin-ghost btn-sm" style="color:var(--color-error);">
+                                            <i data-lucide="trash-2"></i>
+                                        </button>
+                                    </form>
+                                    <?php endif; ?>
+                                </div>
+                            </td>
+                        </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        <?php endif; ?>
+    </div>
+</div>
+
+<!-- Edit Question Modal -->
+<div id="edit-question-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center;">
+    <div style="background:var(--color-bg-surface);border-radius:var(--radius-lg);padding:var(--space-xl);max-width:600px;width:90%;max-height:90vh;overflow-y:auto;">
+        <h3 style="margin-bottom:var(--space-lg);">Redigera fraga</h3>
+        <form method="POST" id="edit-question-form">
+            <input type="hidden" name="action" value="update_question">
+            <input type="hidden" name="id" id="edit-q-id">
+
+            <div class="form-group" style="margin-bottom:var(--space-md);">
+                <label class="form-label">Fragetext *</label>
+                <input type="text" name="question_text" id="edit-q-text" class="form-input" required>
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-md);margin-bottom:var(--space-md);">
+                <div class="form-group">
+                    <label class="form-label">Fragetyp</label>
+                    <select name="question_type" id="edit-q-type" class="form-select">
+                        <option value="checkbox">Flerval (checkbox)</option>
+                        <option value="radio">Enkelval (radio)</option>
+                        <option value="scale">Skala 1-10</option>
+                        <option value="text">Fritext</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Sorteringsordning</label>
+                    <input type="number" name="sort_order" id="edit-q-order" class="form-input" min="0">
+                </div>
+            </div>
+
+            <div class="form-group" style="margin-bottom:var(--space-md);">
+                <label class="form-label">Svarsalternativ (ett per rad)</label>
+                <textarea name="options" id="edit-q-options" class="form-textarea" rows="5"></textarea>
+            </div>
+
+            <div class="form-group" style="margin-bottom:var(--space-lg);">
+                <label style="display:flex;align-items:center;gap:var(--space-xs);cursor:pointer;">
+                    <input type="checkbox" name="is_required" id="edit-q-required" value="1">
+                    Obligatorisk fraga
+                </label>
+            </div>
+
+            <div style="display:flex;gap:var(--space-md);justify-content:flex-end;">
+                <button type="button" class="btn-admin btn-admin-secondary" onclick="closeEditModal()">Avbryt</button>
+                <button type="submit" class="btn-admin btn-admin-primary">Spara</button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<script>
+function toggleOptionsField(type) {
+    const optionsGroup = document.getElementById('options-group');
+    if (type === 'checkbox' || type === 'radio') {
+        optionsGroup.style.display = 'block';
+    } else {
+        optionsGroup.style.display = 'none';
+    }
+}
+
+function editQuestion(q) {
+    document.getElementById('edit-q-id').value = q.id;
+    document.getElementById('edit-q-text').value = q.question_text;
+    document.getElementById('edit-q-type').value = q.question_type;
+    document.getElementById('edit-q-order').value = q.sort_order;
+    document.getElementById('edit-q-required').checked = q.is_required == 1;
+
+    // Parse options
+    if (q.options) {
+        try {
+            const opts = JSON.parse(q.options);
+            document.getElementById('edit-q-options').value = opts.join('\n');
+        } catch (e) {
+            document.getElementById('edit-q-options').value = '';
+        }
+    } else {
+        document.getElementById('edit-q-options').value = '';
+    }
+
+    document.getElementById('edit-question-modal').style.display = 'flex';
+}
+
+function closeEditModal() {
+    document.getElementById('edit-question-modal').style.display = 'none';
+}
+
+// Close modal on outside click
+document.getElementById('edit-question-modal').addEventListener('click', function(e) {
+    if (e.target === this) closeEditModal();
+});
+</script>
+
+<style>
+.inactive-row { opacity: 0.5; }
+.form-textarea {
+    width: 100%;
+    padding: var(--space-sm);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    background: var(--color-bg-page);
+    color: var(--color-text-primary);
+    font-family: inherit;
+    resize: vertical;
+}
+</style>
+
+<?php elseif ($viewMode === 'results' && $selectedCampaign): ?>
 <!-- Results View -->
 <?php
 $selectedCampData = null;
