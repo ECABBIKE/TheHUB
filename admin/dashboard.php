@@ -80,6 +80,14 @@ if (!isset($stats['pending_news'])) {
     }
 }
 
+// Count pending roadmap tasks from ROADMAP.md
+$roadmapPendingCount = 0;
+$roadmapPath = __DIR__ . '/../ROADMAP.md';
+if (file_exists($roadmapPath)) {
+    $roadmapContent = file_get_contents($roadmapPath);
+    $roadmapPendingCount = substr_count($roadmapContent, '[ ]');
+}
+
 // Get upcoming events
 $upcomingEvents = [];
 try {
@@ -435,9 +443,12 @@ include __DIR__ . '/components/unified-layout.php';
                 <i data-lucide="newspaper"></i>
                 <span>Nyheter</span>
             </a>
-            <a href="/admin/roadmap.php" class="quick-action">
+            <a href="/admin/roadmap.php" class="quick-action <?= $roadmapPendingCount > 0 ? 'has-badge' : '' ?>">
                 <i data-lucide="map"></i>
                 <span>Roadmap</span>
+                <?php if ($roadmapPendingCount > 0): ?>
+                <span class="quick-action-badge"><?= $roadmapPendingCount ?></span>
+                <?php endif; ?>
             </a>
         </div>
     </div>
@@ -711,6 +722,28 @@ include __DIR__ . '/components/unified-layout.php';
 .quick-action svg {
     width: 24px;
     height: 24px;
+}
+
+.quick-action.has-badge {
+    position: relative;
+}
+
+.quick-action-badge {
+    position: absolute;
+    top: -6px;
+    right: -6px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 20px;
+    height: 20px;
+    padding: 0 5px;
+    background: var(--color-warning);
+    color: #000;
+    font-size: 11px;
+    font-weight: 700;
+    border-radius: 10px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.2);
 }
 
 .badge {

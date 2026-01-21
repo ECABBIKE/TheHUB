@@ -80,13 +80,43 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $tablesExist) {
         $validUntil = $_POST['valid_until'] ?? null;
         $ownerId = !empty($_POST['owner_user_id']) ? (int)$_POST['owner_user_id'] : $currentUserId;
         $allowPromotorAccess = isset($_POST['allow_promotor_access']) ? 1 : 0;
+        $audienceType = $_POST['audience_type'] ?? 'churned';
+        $startYear = (int)($_POST['start_year'] ?? 2016);
+        $endYear = (int)($_POST['end_year'] ?? ((int)date('Y') - 1));
+        $targetYear = (int)($_POST['target_year'] ?? (int)date('Y'));
+
+        // Validate audience type
+        if (!in_array($audienceType, ['churned', 'active'])) {
+            $audienceType = 'churned';
+        }
+
+        // Validate years
+        if ($startYear < 2010) $startYear = 2016;
+        if ($endYear > (int)date('Y')) $endYear = (int)date('Y');
+        if ($startYear > $endYear) $startYear = $endYear;
 
         if ($name && !empty($brandIds)) {
-            $stmt = $pdo->prepare("
-                INSERT INTO winback_campaigns (name, target_type, brand_ids, discount_type, discount_value, discount_valid_until, owner_user_id, allow_promotor_access, is_active)
-                VALUES (?, 'multi_brand', ?, ?, ?, ?, ?, ?, 1)
-            ");
-            $stmt->execute([$name, json_encode(array_map('intval', $brandIds)), $discountType, $discountValue, $validUntil ?: null, $ownerId, $allowPromotorAccess]);
+            // Check if audience_type column exists (migration 023)
+            $hasAudienceType = false;
+            try {
+                $check = $pdo->query("SHOW COLUMNS FROM winback_campaigns LIKE 'audience_type'");
+                $hasAudienceType = $check->rowCount() > 0;
+            } catch (Exception $e) {}
+
+            if ($hasAudienceType) {
+                $stmt = $pdo->prepare("
+                    INSERT INTO winback_campaigns (name, target_type, audience_type, brand_ids, start_year, end_year, target_year, discount_type, discount_value, discount_valid_until, owner_user_id, allow_promotor_access, is_active)
+                    VALUES (?, 'multi_brand', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
+                ");
+                $stmt->execute([$name, $audienceType, json_encode(array_map('intval', $brandIds)), $startYear, $endYear, $targetYear, $discountType, $discountValue, $validUntil ?: null, $ownerId, $allowPromotorAccess]);
+            } else {
+                // Fallback if migration not run yet
+                $stmt = $pdo->prepare("
+                    INSERT INTO winback_campaigns (name, target_type, brand_ids, start_year, end_year, target_year, discount_type, discount_value, discount_valid_until, owner_user_id, allow_promotor_access, is_active)
+                    VALUES (?, 'multi_brand', ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
+                ");
+                $stmt->execute([$name, json_encode(array_map('intval', $brandIds)), $startYear, $endYear, $targetYear, $discountType, $discountValue, $validUntil ?: null, $ownerId, $allowPromotorAccess]);
+            }
             $message = 'Kampanj skapad!';
         } else {
             $error = 'Namn och varumarken kravs';
@@ -103,6 +133,51 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $tablesExist) {
             $stmt = $pdo->prepare("UPDATE winback_campaigns SET owner_user_id = ?, allow_promotor_access = ? WHERE id = ?");
             $stmt->execute([$ownerId, $allowPromotorAccess, $id]);
             $message = 'Kampanjinställningar uppdaterade';
+        }
+    } elseif ($action === 'update_campaign') {
+        $id = (int)$_POST['id'];
+
+        // Get campaign to check permissions
+        $stmt = $pdo->prepare("SELECT * FROM winback_campaigns WHERE id = ?");
+        $stmt->execute([$id]);
+        $campaignToEdit = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if (!$campaignToEdit) {
+            $error = 'Kampanj hittades inte';
+        } elseif (!canEditCampaign($campaignToEdit)) {
+            $error = 'Du har inte behörighet att redigera denna kampanj';
+        } else {
+            $name = trim($_POST['name'] ?? '');
+            $discountType = $_POST['discount_type'] ?? $campaignToEdit['discount_type'];
+            $discountValue = (float)($_POST['discount_value'] ?? $campaignToEdit['discount_value']);
+            $validUntil = $_POST['valid_until'] ?? $campaignToEdit['discount_valid_until'];
+
+            if (empty($name)) {
+                $error = 'Kampanjnamn krävs';
+            } else {
+                // Admin can also update owner settings
+                if ($isAdmin) {
+                    $ownerId = !empty($_POST['owner_user_id']) ? (int)$_POST['owner_user_id'] : null;
+                    $allowPromotorAccess = isset($_POST['allow_promotor_access']) ? 1 : 0;
+
+                    $stmt = $pdo->prepare("
+                        UPDATE winback_campaigns
+                        SET name = ?, discount_type = ?, discount_value = ?, discount_valid_until = ?,
+                            owner_user_id = ?, allow_promotor_access = ?
+                        WHERE id = ?
+                    ");
+                    $stmt->execute([$name, $discountType, $discountValue, $validUntil ?: null, $ownerId, $allowPromotorAccess, $id]);
+                } else {
+                    // Non-admin (promotor) can only update basic settings
+                    $stmt = $pdo->prepare("
+                        UPDATE winback_campaigns
+                        SET name = ?, discount_type = ?, discount_value = ?, discount_valid_until = ?
+                        WHERE id = ?
+                    ");
+                    $stmt->execute([$name, $discountType, $discountValue, $validUntil ?: null, $id]);
+                }
+                $message = 'Kampanj uppdaterad';
+            }
         }
     } elseif ($action === 'create_question') {
         $questionText = trim($_POST['question_text'] ?? '');
@@ -340,29 +415,47 @@ if ($tablesExist) {
             $stmt->execute([$c['id']]);
             $c['response_count'] = (int)$stmt->fetchColumn();
 
-            // Get potential audience size
+            // Get potential audience size based on audience type
             $brandIds = json_decode($c['brand_ids'] ?? '[]', true) ?: [];
+            $audienceType = $c['audience_type'] ?? 'churned';
+
             if (!empty($brandIds)) {
                 $placeholders = implode(',', array_fill(0, count($brandIds), '?'));
-                $stmt = $pdo->prepare("
-                    SELECT COUNT(DISTINCT r.cyclist_id)
-                    FROM results r
-                    JOIN events e ON r.event_id = e.id
-                    JOIN series s ON e.series_id = s.id
-                    JOIN brand_series_map bsm ON s.id = bsm.series_id
-                    WHERE YEAR(e.date) BETWEEN ? AND ?
-                      AND bsm.brand_id IN ($placeholders)
-                      AND r.cyclist_id NOT IN (
-                          SELECT DISTINCT r2.cyclist_id
-                          FROM results r2
-                          JOIN events e2 ON r2.event_id = e2.id
-                          JOIN series s2 ON e2.series_id = s2.id
-                          JOIN brand_series_map bsm2 ON s2.id = bsm2.series_id
-                          WHERE YEAR(e2.date) = ?
-                            AND bsm2.brand_id IN ($placeholders)
-                      )
-                ");
-                $params = array_merge([$c['start_year'], $c['end_year']], $brandIds, [$c['target_year']], $brandIds);
+
+                if ($audienceType === 'active') {
+                    // ACTIVE: Count people who competed IN target_year
+                    $stmt = $pdo->prepare("
+                        SELECT COUNT(DISTINCT r.cyclist_id)
+                        FROM results r
+                        JOIN events e ON r.event_id = e.id
+                        JOIN series s ON e.series_id = s.id
+                        JOIN brand_series_map bsm ON s.id = bsm.series_id
+                        WHERE YEAR(e.date) = ?
+                          AND bsm.brand_id IN ($placeholders)
+                    ");
+                    $params = array_merge([$c['target_year']], $brandIds);
+                } else {
+                    // CHURNED: Count people who competed in start-end but NOT in target_year
+                    $stmt = $pdo->prepare("
+                        SELECT COUNT(DISTINCT r.cyclist_id)
+                        FROM results r
+                        JOIN events e ON r.event_id = e.id
+                        JOIN series s ON e.series_id = s.id
+                        JOIN brand_series_map bsm ON s.id = bsm.series_id
+                        WHERE YEAR(e.date) BETWEEN ? AND ?
+                          AND bsm.brand_id IN ($placeholders)
+                          AND r.cyclist_id NOT IN (
+                              SELECT DISTINCT r2.cyclist_id
+                              FROM results r2
+                              JOIN events e2 ON r2.event_id = e2.id
+                              JOIN series s2 ON e2.series_id = s2.id
+                              JOIN brand_series_map bsm2 ON s2.id = bsm2.series_id
+                              WHERE YEAR(e2.date) = ?
+                                AND bsm2.brand_id IN ($placeholders)
+                          )
+                    ");
+                    $params = array_merge([$c['start_year'], $c['end_year']], $brandIds, [$c['target_year']], $brandIds);
+                }
                 $stmt->execute($params);
                 $c['potential_audience'] = (int)$stmt->fetchColumn();
             } else {
@@ -401,11 +494,16 @@ $selectedCampaign = isset($_GET['campaign']) ? (int)$_GET['campaign'] : null;
 // Get responses for selected campaign
 $campaignResponses = [];
 $answerStats = [];
+$demographicStats = ['experience' => [], 'age' => []];
 
 if ($selectedCampaign && $tablesExist) {
     try {
         $stmt = $pdo->prepare("
-            SELECT wr.*, r.firstname, r.lastname, c.name as club_name
+            SELECT wr.*, r.firstname, r.lastname, r.birth_year, c.name as club_name,
+                   (SELECT COUNT(DISTINCT YEAR(e.date))
+                    FROM results res
+                    JOIN events e ON res.event_id = e.id
+                    WHERE res.cyclist_id = r.id) as total_seasons
             FROM winback_responses wr
             JOIN riders r ON wr.rider_id = r.id
             LEFT JOIN clubs c ON r.club_id = c.id
@@ -414,6 +512,39 @@ if ($selectedCampaign && $tablesExist) {
         ");
         $stmt->execute([$selectedCampaign]);
         $campaignResponses = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Calculate demographic breakdowns (anonymized)
+        $currentYear = (int)date('Y');
+        foreach ($campaignResponses as $resp) {
+            // Experience groups
+            $seasons = (int)($resp['total_seasons'] ?? 0);
+            if ($seasons <= 1) {
+                $expGroup = '1 sasong';
+            } elseif ($seasons <= 3) {
+                $expGroup = '2-3 sasonger';
+            } else {
+                $expGroup = '4+ sasonger';
+            }
+            $demographicStats['experience'][$expGroup] = ($demographicStats['experience'][$expGroup] ?? 0) + 1;
+
+            // Age groups
+            $birthYear = (int)($resp['birth_year'] ?? 0);
+            if ($birthYear > 0) {
+                $age = $currentYear - $birthYear;
+                if ($age < 18) {
+                    $ageGroup = 'Under 18';
+                } elseif ($age <= 30) {
+                    $ageGroup = '18-30 ar';
+                } elseif ($age <= 45) {
+                    $ageGroup = '31-45 ar';
+                } else {
+                    $ageGroup = '46+ ar';
+                }
+            } else {
+                $ageGroup = 'Okant';
+            }
+            $demographicStats['age'][$ageGroup] = ($demographicStats['age'][$ageGroup] ?? 0) + 1;
+        }
 
         // Get answer statistics (anonymized)
         $questions = $pdo->prepare("
@@ -618,6 +749,62 @@ include __DIR__ . '/components/unified-layout.php';
     color: var(--color-text-muted);
     font-size: 0.875rem;
 }
+/* Demographic Cards */
+.demographic-card {
+    background: var(--color-bg-page);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: var(--space-lg);
+}
+.demographic-card h4 {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    margin-bottom: var(--space-md);
+    color: var(--color-text-primary);
+    font-size: 1rem;
+}
+.demographic-bar {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    margin-bottom: var(--space-sm);
+}
+.demographic-label {
+    flex: 0 0 100px;
+    font-size: 0.875rem;
+    color: var(--color-text-secondary);
+}
+.demographic-bar-track {
+    flex: 1;
+    height: 24px;
+    background: var(--color-bg-surface);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+}
+.demographic-bar-fill {
+    height: 100%;
+    background: linear-gradient(90deg, var(--color-accent), var(--color-accent-hover));
+    border-radius: var(--radius-sm);
+    transition: width 0.3s ease;
+}
+.demographic-value {
+    flex: 0 0 80px;
+    text-align: right;
+    font-size: 0.875rem;
+    font-weight: 600;
+    color: var(--color-text-primary);
+}
+/* Audience type radio selection */
+.audience-option:hover {
+    border-color: var(--color-accent) !important;
+    background: var(--color-bg-hover) !important;
+}
+.audience-option:has(input:checked) {
+    border-color: var(--color-accent) !important;
+    background: var(--color-accent-light) !important;
+}
+
 .tabs-nav {
     display: flex;
     gap: var(--space-xs);
@@ -671,10 +858,12 @@ include __DIR__ . '/components/unified-layout.php';
         <div class="stat-value"><?= $stats['total_questions'] ?? 0 ?></div>
         <div class="stat-label">Aktiva fragor</div>
     </div>
-    <div class="stat-box">
-        <div class="stat-value"><?= count($campaigns) ?></div>
-        <div class="stat-label">Totalt kampanjer</div>
-    </div>
+    <a href="/admin/participant-analysis.php" class="stat-box" style="text-decoration:none;cursor:pointer;">
+        <div class="stat-value" style="display:flex;align-items:center;justify-content:center;gap:var(--space-xs);">
+            <i data-lucide="database" style="width:24px;height:24px;"></i>
+        </div>
+        <div class="stat-label">Analysera data</div>
+    </a>
 </div>
 
 <!-- Tabs -->
@@ -725,44 +914,72 @@ $audienceStats = ['total' => 0, 'with_email' => 0, 'without_email' => 0, 'invite
 
 if ($selectedCampData) {
     $brandIds = json_decode($selectedCampData['brand_ids'] ?? '[]', true) ?: [];
+    $audienceType = $selectedCampData['audience_type'] ?? 'churned';
 
     if (!empty($brandIds)) {
         $placeholders = implode(',', array_fill(0, count($brandIds), '?'));
 
-        // Get all riders who match the criteria
-        $sql = "
-            SELECT DISTINCT
-                r.id, r.firstname, r.lastname, r.email,
-                c.name as club_name,
-                MAX(YEAR(e.date)) as last_active_year,
-                COUNT(DISTINCT YEAR(e.date)) as total_seasons
-            FROM riders r
-            JOIN results res ON r.id = res.cyclist_id
-            JOIN events e ON res.event_id = e.id
-            JOIN series s ON e.series_id = s.id
-            JOIN brand_series_map bsm ON s.id = bsm.series_id
-            LEFT JOIN clubs c ON r.club_id = c.id
-            WHERE YEAR(e.date) BETWEEN ? AND ?
-              AND bsm.brand_id IN ($placeholders)
-              AND r.id NOT IN (
-                  SELECT DISTINCT res2.cyclist_id
-                  FROM results res2
-                  JOIN events e2 ON res2.event_id = e2.id
-                  JOIN series s2 ON e2.series_id = s2.id
-                  JOIN brand_series_map bsm2 ON s2.id = bsm2.series_id
-                  WHERE YEAR(e2.date) = ?
-                    AND bsm2.brand_id IN ($placeholders)
-              )
-            GROUP BY r.id
-            ORDER BY last_active_year DESC, r.lastname, r.firstname
-            LIMIT 500
-        ";
-        $params = array_merge(
-            [$selectedCampData['start_year'], $selectedCampData['end_year']],
-            $brandIds,
-            [$selectedCampData['target_year']],
-            $brandIds
-        );
+        if ($audienceType === 'active') {
+            // ACTIVE: Get riders who competed IN target_year for these brands
+            $sql = "
+                SELECT DISTINCT
+                    r.id, r.firstname, r.lastname, r.email,
+                    c.name as club_name,
+                    COUNT(DISTINCT e.id) as events_2025,
+                    COUNT(DISTINCT YEAR(e.date)) as total_seasons
+                FROM riders r
+                JOIN results res ON r.id = res.cyclist_id
+                JOIN events e ON res.event_id = e.id
+                JOIN series s ON e.series_id = s.id
+                JOIN brand_series_map bsm ON s.id = bsm.series_id
+                LEFT JOIN clubs c ON r.club_id = c.id
+                WHERE YEAR(e.date) = ?
+                  AND bsm.brand_id IN ($placeholders)
+                GROUP BY r.id
+                ORDER BY events_2025 DESC, r.lastname, r.firstname
+                LIMIT 500
+            ";
+            $params = array_merge(
+                [$selectedCampData['target_year']],
+                $brandIds
+            );
+        } else {
+            // CHURNED: Get riders who competed in start_year-end_year but NOT in target_year
+            $sql = "
+                SELECT DISTINCT
+                    r.id, r.firstname, r.lastname, r.email,
+                    c.name as club_name,
+                    MAX(YEAR(e.date)) as last_active_year,
+                    COUNT(DISTINCT YEAR(e.date)) as total_seasons
+                FROM riders r
+                JOIN results res ON r.id = res.cyclist_id
+                JOIN events e ON res.event_id = e.id
+                JOIN series s ON e.series_id = s.id
+                JOIN brand_series_map bsm ON s.id = bsm.series_id
+                LEFT JOIN clubs c ON r.club_id = c.id
+                WHERE YEAR(e.date) BETWEEN ? AND ?
+                  AND bsm.brand_id IN ($placeholders)
+                  AND r.id NOT IN (
+                      SELECT DISTINCT res2.cyclist_id
+                      FROM results res2
+                      JOIN events e2 ON res2.event_id = e2.id
+                      JOIN series s2 ON e2.series_id = s2.id
+                      JOIN brand_series_map bsm2 ON s2.id = bsm2.series_id
+                      WHERE YEAR(e2.date) = ?
+                        AND bsm2.brand_id IN ($placeholders)
+                  )
+                GROUP BY r.id
+                ORDER BY last_active_year DESC, r.lastname, r.firstname
+                LIMIT 500
+            ";
+            $params = array_merge(
+                [$selectedCampData['start_year'], $selectedCampData['end_year']],
+                $brandIds,
+                [$selectedCampData['target_year']],
+                $brandIds
+            );
+        }
+
         $stmt = $pdo->prepare($sql);
         $stmt->execute($params);
         $audienceRiders = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -821,9 +1038,13 @@ if ($selectedCampData) {
 }
 ?>
 
+<?php $isActiveAudience = ($selectedCampData['audience_type'] ?? 'churned') === 'active'; ?>
 <div class="admin-card">
     <div class="admin-card-header">
         <h2>Malgrupp: <?= htmlspecialchars($selectedCampData['name'] ?? 'Okand') ?></h2>
+        <span class="badge <?= $isActiveAudience ? 'badge-success' : 'badge-warning' ?>">
+            <?= $isActiveAudience ? 'Aktiva ' . $selectedCampData['target_year'] : 'Churnade (ej ' . $selectedCampData['target_year'] . ')' ?>
+        </span>
     </div>
     <div class="admin-card-body">
         <!-- Contact Stats -->
@@ -892,7 +1113,7 @@ if ($selectedCampData) {
                                 <th>Namn</th>
                                 <th>Email</th>
                                 <th>Klubb</th>
-                                <th>Senast aktiv</th>
+                                <th><?= $isActiveAudience ? 'Events ' . $selectedCampData['target_year'] : 'Senast aktiv' ?></th>
                                 <th>Status</th>
                             </tr>
                         </thead>
@@ -919,7 +1140,7 @@ if ($selectedCampData) {
                                     <?php endif; ?>
                                 </td>
                                 <td><?= htmlspecialchars($rider['club_name'] ?? '-') ?></td>
-                                <td><?= $rider['last_active_year'] ?></td>
+                                <td><?= $isActiveAudience ? ($rider['events_2025'] ?? '-') : ($rider['last_active_year'] ?? '-') ?></td>
                                 <td>
                                     <?php if ($rider['has_responded']): ?>
                                         <span class="badge badge-success">Svarat</span>
@@ -1339,6 +1560,67 @@ if (!$selectedCampData || !canAccessCampaign($selectedCampData)):
                 </div>
             <?php endforeach; ?>
 
+            <!-- Demographic Trends (Anonymized) -->
+            <?php if (!empty($demographicStats['experience']) || !empty($demographicStats['age'])): ?>
+            <h3 style="margin: var(--space-xl) 0 var(--space-lg);">
+                <i data-lucide="bar-chart-3" style="width:20px;height:20px;vertical-align:middle;margin-right:var(--space-xs);"></i>
+                Demografiska trender (anonymiserade)
+            </h3>
+            <p style="color:var(--color-text-muted);margin-bottom:var(--space-lg);font-size:0.875rem;">
+                Baserat pa svarandes erfarenhet och alder - inga individuella svar visas.
+            </p>
+
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:var(--space-xl);">
+                <!-- Experience Breakdown -->
+                <?php if (!empty($demographicStats['experience'])): ?>
+                <div class="demographic-card">
+                    <h4><i data-lucide="trophy" style="width:16px;height:16px;"></i> Erfarenhetsniva</h4>
+                    <?php
+                    $totalExp = array_sum($demographicStats['experience']);
+                    $expOrder = ['1 sasong' => 0, '2-3 sasonger' => 1, '4+ sasonger' => 2];
+                    uksort($demographicStats['experience'], function($a, $b) use ($expOrder) {
+                        return ($expOrder[$a] ?? 99) - ($expOrder[$b] ?? 99);
+                    });
+                    foreach ($demographicStats['experience'] as $group => $count):
+                        $pct = $totalExp > 0 ? round(($count / $totalExp) * 100) : 0;
+                    ?>
+                    <div class="demographic-bar">
+                        <div class="demographic-label"><?= htmlspecialchars($group) ?></div>
+                        <div class="demographic-bar-track">
+                            <div class="demographic-bar-fill" style="width:<?= $pct ?>%;"></div>
+                        </div>
+                        <div class="demographic-value"><?= $count ?> (<?= $pct ?>%)</div>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
+                <?php endif; ?>
+
+                <!-- Age Breakdown -->
+                <?php if (!empty($demographicStats['age'])): ?>
+                <div class="demographic-card">
+                    <h4><i data-lucide="users" style="width:16px;height:16px;"></i> Aldersfordelning</h4>
+                    <?php
+                    $totalAge = array_sum($demographicStats['age']);
+                    $ageOrder = ['Under 18' => 0, '18-30 ar' => 1, '31-45 ar' => 2, '46+ ar' => 3, 'Okant' => 4];
+                    uksort($demographicStats['age'], function($a, $b) use ($ageOrder) {
+                        return ($ageOrder[$a] ?? 99) - ($ageOrder[$b] ?? 99);
+                    });
+                    foreach ($demographicStats['age'] as $group => $count):
+                        $pct = $totalAge > 0 ? round(($count / $totalAge) * 100) : 0;
+                    ?>
+                    <div class="demographic-bar">
+                        <div class="demographic-label"><?= htmlspecialchars($group) ?></div>
+                        <div class="demographic-bar-track">
+                            <div class="demographic-bar-fill" style="width:<?= $pct ?>%;"></div>
+                        </div>
+                        <div class="demographic-value"><?= $count ?> (<?= $pct ?>%)</div>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
+                <?php endif; ?>
+            </div>
+            <?php endif; ?>
+
             <!-- Response list (for admin tracking) -->
             <h3 style="margin: var(--space-xl) 0 var(--space-lg);">Svarande (<?= count($campaignResponses) ?>)</h3>
             <div class="admin-table-container">
@@ -1384,6 +1666,64 @@ if (!$selectedCampData || !canAccessCampaign($selectedCampData)):
     <div class="admin-card-body">
         <form method="POST">
             <input type="hidden" name="action" value="create_campaign">
+
+            <!-- Audience Type Selection -->
+            <div class="form-group" style="margin-bottom:var(--space-md);">
+                <label class="form-label">Malgrupp *</label>
+                <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:var(--space-md);">
+                    <label class="audience-option" style="display:flex;align-items:flex-start;gap:var(--space-sm);padding:var(--space-md);background:var(--color-bg-page);border:2px solid var(--color-border);border-radius:var(--radius-md);cursor:pointer;transition:all 0.15s;">
+                        <input type="radio" name="audience_type" value="churned" checked style="margin-top:3px;">
+                        <div>
+                            <strong style="color:var(--color-text-primary);">Churnade deltagare</strong>
+                            <p style="margin:var(--space-2xs) 0 0;font-size:0.875rem;color:var(--color-text-secondary);">
+                                Tavlade tidigare men INTE malaret.<br>
+                                <em>Syfte: Fa tillbaka inaktiva deltagare</em>
+                            </p>
+                        </div>
+                    </label>
+                    <label class="audience-option" style="display:flex;align-items:flex-start;gap:var(--space-sm);padding:var(--space-md);background:var(--color-bg-page);border:2px solid var(--color-border);border-radius:var(--radius-md);cursor:pointer;transition:all 0.15s;">
+                        <input type="radio" name="audience_type" value="active" style="margin-top:3px;">
+                        <div>
+                            <strong style="color:var(--color-text-primary);">Aktiva deltagare</strong>
+                            <p style="margin:var(--space-2xs) 0 0;font-size:0.875rem;color:var(--color-text-secondary);">
+                                Tavlade minst en gang malaret.<br>
+                                <em>Syfte: Feedback + rabatt for nasta ar</em>
+                            </p>
+                        </div>
+                    </label>
+                </div>
+            </div>
+
+            <!-- Year Settings -->
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:var(--space-md);margin-bottom:var(--space-md);padding:var(--space-md);background:var(--color-bg-page);border-radius:var(--radius-md);">
+                <div class="form-group">
+                    <label class="form-label">Startar</label>
+                    <select name="start_year" class="form-select">
+                        <?php for ($y = 2016; $y <= (int)date('Y'); $y++): ?>
+                        <option value="<?= $y ?>" <?= $y == 2016 ? 'selected' : '' ?>><?= $y ?></option>
+                        <?php endfor; ?>
+                    </select>
+                    <small style="color:var(--color-text-muted);">Forsta ar att inkludera</small>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Slutar</label>
+                    <select name="end_year" class="form-select">
+                        <?php for ($y = 2016; $y <= (int)date('Y'); $y++): ?>
+                        <option value="<?= $y ?>" <?= $y == ((int)date('Y') - 1) ? 'selected' : '' ?>><?= $y ?></option>
+                        <?php endfor; ?>
+                    </select>
+                    <small style="color:var(--color-text-muted);">Sista ar att inkludera</small>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Malar</label>
+                    <select name="target_year" class="form-select">
+                        <?php for ($y = 2020; $y <= (int)date('Y') + 1; $y++): ?>
+                        <option value="<?= $y ?>" <?= $y == (int)date('Y') ? 'selected' : '' ?>><?= $y ?></option>
+                        <?php endfor; ?>
+                    </select>
+                    <small style="color:var(--color-text-muted);">Churned: ej detta ar. Aktiv: detta ar.</small>
+                </div>
+            </div>
 
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:var(--space-md);margin-bottom:var(--space-md);">
                 <div class="form-group">
@@ -1468,6 +1808,7 @@ if (!$selectedCampData || !canAccessCampaign($selectedCampData)):
         $brandIds = json_decode($c['brand_ids'] ?? '[]', true) ?: [];
         $canEdit = canEditCampaign($c);
         $ownerName = $c['owner_name'] ?: $c['owner_username'] ?: null;
+        $campAudienceType = $c['audience_type'] ?? 'churned';
         ?>
         <div class="campaign-card <?= $c['is_active'] ? '' : 'inactive' ?>">
             <div class="campaign-header">
@@ -1476,6 +1817,9 @@ if (!$selectedCampData || !canAccessCampaign($selectedCampData)):
                     <div style="margin-top:var(--space-xs);display:flex;gap:var(--space-xs);flex-wrap:wrap;">
                         <span class="badge <?= $c['is_active'] ? 'badge-success' : 'badge-secondary' ?>">
                             <?= $c['is_active'] ? 'Aktiv' : 'Inaktiv' ?>
+                        </span>
+                        <span class="badge <?= $campAudienceType === 'active' ? 'badge-primary' : 'badge-warning' ?>" title="Malgrupp">
+                            <?= $campAudienceType === 'active' ? 'Aktiva ' . $c['target_year'] : 'Churnade' ?>
                         </span>
                         <?php if ($ownerName): ?>
                         <span class="badge badge-info" title="Kampanjagare">
@@ -1498,26 +1842,28 @@ if (!$selectedCampData || !canAccessCampaign($selectedCampData)):
                         <i data-lucide="bar-chart-2"></i> Resultat
                     </a>
                     <?php if ($canEdit): ?>
+                    <button type="button" class="btn-admin btn-admin-ghost btn-sm" onclick="editCampaign(<?= htmlspecialchars(json_encode($c)) ?>)" title="Redigera kampanj">
+                        <i data-lucide="edit-2"></i>
+                    </button>
                     <form method="POST" style="display:inline;">
                         <input type="hidden" name="action" value="toggle_campaign">
                         <input type="hidden" name="id" value="<?= $c['id'] ?>">
-                        <button type="submit" class="btn-admin btn-admin-ghost btn-sm">
+                        <button type="submit" class="btn-admin btn-admin-ghost btn-sm" title="<?= $c['is_active'] ? 'Pausa' : 'Aktivera' ?>">
                             <i data-lucide="<?= $c['is_active'] ? 'pause' : 'play' ?>"></i>
                         </button>
                     </form>
-                    <?php endif; ?>
-                    <?php if ($isAdmin): ?>
-                    <button type="button" class="btn-admin btn-admin-ghost btn-sm" onclick="editCampaignOwner(<?= htmlspecialchars(json_encode($c)) ?>)" title="Hantera agare">
-                        <i data-lucide="settings"></i>
-                    </button>
                     <?php endif; ?>
                 </div>
             </div>
 
             <div class="campaign-meta">
                 <span class="campaign-meta-item">
-                    <i data-lucide="calendar"></i>
-                    Malgrupp: Tavlade <?= $c['start_year'] ?>-<?= $c['end_year'] ?>, ej <?= $c['target_year'] ?>
+                    <i data-lucide="<?= $campAudienceType === 'active' ? 'users' : 'user-minus' ?>"></i>
+                    <?php if ($campAudienceType === 'active'): ?>
+                        Malgrupp: Tavlade <?= $c['target_year'] ?>
+                    <?php else: ?>
+                        Malgrupp: Tavlade <?= $c['start_year'] ?>-<?= $c['end_year'] ?>, ej <?= $c['target_year'] ?>
+                    <?php endif; ?>
                 </span>
                 <span class="campaign-meta-item">
                     <i data-lucide="tag"></i>
@@ -1560,49 +1906,71 @@ if (!$selectedCampData || !canAccessCampaign($selectedCampData)):
 
 <?php endif; // viewMode ?>
 
-<?php if ($isAdmin && !empty($promotors)): ?>
-<!-- Edit Campaign Owner Modal -->
-<div id="edit-owner-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center;">
+<!-- Edit Campaign Modal -->
+<div id="edit-campaign-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center;">
     <div style="background:var(--color-bg-surface);border-radius:var(--radius-lg);padding:var(--space-xl);max-width:500px;width:90%;max-height:90vh;overflow-y:auto;">
         <h3 style="margin-bottom:var(--space-lg);">
-            <i data-lucide="settings" style="width:20px;height:20px;vertical-align:middle;margin-right:var(--space-xs);"></i>
-            Kampanjinstallningar
+            <i data-lucide="edit-2" style="width:20px;height:20px;vertical-align:middle;margin-right:var(--space-xs);"></i>
+            Redigera kampanj
         </h3>
-        <form method="POST" id="edit-owner-form">
-            <input type="hidden" name="action" value="update_campaign_owner">
+        <form method="POST" id="edit-campaign-form">
+            <input type="hidden" name="action" value="update_campaign">
             <input type="hidden" name="id" id="edit-campaign-id">
 
             <div class="form-group" style="margin-bottom:var(--space-md);">
-                <label class="form-label">Kampanj</label>
-                <input type="text" id="edit-campaign-name" class="form-input" readonly style="background:var(--color-bg-page);">
+                <label class="form-label">Kampanjnamn *</label>
+                <input type="text" name="name" id="edit-campaign-name" class="form-input" required>
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-md);margin-bottom:var(--space-md);">
+                <div class="form-group">
+                    <label class="form-label">Rabatttyp</label>
+                    <select name="discount_type" id="edit-discount-type" class="form-select">
+                        <option value="fixed">Fast belopp (SEK)</option>
+                        <option value="percentage">Procent (%)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Rabattvarde</label>
+                    <input type="number" name="discount_value" id="edit-discount-value" class="form-input" min="1">
+                </div>
             </div>
 
             <div class="form-group" style="margin-bottom:var(--space-md);">
-                <label class="form-label">Agare (promotor)</label>
-                <select name="owner_user_id" id="edit-owner-id" class="form-select">
-                    <option value="">Ingen agare</option>
-                    <?php foreach ($promotors as $p): ?>
-                    <option value="<?= $p['id'] ?>">
-                        <?= htmlspecialchars($p['full_name'] ?: $p['username']) ?>
-                        (<?= $p['role'] ?>)
-                    </option>
-                    <?php endforeach; ?>
-                </select>
-                <small style="color:var(--color-text-muted);">Agaren kan hantera kampanjen, se malgrupp och skicka inbjudningar</small>
+                <label class="form-label">Giltig t.o.m.</label>
+                <input type="date" name="valid_until" id="edit-valid-until" class="form-input">
             </div>
 
-            <div class="form-group" style="margin-bottom:var(--space-lg);">
-                <label style="display:flex;align-items:center;gap:var(--space-xs);cursor:pointer;">
-                    <input type="checkbox" name="allow_promotor_access" id="edit-promotor-access" value="1">
-                    Tillat alla promotors att se resultat
-                </label>
-                <small style="color:var(--color-text-muted);display:block;margin-top:var(--space-xs);">
-                    Om aktiverad kan alla inloggade promotors se svar och statistik for denna kampanj
-                </small>
+            <?php if ($isAdmin && !empty($promotors)): ?>
+            <div style="padding-top:var(--space-md);border-top:1px solid var(--color-border);margin-bottom:var(--space-md);">
+                <div class="form-group" style="margin-bottom:var(--space-md);">
+                    <label class="form-label">Agare (promotor)</label>
+                    <select name="owner_user_id" id="edit-owner-id" class="form-select">
+                        <option value="">Ingen agare</option>
+                        <?php foreach ($promotors as $p): ?>
+                        <option value="<?= $p['id'] ?>">
+                            <?= htmlspecialchars($p['full_name'] ?: $p['username']) ?>
+                            (<?= $p['role'] ?>)
+                        </option>
+                        <?php endforeach; ?>
+                    </select>
+                    <small style="color:var(--color-text-muted);">Agaren kan hantera kampanjen, se malgrupp och skicka inbjudningar</small>
+                </div>
+
+                <div class="form-group" style="margin-bottom:var(--space-md);">
+                    <label style="display:flex;align-items:center;gap:var(--space-xs);cursor:pointer;">
+                        <input type="checkbox" name="allow_promotor_access" id="edit-promotor-access" value="1">
+                        Tillat alla promotors att se resultat
+                    </label>
+                    <small style="color:var(--color-text-muted);display:block;margin-top:var(--space-xs);">
+                        Om aktiverad kan alla inloggade promotors se svar och statistik for denna kampanj
+                    </small>
+                </div>
             </div>
+            <?php endif; ?>
 
             <div style="display:flex;gap:var(--space-md);justify-content:flex-end;">
-                <button type="button" class="btn-admin btn-admin-secondary" onclick="closeOwnerModal()">Avbryt</button>
+                <button type="button" class="btn-admin btn-admin-secondary" onclick="closeEditCampaignModal()">Avbryt</button>
                 <button type="submit" class="btn-admin btn-admin-primary">
                     <i data-lucide="save"></i> Spara
                 </button>
@@ -1612,24 +1980,30 @@ if (!$selectedCampData || !canAccessCampaign($selectedCampData)):
 </div>
 
 <script>
-function editCampaignOwner(campaign) {
+function editCampaign(campaign) {
     document.getElementById('edit-campaign-id').value = campaign.id;
     document.getElementById('edit-campaign-name').value = campaign.name;
+    document.getElementById('edit-discount-type').value = campaign.discount_type || 'fixed';
+    document.getElementById('edit-discount-value').value = campaign.discount_value || 100;
+    document.getElementById('edit-valid-until').value = campaign.discount_valid_until ? campaign.discount_valid_until.split(' ')[0] : '';
+
+    <?php if ($isAdmin && !empty($promotors)): ?>
     document.getElementById('edit-owner-id').value = campaign.owner_user_id || '';
     document.getElementById('edit-promotor-access').checked = campaign.allow_promotor_access == 1;
-    document.getElementById('edit-owner-modal').style.display = 'flex';
+    <?php endif; ?>
+
+    document.getElementById('edit-campaign-modal').style.display = 'flex';
 }
 
-function closeOwnerModal() {
-    document.getElementById('edit-owner-modal').style.display = 'none';
+function closeEditCampaignModal() {
+    document.getElementById('edit-campaign-modal').style.display = 'none';
 }
 
 // Close modal on outside click
-document.getElementById('edit-owner-modal')?.addEventListener('click', function(e) {
-    if (e.target === this) closeOwnerModal();
+document.getElementById('edit-campaign-modal')?.addEventListener('click', function(e) {
+    if (e.target === this) closeEditCampaignModal();
 });
 </script>
-<?php endif; ?>
 
 <?php endif; // tablesExist ?>
 

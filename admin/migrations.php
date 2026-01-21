@@ -73,12 +73,18 @@ $migrationChecks = [
         'tables' => ['scf_license_cache', 'scf_license_history', 'scf_sync_log', 'scf_match_candidates'],
         'columns' => ['riders.scf_license_verified_at', 'riders.scf_license_year', 'riders.scf_license_type', 'riders.scf_disciplines', 'riders.scf_club_name']
     ],
+    '020_merge_map_names.sql' => [
+        'columns' => ['rider_merge_map.merged_firstname', 'rider_merge_map.merged_lastname', 'rider_merge_map.merged_license_number']
+    ],
     '021_winback_survey.sql' => [
         'tables' => ['winback_campaigns', 'winback_questions', 'winback_responses', 'winback_answers']
     ],
     '022_winback_invitations.sql' => [
         'tables' => ['winback_invitations'],
         'columns' => ['winback_campaigns.owner_user_id', 'winback_campaigns.allow_promotor_access']
+    ],
+    '023_winback_audience_type.sql' => [
+        'columns' => ['winback_campaigns.audience_type']
     ],
 ];
 
