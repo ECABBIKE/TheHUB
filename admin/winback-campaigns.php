@@ -81,11 +81,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $tablesExist) {
         $ownerId = !empty($_POST['owner_user_id']) ? (int)$_POST['owner_user_id'] : $currentUserId;
         $allowPromotorAccess = isset($_POST['allow_promotor_access']) ? 1 : 0;
         $audienceType = $_POST['audience_type'] ?? 'churned';
+        $startYear = (int)($_POST['start_year'] ?? 2016);
+        $endYear = (int)($_POST['end_year'] ?? ((int)date('Y') - 1));
+        $targetYear = (int)($_POST['target_year'] ?? (int)date('Y'));
 
         // Validate audience type
         if (!in_array($audienceType, ['churned', 'active'])) {
             $audienceType = 'churned';
         }
+
+        // Validate years
+        if ($startYear < 2010) $startYear = 2016;
+        if ($endYear > (int)date('Y')) $endYear = (int)date('Y');
+        if ($startYear > $endYear) $startYear = $endYear;
 
         if ($name && !empty($brandIds)) {
             // Check if audience_type column exists (migration 023)
@@ -97,17 +105,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $tablesExist) {
 
             if ($hasAudienceType) {
                 $stmt = $pdo->prepare("
-                    INSERT INTO winback_campaigns (name, target_type, audience_type, brand_ids, discount_type, discount_value, discount_valid_until, owner_user_id, allow_promotor_access, is_active)
-                    VALUES (?, 'multi_brand', ?, ?, ?, ?, ?, ?, ?, 1)
+                    INSERT INTO winback_campaigns (name, target_type, audience_type, brand_ids, start_year, end_year, target_year, discount_type, discount_value, discount_valid_until, owner_user_id, allow_promotor_access, is_active)
+                    VALUES (?, 'multi_brand', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
                 ");
-                $stmt->execute([$name, $audienceType, json_encode(array_map('intval', $brandIds)), $discountType, $discountValue, $validUntil ?: null, $ownerId, $allowPromotorAccess]);
+                $stmt->execute([$name, $audienceType, json_encode(array_map('intval', $brandIds)), $startYear, $endYear, $targetYear, $discountType, $discountValue, $validUntil ?: null, $ownerId, $allowPromotorAccess]);
             } else {
                 // Fallback if migration not run yet
                 $stmt = $pdo->prepare("
-                    INSERT INTO winback_campaigns (name, target_type, brand_ids, discount_type, discount_value, discount_valid_until, owner_user_id, allow_promotor_access, is_active)
-                    VALUES (?, 'multi_brand', ?, ?, ?, ?, ?, ?, 1)
+                    INSERT INTO winback_campaigns (name, target_type, brand_ids, start_year, end_year, target_year, discount_type, discount_value, discount_valid_until, owner_user_id, allow_promotor_access, is_active)
+                    VALUES (?, 'multi_brand', ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
                 ");
-                $stmt->execute([$name, json_encode(array_map('intval', $brandIds)), $discountType, $discountValue, $validUntil ?: null, $ownerId, $allowPromotorAccess]);
+                $stmt->execute([$name, json_encode(array_map('intval', $brandIds)), $startYear, $endYear, $targetYear, $discountType, $discountValue, $validUntil ?: null, $ownerId, $allowPromotorAccess]);
             }
             $message = 'Kampanj skapad!';
         } else {
@@ -1668,7 +1676,7 @@ if (!$selectedCampData || !canAccessCampaign($selectedCampData)):
                         <div>
                             <strong style="color:var(--color-text-primary);">Churnade deltagare</strong>
                             <p style="margin:var(--space-2xs) 0 0;font-size:0.875rem;color:var(--color-text-secondary);">
-                                Tavlade tidigare (2021-2024) men INTE 2025.<br>
+                                Tavlade tidigare men INTE malaret.<br>
                                 <em>Syfte: Fa tillbaka inaktiva deltagare</em>
                             </p>
                         </div>
@@ -1676,13 +1684,44 @@ if (!$selectedCampData || !canAccessCampaign($selectedCampData)):
                     <label class="audience-option" style="display:flex;align-items:flex-start;gap:var(--space-sm);padding:var(--space-md);background:var(--color-bg-page);border:2px solid var(--color-border);border-radius:var(--radius-md);cursor:pointer;transition:all 0.15s;">
                         <input type="radio" name="audience_type" value="active" style="margin-top:3px;">
                         <div>
-                            <strong style="color:var(--color-text-primary);">Aktiva 2025-deltagare</strong>
+                            <strong style="color:var(--color-text-primary);">Aktiva deltagare</strong>
                             <p style="margin:var(--space-2xs) 0 0;font-size:0.875rem;color:var(--color-text-secondary);">
-                                Tavlade minst en gang 2025.<br>
-                                <em>Syfte: Feedback + rabatt for 2026</em>
+                                Tavlade minst en gang malaret.<br>
+                                <em>Syfte: Feedback + rabatt for nasta ar</em>
                             </p>
                         </div>
                     </label>
+                </div>
+            </div>
+
+            <!-- Year Settings -->
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:var(--space-md);margin-bottom:var(--space-md);padding:var(--space-md);background:var(--color-bg-page);border-radius:var(--radius-md);">
+                <div class="form-group">
+                    <label class="form-label">Startar</label>
+                    <select name="start_year" class="form-select">
+                        <?php for ($y = 2016; $y <= (int)date('Y'); $y++): ?>
+                        <option value="<?= $y ?>" <?= $y == 2016 ? 'selected' : '' ?>><?= $y ?></option>
+                        <?php endfor; ?>
+                    </select>
+                    <small style="color:var(--color-text-muted);">Forsta ar att inkludera</small>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Slutar</label>
+                    <select name="end_year" class="form-select">
+                        <?php for ($y = 2016; $y <= (int)date('Y'); $y++): ?>
+                        <option value="<?= $y ?>" <?= $y == ((int)date('Y') - 1) ? 'selected' : '' ?>><?= $y ?></option>
+                        <?php endfor; ?>
+                    </select>
+                    <small style="color:var(--color-text-muted);">Sista ar att inkludera</small>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Malar</label>
+                    <select name="target_year" class="form-select">
+                        <?php for ($y = 2020; $y <= (int)date('Y') + 1; $y++): ?>
+                        <option value="<?= $y ?>" <?= $y == (int)date('Y') ? 'selected' : '' ?>><?= $y ?></option>
+                        <?php endfor; ?>
+                    </select>
+                    <small style="color:var(--color-text-muted);">Churned: ej detta ar. Aktiv: detta ar.</small>
                 </div>
             </div>
 
