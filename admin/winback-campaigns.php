@@ -243,6 +243,40 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $tablesExist) {
             $pdo->prepare("DELETE FROM winback_questions WHERE id = ?")->execute([$id]);
             $message = 'Fraga borttagen';
         }
+    } elseif ($action === 'cleanup_duplicates') {
+        // Find and remove duplicate questions (keep the one with lowest ID)
+        try {
+            // Find duplicates based on question_text (case-insensitive)
+            $duplicates = $pdo->query("
+                SELECT q1.id
+                FROM winback_questions q1
+                INNER JOIN (
+                    SELECT MIN(id) as keep_id, LOWER(question_text) as ltext
+                    FROM winback_questions
+                    GROUP BY LOWER(question_text)
+                    HAVING COUNT(*) > 1
+                ) q2 ON LOWER(q1.question_text) = q2.ltext AND q1.id != q2.keep_id
+            ")->fetchAll(PDO::FETCH_COLUMN);
+
+            $deletedCount = 0;
+            foreach ($duplicates as $dupId) {
+                // Check if this duplicate has answers
+                $stmt = $pdo->prepare("SELECT COUNT(*) FROM winback_answers WHERE question_id = ?");
+                $stmt->execute([$dupId]);
+                if ($stmt->fetchColumn() == 0) {
+                    $pdo->prepare("DELETE FROM winback_questions WHERE id = ?")->execute([$dupId]);
+                    $deletedCount++;
+                }
+            }
+
+            if ($deletedCount > 0) {
+                $message = "Rensade $deletedCount dubbletter av fragor";
+            } else {
+                $message = 'Inga dubbletter hittades att rensa';
+            }
+        } catch (Exception $e) {
+            $error = 'Fel vid rensning: ' . $e->getMessage();
+        }
     } elseif ($action === 'send_invitations') {
         // Send invitations to selected riders
         $campaignId = (int)$_POST['campaign_id'];
@@ -476,6 +510,7 @@ if ($tablesExist) {
 
 // Get all questions for question management view
 $allQuestions = [];
+$duplicateCount = 0;
 if ($tablesExist) {
     try {
         $allQuestions = $pdo->query("
@@ -484,6 +519,20 @@ if ($tablesExist) {
             LEFT JOIN winback_campaigns c ON q.campaign_id = c.id
             ORDER BY q.sort_order ASC, q.id ASC
         ")->fetchAll(PDO::FETCH_ASSOC);
+
+        // Count duplicates
+        $duplicateCount = (int)$pdo->query("
+            SELECT COUNT(*) FROM (
+                SELECT q1.id
+                FROM winback_questions q1
+                INNER JOIN (
+                    SELECT MIN(id) as keep_id, LOWER(question_text) as ltext
+                    FROM winback_questions
+                    GROUP BY LOWER(question_text)
+                    HAVING COUNT(*) > 1
+                ) q2 ON LOWER(q1.question_text) = q2.ltext AND q1.id != q2.keep_id
+            ) as dups
+        ")->fetchColumn();
     } catch (Exception $e) {}
 }
 
@@ -823,6 +872,111 @@ include __DIR__ . '/components/unified-layout.php';
 .tab-link.active {
     color: var(--color-accent);
     border-bottom-color: var(--color-accent);
+}
+
+/* Mobile Edge-to-Edge */
+@media (max-width: 767px) {
+    .stats-grid {
+        grid-template-columns: repeat(2, 1fr);
+        gap: var(--space-sm);
+        margin-left: -16px;
+        margin-right: -16px;
+        padding: 0 var(--space-md);
+    }
+    .stat-box {
+        padding: var(--space-md);
+    }
+    .stat-value {
+        font-size: 1.5rem;
+    }
+    .admin-card {
+        margin-left: -16px;
+        margin-right: -16px;
+        border-radius: 0;
+        border-left: none;
+        border-right: none;
+    }
+    .admin-table-container {
+        margin-left: -16px;
+        margin-right: -16px;
+        overflow-x: auto;
+    }
+    .admin-table {
+        min-width: 600px;
+    }
+    .tabs-nav {
+        margin-left: -16px;
+        margin-right: -16px;
+        padding: 0 var(--space-md);
+        overflow-x: auto;
+        flex-wrap: nowrap;
+    }
+    .tab-link {
+        padding: var(--space-sm);
+        white-space: nowrap;
+        font-size: 0.875rem;
+    }
+    .campaign-card {
+        margin-left: -16px;
+        margin-right: -16px;
+        border-radius: 0;
+        border-left: none;
+        border-right: none;
+    }
+    .campaign-stats {
+        flex-wrap: wrap;
+        gap: var(--space-md);
+    }
+    .campaign-stat {
+        flex: 0 0 calc(50% - var(--space-md));
+    }
+    .answer-stat {
+        margin-left: -16px;
+        margin-right: -16px;
+        border-radius: 0;
+        border-left: none;
+        border-right: none;
+    }
+    .option-bar {
+        flex-wrap: wrap;
+    }
+    .option-label {
+        flex: 0 0 100%;
+        margin-bottom: var(--space-xs);
+    }
+    .option-bar-fill {
+        flex: 1;
+    }
+    .demographic-card {
+        margin-left: -16px;
+        margin-right: -16px;
+        border-radius: 0;
+        border-left: none;
+        border-right: none;
+    }
+    .demographic-bar {
+        flex-wrap: wrap;
+    }
+    .demographic-label {
+        flex: 0 0 100%;
+        margin-bottom: var(--space-2xs);
+    }
+}
+
+/* Duplicate warning */
+.duplicate-warning {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    padding: var(--space-md);
+    background: rgba(251, 191, 36, 0.15);
+    border: 1px solid var(--color-warning);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--space-md);
+}
+.duplicate-warning i {
+    color: var(--color-warning);
+    flex-shrink: 0;
 }
 </style>
 
@@ -1250,6 +1404,25 @@ document.getElementById('invitation-form')?.addEventListener('submit', function(
     Endast administratorer kan hantera fragor.
 </div>
 <?php else: ?>
+
+<?php if ($duplicateCount > 0): ?>
+<div class="duplicate-warning">
+    <i data-lucide="alert-triangle"></i>
+    <div style="flex:1;">
+        <strong><?= $duplicateCount ?> dubbletter hittades</strong>
+        <p style="margin:var(--space-2xs) 0 0;font-size:0.875rem;color:var(--color-text-secondary);">
+            Det finns fragor med samma text. Klicka for att rensa dubbletter (behaller aldsta fragan).
+        </p>
+    </div>
+    <form method="POST" style="flex-shrink:0;">
+        <input type="hidden" name="action" value="cleanup_duplicates">
+        <button type="submit" class="btn-admin btn-admin-warning" onclick="return confirm('Rensa <?= $duplicateCount ?> dubbletter?')">
+            <i data-lucide="trash-2"></i> Rensa dubbletter
+        </button>
+    </form>
+</div>
+<?php endif; ?>
+
 <div class="admin-card" style="margin-bottom: var(--space-lg);">
     <div class="admin-card-header">
         <h2><i data-lucide="plus"></i> Lagg till fraga</h2>
