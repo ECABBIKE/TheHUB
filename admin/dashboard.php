@@ -439,6 +439,10 @@ include __DIR__ . '/components/unified-layout.php';
                 <i data-lucide="chart-line"></i>
                 <span>Analytics</span>
             </a>
+            <a href="/admin/winback-campaigns.php" class="quick-action">
+                <i data-lucide="mail"></i>
+                <span>Kampanjer</span>
+            </a>
             <a href="/admin/news-moderation.php" class="quick-action">
                 <i data-lucide="newspaper"></i>
                 <span>Nyheter</span>
