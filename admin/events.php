@@ -76,6 +76,7 @@ $sql = "SELECT
     e.event_level, e.event_format, e.point_scale_id, e.pricing_template_id, e.advent_id,
     e.organizer_club_id, e.website, e.contact_email, e.contact_phone,
     e.registration_deadline, e.registration_deadline_time,
+    e.venue_id,
     v.name as venue_name,
     c.name as organizer_name,
     {$seriesNameSelect} as series_name,
@@ -1038,9 +1039,16 @@ function enableBulkEdit(mode) {
         fieldSelector = '.event-field';
     }
 
+    console.log('[BulkEdit] Enabling mode:', mode, 'selector:', fieldSelector);
+
     // Disable individual onchange/onblur handlers and add bulk edit tracking for visible fields only
-    document.querySelectorAll(`${fieldSelector} select`).forEach(select => {
-        select.dataset.originalOnchange = select.getAttribute('onchange');
+    const selects = document.querySelectorAll(`${fieldSelector} select`);
+    console.log('[BulkEdit] Found', selects.length, 'select elements');
+
+    selects.forEach((select, idx) => {
+        const originalOnchange = select.getAttribute('onchange');
+        console.log('[BulkEdit] Select', idx, 'onchange:', originalOnchange);
+        select.dataset.originalOnchange = originalOnchange;
         select.removeAttribute('onchange');
         select.addEventListener('change', trackBulkChange);
         select.style.borderColor = 'var(--color-primary)';
@@ -1083,9 +1091,14 @@ function trackBulkChange(event) {
     const eventId = getEventIdFromRow(row);
     const fieldType = getFieldType(element);
 
+    console.log('[BulkEdit] trackBulkChange called');
+    console.log('[BulkEdit] eventId:', eventId, 'fieldType:', fieldType, 'value:', element.value);
+    console.log('[BulkEdit] originalOnchange:', element.dataset.originalOnchange);
+
     // Skip unknown fields
     if (fieldType === 'unknown') {
-        console.warn('Unknown field type for element:', element);
+        console.warn('[BulkEdit] Unknown field type for element:', element);
+        console.warn('[BulkEdit] onchange was:', element.dataset.originalOnchange);
         return;
     }
 
