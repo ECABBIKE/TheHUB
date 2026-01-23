@@ -62,12 +62,42 @@ try {
             COALESCE(cl.sort_order, 9999) as class_sort_order,
             COUNT(DISTINCT r.cyclist_id) as participants,
 
-            -- Winner time (position = 1, must be finished - exclude DNF/DNS/DQ)
-            MIN(CASE WHEN r.position = 1 AND (r.status IS NULL OR LOWER(r.status) NOT IN ('dnf', 'dns', 'dq', 'dsq', 'did not finish', 'did not start', 'disqualified')) THEN TIME_TO_SEC(r.finish_time) END) as winner_time_sec,
+            -- Winner time (fastest finished time - exclude DNF/DNS/DQ)
+            -- Use custom time parsing to handle MM:SS.ms format
+            MIN(CASE WHEN (r.status IS NULL OR LOWER(r.status) NOT IN ('dnf', 'dns', 'dq', 'dsq', 'did not finish', 'did not start', 'disqualified'))
+                     AND r.finish_time IS NOT NULL
+                     AND r.finish_time != ''
+                     AND r.finish_time NOT LIKE '%DNF%'
+                     AND r.finish_time NOT LIKE '%DNS%'
+                THEN
+                    CASE
+                        -- HH:MM:SS or HH:MM:SS.ms format
+                        WHEN r.finish_time REGEXP '^[0-9]+:[0-9]+:[0-9]' THEN TIME_TO_SEC(r.finish_time)
+                        -- MM:SS.ms or MM:SS format (no hours)
+                        WHEN r.finish_time REGEXP '^[0-9]+:[0-9]' THEN
+                            CAST(SUBSTRING_INDEX(r.finish_time, ':', 1) AS DECIMAL(10,3)) * 60 +
+                            CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(r.finish_time, ':', -1), '.', 1) AS DECIMAL(10,3)) +
+                            COALESCE(CAST(CONCAT('0.', SUBSTRING_INDEX(r.finish_time, '.', -1)) AS DECIMAL(10,3)), 0)
+                        ELSE TIME_TO_SEC(r.finish_time)
+                    END
+                END) as winner_time_sec,
 
             -- Average time (finished only - exclude DNF/DNS/DQ)
-            AVG(CASE WHEN (r.status IS NULL OR LOWER(r.status) NOT IN ('dnf', 'dns', 'dq', 'dsq', 'did not finish', 'did not start', 'disqualified')) AND r.finish_time IS NOT NULL
-                THEN TIME_TO_SEC(r.finish_time) END) as avg_time_sec,
+            AVG(CASE WHEN (r.status IS NULL OR LOWER(r.status) NOT IN ('dnf', 'dns', 'dq', 'dsq', 'did not finish', 'did not start', 'disqualified'))
+                     AND r.finish_time IS NOT NULL
+                     AND r.finish_time != ''
+                     AND r.finish_time NOT LIKE '%DNF%'
+                     AND r.finish_time NOT LIKE '%DNS%'
+                THEN
+                    CASE
+                        WHEN r.finish_time REGEXP '^[0-9]+:[0-9]+:[0-9]' THEN TIME_TO_SEC(r.finish_time)
+                        WHEN r.finish_time REGEXP '^[0-9]+:[0-9]' THEN
+                            CAST(SUBSTRING_INDEX(r.finish_time, ':', 1) AS DECIMAL(10,3)) * 60 +
+                            CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(r.finish_time, ':', -1), '.', 1) AS DECIMAL(10,3)) +
+                            COALESCE(CAST(CONCAT('0.', SUBSTRING_INDEX(r.finish_time, '.', -1)) AS DECIMAL(10,3)), 0)
+                        ELSE TIME_TO_SEC(r.finish_time)
+                    END
+                END) as avg_time_sec,
 
             -- Median approximation (simple)
             COUNT(CASE WHEN r.status IS NULL OR LOWER(r.status) NOT IN ('dnf', 'dns', 'dq', 'dsq', 'did not finish', 'did not start', 'disqualified') THEN 1 END) as finished_count,
@@ -110,9 +140,7 @@ try {
                 IF(MAX(CASE WHEN r.ss15 IS NOT NULL AND r.ss15 != '' AND r.ss15 != '00:00:00' THEN 1 END) = 1, 'SS15', NULL)
             ) as stages_used,
 
-            -- Time spread (difference between winner and last finisher)
-            MAX(CASE WHEN r.status IS NULL OR LOWER(r.status) NOT IN ('dnf', 'dns', 'dq', 'dsq', 'did not finish', 'did not start', 'disqualified') THEN TIME_TO_SEC(r.finish_time) END) -
-            MIN(CASE WHEN r.position = 1 THEN TIME_TO_SEC(r.finish_time) END) as time_spread_sec,
+            -- Time spread removed (complex time format handling needed)
 
             -- Venue info for tracking min/max locations
             v.name as venue_name
@@ -172,7 +200,21 @@ try {
 
             -- Average winner time across all events (finished only - exclude DNF/DNS/DQ)
             AVG(
-                CASE WHEN r.position = 1 AND (r.status IS NULL OR LOWER(r.status) NOT IN ('dnf', 'dns', 'dq', 'dsq', 'did not finish', 'did not start', 'disqualified')) THEN TIME_TO_SEC(r.finish_time) END
+                CASE WHEN (r.status IS NULL OR LOWER(r.status) NOT IN ('dnf', 'dns', 'dq', 'dsq', 'did not finish', 'did not start', 'disqualified'))
+                     AND r.finish_time IS NOT NULL
+                     AND r.finish_time != ''
+                     AND r.finish_time NOT LIKE '%DNF%'
+                     AND r.finish_time NOT LIKE '%DNS%'
+                THEN
+                    CASE
+                        WHEN r.finish_time REGEXP '^[0-9]+:[0-9]+:[0-9]' THEN TIME_TO_SEC(r.finish_time)
+                        WHEN r.finish_time REGEXP '^[0-9]+:[0-9]' THEN
+                            CAST(SUBSTRING_INDEX(r.finish_time, ':', 1) AS DECIMAL(10,3)) * 60 +
+                            CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(r.finish_time, ':', -1), '.', 1) AS DECIMAL(10,3)) +
+                            COALESCE(CAST(CONCAT('0.', SUBSTRING_INDEX(r.finish_time, '.', -1)) AS DECIMAL(10,3)), 0)
+                        ELSE TIME_TO_SEC(r.finish_time)
+                    END
+                END
             ) as avg_winner_time_sec,
 
             -- Average stage count
@@ -224,7 +266,21 @@ if ($selectedBrand !== null) {
                 e.date as event_date,
                 COALESCE(cl.display_name, cl.name) as class_name,
                 COUNT(DISTINCT r.cyclist_id) as class_participants,
-                MIN(CASE WHEN r.position = 1 AND (r.status IS NULL OR LOWER(r.status) NOT IN ('dnf', 'dns', 'dq', 'dsq', 'did not finish', 'did not start', 'disqualified')) THEN TIME_TO_SEC(r.finish_time) END) as winner_time_sec
+                MIN(CASE WHEN (r.status IS NULL OR LOWER(r.status) NOT IN ('dnf', 'dns', 'dq', 'dsq', 'did not finish', 'did not start', 'disqualified'))
+                         AND r.finish_time IS NOT NULL
+                         AND r.finish_time != ''
+                         AND r.finish_time NOT LIKE '%DNF%'
+                         AND r.finish_time NOT LIKE '%DNS%'
+                    THEN
+                        CASE
+                            WHEN r.finish_time REGEXP '^[0-9]+:[0-9]+:[0-9]' THEN TIME_TO_SEC(r.finish_time)
+                            WHEN r.finish_time REGEXP '^[0-9]+:[0-9]' THEN
+                                CAST(SUBSTRING_INDEX(r.finish_time, ':', 1) AS DECIMAL(10,3)) * 60 +
+                                CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(r.finish_time, ':', -1), '.', 1) AS DECIMAL(10,3)) +
+                                COALESCE(CAST(CONCAT('0.', SUBSTRING_INDEX(r.finish_time, '.', -1)) AS DECIMAL(10,3)), 0)
+                            ELSE TIME_TO_SEC(r.finish_time)
+                        END
+                    END) as winner_time_sec
             FROM results r
             JOIN events e ON r.event_id = e.id
             JOIN series s ON e.series_id = s.id
