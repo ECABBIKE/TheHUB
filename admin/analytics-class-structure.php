@@ -112,13 +112,17 @@ try {
 
             -- Time spread (difference between winner and last finisher)
             MAX(CASE WHEN r.status = 'finished' THEN TIME_TO_SEC(r.finish_time) END) -
-            MIN(CASE WHEN r.position = 1 THEN TIME_TO_SEC(r.finish_time) END) as time_spread_sec
+            MIN(CASE WHEN r.position = 1 THEN TIME_TO_SEC(r.finish_time) END) as time_spread_sec,
+
+            -- Venue info for tracking min/max locations
+            v.name as venue_name
 
         FROM results r
         JOIN events e ON r.event_id = e.id
         JOIN series s ON e.series_id = s.id
         LEFT JOIN series_brands sb ON s.brand_id = sb.id
         LEFT JOIN classes cl ON r.class_id = cl.id
+        LEFT JOIN venues v ON e.venue_id = v.id
         WHERE YEAR(e.date) = ?
         $brandFilter
         GROUP BY e.id, COALESCE(r.class_id, 0)
@@ -204,9 +208,11 @@ try {
 }
 
 // Historical data by venue (when brand is selected)
+// Now fetches class-specific winner times
 $venueHistory = [];
 if ($selectedBrand !== null) {
     try {
+        // Get winner times per class per event per venue
         $histSql = "
             SELECT
                 v.id as venue_id,
@@ -216,34 +222,16 @@ if ($selectedBrand !== null) {
                 e.id as event_id,
                 e.name as event_name,
                 e.date as event_date,
-                COUNT(DISTINCT r.cyclist_id) as participants,
-
-                -- Average winner time for the event (all classes)
-                AVG(
-                    CASE WHEN r.position = 1 THEN TIME_TO_SEC(r.finish_time) END
-                ) as avg_winner_time_sec,
-
-                -- Count unique classes
-                COUNT(DISTINCT COALESCE(r.class_id, 0)) as class_count,
-
-                -- Average stage count
-                AVG(
-                    (CASE WHEN r.ss1 IS NOT NULL AND r.ss1 != '' AND r.ss1 != '00:00:00' THEN 1 ELSE 0 END) +
-                    (CASE WHEN r.ss2 IS NOT NULL AND r.ss2 != '' AND r.ss2 != '00:00:00' THEN 1 ELSE 0 END) +
-                    (CASE WHEN r.ss3 IS NOT NULL AND r.ss3 != '' AND r.ss3 != '00:00:00' THEN 1 ELSE 0 END) +
-                    (CASE WHEN r.ss4 IS NOT NULL AND r.ss4 != '' AND r.ss4 != '00:00:00' THEN 1 ELSE 0 END) +
-                    (CASE WHEN r.ss5 IS NOT NULL AND r.ss5 != '' AND r.ss5 != '00:00:00' THEN 1 ELSE 0 END) +
-                    (CASE WHEN r.ss6 IS NOT NULL AND r.ss6 != '' AND r.ss6 != '00:00:00' THEN 1 ELSE 0 END) +
-                    (CASE WHEN r.ss7 IS NOT NULL AND r.ss7 != '' AND r.ss7 != '00:00:00' THEN 1 ELSE 0 END) +
-                    (CASE WHEN r.ss8 IS NOT NULL AND r.ss8 != '' AND r.ss8 != '00:00:00' THEN 1 ELSE 0 END)
-                ) as avg_stages
-
+                COALESCE(cl.display_name, cl.name) as class_name,
+                COUNT(DISTINCT r.cyclist_id) as class_participants,
+                MIN(CASE WHEN r.position = 1 THEN TIME_TO_SEC(r.finish_time) END) as winner_time_sec
             FROM results r
             JOIN events e ON r.event_id = e.id
             JOIN series s ON e.series_id = s.id
             JOIN venues v ON e.venue_id = v.id
+            LEFT JOIN classes cl ON r.class_id = cl.id
             WHERE s.brand_id = ?
-            GROUP BY v.id, e.id
+            GROUP BY v.id, e.id, r.class_id
             ORDER BY v.name ASC, event_year ASC
         ";
 
@@ -251,30 +239,90 @@ if ($selectedBrand !== null) {
         $stmt->execute([$selectedBrand]);
         $histData = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        // Group by venue
+        // Define class mappings for display
+        $targetClasses = [
+            'h_elit' => ['Herrar Elit', 'H Elit', 'Herrar elit'],
+            'd_elit' => ['Damer Elit', 'D Elit', 'Damer elit'],
+            'p15_16' => ['P15-16', 'Pojkar 15-16', 'P 15-16'],
+            'p13_14' => ['P13-14', 'Pojkar 13-14', 'P 13-14'],
+        ];
+        $masterClasses = ['H30', 'H35', 'H40', 'H45', 'H50', 'Herrar 30', 'Herrar 35', 'Herrar 40', 'Herrar 45', 'Herrar 50'];
+
+        // Group by venue and year, then aggregate class times
+        $tempData = [];
         foreach ($histData as $row) {
             $venueId = $row['venue_id'];
-            $venueName = $row['venue_name'];
-            if ($row['venue_city']) {
-                $venueName .= ' (' . $row['venue_city'] . ')';
-            }
-            if (!isset($venueHistory[$venueId])) {
-                $venueHistory[$venueId] = [
+            $year = $row['event_year'];
+            $className = $row['class_name'];
+
+            if (!isset($tempData[$venueId])) {
+                $venueName = $row['venue_name'];
+                if ($row['venue_city']) {
+                    $venueName .= ' (' . $row['venue_city'] . ')';
+                }
+                $tempData[$venueId] = [
                     'name' => $venueName,
-                    'years' => [],
-                    'events' => []
+                    'years' => []
                 ];
             }
-            $year = $row['event_year'];
-            $venueHistory[$venueId]['years'][$year] = [
-                'event_name' => $row['event_name'],
-                'event_date' => $row['event_date'],
-                'participants' => $row['participants'],
-                'avg_winner_time' => $row['avg_winner_time_sec'],
-                'class_count' => $row['class_count'],
-                'avg_stages' => round($row['avg_stages'], 1)
+
+            if (!isset($tempData[$venueId]['years'][$year])) {
+                $tempData[$venueId]['years'][$year] = [
+                    'event_name' => $row['event_name'],
+                    'event_date' => $row['event_date'],
+                    'participants' => 0,
+                    'h_elit' => null,
+                    'd_elit' => null,
+                    'p15_16' => null,
+                    'p13_14' => null,
+                    'master_times' => []
+                ];
+            }
+
+            $tempData[$venueId]['years'][$year]['participants'] += $row['class_participants'];
+
+            // Match class to target categories
+            if ($className && $row['winner_time_sec'] > 0) {
+                foreach ($targetClasses as $key => $names) {
+                    foreach ($names as $name) {
+                        if (strcasecmp($className, $name) === 0) {
+                            $tempData[$venueId]['years'][$year][$key] = $row['winner_time_sec'];
+                            break 2;
+                        }
+                    }
+                }
+                // Check for master classes
+                foreach ($masterClasses as $masterName) {
+                    if (strcasecmp($className, $masterName) === 0) {
+                        $tempData[$venueId]['years'][$year]['master_times'][] = $row['winner_time_sec'];
+                        break;
+                    }
+                }
+            }
+        }
+
+        // Calculate master averages and build final structure
+        foreach ($tempData as $venueId => $venueData) {
+            $venueHistory[$venueId] = [
+                'name' => $venueData['name'],
+                'years' => []
             ];
-            $venueHistory[$venueId]['events'][] = $row;
+            foreach ($venueData['years'] as $year => $yearData) {
+                $masterAvg = null;
+                if (!empty($yearData['master_times'])) {
+                    $masterAvg = array_sum($yearData['master_times']) / count($yearData['master_times']);
+                }
+                $venueHistory[$venueId]['years'][$year] = [
+                    'event_name' => $yearData['event_name'],
+                    'event_date' => $yearData['event_date'],
+                    'participants' => $yearData['participants'],
+                    'h_elit' => $yearData['h_elit'],
+                    'd_elit' => $yearData['d_elit'],
+                    'p15_16' => $yearData['p15_16'],
+                    'p13_14' => $yearData['p13_14'],
+                    'master' => $masterAvg
+                ];
+            }
         }
 
         // Sort by number of years (most history first)
@@ -300,7 +348,8 @@ foreach ($classData as $row) {
             'total_stages' => 0,
             'avg_winner_time' => 0,
             'winner_times' => [],
-            'stage_counts' => []
+            'stage_counts' => [],
+            'time_venues' => [] // Track venue for each time
         ];
     }
     $classAggregates[$className]['event_count']++;
@@ -310,6 +359,7 @@ foreach ($classData as $row) {
     }
     if ($row['winner_time_sec'] > 0) {
         $classAggregates[$className]['winner_times'][] = $row['winner_time_sec'];
+        $classAggregates[$className]['time_venues'][$row['winner_time_sec']] = $row['venue_name'] ?: $row['event_name'];
     }
 }
 
@@ -330,6 +380,13 @@ foreach ($classAggregates as $className => &$agg) {
     $agg['max_winner_time'] = !empty($agg['winner_times'])
         ? max($agg['winner_times'])
         : 0;
+    // Get venue names for min/max times
+    $agg['min_venue'] = $agg['min_winner_time'] > 0 && isset($agg['time_venues'][$agg['min_winner_time']])
+        ? $agg['time_venues'][$agg['min_winner_time']]
+        : '';
+    $agg['max_venue'] = $agg['max_winner_time'] > 0 && isset($agg['time_venues'][$agg['max_winner_time']])
+        ? $agg['time_venues'][$agg['max_winner_time']]
+        : '';
 }
 unset($agg);
 
@@ -865,19 +922,21 @@ include __DIR__ . '/components/unified-layout.php';
                     <thead>
                         <tr>
                             <th>Ar</th>
-                            <th>Deltagare</th>
-                            <th>Klasser</th>
-                            <th>Snitt strackor</th>
-                            <th>Snitt vinnartid</th>
+                            <th>Delt.</th>
+                            <th>H Elit</th>
+                            <th>D Elit</th>
+                            <th>P15-16</th>
+                            <th>P13-14</th>
+                            <th>Master</th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php
                         $prevParticipants = null;
-                        $prevTime = null;
+                        $prevHElit = null;
                         ksort($data['years']); // Sort by year ascending
                         foreach ($data['years'] as $year => $yearData):
-                            // Calculate trend arrows
+                            // Calculate trend arrows for participants
                             $partTrend = '';
                             if ($prevParticipants !== null) {
                                 if ($yearData['participants'] > $prevParticipants) {
@@ -888,35 +947,28 @@ include __DIR__ . '/components/unified-layout.php';
                             }
                             $prevParticipants = $yearData['participants'];
 
-                            // Time trend (lower is better for winner time)
-                            $timeTrend = '';
-                            if ($prevTime !== null && $yearData['avg_winner_time'] > 0) {
-                                $diff = $yearData['avg_winner_time'] - $prevTime;
-                                if ($diff < -5) { // Faster by more than 5 sec
-                                    $timeTrend = '<span class="trend-arrow trend-up">snabbare</span>';
-                                } elseif ($diff > 5) { // Slower by more than 5 sec
-                                    $timeTrend = '<span class="trend-arrow trend-down">langsammare</span>';
+                            // Time trend for H Elit (lower is better)
+                            $hElitTrend = '';
+                            if ($prevHElit !== null && $yearData['h_elit'] > 0) {
+                                $diff = $yearData['h_elit'] - $prevHElit;
+                                if ($diff < -5) {
+                                    $hElitTrend = '<span class="trend-arrow trend-up" title="Snabbare"></span>';
+                                } elseif ($diff > 5) {
+                                    $hElitTrend = '<span class="trend-arrow trend-down" title="Langsammare"></span>';
                                 }
                             }
-                            if ($yearData['avg_winner_time'] > 0) {
-                                $prevTime = $yearData['avg_winner_time'];
+                            if ($yearData['h_elit'] > 0) {
+                                $prevHElit = $yearData['h_elit'];
                             }
                         ?>
                         <tr>
                             <td><strong><?= $year ?></strong></td>
                             <td><?= $yearData['participants'] ?><?= $partTrend ?></td>
-                            <td><?= $yearData['class_count'] ?></td>
-                            <td>
-                                <?php if ($yearData['avg_stages'] > 0): ?>
-                                <span class="stage-badge"><?= $yearData['avg_stages'] ?></span>
-                                <?php else: ?>
-                                -
-                                <?php endif; ?>
-                            </td>
-                            <td class="time-cell">
-                                <?= formatTime($yearData['avg_winner_time']) ?>
-                                <?= $timeTrend ?>
-                            </td>
+                            <td class="time-cell"><?= formatTime($yearData['h_elit']) ?><?= $hElitTrend ?></td>
+                            <td class="time-cell"><?= formatTime($yearData['d_elit']) ?></td>
+                            <td class="time-cell"><?= formatTime($yearData['p15_16']) ?></td>
+                            <td class="time-cell"><?= formatTime($yearData['p13_14']) ?></td>
+                            <td class="time-cell" title="Snitt H30-H50"><?= formatTime($yearData['master']) ?></td>
                         </tr>
                         <?php endforeach; ?>
                     </tbody>
@@ -973,9 +1025,19 @@ include __DIR__ . '/components/unified-layout.php';
                                 -
                                 <?php endif; ?>
                             </td>
-                            <td class="time-cell" style="color: var(--color-success);"><?= formatTime($agg['min_winner_time']) ?></td>
+                            <td class="time-cell" style="color: var(--color-success);">
+                                <?= formatTime($agg['min_winner_time']) ?>
+                                <?php if (!empty($agg['min_venue'])): ?>
+                                <span style="color: var(--color-text-muted); font-size: 0.75rem; display: block;">(<?= htmlspecialchars($agg['min_venue']) ?>)</span>
+                                <?php endif; ?>
+                            </td>
                             <td class="time-cell"><?= formatTime($agg['avg_winner_time']) ?></td>
-                            <td class="time-cell" style="color: var(--color-warning);"><?= formatTime($agg['max_winner_time']) ?></td>
+                            <td class="time-cell" style="color: var(--color-warning);">
+                                <?= formatTime($agg['max_winner_time']) ?>
+                                <?php if (!empty($agg['max_venue'])): ?>
+                                <span style="color: var(--color-text-muted); font-size: 0.75rem; display: block;">(<?= htmlspecialchars($agg['max_venue']) ?>)</span>
+                                <?php endif; ?>
+                            </td>
                         </tr>
                         <?php endforeach; ?>
                     </tbody>
