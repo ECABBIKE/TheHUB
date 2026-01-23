@@ -650,6 +650,27 @@ id, name, city, country, active
 id, name, year, status, logo
 ```
 
+### series_events (koppling event-serie) - VIKTIGT!
+```sql
+id, series_id, event_id, template_id
+```
+
+**VIKTIGT: Events kopplas till serier via `series_events`-tabellen (many-to-many), INTE via `events.series_id`!**
+
+```php
+// FEL - Missar events som är kopplade via series_events
+JOIN series s ON e.series_id = s.id
+
+// RÄTT - Använd series_events för att hitta ALLA events i en serie
+JOIN series_events se ON se.event_id = e.id
+JOIN series s ON se.series_id = s.id
+```
+
+**När ska du använda vad?**
+- `LEFT JOIN series s ON e.series_id = s.id` - OK för att visa serienamn (optional)
+- `JOIN series_events se ON ...` - KRÄV för analytics/aggregering per serie/brand
+- Se `/analytics/includes/KPICalculator.php` för korrekt mönster
+
 ---
 
 ## PROJEKTSTRUKTUR
