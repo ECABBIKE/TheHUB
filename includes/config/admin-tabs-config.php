@@ -56,6 +56,13 @@ $ADMIN_TABS = [
                 'icon' => 'git-branch',
                 'url' => '/admin/elimination.php',
                 'pages' => ['elimination.php', 'elimination-manage.php', 'elimination-live.php', 'elimination-import-qualifying.php', 'elimination-add-qualifying.php', 'elimination-create.php']
+            ],
+            [
+                'id' => 'classes',
+                'label' => 'Klasser',
+                'icon' => 'layers',
+                'url' => '/admin/classes.php',
+                'pages' => ['classes.php']
             ]
         ]
     ],
@@ -188,13 +195,6 @@ $ADMIN_TABS = [
                 'pages' => ['gravity-id.php']
             ],
             [
-                'id' => 'classes',
-                'label' => 'Klasser',
-                'icon' => 'layers',
-                'url' => '/admin/classes.php',
-                'pages' => ['classes.php']
-            ],
-            [
                 'id' => 'license-matrix',
                 'label' => 'Licenser',
                 'icon' => 'grid-3x3',
@@ -281,6 +281,7 @@ $ADMIN_TABS = [
                     'analytics-series-compare.php',
                     'analytics-first-season.php',
                     'analytics-event-participation.php',
+                    'analytics-class-structure.php',
                     'analytics-data-quality.php',
                     'analytics-diagnose.php',
                     'analytics-export-center.php',

@@ -58,7 +58,8 @@ try {
             sb.name as brand_name,
             sb.accent_color as brand_color,
             COALESCE(r.class_id, 0) as class_id,
-            COALESCE(cl.name, CASE WHEN r.class_id IS NULL THEN 'Okänd klass' ELSE CONCAT('Klass ', r.class_id) END) as class_name,
+            COALESCE(cl.display_name, cl.name, CASE WHEN r.class_id IS NULL THEN 'Okand klass' ELSE CONCAT('Klass ', r.class_id) END) as class_name,
+            COALESCE(cl.sort_order, 9999) as class_sort_order,
             COUNT(DISTINCT r.cyclist_id) as participants,
 
             -- Winner time (position = 1)
@@ -121,7 +122,7 @@ try {
         WHERE YEAR(e.date) = ?
         $brandFilter
         GROUP BY e.id, COALESCE(r.class_id, 0)
-        ORDER BY e.date DESC, class_name ASC
+        ORDER BY e.date DESC, class_sort_order ASC, class_name ASC
     ";
 
     $params = array_merge([$selectedYear], $brandParams);
@@ -292,6 +293,7 @@ foreach ($classData as $row) {
     $className = $row['class_name'];
     if (!isset($classAggregates[$className])) {
         $classAggregates[$className] = [
+            'sort_order' => $row['class_sort_order'],
             'event_count' => 0,
             'total_participants' => 0,
             'avg_participants' => 0,
@@ -325,9 +327,9 @@ foreach ($classAggregates as $className => &$agg) {
 }
 unset($agg);
 
-// Sort by event count
+// Sort by class sort_order (same as classes.php)
 uasort($classAggregates, function($a, $b) {
-    return $b['event_count'] - $a['event_count'];
+    return $a['sort_order'] - $b['sort_order'];
 });
 
 // Helper function to format time
