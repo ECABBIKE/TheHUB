@@ -153,6 +153,132 @@ try {
     error_log("Class Structure query error: " . $e->getMessage());
 }
 
+// Brand comparison data (shows when no brand is selected, or as overview)
+$brandComparison = [];
+try {
+    $compSql = "
+        SELECT
+            sb.id as brand_id,
+            sb.name as brand_name,
+            sb.accent_color as brand_color,
+            YEAR(e.date) as event_year,
+            COUNT(DISTINCT e.id) as event_count,
+            COUNT(DISTINCT r.cyclist_id) as total_participants,
+
+            -- Average winner time across all events
+            AVG(
+                CASE WHEN r.position = 1 THEN TIME_TO_SEC(r.finish_time) END
+            ) as avg_winner_time_sec,
+
+            -- Average stage count
+            AVG(
+                (CASE WHEN r.ss1 IS NOT NULL AND r.ss1 != '' AND r.ss1 != '00:00:00' THEN 1 ELSE 0 END) +
+                (CASE WHEN r.ss2 IS NOT NULL AND r.ss2 != '' AND r.ss2 != '00:00:00' THEN 1 ELSE 0 END) +
+                (CASE WHEN r.ss3 IS NOT NULL AND r.ss3 != '' AND r.ss3 != '00:00:00' THEN 1 ELSE 0 END) +
+                (CASE WHEN r.ss4 IS NOT NULL AND r.ss4 != '' AND r.ss4 != '00:00:00' THEN 1 ELSE 0 END) +
+                (CASE WHEN r.ss5 IS NOT NULL AND r.ss5 != '' AND r.ss5 != '00:00:00' THEN 1 ELSE 0 END) +
+                (CASE WHEN r.ss6 IS NOT NULL AND r.ss6 != '' AND r.ss6 != '00:00:00' THEN 1 ELSE 0 END) +
+                (CASE WHEN r.ss7 IS NOT NULL AND r.ss7 != '' AND r.ss7 != '00:00:00' THEN 1 ELSE 0 END) +
+                (CASE WHEN r.ss8 IS NOT NULL AND r.ss8 != '' AND r.ss8 != '00:00:00' THEN 1 ELSE 0 END)
+            ) as avg_stages,
+
+            -- Count unique classes used
+            COUNT(DISTINCT COALESCE(r.class_id, 0)) as unique_classes
+
+        FROM results r
+        JOIN events e ON r.event_id = e.id
+        JOIN series s ON e.series_id = s.id
+        JOIN series_brands sb ON s.brand_id = sb.id
+        WHERE YEAR(e.date) = ?
+        GROUP BY sb.id, YEAR(e.date)
+        ORDER BY sb.name ASC
+    ";
+
+    $stmt = $pdo->prepare($compSql);
+    $stmt->execute([$selectedYear]);
+    $brandComparison = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+} catch (Exception $e) {
+    error_log("Brand comparison error: " . $e->getMessage());
+}
+
+// Historical data by location (when brand is selected)
+$locationHistory = [];
+if ($selectedBrand !== null) {
+    try {
+        $histSql = "
+            SELECT
+                e.location,
+                YEAR(e.date) as event_year,
+                e.id as event_id,
+                e.name as event_name,
+                e.date as event_date,
+                COUNT(DISTINCT r.cyclist_id) as participants,
+
+                -- Average winner time for the event (all classes)
+                AVG(
+                    CASE WHEN r.position = 1 THEN TIME_TO_SEC(r.finish_time) END
+                ) as avg_winner_time_sec,
+
+                -- Count unique classes
+                COUNT(DISTINCT COALESCE(r.class_id, 0)) as class_count,
+
+                -- Average stage count
+                AVG(
+                    (CASE WHEN r.ss1 IS NOT NULL AND r.ss1 != '' AND r.ss1 != '00:00:00' THEN 1 ELSE 0 END) +
+                    (CASE WHEN r.ss2 IS NOT NULL AND r.ss2 != '' AND r.ss2 != '00:00:00' THEN 1 ELSE 0 END) +
+                    (CASE WHEN r.ss3 IS NOT NULL AND r.ss3 != '' AND r.ss3 != '00:00:00' THEN 1 ELSE 0 END) +
+                    (CASE WHEN r.ss4 IS NOT NULL AND r.ss4 != '' AND r.ss4 != '00:00:00' THEN 1 ELSE 0 END) +
+                    (CASE WHEN r.ss5 IS NOT NULL AND r.ss5 != '' AND r.ss5 != '00:00:00' THEN 1 ELSE 0 END) +
+                    (CASE WHEN r.ss6 IS NOT NULL AND r.ss6 != '' AND r.ss6 != '00:00:00' THEN 1 ELSE 0 END) +
+                    (CASE WHEN r.ss7 IS NOT NULL AND r.ss7 != '' AND r.ss7 != '00:00:00' THEN 1 ELSE 0 END) +
+                    (CASE WHEN r.ss8 IS NOT NULL AND r.ss8 != '' AND r.ss8 != '00:00:00' THEN 1 ELSE 0 END)
+                ) as avg_stages
+
+            FROM results r
+            JOIN events e ON r.event_id = e.id
+            JOIN series s ON e.series_id = s.id
+            WHERE s.brand_id = ?
+            AND e.location IS NOT NULL AND e.location != ''
+            GROUP BY e.location, e.id
+            ORDER BY e.location ASC, event_year ASC
+        ";
+
+        $stmt = $pdo->prepare($histSql);
+        $stmt->execute([$selectedBrand]);
+        $histData = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Group by location
+        foreach ($histData as $row) {
+            $loc = $row['location'];
+            if (!isset($locationHistory[$loc])) {
+                $locationHistory[$loc] = [
+                    'years' => [],
+                    'events' => []
+                ];
+            }
+            $year = $row['event_year'];
+            $locationHistory[$loc]['years'][$year] = [
+                'event_name' => $row['event_name'],
+                'event_date' => $row['event_date'],
+                'participants' => $row['participants'],
+                'avg_winner_time' => $row['avg_winner_time_sec'],
+                'class_count' => $row['class_count'],
+                'avg_stages' => round($row['avg_stages'], 1)
+            ];
+            $locationHistory[$loc]['events'][] = $row;
+        }
+
+        // Sort by number of years (most history first)
+        uasort($locationHistory, function($a, $b) {
+            return count($b['years']) - count($a['years']);
+        });
+
+    } catch (Exception $e) {
+        error_log("Location history error: " . $e->getMessage());
+    }
+}
+
 // Calculate aggregated stats per class across all events
 $classAggregates = [];
 foreach ($classData as $row) {
@@ -377,6 +503,108 @@ include __DIR__ . '/components/unified-layout.php';
     color: var(--color-text-muted);
 }
 
+/* Historical trends section */
+.location-section {
+    margin-bottom: var(--space-xl);
+}
+.location-header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    margin-bottom: var(--space-md);
+}
+.location-header h3 {
+    margin: 0;
+    font-size: 1.1rem;
+    color: var(--color-text-primary);
+}
+.location-header .year-count {
+    font-size: 0.8rem;
+    color: var(--color-text-muted);
+    background: var(--color-bg-page);
+    padding: 2px 8px;
+    border-radius: var(--radius-full);
+}
+.history-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+.history-table th,
+.history-table td {
+    padding: var(--space-sm) var(--space-md);
+    text-align: left;
+    border-bottom: 1px solid var(--color-border);
+}
+.history-table th {
+    background: var(--color-bg-page);
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+}
+.history-table td {
+    font-size: 0.875rem;
+}
+.history-table tr:last-child td {
+    border-bottom: none;
+}
+.trend-arrow {
+    font-size: 0.75rem;
+    margin-left: var(--space-xs);
+}
+.trend-up { color: var(--color-success); }
+.trend-down { color: var(--color-error); }
+.trend-same { color: var(--color-text-muted); }
+
+/* Brand comparison */
+.brand-comparison-table {
+    width: 100%;
+    border-collapse: collapse;
+}
+.brand-comparison-table th,
+.brand-comparison-table td {
+    padding: var(--space-md);
+    text-align: left;
+    border-bottom: 1px solid var(--color-border);
+}
+.brand-comparison-table th {
+    background: var(--color-bg-page);
+    font-size: 0.75rem;
+    font-weight: 600;
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+}
+.brand-comparison-table tr:last-child td {
+    border-bottom: none;
+}
+.brand-comparison-table tr:hover {
+    background: var(--color-bg-hover);
+}
+.brand-name-cell {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+}
+.brand-color-dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+.bar-container {
+    width: 100%;
+    max-width: 120px;
+    height: 8px;
+    background: var(--color-bg-page);
+    border-radius: var(--radius-full);
+    overflow: hidden;
+}
+.bar-fill {
+    height: 100%;
+    border-radius: var(--radius-full);
+    transition: width 0.3s ease;
+}
+
 /* Mobile */
 @media (max-width: 767px) {
     .event-card,
@@ -458,12 +686,78 @@ include __DIR__ . '/components/unified-layout.php';
     </div>
 </div>
 
+<!-- Brand Comparison (always shown) -->
+<?php if (!empty($brandComparison)): ?>
+<div class="admin-card" style="margin-bottom: var(--space-xl);">
+    <div class="admin-card-header">
+        <h2><i data-lucide="git-compare"></i> Jamfor varumarken (<?= $selectedYear ?>)</h2>
+    </div>
+    <div class="admin-card-body" style="padding:0;">
+        <div class="table-responsive">
+            <?php
+            // Calculate max values for bar charts
+            $maxParticipants = max(array_column($brandComparison, 'total_participants'));
+            $maxStages = max(array_column($brandComparison, 'avg_stages'));
+            $maxTime = max(array_filter(array_column($brandComparison, 'avg_winner_time_sec')));
+            ?>
+            <table class="brand-comparison-table">
+                <thead>
+                    <tr>
+                        <th>Varumarke</th>
+                        <th>Events</th>
+                        <th>Deltagare</th>
+                        <th>Klasser</th>
+                        <th>Snitt strackor</th>
+                        <th>Snitt vinnartid</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($brandComparison as $brand): ?>
+                    <tr>
+                        <td>
+                            <div class="brand-name-cell">
+                                <span class="brand-color-dot" style="background: <?= htmlspecialchars($brand['brand_color'] ?: 'var(--color-accent)') ?>"></span>
+                                <strong><?= htmlspecialchars($brand['brand_name']) ?></strong>
+                            </div>
+                        </td>
+                        <td><?= $brand['event_count'] ?></td>
+                        <td>
+                            <div style="display:flex;align-items:center;gap:var(--space-sm);">
+                                <span><?= $brand['total_participants'] ?></span>
+                                <div class="bar-container">
+                                    <div class="bar-fill" style="width: <?= $maxParticipants > 0 ? round($brand['total_participants'] / $maxParticipants * 100) : 0 ?>%; background: <?= htmlspecialchars($brand['brand_color'] ?: 'var(--color-accent)') ?>"></div>
+                                </div>
+                            </div>
+                        </td>
+                        <td><?= $brand['unique_classes'] ?></td>
+                        <td>
+                            <?php if ($brand['avg_stages'] > 0): ?>
+                            <span class="stage-badge"><?= round($brand['avg_stages'], 1) ?></span>
+                            <?php else: ?>
+                            -
+                            <?php endif; ?>
+                        </td>
+                        <td class="time-cell"><?= formatTime($brand['avg_winner_time_sec']) ?></td>
+                    </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
+
 <?php if (empty($eventSummary)): ?>
 <div class="admin-card">
     <div class="no-data">
         <i data-lucide="inbox" style="width:48px;height:48px;margin-bottom:var(--space-md);opacity:0.5;"></i>
         <p>Ingen data hittades for valda filter.</p>
         <p style="font-size:0.85rem;">Prova att valja en annan sasong eller varumarke.</p>
+        <?php if ($selectedBrand === null): ?>
+        <p style="font-size:0.85rem; margin-top: var(--space-md);">
+            <strong>Tips:</strong> Valj ett varumarke for att se historik per destination.
+        </p>
+        <?php endif; ?>
     </div>
 </div>
 <?php else: ?>
@@ -535,6 +829,101 @@ include __DIR__ . '/components/unified-layout.php';
         <div style="padding:var(--space-sm);"></div>
     </div>
 </div>
+
+<!-- Historical trends by location (when brand selected) -->
+<?php if (!empty($locationHistory)): ?>
+<div class="admin-card" style="margin-bottom: var(--space-xl);">
+    <div class="admin-card-header">
+        <h2><i data-lucide="map-pin"></i> Historik per destination</h2>
+    </div>
+    <div class="admin-card-body">
+        <?php foreach ($locationHistory as $location => $data): ?>
+        <?php if (count($data['years']) > 1): ?>
+        <div class="location-section">
+            <div class="location-header">
+                <i data-lucide="map-pin"></i>
+                <h3><?= htmlspecialchars($location) ?></h3>
+                <span class="year-count"><?= count($data['years']) ?> ar</span>
+            </div>
+            <div class="table-responsive">
+                <table class="history-table">
+                    <thead>
+                        <tr>
+                            <th>Ar</th>
+                            <th>Deltagare</th>
+                            <th>Klasser</th>
+                            <th>Snitt strackor</th>
+                            <th>Snitt vinnartid</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <?php
+                        $prevParticipants = null;
+                        $prevTime = null;
+                        ksort($data['years']); // Sort by year ascending
+                        foreach ($data['years'] as $year => $yearData):
+                            // Calculate trend arrows
+                            $partTrend = '';
+                            if ($prevParticipants !== null) {
+                                if ($yearData['participants'] > $prevParticipants) {
+                                    $partTrend = '<span class="trend-arrow trend-up">+' . ($yearData['participants'] - $prevParticipants) . '</span>';
+                                } elseif ($yearData['participants'] < $prevParticipants) {
+                                    $partTrend = '<span class="trend-arrow trend-down">' . ($yearData['participants'] - $prevParticipants) . '</span>';
+                                }
+                            }
+                            $prevParticipants = $yearData['participants'];
+
+                            // Time trend (lower is better for winner time)
+                            $timeTrend = '';
+                            if ($prevTime !== null && $yearData['avg_winner_time'] > 0) {
+                                $diff = $yearData['avg_winner_time'] - $prevTime;
+                                if ($diff < -5) { // Faster by more than 5 sec
+                                    $timeTrend = '<span class="trend-arrow trend-up">snabbare</span>';
+                                } elseif ($diff > 5) { // Slower by more than 5 sec
+                                    $timeTrend = '<span class="trend-arrow trend-down">langsammare</span>';
+                                }
+                            }
+                            if ($yearData['avg_winner_time'] > 0) {
+                                $prevTime = $yearData['avg_winner_time'];
+                            }
+                        ?>
+                        <tr>
+                            <td><strong><?= $year ?></strong></td>
+                            <td><?= $yearData['participants'] ?><?= $partTrend ?></td>
+                            <td><?= $yearData['class_count'] ?></td>
+                            <td>
+                                <?php if ($yearData['avg_stages'] > 0): ?>
+                                <span class="stage-badge"><?= $yearData['avg_stages'] ?></span>
+                                <?php else: ?>
+                                -
+                                <?php endif; ?>
+                            </td>
+                            <td class="time-cell">
+                                <?= formatTime($yearData['avg_winner_time']) ?>
+                                <?= $timeTrend ?>
+                            </td>
+                        </tr>
+                        <?php endforeach; ?>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        <?php endif; ?>
+        <?php endforeach; ?>
+
+        <?php
+        // Check if any locations had only 1 year
+        $singleYearLocations = array_filter($locationHistory, function($d) { return count($d['years']) === 1; });
+        if (!empty($singleYearLocations)):
+        ?>
+        <p style="color: var(--color-text-muted); font-size: 0.85rem; margin-top: var(--space-lg);">
+            <i data-lucide="info" style="width:14px;height:14px;vertical-align:middle;"></i>
+            <?= count($singleYearLocations) ?> destinationer med endast ett ar visas inte.
+        </p>
+        <?php endif; ?>
+    </div>
+</div>
+<?php endif; ?>
 
 <!-- Aggregate by Class -->
 <div class="aggregate-section">
