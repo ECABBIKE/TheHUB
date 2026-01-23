@@ -1,6 +1,6 @@
 # TheHUB - Development Roadmap
 
-> Senast uppdaterad: 2026-01-22
+> Senast uppdaterad: 2026-01-23
 >
 > **Se:** `/admin/roadmap.php` for interaktiv vy
 
@@ -253,6 +253,21 @@ Automatiskt genererade "trading cards" med deltagarstatistik:
 ---
 
 # CHANGELOG
+
+### 2026-01-23 (Klassanalys & Events)
+- **Branch: claude/participant-analysis-tool-v8luL**
+
+- **Forbattrad klassanalys**
+  - Anvander display_name fran classes-tabellen
+  - Sorterar klasser enligt sort_order (samma som classes.php)
+  - Flyttat klasser-lank fran Konfiguration till Tavlingar
+
+- **Events admin forbattringar**
+  - Fixat venue_id i update-event-field.php
+  - Fixat event_format validation i bulk-update-events.php
+  - Lagt till point_scale_id och venue_id i bulk-update
+  - Lagt till e.venue_id i SQL SELECT
+  - Andrat platshistorik till att anvanda venues-tabellen
 
 ### 2026-01-22 (Roadmap Forbattring)
 - **Branch: claude/participant-analysis-tool-v8luL**
