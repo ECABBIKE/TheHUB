@@ -17,6 +17,16 @@ $filterBrand = isset($_GET['brand']) ? trim($_GET['brand']) : null;
 $filterYear = isset($_GET['year']) && is_numeric($_GET['year']) ? intval($_GET['year']) : null;
 $filterDiscipline = isset($_GET['discipline']) ? trim($_GET['discipline']) : null;
 
+// Get sort parameter (default: date DESC)
+$sortColumn = isset($_GET['sort']) ? trim($_GET['sort']) : 'date';
+$sortDir = isset($_GET['dir']) && strtolower($_GET['dir']) === 'asc' ? 'ASC' : 'DESC';
+
+// Validate sort column
+$validSortColumns = ['date', 'name'];
+if (!in_array($sortColumn, $validSortColumns)) {
+    $sortColumn = 'date';
+}
+
 // Check if series_events table exists
 $seriesEventsTableExists = false;
 try {
@@ -86,7 +96,7 @@ LEFT JOIN venues v ON e.venue_id = v.id
 LEFT JOIN series s ON e.series_id = s.id
 LEFT JOIN clubs c ON e.organizer_club_id = c.id
 {$whereClause}
-ORDER BY e.date DESC
+ORDER BY e.{$sortColumn} {$sortDir}" . ($sortColumn !== 'date' ? ", e.date DESC" : "") . "
 LIMIT 200";
 
 // Only run query if not a promotor with no events
@@ -356,8 +366,37 @@ include __DIR__ . '/components/unified-layout.php';
                 <table class="admin-table">
                     <thead>
                         <tr>
-                            <th class="sticky-col sticky-col-1">Datum</th>
-                            <th class="sticky-col sticky-col-2">Namn</th>
+                            <?php
+                            // Helper function for sort URL
+                            function getSortUrl($col, $currentSort, $currentDir, $filters) {
+                                $newDir = ($currentSort === $col && $currentDir === 'DESC') ? 'asc' : 'desc';
+                                $params = array_filter([
+                                    'brand' => $filters['brand'] ?? null,
+                                    'year' => $filters['year'] ?? null,
+                                    'discipline' => $filters['discipline'] ?? null,
+                                    'sort' => $col,
+                                    'dir' => $newDir
+                                ]);
+                                return '/admin/events?' . http_build_query($params);
+                            }
+                            $filters = ['brand' => $filterBrand, 'year' => $filterYear, 'discipline' => $filterDiscipline];
+                            ?>
+                            <th class="sticky-col sticky-col-1 sortable-header">
+                                <a href="<?= getSortUrl('date', $sortColumn, $sortDir, $filters) ?>" class="sort-link <?= $sortColumn === 'date' ? 'active' : '' ?>">
+                                    Datum
+                                    <?php if ($sortColumn === 'date'): ?>
+                                        <i data-lucide="<?= $sortDir === 'ASC' ? 'chevron-up' : 'chevron-down' ?>" class="sort-icon"></i>
+                                    <?php endif; ?>
+                                </a>
+                            </th>
+                            <th class="sticky-col sticky-col-2 sortable-header">
+                                <a href="<?= getSortUrl('name', $sortColumn, $sortDir, $filters) ?>" class="sort-link <?= $sortColumn === 'name' ? 'active' : '' ?>">
+                                    Namn
+                                    <?php if ($sortColumn === 'name'): ?>
+                                        <i data-lucide="<?= $sortDir === 'ASC' ? 'chevron-up' : 'chevron-down' ?>" class="sort-icon"></i>
+                                    <?php endif; ?>
+                                </a>
+                            </th>
                             <th class="event-field destination-field">Serie</th>
                             <th class="destination-field">Destination</th>
                             <th class="destination-field organizer-field">Arrangor</th>
@@ -946,6 +985,27 @@ document.addEventListener('DOMContentLoaded', function() {
         .admin-table .admin-form-input {
             font-size: 0.75rem;
             padding: 4px 8px;
+        }
+        /* Sortable headers */
+        .sortable-header .sort-link {
+            display: inline-flex;
+            align-items: center;
+            gap: 4px;
+            color: inherit;
+            text-decoration: none;
+            cursor: pointer;
+            white-space: nowrap;
+        }
+        .sortable-header .sort-link:hover {
+            color: var(--color-accent);
+        }
+        .sortable-header .sort-link.active {
+            color: var(--color-accent);
+        }
+        .sortable-header .sort-icon {
+            width: 14px;
+            height: 14px;
+            flex-shrink: 0;
         }
     `;
     document.head.appendChild(style);
