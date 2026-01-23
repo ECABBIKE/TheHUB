@@ -246,7 +246,14 @@ if ($selectedBrand !== null) {
             'p15_16' => ['P15-16', 'Pojkar 15-16', 'P 15-16'],
             'p13_14' => ['P13-14', 'Pojkar 13-14', 'P 13-14'],
         ];
-        $masterClasses = ['H30', 'H35', 'H40', 'H45', 'H50', 'Herrar 30', 'Herrar 35', 'Herrar 40', 'Herrar 45', 'Herrar 50'];
+        // Master classes - average of whichever were run that year
+        $masterClasses = [
+            'Master Herrar 30+',
+            'Master Herrar 35+',
+            'Master Herrar 40+',
+            'Master Herrar 45+',
+            'Master Herrar 50+'
+        ];
 
         // Group by venue and year, then aggregate class times
         $tempData = [];
