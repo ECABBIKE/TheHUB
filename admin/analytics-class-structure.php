@@ -316,9 +316,10 @@ if ($selectedBrand !== null) {
             JOIN events e ON r.event_id = e.id
             JOIN series_events se ON se.event_id = e.id
             JOIN series s ON se.series_id = s.id
-            JOIN venues v ON e.venue_id = v.id
+            LEFT JOIN venues v ON e.venue_id = v.id
             LEFT JOIN classes cl ON r.class_id = cl.id
             WHERE s.brand_id = ?
+              AND v.id IS NOT NULL
             GROUP BY v.id, e.id, r.class_id
             ORDER BY v.name ASC, event_year ASC
         ";
@@ -331,7 +332,7 @@ if ($selectedBrand !== null) {
         $targetClasses = [
             'h_elit' => ['Herrar Elit', 'H Elit', 'Herrar elit', 'Men Elite', 'Herr Elit', 'H-Elit'],
             'd_elit' => ['Damer Elit', 'D Elit', 'Damer elit', 'Women Elite', 'Dam Elit', 'D-Elit'],
-            'p15_16' => ['P15-16', 'Pojkar 15-16', 'P 15-16', 'Pojkar P15-16', 'P15/16', 'Boys 15-16', 'Junior P15-16', 'Pojkar, 15-16'],
+            'p15_16' => ['P15-16', 'Pojkar 15-16', 'Pojkar  15-16', 'P 15-16', 'Pojkar P15-16', 'P15/16', 'Boys 15-16', 'Junior P15-16', 'Pojkar, 15-16', 'Pojkar15-16'],
             'p13_14' => ['P13-14', 'Pojkar 13-14', 'P 13-14', 'Pojkar P13-14', 'P13/14', 'Boys 13-14', 'Junior P13-14', 'Pojkar, 13-14'],
         ];
         // Master classes - average of whichever were run that year
@@ -378,13 +379,14 @@ if ($selectedBrand !== null) {
 
             // Match class to target categories
             if ($className && $row['winner_time_sec'] > 0) {
-                $classLower = strtolower($className);
+                $classNameTrimmed = trim($className);
+                $classLower = strtolower($classNameTrimmed);
                 $matched = false;
 
-                // First try exact match
+                // First try exact match (with trim)
                 foreach ($targetClasses as $key => $names) {
                     foreach ($names as $name) {
-                        if (strcasecmp($className, $name) === 0) {
+                        if (strcasecmp($classNameTrimmed, trim($name)) === 0) {
                             $tempData[$venueId]['years'][$year][$key] = $row['winner_time_sec'];
                             $matched = true;
                             break 2;
