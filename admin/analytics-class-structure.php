@@ -59,8 +59,8 @@ try {
             s.name as series_name,
             sb.name as brand_name,
             sb.accent_color as brand_color,
-            r.class_id,
-            COALESCE(cl.name, CONCAT('Klass ', r.class_id)) as class_name,
+            COALESCE(r.class_id, 0) as class_id,
+            COALESCE(cl.name, CASE WHEN r.class_id IS NULL THEN 'Okänd klass' ELSE CONCAT('Klass ', r.class_id) END) as class_name,
             COUNT(DISTINCT r.cyclist_id) as participants,
 
             -- Winner time (position = 1)
@@ -122,8 +122,7 @@ try {
         LEFT JOIN classes cl ON r.class_id = cl.id
         WHERE YEAR(e.date) = ?
         $brandFilter
-        AND r.class_id IS NOT NULL
-        GROUP BY e.id, r.class_id
+        GROUP BY e.id, COALESCE(r.class_id, 0)
         ORDER BY e.date DESC, class_name ASC
     ";
 
@@ -203,6 +202,7 @@ uasort($classAggregates, function($a, $b) {
 // Helper function to format time
 function formatTime($seconds) {
     if (!$seconds || $seconds <= 0) return '-';
+    $seconds = (int) $seconds; // Cast to int to avoid float warnings
     $hours = floor($seconds / 3600);
     $minutes = floor(($seconds % 3600) / 60);
     $secs = $seconds % 60;
