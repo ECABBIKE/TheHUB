@@ -112,13 +112,17 @@ try {
 
             -- Time spread (difference between winner and last finisher)
             MAX(CASE WHEN r.status = 'finished' THEN TIME_TO_SEC(r.finish_time) END) -
-            MIN(CASE WHEN r.position = 1 THEN TIME_TO_SEC(r.finish_time) END) as time_spread_sec
+            MIN(CASE WHEN r.position = 1 THEN TIME_TO_SEC(r.finish_time) END) as time_spread_sec,
+
+            -- Venue info for tracking min/max locations
+            v.name as venue_name
 
         FROM results r
         JOIN events e ON r.event_id = e.id
         JOIN series s ON e.series_id = s.id
         LEFT JOIN series_brands sb ON s.brand_id = sb.id
         LEFT JOIN classes cl ON r.class_id = cl.id
+        LEFT JOIN venues v ON e.venue_id = v.id
         WHERE YEAR(e.date) = ?
         $brandFilter
         GROUP BY e.id, COALESCE(r.class_id, 0)
@@ -300,7 +304,8 @@ foreach ($classData as $row) {
             'total_stages' => 0,
             'avg_winner_time' => 0,
             'winner_times' => [],
-            'stage_counts' => []
+            'stage_counts' => [],
+            'time_venues' => [] // Track venue for each time
         ];
     }
     $classAggregates[$className]['event_count']++;
@@ -310,6 +315,7 @@ foreach ($classData as $row) {
     }
     if ($row['winner_time_sec'] > 0) {
         $classAggregates[$className]['winner_times'][] = $row['winner_time_sec'];
+        $classAggregates[$className]['time_venues'][$row['winner_time_sec']] = $row['venue_name'] ?: $row['event_name'];
     }
 }
 
@@ -330,6 +336,13 @@ foreach ($classAggregates as $className => &$agg) {
     $agg['max_winner_time'] = !empty($agg['winner_times'])
         ? max($agg['winner_times'])
         : 0;
+    // Get venue names for min/max times
+    $agg['min_venue'] = $agg['min_winner_time'] > 0 && isset($agg['time_venues'][$agg['min_winner_time']])
+        ? $agg['time_venues'][$agg['min_winner_time']]
+        : '';
+    $agg['max_venue'] = $agg['max_winner_time'] > 0 && isset($agg['time_venues'][$agg['max_winner_time']])
+        ? $agg['time_venues'][$agg['max_winner_time']]
+        : '';
 }
 unset($agg);
 
@@ -973,9 +986,19 @@ include __DIR__ . '/components/unified-layout.php';
                                 -
                                 <?php endif; ?>
                             </td>
-                            <td class="time-cell" style="color: var(--color-success);"><?= formatTime($agg['min_winner_time']) ?></td>
+                            <td class="time-cell" style="color: var(--color-success);">
+                                <?= formatTime($agg['min_winner_time']) ?>
+                                <?php if (!empty($agg['min_venue'])): ?>
+                                <span style="color: var(--color-text-muted); font-size: 0.75rem; display: block;">(<?= htmlspecialchars($agg['min_venue']) ?>)</span>
+                                <?php endif; ?>
+                            </td>
                             <td class="time-cell"><?= formatTime($agg['avg_winner_time']) ?></td>
-                            <td class="time-cell" style="color: var(--color-warning);"><?= formatTime($agg['max_winner_time']) ?></td>
+                            <td class="time-cell" style="color: var(--color-warning);">
+                                <?= formatTime($agg['max_winner_time']) ?>
+                                <?php if (!empty($agg['max_venue'])): ?>
+                                <span style="color: var(--color-text-muted); font-size: 0.75rem; display: block;">(<?= htmlspecialchars($agg['max_venue']) ?>)</span>
+                                <?php endif; ?>
+                            </td>
                         </tr>
                         <?php endforeach; ?>
                     </tbody>
