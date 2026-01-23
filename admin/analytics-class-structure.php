@@ -964,7 +964,6 @@ include __DIR__ . '/components/unified-layout.php';
                         <th>Sträckor</th>
                         <th>Vinnartid</th>
                         <th>Snitttid</th>
-                        <th>Tidsspridning</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -984,13 +983,6 @@ include __DIR__ . '/components/unified-layout.php';
                         </td>
                         <td class="time-cell"><?= formatTime($class['winner_time_sec']) ?></td>
                         <td class="time-cell"><?= formatTime($class['avg_time_sec']) ?></td>
-                        <td class="time-cell">
-                            <?php if ($class['time_spread_sec'] > 0): ?>
-                            +<?= formatTime($class['time_spread_sec']) ?>
-                            <?php else: ?>
-                            -
-                            <?php endif; ?>
-                        </td>
                     </tr>
                     <?php endforeach; ?>
                 </tbody>
