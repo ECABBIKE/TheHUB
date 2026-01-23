@@ -33,7 +33,7 @@ if (empty($changes)) {
 // Valid field values
 $validDisciplines = ['', 'ENDURO', 'DH', 'XC', 'XCO', 'XCM', 'DUAL_SLALOM', 'PUMPTRACK', 'GRAVEL', 'E-MTB'];
 $validEventLevels = ['', 'national', 'sportmotion'];
-$validEventFormats = ['', 'Enduro (en tid)', 'Downhill Standard', 'SweCUP Downhill', 'Dual Slalom'];
+$validEventFormats = ['', 'ENDURO', 'DH_STANDARD', 'DH_SWECUP', 'DUAL_SLALOM'];
 
 try {
     global $pdo;
@@ -111,6 +111,20 @@ try {
                         $adventId = trim($value);
                         $stmt = $pdo->prepare("UPDATE events SET advent_id = ? WHERE id = ?");
                         $stmt->execute([$adventId, $eventId]);
+                        $updateCount++;
+                        break;
+
+                    case 'point_scale_id':
+                        $pointScaleId = ($value !== '' && $value !== null) ? intval($value) : null;
+                        $stmt = $pdo->prepare("UPDATE events SET point_scale_id = ? WHERE id = ?");
+                        $stmt->execute([$pointScaleId, $eventId]);
+                        $updateCount++;
+                        break;
+
+                    case 'venue_id':
+                        $venueId = ($value !== '' && $value !== null) ? intval($value) : null;
+                        $stmt = $pdo->prepare("UPDATE events SET venue_id = ? WHERE id = ?");
+                        $stmt->execute([$venueId, $eventId]);
                         $updateCount++;
                         break;
 
