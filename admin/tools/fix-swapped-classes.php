@@ -105,7 +105,7 @@ include __DIR__ . '/../components/unified-layout.php';
     </div>
     <div class="card-body">
         <form method="POST">
-            <?= csrfField() ?>
+            <?= csrf_field() ?>
 
             <div class="form-group">
                 <label class="form-label">Event</label>

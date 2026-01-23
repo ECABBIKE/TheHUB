@@ -147,7 +147,8 @@ try {
 
         FROM results r
         JOIN events e ON r.event_id = e.id
-        JOIN series s ON e.series_id = s.id
+        JOIN series_events se ON se.event_id = e.id
+        JOIN series s ON se.series_id = s.id
         LEFT JOIN series_brands sb ON s.brand_id = sb.id
         LEFT JOIN classes cl ON r.class_id = cl.id
         LEFT JOIN venues v ON e.venue_id = v.id
@@ -234,7 +235,8 @@ try {
 
         FROM results r
         JOIN events e ON r.event_id = e.id
-        JOIN series s ON e.series_id = s.id
+        JOIN series_events se ON se.event_id = e.id
+        JOIN series s ON se.series_id = s.id
         JOIN series_brands sb ON s.brand_id = sb.id
         WHERE YEAR(e.date) = ?
         GROUP BY sb.id, YEAR(e.date)
@@ -283,7 +285,8 @@ if ($selectedBrand !== null) {
                     END) as winner_time_sec
             FROM results r
             JOIN events e ON r.event_id = e.id
-            JOIN series s ON e.series_id = s.id
+            JOIN series_events se ON se.event_id = e.id
+            JOIN series s ON se.series_id = s.id
             JOIN venues v ON e.venue_id = v.id
             LEFT JOIN classes cl ON r.class_id = cl.id
             WHERE s.brand_id = ?
@@ -964,7 +967,6 @@ include __DIR__ . '/components/unified-layout.php';
                         <th>Sträckor</th>
                         <th>Vinnartid</th>
                         <th>Snitttid</th>
-                        <th>Tidsspridning</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -984,13 +986,6 @@ include __DIR__ . '/components/unified-layout.php';
                         </td>
                         <td class="time-cell"><?= formatTime($class['winner_time_sec']) ?></td>
                         <td class="time-cell"><?= formatTime($class['avg_time_sec']) ?></td>
-                        <td class="time-cell">
-                            <?php if ($class['time_spread_sec'] > 0): ?>
-                            +<?= formatTime($class['time_spread_sec']) ?>
-                            <?php else: ?>
-                            -
-                            <?php endif; ?>
-                        </td>
                     </tr>
                     <?php endforeach; ?>
                 </tbody>
