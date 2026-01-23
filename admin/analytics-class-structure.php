@@ -140,7 +140,36 @@ try {
                 IF(MAX(CASE WHEN r.ss15 IS NOT NULL AND r.ss15 != '' AND r.ss15 != '00:00:00' THEN 1 END) = 1, 'SS15', NULL)
             ) as stages_used,
 
-            -- Time spread removed (complex time format handling needed)
+            -- Time spread (difference between slowest and fastest finisher)
+            (
+                MAX(CASE WHEN (r.status IS NULL OR LOWER(r.status) NOT IN ('dnf', 'dns', 'dq', 'dsq', 'did not finish', 'did not start', 'disqualified'))
+                         AND r.finish_time IS NOT NULL AND r.finish_time != ''
+                         AND r.finish_time NOT LIKE '%DNF%' AND r.finish_time NOT LIKE '%DNS%'
+                    THEN
+                        CASE
+                            WHEN r.finish_time REGEXP '^[0-9]+:[0-9]+:[0-9]' THEN TIME_TO_SEC(r.finish_time)
+                            WHEN r.finish_time REGEXP '^[0-9]+:[0-9]' THEN
+                                CAST(SUBSTRING_INDEX(r.finish_time, ':', 1) AS DECIMAL(10,3)) * 60 +
+                                CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(r.finish_time, ':', -1), '.', 1) AS DECIMAL(10,3)) +
+                                COALESCE(CAST(CONCAT('0.', SUBSTRING_INDEX(r.finish_time, '.', -1)) AS DECIMAL(10,3)), 0)
+                            ELSE TIME_TO_SEC(r.finish_time)
+                        END
+                    END)
+                -
+                MIN(CASE WHEN (r.status IS NULL OR LOWER(r.status) NOT IN ('dnf', 'dns', 'dq', 'dsq', 'did not finish', 'did not start', 'disqualified'))
+                         AND r.finish_time IS NOT NULL AND r.finish_time != ''
+                         AND r.finish_time NOT LIKE '%DNF%' AND r.finish_time NOT LIKE '%DNS%'
+                    THEN
+                        CASE
+                            WHEN r.finish_time REGEXP '^[0-9]+:[0-9]+:[0-9]' THEN TIME_TO_SEC(r.finish_time)
+                            WHEN r.finish_time REGEXP '^[0-9]+:[0-9]' THEN
+                                CAST(SUBSTRING_INDEX(r.finish_time, ':', 1) AS DECIMAL(10,3)) * 60 +
+                                CAST(SUBSTRING_INDEX(SUBSTRING_INDEX(r.finish_time, ':', -1), '.', 1) AS DECIMAL(10,3)) +
+                                COALESCE(CAST(CONCAT('0.', SUBSTRING_INDEX(r.finish_time, '.', -1)) AS DECIMAL(10,3)), 0)
+                            ELSE TIME_TO_SEC(r.finish_time)
+                        END
+                    END)
+            ) as time_spread_sec,
 
             -- Venue info for tracking min/max locations
             v.name as venue_name
@@ -967,6 +996,7 @@ include __DIR__ . '/components/unified-layout.php';
                         <th>Sträckor</th>
                         <th>Vinnartid</th>
                         <th>Snitttid</th>
+                        <th>Tidsspridning</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -986,6 +1016,13 @@ include __DIR__ . '/components/unified-layout.php';
                         </td>
                         <td class="time-cell"><?= formatTime($class['winner_time_sec']) ?></td>
                         <td class="time-cell"><?= formatTime($class['avg_time_sec']) ?></td>
+                        <td class="time-cell">
+                            <?php if (isset($class['time_spread_sec']) && $class['time_spread_sec'] > 0): ?>
+                            +<?= formatTime($class['time_spread_sec']) ?>
+                            <?php else: ?>
+                            -
+                            <?php endif; ?>
+                        </td>
                     </tr>
                     <?php endforeach; ?>
                 </tbody>
