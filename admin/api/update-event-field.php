@@ -37,10 +37,10 @@ if (!$field) {
 }
 
 // Whitelist of allowed fields
-$allowedFields = ['event_level', 'event_format', 'point_scale_id', 'pricing_template_id', 'advent_id'];
+$allowedFields = ['event_level', 'event_format', 'point_scale_id', 'pricing_template_id', 'advent_id', 'venue_id'];
 
 if (!in_array($field, $allowedFields)) {
-    echo json_encode(['success' => false, 'error' => 'Invalid field name']);
+    echo json_encode(['success' => false, 'error' => 'Invalid field name: ' . $field]);
     exit;
 }
 
@@ -75,6 +75,10 @@ switch ($field) {
 
     case 'advent_id':
         $value = trim($value);
+        break;
+
+    case 'venue_id':
+        $value = ($value !== '' && $value !== null) ? intval($value) : null;
         break;
 }
 

@@ -1117,7 +1117,7 @@ function getFieldType(element) {
     const onblur = element.dataset.originalOnblur || element.getAttribute('onblur') || '';
 
     // Event fields
-    if (onchange.includes('updateSeries') || element.style.minWidth === '200px') {
+    if (onchange.includes('updateSeries')) {
         return 'series_id';
     } else if (onchange.includes('updateDiscipline')) {
         return 'discipline';
@@ -1125,10 +1125,16 @@ function getFieldType(element) {
         return 'event_level';
     } else if (onchange.includes('updateEventFormat')) {
         return 'event_format';
+    } else if (onchange.includes('updatePointScale')) {
+        return 'point_scale_id';
     } else if (onchange.includes('updatePricingTemplate')) {
         return 'pricing_template_id';
     } else if (onblur.includes('updateAdventId')) {
         return 'advent_id';
+    }
+    // Destination fields
+    else if (onchange.includes('updateVenue')) {
+        return 'venue_id';
     }
     // Organizer fields
     else if (onchange.includes('updateOrganizerClub')) {

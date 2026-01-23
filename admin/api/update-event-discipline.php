@@ -38,14 +38,14 @@ if (!in_array($discipline, $validDisciplines)) {
 }
 
 try {
-    $db = getDB();
+    global $pdo;
 
-    // Update the event
-    $db->update('events', [
-        'discipline' => $discipline ?: null
-    ], 'id = ?', [$eventId]);
+    // Update the event using direct PDO
+    $stmt = $pdo->prepare("UPDATE events SET discipline = ? WHERE id = ?");
+    $stmt->execute([$discipline ?: null, $eventId]);
 
     echo json_encode(['success' => true]);
 } catch (Exception $e) {
+    error_log("Discipline update error: " . $e->getMessage() . " | Event ID: $eventId");
     echo json_encode(['success' => false, 'error' => $e->getMessage()]);
 }
