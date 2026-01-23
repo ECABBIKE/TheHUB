@@ -170,9 +170,9 @@ try {
             COUNT(DISTINCT e.id) as event_count,
             COUNT(DISTINCT r.cyclist_id) as total_participants,
 
-            -- Average winner time across all events
+            -- Average winner time across all events (finished only)
             AVG(
-                CASE WHEN r.position = 1 THEN TIME_TO_SEC(r.finish_time) END
+                CASE WHEN r.position = 1 AND r.status = 'finished' THEN TIME_TO_SEC(r.finish_time) END
             ) as avg_winner_time_sec,
 
             -- Average stage count
