@@ -316,9 +316,10 @@ if ($selectedBrand !== null) {
             JOIN events e ON r.event_id = e.id
             JOIN series_events se ON se.event_id = e.id
             JOIN series s ON se.series_id = s.id
-            JOIN venues v ON e.venue_id = v.id
+            LEFT JOIN venues v ON e.venue_id = v.id
             LEFT JOIN classes cl ON r.class_id = cl.id
             WHERE s.brand_id = ?
+              AND v.id IS NOT NULL
             GROUP BY v.id, e.id, r.class_id
             ORDER BY v.name ASC, event_year ASC
         ";
@@ -327,11 +328,21 @@ if ($selectedBrand !== null) {
         $stmt->execute([$selectedBrand]);
         $histData = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+        // DEBUG: Log all classes found with their winner times
+        $debugClasses = [];
+        foreach ($histData as $row) {
+            $key = $row['event_year'] . ' - ' . $row['class_name'];
+            if (!isset($debugClasses[$key])) {
+                $debugClasses[$key] = $row['winner_time_sec'];
+            }
+        }
+        error_log("VENUE HISTORY DEBUG - Classes found: " . print_r($debugClasses, true));
+
         // Define class mappings for display (expanded to match various naming conventions)
         $targetClasses = [
             'h_elit' => ['Herrar Elit', 'H Elit', 'Herrar elit', 'Men Elite', 'Herr Elit', 'H-Elit'],
             'd_elit' => ['Damer Elit', 'D Elit', 'Damer elit', 'Women Elite', 'Dam Elit', 'D-Elit'],
-            'p15_16' => ['P15-16', 'Pojkar 15-16', 'P 15-16', 'Pojkar P15-16', 'P15/16', 'Boys 15-16', 'Junior P15-16', 'Pojkar, 15-16'],
+            'p15_16' => ['P15-16', 'Pojkar 15-16', 'Pojkar  15-16', 'P 15-16', 'Pojkar P15-16', 'P15/16', 'Boys 15-16', 'Junior P15-16', 'Pojkar, 15-16', 'Pojkar15-16'],
             'p13_14' => ['P13-14', 'Pojkar 13-14', 'P 13-14', 'Pojkar P13-14', 'P13/14', 'Boys 13-14', 'Junior P13-14', 'Pojkar, 13-14'],
         ];
         // Master classes - average of whichever were run that year
@@ -378,13 +389,14 @@ if ($selectedBrand !== null) {
 
             // Match class to target categories
             if ($className && $row['winner_time_sec'] > 0) {
-                $classLower = strtolower($className);
+                $classNameTrimmed = trim($className);
+                $classLower = strtolower($classNameTrimmed);
                 $matched = false;
 
-                // First try exact match
+                // First try exact match (with trim)
                 foreach ($targetClasses as $key => $names) {
                     foreach ($names as $name) {
-                        if (strcasecmp($className, $name) === 0) {
+                        if (strcasecmp($classNameTrimmed, trim($name)) === 0) {
                             $tempData[$venueId]['years'][$year][$key] = $row['winner_time_sec'];
                             $matched = true;
                             break 2;
@@ -394,28 +406,38 @@ if ($selectedBrand !== null) {
 
                 // Fallback: pattern-based matching if no exact match
                 if (!$matched) {
-                    // P15-16 pattern: contains "15" and "16" (but not "1516" which could be other)
-                    if ((strpos($classLower, '15-16') !== false || strpos($classLower, '15/16') !== false ||
-                         (strpos($classLower, '15') !== false && strpos($classLower, '16') !== false)) &&
-                        (strpos($classLower, 'pojk') !== false || strpos($classLower, 'p1') !== false || strpos($classLower, 'p 1') !== false)) {
-                        $tempData[$venueId]['years'][$year]['p15_16'] = $row['winner_time_sec'];
-                        $matched = true;
+                    // P15-16 pattern: contains "15-16" or "15/16", or contains both "15" and "16" with pojk/p prefix
+                    // Also match "Ungdom 15-16", "U15-16", etc.
+                    if (strpos($classLower, '15-16') !== false || strpos($classLower, '15/16') !== false ||
+                        (strpos($classLower, 'u15') !== false && strpos($classLower, '16') !== false) ||
+                        ((strpos($classLower, '15') !== false && strpos($classLower, '16') !== false) &&
+                         (strpos($classLower, 'pojk') !== false || strpos($classLower, 'p1') !== false ||
+                          strpos($classLower, 'p 1') !== false || strpos($classLower, 'ungdom') !== false))) {
+                        // But exclude if it's clearly a different age group
+                        if (strpos($classLower, '13') === false && strpos($classLower, '17') === false) {
+                            $tempData[$venueId]['years'][$year]['p15_16'] = $row['winner_time_sec'];
+                            $matched = true;
+                        }
                     }
                     // P13-14 pattern
-                    elseif ((strpos($classLower, '13-14') !== false || strpos($classLower, '13/14') !== false ||
-                             (strpos($classLower, '13') !== false && strpos($classLower, '14') !== false)) &&
-                            (strpos($classLower, 'pojk') !== false || strpos($classLower, 'p1') !== false || strpos($classLower, 'p 1') !== false)) {
-                        $tempData[$venueId]['years'][$year]['p13_14'] = $row['winner_time_sec'];
-                        $matched = true;
+                    if (!$matched && (strpos($classLower, '13-14') !== false || strpos($classLower, '13/14') !== false ||
+                            (strpos($classLower, 'u13') !== false && strpos($classLower, '14') !== false) ||
+                            ((strpos($classLower, '13') !== false && strpos($classLower, '14') !== false) &&
+                             (strpos($classLower, 'pojk') !== false || strpos($classLower, 'p1') !== false ||
+                              strpos($classLower, 'p 1') !== false || strpos($classLower, 'ungdom') !== false)))) {
+                        if (strpos($classLower, '15') === false) {
+                            $tempData[$venueId]['years'][$year]['p13_14'] = $row['winner_time_sec'];
+                            $matched = true;
+                        }
                     }
                     // Herrar Elit pattern
-                    elseif ((strpos($classLower, 'herr') !== false || strpos($classLower, 'h ') === 0 || strpos($classLower, 'h-') === 0) &&
+                    if (!$matched && (strpos($classLower, 'herr') !== false || strpos($classLower, 'h ') === 0 || strpos($classLower, 'h-') === 0) &&
                             strpos($classLower, 'elit') !== false) {
                         $tempData[$venueId]['years'][$year]['h_elit'] = $row['winner_time_sec'];
                         $matched = true;
                     }
                     // Damer Elit pattern
-                    elseif ((strpos($classLower, 'dam') !== false || strpos($classLower, 'd ') === 0 || strpos($classLower, 'd-') === 0) &&
+                    if (!$matched && (strpos($classLower, 'dam') !== false || strpos($classLower, 'd ') === 0 || strpos($classLower, 'd-') === 0) &&
                             strpos($classLower, 'elit') !== false) {
                         $tempData[$venueId]['years'][$year]['d_elit'] = $row['winner_time_sec'];
                         $matched = true;
@@ -1032,6 +1054,18 @@ include __DIR__ . '/components/unified-layout.php';
         <div style="padding:var(--space-sm);"></div>
     </div>
 </div>
+
+<!-- DEBUG: Show all classes found in venue history data -->
+<?php if (!empty($debugClasses)): ?>
+<div class="alert alert-info mb-lg">
+    <strong>DEBUG - Klasser funna i venue history (2024):</strong><br>
+    <?php foreach ($debugClasses as $key => $time): ?>
+        <?php if (strpos($key, '2024') !== false): ?>
+            <?= htmlspecialchars($key) ?>: <?= $time ? round($time, 2) . 's' : 'NULL' ?><br>
+        <?php endif; ?>
+    <?php endforeach; ?>
+</div>
+<?php endif; ?>
 
 <!-- Historical trends by venue (when brand selected) -->
 <?php if (!empty($venueHistory)): ?>
