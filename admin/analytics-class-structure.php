@@ -328,6 +328,16 @@ if ($selectedBrand !== null) {
         $stmt->execute([$selectedBrand]);
         $histData = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+        // DEBUG: Log all classes found with their winner times
+        $debugClasses = [];
+        foreach ($histData as $row) {
+            $key = $row['event_year'] . ' - ' . $row['class_name'];
+            if (!isset($debugClasses[$key])) {
+                $debugClasses[$key] = $row['winner_time_sec'];
+            }
+        }
+        error_log("VENUE HISTORY DEBUG - Classes found: " . print_r($debugClasses, true));
+
         // Define class mappings for display (expanded to match various naming conventions)
         $targetClasses = [
             'h_elit' => ['Herrar Elit', 'H Elit', 'Herrar elit', 'Men Elite', 'Herr Elit', 'H-Elit'],
@@ -1044,6 +1054,18 @@ include __DIR__ . '/components/unified-layout.php';
         <div style="padding:var(--space-sm);"></div>
     </div>
 </div>
+
+<!-- DEBUG: Show all classes found in venue history data -->
+<?php if (!empty($debugClasses)): ?>
+<div class="alert alert-info mb-lg">
+    <strong>DEBUG - Klasser funna i venue history (2024):</strong><br>
+    <?php foreach ($debugClasses as $key => $time): ?>
+        <?php if (strpos($key, '2024') !== false): ?>
+            <?= htmlspecialchars($key) ?>: <?= $time ? round($time, 2) . 's' : 'NULL' ?><br>
+        <?php endif; ?>
+    <?php endforeach; ?>
+</div>
+<?php endif; ?>
 
 <!-- Historical trends by venue (when brand selected) -->
 <?php if (!empty($venueHistory)): ?>
