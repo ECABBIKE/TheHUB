@@ -290,6 +290,20 @@ include __DIR__ . '/components/unified-layout.php';
         </div>
     </div>
 
+    <!-- Fix Swapped Classes -->
+    <div class="card">
+        <div class="tool-header">
+            <div class="tool-icon"><i data-lucide="shuffle"></i></div>
+            <div>
+                <h4 class="tool-title">Byt Klasser</h4>
+                <p class="tool-description">Byt plats på två klasser i ett event</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/tools/fix-swapped-classes.php" class="btn-admin btn-admin-primary">Öppna</a>
+        </div>
+    </div>
+
     <!-- Find Duplicates -->
     <div class="card">
         <div class="tool-header">
