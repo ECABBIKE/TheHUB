@@ -62,8 +62,8 @@ try {
             COALESCE(cl.sort_order, 9999) as class_sort_order,
             COUNT(DISTINCT r.cyclist_id) as participants,
 
-            -- Winner time (position = 1)
-            MIN(CASE WHEN r.position = 1 THEN TIME_TO_SEC(r.finish_time) END) as winner_time_sec,
+            -- Winner time (position = 1, must be finished)
+            MIN(CASE WHEN r.position = 1 AND r.status = 'finished' THEN TIME_TO_SEC(r.finish_time) END) as winner_time_sec,
 
             -- Average time (finished only)
             AVG(CASE WHEN r.status = 'finished' AND r.finish_time IS NOT NULL
@@ -224,7 +224,7 @@ if ($selectedBrand !== null) {
                 e.date as event_date,
                 COALESCE(cl.display_name, cl.name) as class_name,
                 COUNT(DISTINCT r.cyclist_id) as class_participants,
-                MIN(CASE WHEN r.position = 1 THEN TIME_TO_SEC(r.finish_time) END) as winner_time_sec
+                MIN(CASE WHEN r.position = 1 AND r.status = 'finished' THEN TIME_TO_SEC(r.finish_time) END) as winner_time_sec
             FROM results r
             JOIN events e ON r.event_id = e.id
             JOIN series s ON e.series_id = s.id
