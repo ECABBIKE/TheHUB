@@ -394,28 +394,38 @@ if ($selectedBrand !== null) {
 
                 // Fallback: pattern-based matching if no exact match
                 if (!$matched) {
-                    // P15-16 pattern: contains "15" and "16" (but not "1516" which could be other)
-                    if ((strpos($classLower, '15-16') !== false || strpos($classLower, '15/16') !== false ||
-                         (strpos($classLower, '15') !== false && strpos($classLower, '16') !== false)) &&
-                        (strpos($classLower, 'pojk') !== false || strpos($classLower, 'p1') !== false || strpos($classLower, 'p 1') !== false)) {
-                        $tempData[$venueId]['years'][$year]['p15_16'] = $row['winner_time_sec'];
-                        $matched = true;
+                    // P15-16 pattern: contains "15-16" or "15/16", or contains both "15" and "16" with pojk/p prefix
+                    // Also match "Ungdom 15-16", "U15-16", etc.
+                    if (strpos($classLower, '15-16') !== false || strpos($classLower, '15/16') !== false ||
+                        (strpos($classLower, 'u15') !== false && strpos($classLower, '16') !== false) ||
+                        ((strpos($classLower, '15') !== false && strpos($classLower, '16') !== false) &&
+                         (strpos($classLower, 'pojk') !== false || strpos($classLower, 'p1') !== false ||
+                          strpos($classLower, 'p 1') !== false || strpos($classLower, 'ungdom') !== false))) {
+                        // But exclude if it's clearly a different age group
+                        if (strpos($classLower, '13') === false && strpos($classLower, '17') === false) {
+                            $tempData[$venueId]['years'][$year]['p15_16'] = $row['winner_time_sec'];
+                            $matched = true;
+                        }
                     }
                     // P13-14 pattern
-                    elseif ((strpos($classLower, '13-14') !== false || strpos($classLower, '13/14') !== false ||
-                             (strpos($classLower, '13') !== false && strpos($classLower, '14') !== false)) &&
-                            (strpos($classLower, 'pojk') !== false || strpos($classLower, 'p1') !== false || strpos($classLower, 'p 1') !== false)) {
-                        $tempData[$venueId]['years'][$year]['p13_14'] = $row['winner_time_sec'];
-                        $matched = true;
+                    if (!$matched && (strpos($classLower, '13-14') !== false || strpos($classLower, '13/14') !== false ||
+                            (strpos($classLower, 'u13') !== false && strpos($classLower, '14') !== false) ||
+                            ((strpos($classLower, '13') !== false && strpos($classLower, '14') !== false) &&
+                             (strpos($classLower, 'pojk') !== false || strpos($classLower, 'p1') !== false ||
+                              strpos($classLower, 'p 1') !== false || strpos($classLower, 'ungdom') !== false)))) {
+                        if (strpos($classLower, '15') === false) {
+                            $tempData[$venueId]['years'][$year]['p13_14'] = $row['winner_time_sec'];
+                            $matched = true;
+                        }
                     }
                     // Herrar Elit pattern
-                    elseif ((strpos($classLower, 'herr') !== false || strpos($classLower, 'h ') === 0 || strpos($classLower, 'h-') === 0) &&
+                    if (!$matched && (strpos($classLower, 'herr') !== false || strpos($classLower, 'h ') === 0 || strpos($classLower, 'h-') === 0) &&
                             strpos($classLower, 'elit') !== false) {
                         $tempData[$venueId]['years'][$year]['h_elit'] = $row['winner_time_sec'];
                         $matched = true;
                     }
                     // Damer Elit pattern
-                    elseif ((strpos($classLower, 'dam') !== false || strpos($classLower, 'd ') === 0 || strpos($classLower, 'd-') === 0) &&
+                    if (!$matched && (strpos($classLower, 'dam') !== false || strpos($classLower, 'd ') === 0 || strpos($classLower, 'd-') === 0) &&
                             strpos($classLower, 'elit') !== false) {
                         $tempData[$venueId]['years'][$year]['d_elit'] = $row['winner_time_sec'];
                         $matched = true;
