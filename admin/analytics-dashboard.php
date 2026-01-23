@@ -177,6 +177,10 @@ include __DIR__ . '/components/unified-layout.php';
         <i data-lucide="calendar-days"></i>
         <span>Event Deltagande</span>
     </a>
+    <a href="/admin/analytics-class-structure.php" class="analytics-nav-item">
+        <i data-lucide="layers-3"></i>
+        <span>Klassanalys</span>
+    </a>
     <a href="/admin/analytics-cohorts.php" class="analytics-nav-item">
         <i data-lucide="users"></i>
         <span>Kohorter</span>
