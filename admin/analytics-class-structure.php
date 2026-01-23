@@ -324,6 +324,12 @@ foreach ($classAggregates as $className => &$agg) {
     $agg['avg_winner_time'] = !empty($agg['winner_times'])
         ? array_sum($agg['winner_times']) / count($agg['winner_times'])
         : 0;
+    $agg['min_winner_time'] = !empty($agg['winner_times'])
+        ? min($agg['winner_times'])
+        : 0;
+    $agg['max_winner_time'] = !empty($agg['winner_times'])
+        ? max($agg['winner_times'])
+        : 0;
 }
 unset($agg);
 
@@ -948,8 +954,10 @@ include __DIR__ . '/components/unified-layout.php';
                             <th>Klass</th>
                             <th>Antal events</th>
                             <th>Snitt deltagare</th>
-                            <th>Snitt sträckor</th>
+                            <th>Snitt strackor</th>
+                            <th>Kortast</th>
                             <th>Snitt vinnartid</th>
+                            <th>Langst</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -965,7 +973,9 @@ include __DIR__ . '/components/unified-layout.php';
                                 -
                                 <?php endif; ?>
                             </td>
+                            <td class="time-cell" style="color: var(--color-success);"><?= formatTime($agg['min_winner_time']) ?></td>
                             <td class="time-cell"><?= formatTime($agg['avg_winner_time']) ?></td>
+                            <td class="time-cell" style="color: var(--color-warning);"><?= formatTime($agg['max_winner_time']) ?></td>
                         </tr>
                         <?php endforeach; ?>
                     </tbody>
