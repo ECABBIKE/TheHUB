@@ -147,7 +147,8 @@ try {
 
         FROM results r
         JOIN events e ON r.event_id = e.id
-        JOIN series s ON e.series_id = s.id
+        JOIN series_events se ON se.event_id = e.id
+        JOIN series s ON se.series_id = s.id
         LEFT JOIN series_brands sb ON s.brand_id = sb.id
         LEFT JOIN classes cl ON r.class_id = cl.id
         LEFT JOIN venues v ON e.venue_id = v.id
@@ -234,7 +235,8 @@ try {
 
         FROM results r
         JOIN events e ON r.event_id = e.id
-        JOIN series s ON e.series_id = s.id
+        JOIN series_events se ON se.event_id = e.id
+        JOIN series s ON se.series_id = s.id
         JOIN series_brands sb ON s.brand_id = sb.id
         WHERE YEAR(e.date) = ?
         GROUP BY sb.id, YEAR(e.date)
@@ -283,7 +285,8 @@ if ($selectedBrand !== null) {
                     END) as winner_time_sec
             FROM results r
             JOIN events e ON r.event_id = e.id
-            JOIN series s ON e.series_id = s.id
+            JOIN series_events se ON se.event_id = e.id
+            JOIN series s ON se.series_id = s.id
             JOIN venues v ON e.venue_id = v.id
             LEFT JOIN classes cl ON r.class_id = cl.id
             WHERE s.brand_id = ?
