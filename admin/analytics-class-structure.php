@@ -202,13 +202,15 @@ try {
     error_log("Brand comparison error: " . $e->getMessage());
 }
 
-// Historical data by location (when brand is selected)
-$locationHistory = [];
+// Historical data by venue (when brand is selected)
+$venueHistory = [];
 if ($selectedBrand !== null) {
     try {
         $histSql = "
             SELECT
-                e.location,
+                v.id as venue_id,
+                v.name as venue_name,
+                v.city as venue_city,
                 YEAR(e.date) as event_year,
                 e.id as event_id,
                 e.name as event_name,
@@ -238,27 +240,32 @@ if ($selectedBrand !== null) {
             FROM results r
             JOIN events e ON r.event_id = e.id
             JOIN series s ON e.series_id = s.id
+            JOIN venues v ON e.venue_id = v.id
             WHERE s.brand_id = ?
-            AND e.location IS NOT NULL AND e.location != ''
-            GROUP BY e.location, e.id
-            ORDER BY e.location ASC, event_year ASC
+            GROUP BY v.id, e.id
+            ORDER BY v.name ASC, event_year ASC
         ";
 
         $stmt = $pdo->prepare($histSql);
         $stmt->execute([$selectedBrand]);
         $histData = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        // Group by location
+        // Group by venue
         foreach ($histData as $row) {
-            $loc = $row['location'];
-            if (!isset($locationHistory[$loc])) {
-                $locationHistory[$loc] = [
+            $venueId = $row['venue_id'];
+            $venueName = $row['venue_name'];
+            if ($row['venue_city']) {
+                $venueName .= ' (' . $row['venue_city'] . ')';
+            }
+            if (!isset($venueHistory[$venueId])) {
+                $venueHistory[$venueId] = [
+                    'name' => $venueName,
                     'years' => [],
                     'events' => []
                 ];
             }
             $year = $row['event_year'];
-            $locationHistory[$loc]['years'][$year] = [
+            $venueHistory[$venueId]['years'][$year] = [
                 'event_name' => $row['event_name'],
                 'event_date' => $row['event_date'],
                 'participants' => $row['participants'],
@@ -266,16 +273,16 @@ if ($selectedBrand !== null) {
                 'class_count' => $row['class_count'],
                 'avg_stages' => round($row['avg_stages'], 1)
             ];
-            $locationHistory[$loc]['events'][] = $row;
+            $venueHistory[$venueId]['events'][] = $row;
         }
 
         // Sort by number of years (most history first)
-        uasort($locationHistory, function($a, $b) {
+        uasort($venueHistory, function($a, $b) {
             return count($b['years']) - count($a['years']);
         });
 
     } catch (Exception $e) {
-        error_log("Location history error: " . $e->getMessage());
+        error_log("Venue history error: " . $e->getMessage());
     }
 }
 
@@ -755,7 +762,7 @@ include __DIR__ . '/components/unified-layout.php';
         <p style="font-size:0.85rem;">Prova att valja en annan sasong eller varumarke.</p>
         <?php if ($selectedBrand === null): ?>
         <p style="font-size:0.85rem; margin-top: var(--space-md);">
-            <strong>Tips:</strong> Valj ett varumarke for att se historik per destination.
+            <strong>Tips:</strong> Valj ett varumarke for att se historik per anlaggning.
         </p>
         <?php endif; ?>
     </div>
@@ -830,19 +837,19 @@ include __DIR__ . '/components/unified-layout.php';
     </div>
 </div>
 
-<!-- Historical trends by location (when brand selected) -->
-<?php if (!empty($locationHistory)): ?>
+<!-- Historical trends by venue (when brand selected) -->
+<?php if (!empty($venueHistory)): ?>
 <div class="admin-card" style="margin-bottom: var(--space-xl);">
     <div class="admin-card-header">
-        <h2><i data-lucide="map-pin"></i> Historik per destination</h2>
+        <h2><i data-lucide="mountain"></i> Historik per anlaggning</h2>
     </div>
     <div class="admin-card-body">
-        <?php foreach ($locationHistory as $location => $data): ?>
+        <?php foreach ($venueHistory as $venueId => $data): ?>
         <?php if (count($data['years']) > 1): ?>
         <div class="location-section">
             <div class="location-header">
-                <i data-lucide="map-pin"></i>
-                <h3><?= htmlspecialchars($location) ?></h3>
+                <i data-lucide="mountain"></i>
+                <h3><?= htmlspecialchars($data['name']) ?></h3>
                 <span class="year-count"><?= count($data['years']) ?> ar</span>
             </div>
             <div class="table-responsive">
@@ -912,13 +919,13 @@ include __DIR__ . '/components/unified-layout.php';
         <?php endforeach; ?>
 
         <?php
-        // Check if any locations had only 1 year
-        $singleYearLocations = array_filter($locationHistory, function($d) { return count($d['years']) === 1; });
-        if (!empty($singleYearLocations)):
+        // Check if any venues had only 1 year
+        $singleYearVenues = array_filter($venueHistory, function($d) { return count($d['years']) === 1; });
+        if (!empty($singleYearVenues)):
         ?>
         <p style="color: var(--color-text-muted); font-size: 0.85rem; margin-top: var(--space-lg);">
             <i data-lucide="info" style="width:14px;height:14px;vertical-align:middle;"></i>
-            <?= count($singleYearLocations) ?> destinationer med endast ett ar visas inte.
+            <?= count($singleYearVenues) ?> anlaggningar med endast ett ar visas inte.
         </p>
         <?php endif; ?>
     </div>
