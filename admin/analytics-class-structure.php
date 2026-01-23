@@ -239,12 +239,12 @@ if ($selectedBrand !== null) {
         $stmt->execute([$selectedBrand]);
         $histData = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        // Define class mappings for display
+        // Define class mappings for display (expanded to match various naming conventions)
         $targetClasses = [
-            'h_elit' => ['Herrar Elit', 'H Elit', 'Herrar elit'],
-            'd_elit' => ['Damer Elit', 'D Elit', 'Damer elit'],
-            'p15_16' => ['P15-16', 'Pojkar 15-16', 'P 15-16'],
-            'p13_14' => ['P13-14', 'Pojkar 13-14', 'P 13-14'],
+            'h_elit' => ['Herrar Elit', 'H Elit', 'Herrar elit', 'Men Elite', 'Herr Elit', 'H-Elit'],
+            'd_elit' => ['Damer Elit', 'D Elit', 'Damer elit', 'Women Elite', 'Dam Elit', 'D-Elit'],
+            'p15_16' => ['P15-16', 'Pojkar 15-16', 'P 15-16', 'Pojkar P15-16', 'P15/16', 'Boys 15-16', 'Junior P15-16', 'Pojkar, 15-16'],
+            'p13_14' => ['P13-14', 'Pojkar 13-14', 'P 13-14', 'Pojkar P13-14', 'P13/14', 'Boys 13-14', 'Junior P13-14', 'Pojkar, 13-14'],
         ];
         // Master classes - average of whichever were run that year
         $masterClasses = [
@@ -290,15 +290,51 @@ if ($selectedBrand !== null) {
 
             // Match class to target categories
             if ($className && $row['winner_time_sec'] > 0) {
+                $classLower = strtolower($className);
+                $matched = false;
+
+                // First try exact match
                 foreach ($targetClasses as $key => $names) {
                     foreach ($names as $name) {
                         if (strcasecmp($className, $name) === 0) {
                             $tempData[$venueId]['years'][$year][$key] = $row['winner_time_sec'];
+                            $matched = true;
                             break 2;
                         }
                     }
                 }
-                // Check for master classes
+
+                // Fallback: pattern-based matching if no exact match
+                if (!$matched) {
+                    // P15-16 pattern: contains "15" and "16" (but not "1516" which could be other)
+                    if ((strpos($classLower, '15-16') !== false || strpos($classLower, '15/16') !== false ||
+                         (strpos($classLower, '15') !== false && strpos($classLower, '16') !== false)) &&
+                        (strpos($classLower, 'pojk') !== false || strpos($classLower, 'p1') !== false || strpos($classLower, 'p 1') !== false)) {
+                        $tempData[$venueId]['years'][$year]['p15_16'] = $row['winner_time_sec'];
+                        $matched = true;
+                    }
+                    // P13-14 pattern
+                    elseif ((strpos($classLower, '13-14') !== false || strpos($classLower, '13/14') !== false ||
+                             (strpos($classLower, '13') !== false && strpos($classLower, '14') !== false)) &&
+                            (strpos($classLower, 'pojk') !== false || strpos($classLower, 'p1') !== false || strpos($classLower, 'p 1') !== false)) {
+                        $tempData[$venueId]['years'][$year]['p13_14'] = $row['winner_time_sec'];
+                        $matched = true;
+                    }
+                    // Herrar Elit pattern
+                    elseif ((strpos($classLower, 'herr') !== false || strpos($classLower, 'h ') === 0 || strpos($classLower, 'h-') === 0) &&
+                            strpos($classLower, 'elit') !== false) {
+                        $tempData[$venueId]['years'][$year]['h_elit'] = $row['winner_time_sec'];
+                        $matched = true;
+                    }
+                    // Damer Elit pattern
+                    elseif ((strpos($classLower, 'dam') !== false || strpos($classLower, 'd ') === 0 || strpos($classLower, 'd-') === 0) &&
+                            strpos($classLower, 'elit') !== false) {
+                        $tempData[$venueId]['years'][$year]['d_elit'] = $row['winner_time_sec'];
+                        $matched = true;
+                    }
+                }
+
+                // Check for master classes (always check, not mutually exclusive with above)
                 foreach ($masterClasses as $masterName) {
                     if (strcasecmp($className, $masterName) === 0) {
                         $tempData[$venueId]['years'][$year]['master_times'][] = $row['winner_time_sec'];
