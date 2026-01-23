@@ -31,23 +31,21 @@ try {
     $availableYears = $stmt->fetchAll(PDO::FETCH_COLUMN);
 } catch (Exception $e) {}
 
-// Parameters
-$selectedBrands = isset($_GET['brands']) ? array_map('intval', (array)$_GET['brands']) : [];
+// Parameters - single brand like analytics-trends.php
+$selectedBrand = isset($_GET['brand']) && $_GET['brand'] !== '' ? (int)$_GET['brand'] : null;
 $selectedYear = isset($_GET['year']) ? (int)$_GET['year'] : ($availableYears[0] ?? (int)date('Y'));
-$groupBy = $_GET['group_by'] ?? 'event'; // event, class, series
 
 // Build query for class structure analysis
 $classData = [];
 $eventSummary = [];
 
 try {
-    // Build brand filter
+    // Build brand filter (single brand, like analytics-trends.php)
     $brandFilter = '';
     $brandParams = [];
-    if (!empty($selectedBrands)) {
-        $placeholders = implode(',', array_fill(0, count($selectedBrands), '?'));
-        $brandFilter = "AND s.brand_id IN ($placeholders)";
-        $brandParams = $selectedBrands;
+    if ($selectedBrand !== null) {
+        $brandFilter = "AND s.brand_id = ?";
+        $brandParams = [$selectedBrand];
     }
 
     // Get class structure data per event
@@ -225,56 +223,6 @@ include __DIR__ . '/components/unified-layout.php';
 ?>
 
 <style>
-.filter-section {
-    background: var(--color-bg-surface);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-md);
-    padding: var(--space-lg);
-    margin-bottom: var(--space-xl);
-}
-.filter-row {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--space-md);
-    align-items: flex-end;
-}
-.filter-group {
-    flex: 1;
-    min-width: 150px;
-}
-.filter-group.brands {
-    flex: 2;
-    min-width: 300px;
-}
-
-.brand-pills {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--space-xs);
-}
-.brand-pill {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--space-xs);
-    padding: var(--space-xs) var(--space-sm);
-    background: var(--color-bg-page);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-full);
-    font-size: 0.8rem;
-    cursor: pointer;
-    transition: all 0.15s ease;
-}
-.brand-pill:hover {
-    border-color: var(--color-accent);
-}
-.brand-pill.selected {
-    background: var(--color-accent-light);
-    border-color: var(--color-accent);
-}
-.brand-pill input {
-    display: none;
-}
-
 .stats-grid {
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
@@ -431,7 +379,6 @@ include __DIR__ . '/components/unified-layout.php';
 
 /* Mobile */
 @media (max-width: 767px) {
-    .filter-section,
     .event-card,
     .stat-card {
         margin-left: -16px;
@@ -457,38 +404,34 @@ include __DIR__ . '/components/unified-layout.php';
 }
 </style>
 
-<!-- Filter Section -->
-<form method="get" class="filter-section">
-    <div class="filter-row">
+<!-- Filter Bar (same pattern as analytics-trends.php) -->
+<div class="filter-bar">
+    <form method="get" class="filter-form">
+        <?php if (!empty($brands)): ?>
         <div class="filter-group">
-            <label class="form-label">Sasong</label>
-            <select name="year" class="form-select">
-                <?php foreach ($availableYears as $y): ?>
-                <option value="<?= $y ?>" <?= $y == $selectedYear ? 'selected' : '' ?>><?= $y ?></option>
+            <label class="filter-label">Varumarke</label>
+            <select name="brand" class="form-select" onchange="this.form.submit()">
+                <option value="">Alla varumarken</option>
+                <?php foreach ($brands as $brand): ?>
+                    <option value="<?= $brand['id'] ?>" <?= $selectedBrand == $brand['id'] ? 'selected' : '' ?>
+                        <?php if (!empty($brand['accent_color'])): ?>style="border-left: 3px solid <?= htmlspecialchars($brand['accent_color']) ?>"<?php endif; ?>>
+                        <?= htmlspecialchars($brand['name']) ?>
+                    </option>
                 <?php endforeach; ?>
             </select>
         </div>
+        <?php endif; ?>
 
-        <div class="filter-group brands">
-            <label class="form-label">Varumarken (<?= count($selectedBrands) ?: 'alla' ?>)</label>
-            <div class="brand-pills">
-                <?php foreach ($brands as $b): ?>
-                <label class="brand-pill <?= in_array($b['id'], $selectedBrands) ? 'selected' : '' ?>">
-                    <input type="checkbox" name="brands[]" value="<?= $b['id'] ?>"
-                           <?= in_array($b['id'], $selectedBrands) ? 'checked' : '' ?>>
-                    <?= htmlspecialchars($b['name']) ?>
-                </label>
+        <div class="filter-group">
+            <label class="filter-label">Sasong</label>
+            <select name="year" class="form-select" onchange="this.form.submit()">
+                <?php foreach ($availableYears as $y): ?>
+                    <option value="<?= $y ?>" <?= $y == $selectedYear ? 'selected' : '' ?>><?= $y ?></option>
                 <?php endforeach; ?>
-            </div>
+            </select>
         </div>
-
-        <div class="filter-group" style="flex:0;">
-            <button type="submit" class="btn-admin btn-admin-primary">
-                <i data-lucide="filter"></i> Filtrera
-            </button>
-        </div>
-    </div>
-</form>
+    </form>
+</div>
 
 <!-- Stats Overview -->
 <div class="stats-grid">
@@ -520,7 +463,7 @@ include __DIR__ . '/components/unified-layout.php';
     <div class="no-data">
         <i data-lucide="inbox" style="width:48px;height:48px;margin-bottom:var(--space-md);opacity:0.5;"></i>
         <p>Ingen data hittades for valda filter.</p>
-        <p style="font-size:0.85rem;">Valj varumarken och tryck Filtrera for att se data.</p>
+        <p style="font-size:0.85rem;">Prova att valja en annan sasong eller varumarke.</p>
     </div>
 </div>
 <?php else: ?>
@@ -637,17 +580,6 @@ include __DIR__ . '/components/unified-layout.php';
 <?php endif; ?>
 
 <script>
-// Toggle brand pill selection
-document.querySelectorAll('.brand-pill').forEach(pill => {
-    pill.addEventListener('click', function(e) {
-        if (e.target.tagName !== 'INPUT') {
-            const checkbox = this.querySelector('input');
-            checkbox.checked = !checkbox.checked;
-        }
-        this.classList.toggle('selected', this.querySelector('input').checked);
-    });
-});
-
 // Initialize Lucide icons
 if (typeof lucide !== 'undefined') {
     lucide.createIcons();
