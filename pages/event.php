@@ -21,8 +21,8 @@ if (!function_exists('timeToSeconds')) {
         if (empty($time)) return PHP_INT_MAX;
         // Treat "0:00", "0:00:00" etc as invalid (no time recorded)
         if (preg_match('/^0+[:.]?0*[:.]?0*$/', $time)) return PHP_INT_MAX;
-        // Treat status values as invalid
-        if (in_array(strtolower($time), ['dns', 'dnf', 'dq', 'dsq'])) return PHP_INT_MAX;
+        // Treat status values as invalid (including 'finished' that may end up in time columns)
+        if (in_array(strtolower(trim($time)), ['dns', 'dnf', 'dq', 'dsq', 'finished', 'fin', 'finish', 'finnished', 'ok'])) return PHP_INT_MAX;
         $decimal = 0;
         if (preg_match('/(\.\d+)$/', $time, $matches)) {
             $decimal = floatval($matches[1]);
@@ -48,8 +48,8 @@ if (!function_exists('formatDisplayTime')) {
         if (empty($time)) return null;
         // Treat "0:00" etc as no time
         if (preg_match('/^0+[:.]?0*[:.]?0*$/', $time)) return null;
-        // Treat status values as no time
-        if (in_array(strtolower($time), ['dns', 'dnf', 'dq', 'dsq'])) return null;
+        // Treat status values as no time (including 'finished' that may end up in time columns)
+        if (in_array(strtolower(trim($time)), ['dns', 'dnf', 'dq', 'dsq', 'finished', 'fin', 'finish', 'finnished', 'ok'])) return null;
         $decimal = '';
         if (preg_match('/(\.\d+)$/', $time, $matches)) {
             $decimal = $matches[1];
@@ -284,9 +284,10 @@ try {
     $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     // Normalize status values (e.g., 'FIN' -> 'finished')
+    // ALWAYS set normalized lowercase status to ensure sorting works correctly
     foreach ($results as &$result) {
         $status = strtolower(trim($result['status'] ?? ''));
-        if (in_array($status, ['fin', 'finish', 'finnished', 'ok'])) {
+        if (in_array($status, ['fin', 'finish', 'finished', 'finnished', 'ok', ''])) {
             $result['status'] = 'finished';
         } elseif (in_array($status, ['dnf', 'did not finish'])) {
             $result['status'] = 'dnf';
@@ -294,26 +295,34 @@ try {
             $result['status'] = 'dns';
         } elseif (in_array($status, ['dq', 'dsq', 'disqualified'])) {
             $result['status'] = 'dq';
+        } else {
+            // Unknown status - keep as-is but ensure lowercase
+            $result['status'] = $status;
         }
     }
     unset($result); // Break reference
 
-    // Check if any results have split times
+    // Status values that should NOT count as valid split times
+    $invalidSplitValues = ['dns', 'dnf', 'dq', 'dsq', 'finished', 'fin', 'finish', 'ok', 'did not finish', 'did not start', 'disqualified', '0:00', '0:00.00', '00:00:00', ''];
+
+    // Check if any results have split times (excluding status values in split columns)
     $hasSplitTimes = false;
     foreach ($results as $result) {
         for ($i = 1; $i <= 15; $i++) {
-            if (!empty($result['ss' . $i])) {
+            $splitVal = $result['ss' . $i] ?? '';
+            if (!empty($splitVal) && !in_array(strtolower(trim($splitVal)), $invalidSplitValues)) {
                 $hasSplitTimes = true;
                 break 2;
             }
         }
     }
 
-    // Check if DH event has run 2 data
+    // Check if DH event has run 2 data (exclude status values that may have ended up in time columns)
     $hasRun2Data = false;
     if ($isDH) {
         foreach ($results as $result) {
-            if (!empty($result['run_2_time']) && !in_array(strtolower($result['run_2_time']), ['dns', 'dnf', 'dq', '0:00', '0:00.00'])) {
+            $run2Val = strtolower(trim($result['run_2_time'] ?? ''));
+            if (!empty($run2Val) && !in_array($run2Val, $invalidSplitValues)) {
                 $hasRun2Data = true;
                 break;
             }
@@ -1284,12 +1293,13 @@ if (!empty($eventSponsors['content'])): ?>
     $isTimeRanked = ($classData['ranking_type'] ?? 'time') === 'time';
     $isMotionOrKids = $classData['is_motion_or_kids'] ?? false;
 
-    // Calculate which splits this class has
+    // Calculate which splits this class has (excluding status values in split columns)
     $classSplits = [];
     if ($hasSplitTimes && !$isDH) {
         for ($ss = 1; $ss <= 15; $ss++) {
             foreach ($classData['results'] as $r) {
-                if (!empty($r['ss' . $ss])) {
+                $splitVal = $r['ss' . $ss] ?? '';
+                if (!empty($splitVal) && !in_array(strtolower(trim($splitVal)), $invalidSplitValues)) {
                     $classSplits[] = $ss;
                     break;
                 }
