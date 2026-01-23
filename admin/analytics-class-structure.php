@@ -62,15 +62,15 @@ try {
             COALESCE(cl.sort_order, 9999) as class_sort_order,
             COUNT(DISTINCT r.cyclist_id) as participants,
 
-            -- Winner time (position = 1, must be finished)
-            MIN(CASE WHEN r.position = 1 AND r.status = 'finished' THEN TIME_TO_SEC(r.finish_time) END) as winner_time_sec,
+            -- Winner time (position = 1, must be finished - exclude DNF/DNS/DQ)
+            MIN(CASE WHEN r.position = 1 AND (r.status IS NULL OR LOWER(r.status) NOT IN ('dnf', 'dns', 'dq', 'dsq', 'did not finish', 'did not start', 'disqualified')) THEN TIME_TO_SEC(r.finish_time) END) as winner_time_sec,
 
-            -- Average time (finished only)
-            AVG(CASE WHEN r.status = 'finished' AND r.finish_time IS NOT NULL
+            -- Average time (finished only - exclude DNF/DNS/DQ)
+            AVG(CASE WHEN (r.status IS NULL OR LOWER(r.status) NOT IN ('dnf', 'dns', 'dq', 'dsq', 'did not finish', 'did not start', 'disqualified')) AND r.finish_time IS NOT NULL
                 THEN TIME_TO_SEC(r.finish_time) END) as avg_time_sec,
 
             -- Median approximation (simple)
-            COUNT(CASE WHEN r.status = 'finished' THEN 1 END) as finished_count,
+            COUNT(CASE WHEN r.status IS NULL OR LOWER(r.status) NOT IN ('dnf', 'dns', 'dq', 'dsq', 'did not finish', 'did not start', 'disqualified') THEN 1 END) as finished_count,
 
             -- Count stages used (non-null ss columns)
             MAX(
@@ -111,7 +111,7 @@ try {
             ) as stages_used,
 
             -- Time spread (difference between winner and last finisher)
-            MAX(CASE WHEN r.status = 'finished' THEN TIME_TO_SEC(r.finish_time) END) -
+            MAX(CASE WHEN r.status IS NULL OR LOWER(r.status) NOT IN ('dnf', 'dns', 'dq', 'dsq', 'did not finish', 'did not start', 'disqualified') THEN TIME_TO_SEC(r.finish_time) END) -
             MIN(CASE WHEN r.position = 1 THEN TIME_TO_SEC(r.finish_time) END) as time_spread_sec,
 
             -- Venue info for tracking min/max locations
@@ -170,9 +170,9 @@ try {
             COUNT(DISTINCT e.id) as event_count,
             COUNT(DISTINCT r.cyclist_id) as total_participants,
 
-            -- Average winner time across all events (finished only)
+            -- Average winner time across all events (finished only - exclude DNF/DNS/DQ)
             AVG(
-                CASE WHEN r.position = 1 AND r.status = 'finished' THEN TIME_TO_SEC(r.finish_time) END
+                CASE WHEN r.position = 1 AND (r.status IS NULL OR LOWER(r.status) NOT IN ('dnf', 'dns', 'dq', 'dsq', 'did not finish', 'did not start', 'disqualified')) THEN TIME_TO_SEC(r.finish_time) END
             ) as avg_winner_time_sec,
 
             -- Average stage count
@@ -224,7 +224,7 @@ if ($selectedBrand !== null) {
                 e.date as event_date,
                 COALESCE(cl.display_name, cl.name) as class_name,
                 COUNT(DISTINCT r.cyclist_id) as class_participants,
-                MIN(CASE WHEN r.position = 1 AND r.status = 'finished' THEN TIME_TO_SEC(r.finish_time) END) as winner_time_sec
+                MIN(CASE WHEN r.position = 1 AND (r.status IS NULL OR LOWER(r.status) NOT IN ('dnf', 'dns', 'dq', 'dsq', 'did not finish', 'did not start', 'disqualified')) THEN TIME_TO_SEC(r.finish_time) END) as winner_time_sec
             FROM results r
             JOIN events e ON r.event_id = e.id
             JOIN series s ON e.series_id = s.id
@@ -239,12 +239,12 @@ if ($selectedBrand !== null) {
         $stmt->execute([$selectedBrand]);
         $histData = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        // Define class mappings for display
+        // Define class mappings for display (expanded to match various naming conventions)
         $targetClasses = [
-            'h_elit' => ['Herrar Elit', 'H Elit', 'Herrar elit'],
-            'd_elit' => ['Damer Elit', 'D Elit', 'Damer elit'],
-            'p15_16' => ['P15-16', 'Pojkar 15-16', 'P 15-16'],
-            'p13_14' => ['P13-14', 'Pojkar 13-14', 'P 13-14'],
+            'h_elit' => ['Herrar Elit', 'H Elit', 'Herrar elit', 'Men Elite', 'Herr Elit', 'H-Elit'],
+            'd_elit' => ['Damer Elit', 'D Elit', 'Damer elit', 'Women Elite', 'Dam Elit', 'D-Elit'],
+            'p15_16' => ['P15-16', 'Pojkar 15-16', 'P 15-16', 'Pojkar P15-16', 'P15/16', 'Boys 15-16', 'Junior P15-16', 'Pojkar, 15-16'],
+            'p13_14' => ['P13-14', 'Pojkar 13-14', 'P 13-14', 'Pojkar P13-14', 'P13/14', 'Boys 13-14', 'Junior P13-14', 'Pojkar, 13-14'],
         ];
         // Master classes - average of whichever were run that year
         $masterClasses = [
@@ -290,15 +290,51 @@ if ($selectedBrand !== null) {
 
             // Match class to target categories
             if ($className && $row['winner_time_sec'] > 0) {
+                $classLower = strtolower($className);
+                $matched = false;
+
+                // First try exact match
                 foreach ($targetClasses as $key => $names) {
                     foreach ($names as $name) {
                         if (strcasecmp($className, $name) === 0) {
                             $tempData[$venueId]['years'][$year][$key] = $row['winner_time_sec'];
+                            $matched = true;
                             break 2;
                         }
                     }
                 }
-                // Check for master classes
+
+                // Fallback: pattern-based matching if no exact match
+                if (!$matched) {
+                    // P15-16 pattern: contains "15" and "16" (but not "1516" which could be other)
+                    if ((strpos($classLower, '15-16') !== false || strpos($classLower, '15/16') !== false ||
+                         (strpos($classLower, '15') !== false && strpos($classLower, '16') !== false)) &&
+                        (strpos($classLower, 'pojk') !== false || strpos($classLower, 'p1') !== false || strpos($classLower, 'p 1') !== false)) {
+                        $tempData[$venueId]['years'][$year]['p15_16'] = $row['winner_time_sec'];
+                        $matched = true;
+                    }
+                    // P13-14 pattern
+                    elseif ((strpos($classLower, '13-14') !== false || strpos($classLower, '13/14') !== false ||
+                             (strpos($classLower, '13') !== false && strpos($classLower, '14') !== false)) &&
+                            (strpos($classLower, 'pojk') !== false || strpos($classLower, 'p1') !== false || strpos($classLower, 'p 1') !== false)) {
+                        $tempData[$venueId]['years'][$year]['p13_14'] = $row['winner_time_sec'];
+                        $matched = true;
+                    }
+                    // Herrar Elit pattern
+                    elseif ((strpos($classLower, 'herr') !== false || strpos($classLower, 'h ') === 0 || strpos($classLower, 'h-') === 0) &&
+                            strpos($classLower, 'elit') !== false) {
+                        $tempData[$venueId]['years'][$year]['h_elit'] = $row['winner_time_sec'];
+                        $matched = true;
+                    }
+                    // Damer Elit pattern
+                    elseif ((strpos($classLower, 'dam') !== false || strpos($classLower, 'd ') === 0 || strpos($classLower, 'd-') === 0) &&
+                            strpos($classLower, 'elit') !== false) {
+                        $tempData[$venueId]['years'][$year]['d_elit'] = $row['winner_time_sec'];
+                        $matched = true;
+                    }
+                }
+
+                // Check for master classes (always check, not mutually exclusive with above)
                 foreach ($masterClasses as $masterName) {
                     if (strcasecmp($className, $masterName) === 0) {
                         $tempData[$venueId]['years'][$year]['master_times'][] = $row['winner_time_sec'];
