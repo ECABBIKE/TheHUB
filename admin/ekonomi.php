@@ -391,7 +391,7 @@ include __DIR__ . '/components/unified-layout.php';
                 Certifikat (Swish Handel)
             </a>
             <?php endif; ?>
-            <a href="/admin/memberships" class="ekonomi-card-link">
+            <a href="/admin/memberships.php" class="ekonomi-card-link">
                 <i data-lucide="users"></i>
                 Medlemskap
             </a>
@@ -590,7 +590,7 @@ include __DIR__ . '/components/unified-layout.php';
                 <i data-lucide="shield-check"></i>
                 Konfigurera Swish Handel
             </a>
-            <a href="/admin/stripe-connect" class="btn btn--secondary">
+            <a href="/admin/stripe-connect.php" class="btn btn--secondary">
                 <i data-lucide="credit-card"></i>
                 Konfigurera Stripe Connect
             </a>
