@@ -313,6 +313,15 @@ class PaymentManager {
             $stmt->execute([$orderId]);
 
             $this->pdo->commit();
+
+            // Send confirmation email
+            try {
+                require_once __DIR__ . '/../mail.php';
+                hub_send_order_confirmation($orderId);
+            } catch (\Exception $emailError) {
+                error_log("Failed to send order confirmation email: " . $emailError->getMessage());
+            }
+
             return true;
 
         } catch (\Exception $e) {

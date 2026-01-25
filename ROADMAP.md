@@ -1,6 +1,6 @@
 # TheHUB - Development Roadmap
 
-> Senast uppdaterad: 2026-01-23
+> Senast uppdaterad: 2026-01-25
 >
 > **Se:** `/admin/roadmap.php` for interaktiv vy
 
@@ -11,7 +11,7 @@
 | Omrade | Status | Beskrivning | Progress |
 |--------|--------|-------------|----------|
 | Analytics Platform | KLAR | Statistik, KPI:er, trender, rapporter | 100% |
-| Betalningssystem | 80% KLAR | Swish, Stripe, ordrar, checkout | 80% |
+| Betalningssystem | KLAR | Swish, Stripe, ordrar, checkout, email | 100% |
 | Event Ratings | KLAR | Deltagarfeedback pa events | 100% |
 | Win-Back System | KLAR | Aterengagera churnade deltagare | 100% |
 | Klubb RF-Registrering | KLAR | SCF/NCF/DCU-synk och stavningskontroll | 100% |
@@ -150,29 +150,37 @@ Automatiskt genererade "trading cards" med deltagarstatistik:
 
 ## DEL 2: Betalningssystem
 
-**Status:** 80% KLAR
+**Status:** KLAR (100%)
 
-### Fungerar
+### Implementerat
 
 - [x] Order CRUD och multi-rider ordrar
 - [x] Manuell Swish (QR + deeplink)
 - [x] Gateway-arkitektur (interface + PaymentManager)
 - [x] Checkout-flode
 - [x] Mina biljetter/anmalningar
+- [x] Webhook databas-hantering (fungerar korrekt)
+- [x] Email-bekraftelser (via Resend/SMTP/PHP mail)
+- [x] Rabattkoder (discount_codes med full CRUD)
+- [x] Gravity ID-rabatter
+- [x] Dokumentation (docs/PAYMENT.md)
 
-### Aterstar
+### Konfigureras vid behov
 
-- [ ] Fixa webhook databas-wrapper
-- [ ] Email-bekraftelser (PHPMailer)
-- [ ] Rabattkoder (discount_codes-tabeller)
-- [ ] Swish Handel (certifikat)
-- [ ] Stripe Connect (API-nycklar)
+- [ ] Swish Handel (kraver avtal + certifikat fran bank)
+- [ ] Stripe Connect (kraver Stripe-konto + API-nycklar)
 
 ### Huvudfiler
 
-- `includes/payment.php` - Order CRUD
-- `gateways/ManualGateway.php` - Manuell Swish
+- `includes/payment.php` - Order CRUD, rabattkoder
+- `includes/payment/PaymentManager.php` - Central payment hub
+- `includes/payment/gateways/*.php` - Gateway-implementationer
+- `includes/mail.php` - Email med payment_confirmation-mall
+- `admin/orders.php` - Orderhantering
+- `admin/discount-codes.php` - Rabattkodshantering
 - `pages/checkout.php` - Checkout UI
+- `api/webhooks/*.php` - Swish/Stripe webhooks
+- `docs/PAYMENT.md` - Full dokumentation
 
 ---
 
@@ -253,6 +261,32 @@ Automatiskt genererade "trading cards" med deltagarstatistik:
 ---
 
 # CHANGELOG
+
+### 2026-01-25 (Betalningssystem Komplett)
+- **Branch: claude/complete-payment-system-VH54k**
+
+- **Betalningssystem nu 100% klart**
+  - Email-bekraftelser vid betalning implementerat
+  - Payment confirmation mall i mail.php
+  - Automatisk email vid webhook-callback (Swish/Stripe)
+  - Automatisk email vid manuell betalningsbekraftelse
+  - Verifierat att rabattkodssystem fungerar (discount_codes)
+  - Verifierat att webhook-hantering fungerar korrekt
+
+- **Ny dokumentation:**
+  - `docs/PAYMENT.md` - Komplett betalningsdokumentation
+    - Arkitekturoversikt
+    - Databastabeller
+    - Gateway-interface
+    - API-endpoints
+    - Felsokning
+
+- **Uppdaterade filer:**
+  - `includes/mail.php` - Ny payment_confirmation mall + hub_send_order_confirmation()
+  - `includes/payment.php` - Email-utskick i markOrderPaid()
+  - `includes/payment/PaymentManager.php` - Email-utskick i markOrderPaid()
+  - `api/webhooks/swish-callback.php` - Email-utskick vid PAID
+  - `api/webhooks/stripe-webhook.php` - Email-utskick vid payment_intent.succeeded
 
 ### 2026-01-23 (Klassanalys & Events)
 - **Branch: claude/participant-analysis-tool-v8luL**

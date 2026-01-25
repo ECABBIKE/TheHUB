@@ -282,6 +282,76 @@ function hub_smtp_get_response($socket): string {
 }
 
 /**
+ * Send payment confirmation email
+ */
+function hub_send_payment_confirmation_email(string $email, string $name, array $orderData): bool {
+    $subject = 'Betalningsbekraftelse - ' . $orderData['order_number'] . ' - TheHUB';
+
+    $body = hub_email_template('payment_confirmation', [
+        'name' => $name,
+        'order_number' => $orderData['order_number'],
+        'event_name' => $orderData['event_name'] ?? $orderData['series_name'] ?? 'Anmalan',
+        'event_date' => isset($orderData['event_date']) ? date('j M Y', strtotime($orderData['event_date'])) : '',
+        'items_html' => $orderData['items_html'] ?? '',
+        'subtotal' => number_format($orderData['subtotal'] ?? 0, 0, ',', ' '),
+        'discount' => number_format($orderData['discount'] ?? 0, 0, ',', ' '),
+        'total' => number_format($orderData['total'] ?? 0, 0, ',', ' '),
+        'payment_method' => $orderData['payment_method'] ?? 'Swish',
+        'payment_reference' => $orderData['payment_reference'] ?? '',
+        'profile_url' => SITE_URL . '/profile'
+    ]);
+
+    return hub_send_email($email, $subject, $body);
+}
+
+/**
+ * Send payment confirmation for an order ID
+ */
+function hub_send_order_confirmation(int $orderId): bool {
+    require_once __DIR__ . '/payment.php';
+
+    $order = getOrder($orderId);
+    if (!$order) {
+        error_log("hub_send_order_confirmation: Order {$orderId} not found");
+        return false;
+    }
+
+    if (empty($order['customer_email'])) {
+        error_log("hub_send_order_confirmation: No email for order {$orderId}");
+        return false;
+    }
+
+    // Build items HTML
+    $itemsHtml = '';
+    if (!empty($order['items'])) {
+        foreach ($order['items'] as $item) {
+            $itemsHtml .= '<tr>';
+            $itemsHtml .= '<td style="padding: 8px; border-bottom: 1px solid #eee;">' . htmlspecialchars($item['description']) . '</td>';
+            $itemsHtml .= '<td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right;">' . number_format($item['total_price'], 0, ',', ' ') . ' kr</td>';
+            $itemsHtml .= '</tr>';
+        }
+    }
+
+    $orderData = [
+        'order_number' => $order['order_number'],
+        'event_name' => $order['event_name'] ?? $order['series_name'] ?? 'Anmalan',
+        'event_date' => $order['event_date'] ?? null,
+        'items_html' => $itemsHtml,
+        'subtotal' => $order['subtotal'],
+        'discount' => $order['discount'],
+        'total' => $order['total_amount'],
+        'payment_method' => ucfirst($order['payment_method'] ?? 'swish'),
+        'payment_reference' => $order['payment_reference'] ?? ''
+    ];
+
+    return hub_send_payment_confirmation_email(
+        $order['customer_email'],
+        $order['customer_name'],
+        $orderData
+    );
+}
+
+/**
  * Send password reset email
  */
 function hub_send_password_reset_email(string $email, string $name, string $resetLink): bool {
@@ -406,6 +476,54 @@ function hub_email_template(string $template, array $vars = []): string {
             <p class="note">Din feedback är anonym och hjälper oss att skapa bättre tävlingar.</p>
             <p class="note">Eller kopiera och klistra in denna länk i din webbläsare:</p>
             <div class="link">{{survey_link}}</div>
+        ',
+
+        'payment_confirmation' => '
+            <div class="header">
+                <div class="logo">TheHUB</div>
+            </div>
+            <h1>Betalningsbekraftelse</h1>
+            <p>Hej {{name}},</p>
+            <p>Tack for din betalning! Din anmalan ar nu bekraftad.</p>
+
+            <div style="background: #f5f5f5; border-radius: 8px; padding: 16px; margin: 16px 0;">
+                <p style="margin: 0 0 8px 0;"><strong>Ordernummer:</strong> {{order_number}}</p>
+                <p style="margin: 0 0 8px 0;"><strong>Event:</strong> {{event_name}}</p>
+                {{#event_date}}<p style="margin: 0 0 8px 0;"><strong>Datum:</strong> {{event_date}}</p>{{/event_date}}
+                <p style="margin: 0;"><strong>Betalningsmetod:</strong> {{payment_method}}</p>
+            </div>
+
+            {{#items_html}}
+            <h3 style="margin-top: 24px;">Orderrader</h3>
+            <table style="width: 100%; border-collapse: collapse; margin-bottom: 16px;">
+                <tbody>
+                    {{items_html}}
+                </tbody>
+            </table>
+            {{/items_html}}
+
+            <table style="width: 100%; margin-top: 16px;">
+                {{#discount}}
+                <tr>
+                    <td style="padding: 4px 0;">Summa:</td>
+                    <td style="padding: 4px 0; text-align: right;">{{subtotal}} kr</td>
+                </tr>
+                <tr>
+                    <td style="padding: 4px 0; color: #10b981;">Rabatt:</td>
+                    <td style="padding: 4px 0; text-align: right; color: #10b981;">-{{discount}} kr</td>
+                </tr>
+                {{/discount}}
+                <tr>
+                    <td style="padding: 8px 0; font-weight: bold; font-size: 1.1em; border-top: 2px solid #333;">Totalt betalt:</td>
+                    <td style="padding: 8px 0; font-weight: bold; font-size: 1.1em; text-align: right; border-top: 2px solid #333;">{{total}} kr</td>
+                </tr>
+            </table>
+
+            <p class="text-center" style="margin-top: 24px;">
+                <a href="{{profile_url}}" class="btn">Se dina anmalningar</a>
+            </p>
+
+            <p class="note" style="margin-top: 24px;">Om du har fragor, kontakta arrangoren via TheHUB.</p>
         '
     ];
 

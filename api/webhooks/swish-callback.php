@@ -26,6 +26,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 require_once __DIR__ . '/../../config.php';
+require_once __DIR__ . '/../../includes/mail.php';
 
 $pdo = $GLOBALS['pdo'];
 
@@ -140,6 +141,15 @@ try {
                 }
 
                 $pdo->commit();
+
+                // Send confirmation email
+                if ($rowsAffected > 0) {
+                    try {
+                        hub_send_order_confirmation($order['id']);
+                    } catch (Exception $emailError) {
+                        error_log("Failed to send order confirmation email: " . $emailError->getMessage());
+                    }
+                }
 
                 $result = [
                     'status' => 'processed',
