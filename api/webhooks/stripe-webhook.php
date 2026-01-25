@@ -191,6 +191,116 @@ try {
             }
             break;
 
+        case 'checkout.session.completed':
+            // Checkout session completed - payment successful
+            $sessionId = $data['id'] ?? null;
+            $paymentStatus = $data['payment_status'] ?? '';
+
+            if ($sessionId && $paymentStatus === 'paid') {
+                // Find order by session ID (stored in gateway_transaction_id)
+                $stmt = $pdo->prepare("
+                    SELECT id, payment_status, order_number
+                    FROM orders
+                    WHERE gateway_transaction_id = ? AND gateway_code = 'stripe'
+                ");
+                $stmt->execute([$sessionId]);
+                $order = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                if ($order && $order['payment_status'] === 'pending') {
+                    $pdo->beginTransaction();
+
+                    try {
+                        // Mark order as paid
+                        $stmt = $pdo->prepare("
+                            UPDATE orders
+                            SET payment_status = 'paid',
+                                payment_reference = ?,
+                                paid_at = NOW(),
+                                callback_received_at = NOW(),
+                                gateway_metadata = JSON_SET(
+                                    COALESCE(gateway_metadata, '{}'),
+                                    '$.checkout_session', CAST(? AS JSON)
+                                )
+                            WHERE id = ?
+                        ");
+                        $stmt->execute([
+                            $data['payment_intent'] ?? $sessionId,
+                            json_encode(['session_id' => $sessionId, 'customer_email' => $data['customer_email'] ?? '']),
+                            $order['id']
+                        ]);
+
+                        // Update registrations
+                        $stmt = $pdo->prepare("
+                            UPDATE event_registrations
+                            SET payment_status = 'paid',
+                                status = 'confirmed',
+                                confirmed_date = NOW()
+                            WHERE order_id = ?
+                        ");
+                        $stmt->execute([$order['id']]);
+
+                        $pdo->commit();
+
+                        // Send confirmation email
+                        try {
+                            hub_send_order_confirmation($order['id']);
+                        } catch (Exception $emailError) {
+                            error_log("Failed to send order confirmation email: " . $emailError->getMessage());
+                        }
+
+                        // Mark webhook as processed
+                        if ($logId) {
+                            $stmt = $pdo->prepare("
+                                UPDATE webhook_logs
+                                SET processed = 1, order_id = ?, processed_at = NOW()
+                                WHERE id = ?
+                            ");
+                            $stmt->execute([$order['id'], $logId]);
+                        }
+
+                        $result = [
+                            'status' => 'processed',
+                            'message' => 'Checkout completed for order ' . $order['order_number']
+                        ];
+
+                    } catch (Exception $e) {
+                        $pdo->rollBack();
+                        throw $e;
+                    }
+                } else {
+                    $result = [
+                        'status' => 'ignored',
+                        'message' => $order ? 'Order already processed' : 'Order not found'
+                    ];
+                }
+            } else {
+                $result = ['status' => 'ignored', 'message' => 'Session not paid or missing ID'];
+            }
+            break;
+
+        case 'checkout.session.async_payment_failed':
+            // Async payment method failed (e.g., bank transfer that didn't complete)
+            $sessionId = $data['id'] ?? null;
+
+            if ($sessionId) {
+                $stmt = $pdo->prepare("
+                    UPDATE orders
+                    SET payment_status = 'failed',
+                        callback_received_at = NOW(),
+                        gateway_metadata = JSON_SET(
+                            COALESCE(gateway_metadata, '{}'),
+                            '$.async_payment_error', 'Async payment failed'
+                        )
+                    WHERE gateway_transaction_id = ? AND gateway_code = 'stripe' AND payment_status = 'pending'
+                ");
+                $stmt->execute([$sessionId]);
+
+                $result = ['status' => 'processed', 'message' => 'Async payment failure recorded'];
+            } else {
+                $result = ['status' => 'ignored', 'message' => 'Missing session ID'];
+            }
+            break;
+
         case 'charge.refunded':
             $paymentIntentId = $data['payment_intent'] ?? null;
 
@@ -247,7 +357,9 @@ try {
     }
 
     // Mark webhook as processed if not already done
-    if ($logId && !in_array($type, ['payment_intent.succeeded'])) {
+    // These events handle their own logging within their case blocks
+    $eventsWithCustomLogging = ['payment_intent.succeeded', 'checkout.session.completed'];
+    if ($logId && !in_array($type, $eventsWithCustomLogging)) {
         $stmt = $pdo->prepare("
             UPDATE webhook_logs
             SET processed = 1, processed_at = NOW()
