@@ -1064,12 +1064,8 @@ include __DIR__ . '/components/unified-layout.php';
                         <input type="checkbox" name="invitation_use_global" <?= !empty($event['invitation_use_global']) ? 'checked' : '' ?>>
                         <span class="text-xs">Global</span>
                     </label>
-                    <label class="checkbox-inline checkbox-hidden">
-                        <input type="checkbox" name="invitation_hidden" <?= !empty($event['invitation_hidden']) ? 'checked' : '' ?>>
-                        <span class="text-xs">Visa ej</span>
-                    </label>
                 </label>
-                <textarea name="invitation" class="admin-form-input" rows="4" placeholder="Välkommen till... (visas högst upp på Inbjudan-fliken)"><?= h($event['invitation'] ?? '') ?></textarea>
+                <textarea name="invitation" class="admin-form-input event-textarea" rows="4" placeholder="Välkommen till... (visas högst upp på Inbjudan-fliken)"><?= h($event['invitation'] ?? '') ?></textarea>
                 <small class="form-help">Inledande text som visas högst upp på Inbjudan-fliken på event-sidan.</small>
             </div>
 
@@ -1102,12 +1098,8 @@ include __DIR__ . '/components/unified-layout.php';
                                 <input type="checkbox" name="<?= $field['global_key'] ?>" <?= !empty($event[$field['global_key']]) ? 'checked' : '' ?>>
                                 <span class="text-xs">Global</span>
                             </label>
-                            <label class="checkbox-inline checkbox-hidden">
-                                <input type="checkbox" name="<?= $field['hidden_key'] ?>" <?= !empty($event[$field['hidden_key']]) ? 'checked' : '' ?>>
-                                <span class="text-xs">Visa ej</span>
-                            </label>
                         </label>
-                        <textarea name="<?= $field['key'] ?>" class="admin-form-input" rows="2"><?= h($event[$field['key']] ?? '') ?></textarea>
+                        <textarea name="<?= $field['key'] ?>" class="admin-form-input event-textarea" rows="3"><?= h($event[$field['key']] ?? '') ?></textarea>
                     </div>
                 <?php endforeach; ?>
             </div>
@@ -1164,12 +1156,8 @@ include __DIR__ . '/components/unified-layout.php';
                                 <input type="checkbox" name="<?= $field['global_key'] ?>" <?= !empty($event[$field['global_key']]) ? 'checked' : '' ?>>
                                 <span class="text-xs">Global</span>
                             </label>
-                            <label class="checkbox-inline checkbox-hidden">
-                                <input type="checkbox" name="<?= $field['hidden_key'] ?>" <?= !empty($event[$field['hidden_key']]) ? 'checked' : '' ?>>
-                                <span class="text-xs">Visa ej</span>
-                            </label>
                         </label>
-                        <textarea name="<?= $field['key'] ?>" class="admin-form-input" rows="3"><?= h($event[$field['key']] ?? '') ?></textarea>
+                        <textarea name="<?= $field['key'] ?>" class="admin-form-input event-textarea" rows="3"><?= h($event[$field['key']] ?? '') ?></textarea>
                     </div>
                 <?php endforeach; ?>
             </div>
@@ -1204,12 +1192,8 @@ include __DIR__ . '/components/unified-layout.php';
                                 <input type="checkbox" name="<?= $field['global_key'] ?>" <?= !empty($event[$field['global_key']]) ? 'checked' : '' ?>>
                                 <span class="text-xs">Global</span>
                             </label>
-                            <label class="checkbox-inline checkbox-hidden">
-                                <input type="checkbox" name="<?= $field['hidden_key'] ?>" <?= !empty($event[$field['hidden_key']]) ? 'checked' : '' ?>>
-                                <span class="text-xs">Visa ej</span>
-                            </label>
                         </label>
-                        <textarea name="<?= $field['key'] ?>" class="admin-form-input" rows="3"><?= h($event[$field['key']] ?? '') ?></textarea>
+                        <textarea name="<?= $field['key'] ?>" class="admin-form-input event-textarea" rows="3"><?= h($event[$field['key']] ?? '') ?></textarea>
                         <?php if (!empty($field['publish_key'])): ?>
                         <div class="mt-sm flex items-center gap-sm">
                             <label class="text-xs text-secondary whitespace-nowrap">
@@ -1481,12 +1465,17 @@ include __DIR__ . '/components/unified-layout.php';
         padding-bottom: calc(80px + var(--mobile-nav-height, 64px) + env(safe-area-inset-bottom, 0px)) !important;
     }
 }
-/* Styling for hidden checkbox to indicate hiding content */
-.checkbox-hidden span {
-    color: var(--color-danger);
+/* Uniform textarea styling for event content fields */
+.event-textarea {
+    min-height: 80px;
+    resize: vertical;
+    font-size: var(--text-sm);
+    line-height: 1.5;
 }
-.checkbox-hidden input:checked + span {
-    font-weight: 600;
+
+/* Make all textareas in form-grid consistent */
+.form-grid .admin-form-input[rows] {
+    min-height: 80px;
 }
 </style>
 

@@ -69,15 +69,8 @@ $ADMIN_TABS = [
                 'label' => 'Race Reports',
                 'icon' => 'file-text',
                 'url' => '/admin/race-reports.php',
-                'pages' => ['race-reports.php', 'race-report-edit.php'],
+                'pages' => ['race-reports.php', 'race-report-edit.php', 'news-moderation.php'],
                 'role' => 'super_admin'
-            ],
-            [
-                'id' => 'news-moderation',
-                'label' => 'Nyheter',
-                'icon' => 'newspaper',
-                'url' => '/admin/news-moderation.php',
-                'pages' => ['news-moderation.php']
             ]
         ]
     ],
