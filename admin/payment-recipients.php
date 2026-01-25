@@ -202,20 +202,18 @@ include __DIR__ . '/components/unified-layout.php';
 <div class="recipient-grid">
     <?php foreach ($recipients as $r): ?>
     <?php
-    $gatewayType = $r['gateway_type'] ?? 'swish';
+    $hasSwish = !empty($r['swish_number']);
     $hasStripe = !empty($r['stripe_account_id']);
     $stripeStatus = $r['stripe_account_status'] ?? null;
+    $hasBank = !empty($r['bankgiro']) || !empty($r['plusgiro']) || !empty($r['bank_account']);
+
+    // Count configured methods
+    $methodCount = ($hasSwish ? 1 : 0) + ($hasStripe ? 1 : 0) + ($hasBank ? 1 : 0);
     ?>
     <div class="recipient-card <?= !$r['active'] ? 'inactive' : '' ?>">
         <div class="recipient-card-header">
-            <div class="recipient-icon <?= $gatewayType ?>">
-                <?php if ($gatewayType === 'stripe'): ?>
-                    <i data-lucide="credit-card"></i>
-                <?php elseif ($gatewayType === 'bank'): ?>
-                    <i data-lucide="landmark"></i>
-                <?php else: ?>
-                    <i data-lucide="smartphone"></i>
-                <?php endif; ?>
+            <div class="recipient-icon multi">
+                <i data-lucide="wallet"></i>
             </div>
             <div class="recipient-info">
                 <h3><?= htmlspecialchars($r['name']) ?></h3>
@@ -226,12 +224,6 @@ include __DIR__ . '/components/unified-layout.php';
             <div class="recipient-status">
                 <?php if (!$r['active']): ?>
                     <span class="badge badge-secondary">Inaktiv</span>
-                <?php elseif ($gatewayType === 'stripe' && $hasStripe): ?>
-                    <?php if ($stripeStatus === 'active'): ?>
-                        <span class="badge badge-success">Stripe aktiv</span>
-                    <?php else: ?>
-                        <span class="badge badge-warning">Stripe väntar</span>
-                    <?php endif; ?>
                 <?php else: ?>
                     <span class="badge badge-success">Aktiv</span>
                 <?php endif; ?>
@@ -239,80 +231,90 @@ include __DIR__ . '/components/unified-layout.php';
         </div>
 
         <div class="recipient-card-body">
-            <!-- Payment details -->
-            <div class="recipient-details">
-                <?php if ($gatewayType === 'swish' && $r['swish_number']): ?>
-                <div class="detail-row">
-                    <span class="detail-label">Swish</span>
-                    <span class="detail-value"><?= htmlspecialchars($r['swish_number']) ?></span>
+            <!-- Payment methods -->
+            <div class="payment-methods">
+                <?php if ($hasSwish): ?>
+                <div class="payment-method">
+                    <div class="method-icon swish"><i data-lucide="smartphone"></i></div>
+                    <div class="method-info">
+                        <span class="method-name">Swish</span>
+                        <span class="method-value"><?= htmlspecialchars($r['swish_number']) ?></span>
+                    </div>
+                    <span class="method-status active"><i data-lucide="check"></i></span>
                 </div>
-                <?php if ($r['swish_name']): ?>
-                <div class="detail-row">
-                    <span class="detail-label">Mottagare</span>
-                    <span class="detail-value"><?= htmlspecialchars($r['swish_name']) ?></span>
-                </div>
-                <?php endif; ?>
                 <?php endif; ?>
 
-                <?php if ($gatewayType === 'stripe'): ?>
-                <div class="detail-row">
-                    <span class="detail-label">Gateway</span>
-                    <span class="detail-value">Stripe Connect</span>
-                </div>
                 <?php if ($hasStripe): ?>
-                <div class="detail-row">
-                    <span class="detail-label">Account</span>
-                    <span class="detail-value"><code><?= htmlspecialchars(substr($r['stripe_account_id'], 0, 20)) ?>...</code></span>
-                </div>
-                <?php endif; ?>
-                <?php endif; ?>
-
-                <?php if ($gatewayType === 'bank'): ?>
-                <?php if (!empty($r['bankgiro'])): ?>
-                <div class="detail-row">
-                    <span class="detail-label">Bankgiro</span>
-                    <span class="detail-value"><?= htmlspecialchars($r['bankgiro']) ?></span>
-                </div>
-                <?php endif; ?>
-                <?php if (!empty($r['plusgiro'])): ?>
-                <div class="detail-row">
-                    <span class="detail-label">Plusgiro</span>
-                    <span class="detail-value"><?= htmlspecialchars($r['plusgiro']) ?></span>
-                </div>
-                <?php endif; ?>
-                <?php if (!empty($r['bank_account'])): ?>
-                <div class="detail-row">
-                    <span class="detail-label">Bankkonto</span>
-                    <span class="detail-value"><?= htmlspecialchars($r['bank_clearing'] ?? '') ?> <?= htmlspecialchars($r['bank_account']) ?></span>
-                </div>
-                <?php endif; ?>
-                <?php endif; ?>
-
-                <!-- Usage -->
-                <div class="detail-row usage">
-                    <span class="detail-label">Används av</span>
-                    <span class="detail-value">
-                        <?php
-                        $usage = [];
-                        if ($r['series_count'] > 0) $usage[] = $r['series_count'] . ' serier';
-                        if ($r['events_count'] > 0) $usage[] = $r['events_count'] . ' event';
-                        echo $usage ? implode(', ', $usage) : 'Ingen';
-                        ?>
+                <div class="payment-method">
+                    <div class="method-icon stripe"><i data-lucide="credit-card"></i></div>
+                    <div class="method-info">
+                        <span class="method-name">Stripe</span>
+                        <span class="method-value"><?= $stripeStatus === 'active' ? 'Aktiv' : 'Väntar' ?></span>
+                    </div>
+                    <span class="method-status <?= $stripeStatus === 'active' ? 'active' : 'pending' ?>">
+                        <i data-lucide="<?= $stripeStatus === 'active' ? 'check' : 'clock' ?>"></i>
                     </span>
                 </div>
+                <?php elseif ($stripeConfigured): ?>
+                <div class="payment-method not-configured">
+                    <div class="method-icon stripe"><i data-lucide="credit-card"></i></div>
+                    <div class="method-info">
+                        <span class="method-name">Stripe</span>
+                        <span class="method-value">Ej kopplad</span>
+                    </div>
+                    <a href="/admin/stripe-connect.php" class="method-action">Anslut</a>
+                </div>
+                <?php endif; ?>
+
+                <?php if ($hasBank): ?>
+                <div class="payment-method">
+                    <div class="method-icon bank"><i data-lucide="landmark"></i></div>
+                    <div class="method-info">
+                        <span class="method-name">Bank</span>
+                        <span class="method-value">
+                            <?php
+                            if (!empty($r['bankgiro'])) echo 'BG ' . htmlspecialchars($r['bankgiro']);
+                            elseif (!empty($r['plusgiro'])) echo 'PG ' . htmlspecialchars($r['plusgiro']);
+                            else echo htmlspecialchars($r['bank_account']);
+                            ?>
+                        </span>
+                    </div>
+                    <span class="method-status active"><i data-lucide="check"></i></span>
+                </div>
+                <?php endif; ?>
+
+                <?php if (!$hasSwish && !$hasStripe && !$hasBank): ?>
+                <div class="no-methods">
+                    <i data-lucide="alert-circle"></i>
+                    <span>Ingen betalningsmetod konfigurerad</span>
+                </div>
+                <?php endif; ?>
+            </div>
+
+            <!-- Usage -->
+            <div class="recipient-usage">
+                <span class="usage-label">Används av:</span>
+                <span class="usage-value">
+                    <?php
+                    $usage = [];
+                    if ($r['series_count'] > 0) $usage[] = $r['series_count'] . ' serier';
+                    if ($r['events_count'] > 0) $usage[] = $r['events_count'] . ' event';
+                    echo $usage ? implode(', ', $usage) : 'Ingen';
+                    ?>
+                </span>
             </div>
         </div>
 
         <div class="recipient-card-footer">
-            <?php if ($gatewayType === 'stripe' && !$hasStripe && $stripeConfigured): ?>
+            <?php if ($stripeConfigured && !$hasStripe): ?>
             <a href="/admin/stripe-connect.php" class="btn-admin btn-admin-primary btn-admin-sm flex-1">
                 <i data-lucide="link"></i>
                 Anslut Stripe
             </a>
-            <?php elseif ($gatewayType === 'stripe' && $hasStripe): ?>
-            <a href="/admin/stripe-connect.php" class="btn-admin btn-admin-secondary btn-admin-sm flex-1">
+            <?php elseif ($hasStripe): ?>
+            <a href="/admin/stripe-connect.php" class="btn-admin btn-admin-secondary btn-admin-sm">
                 <i data-lucide="external-link"></i>
-                Stripe Dashboard
+                Stripe
             </a>
             <?php endif; ?>
 
@@ -370,48 +372,11 @@ include __DIR__ . '/components/unified-layout.php';
                                placeholder="T.ex. Centralt konto för GS-serier">
                     </div>
 
-                    <?php if ($hasGatewayType): ?>
-                    <div class="admin-form-group">
-                        <label class="admin-form-label">Betalningsmetod</label>
-                        <div class="gateway-selector">
-                            <label class="gateway-option">
-                                <input type="radio" name="gateway_type" value="swish" checked onchange="toggleGatewayFields()">
-                                <div class="gateway-option-content">
-                                    <i data-lucide="smartphone"></i>
-                                    <span>Swish</span>
-                                </div>
-                            </label>
-                            <?php if ($stripeConfigured): ?>
-                            <label class="gateway-option">
-                                <input type="radio" name="gateway_type" value="stripe" onchange="toggleGatewayFields()">
-                                <div class="gateway-option-content">
-                                    <i data-lucide="credit-card"></i>
-                                    <span>Stripe</span>
-                                </div>
-                            </label>
-                            <?php endif; ?>
-                            <label class="gateway-option">
-                                <input type="radio" name="gateway_type" value="bank" onchange="toggleGatewayFields()">
-                                <div class="gateway-option-content">
-                                    <i data-lucide="landmark"></i>
-                                    <span>Bank</span>
-                                </div>
-                            </label>
-                            <label class="gateway-option">
-                                <input type="radio" name="gateway_type" value="manual" onchange="toggleGatewayFields()">
-                                <div class="gateway-option-content">
-                                    <i data-lucide="hand-coins"></i>
-                                    <span>Manuell</span>
-                                </div>
-                            </label>
-                        </div>
-                    </div>
-                    <?php endif; ?>
                 </div>
 
                 <!-- Swish fields -->
-                <div class="form-section gateway-fields" id="swishFields">
-                    <h4><i data-lucide="smartphone"></i> Swish-uppgifter</h4>
+                <div class="form-section">
+                    <h4><i data-lucide="smartphone"></i> Swish</h4>
                     <div class="admin-form-row">
                         <div class="admin-form-group">
                             <label class="admin-form-label">Swish-nummer</label>
@@ -428,17 +393,18 @@ include __DIR__ . '/components/unified-layout.php';
                 </div>
 
                 <!-- Stripe fields -->
-                <div class="form-section gateway-fields" id="stripeFields" style="display: none;">
+                <?php if ($stripeConfigured): ?>
+                <div class="form-section">
                     <h4><i data-lucide="credit-card"></i> Stripe Connect</h4>
-                    <p class="text-secondary">
-                        Stripe-kontot kopplas efter att mottagaren skapats.
-                        Gå till <a href="/admin/stripe-connect.php">Stripe Connect</a> för att slutföra kopplingen.
+                    <p class="text-secondary mb-0">
+                        Stripe-kontot kopplas via <a href="/admin/stripe-connect.php" class="text-accent">Stripe Connect</a> efter att mottagaren skapats.
                     </p>
                 </div>
+                <?php endif; ?>
 
                 <!-- Bank fields -->
                 <?php if ($hasBankFields): ?>
-                <div class="form-section gateway-fields" id="bankFields" style="display: none;">
+                <div class="form-section">
                     <h4><i data-lucide="landmark"></i> Bankuppgifter</h4>
                     <div class="admin-form-row">
                         <div class="admin-form-group">
@@ -576,25 +542,149 @@ include __DIR__ . '/components/unified-layout.php';
     height: 20px;
 }
 
-.recipient-icon.swish {
+.recipient-icon.multi {
+    background: linear-gradient(135deg, var(--color-accent), var(--color-accent-hover));
+    color: white;
+}
+
+/* Payment Methods List */
+.payment-methods {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-sm);
+}
+
+.payment-method {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    padding: var(--space-sm);
+    background: var(--color-bg-hover);
+    border-radius: var(--radius-sm);
+}
+
+.payment-method.not-configured {
+    opacity: 0.6;
+}
+
+.method-icon {
+    width: 28px;
+    height: 28px;
+    border-radius: var(--radius-sm);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.method-icon i {
+    width: 14px;
+    height: 14px;
+}
+
+.method-icon.swish {
     background: linear-gradient(135deg, #78bd1c, #59a60d);
     color: white;
 }
 
-.recipient-icon.stripe {
+.method-icon.stripe {
     background: linear-gradient(135deg, #635bff, #5851ea);
     color: white;
 }
 
-.recipient-icon.bank {
+.method-icon.bank {
     background: linear-gradient(135deg, #3b82f6, #2563eb);
     color: white;
 }
 
-.recipient-icon.manual {
-    background: var(--color-bg-surface);
+.method-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.method-name {
+    display: block;
+    font-size: var(--text-xs);
+    font-weight: 600;
     color: var(--color-text-secondary);
-    border: 1px solid var(--color-border);
+    text-transform: uppercase;
+    letter-spacing: 0.03em;
+}
+
+.method-value {
+    display: block;
+    font-size: var(--text-sm);
+    font-weight: 500;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.method-status {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.method-status i {
+    width: 12px;
+    height: 12px;
+}
+
+.method-status.active {
+    background: var(--color-success);
+    color: white;
+}
+
+.method-status.pending {
+    background: var(--color-warning);
+    color: white;
+}
+
+.method-action {
+    font-size: var(--text-xs);
+    font-weight: 500;
+    color: var(--color-accent);
+    text-decoration: none;
+}
+
+.method-action:hover {
+    text-decoration: underline;
+}
+
+.no-methods {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    padding: var(--space-md);
+    color: var(--color-text-muted);
+    font-size: var(--text-sm);
+}
+
+.no-methods i {
+    width: 16px;
+    height: 16px;
+}
+
+.recipient-usage {
+    display: flex;
+    justify-content: space-between;
+    margin-top: var(--space-sm);
+    padding-top: var(--space-sm);
+    border-top: 1px solid var(--color-border);
+    font-size: var(--text-sm);
+}
+
+.usage-label {
+    color: var(--color-text-secondary);
+}
+
+.usage-value {
+    font-weight: 500;
 }
 
 .recipient-info {
@@ -768,56 +858,6 @@ include __DIR__ . '/components/unified-layout.php';
     height: 16px;
 }
 
-/* Gateway selector */
-.gateway-selector {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: var(--space-sm);
-}
-
-@media (max-width: 500px) {
-    .gateway-selector {
-        grid-template-columns: repeat(2, 1fr);
-    }
-}
-
-.gateway-option {
-    cursor: pointer;
-}
-
-.gateway-option input {
-    position: absolute;
-    opacity: 0;
-    pointer-events: none;
-}
-
-.gateway-option-content {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: var(--space-xs);
-    padding: var(--space-md);
-    border: 2px solid var(--color-border);
-    border-radius: var(--radius-md);
-    transition: all 0.15s ease;
-}
-
-.gateway-option-content i {
-    width: 24px;
-    height: 24px;
-}
-
-.gateway-option-content span {
-    font-size: var(--text-sm);
-    font-weight: 500;
-}
-
-.gateway-option input:checked + .gateway-option-content {
-    border-color: var(--color-accent);
-    background: var(--color-accent-light);
-    color: var(--color-accent);
-}
-
 .admin-form-row {
     display: grid;
     grid-template-columns: 1fr 1fr;
@@ -858,11 +898,6 @@ function showModal(action, data = null) {
         document.getElementById('formSwishName').value = data.swish_name || '';
         document.getElementById('formActive').checked = data.active == 1;
 
-        // Gateway type
-        const gatewayType = data.gateway_type || 'swish';
-        const gatewayRadio = document.querySelector(`input[name="gateway_type"][value="${gatewayType}"]`);
-        if (gatewayRadio) gatewayRadio.checked = true;
-
         // Bank fields
         if (document.getElementById('formBankgiro')) {
             document.getElementById('formBankgiro').value = data.bankgiro || '';
@@ -876,19 +911,13 @@ function showModal(action, data = null) {
         }
 
         document.getElementById('formSubmitBtn').textContent = 'Uppdatera';
-        toggleGatewayFields();
     } else {
         title.textContent = 'Ny mottagare';
         document.getElementById('formAction').value = 'create';
         document.getElementById('formId').value = '';
         form.reset();
         document.getElementById('formActive').checked = true;
-
-        const swishRadio = document.querySelector('input[name="gateway_type"][value="swish"]');
-        if (swishRadio) swishRadio.checked = true;
-
         document.getElementById('formSubmitBtn').textContent = 'Skapa';
-        toggleGatewayFields();
     }
 
     modal.classList.remove('hidden');
@@ -897,19 +926,6 @@ function showModal(action, data = null) {
 
 function hideModal() {
     document.getElementById('recipientModal').classList.add('hidden');
-}
-
-function toggleGatewayFields() {
-    const selectedGateway = document.querySelector('input[name="gateway_type"]:checked');
-    const gateway = selectedGateway ? selectedGateway.value : 'swish';
-
-    const swishFields = document.getElementById('swishFields');
-    const stripeFields = document.getElementById('stripeFields');
-    const bankFields = document.getElementById('bankFields');
-
-    if (swishFields) swishFields.style.display = gateway === 'swish' ? 'block' : 'none';
-    if (stripeFields) stripeFields.style.display = gateway === 'stripe' ? 'block' : 'none';
-    if (bankFields) bankFields.style.display = gateway === 'bank' ? 'block' : 'none';
 }
 
 // Close modal on escape key
