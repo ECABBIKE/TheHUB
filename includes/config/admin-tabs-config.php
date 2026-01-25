@@ -159,6 +159,10 @@ $ADMIN_TABS = [
                     'gateway-settings.php',
                     'certificates.php',
                     'swish-accounts.php',
+                    // Stripe
+                    'stripe-connect.php',
+                    // Medlemskap
+                    'memberships.php',
                     // Event-specifika
                     'event-payment.php',
                     'event-orders.php',

@@ -42,7 +42,7 @@ $stats['revenue_30d'] = $db->getRow("
 
 // Antal aktiva mottagare
 $stats['active_recipients'] = $db->getRow("
-    SELECT COUNT(*) as cnt FROM payment_recipients WHERE is_active = 1
+    SELECT COUNT(*) as cnt FROM payment_recipients WHERE active = 1
 ")['cnt'] ?? 0;
 
 // Antal prismallar
@@ -391,9 +391,9 @@ include __DIR__ . '/components/unified-layout.php';
                 Certifikat (Swish Handel)
             </a>
             <?php endif; ?>
-            <a href="/admin/payment-settings" class="ekonomi-card-link">
-                <i data-lucide="settings"></i>
-                Betalningsinstallningar
+            <a href="/admin/memberships" class="ekonomi-card-link">
+                <i data-lucide="users"></i>
+                Medlemskap
             </a>
         </div>
     </div>
@@ -576,28 +576,28 @@ include __DIR__ . '/components/unified-layout.php';
 <?php endif; ?>
 
 <!-- Dokumentation -->
+<?php if ($isSuperAdmin): ?>
 <div class="card" style="margin-top: var(--space-xl);">
     <div class="card-header">
         <h3><i data-lucide="book-open"></i> Dokumentation</h3>
     </div>
     <div class="card-body">
         <p class="text-secondary mb-md">
-            Full teknisk dokumentation for betalningssystemet, inklusive guider for att aktivera Swish Handel och Stripe.
+            Teknisk dokumentation for betalningssystemet finns i <code>docs/PAYMENT.md</code> i projektets repository.
         </p>
         <div style="display: flex; gap: var(--space-md); flex-wrap: wrap;">
-            <a href="/docs/PAYMENT.md" target="_blank" class="btn btn--secondary">
-                <i data-lucide="file-text"></i>
-                Betalningsdokumentation
-            </a>
-            <?php if ($isSuperAdmin): ?>
             <a href="/admin/certificates" class="btn btn--secondary">
                 <i data-lucide="shield-check"></i>
                 Konfigurera Swish Handel
             </a>
-            <?php endif; ?>
+            <a href="/admin/stripe-connect" class="btn btn--secondary">
+                <i data-lucide="credit-card"></i>
+                Konfigurera Stripe Connect
+            </a>
         </div>
     </div>
 </div>
+<?php endif; ?>
 
 <!-- Hjalpsektionen -->
 <div class="card" style="margin-top: var(--space-lg);">

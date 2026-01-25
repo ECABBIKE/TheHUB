@@ -4,130 +4,133 @@
  * Public page for viewing and purchasing memberships
  */
 
-require_once __DIR__ . '/../config.php';
-require_once __DIR__ . '/../config/database.php';
-
-$db = hub_db();
-$pageTitle = 'Medlemskap';
+$pdo = hub_db();
 
 // Get all active plans
-$plans = $db->query("
-    SELECT id, name, description, price_amount, currency, billing_interval,
-           billing_interval_count, benefits, discount_percent, stripe_price_id
-    FROM membership_plans
-    WHERE active = 1
-    ORDER BY sort_order, price_amount
-")->fetchAll(PDO::FETCH_ASSOC);
+$plans = [];
+try {
+    $stmt = $pdo->query("
+        SELECT id, name, description, price_amount, currency, billing_interval,
+               billing_interval_count, benefits, discount_percent, stripe_price_id
+        FROM membership_plans
+        WHERE active = 1
+        ORDER BY sort_order, price_amount
+    ");
+    $plans = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-// Parse benefits JSON
-foreach ($plans as &$plan) {
-    $plan['benefits'] = json_decode($plan['benefits'] ?? '[]', true);
+    // Parse benefits JSON
+    foreach ($plans as &$plan) {
+        $plan['benefits'] = json_decode($plan['benefits'] ?? '[]', true);
+    }
+} catch (Exception $e) {
+    // Tables might not exist yet
+    error_log("Membership page error: " . $e->getMessage());
 }
 
 // Check if viewing success page
 $success = isset($_GET['session_id']);
-
-include __DIR__ . '/../includes/header.php';
 ?>
 
-<main class="container">
-    <?php if ($success): ?>
-        <!-- Success Message -->
-        <div class="card" style="max-width: 600px; margin: var(--space-2xl) auto; text-align: center;">
-            <div class="card-body" style="padding: var(--space-2xl);">
-                <div style="font-size: 4rem; margin-bottom: var(--space-lg);">
-                    <i data-lucide="check-circle" style="color: var(--color-success); width: 80px; height: 80px;"></i>
+<div class="page-header">
+    <h1 class="page-title">
+        <i data-lucide="users" class="page-icon"></i>
+        Medlemskap
+    </h1>
+    <p class="page-subtitle">Bli medlem och få exklusiva förmåner</p>
+</div>
+
+<?php if ($success): ?>
+<!-- Success Message -->
+<div class="card" style="max-width: 600px; margin: var(--space-xl) auto; text-align: center;">
+    <div class="card-body" style="padding: var(--space-2xl);">
+        <div style="margin-bottom: var(--space-lg); color: var(--color-success);">
+            <i data-lucide="check-circle" style="width: 64px; height: 64px;"></i>
+        </div>
+        <h2 style="color: var(--color-success); margin-bottom: var(--space-md);">Tack för ditt medlemskap!</h2>
+        <p class="text-muted" style="margin-bottom: var(--space-lg);">
+            Din prenumeration är nu aktiv. Du kommer att få ett bekräftelsemail inom kort.
+        </p>
+        <a href="/membership" class="btn btn-primary">Till medlemssidan</a>
+    </div>
+</div>
+
+<?php elseif (empty($plans)): ?>
+<!-- No plans yet -->
+<div class="empty-state">
+    <div class="empty-icon"><i data-lucide="users"></i></div>
+    <h3>Medlemskap kommer snart</h3>
+    <p>Vi arbetar på medlemskapsfunktioner. Kom tillbaka senare!</p>
+</div>
+
+<?php else: ?>
+<!-- Membership Plans -->
+<div class="membership-plans">
+    <?php foreach ($plans as $index => $plan): ?>
+        <div class="card plan-card <?= $index === 1 ? 'featured' : '' ?>">
+            <?php if ($index === 1): ?>
+                <div class="plan-badge">Populärt val</div>
+            <?php endif; ?>
+
+            <div class="card-body">
+                <h2 class="plan-name"><?= htmlspecialchars($plan['name']) ?></h2>
+
+                <?php if ($plan['description']): ?>
+                    <p class="text-muted plan-desc"><?= htmlspecialchars($plan['description']) ?></p>
+                <?php endif; ?>
+
+                <div class="plan-price">
+                    <span class="price-amount"><?= number_format($plan['price_amount'] / 100, 0) ?></span>
+                    <span class="price-suffix">kr/<?= $plan['billing_interval'] === 'year' ? 'år' : 'mån' ?></span>
                 </div>
-                <h1 style="color: var(--color-success);">Tack for ditt medlemskap!</h1>
-                <p class="text-secondary" style="font-size: 1.1rem; margin: var(--space-lg) 0;">
-                    Din prenumeration ar nu aktiv. Du kommer att fa ett bekraftelsemail inom kort.
-                </p>
-                <a href="/membership" class="btn btn-primary">Till medlemssidan</a>
-            </div>
-        </div>
-    <?php else: ?>
-        <!-- Membership Plans -->
-        <div style="text-align: center; margin: var(--space-2xl) 0;">
-            <h1>Bli medlem</h1>
-            <p class="text-secondary" style="max-width: 600px; margin: var(--space-md) auto;">
-                Bli medlem och fa exklusiva formaner, rabatter pa anmalningar och mycket mer.
-            </p>
-        </div>
 
-        <?php if (empty($plans)): ?>
-            <div class="alert alert-info" style="max-width: 600px; margin: 0 auto;">
-                Medlemskap kommer snart! Kom tillbaka senare.
-            </div>
-        <?php else: ?>
-            <div class="membership-plans" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: var(--space-xl); max-width: 1000px; margin: 0 auto;">
-                <?php foreach ($plans as $index => $plan): ?>
-                    <div class="card plan-card <?= $index === 1 ? 'featured' : '' ?>">
-                        <?php if ($index === 1): ?>
-                            <div class="plan-badge">Populart val</div>
-                        <?php endif; ?>
-                        <div class="card-body" style="padding: var(--space-xl);">
-                            <h2 style="margin-bottom: var(--space-sm);"><?= htmlspecialchars($plan['name']) ?></h2>
-                            <?php if ($plan['description']): ?>
-                                <p class="text-muted" style="margin-bottom: var(--space-lg);"><?= htmlspecialchars($plan['description']) ?></p>
-                            <?php endif; ?>
-
-                            <div class="plan-price">
-                                <span class="price-amount"><?= number_format($plan['price_amount'] / 100, 0) ?></span>
-                                <span class="price-currency">kr</span>
-                                <span class="price-interval">/<?= $plan['billing_interval'] === 'year' ? 'ar' : 'manad' ?></span>
-                            </div>
-
-                            <?php if ($plan['discount_percent'] > 0): ?>
-                                <div class="plan-discount">
-                                    <i data-lucide="percent"></i>
-                                    <?= $plan['discount_percent'] ?>% rabatt pa alla anmalningar
-                                </div>
-                            <?php endif; ?>
-
-                            <?php if (!empty($plan['benefits'])): ?>
-                                <ul class="plan-benefits">
-                                    <?php foreach ($plan['benefits'] as $benefit): ?>
-                                        <li>
-                                            <i data-lucide="check" style="color: var(--color-success);"></i>
-                                            <?= htmlspecialchars($benefit) ?>
-                                        </li>
-                                    <?php endforeach; ?>
-                                </ul>
-                            <?php endif; ?>
-
-                            <?php if ($plan['stripe_price_id']): ?>
-                                <button class="btn btn-primary btn-block subscribe-btn"
-                                        data-plan-id="<?= $plan['id'] ?>"
-                                        data-plan-name="<?= htmlspecialchars($plan['name']) ?>">
-                                    Valj <?= htmlspecialchars($plan['name']) ?>
-                                </button>
-                            <?php else: ?>
-                                <button class="btn btn-secondary btn-block" disabled>
-                                    Kommer snart
-                                </button>
-                            <?php endif; ?>
-                        </div>
+                <?php if ($plan['discount_percent'] > 0): ?>
+                    <div class="plan-discount">
+                        <i data-lucide="percent"></i>
+                        <?= $plan['discount_percent'] ?>% rabatt på alla anmälningar
                     </div>
-                <?php endforeach; ?>
-            </div>
+                <?php endif; ?>
 
-            <!-- Already a member? -->
-            <div style="text-align: center; margin-top: var(--space-2xl);">
-                <p class="text-muted">Redan medlem?</p>
-                <button class="btn btn-secondary" onclick="openPortal()">
-                    <i data-lucide="settings"></i> Hantera prenumeration
-                </button>
+                <?php if (!empty($plan['benefits'])): ?>
+                    <ul class="plan-benefits">
+                        <?php foreach ($plan['benefits'] as $benefit): ?>
+                            <li>
+                                <i data-lucide="check"></i>
+                                <?= htmlspecialchars($benefit) ?>
+                            </li>
+                        <?php endforeach; ?>
+                    </ul>
+                <?php endif; ?>
+
+                <?php if ($plan['stripe_price_id']): ?>
+                    <button class="btn btn-primary btn-block subscribe-btn"
+                            data-plan-id="<?= $plan['id'] ?>"
+                            data-plan-name="<?= htmlspecialchars($plan['name']) ?>">
+                        Välj <?= htmlspecialchars($plan['name']) ?>
+                    </button>
+                <?php else: ?>
+                    <button class="btn btn-secondary btn-block" disabled>
+                        Kommer snart
+                    </button>
+                <?php endif; ?>
             </div>
-        <?php endif; ?>
-    <?php endif; ?>
-</main>
+        </div>
+    <?php endforeach; ?>
+</div>
+
+<!-- Already a member? -->
+<div class="membership-footer">
+    <p class="text-muted">Redan medlem?</p>
+    <button class="btn btn-secondary" id="openPortalBtn">
+        <i data-lucide="settings"></i> Hantera prenumeration
+    </button>
+</div>
 
 <!-- Signup Modal -->
-<dialog id="signupModal" class="modal">
-    <div class="modal-content" style="max-width: 400px;">
+<dialog id="signupModal" class="hub-modal">
+    <div class="modal-content">
         <div class="modal-header">
             <h3>Bli medlem</h3>
-            <button onclick="this.closest('dialog').close()" class="btn btn-ghost">
+            <button class="modal-close" onclick="this.closest('dialog').close()">
                 <i data-lucide="x"></i>
             </button>
         </div>
@@ -135,7 +138,7 @@ include __DIR__ . '/../includes/header.php';
             <input type="hidden" name="plan_id" id="planId">
             <div class="modal-body">
                 <p class="text-muted" style="margin-bottom: var(--space-lg);">
-                    Fyll i dina uppgifter for att fortsatta till betalning.
+                    Fyll i dina uppgifter för att fortsätta till betalning.
                 </p>
                 <div class="form-group">
                     <label class="form-label">Namn *</label>
@@ -147,31 +150,26 @@ include __DIR__ . '/../includes/header.php';
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" onclick="this.closest('dialog').close()" class="btn btn-secondary">Avbryt</button>
-                <button type="submit" class="btn btn-primary" id="submitBtn">
-                    <span class="btn-text">Fortsatt till betalning</span>
-                    <span class="btn-loading" style="display: none;">
-                        <i data-lucide="loader-2" class="spin"></i> Laddar...
-                    </span>
-                </button>
+                <button type="button" class="btn btn-secondary" onclick="this.closest('dialog').close()">Avbryt</button>
+                <button type="submit" class="btn btn-primary" id="submitBtn">Fortsätt till betalning</button>
             </div>
         </form>
     </div>
 </dialog>
 
 <!-- Portal Modal -->
-<dialog id="portalModal" class="modal">
-    <div class="modal-content" style="max-width: 400px;">
+<dialog id="portalModal" class="hub-modal">
+    <div class="modal-content">
         <div class="modal-header">
             <h3>Hantera prenumeration</h3>
-            <button onclick="this.closest('dialog').close()" class="btn btn-ghost">
+            <button class="modal-close" onclick="this.closest('dialog').close()">
                 <i data-lucide="x"></i>
             </button>
         </div>
         <form id="portalForm">
             <div class="modal-body">
                 <p class="text-muted" style="margin-bottom: var(--space-lg);">
-                    Ange din e-postadress for att oppna Stripe kundportal.
+                    Ange din e-postadress för att öppna Stripe kundportal.
                 </p>
                 <div class="form-group">
                     <label class="form-label">E-post *</label>
@@ -179,25 +177,33 @@ include __DIR__ . '/../includes/header.php';
                 </div>
             </div>
             <div class="modal-footer">
-                <button type="button" onclick="this.closest('dialog').close()" class="btn btn-secondary">Avbryt</button>
-                <button type="submit" class="btn btn-primary">Oppna portal</button>
+                <button type="button" class="btn btn-secondary" onclick="this.closest('dialog').close()">Avbryt</button>
+                <button type="submit" class="btn btn-primary">Öppna portal</button>
             </div>
         </form>
     </div>
 </dialog>
 
 <style>
+.membership-plans {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: var(--space-xl);
+    max-width: 900px;
+    margin: var(--space-xl) auto;
+}
+
 .plan-card {
     position: relative;
     transition: transform 0.2s, box-shadow 0.2s;
 }
 .plan-card:hover {
     transform: translateY(-4px);
-    box-shadow: 0 12px 40px rgba(0, 0, 0, 0.15);
 }
 .plan-card.featured {
     border: 2px solid var(--color-accent);
 }
+
 .plan-badge {
     position: absolute;
     top: -12px;
@@ -209,73 +215,97 @@ include __DIR__ . '/../includes/header.php';
     border-radius: var(--radius-full);
     font-size: 0.85rem;
     font-weight: 600;
+    white-space: nowrap;
 }
+
+.plan-name {
+    margin-bottom: var(--space-xs);
+}
+.plan-desc {
+    margin-bottom: var(--space-lg);
+}
+
 .plan-price {
     margin: var(--space-lg) 0;
+    display: flex;
+    align-items: baseline;
+    gap: var(--space-xs);
 }
 .price-amount {
-    font-size: 3rem;
+    font-size: 2.5rem;
     font-weight: 700;
     font-family: var(--font-heading);
     color: var(--color-accent);
 }
-.price-currency {
-    font-size: 1.5rem;
-    color: var(--color-text-secondary);
-}
-.price-interval {
+.price-suffix {
     font-size: 1rem;
     color: var(--color-text-muted);
 }
+
 .plan-discount {
     display: inline-flex;
     align-items: center;
     gap: var(--space-xs);
     background: var(--color-accent-light);
     color: var(--color-accent-text);
-    padding: var(--space-xs) var(--space-md);
+    padding: var(--space-xs) var(--space-sm);
     border-radius: var(--radius-full);
-    font-size: 0.9rem;
-    margin-bottom: var(--space-lg);
+    font-size: 0.875rem;
+    margin-bottom: var(--space-md);
 }
 .plan-discount i {
-    width: 16px;
-    height: 16px;
+    width: 14px;
+    height: 14px;
 }
+
 .plan-benefits {
     list-style: none;
     padding: 0;
-    margin: var(--space-lg) 0;
+    margin: var(--space-md) 0 var(--space-lg);
 }
 .plan-benefits li {
     display: flex;
     align-items: flex-start;
     gap: var(--space-sm);
-    padding: var(--space-sm) 0;
+    padding: var(--space-xs) 0;
     color: var(--color-text-secondary);
+    font-size: 0.9rem;
 }
 .plan-benefits li i {
-    width: 18px;
-    height: 18px;
+    width: 16px;
+    height: 16px;
+    color: var(--color-success);
     flex-shrink: 0;
     margin-top: 2px;
 }
+
 .btn-block {
     width: 100%;
-    margin-top: var(--space-lg);
+}
+
+.membership-footer {
+    text-align: center;
+    margin-top: var(--space-2xl);
+    padding-top: var(--space-xl);
+    border-top: 1px solid var(--color-border);
+}
+.membership-footer p {
+    margin-bottom: var(--space-sm);
 }
 
 /* Modal styles */
-.modal {
+.hub-modal {
     border: none;
     border-radius: var(--radius-lg);
     padding: 0;
     background: var(--color-bg-card);
     color: var(--color-text-primary);
     box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25);
+    max-width: 400px;
+    width: 90%;
 }
-.modal::backdrop {
-    background: rgba(0, 0, 0, 0.5);
+.hub-modal::backdrop {
+    background: rgba(0, 0, 0, 0.6);
 }
 .modal-content {
     width: 100%;
@@ -287,6 +317,19 @@ include __DIR__ . '/../includes/header.php';
     padding: var(--space-lg);
     border-bottom: 1px solid var(--color-border);
 }
+.modal-header h3 {
+    margin: 0;
+}
+.modal-close {
+    background: none;
+    border: none;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    padding: var(--space-xs);
+}
+.modal-close:hover {
+    color: var(--color-text-primary);
+}
 .modal-body {
     padding: var(--space-lg);
 }
@@ -297,12 +340,20 @@ include __DIR__ . '/../includes/header.php';
     padding: var(--space-lg);
     border-top: 1px solid var(--color-border);
 }
-.spin {
-    animation: spin 1s linear infinite;
-}
-@keyframes spin {
-    from { transform: rotate(0deg); }
-    to { transform: rotate(360deg); }
+
+/* Mobile edge-to-edge */
+@media (max-width: 767px) {
+    .membership-plans {
+        grid-template-columns: 1fr;
+    }
+    .plan-card {
+        margin-left: -16px;
+        margin-right: -16px;
+        border-radius: 0 !important;
+        border-left: none !important;
+        border-right: none !important;
+        width: calc(100% + 32px);
+    }
 }
 </style>
 
@@ -311,19 +362,23 @@ document.addEventListener('DOMContentLoaded', function() {
     // Subscribe buttons
     document.querySelectorAll('.subscribe-btn').forEach(btn => {
         btn.addEventListener('click', function() {
-            const planId = this.dataset.planId;
-            document.getElementById('planId').value = planId;
+            document.getElementById('planId').value = this.dataset.planId;
             document.getElementById('signupModal').showModal();
         });
     });
 
+    // Open portal button
+    document.getElementById('openPortalBtn')?.addEventListener('click', function() {
+        document.getElementById('portalModal').showModal();
+    });
+
     // Signup form
-    document.getElementById('signupForm').addEventListener('submit', async function(e) {
+    document.getElementById('signupForm')?.addEventListener('submit', async function(e) {
         e.preventDefault();
 
         const btn = document.getElementById('submitBtn');
-        btn.querySelector('.btn-text').style.display = 'none';
-        btn.querySelector('.btn-loading').style.display = 'inline-flex';
+        const originalText = btn.textContent;
+        btn.textContent = 'Laddar...';
         btn.disabled = true;
 
         try {
@@ -345,20 +400,18 @@ document.addEventListener('DOMContentLoaded', function() {
                 window.location.href = data.checkout_url;
             } else {
                 alert('Fel: ' + (data.error || 'Kunde inte skapa betalningssession'));
-                btn.querySelector('.btn-text').style.display = 'inline';
-                btn.querySelector('.btn-loading').style.display = 'none';
+                btn.textContent = originalText;
                 btn.disabled = false;
             }
         } catch (err) {
-            alert('Ett fel uppstod. Forsok igen.');
-            btn.querySelector('.btn-text').style.display = 'inline';
-            btn.querySelector('.btn-loading').style.display = 'none';
+            alert('Ett fel uppstod. Försök igen.');
+            btn.textContent = originalText;
             btn.disabled = false;
         }
     });
 
     // Portal form
-    document.getElementById('portalForm').addEventListener('submit', async function(e) {
+    document.getElementById('portalForm')?.addEventListener('submit', async function(e) {
         e.preventDefault();
 
         try {
@@ -376,17 +429,12 @@ document.addEventListener('DOMContentLoaded', function() {
             if (data.success && data.portal_url) {
                 window.location.href = data.portal_url;
             } else {
-                alert('Fel: ' + (data.error || 'Kunde inte oppna portalen'));
+                alert('Fel: ' + (data.error || 'Kunde inte öppna portalen'));
             }
         } catch (err) {
-            alert('Ett fel uppstod. Forsok igen.');
+            alert('Ett fel uppstod. Försök igen.');
         }
     });
 });
-
-function openPortal() {
-    document.getElementById('portalModal').showModal();
-}
 </script>
-
-<?php include __DIR__ . '/../includes/footer.php'; ?>
+<?php endif; ?>
