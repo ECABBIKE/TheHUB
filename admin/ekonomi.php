@@ -571,35 +571,59 @@ include __DIR__ . '/components/unified-layout.php';
 </div>
 <?php endif; ?>
 
-<!-- Hjälpsektion -->
+<!-- Dokumentation -->
 <div class="card" style="margin-top: var(--space-xl);">
     <div class="card-header">
-        <h3><i data-lucide="help-circle"></i> Hur fungerar anmälningssystemet?</h3>
+        <h3><i data-lucide="book-open"></i> Dokumentation</h3>
+    </div>
+    <div class="card-body">
+        <p class="text-secondary mb-md">
+            Full teknisk dokumentation for betalningssystemet, inklusive guider for att aktivera Swish Handel och Stripe.
+        </p>
+        <div style="display: flex; gap: var(--space-md); flex-wrap: wrap;">
+            <a href="/docs/PAYMENT.md" target="_blank" class="btn btn--secondary">
+                <i data-lucide="file-text"></i>
+                Betalningsdokumentation
+            </a>
+            <?php if ($isSuperAdmin): ?>
+            <a href="/admin/certificates" class="btn btn--secondary">
+                <i data-lucide="shield-check"></i>
+                Konfigurera Swish Handel
+            </a>
+            <?php endif; ?>
+        </div>
+    </div>
+</div>
+
+<!-- Hjalpsektionen -->
+<div class="card" style="margin-top: var(--space-lg);">
+    <div class="card-header">
+        <h3><i data-lucide="help-circle"></i> Hur fungerar anmalningssystemet?</h3>
     </div>
     <div class="card-body">
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: var(--space-lg);">
             <div>
                 <h4 style="color: var(--color-accent); margin-bottom: var(--space-sm);">1. Skapa event</h4>
                 <p style="color: var(--color-text-secondary); font-size: var(--text-sm);">
-                    Skapa ett event under Tävlingar och aktivera anmälan. Välj vilka klasser som ska vara tillgängliga.
+                    Skapa ett event under Tavlingar och aktivera anmalan. Valj vilka klasser som ska vara tillgangliga.
                 </p>
             </div>
             <div>
-                <h4 style="color: var(--color-accent); margin-bottom: var(--space-sm);">2. Sätt priser</h4>
+                <h4 style="color: var(--color-accent); margin-bottom: var(--space-sm);">2. Satt priser</h4>
                 <p style="color: var(--color-text-secondary); font-size: var(--text-sm);">
-                    Använd en prismall eller sätt priser direkt på eventet. Konfigurera early bird och sena anmälningar.
+                    Anvand en prismall eller satt priser direkt pa eventet. Konfigurera early bird och sena anmalningar.
                 </p>
             </div>
             <div>
                 <h4 style="color: var(--color-accent); margin-bottom: var(--space-sm);">3. Konfigurera betalning</h4>
                 <p style="color: var(--color-text-secondary); font-size: var(--text-sm);">
-                    Välj mottagare för betalningar. Kan vara Swish Handel (automatisk) eller manuell Swish.
+                    Valj mottagare for betalningar. Kan vara Swish Handel (automatisk) eller manuell Swish.
                 </p>
             </div>
             <div>
-                <h4 style="color: var(--color-accent); margin-bottom: var(--space-sm);">4. Öppna anmälan</h4>
+                <h4 style="color: var(--color-accent); margin-bottom: var(--space-sm);">4. Oppna anmalan</h4>
                 <p style="color: var(--color-text-secondary); font-size: var(--text-sm);">
-                    Deltagare kan nu anmäla sig via hemsidan. Betalningar bekräftas automatiskt (Swish Handel) eller manuellt.
+                    Deltagare kan nu anmala sig via hemsidan. Betalningar bekraftas automatiskt (Swish Handel) eller manuellt.
                 </p>
             </div>
         </div>

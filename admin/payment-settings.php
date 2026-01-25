@@ -130,7 +130,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// Get promotor's assigned events
+// Get promotor's assigned events - current year only
+$currentYear = date('Y');
 $assignedEvents = $db->getAll("
     SELECT e.id, e.name, e.date, e.location, s.name as series_name,
            pc.id as config_id, pc.swish_enabled, pc.swish_number, pc.swish_name
@@ -138,22 +139,24 @@ $assignedEvents = $db->getAll("
     JOIN events e ON pe.event_id = e.id
     LEFT JOIN series s ON e.series_id = s.id
     LEFT JOIN payment_configs pc ON pc.event_id = e.id
-    WHERE pe.user_id = ?
+    WHERE pe.user_id = ? AND YEAR(e.date) = ?
     ORDER BY e.date DESC
-", [$userId]);
+", [$userId, $currentYear]);
 
-// Get series (for super admin or series promotors)
+// Get series (for super admin or series promotors) - current year only
 $series = [];
+$currentYear = date('Y');
 if ($isSuperAdmin) {
     $series = $db->getAll("
-        SELECT s.id, s.name, COUNT(e.id) as event_count,
+        SELECT s.id, s.name, s.year, COUNT(e.id) as event_count,
                pc.id as config_id, pc.swish_enabled, pc.swish_number, pc.swish_name
         FROM series s
         LEFT JOIN events e ON s.id = e.series_id
         LEFT JOIN payment_configs pc ON pc.series_id = s.id
+        WHERE s.year = ?
         GROUP BY s.id
         ORDER BY s.name
-    ");
+    ", [$currentYear]);
 }
 
 // Page settings for unified layout
