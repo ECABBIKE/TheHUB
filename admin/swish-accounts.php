@@ -40,7 +40,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'swish_number' => $swishNumber,
                     'swish_name' => $swishName ?: $name,
                     'gateway_type' => $gatewayType,
-                    'is_active' => 1,
+                    'active' => 1,
                     'created_at' => date('Y-m-d H:i:s')
                 ]);
                 $message = 'Swish-konto skapat!';
@@ -58,7 +58,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $swishNumber = preg_replace('/[^0-9]/', '', $_POST['swish_number'] ?? '');
         $swishName = trim($_POST['swish_name'] ?? '');
         $gatewayType = $_POST['gateway_type'] ?? 'manual';
-        $isActive = isset($_POST['is_active']) ? 1 : 0;
+        $isActive = isset($_POST['active']) ? 1 : 0;
 
         if (empty($name) || empty($swishNumber)) {
             $message = 'Namn och Swish-nummer krävs';
@@ -70,7 +70,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'swish_number' => $swishNumber,
                     'swish_name' => $swishName ?: $name,
                     'gateway_type' => $gatewayType,
-                    'is_active' => $isActive
+                    'active' => $isActive
                 ], 'id = ?', [$recipientId]);
                 $message = 'Swish-konto uppdaterat!';
                 $messageType = 'success';
@@ -100,7 +100,7 @@ $recipients = $db->getAll("
            (SELECT COUNT(*) FROM series WHERE payment_recipient_id = pr.id) as series_count,
            (SELECT COUNT(*) FROM events WHERE payment_recipient_id = pr.id) as events_count
     FROM payment_recipients pr
-    ORDER BY pr.is_active DESC, pr.name ASC
+    ORDER BY pr.active DESC, pr.name ASC
 ");
 
 // Check for certificates
@@ -313,8 +313,8 @@ include __DIR__ . '/components/unified-layout.php';
             <?php if ($editRecipient): ?>
             <div class="admin-form-group">
                 <label class="admin-form-label flex items-center gap-sm">
-                    <input type="checkbox" name="is_active" value="1"
-                           <?= ($editRecipient['is_active'] ?? 1) ? 'checked' : '' ?>>
+                    <input type="checkbox" name="active" value="1"
+                           <?= ($editRecipient['active'] ?? 1) ? 'checked' : '' ?>>
                     Aktiv
                 </label>
             </div>
@@ -350,7 +350,7 @@ include __DIR__ . '/components/unified-layout.php';
         $hasCert = isset($certificates[$r['id']]);
         $isAuto = $r['gateway_type'] === 'swish_handel';
     ?>
-    <div class="swish-card <?= !$r['is_active'] ? 'inactive' : '' ?>">
+    <div class="swish-card <?= !$r['active'] ? 'inactive' : '' ?>">
         <div class="swish-card-header">
             <div class="swish-icon">
                 <i data-lucide="smartphone"></i>
@@ -359,7 +359,7 @@ include __DIR__ . '/components/unified-layout.php';
                 <h3><?= htmlspecialchars($r['name']) ?></h3>
                 <small>
                     <?= $isAuto ? 'Swish Handel (automatisk)' : 'Manuell Swish' ?>
-                    <?php if (!$r['is_active']): ?>
+                    <?php if (!$r['active']): ?>
                         <span class="badge badge-secondary">Inaktiv</span>
                     <?php endif; ?>
                 </small>

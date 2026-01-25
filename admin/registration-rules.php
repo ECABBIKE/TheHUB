@@ -148,16 +148,17 @@ include __DIR__ . '/components/unified-layout.php';
 <?php if ($selectedSeries): ?>
 
 <?php
-// Fetch events in this series - using series_events join (many-to-many)
+// Fetch events in this series - from BOTH series_events table AND events.series_id
+// This ensures we show events regardless of how they were connected
 $seriesEvents = $db->getAll("
-    SELECT e.id, e.name, e.date, e.location, e.active,
+    SELECT DISTINCT e.id, e.name, e.date, e.location, e.active,
            e.registration_opens, e.registration_deadline,
            e.registration_enabled
     FROM events e
-    JOIN series_events se ON se.event_id = e.id
-    WHERE se.series_id = ?
+    LEFT JOIN series_events se ON se.event_id = e.id AND se.series_id = ?
+    WHERE se.series_id = ? OR e.series_id = ?
     ORDER BY e.date ASC
-", [$selectedSeriesId]);
+", [$selectedSeriesId, $selectedSeriesId, $selectedSeriesId]);
 ?>
 
 <!-- Events in Series -->
@@ -167,7 +168,16 @@ $seriesEvents = $db->getAll("
     </div>
     <div class="admin-card-body">
         <?php if (empty($seriesEvents)): ?>
-            <p class="text-secondary">Inga events kopplade till denna serie.</p>
+            <div class="alert alert-warning">
+                <i data-lucide="alert-triangle"></i>
+                <div>
+                    <strong>Inga events kopplade till denna serie.</strong>
+                    <p style="margin: var(--space-xs) 0 0 0;">
+                        Koppla events via <a href="/admin/series-events.php?series_id=<?= $selectedSeriesId ?>">Serie-Events</a>
+                        eller sätt <code>series_id</code> på events.
+                    </p>
+                </div>
+            </div>
         <?php else: ?>
             <div class="admin-table-container">
                 <table class="admin-table">

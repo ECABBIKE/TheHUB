@@ -206,7 +206,7 @@ include __DIR__ . '/../includes/layout-header.php';
   </div>
   <div class="card-body">
   <form method="POST" class="flex gap-md gs-items-end flex-wrap">
-   <?= csrfField() ?>
+   <?= csrf_field() ?>
    <input type="hidden" name="action" value="generate_tickets">
 
    <div class="form-group">
@@ -314,7 +314,7 @@ include __DIR__ . '/../includes/layout-header.php';
      <?php if ($available > 0): ?>
       <form method="POST" style="display: inline;"
        onsubmit="return confirm('Radera <?= $available ?> tillgängliga biljetter?');">
-      <?= csrfField() ?>
+      <?= csrf_field() ?>
       <input type="hidden" name="action" value="delete_available">
       <input type="hidden" name="class_id" value="<?= $class['id'] ?>">
       <button type="submit" class="btn btn-error btn--sm">

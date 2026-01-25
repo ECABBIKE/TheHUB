@@ -234,13 +234,13 @@ include __DIR__ . '/components/unified-layout.php';
 
 <!-- Tabs -->
 <div class="admin-tabs mb-lg">
-    <a href="?tab=plans" class="admin-tab <?= $tab === 'plans' ? 'active' : '' ?>">
+    <a href="/admin/memberships.php?tab=plans" class="admin-tab <?= $tab === 'plans' ? 'active' : '' ?>">
         <i data-lucide="package"></i> Planer
     </a>
-    <a href="?tab=subscriptions" class="admin-tab <?= $tab === 'subscriptions' ? 'active' : '' ?>">
+    <a href="/admin/memberships.php?tab=subscriptions" class="admin-tab <?= $tab === 'subscriptions' ? 'active' : '' ?>">
         <i data-lucide="credit-card"></i> Prenumerationer
     </a>
-    <a href="?tab=stats" class="admin-tab <?= $tab === 'stats' ? 'active' : '' ?>">
+    <a href="/admin/memberships.php?tab=stats" class="admin-tab <?= $tab === 'stats' ? 'active' : '' ?>">
         <i data-lucide="bar-chart-3"></i> Statistik
     </a>
 </div>
@@ -303,7 +303,7 @@ include __DIR__ . '/components/unified-layout.php';
                                 </td>
                                 <td class="text-right">
                                     <form method="POST" style="display: inline;">
-                                        <?= csrfField() ?>
+                                        <?= csrf_field() ?>
                                         <input type="hidden" name="action" value="toggle_plan">
                                         <input type="hidden" name="plan_id" value="<?= $plan['id'] ?>">
                                         <button type="submit" class="btn-admin btn-admin-ghost btn-sm">
@@ -330,7 +330,7 @@ include __DIR__ . '/components/unified-layout.php';
             </button>
         </div>
         <form method="POST">
-            <?= csrfField() ?>
+            <?= csrf_field() ?>
             <input type="hidden" name="action" value="create_plan">
             <div class="admin-modal-body">
                 <div class="admin-form-group">
@@ -440,7 +440,7 @@ include __DIR__ . '/components/unified-layout.php';
                                 <td class="text-right">
                                     <?php if ($sub['stripe_subscription_status'] === 'active' && !$sub['cancel_at_period_end']): ?>
                                         <form method="POST" onsubmit="return confirm('Är du säker på att du vill avsluta denna prenumeration?');">
-                                            <?= csrfField() ?>
+                                            <?= csrf_field() ?>
                                             <input type="hidden" name="action" value="cancel_subscription">
                                             <input type="hidden" name="subscription_id" value="<?= $sub['id'] ?>">
                                             <button type="submit" class="btn-admin btn-admin-ghost btn-sm text-error">
