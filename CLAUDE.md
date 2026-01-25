@@ -96,6 +96,23 @@ migrations/             ← FEL! Arkiverad
 3. Ingen dynamisk SQL (SET @sql / PREPARE / EXECUTE)
 4. Endast standard SQL-statements
 5. **Migrationer ska vara körbara via admin/migrations.php**
+6. **VIKTIGT: Registrera migrationen i `$migrationChecks`** (se nedan)
+
+### Registrera migration för statusvisning:
+För att migrations.php ska kunna visa om en migration är körd måste den registreras i `$migrationChecks` arrayen i `/admin/migrations.php`:
+
+```php
+$migrationChecks = [
+    // ... befintliga ...
+    '027_payment_recipients_bank_details.sql' => [
+        'tables' => ['new_table_name'],           // Tabeller som skapas
+        'columns' => ['table.column_name'],       // Kolumner som läggs till
+        'data' => ['table.condition IS NOT NULL'] // Data-villkor
+    ],
+];
+```
+
+**Utan denna registrering visas migrationen som "unknown" och inte som "Körd"!**
 
 ---
 
