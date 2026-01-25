@@ -42,7 +42,7 @@ $stats['revenue_30d'] = $db->getRow("
 
 // Antal aktiva mottagare
 $stats['active_recipients'] = $db->getRow("
-    SELECT COUNT(*) as cnt FROM payment_recipients WHERE is_active = 1
+    SELECT COUNT(*) as cnt FROM payment_recipients WHERE active = 1
 ")['cnt'] ?? 0;
 
 // Antal prismallar
@@ -391,9 +391,9 @@ include __DIR__ . '/components/unified-layout.php';
                 Certifikat (Swish Handel)
             </a>
             <?php endif; ?>
-            <a href="/admin/payment-settings" class="ekonomi-card-link">
-                <i data-lucide="settings"></i>
-                Betalningsinstallningar
+            <a href="/admin/memberships" class="ekonomi-card-link">
+                <i data-lucide="users"></i>
+                Medlemskap
             </a>
         </div>
     </div>

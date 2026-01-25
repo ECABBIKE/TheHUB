@@ -142,7 +142,7 @@ $recipients = $db->getAll("
            (SELECT COUNT(*) FROM series WHERE payment_recipient_id = pr.id) as series_count,
            (SELECT COUNT(*) FROM events WHERE payment_recipient_id = pr.id) as events_count
     FROM payment_recipients pr
-    WHERE pr.is_active = 1
+    WHERE pr.active = 1
     ORDER BY pr.name
 ");
 

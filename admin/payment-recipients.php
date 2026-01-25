@@ -281,7 +281,7 @@ include __DIR__ . '/components/unified-layout.php';
 </div>
 
 <!-- Modal for create/edit -->
-<div id="recipientModal" class="modal" class="hidden">
+<div id="recipientModal" class="modal hidden">
     <div class="modal-backdrop" onclick="hideModal()"></div>
     <div class="modal-content">
         <div class="modal-header">
