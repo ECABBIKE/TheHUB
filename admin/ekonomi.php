@@ -378,9 +378,13 @@ include __DIR__ . '/components/unified-layout.php';
                 Swish-konton (Alla)
             </a>
             <?php if ($isSuperAdmin): ?>
+            <a href="/admin/stripe-connect" class="ekonomi-card-link">
+                <i data-lucide="credit-card"></i>
+                Stripe Connect (Kort)
+            </a>
             <a href="/admin/gateway-settings" class="ekonomi-card-link">
                 <i data-lucide="sliders"></i>
-                Gateway-inställningar
+                Gateway-installningar
             </a>
             <a href="/admin/certificates" class="ekonomi-card-link">
                 <i data-lucide="shield-check"></i>
@@ -389,7 +393,7 @@ include __DIR__ . '/components/unified-layout.php';
             <?php endif; ?>
             <a href="/admin/payment-settings" class="ekonomi-card-link">
                 <i data-lucide="settings"></i>
-                Betalningsinställningar
+                Betalningsinstallningar
             </a>
         </div>
     </div>
