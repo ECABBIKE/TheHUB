@@ -452,11 +452,11 @@ function showModal(action, data = null) {
         document.getElementById('formSubmitBtn').textContent = 'Skapa';
     }
 
-    modal.style.display = 'flex';
+    modal.classList.remove('hidden');
 }
 
 function hideModal() {
-    document.getElementById('recipientModal').style.display = 'none';
+    document.getElementById('recipientModal').classList.add('hidden');
 }
 
 // Close modal on escape key
