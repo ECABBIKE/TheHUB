@@ -63,6 +63,21 @@ $ADMIN_TABS = [
                 'icon' => 'layers',
                 'url' => '/admin/classes.php',
                 'pages' => ['classes.php']
+            ],
+            [
+                'id' => 'race-reports',
+                'label' => 'Race Reports',
+                'icon' => 'file-text',
+                'url' => '/admin/race-reports.php',
+                'pages' => ['race-reports.php', 'race-report-edit.php'],
+                'role' => 'super_admin'
+            ],
+            [
+                'id' => 'news-moderation',
+                'label' => 'Nyheter',
+                'icon' => 'newspaper',
+                'url' => '/admin/news-moderation.php',
+                'pages' => ['news-moderation.php']
             ]
         ]
     ],
@@ -241,21 +256,6 @@ $ADMIN_TABS = [
                 'pages' => ['sponsor-placements.php'],
                 'role' => 'super_admin'
             ],
-            [
-                'id' => 'race-reports',
-                'label' => 'Race Reports',
-                'icon' => 'file-text',
-                'url' => '/admin/race-reports.php',
-                'pages' => ['race-reports.php', 'race-report-edit.php'],
-                'role' => 'super_admin'
-            ],
-            [
-                'id' => 'news-moderation',
-                'label' => 'Nyheter',
-                'icon' => 'newspaper',
-                'url' => '/admin/news-moderation.php',
-                'pages' => ['news-moderation.php']
-            ]
         ]
     ],
 
