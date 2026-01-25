@@ -345,10 +345,6 @@ include __DIR__ . '/components/unified-layout.php';
         Konfigurera betalmetoder
     </a>
     <?php endif; ?>
-    <a href="/admin/pricing-templates" class="quick-action-btn">
-        <i data-lucide="receipt"></i>
-        Prismallar
-    </a>
 </div>
 
 <!-- Huvudsektioner -->
@@ -366,7 +362,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
             <div>
                 <h3 class="ekonomi-card-title">Betalningsmetoder</h3>
-                <p class="ekonomi-card-subtitle">Swish, Stripe, Manuell</p>
+                <p class="ekonomi-card-subtitle"><?= $stats['active_recipients'] ?> mottagare konfigurerade</p>
             </div>
         </div>
         <div class="ekonomi-card-body">
@@ -395,34 +391,6 @@ include __DIR__ . '/components/unified-layout.php';
                 <i data-lucide="users"></i>
                 Medlemskap
             </a>
-        </div>
-    </div>
-
-    <!-- Mottagare -->
-    <div class="ekonomi-card">
-        <div class="ekonomi-card-header">
-            <div class="ekonomi-card-icon green">
-                <i data-lucide="users"></i>
-            </div>
-            <div>
-                <h3 class="ekonomi-card-title">Mottagare</h3>
-                <p class="ekonomi-card-subtitle"><?= $stats['active_recipients'] ?> aktiva</p>
-            </div>
-        </div>
-        <div class="ekonomi-card-body">
-            <p>Hantera vem som tar emot betalningar. Varje arrangör/klubb kan ha egna Swish-nummer eller bankkonton.</p>
-        </div>
-        <div class="ekonomi-card-links">
-            <a href="/admin/payment-recipients" class="ekonomi-card-link">
-                <i data-lucide="building-2"></i>
-                Hantera mottagare
-            </a>
-            <?php if ($isSuperAdmin): ?>
-            <a href="/admin/payment-recipients?action=create" class="ekonomi-card-link">
-                <i data-lucide="plus"></i>
-                Lägg till mottagare
-            </a>
-            <?php endif; ?>
         </div>
     </div>
 
