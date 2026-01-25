@@ -17,6 +17,7 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 
 require_once __DIR__ . '/../../config.php';
 require_once __DIR__ . '/../../includes/payment/StripeClient.php';
+require_once __DIR__ . '/../../includes/mail.php';
 
 $pdo = $GLOBALS['pdo'];
 
@@ -130,6 +131,13 @@ try {
                     $stmt->execute([$order['id']]);
 
                     $pdo->commit();
+
+                    // Send confirmation email
+                    try {
+                        hub_send_order_confirmation($order['id']);
+                    } catch (Exception $emailError) {
+                        error_log("Failed to send order confirmation email: " . $emailError->getMessage());
+                    }
 
                     // Mark webhook as processed
                     if ($logId) {
