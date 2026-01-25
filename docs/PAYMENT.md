@@ -513,14 +513,117 @@ Alla admin-formular anvander CSRF-tokens.
 
 ---
 
+## Medlemskap & Prenumerationer (Stripe Billing)
+
+TheHUB stodjer atervommande medlemskap via Stripe Billing v2 API.
+
+### Databastabeller
+
+#### membership_plans
+Medlemsplaner som kan kopas.
+
+| Kolumn | Typ | Beskrivning |
+|--------|-----|-------------|
+| id | INT | Primary key |
+| name | VARCHAR(100) | Plannamn |
+| description | TEXT | Beskrivning |
+| price_amount | INT | Pris i ore |
+| billing_interval | ENUM | day, week, month, year |
+| stripe_product_id | VARCHAR(100) | Stripe Product ID |
+| stripe_price_id | VARCHAR(100) | Stripe Price ID |
+| benefits | JSON | Array av formaner |
+| discount_percent | INT | Rabatt pa anmalningar |
+| active | TINYINT | 1 = aktiv |
+
+#### member_subscriptions
+Aktiva prenumerationer.
+
+| Kolumn | Typ | Beskrivning |
+|--------|-----|-------------|
+| id | INT | Primary key |
+| rider_id | INT | Koppling till riders |
+| user_id | INT | Koppling till users |
+| email | VARCHAR(255) | E-post |
+| plan_id | INT | FK till membership_plans |
+| stripe_customer_id | VARCHAR(100) | Stripe Customer ID |
+| stripe_subscription_id | VARCHAR(100) | Stripe Subscription ID |
+| stripe_subscription_status | VARCHAR(50) | active, trialing, canceled, etc |
+| current_period_end | DATETIME | Nar perioden gar ut |
+| cancel_at_period_end | TINYINT | Om prenumerationen avslutas |
+
+#### subscription_invoices
+Betalningshistorik for prenumerationer.
+
+#### stripe_customers
+Koppling mellan anvandare och Stripe-kunder.
+
+### API-endpoints
+
+#### GET /api/memberships.php?action=get_plans
+Hamta alla aktiva medlemsplaner.
+
+#### POST /api/memberships.php?action=create_checkout
+Skapa Stripe Checkout-session for prenumeration.
+
+```json
+{
+  "plan_id": 1,
+  "email": "user@example.com",
+  "name": "Johan Andersson"
+}
+```
+
+#### POST /api/memberships.php?action=create_portal
+Oppna Stripe Billing Portal for att hantera prenumeration.
+
+```json
+{
+  "email": "user@example.com"
+}
+```
+
+### Webhooks
+
+Subscription-relaterade webhooks i `/api/webhooks/stripe-webhook.php`:
+
+- `customer.subscription.created` - Ny prenumeration
+- `customer.subscription.updated` - Uppdaterad prenumeration
+- `customer.subscription.deleted` - Avslutad prenumeration
+- `customer.subscription.trial_will_end` - Trial avslutas snart
+- `invoice.paid` - Faktura betald
+- `invoice.payment_failed` - Betalning misslyckades
+
+### Admin-hantering
+
+- `/admin/memberships.php` - Hantera planer och prenumerationer
+- Flikarna: Planer, Prenumerationer, Statistik
+
+### Publik sida
+
+- `/membership` - Visa planer och registrering
+- `/membership?session_id=xxx` - Bekraftelsesida efter betalning
+
+### Flode
+
+1. Besokare valjer plan pa `/membership`
+2. Fyller i namn och email
+3. Redirectas till Stripe Checkout
+4. Efter betalning -> webhook -> prenumeration skapas
+5. Bekraftelsemail skickas
+6. Medlem kan hantera prenumeration via Stripe Portal
+
+---
+
 ## TODO
 
-- [ ] Implementera email-bekraftelse vid betalning
-- [ ] Stripe Connect onboarding-flode
+- [x] Implementera email-bekraftelse vid betalning
+- [x] Stripe Connect onboarding-flode
+- [x] Medlemskap och prenumerationer (Stripe Billing)
 - [ ] Swish Handel certifikatfornyelse-paminelser
 - [ ] Automatisk orderrensning (utgangna ordrar)
 - [ ] Rapportering och statistik
 
 ---
 
-**Version:** 1.0.0
+**Version:** 2.0.0
+**Senast uppdaterad:** 2026-01-25

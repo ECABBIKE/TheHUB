@@ -872,6 +872,54 @@ include __DIR__ . '/components/unified-layout.php';
 
 </div>
 
+<!-- ========== MEDLEMSKAP & BETALNINGAR ========== -->
+<h3 class="section-title">Medlemskap & Betalningar</h3>
+<div class="tools-grid">
+
+    <!-- Medlemskap -->
+    <div class="card">
+        <div class="tool-header">
+            <div class="tool-icon"><i data-lucide="users"></i></div>
+            <div>
+                <h4 class="tool-title">Medlemskap</h4>
+                <p class="tool-description">Hantera medlemsplaner och prenumerationer</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/memberships.php" class="btn-admin btn-admin-primary">Oppna</a>
+        </div>
+    </div>
+
+    <!-- Ekonomi -->
+    <div class="card">
+        <div class="tool-header">
+            <div class="tool-icon"><i data-lucide="wallet"></i></div>
+            <div>
+                <h4 class="tool-title">Ekonomi</h4>
+                <p class="tool-description">Betalningsoversikt och installningar</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/ekonomi.php" class="btn-admin btn-admin-primary">Oppna</a>
+        </div>
+    </div>
+
+    <!-- Stripe Connect -->
+    <div class="card">
+        <div class="tool-header">
+            <div class="tool-icon"><i data-lucide="link"></i></div>
+            <div>
+                <h4 class="tool-title">Stripe Connect</h4>
+                <p class="tool-description">Hantera betalningsmottagare</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/stripe-connect.php" class="btn-admin btn-admin-secondary">Oppna</a>
+        </div>
+    </div>
+
+</div>
+
 <!-- ========== SYSTEM ========== -->
 <h3 class="section-title">System</h3>
 <div class="tools-grid">

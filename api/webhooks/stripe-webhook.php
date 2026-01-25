@@ -351,6 +351,250 @@ try {
             }
             break;
 
+        // ============================================================
+        // SUBSCRIPTION EVENTS (Stripe Billing)
+        // ============================================================
+
+        case 'customer.subscription.created':
+        case 'customer.subscription.updated':
+            $subscriptionId = $data['id'] ?? null;
+            $customerId = $data['customer'] ?? null;
+            $status = $data['status'] ?? '';
+
+            if ($subscriptionId && $customerId) {
+                // Check if subscription exists
+                $stmt = $pdo->prepare("SELECT id FROM member_subscriptions WHERE stripe_subscription_id = ?");
+                $stmt->execute([$subscriptionId]);
+                $existing = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                $periodStart = isset($data['current_period_start'])
+                    ? date('Y-m-d H:i:s', $data['current_period_start']) : null;
+                $periodEnd = isset($data['current_period_end'])
+                    ? date('Y-m-d H:i:s', $data['current_period_end']) : null;
+                $cancelAtPeriodEnd = $data['cancel_at_period_end'] ?? false;
+                $canceledAt = isset($data['canceled_at'])
+                    ? date('Y-m-d H:i:s', $data['canceled_at']) : null;
+                $trialStart = isset($data['trial_start'])
+                    ? date('Y-m-d H:i:s', $data['trial_start']) : null;
+                $trialEnd = isset($data['trial_end'])
+                    ? date('Y-m-d H:i:s', $data['trial_end']) : null;
+
+                if ($existing) {
+                    // Update existing subscription
+                    $stmt = $pdo->prepare("
+                        UPDATE member_subscriptions SET
+                            stripe_subscription_status = ?,
+                            current_period_start = ?,
+                            current_period_end = ?,
+                            cancel_at_period_end = ?,
+                            canceled_at = ?,
+                            trial_start = ?,
+                            trial_end = ?,
+                            updated_at = NOW()
+                        WHERE stripe_subscription_id = ?
+                    ");
+                    $stmt->execute([
+                        $status,
+                        $periodStart,
+                        $periodEnd,
+                        $cancelAtPeriodEnd ? 1 : 0,
+                        $canceledAt,
+                        $trialStart,
+                        $trialEnd,
+                        $subscriptionId
+                    ]);
+                } else {
+                    // Get price/plan info from subscription items
+                    $priceId = $data['items']['data'][0]['price']['id'] ?? null;
+
+                    // Find matching plan
+                    $stmt = $pdo->prepare("SELECT id FROM membership_plans WHERE stripe_price_id = ?");
+                    $stmt->execute([$priceId]);
+                    $plan = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                    if ($plan) {
+                        // Get customer email from Stripe
+                        $customerEmail = $data['metadata']['email'] ?? '';
+                        $customerName = $data['metadata']['name'] ?? '';
+
+                        // Create new subscription record
+                        $stmt = $pdo->prepare("
+                            INSERT INTO member_subscriptions (
+                                plan_id, email, name, stripe_customer_id, stripe_subscription_id,
+                                stripe_subscription_status, current_period_start, current_period_end,
+                                cancel_at_period_end, trial_start, trial_end, metadata
+                            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                        ");
+                        $stmt->execute([
+                            $plan['id'],
+                            $customerEmail,
+                            $customerName,
+                            $customerId,
+                            $subscriptionId,
+                            $status,
+                            $periodStart,
+                            $periodEnd,
+                            $cancelAtPeriodEnd ? 1 : 0,
+                            $trialStart,
+                            $trialEnd,
+                            json_encode($data['metadata'] ?? [])
+                        ]);
+                    }
+                }
+
+                $result = ['status' => 'processed', 'message' => "Subscription {$type} processed"];
+            } else {
+                $result = ['status' => 'ignored', 'message' => 'Missing subscription or customer ID'];
+            }
+            break;
+
+        case 'customer.subscription.deleted':
+            $subscriptionId = $data['id'] ?? null;
+
+            if ($subscriptionId) {
+                $stmt = $pdo->prepare("
+                    UPDATE member_subscriptions SET
+                        stripe_subscription_status = 'canceled',
+                        canceled_at = NOW(),
+                        updated_at = NOW()
+                    WHERE stripe_subscription_id = ?
+                ");
+                $stmt->execute([$subscriptionId]);
+
+                $result = ['status' => 'processed', 'message' => 'Subscription canceled'];
+            } else {
+                $result = ['status' => 'ignored', 'message' => 'Missing subscription ID'];
+            }
+            break;
+
+        case 'customer.subscription.trial_will_end':
+            // Subscription trial ending soon (3 days before)
+            $subscriptionId = $data['id'] ?? null;
+
+            if ($subscriptionId) {
+                // Get subscription with email
+                $stmt = $pdo->prepare("
+                    SELECT ms.*, mp.name as plan_name
+                    FROM member_subscriptions ms
+                    JOIN membership_plans mp ON ms.plan_id = mp.id
+                    WHERE ms.stripe_subscription_id = ?
+                ");
+                $stmt->execute([$subscriptionId]);
+                $subscription = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                if ($subscription && $subscription['email']) {
+                    // Send trial ending email notification
+                    try {
+                        $subject = 'Din provperiod avslutas snart - ' . $subscription['plan_name'];
+                        $body = "<h2>Hej {$subscription['name']}!</h2>";
+                        $body .= "<p>Din provperiod for <strong>{$subscription['plan_name']}</strong> avslutas snart.</p>";
+                        $body .= "<p>Efter provperioden kommer din prenumeration att aktiveras automatiskt.</p>";
+                        $body .= "<p>Om du vill avsluta innan dess, kan du gora det via din medlemssida.</p>";
+
+                        hub_send_email($subscription['email'], $subject, $body);
+                    } catch (Exception $emailError) {
+                        error_log("Failed to send trial ending email: " . $emailError->getMessage());
+                    }
+                }
+
+                $result = ['status' => 'processed', 'message' => 'Trial ending notification sent'];
+            } else {
+                $result = ['status' => 'ignored', 'message' => 'Missing subscription ID'];
+            }
+            break;
+
+        case 'invoice.paid':
+            // Invoice was paid - update subscription payment info
+            $subscriptionId = $data['subscription'] ?? null;
+            $amountPaid = $data['amount_paid'] ?? 0;
+            $invoiceId = $data['id'] ?? null;
+
+            if ($subscriptionId) {
+                // Update last payment
+                $stmt = $pdo->prepare("
+                    UPDATE member_subscriptions SET
+                        last_payment_at = NOW(),
+                        last_payment_amount = ?,
+                        updated_at = NOW()
+                    WHERE stripe_subscription_id = ?
+                ");
+                $stmt->execute([$amountPaid, $subscriptionId]);
+
+                // Store invoice record
+                if ($invoiceId) {
+                    $stmt = $pdo->prepare("SELECT id FROM member_subscriptions WHERE stripe_subscription_id = ?");
+                    $stmt->execute([$subscriptionId]);
+                    $sub = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                    if ($sub) {
+                        $stmt = $pdo->prepare("
+                            INSERT INTO subscription_invoices (
+                                subscription_id, stripe_invoice_id, stripe_invoice_number,
+                                stripe_invoice_pdf, stripe_hosted_invoice_url,
+                                amount_due, amount_paid, currency, status,
+                                period_start, period_end, paid_at
+                            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 'paid', ?, ?, NOW())
+                            ON DUPLICATE KEY UPDATE
+                                status = 'paid', paid_at = NOW(), amount_paid = ?
+                        ");
+                        $stmt->execute([
+                            $sub['id'],
+                            $invoiceId,
+                            $data['number'] ?? null,
+                            $data['invoice_pdf'] ?? null,
+                            $data['hosted_invoice_url'] ?? null,
+                            $data['amount_due'] ?? 0,
+                            $amountPaid,
+                            $data['currency'] ?? 'sek',
+                            isset($data['period_start']) ? date('Y-m-d H:i:s', $data['period_start']) : null,
+                            isset($data['period_end']) ? date('Y-m-d H:i:s', $data['period_end']) : null,
+                            $amountPaid
+                        ]);
+                    }
+                }
+
+                $result = ['status' => 'processed', 'message' => 'Invoice payment recorded'];
+            } else {
+                $result = ['status' => 'ignored', 'message' => 'No subscription for this invoice'];
+            }
+            break;
+
+        case 'invoice.payment_failed':
+            // Invoice payment failed
+            $subscriptionId = $data['subscription'] ?? null;
+            $invoiceId = $data['id'] ?? null;
+
+            if ($subscriptionId) {
+                // Get subscription with email
+                $stmt = $pdo->prepare("
+                    SELECT ms.*, mp.name as plan_name
+                    FROM member_subscriptions ms
+                    JOIN membership_plans mp ON ms.plan_id = mp.id
+                    WHERE ms.stripe_subscription_id = ?
+                ");
+                $stmt->execute([$subscriptionId]);
+                $subscription = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                if ($subscription && $subscription['email']) {
+                    // Send payment failed email
+                    try {
+                        $subject = 'Betalning misslyckades - ' . $subscription['plan_name'];
+                        $body = "<h2>Hej {$subscription['name']}!</h2>";
+                        $body .= "<p>Vi kunde inte genomfora betalningen for din prenumeration <strong>{$subscription['plan_name']}</strong>.</p>";
+                        $body .= "<p>Vanligen uppdatera din betalningsmetod for att undvika avbrott i ditt medlemskap.</p>";
+
+                        hub_send_email($subscription['email'], $subject, $body);
+                    } catch (Exception $emailError) {
+                        error_log("Failed to send payment failed email: " . $emailError->getMessage());
+                    }
+                }
+
+                $result = ['status' => 'processed', 'message' => 'Payment failure notification sent'];
+            } else {
+                $result = ['status' => 'ignored', 'message' => 'No subscription for this invoice'];
+            }
+            break;
+
         default:
             // Unhandled event type
             $result = ['status' => 'ignored', 'message' => 'Unhandled event type: ' . $type];
