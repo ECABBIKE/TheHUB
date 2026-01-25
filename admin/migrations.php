@@ -90,6 +90,15 @@ $migrationChecks = [
         'tables' => ['artist_name_claims'],
         'columns' => ['riders.is_anonymous', 'riders.anonymous_source', 'riders.merged_into_rider_id']
     ],
+    '025_memberships_subscriptions.sql' => [
+        'tables' => ['membership_plans', 'membership_subscriptions', 'membership_invoices']
+    ],
+    '026_populate_series_events.sql' => [
+        'data' => ['series_events.id IS NOT NULL']
+    ],
+    '027_payment_recipients_bank_details.sql' => [
+        'columns' => ['payment_recipients.gateway_type', 'payment_recipients.bankgiro', 'payment_recipients.plusgiro', 'payment_recipients.bank_account']
+    ],
 ];
 
 // ============================================================================
