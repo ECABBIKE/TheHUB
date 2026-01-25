@@ -302,4 +302,361 @@ class StripeClient {
 
         return implode('&', $result);
     }
+
+    // ============================================================
+    // STRIPE BILLING / SUBSCRIPTIONS (v2 API Features)
+    // ============================================================
+
+    /**
+     * Create or get a Stripe Customer
+     *
+     * @param array $data Customer data (email, name, metadata)
+     * @return array Result with customer_id
+     */
+    public function createCustomer(array $data): array {
+        $params = [
+            'email' => $data['email'],
+            'name' => $data['name'] ?? null,
+            'metadata' => $data['metadata'] ?? []
+        ];
+
+        // Remove null values
+        $params = array_filter($params, fn($v) => $v !== null);
+
+        $response = $this->request('POST', '/customers', $params);
+
+        return [
+            'success' => !isset($response['error']),
+            'customer_id' => $response['id'] ?? null,
+            'email' => $response['email'] ?? null,
+            'error' => $response['error']['message'] ?? null
+        ];
+    }
+
+    /**
+     * Get customer by email
+     *
+     * @param string $email Customer email
+     * @return array Customer data or null
+     */
+    public function getCustomerByEmail(string $email): array {
+        $response = $this->request('GET', '/customers?email=' . urlencode($email) . '&limit=1');
+
+        if (!empty($response['data'][0])) {
+            return [
+                'success' => true,
+                'customer_id' => $response['data'][0]['id'],
+                'customer' => $response['data'][0]
+            ];
+        }
+
+        return [
+            'success' => false,
+            'customer_id' => null,
+            'error' => 'Customer not found'
+        ];
+    }
+
+    /**
+     * Get or create customer
+     *
+     * @param array $data Customer data
+     * @return array Customer result
+     */
+    public function getOrCreateCustomer(array $data): array {
+        // Try to find existing customer
+        $existing = $this->getCustomerByEmail($data['email']);
+        if ($existing['success']) {
+            return $existing;
+        }
+
+        // Create new customer
+        return $this->createCustomer($data);
+    }
+
+    /**
+     * Create a Product in Stripe
+     *
+     * @param array $data Product data
+     * @return array Result
+     */
+    public function createProduct(array $data): array {
+        $params = [
+            'name' => $data['name'],
+            'description' => $data['description'] ?? null,
+            'metadata' => $data['metadata'] ?? []
+        ];
+
+        $params = array_filter($params, fn($v) => $v !== null);
+
+        $response = $this->request('POST', '/products', $params);
+
+        return [
+            'success' => !isset($response['error']),
+            'product_id' => $response['id'] ?? null,
+            'error' => $response['error']['message'] ?? null
+        ];
+    }
+
+    /**
+     * Create a Price for a Product
+     *
+     * @param array $data Price data
+     * @return array Result
+     */
+    public function createPrice(array $data): array {
+        $params = [
+            'product' => $data['product_id'],
+            'unit_amount' => (int)$data['amount'], // Already in ore/cents
+            'currency' => strtolower($data['currency'] ?? 'sek'),
+        ];
+
+        // Recurring price (subscription)
+        if (!empty($data['recurring'])) {
+            $params['recurring'] = [
+                'interval' => $data['interval'] ?? 'month',
+                'interval_count' => $data['interval_count'] ?? 1
+            ];
+        }
+
+        $response = $this->request('POST', '/prices', $params);
+
+        return [
+            'success' => !isset($response['error']),
+            'price_id' => $response['id'] ?? null,
+            'error' => $response['error']['message'] ?? null
+        ];
+    }
+
+    /**
+     * Create a Subscription
+     *
+     * @param array $data Subscription data
+     * @return array Result
+     */
+    public function createSubscription(array $data): array {
+        $params = [
+            'customer' => $data['customer_id'],
+            'items' => [
+                ['price' => $data['price_id']]
+            ],
+            'payment_behavior' => 'default_incomplete',
+            'payment_settings' => [
+                'save_default_payment_method' => 'on_subscription'
+            ],
+            'expand' => ['latest_invoice.payment_intent']
+        ];
+
+        // Add trial period if specified
+        if (!empty($data['trial_days'])) {
+            $params['trial_period_days'] = $data['trial_days'];
+        }
+
+        // Add metadata
+        if (!empty($data['metadata'])) {
+            $params['metadata'] = $data['metadata'];
+        }
+
+        $response = $this->request('POST', '/subscriptions', $params);
+
+        return [
+            'success' => !isset($response['error']),
+            'subscription_id' => $response['id'] ?? null,
+            'status' => $response['status'] ?? null,
+            'client_secret' => $response['latest_invoice']['payment_intent']['client_secret'] ?? null,
+            'error' => $response['error']['message'] ?? null
+        ];
+    }
+
+    /**
+     * Get Subscription details
+     *
+     * @param string $subscriptionId Subscription ID
+     * @return array Subscription details
+     */
+    public function getSubscription(string $subscriptionId): array {
+        $response = $this->request('GET', "/subscriptions/{$subscriptionId}");
+
+        return [
+            'success' => !isset($response['error']),
+            'id' => $response['id'] ?? null,
+            'status' => $response['status'] ?? null,
+            'current_period_start' => isset($response['current_period_start'])
+                ? date('Y-m-d H:i:s', $response['current_period_start']) : null,
+            'current_period_end' => isset($response['current_period_end'])
+                ? date('Y-m-d H:i:s', $response['current_period_end']) : null,
+            'cancel_at_period_end' => $response['cancel_at_period_end'] ?? false,
+            'customer' => $response['customer'] ?? null,
+            'error' => $response['error']['message'] ?? null
+        ];
+    }
+
+    /**
+     * Cancel Subscription
+     *
+     * @param string $subscriptionId Subscription ID
+     * @param bool $atPeriodEnd Cancel at end of billing period
+     * @return array Result
+     */
+    public function cancelSubscription(string $subscriptionId, bool $atPeriodEnd = true): array {
+        if ($atPeriodEnd) {
+            // Cancel at period end (recommended)
+            $response = $this->request('POST', "/subscriptions/{$subscriptionId}", [
+                'cancel_at_period_end' => 'true'
+            ]);
+        } else {
+            // Cancel immediately
+            $response = $this->request('DELETE', "/subscriptions/{$subscriptionId}");
+        }
+
+        return [
+            'success' => !isset($response['error']),
+            'status' => $response['status'] ?? null,
+            'canceled_at' => isset($response['canceled_at'])
+                ? date('Y-m-d H:i:s', $response['canceled_at']) : null,
+            'error' => $response['error']['message'] ?? null
+        ];
+    }
+
+    /**
+     * Reactivate a subscription that was set to cancel
+     *
+     * @param string $subscriptionId Subscription ID
+     * @return array Result
+     */
+    public function reactivateSubscription(string $subscriptionId): array {
+        $response = $this->request('POST', "/subscriptions/{$subscriptionId}", [
+            'cancel_at_period_end' => 'false'
+        ]);
+
+        return [
+            'success' => !isset($response['error']),
+            'status' => $response['status'] ?? null,
+            'error' => $response['error']['message'] ?? null
+        ];
+    }
+
+    /**
+     * Create Checkout Session for subscription
+     *
+     * @param array $data Session data
+     * @return array Result with checkout URL
+     */
+    public function createSubscriptionCheckout(array $data): array {
+        $params = [
+            'mode' => 'subscription',
+            'line_items' => [
+                [
+                    'price' => $data['price_id'],
+                    'quantity' => 1
+                ]
+            ],
+            'success_url' => $data['success_url'],
+            'cancel_url' => $data['cancel_url'],
+        ];
+
+        // Add customer if we have their email
+        if (!empty($data['customer_email'])) {
+            $params['customer_email'] = $data['customer_email'];
+        }
+
+        // Or use existing customer ID
+        if (!empty($data['customer_id'])) {
+            $params['customer'] = $data['customer_id'];
+            unset($params['customer_email']);
+        }
+
+        // Add metadata
+        if (!empty($data['metadata'])) {
+            $params['subscription_data'] = [
+                'metadata' => $data['metadata']
+            ];
+        }
+
+        // Trial period
+        if (!empty($data['trial_days'])) {
+            $params['subscription_data']['trial_period_days'] = $data['trial_days'];
+        }
+
+        $response = $this->request('POST', '/checkout/sessions', $params);
+
+        return [
+            'success' => !isset($response['error']),
+            'session_id' => $response['id'] ?? null,
+            'url' => $response['url'] ?? null,
+            'error' => $response['error']['message'] ?? null
+        ];
+    }
+
+    /**
+     * Create Billing Portal Session
+     * Allows customers to manage their subscription
+     *
+     * @param string $customerId Stripe Customer ID
+     * @param string $returnUrl URL to return to after portal
+     * @return array Result with portal URL
+     */
+    public function createBillingPortalSession(string $customerId, string $returnUrl): array {
+        $params = [
+            'customer' => $customerId,
+            'return_url' => $returnUrl
+        ];
+
+        $response = $this->request('POST', '/billing_portal/sessions', $params);
+
+        return [
+            'success' => !isset($response['error']),
+            'url' => $response['url'] ?? null,
+            'error' => $response['error']['message'] ?? null
+        ];
+    }
+
+    /**
+     * Get all subscriptions for a customer
+     *
+     * @param string $customerId Stripe Customer ID
+     * @return array List of subscriptions
+     */
+    public function getCustomerSubscriptions(string $customerId): array {
+        $response = $this->request('GET', '/subscriptions?customer=' . urlencode($customerId));
+
+        return [
+            'success' => !isset($response['error']),
+            'subscriptions' => $response['data'] ?? [],
+            'error' => $response['error']['message'] ?? null
+        ];
+    }
+
+    /**
+     * List invoices for a subscription
+     *
+     * @param string $subscriptionId Subscription ID
+     * @param int $limit Max invoices to return
+     * @return array List of invoices
+     */
+    public function getSubscriptionInvoices(string $subscriptionId, int $limit = 10): array {
+        $response = $this->request('GET', '/invoices?subscription=' . urlencode($subscriptionId) . '&limit=' . $limit);
+
+        return [
+            'success' => !isset($response['error']),
+            'invoices' => $response['data'] ?? [],
+            'error' => $response['error']['message'] ?? null
+        ];
+    }
+
+    /**
+     * Create Login Link for Express Account Dashboard
+     *
+     * @param string $accountId Stripe Account ID
+     * @return array Result with login URL
+     */
+    public function createLoginLink(string $accountId): array {
+        $response = $this->request('POST', "/accounts/{$accountId}/login_links");
+
+        return [
+            'success' => !isset($response['error']),
+            'url' => $response['url'] ?? null,
+            'error' => $response['error']['message'] ?? null
+        ];
+    }
 }

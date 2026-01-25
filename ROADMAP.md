@@ -262,6 +262,34 @@ Automatiskt genererade "trading cards" med deltagarstatistik:
 
 # CHANGELOG
 
+### 2026-01-25 (Medlemskap & Prenumerationer)
+- **Branch: claude/complete-payment-system-VH54k**
+
+- **Ny funktion: Stripe Billing for medlemskap**
+  - Medlemsplaner med atervommande betalningar
+  - Stripe v2 API for subscriptions
+  - Customer portal for medlemshantering
+  - Prenumerations-webhooks (created, updated, deleted, trial_will_end)
+  - Invoice-webhooks (paid, payment_failed)
+
+- **Nya databastabeller:**
+  - `membership_plans` - Medlemsplaner
+  - `member_subscriptions` - Aktiva prenumerationer
+  - `subscription_invoices` - Betalningshistorik
+  - `stripe_customers` - Kundkoppling
+
+- **Nya filer:**
+  - `Tools/migrations/025_memberships_subscriptions.sql` - Migrering
+  - `admin/memberships.php` - Admin-hantering av planer och prenumerationer
+  - `api/memberships.php` - API for checkout och portalhantering
+  - `pages/membership.php` - Publik medlemssida
+
+- **Uppdaterade filer:**
+  - `includes/payment/StripeClient.php` - Subscription-metoder (createCustomer, createSubscription, createBillingPortalSession, etc.)
+  - `api/webhooks/stripe-webhook.php` - Prenumerations-webhooks
+  - `router.php` - /membership route
+  - `admin/tools.php` - Ny sektion "Medlemskap & Betalningar"
+
 ### 2026-01-25 (Betalningssystem Komplett)
 - **Branch: claude/complete-payment-system-VH54k**
 
