@@ -1069,37 +1069,41 @@ include __DIR__ . '/components/unified-layout.php';
                 <small class="form-help">Inledande text som visas högst upp på Inbjudan-fliken på event-sidan.</small>
             </div>
 
-            <p class="text-secondary text-sm mb-lg">
-                <strong>Faciliteter & Logistik</strong> - Övrig information för Inbjudan-fliken.
-            </p>
+            <div class="facility-section-header">
+                <h3>Faciliteter & Logistik</h3>
+                <p>Övrig information för Inbjudan-fliken. Lämna tomt = visas ej.</p>
+            </div>
 
             <?php
             $facilityFields = [
-                ['key' => 'hydration_stations', 'label' => 'Vätskekontroller', 'global_key' => 'hydration_use_global', 'hidden_key' => 'hydration_hidden'],
-                ['key' => 'toilets_showers', 'label' => 'Toaletter/Dusch', 'global_key' => 'toilets_use_global', 'hidden_key' => 'toilets_hidden'],
-                ['key' => 'bike_wash', 'label' => 'Cykeltvätt', 'global_key' => 'bike_wash_use_global', 'hidden_key' => 'bike_wash_hidden'],
-                ['key' => 'food_cafe', 'label' => 'Mat/Café', 'global_key' => 'food_use_global', 'hidden_key' => 'food_hidden'],
-                ['key' => 'shops_info', 'label' => 'Affärer', 'global_key' => 'shops_use_global', 'hidden_key' => 'shops_hidden'],
-                ['key' => 'exhibitors', 'label' => 'Utställare', 'global_key' => 'exhibitors_use_global', 'hidden_key' => 'exhibitors_hidden'],
-                ['key' => 'parking_detailed', 'label' => 'Parkering', 'global_key' => 'parking_use_global', 'hidden_key' => 'parking_hidden'],
-                ['key' => 'hotel_accommodation', 'label' => 'Hotell/Boende', 'global_key' => 'hotel_use_global', 'hidden_key' => 'hotel_hidden'],
-                ['key' => 'local_info', 'label' => 'Lokal information', 'global_key' => 'local_use_global', 'hidden_key' => 'local_hidden'],
-                ['key' => 'media_production', 'label' => 'Media', 'global_key' => 'media_use_global', 'hidden_key' => 'media_hidden'],
-                ['key' => 'contacts_info', 'label' => 'Kontakter', 'global_key' => 'contacts_use_global', 'hidden_key' => 'contacts_hidden'],
+                ['key' => 'hydration_stations', 'label' => 'Vätskekontroller', 'global_key' => 'hydration_use_global', 'icon' => 'droplet'],
+                ['key' => 'toilets_showers', 'label' => 'Toaletter/Dusch', 'global_key' => 'toilets_use_global', 'icon' => 'bath'],
+                ['key' => 'bike_wash', 'label' => 'Cykeltvätt', 'global_key' => 'bike_wash_use_global', 'icon' => 'sparkles'],
+                ['key' => 'food_cafe', 'label' => 'Mat/Café', 'global_key' => 'food_use_global', 'icon' => 'utensils'],
+                ['key' => 'shops_info', 'label' => 'Affärer', 'global_key' => 'shops_use_global', 'icon' => 'store'],
+                ['key' => 'exhibitors', 'label' => 'Utställare', 'global_key' => 'exhibitors_use_global', 'icon' => 'tent'],
+                ['key' => 'parking_detailed', 'label' => 'Parkering', 'global_key' => 'parking_use_global', 'icon' => 'car'],
+                ['key' => 'hotel_accommodation', 'label' => 'Hotell/Boende', 'global_key' => 'hotel_use_global', 'icon' => 'bed'],
+                ['key' => 'local_info', 'label' => 'Lokal information', 'global_key' => 'local_use_global', 'icon' => 'info'],
+                ['key' => 'media_production', 'label' => 'Media', 'global_key' => 'media_use_global', 'icon' => 'camera'],
+                ['key' => 'contacts_info', 'label' => 'Kontakter', 'global_key' => 'contacts_use_global', 'icon' => 'phone'],
             ];
             ?>
 
-            <div class="form-grid form-grid-2">
+            <div class="facility-fields">
                 <?php foreach ($facilityFields as $field): ?>
-                    <div class="admin-form-group">
-                        <label class="admin-form-label">
-                            <?= $field['label'] ?>
-                            <label class="checkbox-inline">
+                    <div class="facility-field">
+                        <div class="facility-field-header">
+                            <div class="facility-field-label">
+                                <i data-lucide="<?= $field['icon'] ?>"></i>
+                                <span><?= $field['label'] ?></span>
+                            </div>
+                            <label class="global-toggle">
                                 <input type="checkbox" name="<?= $field['global_key'] ?>" <?= !empty($event[$field['global_key']]) ? 'checked' : '' ?>>
-                                <span class="text-xs">Global</span>
+                                <span>Global</span>
                             </label>
-                        </label>
-                        <textarea name="<?= $field['key'] ?>" class="admin-form-input event-textarea" rows="3"><?= h($event[$field['key']] ?? '') ?></textarea>
+                        </div>
+                        <textarea name="<?= $field['key'] ?>" class="facility-textarea" rows="4" placeholder="Skriv information här..."><?= h($event[$field['key']] ?? '') ?></textarea>
                     </div>
                 <?php endforeach; ?>
             </div>
@@ -1128,36 +1132,40 @@ include __DIR__ . '/components/unified-layout.php';
                 </div>
             </div>
 
-            <p class="text-secondary text-sm mb-lg">
-                Innehåll för PM-fliken. Markera "Global" för att använda standardtext.
-            </p>
+            <div class="facility-section-header">
+                <h3>PM Innehåll</h3>
+                <p>Innehåll för PM-fliken. Markera "Global" för att använda standardtext.</p>
+            </div>
 
             <?php
             $pmFields = [
-                ['key' => 'pm_content', 'label' => 'PM Huvudtext', 'global_key' => 'pm_use_global', 'hidden_key' => 'pm_hidden'],
-                ['key' => 'driver_meeting', 'label' => 'Förarmöte', 'global_key' => 'driver_meeting_use_global', 'hidden_key' => 'driver_meeting_hidden'],
-                ['key' => 'training_info', 'label' => 'Träning', 'global_key' => 'training_use_global', 'hidden_key' => 'training_hidden'],
-                ['key' => 'timing_info', 'label' => 'Tidtagning', 'global_key' => 'timing_use_global', 'hidden_key' => 'timing_hidden'],
-                ['key' => 'lift_info', 'label' => 'Lift', 'global_key' => 'lift_use_global', 'hidden_key' => 'lift_hidden'],
-                ['key' => 'competition_rules', 'label' => 'Tävlingsregler', 'global_key' => 'rules_use_global', 'hidden_key' => 'rules_hidden'],
-                ['key' => 'insurance_info', 'label' => 'Försäkring', 'global_key' => 'insurance_use_global', 'hidden_key' => 'insurance_hidden'],
-                ['key' => 'equipment_info', 'label' => 'Utrustning', 'global_key' => 'equipment_use_global', 'hidden_key' => 'equipment_hidden'],
-                ['key' => 'medical_info', 'label' => 'Sjukvård', 'global_key' => 'medical_use_global', 'hidden_key' => 'medical_hidden'],
-                ['key' => 'scf_representatives', 'label' => 'SCF Representanter', 'global_key' => 'scf_use_global', 'hidden_key' => 'scf_hidden'],
+                ['key' => 'pm_content', 'label' => 'PM Huvudtext', 'global_key' => 'pm_use_global', 'icon' => 'file-text'],
+                ['key' => 'driver_meeting', 'label' => 'Förarmöte', 'global_key' => 'driver_meeting_use_global', 'icon' => 'users'],
+                ['key' => 'training_info', 'label' => 'Träning', 'global_key' => 'training_use_global', 'icon' => 'bike'],
+                ['key' => 'timing_info', 'label' => 'Tidtagning', 'global_key' => 'timing_use_global', 'icon' => 'timer'],
+                ['key' => 'lift_info', 'label' => 'Lift', 'global_key' => 'lift_use_global', 'icon' => 'cable-car'],
+                ['key' => 'competition_rules', 'label' => 'Tävlingsregler', 'global_key' => 'rules_use_global', 'icon' => 'scroll-text'],
+                ['key' => 'insurance_info', 'label' => 'Försäkring', 'global_key' => 'insurance_use_global', 'icon' => 'shield-check'],
+                ['key' => 'equipment_info', 'label' => 'Utrustning', 'global_key' => 'equipment_use_global', 'icon' => 'hard-hat'],
+                ['key' => 'medical_info', 'label' => 'Sjukvård', 'global_key' => 'medical_use_global', 'icon' => 'heart-pulse'],
+                ['key' => 'scf_representatives', 'label' => 'SCF Representanter', 'global_key' => 'scf_use_global', 'icon' => 'badge-check'],
             ];
             ?>
 
-            <div class="form-grid form-grid-2">
+            <div class="facility-fields">
                 <?php foreach ($pmFields as $field): ?>
-                    <div class="admin-form-group">
-                        <label class="admin-form-label">
-                            <?= $field['label'] ?>
-                            <label class="checkbox-inline">
+                    <div class="facility-field">
+                        <div class="facility-field-header">
+                            <div class="facility-field-label">
+                                <i data-lucide="<?= $field['icon'] ?>"></i>
+                                <span><?= $field['label'] ?></span>
+                            </div>
+                            <label class="global-toggle">
                                 <input type="checkbox" name="<?= $field['global_key'] ?>" <?= !empty($event[$field['global_key']]) ? 'checked' : '' ?>>
-                                <span class="text-xs">Global</span>
+                                <span>Global</span>
                             </label>
-                        </label>
-                        <textarea name="<?= $field['key'] ?>" class="admin-form-input event-textarea" rows="3"><?= h($event[$field['key']] ?? '') ?></textarea>
+                        </div>
+                        <textarea name="<?= $field['key'] ?>" class="facility-textarea" rows="4" placeholder="Skriv information här..."><?= h($event[$field['key']] ?? '') ?></textarea>
                     </div>
                 <?php endforeach; ?>
             </div>
@@ -1171,39 +1179,41 @@ include __DIR__ . '/components/unified-layout.php';
             <span class="text-secondary text-sm">Jury, Schema, Starttider</span>
         </summary>
         <div class="admin-card-body">
-            <p class="text-secondary text-sm mb-lg">
-                Separata flikar som visas om innehåll finns (eller global text aktiverad).
-            </p>
+            <div class="facility-section-header">
+                <h3>Separata flikar</h3>
+                <p>Visas om innehåll finns (eller global text aktiverad).</p>
+            </div>
 
             <?php
             $otherTabFields = [
-                ['key' => 'jury_communication', 'label' => 'Jurykommuniké', 'global_key' => 'jury_use_global', 'hidden_key' => 'jury_hidden'],
-                ['key' => 'competition_schedule', 'label' => 'Tävlingsschema', 'global_key' => 'schedule_use_global', 'hidden_key' => 'schedule_hidden'],
-                ['key' => 'start_times', 'label' => 'Starttider', 'global_key' => 'start_times_use_global', 'hidden_key' => 'start_times_hidden', 'publish_key' => 'starttider_publish_at'],
+                ['key' => 'jury_communication', 'label' => 'Jurykommuniké', 'global_key' => 'jury_use_global', 'icon' => 'gavel'],
+                ['key' => 'competition_schedule', 'label' => 'Tävlingsschema', 'global_key' => 'schedule_use_global', 'icon' => 'calendar-days'],
+                ['key' => 'start_times', 'label' => 'Starttider', 'global_key' => 'start_times_use_global', 'icon' => 'clock', 'publish_key' => 'starttider_publish_at'],
             ];
             ?>
 
-            <div class="form-grid form-grid-2">
+            <div class="facility-fields">
                 <?php foreach ($otherTabFields as $field): ?>
-                    <div class="admin-form-group">
-                        <label class="admin-form-label">
-                            <?= $field['label'] ?>
-                            <label class="checkbox-inline">
+                    <div class="facility-field">
+                        <div class="facility-field-header">
+                            <div class="facility-field-label">
+                                <i data-lucide="<?= $field['icon'] ?>"></i>
+                                <span><?= $field['label'] ?></span>
+                            </div>
+                            <label class="global-toggle">
                                 <input type="checkbox" name="<?= $field['global_key'] ?>" <?= !empty($event[$field['global_key']]) ? 'checked' : '' ?>>
-                                <span class="text-xs">Global</span>
+                                <span>Global</span>
                             </label>
-                        </label>
-                        <textarea name="<?= $field['key'] ?>" class="admin-form-input event-textarea" rows="3"><?= h($event[$field['key']] ?? '') ?></textarea>
+                        </div>
+                        <textarea name="<?= $field['key'] ?>" class="facility-textarea" rows="4" placeholder="Skriv information här..."><?= h($event[$field['key']] ?? '') ?></textarea>
                         <?php if (!empty($field['publish_key'])): ?>
-                        <div class="mt-sm flex items-center gap-sm">
-                            <label class="text-xs text-secondary whitespace-nowrap">
-                                <i data-lucide="calendar-clock" class="icon-xs inline-block"></i>
-                                Publiceras:
-                            </label>
+                        <div class="publish-date-row">
+                            <i data-lucide="calendar-clock"></i>
+                            <span>Publiceras:</span>
                             <input type="datetime-local" name="<?= $field['publish_key'] ?>"
-                                   class="admin-form-input text-xs"
+                                   class="admin-form-input"
                                    value="<?= !empty($event[$field['publish_key']]) ? date('Y-m-d\TH:i', strtotime($event[$field['publish_key']])) : '' ?>">
-                            <small class="form-help text-xs">Lämna tomt = synlig direkt</small>
+                            <span class="text-muted">Lämna tomt = synlig direkt</span>
                         </div>
                         <?php endif; ?>
                     </div>
@@ -1465,17 +1475,149 @@ include __DIR__ . '/components/unified-layout.php';
         padding-bottom: calc(80px + var(--mobile-nav-height, 64px) + env(safe-area-inset-bottom, 0px)) !important;
     }
 }
-/* Uniform textarea styling for event content fields */
-.event-textarea {
-    min-height: 80px;
-    resize: vertical;
+/* ===== FACILITY FIELDS - Improved Layout ===== */
+.facility-section-header {
+    margin-bottom: var(--space-lg);
+    padding-bottom: var(--space-md);
+    border-bottom: 1px solid var(--color-border);
+}
+.facility-section-header h3 {
+    font-size: var(--text-lg);
+    font-weight: 600;
+    margin: 0 0 var(--space-xs) 0;
+    color: var(--color-text-primary);
+}
+.facility-section-header p {
     font-size: var(--text-sm);
-    line-height: 1.5;
+    color: var(--color-text-secondary);
+    margin: 0;
 }
 
-/* Make all textareas in form-grid consistent */
-.form-grid .admin-form-input[rows] {
-    min-height: 80px;
+.facility-fields {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+}
+
+.facility-field {
+    background: var(--color-bg-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+}
+
+.facility-field-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--space-sm) var(--space-md);
+    background: var(--color-bg-hover);
+    border-bottom: 1px solid var(--color-border);
+}
+
+.facility-field-label {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    font-weight: 600;
+    font-size: var(--text-sm);
+    color: var(--color-text-primary);
+}
+.facility-field-label i {
+    width: 18px;
+    height: 18px;
+    color: var(--color-accent);
+}
+
+.global-toggle {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    padding: var(--space-2xs) var(--space-sm);
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-full);
+    font-size: var(--text-xs);
+    color: var(--color-text-secondary);
+    cursor: pointer;
+    transition: all 0.15s ease;
+}
+.global-toggle:hover {
+    border-color: var(--color-accent);
+}
+.global-toggle:has(input:checked) {
+    background: var(--color-accent-light);
+    border-color: var(--color-accent);
+    color: var(--color-accent);
+}
+.global-toggle input {
+    margin: 0;
+    width: 14px;
+    height: 14px;
+    accent-color: var(--color-accent);
+}
+.global-toggle span {
+    font-weight: 500;
+}
+
+.facility-textarea {
+    width: 100%;
+    min-height: 100px;
+    padding: var(--space-md);
+    border: none;
+    resize: vertical;
+    font-size: var(--text-sm);
+    line-height: 1.6;
+    background: var(--color-bg-card);
+    color: var(--color-text-primary);
+}
+.facility-textarea:focus {
+    outline: none;
+    background: var(--color-bg-surface);
+}
+.facility-textarea::placeholder {
+    color: var(--color-text-muted);
+}
+
+.publish-date-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    padding: var(--space-sm) var(--space-md);
+    background: var(--color-bg-hover);
+    border-top: 1px solid var(--color-border);
+    font-size: var(--text-xs);
+    color: var(--color-text-secondary);
+    flex-wrap: wrap;
+}
+.publish-date-row i {
+    width: 14px;
+    height: 14px;
+}
+.publish-date-row input {
+    padding: var(--space-xs) var(--space-sm);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    font-size: var(--text-xs);
+    background: var(--color-bg-card);
+}
+.publish-date-row .text-muted {
+    color: var(--color-text-muted);
+}
+
+/* Mobile: Stack facility fields edge-to-edge */
+@media (max-width: 767px) {
+    .facility-fields {
+        gap: 0;
+        margin-left: calc(-1 * var(--space-md));
+        margin-right: calc(-1 * var(--space-md));
+    }
+    .facility-field {
+        border-radius: 0;
+        border-left: none;
+        border-right: none;
+        margin-bottom: -1px;
+    }
 }
 </style>
 

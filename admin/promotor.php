@@ -24,6 +24,8 @@ try {
         SELECT s.*,
                pr.swish_number as recipient_swish,
                pr.swish_name as recipient_swish_name,
+               pr.stripe_account_id,
+               pr.stripe_account_status,
                m.filepath as banner_url,
                COUNT(DISTINCT e.id) as event_count
         FROM series s
@@ -479,12 +481,37 @@ include __DIR__ . '/components/unified-layout.php';
                 <span>Ingen banner</span>
             </div>
             <?php endif; ?>
+
+            <?php
+            $stripeStatus = $s['stripe_account_status'] ?? null;
+            $hasStripe = !empty($s['stripe_account_id']);
+            ?>
+            <?php if ($hasStripe && $stripeStatus === 'active'): ?>
+            <div class="series-detail" style="color: var(--color-success);">
+                <i data-lucide="credit-card"></i>
+                <span>Stripe aktiv</span>
+            </div>
+            <?php elseif ($hasStripe): ?>
+            <div class="series-detail" style="color: var(--color-warning);">
+                <i data-lucide="credit-card"></i>
+                <span>Stripe väntar</span>
+            </div>
+            <?php else: ?>
+            <div class="series-detail missing">
+                <i data-lucide="credit-card"></i>
+                <span>Stripe ej ansluten</span>
+            </div>
+            <?php endif; ?>
         </div>
-        <div class="series-card-footer">
-            <button class="btn btn-secondary" onclick="editSeries(<?= $s['id'] ?>)">
+        <div class="series-card-footer" style="display: flex; gap: var(--space-sm);">
+            <button class="btn btn-secondary" onclick="editSeries(<?= $s['id'] ?>)" style="flex: 1;">
                 <i data-lucide="settings"></i>
-                Redigera inställningar
+                Inställningar
             </button>
+            <a href="/admin/promotor-stripe.php" class="btn btn-secondary" style="flex: 1;">
+                <i data-lucide="credit-card"></i>
+                Stripe
+            </a>
         </div>
     </div>
     <?php endforeach; ?>
