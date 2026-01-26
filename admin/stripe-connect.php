@@ -143,7 +143,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $methods = $_POST['methods'] ?? [];
 
         // Validate methods
-        $validMethods = array_intersect($methods, ['card', 'swish']);
+        $validMethods = array_intersect($methods, ['card', 'swish', 'vipps']);
 
         if ($recipientId && !empty($validMethods)) {
             $recipient = $db->getRow("SELECT gateway_config FROM payment_recipients WHERE id = ?", [$recipientId]);
@@ -157,6 +157,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $methodNames = [];
             if (in_array('card', $validMethods)) $methodNames[] = 'Kort';
             if (in_array('swish', $validMethods)) $methodNames[] = 'Swish';
+            if (in_array('vipps', $validMethods)) $methodNames[] = 'Vipps';
 
             $message = 'Betalmetoder uppdaterade: ' . implode(', ', $methodNames);
             $messageType = 'success';
@@ -500,6 +501,10 @@ STRIPE_WEBHOOK_SECRET=whsec_xxxxx</pre>
                     <label class="checkbox-label">
                         <input type="checkbox" name="methods[]" value="swish" <?= in_array('swish', $paymentMethods) ? 'checked' : '' ?>>
                         <i data-lucide="smartphone"></i> Swish
+                    </label>
+                    <label class="checkbox-label" title="Vipps (Norge) - Kräver aktivering hos Stripe">
+                        <input type="checkbox" name="methods[]" value="vipps" <?= in_array('vipps', $paymentMethods) ? 'checked' : '' ?>>
+                        <i data-lucide="smartphone"></i> Vipps
                     </label>
                     <button type="submit" class="btn-admin btn-admin-ghost btn-admin-sm">
                         <i data-lucide="save"></i>

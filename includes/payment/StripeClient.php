@@ -29,9 +29,15 @@ class StripeClient {
             'metadata' => $data['metadata'] ?? []
         ];
 
-        // Payment method types - default to card, can include swish
+        // Payment method types - default to card, can include swish, vipps
         $paymentMethods = $data['payment_method_types'] ?? ['card'];
         $params['payment_method_types'] = $paymentMethods;
+
+        // Check if Vipps is included (requires preview header)
+        $extraHeaders = [];
+        if (in_array('vipps', $paymentMethods)) {
+            $extraHeaders[] = 'vipps_preview: v1';
+        }
 
         // Add receipt email if provided
         if (!empty($data['email'])) {
@@ -55,7 +61,7 @@ class StripeClient {
             }
         }
 
-        $response = $this->request('POST', '/payment_intents', $params);
+        $response = $this->request('POST', '/payment_intents', $params, $extraHeaders);
 
         return [
             'success' => !isset($response['error']),
@@ -250,9 +256,10 @@ class StripeClient {
      * @param string $method HTTP method
      * @param string $endpoint API endpoint
      * @param array|null $data Request data
+     * @param array $extraHeaders Additional headers (e.g., for beta features)
      * @return array Response
      */
-    public function request(string $method, string $endpoint, ?array $data = null): array {
+    public function request(string $method, string $endpoint, ?array $data = null, array $extraHeaders = []): array {
         $url = $this->baseUrl . $endpoint;
 
         $ch = curl_init($url);
@@ -262,6 +269,11 @@ class StripeClient {
             'Content-Type: application/x-www-form-urlencoded',
             'Stripe-Version: 2023-10-16'
         ];
+
+        // Add any extra headers (e.g., vipps_preview=v1 for Vipps beta)
+        foreach ($extraHeaders as $header) {
+            $headers[] = $header;
+        }
 
         curl_setopt_array($ch, [
             CURLOPT_CUSTOMREQUEST => $method,
