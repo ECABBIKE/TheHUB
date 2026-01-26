@@ -108,6 +108,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $messageType = 'error';
             }
         }
+    } elseif ($postAction === 'update_platform_fee') {
+        $recipientId = intval($_POST['recipient_id'] ?? 0);
+        $platformFee = floatval($_POST['platform_fee'] ?? 2);
+
+        if ($recipientId && $platformFee >= 0 && $platformFee <= 50) {
+            $recipient = $db->getRow("SELECT gateway_config FROM payment_recipients WHERE id = ?", [$recipientId]);
+            $config = json_decode($recipient['gateway_config'] ?? '{}', true) ?: [];
+            $config['platform_fee_percent'] = $platformFee;
+
+            $db->update('payment_recipients', [
+                'gateway_config' => json_encode($config)
+            ], 'id = ?', [$recipientId]);
+
+            $message = 'Plattformsavgift uppdaterad till ' . $platformFee . '%';
+            $messageType = 'success';
+        }
     }
 }
 
@@ -230,6 +246,33 @@ include __DIR__ . '/components/unified-layout.php';
     border-radius: var(--radius-sm);
     font-family: monospace;
 }
+
+.stripe-details {
+    background: var(--color-bg-surface);
+    border-radius: var(--radius-sm);
+    padding: var(--space-md);
+}
+
+.stripe-detail-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    padding: var(--space-xs) 0;
+}
+
+.stripe-detail-row:not(:last-child) {
+    border-bottom: 1px solid var(--color-border);
+    padding-bottom: var(--space-sm);
+    margin-bottom: var(--space-sm);
+}
+
+.platform-fee-form input[type="number"] {
+    font-size: var(--text-sm);
+}
+
+.mt-md {
+    margin-top: var(--space-md);
+}
 </style>
 
 <?php if ($message): ?>
@@ -264,7 +307,7 @@ STRIPE_WEBHOOK_SECRET=whsec_xxxxx</pre>
         <li>Valj en mottagare nedan och klicka "Anslut till Stripe"</li>
         <li>Mottagaren fyller i foretagsuppgifter, bankinfo och verifierar identitet pa Stripe</li>
         <li>Nar Stripe godkant kontot kan mottagaren ta emot kortbetalningar</li>
-        <li>TheHUB tar automatiskt 2% plattformsavgift pa varje transaktion</li>
+        <li>TheHUB tar plattformsavgift pa varje transaktion (konfigurerbart per mottagare)</li>
     </ol>
 </div>
 
@@ -319,7 +362,11 @@ STRIPE_WEBHOOK_SECRET=whsec_xxxxx</pre>
     </div>
 
     <?php if ($hasStripe): ?>
-        <div style="display: flex; gap: var(--space-sm); flex-wrap: wrap;">
+        <?php
+        $gatewayConfig = json_decode($r['gateway_config'] ?? '{}', true) ?: [];
+        $platformFee = $gatewayConfig['platform_fee_percent'] ?? 2;
+        ?>
+        <div style="display: flex; gap: var(--space-sm); flex-wrap: wrap; align-items: center;">
             <?php if ($stripeStatus !== 'active'): ?>
                 <a href="?start_onboarding=<?= $r['id'] ?>" class="btn-admin btn-admin-primary">
                     <i data-lucide="external-link"></i> Fortsatt onboarding
@@ -337,8 +384,26 @@ STRIPE_WEBHOOK_SECRET=whsec_xxxxx</pre>
             </button>
         </div>
 
-        <div class="text-sm text-secondary mt-md">
-            <strong>Account ID:</strong> <code><?= htmlspecialchars($r['stripe_account_id']) ?></code>
+        <div class="stripe-details mt-md">
+            <div class="stripe-detail-row">
+                <span class="text-secondary">Account ID:</span>
+                <code><?= htmlspecialchars($r['stripe_account_id']) ?></code>
+            </div>
+            <div class="stripe-detail-row">
+                <span class="text-secondary">Plattformsavgift:</span>
+                <form method="POST" class="platform-fee-form" style="display: inline-flex; align-items: center; gap: var(--space-xs);">
+                    <?= csrf_field() ?>
+                    <input type="hidden" name="action" value="update_platform_fee">
+                    <input type="hidden" name="recipient_id" value="<?= $r['id'] ?>">
+                    <input type="number" name="platform_fee" value="<?= h($platformFee) ?>"
+                           min="0" max="50" step="0.1" class="admin-form-input"
+                           style="width: 70px; padding: 4px 8px;">
+                    <span>%</span>
+                    <button type="submit" class="btn-admin btn-admin-ghost btn-admin-sm">
+                        <i data-lucide="save"></i>
+                    </button>
+                </form>
+            </div>
         </div>
     <?php else: ?>
         <form method="POST" style="display: flex; gap: var(--space-md); flex-wrap: wrap; align-items: flex-end;">
