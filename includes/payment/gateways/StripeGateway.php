@@ -26,7 +26,7 @@ class StripeGateway implements GatewayInterface {
     }
 
     public function getName(): string {
-        return 'Stripe (Kort / Apple Pay / Google Pay)';
+        return 'Stripe (Kort / Swish / Apple Pay / Google Pay)';
     }
 
     public function getCode(): string {
@@ -105,11 +105,20 @@ class StripeGateway implements GatewayInterface {
             }
         }
 
+        // Determine which payment methods to offer
+        // Can be configured per recipient or passed from order
+        $enabledMethods = $gatewayConfig['payment_methods'] ?? ['card', 'swish'];
+        if (!empty($orderData['payment_method'])) {
+            // If specific method requested (e.g., user chose Swish)
+            $enabledMethods = [$orderData['payment_method']];
+        }
+
         $paymentData = [
             'amount' => (float)$orderData['total_amount'],
             'currency' => 'SEK',
             'description' => $orderData['event_name'] ?? 'TheHUB Registration',
             'email' => $orderData['customer_email'] ?? null,
+            'payment_method_types' => $enabledMethods,
             'metadata' => [
                 'order_id' => $orderData['id'] ?? null,
                 'order_number' => $orderData['order_number'] ?? null,

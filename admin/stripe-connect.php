@@ -138,6 +138,32 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $message = 'Plattformsavgift uppdaterad till ' . $feeDisplay;
             $messageType = 'success';
         }
+    } elseif ($postAction === 'update_payment_methods') {
+        $recipientId = intval($_POST['recipient_id'] ?? 0);
+        $methods = $_POST['methods'] ?? [];
+
+        // Validate methods
+        $validMethods = array_intersect($methods, ['card', 'swish']);
+
+        if ($recipientId && !empty($validMethods)) {
+            $recipient = $db->getRow("SELECT gateway_config FROM payment_recipients WHERE id = ?", [$recipientId]);
+            $config = json_decode($recipient['gateway_config'] ?? '{}', true) ?: [];
+            $config['payment_methods'] = array_values($validMethods);
+
+            $db->update('payment_recipients', [
+                'gateway_config' => json_encode($config)
+            ], 'id = ?', [$recipientId]);
+
+            $methodNames = [];
+            if (in_array('card', $validMethods)) $methodNames[] = 'Kort';
+            if (in_array('swish', $validMethods)) $methodNames[] = 'Swish';
+
+            $message = 'Betalmetoder uppdaterade: ' . implode(', ', $methodNames);
+            $messageType = 'success';
+        } elseif ($recipientId && empty($validMethods)) {
+            $message = 'Minst en betalmetod maste vara aktiverad';
+            $messageType = 'error';
+        }
     }
 }
 
@@ -284,6 +310,30 @@ include __DIR__ . '/components/unified-layout.php';
     font-size: var(--text-sm);
 }
 
+.checkbox-label {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-xs);
+    cursor: pointer;
+    font-size: var(--text-sm);
+    color: var(--color-text-secondary);
+}
+
+.checkbox-label input[type="checkbox"] {
+    width: 16px;
+    height: 16px;
+    accent-color: var(--color-accent);
+}
+
+.checkbox-label:has(input:checked) {
+    color: var(--color-text-primary);
+}
+
+.checkbox-label svg {
+    width: 16px;
+    height: 16px;
+}
+
 .mt-md {
     margin-top: var(--space-md);
 }
@@ -407,6 +457,7 @@ STRIPE_WEBHOOK_SECRET=whsec_xxxxx</pre>
         $gatewayConfig = json_decode($r['gateway_config'] ?? '{}', true) ?: [];
         $feeType = $gatewayConfig['platform_fee_type'] ?? 'fixed';
         $feeAmount = $gatewayConfig['platform_fee_amount'] ?? 10;
+        $paymentMethods = $gatewayConfig['payment_methods'] ?? ['card', 'swish'];
         // Migrate old format
         if (isset($gatewayConfig['platform_fee_percent']) && !isset($gatewayConfig['platform_fee_type'])) {
             $feeType = 'percent';
@@ -435,6 +486,25 @@ STRIPE_WEBHOOK_SECRET=whsec_xxxxx</pre>
             <div class="stripe-detail-row">
                 <span class="text-secondary">Account ID:</span>
                 <code><?= htmlspecialchars($r['stripe_account_id']) ?></code>
+            </div>
+            <div class="stripe-detail-row">
+                <span class="text-secondary">Betalmetoder:</span>
+                <form method="POST" class="payment-methods-form" style="display: inline-flex; align-items: center; gap: var(--space-md);">
+                    <?= csrf_field() ?>
+                    <input type="hidden" name="action" value="update_payment_methods">
+                    <input type="hidden" name="recipient_id" value="<?= $r['id'] ?>">
+                    <label class="checkbox-label">
+                        <input type="checkbox" name="methods[]" value="card" <?= in_array('card', $paymentMethods) ? 'checked' : '' ?>>
+                        <i data-lucide="credit-card"></i> Kort
+                    </label>
+                    <label class="checkbox-label">
+                        <input type="checkbox" name="methods[]" value="swish" <?= in_array('swish', $paymentMethods) ? 'checked' : '' ?>>
+                        <i data-lucide="smartphone"></i> Swish
+                    </label>
+                    <button type="submit" class="btn-admin btn-admin-ghost btn-admin-sm">
+                        <i data-lucide="save"></i>
+                    </button>
+                </form>
             </div>
             <div class="stripe-detail-row">
                 <span class="text-secondary">Plattformsavgift:</span>

@@ -29,6 +29,10 @@ class StripeClient {
             'metadata' => $data['metadata'] ?? []
         ];
 
+        // Payment method types - default to card, can include swish
+        $paymentMethods = $data['payment_method_types'] ?? ['card'];
+        $params['payment_method_types'] = $paymentMethods;
+
         // Add receipt email if provided
         if (!empty($data['email'])) {
             $params['receipt_email'] = $data['email'];
