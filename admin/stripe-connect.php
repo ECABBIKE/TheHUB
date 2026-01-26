@@ -94,10 +94,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ]);
 
             if ($result['success']) {
+                // Save platform fee settings
+                $feeAmount = floatval($_POST['platform_fee_amount'] ?? 10);
+                $feeType = in_array($_POST['platform_fee_type'] ?? 'fixed', ['fixed', 'percent']) ? $_POST['platform_fee_type'] : 'fixed';
+                $gatewayConfig = json_encode([
+                    'platform_fee_type' => $feeType,
+                    'platform_fee_amount' => $feeAmount
+                ]);
+
                 $db->update('payment_recipients', [
                     'stripe_account_id' => $result['account_id'],
                     'stripe_account_status' => 'pending',
-                    'gateway_type' => 'stripe'
+                    'gateway_type' => 'stripe',
+                    'gateway_config' => $gatewayConfig
                 ], 'id = ?', [$recipientId]);
 
                 // Redirect to onboarding
@@ -107,6 +116,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $message = 'Fel: ' . ($result['error'] ?? 'Kunde inte skapa Stripe-konto');
                 $messageType = 'error';
             }
+        }
+    } elseif ($postAction === 'update_platform_fee') {
+        $recipientId = intval($_POST['recipient_id'] ?? 0);
+        $feeAmount = floatval($_POST['platform_fee_amount'] ?? 10);
+        $feeType = in_array($_POST['platform_fee_type'] ?? 'fixed', ['fixed', 'percent']) ? $_POST['platform_fee_type'] : 'fixed';
+
+        if ($recipientId && $feeAmount >= 0) {
+            $recipient = $db->getRow("SELECT gateway_config FROM payment_recipients WHERE id = ?", [$recipientId]);
+            $config = json_decode($recipient['gateway_config'] ?? '{}', true) ?: [];
+            $config['platform_fee_type'] = $feeType;
+            $config['platform_fee_amount'] = $feeAmount;
+            // Remove old format
+            unset($config['platform_fee_percent']);
+
+            $db->update('payment_recipients', [
+                'gateway_config' => json_encode($config)
+            ], 'id = ?', [$recipientId]);
+
+            $feeDisplay = $feeType === 'fixed' ? $feeAmount . ' kr/anmälan' : $feeAmount . '%';
+            $message = 'Plattformsavgift uppdaterad till ' . $feeDisplay;
+            $messageType = 'success';
         }
     }
 }
@@ -230,6 +260,60 @@ include __DIR__ . '/components/unified-layout.php';
     border-radius: var(--radius-sm);
     font-family: monospace;
 }
+
+.stripe-details {
+    background: var(--color-bg-surface);
+    border-radius: var(--radius-sm);
+    padding: var(--space-md);
+}
+
+.stripe-detail-row {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    padding: var(--space-xs) 0;
+}
+
+.stripe-detail-row:not(:last-child) {
+    border-bottom: 1px solid var(--color-border);
+    padding-bottom: var(--space-sm);
+    margin-bottom: var(--space-sm);
+}
+
+.platform-fee-form input[type="number"] {
+    font-size: var(--text-sm);
+}
+
+.mt-md {
+    margin-top: var(--space-md);
+}
+
+.stripe-connect-form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-md);
+}
+
+.connect-form-row {
+    display: flex;
+    gap: var(--space-md);
+    flex-wrap: wrap;
+    align-items: flex-end;
+}
+
+.connect-form-row .admin-form-group {
+    flex: 1;
+    min-width: 150px;
+}
+
+@media (max-width: 600px) {
+    .connect-form-row {
+        flex-direction: column;
+    }
+    .connect-form-row .admin-form-group {
+        width: 100%;
+    }
+}
 </style>
 
 <?php if ($message): ?>
@@ -264,7 +348,7 @@ STRIPE_WEBHOOK_SECRET=whsec_xxxxx</pre>
         <li>Valj en mottagare nedan och klicka "Anslut till Stripe"</li>
         <li>Mottagaren fyller i foretagsuppgifter, bankinfo och verifierar identitet pa Stripe</li>
         <li>Nar Stripe godkant kontot kan mottagaren ta emot kortbetalningar</li>
-        <li>TheHUB tar automatiskt 2% plattformsavgift pa varje transaktion</li>
+        <li>TheHUB tar plattformsavgift pa varje transaktion (konfigurerbart per mottagare)</li>
     </ol>
 </div>
 
@@ -319,7 +403,17 @@ STRIPE_WEBHOOK_SECRET=whsec_xxxxx</pre>
     </div>
 
     <?php if ($hasStripe): ?>
-        <div style="display: flex; gap: var(--space-sm); flex-wrap: wrap;">
+        <?php
+        $gatewayConfig = json_decode($r['gateway_config'] ?? '{}', true) ?: [];
+        $feeType = $gatewayConfig['platform_fee_type'] ?? 'fixed';
+        $feeAmount = $gatewayConfig['platform_fee_amount'] ?? 10;
+        // Migrate old format
+        if (isset($gatewayConfig['platform_fee_percent']) && !isset($gatewayConfig['platform_fee_type'])) {
+            $feeType = 'percent';
+            $feeAmount = $gatewayConfig['platform_fee_percent'];
+        }
+        ?>
+        <div style="display: flex; gap: var(--space-sm); flex-wrap: wrap; align-items: center;">
             <?php if ($stripeStatus !== 'active'): ?>
                 <a href="?start_onboarding=<?= $r['id'] ?>" class="btn-admin btn-admin-primary">
                     <i data-lucide="external-link"></i> Fortsatt onboarding
@@ -337,26 +431,67 @@ STRIPE_WEBHOOK_SECRET=whsec_xxxxx</pre>
             </button>
         </div>
 
-        <div class="text-sm text-secondary mt-md">
-            <strong>Account ID:</strong> <code><?= htmlspecialchars($r['stripe_account_id']) ?></code>
+        <div class="stripe-details mt-md">
+            <div class="stripe-detail-row">
+                <span class="text-secondary">Account ID:</span>
+                <code><?= htmlspecialchars($r['stripe_account_id']) ?></code>
+            </div>
+            <div class="stripe-detail-row">
+                <span class="text-secondary">Plattformsavgift:</span>
+                <form method="POST" class="platform-fee-form" style="display: inline-flex; align-items: center; gap: var(--space-sm);">
+                    <?= csrf_field() ?>
+                    <input type="hidden" name="action" value="update_platform_fee">
+                    <input type="hidden" name="recipient_id" value="<?= $r['id'] ?>">
+                    <input type="number" name="platform_fee_amount" value="<?= h($feeAmount) ?>"
+                           min="0" max="500" step="1" class="admin-form-input"
+                           style="width: 80px; padding: 4px 8px;">
+                    <select name="platform_fee_type" class="admin-form-select" style="padding: 4px 8px;">
+                        <option value="fixed" <?= $feeType === 'fixed' ? 'selected' : '' ?>>kr/anmälan</option>
+                        <option value="percent" <?= $feeType === 'percent' ? 'selected' : '' ?>>%</option>
+                    </select>
+                    <button type="submit" class="btn-admin btn-admin-ghost btn-admin-sm">
+                        <i data-lucide="save"></i>
+                    </button>
+                </form>
+            </div>
         </div>
     <?php else: ?>
-        <form method="POST" style="display: flex; gap: var(--space-md); flex-wrap: wrap; align-items: flex-end;">
+        <?php
+        // Default fee settings for new connections
+        $gatewayConfig = json_decode($r['gateway_config'] ?? '{}', true) ?: [];
+        $feeType = $gatewayConfig['platform_fee_type'] ?? 'fixed';
+        $feeAmount = $gatewayConfig['platform_fee_amount'] ?? 10;
+        ?>
+        <form method="POST" class="stripe-connect-form">
             <?= csrf_field() ?>
             <input type="hidden" name="action" value="create_account">
             <input type="hidden" name="recipient_id" value="<?= $r['id'] ?>">
 
-            <div class="admin-form-group" style="flex: 1; min-width: 200px;">
-                <label class="admin-form-label">E-post (valfritt)</label>
-                <input type="email" name="email" class="admin-form-input" placeholder="kontakt@foretag.se">
-            </div>
+            <div class="connect-form-row">
+                <div class="admin-form-group">
+                    <label class="admin-form-label">E-post (valfritt)</label>
+                    <input type="email" name="email" class="admin-form-input" placeholder="kontakt@foretag.se">
+                </div>
 
-            <div class="admin-form-group">
-                <label class="admin-form-label">Kontotyp</label>
-                <select name="business_type" class="admin-form-select">
-                    <option value="company">Foretag/Forening</option>
-                    <option value="individual">Privatperson</option>
-                </select>
+                <div class="admin-form-group">
+                    <label class="admin-form-label">Kontotyp</label>
+                    <select name="business_type" class="admin-form-select">
+                        <option value="company">Foretag/Forening</option>
+                        <option value="individual">Privatperson</option>
+                    </select>
+                </div>
+
+                <div class="admin-form-group">
+                    <label class="admin-form-label">Plattformsavgift</label>
+                    <div style="display: flex; gap: var(--space-xs); align-items: center;">
+                        <input type="number" name="platform_fee_amount" value="<?= h($feeAmount) ?>"
+                               min="0" max="500" step="1" class="admin-form-input" style="width: 70px;">
+                        <select name="platform_fee_type" class="admin-form-select" style="width: auto;">
+                            <option value="fixed" <?= $feeType === 'fixed' ? 'selected' : '' ?>>kr/anmälan</option>
+                            <option value="percent" <?= $feeType === 'percent' ? 'selected' : '' ?>>%</option>
+                        </select>
+                    </div>
+                </div>
             </div>
 
             <button type="submit" class="btn-admin btn-admin-primary">

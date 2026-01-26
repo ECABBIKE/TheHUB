@@ -88,16 +88,21 @@ class StripeGateway implements GatewayInterface {
 
         $paymentRecipientId = $orderData['payment_recipient_id'] ?? null;
 
-        // Get Stripe account ID if using Connected Account
+        // Get Stripe account ID and gateway config if using Connected Account
         $stripeAccountId = null;
+        $gatewayConfig = [];
         if ($paymentRecipientId) {
             $stmt = $this->pdo->prepare("
-                SELECT stripe_account_id
+                SELECT stripe_account_id, gateway_config
                 FROM payment_recipients
                 WHERE id = ? AND stripe_account_status = 'active'
             ");
             $stmt->execute([$paymentRecipientId]);
-            $stripeAccountId = $stmt->fetchColumn() ?: null;
+            $row = $stmt->fetch(\PDO::FETCH_ASSOC);
+            if ($row) {
+                $stripeAccountId = $row['stripe_account_id'] ?: null;
+                $gatewayConfig = json_decode($row['gateway_config'] ?? '{}', true) ?: [];
+            }
         }
 
         $paymentData = [
@@ -116,7 +121,17 @@ class StripeGateway implements GatewayInterface {
         // Add Connected Account if configured
         if ($stripeAccountId) {
             $paymentData['stripe_account_id'] = $stripeAccountId;
-            $paymentData['platform_fee_percent'] = 2; // 2% platform fee
+
+            // Platform fee - support both percentage and fixed amount
+            $feeType = $gatewayConfig['platform_fee_type'] ?? 'fixed';
+            $feeAmount = $gatewayConfig['platform_fee_amount'] ?? 10; // Default 10 kr
+
+            if ($feeType === 'percent') {
+                $paymentData['platform_fee_percent'] = $feeAmount;
+            } else {
+                // Fixed fee in SEK, pass as application_fee_amount in öre
+                $paymentData['platform_fee_fixed'] = (int)($feeAmount * 100);
+            }
         }
 
         $result = $this->client->createPaymentIntent($paymentData);

@@ -340,9 +340,9 @@ include __DIR__ . '/components/unified-layout.php';
         Hantera väntande (<?= $stats['pending_orders'] ?>)
     </a>
     <?php if ($isSuperAdmin): ?>
-    <a href="/admin/gateway-settings" class="quick-action-btn">
+    <a href="/admin/payment-recipients" class="quick-action-btn">
         <i data-lucide="settings"></i>
-        Konfigurera betalmetoder
+        Betalningsmottagare
     </a>
     <?php endif; ?>
 </div>
@@ -378,9 +378,9 @@ include __DIR__ . '/components/unified-layout.php';
                 <i data-lucide="credit-card"></i>
                 Stripe Connect (Kort)
             </a>
-            <a href="/admin/gateway-settings" class="ekonomi-card-link">
-                <i data-lucide="sliders"></i>
-                Gateway-installningar
+            <a href="/admin/payment-recipients" class="ekonomi-card-link">
+                <i data-lucide="wallet"></i>
+                Betalningsmottagare
             </a>
             <a href="/admin/certificates" class="ekonomi-card-link">
                 <i data-lucide="shield-check"></i>

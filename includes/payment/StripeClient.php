@@ -40,8 +40,12 @@ class StripeClient {
                 'destination' => $data['stripe_account_id']
             ];
 
-            // Platform fee (e.g., 2%)
-            if (!empty($data['platform_fee_percent'])) {
+            // Platform fee - supports percentage or fixed amount
+            if (!empty($data['platform_fee_fixed'])) {
+                // Fixed fee in öre (e.g., 1000 = 10 kr)
+                $params['application_fee_amount'] = (int)$data['platform_fee_fixed'];
+            } elseif (!empty($data['platform_fee_percent'])) {
+                // Percentage fee (e.g., 2 = 2%)
                 $feeAmount = (int)($params['amount'] * $data['platform_fee_percent'] / 100);
                 $params['application_fee_amount'] = $feeAmount;
             }
@@ -295,8 +299,14 @@ class StripeClient {
 
             if (is_array($value)) {
                 $result[] = $this->buildQuery($value, $fullKey);
+            } elseif (is_bool($value)) {
+                // Stripe expects "true"/"false" strings, not "1"/"0"
+                $result[] = urlencode($fullKey) . '=' . ($value ? 'true' : 'false');
+            } elseif ($value === null) {
+                // Skip null values
+                continue;
             } else {
-                $result[] = urlencode($fullKey) . '=' . urlencode($value);
+                $result[] = urlencode($fullKey) . '=' . urlencode((string)$value);
             }
         }
 
