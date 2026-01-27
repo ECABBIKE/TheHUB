@@ -99,6 +99,9 @@ $migrationChecks = [
     '027_payment_recipients_bank_details.sql' => [
         'columns' => ['payment_recipients.gateway_type', 'payment_recipients.bankgiro', 'payment_recipients.plusgiro', 'payment_recipients.bank_account']
     ],
+    '028_course_tracks.sql' => [
+        'columns' => ['events.course_tracks', 'events.course_tracks_use_global']
+    ],
 ];
 
 // ============================================================================
