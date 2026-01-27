@@ -508,6 +508,10 @@ input[type="number"] {
  document.addEventListener('keydown', function(e) {
      if (e.key === 'Escape') closeCreateModal();
  });
+ // Auto-open modal if ?action=create is in URL
+ if (window.location.search.includes('action=create')) {
+     document.addEventListener('DOMContentLoaded', openCreateModal);
+ }
  </script>
  <?php endif; ?>
 

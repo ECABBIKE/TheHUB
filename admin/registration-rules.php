@@ -42,20 +42,43 @@ $eventClasses = [
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     checkCsrf();
 
-    $seriesId = filter_input(INPUT_POST, 'series_id', FILTER_VALIDATE_INT);
-    $eventClass = $_POST['event_class'] ?? '';
+    $action = $_POST['action'] ?? 'save_event_class';
 
-    if ($seriesId && array_key_exists($eventClass, $eventClasses)) {
-        try {
-            $db->update('series', [
-                'event_license_class' => $eventClass
-            ], 'id = ?', [$seriesId]);
+    if ($action === 'toggle_registration') {
+        // Toggle registration on/off for an event
+        $eventId = filter_input(INPUT_POST, 'event_id', FILTER_VALIDATE_INT);
+        $enabled = isset($_POST['registration_enabled']) ? 1 : 0;
 
-            $message = "Eventklass ändrad till '{$eventClasses[$eventClass]['name']}'";
-            $messageType = 'success';
-        } catch (Exception $e) {
-            $message = 'Fel: ' . $e->getMessage();
-            $messageType = 'error';
+        if ($eventId) {
+            try {
+                $db->update('events', [
+                    'registration_enabled' => $enabled
+                ], 'id = ?', [$eventId]);
+
+                $message = $enabled ? "Anmalan aktiverad" : "Anmalan avstangd";
+                $messageType = 'success';
+            } catch (Exception $e) {
+                $message = 'Fel: ' . $e->getMessage();
+                $messageType = 'error';
+            }
+        }
+    } else {
+        // Save event class
+        $seriesId = filter_input(INPUT_POST, 'series_id', FILTER_VALIDATE_INT);
+        $eventClass = $_POST['event_class'] ?? '';
+
+        if ($seriesId && array_key_exists($eventClass, $eventClasses)) {
+            try {
+                $db->update('series', [
+                    'event_license_class' => $eventClass
+                ], 'id = ?', [$seriesId]);
+
+                $message = "Eventklass andrad till '{$eventClasses[$eventClass]['name']}'";
+                $messageType = 'success';
+            } catch (Exception $e) {
+                $message = 'Fel: ' . $e->getMessage();
+                $messageType = 'error';
+            }
         }
     }
 }
@@ -125,28 +148,18 @@ include __DIR__ . '/components/unified-layout.php';
 <?php if ($selectedSeries): ?>
 
 <?php
-// Fetch events in this series
+// Fetch events in this series - from BOTH series_events table AND events.series_id
+// This ensures we show events regardless of how they were connected
 $seriesEvents = $db->getAll("
-    SELECT e.id, e.name, e.date, e.location, e.active,
-           e.registration_opens, e.registration_deadline
+    SELECT DISTINCT e.id, e.name, e.date, e.location, e.active,
+           e.registration_opens, e.registration_deadline,
+           e.registration_enabled
     FROM events e
-    WHERE e.series_id = ?
+    LEFT JOIN series_events se ON se.event_id = e.id AND se.series_id = ?
+    WHERE se.series_id = ? OR e.series_id = ?
     ORDER BY e.date ASC
-", [$selectedSeriesId]);
-
-// DEBUG: Kolla om events finns med raw PDO
-$debugStmt = $pdo->prepare("SELECT COUNT(*) as cnt FROM events WHERE series_id = ?");
-$debugStmt->execute([$selectedSeriesId]);
-$debugCount = $debugStmt->fetch(PDO::FETCH_ASSOC);
-error_log("REGISTRATION-RULES DEBUG: series_id={$selectedSeriesId}, events found via getAll=" . count($seriesEvents) . ", raw count=" . ($debugCount['cnt'] ?? 'error'));
+", [$selectedSeriesId, $selectedSeriesId, $selectedSeriesId]);
 ?>
-
-<!-- DEBUG INFO -->
-<div class="alert alert-info mb-md" style="font-size: 0.8rem;">
-    <strong>Debug:</strong> series_id=<?= $selectedSeriesId ?>,
-    events via getAll=<?= count($seriesEvents) ?>,
-    raw SQL count=<?= $debugCount['cnt'] ?? 'error' ?>
-</div>
 
 <!-- Events in Series -->
 <div class="admin-card mb-lg">
@@ -155,7 +168,16 @@ error_log("REGISTRATION-RULES DEBUG: series_id={$selectedSeriesId}, events found
     </div>
     <div class="admin-card-body">
         <?php if (empty($seriesEvents)): ?>
-            <p class="text-secondary">Inga events kopplade till denna serie.</p>
+            <div class="alert alert-warning">
+                <i data-lucide="alert-triangle"></i>
+                <div>
+                    <strong>Inga events kopplade till denna serie.</strong>
+                    <p style="margin: var(--space-xs) 0 0 0;">
+                        Koppla events via <a href="/admin/series-events.php?series_id=<?= $selectedSeriesId ?>">Serie-Events</a>
+                        eller sätt <code>series_id</code> på events.
+                    </p>
+                </div>
+            </div>
         <?php else: ?>
             <div class="admin-table-container">
                 <table class="admin-table">
@@ -165,6 +187,7 @@ error_log("REGISTRATION-RULES DEBUG: series_id={$selectedSeriesId}, events found
                             <th>Datum</th>
                             <th>Plats</th>
                             <th>Status</th>
+                            <th>Anmalan</th>
                             <th></th>
                         </tr>
                     </thead>
@@ -182,6 +205,20 @@ error_log("REGISTRATION-RULES DEBUG: series_id={$selectedSeriesId}, events found
                                 <?php else: ?>
                                     <span class="badge badge-warning">Inaktiv</span>
                                 <?php endif; ?>
+                            </td>
+                            <td>
+                                <form method="POST" class="inline">
+                                    <?= csrf_field() ?>
+                                    <input type="hidden" name="action" value="toggle_registration">
+                                    <input type="hidden" name="event_id" value="<?= $evt['id'] ?>">
+                                    <?php $regEnabled = $evt['registration_enabled'] ?? 0; ?>
+                                    <label class="toggle-switch">
+                                        <input type="checkbox" name="registration_enabled" value="1"
+                                            <?= $regEnabled ? 'checked' : '' ?>
+                                            onchange="this.form.submit()">
+                                        <span class="toggle-slider"></span>
+                                    </label>
+                                </form>
                             </td>
                             <td>
                                 <a href="/admin/event-edit.php?id=<?= $evt['id'] ?>" class="btn-admin btn-admin-sm btn-admin-secondary">

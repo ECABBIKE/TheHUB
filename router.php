@@ -85,6 +85,7 @@ function hub_get_current_page(): array {
         'reset-password' => '/pages/reset-password.php',
         'activate-account' => '/pages/activate-account.php',
         'checkout' => '/pages/checkout.php',
+        'membership' => '/pages/membership.php',
     ];
 
     if (isset($simplePages[$section])) {

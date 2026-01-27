@@ -42,7 +42,7 @@ $stats['revenue_30d'] = $db->getRow("
 
 // Antal aktiva mottagare
 $stats['active_recipients'] = $db->getRow("
-    SELECT COUNT(*) as cnt FROM payment_recipients WHERE is_active = 1
+    SELECT COUNT(*) as cnt FROM payment_recipients WHERE active = 1
 ")['cnt'] ?? 0;
 
 // Antal prismallar
@@ -340,15 +340,11 @@ include __DIR__ . '/components/unified-layout.php';
         Hantera väntande (<?= $stats['pending_orders'] ?>)
     </a>
     <?php if ($isSuperAdmin): ?>
-    <a href="/admin/gateway-settings" class="quick-action-btn">
+    <a href="/admin/payment-recipients" class="quick-action-btn">
         <i data-lucide="settings"></i>
-        Konfigurera betalmetoder
+        Betalningsmottagare
     </a>
     <?php endif; ?>
-    <a href="/admin/pricing-templates" class="quick-action-btn">
-        <i data-lucide="receipt"></i>
-        Prismallar
-    </a>
 </div>
 
 <!-- Huvudsektioner -->
@@ -366,7 +362,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
             <div>
                 <h3 class="ekonomi-card-title">Betalningsmetoder</h3>
-                <p class="ekonomi-card-subtitle">Swish, Stripe, Manuell</p>
+                <p class="ekonomi-card-subtitle"><?= $stats['active_recipients'] ?> mottagare konfigurerade</p>
             </div>
         </div>
         <div class="ekonomi-card-body">
@@ -378,47 +374,23 @@ include __DIR__ . '/components/unified-layout.php';
                 Swish-konton (Alla)
             </a>
             <?php if ($isSuperAdmin): ?>
-            <a href="/admin/gateway-settings" class="ekonomi-card-link">
-                <i data-lucide="sliders"></i>
-                Gateway-inställningar
+            <a href="/admin/stripe-connect" class="ekonomi-card-link">
+                <i data-lucide="credit-card"></i>
+                Stripe Connect (Kort)
+            </a>
+            <a href="/admin/payment-recipients" class="ekonomi-card-link">
+                <i data-lucide="wallet"></i>
+                Betalningsmottagare
             </a>
             <a href="/admin/certificates" class="ekonomi-card-link">
                 <i data-lucide="shield-check"></i>
                 Certifikat (Swish Handel)
             </a>
             <?php endif; ?>
-            <a href="/admin/payment-settings" class="ekonomi-card-link">
-                <i data-lucide="settings"></i>
-                Betalningsinställningar
-            </a>
-        </div>
-    </div>
-
-    <!-- Mottagare -->
-    <div class="ekonomi-card">
-        <div class="ekonomi-card-header">
-            <div class="ekonomi-card-icon green">
+            <a href="/admin/memberships.php" class="ekonomi-card-link">
                 <i data-lucide="users"></i>
-            </div>
-            <div>
-                <h3 class="ekonomi-card-title">Mottagare</h3>
-                <p class="ekonomi-card-subtitle"><?= $stats['active_recipients'] ?> aktiva</p>
-            </div>
-        </div>
-        <div class="ekonomi-card-body">
-            <p>Hantera vem som tar emot betalningar. Varje arrangör/klubb kan ha egna Swish-nummer eller bankkonton.</p>
-        </div>
-        <div class="ekonomi-card-links">
-            <a href="/admin/payment-recipients" class="ekonomi-card-link">
-                <i data-lucide="building-2"></i>
-                Hantera mottagare
+                Medlemskap
             </a>
-            <?php if ($isSuperAdmin): ?>
-            <a href="/admin/payment-recipients?action=create" class="ekonomi-card-link">
-                <i data-lucide="plus"></i>
-                Lägg till mottagare
-            </a>
-            <?php endif; ?>
         </div>
     </div>
 
@@ -571,35 +543,59 @@ include __DIR__ . '/components/unified-layout.php';
 </div>
 <?php endif; ?>
 
-<!-- Hjälpsektion -->
+<!-- Dokumentation -->
+<?php if ($isSuperAdmin): ?>
 <div class="card" style="margin-top: var(--space-xl);">
     <div class="card-header">
-        <h3><i data-lucide="help-circle"></i> Hur fungerar anmälningssystemet?</h3>
+        <h3><i data-lucide="book-open"></i> Dokumentation</h3>
+    </div>
+    <div class="card-body">
+        <p class="text-secondary mb-md">
+            Teknisk dokumentation for betalningssystemet finns i <code>docs/PAYMENT.md</code> i projektets repository.
+        </p>
+        <div style="display: flex; gap: var(--space-md); flex-wrap: wrap;">
+            <a href="/admin/certificates" class="btn btn--secondary">
+                <i data-lucide="shield-check"></i>
+                Konfigurera Swish Handel
+            </a>
+            <a href="/admin/stripe-connect.php" class="btn btn--secondary">
+                <i data-lucide="credit-card"></i>
+                Konfigurera Stripe Connect
+            </a>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
+
+<!-- Hjalpsektionen -->
+<div class="card" style="margin-top: var(--space-lg);">
+    <div class="card-header">
+        <h3><i data-lucide="help-circle"></i> Hur fungerar anmalningssystemet?</h3>
     </div>
     <div class="card-body">
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(250px, 1fr)); gap: var(--space-lg);">
             <div>
                 <h4 style="color: var(--color-accent); margin-bottom: var(--space-sm);">1. Skapa event</h4>
                 <p style="color: var(--color-text-secondary); font-size: var(--text-sm);">
-                    Skapa ett event under Tävlingar och aktivera anmälan. Välj vilka klasser som ska vara tillgängliga.
+                    Skapa ett event under Tavlingar och aktivera anmalan. Valj vilka klasser som ska vara tillgangliga.
                 </p>
             </div>
             <div>
-                <h4 style="color: var(--color-accent); margin-bottom: var(--space-sm);">2. Sätt priser</h4>
+                <h4 style="color: var(--color-accent); margin-bottom: var(--space-sm);">2. Satt priser</h4>
                 <p style="color: var(--color-text-secondary); font-size: var(--text-sm);">
-                    Använd en prismall eller sätt priser direkt på eventet. Konfigurera early bird och sena anmälningar.
+                    Anvand en prismall eller satt priser direkt pa eventet. Konfigurera early bird och sena anmalningar.
                 </p>
             </div>
             <div>
                 <h4 style="color: var(--color-accent); margin-bottom: var(--space-sm);">3. Konfigurera betalning</h4>
                 <p style="color: var(--color-text-secondary); font-size: var(--text-sm);">
-                    Välj mottagare för betalningar. Kan vara Swish Handel (automatisk) eller manuell Swish.
+                    Valj mottagare for betalningar. Kan vara Swish Handel (automatisk) eller manuell Swish.
                 </p>
             </div>
             <div>
-                <h4 style="color: var(--color-accent); margin-bottom: var(--space-sm);">4. Öppna anmälan</h4>
+                <h4 style="color: var(--color-accent); margin-bottom: var(--space-sm);">4. Oppna anmalan</h4>
                 <p style="color: var(--color-text-secondary); font-size: var(--text-sm);">
-                    Deltagare kan nu anmäla sig via hemsidan. Betalningar bekräftas automatiskt (Swish Handel) eller manuellt.
+                    Deltagare kan nu anmala sig via hemsidan. Betalningar bekraftas automatiskt (Swish Handel) eller manuellt.
                 </p>
             </div>
         </div>
