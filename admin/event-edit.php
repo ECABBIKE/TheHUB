@@ -338,7 +338,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             // Course tracks (bansträckningar)
             'course_tracks' => trim($_POST['course_tracks'] ?? ''),
             'course_tracks_use_global' => isset($_POST['course_tracks_use_global']) ? 1 : 0,
-            'course_tracks_hidden' => isset($_POST['course_tracks_hidden']) ? 1 : 0,
         ];
 
         try {
@@ -1196,7 +1195,7 @@ include __DIR__ . '/components/unified-layout.php';
                 ['key' => 'jury_communication', 'label' => 'Jurykommuniké', 'global_key' => 'jury_use_global', 'hidden_key' => 'jury_hidden'],
                 ['key' => 'competition_schedule', 'label' => 'Tävlingsschema', 'global_key' => 'schedule_use_global', 'hidden_key' => 'schedule_hidden'],
                 ['key' => 'start_times', 'label' => 'Starttider', 'global_key' => 'start_times_use_global', 'hidden_key' => 'start_times_hidden', 'publish_key' => 'starttider_publish_at'],
-                ['key' => 'course_tracks', 'label' => 'Bansträckningar', 'global_key' => 'course_tracks_use_global', 'hidden_key' => 'course_tracks_hidden'],
+                ['key' => 'course_tracks', 'label' => 'Bansträckningar', 'global_key' => 'course_tracks_use_global'],
             ];
             ?>
 

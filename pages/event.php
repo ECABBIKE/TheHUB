@@ -1184,7 +1184,7 @@ if (!empty($eventSponsors['content'])): ?>
         </a>
         <?php endif; ?>
 
-        <?php if ($showAllTabs && empty($event['course_tracks_hidden']) && (!empty($event['course_tracks']) || !empty($event['course_tracks_use_global']))): ?>
+        <?php if ($showAllTabs && (!empty($event['course_tracks']) || !empty($event['course_tracks_use_global']))): ?>
         <a href="?id=<?= $eventId ?>&tab=banstrackning" class="event-tab <?= $activeTab === 'banstrackning' ? 'active' : '' ?>">
             <i data-lucide="route"></i>
             Bansträckningar
@@ -2159,7 +2159,7 @@ $hasPMContent = $pmContent || $driverMeetingPM || $trainingPM || $timingPM || $l
         <h2 class="card-title"><i data-lucide="route"></i> Bansträckningar</h2>
     </div>
     <div class="card-body">
-        <?php $courseTracksContent = getEventContent($event, 'course_tracks', 'course_tracks_use_global', $globalTextMap, 'course_tracks_hidden'); ?>
+        <?php $courseTracksContent = getEventContent($event, 'course_tracks', 'course_tracks_use_global', $globalTextMap); ?>
         <?php if ($courseTracksContent): ?>
             <div class="prose"><?= nl2br(h($courseTracksContent)) ?></div>
         <?php else: ?>
