@@ -90,6 +90,9 @@ $migrationChecks = [
         'tables' => ['artist_name_claims'],
         'columns' => ['riders.is_anonymous', 'riders.anonymous_source', 'riders.merged_into_rider_id']
     ],
+    '025_course_tracks.sql' => [
+        'columns' => ['events.course_tracks', 'events.course_tracks_use_global']
+    ],
 ];
 
 // ============================================================================
