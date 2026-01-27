@@ -249,7 +249,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'registration_deadline' => !empty($_POST['registration_deadline']) ? trim($_POST['registration_deadline']) : null,
             'registration_deadline_time' => !empty($_POST['registration_deadline_time']) ? trim($_POST['registration_deadline_time']) : null,
             'active' => isset($_POST['active']) ? 1 : 0,
-            'is_championship' => isset($_POST['is_championship']) ? 1 : 0,
+            // is_championship: Only super admins can change this - handled separately below
             'contact_email' => trim($_POST['contact_email'] ?? ''),
             'contact_phone' => trim($_POST['contact_phone'] ?? ''),
             // Extended fields
@@ -343,9 +343,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         try {
             error_log("EVENT EDIT: Saving event ID {$id}, name: {$name}");
 
-            // Store is_championship separately
-            $isChampionship = $eventData['is_championship'];
-            unset($eventData['is_championship']);
+            // is_championship: ONLY super admins can change this
+            // Promotors must never be able to modify it (even via manipulated POST data)
+            $isChampionship = null; // null = don't update
+            if (!$isPromotorOnly) {
+                // Super admin/admin - check actual POST value (not just isset!)
+                $isChampionship = (!empty($_POST['is_championship']) && $_POST['is_championship'] == '1') ? 1 : 0;
+            }
 
             // First, update the core fields (original 10 that always work)
             $basicResult = $db->query(
@@ -386,11 +390,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 error_log("EVENT EDIT: Extended fields update failed (non-critical): " . $extEx->getMessage());
             }
 
-            // Update is_championship separately
-            try {
-                $db->query("UPDATE events SET is_championship = ? WHERE id = ?", [$isChampionship, $id]);
-            } catch (Exception $smEx) {
-                error_log("EVENT EDIT: SM column update failed: " . $smEx->getMessage());
+            // Update is_championship separately - ONLY if user is super admin (not promotor)
+            if ($isChampionship !== null) {
+                try {
+                    $db->query("UPDATE events SET is_championship = ? WHERE id = ?", [$isChampionship, $id]);
+                } catch (Exception $smEx) {
+                    error_log("EVENT EDIT: SM column update failed: " . $smEx->getMessage());
+                }
             }
 
             // Update header_banner_media_id separately
