@@ -19,6 +19,11 @@ require_once __DIR__ . '/../../config.php';
 require_once __DIR__ . '/../../includes/payment/StripeClient.php';
 require_once __DIR__ . '/../../includes/mail.php';
 
+// Include receipt manager for automatic receipt generation
+if (file_exists(__DIR__ . '/../../includes/receipt-manager.php')) {
+    require_once __DIR__ . '/../../includes/receipt-manager.php';
+}
+
 $pdo = $GLOBALS['pdo'];
 
 // Read raw POST data
@@ -132,6 +137,18 @@ try {
 
                     $pdo->commit();
 
+                    // Generate receipt
+                    try {
+                        if (function_exists('createReceiptForOrder')) {
+                            $receiptResult = createReceiptForOrder($pdo, $order['id']);
+                            if (!$receiptResult['success']) {
+                                error_log("Failed to create receipt for order {$order['id']}: " . ($receiptResult['error'] ?? 'Unknown error'));
+                            }
+                        }
+                    } catch (Exception $receiptError) {
+                        error_log("Receipt generation error: " . $receiptError->getMessage());
+                    }
+
                     // Send confirmation email
                     try {
                         hub_send_order_confirmation($order['id']);
@@ -240,6 +257,18 @@ try {
                         $stmt->execute([$order['id']]);
 
                         $pdo->commit();
+
+                        // Generate receipt
+                        try {
+                            if (function_exists('createReceiptForOrder')) {
+                                $receiptResult = createReceiptForOrder($pdo, $order['id']);
+                                if (!$receiptResult['success']) {
+                                    error_log("Failed to create receipt for order {$order['id']}: " . ($receiptResult['error'] ?? 'Unknown error'));
+                                }
+                            }
+                        } catch (Exception $receiptError) {
+                            error_log("Receipt generation error: " . $receiptError->getMessage());
+                        }
 
                         // Send confirmation email
                         try {
