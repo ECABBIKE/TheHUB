@@ -42,16 +42,21 @@ function normalizeNameForMatch($name) {
 
 /**
  * Find matching riders in database
- * Returns array with match_type: 'exact_uci', 'name_club', 'name_only', 'no_match'
+ *
+ * AUTO-UPDATE cases (no manual review needed):
+ * - exact_uci: UCI ID + name match (100%)
+ * - name_club: Name + club match (90%)
+ * - name_only_single: Only ONE rider with this name exists (85%)
+ *
+ * MANUAL REVIEW cases:
+ * - ambiguous: Multiple riders with same name, no club match
  */
 function findMatchingRider($db, $firstname, $lastname, $uciId = null, $clubName = null) {
-    $matches = [];
-
     $normFirst = normalizeNameForMatch($firstname);
     $normLast = normalizeNameForMatch($lastname);
     $normUci = normalizeUciIdForMatch($uciId);
 
-    // Strategy 1: Exact UCI ID match + name verification
+    // Strategy 1: Exact UCI ID match + name verification (100% - auto update)
     if ($normUci) {
         $riders = $db->getAll("
             SELECT r.id, r.firstname, r.lastname, r.email, r.license_number,
@@ -65,7 +70,6 @@ function findMatchingRider($db, $firstname, $lastname, $uciId = null, $clubName 
         foreach ($riders as $rider) {
             $riderUci = normalizeUciIdForMatch($rider['license_number']);
             if ($riderUci === $normUci) {
-                // UCI ID matches - verify name too for 100% confidence
                 $riderNormFirst = normalizeNameForMatch($rider['firstname']);
                 $riderNormLast = normalizeNameForMatch($rider['lastname']);
 
@@ -77,11 +81,16 @@ function findMatchingRider($db, $firstname, $lastname, $uciId = null, $clubName 
                         'reason' => 'UCI ID + namn matchar exakt'
                     ];
                 } else {
-                    // UCI matches but name doesn't - suspicious, needs review
-                    $matches[] = [
-                        'match_type' => 'uci_name_mismatch',
+                    // UCI matches but name doesn't - needs review
+                    return [
+                        'match_type' => 'ambiguous',
                         'confidence' => 50,
-                        'rider' => $rider,
+                        'matches' => [[
+                            'match_type' => 'uci_name_mismatch',
+                            'confidence' => 50,
+                            'rider' => $rider,
+                            'reason' => 'UCI ID matchar men namn skiljer sig'
+                        ]],
                         'reason' => 'UCI ID matchar men namn skiljer sig'
                     ];
                 }
@@ -89,80 +98,17 @@ function findMatchingRider($db, $firstname, $lastname, $uciId = null, $clubName 
         }
     }
 
-    // Strategy 2: Name + Club match
-    if (!empty($clubName)) {
-        $clubNorm = normalizeNameForMatch($clubName);
-        $riders = $db->getAll("
-            SELECT r.id, r.firstname, r.lastname, r.email, r.license_number,
-                   r.birth_year, r.nationality, c.name as club_name
-            FROM riders r
-            LEFT JOIN clubs c ON r.club_id = c.id
-            WHERE LOWER(r.firstname) = LOWER(?)
-              AND LOWER(r.lastname) = LOWER(?)
-        ", [$firstname, $lastname]);
-
-        foreach ($riders as $rider) {
-            if (!empty($rider['club_name'])) {
-                $riderClubNorm = normalizeNameForMatch($rider['club_name']);
-                // Check if clubs match (fuzzy)
-                if ($riderClubNorm === $clubNorm ||
-                    strpos($riderClubNorm, $clubNorm) !== false ||
-                    strpos($clubNorm, $riderClubNorm) !== false) {
-
-                    // Check if we already have this rider in matches
-                    $alreadyMatched = false;
-                    foreach ($matches as $m) {
-                        if ($m['rider']['id'] === $rider['id']) {
-                            $alreadyMatched = true;
-                            break;
-                        }
-                    }
-
-                    if (!$alreadyMatched) {
-                        $matches[] = [
-                            'match_type' => 'name_club',
-                            'confidence' => 80,
-                            'rider' => $rider,
-                            'reason' => 'Namn + klubb matchar'
-                        ];
-                    }
-                }
-            }
-        }
-    }
-
-    // Strategy 3: Name only match
+    // Get all riders with matching name
     $riders = $db->getAll("
         SELECT r.id, r.firstname, r.lastname, r.email, r.license_number,
-               r.birth_year, c.name as club_name
+               r.birth_year, r.nationality, c.name as club_name
         FROM riders r
         LEFT JOIN clubs c ON r.club_id = c.id
         WHERE LOWER(r.firstname) = LOWER(?)
           AND LOWER(r.lastname) = LOWER(?)
     ", [$firstname, $lastname]);
 
-    foreach ($riders as $rider) {
-        // Check if we already have this rider in matches
-        $alreadyMatched = false;
-        foreach ($matches as $m) {
-            if ($m['rider']['id'] === $rider['id']) {
-                $alreadyMatched = true;
-                break;
-            }
-        }
-
-        if (!$alreadyMatched) {
-            $matches[] = [
-                'match_type' => 'name_only',
-                'confidence' => 60,
-                'rider' => $rider,
-                'reason' => 'Endast namn matchar'
-            ];
-        }
-    }
-
-    // Return best match or all matches for review
-    if (empty($matches)) {
+    if (empty($riders)) {
         return [
             'match_type' => 'no_match',
             'confidence' => 0,
@@ -171,22 +117,54 @@ function findMatchingRider($db, $firstname, $lastname, $uciId = null, $clubName 
         ];
     }
 
-    // Sort by confidence
-    usort($matches, function($a, $b) {
-        return $b['confidence'] - $a['confidence'];
-    });
+    // Strategy 2: Name + Club match (90% - auto update)
+    if (!empty($clubName)) {
+        $clubNorm = normalizeNameForMatch($clubName);
 
-    // If best match is 100% (exact_uci), return it directly
-    if ($matches[0]['confidence'] === 100) {
-        return $matches[0];
+        foreach ($riders as $rider) {
+            if (!empty($rider['club_name'])) {
+                $riderClubNorm = normalizeNameForMatch($rider['club_name']);
+                // Check if clubs match (fuzzy)
+                if ($riderClubNorm === $clubNorm ||
+                    strpos($riderClubNorm, $clubNorm) !== false ||
+                    strpos($clubNorm, $riderClubNorm) !== false) {
+                    return [
+                        'match_type' => 'name_club',
+                        'confidence' => 90,
+                        'rider' => $rider,
+                        'reason' => 'Namn + klubb matchar'
+                    ];
+                }
+            }
+        }
     }
 
-    // Otherwise return all matches for review
+    // Strategy 3: Only ONE rider with this name exists (85% - auto update)
+    if (count($riders) === 1) {
+        return [
+            'match_type' => 'name_only_single',
+            'confidence' => 85,
+            'rider' => $riders[0],
+            'reason' => 'Unik namnmatchning (endast en person med detta namn)'
+        ];
+    }
+
+    // Strategy 4: Multiple riders with same name - needs manual review
+    $matches = [];
+    foreach ($riders as $rider) {
+        $matches[] = [
+            'match_type' => 'name_only',
+            'confidence' => 60,
+            'rider' => $rider,
+            'reason' => 'Flera personer med samma namn'
+        ];
+    }
+
     return [
-        'match_type' => 'multiple',
-        'confidence' => $matches[0]['confidence'],
+        'match_type' => 'ambiguous',
+        'confidence' => 60,
         'matches' => $matches,
-        'reason' => count($matches) . ' möjliga matchningar'
+        'reason' => count($matches) . ' personer med samma namn'
     ];
 }
 
@@ -403,8 +381,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['import_file'])) {
                                 'nationality' => $nationality,
                             ];
 
-                            if ($match['match_type'] === 'exact_uci') {
-                                // 100% match - auto update email and nationality
+                            // Auto-update for high-confidence matches
+                            $autoUpdateTypes = ['exact_uci', 'name_club', 'name_only_single'];
+
+                            if (in_array($match['match_type'], $autoUpdateTypes)) {
+                                // High confidence - auto update email and nationality
                                 try {
                                     $updateData = ['email' => $email];
                                     $nationalityUpdated = false;
@@ -423,10 +404,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['import_file'])) {
                                     $stats['auto_updated']++;
                                     $autoUpdated[] = array_merge($rowData, [
                                         'rider_id' => $match['rider']['id'],
-                                        'old_email' => $match['rider']['email'],
+                                        'old_email' => $match['rider']['email'] ?? '',
                                         'old_nationality' => $match['rider']['nationality'] ?? '',
                                         'nationality_updated' => $nationalityUpdated,
-                                        'rider_club' => $match['rider']['club_name'],
+                                        'rider_club' => $match['rider']['club_name'] ?? '',
+                                        'match_type' => $match['match_type'],
+                                        'confidence' => $match['confidence'],
                                     ]);
                                 } catch (Exception $e) {
                                     // Failed - add to review
@@ -439,9 +422,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['import_file'])) {
                             } elseif ($match['match_type'] === 'no_match') {
                                 // No match found - silently skip (likely parents, not in database)
                                 $stats['no_match']++;
-                                // Don't add to noMatch array - we don't display these
+                            } elseif ($match['match_type'] === 'ambiguous') {
+                                // Multiple people with same name - needs manual review
+                                $stats['needs_review']++;
+                                $needsReview[] = array_merge($rowData, [
+                                    'matches' => $match['matches'],
+                                ]);
                             } else {
-                                // Needs manual review
+                                // Fallback - needs review
                                 $stats['needs_review']++;
                                 $matches = isset($match['matches']) ? $match['matches'] : [$match];
                                 $needsReview[] = array_merge($rowData, [
@@ -593,26 +581,38 @@ include __DIR__ . '/components/unified-layout.php';
                     <tr>
                         <th>Namn</th>
                         <th>E-post</th>
-                        <th>Tidigare e-post</th>
-                        <th>Nationalitet</th>
-                        <th>UCI ID</th>
+                        <th>Tidigare</th>
+                        <th>Matchningstyp</th>
+                        <th>Nat</th>
                     </tr>
                 </thead>
                 <tbody>
-                    <?php foreach (array_slice($autoUpdated, 0, 50) as $row): ?>
+                    <?php foreach (array_slice($autoUpdated, 0, 100) as $row): ?>
                     <tr>
                         <td><strong><?= h($row['firstname'] . ' ' . $row['lastname']) ?></strong></td>
-                        <td><code><?= h($row['email']) ?></code></td>
-                        <td class="text-secondary"><?= h($row['old_email'] ?: '-') ?></td>
+                        <td><code class="text-sm"><?= h($row['email']) ?></code></td>
+                        <td class="text-secondary text-sm"><?= h($row['old_email'] ?: '-') ?></td>
+                        <td>
+                            <?php
+                            $matchType = $row['match_type'] ?? 'exact_uci';
+                            $conf = $row['confidence'] ?? 100;
+                            $badgeClass = $conf >= 100 ? 'badge-success' : ($conf >= 85 ? 'badge-info' : 'badge-warning');
+                            $label = match($matchType) {
+                                'exact_uci' => 'UCI+Namn',
+                                'name_club' => 'Namn+Klubb',
+                                'name_only_single' => 'Unikt namn',
+                                default => $matchType
+                            };
+                            ?>
+                            <span class="badge <?= $badgeClass ?>"><?= h($label) ?></span>
+                        </td>
                         <td>
                             <?php if (!empty($row['nationality_updated']) && $row['nationality_updated']): ?>
                                 <span class="badge badge-info"><?= h($row['nationality']) ?></span>
-                                <span class="text-secondary text-sm">(var: <?= h($row['old_nationality'] ?: '-') ?>)</span>
                             <?php else: ?>
                                 <?= h($row['nationality'] ?: '-') ?>
                             <?php endif; ?>
                         </td>
-                        <td><code class="text-sm"><?= h($row['uci_id']) ?></code></td>
                     </tr>
                     <?php endforeach; ?>
                 </tbody>
