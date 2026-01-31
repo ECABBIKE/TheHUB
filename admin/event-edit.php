@@ -249,7 +249,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'registration_deadline' => !empty($_POST['registration_deadline']) ? trim($_POST['registration_deadline']) : null,
             'registration_deadline_time' => !empty($_POST['registration_deadline_time']) ? trim($_POST['registration_deadline_time']) : null,
             'active' => isset($_POST['active']) ? 1 : 0,
-            'is_championship' => isset($_POST['is_championship']) ? 1 : 0,
+            // is_championship: Only super admins can change this - handled separately below
             'contact_email' => trim($_POST['contact_email'] ?? ''),
             'contact_phone' => trim($_POST['contact_phone'] ?? ''),
             // Extended fields
@@ -335,14 +335,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'jury_hidden' => isset($_POST['jury_hidden']) ? 1 : 0,
             'schedule_hidden' => isset($_POST['schedule_hidden']) ? 1 : 0,
             'start_times_hidden' => isset($_POST['start_times_hidden']) ? 1 : 0,
+            // Course tracks (bansträckningar)
+            'course_tracks' => trim($_POST['course_tracks'] ?? ''),
+            'course_tracks_use_global' => isset($_POST['course_tracks_use_global']) ? 1 : 0,
         ];
 
         try {
             error_log("EVENT EDIT: Saving event ID {$id}, name: {$name}");
 
-            // Store is_championship separately
-            $isChampionship = $eventData['is_championship'];
-            unset($eventData['is_championship']);
+            // is_championship: ONLY super admins can change this
+            // Promotors must never be able to modify it (even via manipulated POST data)
+            $isChampionship = null; // null = don't update
+            if (!$isPromotorOnly) {
+                // Super admin/admin - check actual POST value (not just isset!)
+                $isChampionship = (!empty($_POST['is_championship']) && $_POST['is_championship'] == '1') ? 1 : 0;
+            }
 
             // First, update the core fields (original 10 that always work)
             $basicResult = $db->query(
@@ -383,11 +390,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 error_log("EVENT EDIT: Extended fields update failed (non-critical): " . $extEx->getMessage());
             }
 
-            // Update is_championship separately
-            try {
-                $db->query("UPDATE events SET is_championship = ? WHERE id = ?", [$isChampionship, $id]);
-            } catch (Exception $smEx) {
-                error_log("EVENT EDIT: SM column update failed: " . $smEx->getMessage());
+            // Update is_championship separately - ONLY if user is super admin (not promotor)
+            if ($isChampionship !== null) {
+                try {
+                    $db->query("UPDATE events SET is_championship = ? WHERE id = ?", [$isChampionship, $id]);
+                } catch (Exception $smEx) {
+                    error_log("EVENT EDIT: SM column update failed: " . $smEx->getMessage());
+                }
             }
 
             // Update header_banner_media_id separately
@@ -1176,7 +1185,7 @@ include __DIR__ . '/components/unified-layout.php';
     <details class="admin-card mb-lg">
         <summary class="admin-card-header collapsible-header">
             <h2>Övriga event-flikar</h2>
-            <span class="text-secondary text-sm">Jury, Schema, Starttider</span>
+            <span class="text-secondary text-sm">Jury, Schema, Starttider, Bansträckningar</span>
         </summary>
         <div class="admin-card-body">
             <div class="facility-section-header">
@@ -1189,6 +1198,7 @@ include __DIR__ . '/components/unified-layout.php';
                 ['key' => 'jury_communication', 'label' => 'Jurykommuniké', 'global_key' => 'jury_use_global', 'icon' => 'gavel'],
                 ['key' => 'competition_schedule', 'label' => 'Tävlingsschema', 'global_key' => 'schedule_use_global', 'icon' => 'calendar-days'],
                 ['key' => 'start_times', 'label' => 'Starttider', 'global_key' => 'start_times_use_global', 'icon' => 'clock', 'publish_key' => 'starttider_publish_at'],
+                ['key' => 'course_tracks', 'label' => 'Bansträckningar', 'global_key' => 'course_tracks_use_global', 'icon' => 'route'],
             ];
             ?>
 

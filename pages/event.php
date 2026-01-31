@@ -1184,6 +1184,13 @@ if (!empty($eventSponsors['content'])): ?>
         </a>
         <?php endif; ?>
 
+        <?php if ($showAllTabs && (!empty($event['course_tracks']) || !empty($event['course_tracks_use_global']))): ?>
+        <a href="?id=<?= $eventId ?>&tab=banstrackning" class="event-tab <?= $activeTab === 'banstrackning' ? 'active' : '' ?>">
+            <i data-lucide="route"></i>
+            Bansträckningar
+        </a>
+        <?php endif; ?>
+
         <?php if ($hasInteractiveMap && $kartaPublished): ?>
         <a href="?id=<?= $eventId ?>&tab=karta" class="event-tab <?= $activeTab === 'karta' ? 'active' : '' ?>" onclick="if(window.innerWidth <= 768) { window.location.href='/map.php?id=<?= $eventId ?>'; return false; }">
             <i data-lucide="map-pin"></i>
@@ -2141,6 +2148,22 @@ $hasPMContent = $pmContent || $driverMeetingPM || $trainingPM || $timingPM || $l
             <div class="prose"><?= nl2br(h($startContent)) ?></div>
         <?php else: ?>
             <p class="text-muted">Inga starttider publicerade ännu.</p>
+        <?php endif; ?>
+    </div>
+</section>
+
+<?php elseif ($activeTab === 'banstrackning'): ?>
+<!-- COURSE TRACKS TAB -->
+<section class="card">
+    <div class="card-header">
+        <h2 class="card-title"><i data-lucide="route"></i> Bansträckningar</h2>
+    </div>
+    <div class="card-body">
+        <?php $courseTracksContent = getEventContent($event, 'course_tracks', 'course_tracks_use_global', $globalTextMap); ?>
+        <?php if ($courseTracksContent): ?>
+            <div class="prose"><?= nl2br(h($courseTracksContent)) ?></div>
+        <?php else: ?>
+            <p class="text-muted">Ingen information om bansträckningar tillgänglig.</p>
         <?php endif; ?>
     </div>
 </section>

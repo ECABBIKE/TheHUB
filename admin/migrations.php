@@ -99,7 +99,10 @@ $migrationChecks = [
     '027_payment_recipients_bank_details.sql' => [
         'columns' => ['payment_recipients.gateway_type', 'payment_recipients.bankgiro', 'payment_recipients.plusgiro', 'payment_recipients.bank_account']
     ],
-    '028_vat_receipts_multi_recipient.sql' => [
+    '028_course_tracks.sql' => [
+        'columns' => ['events.course_tracks', 'events.course_tracks_use_global']
+    ],
+    '029_vat_receipts_multi_recipient.sql' => [
         'tables' => ['product_types', 'receipts', 'receipt_items', 'receipt_sequences'],
         'columns' => ['orders.vat_amount', 'orders.cart_session_id', 'order_items.vat_rate', 'series.series_registration_deadline_days']
     ],

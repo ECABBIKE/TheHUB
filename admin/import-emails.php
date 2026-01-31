@@ -1,0 +1,841 @@
+<?php
+/**
+ * Import E-postadresser - Uppdatera befintliga deltagare med e-post
+ *
+ * Matchningslogik:
+ * 1. UCI ID + namn = 100% säker → automatisk uppdatering
+ * 2. Namn + klubb = osäker → manuell granskning
+ * 3. Endast namn = osäker → manuell granskning
+ */
+require_once __DIR__ . '/../config.php';
+require_admin();
+
+$db = getDB();
+
+// ============================================================================
+// HELPER FUNCTIONS
+// ============================================================================
+
+/**
+ * Normalize UCI ID for comparison (remove spaces, convert to uppercase)
+ */
+function normalizeUciIdForMatch($uciId) {
+    if (empty($uciId)) return null;
+    // Remove all spaces, dashes, and convert to uppercase
+    return strtoupper(preg_replace('/[\s\-]/', '', trim($uciId)));
+}
+
+/**
+ * Normalize name for comparison
+ */
+function normalizeNameForMatch($name) {
+    if (empty($name)) return '';
+    $name = mb_strtolower(trim($name), 'UTF-8');
+    // Replace Swedish characters
+    $name = preg_replace('/[åä]/u', 'a', $name);
+    $name = preg_replace('/[ö]/u', 'o', $name);
+    $name = preg_replace('/[é]/u', 'e', $name);
+    // Remove non-alphanumeric
+    $name = preg_replace('/[^a-z0-9]/u', '', $name);
+    return $name;
+}
+
+/**
+ * Find matching riders in database
+ * Returns array with match_type: 'exact_uci', 'name_club', 'name_only', 'no_match'
+ */
+function findMatchingRider($db, $firstname, $lastname, $uciId = null, $clubName = null) {
+    $matches = [];
+
+    $normFirst = normalizeNameForMatch($firstname);
+    $normLast = normalizeNameForMatch($lastname);
+    $normUci = normalizeUciIdForMatch($uciId);
+
+    // Strategy 1: Exact UCI ID match + name verification
+    if ($normUci) {
+        $riders = $db->getAll("
+            SELECT r.id, r.firstname, r.lastname, r.email, r.license_number,
+                   r.birth_year, r.nationality, c.name as club_name
+            FROM riders r
+            LEFT JOIN clubs c ON r.club_id = c.id
+            WHERE r.license_number IS NOT NULL
+              AND r.license_number != ''
+        ");
+
+        foreach ($riders as $rider) {
+            $riderUci = normalizeUciIdForMatch($rider['license_number']);
+            if ($riderUci === $normUci) {
+                // UCI ID matches - verify name too for 100% confidence
+                $riderNormFirst = normalizeNameForMatch($rider['firstname']);
+                $riderNormLast = normalizeNameForMatch($rider['lastname']);
+
+                if ($riderNormFirst === $normFirst && $riderNormLast === $normLast) {
+                    return [
+                        'match_type' => 'exact_uci',
+                        'confidence' => 100,
+                        'rider' => $rider,
+                        'reason' => 'UCI ID + namn matchar exakt'
+                    ];
+                } else {
+                    // UCI matches but name doesn't - suspicious, needs review
+                    $matches[] = [
+                        'match_type' => 'uci_name_mismatch',
+                        'confidence' => 50,
+                        'rider' => $rider,
+                        'reason' => 'UCI ID matchar men namn skiljer sig'
+                    ];
+                }
+            }
+        }
+    }
+
+    // Strategy 2: Name + Club match
+    if (!empty($clubName)) {
+        $clubNorm = normalizeNameForMatch($clubName);
+        $riders = $db->getAll("
+            SELECT r.id, r.firstname, r.lastname, r.email, r.license_number,
+                   r.birth_year, r.nationality, c.name as club_name
+            FROM riders r
+            LEFT JOIN clubs c ON r.club_id = c.id
+            WHERE LOWER(r.firstname) = LOWER(?)
+              AND LOWER(r.lastname) = LOWER(?)
+        ", [$firstname, $lastname]);
+
+        foreach ($riders as $rider) {
+            if (!empty($rider['club_name'])) {
+                $riderClubNorm = normalizeNameForMatch($rider['club_name']);
+                // Check if clubs match (fuzzy)
+                if ($riderClubNorm === $clubNorm ||
+                    strpos($riderClubNorm, $clubNorm) !== false ||
+                    strpos($clubNorm, $riderClubNorm) !== false) {
+
+                    // Check if we already have this rider in matches
+                    $alreadyMatched = false;
+                    foreach ($matches as $m) {
+                        if ($m['rider']['id'] === $rider['id']) {
+                            $alreadyMatched = true;
+                            break;
+                        }
+                    }
+
+                    if (!$alreadyMatched) {
+                        $matches[] = [
+                            'match_type' => 'name_club',
+                            'confidence' => 80,
+                            'rider' => $rider,
+                            'reason' => 'Namn + klubb matchar'
+                        ];
+                    }
+                }
+            }
+        }
+    }
+
+    // Strategy 3: Name only match
+    $riders = $db->getAll("
+        SELECT r.id, r.firstname, r.lastname, r.email, r.license_number,
+               r.birth_year, c.name as club_name
+        FROM riders r
+        LEFT JOIN clubs c ON r.club_id = c.id
+        WHERE LOWER(r.firstname) = LOWER(?)
+          AND LOWER(r.lastname) = LOWER(?)
+    ", [$firstname, $lastname]);
+
+    foreach ($riders as $rider) {
+        // Check if we already have this rider in matches
+        $alreadyMatched = false;
+        foreach ($matches as $m) {
+            if ($m['rider']['id'] === $rider['id']) {
+                $alreadyMatched = true;
+                break;
+            }
+        }
+
+        if (!$alreadyMatched) {
+            $matches[] = [
+                'match_type' => 'name_only',
+                'confidence' => 60,
+                'rider' => $rider,
+                'reason' => 'Endast namn matchar'
+            ];
+        }
+    }
+
+    // Return best match or all matches for review
+    if (empty($matches)) {
+        return [
+            'match_type' => 'no_match',
+            'confidence' => 0,
+            'rider' => null,
+            'reason' => 'Ingen matchning hittad'
+        ];
+    }
+
+    // Sort by confidence
+    usort($matches, function($a, $b) {
+        return $b['confidence'] - $a['confidence'];
+    });
+
+    // If best match is 100% (exact_uci), return it directly
+    if ($matches[0]['confidence'] === 100) {
+        return $matches[0];
+    }
+
+    // Otherwise return all matches for review
+    return [
+        'match_type' => 'multiple',
+        'confidence' => $matches[0]['confidence'],
+        'matches' => $matches,
+        'reason' => count($matches) . ' möjliga matchningar'
+    ];
+}
+
+// ============================================================================
+// PROCESS ACTIONS
+// ============================================================================
+
+$message = '';
+$messageType = '';
+$stats = null;
+$autoUpdated = [];
+$needsReview = [];
+$noMatch = [];
+
+// Handle manual confirmation of pending updates
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'confirm_updates') {
+    checkCsrf();
+
+    $confirmed = $_POST['confirm'] ?? [];
+    $nationalities = $_POST['nationality'] ?? [];
+    $updatedCount = 0;
+    $skippedCount = 0;
+    $nationalityCount = 0;
+
+    foreach ($confirmed as $riderId => $email) {
+        if (!empty($email) && filter_var($email, FILTER_VALIDATE_EMAIL)) {
+            try {
+                $updateData = ['email' => $email];
+
+                // Also update nationality if provided
+                if (!empty($nationalities[$riderId])) {
+                    $updateData['nationality'] = $nationalities[$riderId];
+                    $nationalityCount++;
+                }
+
+                $db->update('riders', $updateData, 'id = ?', [$riderId]);
+                $updatedCount++;
+            } catch (Exception $e) {
+                $skippedCount++;
+            }
+        } else {
+            $skippedCount++;
+        }
+    }
+
+    $message = "Uppdaterade $updatedCount e-postadresser" .
+        ($nationalityCount > 0 ? ", $nationalityCount nationaliteter" : "") .
+        ($skippedCount > 0 ? ", $skippedCount överhoppade" : "");
+    $messageType = 'success';
+
+    // Clear session data
+    unset($_SESSION['email_import_review']);
+}
+
+// Handle CSV upload
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['import_file'])) {
+    checkCsrf();
+
+    $file = $_FILES['import_file'];
+
+    if ($file['error'] !== UPLOAD_ERR_OK) {
+        $message = 'Filuppladdning misslyckades';
+        $messageType = 'error';
+    } elseif ($file['size'] > MAX_UPLOAD_SIZE) {
+        $message = 'Filen är för stor (max ' . (MAX_UPLOAD_SIZE / 1024 / 1024) . 'MB)';
+        $messageType = 'error';
+    } else {
+        $extension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
+
+        if (!in_array($extension, ['csv', 'txt'])) {
+            $message = 'Ogiltigt filformat. Tillåtna: CSV, TXT';
+            $messageType = 'error';
+        } else {
+            // Process CSV
+            $filepath = $file['tmp_name'];
+
+            // Ensure UTF-8
+            $content = file_get_contents($filepath);
+            $content = preg_replace('/^\xEF\xBB\xBF/', '', $content); // Remove BOM
+            if (!mb_check_encoding($content, 'UTF-8')) {
+                $content = mb_convert_encoding($content, 'UTF-8', 'Windows-1252');
+            }
+            file_put_contents($filepath, $content);
+
+            if (($handle = fopen($filepath, 'r')) !== false) {
+                // Detect delimiter
+                $firstLine = fgets($handle);
+                rewind($handle);
+
+                // Check for tab, semicolon, or comma
+                $tabCount = substr_count($firstLine, "\t");
+                $semiCount = substr_count($firstLine, ';');
+                $commaCount = substr_count($firstLine, ',');
+
+                if ($tabCount > $semiCount && $tabCount > $commaCount) {
+                    $delimiter = "\t";
+                } elseif ($semiCount > $commaCount) {
+                    $delimiter = ';';
+                } else {
+                    $delimiter = ',';
+                }
+
+                // Read header
+                $header = fgetcsv($handle, 4096, $delimiter);
+                if (!$header) {
+                    $message = 'Tom fil eller ogiltigt format';
+                    $messageType = 'error';
+                } else {
+                    // Normalize header
+                    $headerMap = [];
+                    foreach ($header as $idx => $col) {
+                        $col = mb_strtolower(trim($col), 'UTF-8');
+                        $col = str_replace([' ', '-', '_'], '', $col);
+
+                        // Map column names
+                        $mappings = [
+                            'firstname' => 'firstname', 'förnamn' => 'firstname', 'fornamn' => 'firstname',
+                            'lastname' => 'lastname', 'efternamn' => 'lastname',
+                            'email' => 'email', 'epost' => 'email', 'epostadress' => 'email', 'mail' => 'email',
+                            'klubb' => 'club', 'club' => 'club', 'huvudförening' => 'club', 'huvudforening' => 'club',
+                            'uciid' => 'uci_id', 'ucikod' => 'uci_id', 'licensnumber' => 'uci_id', 'licensnummer' => 'uci_id',
+                            'nationality' => 'nationality', 'land' => 'nationality', 'nationalitet' => 'nationality',
+                            'adress' => 'address', 'address' => 'address',
+                            'postcode' => 'postcode', 'postnummer' => 'postcode',
+                            'city' => 'city', 'ort' => 'city', 'stad' => 'city',
+                            'phone' => 'phone', 'telefon' => 'phone', 'tel' => 'phone',
+                        ];
+
+                        $mapped = $mappings[$col] ?? $col;
+                        $headerMap[$mapped] = $idx;
+                    }
+
+                    // Check required columns
+                    if (!isset($headerMap['firstname']) || !isset($headerMap['lastname']) || !isset($headerMap['email'])) {
+                        $message = 'Filen saknar obligatoriska kolumner: first_name, last_name, E-mail';
+                        $messageType = 'error';
+                    } else {
+                        // Process rows
+                        $stats = [
+                            'total' => 0,
+                            'auto_updated' => 0,
+                            'needs_review' => 0,
+                            'no_match' => 0,  // Not shown - likely parents
+                            'empty_email' => 0,
+                            'invalid_email' => 0,
+                            'nationality_updated' => 0,
+                        ];
+
+                        $lineNumber = 1;
+                        while (($row = fgetcsv($handle, 4096, $delimiter)) !== false) {
+                            $lineNumber++;
+                            $stats['total']++;
+
+                            // Extract data
+                            $firstname = isset($headerMap['firstname']) ? trim($row[$headerMap['firstname']] ?? '') : '';
+                            $lastname = isset($headerMap['lastname']) ? trim($row[$headerMap['lastname']] ?? '') : '';
+                            $email = isset($headerMap['email']) ? trim($row[$headerMap['email']] ?? '') : '';
+                            $club = isset($headerMap['club']) ? trim($row[$headerMap['club']] ?? '') : '';
+                            $uciId = isset($headerMap['uci_id']) ? trim($row[$headerMap['uci_id']] ?? '') : '';
+                            $nationality = isset($headerMap['nationality']) ? strtoupper(trim($row[$headerMap['nationality']] ?? '')) : '';
+
+                            // Normalize nationality to 3-letter code
+                            if (!empty($nationality)) {
+                                $nationalityMap = [
+                                    'SVERIGE' => 'SWE', 'SWEDEN' => 'SWE', 'SE' => 'SWE',
+                                    'NORGE' => 'NOR', 'NORWAY' => 'NOR', 'NO' => 'NOR',
+                                    'DANMARK' => 'DEN', 'DENMARK' => 'DEN', 'DK' => 'DEN',
+                                    'FINLAND' => 'FIN', 'FI' => 'FIN',
+                                    'TYSKLAND' => 'GER', 'GERMANY' => 'GER', 'DE' => 'GER',
+                                    'STORBRITANNIEN' => 'GBR', 'UK' => 'GBR', 'GB' => 'GBR',
+                                    'USA' => 'USA', 'US' => 'USA',
+                                    'ISLAND' => 'ISL', 'ICELAND' => 'ISL', 'IS' => 'ISL',
+                                    'ESTLAND' => 'EST', 'ESTONIA' => 'EST', 'EE' => 'EST',
+                                    'LETTLAND' => 'LAT', 'LATVIA' => 'LAT', 'LV' => 'LAT',
+                                    'LITAUEN' => 'LTU', 'LITHUANIA' => 'LTU', 'LT' => 'LTU',
+                                    'POLEN' => 'POL', 'POLAND' => 'POL', 'PL' => 'POL',
+                                    'FRANKRIKE' => 'FRA', 'FRANCE' => 'FRA', 'FR' => 'FRA',
+                                    'SPANIEN' => 'ESP', 'SPAIN' => 'ESP', 'ES' => 'ESP',
+                                    'ITALIEN' => 'ITA', 'ITALY' => 'ITA', 'IT' => 'ITA',
+                                    'SCHWEIZ' => 'SUI', 'SWITZERLAND' => 'SUI', 'CH' => 'SUI',
+                                    'ÖSTERRIKE' => 'AUT', 'AUSTRIA' => 'AUT', 'AT' => 'AUT',
+                                    'NEDERLÄNDERNA' => 'NED', 'NETHERLANDS' => 'NED', 'NL' => 'NED',
+                                    'BELGIEN' => 'BEL', 'BELGIUM' => 'BEL', 'BE' => 'BEL',
+                                ];
+                                $nationality = $nationalityMap[$nationality] ?? (strlen($nationality) === 3 ? $nationality : '');
+                            }
+
+                            // Skip if no name
+                            if (empty($firstname) || empty($lastname)) {
+                                continue;
+                            }
+
+                            // Validate email
+                            if (empty($email)) {
+                                $stats['empty_email']++;
+                                continue;
+                            }
+
+                            if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+                                $stats['invalid_email']++;
+                                continue;
+                            }
+
+                            // Find matching rider
+                            $match = findMatchingRider($db, $firstname, $lastname, $uciId, $club);
+
+                            $rowData = [
+                                'line' => $lineNumber,
+                                'firstname' => $firstname,
+                                'lastname' => $lastname,
+                                'email' => $email,
+                                'club' => $club,
+                                'uci_id' => $uciId,
+                                'nationality' => $nationality,
+                            ];
+
+                            if ($match['match_type'] === 'exact_uci') {
+                                // 100% match - auto update email and nationality
+                                try {
+                                    $updateData = ['email' => $email];
+                                    $nationalityUpdated = false;
+
+                                    // Also update nationality if provided and different
+                                    if (!empty($nationality)) {
+                                        $currentNat = $match['rider']['nationality'] ?? '';
+                                        if (empty($currentNat) || $currentNat !== $nationality) {
+                                            $updateData['nationality'] = $nationality;
+                                            $nationalityUpdated = true;
+                                            $stats['nationality_updated']++;
+                                        }
+                                    }
+
+                                    $db->update('riders', $updateData, 'id = ?', [$match['rider']['id']]);
+                                    $stats['auto_updated']++;
+                                    $autoUpdated[] = array_merge($rowData, [
+                                        'rider_id' => $match['rider']['id'],
+                                        'old_email' => $match['rider']['email'],
+                                        'old_nationality' => $match['rider']['nationality'] ?? '',
+                                        'nationality_updated' => $nationalityUpdated,
+                                        'rider_club' => $match['rider']['club_name'],
+                                    ]);
+                                } catch (Exception $e) {
+                                    // Failed - add to review
+                                    $stats['needs_review']++;
+                                    $needsReview[] = array_merge($rowData, [
+                                        'matches' => [$match],
+                                        'error' => $e->getMessage(),
+                                    ]);
+                                }
+                            } elseif ($match['match_type'] === 'no_match') {
+                                // No match found - silently skip (likely parents, not in database)
+                                $stats['no_match']++;
+                                // Don't add to noMatch array - we don't display these
+                            } else {
+                                // Needs manual review
+                                $stats['needs_review']++;
+                                $matches = isset($match['matches']) ? $match['matches'] : [$match];
+                                $needsReview[] = array_merge($rowData, [
+                                    'matches' => $matches,
+                                ]);
+                            }
+                        }
+
+                        fclose($handle);
+
+                        // Store review data in session
+                        if (!empty($needsReview)) {
+                            $_SESSION['email_import_review'] = $needsReview;
+                        }
+
+                        $message = "Bearbetade {$stats['total']} rader. {$stats['auto_updated']} automatiskt uppdaterade, {$stats['needs_review']} behöver granskning.";
+                        $messageType = 'success';
+                    }
+                }
+            } else {
+                $message = 'Kunde inte öppna filen';
+                $messageType = 'error';
+            }
+        }
+    }
+}
+
+// Get pending reviews from session
+$pendingReview = $_SESSION['email_import_review'] ?? [];
+
+// Page setup
+$page_title = 'Importera E-postadresser';
+$breadcrumbs = [
+    ['label' => 'Verktyg', 'url' => '/admin/tools.php'],
+    ['label' => 'Import E-post']
+];
+
+include __DIR__ . '/components/unified-layout.php';
+?>
+
+<style>
+.match-card {
+    background: var(--color-bg-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: var(--space-md);
+    margin-bottom: var(--space-sm);
+}
+.match-card.selected {
+    border-color: var(--color-accent);
+    background: var(--color-accent-light);
+}
+.confidence-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-xs);
+    padding: var(--space-2xs) var(--space-sm);
+    border-radius: var(--radius-full);
+    font-size: var(--text-xs);
+    font-weight: 600;
+}
+.confidence-100 { background: rgba(16, 185, 129, 0.15); color: #059669; }
+.confidence-80 { background: rgba(245, 158, 11, 0.15); color: #d97706; }
+.confidence-60 { background: rgba(239, 68, 68, 0.15); color: #dc2626; }
+.review-row {
+    background: var(--color-bg-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    padding: var(--space-md);
+    margin-bottom: var(--space-md);
+}
+.review-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: var(--space-md);
+    padding-bottom: var(--space-md);
+    border-bottom: 1px solid var(--color-border);
+}
+.import-data {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--space-sm);
+    font-size: var(--text-sm);
+}
+.import-data dt { color: var(--color-text-muted); }
+.import-data dd { color: var(--color-text-primary); font-weight: 500; margin: 0 0 var(--space-xs); }
+</style>
+
+<!-- Message -->
+<?php if ($message): ?>
+<div class="alert alert-<?= h($messageType) ?> mb-lg">
+    <i data-lucide="<?= $messageType === 'success' ? 'check-circle' : 'alert-circle' ?>"></i>
+    <?= h($message) ?>
+</div>
+<?php endif; ?>
+
+<!-- Statistics -->
+<?php if ($stats): ?>
+<div class="card mb-lg">
+    <div class="card-header">
+        <h3><i data-lucide="bar-chart-2"></i> Resultat</h3>
+    </div>
+    <div class="card-body">
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: var(--space-md);">
+            <div class="text-center">
+                <div style="font-size: var(--text-2xl); font-weight: 700;"><?= number_format($stats['total']) ?></div>
+                <div class="text-secondary text-sm">Totalt rader</div>
+            </div>
+            <div class="text-center">
+                <div style="font-size: var(--text-2xl); font-weight: 700; color: var(--color-success);"><?= number_format($stats['auto_updated']) ?></div>
+                <div class="text-secondary text-sm">Auto-uppdaterade</div>
+            </div>
+            <?php if ($stats['nationality_updated'] > 0): ?>
+            <div class="text-center">
+                <div style="font-size: var(--text-2xl); font-weight: 700; color: var(--color-info);"><?= number_format($stats['nationality_updated']) ?></div>
+                <div class="text-secondary text-sm">Nationalitet uppdaterad</div>
+            </div>
+            <?php endif; ?>
+            <div class="text-center">
+                <div style="font-size: var(--text-2xl); font-weight: 700; color: var(--color-warning);"><?= number_format($stats['needs_review']) ?></div>
+                <div class="text-secondary text-sm">Behöver granskning</div>
+            </div>
+            <div class="text-center">
+                <div style="font-size: var(--text-2xl); font-weight: 700; color: var(--color-text-muted);"><?= number_format($stats['no_match']) ?></div>
+                <div class="text-secondary text-sm">Ej i databasen</div>
+            </div>
+            <?php if ($stats['empty_email'] > 0 || $stats['invalid_email'] > 0): ?>
+            <div class="text-center">
+                <div style="font-size: var(--text-2xl); font-weight: 700; color: var(--color-error);"><?= number_format($stats['empty_email'] + $stats['invalid_email']) ?></div>
+                <div class="text-secondary text-sm">Ogiltig/saknad e-post</div>
+            </div>
+            <?php endif; ?>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
+
+<!-- Auto-updated list -->
+<?php if (!empty($autoUpdated)): ?>
+<div class="card mb-lg">
+    <div class="card-header">
+        <h3><i data-lucide="check-circle" style="color: var(--color-success);"></i> Automatiskt uppdaterade (<?= count($autoUpdated) ?>)</h3>
+    </div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Namn</th>
+                        <th>E-post</th>
+                        <th>Tidigare e-post</th>
+                        <th>Nationalitet</th>
+                        <th>UCI ID</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach (array_slice($autoUpdated, 0, 50) as $row): ?>
+                    <tr>
+                        <td><strong><?= h($row['firstname'] . ' ' . $row['lastname']) ?></strong></td>
+                        <td><code><?= h($row['email']) ?></code></td>
+                        <td class="text-secondary"><?= h($row['old_email'] ?: '-') ?></td>
+                        <td>
+                            <?php if (!empty($row['nationality_updated']) && $row['nationality_updated']): ?>
+                                <span class="badge badge-info"><?= h($row['nationality']) ?></span>
+                                <span class="text-secondary text-sm">(var: <?= h($row['old_nationality'] ?: '-') ?>)</span>
+                            <?php else: ?>
+                                <?= h($row['nationality'] ?: '-') ?>
+                            <?php endif; ?>
+                        </td>
+                        <td><code class="text-sm"><?= h($row['uci_id']) ?></code></td>
+                    </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+            <?php if (count($autoUpdated) > 50): ?>
+            <p class="text-secondary text-sm mt-md">Visar första 50 av <?= count($autoUpdated) ?></p>
+            <?php endif; ?>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
+
+<!-- Needs Review -->
+<?php if (!empty($pendingReview)): ?>
+<div class="card mb-lg">
+    <div class="card-header">
+        <h3><i data-lucide="eye" style="color: var(--color-warning);"></i> Behöver granskning (<?= count($pendingReview) ?>)</h3>
+    </div>
+    <div class="card-body">
+        <form method="POST" id="reviewForm">
+            <?= csrf_field() ?>
+            <input type="hidden" name="action" value="confirm_updates">
+
+            <div class="mb-lg">
+                <p class="text-secondary">
+                    Granska matchningarna nedan. Kryssa i de som ska uppdateras.
+                </p>
+            </div>
+
+            <?php foreach ($pendingReview as $idx => $row): ?>
+            <div class="review-row">
+                <div class="review-header">
+                    <div>
+                        <h4 style="margin: 0;"><?= h($row['firstname'] . ' ' . $row['lastname']) ?></h4>
+                        <p class="text-secondary text-sm" style="margin: var(--space-xs) 0 0;">
+                            Rad <?= $row['line'] ?>
+                            <?php if (!empty($row['club'])): ?> • Klubb: <?= h($row['club']) ?><?php endif; ?>
+                            <?php if (!empty($row['uci_id'])): ?> • UCI: <?= h($row['uci_id']) ?><?php endif; ?>
+                        </p>
+                    </div>
+                    <div>
+                        <span class="badge badge-info"><?= h($row['email']) ?></span>
+                    </div>
+                </div>
+
+                <div class="import-data mb-md">
+                    <div>
+                        <dt>E-post att importera</dt>
+                        <dd><code><?= h($row['email']) ?></code></dd>
+                    </div>
+                    <?php if (!empty($row['club'])): ?>
+                    <div>
+                        <dt>Klubb i filen</dt>
+                        <dd><?= h($row['club']) ?></dd>
+                    </div>
+                    <?php endif; ?>
+                    <?php if (!empty($row['uci_id'])): ?>
+                    <div>
+                        <dt>UCI ID i filen</dt>
+                        <dd><code><?= h($row['uci_id']) ?></code></dd>
+                    </div>
+                    <?php endif; ?>
+                </div>
+
+                <h5 style="margin: var(--space-md) 0 var(--space-sm);">Möjliga matchningar:</h5>
+
+                <?php
+                $matches = $row['matches'] ?? [];
+                foreach ($matches as $mIdx => $match):
+                    $rider = $match['rider'];
+                    $confidence = $match['confidence'];
+                    $confClass = $confidence >= 100 ? 'confidence-100' : ($confidence >= 80 ? 'confidence-80' : 'confidence-60');
+                ?>
+                <div class="match-card">
+                    <label style="display: flex; align-items: flex-start; gap: var(--space-md); cursor: pointer;">
+                        <input type="checkbox"
+                               name="confirm[<?= $rider['id'] ?>]"
+                               value="<?= h($row['email']) ?>"
+                               style="margin-top: 4px;">
+                        <?php if (!empty($row['nationality'])): ?>
+                        <input type="hidden" name="nationality[<?= $rider['id'] ?>]" value="<?= h($row['nationality']) ?>">
+                        <?php endif; ?>
+                        <div style="flex: 1;">
+                            <div style="display: flex; align-items: center; gap: var(--space-sm); margin-bottom: var(--space-xs);">
+                                <strong><?= h($rider['firstname'] . ' ' . $rider['lastname']) ?></strong>
+                                <span class="confidence-badge <?= $confClass ?>"><?= $confidence ?>%</span>
+                            </div>
+                            <div class="text-sm text-secondary">
+                                <?= h($match['reason']) ?>
+                            </div>
+                            <div class="text-sm" style="margin-top: var(--space-xs);">
+                                <span class="text-secondary">Nuvarande e-post:</span>
+                                <?php if ($rider['email']): ?>
+                                    <code><?= h($rider['email']) ?></code>
+                                <?php else: ?>
+                                    <em class="text-muted">Ingen</em>
+                                <?php endif; ?>
+
+                                <?php if ($rider['club_name']): ?>
+                                    <span class="text-secondary" style="margin-left: var(--space-md);">Klubb:</span>
+                                    <?= h($rider['club_name']) ?>
+                                <?php endif; ?>
+
+                                <?php if ($rider['license_number']): ?>
+                                    <span class="text-secondary" style="margin-left: var(--space-md);">UCI:</span>
+                                    <code class="text-sm"><?= h($rider['license_number']) ?></code>
+                                <?php endif; ?>
+
+                                <?php if (!empty($row['nationality'])): ?>
+                                    <span class="text-secondary" style="margin-left: var(--space-md);">Nat:</span>
+                                    <?php if (($rider['nationality'] ?? '') !== $row['nationality']): ?>
+                                        <span class="badge badge-info"><?= h($row['nationality']) ?></span>
+                                        <span class="text-muted">(nu: <?= h($rider['nationality'] ?: '-') ?>)</span>
+                                    <?php else: ?>
+                                        <?= h($row['nationality']) ?>
+                                    <?php endif; ?>
+                                <?php endif; ?>
+                            </div>
+                        </div>
+                    </label>
+                </div>
+                <?php endforeach; ?>
+            </div>
+            <?php endforeach; ?>
+
+            <div style="position: sticky; bottom: 0; background: var(--color-bg-page); padding: var(--space-md) 0; border-top: 1px solid var(--color-border); margin-top: var(--space-lg);">
+                <button type="submit" class="btn-admin btn-admin-primary">
+                    <i data-lucide="check"></i>
+                    Uppdatera valda
+                </button>
+                <button type="button" class="btn-admin btn-admin-secondary" onclick="document.querySelectorAll('input[name^=confirm]').forEach(c => c.checked = true);">
+                    Markera alla
+                </button>
+                <button type="button" class="btn-admin btn-admin-ghost" onclick="document.querySelectorAll('input[name^=confirm]').forEach(c => c.checked = false);">
+                    Avmarkera alla
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+<?php endif; ?>
+
+<!-- No Match section removed - these are likely parents not in database -->
+
+<!-- Upload Form -->
+<div class="card">
+    <div class="card-header">
+        <h3><i data-lucide="upload"></i> Ladda upp CSV-fil</h3>
+    </div>
+    <div class="card-body">
+        <form method="POST" enctype="multipart/form-data" style="max-width: 500px;">
+            <?= csrf_field() ?>
+
+            <div class="form-group">
+                <label class="form-label">Välj CSV/TXT-fil</label>
+                <input type="file" name="import_file" class="form-input" accept=".csv,.txt" required>
+                <small class="text-secondary">Max storlek: <?= round(MAX_UPLOAD_SIZE / 1024 / 1024) ?>MB. Stödjer tab-, semikolon- och kommaseparerade filer.</small>
+            </div>
+
+            <button type="submit" class="btn-admin btn-admin-primary">
+                <i data-lucide="upload"></i>
+                Ladda upp och bearbeta
+            </button>
+        </form>
+
+        <div class="mt-lg" style="padding-top: var(--space-lg); border-top: 1px solid var(--color-border);">
+            <h4>Förväntat filformat</h4>
+            <p class="text-secondary mb-md">
+                Filen ska ha följande kolumner (ordningen spelar ingen roll):
+            </p>
+
+            <div class="table-responsive">
+                <table class="table">
+                    <thead>
+                        <tr>
+                            <th>Kolumn</th>
+                            <th>Obligatorisk</th>
+                            <th>Beskrivning</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>first_name</code> / <code>Förnamn</code></td>
+                            <td><span class="badge badge-danger">Ja</span></td>
+                            <td>Förnamn</td>
+                        </tr>
+                        <tr>
+                            <td><code>last_name</code> / <code>Efternamn</code></td>
+                            <td><span class="badge badge-danger">Ja</span></td>
+                            <td>Efternamn</td>
+                        </tr>
+                        <tr>
+                            <td><code>E-mail</code> / <code>Email</code></td>
+                            <td><span class="badge badge-danger">Ja</span></td>
+                            <td>E-postadress att importera</td>
+                        </tr>
+                        <tr>
+                            <td><code>UCI ID</code> / <code>Licensnummer</code></td>
+                            <td><span class="badge badge-success">Rekommenderas</span></td>
+                            <td>För 100% säker matchning</td>
+                        </tr>
+                        <tr>
+                            <td><code>Klubb</code> / <code>Club</code></td>
+                            <td><span class="badge badge-secondary">Valfri</span></td>
+                            <td>Hjälper till vid matchning</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+            <div class="alert alert-info mt-md">
+                <i data-lucide="info"></i>
+                <div>
+                    <strong>Matchningslogik:</strong>
+                    <ol style="margin: var(--space-sm) 0 0; padding-left: var(--space-lg);">
+                        <li><strong>UCI ID + namn</strong> → 100% säker matchning → automatisk uppdatering</li>
+                        <li><strong>Namn + klubb</strong> → 80% säker → kräver manuell granskning</li>
+                        <li><strong>Endast namn</strong> → 60% säker → kräver manuell granskning</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<?php include __DIR__ . '/components/unified-layout-footer.php'; ?>

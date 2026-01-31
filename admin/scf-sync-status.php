@@ -273,6 +273,89 @@ include __DIR__ . '/components/unified-layout.php';
     </div>
 </div>
 
+<!-- Cron Job Status -->
+<div class="card">
+    <div class="card-header">
+        <h3>Automatisk synkronisering (Cron)</h3>
+    </div>
+    <div class="card-body">
+        <?php
+        // Check cron status based on sync log
+        $lastSync = !empty($recentSyncs) ? $recentSyncs[0] : null;
+        $lastCronSync = null;
+        $cronRunning = false;
+
+        // Find last automatic (non-manual) sync
+        foreach ($recentSyncs as $sync) {
+            if (strpos($sync['sync_type'], 'manual') === false) {
+                $lastCronSync = $sync;
+                break;
+            }
+        }
+
+        // Check if cron appears to be running (sync within last 48 hours)
+        if ($lastCronSync) {
+            $lastSyncTime = strtotime($lastCronSync['started_at']);
+            $hoursSinceSync = (time() - $lastSyncTime) / 3600;
+            $cronRunning = $hoursSinceSync < 48;
+        }
+        ?>
+
+        <?php if (!$scfEnabled): ?>
+            <div class="info-box warning">
+                <i data-lucide="alert-triangle"></i>
+                <strong>API ej konfigurerat</strong> - Cron-jobb kan inte köras utan SCF_API_KEY.
+            </div>
+        <?php elseif (!$lastCronSync): ?>
+            <div class="info-box warning">
+                <i data-lucide="alert-triangle"></i>
+                <strong>Ingen automatisk synkronisering har körts</strong><br>
+                Cron-jobbet behöver konfigureras på servern. Se instruktioner nedan under "Konfiguration".
+            </div>
+        <?php elseif (!$cronRunning): ?>
+            <div class="info-box warning">
+                <i data-lucide="alert-circle"></i>
+                <strong>Cron-jobb verkar inte köras</strong><br>
+                Senaste automatiska synkronisering: <?= date('Y-m-d H:i', strtotime($lastCronSync['started_at'])) ?>
+                (<?= round($hoursSinceSync / 24, 1) ?> dagar sedan)
+            </div>
+        <?php else: ?>
+            <div style="display: flex; align-items: center; gap: var(--space-md); padding: var(--space-md); background: rgba(16, 185, 129, 0.1); border-radius: var(--radius-md); border: 1px solid rgba(16, 185, 129, 0.3);">
+                <i data-lucide="check-circle" style="color: var(--color-success); width: 24px; height: 24px;"></i>
+                <div>
+                    <strong style="color: var(--color-success);">Cron-jobb aktivt</strong><br>
+                    <span class="text-secondary">Senaste körning: <?= date('Y-m-d H:i', strtotime($lastCronSync['started_at'])) ?></span>
+                </div>
+            </div>
+        <?php endif; ?>
+
+        <?php if ($lastCronSync): ?>
+        <div class="mt-md" style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: var(--space-md);">
+            <div>
+                <div class="text-secondary text-sm">Typ</div>
+                <strong><?= htmlspecialchars($lastCronSync['sync_type']) ?></strong>
+            </div>
+            <div>
+                <div class="text-secondary text-sm">Bearbetade</div>
+                <strong><?= number_format($lastCronSync['processed']) ?></strong>
+            </div>
+            <div>
+                <div class="text-secondary text-sm">Hittade</div>
+                <strong><?= number_format($lastCronSync['found']) ?></strong>
+            </div>
+            <div>
+                <div class="text-secondary text-sm">Uppdaterade</div>
+                <strong><?= number_format($lastCronSync['updated']) ?></strong>
+            </div>
+            <div>
+                <div class="text-secondary text-sm">Fel</div>
+                <strong <?= $lastCronSync['errors'] > 0 ? 'class="text-danger"' : '' ?>><?= number_format($lastCronSync['errors']) ?></strong>
+            </div>
+        </div>
+        <?php endif; ?>
+    </div>
+</div>
+
 <!-- License Verification Progress -->
 <?php if ($riderStats['with_uci_id'] > 0): ?>
 <div class="card">
@@ -328,12 +411,19 @@ include __DIR__ . '/components/unified-layout.php';
 </div>
 
 <!-- Recent Sync Operations -->
-<?php if (!empty($recentSyncs)): ?>
 <div class="card">
     <div class="card-header">
-        <h3>Senaste synkroniseringar</h3>
+        <h3>Synkroniseringshistorik</h3>
     </div>
     <div class="card-body">
+        <?php if (empty($recentSyncs)): ?>
+            <div class="info-box">
+                <i data-lucide="info"></i>
+                <strong>Ingen synkroniseringshistorik</strong><br>
+                Ingen synkronisering har körts ännu. Använd knappen "Starta synkronisering" ovan för att köra manuellt,
+                eller konfigurera cron-jobb för automatisk synkronisering.
+            </div>
+        <?php else: ?>
         <div class="table-responsive">
             <table class="sync-log-table">
                 <thead>
@@ -362,7 +452,18 @@ include __DIR__ . '/components/unified-layout.php';
                             </span>
                             <?php endif; ?>
                         </td>
-                        <td><?= htmlspecialchars($sync['sync_type']) ?></td>
+                        <td>
+                            <?php
+                            $typeLabels = [
+                                'full' => 'Automatisk (full)',
+                                'incremental' => 'Automatisk (inkr.)',
+                                'manual' => 'Manuell',
+                                'manual_batch' => 'Manuell batch',
+                                'match_search' => 'Matchningssökning'
+                            ];
+                            echo $typeLabels[$sync['sync_type']] ?? htmlspecialchars($sync['sync_type']);
+                            ?>
+                        </td>
                         <td><?= $sync['year'] ?></td>
                         <td>
                             <span class="sync-status <?= $sync['status'] ?>">
@@ -394,9 +495,9 @@ include __DIR__ . '/components/unified-layout.php';
                 </tbody>
             </table>
         </div>
+        <?php endif; ?>
     </div>
 </div>
-<?php endif; ?>
 
 <!-- Configuration Info -->
 <div class="card">
