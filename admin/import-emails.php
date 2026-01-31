@@ -293,6 +293,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['import_file'])) {
 
                         // Map column names
                         $mappings = [
+                            // Standard formats
                             'firstname' => 'firstname', 'förnamn' => 'firstname', 'fornamn' => 'firstname',
                             'lastname' => 'lastname', 'efternamn' => 'lastname',
                             'email' => 'email', 'epost' => 'email', 'epostadress' => 'email', 'mail' => 'email',
@@ -303,9 +304,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['import_file'])) {
                             'postcode' => 'postcode', 'postnummer' => 'postcode',
                             'city' => 'city', 'ort' => 'city', 'stad' => 'city',
                             'phone' => 'phone', 'telefon' => 'phone', 'tel' => 'phone',
+
+                            // Ticket/Event registration format (Jetveo/WooCommerce)
+                            'attendeefirstname' => 'firstname',
+                            'attendeelastname' => 'lastname',
+                            'attendeeemail' => 'email',
+                            'attendeetelephone' => 'phone',
                         ];
 
                         $mapped = $mappings[$col] ?? $col;
+
+                        // Handle long ticket format column names (partial matching)
+                        if ($mapped === $col) {
+                            // Cykelklubb column
+                            if (strpos($col, 'cykelklubb') !== false) {
+                                $mapped = 'club';
+                            }
+                            // UCI-ID column (check for uciid pattern)
+                            elseif (strpos($col, 'uciid') !== false || (strpos($col, 'uci') !== false && strpos($col, 'licens') !== false)) {
+                                $mapped = 'uci_id';
+                            }
+                        }
+
                         $headerMap[$mapped] = $idx;
                     }
 
@@ -338,6 +358,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['import_file'])) {
                             $club = isset($headerMap['club']) ? trim($row[$headerMap['club']] ?? '') : '';
                             $uciId = isset($headerMap['uci_id']) ? trim($row[$headerMap['uci_id']] ?? '') : '';
                             $nationality = isset($headerMap['nationality']) ? strtoupper(trim($row[$headerMap['nationality']] ?? '')) : '';
+
+                            // Filter out placeholder UCI IDs (ticket format uses "1" for non-license holders)
+                            if ($uciId === '1' || $uciId === '0' || $uciId === '-') {
+                                $uciId = '';
+                            }
 
                             // Normalize nationality to 3-letter code
                             if (!empty($nationality)) {
