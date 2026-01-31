@@ -231,7 +231,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     unset($_SESSION['email_import_review']);
 }
 
-// Handle CSV upload
+// Handle CSV/ZIP upload
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['import_file'])) {
     checkCsrf();
 
@@ -240,47 +240,102 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['import_file'])) {
     if ($file['error'] !== UPLOAD_ERR_OK) {
         $message = 'Filuppladdning misslyckades';
         $messageType = 'error';
-    } elseif ($file['size'] > MAX_UPLOAD_SIZE) {
-        $message = 'Filen är för stor (max ' . (MAX_UPLOAD_SIZE / 1024 / 1024) . 'MB)';
+    } elseif ($file['size'] > MAX_UPLOAD_SIZE * 10) { // Allow larger zip files
+        $message = 'Filen är för stor (max ' . (MAX_UPLOAD_SIZE * 10 / 1024 / 1024) . 'MB)';
         $messageType = 'error';
     } else {
         $extension = strtolower(pathinfo($file['name'], PATHINFO_EXTENSION));
 
-        if (!in_array($extension, ['csv', 'txt'])) {
-            $message = 'Ogiltigt filformat. Tillåtna: CSV, TXT';
+        if (!in_array($extension, ['csv', 'txt', 'zip'])) {
+            $message = 'Ogiltigt filformat. Tillåtna: CSV, TXT, ZIP';
             $messageType = 'error';
         } else {
-            // Process CSV
-            $filepath = $file['tmp_name'];
+            // Initialize stats
+            $stats = [
+                'total' => 0,
+                'auto_updated' => 0,
+                'needs_review' => 0,
+                'no_match' => 0,
+                'already_has_email' => 0,
+                'empty_email' => 0,
+                'invalid_email' => 0,
+                'nationality_updated' => 0,
+                'files_processed' => 0,
+            ];
 
-            // Ensure UTF-8
-            $content = file_get_contents($filepath);
-            $content = preg_replace('/^\xEF\xBB\xBF/', '', $content); // Remove BOM
-            if (!mb_check_encoding($content, 'UTF-8')) {
-                $content = mb_convert_encoding($content, 'UTF-8', 'Windows-1252');
-            }
-            file_put_contents($filepath, $content);
+            $filesToProcess = [];
 
-            if (($handle = fopen($filepath, 'r')) !== false) {
-                // Detect delimiter
-                $firstLine = fgets($handle);
-                rewind($handle);
+            if ($extension === 'zip') {
+                // Extract CSV files from ZIP
+                $zip = new ZipArchive();
+                if ($zip->open($file['tmp_name']) === TRUE) {
+                    $tempDir = sys_get_temp_dir() . '/email_import_' . uniqid();
+                    mkdir($tempDir, 0755, true);
 
-                // Check for tab, semicolon, or comma
-                $tabCount = substr_count($firstLine, "\t");
-                $semiCount = substr_count($firstLine, ';');
-                $commaCount = substr_count($firstLine, ',');
+                    for ($i = 0; $i < $zip->numFiles; $i++) {
+                        $filename = $zip->getNameIndex($i);
+                        $fileExt = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
 
-                if ($tabCount > $semiCount && $tabCount > $commaCount) {
-                    $delimiter = "\t";
-                } elseif ($semiCount > $commaCount) {
-                    $delimiter = ';';
+                        if (in_array($fileExt, ['csv', 'txt'])) {
+                            $zip->extractTo($tempDir, $filename);
+                            $extractedPath = $tempDir . '/' . $filename;
+                            if (file_exists($extractedPath)) {
+                                $filesToProcess[] = [
+                                    'path' => $extractedPath,
+                                    'name' => basename($filename)
+                                ];
+                            }
+                        }
+                    }
+                    $zip->close();
+
+                    if (empty($filesToProcess)) {
+                        $message = 'Ingen CSV-fil hittades i ZIP-arkivet';
+                        $messageType = 'error';
+                    }
                 } else {
-                    $delimiter = ',';
+                    $message = 'Kunde inte öppna ZIP-filen';
+                    $messageType = 'error';
                 }
+            } else {
+                // Single CSV file
+                $filesToProcess[] = [
+                    'path' => $file['tmp_name'],
+                    'name' => $file['name']
+                ];
+            }
 
-                // Read header
-                $header = fgetcsv($handle, 4096, $delimiter);
+            // Process all CSV files
+            foreach ($filesToProcess as $csvFile) {
+                $filepath = $csvFile['path'];
+
+                // Ensure UTF-8
+                $content = file_get_contents($filepath);
+                $content = preg_replace('/^\xEF\xBB\xBF/', '', $content);
+                if (!mb_check_encoding($content, 'UTF-8')) {
+                    $content = mb_convert_encoding($content, 'UTF-8', 'Windows-1252');
+                }
+                file_put_contents($filepath, $content);
+
+                if (($handle = fopen($filepath, 'r')) !== false) {
+                    // Detect delimiter
+                    $firstLine = fgets($handle);
+                    rewind($handle);
+
+                    $tabCount = substr_count($firstLine, "\t");
+                    $semiCount = substr_count($firstLine, ';');
+                    $commaCount = substr_count($firstLine, ',');
+
+                    if ($tabCount > $semiCount && $tabCount > $commaCount) {
+                        $delimiter = "\t";
+                    } elseif ($semiCount > $commaCount) {
+                        $delimiter = ';';
+                    } else {
+                        $delimiter = ',';
+                    }
+
+                    // Read header
+                    $header = fgetcsv($handle, 4096, $delimiter);
                 if (!$header) {
                     $message = 'Tom fil eller ogiltigt format';
                     $messageType = 'error';
@@ -331,22 +386,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['import_file'])) {
 
                     // Check required columns
                     if (!isset($headerMap['firstname']) || !isset($headerMap['lastname']) || !isset($headerMap['email'])) {
-                        $message = 'Filen saknar obligatoriska kolumner: first_name, last_name, E-mail';
-                        $messageType = 'error';
-                    } else {
-                        // Process rows
-                        $stats = [
-                            'total' => 0,
-                            'auto_updated' => 0,
-                            'needs_review' => 0,
-                            'no_match' => 0,  // Not shown - likely parents
-                            'already_has_email' => 0,  // Skip - already has email
-                            'empty_email' => 0,
-                            'invalid_email' => 0,
-                            'nationality_updated' => 0,
-                        ];
+                        // Skip this file - missing required columns
+                        fclose($handle);
+                        continue;
+                    }
 
-                        $lineNumber = 1;
+                    // Process rows
+                    $stats['files_processed']++;
+                    $lineNumber = 1;
                         while (($row = fgetcsv($handle, 4096, $delimiter)) !== false) {
                             $lineNumber++;
                             $stats['total']++;
@@ -538,20 +585,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['import_file'])) {
                             }
                         }
 
-                        fclose($handle);
-
-                        // Store review data in session
-                        if (!empty($needsReview)) {
-                            $_SESSION['email_import_review'] = $needsReview;
-                        }
-
-                        $message = "Bearbetade {$stats['total']} rader. {$stats['auto_updated']} automatiskt uppdaterade, {$stats['needs_review']} behöver granskning.";
-                        $messageType = 'success';
-                    }
+                    fclose($handle);
                 }
+            } // End foreach filesToProcess
+
+            // Cleanup temp directory if ZIP was used
+            if ($extension === 'zip' && isset($tempDir) && is_dir($tempDir)) {
+                array_map('unlink', glob("$tempDir/*.*"));
+                array_map('unlink', glob("$tempDir/*/*.*"));
+                @rmdir($tempDir);
+            }
+
+            // Store review data in session
+            if (!empty($needsReview)) {
+                $_SESSION['email_import_review'] = $needsReview;
+            }
+
+            // Build message
+            if ($stats['files_processed'] > 0) {
+                $fileMsg = $stats['files_processed'] > 1 ? " ({$stats['files_processed']} filer)" : "";
+                $message = "Bearbetade {$stats['total']} rader{$fileMsg}. {$stats['auto_updated']} automatiskt uppdaterade, {$stats['needs_review']} behöver granskning.";
+                $messageType = 'success';
             } else {
-                $message = 'Kunde inte öppna filen';
-                $messageType = 'error';
+                $message = $message ?: 'Inga filer kunde bearbetas';
+                $messageType = $messageType ?: 'error';
             }
         }
     }
@@ -635,6 +692,12 @@ include __DIR__ . '/components/unified-layout.php';
     </div>
     <div class="card-body">
         <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(140px, 1fr)); gap: var(--space-md);">
+            <?php if (($stats['files_processed'] ?? 0) > 1): ?>
+            <div class="text-center">
+                <div style="font-size: var(--text-2xl); font-weight: 700;"><?= number_format($stats['files_processed']) ?></div>
+                <div class="text-secondary text-sm">Filer bearbetade</div>
+            </div>
+            <?php endif; ?>
             <div class="text-center">
                 <div style="font-size: var(--text-2xl); font-weight: 700;"><?= number_format($stats['total']) ?></div>
                 <div class="text-secondary text-sm">Totalt rader</div>
@@ -874,9 +937,9 @@ include __DIR__ . '/components/unified-layout.php';
             <?= csrf_field() ?>
 
             <div class="form-group">
-                <label class="form-label">Välj CSV/TXT-fil</label>
-                <input type="file" name="import_file" class="form-input" accept=".csv,.txt" required>
-                <small class="text-secondary">Max storlek: <?= round(MAX_UPLOAD_SIZE / 1024 / 1024) ?>MB. Stödjer tab-, semikolon- och kommaseparerade filer.</small>
+                <label class="form-label">Välj CSV/TXT/ZIP-fil</label>
+                <input type="file" name="import_file" class="form-input" accept=".csv,.txt,.zip" required>
+                <small class="text-secondary">Max storlek: <?= round(MAX_UPLOAD_SIZE * 10 / 1024 / 1024) ?>MB. Stödjer CSV/TXT (tab-, semikolon-, kommaseparerad) och ZIP med flera CSV-filer.</small>
             </div>
 
             <button type="submit" class="btn-admin btn-admin-primary">
