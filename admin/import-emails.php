@@ -723,9 +723,11 @@ include __DIR__ . '/components/unified-layout.php';
 
                                 <?php if (!empty($row['nationality'])): ?>
                                     <span class="text-secondary" style="margin-left: var(--space-md);">Nat:</span>
-                                    <?php if (($rider['nationality'] ?? '') !== $row['nationality']): ?>
+                                    <?php
+                                    $riderNat = $rider['nationality'] ?? '';
+                                    if ($riderNat !== $row['nationality']): ?>
                                         <span class="badge badge-info"><?= h($row['nationality']) ?></span>
-                                        <span class="text-muted">(nu: <?= h($rider['nationality'] ?: '-') ?>)</span>
+                                        <span class="text-muted">(nu: <?= h($riderNat ?: '-') ?>)</span>
                                     <?php else: ?>
                                         <?= h($row['nationality']) ?>
                                     <?php endif; ?>
