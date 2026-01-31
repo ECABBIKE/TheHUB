@@ -587,6 +587,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['import_file'])) {
 
                     fclose($handle);
                 }
+                } // End fopen if
             } // End foreach filesToProcess
 
             // Cleanup temp directory if ZIP was used
