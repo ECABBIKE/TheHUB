@@ -102,6 +102,9 @@ $migrationChecks = [
     '028_course_tracks.sql' => [
         'columns' => ['events.course_tracks', 'events.course_tracks_use_global']
     ],
+    '029_winback_discount_target.sql' => [
+        'columns' => ['winback_campaigns.discount_event_id']
+    ],
 ];
 
 // ============================================================================
