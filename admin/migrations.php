@@ -91,7 +91,7 @@ $migrationChecks = [
         'columns' => ['riders.is_anonymous', 'riders.anonymous_source', 'riders.merged_into_rider_id']
     ],
     '025_memberships_subscriptions.sql' => [
-        'tables' => ['membership_plans', 'membership_subscriptions', 'membership_invoices']
+        'tables' => ['membership_plans', 'member_subscriptions', 'subscription_invoices']
     ],
     '026_populate_series_events.sql' => [
         'data' => ['series_events.id IS NOT NULL']
@@ -102,7 +102,7 @@ $migrationChecks = [
     '028_course_tracks.sql' => [
         'columns' => ['events.course_tracks', 'events.course_tracks_use_global']
     ],
-    '029_winback_discount_target.sql' => [
+    '030_winback_discount_target.sql' => [
         'columns' => ['winback_campaigns.discount_event_id']
     ],
 ];
