@@ -262,6 +262,42 @@ Automatiskt genererade "trading cards" med deltagarstatistik:
 
 # CHANGELOG
 
+### 2026-01-29 (Mina Kop & Kvittosystem)
+- **Branch: claude/complete-payment-system-VH54k**
+
+- **Ny funktion: Kombinerad Mina Kop-sida**
+  - Slog ihop /profile/registrations och /profile/receipts till en sida
+  - Tab-baserat UI: Kommande anmalningar + Kophistorik
+  - Varje kop visar saljarens namn och org.nr
+  - Detaljerad kvittovisning med momsspecifikation
+  - Uppdaterade alla lankar i navigationen
+
+- **Ny funktion: Automatisk kvittogenerering**
+  - Kvitton skapas automatiskt vid betalning (Stripe webhook)
+  - Kvitton skapas vid manuell betalningsbekraftelse
+  - Momsberakning: 6% (sport), 12% (mat), 25% (ovrigt)
+  - Saljarens uppgifter hamtas fran payment_recipients
+
+- **Nya filer:**
+  - `Tools/migrations/028_vat_receipts_multi_recipient.sql` - Moms och kvitto-tabeller
+  - `includes/receipt-manager.php` - Kvittoskapande och momsberakning
+
+- **Nya databastabeller (migration 028):**
+  - `product_types` - Produkttyper med momssatser
+  - `receipts` - Kvittoheader
+  - `receipt_items` - Kvittorader med moms
+  - `receipt_sequences` - Lopnummer per ar
+
+- **Uppdaterade filer:**
+  - `pages/profile/receipts.php` - Helt omskriven till Mina Kop
+  - `pages/profile/registrations.php` - Redirect till receipts.php
+  - `api/webhooks/stripe-webhook.php` - Kvittogenerering vid betalning
+  - `includes/payment.php` - Kvittogenerering i markOrderPaid()
+  - `components/header.php` - Uppdaterad lank till Mina Kop
+  - `pages/profile/index.php` - Uppdaterade lankar
+  - `pages/checkout.php` - Uppdaterad success-lank
+  - `admin/migrations.php` - Lagt till migration 028 check
+
 ### 2026-01-25 (Medlemskap & Prenumerationer)
 - **Branch: claude/complete-payment-system-VH54k**
 

@@ -124,9 +124,9 @@ const WooCommerce = {
         // Show success message
         this.showNotification('Betalning genomförd!', 'success');
 
-        // Redirect to registrations page
+        // Redirect to purchases page
         setTimeout(() => {
-            window.location.href = '/profile/registrations?success=1';
+            window.location.href = '/profile/receipts?success=1';
         }, 1500);
     },
 

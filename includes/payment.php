@@ -500,6 +500,21 @@ function markOrderPaid(int $orderId, string $paymentReference = ''): bool {
 
         $pdo->commit();
 
+        // Generate receipt
+        try {
+            if (file_exists(__DIR__ . '/receipt-manager.php')) {
+                require_once __DIR__ . '/receipt-manager.php';
+                if (function_exists('createReceiptForOrder')) {
+                    $receiptResult = createReceiptForOrder($pdo, $orderId);
+                    if (!$receiptResult['success']) {
+                        error_log("Failed to create receipt for order {$orderId}: " . ($receiptResult['error'] ?? 'Unknown error'));
+                    }
+                }
+            }
+        } catch (Exception $receiptError) {
+            error_log("Receipt generation error: " . $receiptError->getMessage());
+        }
+
         // Send confirmation email
         try {
             require_once __DIR__ . '/mail.php';
