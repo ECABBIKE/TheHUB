@@ -179,6 +179,18 @@ $autoUpdated = [];
 $needsReview = [];
 $noMatch = [];
 
+// Clear session on fresh page load (GET request without any action)
+if ($_SERVER['REQUEST_METHOD'] === 'GET' && !isset($_GET['keep'])) {
+    unset($_SESSION['email_import_review']);
+}
+
+// Handle clear action
+if (isset($_GET['clear'])) {
+    unset($_SESSION['email_import_review']);
+    header('Location: /admin/import-emails.php');
+    exit;
+}
+
 // Handle manual confirmation of pending updates
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'confirm_updates') {
     checkCsrf();
