@@ -102,6 +102,10 @@ $migrationChecks = [
     '028_course_tracks.sql' => [
         'columns' => ['events.course_tracks', 'events.course_tracks_use_global']
     ],
+    '029_vat_receipts_multi_recipient.sql' => [
+        'tables' => ['product_types', 'receipts', 'receipt_items', 'receipt_sequences'],
+        'columns' => ['orders.vat_amount', 'orders.cart_session_id', 'order_items.vat_rate', 'series.series_registration_deadline_days']
+    ],
 ];
 
 // ============================================================================

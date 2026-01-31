@@ -113,19 +113,14 @@ $recentResults = $resultStmt->fetchAll(PDO::FETCH_ASSOC);
 
 <!-- Quick Links -->
 <div class="quick-links">
-    <a href="/profile/registrations" class="quick-link">
-        <span class="quick-link-icon"><i data-lucide="clipboard-list"></i></span>
-        <span class="quick-link-label">Mina anmälningar</span>
+    <a href="/profile/receipts" class="quick-link">
+        <span class="quick-link-icon"><i data-lucide="shopping-bag"></i></span>
+        <span class="quick-link-label">Mina köp</span>
         <span class="quick-link-arrow">›</span>
     </a>
     <a href="/rider/<?= $currentUser['id'] ?>" class="quick-link">
         <span class="quick-link-icon"><i data-lucide="flag"></i></span>
         <span class="quick-link-label">Mina resultat</span>
-        <span class="quick-link-arrow">›</span>
-    </a>
-    <a href="/profile/receipts" class="quick-link">
-        <span class="quick-link-icon"><i data-lucide="receipt"></i></span>
-        <span class="quick-link-label">Kvitton</span>
         <span class="quick-link-arrow">›</span>
     </a>
     <a href="/profile/race-reports" class="quick-link">
@@ -159,7 +154,7 @@ $recentResults = $resultStmt->fetchAll(PDO::FETCH_ASSOC);
     <div class="section">
         <div class="section-header">
             <h2>Kommande tävlingar</h2>
-            <a href="/profile/registrations" class="section-link">Visa alla</a>
+            <a href="/profile/receipts" class="section-link">Visa alla</a>
         </div>
         <div class="upcoming-list">
             <?php foreach ($upcomingRegs as $reg): ?>
