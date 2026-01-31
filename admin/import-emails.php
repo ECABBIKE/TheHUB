@@ -60,7 +60,7 @@ function findMatchingRider($db, $firstname, $lastname, $uciId = null, $clubName 
     if ($normUci) {
         $riders = $db->getAll("
             SELECT r.id, r.firstname, r.lastname, r.email, r.license_number,
-                   r.birth_year, r.nationality, c.name as club_name
+                   r.birth_year, r.nationality, r.gender, c.name as club_name
             FROM riders r
             LEFT JOIN clubs c ON r.club_id = c.id
             WHERE r.license_number IS NOT NULL
@@ -197,14 +197,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
     $confirmed = $_POST['confirm'] ?? [];
     $nationalities = $_POST['nationality'] ?? [];
+    $genders = $_POST['gender'] ?? [];
+    $birthYears = $_POST['birth_year'] ?? [];
     $updatedCount = 0;
     $skippedCount = 0;
+    $genderCount = 0;
+    $birthYearCount = 0;
     $nationalityCount = 0;
 
     foreach ($confirmed as $riderId => $email) {
         if (!empty($email) && filter_var($email, FILTER_VALIDATE_EMAIL)) {
             try {
                 $updateData = ['email' => $email];
+
+                // Also update gender if provided
+                if (!empty($genders[$riderId])) {
+                    $updateData['gender'] = $genders[$riderId];
+                    $genderCount++;
+                }
+
+                // Also update birth_year if provided
+                if (!empty($birthYears[$riderId])) {
+                    $updateData['birth_year'] = (int)$birthYears[$riderId];
+                    $birthYearCount++;
+                }
 
                 // Also update nationality if provided
                 if (!empty($nationalities[$riderId])) {
@@ -222,9 +238,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         }
     }
 
-    $message = "Uppdaterade $updatedCount e-postadresser" .
-        ($nationalityCount > 0 ? ", $nationalityCount nationaliteter" : "") .
-        ($skippedCount > 0 ? ", $skippedCount överhoppade" : "");
+    $parts = ["Uppdaterade $updatedCount e-postadresser"];
+    if ($genderCount > 0) $parts[] = "$genderCount kön";
+    if ($birthYearCount > 0) $parts[] = "$birthYearCount födelseår";
+    if ($nationalityCount > 0) $parts[] = "$nationalityCount nationaliteter";
+    if ($skippedCount > 0) $parts[] = "$skippedCount överhoppade";
+    $message = implode(', ', $parts);
     $messageType = 'success';
 
     // Clear session data
@@ -260,6 +279,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['import_file'])) {
                 'empty_email' => 0,
                 'invalid_email' => 0,
                 'nationality_updated' => 0,
+                'gender_updated' => 0,
+                'birth_year_updated' => 0,
                 'files_processed' => 0,
             ];
 
@@ -353,12 +374,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['import_file'])) {
                             'lastname' => 'lastname', 'efternamn' => 'lastname',
                             'email' => 'email', 'epost' => 'email', 'epostadress' => 'email', 'mail' => 'email',
                             'klubb' => 'club', 'club' => 'club', 'huvudförening' => 'club', 'huvudforening' => 'club',
+                            'klubbföretag' => 'club', 'klubbforetag' => 'club',
                             'uciid' => 'uci_id', 'ucikod' => 'uci_id', 'licensnumber' => 'uci_id', 'licensnummer' => 'uci_id',
                             'nationality' => 'nationality', 'land' => 'nationality', 'nationalitet' => 'nationality',
                             'adress' => 'address', 'address' => 'address',
                             'postcode' => 'postcode', 'postnummer' => 'postcode',
                             'city' => 'city', 'ort' => 'city', 'stad' => 'city',
                             'phone' => 'phone', 'telefon' => 'phone', 'tel' => 'phone',
+                            // Gender
+                            'kön' => 'gender', 'kon' => 'gender', 'gender' => 'gender', 'sex' => 'gender',
+                            // Birthdate
+                            'födelsedag' => 'birthdate', 'fodelsedag' => 'birthdate', 'födelsedatum' => 'birthdate',
+                            'birthdate' => 'birthdate', 'birthday' => 'birthdate', 'dateofbirth' => 'birthdate',
+                            // Email fallbacks
+                            'profilemail' => 'email_fallback2', 'profilepost' => 'email_fallback2',
 
                             // Ticket/Event registration format (Jetveo/WooCommerce)
                             'attendeefirstname' => 'firstname',
@@ -375,9 +404,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['import_file'])) {
                             if (strpos($col, 'cykelklubb') !== false) {
                                 $mapped = 'club';
                             }
-                            // UCI-ID column (check for uciid pattern)
-                            elseif (strpos($col, 'uciid') !== false || (strpos($col, 'uci') !== false && strpos($col, 'licens') !== false)) {
+                            // UCI-ID column (ID Medlemsnummer cykelförbundet)
+                            elseif (strpos($col, 'uciid') !== false ||
+                                    strpos($col, 'medlemsnummer') !== false ||
+                                    (strpos($col, 'uci') !== false && strpos($col, 'licens') !== false)) {
                                 $mapped = 'uci_id';
+                            }
+                            // Deltagarens email (fallback 1)
+                            elseif (strpos($col, 'deltagarensemail') !== false ||
+                                    strpos($col, 'deltagarensmail') !== false) {
+                                $mapped = 'email_fallback1';
+                            }
+                            // Profil e-mail (fallback 2)
+                            elseif (strpos($col, 'profil') !== false && (strpos($col, 'mail') !== false || strpos($col, 'epost') !== false)) {
+                                $mapped = 'email_fallback2';
                             }
                         }
 
@@ -401,14 +441,52 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['import_file'])) {
                             // Extract data
                             $firstname = isset($headerMap['firstname']) ? trim($row[$headerMap['firstname']] ?? '') : '';
                             $lastname = isset($headerMap['lastname']) ? trim($row[$headerMap['lastname']] ?? '') : '';
-                            $email = isset($headerMap['email']) ? trim($row[$headerMap['email']] ?? '') : '';
                             $club = isset($headerMap['club']) ? trim($row[$headerMap['club']] ?? '') : '';
                             $uciId = isset($headerMap['uci_id']) ? trim($row[$headerMap['uci_id']] ?? '') : '';
                             $nationality = isset($headerMap['nationality']) ? strtoupper(trim($row[$headerMap['nationality']] ?? '')) : '';
+                            $gender = isset($headerMap['gender']) ? strtoupper(trim($row[$headerMap['gender']] ?? '')) : '';
+                            $birthdate = isset($headerMap['birthdate']) ? trim($row[$headerMap['birthdate']] ?? '') : '';
 
-                            // Filter out placeholder UCI IDs (ticket format uses "1" for non-license holders)
-                            if ($uciId === '1' || $uciId === '0' || $uciId === '-') {
-                                $uciId = '';
+                            // Email with fallback: E-post → Deltagarens email → Profil e-mail
+                            $email = isset($headerMap['email']) ? trim($row[$headerMap['email']] ?? '') : '';
+                            if (empty($email) && isset($headerMap['email_fallback1'])) {
+                                $email = trim($row[$headerMap['email_fallback1']] ?? '');
+                            }
+                            if (empty($email) && isset($headerMap['email_fallback2'])) {
+                                $email = trim($row[$headerMap['email_fallback2']] ?? '');
+                            }
+
+                            // Validate UCI ID - only accept 11-digit format (e.g., 10076513580)
+                            // Reject "engångslicens", text, or wrong format
+                            if (!empty($uciId)) {
+                                // Remove any spaces
+                                $uciId = preg_replace('/\s+/', '', $uciId);
+                                // Only keep if exactly 11 digits
+                                if (!preg_match('/^\d{11}$/', $uciId)) {
+                                    $uciId = '';
+                                }
+                            }
+
+                            // Normalize gender to M/F
+                            if (!empty($gender)) {
+                                $gender = match(strtoupper($gender)) {
+                                    'M', 'MALE', 'MAN', 'HERR', 'HERRAR' => 'M',
+                                    'K', 'F', 'FEMALE', 'KVINNA', 'KVINNOR', 'DAM', 'DAMER' => 'F',
+                                    default => ''
+                                };
+                            }
+
+                            // Extract birth year from birthdate (formats: DD-MM-YYYY, YYYY-MM-DD, DD/MM/YYYY)
+                            $birthYear = null;
+                            if (!empty($birthdate)) {
+                                // Try different date formats
+                                if (preg_match('/(\d{4})/', $birthdate, $matches)) {
+                                    $year = (int)$matches[1];
+                                    // Sanity check: year should be between 1920 and current year
+                                    if ($year >= 1920 && $year <= date('Y')) {
+                                        $birthYear = $year;
+                                    }
+                                }
                             }
 
                             // Normalize nationality to 3-letter code
@@ -464,39 +542,85 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['import_file'])) {
                                 'club' => $club,
                                 'uci_id' => $uciId,
                                 'nationality' => $nationality,
+                                'gender' => $gender,
+                                'birth_year' => $birthYear,
                             ];
 
                             // Auto-update for high-confidence matches
                             $autoUpdateTypes = ['exact_uci', 'name_club', 'name_only_single'];
 
                             if (in_array($match['match_type'], $autoUpdateTypes)) {
-                                // Check if rider ALREADY has an email - skip if so!
+                                // Check if rider ALREADY has an email - skip email but still update gender/birth_year
                                 $existingEmail = $match['rider']['email'] ?? '';
                                 if (!empty($existingEmail)) {
-                                    // Already has email - skip (but still update nationality if needed)
+                                    // Already has email - skip email but update other fields
                                     $stats['already_has_email']++;
 
-                                    // Still update nationality if different
+                                    // Still update gender, birth_year, nationality if different
+                                    $updateData = [];
+
+                                    if (!empty($gender)) {
+                                        $currentGender = $match['rider']['gender'] ?? '';
+                                        if (empty($currentGender) || $currentGender !== $gender) {
+                                            $updateData['gender'] = $gender;
+                                        }
+                                    }
+
+                                    if (!empty($birthYear)) {
+                                        $currentBirthYear = $match['rider']['birth_year'] ?? null;
+                                        if (empty($currentBirthYear) || (int)$currentBirthYear !== $birthYear) {
+                                            $updateData['birth_year'] = $birthYear;
+                                        }
+                                    }
+
                                     if (!empty($nationality)) {
                                         $currentNat = $match['rider']['nationality'] ?? '';
                                         if (empty($currentNat) || $currentNat !== $nationality) {
-                                            try {
-                                                $db->update('riders', ['nationality' => $nationality], 'id = ?', [$match['rider']['id']]);
-                                                $stats['nationality_updated']++;
-                                            } catch (Exception $e) {
-                                                // Ignore nationality update errors
-                                            }
+                                            $updateData['nationality'] = $nationality;
+                                        }
+                                    }
+
+                                    if (!empty($updateData)) {
+                                        try {
+                                            $db->update('riders', $updateData, 'id = ?', [$match['rider']['id']]);
+                                            if (isset($updateData['gender'])) $stats['gender_updated']++;
+                                            if (isset($updateData['birth_year'])) $stats['birth_year_updated']++;
+                                            if (isset($updateData['nationality'])) $stats['nationality_updated']++;
+                                        } catch (Exception $e) {
+                                            // Ignore update errors
                                         }
                                     }
                                     continue;
                                 }
 
-                                // No email yet - add it
+                                // No email yet - add it along with gender/birth_year
                                 try {
                                     $updateData = ['email' => $email];
+                                    $genderUpdated = false;
+                                    $birthYearUpdated = false;
                                     $nationalityUpdated = false;
 
-                                    // Also update nationality if provided and different
+                                    // Update gender if provided and different
+                                    if (!empty($gender)) {
+                                        $currentGender = $match['rider']['gender'] ?? '';
+                                        if (empty($currentGender) || $currentGender !== $gender) {
+                                            $updateData['gender'] = $gender;
+                                            $genderUpdated = true;
+                                            $stats['gender_updated']++;
+                                        }
+                                    }
+
+                                    // Update birth_year if provided and different
+                                    if (!empty($birthYear)) {
+                                        $currentBirthYear = $match['rider']['birth_year'] ?? null;
+                                        if (empty($currentBirthYear) || (int)$currentBirthYear !== $birthYear) {
+                                            $updateData['birth_year'] = $birthYear;
+                                            $birthYearUpdated = true;
+                                            $stats['birth_year_updated']++;
+                                        }
+                                    }
+
+                                    // Update nationality if provided and different
                                     if (!empty($nationality)) {
                                         $currentNat = $match['rider']['nationality'] ?? '';
                                         if (empty($currentNat) || $currentNat !== $nationality) {
@@ -512,7 +636,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['import_file'])) {
                                         'rider_id' => $match['rider']['id'],
                                         'old_email' => '',
                                         'old_nationality' => $match['rider']['nationality'] ?? '',
+                                        'old_gender' => $match['rider']['gender'] ?? '',
+                                        'old_birth_year' => $match['rider']['birth_year'] ?? '',
                                         'nationality_updated' => $nationalityUpdated,
+                                        'gender_updated' => $genderUpdated,
+                                        'birth_year_updated' => $birthYearUpdated,
                                         'rider_club' => $match['rider']['club_name'] ?? '',
                                         'match_type' => $match['match_type'],
                                         'confidence' => $match['confidence'],
@@ -542,7 +670,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['import_file'])) {
                                     $singleMatch = array_values($matchesWithoutEmail)[0];
                                     try {
                                         $updateData = ['email' => $email];
+                                        $genderUpdated = false;
+                                        $birthYearUpdated = false;
                                         $nationalityUpdated = false;
+
+                                        if (!empty($gender)) {
+                                            $currentGender = $singleMatch['rider']['gender'] ?? '';
+                                            if (empty($currentGender) || $currentGender !== $gender) {
+                                                $updateData['gender'] = $gender;
+                                                $genderUpdated = true;
+                                                $stats['gender_updated']++;
+                                            }
+                                        }
+
+                                        if (!empty($birthYear)) {
+                                            $currentBirthYear = $singleMatch['rider']['birth_year'] ?? null;
+                                            if (empty($currentBirthYear) || (int)$currentBirthYear !== $birthYear) {
+                                                $updateData['birth_year'] = $birthYear;
+                                                $birthYearUpdated = true;
+                                                $stats['birth_year_updated']++;
+                                            }
+                                        }
+
                                         if (!empty($nationality)) {
                                             $currentNat = $singleMatch['rider']['nationality'] ?? '';
                                             if (empty($currentNat) || $currentNat !== $nationality) {
@@ -551,13 +700,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['import_file'])) {
                                                 $stats['nationality_updated']++;
                                             }
                                         }
+
                                         $db->update('riders', $updateData, 'id = ?', [$singleMatch['rider']['id']]);
                                         $stats['auto_updated']++;
                                         $autoUpdated[] = array_merge($rowData, [
                                             'rider_id' => $singleMatch['rider']['id'],
                                             'old_email' => '',
                                             'old_nationality' => $singleMatch['rider']['nationality'] ?? '',
+                                            'old_gender' => $singleMatch['rider']['gender'] ?? '',
+                                            'old_birth_year' => $singleMatch['rider']['birth_year'] ?? '',
                                             'nationality_updated' => $nationalityUpdated,
+                                            'gender_updated' => $genderUpdated,
+                                            'birth_year_updated' => $birthYearUpdated,
                                             'rider_club' => $singleMatch['rider']['club_name'] ?? '',
                                             'match_type' => 'ambiguous_resolved',
                                             'confidence' => 75,
@@ -707,7 +861,19 @@ include __DIR__ . '/components/unified-layout.php';
                 <div style="font-size: var(--text-2xl); font-weight: 700; color: var(--color-success);"><?= number_format($stats['auto_updated']) ?></div>
                 <div class="text-secondary text-sm">Auto-uppdaterade</div>
             </div>
-            <?php if ($stats['nationality_updated'] > 0): ?>
+            <?php if (($stats['gender_updated'] ?? 0) > 0): ?>
+            <div class="text-center">
+                <div style="font-size: var(--text-2xl); font-weight: 700; color: var(--color-info);"><?= number_format($stats['gender_updated']) ?></div>
+                <div class="text-secondary text-sm">Kön uppdaterat</div>
+            </div>
+            <?php endif; ?>
+            <?php if (($stats['birth_year_updated'] ?? 0) > 0): ?>
+            <div class="text-center">
+                <div style="font-size: var(--text-2xl); font-weight: 700; color: var(--color-info);"><?= number_format($stats['birth_year_updated']) ?></div>
+                <div class="text-secondary text-sm">Födelseår uppdaterat</div>
+            </div>
+            <?php endif; ?>
+            <?php if (($stats['nationality_updated'] ?? 0) > 0): ?>
             <div class="text-center">
                 <div style="font-size: var(--text-2xl); font-weight: 700; color: var(--color-info);"><?= number_format($stats['nationality_updated']) ?></div>
                 <div class="text-secondary text-sm">Nationalitet uppdaterad</div>
@@ -749,9 +915,9 @@ include __DIR__ . '/components/unified-layout.php';
                     <tr>
                         <th>Namn</th>
                         <th>E-post</th>
-                        <th>Tidigare</th>
+                        <th>Kön</th>
+                        <th>Födelseår</th>
                         <th>Matchningstyp</th>
-                        <th>Nat</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -759,7 +925,20 @@ include __DIR__ . '/components/unified-layout.php';
                     <tr>
                         <td><strong><?= h($row['firstname'] . ' ' . $row['lastname']) ?></strong></td>
                         <td><code class="text-sm"><?= h($row['email']) ?></code></td>
-                        <td class="text-secondary text-sm"><?= h($row['old_email'] ?: '-') ?></td>
+                        <td>
+                            <?php if (!empty($row['gender_updated']) && $row['gender_updated']): ?>
+                                <span class="badge badge-info"><?= h($row['gender']) ?></span>
+                            <?php else: ?>
+                                <?= h($row['gender'] ?: '-') ?>
+                            <?php endif; ?>
+                        </td>
+                        <td>
+                            <?php if (!empty($row['birth_year_updated']) && $row['birth_year_updated']): ?>
+                                <span class="badge badge-info"><?= h($row['birth_year']) ?></span>
+                            <?php else: ?>
+                                <?= h($row['birth_year'] ?: '-') ?>
+                            <?php endif; ?>
+                        </td>
                         <td>
                             <?php
                             $matchType = $row['match_type'] ?? 'exact_uci';
@@ -774,13 +953,6 @@ include __DIR__ . '/components/unified-layout.php';
                             };
                             ?>
                             <span class="badge <?= $badgeClass ?>"><?= h($label) ?></span>
-                        </td>
-                        <td>
-                            <?php if (!empty($row['nationality_updated']) && $row['nationality_updated']): ?>
-                                <span class="badge badge-info"><?= h($row['nationality']) ?></span>
-                            <?php else: ?>
-                                <?= h($row['nationality'] ?: '-') ?>
-                            <?php endif; ?>
                         </td>
                     </tr>
                     <?php endforeach; ?>
@@ -832,6 +1004,18 @@ include __DIR__ . '/components/unified-layout.php';
                         <dt>E-post att importera</dt>
                         <dd><code><?= h($row['email']) ?></code></dd>
                     </div>
+                    <?php if (!empty($row['gender'])): ?>
+                    <div>
+                        <dt>Kön</dt>
+                        <dd><?= h($row['gender']) ?></dd>
+                    </div>
+                    <?php endif; ?>
+                    <?php if (!empty($row['birth_year'])): ?>
+                    <div>
+                        <dt>Födelseår</dt>
+                        <dd><?= h($row['birth_year']) ?></dd>
+                    </div>
+                    <?php endif; ?>
                     <?php if (!empty($row['club'])): ?>
                     <div>
                         <dt>Klubb i filen</dt>
@@ -861,6 +1045,12 @@ include __DIR__ . '/components/unified-layout.php';
                                name="confirm[<?= $rider['id'] ?>]"
                                value="<?= h($row['email']) ?>"
                                style="margin-top: 4px;">
+                        <?php if (!empty($row['gender'])): ?>
+                        <input type="hidden" name="gender[<?= $rider['id'] ?>]" value="<?= h($row['gender']) ?>">
+                        <?php endif; ?>
+                        <?php if (!empty($row['birth_year'])): ?>
+                        <input type="hidden" name="birth_year[<?= $rider['id'] ?>]" value="<?= h($row['birth_year']) ?>">
+                        <?php endif; ?>
                         <?php if (!empty($row['nationality'])): ?>
                         <input type="hidden" name="nationality[<?= $rider['id'] ?>]" value="<?= h($row['nationality']) ?>">
                         <?php endif; ?>
@@ -880,6 +1070,30 @@ include __DIR__ . '/components/unified-layout.php';
                                     <em class="text-muted">Ingen</em>
                                 <?php endif; ?>
 
+                                <?php if (!empty($row['gender'])): ?>
+                                    <span class="text-secondary" style="margin-left: var(--space-md);">Kön:</span>
+                                    <?php
+                                    $riderGender = $rider['gender'] ?? '';
+                                    if ($riderGender !== $row['gender']): ?>
+                                        <span class="badge badge-info"><?= h($row['gender']) ?></span>
+                                        <span class="text-muted">(nu: <?= h($riderGender ?: '-') ?>)</span>
+                                    <?php else: ?>
+                                        <?= h($row['gender']) ?>
+                                    <?php endif; ?>
+                                <?php endif; ?>
+
+                                <?php if (!empty($row['birth_year'])): ?>
+                                    <span class="text-secondary" style="margin-left: var(--space-md);">År:</span>
+                                    <?php
+                                    $riderYear = $rider['birth_year'] ?? '';
+                                    if ((int)$riderYear !== (int)$row['birth_year']): ?>
+                                        <span class="badge badge-info"><?= h($row['birth_year']) ?></span>
+                                        <span class="text-muted">(nu: <?= h($riderYear ?: '-') ?>)</span>
+                                    <?php else: ?>
+                                        <?= h($row['birth_year']) ?>
+                                    <?php endif; ?>
+                                <?php endif; ?>
+
                                 <?php if ($rider['club_name']): ?>
                                     <span class="text-secondary" style="margin-left: var(--space-md);">Klubb:</span>
                                     <?= h($rider['club_name']) ?>
@@ -888,18 +1102,6 @@ include __DIR__ . '/components/unified-layout.php';
                                 <?php if ($rider['license_number']): ?>
                                     <span class="text-secondary" style="margin-left: var(--space-md);">UCI:</span>
                                     <code class="text-sm"><?= h($rider['license_number']) ?></code>
-                                <?php endif; ?>
-
-                                <?php if (!empty($row['nationality'])): ?>
-                                    <span class="text-secondary" style="margin-left: var(--space-md);">Nat:</span>
-                                    <?php
-                                    $riderNat = $rider['nationality'] ?? '';
-                                    if ($riderNat !== $row['nationality']): ?>
-                                        <span class="badge badge-info"><?= h($row['nationality']) ?></span>
-                                        <span class="text-muted">(nu: <?= h($riderNat ?: '-') ?>)</span>
-                                    <?php else: ?>
-                                        <?= h($row['nationality']) ?>
-                                    <?php endif; ?>
                                 <?php endif; ?>
                             </div>
                         </div>
