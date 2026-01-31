@@ -179,6 +179,18 @@ $autoUpdated = [];
 $needsReview = [];
 $noMatch = [];
 
+// Clear session on fresh page load (GET request without any action)
+if ($_SERVER['REQUEST_METHOD'] === 'GET' && !isset($_GET['keep'])) {
+    unset($_SESSION['email_import_review']);
+}
+
+// Handle clear action
+if (isset($_GET['clear'])) {
+    unset($_SESSION['email_import_review']);
+    header('Location: /admin/import-emails.php');
+    exit;
+}
+
 // Handle manual confirmation of pending updates
 if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'confirm_updates') {
     checkCsrf();
@@ -308,6 +320,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['import_file'])) {
                             'auto_updated' => 0,
                             'needs_review' => 0,
                             'no_match' => 0,  // Not shown - likely parents
+                            'already_has_email' => 0,  // Skip - already has email
                             'empty_email' => 0,
                             'invalid_email' => 0,
                             'nationality_updated' => 0,
@@ -385,7 +398,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['import_file'])) {
                             $autoUpdateTypes = ['exact_uci', 'name_club', 'name_only_single'];
 
                             if (in_array($match['match_type'], $autoUpdateTypes)) {
-                                // High confidence - auto update email and nationality
+                                // Check if rider ALREADY has an email - skip if so!
+                                $existingEmail = $match['rider']['email'] ?? '';
+                                if (!empty($existingEmail)) {
+                                    // Already has email - skip (but still update nationality if needed)
+                                    $stats['already_has_email']++;
+
+                                    // Still update nationality if different
+                                    if (!empty($nationality)) {
+                                        $currentNat = $match['rider']['nationality'] ?? '';
+                                        if (empty($currentNat) || $currentNat !== $nationality) {
+                                            try {
+                                                $db->update('riders', ['nationality' => $nationality], 'id = ?', [$match['rider']['id']]);
+                                                $stats['nationality_updated']++;
+                                            } catch (Exception $e) {
+                                                // Ignore nationality update errors
+                                            }
+                                        }
+                                    }
+                                    continue;
+                                }
+
+                                // No email yet - add it
                                 try {
                                     $updateData = ['email' => $email];
                                     $nationalityUpdated = false;
@@ -404,7 +438,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['import_file'])) {
                                     $stats['auto_updated']++;
                                     $autoUpdated[] = array_merge($rowData, [
                                         'rider_id' => $match['rider']['id'],
-                                        'old_email' => $match['rider']['email'] ?? '',
+                                        'old_email' => '',
                                         'old_nationality' => $match['rider']['nationality'] ?? '',
                                         'nationality_updated' => $nationalityUpdated,
                                         'rider_club' => $match['rider']['club_name'] ?? '',
@@ -423,11 +457,52 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_FILES['import_file'])) {
                                 // No match found - silently skip (likely parents, not in database)
                                 $stats['no_match']++;
                             } elseif ($match['match_type'] === 'ambiguous') {
-                                // Multiple people with same name - needs manual review
-                                $stats['needs_review']++;
-                                $needsReview[] = array_merge($rowData, [
-                                    'matches' => $match['matches'],
-                                ]);
+                                // Multiple people with same name - filter to only those WITHOUT email
+                                $matchesWithoutEmail = array_filter($match['matches'], function($m) {
+                                    return empty($m['rider']['email']);
+                                });
+
+                                if (empty($matchesWithoutEmail)) {
+                                    // All matches already have email - skip
+                                    $stats['already_has_email']++;
+                                } elseif (count($matchesWithoutEmail) === 1) {
+                                    // Only ONE without email - auto-update that one
+                                    $singleMatch = array_values($matchesWithoutEmail)[0];
+                                    try {
+                                        $updateData = ['email' => $email];
+                                        $nationalityUpdated = false;
+                                        if (!empty($nationality)) {
+                                            $currentNat = $singleMatch['rider']['nationality'] ?? '';
+                                            if (empty($currentNat) || $currentNat !== $nationality) {
+                                                $updateData['nationality'] = $nationality;
+                                                $nationalityUpdated = true;
+                                                $stats['nationality_updated']++;
+                                            }
+                                        }
+                                        $db->update('riders', $updateData, 'id = ?', [$singleMatch['rider']['id']]);
+                                        $stats['auto_updated']++;
+                                        $autoUpdated[] = array_merge($rowData, [
+                                            'rider_id' => $singleMatch['rider']['id'],
+                                            'old_email' => '',
+                                            'old_nationality' => $singleMatch['rider']['nationality'] ?? '',
+                                            'nationality_updated' => $nationalityUpdated,
+                                            'rider_club' => $singleMatch['rider']['club_name'] ?? '',
+                                            'match_type' => 'ambiguous_resolved',
+                                            'confidence' => 75,
+                                        ]);
+                                    } catch (Exception $e) {
+                                        $stats['needs_review']++;
+                                        $needsReview[] = array_merge($rowData, [
+                                            'matches' => $matchesWithoutEmail,
+                                        ]);
+                                    }
+                                } else {
+                                    // Multiple without email - needs manual review
+                                    $stats['needs_review']++;
+                                    $needsReview[] = array_merge($rowData, [
+                                        'matches' => array_values($matchesWithoutEmail),
+                                    ]);
+                                }
                             } else {
                                 // Fallback - needs review
                                 $stats['needs_review']++;
@@ -554,6 +629,10 @@ include __DIR__ . '/components/unified-layout.php';
                 <div class="text-secondary text-sm">Behöver granskning</div>
             </div>
             <div class="text-center">
+                <div style="font-size: var(--text-2xl); font-weight: 700; color: var(--color-text-muted);"><?= number_format($stats['already_has_email'] ?? 0) ?></div>
+                <div class="text-secondary text-sm">Redan har e-post</div>
+            </div>
+            <div class="text-center">
                 <div style="font-size: var(--text-2xl); font-weight: 700; color: var(--color-text-muted);"><?= number_format($stats['no_match']) ?></div>
                 <div class="text-secondary text-sm">Ej i databasen</div>
             </div>
@@ -601,6 +680,7 @@ include __DIR__ . '/components/unified-layout.php';
                                 'exact_uci' => 'UCI+Namn',
                                 'name_club' => 'Namn+Klubb',
                                 'name_only_single' => 'Unikt namn',
+                                'ambiguous_resolved' => 'Enda utan e-post',
                                 default => $matchType
                             };
                             ?>
