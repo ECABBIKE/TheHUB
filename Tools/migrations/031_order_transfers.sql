@@ -157,3 +157,96 @@ INSERT INTO system_settings (setting_key, setting_value, setting_type, descripti
     ('platform_fee_fixed', '0', 'number', 'Fast plattformsavgift i SEK (om fixed)'),
     ('platform_fee_percent', '0', 'number', 'Procentuell avgift (om percent)')
 ON DUPLICATE KEY UPDATE setting_key = setting_key;
+
+-- ============================================================
+-- 6. ORDER REFUNDS (Spåra återbetalningar)
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS order_refunds (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+
+    -- Koppling till order
+    order_id INT NOT NULL,
+
+    -- Belopp
+    amount DECIMAL(10,2) NOT NULL,
+    refund_type ENUM('full', 'partial') NOT NULL DEFAULT 'full',
+
+    -- Anledning
+    reason TEXT DEFAULT NULL,
+
+    -- Vem godkände återbetalningen
+    admin_id INT DEFAULT NULL,
+
+    -- Stripe-koppling
+    stripe_refund_id VARCHAR(100) DEFAULT NULL,
+
+    -- Status
+    status ENUM('pending', 'processing', 'completed', 'partial_completed', 'failed') DEFAULT 'pending',
+
+    -- Transfer reversals tracking
+    transfer_reversals_completed TINYINT(1) DEFAULT 0,
+
+    -- Fel-info
+    error_message TEXT DEFAULT NULL,
+
+    -- Timestamps
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    processed_at DATETIME DEFAULT NULL,
+    completed_at DATETIME DEFAULT NULL,
+
+    INDEX idx_order (order_id),
+    INDEX idx_status (status),
+    INDEX idx_stripe_refund (stripe_refund_id),
+    INDEX idx_created (created_at)
+);
+
+-- ============================================================
+-- 7. TRANSFER REVERSALS (Spåra återföringar från säljare)
+-- ============================================================
+
+CREATE TABLE IF NOT EXISTS transfer_reversals (
+    id INT AUTO_INCREMENT PRIMARY KEY,
+
+    -- Koppling till transfer och refund
+    order_transfer_id INT NOT NULL,
+    refund_id INT NOT NULL,
+
+    -- Belopp som återförts
+    amount DECIMAL(10,2) NOT NULL,
+
+    -- Stripe-koppling
+    stripe_reversal_id VARCHAR(100) DEFAULT NULL,
+
+    -- Status
+    status ENUM('pending', 'completed', 'failed') DEFAULT 'pending',
+
+    -- Fel-info
+    error_message TEXT DEFAULT NULL,
+
+    -- Timestamps
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    retried_at DATETIME DEFAULT NULL,
+
+    INDEX idx_transfer (order_transfer_id),
+    INDEX idx_refund (refund_id),
+    INDEX idx_status (status),
+    FOREIGN KEY (order_transfer_id) REFERENCES order_transfers(id) ON DELETE CASCADE,
+    FOREIGN KEY (refund_id) REFERENCES order_refunds(id) ON DELETE CASCADE
+);
+
+-- ============================================================
+-- 8. UPPDATERA ORDER_TRANSFERS FÖR REFUND-STÖD
+-- ============================================================
+
+ALTER TABLE order_transfers
+    ADD COLUMN IF NOT EXISTS reversed TINYINT(1) DEFAULT 0 AFTER status,
+    ADD COLUMN IF NOT EXISTS reversed_amount DECIMAL(10,2) DEFAULT 0.00 AFTER reversed,
+    ADD COLUMN IF NOT EXISTS reversed_at DATETIME DEFAULT NULL AFTER reversed_amount;
+
+-- ============================================================
+-- 9. UPPDATERA ORDERS FÖR REFUND-STÖD
+-- ============================================================
+
+ALTER TABLE orders
+    ADD COLUMN IF NOT EXISTS refunded_amount DECIMAL(10,2) DEFAULT 0.00 AFTER refunded_at;
