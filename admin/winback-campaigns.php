@@ -148,12 +148,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $tablesExist) {
             $error = 'Du har inte behörighet att redigera denna kampanj';
         } else {
             $name = trim($_POST['name'] ?? '');
-            $discountType = $_POST['discount_type'] ?? $campaignToEdit['discount_type'];
-            $discountValue = (float)($_POST['discount_value'] ?? $campaignToEdit['discount_value']);
-            $validUntil = $_POST['valid_until'] ?? $campaignToEdit['discount_valid_until'];
+            $discountCodeId = !empty($_POST['discount_code_id']) ? (int)$_POST['discount_code_id'] : null;
+            $emailSubject = trim($_POST['email_subject'] ?? '');
+            $emailBody = trim($_POST['email_body'] ?? '');
 
             if (empty($name)) {
-                $error = 'Kampanjnamn krävs';
+                $error = 'Kampanjnamn kravs';
+            } elseif (empty($discountCodeId)) {
+                $error = 'Valj en rabattkod';
             } else {
                 // Admin can also update owner settings
                 if ($isAdmin) {
@@ -162,19 +164,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $tablesExist) {
 
                     $stmt = $pdo->prepare("
                         UPDATE winback_campaigns
-                        SET name = ?, discount_type = ?, discount_value = ?, discount_valid_until = ?,
+                        SET name = ?, discount_code_id = ?, email_subject = ?, email_body = ?,
                             owner_user_id = ?, allow_promotor_access = ?
                         WHERE id = ?
                     ");
-                    $stmt->execute([$name, $discountType, $discountValue, $validUntil ?: null, $ownerId, $allowPromotorAccess, $id]);
+                    $stmt->execute([$name, $discountCodeId, $emailSubject, $emailBody, $ownerId, $allowPromotorAccess, $id]);
                 } else {
                     // Non-admin (promotor) can only update basic settings
                     $stmt = $pdo->prepare("
                         UPDATE winback_campaigns
-                        SET name = ?, discount_type = ?, discount_value = ?, discount_valid_until = ?
+                        SET name = ?, discount_code_id = ?, email_subject = ?, email_body = ?
                         WHERE id = ?
                     ");
-                    $stmt->execute([$name, $discountType, $discountValue, $validUntil ?: null, $id]);
+                    $stmt->execute([$name, $discountCodeId, $emailSubject, $emailBody, $id]);
                 }
                 $message = 'Kampanj uppdaterad';
             }
@@ -2223,7 +2225,7 @@ Din feedback ar anonym och hjalper oss att skapa battre tavlingar.</textarea>
 
 <!-- Edit Campaign Modal -->
 <div id="edit-campaign-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center;">
-    <div style="background:var(--color-bg-surface);border-radius:var(--radius-lg);padding:var(--space-xl);max-width:500px;width:90%;max-height:90vh;overflow-y:auto;">
+    <div style="background:var(--color-bg-surface);border-radius:var(--radius-lg);padding:var(--space-xl);max-width:600px;width:90%;max-height:90vh;overflow-y:auto;">
         <h3 style="margin-bottom:var(--space-lg);">
             <i data-lucide="edit-2" style="width:20px;height:20px;vertical-align:middle;margin-right:var(--space-xs);"></i>
             Redigera kampanj
@@ -2237,23 +2239,42 @@ Din feedback ar anonym och hjalper oss att skapa battre tavlingar.</textarea>
                 <input type="text" name="name" id="edit-campaign-name" class="form-input" required>
             </div>
 
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-md);margin-bottom:var(--space-md);">
-                <div class="form-group">
-                    <label class="form-label">Rabatttyp</label>
-                    <select name="discount_type" id="edit-discount-type" class="form-select">
-                        <option value="fixed">Fast belopp (SEK)</option>
-                        <option value="percentage">Procent (%)</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Rabattvarde</label>
-                    <input type="number" name="discount_value" id="edit-discount-value" class="form-input" min="1">
-                </div>
+            <div class="form-group" style="margin-bottom:var(--space-md);">
+                <label class="form-label">Rabattkod *</label>
+                <select name="discount_code_id" id="edit-discount-code-id" class="form-select" required>
+                    <option value="">Valj rabattkod...</option>
+                    <?php foreach ($discountCodes ?? [] as $dc):
+                        $discountLabel = $dc['discount_type'] === 'percentage'
+                            ? intval($dc['discount_value']) . '%'
+                            : number_format($dc['discount_value'], 0) . ' kr';
+                        $targetLabel = '';
+                        if ($dc['event_name']) $targetLabel = ' - Event: ' . $dc['event_name'];
+                        elseif ($dc['series_name']) $targetLabel = ' - Serie: ' . $dc['series_name'];
+                        elseif ($dc['applicable_to'] === 'all') $targetLabel = ' - Alla event';
+                    ?>
+                    <option value="<?= $dc['id'] ?>">
+                        <?= htmlspecialchars($dc['code']) ?> (<?= $discountLabel ?><?= $targetLabel ?>)
+                    </option>
+                    <?php endforeach; ?>
+                </select>
+                <small style="color:var(--color-text-muted);display:block;margin-top:4px;">
+                    <a href="/admin/discount-codes.php" target="_blank">Skapa ny rabattkod</a>
+                </small>
             </div>
 
-            <div class="form-group" style="margin-bottom:var(--space-md);">
-                <label class="form-label">Giltig t.o.m.</label>
-                <input type="date" name="valid_until" id="edit-valid-until" class="form-input">
+            <div style="margin-bottom:var(--space-md);padding:var(--space-md);background:var(--color-bg-page);border-radius:var(--radius-md);">
+                <h4 style="margin:0 0 var(--space-sm) 0;font-size:0.9rem;color:var(--color-text-secondary);">E-postinnehall</h4>
+                <div class="form-group" style="margin-bottom:var(--space-md);">
+                    <label class="form-label">Amnesrad</label>
+                    <input type="text" name="email_subject" id="edit-email-subject" class="form-input" placeholder="T.ex. Vi saknar dig!">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Meddelande</label>
+                    <textarea name="email_body" id="edit-email-body" class="form-input" rows="6" placeholder="Skriv ditt meddelande har..."></textarea>
+                    <small style="color:var(--color-text-muted);display:block;margin-top:4px;">
+                        Variabler: <code>{{name}}</code>, <code>{{discount_code}}</code>, <code>{{discount_text}}</code>
+                    </small>
+                </div>
             </div>
 
             <?php if ($isAdmin && !empty($promotors)): ?>
@@ -2298,9 +2319,9 @@ Din feedback ar anonym och hjalper oss att skapa battre tavlingar.</textarea>
 function editCampaign(campaign) {
     document.getElementById('edit-campaign-id').value = campaign.id;
     document.getElementById('edit-campaign-name').value = campaign.name;
-    document.getElementById('edit-discount-type').value = campaign.discount_type || 'fixed';
-    document.getElementById('edit-discount-value').value = campaign.discount_value || 100;
-    document.getElementById('edit-valid-until').value = campaign.discount_valid_until ? campaign.discount_valid_until.split(' ')[0] : '';
+    document.getElementById('edit-discount-code-id').value = campaign.discount_code_id || '';
+    document.getElementById('edit-email-subject').value = campaign.email_subject || 'Vi saknar dig!';
+    document.getElementById('edit-email-body').value = campaign.email_body || '';
 
     <?php if ($isAdmin && !empty($promotors)): ?>
     document.getElementById('edit-owner-id').value = campaign.owner_user_id || '';
