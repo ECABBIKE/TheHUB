@@ -87,7 +87,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $tablesExist) {
         $targetYear = (int)($_POST['target_year'] ?? (int)date('Y'));
 
         // Validate audience type
-        if (!in_array($audienceType, ['churned', 'active'])) {
+        if (!in_array($audienceType, ['churned', 'active', 'one_timer'])) {
             $audienceType = 'churned';
         }
 
@@ -563,6 +563,21 @@ if ($tablesExist) {
                         JOIN series s ON e.series_id = s.id
                         WHERE YEAR(e.date) = ?
                           AND s.brand_id IN ($placeholders)
+                    ");
+                    $params = array_merge([$c['target_year']], $brandIds);
+                } elseif ($audienceType === 'one_timer') {
+                    // ONE_TIMER: Count people who competed EXACTLY ONCE in target_year
+                    $stmt = $pdo->prepare("
+                        SELECT COUNT(*) FROM (
+                            SELECT r.cyclist_id
+                            FROM results r
+                            JOIN events e ON r.event_id = e.id
+                            JOIN series s ON e.series_id = s.id
+                            WHERE YEAR(e.date) = ?
+                              AND s.brand_id IN ($placeholders)
+                            GROUP BY r.cyclist_id
+                            HAVING COUNT(DISTINCT e.id) = 1
+                        ) AS one_timers
                     ");
                     $params = array_merge([$c['target_year']], $brandIds);
                 } else {
@@ -1190,6 +1205,30 @@ if ($selectedCampData) {
                 [$selectedCampData['target_year']],
                 $brandIds
             );
+        } elseif ($audienceType === 'one_timer') {
+            // ONE_TIMER: Get riders who competed EXACTLY ONCE in target_year for these brands
+            $sql = "
+                SELECT
+                    r.id, r.firstname, r.lastname, r.email,
+                    c.name as club_name,
+                    COUNT(DISTINCT e.id) as events_target_year,
+                    MIN(e.name) as single_event_name,
+                    MIN(e.date) as single_event_date
+                FROM riders r
+                JOIN results res ON r.id = res.cyclist_id
+                JOIN events e ON res.event_id = e.id
+                JOIN series s ON e.series_id = s.id
+                LEFT JOIN clubs c ON r.club_id = c.id
+                WHERE YEAR(e.date) = ?
+                  AND s.brand_id IN ($placeholders)
+                GROUP BY r.id
+                HAVING COUNT(DISTINCT e.id) = 1
+                ORDER BY r.lastname, r.firstname
+            ";
+            $params = array_merge(
+                [$selectedCampData['target_year']],
+                $brandIds
+            );
         } else {
             // CHURNED: Get riders who competed in start_year-end_year but NOT in target_year
             $sql = "
@@ -1282,12 +1321,20 @@ if ($selectedCampData) {
 }
 ?>
 
-<?php $isActiveAudience = ($selectedCampData['audience_type'] ?? 'churned') === 'active'; ?>
+<?php
+$audienceTypeView = $selectedCampData['audience_type'] ?? 'churned';
+$audienceBadgeClass = $audienceTypeView === 'active' ? 'badge-success' : ($audienceTypeView === 'one_timer' ? 'badge-info' : 'badge-warning');
+$audienceLabel = match($audienceTypeView) {
+    'active' => 'Aktiva ' . $selectedCampData['target_year'],
+    'one_timer' => 'Engangare ' . $selectedCampData['target_year'],
+    default => 'Churnade (ej ' . $selectedCampData['target_year'] . ')'
+};
+?>
 <div class="admin-card">
     <div class="admin-card-header">
         <h2>Malgrupp: <?= htmlspecialchars($selectedCampData['name'] ?? 'Okand') ?></h2>
-        <span class="badge <?= $isActiveAudience ? 'badge-success' : 'badge-warning' ?>">
-            <?= $isActiveAudience ? 'Aktiva ' . $selectedCampData['target_year'] : 'Churnade (ej ' . $selectedCampData['target_year'] . ')' ?>
+        <span class="badge <?= $audienceBadgeClass ?>">
+            <?= $audienceLabel ?>
         </span>
     </div>
     <div class="admin-card-body">
@@ -1954,6 +2001,16 @@ if (!$selectedCampData || !canAccessCampaign($selectedCampData)):
                             </p>
                         </div>
                     </label>
+                    <label class="audience-option" style="display:flex;align-items:flex-start;gap:var(--space-sm);padding:var(--space-md);background:var(--color-bg-page);border:2px solid var(--color-border);border-radius:var(--radius-md);cursor:pointer;transition:all 0.15s;">
+                        <input type="radio" name="audience_type" value="one_timer" style="margin-top:3px;">
+                        <div>
+                            <strong style="color:var(--color-text-primary);">Engangare</strong>
+                            <p style="margin:var(--space-2xs) 0 0;font-size:0.875rem;color:var(--color-text-secondary);">
+                                Tavlade bara EN gang malaret.<br>
+                                <em>Syfte: Fa dem att komma tillbaka fler ggr</em>
+                            </p>
+                        </div>
+                    </label>
                 </div>
             </div>
 
@@ -2109,8 +2166,12 @@ Din feedback ar anonym och hjalper oss att skapa battre tavlingar.</textarea>
                         <span class="badge <?= $c['is_active'] ? 'badge-success' : 'badge-secondary' ?>">
                             <?= $c['is_active'] ? 'Aktiv' : 'Inaktiv' ?>
                         </span>
-                        <span class="badge <?= $campAudienceType === 'active' ? 'badge-primary' : 'badge-warning' ?>" title="Malgrupp">
-                            <?= $campAudienceType === 'active' ? 'Aktiva ' . $c['target_year'] : 'Churnade' ?>
+                        <span class="badge <?= $campAudienceType === 'active' ? 'badge-primary' : ($campAudienceType === 'one_timer' ? 'badge-info' : 'badge-warning') ?>" title="Malgrupp">
+                            <?php
+                            if ($campAudienceType === 'active') echo 'Aktiva ' . $c['target_year'];
+                            elseif ($campAudienceType === 'one_timer') echo 'Engangare ' . $c['target_year'];
+                            else echo 'Churnade';
+                            ?>
                         </span>
                         <?php if ($ownerName): ?>
                         <span class="badge badge-info" title="Kampanjagare">
