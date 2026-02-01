@@ -141,7 +141,13 @@ try {
     if ($paymentRecipientColumnExists) {
         $tables = $db->getAll("SHOW TABLES LIKE 'payment_recipients'");
         if (!empty($tables)) {
-            $paymentRecipients = $db->getAll("SELECT id, name, swish_number, swish_name FROM payment_recipients WHERE active = 1 ORDER BY name ASC");
+            $paymentRecipients = $db->getAll("
+                SELECT id, name, swish_number, swish_name,
+                       stripe_account_id, stripe_account_status
+                FROM payment_recipients
+                WHERE active = 1
+                ORDER BY name ASC
+            ");
         }
     }
 } catch (Exception $e) {}
@@ -397,12 +403,18 @@ if (!$isNew) {
     } catch (Exception $e) {}
 
     if ($seriesEventsExists) {
-        // Count events via junction table
-        $eventsCount = $db->getValue("SELECT COUNT(*) FROM series_events WHERE series_id = ?", [$id]) ?: 0;
+        // Count events via junction table (only events that actually exist)
+        $eventsCount = $db->getValue("
+            SELECT COUNT(*)
+            FROM series_events se
+            INNER JOIN events e ON se.event_id = e.id
+            WHERE se.series_id = ?
+        ", [$id]) ?: 0;
         // Count events with at least one finished result
         $eventsWithResults = $db->getValue("
             SELECT COUNT(DISTINCT se.event_id)
             FROM series_events se
+            INNER JOIN events e ON se.event_id = e.id
             INNER JOIN results r ON r.event_id = se.event_id
             WHERE se.series_id = ? AND r.status = 'finished'
         ", [$id]) ?: 0;

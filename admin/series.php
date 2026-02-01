@@ -180,12 +180,16 @@ try {
 // Get series from database with brand info
 $formatSelect = $formatColumnExists ? ', s.format' : ', "Championship" as format';
 $yearSelect = $yearColumnExists ? ', s.year' : ', NULL as year';
+// Count events that actually exist in events table (ignore orphaned series_events entries)
 $eventsCountSelect = $seriesEventsTableExists
-    ? '(SELECT COUNT(*) FROM series_events WHERE series_id = s.id)'
+    ? '(SELECT COUNT(*) FROM series_events se
+        INNER JOIN events e ON se.event_id = e.id
+        WHERE se.series_id = s.id)'
     : '0';
 // Count events that have at least one result
 $eventsWithResultsSelect = $seriesEventsTableExists
     ? '(SELECT COUNT(DISTINCT se2.event_id) FROM series_events se2
+        INNER JOIN events e2 ON se2.event_id = e2.id
         INNER JOIN results r ON r.event_id = se2.event_id
         WHERE se2.series_id = s.id AND r.status = "finished")'
     : '0';

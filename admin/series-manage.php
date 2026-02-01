@@ -312,12 +312,19 @@ try {
     $pricingTemplates = $db->getAll("SELECT id, name, is_default FROM pricing_templates ORDER BY is_default DESC, name ASC");
 } catch (Exception $e) {}
 
-// Get payment recipients
+// Get payment recipients (with Stripe info)
 $paymentRecipients = [];
 try {
     $tables = $db->getAll("SHOW TABLES LIKE 'payment_recipients'");
     if (!empty($tables)) {
-        $paymentRecipients = $db->getAll("SELECT id, name, swish_number, swish_name FROM payment_recipients WHERE is_active = 1 ORDER BY name ASC");
+        $paymentRecipients = $db->getAll("
+            SELECT id, name, swish_number, swish_name,
+                   stripe_account_id, stripe_account_status,
+                   gateway_type
+            FROM payment_recipients
+            WHERE active = 1
+            ORDER BY name ASC
+        ");
     }
 } catch (Exception $e) {}
 
@@ -894,6 +901,16 @@ include __DIR__ . '/components/unified-layout.php';
         <input type="hidden" name="action" value="save_payment">
 
         <?php if (!empty($paymentRecipients)): ?>
+        <?php
+        // Get selected recipient for status display
+        $selectedRecipient = null;
+        foreach ($paymentRecipients as $r) {
+            if (($series['payment_recipient_id'] ?? '') == $r['id']) {
+                $selectedRecipient = $r;
+                break;
+            }
+        }
+        ?>
         <!-- Modern Payment Recipients -->
         <div class="admin-card mb-lg">
             <div class="admin-card-header">
@@ -906,19 +923,51 @@ include __DIR__ . '/components/unified-layout.php';
 
                 <div class="admin-form-group">
                     <label class="admin-form-label">Mottagare</label>
-                    <select name="payment_recipient_id" class="admin-form-select">
+                    <select name="payment_recipient_id" class="admin-form-select" onchange="this.form.submit()">
                         <option value="">-- Ingen (betalning inaktiverad) --</option>
-                        <?php foreach ($paymentRecipients as $r): ?>
+                        <?php foreach ($paymentRecipients as $r):
+                            $hasStripe = !empty($r['stripe_account_id']);
+                            $stripeActive = ($r['stripe_account_status'] ?? '') === 'active';
+                            $statusIcon = $hasStripe ? ($stripeActive ? ' [Stripe OK]' : ' [Stripe väntar]') : '';
+                        ?>
                         <option value="<?= $r['id'] ?>" <?= ($series['payment_recipient_id'] ?? '') == $r['id'] ? 'selected' : '' ?>>
-                            <?= htmlspecialchars($r['name']) ?> (<?= htmlspecialchars($r['swish_number']) ?>)
+                            <?= htmlspecialchars($r['name']) ?><?= $statusIcon ?>
                         </option>
                         <?php endforeach; ?>
                     </select>
                     <small class="text-secondary">
-                        <a href="/admin/payment-recipients" class="text-accent">Hantera mottagare</a> |
-                        <a href="/admin/swish-accounts" class="text-accent">Swish-konton</a>
+                        <a href="/admin/payment-recipients" class="text-accent">Hantera mottagare & Stripe Connect</a>
                     </small>
                 </div>
+
+                <?php if ($selectedRecipient): ?>
+                <!-- Stripe Connect Status -->
+                <div class="mt-md p-md" style="background: var(--color-bg-hover); border-radius: var(--radius-md); border: 1px solid var(--color-border);">
+                    <div class="flex justify-between items-center flex-wrap gap-sm">
+                        <div>
+                            <strong><?= htmlspecialchars($selectedRecipient['name']) ?></strong>
+                            <?php if (!empty($selectedRecipient['stripe_account_id'])): ?>
+                                <?php if (($selectedRecipient['stripe_account_status'] ?? '') === 'active'): ?>
+                                    <span class="badge badge-success ml-sm">Stripe aktiv</span>
+                                <?php else: ?>
+                                    <span class="badge badge-warning ml-sm">Stripe: <?= htmlspecialchars($selectedRecipient['stripe_account_status'] ?? 'pending') ?></span>
+                                <?php endif; ?>
+                            <?php else: ?>
+                                <span class="badge badge-secondary ml-sm">Stripe ej ansluten</span>
+                            <?php endif; ?>
+                        </div>
+                        <a href="/admin/payment-recipients" class="btn-admin btn-admin-secondary btn-admin-sm">
+                            <i data-lucide="settings"></i> Hantera
+                        </a>
+                    </div>
+                    <?php if (!empty($selectedRecipient['swish_number'])): ?>
+                    <div class="mt-sm text-sm text-secondary">
+                        <i data-lucide="smartphone" style="width: 14px; height: 14px; vertical-align: middle;"></i>
+                        Swish: <?= htmlspecialchars($selectedRecipient['swish_number']) ?>
+                    </div>
+                    <?php endif; ?>
+                </div>
+                <?php endif; ?>
             </div>
         </div>
         <?php elseif ($hasLegacySwish): ?>
