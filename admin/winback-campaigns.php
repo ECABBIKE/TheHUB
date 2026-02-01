@@ -212,6 +212,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $tablesExist) {
         $options = trim($_POST['options'] ?? '');
         $sortOrder = (int)($_POST['sort_order'] ?? 0);
         $isRequired = isset($_POST['is_required']) ? 1 : 0;
+        $campaignId = !empty($_POST['campaign_id']) ? (int)$_POST['campaign_id'] : null;
 
         if ($questionText) {
             $optionsJson = null;
@@ -222,11 +223,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $tablesExist) {
 
             $stmt = $pdo->prepare("
                 UPDATE winback_questions
-                SET question_text = ?, question_type = ?, options = ?, sort_order = ?, is_required = ?
+                SET question_text = ?, question_type = ?, options = ?, sort_order = ?, is_required = ?, campaign_id = ?
                 WHERE id = ?
             ");
-            $stmt->execute([$questionText, $questionType, $optionsJson, $sortOrder, $isRequired, $id]);
-            $message = 'Fraga uppdaterad!';
+            $stmt->execute([$questionText, $questionType, $optionsJson, $sortOrder, $isRequired, $campaignId, $id]);
+            $message = 'Fråga uppdaterad!';
         } else {
             $error = 'Frågetext krävs';
         }
@@ -1709,7 +1710,7 @@ document.getElementById('invitation-form')?.addEventListener('submit', function(
 <!-- Edit Question Modal -->
 <div id="edit-question-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center;">
     <div style="background:var(--color-bg-surface);border-radius:var(--radius-lg);padding:var(--space-xl);max-width:600px;width:90%;max-height:90vh;overflow-y:auto;">
-        <h3 style="margin-bottom:var(--space-lg);">Redigera fraga</h3>
+        <h3 style="margin-bottom:var(--space-lg);">Redigera fråga</h3>
         <form method="POST" id="edit-question-form">
             <input type="hidden" name="action" value="update_question">
             <input type="hidden" name="id" id="edit-q-id">
@@ -1719,9 +1720,28 @@ document.getElementById('invitation-form')?.addEventListener('submit', function(
                 <input type="text" name="question_text" id="edit-q-text" class="form-input" required>
             </div>
 
+            <div class="form-group" style="margin-bottom:var(--space-md);padding:var(--space-md);background:var(--color-bg-page);border-radius:var(--radius-md);">
+                <label class="form-label">Gäller för kampanj</label>
+                <div style="display:flex;flex-direction:column;gap:var(--space-sm);margin-top:var(--space-sm);">
+                    <label style="display:flex;align-items:center;gap:var(--space-sm);cursor:pointer;padding:var(--space-xs) 0;">
+                        <input type="radio" name="campaign_id" value="" id="edit-q-campaign-all">
+                        <span>Alla kampanjer (global fråga)</span>
+                    </label>
+                    <?php foreach ($campaigns as $camp): ?>
+                    <label style="display:flex;align-items:center;gap:var(--space-sm);cursor:pointer;padding:var(--space-xs) 0;">
+                        <input type="radio" name="campaign_id" value="<?= $camp['id'] ?>" class="edit-q-campaign-radio">
+                        <span><?= htmlspecialchars($camp['name']) ?></span>
+                        <?php if (!$camp['is_active']): ?>
+                            <span style="font-size:0.75rem;color:var(--color-text-muted);">(inaktiv)</span>
+                        <?php endif; ?>
+                    </label>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-md);margin-bottom:var(--space-md);">
                 <div class="form-group">
-                    <label class="form-label">Fragetyp</label>
+                    <label class="form-label">Frågetyp</label>
                     <select name="question_type" id="edit-q-type" class="form-select">
                         <option value="checkbox">Flerval (checkbox)</option>
                         <option value="radio">Enkelval (radio)</option>
@@ -1743,13 +1763,13 @@ document.getElementById('invitation-form')?.addEventListener('submit', function(
             <div class="form-group" style="margin-bottom:var(--space-lg);">
                 <label style="display:flex;align-items:center;gap:var(--space-xs);cursor:pointer;">
                     <input type="checkbox" name="is_required" id="edit-q-required" value="1">
-                    Obligatorisk fraga
+                    Obligatorisk fråga
                 </label>
             </div>
 
             <div style="display:flex;gap:var(--space-md);justify-content:flex-end;">
                 <button type="button" class="btn-admin btn-admin-secondary" onclick="closeEditModal()">Avbryt</button>
-                <button type="submit" class="btn-admin btn-admin-primåry">Spara</button>
+                <button type="submit" class="btn-admin btn-admin-primary">Spara</button>
             </div>
         </form>
     </div>
@@ -1771,6 +1791,21 @@ function editQuestion(q) {
     document.getElementById('edit-q-type').value = q.question_type;
     document.getElementById('edit-q-order').value = q.sort_order;
     document.getElementById('edit-q-required').checked = q.is_required == 1;
+
+    // Set campaign radio button
+    const campaignId = q.campaign_id || '';
+    if (campaignId === '' || campaignId === null) {
+        document.getElementById('edit-q-campaign-all').checked = true;
+    } else {
+        const radios = document.querySelectorAll('.edit-q-campaign-radio');
+        radios.forEach(radio => {
+            radio.checked = (radio.value == campaignId);
+        });
+        // If no match found, select "all"
+        if (!document.querySelector('.edit-q-campaign-radio:checked')) {
+            document.getElementById('edit-q-campaign-all').checked = true;
+        }
+    }
 
     // Parse options
     if (q.options) {
