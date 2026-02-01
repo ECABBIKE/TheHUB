@@ -49,6 +49,49 @@ if (!$series) {
     exit;
 }
 
+// ============================================================
+// AUTO-SYNC: Add events locked to this series (events.series_id) to series_events table
+// This ensures events with series_id set always appear in the series management
+// ============================================================
+try {
+    $lockedEvents = $db->getAll("
+        SELECT e.id, e.date
+        FROM events e
+        WHERE e.series_id = ?
+        AND e.id NOT IN (SELECT event_id FROM series_events WHERE series_id = ?)
+    ", [$id, $id]);
+
+    if (!empty($lockedEvents)) {
+        foreach ($lockedEvents as $ev) {
+            $existingCount = $db->getRow("SELECT COUNT(*) as cnt FROM series_events WHERE series_id = ?", [$id]);
+            $db->insert('series_events', [
+                'series_id' => $id,
+                'event_id' => $ev['id'],
+                'template_id' => null,
+                'sort_order' => ($existingCount['cnt'] ?? 0) + 1
+            ]);
+        }
+
+        // Re-sort all events by date
+        $allSeriesEvents = $db->getAll("
+            SELECT se.id, e.date
+            FROM series_events se
+            JOIN events e ON se.event_id = e.id
+            WHERE se.series_id = ?
+            ORDER BY e.date ASC
+        ", [$id]);
+
+        $sortOrder = 1;
+        foreach ($allSeriesEvents as $se) {
+            $db->update('series_events', ['sort_order' => $sortOrder], 'id = ?', [$se['id']]);
+            $sortOrder++;
+        }
+    }
+} catch (Exception $e) {
+    // Silently ignore sync errors
+    error_log("Series auto-sync error: " . $e->getMessage());
+}
+
 // Get active tab
 $activeTab = $_GET['tab'] ?? 'info';
 $validTabs = ['info', 'events', 'registration', 'payment', 'results'];
