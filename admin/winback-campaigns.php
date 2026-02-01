@@ -86,6 +86,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $tablesExist) {
         $endYear = (int)($_POST['end_year'] ?? ((int)date('Y') - 1));
         $targetYear = (int)($_POST['target_year'] ?? (int)date('Y'));
 
+        // Discount target (where can the code be used)
+        $discountApplicableTo = $_POST['discount_applicable_to'] ?? 'all';
+        $discountSeriesId = !empty($_POST['discount_series_id']) ? (int)$_POST['discount_series_id'] : null;
+        $discountEventId = !empty($_POST['discount_event_id']) ? (int)$_POST['discount_event_id'] : null;
+
+        // Validate discount target
+        if (!in_array($discountApplicableTo, ['all', 'brand', 'series', 'event'])) {
+            $discountApplicableTo = 'all';
+        }
+
         // Validate audience type
         if (!in_array($audienceType, ['churned', 'active'])) {
             $audienceType = 'churned';
@@ -97,6 +107,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $tablesExist) {
         if ($startYear > $endYear) $startYear = $endYear;
 
         if ($name && !empty($brandIds)) {
+            // Check if discount_applicable_to column exists (migration 021 or 029)
+            $hasDiscountTarget = false;
+            try {
+                $check = $pdo->query("SHOW COLUMNS FROM winback_campaigns LIKE 'discount_applicable_to'");
+                $hasDiscountTarget = $check->rowCount() > 0;
+            } catch (Exception $e) {}
+
             // Check if audience_type column exists (migration 023)
             $hasAudienceType = false;
             try {
@@ -104,14 +121,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $tablesExist) {
                 $hasAudienceType = $check->rowCount() > 0;
             } catch (Exception $e) {}
 
-            if ($hasAudienceType) {
+            // Check if discount_event_id column exists (migration 029)
+            $hasEventId = false;
+            try {
+                $check = $pdo->query("SHOW COLUMNS FROM winback_campaigns LIKE 'discount_event_id'");
+                $hasEventId = $check->rowCount() > 0;
+            } catch (Exception $e) {}
+
+            if ($hasAudienceType && $hasDiscountTarget && $hasEventId) {
+                $stmt = $pdo->prepare("
+                    INSERT INTO winback_campaigns (name, target_type, audience_type, brand_ids, start_year, end_year, target_year, discount_type, discount_value, discount_valid_until, discount_applicable_to, discount_series_id, discount_event_id, owner_user_id, allow_promotor_access, is_active)
+                    VALUES (?, 'multi_brand', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
+                ");
+                $stmt->execute([$name, $audienceType, json_encode(array_map('intval', $brandIds)), $startYear, $endYear, $targetYear, $discountType, $discountValue, $validUntil ?: null, $discountApplicableTo, $discountSeriesId, $discountEventId, $ownerId, $allowPromotorAccess]);
+            } elseif ($hasAudienceType && $hasDiscountTarget) {
+                $stmt = $pdo->prepare("
+                    INSERT INTO winback_campaigns (name, target_type, audience_type, brand_ids, start_year, end_year, target_year, discount_type, discount_value, discount_valid_until, discount_applicable_to, discount_series_id, owner_user_id, allow_promotor_access, is_active)
+                    VALUES (?, 'multi_brand', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
+                ");
+                $stmt->execute([$name, $audienceType, json_encode(array_map('intval', $brandIds)), $startYear, $endYear, $targetYear, $discountType, $discountValue, $validUntil ?: null, $discountApplicableTo, $discountSeriesId, $ownerId, $allowPromotorAccess]);
+            } elseif ($hasAudienceType) {
                 $stmt = $pdo->prepare("
                     INSERT INTO winback_campaigns (name, target_type, audience_type, brand_ids, start_year, end_year, target_year, discount_type, discount_value, discount_valid_until, owner_user_id, allow_promotor_access, is_active)
                     VALUES (?, 'multi_brand', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
                 ");
                 $stmt->execute([$name, $audienceType, json_encode(array_map('intval', $brandIds)), $startYear, $endYear, $targetYear, $discountType, $discountValue, $validUntil ?: null, $ownerId, $allowPromotorAccess]);
             } else {
-                // Fallback if migration not run yet
+                // Fallback if migrations not run yet
                 $stmt = $pdo->prepare("
                     INSERT INTO winback_campaigns (name, target_type, brand_ids, start_year, end_year, target_year, discount_type, discount_value, discount_valid_until, owner_user_id, allow_promotor_access, is_active)
                     VALUES (?, 'multi_brand', ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
@@ -277,6 +313,45 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $tablesExist) {
             }
         } catch (Exception $e) {
             $error = 'Fel vid rensning: ' . $e->getMessage();
+        }
+    } elseif ($action === 'delete_campaign') {
+        // Step 2: Actually delete the campaign (requires confirmation token)
+        $id = (int)$_POST['id'];
+        $confirmToken = $_POST['confirm_token'] ?? '';
+        $expectedToken = 'DELETE_CAMPAIGN_' . $id;
+
+        if ($confirmToken !== $expectedToken) {
+            $error = 'Ogiltig bekraftelse. Forsok igen.';
+        } else {
+            // Get campaign to check permissions
+            $stmt = $pdo->prepare("SELECT * FROM winback_campaigns WHERE id = ?");
+            $stmt->execute([$id]);
+            $campaignToDelete = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$campaignToDelete) {
+                $error = 'Kampanj hittades inte';
+            } elseif (!canEditCampaign($campaignToDelete)) {
+                $error = 'Du har inte behorighet att radera denna kampanj';
+            } else {
+                try {
+                    // Check if campaign has responses
+                    $stmt = $pdo->prepare("SELECT COUNT(*) FROM winback_responses WHERE campaign_id = ?");
+                    $stmt->execute([$id]);
+                    $responseCount = (int)$stmt->fetchColumn();
+
+                    if ($responseCount > 0) {
+                        $error = "Kan inte radera kampanj med $responseCount svar. Inaktivera istallet.";
+                    } else {
+                        // Delete invitations first (foreign key)
+                        $pdo->prepare("DELETE FROM winback_invitations WHERE campaign_id = ?")->execute([$id]);
+                        // Delete campaign
+                        $pdo->prepare("DELETE FROM winback_campaigns WHERE id = ?")->execute([$id]);
+                        $message = 'Kampanj raderad: ' . $campaignToDelete['name'];
+                    }
+                } catch (Exception $e) {
+                    $error = 'Fel vid radering: ' . $e->getMessage();
+                }
+            }
         }
     } elseif ($action === 'send_invitations') {
         // Send invitations to selected riders
@@ -1917,6 +1992,39 @@ if (!$selectedCampData || !canAccessCampaign($selectedCampData)):
                 </div>
             </div>
 
+            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:var(--space-md);margin-bottom:var(--space-md);padding:var(--space-md);background:var(--color-bg-page);border-radius:var(--radius-md);">
+                <div class="form-group">
+                    <label class="form-label">Rabatten galler for</label>
+                    <select name="discount_applicable_to" id="discount-applicable-to" class="form-select" onchange="toggleDiscountTarget()">
+                        <option value="all">Alla event</option>
+                        <option value="series">Specifik serie</option>
+                        <option value="event">Specifikt event</option>
+                    </select>
+                </div>
+                <div class="form-group" id="discount-series-group" style="display:none;">
+                    <label class="form-label">Valj serie</label>
+                    <select name="discount_series_id" class="form-select">
+                        <option value="">Valj serie...</option>
+                        <?php
+                        $seriesList = $pdo->query("SELECT id, name, year FROM series WHERE status = 'active' OR year >= YEAR(CURDATE()) ORDER BY year DESC, name")->fetchAll(PDO::FETCH_ASSOC);
+                        foreach ($seriesList as $s): ?>
+                        <option value="<?= $s['id'] ?>"><?= htmlspecialchars($s['name']) ?> (<?= $s['year'] ?>)</option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="form-group" id="discount-event-group" style="display:none;">
+                    <label class="form-label">Valj event</label>
+                    <select name="discount_event_id" class="form-select">
+                        <option value="">Valj event...</option>
+                        <?php
+                        $eventsList = $pdo->query("SELECT id, name, date FROM events WHERE date >= CURDATE() ORDER BY date ASC LIMIT 100")->fetchAll(PDO::FETCH_ASSOC);
+                        foreach ($eventsList as $ev): ?>
+                        <option value="<?= $ev['id'] ?>"><?= htmlspecialchars($ev['name']) ?> (<?= date('Y-m-d', strtotime($ev['date'])) ?>)</option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+            </div>
+
             <div class="form-group" style="margin-bottom:var(--space-md);">
                 <label class="form-label">Varumarken *</label>
                 <div style="display:flex;flex-wrap:wrap;gap:var(--space-sm);">
@@ -2022,6 +2130,9 @@ if (!$selectedCampData || !canAccessCampaign($selectedCampData)):
                             <i data-lucide="<?= $c['is_active'] ? 'pause' : 'play' ?>"></i>
                         </button>
                     </form>
+                    <button type="button" class="btn-admin btn-admin-ghost btn-sm" onclick="confirmDeleteCampaign(<?= $c['id'] ?>, '<?= htmlspecialchars($c['name'], ENT_QUOTES) ?>', <?= $c['response_count'] ?>)" title="Radera kampanj" style="color: var(--color-error);">
+                        <i data-lucide="trash-2"></i>
+                    </button>
                     <?php endif; ?>
                 </div>
             </div>
@@ -2173,6 +2284,50 @@ function closeEditCampaignModal() {
 document.getElementById('edit-campaign-modal')?.addEventListener('click', function(e) {
     if (e.target === this) closeEditCampaignModal();
 });
+
+// Toggle discount target fields
+function toggleDiscountTarget() {
+    const select = document.getElementById('discount-applicable-to');
+    const seriesGroup = document.getElementById('discount-series-group');
+    const eventGroup = document.getElementById('discount-event-group');
+
+    if (select && seriesGroup && eventGroup) {
+        seriesGroup.style.display = select.value === 'series' ? 'block' : 'none';
+        eventGroup.style.display = select.value === 'event' ? 'block' : 'none';
+    }
+}
+
+// Delete campaign - 2-step confirmation
+function confirmDeleteCampaign(id, name, responseCount) {
+    if (responseCount > 0) {
+        alert('Denna kampanj har ' + responseCount + ' svar och kan inte raderas.\n\nInaktivera kampanjen istallet.');
+        return;
+    }
+
+    // Step 1: First confirmation
+    const step1 = confirm('Vill du radera kampanjen "' + name + '"?\n\nDetta kan inte angras!');
+    if (!step1) return;
+
+    // Step 2: Type confirmation
+    const confirmText = prompt('For att bekrafta, skriv kampanjens namn:\n\n' + name);
+    if (confirmText !== name) {
+        if (confirmText !== null) {
+            alert('Namnet matchade inte. Radering avbruten.');
+        }
+        return;
+    }
+
+    // Submit delete form
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.innerHTML = `
+        <input type="hidden" name="action" value="delete_campaign">
+        <input type="hidden" name="id" value="${id}">
+        <input type="hidden" name="confirm_token" value="DELETE_CAMPAIGN_${id}">
+    `;
+    document.body.appendChild(form);
+    form.submit();
+}
 </script>
 
 <?php endif; // tablesExist ?>

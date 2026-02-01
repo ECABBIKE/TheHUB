@@ -91,7 +91,7 @@ $migrationChecks = [
         'columns' => ['riders.is_anonymous', 'riders.anonymous_source', 'riders.merged_into_rider_id']
     ],
     '025_memberships_subscriptions.sql' => [
-        'tables' => ['membership_plans', 'membership_subscriptions', 'membership_invoices']
+        'tables' => ['membership_plans', 'member_subscriptions', 'subscription_invoices']
     ],
     '026_populate_series_events.sql' => [
         'data' => ['series_events.id IS NOT NULL']
@@ -106,7 +106,10 @@ $migrationChecks = [
         'tables' => ['product_types', 'receipts', 'receipt_items', 'receipt_sequences'],
         'columns' => ['orders.vat_amount', 'orders.cart_session_id', 'order_items.vat_rate', 'series.series_registration_deadline_days']
     ],
-    '030_order_transfers.sql' => [
+    '030_winback_discount_target.sql' => [
+        'columns' => ['winback_campaigns.discount_event_id']
+    ],
+    '031_order_transfers.sql' => [
         'tables' => ['order_transfers', 'seller_reports', 'seller_report_items'],
         'columns' => ['order_items.payment_recipient_id', 'order_items.seller_amount', 'orders.transfer_group', 'orders.transfers_status']
     ],
