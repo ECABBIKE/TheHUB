@@ -1165,7 +1165,6 @@ if ($selectedCampData) {
                   AND s.brand_id IN ($placeholders)
                 GROUP BY r.id
                 ORDER BY events_2025 DESC, r.lastname, r.firstname
-                LIMIT 500
             ";
             $params = array_merge(
                 [$selectedCampData['target_year']],
@@ -1196,7 +1195,6 @@ if ($selectedCampData) {
                   )
                 GROUP BY r.id
                 ORDER BY last_active_year DESC, r.lastname, r.firstname
-                LIMIT 500
             ";
             $params = array_merge(
                 [$selectedCampData['start_year'], $selectedCampData['end_year']],
