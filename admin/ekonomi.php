@@ -432,6 +432,10 @@ include __DIR__ . '/components/unified-layout.php';
                 <i data-lucide="link"></i>
                 Stripe-inställningar
             </a>
+            <a href="/admin/promotor-stripe.php" class="action-link">
+                <i data-lucide="eye"></i>
+                Arrangörsvy (test)
+            </a>
         </div>
     </div>
 
