@@ -106,6 +106,10 @@ $migrationChecks = [
         'tables' => ['product_types', 'receipts', 'receipt_items', 'receipt_sequences'],
         'columns' => ['orders.vat_amount', 'orders.cart_session_id', 'order_items.vat_rate', 'series.series_registration_deadline_days']
     ],
+    '030_order_transfers.sql' => [
+        'tables' => ['order_transfers', 'seller_reports', 'seller_report_items'],
+        'columns' => ['order_items.payment_recipient_id', 'order_items.seller_amount', 'orders.transfer_group', 'orders.transfers_status']
+    ],
 ];
 
 // ============================================================================
