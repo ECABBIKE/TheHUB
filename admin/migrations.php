@@ -109,6 +109,9 @@ $migrationChecks = [
     '030_winback_discount_target.sql' => [
         'columns' => ['winback_campaigns.discount_event_id']
     ],
+    '031_winback_discount_code_link.sql' => [
+        'columns' => ['winback_campaigns.discount_code_id', 'winback_campaigns.email_subject', 'winback_campaigns.email_body']
+    ],
 ];
 
 // ============================================================================
