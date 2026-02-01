@@ -495,7 +495,7 @@ include __DIR__ . '/components/unified-layout.php';
     Beräkna om poäng
    </button>
   </form>
-  <a href="/admin/series/edit/<?= $seriesId ?>" class="btn btn--secondary">
+  <a href="/admin/series/manage/<?= $seriesId ?>" class="btn btn--secondary">
    <i data-lucide="settings"></i>
    Inställningar
   </a>

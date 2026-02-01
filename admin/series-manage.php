@@ -25,29 +25,102 @@ if (isset($_GET['id'])) {
     }
 }
 
-if ($id <= 0) {
+// Handle new series creation
+$isNewSeries = ($id <= 0 && isset($_GET['new']));
+
+if ($id <= 0 && !$isNewSeries) {
     $_SESSION['flash_message'] = 'Ogiltigt serie-ID';
     $_SESSION['flash_type'] = 'error';
     header('Location: /admin/series');
     exit;
 }
 
-// Check access
-if (!canAccessSeries($id)) {
+// Check access (admins can create new series)
+if (!$isNewSeries && !canAccessSeries($id)) {
     $_SESSION['flash_message'] = 'Du har inte behörighet att hantera denna serie';
     $_SESSION['flash_type'] = 'error';
     header('Location: /admin/series');
     exit;
 }
 
-// Fetch series
-$series = $db->getRow("SELECT * FROM series WHERE id = ?", [$id]);
-if (!$series) {
-    $_SESSION['flash_message'] = 'Serie hittades inte';
+// Only admins can create new series
+if ($isNewSeries && !isAdmin()) {
+    $_SESSION['flash_message'] = 'Endast administratörer kan skapa nya serier';
     $_SESSION['flash_type'] = 'error';
     header('Location: /admin/series');
     exit;
 }
+
+// Fetch series or create empty template for new series
+if ($isNewSeries) {
+    $series = [
+        'id' => 0,
+        'name' => '',
+        'year' => date('Y'),
+        'type' => '',
+        'format' => 'Championship',
+        'status' => 'planning',
+        'description' => '',
+        'organizer' => '',
+        'brand_id' => null,
+        'pricing_template_id' => null,
+        'payment_recipient_id' => null,
+    ];
+} else {
+    $series = $db->getRow("SELECT * FROM series WHERE id = ?", [$id]);
+    if (!$series) {
+        $_SESSION['flash_message'] = 'Serie hittades inte';
+        $_SESSION['flash_type'] = 'error';
+        header('Location: /admin/series');
+        exit;
+    }
+}
+
+// ============================================================
+// AUTO-SYNC: Add events locked to this series (events.series_id) to series_events table
+// This ensures events with series_id set always appear in the series management
+// Only run for existing series, not new ones
+// ============================================================
+if (!$isNewSeries) {
+try {
+    $lockedEvents = $db->getAll("
+        SELECT e.id, e.date
+        FROM events e
+        WHERE e.series_id = ?
+        AND e.id NOT IN (SELECT event_id FROM series_events WHERE series_id = ?)
+    ", [$id, $id]);
+
+    if (!empty($lockedEvents)) {
+        foreach ($lockedEvents as $ev) {
+            $existingCount = $db->getRow("SELECT COUNT(*) as cnt FROM series_events WHERE series_id = ?", [$id]);
+            $db->insert('series_events', [
+                'series_id' => $id,
+                'event_id' => $ev['id'],
+                'template_id' => null,
+                'sort_order' => ($existingCount['cnt'] ?? 0) + 1
+            ]);
+        }
+
+        // Re-sort all events by date
+        $allSeriesEvents = $db->getAll("
+            SELECT se.id, e.date
+            FROM series_events se
+            JOIN events e ON se.event_id = e.id
+            WHERE se.series_id = ?
+            ORDER BY e.date ASC
+        ", [$id]);
+
+        $sortOrder = 1;
+        foreach ($allSeriesEvents as $se) {
+            $db->update('series_events', ['sort_order' => $sortOrder], 'id = ?', [$se['id']]);
+            $sortOrder++;
+        }
+    }
+} catch (Exception $e) {
+    // Silently ignore sync errors
+    error_log("Series auto-sync error: " . $e->getMessage());
+}
+} // End of !$isNewSeries check
 
 // Get active tab
 $activeTab = $_GET['tab'] ?? 'info';
@@ -104,9 +177,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             } catch (Exception $e) {}
 
-            $db->update('series', $seriesData, 'id = ?', [$id]);
-            $series = $db->getRow("SELECT * FROM series WHERE id = ?", [$id]);
-            $message = 'Serie uppdaterad!';
+            // Create new series or update existing
+            if ($id <= 0) {
+                // Insert new series
+                $newId = $db->insert('series', $seriesData);
+                if ($newId) {
+                    $id = $newId;
+                    $isNewSeries = false;
+                    $series = $db->getRow("SELECT * FROM series WHERE id = ?", [$id]);
+                    $_SESSION['flash_message'] = 'Serie skapad!';
+                    $_SESSION['flash_type'] = 'success';
+                    // Redirect to the new series manage page
+                    header('Location: /admin/series/manage/' . $id);
+                    exit;
+                } else {
+                    $message = 'Kunde inte skapa serien';
+                    $messageType = 'error';
+                }
+            } else {
+                $db->update('series', $seriesData, 'id = ?', [$id]);
+                $series = $db->getRow("SELECT * FROM series WHERE id = ?", [$id]);
+                $message = 'Serie uppdaterad!';
+            }
             $messageType = 'success';
         }
     }
@@ -312,12 +404,19 @@ try {
     $pricingTemplates = $db->getAll("SELECT id, name, is_default FROM pricing_templates ORDER BY is_default DESC, name ASC");
 } catch (Exception $e) {}
 
-// Get payment recipients
+// Get payment recipients (with Stripe info)
 $paymentRecipients = [];
 try {
     $tables = $db->getAll("SHOW TABLES LIKE 'payment_recipients'");
     if (!empty($tables)) {
-        $paymentRecipients = $db->getAll("SELECT id, name, swish_number, swish_name FROM payment_recipients WHERE is_active = 1 ORDER BY name ASC");
+        $paymentRecipients = $db->getAll("
+            SELECT id, name, swish_number, swish_name,
+                   stripe_account_id, stripe_account_status,
+                   gateway_type
+            FROM payment_recipients
+            WHERE active = 1
+            ORDER BY name ASC
+        ");
     }
 } catch (Exception $e) {}
 
@@ -349,11 +448,19 @@ $uniqueParticipants = $db->getRow("
 // ============================================================
 // PAGE CONFIG
 // ============================================================
-$page_title = 'Hantera: ' . htmlspecialchars($series['name']);
-$breadcrumbs = [
-    ['label' => 'Serier', 'url' => '/admin/series'],
-    ['label' => htmlspecialchars($series['name'])]
-];
+if ($isNewSeries) {
+    $page_title = 'Skapa ny serie';
+    $breadcrumbs = [
+        ['label' => 'Serier', 'url' => '/admin/series'],
+        ['label' => 'Ny serie']
+    ];
+} else {
+    $page_title = 'Hantera: ' . htmlspecialchars($series['name']);
+    $breadcrumbs = [
+        ['label' => 'Serier', 'url' => '/admin/series'],
+        ['label' => htmlspecialchars($series['name'])]
+    ];
+}
 include __DIR__ . '/components/unified-layout.php';
 ?>
 
@@ -519,6 +626,13 @@ include __DIR__ . '/components/unified-layout.php';
 </div>
 <?php endif; ?>
 
+<?php if ($isNewSeries): ?>
+<!-- New Series - simplified view -->
+<div class="alert alert-info">
+    <i data-lucide="info"></i>
+    Fyll i grundläggande information och klicka "Spara" för att skapa serien. Därefter kan du lägga till events och konfigurera anmälan/betalning.
+</div>
+<?php else: ?>
 <!-- Quick Stats -->
 <div class="quick-stats">
     <div class="quick-stat">
@@ -567,6 +681,7 @@ include __DIR__ . '/components/unified-layout.php';
         Resultat
     </a>
 </nav>
+<?php endif; // End of !$isNewSeries ?>
 
 <!-- ============================================================ -->
 <!-- INFO TAB -->
@@ -645,6 +760,7 @@ include __DIR__ . '/components/unified-layout.php';
     </form>
 </div>
 
+<?php if (!$isNewSeries): ?>
 <!-- ============================================================ -->
 <!-- EVENTS TAB -->
 <!-- ============================================================ -->
@@ -894,6 +1010,16 @@ include __DIR__ . '/components/unified-layout.php';
         <input type="hidden" name="action" value="save_payment">
 
         <?php if (!empty($paymentRecipients)): ?>
+        <?php
+        // Get selected recipient for status display
+        $selectedRecipient = null;
+        foreach ($paymentRecipients as $r) {
+            if (($series['payment_recipient_id'] ?? '') == $r['id']) {
+                $selectedRecipient = $r;
+                break;
+            }
+        }
+        ?>
         <!-- Modern Payment Recipients -->
         <div class="admin-card mb-lg">
             <div class="admin-card-header">
@@ -906,19 +1032,51 @@ include __DIR__ . '/components/unified-layout.php';
 
                 <div class="admin-form-group">
                     <label class="admin-form-label">Mottagare</label>
-                    <select name="payment_recipient_id" class="admin-form-select">
+                    <select name="payment_recipient_id" class="admin-form-select" onchange="this.form.submit()">
                         <option value="">-- Ingen (betalning inaktiverad) --</option>
-                        <?php foreach ($paymentRecipients as $r): ?>
+                        <?php foreach ($paymentRecipients as $r):
+                            $hasStripe = !empty($r['stripe_account_id']);
+                            $stripeActive = ($r['stripe_account_status'] ?? '') === 'active';
+                            $statusIcon = $hasStripe ? ($stripeActive ? ' [Stripe OK]' : ' [Stripe väntar]') : '';
+                        ?>
                         <option value="<?= $r['id'] ?>" <?= ($series['payment_recipient_id'] ?? '') == $r['id'] ? 'selected' : '' ?>>
-                            <?= htmlspecialchars($r['name']) ?> (<?= htmlspecialchars($r['swish_number']) ?>)
+                            <?= htmlspecialchars($r['name']) ?><?= $statusIcon ?>
                         </option>
                         <?php endforeach; ?>
                     </select>
                     <small class="text-secondary">
-                        <a href="/admin/payment-recipients" class="text-accent">Hantera mottagare</a> |
-                        <a href="/admin/swish-accounts" class="text-accent">Swish-konton</a>
+                        <a href="/admin/payment-recipients" class="text-accent">Hantera mottagare & Stripe Connect</a>
                     </small>
                 </div>
+
+                <?php if ($selectedRecipient): ?>
+                <!-- Stripe Connect Status -->
+                <div class="mt-md p-md" style="background: var(--color-bg-hover); border-radius: var(--radius-md); border: 1px solid var(--color-border);">
+                    <div class="flex justify-between items-center flex-wrap gap-sm">
+                        <div>
+                            <strong><?= htmlspecialchars($selectedRecipient['name']) ?></strong>
+                            <?php if (!empty($selectedRecipient['stripe_account_id'])): ?>
+                                <?php if (($selectedRecipient['stripe_account_status'] ?? '') === 'active'): ?>
+                                    <span class="badge badge-success ml-sm">Stripe aktiv</span>
+                                <?php else: ?>
+                                    <span class="badge badge-warning ml-sm">Stripe: <?= htmlspecialchars($selectedRecipient['stripe_account_status'] ?? 'pending') ?></span>
+                                <?php endif; ?>
+                            <?php else: ?>
+                                <span class="badge badge-secondary ml-sm">Stripe ej ansluten</span>
+                            <?php endif; ?>
+                        </div>
+                        <a href="/admin/payment-recipients" class="btn-admin btn-admin-secondary btn-admin-sm">
+                            <i data-lucide="settings"></i> Hantera
+                        </a>
+                    </div>
+                    <?php if (!empty($selectedRecipient['swish_number'])): ?>
+                    <div class="mt-sm text-sm text-secondary">
+                        <i data-lucide="smartphone" style="width: 14px; height: 14px; vertical-align: middle;"></i>
+                        Swish: <?= htmlspecialchars($selectedRecipient['swish_number']) ?>
+                    </div>
+                    <?php endif; ?>
+                </div>
+                <?php endif; ?>
             </div>
         </div>
         <?php elseif ($hasLegacySwish): ?>
@@ -1075,6 +1233,7 @@ include __DIR__ . '/components/unified-layout.php';
         </div>
     </div>
 </div>
+<?php endif; // End of !$isNewSeries for Events, Registration, Payment, Results tabs ?>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {

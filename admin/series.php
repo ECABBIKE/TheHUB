@@ -114,9 +114,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
-// Redirect old edit URLs to new edit page
+// Redirect old edit URLs to manage page
 if (isset($_GET['edit']) && is_numeric($_GET['edit'])) {
-    header('Location: /admin/series/edit/' . intval($_GET['edit']));
+    header('Location: /admin/series/manage/' . intval($_GET['edit']));
     exit;
 }
 
@@ -180,12 +180,16 @@ try {
 // Get series from database with brand info
 $formatSelect = $formatColumnExists ? ', s.format' : ', "Championship" as format';
 $yearSelect = $yearColumnExists ? ', s.year' : ', NULL as year';
+// Count events that actually exist in events table (ignore orphaned series_events entries)
 $eventsCountSelect = $seriesEventsTableExists
-    ? '(SELECT COUNT(*) FROM series_events WHERE series_id = s.id)'
+    ? '(SELECT COUNT(*) FROM series_events se
+        INNER JOIN events e ON se.event_id = e.id
+        WHERE se.series_id = s.id)'
     : '0';
 // Count events that have at least one result
 $eventsWithResultsSelect = $seriesEventsTableExists
     ? '(SELECT COUNT(DISTINCT se2.event_id) FROM series_events se2
+        INNER JOIN events e2 ON se2.event_id = e2.id
         INNER JOIN results r ON r.event_id = se2.event_id
         WHERE se2.series_id = s.id AND r.status = "finished")'
     : '0';
@@ -251,7 +255,7 @@ if ($isPromotorOnly) {
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>
         Varumärken
     </a>
-    <a href="/admin/series/edit?new=1" class="btn-admin btn-admin-primary">
+    <a href="/admin/series/manage/0?new=1" class="btn-admin btn-admin-primary">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
         Ny Serie
     </a>';
@@ -387,7 +391,7 @@ include __DIR__ . '/components/unified-layout.php';
                 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>
                 <h3>Inga serier hittades</h3>
                 <p>Prova att ändra filtren eller skapa en ny serie.</p>
-                <a href="/admin/series/edit?new=1" class="btn-admin btn-admin-primary">Skapa serie</a>
+                <a href="/admin/series/manage/0?new=1" class="btn-admin btn-admin-primary">Skapa serie</a>
             </div>
         <?php else: ?>
             <div class="admin-table-container">
@@ -431,7 +435,7 @@ include __DIR__ . '/components/unified-layout.php';
                                     <?php endif; ?>
                                 </td>
                                 <td>
-                                    <a href="/admin/series/edit/<?= $serie['id'] ?>" style="color: var(--color-accent); text-decoration: none; font-weight: 500;">
+                                    <a href="/admin/series/manage/<?= $serie['id'] ?>" style="color: var(--color-accent); text-decoration: none; font-weight: 500;">
                                         <?= htmlspecialchars($serie['name']) ?>
                                     </a>
                                     <?php if (!empty($serie['type'])): ?>
