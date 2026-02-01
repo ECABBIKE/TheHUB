@@ -168,22 +168,111 @@ include __DIR__ . '/components/unified-layout.php';
 </div>
 <?php endif; ?>
 
-<!-- Info Card -->
-<div class="admin-card mb-lg" style="background: var(--color-bg-hover); border: 1px solid var(--color-border);">
+<!-- Admin Instructions -->
+<div class="admin-card mb-lg" style="background: linear-gradient(135deg, var(--color-bg-surface), var(--color-bg-hover)); border: 2px solid var(--color-accent-light);">
+    <div class="admin-card-body">
+        <h3 style="margin-bottom: var(--space-md);">
+            <i data-lucide="clipboard-list" style="width: 20px; height: 20px; vertical-align: middle; color: var(--color-accent);"></i>
+            Admin: Sa har fungerar aterbetalningar
+        </h3>
+
+        <div style="display: grid; gap: var(--space-md); grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));">
+            <!-- Admin Steps -->
+            <div style="background: var(--color-bg-page); padding: var(--space-md); border-radius: var(--radius-md); border: 1px solid var(--color-border);">
+                <h4 style="margin: 0 0 var(--space-sm) 0; display: flex; align-items: center; gap: var(--space-xs);">
+                    <i data-lucide="shield-check" style="width: 18px; height: 18px; color: var(--color-accent);"></i>
+                    Dina steg som admin
+                </h4>
+                <ol style="color: var(--color-text-secondary); margin: 0; padding-left: 1.2rem; font-size: var(--text-sm);">
+                    <li>Arrangoren kontaktar dig med refund-begaran</li>
+                    <li>Verifiera att arrangoren godkanner refund</li>
+                    <li>Sok upp ordern nedan (Order ID)</li>
+                    <li>Valj hel/delvis aterbetalning</li>
+                    <li>Klicka "Processa Aterbetalning"</li>
+                </ol>
+                <p class="text-xs text-secondary" style="margin: var(--space-sm) 0 0 0;">
+                    <i data-lucide="info" style="width: 12px; height: 12px;"></i>
+                    Saljartransfers aterfors <strong>automatiskt</strong>
+                </p>
+            </div>
+
+            <!-- Policy Box -->
+            <div style="background: var(--color-bg-page); padding: var(--space-md); border-radius: var(--radius-md); border: 1px solid var(--color-border);">
+                <h4 style="margin: 0 0 var(--space-sm) 0; display: flex; align-items: center; gap: var(--space-xs);">
+                    <i data-lucide="book-open" style="width: 18px; height: 18px; color: var(--color-warning);"></i>
+                    Aterbetalningspolicy (Allmanna Villkor)
+                </h4>
+                <ul style="color: var(--color-text-secondary); margin: 0; padding-left: 1.2rem; font-size: var(--text-sm);">
+                    <li><strong>5.1:</strong> Ingen angerratt for idrottsevenemang</li>
+                    <li><strong>5.2:</strong> Refund endast om <strong>Arrangoren godkanner</strong></li>
+                    <li><strong>5.3:</strong> Aterbetalning till samma betalmetod</li>
+                </ul>
+                <p class="text-xs text-secondary" style="margin: var(--space-sm) 0 0 0;">
+                    <i data-lucide="external-link" style="width: 12px; height: 12px;"></i>
+                    <a href="/villkor" target="_blank" style="color: var(--color-accent);">Las fullstandiga villkor</a>
+                </p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Promotor/Arrangor Info -->
+<div class="admin-card mb-lg" style="border: 1px solid var(--color-border); background: rgba(251, 191, 36, 0.03);">
     <div class="admin-card-body">
         <h3 style="margin-bottom: var(--space-sm);">
-            <i data-lucide="info" style="width: 20px; height: 20px; vertical-align: middle;"></i>
-            Om Återbetalningar
+            <i data-lucide="users" style="width: 20px; height: 20px; vertical-align: middle; color: var(--color-warning);"></i>
+            For arrangorer: Sa fungerar det
         </h3>
-        <p style="color: var(--color-text-secondary); margin-bottom: var(--space-sm);">
-            Enligt Allmänna Villkor (5.1-5.3) gäller <strong>ingen ångerrätt</strong> för idrottsevenemang.
-            Återbetalning sker endast om <strong>Arrangören godkänner</strong>.
+        <p style="color: var(--color-text-secondary); font-size: var(--text-sm); margin-bottom: var(--space-sm);">
+            Information att dela med arrangorer som fragar om aterbetalningar:
         </p>
-        <ul style="color: var(--color-text-secondary); margin: 0; padding-left: var(--space-lg);">
-            <li>Vid refund återförs automatiskt säljarens andel från deras Stripe-konto</li>
-            <li>Plattformen bär risken för eventuella underskott</li>
-            <li>Refunds kan också processas direkt via Stripe Dashboard (synkas automatiskt)</li>
-        </ul>
+
+        <div style="background: var(--color-bg-page); padding: var(--space-md); border-radius: var(--radius-md); font-size: var(--text-sm);">
+            <p style="margin: 0 0 var(--space-sm) 0;"><strong>For arrangorer/promotors:</strong></p>
+            <ul style="color: var(--color-text-secondary); margin: 0; padding-left: 1.2rem;">
+                <li><strong>Deltagare kontaktar dig</strong> (arrangoren) for aterbetalning</li>
+                <li><strong>Du beslutar</strong> om aterbetalning ska godkannas</li>
+                <li>Meddela TheHUB-admin med: Order-ID + ditt beslut</li>
+                <li>Admin processar aterbetalningen tekniskt</li>
+                <li>Pengarna aterfors fran ditt Stripe-konto automatiskt</li>
+            </ul>
+            <div style="margin-top: var(--space-sm); padding: var(--space-sm); background: var(--color-bg-hover); border-radius: var(--radius-sm);">
+                <strong style="color: var(--color-text-primary);">Kontakt for refund-begaran:</strong>
+                <span style="color: var(--color-text-secondary);">info@gravityseries.se</span>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Technical Info -->
+<div class="admin-card mb-lg" style="border: 1px solid var(--color-border);">
+    <div class="admin-card-body">
+        <details>
+            <summary style="cursor: pointer; font-weight: 600; display: flex; align-items: center; gap: var(--space-sm);">
+                <i data-lucide="code" style="width: 18px; height: 18px; color: var(--color-accent);"></i>
+                Teknisk information (for admins)
+            </summary>
+            <div style="margin-top: var(--space-md); padding: var(--space-md); background: var(--color-bg-page); border-radius: var(--radius-md);">
+                <ul style="color: var(--color-text-secondary); margin: 0; padding-left: 1.2rem; font-size: var(--text-sm);">
+                    <li><strong>Refunds via Stripe Dashboard</strong> synkas automatiskt via webhook (charge.refunded)</li>
+                    <li><strong>Automatisk transfer reversal</strong> - vid refund aterfors saljartransfers proportionellt</li>
+                    <li><strong>Partial refunds</strong> - mojligt att aterbetala del av order</li>
+                    <li><strong>Plattformen bar risken</strong> for chargebacks (negativ balans)</li>
+                    <li><strong>Retry-funktion</strong> for misslyckade transfer-aterforingar</li>
+                </ul>
+                <div style="margin-top: var(--space-md); display: flex; gap: var(--space-sm); flex-wrap: wrap;">
+                    <a href="https://dashboard.stripe.com/refunds" target="_blank" class="btn-admin btn-admin-secondary btn-admin-sm">
+                        <i data-lucide="external-link"></i> Stripe Dashboard
+                    </a>
+                    <a href="/admin/stripe-connect" class="btn-admin btn-admin-secondary btn-admin-sm">
+                        <i data-lucide="link"></i> Stripe Connect
+                    </a>
+                    <a href="/admin/ekonomi" class="btn-admin btn-admin-secondary btn-admin-sm">
+                        <i data-lucide="wallet"></i> Ekonomi
+                    </a>
+                </div>
+            </div>
+        </details>
     </div>
 </div>
 
