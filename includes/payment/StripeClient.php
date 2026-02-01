@@ -161,9 +161,11 @@ class StripeClient {
             'type' => 'express',
             'country' => $data['country'] ?? 'SE',
             'email' => $data['email'] ?? null,
-            // Recipient configuration: only transfers capability (not card_payments)
-            // This means the platform handles payments, sellers receive transfers
+            // Standard Express account with both capabilities
+            // - card_payments: Can accept card payments directly (required by Stripe)
+            // - transfers: Can receive transfers from the platform
             'capabilities' => [
+                'card_payments' => ['requested' => true],
                 'transfers' => ['requested' => true]
             ],
             'business_type' => $data['business_type'] ?? 'individual',
