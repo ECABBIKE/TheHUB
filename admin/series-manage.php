@@ -25,34 +25,63 @@ if (isset($_GET['id'])) {
     }
 }
 
-if ($id <= 0) {
+// Handle new series creation
+$isNewSeries = ($id <= 0 && isset($_GET['new']));
+
+if ($id <= 0 && !$isNewSeries) {
     $_SESSION['flash_message'] = 'Ogiltigt serie-ID';
     $_SESSION['flash_type'] = 'error';
     header('Location: /admin/series');
     exit;
 }
 
-// Check access
-if (!canAccessSeries($id)) {
+// Check access (admins can create new series)
+if (!$isNewSeries && !canAccessSeries($id)) {
     $_SESSION['flash_message'] = 'Du har inte behörighet att hantera denna serie';
     $_SESSION['flash_type'] = 'error';
     header('Location: /admin/series');
     exit;
 }
 
-// Fetch series
-$series = $db->getRow("SELECT * FROM series WHERE id = ?", [$id]);
-if (!$series) {
-    $_SESSION['flash_message'] = 'Serie hittades inte';
+// Only admins can create new series
+if ($isNewSeries && !isAdmin()) {
+    $_SESSION['flash_message'] = 'Endast administratörer kan skapa nya serier';
     $_SESSION['flash_type'] = 'error';
     header('Location: /admin/series');
     exit;
 }
 
+// Fetch series or create empty template for new series
+if ($isNewSeries) {
+    $series = [
+        'id' => 0,
+        'name' => '',
+        'year' => date('Y'),
+        'type' => '',
+        'format' => 'Championship',
+        'status' => 'planning',
+        'description' => '',
+        'organizer' => '',
+        'brand_id' => null,
+        'pricing_template_id' => null,
+        'payment_recipient_id' => null,
+    ];
+} else {
+    $series = $db->getRow("SELECT * FROM series WHERE id = ?", [$id]);
+    if (!$series) {
+        $_SESSION['flash_message'] = 'Serie hittades inte';
+        $_SESSION['flash_type'] = 'error';
+        header('Location: /admin/series');
+        exit;
+    }
+}
+
 // ============================================================
 // AUTO-SYNC: Add events locked to this series (events.series_id) to series_events table
 // This ensures events with series_id set always appear in the series management
+// Only run for existing series, not new ones
 // ============================================================
+if (!$isNewSeries) {
 try {
     $lockedEvents = $db->getAll("
         SELECT e.id, e.date
@@ -91,6 +120,7 @@ try {
     // Silently ignore sync errors
     error_log("Series auto-sync error: " . $e->getMessage());
 }
+} // End of !$isNewSeries check
 
 // Get active tab
 $activeTab = $_GET['tab'] ?? 'info';
@@ -147,9 +177,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             } catch (Exception $e) {}
 
-            $db->update('series', $seriesData, 'id = ?', [$id]);
-            $series = $db->getRow("SELECT * FROM series WHERE id = ?", [$id]);
-            $message = 'Serie uppdaterad!';
+            // Create new series or update existing
+            if ($id <= 0) {
+                // Insert new series
+                $newId = $db->insert('series', $seriesData);
+                if ($newId) {
+                    $id = $newId;
+                    $isNewSeries = false;
+                    $series = $db->getRow("SELECT * FROM series WHERE id = ?", [$id]);
+                    $_SESSION['flash_message'] = 'Serie skapad!';
+                    $_SESSION['flash_type'] = 'success';
+                    // Redirect to the new series manage page
+                    header('Location: /admin/series/manage/' . $id);
+                    exit;
+                } else {
+                    $message = 'Kunde inte skapa serien';
+                    $messageType = 'error';
+                }
+            } else {
+                $db->update('series', $seriesData, 'id = ?', [$id]);
+                $series = $db->getRow("SELECT * FROM series WHERE id = ?", [$id]);
+                $message = 'Serie uppdaterad!';
+            }
             $messageType = 'success';
         }
     }
@@ -399,11 +448,19 @@ $uniqueParticipants = $db->getRow("
 // ============================================================
 // PAGE CONFIG
 // ============================================================
-$page_title = 'Hantera: ' . htmlspecialchars($series['name']);
-$breadcrumbs = [
-    ['label' => 'Serier', 'url' => '/admin/series'],
-    ['label' => htmlspecialchars($series['name'])]
-];
+if ($isNewSeries) {
+    $page_title = 'Skapa ny serie';
+    $breadcrumbs = [
+        ['label' => 'Serier', 'url' => '/admin/series'],
+        ['label' => 'Ny serie']
+    ];
+} else {
+    $page_title = 'Hantera: ' . htmlspecialchars($series['name']);
+    $breadcrumbs = [
+        ['label' => 'Serier', 'url' => '/admin/series'],
+        ['label' => htmlspecialchars($series['name'])]
+    ];
+}
 include __DIR__ . '/components/unified-layout.php';
 ?>
 
@@ -569,6 +626,13 @@ include __DIR__ . '/components/unified-layout.php';
 </div>
 <?php endif; ?>
 
+<?php if ($isNewSeries): ?>
+<!-- New Series - simplified view -->
+<div class="alert alert-info">
+    <i data-lucide="info"></i>
+    Fyll i grundläggande information och klicka "Spara" för att skapa serien. Därefter kan du lägga till events och konfigurera anmälan/betalning.
+</div>
+<?php else: ?>
 <!-- Quick Stats -->
 <div class="quick-stats">
     <div class="quick-stat">
@@ -617,6 +681,7 @@ include __DIR__ . '/components/unified-layout.php';
         Resultat
     </a>
 </nav>
+<?php endif; // End of !$isNewSeries ?>
 
 <!-- ============================================================ -->
 <!-- INFO TAB -->
@@ -695,6 +760,7 @@ include __DIR__ . '/components/unified-layout.php';
     </form>
 </div>
 
+<?php if (!$isNewSeries): ?>
 <!-- ============================================================ -->
 <!-- EVENTS TAB -->
 <!-- ============================================================ -->
@@ -1167,6 +1233,7 @@ include __DIR__ . '/components/unified-layout.php';
         </div>
     </div>
 </div>
+<?php endif; // End of !$isNewSeries for Events, Registration, Payment, Results tabs ?>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {
