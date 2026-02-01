@@ -24,6 +24,155 @@ if (file_exists(__DIR__ . '/../../includes/receipt-manager.php')) {
     require_once __DIR__ . '/../../includes/receipt-manager.php';
 }
 
+/**
+ * Create transfers to sellers for multi-recipient orders
+ * Called after successful payment
+ *
+ * @param PDO $pdo Database connection
+ * @param int $orderId Order ID
+ * @param string $chargeId Stripe charge ID (source_transaction)
+ * @return array Result with transfer details
+ */
+function createOrderTransfers(PDO $pdo, int $orderId, string $chargeId): array {
+    // Get Stripe client
+    $stripeApiKey = getenv('STRIPE_SECRET_KEY');
+    if (!$stripeApiKey && function_exists('env')) {
+        $stripeApiKey = env('STRIPE_SECRET_KEY', '');
+    }
+
+    if (!$stripeApiKey) {
+        return ['success' => false, 'error' => 'Stripe API key not configured'];
+    }
+
+    $client = new \TheHUB\Payment\StripeClient($stripeApiKey);
+
+    // Get order with transfer_group
+    $stmt = $pdo->prepare("
+        SELECT id, order_number, transfer_group, total_amount, currency
+        FROM orders WHERE id = ?
+    ");
+    $stmt->execute([$orderId]);
+    $order = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$order) {
+        return ['success' => false, 'error' => 'Order not found'];
+    }
+
+    $transferGroup = $order['transfer_group'] ?: 'order_' . $order['order_number'];
+
+    // Get order items grouped by payment recipient
+    // Only items where the recipient has a Stripe account
+    $stmt = $pdo->prepare("
+        SELECT
+            oi.payment_recipient_id,
+            pr.stripe_account_id,
+            pr.name as recipient_name,
+            SUM(COALESCE(oi.seller_amount, oi.total_price)) as total_amount
+        FROM order_items oi
+        JOIN payment_recipients pr ON oi.payment_recipient_id = pr.id
+        WHERE oi.order_id = ?
+          AND pr.stripe_account_id IS NOT NULL
+          AND pr.stripe_account_status = 'active'
+        GROUP BY oi.payment_recipient_id, pr.stripe_account_id, pr.name
+    ");
+    $stmt->execute([$orderId]);
+    $recipientAmounts = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+    if (empty($recipientAmounts)) {
+        // No recipients with Stripe accounts - mark as completed (nothing to transfer)
+        $stmt = $pdo->prepare("
+            UPDATE orders SET transfers_status = 'completed', transfers_completed_at = NOW()
+            WHERE id = ?
+        ");
+        $stmt->execute([$orderId]);
+        return ['success' => true, 'transfers' => [], 'message' => 'No recipients require transfers'];
+    }
+
+    // Mark order as processing transfers
+    $stmt = $pdo->prepare("UPDATE orders SET transfers_status = 'processing' WHERE id = ?");
+    $stmt->execute([$orderId]);
+
+    $transfers = [];
+    $hasErrors = false;
+
+    foreach ($recipientAmounts as $recipient) {
+        // Create transfer record first
+        $stmt = $pdo->prepare("
+            INSERT INTO order_transfers
+            (order_id, payment_recipient_id, stripe_account_id, amount, stripe_charge_id, transfer_group, status, created_at)
+            VALUES (?, ?, ?, ?, ?, ?, 'pending', NOW())
+        ");
+        $stmt->execute([
+            $orderId,
+            $recipient['payment_recipient_id'],
+            $recipient['stripe_account_id'],
+            $recipient['total_amount'],
+            $chargeId,
+            $transferGroup
+        ]);
+        $transferRecordId = $pdo->lastInsertId();
+
+        // Create Stripe transfer
+        $transferResult = $client->createTransfer([
+            'amount' => (float)$recipient['total_amount'],
+            'currency' => strtolower($order['currency'] ?? 'sek'),
+            'destination' => $recipient['stripe_account_id'],
+            'source_transaction' => $chargeId,
+            'transfer_group' => $transferGroup,
+            'description' => "Order {$order['order_number']} - {$recipient['recipient_name']}",
+            'metadata' => [
+                'order_id' => $orderId,
+                'order_number' => $order['order_number'],
+                'recipient_id' => $recipient['payment_recipient_id']
+            ]
+        ]);
+
+        if ($transferResult['success']) {
+            // Update transfer record with Stripe ID
+            $stmt = $pdo->prepare("
+                UPDATE order_transfers
+                SET stripe_transfer_id = ?, status = 'completed', transferred_at = NOW()
+                WHERE id = ?
+            ");
+            $stmt->execute([$transferResult['transfer_id'], $transferRecordId]);
+
+            $transfers[] = [
+                'recipient_id' => $recipient['payment_recipient_id'],
+                'recipient_name' => $recipient['recipient_name'],
+                'amount' => $recipient['total_amount'],
+                'transfer_id' => $transferResult['transfer_id']
+            ];
+        } else {
+            // Mark transfer as failed
+            $stmt = $pdo->prepare("
+                UPDATE order_transfers
+                SET status = 'failed', failed_at = NOW(), error_message = ?
+                WHERE id = ?
+            ");
+            $stmt->execute([$transferResult['error'] ?? 'Unknown error', $transferRecordId]);
+            $hasErrors = true;
+
+            error_log("Transfer failed for order {$orderId}, recipient {$recipient['payment_recipient_id']}: " . ($transferResult['error'] ?? 'Unknown'));
+        }
+    }
+
+    // Update order transfers status
+    $finalStatus = $hasErrors ? 'failed' : 'completed';
+    $stmt = $pdo->prepare("
+        UPDATE orders
+        SET transfers_status = ?,
+            transfers_completed_at = CASE WHEN ? = 'completed' THEN NOW() ELSE NULL END
+        WHERE id = ?
+    ");
+    $stmt->execute([$finalStatus, $finalStatus, $orderId]);
+
+    return [
+        'success' => !$hasErrors,
+        'transfers' => $transfers,
+        'has_errors' => $hasErrors
+    ];
+}
+
 $pdo = $GLOBALS['pdo'];
 
 // Read raw POST data
@@ -137,7 +286,7 @@ try {
 
                     $pdo->commit();
 
-                    // Generate receipt
+                    // Generate receipt(s) - may be multiple for multi-seller orders
                     try {
                         if (function_exists('createReceiptForOrder')) {
                             $receiptResult = createReceiptForOrder($pdo, $order['id']);
@@ -147,6 +296,19 @@ try {
                         }
                     } catch (Exception $receiptError) {
                         error_log("Receipt generation error: " . $receiptError->getMessage());
+                    }
+
+                    // Create transfers to sellers (multi-recipient support)
+                    try {
+                        $chargeId = $data['latest_charge'] ?? null;
+                        if ($chargeId) {
+                            $transferResult = createOrderTransfers($pdo, $order['id'], $chargeId);
+                            if (!$transferResult['success'] && !empty($transferResult['error'])) {
+                                error_log("Transfer creation warning for order {$order['id']}: " . $transferResult['error']);
+                            }
+                        }
+                    } catch (Exception $transferError) {
+                        error_log("Transfer creation error for order {$order['id']}: " . $transferError->getMessage());
                     }
 
                     // Send confirmation email
@@ -258,7 +420,7 @@ try {
 
                         $pdo->commit();
 
-                        // Generate receipt
+                        // Generate receipt(s) - may be multiple for multi-seller orders
                         try {
                             if (function_exists('createReceiptForOrder')) {
                                 $receiptResult = createReceiptForOrder($pdo, $order['id']);
@@ -268,6 +430,30 @@ try {
                             }
                         } catch (Exception $receiptError) {
                             error_log("Receipt generation error: " . $receiptError->getMessage());
+                        }
+
+                        // Create transfers to sellers (multi-recipient support)
+                        // For checkout.session, we need to get the charge ID from payment_intent
+                        try {
+                            $paymentIntentId = $data['payment_intent'] ?? null;
+                            if ($paymentIntentId) {
+                                $stripeApiKey = getenv('STRIPE_SECRET_KEY');
+                                if (!$stripeApiKey && function_exists('env')) {
+                                    $stripeApiKey = env('STRIPE_SECRET_KEY', '');
+                                }
+                                if ($stripeApiKey) {
+                                    $client = new \TheHUB\Payment\StripeClient($stripeApiKey);
+                                    $chargeResult = $client->getChargeFromPaymentIntent($paymentIntentId);
+                                    if ($chargeResult['success'] && $chargeResult['charge_id']) {
+                                        $transferResult = createOrderTransfers($pdo, $order['id'], $chargeResult['charge_id']);
+                                        if (!$transferResult['success'] && !empty($transferResult['error'])) {
+                                            error_log("Transfer creation warning for order {$order['id']}: " . $transferResult['error']);
+                                        }
+                                    }
+                                }
+                            }
+                        } catch (Exception $transferError) {
+                            error_log("Transfer creation error for order {$order['id']}: " . $transferError->getMessage());
                         }
 
                         // Send confirmation email

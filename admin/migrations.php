@@ -109,6 +109,10 @@ $migrationChecks = [
     '030_winback_discount_target.sql' => [
         'columns' => ['winback_campaigns.discount_event_id']
     ],
+    '031_order_transfers.sql' => [
+        'tables' => ['order_transfers', 'seller_reports', 'seller_report_items'],
+        'columns' => ['order_items.payment_recipient_id', 'order_items.seller_amount', 'orders.transfer_group', 'orders.transfers_status']
+    ],
 ];
 
 // ============================================================================
