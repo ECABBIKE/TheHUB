@@ -332,6 +332,17 @@ include __DIR__ . '/components/unified-layout.php';
 </div>
 <?php endif; ?>
 
+<?php if (!$stripeConfigured): ?>
+<div class="alert alert-warning mb-lg">
+    <i data-lucide="alert-triangle"></i>
+    <div>
+        <strong>Stripe Connect ej konfigurerat!</strong><br>
+        Lägg till <code>STRIPE_SECRET_KEY</code> i .env-filen för att aktivera Stripe Connect-funktionen.
+        Utan detta kan du inte ta emot kortbetalningar via Stripe.
+    </div>
+</div>
+<?php endif; ?>
+
 <!-- Instructions Box -->
 <div class="admin-card mb-lg" style="background: linear-gradient(135deg, var(--color-bg-surface), var(--color-bg-hover)); border: 2px solid var(--color-accent-light);">
     <div class="admin-card-body">

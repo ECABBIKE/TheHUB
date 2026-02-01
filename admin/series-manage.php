@@ -81,44 +81,55 @@ if ($isNewSeries) {
 // This ensures events with series_id set always appear in the series management
 // Only run for existing series, not new ones
 // ============================================================
+$syncMessage = '';
 if (!$isNewSeries) {
 try {
     $lockedEvents = $db->getAll("
-        SELECT e.id, e.date
+        SELECT e.id, e.name, e.date
         FROM events e
         WHERE e.series_id = ?
         AND e.id NOT IN (SELECT event_id FROM series_events WHERE series_id = ?)
     ", [$id, $id]);
 
     if (!empty($lockedEvents)) {
+        $syncedCount = 0;
         foreach ($lockedEvents as $ev) {
-            $existingCount = $db->getRow("SELECT COUNT(*) as cnt FROM series_events WHERE series_id = ?", [$id]);
-            $db->insert('series_events', [
-                'series_id' => $id,
-                'event_id' => $ev['id'],
-                'template_id' => null,
-                'sort_order' => ($existingCount['cnt'] ?? 0) + 1
-            ]);
+            try {
+                $existingCount = $db->getRow("SELECT COUNT(*) as cnt FROM series_events WHERE series_id = ?", [$id]);
+                $db->insert('series_events', [
+                    'series_id' => $id,
+                    'event_id' => $ev['id'],
+                    'template_id' => null,
+                    'sort_order' => ($existingCount['cnt'] ?? 0) + 1
+                ]);
+                $syncedCount++;
+            } catch (Exception $insertError) {
+                error_log("Series auto-sync insert error for event {$ev['id']}: " . $insertError->getMessage());
+            }
         }
 
-        // Re-sort all events by date
-        $allSeriesEvents = $db->getAll("
-            SELECT se.id, e.date
-            FROM series_events se
-            JOIN events e ON se.event_id = e.id
-            WHERE se.series_id = ?
-            ORDER BY e.date ASC
-        ", [$id]);
+        if ($syncedCount > 0) {
+            // Re-sort all events by date
+            $allSeriesEvents = $db->getAll("
+                SELECT se.id, e.date
+                FROM series_events se
+                JOIN events e ON se.event_id = e.id
+                WHERE se.series_id = ?
+                ORDER BY e.date ASC
+            ", [$id]);
 
-        $sortOrder = 1;
-        foreach ($allSeriesEvents as $se) {
-            $db->update('series_events', ['sort_order' => $sortOrder], 'id = ?', [$se['id']]);
-            $sortOrder++;
+            $sortOrder = 1;
+            foreach ($allSeriesEvents as $se) {
+                $db->update('series_events', ['sort_order' => $sortOrder], 'id = ?', [$se['id']]);
+                $sortOrder++;
+            }
+
+            $syncMessage = "Auto-synkade {$syncedCount} event(s) från events.series_id till series_events.";
         }
     }
 } catch (Exception $e) {
-    // Silently ignore sync errors
     error_log("Series auto-sync error: " . $e->getMessage());
+    $syncMessage = "Fel vid auto-sync: " . $e->getMessage();
 }
 } // End of !$isNewSeries check
 
@@ -138,6 +149,12 @@ if (isset($_SESSION['flash_message'])) {
     $message = $_SESSION['flash_message'];
     $messageType = $_SESSION['flash_type'] ?? 'info';
     unset($_SESSION['flash_message'], $_SESSION['flash_type']);
+}
+
+// Add sync message if events were auto-synced
+if (!empty($syncMessage) && empty($message)) {
+    $message = $syncMessage;
+    $messageType = 'success';
 }
 
 // ============================================================
@@ -256,6 +273,52 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $activeTab = 'events';
     }
 
+    elseif ($action === 'sync_all_orphaned') {
+        // Sync all events from events.series_id to series_events
+        $orphaned = $db->getAll("
+            SELECT e.id, e.date
+            FROM events e
+            WHERE e.series_id = ?
+            AND e.id NOT IN (SELECT event_id FROM series_events WHERE series_id = ?)
+        ", [$id, $id]);
+
+        $synced = 0;
+        foreach ($orphaned as $oe) {
+            try {
+                $maxOrder = $db->getRow("SELECT MAX(sort_order) as max_order FROM series_events WHERE series_id = ?", [$id]);
+                $sortOrder = ($maxOrder['max_order'] ?? 0) + 1;
+                $db->insert('series_events', [
+                    'series_id' => $id,
+                    'event_id' => $oe['id'],
+                    'template_id' => null,
+                    'sort_order' => $sortOrder
+                ]);
+                $synced++;
+            } catch (Exception $e) {
+                error_log("Sync orphaned event error: " . $e->getMessage());
+            }
+        }
+
+        // Re-sort by date
+        if ($synced > 0) {
+            $allEvents = $db->getAll("
+                SELECT se.id FROM series_events se
+                JOIN events e ON se.event_id = e.id
+                WHERE se.series_id = ?
+                ORDER BY e.date ASC
+            ", [$id]);
+            $order = 1;
+            foreach ($allEvents as $ae) {
+                $db->update('series_events', ['sort_order' => $order], 'id = ?', [$ae['id']]);
+                $order++;
+            }
+        }
+
+        $message = "Synkade {$synced} event(s) till series_events!";
+        $messageType = 'success';
+        $activeTab = 'events';
+    }
+
     // REGISTRATION TAB ACTIONS
     elseif ($action === 'save_registration') {
         $registrationEnabled = isset($_POST['registration_enabled']) ? 1 : 0;
@@ -362,7 +425,7 @@ try {
     }
 } catch (Exception $e) {}
 
-// Get events in this series
+// Get events in this series from series_events table
 $seriesEvents = $db->getAll("
     SELECT se.*, e.name as event_name, e.date as event_date, e.location, e.discipline,
            e.series_id as event_series_id, ps.name as template_name,
@@ -373,6 +436,19 @@ $seriesEvents = $db->getAll("
     WHERE se.series_id = ?
     ORDER BY e.date ASC
 ", [$id]);
+
+// FALLBACK: If no events in series_events, check for events linked via events.series_id
+// These are "orphaned" events that should be in series_events but aren't
+$orphanedEvents = [];
+if (empty($seriesEvents)) {
+    $orphanedEvents = $db->getAll("
+        SELECT e.id, e.name as event_name, e.date as event_date, e.location, e.discipline,
+               e.series_id as event_series_id, e.registration_opens, e.registration_deadline
+        FROM events e
+        WHERE e.series_id = ?
+        ORDER BY e.date ASC
+    ", [$id]);
+}
 
 // Get events not in series (for adding)
 $eventsNotInSeries = $db->getAll("
@@ -833,8 +909,55 @@ include __DIR__ . '/components/unified-layout.php';
                     <h2><i data-lucide="list"></i> Events i serien (<?= $eventsCount ?>)</h2>
                 </div>
                 <div class="admin-card-body" style="padding: 0;">
-                    <?php if (empty($seriesEvents)): ?>
+                    <?php if (empty($seriesEvents) && empty($orphanedEvents)): ?>
                         <p class="text-secondary p-lg">Inga events tillagda ännu.</p>
+                    <?php elseif (empty($seriesEvents) && !empty($orphanedEvents)): ?>
+                        <!-- Orphaned events found - need to sync -->
+                        <div class="alert alert-warning m-md">
+                            <i data-lucide="alert-triangle"></i>
+                            <strong>Hittade <?= count($orphanedEvents) ?> event(s) kopplade via events.series_id som saknas i series_events.</strong>
+                            <p style="margin-top: var(--space-sm);">Dessa events visas på publika sidan men inte här. Klicka nedan för att synka dem.</p>
+                        </div>
+                        <div class="table-responsive">
+                            <table class="event-table">
+                                <thead>
+                                    <tr>
+                                        <th>#</th>
+                                        <th>Event</th>
+                                        <th>Datum</th>
+                                        <th>Åtgärd</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php foreach ($orphanedEvents as $idx => $oe): ?>
+                                    <tr>
+                                        <td><?= $idx + 1 ?></td>
+                                        <td><?= htmlspecialchars($oe['event_name']) ?></td>
+                                        <td><?= $oe['event_date'] ? date('Y-m-d', strtotime($oe['event_date'])) : '-' ?></td>
+                                        <td>
+                                            <form method="POST" style="display: inline;">
+                                                <?= csrf_field() ?>
+                                                <input type="hidden" name="action" value="add_event">
+                                                <input type="hidden" name="event_id" value="<?= $oe['id'] ?>">
+                                                <button type="submit" class="btn-admin btn-admin-success btn-admin-sm">
+                                                    <i data-lucide="link"></i> Synka
+                                                </button>
+                                            </form>
+                                        </td>
+                                    </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                            </table>
+                        </div>
+                        <div class="p-md">
+                            <form method="POST">
+                                <?= csrf_field() ?>
+                                <input type="hidden" name="action" value="sync_all_orphaned">
+                                <button type="submit" class="btn-admin btn-admin-primary">
+                                    <i data-lucide="refresh-cw"></i> Synka alla <?= count($orphanedEvents) ?> events
+                                </button>
+                            </form>
+                        </div>
                     <?php else: ?>
                     <div class="table-responsive">
                         <table class="event-table">
