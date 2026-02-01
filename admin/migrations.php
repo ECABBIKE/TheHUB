@@ -113,6 +113,9 @@ $migrationChecks = [
         'tables' => ['order_transfers', 'seller_reports', 'seller_report_items', 'order_refunds', 'transfer_reversals'],
         'columns' => ['order_items.payment_recipient_id', 'order_items.seller_amount', 'orders.transfer_group', 'orders.transfers_status', 'orders.refunded_amount', 'order_transfers.reversed']
     ],
+    '032_winback_discount_code_link.sql' => [
+        'columns' => ['winback_campaigns.discount_code_id', 'winback_campaigns.email_subject', 'winback_campaigns.email_body']
+    ],
 ];
 
 // ============================================================================

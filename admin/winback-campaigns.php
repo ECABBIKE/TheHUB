@@ -76,25 +76,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $tablesExist) {
     } elseif ($action === 'create_campaign') {
         $name = trim($_POST['name'] ?? '');
         $brandIds = $_POST['brand_ids'] ?? [];
-        $discountType = $_POST['discount_type'] ?? 'fixed';
-        $discountValue = (float)($_POST['discount_value'] ?? 100);
-        $validUntil = $_POST['valid_until'] ?? null;
+        $discountCodeId = !empty($_POST['discount_code_id']) ? (int)$_POST['discount_code_id'] : null;
+        $emailSubject = trim($_POST['email_subject'] ?? 'Vi saknar dig!');
+        $emailBody = trim($_POST['email_body'] ?? '');
         $ownerId = !empty($_POST['owner_user_id']) ? (int)$_POST['owner_user_id'] : $currentUserId;
         $allowPromotorAccess = isset($_POST['allow_promotor_access']) ? 1 : 0;
         $audienceType = $_POST['audience_type'] ?? 'churned';
         $startYear = (int)($_POST['start_year'] ?? 2016);
         $endYear = (int)($_POST['end_year'] ?? ((int)date('Y') - 1));
         $targetYear = (int)($_POST['target_year'] ?? (int)date('Y'));
-
-        // Discount target (where can the code be used)
-        $discountApplicableTo = $_POST['discount_applicable_to'] ?? 'all';
-        $discountSeriesId = !empty($_POST['discount_series_id']) ? (int)$_POST['discount_series_id'] : null;
-        $discountEventId = !empty($_POST['discount_event_id']) ? (int)$_POST['discount_event_id'] : null;
-
-        // Validate discount target
-        if (!in_array($discountApplicableTo, ['all', 'brand', 'series', 'event'])) {
-            $discountApplicableTo = 'all';
-        }
 
         // Validate audience type
         if (!in_array($audienceType, ['churned', 'active'])) {
@@ -106,57 +96,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $tablesExist) {
         if ($endYear > (int)date('Y')) $endYear = (int)date('Y');
         if ($startYear > $endYear) $startYear = $endYear;
 
-        if ($name && !empty($brandIds)) {
-            // Check if discount_applicable_to column exists (migration 021 or 029)
-            $hasDiscountTarget = false;
+        if (empty($name)) {
+            $error = 'Kampanjnamn kravs';
+        } elseif (empty($brandIds)) {
+            $error = 'Valj minst ett varumarke';
+        } elseif (empty($discountCodeId)) {
+            $error = 'Valj en rabattkod';
+        } else {
+            // Check if new columns exist (migration 031)
+            $hasDiscountCodeId = false;
             try {
-                $check = $pdo->query("SHOW COLUMNS FROM winback_campaigns LIKE 'discount_applicable_to'");
-                $hasDiscountTarget = $check->rowCount() > 0;
+                $check = $pdo->query("SHOW COLUMNS FROM winback_campaigns LIKE 'discount_code_id'");
+                $hasDiscountCodeId = $check->rowCount() > 0;
             } catch (Exception $e) {}
 
-            // Check if audience_type column exists (migration 023)
-            $hasAudienceType = false;
-            try {
-                $check = $pdo->query("SHOW COLUMNS FROM winback_campaigns LIKE 'audience_type'");
-                $hasAudienceType = $check->rowCount() > 0;
-            } catch (Exception $e) {}
-
-            // Check if discount_event_id column exists (migration 029)
-            $hasEventId = false;
-            try {
-                $check = $pdo->query("SHOW COLUMNS FROM winback_campaigns LIKE 'discount_event_id'");
-                $hasEventId = $check->rowCount() > 0;
-            } catch (Exception $e) {}
-
-            if ($hasAudienceType && $hasDiscountTarget && $hasEventId) {
+            if ($hasDiscountCodeId) {
                 $stmt = $pdo->prepare("
-                    INSERT INTO winback_campaigns (name, target_type, audience_type, brand_ids, start_year, end_year, target_year, discount_type, discount_value, discount_valid_until, discount_applicable_to, discount_series_id, discount_event_id, owner_user_id, allow_promotor_access, is_active)
-                    VALUES (?, 'multi_brand', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
-                ");
-                $stmt->execute([$name, $audienceType, json_encode(array_map('intval', $brandIds)), $startYear, $endYear, $targetYear, $discountType, $discountValue, $validUntil ?: null, $discountApplicableTo, $discountSeriesId, $discountEventId, $ownerId, $allowPromotorAccess]);
-            } elseif ($hasAudienceType && $hasDiscountTarget) {
-                $stmt = $pdo->prepare("
-                    INSERT INTO winback_campaigns (name, target_type, audience_type, brand_ids, start_year, end_year, target_year, discount_type, discount_value, discount_valid_until, discount_applicable_to, discount_series_id, owner_user_id, allow_promotor_access, is_active)
-                    VALUES (?, 'multi_brand', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
-                ");
-                $stmt->execute([$name, $audienceType, json_encode(array_map('intval', $brandIds)), $startYear, $endYear, $targetYear, $discountType, $discountValue, $validUntil ?: null, $discountApplicableTo, $discountSeriesId, $ownerId, $allowPromotorAccess]);
-            } elseif ($hasAudienceType) {
-                $stmt = $pdo->prepare("
-                    INSERT INTO winback_campaigns (name, target_type, audience_type, brand_ids, start_year, end_year, target_year, discount_type, discount_value, discount_valid_until, owner_user_id, allow_promotor_access, is_active)
+                    INSERT INTO winback_campaigns (name, target_type, audience_type, brand_ids, start_year, end_year, target_year, discount_code_id, email_subject, email_body, owner_user_id, allow_promotor_access, is_active)
                     VALUES (?, 'multi_brand', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
                 ");
-                $stmt->execute([$name, $audienceType, json_encode(array_map('intval', $brandIds)), $startYear, $endYear, $targetYear, $discountType, $discountValue, $validUntil ?: null, $ownerId, $allowPromotorAccess]);
+                $stmt->execute([$name, $audienceType, json_encode(array_map('intval', $brandIds)), $startYear, $endYear, $targetYear, $discountCodeId, $emailSubject, $emailBody, $ownerId, $allowPromotorAccess]);
+                $message = 'Kampanj skapad!';
             } else {
-                // Fallback if migrations not run yet
-                $stmt = $pdo->prepare("
-                    INSERT INTO winback_campaigns (name, target_type, brand_ids, start_year, end_year, target_year, discount_type, discount_value, discount_valid_until, owner_user_id, allow_promotor_access, is_active)
-                    VALUES (?, 'multi_brand', ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
-                ");
-                $stmt->execute([$name, json_encode(array_map('intval', $brandIds)), $startYear, $endYear, $targetYear, $discountType, $discountValue, $validUntil ?: null, $ownerId, $allowPromotorAccess]);
+                $error = 'Kor migration 031 forst (admin/migrations.php)';
             }
-            $message = 'Kampanj skapad!';
-        } else {
-            $error = 'Namn och varumarken kravs';
         }
     } elseif ($action === 'update_campaign_owner') {
         // Only admins can change campaign ownership
@@ -373,89 +336,131 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $tablesExist) {
             } elseif (!canEditCampaign($campaign)) {
                 $error = 'Du har inte behörighet att skicka inbjudningar för denna kampanj';
             } else {
-                $sentCount = 0;
-                $failedCount = 0;
-                $skippedCount = 0;
-
-                // Check if invitations table exists
-                $invTableExists = false;
-                try {
-                    $check = $pdo->query("SHOW TABLES LIKE 'winback_invitations'");
-                    $invTableExists = $check->rowCount() > 0;
-                } catch (Exception $e) {}
-
-                foreach ($riderIds as $riderId) {
-                    $riderId = (int)$riderId;
-
-                    // Get rider info
-                    $stmt = $pdo->prepare("SELECT id, firstname, lastname, email FROM riders WHERE id = ?");
-                    $stmt->execute([$riderId]);
-                    $rider = $stmt->fetch(PDO::FETCH_ASSOC);
-
-                    if (!$rider || empty($rider['email'])) {
-                        $skippedCount++;
-                        continue;
-                    }
-
-                    // Check if already invited (if table exists)
-                    if ($invTableExists) {
-                        $stmt = $pdo->prepare("SELECT id FROM winback_invitations WHERE campaign_id = ? AND rider_id = ?");
-                        $stmt->execute([$campaignId, $riderId]);
-                        if ($stmt->fetch()) {
-                            $skippedCount++;
-                            continue;
-                        }
-                    }
-
-                    // Generate tracking token
-                    $trackingToken = bin2hex(random_bytes(32));
-
-                    // Build email
-                    $surveyUrl = 'https://thehub.gravityseries.se/profile/winback-survey?t=' . $trackingToken;
-                    $discountText = $campaign['discount_type'] === 'percentage'
-                        ? intval($campaign['discount_value']) . '% rabatt'
-                        : number_format($campaign['discount_value'], 0) . ' kr rabatt';
-
-                    $subject = 'Vi saknar dig! - TheHUB';
-                    $body = hub_email_template('winback_invitation', [
-                        'name' => $rider['firstname'],
-                        'campaign_name' => $campaign['name'],
-                        'discount_text' => $discountText,
-                        'survey_link' => $surveyUrl
-                    ]);
-
-                    // Send email
-                    $sent = hub_send_email($rider['email'], $subject, $body);
-
-                    // Log invitation (if table exists)
-                    if ($invTableExists) {
-                        $stmt = $pdo->prepare("
-                            INSERT INTO winback_invitations (campaign_id, rider_id, email_address, invitation_method, invitation_status, sent_at, sent_by, tracking_token)
-                            VALUES (?, ?, ?, 'email', ?, NOW(), ?, ?)
-                        ");
-                        $stmt->execute([
-                            $campaignId,
-                            $riderId,
-                            $rider['email'],
-                            $sent ? 'sent' : 'failed',
-                            $_SESSION['admin_id'] ?? null,
-                            $trackingToken
-                        ]);
-                    }
-
-                    if ($sent) {
-                        $sentCount++;
-                    } else {
-                        $failedCount++;
+                // Get linked discount code
+                $discountCode = null;
+                $discountText = '';
+                if (!empty($campaign['discount_code_id'])) {
+                    $stmt = $pdo->prepare("SELECT * FROM discount_codes WHERE id = ?");
+                    $stmt->execute([$campaign['discount_code_id']]);
+                    $discountCode = $stmt->fetch(PDO::FETCH_ASSOC);
+                    if ($discountCode) {
+                        $discountText = $discountCode['discount_type'] === 'percentage'
+                            ? intval($discountCode['discount_value']) . '% rabatt'
+                            : number_format($discountCode['discount_value'], 0) . ' kr rabatt';
                     }
                 }
 
-                if ($sentCount > 0) {
-                    $message = "Skickade $sentCount inbjudningar";
-                    if ($skippedCount > 0) $message .= ", hoppade over $skippedCount (redan inbjudna eller saknar email)";
-                    if ($failedCount > 0) $message .= ", $failedCount misslyckades";
+                if (!$discountCode) {
+                    $error = 'Kampanjen saknar kopplad rabattkod';
                 } else {
-                    $error = "Inga inbjudningar skickades. $skippedCount hoppades over, $failedCount misslyckades.";
+                    $sentCount = 0;
+                    $failedCount = 0;
+                    $skippedCount = 0;
+
+                    // Check if invitations table exists
+                    $invTableExists = false;
+                    try {
+                        $check = $pdo->query("SHOW TABLES LIKE 'winback_invitations'");
+                        $invTableExists = $check->rowCount() > 0;
+                    } catch (Exception $e) {}
+
+                    foreach ($riderIds as $riderId) {
+                        $riderId = (int)$riderId;
+
+                        // Get rider info
+                        $stmt = $pdo->prepare("SELECT id, firstname, lastname, email FROM riders WHERE id = ?");
+                        $stmt->execute([$riderId]);
+                        $rider = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                        if (!$rider || empty($rider['email'])) {
+                            $skippedCount++;
+                            continue;
+                        }
+
+                        // Check if already invited (if table exists)
+                        if ($invTableExists) {
+                            $stmt = $pdo->prepare("SELECT id FROM winback_invitations WHERE campaign_id = ? AND rider_id = ?");
+                            $stmt->execute([$campaignId, $riderId]);
+                            if ($stmt->fetch()) {
+                                $skippedCount++;
+                                continue;
+                            }
+                        }
+
+                        // Generate tracking token
+                        $trackingToken = bin2hex(random_bytes(32));
+
+                        // Build email using custom content or default
+                        $surveyUrl = 'https://thehub.gravityseries.se/profile/winback-survey?t=' . $trackingToken;
+
+                        // Use custom subject/body if set, otherwise use defaults
+                        $subject = !empty($campaign['email_subject'])
+                            ? $campaign['email_subject'] . ' - TheHUB'
+                            : 'Vi saknar dig! - TheHUB';
+
+                        // Build email body with variables replaced
+                        $emailBody = !empty($campaign['email_body'])
+                            ? $campaign['email_body']
+                            : "Hej {{name}},\n\nVi har markt att du inte tavlat pa ett tag.\n\nSvara pa en kort enkat sa far du rabattkoden {{discount_code}} ({{discount_text}}) pa din nasta anmalan!";
+
+                        // Replace variables
+                        $emailBody = str_replace([
+                            '{{name}}',
+                            '{{discount_code}}',
+                            '{{discount_text}}'
+                        ], [
+                            htmlspecialchars($rider['firstname']),
+                            htmlspecialchars($discountCode['code']),
+                            $discountText
+                        ], $emailBody);
+
+                        // Wrap in HTML template
+                        $body = '
+                            <div class="header">
+                                <div class="logo">TheHUB</div>
+                            </div>
+                            <div style="white-space: pre-wrap;">' . nl2br($emailBody) . '</div>
+                            <p class="text-center" style="margin-top: 24px;">
+                                <a href="' . $surveyUrl . '" class="btn">Svara pa enkaten</a>
+                            </p>
+                        ';
+
+                        // Use hub email wrapper
+                        $fullBody = hub_email_template('custom', ['content' => $body]);
+
+                        // Send email
+                        $sent = hub_send_email($rider['email'], $subject, $fullBody);
+
+                        // Log invitation (if table exists)
+                        if ($invTableExists) {
+                            $stmt = $pdo->prepare("
+                                INSERT INTO winback_invitations (campaign_id, rider_id, email_address, invitation_method, invitation_status, sent_at, sent_by, tracking_token)
+                                VALUES (?, ?, ?, 'email', ?, NOW(), ?, ?)
+                            ");
+                            $stmt->execute([
+                                $campaignId,
+                                $riderId,
+                                $rider['email'],
+                                $sent ? 'sent' : 'failed',
+                                $_SESSION['admin_id'] ?? null,
+                                $trackingToken
+                            ]);
+                        }
+
+                        if ($sent) {
+                            $sentCount++;
+                        } else {
+                            $failedCount++;
+                        }
+                    }
+
+                    if ($sentCount > 0) {
+                        $message = "Skickade $sentCount inbjudningar med rabattkod " . $discountCode['code'];
+                        if ($skippedCount > 0) $message .= ", hoppade over $skippedCount (redan inbjudna eller saknar email)";
+                        if ($failedCount > 0) $message .= ", $failedCount misslyckades";
+                    } else {
+                        $error = "Inga inbjudningar skickades. $skippedCount hoppades over, $failedCount misslyckades.";
+                    }
                 }
             }
         }
@@ -520,6 +525,19 @@ if ($tablesExist) {
         // Get brands using KPICalculator (same as dashboard)
         $kpiCalc = new KPICalculator($pdo);
         $brands = $kpiCalc->getAllBrands();
+
+        // Get discount codes for linking
+        $discountCodes = $pdo->query("
+            SELECT dc.*,
+                   e.name as event_name,
+                   s.name as series_name,
+                   dc.current_uses
+            FROM discount_codes dc
+            LEFT JOIN events e ON dc.event_id = e.id
+            LEFT JOIN series s ON dc.series_id = s.id
+            WHERE dc.is_active = 1
+            ORDER BY dc.created_at DESC
+        ")->fetchAll(PDO::FETCH_ASSOC);
 
         // Get response stats per campaign
         foreach ($campaigns as &$c) {
@@ -1165,7 +1183,6 @@ if ($selectedCampData) {
                   AND s.brand_id IN ($placeholders)
                 GROUP BY r.id
                 ORDER BY events_2025 DESC, r.lastname, r.firstname
-                LIMIT 500
             ";
             $params = array_merge(
                 [$selectedCampData['target_year']],
@@ -1196,7 +1213,6 @@ if ($selectedCampData) {
                   )
                 GROUP BY r.id
                 ORDER BY last_active_year DESC, r.lastname, r.firstname
-                LIMIT 500
             ";
             $params = array_merge(
                 [$selectedCampData['start_year'], $selectedCampData['end_year']],
@@ -1973,55 +1989,50 @@ if (!$selectedCampData || !canAccessCampaign($selectedCampData)):
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:var(--space-md);margin-bottom:var(--space-md);">
                 <div class="form-group">
                     <label class="form-label">Kampanjnamn *</label>
-                    <input type="text" name="name" class="form-input" required placeholder="T.ex. GravitySeries Comeback">
+                    <input type="text" name="name" class="form-input" required placeholder="T.ex. Back To Gravity 2026">
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Rabatttyp</label>
-                    <select name="discount_type" class="form-select">
-                        <option value="fixed">Fast belopp (SEK)</option>
-                        <option value="percentage">Procent (%)</option>
+                    <label class="form-label">Rabattkod *</label>
+                    <select name="discount_code_id" class="form-select" required>
+                        <option value="">Valj rabattkod...</option>
+                        <?php foreach ($discountCodes ?? [] as $dc):
+                            $discountLabel = $dc['discount_type'] === 'percentage'
+                                ? intval($dc['discount_value']) . '%'
+                                : number_format($dc['discount_value'], 0) . ' kr';
+                            $targetLabel = '';
+                            if ($dc['event_name']) $targetLabel = ' - Event: ' . $dc['event_name'];
+                            elseif ($dc['series_name']) $targetLabel = ' - Serie: ' . $dc['series_name'];
+                            elseif ($dc['applicable_to'] === 'all') $targetLabel = ' - Alla event';
+                        ?>
+                        <option value="<?= $dc['id'] ?>">
+                            <?= htmlspecialchars($dc['code']) ?> (<?= $discountLabel ?><?= $targetLabel ?>)
+                        </option>
+                        <?php endforeach; ?>
                     </select>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Rabattvarde</label>
-                    <input type="number" name="discount_value" class="form-input" value="100" min="1">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Giltig t.o.m.</label>
-                    <input type="date" name="valid_until" class="form-input" value="2026-12-31">
+                    <small style="color:var(--color-text-muted);display:block;margin-top:4px;">
+                        <a href="/admin/discount-codes.php" target="_blank">Skapa ny rabattkod</a> om ingen passar
+                    </small>
                 </div>
             </div>
 
-            <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:var(--space-md);margin-bottom:var(--space-md);padding:var(--space-md);background:var(--color-bg-page);border-radius:var(--radius-md);">
+            <div style="margin-bottom:var(--space-md);padding:var(--space-md);background:var(--color-bg-page);border-radius:var(--radius-md);">
+                <h4 style="margin:0 0 var(--space-sm) 0;font-size:0.9rem;color:var(--color-text-secondary);">E-postinnehall</h4>
+                <div class="form-group" style="margin-bottom:var(--space-md);">
+                    <label class="form-label">Amnesrad</label>
+                    <input type="text" name="email_subject" class="form-input" value="Vi saknar dig!" placeholder="T.ex. Vi saknar dig!">
+                </div>
                 <div class="form-group">
-                    <label class="form-label">Rabatten galler for</label>
-                    <select name="discount_applicable_to" id="discount-applicable-to" class="form-select" onchange="toggleDiscountTarget()">
-                        <option value="all">Alla event</option>
-                        <option value="series">Specifik serie</option>
-                        <option value="event">Specifikt event</option>
-                    </select>
-                </div>
-                <div class="form-group" id="discount-series-group" style="display:none;">
-                    <label class="form-label">Valj serie</label>
-                    <select name="discount_series_id" class="form-select">
-                        <option value="">Valj serie...</option>
-                        <?php
-                        $seriesList = $pdo->query("SELECT id, name, year FROM series WHERE status = 'active' OR year >= YEAR(CURDATE()) ORDER BY year DESC, name")->fetchAll(PDO::FETCH_ASSOC);
-                        foreach ($seriesList as $s): ?>
-                        <option value="<?= $s['id'] ?>"><?= htmlspecialchars($s['name']) ?> (<?= $s['year'] ?>)</option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-                <div class="form-group" id="discount-event-group" style="display:none;">
-                    <label class="form-label">Valj event</label>
-                    <select name="discount_event_id" class="form-select">
-                        <option value="">Valj event...</option>
-                        <?php
-                        $eventsList = $pdo->query("SELECT id, name, date FROM events WHERE date >= CURDATE() ORDER BY date ASC LIMIT 100")->fetchAll(PDO::FETCH_ASSOC);
-                        foreach ($eventsList as $ev): ?>
-                        <option value="<?= $ev['id'] ?>"><?= htmlspecialchars($ev['name']) ?> (<?= date('Y-m-d', strtotime($ev['date'])) ?>)</option>
-                        <?php endforeach; ?>
-                    </select>
+                    <label class="form-label">Meddelande</label>
+                    <textarea name="email_body" class="form-input" rows="6" placeholder="Skriv ditt meddelande har...">Hej {{name}},
+
+Vi har markt att du inte tavlat pa ett tag och vill garna hora hur du mar.
+
+Svara pa en kort enkat (tar bara 2 minuter) sa far du en rabattkod pa din nasta anmalan som tack!
+
+Din feedback ar anonym och hjalper oss att skapa battre tavlingar.</textarea>
+                    <small style="color:var(--color-text-muted);display:block;margin-top:4px;">
+                        Tillgangliga variabler: <code>{{name}}</code> (fornamn), <code>{{discount_code}}</code> (rabattkoden), <code>{{discount_text}}</code> (t.ex. "100 kr rabatt")
+                    </small>
                 </div>
             </div>
 
@@ -2159,9 +2170,26 @@ if (!$selectedCampData || !canAccessCampaign($selectedCampData)):
                     echo implode(', ', $brandNames) ?: 'Alla';
                     ?>
                 </span>
+                <?php
+                // Get linked discount code info
+                $linkedCode = null;
+                if (!empty($c['discount_code_id'])) {
+                    foreach ($discountCodes ?? [] as $dc) {
+                        if ($dc['id'] == $c['discount_code_id']) {
+                            $linkedCode = $dc;
+                            break;
+                        }
+                    }
+                }
+                ?>
                 <span class="campaign-meta-item">
-                    <i data-lucide="gift"></i>
-                    <?= $c['discount_type'] === 'percentage' ? intval($c['discount_value']) . '%' : number_format($c['discount_value'], 0) . ' kr' ?> rabatt
+                    <i data-lucide="ticket"></i>
+                    <?php if ($linkedCode): ?>
+                        Kod: <strong><?= htmlspecialchars($linkedCode['code']) ?></strong>
+                        (<?= $linkedCode['discount_type'] === 'percentage' ? intval($linkedCode['discount_value']) . '%' : number_format($linkedCode['discount_value'], 0) . ' kr' ?>)
+                    <?php else: ?>
+                        <span style="color:var(--color-warning);">Ingen rabattkod kopplad</span>
+                    <?php endif; ?>
                 </span>
             </div>
 
@@ -2178,6 +2206,12 @@ if (!$selectedCampData || !canAccessCampaign($selectedCampData)):
                 <div class="campaign-stat">
                     <div class="campaign-stat-value"><?= round(($c['response_count'] / $c['potential_audience']) * 100, 1) ?>%</div>
                     <div class="campaign-stat-label">Svarsfrekvens</div>
+                </div>
+                <?php endif; ?>
+                <?php if ($linkedCode): ?>
+                <div class="campaign-stat">
+                    <div class="campaign-stat-value"><?= (int)$linkedCode['current_uses'] ?></div>
+                    <div class="campaign-stat-label">Kod anvand</div>
                 </div>
                 <?php endif; ?>
             </div>
