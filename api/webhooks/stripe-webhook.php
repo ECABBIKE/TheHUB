@@ -517,19 +517,178 @@ try {
             break;
 
         case 'charge.refunded':
+            // Refund processed via Stripe - automatically reverse transfers
             $paymentIntentId = $data['payment_intent'] ?? null;
+            $chargeId = $data['id'] ?? null;
+            $amountRefunded = isset($data['amount_refunded']) ? $data['amount_refunded'] / 100 : 0;
+            $totalAmount = isset($data['amount']) ? $data['amount'] / 100 : 0;
+            $isFullRefund = ($amountRefunded >= $totalAmount);
 
             if ($paymentIntentId) {
+                // Get order
                 $stmt = $pdo->prepare("
-                    UPDATE orders
-                    SET payment_status = 'refunded',
-                        refunded_at = NOW(),
-                        callback_received_at = NOW()
+                    SELECT id, order_number, total_amount
+                    FROM orders
                     WHERE gateway_transaction_id = ? AND gateway_code = 'stripe'
                 ");
                 $stmt->execute([$paymentIntentId]);
+                $order = $stmt->fetch(PDO::FETCH_ASSOC);
 
-                $result = ['status' => 'processed', 'message' => 'Refund recorded'];
+                if ($order) {
+                    $pdo->beginTransaction();
+
+                    try {
+                        // Update order status
+                        $newStatus = $isFullRefund ? 'refunded' : 'partial_refund';
+                        $stmt = $pdo->prepare("
+                            UPDATE orders
+                            SET payment_status = ?,
+                                refunded_at = NOW(),
+                                refunded_amount = ?,
+                                callback_received_at = NOW()
+                            WHERE id = ?
+                        ");
+                        $stmt->execute([$newStatus, $amountRefunded, $order['id']]);
+
+                        // Record refund in order_refunds
+                        $refundId = $data['refunds']['data'][0]['id'] ?? null;
+                        $stmt = $pdo->prepare("
+                            INSERT INTO order_refunds
+                            (order_id, amount, refund_type, stripe_refund_id, status, reason, processed_at, completed_at, created_at)
+                            VALUES (?, ?, ?, ?, 'processing', 'Refund via Stripe Dashboard', NOW(), NULL, NOW())
+                            ON DUPLICATE KEY UPDATE status = 'processing'
+                        ");
+                        $stmt->execute([
+                            $order['id'],
+                            $amountRefunded,
+                            $isFullRefund ? 'full' : 'partial',
+                            $refundId
+                        ]);
+                        $refundRecordId = $pdo->lastInsertId();
+
+                        // Reverse transfers to sellers
+                        $stripeApiKey = getenv('STRIPE_SECRET_KEY');
+                        if (!$stripeApiKey && function_exists('env')) {
+                            $stripeApiKey = env('STRIPE_SECRET_KEY', '');
+                        }
+
+                        if ($stripeApiKey) {
+                            $client = new \TheHUB\Payment\StripeClient($stripeApiKey);
+
+                            // Get transfers for this order
+                            $stmt = $pdo->prepare("
+                                SELECT ot.*
+                                FROM order_transfers ot
+                                WHERE ot.order_id = ?
+                                  AND ot.status = 'completed'
+                                  AND ot.reversed = 0
+                            ");
+                            $stmt->execute([$order['id']]);
+                            $transfers = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+                            $totalTransferred = array_sum(array_column($transfers, 'amount'));
+                            $allReversalsSuccess = true;
+
+                            foreach ($transfers as $transfer) {
+                                // Calculate proportional reversal
+                                $reversalAmount = $isFullRefund
+                                    ? (float)$transfer['amount']
+                                    : ((float)$transfer['amount'] / $totalTransferred) * $amountRefunded;
+                                $reversalAmount = round($reversalAmount, 2);
+
+                                if ($reversalAmount <= 0) continue;
+
+                                $reversalResult = $client->createTransferReversal(
+                                    $transfer['stripe_transfer_id'],
+                                    $isFullRefund ? null : $reversalAmount
+                                );
+
+                                if ($reversalResult['success']) {
+                                    // Record successful reversal
+                                    $stmt = $pdo->prepare("
+                                        INSERT INTO transfer_reversals
+                                        (order_transfer_id, refund_id, stripe_reversal_id, amount, status, created_at)
+                                        VALUES (?, ?, ?, ?, 'completed', NOW())
+                                    ");
+                                    $stmt->execute([
+                                        $transfer['id'],
+                                        $refundRecordId,
+                                        $reversalResult['reversal_id'],
+                                        $reversalAmount
+                                    ]);
+
+                                    // Update transfer as reversed
+                                    $stmt = $pdo->prepare("
+                                        UPDATE order_transfers
+                                        SET reversed = ?, reversed_amount = COALESCE(reversed_amount, 0) + ?, reversed_at = NOW()
+                                        WHERE id = ?
+                                    ");
+                                    $stmt->execute([
+                                        $isFullRefund ? 1 : 0,
+                                        $reversalAmount,
+                                        $transfer['id']
+                                    ]);
+                                } else {
+                                    // Record failed reversal
+                                    $stmt = $pdo->prepare("
+                                        INSERT INTO transfer_reversals
+                                        (order_transfer_id, refund_id, amount, status, error_message, created_at)
+                                        VALUES (?, ?, ?, 'failed', ?, NOW())
+                                    ");
+                                    $stmt->execute([
+                                        $transfer['id'],
+                                        $refundRecordId,
+                                        $reversalAmount,
+                                        $reversalResult['error'] ?? 'Unknown error'
+                                    ]);
+                                    $allReversalsSuccess = false;
+                                    error_log("Transfer reversal failed: " . ($reversalResult['error'] ?? 'Unknown'));
+                                }
+                            }
+
+                            // Update refund record status
+                            $finalStatus = $allReversalsSuccess ? 'completed' : 'partial_completed';
+                            $stmt = $pdo->prepare("
+                                UPDATE order_refunds
+                                SET status = ?,
+                                    transfer_reversals_completed = ?,
+                                    completed_at = CASE WHEN ? = 'completed' THEN NOW() ELSE NULL END
+                                WHERE id = ?
+                            ");
+                            $stmt->execute([$finalStatus, $allReversalsSuccess ? 1 : 0, $finalStatus, $refundRecordId]);
+                        }
+
+                        // Update registrations if full refund
+                        if ($isFullRefund) {
+                            $stmt = $pdo->prepare("
+                                UPDATE event_registrations
+                                SET payment_status = 'refunded', status = 'cancelled'
+                                WHERE order_id = ?
+                            ");
+                            $stmt->execute([$order['id']]);
+
+                            $stmt = $pdo->prepare("
+                                UPDATE event_tickets
+                                SET status = 'refunded'
+                                WHERE order_id = ?
+                            ");
+                            $stmt->execute([$order['id']]);
+                        }
+
+                        $pdo->commit();
+                        $result = [
+                            'status' => 'processed',
+                            'message' => ($isFullRefund ? 'Full' : 'Partial') . ' refund recorded with transfer reversals'
+                        ];
+
+                    } catch (Exception $e) {
+                        $pdo->rollBack();
+                        error_log("Refund webhook error: " . $e->getMessage());
+                        throw $e;
+                    }
+                } else {
+                    $result = ['status' => 'ignored', 'message' => 'Order not found'];
+                }
             } else {
                 $result = ['status' => 'ignored', 'message' => 'Missing payment_intent ID'];
             }
