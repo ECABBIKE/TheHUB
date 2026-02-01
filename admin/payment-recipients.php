@@ -165,6 +165,58 @@ include __DIR__ . '/components/unified-layout.php';
 </div>
 <?php endif; ?>
 
+<!-- Instructions Box -->
+<div class="admin-card mb-lg" style="background: linear-gradient(135deg, var(--color-bg-surface), var(--color-bg-hover)); border: 2px solid var(--color-accent-light);">
+    <div class="admin-card-body">
+        <h3 style="margin: 0 0 var(--space-md) 0; display: flex; align-items: center; gap: var(--space-sm);">
+            <i data-lucide="clipboard-list" style="color: var(--color-accent);"></i>
+            Sa satter du upp en ny betalnings-mottagare
+        </h3>
+
+        <div style="display: grid; gap: var(--space-md); grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));">
+            <!-- Step 1 -->
+            <div style="display: flex; gap: var(--space-sm);">
+                <div style="min-width: 28px; height: 28px; background: var(--color-accent); color: var(--color-bg-page); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: var(--text-sm);">1</div>
+                <div>
+                    <strong>Skapa mottagare har</strong>
+                    <p class="text-secondary text-sm" style="margin: 2px 0 0 0;">Namn, org.nr, kontaktinfo</p>
+                </div>
+            </div>
+
+            <!-- Step 2 -->
+            <div style="display: flex; gap: var(--space-sm);">
+                <div style="min-width: 28px; height: 28px; background: var(--color-accent); color: var(--color-bg-page); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: var(--text-sm);">2</div>
+                <div>
+                    <strong>Anslut till Stripe</strong>
+                    <p class="text-secondary text-sm" style="margin: 2px 0 0 0;">
+                        <a href="/admin/stripe-connect" style="color: var(--color-accent);">Stripe Connect-sidan</a>
+                    </p>
+                </div>
+            </div>
+
+            <!-- Step 3 -->
+            <div style="display: flex; gap: var(--space-sm);">
+                <div style="min-width: 28px; height: 28px; background: var(--color-accent); color: var(--color-bg-page); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: var(--text-sm);">3</div>
+                <div>
+                    <strong>Koppla till event/serie</strong>
+                    <p class="text-secondary text-sm" style="margin: 2px 0 0 0;">
+                        <a href="/admin/events" style="color: var(--color-accent);">Events</a> /
+                        <a href="/admin/series" style="color: var(--color-accent);">Serier</a>
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div style="margin-top: var(--space-md); padding-top: var(--space-md); border-top: 1px solid var(--color-border);">
+            <p class="text-secondary text-sm" style="margin: 0;">
+                <i data-lucide="info" style="width: 14px; height: 14px; vertical-align: middle;"></i>
+                <strong>Viktigt:</strong> Varje mottagare behover ett unikt organisationsnummer for korrekta kvitton.
+                Vid multi-seller order skapas separata kvitton per saljare.
+            </p>
+        </div>
+    </div>
+</div>
+
 <!-- Header with actions -->
 <div class="flex justify-between items-center mb-lg flex-wrap gap-md">
     <div>

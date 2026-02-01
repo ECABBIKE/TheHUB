@@ -436,14 +436,111 @@ include __DIR__ . '/components/unified-layout.php';
 </div>
 <?php else: ?>
 
-<div class="info-box">
-    <h3><i data-lucide="info"></i> Hur det fungerar</h3>
-    <ol>
-        <li>Klicka "Anslut till Stripe" för din serie</li>
-        <li>Fyll i företagsuppgifter och bankinfo på Stripe</li>
-        <li>När Stripe godkänt kontot kan du ta emot betalningar (kort, Swish, Vipps)</li>
-        <li>Utbetalningar sker automatiskt till ditt bankkonto</li>
-    </ol>
+<!-- Main Instructions -->
+<div class="info-box" style="background: linear-gradient(135deg, var(--color-bg-surface), var(--color-bg-hover)); border: 2px solid var(--color-accent-light);">
+    <h3><i data-lucide="clipboard-list" style="color: var(--color-accent);"></i> Kom igang med betalningar</h3>
+
+    <div style="display: grid; gap: var(--space-lg); margin-top: var(--space-md);">
+        <div style="display: flex; gap: var(--space-md);">
+            <div style="min-width: 28px; height: 28px; background: var(--color-accent); color: var(--color-bg-page); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: var(--text-sm);">1</div>
+            <div>
+                <strong>Klicka "Anslut till Stripe" nedan</strong>
+                <p class="text-secondary text-sm" style="margin: 2px 0 0 0;">Valj din serie och paborja anslutningen</p>
+            </div>
+        </div>
+        <div style="display: flex; gap: var(--space-md);">
+            <div style="min-width: 28px; height: 28px; background: var(--color-accent); color: var(--color-bg-page); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: var(--text-sm);">2</div>
+            <div>
+                <strong>Fyll i uppgifter pa Stripe</strong>
+                <p class="text-secondary text-sm" style="margin: 2px 0 0 0;">Foretagsinfo, organisationsnummer, bankuppgifter, ID-verifiering</p>
+            </div>
+        </div>
+        <div style="display: flex; gap: var(--space-md);">
+            <div style="min-width: 28px; height: 28px; background: var(--color-accent); color: var(--color-bg-page); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: var(--text-sm);">3</div>
+            <div>
+                <strong>Stripe granskar och aktiverar</strong>
+                <p class="text-secondary text-sm" style="margin: 2px 0 0 0;">Tar normalt 1-2 vardagar. Du far notis nar det ar klart.</p>
+            </div>
+        </div>
+        <div style="display: flex; gap: var(--space-md);">
+            <div style="min-width: 28px; height: 28px; background: var(--color-success); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: var(--text-sm);">
+                <i data-lucide="check" style="width: 16px; height: 16px;"></i>
+            </div>
+            <div>
+                <strong>Borja ta emot betalningar!</strong>
+                <p class="text-secondary text-sm" style="margin: 2px 0 0 0;">Kortbetalningar, Swish och mer. Utbetalningar automatiskt till ditt konto.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- How It Works -->
+<div class="info-box" style="background: var(--color-bg-surface);">
+    <h3><i data-lucide="wallet" style="color: var(--color-info);"></i> Hur pengarna flyter</h3>
+    <div style="display: grid; gap: var(--space-md); grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); margin-top: var(--space-sm);">
+        <div style="text-align: center; padding: var(--space-md); background: var(--color-bg-page); border-radius: var(--radius-md);">
+            <i data-lucide="user" style="width: 24px; height: 24px; color: var(--color-accent); margin-bottom: var(--space-xs);"></i>
+            <p class="text-sm" style="margin: 0;"><strong>Deltagare betalar</strong></p>
+            <p class="text-xs text-secondary" style="margin: 0;">via TheHUB checkout</p>
+        </div>
+        <div style="text-align: center; padding: var(--space-md);">
+            <i data-lucide="arrow-right" style="width: 24px; height: 24px; color: var(--color-text-muted);"></i>
+        </div>
+        <div style="text-align: center; padding: var(--space-md); background: var(--color-bg-page); border-radius: var(--radius-md);">
+            <i data-lucide="building-2" style="width: 24px; height: 24px; color: var(--color-warning); margin-bottom: var(--space-xs);"></i>
+            <p class="text-sm" style="margin: 0;"><strong>TheHUB tar emot</strong></p>
+            <p class="text-xs text-secondary" style="margin: 0;">och overfOr direkt till dig</p>
+        </div>
+        <div style="text-align: center; padding: var(--space-md);">
+            <i data-lucide="arrow-right" style="width: 24px; height: 24px; color: var(--color-text-muted);"></i>
+        </div>
+        <div style="text-align: center; padding: var(--space-md); background: var(--color-bg-page); border-radius: var(--radius-md);">
+            <i data-lucide="landmark" style="width: 24px; height: 24px; color: var(--color-success); margin-bottom: var(--space-xs);"></i>
+            <p class="text-sm" style="margin: 0;"><strong>Ditt bankkonto</strong></p>
+            <p class="text-xs text-secondary" style="margin: 0;">automatiska utbetalningar</p>
+        </div>
+    </div>
+</div>
+
+<!-- Refund Info -->
+<div class="info-box" style="background: rgba(251, 191, 36, 0.03); border-color: var(--color-warning);">
+    <h3><i data-lucide="undo-2" style="color: var(--color-warning);"></i> Aterbetalningar - Viktigt att veta</h3>
+    <div style="display: grid; gap: var(--space-md); margin-top: var(--space-sm);">
+        <p class="text-secondary text-sm" style="margin: 0;">
+            Enligt Allmanna Villkor galler <strong>ingen angerratt</strong> for idrottsevenemang.
+            Du som arrangor beslutar om aterbetalning ska godkannas.
+        </p>
+        <div style="background: var(--color-bg-page); padding: var(--space-md); border-radius: var(--radius-md);">
+            <h4 style="margin: 0 0 var(--space-sm) 0; font-size: var(--text-sm);">Sa fungerar det:</h4>
+            <ol style="margin: 0; padding-left: 1.2rem; color: var(--color-text-secondary); font-size: var(--text-sm);">
+                <li>Deltagare kontaktar <strong>dig</strong> for aterbetalning</li>
+                <li>Du beslutar om refund ska godkannas</li>
+                <li>Meddela TheHUB-admin med Order-ID + ditt beslut</li>
+                <li>Admin processar aterbetalningen tekniskt</li>
+                <li><strong>Automatisk aterforing:</strong> Pengarna aterfors fran ditt Stripe-konto</li>
+            </ol>
+        </div>
+        <p class="text-secondary text-xs" style="margin: 0;">
+            <i data-lucide="shield-check" style="width: 14px; height: 14px; vertical-align: middle;"></i>
+            TheHUB hanterar chargebacks (tvistade betalningar) - du behover inte oroa dig for dem.
+        </p>
+    </div>
+</div>
+
+<!-- Contact -->
+<div class="info-box" style="background: var(--color-bg-surface);">
+    <h3><i data-lucide="mail" style="color: var(--color-accent);"></i> Kontakt</h3>
+    <p class="text-secondary text-sm" style="margin: 0 0 var(--space-sm) 0;">
+        Har du fragor om betalningar eller behover hjalp?
+    </p>
+    <div style="display: flex; gap: var(--space-md); flex-wrap: wrap;">
+        <a href="mailto:info@gravityseries.se" class="btn btn--secondary btn--sm">
+            <i data-lucide="mail"></i> info@gravityseries.se
+        </a>
+        <a href="/admin/promotor-payments" class="btn btn--secondary btn--sm">
+            <i data-lucide="receipt"></i> Se dina betalningar
+        </a>
+    </div>
 </div>
 
 <?php if (empty($series)): ?>

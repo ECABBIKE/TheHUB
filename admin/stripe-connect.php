@@ -393,14 +393,91 @@ STRIPE_WEBHOOK_SECRET=whsec_xxxxx</pre>
 <?php else: ?>
 
 <!-- Instructions -->
-<div class="config-box">
-    <h3><i data-lucide="info"></i> Hur det fungerar</h3>
-    <ol style="color: var(--color-text-secondary); margin: 0; padding-left: 1.5rem;">
-        <li>Valj en mottagare nedan och klicka "Anslut till Stripe"</li>
-        <li>Mottagaren fyller i foretagsuppgifter, bankinfo och verifierar identitet pa Stripe</li>
-        <li>Nar Stripe godkant kontot kan mottagaren ta emot kortbetalningar</li>
-        <li>TheHUB tar plattformsavgift pa varje transaktion (konfigurerbart per mottagare)</li>
-    </ol>
+<div class="config-box" style="background: linear-gradient(135deg, var(--color-bg-surface), var(--color-bg-hover)); border: 2px solid var(--color-accent-light);">
+    <h3><i data-lucide="clipboard-list" style="color: var(--color-accent);"></i> Admin: Checklista for Betalningssystem</h3>
+
+    <div style="display: grid; gap: var(--space-lg); margin-top: var(--space-md);">
+        <!-- Step 1 -->
+        <div style="display: flex; gap: var(--space-md);">
+            <div style="min-width: 32px; height: 32px; background: var(--color-accent); color: var(--color-bg-page); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold;">1</div>
+            <div style="flex: 1;">
+                <strong>Skapa betalningsmottagare</strong>
+                <p class="text-secondary text-sm" style="margin: var(--space-xs) 0;">
+                    Varje arrangor/klubb som ska ta emot pengar behover en mottagare med org.nr och kontaktinfo.
+                </p>
+                <a href="/admin/payment-recipients" class="btn-admin btn-admin-secondary btn-admin-sm">
+                    <i data-lucide="building-2"></i> Hantera mottagare
+                </a>
+            </div>
+        </div>
+
+        <!-- Step 2 -->
+        <div style="display: flex; gap: var(--space-md);">
+            <div style="min-width: 32px; height: 32px; background: var(--color-accent); color: var(--color-bg-page); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold;">2</div>
+            <div style="flex: 1;">
+                <strong>Anslut till Stripe (nedan)</strong>
+                <p class="text-secondary text-sm" style="margin: var(--space-xs) 0;">
+                    Klicka "Anslut till Stripe" for varje mottagare. Du kommer till Stripes onboarding.
+                </p>
+            </div>
+        </div>
+
+        <!-- Step 3 -->
+        <div style="display: flex; gap: var(--space-md);">
+            <div style="min-width: 32px; height: 32px; background: var(--color-accent); color: var(--color-bg-page); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold;">3</div>
+            <div style="flex: 1;">
+                <strong>Arrangoren fyller i sina uppgifter</strong>
+                <p class="text-secondary text-sm" style="margin: var(--space-xs) 0;">
+                    Skicka onboarding-lanken till arrangoren. De fyller i: foretagsinfo, bankuppgifter, ID-verifiering.
+                    <br><em>Alternativt: Du kan fylla i uppgifterna at dem om du har all info.</em>
+                </p>
+            </div>
+        </div>
+
+        <!-- Step 4 -->
+        <div style="display: flex; gap: var(--space-md);">
+            <div style="min-width: 32px; height: 32px; background: var(--color-accent); color: var(--color-bg-page); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold;">4</div>
+            <div style="flex: 1;">
+                <strong>Koppla event/serier till mottagaren</strong>
+                <p class="text-secondary text-sm" style="margin: var(--space-xs) 0;">
+                    Nar kontot ar aktivt, koppla events eller serier till mottagaren sa betalningar gar till dem.
+                </p>
+                <div style="display: flex; gap: var(--space-sm); flex-wrap: wrap;">
+                    <a href="/admin/events" class="btn-admin btn-admin-secondary btn-admin-sm">
+                        <i data-lucide="calendar"></i> Events
+                    </a>
+                    <a href="/admin/series" class="btn-admin btn-admin-secondary btn-admin-sm">
+                        <i data-lucide="trophy"></i> Serier
+                    </a>
+                </div>
+            </div>
+        </div>
+
+        <!-- Step 5 -->
+        <div style="display: flex; gap: var(--space-md);">
+            <div style="min-width: 32px; height: 32px; background: var(--color-accent); color: var(--color-bg-page); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold;">5</div>
+            <div style="flex: 1;">
+                <strong>Aterbetalningar vid behov</strong>
+                <p class="text-secondary text-sm" style="margin: var(--space-xs) 0;">
+                    Vid refund aterfors automatiskt saljartransfers. Arrangoren beslutar om refund (enligt villkoren).
+                </p>
+                <a href="/admin/process-refunds" class="btn-admin btn-admin-secondary btn-admin-sm">
+                    <i data-lucide="undo-2"></i> Hantera aterbetalningar
+                </a>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Important Info Box -->
+<div class="config-box" style="background: rgba(251, 191, 36, 0.05); border-color: var(--color-warning);">
+    <h3><i data-lucide="alert-triangle" style="color: var(--color-warning);"></i> Viktigt att veta</h3>
+    <ul style="color: var(--color-text-secondary); margin: var(--space-sm) 0 0 0; padding-left: 1.5rem;">
+        <li><strong>Recipient Model:</strong> Alla betalningar gar till TheHUB:s Stripe-konto, vi overfOr sen till saljare.</li>
+        <li><strong>Automatiska transfers:</strong> Nar en betalning lyckas skapas transfer till saljaren direkt.</li>
+        <li><strong>Chargebacks:</strong> Plattformen bar risken for chargebacks (pengar tas fran oss, inte saljaren).</li>
+        <li><strong>Refunds:</strong> Vid aterbetalning aterfors transfers automatiskt fran saljarens konto till plattformen.</li>
+    </ul>
 </div>
 
 <!-- Recipients List -->
