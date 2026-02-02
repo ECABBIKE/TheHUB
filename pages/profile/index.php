@@ -60,6 +60,82 @@ $resultStmt = $pdo->prepare("
 ");
 $resultStmt->execute([$currentUser['id']]);
 $recentResults = $resultStmt->fetchAll(PDO::FETCH_ASSOC);
+
+// Check for pending winback campaigns
+$pendingWinbackCount = 0;
+try {
+    $winbackCheck = $pdo->query("SHOW TABLES LIKE 'winback_campaigns'");
+    if ($winbackCheck->rowCount() > 0) {
+        // Get active campaigns
+        $campStmt = $pdo->query("SELECT * FROM winback_campaigns WHERE is_active = 1");
+        $winbackCampaigns = $campStmt->fetchAll(PDO::FETCH_ASSOC);
+
+        foreach ($winbackCampaigns as $c) {
+            $brandIds = json_decode($c['brand_ids'] ?? '[]', true) ?: [];
+            $audienceType = $c['audience_type'] ?? 'churned';
+            $placeholders = !empty($brandIds) ? implode(',', array_fill(0, count($brandIds), '?')) : '0';
+
+            // Check if already responded
+            $respCheck = $pdo->prepare("SELECT id FROM winback_responses WHERE campaign_id = ? AND rider_id = ?");
+            $respCheck->execute([$c['id'], $currentUser['id']]);
+            if ($respCheck->fetch()) continue;
+
+            // Check if user qualifies based on audience type
+            $qualifies = false;
+
+            if ($audienceType === 'churned') {
+                // Churned: competed in start-end years but NOT in target year
+                $sql = "SELECT COUNT(DISTINCT e.id) FROM results r
+                        JOIN events e ON r.event_id = e.id
+                        JOIN series s ON e.series_id = s.id
+                        WHERE r.cyclist_id = ? AND YEAR(e.date) BETWEEN ? AND ?" .
+                        (!empty($brandIds) ? " AND s.brand_id IN ($placeholders)" : "");
+                $params = array_merge([$currentUser['id'], $c['start_year'], $c['end_year']], $brandIds);
+                $stmt = $pdo->prepare($sql);
+                $stmt->execute($params);
+                $historicalCount = (int)$stmt->fetchColumn();
+
+                $sql2 = "SELECT COUNT(*) FROM results r
+                         JOIN events e ON r.event_id = e.id
+                         JOIN series s ON e.series_id = s.id
+                         WHERE r.cyclist_id = ? AND YEAR(e.date) = ?" .
+                         (!empty($brandIds) ? " AND s.brand_id IN ($placeholders)" : "");
+                $params2 = array_merge([$currentUser['id'], $c['target_year']], $brandIds);
+                $stmt2 = $pdo->prepare($sql2);
+                $stmt2->execute($params2);
+                $targetCount = (int)$stmt2->fetchColumn();
+
+                $qualifies = ($historicalCount > 0 && $targetCount == 0);
+            } elseif ($audienceType === 'active') {
+                // Active: competed in target year
+                $sql = "SELECT COUNT(*) FROM results r
+                        JOIN events e ON r.event_id = e.id
+                        JOIN series s ON e.series_id = s.id
+                        WHERE r.cyclist_id = ? AND YEAR(e.date) = ?" .
+                        (!empty($brandIds) ? " AND s.brand_id IN ($placeholders)" : "");
+                $params = array_merge([$currentUser['id'], $c['target_year']], $brandIds);
+                $stmt = $pdo->prepare($sql);
+                $stmt->execute($params);
+                $qualifies = ((int)$stmt->fetchColumn() > 0);
+            } elseif ($audienceType === 'one_timer') {
+                // One-timer: competed exactly once in target year
+                $sql = "SELECT COUNT(DISTINCT e.id) FROM results r
+                        JOIN events e ON r.event_id = e.id
+                        JOIN series s ON e.series_id = s.id
+                        WHERE r.cyclist_id = ? AND YEAR(e.date) = ?" .
+                        (!empty($brandIds) ? " AND s.brand_id IN ($placeholders)" : "");
+                $params = array_merge([$currentUser['id'], $c['target_year']], $brandIds);
+                $stmt = $pdo->prepare($sql);
+                $stmt->execute($params);
+                $qualifies = ((int)$stmt->fetchColumn() == 1);
+            }
+
+            if ($qualifies) $pendingWinbackCount++;
+        }
+    }
+} catch (PDOException $e) {
+    $pendingWinbackCount = 0;
+}
 ?>
 
 <div class="page-header">
@@ -113,19 +189,14 @@ $recentResults = $resultStmt->fetchAll(PDO::FETCH_ASSOC);
 
 <!-- Quick Links -->
 <div class="quick-links">
-    <a href="/profile/registrations" class="quick-link">
-        <span class="quick-link-icon"><i data-lucide="clipboard-list"></i></span>
-        <span class="quick-link-label">Mina anmälningar</span>
+    <a href="/profile/receipts" class="quick-link">
+        <span class="quick-link-icon"><i data-lucide="shopping-bag"></i></span>
+        <span class="quick-link-label">Mina köp</span>
         <span class="quick-link-arrow">›</span>
     </a>
     <a href="/rider/<?= $currentUser['id'] ?>" class="quick-link">
         <span class="quick-link-icon"><i data-lucide="flag"></i></span>
         <span class="quick-link-label">Mina resultat</span>
-        <span class="quick-link-arrow">›</span>
-    </a>
-    <a href="/profile/receipts" class="quick-link">
-        <span class="quick-link-icon"><i data-lucide="receipt"></i></span>
-        <span class="quick-link-label">Kvitton</span>
         <span class="quick-link-arrow">›</span>
     </a>
     <a href="/profile/race-reports" class="quick-link">
@@ -146,6 +217,16 @@ $recentResults = $resultStmt->fetchAll(PDO::FETCH_ASSOC);
     <a href="/profile/profiles" class="quick-link quick-link--highlight">
         <span class="quick-link-icon"><i data-lucide="users"></i></span>
         <span class="quick-link-label">Mina profiler (<?= $profileCount ?>)</span>
+        <span class="quick-link-arrow">›</span>
+    </a>
+    <?php endif; ?>
+    <?php if ($pendingWinbackCount > 0): ?>
+    <a href="/profile/winback" class="quick-link" style="background: linear-gradient(135deg, var(--color-accent-light), transparent); border-color: var(--color-accent);">
+        <span class="quick-link-icon"><i data-lucide="arrow-right-circle"></i></span>
+        <span class="quick-link-label">Back to Gravity</span>
+        <?php if ($pendingWinbackCount > 1): ?>
+            <span class="quick-link-badge" style="background:var(--color-accent);color:#000;padding:2px 8px;border-radius:12px;font-size:0.75rem;"><?= $pendingWinbackCount ?></span>
+        <?php endif; ?>
         <span class="quick-link-arrow">›</span>
     </a>
     <?php endif; ?>
@@ -170,7 +251,7 @@ $recentResults = $resultStmt->fetchAll(PDO::FETCH_ASSOC);
     <div class="section">
         <div class="section-header">
             <h2>Kommande tävlingar</h2>
-            <a href="/profile/registrations" class="section-link">Visa alla</a>
+            <a href="/profile/receipts" class="section-link">Visa alla</a>
         </div>
         <div class="upcoming-list">
             <?php foreach ($upcomingRegs as $reg): ?>

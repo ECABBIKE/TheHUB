@@ -325,7 +325,7 @@ include __DIR__ . '/components/unified-layout.php';
             Registreringar (<?= count($registrations) ?>)
         </h2>
         <div class="card-header-actions">
-            <a href="/admin/series-edit.php?id=<?= $seriesId ?>" class="btn btn--secondary btn--sm">
+            <a href="/admin/series-manage.php?id=<?= $seriesId ?>" class="btn btn--secondary btn--sm">
                 <i data-lucide="settings"></i>
                 Serie-inställningar
             </a>

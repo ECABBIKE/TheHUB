@@ -208,9 +208,9 @@ include __DIR__ . '/../components/header.php';
                     <p class="text-secondary mb-lg">
                         Order <strong><?= htmlspecialchars($order['order_number']) ?></strong> är betald.
                     </p>
-                    <a href="/profile/registrations" class="btn btn--primary">
-                        <i data-lucide="ticket"></i>
-                        Mina anmälningar
+                    <a href="/profile/receipts" class="btn btn--primary">
+                        <i data-lucide="shopping-bag"></i>
+                        Mina köp
                     </a>
                 </div>
             </div>

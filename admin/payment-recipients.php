@@ -55,13 +55,143 @@ try {
     $hasBankFields = !empty($cols);
 } catch (Exception $e) {}
 
+// Initialize Stripe client if configured
+$stripeClient = null;
+if (!empty(env('STRIPE_SECRET_KEY', ''))) {
+    require_once __DIR__ . '/../includes/payment/StripeClient.php';
+    $stripeClient = new \TheHUB\Payment\StripeClient(env('STRIPE_SECRET_KEY'));
+}
+
 // Handle form submissions
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     checkCsrf();
 
     $action = $_POST['action'] ?? '';
 
-    if ($action === 'create' || $action === 'update') {
+    // ========================================
+    // STRIPE CONNECT ACTIONS
+    // ========================================
+
+    // Create Stripe Connect Account
+    if ($action === 'create_stripe_account' && $stripeClient) {
+        $recipientId = intval($_POST['recipient_id'] ?? 0);
+        $recipient = $db->getOne("SELECT * FROM payment_recipients WHERE id = ?", [$recipientId]);
+
+        if (!$recipient) {
+            $message = 'Mottagare hittades inte';
+            $messageType = 'error';
+        } elseif (!empty($recipient['stripe_account_id'])) {
+            $message = 'Mottagaren har redan ett Stripe-konto';
+            $messageType = 'warning';
+        } else {
+            $result = $stripeClient->createConnectedAccount([
+                'email' => $recipient['contact_email'] ?? null,
+                'country' => 'SE',
+                'business_type' => 'company',
+                'business_name' => $recipient['name'],
+                'metadata' => [
+                    'recipient_id' => $recipientId,
+                    'recipient_name' => $recipient['name'],
+                    'org_number' => $recipient['org_number'] ?? ''
+                ]
+            ]);
+
+            if ($result['success']) {
+                $db->update('payment_recipients', [
+                    'stripe_account_id' => $result['account_id'],
+                    'stripe_account_status' => 'pending'
+                ], 'id = ?', [$recipientId]);
+
+                $message = 'Stripe-konto skapat! Klicka på "Slutför onboarding" för att slutföra registreringen.';
+                $messageType = 'success';
+            } else {
+                $message = 'Kunde inte skapa Stripe-konto: ' . ($result['error'] ?? 'Okänt fel');
+                $messageType = 'error';
+            }
+        }
+    }
+
+    // Generate Stripe Onboarding Link
+    elseif ($action === 'stripe_onboarding' && $stripeClient) {
+        $recipientId = intval($_POST['recipient_id'] ?? 0);
+        $recipient = $db->getOne("SELECT * FROM payment_recipients WHERE id = ?", [$recipientId]);
+
+        if (!$recipient || empty($recipient['stripe_account_id'])) {
+            $message = 'Inget Stripe-konto hittat';
+            $messageType = 'error';
+        } else {
+            $baseUrl = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http') . '://' . $_SERVER['HTTP_HOST'];
+            $returnUrl = $baseUrl . '/admin/payment-recipients?stripe_return=1&recipient_id=' . $recipientId;
+            $refreshUrl = $baseUrl . '/admin/payment-recipients?stripe_refresh=1&recipient_id=' . $recipientId;
+
+            $result = $stripeClient->createAccountLink(
+                $recipient['stripe_account_id'],
+                $returnUrl,
+                $refreshUrl
+            );
+
+            if ($result['success'] && !empty($result['url'])) {
+                header('Location: ' . $result['url']);
+                exit;
+            } else {
+                $message = 'Kunde inte skapa onboarding-länk: ' . ($result['error'] ?? 'Okänt fel');
+                $messageType = 'error';
+            }
+        }
+    }
+
+    // Get Stripe Dashboard Link
+    elseif ($action === 'stripe_dashboard' && $stripeClient) {
+        $recipientId = intval($_POST['recipient_id'] ?? 0);
+        $recipient = $db->getOne("SELECT * FROM payment_recipients WHERE id = ?", [$recipientId]);
+
+        if (!$recipient || empty($recipient['stripe_account_id'])) {
+            $message = 'Inget Stripe-konto hittat';
+            $messageType = 'error';
+        } else {
+            $result = $stripeClient->createLoginLink($recipient['stripe_account_id']);
+
+            if ($result['success'] && !empty($result['url'])) {
+                header('Location: ' . $result['url']);
+                exit;
+            } else {
+                $message = 'Kunde inte öppna Stripe Dashboard: ' . ($result['error'] ?? 'Okänt fel');
+                $messageType = 'error';
+            }
+        }
+    }
+
+    // Refresh Stripe Account Status
+    elseif ($action === 'refresh_stripe_status' && $stripeClient) {
+        $recipientId = intval($_POST['recipient_id'] ?? 0);
+        $recipient = $db->getOne("SELECT * FROM payment_recipients WHERE id = ?", [$recipientId]);
+
+        if ($recipient && !empty($recipient['stripe_account_id'])) {
+            $account = $stripeClient->getAccount($recipient['stripe_account_id']);
+
+            if ($account['success']) {
+                $status = 'pending';
+                if ($account['details_submitted'] && $account['charges_enabled'] && $account['payouts_enabled']) {
+                    $status = 'active';
+                } elseif ($account['details_submitted']) {
+                    $status = 'restricted';
+                }
+
+                $db->update('payment_recipients', [
+                    'stripe_account_status' => $status
+                ], 'id = ?', [$recipientId]);
+
+                $message = 'Stripe-status uppdaterad: ' . ucfirst($status);
+                $messageType = 'success';
+            }
+        }
+    }
+
+    // ========================================
+    // REGULAR RECIPIENT ACTIONS
+    // ========================================
+
+    elseif ($action === 'create' || $action === 'update') {
         $name = trim($_POST['name'] ?? '');
         $gatewayType = $_POST['gateway_type'] ?? 'swish';
 
@@ -125,6 +255,43 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     }
 }
 
+// Handle Stripe return/refresh callbacks
+if (isset($_GET['stripe_return']) && !empty($_GET['recipient_id']) && $stripeClient) {
+    $recipientId = intval($_GET['recipient_id']);
+    $recipient = $db->getOne("SELECT * FROM payment_recipients WHERE id = ?", [$recipientId]);
+
+    if ($recipient && !empty($recipient['stripe_account_id'])) {
+        // Fetch updated account status
+        $account = $stripeClient->getAccount($recipient['stripe_account_id']);
+
+        if ($account['success']) {
+            $status = 'pending';
+            if ($account['details_submitted'] && $account['charges_enabled'] && $account['payouts_enabled']) {
+                $status = 'active';
+            } elseif ($account['details_submitted']) {
+                $status = 'restricted';
+            }
+
+            $db->update('payment_recipients', [
+                'stripe_account_status' => $status
+            ], 'id = ?', [$recipientId]);
+
+            if ($status === 'active') {
+                $message = 'Stripe-kontot är nu aktivt och redo att ta emot betalningar!';
+                $messageType = 'success';
+            } else {
+                $message = 'Onboarding pågår. Klicka på "Slutför onboarding" om du behöver komplettera informationen.';
+                $messageType = 'info';
+            }
+        }
+    }
+}
+
+if (isset($_GET['stripe_refresh']) && !empty($_GET['recipient_id'])) {
+    $message = 'Stripe-sessionen gick ut. Klicka på "Slutför onboarding" för att fortsätta.';
+    $messageType = 'warning';
+}
+
 // Get all recipients with usage count
 $recipients = $db->getAll("
     SELECT pr.*,
@@ -165,18 +332,75 @@ include __DIR__ . '/components/unified-layout.php';
 </div>
 <?php endif; ?>
 
+<?php if (!$stripeConfigured): ?>
+<div class="alert alert-warning mb-lg">
+    <i data-lucide="alert-triangle"></i>
+    <div>
+        <strong>Stripe Connect ej konfigurerat!</strong><br>
+        Lägg till <code>STRIPE_SECRET_KEY</code> i .env-filen för att aktivera Stripe Connect-funktionen.
+        Utan detta kan du inte ta emot kortbetalningar via Stripe.
+    </div>
+</div>
+<?php endif; ?>
+
+<!-- Instructions Box -->
+<div class="admin-card mb-lg" style="background: linear-gradient(135deg, var(--color-bg-surface), var(--color-bg-hover)); border: 2px solid var(--color-accent-light);">
+    <div class="admin-card-body">
+        <h3 style="margin: 0 0 var(--space-md) 0; display: flex; align-items: center; gap: var(--space-sm);">
+            <i data-lucide="clipboard-list" style="color: var(--color-accent);"></i>
+            Sa satter du upp en ny betalnings-mottagare
+        </h3>
+
+        <div style="display: grid; gap: var(--space-md); grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));">
+            <!-- Step 1 -->
+            <div style="display: flex; gap: var(--space-sm);">
+                <div style="min-width: 28px; height: 28px; background: var(--color-accent); color: var(--color-bg-page); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: var(--text-sm);">1</div>
+                <div>
+                    <strong>Skapa mottagare har</strong>
+                    <p class="text-secondary text-sm" style="margin: 2px 0 0 0;">Namn, org.nr, kontaktinfo</p>
+                </div>
+            </div>
+
+            <!-- Step 2 -->
+            <div style="display: flex; gap: var(--space-sm);">
+                <div style="min-width: 28px; height: 28px; background: var(--color-accent); color: var(--color-bg-page); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: var(--text-sm);">2</div>
+                <div>
+                    <strong>Anslut till Stripe</strong>
+                    <p class="text-secondary text-sm" style="margin: 2px 0 0 0;">
+                        Klicka "Skapa Stripe-konto" i kortet
+                    </p>
+                </div>
+            </div>
+
+            <!-- Step 3 -->
+            <div style="display: flex; gap: var(--space-sm);">
+                <div style="min-width: 28px; height: 28px; background: var(--color-accent); color: var(--color-bg-page); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: var(--text-sm);">3</div>
+                <div>
+                    <strong>Koppla till event/serie</strong>
+                    <p class="text-secondary text-sm" style="margin: 2px 0 0 0;">
+                        <a href="/admin/events" style="color: var(--color-accent);">Events</a> /
+                        <a href="/admin/series" style="color: var(--color-accent);">Serier</a>
+                    </p>
+                </div>
+            </div>
+        </div>
+
+        <div style="margin-top: var(--space-md); padding-top: var(--space-md); border-top: 1px solid var(--color-border);">
+            <p class="text-secondary text-sm" style="margin: 0;">
+                <i data-lucide="info" style="width: 14px; height: 14px; vertical-align: middle;"></i>
+                <strong>Viktigt:</strong> Varje mottagare behover ett unikt organisationsnummer for korrekta kvitton.
+                Vid multi-seller order skapas separata kvitton per saljare.
+            </p>
+        </div>
+    </div>
+</div>
+
 <!-- Header with actions -->
 <div class="flex justify-between items-center mb-lg flex-wrap gap-md">
     <div>
         <p class="text-secondary m-0">Hantera betalningsmottagare för serier och event</p>
     </div>
     <div class="flex gap-sm">
-        <?php if ($stripeConfigured): ?>
-        <a href="/admin/stripe-connect.php" class="btn-admin btn-admin-secondary">
-            <i data-lucide="credit-card"></i>
-            Stripe Connect
-        </a>
-        <?php endif; ?>
         <button type="button" class="btn-admin btn-admin-primary" onclick="showModal('create')">
             <i data-lucide="plus"></i>
             Ny mottagare
@@ -262,7 +486,7 @@ include __DIR__ . '/components/unified-layout.php';
                         <span class="method-name">Stripe</span>
                         <span class="method-value">Ej kopplad</span>
                     </div>
-                    <a href="/admin/stripe-connect.php" class="method-action">Anslut</a>
+                    <span class="method-action text-muted">Se nedan</span>
                 </div>
                 <?php endif; ?>
 
@@ -307,15 +531,46 @@ include __DIR__ . '/components/unified-layout.php';
 
         <div class="recipient-card-footer">
             <?php if ($stripeConfigured && !$hasStripe): ?>
-            <a href="/admin/stripe-connect.php" class="btn-admin btn-admin-primary btn-admin-sm flex-1">
-                <i data-lucide="link"></i>
-                Anslut Stripe
-            </a>
-            <?php elseif ($hasStripe): ?>
-            <a href="/admin/stripe-connect.php" class="btn-admin btn-admin-secondary btn-admin-sm">
-                <i data-lucide="external-link"></i>
-                Stripe
-            </a>
+            <!-- No Stripe account yet - Create one -->
+            <form method="POST" class="inline flex-1">
+                <?= csrf_field() ?>
+                <input type="hidden" name="action" value="create_stripe_account">
+                <input type="hidden" name="recipient_id" value="<?= $r['id'] ?>">
+                <button type="submit" class="btn-admin btn-admin-primary btn-admin-sm w-full">
+                    <i data-lucide="link"></i>
+                    Skapa Stripe-konto
+                </button>
+            </form>
+            <?php elseif ($hasStripe && $stripeStatus !== 'active'): ?>
+            <!-- Has Stripe account but not active - Continue onboarding -->
+            <form method="POST" class="inline">
+                <?= csrf_field() ?>
+                <input type="hidden" name="action" value="stripe_onboarding">
+                <input type="hidden" name="recipient_id" value="<?= $r['id'] ?>">
+                <button type="submit" class="btn-admin btn-admin-warning btn-admin-sm">
+                    <i data-lucide="arrow-right"></i>
+                    Slutför onboarding
+                </button>
+            </form>
+            <form method="POST" class="inline">
+                <?= csrf_field() ?>
+                <input type="hidden" name="action" value="refresh_stripe_status">
+                <input type="hidden" name="recipient_id" value="<?= $r['id'] ?>">
+                <button type="submit" class="btn-admin btn-admin-secondary btn-admin-sm" title="Uppdatera status">
+                    <i data-lucide="refresh-cw"></i>
+                </button>
+            </form>
+            <?php elseif ($hasStripe && $stripeStatus === 'active'): ?>
+            <!-- Has active Stripe account - Show dashboard -->
+            <form method="POST" class="inline">
+                <?= csrf_field() ?>
+                <input type="hidden" name="action" value="stripe_dashboard">
+                <input type="hidden" name="recipient_id" value="<?= $r['id'] ?>">
+                <button type="submit" class="btn-admin btn-admin-secondary btn-admin-sm">
+                    <i data-lucide="external-link"></i>
+                    Stripe Dashboard
+                </button>
+            </form>
             <?php endif; ?>
 
             <button type="button" class="btn-admin btn-admin-secondary btn-admin-sm"
@@ -397,7 +652,7 @@ include __DIR__ . '/components/unified-layout.php';
                 <div class="form-section">
                     <h4><i data-lucide="credit-card"></i> Stripe Connect</h4>
                     <p class="text-secondary mb-0">
-                        Stripe-kontot kopplas via <a href="/admin/stripe-connect.php" class="text-accent">Stripe Connect</a> efter att mottagaren skapats.
+                        Stripe-kontot kopplas efter att mottagaren skapats. Klicka på "Skapa Stripe-konto" i mottagarkortet.
                     </p>
                 </div>
                 <?php endif; ?>
@@ -481,6 +736,20 @@ include __DIR__ . '/components/unified-layout.php';
 </div>
 
 <style>
+/* Utility classes */
+.w-full { width: 100%; }
+.inline { display: inline-block; }
+
+/* Button warning variant */
+.btn-admin-warning {
+    background: var(--color-warning);
+    color: var(--color-bg-page);
+    border: 1px solid var(--color-warning);
+}
+.btn-admin-warning:hover {
+    background: color-mix(in srgb, var(--color-warning) 85%, black);
+}
+
 /* Recipient Grid */
 .recipient-grid {
     display: grid;

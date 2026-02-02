@@ -201,560 +201,475 @@ if ($message) {
         ORDER BY s.name
     ", [$userId]);
 }
+
+// Page config
+$page_title = 'Stripe Connect';
+$breadcrumbs = [
+    ['label' => 'Mina tävlingar', 'url' => '/admin/promotor.php'],
+    ['label' => 'Stripe Connect']
+];
+
+include __DIR__ . '/components/unified-layout.php';
 ?>
-<!DOCTYPE html>
-<html lang="sv" data-theme="light">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Stripe Connect - TheHUB</title>
-    <link rel="stylesheet" href="/assets/css/reset.css">
-    <link rel="stylesheet" href="/assets/css/tokens.css">
-    <link rel="stylesheet" href="/assets/css/theme.css">
-    <link rel="stylesheet" href="/assets/css/components.css">
-    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
-    <style>
-        .promotor-page {
-            min-height: 100vh;
-            background: var(--color-bg-page);
-        }
-        .promotor-header {
-            background: var(--color-bg-surface);
-            border-bottom: 1px solid var(--color-border);
-            padding: var(--space-md) var(--space-lg);
-        }
-        .promotor-header-content {
-            max-width: 800px;
-            margin: 0 auto;
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: var(--space-md);
-            flex-wrap: wrap;
-        }
-        .promotor-header h1 {
-            font-size: 1.25rem;
-            font-weight: 600;
-            color: var(--color-text-primary);
-            display: flex;
-            align-items: center;
-            gap: var(--space-sm);
-        }
-        .promotor-header h1 i {
-            color: #635bff;
-        }
-        .promotor-content {
-            max-width: 800px;
-            margin: 0 auto;
-            padding: var(--space-lg);
-            padding-bottom: calc(var(--space-lg) + 80px);
-        }
-        .back-link {
-            display: inline-flex;
-            align-items: center;
-            gap: var(--space-xs);
-            color: var(--color-text-secondary);
-            text-decoration: none;
-            font-size: var(--text-sm);
-        }
-        .back-link:hover {
-            color: var(--color-text-primary);
-        }
 
-        /* Alert */
-        .alert {
-            padding: var(--space-md);
-            border-radius: var(--radius-md);
-            margin-bottom: var(--space-lg);
-            display: flex;
-            align-items: flex-start;
-            gap: var(--space-sm);
-        }
-        .alert i { width: 20px; height: 20px; flex-shrink: 0; }
-        .alert-success {
-            background: rgba(16, 185, 129, 0.1);
-            color: var(--color-success);
-            border: 1px solid rgba(16, 185, 129, 0.2);
-        }
-        .alert-info {
-            background: rgba(56, 189, 248, 0.1);
-            color: var(--color-info);
-            border: 1px solid rgba(56, 189, 248, 0.2);
-        }
-        .alert-error {
-            background: rgba(239, 68, 68, 0.1);
-            color: var(--color-error);
-            border: 1px solid rgba(239, 68, 68, 0.2);
-        }
-        .alert-warning {
-            background: rgba(251, 191, 36, 0.1);
-            color: #92400e;
-            border: 1px solid rgba(251, 191, 36, 0.2);
-        }
+<style>
+/* Info Box */
+.info-box {
+    background: var(--color-bg-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    padding: var(--space-lg);
+    margin-bottom: var(--space-lg);
+}
+.info-box h3 {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    margin: 0 0 var(--space-md) 0;
+    font-size: var(--text-base);
+}
+.info-box h3 i {
+    color: var(--color-info);
+}
+.info-box ol {
+    margin: 0;
+    padding-left: 1.5rem;
+    color: var(--color-text-secondary);
+}
+.info-box li {
+    margin-bottom: var(--space-xs);
+}
 
-        /* Info Box */
-        .info-box {
-            background: var(--color-bg-surface);
-            border: 1px solid var(--color-border);
-            border-radius: var(--radius-lg);
-            padding: var(--space-lg);
-            margin-bottom: var(--space-lg);
-        }
-        .info-box h3 {
-            display: flex;
-            align-items: center;
-            gap: var(--space-sm);
-            margin: 0 0 var(--space-md) 0;
-            font-size: var(--text-base);
-        }
-        .info-box h3 i {
-            color: var(--color-info);
-        }
-        .info-box ol {
-            margin: 0;
-            padding-left: 1.5rem;
-            color: var(--color-text-secondary);
-        }
-        .info-box li {
-            margin-bottom: var(--space-xs);
-        }
+/* Series Card */
+.series-card {
+    background: var(--color-bg-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-lg);
+    margin-bottom: var(--space-md);
+    overflow: hidden;
+}
+.series-card-header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-md);
+    padding: var(--space-md) var(--space-lg);
+    border-bottom: 1px solid var(--color-border);
+    background: var(--color-bg-hover);
+}
+.series-logo {
+    width: 40px;
+    height: 40px;
+    border-radius: var(--radius-md);
+    background: var(--color-bg-card);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    overflow: hidden;
+    flex-shrink: 0;
+}
+.series-logo img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+.series-info {
+    flex: 1;
+}
+.series-info h3 {
+    margin: 0;
+    font-size: var(--text-base);
+}
+.series-info p {
+    margin: 0;
+    font-size: var(--text-sm);
+    color: var(--color-text-secondary);
+}
 
-        /* Series Card */
-        .series-card {
-            background: var(--color-bg-surface);
-            border: 1px solid var(--color-border);
-            border-radius: var(--radius-lg);
-            margin-bottom: var(--space-md);
-            overflow: hidden;
-        }
-        .series-card-header {
-            display: flex;
-            align-items: center;
-            gap: var(--space-md);
-            padding: var(--space-md) var(--space-lg);
-            border-bottom: 1px solid var(--color-border);
-            background: var(--color-bg-hover);
-        }
-        .series-logo {
-            width: 40px;
-            height: 40px;
-            border-radius: var(--radius-md);
-            background: var(--color-bg-card);
-            display: flex;
-            align-items: center;
-            justify-content: center;
-            overflow: hidden;
-            flex-shrink: 0;
-        }
-        .series-logo img {
-            max-width: 100%;
-            max-height: 100%;
-            object-fit: contain;
-        }
-        .series-info {
-            flex: 1;
-        }
-        .series-info h3 {
-            margin: 0;
-            font-size: var(--text-base);
-        }
-        .series-info p {
-            margin: 0;
-            font-size: var(--text-sm);
-            color: var(--color-text-secondary);
-        }
+/* Stripe Status */
+.stripe-status {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-xs);
+    padding: var(--space-xs) var(--space-sm);
+    border-radius: var(--radius-full);
+    font-size: var(--text-xs);
+    font-weight: 500;
+}
+.stripe-status i { width: 14px; height: 14px; }
+.stripe-status.active {
+    background: rgba(16, 185, 129, 0.15);
+    color: var(--color-success);
+}
+.stripe-status.pending {
+    background: rgba(251, 191, 36, 0.15);
+    color: var(--color-warning);
+}
+.stripe-status.not-connected {
+    background: rgba(107, 114, 128, 0.15);
+    color: var(--color-text-muted);
+}
 
-        /* Stripe Status */
-        .stripe-status {
-            display: inline-flex;
-            align-items: center;
-            gap: var(--space-xs);
-            padding: var(--space-xs) var(--space-sm);
-            border-radius: var(--radius-full);
-            font-size: var(--text-xs);
-            font-weight: 500;
-        }
-        .stripe-status i { width: 14px; height: 14px; }
-        .stripe-status.active {
-            background: rgba(16, 185, 129, 0.15);
-            color: var(--color-success);
-        }
-        .stripe-status.pending {
-            background: rgba(251, 191, 36, 0.15);
-            color: var(--color-warning);
-        }
-        .stripe-status.not-connected {
-            background: rgba(107, 114, 128, 0.15);
-            color: var(--color-text-muted);
-        }
+/* Card Body */
+.series-card-body {
+    padding: var(--space-lg);
+}
 
-        /* Card Body */
-        .series-card-body {
-            padding: var(--space-lg);
-        }
+/* Connect Form */
+.connect-form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-md);
+    align-items: flex-end;
+}
+.connect-form .form-group {
+    flex: 1;
+    min-width: 200px;
+}
+.connect-form label {
+    display: block;
+    font-size: var(--text-sm);
+    font-weight: 500;
+    color: var(--color-text-secondary);
+    margin-bottom: var(--space-xs);
+}
+.connect-form input,
+.connect-form select {
+    width: 100%;
+    padding: var(--space-sm) var(--space-md);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    font-size: var(--text-sm);
+    background: var(--color-bg-card);
+    color: var(--color-text-primary);
+}
 
-        /* Connect Form */
-        .connect-form {
-            display: flex;
-            flex-wrap: wrap;
-            gap: var(--space-md);
-            align-items: flex-end;
-        }
-        .connect-form .form-group {
-            flex: 1;
-            min-width: 200px;
-        }
-        .connect-form label {
-            display: block;
-            font-size: var(--text-sm);
-            font-weight: 500;
-            color: var(--color-text-secondary);
-            margin-bottom: var(--space-xs);
-        }
-        .connect-form input,
-        .connect-form select {
-            width: 100%;
-            padding: var(--space-sm) var(--space-md);
-            border: 1px solid var(--color-border);
-            border-radius: var(--radius-md);
-            font-size: var(--text-sm);
-            background: var(--color-bg-card);
-            color: var(--color-text-primary);
-        }
+/* Action Buttons */
+.action-buttons {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-sm);
+}
+.btn-stripe {
+    background: linear-gradient(135deg, #635bff, #5851ea);
+    color: white;
+}
+.btn-stripe:hover {
+    background: linear-gradient(135deg, #5851ea, #4f46e5);
+}
 
-        /* Action Buttons */
-        .action-buttons {
-            display: flex;
-            flex-wrap: wrap;
-            gap: var(--space-sm);
-        }
-        .btn {
-            display: inline-flex;
-            align-items: center;
-            gap: var(--space-xs);
-            padding: var(--space-sm) var(--space-md);
-            border-radius: var(--radius-md);
-            font-size: var(--text-sm);
-            font-weight: 500;
-            text-decoration: none;
-            cursor: pointer;
-            border: none;
-            transition: all 0.15s ease;
-        }
-        .btn i { width: 16px; height: 16px; }
-        .btn-stripe {
-            background: linear-gradient(135deg, #635bff, #5851ea);
-            color: white;
-        }
-        .btn-stripe:hover {
-            background: linear-gradient(135deg, #5851ea, #4f46e5);
-        }
-        .btn-secondary {
-            background: var(--color-bg-card);
-            color: var(--color-text-primary);
-            border: 1px solid var(--color-border);
-        }
-        .btn-secondary:hover {
-            background: var(--color-bg-hover);
-        }
+/* Account Info */
+.account-info {
+    margin-top: var(--space-md);
+    padding-top: var(--space-md);
+    border-top: 1px solid var(--color-border);
+    font-size: var(--text-sm);
+    color: var(--color-text-secondary);
+}
+.account-info code {
+    background: var(--color-bg-hover);
+    padding: 2px 6px;
+    border-radius: var(--radius-sm);
+    font-family: monospace;
+    font-size: var(--text-xs);
+}
 
-        /* Account Info */
-        .account-info {
-            margin-top: var(--space-md);
-            padding-top: var(--space-md);
-            border-top: 1px solid var(--color-border);
-            font-size: var(--text-sm);
-            color: var(--color-text-secondary);
-        }
-        .account-info code {
-            background: var(--color-bg-hover);
-            padding: 2px 6px;
-            border-radius: var(--radius-sm);
-            font-family: monospace;
-            font-size: var(--text-xs);
-        }
+/* No Recipient Warning */
+.no-recipient {
+    padding: var(--space-lg);
+    text-align: center;
+    color: var(--color-text-secondary);
+}
+.no-recipient i {
+    width: 32px;
+    height: 32px;
+    margin-bottom: var(--space-sm);
+    opacity: 0.5;
+}
+.no-recipient p {
+    margin: 0;
+}
 
-        /* No Recipient Warning */
-        .no-recipient {
-            padding: var(--space-lg);
-            text-align: center;
-            color: var(--color-text-secondary);
-        }
-        .no-recipient i {
-            width: 32px;
-            height: 32px;
-            margin-bottom: var(--space-sm);
-            opacity: 0.5;
-        }
-        .no-recipient p {
-            margin: 0;
-        }
+/* Empty State */
+.empty-state {
+    text-align: center;
+    padding: var(--space-2xl);
+    color: var(--color-text-secondary);
+}
+.empty-state i {
+    width: 48px;
+    height: 48px;
+    margin-bottom: var(--space-md);
+    opacity: 0.5;
+}
 
-        /* Empty State */
-        .empty-state {
-            text-align: center;
-            padding: var(--space-2xl);
-            color: var(--color-text-secondary);
-        }
-        .empty-state i {
-            width: 48px;
-            height: 48px;
-            margin-bottom: var(--space-md);
-            opacity: 0.5;
-        }
+@media (max-width: 767px) {
+    .series-card {
+        margin-left: -16px;
+        margin-right: -16px;
+        border-radius: 0;
+        border-left: none;
+        border-right: none;
+        width: calc(100% + 32px);
+    }
+    .info-box {
+        margin-left: -16px;
+        margin-right: -16px;
+        border-radius: 0;
+        border-left: none;
+        border-right: none;
+        width: calc(100% + 32px);
+    }
+}
+</style>
 
-        /* Bottom Navigation */
-        .promotor-bottom-nav {
-            position: fixed;
-            bottom: 0;
-            left: 0;
-            right: 0;
-            height: 64px;
-            padding-bottom: env(safe-area-inset-bottom);
-            background: var(--color-bg-surface);
-            border-top: 1px solid var(--color-border);
-            z-index: 100;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-        }
-        .promotor-bottom-nav-inner {
-            display: flex;
-            justify-content: space-around;
-            align-items: center;
-            width: 100%;
-            max-width: 400px;
-            height: 100%;
-        }
-        .promotor-nav-link {
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            gap: 4px;
-            padding: var(--space-xs) var(--space-md);
-            color: var(--color-text-secondary);
-            font-size: var(--text-xs);
-            font-weight: 500;
-            text-decoration: none;
-            min-width: 72px;
-        }
-        .promotor-nav-link:hover {
-            color: var(--color-text-primary);
-        }
-        .promotor-nav-link.active {
-            color: var(--color-accent);
-        }
-        .promotor-nav-link i {
-            width: 24px;
-            height: 24px;
-        }
+<?php if ($message): ?>
+<div class="alert alert-<?= $messageType ?>">
+    <i data-lucide="<?= $messageType === 'success' ? 'check-circle' : ($messageType === 'error' ? 'alert-circle' : 'info') ?>"></i>
+    <span><?= h($message) ?></span>
+</div>
+<?php endif; ?>
 
-        /* Mobile */
-        @media (max-width: 767px) {
-            .promotor-content {
-                padding: var(--space-md);
-                padding-bottom: calc(var(--space-md) + 80px);
-            }
-            .series-card {
-                margin-left: calc(-1 * var(--space-md));
-                margin-right: calc(-1 * var(--space-md));
-                border-radius: 0;
-                border-left: none;
-                border-right: none;
-            }
-            .info-box {
-                margin-left: calc(-1 * var(--space-md));
-                margin-right: calc(-1 * var(--space-md));
-                border-radius: 0;
-                border-left: none;
-                border-right: none;
-            }
-        }
-    </style>
-</head>
-<body class="promotor-page">
+<?php if (!$stripeConfigured): ?>
+<div class="alert alert-warning">
+    <i data-lucide="alert-triangle"></i>
+    <span>Stripe är inte konfigurerat för denna plattform. Kontakta administratören.</span>
+</div>
+<?php else: ?>
 
-<header class="promotor-header">
-    <div class="promotor-header-content">
-        <h1>
-            <i data-lucide="credit-card"></i>
-            Stripe Connect
-        </h1>
-        <a href="/admin/promotor.php" class="back-link">
-            <i data-lucide="arrow-left"></i>
-            Tillbaka
+<!-- Main Instructions -->
+<div class="info-box" style="background: linear-gradient(135deg, var(--color-bg-surface), var(--color-bg-hover)); border: 2px solid var(--color-accent-light);">
+    <h3><i data-lucide="clipboard-list" style="color: var(--color-accent);"></i> Kom igang med betalningar</h3>
+
+    <div style="display: grid; gap: var(--space-lg); margin-top: var(--space-md);">
+        <div style="display: flex; gap: var(--space-md);">
+            <div style="min-width: 28px; height: 28px; background: var(--color-accent); color: var(--color-bg-page); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: var(--text-sm);">1</div>
+            <div>
+                <strong>Klicka "Anslut till Stripe" nedan</strong>
+                <p class="text-secondary text-sm" style="margin: 2px 0 0 0;">Valj din serie och paborja anslutningen</p>
+            </div>
+        </div>
+        <div style="display: flex; gap: var(--space-md);">
+            <div style="min-width: 28px; height: 28px; background: var(--color-accent); color: var(--color-bg-page); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: var(--text-sm);">2</div>
+            <div>
+                <strong>Fyll i uppgifter pa Stripe</strong>
+                <p class="text-secondary text-sm" style="margin: 2px 0 0 0;">Foretagsinfo, organisationsnummer, bankuppgifter, ID-verifiering</p>
+            </div>
+        </div>
+        <div style="display: flex; gap: var(--space-md);">
+            <div style="min-width: 28px; height: 28px; background: var(--color-accent); color: var(--color-bg-page); border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: var(--text-sm);">3</div>
+            <div>
+                <strong>Stripe granskar och aktiverar</strong>
+                <p class="text-secondary text-sm" style="margin: 2px 0 0 0;">Tar normalt 1-2 vardagar. Du far notis nar det ar klart.</p>
+            </div>
+        </div>
+        <div style="display: flex; gap: var(--space-md);">
+            <div style="min-width: 28px; height: 28px; background: var(--color-success); color: white; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: bold; font-size: var(--text-sm);">
+                <i data-lucide="check" style="width: 16px; height: 16px;"></i>
+            </div>
+            <div>
+                <strong>Borja ta emot betalningar!</strong>
+                <p class="text-secondary text-sm" style="margin: 2px 0 0 0;">Kortbetalningar, Swish och mer. Utbetalningar automatiskt till ditt konto.</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- How It Works -->
+<div class="info-box" style="background: var(--color-bg-surface);">
+    <h3><i data-lucide="wallet" style="color: var(--color-info);"></i> Hur pengarna flyter</h3>
+    <div style="display: grid; gap: var(--space-md); grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); margin-top: var(--space-sm);">
+        <div style="text-align: center; padding: var(--space-md); background: var(--color-bg-page); border-radius: var(--radius-md);">
+            <i data-lucide="user" style="width: 24px; height: 24px; color: var(--color-accent); margin-bottom: var(--space-xs);"></i>
+            <p class="text-sm" style="margin: 0;"><strong>Deltagare betalar</strong></p>
+            <p class="text-xs text-secondary" style="margin: 0;">via TheHUB checkout</p>
+        </div>
+        <div style="text-align: center; padding: var(--space-md);">
+            <i data-lucide="arrow-right" style="width: 24px; height: 24px; color: var(--color-text-muted);"></i>
+        </div>
+        <div style="text-align: center; padding: var(--space-md); background: var(--color-bg-page); border-radius: var(--radius-md);">
+            <i data-lucide="building-2" style="width: 24px; height: 24px; color: var(--color-warning); margin-bottom: var(--space-xs);"></i>
+            <p class="text-sm" style="margin: 0;"><strong>TheHUB tar emot</strong></p>
+            <p class="text-xs text-secondary" style="margin: 0;">och overfOr direkt till dig</p>
+        </div>
+        <div style="text-align: center; padding: var(--space-md);">
+            <i data-lucide="arrow-right" style="width: 24px; height: 24px; color: var(--color-text-muted);"></i>
+        </div>
+        <div style="text-align: center; padding: var(--space-md); background: var(--color-bg-page); border-radius: var(--radius-md);">
+            <i data-lucide="landmark" style="width: 24px; height: 24px; color: var(--color-success); margin-bottom: var(--space-xs);"></i>
+            <p class="text-sm" style="margin: 0;"><strong>Ditt bankkonto</strong></p>
+            <p class="text-xs text-secondary" style="margin: 0;">automatiska utbetalningar</p>
+        </div>
+    </div>
+</div>
+
+<!-- Refund Info -->
+<div class="info-box" style="background: rgba(251, 191, 36, 0.03); border-color: var(--color-warning);">
+    <h3><i data-lucide="undo-2" style="color: var(--color-warning);"></i> Aterbetalningar - Viktigt att veta</h3>
+    <div style="display: grid; gap: var(--space-md); margin-top: var(--space-sm);">
+        <p class="text-secondary text-sm" style="margin: 0;">
+            Enligt Allmanna Villkor galler <strong>ingen angerratt</strong> for idrottsevenemang.
+            Du som arrangor beslutar om aterbetalning ska godkannas.
+        </p>
+        <div style="background: var(--color-bg-page); padding: var(--space-md); border-radius: var(--radius-md);">
+            <h4 style="margin: 0 0 var(--space-sm) 0; font-size: var(--text-sm);">Sa fungerar det:</h4>
+            <ol style="margin: 0; padding-left: 1.2rem; color: var(--color-text-secondary); font-size: var(--text-sm);">
+                <li>Deltagare kontaktar <strong>dig</strong> for aterbetalning</li>
+                <li>Du beslutar om refund ska godkannas</li>
+                <li>Meddela TheHUB-admin med Order-ID + ditt beslut</li>
+                <li>Admin processar aterbetalningen tekniskt</li>
+                <li><strong>Automatisk aterforing:</strong> Pengarna aterfors fran ditt Stripe-konto</li>
+            </ol>
+        </div>
+        <p class="text-secondary text-xs" style="margin: 0;">
+            <i data-lucide="shield-check" style="width: 14px; height: 14px; vertical-align: middle;"></i>
+            TheHUB hanterar chargebacks (tvistade betalningar) - du behover inte oroa dig for dem.
+        </p>
+    </div>
+</div>
+
+<!-- Contact -->
+<div class="info-box" style="background: var(--color-bg-surface);">
+    <h3><i data-lucide="mail" style="color: var(--color-accent);"></i> Kontakt</h3>
+    <p class="text-secondary text-sm" style="margin: 0 0 var(--space-sm) 0;">
+        Har du fragor om betalningar eller behover hjalp?
+    </p>
+    <div style="display: flex; gap: var(--space-md); flex-wrap: wrap;">
+        <a href="mailto:info@gravityseries.se" class="btn btn--secondary btn--sm">
+            <i data-lucide="mail"></i> info@gravityseries.se
+        </a>
+        <a href="/admin/promotor-payments" class="btn btn--secondary btn--sm">
+            <i data-lucide="receipt"></i> Se dina betalningar
         </a>
     </div>
-</header>
+</div>
 
-<main class="promotor-content">
-    <?php if ($message): ?>
-    <div class="alert alert-<?= $messageType ?>">
-        <i data-lucide="<?= $messageType === 'success' ? 'check-circle' : ($messageType === 'error' ? 'alert-circle' : 'info') ?>"></i>
-        <span><?= h($message) ?></span>
-    </div>
-    <?php endif; ?>
+<?php if (empty($series)): ?>
+<div class="empty-state">
+    <i data-lucide="medal"></i>
+    <h3>Inga serier</h3>
+    <p>Du har inga serier tilldelade ännu.</p>
+</div>
+<?php else: ?>
 
-    <?php if (!$stripeConfigured): ?>
-    <div class="alert alert-warning">
-        <i data-lucide="alert-triangle"></i>
-        <span>Stripe är inte konfigurerat för denna plattform. Kontakta administratören.</span>
-    </div>
-    <?php else: ?>
-
-    <div class="info-box">
-        <h3><i data-lucide="info"></i> Hur det fungerar</h3>
-        <ol>
-            <li>Klicka "Anslut till Stripe" för din serie</li>
-            <li>Fyll i företagsuppgifter och bankinfo på Stripe</li>
-            <li>När Stripe godkänt kontot kan du ta emot kortbetalningar</li>
-            <li>Utbetalningar sker direkt till ditt bankkonto</li>
-        </ol>
-    </div>
-
-    <?php if (empty($series)): ?>
-    <div class="empty-state">
-        <i data-lucide="medal"></i>
-        <h3>Inga serier</h3>
-        <p>Du har inga serier tilldelade ännu.</p>
-    </div>
-    <?php else: ?>
-
-    <?php foreach ($series as $s):
-        $hasRecipient = !empty($s['recipient_id']);
-        $hasStripe = !empty($s['stripe_account_id']);
-        $stripeStatus = $s['stripe_account_status'] ?? 'not_connected';
-    ?>
-    <div class="series-card">
-        <div class="series-card-header">
-            <div class="series-logo">
-                <?php if ($s['logo']): ?>
-                    <img src="<?= h($s['logo']) ?>" alt="<?= h($s['name']) ?>">
-                <?php else: ?>
-                    <i data-lucide="medal"></i>
-                <?php endif; ?>
-            </div>
-            <div class="series-info">
-                <h3><?= h($s['name']) ?></h3>
-                <?php if ($hasRecipient): ?>
-                <p><?= h($s['recipient_name']) ?></p>
-                <?php endif; ?>
-            </div>
-            <?php if ($hasStripe): ?>
-                <?php if ($stripeStatus === 'active'): ?>
-                <span class="stripe-status active">
-                    <i data-lucide="check-circle"></i> Aktiv
-                </span>
-                <?php else: ?>
-                <span class="stripe-status pending">
-                    <i data-lucide="clock"></i> Väntar
-                </span>
-                <?php endif; ?>
+<?php foreach ($series as $s):
+    $hasRecipient = !empty($s['recipient_id']);
+    $hasStripe = !empty($s['stripe_account_id']);
+    $stripeStatus = $s['stripe_account_status'] ?? 'not_connected';
+?>
+<div class="series-card">
+    <div class="series-card-header">
+        <div class="series-logo">
+            <?php if ($s['logo']): ?>
+                <img src="<?= h($s['logo']) ?>" alt="<?= h($s['name']) ?>">
             <?php else: ?>
-            <span class="stripe-status not-connected">
-                <i data-lucide="x-circle"></i> Ej ansluten
+                <i data-lucide="medal"></i>
+            <?php endif; ?>
+        </div>
+        <div class="series-info">
+            <h3><?= h($s['name']) ?></h3>
+            <?php if ($hasRecipient): ?>
+            <p><?= h($s['recipient_name']) ?></p>
+            <?php endif; ?>
+        </div>
+        <?php if ($hasStripe): ?>
+            <?php if ($stripeStatus === 'active'): ?>
+            <span class="stripe-status active">
+                <i data-lucide="check-circle"></i> Aktiv
+            </span>
+            <?php else: ?>
+            <span class="stripe-status pending">
+                <i data-lucide="clock"></i> Väntar
             </span>
             <?php endif; ?>
+        <?php else: ?>
+        <span class="stripe-status not-connected">
+            <i data-lucide="x-circle"></i> Ej ansluten
+        </span>
+        <?php endif; ?>
+    </div>
+
+    <div class="series-card-body">
+        <?php if (!$hasRecipient): ?>
+        <div class="no-recipient">
+            <i data-lucide="alert-circle"></i>
+            <p>Ingen betalningsmottagare kopplad till denna serie.<br>
+            Kontakta administratören för att konfigurera betalningar.</p>
         </div>
+        <?php elseif ($hasStripe): ?>
 
-        <div class="series-card-body">
-            <?php if (!$hasRecipient): ?>
-            <div class="no-recipient">
-                <i data-lucide="alert-circle"></i>
-                <p>Ingen betalningsmottagare kopplad till denna serie.<br>
-                Kontakta administratören för att konfigurera betalningar.</p>
-            </div>
-            <?php elseif ($hasStripe): ?>
-
-            <div class="action-buttons">
-                <?php if ($stripeStatus !== 'active'): ?>
-                <a href="?start_onboarding=<?= $s['recipient_id'] ?>" class="btn btn-stripe">
-                    <i data-lucide="external-link"></i> Fortsätt onboarding
-                </a>
-                <?php endif; ?>
-
-                <button type="button" class="btn btn-secondary" onclick="openStripeDashboard('<?= h($s['stripe_account_id']) ?>')">
-                    <i data-lucide="layout-dashboard"></i> Stripe Dashboard
-                </button>
-
-                <button type="button" class="btn btn-secondary" onclick="location.reload()">
-                    <i data-lucide="refresh-cw"></i> Uppdatera
-                </button>
-            </div>
-
-            <div class="account-info">
-                <strong>Account ID:</strong> <code><?= h($s['stripe_account_id']) ?></code>
-            </div>
-
-            <?php else: ?>
-
-            <form method="POST" class="connect-form">
-                <?= csrf_field() ?>
-                <input type="hidden" name="action" value="create_account">
-                <input type="hidden" name="recipient_id" value="<?= $s['recipient_id'] ?>">
-
-                <div class="form-group">
-                    <label>E-post</label>
-                    <input type="email" name="email" placeholder="kontakt@forening.se">
-                </div>
-
-                <div class="form-group">
-                    <label>Kontotyp</label>
-                    <select name="business_type">
-                        <option value="company">Förening/Företag</option>
-                        <option value="individual">Privatperson</option>
-                    </select>
-                </div>
-
-                <button type="submit" class="btn btn-stripe">
-                    <i data-lucide="link"></i> Anslut till Stripe
-                </button>
-            </form>
-
+        <div class="action-buttons">
+            <?php if ($stripeStatus !== 'active'): ?>
+            <a href="?start_onboarding=<?= $s['recipient_id'] ?>" class="btn btn-stripe">
+                <i data-lucide="external-link"></i> Fortsätt onboarding
+            </a>
             <?php endif; ?>
+
+            <button type="button" class="btn btn--secondary" onclick="openStripeDashboard('<?= h($s['stripe_account_id']) ?>')">
+                <i data-lucide="layout-dashboard"></i> Stripe Dashboard
+            </button>
+
+            <button type="button" class="btn btn--secondary" onclick="location.reload()">
+                <i data-lucide="refresh-cw"></i> Uppdatera status
+            </button>
         </div>
-    </div>
-    <?php endforeach; ?>
 
-    <?php endif; ?>
-    <?php endif; ?>
-</main>
+        <div class="account-info">
+            <strong>Account ID:</strong> <code><?= h($s['stripe_account_id']) ?></code>
+        </div>
 
-<!-- Bottom Navigation -->
-<nav class="promotor-bottom-nav">
-    <div class="promotor-bottom-nav-inner">
-        <a href="/" class="promotor-nav-link">
-            <i data-lucide="home"></i>
-            <span>Hem</span>
-        </a>
-        <a href="/admin/promotor.php" class="promotor-nav-link">
-            <i data-lucide="calendar-check"></i>
-            <span>Tävlingar</span>
-        </a>
-        <a href="/admin/promotor-stripe.php" class="promotor-nav-link active">
-            <i data-lucide="credit-card"></i>
-            <span>Stripe</span>
-        </a>
+        <?php else: ?>
+
+        <form method="POST" class="connect-form">
+            <?= csrf_field() ?>
+            <input type="hidden" name="action" value="create_account">
+            <input type="hidden" name="recipient_id" value="<?= $s['recipient_id'] ?>">
+
+            <div class="form-group">
+                <label>E-post</label>
+                <input type="email" name="email" placeholder="kontakt@forening.se">
+            </div>
+
+            <div class="form-group">
+                <label>Kontotyp</label>
+                <select name="business_type">
+                    <option value="company">Förening/Företag</option>
+                    <option value="individual">Privatperson</option>
+                </select>
+            </div>
+
+            <button type="submit" class="btn btn-stripe">
+                <i data-lucide="link"></i> Anslut till Stripe
+            </button>
+        </form>
+
+        <?php endif; ?>
     </div>
-</nav>
+</div>
+<?php endforeach; ?>
+
+<?php endif; ?>
+<?php endif; ?>
 
 <script>
-    lucide.createIcons();
+function openStripeDashboard(accountId) {
+    fetch('/api/stripe-connect.php?action=create_login_link&account_id=' + accountId)
+        .then(r => r.json())
+        .then(data => {
+            if (data.success && data.url) {
+                window.open(data.url, '_blank');
+            } else {
+                alert('Kunde inte öppna Stripe Dashboard: ' + (data.error || 'Okänt fel'));
+            }
+        })
+        .catch(err => {
+            alert('Fel: ' + err.message);
+        });
+}
 
-    function openStripeDashboard(accountId) {
-        fetch('/api/stripe-connect.php?action=create_login_link&account_id=' + accountId)
-            .then(r => r.json())
-            .then(data => {
-                if (data.success && data.url) {
-                    window.open(data.url, '_blank');
-                } else {
-                    alert('Kunde inte öppna Stripe Dashboard: ' + (data.error || 'Okänt fel'));
-                }
-            })
-            .catch(err => {
-                alert('Fel: ' + err.message);
-            });
-    }
+// Init Lucide icons
+if (typeof lucide !== 'undefined') {
+    lucide.createIcons();
+}
 </script>
-</body>
-</html>
+
+<?php include __DIR__ . '/components/unified-layout-footer.php'; ?>

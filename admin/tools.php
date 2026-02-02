@@ -401,6 +401,20 @@ include __DIR__ . '/components/unified-layout.php';
         </div>
     </div>
 
+    <!-- Import E-post -->
+    <div class="card">
+        <div class="tool-header">
+            <div class="tool-icon"><i data-lucide="mail"></i></div>
+            <div>
+                <h4 class="tool-title">Importera E-post</h4>
+                <p class="tool-description">Uppdatera e-post och nationalitet</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/import-emails.php" class="btn-admin btn-admin-primary">Importera</a>
+        </div>
+    </div>
+
     <!-- Clear Event Results -->
     <div class="card">
         <div class="tool-header">
@@ -929,6 +943,20 @@ include __DIR__ . '/components/unified-layout.php';
         </div>
         <div class="tool-actions">
             <a href="/admin/stripe-connect.php" class="btn-admin btn-admin-secondary">Oppna</a>
+        </div>
+    </div>
+
+    <!-- Process Refunds -->
+    <div class="card">
+        <div class="tool-header">
+            <div class="tool-icon"><i data-lucide="undo-2"></i></div>
+            <div>
+                <h4 class="tool-title">Aterbetalningar</h4>
+                <p class="tool-description">Processa refunds med auto transfer-aterforing</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/process-refunds.php" class="btn-admin btn-admin-secondary">Oppna</a>
         </div>
     </div>
 

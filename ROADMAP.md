@@ -1,6 +1,6 @@
 # TheHUB - Development Roadmap
 
-> Senast uppdaterad: 2026-01-25
+> Senast uppdaterad: 2026-02-01
 >
 > **Se:** `/admin/roadmap.php` for interaktiv vy
 
@@ -261,6 +261,84 @@ Automatiskt genererade "trading cards" med deltagarstatistik:
 ---
 
 # CHANGELOG
+
+### 2026-02-01 (Multi-Seller Betalningssystem & Aterbetalningar)
+- **Branch:** claude/complete-payment-system-VH54k
+
+- **Ny funktion: Multi-Seller Payment System (Stripe Connect Recipient Model)**
+  - Alla betalningar gar till plattformens Stripe-konto
+  - Automatiska transfers till saljare efter lyckad betalning
+  - Stod for orders med flera saljare (split payments)
+  - Transfer tracking i databasen
+  - Veckorapporter till saljare
+
+- **Ny funktion: Aterbetalningssystem med Transfer-aterforing**
+  - Automatisk aterforing av saljartransfers vid refund
+  - Stod for full och partial refunds
+  - Admin-granssnitt for aterbetalningar
+  - Webhook-hantering for Stripe refunds (aven fran Dashboard)
+  - Retry-funktion for misslyckade transfer-aterforingar
+
+- **Aterbetalningspolicy (baserat pa Allmanna Villkor):**
+  - Ingen angerratt for idrottsevenemang (lag om distansavtal)
+  - Aterbetalning sker endast om Arrangoren godkanner
+  - Plattformen processar aterbetalningen tekniskt
+  - Plattformen bar risken for chargebacks (negativ balans)
+
+- **Nya filer:**
+  - `Tools/migrations/031_order_transfers.sql` - Transfers, refunds, reversals
+  - `includes/refund-manager.php` - RefundManager med transfer-aterforing
+  - `admin/process-refunds.php` - Admin-sida for aterbetalningar
+
+- **Nya databastabeller (migration 031):**
+  - `order_transfers` - Sparar transfers till saljare
+  - `seller_reports` - Vecko/manadsrapporter per saljare
+  - `seller_report_items` - Detaljerade rader i rapporter
+  - `order_refunds` - Sparar aterbetalningar
+  - `transfer_reversals` - Sparar aterforingar fran saljare
+
+- **Uppdaterade filer:**
+  - `includes/payment/StripeClient.php` - createTransfer(), createTransferReversal(), listTransfers()
+  - `api/webhooks/stripe-webhook.php` - Auto-transfers, refund med transfer-aterforing
+  - `includes/receipt-manager.php` - Multi-seller kvitton, veckorapporter
+  - `admin/migrations.php` - Migration check for 031
+  - `admin/tools.php` - Lank till process-refunds.php
+
+### 2026-01-29 (Mina Kop & Kvittosystem)
+- **Branch: claude/complete-payment-system-VH54k**
+
+- **Ny funktion: Kombinerad Mina Kop-sida**
+  - Slog ihop /profile/registrations och /profile/receipts till en sida
+  - Tab-baserat UI: Kommande anmalningar + Kophistorik
+  - Varje kop visar saljarens namn och org.nr
+  - Detaljerad kvittovisning med momsspecifikation
+  - Uppdaterade alla lankar i navigationen
+
+- **Ny funktion: Automatisk kvittogenerering**
+  - Kvitton skapas automatiskt vid betalning (Stripe webhook)
+  - Kvitton skapas vid manuell betalningsbekraftelse
+  - Momsberakning: 6% (sport), 12% (mat), 25% (ovrigt)
+  - Saljarens uppgifter hamtas fran payment_recipients
+
+- **Nya filer:**
+  - `Tools/migrations/028_vat_receipts_multi_recipient.sql` - Moms och kvitto-tabeller
+  - `includes/receipt-manager.php` - Kvittoskapande och momsberakning
+
+- **Nya databastabeller (migration 028):**
+  - `product_types` - Produkttyper med momssatser
+  - `receipts` - Kvittoheader
+  - `receipt_items` - Kvittorader med moms
+  - `receipt_sequences` - Lopnummer per ar
+
+- **Uppdaterade filer:**
+  - `pages/profile/receipts.php` - Helt omskriven till Mina Kop
+  - `pages/profile/registrations.php` - Redirect till receipts.php
+  - `api/webhooks/stripe-webhook.php` - Kvittogenerering vid betalning
+  - `includes/payment.php` - Kvittogenerering i markOrderPaid()
+  - `components/header.php` - Uppdaterad lank till Mina Kop
+  - `pages/profile/index.php` - Uppdaterade lankar
+  - `pages/checkout.php` - Uppdaterad success-lank
+  - `admin/migrations.php` - Lagt till migration 028 check
 
 ### 2026-01-25 (Medlemskap & Prenumerationer)
 - **Branch: claude/complete-payment-system-VH54k**

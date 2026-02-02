@@ -76,9 +76,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $tablesExist) {
     } elseif ($action === 'create_campaign') {
         $name = trim($_POST['name'] ?? '');
         $brandIds = $_POST['brand_ids'] ?? [];
-        $discountType = $_POST['discount_type'] ?? 'fixed';
-        $discountValue = (float)($_POST['discount_value'] ?? 100);
-        $validUntil = $_POST['valid_until'] ?? null;
+        $discountCodeId = !empty($_POST['discount_code_id']) ? (int)$_POST['discount_code_id'] : null;
+        $emailSubject = trim($_POST['email_subject'] ?? 'Vi saknar dig!');
+        $emailBody = trim($_POST['email_body'] ?? '');
         $ownerId = !empty($_POST['owner_user_id']) ? (int)$_POST['owner_user_id'] : $currentUserId;
         $allowPromotorAccess = isset($_POST['allow_promotor_access']) ? 1 : 0;
         $audienceType = $_POST['audience_type'] ?? 'churned';
@@ -87,7 +87,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $tablesExist) {
         $targetYear = (int)($_POST['target_year'] ?? (int)date('Y'));
 
         // Validate audience type
-        if (!in_array($audienceType, ['churned', 'active'])) {
+        if (!in_array($audienceType, ['churned', 'active', 'one_timer'])) {
             $audienceType = 'churned';
         }
 
@@ -96,36 +96,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $tablesExist) {
         if ($endYear > (int)date('Y')) $endYear = (int)date('Y');
         if ($startYear > $endYear) $startYear = $endYear;
 
-        if ($name && !empty($brandIds)) {
-            // Check if audience_type column exists (migration 023)
-            $hasAudienceType = false;
+        if (empty($name)) {
+            $error = 'Kampanjnamn krävs';
+        } elseif (empty($brandIds)) {
+            $error = 'Välj minst ett varumärke';
+        } elseif (empty($discountCodeId)) {
+            $error = 'Välj en rabattkod';
+        } else {
+            // Check if new columns exist (migration 031)
+            $hasDiscountCodeId = false;
             try {
-                $check = $pdo->query("SHOW COLUMNS FROM winback_campaigns LIKE 'audience_type'");
-                $hasAudienceType = $check->rowCount() > 0;
+                $check = $pdo->query("SHOW COLUMNS FROM winback_campaigns LIKE 'discount_code_id'");
+                $hasDiscountCodeId = $check->rowCount() > 0;
             } catch (Exception $e) {}
 
-            if ($hasAudienceType) {
+            if ($hasDiscountCodeId) {
                 $stmt = $pdo->prepare("
-                    INSERT INTO winback_campaigns (name, target_type, audience_type, brand_ids, start_year, end_year, target_year, discount_type, discount_value, discount_valid_until, owner_user_id, allow_promotor_access, is_active)
+                    INSERT INTO winback_campaigns (name, target_type, audience_type, brand_ids, start_year, end_year, target_year, discount_code_id, email_subject, email_body, owner_user_id, allow_promotor_access, is_active)
                     VALUES (?, 'multi_brand', ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
                 ");
-                $stmt->execute([$name, $audienceType, json_encode(array_map('intval', $brandIds)), $startYear, $endYear, $targetYear, $discountType, $discountValue, $validUntil ?: null, $ownerId, $allowPromotorAccess]);
+                $stmt->execute([$name, $audienceType, json_encode(array_map('intval', $brandIds)), $startYear, $endYear, $targetYear, $discountCodeId, $emailSubject, $emailBody, $ownerId, $allowPromotorAccess]);
+                $message = 'Kampanj skapad!';
             } else {
-                // Fallback if migration not run yet
-                $stmt = $pdo->prepare("
-                    INSERT INTO winback_campaigns (name, target_type, brand_ids, start_year, end_year, target_year, discount_type, discount_value, discount_valid_until, owner_user_id, allow_promotor_access, is_active)
-                    VALUES (?, 'multi_brand', ?, ?, ?, ?, ?, ?, ?, ?, ?, 1)
-                ");
-                $stmt->execute([$name, json_encode(array_map('intval', $brandIds)), $startYear, $endYear, $targetYear, $discountType, $discountValue, $validUntil ?: null, $ownerId, $allowPromotorAccess]);
+                $error = 'Kör migration 031 först (admin/migrations.php)';
             }
-            $message = 'Kampanj skapad!';
-        } else {
-            $error = 'Namn och varumarken kravs';
         }
     } elseif ($action === 'update_campaign_owner') {
         // Only admins can change campaign ownership
         if (!$isAdmin) {
-            $error = 'Endast administratorer kan andra agare';
+            $error = 'Endast administratorer kan ändra ägare';
         } else {
             $id = (int)$_POST['id'];
             $ownerId = !empty($_POST['owner_user_id']) ? (int)$_POST['owner_user_id'] : null;
@@ -149,12 +148,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $tablesExist) {
             $error = 'Du har inte behörighet att redigera denna kampanj';
         } else {
             $name = trim($_POST['name'] ?? '');
-            $discountType = $_POST['discount_type'] ?? $campaignToEdit['discount_type'];
-            $discountValue = (float)($_POST['discount_value'] ?? $campaignToEdit['discount_value']);
-            $validUntil = $_POST['valid_until'] ?? $campaignToEdit['discount_valid_until'];
+            $discountCodeId = !empty($_POST['discount_code_id']) ? (int)$_POST['discount_code_id'] : null;
+            $emailSubject = trim($_POST['email_subject'] ?? '');
+            $emailBody = trim($_POST['email_body'] ?? '');
 
             if (empty($name)) {
                 $error = 'Kampanjnamn krävs';
+            } elseif (empty($discountCodeId)) {
+                $error = 'Välj en rabattkod';
             } else {
                 // Admin can also update owner settings
                 if ($isAdmin) {
@@ -163,19 +164,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $tablesExist) {
 
                     $stmt = $pdo->prepare("
                         UPDATE winback_campaigns
-                        SET name = ?, discount_type = ?, discount_value = ?, discount_valid_until = ?,
+                        SET name = ?, discount_code_id = ?, email_subject = ?, email_body = ?,
                             owner_user_id = ?, allow_promotor_access = ?
                         WHERE id = ?
                     ");
-                    $stmt->execute([$name, $discountType, $discountValue, $validUntil ?: null, $ownerId, $allowPromotorAccess, $id]);
+                    $stmt->execute([$name, $discountCodeId, $emailSubject, $emailBody, $ownerId, $allowPromotorAccess, $id]);
                 } else {
                     // Non-admin (promotor) can only update basic settings
                     $stmt = $pdo->prepare("
                         UPDATE winback_campaigns
-                        SET name = ?, discount_type = ?, discount_value = ?, discount_valid_until = ?
+                        SET name = ?, discount_code_id = ?, email_subject = ?, email_body = ?
                         WHERE id = ?
                     ");
-                    $stmt->execute([$name, $discountType, $discountValue, $validUntil ?: null, $id]);
+                    $stmt->execute([$name, $discountCodeId, $emailSubject, $emailBody, $id]);
                 }
                 $message = 'Kampanj uppdaterad';
             }
@@ -202,7 +203,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $tablesExist) {
             $stmt->execute([$campaignId, $questionText, $questionType, $optionsJson, $sortOrder, $isRequired]);
             $message = 'Fraga skapad!';
         } else {
-            $error = 'Fragetext kravs';
+            $error = 'Frågetext krävs';
         }
     } elseif ($action === 'update_question') {
         $id = (int)$_POST['id'];
@@ -211,6 +212,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $tablesExist) {
         $options = trim($_POST['options'] ?? '');
         $sortOrder = (int)($_POST['sort_order'] ?? 0);
         $isRequired = isset($_POST['is_required']) ? 1 : 0;
+        $campaignId = !empty($_POST['campaign_id']) ? (int)$_POST['campaign_id'] : null;
 
         if ($questionText) {
             $optionsJson = null;
@@ -221,13 +223,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $tablesExist) {
 
             $stmt = $pdo->prepare("
                 UPDATE winback_questions
-                SET question_text = ?, question_type = ?, options = ?, sort_order = ?, is_required = ?
+                SET question_text = ?, question_type = ?, options = ?, sort_order = ?, is_required = ?, campaign_id = ?
                 WHERE id = ?
             ");
-            $stmt->execute([$questionText, $questionType, $optionsJson, $sortOrder, $isRequired, $id]);
-            $message = 'Fraga uppdaterad!';
+            $stmt->execute([$questionText, $questionType, $optionsJson, $sortOrder, $isRequired, $campaignId, $id]);
+            $message = 'Fråga uppdaterad!';
         } else {
-            $error = 'Fragetext kravs';
+            $error = 'Frågetext krävs';
         }
     } elseif ($action === 'toggle_question') {
         $id = (int)$_POST['id'];
@@ -239,7 +241,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $tablesExist) {
         $stmt = $pdo->prepare("SELECT COUNT(*) FROM winback_answers WHERE question_id = ?");
         $stmt->execute([$id]);
         if ($stmt->fetchColumn() > 0) {
-            $error = 'Kan inte ta bort fraga som har svar. Inaktivera istallet.';
+            $error = 'Kan inte ta bort fraga som har svar. Inaktivera istället.';
         } else {
             $pdo->prepare("DELETE FROM winback_questions WHERE id = ?")->execute([$id]);
             $message = 'Fraga borttagen';
@@ -271,12 +273,51 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $tablesExist) {
             }
 
             if ($deletedCount > 0) {
-                $message = "Rensade $deletedCount dubbletter av fragor";
+                $message = "Rensade $deletedCount dubbletter av frågor";
             } else {
                 $message = 'Inga dubbletter hittades att rensa';
             }
         } catch (Exception $e) {
             $error = 'Fel vid rensning: ' . $e->getMessage();
+        }
+    } elseif ($action === 'delete_campaign') {
+        // Step 2: Actually delete the campaign (requires confirmation token)
+        $id = (int)$_POST['id'];
+        $confirmToken = $_POST['confirm_token'] ?? '';
+        $expectedToken = 'DELETE_CAMPAIGN_' . $id;
+
+        if ($confirmToken !== $expectedToken) {
+            $error = 'Ogiltig bekraftelse. Forsok igen.';
+        } else {
+            // Get campaign to check permissions
+            $stmt = $pdo->prepare("SELECT * FROM winback_campaigns WHERE id = ?");
+            $stmt->execute([$id]);
+            $campaignToDelete = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$campaignToDelete) {
+                $error = 'Kampanj hittades inte';
+            } elseif (!canEditCampaign($campaignToDelete)) {
+                $error = 'Du har inte behorighet att radera denna kampanj';
+            } else {
+                try {
+                    // Check if campaign has responses
+                    $stmt = $pdo->prepare("SELECT COUNT(*) FROM winback_responses WHERE campaign_id = ?");
+                    $stmt->execute([$id]);
+                    $responseCount = (int)$stmt->fetchColumn();
+
+                    if ($responseCount > 0) {
+                        $error = "Kan inte radera kampanj med $responseCount svar. Inaktivera istället.";
+                    } else {
+                        // Delete invitations first (foreign key)
+                        $pdo->prepare("DELETE FROM winback_invitations WHERE campaign_id = ?")->execute([$id]);
+                        // Delete campaign
+                        $pdo->prepare("DELETE FROM winback_campaigns WHERE id = ?")->execute([$id]);
+                        $message = 'Kampanj raderad: ' . $campaignToDelete['name'];
+                    }
+                } catch (Exception $e) {
+                    $error = 'Fel vid radering: ' . $e->getMessage();
+                }
+            }
         }
     } elseif ($action === 'send_invitations') {
         // Send invitations to selected riders
@@ -284,7 +325,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $tablesExist) {
         $riderIds = $_POST['rider_ids'] ?? [];
 
         if (empty($riderIds)) {
-            $error = 'Valj minst en deltagare att bjuda in';
+            $error = 'Välj minst en deltägare att bjuda in';
         } else {
             require_once __DIR__ . '/../includes/mail.php';
 
@@ -298,89 +339,131 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $tablesExist) {
             } elseif (!canEditCampaign($campaign)) {
                 $error = 'Du har inte behörighet att skicka inbjudningar för denna kampanj';
             } else {
-                $sentCount = 0;
-                $failedCount = 0;
-                $skippedCount = 0;
-
-                // Check if invitations table exists
-                $invTableExists = false;
-                try {
-                    $check = $pdo->query("SHOW TABLES LIKE 'winback_invitations'");
-                    $invTableExists = $check->rowCount() > 0;
-                } catch (Exception $e) {}
-
-                foreach ($riderIds as $riderId) {
-                    $riderId = (int)$riderId;
-
-                    // Get rider info
-                    $stmt = $pdo->prepare("SELECT id, firstname, lastname, email FROM riders WHERE id = ?");
-                    $stmt->execute([$riderId]);
-                    $rider = $stmt->fetch(PDO::FETCH_ASSOC);
-
-                    if (!$rider || empty($rider['email'])) {
-                        $skippedCount++;
-                        continue;
-                    }
-
-                    // Check if already invited (if table exists)
-                    if ($invTableExists) {
-                        $stmt = $pdo->prepare("SELECT id FROM winback_invitations WHERE campaign_id = ? AND rider_id = ?");
-                        $stmt->execute([$campaignId, $riderId]);
-                        if ($stmt->fetch()) {
-                            $skippedCount++;
-                            continue;
-                        }
-                    }
-
-                    // Generate tracking token
-                    $trackingToken = bin2hex(random_bytes(32));
-
-                    // Build email
-                    $surveyUrl = 'https://thehub.gravityseries.se/profile/winback-survey?t=' . $trackingToken;
-                    $discountText = $campaign['discount_type'] === 'percentage'
-                        ? intval($campaign['discount_value']) . '% rabatt'
-                        : number_format($campaign['discount_value'], 0) . ' kr rabatt';
-
-                    $subject = 'Vi saknar dig! - TheHUB';
-                    $body = hub_email_template('winback_invitation', [
-                        'name' => $rider['firstname'],
-                        'campaign_name' => $campaign['name'],
-                        'discount_text' => $discountText,
-                        'survey_link' => $surveyUrl
-                    ]);
-
-                    // Send email
-                    $sent = hub_send_email($rider['email'], $subject, $body);
-
-                    // Log invitation (if table exists)
-                    if ($invTableExists) {
-                        $stmt = $pdo->prepare("
-                            INSERT INTO winback_invitations (campaign_id, rider_id, email_address, invitation_method, invitation_status, sent_at, sent_by, tracking_token)
-                            VALUES (?, ?, ?, 'email', ?, NOW(), ?, ?)
-                        ");
-                        $stmt->execute([
-                            $campaignId,
-                            $riderId,
-                            $rider['email'],
-                            $sent ? 'sent' : 'failed',
-                            $_SESSION['admin_id'] ?? null,
-                            $trackingToken
-                        ]);
-                    }
-
-                    if ($sent) {
-                        $sentCount++;
-                    } else {
-                        $failedCount++;
+                // Get linked discount code
+                $discountCode = null;
+                $discountText = '';
+                if (!empty($campaign['discount_code_id'])) {
+                    $stmt = $pdo->prepare("SELECT * FROM discount_codes WHERE id = ?");
+                    $stmt->execute([$campaign['discount_code_id']]);
+                    $discountCode = $stmt->fetch(PDO::FETCH_ASSOC);
+                    if ($discountCode) {
+                        $discountText = $discountCode['discount_type'] === 'percentage'
+                            ? intval($discountCode['discount_value']) . '% rabatt'
+                            : number_format($discountCode['discount_value'], 0) . ' kr rabatt';
                     }
                 }
 
-                if ($sentCount > 0) {
-                    $message = "Skickade $sentCount inbjudningar";
-                    if ($skippedCount > 0) $message .= ", hoppade over $skippedCount (redan inbjudna eller saknar email)";
-                    if ($failedCount > 0) $message .= ", $failedCount misslyckades";
+                if (!$discountCode) {
+                    $error = 'Kampanjen saknar kopplad rabattkod';
                 } else {
-                    $error = "Inga inbjudningar skickades. $skippedCount hoppades over, $failedCount misslyckades.";
+                    $sentCount = 0;
+                    $failedCount = 0;
+                    $skippedCount = 0;
+
+                    // Check if invitations table exists
+                    $invTableExists = false;
+                    try {
+                        $check = $pdo->query("SHOW TABLES LIKE 'winback_invitations'");
+                        $invTableExists = $check->rowCount() > 0;
+                    } catch (Exception $e) {}
+
+                    foreach ($riderIds as $riderId) {
+                        $riderId = (int)$riderId;
+
+                        // Get rider info
+                        $stmt = $pdo->prepare("SELECT id, firstname, lastname, email FROM riders WHERE id = ?");
+                        $stmt->execute([$riderId]);
+                        $rider = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                        if (!$rider || empty($rider['email'])) {
+                            $skippedCount++;
+                            continue;
+                        }
+
+                        // Check if already invited (if table exists)
+                        if ($invTableExists) {
+                            $stmt = $pdo->prepare("SELECT id FROM winback_invitations WHERE campaign_id = ? AND rider_id = ?");
+                            $stmt->execute([$campaignId, $riderId]);
+                            if ($stmt->fetch()) {
+                                $skippedCount++;
+                                continue;
+                            }
+                        }
+
+                        // Generate tracking token
+                        $trackingToken = bin2hex(random_bytes(32));
+
+                        // Build email using custom content or default
+                        $surveyUrl = 'https://thehub.gravityseries.se/profile/winback-survey?t=' . $trackingToken;
+
+                        // Use custom subject/body if set, otherwise use defaults
+                        $subject = !empty($campaign['email_subject'])
+                            ? $campaign['email_subject'] . ' - TheHUB'
+                            : 'Vi saknar dig! - TheHUB';
+
+                        // Build email body with variables replaced
+                        $emailBody = !empty($campaign['email_body'])
+                            ? $campaign['email_body']
+                            : "Hej {{name}},\n\nVi har märkt att du inte tävlat på ett tag.\n\nSvara på en kort enkät så får du rabattkoden {{discount_code}} ({{discount_text}}) på din nästa anmälan!";
+
+                        // Replace variables
+                        $emailBody = str_replace([
+                            '{{name}}',
+                            '{{discount_code}}',
+                            '{{discount_text}}'
+                        ], [
+                            htmlspecialchars($rider['firstname']),
+                            htmlspecialchars($discountCode['code']),
+                            $discountText
+                        ], $emailBody);
+
+                        // Wrap in HTML template
+                        $body = '
+                            <div class="header">
+                                <div class="logo">TheHUB</div>
+                            </div>
+                            <div style="white-space: pre-wrap;">' . nl2br($emailBody) . '</div>
+                            <p class="text-center" style="margin-top: 24px;">
+                                <a href="' . $surveyUrl . '" class="btn">Svara på enkäten</a>
+                            </p>
+                        ';
+
+                        // Use hub email wrapper
+                        $fullBody = hub_email_template('custom', ['content' => $body]);
+
+                        // Send email
+                        $sent = hub_send_email($rider['email'], $subject, $fullBody);
+
+                        // Log invitation (if table exists)
+                        if ($invTableExists) {
+                            $stmt = $pdo->prepare("
+                                INSERT INTO winback_invitations (campaign_id, rider_id, email_address, invitation_method, invitation_status, sent_at, sent_by, tracking_token)
+                                VALUES (?, ?, ?, 'email', ?, NOW(), ?, ?)
+                            ");
+                            $stmt->execute([
+                                $campaignId,
+                                $riderId,
+                                $rider['email'],
+                                $sent ? 'sent' : 'failed',
+                                $_SESSION['admin_id'] ?? null,
+                                $trackingToken
+                            ]);
+                        }
+
+                        if ($sent) {
+                            $sentCount++;
+                        } else {
+                            $failedCount++;
+                        }
+                    }
+
+                    if ($sentCount > 0) {
+                        $message = "Skickade $sentCount inbjudningar med rabattkod " . $discountCode['code'];
+                        if ($skippedCount > 0) $message .= ", hoppade over $skippedCount (redan inbjudna eller saknar email)";
+                        if ($failedCount > 0) $message .= ", $failedCount misslyckades";
+                    } else {
+                        $error = "Inga inbjudningar skickades. $skippedCount hoppades över, $failedCount misslyckades.";
+                    }
                 }
             }
         }
@@ -397,12 +480,12 @@ if (!function_exists('hub_email_template_winback')) {
             </div>
             <h1>Vi saknar dig!</h1>
             <p>Hej {{name}},</p>
-            <p>Vi har markt att du inte tavlat pa ett tag och vill garna hora hur du mar och vad vi kan gora battre.</p>
-            <p>Svara pa en kort enkat (tar bara 2 minuter) sa far du en <strong>{{discount_text}}</strong> pa din nasta anmalan som tack!</p>
+            <p>Vi har märkt att du inte tävlat på ett tag och vill gärna höra hur du mår och vad vi kan göra bättre.</p>
+            <p>Svara på en kort enkät (tar bara 2 minuter) så får du en <strong>{{discount_text}}</strong> på din nästa anmälan som tack!</p>
             <p class="text-center">
-                <a href="{{survey_link}}" class="btn">Svara pa enkaten</a>
+                <a href="{{survey_link}}" class="btn">Svara på enkäten</a>
             </p>
-            <p class="note">Din feedback ar anonym och hjalper oss att skapa battre tavlingar.</p>
+            <p class="note">Din feedback är anonym och hjälper oss att skapa bättre tävlingar.</p>
         '
     ];
 }
@@ -446,6 +529,19 @@ if ($tablesExist) {
         $kpiCalc = new KPICalculator($pdo);
         $brands = $kpiCalc->getAllBrands();
 
+        // Get discount codes for linking
+        $discountCodes = $pdo->query("
+            SELECT dc.*,
+                   e.name as event_name,
+                   s.name as series_name,
+                   dc.current_uses
+            FROM discount_codes dc
+            LEFT JOIN events e ON dc.event_id = e.id
+            LEFT JOIN series s ON dc.series_id = s.id
+            WHERE dc.is_active = 1
+            ORDER BY dc.created_at DESC
+        ")->fetchAll(PDO::FETCH_ASSOC);
+
         // Get response stats per campaign
         foreach ($campaigns as &$c) {
             $stmt = $pdo->prepare("SELECT COUNT(*) FROM winback_responses WHERE campaign_id = ?");
@@ -468,6 +564,21 @@ if ($tablesExist) {
                         JOIN series s ON e.series_id = s.id
                         WHERE YEAR(e.date) = ?
                           AND s.brand_id IN ($placeholders)
+                    ");
+                    $params = array_merge([$c['target_year']], $brandIds);
+                } elseif ($audienceType === 'one_timer') {
+                    // ONE_TIMER: Count people who competed EXACTLY ONCE in target_year
+                    $stmt = $pdo->prepare("
+                        SELECT COUNT(*) FROM (
+                            SELECT r.cyclist_id
+                            FROM results r
+                            JOIN events e ON r.event_id = e.id
+                            JOIN series s ON e.series_id = s.id
+                            WHERE YEAR(e.date) = ?
+                              AND s.brand_id IN ($placeholders)
+                            GROUP BY r.cyclist_id
+                            HAVING COUNT(DISTINCT e.id) = 1
+                        ) AS one_timers
                     ");
                     $params = array_merge([$c['target_year']], $brandIds);
                 } else {
@@ -570,9 +681,9 @@ if ($selectedCampaign && $tablesExist) {
             if ($seasons <= 1) {
                 $expGroup = '1 sasong';
             } elseif ($seasons <= 3) {
-                $expGroup = '2-3 sasonger';
+                $expGroup = '2-3 säsonger';
             } else {
-                $expGroup = '4+ sasonger';
+                $expGroup = '4+ säsonger';
             }
             $demographicStats['experience'][$expGroup] = ($demographicStats['experience'][$expGroup] ?? 0) + 1;
 
@@ -689,7 +800,7 @@ include __DIR__ . '/components/unified-layout.php';
 .campaign-name {
     font-size: 1.125rem;
     font-weight: 600;
-    color: var(--color-text-primary);
+    color: var(--color-text-primåry);
 }
 .campaign-meta {
     display: flex;
@@ -735,7 +846,7 @@ include __DIR__ . '/components/unified-layout.php';
     padding: var(--space-lg);
     text-align: center;
 }
-.stat-box.primary { border-left: 3px solid var(--color-accent); }
+.stat-box.primåry { border-left: 3px solid var(--color-accent); }
 .stat-value {
     font-size: 2rem;
     font-weight: 700;
@@ -755,7 +866,7 @@ include __DIR__ . '/components/unified-layout.php';
 .answer-stat-header {
     font-weight: 600;
     margin-bottom: var(--space-md);
-    color: var(--color-text-primary);
+    color: var(--color-text-primåry);
 }
 .option-bar {
     display: flex;
@@ -810,7 +921,7 @@ include __DIR__ . '/components/unified-layout.php';
     align-items: center;
     gap: var(--space-xs);
     margin-bottom: var(--space-md);
-    color: var(--color-text-primary);
+    color: var(--color-text-primåry);
     font-size: 1rem;
 }
 .demographic-bar {
@@ -842,7 +953,7 @@ include __DIR__ . '/components/unified-layout.php';
     text-align: right;
     font-size: 0.875rem;
     font-weight: 600;
-    color: var(--color-text-primary);
+    color: var(--color-text-primåry);
 }
 /* Audience type radio selection */
 .audience-option:hover {
@@ -868,7 +979,7 @@ include __DIR__ . '/components/unified-layout.php';
     margin-bottom: -2px;
     transition: all 0.15s;
 }
-.tab-link:hover { color: var(--color-text-primary); }
+.tab-link:hover { color: var(--color-text-primåry); }
 .tab-link.active {
     color: var(--color-accent);
     border-bottom-color: var(--color-accent);
@@ -984,7 +1095,7 @@ include __DIR__ . '/components/unified-layout.php';
 <div class="alert alert-warning">
     <i data-lucide="alert-triangle"></i>
     <div>
-        <strong>Migrering kravs</strong><br>
+        <strong>Migrering krävs</strong><br>
         Kor migrering <code>014_winback_survey.sql</code> via
         <a href="/admin/migrations.php">Migrationsverktyget</a>.
     </div>
@@ -1000,7 +1111,7 @@ include __DIR__ . '/components/unified-layout.php';
 
 <!-- Stats -->
 <div class="stats-grid">
-    <div class="stat-box primary">
+    <div class="stat-box primåry">
         <div class="stat-value"><?= $stats['total_responses'] ?? 0 ?></div>
         <div class="stat-label">Totala svar</div>
     </div>
@@ -1010,7 +1121,7 @@ include __DIR__ . '/components/unified-layout.php';
     </div>
     <div class="stat-box">
         <div class="stat-value"><?= $stats['total_questions'] ?? 0 ?></div>
-        <div class="stat-label">Aktiva fragor</div>
+        <div class="stat-label">Aktiva frågor</div>
     </div>
     <a href="/admin/participant-analysis.php" class="stat-box" style="text-decoration:none;cursor:pointer;">
         <div class="stat-value" style="display:flex;align-items:center;justify-content:center;gap:var(--space-xs);">
@@ -1035,7 +1146,7 @@ include __DIR__ . '/components/unified-layout.php';
     <?php if ($selectedCampaign): ?>
     <a href="?view=audience&campaign=<?= $selectedCampaign ?>" class="tab-link <?= $viewMode === 'audience' ? 'active' : '' ?>">
         <i data-lucide="users" style="width:16px;height:16px;vertical-align:middle;margin-right:var(--space-xs);"></i>
-        Malgrupp
+        Målgrupp
     </a>
     <a href="?view=results&campaign=<?= $selectedCampaign ?>" class="tab-link <?= $viewMode === 'results' ? 'active' : '' ?>">
         <i data-lucide="bar-chart-2" style="width:16px;height:16px;vertical-align:middle;margin-right:var(--space-xs);"></i>
@@ -1090,7 +1201,30 @@ if ($selectedCampData) {
                   AND s.brand_id IN ($placeholders)
                 GROUP BY r.id
                 ORDER BY events_2025 DESC, r.lastname, r.firstname
-                LIMIT 500
+            ";
+            $params = array_merge(
+                [$selectedCampData['target_year']],
+                $brandIds
+            );
+        } elseif ($audienceType === 'one_timer') {
+            // ONE_TIMER: Get riders who competed EXACTLY ONCE in target_year for these brands
+            $sql = "
+                SELECT
+                    r.id, r.firstname, r.lastname, r.email,
+                    c.name as club_name,
+                    COUNT(DISTINCT e.id) as events_target_year,
+                    MIN(e.name) as single_event_name,
+                    MIN(e.date) as single_event_date
+                FROM riders r
+                JOIN results res ON r.id = res.cyclist_id
+                JOIN events e ON res.event_id = e.id
+                JOIN series s ON e.series_id = s.id
+                LEFT JOIN clubs c ON r.club_id = c.id
+                WHERE YEAR(e.date) = ?
+                  AND s.brand_id IN ($placeholders)
+                GROUP BY r.id
+                HAVING COUNT(DISTINCT e.id) = 1
+                ORDER BY r.lastname, r.firstname
             ";
             $params = array_merge(
                 [$selectedCampData['target_year']],
@@ -1121,7 +1255,6 @@ if ($selectedCampData) {
                   )
                 GROUP BY r.id
                 ORDER BY last_active_year DESC, r.lastname, r.firstname
-                LIMIT 500
             ";
             $params = array_merge(
                 [$selectedCampData['start_year'], $selectedCampData['end_year']],
@@ -1189,12 +1322,20 @@ if ($selectedCampData) {
 }
 ?>
 
-<?php $isActiveAudience = ($selectedCampData['audience_type'] ?? 'churned') === 'active'; ?>
+<?php
+$audienceTypeView = $selectedCampData['audience_type'] ?? 'churned';
+$audienceBadgeClass = $audienceTypeView === 'active' ? 'badge-success' : ($audienceTypeView === 'one_timer' ? 'badge-info' : 'badge-warning');
+$audienceLabel = match($audienceTypeView) {
+    'active' => 'Aktiva ' . $selectedCampData['target_year'],
+    'one_timer' => 'Engångare ' . $selectedCampData['target_year'],
+    default => 'Churnade (ej ' . $selectedCampData['target_year'] . ')'
+};
+?>
 <div class="admin-card">
     <div class="admin-card-header">
-        <h2>Malgrupp: <?= htmlspecialchars($selectedCampData['name'] ?? 'Okand') ?></h2>
-        <span class="badge <?= $isActiveAudience ? 'badge-success' : 'badge-warning' ?>">
-            <?= $isActiveAudience ? 'Aktiva ' . $selectedCampData['target_year'] : 'Churnade (ej ' . $selectedCampData['target_year'] . ')' ?>
+        <h2>Målgrupp: <?= htmlspecialchars($selectedCampData['name'] ?? 'Okand') ?></h2>
+        <span class="badge <?= $audienceBadgeClass ?>">
+            <?= $audienceLabel ?>
         </span>
     </div>
     <div class="admin-card-body">
@@ -1202,7 +1343,7 @@ if ($selectedCampData) {
         <div class="audience-stats">
             <div class="audience-stat">
                 <div class="audience-stat-value"><?= number_format($audienceStats['total']) ?></div>
-                <div class="audience-stat-label">Totalt i malgruppen</div>
+                <div class="audience-stat-label">Totalt i målgruppen</div>
             </div>
             <div class="audience-stat has-email">
                 <div class="audience-stat-value"><?= number_format($audienceStats['with_email']) ?></div>
@@ -1226,7 +1367,7 @@ if ($selectedCampData) {
 
         <?php if (empty($audienceRiders)): ?>
             <p style="text-align:center;color:var(--color-text-muted);padding:var(--space-2xl);">
-                Ingen malgrupp hittades for denna kampanj.
+                Ingen målgrupp hittades for denna kampanj.
             </p>
         <?php else: ?>
             <!-- Invitation Form -->
@@ -1239,12 +1380,12 @@ if ($selectedCampData) {
                     <div class="audience-select-all">
                         <label style="display:flex;align-items:center;gap:var(--space-xs);cursor:pointer;">
                             <input type="checkbox" id="select-all-riders" onchange="toggleAllRiders(this.checked)">
-                            <strong>Valj alla med email</strong>
+                            <strong>Välj alla med email</strong>
                         </label>
                     </div>
                     <div class="audience-buttons">
                         <span id="selected-count">0 valda</span>
-                        <button type="submit" class="btn-admin btn-admin-primary" id="send-btn" disabled>
+                        <button type="submit" class="btn-admin btn-admin-primåry" id="send-btn" disabled>
                             <i data-lucide="send"></i> Skicka inbjudningar
                         </button>
                     </div>
@@ -1252,7 +1393,7 @@ if ($selectedCampData) {
                 <?php else: ?>
                 <div class="alert alert-info" style="margin-bottom:var(--space-md);">
                     <i data-lucide="info"></i>
-                    Du kan se malgruppen men endast kampanjens agare eller administratorer kan skicka inbjudningar.
+                    Du kan se målgruppen men endast kampanjens ägare eller administratorer kan skicka inbjudningar.
                 </div>
                 <?php endif; ?>
 
@@ -1334,7 +1475,7 @@ if ($selectedCampData) {
 .audience-stat-value {
     font-size: 1.5rem;
     font-weight: 700;
-    color: var(--color-text-primary);
+    color: var(--color-text-primåry);
 }
 .audience-stat-label {
     font-size: 0.75rem;
@@ -1385,7 +1526,7 @@ function updateSelectedCount() {
 // Confirm before sending
 document.getElementById('invitation-form')?.addEventListener('submit', function(e) {
     const count = document.querySelectorAll('.rider-checkbox:checked').length;
-    if (!confirm('Skicka inbjudningar till ' + count + ' deltagare?')) {
+    if (!confirm('Skicka inbjudningar till ' + count + ' deltägare?')) {
         e.preventDefault();
     }
 });
@@ -1398,7 +1539,7 @@ document.getElementById('invitation-form')?.addEventListener('submit', function(
 <?php if (!$isAdmin): ?>
 <div class="alert alert-warning">
     <i data-lucide="lock"></i>
-    Endast administratorer kan hantera fragor.
+    Endast administratorer kan hantera frågor.
 </div>
 <?php else: ?>
 
@@ -1408,7 +1549,7 @@ document.getElementById('invitation-form')?.addEventListener('submit', function(
     <div style="flex:1;">
         <strong><?= $duplicateCount ?> dubbletter hittades</strong>
         <p style="margin:var(--space-2xs) 0 0;font-size:0.875rem;color:var(--color-text-secondary);">
-            Det finns fragor med samma text. Klicka for att rensa dubbletter (behaller aldsta fragan).
+            Det finns frågor med samma text. Klicka for att rensa dubbletter (behaller aldsta fragan).
         </p>
     </div>
     <form method="POST" style="flex-shrink:0;">
@@ -1430,7 +1571,7 @@ document.getElementById('invitation-form')?.addEventListener('submit', function(
 
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:var(--space-md);margin-bottom:var(--space-md);">
                 <div class="form-group" style="grid-column: span 2;">
-                    <label class="form-label">Fragetext *</label>
+                    <label class="form-label">Frågetext *</label>
                     <input type="text" name="question_text" class="form-input" required placeholder="T.ex. Vad skulle fa dig att tavla igen?">
                 </div>
                 <div class="form-group">
@@ -1472,7 +1613,7 @@ document.getElementById('invitation-form')?.addEventListener('submit', function(
                 </div>
             </div>
 
-            <button type="submit" class="btn-admin btn-admin-primary">
+            <button type="submit" class="btn-admin btn-admin-primåry">
                 <i data-lucide="plus"></i> Lagg till fraga
             </button>
         </form>
@@ -1482,12 +1623,12 @@ document.getElementById('invitation-form')?.addEventListener('submit', function(
 <!-- Questions List -->
 <div class="admin-card">
     <div class="admin-card-header">
-        <h2>Befintliga fragor (<?= count($allQuestions) ?>)</h2>
+        <h2>Befintliga frågor (<?= count($allQuestions) ?>)</h2>
     </div>
     <div class="admin-card-body" style="padding:0;">
         <?php if (empty($allQuestions)): ?>
             <p style="text-align:center;color:var(--color-text-muted);padding:var(--space-2xl);">
-                Inga fragor skapade. Kor migrering 014 for att ladda standardfragor.
+                Inga frågor skapade. Kor migrering 014 for att ladda standardfrågor.
             </p>
         <?php else: ?>
             <div class="admin-table-container">
@@ -1569,19 +1710,38 @@ document.getElementById('invitation-form')?.addEventListener('submit', function(
 <!-- Edit Question Modal -->
 <div id="edit-question-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center;">
     <div style="background:var(--color-bg-surface);border-radius:var(--radius-lg);padding:var(--space-xl);max-width:600px;width:90%;max-height:90vh;overflow-y:auto;">
-        <h3 style="margin-bottom:var(--space-lg);">Redigera fraga</h3>
+        <h3 style="margin-bottom:var(--space-lg);">Redigera fråga</h3>
         <form method="POST" id="edit-question-form">
             <input type="hidden" name="action" value="update_question">
             <input type="hidden" name="id" id="edit-q-id">
 
             <div class="form-group" style="margin-bottom:var(--space-md);">
-                <label class="form-label">Fragetext *</label>
+                <label class="form-label">Frågetext *</label>
                 <input type="text" name="question_text" id="edit-q-text" class="form-input" required>
+            </div>
+
+            <div class="form-group" style="margin-bottom:var(--space-md);padding:var(--space-md);background:var(--color-bg-page);border-radius:var(--radius-md);">
+                <label class="form-label">Gäller för kampanj</label>
+                <div style="display:flex;flex-direction:column;gap:var(--space-sm);margin-top:var(--space-sm);">
+                    <label style="display:flex;align-items:center;gap:var(--space-sm);cursor:pointer;padding:var(--space-xs) 0;">
+                        <input type="radio" name="campaign_id" value="" id="edit-q-campaign-all">
+                        <span>Alla kampanjer (global fråga)</span>
+                    </label>
+                    <?php foreach ($campaigns as $camp): ?>
+                    <label style="display:flex;align-items:center;gap:var(--space-sm);cursor:pointer;padding:var(--space-xs) 0;">
+                        <input type="radio" name="campaign_id" value="<?= $camp['id'] ?>" class="edit-q-campaign-radio">
+                        <span><?= htmlspecialchars($camp['name']) ?></span>
+                        <?php if (!$camp['is_active']): ?>
+                            <span style="font-size:0.75rem;color:var(--color-text-muted);">(inaktiv)</span>
+                        <?php endif; ?>
+                    </label>
+                    <?php endforeach; ?>
+                </div>
             </div>
 
             <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-md);margin-bottom:var(--space-md);">
                 <div class="form-group">
-                    <label class="form-label">Fragetyp</label>
+                    <label class="form-label">Frågetyp</label>
                     <select name="question_type" id="edit-q-type" class="form-select">
                         <option value="checkbox">Flerval (checkbox)</option>
                         <option value="radio">Enkelval (radio)</option>
@@ -1603,7 +1763,7 @@ document.getElementById('invitation-form')?.addEventListener('submit', function(
             <div class="form-group" style="margin-bottom:var(--space-lg);">
                 <label style="display:flex;align-items:center;gap:var(--space-xs);cursor:pointer;">
                     <input type="checkbox" name="is_required" id="edit-q-required" value="1">
-                    Obligatorisk fraga
+                    Obligatorisk fråga
                 </label>
             </div>
 
@@ -1631,6 +1791,21 @@ function editQuestion(q) {
     document.getElementById('edit-q-type').value = q.question_type;
     document.getElementById('edit-q-order').value = q.sort_order;
     document.getElementById('edit-q-required').checked = q.is_required == 1;
+
+    // Set campaign radio button
+    const campaignId = q.campaign_id || '';
+    if (campaignId === '' || campaignId === null) {
+        document.getElementById('edit-q-campaign-all').checked = true;
+    } else {
+        const radios = document.querySelectorAll('.edit-q-campaign-radio');
+        radios.forEach(radio => {
+            radio.checked = (radio.value == campaignId);
+        });
+        // If no match found, select "all"
+        if (!document.querySelector('.edit-q-campaign-radio:checked')) {
+            document.getElementById('edit-q-campaign-all').checked = true;
+        }
+    }
 
     // Parse options
     if (q.options) {
@@ -1665,7 +1840,7 @@ document.getElementById('edit-question-modal').addEventListener('click', functio
     border: 1px solid var(--color-border);
     border-radius: var(--radius-sm);
     background: var(--color-bg-page);
-    color: var(--color-text-primary);
+    color: var(--color-text-primåry);
     font-family: inherit;
     resize: vertical;
 }
@@ -1747,7 +1922,7 @@ if (!$selectedCampData || !canAccessCampaign($selectedCampData)):
                     <h4><i data-lucide="trophy" style="width:16px;height:16px;"></i> Erfarenhetsniva</h4>
                     <?php
                     $totalExp = array_sum($demographicStats['experience']);
-                    $expOrder = ['1 sasong' => 0, '2-3 sasonger' => 1, '4+ sasonger' => 2];
+                    $expOrder = ['1 sasong' => 0, '2-3 säsonger' => 1, '4+ säsonger' => 2];
                     uksort($demographicStats['experience'], function($a, $b) use ($expOrder) {
                         return ($expOrder[$a] ?? 99) - ($expOrder[$b] ?? 99);
                     });
@@ -1830,34 +2005,44 @@ if (!$selectedCampData || !canAccessCampaign($selectedCampData)):
 
 <!-- Create Campaign -->
 <details class="admin-card" style="margin-bottom: var(--space-lg);">
-    <summary style="cursor:pointer;padding:var(--space-md);font-weight:600;">
+    <summåry style="cursor:pointer;padding:var(--space-md);font-weight:600;">
         <i data-lucide="plus"></i> Skapa ny kampanj
-    </summary>
+    </summåry>
     <div class="admin-card-body">
         <form method="POST">
             <input type="hidden" name="action" value="create_campaign">
 
             <!-- Audience Type Selection -->
             <div class="form-group" style="margin-bottom:var(--space-md);">
-                <label class="form-label">Malgrupp *</label>
+                <label class="form-label">Målgrupp *</label>
                 <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:var(--space-md);">
                     <label class="audience-option" style="display:flex;align-items:flex-start;gap:var(--space-sm);padding:var(--space-md);background:var(--color-bg-page);border:2px solid var(--color-border);border-radius:var(--radius-md);cursor:pointer;transition:all 0.15s;">
                         <input type="radio" name="audience_type" value="churned" checked style="margin-top:3px;">
                         <div>
-                            <strong style="color:var(--color-text-primary);">Churnade deltagare</strong>
+                            <strong style="color:var(--color-text-primåry);">Churnade deltägare</strong>
                             <p style="margin:var(--space-2xs) 0 0;font-size:0.875rem;color:var(--color-text-secondary);">
-                                Tavlade tidigare men INTE malaret.<br>
-                                <em>Syfte: Fa tillbaka inaktiva deltagare</em>
+                                Tävlade tidigare men INTE målåret.<br>
+                                <em>Syfte: Få tillbaka inaktiva deltägare</em>
                             </p>
                         </div>
                     </label>
                     <label class="audience-option" style="display:flex;align-items:flex-start;gap:var(--space-sm);padding:var(--space-md);background:var(--color-bg-page);border:2px solid var(--color-border);border-radius:var(--radius-md);cursor:pointer;transition:all 0.15s;">
                         <input type="radio" name="audience_type" value="active" style="margin-top:3px;">
                         <div>
-                            <strong style="color:var(--color-text-primary);">Aktiva deltagare</strong>
+                            <strong style="color:var(--color-text-primåry);">Aktiva deltägare</strong>
                             <p style="margin:var(--space-2xs) 0 0;font-size:0.875rem;color:var(--color-text-secondary);">
-                                Tavlade minst en gang malaret.<br>
-                                <em>Syfte: Feedback + rabatt for nasta ar</em>
+                                Tävlade minst en gång målåret.<br>
+                                <em>Syfte: Feedback + rabatt for nästa ar</em>
+                            </p>
+                        </div>
+                    </label>
+                    <label class="audience-option" style="display:flex;align-items:flex-start;gap:var(--space-sm);padding:var(--space-md);background:var(--color-bg-page);border:2px solid var(--color-border);border-radius:var(--radius-md);cursor:pointer;transition:all 0.15s;">
+                        <input type="radio" name="audience_type" value="one_timer" style="margin-top:3px;">
+                        <div>
+                            <strong style="color:var(--color-text-primåry);">Engångare</strong>
+                            <p style="margin:var(--space-2xs) 0 0;font-size:0.875rem;color:var(--color-text-secondary);">
+                                Tävlade bara EN gång målåret.<br>
+                                <em>Syfte: Fa dem att komma tillbaka fler ggr</em>
                             </p>
                         </div>
                     </label>
@@ -1898,27 +2083,55 @@ if (!$selectedCampData || !canAccessCampaign($selectedCampData)):
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:var(--space-md);margin-bottom:var(--space-md);">
                 <div class="form-group">
                     <label class="form-label">Kampanjnamn *</label>
-                    <input type="text" name="name" class="form-input" required placeholder="T.ex. GravitySeries Comeback">
+                    <input type="text" name="name" class="form-input" required placeholder="T.ex. Back To Gravity 2026">
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Rabatttyp</label>
-                    <select name="discount_type" class="form-select">
-                        <option value="fixed">Fast belopp (SEK)</option>
-                        <option value="percentage">Procent (%)</option>
+                    <label class="form-label">Rabattkod *</label>
+                    <select name="discount_code_id" class="form-select" required>
+                        <option value="">Välj rabattkod...</option>
+                        <?php foreach ($discountCodes ?? [] as $dc):
+                            $discountLabel = $dc['discount_type'] === 'percentage'
+                                ? intval($dc['discount_value']) . '%'
+                                : number_format($dc['discount_value'], 0) . ' kr';
+                            $targetLabel = '';
+                            if ($dc['event_name']) $targetLabel = ' - Event: ' . $dc['event_name'];
+                            elseif ($dc['series_name']) $targetLabel = ' - Serie: ' . $dc['series_name'];
+                            elseif ($dc['applicable_to'] === 'all') $targetLabel = ' - Alla event';
+                        ?>
+                        <option value="<?= $dc['id'] ?>">
+                            <?= htmlspecialchars($dc['code']) ?> (<?= $discountLabel ?><?= $targetLabel ?>)
+                        </option>
+                        <?php endforeach; ?>
                     </select>
+                    <small style="color:var(--color-text-muted);display:block;margin-top:4px;">
+                        <a href="/admin/discount-codes.php" target="_blank">Skapa ny rabattkod</a> om ingen passar
+                    </small>
+                </div>
+            </div>
+
+            <div style="margin-bottom:var(--space-md);padding:var(--space-md);background:var(--color-bg-page);border-radius:var(--radius-md);">
+                <h4 style="margin:0 0 var(--space-sm) 0;font-size:0.9rem;color:var(--color-text-secondary);">E-postinnehall</h4>
+                <div class="form-group" style="margin-bottom:var(--space-md);">
+                    <label class="form-label">Ämnesrad</label>
+                    <input type="text" name="email_subject" class="form-input" value="Vi saknar dig!" placeholder="T.ex. Vi saknar dig!">
                 </div>
                 <div class="form-group">
-                    <label class="form-label">Rabattvarde</label>
-                    <input type="number" name="discount_value" class="form-input" value="100" min="1">
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Giltig t.o.m.</label>
-                    <input type="date" name="valid_until" class="form-input" value="2026-12-31">
+                    <label class="form-label">Meddelande</label>
+                    <textarea name="email_body" class="form-input" rows="6" placeholder="Skriv ditt meddelande har...">Hej {{name}},
+
+Vi har märkt att du inte tävlat på ett tag och vill gärna höra hur du mår.
+
+Svara på en kort enkät (tar bara 2 minuter) så får du en rabattkod på din nästa anmälan som tack!
+
+Din feedback är anonym och hjälper oss att skapa bättre tävlingar.</textarea>
+                    <small style="color:var(--color-text-muted);display:block;margin-top:4px;">
+                        Tillgångliga variabler: <code>{{name}}</code> (förnamn), <code>{{discount_code}}</code> (rabattkoden), <code>{{discount_text}}</code> (t.ex. "100 kr rabatt")
+                    </small>
                 </div>
             </div>
 
             <div class="form-group" style="margin-bottom:var(--space-md);">
-                <label class="form-label">Varumarken *</label>
+                <label class="form-label">Varumårken *</label>
                 <div style="display:flex;flex-wrap:wrap;gap:var(--space-sm);">
                     <?php foreach ($brands as $b): ?>
                     <label style="display:flex;align-items:center;gap:var(--space-xs);padding:var(--space-sm);background:var(--color-bg-page);border-radius:var(--radius-sm);cursor:pointer;">
@@ -1932,9 +2145,9 @@ if (!$selectedCampData || !canAccessCampaign($selectedCampData)):
             <?php if ($isAdmin && !empty($promotors)): ?>
             <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:var(--space-md);margin-bottom:var(--space-md);padding-top:var(--space-md);border-top:1px solid var(--color-border);">
                 <div class="form-group">
-                    <label class="form-label">Agare (promotor)</label>
+                    <label class="form-label">Ägare (promotor)</label>
                     <select name="owner_user_id" class="form-select">
-                        <option value="">Valj agare...</option>
+                        <option value="">Välj ägare...</option>
                         <?php foreach ($promotors as $p): ?>
                         <option value="<?= $p['id'] ?>" <?= $p['id'] == $currentUserId ? 'selected' : '' ?>>
                             <?= htmlspecialchars($p['full_name'] ?: $p['username']) ?>
@@ -1942,7 +2155,7 @@ if (!$selectedCampData || !canAccessCampaign($selectedCampData)):
                         </option>
                         <?php endforeach; ?>
                     </select>
-                    <small style="color:var(--color-text-muted);">Agaren kan hantera kampanjen och se resultat</small>
+                    <small style="color:var(--color-text-muted);">Ägaren kan hantera kampanjen och se resultat</small>
                 </div>
                 <div class="form-group" style="display:flex;align-items:center;">
                     <label style="display:flex;align-items:center;gap:var(--space-xs);cursor:pointer;">
@@ -1953,7 +2166,7 @@ if (!$selectedCampData || !canAccessCampaign($selectedCampData)):
             </div>
             <?php endif; ?>
 
-            <button type="submit" class="btn-admin btn-admin-primary">
+            <button type="submit" class="btn-admin btn-admin-primåry">
                 <i data-lucide="plus"></i> Skapa kampanj
             </button>
         </form>
@@ -1968,7 +2181,7 @@ if (!$selectedCampData || !canAccessCampaign($selectedCampData)):
         <div class="admin-card-body" style="text-align:center;padding:var(--space-2xl);">
             <i data-lucide="megaphone" style="width:48px;height:48px;color:var(--color-text-muted);"></i>
             <p style="margin-top:var(--space-md);color:var(--color-text-muted);">
-                Inga kampanjer skapade. Skapa din forsta ovan eller kor migrering 014.
+                Inga kampanjer skapade. Skapå din första ovan eller kor migrering 014.
             </p>
         </div>
     </div>
@@ -1988,11 +2201,15 @@ if (!$selectedCampData || !canAccessCampaign($selectedCampData)):
                         <span class="badge <?= $c['is_active'] ? 'badge-success' : 'badge-secondary' ?>">
                             <?= $c['is_active'] ? 'Aktiv' : 'Inaktiv' ?>
                         </span>
-                        <span class="badge <?= $campAudienceType === 'active' ? 'badge-primary' : 'badge-warning' ?>" title="Malgrupp">
-                            <?= $campAudienceType === 'active' ? 'Aktiva ' . $c['target_year'] : 'Churnade' ?>
+                        <span class="badge <?= $campAudienceType === 'active' ? 'badge-primåry' : ($campAudienceType === 'one_timer' ? 'badge-info' : 'badge-warning') ?>" title="Målgrupp">
+                            <?php
+                            if ($campAudienceType === 'active') echo 'Aktiva ' . $c['target_year'];
+                            elseif ($campAudienceType === 'one_timer') echo 'Engångare ' . $c['target_year'];
+                            else echo 'Churnade';
+                            ?>
                         </span>
                         <?php if ($ownerName): ?>
-                        <span class="badge badge-info" title="Kampanjagare">
+                        <span class="badge badge-info" title="Kampanjägare">
                             <i data-lucide="user" style="width:12px;height:12px;"></i>
                             <?= htmlspecialchars($ownerName) ?>
                         </span>
@@ -2006,7 +2223,7 @@ if (!$selectedCampData || !canAccessCampaign($selectedCampData)):
                 </div>
                 <div style="display:flex;gap:var(--space-xs);">
                     <a href="?view=audience&campaign=<?= $c['id'] ?>" class="btn-admin btn-admin-secondary btn-sm">
-                        <i data-lucide="users"></i> Malgrupp
+                        <i data-lucide="users"></i> Målgrupp
                     </a>
                     <a href="?view=results&campaign=<?= $c['id'] ?>" class="btn-admin btn-admin-secondary btn-sm">
                         <i data-lucide="bar-chart-2"></i> Resultat
@@ -2022,6 +2239,9 @@ if (!$selectedCampData || !canAccessCampaign($selectedCampData)):
                             <i data-lucide="<?= $c['is_active'] ? 'pause' : 'play' ?>"></i>
                         </button>
                     </form>
+                    <button type="button" class="btn-admin btn-admin-ghost btn-sm" onclick="confirmDeleteCampaign(<?= $c['id'] ?>, '<?= htmlspecialchars($c['name'], ENT_QUOTES) ?>', <?= $c['response_count'] ?>)" title="Radera kampanj" style="color: var(--color-error);">
+                        <i data-lucide="trash-2"></i>
+                    </button>
                     <?php endif; ?>
                 </div>
             </div>
@@ -2030,14 +2250,14 @@ if (!$selectedCampData || !canAccessCampaign($selectedCampData)):
                 <span class="campaign-meta-item">
                     <i data-lucide="<?= $campAudienceType === 'active' ? 'users' : 'user-minus' ?>"></i>
                     <?php if ($campAudienceType === 'active'): ?>
-                        Malgrupp: Tavlade <?= $c['target_year'] ?>
+                        Målgrupp: Tävlade <?= $c['target_year'] ?>
                     <?php else: ?>
-                        Malgrupp: Tavlade <?= $c['start_year'] ?>-<?= $c['end_year'] ?>, ej <?= $c['target_year'] ?>
+                        Målgrupp: Tävlade <?= $c['start_year'] ?>-<?= $c['end_year'] ?>, ej <?= $c['target_year'] ?>
                     <?php endif; ?>
                 </span>
                 <span class="campaign-meta-item">
                     <i data-lucide="tag"></i>
-                    Varumarken:
+                    Varumårken:
                     <?php
                     $brandNames = [];
                     foreach ($brands as $b) {
@@ -2048,9 +2268,26 @@ if (!$selectedCampData || !canAccessCampaign($selectedCampData)):
                     echo implode(', ', $brandNames) ?: 'Alla';
                     ?>
                 </span>
+                <?php
+                // Get linked discount code info
+                $linkedCode = null;
+                if (!empty($c['discount_code_id'])) {
+                    foreach ($discountCodes ?? [] as $dc) {
+                        if ($dc['id'] == $c['discount_code_id']) {
+                            $linkedCode = $dc;
+                            break;
+                        }
+                    }
+                }
+                ?>
                 <span class="campaign-meta-item">
-                    <i data-lucide="gift"></i>
-                    <?= $c['discount_type'] === 'percentage' ? intval($c['discount_value']) . '%' : number_format($c['discount_value'], 0) . ' kr' ?> rabatt
+                    <i data-lucide="ticket"></i>
+                    <?php if ($linkedCode): ?>
+                        Kod: <strong><?= htmlspecialchars($linkedCode['code']) ?></strong>
+                        (<?= $linkedCode['discount_type'] === 'percentage' ? intval($linkedCode['discount_value']) . '%' : number_format($linkedCode['discount_value'], 0) . ' kr' ?>)
+                    <?php else: ?>
+                        <span style="color:var(--color-warning);">Ingen rabattkod kopplad</span>
+                    <?php endif; ?>
                 </span>
             </div>
 
@@ -2061,12 +2298,18 @@ if (!$selectedCampData || !canAccessCampaign($selectedCampData)):
                 </div>
                 <div class="campaign-stat">
                     <div class="campaign-stat-value"><?= number_format($c['potential_audience']) ?></div>
-                    <div class="campaign-stat-label">Potentiell malgrupp</div>
+                    <div class="campaign-stat-label">Potentiell målgrupp</div>
                 </div>
                 <?php if ($c['potential_audience'] > 0): ?>
                 <div class="campaign-stat">
                     <div class="campaign-stat-value"><?= round(($c['response_count'] / $c['potential_audience']) * 100, 1) ?>%</div>
                     <div class="campaign-stat-label">Svarsfrekvens</div>
+                </div>
+                <?php endif; ?>
+                <?php if ($linkedCode): ?>
+                <div class="campaign-stat">
+                    <div class="campaign-stat-value"><?= (int)$linkedCode['current_uses'] ?></div>
+                    <div class="campaign-stat-label">Kod anvand</div>
                 </div>
                 <?php endif; ?>
             </div>
@@ -2078,7 +2321,7 @@ if (!$selectedCampData || !canAccessCampaign($selectedCampData)):
 
 <!-- Edit Campaign Modal -->
 <div id="edit-campaign-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center;">
-    <div style="background:var(--color-bg-surface);border-radius:var(--radius-lg);padding:var(--space-xl);max-width:500px;width:90%;max-height:90vh;overflow-y:auto;">
+    <div style="background:var(--color-bg-surface);border-radius:var(--radius-lg);padding:var(--space-xl);max-width:600px;width:90%;max-height:90vh;overflow-y:auto;">
         <h3 style="margin-bottom:var(--space-lg);">
             <i data-lucide="edit-2" style="width:20px;height:20px;vertical-align:middle;margin-right:var(--space-xs);"></i>
             Redigera kampanj
@@ -2092,31 +2335,50 @@ if (!$selectedCampData || !canAccessCampaign($selectedCampData)):
                 <input type="text" name="name" id="edit-campaign-name" class="form-input" required>
             </div>
 
-            <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-md);margin-bottom:var(--space-md);">
-                <div class="form-group">
-                    <label class="form-label">Rabatttyp</label>
-                    <select name="discount_type" id="edit-discount-type" class="form-select">
-                        <option value="fixed">Fast belopp (SEK)</option>
-                        <option value="percentage">Procent (%)</option>
-                    </select>
-                </div>
-                <div class="form-group">
-                    <label class="form-label">Rabattvarde</label>
-                    <input type="number" name="discount_value" id="edit-discount-value" class="form-input" min="1">
-                </div>
+            <div class="form-group" style="margin-bottom:var(--space-md);">
+                <label class="form-label">Rabattkod *</label>
+                <select name="discount_code_id" id="edit-discount-code-id" class="form-select" required>
+                    <option value="">Välj rabattkod...</option>
+                    <?php foreach ($discountCodes ?? [] as $dc):
+                        $discountLabel = $dc['discount_type'] === 'percentage'
+                            ? intval($dc['discount_value']) . '%'
+                            : number_format($dc['discount_value'], 0) . ' kr';
+                        $targetLabel = '';
+                        if ($dc['event_name']) $targetLabel = ' - Event: ' . $dc['event_name'];
+                        elseif ($dc['series_name']) $targetLabel = ' - Serie: ' . $dc['series_name'];
+                        elseif ($dc['applicable_to'] === 'all') $targetLabel = ' - Alla event';
+                    ?>
+                    <option value="<?= $dc['id'] ?>">
+                        <?= htmlspecialchars($dc['code']) ?> (<?= $discountLabel ?><?= $targetLabel ?>)
+                    </option>
+                    <?php endforeach; ?>
+                </select>
+                <small style="color:var(--color-text-muted);display:block;margin-top:4px;">
+                    <a href="/admin/discount-codes.php" target="_blank">Skapa ny rabattkod</a>
+                </small>
             </div>
 
-            <div class="form-group" style="margin-bottom:var(--space-md);">
-                <label class="form-label">Giltig t.o.m.</label>
-                <input type="date" name="valid_until" id="edit-valid-until" class="form-input">
+            <div style="margin-bottom:var(--space-md);padding:var(--space-md);background:var(--color-bg-page);border-radius:var(--radius-md);">
+                <h4 style="margin:0 0 var(--space-sm) 0;font-size:0.9rem;color:var(--color-text-secondary);">E-postinnehall</h4>
+                <div class="form-group" style="margin-bottom:var(--space-md);">
+                    <label class="form-label">Ämnesrad</label>
+                    <input type="text" name="email_subject" id="edit-email-subject" class="form-input" placeholder="T.ex. Vi saknar dig!">
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Meddelande</label>
+                    <textarea name="email_body" id="edit-email-body" class="form-input" rows="6" placeholder="Skriv ditt meddelande har..."></textarea>
+                    <small style="color:var(--color-text-muted);display:block;margin-top:4px;">
+                        Variabler: <code>{{name}}</code>, <code>{{discount_code}}</code>, <code>{{discount_text}}</code>
+                    </small>
+                </div>
             </div>
 
             <?php if ($isAdmin && !empty($promotors)): ?>
             <div style="padding-top:var(--space-md);border-top:1px solid var(--color-border);margin-bottom:var(--space-md);">
                 <div class="form-group" style="margin-bottom:var(--space-md);">
-                    <label class="form-label">Agare (promotor)</label>
+                    <label class="form-label">Ägare (promotor)</label>
                     <select name="owner_user_id" id="edit-owner-id" class="form-select">
-                        <option value="">Ingen agare</option>
+                        <option value="">Ingen ägare</option>
                         <?php foreach ($promotors as $p): ?>
                         <option value="<?= $p['id'] ?>">
                             <?= htmlspecialchars($p['full_name'] ?: $p['username']) ?>
@@ -2124,7 +2386,7 @@ if (!$selectedCampData || !canAccessCampaign($selectedCampData)):
                         </option>
                         <?php endforeach; ?>
                     </select>
-                    <small style="color:var(--color-text-muted);">Agaren kan hantera kampanjen, se malgrupp och skicka inbjudningar</small>
+                    <small style="color:var(--color-text-muted);">Ägaren kan hantera kampanjen, se målgrupp och skicka inbjudningar</small>
                 </div>
 
                 <div class="form-group" style="margin-bottom:var(--space-md);">
@@ -2141,7 +2403,7 @@ if (!$selectedCampData || !canAccessCampaign($selectedCampData)):
 
             <div style="display:flex;gap:var(--space-md);justify-content:flex-end;">
                 <button type="button" class="btn-admin btn-admin-secondary" onclick="closeEditCampaignModal()">Avbryt</button>
-                <button type="submit" class="btn-admin btn-admin-primary">
+                <button type="submit" class="btn-admin btn-admin-primåry">
                     <i data-lucide="save"></i> Spara
                 </button>
             </div>
@@ -2153,9 +2415,9 @@ if (!$selectedCampData || !canAccessCampaign($selectedCampData)):
 function editCampaign(campaign) {
     document.getElementById('edit-campaign-id').value = campaign.id;
     document.getElementById('edit-campaign-name').value = campaign.name;
-    document.getElementById('edit-discount-type').value = campaign.discount_type || 'fixed';
-    document.getElementById('edit-discount-value').value = campaign.discount_value || 100;
-    document.getElementById('edit-valid-until').value = campaign.discount_valid_until ? campaign.discount_valid_until.split(' ')[0] : '';
+    document.getElementById('edit-discount-code-id').value = campaign.discount_code_id || '';
+    document.getElementById('edit-email-subject').value = campaign.email_subject || 'Vi saknar dig!';
+    document.getElementById('edit-email-body').value = campaign.email_body || '';
 
     <?php if ($isAdmin && !empty($promotors)): ?>
     document.getElementById('edit-owner-id').value = campaign.owner_user_id || '';
@@ -2173,6 +2435,50 @@ function closeEditCampaignModal() {
 document.getElementById('edit-campaign-modal')?.addEventListener('click', function(e) {
     if (e.target === this) closeEditCampaignModal();
 });
+
+// Toggle discount target fields
+function toggleDiscountTarget() {
+    const select = document.getElementById('discount-applicable-to');
+    const seriesGroup = document.getElementById('discount-series-group');
+    const eventGroup = document.getElementById('discount-event-group');
+
+    if (select && seriesGroup && eventGroup) {
+        seriesGroup.style.display = select.value === 'series' ? 'block' : 'none';
+        eventGroup.style.display = select.value === 'event' ? 'block' : 'none';
+    }
+}
+
+// Delete campaign - 2-step confirmation
+function confirmDeleteCampaign(id, name, responseCount) {
+    if (responseCount > 0) {
+        alert('Denna kampanj har ' + responseCount + ' svar och kan inte raderas.\n\nInaktivera kampanjen istället.');
+        return;
+    }
+
+    // Step 1: First confirmation
+    const step1 = confirm('Vill du radera kampanjen "' + name + '"?\n\nDetta kan inte angras!');
+    if (!step1) return;
+
+    // Step 2: Type confirmation
+    const confirmText = prompt('For att bekrafta, skriv kampanjens namn:\n\n' + name);
+    if (confirmText !== name) {
+        if (confirmText !== null) {
+            alert('Namnet matchade inte. Radering avbruten.');
+        }
+        return;
+    }
+
+    // Submit delete form
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.innerHTML = `
+        <input type="hidden" name="action" value="delete_campaign">
+        <input type="hidden" name="id" value="${id}">
+        <input type="hidden" name="confirm_token" value="DELETE_CAMPAIGN_${id}">
+    `;
+    document.body.appendChild(form);
+    form.submit();
+}
 </script>
 
 <?php endif; // tablesExist ?>
