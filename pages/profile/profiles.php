@@ -26,7 +26,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['switch_profile'])) {
 
 // Get all linked profiles
 $linkedProfiles = get_rider_linked_profiles();
-$currentRiderId = $_SESSION['rider_id'];
+
+// Get current rider ID from various session types
+$currentRiderId = $_SESSION['rider_id'] ?? $_SESSION['admin_id'] ?? $_SESSION['hub_user_id'] ?? $currentUser['id'] ?? 0;
 $message = $_GET['switched'] ?? '';
 
 // Get additional info for each profile
