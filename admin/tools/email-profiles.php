@@ -14,6 +14,218 @@ requireAdmin();
 
 $db = getDB();
 
+// Preview mode - show what "Mina profiler" would look like
+$previewEmail = trim($_GET['preview'] ?? '');
+if ($previewEmail) {
+    $previewProfiles = $db->getAll(
+        "SELECT r.*, c.name as club_name,
+                (SELECT COUNT(*) FROM results WHERE cyclist_id = r.id) as result_count,
+                (SELECT COUNT(*) FROM event_registrations WHERE rider_id = r.id AND status != 'cancelled') as registration_count
+         FROM riders r
+         LEFT JOIN clubs c ON r.club_id = c.id
+         WHERE r.email = ? AND r.active = 1
+         ORDER BY r.birth_year DESC",
+        [$previewEmail]
+    );
+
+    $pageTitle = 'Förhandsgranska: Mina profiler';
+    include __DIR__ . '/../includes/admin-header.php';
+    ?>
+    <div class="admin-content">
+        <div class="page-header">
+            <a href="?" class="btn-admin btn-admin-secondary mb-md">
+                <i data-lucide="arrow-left"></i> Tillbaka
+            </a>
+            <h1><i data-lucide="eye"></i> Förhandsgranska: Mina profiler</h1>
+            <p class="text-secondary">Så här ser det ut för <?= htmlspecialchars($previewEmail) ?></p>
+        </div>
+
+        <div class="preview-container">
+            <div class="preview-frame">
+                <div class="preview-header">
+                    <span class="preview-label">Användarvy - "Mina profiler"</span>
+                </div>
+                <div class="preview-content">
+                    <?php if (empty($previewProfiles)): ?>
+                        <p class="text-muted">Inga profiler hittades för denna e-post.</p>
+                    <?php else: ?>
+                        <div class="info-box mb-lg">
+                            <i data-lucide="info"></i>
+                            <div>
+                                <strong>Du har <?= count($previewProfiles) ?> profiler</strong><br>
+                                Klicka på "Byt till denna" för att hantera en annan profil.
+                            </div>
+                        </div>
+
+                        <div class="profiles-list">
+                            <?php foreach ($previewProfiles as $i => $profile): ?>
+                                <?php $isFirst = ($i === 0); ?>
+                                <div class="profile-card <?= $isFirst ? 'profile-card--active' : '' ?>">
+                                    <div class="profile-card-header">
+                                        <div class="profile-avatar">
+                                            <?= strtoupper(substr($profile['firstname'], 0, 1) . substr($profile['lastname'], 0, 1)) ?>
+                                        </div>
+                                        <div class="profile-main-info">
+                                            <h3 class="profile-name">
+                                                <?= htmlspecialchars($profile['firstname'] . ' ' . $profile['lastname']) ?>
+                                                <?php if ($isFirst): ?>
+                                                    <span class="badge badge-success">Aktiv</span>
+                                                <?php endif; ?>
+                                            </h3>
+                                            <?php if ($profile['birth_year']): ?>
+                                                <span class="profile-meta">
+                                                    <i data-lucide="calendar" class="icon-xs"></i>
+                                                    Född <?= $profile['birth_year'] ?> (<?= date('Y') - $profile['birth_year'] ?> år)
+                                                </span>
+                                            <?php endif; ?>
+                                            <?php if ($profile['club_name']): ?>
+                                                <span class="profile-meta">
+                                                    <i data-lucide="shield" class="icon-xs"></i>
+                                                    <?= htmlspecialchars($profile['club_name']) ?>
+                                                </span>
+                                            <?php endif; ?>
+                                        </div>
+                                    </div>
+                                    <div class="profile-card-stats">
+                                        <div class="stat">
+                                            <span class="stat-value"><?= $profile['result_count'] ?></span>
+                                            <span class="stat-label">Resultat</span>
+                                        </div>
+                                        <div class="stat">
+                                            <span class="stat-value"><?= $profile['registration_count'] ?></span>
+                                            <span class="stat-label">Anmälningar</span>
+                                        </div>
+                                    </div>
+                                    <div class="profile-card-actions">
+                                        <?php if ($isFirst): ?>
+                                            <span class="btn btn-primary disabled">
+                                                <i data-lucide="pencil"></i> Redigera profil
+                                            </span>
+                                        <?php else: ?>
+                                            <span class="btn btn-primary disabled">
+                                                <i data-lucide="repeat"></i> Byt till denna
+                                            </span>
+                                        <?php endif; ?>
+                                        <span class="btn btn-outline disabled">
+                                            <i data-lucide="flag"></i> Visa resultat
+                                        </span>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php endif; ?>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <style>
+    .preview-container {
+        max-width: 600px;
+    }
+    .preview-frame {
+        border: 2px solid var(--color-accent);
+        border-radius: var(--radius-lg);
+        overflow: hidden;
+        background: var(--color-bg-page);
+    }
+    .preview-header {
+        background: var(--color-accent);
+        color: #000;
+        padding: var(--space-sm) var(--space-md);
+        font-weight: 600;
+        font-size: 0.85rem;
+    }
+    .preview-content {
+        padding: var(--space-lg);
+    }
+    .profiles-list {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-md);
+    }
+    .profile-card {
+        background: var(--color-bg-card);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-lg);
+        padding: var(--space-lg);
+    }
+    .profile-card--active {
+        border-color: var(--color-accent);
+        box-shadow: 0 0 0 1px var(--color-accent);
+    }
+    .profile-card-header {
+        display: flex;
+        align-items: flex-start;
+        gap: var(--space-md);
+        margin-bottom: var(--space-md);
+    }
+    .profile-avatar {
+        width: 48px;
+        height: 48px;
+        border-radius: var(--radius-full);
+        background: var(--color-accent-light);
+        color: var(--color-accent);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        flex-shrink: 0;
+    }
+    .profile-name {
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin: 0 0 var(--space-xs) 0;
+        display: flex;
+        align-items: center;
+        gap: var(--space-sm);
+        flex-wrap: wrap;
+    }
+    .profile-meta {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-2xs);
+        color: var(--color-text-secondary);
+        font-size: 0.85rem;
+        margin-right: var(--space-md);
+    }
+    .profile-card-stats {
+        display: flex;
+        gap: var(--space-xl);
+        padding: var(--space-sm) 0;
+        border-top: 1px solid var(--color-border);
+        border-bottom: 1px solid var(--color-border);
+        margin-bottom: var(--space-md);
+    }
+    .stat { text-align: center; }
+    .stat-value { display: block; font-weight: 600; }
+    .stat-label { font-size: 0.75rem; color: var(--color-text-muted); text-transform: uppercase; }
+    .profile-card-actions {
+        display: flex;
+        gap: var(--space-sm);
+        flex-wrap: wrap;
+    }
+    .btn.disabled {
+        opacity: 0.7;
+        cursor: default;
+        pointer-events: none;
+    }
+    .info-box {
+        display: flex;
+        align-items: flex-start;
+        gap: var(--space-md);
+        padding: var(--space-md);
+        background: var(--color-accent-light);
+        border-radius: var(--radius-md);
+        color: var(--color-accent-text);
+    }
+    </style>
+    <script>lucide.createIcons();</script>
+    <?php
+    include __DIR__ . '/../includes/admin-footer.php';
+    exit;
+}
+
 // Get filter
 $minProfiles = (int)($_GET['min'] ?? 2);
 $searchEmail = trim($_GET['search'] ?? '');
@@ -164,6 +376,9 @@ include __DIR__ . '/../includes/admin-header.php';
                                     <?php else: ?>
                                         <span class="badge badge-warning"><i data-lucide="alert-circle" class="icon-xs"></i> Inget lösenord</span>
                                     <?php endif; ?>
+                                    <a href="?preview=<?= urlencode($group['email']) ?>" class="btn-admin btn-admin-sm btn-admin-secondary ml-auto">
+                                        <i data-lucide="eye"></i> Förhandsgranska
+                                    </a>
                                 </div>
                             </div>
                             <div class="email-group-riders">
