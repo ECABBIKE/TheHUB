@@ -4,6 +4,9 @@
  * Shows user profile, children, registrations, etc.
  */
 
+// Include rider auth functions for multi-profile support
+require_once dirname(dirname(__DIR__)) . '/includes/rider-auth.php';
+
 $currentUser = hub_current_user();
 
 if (!$currentUser) {

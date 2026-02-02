@@ -454,19 +454,37 @@ function get_rider_managed_clubs() {
 /**
  * Get all profiles linked to the current user's email
  * Returns array of rider profiles that share the same email
+ * Works with both rider login and admin login sessions
  */
 function get_rider_linked_profiles() {
-    if (!is_rider_logged_in()) {
-        return [];
-    }
-
     // Return cached profiles from session if available
     if (isset($_SESSION['rider_all_profiles']) && !empty($_SESSION['rider_all_profiles'])) {
         return $_SESSION['rider_all_profiles'];
     }
 
-    // Otherwise fetch from database
-    $email = $_SESSION['rider_email'] ?? null;
+    // Get email from various session types
+    $email = null;
+
+    // Check rider session first
+    if (isset($_SESSION['rider_email']) && !empty($_SESSION['rider_email'])) {
+        $email = $_SESSION['rider_email'];
+    }
+    // Check admin session
+    elseif (isset($_SESSION['admin_email']) && !empty($_SESSION['admin_email'])) {
+        $email = $_SESSION['admin_email'];
+    }
+    // Check hub user session
+    elseif (isset($_SESSION['hub_user_email']) && !empty($_SESSION['hub_user_email'])) {
+        $email = $_SESSION['hub_user_email'];
+    }
+    // Try hub_current_user() if available
+    elseif (function_exists('hub_current_user')) {
+        $user = hub_current_user();
+        if ($user && !empty($user['email'])) {
+            $email = $user['email'];
+        }
+    }
+
     if (!$email) {
         return [];
     }
@@ -485,15 +503,27 @@ function get_rider_linked_profiles() {
 
 /**
  * Switch to a different profile (must be linked to same email)
+ * Works with both rider login and admin login sessions
  * @param int $riderId The rider ID to switch to
  * @return bool True if switch successful
  */
 function rider_switch_profile($riderId) {
-    if (!is_rider_logged_in()) {
-        return false;
+    // Get email from various session types
+    $email = null;
+
+    if (isset($_SESSION['rider_email']) && !empty($_SESSION['rider_email'])) {
+        $email = $_SESSION['rider_email'];
+    } elseif (isset($_SESSION['admin_email']) && !empty($_SESSION['admin_email'])) {
+        $email = $_SESSION['admin_email'];
+    } elseif (isset($_SESSION['hub_user_email']) && !empty($_SESSION['hub_user_email'])) {
+        $email = $_SESSION['hub_user_email'];
+    } elseif (function_exists('hub_current_user')) {
+        $user = hub_current_user();
+        if ($user && !empty($user['email'])) {
+            $email = $user['email'];
+        }
     }
 
-    $email = $_SESSION['rider_email'] ?? null;
     if (!$email) {
         return false;
     }
@@ -510,9 +540,14 @@ function rider_switch_profile($riderId) {
         return false;
     }
 
-    // Switch to this profile
+    // Switch to this profile - update both session systems
     $_SESSION['rider_id'] = $rider['id'];
     $_SESSION['rider_name'] = $rider['firstname'] . ' ' . $rider['lastname'];
+
+    // Also update hub user session if present
+    if (isset($_SESSION['hub_user_id'])) {
+        $_SESSION['hub_user_id'] = $rider['id'];
+    }
 
     return true;
 }
@@ -520,20 +555,34 @@ function rider_switch_profile($riderId) {
 /**
  * Check if current user can manage a specific rider profile
  * Returns true if the profile shares the same email or is linked via rider_parents
+ * Works with both rider login and admin login sessions
  * @param int $riderId The rider ID to check
  * @return bool
  */
 function can_manage_rider_profile($riderId) {
-    if (!is_rider_logged_in()) {
-        return false;
-    }
+    // Get current user ID from various session types
+    $currentUserId = $_SESSION['rider_id'] ?? $_SESSION['admin_id'] ?? $_SESSION['hub_user_id'] ?? null;
 
     // Same rider = can manage
-    if ($_SESSION['rider_id'] == $riderId) {
+    if ($currentUserId && $currentUserId == $riderId) {
         return true;
     }
 
-    $email = $_SESSION['rider_email'] ?? null;
+    // Get email from various session types
+    $email = null;
+    if (isset($_SESSION['rider_email']) && !empty($_SESSION['rider_email'])) {
+        $email = $_SESSION['rider_email'];
+    } elseif (isset($_SESSION['admin_email']) && !empty($_SESSION['admin_email'])) {
+        $email = $_SESSION['admin_email'];
+    } elseif (isset($_SESSION['hub_user_email']) && !empty($_SESSION['hub_user_email'])) {
+        $email = $_SESSION['hub_user_email'];
+    } elseif (function_exists('hub_current_user')) {
+        $user = hub_current_user();
+        if ($user && !empty($user['email'])) {
+            $email = $user['email'];
+        }
+    }
+
     if (!$email) {
         return false;
     }
@@ -551,16 +600,18 @@ function can_manage_rider_profile($riderId) {
     }
 
     // Also check rider_parents table (for explicitly linked children)
-    try {
-        $linked = $db->getRow(
-            "SELECT 1 FROM rider_parents WHERE parent_rider_id = ? AND child_rider_id = ?",
-            [$_SESSION['rider_id'], $riderId]
-        );
-        if ($linked) {
-            return true;
+    if ($currentUserId) {
+        try {
+            $linked = $db->getRow(
+                "SELECT 1 FROM rider_parents WHERE parent_rider_id = ? AND child_rider_id = ?",
+                [$currentUserId, $riderId]
+            );
+            if ($linked) {
+                return true;
+            }
+        } catch (PDOException $e) {
+            // Table might not exist
         }
-    } catch (PDOException $e) {
-        // Table might not exist
     }
 
     return false;
@@ -568,7 +619,15 @@ function can_manage_rider_profile($riderId) {
 
 /**
  * Get the count of profiles the current user can manage
+ * Will fetch from database if not already cached in session
  */
 function get_rider_profile_count() {
-    return $_SESSION['rider_profile_count'] ?? 1;
+    // If already cached, return it
+    if (isset($_SESSION['rider_profile_count']) && $_SESSION['rider_profile_count'] > 0) {
+        return $_SESSION['rider_profile_count'];
+    }
+
+    // Otherwise, fetch profiles which will populate the session
+    $profiles = get_rider_linked_profiles();
+    return count($profiles) ?: 1;
 }
