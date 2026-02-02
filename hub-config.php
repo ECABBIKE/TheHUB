@@ -221,9 +221,25 @@ if (!function_exists('hub_current_user')) {
             $fullName = $_SESSION['admin_name'] ?? 'Admin';
             $nameParts = explode(' ', $fullName, 2);
 
+            // Get email - from session or lookup from database
+            $adminEmail = $_SESSION['admin_email'] ?? '';
+            if (empty($adminEmail) && isset($_SESSION['admin_id']) && $_SESSION['admin_id'] > 0) {
+                try {
+                    $stmt = hub_db()->prepare("SELECT email FROM admin_users WHERE id = ?");
+                    $stmt->execute([$_SESSION['admin_id']]);
+                    $result = $stmt->fetch(PDO::FETCH_ASSOC);
+                    if ($result && !empty($result['email'])) {
+                        $adminEmail = $result['email'];
+                        $_SESSION['admin_email'] = $adminEmail; // Cache for future
+                    }
+                } catch (Exception $e) {
+                    // Ignore errors
+                }
+            }
+
             return [
                 'id' => $_SESSION['admin_id'] ?? 0,
-                'email' => $_SESSION['admin_email'] ?? '',
+                'email' => $adminEmail,
                 'firstname' => $nameParts[0] ?? 'Admin',
                 'lastname' => $nameParts[1] ?? '',
                 'role_id' => $roleId,
