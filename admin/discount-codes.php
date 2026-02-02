@@ -223,9 +223,35 @@ include __DIR__ . '/components/unified-layout.php';
 .code-discount {
     font-size: 1.125rem;
     font-weight: 600;
+    background: var(--color-bg-page);
+    padding: var(--space-xs) var(--space-sm);
+    border-radius: var(--radius-sm);
 }
-.code-discount.percentage { color: var(--color-success); }
-.code-discount.fixed { color: var(--color-accent); }
+.code-discount.percentage {
+    color: var(--color-success);
+    border: 1px solid var(--color-success);
+}
+.code-discount.fixed {
+    color: var(--color-info, #38bdf8);
+    border: 1px solid var(--color-info, #38bdf8);
+}
+.discount-type-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-2xs);
+    padding: var(--space-2xs) var(--space-xs);
+    border-radius: var(--radius-sm);
+    font-size: 0.75rem;
+    font-weight: 600;
+}
+.discount-type-badge.percentage {
+    background: rgba(16, 185, 129, 0.15);
+    color: var(--color-success);
+}
+.discount-type-badge.fixed {
+    background: rgba(56, 189, 248, 0.15);
+    color: var(--color-info, #38bdf8);
+}
 .code-meta {
     display: flex;
     flex-wrap: wrap;
@@ -438,12 +464,18 @@ include __DIR__ . '/components/unified-layout.php';
     <?php foreach ($codes as $code): ?>
         <div class="code-card <?= $code['is_active'] ? '' : 'inactive' ?>">
             <div class="code-header">
-                <span class="code-value"><?= htmlspecialchars($code['code']) ?></span>
+                <div style="display:flex;align-items:center;gap:var(--space-sm);flex-wrap:wrap;">
+                    <span class="code-value"><?= htmlspecialchars($code['code']) ?></span>
+                    <span class="discount-type-badge <?= $code['discount_type'] ?>">
+                        <i data-lucide="<?= $code['discount_type'] === 'percentage' ? 'percent' : 'banknote' ?>" style="width:12px;height:12px;"></i>
+                        <?= $code['discount_type'] === 'percentage' ? 'Procent' : 'Fast belopp' ?>
+                    </span>
+                </div>
                 <span class="code-discount <?= $code['discount_type'] ?>">
                     <?php if ($code['discount_type'] === 'percentage'): ?>
-                        -<?= intval($code['discount_value']) ?>%
+                        −<?= intval($code['discount_value']) ?>%
                     <?php else: ?>
-                        -<?= number_format($code['discount_value'], 0) ?> kr
+                        −<?= number_format($code['discount_value'], 0) ?> kr
                     <?php endif; ?>
                 </span>
             </div>
