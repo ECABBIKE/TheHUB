@@ -116,6 +116,10 @@ $migrationChecks = [
     '032_winback_discount_code_link.sql' => [
         'columns' => ['winback_campaigns.discount_code_id', 'winback_campaigns.email_subject', 'winback_campaigns.email_body']
     ],
+    '033_winback_audience_one_timer.sql' => [
+        // Modifies ENUM to add 'one_timer' - check manually via SHOW COLUMNS
+        'columns' => []
+    ],
 ];
 
 // ============================================================================

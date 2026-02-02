@@ -4775,7 +4775,7 @@ class KPICalculator {
             SELECT
                 b.id AS brand_id,
                 b.name AS brand_name,
-                b.short_code,
+                b.slug AS short_code,
                 b.color_primary,
                 COUNT(*) AS rookie_count,
                 AVG(rfs.total_starts) AS avg_starts,
@@ -4789,7 +4789,7 @@ class KPICalculator {
             JOIN series_brands b ON rfs.first_brand_id = b.id
             WHERE rfs.cohort_year = ?
             AND rfs.first_brand_id IN ($placeholders)
-            GROUP BY b.id, b.name, b.short_code, b.color_primary
+            GROUP BY b.id, b.name, b.slug, b.color_primary
             HAVING COUNT(*) >= 10
             ORDER BY rookie_count DESC
         ";
@@ -4854,7 +4854,7 @@ class KPICalculator {
         $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
         // Get brand info
-        $brandStmt = $this->pdo->prepare("SELECT name, short_code, color_primary FROM series_brands WHERE id = ?");
+        $brandStmt = $this->pdo->prepare("SELECT name, slug AS short_code, color_primary FROM series_brands WHERE id = ?");
         $brandStmt->execute([$brandId]);
         $brand = $brandStmt->fetch(PDO::FETCH_ASSOC);
 
@@ -4909,7 +4909,7 @@ class KPICalculator {
             SELECT
                 b.id AS brand_id,
                 b.name AS brand_name,
-                b.short_code,
+                b.slug AS short_code,
                 rjs.journey_pattern,
                 COUNT(*) AS rider_count
             FROM rider_journey_summary rjs
@@ -4917,7 +4917,7 @@ class KPICalculator {
             JOIN series_brands b ON rfs.first_brand_id = b.id
             WHERE rjs.cohort_year = ?
             AND rfs.first_brand_id IN ($placeholders)
-            GROUP BY b.id, b.name, b.short_code, rjs.journey_pattern
+            GROUP BY b.id, b.name, b.slug, rjs.journey_pattern
             HAVING COUNT(*) >= 10
             ORDER BY b.name, rider_count DESC
         ";
@@ -4975,13 +4975,13 @@ class KPICalculator {
             SELECT
                 b.id,
                 b.name,
-                b.short_code,
+                b.slug AS short_code,
                 b.color_primary,
                 COUNT(DISTINCT rfs.rider_id) AS rookie_count
             FROM series_brands b
             JOIN rider_first_season rfs ON rfs.first_brand_id = b.id
             $whereClause
-            GROUP BY b.id, b.name, b.short_code, b.color_primary
+            GROUP BY b.id, b.name, b.slug, b.color_primary
             HAVING COUNT(DISTINCT rfs.rider_id) >= 10
             ORDER BY rookie_count DESC
         ";
