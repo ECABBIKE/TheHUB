@@ -2,8 +2,8 @@
 /**
  * Email Profile Groups Tool
  *
- * Finds all riders sharing the same email address and allows
- * setting which profile should be the "primary" (with password).
+ * Shows all riders sharing the same email address.
+ * These are automatically grouped as shared accounts.
  *
  * @package TheHUB Admin Tools
  */
@@ -13,45 +13,217 @@ require_once __DIR__ . '/../../includes/auth.php';
 requireAdmin();
 
 $db = getDB();
-$message = '';
-$messageType = '';
 
-// Handle setting primary profile
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['set_primary'])) {
-    checkCsrf();
+// Preview mode - show what "Mina profiler" would look like
+$previewEmail = trim($_GET['preview'] ?? '');
+if ($previewEmail) {
+    $previewProfiles = $db->getAll(
+        "SELECT r.*, c.name as club_name,
+                (SELECT COUNT(*) FROM results WHERE cyclist_id = r.id) as result_count,
+                (SELECT COUNT(*) FROM event_registrations WHERE rider_id = r.id AND status != 'cancelled') as registration_count
+         FROM riders r
+         LEFT JOIN clubs c ON r.club_id = c.id
+         WHERE r.email = ? AND r.active = 1
+         ORDER BY r.birth_year DESC",
+        [$previewEmail]
+    );
 
-    $riderId = (int)$_POST['rider_id'];
-    $email = trim($_POST['email']);
+    $pageTitle = 'Förhandsgranska: Mina profiler';
+    include __DIR__ . '/../includes/admin-header.php';
+    ?>
+    <div class="admin-content">
+        <div class="page-header">
+            <a href="?" class="btn-admin btn-admin-secondary mb-md">
+                <i data-lucide="arrow-left"></i> Tillbaka
+            </a>
+            <h1><i data-lucide="eye"></i> Förhandsgranska: Mina profiler</h1>
+            <p class="text-secondary">Så här ser det ut för <?= htmlspecialchars($previewEmail) ?></p>
+        </div>
 
-    // Verify this rider has this email
-    $rider = $db->getRow("SELECT * FROM riders WHERE id = ? AND email = ?", [$riderId, $email]);
+        <div class="preview-container">
+            <div class="preview-frame">
+                <div class="preview-header">
+                    <span class="preview-label">Användarvy - "Mina profiler"</span>
+                </div>
+                <div class="preview-content">
+                    <?php if (empty($previewProfiles)): ?>
+                        <p class="text-muted">Inga profiler hittades för denna e-post.</p>
+                    <?php else: ?>
+                        <div class="info-box mb-lg">
+                            <i data-lucide="info"></i>
+                            <div>
+                                <strong>Du har <?= count($previewProfiles) ?> profiler</strong><br>
+                                Klicka på "Byt till denna" för att hantera en annan profil.
+                            </div>
+                        </div>
 
-    if ($rider) {
-        // Check if rider already has a password
-        if (empty($rider['password'])) {
-            // Generate a temporary password reset token so user can set password
-            $token = bin2hex(random_bytes(32));
-            $expires = date('Y-m-d H:i:s', strtotime('+7 days'));
+                        <div class="profiles-list">
+                            <?php foreach ($previewProfiles as $i => $profile): ?>
+                                <?php $isFirst = ($i === 0); ?>
+                                <div class="profile-card <?= $isFirst ? 'profile-card--active' : '' ?>">
+                                    <div class="profile-card-header">
+                                        <div class="profile-avatar">
+                                            <?= strtoupper(substr($profile['firstname'], 0, 1) . substr($profile['lastname'], 0, 1)) ?>
+                                        </div>
+                                        <div class="profile-main-info">
+                                            <h3 class="profile-name">
+                                                <?= htmlspecialchars($profile['firstname'] . ' ' . $profile['lastname']) ?>
+                                                <?php if ($isFirst): ?>
+                                                    <span class="badge badge-success">Aktiv</span>
+                                                <?php endif; ?>
+                                            </h3>
+                                            <?php if ($profile['birth_year']): ?>
+                                                <span class="profile-meta">
+                                                    <i data-lucide="calendar" class="icon-xs"></i>
+                                                    Född <?= $profile['birth_year'] ?> (<?= date('Y') - $profile['birth_year'] ?> år)
+                                                </span>
+                                            <?php endif; ?>
+                                            <?php if ($profile['club_name']): ?>
+                                                <span class="profile-meta">
+                                                    <i data-lucide="shield" class="icon-xs"></i>
+                                                    <?= htmlspecialchars($profile['club_name']) ?>
+                                                </span>
+                                            <?php endif; ?>
+                                        </div>
+                                    </div>
+                                    <div class="profile-card-stats">
+                                        <div class="stat">
+                                            <span class="stat-value"><?= $profile['result_count'] ?></span>
+                                            <span class="stat-label">Resultat</span>
+                                        </div>
+                                        <div class="stat">
+                                            <span class="stat-value"><?= $profile['registration_count'] ?></span>
+                                            <span class="stat-label">Anmälningar</span>
+                                        </div>
+                                    </div>
+                                    <div class="profile-card-actions">
+                                        <?php if ($isFirst): ?>
+                                            <span class="btn btn-primary disabled">
+                                                <i data-lucide="pencil"></i> Redigera profil
+                                            </span>
+                                        <?php else: ?>
+                                            <span class="btn btn-primary disabled">
+                                                <i data-lucide="repeat"></i> Byt till denna
+                                            </span>
+                                        <?php endif; ?>
+                                        <span class="btn btn-outline disabled">
+                                            <i data-lucide="flag"></i> Visa resultat
+                                        </span>
+                                    </div>
+                                </div>
+                            <?php endforeach; ?>
+                        </div>
+                    <?php endif; ?>
+                </div>
+            </div>
+        </div>
+    </div>
 
-            $db->update('riders', [
-                'password_reset_token' => $token,
-                'password_reset_expires' => $expires
-            ], 'id = ?', [$riderId]);
-
-            $resetLink = SITE_URL . '/rider-reset-password.php?token=' . $token;
-            $message = "Återställningslänk skapad för {$rider['firstname']} {$rider['lastname']}. Länk giltig i 7 dagar.";
-            $messageType = 'success';
-
-            // Log for easy access
-            error_log("Password reset link for rider #{$riderId} ({$email}): {$resetLink}");
-        } else {
-            $message = "{$rider['firstname']} {$rider['lastname']} har redan ett lösenord och är huvudprofil.";
-            $messageType = 'info';
-        }
-    } else {
-        $message = "Kunde inte hitta deltagaren.";
-        $messageType = 'error';
+    <style>
+    .preview-container {
+        max-width: 600px;
     }
+    .preview-frame {
+        border: 2px solid var(--color-accent);
+        border-radius: var(--radius-lg);
+        overflow: hidden;
+        background: var(--color-bg-page);
+    }
+    .preview-header {
+        background: var(--color-accent);
+        color: #000;
+        padding: var(--space-sm) var(--space-md);
+        font-weight: 600;
+        font-size: 0.85rem;
+    }
+    .preview-content {
+        padding: var(--space-lg);
+    }
+    .profiles-list {
+        display: flex;
+        flex-direction: column;
+        gap: var(--space-md);
+    }
+    .profile-card {
+        background: var(--color-bg-card);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-lg);
+        padding: var(--space-lg);
+    }
+    .profile-card--active {
+        border-color: var(--color-accent);
+        box-shadow: 0 0 0 1px var(--color-accent);
+    }
+    .profile-card-header {
+        display: flex;
+        align-items: flex-start;
+        gap: var(--space-md);
+        margin-bottom: var(--space-md);
+    }
+    .profile-avatar {
+        width: 48px;
+        height: 48px;
+        border-radius: var(--radius-full);
+        background: var(--color-accent-light);
+        color: var(--color-accent);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-weight: 600;
+        flex-shrink: 0;
+    }
+    .profile-name {
+        font-size: 1.1rem;
+        font-weight: 600;
+        margin: 0 0 var(--space-xs) 0;
+        display: flex;
+        align-items: center;
+        gap: var(--space-sm);
+        flex-wrap: wrap;
+    }
+    .profile-meta {
+        display: inline-flex;
+        align-items: center;
+        gap: var(--space-2xs);
+        color: var(--color-text-secondary);
+        font-size: 0.85rem;
+        margin-right: var(--space-md);
+    }
+    .profile-card-stats {
+        display: flex;
+        gap: var(--space-xl);
+        padding: var(--space-sm) 0;
+        border-top: 1px solid var(--color-border);
+        border-bottom: 1px solid var(--color-border);
+        margin-bottom: var(--space-md);
+    }
+    .stat { text-align: center; }
+    .stat-value { display: block; font-weight: 600; }
+    .stat-label { font-size: 0.75rem; color: var(--color-text-muted); text-transform: uppercase; }
+    .profile-card-actions {
+        display: flex;
+        gap: var(--space-sm);
+        flex-wrap: wrap;
+    }
+    .btn.disabled {
+        opacity: 0.7;
+        cursor: default;
+        pointer-events: none;
+    }
+    .info-box {
+        display: flex;
+        align-items: flex-start;
+        gap: var(--space-md);
+        padding: var(--space-md);
+        background: var(--color-accent-light);
+        border-radius: var(--radius-md);
+        color: var(--color-accent-text);
+    }
+    </style>
+    <script>lucide.createIcons();</script>
+    <?php
+    include __DIR__ . '/../includes/admin-footer.php';
+    exit;
 }
 
 // Get filter
@@ -64,7 +236,7 @@ $query = "
         r.email,
         COUNT(*) as profile_count,
         GROUP_CONCAT(r.id ORDER BY r.birth_year DESC) as rider_ids,
-        MAX(CASE WHEN r.password IS NOT NULL AND r.password != '' THEN 1 ELSE 0 END) as has_password
+        MAX(CASE WHEN r.password IS NOT NULL AND r.password != '' THEN 1 ELSE 0 END) as has_login
     FROM riders r
     WHERE r.email IS NOT NULL
       AND r.email != ''
@@ -82,7 +254,7 @@ $query .= "
     GROUP BY r.email
     HAVING COUNT(*) >= ?
     ORDER BY profile_count DESC, r.email
-    LIMIT 200
+    LIMIT 500
 ";
 $params[] = $minProfiles;
 
@@ -113,14 +285,16 @@ include __DIR__ . '/../includes/admin-header.php';
 <div class="admin-content">
     <div class="page-header">
         <h1><i data-lucide="users"></i> E-post profilgrupper</h1>
-        <p class="text-secondary">Hitta och hantera deltagare som delar samma e-postadress</p>
+        <p class="text-secondary">Deltagare som delar e-postadress grupperas automatiskt som familj/föräldrakonton</p>
     </div>
 
-    <?php if ($message): ?>
-        <div class="alert alert-<?= $messageType ?> mb-lg">
-            <?= htmlspecialchars($message) ?>
+    <div class="alert alert-info mb-lg">
+        <i data-lucide="info"></i>
+        <div>
+            <strong>Automatisk kontogruppering</strong><br>
+            När flera deltagare har samma e-postadress kan de logga in med ett lösenord och hantera alla profiler under "Mina profiler".
         </div>
-    <?php endif; ?>
+    </div>
 
     <!-- Statistics -->
     <div class="stats-grid mb-xl">
@@ -130,7 +304,7 @@ include __DIR__ . '/../includes/admin-header.php';
         </div>
         <div class="stat-card">
             <div class="stat-value"><?= number_format($stats['emails_with_multiple']) ?></div>
-            <div class="stat-label">E-poster med flera profiler</div>
+            <div class="stat-label">Delade konton (familjer)</div>
         </div>
         <div class="stat-card">
             <div class="stat-value"><?= number_format($stats['riders_in_groups'] ?? 0) ?></div>
@@ -171,7 +345,7 @@ include __DIR__ . '/../includes/admin-header.php';
     <!-- Results -->
     <div class="card">
         <div class="card-header">
-            <h3>E-postgrupper (<?= count($emailGroups) ?>)</h3>
+            <h3>Delade konton (<?= count($emailGroups) ?>)</h3>
         </div>
         <div class="card-body">
             <?php if (empty($emailGroups)): ?>
@@ -192,34 +366,34 @@ include __DIR__ . '/../includes/admin-header.php';
                             $riderIds
                         );
                         ?>
-                        <div class="email-group <?= $group['has_password'] ? 'has-primary' : 'no-primary' ?>">
+                        <div class="email-group <?= $group['has_login'] ? 'has-login' : 'no-login' ?>">
                             <div class="email-group-header">
                                 <div class="email-info">
                                     <span class="email-address"><?= htmlspecialchars($group['email']) ?></span>
                                     <span class="profile-count"><?= $group['profile_count'] ?> profiler</span>
-                                    <?php if ($group['has_password']): ?>
-                                        <span class="badge badge-success">Har huvudprofil</span>
+                                    <?php if ($group['has_login']): ?>
+                                        <span class="badge badge-success"><i data-lucide="check" class="icon-xs"></i> Kan logga in</span>
                                     <?php else: ?>
-                                        <span class="badge badge-warning">Saknar lösenord</span>
+                                        <span class="badge badge-warning"><i data-lucide="alert-circle" class="icon-xs"></i> Inget lösenord</span>
                                     <?php endif; ?>
+                                    <a href="?preview=<?= urlencode($group['email']) ?>" class="btn-admin btn-admin-sm btn-admin-secondary ml-auto">
+                                        <i data-lucide="eye"></i> Förhandsgranska
+                                    </a>
                                 </div>
                             </div>
                             <div class="email-group-riders">
-                                <table class="admin-table">
+                                <table class="admin-table admin-table-compact">
                                     <thead>
                                         <tr>
                                             <th>Namn</th>
                                             <th>Födelseår</th>
                                             <th>Klubb</th>
                                             <th>Resultat</th>
-                                            <th>Status</th>
-                                            <th>Åtgärd</th>
                                         </tr>
                                     </thead>
                                     <tbody>
                                         <?php foreach ($riders as $rider): ?>
-                                            <?php $hasPwd = !empty($rider['password']); ?>
-                                            <tr class="<?= $hasPwd ? 'is-primary' : '' ?>">
+                                            <tr>
                                                 <td>
                                                     <a href="/admin/rider-edit.php?id=<?= $rider['id'] ?>">
                                                         <?= htmlspecialchars($rider['firstname'] . ' ' . $rider['lastname']) ?>
@@ -236,32 +410,6 @@ include __DIR__ . '/../includes/admin-header.php';
                                                 </td>
                                                 <td><?= htmlspecialchars($rider['club_name'] ?? '-') ?></td>
                                                 <td><?= $rider['result_count'] ?></td>
-                                                <td>
-                                                    <?php if ($hasPwd): ?>
-                                                        <span class="badge badge-success">
-                                                            <i data-lucide="key" class="icon-xs"></i> Huvudprofil
-                                                        </span>
-                                                    <?php else: ?>
-                                                        <span class="text-muted">-</span>
-                                                    <?php endif; ?>
-                                                </td>
-                                                <td>
-                                                    <?php if (!$hasPwd): ?>
-                                                        <form method="POST" style="display: inline;">
-                                                            <?= csrf_field() ?>
-                                                            <input type="hidden" name="rider_id" value="<?= $rider['id'] ?>">
-                                                            <input type="hidden" name="email" value="<?= htmlspecialchars($group['email']) ?>">
-                                                            <button type="submit" name="set_primary" class="btn-admin btn-admin-sm btn-admin-primary"
-                                                                    onclick="return confirm('Skapa lösenordsåterställning för <?= htmlspecialchars($rider['firstname']) ?>?')">
-                                                                <i data-lucide="user-check"></i> Gör huvudprofil
-                                                            </button>
-                                                        </form>
-                                                    <?php else: ?>
-                                                        <span class="text-success text-sm">
-                                                            <i data-lucide="check"></i> Aktiv
-                                                        </span>
-                                                    <?php endif; ?>
-                                                </td>
                                             </tr>
                                         <?php endforeach; ?>
                                     </tbody>
@@ -328,7 +476,7 @@ include __DIR__ . '/../includes/admin-header.php';
 .email-groups {
     display: flex;
     flex-direction: column;
-    gap: var(--space-lg);
+    gap: var(--space-md);
 }
 
 .email-group {
@@ -337,12 +485,12 @@ include __DIR__ . '/../includes/admin-header.php';
     overflow: hidden;
 }
 
-.email-group.no-primary {
-    border-color: var(--color-warning);
+.email-group.has-login {
+    border-left: 3px solid var(--color-success);
 }
 
-.email-group.has-primary {
-    border-color: var(--color-success);
+.email-group.no-login {
+    border-left: 3px solid var(--color-warning);
 }
 
 .email-group-header {
@@ -360,7 +508,6 @@ include __DIR__ . '/../includes/admin-header.php';
 
 .email-address {
     font-weight: 600;
-    font-size: 1.1rem;
 }
 
 .profile-count {
@@ -376,8 +523,8 @@ include __DIR__ . '/../includes/admin-header.php';
     margin: 0;
 }
 
-tr.is-primary {
-    background: rgba(16, 185, 129, 0.05);
+.admin-table-compact td, .admin-table-compact th {
+    padding: var(--space-xs) var(--space-sm);
 }
 
 @media (max-width: 768px) {
