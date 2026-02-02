@@ -151,12 +151,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $tablesExist) {
             $discountCodeId = !empty($_POST['discount_code_id']) ? (int)$_POST['discount_code_id'] : null;
             $emailSubject = trim($_POST['email_subject'] ?? '');
             $emailBody = trim($_POST['email_body'] ?? '');
+            $audienceType = $_POST['audience_type'] ?? 'churned';
+            $startYear = (int)($_POST['start_year'] ?? 2016);
+            $endYear = (int)($_POST['end_year'] ?? ((int)date('Y') - 1));
+            $targetYear = (int)($_POST['target_year'] ?? (int)date('Y'));
+            $brandIds = $_POST['brand_ids'] ?? [];
+
+            // Validate audience type
+            if (!in_array($audienceType, ['churned', 'active', 'one_timer'])) {
+                $audienceType = 'churned';
+            }
+
+            // Validate years
+            if ($startYear < 2010) $startYear = 2016;
+            if ($endYear > (int)date('Y')) $endYear = (int)date('Y');
+            if ($startYear > $endYear) $startYear = $endYear;
 
             if (empty($name)) {
                 $error = 'Kampanjnamn krävs';
+            } elseif (empty($brandIds)) {
+                $error = 'Välj minst ett varumärke';
             } elseif (empty($discountCodeId)) {
                 $error = 'Välj en rabattkod';
             } else {
+                $brandIdsJson = json_encode(array_map('intval', $brandIds));
+
                 // Admin can also update owner settings
                 if ($isAdmin) {
                     $ownerId = !empty($_POST['owner_user_id']) ? (int)$_POST['owner_user_id'] : null;
@@ -165,18 +184,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $tablesExist) {
                     $stmt = $pdo->prepare("
                         UPDATE winback_campaigns
                         SET name = ?, discount_code_id = ?, email_subject = ?, email_body = ?,
+                            audience_type = ?, start_year = ?, end_year = ?, target_year = ?, brand_ids = ?,
                             owner_user_id = ?, allow_promotor_access = ?
                         WHERE id = ?
                     ");
-                    $stmt->execute([$name, $discountCodeId, $emailSubject, $emailBody, $ownerId, $allowPromotorAccess, $id]);
+                    $stmt->execute([$name, $discountCodeId, $emailSubject, $emailBody,
+                                    $audienceType, $startYear, $endYear, $targetYear, $brandIdsJson,
+                                    $ownerId, $allowPromotorAccess, $id]);
                 } else {
                     // Non-admin (promotor) can only update basic settings
                     $stmt = $pdo->prepare("
                         UPDATE winback_campaigns
-                        SET name = ?, discount_code_id = ?, email_subject = ?, email_body = ?
+                        SET name = ?, discount_code_id = ?, email_subject = ?, email_body = ?,
+                            audience_type = ?, start_year = ?, end_year = ?, target_year = ?, brand_ids = ?
                         WHERE id = ?
                     ");
-                    $stmt->execute([$name, $discountCodeId, $emailSubject, $emailBody, $id]);
+                    $stmt->execute([$name, $discountCodeId, $emailSubject, $emailBody,
+                                    $audienceType, $startYear, $endYear, $targetYear, $brandIdsJson, $id]);
                 }
                 $message = 'Kampanj uppdaterad';
             }
@@ -2321,7 +2345,7 @@ Din feedback är anonym och hjälper oss att skapa bättre tävlingar.</textarea
 
 <!-- Edit Campaign Modal -->
 <div id="edit-campaign-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.5);z-index:1000;align-items:center;justify-content:center;">
-    <div style="background:var(--color-bg-surface);border-radius:var(--radius-lg);padding:var(--space-xl);max-width:600px;width:90%;max-height:90vh;overflow-y:auto;">
+    <div style="background:var(--color-bg-surface);border-radius:var(--radius-lg);padding:var(--space-xl);max-width:700px;width:90%;max-height:90vh;overflow-y:auto;">
         <h3 style="margin-bottom:var(--space-lg);">
             <i data-lucide="edit-2" style="width:20px;height:20px;vertical-align:middle;margin-right:var(--space-xs);"></i>
             Redigera kampanj
@@ -2330,43 +2354,101 @@ Din feedback är anonym och hjälper oss att skapa bättre tävlingar.</textarea
             <input type="hidden" name="action" value="update_campaign">
             <input type="hidden" name="id" id="edit-campaign-id">
 
+            <!-- Audience Type -->
             <div class="form-group" style="margin-bottom:var(--space-md);">
-                <label class="form-label">Kampanjnamn *</label>
-                <input type="text" name="name" id="edit-campaign-name" class="form-input" required>
+                <label class="form-label">Malgrupp *</label>
+                <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:var(--space-sm);">
+                    <label style="display:flex;align-items:center;gap:var(--space-xs);padding:var(--space-sm);background:var(--color-bg-page);border:1px solid var(--color-border);border-radius:var(--radius-sm);cursor:pointer;">
+                        <input type="radio" name="audience_type" value="churned" id="edit-audience-churned">
+                        <span>Churnade</span>
+                    </label>
+                    <label style="display:flex;align-items:center;gap:var(--space-xs);padding:var(--space-sm);background:var(--color-bg-page);border:1px solid var(--color-border);border-radius:var(--radius-sm);cursor:pointer;">
+                        <input type="radio" name="audience_type" value="active" id="edit-audience-active">
+                        <span>Aktiva</span>
+                    </label>
+                    <label style="display:flex;align-items:center;gap:var(--space-xs);padding:var(--space-sm);background:var(--color-bg-page);border:1px solid var(--color-border);border-radius:var(--radius-sm);cursor:pointer;">
+                        <input type="radio" name="audience_type" value="one_timer" id="edit-audience-one-timer">
+                        <span>Engangare</span>
+                    </label>
+                </div>
             </div>
 
+            <!-- Year Settings -->
+            <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:var(--space-md);margin-bottom:var(--space-md);padding:var(--space-md);background:var(--color-bg-page);border-radius:var(--radius-md);">
+                <div class="form-group">
+                    <label class="form-label">Startar</label>
+                    <select name="start_year" id="edit-start-year" class="form-select">
+                        <?php for ($y = 2016; $y <= (int)date('Y'); $y++): ?>
+                        <option value="<?= $y ?>"><?= $y ?></option>
+                        <?php endfor; ?>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Slutar</label>
+                    <select name="end_year" id="edit-end-year" class="form-select">
+                        <?php for ($y = 2016; $y <= (int)date('Y'); $y++): ?>
+                        <option value="<?= $y ?>"><?= $y ?></option>
+                        <?php endfor; ?>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Malar</label>
+                    <select name="target_year" id="edit-target-year" class="form-select">
+                        <?php for ($y = 2020; $y <= (int)date('Y') + 1; $y++): ?>
+                        <option value="<?= $y ?>"><?= $y ?></option>
+                        <?php endfor; ?>
+                    </select>
+                </div>
+            </div>
+
+            <div style="display:grid;grid-template-columns:1fr 1fr;gap:var(--space-md);margin-bottom:var(--space-md);">
+                <div class="form-group">
+                    <label class="form-label">Kampanjnamn *</label>
+                    <input type="text" name="name" id="edit-campaign-name" class="form-input" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Rabattkod *</label>
+                    <select name="discount_code_id" id="edit-discount-code-id" class="form-select" required>
+                        <option value="">Valj rabattkod...</option>
+                        <?php foreach ($discountCodes ?? [] as $dc):
+                            $discountLabel = $dc['discount_type'] === 'percentage'
+                                ? intval($dc['discount_value']) . '%'
+                                : number_format($dc['discount_value'], 0) . ' kr';
+                            $targetLabel = '';
+                            if ($dc['event_name']) $targetLabel = ' - Event: ' . $dc['event_name'];
+                            elseif ($dc['series_name']) $targetLabel = ' - Serie: ' . $dc['series_name'];
+                            elseif ($dc['applicable_to'] === 'all') $targetLabel = ' - Alla event';
+                        ?>
+                        <option value="<?= $dc['id'] ?>">
+                            <?= htmlspecialchars($dc['code']) ?> (<?= $discountLabel ?><?= $targetLabel ?>)
+                        </option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+            </div>
+
+            <!-- Brands -->
             <div class="form-group" style="margin-bottom:var(--space-md);">
-                <label class="form-label">Rabattkod *</label>
-                <select name="discount_code_id" id="edit-discount-code-id" class="form-select" required>
-                    <option value="">Välj rabattkod...</option>
-                    <?php foreach ($discountCodes ?? [] as $dc):
-                        $discountLabel = $dc['discount_type'] === 'percentage'
-                            ? intval($dc['discount_value']) . '%'
-                            : number_format($dc['discount_value'], 0) . ' kr';
-                        $targetLabel = '';
-                        if ($dc['event_name']) $targetLabel = ' - Event: ' . $dc['event_name'];
-                        elseif ($dc['series_name']) $targetLabel = ' - Serie: ' . $dc['series_name'];
-                        elseif ($dc['applicable_to'] === 'all') $targetLabel = ' - Alla event';
-                    ?>
-                    <option value="<?= $dc['id'] ?>">
-                        <?= htmlspecialchars($dc['code']) ?> (<?= $discountLabel ?><?= $targetLabel ?>)
-                    </option>
+                <label class="form-label">Varumarken *</label>
+                <div id="edit-brands-container" style="display:flex;flex-wrap:wrap;gap:var(--space-sm);">
+                    <?php foreach ($brands as $b): ?>
+                    <label style="display:flex;align-items:center;gap:var(--space-xs);padding:var(--space-sm);background:var(--color-bg-page);border-radius:var(--radius-sm);cursor:pointer;">
+                        <input type="checkbox" name="brand_ids[]" value="<?= $b['id'] ?>" class="edit-brand-checkbox">
+                        <?= htmlspecialchars($b['name']) ?>
+                    </label>
                     <?php endforeach; ?>
-                </select>
-                <small style="color:var(--color-text-muted);display:block;margin-top:4px;">
-                    <a href="/admin/discount-codes.php" target="_blank">Skapa ny rabattkod</a>
-                </small>
+                </div>
             </div>
 
             <div style="margin-bottom:var(--space-md);padding:var(--space-md);background:var(--color-bg-page);border-radius:var(--radius-md);">
                 <h4 style="margin:0 0 var(--space-sm) 0;font-size:0.9rem;color:var(--color-text-secondary);">E-postinnehall</h4>
                 <div class="form-group" style="margin-bottom:var(--space-md);">
-                    <label class="form-label">Ämnesrad</label>
+                    <label class="form-label">Amnesrad</label>
                     <input type="text" name="email_subject" id="edit-email-subject" class="form-input" placeholder="T.ex. Vi saknar dig!">
                 </div>
                 <div class="form-group">
                     <label class="form-label">Meddelande</label>
-                    <textarea name="email_body" id="edit-email-body" class="form-input" rows="6" placeholder="Skriv ditt meddelande har..."></textarea>
+                    <textarea name="email_body" id="edit-email-body" class="form-input" rows="5" placeholder="Skriv ditt meddelande har..."></textarea>
                     <small style="color:var(--color-text-muted);display:block;margin-top:4px;">
                         Variabler: <code>{{name}}</code>, <code>{{discount_code}}</code>, <code>{{discount_text}}</code>
                     </small>
@@ -2376,9 +2458,9 @@ Din feedback är anonym och hjälper oss att skapa bättre tävlingar.</textarea
             <?php if ($isAdmin && !empty($promotors)): ?>
             <div style="padding-top:var(--space-md);border-top:1px solid var(--color-border);margin-bottom:var(--space-md);">
                 <div class="form-group" style="margin-bottom:var(--space-md);">
-                    <label class="form-label">Ägare (promotor)</label>
+                    <label class="form-label">Agare (promotor)</label>
                     <select name="owner_user_id" id="edit-owner-id" class="form-select">
-                        <option value="">Ingen ägare</option>
+                        <option value="">Ingen agare</option>
                         <?php foreach ($promotors as $p): ?>
                         <option value="<?= $p['id'] ?>">
                             <?= htmlspecialchars($p['full_name'] ?: $p['username']) ?>
@@ -2386,24 +2468,19 @@ Din feedback är anonym och hjälper oss att skapa bättre tävlingar.</textarea
                         </option>
                         <?php endforeach; ?>
                     </select>
-                    <small style="color:var(--color-text-muted);">Ägaren kan hantera kampanjen, se målgrupp och skicka inbjudningar</small>
                 </div>
-
-                <div class="form-group" style="margin-bottom:var(--space-md);">
+                <div class="form-group">
                     <label style="display:flex;align-items:center;gap:var(--space-xs);cursor:pointer;">
                         <input type="checkbox" name="allow_promotor_access" id="edit-promotor-access" value="1">
                         Tillat alla promotors att se resultat
                     </label>
-                    <small style="color:var(--color-text-muted);display:block;margin-top:var(--space-xs);">
-                        Om aktiverad kan alla inloggade promotors se svar och statistik for denna kampanj
-                    </small>
                 </div>
             </div>
             <?php endif; ?>
 
             <div style="display:flex;gap:var(--space-md);justify-content:flex-end;">
                 <button type="button" class="btn-admin btn-admin-secondary" onclick="closeEditCampaignModal()">Avbryt</button>
-                <button type="submit" class="btn-admin btn-admin-primåry">
+                <button type="submit" class="btn-admin btn-admin-primary">
                     <i data-lucide="save"></i> Spara
                 </button>
             </div>
@@ -2418,6 +2495,23 @@ function editCampaign(campaign) {
     document.getElementById('edit-discount-code-id').value = campaign.discount_code_id || '';
     document.getElementById('edit-email-subject').value = campaign.email_subject || 'Vi saknar dig!';
     document.getElementById('edit-email-body').value = campaign.email_body || '';
+
+    // Set audience type
+    const audienceType = campaign.audience_type || 'churned';
+    document.getElementById('edit-audience-churned').checked = audienceType === 'churned';
+    document.getElementById('edit-audience-active').checked = audienceType === 'active';
+    document.getElementById('edit-audience-one-timer').checked = audienceType === 'one_timer';
+
+    // Set years
+    document.getElementById('edit-start-year').value = campaign.start_year || 2016;
+    document.getElementById('edit-end-year').value = campaign.end_year || (new Date().getFullYear() - 1);
+    document.getElementById('edit-target-year').value = campaign.target_year || new Date().getFullYear();
+
+    // Set brand checkboxes
+    const brandIds = campaign.brand_ids ? (typeof campaign.brand_ids === 'string' ? JSON.parse(campaign.brand_ids) : campaign.brand_ids) : [];
+    document.querySelectorAll('.edit-brand-checkbox').forEach(cb => {
+        cb.checked = brandIds.includes(parseInt(cb.value));
+    });
 
     <?php if ($isAdmin && !empty($promotors)): ?>
     document.getElementById('edit-owner-id').value = campaign.owner_user_id || '';
