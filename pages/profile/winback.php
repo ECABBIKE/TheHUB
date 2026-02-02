@@ -319,7 +319,7 @@ if ($tablesExist) {
                 <?php endif; ?>
 
                 <div class="prize-draw-box">
-                    <h3>🎁 Utlottning av fina priser!</h3>
+                    <h3><i data-lucide="gift" style="width:20px;height:20px;vertical-align:middle;margin-right:var(--space-xs);"></i> Utlottning av fina priser!</h3>
                     <p>Alla som svarar är med i utlottningen</p>
                 </div>
 
