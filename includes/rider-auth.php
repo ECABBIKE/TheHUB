@@ -457,8 +457,9 @@ function get_rider_managed_clubs() {
  * Works with both rider login and admin login sessions
  */
 function get_rider_linked_profiles() {
-    // Return cached profiles from session if available
-    if (isset($_SESSION['rider_all_profiles']) && !empty($_SESSION['rider_all_profiles'])) {
+    // Return cached profiles from session if available (and more than 1 profile)
+    // Don't trust cache with 0-1 profiles as it might be stale
+    if (isset($_SESSION['rider_all_profiles']) && count($_SESSION['rider_all_profiles']) > 1) {
         return $_SESSION['rider_all_profiles'];
     }
 
@@ -482,6 +483,24 @@ function get_rider_linked_profiles() {
         $user = hub_current_user();
         if ($user && !empty($user['email'])) {
             $email = $user['email'];
+        }
+    }
+
+    // If still no email but we have admin_id, look up email from admin_users table
+    if (!$email && isset($_SESSION['admin_id']) && $_SESSION['admin_id'] > 0) {
+        try {
+            $db = getDB();
+            $adminUser = $db->getRow(
+                "SELECT email FROM admin_users WHERE id = ?",
+                [$_SESSION['admin_id']]
+            );
+            if ($adminUser && !empty($adminUser['email'])) {
+                $email = $adminUser['email'];
+                // Cache it in session for future calls
+                $_SESSION['admin_email'] = $email;
+            }
+        } catch (Exception $e) {
+            // Table might not exist or other error
         }
     }
 
@@ -521,6 +540,23 @@ function rider_switch_profile($riderId) {
         $user = hub_current_user();
         if ($user && !empty($user['email'])) {
             $email = $user['email'];
+        }
+    }
+
+    // If still no email but we have admin_id, look up email from admin_users table
+    if (!$email && isset($_SESSION['admin_id']) && $_SESSION['admin_id'] > 0) {
+        try {
+            $db = getDB();
+            $adminUser = $db->getRow(
+                "SELECT email FROM admin_users WHERE id = ?",
+                [$_SESSION['admin_id']]
+            );
+            if ($adminUser && !empty($adminUser['email'])) {
+                $email = $adminUser['email'];
+                $_SESSION['admin_email'] = $email;
+            }
+        } catch (Exception $e) {
+            // Table might not exist
         }
     }
 
@@ -583,6 +619,23 @@ function can_manage_rider_profile($riderId) {
         }
     }
 
+    // If still no email but we have admin_id, look up email from admin_users table
+    if (!$email && isset($_SESSION['admin_id']) && $_SESSION['admin_id'] > 0) {
+        try {
+            $db = getDB();
+            $adminUser = $db->getRow(
+                "SELECT email FROM admin_users WHERE id = ?",
+                [$_SESSION['admin_id']]
+            );
+            if ($adminUser && !empty($adminUser['email'])) {
+                $email = $adminUser['email'];
+                $_SESSION['admin_email'] = $email;
+            }
+        } catch (Exception $e) {
+            // Table might not exist
+        }
+    }
+
     if (!$email) {
         return false;
     }
@@ -622,12 +675,13 @@ function can_manage_rider_profile($riderId) {
  * Will fetch from database if not already cached in session
  */
 function get_rider_profile_count() {
-    // If already cached, return it
-    if (isset($_SESSION['rider_profile_count']) && $_SESSION['rider_profile_count'] > 0) {
+    // If already cached with more than 1 profile, trust the cache
+    if (isset($_SESSION['rider_profile_count']) && $_SESSION['rider_profile_count'] > 1) {
         return $_SESSION['rider_profile_count'];
     }
 
-    // Otherwise, fetch profiles which will populate the session
+    // Always fetch from database if count is 0-1 (might be stale cache)
+    // This ensures newly linked profiles are discovered
     $profiles = get_rider_linked_profiles();
     return count($profiles) ?: 1;
 }
