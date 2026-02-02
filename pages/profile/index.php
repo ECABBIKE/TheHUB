@@ -14,6 +14,44 @@ if (!$currentUser) {
     exit;
 }
 
+// Debug mode for troubleshooting multi-profile feature
+if (isset($_GET['debug_profiles']) && isset($_SESSION['admin_logged_in'])) {
+    $db = getDB();
+    $debugInfo = [
+        'session' => [
+            'admin_id' => $_SESSION['admin_id'] ?? 'not set',
+            'admin_email' => $_SESSION['admin_email'] ?? 'not set',
+            'rider_id' => $_SESSION['rider_id'] ?? 'not set',
+            'rider_email' => $_SESSION['rider_email'] ?? 'not set',
+            'hub_user_id' => $_SESSION['hub_user_id'] ?? 'not set',
+            'hub_user_email' => $_SESSION['hub_user_email'] ?? 'not set',
+            'rider_profile_count' => $_SESSION['rider_profile_count'] ?? 'not set',
+        ],
+        'hub_current_user' => $currentUser,
+    ];
+
+    // Try to look up admin email from admin_users
+    if (isset($_SESSION['admin_id']) && $_SESSION['admin_id'] > 0) {
+        $adminUser = $db->getRow("SELECT id, email, username FROM admin_users WHERE id = ?", [$_SESSION['admin_id']]);
+        $debugInfo['admin_users_lookup'] = $adminUser ?: 'not found';
+    }
+
+    // Find riders with same email
+    $email = $_SESSION['admin_email'] ?? $_SESSION['rider_email'] ?? $currentUser['email'] ?? null;
+    if ($email) {
+        $riders = $db->getAll("SELECT id, firstname, lastname, email FROM riders WHERE email = ? AND active = 1", [$email]);
+        $debugInfo['riders_with_email'] = $riders;
+    }
+
+    // Get linked profiles result
+    $debugInfo['get_rider_linked_profiles_result'] = get_rider_linked_profiles();
+    $debugInfo['get_rider_profile_count_result'] = get_rider_profile_count();
+
+    header('Content-Type: application/json');
+    echo json_encode($debugInfo, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE);
+    exit;
+}
+
 $pdo = hub_db();
 
 // Include avatar helper functions
