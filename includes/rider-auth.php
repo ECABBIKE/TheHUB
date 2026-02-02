@@ -69,19 +69,23 @@ function require_rider() {
 function rider_login($email, $password, $rememberMe = false) {
     $db = getDB();
 
-    // Find rider by email
+    // Find rider by email that has a password set (the "primary" account)
     $rider = $db->getRow(
-        "SELECT * FROM riders WHERE email = ? AND active = 1 LIMIT 1",
+        "SELECT * FROM riders WHERE email = ? AND active = 1 AND password IS NOT NULL AND password != '' LIMIT 1",
         [$email]
     );
 
     if (!$rider) {
-        return ['success' => false, 'message' => 'Ogiltig e-post eller lösenord'];
-    }
+        // Try finding any rider with this email (might not have password set)
+        $anyRider = $db->getRow(
+            "SELECT * FROM riders WHERE email = ? AND active = 1 LIMIT 1",
+            [$email]
+        );
 
-    // Check if rider has a password set
-    if (empty($rider['password'])) {
-        return ['success' => false, 'message' => 'Du har inte satt ett lösenord ännu. Klicka på "Glömt lösenord" för att skapa ett.'];
+        if ($anyRider && empty($anyRider['password'])) {
+            return ['success' => false, 'message' => 'Du har inte satt ett lösenord ännu. Klicka på "Glömt lösenord" för att skapa ett.'];
+        }
+        return ['success' => false, 'message' => 'Ogiltig e-post eller lösenord'];
     }
 
     // Verify password
@@ -95,6 +99,14 @@ function rider_login($email, $password, $rememberMe = false) {
     $_SESSION['rider_email'] = $rider['email'];
     $_SESSION['rider_remember_me'] = $rememberMe;
 
+    // Find ALL profiles with the same email (for "Mina profiler" feature)
+    $allProfiles = $db->getAll(
+        "SELECT id, firstname, lastname, birth_year, gender FROM riders WHERE email = ? AND active = 1 ORDER BY birth_year DESC",
+        [$email]
+    );
+    $_SESSION['rider_all_profiles'] = $allProfiles;
+    $_SESSION['rider_profile_count'] = count($allProfiles);
+
     // If remember me, extend session cookie and create remember token
     if ($rememberMe) {
         rider_set_remember_token($rider['id']);
@@ -103,7 +115,7 @@ function rider_login($email, $password, $rememberMe = false) {
     // Update last login
     $db->update('riders', ['last_login' => date('Y-m-d H:i:s')], 'id = ?', [$rider['id']]);
 
-    return ['success' => true, 'rider' => $rider];
+    return ['success' => true, 'rider' => $rider, 'profile_count' => count($allProfiles)];
 }
 
 /**
@@ -437,4 +449,126 @@ function get_rider_managed_clubs() {
     }
 
     return $clubs;
+}
+
+/**
+ * Get all profiles linked to the current user's email
+ * Returns array of rider profiles that share the same email
+ */
+function get_rider_linked_profiles() {
+    if (!is_rider_logged_in()) {
+        return [];
+    }
+
+    // Return cached profiles from session if available
+    if (isset($_SESSION['rider_all_profiles']) && !empty($_SESSION['rider_all_profiles'])) {
+        return $_SESSION['rider_all_profiles'];
+    }
+
+    // Otherwise fetch from database
+    $email = $_SESSION['rider_email'] ?? null;
+    if (!$email) {
+        return [];
+    }
+
+    $db = getDB();
+    $profiles = $db->getAll(
+        "SELECT id, firstname, lastname, birth_year, gender FROM riders WHERE email = ? AND active = 1 ORDER BY birth_year DESC",
+        [$email]
+    );
+
+    $_SESSION['rider_all_profiles'] = $profiles;
+    $_SESSION['rider_profile_count'] = count($profiles);
+
+    return $profiles;
+}
+
+/**
+ * Switch to a different profile (must be linked to same email)
+ * @param int $riderId The rider ID to switch to
+ * @return bool True if switch successful
+ */
+function rider_switch_profile($riderId) {
+    if (!is_rider_logged_in()) {
+        return false;
+    }
+
+    $email = $_SESSION['rider_email'] ?? null;
+    if (!$email) {
+        return false;
+    }
+
+    $db = getDB();
+
+    // Verify that this rider has the same email (security check)
+    $rider = $db->getRow(
+        "SELECT * FROM riders WHERE id = ? AND email = ? AND active = 1",
+        [$riderId, $email]
+    );
+
+    if (!$rider) {
+        return false;
+    }
+
+    // Switch to this profile
+    $_SESSION['rider_id'] = $rider['id'];
+    $_SESSION['rider_name'] = $rider['firstname'] . ' ' . $rider['lastname'];
+
+    return true;
+}
+
+/**
+ * Check if current user can manage a specific rider profile
+ * Returns true if the profile shares the same email or is linked via rider_parents
+ * @param int $riderId The rider ID to check
+ * @return bool
+ */
+function can_manage_rider_profile($riderId) {
+    if (!is_rider_logged_in()) {
+        return false;
+    }
+
+    // Same rider = can manage
+    if ($_SESSION['rider_id'] == $riderId) {
+        return true;
+    }
+
+    $email = $_SESSION['rider_email'] ?? null;
+    if (!$email) {
+        return false;
+    }
+
+    $db = getDB();
+
+    // Check if rider has the same email
+    $rider = $db->getRow(
+        "SELECT id FROM riders WHERE id = ? AND email = ? AND active = 1",
+        [$riderId, $email]
+    );
+
+    if ($rider) {
+        return true;
+    }
+
+    // Also check rider_parents table (for explicitly linked children)
+    try {
+        $linked = $db->getRow(
+            "SELECT 1 FROM rider_parents WHERE parent_rider_id = ? AND child_rider_id = ?",
+            [$_SESSION['rider_id'], $riderId]
+        );
+        if ($linked) {
+            return true;
+        }
+    } catch (PDOException $e) {
+        // Table might not exist
+    }
+
+    return false;
+}
+
+/**
+ * Get the count of profiles the current user can manage
+ */
+function get_rider_profile_count() {
+    return $_SESSION['rider_profile_count'] ?? 1;
 }
