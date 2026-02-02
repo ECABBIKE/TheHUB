@@ -287,8 +287,128 @@ $breadcrumbs = [
     ['label' => 'E-post profilgrupper']
 ];
 
+// Get current admin's email info for diagnostics
+$currentAdminId = $_SESSION['admin_id'] ?? null;
+$currentAdminEmail = $_SESSION['admin_email'] ?? null;
+$adminUserRecord = null;
+$linkedRiderProfiles = [];
+
+if ($currentAdminId) {
+    $adminUserRecord = $db->getRow("SELECT id, username, email, full_name FROM admin_users WHERE id = ?", [$currentAdminId]);
+
+    // If we have an email (from session or from admin_users), find linked riders
+    $emailToCheck = $currentAdminEmail;
+    if (!$emailToCheck && $adminUserRecord && !empty($adminUserRecord['email'])) {
+        $emailToCheck = $adminUserRecord['email'];
+    }
+
+    if ($emailToCheck) {
+        $linkedRiderProfiles = $db->getAll(
+            "SELECT id, firstname, lastname, email FROM riders WHERE email = ? AND active = 1",
+            [$emailToCheck]
+        );
+    }
+}
+
 include __DIR__ . '/../components/unified-layout.php';
 ?>
+
+<!-- Diagnostik for nuvarande admin -->
+<?php if ($currentAdminId): ?>
+<div class="card mb-lg" style="border-left: 3px solid var(--color-accent);">
+    <div class="card-header">
+        <h3><i data-lucide="user-check"></i> Din kontostatus</h3>
+    </div>
+    <div class="card-body">
+        <div class="diagnostic-grid">
+            <div class="diagnostic-item">
+                <span class="diagnostic-label">Admin ID:</span>
+                <span class="diagnostic-value"><?= $currentAdminId ?></span>
+            </div>
+            <div class="diagnostic-item">
+                <span class="diagnostic-label">Session admin_email:</span>
+                <span class="diagnostic-value <?= $currentAdminEmail ? 'text-success' : 'text-warning' ?>">
+                    <?= $currentAdminEmail ?: '<em>Ej satt i session</em>' ?>
+                </span>
+            </div>
+            <div class="diagnostic-item">
+                <span class="diagnostic-label">admin_users.email:</span>
+                <span class="diagnostic-value <?= ($adminUserRecord && !empty($adminUserRecord['email'])) ? 'text-success' : 'text-warning' ?>">
+                    <?= ($adminUserRecord && !empty($adminUserRecord['email'])) ? htmlspecialchars($adminUserRecord['email']) : '<em>Tom eller saknas</em>' ?>
+                </span>
+            </div>
+            <div class="diagnostic-item">
+                <span class="diagnostic-label">Kopplade rider-profiler:</span>
+                <span class="diagnostic-value">
+                    <?php if (count($linkedRiderProfiles) > 0): ?>
+                        <span class="text-success"><?= count($linkedRiderProfiles) ?> profiler</span>
+                        <ul style="margin: var(--space-xs) 0 0 0; padding-left: var(--space-lg);">
+                            <?php foreach ($linkedRiderProfiles as $rp): ?>
+                                <li><?= htmlspecialchars($rp['firstname'] . ' ' . $rp['lastname']) ?> (ID: <?= $rp['id'] ?>)</li>
+                            <?php endforeach; ?>
+                        </ul>
+                    <?php else: ?>
+                        <span class="text-warning">Inga (e-post matchar inte)</span>
+                    <?php endif; ?>
+                </span>
+            </div>
+        </div>
+
+        <?php if (!$currentAdminEmail && (!$adminUserRecord || empty($adminUserRecord['email']))): ?>
+        <div class="alert alert-warning mt-md">
+            <i data-lucide="alert-triangle"></i>
+            <div>
+                <strong>Problem hittat!</strong><br>
+                Din admin-anvandare (ID <?= $currentAdminId ?>) har ingen e-post sparad.
+                Gar till <a href="/admin/users.php">Anvandare</a> och lagg till din e-post for att aktivera "Mina profiler".
+            </div>
+        </div>
+        <?php elseif (count($linkedRiderProfiles) < 2): ?>
+        <div class="alert alert-info mt-md">
+            <i data-lucide="info"></i>
+            <div>
+                Du har <?= count($linkedRiderProfiles) ?> rider-profil(er) med e-posten <strong><?= htmlspecialchars($currentAdminEmail ?: $adminUserRecord['email'] ?? '') ?></strong>.
+                For att se "Mina profiler" behovs minst 2 profiler med samma e-post i riders-tabellen.
+            </div>
+        </div>
+        <?php else: ?>
+        <div class="alert alert-success mt-md">
+            <i data-lucide="check-circle"></i>
+            <div>
+                Allt ser bra ut! Du har <?= count($linkedRiderProfiles) ?> profiler kopplade.
+                Ga till <a href="/profile/profiles">/profile/profiles</a> for att se dem.
+            </div>
+        </div>
+        <?php endif; ?>
+    </div>
+</div>
+
+<style>
+.diagnostic-grid {
+    display: grid;
+    gap: var(--space-sm);
+}
+.diagnostic-item {
+    display: flex;
+    gap: var(--space-md);
+    padding: var(--space-xs) 0;
+    border-bottom: 1px solid var(--color-border);
+}
+.diagnostic-item:last-child {
+    border-bottom: none;
+}
+.diagnostic-label {
+    font-weight: 600;
+    min-width: 180px;
+    color: var(--color-text-secondary);
+}
+.diagnostic-value {
+    flex: 1;
+}
+.text-success { color: var(--color-success); }
+.text-warning { color: var(--color-warning); }
+</style>
+<?php endif; ?>
 
 <div class="page-header mb-lg">
     <h1><i data-lucide="users"></i> E-post profilgrupper</h1>
