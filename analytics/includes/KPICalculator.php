@@ -4776,7 +4776,7 @@ class KPICalculator {
                 b.id AS brand_id,
                 b.name AS brand_name,
                 b.slug AS short_code,
-                b.color_primary,
+                b.gradient_start AS color_primary,
                 COUNT(*) AS rookie_count,
                 AVG(rfs.total_starts) AS avg_starts,
                 AVG(rfs.total_events) AS avg_events,
@@ -4789,7 +4789,7 @@ class KPICalculator {
             JOIN series_brands b ON rfs.first_brand_id = b.id
             WHERE rfs.cohort_year = ?
             AND rfs.first_brand_id IN ($placeholders)
-            GROUP BY b.id, b.name, b.slug, b.color_primary
+            GROUP BY b.id, b.name, b.slug, b.gradient_start
             HAVING COUNT(*) >= 10
             ORDER BY rookie_count DESC
         ";
@@ -4976,12 +4976,12 @@ class KPICalculator {
                 b.id,
                 b.name,
                 b.slug AS short_code,
-                b.color_primary,
+                b.gradient_start AS color_primary,
                 COUNT(DISTINCT rfs.rider_id) AS rookie_count
             FROM series_brands b
             JOIN rider_first_season rfs ON rfs.first_brand_id = b.id
             $whereClause
-            GROUP BY b.id, b.name, b.slug, b.color_primary
+            GROUP BY b.id, b.name, b.slug, b.gradient_start
             HAVING COUNT(DISTINCT rfs.rider_id) >= 10
             ORDER BY rookie_count DESC
         ";
