@@ -431,14 +431,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $tablesExist) {
                             : "Hej {{name}},\n\nVi har märkt att du inte tävlat på ett tag.\n\nSvara på en kort enkät så får du rabattkoden {{discount_code}} ({{discount_text}}) på din nästa anmälan!";
 
                         // Replace variables
+                        $hubLink = SITE_URL;
                         $emailBody = str_replace([
                             '{{name}}',
                             '{{discount_code}}',
-                            '{{discount_text}}'
+                            '{{discount_text}}',
+                            '{{hub_link}}',
+                            '{{survey_link}}'
                         ], [
                             htmlspecialchars($rider['firstname']),
                             htmlspecialchars($discountCode['code']),
-                            $discountText
+                            $discountText,
+                            $hubLink,
+                            $surveyUrl
                         ], $emailBody);
 
                         // Wrap in HTML template
@@ -2149,7 +2154,7 @@ Svara på en kort enkät (tar bara 2 minuter) så får du en rabattkod på din n
 
 Din feedback är anonym och hjälper oss att skapa bättre tävlingar.</textarea>
                     <small style="color:var(--color-text-muted);display:block;margin-top:4px;">
-                        Tillgångliga variabler: <code>{{name}}</code> (förnamn), <code>{{discount_code}}</code> (rabattkoden), <code>{{discount_text}}</code> (t.ex. "100 kr rabatt")
+                        Variabler: <code>{{name}}</code> (förnamn), <code>{{hub_link}}</code> (länk till TheHUB), <code>{{survey_link}}</code> (enkätlänk), <code>{{discount_code}}</code>, <code>{{discount_text}}</code>
                     </small>
                 </div>
             </div>
@@ -2450,7 +2455,7 @@ Din feedback är anonym och hjälper oss att skapa bättre tävlingar.</textarea
                     <label class="form-label">Meddelande</label>
                     <textarea name="email_body" id="edit-email-body" class="form-input" rows="5" placeholder="Skriv ditt meddelande har..."></textarea>
                     <small style="color:var(--color-text-muted);display:block;margin-top:4px;">
-                        Variabler: <code>{{name}}</code>, <code>{{discount_code}}</code>, <code>{{discount_text}}</code>
+                        Variabler: <code>{{name}}</code>, <code>{{hub_link}}</code>, <code>{{survey_link}}</code>, <code>{{discount_code}}</code>, <code>{{discount_text}}</code>
                     </small>
                 </div>
             </div>
