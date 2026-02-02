@@ -125,6 +125,7 @@ function hub_get_current_page(): array {
         'profile' => [
             'index' => '/pages/profile/index.php',
             'edit' => '/pages/profile/edit.php',
+            'profiles' => '/pages/profile/profiles.php',
             'children' => '/pages/profile/children.php',
             'club-admin' => '/pages/profile/club-admin.php',
             'registrations' => '/pages/profile/registrations.php',

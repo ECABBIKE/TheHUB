@@ -209,6 +209,17 @@ try {
         <span class="quick-link-label">Betygsatt Events</span>
         <span class="quick-link-arrow">›</span>
     </a>
+    <?php
+    // Get profile count for "Mina profiler" link
+    $profileCount = function_exists('get_rider_profile_count') ? get_rider_profile_count() : 1;
+    if ($profileCount > 1):
+    ?>
+    <a href="/profile/profiles" class="quick-link quick-link--highlight">
+        <span class="quick-link-icon"><i data-lucide="users"></i></span>
+        <span class="quick-link-label">Mina profiler (<?= $profileCount ?>)</span>
+        <span class="quick-link-arrow">›</span>
+    </a>
+    <?php endif; ?>
     <?php if ($pendingWinbackCount > 0): ?>
     <a href="/profile/winback" class="quick-link" style="background: linear-gradient(135deg, var(--color-accent-light), transparent); border-color: var(--color-accent);">
         <span class="quick-link-icon"><i data-lucide="arrow-right-circle"></i></span>
