@@ -117,8 +117,8 @@ $migrationChecks = [
         'columns' => ['winback_campaigns.discount_code_id', 'winback_campaigns.email_subject', 'winback_campaigns.email_body']
     ],
     '033_winback_audience_one_timer.sql' => [
-        // Modifies ENUM to add 'one_timer' - check manually via SHOW COLUMNS
-        'columns' => []
+        // Check if ENUM contains 'one_timer'
+        'data' => ["SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'winback_campaigns' AND COLUMN_NAME = 'audience_type' AND COLUMN_TYPE LIKE '%one_timer%'"]
     ],
 ];
 
