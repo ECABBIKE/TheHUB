@@ -120,6 +120,16 @@ try {
     error_log("EVENT EDIT: Error fetching event media: " . $e->getMessage());
 }
 
+// Get media files from series folder for logo selection
+$seriesMediaFiles = [];
+try {
+    $stmt = $pdo->prepare("SELECT id, filename, original_filename, filepath FROM media WHERE folder = 'series' ORDER BY uploaded_at DESC");
+    $stmt->execute();
+    $seriesMediaFiles = $stmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (Exception $e) {
+    error_log("EVENT EDIT: Error fetching series media: " . $e->getMessage());
+}
+
 // Check/create _hidden columns for event content fields
 $hiddenColumns = [
     'invitation_hidden', 'hydration_hidden', 'toilets_hidden', 'bike_wash_hidden',
@@ -772,7 +782,7 @@ include __DIR__ . '/components/unified-layout.php';
                     <label class="admin-form-label">Event-logga <span class="text-secondary text-sm">(om ingen serie)</span></label>
                     <select name="logo_media_id" class="admin-form-select">
                         <option value="">-- Ingen (använd seriens) --</option>
-                        <?php foreach ($eventMediaFiles as $media): ?>
+                        <?php foreach ($seriesMediaFiles as $media): ?>
                         <option value="<?= $media['id'] ?>" <?= ($event['logo_media_id'] ?? '') == $media['id'] ? 'selected' : '' ?>>
                             <?= htmlspecialchars($media['original_filename']) ?>
                         </option>
@@ -784,7 +794,7 @@ include __DIR__ . '/components/unified-layout.php';
                     </div>
                     <?php endif; ?>
                     <small class="form-help block mt-sm">
-                        Välj bild från <a href="/admin/media?folder=events" target="_blank">Mediabiblioteket</a>. Används i kalender om eventet inte tillhör en serie.
+                        Välj bild från <a href="/admin/media?folder=series" target="_blank">Mediabiblioteket (Serie-loggor)</a>. Används i kalender om eventet inte tillhör en serie.
                     </small>
                 </div>
             </div>
