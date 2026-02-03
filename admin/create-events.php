@@ -328,24 +328,18 @@ include __DIR__ . '/components/unified-layout.php';
 <?php endif; ?>
 
 <!-- Quick Stats -->
-<div class="grid grid-cols-1 gs-md-grid-cols-3 gap-md mb-lg">
-    <div class="card">
-        <div class="card-body text-center">
-            <div class="text-3xl font-bold text-accent"><?= count($venues) ?></div>
-            <div class="text-sm text-secondary">Banor</div>
-        </div>
+<div class="stats-grid">
+    <div class="stat-card">
+        <span class="stat-value"><?= count($venues) ?></span>
+        <span class="stat-label">Banor</span>
     </div>
-    <div class="card">
-        <div class="card-body text-center">
-            <div class="text-3xl font-bold text-accent"><?= count($series) ?></div>
-            <div class="text-sm text-secondary">Serier</div>
-        </div>
+    <div class="stat-card">
+        <span class="stat-value"><?= count($series) ?></span>
+        <span class="stat-label">Serier</span>
     </div>
-    <div class="card">
-        <div class="card-body text-center">
-            <div class="text-3xl font-bold text-accent"><?= count($clubs) ?></div>
-            <div class="text-sm text-secondary">Klubbar</div>
-        </div>
+    <div class="stat-card">
+        <span class="stat-value"><?= count($clubs) ?></span>
+        <span class="stat-label">Klubbar</span>
     </div>
 </div>
 
