@@ -262,6 +262,23 @@ Automatiskt genererade "trading cards" med deltagarstatistik:
 
 # CHANGELOG
 
+### 2026-02-03 (Event Creation Tool)
+- **Branch:** claude/create-event-import-tool-MHtMW
+
+- **Ny funktion: Multi-row Event Creation Tool**
+  - Skapa upp till 10 events samtidigt med snabb formulär
+  - Dropdowns för bana, serie, disciplin och arrangör
+  - Möjlighet att skapa nya banor direkt i verktyget
+  - Automatisk generering av advent_id
+  - Stöd för att koppla events till series_events junction table
+  - Prioritering av RF-registrerade klubbar i arrangörslistan
+
+- **Nya filer:**
+  - `admin/create-events.php` - Multi-row event creation tool
+
+- **Uppdaterade filer:**
+  - `admin/tools.php` - Länk till nya verktyget under Import & Resultat
+
 ### 2026-02-01 (Multi-Seller Betalningssystem & Aterbetalningar)
 - **Branch:** claude/complete-payment-system-VH54k
 
