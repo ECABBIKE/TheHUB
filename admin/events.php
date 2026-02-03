@@ -260,6 +260,10 @@ if ($isPromotorOnly) {
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 14c.2-1 .7-1.7 1.5-2.5 1-.9 1.5-2.2 1.5-3.5A6 6 0 0 0 6 8c0 1 .2 2.2 1.5 3.5.7.7 1.3 1.5 1.5 2.5"/><path d="M9 18h6"/><path d="M10 22h4"/></svg>
         Auto-skapa (' . $eventsWithoutVenue . ')
     </a>' : '') . '
+    <a href="/admin/create-events.php" class="btn-admin btn-admin-secondary mr-sm" title="Snabbskapa upp till 10 events">
+        <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M8 12h8"/><path d="M12 8v8"/></svg>
+        Bulk-skapa
+    </a>
     <a href="/admin/events/create" class="btn-admin btn-admin-primary">
         <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12h14"/><path d="M12 5v14"/></svg>
         Nytt Event
@@ -358,7 +362,10 @@ include __DIR__ . '/components/unified-layout.php';
                 <?php else: ?>
                     <h3>Inga events hittades</h3>
                     <p>Prova att ändra filtren eller skapa ett nytt event.</p>
-                    <a href="/admin/events/create" class="btn-admin btn-admin-primary">Skapa event</a>
+                    <div class="flex gap-sm justify-center">
+                        <a href="/admin/create-events.php" class="btn-admin btn-admin-secondary">Bulk-skapa</a>
+                        <a href="/admin/events/create" class="btn-admin btn-admin-primary">Skapa event</a>
+                    </div>
                 <?php endif; ?>
             </div>
         <?php else: ?>
