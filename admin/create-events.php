@@ -60,13 +60,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $messageType = 'error';
         } else {
             try {
-                $db->insert('venues', [
+                $newVenueId = $db->insert('venues', [
                     'name' => $venueName,
                     'city' => $venueCity ?: null,
                     'active' => 1,
                     'created_at' => date('Y-m-d H:i:s')
                 ]);
-                $newVenueId = $db->lastInsertId();
                 $message = "Bana \"{$venueName}\" skapad med ID {$newVenueId}";
                 $messageType = 'success';
 
@@ -142,7 +141,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
 
             try {
-                $db->insert('events', [
+                $eventId = $db->insert('events', [
                     'name' => $name,
                     'advent_id' => $adventId,
                     'date' => date('Y-m-d', $parsedDate),
@@ -155,8 +154,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'status' => 'upcoming',
                     'created_at' => date('Y-m-d H:i:s')
                 ]);
-
-                $eventId = $db->lastInsertId();
 
                 // If series_id is set, also add to series_events junction table
                 if ($seriesId) {
