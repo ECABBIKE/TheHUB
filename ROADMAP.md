@@ -279,6 +279,29 @@ Automatiskt genererade "trading cards" med deltagarstatistik:
 - **Uppdaterade filer:**
   - `admin/tools.php` - Länk till nya verktyget under Import & Resultat
 
+### 2026-02-03 (Event Extended Fields)
+- **Branch:** claude/create-event-import-tool-MHtMW
+
+- **Ny funktion: Utökade eventfält**
+  - **Event-logga:** Events utan serie kan nu ha egen logga från mediaarkivet
+  - **Flerdagars-event:** Stöd för slutdatum (end_date) för festivaler och etapplopp
+  - **Multi-format:** Events kan innehålla flera discipliner (ENDURO, DH, XC, etc.)
+  - **Eventtyp:** Ny typ-klassificering (single, festival, stage_race, multi_event)
+
+- **Kalenderförbättringar:**
+  - Visar event-logga om ingen serie-logga finns
+  - Visar datumintervall för flerdagars-event (t.ex. "5-7 Jun")
+  - Festival-badge för multi-format events
+
+- **Nya filer:**
+  - `Tools/migrations/034_event_extended_fields.sql` - Databasmigration
+
+- **Uppdaterade filer:**
+  - `admin/event-edit.php` - Nya formulärfält för logo, slutdatum, multi-format
+  - `pages/calendar/index.php` - Visar event-logga och datumintervall
+  - `assets/css/pages/calendar-index.css` - Festival badge styling
+  - `admin/migrations.php` - Registrerat migration 034
+
 ### 2026-02-01 (Multi-Seller Betalningssystem & Aterbetalningar)
 - **Branch:** claude/complete-payment-system-VH54k
 

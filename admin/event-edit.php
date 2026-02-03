@@ -67,6 +67,48 @@ try {
     error_log("EVENT EDIT: Error checking/adding pricing_template_id column: " . $e->getMessage());
 }
 
+// Check/create extended event fields (logo, end_date, formats, event_type)
+try {
+    $columns = $db->getAll("SHOW COLUMNS FROM events LIKE 'logo_media_id'");
+    if (empty($columns)) {
+        $db->query("ALTER TABLE events ADD COLUMN logo VARCHAR(255) NULL");
+        $db->query("ALTER TABLE events ADD COLUMN logo_media_id INT NULL");
+        error_log("EVENT EDIT: Added logo columns to events table");
+    }
+} catch (Exception $e) {
+    error_log("EVENT EDIT: Error checking/adding logo columns: " . $e->getMessage());
+}
+
+try {
+    $columns = $db->getAll("SHOW COLUMNS FROM events LIKE 'end_date'");
+    if (empty($columns)) {
+        $db->query("ALTER TABLE events ADD COLUMN end_date DATE NULL AFTER date");
+        error_log("EVENT EDIT: Added end_date column to events table");
+    }
+} catch (Exception $e) {
+    error_log("EVENT EDIT: Error checking/adding end_date column: " . $e->getMessage());
+}
+
+try {
+    $columns = $db->getAll("SHOW COLUMNS FROM events LIKE 'formats'");
+    if (empty($columns)) {
+        $db->query("ALTER TABLE events ADD COLUMN formats VARCHAR(500) NULL");
+        error_log("EVENT EDIT: Added formats column to events table");
+    }
+} catch (Exception $e) {
+    error_log("EVENT EDIT: Error checking/adding formats column: " . $e->getMessage());
+}
+
+try {
+    $columns = $db->getAll("SHOW COLUMNS FROM events LIKE 'event_type'");
+    if (empty($columns)) {
+        $db->query("ALTER TABLE events ADD COLUMN event_type VARCHAR(50) DEFAULT 'single'");
+        error_log("EVENT EDIT: Added event_type column to events table");
+    }
+} catch (Exception $e) {
+    error_log("EVENT EDIT: Error checking/adding event_type column: " . $e->getMessage());
+}
+
 // Get media files from events folder for banner selection
 $eventMediaFiles = [];
 try {
@@ -228,10 +270,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $message = 'Namn och datum är obligatoriska';
         $messageType = 'error';
     } else {
+        // Process formats (multiple disciplines) - convert array to comma-separated string
+        $formats = '';
+        if (!empty($_POST['formats']) && is_array($_POST['formats'])) {
+            $formats = implode(',', $_POST['formats']);
+        }
+
         $eventData = [
             'name' => $name,
             'advent_id' => trim($_POST['advent_id'] ?? '') ?: null,
             'date' => $date,
+            'end_date' => !empty($_POST['end_date']) ? trim($_POST['end_date']) : null,
+            'event_type' => in_array($_POST['event_type'] ?? '', ['single', 'festival', 'stage_race', 'multi_event']) ? $_POST['event_type'] : 'single',
+            'logo_media_id' => !empty($_POST['logo_media_id']) ? intval($_POST['logo_media_id']) : null,
+            'formats' => $formats ?: null,
             'location' => trim($_POST['location'] ?? ''),
             'venue_id' => !empty($_POST['venue_id']) ? intval($_POST['venue_id']) : null,
             'discipline' => trim($_POST['discipline'] ?? ''),
@@ -407,6 +459,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 } catch (Exception $hbEx) {
                     error_log("EVENT EDIT: header_banner_media_id update failed: " . $hbEx->getMessage());
                 }
+            }
+
+            // Update logo_media_id and logo path separately
+            try {
+                $logoMediaId = !empty($_POST['logo_media_id']) ? intval($_POST['logo_media_id']) : null;
+                $logoPath = null;
+                if ($logoMediaId) {
+                    global $pdo;
+                    $logoStmt = $pdo->prepare("SELECT filepath FROM media WHERE id = ?");
+                    $logoStmt->execute([$logoMediaId]);
+                    $logoRow = $logoStmt->fetch(PDO::FETCH_ASSOC);
+                    if ($logoRow) {
+                        $logoPath = '/' . $logoRow['filepath'];
+                    }
+                }
+                $db->query("UPDATE events SET logo_media_id = ?, logo = ? WHERE id = ?", [$logoMediaId, $logoPath, $id]);
+            } catch (Exception $logoEx) {
+                error_log("EVENT EDIT: logo_media_id update failed: " . $logoEx->getMessage());
             }
 
             // Update payment_recipient_id separately (if column exists)
@@ -657,8 +727,23 @@ include __DIR__ . '/components/unified-layout.php';
                 </div>
 
                 <div class="admin-form-group">
-                    <label class="admin-form-label">Datum <span class="required">*</span></label>
+                    <label class="admin-form-label">Startdatum <span class="required">*</span></label>
                     <input type="date" class="admin-form-input" <?= $isPromotorOnly ? '' : 'name="date" required' ?> value="<?= h($event['date']) ?>">
+                </div>
+
+                <div class="admin-form-group">
+                    <label class="admin-form-label">Slutdatum <span class="text-secondary text-sm">(för flerdagars-event)</span></label>
+                    <input type="date" name="end_date" class="admin-form-input" value="<?= h($event['end_date'] ?? '') ?>">
+                </div>
+
+                <div class="admin-form-group">
+                    <label class="admin-form-label">Eventtyp</label>
+                    <select name="event_type" class="admin-form-select">
+                        <option value="single" <?= ($event['event_type'] ?? 'single') === 'single' ? 'selected' : '' ?>>Enstaka event</option>
+                        <option value="festival" <?= ($event['event_type'] ?? '') === 'festival' ? 'selected' : '' ?>>Festival (flerdagars, flera format)</option>
+                        <option value="stage_race" <?= ($event['event_type'] ?? '') === 'stage_race' ? 'selected' : '' ?>>Etapplopp</option>
+                        <option value="multi_event" <?= ($event['event_type'] ?? '') === 'multi_event' ? 'selected' : '' ?>>Multi-event</option>
+                    </select>
                 </div>
 
                 <div class="admin-form-group">
@@ -681,6 +766,26 @@ include __DIR__ . '/components/unified-layout.php';
                             </option>
                         <?php endforeach; ?>
                     </select>
+                </div>
+
+                <div class="admin-form-group">
+                    <label class="admin-form-label">Event-logga <span class="text-secondary text-sm">(om ingen serie)</span></label>
+                    <select name="logo_media_id" class="admin-form-select">
+                        <option value="">-- Ingen (använd seriens) --</option>
+                        <?php foreach ($eventMediaFiles as $media): ?>
+                        <option value="<?= $media['id'] ?>" <?= ($event['logo_media_id'] ?? '') == $media['id'] ? 'selected' : '' ?>>
+                            <?= htmlspecialchars($media['original_filename']) ?>
+                        </option>
+                        <?php endforeach; ?>
+                    </select>
+                    <?php if (!empty($event['logo'])): ?>
+                    <div class="mt-sm">
+                        <img src="<?= h($event['logo']) ?>" alt="Event logo" style="max-height: 60px; border-radius: var(--radius-sm);">
+                    </div>
+                    <?php endif; ?>
+                    <small class="form-help block mt-sm">
+                        Välj bild från <a href="/admin/media?folder=events" target="_blank">Mediabiblioteket</a>. Används i kalender om eventet inte tillhör en serie.
+                    </small>
                 </div>
             </div>
         </fieldset>
@@ -713,18 +818,54 @@ include __DIR__ . '/components/unified-layout.php';
         <fieldset class="admin-card-body fieldset-reset" style="padding: var(--space-lg);" <?= $isPromotorOnly ? 'disabled' : '' ?>>
             <div class="form-grid form-grid-2">
                 <div class="admin-form-group">
-                    <label class="admin-form-label">Tävlingsformat</label>
+                    <label class="admin-form-label">Huvudformat</label>
                     <select name="discipline" class="admin-form-select">
                         <option value="">Välj format...</option>
                         <option value="ENDURO" <?= ($event['discipline'] ?? '') === 'ENDURO' ? 'selected' : '' ?>>Enduro</option>
                         <option value="DH" <?= ($event['discipline'] ?? '') === 'DH' ? 'selected' : '' ?>>Downhill</option>
                         <option value="XC" <?= ($event['discipline'] ?? '') === 'XC' ? 'selected' : '' ?>>XC</option>
                         <option value="XCO" <?= ($event['discipline'] ?? '') === 'XCO' ? 'selected' : '' ?>>XCO</option>
+                        <option value="XCC" <?= ($event['discipline'] ?? '') === 'XCC' ? 'selected' : '' ?>>XCC</option>
+                        <option value="XCE" <?= ($event['discipline'] ?? '') === 'XCE' ? 'selected' : '' ?>>XCE</option>
                         <option value="DUAL_SLALOM" <?= ($event['discipline'] ?? '') === 'DUAL_SLALOM' ? 'selected' : '' ?>>Dual Slalom</option>
                         <option value="PUMPTRACK" <?= ($event['discipline'] ?? '') === 'PUMPTRACK' ? 'selected' : '' ?>>Pumptrack</option>
                         <option value="GRAVEL" <?= ($event['discipline'] ?? '') === 'GRAVEL' ? 'selected' : '' ?>>Gravel</option>
                         <option value="E-MTB" <?= ($event['discipline'] ?? '') === 'E-MTB' ? 'selected' : '' ?>>E-MTB</option>
                     </select>
+                </div>
+
+                <?php
+                // Parse existing formats for checkboxes
+                $existingFormats = [];
+                if (!empty($event['formats'])) {
+                    $existingFormats = array_map('trim', explode(',', $event['formats']));
+                }
+                $allFormats = [
+                    'ENDURO' => 'Enduro',
+                    'DH' => 'Downhill',
+                    'XC' => 'XC',
+                    'XCO' => 'XCO',
+                    'XCC' => 'XCC',
+                    'XCE' => 'XCE',
+                    'DUAL_SLALOM' => 'Dual Slalom',
+                    'PUMPTRACK' => 'Pumptrack',
+                    'GRAVEL' => 'Gravel',
+                    'E-MTB' => 'E-MTB'
+                ];
+                ?>
+                <div class="admin-form-group">
+                    <label class="admin-form-label">Alla format <span class="text-secondary text-sm">(för festivaler/multi-events)</span></label>
+                    <div class="checkbox-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: var(--space-sm);">
+                        <?php foreach ($allFormats as $key => $label): ?>
+                        <label class="checkbox-label" style="display: flex; align-items: center; gap: var(--space-xs); cursor: pointer;">
+                            <input type="checkbox" name="formats[]" value="<?= $key ?>" <?= in_array($key, $existingFormats) ? 'checked' : '' ?>>
+                            <?= $label ?>
+                        </label>
+                        <?php endforeach; ?>
+                    </div>
+                    <small class="form-help block mt-sm">
+                        Välj flera format om eventet innehåller flera olika tävlingar (t.ex. en festival med både Enduro och Downhill).
+                    </small>
                 </div>
 
                 <div class="admin-form-group">
