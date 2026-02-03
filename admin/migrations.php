@@ -120,6 +120,9 @@ $migrationChecks = [
         // Check if ENUM contains 'one_timer'
         'data' => ["SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'winback_campaigns' AND COLUMN_NAME = 'audience_type' AND COLUMN_TYPE LIKE '%one_timer%'"]
     ],
+    '034_event_extended_fields.sql' => [
+        'columns' => ['events.logo', 'events.logo_media_id', 'events.end_date', 'events.formats', 'events.event_type']
+    ],
 ];
 
 // ============================================================================

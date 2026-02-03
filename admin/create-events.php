@@ -60,13 +60,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $messageType = 'error';
         } else {
             try {
-                $db->insert('venues', [
+                $newVenueId = $db->insert('venues', [
                     'name' => $venueName,
                     'city' => $venueCity ?: null,
                     'active' => 1,
                     'created_at' => date('Y-m-d H:i:s')
                 ]);
-                $newVenueId = $db->lastInsertId();
                 $message = "Bana \"{$venueName}\" skapad med ID {$newVenueId}";
                 $messageType = 'success';
 
@@ -142,7 +141,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
 
             try {
-                $db->insert('events', [
+                $eventId = $db->insert('events', [
                     'name' => $name,
                     'advent_id' => $adventId,
                     'date' => date('Y-m-d', $parsedDate),
@@ -155,8 +154,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     'status' => 'upcoming',
                     'created_at' => date('Y-m-d H:i:s')
                 ]);
-
-                $eventId = $db->lastInsertId();
 
                 // If series_id is set, also add to series_events junction table
                 if ($seriesId) {
@@ -328,24 +325,18 @@ include __DIR__ . '/components/unified-layout.php';
 <?php endif; ?>
 
 <!-- Quick Stats -->
-<div class="grid grid-cols-1 gs-md-grid-cols-3 gap-md mb-lg">
-    <div class="card">
-        <div class="card-body text-center">
-            <div class="text-3xl font-bold text-accent"><?= count($venues) ?></div>
-            <div class="text-sm text-secondary">Banor</div>
-        </div>
+<div class="stats-grid">
+    <div class="stat-card">
+        <span class="stat-value"><?= count($venues) ?></span>
+        <span class="stat-label">Banor</span>
     </div>
-    <div class="card">
-        <div class="card-body text-center">
-            <div class="text-3xl font-bold text-accent"><?= count($series) ?></div>
-            <div class="text-sm text-secondary">Serier</div>
-        </div>
+    <div class="stat-card">
+        <span class="stat-value"><?= count($series) ?></span>
+        <span class="stat-label">Serier</span>
     </div>
-    <div class="card">
-        <div class="card-body text-center">
-            <div class="text-3xl font-bold text-accent"><?= count($clubs) ?></div>
-            <div class="text-sm text-secondary">Klubbar</div>
-        </div>
+    <div class="stat-card">
+        <span class="stat-value"><?= count($clubs) ?></span>
+        <span class="stat-label">Klubbar</span>
     </div>
 </div>
 

@@ -16,10 +16,14 @@ $currentUser = hub_current_user();
 $filterSeries = $_GET['series'] ?? '';
 $filterFormat = $_GET['format'] ?? '';
 
-// Get upcoming events with series colors and logo from brand
+// Get upcoming events with series colors and logo from brand (or event logo)
 $sql = "
     SELECT e.*,
            e.is_championship,
+           e.logo as event_logo,
+           e.end_date,
+           e.event_type,
+           e.formats,
            s.name as series_name,
            s.id as series_id,
            sb.logo as series_logo,
@@ -190,19 +194,39 @@ if (!function_exists('getDeadlineInfo')) {
                     <?php foreach ($monthEvents as $event): ?>
                         <?php
                         $eventDate = strtotime($event['date']);
-                        $dateFormatted = date('j', $eventDate) . ' ' . hub_month_short($eventDate);
-                        $dayName = hub_day_short($eventDate);
+                        $eventEndDate = !empty($event['end_date']) ? strtotime($event['end_date']) : null;
+
+                        // Format date - show range for multi-day events
+                        if ($eventEndDate && $eventEndDate > $eventDate) {
+                            $startDay = date('j', $eventDate);
+                            $endDay = date('j', $eventEndDate);
+                            $startMonth = hub_month_short($eventDate);
+                            $endMonth = hub_month_short($eventEndDate);
+                            if ($startMonth === $endMonth) {
+                                $dateFormatted = $startDay . '-' . $endDay . ' ' . $startMonth;
+                            } else {
+                                $dateFormatted = $startDay . ' ' . $startMonth . ' - ' . $endDay . ' ' . $endMonth;
+                            }
+                            $dayName = hub_day_short($eventDate) . '-' . hub_day_short($eventEndDate);
+                        } else {
+                            $dateFormatted = date('j', $eventDate) . ' ' . hub_month_short($eventDate);
+                            $dayName = hub_day_short($eventDate);
+                        }
+
                         $deadlineInfo = getDeadlineInfo($event['registration_deadline']);
                         $location = $event['venue_city'] ?: $event['location'];
                         $accentColor = $event['series_accent'] ?: '#61CE70';
-                        $seriesLogo = $event['series_logo'] ?? '';
+                        // Use event logo if available, otherwise fall back to series logo
+                        $displayLogo = !empty($event['event_logo']) ? $event['event_logo'] : ($event['series_logo'] ?? '');
+                        $logoAlt = !empty($event['event_logo']) ? $event['name'] : ($event['series_name'] ?? $event['name']);
+                        $isMultiFormat = !empty($event['formats']) && strpos($event['formats'], ',') !== false;
                         ?>
                         <a href="/calendar/<?= $event['id'] ?>" class="event-row" style="--event-accent: <?= htmlspecialchars($accentColor) ?>">
                             <div class="event-accent-bar"></div>
 
-                            <?php if ($seriesLogo): ?>
+                            <?php if ($displayLogo): ?>
                             <div class="event-logo">
-                                <img src="<?= htmlspecialchars($seriesLogo) ?>" alt="<?= htmlspecialchars($event['series_name']) ?>">
+                                <img src="<?= htmlspecialchars($displayLogo) ?>" alt="<?= htmlspecialchars($logoAlt) ?>">
                             </div>
                             <?php else: ?>
                             <div class="event-logo event-logo-placeholder">
@@ -223,6 +247,13 @@ if (!function_exists('getDeadlineInfo')) {
                             <span class="event-sm-badge" title="Svenska Mästerskap">
                                 <i data-lucide="medal"></i>
                                 SM
+                            </span>
+                            <?php endif; ?>
+
+                            <?php if ($event['event_type'] === 'festival' || $isMultiFormat): ?>
+                            <span class="event-festival-badge" title="Flera format">
+                                <i data-lucide="sparkles"></i>
+                                Festival
                             </span>
                             <?php endif; ?>
 
