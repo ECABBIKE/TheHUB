@@ -387,6 +387,20 @@ include __DIR__ . '/components/unified-layout.php';
 <h3 class="section-title">Import & Resultat</h3>
 <div class="tools-grid">
 
+    <!-- Create Events -->
+    <div class="card">
+        <div class="tool-header">
+            <div class="tool-icon"><i data-lucide="calendar-plus"></i></div>
+            <div>
+                <h4 class="tool-title">Skapa Events</h4>
+                <p class="tool-description">Snabbskapa upp till 10 events</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/create-events.php" class="btn-admin btn-admin-primary">Skapa</a>
+        </div>
+    </div>
+
     <!-- Import Results -->
     <div class="card">
         <div class="tool-header">
