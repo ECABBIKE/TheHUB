@@ -200,6 +200,20 @@ include __DIR__ . '/components/unified-layout.php';
         </div>
     </div>
 
+    <!-- User Accounts -->
+    <div class="card">
+        <div class="tool-header">
+            <div class="tool-icon"><i data-lucide="user-cog"></i></div>
+            <div>
+                <h4 class="tool-title">Anvandarkonton</h4>
+                <p class="tool-description">Splittra, flytta och sammanfoga profiler</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/tools/user-accounts.php" class="btn-admin btn-admin-primary">Hantera</a>
+        </div>
+    </div>
+
     <!-- Search UCI ID -->
     <div class="card">
         <div class="tool-header">
