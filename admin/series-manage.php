@@ -339,6 +339,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $activeTab = 'events';
     }
 
+    elseif ($action === 'cleanup_invalid_series_events') {
+        // Remove series_events entries that point to non-existent events
+        $deleted = $db->execute("
+            DELETE se FROM series_events se
+            LEFT JOIN events e ON se.event_id = e.id
+            WHERE se.series_id = ? AND e.id IS NULL
+        ", [$id]);
+
+        $message = "Rensade ogiltiga kopplingar från series_events!";
+        $messageType = 'success';
+        $activeTab = 'events';
+    }
+
     // REGISTRATION TAB ACTIONS
     elseif ($action === 'save_registration') {
         $registrationEnabled = isset($_POST['registration_enabled']) ? 1 : 0;
@@ -929,19 +942,57 @@ include __DIR__ . '/components/unified-layout.php';
                 </div>
                 <div class="admin-card-body" style="padding: 0;">
                     <?php
-                    // Debug: Show diagnostic info if no events found but orphaned exist
+                    // Debug: Show diagnostic info if no events found
                     if (empty($seriesEvents) && empty($orphanedEvents)) {
-                        // Check if there are ANY events with this series_id in the events table
+                        // Check actual database state
                         $directEventsCount = $db->getRow("SELECT COUNT(*) as cnt FROM events WHERE series_id = ?", [$id]);
                         $seriesEventsCount = $db->getRow("SELECT COUNT(*) as cnt FROM series_events WHERE series_id = ?", [$id]);
 
-                        if (($directEventsCount['cnt'] ?? 0) > 0 || ($seriesEventsCount['cnt'] ?? 0) > 0) {
-                            echo '<div class="alert alert-info m-md">';
-                            echo '<i data-lucide="info"></i> ';
-                            echo '<strong>Diagnostik:</strong> ';
-                            echo 'Events med series_id=' . $id . ': ' . ($directEventsCount['cnt'] ?? 0) . ', ';
-                            echo 'Rader i series_events: ' . ($seriesEventsCount['cnt'] ?? 0);
-                            echo '</div>';
+                        // Check for mismatched event_ids in series_events
+                        $mismatchedEntries = $db->getAll("
+                            SELECT se.id, se.event_id, se.series_id
+                            FROM series_events se
+                            LEFT JOIN events e ON se.event_id = e.id
+                            WHERE se.series_id = ? AND e.id IS NULL
+                        ", [$id]);
+
+                        // Check what event_ids are in series_events
+                        $seEventIds = $db->getAll("SELECT event_id FROM series_events WHERE series_id = ? LIMIT 10", [$id]);
+
+                        // Check if those events exist
+                        $existingEvents = [];
+                        if (!empty($seEventIds)) {
+                            $ids = array_column($seEventIds, 'event_id');
+                            $placeholders = implode(',', array_fill(0, count($ids), '?'));
+                            $existingEvents = $db->getAll("SELECT id, name FROM events WHERE id IN ($placeholders)", $ids);
+                        }
+
+                        echo '<div class="alert alert-warning m-md">';
+                        echo '<i data-lucide="alert-triangle"></i> ';
+                        echo '<strong>Diagnostik - Dataproblem upptäckt:</strong><br>';
+                        echo 'Events med series_id=' . $id . ': ' . ($directEventsCount['cnt'] ?? 0) . '<br>';
+                        echo 'Rader i series_events: ' . ($seriesEventsCount['cnt'] ?? 0) . '<br>';
+                        echo 'Ogiltiga kopplingar (event saknas): ' . count($mismatchedEntries) . '<br>';
+
+                        if (!empty($seEventIds)) {
+                            echo 'Event-IDs i series_events: ' . implode(', ', array_column($seEventIds, 'event_id')) . '<br>';
+                        }
+                        if (!empty($existingEvents)) {
+                            echo 'Av dessa finns: ' . implode(', ', array_map(function($e) { return $e['id'] . ' (' . $e['name'] . ')'; }, $existingEvents));
+                        } else {
+                            echo '<strong style="color: var(--color-error);">INGA av dessa event-IDs finns i events-tabellen!</strong>';
+                        }
+                        echo '</div>';
+
+                        // Auto-fix: If we have mismatched entries, offer to clean them up
+                        if (!empty($mismatchedEntries)) {
+                            echo '<form method="POST" class="m-md">';
+                            echo csrf_field();
+                            echo '<input type="hidden" name="action" value="cleanup_invalid_series_events">';
+                            echo '<button type="submit" class="btn-admin btn-admin-warning">';
+                            echo '<i data-lucide="trash-2"></i> Rensa ' . count($mismatchedEntries) . ' ogiltiga kopplingar';
+                            echo '</button>';
+                            echo '</form>';
                         }
                     }
                     ?>
