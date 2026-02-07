@@ -149,13 +149,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $message = 'Inget Stripe-konto hittat';
             $messageType = 'error';
         } else {
+            error_log("STRIPE DASHBOARD: Creating login link for account {$recipient['stripe_account_id']}");
             $result = $stripeClient->createLoginLink($recipient['stripe_account_id']);
 
             if ($result['success'] && !empty($result['url'])) {
+                error_log("STRIPE DASHBOARD: Redirecting to {$result['url']}");
                 header('Location: ' . $result['url']);
                 exit;
             } else {
-                $message = 'Kunde inte öppna Stripe Dashboard: ' . ($result['error'] ?? 'Okänt fel');
+                $errorMsg = $result['error'] ?? 'Okänt fel';
+                error_log("STRIPE DASHBOARD: Failed to create login link: {$errorMsg}");
+                $message = 'Kunde inte öppna Stripe Dashboard: ' . $errorMsg . ' (Account ID: ' . $recipient['stripe_account_id'] . ')';
                 $messageType = 'error';
             }
         }
