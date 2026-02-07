@@ -108,18 +108,20 @@ try {
 
     // Determine Stripe connected account for destination charge
     $stripeAccountId = null;
-    $platformFeePercent = floatval(env('STRIPE_PLATFORM_FEE_PERCENT', '2'));
+    $platformFeePercent = floatval(env('STRIPE_PLATFORM_FEE_PERCENT', '2')); // Default fallback
 
     // Check payment recipient for connected account
     if (!empty($order['payment_recipient_id'])) {
         $stmt = $pdo->prepare("
-            SELECT stripe_account_id, stripe_account_status
+            SELECT stripe_account_id, stripe_account_status, platform_fee_percent
             FROM payment_recipients WHERE id = ? AND active = 1
         ");
         $stmt->execute([$order['payment_recipient_id']]);
         $recipient = $stmt->fetch(PDO::FETCH_ASSOC);
         if ($recipient && $recipient['stripe_account_status'] === 'active') {
             $stripeAccountId = $recipient['stripe_account_id'];
+            // Use recipient-specific platform fee if set, otherwise use default
+            $platformFeePercent = floatval($recipient['platform_fee_percent'] ?? $platformFeePercent);
         }
     }
 
