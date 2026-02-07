@@ -216,6 +216,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $recipientData['org_number'] = trim($_POST['org_number'] ?? '');
             }
 
+            // Add platform fee percent
+            if (isset($_POST['platform_fee_percent'])) {
+                $recipientData['platform_fee_percent'] = floatval($_POST['platform_fee_percent']);
+            }
+
             try {
                 if ($action === 'create') {
                     $db->insert('payment_recipients', $recipientData);
@@ -592,6 +597,20 @@ include __DIR__ . '/components/unified-layout.php';
                     <p class="text-secondary mb-0">
                         Stripe-kontot kopplas efter att mottagaren skapats. Klicka på "Skapa Stripe-konto" i mottagarkortet.
                     </p>
+
+                    <div class="admin-form-group" style="margin-top: var(--space-md);">
+                        <label class="admin-form-label">Plattformsavgift (%)
+                            <small class="text-secondary" style="font-weight: normal; margin-left: var(--space-xs);">
+                                TheHUB's avgift på betalningar till denna mottagare
+                            </small>
+                        </label>
+                        <input type="number" name="platform_fee_percent" id="formPlatformFee"
+                               class="admin-form-input" step="0.01" min="0" max="100" value="2.00"
+                               placeholder="2.00">
+                        <small class="text-secondary">
+                            Stripe tar 1.5% + 1.80 kr för EES-kort. Din plattformsavgift läggs ovanpå.
+                        </small>
+                    </div>
                 </div>
                 <?php endif; ?>
 
@@ -1072,6 +1091,11 @@ function showModal(action, data = null) {
             document.getElementById('formContactEmail').value = data.contact_email || '';
             document.getElementById('formContactPhone').value = data.contact_phone || '';
             document.getElementById('formOrgNumber').value = data.org_number || '';
+        }
+
+        // Platform fee
+        if (document.getElementById('formPlatformFee')) {
+            document.getElementById('formPlatformFee').value = data.platform_fee_percent || '2.00';
         }
 
         document.getElementById('formSubmitBtn').textContent = 'Uppdatera';
