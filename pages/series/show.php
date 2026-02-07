@@ -36,9 +36,14 @@ if (!$series) {
     return;
 }
 
-// Club championship only available for series from 2024 onwards
-// Earlier data (2016-2023) is unreliable
-$showClubChampionship = isset($series['year']) && (int)$series['year'] >= 2024;
+// Club championship tab shown for series from 2024 onwards (reliable data)
+$showClubTab = isset($series['year']) && (int)$series['year'] >= 2024;
+
+// Club championship enabled if explicitly set to 1 (default is 1)
+$clubChampionshipEnabled = !isset($series['enable_club_championship']) || !empty($series['enable_club_championship']);
+
+// Show actual standings only if both tab is shown AND championship is enabled
+$showClubChampionship = $showClubTab && $clubChampionshipEnabled;
 
 // Check if series_events table exists
 $useSeriesEvents = false;
@@ -520,10 +525,10 @@ skip_club_standings:
                 <i data-lucide="user"></i>
                 <span>Individuellt</span>
             </button>
-            <?php if ($showClubChampionship): ?>
+            <?php if ($showClubTab): ?>
             <button class="standings-toggle-btn" data-tab="club" onclick="switchTab('club')">
                 <i data-lucide="shield"></i>
-                <span>Klubbmastarskap</span>
+                <span>Klubbmästerskap</span>
             </button>
             <?php endif; ?>
         </div>
@@ -702,9 +707,19 @@ skip_club_standings:
         </div>
     </div>
 
-    <?php if ($showClubChampionship): ?>
-    <!-- Club Standings Section (Admin Style) -->
+    <?php if ($showClubTab): ?>
+    <!-- Club Standings Section -->
     <div id="club-standings" style="display: none;">
+        <?php if (!$clubChampionshipEnabled): ?>
+        <!-- Club Championship Disabled Message -->
+        <div class="card">
+            <div class="card-body" style="text-align: center; padding: var(--space-2xl);">
+                <i data-lucide="shield-off" style="width: 48px; height: 48px; color: var(--color-text-muted); margin-bottom: var(--space-md);"></i>
+                <h3 style="margin-bottom: var(--space-sm);">Klubbmästerskap ej aktiverat</h3>
+                <p style="color: var(--color-text-secondary);">Denna serien erbjuder inte Klubbmästerskap</p>
+            </div>
+        </div>
+        <?php else: ?>
         <?php
         // Calculate summary stats
         $clubTotalParticipants = array_sum(array_column($clubStandings, 'rider_count'));
@@ -818,7 +833,9 @@ skip_club_standings:
 <script type="application/json" id="events-data">
 <?= json_encode($events, JSON_UNESCAPED_UNICODE) ?>
 </script>
-<?php endif; // $showClubChampionship ?>
+        <?php endif; // $clubChampionshipEnabled ?>
+    </div>
+<?php endif; // $showClubTab ?>
 
 <script>
 function switchTab(tab) {
