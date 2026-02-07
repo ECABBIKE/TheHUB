@@ -2955,22 +2955,7 @@ if (!empty($event['series_id'])) {
                 Gå till anmälan
             </a>
 
-        <?php elseif (!$isLoggedIn): ?>
-            <!-- Not logged in -->
-            <div class="text-center py-lg">
-                <i data-lucide="log-in" style="width:48px;height:48px;color:var(--color-text-muted);margin-bottom:var(--space-md);"></i>
-                <h3 class="mb-sm">Logga in för att anmäla dig</h3>
-                <p class="text-secondary mb-lg">Du måste vara inloggad för att kunna anmäla dig till eventet.</p>
-                <a href="/login?redirect=<?= urlencode('/event/' . $eventId . '?tab=anmalan') ?>" class="btn btn--primary">
-                    <i data-lucide="log-in"></i>
-                    Logga in
-                </a>
-                <p class="text-sm text-muted mt-md">
-                    Har du inget konto? <a href="/register?redirect=<?= urlencode('/event/' . $eventId . '?tab=anmalan') ?>">Registrera dig här</a>
-                </p>
-            </div>
-
-        <?php elseif ($existingRegistration): ?>
+        <?php elseif ($isLoggedIn && $existingRegistration): ?>
             <!-- Already registered -->
             <div class="reg-existing">
                 <i data-lucide="check-circle" class="reg-existing__icon"></i>
