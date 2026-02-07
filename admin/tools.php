@@ -994,6 +994,20 @@ include __DIR__ . '/components/unified-layout.php';
 <h3 class="section-title">System</h3>
 <div class="tools-grid">
 
+    <!-- Test Event for Payment -->
+    <div class="card">
+        <div class="tool-header">
+            <div class="tool-icon"><i data-lucide="flask-conical"></i></div>
+            <div>
+                <h4 class="tool-title">Testevent (betalning)</h4>
+                <p class="tool-description">Skapa testevent for Stripe-flode</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/tools/create-test-event.php" class="btn-admin btn-admin-primary">Oppna</a>
+        </div>
+    </div>
+
     <!-- Clear Cache -->
     <div class="card">
         <div class="tool-header">
