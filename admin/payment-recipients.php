@@ -193,7 +193,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     elseif ($action === 'create' || $action === 'update') {
         $name = trim($_POST['name'] ?? '');
-        $gatewayType = $_POST['gateway_type'] ?? 'swish';
 
         if (empty($name)) {
             $message = 'Namn är obligatoriskt';
@@ -202,23 +201,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $recipientData = [
                 'name' => $name,
                 'description' => trim($_POST['description'] ?? ''),
-                'swish_number' => trim($_POST['swish_number'] ?? ''),
-                'swish_name' => trim($_POST['swish_name'] ?? ''),
                 'active' => isset($_POST['active']) ? 1 : 0,
             ];
 
-            // Add gateway type if column exists
+            // Add gateway type if column exists (always stripe)
             if ($hasGatewayType) {
-                $recipientData['gateway_type'] = $gatewayType;
+                $recipientData['gateway_type'] = 'stripe';
             }
 
-            // Add bank fields if columns exist
+            // Add contact fields if columns exist
             if ($hasBankFields) {
-                $recipientData['bankgiro'] = trim($_POST['bankgiro'] ?? '');
-                $recipientData['plusgiro'] = trim($_POST['plusgiro'] ?? '');
-                $recipientData['bank_account'] = trim($_POST['bank_account'] ?? '');
-                $recipientData['bank_name'] = trim($_POST['bank_name'] ?? '');
-                $recipientData['bank_clearing'] = trim($_POST['bank_clearing'] ?? '');
                 $recipientData['contact_email'] = trim($_POST['contact_email'] ?? '');
                 $recipientData['contact_phone'] = trim($_POST['contact_phone'] ?? '');
                 $recipientData['org_number'] = trim($_POST['org_number'] ?? '');
@@ -426,13 +418,8 @@ include __DIR__ . '/components/unified-layout.php';
 <div class="recipient-grid">
     <?php foreach ($recipients as $r): ?>
     <?php
-    $hasSwish = !empty($r['swish_number']);
     $hasStripe = !empty($r['stripe_account_id']);
     $stripeStatus = $r['stripe_account_status'] ?? null;
-    $hasBank = !empty($r['bankgiro']) || !empty($r['plusgiro']) || !empty($r['bank_account']);
-
-    // Count configured methods
-    $methodCount = ($hasSwish ? 1 : 0) + ($hasStripe ? 1 : 0) + ($hasBank ? 1 : 0);
     ?>
     <div class="recipient-card <?= !$r['active'] ? 'inactive' : '' ?>">
         <div class="recipient-card-header">
@@ -455,25 +442,14 @@ include __DIR__ . '/components/unified-layout.php';
         </div>
 
         <div class="recipient-card-body">
-            <!-- Payment methods -->
+            <!-- Payment method: Stripe -->
             <div class="payment-methods">
-                <?php if ($hasSwish): ?>
-                <div class="payment-method">
-                    <div class="method-icon swish"><i data-lucide="smartphone"></i></div>
-                    <div class="method-info">
-                        <span class="method-name">Swish</span>
-                        <span class="method-value"><?= htmlspecialchars($r['swish_number']) ?></span>
-                    </div>
-                    <span class="method-status active"><i data-lucide="check"></i></span>
-                </div>
-                <?php endif; ?>
-
                 <?php if ($hasStripe): ?>
                 <div class="payment-method">
                     <div class="method-icon stripe"><i data-lucide="credit-card"></i></div>
                     <div class="method-info">
-                        <span class="method-name">Stripe</span>
-                        <span class="method-value"><?= $stripeStatus === 'active' ? 'Aktiv' : 'Väntar' ?></span>
+                        <span class="method-name">Stripe Connect</span>
+                        <span class="method-value"><?= $stripeStatus === 'active' ? 'Aktiv' : ($stripeStatus === 'restricted' ? 'Begränsad' : 'Väntar på onboarding') ?></span>
                     </div>
                     <span class="method-status <?= $stripeStatus === 'active' ? 'active' : 'pending' ?>">
                         <i data-lucide="<?= $stripeStatus === 'active' ? 'check' : 'clock' ?>"></i>
@@ -483,34 +459,14 @@ include __DIR__ . '/components/unified-layout.php';
                 <div class="payment-method not-configured">
                     <div class="method-icon stripe"><i data-lucide="credit-card"></i></div>
                     <div class="method-info">
-                        <span class="method-name">Stripe</span>
+                        <span class="method-name">Stripe Connect</span>
                         <span class="method-value">Ej kopplad</span>
                     </div>
-                    <span class="method-action text-muted">Se nedan</span>
                 </div>
-                <?php endif; ?>
-
-                <?php if ($hasBank): ?>
-                <div class="payment-method">
-                    <div class="method-icon bank"><i data-lucide="landmark"></i></div>
-                    <div class="method-info">
-                        <span class="method-name">Bank</span>
-                        <span class="method-value">
-                            <?php
-                            if (!empty($r['bankgiro'])) echo 'BG ' . htmlspecialchars($r['bankgiro']);
-                            elseif (!empty($r['plusgiro'])) echo 'PG ' . htmlspecialchars($r['plusgiro']);
-                            else echo htmlspecialchars($r['bank_account']);
-                            ?>
-                        </span>
-                    </div>
-                    <span class="method-status active"><i data-lucide="check"></i></span>
-                </div>
-                <?php endif; ?>
-
-                <?php if (!$hasSwish && !$hasStripe && !$hasBank): ?>
+                <?php else: ?>
                 <div class="no-methods">
                     <i data-lucide="alert-circle"></i>
-                    <span>Ingen betalningsmetod konfigurerad</span>
+                    <span>Stripe ej konfigurerat (saknar API-nyckel)</span>
                 </div>
                 <?php endif; ?>
             </div>
@@ -629,24 +585,6 @@ include __DIR__ . '/components/unified-layout.php';
 
                 </div>
 
-                <!-- Swish fields -->
-                <div class="form-section">
-                    <h4><i data-lucide="smartphone"></i> Swish</h4>
-                    <div class="admin-form-row">
-                        <div class="admin-form-group">
-                            <label class="admin-form-label">Swish-nummer</label>
-                            <input type="text" name="swish_number" id="formSwishNumber" class="admin-form-input"
-                                   placeholder="070-123 45 67">
-                        </div>
-                        <div class="admin-form-group">
-                            <label class="admin-form-label">Mottagarnamn</label>
-                            <input type="text" name="swish_name" id="formSwishName" class="admin-form-input"
-                                   placeholder="GravitySeries">
-                            <small class="text-secondary">Visas i Swish-appen</small>
-                        </div>
-                    </div>
-                </div>
-
                 <!-- Stripe fields -->
                 <?php if ($stripeConfigured): ?>
                 <div class="form-section">
@@ -656,41 +594,6 @@ include __DIR__ . '/components/unified-layout.php';
                     </p>
                 </div>
                 <?php endif; ?>
-
-                <!-- Bank fields -->
-                <?php if ($hasBankFields): ?>
-                <div class="form-section">
-                    <h4><i data-lucide="landmark"></i> Bankuppgifter</h4>
-                    <div class="admin-form-row">
-                        <div class="admin-form-group">
-                            <label class="admin-form-label">Bankgiro</label>
-                            <input type="text" name="bankgiro" id="formBankgiro" class="admin-form-input"
-                                   placeholder="123-4567">
-                        </div>
-                        <div class="admin-form-group">
-                            <label class="admin-form-label">Plusgiro</label>
-                            <input type="text" name="plusgiro" id="formPlusgiro" class="admin-form-input"
-                                   placeholder="12 34 56-7">
-                        </div>
-                    </div>
-                    <div class="admin-form-row">
-                        <div class="admin-form-group">
-                            <label class="admin-form-label">Clearingnummer</label>
-                            <input type="text" name="bank_clearing" id="formBankClearing" class="admin-form-input"
-                                   placeholder="1234">
-                        </div>
-                        <div class="admin-form-group">
-                            <label class="admin-form-label">Kontonummer</label>
-                            <input type="text" name="bank_account" id="formBankAccount" class="admin-form-input"
-                                   placeholder="12 345 67-8">
-                        </div>
-                    </div>
-                    <div class="admin-form-group">
-                        <label class="admin-form-label">Banknamn</label>
-                        <input type="text" name="bank_name" id="formBankName" class="admin-form-input"
-                               placeholder="Swedbank, SEB, Nordea...">
-                    </div>
-                </div>
 
                 <!-- Contact info -->
                 <div class="form-section">
@@ -713,7 +616,6 @@ include __DIR__ . '/components/unified-layout.php';
                                placeholder="123456-7890">
                     </div>
                 </div>
-                <?php endif; ?>
 
                 <!-- Status -->
                 <div class="form-section">
@@ -1163,17 +1065,10 @@ function showModal(action, data = null) {
         document.getElementById('formId').value = data.id;
         document.getElementById('formName').value = data.name || '';
         document.getElementById('formDescription').value = data.description || '';
-        document.getElementById('formSwishNumber').value = data.swish_number || '';
-        document.getElementById('formSwishName').value = data.swish_name || '';
         document.getElementById('formActive').checked = data.active == 1;
 
-        // Bank fields
-        if (document.getElementById('formBankgiro')) {
-            document.getElementById('formBankgiro').value = data.bankgiro || '';
-            document.getElementById('formPlusgiro').value = data.plusgiro || '';
-            document.getElementById('formBankAccount').value = data.bank_account || '';
-            document.getElementById('formBankClearing').value = data.bank_clearing || '';
-            document.getElementById('formBankName').value = data.bank_name || '';
+        // Contact fields
+        if (document.getElementById('formContactEmail')) {
             document.getElementById('formContactEmail').value = data.contact_email || '';
             document.getElementById('formContactPhone').value = data.contact_phone || '';
             document.getElementById('formOrgNumber').value = data.org_number || '';

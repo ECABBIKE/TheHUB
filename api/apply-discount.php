@@ -55,31 +55,12 @@ if ($order['rider_id'] != $currentUser['id'] && !hub_is_admin()) {
 $result = applyDiscountToOrder($orderId, $code, $currentUser['id']);
 
 if ($result['success']) {
-    // Also regenerate Swish URLs with new amount
-    $swishUrl = null;
-    $swishQr = null;
-
-    if (!empty($order['swish_number'])) {
-        $swishUrl = generateSwishUrl(
-            $order['swish_number'],
-            $result['new_total'],
-            $order['swish_message']
-        );
-        $swishQr = generateSwishQR(
-            $order['swish_number'],
-            $result['new_total'],
-            $order['swish_message']
-        );
-    }
-
     echo json_encode([
         'success' => true,
         'discount_amount' => $result['discount_amount'],
         'new_discount' => $result['new_discount'],
         'new_total' => $result['new_total'],
-        'swish_url' => $swishUrl,
-        'swish_qr' => $swishQr,
-        'message' => 'Rabattkod tillämpad!'
+        'message' => 'Rabattkod tillampad!'
     ]);
 } else {
     echo json_encode($result);

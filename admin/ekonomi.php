@@ -15,6 +15,9 @@ $db = getDB();
 $currentAdmin = getCurrentAdmin();
 $isSuperAdmin = hasRole('super_admin');
 
+// Check Stripe configuration
+$stripeConfigured = !empty(env('STRIPE_SECRET_KEY', ''));
+
 // Hämta statistik
 $stats = [];
 
@@ -420,22 +423,20 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <p class="action-desc">
-            Alla betalningar går via Stripe. Stöd för kort, Swish och Vipps.
-            Varje arrangör kopplar sitt eget Stripe-konto.
+            Alla betalningar gar via Stripe. Varje arrangor kopplar sitt eget Stripe-konto
+            for att ta emot betalningar direkt.
         </p>
         <div class="action-links">
             <a href="/admin/payment-recipients" class="action-link primary">
                 <i data-lucide="building-2"></i>
-                Betalningsmottagare
+                Betalningsmottagare & Stripe Connect
             </a>
-            <a href="/admin/stripe-connect" class="action-link">
-                <i data-lucide="link"></i>
-                Stripe-inställningar
-            </a>
-            <a href="/admin/promotor-stripe.php" class="action-link">
-                <i data-lucide="eye"></i>
-                Arrangörsvy (test)
-            </a>
+            <?php if (!$stripeConfigured): ?>
+            <div class="action-link" style="color: var(--color-warning); cursor: default;">
+                <i data-lucide="alert-triangle"></i>
+                Stripe ej konfigurerat (lagg till STRIPE_SECRET_KEY i .env)
+            </div>
+            <?php endif; ?>
         </div>
     </div>
 
