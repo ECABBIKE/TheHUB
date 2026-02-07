@@ -23,9 +23,9 @@ $updates = [
     ],
     [
         'id' => 2,
-        'name' => 'Edvinsson Consulting AB',
+        'name' => 'Edvinsson Consulting AB (Platform)',
         'old_account_id' => 'acct_1Sw1SSDF8drbPC3o',
-        'new_account_id' => 'acct_1SvysEDEXJRFV9od'
+        'new_account_id' => NULL  // No Connected Account - money stays in platform account
     ]
 ];
 
