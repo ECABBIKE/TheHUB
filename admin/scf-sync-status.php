@@ -547,13 +547,31 @@ include __DIR__ . '/components/unified-layout.php';
             </tr>
         </table>
 
-        <h4 class="mt-lg">Cron-kommandon</h4>
-        <p class="text-secondary text-sm">Lägg till i crontab för automatisk synkronisering:</p>
-        <pre style="background: var(--color-bg-hover); padding: var(--space-md); border-radius: var(--radius-sm); font-size: var(--text-xs); overflow-x: auto;"># Daglig licensverifiering kl 03:00
-0 3 * * * cd <?= ROOT_PATH ?>/cron && php sync_scf_licenses.php --year=<?= date('Y') ?> >> /var/log/scf-sync.log 2>&1
+        <h4 class="mt-lg">Konfigurera Cron-jobb (Hostinger)</h4>
 
-# Veckovis matchningssökning söndag kl 04:00
-0 4 * * 0 cd <?= ROOT_PATH ?>/cron && php find_scf_matches.php --limit=500 >> /var/log/scf-match.log 2>&1</pre>
+        <ol style="margin-left: var(--space-lg); line-height: 2; margin-bottom: var(--space-md);">
+            <li>Gå till <strong>hPanel → Avancerat → Cron-jobb</strong></li>
+            <li>Välj tidsintervall: <strong>"En gång per dag"</strong> eller <strong>"03:00"</strong></li>
+            <li>Klistra in detta kommando:</li>
+        </ol>
+
+        <pre style="background: var(--color-bg-hover); padding: var(--space-md); border-radius: var(--radius-sm); font-size: var(--text-xs); overflow-x: auto; margin-bottom: var(--space-md);">cd <?= ROOT_PATH ?>/cron && /usr/bin/php sync_scf_licenses.php --year=<?= date('Y') ?> >> <?= ROOT_PATH ?>/logs/scf-sync.log 2>&1</pre>
+
+        <p class="text-secondary text-sm" style="margin-bottom: var(--space-md);">
+            <strong>OBS:</strong> Om <code>/usr/bin/php</code> inte fungerar, kolla PHP-sökvägen i hPanel
+            (ofta <code>/usr/bin/php8.1</code> eller liknande).
+        </p>
+
+        <h4>Testa manuellt först</h4>
+        <p class="text-secondary text-sm">Kör i SSH för att verifiera:</p>
+        <pre style="background: var(--color-bg-hover); padding: var(--space-md); border-radius: var(--radius-sm); font-size: var(--text-xs); overflow-x: auto;">cd <?= ROOT_PATH ?>/cron
+php sync_scf_licenses.php --year=<?= date('Y') ?> --limit=10 --debug</pre>
+
+        <h4 class="mt-lg">Alternativ: Kör manuellt</h4>
+        <p class="text-secondary text-sm">
+            Om cron inte fungerar, använd <a href="/admin/scf-batch-verify.php" class="color-accent">Batch-verifiering</a>
+            för manuell synkronisering vid behov.
+        </p>
     </div>
 </div>
 
