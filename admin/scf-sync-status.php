@@ -26,7 +26,13 @@ if ($scfEnabled) {
     $scfService = new SCFLicenseService($apiKey, $db);
     $currentYear = (int)date('Y');
     $stats = $scfService->getSyncStats($currentYear);
-    $recentSyncs = $scfService->getRecentSyncs(10);
+    // Only get syncs that actually processed something (not empty runs)
+    $recentSyncs = $db->getAll("
+        SELECT * FROM scf_sync_log
+        WHERE processed > 0 OR status = 'failed'
+        ORDER BY started_at DESC
+        LIMIT 10
+    ");
 }
 
 // Get general rider statistics
@@ -81,8 +87,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                         break;
                     }
 
-                    // Start sync log
-                    $scfService->startSync('manual_batch', $year, count($riders));
+                    // Start sync log (only if we have riders to process)
+                    $scfService->startSync('manual', $year, count($riders));
 
                     // Sync the batch
                     $result = $scfService->syncRiderBatch($riders, $year);
@@ -385,26 +391,22 @@ include __DIR__ . '/components/unified-layout.php';
     </div>
     <div class="card-body">
         <div class="action-buttons">
-            <a href="/admin/scf-match-review.php" class="btn btn-primary">
-                <i data-lucide="user-check"></i>
-                Granska matchningar
+            <?php if ($scfEnabled): ?>
+            <a href="/admin/scf-batch-verify.php" class="btn btn-primary">
+                <i data-lucide="shield-check"></i>
+                Batch-verifiering (UCI ID)
+            </a>
+            <a href="/admin/scf-name-search.php" class="btn btn-secondary">
+                <i data-lucide="search"></i>
+                Namnsökning (SWE-ID)
                 <?php if ($riderStats['pending_matches'] > 0): ?>
                 <span class="badge badge-warning"><?= $riderStats['pending_matches'] ?></span>
                 <?php endif; ?>
             </a>
-            <?php if ($scfEnabled): ?>
-            <form method="post" style="display: inline;">
-                <?= csrf_field() ?>
-                <input type="hidden" name="action" value="trigger_sync">
-                <button type="submit" class="btn btn-secondary">
-                    <i data-lucide="refresh-cw"></i>
-                    Starta synkronisering
-                </button>
-            </form>
             <?php endif; ?>
-            <a href="/admin/riders.php?filter=no_uci" class="btn btn-ghost">
-                <i data-lucide="search"></i>
-                Visa deltagare utan UCI ID
+            <a href="/admin/scf-api-test.php" class="btn btn-ghost">
+                <i data-lucide="bug"></i>
+                API-test
             </a>
         </div>
     </div>
@@ -459,9 +461,10 @@ include __DIR__ . '/components/unified-layout.php';
                                 'incremental' => 'Automatisk (inkr.)',
                                 'manual' => 'Manuell',
                                 'manual_batch' => 'Manuell batch',
-                                'match_search' => 'Matchningssökning'
+                                'match_search' => 'Matchningssökning',
+                                'cron' => 'Cron'
                             ];
-                            echo $typeLabels[$sync['sync_type']] ?? htmlspecialchars($sync['sync_type']);
+                            echo $typeLabels[$sync['sync_type']] ?? htmlspecialchars($sync['sync_type'] ?: '-');
                             ?>
                         </td>
                         <td><?= $sync['year'] ?></td>
@@ -521,6 +524,20 @@ include __DIR__ . '/components/unified-layout.php';
                 <td><code>https://licens.scf.se/api/1.0</code></td>
             </tr>
             <tr>
+                <td><strong>Tillgängliga sökningar</strong></td>
+                <td>
+                    <code>/ucilicenselookup</code> - Kräver UCI ID<br>
+                    <code>/licenselookup</code> - Kräver namn + kön
+                </td>
+            </tr>
+            <tr>
+                <td><strong>Begränsningar</strong></td>
+                <td>
+                    <span class="text-warning">Ingen bulklista</span> - API:et stöder inte att lista alla licensinnehavare.<br>
+                    Nya cyklister hittas via: anmälningar, resultatimport, eller manuell sökning.
+                </td>
+            </tr>
+            <tr>
                 <td><strong>Max per batch</strong></td>
                 <td>25 UCI IDs</td>
             </tr>
@@ -530,13 +547,31 @@ include __DIR__ . '/components/unified-layout.php';
             </tr>
         </table>
 
-        <h4 class="mt-lg">Cron-kommandon</h4>
-        <p class="text-secondary text-sm">Lägg till i crontab för automatisk synkronisering:</p>
-        <pre style="background: var(--color-bg-hover); padding: var(--space-md); border-radius: var(--radius-sm); font-size: var(--text-xs); overflow-x: auto;"># Daglig licensverifiering kl 03:00
-0 3 * * * cd <?= ROOT_PATH ?>/cron && php sync_scf_licenses.php --year=<?= date('Y') ?> >> /var/log/scf-sync.log 2>&1
+        <h4 class="mt-lg">Konfigurera Cron-jobb (Hostinger)</h4>
 
-# Veckovis matchningssökning söndag kl 04:00
-0 4 * * 0 cd <?= ROOT_PATH ?>/cron && php find_scf_matches.php --limit=500 >> /var/log/scf-match.log 2>&1</pre>
+        <ol style="margin-left: var(--space-lg); line-height: 2; margin-bottom: var(--space-md);">
+            <li>Gå till <strong>hPanel → Avancerat → Cron-jobb</strong></li>
+            <li>Välj tidsintervall: <strong>"En gång per dag"</strong> eller <strong>"03:00"</strong></li>
+            <li>Klistra in detta kommando:</li>
+        </ol>
+
+        <pre style="background: var(--color-bg-hover); padding: var(--space-md); border-radius: var(--radius-sm); font-size: var(--text-xs); overflow-x: auto; margin-bottom: var(--space-md);">cd <?= ROOT_PATH ?>/cron && /usr/bin/php sync_scf_licenses.php --year=<?= date('Y') ?> >> <?= ROOT_PATH ?>/logs/scf-sync.log 2>&1</pre>
+
+        <p class="text-secondary text-sm" style="margin-bottom: var(--space-md);">
+            <strong>OBS:</strong> Om <code>/usr/bin/php</code> inte fungerar, kolla PHP-sökvägen i hPanel
+            (ofta <code>/usr/bin/php8.1</code> eller liknande).
+        </p>
+
+        <h4>Testa manuellt först</h4>
+        <p class="text-secondary text-sm">Kör i SSH för att verifiera:</p>
+        <pre style="background: var(--color-bg-hover); padding: var(--space-md); border-radius: var(--radius-sm); font-size: var(--text-xs); overflow-x: auto;">cd <?= ROOT_PATH ?>/cron
+php sync_scf_licenses.php --year=<?= date('Y') ?> --limit=10 --debug</pre>
+
+        <h4 class="mt-lg">Alternativ: Kör manuellt</h4>
+        <p class="text-secondary text-sm">
+            Om cron inte fungerar, använd <a href="/admin/scf-batch-verify.php" class="color-accent">Batch-verifiering</a>
+            för manuell synkronisering vid behov.
+        </p>
     </div>
 </div>
 

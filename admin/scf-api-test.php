@@ -157,6 +157,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['test_type'])) {
                     }
                 }
                 break;
+
+            case 'list_members':
+                // Test members list endpoint (discovered from web interface)
+                $licenseTypeId = trim($_POST['license_type_id'] ?? '152'); // 152 = MTB?
+                $seasonId = trim($_POST['season_id'] ?? '');
+
+                // Try the web interface URL pattern
+                $url = 'https://licens.scf.se/members';
+                $params = ['licenseTypeId' => $licenseTypeId];
+                if (!empty($seasonId)) {
+                    $params['seasonId'] = $seasonId;
+                }
+                break;
+
+            case 'list_members_api':
+                // Try API endpoint for members
+                $licenseTypeId = trim($_POST['license_type_id'] ?? '152');
+                $url = $baseUrl . '/members';
+                $params = [
+                    'licenseTypeId' => $licenseTypeId,
+                    'year' => date('Y')
+                ];
+                break;
         }
 
         if ($url && !$testError) {
@@ -296,6 +319,46 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['test_type'])) {
                 <small class="text-secondary">Rekommenderas för bättre träffsäkerhet</small>
             </div>
             <button type="submit" class="btn btn-primary">Sök i SCF</button>
+        </form>
+    </div>
+</div>
+
+<!-- Test: Members List (experimental) -->
+<div class="card">
+    <div class="card-header">
+        <h3>Test 4: Lista medlemmar (experimentellt)</h3>
+    </div>
+    <div class="card-body">
+        <div class="alert alert-warning" style="margin-bottom: var(--space-md);">
+            <strong>Experimentellt!</strong> Testar om det finns ett endpoint för att lista licensinnehavare.
+            Webbgränssnittet på <code>licens.scf.se/members</code> visar en lista, kanske finns ett API?
+        </div>
+
+        <form method="post" style="margin-bottom: var(--space-md);">
+            <?= csrf_field() ?>
+            <input type="hidden" name="test_type" value="list_members_api">
+            <div style="display: flex; gap: var(--space-md); flex-wrap: wrap; align-items: end;">
+                <div class="form-group" style="margin: 0;">
+                    <label class="form-label">Licenstyp ID</label>
+                    <input type="text" name="license_type_id" class="form-input" style="width: 100px;"
+                           value="<?= htmlspecialchars($_POST['license_type_id'] ?? '152') ?>">
+                    <small class="text-secondary">152 = MTB (gissning)</small>
+                </div>
+                <button type="submit" class="btn btn-primary">Testa API /members</button>
+            </div>
+        </form>
+
+        <form method="post">
+            <?= csrf_field() ?>
+            <input type="hidden" name="test_type" value="list_members">
+            <div style="display: flex; gap: var(--space-md); flex-wrap: wrap; align-items: end;">
+                <div class="form-group" style="margin: 0;">
+                    <label class="form-label">Licenstyp ID</label>
+                    <input type="text" name="license_type_id" class="form-input" style="width: 100px;"
+                           value="<?= htmlspecialchars($_POST['license_type_id'] ?? '152') ?>">
+                </div>
+                <button type="submit" class="btn btn-secondary">Testa Webb-URL /members</button>
+            </div>
         </form>
     </div>
 </div>

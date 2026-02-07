@@ -9,6 +9,83 @@
 require_once __DIR__ . '/registration-rules.php';
 
 /**
+ * Verify rider's license against SCF if needed
+ *
+ * Checks if rider has been verified for current year.
+ * If not, fetches license data from SCF API and updates database.
+ *
+ * @param PDO $pdo Database connection
+ * @param int $riderId Rider ID
+ * @return array|null Updated rider data or null if verification failed
+ */
+function verifyRiderLicenseIfNeeded($pdo, $riderId) {
+    $currentYear = (int)date('Y');
+
+    // Check if already verified this year
+    $stmt = $pdo->prepare("
+        SELECT id, license_number, scf_license_year
+        FROM riders
+        WHERE id = ?
+    ");
+    $stmt->execute([$riderId]);
+    $rider = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    if (!$rider) {
+        return null;
+    }
+
+    // Already verified for current year
+    if ($rider['scf_license_year'] == $currentYear) {
+        return $rider;
+    }
+
+    // No UCI ID to verify
+    if (empty($rider['license_number']) || strpos($rider['license_number'], 'SWE') === 0) {
+        return $rider;
+    }
+
+    // Try to verify with SCF
+    $apiKey = function_exists('env') ? env('SCF_API_KEY', '') : '';
+    if (empty($apiKey)) {
+        return $rider; // No API key, skip verification
+    }
+
+    try {
+        require_once __DIR__ . '/SCFLicenseService.php';
+
+        // Get Database wrapper if available
+        $db = function_exists('getDB') ? getDB() : null;
+        if (!$db) {
+            return $rider;
+        }
+
+        $scfService = new SCFLicenseService($apiKey, $db);
+
+        // Normalize UCI ID
+        $uciId = preg_replace('/[^0-9]/', '', $rider['license_number']);
+
+        // Lookup in SCF
+        $results = $scfService->lookupByUciIds([$uciId], $currentYear);
+
+        if (!empty($results)) {
+            $licenseData = reset($results);
+            $scfService->updateRiderLicense($riderId, $licenseData, $currentYear);
+            $scfService->cacheLicense($licenseData, $currentYear);
+
+            // Return updated rider data
+            $stmt = $pdo->prepare("SELECT * FROM riders WHERE id = ?");
+            $stmt->execute([$riderId]);
+            return $stmt->fetch(PDO::FETCH_ASSOC);
+        }
+    } catch (Exception $e) {
+        // Log error but don't block registration
+        error_log("SCF verification failed for rider $riderId: " . $e->getMessage());
+    }
+
+    return $rider;
+}
+
+/**
  * Main validation function - validates a registration attempt
  *
  * @param PDO $pdo Database connection
@@ -29,6 +106,13 @@ function validateRegistration($pdo, $eventId, $riderId, $classId) {
             'errors' => ['Åkaren hittades inte i systemet.'],
             'warnings' => []
         ];
+    }
+
+    // Verify license with SCF if not verified this year
+    // This updates the rider's license data in the database if needed
+    $verifiedRider = verifyRiderLicenseIfNeeded($pdo, $riderId);
+    if ($verifiedRider) {
+        $rider = $verifiedRider;
     }
 
     // Get event information
