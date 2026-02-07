@@ -2499,8 +2499,17 @@ if (!empty($event['pricing_template_id'])) {
     }
 }
 
-// Check early bird / late fee status
+// Check registration opens time
 $now = time();
+$registrationOpensTime = null;
+$registrationNotYetOpen = false;
+
+if (!empty($event['registration_opens'])) {
+    $registrationOpensTime = strtotime($event['registration_opens']);
+    $registrationNotYetOpen = ($registrationOpensTime > $now);
+}
+
+// Check early bird / late fee status
 $isEarlyBird = false;
 $isLateFee = false;
 $earlyBirdDeadline = null;
@@ -2960,6 +2969,50 @@ if (!empty($event['series_id'])) {
                         Mina biljetter
                     </a>
                 </div>
+            </div>
+
+        <?php elseif ($registrationNotYetOpen): ?>
+            <!-- Registration not yet open - Show countdown -->
+            <div class="alert alert--info" style="text-align: center; padding: var(--space-xl);">
+                <i data-lucide="clock" style="width: 48px; height: 48px; margin-bottom: var(--space-md);"></i>
+                <h3 style="margin-bottom: var(--space-sm);">Anmälan öppnar snart!</h3>
+                <p class="text-secondary" style="margin-bottom: var(--space-lg);">
+                    Anmälan öppnar: <strong><?= date('j M Y \k\l. H:i', $registrationOpensTime) ?></strong>
+                </p>
+                <div id="registration-countdown" style="font-size: 2rem; font-weight: 600; color: var(--color-accent); margin-bottom: var(--space-md);"></div>
+                <script>
+                (function() {
+                    const opensTime = <?= $registrationOpensTime * 1000 ?>; // Convert to milliseconds
+                    const countdownEl = document.getElementById('registration-countdown');
+
+                    function updateCountdown() {
+                        const now = Date.now();
+                        const diff = opensTime - now;
+
+                        if (diff <= 0) {
+                            countdownEl.textContent = 'Anmälan är öppen!';
+                            setTimeout(() => location.reload(), 2000);
+                            return;
+                        }
+
+                        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+                        const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                        const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+                        let parts = [];
+                        if (days > 0) parts.push(days + 'd');
+                        if (hours > 0 || days > 0) parts.push(hours + 'h');
+                        if (minutes > 0 || hours > 0 || days > 0) parts.push(minutes + 'm');
+                        parts.push(seconds + 's');
+
+                        countdownEl.textContent = parts.join(' ');
+                        setTimeout(updateCountdown, 1000);
+                    }
+
+                    updateCountdown();
+                })();
+                </script>
             </div>
 
         <?php elseif (empty($eventPricing)): ?>
