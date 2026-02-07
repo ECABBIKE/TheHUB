@@ -45,3 +45,6 @@ backups/
 # Rate limiting storage
 storage/rate-limits/*
 !storage/rate-limits/.gitkeep
+
+# Production environment (NEVER commit with real values)
+.env.production
