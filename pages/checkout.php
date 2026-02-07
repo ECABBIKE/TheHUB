@@ -3,8 +3,7 @@
  * TheHUB Checkout Page
  *
  * Displays payment options for event registrations:
- * - Swish (direct link on mobile, QR on desktop)
- * - Card via WooCommerce (fallback)
+ * - Card payment via Stripe Checkout
  * - Discount codes and Gravity ID discounts
  */
 
@@ -31,6 +30,8 @@ $appliedDiscounts = [];
 $gravityIdInfo = null;
 $isSeries = false;
 $seriesInfo = null;
+$stripeSuccess = isset($_GET['stripe_success']);
+$stripeCancelled = isset($_GET['stripe_cancelled']);
 
 try {
     if ($orderId) {
@@ -38,6 +39,11 @@ try {
         $order = getOrder($orderId);
         if (!$order) {
             $error = 'Order hittades inte.';
+        }
+        // If returning from Stripe success, check payment status
+        if ($order && $stripeSuccess && $order['payment_status'] !== 'paid') {
+            // Payment may not be confirmed yet by webhook - show pending message
+            $order['stripe_pending'] = true;
         }
     } elseif ($seriesRegistrationId) {
         // Handle series registration checkout
@@ -79,12 +85,7 @@ try {
                 // Create new series order
                 $orderData = createSeriesOrder($seriesRegistrationId, $seriesReg['rider_id']);
                 $order = getOrder($orderData['order_id']);
-
-                // Add payment URLs to order
-                $order['swish_url'] = $orderData['swish_url'];
-                $order['swish_qr'] = $orderData['swish_qr'];
-                $order['swish_available'] = $orderData['swish_available'];
-                $order['card_available'] = $orderData['card_available'];
+                $order['card_available'] = !empty(env('STRIPE_SECRET_KEY', ''));
             }
         }
     } elseif (!empty($registrationIds)) {
@@ -143,11 +144,7 @@ try {
                     $order = getOrder($orderData['order_id']);
                     $appliedDiscounts = $orderData['applied_discounts'] ?? [];
 
-                    // Add payment URLs to order
-                    $order['swish_url'] = $orderData['swish_url'];
-                    $order['swish_qr'] = $orderData['swish_qr'];
-                    $order['swish_available'] = $orderData['swish_available'];
-                    $order['card_available'] = $orderData['card_available'];
+                    $order['card_available'] = !empty(env('STRIPE_SECRET_KEY', ''));
                     $order['applied_discounts'] = $appliedDiscounts;
                 }
             }
@@ -156,19 +153,9 @@ try {
         $error = 'Ingen order eller registrering angiven.';
     }
 
-    // If order exists but doesn't have swish URLs, generate them
-    if ($order && empty($order['swish_url']) && !empty($order['swish_number'])) {
-        $order['swish_url'] = generateSwishUrl(
-            $order['swish_number'],
-            $order['total_amount'],
-            $order['swish_message']
-        );
-        $order['swish_qr'] = generateSwishQR(
-            $order['swish_number'],
-            $order['total_amount'],
-            $order['swish_message']
-        );
-        $order['swish_available'] = true;
+    // Set Stripe availability if not already set
+    if ($order && !isset($order['card_available'])) {
+        $order['card_available'] = !empty(env('STRIPE_SECRET_KEY', ''));
     }
 
 } catch (Exception $e) {
@@ -214,6 +201,25 @@ include __DIR__ . '/../components/header.php';
                     </a>
                 </div>
             </div>
+
+        <?php elseif ($order && !empty($order['stripe_pending'])): ?>
+            <!-- Stripe payment processing -->
+            <div class="card">
+                <div class="card-body text-center py-xl">
+                    <i data-lucide="loader" class="icon-xl text-accent mb-md spin"></i>
+                    <h1 class="text-xl mb-sm">Betalning bearbetas</h1>
+                    <p class="text-secondary mb-lg">
+                        Din betalning behandlas. Sidan uppdateras automatiskt.
+                    </p>
+                    <p class="text-sm text-secondary">
+                        Order: <strong><?= htmlspecialchars($order['order_number']) ?></strong>
+                    </p>
+                </div>
+            </div>
+            <script>
+            // Auto-refresh to check if payment confirmed
+            setTimeout(function() { window.location.reload(); }, 5000);
+            </script>
 
         <?php elseif ($order): ?>
             <!-- Order summary -->
@@ -349,97 +355,44 @@ include __DIR__ . '/../components/header.php';
                 <div class="card-header">
                     <h2 class="text-lg">
                         <i data-lucide="credit-card"></i>
-                        Välj betalningsmetod
+                        Betalning
                     </h2>
                 </div>
                 <div class="card-body">
-                    <?php if (!empty($order['swish_available'])): ?>
-                    <!-- Swish payment -->
-                    <div class="payment-option payment-option--swish mb-lg">
-                        <div class="flex items-center gap-md mb-md">
-                            <img src="/assets/images/swish-logo.svg" alt="Swish" class="payment-logo" onerror="this.style.display='none'">
-                            <div>
-                                <h3 class="font-medium">Betala med Swish</h3>
-                                <p class="text-sm text-secondary">Direkt betalning till arrangören</p>
-                            </div>
-                        </div>
-
-                        <!-- Mobile: Swish link button -->
-                        <div class="swish-mobile mb-md">
-                            <a href="<?= htmlspecialchars($order['swish_url']) ?>"
-                               class="btn btn--swish btn--lg w-full"
-                               id="swish-button">
-                                <i data-lucide="smartphone"></i>
-                                Öppna Swish - <?= number_format($order['total_amount'], 0) ?> kr
-                            </a>
-                        </div>
-
-                        <!-- Desktop: QR code -->
-                        <div class="swish-desktop text-center">
-                            <p class="text-sm text-secondary mb-md">Scanna QR-koden med Swish-appen</p>
-                            <div class="swish-qr-container">
-                                <img src="<?= htmlspecialchars($order['swish_qr']) ?>"
-                                     alt="Swish QR-kod"
-                                     class="swish-qr"
-                                     width="200"
-                                     height="200">
-                            </div>
-                        </div>
-
-                        <!-- Payment details -->
-                        <div class="swish-details mt-md p-md bg-muted rounded-md">
-                            <div class="grid grid-cols-2 gap-sm text-sm">
-                                <div>
-                                    <span class="text-secondary">Mottagare:</span><br>
-                                    <strong><?= htmlspecialchars($order['swish_name'] ?? formatSwishNumber($order['swish_number'])) ?></strong>
-                                </div>
-                                <div>
-                                    <span class="text-secondary">Swish-nummer:</span><br>
-                                    <strong><?= formatSwishNumber($order['swish_number']) ?></strong>
-                                </div>
-                                <div>
-                                    <span class="text-secondary">Belopp:</span><br>
-                                    <strong><?= number_format($order['total_amount'], 0) ?> kr</strong>
-                                </div>
-                                <div>
-                                    <span class="text-secondary">Meddelande:</span><br>
-                                    <strong><?= htmlspecialchars($order['swish_message']) ?></strong>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div class="mt-md p-md bg-warning-subtle rounded-md text-sm">
-                            <i data-lucide="info" class="icon-sm"></i>
-                            <strong>Viktigt:</strong> Ange meddelandet <strong><?= htmlspecialchars($order['swish_message']) ?></strong>
-                            så vi kan koppla betalningen till din anmälan.
-                        </div>
-                    </div>
-                    <?php endif; ?>
-
                     <?php if (!empty($order['card_available'])): ?>
-                    <!-- Card payment via Stripe -->
+                    <!-- Stripe Checkout -->
                     <div class="payment-option payment-option--card">
                         <div class="flex items-center gap-md mb-md">
-                            <i data-lucide="credit-card" class="icon-lg"></i>
+                            <div style="width:48px;height:48px;background:linear-gradient(135deg,#635bff,#5851db);border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center;">
+                                <i data-lucide="credit-card" style="width:24px;height:24px;color:white;"></i>
+                            </div>
                             <div>
                                 <h3 class="font-medium">Betala med kort</h3>
-                                <p class="text-sm text-secondary">Visa, Mastercard, etc.</p>
+                                <p class="text-sm text-secondary">Visa, Mastercard, Apple Pay, Google Pay</p>
                             </div>
                         </div>
-                        <p class="text-sm text-secondary">
-                            Kortbetalning via Stripe. Kontakta arrangören för mer information.
+
+                        <button type="button"
+                                id="stripe-pay-btn"
+                                class="btn btn--primary btn--lg w-full"
+                                onclick="startStripeCheckout(<?= $order['id'] ?>)">
+                            <i data-lucide="lock"></i>
+                            Betala <?= number_format($order['total_amount'], 0) ?> kr
+                        </button>
+
+                        <p class="text-xs text-secondary text-center mt-sm">
+                            <i data-lucide="shield-check" class="icon-xs"></i>
+                            Sakra betalningar via Stripe. Vi lagrar inga kortuppgifter.
                         </p>
                     </div>
-                    <?php endif; ?>
-
-                    <?php if (empty($order['swish_available']) && empty($order['card_available'])): ?>
+                    <?php else: ?>
                     <!-- No payment method available -->
                     <div class="text-center py-lg">
                         <i data-lucide="alert-circle" class="icon-lg text-warning mb-md"></i>
-                        <h3 class="font-medium mb-sm">Ingen betalningsmetod konfigurerad</h3>
+                        <h3 class="font-medium mb-sm">Betalning ej tillganglig</h3>
                         <p class="text-sm text-secondary">
-                            Arrangören har inte konfigurerat betalning för detta event.
-                            Kontakta arrangören direkt for betalningsinstruktioner.
+                            Betalningssystemet ar inte konfigurerat annu.
+                            Kontakta arrangoren for betalningsinstruktioner.
                         </p>
                     </div>
                     <?php endif; ?>
@@ -454,12 +407,10 @@ include __DIR__ . '/../components/header.php';
                         Efter betalning
                     </h3>
                     <p class="text-sm text-secondary">
-                        Din anmälan bekräftas automatiskt när betalningen är genomförd.
-                        Du får ett bekräftelsemail till <strong><?= htmlspecialchars($order['customer_email']) ?></strong>.
-                    </p>
-                    <p class="text-sm text-secondary mt-sm">
-                        Swish-betalningar bekräftas vanligtvis inom några minuter.
-                        Har du frågor? Kontakta arrangören.
+                        Din anmalan bekraftas automatiskt nar betalningen ar genomford.
+                        <?php if (!empty($order['customer_email'])): ?>
+                        Du far ett bekraftelsemail till <strong><?= htmlspecialchars($order['customer_email']) ?></strong>.
+                        <?php endif; ?>
                     </p>
                 </div>
             </div>
@@ -468,6 +419,43 @@ include __DIR__ . '/../components/header.php';
 </main>
 
 <script>
+// Stripe Checkout
+async function startStripeCheckout(orderId) {
+    const btn = document.getElementById('stripe-pay-btn');
+    if (!btn) return;
+
+    btn.disabled = true;
+    btn.innerHTML = '<i data-lucide="loader" class="spin"></i> Forbereder betalning...';
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+
+    try {
+        const formData = new FormData();
+        formData.append('order_id', orderId);
+
+        const response = await fetch('/api/create-checkout-session.php', {
+            method: 'POST',
+            body: formData
+        });
+
+        const data = await response.json();
+
+        if (data.success && data.url) {
+            // Redirect to Stripe Checkout
+            window.location.href = data.url;
+        } else {
+            alert(data.error || 'Kunde inte starta betalning. Forsok igen.');
+            btn.disabled = false;
+            btn.innerHTML = '<i data-lucide="lock"></i> Betala <?= number_format($order['total_amount'] ?? 0, 0) ?> kr';
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+        }
+    } catch (error) {
+        alert('Nagot gick fel. Forsok igen.');
+        btn.disabled = false;
+        btn.innerHTML = '<i data-lucide="lock"></i> Betala <?= number_format($order['total_amount'] ?? 0, 0) ?> kr';
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
+}
+
 // Discount code AJAX handling
 document.addEventListener('DOMContentLoaded', function() {
     const discountForm = document.getElementById('discount-form');
@@ -485,10 +473,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 return;
             }
 
-            // Disable button while processing
             applyBtn.disabled = true;
             applyBtn.innerHTML = '<i data-lucide="loader" class="spin"></i> Kontrollerar...';
-            lucide.createIcons();
+            if (typeof lucide !== 'undefined') lucide.createIcons();
 
             try {
                 const formData = new FormData();
@@ -503,26 +490,23 @@ document.addEventListener('DOMContentLoaded', function() {
                 const data = await response.json();
 
                 if (data.success) {
-                    showMessage('Rabattkod tillämpad! Du sparade ' + data.discount_amount + ' kr', 'success');
-
-                    // Reload page to show updated totals
-                    setTimeout(() => {
-                        window.location.reload();
-                    }, 1000);
+                    showMessage('Rabattkod tillampad! Du sparade ' + data.discount_amount + ' kr', 'success');
+                    setTimeout(() => { window.location.reload(); }, 1000);
                 } else {
                     showMessage(data.error || 'Ogiltig rabattkod', 'error');
                 }
             } catch (error) {
-                showMessage('Något gick fel. Försök igen.', 'error');
+                showMessage('Nagot gick fel. Forsok igen.', 'error');
             }
 
             applyBtn.disabled = false;
-            applyBtn.innerHTML = '<i data-lucide="check"></i> Använd';
-            lucide.createIcons();
+            applyBtn.innerHTML = '<i data-lucide="check"></i> Anvand';
+            if (typeof lucide !== 'undefined') lucide.createIcons();
         });
     }
 
     function showMessage(text, type) {
+        if (!discountMessage) return;
         discountMessage.textContent = text;
         discountMessage.className = 'mt-sm text-sm ' + (type === 'success' ? 'text-success' : 'text-error');
         discountMessage.style.display = 'block';

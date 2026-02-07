@@ -39,7 +39,7 @@ function getPaymentConfig(int $eventId): ?array {
         // 1. Check event's own payment_recipient_id
         try {
             $stmt = $pdo->prepare("
-                SELECT pr.*, 'event_recipient' as config_source, e.name as source_name, 1 as swish_enabled
+                SELECT pr.*, 'event_recipient' as config_source, e.name as source_name, 1 as payment_enabled
                 FROM events e
                 JOIN payment_recipients pr ON e.payment_recipient_id = pr.id
                 WHERE e.id = ? AND pr.active = 1
@@ -54,7 +54,7 @@ function getPaymentConfig(int $eventId): ?array {
         // First try via events.series_id
         try {
             $stmt = $pdo->prepare("
-                SELECT pr.*, 'series_recipient' as config_source, s.name as source_name, 1 as swish_enabled
+                SELECT pr.*, 'series_recipient' as config_source, s.name as source_name, 1 as payment_enabled
                 FROM events e
                 JOIN series s ON e.series_id = s.id
                 JOIN payment_recipients pr ON s.payment_recipient_id = pr.id
@@ -69,7 +69,7 @@ function getPaymentConfig(int $eventId): ?array {
         // 2b. Also check via series_events junction table (many-to-many)
         try {
             $stmt = $pdo->prepare("
-                SELECT pr.*, 'series_recipient' as config_source, s.name as source_name, 1 as swish_enabled
+                SELECT pr.*, 'series_recipient' as config_source, s.name as source_name, 1 as payment_enabled
                 FROM series_events se
                 JOIN series s ON se.series_id = s.id
                 JOIN payment_recipients pr ON s.payment_recipient_id = pr.id
@@ -137,7 +137,7 @@ function getPaymentConfig(int $eventId): ?array {
     try {
         $stmt = $pdo->prepare("
             SELECT au.swish_number, au.swish_name, au.full_name as source_name,
-                   'promotor_direct' as config_source, 1 as swish_enabled
+                   'promotor_direct' as config_source, 1 as payment_enabled
             FROM admin_users au
             JOIN promotor_events pe ON pe.user_id = au.id
             WHERE pe.event_id = ? AND au.swish_number IS NOT NULL
@@ -154,20 +154,10 @@ function getPaymentConfig(int $eventId): ?array {
 }
 
 /**
- * Check if Swish is available for an event
- */
-function isSwishAvailable(int $eventId): bool {
-    $config = getPaymentConfig($eventId);
-    return $config !== null && !empty($config['swish_number']) && $config['swish_enabled'];
-}
-
-/**
- * Check if card payment is available for an event
+ * Check if card/Stripe payment is available for an event
  */
 function isCardAvailable(int $eventId): bool {
-    $config = getPaymentConfig($eventId);
-    // Card is available via WooCommerce (fallback) or if explicitly enabled
-    return $config === null || !empty($config['card_enabled']);
+    return !empty(env('STRIPE_SECRET_KEY', ''));
 }
 
 // ============================================================================
@@ -367,9 +357,8 @@ function createOrder(array $registrationIds, int $riderId, int $eventId, ?string
     $totalDiscount = $discountCodeAmount + $gravityIdAmount;
     $total = max(0, $subtotal - $totalDiscount);
 
-    // Generate order number and Swish message
+    // Generate order number
     $orderNumber = generateOrderNumber();
-    $swishMessage = substr($orderNumber, 4); // Remove "ORD-" prefix for shorter message
 
     $pdo->beginTransaction();
 
@@ -381,13 +370,11 @@ function createOrder(array $registrationIds, int $riderId, int $eventId, ?string
                 event_id, subtotal, discount, total_amount, currency,
                 payment_method, payment_status,
                 discount_code_id, gravity_id_discount,
-                swish_number, swish_message,
                 expires_at, created_at
             ) VALUES (
                 ?, ?, ?, ?,
                 ?, ?, ?, ?, 'SEK',
-                'swish', 'pending',
-                ?, ?,
+                'card', 'pending',
                 ?, ?,
                 DATE_ADD(NOW(), INTERVAL 24 HOUR), NOW()
             )
@@ -402,20 +389,20 @@ function createOrder(array $registrationIds, int $riderId, int $eventId, ?string
             $totalDiscount,
             $total,
             $discountCodeId,
-            $gravityIdAmount > 0 ? $gravityIdAmount : null,
-            $paymentConfig['swish_number'] ?? null,
-            $swishMessage
+            $gravityIdAmount > 0 ? $gravityIdAmount : null
         ]);
 
         $orderId = $pdo->lastInsertId();
 
-        // Create order items
+        // Create order items (with payment_recipient_id for Stripe transfers)
+        $recipientId = $paymentConfig['id'] ?? null;
         foreach ($registrations as $reg) {
             $stmt = $pdo->prepare("
                 INSERT INTO order_items (
                     order_id, item_type, registration_id,
-                    description, unit_price, quantity, total_price
-                ) VALUES (?, 'registration', ?, ?, ?, 1, ?)
+                    description, unit_price, quantity, total_price,
+                    payment_recipient_id
+                ) VALUES (?, 'registration', ?, ?, ?, 1, ?, ?)
             ");
 
             $description = $reg['first_name'] . ' ' . $reg['last_name'] . ' - ' . $reg['category'];
@@ -424,7 +411,8 @@ function createOrder(array $registrationIds, int $riderId, int $eventId, ?string
                 $reg['id'],
                 $description,
                 $reg['price'],
-                $reg['price']
+                $reg['price'],
+                $recipientId
             ]);
         }
 
@@ -443,23 +431,6 @@ function createOrder(array $registrationIds, int $riderId, int $eventId, ?string
 
         $pdo->commit();
 
-        // Generate payment links
-        $swishUrl = null;
-        $swishQR = null;
-
-        if ($paymentConfig && !empty($paymentConfig['swish_number'])) {
-            $swishUrl = generateSwishUrl(
-                $paymentConfig['swish_number'],
-                $total,
-                $swishMessage
-            );
-            $swishQR = generateSwishQR(
-                $paymentConfig['swish_number'],
-                $total,
-                $swishMessage
-            );
-        }
-
         return [
             'success' => true,
             'order_id' => $orderId,
@@ -468,13 +439,7 @@ function createOrder(array $registrationIds, int $riderId, int $eventId, ?string
             'discount' => $totalDiscount,
             'total' => $total,
             'applied_discounts' => $appliedDiscounts,
-            'swish_available' => $swishUrl !== null,
-            'swish_url' => $swishUrl,
-            'swish_qr' => $swishQR,
-            'swish_number' => $paymentConfig['swish_number'] ?? null,
-            'swish_name' => $paymentConfig['swish_name'] ?? null,
-            'swish_message' => $swishMessage,
-            'card_available' => isCardAvailable($eventId)
+            'card_available' => !empty(env('STRIPE_SECRET_KEY', ''))
         ];
 
     } catch (Exception $e) {
@@ -613,7 +578,7 @@ function createSeriesOrder(int $seriesRegistrationId, int $riderId): array {
     try {
         // Try to get payment recipient from series
         $stmt = $pdo->prepare("
-            SELECT pr.*, 'series_recipient' as config_source, s.name as source_name, 1 as swish_enabled
+            SELECT pr.*, 'series_recipient' as config_source, s.name as source_name, 1 as payment_enabled
             FROM series s
             JOIN payment_recipients pr ON s.payment_recipient_id = pr.id
             WHERE s.id = ? AND pr.active = 1
@@ -640,7 +605,6 @@ function createSeriesOrder(int $seriesRegistrationId, int $riderId): array {
     $subtotal = $registration['final_price'];
     $total = $subtotal;
     $orderNumber = generateOrderNumber();
-    $swishMessage = substr($orderNumber, 4);
 
     $pdo->beginTransaction();
 
@@ -651,13 +615,11 @@ function createSeriesOrder(int $seriesRegistrationId, int $riderId): array {
                 order_number, rider_id, customer_email, customer_name,
                 series_id, subtotal, discount, total_amount, currency,
                 payment_method, payment_status,
-                swish_number, swish_message,
                 expires_at, created_at
             ) VALUES (
                 ?, ?, ?, ?,
                 ?, ?, 0, ?, 'SEK',
-                'swish', 'pending',
-                ?, ?,
+                'card', 'pending',
                 DATE_ADD(NOW(), INTERVAL 24 HOUR), NOW()
             )
         ");
@@ -668,9 +630,7 @@ function createSeriesOrder(int $seriesRegistrationId, int $riderId): array {
             $rider['firstname'] . ' ' . $rider['lastname'],
             $registration['series_id'],
             $subtotal,
-            $total,
-            $paymentConfig['swish_number'] ?? null,
-            $swishMessage
+            $total
         ]);
 
         $orderId = $pdo->lastInsertId();
@@ -701,33 +661,6 @@ function createSeriesOrder(int $seriesRegistrationId, int $riderId): array {
 
         $pdo->commit();
 
-        // Generate Swish links
-        $swishUrl = null;
-        $swishQR = null;
-
-        if ($paymentConfig && !empty($paymentConfig['swish_number'])) {
-            $swishUrl = generateSwishUrl(
-                $paymentConfig['swish_number'],
-                $total,
-                $swishMessage
-            );
-            $swishQR = generateSwishQR(
-                $paymentConfig['swish_number'],
-                $total,
-                $swishMessage
-            );
-        }
-
-        // Check if Stripe/card is available for this payment recipient
-        $cardAvailable = false;
-        if ($paymentConfig) {
-            try {
-                $hasStripe = !empty($paymentConfig['stripe_account_id']) &&
-                             ($paymentConfig['stripe_account_status'] ?? '') === 'active';
-                $cardAvailable = $hasStripe;
-            } catch (Exception $e) {}
-        }
-
         return [
             'success' => true,
             'order_id' => $orderId,
@@ -735,13 +668,7 @@ function createSeriesOrder(int $seriesRegistrationId, int $riderId): array {
             'subtotal' => $subtotal,
             'discount' => 0,
             'total' => $total,
-            'swish_available' => $swishUrl !== null,
-            'swish_url' => $swishUrl,
-            'swish_qr' => $swishQR,
-            'swish_number' => $paymentConfig['swish_number'] ?? null,
-            'swish_name' => $paymentConfig['swish_name'] ?? null,
-            'swish_message' => $swishMessage,
-            'card_available' => $cardAvailable
+            'card_available' => !empty(env('STRIPE_SECRET_KEY', ''))
         ];
 
     } catch (Exception $e) {

@@ -133,6 +133,9 @@ $migrationChecks = [
     '037_pricing_template_season_price.sql' => [
         'columns' => ['pricing_template_rules.season_price']
     ],
+    '038_orders_stripe_session.sql' => [
+        'columns' => ['orders.stripe_session_id', 'orders.stripe_payment_intent_id']
+    ],
 ];
 
 // ============================================================================
