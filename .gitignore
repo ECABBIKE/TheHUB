@@ -41,3 +41,7 @@ PROJECT-STRUCTURE-ANALYSIS.md
 REFACTORING-CHECKLIST.md
 VISUAL-PROJECT-MAP.txt
 backups/
+
+# Rate limiting storage
+storage/rate-limits/*
+!storage/rate-limits/.gitkeep
