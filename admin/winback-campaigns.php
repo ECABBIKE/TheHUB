@@ -1209,6 +1209,7 @@ $audienceStats = ['total' => 0, 'with_email' => 0, 'without_email' => 0, 'invite
 if ($selectedCampData) {
     $brandIds = json_decode($selectedCampData['brand_ids'] ?? '[]', true) ?: [];
     $audienceType = $selectedCampData['audience_type'] ?? 'churned';
+    $isActiveAudience = ($audienceType === 'active');
 
     if (!empty($brandIds)) {
         $placeholders = implode(',', array_fill(0, count($brandIds), '?'));
