@@ -300,16 +300,47 @@ Automatiskt genererade "trading cards" med deltagarstatistik:
 - **Ny migration: 037_pricing_template_season_price.sql**
   - Lagger till `season_price` (DECIMAL) pa pricing_template_rules
 
+- **Stripe-only betalningssystem**
+  - Alla betalningar gar nu via Stripe Checkout (manuell Swish borttagen)
+  - Ny API-endpoint: `/api/create-checkout-session.php` - skapar Stripe Checkout Session
+  - Checkout-sidan (`/pages/checkout.php`) visar "Betala X kr"-knapp som redirectar till Stripe
+  - Automatisk statusuppdatering efter betalning (webhook + auto-refresh)
+  - `includes/payment.php` - orders skapas med payment_method='card'
+  - payment_recipient_id lagras pa order_items for Stripe Connect-transfers
+
+- **Admin: Ekonomi-sida rensad**
+  - Borttagna dubblettlankar (Stripe-installningar redirectade till samma sida)
+  - Visar varning om STRIPE_SECRET_KEY saknas
+  - Betalningsmottagare-modal: Swish/bankfalt borttagna, kontaktinfo kvar
+  - Kort visar Stripe Connect-status (aktiv/vantar/ej kopplad)
+
+- **Ny migration: 038_orders_stripe_session.sql**
+  - Lagger till `stripe_session_id` och `stripe_payment_intent_id` pa orders
+
+- **Testevent-verktyg**
+  - Nytt adminverktyg: `/admin/tools/create-test-event.php`
+  - Skapar "TEST 2026" med prissattning, seriekoppling och checklista
+  - Lankat fran System-sektionen i `/admin/tools.php`
+  - Visar Stripe-konfigurationsstatus och betalningschecklista
+
 - **Nya/andrade filer:**
   - `admin/api/update-event-series.php` - Fixat series_events-synk
   - `admin/series.php` - Snyggare knappar
   - `admin/series-manage.php` - Fixade knappar, events-query, registration save, PRG borttaget
   - `admin/pricing-templates.php` - Sasongspris-kolumn i redigera-vy
-  - `includes/payment.php` - Fixat getPaymentConfig(), createSeriesOrder()
-  - `pages/checkout.php` - Borre felhantering vid saknad betalningsmetod
-  - `Tools/migrations/036_event_registration_opens.sql` - Ny migration
-  - `Tools/migrations/037_pricing_template_season_price.sql` - Ny migration
-  - `admin/migrations.php` - Registrerat migration 036 och 037
+  - `admin/ekonomi.php` - Rensade lankar, Stripe-varning
+  - `admin/payment-recipients.php` - Rensat modal, Stripe-fokus
+  - `admin/tools/create-test-event.php` - Nytt testverktyg
+  - `admin/tools.php` - Lagt till testevent-lanken
+  - `api/create-checkout-session.php` - Stripe Checkout API
+  - `api/apply-discount.php` - Borttagen Swish-regenerering
+  - `includes/payment.php` - Stripe-only, borttagen Swish-kod
+  - `pages/checkout.php` - Stripe Checkout UI
+  - `.env.example` - Stripe-nycklar dokumenterade
+  - `Tools/migrations/036_event_registration_opens.sql` - Registration dates
+  - `Tools/migrations/037_pricing_template_season_price.sql` - Season pricing
+  - `Tools/migrations/038_orders_stripe_session.sql` - Stripe session tracking
+  - `admin/migrations.php` - Registrerat migration 036, 037, 038
 
 ### 2026-02-05 (User Accounts System)
 - **Branch:** claude/create-event-import-tool-MHtMW
