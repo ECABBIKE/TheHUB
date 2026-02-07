@@ -2996,47 +2996,175 @@ if (!empty($event['series_id'])) {
 
         <?php elseif ($registrationNotYetOpen): ?>
             <!-- Registration not yet open - Show countdown -->
-            <div class="alert alert--info" style="text-align: center; padding: var(--space-xl);">
-                <i data-lucide="clock" style="width: 48px; height: 48px; margin-bottom: var(--space-md);"></i>
-                <h3 style="margin-bottom: var(--space-sm);">Anmälan öppnar snart!</h3>
-                <p class="text-secondary" style="margin-bottom: var(--space-lg);">
-                    Anmälan öppnar: <strong><?= date('j M Y \k\l. H:i', $registrationOpensTime) ?></strong>
-                </p>
-                <div id="registration-countdown" style="font-size: 2rem; font-weight: 600; color: var(--color-accent); margin-bottom: var(--space-md);"></div>
-                <script>
-                (function() {
-                    const opensTime = <?= $registrationOpensTime * 1000 ?>; // Convert to milliseconds
-                    const countdownEl = document.getElementById('registration-countdown');
+            <style>
+                .reg-countdown {
+                    background: linear-gradient(135deg, var(--color-bg-card) 0%, var(--color-bg-surface) 100%);
+                    border: 1px solid var(--color-border);
+                    border-radius: var(--radius-lg);
+                    padding: var(--space-2xl) var(--space-lg);
+                    text-align: center;
+                    position: relative;
+                    overflow: hidden;
+                }
+                .reg-countdown::before {
+                    content: '';
+                    position: absolute;
+                    top: 0;
+                    left: 0;
+                    right: 0;
+                    bottom: 0;
+                    background: radial-gradient(circle at top right, var(--color-accent-light), transparent 60%);
+                    opacity: 0.3;
+                    pointer-events: none;
+                }
+                .reg-countdown__content {
+                    position: relative;
+                    z-index: 1;
+                }
+                .reg-countdown__icon {
+                    width: 64px;
+                    height: 64px;
+                    color: var(--color-accent);
+                    margin: 0 auto var(--space-md);
+                    filter: drop-shadow(0 0 8px var(--color-accent-light));
+                }
+                .reg-countdown__title {
+                    font-size: 1.75rem;
+                    font-weight: 700;
+                    margin-bottom: var(--space-sm);
+                    background: linear-gradient(135deg, var(--color-accent) 0%, var(--color-accent-hover) 100%);
+                    -webkit-background-clip: text;
+                    background-clip: text;
+                    -webkit-text-fill-color: transparent;
+                }
+                .reg-countdown__date {
+                    color: var(--color-text-secondary);
+                    margin-bottom: var(--space-xl);
+                    font-size: 1.1rem;
+                }
+                .reg-countdown__timer {
+                    display: flex;
+                    justify-content: center;
+                    gap: var(--space-md);
+                    margin: var(--space-xl) 0;
+                }
+                .reg-countdown__block {
+                    display: flex;
+                    flex-direction: column;
+                    align-items: center;
+                    min-width: 70px;
+                }
+                .reg-countdown__value {
+                    font-size: 3rem;
+                    font-weight: 800;
+                    line-height: 1;
+                    background: linear-gradient(180deg, var(--color-text-primary) 0%, var(--color-text-secondary) 100%);
+                    -webkit-background-clip: text;
+                    background-clip: text;
+                    -webkit-text-fill-color: transparent;
+                    text-shadow: 0 2px 8px rgba(0,0,0,0.2);
+                }
+                .reg-countdown__label {
+                    font-size: 0.75rem;
+                    text-transform: uppercase;
+                    letter-spacing: 1px;
+                    color: var(--color-text-muted);
+                    margin-top: var(--space-xs);
+                }
+                .reg-countdown__separator {
+                    font-size: 2rem;
+                    color: var(--color-accent-light);
+                    align-self: center;
+                    margin-top: -12px;
+                }
+                @media (max-width: 767px) {
+                    .reg-countdown {
+                        padding: var(--space-xl) var(--space-md);
+                    }
+                    .reg-countdown__title {
+                        font-size: 1.5rem;
+                    }
+                    .reg-countdown__timer {
+                        gap: var(--space-sm);
+                    }
+                    .reg-countdown__block {
+                        min-width: 60px;
+                    }
+                    .reg-countdown__value {
+                        font-size: 2.5rem;
+                    }
+                    .reg-countdown__separator {
+                        font-size: 1.5rem;
+                    }
+                }
+            </style>
+            <div class="reg-countdown">
+                <div class="reg-countdown__content">
+                    <i data-lucide="clock" class="reg-countdown__icon"></i>
+                    <h3 class="reg-countdown__title">Anmälan öppnar snart!</h3>
+                    <p class="reg-countdown__date">
+                        <strong><?= date('j M Y \k\l. H:i', $registrationOpensTime) ?></strong>
+                    </p>
+                    <div class="reg-countdown__timer">
+                        <div class="reg-countdown__block">
+                            <div class="reg-countdown__value" id="countdown-days">00</div>
+                            <div class="reg-countdown__label">Dagar</div>
+                        </div>
+                        <div class="reg-countdown__separator">:</div>
+                        <div class="reg-countdown__block">
+                            <div class="reg-countdown__value" id="countdown-hours">00</div>
+                            <div class="reg-countdown__label">Timmar</div>
+                        </div>
+                        <div class="reg-countdown__separator">:</div>
+                        <div class="reg-countdown__block">
+                            <div class="reg-countdown__value" id="countdown-minutes">00</div>
+                            <div class="reg-countdown__label">Minuter</div>
+                        </div>
+                        <div class="reg-countdown__separator">:</div>
+                        <div class="reg-countdown__block">
+                            <div class="reg-countdown__value" id="countdown-seconds">00</div>
+                            <div class="reg-countdown__label">Sekunder</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            <script>
+            (function() {
+                const opensTime = <?= $registrationOpensTime * 1000 ?>;
+                const daysEl = document.getElementById('countdown-days');
+                const hoursEl = document.getElementById('countdown-hours');
+                const minutesEl = document.getElementById('countdown-minutes');
+                const secondsEl = document.getElementById('countdown-seconds');
 
-                    function updateCountdown() {
-                        const now = Date.now();
-                        const diff = opensTime - now;
+                function pad(num) {
+                    return num < 10 ? '0' + num : num;
+                }
 
-                        if (diff <= 0) {
-                            countdownEl.textContent = 'Anmälan är öppen!';
-                            setTimeout(() => location.reload(), 2000);
-                            return;
-                        }
+                function updateCountdown() {
+                    const now = Date.now();
+                    const diff = opensTime - now;
 
-                        const days = Math.floor(diff / (1000 * 60 * 60 * 24));
-                        const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
-                        const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
-                        const seconds = Math.floor((diff % (1000 * 60)) / 1000);
-
-                        let parts = [];
-                        if (days > 0) parts.push(days + 'd');
-                        if (hours > 0 || days > 0) parts.push(hours + 'h');
-                        if (minutes > 0 || hours > 0 || days > 0) parts.push(minutes + 'm');
-                        parts.push(seconds + 's');
-
-                        countdownEl.textContent = parts.join(' ');
-                        setTimeout(updateCountdown, 1000);
+                    if (diff <= 0) {
+                        location.reload();
+                        return;
                     }
 
-                    updateCountdown();
-                })();
-                </script>
-            </div>
+                    const days = Math.floor(diff / (1000 * 60 * 60 * 24));
+                    const hours = Math.floor((diff % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+                    const minutes = Math.floor((diff % (1000 * 60 * 60)) / (1000 * 60));
+                    const seconds = Math.floor((diff % (1000 * 60)) / 1000);
+
+                    daysEl.textContent = pad(days);
+                    hoursEl.textContent = pad(hours);
+                    minutesEl.textContent = pad(minutes);
+                    secondsEl.textContent = pad(seconds);
+
+                    setTimeout(updateCountdown, 1000);
+                }
+
+                updateCountdown();
+            })();
+            </script>
 
         <?php elseif (empty($eventPricing)): ?>
             <div class="alert alert--info">
