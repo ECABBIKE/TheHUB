@@ -3064,22 +3064,40 @@ if (!empty($event['series_id'])) {
                 }
                 @media (max-width: 767px) {
                     .reg-countdown {
-                        padding: var(--space-xl) var(--space-md);
+                        padding: var(--space-lg) var(--space-sm);
+                        margin-left: -16px;
+                        margin-right: -16px;
+                        border-radius: 0 !important;
+                        border-left: none !important;
+                        border-right: none !important;
+                    }
+                    .reg-countdown__icon {
+                        width: 48px;
+                        height: 48px;
                     }
                     .reg-countdown__title {
-                        font-size: 1.5rem;
+                        font-size: 1.3rem;
+                    }
+                    .reg-countdown__date {
+                        font-size: 0.95rem;
                     }
                     .reg-countdown__timer {
-                        gap: var(--space-sm);
+                        gap: var(--space-2xs);
                     }
                     .reg-countdown__block {
-                        min-width: 60px;
+                        flex: 1;
+                        min-width: 0;
                     }
                     .reg-countdown__value {
-                        font-size: 2.5rem;
+                        font-size: 2rem;
+                    }
+                    .reg-countdown__label {
+                        font-size: 0.65rem;
+                        letter-spacing: 0;
                     }
                     .reg-countdown__separator {
-                        font-size: 1.5rem;
+                        font-size: 1.3rem;
+                        margin: 0 -2px;
                     }
                 }
             </style>
