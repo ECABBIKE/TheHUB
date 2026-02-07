@@ -459,31 +459,12 @@ try {
 } catch (Exception $e) {}
 
 // Get events in this series from series_events table
-// DEBUG: Try a simpler query first
-$simpleTest = $db->getAll("
-    SELECT se.id, se.event_id, se.series_id, e.id as eid, e.name
-    FROM series_events se
-    JOIN events e ON se.event_id = e.id
-    WHERE se.series_id = ?
-", [$id]);
-
-// Debug logging
-if (empty($simpleTest)) {
-    error_log("series-manage.php DEBUG: Simple JOIN test FAILED for series_id=$id");
-    // Try without JOIN
-    $noJoinTest = $db->getAll("SELECT * FROM series_events WHERE series_id = ?", [$id]);
-    error_log("series-manage.php DEBUG: Without JOIN: " . count($noJoinTest) . " rows");
-    if (!empty($noJoinTest)) {
-        error_log("series-manage.php DEBUG: First row event_id: " . ($noJoinTest[0]['event_id'] ?? 'null'));
-    }
-} else {
-    error_log("series-manage.php DEBUG: Simple JOIN returned " . count($simpleTest) . " rows for series_id=$id");
-}
-
+// Use a simpler query that we know works based on debugging
 $seriesEvents = $db->getAll("
-    SELECT se.*, e.name as event_name, e.date as event_date, e.location, e.discipline,
-           e.series_id as event_series_id, ps.name as template_name,
-           e.registration_opens, e.registration_deadline
+    SELECT se.id, se.event_id, se.series_id, se.template_id, se.sort_order,
+           e.name as event_name, e.date as event_date, e.location, e.discipline,
+           e.series_id as event_series_id, e.registration_opens, e.registration_deadline,
+           ps.name as template_name
     FROM series_events se
     JOIN events e ON se.event_id = e.id
     LEFT JOIN point_scales ps ON se.template_id = ps.id
@@ -491,26 +472,50 @@ $seriesEvents = $db->getAll("
     ORDER BY e.date ASC
 ", [$id]);
 
-// If main query fails but simple test passed, use simple results
-if (empty($seriesEvents) && !empty($simpleTest)) {
-    error_log("series-manage.php DEBUG: Main query failed but simple test passed. Using fallback.");
-    // Fallback: query events directly based on series_events
-    $eventIds = array_column($simpleTest, 'event_id');
-    if (!empty($eventIds)) {
-        $placeholders = implode(',', array_fill(0, count($eventIds), '?'));
-        $seriesEvents = $db->getAll("
-            SELECT e.id, e.name as event_name, e.date as event_date, e.location, e.discipline,
-                   e.series_id as event_series_id, e.registration_opens, e.registration_deadline,
-                   NULL as template_name, NULL as template_id
-            FROM events e
-            WHERE e.id IN ($placeholders)
-            ORDER BY e.date ASC
-        ", $eventIds);
+// Debug: If still empty, try without LEFT JOIN
+if (empty($seriesEvents)) {
+    error_log("series-manage.php: Main query returned 0 rows for series_id=$id, trying without LEFT JOIN");
+    $seriesEvents = $db->getAll("
+        SELECT se.id, se.event_id, se.series_id, se.template_id, se.sort_order,
+               e.name as event_name, e.date as event_date, e.location, e.discipline,
+               e.series_id as event_series_id, e.registration_opens, e.registration_deadline,
+               NULL as template_name
+        FROM series_events se
+        JOIN events e ON se.event_id = e.id
+        WHERE se.series_id = ?
+        ORDER BY e.date ASC
+    ", [$id]);
+}
 
-        // Add series_events info
-        foreach ($seriesEvents as &$se) {
-            $se['id'] = null; // series_events.id unknown
-            $se['event_id'] = $se['id'];
+// Debug: If STILL empty, try the absolute simplest query
+if (empty($seriesEvents)) {
+    error_log("series-manage.php: Query without LEFT JOIN also returned 0 rows, trying simplest form");
+    $simpleTest = $db->getAll("
+        SELECT se.id, se.event_id, se.series_id, e.id as eid, e.name as event_name, e.date as event_date, e.location
+        FROM series_events se, events e
+        WHERE se.event_id = e.id AND se.series_id = ?
+    ", [$id]);
+
+    if (!empty($simpleTest)) {
+        error_log("series-manage.php: Simple comma-join worked! " . count($simpleTest) . " rows");
+        // Use this as fallback
+        $seriesEvents = [];
+        foreach ($simpleTest as $row) {
+            $seriesEvents[] = [
+                'id' => $row['id'],
+                'event_id' => $row['event_id'],
+                'series_id' => $row['series_id'],
+                'template_id' => null,
+                'sort_order' => null,
+                'event_name' => $row['event_name'],
+                'event_date' => $row['event_date'],
+                'location' => $row['location'],
+                'discipline' => null,
+                'event_series_id' => null,
+                'registration_opens' => null,
+                'registration_deadline' => null,
+                'template_name' => null
+            ];
         }
     }
 }
@@ -987,16 +992,6 @@ include __DIR__ . '/components/unified-layout.php';
                 </div>
                 <div class="admin-card-body" style="padding: 0;">
                     <?php
-                    // Debug: Show simple test result
-                    if (isset($simpleTest)) {
-                        echo '<div class="alert alert-info m-md"><i data-lucide="bug"></i> ';
-                        echo '<strong>DEBUG simple JOIN test:</strong> ' . count($simpleTest) . ' rader returnerade<br>';
-                        if (!empty($simpleTest)) {
-                            echo 'Events: ' . implode(', ', array_map(function($r) { return $r['event_id'] . ' (' . $r['name'] . ')'; }, $simpleTest));
-                        }
-                        echo '</div>';
-                    }
-
                     // Debug: Show diagnostic info if no events found
                     if (empty($seriesEvents) && empty($orphanedEvents)) {
                         // Check actual database state
