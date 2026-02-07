@@ -51,6 +51,7 @@ function getPaymentConfig(int $eventId): ?array {
         } catch (Exception $e) {}
 
         // 2. Check series' payment_recipient_id (if event has no recipient but belongs to series)
+        // First try via events.series_id
         try {
             $stmt = $pdo->prepare("
                 SELECT pr.*, 'series_recipient' as config_source, s.name as source_name, 1 as swish_enabled
@@ -64,63 +65,91 @@ function getPaymentConfig(int $eventId): ?array {
                 return $config;
             }
         } catch (Exception $e) {}
+
+        // 2b. Also check via series_events junction table (many-to-many)
+        try {
+            $stmt = $pdo->prepare("
+                SELECT pr.*, 'series_recipient' as config_source, s.name as source_name, 1 as swish_enabled
+                FROM series_events se
+                JOIN series s ON se.series_id = s.id
+                JOIN payment_recipients pr ON s.payment_recipient_id = pr.id
+                WHERE se.event_id = ? AND pr.active = 1
+                LIMIT 1
+            ");
+            $stmt->execute([$eventId]);
+            if ($config = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                return $config;
+            }
+        } catch (Exception $e) {}
     }
 
     // Legacy system fallback (payment_configs table)
+    // Note: These tables may not exist in newer installations
 
-    // 3. Check event-specific config
-    $stmt = $pdo->prepare("
-        SELECT pc.*, 'event' as config_source
-        FROM payment_configs pc
-        WHERE pc.event_id = ?
-    ");
-    $stmt->execute([$eventId]);
-    if ($config = $stmt->fetch(PDO::FETCH_ASSOC)) {
-        return $config;
+    // 3. Check event-specific config (legacy payment_configs table)
+    try {
+        $stmt = $pdo->prepare("
+            SELECT pc.*, 'event' as config_source
+            FROM payment_configs pc
+            WHERE pc.event_id = ?
+        ");
+        $stmt->execute([$eventId]);
+        if ($config = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            return $config;
+        }
+    } catch (Exception $e) {
+        // payment_configs table doesn't exist - skip legacy fallbacks
+        return null;
     }
 
     // 4. Check series config (if event belongs to a series)
-    $stmt = $pdo->prepare("
-        SELECT pc.*, 'series' as config_source, s.name as source_name
-        FROM payment_configs pc
-        JOIN series s ON s.id = pc.series_id
-        JOIN events e ON e.series_id = s.id
-        WHERE e.id = ?
-    ");
-    $stmt->execute([$eventId]);
-    if ($config = $stmt->fetch(PDO::FETCH_ASSOC)) {
-        return $config;
-    }
+    try {
+        $stmt = $pdo->prepare("
+            SELECT pc.*, 'series' as config_source, s.name as source_name
+            FROM payment_configs pc
+            JOIN series s ON s.id = pc.series_id
+            JOIN events e ON e.series_id = s.id
+            WHERE e.id = ?
+        ");
+        $stmt->execute([$eventId]);
+        if ($config = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            return $config;
+        }
+    } catch (Exception $e) {}
 
     // 5. Check promotor config (user assigned to this event)
-    $stmt = $pdo->prepare("
-        SELECT pc.*, 'promotor' as config_source, au.full_name as source_name
-        FROM payment_configs pc
-        JOIN admin_users au ON au.id = pc.promotor_user_id
-        JOIN promotor_events pe ON pe.user_id = au.id
-        WHERE pe.event_id = ? AND pc.swish_enabled = 1
-        LIMIT 1
-    ");
-    $stmt->execute([$eventId]);
-    if ($config = $stmt->fetch(PDO::FETCH_ASSOC)) {
-        return $config;
-    }
+    try {
+        $stmt = $pdo->prepare("
+            SELECT pc.*, 'promotor' as config_source, au.full_name as source_name
+            FROM payment_configs pc
+            JOIN admin_users au ON au.id = pc.promotor_user_id
+            JOIN promotor_events pe ON pe.user_id = au.id
+            WHERE pe.event_id = ? AND pc.swish_enabled = 1
+            LIMIT 1
+        ");
+        $stmt->execute([$eventId]);
+        if ($config = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            return $config;
+        }
+    } catch (Exception $e) {}
 
     // 6. Check if any promotor for this event has swish directly on their profile
-    $stmt = $pdo->prepare("
-        SELECT au.swish_number, au.swish_name, au.full_name as source_name,
-               'promotor_direct' as config_source, 1 as swish_enabled
-        FROM admin_users au
-        JOIN promotor_events pe ON pe.user_id = au.id
-        WHERE pe.event_id = ? AND au.swish_number IS NOT NULL
-        LIMIT 1
-    ");
-    $stmt->execute([$eventId]);
-    if ($config = $stmt->fetch(PDO::FETCH_ASSOC)) {
-        return $config;
-    }
+    try {
+        $stmt = $pdo->prepare("
+            SELECT au.swish_number, au.swish_name, au.full_name as source_name,
+                   'promotor_direct' as config_source, 1 as swish_enabled
+            FROM admin_users au
+            JOIN promotor_events pe ON pe.user_id = au.id
+            WHERE pe.event_id = ? AND au.swish_number IS NOT NULL
+            LIMIT 1
+        ");
+        $stmt->execute([$eventId]);
+        if ($config = $stmt->fetch(PDO::FETCH_ASSOC)) {
+            return $config;
+        }
+    } catch (Exception $e) {}
 
-    // 7. No config found - use WooCommerce fallback
+    // 7. No config found
     return null;
 }
 
@@ -689,6 +718,16 @@ function createSeriesOrder(int $seriesRegistrationId, int $riderId): array {
             );
         }
 
+        // Check if Stripe/card is available for this payment recipient
+        $cardAvailable = false;
+        if ($paymentConfig) {
+            try {
+                $hasStripe = !empty($paymentConfig['stripe_account_id']) &&
+                             ($paymentConfig['stripe_account_status'] ?? '') === 'active';
+                $cardAvailable = $hasStripe;
+            } catch (Exception $e) {}
+        }
+
         return [
             'success' => true,
             'order_id' => $orderId,
@@ -702,7 +741,7 @@ function createSeriesOrder(int $seriesRegistrationId, int $riderId): array {
             'swish_number' => $paymentConfig['swish_number'] ?? null,
             'swish_name' => $paymentConfig['swish_name'] ?? null,
             'swish_message' => $swishMessage,
-            'card_available' => false
+            'card_available' => $cardAvailable
         ];
 
     } catch (Exception $e) {

@@ -33,9 +33,42 @@ if (!$eventId) {
 try {
     global $pdo;
 
-    // Update the event using direct PDO
+    // Get old series_id before update
+    $stmt = $pdo->prepare("SELECT series_id FROM events WHERE id = ?");
+    $stmt->execute([$eventId]);
+    $oldSeriesId = $stmt->fetchColumn();
+
+    // Update the event series_id
     $stmt = $pdo->prepare("UPDATE events SET series_id = ? WHERE id = ?");
     $stmt->execute([$seriesId, $eventId]);
+
+    // Sync series_events junction table
+    // Remove from old series if it changed
+    if ($oldSeriesId && $oldSeriesId != $seriesId) {
+        $stmt = $pdo->prepare("DELETE FROM series_events WHERE event_id = ? AND series_id = ?");
+        $stmt->execute([$eventId, $oldSeriesId]);
+    }
+
+    // Add to new series if set and not already there
+    if ($seriesId) {
+        $stmt = $pdo->prepare("SELECT id FROM series_events WHERE event_id = ? AND series_id = ?");
+        $stmt->execute([$eventId, $seriesId]);
+        $existing = $stmt->fetch();
+
+        if (!$existing) {
+            // Get next sort_order
+            $stmt = $pdo->prepare("SELECT COALESCE(MAX(sort_order), 0) + 1 FROM series_events WHERE series_id = ?");
+            $stmt->execute([$seriesId]);
+            $nextOrder = $stmt->fetchColumn();
+
+            $stmt = $pdo->prepare("INSERT INTO series_events (series_id, event_id, template_id, sort_order) VALUES (?, ?, NULL, ?)");
+            $stmt->execute([$seriesId, $eventId, $nextOrder]);
+        }
+    } elseif (!$seriesId && $oldSeriesId) {
+        // Series removed - also remove from series_events
+        $stmt = $pdo->prepare("DELETE FROM series_events WHERE event_id = ? AND series_id = ?");
+        $stmt->execute([$eventId, $oldSeriesId]);
+    }
 
     echo json_encode(['success' => true]);
 } catch (Exception $e) {
