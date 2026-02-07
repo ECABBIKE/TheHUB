@@ -2955,22 +2955,7 @@ if (!empty($event['series_id'])) {
                 Gå till anmälan
             </a>
 
-        <?php elseif (!$isLoggedIn): ?>
-            <!-- Not logged in -->
-            <div class="text-center py-lg">
-                <i data-lucide="log-in" style="width:48px;height:48px;color:var(--color-text-muted);margin-bottom:var(--space-md);"></i>
-                <h3 class="mb-sm">Logga in för att anmäla dig</h3>
-                <p class="text-secondary mb-lg">Du måste vara inloggad för att kunna anmäla dig till eventet.</p>
-                <a href="/login?redirect=<?= urlencode('/event/' . $eventId . '?tab=anmalan') ?>" class="btn btn--primary">
-                    <i data-lucide="log-in"></i>
-                    Logga in
-                </a>
-                <p class="text-sm text-muted mt-md">
-                    Har du inget konto? <a href="/register?redirect=<?= urlencode('/event/' . $eventId . '?tab=anmalan') ?>">Registrera dig här</a>
-                </p>
-            </div>
-
-        <?php elseif ($existingRegistration): ?>
+        <?php elseif ($isLoggedIn && $existingRegistration): ?>
             <!-- Already registered -->
             <div class="reg-existing">
                 <i data-lucide="check-circle" class="reg-existing__icon"></i>
@@ -3079,22 +3064,40 @@ if (!empty($event['series_id'])) {
                 }
                 @media (max-width: 767px) {
                     .reg-countdown {
-                        padding: var(--space-xl) var(--space-md);
+                        padding: var(--space-lg) var(--space-sm);
+                        margin-left: -16px;
+                        margin-right: -16px;
+                        border-radius: 0 !important;
+                        border-left: none !important;
+                        border-right: none !important;
+                    }
+                    .reg-countdown__icon {
+                        width: 48px;
+                        height: 48px;
                     }
                     .reg-countdown__title {
-                        font-size: 1.5rem;
+                        font-size: 1.3rem;
+                    }
+                    .reg-countdown__date {
+                        font-size: 0.95rem;
                     }
                     .reg-countdown__timer {
-                        gap: var(--space-sm);
+                        gap: var(--space-2xs);
                     }
                     .reg-countdown__block {
-                        min-width: 60px;
+                        flex: 1;
+                        min-width: 0;
                     }
                     .reg-countdown__value {
-                        font-size: 2.5rem;
+                        font-size: 2rem;
+                    }
+                    .reg-countdown__label {
+                        font-size: 0.65rem;
+                        letter-spacing: 0;
                     }
                     .reg-countdown__separator {
-                        font-size: 1.5rem;
+                        font-size: 1.3rem;
+                        margin: 0 -2px;
                     }
                 }
             </style>
@@ -3167,10 +3170,12 @@ if (!empty($event['series_id'])) {
             </script>
 
         <?php elseif (empty($eventPricing)): ?>
-            <div class="alert alert--info">
-                <i data-lucide="info"></i>
-                <strong>Eventets anmälan hanteras ej av TheHUB.</strong><br>
-                Kontakta arrangerande klubb för mer information.
+            <div class="alert alert--info" style="display: flex; gap: var(--space-md); text-align: left;">
+                <i data-lucide="info" style="flex-shrink: 0; margin-top: 2px;"></i>
+                <div>
+                    <strong style="display: block; margin-bottom: var(--space-xs);">Eventets anmälan hanteras ej av TheHUB.</strong>
+                    <span>Kontakta arrangerande klubb för mer information.</span>
+                </div>
             </div>
 
         <?php else: ?>
