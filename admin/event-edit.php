@@ -308,6 +308,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'organizer_club_id' => !empty($_POST['organizer_club_id']) ? intval($_POST['organizer_club_id']) : null,
             'organizer' => '', // Keep for backwards compatibility
             'website' => trim($_POST['website'] ?? ''),
+            'registration_opens' => !empty($_POST['registration_opens']) ? trim($_POST['registration_opens']) : null,
             'registration_deadline' => !empty($_POST['registration_deadline']) ? trim($_POST['registration_deadline']) : null,
             'registration_deadline_time' => !empty($_POST['registration_deadline_time']) ? trim($_POST['registration_deadline_time']) : null,
             'active' => isset($_POST['active']) ? 1 : 0,
@@ -797,6 +798,23 @@ include __DIR__ . '/components/unified-layout.php';
                         Välj bild från <a href="/admin/media?folder=series" target="_blank">Mediabiblioteket (Serie-loggor)</a>. Används i kalender om eventet inte tillhör en serie.
                     </small>
                 </div>
+
+                <div class="admin-form-group">
+                    <label class="admin-form-label">Anmälan öppnar (datum och tid)</label>
+                    <input type="datetime-local" name="registration_opens" class="admin-form-input" value="<?= !empty($event['registration_opens']) ? date('Y-m-d\TH:i', strtotime($event['registration_opens'])) : '' ?>">
+                    <small class="form-help">När anmälan öppnar. Lämna tomt om anmälan redan är öppen.</small>
+                </div>
+
+                <div class="admin-form-group">
+                    <label class="admin-form-label">Anmälningsfrist (datum)</label>
+                    <input type="date" name="registration_deadline" class="admin-form-input" value="<?= h($event['registration_deadline'] ?? '') ?>">
+                </div>
+
+                <div class="admin-form-group">
+                    <label class="admin-form-label">Anmälningsfrist (klockslag)</label>
+                    <input type="time" name="registration_deadline_time" class="admin-form-input" value="<?= h($event['registration_deadline_time'] ?? '') ?>">
+                    <small class="form-help">Lämna tomt för 23:59</small>
+                </div>
             </div>
         </fieldset>
     </details>
@@ -1093,17 +1111,6 @@ include __DIR__ . '/components/unified-layout.php';
                 <div class="admin-form-group">
                     <label class="admin-form-label">Kontakt telefon</label>
                     <input type="tel" name="contact_phone" class="admin-form-input" value="<?= h($event['contact_phone'] ?? '') ?>">
-                </div>
-
-                <div class="admin-form-group">
-                    <label class="admin-form-label">Anmälningsfrist (datum)</label>
-                    <input type="date" name="registration_deadline" class="admin-form-input" value="<?= h($event['registration_deadline'] ?? '') ?>">
-                </div>
-
-                <div class="admin-form-group">
-                    <label class="admin-form-label">Anmälningsfrist (klockslag)</label>
-                    <input type="time" name="registration_deadline_time" class="admin-form-input" value="<?= h($event['registration_deadline_time'] ?? '') ?>">
-                    <small class="form-help">Lämna tomt för 23:59</small>
                 </div>
             </div>
         </div>
