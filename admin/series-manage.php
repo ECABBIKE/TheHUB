@@ -276,13 +276,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         try {
             // Get event_id before deleting
             $seriesEvent = $db->getOne("SELECT event_id FROM series_events WHERE id = ?", [$seriesEventId]);
+            error_log("REMOVE_EVENT: Attempting to remove series_event {$seriesEventId}, event_id = " . ($seriesEvent ? $seriesEvent['event_id'] : 'NULL'));
 
             // Delete from series_events
             $deleted = $db->delete('series_events', 'id = ? AND series_id = ?', [$seriesEventId, $id]);
+            error_log("REMOVE_EVENT: Deleted from series_events: " . ($deleted ? 'YES' : 'NO'));
 
             if ($deleted && $seriesEvent) {
                 // Also clear events.series_id to prevent auto-sync from re-adding
-                $db->query("UPDATE events SET series_id = NULL WHERE id = ? AND series_id = ?", [$seriesEvent['event_id'], $id]);
+                $updateResult = $db->query("UPDATE events SET series_id = NULL WHERE id = ? AND series_id = ?", [$seriesEvent['event_id'], $id]);
+                error_log("REMOVE_EVENT: Updated events.series_id to NULL for event {$seriesEvent['event_id']}, affected rows: " . ($updateResult ? $updateResult->rowCount() : '0'));
+
+                // Verify it was actually cleared
+                $check = $db->getOne("SELECT series_id FROM events WHERE id = ?", [$seriesEvent['event_id']]);
+                error_log("REMOVE_EVENT: Verification - event {$seriesEvent['event_id']} series_id is now: " . ($check['series_id'] ?? 'NULL'));
+
                 $message = 'Event borttaget från serien';
                 $messageType = 'success';
             } elseif (!$seriesEvent) {
