@@ -26,7 +26,13 @@ if ($scfEnabled) {
     $scfService = new SCFLicenseService($apiKey, $db);
     $currentYear = (int)date('Y');
     $stats = $scfService->getSyncStats($currentYear);
-    $recentSyncs = $scfService->getRecentSyncs(10);
+    // Only get syncs that actually processed something (not empty runs)
+    $recentSyncs = $db->getAll("
+        SELECT * FROM scf_sync_log
+        WHERE processed > 0 OR status = 'failed'
+        ORDER BY started_at DESC
+        LIMIT 10
+    ");
 }
 
 // Get general rider statistics
@@ -81,8 +87,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action'])) {
                         break;
                     }
 
-                    // Start sync log
-                    $scfService->startSync('manual_batch', $year, count($riders));
+                    // Start sync log (only if we have riders to process)
+                    $scfService->startSync('manual', $year, count($riders));
 
                     // Sync the batch
                     $result = $scfService->syncRiderBatch($riders, $year);
@@ -459,9 +465,10 @@ include __DIR__ . '/components/unified-layout.php';
                                 'incremental' => 'Automatisk (inkr.)',
                                 'manual' => 'Manuell',
                                 'manual_batch' => 'Manuell batch',
-                                'match_search' => 'Matchningssökning'
+                                'match_search' => 'Matchningssökning',
+                                'cron' => 'Cron'
                             ];
-                            echo $typeLabels[$sync['sync_type']] ?? htmlspecialchars($sync['sync_type']);
+                            echo $typeLabels[$sync['sync_type']] ?? htmlspecialchars($sync['sync_type'] ?: '-');
                             ?>
                         </td>
                         <td><?= $sync['year'] ?></td>
