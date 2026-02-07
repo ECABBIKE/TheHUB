@@ -1,6 +1,6 @@
 # TheHUB - Development Roadmap
 
-> Senast uppdaterad: 2026-02-05
+> Senast uppdaterad: 2026-02-07
 >
 > **Se:** `/admin/roadmap.php` for interaktiv vy
 
@@ -261,6 +261,38 @@ Automatiskt genererade "trading cards" med deltagarstatistik:
 ---
 
 # CHANGELOG
+
+### 2026-02-07 (Events/Series Sync & Betalningsfix)
+- **Branch:** claude/fix-events-payments-rAxgE
+
+- **Buggfix: Events hamnar nu i ratt serier**
+  - Fixat `admin/api/update-event-series.php` - synkar nu bade `events.series_id` OCH `series_events` junction-tabellen
+  - Events som tilldelas serie via admin-tabellen syns nu korrekt i serievyer och publika sidor
+
+- **Buggfix: Betalningar kraschar inte langre**
+  - Fixat `includes/payment.php` `getPaymentConfig()` - legacy fallback-queries (payment_configs) ar nu wrappade i try/catch
+  - Lagt till sok via `series_events` junction-tabellen for betalningsmottagare (inte bara events.series_id)
+  - `createSeriesOrder()` kontrollerar nu korrekt om Stripe/kort finns tillgangligt
+  - Checkout-sidan visar nu tydligt meddelande om ingen betalningsmetod ar konfigurerad
+
+- **UI-fix: Admin serie-hantering**
+  - Knappar pa `/admin/series` - "Hantera" och "Radera" ar nu proportionerliga med Lucide-ikoner + text
+  - Events-tab: Poangmall sparas nu automatiskt vid val (onchange auto-submit)
+  - Events-tab: Spara- och ta bort-knappar har nu synliga text-etiketter
+  - Registration-tab: Sparfunktion for anmalningsdatum fungerar nu (hanterar saknade kolumner)
+
+- **Ny migration: 036_event_registration_opens.sql**
+  - Lagger till `registration_opens` (DATETIME) pa events-tabellen
+  - Lagger till `registration_deadline_time` (TIME) for tidkomponent
+
+- **Nya/andrade filer:**
+  - `admin/api/update-event-series.php` - Fixat series_events-synk
+  - `admin/series.php` - Snyggare knappar
+  - `admin/series-manage.php` - Fixade knappar, events-query, registration save
+  - `includes/payment.php` - Fixat getPaymentConfig(), createSeriesOrder()
+  - `pages/checkout.php` - Borre felhantering vid saknad betalningsmetod
+  - `Tools/migrations/036_event_registration_opens.sql` - Ny migration
+  - `admin/migrations.php` - Registrerat migration 036
 
 ### 2026-02-05 (User Accounts System)
 - **Branch:** claude/create-event-import-tool-MHtMW

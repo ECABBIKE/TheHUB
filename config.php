@@ -90,6 +90,8 @@ if (APP_ENV === 'development') {
 // Version info
 define('APP_VERSION', '1.0');
 define('APP_VERSION_NAME', 'Release');
+define('APP_BUILD', '2026-02-07');
+define('DEPLOYMENT_OFFSET', 131);
 
 
 try {

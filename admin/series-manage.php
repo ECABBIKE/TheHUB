@@ -375,21 +375,58 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $closesDate = $_POST['closes_date'] ?? [];
         $closesTime = $_POST['closes_time'] ?? [];
 
+        // Check which columns exist on events table
+        $hasRegOpens = false;
+        $hasRegDeadlineTime = false;
+        try {
+            $cols = $db->getAll("SHOW COLUMNS FROM events LIKE 'registration_opens'");
+            $hasRegOpens = !empty($cols);
+        } catch (Exception $e) {}
+        try {
+            $cols = $db->getAll("SHOW COLUMNS FROM events LIKE 'registration_deadline_time'");
+            $hasRegDeadlineTime = !empty($cols);
+        } catch (Exception $e) {}
+
         $saved = 0;
+        $errors = 0;
         foreach ($eventIds as $index => $eventId) {
             $eventId = intval($eventId);
-            $regOpens = !empty($opensDate[$index]) ? $opensDate[$index] . ' ' . ($opensTime[$index] ?? '00:00:00') : null;
-            $regCloses = !empty($closesDate[$index]) ? $closesDate[$index] . ' ' . ($closesTime[$index] ?? '23:59:59') : null;
 
-            $db->update('events', [
-                'registration_opens' => $regOpens,
-                'registration_deadline' => $regCloses
-            ], 'id = ?', [$eventId]);
-            $saved++;
+            $updateData = [];
+
+            // Handle registration opens
+            if ($hasRegOpens) {
+                $regOpens = !empty($opensDate[$index]) ? $opensDate[$index] . ' ' . ($opensTime[$index] ?? '00:00:00') : null;
+                $updateData['registration_opens'] = $regOpens;
+            }
+
+            // Handle registration deadline (date + optional time)
+            $regClosesDate = !empty($closesDate[$index]) ? $closesDate[$index] : null;
+            $updateData['registration_deadline'] = $regClosesDate;
+
+            if ($hasRegDeadlineTime) {
+                $regClosesTime = !empty($closesTime[$index]) ? $closesTime[$index] . ':00' : null;
+                $updateData['registration_deadline_time'] = $regClosesTime;
+            }
+
+            if (!empty($updateData)) {
+                try {
+                    $db->update('events', $updateData, 'id = ?', [$eventId]);
+                    $saved++;
+                } catch (Exception $e) {
+                    error_log("save_event_times error for event $eventId: " . $e->getMessage());
+                    $errors++;
+                }
+            }
         }
 
-        $message = "Sparade anmälningstider för $saved events";
-        $messageType = 'success';
+        if ($errors > 0) {
+            $message = "Sparade $saved events, $errors fel. Kör migration 036 först om kolumner saknas.";
+            $messageType = 'warning';
+        } else {
+            $message = "Sparade anmälningstider for $saved events";
+            $messageType = 'success';
+        }
         $activeTab = 'registration';
     }
 
@@ -458,65 +495,55 @@ try {
     }
 } catch (Exception $e) {}
 
-// Get events in this series from series_events table
-// Use a simpler query that we know works based on debugging
-$seriesEvents = $db->getAll("
-    SELECT se.id, se.event_id, se.series_id, se.template_id, se.sort_order,
-           e.name as event_name, e.date as event_date, e.location, e.discipline,
-           e.series_id as event_series_id, e.registration_opens, e.registration_deadline,
-           ps.name as template_name
-    FROM series_events se
-    JOIN events e ON se.event_id = e.id
-    LEFT JOIN point_scales ps ON se.template_id = ps.id
-    WHERE se.series_id = ?
-    ORDER BY e.date ASC
-", [$id]);
+// Check which registration columns exist on events table
+$hasEventsRegOpens = false;
+$hasEventsRegDeadlineTime = false;
+try {
+    $cols = $db->getAll("SHOW COLUMNS FROM events LIKE 'registration_opens'");
+    $hasEventsRegOpens = !empty($cols);
+} catch (Exception $e) {}
+try {
+    $cols = $db->getAll("SHOW COLUMNS FROM events LIKE 'registration_deadline_time'");
+    $hasEventsRegDeadlineTime = !empty($cols);
+} catch (Exception $e) {}
 
-// Debug: If still empty, try without LEFT JOIN
-if (empty($seriesEvents)) {
-    error_log("series-manage.php: Main query returned 0 rows for series_id=$id, trying without LEFT JOIN");
+$regOpensSelect = $hasEventsRegOpens ? 'e.registration_opens' : 'NULL as registration_opens';
+$regDeadlineTimeSelect = $hasEventsRegDeadlineTime ? 'e.registration_deadline_time' : 'NULL as registration_deadline_time';
+
+// Get events in this series from series_events table
+$seriesEvents = [];
+try {
     $seriesEvents = $db->getAll("
         SELECT se.id, se.event_id, se.series_id, se.template_id, se.sort_order,
                e.name as event_name, e.date as event_date, e.location, e.discipline,
-               e.series_id as event_series_id, e.registration_opens, e.registration_deadline,
-               NULL as template_name
+               e.series_id as event_series_id, {$regOpensSelect}, e.registration_deadline,
+               {$regDeadlineTimeSelect}, ps.name as template_name
         FROM series_events se
         JOIN events e ON se.event_id = e.id
+        LEFT JOIN point_scales ps ON se.template_id = ps.id
         WHERE se.series_id = ?
         ORDER BY e.date ASC
     ", [$id]);
+} catch (Exception $e) {
+    error_log("series-manage.php: Main query failed: " . $e->getMessage());
 }
 
-// Debug: If STILL empty, try the absolute simplest query
+// Fallback: simplest query if main fails
 if (empty($seriesEvents)) {
-    error_log("series-manage.php: Query without LEFT JOIN also returned 0 rows, trying simplest form");
-    $simpleTest = $db->getAll("
-        SELECT se.id, se.event_id, se.series_id, e.id as eid, e.name as event_name, e.date as event_date, e.location
-        FROM series_events se, events e
-        WHERE se.event_id = e.id AND se.series_id = ?
-    ", [$id]);
-
-    if (!empty($simpleTest)) {
-        error_log("series-manage.php: Simple comma-join worked! " . count($simpleTest) . " rows");
-        // Use this as fallback
-        $seriesEvents = [];
-        foreach ($simpleTest as $row) {
-            $seriesEvents[] = [
-                'id' => $row['id'],
-                'event_id' => $row['event_id'],
-                'series_id' => $row['series_id'],
-                'template_id' => null,
-                'sort_order' => null,
-                'event_name' => $row['event_name'],
-                'event_date' => $row['event_date'],
-                'location' => $row['location'],
-                'discipline' => null,
-                'event_series_id' => null,
-                'registration_opens' => null,
-                'registration_deadline' => null,
-                'template_name' => null
-            ];
-        }
+    try {
+        $seriesEvents = $db->getAll("
+            SELECT se.id, se.event_id, se.series_id, se.template_id, se.sort_order,
+                   e.name as event_name, e.date as event_date, e.location, e.discipline,
+                   e.series_id as event_series_id, e.registration_deadline,
+                   NULL as registration_opens, NULL as registration_deadline_time,
+                   NULL as template_name
+            FROM series_events se
+            JOIN events e ON se.event_id = e.id
+            WHERE se.series_id = ?
+            ORDER BY e.date ASC
+        ", [$id]);
+    } catch (Exception $e) {
+        error_log("series-manage.php: Fallback query also failed: " . $e->getMessage());
     }
 }
 
@@ -1119,11 +1146,11 @@ include __DIR__ . '/components/unified-layout.php';
                                     </td>
                                     <td><?= $se['event_date'] ? date('Y-m-d', strtotime($se['event_date'])) : '-' ?></td>
                                     <td>
-                                        <form method="POST" class="flex gap-xs">
+                                        <form method="POST" class="flex gap-xs items-center">
                                             <?= csrf_field() ?>
                                             <input type="hidden" name="action" value="update_template">
                                             <input type="hidden" name="series_event_id" value="<?= $se['id'] ?>">
-                                            <select name="template_id" class="admin-form-select template-select">
+                                            <select name="template_id" class="admin-form-select template-select" onchange="this.form.submit()">
                                                 <option value="">-- Ingen --</option>
                                                 <?php foreach ($pointScales as $scale): ?>
                                                 <option value="<?= $scale['id'] ?>" <?= $se['template_id'] == $scale['id'] ? 'selected' : '' ?>>
@@ -1131,8 +1158,8 @@ include __DIR__ . '/components/unified-layout.php';
                                                 </option>
                                                 <?php endforeach; ?>
                                             </select>
-                                            <button type="submit" class="btn-admin btn-admin-sm btn-admin-secondary" title="Spara">
-                                                <i data-lucide="check"></i>
+                                            <button type="submit" class="btn-admin btn-admin-sm btn-admin-primary" title="Spara poängmall">
+                                                <i data-lucide="save" style="width:14px;height:14px;"></i> Spara
                                             </button>
                                         </form>
                                     </td>
@@ -1141,8 +1168,8 @@ include __DIR__ . '/components/unified-layout.php';
                                             <?= csrf_field() ?>
                                             <input type="hidden" name="action" value="remove_event">
                                             <input type="hidden" name="series_event_id" value="<?= $se['id'] ?>">
-                                            <button type="submit" class="btn-admin btn-admin-sm btn-admin-danger">
-                                                <i data-lucide="trash-2"></i>
+                                            <button type="submit" class="btn-admin btn-admin-sm btn-admin-danger" title="Ta bort event">
+                                                <i data-lucide="trash-2" style="width:14px;height:14px;"></i> Ta bort
                                             </button>
                                         </form>
                                     </td>
@@ -1220,10 +1247,18 @@ include __DIR__ . '/components/unified-layout.php';
 
                 <div class="reg-times-grid">
                     <?php foreach ($seriesEvents as $se):
-                        $opensDate = $se['registration_opens'] ? date('Y-m-d', strtotime($se['registration_opens'])) : '';
-                        $opensTime = $se['registration_opens'] ? date('H:i', strtotime($se['registration_opens'])) : '00:00';
-                        $closesDate = $se['registration_deadline'] ? date('Y-m-d', strtotime($se['registration_deadline'])) : '';
-                        $closesTime = $se['registration_deadline'] ? date('H:i', strtotime($se['registration_deadline'])) : '23:59';
+                        // Opens: stored as DATETIME in registration_opens
+                        $opensDate = !empty($se['registration_opens']) ? date('Y-m-d', strtotime($se['registration_opens'])) : '';
+                        $opensTime = !empty($se['registration_opens']) ? date('H:i', strtotime($se['registration_opens'])) : '00:00';
+                        // Closes: stored as DATE in registration_deadline + optional TIME in registration_deadline_time
+                        $closesDate = !empty($se['registration_deadline']) ? date('Y-m-d', strtotime($se['registration_deadline'])) : '';
+                        if (!empty($se['registration_deadline_time'])) {
+                            $closesTime = date('H:i', strtotime($se['registration_deadline_time']));
+                        } elseif (!empty($se['registration_deadline'])) {
+                            $closesTime = '23:59';
+                        } else {
+                            $closesTime = '23:59';
+                        }
                     ?>
                     <div class="reg-time-row">
                         <div>

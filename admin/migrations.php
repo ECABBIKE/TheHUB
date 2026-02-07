@@ -127,6 +127,9 @@ $migrationChecks = [
         'tables' => ['user_accounts'],
         'columns' => ['riders.user_account_id']
     ],
+    '036_event_registration_opens.sql' => [
+        'columns' => ['events.registration_opens', 'events.registration_deadline_time']
+    ],
 ];
 
 // ============================================================================

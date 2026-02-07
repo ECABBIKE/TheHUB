@@ -417,7 +417,7 @@ include __DIR__ . '/../components/header.php';
                     <?php endif; ?>
 
                     <?php if (!empty($order['card_available'])): ?>
-                    <!-- Card payment via WooCommerce -->
+                    <!-- Card payment via Stripe -->
                     <div class="payment-option payment-option--card">
                         <div class="flex items-center gap-md mb-md">
                             <i data-lucide="credit-card" class="icon-lg"></i>
@@ -426,12 +426,21 @@ include __DIR__ . '/../components/header.php';
                                 <p class="text-sm text-secondary">Visa, Mastercard, etc.</p>
                             </div>
                         </div>
-                        <button type="button"
-                                class="btn btn--secondary btn--lg w-full"
-                                onclick="WooCommerce.openCheckout('<?= WC_CHECKOUT_URL ?>?order=<?= $order['id'] ?>')">
-                            <i data-lucide="external-link"></i>
-                            Betala med kort
-                        </button>
+                        <p class="text-sm text-secondary">
+                            Kortbetalning via Stripe. Kontakta arrangören för mer information.
+                        </p>
+                    </div>
+                    <?php endif; ?>
+
+                    <?php if (empty($order['swish_available']) && empty($order['card_available'])): ?>
+                    <!-- No payment method available -->
+                    <div class="text-center py-lg">
+                        <i data-lucide="alert-circle" class="icon-lg text-warning mb-md"></i>
+                        <h3 class="font-medium mb-sm">Ingen betalningsmetod konfigurerad</h3>
+                        <p class="text-sm text-secondary">
+                            Arrangören har inte konfigurerat betalning för detta event.
+                            Kontakta arrangören direkt for betalningsinstruktioner.
+                        </p>
                     </div>
                     <?php endif; ?>
                 </div>
