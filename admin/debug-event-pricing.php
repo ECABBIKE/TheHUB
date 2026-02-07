@@ -40,9 +40,31 @@ if ($event['pricing_template_id']) {
     }
 }
 
-// Check event pricing rules
+// Check event pricing rules (without JOIN)
 $eventRules = $db->getAll("SELECT * FROM event_pricing_rules WHERE event_id = ?", [$eventId]);
-echo "\nEvent-specific pricing rules: " . count($eventRules) . "\n";
+echo "\nEvent-specific pricing rules (raw): " . count($eventRules) . "\n";
+
+// Check event pricing rules (WITH JOIN like frontend does)
+$eventRulesWithJoin = $db->getAll("
+    SELECT epr.class_id, epr.base_price, epr.early_bird_price, epr.late_fee,
+           c.name as class_name, c.display_name
+    FROM event_pricing_rules epr
+    JOIN classes c ON epr.class_id = c.id
+    WHERE epr.event_id = ?
+", [$eventId]);
+echo "Event-specific pricing rules (with JOIN classes): " . count($eventRulesWithJoin) . "\n";
+
+if (count($eventRules) != count($eventRulesWithJoin)) {
+    echo "\n⚠️ WARNING: Some pricing rules have invalid class_id!\n";
+    echo "Checking which class_ids are missing:\n";
+
+    foreach ($eventRules as $rule) {
+        $classExists = $db->getOne("SELECT id FROM classes WHERE id = ?", [$rule['class_id']]);
+        if (!$classExists) {
+            echo "  - Pricing rule for class_id={$rule['class_id']} - CLASS DOES NOT EXIST!\n";
+        }
+    }
+}
 
 // Check series_events
 $seriesEvent = $db->getOne("SELECT * FROM series_events WHERE event_id = ?", [$eventId]);

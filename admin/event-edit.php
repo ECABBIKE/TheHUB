@@ -36,7 +36,7 @@ try {
     if ($paymentRecipientColumnExists) {
         $tables = $db->getAll("SHOW TABLES LIKE 'payment_recipients'");
         if (!empty($tables)) {
-            $paymentRecipients = $db->getAll("SELECT id, name, swish_number, swish_name FROM payment_recipients WHERE active = 1 ORDER BY name ASC");
+            $paymentRecipients = $db->getAll("SELECT id, name, stripe_account_status FROM payment_recipients WHERE active = 1 ORDER BY name ASC");
         }
     }
 } catch (Exception $e) {
@@ -1127,12 +1127,12 @@ include __DIR__ . '/components/unified-layout.php';
         </summary>
         <fieldset class="admin-card-body fieldset-reset" style="padding: var(--space-lg);" <?= $isPromotorOnly ? 'disabled' : '' ?>>
             <div class="admin-form-group">
-                <label class="admin-form-label">Betalningsmottagare (Swish)</label>
+                <label class="admin-form-label">Betalningsmottagare</label>
                 <select name="payment_recipient_id" class="admin-form-select">
                     <option value="">Använd seriens mottagare</option>
                     <?php foreach ($paymentRecipients as $recipient): ?>
                         <option value="<?= $recipient['id'] ?>" <?= ($event['payment_recipient_id'] ?? '') == $recipient['id'] ? 'selected' : '' ?>>
-                            <?= h($recipient['name']) ?> (<?= h($recipient['swish_number']) ?>)
+                            <?= h($recipient['name']) ?><?php if (!empty($recipient['stripe_account_status'])): ?> (<?= $recipient['stripe_account_status'] === 'active' ? 'aktiv' : 'inaktiv' ?>)<?php endif; ?>
                         </option>
                     <?php endforeach; ?>
                 </select>
