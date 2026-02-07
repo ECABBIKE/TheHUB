@@ -2482,6 +2482,7 @@ $isLoggedIn = hub_is_logged_in();
 
 // Get pricing info for this event from template
 $eventPricing = [];
+error_log("EVENT PRICING DEBUG: Event {$eventId}, pricing_template_id=" . ($event['pricing_template_id'] ?? 'NULL'));
 if (!empty($event['pricing_template_id'])) {
     try {
         $pricingStmt = $db->prepare("
@@ -2498,10 +2499,14 @@ if (!empty($event['pricing_template_id'])) {
         // Debug: Log if template ID is set but no pricing found
         if (empty($eventPricing)) {
             error_log("EVENT PRICING: Event {$eventId} has pricing_template_id={$event['pricing_template_id']} but no pricing_template_rules found");
+        } else {
+            error_log("EVENT PRICING DEBUG: Found " . count($eventPricing) . " pricing rules for event {$eventId}");
         }
     } catch (PDOException $e) {
         error_log("EVENT PRICING: PDO error loading template pricing for event {$eventId}: " . $e->getMessage());
     }
+} else {
+    error_log("EVENT PRICING DEBUG: Event {$eventId} has no pricing_template_id set");
 }
 
 // Fallback: If no template pricing, try event_pricing_rules (legacy)
