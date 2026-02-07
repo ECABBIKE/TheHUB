@@ -273,9 +273,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     elseif ($action === 'remove_event') {
         $seriesEventId = intval($_POST['series_event_id']);
-        $db->delete('series_events', 'id = ? AND series_id = ?', [$seriesEventId, $id]);
-        $message = 'Event borttaget från serien';
-        $messageType = 'success';
+        try {
+            $deleted = $db->delete('series_events', 'id = ? AND series_id = ?', [$seriesEventId, $id]);
+            if ($deleted) {
+                $message = 'Event borttaget från serien';
+                $messageType = 'success';
+            } else {
+                $message = 'Inget event hittades att ta bort';
+                $messageType = 'error';
+            }
+        } catch (Exception $e) {
+            $message = 'Fel vid borttagning: ' . $e->getMessage();
+            $messageType = 'error';
+            error_log("SERIES MANAGE: Failed to remove event {$seriesEventId} from series {$id}: " . $e->getMessage());
+        }
         $activeTab = 'events';
     }
 
