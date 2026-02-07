@@ -96,18 +96,29 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
  $templateId = intval($_POST['template_id']);
  $classIds = $_POST['class_id'] ?? [];
  $basePrices = $_POST['base_price'] ?? [];
+ $seasonPrices = $_POST['season_price'] ?? [];
+
+ // Check if season_price column exists
+ $hasSeasonPrice = false;
+ try {
+  $cols = $db->getAll("SHOW COLUMNS FROM pricing_template_rules LIKE 'season_price'");
+  $hasSeasonPrice = !empty($cols);
+ } catch (Exception $e) {}
 
  $saved = 0;
  foreach ($classIds as $index => $classId) {
  $basePrice = floatval($basePrices[$index] ?? 0);
+ $seasonPrice = floatval($seasonPrices[$index] ?? 0);
 
- if ($basePrice > 0) {
- // Check if exists
+ if ($basePrice > 0 || $seasonPrice > 0) {
  $existing = $db->getRow("SELECT id FROM pricing_template_rules WHERE template_id = ? AND class_id = ?", [$templateId, $classId]);
 
  $data = [
   'base_price' => $basePrice
  ];
+ if ($hasSeasonPrice) {
+  $data['season_price'] = $seasonPrice > 0 ? $seasonPrice : null;
+ }
 
  if ($existing) {
   $db->update('pricing_template_rules', $data, 'id = ?', [$existing['id']]);
@@ -118,7 +129,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
  }
  $saved++;
  } else {
- // Remove pricing if price is 0
+ // Remove pricing if both prices are 0
  $db->delete('pricing_template_rules', 'template_id = ? AND class_id = ?', [$templateId, $classId]);
  }
  }
@@ -286,7 +297,7 @@ input[type="number"] {
  <div class="card-header">
  <h2 class="">
   <i data-lucide="credit-card"></i>
-  Grundpriser per klass
+  Priser per klass
  </h2>
  </div>
  <div class="card-body">
@@ -299,6 +310,13 @@ input[type="number"] {
   // Get template pricing settings for calculations
   $ebPercent = $editTemplate['early_bird_percent'] ?? 15;
   $latePercent = $editTemplate['late_fee_percent'] ?? 25;
+
+  // Check if season_price column exists
+  $hasSeasonPriceCol = false;
+  try {
+   $cols = $db->getAll("SHOW COLUMNS FROM pricing_template_rules LIKE 'season_price'");
+   $hasSeasonPriceCol = !empty($cols);
+  } catch (Exception $e) {}
   ?>
 
   <div class="table-responsive">
@@ -306,15 +324,19 @@ input[type="number"] {
   <thead>
   <tr>
    <th>Klass</th>
-   <th>Ordinarie pris</th>
+   <th>Eventpris</th>
    <th>Early Bird (-<?= $ebPercent ?>%)</th>
    <th>Efteranmälan (+<?= $latePercent ?>%)</th>
+   <?php if ($hasSeasonPriceCol): ?>
+   <th>Säsongspris</th>
+   <?php endif; ?>
   </tr>
   </thead>
   <tbody>
   <?php foreach ($classes as $class):
    $rule = $templateRules[$class['id']] ?? null;
    $basePrice = $rule['base_price'] ?? 0;
+   $seasonPrice = $rule['season_price'] ?? 0;
    $ebPrice = $basePrice * (1 - $ebPercent / 100);
    $latePrice = $basePrice * (1 + $latePercent / 100);
   ?>
@@ -343,11 +365,29 @@ input[type="number"] {
    <?= $basePrice > 0 ? number_format($latePrice, 0) . ' kr' : '-' ?>
    </span>
    </td>
+   <?php if ($hasSeasonPriceCol): ?>
+   <td>
+   <div class="flex items-center gap-xs">
+   <input type="number" name="season_price[]" class="input"
+    value="<?= $seasonPrice ?: '' ?>"
+    min="0" step="1" style="width: 100px;"
+    placeholder="<?= $basePrice > 0 ? number_format($basePrice * 4 * 0.85, 0) : '' ?>">
+   <span class="text-secondary">kr</span>
+   </div>
+   </td>
+   <?php endif; ?>
    </tr>
   <?php endforeach; ?>
   </tbody>
   </table>
   </div>
+
+  <?php if ($hasSeasonPriceCol): ?>
+  <p class="text-secondary text-sm mt-sm">
+   <i data-lucide="info" class="icon-sm"></i>
+   Säsongspris = pris för hela serien (alla events). Lämna tomt om säsongspris ej ska erbjudas för klassen.
+  </p>
+  <?php endif; ?>
 
   <div class="mt-lg">
   <button type="submit" class="btn btn--primary">
