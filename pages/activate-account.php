@@ -15,6 +15,7 @@ if (hub_is_logged_in()) {
 
 // Include mail helper
 require_once HUB_ROOT . '/includes/mail.php';
+require_once HUB_ROOT . '/includes/rate-limiter.php';
 
 $pdo = hub_db();
 $message = '';
@@ -31,8 +32,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email = trim($_POST['email'] ?? '');
     $confirmActivation = isset($_POST['confirm_activation']);
     $submittedEmail = $email;
+    $clientIp = get_client_ip();
 
-    if (empty($email)) {
+    // Rate limiting: max 5 attempts per IP per hour, and 3 per email per hour
+    $ipLimited = is_rate_limited('activate_account_ip', $clientIp, 5, 3600);
+    $emailLimited = !empty($email) && is_rate_limited('activate_account_email', $email, 3, 3600);
+
+    if ($ipLimited || $emailLimited) {
+        $message = 'För många förfrågningar. Vänta en stund innan du försöker igen.';
+        $messageType = 'error';
+    } elseif (empty($email)) {
         $message = 'Ange din e-postadress';
         $messageType = 'error';
     } else {
@@ -135,6 +144,10 @@ function sendActivationEmail($pdo, $primaryRider, $allRiders, &$message, &$messa
     $profileCount = count($allRiders);
 
     $emailSent = hub_send_account_activation_email($primaryRider['email'], $riderName, $activationLink);
+
+    // Record attempt for rate limiting
+    record_rate_limit_attempt('activate_account_ip', $clientIp, 3600);
+    record_rate_limit_attempt('activate_account_email', $email, 3600);
 
     if ($emailSent) {
         if ($profileCount > 1) {

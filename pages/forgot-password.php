@@ -14,6 +14,7 @@ if (hub_is_logged_in()) {
 
 // Include mail helper
 require_once HUB_ROOT . '/includes/mail.php';
+require_once HUB_ROOT . '/includes/rate-limiter.php';
 
 $pdo = hub_db();
 $message = '';
@@ -25,8 +26,16 @@ $linkedProfilesCount = 0;
 
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $email = trim($_POST['email'] ?? '');
+    $clientIp = get_client_ip();
 
-    if (empty($email)) {
+    // Rate limiting: max 5 attempts per IP per hour, and 3 per email per hour
+    $ipLimited = is_rate_limited('forgot_password_ip', $clientIp, 5, 3600);
+    $emailLimited = !empty($email) && is_rate_limited('forgot_password_email', $email, 3, 3600);
+
+    if ($ipLimited || $emailLimited) {
+        $message = 'För många förfrågningar. Vänta en stund innan du försöker igen.';
+        $messageType = 'error';
+    } elseif (empty($email)) {
         $message = 'Ange din e-postadress';
         $messageType = 'error';
     } else {
@@ -128,6 +137,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             // Send email
             $emailSent = hub_send_password_reset_email($accountEmail, $accountName, $resetLink);
+
+            // Record attempt for rate limiting (regardless of success)
+            record_rate_limit_attempt('forgot_password_ip', $clientIp, 3600);
+            record_rate_limit_attempt('forgot_password_email', $email, 3600);
 
             if ($emailSent) {
                 if ($linkedProfilesCount > 0) {
