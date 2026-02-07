@@ -84,6 +84,26 @@ if ($isNewSeries) {
 $syncMessage = '';
 if (!$isNewSeries) {
 try {
+    // First, clean up stale entries in series_events (pointing to non-existent events)
+    $staleEntries = $db->getAll("
+        SELECT se.id, se.event_id
+        FROM series_events se
+        LEFT JOIN events e ON se.event_id = e.id
+        WHERE se.series_id = ? AND e.id IS NULL
+    ", [$id]);
+
+    if (!empty($staleEntries)) {
+        foreach ($staleEntries as $stale) {
+            try {
+                $db->delete('series_events', 'id = ?', [$stale['id']]);
+            } catch (Exception $deleteError) {
+                error_log("Series auto-sync: failed to delete stale entry {$stale['id']}: " . $deleteError->getMessage());
+            }
+        }
+        $syncMessage = "Rensade " . count($staleEntries) . " ogiltiga serie-event kopplingar. ";
+    }
+
+    // Now find events with series_id set that are not in series_events
     $lockedEvents = $db->getAll("
         SELECT e.id, e.name, e.date
         FROM events e
@@ -124,7 +144,7 @@ try {
                 $sortOrder++;
             }
 
-            $syncMessage = "Auto-synkade {$syncedCount} event(s) från events.series_id till series_events.";
+            $syncMessage .= "Auto-synkade {$syncedCount} event(s) från events.series_id till series_events.";
         }
     }
 } catch (Exception $e) {
@@ -437,18 +457,17 @@ $seriesEvents = $db->getAll("
     ORDER BY e.date ASC
 ", [$id]);
 
-// FALLBACK: If no events in series_events, check for events linked via events.series_id
+// ALWAYS check for events linked via events.series_id that are NOT in series_events
 // These are "orphaned" events that should be in series_events but aren't
-$orphanedEvents = [];
-if (empty($seriesEvents)) {
-    $orphanedEvents = $db->getAll("
-        SELECT e.id, e.name as event_name, e.date as event_date, e.location, e.discipline,
-               e.series_id as event_series_id, e.registration_opens, e.registration_deadline
-        FROM events e
-        WHERE e.series_id = ?
-        ORDER BY e.date ASC
-    ", [$id]);
-}
+// This can happen due to data sync issues or manual database changes
+$orphanedEvents = $db->getAll("
+    SELECT e.id, e.name as event_name, e.date as event_date, e.location, e.discipline,
+           e.series_id as event_series_id, e.registration_opens, e.registration_deadline
+    FROM events e
+    WHERE e.series_id = ?
+    AND e.id NOT IN (SELECT event_id FROM series_events WHERE series_id = ?)
+    ORDER BY e.date ASC
+", [$id, $id]);
 
 // Get events not in series (for adding)
 $eventsNotInSeries = $db->getAll("
@@ -909,6 +928,23 @@ include __DIR__ . '/components/unified-layout.php';
                     <h2><i data-lucide="list"></i> Events i serien (<?= $eventsCount ?>)</h2>
                 </div>
                 <div class="admin-card-body" style="padding: 0;">
+                    <?php
+                    // Debug: Show diagnostic info if no events found but orphaned exist
+                    if (empty($seriesEvents) && empty($orphanedEvents)) {
+                        // Check if there are ANY events with this series_id in the events table
+                        $directEventsCount = $db->getRow("SELECT COUNT(*) as cnt FROM events WHERE series_id = ?", [$id]);
+                        $seriesEventsCount = $db->getRow("SELECT COUNT(*) as cnt FROM series_events WHERE series_id = ?", [$id]);
+
+                        if (($directEventsCount['cnt'] ?? 0) > 0 || ($seriesEventsCount['cnt'] ?? 0) > 0) {
+                            echo '<div class="alert alert-info m-md">';
+                            echo '<i data-lucide="info"></i> ';
+                            echo '<strong>Diagnostik:</strong> ';
+                            echo 'Events med series_id=' . $id . ': ' . ($directEventsCount['cnt'] ?? 0) . ', ';
+                            echo 'Rader i series_events: ' . ($seriesEventsCount['cnt'] ?? 0);
+                            echo '</div>';
+                        }
+                    }
+                    ?>
                     <?php if (empty($seriesEvents) && empty($orphanedEvents)): ?>
                         <p class="text-secondary p-lg">Inga events tillagda ännu.</p>
                     <?php elseif (empty($seriesEvents) && !empty($orphanedEvents)): ?>
