@@ -2487,21 +2487,23 @@ try {
 $currentUser = hub_current_user();
 $isLoggedIn = hub_is_logged_in();
 
-// Get pricing info for this event
+// Get pricing info for this event from template
 $eventPricing = [];
-try {
-    $pricingStmt = $db->prepare("
-        SELECT epr.class_id, epr.base_price, epr.early_bird_price, epr.late_fee,
-               c.name as class_name, c.display_name, c.gender, c.min_age, c.max_age
-        FROM event_pricing_rules epr
-        JOIN classes c ON epr.class_id = c.id
-        WHERE epr.event_id = ?
-        ORDER BY c.sort_order, c.name
-    ");
-    $pricingStmt->execute([$eventId]);
-    $eventPricing = $pricingStmt->fetchAll(PDO::FETCH_ASSOC);
-} catch (PDOException $e) {
-    // Pricing rules might not exist
+if (!empty($event['pricing_template_id'])) {
+    try {
+        $pricingStmt = $db->prepare("
+            SELECT ptr.class_id, ptr.base_price, ptr.early_bird_price, ptr.late_fee,
+                   c.name as class_name, c.display_name, c.gender, c.min_age, c.max_age
+            FROM pricing_template_rules ptr
+            JOIN classes c ON c.id = ptr.class_id
+            WHERE ptr.template_id = ?
+            ORDER BY c.sort_order, c.name
+        ");
+        $pricingStmt->execute([$event['pricing_template_id']]);
+        $eventPricing = $pricingStmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        // Pricing template might not exist
+    }
 }
 
 // Check early bird / late fee status
