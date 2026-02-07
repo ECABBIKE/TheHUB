@@ -136,6 +136,9 @@ $migrationChecks = [
     '038_orders_stripe_session.sql' => [
         'columns' => ['orders.stripe_session_id', 'orders.stripe_payment_intent_id']
     ],
+    '039_payment_recipients_platform_fee.sql' => [
+        'columns' => ['payment_recipients.platform_fee_percent']
+    ],
 ];
 
 // ============================================================================
