@@ -130,6 +130,9 @@ $migrationChecks = [
     '036_event_registration_opens.sql' => [
         'columns' => ['events.registration_opens', 'events.registration_deadline_time']
     ],
+    '037_pricing_template_season_price.sql' => [
+        'columns' => ['pricing_template_rules.season_price']
+    ],
 ];
 
 // ============================================================================

@@ -285,14 +285,31 @@ Automatiskt genererade "trading cards" med deltagarstatistik:
   - Lagger till `registration_opens` (DATETIME) pa events-tabellen
   - Lagger till `registration_deadline_time` (TIME) for tidkomponent
 
+- **Buggfix: Anmalningsdatum sparas nu korrekt**
+  - Tagit bort PRG-redirect som orsakade att data forsvann vid sparning
+  - Fixat kolumndetektion: anvander fetchAll() istallet for opaalitligt rowCount()
+  - Hanterare fungerar nu som ovriga tabs (save_info, save_payment) - inline meddelande
+  - Diagnostisk loggning tillagd for felsokning
+
+- **Ny funktion: Sasongspriser per klass i prismallar**
+  - Ny kolumn `season_price` i pricing_template_rules
+  - Admins kan nu satta ett fast sasongspris for varje klass i prismallen
+  - Sasongskolumn visas automatiskt nar migration 037 ar kord
+  - Sparas tillsammans med eventpriser i samma formular
+
+- **Ny migration: 037_pricing_template_season_price.sql**
+  - Lagger till `season_price` (DECIMAL) pa pricing_template_rules
+
 - **Nya/andrade filer:**
   - `admin/api/update-event-series.php` - Fixat series_events-synk
   - `admin/series.php` - Snyggare knappar
-  - `admin/series-manage.php` - Fixade knappar, events-query, registration save
+  - `admin/series-manage.php` - Fixade knappar, events-query, registration save, PRG borttaget
+  - `admin/pricing-templates.php` - Sasongspris-kolumn i redigera-vy
   - `includes/payment.php` - Fixat getPaymentConfig(), createSeriesOrder()
   - `pages/checkout.php` - Borre felhantering vid saknad betalningsmetod
   - `Tools/migrations/036_event_registration_opens.sql` - Ny migration
-  - `admin/migrations.php` - Registrerat migration 036
+  - `Tools/migrations/037_pricing_template_season_price.sql` - Ny migration
+  - `admin/migrations.php` - Registrerat migration 036 och 037
 
 ### 2026-02-05 (User Accounts System)
 - **Branch:** claude/create-event-import-tool-MHtMW
