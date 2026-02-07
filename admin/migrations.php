@@ -139,6 +139,9 @@ $migrationChecks = [
     '039_payment_recipients_platform_fee.sql' => [
         'columns' => ['payment_recipients.platform_fee_percent']
     ],
+    '040_series_club_championship.sql' => [
+        'columns' => ['series.enable_club_championship']
+    ],
 ];
 
 // ============================================================================

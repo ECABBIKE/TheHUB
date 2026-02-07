@@ -284,8 +284,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             if ($deleted && $seriesEvent) {
                 // Also clear events.series_id to prevent auto-sync from re-adding
-                $updateResult = $db->query("UPDATE events SET series_id = NULL WHERE id = ? AND series_id = ?", [$seriesEvent['event_id'], $id]);
-                error_log("REMOVE_EVENT: Updated events.series_id to NULL for event {$seriesEvent['event_id']}, affected rows: " . ($updateResult ? $updateResult->rowCount() : '0'));
+                // Remove the series_id condition to ensure it always clears
+                $pdo = $db->getPDO();
+                $stmt = $pdo->prepare("UPDATE events SET series_id = NULL WHERE id = ?");
+                $stmt->execute([$seriesEvent['event_id']]);
+                $affectedRows = $stmt->rowCount();
+                error_log("REMOVE_EVENT: Updated events.series_id to NULL for event {$seriesEvent['event_id']}, affected rows: {$affectedRows}");
 
                 // Verify it was actually cleared
                 $check = $db->getOne("SELECT series_id FROM events WHERE id = ?", [$seriesEvent['event_id']]);
@@ -540,6 +544,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $series = $db->getRow("SELECT * FROM series WHERE id = ?", [$id]);
         $message = $countBestValue === null ? 'Alla resultat räknas nu' : "Räknar nu de {$countBestValue} bästa resultaten";
         $messageType = 'success';
+        $activeTab = 'results';
+    }
+
+    elseif ($action === 'update_club_championship') {
+        $enableClubChampionship = isset($_POST['enable_club_championship']) ? 1 : 0;
+
+        // Check if column exists before updating
+        try {
+            $columns = $db->getAll("SHOW COLUMNS FROM series LIKE 'enable_club_championship'");
+            if (!empty($columns)) {
+                $db->update('series', ['enable_club_championship' => $enableClubChampionship], 'id = ?', [$id]);
+                $series = $db->getRow("SELECT * FROM series WHERE id = ?", [$id]);
+                $message = $enableClubChampionship ? 'Klubbmästerskap aktiverat' : 'Klubbmästerskap inaktiverat';
+                $messageType = 'success';
+            } else {
+                $message = 'Kolumnen enable_club_championship finns inte. Kör migration 040.';
+                $messageType = 'error';
+            }
+        } catch (Exception $e) {
+            $message = 'Fel vid uppdatering: ' . $e->getMessage();
+            $messageType = 'error';
+        }
         $activeTab = 'results';
     }
 }
@@ -1522,6 +1548,30 @@ include __DIR__ . '/components/unified-layout.php';
                             </select>
                             <small class="text-secondary">
                                 Stryker sämsta resultat från totalen
+                            </small>
+                        </div>
+                    </form>
+                </div>
+            </div>
+
+            <div class="admin-card mb-lg">
+                <div class="admin-card-header">
+                    <h2><i data-lucide="users"></i> Klubbmästerskap</h2>
+                </div>
+                <div class="admin-card-body">
+                    <form method="POST">
+                        <?= csrf_field() ?>
+                        <input type="hidden" name="action" value="update_club_championship">
+
+                        <div class="admin-form-group">
+                            <label class="admin-form-label">
+                                <input type="checkbox" name="enable_club_championship" value="1"
+                                       <?= !empty($series['enable_club_championship']) ? 'checked' : '' ?>
+                                       onchange="this.form.submit()">
+                                Visa klubbmästerskap
+                            </label>
+                            <small class="text-secondary">
+                                Aktivera klubbmästerskapställning för denna serie
                             </small>
                         </div>
                     </form>
