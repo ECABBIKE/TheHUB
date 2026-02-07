@@ -3167,10 +3167,12 @@ if (!empty($event['series_id'])) {
             </script>
 
         <?php elseif (empty($eventPricing)): ?>
-            <div class="alert alert--info">
-                <i data-lucide="info"></i>
-                <strong>Eventets anmälan hanteras ej av TheHUB.</strong><br>
-                Kontakta arrangerande klubb för mer information.
+            <div class="alert alert--info" style="display: flex; gap: var(--space-md); text-align: left;">
+                <i data-lucide="info" style="flex-shrink: 0; margin-top: 2px;"></i>
+                <div>
+                    <strong style="display: block; margin-bottom: var(--space-xs);">Eventets anmälan hanteras ej av TheHUB.</strong>
+                    <span>Kontakta arrangerande klubb för mer information.</span>
+                </div>
             </div>
 
         <?php else: ?>
