@@ -2494,8 +2494,13 @@ if (!empty($event['pricing_template_id'])) {
         ");
         $pricingStmt->execute([$event['pricing_template_id']]);
         $eventPricing = $pricingStmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Debug: Log if template ID is set but no pricing found
+        if (empty($eventPricing)) {
+            error_log("EVENT PRICING: Event {$eventId} has pricing_template_id={$event['pricing_template_id']} but no pricing_template_rules found");
+        }
     } catch (PDOException $e) {
-        // Pricing template might not exist
+        error_log("EVENT PRICING: PDO error loading template pricing for event {$eventId}: " . $e->getMessage());
     }
 }
 
