@@ -2,16 +2,18 @@
 
 > Dokumentation for betalningsintegration och orderhantering
 
-**Senast uppdaterad:** 2026-01-25
+**Senast uppdaterad:** 2026-02-07
 
 ---
 
 ## Oversikt
 
-TheHUB anvander ett multi-gateway betalningssystem med stod for:
-- **Manuell Swish** - QR-kod och djuplank (aktiv)
-- **Swish Handel** - Automatiserad betalning via Swish Commerce API (konfigureras)
-- **Stripe Connect** - Kortbetalning, Apple Pay, Google Pay (konfigureras)
+TheHUB anvander **Stripe** som enda betalningsgateway:
+- **Stripe Checkout** - Kortbetalning, Apple Pay, Google Pay, Klarna, Swish (via Stripe)
+- **Stripe Connect** - Varje arrangor kopplar sitt eget Stripe-konto for direkta utbetalningar
+
+> **Obs:** Manuell Swish (QR-kod/djuplank) ar borttagen sedan 2026-02-07.
+> Alla betalningar gar nu via Stripe Checkout som stodjer Swish som betalmetod.
 
 ---
 
@@ -19,44 +21,113 @@ TheHUB anvander ett multi-gateway betalningssystem med stod for:
 
 ```
 includes/
-├── payment.php                    # Legacy payment functions (Order CRUD, Swish links)
+├── payment.php                    # Order CRUD, priskalkylering, rabatter
 ├── order-manager.php              # Multi-rider order management
 └── payment/
-    ├── GatewayInterface.php       # Interface for alla gateways
+    ├── GatewayInterface.php       # Interface for gateways
     ├── PaymentManager.php         # Central payment hub
-    ├── SwishClient.php            # Swish Commerce API client
-    ├── StripeClient.php           # Stripe API client
+    ├── StripeClient.php           # Stripe API client (Connect, Checkout, Transfers)
     └── gateways/
-        ├── ManualGateway.php      # Manuell Swish (QR + deeplink)
-        ├── SwishGateway.php       # Swish Handel (automatiserad)
-        └── StripeGateway.php      # Stripe Connect
+        └── StripeGateway.php      # Stripe Connect gateway
 
 admin/
 ├── orders.php                     # Orderhantering och betalningsbekraftelse
-├── payment-recipients.php         # Centrala betalningsmottagare
-├── payment-settings.php           # Legacy betalningsinstallningar
-├── gateway-settings.php           # Gateway-konfiguration per mottagare
-├── certificates.php               # Swish certifikathantering
+├── ekonomi.php                    # Ekonomi-dashboard
+├── payment-recipients.php         # Betalningsmottagare (Stripe Connect)
+├── promotor-stripe.php            # Arrangors Stripe-onboarding
 └── discount-codes.php             # Rabattkodshantering
 
 api/
-├── orders.php                     # Order-API (skapa, hamta, lista riders)
+├── create-checkout-session.php    # Skapa Stripe Checkout Session
+├── stripe-connect.php             # Stripe Connect API (login link, etc)
 ├── apply-discount.php             # Tillamp rabattkod pa order
 ├── validate-discount.php          # Validera rabattkod
 └── webhooks/
-    ├── swish-callback.php         # Swish Handel callback
-    └── stripe-webhook.php         # Stripe webhook
+    └── stripe-webhook.php         # Stripe webhook (betalning, prenumeration, etc)
 
 pages/
-└── checkout.php                   # Checkout-sida for anvandare
+└── checkout.php                   # Checkout-sida for anvandare (Stripe Checkout)
 ```
+
+---
+
+## Konfiguration (.env)
+
+```env
+# Stripe API-nycklar (obligatoriskt)
+STRIPE_SECRET_KEY=sk_test_...          # eller sk_live_...
+STRIPE_PUBLISHABLE_KEY=pk_test_...     # eller pk_live_...
+STRIPE_WEBHOOK_SECRET=whsec_...        # Webhook-signering
+STRIPE_PLATFORM_FEE_PERCENT=2          # Plattformsavgift i procent
+```
+
+Skapa nycklar pa: https://dashboard.stripe.com/apikeys
+Skapa webhook pa: https://dashboard.stripe.com/webhooks
+- Endpoint URL: `https://yourdomain.se/api/webhooks/stripe-webhook.php`
+- Events att lyssna pa: `checkout.session.completed`, `payment_intent.succeeded`, `charge.refunded`, `account.updated`, `customer.subscription.*`, `invoice.*`
+
+---
+
+## Betalningsflode (Stripe Checkout)
+
+```
+1. Anvandare valjer anmalningar
+   |
+2. Systemet beraknar pris (bas + early bird/late fee)
+   |
+3. Anvandare anger rabattkod (valfritt)
+   |
+4. Order skapas i databasen (payment_status = 'pending')
+   |
+5. Anvandare klickar "Betala X kr"
+   |
+6. /api/create-checkout-session.php:
+   - Skapar Stripe Checkout Session
+   - Satter gateway_code = 'stripe', gateway_transaction_id = session_id
+   - Om Connected Account finns: destination charge med platform fee
+   |
+7. Anvandare redirectas till Stripe Checkout (hosted page)
+   - Valjer betalmetod: kort, Apple Pay, Google Pay, Klarna, Swish
+   |
+8. Stripe skickar webhook (checkout.session.completed)
+   |
+9. stripe-webhook.php:
+   - Hittar order via gateway_transaction_id
+   - Markerar order som betald
+   - Uppdaterar event_registrations/series_registrations
+   - Genererar kvitto
+   - Skapar transfers till Connected Accounts
+   |
+10. Anvandare redirectas tillbaka till checkout-sida
+    - Visar "Betalning bearbetas" + auto-refresh
+    - Nar webhook processats: visar "Betalning genomford!"
+```
+
+---
+
+## Stripe Connect (Betalningsmottagare)
+
+### Flode for arrangor
+
+1. Admin skapar betalningsmottagare i `/admin/payment-recipients.php`
+2. Kopplar mottagare till serie via `series.payment_recipient_id`
+3. Arrangor gar till `/admin/promotor-stripe.php`
+4. Klickar "Anslut till Stripe" -> Stripe onboarding
+5. Fyller i foretags/foreningsuppgifter, bankinfo, ID-verifiering
+6. Stripe granskar (1-2 vardagar)
+7. Nar `stripe_account_status = 'active'` kan mottagaren ta emot betalningar
+
+### Destination Charges
+
+Betalningar gar direkt till plattformens Stripe-konto. Transfers skapas till Connected Accounts:
+- `application_fee_amount` = plattformsavgift (default 2%)
+- `transfer_data.destination` = arrangors Stripe account ID
 
 ---
 
 ## Databastabeller
 
 ### orders
-Huvudtabell for ordrar.
 
 | Kolumn | Typ | Beskrivning |
 |--------|-----|-------------|
@@ -71,22 +142,21 @@ Huvudtabell for ordrar.
 | discount | DECIMAL(10,2) | Total rabatt |
 | total_amount | DECIMAL(10,2) | Slutsumma |
 | currency | VARCHAR(3) | Valuta (SEK) |
-| payment_method | ENUM | swish, card, manual |
+| payment_method | VARCHAR(20) | 'card' |
 | payment_status | ENUM | pending, paid, failed, refunded, cancelled |
-| payment_reference | VARCHAR(255) | Extern betalningsreferens |
+| payment_reference | VARCHAR(255) | Stripe payment_intent ID |
+| gateway_code | VARCHAR(50) | 'stripe' |
+| gateway_transaction_id | VARCHAR(255) | Stripe Checkout Session ID |
+| gateway_metadata | JSON | Extra data fran Stripe |
+| stripe_session_id | VARCHAR(255) | Stripe Session ID (migration 038) |
+| stripe_payment_intent_id | VARCHAR(255) | Payment Intent ID (migration 038) |
 | paid_at | DATETIME | Tidpunkt for betalning |
 | expires_at | DATETIME | Order utgar |
-| swish_number | VARCHAR(20) | Swish-nummer for betalning |
-| swish_message | VARCHAR(50) | Swish-meddelande |
-| gateway_code | VARCHAR(50) | Vilken gateway som anvands |
-| gateway_transaction_id | VARCHAR(255) | Gateway transaktions-ID |
-| gateway_metadata | JSON | Extra data fran gateway |
-| discount_code_id | INT | Koppling till discount_codes |
+| discount_code_id | INT | FK till discount_codes |
 | gravity_id_discount | DECIMAL(10,2) | Gravity ID-rabatt |
-| callback_received_at | DATETIME | Nar webhook mottogs |
+| transfers_status | VARCHAR(20) | pending, processing, completed, failed |
 
 ### order_items
-Orderrader.
 
 | Kolumn | Typ | Beskrivning |
 |--------|-----|-------------|
@@ -99,303 +169,71 @@ Orderrader.
 | unit_price | DECIMAL(10,2) | Styckpris |
 | quantity | INT | Antal |
 | total_price | DECIMAL(10,2) | Totalt pris |
+| payment_recipient_id | INT | FK till payment_recipients (for transfers) |
+| seller_amount | DECIMAL(10,2) | Belopp till saljaren (efter avgifter) |
 
 ### payment_recipients
-Centrala betalningsmottagare (ersatter legacy payment_configs).
 
 | Kolumn | Typ | Beskrivning |
 |--------|-----|-------------|
 | id | INT | Primary key |
 | name | VARCHAR(255) | Namn (t.ex. "GravitySeries AB") |
 | description | TEXT | Beskrivning |
-| swish_number | VARCHAR(20) | Swish-nummer |
-| swish_name | VARCHAR(255) | Namn som visas i Swish |
 | active | TINYINT | 1 = aktiv |
-| gateway_type | ENUM | manual, swish_handel, stripe |
-| gateway_enabled | TINYINT | 1 = gateway aktiverad |
-| gateway_config | JSON | Gateway-specifik konfiguration |
+| gateway_type | VARCHAR(20) | 'stripe' |
 | stripe_account_id | VARCHAR(255) | Stripe Connected Account ID |
-| stripe_account_status | VARCHAR(50) | Stripe kontostatus |
+| stripe_account_status | VARCHAR(50) | pending, active, restricted |
+| contact_email | VARCHAR(255) | Kontakt-epost |
+| contact_phone | VARCHAR(50) | Kontakttelefon |
+| org_number | VARCHAR(20) | Organisationsnummer |
 
-### payment_transactions
-Transaktionslogg.
+### order_transfers
 
 | Kolumn | Typ | Beskrivning |
 |--------|-----|-------------|
 | id | INT | Primary key |
 | order_id | INT | FK till orders |
-| gateway_code | VARCHAR(50) | Gateway |
-| transaction_type | ENUM | payment, refund, cancel, status_check |
-| request_data | JSON | Forfragan |
-| response_data | JSON | Svar |
-| status | ENUM | pending, success, failed, cancelled |
-| error_code | VARCHAR(50) | Felkod |
-| error_message | TEXT | Felmeddelande |
-| created_at | DATETIME | Skapad |
-| completed_at | DATETIME | Slutford |
-
-### gateway_certificates
-Swish-certifikat.
-
-| Kolumn | Typ | Beskrivning |
-|--------|-----|-------------|
-| id | INT | Primary key |
 | payment_recipient_id | INT | FK till payment_recipients |
-| cert_type | ENUM | swish_test, swish_production |
-| cert_data | MEDIUMBLOB | Certifikatdata (P12) |
-| cert_password | VARCHAR(255) | Certifikatlösenord |
-| uploaded_by | INT | Uppladdad av |
-| uploaded_at | DATETIME | Uppladdad |
-| expires_at | DATE | Gar ut |
-| active | TINYINT | 1 = aktiv |
-
-### webhook_logs
-Webhook-logg.
-
-| Kolumn | Typ | Beskrivning |
-|--------|-----|-------------|
-| id | INT | Primary key |
-| gateway_code | VARCHAR(50) | Gateway |
-| webhook_type | VARCHAR(100) | Typ (callback, event, etc) |
-| payload | TEXT | Radata |
-| headers | JSON | Request headers |
-| signature | VARCHAR(255) | Signatur for verifiering |
-| processed | TINYINT | 1 = behandlad |
-| order_id | INT | Kopplad order |
-| error_message | TEXT | Fel vid behandling |
-| received_at | DATETIME | Mottagen |
-| processed_at | DATETIME | Behandlad |
+| stripe_account_id | VARCHAR(255) | Stripe Connected Account |
+| amount | DECIMAL(10,2) | Belopp att overfora |
+| stripe_transfer_id | VARCHAR(255) | Stripe Transfer ID |
+| stripe_charge_id | VARCHAR(255) | Kopplad charge |
+| transfer_group | VARCHAR(255) | For grupperade transfers |
+| status | VARCHAR(20) | pending, completed, failed |
 
 ### discount_codes
-Rabattkoder.
 
 | Kolumn | Typ | Beskrivning |
 |--------|-----|-------------|
 | id | INT | Primary key |
 | code | VARCHAR(50) | Rabattkod (unik, versaler) |
-| description | TEXT | Intern beskrivning |
 | discount_type | ENUM | fixed, percentage |
 | discount_value | DECIMAL(10,2) | Varde (SEK eller %) |
-| max_uses | INT | Max anvandningar totalt (NULL = obegransat) |
+| max_uses | INT | Max anvandningar totalt |
 | max_uses_per_user | INT | Max per anvandare |
-| current_uses | INT | Antal anvandningar |
-| valid_from | DATETIME | Giltig fran |
-| valid_until | DATETIME | Giltig till |
+| valid_from / valid_until | DATETIME | Giltighetstid |
 | min_order_amount | DECIMAL(10,2) | Minsta orderbelopp |
 | applicable_to | ENUM | all, event, series |
-| event_id | INT | Specifikt event (nullable) |
-| series_id | INT | Specifik serie (nullable) |
-| is_active | TINYINT | 1 = aktiv |
-| created_by | INT | Skapad av |
-| created_at | DATETIME | Skapad |
-
-### discount_code_usage
-Rabattkod-anvandning.
-
-| Kolumn | Typ | Beskrivning |
-|--------|-----|-------------|
-| id | INT | Primary key |
-| discount_code_id | INT | FK till discount_codes |
-| order_id | INT | FK till orders |
-| rider_id | INT | FK till riders |
-| discount_amount | DECIMAL(10,2) | Applicerad rabatt |
-| created_at | DATETIME | Skapad |
-
----
-
-## Betalningshierarki
-
-Betalningskonfiguration hamtas i foljande ordning:
-
-1. **Event's payment_recipient_id** (ny system)
-2. **Series' payment_recipient_id** (ny system)
-3. **Event-specifik payment_configs** (legacy)
-4. **Serie payment_configs** (legacy)
-5. **Promotor config** (legacy)
-6. **WooCommerce fallback**
-
----
-
-## Gateway Interface
-
-Alla gateways implementerar `GatewayInterface`:
-
-```php
-interface GatewayInterface {
-    public function getCode(): string;
-    public function getName(): string;
-    public function isAvailable(int $paymentRecipientId): bool;
-    public function initiatePayment(array $orderData): array;
-    public function checkStatus(string $transactionId): array;
-    public function refund(string $transactionId, float $amount): array;
-    public function cancel(string $transactionId): array;
-}
-```
-
----
-
-## Manual Gateway (Manuell Swish)
-
-Anvands som standard nar ingen annan gateway ar konfigurerad.
-
-### Flode
-
-1. Order skapas med Swish-nummer och meddelande
-2. Kund far Swish-lank och QR-kod
-3. Kund oppnar Swish-appen och betalar
-4. Admin bekraftar betalning manuellt i `/admin/orders.php`
-5. Order och registreringar markeras som betalda
-
-### Swish URL-format
-
-```
-https://app.swish.nu/1/p/sw/?sw=TELEFON&amt=BELOPP&msg=MEDDELANDE
-```
-
-### QR-kod format (Swish C-format)
-
-```
-C{telefonnummer};{belopp_i_ore};{meddelande}
-```
-
----
-
-## Swish Handel Gateway
-
-Automatiserad betalning via Swish Commerce API.
-
-### Krav
-
-- Avtal med Swish Handel (via bank)
-- P12-certifikat (test eller produktion)
-- Payee alias (bankgirokonto)
-
-### Konfiguration
-
-1. Skapa payment recipient i `/admin/payment-recipients.php`
-2. Ladda upp certifikat i `/admin/certificates.php`
-3. Konfigurera gateway i `/admin/gateway-settings.php`
-
-### Webhook
-
-Endpoint: `/api/webhooks/swish-callback.php`
-
-Hanterar statuskoder:
-- `PAID` - Betalning genomford
-- `DECLINED` - Betalning nekad
-- `ERROR` - Fel vid betalning
-- `CANCELLED` - Betalning avbruten
-- `CREATED` / `PENDING` - Vantar pa betalning
-
----
-
-## Stripe Gateway
-
-Kortbetalning, Apple Pay, Google Pay via Stripe Connect.
-
-### Krav
-
-- Stripe-konto
-- Connected Account for varje betalningsmottagare
-- Webhook secret
-
-### Konfiguration
-
-1. Skapa payment recipient
-2. Anslut Stripe Connected Account
-3. Konfigurera platform fee (standard 2%)
-
-### Webhook
-
-Endpoint: `/api/webhooks/stripe-webhook.php`
-
-Hanterar events:
-- `payment_intent.succeeded`
-- `payment_intent.payment_failed`
-- `charge.refunded`
-- `account.updated`
-
----
-
-## Rabattkoder
-
-### Typer
-
-- **Fixed (fast belopp)** - T.ex. -50 kr
-- **Percentage (procent)** - T.ex. -10%
-
-### Begransningar
-
-- Max anvandningar totalt
-- Max per anvandare
-- Giltighetstid (fran/till)
-- Minsta orderbelopp
-- Specifikt event eller serie
-
-### Gravity ID-rabatt
-
-Automatisk rabatt for riders med Gravity ID. Konfigureras per:
-- Event (`events.gravity_id_discount`)
-- Serie (`series.gravity_id_discount`)
-- Globalt (`gravity_id_settings`)
-
----
-
-## Order-flode
-
-```
-1. Anvandare valjer anmalningar
-   ↓
-2. Systemet beraknar pris (bas + tidiga/sena avgifter)
-   ↓
-3. Anvandare anger rabattkod (valfritt)
-   ↓
-4. Systemet validerar och tillampard rabatter
-   ↓
-5. Order skapas i databasen
-   ↓
-6. Gateway initieras baserat pa konfiguration
-   ↓
-7. Anvandare betalar via Swish/Stripe
-   ↓
-8. Webhook tar emot betalningsbekraftelse
-   ↓
-9. Order markeras som betald
-   ↓
-10. Registreringar bekraftas
-   ↓
-11. Bekraftelsemail skickas (TODO)
-```
 
 ---
 
 ## API-endpoints
 
-### POST /api/orders.php
+### POST /api/create-checkout-session.php
 
-Skapa order med flera riders.
+Skapar Stripe Checkout Session for en order.
 
-**Request:**
-```json
-{
-  "event_id": 123,
-  "registrations": [
-    {"rider_id": 1, "class_id": 5},
-    {"rider_id": 2, "class_id": 5}
-  ],
-  "discount_code": "SUMMER2026"
-}
+**Request (POST form data):**
+```
+order_id=456
 ```
 
 **Response:**
 ```json
 {
   "success": true,
-  "order_id": 456,
-  "order_number": "ORD-2026-000001",
-  "total": 500,
-  "swish_url": "https://app.swish.nu/...",
-  "swish_qr": "https://chart.googleapis.com/..."
+  "url": "https://checkout.stripe.com/c/pay/...",
+  "session_id": "cs_test_..."
 }
 ```
 
@@ -411,81 +249,93 @@ Tillamp rabattkod pa befintlig order.
 }
 ```
 
-### POST /api/validate-discount.php
-
-Validera rabattkod utan att tillampa.
-
-**Request:**
+**Response:**
 ```json
 {
-  "code": "SUMMER2026",
-  "event_id": 123,
-  "amount": 500
+  "success": true,
+  "discount_amount": 50,
+  "new_total": 450,
+  "message": "Rabattkod tillampad!"
 }
 ```
 
+### Webhook: POST /api/webhooks/stripe-webhook.php
+
+Hanterar Stripe events:
+- `checkout.session.completed` - Betalning klar via Checkout
+- `payment_intent.succeeded` - Payment Intent succeeded
+- `charge.refunded` - Aterbetalning
+- `account.updated` - Connected Account uppdaterat
+- `checkout.session.async_payment_failed` - Asynkron betalning misslyckades
+- `customer.subscription.*` - Prenumerationsandringar
+- `invoice.*` - Fakturahandringar
+
 ---
 
-## Email-bekraftelser
+## Rabattkoder
 
-Email skickas via `includes/mail.php` med stod for:
-- **Resend API** (rekommenderat)
-- **SMTP**
-- **PHP mail()**
+### Typer
+- **Fixed (fast belopp)** - T.ex. -50 kr
+- **Percentage (procent)** - T.ex. -10%
 
-### Mallar
+### Begransningar
+- Max anvandningar totalt / per anvandare
+- Giltighetstid
+- Minsta orderbelopp
+- Specifikt event eller serie
 
-Befintliga mallar i `hub_email_template()`:
-- `password_reset` - Aterställ losenord
-- `welcome` - Valkommen
-- `account_activation` - Aktivera konto
-- `claim_approved` - Profilaktivering godkand
-- `winback_invitation` - Win-back enkatinbjudan
-- `payment_confirmation` - Betalningsbekraftelse (TODO)
+### Gravity ID-rabatt
+Automatisk rabatt for riders med Gravity ID:
+- Per event: `events.gravity_id_discount`
+- Per serie: `series.gravity_id_discount`
+- Globalt: `gravity_id_settings.default_discount`
+
+---
+
+## Prissattning
+
+### Flode
+1. **Pricing Templates** - Grundpriser per klass + early bird/late fee-procent
+2. **Event Pricing Rules** - Eventspecifika prisoverskridanden
+3. **Season Pricing** - Sasongspriser per klass i prismallen (`pricing_template_rules.season_price`)
+
+### Tabeller
+- `pricing_templates` - Prismall med early bird/late fee-installningar
+- `pricing_template_rules` - Grundpris + sasongspris per klass och mall
+- `event_pricing_rules` - Eventspecifika prisoverskridanden
 
 ---
 
 ## Admin-verktyg
 
-### /admin/orders.php
-- Lista ordrar (filtrera pa status, event)
-- Sok pa ordernummer, kundnamn, Swish-meddelande
-- Manuell betalningsbekraftelse
-- Avbryt ordrar
+| Verktyg | URL | Beskrivning |
+|---------|-----|-------------|
+| Ekonomi | `/admin/ekonomi.php` | Dashboard med oversikt |
+| Ordrar | `/admin/orders.php` | Orderhantering och bekraftelse |
+| Mottagare | `/admin/payment-recipients.php` | Betalningsmottagare + Stripe Connect |
+| Arrangor-Stripe | `/admin/promotor-stripe.php` | Arrangors onboarding-flode |
+| Rabattkoder | `/admin/discount-codes.php` | Rabattkodshantering |
+| Prismallar | `/admin/pricing-templates.php` | Prissattning per klass |
+| Testevent | `/admin/tools/create-test-event.php` | Skapa testevent for betalningstest |
 
-### /admin/payment-recipients.php
-- Skapa/redigera betalningsmottagare
-- Koppla till serier/events
-- Visa anvandningsstatistik
+---
 
-### /admin/gateway-settings.php
-- Valj gateway-typ (manual, swish_handel, stripe)
-- Konfigurera gateway-specifika installningar
+## Migrationer
 
-### /admin/certificates.php
-- Ladda upp Swish P12-certifikat
-- Hantera test/produktion
-- Avaktivera gamla certifikat
-
-### /admin/discount-codes.php
-- Skapa/redigera rabattkoder
-- Visa anvandningsstatistik
-- Aktivera/inaktivera koder
+| # | Fil | Innehall |
+|---|-----|----------|
+| 031 | order_transfers.sql | Transfer-tabell, payment_recipient_id pa order_items |
+| 037 | pricing_template_season_price.sql | season_price pa pricing_template_rules |
+| 038 | orders_stripe_session.sql | stripe_session_id, stripe_payment_intent_id pa orders |
 
 ---
 
 ## Sakerhet
 
-### Webhook-verifiering
-- Stripe: HMAC signaturverifiering
-- Swish: Certifikatbaserad autentisering
-
-### CSRF-skydd
-Alla admin-formular anvander CSRF-tokens.
-
-### Behorigheter
-- Admin: Full atkomst
-- Promotor: Endast egna events/serier
+- **Webhook-verifiering**: Stripe HMAC signaturverifiering (`STRIPE_WEBHOOK_SECRET`)
+- **CSRF-skydd**: Alla admin-formular anvander CSRF-tokens
+- **Behorighetskontroll**: Admin = full atkomst, Promotor = egna events/serier
+- **Inga kortuppgifter**: Lagras aldrig - allt hanteras av Stripe (PCI DSS Level 1)
 
 ---
 
@@ -498,132 +348,29 @@ Alla admin-formular anvander CSRF-tokens.
 
 ### Vanliga problem
 
-**Order skapas inte:**
-- Kontrollera att payment_recipient ar konfigurerad for eventet
-- Verifiera att event har aktiva klasser med prissattning
-
-**Swish-lank fungerar inte:**
-- Kontrollera att Swish-numret ar korrekt formaterat
-- Testa med ett giltigt svenskt mobilnummer
+**Betalningsknapp saknas:**
+- Kontrollera att `STRIPE_SECRET_KEY` finns i `.env`
 
 **Webhook tar inte emot callbacks:**
 - Verifiera att webhook-URL ar tillganglig fran internet
 - Kontrollera `webhook_logs` for fel
-- Verifiera certifikat (Swish Handel)
+- Verifiera `STRIPE_WEBHOOK_SECRET`
+
+**Transfers misslyckas:**
+- Kontrollera att Connected Account har `stripe_account_status = 'active'`
+- Verifiera att `charges_enabled` och `payouts_enabled` ar true
 
 ---
 
 ## Medlemskap & Prenumerationer (Stripe Billing)
 
-TheHUB stodjer atervommande medlemskap via Stripe Billing v2 API.
+Se separat sektion i slutet av denna fil for Stripe Billing-integration
+med `membership_plans`, `member_subscriptions`, etc.
 
-### Databastabeller
-
-#### membership_plans
-Medlemsplaner som kan kopas.
-
-| Kolumn | Typ | Beskrivning |
-|--------|-----|-------------|
-| id | INT | Primary key |
-| name | VARCHAR(100) | Plannamn |
-| description | TEXT | Beskrivning |
-| price_amount | INT | Pris i ore |
-| billing_interval | ENUM | day, week, month, year |
-| stripe_product_id | VARCHAR(100) | Stripe Product ID |
-| stripe_price_id | VARCHAR(100) | Stripe Price ID |
-| benefits | JSON | Array av formaner |
-| discount_percent | INT | Rabatt pa anmalningar |
-| active | TINYINT | 1 = aktiv |
-
-#### member_subscriptions
-Aktiva prenumerationer.
-
-| Kolumn | Typ | Beskrivning |
-|--------|-----|-------------|
-| id | INT | Primary key |
-| rider_id | INT | Koppling till riders |
-| user_id | INT | Koppling till users |
-| email | VARCHAR(255) | E-post |
-| plan_id | INT | FK till membership_plans |
-| stripe_customer_id | VARCHAR(100) | Stripe Customer ID |
-| stripe_subscription_id | VARCHAR(100) | Stripe Subscription ID |
-| stripe_subscription_status | VARCHAR(50) | active, trialing, canceled, etc |
-| current_period_end | DATETIME | Nar perioden gar ut |
-| cancel_at_period_end | TINYINT | Om prenumerationen avslutas |
-
-#### subscription_invoices
-Betalningshistorik for prenumerationer.
-
-#### stripe_customers
-Koppling mellan anvandare och Stripe-kunder.
-
-### API-endpoints
-
-#### GET /api/memberships.php?action=get_plans
-Hamta alla aktiva medlemsplaner.
-
-#### POST /api/memberships.php?action=create_checkout
-Skapa Stripe Checkout-session for prenumeration.
-
-```json
-{
-  "plan_id": 1,
-  "email": "user@example.com",
-  "name": "Johan Andersson"
-}
-```
-
-#### POST /api/memberships.php?action=create_portal
-Oppna Stripe Billing Portal for att hantera prenumeration.
-
-```json
-{
-  "email": "user@example.com"
-}
-```
-
-### Webhooks
-
-Subscription-relaterade webhooks i `/api/webhooks/stripe-webhook.php`:
-
-- `customer.subscription.created` - Ny prenumeration
-- `customer.subscription.updated` - Uppdaterad prenumeration
-- `customer.subscription.deleted` - Avslutad prenumeration
-- `customer.subscription.trial_will_end` - Trial avslutas snart
-- `invoice.paid` - Faktura betald
-- `invoice.payment_failed` - Betalning misslyckades
-
-### Admin-hantering
-
-- `/admin/memberships.php` - Hantera planer och prenumerationer
-- Flikarna: Planer, Prenumerationer, Statistik
-
-### Publik sida
-
-- `/membership` - Visa planer och registrering
-- `/membership?session_id=xxx` - Bekraftelsesida efter betalning
-
-### Flode
-
-1. Besokare valjer plan pa `/membership`
-2. Fyller i namn och email
-3. Redirectas till Stripe Checkout
-4. Efter betalning -> webhook -> prenumeration skapas
-5. Bekraftelsemail skickas
-6. Medlem kan hantera prenumeration via Stripe Portal
+Hantering: `/admin/memberships.php`
+Publik sida: `/membership`
 
 ---
 
-## TODO
-
-- [x] Implementera email-bekraftelse vid betalning
-- [x] Stripe Connect onboarding-flode
-- [x] Medlemskap och prenumerationer (Stripe Billing)
-- [ ] Swish Handel certifikatfornyelse-paminelser
-- [ ] Automatisk orderrensning (utgangna ordrar)
-- [ ] Rapportering och statistik
-
----
-
-**Version:** 2.0.0
-**Senast uppdaterad:** 2026-01-25
+**Version:** 3.0.0 (Stripe-only)
+**Senast uppdaterad:** 2026-02-07
