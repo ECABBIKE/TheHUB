@@ -357,15 +357,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $registrationEnabled = isset($_POST['registration_enabled']) ? 1 : 0;
         $pricingTemplateId = !empty($_POST['pricing_template_id']) ? intval($_POST['pricing_template_id']) : null;
 
-        $db->update('series', [
-            'registration_enabled' => $registrationEnabled,
-            'pricing_template_id' => $pricingTemplateId
-        ], 'id = ?', [$id]);
-
-        $series = $db->getRow("SELECT * FROM series WHERE id = ?", [$id]);
-        $message = 'Anmälningsinställningar sparade!';
-        $messageType = 'success';
-        $activeTab = 'registration';
+        $pdo = $db->getPdo();
+        try {
+            $stmt = $pdo->prepare("UPDATE series SET registration_enabled = ?, pricing_template_id = ? WHERE id = ?");
+            $stmt->execute([$registrationEnabled, $pricingTemplateId, $id]);
+            $_SESSION['flash_message'] = 'Anmälningsinställningar sparade!';
+            $_SESSION['flash_type'] = 'success';
+        } catch (Exception $e) {
+            error_log("save_registration error: " . $e->getMessage());
+            $_SESSION['flash_message'] = 'Kunde inte spara: ' . $e->getMessage();
+            $_SESSION['flash_type'] = 'error';
+        }
+        // PRG - redirect to avoid form resubmission
+        header("Location: /admin/series/manage/{$id}?id={$id}&tab=registration");
+        exit;
     }
 
     elseif ($action === 'save_event_times') {
@@ -375,59 +380,81 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $closesDate = $_POST['closes_date'] ?? [];
         $closesTime = $_POST['closes_time'] ?? [];
 
+        // Use raw PDO for direct error handling (DatabaseWrapper swallows exceptions)
+        $pdo = $db->getPdo();
+
         // Check which columns exist on events table
         $hasRegOpens = false;
         $hasRegDeadlineTime = false;
         try {
-            $cols = $db->getAll("SHOW COLUMNS FROM events LIKE 'registration_opens'");
-            $hasRegOpens = !empty($cols);
+            $chk = $pdo->query("SHOW COLUMNS FROM events LIKE 'registration_opens'");
+            $hasRegOpens = $chk->rowCount() > 0;
         } catch (Exception $e) {}
         try {
-            $cols = $db->getAll("SHOW COLUMNS FROM events LIKE 'registration_deadline_time'");
-            $hasRegDeadlineTime = !empty($cols);
+            $chk = $pdo->query("SHOW COLUMNS FROM events LIKE 'registration_deadline_time'");
+            $hasRegDeadlineTime = $chk->rowCount() > 0;
         } catch (Exception $e) {}
 
         $saved = 0;
         $errors = 0;
+        $errorMessages = [];
         foreach ($eventIds as $index => $eventId) {
             $eventId = intval($eventId);
+            if ($eventId <= 0) continue;
 
-            $updateData = [];
+            try {
+                // Build SET clause dynamically based on available columns
+                $sets = [];
+                $values = [];
 
-            // Handle registration opens
-            if ($hasRegOpens) {
-                $regOpens = !empty($opensDate[$index]) ? $opensDate[$index] . ' ' . ($opensTime[$index] ?? '00:00:00') : null;
-                $updateData['registration_opens'] = $regOpens;
-            }
+                // Registration deadline (DATE column - always exists)
+                $regClosesDate = !empty($closesDate[$index]) ? $closesDate[$index] : null;
+                $sets[] = 'registration_deadline = ?';
+                $values[] = $regClosesDate;
 
-            // Handle registration deadline (date + optional time)
-            $regClosesDate = !empty($closesDate[$index]) ? $closesDate[$index] : null;
-            $updateData['registration_deadline'] = $regClosesDate;
-
-            if ($hasRegDeadlineTime) {
-                $regClosesTime = !empty($closesTime[$index]) ? $closesTime[$index] . ':00' : null;
-                $updateData['registration_deadline_time'] = $regClosesTime;
-            }
-
-            if (!empty($updateData)) {
-                try {
-                    $db->update('events', $updateData, 'id = ?', [$eventId]);
-                    $saved++;
-                } catch (Exception $e) {
-                    error_log("save_event_times error for event $eventId: " . $e->getMessage());
-                    $errors++;
+                // Registration deadline time (TIME column - may not exist)
+                if ($hasRegDeadlineTime) {
+                    $regClosesTime = !empty($closesTime[$index]) ? $closesTime[$index] . ':00' : null;
+                    $sets[] = 'registration_deadline_time = ?';
+                    $values[] = $regClosesTime;
                 }
+
+                // Registration opens (DATETIME column - requires migration 036)
+                if ($hasRegOpens) {
+                    $regOpens = !empty($opensDate[$index])
+                        ? $opensDate[$index] . ' ' . ($opensTime[$index] ?? '00:00') . ':00'
+                        : null;
+                    $sets[] = 'registration_opens = ?';
+                    $values[] = $regOpens;
+                }
+
+                if (!empty($sets)) {
+                    $values[] = $eventId;
+                    $sql = "UPDATE events SET " . implode(', ', $sets) . " WHERE id = ?";
+                    $stmt = $pdo->prepare($sql);
+                    $stmt->execute($values);
+                    $saved++;
+                }
+            } catch (Exception $e) {
+                error_log("save_event_times error for event $eventId: " . $e->getMessage());
+                $errorMessages[] = "Event $eventId: " . $e->getMessage();
+                $errors++;
             }
         }
 
         if ($errors > 0) {
-            $message = "Sparade $saved events, $errors fel. Kör migration 036 först om kolumner saknas.";
-            $messageType = 'warning';
+            $_SESSION['flash_message'] = "Sparade $saved events, $errors fel. " . implode('; ', $errorMessages);
+            $_SESSION['flash_type'] = 'warning';
+        } elseif ($saved > 0) {
+            $_SESSION['flash_message'] = "Sparade anmälningstider for $saved events";
+            $_SESSION['flash_type'] = 'success';
         } else {
-            $message = "Sparade anmälningstider for $saved events";
-            $messageType = 'success';
+            $_SESSION['flash_message'] = "Inga events att spara.";
+            $_SESSION['flash_type'] = 'info';
         }
-        $activeTab = 'registration';
+        // PRG - redirect to avoid form resubmission
+        header("Location: /admin/series/manage/{$id}?id={$id}&tab=registration");
+        exit;
     }
 
     // PAYMENT TAB ACTIONS
