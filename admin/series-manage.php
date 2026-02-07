@@ -274,12 +274,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     elseif ($action === 'remove_event') {
         $seriesEventId = intval($_POST['series_event_id']);
         try {
+            // Get event_id before deleting
+            $seriesEvent = $db->getOne("SELECT event_id FROM series_events WHERE id = ?", [$seriesEventId]);
+
+            // Delete from series_events
             $deleted = $db->delete('series_events', 'id = ? AND series_id = ?', [$seriesEventId, $id]);
-            if ($deleted) {
+
+            if ($deleted && $seriesEvent) {
+                // Also clear events.series_id to prevent auto-sync from re-adding
+                $db->query("UPDATE events SET series_id = NULL WHERE id = ? AND series_id = ?", [$seriesEvent['event_id'], $id]);
                 $message = 'Event borttaget från serien';
                 $messageType = 'success';
-            } else {
+            } elseif (!$seriesEvent) {
                 $message = 'Inget event hittades att ta bort';
+                $messageType = 'error';
+            } else {
+                $message = 'Kunde inte ta bort eventet';
                 $messageType = 'error';
             }
         } catch (Exception $e) {
