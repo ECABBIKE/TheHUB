@@ -53,6 +53,10 @@ if (!$eventId) {
 $stmt = $pdo->prepare("
     SELECT
         e.*,
+        e.end_date,
+        e.event_type,
+        e.formats,
+        e.logo as event_logo,
         s.name as series_name,
         s.logo as series_logo,
         v.name as venue_name,
@@ -78,7 +82,32 @@ if (!$event) {
 
 // Check if event is in the past
 $eventDate = strtotime($event['date']);
+$eventEndDate = !empty($event['end_date']) ? strtotime($event['end_date']) : null;
 $isPast = $eventDate < time();
+$isMultiDay = $eventEndDate && $eventEndDate > $eventDate;
+
+// Parse formats for display
+$eventFormats = [];
+$formatLabels = [
+    'ENDURO' => 'Enduro',
+    'DH' => 'Downhill',
+    'XC' => 'XC',
+    'XCO' => 'XCO',
+    'XCC' => 'XCC',
+    'XCE' => 'XCE',
+    'DUAL_SLALOM' => 'Dual Slalom',
+    'PUMPTRACK' => 'Pumptrack',
+    'GRAVEL' => 'Gravel',
+    'E-MTB' => 'E-MTB'
+];
+if (!empty($event['formats'])) {
+    $formatKeys = array_map('trim', explode(',', $event['formats']));
+    foreach ($formatKeys as $key) {
+        if (isset($formatLabels[$key])) {
+            $eventFormats[] = $formatLabels[$key];
+        }
+    }
+}
 
 // Fetch registered participants
 $regStmt = $pdo->prepare("
@@ -150,8 +179,17 @@ if ($event['series_id']) {
     <!-- Event Header -->
     <div class="event-hero">
         <div class="event-date-box">
-            <span class="event-day"><?= date('j', $eventDate) ?></span>
-            <span class="event-month"><?= hub_month_short($eventDate) ?></span>
+            <?php if ($isMultiDay): ?>
+                <span class="event-day"><?= date('j', $eventDate) ?>-<?= date('j', $eventEndDate) ?></span>
+                <?php if (date('n', $eventDate) === date('n', $eventEndDate)): ?>
+                    <span class="event-month"><?= hub_month_short($eventDate) ?></span>
+                <?php else: ?>
+                    <span class="event-month"><?= hub_month_short($eventDate) ?>-<?= hub_month_short($eventEndDate) ?></span>
+                <?php endif; ?>
+            <?php else: ?>
+                <span class="event-day"><?= date('j', $eventDate) ?></span>
+                <span class="event-month"><?= hub_month_short($eventDate) ?></span>
+            <?php endif; ?>
             <span class="event-year"><?= date('Y', $eventDate) ?></span>
         </div>
 
@@ -162,6 +200,18 @@ if ($event['series_id']) {
                 <a href="/series/<?= $event['series_id'] ?>" class="event-series">
                     <?= htmlspecialchars($event['series_name']) ?>
                 </a>
+            <?php endif; ?>
+
+            <?php if (!empty($eventFormats)): ?>
+                <p class="event-formats">
+                    <?= hub_icon('bike', 'icon-sm') ?>
+                    <?= implode(' • ', $eventFormats) ?>
+                </p>
+            <?php elseif (!empty($event['discipline'])): ?>
+                <p class="event-formats">
+                    <?= hub_icon('bike', 'icon-sm') ?>
+                    <?= htmlspecialchars($formatLabels[$event['discipline']] ?? $event['discipline']) ?>
+                </p>
             <?php endif; ?>
 
             <?php if ($event['location'] || $event['venue_city']): ?>
@@ -335,7 +385,20 @@ if ($event['series_id']) {
     text-decoration: underline;
 }
 
+.event-formats {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    color: var(--color-accent);
+    font-weight: var(--weight-medium);
+    font-size: var(--text-base);
+    margin: var(--space-xs) 0;
+}
+
 .event-location {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
     color: var(--color-text-secondary);
     margin: var(--space-sm) 0 0;
 }

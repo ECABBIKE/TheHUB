@@ -123,6 +123,10 @@ $migrationChecks = [
     '034_event_extended_fields.sql' => [
         'columns' => ['events.logo', 'events.logo_media_id', 'events.end_date', 'events.formats', 'events.event_type']
     ],
+    '035_user_accounts.sql' => [
+        'tables' => ['user_accounts'],
+        'columns' => ['riders.user_account_id']
+    ],
 ];
 
 // ============================================================================

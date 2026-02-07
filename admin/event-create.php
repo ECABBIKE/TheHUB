@@ -43,10 +43,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
  $advent_id_input = generateEventAdventId($pdo, $event_year);
  }
 
+ // Process formats (multiple disciplines) - convert array to comma-separated string
+ $formats = '';
+ if (!empty($_POST['formats']) && is_array($_POST['formats'])) {
+     $formats = implode(',', $_POST['formats']);
+ }
+
  $eventData = [
  'name' => $name,
  'advent_id' => $advent_id_input,
  'date' => $date,
+ 'end_date' => !empty($_POST['end_date']) ? trim($_POST['end_date']) : null,
+ 'event_type' => in_array($_POST['event_type'] ?? '', ['single', 'festival', 'stage_race', 'multi_event']) ? $_POST['event_type'] : 'single',
+ 'formats' => $formats ?: null,
  'location' => trim($_POST['location'] ?? ''),
  'venue_id' => !empty($_POST['venue_id']) ? intval($_POST['venue_id']) : null,
  'discipline' => trim($_POST['discipline'] ?? ''),
@@ -246,11 +255,12 @@ include __DIR__ . '/components/unified-layout.php';
   <small class="text-muted">Externt ID för import av resultat. Lämna tomt för auto-generering.</small>
   </div>
 
-  <!-- Date (Required) -->
+  <!-- Date and End Date -->
+  <div class="grid grid-cols-2 gap-md">
   <div>
   <label for="date" class="label">
   <i data-lucide="calendar-days"></i>
-  Datum <span class="text-error">*</span>
+  Startdatum <span class="text-error">*</span>
   </label>
   <input
   type="date"
@@ -260,6 +270,34 @@ include __DIR__ . '/components/unified-layout.php';
   required
   value="<?= htmlspecialchars($_POST['date'] ?? '') ?>"
   >
+  </div>
+  <div>
+  <label for="end_date" class="label">
+  <i data-lucide="calendar-range"></i>
+  Slutdatum <span class="text-muted text-sm">(för flerdagars-event)</span>
+  </label>
+  <input
+  type="date"
+  id="end_date"
+  name="end_date"
+  class="input"
+  value="<?= htmlspecialchars($_POST['end_date'] ?? '') ?>"
+  >
+  </div>
+  </div>
+
+  <!-- Event Type -->
+  <div>
+  <label for="event_type" class="label">
+  <i data-lucide="sparkles"></i>
+  Eventtyp
+  </label>
+  <select id="event_type" name="event_type" class="input">
+  <option value="single" <?= ($_POST['event_type'] ?? 'single') === 'single' ? 'selected' : '' ?>>Enstaka event</option>
+  <option value="festival" <?= ($_POST['event_type'] ?? '') === 'festival' ? 'selected' : '' ?>>Festival (flerdagars, flera format)</option>
+  <option value="stage_race" <?= ($_POST['event_type'] ?? '') === 'stage_race' ? 'selected' : '' ?>>Etapplopp</option>
+  <option value="multi_event" <?= ($_POST['event_type'] ?? '') === 'multi_event' ? 'selected' : '' ?>>Multi-event</option>
+  </select>
   </div>
 
   <!-- Location and Venue -->
@@ -315,6 +353,38 @@ include __DIR__ . '/components/unified-layout.php';
   <option value="GRAVEL" <?= ($_POST['discipline'] ?? '') === 'GRAVEL' ? 'selected' : '' ?>>Gravel</option>
   <option value="E-MTB" <?= ($_POST['discipline'] ?? '') === 'E-MTB' ? 'selected' : '' ?>>E-MTB</option>
   </select>
+  </div>
+
+  <!-- Multiple Formats (for festivals/multi-events) -->
+  <div>
+  <label class="label">
+  <i data-lucide="layers"></i>
+  Alla format <span class="text-muted text-sm">(för festivaler/multi-events)</span>
+  </label>
+  <div style="display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: var(--space-sm); padding: var(--space-sm); background: var(--color-bg-hover); border-radius: var(--radius-md);">
+  <?php
+  $allFormats = [
+      'ENDURO' => 'Enduro',
+      'DH' => 'Downhill',
+      'XC' => 'XC',
+      'XCO' => 'XCO',
+      'XCC' => 'XCC',
+      'XCE' => 'XCE',
+      'DUAL_SLALOM' => 'Dual Slalom',
+      'PUMPTRACK' => 'Pumptrack',
+      'GRAVEL' => 'Gravel',
+      'E-MTB' => 'E-MTB'
+  ];
+  $selectedFormats = isset($_POST['formats']) && is_array($_POST['formats']) ? $_POST['formats'] : [];
+  foreach ($allFormats as $key => $label):
+  ?>
+  <label style="display: flex; align-items: center; gap: var(--space-xs); cursor: pointer;">
+      <input type="checkbox" name="formats[]" value="<?= $key ?>" <?= in_array($key, $selectedFormats) ? 'checked' : '' ?>>
+      <?= $label ?>
+  </label>
+  <?php endforeach; ?>
+  </div>
+  <small class="text-secondary">Välj flera format om eventet innehåller flera olika tävlingar.</small>
   </div>
 
   <!-- Event Level (National/Sportmotion) -->

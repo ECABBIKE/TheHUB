@@ -1,6 +1,6 @@
 # TheHUB - Development Roadmap
 
-> Senast uppdaterad: 2026-02-01
+> Senast uppdaterad: 2026-02-05
 >
 > **Se:** `/admin/roadmap.php` for interaktiv vy
 
@@ -261,6 +261,34 @@ Automatiskt genererade "trading cards" med deltagarstatistik:
 ---
 
 # CHANGELOG
+
+### 2026-02-05 (User Accounts System)
+- **Branch:** claude/create-event-import-tool-MHtMW
+
+- **Ny funktion: Anvandarkonton (user_accounts)**
+  - Separerar anvandaridentitet fran rider-profiler
+  - Ny `user_accounts` tabell med e-post, losenord, tokens, status
+  - Ny `user_account_id` FK-kolumn pa riders-tabellen
+  - Explicit koppling istallet for implicit e-post-baserad gruppering
+
+- **Admin-verktyg: Anvandarkonton** (`admin/tools/user-accounts.php`)
+  - Oversikt med statistik: konton, kopplade profiler, legacy-grupper
+  - Migrera befintlig data: skapar user_accounts fran befintliga e-postgrupper
+  - Splittra profiler: bryt ut en rider till eget konto
+  - Flytta profiler: flytta en rider till annat konto
+  - Sammanfoga konton: kombinera tva konton till ett
+  - Konsolidera legacy: fixa linked_to_rider_id for aldre konton
+  - Filtrera och sok bland alla konton
+  - Detaljvy med alla kopplade profiler per konto
+
+- **Nya filer:**
+  - `Tools/migrations/035_user_accounts.sql` - Databasmigration
+  - `admin/tools/user-accounts.php` - Hanteringsverktyg
+
+- **Uppdaterade filer:**
+  - `admin/tools.php` - Lank till nya verktyget under Klubbar & Akare
+  - `admin/migrations.php` - Registrerad migration 035
+  - `config.php` - APP_BUILD uppdaterad till 2026-02-05
 
 ### 2026-02-03 (Event Creation Tool)
 - **Branch:** claude/create-event-import-tool-MHtMW
