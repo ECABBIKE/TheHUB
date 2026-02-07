@@ -3169,7 +3169,8 @@ if (!empty($event['series_id'])) {
         <?php elseif (empty($eventPricing)): ?>
             <div class="alert alert--info">
                 <i data-lucide="info"></i>
-                Priserna för detta event är inte konfigurerade ännu. Kontakta arrangören.
+                <strong>Eventets anmälan hanteras ej av TheHUB.</strong><br>
+                Kontakta arrangerande klubb för mer information.
             </div>
 
         <?php else: ?>
