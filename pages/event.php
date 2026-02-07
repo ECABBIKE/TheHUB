@@ -853,18 +853,11 @@ try {
     }
 
     // Registration is only "open" if deadline is set, hasn't passed, AND pricing is configured
-    $hasPricingRules = false;
-    try {
-        $priceCheck = $db->prepare("SELECT COUNT(*) as cnt FROM event_pricing_rules WHERE event_id = ?");
-        $priceCheck->execute([$eventId]);
-        $priceRow = $priceCheck->fetch(PDO::FETCH_ASSOC);
-        $hasPricingRules = ($priceRow && $priceRow['cnt'] > 0);
-    } catch (Exception $e) {
-        $hasPricingRules = false;
-    }
+    // Check if event has pricing configured (via template or external registration)
+    $hasPricing = !empty($event['pricing_template_id']) || !empty($event['registration_url']);
 
-    // Registration tab is shown if: has pricing rules AND either has valid deadline OR has external URL
-    $registrationConfigured = $hasPricingRules || !empty($event['registration_url']);
+    // Registration tab is shown if: has pricing configured AND either has valid deadline OR has external URL
+    $registrationConfigured = $hasPricing;
     $registrationOpen = $registrationConfigured && ($registrationDeadline === null || $registrationDeadline >= time());
 
     // Check publish dates for starttider, karta and PM
