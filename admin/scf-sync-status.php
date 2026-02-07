@@ -391,26 +391,22 @@ include __DIR__ . '/components/unified-layout.php';
     </div>
     <div class="card-body">
         <div class="action-buttons">
-            <a href="/admin/scf-match-review.php" class="btn btn-primary">
-                <i data-lucide="user-check"></i>
-                Granska matchningar
+            <?php if ($scfEnabled): ?>
+            <a href="/admin/scf-batch-verify.php" class="btn btn-primary">
+                <i data-lucide="shield-check"></i>
+                Batch-verifiering (UCI ID)
+            </a>
+            <a href="/admin/scf-name-search.php" class="btn btn-secondary">
+                <i data-lucide="search"></i>
+                Namnsökning (SWE-ID)
                 <?php if ($riderStats['pending_matches'] > 0): ?>
                 <span class="badge badge-warning"><?= $riderStats['pending_matches'] ?></span>
                 <?php endif; ?>
             </a>
-            <?php if ($scfEnabled): ?>
-            <form method="post" style="display: inline;">
-                <?= csrf_field() ?>
-                <input type="hidden" name="action" value="trigger_sync">
-                <button type="submit" class="btn btn-secondary">
-                    <i data-lucide="refresh-cw"></i>
-                    Starta synkronisering
-                </button>
-            </form>
             <?php endif; ?>
-            <a href="/admin/riders.php?filter=no_uci" class="btn btn-ghost">
-                <i data-lucide="search"></i>
-                Visa deltagare utan UCI ID
+            <a href="/admin/scf-api-test.php" class="btn btn-ghost">
+                <i data-lucide="bug"></i>
+                API-test
             </a>
         </div>
     </div>
@@ -526,6 +522,20 @@ include __DIR__ . '/components/unified-layout.php';
             <tr>
                 <td><strong>API Endpoint</strong></td>
                 <td><code>https://licens.scf.se/api/1.0</code></td>
+            </tr>
+            <tr>
+                <td><strong>Tillgängliga sökningar</strong></td>
+                <td>
+                    <code>/ucilicenselookup</code> - Kräver UCI ID<br>
+                    <code>/licenselookup</code> - Kräver namn + kön
+                </td>
+            </tr>
+            <tr>
+                <td><strong>Begränsningar</strong></td>
+                <td>
+                    <span class="text-warning">Ingen bulklista</span> - API:et stöder inte att lista alla licensinnehavare.<br>
+                    Nya cyklister hittas via: anmälningar, resultatimport, eller manuell sökning.
+                </td>
             </tr>
             <tr>
                 <td><strong>Max per batch</strong></td>
