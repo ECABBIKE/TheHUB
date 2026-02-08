@@ -391,6 +391,66 @@ include __DIR__ . '/../components/header.php';
                             Sakra betalningar via Stripe. Vi lagrar inga kortuppgifter.
                         </p>
                     </div>
+                    <?php elseif (!empty($order['swish_number'])): ?>
+                    <!-- Swish Payment -->
+                    <div class="payment-option">
+                        <div class="flex items-center gap-md mb-md">
+                            <div style="width:48px;height:48px;background:#FF5C13;border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center;">
+                                <i data-lucide="smartphone" style="width:24px;height:24px;color:white;"></i>
+                            </div>
+                            <div>
+                                <h3 class="font-medium">Betala med Swish</h3>
+                                <p class="text-sm text-secondary">Öppna Swish-appen för att betala</p>
+                            </div>
+                        </div>
+
+                        <div style="background: var(--color-bg-card); padding: var(--space-lg); border-radius: var(--radius-md); border: 2px dashed var(--color-border);">
+                            <div style="text-align: center; margin-bottom: var(--space-md);">
+                                <div style="font-size: var(--text-sm); color: var(--color-text-secondary); margin-bottom: var(--space-xs);">Swish-nummer</div>
+                                <div style="font-size: var(--text-2xl); font-weight: var(--weight-bold); font-family: monospace; color: var(--color-accent);">
+                                    <?= htmlspecialchars($order['swish_number']) ?>
+                                </div>
+                            </div>
+
+                            <div style="text-align: center; margin-bottom: var(--space-md);">
+                                <div style="font-size: var(--text-sm); color: var(--color-text-secondary); margin-bottom: var(--space-xs);">Belopp</div>
+                                <div style="font-size: var(--text-3xl); font-weight: var(--weight-bold); color: var(--color-text-primary);">
+                                    <?= number_format($order['total_amount'], 0) ?> kr
+                                </div>
+                            </div>
+
+                            <?php if (!empty($order['swish_message'])): ?>
+                            <div style="text-align: center; margin-bottom: var(--space-md);">
+                                <div style="font-size: var(--text-sm); color: var(--color-text-secondary); margin-bottom: var(--space-xs);">Meddelande (viktigt!)</div>
+                                <div style="font-size: var(--text-lg); font-weight: var(--weight-semibold); font-family: monospace; color: var(--color-accent); padding: var(--space-sm); background: var(--color-accent-light); border-radius: var(--radius-sm);">
+                                    <?= htmlspecialchars($order['swish_message']) ?>
+                                </div>
+                            </div>
+                            <?php endif; ?>
+
+                            <div style="text-align: center; padding: var(--space-md); background: var(--color-bg-page); border-radius: var(--radius-sm);">
+                                <div style="font-size: var(--text-sm); color: var(--color-text-secondary); margin-bottom: var(--space-sm);">
+                                    <i data-lucide="info" style="width: 16px; height: 16px;"></i>
+                                    Instruktioner
+                                </div>
+                                <ol style="text-align: left; font-size: var(--text-sm); color: var(--color-text-secondary); padding-left: var(--space-lg); margin: 0;">
+                                    <li>Öppna Swish-appen</li>
+                                    <li>Välj "Betala"</li>
+                                    <li>Ange nummer: <strong><?= htmlspecialchars($order['swish_number']) ?></strong></li>
+                                    <li>Ange belopp: <strong><?= number_format($order['total_amount'], 0) ?> kr</strong></li>
+                                    <li>Ange meddelande: <strong><?= htmlspecialchars($order['swish_message'] ?? $order['order_number']) ?></strong></li>
+                                    <li>Bekräfta betalningen</li>
+                                </ol>
+                            </div>
+                        </div>
+
+                        <div style="margin-top: var(--space-md); padding: var(--space-md); background: var(--color-accent-light); border-radius: var(--radius-sm); border-left: 4px solid var(--color-accent);">
+                            <div style="font-size: var(--text-sm); color: var(--color-text-primary);">
+                                <i data-lucide="alert-triangle" style="width: 16px; height: 16px; color: var(--color-accent);"></i>
+                                <strong>OBS!</strong> Glöm inte att ange orderreferensen som meddelande i Swish. Din anmälan aktiveras automatiskt när betalningen mottagits.
+                            </div>
+                        </div>
+                    </div>
                     <?php else: ?>
                     <!-- No payment method available -->
                     <div class="text-center py-lg">
