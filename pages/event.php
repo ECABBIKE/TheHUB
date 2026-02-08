@@ -2972,41 +2972,118 @@ if (!empty($event['series_id'])) {
     padding: var(--space-xs) var(--space-sm);
 }
 
-/* Rider search dropdown */
-.rider-search-results {
-    position: absolute;
-    top: 100%;
+/* Rider search modal */
+.rider-search-modal {
+    position: fixed;
+    top: 0;
     left: 0;
     right: 0;
+    bottom: 0;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: var(--space-md);
+}
+
+.rider-search-modal__backdrop {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.7);
+    backdrop-filter: blur(4px);
+}
+
+.rider-search-modal__container {
+    position: relative;
     background: var(--color-bg-card);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-md);
-    margin-top: var(--space-xs);
-    max-height: 300px;
+    border-radius: var(--radius-lg);
+    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+    width: 100%;
+    max-width: 600px;
+    max-height: 80vh;
+    display: flex;
+    flex-direction: column;
+}
+
+.rider-search-modal__header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-lg);
+    border-bottom: 1px solid var(--color-border);
+}
+
+.rider-search-modal__header h3 {
+    margin: 0;
+    font-size: 1.25rem;
+    font-weight: 600;
+}
+
+.rider-search-modal__body {
+    padding: var(--space-lg);
     overflow-y: auto;
-    z-index: 1000;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
+    flex: 1;
+}
+
+.rider-search-modal__input-wrapper {
+    position: relative;
+    margin-bottom: var(--space-lg);
+}
+
+.rider-search-modal__search-icon {
+    position: absolute;
+    left: var(--space-md);
+    top: 50%;
+    transform: translateY(-50%);
+    color: var(--color-text-muted);
+    width: 20px;
+    height: 20px;
+    pointer-events: none;
+}
+
+.rider-search-modal__input {
+    width: 100%;
+    padding: var(--space-md) var(--space-md) var(--space-md) 48px;
+    font-size: 1rem;
+    border: 2px solid var(--color-border);
+    border-radius: var(--radius-md);
+    background: var(--color-bg-surface);
+    color: var(--color-text-primary);
+    transition: border-color 0.2s ease;
+}
+
+.rider-search-modal__input:focus {
+    outline: none;
+    border-color: var(--color-accent);
+}
+
+.rider-search-modal__results {
+    display: grid;
+    gap: var(--space-xs);
 }
 
 .rider-search-result {
-    padding: var(--space-sm) var(--space-md);
+    padding: var(--space-md);
+    background: var(--color-bg-surface);
+    border: 2px solid var(--color-border);
+    border-radius: var(--radius-md);
     cursor: pointer;
-    border-bottom: 1px solid var(--color-border);
-    transition: background 0.2s ease;
-}
-
-.rider-search-result:last-child {
-    border-bottom: none;
+    transition: all 0.2s ease;
 }
 
 .rider-search-result:hover {
-    background: var(--color-bg-hover);
+    border-color: var(--color-accent);
+    background: var(--color-accent-light);
 }
 
 .rider-search-result__name {
     font-weight: 600;
+    font-size: 1.0625rem;
     color: var(--color-text-primary);
-    margin-bottom: 2px;
+    margin-bottom: 4px;
 }
 
 .rider-search-result__info {
@@ -3020,13 +3097,41 @@ if (!empty($event['series_id'])) {
 .rider-search-result__uci {
     color: var(--color-accent);
     font-family: monospace;
+    font-weight: 500;
 }
 
 .rider-search-empty {
-    padding: var(--space-md);
+    padding: var(--space-2xl);
     text-align: center;
     color: var(--color-text-muted);
-    font-size: 0.875rem;
+}
+
+.rider-search-empty i {
+    width: 48px;
+    height: 48px;
+    color: var(--color-text-muted);
+    margin-bottom: var(--space-md);
+}
+
+@media (max-width: 767px) {
+    .rider-search-modal {
+        padding: 0;
+    }
+
+    .rider-search-modal__container {
+        max-width: 100%;
+        max-height: 100vh;
+        border-radius: 0;
+        height: 100%;
+    }
+
+    .rider-search-modal__header {
+        padding: var(--space-md);
+    }
+
+    .rider-search-modal__body {
+        padding: var(--space-md);
+    }
 }
 </style>
 
@@ -3331,22 +3436,46 @@ if (!empty($event['series_id'])) {
 
                 <!-- Rider Search -->
                 <div class="form-group">
-                    <label class="form-label">Sök deltagare (namn eller UCI ID)</label>
-                    <div style="position: relative;">
-                        <input type="text" id="riderSearch" class="form-input"
-                               placeholder="Skriv namn eller UCI ID..."
-                               autocomplete="off">
-                        <div id="riderSearchResults" class="rider-search-results" style="display: none;"></div>
-                    </div>
-                    <div id="selectedRiderDisplay" style="display: none; margin-top: var(--space-sm); padding: var(--space-sm); background: var(--color-bg-surface); border-radius: var(--radius-sm); border: 1px solid var(--color-border);">
-                        <div style="display: flex; justify-content: space-between; align-items: center;">
-                            <div>
-                                <strong id="selectedRiderName"></strong>
+                    <label class="form-label">Välj deltagare</label>
+
+                    <!-- Selected rider display -->
+                    <div id="selectedRiderDisplay" style="display: none; margin-bottom: var(--space-sm); padding: var(--space-md); background: var(--color-bg-surface); border-radius: var(--radius-md); border: 2px solid var(--color-accent);">
+                        <div style="display: flex; justify-content: space-between; align-items: center; gap: var(--space-md);">
+                            <div style="flex: 1;">
+                                <strong id="selectedRiderName" style="font-size: 1.125rem; display: block; margin-bottom: 4px;"></strong>
                                 <div style="font-size: 0.875rem; color: var(--color-text-secondary);" id="selectedRiderInfo"></div>
                             </div>
                             <button type="button" id="clearSelectedRider" class="btn btn--ghost btn--sm">
                                 <i data-lucide="x"></i> Ändra
                             </button>
+                        </div>
+                    </div>
+
+                    <!-- Open search modal button -->
+                    <button type="button" id="openRiderSearchBtn" class="btn btn--outline btn--block">
+                        <i data-lucide="search"></i>
+                        Sök deltagare (namn eller UCI ID)
+                    </button>
+                </div>
+
+                <!-- Rider Search Modal -->
+                <div id="riderSearchModal" class="rider-search-modal" style="display: none;">
+                    <div class="rider-search-modal__backdrop"></div>
+                    <div class="rider-search-modal__container">
+                        <div class="rider-search-modal__header">
+                            <h3>Sök deltagare</h3>
+                            <button type="button" id="closeRiderSearchBtn" class="btn btn--ghost btn--sm">
+                                <i data-lucide="x"></i>
+                            </button>
+                        </div>
+                        <div class="rider-search-modal__body">
+                            <div class="rider-search-modal__input-wrapper">
+                                <i data-lucide="search" class="rider-search-modal__search-icon"></i>
+                                <input type="text" id="riderSearch" class="rider-search-modal__input"
+                                       placeholder="Skriv namn eller UCI ID..."
+                                       autocomplete="off">
+                            </div>
+                            <div id="riderSearchResults" class="rider-search-modal__results"></div>
                         </div>
                     </div>
                 </div>
@@ -3409,6 +3538,9 @@ if (!empty($event['series_id'])) {
                 let selectedClassData = null;
 
                 // DOM elements
+                const riderSearchModal = document.getElementById('riderSearchModal');
+                const openRiderSearchBtn = document.getElementById('openRiderSearchBtn');
+                const closeRiderSearchBtn = document.getElementById('closeRiderSearchBtn');
                 const riderSearch = document.getElementById('riderSearch');
                 const riderSearchResults = document.getElementById('riderSearchResults');
                 const selectedRiderDisplay = document.getElementById('selectedRiderDisplay');
@@ -3468,8 +3600,6 @@ if (!empty($event['series_id'])) {
                         `;
                     }).join('');
 
-                    riderSearchResults.style.display = 'block';
-
                     // Add click handlers
                     riderSearchResults.querySelectorAll('.rider-search-result').forEach(el => {
                         el.addEventListener('click', function() {
@@ -3481,8 +3611,14 @@ if (!empty($event['series_id'])) {
                 }
 
                 function renderEmptyResults() {
-                    riderSearchResults.innerHTML = '<div class="rider-search-empty">Inga deltagare hittades</div>';
-                    riderSearchResults.style.display = 'block';
+                    riderSearchResults.innerHTML = `
+                        <div class="rider-search-empty">
+                            <i data-lucide="search-x"></i>
+                            <p>Inga deltagare hittades</p>
+                            <p style="font-size: 0.875rem; margin-top: var(--space-xs);">Prova ett annat sökord</p>
+                        </div>
+                    `;
+                    if (typeof lucide !== 'undefined') lucide.createIcons();
                 }
 
                 function selectRider(rider) {
@@ -3498,8 +3634,8 @@ if (!empty($event['series_id'])) {
                     selectedRiderInfo.textContent = infoItems.join(' • ');
 
                     // Show/hide elements
-                    riderSearch.style.display = 'none';
-                    riderSearchResults.style.display = 'none';
+                    closeSearchModal();
+                    openRiderSearchBtn.style.display = 'none';
                     selectedRiderDisplay.style.display = 'block';
 
                     // Load classes for this rider
@@ -3510,11 +3646,26 @@ if (!empty($event['series_id'])) {
                     selectedRider = null;
                     selectedRiderId = null;
                     riderSearch.value = '';
-                    riderSearch.style.display = 'block';
+                    riderSearchResults.innerHTML = '';
+                    openRiderSearchBtn.style.display = 'block';
                     selectedRiderDisplay.style.display = 'none';
                     classSelection.style.display = 'none';
                     selectedClassId = null;
                     addToCartBtn.disabled = true;
+                }
+
+                // Modal functions
+                function openSearchModal() {
+                    riderSearchModal.style.display = 'flex';
+                    document.body.style.overflow = 'hidden';
+                    setTimeout(() => riderSearch.focus(), 100);
+                }
+
+                function closeSearchModal() {
+                    riderSearchModal.style.display = 'none';
+                    document.body.style.overflow = '';
+                    riderSearch.value = '';
+                    riderSearchResults.innerHTML = '';
                 }
 
                 // Load classes for selected rider
@@ -3699,26 +3850,30 @@ if (!empty($event['series_id'])) {
 
                 // Event listeners
 
+                // Modal controls
+                openRiderSearchBtn.addEventListener('click', openSearchModal);
+                closeRiderSearchBtn.addEventListener('click', closeSearchModal);
+
+                // Close modal on backdrop click
+                riderSearchModal.addEventListener('click', function(e) {
+                    if (e.target === riderSearchModal || e.target.classList.contains('rider-search-modal__backdrop')) {
+                        closeSearchModal();
+                    }
+                });
+
                 // Rider search with debounce
                 riderSearch.addEventListener('input', function() {
                     clearTimeout(searchTimeout);
                     const query = this.value.trim();
 
                     if (query.length < 2) {
-                        riderSearchResults.style.display = 'none';
+                        riderSearchResults.innerHTML = '';
                         return;
                     }
 
                     searchTimeout = setTimeout(() => {
                         searchRiders(query);
                     }, 300);
-                });
-
-                // Hide results when clicking outside
-                document.addEventListener('click', function(e) {
-                    if (!riderSearch.contains(e.target) && !riderSearchResults.contains(e.target)) {
-                        riderSearchResults.style.display = 'none';
-                    }
                 });
 
                 // Clear selected rider
