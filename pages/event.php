@@ -3606,9 +3606,19 @@ if (!empty($event['series_id'])) {
                         if (rider.club_name) infoItems.push(rider.club_name);
                         if (rider.license_number) infoItems.push(`<span class="rider-search-result__uci">UCI: ${rider.license_number}</span>`);
 
+                        // License indicator
+                        const licenseIndicator = rider.has_valid_license && rider.license_display_year
+                            ? `<span style="display: inline-flex; align-items: center; gap: 4px; color: var(--color-success); font-weight: 500; font-size: 0.875rem;">
+                                 <i data-lucide="check-circle" style="width: 16px; height: 16px;"></i> Licens ${rider.license_display_year}
+                               </span>`
+                            : '';
+
                         return `
                             <div class="rider-search-result" data-rider-id="${rider.id}">
-                                <div class="rider-search-result__name">${rider.firstname} ${rider.lastname}</div>
+                                <div class="rider-search-result__name">
+                                    ${rider.firstname} ${rider.lastname}
+                                    ${licenseIndicator}
+                                </div>
                                 <div class="rider-search-result__info">${infoItems.join(' • ')}</div>
                             </div>
                         `;
