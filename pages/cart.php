@@ -95,6 +95,7 @@ include __DIR__ . '/../components/header.php';
                             <thead>
                                 <tr>
                                     <th>Deltagare</th>
+                                    <th>Klubb</th>
                                     <th>Klass</th>
                                     <th style="text-align: right;">Pris</th>
                                     <th style="width: 50px;"></th>
@@ -107,6 +108,7 @@ include __DIR__ . '/../components/header.php';
                 html += `
                     <tr>
                         <td><strong>${item.rider_name}</strong></td>
+                        <td style="color: var(--color-text-secondary);">${item.club_name || '-'}</td>
                         <td>${item.class_name}</td>
                         <td style="text-align: right;">${item.price} kr</td>
                         <td style="text-align: right;">
@@ -162,6 +164,14 @@ include __DIR__ . '/../components/header.php';
     checkoutBtn.addEventListener('click', async function() {
         const cart = GlobalCart.getCart();
         if (cart.length === 0) return;
+
+        // Check if user is logged in
+        <?php if (!hub_is_logged_in()): ?>
+        if (confirm('Du måste vara inloggad för att slutföra köpet. Vill du logga in nu?')) {
+            window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname);
+        }
+        return;
+        <?php endif; ?>
 
         checkoutBtn.disabled = true;
         checkoutBtn.innerHTML = '<i data-lucide="loader-2" class="spin"></i> Bearbetar...';

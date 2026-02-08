@@ -3880,6 +3880,7 @@ if (!empty($event['series_id'])) {
                         type: 'event',
                         rider_id: selectedRider.id,
                         rider_name: selectedRider.firstname + ' ' + selectedRider.lastname,
+                        club_name: selectedRider.club_name || '-',
                         event_id: eventId,
                         event_name: '<?= addslashes($event['name']) ?>',
                         event_date: '<?= $event['date'] ?>',
