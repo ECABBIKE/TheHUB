@@ -120,11 +120,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
  $lateFeePrice = floatval($lateFeePrices[$index] ?? 0);
  $seasonPrice = floatval($seasonPrices[$index] ?? 0);
 
- if ($basePrice > 0 || $seasonPrice > 0) {
+ // Save if ANY price is set
+ if ($basePrice > 0 || $earlyBirdPrice > 0 || $lateFeePrice > 0 || $seasonPrice > 0) {
  $existing = $db->getRow("SELECT id FROM pricing_template_rules WHERE template_id = ? AND class_id = ?", [$templateId, $classId]);
 
  $data = [
-  'base_price' => round($basePrice) // Always whole numbers
+  'base_price' => $basePrice > 0 ? round($basePrice) : 0
  ];
  if ($hasEarlyBirdPrice) {
   $data['early_bird_price'] = $earlyBirdPrice > 0 ? round($earlyBirdPrice) : null;
@@ -145,7 +146,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
  }
  $saved++;
  } else {
- // Remove pricing if all prices are 0
+ // Remove pricing if ALL prices are 0
  $db->delete('pricing_template_rules', 'template_id = ? AND class_id = ?', [$templateId, $classId]);
  }
  }
