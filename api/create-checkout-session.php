@@ -26,12 +26,8 @@ use TheHUB\Payment\StripeClient;
 
 $pdo = $GLOBALS['pdo'];
 
-// Verify user is logged in
-if (!function_exists('hub_is_logged_in') || !hub_is_logged_in()) {
-    http_response_code(401);
-    echo json_encode(['success' => false, 'error' => 'Ej inloggad']);
-    exit;
-}
+// Allow both logged-in and guest users to create checkout sessions
+// Order contains customer email and name for receipts
 
 $orderId = intval($_POST['order_id'] ?? 0);
 if (!$orderId) {
