@@ -911,6 +911,44 @@ try {
         $seriesEvents = $seriesEventsStmt->fetchAll(PDO::FETCH_ASSOC);
     }
 
+    // Check if series registration is available
+    $seriesRegistrationAvailable = false;
+    $seriesInfo = null;
+    $seriesEventsWithPricing = [];
+
+    if (!empty($event['series_id']) && $registrationOpen) {
+        // Load series information
+        $seriesStmt = $db->prepare("
+            SELECT id, name, logo, series_discount_percent, year
+            FROM series
+            WHERE id = ?
+        ");
+        $seriesStmt->execute([$event['series_id']]);
+        $seriesInfo = $seriesStmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($seriesInfo && count($seriesEvents) > 1) {
+            // Load all events in series with pricing info
+            $eventIds = array_column($seriesEvents, 'id');
+            $placeholders = str_repeat('?,', count($eventIds) - 1) . '?';
+
+            $seriesPricingStmt = $db->prepare("
+                SELECT e.id, e.name, e.date, e.pricing_template_id,
+                       pt.name as template_name
+                FROM events e
+                LEFT JOIN pricing_templates pt ON e.pricing_template_id = pt.id
+                WHERE e.id IN ($placeholders)
+                AND e.active = 1
+                AND e.pricing_template_id IS NOT NULL
+                ORDER BY e.date ASC
+            ");
+            $seriesPricingStmt->execute($eventIds);
+            $seriesEventsWithPricing = $seriesPricingStmt->fetchAll(PDO::FETCH_ASSOC);
+
+            // Series registration is available if all events have pricing
+            $seriesRegistrationAvailable = (count($seriesEventsWithPricing) === count($seriesEvents));
+        }
+    }
+
 } catch (Exception $e) {
     $error = $e->getMessage();
     error_log("EVENT PAGE ERROR (ID: {$eventId}): " . $error);
@@ -3398,6 +3436,44 @@ if (!empty($event['series_id'])) {
                         <p style="margin-top: var(--space-sm); font-size: 0.875rem; color: var(--color-text-secondary);">
                             Du kan lägga till fler deltagare nedan (t.ex. familjemedlemmar).
                         </p>
+                    </div>
+                </div>
+            <?php endif; ?>
+
+            <?php if ($seriesRegistrationAvailable && $seriesInfo): ?>
+                <!-- Series Registration Option -->
+                <div class="card" style="margin-bottom: var(--space-lg); border: 2px solid var(--color-accent); background: var(--color-accent-light);">
+                    <div class="card-header" style="background: var(--color-bg-surface); border-bottom: 1px solid var(--color-accent);">
+                        <h3 style="margin: 0; display: flex; align-items: center; gap: var(--space-sm);">
+                            <i data-lucide="trophy"></i>
+                            Anmäl dig till hela serien
+                        </h3>
+                    </div>
+                    <div class="card-body">
+                        <p style="margin-bottom: var(--space-md); color: var(--color-text-primary);">
+                            Detta event ingår i <strong><?= h($seriesInfo['name']) ?></strong>. Anmäl dig till alla <?= count($seriesEventsWithPricing) ?> event och spara <?= h($seriesInfo['series_discount_percent'] ?? 15) ?>%!
+                        </p>
+
+                        <div style="background: var(--color-bg-card); border-radius: var(--radius-md); padding: var(--space-md); margin-bottom: var(--space-md);">
+                            <div style="font-size: var(--text-sm); color: var(--color-text-secondary); margin-bottom: var(--space-sm);">Event i serien:</div>
+                            <ul style="margin: 0; padding-left: var(--space-lg); font-size: var(--text-sm);">
+                                <?php foreach ($seriesEventsWithPricing as $seriesEvent): ?>
+                                <li style="margin-bottom: var(--space-xs);">
+                                    <strong><?= h($seriesEvent['name']) ?></strong> - <?= date('j M Y', strtotime($seriesEvent['date'])) ?>
+                                </li>
+                                <?php endforeach; ?>
+                            </ul>
+                        </div>
+
+                        <a href="/series/<?= $seriesInfo['id'] ?>" class="btn btn--primary btn--lg btn--block" style="margin-top: var(--space-md);">
+                            <i data-lucide="trophy"></i>
+                            Gå till serieanmälan
+                        </a>
+
+                        <div style="text-align: center; margin-top: var(--space-md); font-size: var(--text-sm); color: var(--color-text-secondary);">
+                            <i data-lucide="info" style="width: 14px; height: 14px;"></i>
+                            Eller anmäl dig till detta enskilda event nedan
+                        </div>
                     </div>
                 </div>
             <?php endif; ?>
