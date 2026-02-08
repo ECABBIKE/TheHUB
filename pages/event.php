@@ -3812,6 +3812,10 @@ if (!empty($event['series_id'])) {
 
                     selectedClassId = cls.class_id;
                     selectedClassData = cls;
+
+                    // Show license commitment checkbox if needed
+                    showLicenseCommitmentIfNeeded();
+
                     updateAddToCartButton();
                 }
 

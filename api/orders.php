@@ -243,21 +243,23 @@ try {
 
             // Skapa multi-rider order
             case 'create':
-                if (!hub_is_logged_in()) {
-                    http_response_code(401);
-                    echo json_encode(['success' => false, 'error' => 'Du måste vara inloggad']);
-                    exit;
-                }
-
-                $currentUser = hub_current_user();
+                // Tillåt både inloggade och icke-inloggade användare
+                $currentUser = hub_is_logged_in() ? hub_current_user() : null;
 
                 // Validera buyer data
+                // Om inloggad: använd användarens data som default
+                // Om inte inloggad: måste skickas med i request
                 $buyerData = [
-                    'user_id' => $currentUser['id'],
-                    'name' => $data['buyer']['name'] ?? ($currentUser['firstname'] . ' ' . $currentUser['lastname']),
-                    'email' => $data['buyer']['email'] ?? $currentUser['email'],
+                    'user_id' => $currentUser['id'] ?? null,
+                    'name' => $data['buyer']['name'] ?? ($currentUser ? ($currentUser['firstname'] . ' ' . $currentUser['lastname']) : null),
+                    'email' => $data['buyer']['email'] ?? ($currentUser['email'] ?? null),
                     'phone' => $data['buyer']['phone'] ?? null
                 ];
+
+                // Validera att buyer har nödvändig information
+                if (empty($buyerData['name']) || empty($buyerData['email'])) {
+                    throw new Exception('Köparens namn och e-post måste anges');
+                }
 
                 $items = $data['items'] ?? [];
 
@@ -265,16 +267,8 @@ try {
                     throw new Exception('Inga deltagare valda');
                 }
 
-                // Validera att användaren får anmäla dessa riders
-                $allowedRiders = getRegistrableRiders($currentUser['id']);
-                $allowedRiderIds = array_column($allowedRiders, 'id');
-
-                foreach ($items as $item) {
-                    $riderId = intval($item['rider_id']);
-                    if (!in_array($riderId, $allowedRiderIds)) {
-                        throw new Exception('Du har inte behörighet att anmäla rider med ID ' . $riderId);
-                    }
-                }
+                // Ingen permission-validering - vem som helst kan anmäla vilken åkare som helst
+                // Köparens uppgifter valideras i kassan före betalning
 
                 // Skapa order
                 $result = createMultiRiderOrder($buyerData, $items, $data['discount_code'] ?? null);
