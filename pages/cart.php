@@ -34,6 +34,32 @@ include __DIR__ . '/../components/header.php';
 
             <div id="cartItems"></div>
 
+            <?php if (!hub_is_logged_in()): ?>
+            <!-- Guest Checkout Form -->
+            <div id="guestCheckoutForm" class="card" style="display: none; margin-top: var(--space-xl);">
+                <div class="card-header">
+                    <h3>Dina uppgifter</h3>
+                </div>
+                <div class="card-body">
+                    <p style="color: var(--color-text-secondary); margin-bottom: var(--space-md);">
+                        Fyll i dina uppgifter för att slutföra köpet.
+                    </p>
+                    <div class="form-group">
+                        <label class="form-label">E-post *</label>
+                        <input type="email" id="guestEmail" class="form-input" placeholder="din@email.se" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Namn *</label>
+                        <input type="text" id="guestName" class="form-input" placeholder="För- och efternamn" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Telefon (valfritt)</label>
+                        <input type="tel" id="guestPhone" class="form-input" placeholder="070-123 45 67">
+                    </div>
+                </div>
+            </div>
+            <?php endif; ?>
+
             <div id="cartSummary" style="display: none; margin-top: var(--space-xl); padding: var(--space-lg); background: var(--color-bg-surface); border-radius: var(--radius-md); border: 1px solid var(--color-border);">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-md);">
                     <span style="font-size: var(--text-lg); font-weight: var(--weight-semibold);">Totalt:</span>
@@ -75,6 +101,12 @@ include __DIR__ . '/../components/header.php';
 
         emptyCart.style.display = 'none';
         cartSummary.style.display = 'block';
+
+        // Show guest form if not logged in
+        <?php if (!hub_is_logged_in()): ?>
+        const guestForm = document.getElementById('guestCheckoutForm');
+        if (guestForm) guestForm.style.display = 'block';
+        <?php endif; ?>
 
         // Group by event
         const byEvent = GlobalCart.getItemsByEvent();
@@ -165,12 +197,35 @@ include __DIR__ . '/../components/header.php';
         const cart = GlobalCart.getCart();
         if (cart.length === 0) return;
 
-        // Check if user is logged in
+        // Prepare buyer data
+        const buyerData = {};
+
         <?php if (!hub_is_logged_in()): ?>
-        if (confirm('Du måste vara inloggad för att slutföra köpet. Vill du logga in nu?')) {
-            window.location.href = '/login?redirect=' + encodeURIComponent(window.location.pathname);
+        // Guest checkout - validate form
+        const guestEmail = document.getElementById('guestEmail')?.value?.trim();
+        const guestName = document.getElementById('guestName')?.value?.trim();
+        const guestPhone = document.getElementById('guestPhone')?.value?.trim();
+
+        if (!guestEmail || !guestName) {
+            alert('Fyll i e-post och namn för att fortsätta');
+            return;
         }
-        return;
+
+        // Validate email format
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(guestEmail)) {
+            alert('Ange en giltig e-postadress');
+            return;
+        }
+
+        buyerData.email = guestEmail;
+        buyerData.name = guestName;
+        if (guestPhone) buyerData.phone = guestPhone;
+        <?php else: ?>
+        // Logged in user
+        <?php $currentUser = hub_current_user(); ?>
+        buyerData.name = '<?= h(($currentUser['firstname'] ?? '') . ' ' . ($currentUser['lastname'] ?? '')) ?>';
+        buyerData.email = '<?= h($currentUser['email'] ?? '') ?>';
         <?php endif; ?>
 
         checkoutBtn.disabled = true;
@@ -178,12 +233,6 @@ include __DIR__ . '/../components/header.php';
         if (typeof lucide !== 'undefined') lucide.createIcons();
 
         try {
-            const buyerData = {};
-            <?php if (hub_is_logged_in() && hub_current_user()): ?>
-            <?php $currentUser = hub_current_user(); ?>
-            buyerData.name = '<?= h(($currentUser['firstname'] ?? '') . ' ' . ($currentUser['lastname'] ?? '')) ?>';
-            buyerData.email = '<?= h($currentUser['email'] ?? '') ?>';
-            <?php endif; ?>
 
             const response = await fetch('/api/orders.php', {
                 method: 'POST',
