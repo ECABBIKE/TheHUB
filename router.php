@@ -147,6 +147,9 @@ function hub_get_current_page(): array {
             'tag' => '/pages/news/index.php',
             'event' => '/pages/news/index.php',
             'rider' => '/pages/news/index.php'
+        ],
+        'cart' => [
+            'index' => '/pages/cart.php'
         ]
     ];
 

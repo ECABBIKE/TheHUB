@@ -64,10 +64,22 @@ function createMultiRiderOrder(array $buyerData, array $items, ?string $discount
 
         $swishNumber = null;
         $swishMessage = $orderReference;
-        if ($firstEventId && function_exists('getPaymentConfig')) {
-            $paymentConfig = getPaymentConfig($firstEventId);
-            if ($paymentConfig && !empty($paymentConfig['swish_number'])) {
-                $swishNumber = $paymentConfig['swish_number'];
+        $paymentRecipientId = null;
+        if ($firstEventId) {
+            // Get payment_recipient_id from event
+            $paymentStmt = $pdo->prepare("SELECT payment_recipient_id FROM events WHERE id = ?");
+            $paymentStmt->execute([$firstEventId]);
+            $eventPayment = $paymentStmt->fetch(PDO::FETCH_ASSOC);
+            if ($eventPayment && !empty($eventPayment['payment_recipient_id'])) {
+                $paymentRecipientId = $eventPayment['payment_recipient_id'];
+            }
+
+            // Get Swish number
+            if (function_exists('getPaymentConfig')) {
+                $paymentConfig = getPaymentConfig($firstEventId);
+                if ($paymentConfig && !empty($paymentConfig['swish_number'])) {
+                    $swishNumber = $paymentConfig['swish_number'];
+                }
             }
         }
 
@@ -85,13 +97,13 @@ function createMultiRiderOrder(array $buyerData, array $items, ?string $discount
         $orderStmt = $pdo->prepare("
             INSERT INTO orders (
                 order_number, rider_id, customer_email, customer_name,
-                event_id, subtotal, discount, total_amount, currency,
+                event_id, payment_recipient_id, subtotal, discount, total_amount, currency,
                 payment_method, payment_status,
                 swish_number, swish_message,
                 expires_at, created_at
             ) VALUES (
                 ?, ?, ?, ?,
-                ?, 0, 0, 0, 'SEK',
+                ?, ?, 0, 0, 0, 'SEK',
                 'swish', 'pending',
                 ?, ?,
                 DATE_ADD(NOW(), INTERVAL 24 HOUR), NOW()
@@ -103,6 +115,7 @@ function createMultiRiderOrder(array $buyerData, array $items, ?string $discount
             $buyerData['email'],
             $buyerData['name'],
             $firstEventId,
+            $paymentRecipientId,  // Add payment recipient
             $swishNumber,
             $swishMessage
         ]);
