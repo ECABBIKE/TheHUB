@@ -342,8 +342,17 @@ function createMultiRiderOrder(array $buyerData, array $items, ?string $discount
             }
         }
 
-        // Beräkna totalt
+        // Beräkna totalt discount
         $totalDiscount = 0;
+
+        // Check for Gravity ID discount if buyer has valid rider_id
+        if ($validRiderId && $firstEventId && function_exists('checkGravityIdDiscount')) {
+            $gravityIdInfo = checkGravityIdDiscount($validRiderId, $firstEventId);
+            if ($gravityIdInfo && $gravityIdInfo['has_gravity_id'] && $gravityIdInfo['discount'] > 0) {
+                $totalDiscount += floatval($gravityIdInfo['discount']);
+            }
+        }
+
         $totalAmount = $subtotal - $totalDiscount;
 
         // Uppdatera order med summor
@@ -520,6 +529,8 @@ function getEligibleClassesForEvent(int $eventId, int $riderId): array {
         $earlyBirdPercent = floatval($template['early_bird_percent'] ?? 0);
         $lateFeePercent = floatval($template['late_fee_percent'] ?? 0);
         $pricingMode = $template['pricing_mode'] ?? 'percentage';
+        $earlyBirdDaysBefore = intval($template['early_bird_days_before'] ?? 21);
+        $lateFeeDaysBefore = intval($template['late_fee_days_before'] ?? 3);
     } else {
         // Fallback to legacy event_pricing_rules
         $classStmt = $pdo->prepare("
@@ -533,6 +544,8 @@ function getEligibleClassesForEvent(int $eventId, int $riderId): array {
         $classStmt->execute([$eventId]);
         $earlyBirdPercent = null;
         $lateFeePercent = null;
+        $earlyBirdDaysBefore = null;
+        $lateFeeDaysBefore = null;
     }
 
     $eligibleClasses = [];
@@ -611,12 +624,34 @@ function getEligibleClassesForEvent(int $eventId, int $riderId): array {
             $lateFeePrice = $basePrice;
         }
 
+        // Calculate current_price based on timing
+        $currentPrice = $basePrice; // default
+        $now = time();
+
+        if (isset($earlyBirdDaysBefore) && isset($lateFeeDaysBefore)) {
+            // Calculate early bird deadline and late fee start from event date
+            $earlyBirdDeadline = $eventDate - ($earlyBirdDaysBefore * 86400); // 86400 seconds per day
+            $lateFeeStart = $eventDate - ($lateFeeDaysBefore * 86400);
+
+            if ($now <= $earlyBirdDeadline) {
+                // Before early bird deadline - use early bird price
+                $currentPrice = $earlyBirdPrice;
+            } elseif ($now >= $lateFeeStart) {
+                // After late fee start - use late fee price
+                $currentPrice = $lateFeePrice;
+            } else {
+                // Between early bird and late fee - use base price
+                $currentPrice = $basePrice;
+            }
+        }
+
         $classData = [
             'class_id' => $class['class_id'],
             'name' => $class['display_name'] ?: $class['name'],
             'base_price' => $basePrice,
             'early_bird_price' => $earlyBirdPrice,
             'late_fee' => $lateFeePrice,
+            'current_price' => $currentPrice,
             'eligible' => $eligible,
             'reason' => $reason,
             'warning' => $warning
@@ -632,22 +667,35 @@ function getEligibleClassesForEvent(int $eventId, int $riderId): array {
 
     // Returnera endast eligible klasser (dölj ineligible)
     // Om inga eligible klasser, returnera debug-info
-    if (empty($eligibleClasses) && !empty($ineligibleClasses)) {
-        return [[
-            'error' => 'no_eligible_classes',
-            'message' => 'Inga klasser matchade kriterierna',
-            'debug' => [
-                'rider_age' => $riderAge,
-                'rider_gender' => $riderGender,
-                'license_status' => $licenseStatus,
-                'ineligible_classes' => array_map(function($cls) {
-                    return [
-                        'name' => $cls['name'],
-                        'reason' => $cls['reason']
-                    ];
-                }, $ineligibleClasses)
-            ]
-        ]];
+    if (empty($eligibleClasses)) {
+        if (!empty($ineligibleClasses)) {
+            // Fanns klasser men ingen matchade
+            return [[
+                'error' => 'no_eligible_classes',
+                'message' => 'Inga klasser matchade kriterierna',
+                'debug' => [
+                    'rider_age' => $riderAge,
+                    'rider_gender' => $riderGender,
+                    'license_status' => $licenseStatus,
+                    'ineligible_classes' => array_map(function($cls) {
+                        return [
+                            'name' => $cls['name'],
+                            'reason' => $cls['reason']
+                        ];
+                    }, $ineligibleClasses)
+                ]
+            ]];
+        } else {
+            // Inga klasser alls i prismallen
+            return [[
+                'error' => 'no_classes_configured',
+                'message' => 'Eventet saknar klasser',
+                'debug' => [
+                    'pricing_template_id' => $pricingTemplateId ?? 'NULL',
+                    'event_id' => $eventId
+                ]
+            ]];
+        }
     }
 
     return $eligibleClasses;

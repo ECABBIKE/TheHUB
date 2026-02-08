@@ -63,6 +63,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 // Filter parameters
 $filterStatus = $_GET['status'] ?? 'pending';
 $filterEvent = isset($_GET['event_id']) ? intval($_GET['event_id']) : 0;
+$filterRecipient = isset($_GET['recipient_id']) ? intval($_GET['recipient_id']) : 0;
 $search = trim($_GET['search'] ?? '');
 
 // Build query
@@ -79,6 +80,12 @@ if ($filterStatus && $filterStatus !== 'all') {
 if ($filterEvent) {
     $whereConditions[] = "o.event_id = ?";
     $params[] = $filterEvent;
+}
+
+// Payment recipient filter
+if ($filterRecipient) {
+    $whereConditions[] = "o.payment_recipient_id = ?";
+    $params[] = $filterRecipient;
 }
 
 // Search
@@ -131,6 +138,15 @@ if ($isSuperAdmin) {
         ORDER BY e.date DESC
     ", [$currentAdmin['id']]);
 }
+
+// Get payment recipients for filter
+$recipients = $db->getAll("
+    SELECT DISTINCT pr.id, pr.name, pr.identifier
+    FROM payment_recipients pr
+    JOIN orders o ON o.payment_recipient_id = pr.id
+    WHERE pr.active = 1
+    ORDER BY pr.name
+");
 
 // Stats
 $stats = $db->getRow("
@@ -212,6 +228,20 @@ include __DIR__ . '/components/unified-layout.php';
                     <?php foreach ($events as $event): ?>
                     <option value="<?= $event['id'] ?>" <?= $filterEvent == $event['id'] ? 'selected' : '' ?>>
                         <?= h($event['name']) ?> (<?= date('Y-m-d', strtotime($event['date'])) ?>)
+                    </option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <?php endif; ?>
+
+            <?php if (!empty($recipients)): ?>
+            <div class="admin-form-group mb-0">
+                <label class="admin-form-label">Betalningsmottagare</label>
+                <select name="recipient_id" class="admin-form-select" onchange="this.form.submit()">
+                    <option value="">Alla mottagare</option>
+                    <?php foreach ($recipients as $recipient): ?>
+                    <option value="<?= $recipient['id'] ?>" <?= $filterRecipient == $recipient['id'] ? 'selected' : '' ?>>
+                        <?= h($recipient['name']) ?><?= $recipient['identifier'] ? ' (' . h($recipient['identifier']) . ')' : '' ?>
                     </option>
                     <?php endforeach; ?>
                 </select>
