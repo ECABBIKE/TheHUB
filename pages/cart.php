@@ -145,9 +145,9 @@ include __DIR__ . '/../components/header.php';
                         <td style="text-align: right;">${item.price} kr</td>
                         <td style="text-align: right;">
                             <button class="btn btn--ghost btn--sm remove-item"
-                                    data-event="${item.event_id}"
-                                    data-rider="${item.rider_id}"
-                                    data-class="${item.class_id}"
+                                    data-eventid="${item.event_id}"
+                                    data-riderid="${item.rider_id}"
+                                    data-classid="${item.class_id}"
                                     title="Ta bort">
                                 <i data-lucide="x"></i>
                             </button>
@@ -175,9 +175,9 @@ include __DIR__ . '/../components/header.php';
         // Add remove handlers
         document.querySelectorAll('.remove-item').forEach(btn => {
             btn.addEventListener('click', function() {
-                const eventId = parseInt(this.dataset.event);
-                const riderId = parseInt(this.dataset.rider);
-                const classId = parseInt(this.dataset.class);
+                const eventId = parseInt(this.dataset.eventid);
+                const riderId = parseInt(this.dataset.riderid);
+                const classId = parseInt(this.dataset.classid);
                 GlobalCart.removeItem(eventId, riderId, classId);
                 renderCart();
             });
@@ -226,6 +226,12 @@ include __DIR__ . '/../components/header.php';
         <?php $currentUser = hub_current_user(); ?>
         buyerData.name = '<?= h(($currentUser['firstname'] ?? '') . ' ' . ($currentUser['lastname'] ?? '')) ?>';
         buyerData.email = '<?= h($currentUser['email'] ?? '') ?>';
+
+        // Validate that logged-in user has an email
+        if (!buyerData.email) {
+            alert('Din profil saknar e-postadress. Vänligen uppdatera din profil först.');
+            return;
+        }
         <?php endif; ?>
 
         checkoutBtn.disabled = true;
