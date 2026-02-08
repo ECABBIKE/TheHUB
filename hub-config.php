@@ -66,7 +66,7 @@ if (!defined('HUB_NAV')) {
         ['id' => 'news', 'label' => 'Nyheter', 'icon' => 'newspaper', 'url' => '/news', 'aria' => 'Visa nyheter och race reports'],
         ['id' => 'database', 'label' => 'Databas', 'icon' => 'search', 'url' => '/database', 'aria' => 'Sök åkare och klubbar'],
         ['id' => 'ranking', 'label' => 'Ranking', 'icon' => 'trending-up', 'url' => '/ranking', 'aria' => 'Visa ranking'],
-        ['id' => 'cart', 'label' => 'Kundvagn', 'icon' => 'shopping-cart', 'url' => '/cart', 'aria' => 'Visa kundvagn', 'badge' => 0, 'badgeId' => 'nav-cart-badge'],
+        // 'Kundvagn' borttagen - finns nu i header istället (högra hörnet)
         // 'Mitt' borttagen - nu i header istället
     ]);
 }
