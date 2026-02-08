@@ -3429,8 +3429,8 @@ if (!empty($event['series_id'])) {
                     </div>
                 </div>
                 <button type="button" id="checkoutBtn" class="btn btn--primary btn--lg btn--block">
-                    <i data-lucide="credit-card"></i>
-                    Gå till betalning
+                    <i data-lucide="shopping-cart"></i>
+                    Gå till varukorgen
                 </button>
             </div>
 
@@ -3456,7 +3456,7 @@ if (!empty($event['series_id'])) {
                     </div>
 
                     <!-- Open search modal button -->
-                    <button type="button" id="openRiderSearchBtn" class="btn btn--outline btn--block">
+                    <button type="button" id="openRiderSearchBtn" class="btn btn--outline btn--block" style="border: 2px solid var(--color-border-strong);">
                         <i data-lucide="search"></i>
                         Sök deltagare (namn eller UCI ID)
                     </button>
@@ -3507,12 +3507,7 @@ if (!empty($event['series_id'])) {
                     </button>
                 </div>
 
-                <div class="reg-add-more mt-md">
-                    <button type="button" id="addAnotherBtn" class="btn btn--ghost btn--sm" style="display:none;">
-                        <i data-lucide="user-plus"></i>
-                        Lägg till fler deltagare
-                    </button>
-                </div>
+                <!-- Removed "Lägg till fler deltagare" - new search appears automatically -->
             </div>
 
             <?php if ($seriesPassAvailable && $seriesInfo): ?>
@@ -3978,14 +3973,14 @@ if (!empty($event['series_id'])) {
                         } else {
                             alert(data.error || 'Ett fel uppstod');
                             checkoutBtn.disabled = false;
-                            checkoutBtn.innerHTML = '<i data-lucide="credit-card"></i> Gå till betalning';
+                            checkoutBtn.innerHTML = '<i data-lucide="shopping-cart"></i> Gå till varukorgen';
                             if (typeof lucide !== 'undefined') lucide.createIcons();
                         }
                     } catch (error) {
                         console.error('Checkout error:', error);
                         alert('Ett fel uppstod. Försök igen.');
                         checkoutBtn.disabled = false;
-                        checkoutBtn.innerHTML = '<i data-lucide="credit-card"></i> Gå till betalning';
+                        checkoutBtn.innerHTML = '<i data-lucide="shopping-cart"></i> Gå till varukorgen';
                         if (typeof lucide !== 'undefined') lucide.createIcons();
                     }
                 }
