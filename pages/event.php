@@ -3897,15 +3897,19 @@ if (!empty($event['series_id'])) {
                     if (typeof lucide !== 'undefined') lucide.createIcons();
 
                     try {
+                        // Buyer data - använd inloggad användares data om tillgänglig
+                        const buyerData = {};
+                        <?php if ($isLoggedIn && $currentUser): ?>
+                        buyerData.name = '<?= h(($currentUser['firstname'] ?? '') . ' ' . ($currentUser['lastname'] ?? '')) ?>';
+                        buyerData.email = '<?= h($currentUser['email'] ?? '') ?>';
+                        <?php endif; ?>
+
                         const response = await fetch('/api/orders.php', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
                                 action: 'create',
-                                buyer: {
-                                    name: '<?= h($currentUser['firstname'] . ' ' . $currentUser['lastname']) ?>',
-                                    email: '<?= h($currentUser['email'] ?? '') ?>'
-                                },
+                                buyer: buyerData,
                                 items: cart
                             })
                         });
