@@ -4030,7 +4030,10 @@ if (!empty($event['series_id'])) {
                 });
 
                 addToCartBtn.addEventListener('click', addToCart);
-                checkoutBtn.addEventListener('click', checkout);
+                checkoutBtn.addEventListener('click', function() {
+                    // Navigate to cart page
+                    window.location.href = '/cart';
+                });
                 addAnotherBtn.addEventListener('click', function() {
                     document.getElementById('addRiderSection').scrollIntoView({ behavior: 'smooth' });
                 });
