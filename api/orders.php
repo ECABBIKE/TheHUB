@@ -62,7 +62,7 @@ try {
                 // Hämta event-info för early bird / late fee status
                 $pdo = hub_db();
                 $eventStmt = $pdo->prepare("
-                    SELECT name, date, pricing_template_id, early_bird_deadline, late_fee_start
+                    SELECT name, date, pricing_template_id
                     FROM events WHERE id = ?
                 ");
                 $eventStmt->execute([$eventId]);
@@ -72,7 +72,7 @@ try {
                 $isEarlyBird = false;
                 $isLateFee = false;
 
-                // Calculate early bird / late fee status
+                // Calculate early bird / late fee status from pricing template
                 if (!empty($event['pricing_template_id'])) {
                     // Get template settings for deadline calculation
                     $templateStmt = $pdo->prepare("SELECT * FROM pricing_templates WHERE id = ?");
@@ -94,13 +94,6 @@ try {
                             $isLateFee = $now >= $lateFeeStart && $now < $eventDate;
                         }
                     }
-                }
-                // Fallback to event-specific deadlines (legacy or override)
-                elseif (!empty($event['early_bird_deadline'])) {
-                    $isEarlyBird = $now < strtotime($event['early_bird_deadline']);
-                }
-                if (empty($event['pricing_template_id']) && !empty($event['late_fee_start'])) {
-                    $isLateFee = $now >= strtotime($event['late_fee_start']);
                 }
 
                 // Beräkna aktuellt pris för varje klass
