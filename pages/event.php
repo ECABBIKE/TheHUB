@@ -3485,6 +3485,18 @@ if (!empty($event['series_id'])) {
                     <label class="form-label">Välj klass</label>
                     <div id="classList" class="reg-class-list"></div>
 
+                    <!-- License Commitment (shown if needed) -->
+                    <div id="licenseCommitment" style="display:none; margin-top: var(--space-md);">
+                        <div style="background: var(--color-bg-surface); border: 2px solid var(--color-warning); border-radius: var(--radius-md); padding: var(--space-md);">
+                            <label style="display: flex; gap: var(--space-sm); cursor: pointer; align-items: flex-start;">
+                                <input type="checkbox" id="licenseCommitmentCheckbox" style="margin-top: 2px; width: 18px; height: 18px; cursor: pointer;">
+                                <span style="flex: 1; font-size: 0.9375rem; line-height: 1.5;">
+                                    Jag förbinder mig att köpa en giltig licens innan eventet för att kunna starta
+                                </span>
+                            </label>
+                        </div>
+                    </div>
+
                     <button type="button" id="addToCartBtn" class="btn btn--secondary btn--block mt-md" disabled>
                         <i data-lucide="plus"></i>
                         Lägg till i anmälan
@@ -3536,6 +3548,8 @@ if (!empty($event['series_id'])) {
                 let selectedRiderId = null;
                 let selectedClassId = null;
                 let selectedClassData = null;
+                let requiresLicenseCommitment = false;
+                let licenseCommitmentAccepted = false;
 
                 // DOM elements
                 const riderSearchModal = document.getElementById('riderSearchModal');
@@ -3650,7 +3664,10 @@ if (!empty($event['series_id'])) {
                     openRiderSearchBtn.style.display = 'block';
                     selectedRiderDisplay.style.display = 'none';
                     classSelection.style.display = 'none';
+                    document.getElementById('licenseCommitment').style.display = 'none';
                     selectedClassId = null;
+                    requiresLicenseCommitment = false;
+                    licenseCommitmentAccepted = false;
                     addToCartBtn.disabled = true;
                 }
 
@@ -3678,6 +3695,10 @@ if (!empty($event['series_id'])) {
                         const data = await response.json();
 
                         if (data.success) {
+                            // Save license commitment requirement
+                            requiresLicenseCommitment = data.requires_license_commitment || false;
+                            licenseCommitmentAccepted = false;
+
                             if (data.classes && data.classes.length > 0) {
                                 // Check if it's an incomplete profile error
                                 if (data.classes[0].error === 'incomplete_profile') {
@@ -3690,7 +3711,7 @@ if (!empty($event['series_id'])) {
                                                     <p style="margin: 0;">${data.classes[0].message}</p>
                                                     <p style="margin: var(--space-sm) 0 0 0; font-size: 0.875rem;">
                                                         Rider med ID ${selectedRider.id} saknar viktig information.
-                                                        Kontakta administratören för att uppdatera profilen.
+                                                        Logga in med profilen och uppdatera all information.
                                                     </p>
                                                 </div>
                                             </div>
@@ -3699,6 +3720,7 @@ if (!empty($event['series_id'])) {
                                     if (typeof lucide !== 'undefined') lucide.createIcons();
                                 } else {
                                     renderClasses(data.classes);
+                                    showLicenseCommitmentIfNeeded();
                                 }
                             } else {
                                 classList.innerHTML = '<p class="text-muted">Inga tillgängliga klasser för denna deltagare</p>';
@@ -3757,6 +3779,30 @@ if (!empty($event['series_id'])) {
                     if (typeof lucide !== 'undefined') lucide.createIcons();
                 }
 
+                function showLicenseCommitmentIfNeeded() {
+                    const licenseCommitmentDiv = document.getElementById('licenseCommitment');
+                    const licenseCommitmentCheckbox = document.getElementById('licenseCommitmentCheckbox');
+
+                    if (requiresLicenseCommitment) {
+                        licenseCommitmentDiv.style.display = 'block';
+                        // Reset checkbox state
+                        licenseCommitmentCheckbox.checked = false;
+                        licenseCommitmentAccepted = false;
+                        // Update button state
+                        updateAddToCartButton();
+                    } else {
+                        licenseCommitmentDiv.style.display = 'none';
+                    }
+                }
+
+                function updateAddToCartButton() {
+                    // Enable button only if:
+                    // 1. A class is selected
+                    // 2. If license commitment required, it must be accepted
+                    const canAdd = selectedClassId && (!requiresLicenseCommitment || licenseCommitmentAccepted);
+                    addToCartBtn.disabled = !canAdd;
+                }
+
                 function selectClass(cls) {
                     // Update visual selection
                     document.querySelectorAll('.reg-class-item').forEach(item => {
@@ -3766,7 +3812,7 @@ if (!empty($event['series_id'])) {
 
                     selectedClassId = cls.class_id;
                     selectedClassData = cls;
-                    addToCartBtn.disabled = false;
+                    updateAddToCartButton();
                 }
 
                 function addToCart() {
@@ -3909,6 +3955,12 @@ if (!empty($event['series_id'])) {
 
                 // Clear selected rider
                 clearSelectedRider.addEventListener('click', clearRiderSelection);
+
+                // License commitment checkbox
+                document.getElementById('licenseCommitmentCheckbox').addEventListener('change', function() {
+                    licenseCommitmentAccepted = this.checked;
+                    updateAddToCartButton();
+                });
 
                 addToCartBtn.addEventListener('click', addToCart);
                 checkoutBtn.addEventListener('click', checkout);
