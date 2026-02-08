@@ -2482,11 +2482,18 @@ $isLoggedIn = hub_is_logged_in();
 
 // Get pricing info for this event from template
 $eventPricing = [];
-error_log("EVENT PRICING DEBUG: Event {$eventId}, pricing_template_id=" . ($event['pricing_template_id'] ?? 'NULL'));
+$pricingTemplate = null;
+
 if (!empty($event['pricing_template_id'])) {
     try {
+        // Get template settings (for early bird & late fee percentages)
+        $templateStmt = $db->prepare("SELECT * FROM pricing_templates WHERE id = ?");
+        $templateStmt->execute([$event['pricing_template_id']]);
+        $pricingTemplate = $templateStmt->fetch(PDO::FETCH_ASSOC);
+
+        // Get pricing rules with correct column names
         $pricingStmt = $db->prepare("
-            SELECT ptr.class_id, ptr.base_price, ptr.early_bird_price, ptr.late_fee,
+            SELECT ptr.class_id, ptr.base_price,
                    c.name as class_name, c.display_name, c.gender, c.min_age, c.max_age
             FROM pricing_template_rules ptr
             JOIN classes c ON c.id = ptr.class_id
@@ -2496,17 +2503,26 @@ if (!empty($event['pricing_template_id'])) {
         $pricingStmt->execute([$event['pricing_template_id']]);
         $eventPricing = $pricingStmt->fetchAll(PDO::FETCH_ASSOC);
 
-        // Debug: Log if template ID is set but no pricing found
-        if (empty($eventPricing)) {
-            error_log("EVENT PRICING: Event {$eventId} has pricing_template_id={$event['pricing_template_id']} but no pricing_template_rules found");
-        } else {
-            error_log("EVENT PRICING DEBUG: Found " . count($eventPricing) . " pricing rules for event {$eventId}");
+        // Calculate early_bird_price and late_fee based on template percentages
+        if ($pricingTemplate && !empty($eventPricing)) {
+            $earlyBirdPercent = floatval($pricingTemplate['early_bird_percent'] ?? 0);
+            $lateFeePercent = floatval($pricingTemplate['late_fee_percent'] ?? 0);
+
+            foreach ($eventPricing as &$pricing) {
+                $basePrice = floatval($pricing['base_price']);
+
+                // Early bird = base_price - (base_price * percent / 100)
+                $pricing['early_bird_price'] = $basePrice - ($basePrice * $earlyBirdPercent / 100);
+
+                // Late fee = base_price + (base_price * percent / 100)
+                $pricing['late_fee'] = $basePrice + ($basePrice * $lateFeePercent / 100);
+            }
+            unset($pricing); // Break reference
         }
+
     } catch (PDOException $e) {
         error_log("EVENT PRICING: PDO error loading template pricing for event {$eventId}: " . $e->getMessage());
     }
-} else {
-    error_log("EVENT PRICING DEBUG: Event {$eventId} has no pricing_template_id set");
 }
 
 // Fallback: If no template pricing, try event_pricing_rules (legacy)
@@ -2543,11 +2559,28 @@ $isLateFee = false;
 $earlyBirdDeadline = null;
 $lateFeeStart = null;
 
-if (!empty($event['early_bird_deadline'])) {
+// If using pricing template, calculate deadlines from template settings
+if ($pricingTemplate && !empty($event['date'])) {
+    $eventDate = strtotime($event['date']);
+
+    // Early bird deadline = event_date - early_bird_days_before
+    if (!empty($pricingTemplate['early_bird_days_before'])) {
+        $earlyBirdDeadline = strtotime("-" . intval($pricingTemplate['early_bird_days_before']) . " days", $eventDate);
+        $isEarlyBird = $now < $earlyBirdDeadline;
+    }
+
+    // Late fee starts = event_date - late_fee_days_before
+    if (!empty($pricingTemplate['late_fee_days_before'])) {
+        $lateFeeStart = strtotime("-" . intval($pricingTemplate['late_fee_days_before']) . " days", $eventDate);
+        $isLateFee = $now >= $lateFeeStart && $now < $eventDate;
+    }
+}
+// Fallback to event-specific deadlines (legacy or override)
+elseif (!empty($event['early_bird_deadline'])) {
     $earlyBirdDeadline = strtotime($event['early_bird_deadline']);
     $isEarlyBird = $now < $earlyBirdDeadline;
 }
-if (!empty($event['late_fee_start'])) {
+if (empty($pricingTemplate) && !empty($event['late_fee_start'])) {
     $lateFeeStart = strtotime($event['late_fee_start']);
     $isLateFee = $now >= $lateFeeStart;
 }
