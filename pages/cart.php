@@ -184,8 +184,11 @@ include __DIR__ . '/../includes/header.php';
             const data = await response.json();
 
             if (data.success) {
-                // Clear cart on success
-                GlobalCart.clearCart();
+                // DON'T clear cart yet - user hasn't paid!
+                // Cart will be cleared after successful payment (webhook or return page)
+                // Store order ID so we can restore it if needed
+                sessionStorage.setItem('pending_order_id', data.order.id);
+
                 // Redirect to checkout
                 window.location.href = data.order.checkout_url;
             } else {

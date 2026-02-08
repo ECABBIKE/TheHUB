@@ -201,6 +201,12 @@ include __DIR__ . '/../components/header.php';
                     </a>
                 </div>
             </div>
+            <script>
+            // Clear cart after successful payment
+            if (typeof GlobalCart !== 'undefined') {
+                GlobalCart.clearCart();
+            }
+            </script>
 
         <?php elseif ($order && !empty($order['stripe_pending'])): ?>
             <!-- Stripe payment processing -->
