@@ -2423,8 +2423,9 @@ try {
                 <table class="table table--striped table--compact">
                     <thead>
                         <tr>
-                            <th style="width:40px">#</th>
+                            <th style="width:60px">Startnr</th>
                             <th>Namn</th>
+                            <th style="width:80px">Född</th>
                             <th>Klubb</th>
                             <th style="width:100px">Status</th>
                         </tr>
@@ -2432,8 +2433,9 @@ try {
                     <tbody>
                         <?php foreach ($classRegs as $index => $reg): ?>
                         <tr>
-                            <td class="text-muted"><?= $index + 1 ?></td>
+                            <td class="text-muted"><?= h($reg['bib_number'] ?? '-') ?></td>
                             <td><strong><?= h(($reg['firstname'] ?? $reg['first_name'] ?? '') . ' ' . ($reg['lastname'] ?? $reg['last_name'] ?? '')) ?></strong></td>
+                            <td class="text-muted"><?= h($reg['birth_year'] ?? '-') ?></td>
                             <td class="text-secondary"><?= h($reg['club_name'] ?? '-') ?></td>
                             <td>
                                 <?php
@@ -3880,6 +3882,7 @@ if (!empty($event['series_id'])) {
                         type: 'event',
                         rider_id: selectedRider.id,
                         rider_name: selectedRider.firstname + ' ' + selectedRider.lastname,
+                        club_name: selectedRider.club_name || '-',
                         event_id: eventId,
                         event_name: '<?= addslashes($event['name']) ?>',
                         event_date: '<?= $event['date'] ?>',
@@ -4027,7 +4030,10 @@ if (!empty($event['series_id'])) {
                 });
 
                 addToCartBtn.addEventListener('click', addToCart);
-                checkoutBtn.addEventListener('click', checkout);
+                checkoutBtn.addEventListener('click', function() {
+                    // Navigate to cart page
+                    window.location.href = '/cart';
+                });
                 addAnotherBtn.addEventListener('click', function() {
                     document.getElementById('addRiderSection').scrollIntoView({ behavior: 'smooth' });
                 });
