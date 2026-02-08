@@ -2984,8 +2984,8 @@ if (!empty($event['series_id'])) {
     margin-top: var(--space-xs);
     max-height: 300px;
     overflow-y: auto;
-    z-index: 100;
-    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+    z-index: 1000;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.25);
 }
 
 .rider-search-result {
