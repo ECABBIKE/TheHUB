@@ -1,9 +1,19 @@
 <?php
 /**
- * Create Stripe Checkout Session
+ * Create Stripe Checkout Session (Destination Charges)
  *
  * Creates a Stripe Checkout Session for an order and returns the URL.
- * Called from the checkout page when user clicks "Betala med kort".
+ * Supports both Destination Charges (Connected Accounts) and Direct Charges (platform).
+ *
+ * DESTINATION CHARGES (if payment_recipient has stripe_account_id):
+ *   - Payment goes directly to Connected Account
+ *   - Platform takes automatic application_fee
+ *   - Swish + kort available (uses TheHUB26 profile)
+ *
+ * DIRECT CHARGES (fallback if no Connected Account):
+ *   - Payment goes to platform account
+ *   - Only card payments (uses Default profile, no Swish)
+ *   - Manual payouts required
  *
  * POST params:
  *   order_id - Order ID to pay for
@@ -102,8 +112,32 @@ try {
         ];
     }
 
-    // Build checkout session params - DIRECT CHARGES ONLY
-    // All payments go to platform account, manual payouts to organizers
+    // Get payment recipient (if order has one)
+    $paymentRecipient = null;
+    $stripeAccountId = null;
+    $platformFeePercent = env('STRIPE_PLATFORM_FEE_PERCENT', 2);
+
+    if (!empty($order['payment_recipient_id'])) {
+        $stmt = $pdo->prepare("
+            SELECT * FROM payment_recipients
+            WHERE id = ? AND stripe_account_id IS NOT NULL
+        ");
+        $stmt->execute([$order['payment_recipient_id']]);
+        $paymentRecipient = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($paymentRecipient && !empty($paymentRecipient['stripe_account_id'])) {
+            $stripeAccountId = $paymentRecipient['stripe_account_id'];
+
+            // Use recipient's platform fee if set, otherwise use default
+            if (isset($paymentRecipient['platform_fee_percent'])) {
+                $platformFeePercent = $paymentRecipient['platform_fee_percent'];
+            }
+        }
+    }
+
+    // Build checkout session params
+    // DESTINATION CHARGES: Payment goes directly to Connected Account (if available)
+    // DIRECT CHARGES: Payment goes to platform (fallback for orders without recipient)
     $baseUrl = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http') . '://' . $_SERVER['HTTP_HOST'];
 
     $stripe = new StripeClient($stripeKey);
@@ -113,13 +147,13 @@ try {
         'line_items' => $lineItems,
         'success_url' => $baseUrl . '/checkout?order=' . $orderId . '&stripe_success=1',
         'cancel_url' => $baseUrl . '/checkout?order=' . $orderId . '&stripe_cancelled=1',
-        'payment_method_types' => ['card', 'swish'],  // Kort + Swish
+        'payment_method_types' => ['card', 'swish'],  // Kort + Swish (Swish fungerar för Connected Accounts)
         'metadata' => [
             'order_id' => $orderId,
             'order_number' => $order['order_number'] ?? '',
             'rider_id' => $order['rider_id'] ?? '',
             'event_id' => $order['event_id'] ?? '',
-            'payment_recipient_id' => $order['payment_recipient_id'] ?? ''  // För rapportering
+            'payment_recipient_id' => $order['payment_recipient_id'] ?? ''
         ],
         'payment_intent_data' => [
             'statement_descriptor' => 'THEHUB EVENT',  // Max 22 tecken - visas på kvitto
@@ -130,6 +164,32 @@ try {
             ]
         ]
     ];
+
+    // DESTINATION CHARGE: If order has a Connected Account
+    if ($stripeAccountId) {
+        // Calculate platform fee (application_fee_amount)
+        $platformFeeAmount = (int)($order['total_amount'] * ($platformFeePercent / 100) * 100); // Convert to öre
+
+        // Payment goes directly to Connected Account
+        $sessionParams['payment_intent_data']['transfer_data'] = [
+            'destination' => $stripeAccountId
+        ];
+
+        // Platform takes automatic fee
+        $sessionParams['payment_intent_data']['application_fee_amount'] = $platformFeeAmount;
+
+        // Use Connected Account's payment methods (TheHUB26 profile = Swish enabled!)
+        $sessionParams['payment_intent_data']['on_behalf_of'] = $stripeAccountId;
+    }
+    // DIRECT CHARGE: No Connected Account (fallback)
+    else {
+        // Payment goes to platform, uses Default profile (no Swish)
+        // Remove 'swish' from payment_method_types for direct charges
+        $sessionParams['payment_method_types'] = ['card'];
+
+        // Add transfer_group for potential manual transfers later
+        $sessionParams['payment_intent_data']['transfer_group'] = 'order_' . $order['order_number'];
+    }
 
     // Add customer email if available
     if (!empty($order['customer_email'])) {
