@@ -2423,8 +2423,9 @@ try {
                 <table class="table table--striped table--compact">
                     <thead>
                         <tr>
-                            <th style="width:40px">#</th>
+                            <th style="width:60px">Startnr</th>
                             <th>Namn</th>
+                            <th style="width:80px">Född</th>
                             <th>Klubb</th>
                             <th style="width:100px">Status</th>
                         </tr>
@@ -2432,8 +2433,9 @@ try {
                     <tbody>
                         <?php foreach ($classRegs as $index => $reg): ?>
                         <tr>
-                            <td class="text-muted"><?= $index + 1 ?></td>
+                            <td class="text-muted"><?= h($reg['bib_number'] ?? '-') ?></td>
                             <td><strong><?= h(($reg['firstname'] ?? $reg['first_name'] ?? '') . ' ' . ($reg['lastname'] ?? $reg['last_name'] ?? '')) ?></strong></td>
+                            <td class="text-muted"><?= h($reg['birth_year'] ?? '-') ?></td>
                             <td class="text-secondary"><?= h($reg['club_name'] ?? '-') ?></td>
                             <td>
                                 <?php
