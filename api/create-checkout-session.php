@@ -113,7 +113,7 @@ try {
         'line_items' => $lineItems,
         'success_url' => $baseUrl . '/checkout?order=' . $orderId . '&stripe_success=1',
         'cancel_url' => $baseUrl . '/checkout?order=' . $orderId . '&stripe_cancelled=1',
-        'payment_method_types' => ['card'],  // Bara kort tills Swish aktiveras för plattformskonto
+        'payment_method_types' => ['card', 'swish'],  // Kort + Swish
         'metadata' => [
             'order_id' => $orderId,
             'order_number' => $order['order_number'] ?? '',
