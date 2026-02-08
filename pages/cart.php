@@ -6,12 +6,16 @@
 
 require_once __DIR__ . '/../hub-config.php';
 
-$pageTitle = 'Kundvagn';
-include __DIR__ . '/../includes/header.php';
+$pageInfo = [
+    'title' => 'Kundvagn',
+    'section' => 'cart'
+];
+
+include __DIR__ . '/../components/header.php';
 ?>
 
-<main class="container" style="padding-top: var(--space-xl); padding-bottom: var(--space-xl);">
-    <div style="max-width: 800px; margin: 0 auto;">
+<main class="main-content">
+    <div class="container" style="max-width: 800px; margin: 0 auto;">
         <h1 style="margin-bottom: var(--space-lg);">
             <i data-lucide="shopping-cart"></i>
             Kundvagn
@@ -214,4 +218,4 @@ include __DIR__ . '/../includes/header.php';
 })();
 </script>
 
-<?php include __DIR__ . '/../includes/footer.php'; ?>
+<?php include __DIR__ . '/../components/footer.php'; ?>
