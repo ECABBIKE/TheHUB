@@ -206,8 +206,8 @@ function createMultiRiderOrder(array $buyerData, array $items, ?string $discount
                     INSERT INTO event_registrations (
                         event_id, rider_id, first_name, last_name, email,
                         birth_year, gender, club_name, category,
-                        status, payment_status, registration_date, registered_by, order_id
-                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', 'unpaid', NOW(), ?, ?)
+                        status, payment_status, registration_date, order_id
+                    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', 'unpaid', NOW(), ?)
                 ");
                 $regStmt->execute([
                     $eventId,
@@ -219,7 +219,6 @@ function createMultiRiderOrder(array $buyerData, array $items, ?string $discount
                     $rider['gender'],
                     $clubName,
                     $className,
-                    $buyerData['user_id'] ?? null,
                     $orderId
                 ]);
 
