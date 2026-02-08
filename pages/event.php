@@ -3440,8 +3440,6 @@ if (!empty($event['series_id'])) {
 
                 <!-- Rider Search -->
                 <div class="form-group">
-                    <label class="form-label">Välj deltagare</label>
-
                     <!-- Selected rider display -->
                     <div id="selectedRiderDisplay" style="display: none; margin-bottom: var(--space-sm); padding: var(--space-md); background: var(--color-bg-surface); border-radius: var(--radius-md); border: 2px solid var(--color-accent);">
                         <div style="display: flex; justify-content: space-between; align-items: center; gap: var(--space-md);">
@@ -3507,7 +3505,13 @@ if (!empty($event['series_id'])) {
                     </button>
                 </div>
 
-                <!-- Removed "Lägg till fler deltagare" - new search appears automatically -->
+                <!-- Keep button for JavaScript but hidden (not shown to user) -->
+                <div class="reg-add-more mt-md" style="display: none !important;">
+                    <button type="button" id="addAnotherBtn" class="btn btn--ghost btn--sm">
+                        <i data-lucide="user-plus"></i>
+                        Lägg till fler deltagare
+                    </button>
+                </div>
             </div>
 
             <?php if ($seriesPassAvailable && $seriesInfo): ?>
