@@ -158,30 +158,38 @@ function createMultiRiderOrder(array $buyerData, array $items, ?string $discount
                     throw new Exception("{$rider['firstname']} {$rider['lastname']} är redan anmäld till detta event");
                 }
 
-                // Hämta event-info och pris
-                $eventStmt = $pdo->prepare("
-                    SELECT e.name as event_name, e.date as event_date,
-                           epr.base_price, epr.early_bird_price, epr.late_fee,
-                           e.early_bird_deadline, e.late_fee_start
-                    FROM events e
-                    LEFT JOIN event_pricing_rules epr ON epr.event_id = e.id AND epr.class_id = ?
-                    WHERE e.id = ?
-                ");
-                $eventStmt->execute([$classId, $eventId]);
+                // Hämta event-info och pris (använd pricing template system)
+                $classesData = getEligibleClassesForEvent($eventId, $riderId);
+                $selectedClass = null;
+                foreach ($classesData as $cls) {
+                    if ($cls['class_id'] == $classId) {
+                        $selectedClass = $cls;
+                        break;
+                    }
+                }
+
+                if (!$selectedClass) {
+                    throw new Exception("Klassen är inte tillgänglig för denna deltagare");
+                }
+
+                // Get event info
+                $eventStmt = $pdo->prepare("SELECT name as event_name, date as event_date FROM events WHERE id = ?");
+                $eventStmt->execute([$eventId]);
                 $eventInfo = $eventStmt->fetch(PDO::FETCH_ASSOC);
 
                 if (!$eventInfo) {
                     throw new Exception("Event med ID {$eventId} hittades inte");
                 }
 
-                // Beräkna pris
-                $basePrice = floatval($eventInfo['base_price'] ?? 0);
-                $finalPrice = $basePrice;
+                // Use prices from eligible classes (already calculated with early bird/late fee)
+                $finalPrice = $selectedClass['current_price'] ?? $selectedClass['base_price'];
+                $basePrice = $selectedClass['base_price'];
                 $earlyBirdDiscount = 0;
                 $lateFee = 0;
 
+                // Dummy logic to keep old code working
                 $now = time();
-                if (!empty($eventInfo['early_bird_deadline']) && $now < strtotime($eventInfo['early_bird_deadline'])) {
+                if (false) { // Disabled - now handled by getEligibleClassesForEvent
                     if ($eventInfo['early_bird_price']) {
                         $earlyBirdDiscount = $basePrice - floatval($eventInfo['early_bird_price']);
                         $finalPrice = floatval($eventInfo['early_bird_price']);
@@ -457,13 +465,25 @@ function getEligibleClassesForEvent(int $eventId, int $riderId): array {
     }
 
     // Hämta event-datum och pricing_template_id
-    $eventStmt = $pdo->prepare("SELECT date, pricing_template_id FROM events WHERE id = ?");
+    // Include series pricing_template_id as fallback
+    $eventStmt = $pdo->prepare("
+        SELECT e.date, e.pricing_template_id,
+               s.pricing_template_id as series_pricing_template_id
+        FROM events e
+        LEFT JOIN series_events se ON e.id = se.event_id
+        LEFT JOIN series s ON se.series_id = s.id
+        WHERE e.id = ?
+        LIMIT 1
+    ");
     $eventStmt->execute([$eventId]);
     $event = $eventStmt->fetch(PDO::FETCH_ASSOC);
 
     if (!$event) {
         return [];
     }
+
+    // Use event pricing template, or fallback to series pricing template
+    $pricingTemplateId = $event['pricing_template_id'] ?? $event['series_pricing_template_id'] ?? null;
 
     $eventDate = strtotime($event['date']);
     $riderAge = date('Y', $eventDate) - intval($rider['birth_year']);
@@ -481,10 +501,10 @@ function getEligibleClassesForEvent(int $eventId, int $riderId): array {
     }
 
     // Try pricing template system first (new system)
-    if (!empty($event['pricing_template_id'])) {
+    if (!empty($pricingTemplateId)) {
         // Get template settings
         $templateStmt = $pdo->prepare("SELECT * FROM pricing_templates WHERE id = ?");
-        $templateStmt->execute([$event['pricing_template_id']]);
+        $templateStmt->execute([$pricingTemplateId]);
         $template = $templateStmt->fetch(PDO::FETCH_ASSOC);
 
         // Get pricing rules from template (including manual price overrides)
@@ -496,7 +516,7 @@ function getEligibleClassesForEvent(int $eventId, int $riderId): array {
             WHERE ptr.template_id = ?
             ORDER BY c.sort_order, c.name
         ");
-        $classStmt->execute([$event['pricing_template_id']]);
+        $classStmt->execute([$pricingTemplateId]);
 
         $earlyBirdPercent = floatval($template['early_bird_percent'] ?? 0);
         $lateFeePercent = floatval($template['late_fee_percent'] ?? 0);
@@ -519,15 +539,22 @@ function getEligibleClassesForEvent(int $eventId, int $riderId): array {
     $eligibleClasses = [];
     $ineligibleClasses = [];
 
+    // DEBUG: Log rider info
+    error_log("DEBUG getEligibleClassesForEvent: Event=$eventId, Rider=$riderId, Age=$riderAge, Gender='$riderGender', License=$licenseStatus");
+
     while ($class = $classStmt->fetch(PDO::FETCH_ASSOC)) {
         $eligible = true;
         $reason = '';
         $warning = '';
 
+        // DEBUG: Log each class check
+        error_log("  Class: {$class['name']} | Gender={$class['gender']}, Age={$class['min_age']}-{$class['max_age']}");
+
         // Kolla licens - blockera endast om licensen är UTGÅNGEN
         if ($licenseStatus === 'expired') {
             $eligible = false;
             $reason = 'Licensen har gått ut';
+            error_log("    BLOCKED: Expired license");
         } elseif ($licenseStatus === 'none') {
             // Varna om ingen licens finns, men tillåt anmälan
             $warning = 'Ingen licens registrerad';
@@ -537,16 +564,23 @@ function getEligibleClassesForEvent(int $eventId, int $riderId): array {
         if ($eligible && $class['gender'] && $class['gender'] !== $riderGender) {
             $eligible = false;
             $reason = $class['gender'] === 'M' ? 'Endast herrar' : 'Endast damer';
+            error_log("    BLOCKED: Gender mismatch (need='{$class['gender']}', have='$riderGender')");
         }
 
         // Kolla ålder
         if ($eligible && $class['min_age'] && $riderAge < $class['min_age']) {
             $eligible = false;
             $reason = "Minst {$class['min_age']} år";
+            error_log("    BLOCKED: Too young (age=$riderAge < min={$class['min_age']})");
         }
         if ($eligible && $class['max_age'] && $riderAge > $class['max_age']) {
             $eligible = false;
             $reason = "Max {$class['max_age']} år";
+            error_log("    BLOCKED: Too old (age=$riderAge > max={$class['max_age']})");
+        }
+
+        if ($eligible) {
+            error_log("    ELIGIBLE!");
         }
 
         $basePrice = round(floatval($class['base_price'])); // Always whole numbers
