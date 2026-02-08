@@ -3546,8 +3546,7 @@ if (!empty($event['series_id'])) {
                 const isEarlyBird = <?= $isEarlyBird ? 'true' : 'false' ?>;
                 const isLateFee = <?= $isLateFee ? 'true' : 'false' ?>;
 
-                // Cart state
-                let cart = [];
+                // Cart state - use GlobalCart instead of local array
                 let availableRiders = [];
                 let selectedRiderId = null;
                 let selectedClassId = null;
@@ -3877,11 +3876,14 @@ if (!empty($event['series_id'])) {
                 function addToCart() {
                     if (!selectedRiderId || !selectedClassId || !selectedRider) return;
 
-                    cart.push({
+                    // Add to GlobalCart
+                    GlobalCart.addItem({
                         type: 'event',
                         rider_id: selectedRider.id,
                         rider_name: selectedRider.firstname + ' ' + selectedRider.lastname,
                         event_id: eventId,
+                        event_name: '<?= addslashes($event['name']) ?>',
+                        event_date: '<?= $event['date'] ?>',
                         class_id: selectedClassId,
                         class_name: selectedClassData.name,
                         price: selectedClassData.current_price
@@ -3895,13 +3897,17 @@ if (!empty($event['series_id'])) {
                     updateCart();
                 }
 
-                function removeFromCart(index) {
-                    cart.splice(index, 1);
+                function removeFromCart(eventId, riderId, classId) {
+                    GlobalCart.removeItem(eventId, riderId, classId);
                     updateCart();
                 }
 
                 function updateCart() {
-                    if (cart.length === 0) {
+                    // Get items from GlobalCart for THIS event only
+                    const allItems = GlobalCart.getCart();
+                    const thisEventItems = allItems.filter(item => item.event_id == eventId);
+
+                    if (thisEventItems.length === 0) {
                         registrationCart.style.display = 'none';
                         addAnotherBtn.style.display = 'none';
                         return;
@@ -3911,22 +3917,23 @@ if (!empty($event['series_id'])) {
                     addAnotherBtn.style.display = 'inline-flex';
 
                     // Render cart items
-                    cartItems.innerHTML = cart.map((item, index) => `
+                    cartItems.innerHTML = thisEventItems.map((item) => `
                         <div class="reg-cart__item">
                             <div class="reg-cart__item-info">
                                 <strong>${item.rider_name}</strong>
                                 <span class="text-muted">${item.class_name}</span>
                             </div>
                             <div class="reg-cart__item-price">${item.price.toLocaleString('sv-SE')} kr</div>
-                            <button type="button" class="reg-cart__item-remove" onclick="window.removeCartItem(${index})">
+                            <button type="button" class="reg-cart__item-remove"
+                                    onclick="window.removeCartItem(${item.event_id}, ${item.rider_id}, ${item.class_id})">
                                 <i data-lucide="x"></i>
                             </button>
                         </div>
                     `).join('');
 
                     // Update totals
-                    const total = cart.reduce((sum, item) => sum + item.price, 0);
-                    cartCount.textContent = cart.length;
+                    const total = thisEventItems.reduce((sum, item) => sum + item.price, 0);
+                    cartCount.textContent = thisEventItems.length;
                     cartTotal.textContent = total.toLocaleString('sv-SE') + ' kr';
 
                     if (typeof lucide !== 'undefined') lucide.createIcons();
@@ -3936,6 +3943,8 @@ if (!empty($event['series_id'])) {
                 window.removeCartItem = removeFromCart;
 
                 async function checkout() {
+                    // Get cart from GlobalCart
+                    const cart = GlobalCart.getCart();
                     if (cart.length === 0) return;
 
                     checkoutBtn.disabled = true;
@@ -3963,6 +3972,8 @@ if (!empty($event['series_id'])) {
                         const data = await response.json();
 
                         if (data.success) {
+                            // Clear cart on successful order creation
+                            GlobalCart.clearCart();
                             window.location.href = data.order.checkout_url;
                         } else {
                             alert(data.error || 'Ett fel uppstod');
@@ -4021,6 +4032,12 @@ if (!empty($event['series_id'])) {
                 addAnotherBtn.addEventListener('click', function() {
                     document.getElementById('addRiderSection').scrollIntoView({ behavior: 'smooth' });
                 });
+
+                // Listen for cart updates from GlobalCart
+                window.addEventListener('cartUpdated', updateCart);
+
+                // Initial cart render on page load
+                updateCart();
             })();
             </script>
         <?php endif; ?>

@@ -33,6 +33,31 @@ if (function_exists('getVersionInfo')) {
 <!-- Global Cart JS -->
 <script src="/assets/js/global-cart.js?v=<?= time() ?>"></script>
 
+<!-- Cart Badge Updater -->
+<script>
+(function() {
+    function updateCartBadge() {
+        const cartCount = GlobalCart.getCart().length;
+        const badge = document.getElementById('nav-cart-badge');
+        if (badge) {
+            if (cartCount > 0) {
+                badge.textContent = cartCount;
+                badge.style.display = 'inline-flex';
+            } else {
+                badge.style.display = 'none';
+            }
+        }
+    }
+
+    // Update on page load
+    if (typeof GlobalCart !== 'undefined') {
+        updateCartBadge();
+        // Update when cart changes
+        window.addEventListener('cartUpdated', updateCartBadge);
+    }
+})();
+</script>
+
 <style>
 .site-footer {
     padding: var(--space-lg) var(--space-md);
