@@ -3155,30 +3155,6 @@ if (!empty($event['series_id'])) {
                 Gå till anmälan
             </a>
 
-        <?php elseif ($isLoggedIn && $existingRegistration): ?>
-            <!-- Already registered -->
-            <div class="reg-existing">
-                <i data-lucide="check-circle" class="reg-existing__icon"></i>
-                <h3 class="mb-sm">Du är anmäld!</h3>
-                <p class="text-secondary mb-md">
-                    Du är anmäld i <strong><?= h($existingRegistration['class_name'] ?: $existingRegistration['category']) ?></strong>
-                </p>
-                <?php if ($existingRegistration['payment_status'] !== 'paid'): ?>
-                    <div class="alert alert--warning mb-md">
-                        <i data-lucide="credit-card"></i>
-                        Betalning saknas. <a href="/checkout?registration=<?= $existingRegistration['id'] ?>">Betala nu</a>
-                    </div>
-                <?php else: ?>
-                    <span class="badge badge-success">Betald</span>
-                <?php endif; ?>
-                <div class="mt-lg">
-                    <a href="/profile/tickets" class="btn btn--ghost">
-                        <i data-lucide="ticket"></i>
-                        Mina biljetter
-                    </a>
-                </div>
-            </div>
-
         <?php elseif ($registrationNotYetOpen): ?>
             <!-- Registration not yet open - Show countdown -->
             <style>
@@ -3392,6 +3368,30 @@ if (!empty($event['series_id'])) {
 
         <?php else: ?>
             <!-- Multi-Rider Registration Form -->
+            <?php if ($isLoggedIn && $existingRegistration): ?>
+                <!-- Show existing registration info but don't block form -->
+                <div class="alert alert--success mb-lg" style="display: flex; gap: var(--space-md); text-align: left;">
+                    <i data-lucide="check-circle" style="flex-shrink: 0; margin-top: 2px; width: 24px; height: 24px;"></i>
+                    <div style="flex: 1;">
+                        <strong style="display: block; margin-bottom: var(--space-xs);">Du är anmäld!</strong>
+                        <p style="margin: 0;">
+                            Du är anmäld i <strong><?= h($existingRegistration['class_name'] ?: $existingRegistration['category']) ?></strong>
+                        </p>
+                        <?php if ($existingRegistration['payment_status'] !== 'paid'): ?>
+                            <div style="margin-top: var(--space-sm); padding: var(--space-sm); background: rgba(234, 179, 8, 0.1); border-radius: var(--radius-sm);">
+                                <i data-lucide="credit-card" style="width: 16px; height: 16px;"></i>
+                                <span>Betalning saknas. <a href="/checkout?registration=<?= $existingRegistration['id'] ?>" style="text-decoration: underline;">Betala nu</a></span>
+                            </div>
+                        <?php else: ?>
+                            <span class="badge badge-success" style="margin-top: var(--space-sm);">Betald</span>
+                        <?php endif; ?>
+                        <p style="margin-top: var(--space-sm); font-size: 0.875rem; color: var(--color-text-secondary);">
+                            Du kan lägga till fler deltagare nedan (t.ex. familjemedlemmar).
+                        </p>
+                    </div>
+                </div>
+            <?php endif; ?>
+
             <?php if ($isEarlyBird): ?>
                 <div class="alert alert--success mb-md">
                     <i data-lucide="clock"></i>
