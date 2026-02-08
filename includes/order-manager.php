@@ -427,24 +427,52 @@ function getEligibleClassesForEvent(int $eventId, int $riderId): array {
         return [];
     }
 
-    // Hämta event-datum för åldersberäkning
-    $eventStmt = $pdo->prepare("SELECT date FROM events WHERE id = ?");
+    // Hämta event-datum och pricing_template_id
+    $eventStmt = $pdo->prepare("SELECT date, pricing_template_id FROM events WHERE id = ?");
     $eventStmt->execute([$eventId]);
-    $eventDate = $eventStmt->fetchColumn();
+    $event = $eventStmt->fetch(PDO::FETCH_ASSOC);
 
-    $riderAge = date('Y', strtotime($eventDate)) - intval($rider['birth_year']);
+    if (!$event) {
+        return [];
+    }
+
+    $riderAge = date('Y', strtotime($event['date'])) - intval($rider['birth_year']);
     $riderGender = strtoupper($rider['gender']);
 
-    // Hämta klasser med priser
-    $classStmt = $pdo->prepare("
-        SELECT c.id as class_id, c.name, c.display_name, c.gender, c.min_age, c.max_age,
-               epr.base_price, epr.early_bird_price, epr.late_fee
-        FROM event_pricing_rules epr
-        JOIN classes c ON epr.class_id = c.id
-        WHERE epr.event_id = ?
-        ORDER BY c.sort_order, c.name
-    ");
-    $classStmt->execute([$eventId]);
+    // Try pricing template system first (new system)
+    if (!empty($event['pricing_template_id'])) {
+        // Get template settings
+        $templateStmt = $pdo->prepare("SELECT * FROM pricing_templates WHERE id = ?");
+        $templateStmt->execute([$event['pricing_template_id']]);
+        $template = $templateStmt->fetch(PDO::FETCH_ASSOC);
+
+        // Get pricing rules from template
+        $classStmt = $pdo->prepare("
+            SELECT c.id as class_id, c.name, c.display_name, c.gender, c.min_age, c.max_age,
+                   ptr.base_price
+            FROM pricing_template_rules ptr
+            JOIN classes c ON ptr.class_id = c.id
+            WHERE ptr.template_id = ?
+            ORDER BY c.sort_order, c.name
+        ");
+        $classStmt->execute([$event['pricing_template_id']]);
+
+        $earlyBirdPercent = floatval($template['early_bird_percent'] ?? 0);
+        $lateFeePercent = floatval($template['late_fee_percent'] ?? 0);
+    } else {
+        // Fallback to legacy event_pricing_rules
+        $classStmt = $pdo->prepare("
+            SELECT c.id as class_id, c.name, c.display_name, c.gender, c.min_age, c.max_age,
+                   epr.base_price, epr.early_bird_price, epr.late_fee
+            FROM event_pricing_rules epr
+            JOIN classes c ON epr.class_id = c.id
+            WHERE epr.event_id = ?
+            ORDER BY c.sort_order, c.name
+        ");
+        $classStmt->execute([$eventId]);
+        $earlyBirdPercent = null;
+        $lateFeePercent = null;
+    }
 
     $classes = [];
     while ($class = $classStmt->fetch(PDO::FETCH_ASSOC)) {
@@ -467,12 +495,25 @@ function getEligibleClassesForEvent(int $eventId, int $riderId): array {
             $reason = "Max {$class['max_age']} år";
         }
 
+        $basePrice = floatval($class['base_price']);
+
+        // Calculate early bird and late fee based on system used
+        if ($earlyBirdPercent !== null && $lateFeePercent !== null) {
+            // Pricing template system - calculate from percentages
+            $earlyBirdPrice = $basePrice - ($basePrice * $earlyBirdPercent / 100);
+            $lateFee = $basePrice + ($basePrice * $lateFeePercent / 100);
+        } else {
+            // Legacy system - use values from event_pricing_rules
+            $earlyBirdPrice = isset($class['early_bird_price']) ? floatval($class['early_bird_price']) : null;
+            $lateFee = isset($class['late_fee']) ? floatval($class['late_fee']) : null;
+        }
+
         $classes[] = [
             'class_id' => $class['class_id'],
             'name' => $class['display_name'] ?: $class['name'],
-            'base_price' => floatval($class['base_price']),
-            'early_bird_price' => $class['early_bird_price'] ? floatval($class['early_bird_price']) : null,
-            'late_fee' => $class['late_fee'] ? floatval($class['late_fee']) : null,
+            'base_price' => $basePrice,
+            'early_bird_price' => $earlyBirdPrice,
+            'late_fee' => $lateFee,
             'eligible' => $eligible,
             'reason' => $reason
         ];
