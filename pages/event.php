@@ -2971,6 +2971,63 @@ if (!empty($event['series_id'])) {
 .table--compact td {
     padding: var(--space-xs) var(--space-sm);
 }
+
+/* Rider search dropdown */
+.rider-search-results {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    background: var(--color-bg-card);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    margin-top: var(--space-xs);
+    max-height: 300px;
+    overflow-y: auto;
+    z-index: 100;
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.rider-search-result {
+    padding: var(--space-sm) var(--space-md);
+    cursor: pointer;
+    border-bottom: 1px solid var(--color-border);
+    transition: background 0.2s ease;
+}
+
+.rider-search-result:last-child {
+    border-bottom: none;
+}
+
+.rider-search-result:hover {
+    background: var(--color-bg-hover);
+}
+
+.rider-search-result__name {
+    font-weight: 600;
+    color: var(--color-text-primary);
+    margin-bottom: 2px;
+}
+
+.rider-search-result__info {
+    font-size: 0.875rem;
+    color: var(--color-text-secondary);
+    display: flex;
+    gap: var(--space-sm);
+    flex-wrap: wrap;
+}
+
+.rider-search-result__uci {
+    color: var(--color-accent);
+    font-family: monospace;
+}
+
+.rider-search-empty {
+    padding: var(--space-md);
+    text-align: center;
+    color: var(--color-text-muted);
+    font-size: 0.875rem;
+}
 </style>
 
 <section class="card">
@@ -3272,16 +3329,26 @@ if (!empty($event['series_id'])) {
             <div id="addRiderSection" class="reg-add-rider">
                 <h3 class="mb-md">Lägg till deltagare</h3>
 
-                <!-- Rider Selector -->
+                <!-- Rider Search -->
                 <div class="form-group">
-                    <label class="form-label">Välj vem som ska anmälas</label>
-                    <select id="riderSelect" class="form-select">
-                        <option value="">-- Välj deltagare --</option>
-                        <option value="<?= $currentUser['id'] ?>">
-                            <?= h($currentUser['firstname'] . ' ' . $currentUser['lastname']) ?> (du själv)
-                        </option>
-                        <!-- Family members loaded via JS -->
-                    </select>
+                    <label class="form-label">Sök deltagare (namn eller UCI ID)</label>
+                    <div style="position: relative;">
+                        <input type="text" id="riderSearch" class="form-input"
+                               placeholder="Skriv namn eller UCI ID..."
+                               autocomplete="off">
+                        <div id="riderSearchResults" class="rider-search-results" style="display: none;"></div>
+                    </div>
+                    <div id="selectedRiderDisplay" style="display: none; margin-top: var(--space-sm); padding: var(--space-sm); background: var(--color-bg-surface); border-radius: var(--radius-sm); border: 1px solid var(--color-border);">
+                        <div style="display: flex; justify-content: space-between; align-items: center;">
+                            <div>
+                                <strong id="selectedRiderName"></strong>
+                                <div style="font-size: 0.875rem; color: var(--color-text-secondary);" id="selectedRiderInfo"></div>
+                            </div>
+                            <button type="button" id="clearSelectedRider" class="btn btn--ghost btn--sm">
+                                <i data-lucide="x"></i> Ändra
+                            </button>
+                        </div>
+                    </div>
                 </div>
 
                 <!-- Class Selection (shown after rider selected) -->
@@ -3342,7 +3409,12 @@ if (!empty($event['series_id'])) {
                 let selectedClassData = null;
 
                 // DOM elements
-                const riderSelect = document.getElementById('riderSelect');
+                const riderSearch = document.getElementById('riderSearch');
+                const riderSearchResults = document.getElementById('riderSearchResults');
+                const selectedRiderDisplay = document.getElementById('selectedRiderDisplay');
+                const selectedRiderName = document.getElementById('selectedRiderName');
+                const selectedRiderInfo = document.getElementById('selectedRiderInfo');
+                const clearSelectedRider = document.getElementById('clearSelectedRider');
                 const classSelection = document.getElementById('classSelection');
                 const classList = document.getElementById('classList');
                 const addToCartBtn = document.getElementById('addToCartBtn');
@@ -3355,35 +3427,94 @@ if (!empty($event['series_id'])) {
                 const savingsAmount = document.getElementById('savingsAmount');
                 const checkoutBtn = document.getElementById('checkoutBtn');
 
-                // Load available riders
-                async function loadRiders() {
+                // Search state
+                let searchTimeout = null;
+                let selectedRider = null;
+
+                // Search riders in database
+                async function searchRiders(query) {
+                    if (query.length < 2) {
+                        riderSearchResults.style.display = 'none';
+                        return;
+                    }
+
                     try {
-                        const response = await fetch('/api/orders.php?action=my_riders');
+                        const response = await fetch(`/api/orders.php?action=search_riders&q=${encodeURIComponent(query)}`);
                         const data = await response.json();
-                        if (data.success) {
-                            availableRiders = data.riders;
-                            updateRiderSelect();
+
+                        if (data.success && data.riders.length > 0) {
+                            renderSearchResults(data.riders);
+                        } else {
+                            renderEmptyResults();
                         }
                     } catch (e) {
-                        console.error('Failed to load riders:', e);
+                        console.error('Search failed:', e);
+                        riderSearchResults.style.display = 'none';
                     }
                 }
 
-                function updateRiderSelect() {
-                    // Clear and rebuild options
-                    riderSelect.innerHTML = '<option value="">-- Välj deltagare --</option>';
+                function renderSearchResults(riders) {
+                    riderSearchResults.innerHTML = riders.map(rider => {
+                        const infoItems = [];
+                        if (rider.birth_year) infoItems.push(rider.birth_year);
+                        if (rider.club_name) infoItems.push(rider.club_name);
+                        if (rider.license_number) infoItems.push(`<span class="rider-search-result__uci">UCI: ${rider.license_number}</span>`);
 
-                    availableRiders.forEach(rider => {
-                        // Check if already in cart
-                        const inCart = cart.some(item => item.rider_id === rider.id);
-                        if (!inCart) {
-                            const opt = document.createElement('option');
-                            opt.value = rider.id;
-                            opt.textContent = rider.firstname + ' ' + rider.lastname +
-                                (rider.relation === 'self' ? ' (du själv)' : '');
-                            riderSelect.appendChild(opt);
-                        }
+                        return `
+                            <div class="rider-search-result" data-rider-id="${rider.id}">
+                                <div class="rider-search-result__name">${rider.firstname} ${rider.lastname}</div>
+                                <div class="rider-search-result__info">${infoItems.join(' • ')}</div>
+                            </div>
+                        `;
+                    }).join('');
+
+                    riderSearchResults.style.display = 'block';
+
+                    // Add click handlers
+                    riderSearchResults.querySelectorAll('.rider-search-result').forEach(el => {
+                        el.addEventListener('click', function() {
+                            const riderId = this.dataset.riderId;
+                            const rider = riders.find(r => r.id == riderId);
+                            if (rider) selectRider(rider);
+                        });
                     });
+                }
+
+                function renderEmptyResults() {
+                    riderSearchResults.innerHTML = '<div class="rider-search-empty">Inga deltagare hittades</div>';
+                    riderSearchResults.style.display = 'block';
+                }
+
+                function selectRider(rider) {
+                    selectedRider = rider;
+                    selectedRiderId = rider.id;
+
+                    // Update display
+                    selectedRiderName.textContent = `${rider.firstname} ${rider.lastname}`;
+                    const infoItems = [];
+                    if (rider.birth_year) infoItems.push(`Född ${rider.birth_year}`);
+                    if (rider.club_name) infoItems.push(rider.club_name);
+                    if (rider.license_number) infoItems.push(`UCI: ${rider.license_number}`);
+                    selectedRiderInfo.textContent = infoItems.join(' • ');
+
+                    // Show/hide elements
+                    riderSearch.style.display = 'none';
+                    riderSearchResults.style.display = 'none';
+                    selectedRiderDisplay.style.display = 'block';
+
+                    // Load classes for this rider
+                    loadClasses(rider.id);
+                }
+
+                function clearRiderSelection() {
+                    selectedRider = null;
+                    selectedRiderId = null;
+                    riderSearch.value = '';
+                    riderSearch.style.display = 'block';
+                    selectedRiderDisplay.style.display = 'none';
+                    classSelection.style.display = 'none';
+                    selectedClassId = null;
+                    addToCartBtn.disabled = true;
                 }
 
                 // Load classes for selected rider
@@ -3451,15 +3582,12 @@ if (!empty($event['series_id'])) {
                 }
 
                 function addToCart() {
-                    if (!selectedRiderId || !selectedClassId) return;
-
-                    const rider = availableRiders.find(r => r.id == selectedRiderId);
-                    if (!rider) return;
+                    if (!selectedRiderId || !selectedClassId || !selectedRider) return;
 
                     cart.push({
                         type: 'event',
-                        rider_id: rider.id,
-                        rider_name: rider.firstname + ' ' + rider.lastname,
+                        rider_id: selectedRider.id,
+                        rider_name: selectedRider.firstname + ' ' + selectedRider.lastname,
                         event_id: eventId,
                         class_id: selectedClassId,
                         class_name: selectedClassData.name,
@@ -3467,21 +3595,16 @@ if (!empty($event['series_id'])) {
                     });
 
                     // Reset form
-                    selectedRiderId = null;
+                    clearRiderSelection();
                     selectedClassId = null;
                     selectedClassData = null;
-                    riderSelect.value = '';
-                    classSelection.style.display = 'none';
-                    addToCartBtn.disabled = true;
 
                     updateCart();
-                    updateRiderSelect();
                 }
 
                 function removeFromCart(index) {
                     cart.splice(index, 1);
                     updateCart();
-                    updateRiderSelect();
                 }
 
                 function updateCart() {
@@ -3569,25 +3692,37 @@ if (!empty($event['series_id'])) {
                 }
 
                 // Event listeners
-                riderSelect.addEventListener('change', function() {
-                    selectedRiderId = this.value;
-                    if (selectedRiderId) {
-                        loadClasses(selectedRiderId);
-                    } else {
-                        classSelection.style.display = 'none';
+
+                // Rider search with debounce
+                riderSearch.addEventListener('input', function() {
+                    clearTimeout(searchTimeout);
+                    const query = this.value.trim();
+
+                    if (query.length < 2) {
+                        riderSearchResults.style.display = 'none';
+                        return;
                     }
-                    selectedClassId = null;
-                    addToCartBtn.disabled = true;
+
+                    searchTimeout = setTimeout(() => {
+                        searchRiders(query);
+                    }, 300);
                 });
+
+                // Hide results when clicking outside
+                document.addEventListener('click', function(e) {
+                    if (!riderSearch.contains(e.target) && !riderSearchResults.contains(e.target)) {
+                        riderSearchResults.style.display = 'none';
+                    }
+                });
+
+                // Clear selected rider
+                clearSelectedRider.addEventListener('click', clearRiderSelection);
 
                 addToCartBtn.addEventListener('click', addToCart);
                 checkoutBtn.addEventListener('click', checkout);
                 addAnotherBtn.addEventListener('click', function() {
                     document.getElementById('addRiderSection').scrollIntoView({ behavior: 'smooth' });
                 });
-
-                // Initialize
-                loadRiders();
             })();
             </script>
         <?php endif; ?>
