@@ -5,11 +5,37 @@
  */
 
 require_once __DIR__ . '/../hub-config.php';
+require_once __DIR__ . '/../includes/payment.php';
 
 $pageInfo = [
     'title' => 'Kundvagn',
     'section' => 'cart'
 ];
+
+// Check if logged-in user has Gravity ID
+$hasGravityId = false;
+$gravityId = null;
+$riderId = null;
+
+if (hub_is_logged_in()) {
+    $currentUser = hub_current_user();
+    $pdo = hub_db();
+
+    // Check if current user is a rider with Gravity ID
+    try {
+        $stmt = $pdo->prepare("SELECT id, gravity_id FROM riders WHERE id = ? AND gravity_id IS NOT NULL AND gravity_id != ''");
+        $stmt->execute([$currentUser['id']]);
+        $rider = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($rider) {
+            $hasGravityId = true;
+            $gravityId = $rider['gravity_id'];
+            $riderId = $rider['id'];
+        }
+    } catch (Exception $e) {
+        // gravity_id column doesn't exist
+    }
+}
 
 include __DIR__ . '/../components/header.php';
 ?>
@@ -61,12 +87,32 @@ include __DIR__ . '/../components/header.php';
             <?php endif; ?>
 
             <div id="cartSummary" style="display: none; margin-top: var(--space-xl); padding: var(--space-lg); background: var(--color-bg-surface); border-radius: var(--radius-md); border: 1px solid var(--color-border);">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-md);">
+                <!-- Subtotal -->
+                <div style="display: flex; justify-content: space-between; align-items: center; padding-bottom: var(--space-sm); border-bottom: 1px solid var(--color-border);">
+                    <span style="font-size: var(--text-md);">Delsumma:</span>
+                    <span id="subtotalPrice" style="font-size: var(--text-lg); font-weight: var(--weight-semibold);">0 kr</span>
+                </div>
+
+                <?php if ($hasGravityId): ?>
+                <!-- Gravity ID Discount -->
+                <div id="gravityIdDiscount" style="display: none; padding: var(--space-sm) 0; border-bottom: 1px solid var(--color-border);">
+                    <div style="display: flex; justify-content: space-between; align-items: center; color: var(--color-success);">
+                        <span style="font-size: var(--text-sm); display: flex; align-items: center; gap: var(--space-xs);">
+                            <i data-lucide="badge-check" style="width: 16px; height: 16px;"></i>
+                            Gravity ID: <?= htmlspecialchars($gravityId) ?>
+                        </span>
+                        <span id="gravityIdAmount" style="font-weight: var(--weight-semibold);">-0 kr</span>
+                    </div>
+                </div>
+                <?php endif; ?>
+
+                <!-- Total -->
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: var(--space-md);">
                     <span style="font-size: var(--text-lg); font-weight: var(--weight-semibold);">Totalt:</span>
                     <span id="totalPrice" style="font-size: var(--text-2xl); font-weight: var(--weight-bold); color: var(--color-accent);">0 kr</span>
                 </div>
 
-                <button id="checkoutBtn" class="btn btn--primary btn--lg btn--block">
+                <button id="checkoutBtn" class="btn btn--primary btn--lg btn--block" style="margin-top: var(--space-lg);">
                     <i data-lucide="credit-card"></i>
                     Gå till betalning
                 </button>
@@ -167,8 +213,18 @@ include __DIR__ . '/../components/header.php';
 
         cartItemsContainer.innerHTML = html;
 
-        // Update total
-        totalPriceEl.textContent = GlobalCart.getTotalPrice() + ' kr';
+        // Calculate subtotal
+        const subtotal = GlobalCart.getTotalPrice();
+        const subtotalEl = document.getElementById('subtotalPrice');
+        if (subtotalEl) subtotalEl.textContent = subtotal + ' kr';
+
+        // Calculate Gravity ID discount if applicable
+        <?php if ($hasGravityId && $riderId): ?>
+        calculateGravityIdDiscount(subtotal);
+        <?php else: ?>
+        // No Gravity ID - just show total
+        totalPriceEl.textContent = subtotal + ' kr';
+        <?php endif; ?>
 
         // Re-init Lucide icons
         if (typeof lucide !== 'undefined') lucide.createIcons();
@@ -184,6 +240,51 @@ include __DIR__ . '/../components/header.php';
             });
         });
     }
+
+    <?php if ($hasGravityId && $riderId): ?>
+    // Calculate Gravity ID discount for cart
+    async function calculateGravityIdDiscount(subtotal) {
+        const cart = GlobalCart.getCart();
+        if (cart.length === 0) {
+            totalPriceEl.textContent = '0 kr';
+            return;
+        }
+
+        // Get unique event IDs from cart
+        const eventIds = [...new Set(cart.map(item => item.event_id))];
+
+        try {
+            // Fetch Gravity ID discount for each event
+            const discountPromises = eventIds.map(eventId =>
+                fetch(`/api/gravity-id-discount.php?rider_id=<?= $riderId ?>&event_id=${eventId}`)
+                    .then(r => r.json())
+                    .then(data => data.discount || 0)
+                    .catch(() => 0)
+            );
+
+            const discounts = await Promise.all(discountPromises);
+            const totalDiscount = discounts.reduce((sum, d) => sum + d, 0);
+
+            // Update UI
+            const gravityIdDiscountEl = document.getElementById('gravityIdDiscount');
+            const gravityIdAmountEl = document.getElementById('gravityIdAmount');
+
+            if (totalDiscount > 0 && gravityIdDiscountEl && gravityIdAmountEl) {
+                gravityIdDiscountEl.style.display = 'block';
+                gravityIdAmountEl.textContent = '-' + Math.round(totalDiscount) + ' kr';
+
+                const finalTotal = Math.max(0, subtotal - totalDiscount);
+                totalPriceEl.textContent = Math.round(finalTotal) + ' kr';
+            } else {
+                if (gravityIdDiscountEl) gravityIdDiscountEl.style.display = 'none';
+                totalPriceEl.textContent = subtotal + ' kr';
+            }
+        } catch (error) {
+            console.error('Error calculating Gravity ID discount:', error);
+            totalPriceEl.textContent = subtotal + ' kr';
+        }
+    }
+    <?php endif; ?>
 
     // Clear cart
     clearCartBtn.addEventListener('click', function() {
