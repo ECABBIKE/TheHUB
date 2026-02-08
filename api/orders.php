@@ -166,6 +166,43 @@ try {
                 ]);
                 break;
 
+            // Sök riders i databasen (namn eller UCI ID)
+            case 'search_riders':
+                $query = trim($_GET['q'] ?? '');
+
+                if (strlen($query) < 2) {
+                    echo json_encode([
+                        'success' => true,
+                        'riders' => []
+                    ]);
+                    break;
+                }
+
+                $pdo = hub_db();
+
+                // Search by name or license_number (UCI ID)
+                $searchPattern = '%' . $query . '%';
+                $stmt = $pdo->prepare("
+                    SELECT r.id, r.firstname, r.lastname, r.birth_year, r.gender,
+                           r.license_number, r.license_type, c.name as club_name
+                    FROM riders r
+                    LEFT JOIN clubs c ON r.club_id = c.id
+                    WHERE (CONCAT(r.firstname, ' ', r.lastname) LIKE ?
+                           OR r.license_number LIKE ?
+                           OR CONCAT(r.lastname, ' ', r.firstname) LIKE ?)
+                    AND r.active = 1
+                    ORDER BY r.lastname, r.firstname
+                    LIMIT 50
+                ");
+                $stmt->execute([$searchPattern, $searchPattern, $searchPattern]);
+                $riders = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+                echo json_encode([
+                    'success' => true,
+                    'riders' => $riders
+                ]);
+                break;
+
             default:
                 throw new Exception('Ogiltig action');
         }
