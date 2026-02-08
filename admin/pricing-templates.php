@@ -96,28 +96,44 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
  $templateId = intval($_POST['template_id']);
  $classIds = $_POST['class_id'] ?? [];
  $basePrices = $_POST['base_price'] ?? [];
+ $earlyBirdPrices = $_POST['early_bird_price'] ?? [];
+ $lateFeePrices = $_POST['late_fee_price'] ?? [];
  $seasonPrices = $_POST['season_price'] ?? [];
 
- // Check if season_price column exists
+ // Check which columns exist
  $hasSeasonPrice = false;
+ $hasEarlyBirdPrice = false;
+ $hasLateFeePrice = false;
  try {
-  $cols = $db->getAll("SHOW COLUMNS FROM pricing_template_rules LIKE 'season_price'");
-  $hasSeasonPrice = !empty($cols);
+  $cols = $db->getAll("SHOW COLUMNS FROM pricing_template_rules");
+  foreach ($cols as $col) {
+   if ($col['Field'] === 'season_price') $hasSeasonPrice = true;
+   if ($col['Field'] === 'early_bird_price') $hasEarlyBirdPrice = true;
+   if ($col['Field'] === 'late_fee_price') $hasLateFeePrice = true;
+  }
  } catch (Exception $e) {}
 
  $saved = 0;
  foreach ($classIds as $index => $classId) {
  $basePrice = floatval($basePrices[$index] ?? 0);
+ $earlyBirdPrice = floatval($earlyBirdPrices[$index] ?? 0);
+ $lateFeePrice = floatval($lateFeePrices[$index] ?? 0);
  $seasonPrice = floatval($seasonPrices[$index] ?? 0);
 
  if ($basePrice > 0 || $seasonPrice > 0) {
  $existing = $db->getRow("SELECT id FROM pricing_template_rules WHERE template_id = ? AND class_id = ?", [$templateId, $classId]);
 
  $data = [
-  'base_price' => $basePrice
+  'base_price' => round($basePrice) // Always whole numbers
  ];
+ if ($hasEarlyBirdPrice) {
+  $data['early_bird_price'] = $earlyBirdPrice > 0 ? round($earlyBirdPrice) : null;
+ }
+ if ($hasLateFeePrice) {
+  $data['late_fee_price'] = $lateFeePrice > 0 ? round($lateFeePrice) : null;
+ }
  if ($hasSeasonPrice) {
-  $data['season_price'] = $seasonPrice > 0 ? $seasonPrice : null;
+  $data['season_price'] = $seasonPrice > 0 ? round($seasonPrice) : null;
  }
 
  if ($existing) {
@@ -129,11 +145,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
  }
  $saved++;
  } else {
- // Remove pricing if both prices are 0
+ // Remove pricing if all prices are 0
  $db->delete('pricing_template_rules', 'template_id = ? AND class_id = ?', [$templateId, $classId]);
  }
  }
- $message ="Sparade $saved priser";
+ $message ="Sparade $saved priser (avrundade till hela kronor)";
  $messageType = 'success';
  }
 }
@@ -336,9 +352,12 @@ input[type="number"] {
   <?php foreach ($classes as $class):
    $rule = $templateRules[$class['id']] ?? null;
    $basePrice = $rule['base_price'] ?? 0;
+   $earlyBirdPrice = $rule['early_bird_price'] ?? 0;
+   $lateFeePrice = $rule['late_fee_price'] ?? 0;
    $seasonPrice = $rule['season_price'] ?? 0;
-   $ebPrice = $basePrice * (1 - $ebPercent / 100);
-   $latePrice = $basePrice * (1 + $latePercent / 100);
+   // Calculate suggested prices (rounded to whole numbers)
+   $suggestedEbPrice = $basePrice > 0 ? round($basePrice * (1 - $ebPercent / 100)) : 0;
+   $suggestedLatePrice = $basePrice > 0 ? round($basePrice * (1 + $latePercent / 100)) : 0;
   ?>
    <tr data-row="<?= $class['id'] ?>">
    <td>
@@ -356,14 +375,32 @@ input[type="number"] {
    </div>
    </td>
    <td>
-   <span id="eb-<?= $class['id'] ?>" class="text-success font-bold">
-   <?= $basePrice > 0 ? number_format($ebPrice, 0) . ' kr' : '-' ?>
+   <div class="flex items-center gap-xs">
+   <input type="number" name="early_bird_price[]" class="input"
+    id="eb-input-<?= $class['id'] ?>"
+    value="<?= $earlyBirdPrice ?: '' ?>"
+    placeholder="<?= $suggestedEbPrice ?: '' ?>"
+    min="0" step="1" style="width: 100px;"
+    title="Lämna tom för automatisk beräkning (-<?= $ebPercent ?>%)">
+   <span class="text-secondary">kr</span>
+   <span id="eb-calc-<?= $class['id'] ?>" class="text-xs text-secondary" style="white-space: nowrap;">
+   <?= $basePrice > 0 ? "(-{$ebPercent}%)" : '' ?>
    </span>
+   </div>
    </td>
    <td>
-   <span id="late-<?= $class['id'] ?>" class="text-warning font-bold">
-   <?= $basePrice > 0 ? number_format($latePrice, 0) . ' kr' : '-' ?>
+   <div class="flex items-center gap-xs">
+   <input type="number" name="late_fee_price[]" class="input"
+    id="late-input-<?= $class['id'] ?>"
+    value="<?= $lateFeePrice ?: '' ?>"
+    placeholder="<?= $suggestedLatePrice ?: '' ?>"
+    min="0" step="1" style="width: 100px;"
+    title="Lämna tom för automatisk beräkning (+<?= $latePercent ?>%)">
+   <span class="text-secondary">kr</span>
+   <span id="late-calc-<?= $class['id'] ?>" class="text-xs text-secondary" style="white-space: nowrap;">
+   <?= $basePrice > 0 ? "(+{$latePercent}%)" : '' ?>
    </span>
+   </div>
    </td>
    <?php if ($hasSeasonPriceCol): ?>
    <td>
@@ -382,12 +419,22 @@ input[type="number"] {
   </table>
   </div>
 
-  <?php if ($hasSeasonPriceCol): ?>
-  <p class="text-secondary text-sm mt-sm">
-   <i data-lucide="info" class="icon-sm"></i>
-   Säsongspris = pris för hela serien (alla events). Lämna tomt om säsongspris ej ska erbjudas för klassen.
-  </p>
-  <?php endif; ?>
+  <div class="alert alert--info mt-md">
+   <div style="display: flex; gap: var(--space-sm); align-items: flex-start;">
+    <i data-lucide="info" style="flex-shrink: 0; margin-top: 2px;"></i>
+    <div style="font-size: 0.875rem;">
+     <p style="margin: 0 0 var(--space-xs) 0;"><strong>Prissättning:</strong></p>
+     <ul style="margin: 0; padding-left: var(--space-lg);">
+      <li><strong>Eventpris:</strong> Grundpris för eventet (krävs)</li>
+      <li><strong>Early Bird & Efteranmälan:</strong> Lämna tom för automatisk beräkning från % (rekommenderas), eller ange manuellt pris</li>
+      <?php if ($hasSeasonPriceCol): ?>
+      <li><strong>Säsongspris:</strong> Pris för hela serien (alla events). Lämna tomt om ej erbjuds.</li>
+      <?php endif; ?>
+      <li>Alla priser avrundas automatiskt till <strong>hela kronor</strong></li>
+     </ul>
+    </div>
+   </div>
+  </div>
 
   <div class="mt-lg">
   <button type="submit" class="btn btn--primary">
@@ -561,21 +608,31 @@ function calculatePrices(classId, ebPercent, latePercent) {
  if (!row) return;
 
  const baseInput = row.querySelector('input[data-class="' + classId + '"]');
- const ebSpan = document.getElementById(`eb-${classId}`);
- const lateSpan = document.getElementById(`late-${classId}`);
+ const ebInput = document.getElementById(`eb-input-${classId}`);
+ const lateInput = document.getElementById(`late-input-${classId}`);
+ const ebCalc = document.getElementById(`eb-calc-${classId}`);
+ const lateCalc = document.getElementById(`late-calc-${classId}`);
 
- if (!baseInput || !ebSpan || !lateSpan) return;
+ if (!baseInput || !ebInput || !lateInput) return;
 
  const base = parseFloat(baseInput.value) || 0;
 
  if (base > 0) {
  const ebPrice = Math.round(base * (1 - ebPercent / 100));
  const latePrice = Math.round(base * (1 + latePercent / 100));
- ebSpan.textContent = ebPrice + ' kr';
- lateSpan.textContent = latePrice + ' kr';
+
+ // Update placeholders (suggested values)
+ ebInput.placeholder = ebPrice;
+ lateInput.placeholder = latePrice;
+
+ // Update calculation labels
+ if (ebCalc) ebCalc.textContent = `(-${ebPercent}%)`;
+ if (lateCalc) lateCalc.textContent = `(+${latePercent}%)`;
  } else {
- ebSpan.textContent = '-';
- lateSpan.textContent = '-';
+ ebInput.placeholder = '';
+ lateInput.placeholder = '';
+ if (ebCalc) ebCalc.textContent = '';
+ if (lateCalc) lateCalc.textContent = '';
  }
 }
 </script>

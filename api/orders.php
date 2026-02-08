@@ -104,16 +104,16 @@ try {
                     }
                 }
 
-                // Beräkna aktuellt pris för varje klass
+                // Beräkna aktuellt pris för varje klass (rounded to whole numbers)
                 foreach ($classes as &$class) {
-                    if ($isEarlyBird && $class['early_bird_price']) {
-                        $class['current_price'] = $class['early_bird_price'];
+                    if ($isEarlyBird && !empty($class['early_bird_price'])) {
+                        $class['current_price'] = round($class['early_bird_price']);
                         $class['price_type'] = 'early_bird';
-                    } elseif ($isLateFee && $class['late_fee']) {
-                        $class['current_price'] = $class['base_price'] + $class['late_fee'];
+                    } elseif ($isLateFee && !empty($class['late_fee'])) {
+                        $class['current_price'] = round($class['late_fee']);
                         $class['price_type'] = 'late_fee';
                     } else {
-                        $class['current_price'] = $class['base_price'];
+                        $class['current_price'] = round($class['base_price']);
                         $class['price_type'] = 'normal';
                     }
                 }
