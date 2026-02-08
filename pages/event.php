@@ -830,15 +830,23 @@ try {
     $registrations = $registrations->fetchAll(PDO::FETCH_ASSOC);
     $totalRegistrations = count($registrations);
 
-    // Group registrations by class
+    // Group registrations by class (preserve sort_order)
     $registrationsByClass = [];
+    $classSortOrders = []; // Track sort_order for each class
     foreach ($registrations as $reg) {
         $className = $reg['class_name'] ?: $reg['category'] ?: 'Okänd klass';
         if (!isset($registrationsByClass[$className])) {
             $registrationsByClass[$className] = [];
+            // Store sort_order for this class (use 9999 if null, to sort unknowns last)
+            $classSortOrders[$className] = $reg['class_sort_order'] ?? 9999;
         }
         $registrationsByClass[$className][] = $reg;
     }
+
+    // Sort classes by sort_order
+    uksort($registrationsByClass, function($a, $b) use ($classSortOrders) {
+        return ($classSortOrders[$a] ?? 9999) <=> ($classSortOrders[$b] ?? 9999);
+    });
 
     // Check if event is in the past
     $eventDate = strtotime($event['date']);

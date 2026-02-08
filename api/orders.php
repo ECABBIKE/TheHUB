@@ -105,16 +105,23 @@ try {
                 }
 
                 // Beräkna aktuellt pris för varje klass (rounded to whole numbers)
-                foreach ($classes as &$class) {
-                    if ($isEarlyBird && !empty($class['early_bird_price'])) {
-                        $class['current_price'] = round($class['early_bird_price']);
-                        $class['price_type'] = 'early_bird';
-                    } elseif ($isLateFee && !empty($class['late_fee'])) {
-                        $class['current_price'] = round($class['late_fee']);
-                        $class['price_type'] = 'late_fee';
-                    } else {
-                        $class['current_price'] = round($class['base_price']);
-                        $class['price_type'] = 'normal';
+                // Skip if classes contain error
+                if (!empty($classes) && !isset($classes[0]['error'])) {
+                    foreach ($classes as &$class) {
+                        // Use current_price if already set by getEligibleClassesForEvent
+                        if (isset($class['current_price'])) {
+                            // Already calculated - just round it
+                            $class['current_price'] = round($class['current_price']);
+                        } elseif ($isEarlyBird && !empty($class['early_bird_price'])) {
+                            $class['current_price'] = round($class['early_bird_price']);
+                            $class['price_type'] = 'early_bird';
+                        } elseif ($isLateFee && !empty($class['late_fee'])) {
+                            $class['current_price'] = round($class['late_fee']);
+                            $class['price_type'] = 'late_fee';
+                        } else {
+                            $class['current_price'] = round($class['base_price']);
+                            $class['price_type'] = 'normal';
+                        }
                     }
                 }
 
