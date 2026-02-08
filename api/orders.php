@@ -266,13 +266,18 @@ try {
                 }
 
                 // Validera att användaren får anmäla dessa riders
-                $allowedRiders = getRegistrableRiders($currentUser['id']);
-                $allowedRiderIds = array_column($allowedRiders, 'id');
+                // Admins and super_admins can register any rider, others must have family relationship
+                $isAdmin = !empty($currentUser['is_admin']) || (!empty($currentUser['role_id']) && $currentUser['role_id'] >= 3);
 
-                foreach ($items as $item) {
-                    $riderId = intval($item['rider_id']);
-                    if (!in_array($riderId, $allowedRiderIds)) {
-                        throw new Exception('Du har inte behörighet att anmäla rider med ID ' . $riderId);
+                if (!$isAdmin) {
+                    $allowedRiders = getRegistrableRiders($currentUser['id']);
+                    $allowedRiderIds = array_column($allowedRiders, 'id');
+
+                    foreach ($items as $item) {
+                        $riderId = intval($item['rider_id']);
+                        if (!in_array($riderId, $allowedRiderIds)) {
+                            throw new Exception('Du har inte behörighet att anmäla rider med ID ' . $riderId);
+                        }
                     }
                 }
 
