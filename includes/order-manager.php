@@ -477,10 +477,10 @@ function getEligibleClassesForEvent(int $eventId, int $riderId): array {
         $templateStmt->execute([$event['pricing_template_id']]);
         $template = $templateStmt->fetch(PDO::FETCH_ASSOC);
 
-        // Get pricing rules from template
+        // Get pricing rules from template (including manual price overrides)
         $classStmt = $pdo->prepare("
             SELECT c.id as class_id, c.name, c.display_name, c.gender, c.min_age, c.max_age,
-                   ptr.base_price
+                   ptr.base_price, ptr.early_bird_price, ptr.late_fee_price, ptr.season_price
             FROM pricing_template_rules ptr
             JOIN classes c ON ptr.class_id = c.id
             WHERE ptr.template_id = ?
@@ -490,6 +490,7 @@ function getEligibleClassesForEvent(int $eventId, int $riderId): array {
 
         $earlyBirdPercent = floatval($template['early_bird_percent'] ?? 0);
         $lateFeePercent = floatval($template['late_fee_percent'] ?? 0);
+        $pricingMode = $template['pricing_mode'] ?? 'percentage';
     } else {
         // Fallback to legacy event_pricing_rules
         $classStmt = $pdo->prepare("
@@ -538,17 +539,33 @@ function getEligibleClassesForEvent(int $eventId, int $riderId): array {
             $reason = "Max {$class['max_age']} år";
         }
 
-        $basePrice = floatval($class['base_price']);
+        $basePrice = round(floatval($class['base_price'])); // Always whole numbers
 
-        // Calculate early bird and late fee based on system used
+        // Calculate early bird and late fee prices
+        $earlyBirdPrice = null;
+        $lateFeePrice = null;
+
         if ($earlyBirdPercent !== null && $lateFeePercent !== null) {
-            // Pricing template system - calculate from percentages
-            $earlyBirdPrice = $basePrice - ($basePrice * $earlyBirdPercent / 100);
-            $lateFee = $basePrice + ($basePrice * $lateFeePercent / 100);
+            // Pricing template system - check for manual overrides first
+            if (!empty($class['early_bird_price'])) {
+                // Manual price set - use it (already whole number)
+                $earlyBirdPrice = round(floatval($class['early_bird_price']));
+            } else {
+                // Calculate from percentage and round to whole number
+                $earlyBirdPrice = round($basePrice - ($basePrice * $earlyBirdPercent / 100));
+            }
+
+            if (!empty($class['late_fee_price'])) {
+                // Manual price set - use it (already whole number)
+                $lateFeePrice = round(floatval($class['late_fee_price']));
+            } else {
+                // Calculate from percentage and round to whole number
+                $lateFeePrice = round($basePrice + ($basePrice * $lateFeePercent / 100));
+            }
         } else {
             // Legacy system - use values from event_pricing_rules
-            $earlyBirdPrice = isset($class['early_bird_price']) ? floatval($class['early_bird_price']) : null;
-            $lateFee = isset($class['late_fee']) ? floatval($class['late_fee']) : null;
+            $earlyBirdPrice = isset($class['early_bird_price']) ? round(floatval($class['early_bird_price'])) : null;
+            $lateFeePrice = isset($class['late_fee']) ? round(floatval($class['late_fee'])) : null;
         }
 
         $classData = [
@@ -556,7 +573,7 @@ function getEligibleClassesForEvent(int $eventId, int $riderId): array {
             'name' => $class['display_name'] ?: $class['name'],
             'base_price' => $basePrice,
             'early_bird_price' => $earlyBirdPrice,
-            'late_fee' => $lateFee,
+            'late_fee' => $lateFeePrice,
             'eligible' => $eligible,
             'reason' => $reason,
             'warning' => $warning
