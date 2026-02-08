@@ -130,7 +130,7 @@ include __DIR__ . '/../components/header.php';
                                     <th>Klubb</th>
                                     <th>Klass</th>
                                     <th style="text-align: right;">Pris</th>
-                                    <th style="width: 50px;"></th>
+                                    <th style="width: 100px; text-align: center;"></th>
                                 </tr>
                             </thead>
                             <tbody>
@@ -143,13 +143,14 @@ include __DIR__ . '/../components/header.php';
                         <td style="color: var(--color-text-secondary);">${item.club_name || '-'}</td>
                         <td>${item.class_name}</td>
                         <td style="text-align: right;">${item.price} kr</td>
-                        <td style="text-align: right;">
-                            <button class="btn btn--ghost btn--sm remove-item"
+                        <td style="text-align: center; width: 60px;">
+                            <button class="btn btn--danger btn--sm remove-item"
                                     data-eventid="${item.event_id}"
                                     data-riderid="${item.rider_id}"
                                     data-classid="${item.class_id}"
+                                    style="padding: var(--space-xs) var(--space-sm);"
                                     title="Ta bort">
-                                <i data-lucide="x"></i>
+                                <i data-lucide="x"></i> Ta bort
                             </button>
                         </td>
                     </tr>
