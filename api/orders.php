@@ -59,8 +59,16 @@ try {
 
                 $classes = getEligibleClassesForEvent($eventId, $riderId);
 
-                // Hämta event-info för early bird / late fee status
+                // Hämta rider license info för commitment check
                 $pdo = hub_db();
+                $riderStmt = $pdo->prepare("
+                    SELECT license_valid_until, license_year
+                    FROM riders WHERE id = ?
+                ");
+                $riderStmt->execute([$riderId]);
+                $riderInfo = $riderStmt->fetch(PDO::FETCH_ASSOC);
+
+                // Hämta event-info för early bird / late fee status
                 $eventStmt = $pdo->prepare("
                     SELECT name, date, pricing_template_id
                     FROM events WHERE id = ?
@@ -110,11 +118,29 @@ try {
                     }
                 }
 
+                // Check if license commitment is required
+                $requiresLicenseCommitment = false;
+                if ($riderInfo) {
+                    $eventDate = strtotime($event['date']);
+                    $hasValidLicense = false;
+
+                    if (!empty($riderInfo['license_valid_until'])) {
+                        $licenseExpiry = strtotime($riderInfo['license_valid_until']);
+                        $hasValidLicense = $licenseExpiry >= $eventDate;
+                    } elseif (!empty($riderInfo['license_year'])) {
+                        $licenseExpiry = strtotime($riderInfo['license_year'] . '-12-31');
+                        $hasValidLicense = $licenseExpiry >= $eventDate;
+                    }
+
+                    $requiresLicenseCommitment = !$hasValidLicense;
+                }
+
                 echo json_encode([
                     'success' => true,
                     'event' => $event,
                     'is_early_bird' => $isEarlyBird,
                     'is_late_fee' => $isLateFee,
+                    'requires_license_commitment' => $requiresLicenseCommitment,
                     'classes' => $classes
                 ]);
                 break;
