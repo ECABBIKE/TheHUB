@@ -62,15 +62,46 @@ try {
                 // Hämta event-info för early bird / late fee status
                 $pdo = hub_db();
                 $eventStmt = $pdo->prepare("
-                    SELECT name, date, early_bird_deadline, late_fee_start
+                    SELECT name, date, pricing_template_id, early_bird_deadline, late_fee_start
                     FROM events WHERE id = ?
                 ");
                 $eventStmt->execute([$eventId]);
                 $event = $eventStmt->fetch(PDO::FETCH_ASSOC);
 
                 $now = time();
-                $isEarlyBird = !empty($event['early_bird_deadline']) && $now < strtotime($event['early_bird_deadline']);
-                $isLateFee = !empty($event['late_fee_start']) && $now >= strtotime($event['late_fee_start']);
+                $isEarlyBird = false;
+                $isLateFee = false;
+
+                // Calculate early bird / late fee status
+                if (!empty($event['pricing_template_id'])) {
+                    // Get template settings for deadline calculation
+                    $templateStmt = $pdo->prepare("SELECT * FROM pricing_templates WHERE id = ?");
+                    $templateStmt->execute([$event['pricing_template_id']]);
+                    $template = $templateStmt->fetch(PDO::FETCH_ASSOC);
+
+                    if ($template && !empty($event['date'])) {
+                        $eventDate = strtotime($event['date']);
+
+                        // Early bird deadline = event_date - early_bird_days_before
+                        if (!empty($template['early_bird_days_before'])) {
+                            $earlyBirdDeadline = strtotime("-" . intval($template['early_bird_days_before']) . " days", $eventDate);
+                            $isEarlyBird = $now < $earlyBirdDeadline;
+                        }
+
+                        // Late fee starts = event_date - late_fee_days_before
+                        if (!empty($template['late_fee_days_before'])) {
+                            $lateFeeStart = strtotime("-" . intval($template['late_fee_days_before']) . " days", $eventDate);
+                            $isLateFee = $now >= $lateFeeStart && $now < $eventDate;
+                        }
+                    }
+                }
+                // Fallback to event-specific deadlines (legacy or override)
+                elseif (!empty($event['early_bird_deadline'])) {
+                    $isEarlyBird = $now < strtotime($event['early_bird_deadline']);
+                }
+                if (empty($event['pricing_template_id']) && !empty($event['late_fee_start'])) {
+                    $isLateFee = $now >= strtotime($event['late_fee_start']);
+                }
 
                 // Beräkna aktuellt pris för varje klass
                 foreach ($classes as &$class) {
