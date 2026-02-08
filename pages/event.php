@@ -3972,8 +3972,8 @@ if (!empty($event['series_id'])) {
                         const data = await response.json();
 
                         if (data.success) {
-                            // Clear cart on successful order creation
-                            GlobalCart.clearCart();
+                            // DON'T clear cart yet - only after successful payment
+                            // Cart will be cleared in checkout.php after payment completes
                             window.location.href = data.order.checkout_url;
                         } else {
                             alert(data.error || 'Ett fel uppstod');
