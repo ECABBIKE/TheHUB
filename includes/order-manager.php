@@ -72,6 +72,16 @@ function createMultiRiderOrder(array $buyerData, array $items, ?string $discount
         }
 
         // Skapa order
+        // Validera rider_id - måste vara ett giltigt ID från riders-tabellen
+        $validRiderId = null;
+        if (!empty($buyerData['user_id'])) {
+            $riderCheckStmt = $pdo->prepare("SELECT id FROM riders WHERE id = ? LIMIT 1");
+            $riderCheckStmt->execute([$buyerData['user_id']]);
+            if ($riderCheckStmt->fetch()) {
+                $validRiderId = $buyerData['user_id'];
+            }
+        }
+
         $orderStmt = $pdo->prepare("
             INSERT INTO orders (
                 order_number, rider_id, customer_email, customer_name,
@@ -89,7 +99,7 @@ function createMultiRiderOrder(array $buyerData, array $items, ?string $discount
         ");
         $orderStmt->execute([
             $orderReference,
-            $buyerData['user_id'] ?? null,
+            $validRiderId,  // Only set if valid rider ID
             $buyerData['email'],
             $buyerData['name'],
             $firstEventId,
