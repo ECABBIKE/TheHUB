@@ -416,9 +416,10 @@ function getRegistrableRiders(int $userId): array {
 function getEligibleClassesForEvent(int $eventId, int $riderId): array {
     $pdo = hub_db();
 
-    // Hämta rider-info
+    // Hämta rider-info inkl licensinformation
     $riderStmt = $pdo->prepare("
-        SELECT birth_year, gender, license_type FROM riders WHERE id = ?
+        SELECT birth_year, gender, license_type, license_valid_until, license_year
+        FROM riders WHERE id = ?
     ");
     $riderStmt->execute([$riderId]);
     $rider = $riderStmt->fetch(PDO::FETCH_ASSOC);
@@ -436,8 +437,20 @@ function getEligibleClassesForEvent(int $eventId, int $riderId): array {
         return [];
     }
 
-    $riderAge = date('Y', strtotime($event['date'])) - intval($rider['birth_year']);
-    $riderGender = strtoupper($rider['gender']);
+    $eventDate = strtotime($event['date']);
+    $riderAge = date('Y', $eventDate) - intval($rider['birth_year']);
+    $riderGender = !empty($rider['gender']) ? strtoupper($rider['gender']) : null;
+
+    // Validera licens
+    $licenseStatus = 'none'; // none, valid, expired
+    if (!empty($rider['license_valid_until'])) {
+        $licenseExpiry = strtotime($rider['license_valid_until']);
+        $licenseStatus = ($licenseExpiry >= $eventDate) ? 'valid' : 'expired';
+    } elseif (!empty($rider['license_year'])) {
+        // Licenser är giltiga till 31 dec det angivna året
+        $licenseExpiry = strtotime($rider['license_year'] . '-12-31');
+        $licenseStatus = ($licenseExpiry >= $eventDate) ? 'valid' : 'expired';
+    }
 
     // Try pricing template system first (new system)
     if (!empty($event['pricing_template_id'])) {
@@ -474,15 +487,36 @@ function getEligibleClassesForEvent(int $eventId, int $riderId): array {
         $lateFeePercent = null;
     }
 
-    $classes = [];
+    $eligibleClasses = [];
+    $ineligibleClasses = [];
+
     while ($class = $classStmt->fetch(PDO::FETCH_ASSOC)) {
         $eligible = true;
         $reason = '';
+        $warning = '';
+
+        // Kolla licens - blockera endast om licensen är UTGÅNGEN
+        if ($licenseStatus === 'expired') {
+            $eligible = false;
+            $reason = 'Licensen har gått ut';
+        } elseif ($licenseStatus === 'none') {
+            // Varna om ingen licens finns, men tillåt anmälan
+            $warning = 'Ingen licens registrerad';
+        }
 
         // Kolla kön
-        if ($class['gender'] && $class['gender'] !== $riderGender) {
-            $eligible = false;
-            $reason = $class['gender'] === 'M' ? 'Endast herrar' : 'Endast damer';
+        if ($eligible && $class['gender']) {
+            // Klassen har könsbegränsning
+            if ($riderGender === null) {
+                // Ridern saknar kön - varna men tillåt
+                if (empty($warning)) {
+                    $warning = 'Kön saknas i profilen';
+                }
+            } elseif ($class['gender'] !== $riderGender) {
+                // Ridern har fel kön
+                $eligible = false;
+                $reason = $class['gender'] === 'M' ? 'Endast herrar' : 'Endast damer';
+            }
         }
 
         // Kolla ålder
@@ -508,18 +542,27 @@ function getEligibleClassesForEvent(int $eventId, int $riderId): array {
             $lateFee = isset($class['late_fee']) ? floatval($class['late_fee']) : null;
         }
 
-        $classes[] = [
+        $classData = [
             'class_id' => $class['class_id'],
             'name' => $class['display_name'] ?: $class['name'],
             'base_price' => $basePrice,
             'early_bird_price' => $earlyBirdPrice,
             'late_fee' => $lateFee,
             'eligible' => $eligible,
-            'reason' => $reason
+            'reason' => $reason,
+            'warning' => $warning
         ];
+
+        // Separera eligible och ineligible klasser
+        if ($eligible) {
+            $eligibleClasses[] = $classData;
+        } else {
+            $ineligibleClasses[] = $classData;
+        }
     }
 
-    return $classes;
+    // Returnera endast eligible klasser (dölj ineligible)
+    return $eligibleClasses;
 }
 
 /**

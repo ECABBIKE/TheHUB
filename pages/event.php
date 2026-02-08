@@ -3697,20 +3697,31 @@ if (!empty($event['series_id'])) {
                 function renderClasses(classes) {
                     classList.innerHTML = '';
 
+                    if (classes.length === 0) {
+                        classList.innerHTML = '<p class="text-muted">Inga tillgängliga klasser hittades</p>';
+                        return;
+                    }
+
                     classes.forEach(cls => {
                         const div = document.createElement('label');
-                        div.className = 'reg-class-item' + (!cls.eligible ? ' disabled' : '');
+                        div.className = 'reg-class-item';
                         div.dataset.classId = cls.class_id;
                         div.dataset.price = cls.current_price;
                         div.dataset.name = cls.name;
 
+                        // Visa varning om ingen licens
+                        let warningHtml = '';
+                        if (cls.warning) {
+                            warningHtml = `<div class="reg-class-desc" style="color: var(--color-warning);"><i data-lucide="alert-triangle" style="width: 14px; height: 14px; display: inline; vertical-align: text-bottom;"></i> ${cls.warning}</div>`;
+                        }
+
                         div.innerHTML = `
                             <input type="radio" name="class_select" value="${cls.class_id}"
-                                   class="reg-class-radio" ${!cls.eligible ? 'disabled' : ''}
+                                   class="reg-class-radio"
                                    data-price="${cls.current_price}" data-name="${cls.name}">
                             <div class="reg-class-info">
                                 <div class="reg-class-name">${cls.name}</div>
-                                ${!cls.eligible ? `<div class="reg-class-desc text-warning">${cls.reason}</div>` : ''}
+                                ${warningHtml}
                             </div>
                             <div class="reg-class-price">
                                 <div class="reg-class-price__current">${cls.current_price.toLocaleString('sv-SE')} kr</div>
@@ -3718,12 +3729,12 @@ if (!empty($event['series_id'])) {
                             </div>
                         `;
 
-                        if (cls.eligible) {
-                            div.addEventListener('click', () => selectClass(cls));
-                        }
-
+                        div.addEventListener('click', () => selectClass(cls));
                         classList.appendChild(div);
                     });
+
+                    // Refresh icons
+                    if (typeof lucide !== 'undefined') lucide.createIcons();
                 }
 
                 function selectClass(cls) {
