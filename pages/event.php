@@ -3527,13 +3527,19 @@ if (!empty($event['series_id'])) {
                         const data = await response.json();
 
                         if (data.success) {
-                            renderClasses(data.classes);
+                            if (data.classes && data.classes.length > 0) {
+                                renderClasses(data.classes);
+                            } else {
+                                classList.innerHTML = '<p class="text-muted">Inga tillgängliga klasser för denna deltagare</p>';
+                            }
                         } else {
-                            classList.innerHTML = '<p class="text-error">Kunde inte ladda klasser</p>';
+                            console.error('API error:', data);
+                            const errorMsg = data.error || 'Kunde inte ladda klasser';
+                            classList.innerHTML = `<p class="text-error">${errorMsg}</p>`;
                         }
                     } catch (e) {
                         console.error('Failed to load classes:', e);
-                        classList.innerHTML = '<p class="text-error">Ett fel uppstod</p>';
+                        classList.innerHTML = '<p class="text-error">Ett fel uppstod vid laddning av klasser</p>';
                     }
                 }
 
