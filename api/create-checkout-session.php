@@ -1,15 +1,14 @@
 <?php
 /**
- * Create Mollie Payment
+ * Create Stripe Checkout Session
  *
- * Creates a Mollie payment for an order and returns the checkout URL.
- * Called from the checkout page when user clicks "Gå till betalning".
- * Supports Swish and card payments.
+ * Creates a Stripe Checkout Session for an order and returns the URL.
+ * Called from the checkout page when user clicks "Betala med kort".
  *
  * POST params:
  *   order_id - Order ID to pay for
  *
- * Returns JSON: { success, url, payment_id, error }
+ * Returns JSON: { success, url, error }
  */
 
 header('Content-Type: application/json');
@@ -21,9 +20,9 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
 }
 
 require_once __DIR__ . '/../config.php';
-require_once __DIR__ . '/../includes/payment/MollieClient.php';
+require_once __DIR__ . '/../includes/payment/StripeClient.php';
 
-use TheHUB\Payment\MollieClient;
+use TheHUB\Payment\StripeClient;
 
 $pdo = $GLOBALS['pdo'];
 
@@ -36,12 +35,14 @@ if (!$orderId) {
     exit;
 }
 
-// Get Mollie API key
-$mollieKey = env('MOLLIE_API_KEY', '');
-if (empty($mollieKey)) {
-    echo json_encode(['success' => false, 'error' => 'Mollie ej konfigurerat']);
+// Get Stripe key
+$stripeKey = env('STRIPE_SECRET_KEY', '');
+if (empty($stripeKey)) {
+    echo json_encode(['success' => false, 'error' => 'Stripe ej konfigurerat']);
     exit;
 }
+
+$publishableKey = env('STRIPE_PUBLISHABLE_KEY', '');
 
 try {
     // Get order details
@@ -67,69 +68,123 @@ try {
         exit;
     }
 
-    // Build payment description from order items
+    // Get order items for line_items
     $stmt = $pdo->prepare("SELECT * FROM order_items WHERE order_id = ?");
     $stmt->execute([$orderId]);
     $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // Create description
-    $description = 'Anmälan';
-    if (!empty($order['event_name'])) {
-        $description .= ' - ' . $order['event_name'];
-    }
-    if (count($items) > 0) {
-        $description .= ' (' . count($items) . ' st)';
+    // Build Stripe line items
+    $lineItems = [];
+    foreach ($items as $item) {
+        $lineItems[] = [
+            'price_data' => [
+                'currency' => 'sek',
+                'unit_amount' => (int)($item['total_price'] * 100),
+                'product_data' => [
+                    'name' => $item['description'] ?: ('Anmälan - ' . ($order['event_name'] ?? 'Event'))
+                ]
+            ],
+            'quantity' => 1
+        ];
     }
 
-    // Build URLs
+    // If no items, use total amount
+    if (empty($lineItems)) {
+        $lineItems[] = [
+            'price_data' => [
+                'currency' => 'sek',
+                'unit_amount' => (int)($order['total_amount'] * 100),
+                'product_data' => [
+                    'name' => $order['event_name'] ? 'Anmälan - ' . $order['event_name'] : 'Betalning'
+                ]
+            ],
+            'quantity' => 1
+        ];
+    }
+
+    // Build checkout session params - DIRECT CHARGES ONLY
+    // All payments go to platform account, manual payouts to organizers
     $baseUrl = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http') . '://' . $_SERVER['HTTP_HOST'];
 
-    $mollie = new MollieClient($mollieKey);
+    $stripe = new StripeClient($stripeKey);
 
-    // Create Mollie payment
-    // All payments go to platform account, manual payouts to organizers
-    $paymentData = [
-        'amount' => (float)$order['total_amount'],
-        'currency' => 'SEK',
-        'description' => $description,
-        'redirectUrl' => $baseUrl . '/checkout?order=' . $orderId,
-        'webhookUrl' => $baseUrl . '/webhooks/mollie-webhook.php',
+    $sessionParams = [
+        'mode' => 'payment',
+        'line_items' => $lineItems,
+        'success_url' => $baseUrl . '/checkout?order=' . $orderId . '&stripe_success=1',
+        'cancel_url' => $baseUrl . '/checkout?order=' . $orderId . '&stripe_cancelled=1',
+        'payment_method_types' => ['card'],  // Bara kort tills Swish aktiveras för plattformskonto
         'metadata' => [
-            'order_id' => (string)$orderId,
+            'order_id' => $orderId,
             'order_number' => $order['order_number'] ?? '',
-            'rider_id' => (string)($order['rider_id'] ?? ''),
-            'event_id' => (string)($order['event_id'] ?? ''),
-            'payment_recipient_id' => (string)($order['payment_recipient_id'] ?? '')  // För rapportering
+            'rider_id' => $order['rider_id'] ?? '',
+            'event_id' => $order['event_id'] ?? '',
+            'payment_recipient_id' => $order['payment_recipient_id'] ?? ''  // För rapportering
+        ],
+        'payment_intent_data' => [
+            'statement_descriptor' => 'THEHUB EVENT',  // Max 22 tecken - visas på kvitto
+            'metadata' => [
+                'order_id' => $orderId,
+                'order_number' => $order['order_number'] ?? '',
+                'payment_recipient_id' => $order['payment_recipient_id'] ?? ''
+            ]
         ]
     ];
 
-    $response = $mollie->createPayment($paymentData);
+    // Add customer email if available
+    if (!empty($order['customer_email'])) {
+        $sessionParams['customer_email'] = $order['customer_email'];
+    }
 
-    if (!$response['success']) {
-        error_log("Mollie payment error: " . ($response['error'] ?? 'Unknown error'));
+    // Create Checkout Session via Stripe API
+    $response = $stripe->request('POST', '/checkout/sessions', $sessionParams);
+
+    if (isset($response['error'])) {
+        error_log("Stripe Checkout error: " . json_encode($response['error']));
         echo json_encode([
             'success' => false,
-            'error' => $response['error'] ?? 'Mollie-fel'
+            'error' => $response['error']['message'] ?? 'Stripe-fel'
         ]);
         exit;
     }
 
-    $paymentId = $response['payment_id'];
-    $checkoutUrl = $response['checkout_url'];
+    $sessionId = $response['id'] ?? null;
+    $checkoutUrl = $response['url'] ?? null;
 
     if (!$checkoutUrl) {
         echo json_encode(['success' => false, 'error' => 'Kunde inte skapa betalningssession']);
         exit;
     }
 
-    // Store payment ID on order for webhook matching
-    // gateway_transaction_id is used by mollie-webhook.php to find the order
-    $updateSql = "UPDATE orders SET payment_method = 'mollie', updated_at = NOW()";
+    // Store session ID on order for webhook matching
+    // gateway_transaction_id is used by stripe-webhook.php to find the order
+    $updateSql = "UPDATE orders SET payment_method = 'card', updated_at = NOW()";
     $updateParams = [];
 
     // Set gateway fields (used by webhook to match the order)
-    $updateSql .= ", gateway_code = 'mollie', gateway_transaction_id = ?";
-    $updateParams[] = $paymentId;
+    $updateSql .= ", gateway_code = 'stripe', gateway_transaction_id = ?";
+    $updateParams[] = $sessionId;
+
+    // Also set stripe_session_id if column exists
+    try {
+        $chk = $pdo->query("SHOW COLUMNS FROM orders LIKE 'stripe_session_id'");
+        if (count($chk->fetchAll()) > 0) {
+            $updateSql .= ", stripe_session_id = ?";
+            $updateParams[] = $sessionId;
+        }
+    } catch (Exception $e) {}
+
+    // Store payment_intent_id if available
+    $paymentIntentId = $response['payment_intent'] ?? null;
+    if ($paymentIntentId) {
+        try {
+            $chk = $pdo->query("SHOW COLUMNS FROM orders LIKE 'stripe_payment_intent_id'");
+            if (count($chk->fetchAll()) > 0) {
+                $updateSql .= ", stripe_payment_intent_id = ?";
+                $updateParams[] = $paymentIntentId;
+            }
+        } catch (Exception $e) {}
+    }
 
     $updateSql .= " WHERE id = ?";
     $updateParams[] = $orderId;
@@ -140,7 +195,7 @@ try {
     echo json_encode([
         'success' => true,
         'url' => $checkoutUrl,
-        'payment_id' => $paymentId
+        'session_id' => $sessionId
     ]);
 
 } catch (Exception $e) {
