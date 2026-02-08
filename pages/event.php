@@ -3722,6 +3722,31 @@ if (!empty($event['series_id'])) {
                                         </div>
                                     `;
                                     if (typeof lucide !== 'undefined') lucide.createIcons();
+                                } else if (data.classes[0].error === 'no_eligible_classes') {
+                                    // Show debug info about why classes were filtered
+                                    const debug = data.classes[0].debug || {};
+                                    const reasons = (debug.ineligible_classes || []).map(c =>
+                                        `<li><strong>${c.name}:</strong> ${c.reason}</li>`
+                                    ).join('');
+
+                                    classList.innerHTML = `
+                                        <div class="alert alert--info" style="text-align: left;">
+                                            <div style="display: flex; gap: var(--space-sm); align-items: flex-start;">
+                                                <i data-lucide="info" style="flex-shrink: 0; margin-top: 2px;"></i>
+                                                <div>
+                                                    <strong style="display: block; margin-bottom: var(--space-xs);">Inga matchande klasser</strong>
+                                                    <p style="margin: 0 0 var(--space-sm) 0;">Deltagaren matchade inte kriterierna för någon klass:</p>
+                                                    <div style="font-size: 0.875rem; color: var(--color-text-secondary);">
+                                                        <p>Ålder: ${debug.rider_age} år | Kön: ${debug.rider_gender}</p>
+                                                    </div>
+                                                    <ul style="margin: var(--space-xs) 0 0 0; padding-left: var(--space-lg); font-size: 0.875rem;">
+                                                        ${reasons}
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    `;
+                                    if (typeof lucide !== 'undefined') lucide.createIcons();
                                 } else {
                                     renderClasses(data.classes);
                                     showLicenseCommitmentIfNeeded();
