@@ -3419,10 +3419,6 @@ if (!empty($event['series_id'])) {
                         <span>Totalt</span>
                         <span id="cartTotal">0 kr</span>
                     </div>
-                    <div id="cartSavings" class="reg-cart__savings" style="display:none;">
-                        <i data-lucide="piggy-bank"></i>
-                        <span>Du sparar <strong id="savingsAmount">0 kr</strong> i Swish-avgifter!</span>
-                    </div>
                 </div>
                 <button type="button" id="checkoutBtn" class="btn btn--primary btn--lg btn--block">
                     <i data-lucide="credit-card"></i>
@@ -3569,8 +3565,6 @@ if (!empty($event['series_id'])) {
                 const cartItems = document.getElementById('cartItems');
                 const cartCount = document.getElementById('cartCount');
                 const cartTotal = document.getElementById('cartTotal');
-                const cartSavings = document.getElementById('cartSavings');
-                const savingsAmount = document.getElementById('savingsAmount');
                 const checkoutBtn = document.getElementById('checkoutBtn');
 
                 // Search state
@@ -3883,15 +3877,6 @@ if (!empty($event['series_id'])) {
                     const total = cart.reduce((sum, item) => sum + item.price, 0);
                     cartCount.textContent = cart.length;
                     cartTotal.textContent = total.toLocaleString('sv-SE') + ' kr';
-
-                    // Show savings if multiple riders
-                    if (cart.length > 1) {
-                        const savings = (cart.length - 1) * 1; // 1 kr per extra Swish fee saved
-                        savingsAmount.textContent = savings + ' kr';
-                        cartSavings.style.display = 'flex';
-                    } else {
-                        cartSavings.style.display = 'none';
-                    }
 
                     if (typeof lucide !== 'undefined') lucide.createIcons();
                 }

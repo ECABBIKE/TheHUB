@@ -505,7 +505,7 @@ function getEligibleClassesForEvent(int $eventId, int $riderId): array {
         // Fallback to legacy event_pricing_rules
         $classStmt = $pdo->prepare("
             SELECT c.id as class_id, c.name, c.display_name, c.gender, c.min_age, c.max_age,
-                   epr.base_price, epr.early_bird_price, epr.late_fee
+                   epr.base_price
             FROM event_pricing_rules epr
             JOIN classes c ON epr.class_id = c.id
             WHERE epr.event_id = ?
@@ -573,9 +573,9 @@ function getEligibleClassesForEvent(int $eventId, int $riderId): array {
                 $lateFeePrice = round($basePrice + ($basePrice * $lateFeePercent / 100));
             }
         } else {
-            // Legacy system - use values from event_pricing_rules
-            $earlyBirdPrice = isset($class['early_bird_price']) ? round(floatval($class['early_bird_price'])) : null;
-            $lateFeePrice = isset($class['late_fee']) ? round(floatval($class['late_fee'])) : null;
+            // Legacy system - no early bird or late fee in old system
+            $earlyBirdPrice = $basePrice;
+            $lateFeePrice = $basePrice;
         }
 
         $classData = [
