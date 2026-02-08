@@ -240,6 +240,8 @@ function createMultiRiderOrder(array $buyerData, array $items, ?string $discount
                 $registrations[] = [
                     'type' => 'event',
                     'registration_id' => $registrationId,
+                    'rider_id' => $riderId,
+                    'event_id' => $eventId,
                     'rider_name' => "{$rider['firstname']} {$rider['lastname']}",
                     'event_name' => $eventInfo['event_name'],
                     'class_name' => $className,
@@ -346,11 +348,17 @@ function createMultiRiderOrder(array $buyerData, array $items, ?string $discount
         // Beräkna totalt discount
         $totalDiscount = 0;
 
-        // Check for Gravity ID discount if buyer has valid rider_id
-        if ($validRiderId && $firstEventId && function_exists('checkGravityIdDiscount')) {
-            $gravityIdInfo = checkGravityIdDiscount($validRiderId, $firstEventId);
-            if ($gravityIdInfo && $gravityIdInfo['has_gravity_id'] && $gravityIdInfo['discount'] > 0) {
-                $totalDiscount += floatval($gravityIdInfo['discount']);
+        // Check for Gravity ID discount for each registration
+        if (function_exists('checkGravityIdDiscount')) {
+            // Loop through each registration and check for Gravity ID discount
+            foreach ($registrations as $reg) {
+                // Only check for event registrations (not series)
+                if ($reg['type'] === 'event' && !empty($reg['event_id']) && !empty($reg['rider_id'])) {
+                    $gravityIdInfo = checkGravityIdDiscount($reg['rider_id'], $reg['event_id']);
+                    if ($gravityIdInfo && $gravityIdInfo['has_gravity_id'] && $gravityIdInfo['discount'] > 0) {
+                        $totalDiscount += floatval($gravityIdInfo['discount']);
+                    }
+                }
             }
         }
 
