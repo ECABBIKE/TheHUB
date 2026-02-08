@@ -145,6 +145,9 @@ $migrationChecks = [
     '041_events_pricing_template_id.sql' => [
         'columns' => ['events.pricing_template_id']
     ],
+    '042_pricing_template_flexible_prices.sql' => [
+        'columns' => ['pricing_template_rules.early_bird_price', 'pricing_template_rules.late_fee_price', 'pricing_templates.pricing_mode']
+    ],
 ];
 
 // ============================================================================

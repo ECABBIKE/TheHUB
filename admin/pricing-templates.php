@@ -92,6 +92,48 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
  exit;
  }
 
+ elseif ($action === 'copy_template') {
+ $id = intval($_POST['id']);
+ $template = $db->getRow("SELECT * FROM pricing_templates WHERE id = ?", [$id]);
+
+ if ($template) {
+ // Create copy with new name
+ $newName = $template['name'] . ' (kopia)';
+ $newId = $db->insert('pricing_templates', [
+  'name' => $newName,
+  'description' => $template['description'],
+  'is_default' => 0, // Never set copy as default
+  'early_bird_percent' => $template['early_bird_percent'],
+  'early_bird_days_before' => $template['early_bird_days_before'],
+  'late_fee_percent' => $template['late_fee_percent'],
+  'late_fee_days_before' => $template['late_fee_days_before'],
+  'pricing_mode' => $template['pricing_mode'] ?? 'percentage'
+ ]);
+
+ // Copy all pricing rules
+ $rules = $db->getAll("SELECT * FROM pricing_template_rules WHERE template_id = ?", [$id]);
+ foreach ($rules as $rule) {
+  $ruleData = [
+   'template_id' => $newId,
+   'class_id' => $rule['class_id'],
+   'base_price' => $rule['base_price']
+  ];
+
+  // Add optional columns if they exist
+  if (isset($rule['early_bird_price'])) $ruleData['early_bird_price'] = $rule['early_bird_price'];
+  if (isset($rule['late_fee_price'])) $ruleData['late_fee_price'] = $rule['late_fee_price'];
+  if (isset($rule['season_price'])) $ruleData['season_price'] = $rule['season_price'];
+
+  $db->insert('pricing_template_rules', $ruleData);
+ }
+
+ $message = "Prismall kopierad! Redigera namnet på den nya mallen.";
+ $messageType = 'success';
+ header("Location: /admin/pricing-templates.php?edit=$newId");
+ exit;
+ }
+ }
+
  elseif ($action === 'save_prices') {
  $templateId = intval($_POST['template_id']);
  $classIds = $_POST['class_id'] ?? [];
@@ -517,6 +559,14 @@ input[type="number"] {
    <a href="?edit=<?= $template['id'] ?>" class="btn btn--sm btn--primary" title="Redigera priser">
     <i data-lucide="edit" class="icon-sm"></i>
    </a>
+   <form method="POST" style="display: inline;">
+    <?= csrf_field() ?>
+    <input type="hidden" name="action" value="copy_template">
+    <input type="hidden" name="id" value="<?= $template['id'] ?>">
+    <button type="submit" class="btn btn--sm btn--ghost" title="Kopiera mall">
+    <i data-lucide="copy" class="icon-sm"></i>
+    </button>
+   </form>
    <form method="POST" style="display: inline;" onsubmit="return confirm('Är du säker på att du vill ta bort denna mall?');">
     <?= csrf_field() ?>
     <input type="hidden" name="action" value="delete_template">
