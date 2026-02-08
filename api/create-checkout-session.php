@@ -102,8 +102,8 @@ try {
         ];
     }
 
-    // Build checkout session params - DIRECT CHARGES ONLY
-    // All payments go to platform account, manual payouts to organizers
+    // Build checkout session params - DIRECT CHARGES WITH TRANSFERS
+    // All payments go to platform account, automatic transfers to Connected Accounts
     $baseUrl = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http') . '://' . $_SERVER['HTTP_HOST'];
 
     $stripe = new StripeClient($stripeKey);
@@ -123,6 +123,7 @@ try {
         ],
         'payment_intent_data' => [
             'statement_descriptor' => 'THEHUB EVENT',  // Max 22 tecken - visas på kvitto
+            'transfer_group' => 'order_' . $order['order_number'],  // För automatiska transfers
             'metadata' => [
                 'order_id' => $orderId,
                 'order_number' => $order['order_number'] ?? '',
