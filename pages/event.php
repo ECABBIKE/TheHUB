@@ -3679,7 +3679,27 @@ if (!empty($event['series_id'])) {
 
                         if (data.success) {
                             if (data.classes && data.classes.length > 0) {
-                                renderClasses(data.classes);
+                                // Check if it's an incomplete profile error
+                                if (data.classes[0].error === 'incomplete_profile') {
+                                    classList.innerHTML = `
+                                        <div class="alert alert--warning" style="text-align: left;">
+                                            <div style="display: flex; gap: var(--space-sm); align-items: flex-start;">
+                                                <i data-lucide="alert-triangle" style="flex-shrink: 0; margin-top: 2px;"></i>
+                                                <div>
+                                                    <strong style="display: block; margin-bottom: var(--space-xs);">Profilen är inte komplett</strong>
+                                                    <p style="margin: 0;">${data.classes[0].message}</p>
+                                                    <p style="margin: var(--space-sm) 0 0 0; font-size: 0.875rem;">
+                                                        Rider med ID ${selectedRider.id} saknar viktig information.
+                                                        Kontakta administratören för att uppdatera profilen.
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    `;
+                                    if (typeof lucide !== 'undefined') lucide.createIcons();
+                                } else {
+                                    renderClasses(data.classes);
+                                }
                             } else {
                                 classList.innerHTML = '<p class="text-muted">Inga tillgängliga klasser för denna deltagare</p>';
                             }
