@@ -52,6 +52,9 @@
     <!-- Theme System -->
     <script src="/assets/js/theme.js?v=<?= filemtime(__DIR__ . '/../assets/js/theme.js') ?>"></script>
 
+    <!-- Global Shopping Cart -->
+    <script src="/assets/js/global-cart.js?v=<?= filemtime(__DIR__ . '/../assets/js/global-cart.js') ?>"></script>
+
     <!-- FOUC Prevention: Reveal content after CSS is ready -->
     <script>
         (function() {
