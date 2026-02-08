@@ -161,11 +161,13 @@ class StripeClient {
             'type' => 'express',
             'country' => $data['country'] ?? 'SE',
             'email' => $data['email'] ?? null,
-            // Standard Express account with both capabilities
-            // - card_payments: Can accept card payments directly (required by Stripe)
-            // - transfers: Can receive transfers from the platform
+            // Express account capabilities for Swedish market
+            // - card_payments: Visa, Mastercard, Apple Pay, Google Pay
+            // - swish_payments: Swish (Sweden)
+            // - transfers: Can receive transfers from platform
             'capabilities' => [
                 'card_payments' => ['requested' => true],
+                'swish_payments' => ['requested' => true],  // CRITICAL: Swish for Swedish accounts
                 'transfers' => ['requested' => true]
             ],
             'business_type' => $data['business_type'] ?? 'individual',
