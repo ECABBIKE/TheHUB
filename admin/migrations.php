@@ -142,6 +142,9 @@ $migrationChecks = [
     '040_series_club_championship.sql' => [
         'columns' => ['series.enable_club_championship']
     ],
+    '041_events_pricing_template_id.sql' => [
+        'columns' => ['events.pricing_template_id']
+    ],
 ];
 
 // ============================================================================
