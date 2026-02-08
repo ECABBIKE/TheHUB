@@ -131,6 +131,7 @@ try {
         'line_items' => $lineItems,
         'success_url' => $baseUrl . '/checkout?order=' . $orderId . '&stripe_success=1',
         'cancel_url' => $baseUrl . '/checkout?order=' . $orderId . '&stripe_cancelled=1',
+        'payment_method_types' => ['card', 'swish'],  // Aktivera kort och Swish
         'metadata' => [
             'order_id' => $orderId,
             'order_number' => $order['order_number'] ?? '',
@@ -153,6 +154,13 @@ try {
                 'destination' => $stripeAccountId
             ],
             'application_fee_amount' => $feeAmount,
+            'statement_descriptor' => 'THEHUB EVENT',  // Max 22 tecken
+            'metadata' => $sessionParams['metadata']
+        ];
+    } else {
+        // For direct charges (no connected account), add statement descriptor at payment_intent level
+        $sessionParams['payment_intent_data'] = [
+            'statement_descriptor' => 'THEHUB EVENT',  // Max 22 tecken
             'metadata' => $sessionParams['metadata']
         ];
     }
