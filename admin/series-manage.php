@@ -388,12 +388,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     // REGISTRATION TAB ACTIONS
     elseif ($action === 'save_registration') {
         $registrationEnabled = isset($_POST['registration_enabled']) ? 1 : 0;
+        $allowSeriesRegistration = isset($_POST['allow_series_registration']) ? 1 : 0;
         $pricingTemplateId = !empty($_POST['pricing_template_id']) ? intval($_POST['pricing_template_id']) : null;
 
         try {
             $pdo = $db->getPdo();
-            $stmt = $pdo->prepare("UPDATE series SET registration_enabled = ?, pricing_template_id = ? WHERE id = ?");
-            $stmt->execute([$registrationEnabled, $pricingTemplateId, $id]);
+            $stmt = $pdo->prepare("UPDATE series SET registration_enabled = ?, allow_series_registration = ?, pricing_template_id = ? WHERE id = ?");
+            $stmt->execute([$registrationEnabled, $allowSeriesRegistration, $pricingTemplateId, $id]);
             $series = $db->getRow("SELECT * FROM series WHERE id = ?", [$id]);
             $message = 'Anmälningsinställningar sparade!';
             $messageType = 'success';
@@ -1295,6 +1296,15 @@ include __DIR__ . '/components/unified-layout.php';
                             Anmälan aktiverad
                         </label>
                         <small class="text-secondary">Tillåt anmälan till events i serien</small>
+                    </div>
+
+                    <div class="admin-form-group">
+                        <label class="admin-form-label flex items-center gap-sm">
+                            <input type="checkbox" name="allow_series_registration" value="1"
+                                   <?= ($series['allow_series_registration'] ?? 0) ? 'checked' : '' ?>>
+                            Tillåt serieanmälan
+                        </label>
+                        <small class="text-secondary">Visa "Anmäl dig till hela serien"-kortet på event-sidor</small>
                     </div>
 
                     <div class="admin-form-group">
