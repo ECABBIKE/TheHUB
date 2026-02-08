@@ -203,7 +203,8 @@ try {
                 $searchPattern = '%' . $query . '%';
                 $stmt = $pdo->prepare("
                     SELECT r.id, r.firstname, r.lastname, r.birth_year, r.gender,
-                           r.license_number, r.license_type, c.name as club_name
+                           r.license_number, r.license_type, r.license_year, r.license_valid_until,
+                           c.name as club_name
                     FROM riders r
                     LEFT JOIN clubs c ON r.club_id = c.id
                     WHERE (CONCAT(r.firstname, ' ', r.lastname) LIKE ?
@@ -215,6 +216,26 @@ try {
                 ");
                 $stmt->execute([$searchPattern, $searchPattern, $searchPattern]);
                 $riders = $stmt->fetchAll(PDO::FETCH_ASSOC);
+
+                // Add license validation status to each rider
+                $now = time();
+                foreach ($riders as &$rider) {
+                    $hasValidLicense = false;
+                    $licenseYear = null;
+
+                    if (!empty($rider['license_valid_until'])) {
+                        $licenseExpiry = strtotime($rider['license_valid_until']);
+                        $hasValidLicense = $licenseExpiry >= $now;
+                        $licenseYear = date('Y', $licenseExpiry);
+                    } elseif (!empty($rider['license_year'])) {
+                        $licenseExpiry = strtotime($rider['license_year'] . '-12-31');
+                        $hasValidLicense = $licenseExpiry >= $now;
+                        $licenseYear = $rider['license_year'];
+                    }
+
+                    $rider['has_valid_license'] = $hasValidLicense;
+                    $rider['license_display_year'] = $licenseYear;
+                }
 
                 echo json_encode([
                     'success' => true,
@@ -246,20 +267,15 @@ try {
                 // Tillåt både inloggade och icke-inloggade användare
                 $currentUser = hub_is_logged_in() ? hub_current_user() : null;
 
-                // Validera buyer data
+                // Buyer data (optional - kan fyllas i senare i checkout)
                 // Om inloggad: använd användarens data som default
-                // Om inte inloggad: måste skickas med i request
+                // Om inte inloggad: kan skickas med i request eller fyllas i checkout-sidan
                 $buyerData = [
                     'user_id' => $currentUser['id'] ?? null,
                     'name' => $data['buyer']['name'] ?? ($currentUser ? ($currentUser['firstname'] . ' ' . $currentUser['lastname']) : null),
                     'email' => $data['buyer']['email'] ?? ($currentUser['email'] ?? null),
                     'phone' => $data['buyer']['phone'] ?? null
                 ];
-
-                // Validera att buyer har nödvändig information
-                if (empty($buyerData['name']) || empty($buyerData['email'])) {
-                    throw new Exception('Köparens namn och e-post måste anges');
-                }
 
                 $items = $data['items'] ?? [];
 

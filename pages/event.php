@@ -3606,9 +3606,19 @@ if (!empty($event['series_id'])) {
                         if (rider.club_name) infoItems.push(rider.club_name);
                         if (rider.license_number) infoItems.push(`<span class="rider-search-result__uci">UCI: ${rider.license_number}</span>`);
 
+                        // License indicator
+                        const licenseIndicator = rider.has_valid_license && rider.license_display_year
+                            ? `<span style="display: inline-flex; align-items: center; gap: 4px; color: var(--color-success); font-weight: 500; font-size: 0.875rem;">
+                                 <i data-lucide="check-circle" style="width: 16px; height: 16px;"></i> Licens ${rider.license_display_year}
+                               </span>`
+                            : '';
+
                         return `
                             <div class="rider-search-result" data-rider-id="${rider.id}">
-                                <div class="rider-search-result__name">${rider.firstname} ${rider.lastname}</div>
+                                <div class="rider-search-result__name">
+                                    ${rider.firstname} ${rider.lastname}
+                                    ${licenseIndicator}
+                                </div>
                                 <div class="rider-search-result__info">${infoItems.join(' • ')}</div>
                             </div>
                         `;
@@ -3897,15 +3907,19 @@ if (!empty($event['series_id'])) {
                     if (typeof lucide !== 'undefined') lucide.createIcons();
 
                     try {
+                        // Buyer data - använd inloggad användares data om tillgänglig
+                        const buyerData = {};
+                        <?php if ($isLoggedIn && $currentUser): ?>
+                        buyerData.name = '<?= h(($currentUser['firstname'] ?? '') . ' ' . ($currentUser['lastname'] ?? '')) ?>';
+                        buyerData.email = '<?= h($currentUser['email'] ?? '') ?>';
+                        <?php endif; ?>
+
                         const response = await fetch('/api/orders.php', {
                             method: 'POST',
                             headers: { 'Content-Type': 'application/json' },
                             body: JSON.stringify({
                                 action: 'create',
-                                buyer: {
-                                    name: '<?= h($currentUser['firstname'] . ' ' . $currentUser['lastname']) ?>',
-                                    email: '<?= h($currentUser['email'] ?? '') ?>'
-                                },
+                                buyer: buyerData,
                                 items: cart
                             })
                         });
