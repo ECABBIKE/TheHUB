@@ -439,7 +439,7 @@ function getEligibleClassesForEvent(int $eventId, int $riderId): array {
 
     $eventDate = strtotime($event['date']);
     $riderAge = date('Y', $eventDate) - intval($rider['birth_year']);
-    $riderGender = strtoupper($rider['gender']);
+    $riderGender = !empty($rider['gender']) ? strtoupper($rider['gender']) : null;
 
     // Validera licens
     $licenseStatus = 'none'; // none, valid, expired
@@ -505,9 +505,18 @@ function getEligibleClassesForEvent(int $eventId, int $riderId): array {
         }
 
         // Kolla kön
-        if ($eligible && $class['gender'] && $class['gender'] !== $riderGender) {
-            $eligible = false;
-            $reason = $class['gender'] === 'M' ? 'Endast herrar' : 'Endast damer';
+        if ($eligible && $class['gender']) {
+            // Klassen har könsbegränsning
+            if ($riderGender === null) {
+                // Ridern saknar kön - varna men tillåt
+                if (empty($warning)) {
+                    $warning = 'Kön saknas i profilen';
+                }
+            } elseif ($class['gender'] !== $riderGender) {
+                // Ridern har fel kön
+                $eligible = false;
+                $reason = $class['gender'] === 'M' ? 'Endast herrar' : 'Endast damer';
+            }
         }
 
         // Kolla ålder
