@@ -3,13 +3,15 @@
  * Debug Stripe Connect - Visar EXAKT varför Swish inte fungerar
  */
 
-require_once __DIR__ . '/../config/database.php';
-require_once __DIR__ . '/../includes/auth.php';
+require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../includes/payment/StripeClient.php';
 
 use TheHUB\Payment\StripeClient;
 
-requireAdmin();
+// Require admin authentication
+if (!isset($_SESSION['admin_logged_in']) || !$_SESSION['admin_logged_in']) {
+    die('Admin access required');
+}
 
 $pdo = $GLOBALS['pdo'];
 
