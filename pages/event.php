@@ -3175,13 +3175,25 @@ if (!empty($event['series_id'])) {
             </script>
 
         <?php elseif (empty($eventPricing)): ?>
-            <div class="alert alert--info" style="display: flex; gap: var(--space-md); text-align: left;">
-                <i data-lucide="info" style="flex-shrink: 0; margin-top: 2px;"></i>
-                <div>
-                    <strong style="display: block; margin-bottom: var(--space-xs);">Eventets anmälan hanteras ej av TheHUB.</strong>
-                    <span>Kontakta arrangerande klubb för mer information.</span>
+            <?php if (!empty($event['pricing_template_id'])): ?>
+                <!-- Has template but no rules - Configuration error -->
+                <div class="alert alert--warning" style="display: flex; gap: var(--space-md); text-align: left;">
+                    <i data-lucide="alert-triangle" style="flex-shrink: 0; margin-top: 2px;"></i>
+                    <div>
+                        <strong style="display: block; margin-bottom: var(--space-xs);">Prismall saknar konfiguration</strong>
+                        <span>Priserna för detta event är inte konfigurerade ännu. Kontakta arrangören för mer information.</span>
+                    </div>
                 </div>
-            </div>
+            <?php else: ?>
+                <!-- No pricing template at all - Either not configured or external registration -->
+                <div class="alert alert--info" style="display: flex; gap: var(--space-md); text-align: left;">
+                    <i data-lucide="info" style="flex-shrink: 0; margin-top: 2px;"></i>
+                    <div>
+                        <strong style="display: block; margin-bottom: var(--space-xs);">Anmälan hanteras externt</strong>
+                        <span>Eventets anmälan hanteras ej av TheHUB. Kontakta arrangerande klubb för mer information.</span>
+                    </div>
+                </div>
+            <?php endif; ?>
 
         <?php else: ?>
             <!-- Multi-Rider Registration Form -->
