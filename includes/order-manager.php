@@ -632,22 +632,35 @@ function getEligibleClassesForEvent(int $eventId, int $riderId): array {
 
     // Returnera endast eligible klasser (dölj ineligible)
     // Om inga eligible klasser, returnera debug-info
-    if (empty($eligibleClasses) && !empty($ineligibleClasses)) {
-        return [[
-            'error' => 'no_eligible_classes',
-            'message' => 'Inga klasser matchade kriterierna',
-            'debug' => [
-                'rider_age' => $riderAge,
-                'rider_gender' => $riderGender,
-                'license_status' => $licenseStatus,
-                'ineligible_classes' => array_map(function($cls) {
-                    return [
-                        'name' => $cls['name'],
-                        'reason' => $cls['reason']
-                    ];
-                }, $ineligibleClasses)
-            ]
-        ]];
+    if (empty($eligibleClasses)) {
+        if (!empty($ineligibleClasses)) {
+            // Fanns klasser men ingen matchade
+            return [[
+                'error' => 'no_eligible_classes',
+                'message' => 'Inga klasser matchade kriterierna',
+                'debug' => [
+                    'rider_age' => $riderAge,
+                    'rider_gender' => $riderGender,
+                    'license_status' => $licenseStatus,
+                    'ineligible_classes' => array_map(function($cls) {
+                        return [
+                            'name' => $cls['name'],
+                            'reason' => $cls['reason']
+                        ];
+                    }, $ineligibleClasses)
+                ]
+            ]];
+        } else {
+            // Inga klasser alls i prismallen
+            return [[
+                'error' => 'no_classes_configured',
+                'message' => 'Eventet saknar klasser',
+                'debug' => [
+                    'pricing_template_id' => $pricingTemplateId ?? 'NULL',
+                    'event_id' => $eventId
+                ]
+            ]];
+        }
     }
 
     return $eligibleClasses;

@@ -3747,6 +3747,24 @@ if (!empty($event['series_id'])) {
                                         </div>
                                     `;
                                     if (typeof lucide !== 'undefined') lucide.createIcons();
+                                } else if (data.classes[0].error === 'no_classes_configured') {
+                                    // Event has no classes configured
+                                    const debug = data.classes[0].debug || {};
+                                    classList.innerHTML = `
+                                        <div class="alert alert--warning" style="text-align: left;">
+                                            <div style="display: flex; gap: var(--space-sm); align-items: flex-start;">
+                                                <i data-lucide="alert-triangle" style="flex-shrink: 0; margin-top: 2px;"></i>
+                                                <div>
+                                                    <strong style="display: block; margin-bottom: var(--space-xs);">Eventet saknar klasser</strong>
+                                                    <p style="margin: 0;">Detta event har ingen prismall eller inga klasser konfigurerade.</p>
+                                                    <p style="margin: var(--space-sm) 0 0 0; font-size: 0.875rem; color: var(--color-text-secondary);">
+                                                        Prismall ID: ${debug.pricing_template_id || 'Saknas'}
+                                                    </p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    `;
+                                    if (typeof lucide !== 'undefined') lucide.createIcons();
                                 } else {
                                     renderClasses(data.classes);
                                     showLicenseCommitmentIfNeeded();
