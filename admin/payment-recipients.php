@@ -297,7 +297,9 @@ if (isset($_GET['stripe_refresh']) && !empty($_GET['recipient_id'])) {
 $recipients = $db->getAll("
     SELECT pr.*,
            (SELECT COUNT(*) FROM series s WHERE s.payment_recipient_id = pr.id) as series_count,
-           (SELECT COUNT(*) FROM events e WHERE e.payment_recipient_id = pr.id) as events_count
+           (SELECT COUNT(*) FROM events e WHERE e.payment_recipient_id = pr.id) as events_count,
+           (SELECT GROUP_CONCAT(s.name SEPARATOR ', ') FROM series s WHERE s.payment_recipient_id = pr.id) as series_names,
+           (SELECT GROUP_CONCAT(e.name SEPARATOR ', ') FROM events e WHERE e.payment_recipient_id = pr.id LIMIT 5) as events_names
     FROM payment_recipients pr
     ORDER BY pr.name ASC
 ");
@@ -486,9 +488,23 @@ include __DIR__ . '/components/unified-layout.php';
                 <span class="usage-value">
                     <?php
                     $usage = [];
-                    if ($r['series_count'] > 0) $usage[] = $r['series_count'] . ' serier';
-                    if ($r['events_count'] > 0) $usage[] = $r['events_count'] . ' event';
-                    echo $usage ? implode(', ', $usage) : 'Ingen';
+                    if ($r['series_count'] > 0) {
+                        $usage[] = $r['series_count'] . ' serier';
+                        if (!empty($r['series_names'])) {
+                            $usage[] = '<br><small style="color:var(--color-text-muted)">' . htmlspecialchars($r['series_names']) . '</small>';
+                        }
+                    }
+                    if ($r['events_count'] > 0) {
+                        $usage[] = $r['events_count'] . ' event';
+                        if (!empty($r['events_names'])) {
+                            $eventsList = explode(', ', $r['events_names']);
+                            $displayList = array_slice($eventsList, 0, 3);
+                            $usage[] = '<br><small style="color:var(--color-text-muted)">' . htmlspecialchars(implode(', ', $displayList));
+                            if (count($eventsList) > 3) $usage[] = ' +' . (count($eventsList) - 3) . ' till';
+                            $usage[] = '</small>';
+                        }
+                    }
+                    echo $usage ? implode(' ', $usage) : 'Ingen';
                     ?>
                 </span>
             </div>
@@ -544,17 +560,24 @@ include __DIR__ . '/components/unified-layout.php';
                 Redigera
             </button>
 
-            <?php if ($r['series_count'] == 0 && $r['events_count'] == 0): ?>
             <form method="POST" class="inline">
                 <?= csrf_field() ?>
                 <input type="hidden" name="action" value="delete">
                 <input type="hidden" name="id" value="<?= $r['id'] ?>">
+                <?php if ($r['series_count'] > 0 || $r['events_count'] > 0): ?>
+                <button type="submit" class="btn-admin btn-admin-danger btn-admin-sm"
+                        onclick="return confirm('VARNING: Denna mottagare används av <?= $r['series_count'] + $r['events_count'] ?> event/serier.\n\nOm du tar bort den kommer kopplingarna att försvinna.\n\nÄr du säker?')">
+                    <i data-lucide="trash-2"></i>
+                    Ta bort
+                </button>
+                <?php else: ?>
                 <button type="submit" class="btn-admin btn-admin-danger btn-admin-sm"
                         onclick="return confirm('Ta bort <?= htmlspecialchars($r['name']) ?>?')">
                     <i data-lucide="trash-2"></i>
+                    Ta bort
                 </button>
+                <?php endif; ?>
             </form>
-            <?php endif; ?>
         </div>
     </div>
     <?php endforeach; ?>
