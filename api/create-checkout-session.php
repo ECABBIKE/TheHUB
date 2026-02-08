@@ -102,26 +102,8 @@ try {
         ];
     }
 
-    // Determine Stripe connected account for destination charge
-    $stripeAccountId = null;
-    $platformFeePercent = floatval(env('STRIPE_PLATFORM_FEE_PERCENT', '2')); // Default fallback
-
-    // Check payment recipient for connected account
-    if (!empty($order['payment_recipient_id'])) {
-        $stmt = $pdo->prepare("
-            SELECT stripe_account_id, stripe_account_status, platform_fee_percent
-            FROM payment_recipients WHERE id = ? AND active = 1
-        ");
-        $stmt->execute([$order['payment_recipient_id']]);
-        $recipient = $stmt->fetch(PDO::FETCH_ASSOC);
-        if ($recipient && $recipient['stripe_account_status'] === 'active') {
-            $stripeAccountId = $recipient['stripe_account_id'];
-            // Use recipient-specific platform fee if set, otherwise use default
-            $platformFeePercent = floatval($recipient['platform_fee_percent'] ?? $platformFeePercent);
-        }
-    }
-
-    // Build checkout session params
+    // Build checkout session params - DIRECT CHARGES ONLY
+    // All payments go to platform account, manual payouts to organizers
     $baseUrl = (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on' ? 'https' : 'http') . '://' . $_SERVER['HTTP_HOST'];
 
     $stripe = new StripeClient($stripeKey);
@@ -131,38 +113,27 @@ try {
         'line_items' => $lineItems,
         'success_url' => $baseUrl . '/checkout?order=' . $orderId . '&stripe_success=1',
         'cancel_url' => $baseUrl . '/checkout?order=' . $orderId . '&stripe_cancelled=1',
-        'payment_method_types' => ['card', 'swish'],  // Aktivera kort och Swish
+        'payment_method_types' => ['card'],  // Bara kort tills Swish aktiveras för plattformskonto
         'metadata' => [
             'order_id' => $orderId,
             'order_number' => $order['order_number'] ?? '',
             'rider_id' => $order['rider_id'] ?? '',
-            'event_id' => $order['event_id'] ?? ''
+            'event_id' => $order['event_id'] ?? '',
+            'payment_recipient_id' => $order['payment_recipient_id'] ?? ''  // För rapportering
+        ],
+        'payment_intent_data' => [
+            'statement_descriptor' => 'THEHUB EVENT',  // Max 22 tecken - visas på kvitto
+            'metadata' => [
+                'order_id' => $orderId,
+                'order_number' => $order['order_number'] ?? '',
+                'payment_recipient_id' => $order['payment_recipient_id'] ?? ''
+            ]
         ]
     ];
 
     // Add customer email if available
     if (!empty($order['customer_email'])) {
         $sessionParams['customer_email'] = $order['customer_email'];
-    }
-
-    // Add destination charge if connected account
-    if ($stripeAccountId) {
-        $totalAmount = (int)($order['total_amount'] * 100);
-        $feeAmount = (int)($totalAmount * $platformFeePercent / 100);
-        $sessionParams['payment_intent_data'] = [
-            'transfer_data' => [
-                'destination' => $stripeAccountId
-            ],
-            'application_fee_amount' => $feeAmount,
-            'statement_descriptor' => 'THEHUB EVENT',  // Max 22 tecken
-            'metadata' => $sessionParams['metadata']
-        ];
-    } else {
-        // For direct charges (no connected account), add statement descriptor at payment_intent level
-        $sessionParams['payment_intent_data'] = [
-            'statement_descriptor' => 'THEHUB EVENT',  // Max 22 tecken
-            'metadata' => $sessionParams['metadata']
-        ];
     }
 
     // Create Checkout Session via Stripe API
