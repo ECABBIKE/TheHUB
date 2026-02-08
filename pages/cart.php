@@ -213,8 +213,15 @@ include __DIR__ . '/../components/header.php';
     // Listen for cart updates from other pages
     window.addEventListener('cartUpdated', renderCart);
 
-    // Initial render
-    renderCart();
+    // Wait for GlobalCart to load (it's in footer)
+    function initCart() {
+        if (typeof GlobalCart !== 'undefined') {
+            renderCart();
+        } else {
+            setTimeout(initCart, 50);
+        }
+    }
+    initCart();
 })();
 </script>
 
