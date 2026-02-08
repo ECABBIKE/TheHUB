@@ -30,6 +30,9 @@ if (function_exists('getVersionInfo')) {
     </div>
 </footer>
 
+<!-- Global Cart JS -->
+<script src="/assets/js/global-cart.js?v=<?= time() ?>"></script>
+
 <style>
 .site-footer {
     padding: var(--space-lg) var(--space-md);
