@@ -527,32 +527,23 @@ function getEligibleClassesForEvent(int $eventId, int $riderId): array {
                 $scfService = new SCFLicenseService($scfApiKey, getDB());
                 $eventYear = date('Y', $eventDate);
 
-                // Check current year license from SCF API
-                $scfLicense = $scfService->verifyRiderLicense($rider['license_number'], $eventYear);
+                // Check current year license from SCF API using UCI ID
+                $uciId = $scfService->normalizeUciId($rider['license_number']);
+                $scfResults = $scfService->lookupByUciIds([$uciId], $eventYear);
 
-                if ($scfLicense && !empty($scfLicense['valid']) && $scfLicense['valid']) {
-                    // License is valid according to SCF - update local database
-                    $licenseStatus = 'valid';
+                if (!empty($scfResults) && isset($scfResults[$uciId])) {
+                    $scfLicense = $scfResults[$uciId];
 
-                    // Update rider record with fresh license data
-                    $updateStmt = $pdo->prepare("
-                        UPDATE riders
-                        SET license_year = ?,
-                            license_valid_until = ?,
-                            license_type = ?,
-                            license_category = ?,
-                            scf_verified_at = NOW()
-                        WHERE id = ?
-                    ");
-                    $updateStmt->execute([
-                        $eventYear,
-                        $eventYear . '-12-31',
-                        $scfLicense['license_type'] ?? $rider['license_type'],
-                        $scfLicense['license_category'] ?? $rider['license_category'],
-                        $riderId
-                    ]);
+                    // Check if license is valid for the event year
+                    if (!empty($scfLicense['license_year']) && $scfLicense['license_year'] >= $eventYear) {
+                        // License is valid according to SCF - update local database
+                        $licenseStatus = 'valid';
 
-                    error_log("SCF API: Updated license for rider $riderId - valid for $eventYear");
+                        // Update rider using SCFLicenseService method
+                        $scfService->updateRiderLicense($riderId, $scfLicense, $eventYear);
+
+                        error_log("SCF API: Updated license for rider $riderId (UCI: $uciId) - valid for $eventYear");
+                    }
                 }
             }
         } catch (Exception $e) {
