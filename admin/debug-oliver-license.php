@@ -21,12 +21,17 @@ echo "Auth loaded\n";
 requireAdmin();
 echo "Auth checked\n";
 
+echo "Getting database connection...\n";
 $pdo = hub_db();
+echo "Database connected\n";
 
 // Find Oliver
+echo "Searching for Oliver Andersen...\n";
 $stmt = $pdo->prepare("SELECT * FROM riders WHERE firstname = 'Oliver' AND lastname = 'Andersen' LIMIT 1");
 $stmt->execute();
+echo "Query executed\n";
 $rider = $stmt->fetch(PDO::FETCH_ASSOC);
+echo "Fetch complete\n";
 
 if (!$rider) {
     echo "ERROR: Oliver Andersen not found in database\n";
