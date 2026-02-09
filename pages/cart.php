@@ -328,12 +328,6 @@ include __DIR__ . '/../components/header.php';
         <?php $currentUser = hub_current_user(); ?>
         buyerData.name = '<?= h(($currentUser['firstname'] ?? '') . ' ' . ($currentUser['lastname'] ?? '')) ?>';
         buyerData.email = '<?= h($currentUser['email'] ?? '') ?>';
-
-        // Validate that logged-in user has an email
-        if (!buyerData.email) {
-            alert('Din profil saknar e-postadress. Vänligen uppdatera din profil först.');
-            return;
-        }
         <?php endif; ?>
 
         checkoutBtn.disabled = true;
