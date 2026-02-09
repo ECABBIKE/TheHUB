@@ -916,17 +916,22 @@ try {
     $seriesInfo = null;
     $seriesEventsWithPricing = [];
 
-    if (!empty($event['series_id']) && $registrationOpen) {
+    if (!empty($event['series_id'])) {
         // Load series information
         $seriesStmt = $db->prepare("
-            SELECT id, name, logo, series_discount_percent, year
+            SELECT id, name, logo, series_discount_percent, year, allow_series_registration, registration_enabled
             FROM series
             WHERE id = ?
         ");
         $seriesStmt->execute([$event['series_id']]);
         $seriesInfo = $seriesStmt->fetch(PDO::FETCH_ASSOC);
 
-        if ($seriesInfo && count($seriesEvents) > 1) {
+        // If series has registration disabled, override event registration
+        if ($seriesInfo && empty($seriesInfo['registration_enabled'])) {
+            $registrationOpen = false;
+        }
+
+        if ($seriesInfo && $registrationOpen && count($seriesEvents) > 1 && !empty($seriesInfo['allow_series_registration'])) {
             // Load all events in series with pricing info
             $eventIds = array_column($seriesEvents, 'id');
             $placeholders = str_repeat('?,', count($eventIds) - 1) . '?';
