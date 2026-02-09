@@ -517,6 +517,50 @@ function getEligibleClassesForEvent(int $eventId, int $riderId): array {
         $licenseStatus = ($licenseExpiry >= $eventDate) ? 'valid' : 'expired';
     }
 
+    // If license is expired or missing, check SCF API for current license
+    if ($licenseStatus !== 'valid' && !empty($rider['license_number'])) {
+        try {
+            require_once __DIR__ . '/SCFLicenseService.php';
+            $scfApiKey = env('SCF_API_KEY', '');
+
+            if (!empty($scfApiKey)) {
+                $scfService = new SCFLicenseService($scfApiKey, getDB());
+                $eventYear = date('Y', $eventDate);
+
+                // Check current year license from SCF API
+                $scfLicense = $scfService->verifyRiderLicense($rider['license_number'], $eventYear);
+
+                if ($scfLicense && !empty($scfLicense['valid']) && $scfLicense['valid']) {
+                    // License is valid according to SCF - update local database
+                    $licenseStatus = 'valid';
+
+                    // Update rider record with fresh license data
+                    $updateStmt = $pdo->prepare("
+                        UPDATE riders
+                        SET license_year = ?,
+                            license_valid_until = ?,
+                            license_type = ?,
+                            license_category = ?,
+                            scf_verified_at = NOW()
+                        WHERE id = ?
+                    ");
+                    $updateStmt->execute([
+                        $eventYear,
+                        $eventYear . '-12-31',
+                        $scfLicense['license_type'] ?? $rider['license_type'],
+                        $scfLicense['license_category'] ?? $rider['license_category'],
+                        $riderId
+                    ]);
+
+                    error_log("SCF API: Updated license for rider $riderId - valid for $eventYear");
+                }
+            }
+        } catch (Exception $e) {
+            // Silently fail - don't block registration if SCF API is down
+            error_log("SCF API check failed for rider $riderId: " . $e->getMessage());
+        }
+    }
+
     // Try pricing template system first (new system)
     if (!empty($pricingTemplateId)) {
         // Get template settings
