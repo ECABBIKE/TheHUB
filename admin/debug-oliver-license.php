@@ -3,11 +3,23 @@
  * Quick Debug - Oliver Andersen License Check
  */
 
-require_once __DIR__ . '/../config.php';
-require_once __DIR__ . '/../includes/auth.php';
-requireAdmin();
+// Force error display
+ini_set('display_errors', 1);
+ini_set('display_startup_errors', 1);
+error_reporting(E_ALL);
 
 header('Content-Type: text/plain; charset=utf-8');
+
+echo "Starting debug...\n";
+
+require_once __DIR__ . '/../config.php';
+echo "Config loaded\n";
+
+require_once __DIR__ . '/../includes/auth.php';
+echo "Auth loaded\n";
+
+requireAdmin();
+echo "Auth checked\n";
 
 $pdo = hub_db();
 
