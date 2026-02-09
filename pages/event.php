@@ -3440,43 +3440,6 @@ if (!empty($event['series_id'])) {
                 </div>
             <?php endif; ?>
 
-            <?php if ($seriesRegistrationAvailable && $seriesInfo): ?>
-                <!-- Series Registration Option -->
-                <div class="card" style="margin-bottom: var(--space-lg); border: 2px solid var(--color-accent); background: var(--color-accent-light);">
-                    <div class="card-header" style="background: var(--color-bg-surface); border-bottom: 1px solid var(--color-accent);">
-                        <h3 style="margin: 0; display: flex; align-items: center; gap: var(--space-sm);">
-                            <i data-lucide="trophy"></i>
-                            Anmäl dig till hela serien
-                        </h3>
-                    </div>
-                    <div class="card-body">
-                        <p style="margin-bottom: var(--space-md); color: var(--color-text-primary);">
-                            Detta event ingår i <strong><?= h($seriesInfo['name']) ?></strong>. Anmäl dig till alla <?= count($seriesEventsWithPricing) ?> event och spara <?= h($seriesInfo['series_discount_percent'] ?? 15) ?>%!
-                        </p>
-
-                        <div style="background: var(--color-bg-card); border-radius: var(--radius-md); padding: var(--space-md); margin-bottom: var(--space-md);">
-                            <div style="font-size: var(--text-sm); color: var(--color-text-secondary); margin-bottom: var(--space-sm);">Event i serien:</div>
-                            <ul style="margin: 0; padding-left: var(--space-lg); font-size: var(--text-sm);">
-                                <?php foreach ($seriesEventsWithPricing as $seriesEvent): ?>
-                                <li style="margin-bottom: var(--space-xs);">
-                                    <strong><?= h($seriesEvent['name']) ?></strong> - <?= date('j M Y', strtotime($seriesEvent['date'])) ?>
-                                </li>
-                                <?php endforeach; ?>
-                            </ul>
-                        </div>
-
-                        <a href="/series/<?= $seriesInfo['id'] ?>" class="btn btn--primary btn--lg btn--block" style="margin-top: var(--space-md);">
-                            <i data-lucide="trophy"></i>
-                            Gå till serieanmälan
-                        </a>
-
-                        <div style="text-align: center; margin-top: var(--space-md); font-size: var(--text-sm); color: var(--color-text-secondary);">
-                            <i data-lucide="info" style="width: 14px; height: 14px;"></i>
-                            Eller anmäl dig till detta enskilda event nedan
-                        </div>
-                    </div>
-                </div>
-            <?php endif; ?>
 
             <?php if ($isEarlyBird): ?>
                 <div class="alert alert--success mb-md">
@@ -3592,27 +3555,81 @@ if (!empty($event['series_id'])) {
                 </div>
             </div>
 
-            <?php if ($seriesPassAvailable && $seriesInfo): ?>
-            <div class="reg-series-upsell mt-lg">
-                <div class="reg-series-upsell__header">
-                    <?php if ($seriesInfo['logo']): ?>
-                        <img src="<?= h($seriesInfo['logo']) ?>" alt="" class="reg-series-upsell__logo">
-                    <?php endif; ?>
-                    <div>
-                        <div class="reg-series-upsell__title">Köp Serie-pass istället?</div>
-                        <div class="reg-series-upsell__savings">
-                            <i data-lucide="tag"></i>
-                            Spara <?= $seriesInfo['series_discount_percent'] ?>% på alla event
+            <?php if ($seriesRegistrationAvailable && $seriesInfo): ?>
+            <!-- SERIES REGISTRATION SECTION -->
+            <div style="margin-top: var(--space-2xl); padding-top: var(--space-xl); border-top: 2px solid var(--color-border);">
+                <h3 style="display: flex; align-items: center; gap: var(--space-sm); margin-bottom: var(--space-md);">
+                    <i data-lucide="trophy"></i>
+                    Serieanmälan: <?= h($seriesInfo['name']) ?>
+                </h3>
+                <p style="margin-bottom: var(--space-lg); color: var(--color-text-secondary);">
+                    Anmäl dig till alla <?= count($seriesEventsWithPricing) ?> event i serien samtidigt.
+                </p>
+
+                <!-- Series Rider Search -->
+                <div class="form-group">
+                    <div id="seriesSelectedRiderDisplay" style="display: none; margin-bottom: var(--space-sm); padding: var(--space-md); background: var(--color-bg-surface); border-radius: var(--radius-md); border: 2px solid var(--color-accent);">
+                        <div style="display: flex; justify-content: space-between; align-items: center; gap: var(--space-md);">
+                            <div style="flex: 1;">
+                                <strong id="seriesSelectedRiderName" style="font-size: 1.125rem; display: block; margin-bottom: 4px;"></strong>
+                                <div style="font-size: 0.875rem; color: var(--color-text-secondary);" id="seriesSelectedRiderInfo"></div>
+                            </div>
+                            <button type="button" id="seriesClearSelectedRider" class="btn btn--ghost btn--sm">
+                                <i data-lucide="x"></i> Ändra
+                            </button>
+                        </div>
+                    </div>
+
+                    <button type="button" id="seriesOpenRiderSearchBtn" class="btn btn--outline btn--block" style="border: 2px solid var(--color-border-strong);">
+                        <i data-lucide="search"></i>
+                        Sök deltagare (namn eller UCI ID)
+                    </button>
+                </div>
+
+                <!-- Series Rider Search Modal -->
+                <div id="seriesRiderSearchModal" class="rider-search-modal" style="display: none;">
+                    <div class="rider-search-modal__backdrop"></div>
+                    <div class="rider-search-modal__container">
+                        <div class="rider-search-modal__header">
+                            <h3>Sök deltagare</h3>
+                            <button type="button" id="seriesCloseRiderSearchBtn" class="btn btn--ghost btn--sm">
+                                <i data-lucide="x"></i>
+                            </button>
+                        </div>
+                        <div class="rider-search-modal__body">
+                            <div class="rider-search-modal__input-wrapper">
+                                <i data-lucide="search" class="rider-search-modal__search-icon"></i>
+                                <input type="text" id="seriesRiderSearch" class="rider-search-modal__input"
+                                       placeholder="Skriv namn eller UCI ID..."
+                                       autocomplete="off">
+                            </div>
+                            <div id="seriesRiderSearchResults" class="rider-search-modal__results"></div>
                         </div>
                     </div>
                 </div>
-                <p class="text-sm text-secondary mb-sm">
-                    Med ett serie-pass för <?= h($seriesInfo['name']) ?> får du tillgång till alla säsongens event till rabatterat pris.
-                </p>
-                <a href="/register/series?id=<?= $seriesInfo['id'] ?>" class="btn btn--outline btn--sm">
-                    <i data-lucide="ticket"></i>
-                    Se serie-pass
-                </a>
+
+                <!-- Series Class Selection -->
+                <div id="seriesClassSelection" style="display:none;">
+                    <label class="form-label">Välj klass</label>
+                    <div id="seriesClassList" class="reg-class-list"></div>
+
+                    <!-- Series License Commitment -->
+                    <div id="seriesLicenseCommitment" style="display:none; margin-top: var(--space-md);">
+                        <div style="background: var(--color-bg-surface); border: 2px solid var(--color-warning); border-radius: var(--radius-md); padding: var(--space-md);">
+                            <label style="display: flex; gap: var(--space-sm); cursor: pointer; align-items: flex-start;">
+                                <input type="checkbox" id="seriesLicenseCommitmentCheckbox" style="margin-top: 2px; width: 18px; height: 18px; cursor: pointer;">
+                                <span style="flex: 1; font-size: 0.9375rem; line-height: 1.5;">
+                                    Jag förbinder mig att köpa en giltig licens innan eventet för att kunna starta
+                                </span>
+                            </label>
+                        </div>
+                    </div>
+
+                    <button type="button" id="seriesAddToCartBtn" class="btn btn--primary btn--block mt-md" disabled>
+                        <i data-lucide="plus"></i>
+                        Lägg till alla <?= count($seriesEventsWithPricing) ?> event
+                    </button>
+                </div>
             </div>
             <?php endif; ?>
 
@@ -4120,6 +4137,250 @@ if (!empty($event['series_id'])) {
                 // Initial cart render on page load
                 updateCart();
             })();
+
+            <?php if ($seriesRegistrationAvailable && $seriesInfo): ?>
+            // SERIES REGISTRATION JavaScript
+            (function() {
+                const seriesEvents = <?= json_encode(array_map(function($e) {
+                    return ['id' => $e['id'], 'name' => $e['name']];
+                }, $seriesEventsWithPricing)) ?>;
+
+                const currentUserId = <?= $currentUser['id'] ?? 0 ?>;
+
+                let seriesSelectedRiderId = null;
+                let seriesSelectedClassId = null;
+                let seriesSelectedClassData = null;
+                let seriesRequiresLicenseCommitment = false;
+                let seriesLicenseCommitmentAccepted = false;
+                let seriesSelectedRider = null;
+
+                const seriesRiderSearchModal = document.getElementById('seriesRiderSearchModal');
+                const seriesOpenRiderSearchBtn = document.getElementById('seriesOpenRiderSearchBtn');
+                const seriesCloseRiderSearchBtn = document.getElementById('seriesCloseRiderSearchBtn');
+                const seriesRiderSearch = document.getElementById('seriesRiderSearch');
+                const seriesRiderSearchResults = document.getElementById('seriesRiderSearchResults');
+                const seriesSelectedRiderDisplay = document.getElementById('seriesSelectedRiderDisplay');
+                const seriesSelectedRiderName = document.getElementById('seriesSelectedRiderName');
+                const seriesSelectedRiderInfo = document.getElementById('seriesSelectedRiderInfo');
+                const seriesClearSelectedRider = document.getElementById('seriesClearSelectedRider');
+                const seriesClassSelection = document.getElementById('seriesClassSelection');
+                const seriesClassList = document.getElementById('seriesClassList');
+                const seriesAddToCartBtn = document.getElementById('seriesAddToCartBtn');
+                const seriesLicenseCommitment = document.getElementById('seriesLicenseCommitment');
+                const seriesLicenseCommitmentCheckbox = document.getElementById('seriesLicenseCommitmentCheckbox');
+
+                let seriesSearchTimeout = null;
+
+                // Search riders
+                async function seriesSearchRiders(query) {
+                    if (query.length < 2) {
+                        seriesRiderSearchResults.style.display = 'none';
+                        return;
+                    }
+
+                    try {
+                        const response = await fetch(`/api/orders.php?action=search_riders&q=${encodeURIComponent(query)}`);
+                        const data = await response.json();
+
+                        if (data.success && data.riders.length > 0) {
+                            seriesRenderSearchResults(data.riders);
+                        } else {
+                            seriesRenderEmptyResults();
+                        }
+                    } catch (e) {
+                        console.error('Search failed:', e);
+                        seriesRiderSearchResults.style.display = 'none';
+                    }
+                }
+
+                function seriesRenderSearchResults(riders) {
+                    seriesRiderSearchResults.style.display = 'block';
+                    seriesRiderSearchResults.innerHTML = riders.map(rider => `
+                        <div class="rider-search-modal__result" data-rider-id="${rider.id}">
+                            <div class="rider-search-modal__result-avatar">
+                                ${rider.firstname.charAt(0)}
+                            </div>
+                            <div class="rider-search-modal__result-info">
+                                <div class="rider-search-modal__result-name">${rider.firstname} ${rider.lastname}</div>
+                                <div class="rider-search-modal__result-meta">
+                                    ${rider.birth_year ? rider.birth_year : ''}
+                                    ${rider.club_name ? '• ' + rider.club_name : ''}
+                                    ${rider.license_number ? '• ' + rider.license_number : ''}
+                                </div>
+                            </div>
+                        </div>
+                    `).join('');
+
+                    seriesRiderSearchResults.querySelectorAll('.rider-search-modal__result').forEach(el => {
+                        el.addEventListener('click', () => {
+                            const riderId = parseInt(el.dataset.riderId);
+                            const rider = riders.find(r => r.id === riderId);
+                            seriesSelectRider(rider);
+                        });
+                    });
+                }
+
+                function seriesRenderEmptyResults() {
+                    seriesRiderSearchResults.style.display = 'block';
+                    seriesRiderSearchResults.innerHTML = '<div class="rider-search-modal__empty">Inga deltagare hittades</div>';
+                }
+
+                function seriesSelectRider(rider) {
+                    seriesSelectedRider = rider;
+                    seriesSelectedRiderId = rider.id;
+
+                    seriesRiderSearchModal.style.display = 'none';
+                    seriesOpenRiderSearchBtn.style.display = 'none';
+                    seriesSelectedRiderDisplay.style.display = 'block';
+                    seriesSelectedRiderName.textContent = `${rider.firstname} ${rider.lastname}`;
+                    seriesSelectedRiderInfo.textContent = `${rider.birth_year || ''} ${rider.club_name ? '• ' + rider.club_name : ''}`;
+
+                    seriesLoadEligibleClasses(rider.id);
+                }
+
+                async function seriesLoadEligibleClasses(riderId) {
+                    try {
+                        const response = await fetch(`/api/orders.php?action=get_eligible_classes&event_id=${seriesEvents[0].id}&rider_id=${riderId}`);
+                        const data = await response.json();
+
+                        if (data.success) {
+                            seriesRenderClasses(data.classes, data.requires_license_commitment);
+                            seriesClassSelection.style.display = 'block';
+                        }
+                    } catch (e) {
+                        console.error('Failed to load classes:', e);
+                    }
+                }
+
+                function seriesRenderClasses(classes, requiresLicense) {
+                    seriesRequiresLicenseCommitment = requiresLicense;
+
+                    seriesClassList.innerHTML = classes.map(cls => {
+                        const priceDisplay = cls.current_price ? `${cls.current_price} kr` : 'Pris saknas';
+                        return `
+                            <div class="reg-class-item" data-class-id="${cls.class_id}">
+                                <input type="radio" name="series_class" value="${cls.class_id}" class="reg-class-radio">
+                                <div class="reg-class-info">
+                                    <div class="reg-class-name">${cls.name}</div>
+                                    ${cls.warning ? `<div class="reg-class-desc" style="color: var(--color-warning);">${cls.warning}</div>` : ''}
+                                </div>
+                                <div class="reg-class-price">
+                                    <div class="reg-class-price__current">${priceDisplay}</div>
+                                </div>
+                            </div>
+                        `;
+                    }).join('');
+
+                    seriesClassList.querySelectorAll('.reg-class-item').forEach(el => {
+                        const radio = el.querySelector('input[type="radio"]');
+                        el.addEventListener('click', () => {
+                            radio.checked = true;
+                            seriesClassList.querySelectorAll('.reg-class-item').forEach(item => item.classList.remove('selected'));
+                            el.classList.add('selected');
+
+                            const classId = parseInt(el.dataset.classId);
+                            seriesSelectedClassId = classId;
+                            seriesSelectedClassData = classes.find(c => c.class_id === classId);
+
+                            if (seriesRequiresLicenseCommitment) {
+                                seriesLicenseCommitment.style.display = 'block';
+                                seriesUpdateAddButton();
+                            } else {
+                                seriesLicenseCommitment.style.display = 'none';
+                                seriesLicenseCommitmentAccepted = false;
+                                seriesAddToCartBtn.disabled = false;
+                            }
+                        });
+                    });
+                }
+
+                function seriesUpdateAddButton() {
+                    if (seriesRequiresLicenseCommitment) {
+                        seriesAddToCartBtn.disabled = !seriesLicenseCommitmentAccepted;
+                    }
+                }
+
+                // Open modal
+                seriesOpenRiderSearchBtn.addEventListener('click', () => {
+                    seriesRiderSearchModal.style.display = 'block';
+                    seriesRiderSearch.value = '';
+                    seriesRiderSearch.focus();
+                    seriesRiderSearchResults.style.display = 'none';
+                });
+
+                // Close modal
+                seriesCloseRiderSearchBtn.addEventListener('click', () => {
+                    seriesRiderSearchModal.style.display = 'none';
+                });
+
+                seriesRiderSearchModal.querySelector('.rider-search-modal__backdrop').addEventListener('click', () => {
+                    seriesRiderSearchModal.style.display = 'none';
+                });
+
+                // Search input
+                seriesRiderSearch.addEventListener('input', (e) => {
+                    clearTimeout(seriesSearchTimeout);
+                    seriesSearchTimeout = setTimeout(() => {
+                        seriesSearchRiders(e.target.value);
+                    }, 300);
+                });
+
+                // Clear selected rider
+                seriesClearSelectedRider.addEventListener('click', () => {
+                    seriesSelectedRider = null;
+                    seriesSelectedRiderId = null;
+                    seriesSelectedClassId = null;
+                    seriesSelectedClassData = null;
+                    seriesSelectedRiderDisplay.style.display = 'none';
+                    seriesOpenRiderSearchBtn.style.display = 'block';
+                    seriesClassSelection.style.display = 'none';
+                    seriesAddToCartBtn.disabled = true;
+                });
+
+                // License commitment checkbox
+                if (seriesLicenseCommitmentCheckbox) {
+                    seriesLicenseCommitmentCheckbox.addEventListener('change', (e) => {
+                        seriesLicenseCommitmentAccepted = e.target.checked;
+                        seriesUpdateAddButton();
+                    });
+                }
+
+                // Add to cart - adds ALL series events
+                seriesAddToCartBtn.addEventListener('click', async () => {
+                    if (!seriesSelectedRiderId || !seriesSelectedClassId) return;
+
+                    // Add to cart for EACH event in the series
+                    for (const event of seriesEvents) {
+                        GlobalCart.addItem({
+                            type: 'event',
+                            event_id: event.id,
+                            event_name: event.name,
+                            rider_id: seriesSelectedRiderId,
+                            rider_name: `${seriesSelectedRider.firstname} ${seriesSelectedRider.lastname}`,
+                            class_id: seriesSelectedClassId,
+                            class_name: seriesSelectedClassData.name,
+                            price: seriesSelectedClassData.current_price,
+                            license_commitment: seriesRequiresLicenseCommitment
+                        });
+                    }
+
+                    // Reset form
+                    seriesSelectedRider = null;
+                    seriesSelectedRiderId = null;
+                    seriesSelectedClassId = null;
+                    seriesSelectedClassData = null;
+                    seriesSelectedRiderDisplay.style.display = 'none';
+                    seriesOpenRiderSearchBtn.style.display = 'block';
+                    seriesClassSelection.style.display = 'none';
+                    seriesAddToCartBtn.disabled = true;
+                    seriesLicenseCommitment.style.display = 'none';
+                    seriesLicenseCommitmentAccepted = false;
+                    if (seriesLicenseCommitmentCheckbox) {
+                        seriesLicenseCommitmentCheckbox.checked = false;
+                    }
+                });
+            })();
+            <?php endif; ?>
             </script>
         <?php endif; ?>
     </div>
