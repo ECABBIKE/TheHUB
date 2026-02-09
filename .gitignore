@@ -48,3 +48,6 @@ storage/rate-limits/*
 
 # Production environment (NEVER commit with real values)
 .env.production
+
+# Composer dependencies (run 'composer install' to install)
+vendor/
