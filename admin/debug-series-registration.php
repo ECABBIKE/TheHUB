@@ -39,6 +39,31 @@ echo "  Registration Opens: " . ($event['registration_opens'] ?: 'NOT SET') . "\
 echo "  Registration Closes: " . ($event['registration_closes'] ?: 'NOT SET') . "\n";
 echo "\n";
 
+// Check series settings
+if ($event['series_id']) {
+    $seriesStmt = $pdo->prepare("
+        SELECT id, name, allow_series_registration,
+               series_discount_percent, registration_opens, registration_closes
+        FROM series
+        WHERE id = ?
+    ");
+    $seriesStmt->execute([$event['series_id']]);
+    $seriesSettings = $seriesStmt->fetch(PDO::FETCH_ASSOC);
+
+    echo "SERIES SETTINGS:\n";
+    echo "  allow_series_registration: " . ($seriesSettings['allow_series_registration'] ?? 'NULL') . "\n";
+    echo "  series_discount_percent: " . ($seriesSettings['series_discount_percent'] ?? 'NULL') . "%\n";
+    echo "  registration_opens: " . ($seriesSettings['registration_opens'] ?: 'NOT SET') . "\n";
+    echo "  registration_closes: " . ($seriesSettings['registration_closes'] ?: 'NOT SET') . "\n";
+    echo "\n";
+
+    if (!$seriesSettings['allow_series_registration']) {
+        echo "❌ CRITICAL: allow_series_registration = 0 (or NULL)\n";
+        echo "   Series registration is DISABLED in the database!\n\n";
+    }
+}
+echo "\n";
+
 // Check registration status
 $now = time();
 $registrationOpen = true;
@@ -108,13 +133,15 @@ echo str_repeat('-', 80) . "\n";
 echo "SUMMARY:\n\n";
 
 $allHavePricing = (count($seriesEvents) === $eventsWithPricing);
+$seriesAllowsRegistration = !empty($seriesSettings['allow_series_registration']);
 
 echo "Events in series: " . count($seriesEvents) . "\n";
 echo "Events with pricing: $eventsWithPricing\n";
 echo "Events missing pricing: " . count($eventsMissingPricing) . "\n";
+echo "Series allows registration: " . ($seriesAllowsRegistration ? 'YES' : 'NO') . "\n";
 echo "\n";
 
-if ($allHavePricing && count($seriesEvents) > 1 && $registrationOpen) {
+if ($allHavePricing && count($seriesEvents) > 1 && $registrationOpen && $seriesAllowsRegistration) {
     echo "✓✓✓ SERIES REGISTRATION SHOULD BE AVAILABLE! ✓✓✓\n";
 } else {
     echo "❌ SERIES REGISTRATION NOT AVAILABLE\n\n";
@@ -134,6 +161,13 @@ if ($allHavePricing && count($seriesEvents) > 1 && $registrationOpen) {
         echo "\n";
         echo "FIX: Go to Admin > Events > Edit Event > Set Pricing Template\n";
         echo "     for each event missing pricing.\n";
+    }
+
+    if (!$seriesAllowsRegistration) {
+        echo "  ❌ Series has allow_series_registration = 0 or NULL\n";
+        echo "\n";
+        echo "FIX: Run this SQL:\n";
+        echo "     UPDATE series SET allow_series_registration = 1 WHERE id = {$event['series_id']};\n";
     }
 }
 
