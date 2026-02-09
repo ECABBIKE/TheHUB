@@ -22,8 +22,14 @@ requireAdmin();
 echo "Auth checked\n";
 
 echo "Getting database connection...\n";
-$pdo = hub_db();
-echo "Database connected\n";
+try {
+    $pdo = hub_db();
+    echo "Database connected\n";
+} catch (Exception $e) {
+    echo "ERROR getting database: " . $e->getMessage() . "\n";
+    echo "Trace: " . $e->getTraceAsString() . "\n";
+    exit;
+}
 
 // Find Oliver
 echo "Searching for Oliver Andersen...\n";
