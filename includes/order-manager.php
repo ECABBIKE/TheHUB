@@ -519,45 +519,52 @@ function getEligibleClassesForEvent(int $eventId, int $riderId): array {
 
     // If license is expired or missing, check SCF API for current license
     if ($licenseStatus !== 'valid' && !empty($rider['license_number'])) {
+        error_log("SCF CHECK: Rider $riderId has license_number={$rider['license_number']}, status=$licenseStatus - checking SCF API");
+
         try {
             require_once __DIR__ . '/SCFLicenseService.php';
             $scfApiKey = env('SCF_API_KEY', '');
 
-            if (!empty($scfApiKey)) {
+            if (empty($scfApiKey)) {
+                error_log("SCF CHECK: No API key configured");
+            } else {
                 $scfService = new SCFLicenseService($scfApiKey, getDB());
                 $eventYear = date('Y', $eventDate);
 
-                // Check current year license from SCF API
-                $scfLicense = $scfService->verifyRiderLicense($rider['license_number'], $eventYear);
+                // Check current year license from SCF API using UCI ID
+                $uciId = $scfService->normalizeUciId($rider['license_number']);
+                error_log("SCF CHECK: Normalized UCI: $uciId, checking year $eventYear");
 
-                if ($scfLicense && !empty($scfLicense['valid']) && $scfLicense['valid']) {
-                    // License is valid according to SCF - update local database
-                    $licenseStatus = 'valid';
+                $scfResults = $scfService->lookupByUciIds([$uciId], $eventYear);
+                error_log("SCF CHECK: API returned " . (empty($scfResults) ? 'empty' : count($scfResults)) . " results");
 
-                    // Update rider record with fresh license data
-                    $updateStmt = $pdo->prepare("
-                        UPDATE riders
-                        SET license_year = ?,
-                            license_valid_until = ?,
-                            license_type = ?,
-                            license_category = ?,
-                            scf_verified_at = NOW()
-                        WHERE id = ?
-                    ");
-                    $updateStmt->execute([
-                        $eventYear,
-                        $eventYear . '-12-31',
-                        $scfLicense['license_type'] ?? $rider['license_type'],
-                        $scfLicense['license_category'] ?? $rider['license_category'],
-                        $riderId
-                    ]);
+                if (!empty($scfResults)) {
+                    error_log("SCF CHECK: Results: " . json_encode($scfResults));
 
-                    error_log("SCF API: Updated license for rider $riderId - valid for $eventYear");
+                    if (isset($scfResults[$uciId])) {
+                        $scfLicense = $scfResults[$uciId];
+                        error_log("SCF CHECK: Found license data: " . json_encode($scfLicense));
+
+                        // Check if license is valid for the event year
+                        if (!empty($scfLicense['license_year']) && $scfLicense['license_year'] >= $eventYear) {
+                            // License is valid according to SCF - update local database
+                            $licenseStatus = 'valid';
+
+                            // Update rider using SCFLicenseService method
+                            $scfService->updateRiderLicense($riderId, $scfLicense, $eventYear);
+
+                            error_log("SCF CHECK SUCCESS: Updated license for rider $riderId (UCI: $uciId) - valid for $eventYear, new status: $licenseStatus");
+                        } else {
+                            error_log("SCF CHECK: License year check failed - license_year=" . ($scfLicense['license_year'] ?? 'NULL') . ", event_year=$eventYear");
+                        }
+                    } else {
+                        error_log("SCF CHECK: UCI $uciId not found in results array");
+                    }
                 }
             }
         } catch (Exception $e) {
             // Silently fail - don't block registration if SCF API is down
-            error_log("SCF API check failed for rider $riderId: " . $e->getMessage());
+            error_log("SCF CHECK ERROR for rider $riderId: " . $e->getMessage() . "\n" . $e->getTraceAsString());
         }
     }
 
