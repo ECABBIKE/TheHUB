@@ -253,10 +253,17 @@ try {
                             json_encode(['session_id' => $sessionId, 'payment_intent' => $paymentIntentFromSession, 'customer_email' => $data['customer_email'] ?? ''])
                         ];
 
-                        // Store payment_intent_id for refund/status lookups
+                        // Store payment_intent_id for refund/status lookups (if column exists)
                         if ($paymentIntentFromSession) {
-                            $updateSql .= ", stripe_payment_intent_id = ?";
-                            $updateParams[] = $paymentIntentFromSession;
+                            try {
+                                $chk = $pdo->query("SHOW COLUMNS FROM orders LIKE 'stripe_payment_intent_id'");
+                                if ($chk && count($chk->fetchAll()) > 0) {
+                                    $updateSql .= ", stripe_payment_intent_id = ?";
+                                    $updateParams[] = $paymentIntentFromSession;
+                                }
+                            } catch (Exception $colCheck) {
+                                // Column doesn't exist, skip
+                            }
                         }
 
                         $updateSql .= " WHERE id = ?";

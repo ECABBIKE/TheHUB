@@ -212,19 +212,57 @@ include __DIR__ . '/../components/header.php';
             <!-- Stripe payment processing -->
             <div class="card">
                 <div class="card-body text-center py-xl">
-                    <i data-lucide="loader" class="icon-xl text-accent mb-md spin"></i>
+                    <i data-lucide="loader" class="icon-xl text-accent mb-md spin" id="pending-spinner"></i>
                     <h1 class="text-xl mb-sm">Betalning bearbetas</h1>
-                    <p class="text-secondary mb-lg">
+                    <p class="text-secondary mb-lg" id="pending-message">
                         Din betalning behandlas. Sidan uppdateras automatiskt.
                     </p>
                     <p class="text-sm text-secondary">
                         Order: <strong><?= htmlspecialchars($order['order_number']) ?></strong>
                     </p>
+                    <p class="text-xs text-muted mt-md" id="pending-timer"></p>
                 </div>
             </div>
             <script>
-            // Auto-refresh to check if payment confirmed
-            setTimeout(function() { window.location.reload(); }, 5000);
+            // Poll for payment confirmation via lightweight API - max 60 seconds, then stop
+            (function() {
+                let attempts = 0;
+                const maxAttempts = 12;
+                const orderId = <?= (int)$order['id'] ?>;
+
+                function checkPayment() {
+                    attempts++;
+                    const timerEl = document.getElementById('pending-timer');
+                    const messageEl = document.getElementById('pending-message');
+                    const spinnerEl = document.getElementById('pending-spinner');
+
+                    if (attempts > maxAttempts) {
+                        if (messageEl) messageEl.innerHTML = 'Betalningen ar mottagen av Stripe!<br>Bekraftelsen kan ta nagra minuter. Du far ett bekraftelsemail.';
+                        if (timerEl) timerEl.textContent = 'Du kan stanga denna sida.';
+                        if (spinnerEl) { spinnerEl.classList.remove('spin'); spinnerEl.setAttribute('data-lucide', 'check-circle'); spinnerEl.style.color = 'var(--color-success)'; }
+                        if (typeof lucide !== 'undefined') lucide.createIcons();
+                        return;
+                    }
+
+                    if (timerEl) timerEl.textContent = 'Kontrollerar... (' + attempts + '/' + maxAttempts + ')';
+
+                    fetch('/api/check-order-status.php?order_id=' + orderId)
+                        .then(function(r) { return r.json(); })
+                        .then(function(data) {
+                            if (data.payment_status === 'paid') {
+                                // Payment confirmed! Reload to show success page
+                                window.location.href = '/checkout?order=' + orderId;
+                            } else {
+                                setTimeout(checkPayment, 5000);
+                            }
+                        })
+                        .catch(function() {
+                            setTimeout(checkPayment, 5000);
+                        });
+                }
+
+                setTimeout(checkPayment, 4000);
+            })();
             </script>
 
         <?php elseif ($order): ?>

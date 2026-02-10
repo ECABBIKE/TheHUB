@@ -122,6 +122,8 @@ $regStmt = $pdo->prepare("
     LEFT JOIN riders r ON reg.rider_id = r.id
     LEFT JOIN clubs c ON r.club_id = c.id
     WHERE reg.event_id = ?
+      AND reg.status != 'pending'
+      AND reg.status != 'cancelled'
     ORDER BY reg.category, r.lastname, r.firstname
 ");
 $regStmt->execute([$eventId]);
