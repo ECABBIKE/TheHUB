@@ -1,7 +1,7 @@
 <?php
 /**
- * Stripe Connect Gateway
- * Handles card payments via Stripe with Connected Accounts
+ * Stripe Gateway
+ * Handles card payments via single platform Stripe account
  *
  * @package TheHUB\Payment\Gateways
  */
@@ -18,7 +18,6 @@ class StripeGateway implements GatewayInterface {
     public function __construct($pdo) {
         $this->pdo = $pdo;
 
-        // Get Stripe API key from environment or config
         $apiKey = $this->getStripeKey();
         if ($apiKey) {
             $this->client = new StripeClient($apiKey);
@@ -26,7 +25,7 @@ class StripeGateway implements GatewayInterface {
     }
 
     public function getName(): string {
-        return 'Stripe (Kort / Swish / Apple Pay / Google Pay)';
+        return 'Stripe (Kort / Apple Pay / Google Pay)';
     }
 
     public function getCode(): string {
@@ -37,13 +36,11 @@ class StripeGateway implements GatewayInterface {
      * Get Stripe API key from environment
      */
     private function getStripeKey(): ?string {
-        // Try environment variable
         $key = getenv('STRIPE_SECRET_KEY');
         if ($key) {
             return $key;
         }
 
-        // Try env() helper if available
         if (function_exists('env')) {
             $key = env('STRIPE_SECRET_KEY');
             if ($key) {
@@ -55,27 +52,11 @@ class StripeGateway implements GatewayInterface {
     }
 
     /**
-     * Check if gateway is available for a payment recipient
+     * Check if gateway is available
+     * Simply checks if Stripe API key is configured
      */
     public function isAvailable(int $paymentRecipientId): bool {
-        if (!$this->client) {
-            return false;
-        }
-
-        $stmt = $this->pdo->prepare("
-            SELECT gateway_type, gateway_enabled, stripe_account_id, stripe_account_status
-            FROM payment_recipients
-            WHERE id = ? AND active = 1
-        ");
-        $stmt->execute([$paymentRecipientId]);
-        $result = $stmt->fetch(\PDO::FETCH_ASSOC);
-
-        // Stripe is available if enabled and has an active connected account
-        // OR if no connected account is needed (direct to platform)
-        return $result
-            && $result['gateway_type'] === 'stripe'
-            && $result['gateway_enabled']
-            && ($result['stripe_account_status'] === 'active' || !$result['stripe_account_id']);
+        return $this->client !== null;
     }
 
     public function initiatePayment(array $orderData): array {
@@ -86,62 +67,18 @@ class StripeGateway implements GatewayInterface {
             ];
         }
 
-        $paymentRecipientId = $orderData['payment_recipient_id'] ?? null;
-
-        // Get Stripe account ID and gateway config if using Connected Account
-        $stripeAccountId = null;
-        $gatewayConfig = [];
-        if ($paymentRecipientId) {
-            $stmt = $this->pdo->prepare("
-                SELECT stripe_account_id, gateway_config
-                FROM payment_recipients
-                WHERE id = ? AND stripe_account_status = 'active'
-            ");
-            $stmt->execute([$paymentRecipientId]);
-            $row = $stmt->fetch(\PDO::FETCH_ASSOC);
-            if ($row) {
-                $stripeAccountId = $row['stripe_account_id'] ?: null;
-                $gatewayConfig = json_decode($row['gateway_config'] ?? '{}', true) ?: [];
-            }
-        }
-
-        // Determine which payment methods to offer
-        // Can be configured per recipient or passed from order
-        $enabledMethods = $gatewayConfig['payment_methods'] ?? ['card', 'swish'];
-        if (!empty($orderData['payment_method'])) {
-            // If specific method requested (e.g., user chose Swish)
-            $enabledMethods = [$orderData['payment_method']];
-        }
-
         $paymentData = [
             'amount' => (float)$orderData['total_amount'],
             'currency' => 'SEK',
             'description' => $orderData['event_name'] ?? 'TheHUB Registration',
             'email' => $orderData['customer_email'] ?? null,
-            'payment_method_types' => $enabledMethods,
+            'payment_method_types' => ['card'],
             'metadata' => [
                 'order_id' => $orderData['id'] ?? null,
                 'order_number' => $orderData['order_number'] ?? null,
-                'event_id' => $orderData['event_id'] ?? null,
-                'payment_recipient_id' => $paymentRecipientId
+                'event_id' => $orderData['event_id'] ?? null
             ]
         ];
-
-        // Add Connected Account if configured
-        if ($stripeAccountId) {
-            $paymentData['stripe_account_id'] = $stripeAccountId;
-
-            // Platform fee - support both percentage and fixed amount
-            $feeType = $gatewayConfig['platform_fee_type'] ?? 'fixed';
-            $feeAmount = $gatewayConfig['platform_fee_amount'] ?? 10; // Default 10 kr
-
-            if ($feeType === 'percent') {
-                $paymentData['platform_fee_percent'] = $feeAmount;
-            } else {
-                // Fixed fee in SEK, pass as application_fee_amount in öre
-                $paymentData['platform_fee_fixed'] = (int)($feeAmount * 100);
-            }
-        }
 
         $result = $this->client->createPaymentIntent($paymentData);
 
@@ -150,10 +87,9 @@ class StripeGateway implements GatewayInterface {
             'transaction_id' => $result['payment_intent_id'] ?? null,
             'client_secret' => $result['client_secret'] ?? null,
             'status' => $result['status'] ?? 'pending',
-            'redirect_url' => null, // Frontend will handle with Stripe.js
+            'redirect_url' => null,
             'metadata' => [
-                'stripe_status' => $result['status'] ?? null,
-                'connected_account' => $stripeAccountId
+                'stripe_status' => $result['status'] ?? null
             ],
             'error' => $result['error'] ?? null
         ];
@@ -197,39 +133,6 @@ class StripeGateway implements GatewayInterface {
      */
     public function getClient(): ?StripeClient {
         return $this->client;
-    }
-
-    /**
-     * Create Connected Account for payment recipient
-     */
-    public function createConnectedAccount(array $data): array {
-        if (!$this->client) {
-            return ['success' => false, 'error' => 'Stripe not configured'];
-        }
-
-        return $this->client->createConnectedAccount($data);
-    }
-
-    /**
-     * Create Account Link for onboarding
-     */
-    public function createAccountLink(string $accountId, string $returnUrl, string $refreshUrl): array {
-        if (!$this->client) {
-            return ['success' => false, 'error' => 'Stripe not configured'];
-        }
-
-        return $this->client->createAccountLink($accountId, $returnUrl, $refreshUrl);
-    }
-
-    /**
-     * Get Connected Account details
-     */
-    public function getAccount(string $accountId): array {
-        if (!$this->client) {
-            return ['success' => false, 'error' => 'Stripe not configured'];
-        }
-
-        return $this->client->getAccount($accountId);
     }
 
     /**

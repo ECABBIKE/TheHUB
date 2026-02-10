@@ -686,10 +686,12 @@ function getOrder(int $orderId): ?array {
     $stmt = $pdo->prepare("
         SELECT o.*,
                e.name as event_name, e.date as event_date,
-               s.name as series_name, s.logo as series_logo
+               s.name as series_name, s.logo as series_logo,
+               pr.swish_number, pr.swish_name
         FROM orders o
         LEFT JOIN events e ON o.event_id = e.id
         LEFT JOIN series s ON o.series_id = s.id
+        LEFT JOIN payment_recipients pr ON e.payment_recipient_id = pr.id AND pr.active = 1
         WHERE o.id = ?
     ");
     $stmt->execute([$orderId]);

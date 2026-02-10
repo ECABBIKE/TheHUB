@@ -3,15 +3,17 @@
  * Payment Manager - Central hub for all payment operations
  * Handles gateway selection, payment initiation, and status tracking
  *
+ * Active gateways:
+ *  - stripe: Card payments via single platform Stripe account
+ *  - manual: Manual Swish QR code payments (manually reconciled)
+ *
  * @package TheHUB\Payment
  */
 
 namespace TheHUB\Payment;
 
 require_once __DIR__ . '/GatewayInterface.php';
-require_once __DIR__ . '/SwishClient.php';
 require_once __DIR__ . '/StripeClient.php';
-require_once __DIR__ . '/gateways/SwishGateway.php';
 require_once __DIR__ . '/gateways/StripeGateway.php';
 require_once __DIR__ . '/gateways/ManualGateway.php';
 
@@ -29,7 +31,6 @@ class PaymentManager {
      */
     private function registerGateways() {
         $this->gateways['manual'] = new Gateways\ManualGateway($this->pdo);
-        $this->gateways['swish_handel'] = new Gateways\SwishGateway($this->pdo);
         $this->gateways['stripe'] = new Gateways\StripeGateway($this->pdo);
     }
 

@@ -1,6 +1,6 @@
 # TheHUB - Development Roadmap
 
-> Senast uppdaterad: 2026-02-07
+> Senast uppdaterad: 2026-02-10
 >
 > **Se:** `/admin/roadmap.php` for interaktiv vy
 
@@ -11,7 +11,7 @@
 | Omrade | Status | Beskrivning | Progress |
 |--------|--------|-------------|----------|
 | Analytics Platform | KLAR | Statistik, KPI:er, trender, rapporter | 100% |
-| Betalningssystem | KLAR | Swish, Stripe, ordrar, checkout, email | 100% |
+| Betalningssystem | KLAR | Stripe (single account) + manuell Swish, ordrar, checkout | 100% |
 | Event Ratings | KLAR | Deltagarfeedback pa events | 100% |
 | Win-Back System | KLAR | Aterengagera churnade deltagare | 100% |
 | Klubb RF-Registrering | KLAR | SCF/NCF/DCU-synk och stavningskontroll | 100% |
@@ -252,7 +252,8 @@ Automatiskt genererade "trading cards" med deltagarstatistik:
 
 ### Betalning
 - PaymentManager + GatewayInterface-arkitektur
-- Manuell Swish forst, Swish Handel/Stripe senare
+- Stripe single account (inga Connected Accounts) + manuell Swish QR
+- Swedbank Pay forberett (SwebankPayClient.php), vanter pa konto
 
 ### Visualisering
 - Chart.js for grafer
@@ -261,6 +262,46 @@ Automatiskt genererade "trading cards" med deltagarstatistik:
 ---
 
 # CHANGELOG
+
+### 2026-02-10 (Betalningssystem 2.0 - Forenkling)
+- **Branch:** claude/review-payment-system-vUJyF
+
+- **Stripe: Single Account (bort med Connected Accounts)**
+  - Borttagen all Stripe Connect-logik (destination charges, transfers, on_behalf_of)
+  - `create-checkout-session.php` skapar nu enkel direkt charge till plattformskontot
+  - `stripe-webhook.php` skapar inte langre transfers efter betalning
+  - `StripeGateway.php` forenkad - kollar bara om STRIPE_SECRET_KEY finns
+  - `PaymentManager.php` registrerar inte langre SwishGateway (API-baserad)
+
+- **Manuell Swish QR-kod aterinfors**
+  - Checkout-sidan visar nu BADE kortbetalning och Swish QR-kod (inte elseif)
+  - QR-kod genereras automatiskt fran payment_recipients.swish_number
+  - Swish deep-link for mobil ("Oppna Swish-appen")
+  - Swish-nummer, belopp och orderreferens visas tydligt
+  - Manuell avstamning av arrangoren i admin/orders.php
+
+- **Bevarade filer (ej borttagna)**
+  - `SwebankPayClient.php` - Forberedd for Swedbank Pay (vanter pa konto, ~14 dagar)
+  - `SwishClient.php` - Swish API-klient (sparad for framtida bruk)
+  - `SwishGateway.php` - Swish Handel-gateway (ej aktiv men bevarad)
+
+- **Forenklade refunds**
+  - Webhook charge.refunded hanterar nu bara order-uppdatering
+  - Borttagen transfer reversal-logik (inga transfers att reversera)
+
+- **Uppdaterad dokumentation**
+  - `docs/PAYMENT.md` v4.0.0 - Nytt flode med dual payment options
+  - `ROADMAP.md` - Changelog och statusuppdatering
+
+- **Andrade filer:**
+  - `api/create-checkout-session.php` - Borttagen Connected Account/destination charge
+  - `api/webhooks/stripe-webhook.php` - Borttagen createOrderTransfers + transfer reversal
+  - `includes/payment/PaymentManager.php` - Forenkad gateway-registrering
+  - `includes/payment/gateways/StripeGateway.php` - Forenkad for single account
+  - `includes/payment.php` - getOrder() inkluderar nu swish_number
+  - `pages/checkout.php` - Dual payment: kort + Swish QR
+  - `docs/PAYMENT.md` - v4.0.0
+  - `config.php` - APP_BUILD 2026-02-10
 
 ### 2026-02-07 (Events/Series Sync & Betalningsfix)
 - **Branch:** claude/fix-events-payments-rAxgE
