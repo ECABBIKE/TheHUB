@@ -9,7 +9,12 @@
  * Endpoint: /api/webhooks/stripe-webhook.php
  */
 
+// CRITICAL: Webhooks must never redirect or start sessions
+// This flag tells config.php to skip HTTPS redirect, session_start, and security headers
+define('HUB_API_REQUEST', true);
+
 header('Content-Type: application/json');
+header('Cache-Control: no-store');
 
 // Only allow POST
 if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
@@ -144,22 +149,28 @@ try {
                     $pdo->commit();
 
                     // Generate receipt
+                    $receiptResult = null;
                     try {
                         if (function_exists('createReceiptForOrder')) {
                             $receiptResult = createReceiptForOrder($pdo, $order['id']);
                             if (!$receiptResult['success']) {
                                 error_log("Failed to create receipt for order {$order['id']}: " . ($receiptResult['error'] ?? 'Unknown error'));
+                                $receiptResult = null;
                             }
                         }
-                    } catch (Exception $receiptError) {
+                    } catch (\Throwable $receiptError) {
                         error_log("Receipt generation error: " . $receiptError->getMessage());
                     }
 
-                    // Send confirmation email
+                    // Send receipt email with VAT breakdown (or fallback to generic confirmation)
                     try {
-                        hub_send_order_confirmation($order['id']);
-                    } catch (Exception $emailError) {
-                        error_log("Failed to send order confirmation email: " . $emailError->getMessage());
+                        if ($receiptResult && function_exists('hub_send_receipt_email')) {
+                            hub_send_receipt_email($order['id'], $receiptResult);
+                        } else {
+                            hub_send_order_confirmation($order['id']);
+                        }
+                    } catch (\Throwable $emailError) {
+                        error_log("Failed to send email for order {$order['id']}: " . $emailError->getMessage());
                     }
 
                     // Mark webhook as processed
@@ -285,22 +296,28 @@ try {
                         $pdo->commit();
 
                         // Generate receipt
+                        $receiptResult2 = null;
                         try {
                             if (function_exists('createReceiptForOrder')) {
-                                $receiptResult = createReceiptForOrder($pdo, $order['id']);
-                                if (!$receiptResult['success']) {
-                                    error_log("Failed to create receipt for order {$order['id']}: " . ($receiptResult['error'] ?? 'Unknown error'));
+                                $receiptResult2 = createReceiptForOrder($pdo, $order['id']);
+                                if (!$receiptResult2['success']) {
+                                    error_log("Failed to create receipt for order {$order['id']}: " . ($receiptResult2['error'] ?? 'Unknown error'));
+                                    $receiptResult2 = null;
                                 }
                             }
-                        } catch (Exception $receiptError) {
+                        } catch (\Throwable $receiptError) {
                             error_log("Receipt generation error: " . $receiptError->getMessage());
                         }
 
-                        // Send confirmation email
+                        // Send receipt email with VAT breakdown (or fallback to generic confirmation)
                         try {
-                            hub_send_order_confirmation($order['id']);
-                        } catch (Exception $emailError) {
-                            error_log("Failed to send order confirmation email: " . $emailError->getMessage());
+                            if ($receiptResult2 && function_exists('hub_send_receipt_email')) {
+                                hub_send_receipt_email($order['id'], $receiptResult2);
+                            } else {
+                                hub_send_order_confirmation($order['id']);
+                            }
+                        } catch (\Throwable $emailError) {
+                            error_log("Failed to send email for order {$order['id']}: " . $emailError->getMessage());
                         }
 
                         // Mark webhook as processed

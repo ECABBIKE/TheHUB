@@ -382,6 +382,95 @@ function hub_send_account_activation_email(string $email, string $name, string $
 }
 
 /**
+ * Send receipt email for an order
+ *
+ * @param int $orderId
+ * @param array|null $receiptResult Result from createReceiptForOrder()
+ * @return bool
+ */
+function hub_send_receipt_email(int $orderId, ?array $receiptResult = null): bool {
+    require_once __DIR__ . '/receipt-manager.php';
+    require_once __DIR__ . '/payment.php';
+
+    $pdo = hub_db();
+
+    // Get order details
+    $order = getOrder($orderId);
+    if (!$order || empty($order['customer_email'])) {
+        error_log("hub_send_receipt_email: No order or email for order {$orderId}");
+        return false;
+    }
+
+    // Get receipt ID - from result or find latest for this order
+    $receiptId = $receiptResult['receipt_id'] ?? null;
+    if (!$receiptId) {
+        $stmt = $pdo->prepare("SELECT id FROM receipts WHERE order_id = ? ORDER BY id DESC LIMIT 1");
+        $stmt->execute([$orderId]);
+        $receiptId = $stmt->fetchColumn();
+    }
+
+    if (!$receiptId) {
+        error_log("hub_send_receipt_email: No receipt found for order {$orderId}");
+        return false;
+    }
+
+    $receipt = getReceipt($pdo, (int)$receiptId);
+    if (!$receipt) {
+        error_log("hub_send_receipt_email: Could not load receipt {$receiptId}");
+        return false;
+    }
+
+    // Build items HTML
+    $itemsHtml = '';
+    foreach ($receipt['items'] as $item) {
+        $itemsHtml .= '<tr>';
+        $itemsHtml .= '<td style="padding: 8px 4px; border-bottom: 1px solid #eee;">' . htmlspecialchars($item['description']) . '</td>';
+        $itemsHtml .= '<td style="padding: 8px 4px; border-bottom: 1px solid #eee; text-align: right;">' . number_format($item['vat_rate'], 0) . '%</td>';
+        $itemsHtml .= '<td style="padding: 8px 4px; border-bottom: 1px solid #eee; text-align: right;">' . number_format($item['total_price'], 0, ',', ' ') . ' kr</td>';
+        $itemsHtml .= '</tr>';
+    }
+
+    // Build VAT breakdown rows
+    $vatRows = '';
+    if (!empty($receipt['vat_breakdown'])) {
+        foreach ($receipt['vat_breakdown'] as $vat) {
+            $vatRows .= '<tr>';
+            $vatRows .= '<td style="padding: 4px 0; color: #666;">Varav moms ' . number_format($vat['rate'], 0) . '%:</td>';
+            $vatRows .= '<td style="padding: 4px 0; text-align: right; color: #666;">' . number_format($vat['vat'], 2, ',', ' ') . ' kr</td>';
+            $vatRows .= '</tr>';
+        }
+    }
+
+    $paymentMethodNames = [
+        'card' => 'Kortbetalning',
+        'swish' => 'Swish',
+        'invoice' => 'Faktura',
+        'manual' => 'Manuell'
+    ];
+
+    $siteUrl = defined('SITE_URL') ? SITE_URL : 'https://thehub.gravityseries.se';
+
+    $subject = 'Kvitto - ' . ($receipt['receipt_number'] ?? 'TheHUB');
+
+    $body = hub_email_template('receipt', [
+        'name' => $order['customer_name'] ?? 'Kund',
+        'receipt_number' => $receipt['receipt_number'],
+        'order_number' => $receipt['order_number'] ?? $order['order_number'],
+        'receipt_date' => date('Y-m-d', strtotime($receipt['issued_at'] ?? 'now')),
+        'payment_method' => $paymentMethodNames[$order['payment_method'] ?? ''] ?? ucfirst($order['payment_method'] ?? 'Okand'),
+        'seller_name' => $receipt['seller_name'] ?? 'TheHUB',
+        'seller_org' => $receipt['seller_org_number'] ? 'Org.nr: ' . $receipt['seller_org_number'] : '',
+        'items_html' => $itemsHtml,
+        'subtotal' => number_format($receipt['subtotal'], 0, ',', ' '),
+        'vat_rows' => $vatRows,
+        'total' => number_format($receipt['total_amount'], 0, ',', ' '),
+        'receipt_url' => $siteUrl . '/profile/receipts?view=' . $receiptId
+    ]);
+
+    return hub_send_email($order['customer_email'], $subject, $body);
+}
+
+/**
  * Get email template with variables replaced
  */
 function hub_email_template(string $template, array $vars = []): string {
@@ -524,6 +613,62 @@ function hub_email_template(string $template, array $vars = []): string {
             </p>
 
             <p class="note" style="margin-top: 24px;">Om du har fragor, kontakta arrangoren via TheHUB.</p>
+        ',
+
+        'receipt' => '
+            <div class="header">
+                <div class="logo">TheHUB</div>
+            </div>
+            <h1>Kvitto</h1>
+            <p>Hej {{name}},</p>
+            <p>Tack for din betalning! Har ar ditt kvitto.</p>
+
+            <div style="background: #f5f5f5; border-radius: 8px; padding: 16px; margin: 16px 0;">
+                <table style="width: 100%; font-size: 14px;">
+                    <tr><td style="padding: 4px 0; color: #666;">Kvittonummer:</td><td style="padding: 4px 0; text-align: right; font-weight: 600;">{{receipt_number}}</td></tr>
+                    <tr><td style="padding: 4px 0; color: #666;">Ordernummer:</td><td style="padding: 4px 0; text-align: right;">{{order_number}}</td></tr>
+                    <tr><td style="padding: 4px 0; color: #666;">Datum:</td><td style="padding: 4px 0; text-align: right;">{{receipt_date}}</td></tr>
+                    <tr><td style="padding: 4px 0; color: #666;">Betalningsmetod:</td><td style="padding: 4px 0; text-align: right;">{{payment_method}}</td></tr>
+                </table>
+            </div>
+
+            <div style="background: #f0f9ff; border-radius: 8px; padding: 16px; margin: 16px 0;">
+                <p style="margin: 0 0 4px 0; font-weight: 600; font-size: 14px;">Saljare</p>
+                <p style="margin: 0; font-size: 14px;">{{seller_name}}</p>
+                <p style="margin: 0; font-size: 14px; color: #666;">{{seller_org}}</p>
+            </div>
+
+            <h3 style="margin-top: 24px; font-size: 16px;">Orderrader</h3>
+            <table style="width: 100%; border-collapse: collapse; margin-bottom: 16px; font-size: 14px;">
+                <thead>
+                    <tr style="border-bottom: 2px solid #333;">
+                        <th style="padding: 8px 4px; text-align: left;">Beskrivning</th>
+                        <th style="padding: 8px 4px; text-align: right;">Moms</th>
+                        <th style="padding: 8px 4px; text-align: right;">Belopp</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{items_html}}
+                </tbody>
+            </table>
+
+            <table style="width: 100%; font-size: 14px;">
+                <tr>
+                    <td style="padding: 4px 0;">Summa exkl. moms:</td>
+                    <td style="padding: 4px 0; text-align: right;">{{subtotal}} kr</td>
+                </tr>
+                {{vat_rows}}
+                <tr>
+                    <td style="padding: 8px 0; font-weight: bold; font-size: 1.1em; border-top: 2px solid #333;">Totalt inkl. moms:</td>
+                    <td style="padding: 8px 0; font-weight: bold; font-size: 1.1em; text-align: right; border-top: 2px solid #333;">{{total}} kr</td>
+                </tr>
+            </table>
+
+            <p class="text-center" style="margin-top: 24px;">
+                <a href="{{receipt_url}}" class="btn">Se kvitto online</a>
+            </p>
+
+            <p class="note" style="margin-top: 24px;">Detta kvitto ar ditt betalningsbevis. Spara det for din bokforing.</p>
         '
     ];
 

@@ -2463,23 +2463,30 @@ try {
                 <span class="badge badge--neutral ml-sm"><?= count($classRegs) ?></span>
             </h3>
             <div class="table-wrapper">
-                <table class="table table--striped table--compact">
+                <table class="table table--striped table--compact" style="table-layout:fixed;width:100%">
+                    <colgroup>
+                        <col style="width:70px">
+                        <col style="width:35%">
+                        <col style="width:60px">
+                        <col style="width:auto">
+                        <col style="width:90px">
+                    </colgroup>
                     <thead>
                         <tr>
-                            <th style="width:60px">Startnr</th>
+                            <th>Startnr</th>
                             <th>Namn</th>
-                            <th style="width:80px">Född</th>
+                            <th>Född</th>
                             <th>Klubb</th>
-                            <th style="width:100px">Status</th>
+                            <th>Status</th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php foreach ($classRegs as $index => $reg): ?>
                         <tr>
                             <td class="text-muted"><?= h($reg['bib_number'] ?? '-') ?></td>
-                            <td><strong><?= h(($reg['firstname'] ?? $reg['first_name'] ?? '') . ' ' . ($reg['lastname'] ?? $reg['last_name'] ?? '')) ?></strong></td>
+                            <td style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><strong><?= h(($reg['firstname'] ?? $reg['first_name'] ?? '') . ' ' . ($reg['lastname'] ?? $reg['last_name'] ?? '')) ?></strong></td>
                             <td class="text-muted"><?= h($reg['birth_year'] ?? '-') ?></td>
-                            <td class="text-secondary"><?= h($reg['club_name'] ?? '-') ?></td>
+                            <td class="text-secondary" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><?= h($reg['club_name'] ?? '-') ?></td>
                             <td>
                                 <?php
                                 $statusClass = 'badge--secondary';
@@ -4218,8 +4225,8 @@ if (!empty($event['series_id'])) {
 
                     seriesRiderSearchResults.querySelectorAll('.rider-search-modal__result').forEach(el => {
                         el.addEventListener('click', () => {
-                            const riderId = parseInt(el.dataset.riderId);
-                            const rider = riders.find(r => r.id === riderId);
+                            const riderId = el.dataset.riderId;
+                            const rider = riders.find(r => r.id == riderId);
                             seriesSelectRider(rider);
                         });
                     });
@@ -4245,7 +4252,7 @@ if (!empty($event['series_id'])) {
 
                 async function seriesLoadEligibleClasses(riderId) {
                     try {
-                        const response = await fetch(`/api/orders.php?action=get_eligible_classes&event_id=${seriesEvents[0].id}&rider_id=${riderId}`);
+                        const response = await fetch(`/api/orders.php?action=event_classes&event_id=${seriesEvents[0].id}&rider_id=${riderId}`);
                         const data = await response.json();
 
                         if (data.success) {

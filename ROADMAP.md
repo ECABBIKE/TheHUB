@@ -303,6 +303,39 @@ Automatiskt genererade "trading cards" med deltagarstatistik:
   - `docs/PAYMENT.md` - v4.0.0
   - `config.php` - APP_BUILD 2026-02-10
 
+- **Kritiska bugfixar (Session 2)**
+  - Webhook 302 redirect: Lade till HUB_API_REQUEST bypass i config.php (skip HTTPS redirect, session, headers for webhooks)
+  - Admin orders blank page: Andrade catch(Exception) till catch(Throwable) i markOrderPaid() och admin/orders.php
+  - Webhook crash: Wrappade series_registrations update i egen try/catch (tabell kanske inte finns)
+  - Checkout-loop: Fixat oandlig redirect vid stripe_success
+
+- **SCF Licenskontroll: Namnbaserad fallback**
+  - verifyRiderLicenseIfNeeded() provar nu forst UCI ID-sokning, sedan namnbaserad sokning via SCF API
+  - Stodjer lookupByName() med fornamn, efternamn, kon, fodelsear
+
+- **Serieanmalan: Fixat sokning**
+  - Rättade felaktig API action (get_eligible_classes -> event_classes)
+  - Fixade typjamforelse vid rider-val (=== -> == for string/number)
+
+- **Kvitto-mail med momsredovisning**
+  - Nytt receipt email-template i mail.php med fullstandig momsspecifikation
+  - hub_send_receipt_email() skickar kvitto med rader, moms per sats, saljare och org.nr
+  - Ersatter generisk betalningsbekraftelse nar kvitto skapats
+  - Webhook och markOrderPaid() skickar nu kvitto-mail
+
+- **Kolumnjustering pa event-sidan**
+  - Anmalda-tabellerna anvander nu table-layout:fixed med colgroup for identiska kolumnbredder
+  - Overflow-hantering pa namn- och klubb-kolumner
+
+- **Andrade filer (Session 2):**
+  - `api/webhooks/stripe-webhook.php` - HUB_API_REQUEST + receipt email + Throwable
+  - `config.php` - Bypass redirect/session for API requests
+  - `includes/payment.php` - Throwable catches + receipt email
+  - `includes/mail.php` - receipt template + hub_send_receipt_email()
+  - `includes/registration-validator.php` - Name-based SCF license lookup
+  - `admin/orders.php` - Throwable catch
+  - `pages/event.php` - Table alignment + series search fixes
+
 ### 2026-02-07 (Events/Series Sync & Betalningsfix)
 - **Branch:** claude/fix-events-payments-rAxgE
 
