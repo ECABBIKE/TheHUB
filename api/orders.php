@@ -305,18 +305,13 @@ try {
                 echo json_encode($result);
                 break;
 
-            // Skapa ny rider från anmälningsflödet
+            // Skapa ny rider från anmälningsflödet (tillåt gäster)
             case 'create_rider':
-                if (!hub_is_logged_in()) {
-                    http_response_code(401);
-                    echo json_encode(['success' => false, 'error' => 'Du måste vara inloggad']);
-                    exit;
-                }
-
-                $currentUser = hub_current_user();
+                $currentUser = hub_is_logged_in() ? hub_current_user() : null;
+                $parentUserId = $currentUser['id'] ?? 0;
                 $riderData = $data['rider'] ?? $data;
 
-                $result = createRiderFromRegistration($riderData, $currentUser['id']);
+                $result = createRiderFromRegistration($riderData, $parentUserId);
 
                 echo json_encode($result);
                 break;

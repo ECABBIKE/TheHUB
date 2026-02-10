@@ -3742,14 +3742,110 @@ if (!empty($event['series_id'])) {
                 }
 
                 function renderEmptyResults() {
+                    const searchVal = riderSearch.value.trim();
+                    const nameParts = searchVal.split(' ');
+                    const suggestedFirst = nameParts[0] || '';
+                    const suggestedLast = nameParts.slice(1).join(' ') || '';
+
                     riderSearchResults.innerHTML = `
                         <div class="rider-search-empty">
                             <i data-lucide="search-x"></i>
                             <p>Inga deltagare hittades</p>
-                            <p style="font-size: 0.875rem; margin-top: var(--space-xs);">Prova ett annat sökord</p>
+                            <p style="font-size: 0.875rem; margin-top: var(--space-xs); color: var(--color-text-muted);">Ny deltagare? Skapa en profil nedan.</p>
+                        </div>
+                        <div class="reg-create-rider" id="inlineCreateRider">
+                            <h4 style="margin: 0 0 var(--space-sm) 0; font-size: 1rem;">Skapa ny deltagare</h4>
+                            <div class="reg-create-rider__fields">
+                                <div class="form-group">
+                                    <label class="form-label">Fornamn *</label>
+                                    <input type="text" id="newRiderFirstname" class="form-input" value="${suggestedFirst}" required>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Efternamn *</label>
+                                    <input type="text" id="newRiderLastname" class="form-input" value="${suggestedLast}" required>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">E-post *</label>
+                                    <input type="email" id="newRiderEmail" class="form-input" placeholder="namn@exempel.se" required>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Fodelsear</label>
+                                    <input type="number" id="newRiderBirthYear" class="form-input" placeholder="t.ex. 1990" min="1920" max="2025">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Kon</label>
+                                    <select id="newRiderGender" class="form-select">
+                                        <option value="">Valj...</option>
+                                        <option value="M">Man</option>
+                                        <option value="F">Kvinna</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <button type="button" id="createRiderBtn" class="btn btn--primary btn--block mt-md">
+                                <i data-lucide="user-plus"></i> Skapa och valj
+                            </button>
+                            <div id="createRiderError" style="display:none; margin-top: var(--space-sm); color: var(--color-error); font-size: 0.875rem;"></div>
                         </div>
                     `;
                     if (typeof lucide !== 'undefined') lucide.createIcons();
+
+                    // Attach create rider handler
+                    document.getElementById('createRiderBtn').addEventListener('click', createNewRider);
+                }
+
+                async function createNewRider() {
+                    const firstname = document.getElementById('newRiderFirstname').value.trim();
+                    const lastname = document.getElementById('newRiderLastname').value.trim();
+                    const email = document.getElementById('newRiderEmail').value.trim();
+                    const birthYear = document.getElementById('newRiderBirthYear').value.trim();
+                    const gender = document.getElementById('newRiderGender').value;
+                    const errorDiv = document.getElementById('createRiderError');
+                    const btn = document.getElementById('createRiderBtn');
+
+                    if (!firstname || !lastname || !email) {
+                        errorDiv.textContent = 'Fornamn, efternamn och e-post kravs.';
+                        errorDiv.style.display = 'block';
+                        return;
+                    }
+
+                    btn.disabled = true;
+                    btn.textContent = 'Skapar...';
+                    errorDiv.style.display = 'none';
+
+                    try {
+                        const response = await fetch('/api/orders.php', {
+                            method: 'POST',
+                            headers: { 'Content-Type': 'application/json' },
+                            body: JSON.stringify({
+                                action: 'create_rider',
+                                rider: {
+                                    firstname: firstname,
+                                    lastname: lastname,
+                                    email: email,
+                                    birth_year: birthYear || null,
+                                    gender: gender || null
+                                }
+                            })
+                        });
+                        const data = await response.json();
+
+                        if (data.success && data.rider) {
+                            selectRider(data.rider);
+                        } else {
+                            errorDiv.textContent = data.error || 'Kunde inte skapa deltagare.';
+                            errorDiv.style.display = 'block';
+                            btn.disabled = false;
+                            btn.innerHTML = '<i data-lucide="user-plus"></i> Skapa och valj';
+                            if (typeof lucide !== 'undefined') lucide.createIcons();
+                        }
+                    } catch (e) {
+                        console.error('Create rider failed:', e);
+                        errorDiv.textContent = 'Nagot gick fel. Forsok igen.';
+                        errorDiv.style.display = 'block';
+                        btn.disabled = false;
+                        btn.innerHTML = '<i data-lucide="user-plus"></i> Skapa och valj';
+                        if (typeof lucide !== 'undefined') lucide.createIcons();
+                    }
                 }
 
                 function selectRider(rider) {
@@ -4233,8 +4329,96 @@ if (!empty($event['series_id'])) {
                 }
 
                 function seriesRenderEmptyResults() {
+                    const searchVal = seriesRiderSearch.value.trim();
+                    const nameParts = searchVal.split(' ');
+                    const suggestedFirst = nameParts[0] || '';
+                    const suggestedLast = nameParts.slice(1).join(' ') || '';
+
                     seriesRiderSearchResults.style.display = 'block';
-                    seriesRiderSearchResults.innerHTML = '<div class="rider-search-modal__empty">Inga deltagare hittades</div>';
+                    seriesRiderSearchResults.innerHTML = `
+                        <div class="rider-search-modal__empty">Inga deltagare hittades</div>
+                        <div style="padding: var(--space-md);">
+                            <h4 style="margin: 0 0 var(--space-sm) 0; font-size: 1rem;">Skapa ny deltagare</h4>
+                            <div class="reg-create-rider__fields">
+                                <div class="form-group">
+                                    <label class="form-label">Fornamn *</label>
+                                    <input type="text" id="seriesNewRiderFirstname" class="form-input" value="${suggestedFirst}">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Efternamn *</label>
+                                    <input type="text" id="seriesNewRiderLastname" class="form-input" value="${suggestedLast}">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">E-post *</label>
+                                    <input type="email" id="seriesNewRiderEmail" class="form-input" placeholder="namn@exempel.se">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Fodelsear</label>
+                                    <input type="number" id="seriesNewRiderBirthYear" class="form-input" placeholder="t.ex. 1990" min="1920" max="2025">
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Kon</label>
+                                    <select id="seriesNewRiderGender" class="form-select">
+                                        <option value="">Valj...</option>
+                                        <option value="M">Man</option>
+                                        <option value="F">Kvinna</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <button type="button" id="seriesCreateRiderBtn" class="btn btn--primary btn--block mt-md">
+                                <i data-lucide="user-plus"></i> Skapa och valj
+                            </button>
+                            <div id="seriesCreateRiderError" style="display:none; margin-top: var(--space-sm); color: var(--color-error); font-size: 0.875rem;"></div>
+                        </div>
+                    `;
+                    if (typeof lucide !== 'undefined') lucide.createIcons();
+
+                    document.getElementById('seriesCreateRiderBtn').addEventListener('click', async function() {
+                        const firstname = document.getElementById('seriesNewRiderFirstname').value.trim();
+                        const lastname = document.getElementById('seriesNewRiderLastname').value.trim();
+                        const email = document.getElementById('seriesNewRiderEmail').value.trim();
+                        const birthYear = document.getElementById('seriesNewRiderBirthYear').value.trim();
+                        const gender = document.getElementById('seriesNewRiderGender').value;
+                        const errorDiv = document.getElementById('seriesCreateRiderError');
+                        const btn = document.getElementById('seriesCreateRiderBtn');
+
+                        if (!firstname || !lastname || !email) {
+                            errorDiv.textContent = 'Fornamn, efternamn och e-post kravs.';
+                            errorDiv.style.display = 'block';
+                            return;
+                        }
+
+                        btn.disabled = true;
+                        btn.textContent = 'Skapar...';
+                        errorDiv.style.display = 'none';
+
+                        try {
+                            const response = await fetch('/api/orders.php', {
+                                method: 'POST',
+                                headers: { 'Content-Type': 'application/json' },
+                                body: JSON.stringify({
+                                    action: 'create_rider',
+                                    rider: { firstname, lastname, email, birth_year: birthYear || null, gender: gender || null }
+                                })
+                            });
+                            const data = await response.json();
+                            if (data.success && data.rider) {
+                                seriesSelectRider(data.rider);
+                            } else {
+                                errorDiv.textContent = data.error || 'Kunde inte skapa deltagare.';
+                                errorDiv.style.display = 'block';
+                                btn.disabled = false;
+                                btn.innerHTML = '<i data-lucide="user-plus"></i> Skapa och valj';
+                                if (typeof lucide !== 'undefined') lucide.createIcons();
+                            }
+                        } catch (e) {
+                            errorDiv.textContent = 'Nagot gick fel. Forsok igen.';
+                            errorDiv.style.display = 'block';
+                            btn.disabled = false;
+                            btn.innerHTML = '<i data-lucide="user-plus"></i> Skapa och valj';
+                            if (typeof lucide !== 'undefined') lucide.createIcons();
+                        }
+                    });
                 }
 
                 function seriesSelectRider(rider) {
