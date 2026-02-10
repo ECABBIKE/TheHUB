@@ -484,17 +484,22 @@ function markOrderPaid(int $orderId, string $paymentReference = ''): bool {
         ");
         $stmt->execute([$orderId]);
 
-        // Update linked series registrations
-        $stmt = $pdo->prepare("
-            UPDATE series_registrations
-            SET payment_status = 'paid', status = 'confirmed', paid_at = NOW()
-            WHERE order_id = ?
-        ");
-        $stmt->execute([$orderId]);
+        // Update linked series registrations (table may not exist yet)
+        try {
+            $stmt = $pdo->prepare("
+                UPDATE series_registrations
+                SET payment_status = 'paid', status = 'confirmed', paid_at = NOW()
+                WHERE order_id = ?
+            ");
+            $stmt->execute([$orderId]);
+        } catch (\Throwable $seriesErr) {
+            error_log("series_registrations update skipped: " . $seriesErr->getMessage());
+        }
 
         $pdo->commit();
 
-        // Generate receipt
+        // Generate receipt (non-critical - must not break payment confirmation)
+        $receiptResult = null;
         try {
             if (file_exists(__DIR__ . '/receipt-manager.php')) {
                 require_once __DIR__ . '/receipt-manager.php';
@@ -502,25 +507,32 @@ function markOrderPaid(int $orderId, string $paymentReference = ''): bool {
                     $receiptResult = createReceiptForOrder($pdo, $orderId);
                     if (!$receiptResult['success']) {
                         error_log("Failed to create receipt for order {$orderId}: " . ($receiptResult['error'] ?? 'Unknown error'));
+                        $receiptResult = null;
                     }
                 }
             }
-        } catch (Exception $receiptError) {
+        } catch (\Throwable $receiptError) {
             error_log("Receipt generation error: " . $receiptError->getMessage());
         }
 
-        // Send confirmation email
+        // Send receipt email with VAT breakdown (or fallback to generic confirmation)
         try {
             require_once __DIR__ . '/mail.php';
-            hub_send_order_confirmation($orderId);
-        } catch (Exception $emailError) {
-            error_log("Failed to send order confirmation email: " . $emailError->getMessage());
+            if ($receiptResult && function_exists('hub_send_receipt_email')) {
+                hub_send_receipt_email($orderId, $receiptResult);
+            } else {
+                hub_send_order_confirmation($orderId);
+            }
+        } catch (\Throwable $emailError) {
+            error_log("Failed to send email for order {$orderId}: " . $emailError->getMessage());
         }
 
         return true;
 
-    } catch (Exception $e) {
-        $pdo->rollBack();
+    } catch (\Throwable $e) {
+        if ($pdo->inTransaction()) {
+            $pdo->rollBack();
+        }
         throw $e;
     }
 }

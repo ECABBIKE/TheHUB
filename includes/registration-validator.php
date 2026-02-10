@@ -21,9 +21,9 @@ require_once __DIR__ . '/registration-rules.php';
 function verifyRiderLicenseIfNeeded($pdo, $riderId) {
     $currentYear = (int)date('Y');
 
-    // Check if already verified this year
+    // Get full rider data for name-based lookup
     $stmt = $pdo->prepare("
-        SELECT id, license_number, scf_license_year
+        SELECT id, firstname, lastname, birth_year, gender, license_number, scf_license_year
         FROM riders
         WHERE id = ?
     ");
@@ -35,12 +35,7 @@ function verifyRiderLicenseIfNeeded($pdo, $riderId) {
     }
 
     // Already verified for current year
-    if ($rider['scf_license_year'] == $currentYear) {
-        return $rider;
-    }
-
-    // No UCI ID to verify
-    if (empty($rider['license_number']) || strpos($rider['license_number'], 'SWE') === 0) {
+    if (isset($rider['scf_license_year']) && $rider['scf_license_year'] == $currentYear) {
         return $rider;
     }
 
@@ -60,15 +55,47 @@ function verifyRiderLicenseIfNeeded($pdo, $riderId) {
         }
 
         $scfService = new SCFLicenseService($apiKey, $db);
+        $licenseData = null;
 
-        // Normalize UCI ID
-        $uciId = preg_replace('/[^0-9]/', '', $rider['license_number']);
+        // Strategy 1: Lookup by UCI ID (if available and not a generated SWE-id)
+        $hasUciId = !empty($rider['license_number']) && strpos($rider['license_number'], 'SWE') !== 0;
+        if ($hasUciId) {
+            $uciId = preg_replace('/[^0-9]/', '', $rider['license_number']);
+            if (strlen($uciId) >= 8) {
+                $results = $scfService->lookupByUciIds([$uciId], $currentYear);
+                if (!empty($results)) {
+                    $licenseData = reset($results);
+                }
+            }
+        }
 
-        // Lookup in SCF
-        $results = $scfService->lookupByUciIds([$uciId], $currentYear);
+        // Strategy 2: Fallback to name-based lookup if UCI ID not found or not available
+        if (!$licenseData && !empty($rider['firstname']) && !empty($rider['lastname'])) {
+            // Map gender codes
+            $genderMap = ['M' => 'M', 'F' => 'F', 'male' => 'M', 'female' => 'F', 'man' => 'M', 'kvinna' => 'F'];
+            $gender = $genderMap[strtolower($rider['gender'] ?? '')] ?? ($rider['gender'] ?? '');
 
-        if (!empty($results)) {
-            $licenseData = reset($results);
+            // Build birthdate from birth_year if available
+            $birthdate = null;
+            if (!empty($rider['birth_year'])) {
+                $birthdate = $rider['birth_year'] . '-01-01';
+            }
+
+            $nameResult = $scfService->lookupByName(
+                $rider['firstname'],
+                $rider['lastname'],
+                $gender,
+                $birthdate,
+                $currentYear
+            );
+
+            if ($nameResult) {
+                $licenseData = $nameResult;
+            }
+        }
+
+        // Update rider with found license data
+        if ($licenseData) {
             $scfService->updateRiderLicense($riderId, $licenseData, $currentYear);
             $scfService->cacheLicense($licenseData, $currentYear);
 
@@ -77,7 +104,7 @@ function verifyRiderLicenseIfNeeded($pdo, $riderId) {
             $stmt->execute([$riderId]);
             return $stmt->fetch(PDO::FETCH_ASSOC);
         }
-    } catch (Exception $e) {
+    } catch (\Throwable $e) {
         // Log error but don't block registration
         error_log("SCF verification failed for rider $riderId: " . $e->getMessage());
     }

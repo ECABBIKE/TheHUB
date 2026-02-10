@@ -37,7 +37,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $message = 'Kunde inte bekräfta betalningen.';
                 $messageType = 'error';
             }
-        } catch (Exception $e) {
+        } catch (\Throwable $e) {
+            error_log("markOrderPaid error for order {$orderId}: " . $e->getMessage());
             $message = 'Fel: ' . $e->getMessage();
             $messageType = 'error';
         }

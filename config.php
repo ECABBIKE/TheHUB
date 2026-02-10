@@ -66,8 +66,8 @@ define('FORCE_HTTPS', env('FORCE_HTTPS', 'true'));
 // Environment
 define('APP_ENV', env('APP_ENV', 'production'));
 
-// Force HTTPS in production
-if (FORCE_HTTPS === 'true' && APP_ENV !== 'development') {
+// Force HTTPS in production (skip for API/webhook requests and CLI)
+if (FORCE_HTTPS === 'true' && APP_ENV !== 'development' && !defined('HUB_API_REQUEST')) {
     if (!isset($_SERVER['HTTPS']) || $_SERVER['HTTPS'] !== 'on') {
         // Allow CLI and certain trusted proxies
         $behindProxy = isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https';
@@ -110,44 +110,55 @@ try {
     die('Database connection failed');
 }
 
-if (session_status() === PHP_SESSION_NONE) {
-    // Configure session with longer lifetime (7 days)
-    session_set_cookie_params([
-        'lifetime' => 604800, // 7 days
-        'path' => '/',
-        'domain' => '',
-        'secure' => isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on',
-        'httponly' => true,
-        'samesite' => 'Lax'
-    ]);
-    session_name('thehub_session');
-    session_start();
-}
-
-// Security headers (only for web requests, not CLI)
-if (php_sapi_name() !== 'cli') {
-    // Prevent MIME type sniffing
-    header("X-Content-Type-Options: nosniff");
-
-    // Prevent clickjacking
-    header("X-Frame-Options: SAMEORIGIN");
-
-    // Enable XSS filter in older browsers
-    header("X-XSS-Protection: 1; mode=block");
-
-    // Control referrer information
-    header("Referrer-Policy: strict-origin-when-cross-origin");
-
-    // Disable dangerous browser features
-    header("Permissions-Policy: geolocation=(), microphone=(), camera=()");
-
-    // HSTS - Force HTTPS for 1 year (only if HTTPS is enabled)
-    if (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') {
-        header("Strict-Transport-Security: max-age=31536000; includeSubDomains");
+// Skip session and security headers for API/webhook requests (they set their own headers)
+if (!defined('HUB_API_REQUEST')) {
+    if (session_status() === PHP_SESSION_NONE) {
+        // Configure session with longer lifetime (7 days)
+        session_set_cookie_params([
+            'lifetime' => 604800, // 7 days
+            'path' => '/',
+            'domain' => '',
+            'secure' => isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on',
+            'httponly' => true,
+            'samesite' => 'Lax'
+        ]);
+        session_name('thehub_session');
+        session_start();
     }
 
-    // Content Security Policy - Allow Lucide icons from unpkg.com
-    header("Content-Security-Policy: default-src 'self'; script-src 'self' https://unpkg.com 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:;");
+    // Security headers (only for web requests, not CLI)
+    if (php_sapi_name() !== 'cli') {
+        // Prevent MIME type sniffing
+        header("X-Content-Type-Options: nosniff");
+
+        // Prevent clickjacking
+        header("X-Frame-Options: SAMEORIGIN");
+
+        // Enable XSS filter in older browsers
+        header("X-XSS-Protection: 1; mode=block");
+
+        // Control referrer information
+        header("Referrer-Policy: strict-origin-when-cross-origin");
+
+        // Disable dangerous browser features
+        header("Permissions-Policy: geolocation=(), microphone=(), camera=()");
+
+        // HSTS - Force HTTPS for 1 year (only if HTTPS is enabled)
+        if (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') {
+            header("Strict-Transport-Security: max-age=31536000; includeSubDomains");
+        }
+
+        // Content Security Policy - Allow Lucide icons from unpkg.com
+        header("Content-Security-Policy: default-src 'self'; script-src 'self' https://unpkg.com 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data: https:; font-src 'self' data:;");
+    }
+} else {
+    // For API requests, still start session if needed for auth functions
+    // but don't set security headers that could interfere
+    if (session_status() === PHP_SESSION_NONE && php_sapi_name() !== 'cli') {
+        session_set_cookie_params(['lifetime' => 0, 'path' => '/', 'httponly' => true, 'samesite' => 'Lax']);
+        session_name('thehub_session');
+        @session_start();
+    }
 }
 
 date_default_timezone_set('Europe/Stockholm');
