@@ -97,12 +97,15 @@ try {
             }
 
             // Find order by payment intent ID
+            // gateway_transaction_id may contain session_id, so also check stripe_payment_intent_id
             $stmt = $pdo->prepare("
                 SELECT id, payment_status, order_number
                 FROM orders
-                WHERE gateway_transaction_id = ? AND gateway_code = 'stripe'
+                WHERE (gateway_transaction_id = ? OR stripe_payment_intent_id = ?)
+                  AND gateway_code = 'stripe'
+                LIMIT 1
             ");
-            $stmt->execute([$paymentIntentId]);
+            $stmt->execute([$paymentIntentId, $paymentIntentId]);
             $order = $stmt->fetch(PDO::FETCH_ASSOC);
 
             if ($order && $order['payment_status'] === 'pending') {
@@ -198,10 +201,12 @@ try {
                             COALESCE(gateway_metadata, '{}'),
                             '$.stripe_error', ?
                         )
-                    WHERE gateway_transaction_id = ? AND gateway_code = 'stripe' AND payment_status = 'pending'
+                    WHERE (gateway_transaction_id = ? OR stripe_payment_intent_id = ?)
+                      AND gateway_code = 'stripe' AND payment_status = 'pending'
                 ");
                 $stmt->execute([
                     $data['last_payment_error']['message'] ?? 'Payment failed',
+                    $paymentIntentId,
                     $paymentIntentId
                 ]);
 
@@ -230,8 +235,9 @@ try {
                     $pdo->beginTransaction();
 
                     try {
-                        // Mark order as paid
-                        $stmt = $pdo->prepare("
+                        // Mark order as paid and store payment_intent_id for refund lookups
+                        $paymentIntentFromSession = $data['payment_intent'] ?? null;
+                        $updateSql = "
                             UPDATE orders
                             SET payment_status = 'paid',
                                 payment_reference = ?,
@@ -241,13 +247,23 @@ try {
                                     COALESCE(gateway_metadata, '{}'),
                                     '$.checkout_session', CAST(? AS JSON)
                                 )
-                            WHERE id = ?
-                        ");
-                        $stmt->execute([
-                            $data['payment_intent'] ?? $sessionId,
-                            json_encode(['session_id' => $sessionId, 'customer_email' => $data['customer_email'] ?? '']),
-                            $order['id']
-                        ]);
+                        ";
+                        $updateParams = [
+                            $paymentIntentFromSession ?? $sessionId,
+                            json_encode(['session_id' => $sessionId, 'payment_intent' => $paymentIntentFromSession, 'customer_email' => $data['customer_email'] ?? ''])
+                        ];
+
+                        // Store payment_intent_id for refund/status lookups
+                        if ($paymentIntentFromSession) {
+                            $updateSql .= ", stripe_payment_intent_id = ?";
+                            $updateParams[] = $paymentIntentFromSession;
+                        }
+
+                        $updateSql .= " WHERE id = ?";
+                        $updateParams[] = $order['id'];
+
+                        $stmt = $pdo->prepare($updateSql);
+                        $stmt->execute($updateParams);
 
                         // Update registrations
                         $stmt = $pdo->prepare("
@@ -344,9 +360,11 @@ try {
                 $stmt = $pdo->prepare("
                     SELECT id, order_number, total_amount
                     FROM orders
-                    WHERE gateway_transaction_id = ? AND gateway_code = 'stripe'
+                    WHERE (gateway_transaction_id = ? OR stripe_payment_intent_id = ?)
+                      AND gateway_code = 'stripe'
+                    LIMIT 1
                 ");
-                $stmt->execute([$paymentIntentId]);
+                $stmt->execute([$paymentIntentId, $paymentIntentId]);
                 $order = $stmt->fetch(PDO::FETCH_ASSOC);
 
                 if ($order) {
