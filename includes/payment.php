@@ -6,7 +6,7 @@
  * Supports flexible payment config hierarchy: event > series > promotor > fallback
  */
 
-require_once __DIR__ . '/../config.php';
+require_once __DIR__ . '/../hub-config.php';
 
 // ============================================================================
 // PAYMENT CONFIGURATION
