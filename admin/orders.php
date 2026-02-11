@@ -99,9 +99,10 @@ if ($filterStatus && $filterStatus !== 'all') {
     $params[] = $filterStatus;
 }
 
-// Event filter
+// Event filter - also match orders with event_registrations for this event (multi-event orders)
 if ($filterEvent) {
-    $whereConditions[] = "o.event_id = ?";
+    $whereConditions[] = "(o.event_id = ? OR o.id IN (SELECT DISTINCT order_id FROM event_registrations WHERE event_id = ? AND order_id IS NOT NULL))";
+    $params[] = $filterEvent;
     $params[] = $filterEvent;
 }
 
@@ -120,9 +121,10 @@ if ($search) {
     $params[] = $searchTerm;
 }
 
-// Promotor restriction - only their events
+// Promotor restriction - only their events (including multi-event orders)
 if (!$isSuperAdmin) {
-    $whereConditions[] = "o.event_id IN (SELECT event_id FROM promotor_events WHERE user_id = ?)";
+    $whereConditions[] = "(o.event_id IN (SELECT event_id FROM promotor_events WHERE user_id = ?) OR o.id IN (SELECT er.order_id FROM event_registrations er JOIN promotor_events pe ON pe.event_id = er.event_id WHERE pe.user_id = ? AND er.order_id IS NOT NULL))";
+    $params[] = $currentAdmin['id'];
     $params[] = $currentAdmin['id'];
 }
 

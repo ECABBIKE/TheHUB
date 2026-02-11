@@ -4556,17 +4556,26 @@ if (!empty($event['series_id'])) {
 
                 function seriesRenderClasses(classes, requiresLicense) {
                     seriesRequiresLicenseCommitment = requiresLicense;
+                    const numEvents = seriesEvents.length;
 
                     seriesClassList.innerHTML = classes.map(cls => {
-                        // For series registration, use season_price if available
-                        const seriesPrice = cls.season_price && cls.season_price > 0 ? cls.season_price : cls.current_price;
-                        cls._series_price = seriesPrice; // Store for later use
-                        const priceDisplay = seriesPrice ? `${seriesPrice} kr / event` : 'Pris saknas';
+                        const pricePerEvent = cls.current_price;
+                        const seasonTotal = cls.season_price && cls.season_price > 0 ? cls.season_price : 0;
+                        const regularTotal = pricePerEvent * numEvents;
+                        const hasSaving = seasonTotal > 0 && seasonTotal < regularTotal;
+                        const saving = hasSaving ? (regularTotal - seasonTotal) : 0;
+
+                        let priceDisplay = pricePerEvent ? `${pricePerEvent} kr / event` : 'Pris saknas';
+                        let savingHtml = '';
+                        if (hasSaving) {
+                            savingHtml = `<div class="reg-class-desc" style="color: var(--color-success);">Seriepris: ${seasonTotal} kr totalt (spara ${saving} kr)</div>`;
+                        }
                         return `
-                            <div class="reg-class-item" data-class-id="${cls.class_id}">
+                            <div class="reg-class-item" data-class-id="${cls.class_id}" data-season-price="${seasonTotal}" data-saving="${saving}">
                                 <input type="radio" name="series_class" value="${cls.class_id}" class="reg-class-radio">
                                 <div class="reg-class-info">
                                     <div class="reg-class-name">${cls.name}</div>
+                                    ${savingHtml}
                                     ${cls.warning ? `<div class="reg-class-desc" style="color: var(--color-warning);">${cls.warning}</div>` : ''}
                                 </div>
                                 <div class="reg-class-price">
@@ -4650,12 +4659,13 @@ if (!empty($event['series_id'])) {
                     });
                 }
 
-                // Add to cart - adds ALL series events
+                // Add to cart - adds ALL series events at regular per-event price
+                // Series discount is calculated at checkout based on season_price
                 seriesAddToCartBtn.addEventListener('click', async () => {
                     if (!seriesSelectedRiderId || !seriesSelectedClassId) return;
 
-                    // Use season_price if available, otherwise fallback to current_price
-                    const pricePerEvent = seriesSelectedClassData._series_price || seriesSelectedClassData.season_price || seriesSelectedClassData.current_price;
+                    const pricePerEvent = seriesSelectedClassData.current_price;
+                    const seasonPrice = seriesSelectedClassData.season_price || 0;
 
                     // Add to cart for EACH event in the series
                     for (const event of seriesEvents) {
@@ -4669,7 +4679,9 @@ if (!empty($event['series_id'])) {
                             class_name: seriesSelectedClassData.name,
                             price: pricePerEvent,
                             license_commitment: seriesRequiresLicenseCommitment,
-                            is_series_registration: true
+                            is_series_registration: true,
+                            series_id: <?= json_encode($seriesInfo['id'] ?? 0) ?>,
+                            season_price: seasonPrice
                         });
                     }
 
