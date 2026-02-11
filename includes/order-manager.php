@@ -149,14 +149,26 @@ function createMultiRiderOrder(array $buyerData, array $items, ?string $discount
             if ($itemType === 'event') {
                 $eventId = intval($item['event_id']);
 
-                // Kolla om redan anmäld
+                // Kolla om redan anmäld - blockera bara om det finns en BETALD registrering
                 $checkRegStmt = $pdo->prepare("
-                    SELECT id FROM event_registrations
+                    SELECT id, status, payment_status FROM event_registrations
                     WHERE event_id = ? AND rider_id = ? AND status != 'cancelled'
                 ");
                 $checkRegStmt->execute([$eventId, $riderId]);
-                if ($checkRegStmt->fetch()) {
-                    throw new Exception("{$rider['firstname']} {$rider['lastname']} är redan anmäld till detta event");
+                $existingReg = $checkRegStmt->fetch(PDO::FETCH_ASSOC);
+
+                if ($existingReg) {
+                    // Om betalad/bekräftad - blockera dubbelanmälan
+                    if ($existingReg['payment_status'] === 'paid' || $existingReg['status'] === 'confirmed') {
+                        throw new Exception("{$rider['firstname']} {$rider['lastname']} är redan anmäld till detta event");
+                    }
+
+                    // Obetald/pending - avbryt den gamla och ersätt med ny
+                    $cancelStmt = $pdo->prepare("
+                        UPDATE event_registrations SET status = 'cancelled', payment_status = 'cancelled'
+                        WHERE event_id = ? AND rider_id = ? AND status = 'pending' AND payment_status != 'paid'
+                    ");
+                    $cancelStmt->execute([$eventId, $riderId]);
                 }
 
                 // Hämta event-info och pris (använd pricing template system)
@@ -251,14 +263,29 @@ function createMultiRiderOrder(array $buyerData, array $items, ?string $discount
             } elseif ($itemType === 'series') {
                 $seriesId = intval($item['series_id']);
 
-                // Kolla om redan anmäld till serien
+                // Kolla om redan anmäld till serien - blockera bara betalda
                 $checkSeriesStmt = $pdo->prepare("
-                    SELECT id FROM series_registrations
+                    SELECT id, status, payment_status FROM series_registrations
                     WHERE series_id = ? AND rider_id = ? AND status != 'cancelled'
                 ");
                 $checkSeriesStmt->execute([$seriesId, $riderId]);
-                if ($checkSeriesStmt->fetch()) {
-                    throw new Exception("{$rider['firstname']} {$rider['lastname']} har redan ett serie-pass för denna serie");
+                $existingSeriesReg = $checkSeriesStmt->fetch(PDO::FETCH_ASSOC);
+
+                if ($existingSeriesReg) {
+                    if ($existingSeriesReg['payment_status'] === 'paid' || $existingSeriesReg['status'] === 'confirmed') {
+                        throw new Exception("{$rider['firstname']} {$rider['lastname']} har redan ett serie-pass för denna serie");
+                    }
+
+                    // Obetald/pending - avbryt den gamla
+                    try {
+                        $cancelSeriesStmt = $pdo->prepare("
+                            UPDATE series_registrations SET status = 'cancelled'
+                            WHERE series_id = ? AND rider_id = ? AND status = 'pending' AND payment_status != 'paid'
+                        ");
+                        $cancelSeriesStmt->execute([$seriesId, $riderId]);
+                    } catch (\Throwable $e) {
+                        // series_registrations table may not exist
+                    }
                 }
 
                 // Hämta serie-info

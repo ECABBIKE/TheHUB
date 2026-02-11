@@ -392,7 +392,7 @@ function hub_send_receipt_email(int $orderId, ?array $receiptResult = null): boo
     require_once __DIR__ . '/receipt-manager.php';
     require_once __DIR__ . '/payment.php';
 
-    $pdo = hub_db();
+    $pdo = $GLOBALS['pdo'];
 
     // Get order details
     $order = getOrder($orderId);
