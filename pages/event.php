@@ -2838,12 +2838,59 @@ if (!empty($event['series_id'])) {
 @media (max-width: 767px) {
     .reg-class-item {
         flex-wrap: wrap;
+        padding: var(--space-sm);
     }
     .reg-class-price {
         width: 100%;
         text-align: left;
         margin-top: var(--space-xs);
         padding-left: 36px;
+    }
+
+    /* Compact registration section on mobile */
+    .reg-add-rider {
+        padding: var(--space-md);
+        border-radius: 0;
+        border-left: none;
+        border-right: none;
+        margin-left: calc(-1 * var(--container-padding, 12px));
+        margin-right: calc(-1 * var(--container-padding, 12px));
+    }
+
+    /* Cart edge-to-edge on mobile */
+    .reg-cart {
+        border-radius: 0;
+        border-left: none;
+        border-right: none;
+        margin-left: calc(-1 * var(--container-padding, 12px));
+        margin-right: calc(-1 * var(--container-padding, 12px));
+    }
+
+    .reg-cart__header {
+        padding: var(--space-sm) var(--space-md);
+    }
+
+    .reg-cart__item {
+        padding: var(--space-sm);
+        gap: var(--space-sm);
+    }
+
+    .reg-cart__summary {
+        padding: var(--space-sm) var(--space-md);
+    }
+
+    .reg-cart__actions {
+        padding: var(--space-sm) var(--space-md);
+    }
+
+    /* Compact class list on mobile */
+    .reg-class-list {
+        gap: var(--space-xs);
+    }
+
+    /* Series upsell compact on mobile */
+    .reg-series-upsell {
+        padding: var(--space-sm);
     }
 }
 
@@ -3176,21 +3223,60 @@ if (!empty($event['series_id'])) {
 @media (max-width: 767px) {
     .rider-search-modal {
         padding: 0;
+        align-items: flex-start;
     }
 
     .rider-search-modal__container {
         max-width: 100%;
         max-height: 100vh;
+        max-height: 100dvh;
         border-radius: 0;
         height: 100%;
+        height: 100dvh;
     }
 
     .rider-search-modal__header {
-        padding: var(--space-md);
+        padding: var(--space-sm) var(--space-md);
     }
 
     .rider-search-modal__body {
-        padding: var(--space-md);
+        padding: var(--space-sm) var(--space-md);
+    }
+
+    .rider-search-modal__input-wrapper {
+        margin-bottom: var(--space-md);
+        position: sticky;
+        top: 0;
+        z-index: 1;
+        background: var(--color-bg-card);
+        padding-top: var(--space-xs);
+    }
+
+    .rider-search-modal__input {
+        font-size: 16px; /* Prevents iOS zoom on focus */
+        padding: var(--space-sm) var(--space-sm) var(--space-sm) 40px;
+    }
+
+    .rider-search-modal__search-icon {
+        left: var(--space-sm);
+        width: 18px;
+        height: 18px;
+    }
+
+    .rider-search-result {
+        padding: var(--space-sm);
+    }
+
+    .rider-search-result__name {
+        font-size: 1rem;
+    }
+
+    .rider-search-result__info {
+        font-size: 0.8125rem;
+    }
+
+    .rider-search-empty {
+        padding: var(--space-xl);
     }
 }
 </style>
