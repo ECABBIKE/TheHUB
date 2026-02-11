@@ -194,11 +194,23 @@ include __DIR__ . '/../components/header.php';
                     <h1 class="text-xl mb-sm">Betalning genomförd!</h1>
                     <p class="text-secondary mb-lg">
                         Order <strong><?= htmlspecialchars($order['order_number']) ?></strong> är betald.
+                        <?php if (!empty($order['customer_email'])): ?>
+                        <br>Kvitto skickas till <strong><?= htmlspecialchars($order['customer_email']) ?></strong>.
+                        <?php endif; ?>
                     </p>
-                    <a href="/profile/receipts" class="btn btn--primary">
-                        <i data-lucide="shopping-bag"></i>
-                        Mina köp
-                    </a>
+                    <div style="display:flex; flex-direction:column; gap:var(--space-sm); align-items:center;">
+                        <?php if (!empty($order['event_id'])): ?>
+                        <a href="/calendar/event/<?= (int)$order['event_id'] ?>" class="btn btn--primary">
+                            <i data-lucide="calendar"></i> Till eventet
+                        </a>
+                        <?php endif; ?>
+                        <a href="/profile/receipts" class="btn btn--secondary">
+                            <i data-lucide="receipt"></i> Mina kvitton
+                        </a>
+                        <a href="/calendar" class="btn btn--ghost">
+                            <i data-lucide="calendar"></i> Kalender
+                        </a>
+                    </div>
                 </div>
             </div>
             <script>
@@ -206,6 +218,7 @@ include __DIR__ . '/../components/header.php';
             if (typeof GlobalCart !== 'undefined') {
                 GlobalCart.clearCart();
             }
+            sessionStorage.removeItem('pending_order_id');
             </script>
 
         <?php elseif ($order && !empty($order['stripe_pending'])): ?>
@@ -213,7 +226,7 @@ include __DIR__ . '/../components/header.php';
             <div class="card">
                 <div class="card-body text-center py-xl">
                     <i data-lucide="loader" class="icon-xl text-accent mb-md spin" id="pending-spinner"></i>
-                    <h1 class="text-xl mb-sm">Betalning bearbetas</h1>
+                    <h1 class="text-xl mb-sm" id="pending-title">Betalning bearbetas</h1>
                     <p class="text-secondary mb-lg" id="pending-message">
                         Din betalning behandlas. Sidan uppdateras automatiskt.
                     </p>
@@ -221,30 +234,53 @@ include __DIR__ . '/../components/header.php';
                         Order: <strong><?= htmlspecialchars($order['order_number']) ?></strong>
                     </p>
                     <p class="text-xs text-muted mt-md" id="pending-timer"></p>
+                    <div id="pending-links" style="display:none; margin-top: var(--space-lg);">
+                        <?php if (!empty($order['event_id'])): ?>
+                        <a href="/calendar/event/<?= (int)$order['event_id'] ?>" class="btn btn--primary" style="margin-bottom:var(--space-sm);">
+                            <i data-lucide="calendar"></i> Till eventet
+                        </a>
+                        <?php endif; ?>
+                        <a href="/calendar" class="btn btn--secondary" style="margin-bottom:var(--space-sm);">
+                            <i data-lucide="calendar"></i> Kalender
+                        </a>
+                        <a href="/profile/receipts" class="btn btn--ghost">
+                            <i data-lucide="receipt"></i> Mina kvitton
+                        </a>
+                    </div>
                 </div>
             </div>
             <script>
-            // Poll for payment confirmation via lightweight API - max 60 seconds, then stop
+            // Clear cart immediately - payment was sent to Stripe
+            if (typeof GlobalCart !== 'undefined') {
+                GlobalCart.clearCart();
+            }
+            sessionStorage.removeItem('pending_order_id');
+
+            // Poll for payment confirmation - check-order-status now verifies with Stripe directly
             (function() {
                 let attempts = 0;
-                const maxAttempts = 12;
+                const maxAttempts = 6;
                 const orderId = <?= (int)$order['id'] ?>;
 
                 function checkPayment() {
                     attempts++;
                     const timerEl = document.getElementById('pending-timer');
                     const messageEl = document.getElementById('pending-message');
+                    const titleEl = document.getElementById('pending-title');
                     const spinnerEl = document.getElementById('pending-spinner');
+                    const linksEl = document.getElementById('pending-links');
 
                     if (attempts > maxAttempts) {
+                        if (titleEl) titleEl.textContent = 'Betalning mottagen!';
                         if (messageEl) messageEl.innerHTML = 'Betalningen ar mottagen av Stripe!<br>Bekraftelsen kan ta nagra minuter. Du far ett bekraftelsemail.';
-                        if (timerEl) timerEl.textContent = 'Du kan stanga denna sida.';
+                        if (timerEl) timerEl.textContent = '';
                         if (spinnerEl) { spinnerEl.classList.remove('spin'); spinnerEl.setAttribute('data-lucide', 'check-circle'); spinnerEl.style.color = 'var(--color-success)'; }
+                        if (linksEl) linksEl.style.display = 'block';
                         if (typeof lucide !== 'undefined') lucide.createIcons();
                         return;
                     }
 
-                    if (timerEl) timerEl.textContent = 'Kontrollerar... (' + attempts + '/' + maxAttempts + ')';
+                    if (timerEl) timerEl.textContent = 'Kontrollerar betalning...';
 
                     fetch('/api/check-order-status.php?order_id=' + orderId)
                         .then(function(r) { return r.json(); })
@@ -253,15 +289,15 @@ include __DIR__ . '/../components/header.php';
                                 // Payment confirmed! Reload to show success page
                                 window.location.href = '/checkout?order=' + orderId;
                             } else {
-                                setTimeout(checkPayment, 5000);
+                                setTimeout(checkPayment, 3000);
                             }
                         })
                         .catch(function() {
-                            setTimeout(checkPayment, 5000);
+                            setTimeout(checkPayment, 3000);
                         });
                 }
 
-                setTimeout(checkPayment, 4000);
+                setTimeout(checkPayment, 2000);
             })();
             </script>
 
