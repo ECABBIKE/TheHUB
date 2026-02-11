@@ -4192,11 +4192,16 @@ if (!empty($event['series_id'])) {
                 }
 
                 function updateCart() {
-                    // Get items from GlobalCart for THIS event only
                     const allItems = GlobalCart.getCart();
+                    // Show items for this event AND any series registration items linked to this event's series
                     const thisEventItems = allItems.filter(item => item.event_id == eventId);
+                    const seriesItems = allItems.filter(item => item.is_series_registration && item.event_id != eventId);
 
-                    if (thisEventItems.length === 0) {
+                    // Check if current event has series items too
+                    const hasSeriesItems = thisEventItems.some(item => item.is_series_registration) || seriesItems.length > 0;
+                    const relevantItems = hasSeriesItems ? allItems.filter(item => item.is_series_registration || item.event_id == eventId) : thisEventItems;
+
+                    if (relevantItems.length === 0) {
                         registrationCart.style.display = 'none';
                         addAnotherBtn.style.display = 'none';
                         return;
@@ -4205,24 +4210,57 @@ if (!empty($event['series_id'])) {
                     registrationCart.style.display = 'block';
                     addAnotherBtn.style.display = 'inline-flex';
 
-                    // Render cart items
-                    cartItems.innerHTML = thisEventItems.map((item) => `
-                        <div class="reg-cart__item">
-                            <div class="reg-cart__item-info">
-                                <strong>${item.rider_name}</strong>
-                                <span class="text-muted">${item.class_name}</span>
-                            </div>
-                            <div class="reg-cart__item-price">${item.price.toLocaleString('sv-SE')} kr</div>
-                            <button type="button" class="reg-cart__item-remove"
-                                    onclick="window.removeCartItem(${item.event_id}, ${item.rider_id}, ${item.class_id})">
-                                <i data-lucide="x"></i>
-                            </button>
-                        </div>
-                    `).join('');
+                    // Group items by event for display
+                    const grouped = {};
+                    relevantItems.forEach(item => {
+                        const eid = item.event_id;
+                        if (!grouped[eid]) {
+                            grouped[eid] = { name: item.event_name, date: item.event_date || '', items: [] };
+                        }
+                        grouped[eid].items.push(item);
+                    });
 
-                    // Update totals
-                    const total = thisEventItems.reduce((sum, item) => sum + item.price, 0);
-                    cartCount.textContent = thisEventItems.length;
+                    // Sort events by date (current event first, then by date)
+                    const sortedEventIds = Object.keys(grouped).sort((a, b) => {
+                        if (a == eventId) return -1;
+                        if (b == eventId) return 1;
+                        return (grouped[a].date || '').localeCompare(grouped[b].date || '');
+                    });
+
+                    const multiEvent = sortedEventIds.length > 1;
+                    let html = '';
+
+                    sortedEventIds.forEach(eid => {
+                        const group = grouped[eid];
+                        if (multiEvent) {
+                            const dateStr = group.date ? `<span class="text-muted" style="font-size: var(--text-xs);">${group.date}</span>` : '';
+                            html += `<div style="padding: var(--space-xs) 0; display: flex; align-items: center; gap: var(--space-xs);">
+                                <i data-lucide="calendar" style="width: 14px; height: 14px; color: var(--color-text-muted);"></i>
+                                <strong style="font-size: var(--text-sm);">${group.name}</strong>
+                                ${dateStr}
+                            </div>`;
+                        }
+                        group.items.forEach(item => {
+                            html += `<div class="reg-cart__item">
+                                <div class="reg-cart__item-info">
+                                    <strong>${item.rider_name}</strong>
+                                    <span class="text-muted">${item.class_name}</span>
+                                </div>
+                                <div class="reg-cart__item-price">${item.price.toLocaleString('sv-SE')} kr</div>
+                                <button type="button" class="reg-cart__item-remove"
+                                        onclick="window.removeCartItem(${item.event_id}, ${item.rider_id}, ${item.class_id})">
+                                    <i data-lucide="x"></i>
+                                </button>
+                            </div>`;
+                        });
+                    });
+
+                    cartItems.innerHTML = html;
+
+                    // Update totals - show all relevant items
+                    const total = relevantItems.reduce((sum, item) => sum + item.price, 0);
+                    const riderCount = new Set(relevantItems.map(i => i.rider_id)).size;
+                    cartCount.textContent = multiEvent ? `${riderCount} (${sortedEventIds.length} event)` : relevantItems.length;
                     cartTotal.textContent = total.toLocaleString('sv-SE') + ' kr';
 
                     if (typeof lucide !== 'undefined') lucide.createIcons();
@@ -4343,7 +4381,7 @@ if (!empty($event['series_id'])) {
             // SERIES REGISTRATION JavaScript
             (function() {
                 const seriesEvents = <?= json_encode(array_map(function($e) {
-                    return ['id' => $e['id'], 'name' => $e['name']];
+                    return ['id' => $e['id'], 'name' => $e['name'], 'date' => $e['date'] ?? ''];
                 }, $seriesEventsWithPricing)) ?>;
 
                 const currentUserId = <?= $currentUser['id'] ?? 0 ?>;
@@ -4673,6 +4711,7 @@ if (!empty($event['series_id'])) {
                             type: 'event',
                             event_id: event.id,
                             event_name: event.name,
+                            event_date: event.date || '',
                             rider_id: seriesSelectedRiderId,
                             rider_name: `${seriesSelectedRider.firstname} ${seriesSelectedRider.lastname}`,
                             class_id: seriesSelectedClassId,
