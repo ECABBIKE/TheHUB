@@ -293,18 +293,34 @@ include __DIR__ . '/components/unified-layout.php';
                     </tr>
                 </thead>
                 <tbody>
-                    <?php foreach ($orders as $order): ?>
+                    <?php foreach ($orders as $order):
+                        $statusClass = [
+                            'pending' => 'admin-badge-warning',
+                            'paid' => 'admin-badge-success',
+                            'cancelled' => 'admin-badge-secondary',
+                            'refunded' => 'admin-badge-error',
+                            'failed' => 'admin-badge-error'
+                        ][$order['payment_status']] ?? 'admin-badge-secondary';
+
+                        $statusText = [
+                            'pending' => 'Väntar',
+                            'paid' => 'Betald',
+                            'cancelled' => 'Avbruten',
+                            'refunded' => 'Återbetald',
+                            'failed' => 'Misslyckad'
+                        ][$order['payment_status']] ?? $order['payment_status'];
+
+                        $customerName = !empty($order['firstname']) ? $order['firstname'] . ' ' . $order['lastname'] : ($order['customer_name'] ?? '-');
+                    ?>
                     <tr>
-                        <td>
+                        <td data-label="Order">
                             <code class="font-medium"><?= h($order['order_number']) ?></code>
                         </td>
-                        <td>
-                            <div class="font-medium">
-                                <?= h(!empty($order['firstname']) ? $order['firstname'] . ' ' . $order['lastname'] : ($order['customer_name'] ?? '-')) ?>
-                            </div>
+                        <td data-label="Kund">
+                            <div class="font-medium"><?= h($customerName) ?></div>
                             <div class="text-xs text-secondary"><?= h($order['customer_email']) ?></div>
                         </td>
-                        <td>
+                        <td data-label="Event/Serie">
                             <?php if ($order['series_name']): ?>
                             <div><span class="admin-badge admin-badge-info">Serie</span> <?= h($order['series_name']) ?></div>
                             <?php elseif ($order['event_name']): ?>
@@ -314,7 +330,7 @@ include __DIR__ . '/components/unified-layout.php';
                             <span class="text-secondary">-</span>
                             <?php endif; ?>
                         </td>
-                        <td class="text-center">
+                        <td data-label="Deltagare" class="text-center">
                             <?php if ($order['item_count'] > 1): ?>
                             <span class="admin-badge admin-badge-accent"><?= $order['item_count'] ?> st</span>
                             <?php elseif ($order['item_count'] == 1): ?>
@@ -323,51 +339,36 @@ include __DIR__ . '/components/unified-layout.php';
                             <span class="text-secondary">-</span>
                             <?php endif; ?>
                         </td>
-                        <td class="font-medium">
+                        <td data-label="Belopp" class="font-medium">
                             <?= number_format($order['total_amount'], 0) ?> kr
                         </td>
-                        <td>
+                        <td data-label="Swish-ref" class="orders-swish-col">
                             <?php if ($order['swish_message']): ?>
                             <code><?= h($order['swish_message']) ?></code>
                             <?php endif; ?>
                         </td>
-                        <td>
-                            <?php
-                            $statusClass = [
-                                'pending' => 'admin-badge-warning',
-                                'paid' => 'admin-badge-success',
-                                'cancelled' => 'admin-badge-secondary',
-                                'refunded' => 'admin-badge-error',
-                                'failed' => 'admin-badge-error'
-                            ][$order['payment_status']] ?? 'admin-badge-secondary';
-
-                            $statusText = [
-                                'pending' => 'Väntar',
-                                'paid' => 'Betald',
-                                'cancelled' => 'Avbruten',
-                                'refunded' => 'Återbetald',
-                                'failed' => 'Misslyckad'
-                            ][$order['payment_status']] ?? $order['payment_status'];
-                            ?>
+                        <td data-label="Status">
                             <span class="admin-badge <?= $statusClass ?>"><?= $statusText ?></span>
                         </td>
-                        <td class="text-sm text-secondary">
+                        <td data-label="Skapad" class="text-sm text-secondary">
                             <?= date('Y-m-d H:i', strtotime($order['created_at'])) ?>
                         </td>
-                        <td>
+                        <td data-label="" class="orders-actions-cell">
                             <?php if ($order['payment_status'] === 'pending'): ?>
-                            <div class="table-actions">
-                                <button type="button" class="btn-admin btn-admin-sm" style="background: var(--color-success); color: white;"
+                            <div class="orders-actions">
+                                <button type="button" class="btn-admin btn-admin-sm orders-btn-confirm"
                                         onclick="openConfirmModal(<?= $order['id'] ?>, '<?= h($order['order_number']) ?>', '<?= h($order['swish_message']) ?>')">
                                     <i data-lucide="check"></i>
+                                    <span class="orders-btn-label">Bekräfta</span>
                                 </button>
                                 <form method="POST" class="inline">
                                     <?= csrf_field() ?>
                                     <input type="hidden" name="action" value="cancel_order">
                                     <input type="hidden" name="order_id" value="<?= $order['id'] ?>">
-                                    <button type="submit" class="btn-admin btn-admin-sm btn-admin-secondary"
+                                    <button type="submit" class="btn-admin btn-admin-sm orders-btn-cancel"
                                             onclick="return confirm('Avbryt denna order?')">
                                         <i data-lucide="x"></i>
+                                        <span class="orders-btn-label">Avbryt</span>
                                     </button>
                                 </form>
                             </div>
@@ -432,10 +433,11 @@ include __DIR__ . '/components/unified-layout.php';
 </div>
 
 <style>
+/* Modal styles */
 .admin-modal { position: fixed; top: 0; left: 0; right: 0; bottom: 0; z-index: 1000; display: flex; align-items: center; justify-content: center; }
 .admin-modal.hidden { display: none; }
 .admin-modal-overlay { position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0, 0, 0, 0.5); }
-.admin-modal-content { position: relative; background: white; border-radius: var(--radius-lg); box-shadow: var(--shadow-xl); width: 90%; max-width: 500px; max-height: 90vh; overflow: hidden; display: flex; flex-direction: column; }
+.admin-modal-content { position: relative; background: var(--color-bg-card, white); border-radius: var(--radius-lg); box-shadow: var(--shadow-xl); width: 90%; max-width: 500px; max-height: 90vh; overflow: hidden; display: flex; flex-direction: column; }
 .admin-modal-header { display: flex; align-items: center; justify-content: space-between; padding: var(--space-lg); border-bottom: 1px solid var(--color-border); }
 .admin-modal-header h2 { margin: 0; font-size: var(--text-xl); }
 .admin-modal-close { background: none; border: none; padding: var(--space-xs); cursor: pointer; color: var(--color-text-secondary); border-radius: var(--radius-sm); }
@@ -447,6 +449,82 @@ include __DIR__ . '/components/unified-layout.php';
 .admin-badge-error { background: rgba(239, 68, 68, 0.2); color: #dc2626; }
 .admin-badge-info { background: rgba(56, 189, 248, 0.2); color: #0284c7; }
 .admin-badge-accent { background: rgba(55, 212, 214, 0.2); color: var(--color-accent); font-weight: 600; }
+
+/* Action buttons */
+.orders-actions { display: flex; gap: var(--space-xs); }
+.orders-btn-confirm { background: var(--color-success); color: white; }
+.orders-btn-confirm:hover { opacity: 0.9; }
+.orders-btn-cancel { background: transparent; border: 1px solid var(--color-border); color: var(--color-text-secondary); }
+.orders-btn-cancel:hover { background: var(--color-error); color: white; border-color: var(--color-error); }
+.orders-btn-label { display: none; }
+
+/* Mobile responsive orders table */
+@media (max-width: 767px) {
+    .orders-btn-label { display: inline; }
+
+    .admin-table thead { display: none; }
+
+    .admin-table tbody tr {
+        display: block;
+        background: var(--color-bg-surface);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-md);
+        margin-bottom: var(--space-md);
+        padding: var(--space-md);
+    }
+
+    .admin-table tbody td {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: var(--space-xs) 0;
+        border: none;
+        text-align: right;
+    }
+
+    .admin-table tbody td::before {
+        content: attr(data-label);
+        font-weight: 600;
+        color: var(--color-text-secondary);
+        font-size: var(--text-sm);
+        text-align: left;
+        flex-shrink: 0;
+        margin-right: var(--space-md);
+    }
+
+    /* Hide Swish-ref on mobile to save space */
+    .orders-swish-col { display: none; }
+
+    /* Actions cell: full-width buttons */
+    .orders-actions-cell {
+        border-top: 1px solid var(--color-border) !important;
+        margin-top: var(--space-sm);
+        padding-top: var(--space-md) !important;
+    }
+
+    .orders-actions-cell::before { display: none !important; }
+
+    .orders-actions {
+        width: 100%;
+        justify-content: stretch;
+        gap: var(--space-sm);
+    }
+
+    .orders-actions .btn-admin {
+        flex: 1;
+        justify-content: center;
+        padding: var(--space-sm) var(--space-md);
+        font-size: var(--text-sm);
+    }
+
+    .orders-actions form.inline { flex: 1; }
+    .orders-actions form.inline .btn-admin { width: 100%; justify-content: center; }
+
+    /* Filter form stacking */
+    .admin-card .flex.flex-wrap { flex-direction: column; }
+    .admin-card .flex.flex-wrap .admin-form-group { width: 100%; }
+    .admin-card .flex.flex-wrap .min-w-200 { min-width: 0; }
+}
 </style>
 
 <script>
