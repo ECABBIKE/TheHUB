@@ -86,6 +86,17 @@ if (hub_is_logged_in()) {
                 <span id="subtotalPrice" style="font-size: var(--text-lg); font-weight: var(--weight-semibold);">0 kr</span>
             </div>
 
+            <!-- Series Discount -->
+            <div id="seriesDiscount" style="display: none; padding: var(--space-sm) 0; border-bottom: 1px solid var(--color-border);">
+                <div style="display: flex; justify-content: space-between; align-items: center; color: var(--color-success);">
+                    <span style="font-size: var(--text-sm); display: flex; align-items: center; gap: var(--space-xs);">
+                        <i data-lucide="tag" style="width: 16px; height: 16px;"></i>
+                        Serierabatt
+                    </span>
+                    <span id="seriesDiscountAmount" style="font-weight: var(--weight-semibold);">-0 kr</span>
+                </div>
+            </div>
+
             <?php if ($hasGravityId): ?>
             <!-- Gravity ID Discount -->
             <div id="gravityIdDiscount" style="display: none; padding: var(--space-sm) 0; border-bottom: 1px solid var(--color-border);">
@@ -120,6 +131,30 @@ if (hub_is_logged_in()) {
 
 <script>
 (function() {
+    // Calculate series discount from cart items
+    // Groups series items by rider+class, compares regular total vs season_price
+    function calculateSeriesDiscount(cart) {
+        const seriesGroups = {};
+        cart.forEach(item => {
+            if (item.is_series_registration && item.season_price > 0) {
+                const key = `${item.rider_id}_${item.class_id}_${item.series_id || 0}`;
+                if (!seriesGroups[key]) {
+                    seriesGroups[key] = { items: [], season_price: item.season_price };
+                }
+                seriesGroups[key].items.push(item);
+            }
+        });
+
+        let totalDiscount = 0;
+        Object.values(seriesGroups).forEach(group => {
+            const regularTotal = group.items.reduce((sum, item) => sum + (item.price || 0), 0);
+            if (regularTotal > group.season_price) {
+                totalDiscount += regularTotal - group.season_price;
+            }
+        });
+        return totalDiscount;
+    }
+
     const cartItemsContainer = document.getElementById('cartItems');
     const cartSummary = document.getElementById('cartSummary');
     const emptyCart = document.getElementById('emptyCart');
@@ -200,12 +235,25 @@ if (hub_is_logged_in()) {
         const subtotalEl = document.getElementById('subtotalPrice');
         if (subtotalEl) subtotalEl.textContent = subtotal + ' kr';
 
+        // Calculate series discount
+        const seriesDiscount = calculateSeriesDiscount(cart);
+        const seriesDiscountEl = document.getElementById('seriesDiscount');
+        const seriesDiscountAmountEl = document.getElementById('seriesDiscountAmount');
+        if (seriesDiscount > 0 && seriesDiscountEl && seriesDiscountAmountEl) {
+            seriesDiscountEl.style.display = 'block';
+            seriesDiscountAmountEl.textContent = '-' + Math.round(seriesDiscount) + ' kr';
+        } else if (seriesDiscountEl) {
+            seriesDiscountEl.style.display = 'none';
+        }
+
+        const afterSeriesDiscount = subtotal - seriesDiscount;
+
         // Calculate Gravity ID discount if applicable
         <?php if ($hasGravityId && $riderId): ?>
-        calculateGravityIdDiscount(subtotal);
+        calculateGravityIdDiscount(afterSeriesDiscount);
         <?php else: ?>
         // No Gravity ID - just show total
-        totalPriceEl.textContent = subtotal + ' kr';
+        totalPriceEl.textContent = Math.round(afterSeriesDiscount) + ' kr';
         <?php endif; ?>
 
         // Re-init Lucide icons

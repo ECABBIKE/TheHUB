@@ -83,6 +83,20 @@ function createMultiRiderOrder(array $buyerData, array $items, ?string $discount
             }
         }
 
+        // Cancel any previous pending orders for this user (prevents duplicate registrations)
+        if (!empty($buyerData['email'])) {
+            $oldOrdersStmt = $pdo->prepare("
+                SELECT id FROM orders
+                WHERE customer_email = ? AND payment_status = 'pending'
+            ");
+            $oldOrdersStmt->execute([$buyerData['email']]);
+            $oldOrders = $oldOrdersStmt->fetchAll(PDO::FETCH_COLUMN);
+            foreach ($oldOrders as $oldId) {
+                $pdo->prepare("UPDATE event_registrations SET status = 'cancelled', payment_status = 'cancelled' WHERE order_id = ? AND status = 'pending'")->execute([$oldId]);
+                $pdo->prepare("UPDATE orders SET payment_status = 'cancelled', cancelled_at = NOW() WHERE id = ?")->execute([$oldId]);
+            }
+        }
+
         $orderStmt = $pdo->prepare("
             INSERT INTO orders (
                 order_number, rider_id, customer_email, customer_name,
@@ -375,11 +389,34 @@ function createMultiRiderOrder(array $buyerData, array $items, ?string $discount
         // Beräkna totalt discount
         $totalDiscount = 0;
 
-        // Check for Gravity ID discount for each registration
+        // Series discount: group by rider+class+series, compare regular total vs season_price
+        $seriesGroups = [];
+        foreach ($items as $item) {
+            if (!empty($item['is_series_registration']) && !empty($item['season_price']) && floatval($item['season_price']) > 0) {
+                $key = intval($item['rider_id']) . '_' . intval($item['class_id']) . '_' . intval($item['series_id'] ?? 0);
+                if (!isset($seriesGroups[$key])) {
+                    $seriesGroups[$key] = ['season_price' => floatval($item['season_price']), 'regular_total' => 0];
+                }
+                // Sum up actual backend prices for these items
+                foreach ($registrations as $reg) {
+                    if ($reg['type'] === 'event'
+                        && intval($reg['rider_id']) == intval($item['rider_id'])
+                        && intval($reg['event_id']) == intval($item['event_id'])) {
+                        $seriesGroups[$key]['regular_total'] += floatval($reg['price']);
+                        break;
+                    }
+                }
+            }
+        }
+        foreach ($seriesGroups as $group) {
+            if ($group['regular_total'] > $group['season_price']) {
+                $totalDiscount += round($group['regular_total'] - $group['season_price']);
+            }
+        }
+
+        // Gravity ID discount for each registration
         if (function_exists('checkGravityIdDiscount')) {
-            // Loop through each registration and check for Gravity ID discount
             foreach ($registrations as $reg) {
-                // Only check for event registrations (not series)
                 if ($reg['type'] === 'event' && !empty($reg['event_id']) && !empty($reg['rider_id'])) {
                     $gravityIdInfo = checkGravityIdDiscount($reg['rider_id'], $reg['event_id']);
                     if ($gravityIdInfo && $gravityIdInfo['has_gravity_id'] && $gravityIdInfo['discount'] > 0) {
