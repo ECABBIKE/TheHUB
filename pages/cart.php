@@ -7,31 +7,7 @@
  */
 
 require_once __DIR__ . '/../includes/payment.php';
-
-// Check if logged-in user has Gravity ID
-$hasGravityId = false;
-$gravityId = null;
-$riderId = null;
-
-if (hub_is_logged_in()) {
-    $currentUser = hub_current_user();
-    $pdo = hub_db();
-
-    // Check if current user is a rider with Gravity ID
-    try {
-        $stmt = $pdo->prepare("SELECT id, gravity_id FROM riders WHERE id = ? AND gravity_id IS NOT NULL AND gravity_id != ''");
-        $stmt->execute([$currentUser['id']]);
-        $rider = $stmt->fetch(PDO::FETCH_ASSOC);
-
-        if ($rider) {
-            $hasGravityId = true;
-            $gravityId = $rider['gravity_id'];
-            $riderId = $rider['id'];
-        }
-    } catch (Exception $e) {
-        // gravity_id column doesn't exist
-    }
-}
+// Gravity ID is checked client-side for ALL riders in cart via API
 ?>
 
 <div class="container" style="max-width: 800px; margin: 0 auto;">
@@ -97,18 +73,16 @@ if (hub_is_logged_in()) {
                 </div>
             </div>
 
-            <?php if ($hasGravityId): ?>
-            <!-- Gravity ID Discount -->
+            <!-- Gravity ID Discount (checked for all riders in cart via API) -->
             <div id="gravityIdDiscount" style="display: none; padding: var(--space-sm) 0; border-bottom: 1px solid var(--color-border);">
                 <div style="display: flex; justify-content: space-between; align-items: center; color: var(--color-success);">
-                    <span style="font-size: var(--text-sm); display: flex; align-items: center; gap: var(--space-xs);">
+                    <span id="gravityIdLabel" style="font-size: var(--text-sm); display: flex; align-items: center; gap: var(--space-xs);">
                         <i data-lucide="badge-check" style="width: 16px; height: 16px;"></i>
-                        Gravity ID: <?= htmlspecialchars($gravityId) ?>
+                        Gravity ID
                     </span>
                     <span id="gravityIdAmount" style="font-weight: var(--weight-semibold);">-0 kr</span>
                 </div>
             </div>
-            <?php endif; ?>
 
             <!-- Total -->
             <div style="display: flex; justify-content: space-between; align-items: center; margin-top: var(--space-md);">
@@ -253,10 +227,8 @@ if (hub_is_logged_in()) {
                         <i data-lucide="tag" style="width:12px;height:12px;"></i> Serierabatt: -${seriesDiscPerItem} kr
                     </div>`;
                 }
-                <?php if ($hasGravityId): ?>
-                // Gravity ID discount placeholder - filled in async
-                discountLines += `<div class="cart-item-gravity" data-event-id="${item.event_id}" style="display:none; font-size: var(--text-xs); color: var(--color-success); align-items: center; gap: 4px; margin-top: 2px;"></div>`;
-                <?php endif; ?>
+                // Gravity ID discount placeholder - filled in async for each rider
+                discountLines += `<div class="cart-item-gravity" data-event-id="${item.event_id}" data-rider-id="${item.rider_id}" style="display:none; font-size: var(--text-xs); color: var(--color-success); align-items: center; gap: 4px; margin-top: 2px;"></div>`;
 
                 html += `
                     <div class="cart-item" style="display: flex; justify-content: space-between; align-items: center; gap: var(--space-sm); padding: var(--space-md); border-bottom: 1px solid var(--color-border);">
@@ -308,14 +280,8 @@ if (hub_is_logged_in()) {
 
         const afterSeriesDiscount = subtotal - seriesDiscount;
 
-        // Calculate Gravity ID discount if applicable
-        <?php if ($hasGravityId && $riderId): ?>
+        // Calculate Gravity ID discount for all riders in cart
         calculateGravityIdDiscount(afterSeriesDiscount);
-        <?php else: ?>
-        // No Gravity ID - just show total
-        totalPriceEl.textContent = Math.round(afterSeriesDiscount) + ' kr';
-        updateVatDisplay(Math.round(afterSeriesDiscount));
-        <?php endif; ?>
 
         // Re-init Lucide icons
         if (typeof lucide !== 'undefined') lucide.createIcons();
@@ -332,8 +298,7 @@ if (hub_is_logged_in()) {
         });
     }
 
-    <?php if ($hasGravityId && $riderId): ?>
-    // Calculate Gravity ID discount for cart
+    // Calculate Gravity ID discount for ALL riders in cart (not just logged-in user)
     async function calculateGravityIdDiscount(subtotal) {
         const cart = GlobalCart.getCart();
         if (cart.length === 0) {
@@ -342,25 +307,37 @@ if (hub_is_logged_in()) {
             return;
         }
 
-        // Get unique event IDs from cart
-        const eventIds = [...new Set(cart.map(item => item.event_id))];
+        // Get unique (rider_id, event_id) pairs from cart
+        const pairs = [];
+        const seen = new Set();
+        cart.forEach(item => {
+            const key = `${item.rider_id}_${item.event_id}`;
+            if (!seen.has(key)) {
+                seen.add(key);
+                pairs.push({ riderId: item.rider_id, eventId: item.event_id });
+            }
+        });
 
         try {
-            // Fetch Gravity ID discount for each event (returns per-event data)
-            const discountPromises = eventIds.map(eventId =>
-                fetch(`/api/gravity-id-discount.php?rider_id=<?= $riderId ?>&event_id=${eventId}`)
+            // Fetch Gravity ID discount for each (rider, event) pair
+            const discountPromises = pairs.map(({ riderId, eventId }) =>
+                fetch(`/api/gravity-id-discount.php?rider_id=${riderId}&event_id=${eventId}`)
                     .then(r => r.json())
-                    .then(data => ({ eventId, discount: data.discount || 0 }))
-                    .catch(() => ({ eventId, discount: 0 }))
+                    .then(data => ({ riderId, eventId, discount: data.discount || 0, gravityId: data.gravity_id || null }))
+                    .catch(() => ({ riderId, eventId, discount: 0, gravityId: null }))
             );
 
             const discountResults = await Promise.all(discountPromises);
-            const totalDiscount = discountResults.reduce((sum, d) => sum + d.discount, 0);
+            let totalDiscount = 0;
+            let firstGravityId = null;
 
             // Update per-item Gravity ID indicators
-            discountResults.forEach(({ eventId, discount }) => {
+            discountResults.forEach(({ riderId, eventId, discount, gravityId }) => {
                 if (discount > 0) {
-                    document.querySelectorAll(`.cart-item-gravity[data-event-id="${eventId}"]`).forEach(el => {
+                    totalDiscount += discount;
+                    if (!firstGravityId && gravityId) firstGravityId = gravityId;
+
+                    document.querySelectorAll(`.cart-item-gravity[data-event-id="${eventId}"][data-rider-id="${riderId}"]`).forEach(el => {
                         el.innerHTML = '<i data-lucide="badge-check" style="width:12px;height:12px;"></i> Gravity ID: -' + discount + ' kr';
                         el.style.display = 'flex';
                     });
@@ -371,10 +348,14 @@ if (hub_is_logged_in()) {
             // Update summary UI
             const gravityIdDiscountEl = document.getElementById('gravityIdDiscount');
             const gravityIdAmountEl = document.getElementById('gravityIdAmount');
+            const gravityIdLabelEl = document.getElementById('gravityIdLabel');
 
             if (totalDiscount > 0 && gravityIdDiscountEl && gravityIdAmountEl) {
                 gravityIdDiscountEl.style.display = 'block';
                 gravityIdAmountEl.textContent = '-' + Math.round(totalDiscount) + ' kr';
+                if (gravityIdLabelEl && firstGravityId) {
+                    gravityIdLabelEl.innerHTML = '<i data-lucide="badge-check" style="width: 16px; height: 16px;"></i> Gravity ID: ' + firstGravityId;
+                }
 
                 const finalTotal = Math.max(0, subtotal - totalDiscount);
                 totalPriceEl.textContent = Math.round(finalTotal) + ' kr';
@@ -390,7 +371,6 @@ if (hub_is_logged_in()) {
             updateVatDisplay(subtotal);
         }
     }
-    <?php endif; ?>
 
     // Clear cart
     clearCartBtn.addEventListener('click', function() {

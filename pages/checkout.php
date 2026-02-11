@@ -30,7 +30,7 @@ $appliedDiscounts = [];
 $gravityIdInfo = null;
 $seriesDiscountAmount = 0;
 $perRegGravityId = [];
-$perItemSeriesDisc = 0;
+$perItemSeriesItems = [];
 $isSeries = false;
 $seriesInfo = null;
 $stripeSuccess = isset($_GET['stripe_success']);
@@ -88,10 +88,13 @@ try {
             // Series discount = total discount minus Gravity ID discount
             $seriesDiscountAmount = $order['discount'] - ($gravityIdInfo['discount'] ?? 0);
 
-            // Calculate per-item series discount for inline display
-            $itemCount = count($order['items'] ?? []);
-            if ($seriesDiscountAmount > 0 && $itemCount > 0) {
-                $perItemSeriesDisc = round($seriesDiscountAmount / $itemCount);
+            // Track which items are part of a series (for inline badge)
+            if ($seriesDiscountAmount > 0) {
+                foreach ($order['items'] as $item) {
+                    if (!empty($item['registration_id'])) {
+                        $perItemSeriesItems[$item['registration_id']] = true;
+                    }
+                }
             }
         }
     } elseif ($seriesRegistrationId) {
@@ -396,9 +399,9 @@ include __DIR__ . '/../components/header.php';
                                 <span><?= htmlspecialchars($item['description']) ?></span>
                                 <span class="font-medium"><?= number_format($item['total_price'], 0) ?> kr</span>
                             </div>
-                            <?php if ($perItemSeriesDisc > 0): ?>
+                            <?php if (!empty($perItemSeriesItems[$item['registration_id'] ?? 0])): ?>
                             <div class="text-xs text-success" style="display: flex; align-items: center; gap: 4px; margin-top: 2px;">
-                                <i data-lucide="tag" style="width:12px;height:12px;"></i> Serierabatt: -<?= $perItemSeriesDisc ?> kr
+                                <i data-lucide="tag" style="width:12px;height:12px;"></i> Serie
                             </div>
                             <?php endif; ?>
                             <?php $regId = $item['registration_id'] ?? 0; ?>
