@@ -29,6 +29,8 @@ $error = null;
 $appliedDiscounts = [];
 $gravityIdInfo = null;
 $seriesDiscountAmount = 0;
+$perRegGravityId = [];
+$perItemSeriesDisc = 0;
 $isSeries = false;
 $seriesInfo = null;
 $stripeSuccess = isset($_GET['stripe_success']);
@@ -51,12 +53,12 @@ try {
         if ($order && $order['discount'] > 0) {
             $pdo = hub_db();
 
-            // Calculate Gravity ID portion of discount
+            // Calculate Gravity ID portion of discount (with per-registration tracking)
             if (hub_is_logged_in()) {
                 $currentUser = hub_current_user();
                 try {
-                    // Get unique event IDs from order registrations
-                    $regStmt = $pdo->prepare("SELECT DISTINCT event_id, rider_id FROM event_registrations WHERE order_id = ?");
+                    // Get registrations with IDs for per-item display
+                    $regStmt = $pdo->prepare("SELECT id, event_id, rider_id FROM event_registrations WHERE order_id = ?");
                     $regStmt->execute([$order['id']]);
                     $orderRegs = $regStmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -66,6 +68,7 @@ try {
                         $info = checkGravityIdDiscount($reg['rider_id'], $reg['event_id']);
                         if ($info['has_gravity_id'] && $info['discount'] > 0) {
                             $gravityIdTotal += $info['discount'];
+                            $perRegGravityId[$reg['id']] = $info['discount'];
                             if (!$gid) $gid = $info['gravity_id'];
                         }
                     }
@@ -84,6 +87,12 @@ try {
 
             // Series discount = total discount minus Gravity ID discount
             $seriesDiscountAmount = $order['discount'] - ($gravityIdInfo['discount'] ?? 0);
+
+            // Calculate per-item series discount for inline display
+            $itemCount = count($order['items'] ?? []);
+            if ($seriesDiscountAmount > 0 && $itemCount > 0) {
+                $perItemSeriesDisc = round($seriesDiscountAmount / $itemCount);
+            }
         }
     } elseif ($seriesRegistrationId) {
         // Handle series registration checkout
@@ -382,9 +391,22 @@ include __DIR__ . '/../components/header.php';
                     <div class="mb-md">
                         <div class="text-sm text-secondary mb-sm">Anmälningar</div>
                         <?php foreach ($order['items'] as $item): ?>
-                        <div class="flex justify-between items-center py-sm">
-                            <span><?= htmlspecialchars($item['description']) ?></span>
-                            <span class="font-medium"><?= number_format($item['total_price'], 0) ?> kr</span>
+                        <div class="py-sm">
+                            <div class="flex justify-between items-center">
+                                <span><?= htmlspecialchars($item['description']) ?></span>
+                                <span class="font-medium"><?= number_format($item['total_price'], 0) ?> kr</span>
+                            </div>
+                            <?php if ($perItemSeriesDisc > 0): ?>
+                            <div class="text-xs text-success" style="display: flex; align-items: center; gap: 4px; margin-top: 2px;">
+                                <i data-lucide="tag" style="width:12px;height:12px;"></i> Serierabatt: -<?= $perItemSeriesDisc ?> kr
+                            </div>
+                            <?php endif; ?>
+                            <?php $regId = $item['registration_id'] ?? 0; ?>
+                            <?php if (!empty($perRegGravityId[$regId])): ?>
+                            <div class="text-xs text-success" style="display: flex; align-items: center; gap: 4px; margin-top: 2px;">
+                                <i data-lucide="badge-check" style="width:12px;height:12px;"></i> Gravity ID: -<?= $perRegGravityId[$regId] ?> kr
+                            </div>
+                            <?php endif; ?>
                         </div>
                         <?php endforeach; ?>
                     </div>
@@ -443,6 +465,15 @@ include __DIR__ . '/../components/header.php';
                     <div class="flex justify-between items-center pt-md border-top">
                         <span class="font-semibold">Att betala</span>
                         <span class="text-xl font-bold"><?= number_format($order['total_amount'], 0) ?> kr</span>
+                    </div>
+
+                    <!-- VAT info (6% inclusive) -->
+                    <?php
+                    $vatAmount = round($order['total_amount'] * 6 / 106);
+                    ?>
+                    <div class="flex justify-between items-center pt-xs">
+                        <span class="text-xs text-muted">varav moms (6%)</span>
+                        <span class="text-xs text-muted"><?= number_format($vatAmount, 0) ?> kr</span>
                     </div>
 
                     <!-- Order reference -->
@@ -677,6 +708,11 @@ async function startStripeCheckout(orderId) {
         const data = await response.json();
 
         if (data.success && data.url) {
+            // Clear cart BEFORE redirecting to Stripe - payment is committed
+            if (typeof GlobalCart !== 'undefined') {
+                GlobalCart.clearCart();
+            }
+            sessionStorage.removeItem('pending_order_id');
             // Redirect to Stripe Checkout
             window.location.href = data.url;
         } else {

@@ -74,26 +74,55 @@ try {
     $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
     // Build Stripe line items
+    // CRITICAL: Use total_amount (after discounts) to ensure correct charge
+    $totalAmount = floatval($order['total_amount']);
+    $discount = floatval($order['discount'] ?? 0);
+
     $lineItems = [];
-    foreach ($items as $item) {
+
+    if ($discount > 0) {
+        // When discounts exist, build description from items but charge total_amount
+        $descriptions = [];
+        foreach ($items as $item) {
+            $descriptions[] = $item['description'] ?: 'Anmälan';
+        }
+        $itemDesc = count($descriptions) > 3
+            ? count($descriptions) . ' anmälningar'
+            : implode(', ', array_slice($descriptions, 0, 3));
+
         $lineItems[] = [
             'price_data' => [
                 'currency' => 'sek',
-                'unit_amount' => (int)($item['total_price'] * 100),
+                'unit_amount' => (int)round($totalAmount * 100),
                 'product_data' => [
-                    'name' => $item['description'] ?: ('Anmälan - ' . ($order['event_name'] ?? 'Event'))
+                    'name' => $itemDesc,
+                    'description' => 'Inkl. rabatt -' . number_format($discount, 0) . ' kr'
                 ]
             ],
             'quantity' => 1
         ];
+    } elseif (!empty($items)) {
+        // No discount - show individual items
+        foreach ($items as $item) {
+            $lineItems[] = [
+                'price_data' => [
+                    'currency' => 'sek',
+                    'unit_amount' => (int)round(floatval($item['total_price']) * 100),
+                    'product_data' => [
+                        'name' => $item['description'] ?: ('Anmälan - ' . ($order['event_name'] ?? 'Event'))
+                    ]
+                ],
+                'quantity' => 1
+            ];
+        }
     }
 
-    // If no items, use total amount
+    // Fallback: use total amount directly
     if (empty($lineItems)) {
         $lineItems[] = [
             'price_data' => [
                 'currency' => 'sek',
-                'unit_amount' => (int)($order['total_amount'] * 100),
+                'unit_amount' => (int)round($totalAmount * 100),
                 'product_data' => [
                     'name' => $order['event_name'] ? 'Anmälan - ' . $order['event_name'] : 'Betalning'
                 ]
