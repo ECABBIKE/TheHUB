@@ -116,6 +116,12 @@ if (hub_is_logged_in()) {
                 <span id="totalPrice" style="font-size: var(--text-2xl); font-weight: var(--weight-bold); color: var(--color-accent);">0 kr</span>
             </div>
 
+            <!-- VAT info -->
+            <div id="vatInfo" style="display: flex; justify-content: space-between; align-items: center; padding-top: var(--space-xs);">
+                <span style="font-size: var(--text-xs); color: var(--color-text-muted);">varav moms (6%)</span>
+                <span id="vatAmount" style="font-size: var(--text-xs); color: var(--color-text-muted);">0 kr</span>
+            </div>
+
             <button id="checkoutBtn" class="btn btn--primary btn--lg btn--block" style="margin-top: var(--space-lg);">
                 <i data-lucide="credit-card"></i>
                 Gå till betalning
@@ -155,6 +161,41 @@ if (hub_is_logged_in()) {
         return totalDiscount;
     }
 
+    // Calculate per-item series discount for inline display on each registration
+    function getPerItemSeriesDiscount(cart) {
+        const seriesGroups = {};
+        cart.forEach(item => {
+            if (item.is_series_registration && item.season_price > 0) {
+                const key = `${item.rider_id}_${item.class_id}_${item.series_id || 0}`;
+                if (!seriesGroups[key]) {
+                    seriesGroups[key] = { items: [], season_price: item.season_price };
+                }
+                seriesGroups[key].items.push(item);
+            }
+        });
+        const discountMap = {};
+        Object.values(seriesGroups).forEach(group => {
+            const regularTotal = group.items.reduce((sum, item) => sum + (item.price || 0), 0);
+            if (regularTotal > group.season_price) {
+                const totalDiscount = regularTotal - group.season_price;
+                const perItem = Math.round(totalDiscount / group.items.length);
+                group.items.forEach(item => {
+                    discountMap[`${item.event_id}_${item.rider_id}_${item.class_id}`] = perItem;
+                });
+            }
+        });
+        return discountMap;
+    }
+
+    // Update VAT display (6% inclusive: VAT = total * 6 / 106)
+    function updateVatDisplay(total) {
+        const vatEl = document.getElementById('vatAmount');
+        if (vatEl) {
+            const vat = Math.round(total * 6 / 106);
+            vatEl.textContent = vat + ' kr';
+        }
+    }
+
     const cartItemsContainer = document.getElementById('cartItems');
     const cartSummary = document.getElementById('cartSummary');
     const emptyCart = document.getElementById('emptyCart');
@@ -184,6 +225,9 @@ if (hub_is_logged_in()) {
         // Group by event
         const byEvent = GlobalCart.getItemsByEvent();
 
+        // Calculate per-item series discounts for inline display
+        const itemSeriesDiscounts = getPerItemSeriesDiscount(cart);
+
         let html = '';
         byEvent.forEach(eventGroup => {
             html += `
@@ -199,6 +243,21 @@ if (hub_is_logged_in()) {
             `;
 
             eventGroup.items.forEach(item => {
+                const itemKey = `${item.event_id}_${item.rider_id}_${item.class_id}`;
+                const seriesDiscPerItem = itemSeriesDiscounts[itemKey] || 0;
+
+                // Build per-item discount lines
+                let discountLines = '';
+                if (seriesDiscPerItem > 0) {
+                    discountLines += `<div style="font-size: var(--text-xs); color: var(--color-success); display: flex; align-items: center; gap: 4px; margin-top: 2px;">
+                        <i data-lucide="tag" style="width:12px;height:12px;"></i> Serierabatt: -${seriesDiscPerItem} kr
+                    </div>`;
+                }
+                <?php if ($hasGravityId): ?>
+                // Gravity ID discount placeholder - filled in async
+                discountLines += `<div class="cart-item-gravity" data-event-id="${item.event_id}" style="display:none; font-size: var(--text-xs); color: var(--color-success); align-items: center; gap: 4px; margin-top: 2px;"></div>`;
+                <?php endif; ?>
+
                 html += `
                     <div class="cart-item" style="display: flex; justify-content: space-between; align-items: center; gap: var(--space-sm); padding: var(--space-md); border-bottom: 1px solid var(--color-border);">
                         <div style="flex: 1; min-width: 0;">
@@ -206,6 +265,7 @@ if (hub_is_logged_in()) {
                             <span style="font-size: var(--text-sm); color: var(--color-text-secondary);">
                                 ${item.class_name}${item.club_name ? ' &middot; ' + item.club_name : ''}
                             </span>
+                            ${discountLines}
                         </div>
                         <div style="display: flex; align-items: center; gap: var(--space-sm); flex-shrink: 0;">
                             <span style="font-weight: var(--weight-semibold);">${item.price} kr</span>
@@ -254,6 +314,7 @@ if (hub_is_logged_in()) {
         <?php else: ?>
         // No Gravity ID - just show total
         totalPriceEl.textContent = Math.round(afterSeriesDiscount) + ' kr';
+        updateVatDisplay(Math.round(afterSeriesDiscount));
         <?php endif; ?>
 
         // Re-init Lucide icons
@@ -277,6 +338,7 @@ if (hub_is_logged_in()) {
         const cart = GlobalCart.getCart();
         if (cart.length === 0) {
             totalPriceEl.textContent = '0 kr';
+            updateVatDisplay(0);
             return;
         }
 
@@ -284,18 +346,29 @@ if (hub_is_logged_in()) {
         const eventIds = [...new Set(cart.map(item => item.event_id))];
 
         try {
-            // Fetch Gravity ID discount for each event
+            // Fetch Gravity ID discount for each event (returns per-event data)
             const discountPromises = eventIds.map(eventId =>
                 fetch(`/api/gravity-id-discount.php?rider_id=<?= $riderId ?>&event_id=${eventId}`)
                     .then(r => r.json())
-                    .then(data => data.discount || 0)
-                    .catch(() => 0)
+                    .then(data => ({ eventId, discount: data.discount || 0 }))
+                    .catch(() => ({ eventId, discount: 0 }))
             );
 
-            const discounts = await Promise.all(discountPromises);
-            const totalDiscount = discounts.reduce((sum, d) => sum + d, 0);
+            const discountResults = await Promise.all(discountPromises);
+            const totalDiscount = discountResults.reduce((sum, d) => sum + d.discount, 0);
 
-            // Update UI
+            // Update per-item Gravity ID indicators
+            discountResults.forEach(({ eventId, discount }) => {
+                if (discount > 0) {
+                    document.querySelectorAll(`.cart-item-gravity[data-event-id="${eventId}"]`).forEach(el => {
+                        el.innerHTML = '<i data-lucide="badge-check" style="width:12px;height:12px;"></i> Gravity ID: -' + discount + ' kr';
+                        el.style.display = 'flex';
+                    });
+                }
+            });
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+
+            // Update summary UI
             const gravityIdDiscountEl = document.getElementById('gravityIdDiscount');
             const gravityIdAmountEl = document.getElementById('gravityIdAmount');
 
@@ -305,13 +378,16 @@ if (hub_is_logged_in()) {
 
                 const finalTotal = Math.max(0, subtotal - totalDiscount);
                 totalPriceEl.textContent = Math.round(finalTotal) + ' kr';
+                updateVatDisplay(Math.round(finalTotal));
             } else {
                 if (gravityIdDiscountEl) gravityIdDiscountEl.style.display = 'none';
                 totalPriceEl.textContent = subtotal + ' kr';
+                updateVatDisplay(subtotal);
             }
         } catch (error) {
             console.error('Error calculating Gravity ID discount:', error);
             totalPriceEl.textContent = subtotal + ' kr';
+            updateVatDisplay(subtotal);
         }
     }
     <?php endif; ?>

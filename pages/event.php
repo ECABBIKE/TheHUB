@@ -4192,11 +4192,16 @@ if (!empty($event['series_id'])) {
                 }
 
                 function updateCart() {
-                    // Get items from GlobalCart for THIS event only
                     const allItems = GlobalCart.getCart();
+                    // Show items for this event AND any series registration items linked to this event's series
                     const thisEventItems = allItems.filter(item => item.event_id == eventId);
+                    const seriesItems = allItems.filter(item => item.is_series_registration && item.event_id != eventId);
 
-                    if (thisEventItems.length === 0) {
+                    // Check if current event has series items too
+                    const hasSeriesItems = thisEventItems.some(item => item.is_series_registration) || seriesItems.length > 0;
+                    const relevantItems = hasSeriesItems ? allItems.filter(item => item.is_series_registration || item.event_id == eventId) : thisEventItems;
+
+                    if (relevantItems.length === 0) {
                         registrationCart.style.display = 'none';
                         addAnotherBtn.style.display = 'none';
                         return;
@@ -4205,25 +4210,116 @@ if (!empty($event['series_id'])) {
                     registrationCart.style.display = 'block';
                     addAnotherBtn.style.display = 'inline-flex';
 
-                    // Render cart items
-                    cartItems.innerHTML = thisEventItems.map((item) => `
-                        <div class="reg-cart__item">
-                            <div class="reg-cart__item-info">
-                                <strong>${item.rider_name}</strong>
-                                <span class="text-muted">${item.class_name}</span>
-                            </div>
-                            <div class="reg-cart__item-price">${item.price.toLocaleString('sv-SE')} kr</div>
-                            <button type="button" class="reg-cart__item-remove"
-                                    onclick="window.removeCartItem(${item.event_id}, ${item.rider_id}, ${item.class_id})">
-                                <i data-lucide="x"></i>
-                            </button>
-                        </div>
-                    `).join('');
+                    // Group items by event for display
+                    const grouped = {};
+                    relevantItems.forEach(item => {
+                        const eid = item.event_id;
+                        if (!grouped[eid]) {
+                            grouped[eid] = { name: item.event_name, date: item.event_date || '', items: [] };
+                        }
+                        grouped[eid].items.push(item);
+                    });
 
-                    // Update totals
-                    const total = thisEventItems.reduce((sum, item) => sum + item.price, 0);
-                    cartCount.textContent = thisEventItems.length;
-                    cartTotal.textContent = total.toLocaleString('sv-SE') + ' kr';
+                    // Sort events by date (current event first, then by date)
+                    const sortedEventIds = Object.keys(grouped).sort((a, b) => {
+                        if (a == eventId) return -1;
+                        if (b == eventId) return 1;
+                        return (grouped[a].date || '').localeCompare(grouped[b].date || '');
+                    });
+
+                    const multiEvent = sortedEventIds.length > 1;
+                    let html = '';
+
+                    sortedEventIds.forEach(eid => {
+                        const group = grouped[eid];
+                        if (multiEvent) {
+                            const dateStr = group.date ? `<span class="text-muted" style="font-size: var(--text-xs);">${group.date}</span>` : '';
+                            html += `<div style="padding: var(--space-xs) 0; display: flex; align-items: center; gap: var(--space-xs);">
+                                <i data-lucide="calendar" style="width: 14px; height: 14px; color: var(--color-text-muted);"></i>
+                                <strong style="font-size: var(--text-sm);">${group.name}</strong>
+                                ${dateStr}
+                            </div>`;
+                        }
+                        group.items.forEach(item => {
+                            const itemKey = `${item.event_id}_${item.rider_id}_${item.class_id}`;
+                            html += `<div class="reg-cart__item">
+                                <div class="reg-cart__item-info">
+                                    <strong>${item.rider_name}</strong>
+                                    <span class="text-muted">${item.class_name}</span>
+                                    ${item.is_series_registration ? `<span class="reg-cart__item-discount text-xs text-success" data-item-key="${itemKey}" style="display:none;"></span>` : ''}
+                                </div>
+                                <div class="reg-cart__item-price">${item.price.toLocaleString('sv-SE')} kr</div>
+                                <button type="button" class="reg-cart__item-remove"
+                                        onclick="window.removeCartItem(${item.event_id}, ${item.rider_id}, ${item.class_id})">
+                                    <i data-lucide="x"></i>
+                                </button>
+                            </div>`;
+                        });
+                    });
+
+                    cartItems.innerHTML = html;
+
+                    // Calculate series discount
+                    const seriesGroups = {};
+                    relevantItems.forEach(item => {
+                        if (item.is_series_registration && item.season_price > 0) {
+                            const key = `${item.rider_id}_${item.class_id}_${item.series_id || 0}`;
+                            if (!seriesGroups[key]) {
+                                seriesGroups[key] = { items: [], season_price: item.season_price };
+                            }
+                            seriesGroups[key].items.push(item);
+                        }
+                    });
+                    let seriesDiscount = 0;
+                    const perItemDisc = {};
+                    Object.values(seriesGroups).forEach(group => {
+                        const regularTotal = group.items.reduce((sum, item) => sum + (item.price || 0), 0);
+                        if (regularTotal > group.season_price) {
+                            const disc = regularTotal - group.season_price;
+                            seriesDiscount += disc;
+                            const perItem = Math.round(disc / group.items.length);
+                            group.items.forEach(item => {
+                                perItemDisc[`${item.event_id}_${item.rider_id}_${item.class_id}`] = perItem;
+                            });
+                        }
+                    });
+
+                    // Update per-item discount indicators
+                    document.querySelectorAll('.reg-cart__item-discount').forEach(el => {
+                        const disc = perItemDisc[el.dataset.itemKey] || 0;
+                        if (disc > 0) {
+                            el.textContent = 'Serierabatt: -' + disc + ' kr';
+                            el.style.display = 'block';
+                        }
+                    });
+
+                    // Update totals - show all relevant items
+                    const total = relevantItems.reduce((sum, item) => sum + item.price, 0);
+                    const riderCount = new Set(relevantItems.map(i => i.rider_id)).size;
+                    cartCount.textContent = multiEvent ? `${riderCount} (${sortedEventIds.length} event)` : relevantItems.length;
+
+                    // Show series discount and final total
+                    if (seriesDiscount > 0) {
+                        cartTotal.innerHTML = `<span style="text-decoration: line-through; color: var(--color-text-muted); font-size: var(--text-sm);">${total.toLocaleString('sv-SE')} kr</span><br>` +
+                            `<span style="color: var(--color-success); font-size: var(--text-xs);"><i data-lucide="tag" style="width:12px;height:12px;display:inline;"></i> -${seriesDiscount} kr</span><br>` +
+                            `${(total - seriesDiscount).toLocaleString('sv-SE')} kr`;
+                    } else {
+                        cartTotal.textContent = total.toLocaleString('sv-SE') + ' kr';
+                    }
+
+                    // VAT info
+                    const finalTotal = total - seriesDiscount;
+                    const vat = Math.round(finalTotal * 6 / 106);
+                    let vatEl = document.getElementById('cartVat');
+                    if (!vatEl) {
+                        vatEl = document.createElement('div');
+                        vatEl.id = 'cartVat';
+                        vatEl.className = 'text-xs text-muted';
+                        vatEl.style.textAlign = 'right';
+                        vatEl.style.marginTop = '2px';
+                        cartTotal.parentElement.appendChild(vatEl);
+                    }
+                    vatEl.textContent = 'varav moms (6%): ' + vat + ' kr';
 
                     if (typeof lucide !== 'undefined') lucide.createIcons();
                 }
@@ -4328,9 +4424,23 @@ if (!empty($event['series_id'])) {
                 // Listen for cart updates from GlobalCart
                 window.addEventListener('cartUpdated', updateCart);
 
+                // Confirmed rider IDs for this event (already registered & paid)
+                const confirmedRiders = <?= json_encode(array_values(array_unique(array_map(function($r) { return (int)$r['rider_id']; }, $registrations ?? [])))) ?>;
+
                 // Initial cart render on page load - wait for GlobalCart (loaded in footer)
                 function waitForGlobalCart() {
                     if (typeof GlobalCart !== 'undefined') {
+                        // Clean up stale cart items: remove items for riders already confirmed for this event
+                        if (confirmedRiders.length > 0) {
+                            const cart = GlobalCart.getCart();
+                            let cleaned = false;
+                            cart.forEach(item => {
+                                if (item.event_id == eventId && confirmedRiders.includes(parseInt(item.rider_id))) {
+                                    GlobalCart.removeItem(item.event_id, item.rider_id, item.class_id);
+                                    cleaned = true;
+                                }
+                            });
+                        }
                         updateCart();
                     } else {
                         setTimeout(waitForGlobalCart, 50);
@@ -4343,7 +4453,7 @@ if (!empty($event['series_id'])) {
             // SERIES REGISTRATION JavaScript
             (function() {
                 const seriesEvents = <?= json_encode(array_map(function($e) {
-                    return ['id' => $e['id'], 'name' => $e['name']];
+                    return ['id' => $e['id'], 'name' => $e['name'], 'date' => $e['date'] ?? ''];
                 }, $seriesEventsWithPricing)) ?>;
 
                 const currentUserId = <?= $currentUser['id'] ?? 0 ?>;
@@ -4673,6 +4783,7 @@ if (!empty($event['series_id'])) {
                             type: 'event',
                             event_id: event.id,
                             event_name: event.name,
+                            event_date: event.date || '',
                             rider_id: seriesSelectedRiderId,
                             rider_name: `${seriesSelectedRider.firstname} ${seriesSelectedRider.lastname}`,
                             class_id: seriesSelectedClassId,

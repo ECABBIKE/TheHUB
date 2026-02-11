@@ -28,6 +28,9 @@ $order = null;
 $error = null;
 $appliedDiscounts = [];
 $gravityIdInfo = null;
+$seriesDiscountAmount = 0;
+$perRegGravityId = [];
+$perItemSeriesDisc = 0;
 $isSeries = false;
 $seriesInfo = null;
 $stripeSuccess = isset($_GET['stripe_success']);
@@ -46,23 +49,49 @@ try {
             $order['stripe_pending'] = true;
         }
 
-        // Check for Gravity ID discount info (for display)
-        if ($order && $order['discount'] > 0 && hub_is_logged_in()) {
-            $currentUser = hub_current_user();
+        // Build discount breakdown for display
+        if ($order && $order['discount'] > 0) {
             $pdo = hub_db();
-            try {
-                $stmt = $pdo->prepare("SELECT gravity_id FROM riders WHERE id = ? AND gravity_id IS NOT NULL AND gravity_id != ''");
-                $stmt->execute([$currentUser['id']]);
-                $gid = $stmt->fetchColumn();
-                if ($gid) {
-                    $gravityIdInfo = [
-                        'has_gravity_id' => true,
-                        'gravity_id' => $gid,
-                        'discount' => $order['discount']
-                    ];
+
+            // Calculate Gravity ID portion of discount (with per-registration tracking)
+            if (hub_is_logged_in()) {
+                $currentUser = hub_current_user();
+                try {
+                    // Get registrations with IDs for per-item display
+                    $regStmt = $pdo->prepare("SELECT id, event_id, rider_id FROM event_registrations WHERE order_id = ?");
+                    $regStmt->execute([$order['id']]);
+                    $orderRegs = $regStmt->fetchAll(PDO::FETCH_ASSOC);
+
+                    $gravityIdTotal = 0;
+                    $gid = null;
+                    foreach ($orderRegs as $reg) {
+                        $info = checkGravityIdDiscount($reg['rider_id'], $reg['event_id']);
+                        if ($info['has_gravity_id'] && $info['discount'] > 0) {
+                            $gravityIdTotal += $info['discount'];
+                            $perRegGravityId[$reg['id']] = $info['discount'];
+                            if (!$gid) $gid = $info['gravity_id'];
+                        }
+                    }
+
+                    if ($gravityIdTotal > 0 && $gid) {
+                        $gravityIdInfo = [
+                            'has_gravity_id' => true,
+                            'gravity_id' => $gid,
+                            'discount' => $gravityIdTotal
+                        ];
+                    }
+                } catch (Exception $e) {
+                    // Column may not exist
                 }
-            } catch (Exception $e) {
-                // Column may not exist
+            }
+
+            // Series discount = total discount minus Gravity ID discount
+            $seriesDiscountAmount = $order['discount'] - ($gravityIdInfo['discount'] ?? 0);
+
+            // Calculate per-item series discount for inline display
+            $itemCount = count($order['items'] ?? []);
+            if ($seriesDiscountAmount > 0 && $itemCount > 0) {
+                $perItemSeriesDisc = round($seriesDiscountAmount / $itemCount);
             }
         }
     } elseif ($seriesRegistrationId) {
@@ -362,9 +391,22 @@ include __DIR__ . '/../components/header.php';
                     <div class="mb-md">
                         <div class="text-sm text-secondary mb-sm">Anmälningar</div>
                         <?php foreach ($order['items'] as $item): ?>
-                        <div class="flex justify-between items-center py-sm">
-                            <span><?= htmlspecialchars($item['description']) ?></span>
-                            <span class="font-medium"><?= number_format($item['total_price'], 0) ?> kr</span>
+                        <div class="py-sm">
+                            <div class="flex justify-between items-center">
+                                <span><?= htmlspecialchars($item['description']) ?></span>
+                                <span class="font-medium"><?= number_format($item['total_price'], 0) ?> kr</span>
+                            </div>
+                            <?php if ($perItemSeriesDisc > 0): ?>
+                            <div class="text-xs text-success" style="display: flex; align-items: center; gap: 4px; margin-top: 2px;">
+                                <i data-lucide="tag" style="width:12px;height:12px;"></i> Serierabatt: -<?= $perItemSeriesDisc ?> kr
+                            </div>
+                            <?php endif; ?>
+                            <?php $regId = $item['registration_id'] ?? 0; ?>
+                            <?php if (!empty($perRegGravityId[$regId])): ?>
+                            <div class="text-xs text-success" style="display: flex; align-items: center; gap: 4px; margin-top: 2px;">
+                                <i data-lucide="badge-check" style="width:12px;height:12px;"></i> Gravity ID: -<?= $perRegGravityId[$regId] ?> kr
+                            </div>
+                            <?php endif; ?>
                         </div>
                         <?php endforeach; ?>
                     </div>
@@ -375,7 +417,7 @@ include __DIR__ . '/../components/header.php';
                         <span class="font-medium"><?= number_format($order['subtotal'], 0) ?> kr</span>
                     </div>
 
-                    <!-- Applied discounts -->
+                    <!-- Applied discounts (from direct registration checkout) -->
                     <?php if (!empty($order['applied_discounts']) || !empty($appliedDiscounts)): ?>
                         <?php $discounts = !empty($order['applied_discounts']) ? $order['applied_discounts'] : $appliedDiscounts; ?>
                         <?php foreach ($discounts as $discount): ?>
@@ -387,7 +429,28 @@ include __DIR__ . '/../components/header.php';
                             <span class="font-medium">-<?= number_format($discount['amount'], 0) ?> kr</span>
                         </div>
                         <?php endforeach; ?>
-                    <?php elseif ($order['discount'] > 0): ?>
+                    <?php else: ?>
+                        <?php if (!empty($seriesDiscountAmount) && $seriesDiscountAmount > 0): ?>
+                        <div class="flex justify-between items-center py-sm text-success">
+                            <span>
+                                <i data-lucide="tag" class="icon-sm"></i>
+                                Serierabatt
+                            </span>
+                            <span class="font-medium">-<?= number_format($seriesDiscountAmount, 0) ?> kr</span>
+                        </div>
+                        <?php endif; ?>
+
+                        <?php if ($gravityIdInfo && $gravityIdInfo['has_gravity_id'] && $gravityIdInfo['discount'] > 0): ?>
+                        <div class="flex justify-between items-center py-sm text-success">
+                            <span>
+                                <i data-lucide="badge-check" class="icon-sm"></i>
+                                Gravity ID: <?= htmlspecialchars($gravityIdInfo['gravity_id']) ?>
+                            </span>
+                            <span class="font-medium">-<?= number_format($gravityIdInfo['discount'], 0) ?> kr</span>
+                        </div>
+                        <?php endif; ?>
+
+                        <?php if ($order['discount'] > 0 && empty($gravityIdInfo) && empty($seriesDiscountAmount)): ?>
                         <div class="flex justify-between items-center py-sm text-success">
                             <span>
                                 <i data-lucide="tag" class="icon-sm"></i>
@@ -395,23 +458,22 @@ include __DIR__ . '/../components/header.php';
                             </span>
                             <span class="font-medium">-<?= number_format($order['discount'], 0) ?> kr</span>
                         </div>
-                    <?php endif; ?>
-
-                    <!-- Show Gravity ID badge if applicable but no discount yet applied -->
-                    <?php if ($gravityIdInfo && $gravityIdInfo['has_gravity_id'] && empty($appliedDiscounts)): ?>
-                    <div class="flex justify-between items-center py-sm text-success">
-                        <span>
-                            <i data-lucide="badge-check" class="icon-sm"></i>
-                            Gravity ID: <?= htmlspecialchars($gravityIdInfo['gravity_id']) ?>
-                        </span>
-                        <span class="font-medium">-<?= number_format($gravityIdInfo['discount'], 0) ?> kr</span>
-                    </div>
+                        <?php endif; ?>
                     <?php endif; ?>
 
                     <!-- Total -->
                     <div class="flex justify-between items-center pt-md border-top">
                         <span class="font-semibold">Att betala</span>
                         <span class="text-xl font-bold"><?= number_format($order['total_amount'], 0) ?> kr</span>
+                    </div>
+
+                    <!-- VAT info (6% inclusive) -->
+                    <?php
+                    $vatAmount = round($order['total_amount'] * 6 / 106);
+                    ?>
+                    <div class="flex justify-between items-center pt-xs">
+                        <span class="text-xs text-muted">varav moms (6%)</span>
+                        <span class="text-xs text-muted"><?= number_format($vatAmount, 0) ?> kr</span>
                     </div>
 
                     <!-- Order reference -->
@@ -646,6 +708,11 @@ async function startStripeCheckout(orderId) {
         const data = await response.json();
 
         if (data.success && data.url) {
+            // Clear cart BEFORE redirecting to Stripe - payment is committed
+            if (typeof GlobalCart !== 'undefined') {
+                GlobalCart.clearCart();
+            }
+            sessionStorage.removeItem('pending_order_id');
             // Redirect to Stripe Checkout
             window.location.href = data.url;
         } else {
