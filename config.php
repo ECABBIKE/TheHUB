@@ -7,6 +7,21 @@ ini_set('log_errors', '1');
 ini_set('error_log', __DIR__ . '/logs/error.log');
 
 function env($key, $default = null) {
+    // Stripe test/live mode toggle
+    // When STRIPE_MODE=test, redirect Stripe key lookups to test keys
+    static $stripeTestKeys = [
+        'STRIPE_SECRET_KEY' => 'STRIPE_TEST_SECRET_KEY',
+        'STRIPE_PUBLISHABLE_KEY' => 'STRIPE_TEST_PUBLISHABLE_KEY',
+        'STRIPE_WEBHOOK_SECRET' => 'STRIPE_TEST_WEBHOOK_SECRET',
+    ];
+
+    if (isset($stripeTestKeys[$key])) {
+        $mode = env('STRIPE_MODE', 'live');
+        if ($mode === 'test') {
+            return env($stripeTestKeys[$key], $default);
+        }
+    }
+
     $value = getenv($key);
     if ($value === false) {
         // Check .env first, then .env.production as fallback
