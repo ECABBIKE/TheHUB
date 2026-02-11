@@ -300,7 +300,7 @@ include __DIR__ . '/components/unified-layout.php';
                         </td>
                         <td>
                             <div class="font-medium">
-                                <?= h($order['firstname'] . ' ' . $order['lastname']) ?>
+                                <?= h(!empty($order['firstname']) ? $order['firstname'] . ' ' . $order['lastname'] : ($order['customer_name'] ?? '-')) ?>
                             </div>
                             <div class="text-xs text-secondary"><?= h($order['customer_email']) ?></div>
                         </td>

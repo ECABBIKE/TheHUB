@@ -283,7 +283,7 @@ try {
                         $stmt = $pdo->prepare($updateSql);
                         $stmt->execute($updateParams);
 
-                        // Update registrations
+                        // Update event registrations
                         $stmt = $pdo->prepare("
                             UPDATE event_registrations
                             SET payment_status = 'paid',
@@ -292,6 +292,19 @@ try {
                             WHERE order_id = ?
                         ");
                         $stmt->execute([$order['id']]);
+
+                        // Update series registrations (if any)
+                        try {
+                            $stmt = $pdo->prepare("
+                                UPDATE series_registrations
+                                SET payment_status = 'paid',
+                                    status = 'active'
+                                WHERE order_id = ?
+                            ");
+                            $stmt->execute([$order['id']]);
+                        } catch (\Throwable $seriesErr) {
+                            // series_registrations table may not exist
+                        }
 
                         $pdo->commit();
 

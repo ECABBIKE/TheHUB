@@ -299,6 +299,24 @@ include __DIR__ . '/../components/header.php';
         const cart = GlobalCart.getCart();
         if (cart.length === 0) return;
 
+        // Check if we already have a pending order for these items
+        const pendingOrderId = sessionStorage.getItem('pending_order_id');
+        if (pendingOrderId) {
+            try {
+                const statusResp = await fetch('/api/check-order-status.php?order_id=' + pendingOrderId);
+                const statusData = await statusResp.json();
+                if (statusData.payment_status === 'pending') {
+                    // Reuse existing pending order
+                    window.location.href = '/checkout?order=' + pendingOrderId;
+                    return;
+                }
+                // Order was paid/cancelled - clear and create new
+                sessionStorage.removeItem('pending_order_id');
+            } catch (e) {
+                sessionStorage.removeItem('pending_order_id');
+            }
+        }
+
         // Prepare buyer data
         const buyerData = {};
 
@@ -349,9 +367,7 @@ include __DIR__ . '/../components/header.php';
             const data = await response.json();
 
             if (data.success) {
-                // DON'T clear cart yet - user hasn't paid!
-                // Cart will be cleared after successful payment (webhook or return page)
-                // Store order ID so we can restore it if needed
+                // Store order ID to prevent duplicate orders
                 sessionStorage.setItem('pending_order_id', data.order.id);
 
                 // Redirect to checkout
