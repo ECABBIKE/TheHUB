@@ -4113,7 +4113,7 @@ if (!empty($event['series_id'])) {
                             </div>
                         `;
 
-                        div.addEventListener('click', () => selectClass(cls));
+                        div.addEventListener('click', function() { selectClass(cls, this); });
                         classList.appendChild(div);
                     });
 
@@ -4145,12 +4145,12 @@ if (!empty($event['series_id'])) {
                     addToCartBtn.disabled = !canAdd;
                 }
 
-                function selectClass(cls) {
+                function selectClass(cls, element) {
                     // Update visual selection
                     document.querySelectorAll('.reg-class-item').forEach(item => {
                         item.classList.remove('selected');
                     });
-                    event.currentTarget.classList.add('selected');
+                    element.classList.add('selected');
 
                     selectedClassId = cls.class_id;
                     selectedClassData = cls;
@@ -4328,8 +4328,15 @@ if (!empty($event['series_id'])) {
                 // Listen for cart updates from GlobalCart
                 window.addEventListener('cartUpdated', updateCart);
 
-                // Initial cart render on page load
-                updateCart();
+                // Initial cart render on page load - wait for GlobalCart (loaded in footer)
+                function waitForGlobalCart() {
+                    if (typeof GlobalCart !== 'undefined') {
+                        updateCart();
+                    } else {
+                        setTimeout(waitForGlobalCart, 50);
+                    }
+                }
+                waitForGlobalCart();
             })();
 
             <?php if ($seriesRegistrationAvailable && $seriesInfo): ?>
