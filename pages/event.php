@@ -4430,15 +4430,25 @@ if (!empty($event['series_id'])) {
                 // Initial cart render on page load - wait for GlobalCart (loaded in footer)
                 function waitForGlobalCart() {
                     if (typeof GlobalCart !== 'undefined') {
-                        // Clean up stale cart items: remove items for riders already confirmed for this event
+                        // Clean up stale cart items for riders already confirmed for this event
                         if (confirmedRiders.length > 0) {
                             const cart = GlobalCart.getCart();
-                            let cleaned = false;
+                            // Collect items to remove (don't modify while iterating)
+                            const toRemove = [];
                             cart.forEach(item => {
-                                if (item.event_id == eventId && confirmedRiders.includes(parseInt(item.rider_id))) {
-                                    GlobalCart.removeItem(item.event_id, item.rider_id, item.class_id);
-                                    cleaned = true;
+                                if (confirmedRiders.includes(parseInt(item.rider_id))) {
+                                    // Remove items for this event
+                                    if (item.event_id == eventId) {
+                                        toRemove.push(item);
+                                    }
+                                    // Also remove series items for other events (rider paid for whole series)
+                                    else if (item.is_series_registration) {
+                                        toRemove.push(item);
+                                    }
                                 }
+                            });
+                            toRemove.forEach(item => {
+                                GlobalCart.removeItem(item.event_id, item.rider_id, item.class_id);
                             });
                         }
                         updateCart();
