@@ -732,6 +732,8 @@ function getEligibleClassesForEvent(int $eventId, int $riderId): array {
             }
         }
 
+        $seasonPrice = round(floatval($class['season_price'] ?? 0));
+
         $classData = [
             'class_id' => $class['class_id'],
             'name' => $class['display_name'] ?: $class['name'],
@@ -739,6 +741,7 @@ function getEligibleClassesForEvent(int $eventId, int $riderId): array {
             'early_bird_price' => $earlyBirdPrice,
             'late_fee' => $lateFeePrice,
             'current_price' => $currentPrice,
+            'season_price' => $seasonPrice,
             'eligible' => $eligible,
             'reason' => $reason,
             'warning' => $warning
