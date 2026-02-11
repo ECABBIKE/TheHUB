@@ -73,36 +73,13 @@ try {
     $stmt->execute([$orderId]);
     $items = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // Build Stripe line items
-    // CRITICAL: Use total_amount (after discounts) to ensure correct charge
+    // Build Stripe line items - always show individual registrations
     $totalAmount = floatval($order['total_amount']);
     $discount = floatval($order['discount'] ?? 0);
 
     $lineItems = [];
 
-    if ($discount > 0) {
-        // When discounts exist, build description from items but charge total_amount
-        $descriptions = [];
-        foreach ($items as $item) {
-            $descriptions[] = $item['description'] ?: 'Anmälan';
-        }
-        $itemDesc = count($descriptions) > 3
-            ? count($descriptions) . ' anmälningar'
-            : implode(', ', array_slice($descriptions, 0, 3));
-
-        $lineItems[] = [
-            'price_data' => [
-                'currency' => 'sek',
-                'unit_amount' => (int)round($totalAmount * 100),
-                'product_data' => [
-                    'name' => $itemDesc,
-                    'description' => 'Inkl. rabatt -' . number_format($discount, 0) . ' kr'
-                ]
-            ],
-            'quantity' => 1
-        ];
-    } elseif (!empty($items)) {
-        // No discount - show individual items
+    if (!empty($items)) {
         foreach ($items as $item) {
             $lineItems[] = [
                 'price_data' => [
@@ -137,6 +114,35 @@ try {
 
     $stripe = new StripeClient($stripeKey);
 
+    // Create Stripe coupon for discount so individual items show at full price
+    $stripeDiscounts = [];
+    if ($discount > 0) {
+        $couponResponse = $stripe->request('POST', '/coupons', [
+            'amount_off' => (int)round($discount * 100),
+            'currency' => 'sek',
+            'duration' => 'once',
+            'name' => 'Rabatt',
+            'max_redemptions' => 1
+        ]);
+        if (!empty($couponResponse['id'])) {
+            $stripeDiscounts[] = ['coupon' => $couponResponse['id']];
+        } else {
+            // Coupon creation failed - fall back to single line item with correct total
+            error_log("Stripe coupon creation failed: " . json_encode($couponResponse));
+            $lineItems = [[
+                'price_data' => [
+                    'currency' => 'sek',
+                    'unit_amount' => (int)round($totalAmount * 100),
+                    'product_data' => [
+                        'name' => count($items) . ' anmälningar',
+                        'description' => 'Inkl. rabatt -' . number_format($discount, 0) . ' kr'
+                    ]
+                ],
+                'quantity' => 1
+            ]];
+        }
+    }
+
     $sessionParams = [
         'mode' => 'payment',
         'line_items' => $lineItems,
@@ -157,6 +163,11 @@ try {
             ]
         ]
     ];
+
+    // Apply Stripe coupon for discount (individual items shown at full price)
+    if (!empty($stripeDiscounts)) {
+        $sessionParams['discounts'] = $stripeDiscounts;
+    }
 
     // Add customer email if available
     if (!empty($order['customer_email'])) {
