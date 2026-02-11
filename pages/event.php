@@ -2838,12 +2838,59 @@ if (!empty($event['series_id'])) {
 @media (max-width: 767px) {
     .reg-class-item {
         flex-wrap: wrap;
+        padding: var(--space-sm);
     }
     .reg-class-price {
         width: 100%;
         text-align: left;
         margin-top: var(--space-xs);
         padding-left: 36px;
+    }
+
+    /* Compact registration section on mobile */
+    .reg-add-rider {
+        padding: var(--space-md);
+        border-radius: 0;
+        border-left: none;
+        border-right: none;
+        margin-left: calc(-1 * var(--container-padding, 12px));
+        margin-right: calc(-1 * var(--container-padding, 12px));
+    }
+
+    /* Cart edge-to-edge on mobile */
+    .reg-cart {
+        border-radius: 0;
+        border-left: none;
+        border-right: none;
+        margin-left: calc(-1 * var(--container-padding, 12px));
+        margin-right: calc(-1 * var(--container-padding, 12px));
+    }
+
+    .reg-cart__header {
+        padding: var(--space-sm) var(--space-md);
+    }
+
+    .reg-cart__item {
+        padding: var(--space-sm);
+        gap: var(--space-sm);
+    }
+
+    .reg-cart__summary {
+        padding: var(--space-sm) var(--space-md);
+    }
+
+    .reg-cart__actions {
+        padding: var(--space-sm) var(--space-md);
+    }
+
+    /* Compact class list on mobile */
+    .reg-class-list {
+        gap: var(--space-xs);
+    }
+
+    /* Series upsell compact on mobile */
+    .reg-series-upsell {
+        padding: var(--space-sm);
     }
 }
 
@@ -3176,21 +3223,60 @@ if (!empty($event['series_id'])) {
 @media (max-width: 767px) {
     .rider-search-modal {
         padding: 0;
+        align-items: flex-start;
     }
 
     .rider-search-modal__container {
         max-width: 100%;
         max-height: 100vh;
+        max-height: 100dvh;
         border-radius: 0;
         height: 100%;
+        height: 100dvh;
     }
 
     .rider-search-modal__header {
-        padding: var(--space-md);
+        padding: var(--space-sm) var(--space-md);
     }
 
     .rider-search-modal__body {
-        padding: var(--space-md);
+        padding: var(--space-sm) var(--space-md);
+    }
+
+    .rider-search-modal__input-wrapper {
+        margin-bottom: var(--space-md);
+        position: sticky;
+        top: 0;
+        z-index: 1;
+        background: var(--color-bg-card);
+        padding-top: var(--space-xs);
+    }
+
+    .rider-search-modal__input {
+        font-size: 16px; /* Prevents iOS zoom on focus */
+        padding: var(--space-sm) var(--space-sm) var(--space-sm) 40px;
+    }
+
+    .rider-search-modal__search-icon {
+        left: var(--space-sm);
+        width: 18px;
+        height: 18px;
+    }
+
+    .rider-search-result {
+        padding: var(--space-sm);
+    }
+
+    .rider-search-result__name {
+        font-size: 1rem;
+    }
+
+    .rider-search-result__info {
+        font-size: 0.8125rem;
+    }
+
+    .rider-search-empty {
+        padding: var(--space-xl);
     }
 }
 </style>
@@ -4302,24 +4388,33 @@ if (!empty($event['series_id'])) {
                 }
 
                 function seriesRenderSearchResults(riders) {
-                    seriesRiderSearchResults.style.display = 'block';
-                    seriesRiderSearchResults.innerHTML = riders.map(rider => `
-                        <div class="rider-search-modal__result" data-rider-id="${rider.id}">
-                            <div class="rider-search-modal__result-avatar">
-                                ${rider.firstname.charAt(0)}
-                            </div>
-                            <div class="rider-search-modal__result-info">
-                                <div class="rider-search-modal__result-name">${rider.firstname} ${rider.lastname}</div>
-                                <div class="rider-search-modal__result-meta">
-                                    ${rider.birth_year ? rider.birth_year : ''}
-                                    ${rider.club_name ? '• ' + rider.club_name : ''}
-                                    ${rider.license_number ? '• ' + rider.license_number : ''}
-                                </div>
-                            </div>
-                        </div>
-                    `).join('');
+                    seriesRiderSearchResults.style.display = '';
+                    seriesRiderSearchResults.innerHTML = riders.map(rider => {
+                        const infoItems = [];
+                        if (rider.birth_year) infoItems.push(rider.birth_year);
+                        if (rider.club_name) infoItems.push(rider.club_name);
+                        if (rider.license_number) infoItems.push(`<span class="rider-search-result__uci">UCI: ${rider.license_number}</span>`);
 
-                    seriesRiderSearchResults.querySelectorAll('.rider-search-modal__result').forEach(el => {
+                        const licenseIndicator = rider.has_valid_license && rider.license_display_year
+                            ? `<span style="display: inline-flex; align-items: center; gap: 4px; color: var(--color-success); font-weight: 500; font-size: 0.875rem;">
+                                 <i data-lucide="check-circle" style="width: 16px; height: 16px;"></i> Licens ${rider.license_display_year}
+                               </span>`
+                            : '';
+
+                        return `
+                            <div class="rider-search-result" data-rider-id="${rider.id}">
+                                <div class="rider-search-result__name">
+                                    ${rider.firstname} ${rider.lastname}
+                                    ${licenseIndicator}
+                                </div>
+                                <div class="rider-search-result__info">${infoItems.join(' • ')}</div>
+                            </div>
+                        `;
+                    }).join('');
+
+                    if (typeof lucide !== 'undefined') lucide.createIcons();
+
+                    seriesRiderSearchResults.querySelectorAll('.rider-search-result').forEach(el => {
                         el.addEventListener('click', () => {
                             const riderId = el.dataset.riderId;
                             const rider = riders.find(r => r.id == riderId);
@@ -4334,9 +4429,13 @@ if (!empty($event['series_id'])) {
                     const suggestedFirst = nameParts[0] || '';
                     const suggestedLast = nameParts.slice(1).join(' ') || '';
 
-                    seriesRiderSearchResults.style.display = 'block';
+                    seriesRiderSearchResults.style.display = '';
                     seriesRiderSearchResults.innerHTML = `
-                        <div class="rider-search-modal__empty">Inga deltagare hittades</div>
+                        <div class="rider-search-empty">
+                            <i data-lucide="search-x"></i>
+                            <p>Inga deltagare hittades</p>
+                            <p style="font-size: 0.875rem; margin-top: var(--space-xs); color: var(--color-text-muted);">Ny deltagare? Skapa en profil nedan.</p>
+                        </div>
                         <div style="padding: var(--space-md);">
                             <h4 style="margin: 0 0 var(--space-sm) 0; font-size: 1rem;">Skapa ny deltagare</h4>
                             <div class="reg-create-rider__fields">
@@ -4498,7 +4597,7 @@ if (!empty($event['series_id'])) {
 
                 // Open modal
                 seriesOpenRiderSearchBtn.addEventListener('click', () => {
-                    seriesRiderSearchModal.style.display = 'block';
+                    seriesRiderSearchModal.style.display = 'flex';
                     seriesRiderSearch.value = '';
                     seriesRiderSearch.focus();
                     seriesRiderSearchResults.style.display = 'none';

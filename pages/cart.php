@@ -2,15 +2,11 @@
 /**
  * Global Shopping Cart Page
  * Multi-event registration cart
+ *
+ * Loaded via index.php router - header/footer provided by index.php
  */
 
-require_once __DIR__ . '/../hub-config.php';
 require_once __DIR__ . '/../includes/payment.php';
-
-$pageInfo = [
-    'title' => 'Kundvagn',
-    'section' => 'cart'
-];
 
 // Check if logged-in user has Gravity ID
 $hasGravityId = false;
@@ -36,95 +32,91 @@ if (hub_is_logged_in()) {
         // gravity_id column doesn't exist
     }
 }
-
-include __DIR__ . '/../components/header.php';
 ?>
 
-<main class="main-content">
-    <div class="container" style="max-width: 800px; margin: 0 auto;">
-        <h1 style="margin-bottom: var(--space-lg);">
-            <i data-lucide="shopping-cart"></i>
-            Kundvagn
-        </h1>
+<div class="container" style="max-width: 800px; margin: 0 auto;">
+    <h1 style="margin-bottom: var(--space-lg);">
+        <i data-lucide="shopping-cart"></i>
+        Kundvagn
+    </h1>
 
-        <div id="cartContent">
-            <div id="emptyCart" style="display: none; text-align: center; padding: var(--space-3xl) var(--space-lg);">
-                <i data-lucide="shopping-cart" style="width: 64px; height: 64px; color: var(--color-text-muted); margin-bottom: var(--space-lg);"></i>
-                <h2 style="color: var(--color-text-secondary); font-size: var(--text-xl); margin-bottom: var(--space-sm);">Kundvagnen är tom</h2>
-                <p style="color: var(--color-text-muted); margin-bottom: var(--space-lg);">Du har inga anmälningar i kundvagnen</p>
-                <a href="/calendar" class="btn btn--primary">
-                    <i data-lucide="calendar"></i>
-                    Bläddra bland event
-                </a>
+    <div id="cartContent">
+        <div id="emptyCart" style="display: none; text-align: center; padding: var(--space-3xl) var(--space-lg);">
+            <i data-lucide="shopping-cart" style="width: 64px; height: 64px; color: var(--color-text-muted); margin-bottom: var(--space-lg);"></i>
+            <h2 style="color: var(--color-text-secondary); font-size: var(--text-xl); margin-bottom: var(--space-sm);">Kundvagnen är tom</h2>
+            <p style="color: var(--color-text-muted); margin-bottom: var(--space-lg);">Du har inga anmälningar i kundvagnen</p>
+            <a href="/calendar" class="btn btn--primary">
+                <i data-lucide="calendar"></i>
+                Bläddra bland event
+            </a>
+        </div>
+
+        <div id="cartItems"></div>
+
+        <?php if (!hub_is_logged_in()): ?>
+        <!-- Guest Checkout Form -->
+        <div id="guestCheckoutForm" class="card" style="display: none; margin-top: var(--space-xl);">
+            <div class="card-header">
+                <h3>Dina uppgifter</h3>
+            </div>
+            <div class="card-body">
+                <p style="color: var(--color-text-secondary); margin-bottom: var(--space-md);">
+                    Fyll i dina uppgifter för att slutföra köpet.
+                </p>
+                <div class="form-group">
+                    <label class="form-label">E-post *</label>
+                    <input type="email" id="guestEmail" class="form-input" placeholder="din@email.se" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Namn *</label>
+                    <input type="text" id="guestName" class="form-input" placeholder="För- och efternamn" required>
+                </div>
+                <div class="form-group">
+                    <label class="form-label">Telefon (valfritt)</label>
+                    <input type="tel" id="guestPhone" class="form-input" placeholder="070-123 45 67">
+                </div>
+            </div>
+        </div>
+        <?php endif; ?>
+
+        <div id="cartSummary" style="display: none; margin-top: var(--space-xl); padding: var(--space-lg); background: var(--color-bg-surface); border-radius: var(--radius-md); border: 1px solid var(--color-border);">
+            <!-- Subtotal -->
+            <div style="display: flex; justify-content: space-between; align-items: center; padding-bottom: var(--space-sm); border-bottom: 1px solid var(--color-border);">
+                <span style="font-size: var(--text-md);">Delsumma:</span>
+                <span id="subtotalPrice" style="font-size: var(--text-lg); font-weight: var(--weight-semibold);">0 kr</span>
             </div>
 
-            <div id="cartItems"></div>
-
-            <?php if (!hub_is_logged_in()): ?>
-            <!-- Guest Checkout Form -->
-            <div id="guestCheckoutForm" class="card" style="display: none; margin-top: var(--space-xl);">
-                <div class="card-header">
-                    <h3>Dina uppgifter</h3>
-                </div>
-                <div class="card-body">
-                    <p style="color: var(--color-text-secondary); margin-bottom: var(--space-md);">
-                        Fyll i dina uppgifter för att slutföra köpet.
-                    </p>
-                    <div class="form-group">
-                        <label class="form-label">E-post *</label>
-                        <input type="email" id="guestEmail" class="form-input" placeholder="din@email.se" required>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Namn *</label>
-                        <input type="text" id="guestName" class="form-input" placeholder="För- och efternamn" required>
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label">Telefon (valfritt)</label>
-                        <input type="tel" id="guestPhone" class="form-input" placeholder="070-123 45 67">
-                    </div>
+            <?php if ($hasGravityId): ?>
+            <!-- Gravity ID Discount -->
+            <div id="gravityIdDiscount" style="display: none; padding: var(--space-sm) 0; border-bottom: 1px solid var(--color-border);">
+                <div style="display: flex; justify-content: space-between; align-items: center; color: var(--color-success);">
+                    <span style="font-size: var(--text-sm); display: flex; align-items: center; gap: var(--space-xs);">
+                        <i data-lucide="badge-check" style="width: 16px; height: 16px;"></i>
+                        Gravity ID: <?= htmlspecialchars($gravityId) ?>
+                    </span>
+                    <span id="gravityIdAmount" style="font-weight: var(--weight-semibold);">-0 kr</span>
                 </div>
             </div>
             <?php endif; ?>
 
-            <div id="cartSummary" style="display: none; margin-top: var(--space-xl); padding: var(--space-lg); background: var(--color-bg-surface); border-radius: var(--radius-md); border: 1px solid var(--color-border);">
-                <!-- Subtotal -->
-                <div style="display: flex; justify-content: space-between; align-items: center; padding-bottom: var(--space-sm); border-bottom: 1px solid var(--color-border);">
-                    <span style="font-size: var(--text-md);">Delsumma:</span>
-                    <span id="subtotalPrice" style="font-size: var(--text-lg); font-weight: var(--weight-semibold);">0 kr</span>
-                </div>
-
-                <?php if ($hasGravityId): ?>
-                <!-- Gravity ID Discount -->
-                <div id="gravityIdDiscount" style="display: none; padding: var(--space-sm) 0; border-bottom: 1px solid var(--color-border);">
-                    <div style="display: flex; justify-content: space-between; align-items: center; color: var(--color-success);">
-                        <span style="font-size: var(--text-sm); display: flex; align-items: center; gap: var(--space-xs);">
-                            <i data-lucide="badge-check" style="width: 16px; height: 16px;"></i>
-                            Gravity ID: <?= htmlspecialchars($gravityId) ?>
-                        </span>
-                        <span id="gravityIdAmount" style="font-weight: var(--weight-semibold);">-0 kr</span>
-                    </div>
-                </div>
-                <?php endif; ?>
-
-                <!-- Total -->
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-top: var(--space-md);">
-                    <span style="font-size: var(--text-lg); font-weight: var(--weight-semibold);">Totalt:</span>
-                    <span id="totalPrice" style="font-size: var(--text-2xl); font-weight: var(--weight-bold); color: var(--color-accent);">0 kr</span>
-                </div>
-
-                <button id="checkoutBtn" class="btn btn--primary btn--lg btn--block" style="margin-top: var(--space-lg);">
-                    <i data-lucide="credit-card"></i>
-                    Gå till betalning
-                </button>
-
-                <button id="clearCartBtn" class="btn btn--ghost btn--block" style="margin-top: var(--space-sm);">
-                    <i data-lucide="trash-2"></i>
-                    Töm kundvagn
-                </button>
+            <!-- Total -->
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: var(--space-md);">
+                <span style="font-size: var(--text-lg); font-weight: var(--weight-semibold);">Totalt:</span>
+                <span id="totalPrice" style="font-size: var(--text-2xl); font-weight: var(--weight-bold); color: var(--color-accent);">0 kr</span>
             </div>
+
+            <button id="checkoutBtn" class="btn btn--primary btn--lg btn--block" style="margin-top: var(--space-lg);">
+                <i data-lucide="credit-card"></i>
+                Gå till betalning
+            </button>
+
+            <button id="clearCartBtn" class="btn btn--ghost btn--block" style="margin-top: var(--space-sm);">
+                <i data-lucide="trash-2"></i>
+                Töm kundvagn
+            </button>
         </div>
     </div>
-</main>
+</div>
 
 <script>
 (function() {
@@ -169,43 +161,33 @@ include __DIR__ . '/../components/header.php';
                         ${eventGroup.event_date ? `<small style="color: var(--color-text-muted);">${eventGroup.event_date}</small>` : ''}
                     </div>
                     <div class="card-body" style="padding: 0;">
-                        <table class="table" style="margin: 0;">
-                            <thead>
-                                <tr>
-                                    <th>Deltagare</th>
-                                    <th>Klubb</th>
-                                    <th>Klass</th>
-                                    <th style="text-align: right;">Pris</th>
-                                    <th style="width: 100px; text-align: center;"></th>
-                                </tr>
-                            </thead>
-                            <tbody>
             `;
 
             eventGroup.items.forEach(item => {
                 html += `
-                    <tr>
-                        <td><strong>${item.rider_name}</strong></td>
-                        <td style="color: var(--color-text-secondary);">${item.club_name || '-'}</td>
-                        <td>${item.class_name}</td>
-                        <td style="text-align: right;">${item.price} kr</td>
-                        <td style="text-align: center; width: 60px;">
+                    <div class="cart-item" style="display: flex; justify-content: space-between; align-items: center; gap: var(--space-sm); padding: var(--space-md); border-bottom: 1px solid var(--color-border);">
+                        <div style="flex: 1; min-width: 0;">
+                            <strong style="display: block;">${item.rider_name}</strong>
+                            <span style="font-size: var(--text-sm); color: var(--color-text-secondary);">
+                                ${item.class_name}${item.club_name ? ' &middot; ' + item.club_name : ''}
+                            </span>
+                        </div>
+                        <div style="display: flex; align-items: center; gap: var(--space-sm); flex-shrink: 0;">
+                            <span style="font-weight: var(--weight-semibold);">${item.price} kr</span>
                             <button class="btn btn--danger btn--sm remove-item"
                                     data-eventid="${item.event_id}"
                                     data-riderid="${item.rider_id}"
                                     data-classid="${item.class_id}"
-                                    style="padding: var(--space-xs) var(--space-sm);"
+                                    style="padding: var(--space-2xs) var(--space-xs);"
                                     title="Ta bort">
-                                <i data-lucide="x"></i> Ta bort
+                                <i data-lucide="x" style="width: 16px; height: 16px;"></i>
                             </button>
-                        </td>
-                    </tr>
+                        </div>
+                    </div>
                 `;
             });
 
             html += `
-                            </tbody>
-                        </table>
                     </div>
                 </div>
             `;
@@ -401,5 +383,3 @@ include __DIR__ . '/../components/header.php';
     initCart();
 })();
 </script>
-
-<?php include __DIR__ . '/../components/footer.php'; ?>
