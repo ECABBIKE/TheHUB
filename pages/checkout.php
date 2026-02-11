@@ -45,6 +45,26 @@ try {
             // Payment may not be confirmed yet by webhook - show pending message
             $order['stripe_pending'] = true;
         }
+
+        // Check for Gravity ID discount info (for display)
+        if ($order && $order['discount'] > 0 && hub_is_logged_in()) {
+            $currentUser = hub_current_user();
+            $pdo = hub_db();
+            try {
+                $stmt = $pdo->prepare("SELECT gravity_id FROM riders WHERE id = ? AND gravity_id IS NOT NULL AND gravity_id != ''");
+                $stmt->execute([$currentUser['id']]);
+                $gid = $stmt->fetchColumn();
+                if ($gid) {
+                    $gravityIdInfo = [
+                        'has_gravity_id' => true,
+                        'gravity_id' => $gid,
+                        'discount' => $order['discount']
+                    ];
+                }
+            } catch (Exception $e) {
+                // Column may not exist
+            }
+        }
     } elseif ($seriesRegistrationId) {
         // Handle series registration checkout
         if (!hub_is_logged_in()) {

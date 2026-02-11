@@ -281,23 +281,9 @@ if (hub_is_logged_in()) {
         const cart = GlobalCart.getCart();
         if (cart.length === 0) return;
 
-        // Check if we already have a pending order for these items
-        const pendingOrderId = sessionStorage.getItem('pending_order_id');
-        if (pendingOrderId) {
-            try {
-                const statusResp = await fetch('/api/check-order-status.php?order_id=' + pendingOrderId);
-                const statusData = await statusResp.json();
-                if (statusData.payment_status === 'pending') {
-                    // Reuse existing pending order
-                    window.location.href = '/checkout?order=' + pendingOrderId;
-                    return;
-                }
-                // Order was paid/cancelled - clear and create new
-                sessionStorage.removeItem('pending_order_id');
-            } catch (e) {
-                sessionStorage.removeItem('pending_order_id');
-            }
-        }
+        // Always create a fresh order from current cart contents
+        // (old pending orders get cancelled automatically when a new order is created)
+        sessionStorage.removeItem('pending_order_id');
 
         // Prepare buyer data
         const buyerData = {};

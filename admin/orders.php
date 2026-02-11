@@ -58,6 +58,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
         $message = 'Order avbruten!';
         $messageType = 'success';
+
+    } elseif ($action === 'delete_order' && $orderId) {
+        // Delete order items first, then registrations, then order
+        $db->query("DELETE FROM order_items WHERE order_id = ?", [$orderId]);
+        $db->query("DELETE FROM event_registrations WHERE order_id = ?", [$orderId]);
+        $db->query("DELETE FROM series_registrations WHERE order_id = ?", [$orderId]);
+        $db->query("DELETE FROM orders WHERE id = ?", [$orderId]);
+
+        $message = 'Order raderad!';
+        $messageType = 'success';
+
+    } elseif ($action === 'bulk_delete' && !empty($_POST['order_ids'])) {
+        $orderIds = array_map('intval', explode(',', $_POST['order_ids']));
+        $placeholders = implode(',', array_fill(0, count($orderIds), '?'));
+
+        $db->query("DELETE FROM order_items WHERE order_id IN ({$placeholders})", $orderIds);
+        $db->query("DELETE FROM event_registrations WHERE order_id IN ({$placeholders})", $orderIds);
+        $db->query("DELETE FROM series_registrations WHERE order_id IN ({$placeholders})", $orderIds);
+        $db->query("DELETE FROM orders WHERE id IN ({$placeholders})", $orderIds);
+
+        $message = count($orderIds) . ' ordrar raderade!';
+        $messageType = 'success';
     }
 }
 
@@ -120,6 +142,26 @@ $orders = $db->getAll("
     ORDER BY o.created_at DESC
     LIMIT 200
 ", $params);
+
+// Pre-load order items for all orders (for expandable detail)
+$orderItemsByOrder = [];
+if (!empty($orders)) {
+    $orderIds = array_column($orders, 'id');
+    $placeholders = implode(',', array_fill(0, count($orderIds), '?'));
+    $itemRows = $db->getAll("
+        SELECT oi.order_id, oi.description, oi.unit_price, oi.total_price,
+               er.first_name, er.last_name, er.category, er.email,
+               e.name as item_event_name, e.date as item_event_date
+        FROM order_items oi
+        LEFT JOIN event_registrations er ON oi.registration_id = er.id
+        LEFT JOIN events e ON er.event_id = e.id
+        WHERE oi.order_id IN ({$placeholders})
+        ORDER BY oi.id
+    ", $orderIds);
+    foreach ($itemRows as $item) {
+        $orderItemsByOrder[$item['order_id']][] = $item;
+    }
+}
 
 // Get events for filter (only accessible events)
 if ($isSuperAdmin) {
@@ -264,6 +306,27 @@ include __DIR__ . '/components/unified-layout.php';
     </div>
 </div>
 
+<!-- Bulk actions for cancelled orders -->
+<?php
+$cancelledCount = count(array_filter($orders, fn($o) => $o['payment_status'] === 'cancelled'));
+if ($cancelledCount > 0): ?>
+<div class="admin-card mb-lg">
+    <div class="admin-card-body flex items-center justify-between gap-md flex-wrap">
+        <span class="text-secondary"><?= $cancelledCount ?> avbrutna ordrar</span>
+        <form method="POST" class="inline">
+            <?= csrf_field() ?>
+            <input type="hidden" name="action" value="bulk_delete">
+            <input type="hidden" name="order_ids" value="<?= implode(',', array_column(array_filter($orders, fn($o) => $o['payment_status'] === 'cancelled'), 'id')) ?>">
+            <button type="submit" class="btn-admin btn-admin-sm" style="background: var(--color-error); color: white;"
+                    onclick="return confirm('Radera ALLA <?= $cancelledCount ?> avbrutna ordrar permanent?')">
+                <i data-lucide="trash-2"></i>
+                Radera alla avbrutna ordrar
+            </button>
+        </form>
+    </div>
+</div>
+<?php endif; ?>
+
 <!-- Orders list -->
 <div class="admin-card">
     <div class="admin-card-header">
@@ -311,8 +374,9 @@ include __DIR__ . '/components/unified-layout.php';
                         ][$order['payment_status']] ?? $order['payment_status'];
 
                         $customerName = !empty($order['firstname']) ? $order['firstname'] . ' ' . $order['lastname'] : ($order['customer_name'] ?? '-');
+                        $items = $orderItemsByOrder[$order['id']] ?? [];
                     ?>
-                    <tr>
+                    <tr class="order-row" onclick="toggleOrderDetail(<?= $order['id'] ?>)" style="cursor: pointer;">
                         <td data-label="Order">
                             <code class="font-medium"><?= h($order['order_number']) ?></code>
                         </td>
@@ -353,9 +417,9 @@ include __DIR__ . '/components/unified-layout.php';
                         <td data-label="Skapad" class="text-sm text-secondary">
                             <?= date('Y-m-d H:i', strtotime($order['created_at'])) ?>
                         </td>
-                        <td data-label="" class="orders-actions-cell">
-                            <?php if ($order['payment_status'] === 'pending'): ?>
+                        <td data-label="" class="orders-actions-cell" onclick="event.stopPropagation()">
                             <div class="orders-actions">
+                            <?php if ($order['payment_status'] === 'pending'): ?>
                                 <button type="button" class="btn-admin btn-admin-sm orders-btn-confirm"
                                         onclick="openConfirmModal(<?= $order['id'] ?>, '<?= h($order['order_number']) ?>', '<?= h($order['swish_message']) ?>')">
                                     <i data-lucide="check"></i>
@@ -371,12 +435,60 @@ include __DIR__ . '/components/unified-layout.php';
                                         <span class="orders-btn-label">Avbryt</span>
                                     </button>
                                 </form>
-                            </div>
-                            <?php elseif ($order['payment_status'] === 'paid'): ?>
-                            <span class="text-xs text-secondary">
-                                Betald <?= $order['paid_at'] ? date('Y-m-d', strtotime($order['paid_at'])) : '' ?>
-                            </span>
                             <?php endif; ?>
+                                <form method="POST" class="inline">
+                                    <?= csrf_field() ?>
+                                    <input type="hidden" name="action" value="delete_order">
+                                    <input type="hidden" name="order_id" value="<?= $order['id'] ?>">
+                                    <button type="submit" class="btn-admin btn-admin-sm orders-btn-delete"
+                                            onclick="return confirm('Radera order <?= h($order['order_number']) ?> permanent? Detta kan inte ångras.')">
+                                        <i data-lucide="trash-2"></i>
+                                        <span class="orders-btn-label">Radera</span>
+                                    </button>
+                                </form>
+                            </div>
+                        </td>
+                    </tr>
+                    <!-- Expandable detail row -->
+                    <tr class="order-detail-row" id="detail-<?= $order['id'] ?>" style="display: none;">
+                        <td colspan="9" style="padding: 0; background: var(--color-bg-tertiary, var(--color-bg-hover));">
+                            <div style="padding: var(--space-md) var(--space-lg);">
+                                <?php if (!empty($items)): ?>
+                                <div class="text-sm font-medium mb-sm">Orderinnehall:</div>
+                                <table style="width: 100%; font-size: var(--text-sm);">
+                                    <?php foreach ($items as $item): ?>
+                                    <tr>
+                                        <td style="padding: var(--space-2xs) var(--space-sm);">
+                                            <?php if ($item['first_name']): ?>
+                                                <strong><?= h($item['first_name'] . ' ' . $item['last_name']) ?></strong>
+                                                <?php if ($item['category']): ?>
+                                                    <span class="text-secondary"> - <?= h($item['category']) ?></span>
+                                                <?php endif; ?>
+                                            <?php else: ?>
+                                                <?= h($item['description']) ?>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td style="padding: var(--space-2xs) var(--space-sm); white-space: nowrap;">
+                                            <?php if ($item['item_event_name']): ?>
+                                                <?= h($item['item_event_name']) ?>
+                                                <span class="text-secondary">(<?= date('Y-m-d', strtotime($item['item_event_date'])) ?>)</span>
+                                            <?php endif; ?>
+                                        </td>
+                                        <td style="padding: var(--space-2xs) var(--space-sm); text-align: right; white-space: nowrap; font-weight: 600;">
+                                            <?= number_format($item['total_price'], 0) ?> kr
+                                        </td>
+                                    </tr>
+                                    <?php endforeach; ?>
+                                </table>
+                                <?php if ($order['discount'] > 0): ?>
+                                <div style="margin-top: var(--space-xs); padding-top: var(--space-xs); border-top: 1px solid var(--color-border);">
+                                    <span class="text-success text-sm">Rabatt: -<?= number_format($order['discount'], 0) ?> kr</span>
+                                </div>
+                                <?php endif; ?>
+                                <?php else: ?>
+                                <span class="text-secondary text-sm">Inga orderrader registrerade</span>
+                                <?php endif; ?>
+                            </div>
                         </td>
                     </tr>
                     <?php endforeach; ?>
@@ -456,6 +568,10 @@ include __DIR__ . '/components/unified-layout.php';
 .orders-btn-confirm:hover { opacity: 0.9; }
 .orders-btn-cancel { background: transparent; border: 1px solid var(--color-border); color: var(--color-text-secondary); }
 .orders-btn-cancel:hover { background: var(--color-error); color: white; border-color: var(--color-error); }
+.orders-btn-delete { background: transparent; border: 1px solid var(--color-border); color: var(--color-text-muted); }
+.orders-btn-delete:hover { background: var(--color-error); color: white; border-color: var(--color-error); }
+.order-row:hover { background: var(--color-bg-hover); }
+.order-detail-row td { border-top: none !important; }
 .orders-btn-label { display: none; }
 
 /* Mobile responsive orders table */
@@ -494,6 +610,9 @@ include __DIR__ . '/components/unified-layout.php';
 
     /* Hide Swish-ref on mobile to save space */
     .orders-swish-col { display: none; }
+
+    .order-detail-row td { display: block; padding: 0 !important; }
+    .order-detail-row td::before { display: none !important; }
 
     /* Actions cell: full-width buttons */
     .orders-actions-cell {
@@ -537,6 +656,13 @@ function openConfirmModal(orderId, orderNumber, swishRef) {
 
 function closeModal(modalId) {
     document.getElementById(modalId).classList.add('hidden');
+}
+
+function toggleOrderDetail(orderId) {
+    const row = document.getElementById('detail-' + orderId);
+    if (row) {
+        row.style.display = row.style.display === 'none' ? 'table-row' : 'none';
+    }
 }
 
 document.addEventListener('keydown', function(e) {

@@ -4558,7 +4558,10 @@ if (!empty($event['series_id'])) {
                     seriesRequiresLicenseCommitment = requiresLicense;
 
                     seriesClassList.innerHTML = classes.map(cls => {
-                        const priceDisplay = cls.current_price ? `${cls.current_price} kr` : 'Pris saknas';
+                        // For series registration, use season_price if available
+                        const seriesPrice = cls.season_price && cls.season_price > 0 ? cls.season_price : cls.current_price;
+                        cls._series_price = seriesPrice; // Store for later use
+                        const priceDisplay = seriesPrice ? `${seriesPrice} kr / event` : 'Pris saknas';
                         return `
                             <div class="reg-class-item" data-class-id="${cls.class_id}">
                                 <input type="radio" name="series_class" value="${cls.class_id}" class="reg-class-radio">
@@ -4651,6 +4654,9 @@ if (!empty($event['series_id'])) {
                 seriesAddToCartBtn.addEventListener('click', async () => {
                     if (!seriesSelectedRiderId || !seriesSelectedClassId) return;
 
+                    // Use season_price if available, otherwise fallback to current_price
+                    const pricePerEvent = seriesSelectedClassData._series_price || seriesSelectedClassData.season_price || seriesSelectedClassData.current_price;
+
                     // Add to cart for EACH event in the series
                     for (const event of seriesEvents) {
                         GlobalCart.addItem({
@@ -4661,10 +4667,14 @@ if (!empty($event['series_id'])) {
                             rider_name: `${seriesSelectedRider.firstname} ${seriesSelectedRider.lastname}`,
                             class_id: seriesSelectedClassId,
                             class_name: seriesSelectedClassData.name,
-                            price: seriesSelectedClassData.current_price,
-                            license_commitment: seriesRequiresLicenseCommitment
+                            price: pricePerEvent,
+                            license_commitment: seriesRequiresLicenseCommitment,
+                            is_series_registration: true
                         });
                     }
+
+                    // Clear any stale pending order since cart changed
+                    sessionStorage.removeItem('pending_order_id');
 
                     // Reset form
                     seriesSelectedRider = null;
