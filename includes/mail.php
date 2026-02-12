@@ -443,6 +443,7 @@ function hub_send_receipt_email(int $orderId, ?array $receiptResult = null): boo
 
     $paymentMethodNames = [
         'card' => 'Kortbetalning',
+        'swish' => 'Swish',
         'invoice' => 'Faktura',
         'manual' => 'Manuell'
     ];

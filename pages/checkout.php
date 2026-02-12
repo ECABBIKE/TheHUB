@@ -526,7 +526,10 @@ include __DIR__ . '/../components/header.php';
             <!-- Payment options -->
             <?php
             $hasStripe = !empty($order['card_available']);
-            $hasAnyPayment = $hasStripe;
+            $swishNumber = env('SWISH_NUMBER', '');
+            $swishPayeeName = env('SWISH_PAYEE_NAME', '');
+            $hasSwish = !empty($swishNumber);
+            $hasAnyPayment = $hasStripe || $hasSwish;
             ?>
 
             <?php if ($hasStripe): ?>
@@ -567,6 +570,116 @@ include __DIR__ . '/../components/header.php';
             </div>
             <?php endif; ?>
 
+            <?php if ($hasSwish): ?>
+            <!-- Swish Payment -->
+            <div class="card mb-lg" id="swish-section">
+                <div class="card-header">
+                    <h2 class="text-lg">
+                        <i data-lucide="smartphone"></i>
+                        Betala med Swish
+                    </h2>
+                </div>
+                <div class="card-body">
+                    <div class="payment-option payment-option--swish">
+                        <div style="display: flex; align-items: center; gap: var(--space-sm); margin-bottom: var(--space-md);">
+                            <div style="width:40px;height:40px;flex-shrink:0;background:linear-gradient(135deg,#32a852,#1e7e34);border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center;">
+                                <i data-lucide="smartphone" style="width:20px;height:20px;color:white;"></i>
+                            </div>
+                            <div style="min-width:0;">
+                                <h3 class="font-medium">Swish</h3>
+                                <p class="text-sm text-secondary">Betala direkt med Swish-appen</p>
+                            </div>
+                        </div>
+
+                        <!-- Swish payment details -->
+                        <div id="swish-details" style="background: var(--color-bg-surface); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: var(--space-md); margin-bottom: var(--space-md);">
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-sm);">
+                                <span class="text-sm text-secondary">Swish-nummer:</span>
+                                <span class="font-medium" style="font-size: 1.1rem; letter-spacing: 1px;"><?= htmlspecialchars($swishNumber) ?></span>
+                            </div>
+                            <?php if ($swishPayeeName): ?>
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-sm);">
+                                <span class="text-sm text-secondary">Mottagare:</span>
+                                <span class="font-medium"><?= htmlspecialchars($swishPayeeName) ?></span>
+                            </div>
+                            <?php endif; ?>
+                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-sm);">
+                                <span class="text-sm text-secondary">Belopp:</span>
+                                <span class="font-bold" style="font-size: 1.1rem;"><?= number_format($order['total_amount'], 0) ?> kr</span>
+                            </div>
+                            <div style="display: flex; justify-content: space-between; align-items: center; padding-top: var(--space-sm); border-top: 1px solid var(--color-border);">
+                                <span class="text-sm text-secondary">Meddelande:</span>
+                                <span class="font-bold" style="font-size: 1.1rem; color: var(--color-accent);"><?= htmlspecialchars($order['order_number']) ?></span>
+                            </div>
+                        </div>
+
+                        <!-- Instructions -->
+                        <div style="background: var(--color-accent-light); border-radius: var(--radius-md); padding: var(--space-md); margin-bottom: var(--space-md);">
+                            <ol style="margin: 0; padding-left: var(--space-lg); font-size: var(--text-sm); color: var(--color-text-secondary);">
+                                <li style="margin-bottom: var(--space-xs);">Oppna Swish-appen</li>
+                                <li style="margin-bottom: var(--space-xs);">Swisha <strong><?= number_format($order['total_amount'], 0) ?> kr</strong> till <strong><?= htmlspecialchars($swishNumber) ?></strong></li>
+                                <li style="margin-bottom: var(--space-xs);">Skriv <strong><?= htmlspecialchars($order['order_number']) ?></strong> som meddelande</li>
+                                <li>Klicka "Jag har Swishat" nedan</li>
+                            </ol>
+                        </div>
+
+                        <?php
+                        // Swish deep link for mobile
+                        $swishLink = 'https://app.swish.nu/1/p/sw/?sw=' . urlencode($swishNumber)
+                            . '&amt=' . urlencode(number_format($order['total_amount'], 0, '.', ''))
+                            . '&msg=' . urlencode($order['order_number'])
+                            . '&cur=SEK';
+                        ?>
+
+                        <!-- Mobile deep link -->
+                        <a href="<?= htmlspecialchars($swishLink) ?>"
+                           class="btn btn--lg w-full"
+                           id="swish-open-btn"
+                           style="background: linear-gradient(135deg, #32a852, #1e7e34); color: white; margin-bottom: var(--space-sm); text-decoration: none; display: flex; align-items: center; justify-content: center; gap: var(--space-sm);">
+                            <i data-lucide="external-link"></i>
+                            Oppna Swish-appen
+                        </a>
+
+                        <!-- Confirm button -->
+                        <button type="button"
+                                id="swish-confirm-btn"
+                                class="btn btn--secondary btn--lg w-full"
+                                onclick="confirmSwishPayment(<?= $order['id'] ?>)">
+                            <i data-lucide="check-circle"></i>
+                            Jag har Swishat
+                        </button>
+
+                        <p class="text-xs text-muted text-center mt-sm">
+                            Betalningen bekraftas manuellt inom kort.
+                        </p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Swish confirmation (hidden initially) -->
+            <div class="card mb-lg" id="swish-confirmation" style="display: none;">
+                <div class="card-body text-center py-lg">
+                    <i data-lucide="clock" class="icon-xl text-accent mb-md"></i>
+                    <h2 class="text-lg mb-sm">Swish-betalning registrerad!</h2>
+                    <p class="text-secondary mb-md">
+                        Vi har noterat din betalning. Den bekraftas manuellt sa snart vi ser den pa Swish.
+                    </p>
+                    <p class="text-sm text-secondary mb-lg">
+                        Order: <strong><?= htmlspecialchars($order['order_number']) ?></strong>
+                    </p>
+                    <div style="display:flex; flex-direction:column; gap:var(--space-sm); align-items:center;">
+                        <?php if (!empty($order['event_id'])): ?>
+                        <a href="/calendar/event/<?= (int)$order['event_id'] ?>" class="btn btn--primary">
+                            <i data-lucide="calendar"></i> Till eventet
+                        </a>
+                        <?php endif; ?>
+                        <a href="/calendar" class="btn btn--secondary">
+                            <i data-lucide="calendar"></i> Kalender
+                        </a>
+                    </div>
+                </div>
+            </div>
+            <?php endif; ?>
 
             <?php if (!$hasAnyPayment): ?>
             <!-- No payment method available -->
@@ -592,9 +705,14 @@ include __DIR__ . '/../components/header.php';
                         Efter betalning
                     </h3>
                     <p class="text-sm text-secondary">
-                        Betalning bekräftas automatiskt.
+                        <?php if ($hasStripe): ?>
+                        Kortbetalning bekraftas automatiskt.
+                        <?php endif; ?>
+                        <?php if ($hasSwish): ?>
+                        Swish-betalning bekraftas manuellt inom kort.
+                        <?php endif; ?>
                         <?php if (!empty($order['customer_email'])): ?>
-                        Du får ett bekräftelsemail till <strong><?= htmlspecialchars($order['customer_email']) ?></strong>.
+                        Du far ett bekraftelsemail till <strong><?= htmlspecialchars($order['customer_email']) ?></strong>.
                         <?php endif; ?>
                     </p>
                 </div>
@@ -604,6 +722,57 @@ include __DIR__ . '/../components/header.php';
 </main>
 
 <script>
+// Swish Payment Confirmation
+async function confirmSwishPayment(orderId) {
+    const btn = document.getElementById('swish-confirm-btn');
+    if (!btn) return;
+
+    btn.disabled = true;
+    btn.innerHTML = '<i data-lucide="loader" class="spin"></i> Registrerar...';
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+
+    try {
+        const response = await fetch('/api/orders.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                action: 'claim_swish',
+                order_id: orderId
+            })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            // Clear cart
+            if (typeof GlobalCart !== 'undefined') {
+                GlobalCart.clearCart();
+            }
+            sessionStorage.removeItem('pending_order_id');
+
+            // Hide payment sections, show confirmation
+            const swishSection = document.getElementById('swish-section');
+            const stripeSection = document.querySelector('.payment-option--card');
+            const confirmation = document.getElementById('swish-confirmation');
+
+            if (swishSection) swishSection.style.display = 'none';
+            if (stripeSection) stripeSection.closest('.card').style.display = 'none';
+            if (confirmation) confirmation.style.display = 'block';
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+        } else {
+            alert(data.error || 'Kunde inte registrera betalning.');
+            btn.disabled = false;
+            btn.innerHTML = '<i data-lucide="check-circle"></i> Jag har Swishat';
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+        }
+    } catch (error) {
+        alert('Nagot gick fel. Forsok igen.');
+        btn.disabled = false;
+        btn.innerHTML = '<i data-lucide="check-circle"></i> Jag har Swishat';
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
+}
+
 // Stripe Checkout
 async function startStripeCheckout(orderId) {
     const btn = document.getElementById('stripe-pay-btn');

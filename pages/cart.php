@@ -235,7 +235,7 @@ require_once __DIR__ . '/../includes/payment.php';
                         <div style="flex: 1; min-width: 0;">
                             <strong style="display: block;">${item.rider_name}</strong>
                             <span style="font-size: var(--text-sm); color: var(--color-text-secondary);">
-                                ${item.class_name}${item.club_name ? ' &middot; ' + item.club_name : ''}
+                                ${item.class_name || 'Klass'}${item.club_name ? ' &middot; ' + item.club_name : ''}
                             </span>
                             ${discountLines}
                         </div>

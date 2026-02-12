@@ -468,7 +468,7 @@ function getEligibleSeriesClasses($pdo, $seriesId, $riderId) {
 
         $result[] = [
             'id' => $class['id'],
-            'name' => $class['display_name'] ?: $class['name'],
+            'name' => $class['display_name'] ?: $class['name'] ?: ('Klass ' . $class['id']),
             'gender' => $class['gender'],
             'min_age' => $class['min_age'],
             'max_age' => $class['max_age'],

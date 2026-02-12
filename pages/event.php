@@ -4131,7 +4131,8 @@ if (!empty($event['series_id'])) {
                         div.className = 'reg-class-item';
                         div.dataset.classId = cls.class_id;
                         div.dataset.price = cls.current_price;
-                        div.dataset.name = cls.name;
+                        const className = cls.name || 'Klass ' + cls.class_id;
+                        div.dataset.name = className;
 
                         // Visa varning om ingen licens
                         let warningHtml = '';
@@ -4142,9 +4143,9 @@ if (!empty($event['series_id'])) {
                         div.innerHTML = `
                             <input type="radio" name="class_select" value="${cls.class_id}"
                                    class="reg-class-radio"
-                                   data-price="${cls.current_price}" data-name="${cls.name}">
+                                   data-price="${cls.current_price}" data-name="${className}">
                             <div class="reg-class-info">
-                                <div class="reg-class-name">${cls.name}</div>
+                                <div class="reg-class-name">${className}</div>
                                 ${warningHtml}
                             </div>
                             <div class="reg-class-price">
@@ -4743,16 +4744,80 @@ if (!empty($event['series_id'])) {
                 }
 
                 async function seriesLoadEligibleClasses(riderId) {
+                    seriesClassList.innerHTML = '<p class="text-muted">Laddar klasser...</p>';
+                    seriesClassSelection.style.display = 'block';
+
                     try {
                         const response = await fetch(`/api/orders.php?action=event_classes&event_id=${seriesEvents[0].id}&rider_id=${riderId}`);
                         const data = await response.json();
 
                         if (data.success) {
-                            seriesRenderClasses(data.classes, data.requires_license_commitment);
-                            seriesClassSelection.style.display = 'block';
+                            if (data.classes && data.classes.length > 0) {
+                                if (data.classes[0].error === 'incomplete_profile') {
+                                    seriesClassList.innerHTML = `
+                                        <div class="alert alert--warning" style="text-align: left;">
+                                            <div style="display: flex; gap: var(--space-sm); align-items: flex-start;">
+                                                <i data-lucide="alert-triangle" style="flex-shrink: 0; margin-top: 2px;"></i>
+                                                <div>
+                                                    <strong style="display: block; margin-bottom: var(--space-xs);">Profilen ar inte komplett</strong>
+                                                    <p style="margin: 0;">${data.classes[0].message}</p>
+                                                    <a href="/profile/edit" class="btn btn-primary" style="margin-top: var(--space-sm); display: inline-flex; align-items: center; gap: var(--space-xs);">
+                                                        <i data-lucide="user-pen" style="width:16px;height:16px;"></i> Uppdatera profil
+                                                    </a>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    `;
+                                    if (typeof lucide !== 'undefined') lucide.createIcons();
+                                } else if (data.classes[0].error === 'no_eligible_classes') {
+                                    const debug = data.classes[0].debug || {};
+                                    const reasons = (debug.ineligible_classes || []).map(c =>
+                                        `<li><strong>${c.name || 'Okand'}:</strong> ${c.reason}</li>`
+                                    ).join('');
+                                    seriesClassList.innerHTML = `
+                                        <div class="alert alert--info" style="text-align: left;">
+                                            <div style="display: flex; gap: var(--space-sm); align-items: flex-start;">
+                                                <i data-lucide="info" style="flex-shrink: 0; margin-top: 2px;"></i>
+                                                <div>
+                                                    <strong style="display: block; margin-bottom: var(--space-xs);">Inga matchande klasser</strong>
+                                                    <p style="margin: 0 0 var(--space-sm) 0;">Deltagaren matchade inte kriterierna for nagon klass:</p>
+                                                    <div style="font-size: 0.875rem; color: var(--color-text-secondary);">
+                                                        <p>Alder: ${debug.rider_age} ar | Kon: ${debug.rider_gender}</p>
+                                                    </div>
+                                                    <ul style="margin: var(--space-xs) 0 0 0; padding-left: var(--space-lg); font-size: 0.875rem;">
+                                                        ${reasons}
+                                                    </ul>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    `;
+                                    if (typeof lucide !== 'undefined') lucide.createIcons();
+                                } else if (data.classes[0].error === 'no_classes_configured') {
+                                    seriesClassList.innerHTML = `
+                                        <div class="alert alert--warning" style="text-align: left;">
+                                            <div style="display: flex; gap: var(--space-sm); align-items: flex-start;">
+                                                <i data-lucide="alert-triangle" style="flex-shrink: 0; margin-top: 2px;"></i>
+                                                <div>
+                                                    <strong style="display: block; margin-bottom: var(--space-xs);">Eventet saknar klasser</strong>
+                                                    <p style="margin: 0;">Detta event har ingen prismall eller inga klasser konfigurerade.</p>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    `;
+                                    if (typeof lucide !== 'undefined') lucide.createIcons();
+                                } else {
+                                    seriesRenderClasses(data.classes, data.requires_license_commitment);
+                                }
+                            } else {
+                                seriesClassList.innerHTML = '<p class="text-muted">Inga tillgangliga klasser for denna deltagare</p>';
+                            }
+                        } else {
+                            const errorMsg = data.error || 'Kunde inte ladda klasser';
+                            seriesClassList.innerHTML = `<p class="text-error">${errorMsg}</p>`;
                         }
                     } catch (e) {
                         console.error('Failed to load classes:', e);
+                        seriesClassList.innerHTML = '<p class="text-error">Ett fel uppstod vid laddning av klasser</p>';
                     }
                 }
 
@@ -4761,6 +4826,7 @@ if (!empty($event['series_id'])) {
                     const numEvents = seriesEvents.length;
 
                     seriesClassList.innerHTML = classes.map(cls => {
+                        const className = cls.name || 'Klass ' + cls.class_id;
                         const pricePerEvent = cls.current_price;
                         const seasonTotal = cls.season_price && cls.season_price > 0 ? cls.season_price : 0;
                         const regularTotal = pricePerEvent * numEvents;
@@ -4776,7 +4842,7 @@ if (!empty($event['series_id'])) {
                             <div class="reg-class-item" data-class-id="${cls.class_id}" data-season-price="${seasonTotal}" data-saving="${saving}">
                                 <input type="radio" name="series_class" value="${cls.class_id}" class="reg-class-radio">
                                 <div class="reg-class-info">
-                                    <div class="reg-class-name">${cls.name}</div>
+                                    <div class="reg-class-name">${className}</div>
                                     ${savingHtml}
                                     ${cls.warning ? `<div class="reg-class-desc" style="color: var(--color-warning);">${cls.warning}</div>` : ''}
                                 </div>
