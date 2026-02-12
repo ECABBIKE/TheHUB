@@ -629,7 +629,40 @@ include __DIR__ . '/../components/header.php';
                             . '&amt=' . urlencode(number_format($order['total_amount'], 0, '.', ''))
                             . '&msg=' . urlencode($order['order_number'])
                             . '&cur=SEK';
+
+                        // Generate Swish QR code for desktop users
+                        $swishQrSvg = '';
+                        $autoloadPath = __DIR__ . '/../vendor/autoload.php';
+                        if (file_exists($autoloadPath)) {
+                            require_once $autoloadPath;
+                            try {
+                                $qrOptions = new \chillerlan\QRCode\QROptions([
+                                    'outputType' => \chillerlan\QRCode\Output\QROutputInterface::MARKUP_SVG,
+                                    'outputBase64' => false,
+                                    'svgUseCssColors' => false,
+                                    'drawLightModules' => false,
+                                    'addQuietzone' => true,
+                                    'scale' => 10,
+                                ]);
+                                $qrcode = new \chillerlan\QRCode\QRCode($qrOptions);
+                                $swishQrSvg = $qrcode->render($swishLink);
+                            } catch (Exception $e) {
+                                error_log('QR code generation failed: ' . $e->getMessage());
+                            }
+                        }
                         ?>
+
+                        <?php if ($swishQrSvg): ?>
+                        <!-- Swish QR code for desktop -->
+                        <div style="text-align: center; margin-bottom: var(--space-md); padding: var(--space-md); background: #ffffff; border-radius: var(--radius-md);">
+                            <div style="max-width: 200px; margin: 0 auto;">
+                                <?= $swishQrSvg ?>
+                            </div>
+                            <p style="margin: var(--space-sm) 0 0; font-size: var(--text-sm); color: #666;">
+                                Skanna med Swish-appen
+                            </p>
+                        </div>
+                        <?php endif; ?>
 
                         <!-- Mobile deep link -->
                         <a href="<?= htmlspecialchars($swishLink) ?>"

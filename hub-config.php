@@ -545,7 +545,8 @@ if (!function_exists('hub_attempt_login')) {
 
         // Find all riders by email (primary accounts with passwords)
         $stmt = $pdo->prepare("
-            SELECT id, email, password, firstname, lastname, is_admin, role_id, linked_to_rider_id
+            SELECT id, email, password, firstname, lastname, is_admin, role_id, linked_to_rider_id,
+                   birth_year, gender, phone, ice_name, ice_phone
             FROM riders
             WHERE email = ? AND active = 1
             ORDER BY password IS NOT NULL DESC, id
