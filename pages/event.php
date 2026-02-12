@@ -3654,21 +3654,21 @@ if (!empty($event['series_id'])) {
                             </button>
                         </div>
                         <div class="rider-search-modal__body">
-                            <div id="riderSearchSection">
+                            <div id="riderSearchSection" style="display: flex; flex-direction: column; height: 100%;">
                                 <div class="rider-search-modal__input-wrapper">
                                     <i data-lucide="search" class="rider-search-modal__search-icon"></i>
                                     <input type="text" id="riderSearch" class="rider-search-modal__input"
                                            placeholder="Skriv namn eller UCI ID..."
                                            autocomplete="off">
                                 </div>
-                                <div id="riderCreateLink" style="padding: var(--space-sm) var(--space-md); border-bottom: 1px solid var(--color-border);">
-                                    <button type="button" id="showCreateRiderFormBtn" style="background: none; border: none; color: var(--color-accent); cursor: pointer; font-size: 0.875rem; display: flex; align-items: center; gap: var(--space-xs); padding: 0;">
+                                <div style="padding: var(--space-xs) var(--space-lg); flex-shrink: 0;">
+                                    <button type="button" id="showCreateRiderFormBtn" style="background: none; border: none; color: var(--color-accent); cursor: pointer; font-size: 0.875rem; display: inline-flex; align-items: center; gap: var(--space-xs); padding: var(--space-2xs) 0;">
                                         <i data-lucide="user-plus" style="width: 16px; height: 16px;"></i> Skapa ny deltagare
                                     </button>
                                 </div>
                                 <div id="riderSearchResults" class="rider-search-modal__results"></div>
                             </div>
-                            <div id="riderCreateSection" style="display: none;"></div>
+                            <div id="riderCreateSection" style="display: none; height: 100%;"></div>
                         </div>
                     </div>
                 </div>
@@ -3747,21 +3747,21 @@ if (!empty($event['series_id'])) {
                             </button>
                         </div>
                         <div class="rider-search-modal__body">
-                            <div id="seriesRiderSearchSection">
+                            <div id="seriesRiderSearchSection" style="display: flex; flex-direction: column; height: 100%;">
                                 <div class="rider-search-modal__input-wrapper">
                                     <i data-lucide="search" class="rider-search-modal__search-icon"></i>
                                     <input type="text" id="seriesRiderSearch" class="rider-search-modal__input"
                                            placeholder="Skriv namn eller UCI ID..."
                                            autocomplete="off">
                                 </div>
-                                <div id="seriesRiderCreateLink" style="padding: var(--space-sm) var(--space-md); border-bottom: 1px solid var(--color-border);">
-                                    <button type="button" id="seriesShowCreateRiderFormBtn" style="background: none; border: none; color: var(--color-accent); cursor: pointer; font-size: 0.875rem; display: flex; align-items: center; gap: var(--space-xs); padding: 0;">
+                                <div style="padding: var(--space-xs) var(--space-lg); flex-shrink: 0;">
+                                    <button type="button" id="seriesShowCreateRiderFormBtn" style="background: none; border: none; color: var(--color-accent); cursor: pointer; font-size: 0.875rem; display: inline-flex; align-items: center; gap: var(--space-xs); padding: var(--space-2xs) 0;">
                                         <i data-lucide="user-plus" style="width: 16px; height: 16px;"></i> Skapa ny deltagare
                                     </button>
                                 </div>
                                 <div id="seriesRiderSearchResults" class="rider-search-modal__results"></div>
                             </div>
-                            <div id="seriesRiderCreateSection" style="display: none;"></div>
+                            <div id="seriesRiderCreateSection" style="display: none; height: 100%;"></div>
                         </div>
                     </div>
                 </div>
@@ -3864,67 +3864,70 @@ if (!empty($event['series_id'])) {
                     const p = prefix;
 
                     return `
-                        <div style="padding: var(--space-md); overflow-y: auto; max-height: calc(100dvh - 120px);">
-                            <button type="button" id="${p}backToSearchBtn" style="background: none; border: none; color: var(--color-accent); cursor: pointer; font-size: 0.875rem; display: inline-flex; align-items: center; gap: var(--space-2xs); padding: 0; margin-bottom: var(--space-md);">
-                                <i data-lucide="arrow-left" style="width: 16px; height: 16px;"></i> Tillbaka till sok
-                            </button>
-
-                            <div class="form-group">
-                                <label class="form-label">Fornamn *</label>
-                                <input type="text" id="${p}newRiderFirstname" class="form-input" value="${suggestedFirst}" required>
+                        <div style="display: flex; flex-direction: column; height: 100%; overflow: hidden;">
+                            <div style="padding: var(--space-sm) var(--space-lg); border-bottom: 1px solid var(--color-border); flex-shrink: 0;">
+                                <button type="button" id="${p}backToSearchBtn" style="background: none; border: none; color: var(--color-accent); cursor: pointer; font-size: 0.875rem; display: inline-flex; align-items: center; gap: var(--space-2xs); padding: var(--space-xs) 0;">
+                                    <i data-lucide="arrow-left" style="width: 16px; height: 16px;"></i> Tillbaka till sok
+                                </button>
                             </div>
-                            <div class="form-group">
-                                <label class="form-label">Efternamn *</label>
-                                <input type="text" id="${p}newRiderLastname" class="form-input" value="${suggestedLast}" required>
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">E-post *</label>
-                                <input type="email" id="${p}newRiderEmail" class="form-input" placeholder="namn@exempel.se" required>
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Telefon *</label>
-                                <input type="tel" id="${p}newRiderPhone" class="form-input" placeholder="070-123 45 67" required>
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Fodelsear *</label>
-                                <input type="number" id="${p}newRiderBirthYear" class="form-input" placeholder="t.ex. 1990" min="1920" max="2025" required>
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Kon *</label>
-                                <select id="${p}newRiderGender" class="form-select" required>
-                                    <option value="">Valj...</option>
-                                    <option value="M">Man</option>
-                                    <option value="F">Kvinna</option>
-                                </select>
-                            </div>
-                            <div class="form-group">
-                                <label class="form-label">Nationalitet</label>
-                                <select id="${p}newRiderNationality" class="form-select">
-                                    <option value="SWE" selected>Sverige</option>
-                                    <option value="NOR">Norge</option>
-                                    <option value="DNK">Danmark</option>
-                                    <option value="FIN">Finland</option>
-                                    <option value="DEU">Tyskland</option>
-                                    <option value="GBR">Storbritannien</option>
-                                </select>
-                            </div>
-
-                            <div style="margin-top: var(--space-sm); padding-top: var(--space-sm); border-top: 1px solid var(--color-border);">
-                                <label class="form-label" style="color: var(--color-text-muted); font-size: 0.8125rem; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: var(--space-sm);">Nodkontakt (ICE)</label>
+                            <div style="flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: var(--space-lg);">
                                 <div class="form-group">
-                                    <label class="form-label">Namn *</label>
-                                    <input type="text" id="${p}newRiderIceName" class="form-input" placeholder="Kontaktperson" required>
+                                    <label class="form-label">Fornamn *</label>
+                                    <input type="text" id="${p}newRiderFirstname" class="form-input" value="${suggestedFirst}" required>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Efternamn *</label>
+                                    <input type="text" id="${p}newRiderLastname" class="form-input" value="${suggestedLast}" required>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">E-post *</label>
+                                    <input type="email" id="${p}newRiderEmail" class="form-input" placeholder="namn@exempel.se" required>
                                 </div>
                                 <div class="form-group">
                                     <label class="form-label">Telefon *</label>
-                                    <input type="tel" id="${p}newRiderIcePhone" class="form-input" placeholder="070-..." required>
+                                    <input type="tel" id="${p}newRiderPhone" class="form-input" placeholder="070-123 45 67" required>
                                 </div>
-                            </div>
+                                <div class="form-group">
+                                    <label class="form-label">Fodelsear *</label>
+                                    <input type="number" id="${p}newRiderBirthYear" class="form-input" placeholder="t.ex. 1990" min="1920" max="2025" required>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Kon *</label>
+                                    <select id="${p}newRiderGender" class="form-select" required>
+                                        <option value="">Valj...</option>
+                                        <option value="M">Man</option>
+                                        <option value="F">Kvinna</option>
+                                    </select>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Nationalitet</label>
+                                    <select id="${p}newRiderNationality" class="form-select">
+                                        <option value="SWE" selected>Sverige</option>
+                                        <option value="NOR">Norge</option>
+                                        <option value="DNK">Danmark</option>
+                                        <option value="FIN">Finland</option>
+                                        <option value="DEU">Tyskland</option>
+                                        <option value="GBR">Storbritannien</option>
+                                    </select>
+                                </div>
 
-                            <button type="button" id="${p}createRiderBtn" class="btn btn--primary btn--block" style="margin-top: var(--space-md);">
-                                <i data-lucide="user-plus"></i> Skapa och valj
-                            </button>
-                            <div id="${p}createRiderError" style="display:none; margin-top: var(--space-sm); font-size: 0.875rem;"></div>
+                                <div style="margin: var(--space-lg) 0 var(--space-md); padding-top: var(--space-md); border-top: 1px solid var(--color-border);">
+                                    <span style="color: var(--color-text-muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;">Nodkontakt (ICE)</span>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Kontaktperson namn *</label>
+                                    <input type="text" id="${p}newRiderIceName" class="form-input" placeholder="Fornamn Efternamn" required>
+                                </div>
+                                <div class="form-group">
+                                    <label class="form-label">Kontaktperson telefon *</label>
+                                    <input type="tel" id="${p}newRiderIcePhone" class="form-input" placeholder="070-123 45 67" required>
+                                </div>
+
+                                <button type="button" id="${p}createRiderBtn" class="btn btn--primary btn--block" style="margin-top: var(--space-lg); padding: var(--space-md);">
+                                    <i data-lucide="user-plus"></i> Skapa och valj
+                                </button>
+                                <div id="${p}createRiderError" style="display:none; margin-top: var(--space-sm); font-size: 0.875rem;"></div>
+                            </div>
                         </div>
                     `;
                 }
@@ -3934,9 +3937,15 @@ if (!empty($event['series_id'])) {
                     const searchSection = document.getElementById(p ? p + 'RiderSearchSection' : 'riderSearchSection');
                     const createSection = document.getElementById(p ? p + 'RiderCreateSection' : 'riderCreateSection');
 
+                    // Update modal header
+                    const modal = p ? seriesRiderSearchModal : riderSearchModal;
+                    const headerH3 = modal.querySelector('.rider-search-modal__header h3');
+                    if (headerH3) headerH3.textContent = 'Skapa ny deltagare';
+
                     createSection.innerHTML = getCreateRiderFormHtml(prefix);
                     searchSection.style.display = 'none';
-                    createSection.style.display = 'block';
+                    createSection.style.display = 'flex';
+                    createSection.style.flexDirection = 'column';
 
                     if (typeof lucide !== 'undefined') lucide.createIcons();
 
@@ -3945,7 +3954,8 @@ if (!empty($event['series_id'])) {
                     if (backBtn) {
                         backBtn.addEventListener('click', function() {
                             createSection.style.display = 'none';
-                            searchSection.style.display = 'block';
+                            searchSection.style.display = 'flex';
+                            if (headerH3) headerH3.textContent = 'Sok deltagare';
                         });
                     }
 
@@ -4165,9 +4175,11 @@ if (!empty($event['series_id'])) {
                     document.body.style.overflow = '';
                     riderSearch.value = '';
                     riderSearchResults.innerHTML = '';
-                    // Reset to search view (in case create form was open)
-                    document.getElementById('riderSearchSection').style.display = 'block';
+                    // Reset to search view
+                    document.getElementById('riderSearchSection').style.display = 'flex';
                     document.getElementById('riderCreateSection').style.display = 'none';
+                    const h3 = riderSearchModal.querySelector('.rider-search-modal__header h3');
+                    if (h3) h3.textContent = 'Sok deltagare';
                 }
 
                 // Load classes for selected rider
@@ -4949,28 +4961,30 @@ if (!empty($event['series_id'])) {
                 }
 
                 // Open modal - move to body to avoid overflow:hidden clipping from .card
+                function resetSeriesModal() {
+                    document.getElementById('seriesRiderSearchSection').style.display = 'flex';
+                    document.getElementById('seriesRiderCreateSection').style.display = 'none';
+                    const h3 = seriesRiderSearchModal.querySelector('.rider-search-modal__header h3');
+                    if (h3) h3.textContent = 'Sok deltagare';
+                }
+
                 seriesOpenRiderSearchBtn.addEventListener('click', () => {
                     document.body.appendChild(seriesRiderSearchModal);
                     seriesRiderSearchModal.style.display = 'flex';
                     seriesRiderSearch.value = '';
                     seriesRiderSearch.focus();
                     seriesRiderSearchResults.style.display = 'none';
-                    // Reset to search view
-                    document.getElementById('seriesRiderSearchSection').style.display = 'block';
-                    document.getElementById('seriesRiderCreateSection').style.display = 'none';
+                    resetSeriesModal();
                 });
 
-                // Close modal
                 seriesCloseRiderSearchBtn.addEventListener('click', () => {
                     seriesRiderSearchModal.style.display = 'none';
-                    document.getElementById('seriesRiderSearchSection').style.display = 'block';
-                    document.getElementById('seriesRiderCreateSection').style.display = 'none';
+                    resetSeriesModal();
                 });
 
                 seriesRiderSearchModal.querySelector('.rider-search-modal__backdrop').addEventListener('click', () => {
                     seriesRiderSearchModal.style.display = 'none';
-                    document.getElementById('seriesRiderSearchSection').style.display = 'block';
-                    document.getElementById('seriesRiderCreateSection').style.display = 'none';
+                    resetSeriesModal();
                 });
 
                 // Fixed "Create new rider" link for series modal
