@@ -103,10 +103,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
  'gender' => trim($_POST['gender'] ?? ''),
  'club_id' => !empty($_POST['club_id']) ? intval($_POST['club_id']) : null,
  'email' => trim($_POST['email'] ?? ''),
+ 'phone' => trim($_POST['phone'] ?? '') ?: null,
  'nationality' => trim($_POST['nationality'] ?? 'SWE'),
  'team' => trim($_POST['team'] ?? ''),
  'notes' => trim($_POST['notes'] ?? ''),
  'active' => isset($_POST['active']) ? 1 : 0,
+ // Address
+ 'address' => trim($_POST['address'] ?? '') ?: null,
+ 'postal_code' => trim($_POST['postal_code'] ?? '') ?: null,
+ 'postal_city' => trim($_POST['postal_city'] ?? '') ?: null,
+ // ICE - In Case of Emergency
+ 'ice_name' => trim($_POST['ice_name'] ?? '') ?: null,
+ 'ice_phone' => trim($_POST['ice_phone'] ?? '') ?: null,
  // Profile image URL
  'profile_image_url' => trim($_POST['profile_image_url'] ?? '') ?: null,
  // Social media links (normalized to full URLs)
@@ -913,6 +921,22 @@ include __DIR__ . '/components/unified-layout.php';
   >
   </div>
 
+  <!-- Phone -->
+  <div>
+  <label for="phone" class="label">
+  <i data-lucide="phone"></i>
+  Telefon
+  </label>
+  <input
+  type="tel"
+  id="phone"
+  name="phone"
+  class="input"
+  value="<?= h($rider['phone'] ?? '') ?>"
+  placeholder="070-123 45 67"
+  >
+  </div>
+
   <!-- Active Status -->
   <div>
   <label class="checkbox-label">
@@ -928,6 +952,95 @@ include __DIR__ . '/components/unified-layout.php';
   Aktiv deltagare
   </span>
   </label>
+  </div>
+
+  <!-- Address -->
+  <div class="col-span-2 mt-lg">
+  <h2 class="text-primary mb-md">
+  <i data-lucide="map-pin"></i>
+  Adress
+  </h2>
+  </div>
+
+  <div class="col-span-2">
+  <label for="address" class="label">
+  <i data-lucide="home"></i>
+  Gatuadress
+  </label>
+  <input
+  type="text"
+  id="address"
+  name="address"
+  class="input"
+  value="<?= h($rider['address'] ?? '') ?>"
+  placeholder="Gatuadress"
+  >
+  </div>
+
+  <div>
+  <label for="postal_code" class="label">
+  Postnummer
+  </label>
+  <input
+  type="text"
+  id="postal_code"
+  name="postal_code"
+  class="input"
+  value="<?= h($rider['postal_code'] ?? '') ?>"
+  placeholder="123 45"
+  >
+  </div>
+
+  <div>
+  <label for="postal_city" class="label">
+  Ort
+  </label>
+  <input
+  type="text"
+  id="postal_city"
+  name="postal_city"
+  class="input"
+  value="<?= h($rider['postal_city'] ?? '') ?>"
+  placeholder="Stockholm"
+  >
+  </div>
+
+  <!-- ICE - In Case of Emergency -->
+  <div class="col-span-2 mt-lg">
+  <h2 class="text-primary mb-md">
+  <i data-lucide="heart-pulse"></i>
+  Nödkontakt (ICE)
+  </h2>
+  </div>
+
+  <div>
+  <label for="ice_name" class="label">
+  <i data-lucide="user"></i>
+  Kontaktperson
+  </label>
+  <input
+  type="text"
+  id="ice_name"
+  name="ice_name"
+  class="input"
+  value="<?= h($rider['ice_name'] ?? '') ?>"
+  placeholder="Namn på nödkontakt"
+  >
+  </div>
+
+  <div>
+  <label for="ice_phone" class="label">
+  <i data-lucide="phone-call"></i>
+  Telefon nödkontakt
+  </label>
+  <input
+  type="tel"
+  id="ice_phone"
+  name="ice_phone"
+  class="input"
+  value="<?= h($rider['ice_phone'] ?? '') ?>"
+  placeholder="070-123 45 67"
+  >
   </div>
 
   <!-- Social Media Links -->
