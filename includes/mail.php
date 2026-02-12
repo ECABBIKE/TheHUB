@@ -296,7 +296,7 @@ function hub_send_payment_confirmation_email(string $email, string $name, array 
         'subtotal' => number_format($orderData['subtotal'] ?? 0, 0, ',', ' '),
         'discount' => number_format($orderData['discount'] ?? 0, 0, ',', ' '),
         'total' => number_format($orderData['total'] ?? 0, 0, ',', ' '),
-        'payment_method' => $orderData['payment_method'] ?? 'Swish',
+        'payment_method' => $orderData['payment_method'] ?? 'Kortbetalning',
         'payment_reference' => $orderData['payment_reference'] ?? '',
         'profile_url' => SITE_URL . '/profile'
     ]);
@@ -340,7 +340,7 @@ function hub_send_order_confirmation(int $orderId): bool {
         'subtotal' => $order['subtotal'],
         'discount' => $order['discount'],
         'total' => $order['total_amount'],
-        'payment_method' => ucfirst($order['payment_method'] ?? 'swish'),
+        'payment_method' => ucfirst($order['payment_method'] ?? 'card'),
         'payment_reference' => $order['payment_reference'] ?? ''
     ];
 
@@ -443,7 +443,6 @@ function hub_send_receipt_email(int $orderId, ?array $receiptResult = null): boo
 
     $paymentMethodNames = [
         'card' => 'Kortbetalning',
-        'swish' => 'Swish',
         'invoice' => 'Faktura',
         'manual' => 'Manuell'
     ];

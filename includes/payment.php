@@ -2,8 +2,8 @@
 /**
  * TheHUB V1.0 - Payment Functions
  *
- * Handles payment configuration, Swish links/QR, and order management.
- * Supports flexible payment config hierarchy: event > series > promotor > fallback
+ * Handles payment configuration and order management.
+ * Supports payment config hierarchy: event > series > legacy fallback
  */
 
 require_once __DIR__ . '/../hub-config.php';
@@ -117,39 +117,7 @@ function getPaymentConfig(int $eventId): ?array {
         }
     } catch (Exception $e) {}
 
-    // 5. Check promotor config (user assigned to this event)
-    try {
-        $stmt = $pdo->prepare("
-            SELECT pc.*, 'promotor' as config_source, au.full_name as source_name
-            FROM payment_configs pc
-            JOIN admin_users au ON au.id = pc.promotor_user_id
-            JOIN promotor_events pe ON pe.user_id = au.id
-            WHERE pe.event_id = ? AND pc.swish_enabled = 1
-            LIMIT 1
-        ");
-        $stmt->execute([$eventId]);
-        if ($config = $stmt->fetch(PDO::FETCH_ASSOC)) {
-            return $config;
-        }
-    } catch (Exception $e) {}
-
-    // 6. Check if any promotor for this event has swish directly on their profile
-    try {
-        $stmt = $pdo->prepare("
-            SELECT au.swish_number, au.swish_name, au.full_name as source_name,
-                   'promotor_direct' as config_source, 1 as payment_enabled
-            FROM admin_users au
-            JOIN promotor_events pe ON pe.user_id = au.id
-            WHERE pe.event_id = ? AND au.swish_number IS NOT NULL
-            LIMIT 1
-        ");
-        $stmt->execute([$eventId]);
-        if ($config = $stmt->fetch(PDO::FETCH_ASSOC)) {
-            return $config;
-        }
-    } catch (Exception $e) {}
-
-    // 7. No config found
+    // 5. No config found
     return null;
 }
 
@@ -158,102 +126,6 @@ function getPaymentConfig(int $eventId): ?array {
  */
 function isCardAvailable(int $eventId): bool {
     return !empty(env('STRIPE_SECRET_KEY', ''));
-}
-
-// ============================================================================
-// SWISH LINK & QR GENERATION
-// ============================================================================
-
-/**
- * Generate Swish payment URL (opens Swish app on mobile)
- *
- * @param string $recipientNumber Swish number (with or without dashes)
- * @param float $amount Amount in SEK
- * @param string $message Payment reference/message (max 50 chars)
- * @return string Swish URL
- */
-function generateSwishUrl(string $recipientNumber, float $amount, string $message = ''): string {
-    // Clean phone number (remove spaces, dashes)
-    $cleanNumber = preg_replace('/[^0-9]/', '', $recipientNumber);
-
-    // Ensure it starts with 46 (Swedish country code) if it starts with 0
-    if (substr($cleanNumber, 0, 1) === '0') {
-        $cleanNumber = '46' . substr($cleanNumber, 1);
-    }
-
-    // Truncate message to 50 chars (Swish limit)
-    $message = mb_substr($message, 0, 50);
-
-    // Build Swish URL
-    // Format: https://app.swish.nu/1/p/sw/?sw=PHONE&amt=AMOUNT&msg=MESSAGE
-    $params = [
-        'sw' => $cleanNumber,
-        'amt' => number_format($amount, 0, '', ''),
-        'msg' => $message
-    ];
-
-    return 'https://app.swish.nu/1/p/sw/?' . http_build_query($params);
-}
-
-/**
- * Generate Swish QR code data URL
- * Uses the Swish QR format for scanning with Swish app
- *
- * @param string $recipientNumber Swish number
- * @param float $amount Amount in SEK
- * @param string $message Payment reference
- * @param int $size QR code size in pixels
- * @return string Data URL for QR code image (SVG)
- */
-function generateSwishQR(string $recipientNumber, float $amount, string $message = '', int $size = 200): string {
-    // Clean phone number
-    $cleanNumber = preg_replace('/[^0-9]/', '', $recipientNumber);
-    if (substr($cleanNumber, 0, 1) === '0') {
-        $cleanNumber = '46' . substr($cleanNumber, 1);
-    }
-
-    // Swish QR payload format
-    // C = Create payment, phone number, amount (in öre), message
-    $amountOre = (int)($amount * 100);
-    $message = mb_substr($message, 0, 50);
-
-    $payload = "C{$cleanNumber};{$amountOre};{$message}";
-
-    // Use Google Charts API for QR generation (simple approach)
-    // In production, consider using a PHP QR library like endroid/qr-code
-    $qrUrl = 'https://chart.googleapis.com/chart?' . http_build_query([
-        'cht' => 'qr',
-        'chs' => "{$size}x{$size}",
-        'chl' => $payload,
-        'choe' => 'UTF-8'
-    ]);
-
-    return $qrUrl;
-}
-
-/**
- * Format Swish number for display
- */
-function formatSwishNumber(string $number): string {
-    $clean = preg_replace('/[^0-9]/', '', $number);
-
-    // Mobile number format: 070-123 45 67
-    if (strlen($clean) === 10 && substr($clean, 0, 1) === '0') {
-        return substr($clean, 0, 3) . '-' .
-               substr($clean, 3, 3) . ' ' .
-               substr($clean, 6, 2) . ' ' .
-               substr($clean, 8, 2);
-    }
-
-    // Company number format: 123-XXX XX XX
-    if (strlen($clean) >= 7) {
-        return substr($clean, 0, 3) . '-' .
-               substr($clean, 3, 3) . ' ' .
-               substr($clean, 6, 2) . ' ' .
-               substr($clean, 8);
-    }
-
-    return $number;
 }
 
 // ============================================================================
@@ -452,7 +324,7 @@ function createOrder(array $registrationIds, int $riderId, int $eventId, ?string
  * Mark order as paid
  *
  * @param int $orderId Order ID
- * @param string $paymentReference External reference (Swish ref, etc)
+ * @param string $paymentReference External payment reference
  * @return bool Success
  */
 function markOrderPaid(int $orderId, string $paymentReference = ''): bool {
@@ -698,12 +570,10 @@ function getOrder(int $orderId): ?array {
     $stmt = $pdo->prepare("
         SELECT o.*,
                e.name as event_name, e.date as event_date,
-               s.name as series_name, s.logo as series_logo,
-               pr.swish_number, pr.swish_name
+               s.name as series_name, s.logo as series_logo
         FROM orders o
         LEFT JOIN events e ON o.event_id = e.id
         LEFT JOIN series s ON o.series_id = s.id
-        LEFT JOIN payment_recipients pr ON e.payment_recipient_id = pr.id AND pr.active = 1
         WHERE o.id = ?
     ");
     $stmt->execute([$orderId]);

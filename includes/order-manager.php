@@ -82,22 +82,12 @@ function createMultiRiderOrder(array $buyerData, array $items, ?string $discount
             $checkStmt->execute([$orderReference]);
         }
 
-        // Hämta payment config från första event (för Swish-nummer)
+        // Hämta första event_id
         $firstEventId = null;
         foreach ($items as $item) {
             if (($item['type'] ?? 'event') === 'event' && !empty($item['event_id'])) {
                 $firstEventId = intval($item['event_id']);
                 break;
-            }
-        }
-
-        $swishNumber = null;
-        $swishMessage = $orderReference;
-
-        if ($firstEventId && function_exists('getPaymentConfig')) {
-            $paymentConfig = getPaymentConfig($firstEventId);
-            if ($paymentConfig && !empty($paymentConfig['swish_number'])) {
-                $swishNumber = $paymentConfig['swish_number'];
             }
         }
 
@@ -131,13 +121,11 @@ function createMultiRiderOrder(array $buyerData, array $items, ?string $discount
                 order_number, rider_id, customer_email, customer_name,
                 event_id, subtotal, discount, total_amount, currency,
                 payment_method, payment_status,
-                swish_number, swish_message,
                 expires_at, created_at
             ) VALUES (
                 ?, ?, ?, ?,
                 ?, 0, 0, 0, 'SEK',
-                'swish', 'pending',
-                ?, ?,
+                'card', 'pending',
                 DATE_ADD(NOW(), INTERVAL 24 HOUR), NOW()
             )
         ");
@@ -146,9 +134,7 @@ function createMultiRiderOrder(array $buyerData, array $items, ?string $discount
             $validRiderId,  // Only set if valid rider ID
             $buyerData['email'],
             $buyerData['name'],
-            $firstEventId,
-            $swishNumber,
-            $swishMessage
+            $firstEventId
         ]);
 
         $orderId = $pdo->lastInsertId();
@@ -1049,20 +1035,3 @@ function createRiderFromRegistration(array $data, int $parentUserId): array {
     }
 }
 
-/**
- * Beräkna savings för multi-rider order
- */
-function calculateMultiRiderSavings(int $riderCount): array {
-    $swishFeePerTransaction = 1.00; // kr
-
-    $individualCost = $riderCount * $swishFeePerTransaction;
-    $multiRiderCost = $swishFeePerTransaction; // Bara en avgift
-    $savings = $individualCost - $multiRiderCost;
-
-    return [
-        'individual_fees' => $individualCost,
-        'multi_rider_fee' => $multiRiderCost,
-        'savings' => $savings,
-        'savings_percent' => $riderCount > 1 ? round((1 - 1/$riderCount) * 100) : 0
-    ];
-}

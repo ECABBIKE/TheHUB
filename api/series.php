@@ -62,24 +62,15 @@ function handleUpdatePromotor() {
     }
 
     // Update series fields that promotors can change
-    $swishNumber = $input['swish_number'] ?? null;
-    $swishName = $input['swish_name'] ?? null;
     $bannerMediaId = $input['banner_media_id'] ?? null;
-
-    // Sanitize Swish number (remove spaces, keep dashes)
-    if ($swishNumber) {
-        $swishNumber = preg_replace('/[^\d\-]/', '', $swishNumber);
-    }
 
     try {
         $stmt = $pdo->prepare("
             UPDATE series
-            SET swish_number = ?,
-                swish_name = ?,
-                banner_media_id = ?
+            SET banner_media_id = ?
             WHERE id = ?
         ");
-        $stmt->execute([$swishNumber, $swishName, $bannerMediaId, $seriesId]);
+        $stmt->execute([$bannerMediaId, $seriesId]);
 
         echo json_encode([
             'success' => true,

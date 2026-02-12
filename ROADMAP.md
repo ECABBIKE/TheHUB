@@ -1,6 +1,6 @@
 # TheHUB - Development Roadmap
 
-> Senast uppdaterad: 2026-02-10
+> Senast uppdaterad: 2026-02-12
 >
 > **Se:** `/admin/roadmap.php` for interaktiv vy
 
@@ -11,7 +11,7 @@
 | Omrade | Status | Beskrivning | Progress |
 |--------|--------|-------------|----------|
 | Analytics Platform | KLAR | Statistik, KPI:er, trender, rapporter | 100% |
-| Betalningssystem | KLAR | Stripe (single account) + manuell Swish, ordrar, checkout | 100% |
+| Betalningssystem | KLAR | Stripe (single account, kort), ordrar, checkout. Swedbank Pay planerat. | 100% |
 | Event Ratings | KLAR | Deltagarfeedback pa events | 100% |
 | Win-Back System | KLAR | Aterengagera churnade deltagare | 100% |
 | Klubb RF-Registrering | KLAR | SCF/NCF/DCU-synk och stavningskontroll | 100% |
@@ -262,6 +262,41 @@ Automatiskt genererade "trading cards" med deltagarstatistik:
 ---
 
 # CHANGELOG
+
+### 2026-02-12 (Rensning: Swish, Promotor-Stripe, Betalningsmottagare)
+- **Branch:** claude/fix-mobile-payment-layout-Kh2Gg
+
+- **Borttaget: Swish-betalning (manuell QR/djuplank)**
+  - Swish-UI borttagen fran checkout
+  - SwishClient.php, SwishGateway.php, ManualGateway.php arkiverade
+  - swish-callback.php arkiverad
+  - Swish-falt borttagna fran promotor-panel och serie-redigering
+
+- **Borttaget: Stripe Connect (promotor-kopplat)**
+  - payment-recipients.php, promotor-stripe.php, stripe-connect.php arkiverade
+  - Connected account-metoder borttagna fran StripeClient.php
+  - Destination charges och multi-seller transfers borttagna
+  - debug-swish.php, gateway-settings.php, payment-settings.php, event-payment.php arkiverade
+
+- **Borttaget: Betalningsmottagare per event/serie**
+  - Betalningsmottagare-dropdown borttagen fran event-edit och series-manage
+  - Payment recipient-filter borttagen fran ordrar
+  - Ekonomi-dashboard rensat fran Stripe Connect-statistik
+
+- **Kvar: Stripe single account (kortbetalning)**
+  - Alla betalningar gar via plattformens enda Stripe-konto
+  - Checkout, ordrar, rabattkoder, prenumerationer fungerar som vanligt
+
+- **Arkiverade filer:**
+  - `admin/_archived/payment-cleanup-2026/` - Admin-sidor
+  - `includes/payment/_archived/` - Swish gateways och klient
+  - `api/_archived/` - API-endpoints
+
+- **Uppdaterad dokumentation:**
+  - `docs/PAYMENT.md` - Helt omskriven for kort-only
+  - `ROADMAP.md` - Uppdaterad med rensnings-changelog
+  - `CLAUDE.md` - Uppdaterat databas-schema
+  - Navigations-konfiguration rensad (admin-tabs, economy-tabs, .htaccess)
 
 ### 2026-02-10 (Betalningssystem 2.0 - Forenkling)
 - **Branch:** claude/review-payment-system-vUJyF

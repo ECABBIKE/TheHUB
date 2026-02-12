@@ -960,20 +960,6 @@ include __DIR__ . '/components/unified-layout.php';
         </div>
     </div>
 
-    <!-- Stripe Connect -->
-    <div class="card">
-        <div class="tool-header">
-            <div class="tool-icon"><i data-lucide="link"></i></div>
-            <div>
-                <h4 class="tool-title">Stripe Connect</h4>
-                <p class="tool-description">Hantera betalningsmottagare</p>
-            </div>
-        </div>
-        <div class="tool-actions">
-            <a href="/admin/stripe-connect.php" class="btn-admin btn-admin-secondary">Öppna</a>
-        </div>
-    </div>
-
     <!-- Process Refunds -->
     <div class="card">
         <div class="tool-header">

@@ -22,15 +22,10 @@ $series = [];
 try {
     $series = $db->getAll("
         SELECT s.*,
-               pr.swish_number as recipient_swish,
-               pr.swish_name as recipient_swish_name,
-               pr.stripe_account_id,
-               pr.stripe_account_status,
                m.filepath as banner_url,
                COUNT(DISTINCT e.id) as event_count
         FROM series s
         JOIN promotor_series ps ON ps.series_id = s.id
-        LEFT JOIN payment_recipients pr ON s.payment_recipient_id = pr.id
         LEFT JOIN media m ON s.banner_media_id = m.id
         LEFT JOIN events e ON e.series_id = s.id AND YEAR(e.date) = YEAR(CURDATE())
         WHERE ps.user_id = ?
@@ -454,22 +449,6 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="series-card-body">
-            <?php
-            $swishNumber = $s['swish_number'] ?? $s['recipient_swish'] ?? null;
-            $swishName = $s['swish_name'] ?? $s['recipient_swish_name'] ?? null;
-            ?>
-            <?php if ($swishNumber): ?>
-            <div class="series-detail">
-                <i data-lucide="smartphone"></i>
-                <span>Swish: <?= h($swishNumber) ?></span>
-            </div>
-            <?php else: ?>
-            <div class="series-detail missing">
-                <i data-lucide="alert-triangle"></i>
-                <span>Swish ej konfigurerat</span>
-            </div>
-            <?php endif; ?>
-
             <?php if ($s['banner_media_id'] ?? null): ?>
             <div class="series-detail">
                 <i data-lucide="image"></i>
@@ -481,37 +460,12 @@ include __DIR__ . '/components/unified-layout.php';
                 <span>Ingen banner</span>
             </div>
             <?php endif; ?>
-
-            <?php
-            $stripeStatus = $s['stripe_account_status'] ?? null;
-            $hasStripe = !empty($s['stripe_account_id']);
-            ?>
-            <?php if ($hasStripe && $stripeStatus === 'active'): ?>
-            <div class="series-detail" style="color: var(--color-success);">
-                <i data-lucide="credit-card"></i>
-                <span>Stripe aktiv</span>
-            </div>
-            <?php elseif ($hasStripe): ?>
-            <div class="series-detail" style="color: var(--color-warning);">
-                <i data-lucide="credit-card"></i>
-                <span>Stripe väntar</span>
-            </div>
-            <?php else: ?>
-            <div class="series-detail missing">
-                <i data-lucide="credit-card"></i>
-                <span>Stripe ej ansluten</span>
-            </div>
-            <?php endif; ?>
         </div>
         <div class="series-card-footer" style="display: flex; gap: var(--space-sm);">
             <button class="btn btn-secondary" onclick="editSeries(<?= $s['id'] ?>)" style="flex: 1;">
                 <i data-lucide="settings"></i>
                 Inställningar
             </button>
-            <a href="/admin/promotor-stripe.php" class="btn btn-secondary" style="flex: 1;">
-                <i data-lucide="credit-card"></i>
-                Stripe
-            </a>
         </div>
     </div>
     <?php endforeach; ?>
@@ -608,28 +562,6 @@ include __DIR__ . '/components/unified-layout.php';
             <input type="hidden" id="seriesId" name="id">
             <div class="modal-body">
                 <h4 style="margin: 0 0 var(--space-md) 0; font-size: var(--text-md);">
-                    <i data-lucide="smartphone" style="width: 18px; height: 18px; vertical-align: middle;"></i>
-                    Swish-betalning
-                </h4>
-                <p style="font-size: var(--text-sm); color: var(--color-text-secondary); margin-bottom: var(--space-md);">
-                    Konfigurerar Swish för alla tävlingar i serien (om inte tävlingen har egen inställning).
-                </p>
-
-                <div class="form-group">
-                    <label class="form-label">Swish-nummer</label>
-                    <input type="text" class="form-input" id="seriesSwishNumber" name="swish_number" placeholder="070-1234567 eller 123-456 78 90">
-                    <div class="form-hint">Telefonnummer eller organisationsnummer kopplat till Swish</div>
-                </div>
-
-                <div class="form-group">
-                    <label class="form-label">Swish-namn</label>
-                    <input type="text" class="form-input" id="seriesSwishName" name="swish_name" placeholder="Förening ABC">
-                    <div class="form-hint">Namnet som visas för mottagaren i Swish-appen</div>
-                </div>
-
-                <hr style="margin: var(--space-lg) 0; border: none; border-top: 1px solid var(--color-border);">
-
-                <h4 style="margin: 0 0 var(--space-md) 0; font-size: var(--text-md);">
                     <i data-lucide="image" style="width: 18px; height: 18px; vertical-align: middle;"></i>
                     Serie-banner
                 </h4>
@@ -679,8 +611,6 @@ function editSeries(id) {
     document.getElementById('seriesModalTitle').textContent = 'Redigera ' + s.name;
 
     // Set Swish fields - try series-specific first, then payment recipient
-    document.getElementById('seriesSwishNumber').value = s.swish_number || s.recipient_swish || '';
-    document.getElementById('seriesSwishName').value = s.swish_name || s.recipient_swish_name || '';
 
     // Set banner preview
     clearSeriesBanner();
@@ -758,8 +688,6 @@ async function saveSeries(event) {
 
     const data = {
         id: currentSeriesId,
-        swish_number: formData.get('swish_number') || null,
-        swish_name: formData.get('swish_name') || null,
         banner_media_id: formData.get('banner_media_id') || null
     };
 

@@ -264,9 +264,6 @@ include __DIR__ . '/components/unified-layout.php';
                     <a href="https://dashboard.stripe.com/refunds" target="_blank" class="btn-admin btn-admin-secondary btn-admin-sm">
                         <i data-lucide="external-link"></i> Stripe Dashboard
                     </a>
-                    <a href="/admin/stripe-connect" class="btn-admin btn-admin-secondary btn-admin-sm">
-                        <i data-lucide="link"></i> Stripe Connect
-                    </a>
                     <a href="/admin/ekonomi" class="btn-admin btn-admin-secondary btn-admin-sm">
                         <i data-lucide="wallet"></i> Ekonomi
                     </a>

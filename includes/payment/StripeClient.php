@@ -1,6 +1,6 @@
 <?php
 /**
- * Stripe Client - Handles Stripe Connect payments
+ * Stripe Client - Handles Stripe payments (single platform account)
  *
  * @package TheHUB\Payment
  */
@@ -18,11 +18,6 @@ class StripeClient {
     /**
      * Create Payment Intent
      *
-     * Supports two modes:
-     * 1. Single seller (destination charge): Uses transfer_data with one connected account
-     * 2. Multi-seller (separate charges and transfers): Uses transfer_group,
-     *    then createTransfer() is called later per seller after payment succeeds
-     *
      * @param array $data Payment data
      * @return array Result
      */
@@ -31,47 +26,16 @@ class StripeClient {
             'amount' => (int)($data['amount'] * 100), // Convert to cents/ore
             'currency' => strtolower($data['currency'] ?? 'sek'),
             'description' => $data['description'] ?? '',
-            'metadata' => $data['metadata'] ?? []
+            'metadata' => $data['metadata'] ?? [],
+            'payment_method_types' => ['card']
         ];
-
-        // Payment method types - default to card, can include swish, vipps
-        $paymentMethods = $data['payment_method_types'] ?? ['card'];
-        $params['payment_method_types'] = $paymentMethods;
-
-        // Check if Vipps is included (requires preview header)
-        $extraHeaders = [];
-        if (in_array('vipps', $paymentMethods)) {
-            $extraHeaders[] = 'vipps_preview: v1';
-        }
 
         // Add receipt email if provided
         if (!empty($data['email'])) {
             $params['receipt_email'] = $data['email'];
         }
 
-        // Multi-seller mode: Use transfer_group (separate charges and transfers)
-        // Transfers are created later via createTransfer() after payment succeeds
-        if (!empty($data['transfer_group'])) {
-            $params['transfer_group'] = $data['transfer_group'];
-        }
-        // Single seller mode: Use destination charge (legacy, simpler for single seller)
-        elseif (!empty($data['stripe_account_id'])) {
-            $params['transfer_data'] = [
-                'destination' => $data['stripe_account_id']
-            ];
-
-            // Platform fee - supports percentage or fixed amount
-            if (!empty($data['platform_fee_fixed'])) {
-                // Fixed fee in öre (e.g., 1000 = 10 kr)
-                $params['application_fee_amount'] = (int)$data['platform_fee_fixed'];
-            } elseif (!empty($data['platform_fee_percent'])) {
-                // Percentage fee (e.g., 2 = 2%)
-                $feeAmount = (int)($params['amount'] * $data['platform_fee_percent'] / 100);
-                $params['application_fee_amount'] = $feeAmount;
-            }
-        }
-
-        $response = $this->request('POST', '/payment_intents', $params, $extraHeaders);
+        $response = $this->request('POST', '/payment_intents', $params);
 
         return [
             'success' => !isset($response['error']),
@@ -142,97 +106,6 @@ class StripeClient {
         return [
             'success' => !isset($response['error']),
             'status' => $response['status'] ?? null,
-            'error' => $response['error']['message'] ?? null
-        ];
-    }
-
-    /**
-     * Create Connected Account (Express) - Recipient Model
-     *
-     * Uses "recipient" configuration where the platform collects payments
-     * and transfers funds to connected accounts. Simpler onboarding for
-     * sellers - they just need bank details, no full merchant setup.
-     *
-     * @param array $data Account data
-     * @return array Result
-     */
-    public function createConnectedAccount(array $data): array {
-        $params = [
-            'type' => 'express',
-            'country' => $data['country'] ?? 'SE',
-            'email' => $data['email'] ?? null,
-            // Express account capabilities for Swedish market
-            // - card_payments: Visa, Mastercard, Apple Pay, Google Pay
-            // - swish_payments: Swish (Sweden)
-            // - transfers: Can receive transfers from platform
-            'capabilities' => [
-                'card_payments' => ['requested' => true],
-                'swish_payments' => ['requested' => true],  // CRITICAL: Swish for Swedish accounts
-                'transfers' => ['requested' => true]
-            ],
-            'business_type' => $data['business_type'] ?? 'individual',
-            'metadata' => $data['metadata'] ?? []
-        ];
-
-        // Optional: Add business profile for better UX
-        if (!empty($data['business_name'])) {
-            $params['business_profile'] = [
-                'name' => $data['business_name'],
-                'url' => $data['business_url'] ?? null
-            ];
-        }
-
-        $response = $this->request('POST', '/accounts', $params);
-
-        return [
-            'success' => !isset($response['error']),
-            'account_id' => $response['id'] ?? null,
-            'error' => $response['error']['message'] ?? null
-        ];
-    }
-
-    /**
-     * Create Account Link for onboarding
-     *
-     * @param string $accountId Stripe Account ID
-     * @param string $returnUrl Return URL after onboarding
-     * @param string $refreshUrl Refresh URL if link expires
-     * @return array Result with onboarding URL
-     */
-    public function createAccountLink(string $accountId, string $returnUrl, string $refreshUrl): array {
-        $params = [
-            'account' => $accountId,
-            'return_url' => $returnUrl,
-            'refresh_url' => $refreshUrl,
-            'type' => 'account_onboarding'
-        ];
-
-        $response = $this->request('POST', '/account_links', $params);
-
-        return [
-            'success' => !isset($response['error']),
-            'url' => $response['url'] ?? null,
-            'expires_at' => $response['expires_at'] ?? null,
-            'error' => $response['error']['message'] ?? null
-        ];
-    }
-
-    /**
-     * Get Connected Account details
-     *
-     * @param string $accountId Stripe Account ID
-     * @return array Account details
-     */
-    public function getAccount(string $accountId): array {
-        $response = $this->request('GET', "/accounts/{$accountId}");
-
-        return [
-            'success' => !isset($response['error']),
-            'id' => $response['id'] ?? null,
-            'email' => $response['email'] ?? null,
-            'charges_enabled' => $response['charges_enabled'] ?? false,
-            'payouts_enabled' => $response['payouts_enabled'] ?? false,
-            'details_submitted' => $response['details_submitted'] ?? false,
             'error' => $response['error']['message'] ?? null
         ];
     }
@@ -698,168 +571,7 @@ class StripeClient {
     }
 
     /**
-     * Create Login Link for Express Account Dashboard
-     *
-     * @param string $accountId Stripe Account ID
-     * @return array Result with login URL
-     */
-    public function createLoginLink(string $accountId): array {
-        $response = $this->request('POST', "/accounts/{$accountId}/login_links");
-
-        return [
-            'success' => !isset($response['error']),
-            'url' => $response['url'] ?? null,
-            'error' => $response['error']['message'] ?? null
-        ];
-    }
-
-    // ============================================================
-    // MULTI-SELLER TRANSFERS (Separate Charges and Transfers)
-    // ============================================================
-
-    /**
-     * Get Charge ID from Payment Intent
-     *
-     * After a successful payment, we need the charge_id to use as
-     * source_transaction when creating transfers to sellers.
-     *
-     * @param string $paymentIntentId Payment Intent ID
-     * @return array Result with charge_id
-     */
-    public function getChargeFromPaymentIntent(string $paymentIntentId): array {
-        $response = $this->request('GET', "/payment_intents/{$paymentIntentId}");
-
-        if (isset($response['error'])) {
-            return [
-                'success' => false,
-                'error' => $response['error']['message'] ?? 'Unknown error'
-            ];
-        }
-
-        // The latest_charge field contains the charge ID
-        $chargeId = $response['latest_charge'] ?? null;
-
-        // Fallback: check charges array if latest_charge is not available
-        if (!$chargeId && !empty($response['charges']['data'][0]['id'])) {
-            $chargeId = $response['charges']['data'][0]['id'];
-        }
-
-        return [
-            'success' => $chargeId !== null,
-            'charge_id' => $chargeId,
-            'amount' => isset($response['amount']) ? $response['amount'] / 100 : 0,
-            'currency' => $response['currency'] ?? 'sek',
-            'transfer_group' => $response['transfer_group'] ?? null,
-            'error' => $chargeId ? null : 'No charge found for payment intent'
-        ];
-    }
-
-    /**
-     * Create Transfer to Connected Account
-     *
-     * Used in multi-seller orders: after the platform receives payment,
-     * create individual transfers to each seller's connected account.
-     *
-     * @param array $data Transfer data:
-     *   - amount: Amount in SEK (will be converted to öre)
-     *   - currency: Currency (default 'sek')
-     *   - destination: Connected account ID (acct_...)
-     *   - source_transaction: Charge ID from the original payment (ch_...)
-     *   - transfer_group: Group ID for tracking (e.g., order_id)
-     *   - description: Optional description
-     *   - metadata: Optional metadata
-     * @return array Result with transfer_id
-     */
-    public function createTransfer(array $data): array {
-        $params = [
-            'amount' => (int)($data['amount'] * 100), // Convert to öre
-            'currency' => strtolower($data['currency'] ?? 'sek'),
-            'destination' => $data['destination'], // Connected account ID
-        ];
-
-        // Link to source charge (required for proper fund tracking)
-        if (!empty($data['source_transaction'])) {
-            $params['source_transaction'] = $data['source_transaction'];
-        }
-
-        // Transfer group for tracking (matches order_id)
-        if (!empty($data['transfer_group'])) {
-            $params['transfer_group'] = $data['transfer_group'];
-        }
-
-        // Optional description
-        if (!empty($data['description'])) {
-            $params['description'] = $data['description'];
-        }
-
-        // Optional metadata
-        if (!empty($data['metadata'])) {
-            $params['metadata'] = $data['metadata'];
-        }
-
-        $response = $this->request('POST', '/transfers', $params);
-
-        return [
-            'success' => !isset($response['error']),
-            'transfer_id' => $response['id'] ?? null,
-            'amount' => isset($response['amount']) ? $response['amount'] / 100 : 0,
-            'destination' => $response['destination'] ?? null,
-            'error' => $response['error']['message'] ?? null
-        ];
-    }
-
-    /**
-     * Create Transfer Reversal (refund a transfer)
-     *
-     * If a customer requests a refund after transfers have been made,
-     * you may need to reverse transfers from connected accounts.
-     *
-     * @param string $transferId Transfer ID to reverse
-     * @param float|null $amount Amount to reverse (null for full reversal)
-     * @return array Result
-     */
-    public function createTransferReversal(string $transferId, ?float $amount = null): array {
-        $params = [];
-
-        if ($amount !== null) {
-            $params['amount'] = (int)($amount * 100);
-        }
-
-        $response = $this->request('POST', "/transfers/{$transferId}/reversals", $params);
-
-        return [
-            'success' => !isset($response['error']),
-            'reversal_id' => $response['id'] ?? null,
-            'amount' => isset($response['amount']) ? $response['amount'] / 100 : 0,
-            'error' => $response['error']['message'] ?? null
-        ];
-    }
-
-    /**
-     * List Transfers for a transfer group (order)
-     *
-     * Useful for viewing all transfers made for a specific order.
-     *
-     * @param string $transferGroup Transfer group ID (e.g., order_id)
-     * @param int $limit Max transfers to return
-     * @return array List of transfers
-     */
-    public function listTransfers(string $transferGroup, int $limit = 100): array {
-        $response = $this->request('GET', '/transfers?transfer_group=' . urlencode($transferGroup) . '&limit=' . $limit);
-
-        return [
-            'success' => !isset($response['error']),
-            'transfers' => $response['data'] ?? [],
-            'total' => count($response['data'] ?? []),
-            'error' => $response['error']['message'] ?? null
-        ];
-    }
-
-    /**
      * Get Balance for Platform Account
-     *
-     * Shows available and pending balance on the platform account.
-     * Useful for verifying funds before making transfers.
      *
      * @return array Balance data
      */
@@ -891,39 +603,4 @@ class StripeClient {
         ];
     }
 
-    /**
-     * Get Balance for Connected Account
-     *
-     * @param string $accountId Connected account ID
-     * @return array Balance data
-     */
-    public function getConnectedAccountBalance(string $accountId): array {
-        $response = $this->request('GET', '/balance', null, [
-            'Stripe-Account: ' . $accountId
-        ]);
-
-        if (isset($response['error'])) {
-            return [
-                'success' => false,
-                'error' => $response['error']['message'] ?? 'Unknown error'
-            ];
-        }
-
-        $available = [];
-        $pending = [];
-
-        foreach ($response['available'] ?? [] as $bal) {
-            $available[$bal['currency']] = $bal['amount'] / 100;
-        }
-
-        foreach ($response['pending'] ?? [] as $bal) {
-            $pending[$bal['currency']] = $bal['amount'] / 100;
-        }
-
-        return [
-            'success' => true,
-            'available' => $available,
-            'pending' => $pending
-        ];
-    }
 }

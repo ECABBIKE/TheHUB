@@ -499,27 +499,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // PAYMENT TAB ACTIONS
     elseif ($action === 'save_payment') {
-        $paymentRecipientId = !empty($_POST['payment_recipient_id']) ? intval($_POST['payment_recipient_id']) : null;
         $gravityIdDiscount = floatval($_POST['gravity_id_discount'] ?? 0);
 
         $updateData = ['gravity_id_discount' => $gravityIdDiscount];
-
-        // Check if payment_recipient_id column exists
-        try {
-            $columns = $db->getAll("SHOW COLUMNS FROM series LIKE 'payment_recipient_id'");
-            if (!empty($columns)) {
-                $updateData['payment_recipient_id'] = $paymentRecipientId;
-            }
-        } catch (Exception $e) {}
-
-        // Check for legacy swish columns
-        try {
-            $columns = $db->getAll("SHOW COLUMNS FROM series LIKE 'swish_number'");
-            if (!empty($columns)) {
-                $updateData['swish_number'] = trim($_POST['swish_number'] ?? '') ?: null;
-                $updateData['swish_name'] = trim($_POST['swish_name'] ?? '') ?: null;
-            }
-        } catch (Exception $e) {}
 
         $db->update('series', $updateData, 'id = ?', [$id]);
         $series = $db->getRow("SELECT * FROM series WHERE id = ?", [$id]);
@@ -678,28 +660,6 @@ try {
     $pricingTemplates = $db->getAll("SELECT id, name, is_default FROM pricing_templates ORDER BY is_default DESC, name ASC");
 } catch (Exception $e) {}
 
-// Get payment recipients (with Stripe info)
-$paymentRecipients = [];
-try {
-    $tables = $db->getAll("SHOW TABLES LIKE 'payment_recipients'");
-    if (!empty($tables)) {
-        $paymentRecipients = $db->getAll("
-            SELECT id, name, swish_number, swish_name,
-                   stripe_account_id, stripe_account_status,
-                   gateway_type
-            FROM payment_recipients
-            WHERE active = 1
-            ORDER BY name ASC
-        ");
-    }
-} catch (Exception $e) {}
-
-// Check legacy swish columns
-$hasLegacySwish = false;
-try {
-    $columns = $db->getAll("SHOW COLUMNS FROM series LIKE 'swish_number'");
-    $hasLegacySwish = !empty($columns);
-} catch (Exception $e) {}
 
 // Count stats
 $eventsCount = count($seriesEvents);
@@ -1401,106 +1361,6 @@ include __DIR__ . '/components/unified-layout.php';
     <form method="POST">
         <?= csrf_field() ?>
         <input type="hidden" name="action" value="save_payment">
-
-        <?php if (!empty($paymentRecipients)): ?>
-        <?php
-        // Get selected recipient for status display
-        $selectedRecipient = null;
-        foreach ($paymentRecipients as $r) {
-            if (($series['payment_recipient_id'] ?? '') == $r['id']) {
-                $selectedRecipient = $r;
-                break;
-            }
-        }
-        ?>
-        <!-- Modern Payment Recipients -->
-        <div class="admin-card mb-lg">
-            <div class="admin-card-header">
-                <h2><i data-lucide="building-2"></i> Betalningsmottagare</h2>
-            </div>
-            <div class="admin-card-body">
-                <p class="text-secondary mb-md">
-                    Välj vem som tar emot betalningar för denna serie. Event utan egen mottagare använder seriens.
-                </p>
-
-                <div class="admin-form-group">
-                    <label class="admin-form-label">Mottagare</label>
-                    <select name="payment_recipient_id" class="admin-form-select" onchange="this.form.submit()">
-                        <option value="">-- Ingen (betalning inaktiverad) --</option>
-                        <?php foreach ($paymentRecipients as $r):
-                            $hasStripe = !empty($r['stripe_account_id']);
-                            $stripeActive = ($r['stripe_account_status'] ?? '') === 'active';
-                            $statusIcon = $hasStripe ? ($stripeActive ? ' [Stripe OK]' : ' [Stripe väntar]') : '';
-                        ?>
-                        <option value="<?= $r['id'] ?>" <?= ($series['payment_recipient_id'] ?? '') == $r['id'] ? 'selected' : '' ?>>
-                            <?= htmlspecialchars($r['name']) ?><?= $statusIcon ?>
-                        </option>
-                        <?php endforeach; ?>
-                    </select>
-                    <small class="text-secondary">
-                        <a href="/admin/payment-recipients" class="text-accent">Hantera mottagare & Stripe Connect</a>
-                    </small>
-                </div>
-
-                <?php if ($selectedRecipient): ?>
-                <!-- Stripe Connect Status -->
-                <div class="mt-md p-md" style="background: var(--color-bg-hover); border-radius: var(--radius-md); border: 1px solid var(--color-border);">
-                    <div class="flex justify-between items-center flex-wrap gap-sm">
-                        <div>
-                            <strong><?= htmlspecialchars($selectedRecipient['name']) ?></strong>
-                            <?php if (!empty($selectedRecipient['stripe_account_id'])): ?>
-                                <?php if (($selectedRecipient['stripe_account_status'] ?? '') === 'active'): ?>
-                                    <span class="badge badge-success ml-sm">Stripe aktiv</span>
-                                <?php else: ?>
-                                    <span class="badge badge-warning ml-sm">Stripe: <?= htmlspecialchars($selectedRecipient['stripe_account_status'] ?? 'pending') ?></span>
-                                <?php endif; ?>
-                            <?php else: ?>
-                                <span class="badge badge-secondary ml-sm">Stripe ej ansluten</span>
-                            <?php endif; ?>
-                        </div>
-                        <a href="/admin/payment-recipients" class="btn-admin btn-admin-secondary btn-admin-sm">
-                            <i data-lucide="settings"></i> Hantera
-                        </a>
-                    </div>
-                    <?php if (!empty($selectedRecipient['swish_number'])): ?>
-                    <div class="mt-sm text-sm text-secondary">
-                        <i data-lucide="smartphone" style="width: 14px; height: 14px; vertical-align: middle;"></i>
-                        Swish: <?= htmlspecialchars($selectedRecipient['swish_number']) ?>
-                    </div>
-                    <?php endif; ?>
-                </div>
-                <?php endif; ?>
-            </div>
-        </div>
-        <?php elseif ($hasLegacySwish): ?>
-        <!-- Legacy Swish Fields -->
-        <div class="admin-card mb-lg">
-            <div class="admin-card-header">
-                <h2><i data-lucide="smartphone"></i> Swish-betalning</h2>
-            </div>
-            <div class="admin-card-body">
-                <div class="info-grid">
-                    <div class="admin-form-group">
-                        <label class="admin-form-label">Swish-nummer</label>
-                        <input type="text" name="swish_number" class="admin-form-input"
-                               value="<?= htmlspecialchars($series['swish_number'] ?? '') ?>"
-                               placeholder="070-123 45 67">
-                    </div>
-                    <div class="admin-form-group">
-                        <label class="admin-form-label">Mottagarnamn</label>
-                        <input type="text" name="swish_name" class="admin-form-input"
-                               value="<?= htmlspecialchars($series['swish_name'] ?? '') ?>"
-                               placeholder="Seriens namn">
-                    </div>
-                </div>
-            </div>
-        </div>
-        <?php else: ?>
-        <div class="alert alert-info mb-lg">
-            <i data-lucide="info"></i>
-            Betalningssystemet är inte konfigurerat. Kontakta administratören.
-        </div>
-        <?php endif; ?>
 
         <!-- Gravity ID Discount -->
         <div class="admin-card mb-lg">

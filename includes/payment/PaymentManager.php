@@ -5,7 +5,6 @@
  *
  * Active gateways:
  *  - stripe: Card payments via single platform Stripe account
- *  - manual: Manual Swish QR code payments (manually reconciled)
  *
  * @package TheHUB\Payment
  */
@@ -15,7 +14,6 @@ namespace TheHUB\Payment;
 require_once __DIR__ . '/GatewayInterface.php';
 require_once __DIR__ . '/StripeClient.php';
 require_once __DIR__ . '/gateways/StripeGateway.php';
-require_once __DIR__ . '/gateways/ManualGateway.php';
 
 class PaymentManager {
     private $pdo;
@@ -30,7 +28,6 @@ class PaymentManager {
      * Register all available gateways
      */
     private function registerGateways() {
-        $this->gateways['manual'] = new Gateways\ManualGateway($this->pdo);
         $this->gateways['stripe'] = new Gateways\StripeGateway($this->pdo);
     }
 
@@ -40,30 +37,8 @@ class PaymentManager {
      * @param int $paymentRecipientId Payment recipient ID
      * @return GatewayInterface Gateway instance
      */
-    public function getGateway(int $paymentRecipientId): GatewayInterface {
-        $stmt = $this->pdo->prepare("
-            SELECT gateway_type, gateway_enabled
-            FROM payment_recipients
-            WHERE id = ? AND active = 1
-        ");
-        $stmt->execute([$paymentRecipientId]);
-        $recipient = $stmt->fetch(\PDO::FETCH_ASSOC);
-
-        if (!$recipient || !$recipient['gateway_enabled']) {
-            return $this->gateways['manual'];
-        }
-
-        $gatewayType = $recipient['gateway_type'];
-
-        // Check if the gateway is available for this recipient
-        $gateway = $this->gateways[$gatewayType] ?? $this->gateways['manual'];
-
-        if ($gateway->isAvailable($paymentRecipientId)) {
-            return $gateway;
-        }
-
-        // Fallback to manual if gateway is not properly configured
-        return $this->gateways['manual'];
+    public function getGateway(int $paymentRecipientId = 0): GatewayInterface {
+        return $this->gateways['stripe'];
     }
 
     /**
@@ -85,11 +60,9 @@ class PaymentManager {
     public function initiatePayment(int $orderId): array {
         // Get order details
         $stmt = $this->pdo->prepare("
-            SELECT o.*, e.name as event_name, e.payment_recipient_id,
-                   pr.gateway_type, pr.gateway_config, pr.swish_number
+            SELECT o.*, e.name as event_name
             FROM orders o
             JOIN events e ON o.event_id = e.id
-            LEFT JOIN payment_recipients pr ON e.payment_recipient_id = pr.id
             WHERE o.id = ?
         ");
         $stmt->execute([$orderId]);
@@ -99,19 +72,14 @@ class PaymentManager {
             return ['success' => false, 'error' => 'Order not found'];
         }
 
-        if (!$order['payment_recipient_id']) {
-            return ['success' => false, 'error' => 'No payment recipient configured for this event'];
-        }
-
-        // Get appropriate gateway
-        $gateway = $this->getGateway($order['payment_recipient_id']);
+        // Get Stripe gateway
+        $gateway = $this->getGateway();
 
         // Prepare order data for gateway
         $orderData = [
             'id' => $order['id'],
             'order_number' => $order['order_number'],
             'total_amount' => $order['total_amount'],
-            'payment_recipient_id' => $order['payment_recipient_id'],
             'payer_phone' => $order['payer_phone'] ?? null,
             'customer_email' => $order['customer_email'],
             'customer_name' => $order['customer_name'],
@@ -175,7 +143,7 @@ class PaymentManager {
         }
 
         // Check with gateway
-        $gateway = $this->gateways[$order['gateway_code']] ?? $this->gateways['manual'];
+        $gateway = $this->gateways[$order['gateway_code']] ?? $this->gateways['stripe'];
         $result = $gateway->checkStatus($order['gateway_transaction_id']);
 
         // Log transaction
@@ -214,7 +182,7 @@ class PaymentManager {
         }
 
         $refundAmount = $amount ?? $order['total_amount'];
-        $gateway = $this->gateways[$order['gateway_code']] ?? $this->gateways['manual'];
+        $gateway = $this->gateways[$order['gateway_code']] ?? $this->gateways['stripe'];
 
         $result = $gateway->refund($order['gateway_transaction_id'], $refundAmount);
 
@@ -258,7 +226,7 @@ class PaymentManager {
             return ['success' => false, 'error' => 'Cannot cancel paid order, use refund instead'];
         }
 
-        $gateway = $this->gateways[$order['gateway_code']] ?? $this->gateways['manual'];
+        $gateway = $this->gateways[$order['gateway_code']] ?? $this->gateways['stripe'];
 
         $result = $gateway->cancel($order['gateway_transaction_id']);
 
@@ -381,12 +349,9 @@ class PaymentManager {
      */
     public function getOrder(int $orderId): ?array {
         $stmt = $this->pdo->prepare("
-            SELECT o.*, e.name as event_name, e.date as event_date,
-                   pr.name as recipient_name, pr.swish_number, pr.swish_name,
-                   pr.gateway_type, pr.gateway_enabled
+            SELECT o.*, e.name as event_name, e.date as event_date
             FROM orders o
             LEFT JOIN events e ON o.event_id = e.id
-            LEFT JOIN payment_recipients pr ON e.payment_recipient_id = pr.id
             WHERE o.id = ?
         ");
         $stmt->execute([$orderId]);

@@ -2,25 +2,23 @@
 
 > Dokumentation for betalningsintegration och orderhantering
 
-**Senast uppdaterad:** 2026-02-10
+**Senast uppdaterad:** 2026-02-12
 
 ---
 
 ## Oversikt
 
-TheHUB har tva aktiva betalningsmetoder:
+TheHUB har en aktiv betalningsmetod:
 
 1. **Stripe Checkout** - Kortbetalning (Visa, Mastercard, Apple Pay, Google Pay)
    - Alla betalningar gar direkt till plattformens enda Stripe-konto
    - Inga Connected Accounts / destination charges
 
-2. **Manuell Swish** - QR-kod / djuplank (manuellt avstamd)
-   - Visas om `payment_recipients.swish_number` ar konfigurerat for eventet
-   - Anvandaren scannar QR-kod eller oppnar Swish-appen
-   - Betalningen bekraftas manuellt av arrangoren
-
-> **Planerat:** Swedbank Pay (ansokningsprocess pagar, ~14 dagar).
+> **Planerat:** Swedbank Pay (stodjer kort, Swish, faktura, Vipps, MobilePay).
 > SwebankPayClient.php finns redan forberedd.
+
+> **Borttaget 2026-02:** Manuell Swish (QR/djuplank), Stripe Connect (promotor-kopplat),
+> betalningsmottagare per event/serie. Arkiverade filer finns i `_archived/`.
 
 ---
 
@@ -32,19 +30,15 @@ includes/
 ├── order-manager.php              # Multi-rider order management
 └── payment/
     ├── GatewayInterface.php       # Interface for gateways
-    ├── PaymentManager.php         # Central payment hub (stripe + manual)
-    ├── StripeClient.php           # Stripe API client
+    ├── PaymentManager.php         # Central payment hub (stripe only)
+    ├── StripeClient.php           # Stripe API client (single account)
     ├── SwebankPayClient.php       # Swedbank Pay client (forberedd)
-    ├── SwishClient.php            # Swish API client (ej aktiv, sparad for referens)
     └── gateways/
-        ├── StripeGateway.php      # Stripe kortbetalning (single account)
-        ├── ManualGateway.php      # Manuell Swish QR/djuplank
-        └── SwishGateway.php       # Swish Handel (ej aktiv, sparad for referens)
+        └── StripeGateway.php      # Stripe kortbetalning (single account)
 
 admin/
 ├── orders.php                     # Orderhantering och betalningsbekraftelse
 ├── ekonomi.php                    # Ekonomi-dashboard
-├── payment-recipients.php         # Betalningsmottagare
 └── discount-codes.php             # Rabattkodshantering
 
 api/
@@ -55,7 +49,7 @@ api/
     └── stripe-webhook.php         # Stripe webhook (betalning, refund, etc)
 
 pages/
-└── checkout.php                   # Checkout-sida (visar kort + Swish)
+└── checkout.php                   # Checkout-sida (kortbetalning)
 ```
 
 ---
@@ -78,13 +72,13 @@ Skapa webhook pa: https://dashboard.stripe.com/webhooks
 
 ## Betalningsflode
 
-### Alternativ 1: Stripe Checkout (kort)
+### Stripe Checkout (kort)
 
 ```
 1. Anvandare valjer anmalningar
 2. Systemet beraknar pris (bas + early bird/late fee)
 3. Anvandare anger rabattkod (valfritt)
-4. Order skapas (payment_status = 'pending')
+4. Order skapas (payment_status = 'pending', payment_method = 'card')
 5. Klick "Betala X kr" -> POST /api/create-checkout-session.php
 6. Redirect till Stripe Checkout (hosted page)
 7. Stripe webhook (checkout.session.completed)
@@ -93,18 +87,6 @@ Skapa webhook pa: https://dashboard.stripe.com/webhooks
    -> Genererar kvitto
    -> Skickar bekraftelsemail
 8. Anvandare redirectas tillbaka -> "Betalning genomford!"
-```
-
-### Alternativ 2: Manuell Swish (QR-kod)
-
-```
-1. Anvandare valjer anmalningar
-2. Order skapas (payment_status = 'pending')
-3. Checkout-sida visar QR-kod + Swish-nummer + belopp + orderreferens
-4. Anvandare scannar QR-koden eller oppnar Swish-appen manuellt
-5. Betalar till Swish-numret med orderreferens som meddelande
-6. Arrangor verifierar Swish-betalningen manuellt i admin/orders.php
-7. Markerar order som betald -> registrering aktiveras
 ```
 
 ---
@@ -126,9 +108,9 @@ Skapa webhook pa: https://dashboard.stripe.com/webhooks
 | discount | DECIMAL(10,2) | Total rabatt |
 | total_amount | DECIMAL(10,2) | Slutsumma |
 | currency | VARCHAR(3) | Valuta (SEK) |
-| payment_method | VARCHAR(20) | 'card' eller 'swish' |
+| payment_method | VARCHAR(20) | 'card' |
 | payment_status | ENUM | pending, paid, failed, refunded, cancelled |
-| gateway_code | VARCHAR(50) | 'stripe' eller 'manual' |
+| gateway_code | VARCHAR(50) | 'stripe' |
 | gateway_transaction_id | VARCHAR(255) | Stripe Checkout Session ID |
 | stripe_session_id | VARCHAR(255) | Stripe Session ID |
 | stripe_payment_intent_id | VARCHAR(255) | Payment Intent ID |
@@ -149,17 +131,6 @@ Skapa webhook pa: https://dashboard.stripe.com/webhooks
 | unit_price | DECIMAL(10,2) | Styckpris |
 | quantity | INT | Antal |
 | total_price | DECIMAL(10,2) | Totalt pris |
-
-### payment_recipients
-
-| Kolumn | Typ | Beskrivning |
-|--------|-----|-------------|
-| id | INT | Primary key |
-| name | VARCHAR(255) | Namn (t.ex. "GravitySeries AB") |
-| active | TINYINT | 1 = aktiv |
-| swish_number | VARCHAR(50) | Swish-nummer for manuell betalning |
-| swish_name | VARCHAR(255) | Namn som visas vid Swish |
-| contact_email | VARCHAR(255) | Kontakt-epost |
 
 ### discount_codes
 
@@ -261,10 +232,8 @@ Automatisk rabatt for riders med Gravity ID:
 |---------|-----|-------------|
 | Ekonomi | `/admin/ekonomi.php` | Dashboard med oversikt |
 | Ordrar | `/admin/orders.php` | Orderhantering och bekraftelse |
-| Mottagare | `/admin/payment-recipients.php` | Betalningsmottagare |
 | Rabattkoder | `/admin/discount-codes.php` | Rabattkodshantering |
 | Prismallar | `/admin/pricing-templates.php` | Prissattning per klass |
-| Testevent | `/admin/tools/create-test-event.php` | Skapa testevent for betalningstest |
 
 ---
 
@@ -293,16 +262,13 @@ Automatisk rabatt for riders med Gravity ID:
 - Kontrollera `webhook_logs` for fel
 - Verifiera `STRIPE_WEBHOOK_SECRET`
 
-**Swish-QR visas inte:**
-- Kontrollera att eventets payment_recipient har `swish_number` ifyllt
-- Kontrollera att `events.payment_recipient_id` ar satt
-
 ---
 
 ## Framtida utveckling
 
-- **Swedbank Pay** - `SwebankPayClient.php` ar forberedd, invandtar konto-aktivering (~14 dagar)
-- **WooCommerce fallback** - Kan anvandas via GravitySeries.se for temporar betalning
+- **Swedbank Pay** - `SwebankPayClient.php` ar forberedd, invandtar konto-aktivering
+  - Stodjer: kort, Swish, faktura, Vipps, MobilePay
+  - Ersatter nuvarande Stripe-integration
 
 ---
 
@@ -316,5 +282,5 @@ Publik sida: `/membership`
 
 ---
 
-**Version:** 4.0.0 (Single Account + Manual Swish)
-**Senast uppdaterad:** 2026-02-10
+**Version:** 5.0.0 (Single Account, Card Only)
+**Senast uppdaterad:** 2026-02-12
