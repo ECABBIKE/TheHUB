@@ -701,8 +701,20 @@ try {
             $canClaimProfile = true; // Allow testing even without table
         }
     } else {
-        // Has email - show "Activate account" option (sends password reset)
-        $canActivateProfile = empty($rider['password']);
+        // Has email - show "Activate account" option only if not already activated or linked
+        // A rider is activated if: has password set OR is linked to another rider who has password
+        $isActivated = !empty($rider['password']);
+        if (!$isActivated && !empty($rider['linked_to_rider_id'])) {
+            // Check if the linked primary account has a password
+            try {
+                $linkedCheck = $db->prepare("SELECT id FROM riders WHERE id = ? AND password IS NOT NULL AND password != ''");
+                $linkedCheck->execute([$rider['linked_to_rider_id']]);
+                $isActivated = $linkedCheck->fetch() !== false;
+            } catch (Exception $e) {
+                // Ignore errors
+            }
+        }
+        $canActivateProfile = !$isActivated;
     }
 
 } catch (Exception $e) {

@@ -125,9 +125,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $updateValues[] = $postalCity ?: null;
             }
 
-            // UCI ID - only allow setting if not already set (prevent overwrites)
-            if (in_array('uci_id', $existingColumns) && empty($currentUser['uci_id']) && !empty($uciId)) {
-                $updateFields[] = 'uci_id = ?';
+            // UCI ID (stored as license_number) - only allow setting if not already set
+            if (in_array('license_number', $existingColumns) && empty($currentUser['license_number']) && !empty($uciId)) {
+                $updateFields[] = 'license_number = ?';
                 $updateValues[] = $uciId;
             }
 
@@ -287,9 +287,9 @@ $clubs = $pdo->query("SELECT id, name FROM clubs WHERE active = 1 ORDER BY name"
             </div>
             <div class="form-group">
                 <label for="uci_id">UCI ID</label>
-                <?php if (!empty($currentUser['uci_id'])): ?>
+                <?php if (!empty($currentUser['license_number'])): ?>
                     <input type="text" id="uci_id" name="uci_id"
-                           value="<?= htmlspecialchars($currentUser['uci_id']) ?>"
+                           value="<?= htmlspecialchars($currentUser['license_number']) ?>"
                            readonly disabled
                            class="input-disabled">
                     <small class="form-help">UCI ID kan inte ändras efter att det sparats.</small>
