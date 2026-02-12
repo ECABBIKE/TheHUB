@@ -47,7 +47,7 @@
 - Manuell bekraftelse (inte automatisk API-integration)
 - Konfigureras via `SWISH_NUMBER` och `SWISH_PAYEE_NAME` i .env
 - Djuplank: `https://app.swish.nu/1/p/sw/?sw=NUMMER&amt=BELOPP&msg=ORDERNR&cur=SEK`
-- QR-kod genereras med `chillerlan/php-qrcode ^5.0` (SVG-format)
+- QR-kod genereras med extern API: `https://api.qrserver.com/v1/create-qr-code/` (SVG img-tagg)
 - Admin bekraftar manuellt i orderhanteringen
 
 ### Stripe
@@ -105,13 +105,40 @@
 
 ---
 
+## REGISTRERING / SKAPA DELTAGARE
+
+### Obligatoriska falt for eventregistrering
+- `gender` - kon (for klassbestamning)
+- `birth_year` - fodelsear (for aldersklasser)
+- `phone` - telefonnummer
+- `email` - e-post
+- `ice_name` - nodkontakt namn
+- `ice_phone` - nodkontakt telefon
+- Valideras i `getEligibleClassesForEvent()` i order-manager.php
+
+### Skapa ny deltagare (event.php)
+- Fast lank "Skapa ny deltagare" under sokinput i BADA modaler (event + serie)
+- Formularet kraver ALLA falt som behovs for anmalan
+- Om e-post redan finns: API returnerar `code: email_exists_active` eller `email_exists_inactive`
+- Aktiva konton -> "Logga in", inaktiva -> "Sok pa namnet istallet"
+- Delad funktion `getCreateRiderFormHtml(prefix)` hanterar bada modalerna
+- `handleCreateRider(prefix)` ar delad API-anropsfunktion
+
+### Publika sidor (ej inloggningskrav)
+- `cart` och `checkout` ar publika (`$publicPages` i router.php)
+- checkout.php gor egen auth-check och redirectar till login med return-URL
+
+---
+
 ## SENASTE FIXAR (2026-02-12)
 
 - **Login redirect-loop**: `hub_attempt_login()` saknade profilfalt i SELECT -> alla redirectades till /profile/edit. Fixat i hub-config.php
 - **UCI ID tom i profil**: Anvande `uci_id` istallet for `license_number`. Fixat i pages/profile/edit.php
 - **Lankade profiler "Aktivera konto"**: Sekundara profiler har password=NULL -> visade alltid aktiveringsknapp. Fixat i pages/rider.php
 - **Sokmodal bakom header pa mobil**: .card overflow:hidden klippte modalen. Fixat genom att flytta till body
-- **Swish QR-kod**: Tillagd pa checkout-sidan for desktop-anvandare
+- **Swish QR-kod**: Tillagd pa checkout-sidan for desktop-anvandare (extern API for QR)
 - **Tabellkolumner sneda**: Fixat med `table-layout: fixed` i event.php
 - **Duplicerade kvitton**: GROUP BY saknades i receipts-query
 - **Moms saknades i mail**: Lagt till VAT-berakning och saljarinfo i orderbekraftelse-mail
+- **Varukorg kraver login**: cart/checkout tillagda i publicPages, checkout gor egen auth
+- **Skapa ny deltagare**: Fast lank under sokrutan, alla falt kravs, email-duplett ger login/aktivera-forslag
