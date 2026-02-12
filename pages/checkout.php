@@ -10,6 +10,13 @@
 require_once __DIR__ . '/../hub-config.php';
 require_once __DIR__ . '/../includes/payment.php';
 
+// Checkout requires login - redirect with return URL
+if (!hub_is_logged_in()) {
+    $returnUrl = '/checkout' . (!empty($_SERVER['QUERY_STRING']) ? '?' . $_SERVER['QUERY_STRING'] : '');
+    header('Location: /login?redirect=' . urlencode($returnUrl));
+    exit;
+}
+
 // Auto-cleanup expired pending orders
 if (file_exists(__DIR__ . '/../includes/order-manager.php')) {
     require_once __DIR__ . '/../includes/order-manager.php';
