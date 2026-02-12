@@ -82,6 +82,7 @@ $purchaseCount = 0;
 try {
     // Try full query with receipts and payment_recipients
     // Match by rider_id (buyer) OR by customer_email (catches guest/unlinked orders)
+    // Use GROUP BY to avoid duplicate rows when order has multiple receipts (one per seller)
     $stmt = $pdo->prepare("
         SELECT o.*,
                e.name AS event_name,
@@ -90,14 +91,16 @@ try {
                s.logo AS series_logo,
                pr.name AS seller_name,
                pr.org_number AS seller_org_number,
-               r.receipt_number,
-               r.id AS receipt_id
+               MIN(r.receipt_number) AS receipt_number,
+               MIN(r.id) AS receipt_id,
+               COUNT(DISTINCT r.id) AS receipt_count
         FROM orders o
         LEFT JOIN events e ON o.event_id = e.id
         LEFT JOIN series s ON o.series_id = s.id OR e.series_id = s.id
         LEFT JOIN payment_recipients pr ON o.payment_recipient_id = pr.id
         LEFT JOIN receipts r ON r.order_id = o.id AND r.status = 'issued'
         WHERE (o.rider_id IN ($placeholders) OR (o.customer_email = ? AND o.customer_email != ''))
+        GROUP BY o.id
         ORDER BY o.created_at DESC
         LIMIT 50
     ");
@@ -641,6 +644,23 @@ if (!$viewReceipt && isset($_GET['order'])) {
         grid-template-columns: 1fr 1fr;
     }
 }
+
+@media print {
+    .breadcrumb, .page-tabs, .summary-cards, .btn-ghost,
+    .sidebar, .mobile-nav, header, footer, .btn--primary {
+        display: none !important;
+    }
+    .receipt-detail {
+        border: none !important;
+        box-shadow: none !important;
+        max-width: 100% !important;
+        padding: 0 !important;
+    }
+    body {
+        background: white !important;
+        color: black !important;
+    }
+}
 </style>
 
 <div class="page-header">
@@ -836,6 +856,14 @@ if (!$viewReceipt && isset($_GET['order'])) {
                 <span>Totalt:</span>
                 <span><?= number_format($viewOrder['total_amount'], 2, ',', ' ') ?> kr</span>
             </div>
+            <?php
+                $vatRate = 6;
+                $orderVat = round($viewOrder['total_amount'] * $vatRate / (100 + $vatRate));
+            ?>
+            <div class="receipt-total-row" style="font-size: var(--text-sm); color: var(--color-text-muted);">
+                <span>Varav moms (<?= $vatRate ?>%):</span>
+                <span><?= number_format($orderVat, 2, ',', ' ') ?> kr</span>
+            </div>
         </div>
 
         <div style="margin-top: var(--space-xl); padding-top: var(--space-lg); border-top: 1px solid var(--color-border);">
@@ -860,6 +888,12 @@ if (!$viewReceipt && isset($_GET['order'])) {
                     <strong>Betalmetod:</strong> <?= ucfirst(h($viewOrder['payment_method'])) ?>
                 </p>
             <?php endif; ?>
+        </div>
+
+        <div style="margin-top: var(--space-lg); text-align: center;">
+            <button type="button" onclick="window.print()" class="btn btn--primary" style="gap: var(--space-xs);">
+                <i data-lucide="printer"></i> Skriv ut kvitto
+            </button>
         </div>
     </div>
 
