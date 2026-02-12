@@ -263,6 +263,40 @@ Automatiskt genererade "trading cards" med deltagarstatistik:
 
 # CHANGELOG
 
+### 2026-02-12 (Profilfix, Swish QR, Mobilfix)
+- **Branch:** claude/fix-mobile-payment-layout-Kh2Gg
+
+- **Fix: Profil-redirect vid inloggning**
+  - Login-queryn saknade profilfalt (birth_year, gender, phone, ice_name, ice_phone)
+  - Alla inloggade anvandare redirectades till /profile/edit trots komplett profil
+  - Fixat i hub-config.php: lagt till saknade kolumner i rider SELECT
+
+- **Fix: UCI ID i profil-redigering**
+  - Anvande felaktigt kolumnnamn `uci_id` istallet for `license_number`
+  - Fixat i pages/profile/edit.php
+
+- **Fix: Lankade profiler visade "Aktivera konto"**
+  - Sekundara profiler har alltid password=NULL (by design)
+  - Kollar nu om linked_to_rider_id pekar pa ett aktiverat konto
+  - Fixat i pages/rider.php
+
+- **Fix: Sokmodal doldes bakom header pa mobil**
+  - .card har overflow:hidden som klippte position:fixed-modalen
+  - Flyttar modalen till document.body vid oppning
+  - Fixat for bade enkel- och serieanmalan i pages/event.php
+
+- **Ny funktion: Swish QR-kod pa checkout**
+  - Genererar QR-kod fran Swish-djuplanken med chillerlan/php-qrcode
+  - Visas ovanfor "Oppna Swish"-knappen for desktop-anvandare
+  - SVG-format for skarpt rendering
+
+- **Nya/andrade filer:**
+  - `hub-config.php` - Lagt till profilfalt i login-query
+  - `pages/profile/edit.php` - Fixat UCI ID kolumnnamn
+  - `pages/rider.php` - Fixat aktiveringstatus for lankade profiler
+  - `pages/event.php` - Flyttar sokmodal till body pa mobil
+  - `pages/checkout.php` - Swish QR-kod med php-qrcode
+
 ### 2026-02-12 (Enkel Swish + Buggfix: undefined klass)
 - **Branch:** claude/fix-mobile-payment-layout-Kh2Gg
 

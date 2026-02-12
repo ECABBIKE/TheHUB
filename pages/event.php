@@ -4017,8 +4017,9 @@ if (!empty($event['series_id'])) {
                     addToCartBtn.disabled = true;
                 }
 
-                // Modal functions
+                // Modal functions - move to body to avoid overflow:hidden clipping from .card
                 function openSearchModal() {
+                    document.body.appendChild(riderSearchModal);
                     riderSearchModal.style.display = 'flex';
                     document.body.style.overflow = 'hidden';
                     setTimeout(() => riderSearch.focus(), 100);
@@ -4888,8 +4889,9 @@ if (!empty($event['series_id'])) {
                     }
                 }
 
-                // Open modal
+                // Open modal - move to body to avoid overflow:hidden clipping from .card
                 seriesOpenRiderSearchBtn.addEventListener('click', () => {
+                    document.body.appendChild(seriesRiderSearchModal);
                     seriesRiderSearchModal.style.display = 'flex';
                     seriesRiderSearch.value = '';
                     seriesRiderSearch.focus();
