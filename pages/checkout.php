@@ -526,9 +526,7 @@ include __DIR__ . '/../components/header.php';
             <!-- Payment options -->
             <?php
             $hasStripe = !empty($order['card_available']);
-            $hasSwish = !empty($order['swish_number']);
-            $hasAnyPayment = $hasStripe || $hasSwish;
-            $swishMessage = $order['order_number'] ?? '';
+            $hasAnyPayment = $hasStripe;
             ?>
 
             <?php if ($hasStripe): ?>
@@ -569,93 +567,6 @@ include __DIR__ . '/../components/header.php';
             </div>
             <?php endif; ?>
 
-            <?php if ($hasSwish): ?>
-            <!-- Swish QR Payment (manually reconciled) -->
-            <div class="card mb-lg">
-                <div class="card-header">
-                    <h2 class="text-lg">
-                        <i data-lucide="smartphone"></i>
-                        Betala med Swish
-                    </h2>
-                </div>
-                <div class="card-body">
-                    <div class="payment-option">
-                        <div class="flex items-center gap-sm mb-md">
-                            <div style="width:40px;height:40px;flex-shrink:0;background:#FF5C13;border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center;">
-                                <i data-lucide="smartphone" style="width:20px;height:20px;color:white;"></i>
-                            </div>
-                            <div style="min-width:0;">
-                                <h3 class="font-medium">Swish</h3>
-                                <p class="text-sm text-secondary">Scanna QR-koden eller ange uppgifterna manuellt</p>
-                            </div>
-                        </div>
-
-                        <?php
-                        // Generate Swish QR code URL
-                        $swishQrUrl = '';
-                        if (function_exists('generateSwishQR')) {
-                            $swishQrUrl = generateSwishQR($order['swish_number'], $order['total_amount'], $swishMessage, 250);
-                        }
-                        // Generate Swish deep link for mobile
-                        $swishUrl = '';
-                        if (function_exists('generateSwishUrl')) {
-                            $swishUrl = generateSwishUrl($order['swish_number'], $order['total_amount'], $swishMessage);
-                        }
-                        ?>
-
-                        <div style="background: var(--color-bg-card); padding: var(--space-md); border-radius: var(--radius-md); border: 2px dashed var(--color-border);">
-                            <?php if ($swishUrl): ?>
-                            <div style="text-align: center; margin-bottom: var(--space-md);">
-                                <a href="<?= htmlspecialchars($swishUrl) ?>" class="btn btn--secondary w-full" style="background:#FF5C13;color:white;border-color:#FF5C13;">
-                                    <i data-lucide="smartphone"></i>
-                                    Öppna Swish-appen
-                                </a>
-                            </div>
-                            <?php endif; ?>
-
-                            <?php if ($swishQrUrl): ?>
-                            <div style="text-align: center; margin-bottom: var(--space-md);">
-                                <div style="font-size: var(--text-sm); color: var(--color-text-secondary); margin-bottom: var(--space-sm);">Scanna med Swish-appen</div>
-                                <img src="<?= htmlspecialchars($swishQrUrl) ?>" alt="Swish QR-kod" style="max-width:200px;width:100%;height:auto;aspect-ratio:1;margin:0 auto;display:block;border-radius:var(--radius-sm);background:white;padding:var(--space-sm);">
-                            </div>
-                            <?php endif; ?>
-
-                            <div style="text-align: center; margin-bottom: var(--space-md);">
-                                <div style="font-size: var(--text-sm); color: var(--color-text-secondary); margin-bottom: var(--space-xs);">Swish-nummer</div>
-                                <div style="font-size: var(--text-xl); font-weight: var(--weight-bold); font-family: monospace; color: var(--color-accent);">
-                                    <?= htmlspecialchars($order['swish_number']) ?>
-                                </div>
-                                <?php if (!empty($order['swish_name'])): ?>
-                                <div style="font-size: var(--text-sm); color: var(--color-text-secondary);"><?= htmlspecialchars($order['swish_name']) ?></div>
-                                <?php endif; ?>
-                            </div>
-
-                            <div style="text-align: center; margin-bottom: var(--space-md);">
-                                <div style="font-size: var(--text-sm); color: var(--color-text-secondary); margin-bottom: var(--space-xs);">Belopp</div>
-                                <div style="font-size: var(--text-2xl); font-weight: var(--weight-bold); color: var(--color-text-primary);">
-                                    <?= number_format($order['total_amount'], 0) ?> kr
-                                </div>
-                            </div>
-
-                            <div style="text-align: center;">
-                                <div style="font-size: var(--text-sm); color: var(--color-text-secondary); margin-bottom: var(--space-xs);">Meddelande (viktigt!)</div>
-                                <div style="font-size: var(--text-base); font-weight: var(--weight-semibold); font-family: monospace; color: var(--color-accent); padding: var(--space-sm); background: var(--color-accent-light); border-radius: var(--radius-sm); word-break: break-all;">
-                                    <?= htmlspecialchars($swishMessage) ?>
-                                </div>
-                            </div>
-                        </div>
-
-                        <div style="margin-top: var(--space-md); padding: var(--space-sm) var(--space-md); background: var(--color-accent-light); border-radius: var(--radius-sm); border-left: 4px solid var(--color-accent);">
-                            <div style="font-size: var(--text-sm); color: var(--color-text-primary); display: flex; gap: var(--space-xs); align-items: flex-start;">
-                                <i data-lucide="info" style="width: 16px; height: 16px; flex-shrink: 0; margin-top: 2px; color: var(--color-accent);"></i>
-                                <span><strong>OBS!</strong> Ange ordernumret <strong><?= htmlspecialchars($swishMessage) ?></strong> som meddelande i Swish.
-                                Din anmälan bekräftas manuellt efter att betalningen verifierats.</span>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <?php endif; ?>
 
             <?php if (!$hasAnyPayment): ?>
             <!-- No payment method available -->
@@ -681,12 +592,7 @@ include __DIR__ . '/../components/header.php';
                         Efter betalning
                     </h3>
                     <p class="text-sm text-secondary">
-                        <?php if ($hasStripe): ?>
-                        Kortbetalning bekräftas automatiskt.
-                        <?php endif; ?>
-                        <?php if ($hasSwish): ?>
-                        Swish-betalning bekräftas manuellt av arrangören.
-                        <?php endif; ?>
+                        Betalning bekräftas automatiskt.
                         <?php if (!empty($order['customer_email'])): ?>
                         Du får ett bekräftelsemail till <strong><?= htmlspecialchars($order['customer_email']) ?></strong>.
                         <?php endif; ?>

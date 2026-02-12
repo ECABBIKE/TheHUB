@@ -106,17 +106,10 @@ if ($filterEvent) {
     $params[] = $filterEvent;
 }
 
-// Payment recipient filter
-if ($filterRecipient) {
-    $whereConditions[] = "o.payment_recipient_id = ?";
-    $params[] = $filterRecipient;
-}
-
 // Search
 if ($search) {
-    $whereConditions[] = "(o.order_number LIKE ? OR o.customer_name LIKE ? OR o.swish_message LIKE ?)";
+    $whereConditions[] = "(o.order_number LIKE ? OR o.customer_name LIKE ?)";
     $searchTerm = "%{$search}%";
-    $params[] = $searchTerm;
     $params[] = $searchTerm;
     $params[] = $searchTerm;
 }
@@ -183,15 +176,6 @@ if ($isSuperAdmin) {
         ORDER BY e.date DESC
     ", [$currentAdmin['id']]);
 }
-
-// Get payment recipients for filter
-$recipients = $db->getAll("
-    SELECT DISTINCT pr.id, pr.name, pr.identifier
-    FROM payment_recipients pr
-    JOIN orders o ON o.payment_recipient_id = pr.id
-    WHERE pr.active = 1
-    ORDER BY pr.name
-");
 
 // Stats
 $stats = $db->getRow("
@@ -297,7 +281,7 @@ include __DIR__ . '/components/unified-layout.php';
                 <label class="admin-form-label">Sök</label>
                 <input type="text" name="search" class="admin-form-input"
                        value="<?= h($search) ?>"
-                       placeholder="Ordernummer, namn, Swish-ref...">
+                       placeholder="Ordernummer, namn...">
             </div>
 
             <button type="submit" class="btn-admin btn-admin-primary">
@@ -351,7 +335,7 @@ if ($cancelledCount > 0): ?>
                         <th>Event/Serie</th>
                         <th>Deltagare</th>
                         <th>Belopp</th>
-                        <th>Swish-ref</th>
+                        <th>Ref</th>
                         <th>Status</th>
                         <th>Skapad</th>
                         <th></th>
@@ -408,9 +392,9 @@ if ($cancelledCount > 0): ?>
                         <td data-label="Belopp" class="font-medium">
                             <?= number_format($order['total_amount'], 0) ?> kr
                         </td>
-                        <td data-label="Swish-ref" class="orders-swish-col">
-                            <?php if ($order['swish_message']): ?>
-                            <code><?= h($order['swish_message']) ?></code>
+                        <td data-label="Ref" class="orders-swish-col">
+                            <?php if ($order['payment_reference']): ?>
+                            <code><?= h($order['payment_reference']) ?></code>
                             <?php endif; ?>
                         </td>
                         <td data-label="Status">
@@ -423,7 +407,7 @@ if ($cancelledCount > 0): ?>
                             <div class="orders-actions">
                             <?php if ($order['payment_status'] === 'pending'): ?>
                                 <button type="button" class="btn-admin btn-admin-sm orders-btn-confirm"
-                                        onclick="openConfirmModal(<?= $order['id'] ?>, '<?= h($order['order_number']) ?>', '<?= h($order['swish_message']) ?>')">
+                                        onclick="openConfirmModal(<?= $order['id'] ?>, '<?= h($order['order_number']) ?>')">
                                     <i data-lucide="check"></i>
                                     <span class="orders-btn-label">Bekräfta</span>
                                 </button>
@@ -522,16 +506,11 @@ if ($cancelledCount > 0): ?>
                     <strong id="confirm-order-number"></strong>
                 </p>
 
-                <div class="p-md mb-md" style="background: var(--color-bg-tertiary); border-radius: var(--radius-md);">
-                    <div class="text-sm text-secondary">Förväntat Swish-meddelande:</div>
-                    <code class="text-lg" id="confirm-swish-ref"></code>
-                </div>
-
                 <div class="admin-form-group">
                     <label class="admin-form-label">Betalningsreferens (valfritt)</label>
                     <input type="text" name="payment_reference" class="admin-form-input"
-                           placeholder="T.ex. Swish-transaktions-ID">
-                    <small class="text-secondary">Ange referens från Swish eller kontoutdrag</small>
+                           placeholder="T.ex. transaktions-ID">
+                    <small class="text-secondary">Ange referens från betalningen</small>
                 </div>
             </div>
 
@@ -610,7 +589,7 @@ if ($cancelledCount > 0): ?>
         margin-right: var(--space-md);
     }
 
-    /* Hide Swish-ref on mobile to save space */
+    /* Hide ref column on mobile to save space */
     .orders-swish-col { display: none; }
 
     .order-detail-row td { display: block; padding: 0 !important; }
@@ -649,10 +628,9 @@ if ($cancelledCount > 0): ?>
 </style>
 
 <script>
-function openConfirmModal(orderId, orderNumber, swishRef) {
+function openConfirmModal(orderId, orderNumber) {
     document.getElementById('confirm-order-id').value = orderId;
     document.getElementById('confirm-order-number').textContent = orderNumber;
-    document.getElementById('confirm-swish-ref').textContent = swishRef;
     document.getElementById('confirm-modal').classList.remove('hidden');
 }
 

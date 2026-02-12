@@ -162,17 +162,9 @@ $ADMIN_TABS = [
                     'ekonomi.php',
                     // Ordrar & betalningar
                     'orders.php',
-                    'payment-settings.php',
-                    'payment-recipients.php',
-                    'gateway-settings.php',
-                    'certificates.php',
-                    'swish-accounts.php',
-                    // Stripe
-                    'stripe-connect.php',
                     // Medlemskap
                     'memberships.php',
                     // Event-specifika
-                    'event-payment.php',
                     'event-orders.php',
                     'event-registrations.php',
                     'event-ticketing.php',

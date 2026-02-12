@@ -3,8 +3,7 @@
  * Ekonomi Dashboard - Payment Administration
  *
  * Central panel för ekonomisk administration:
- * - Stripe Connect (alla betalningar)
- * - Betalningsmottagare (arrangörer/klubbar)
+ * - Stripe (kortbetalningar)
  * - Ordrar och kvitton
  * - Prissättning
  */
@@ -38,17 +37,6 @@ $stats['revenue_30d'] = $db->getRow("
     AND paid_at >= DATE_SUB(NOW(), INTERVAL 30 DAY)
 ")['total'] ?? 0;
 
-// Antal aktiva mottagare
-$stats['active_recipients'] = $db->getRow("
-    SELECT COUNT(*) as cnt FROM payment_recipients WHERE active = 1
-")['cnt'] ?? 0;
-
-// Mottagare med Stripe Connect
-$stats['stripe_connected'] = $db->getRow("
-    SELECT COUNT(*) as cnt FROM payment_recipients
-    WHERE active = 1 AND stripe_account_id IS NOT NULL
-")['cnt'] ?? 0;
-
 // Väntande återbetalningar
 $stats['pending_refunds'] = $db->getRow("
     SELECT COUNT(*) as cnt FROM refund_requests WHERE status = 'pending'
@@ -57,12 +45,10 @@ $stats['pending_refunds'] = $db->getRow("
 // Senaste ordrar
 $recentOrders = $db->getAll("
     SELECT o.*, e.name as event_name,
-           r.firstname, r.lastname,
-           pr.name as recipient_name
+           r.firstname, r.lastname
     FROM orders o
     LEFT JOIN events e ON o.event_id = e.id
     LEFT JOIN riders r ON o.rider_id = r.id
-    LEFT JOIN payment_recipients pr ON o.payment_recipient_id = pr.id
     ORDER BY o.created_at DESC
     LIMIT 10
 ");
@@ -393,10 +379,6 @@ include __DIR__ . '/components/unified-layout.php';
         <div class="stat-value accent"><?= number_format($stats['revenue_30d'], 0, ',', ' ') ?> kr</div>
         <div class="stat-label">Omsättning (30 dagar)</div>
     </div>
-    <div class="stat-box">
-        <div class="stat-value"><?= $stats['stripe_connected'] ?>/<?= $stats['active_recipients'] ?></div>
-        <div class="stat-label">Stripe-kopplade</div>
-    </div>
 </div>
 
 <!-- Snabblänkar -->
@@ -411,35 +393,6 @@ include __DIR__ . '/components/unified-layout.php';
 
 <!-- Huvudåtgärder -->
 <div class="action-grid">
-    <!-- Stripe Connect -->
-    <div class="action-card">
-        <div class="action-card-header">
-            <div class="action-icon stripe">
-                <i data-lucide="credit-card"></i>
-            </div>
-            <div>
-                <h3 class="action-title">Betalningar</h3>
-                <p class="action-subtitle">Stripe Connect</p>
-            </div>
-        </div>
-        <p class="action-desc">
-            Alla betalningar gar via Stripe. Varje arrangor kopplar sitt eget Stripe-konto
-            for att ta emot betalningar direkt.
-        </p>
-        <div class="action-links">
-            <a href="/admin/payment-recipients" class="action-link primary">
-                <i data-lucide="building-2"></i>
-                Betalningsmottagare & Stripe Connect
-            </a>
-            <?php if (!$stripeConfigured): ?>
-            <div class="action-link" style="color: var(--color-warning); cursor: default;">
-                <i data-lucide="alert-triangle"></i>
-                Stripe ej konfigurerat (lagg till STRIPE_SECRET_KEY i .env)
-            </div>
-            <?php endif; ?>
-        </div>
-    </div>
-
     <!-- Ordrar -->
     <div class="action-card">
         <div class="action-card-header">

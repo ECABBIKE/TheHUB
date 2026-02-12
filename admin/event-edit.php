@@ -27,21 +27,6 @@ try {
     error_log("EVENT EDIT: Error checking/adding is_championship column: " . $e->getMessage());
 }
 
-// Check if payment_recipient_id column exists and get recipients
-$paymentRecipientColumnExists = false;
-$paymentRecipients = [];
-try {
-    $columns = $db->getAll("SHOW COLUMNS FROM events LIKE 'payment_recipient_id'");
-    $paymentRecipientColumnExists = !empty($columns);
-    if ($paymentRecipientColumnExists) {
-        $tables = $db->getAll("SHOW TABLES LIKE 'payment_recipients'");
-        if (!empty($tables)) {
-            $paymentRecipients = $db->getAll("SELECT id, name, stripe_account_status FROM payment_recipients WHERE active = 1 ORDER BY name ASC");
-        }
-    }
-} catch (Exception $e) {
-    error_log("EVENT EDIT: Error checking payment_recipient_id column: " . $e->getMessage());
-}
 
 // Check/create header_banner_media_id column
 $headerBannerColumnExists = false;
@@ -488,16 +473,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $db->query("UPDATE events SET logo_media_id = ?, logo = ? WHERE id = ?", [$logoMediaId, $logoPath, $id]);
             } catch (Exception $logoEx) {
                 error_log("EVENT EDIT: logo_media_id update failed: " . $logoEx->getMessage());
-            }
-
-            // Update payment_recipient_id separately (if column exists)
-            if ($paymentRecipientColumnExists) {
-                try {
-                    $paymentRecipientId = !empty($_POST['payment_recipient_id']) ? intval($_POST['payment_recipient_id']) : null;
-                    $db->query("UPDATE events SET payment_recipient_id = ? WHERE id = ?", [$paymentRecipientId, $id]);
-                } catch (Exception $prEx) {
-                    error_log("EVENT EDIT: payment_recipient_id update failed: " . $prEx->getMessage());
-                }
             }
 
             // Update gravity_id_discount (0 = use series setting, >0 = specific discount)
@@ -1115,42 +1090,6 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
     </details>
-
-    <!-- PAYMENT SETTINGS - Locked for promotors -->
-    <?php if ($paymentRecipientColumnExists && !empty($paymentRecipients)): ?>
-    <?php if ($isPromotorOnly): ?>
-    <input type="hidden" name="payment_recipient_id" value="<?= h($event['payment_recipient_id'] ?? '') ?>">
-    <?php endif; ?>
-    <details class="admin-card mb-lg <?= $isPromotorOnly ? 'locked-section' : '' ?>">
-        <summary class="admin-card-header collapsible-header">
-            <h2>Betalning</h2>
-            <?php if ($isPromotorOnly): ?>
-            <span class="locked-badge">
-                <i data-lucide="lock"></i> Låst
-            </span>
-            <?php else: ?>
-            <span class="text-secondary text-sm">Klicka för att expandera/minimera</span>
-            <?php endif; ?>
-        </summary>
-        <fieldset class="admin-card-body fieldset-reset" style="padding: var(--space-lg);" <?= $isPromotorOnly ? 'disabled' : '' ?>>
-            <div class="admin-form-group">
-                <label class="admin-form-label">Betalningsmottagare</label>
-                <select name="payment_recipient_id" class="admin-form-select">
-                    <option value="">Använd seriens mottagare</option>
-                    <?php foreach ($paymentRecipients as $recipient): ?>
-                        <option value="<?= $recipient['id'] ?>" <?= ($event['payment_recipient_id'] ?? '') == $recipient['id'] ? 'selected' : '' ?>>
-                            <?= h($recipient['name']) ?><?php if (!empty($recipient['stripe_account_status'])): ?> (<?= $recipient['stripe_account_status'] === 'active' ? 'aktiv' : 'inaktiv' ?>)<?php endif; ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
-                <small class="form-help">
-                    Välj en specifik mottagare för detta event, eller lämna tomt för att använda seriens mottagare.
-                    <a href="/admin/payment-recipients" class="text-accent">Hantera mottagare</a>
-                </small>
-            </div>
-        </fieldset>
-    </details>
-    <?php endif; ?>
 
     <!-- GRAVITY ID DISCOUNT -->
     <details class="admin-card mb-lg">

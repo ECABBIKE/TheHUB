@@ -27,26 +27,12 @@ $ECONOMY_GLOBAL = [
             'description' => 'Alla ordrar i systemet'
         ],
         [
-            'id' => 'recipients',
-            'label' => 'Mottagare',
-            'icon' => 'smartphone',
-            'url' => '/admin/payment-recipients.php',
-            'description' => 'Swish-mottagare och gateways'
-        ],
-        [
             'id' => 'templates',
             'label' => 'Prismallar',
             'icon' => 'file-text',
             'url' => '/admin/pricing-templates.php',
             'description' => 'Återanvändbara prismallar'
         ],
-        [
-            'id' => 'settings',
-            'label' => 'Inställningar',
-            'icon' => 'settings',
-            'url' => '/admin/payment-settings.php',
-            'description' => 'Globala betalningsinställningar'
-        ]
     ]
 ];
 
@@ -86,13 +72,6 @@ $ECONOMY_EVENT = [
             'url' => '/admin/event-pricing.php',
             'description' => 'Priser per klass'
         ],
-        [
-            'id' => 'settings',
-            'label' => 'Betalning',
-            'icon' => 'credit-card',
-            'url' => '/admin/event-payment.php',
-            'description' => 'Swish, kort, WooCommerce'
-        ]
     ]
 ];
 

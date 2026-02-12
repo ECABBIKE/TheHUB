@@ -999,9 +999,7 @@ if (!$viewReceipt && isset($_GET['order'])) {
 
                         <div class="purchase-footer">
                             <div class="purchase-method">
-                                <?php if ($purchase['payment_method'] === 'swish'): ?>
-                                    <i data-lucide="smartphone" style="width: 14px; height: 14px;"></i> Swish
-                                <?php elseif ($purchase['payment_method'] === 'card'): ?>
+                                <?php if ($purchase['payment_method'] === 'card'): ?>
                                     <i data-lucide="credit-card" style="width: 14px; height: 14px;"></i> Kort
                                 <?php elseif ($purchase['payment_method']): ?>
                                     <i data-lucide="wallet" style="width: 14px; height: 14px;"></i> <?= ucfirst(h($purchase['payment_method'])) ?>
