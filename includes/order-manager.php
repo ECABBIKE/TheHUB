@@ -959,19 +959,35 @@ function createRiderFromRegistration(array $data, int $parentUserId): array {
     $pdo->beginTransaction();
 
     try {
-        // Validera obligatoriska fält
+        // Validera obligatoriska falt
         if (empty($data['firstname']) || empty($data['lastname']) || empty($data['email'])) {
-            throw new Exception('Förnamn, efternamn och e-post krävs');
+            throw new Exception('Fornamn, efternamn och e-post kravs');
         }
 
-        // Kolla om email redan finns
-        $checkStmt = $pdo->prepare("SELECT id FROM riders WHERE email = ?");
+        // Kolla om email redan finns - ge specifik feedback
+        $checkStmt = $pdo->prepare("SELECT id, password, firstname, lastname FROM riders WHERE email = ? LIMIT 1");
         $checkStmt->execute([$data['email']]);
-        if ($checkStmt->fetch()) {
-            throw new Exception('E-postadressen är redan registrerad');
+        $existingRider = $checkStmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($existingRider) {
+            $pdo->rollBack();
+            $name = trim($existingRider['firstname'] . ' ' . $existingRider['lastname']);
+            if (!empty($existingRider['password'])) {
+                return [
+                    'success' => false,
+                    'code' => 'email_exists_active',
+                    'error' => "Det finns redan ett konto ({$name}) med denna e-post. Logga in for att anmala."
+                ];
+            } else {
+                return [
+                    'success' => false,
+                    'code' => 'email_exists_inactive',
+                    'error' => "Det finns redan en profil ({$name}) med denna e-post som inte ar aktiverad."
+                ];
+            }
         }
 
-        // Beräkna födelseår från födelsedatum
+        // Berakna fodelsear
         $birthYear = null;
         if (!empty($data['birth_date'])) {
             $birthYear = date('Y', strtotime($data['birth_date']));
@@ -979,14 +995,22 @@ function createRiderFromRegistration(array $data, int $parentUserId): array {
             $birthYear = intval($data['birth_year']);
         }
 
-        // Skapa rider
-        $insertStmt = $pdo->prepare("
-            INSERT INTO riders (
-                firstname, lastname, email, birth_year, gender,
-                license_type, license_number, club_id, active, created_at
-            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, 1, NOW())
-        ");
-        $insertStmt->execute([
+        // Check which optional columns exist
+        $optionalCols = [];
+        try {
+            $colCheck = $pdo->query("SHOW COLUMNS FROM riders");
+            $dbColumns = array_column($colCheck->fetchAll(PDO::FETCH_ASSOC), 'Field');
+            foreach (['phone', 'ice_name', 'ice_phone', 'nationality'] as $col) {
+                if (in_array($col, $dbColumns)) {
+                    $optionalCols[] = $col;
+                }
+            }
+        } catch (\Throwable $e) { /* ignore */ }
+
+        // Build dynamic insert
+        $columns = ['firstname', 'lastname', 'email', 'birth_year', 'gender',
+                     'license_type', 'license_number', 'club_id', 'active', 'created_at'];
+        $values = [
             $data['firstname'],
             $data['lastname'],
             $data['email'],
@@ -994,12 +1018,38 @@ function createRiderFromRegistration(array $data, int $parentUserId): array {
             $data['gender'] ?? null,
             $data['license_type'] ?? null,
             $data['license_number'] ?? null,
-            $data['club_id'] ?? null
-        ]);
+            $data['club_id'] ?? null,
+            1,
+            date('Y-m-d H:i:s')
+        ];
+
+        // Add optional columns if they exist in the database
+        if (in_array('phone', $optionalCols) && !empty($data['phone'])) {
+            $columns[] = 'phone';
+            $values[] = $data['phone'];
+        }
+        if (in_array('ice_name', $optionalCols) && !empty($data['ice_name'])) {
+            $columns[] = 'ice_name';
+            $values[] = $data['ice_name'];
+        }
+        if (in_array('ice_phone', $optionalCols) && !empty($data['ice_phone'])) {
+            $columns[] = 'ice_phone';
+            $values[] = $data['ice_phone'];
+        }
+        if (in_array('nationality', $optionalCols) && !empty($data['nationality'])) {
+            $columns[] = 'nationality';
+            $values[] = $data['nationality'];
+        }
+
+        $placeholders = implode(', ', array_fill(0, count($columns), '?'));
+        $columnList = implode(', ', $columns);
+
+        $insertStmt = $pdo->prepare("INSERT INTO riders ({$columnList}) VALUES ({$placeholders})");
+        $insertStmt->execute($values);
 
         $riderId = $pdo->lastInsertId();
 
-        // Skapa family_member-koppling om det finns en förälder
+        // Skapa family_member-koppling om det finns en foralder
         if ($parentUserId) {
             try {
                 $familyStmt = $pdo->prepare("
@@ -1022,7 +1072,10 @@ function createRiderFromRegistration(array $data, int $parentUserId): array {
                 'lastname' => $data['lastname'],
                 'email' => $data['email'],
                 'birth_year' => $birthYear,
-                'gender' => $data['gender'] ?? null
+                'gender' => $data['gender'] ?? null,
+                'phone' => $data['phone'] ?? null,
+                'ice_name' => $data['ice_name'] ?? null,
+                'ice_phone' => $data['ice_phone'] ?? null
             ]
         ];
 
