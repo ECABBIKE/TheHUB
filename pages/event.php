@@ -3870,13 +3870,13 @@ if (!empty($event['series_id'])) {
                         <div style="display: flex; flex-direction: column; height: 100%; overflow: hidden;">
                             <div style="padding: var(--space-sm) var(--space-lg); border-bottom: 1px solid var(--color-border); flex-shrink: 0;">
                                 <button type="button" id="${p}backToSearchBtn" style="background: none; border: none; color: var(--color-accent); cursor: pointer; font-size: 0.875rem; display: inline-flex; align-items: center; gap: var(--space-2xs); padding: var(--space-xs) 0;">
-                                    <i data-lucide="arrow-left" style="width: 16px; height: 16px;"></i> Tillbaka till sok
+                                    <i data-lucide="arrow-left" style="width: 16px; height: 16px;"></i> Tillbaka till sök
                                 </button>
                             </div>
                             <div style="flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: var(--space-lg);">
                                 <table style="width: 100%; border-collapse: separate; border-spacing: 0 var(--space-sm);">
                                     <tr>
-                                        <td style="${labelStyle}">Fornamn *</td>
+                                        <td style="${labelStyle}">Förnamn *</td>
                                         <td><input type="text" id="${p}newRiderFirstname" style="${inputStyle}" value="${suggestedFirst}" required></td>
                                     </tr>
                                     <tr>
@@ -3892,14 +3892,14 @@ if (!empty($event['series_id'])) {
                                         <td><input type="tel" id="${p}newRiderPhone" style="${inputStyle}" placeholder="070-123 45 67" required></td>
                                     </tr>
                                     <tr>
-                                        <td style="${labelStyle}">Fodelsear *</td>
+                                        <td style="${labelStyle}">Födelseår *</td>
                                         <td><input type="number" id="${p}newRiderBirthYear" style="${inputStyle}" placeholder="t.ex. 1990" min="1920" max="2025" required></td>
                                     </tr>
                                     <tr>
-                                        <td style="${labelStyle}">Kon *</td>
+                                        <td style="${labelStyle}">Kön *</td>
                                         <td>
                                             <select id="${p}newRiderGender" style="${inputStyle}" required>
-                                                <option value="">Valj...</option>
+                                                <option value="">Välj...</option>
                                                 <option value="M">Man</option>
                                                 <option value="F">Kvinna</option>
                                             </select>
@@ -3921,12 +3921,12 @@ if (!empty($event['series_id'])) {
                                 </table>
 
                                 <div style="margin: var(--space-md) 0; padding-top: var(--space-md); border-top: 1px solid var(--color-border);">
-                                    <span style="color: var(--color-text-muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;">Nodkontakt (ICE)</span>
+                                    <span style="color: var(--color-text-muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;">Nödkontakt (ICE)</span>
                                 </div>
                                 <table style="width: 100%; border-collapse: separate; border-spacing: 0 var(--space-sm);">
                                     <tr>
                                         <td style="${labelStyle}">Namn *</td>
-                                        <td><input type="text" id="${p}newRiderIceName" style="${inputStyle}" placeholder="Fornamn Efternamn" required></td>
+                                        <td><input type="text" id="${p}newRiderIceName" style="${inputStyle}" placeholder="Förnamn Efternamn" required></td>
                                     </tr>
                                     <tr>
                                         <td style="${labelStyle}">Telefon *</td>
@@ -3935,7 +3935,7 @@ if (!empty($event['series_id'])) {
                                 </table>
 
                                 <button type="button" id="${p}createRiderBtn" class="btn btn--primary btn--block" style="margin-top: var(--space-lg); padding: var(--space-md); width: 100%; background: var(--color-accent); color: var(--color-bg-page); border: none; border-radius: var(--radius-sm); font-size: 1rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: var(--space-xs);">
-                                    <i data-lucide="user-plus"></i> Skapa och valj
+                                    <i data-lucide="user-plus"></i> Skapa och välj
                                 </button>
                                 <div id="${p}createRiderError" style="display:none; margin-top: var(--space-sm); font-size: 0.875rem;"></div>
                             </div>
@@ -3966,7 +3966,7 @@ if (!empty($event['series_id'])) {
                         backBtn.addEventListener('click', function() {
                             createSection.style.display = 'none';
                             searchSection.style.display = 'flex';
-                            if (headerH3) headerH3.textContent = 'Sok deltagare';
+                            if (headerH3) headerH3.textContent = 'Sök deltagare';
                         });
                     }
 
@@ -4069,7 +4069,7 @@ if (!empty($event['series_id'])) {
                                     '<br><a href="/login" style="color: var(--color-accent); text-decoration: underline; font-weight: 500;">Logga in har</a>';
                             } else if (data.code === 'email_exists_inactive') {
                                 errorDiv.innerHTML = '<span style="color: var(--color-warning);">' + (data.error || '') + '</span>' +
-                                    '<br><span style="color: var(--color-text-secondary);">Sok pa namnet istallet for att hitta profilen.</span>';
+                                    '<br><span style="color: var(--color-text-secondary);">Sök på namnet istället för att hitta profilen.</span>';
                             } else {
                                 errorDiv.innerHTML = data.error || 'Kunde inte skapa deltagare.';
                                 errorDiv.style.color = 'var(--color-error)';
@@ -4131,7 +4131,7 @@ if (!empty($event['series_id'])) {
                         <div class="rider-search-empty">
                             <i data-lucide="search-x"></i>
                             <p>Inga deltagare hittades</p>
-                            <p style="font-size: 0.875rem; margin-top: var(--space-xs); color: var(--color-text-muted);">Anvand "Skapa ny deltagare" ovan for att skapa en ny profil.</p>
+                            <p style="font-size: 0.875rem; margin-top: var(--space-xs); color: var(--color-text-muted);">Använd "Skapa ny deltagare" ovan för att skapa en ny profil.</p>
                         </div>
                     `;
                     if (typeof lucide !== 'undefined') lucide.createIcons();
@@ -4190,7 +4190,7 @@ if (!empty($event['series_id'])) {
                     document.getElementById('riderSearchSection').style.display = 'flex';
                     document.getElementById('riderCreateSection').style.display = 'none';
                     const h3 = riderSearchModal.querySelector('.rider-search-modal__header h3');
-                    if (h3) h3.textContent = 'Sok deltagare';
+                    if (h3) h3.textContent = 'Sök deltagare';
                 }
 
                 // Load classes for selected rider
@@ -4813,7 +4813,7 @@ if (!empty($event['series_id'])) {
                         <div class="rider-search-empty">
                             <i data-lucide="search-x"></i>
                             <p>Inga deltagare hittades</p>
-                            <p style="font-size: 0.875rem; margin-top: var(--space-xs); color: var(--color-text-muted);">Anvand "Skapa ny deltagare" ovan for att skapa en ny profil.</p>
+                            <p style="font-size: 0.875rem; margin-top: var(--space-xs); color: var(--color-text-muted);">Använd "Skapa ny deltagare" ovan för att skapa en ny profil.</p>
                         </div>
                     `;
                     if (typeof lucide !== 'undefined') lucide.createIcons();
@@ -4976,7 +4976,7 @@ if (!empty($event['series_id'])) {
                     document.getElementById('seriesRiderSearchSection').style.display = 'flex';
                     document.getElementById('seriesRiderCreateSection').style.display = 'none';
                     const h3 = seriesRiderSearchModal.querySelector('.rider-search-modal__header h3');
-                    if (h3) h3.textContent = 'Sok deltagare';
+                    if (h3) h3.textContent = 'Sök deltagare';
                 }
 
                 seriesOpenRiderSearchBtn.addEventListener('click', () => {
