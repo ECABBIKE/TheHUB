@@ -73,7 +73,7 @@ $totalSpent = 0;
 $purchaseCount = 0;
 
 try {
-    // Hämta alla orders för användaren
+    // Try full query with receipts and payment_recipients
     $stmt = $pdo->prepare("
         SELECT o.*,
                e.name AS event_name,
@@ -95,9 +95,36 @@ try {
     ");
     $stmt->execute($allRiderIds);
     $purchases = $stmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (PDOException $e) {
+    // Fallback: query without receipts/payment_recipients tables
+    try {
+        $stmt = $pdo->prepare("
+            SELECT o.*,
+                   e.name AS event_name,
+                   e.date AS event_date,
+                   s.name AS series_name,
+                   s.logo AS series_logo,
+                   NULL AS seller_name,
+                   NULL AS seller_org_number,
+                   NULL AS receipt_number,
+                   NULL AS receipt_id
+            FROM orders o
+            LEFT JOIN events e ON o.event_id = e.id
+            LEFT JOIN series s ON o.series_id = s.id OR e.series_id = s.id
+            WHERE o.rider_id IN ($placeholders)
+            ORDER BY o.created_at DESC
+            LIMIT 50
+        ");
+        $stmt->execute($allRiderIds);
+        $purchases = $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e2) {
+        $purchases = [];
+    }
+}
 
-    // Hämta items för varje order
-    foreach ($purchases as $key => $purchase) {
+// Hämta items och generate missing receipts for paid orders
+foreach ($purchases as $key => $purchase) {
+    try {
         $itemStmt = $pdo->prepare("
             SELECT oi.*, oi.description, oi.unit_price, oi.quantity
             FROM order_items oi
@@ -105,14 +132,27 @@ try {
         ");
         $itemStmt->execute([$purchase['id']]);
         $purchases[$key]['items'] = $itemStmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        $purchases[$key]['items'] = [];
+    }
 
-        if ($purchase['payment_status'] === 'paid') {
-            $totalSpent += $purchase['total_amount'];
-            $purchaseCount++;
+    if ($purchase['payment_status'] === 'paid') {
+        $totalSpent += $purchase['total_amount'];
+        $purchaseCount++;
+
+        // Auto-generate receipt if missing for paid orders
+        if (empty($purchase['receipt_id']) && function_exists('createReceiptForOrder')) {
+            try {
+                $receiptResult = createReceiptForOrder($pdo, $purchase['id']);
+                if ($receiptResult['success'] && !empty($receiptResult['receipt_id'])) {
+                    $purchases[$key]['receipt_id'] = $receiptResult['receipt_id'];
+                    $purchases[$key]['receipt_number'] = $receiptResult['receipt_number'];
+                }
+            } catch (\Throwable $e) {
+                // Receipt tables may not exist - skip silently
+            }
         }
     }
-} catch (PDOException $e) {
-    $purchases = [];
 }
 
 // =============================================================================

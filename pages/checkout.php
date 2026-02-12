@@ -10,6 +10,14 @@
 require_once __DIR__ . '/../hub-config.php';
 require_once __DIR__ . '/../includes/payment.php';
 
+// Auto-cleanup expired pending orders
+if (file_exists(__DIR__ . '/../includes/order-manager.php')) {
+    require_once __DIR__ . '/../includes/order-manager.php';
+    if (function_exists('cleanupExpiredOrders')) {
+        cleanupExpiredOrders();
+    }
+}
+
 // Get order ID from URL
 $orderId = isset($_GET['order']) ? intval($_GET['order']) : 0;
 
