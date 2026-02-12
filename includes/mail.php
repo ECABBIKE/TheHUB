@@ -571,9 +571,9 @@ function hub_email_template(string $template, array $vars = []): string {
             <div class="header">
                 <div class="logo">TheHUB</div>
             </div>
-            <h1>Betalningsbekraftelse</h1>
+            <h1>Betalningsbekr&auml;ftelse</h1>
             <p>Hej {{name}},</p>
-            <p>Tack for din betalning! Din anmalan ar nu bekraftad.</p>
+            <p>Tack f&ouml;r din betalning! Din anm&auml;lan &auml;r nu bekr&auml;ftad.</p>
 
             <div style="background: #f5f5f5; border-radius: 8px; padding: 16px; margin: 16px 0;">
                 <p style="margin: 0 0 8px 0;"><strong>Ordernummer:</strong> {{order_number}}</p>
@@ -609,10 +609,10 @@ function hub_email_template(string $template, array $vars = []): string {
             </table>
 
             <p class="text-center" style="margin-top: 24px;">
-                <a href="{{profile_url}}" class="btn">Se dina anmalningar</a>
+                <a href="{{profile_url}}" class="btn">Se dina anm&auml;lningar</a>
             </p>
 
-            <p class="note" style="margin-top: 24px;">Om du har fragor, kontakta arrangoren via TheHUB.</p>
+            <p class="note" style="margin-top: 24px;">Om du har fr&aring;gor, kontakta arrang&ouml;ren via TheHUB.</p>
         ',
 
         'receipt' => '
@@ -621,7 +621,7 @@ function hub_email_template(string $template, array $vars = []): string {
             </div>
             <h1>Kvitto</h1>
             <p>Hej {{name}},</p>
-            <p>Tack for din betalning! Har ar ditt kvitto.</p>
+            <p>Tack f&ouml;r din betalning! H&auml;r &auml;r ditt kvitto.</p>
 
             <div style="background: #f5f5f5; border-radius: 8px; padding: 16px; margin: 16px 0;">
                 <table style="width: 100%; font-size: 14px;">
@@ -633,7 +633,7 @@ function hub_email_template(string $template, array $vars = []): string {
             </div>
 
             <div style="background: #f0f9ff; border-radius: 8px; padding: 16px; margin: 16px 0;">
-                <p style="margin: 0 0 4px 0; font-weight: 600; font-size: 14px;">Saljare</p>
+                <p style="margin: 0 0 4px 0; font-weight: 600; font-size: 14px;">S&auml;ljare</p>
                 <p style="margin: 0; font-size: 14px;">{{seller_name}}</p>
                 <p style="margin: 0; font-size: 14px; color: #666;">{{seller_org}}</p>
             </div>
@@ -668,16 +668,36 @@ function hub_email_template(string $template, array $vars = []): string {
                 <a href="{{receipt_url}}" class="btn">Se kvitto online</a>
             </p>
 
-            <p class="note" style="margin-top: 24px;">Detta kvitto ar ditt betalningsbevis. Spara det for din bokforing.</p>
+            <p class="note" style="margin-top: 24px;">Detta kvitto &auml;r ditt betalningsbevis. Spara det f&ouml;r din bokf&ouml;ring.</p>
         '
     ];
 
     // Get template content
     $content = $templates[$template] ?? '<p>Email template not found.</p>';
 
-    // Replace variables
+    // Process Mustache-style conditional sections: {{#key}}...{{/key}}
+    // If value is truthy/non-empty, show the block; otherwise remove it
     foreach ($vars as $key => $value) {
-        $content = str_replace('{{' . $key . '}}', htmlspecialchars($value), $content);
+        $pattern = '/\{\{#' . preg_quote($key, '/') . '\}\}(.*?)\{\{\/' . preg_quote($key, '/') . '\}\}/s';
+        if (!empty($value)) {
+            // Keep the inner content (remove the tags)
+            $content = preg_replace($pattern, '$1', $content);
+        } else {
+            // Remove the entire block
+            $content = preg_replace($pattern, '', $content);
+        }
+    }
+
+    // Also clean up any remaining unmatched conditional tags
+    $content = preg_replace('/\{\{#[a-z_]+\}\}(.*?)\{\{\/[a-z_]+\}\}/s', '', $content);
+
+    // Replace variables - keys containing raw HTML (ending in _html or _rows) should NOT be escaped
+    foreach ($vars as $key => $value) {
+        if (str_ends_with($key, '_html') || str_ends_with($key, '_rows')) {
+            $content = str_replace('{{' . $key . '}}', (string)$value, $content);
+        } else {
+            $content = str_replace('{{' . $key . '}}', htmlspecialchars((string)$value), $content);
+        }
     }
 
     // Wrap in full HTML email structure
