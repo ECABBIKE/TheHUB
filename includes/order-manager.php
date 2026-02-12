@@ -25,6 +25,32 @@ function generateOrderReference(): string {
 }
 
 /**
+ * Cancel expired pending orders and their registrations.
+ * Called automatically when creating new orders and loading checkout.
+ */
+function cleanupExpiredOrders(): void {
+    try {
+        $pdo = hub_db();
+        // Find pending orders past their expires_at
+        $stmt = $pdo->query("
+            SELECT id FROM orders
+            WHERE payment_status = 'pending'
+            AND expires_at IS NOT NULL
+            AND expires_at < NOW()
+            LIMIT 50
+        ");
+        $expiredIds = $stmt->fetchAll(PDO::FETCH_COLUMN);
+
+        foreach ($expiredIds as $expiredId) {
+            $pdo->prepare("UPDATE event_registrations SET status = 'cancelled', payment_status = 'cancelled' WHERE order_id = ? AND status = 'pending'")->execute([$expiredId]);
+            $pdo->prepare("UPDATE orders SET payment_status = 'expired', cancelled_at = NOW() WHERE id = ? AND payment_status = 'pending'")->execute([$expiredId]);
+        }
+    } catch (\Throwable $e) {
+        error_log("cleanupExpiredOrders error: " . $e->getMessage());
+    }
+}
+
+/**
  * Skapa en multi-rider order
  *
  * @param array $buyerData Köparens info: name, email, phone, user_id
@@ -34,6 +60,9 @@ function generateOrderReference(): string {
  */
 function createMultiRiderOrder(array $buyerData, array $items, ?string $discountCode = null): array {
     $pdo = hub_db();
+
+    // Auto-cleanup expired pending orders
+    cleanupExpiredOrders();
 
     if (empty($items)) {
         return ['success' => false, 'error' => 'Inga deltagare valda'];

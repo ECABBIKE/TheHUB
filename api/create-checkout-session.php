@@ -114,6 +114,39 @@ try {
 
     $stripe = new StripeClient($stripeKey);
 
+    // Find or create 6% inclusive VAT tax rate for Stripe
+    $taxRateId = null;
+    try {
+        $taxRates = $stripe->request('GET', '/tax_rates?inclusive=true&active=true&limit=20');
+        if (!empty($taxRates['data'])) {
+            foreach ($taxRates['data'] as $tr) {
+                if (floatval($tr['percentage']) == 6 && $tr['inclusive'] === true) {
+                    $taxRateId = $tr['id'];
+                    break;
+                }
+            }
+        }
+        if (!$taxRateId) {
+            $newRate = $stripe->request('POST', '/tax_rates', [
+                'display_name' => 'Moms',
+                'inclusive' => true,
+                'percentage' => '6.0',
+                'country' => 'SE',
+                'description' => 'Svensk moms 6% (sport/evenemang)'
+            ]);
+            $taxRateId = $newRate['id'] ?? null;
+        }
+        // Apply tax rate to all line items
+        if ($taxRateId) {
+            foreach ($lineItems as &$li) {
+                $li['tax_rates'] = [$taxRateId];
+            }
+            unset($li);
+        }
+    } catch (\Throwable $e) {
+        error_log("Stripe tax rate setup error: " . $e->getMessage());
+    }
+
     // Create Stripe coupon for discount so individual items show at full price
     $stripeDiscounts = [];
     if ($discount > 0) {

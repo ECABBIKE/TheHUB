@@ -4414,7 +4414,9 @@ if (!empty($event['series_id'])) {
 
                 addToCartBtn.addEventListener('click', addToCart);
                 checkoutBtn.addEventListener('click', function() {
-                    // Navigate to cart page
+                    // Clear rider selection before navigating to cart
+                    clearRiderSelection();
+                    closeSearchModal();
                     window.location.href = '/cart';
                 });
                 addAnotherBtn.addEventListener('click', function() {
@@ -4457,6 +4459,14 @@ if (!empty($event['series_id'])) {
                     }
                 }
                 waitForGlobalCart();
+
+                // Clear form when navigating back (browser bfcache)
+                window.addEventListener('pageshow', function(e) {
+                    if (e.persisted) {
+                        clearRiderSelection();
+                        closeSearchModal();
+                    }
+                });
             })();
 
             <?php if ($seriesRegistrationAvailable && $seriesInfo): ?>
