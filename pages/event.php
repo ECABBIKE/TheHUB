@@ -3770,6 +3770,10 @@ if (!empty($event['series_id'])) {
                 let searchTimeout = null;
                 let selectedRider = null;
 
+                // Staging area: items added on this page but not yet committed to cart
+                // These are lost on page reload - only committed when clicking "Gå till kundvagn"
+                let pendingItems = [];
+
                 // Search riders in database
                 async function searchRiders(query) {
                     if (query.length < 2) {
@@ -4008,10 +4012,9 @@ if (!empty($event['series_id'])) {
                                                 <div>
                                                     <strong style="display: block; margin-bottom: var(--space-xs);">Profilen är inte komplett</strong>
                                                     <p style="margin: 0;">${data.classes[0].message}</p>
-                                                    <p style="margin: var(--space-sm) 0 0 0; font-size: 0.875rem;">
-                                                        Rider med ID ${selectedRider.id} saknar viktig information.
-                                                        Logga in med profilen och uppdatera all information.
-                                                    </p>
+                                                    <a href="/profile/edit" class="btn btn-primary" style="margin-top: var(--space-sm); display: inline-flex; align-items: center; gap: var(--space-xs);">
+                                                        <i data-lucide="user-pen" style="width:16px;height:16px;"></i> Uppdatera profil
+                                                    </a>
                                                 </div>
                                             </div>
                                         </div>
@@ -4164,8 +4167,7 @@ if (!empty($event['series_id'])) {
                 function addToCart() {
                     if (!selectedRiderId || !selectedClassId || !selectedRider) return;
 
-                    // Add to GlobalCart
-                    GlobalCart.addItem({
+                    const newItem = {
                         type: 'event',
                         rider_id: selectedRider.id,
                         rider_name: selectedRider.firstname + ' ' + selectedRider.lastname,
@@ -4176,7 +4178,17 @@ if (!empty($event['series_id'])) {
                         class_id: selectedClassId,
                         class_name: selectedClassData.name,
                         price: selectedClassData.current_price
-                    });
+                    };
+
+                    // Check for duplicate in pending items
+                    const isDuplicate = pendingItems.some(item =>
+                        item.event_id == newItem.event_id &&
+                        item.rider_id == newItem.rider_id &&
+                        item.class_id == newItem.class_id
+                    );
+                    if (!isDuplicate) {
+                        pendingItems.push(newItem);
+                    }
 
                     // Reset form
                     clearRiderSelection();
@@ -4186,13 +4198,25 @@ if (!empty($event['series_id'])) {
                     updateCart();
                 }
 
-                function removeFromCart(eventId, riderId, classId) {
-                    GlobalCart.removeItem(eventId, riderId, classId);
+                function removeFromCart(eid, riderId, classId) {
+                    // Try to remove from pending items first
+                    const pendingIdx = pendingItems.findIndex(item =>
+                        item.event_id == eid && item.rider_id == riderId && item.class_id == classId
+                    );
+                    if (pendingIdx !== -1) {
+                        pendingItems.splice(pendingIdx, 1);
+                    } else {
+                        // Remove from committed GlobalCart
+                        GlobalCart.removeItem(eid, riderId, classId);
+                    }
                     updateCart();
                 }
 
                 function updateCart() {
-                    const allItems = GlobalCart.getCart();
+                    // Combine committed GlobalCart items with pending (not yet committed) items
+                    const committedItems = (typeof GlobalCart !== 'undefined') ? GlobalCart.getCart() : [];
+                    const allItems = [...committedItems, ...pendingItems];
+
                     // Show items for this event AND any series registration items linked to this event's series
                     const thisEventItems = allItems.filter(item => item.event_id == eventId);
                     const seriesItems = allItems.filter(item => item.is_series_registration && item.event_id != eventId);
@@ -4328,6 +4352,12 @@ if (!empty($event['series_id'])) {
                 window.removeCartItem = removeFromCart;
 
                 async function checkout() {
+                    // Commit any pending items to GlobalCart first
+                    pendingItems.forEach(item => {
+                        GlobalCart.addItem(item);
+                    });
+                    pendingItems = [];
+
                     // Get cart from GlobalCart
                     const cart = GlobalCart.getCart();
                     if (cart.length === 0) return;
@@ -4414,7 +4444,12 @@ if (!empty($event['series_id'])) {
 
                 addToCartBtn.addEventListener('click', addToCart);
                 checkoutBtn.addEventListener('click', function() {
-                    // Clear rider selection before navigating to cart
+                    // Commit pending items to GlobalCart before navigating
+                    pendingItems.forEach(item => {
+                        GlobalCart.addItem(item);
+                    });
+                    pendingItems = [];
+
                     clearRiderSelection();
                     closeSearchModal();
                     window.location.href = '/cart';

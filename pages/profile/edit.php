@@ -163,6 +163,16 @@ $clubs = $pdo->query("SELECT id, name FROM clubs WHERE active = 1 ORDER BY name"
     <h1 class="page-title">Redigera profil</h1>
 </div>
 
+<?php if (isset($_GET['complete'])): ?>
+    <div class="alert alert-warning" style="display: flex; gap: var(--space-sm); align-items: flex-start;">
+        <i data-lucide="alert-triangle" style="flex-shrink: 0; margin-top: 2px;"></i>
+        <div>
+            <strong>Komplettera din profil</strong>
+            <p style="margin: var(--space-xs) 0 0 0;">Alla obligatoriska fält (markerade med *) måste fyllas i innan du kan anmäla dig till tävlingar. Fyll i nödkontakt (ICE), telefon och övriga uppgifter.</p>
+        </div>
+    </div>
+<?php endif; ?>
+
 <?php if ($message): ?>
     <div class="alert alert-success"><?= htmlspecialchars($message) ?></div>
 <?php endif; ?>
@@ -254,26 +264,26 @@ $clubs = $pdo->query("SELECT id, name FROM clubs WHERE active = 1 ORDER BY name"
 
         <div class="form-row">
             <div class="form-group">
-                <label for="email">E-post</label>
+                <label for="email">E-post *</label>
                 <input type="email" id="email" name="email"
                        value="<?= htmlspecialchars($currentUser['email'] ?? '') ?>"
-                       placeholder="din@email.se">
+                       placeholder="din@email.se" required>
             </div>
             <div class="form-group">
-                <label for="phone">Telefon</label>
+                <label for="phone">Telefon *</label>
                 <input type="tel" id="phone" name="phone"
                        value="<?= htmlspecialchars($currentUser['phone'] ?? '') ?>"
-                       placeholder="07X XXX XX XX">
+                       placeholder="07X XXX XX XX" required>
             </div>
         </div>
 
         <div class="form-row">
             <div class="form-group">
-                <label for="birth_year">Födelseår</label>
+                <label for="birth_year">Födelseår *</label>
                 <input type="number" id="birth_year" name="birth_year"
                        value="<?= htmlspecialchars($currentUser['birth_year'] ?? '') ?>"
                        min="1920" max="<?= date('Y') ?>"
-                       placeholder="ÅÅÅÅ">
+                       placeholder="ÅÅÅÅ" required>
             </div>
             <div class="form-group">
                 <label for="uci_id">UCI ID</label>
@@ -326,20 +336,20 @@ $clubs = $pdo->query("SELECT id, name FROM clubs WHERE active = 1 ORDER BY name"
 
     <div class="form-section">
         <h2>Nödkontakt (ICE)</h2>
-        <p class="form-help">In Case of Emergency - kontaktperson vid olycka.</p>
+        <p class="form-help">In Case of Emergency - kontaktperson vid olycka. Krävs för anmälan till tävling.</p>
 
         <div class="form-row">
             <div class="form-group">
-                <label for="ice_name">Kontaktperson</label>
+                <label for="ice_name">Kontaktperson *</label>
                 <input type="text" id="ice_name" name="ice_name"
                        value="<?= htmlspecialchars($currentUser['ice_name'] ?? '') ?>"
-                       placeholder="Namn på anhörig">
+                       placeholder="Namn på anhörig" required>
             </div>
             <div class="form-group">
-                <label for="ice_phone">Telefon (ICE)</label>
+                <label for="ice_phone">Telefon (ICE) *</label>
                 <input type="tel" id="ice_phone" name="ice_phone"
                        value="<?= htmlspecialchars($currentUser['ice_phone'] ?? '') ?>"
-                       placeholder="07X XXX XX XX">
+                       placeholder="07X XXX XX XX" required>
             </div>
         </div>
     </div>

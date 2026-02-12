@@ -70,8 +70,28 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $result = hub_attempt_login($email, $password, $rememberMe);
 
         if ($result['success']) {
-            $redirect = clean_redirect_url($_POST['redirect'] ?? $_GET['redirect'] ?? '');
-            header('Location: ' . $redirect);
+            // Check if profile is complete (required fields for registration)
+            $profileRedirect = false;
+            $user = $result['user'] ?? null;
+            if ($user && empty($user['is_admin'])) {
+                $missingFields = [];
+                if (empty($user['birth_year'])) $missingFields[] = 'födelseår';
+                if (empty($user['gender'])) $missingFields[] = 'kön';
+                if (empty($user['phone'])) $missingFields[] = 'telefon';
+                if (empty($user['email'])) $missingFields[] = 'e-post';
+                if (empty($user['ice_name'] ?? null)) $missingFields[] = 'nödkontakt';
+                if (empty($user['ice_phone'] ?? null)) $missingFields[] = 'nödkontakt telefon';
+                if (!empty($missingFields)) {
+                    $profileRedirect = true;
+                }
+            }
+
+            if ($profileRedirect) {
+                header('Location: /profile/edit?complete=1');
+            } else {
+                $redirect = clean_redirect_url($_POST['redirect'] ?? $_GET['redirect'] ?? '');
+                header('Location: ' . $redirect);
+            }
             exit;
         } else {
             $error = $result['error'];
