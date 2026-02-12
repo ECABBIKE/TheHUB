@@ -37,13 +37,17 @@ $childIds = function_exists('hub_get_linked_children')
 $allRiderIds = array_merge([$currentUser['id']], $childIds);
 $placeholders = implode(',', array_fill(0, count($allRiderIds), '?'));
 
+// Buyer email - used to also match orders by email (catches orders where rider_id was NULL)
+$buyerEmail = $currentUser['email'] ?? '';
+
 // =============================================================================
-// HÄMTA KOMMANDE ANMÄLNINGAR
+// HÄMTA KOMMANDE ANMÄLNINGAR (egna + barn + via orders som köparen gjort)
 // =============================================================================
 $upcomingRegistrations = [];
 try {
     $tableCheck = $pdo->query("SHOW TABLES LIKE 'event_registrations'");
     if ($tableCheck->rowCount() > 0) {
+        // Match registrations: either rider is current user/child, OR the order was placed by current user
         $stmt = $pdo->prepare("
             SELECT r.*, ri.firstname, ri.lastname,
                    e.name AS event_name, e.date AS event_date, e.location,
@@ -52,13 +56,16 @@ try {
             JOIN riders ri ON r.rider_id = ri.id
             JOIN events e ON r.event_id = e.id
             LEFT JOIN series s ON e.series_id = s.id
-            WHERE r.rider_id IN ($placeholders)
+            LEFT JOIN orders o ON r.order_id = o.id
+            WHERE (r.rider_id IN ($placeholders) OR (o.rider_id IN ($placeholders)) OR (o.customer_email = ? AND o.customer_email != ''))
             AND r.status != 'cancelled'
             AND e.date >= CURDATE()
+            GROUP BY r.id
             ORDER BY e.date ASC
-            LIMIT 10
+            LIMIT 20
         ");
-        $stmt->execute($allRiderIds);
+        $regParams = array_merge($allRiderIds, $allRiderIds, [$buyerEmail]);
+        $stmt->execute($regParams);
         $upcomingRegistrations = $stmt->fetchAll(PDO::FETCH_ASSOC);
     }
 } catch (PDOException $e) {
@@ -66,7 +73,7 @@ try {
 }
 
 // =============================================================================
-// HÄMTA KÖPHISTORIK (ORDERS)
+// HÄMTA KÖPHISTORIK (ORDERS) - matcha på rider_id ELLER customer_email
 // =============================================================================
 $purchases = [];
 $totalSpent = 0;
@@ -74,6 +81,7 @@ $purchaseCount = 0;
 
 try {
     // Try full query with receipts and payment_recipients
+    // Match by rider_id (buyer) OR by customer_email (catches guest/unlinked orders)
     $stmt = $pdo->prepare("
         SELECT o.*,
                e.name AS event_name,
@@ -89,11 +97,12 @@ try {
         LEFT JOIN series s ON o.series_id = s.id OR e.series_id = s.id
         LEFT JOIN payment_recipients pr ON o.payment_recipient_id = pr.id
         LEFT JOIN receipts r ON r.order_id = o.id AND r.status = 'issued'
-        WHERE o.rider_id IN ($placeholders)
+        WHERE (o.rider_id IN ($placeholders) OR (o.customer_email = ? AND o.customer_email != ''))
         ORDER BY o.created_at DESC
         LIMIT 50
     ");
-    $stmt->execute($allRiderIds);
+    $orderParams = array_merge($allRiderIds, [$buyerEmail]);
+    $stmt->execute($orderParams);
     $purchases = $stmt->fetchAll(PDO::FETCH_ASSOC);
 } catch (PDOException $e) {
     // Fallback: query without receipts/payment_recipients tables
@@ -111,11 +120,12 @@ try {
             FROM orders o
             LEFT JOIN events e ON o.event_id = e.id
             LEFT JOIN series s ON o.series_id = s.id OR e.series_id = s.id
-            WHERE o.rider_id IN ($placeholders)
+            WHERE (o.rider_id IN ($placeholders) OR (o.customer_email = ? AND o.customer_email != ''))
             ORDER BY o.created_at DESC
             LIMIT 50
         ");
-        $stmt->execute($allRiderIds);
+        $orderParams = array_merge($allRiderIds, [$buyerEmail]);
+        $stmt->execute($orderParams);
         $purchases = $stmt->fetchAll(PDO::FETCH_ASSOC);
     } catch (PDOException $e2) {
         $purchases = [];
