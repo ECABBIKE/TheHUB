@@ -3861,75 +3861,67 @@ if (!empty($event['series_id'])) {
                     const nameParts = searchVal.split(' ');
                     const suggestedFirst = nameParts[0] || '';
                     const suggestedLast = nameParts.slice(1).join(' ') || '';
-                    const p = prefix; // short alias
+                    const p = prefix;
 
                     return `
-                        <div style="padding: var(--space-md);">
-                            <div style="display: flex; align-items: center; justify-content: space-between; margin-bottom: var(--space-md);">
-                                <h4 style="margin: 0; font-size: 1rem;">Skapa ny deltagare</h4>
-                                <button type="button" id="${p}backToSearchBtn" style="background: none; border: none; color: var(--color-accent); cursor: pointer; font-size: 0.875rem; display: flex; align-items: center; gap: var(--space-2xs);">
-                                    <i data-lucide="arrow-left" style="width: 16px; height: 16px;"></i> Tillbaka till sok
-                                </button>
+                        <div style="padding: var(--space-md); overflow-y: auto; max-height: calc(100dvh - 120px);">
+                            <button type="button" id="${p}backToSearchBtn" style="background: none; border: none; color: var(--color-accent); cursor: pointer; font-size: 0.875rem; display: inline-flex; align-items: center; gap: var(--space-2xs); padding: 0; margin-bottom: var(--space-md);">
+                                <i data-lucide="arrow-left" style="width: 16px; height: 16px;"></i> Tillbaka till sok
+                            </button>
+
+                            <div class="form-group">
+                                <label class="form-label">Fornamn *</label>
+                                <input type="text" id="${p}newRiderFirstname" class="form-input" value="${suggestedFirst}" required>
                             </div>
-                            <div class="reg-create-rider__fields">
-                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-sm);">
-                                    <div class="form-group">
-                                        <label class="form-label">Fornamn *</label>
-                                        <input type="text" id="${p}newRiderFirstname" class="form-input" value="${suggestedFirst}" required>
-                                    </div>
-                                    <div class="form-group">
-                                        <label class="form-label">Efternamn *</label>
-                                        <input type="text" id="${p}newRiderLastname" class="form-input" value="${suggestedLast}" required>
-                                    </div>
-                                </div>
+                            <div class="form-group">
+                                <label class="form-label">Efternamn *</label>
+                                <input type="text" id="${p}newRiderLastname" class="form-input" value="${suggestedLast}" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">E-post *</label>
+                                <input type="email" id="${p}newRiderEmail" class="form-input" placeholder="namn@exempel.se" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Telefon *</label>
+                                <input type="tel" id="${p}newRiderPhone" class="form-input" placeholder="070-123 45 67" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Fodelsear *</label>
+                                <input type="number" id="${p}newRiderBirthYear" class="form-input" placeholder="t.ex. 1990" min="1920" max="2025" required>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Kon *</label>
+                                <select id="${p}newRiderGender" class="form-select" required>
+                                    <option value="">Valj...</option>
+                                    <option value="M">Man</option>
+                                    <option value="F">Kvinna</option>
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label class="form-label">Nationalitet</label>
+                                <select id="${p}newRiderNationality" class="form-select">
+                                    <option value="SWE" selected>Sverige</option>
+                                    <option value="NOR">Norge</option>
+                                    <option value="DNK">Danmark</option>
+                                    <option value="FIN">Finland</option>
+                                    <option value="DEU">Tyskland</option>
+                                    <option value="GBR">Storbritannien</option>
+                                </select>
+                            </div>
+
+                            <div style="margin-top: var(--space-sm); padding-top: var(--space-sm); border-top: 1px solid var(--color-border);">
+                                <label class="form-label" style="color: var(--color-text-muted); font-size: 0.8125rem; text-transform: uppercase; letter-spacing: 0.5px; margin-bottom: var(--space-sm);">Nodkontakt (ICE)</label>
                                 <div class="form-group">
-                                    <label class="form-label">E-post *</label>
-                                    <input type="email" id="${p}newRiderEmail" class="form-input" placeholder="namn@exempel.se" required>
-                                </div>
-                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-sm);">
-                                    <div class="form-group">
-                                        <label class="form-label">Fodelsear *</label>
-                                        <input type="number" id="${p}newRiderBirthYear" class="form-input" placeholder="t.ex. 1990" min="1920" max="2025" required>
-                                    </div>
-                                    <div class="form-group">
-                                        <label class="form-label">Kon *</label>
-                                        <select id="${p}newRiderGender" class="form-select" required>
-                                            <option value="">Valj...</option>
-                                            <option value="M">Man</option>
-                                            <option value="F">Kvinna</option>
-                                        </select>
-                                    </div>
-                                </div>
-                                <div class="form-group">
-                                    <label class="form-label">Nationalitet</label>
-                                    <select id="${p}newRiderNationality" class="form-select">
-                                        <option value="SWE" selected>Sverige</option>
-                                        <option value="NOR">Norge</option>
-                                        <option value="DNK">Danmark</option>
-                                        <option value="FIN">Finland</option>
-                                        <option value="DEU">Tyskland</option>
-                                        <option value="GBR">Storbritannien</option>
-                                    </select>
+                                    <label class="form-label">Namn *</label>
+                                    <input type="text" id="${p}newRiderIceName" class="form-input" placeholder="Kontaktperson" required>
                                 </div>
                                 <div class="form-group">
                                     <label class="form-label">Telefon *</label>
-                                    <input type="tel" id="${p}newRiderPhone" class="form-input" placeholder="070-123 45 67" required>
-                                </div>
-                                <div style="margin-top: var(--space-xs); padding-top: var(--space-sm); border-top: 1px solid var(--color-border);">
-                                    <label class="form-label" style="font-weight: 600; color: var(--color-text-secondary); font-size: 0.8125rem; text-transform: uppercase; letter-spacing: 0.5px;">Nodkontakt (ICE)</label>
-                                </div>
-                                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-sm);">
-                                    <div class="form-group">
-                                        <label class="form-label">Namn *</label>
-                                        <input type="text" id="${p}newRiderIceName" class="form-input" placeholder="Kontaktperson" required>
-                                    </div>
-                                    <div class="form-group">
-                                        <label class="form-label">Telefon *</label>
-                                        <input type="tel" id="${p}newRiderIcePhone" class="form-input" placeholder="070-..." required>
-                                    </div>
+                                    <input type="tel" id="${p}newRiderIcePhone" class="form-input" placeholder="070-..." required>
                                 </div>
                             </div>
-                            <button type="button" id="${p}createRiderBtn" class="btn btn--primary btn--block mt-md">
+
+                            <button type="button" id="${p}createRiderBtn" class="btn btn--primary btn--block" style="margin-top: var(--space-md);">
                                 <i data-lucide="user-plus"></i> Skapa och valj
                             </button>
                             <div id="${p}createRiderError" style="display:none; margin-top: var(--space-sm); font-size: 0.875rem;"></div>
