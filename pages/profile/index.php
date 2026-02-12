@@ -67,21 +67,28 @@ $linkedChildren = hub_get_linked_children($currentUser['id']);
 $adminClubs = hub_get_admin_clubs($currentUser['id']);
 
 // Get upcoming registrations (if table exists)
+// Match by rider_id (direct) OR via orders placed by this user (rider_id/email)
 $upcomingRegs = [];
+$buyerEmail = $currentUser['email'] ?? '';
 try {
     $tableCheck = $pdo->query("SHOW TABLES LIKE 'event_registrations'");
     if ($tableCheck->rowCount() > 0) {
         $regStmt = $pdo->prepare("
             SELECT r.*, e.name as event_name, e.date as event_date, e.location,
-                   cls.display_name as class_name
+                   COALESCE(cls.display_name, r.category) as class_name,
+                   ri.firstname, ri.lastname
             FROM event_registrations r
             JOIN events e ON r.event_id = e.id
             LEFT JOIN classes cls ON r.class_id = cls.id
-            WHERE r.rider_id = ? AND e.date >= CURDATE() AND r.status != 'cancelled'
+            LEFT JOIN orders o ON r.order_id = o.id
+            LEFT JOIN riders ri ON r.rider_id = ri.id
+            WHERE (r.rider_id = ? OR o.rider_id = ? OR (o.customer_email = ? AND o.customer_email != ''))
+            AND e.date >= CURDATE() AND r.status != 'cancelled'
+            GROUP BY r.id
             ORDER BY e.date ASC
-            LIMIT 5
+            LIMIT 10
         ");
-        $regStmt->execute([$currentUser['id']]);
+        $regStmt->execute([$currentUser['id'], $currentUser['id'], $buyerEmail]);
         $upcomingRegs = $regStmt->fetchAll(PDO::FETCH_ASSOC);
     }
 } catch (PDOException $e) {
@@ -295,7 +302,10 @@ try {
             <a href="/profile/receipts" class="section-link">Visa alla</a>
         </div>
         <div class="upcoming-list">
-            <?php foreach ($upcomingRegs as $reg): ?>
+            <?php foreach ($upcomingRegs as $reg):
+                $regRiderName = trim(($reg['firstname'] ?? $reg['first_name'] ?? '') . ' ' . ($reg['lastname'] ?? $reg['last_name'] ?? ''));
+                $isOtherRider = ($reg['rider_id'] != $currentUser['id']);
+            ?>
                 <a href="/calendar/<?= $reg['event_id'] ?>" class="upcoming-item">
                     <div class="upcoming-date">
                         <span class="upcoming-day"><?= date('j', strtotime($reg['event_date'])) ?></span>
@@ -303,10 +313,19 @@ try {
                     </div>
                     <div class="upcoming-info">
                         <span class="upcoming-name"><?= htmlspecialchars($reg['event_name']) ?></span>
-                        <span class="upcoming-class"><?= htmlspecialchars($reg['class_name'] ?? '') ?></span>
+                        <span class="upcoming-class">
+                            <?php if ($isOtherRider && $regRiderName): ?>
+                                <?= htmlspecialchars($regRiderName) ?> &bull;
+                            <?php endif; ?>
+                            <?= htmlspecialchars($reg['class_name'] ?? '') ?>
+                        </span>
                     </div>
                     <span class="upcoming-status status-<?= $reg['status'] ?>">
-                        <?= $reg['status'] === 'confirmed' ? '✓' : '⏳' ?>
+                        <?php if ($reg['status'] === 'confirmed'): ?>
+                            <i data-lucide="check" style="width:16px;height:16px;"></i>
+                        <?php else: ?>
+                            <i data-lucide="clock" style="width:16px;height:16px;"></i>
+                        <?php endif; ?>
                     </span>
                 </a>
             <?php endforeach; ?>

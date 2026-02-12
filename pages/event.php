@@ -2462,49 +2462,78 @@ try {
                 <?= h($className) ?>
                 <span class="badge badge--neutral ml-sm"><?= count($classRegs) ?></span>
             </h3>
-            <div class="table-wrapper">
-                <table class="table table--striped table--compact" style="table-layout:fixed;width:100%">
-                    <colgroup>
-                        <col style="width:70px">
-                        <col style="width:35%">
-                        <col style="width:60px">
-                        <col style="width:auto">
-                        <col style="width:90px">
-                    </colgroup>
+            <!-- Desktop table -->
+            <div class="table-wrapper reg-participants-desktop">
+                <table class="table table--striped table--compact">
                     <thead>
                         <tr>
-                            <th>Startnr</th>
+                            <th style="width:60px">Startnr</th>
                             <th>Namn</th>
-                            <th>Född</th>
+                            <th style="width:55px">Född</th>
                             <th>Klubb</th>
-                            <th>Status</th>
+                            <th style="width:80px">Status</th>
                         </tr>
                     </thead>
                     <tbody>
-                        <?php foreach ($classRegs as $index => $reg): ?>
+                        <?php foreach ($classRegs as $index => $reg):
+                            $regName = h(($reg['firstname'] ?? $reg['first_name'] ?? '') . ' ' . ($reg['lastname'] ?? $reg['last_name'] ?? ''));
+                            $regClub = h($reg['club_name'] ?? '-');
+                            $regBib = h($reg['bib_number'] ?? '-');
+                            $regYear = h($reg['birth_year'] ?? '-');
+                            $statusClass = 'badge--secondary';
+                            $statusText = ucfirst($reg['status'] ?? 'pending');
+                            if ($reg['status'] === 'confirmed' || $reg['payment_status'] === 'paid') {
+                                $statusClass = 'badge--success';
+                                $statusText = 'Betald';
+                            } elseif ($reg['status'] === 'pending') {
+                                $statusClass = 'badge--warning';
+                                $statusText = 'Väntande';
+                            }
+                        ?>
                         <tr>
-                            <td class="text-muted"><?= h($reg['bib_number'] ?? '-') ?></td>
-                            <td style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><strong><?= h(($reg['firstname'] ?? $reg['first_name'] ?? '') . ' ' . ($reg['lastname'] ?? $reg['last_name'] ?? '')) ?></strong></td>
-                            <td class="text-muted"><?= h($reg['birth_year'] ?? '-') ?></td>
-                            <td class="text-secondary" style="overflow:hidden;text-overflow:ellipsis;white-space:nowrap"><?= h($reg['club_name'] ?? '-') ?></td>
-                            <td>
-                                <?php
-                                $statusClass = 'badge--secondary';
-                                $statusText = ucfirst($reg['status'] ?? 'pending');
-                                if ($reg['status'] === 'confirmed' || $reg['payment_status'] === 'paid') {
-                                    $statusClass = 'badge--success';
-                                    $statusText = 'Betald';
-                                } elseif ($reg['status'] === 'pending') {
-                                    $statusClass = 'badge--warning';
-                                    $statusText = 'Väntande';
-                                }
-                                ?>
-                                <span class="badge <?= $statusClass ?>"><?= $statusText ?></span>
-                            </td>
+                            <td class="text-muted"><?= $regBib ?></td>
+                            <td><strong><?= $regName ?></strong></td>
+                            <td class="text-muted"><?= $regYear ?></td>
+                            <td class="text-secondary"><?= $regClub ?></td>
+                            <td><span class="badge <?= $statusClass ?>"><?= $statusText ?></span></td>
                         </tr>
                         <?php endforeach; ?>
                     </tbody>
                 </table>
+            </div>
+            <!-- Mobile card list -->
+            <div class="reg-participants-mobile">
+                <?php foreach ($classRegs as $index => $reg):
+                    $regName = h(($reg['firstname'] ?? $reg['first_name'] ?? '') . ' ' . ($reg['lastname'] ?? $reg['last_name'] ?? ''));
+                    $regClub = h($reg['club_name'] ?? '');
+                    $regBib = h($reg['bib_number'] ?? '');
+                    $regYear = h($reg['birth_year'] ?? '');
+                    $statusClass = 'badge--secondary';
+                    $statusText = ucfirst($reg['status'] ?? 'pending');
+                    if ($reg['status'] === 'confirmed' || $reg['payment_status'] === 'paid') {
+                        $statusClass = 'badge--success';
+                        $statusText = 'Betald';
+                    } elseif ($reg['status'] === 'pending') {
+                        $statusClass = 'badge--warning';
+                        $statusText = 'Väntande';
+                    }
+                ?>
+                <div class="reg-participant-card">
+                    <div class="reg-participant-card__main">
+                        <?php if ($regBib && $regBib !== '-'): ?>
+                            <span class="reg-participant-card__bib">#<?= $regBib ?></span>
+                        <?php endif; ?>
+                        <div class="reg-participant-card__info">
+                            <strong><?= $regName ?></strong>
+                            <span class="text-secondary text-sm">
+                                <?= $regYear && $regYear !== '-' ? $regYear : '' ?>
+                                <?= $regClub ? ($regYear && $regYear !== '-' ? ' &bull; ' : '') . $regClub : '' ?>
+                            </span>
+                        </div>
+                        <span class="badge <?= $statusClass ?>"><?= $statusText ?></span>
+                    </div>
+                </div>
+                <?php endforeach; ?>
             </div>
         </div>
         <?php endforeach; ?>
@@ -3079,6 +3108,56 @@ if (!empty($event['series_id'])) {
     padding: var(--space-xs) var(--space-sm);
 }
 
+/* Registered participants - responsive desktop/mobile */
+.reg-participants-mobile {
+    display: none;
+}
+
+.reg-participant-card {
+    padding: var(--space-sm) var(--space-md);
+    border-bottom: 1px solid var(--color-border);
+}
+
+.reg-participant-card:last-child {
+    border-bottom: none;
+}
+
+.reg-participant-card__main {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+}
+
+.reg-participant-card__bib {
+    font-size: 0.8125rem;
+    color: var(--color-text-muted);
+    font-weight: 600;
+    min-width: 32px;
+}
+
+.reg-participant-card__info {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+    gap: 2px;
+}
+
+.reg-participant-card__info strong {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+@media (max-width: 767px) {
+    .reg-participants-desktop {
+        display: none;
+    }
+    .reg-participants-mobile {
+        display: block;
+    }
+}
+
 /* Rider search modal */
 .rider-search-modal {
     position: fixed;
@@ -3223,33 +3302,47 @@ if (!empty($event['series_id'])) {
 @media (max-width: 767px) {
     .rider-search-modal {
         padding: 0;
-        align-items: flex-start;
+        align-items: stretch;
     }
 
     .rider-search-modal__container {
         max-width: 100%;
-        max-height: 100vh;
-        max-height: 100dvh;
         border-radius: 0;
         height: 100%;
         height: 100dvh;
+        max-height: 100vh;
+        max-height: 100dvh;
+        display: flex;
+        flex-direction: column;
     }
 
     .rider-search-modal__header {
         padding: var(--space-sm) var(--space-md);
+        flex-shrink: 0;
     }
 
     .rider-search-modal__body {
-        padding: var(--space-sm) var(--space-md);
+        padding: 0;
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+        min-height: 0;
+        overflow: hidden;
     }
 
     .rider-search-modal__input-wrapper {
-        margin-bottom: var(--space-md);
-        position: sticky;
-        top: 0;
-        z-index: 1;
+        margin-bottom: 0;
+        padding: var(--space-sm) var(--space-md);
         background: var(--color-bg-card);
-        padding-top: var(--space-xs);
+        flex-shrink: 0;
+        position: relative;
+    }
+
+    .rider-search-modal__results {
+        flex: 1;
+        overflow-y: auto;
+        -webkit-overflow-scrolling: touch;
+        padding: var(--space-sm) var(--space-md);
     }
 
     .rider-search-modal__input {
@@ -3258,7 +3351,7 @@ if (!empty($event['series_id'])) {
     }
 
     .rider-search-modal__search-icon {
-        left: var(--space-sm);
+        left: calc(var(--space-md) + var(--space-sm));
         width: 18px;
         height: 18px;
     }
