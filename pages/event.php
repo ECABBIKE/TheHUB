@@ -3258,10 +3258,11 @@ if (!empty($event['series_id'])) {
     .rider-search-modal__container {
         max-width: 100%;
         border-radius: 0;
-        height: 100%;
-        height: 100dvh;
-        max-height: 100vh;
-        max-height: 100dvh;
+        height: calc(100vh - var(--header-height));
+        height: calc(100dvh - var(--header-height));
+        max-height: calc(100vh - var(--header-height));
+        max-height: calc(100dvh - var(--header-height));
+        margin-top: var(--header-height);
         display: flex;
         flex-direction: column;
     }
