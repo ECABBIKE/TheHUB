@@ -3083,16 +3083,22 @@ if (!empty($event['series_id'])) {
 .reg-participants-table {
     margin: 0;
     min-width: 480px;
+    table-layout: fixed;
+    width: 100%;
 }
 
 .reg-participants-table th,
 .reg-participants-table td {
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
 
-.reg-participants-table th:nth-child(1) { width: 60px; }
-.reg-participants-table th:nth-child(3) { width: 55px; }
-.reg-participants-table th:nth-child(5) { width: 80px; }
+.reg-participants-table th:nth-child(1) { width: 60px; }  /* Startnr */
+.reg-participants-table th:nth-child(2) { width: 35%; }   /* Namn */
+.reg-participants-table th:nth-child(3) { width: 55px; }  /* Född */
+.reg-participants-table th:nth-child(4) { width: 35%; }   /* Klubb */
+.reg-participants-table th:nth-child(5) { width: 80px; }  /* Status */
 
 @media (max-width: 767px) {
     .reg-participants-scroll {

@@ -296,6 +296,11 @@ function hub_send_payment_confirmation_email(string $email, string $name, array 
         'subtotal' => number_format($orderData['subtotal'] ?? 0, 0, ',', ' '),
         'discount' => number_format($orderData['discount'] ?? 0, 0, ',', ' '),
         'total' => number_format($orderData['total'] ?? 0, 0, ',', ' '),
+        'vat_amount' => number_format($orderData['vat_amount'] ?? 0, 0, ',', ' '),
+        'vat_rate' => $orderData['vat_rate'] ?? 6,
+        'seller_name' => $orderData['seller_name'] ?? '',
+        'seller_org' => $orderData['seller_org'] ?? '',
+        'seller_address' => $orderData['seller_address'] ?? '',
         'payment_method' => $orderData['payment_method'] ?? 'Kortbetalning',
         'payment_reference' => $orderData['payment_reference'] ?? '',
         'profile_url' => SITE_URL . '/profile'
@@ -310,6 +315,7 @@ function hub_send_payment_confirmation_email(string $email, string $name, array 
 function hub_send_order_confirmation(int $orderId): bool {
     require_once __DIR__ . '/payment.php';
 
+    $pdo = hub_db();
     $order = getOrder($orderId);
     if (!$order) {
         error_log("hub_send_order_confirmation: Order {$orderId} not found");
@@ -321,15 +327,49 @@ function hub_send_order_confirmation(int $orderId): bool {
         return false;
     }
 
-    // Build items HTML
+    // Build items HTML with VAT info
     $itemsHtml = '';
+    $totalVat = 0;
     if (!empty($order['items'])) {
         foreach ($order['items'] as $item) {
+            $vatRate = $item['vat_rate'] ?? 6;
+            $itemPrice = $item['total_price'] ?? 0;
+            $itemVat = round($itemPrice * $vatRate / (100 + $vatRate));
+            $totalVat += $itemVat;
+
             $itemsHtml .= '<tr>';
             $itemsHtml .= '<td style="padding: 8px; border-bottom: 1px solid #eee;">' . htmlspecialchars($item['description']) . '</td>';
-            $itemsHtml .= '<td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right;">' . number_format($item['total_price'], 0, ',', ' ') . ' kr</td>';
+            $itemsHtml .= '<td style="padding: 8px; border-bottom: 1px solid #eee; text-align: right;">' . number_format($itemPrice, 0, ',', ' ') . ' kr</td>';
             $itemsHtml .= '</tr>';
         }
+    }
+
+    // Recalculate VAT on final total (after discount)
+    $finalTotal = $order['total_amount'] ?? 0;
+    $defaultVatRate = 6;
+    $vatOnTotal = round($finalTotal * $defaultVatRate / (100 + $defaultVatRate));
+
+    // Get seller info from order items' payment_recipient
+    $sellerName = '';
+    $sellerOrg = '';
+    $sellerAddress = '';
+    try {
+        $sellerStmt = $pdo->prepare("
+            SELECT DISTINCT pr.name, pr.org_number, pr.address
+            FROM order_items oi
+            JOIN payment_recipients pr ON oi.payment_recipient_id = pr.id
+            WHERE oi.order_id = ?
+            LIMIT 1
+        ");
+        $sellerStmt->execute([$orderId]);
+        $seller = $sellerStmt->fetch(PDO::FETCH_ASSOC);
+        if ($seller) {
+            $sellerName = $seller['name'] ?? '';
+            $sellerOrg = $seller['org_number'] ? 'Org.nr: ' . $seller['org_number'] : '';
+            $sellerAddress = $seller['address'] ?? '';
+        }
+    } catch (Exception $e) {
+        error_log("hub_send_order_confirmation: seller lookup failed: " . $e->getMessage());
     }
 
     $orderData = [
@@ -340,6 +380,11 @@ function hub_send_order_confirmation(int $orderId): bool {
         'subtotal' => $order['subtotal'],
         'discount' => $order['discount'],
         'total' => $order['total_amount'],
+        'vat_amount' => $vatOnTotal,
+        'vat_rate' => $defaultVatRate,
+        'seller_name' => $sellerName,
+        'seller_org' => $sellerOrg,
+        'seller_address' => $sellerAddress,
         'payment_method' => ucfirst($order['payment_method'] ?? 'card'),
         'payment_reference' => $order['payment_reference'] ?? ''
     ];
@@ -582,6 +627,15 @@ function hub_email_template(string $template, array $vars = []): string {
                 <p style="margin: 0;"><strong>Betalningsmetod:</strong> {{payment_method}}</p>
             </div>
 
+            {{#seller_name}}
+            <div style="background: #f0f9ff; border-radius: 8px; padding: 16px; margin: 16px 0;">
+                <p style="margin: 0 0 4px 0; font-weight: 600; font-size: 14px;">Säljare</p>
+                <p style="margin: 0; font-size: 14px;">{{seller_name}}</p>
+                {{#seller_org}}<p style="margin: 0; font-size: 14px; color: #666;">{{seller_org}}</p>{{/seller_org}}
+                {{#seller_address}}<p style="margin: 0; font-size: 14px; color: #666;">{{seller_address}}</p>{{/seller_address}}
+            </div>
+            {{/seller_name}}
+
             {{#items_html}}
             <h3 style="margin-top: 24px;">Orderrader</h3>
             <table style="width: 100%; border-collapse: collapse; margin-bottom: 16px;">
@@ -606,6 +660,12 @@ function hub_email_template(string $template, array $vars = []): string {
                     <td style="padding: 8px 0; font-weight: bold; font-size: 1.1em; border-top: 2px solid #333;">Totalt betalt:</td>
                     <td style="padding: 8px 0; font-weight: bold; font-size: 1.1em; text-align: right; border-top: 2px solid #333;">{{total}} kr</td>
                 </tr>
+                {{#vat_amount}}
+                <tr>
+                    <td style="padding: 4px 0; font-size: 0.85em; color: #666;">Varav moms ({{vat_rate}}%):</td>
+                    <td style="padding: 4px 0; font-size: 0.85em; color: #666; text-align: right;">{{vat_amount}} kr</td>
+                </tr>
+                {{/vat_amount}}
             </table>
 
             <p class="text-center" style="margin-top: 24px;">
