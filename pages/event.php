@@ -3863,6 +3863,9 @@ if (!empty($event['series_id'])) {
                     const suggestedLast = nameParts.slice(1).join(' ') || '';
                     const p = prefix;
 
+                    const labelStyle = 'font-size: 0.875rem; font-weight: 500; color: var(--color-text-secondary); white-space: nowrap; padding-top: 10px;';
+                    const inputStyle = 'width: 100%; padding: 10px 12px; font-size: 1rem; background: var(--color-bg-surface); border: 1px solid var(--color-border); border-radius: var(--radius-sm); color: var(--color-text-primary); box-sizing: border-box;';
+
                     return `
                         <div style="display: flex; flex-direction: column; height: 100%; overflow: hidden;">
                             <div style="padding: var(--space-sm) var(--space-lg); border-bottom: 1px solid var(--color-border); flex-shrink: 0;">
@@ -3871,59 +3874,67 @@ if (!empty($event['series_id'])) {
                                 </button>
                             </div>
                             <div style="flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: var(--space-lg);">
-                                <div class="form-group">
-                                    <label class="form-label">Fornamn *</label>
-                                    <input type="text" id="${p}newRiderFirstname" class="form-input" value="${suggestedFirst}" required>
-                                </div>
-                                <div class="form-group">
-                                    <label class="form-label">Efternamn *</label>
-                                    <input type="text" id="${p}newRiderLastname" class="form-input" value="${suggestedLast}" required>
-                                </div>
-                                <div class="form-group">
-                                    <label class="form-label">E-post *</label>
-                                    <input type="email" id="${p}newRiderEmail" class="form-input" placeholder="namn@exempel.se" required>
-                                </div>
-                                <div class="form-group">
-                                    <label class="form-label">Telefon *</label>
-                                    <input type="tel" id="${p}newRiderPhone" class="form-input" placeholder="070-123 45 67" required>
-                                </div>
-                                <div class="form-group">
-                                    <label class="form-label">Fodelsear *</label>
-                                    <input type="number" id="${p}newRiderBirthYear" class="form-input" placeholder="t.ex. 1990" min="1920" max="2025" required>
-                                </div>
-                                <div class="form-group">
-                                    <label class="form-label">Kon *</label>
-                                    <select id="${p}newRiderGender" class="form-select" required>
-                                        <option value="">Valj...</option>
-                                        <option value="M">Man</option>
-                                        <option value="F">Kvinna</option>
-                                    </select>
-                                </div>
-                                <div class="form-group">
-                                    <label class="form-label">Nationalitet</label>
-                                    <select id="${p}newRiderNationality" class="form-select">
-                                        <option value="SWE" selected>Sverige</option>
-                                        <option value="NOR">Norge</option>
-                                        <option value="DNK">Danmark</option>
-                                        <option value="FIN">Finland</option>
-                                        <option value="DEU">Tyskland</option>
-                                        <option value="GBR">Storbritannien</option>
-                                    </select>
-                                </div>
+                                <table style="width: 100%; border-collapse: separate; border-spacing: 0 var(--space-sm);">
+                                    <tr>
+                                        <td style="${labelStyle}">Fornamn *</td>
+                                        <td><input type="text" id="${p}newRiderFirstname" style="${inputStyle}" value="${suggestedFirst}" required></td>
+                                    </tr>
+                                    <tr>
+                                        <td style="${labelStyle}">Efternamn *</td>
+                                        <td><input type="text" id="${p}newRiderLastname" style="${inputStyle}" value="${suggestedLast}" required></td>
+                                    </tr>
+                                    <tr>
+                                        <td style="${labelStyle}">E-post *</td>
+                                        <td><input type="email" id="${p}newRiderEmail" style="${inputStyle}" placeholder="namn@exempel.se" required></td>
+                                    </tr>
+                                    <tr>
+                                        <td style="${labelStyle}">Telefon *</td>
+                                        <td><input type="tel" id="${p}newRiderPhone" style="${inputStyle}" placeholder="070-123 45 67" required></td>
+                                    </tr>
+                                    <tr>
+                                        <td style="${labelStyle}">Fodelsear *</td>
+                                        <td><input type="number" id="${p}newRiderBirthYear" style="${inputStyle}" placeholder="t.ex. 1990" min="1920" max="2025" required></td>
+                                    </tr>
+                                    <tr>
+                                        <td style="${labelStyle}">Kon *</td>
+                                        <td>
+                                            <select id="${p}newRiderGender" style="${inputStyle}" required>
+                                                <option value="">Valj...</option>
+                                                <option value="M">Man</option>
+                                                <option value="F">Kvinna</option>
+                                            </select>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td style="${labelStyle}">Nationalitet</td>
+                                        <td>
+                                            <select id="${p}newRiderNationality" style="${inputStyle}">
+                                                <option value="SWE" selected>Sverige</option>
+                                                <option value="NOR">Norge</option>
+                                                <option value="DNK">Danmark</option>
+                                                <option value="FIN">Finland</option>
+                                                <option value="DEU">Tyskland</option>
+                                                <option value="GBR">Storbritannien</option>
+                                            </select>
+                                        </td>
+                                    </tr>
+                                </table>
 
-                                <div style="margin: var(--space-lg) 0 var(--space-md); padding-top: var(--space-md); border-top: 1px solid var(--color-border);">
+                                <div style="margin: var(--space-md) 0; padding-top: var(--space-md); border-top: 1px solid var(--color-border);">
                                     <span style="color: var(--color-text-muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;">Nodkontakt (ICE)</span>
                                 </div>
-                                <div class="form-group">
-                                    <label class="form-label">Kontaktperson namn *</label>
-                                    <input type="text" id="${p}newRiderIceName" class="form-input" placeholder="Fornamn Efternamn" required>
-                                </div>
-                                <div class="form-group">
-                                    <label class="form-label">Kontaktperson telefon *</label>
-                                    <input type="tel" id="${p}newRiderIcePhone" class="form-input" placeholder="070-123 45 67" required>
-                                </div>
+                                <table style="width: 100%; border-collapse: separate; border-spacing: 0 var(--space-sm);">
+                                    <tr>
+                                        <td style="${labelStyle}">Namn *</td>
+                                        <td><input type="text" id="${p}newRiderIceName" style="${inputStyle}" placeholder="Fornamn Efternamn" required></td>
+                                    </tr>
+                                    <tr>
+                                        <td style="${labelStyle}">Telefon *</td>
+                                        <td><input type="tel" id="${p}newRiderIcePhone" style="${inputStyle}" placeholder="070-123 45 67" required></td>
+                                    </tr>
+                                </table>
 
-                                <button type="button" id="${p}createRiderBtn" class="btn btn--primary btn--block" style="margin-top: var(--space-lg); padding: var(--space-md);">
+                                <button type="button" id="${p}createRiderBtn" class="btn btn--primary btn--block" style="margin-top: var(--space-lg); padding: var(--space-md); width: 100%; background: var(--color-accent); color: var(--color-bg-page); border: none; border-radius: var(--radius-sm); font-size: 1rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: var(--space-xs);">
                                     <i data-lucide="user-plus"></i> Skapa och valj
                                 </button>
                                 <div id="${p}createRiderError" style="display:none; margin-top: var(--space-sm); font-size: 0.875rem;"></div>
