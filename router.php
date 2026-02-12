@@ -40,6 +40,8 @@ function hub_requires_auth(string $page): bool {
         'rider-register', 'club-points', 'achievements',
         // News/Blog
         'news',
+        // Shopping - cart is public, checkout handles its own auth
+        'cart', 'checkout',
         // Registration pages (login required but handled in page)
         'register'
     ];
