@@ -297,9 +297,7 @@ try {
                 $result = createMultiRiderOrder($buyerData, $items, $data['discount_code'] ?? null);
 
                 if ($result['success']) {
-                    // Beräkna savings
-                    $savings = calculateMultiRiderSavings(count($items));
-                    $result['savings'] = $savings;
+                    $result['savings'] = null;
                 }
 
                 echo json_encode($result);

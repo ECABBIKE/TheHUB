@@ -498,9 +498,6 @@ include __DIR__ . '/components/unified-layout.php';
         <div class="order-info">
             <div class="order-customer"><?= h($order['firstname'] . ' ' . $order['lastname']) ?></div>
             <div class="order-event"><?= h($order['event_name'] ?? 'Serie-pass') ?></div>
-            <?php if ($order['recipient_name']): ?>
-            <div class="order-recipient"><?= h($order['recipient_name']) ?></div>
-            <?php endif; ?>
         </div>
         <div class="order-amount"><?= number_format($order['total_amount'] ?? 0, 0, ',', ' ') ?> kr</div>
         <div class="order-date"><?= date('j M H:i', strtotime($order['created_at'])) ?></div>
