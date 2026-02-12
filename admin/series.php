@@ -418,7 +418,7 @@ include __DIR__ . '/components/unified-layout.php';
                             $statusInfo = $statusMap[$serie['status']] ?? ['class' => 'admin-badge-secondary', 'text' => ucfirst($serie['status'])];
                             ?>
                             <tr>
-                                <td>
+                                <td data-label="Huvudserie">
                                     <?php if (!empty($serie['brand_name'])): ?>
                                         <div style="display: flex; align-items: center; gap: var(--space-sm);">
                                             <?php if (!empty($serie['brand_logo'])): ?>
@@ -434,7 +434,7 @@ include __DIR__ . '/components/unified-layout.php';
                                         </span>
                                     <?php endif; ?>
                                 </td>
-                                <td>
+                                <td data-label="Säsong" class="series-name-cell">
                                     <a href="/admin/series/manage/<?= $serie['id'] ?>" style="color: var(--color-accent); text-decoration: none; font-weight: 500;">
                                         <?= htmlspecialchars($serie['name']) ?>
                                     </a>
@@ -442,14 +442,14 @@ include __DIR__ . '/components/unified-layout.php';
                                         <br><span style="font-size: 0.75rem; color: var(--color-text-secondary);"><?= htmlspecialchars($serie['type']) ?></span>
                                     <?php endif; ?>
                                 </td>
-                                <td>
+                                <td data-label="År">
                                     <?php if (!empty($serie['year'])): ?>
                                         <span class="admin-badge admin-badge-info"><?= $serie['year'] ?></span>
                                     <?php else: ?>
                                         <span style="color: var(--color-warning);">Saknas!</span>
                                     <?php endif; ?>
                                 </td>
-                                <td>
+                                <td data-label="Status">
                                     <?php
                                     $eventsCount = (int)$serie['events_count'];
                                     $eventsWithResults = (int)$serie['events_with_results'];
@@ -467,7 +467,7 @@ include __DIR__ . '/components/unified-layout.php';
                                         </span>
                                     <?php endif; ?>
                                 </td>
-                                <td>
+                                <td data-label="Resultat">
                                     <?php if ($eventsCount > 0): ?>
                                         <span class="admin-badge <?= $allHaveResults ? 'admin-badge-success' : 'admin-badge-secondary' ?>"
                                               title="<?= $eventsWithResults ?> av <?= $eventsCount ?> har resultat">
@@ -477,16 +477,16 @@ include __DIR__ . '/components/unified-layout.php';
                                         <span class="admin-badge admin-badge-secondary">0</span>
                                     <?php endif; ?>
                                 </td>
-                                <td>
+                                <td data-label="" class="series-actions-cell">
                                     <div class="table-actions">
                                         <a href="/admin/series/manage/<?= $serie['id'] ?>" class="btn-admin btn-admin-sm btn-admin-primary" title="Hantera serie">
                                             <i data-lucide="settings" style="width:14px;height:14px;"></i>
-                                            Hantera
+                                            <span class="series-btn-label">Hantera</span>
                                         </a>
                                         <?php if (!$isPromotorOnly): ?>
                                         <button onclick="deleteSeries(<?= $serie['id'] ?>, '<?= addslashes($serie['name']) ?>')" class="btn-admin btn-admin-sm btn-admin-danger" title="Ta bort serie">
                                             <i data-lucide="trash-2" style="width:14px;height:14px;"></i>
-                                            Radera
+                                            <span class="series-btn-label">Radera</span>
                                         </button>
                                         <?php endif; ?>
                                     </div>
@@ -748,6 +748,108 @@ document.addEventListener('keydown', function(e) {
     outline: none;
     border-color: var(--color-accent);
     box-shadow: 0 0 0 3px var(--color-accent-alpha);
+}
+
+/* ===== Mobile responsive series page ===== */
+.series-btn-label { display: inline; }
+
+@media (max-width: 767px) {
+    /* Stats grid: 2 columns on mobile */
+    .grid-stats {
+        grid-template-columns: 1fr 1fr !important;
+    }
+
+    /* Filter form: stack vertically */
+    .admin-form-row {
+        flex-direction: column !important;
+    }
+    .admin-form-row .admin-form-group {
+        min-width: 0 !important;
+        width: 100%;
+    }
+
+    /* Table to card layout */
+    .admin-table thead { display: none; }
+
+    .admin-table tbody tr {
+        display: block;
+        background: var(--color-bg-surface);
+        border: 1px solid var(--color-border);
+        border-radius: var(--radius-md);
+        margin-bottom: var(--space-md);
+        padding: var(--space-md);
+    }
+
+    .admin-table tbody td {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: var(--space-xs) 0;
+        border: none;
+        text-align: right;
+    }
+
+    .admin-table tbody td::before {
+        content: attr(data-label);
+        font-weight: 600;
+        color: var(--color-text-secondary);
+        font-size: var(--text-sm);
+        text-align: left;
+        flex-shrink: 0;
+        margin-right: var(--space-md);
+    }
+
+    /* Series name cell: let it take full width as header */
+    .series-name-cell {
+        flex-direction: column !important;
+        align-items: flex-start !important;
+        text-align: left !important;
+        padding-bottom: var(--space-sm) !important;
+        border-bottom: 1px solid var(--color-border) !important;
+        margin-bottom: var(--space-xs);
+    }
+    .series-name-cell::before {
+        display: none !important;
+    }
+    .series-name-cell a {
+        font-size: var(--text-lg);
+    }
+
+    /* Actions cell: full width buttons */
+    .series-actions-cell {
+        border-top: 1px solid var(--color-border) !important;
+        margin-top: var(--space-sm);
+        padding-top: var(--space-md) !important;
+    }
+    .series-actions-cell::before { display: none !important; }
+
+    .series-actions-cell .table-actions {
+        width: 100%;
+        display: flex;
+        gap: var(--space-sm);
+    }
+    .series-actions-cell .table-actions .btn-admin {
+        flex: 1;
+        justify-content: center;
+        min-height: 44px;
+    }
+    .series-btn-label { display: inline; }
+
+    /* Card container: edge-to-edge */
+    .admin-card {
+        margin-left: -16px;
+        margin-right: -16px;
+        border-radius: 0 !important;
+        border-left: none !important;
+        border-right: none !important;
+    }
+}
+
+@media (max-width: 479px) {
+    /* Single column stats on very small screens */
+    .grid-stats {
+        grid-template-columns: 1fr !important;
+    }
 }
 </style>
 

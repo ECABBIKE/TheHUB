@@ -148,6 +148,9 @@ $migrationChecks = [
     '042_pricing_template_flexible_prices.sql' => [
         'columns' => ['pricing_template_rules.early_bird_price', 'pricing_template_rules.late_fee_price', 'pricing_templates.pricing_mode']
     ],
+    '043_rider_ice_and_address.sql' => [
+        'columns' => ['riders.ice_name', 'riders.ice_phone', 'riders.address', 'riders.postal_code', 'riders.postal_city']
+    ],
 ];
 
 // ============================================================================

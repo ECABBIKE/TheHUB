@@ -544,11 +544,23 @@ function getRegistrableRiders(int $userId): array {
 function getEligibleClassesForEvent(int $eventId, int $riderId): array {
     $pdo = hub_db();
 
-    // Hämta rider-info inkl licensinformation
-    $riderStmt = $pdo->prepare("
-        SELECT birth_year, gender, license_type, license_valid_until, license_year
-        FROM riders WHERE id = ?
-    ");
+    // Hämta rider-info inkl licensinformation och kontaktuppgifter
+    // Dynamically check available columns to avoid errors if ICE columns don't exist yet
+    $riderColumns = ['birth_year', 'gender', 'license_type', 'license_valid_until', 'license_year', 'email', 'phone'];
+    $optionalColumns = ['ice_name', 'ice_phone'];
+    $existingOptional = [];
+    try {
+        $colCheck = $pdo->query("SHOW COLUMNS FROM riders");
+        $dbColumns = array_column($colCheck->fetchAll(PDO::FETCH_ASSOC), 'Field');
+        foreach ($optionalColumns as $col) {
+            if (in_array($col, $dbColumns)) {
+                $existingOptional[] = $col;
+            }
+        }
+    } catch (\Throwable $e) { /* ignore */ }
+
+    $selectCols = implode(', ', array_merge($riderColumns, $existingOptional));
+    $riderStmt = $pdo->prepare("SELECT {$selectCols} FROM riders WHERE id = ?");
     $riderStmt->execute([$riderId]);
     $rider = $riderStmt->fetch(PDO::FETCH_ASSOC);
 
@@ -563,6 +575,19 @@ function getEligibleClassesForEvent(int $eventId, int $riderId): array {
     }
     if (empty($rider['birth_year'])) {
         $missingFields[] = 'födelsår';
+    }
+    if (empty($rider['phone'])) {
+        $missingFields[] = 'telefonnummer';
+    }
+    if (empty($rider['email'])) {
+        $missingFields[] = 'e-post';
+    }
+    // ICE fields - only validate if columns exist
+    if (in_array('ice_name', $existingOptional) && empty($rider['ice_name'])) {
+        $missingFields[] = 'nödkontakt (namn)';
+    }
+    if (in_array('ice_phone', $existingOptional) && empty($rider['ice_phone'])) {
+        $missingFields[] = 'nödkontakt (telefon)';
     }
 
     // Om kritisk data saknas, returnera special error
