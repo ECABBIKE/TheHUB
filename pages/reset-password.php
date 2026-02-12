@@ -24,11 +24,30 @@ $adminUser = null;
 $accountType = null; // 'rider' or 'admin'
 $linkedProfilesCount = 0;
 
+// Nationality options
+$nationalities = [
+    'SWE' => 'Sverige',
+    'NOR' => 'Norge',
+    'DNK' => 'Danmark',
+    'FIN' => 'Finland',
+    'DEU' => 'Tyskland',
+    'FRA' => 'Frankrike',
+    'CHE' => 'Schweiz',
+    'AUT' => 'Österrike',
+    'ITA' => 'Italien',
+    'ESP' => 'Spanien',
+    'GBR' => 'Storbritannien',
+    'USA' => 'USA',
+];
+
+$needsClub = false;
+$scfClubs = [];
+
 // Validate token - check both riders and admin_users
 if (!empty($token)) {
     // First check riders table
     $stmt = $pdo->prepare("
-        SELECT id, firstname, lastname, email
+        SELECT id, firstname, lastname, email, nationality, birth_year, club_id, license_number
         FROM riders
         WHERE password_reset_token = ?
         AND password_reset_expires > NOW()
@@ -48,6 +67,18 @@ if (!empty($token)) {
         ");
         $countStmt->execute([$rider['email'], $rider['id']]);
         $linkedProfilesCount = (int)$countStmt->fetch(PDO::FETCH_ASSOC)['count'];
+
+        // During activation: check if rider needs to select a club
+        if ($isActivation && empty($rider['club_id']) && empty($rider['license_number'])) {
+            $needsClub = true;
+            $clubStmt = $pdo->query("
+                SELECT id, name, city
+                FROM clubs
+                WHERE active = 1 AND rf_registered = 1
+                ORDER BY name
+            ");
+            $scfClubs = $clubStmt->fetchAll(PDO::FETCH_ASSOC);
+        }
     } else {
         // Check admin_users table
         $adminStmt = $pdo->prepare("
@@ -75,11 +106,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $validToken) {
     $password = $_POST['password'] ?? '';
     $passwordConfirm = $_POST['password_confirm'] ?? '';
 
+    // Activation-specific fields
+    $postNationality = $_POST['nationality'] ?? '';
+    $postBirthYear = $_POST['birth_year'] ?? '';
+    $postClubId = $_POST['club_id'] ?? '';
+
     if (strlen($password) < 8) {
         $message = 'Lösenordet måste vara minst 8 tecken';
         $messageType = 'error';
     } elseif ($password !== $passwordConfirm) {
         $message = 'Lösenorden matchar inte';
+        $messageType = 'error';
+    } elseif ($isActivation && $accountType === 'rider' && empty($postNationality)) {
+        $message = 'Välj ditt land';
+        $messageType = 'error';
+    } elseif ($isActivation && $accountType === 'rider' && !isset($nationalities[$postNationality])) {
+        $message = 'Ogiltigt land valt';
+        $messageType = 'error';
+    } elseif ($isActivation && $accountType === 'rider' && empty($postBirthYear)) {
+        $message = 'Ange ditt födelseår';
+        $messageType = 'error';
+    } elseif ($isActivation && $accountType === 'rider' && (!is_numeric($postBirthYear) || (int)$postBirthYear < 1930 || (int)$postBirthYear > date('Y'))) {
+        $message = 'Ogiltigt födelseår';
+        $messageType = 'error';
+    } elseif ($isActivation && $accountType === 'rider' && $needsClub && empty($postClubId)) {
+        $message = 'Välj en klubb';
         $messageType = 'error';
     } else {
         // Hash new password
@@ -100,16 +151,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $validToken) {
             $messageType = 'success';
             $validToken = false;
         } else {
-            // Update riders table
+            // Build rider update query - always set password
+            $updateFields = [
+                'password = ?',
+                'password_reset_token = NULL',
+                'password_reset_expires = NULL',
+                'linked_to_rider_id = NULL',
+            ];
+            $updateParams = [$hashedPassword];
+
+            // During activation, also save profile fields
+            if ($isActivation) {
+                $updateFields[] = 'nationality = ?';
+                $updateParams[] = $postNationality;
+
+                $updateFields[] = 'birth_year = ?';
+                $updateParams[] = (int)$postBirthYear;
+
+                if ($needsClub && !empty($postClubId)) {
+                    $updateFields[] = 'club_id = ?';
+                    $updateParams[] = (int)$postClubId;
+                }
+            }
+
+            $updateParams[] = $rider['id'];
             $updateStmt = $pdo->prepare("
-                UPDATE riders SET
-                    password = ?,
-                    password_reset_token = NULL,
-                    password_reset_expires = NULL,
-                    linked_to_rider_id = NULL
+                UPDATE riders SET " . implode(', ', $updateFields) . "
                 WHERE id = ?
             ");
-            $updateStmt->execute([$hashedPassword, $rider['id']]);
+            $updateStmt->execute($updateParams);
 
             // Link all other riders with same email to this primary account
             $linkStmt = $pdo->prepare("
@@ -184,9 +254,58 @@ $pageTitle = $isActivation ? 'Aktivera konto' : 'Återställ lösenord';
             <?php endif; ?>
 
             <form method="POST" class="auth-form">
+                <?php if ($isActivation && $accountType === 'rider'): ?>
+                    <div class="profile-section-label">Komplettera din profil</div>
+
+                    <?php
+                        $selNationality = $_POST['nationality'] ?? $rider['nationality'] ?? 'SWE';
+                        $selBirthYear = $_POST['birth_year'] ?? $rider['birth_year'] ?? '';
+                        $selClubId = $_POST['club_id'] ?? '';
+                    ?>
+                    <div class="form-group">
+                        <label for="nationality">Land</label>
+                        <select id="nationality" name="nationality" required class="form-select">
+                            <?php foreach ($nationalities as $code => $name): ?>
+                                <option value="<?= $code ?>"
+                                    <?= $selNationality === $code ? 'selected' : '' ?>>
+                                    <?= htmlspecialchars($name) ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+
+                    <div class="form-group">
+                        <label for="birth_year">Födelseår</label>
+                        <input type="number" id="birth_year" name="birth_year" required
+                               placeholder="t.ex. 1995"
+                               min="1930" max="<?= date('Y') ?>"
+                               value="<?= htmlspecialchars($selBirthYear) ?>">
+                    </div>
+
+                    <?php if ($needsClub): ?>
+                        <div class="form-group">
+                            <label for="club_id">Klubb</label>
+                            <select id="club_id" name="club_id" required class="form-select">
+                                <option value="">-- Välj klubb --</option>
+                                <?php foreach ($scfClubs as $club): ?>
+                                    <option value="<?= $club['id'] ?>"
+                                        <?= $selClubId == $club['id'] ? 'selected' : '' ?>>
+                                        <?= htmlspecialchars($club['name']) ?>
+                                        <?php if (!empty($club['city'])): ?>
+                                            (<?= htmlspecialchars($club['city']) ?>)
+                                        <?php endif; ?>
+                                    </option>
+                                <?php endforeach; ?>
+                            </select>
+                        </div>
+                    <?php endif; ?>
+
+                    <div class="profile-section-label">Välj lösenord</div>
+                <?php endif; ?>
+
                 <div class="form-group">
                     <label for="password">
-                        <?= $isActivation ? 'Välj lösenord' : 'Nytt lösenord' ?>
+                        <?= $isActivation ? 'Lösenord' : 'Nytt lösenord' ?>
                     </label>
                     <input type="password" id="password" name="password" required
                            placeholder="Minst 8 tecken"
@@ -240,5 +359,37 @@ $pageTitle = $isActivation ? 'Aktivera konto' : 'Återställ lösenord';
 
 .mb-md {
     margin-bottom: var(--space-md);
+}
+
+.profile-section-label {
+    font-size: var(--text-sm);
+    font-weight: var(--weight-semibold, 600);
+    color: var(--color-text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    padding-bottom: var(--space-xs);
+    border-bottom: 1px solid var(--color-border);
+}
+
+.form-select {
+    width: 100%;
+    padding: var(--space-sm) var(--space-md);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    font-size: var(--text-base);
+    background: var(--color-bg-surface);
+    color: var(--color-text-primary);
+    transition: all var(--transition-fast);
+    appearance: none;
+    background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='16' height='16' viewBox='0 0 24 24' fill='none' stroke='%23868fa2' stroke-width='2'%3E%3Cpolyline points='6 9 12 15 18 9'/%3E%3C/svg%3E");
+    background-repeat: no-repeat;
+    background-position: right var(--space-sm) center;
+    padding-right: var(--space-xl);
+}
+
+.form-select:focus {
+    outline: none;
+    border-color: var(--color-accent);
+    box-shadow: 0 0 0 3px var(--color-accent-light);
 }
 </style>
