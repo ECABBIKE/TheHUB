@@ -93,7 +93,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
 
                     $pdo->commit();
-                    $message = $existingId ? 'Ditt betyg har uppdaterats!' : 'Tack for ditt betyg!';
+                    $message = $existingId ? 'Ditt betyg har uppdaterats!' : 'Tack för ditt betyg!';
                 } catch (Exception $e) {
                     $pdo->rollBack();
                     $error = 'Kunde inte spara betyget. Forsok igen.';
@@ -208,7 +208,7 @@ if (isset($_GET['event']) && is_numeric($_GET['event'])) {
         </div>
         <div>
             <h1 class="er-title">Betygsatt Events</h1>
-            <p class="er-subtitle">Hjalp arrangorer att forbattra genom din feedback</p>
+            <p class="er-subtitle">Hjälp arrangörer att förbättra genom din feedback</p>
         </div>
     </div>
     <div class="er-stats">
@@ -323,7 +323,7 @@ if (isset($_GET['event']) && is_numeric($_GET['event'])) {
                               class="form-textarea"
                               rows="3"
                               placeholder="Dela med dig av dina tankar om eventet..."><?= htmlspecialchars($existingRating['comment'] ?? '') ?></textarea>
-                    <p class="er-help">Din feedback ar anonym och hjalper arrangorer att forbattra.</p>
+                    <p class="er-help">Din feedback är anonym och hjälper arrangörer att förbättra.</p>
                 </div>
 
                 <div class="er-form-actions">

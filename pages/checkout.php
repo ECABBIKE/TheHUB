@@ -332,7 +332,7 @@ include __DIR__ . '/../components/header.php';
 
                     if (attempts > maxAttempts) {
                         if (titleEl) titleEl.textContent = 'Betalning mottagen!';
-                        if (messageEl) messageEl.innerHTML = 'Betalningen ar mottagen av Stripe!<br>Bekraftelsen kan ta nagra minuter. Du far ett bekraftelsemail.';
+                        if (messageEl) messageEl.innerHTML = 'Betalningen är mottagen av Stripe!<br>Bekräftelsen kan ta några minuter. Du får ett bekräftelsemail.';
                         if (timerEl) timerEl.textContent = '';
                         if (spinnerEl) { spinnerEl.classList.remove('spin'); spinnerEl.setAttribute('data-lucide', 'check-circle'); spinnerEl.style.color = 'var(--color-success)'; }
                         if (linksEl) linksEl.style.display = 'block';
@@ -562,7 +562,7 @@ include __DIR__ . '/../components/header.php';
 
                         <p class="text-xs text-secondary text-center mt-sm">
                             <i data-lucide="shield-check" class="icon-xs"></i>
-                            Sakra betalningar via Stripe. Vi lagrar inga kortuppgifter.
+                            Säkra betalningar via Stripe. Vi lagrar inga kortuppgifter.
                         </p>
                     </div>
                 </div>
@@ -608,7 +608,7 @@ include __DIR__ . '/../components/header.php';
                             <div style="text-align: center; margin-bottom: var(--space-md);">
                                 <a href="<?= htmlspecialchars($swishUrl) ?>" class="btn btn--secondary w-full" style="background:#FF5C13;color:white;border-color:#FF5C13;">
                                     <i data-lucide="smartphone"></i>
-                                    Oppna Swish-appen
+                                    Öppna Swish-appen
                                 </a>
                             </div>
                             <?php endif; ?>
@@ -649,7 +649,7 @@ include __DIR__ . '/../components/header.php';
                             <div style="font-size: var(--text-sm); color: var(--color-text-primary); display: flex; gap: var(--space-xs); align-items: flex-start;">
                                 <i data-lucide="info" style="width: 16px; height: 16px; flex-shrink: 0; margin-top: 2px; color: var(--color-accent);"></i>
                                 <span><strong>OBS!</strong> Ange ordernumret <strong><?= htmlspecialchars($swishMessage) ?></strong> som meddelande i Swish.
-                                Din anmalan bekraftas manuellt efter att betalningen verifierats.</span>
+                                Din anmälan bekräftas manuellt efter att betalningen verifierats.</span>
                             </div>
                         </div>
                     </div>
@@ -663,10 +663,10 @@ include __DIR__ . '/../components/header.php';
                 <div class="card-body">
                     <div class="text-center py-lg">
                         <i data-lucide="alert-circle" class="icon-lg text-warning mb-md"></i>
-                        <h3 class="font-medium mb-sm">Betalning ej tillganglig</h3>
+                        <h3 class="font-medium mb-sm">Betalning ej tillgänglig</h3>
                         <p class="text-sm text-secondary">
-                            Betalningssystemet ar inte konfigurerat for detta event.
-                            Kontakta arrangoren for betalningsinstruktioner.
+                            Betalningssystemet är inte konfigurerat för detta event.
+                            Kontakta arrangören för betalningsinstruktioner.
                         </p>
                     </div>
                 </div>
@@ -682,13 +682,13 @@ include __DIR__ . '/../components/header.php';
                     </h3>
                     <p class="text-sm text-secondary">
                         <?php if ($hasStripe): ?>
-                        Kortbetalning bekraftas automatiskt.
+                        Kortbetalning bekräftas automatiskt.
                         <?php endif; ?>
                         <?php if ($hasSwish): ?>
-                        Swish-betalning bekraftas manuellt av arrangoren.
+                        Swish-betalning bekräftas manuellt av arrangören.
                         <?php endif; ?>
                         <?php if (!empty($order['customer_email'])): ?>
-                        Du far ett bekraftelsemail till <strong><?= htmlspecialchars($order['customer_email']) ?></strong>.
+                        Du får ett bekräftelsemail till <strong><?= htmlspecialchars($order['customer_email']) ?></strong>.
                         <?php endif; ?>
                     </p>
                 </div>
@@ -704,7 +704,7 @@ async function startStripeCheckout(orderId) {
     if (!btn) return;
 
     btn.disabled = true;
-    btn.innerHTML = '<i data-lucide="loader" class="spin"></i> Forbereder betalning...';
+    btn.innerHTML = '<i data-lucide="loader" class="spin"></i> Förbereder betalning...';
     if (typeof lucide !== 'undefined') lucide.createIcons();
 
     try {
@@ -727,13 +727,13 @@ async function startStripeCheckout(orderId) {
             // Redirect to Stripe Checkout
             window.location.href = data.url;
         } else {
-            alert(data.error || 'Kunde inte starta betalning. Forsok igen.');
+            alert(data.error || 'Kunde inte starta betalning. Försök igen.');
             btn.disabled = false;
             btn.innerHTML = '<i data-lucide="lock"></i> Betala <?= number_format($order['total_amount'] ?? 0, 0) ?> kr';
             if (typeof lucide !== 'undefined') lucide.createIcons();
         }
     } catch (error) {
-        alert('Nagot gick fel. Forsok igen.');
+        alert('Något gick fel. Försök igen.');
         btn.disabled = false;
         btn.innerHTML = '<i data-lucide="lock"></i> Betala <?= number_format($order['total_amount'] ?? 0, 0) ?> kr';
         if (typeof lucide !== 'undefined') lucide.createIcons();
@@ -780,7 +780,7 @@ document.addEventListener('DOMContentLoaded', function() {
                     showMessage(data.error || 'Ogiltig rabattkod', 'error');
                 }
             } catch (error) {
-                showMessage('Nagot gick fel. Forsok igen.', 'error');
+                showMessage('Något gick fel. Försök igen.', 'error');
             }
 
             applyBtn.disabled = false;

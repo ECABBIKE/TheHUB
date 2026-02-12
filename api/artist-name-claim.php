@@ -149,7 +149,7 @@ try {
 
         echo json_encode([
             'success' => true,
-            'message' => 'Forfragan skickad! En admin kommer granska och godkanna aktiveringen.',
+            'message' => 'Förfrågan skickad! En admin kommer granska och godkänna aktiveringen.',
             'type' => 'activation'
         ]);
 
@@ -192,12 +192,12 @@ try {
 
         echo json_encode([
             'success' => true,
-            'message' => 'Forfragan skickad! En admin kommer granska och godkanna kopplingen. Dina resultat kommer da sammanfogas.',
+            'message' => 'Förfrågan skickad! En admin kommer granska och godkänna kopplingen. Dina resultat kommer då sammanfogas.',
             'type' => 'claim'
         ]);
     }
 
 } catch (Exception $e) {
     error_log("Artist name claim error: " . $e->getMessage());
-    echo json_encode(['success' => false, 'error' => 'Ett fel uppstod. Forsok igen senare.']);
+    echo json_encode(['success' => false, 'error' => 'Ett fel uppstod. Försök igen senare.']);
 }

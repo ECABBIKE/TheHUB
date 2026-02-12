@@ -173,7 +173,7 @@ include __DIR__ . '/components/unified-layout.php';
     <div class="admin-card-body">
         <h3 style="margin-bottom: var(--space-md);">
             <i data-lucide="clipboard-list" style="width: 20px; height: 20px; vertical-align: middle; color: var(--color-accent);"></i>
-            Admin: Sa har fungerar aterbetalningar
+            Admin: Så här fungerar återbetalningar
         </h3>
 
         <div style="display: grid; gap: var(--space-md); grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));">
@@ -184,11 +184,11 @@ include __DIR__ . '/components/unified-layout.php';
                     Dina steg som admin
                 </h4>
                 <ol style="color: var(--color-text-secondary); margin: 0; padding-left: 1.2rem; font-size: var(--text-sm);">
-                    <li>Arrangoren kontaktar dig med refund-begaran</li>
-                    <li>Verifiera att arrangoren godkanner refund</li>
-                    <li>Sok upp ordern nedan (Order ID)</li>
-                    <li>Valj hel/delvis aterbetalning</li>
-                    <li>Klicka "Processa Aterbetalning"</li>
+                    <li>Arrangören kontaktar dig med refund-begäran</li>
+                    <li>Verifiera att arrangören godkänner refund</li>
+                    <li>Sök upp ordern nedan (Order ID)</li>
+                    <li>Välj hel/delvis återbetalning</li>
+                    <li>Klicka "Processa Återbetalning"</li>
                 </ol>
                 <p class="text-xs text-secondary" style="margin: var(--space-sm) 0 0 0;">
                     <i data-lucide="info" style="width: 12px; height: 12px;"></i>
@@ -200,16 +200,16 @@ include __DIR__ . '/components/unified-layout.php';
             <div style="background: var(--color-bg-page); padding: var(--space-md); border-radius: var(--radius-md); border: 1px solid var(--color-border);">
                 <h4 style="margin: 0 0 var(--space-sm) 0; display: flex; align-items: center; gap: var(--space-xs);">
                     <i data-lucide="book-open" style="width: 18px; height: 18px; color: var(--color-warning);"></i>
-                    Aterbetalningspolicy (Allmanna Villkor)
+                    Återbetalningspolicy (Allmänna Villkor)
                 </h4>
                 <ul style="color: var(--color-text-secondary); margin: 0; padding-left: 1.2rem; font-size: var(--text-sm);">
-                    <li><strong>5.1:</strong> Ingen angerratt for idrottsevenemang</li>
-                    <li><strong>5.2:</strong> Refund endast om <strong>Arrangoren godkanner</strong></li>
-                    <li><strong>5.3:</strong> Aterbetalning till samma betalmetod</li>
+                    <li><strong>5.1:</strong> Ingen ångerrätt för idrottsevenemang</li>
+                    <li><strong>5.2:</strong> Refund endast om <strong>Arrangören godkänner</strong></li>
+                    <li><strong>5.3:</strong> Återbetalning till samma betalmetod</li>
                 </ul>
                 <p class="text-xs text-secondary" style="margin: var(--space-sm) 0 0 0;">
                     <i data-lucide="external-link" style="width: 12px; height: 12px;"></i>
-                    <a href="/villkor" target="_blank" style="color: var(--color-accent);">Las fullstandiga villkor</a>
+                    <a href="/villkor" target="_blank" style="color: var(--color-accent);">Läs fullständiga villkor</a>
                 </p>
             </div>
         </div>
@@ -221,20 +221,20 @@ include __DIR__ . '/components/unified-layout.php';
     <div class="admin-card-body">
         <h3 style="margin-bottom: var(--space-sm);">
             <i data-lucide="users" style="width: 20px; height: 20px; vertical-align: middle; color: var(--color-warning);"></i>
-            For arrangorer: Sa fungerar det
+            För arrangörer: Så fungerar det
         </h3>
         <p style="color: var(--color-text-secondary); font-size: var(--text-sm); margin-bottom: var(--space-sm);">
-            Information att dela med arrangorer som fragar om aterbetalningar:
+            Information att dela med arrangörer som frågar om återbetalningar:
         </p>
 
         <div style="background: var(--color-bg-page); padding: var(--space-md); border-radius: var(--radius-md); font-size: var(--text-sm);">
-            <p style="margin: 0 0 var(--space-sm) 0;"><strong>For arrangorer/promotors:</strong></p>
+            <p style="margin: 0 0 var(--space-sm) 0;"><strong>För arrangörer/promotors:</strong></p>
             <ul style="color: var(--color-text-secondary); margin: 0; padding-left: 1.2rem;">
-                <li><strong>Deltagare kontaktar dig</strong> (arrangoren) for aterbetalning</li>
-                <li><strong>Du beslutar</strong> om aterbetalning ska godkannas</li>
+                <li><strong>Deltagare kontaktar dig</strong> (arrangören) för återbetalning</li>
+                <li><strong>Du beslutar</strong> om återbetalning ska godkännas</li>
                 <li>Meddela TheHUB-admin med: Order-ID + ditt beslut</li>
-                <li>Admin processar aterbetalningen tekniskt</li>
-                <li>Pengarna aterfors fran ditt Stripe-konto automatiskt</li>
+                <li>Admin processar återbetalningen tekniskt</li>
+                <li>Pengarna återförs från ditt Stripe-konto automatiskt</li>
             </ul>
             <div style="margin-top: var(--space-sm); padding: var(--space-sm); background: var(--color-bg-hover); border-radius: var(--radius-sm);">
                 <strong style="color: var(--color-text-primary);">Kontakt for refund-begaran:</strong>

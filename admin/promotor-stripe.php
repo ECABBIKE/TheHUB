@@ -504,25 +504,25 @@ include __DIR__ . '/components/unified-layout.php';
 
 <!-- Refund Info -->
 <div class="info-box" style="background: rgba(251, 191, 36, 0.03); border-color: var(--color-warning);">
-    <h3><i data-lucide="undo-2" style="color: var(--color-warning);"></i> Aterbetalningar - Viktigt att veta</h3>
+    <h3><i data-lucide="undo-2" style="color: var(--color-warning);"></i> Återbetalningar - Viktigt att veta</h3>
     <div style="display: grid; gap: var(--space-md); margin-top: var(--space-sm);">
         <p class="text-secondary text-sm" style="margin: 0;">
-            Enligt Allmanna Villkor galler <strong>ingen angerratt</strong> for idrottsevenemang.
-            Du som arrangor beslutar om aterbetalning ska godkannas.
+            Enligt Allmänna Villkor gäller <strong>ingen ångerrätt</strong> för idrottsevenemang.
+            Du som arrangör beslutar om återbetalning ska godkännas.
         </p>
         <div style="background: var(--color-bg-page); padding: var(--space-md); border-radius: var(--radius-md);">
-            <h4 style="margin: 0 0 var(--space-sm) 0; font-size: var(--text-sm);">Sa fungerar det:</h4>
+            <h4 style="margin: 0 0 var(--space-sm) 0; font-size: var(--text-sm);">Så fungerar det:</h4>
             <ol style="margin: 0; padding-left: 1.2rem; color: var(--color-text-secondary); font-size: var(--text-sm);">
-                <li>Deltagare kontaktar <strong>dig</strong> for aterbetalning</li>
-                <li>Du beslutar om refund ska godkannas</li>
+                <li>Deltagare kontaktar <strong>dig</strong> för återbetalning</li>
+                <li>Du beslutar om refund ska godkännas</li>
                 <li>Meddela TheHUB-admin med Order-ID + ditt beslut</li>
-                <li>Admin processar aterbetalningen tekniskt</li>
-                <li><strong>Automatisk aterforing:</strong> Pengarna aterfors fran ditt Stripe-konto</li>
+                <li>Admin processar återbetalningen tekniskt</li>
+                <li><strong>Automatisk återföring:</strong> Pengarna återförs från ditt Stripe-konto</li>
             </ol>
         </div>
         <p class="text-secondary text-xs" style="margin: 0;">
             <i data-lucide="shield-check" style="width: 14px; height: 14px; vertical-align: middle;"></i>
-            TheHUB hanterar chargebacks (tvistade betalningar) - du behover inte oroa dig for dem.
+            TheHUB hanterar chargebacks (tvistade betalningar) - du behöver inte oroa dig för dem.
         </p>
     </div>
 </div>
@@ -531,7 +531,7 @@ include __DIR__ . '/components/unified-layout.php';
 <div class="info-box" style="background: var(--color-bg-surface);">
     <h3><i data-lucide="mail" style="color: var(--color-accent);"></i> Kontakt</h3>
     <p class="text-secondary text-sm" style="margin: 0 0 var(--space-sm) 0;">
-        Har du fragor om betalningar eller behover hjalp?
+        Har du frågor om betalningar eller behöver hjälp?
     </p>
     <div style="display: flex; gap: var(--space-md); flex-wrap: wrap;">
         <a href="mailto:info@gravityseries.se" class="btn btn--secondary btn--sm">

@@ -3967,7 +3967,7 @@ if (!empty($event['series_id'])) {
                         }
                     } catch (e) {
                         console.error('Create rider failed:', e);
-                        errorDiv.textContent = 'Nagot gick fel. Forsok igen.';
+                        errorDiv.textContent = 'Något gick fel. Försök igen.';
                         errorDiv.style.display = 'block';
                         btn.disabled = false;
                         btn.innerHTML = '<i data-lucide="user-plus"></i> Skapa och valj';
@@ -4720,7 +4720,7 @@ if (!empty($event['series_id'])) {
                                 if (typeof lucide !== 'undefined') lucide.createIcons();
                             }
                         } catch (e) {
-                            errorDiv.textContent = 'Nagot gick fel. Forsok igen.';
+                            errorDiv.textContent = 'Något gick fel. Försök igen.';
                             errorDiv.style.display = 'block';
                             btn.disabled = false;
                             btn.innerHTML = '<i data-lucide="user-plus"></i> Skapa och valj';

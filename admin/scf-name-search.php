@@ -245,7 +245,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $apiKey) {
                     $scfService->cacheLicense($licenseData, $year);
                 }
 
-                $message = "Matchning bekraftad! Cyklist uppdaterad med UCI ID {$match['scf_uci_id']}.";
+                $message = "Matchning bekräftad! Cyklist uppdaterad med UCI ID {$match['scf_uci_id']}.";
                 $messageType = 'success';
             }
         }
