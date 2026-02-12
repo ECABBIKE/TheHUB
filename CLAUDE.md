@@ -31,6 +31,27 @@ Pushat: TheHUB v1.0 [2026-01-08.XXX]
 
 ---
 
+## MEMORY - UPPDATERA ALLTID
+
+**Uppdatera ALLTID `/.claude/rules/memory.md` vid varje push.**
+
+Memory-filen innehåller viktiga beslut, kända buggar, tekniska detaljer och lärdomar från tidigare sessioner. Den hjälper nya sessioner att snabbt förstå projektets aktuella status utan att behöva undersöka allt från grunden.
+
+### Vid varje push:
+1. Läs igenom befintlig memory.md
+2. Lägg till nya insikter, fixar och beslut från sessionen
+3. Ta bort inaktuell information
+4. Håll filen koncis och välstrukturerad
+
+### Vad ska dokumenteras:
+- Kända buggar och deras lösningar
+- Tekniska beslut och varför de togs
+- Viktiga kolumnnamn, tabellrelationer som är lätta att blanda ihop
+- Saker som "ser ut som buggar" men är by design
+- Pågående arbete som inte är färdigt
+
+---
+
 ## ROADMAP - UPPDATERA EFTER VARJE IMPLEMENTATION
 
 **Uppdatera ALLTID `/ROADMAP.md` efter varje implementerad funktion.**
