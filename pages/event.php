@@ -2462,16 +2462,15 @@ try {
                 <?= h($className) ?>
                 <span class="badge badge--neutral ml-sm"><?= count($classRegs) ?></span>
             </h3>
-            <!-- Desktop table -->
-            <div class="table-wrapper reg-participants-desktop">
-                <table class="table table--striped table--compact">
+            <div class="reg-participants-scroll">
+                <table class="table table--striped table--compact reg-participants-table">
                     <thead>
                         <tr>
-                            <th style="width:60px">Startnr</th>
+                            <th>Startnr</th>
                             <th>Namn</th>
-                            <th style="width:55px">Född</th>
+                            <th>Född</th>
                             <th>Klubb</th>
-                            <th style="width:80px">Status</th>
+                            <th>Status</th>
                         </tr>
                     </thead>
                     <tbody>
@@ -2500,40 +2499,6 @@ try {
                         <?php endforeach; ?>
                     </tbody>
                 </table>
-            </div>
-            <!-- Mobile card list -->
-            <div class="reg-participants-mobile">
-                <?php foreach ($classRegs as $index => $reg):
-                    $regName = h(($reg['firstname'] ?? $reg['first_name'] ?? '') . ' ' . ($reg['lastname'] ?? $reg['last_name'] ?? ''));
-                    $regClub = h($reg['club_name'] ?? '');
-                    $regBib = h($reg['bib_number'] ?? '');
-                    $regYear = h($reg['birth_year'] ?? '');
-                    $statusClass = 'badge--secondary';
-                    $statusText = ucfirst($reg['status'] ?? 'pending');
-                    if ($reg['status'] === 'confirmed' || $reg['payment_status'] === 'paid') {
-                        $statusClass = 'badge--success';
-                        $statusText = 'Betald';
-                    } elseif ($reg['status'] === 'pending') {
-                        $statusClass = 'badge--warning';
-                        $statusText = 'Väntande';
-                    }
-                ?>
-                <div class="reg-participant-card">
-                    <div class="reg-participant-card__main">
-                        <?php if ($regBib && $regBib !== '-'): ?>
-                            <span class="reg-participant-card__bib">#<?= $regBib ?></span>
-                        <?php endif; ?>
-                        <div class="reg-participant-card__info">
-                            <strong><?= $regName ?></strong>
-                            <span class="text-secondary text-sm">
-                                <?= $regYear && $regYear !== '-' ? $regYear : '' ?>
-                                <?= $regClub ? ($regYear && $regYear !== '-' ? ' &bull; ' : '') . $regClub : '' ?>
-                            </span>
-                        </div>
-                        <span class="badge <?= $statusClass ?>"><?= $statusText ?></span>
-                    </div>
-                </div>
-                <?php endforeach; ?>
             </div>
         </div>
         <?php endforeach; ?>
@@ -3108,53 +3073,32 @@ if (!empty($event['series_id'])) {
     padding: var(--space-xs) var(--space-sm);
 }
 
-/* Registered participants - responsive desktop/mobile */
-.reg-participants-mobile {
-    display: none;
+/* Registered participants - horizontally scrollable table */
+.reg-participants-scroll {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+    margin: 0;
 }
 
-.reg-participant-card {
-    padding: var(--space-sm) var(--space-md);
-    border-bottom: 1px solid var(--color-border);
+.reg-participants-table {
+    margin: 0;
+    min-width: 480px;
 }
 
-.reg-participant-card:last-child {
-    border-bottom: none;
-}
-
-.reg-participant-card__main {
-    display: flex;
-    align-items: center;
-    gap: var(--space-sm);
-}
-
-.reg-participant-card__bib {
-    font-size: 0.8125rem;
-    color: var(--color-text-muted);
-    font-weight: 600;
-    min-width: 32px;
-}
-
-.reg-participant-card__info {
-    flex: 1;
-    min-width: 0;
-    display: flex;
-    flex-direction: column;
-    gap: 2px;
-}
-
-.reg-participant-card__info strong {
+.reg-participants-table th,
+.reg-participants-table td {
     white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
 }
+
+.reg-participants-table th:nth-child(1) { width: 60px; }
+.reg-participants-table th:nth-child(3) { width: 55px; }
+.reg-participants-table th:nth-child(5) { width: 80px; }
 
 @media (max-width: 767px) {
-    .reg-participants-desktop {
-        display: none;
-    }
-    .reg-participants-mobile {
-        display: block;
+    .reg-participants-scroll {
+        margin-left: calc(-1 * var(--space-md));
+        margin-right: calc(-1 * var(--space-md));
+        padding-left: var(--space-md);
     }
 }
 
