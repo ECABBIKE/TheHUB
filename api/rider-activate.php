@@ -66,16 +66,16 @@ try {
     $stmt = $pdo->prepare("UPDATE riders SET password_reset_token = ?, password_reset_expires = ? WHERE id = ?");
     $stmt->execute([$token, $expires, $riderId]);
 
-    // Build reset link and send email
+    // Build activation link and send email
     $baseUrl = 'https://thehub.gravityseries.se';
-    $resetLink = $baseUrl . '/reset-password?token=' . $token;
+    $activationLink = $baseUrl . '/reset-password?token=' . $token . '&activate=1';
     $riderName = trim($rider['firstname'] . ' ' . $rider['lastname']);
 
     // Log mail configuration for debugging
     error_log("RIDER_ACTIVATE: Mail config - Driver: " . env('MAIL_DRIVER', 'mail') . ", Host: " . env('MAIL_HOST', 'not set') . ", From: " . env('MAIL_FROM_ADDRESS', 'not set'));
     error_log("RIDER_ACTIVATE: Attempting to send to {$rider['email']} for {$riderName}");
 
-    $emailSent = hub_send_password_reset_email($rider['email'], $riderName, $resetLink);
+    $emailSent = hub_send_account_activation_email($rider['email'], $riderName, $activationLink);
 
     // Log the action
     error_log("ADMIN ACTIVATE: Super admin sent activation email to rider {$riderId} ({$riderName}) at {$rider['email']}. Email sent: " . ($emailSent ? 'yes' : 'no'));
