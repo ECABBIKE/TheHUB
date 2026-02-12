@@ -263,6 +263,35 @@ Automatiskt genererade "trading cards" med deltagarstatistik:
 
 # CHANGELOG
 
+### 2026-02-12 (Enkel Swish + Buggfix: undefined klass)
+- **Branch:** claude/fix-mobile-payment-layout-Kh2Gg
+
+- **Ny funktion: Enkel Swish-betalning**
+  - Nytt betalningsalternativ pa checkout-sidan: Swish (paralellt med kort)
+  - Fast Swish-nummer (konfigureras via SWISH_NUMBER i .env)
+  - Visar betalningsdetaljer: nummer, belopp, ordernummer som meddelande
+  - Mobilanpassad djuplank till Swish-appen
+  - "Jag har Swishat"-knapp markerar order for manuell bekraftelse
+  - Admin bekraftar Swish-betalningar i befintlig orderhantering
+  - Temporart - tas bort nar Swedbank Pay ar aktivt
+
+- **Buggfix: "Undefined" klassnamn i serieanmalan**
+  - Serieanmalningsflodets JS-kod saknade felhantering for API-svar
+  - Om rider inte matchade nagon klass visades "undefined" istallet for felmeddelande
+  - Lagt till error handling i seriesLoadEligibleClasses() (inkomplett profil, inga klasser)
+  - Fallback-namn ("Klass X") om klassnamn saknas i databasen
+  - Fixat i bade PHP-backend och JavaScript-rendering
+
+- **Nya/andrade filer:**
+  - `pages/checkout.php` - Swish betalningssektion tillagd
+  - `api/orders.php` - Ny action: claim_swish
+  - `.env.example` - SWISH_NUMBER, SWISH_PAYEE_NAME
+  - `includes/mail.php` - Swish i betalningsmetod-namn
+  - `pages/profile/receipts.php` - Swish-ikon i kvittovisning
+  - `pages/event.php` - Felhantering for klasser i serieanmalan
+  - `includes/order-manager.php` - Fallback-namn for klasser
+  - `includes/series-registration.php` - Fallback-namn for klasser
+
 ### 2026-02-12 (Rensning: Swish, Promotor-Stripe, Betalningsmottagare)
 - **Branch:** claude/fix-mobile-payment-layout-Kh2Gg
 

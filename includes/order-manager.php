@@ -813,7 +813,7 @@ function getEligibleClassesForEvent(int $eventId, int $riderId): array {
 
         $classData = [
             'class_id' => $class['class_id'],
-            'name' => $class['display_name'] ?: $class['name'],
+            'name' => $class['display_name'] ?: $class['name'] ?: ('Klass ' . $class['class_id']),
             'base_price' => $basePrice,
             'early_bird_price' => $earlyBirdPrice,
             'late_fee' => $lateFeePrice,
@@ -937,7 +937,7 @@ function getEligibleClassesForSeries(int $seriesId, int $riderId): array {
 
         $classes[] = [
             'class_id' => $class['class_id'],
-            'name' => $class['display_name'] ?: $class['name'],
+            'name' => $class['display_name'] ?: $class['name'] ?: ('Klass ' . $class['class_id']),
             'base_price' => $basePrice,
             'discount_percent' => $discountPercent,
             'discount_amount' => $discountAmount,

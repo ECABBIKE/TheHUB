@@ -314,6 +314,44 @@ try {
                 echo json_encode($result);
                 break;
 
+            // Markera order som Swish-betalad (vantar pa manuell bekraftelse)
+            case 'claim_swish':
+                $orderId = intval($data['order_id'] ?? 0);
+                if (!$orderId) {
+                    throw new Exception('order_id kravs');
+                }
+
+                $pdo = hub_db();
+
+                // Hamta order
+                $stmt = $pdo->prepare("SELECT id, payment_status, payment_method FROM orders WHERE id = ?");
+                $stmt->execute([$orderId]);
+                $orderRow = $stmt->fetch(PDO::FETCH_ASSOC);
+
+                if (!$orderRow) {
+                    throw new Exception('Order hittades inte');
+                }
+
+                if ($orderRow['payment_status'] === 'paid') {
+                    throw new Exception('Ordern ar redan betald');
+                }
+
+                // Uppdatera payment_method till 'swish' och behall pending status
+                $updateStmt = $pdo->prepare("
+                    UPDATE orders
+                    SET payment_method = 'swish',
+                        gateway_code = 'swish_manual',
+                        updated_at = NOW()
+                    WHERE id = ?
+                ");
+                $updateStmt->execute([$orderId]);
+
+                echo json_encode([
+                    'success' => true,
+                    'message' => 'Swish-betalning registrerad. Bekraftas manuellt.'
+                ]);
+                break;
+
             default:
                 throw new Exception('Ogiltig action');
         }
