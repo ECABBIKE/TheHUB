@@ -285,12 +285,12 @@ function hub_smtp_get_response($socket): string {
  * Send payment confirmation email
  */
 function hub_send_payment_confirmation_email(string $email, string $name, array $orderData): bool {
-    $subject = 'Betalningsbekraftelse - ' . $orderData['order_number'] . ' - TheHUB';
+    $subject = 'Betalningsbekräftelse - ' . $orderData['order_number'] . ' - TheHUB';
 
     $body = hub_email_template('payment_confirmation', [
         'name' => $name,
         'order_number' => $orderData['order_number'],
-        'event_name' => $orderData['event_name'] ?? $orderData['series_name'] ?? 'Anmalan',
+        'event_name' => $orderData['event_name'] ?? $orderData['series_name'] ?? 'Anmälan',
         'event_date' => isset($orderData['event_date']) ? date('j M Y', strtotime($orderData['event_date'])) : '',
         'items_html' => $orderData['items_html'] ?? '',
         'subtotal' => number_format($orderData['subtotal'] ?? 0, 0, ',', ' '),
@@ -334,7 +334,7 @@ function hub_send_order_confirmation(int $orderId): bool {
 
     $orderData = [
         'order_number' => $order['order_number'],
-        'event_name' => $order['event_name'] ?? $order['series_name'] ?? 'Anmalan',
+        'event_name' => $order['event_name'] ?? $order['series_name'] ?? 'Anmälan',
         'event_date' => $order['event_date'] ?? null,
         'items_html' => $itemsHtml,
         'subtotal' => $order['subtotal'],
@@ -457,7 +457,7 @@ function hub_send_receipt_email(int $orderId, ?array $receiptResult = null): boo
         'receipt_number' => $receipt['receipt_number'],
         'order_number' => $receipt['order_number'] ?? $order['order_number'],
         'receipt_date' => date('Y-m-d', strtotime($receipt['issued_at'] ?? 'now')),
-        'payment_method' => $paymentMethodNames[$order['payment_method'] ?? ''] ?? ucfirst($order['payment_method'] ?? 'Okand'),
+        'payment_method' => $paymentMethodNames[$order['payment_method'] ?? ''] ?? ucfirst($order['payment_method'] ?? 'Okänd'),
         'seller_name' => $receipt['seller_name'] ?? 'TheHUB',
         'seller_org' => $receipt['seller_org_number'] ? 'Org.nr: ' . $receipt['seller_org_number'] : '',
         'items_html' => $itemsHtml,
@@ -571,9 +571,9 @@ function hub_email_template(string $template, array $vars = []): string {
             <div class="header">
                 <div class="logo">TheHUB</div>
             </div>
-            <h1>Betalningsbekr&auml;ftelse</h1>
+            <h1>Betalningsbekräftelse</h1>
             <p>Hej {{name}},</p>
-            <p>Tack f&ouml;r din betalning! Din anm&auml;lan &auml;r nu bekr&auml;ftad.</p>
+            <p>Tack för din betalning! Din anmälan är nu bekräftad.</p>
 
             <div style="background: #f5f5f5; border-radius: 8px; padding: 16px; margin: 16px 0;">
                 <p style="margin: 0 0 8px 0;"><strong>Ordernummer:</strong> {{order_number}}</p>
@@ -609,10 +609,10 @@ function hub_email_template(string $template, array $vars = []): string {
             </table>
 
             <p class="text-center" style="margin-top: 24px;">
-                <a href="{{profile_url}}" class="btn">Se dina anm&auml;lningar</a>
+                <a href="{{profile_url}}" class="btn">Se dina anmälningar</a>
             </p>
 
-            <p class="note" style="margin-top: 24px;">Om du har fr&aring;gor, kontakta arrang&ouml;ren via TheHUB.</p>
+            <p class="note" style="margin-top: 24px;">Om du har frågor, kontakta arrangören via TheHUB.</p>
         ',
 
         'receipt' => '
@@ -621,7 +621,7 @@ function hub_email_template(string $template, array $vars = []): string {
             </div>
             <h1>Kvitto</h1>
             <p>Hej {{name}},</p>
-            <p>Tack f&ouml;r din betalning! H&auml;r &auml;r ditt kvitto.</p>
+            <p>Tack för din betalning! Här är ditt kvitto.</p>
 
             <div style="background: #f5f5f5; border-radius: 8px; padding: 16px; margin: 16px 0;">
                 <table style="width: 100%; font-size: 14px;">
@@ -633,7 +633,7 @@ function hub_email_template(string $template, array $vars = []): string {
             </div>
 
             <div style="background: #f0f9ff; border-radius: 8px; padding: 16px; margin: 16px 0;">
-                <p style="margin: 0 0 4px 0; font-weight: 600; font-size: 14px;">S&auml;ljare</p>
+                <p style="margin: 0 0 4px 0; font-weight: 600; font-size: 14px;">Säljare</p>
                 <p style="margin: 0; font-size: 14px;">{{seller_name}}</p>
                 <p style="margin: 0; font-size: 14px; color: #666;">{{seller_org}}</p>
             </div>
@@ -668,7 +668,7 @@ function hub_email_template(string $template, array $vars = []): string {
                 <a href="{{receipt_url}}" class="btn">Se kvitto online</a>
             </p>
 
-            <p class="note" style="margin-top: 24px;">Detta kvitto &auml;r ditt betalningsbevis. Spara det f&ouml;r din bokf&ouml;ring.</p>
+            <p class="note" style="margin-top: 24px;">Detta kvitto är ditt betalningsbevis. Spara det för din bokföring.</p>
         '
     ];
 

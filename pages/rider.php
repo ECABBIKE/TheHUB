@@ -2245,14 +2245,14 @@ document.addEventListener('keydown', function(e) {
                 <button type="button" class="btn-secondary" onclick="closeArtistClaimModal()">Avbryt</button>
                 <button type="submit" class="btn-primary">
                     <i data-lucide="send"></i>
-                    Skicka forfragan
+                    Skicka förfrågan
                 </button>
             </div>
         </form>
         <div id="artistClaimSuccess" class="claim-success" style="display: none;">
             <i data-lucide="check-circle"></i>
-            <h4>Forfragan skickad!</h4>
-            <p>En admin kommer granska din forfragan. Nar den godkanns sammanfogas dina resultat automatiskt.</p>
+            <h4>Förfrågan skickad!</h4>
+            <p>En admin kommer granska din förfrågan. När den godkänns sammanfogas dina resultat automatiskt.</p>
             <button type="button" class="btn-primary" onclick="closeArtistClaimModal();">Stang</button>
         </div>
     </div>
@@ -2273,7 +2273,7 @@ document.addEventListener('keydown', function(e) {
         <form id="artistActivateForm" class="claim-modal-body">
             <div class="claim-info-box claim-info-admin">
                 <i data-lucide="info"></i>
-                <p><strong>Aktivera din profil:</strong> Om detta artistnamn ar ditt, fyll i dina uppgifter for att aktivera profilen. En admin granskar forfragan innan aktiveringen genomfors.</p>
+                <p><strong>Aktivera din profil:</strong> Om detta artistnamn är ditt, fyll i dina uppgifter för att aktivera profilen. En admin granskar förfrågan innan aktiveringen genomförs.</p>
             </div>
 
             <div class="claim-profile-card claim-profile-target">
@@ -2332,14 +2332,14 @@ document.addEventListener('keydown', function(e) {
                 <button type="button" class="btn-secondary" onclick="closeArtistActivateModal()">Avbryt</button>
                 <button type="submit" class="btn-primary">
                     <i data-lucide="send"></i>
-                    Skicka forfragan
+                    Skicka förfrågan
                 </button>
             </div>
         </form>
         <div id="artistActivateSuccess" class="claim-success" style="display: none;">
             <i data-lucide="check-circle"></i>
-            <h4>Forfragan skickad!</h4>
-            <p>En admin kommer granska din forfragan. Du far ett mail nar profilen ar aktiverad.</p>
+            <h4>Förfrågan skickad!</h4>
+            <p>En admin kommer granska din förfrågan. Du får ett mail när profilen är aktiverad.</p>
             <button type="button" class="btn-primary" onclick="closeArtistActivateModal();">Stang</button>
         </div>
     </div>
@@ -2390,12 +2390,12 @@ document.getElementById('artistClaimForm')?.addEventListener('submit', async fun
             form.style.display = 'none';
             document.getElementById('artistClaimSuccess').style.display = 'block';
         } else {
-            alert(result.error || 'Ett fel uppstod. Forsok igen.');
+            alert(result.error || 'Ett fel uppstod. Försök igen.');
             submitBtn.innerHTML = originalText;
             submitBtn.disabled = false;
         }
     } catch (err) {
-        alert('Ett fel uppstod. Forsok igen.');
+        alert('Ett fel uppstod. Försök igen.');
         submitBtn.innerHTML = originalText;
         submitBtn.disabled = false;
     }
@@ -2426,12 +2426,12 @@ document.getElementById('artistActivateForm')?.addEventListener('submit', async 
             form.style.display = 'none';
             document.getElementById('artistActivateSuccess').style.display = 'block';
         } else {
-            alert(result.error || 'Ett fel uppstod. Forsok igen.');
+            alert(result.error || 'Ett fel uppstod. Försök igen.');
             submitBtn.innerHTML = originalText;
             submitBtn.disabled = false;
         }
     } catch (err) {
-        alert('Ett fel uppstod. Forsok igen.');
+        alert('Ett fel uppstod. Försök igen.');
         submitBtn.innerHTML = originalText;
         submitBtn.disabled = false;
     }

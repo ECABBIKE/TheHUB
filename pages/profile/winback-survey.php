@@ -149,9 +149,9 @@ if (!$campaign) {
             <div style="width: 80px; height: 80px; margin: 0 auto var(--space-lg); display: flex; align-items: center; justify-content: center; background: var(--color-bg-hover); border-radius: 50%;">
                 <i data-lucide="check-circle" style="width: 36px; height: 36px; color: var(--color-success);"></i>
             </div>
-            <h3>Ingen enkat tillganglig</h3>
+            <h3>Ingen enkät tillgänglig</h3>
             <p style="color: var(--color-text-secondary);">
-                Just nu finns det ingen feedback-enkat for dig. Tack for att du ar aktiv!
+                Just nu finns det ingen feedback-enkät för dig. Tack för att du är aktiv!
             </p>
             <a href="/profile" class="btn btn-primary" style="margin-top: var(--space-md);">
                 <i data-lucide="arrow-left"></i> Tillbaka till profilen
@@ -238,7 +238,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$alreadyResponded) {
             $respStmt->execute([$responseId]);
             $existingResponse = $respStmt->fetch(PDO::FETCH_ASSOC);
             $alreadyResponded = true;
-            $message = 'Tack for din feedback!';
+            $message = 'Tack för din feedback!';
 
         } catch (Exception $e) {
             $pdo->rollBack();
@@ -253,7 +253,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$alreadyResponded) {
         <i data-lucide="clipboard-list" class="page-icon"></i>
         Feedback-enkat
     </h1>
-    <p class="page-subtitle">Hjalp oss forbattra - fa en rabattkod som tack!</p>
+    <p class="page-subtitle">Hjälp oss förbättra - få en rabattkod som tack!</p>
 </div>
 
 <?php if ($message): ?>
@@ -277,9 +277,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$alreadyResponded) {
         <div class="wb-success-icon">
             <i data-lucide="gift"></i>
         </div>
-        <h2>Tack for din feedback!</h2>
+        <h2>Tack för din feedback!</h2>
         <p class="wb-success-text">
-            Din rost ar viktig for oss. Som tack far du en personlig rabattkod.
+            Din röst är viktig för oss. Som tack får du en personlig rabattkod.
         </p>
 
         <div class="wb-discount-box">
@@ -320,7 +320,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$alreadyResponded) {
         <div class="wb-intro">
             <p>
                 Vi har sett att du inte tavlade <?= $campaign['target_year'] ?> och vill garna hora vad vi kan gora battre.
-                Svara pa nagra korta fragor sa far du en <strong>rabattkod</strong> som tack!
+                Svara på några korta frågor så får du en <strong>rabattkod</strong> som tack!
             </p>
             <div class="wb-reward-preview">
                 <i data-lucide="gift"></i>
@@ -397,7 +397,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && !$alreadyResponded) {
             <div class="wb-form-footer">
                 <p class="wb-privacy">
                     <i data-lucide="shield"></i>
-                    Din feedback ar anonym och anvands endast for att forbattra vara arrangemang.
+                    Din feedback är anonym och används endast för att förbättra våra arrangemang.
                 </p>
                 <button type="submit" class="btn btn-primary btn-lg">
                     <i data-lucide="send"></i>

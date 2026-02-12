@@ -154,7 +154,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $tableExists && $columnExists) {
                     INSERT INTO user_accounts (email, status, notes)
                     VALUES (?, 'pending', ?)
                 ");
-                $stmt->execute([$newEmail, "Splittat fran konto #{$rider['user_account_id']} - tilldelad {$rider['firstname']} {$rider['lastname']}. Andrar e-post manuellt."]);
+                $stmt->execute([$newEmail, "Splittat från konto #{$rider['user_account_id']} - tilldelad {$rider['firstname']} {$rider['lastname']}. Ändrar e-post manuellt."]);
                 $newAccountId = $pdo->lastInsertId();
 
                 // Move rider to new account
@@ -764,7 +764,7 @@ include __DIR__ . '/../components/unified-layout.php';
                                     <span><i data-lucide="shield" style="width:14px;height:14px;display:inline;vertical-align:middle;"></i> <?= htmlspecialchars($rider['club_name']) ?></span>
                                 <?php endif; ?>
                                 <span><?= $rider['result_count'] ?> resultat</span>
-                                <span><?= $rider['reg_count'] ?> anmalningar</span>
+                                <span><?= $rider['reg_count'] ?> anmälningar</span>
                             </div>
                         </div>
                         <div class="rider-card-actions">

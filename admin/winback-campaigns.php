@@ -311,7 +311,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $tablesExist) {
         $expectedToken = 'DELETE_CAMPAIGN_' . $id;
 
         if ($confirmToken !== $expectedToken) {
-            $error = 'Ogiltig bekraftelse. Forsok igen.';
+            $error = 'Ogiltig bekräftelse. Försök igen.';
         } else {
             // Get campaign to check permissions
             $stmt = $pdo->prepare("SELECT * FROM winback_campaigns WHERE id = ?");
@@ -1125,7 +1125,7 @@ include __DIR__ . '/components/unified-layout.php';
     <i data-lucide="alert-triangle"></i>
     <div>
         <strong>Migrering krävs</strong><br>
-        Kor migrering <code>014_winback_survey.sql</code> via
+        Kör migrering <code>014_winback_survey.sql</code> via
         <a href="/admin/migrations.php">Migrationsverktyget</a>.
     </div>
 </div>
@@ -1579,7 +1579,7 @@ document.getElementById('invitation-form')?.addEventListener('submit', function(
     <div style="flex:1;">
         <strong><?= $duplicateCount ?> dubbletter hittades</strong>
         <p style="margin:var(--space-2xs) 0 0;font-size:0.875rem;color:var(--color-text-secondary);">
-            Det finns frågor med samma text. Klicka for att rensa dubbletter (behaller aldsta fragan).
+            Det finns frågor med samma text. Klicka för att rensa dubbletter (behåller äldsta frågan).
         </p>
     </div>
     <form method="POST" style="flex-shrink:0;">
@@ -1658,7 +1658,7 @@ document.getElementById('invitation-form')?.addEventListener('submit', function(
     <div class="admin-card-body" style="padding:0;">
         <?php if (empty($allQuestions)): ?>
             <p style="text-align:center;color:var(--color-text-muted);padding:var(--space-2xl);">
-                Inga frågor skapade. Kor migrering 014 for att ladda standardfrågor.
+                Inga frågor skapade. Kör migrering 014 för att ladda standardfrågor.
             </p>
         <?php else: ?>
             <div class="admin-table-container">

@@ -280,7 +280,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/artist-name-linking.php" class="btn-admin btn-admin-primary">Oppna</a>
+            <a href="/admin/artist-name-linking.php" class="btn-admin btn-admin-primary">Öppna</a>
         </div>
     </div>
 
@@ -809,7 +809,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/participant-analysis.php" class="btn-admin btn-admin-primary">Oppna</a>
+            <a href="/admin/participant-analysis.php" class="btn-admin btn-admin-primary">Öppna</a>
         </div>
     </div>
 
@@ -823,7 +823,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/winback-campaigns.php" class="btn-admin btn-admin-primary">Oppna</a>
+            <a href="/admin/winback-campaigns.php" class="btn-admin btn-admin-primary">Öppna</a>
         </div>
     </div>
 
@@ -942,7 +942,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/memberships.php" class="btn-admin btn-admin-primary">Oppna</a>
+            <a href="/admin/memberships.php" class="btn-admin btn-admin-primary">Öppna</a>
         </div>
     </div>
 
@@ -956,7 +956,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/ekonomi.php" class="btn-admin btn-admin-primary">Oppna</a>
+            <a href="/admin/ekonomi.php" class="btn-admin btn-admin-primary">Öppna</a>
         </div>
     </div>
 
@@ -970,7 +970,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/stripe-connect.php" class="btn-admin btn-admin-secondary">Oppna</a>
+            <a href="/admin/stripe-connect.php" class="btn-admin btn-admin-secondary">Öppna</a>
         </div>
     </div>
 
@@ -984,7 +984,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/process-refunds.php" class="btn-admin btn-admin-secondary">Oppna</a>
+            <a href="/admin/process-refunds.php" class="btn-admin btn-admin-secondary">Öppna</a>
         </div>
     </div>
 
@@ -1004,7 +1004,7 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
         </div>
         <div class="tool-actions">
-            <a href="/admin/tools/create-test-event.php" class="btn-admin btn-admin-primary">Oppna</a>
+            <a href="/admin/tools/create-test-event.php" class="btn-admin btn-admin-primary">Öppna</a>
         </div>
     </div>
 
