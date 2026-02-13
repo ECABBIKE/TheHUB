@@ -443,6 +443,10 @@ include __DIR__ . '/components/unified-layout.php';
                 <i data-lucide="mail"></i>
                 <span>Kampanjer</span>
             </a>
+            <a href="/admin/event-startlist.php" class="quick-action">
+                <i data-lucide="clipboard-list"></i>
+                <span>Startlistor</span>
+            </a>
             <a href="/admin/news-moderation.php" class="quick-action">
                 <i data-lucide="newspaper"></i>
                 <span>Nyheter</span>
