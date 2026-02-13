@@ -200,6 +200,24 @@ function createMultiRiderOrder(array $buyerData, array $items, ?string $discount
                     $cancelStmt->execute([$eventId, $riderId]);
                 }
 
+                // Kontrollera max antal deltagare
+                $capStmt = $pdo->prepare("SELECT max_participants FROM events WHERE id = ?");
+                $capStmt->execute([$eventId]);
+                $maxParticipants = $capStmt->fetchColumn();
+
+                if ($maxParticipants && $maxParticipants > 0) {
+                    $countStmt = $pdo->prepare("
+                        SELECT COUNT(*) FROM event_registrations
+                        WHERE event_id = ? AND status NOT IN ('cancelled')
+                    ");
+                    $countStmt->execute([$eventId]);
+                    $currentCount = $countStmt->fetchColumn();
+
+                    if ($currentCount >= $maxParticipants) {
+                        throw new Exception("Eventet är fullbokat ({$maxParticipants} platser). Inga fler anmälningar kan göras.");
+                    }
+                }
+
                 // Hämta event-info och pris (använd pricing template system)
                 $classesData = getEligibleClassesForEvent($eventId, $riderId);
                 $selectedClass = null;

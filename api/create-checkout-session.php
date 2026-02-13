@@ -68,6 +68,32 @@ try {
         exit;
     }
 
+    // Validate capacity for all event registrations in this order
+    $regStmt = $pdo->prepare("
+        SELECT er.event_id, e.max_participants, e.name as event_name
+        FROM event_registrations er
+        JOIN events e ON er.event_id = e.id
+        WHERE er.order_id = ? AND er.status != 'cancelled'
+    ");
+    $regStmt->execute([$orderId]);
+    $orderRegs = $regStmt->fetchAll(PDO::FETCH_ASSOC);
+
+    foreach ($orderRegs as $reg) {
+        if ($reg['max_participants'] && $reg['max_participants'] > 0) {
+            $countStmt = $pdo->prepare("
+                SELECT COUNT(*) FROM event_registrations
+                WHERE event_id = ? AND status NOT IN ('cancelled') AND order_id != ?
+            ");
+            $countStmt->execute([$reg['event_id'], $orderId]);
+            $otherCount = $countStmt->fetchColumn();
+
+            if ($otherCount >= $reg['max_participants']) {
+                echo json_encode(['success' => false, 'error' => $reg['event_name'] . ' är fullbokat. Inga fler platser tillgängliga.']);
+                exit;
+            }
+        }
+    }
+
     // Get order items for line_items
     $stmt = $pdo->prepare("SELECT * FROM order_items WHERE order_id = ?");
     $stmt->execute([$orderId]);
