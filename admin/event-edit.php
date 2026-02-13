@@ -451,6 +451,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 error_log("EVENT EDIT: general_competition_info update failed (run migration 044): " . $gcEx->getMessage());
             }
 
+            // Update competition_classes_info separately (migration 045 may not be run yet)
+            $db->query("UPDATE events SET competition_classes_info = ?, competition_classes_use_global = ?, competition_classes_hidden = ? WHERE id = ?", [
+                trim($_POST['competition_classes_info'] ?? ''),
+                isset($_POST['competition_classes_use_global']) ? 1 : 0,
+                isset($_POST['competition_classes_hidden']) ? 1 : 0,
+                $id
+            ]);
+
             // Update is_championship separately - ONLY if user is super admin (not promotor)
             if ($isChampionship !== null) {
                 try {
@@ -1204,7 +1212,20 @@ include __DIR__ . '/components/unified-layout.php';
                     </label>
                 </label>
                 <textarea name="general_competition_info" class="admin-form-input event-textarea" rows="6" placeholder="Generell information om tävlingen..."><?= h($event['general_competition_info'] ?? '') ?></textarea>
-                <small class="form-help">Visas under inbjudningstexten på Inbjudan-fliken. Faciliteter & Logistik visas nu på en egen flik.</small>
+                <small class="form-help">Visas under inbjudningstexten på Inbjudan-fliken.</small>
+            </div>
+
+            <!-- Competition classes info field -->
+            <div class="admin-form-group mb-lg pb-lg border-bottom">
+                <label class="admin-form-label text-base font-semibold">
+                    Tävlingsklasser
+                    <label class="checkbox-inline">
+                        <input type="checkbox" name="competition_classes_use_global" <?= !empty($event['competition_classes_use_global']) ? 'checked' : '' ?>>
+                        <span class="text-xs">Global</span>
+                    </label>
+                </label>
+                <textarea name="competition_classes_info" class="admin-form-input event-textarea" rows="6" placeholder="Beskrivning av tävlingsklasser..."><?= h($event['competition_classes_info'] ?? '') ?></textarea>
+                <small class="form-help">Visas under generell tävlingsinformation på Inbjudan-fliken.</small>
             </div>
 
             <div class="facility-section-header">

@@ -154,6 +154,9 @@ $migrationChecks = [
     '044_event_general_competition_info.sql' => [
         'columns' => ['events.general_competition_info', 'events.general_competition_use_global', 'events.general_competition_hidden']
     ],
+    '045_event_competition_classes_info.sql' => [
+        'columns' => ['events.competition_classes_info', 'events.competition_classes_use_global', 'events.competition_classes_hidden']
+    ],
 ];
 
 // ============================================================================

@@ -1953,6 +1953,7 @@ if (!empty($eventSponsors['content'])): ?>
 // Get invitation content
 $invitationText = getEventContent($event, 'invitation', 'invitation_use_global', $globalTextMap, 'invitation_hidden');
 $generalCompInfo = getEventContent($event, 'general_competition_info', 'general_competition_use_global', $globalTextMap, 'general_competition_hidden');
+$compClassesInfo = getEventContent($event, 'competition_classes_info', 'competition_classes_use_global', $globalTextMap, 'competition_classes_hidden');
 ?>
 
 <?php if (!empty($invitationText)): ?>
@@ -1970,7 +1971,7 @@ $generalCompInfo = getEventContent($event, 'general_competition_info', 'general_
 <?php endif; ?>
 
 <?php if (!empty($generalCompInfo)): ?>
-<section class="card">
+<section class="card mb-lg">
     <div class="card-header">
         <h2 class="card-title">
             <i data-lucide="clipboard-list"></i>
@@ -1983,7 +1984,21 @@ $generalCompInfo = getEventContent($event, 'general_competition_info', 'general_
 </section>
 <?php endif; ?>
 
-<?php if (empty($invitationText) && empty($generalCompInfo)): ?>
+<?php if (!empty($compClassesInfo)): ?>
+<section class="card">
+    <div class="card-header">
+        <h2 class="card-title">
+            <i data-lucide="list-checks"></i>
+            Tavlingsklasser
+        </h2>
+    </div>
+    <div class="card-body">
+        <div class="prose"><?= nl2br(h($compClassesInfo)) ?></div>
+    </div>
+</section>
+<?php endif; ?>
+
+<?php if (empty($invitationText) && empty($generalCompInfo) && empty($compClassesInfo)): ?>
 <section class="card">
     <div class="empty-state">
         <i data-lucide="file-text" class="empty-state-icon"></i>
@@ -2535,6 +2550,13 @@ try {
             </h3>
             <div class="reg-participants-scroll">
                 <table class="table table--striped table--compact reg-participants-table">
+                    <colgroup>
+                        <col style="width: 60px;">
+                        <col>
+                        <col style="width: 55px;">
+                        <col>
+                        <col style="width: 80px;">
+                    </colgroup>
                     <thead>
                         <tr>
                             <th>Startnr</th>
@@ -3153,7 +3175,6 @@ if (!empty($event['series_id'])) {
 
 .reg-participants-table {
     margin: 0;
-    min-width: 480px;
     table-layout: fixed;
     width: 100%;
 }
@@ -3165,17 +3186,24 @@ if (!empty($event['series_id'])) {
     text-overflow: ellipsis;
 }
 
-.reg-participants-table th:nth-child(1) { width: 60px; }  /* Startnr */
-.reg-participants-table th:nth-child(2) { width: 35%; }   /* Namn */
-.reg-participants-table th:nth-child(3) { width: 55px; }  /* Född */
-.reg-participants-table th:nth-child(4) { width: 35%; }   /* Klubb */
-.reg-participants-table th:nth-child(5) { width: 80px; }  /* Status */
+/* Column widths controlled via colgroup in HTML */
 
 @media (max-width: 767px) {
     .reg-participants-scroll {
         margin-left: calc(-1 * var(--space-md));
         margin-right: calc(-1 * var(--space-md));
-        padding-left: var(--space-md);
+    }
+
+    .reg-participants-table col:nth-child(1),
+    .reg-participants-table th:nth-child(1),
+    .reg-participants-table td:nth-child(1) {
+        display: none;
+    }
+
+    .reg-participants-table th,
+    .reg-participants-table td {
+        padding: var(--space-xs) var(--space-sm);
+        font-size: var(--text-sm);
     }
 }
 
