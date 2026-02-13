@@ -96,31 +96,106 @@ if ($eventId > 0) {
         $message = '';
         $messageType = '';
 
+        // Get series for ranking-based assignment
+        $eventSeriesId = null;
+        try {
+            $seriesRow = $db->getRow("
+                SELECT se.series_id FROM series_events se WHERE se.event_id = ? LIMIT 1
+            ", [$eventId]);
+            if ($seriesRow) {
+                $eventSeriesId = (int)$seriesRow['series_id'];
+            } elseif ($event['series_id']) {
+                $eventSeriesId = (int)$event['series_id'];
+            }
+        } catch (Exception $e) {}
+
+        // Get ranking data if series exists
+        $rankingByClass = [];
+        if ($eventSeriesId) {
+            try {
+                $rankingRows = $db->getAll("
+                    SELECT sr.cyclist_id, sr.class_id,
+                           SUM(sr.points) as total_points
+                    FROM series_results sr
+                    WHERE sr.series_id = ?
+                    GROUP BY sr.cyclist_id, sr.class_id
+                    ORDER BY total_points DESC
+                ", [$eventSeriesId]);
+                foreach ($rankingRows as $rr) {
+                    $classId = $rr['class_id'] ?? 0;
+                    if (!isset($rankingByClass[$classId])) {
+                        $rankingByClass[$classId] = [];
+                    }
+                    $rankingByClass[$classId][$rr['cyclist_id']] = (int)$rr['total_points'];
+                }
+            } catch (Exception $e) {
+                error_log("Startlist ranking error: " . $e->getMessage());
+            }
+        }
+
         if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             checkCsrf();
             $action = $_POST['action'] ?? '';
 
             if ($action === 'assign_bibs') {
-                // Auto-assign bib numbers per class
-                $classRegs = $db->getAll("
-                    SELECT id, category FROM event_registrations
-                    WHERE event_id = ? AND status != 'cancelled'
-                    ORDER BY category, last_name, first_name
+                $sortMode = $_POST['sort_mode'] ?? 'alpha';
+                $classRanges = $_POST['class_range'] ?? [];
+
+                // Get all active registrations grouped by class
+                $allRegs = $db->getAll("
+                    SELECT er.id, er.category, er.rider_id, er.class_id,
+                           er.last_name, er.first_name, er.created_at
+                    FROM event_registrations er
+                    WHERE er.event_id = ? AND er.status != 'cancelled'
+                    ORDER BY er.category
                 ", [$eventId]);
 
-                $currentClass = null;
-                $bib = 0;
-                $startNumber = intval($_POST['start_number'] ?? 1);
-
-                foreach ($classRegs as $reg) {
-                    if ($reg['category'] !== $currentClass) {
-                        $currentClass = $reg['category'];
-                        $bib = $startNumber;
-                    }
-                    $db->update('event_registrations', ['bib_number' => $bib], 'id = ?', [$reg['id']]);
-                    $bib++;
+                // Group by category
+                $byCategory = [];
+                foreach ($allRegs as $reg) {
+                    $cat = $reg['category'] ?? 'Okand';
+                    $byCategory[$cat][] = $reg;
                 }
-                $message = 'Startnummer tilldelade!';
+
+                $assigned = 0;
+                foreach ($byCategory as $cat => $regs) {
+                    // Get range for this class (from POST or defaults)
+                    $catKey = md5($cat);
+                    $from = intval($classRanges[$catKey]['from'] ?? 1);
+                    $to = intval($classRanges[$catKey]['to'] ?? ($from + count($regs) - 1));
+
+                    // Sort registrations based on mode
+                    if ($sortMode === 'ranking' && !empty($rankingByClass)) {
+                        usort($regs, function($a, $b) use ($rankingByClass) {
+                            $classIdA = $a['class_id'] ?? 0;
+                            $classIdB = $b['class_id'] ?? 0;
+                            $pointsA = $rankingByClass[$classIdA][$a['rider_id']] ?? 0;
+                            $pointsB = $rankingByClass[$classIdB][$b['rider_id']] ?? 0;
+                            if ($pointsA !== $pointsB) return $pointsB - $pointsA; // highest first
+                            return strcmp($a['last_name'], $b['last_name']);
+                        });
+                    } elseif ($sortMode === 'registration') {
+                        usort($regs, function($a, $b) {
+                            return strcmp($a['created_at'], $b['created_at']);
+                        });
+                    } else {
+                        // Default: alphabetical
+                        usort($regs, function($a, $b) {
+                            $cmp = strcmp($a['last_name'], $b['last_name']);
+                            return $cmp !== 0 ? $cmp : strcmp($a['first_name'], $b['first_name']);
+                        });
+                    }
+
+                    // Assign numbers
+                    $bib = $from;
+                    foreach ($regs as $reg) {
+                        if ($to > 0 && $bib > $to) break; // Respect upper limit
+                        $db->update('event_registrations', ['bib_number' => $bib], 'id = ?', [$reg['id']]);
+                        $bib++;
+                        $assigned++;
+                    }
+                }
+                $message = $assigned . ' startnummer tilldelade!';
                 $messageType = 'success';
 
             } elseif ($action === 'save_bib') {
@@ -386,27 +461,107 @@ include __DIR__ . '/components/unified-layout.php';
 </div>
 
 <!-- Bib Assignment Controls -->
-<?php if ($isAdmin): ?>
-<div class="sl-bib-controls">
-    <form method="POST" class="sl-bib-form" onsubmit="return confirm('Tilldela startnummer till alla deltagare?')">
+<?php if ($isAdmin && !empty($classes)): ?>
+<details class="sl-bib-panel" id="bibPanel">
+    <summary class="sl-bib-summary">
+        <i data-lucide="hash"></i>
+        Startnummertilldelning
+        <i data-lucide="chevron-down" class="sl-bib-chevron"></i>
+    </summary>
+    <form method="POST" class="sl-bib-panel-body" id="bibForm">
         <?= csrf_field() ?>
         <input type="hidden" name="action" value="assign_bibs">
-        <label class="sl-bib-label">Starta fran:</label>
-        <input type="number" name="start_number" value="1" min="1" class="sl-bib-input">
-        <button type="submit" class="btn btn-primary btn--sm">
-            <i data-lucide="hash"></i>
-            Tilldela startnr
-        </button>
+
+        <!-- Sort Mode -->
+        <div class="sl-bib-sort-section">
+            <label class="sl-bib-section-label">Sorteringsordning</label>
+            <div class="sl-bib-sort-options">
+                <label class="sl-bib-sort-option">
+                    <input type="radio" name="sort_mode" value="alpha" checked>
+                    <span class="sl-bib-sort-card">
+                        <i data-lucide="arrow-down-a-z"></i>
+                        <span>Alfabetisk</span>
+                        <small>Efternamn A-O</small>
+                    </span>
+                </label>
+                <?php if ($eventSeriesId && !empty($rankingByClass)): ?>
+                <label class="sl-bib-sort-option">
+                    <input type="radio" name="sort_mode" value="ranking">
+                    <span class="sl-bib-sort-card">
+                        <i data-lucide="trophy"></i>
+                        <span>Ranking</span>
+                        <small>Seriepoang</small>
+                    </span>
+                </label>
+                <?php endif; ?>
+                <label class="sl-bib-sort-option">
+                    <input type="radio" name="sort_mode" value="registration">
+                    <span class="sl-bib-sort-card">
+                        <i data-lucide="clock"></i>
+                        <span>Anmalningsordning</span>
+                        <small>Forst anmald forst</small>
+                    </span>
+                </label>
+            </div>
+        </div>
+
+        <!-- Per-Class Ranges -->
+        <div class="sl-bib-ranges-section">
+            <label class="sl-bib-section-label">Nummerserier per klass</label>
+            <div class="sl-bib-ranges">
+                <?php
+                $defaultStart = 1;
+                foreach ($classes as $i => $c):
+                    $cat = $c['category'];
+                    $catKey = md5($cat);
+                    $regCount = 0;
+                    foreach ($registrations as $r) {
+                        if (($r['category'] ?? '') === $cat && ($r['status'] ?? '') !== 'cancelled') $regCount++;
+                    }
+                    $suggestedEnd = $defaultStart + max($regCount, 1) - 1;
+                ?>
+                <div class="sl-bib-range-row">
+                    <span class="sl-bib-range-class">
+                        <?= h($cat) ?>
+                        <small class="sl-bib-range-count"><?= $regCount ?> st</small>
+                    </span>
+                    <div class="sl-bib-range-inputs">
+                        <input type="number" name="class_range[<?= $catKey ?>][from]"
+                               value="<?= $defaultStart ?>" min="1"
+                               class="sl-bib-range-input" placeholder="Fran"
+                               data-cat="<?= $catKey ?>" data-count="<?= $regCount ?>"
+                               onchange="updateRangeEnd(this)">
+                        <span class="sl-bib-range-sep">-</span>
+                        <input type="number" name="class_range[<?= $catKey ?>][to]"
+                               value="<?= $suggestedEnd ?>" min="1"
+                               class="sl-bib-range-input" placeholder="Till">
+                    </div>
+                </div>
+                <?php
+                    $defaultStart = (int)(ceil(($suggestedEnd + 1) / 10) * 10) + 1;
+                    if ($defaultStart <= $suggestedEnd) $defaultStart = $suggestedEnd + 10;
+                endforeach;
+                ?>
+            </div>
+        </div>
+
+        <!-- Actions -->
+        <div class="sl-bib-actions">
+            <button type="submit" class="btn btn-primary" onclick="return confirm('Tilldela startnummer enligt installningarna?')">
+                <i data-lucide="hash"></i>
+                Tilldela startnummer
+            </button>
+            <button type="button" class="btn btn-secondary" onclick="if(confirm('Rensa alla startnummer?')) { document.getElementById('clearBibsForm').submit(); }">
+                <i data-lucide="eraser"></i>
+                Rensa alla
+            </button>
+        </div>
     </form>
-    <form method="POST" onsubmit="return confirm('Rensa alla startnummer?')">
+    <form method="POST" id="clearBibsForm" style="display:none">
         <?= csrf_field() ?>
         <input type="hidden" name="action" value="clear_bibs">
-        <button type="submit" class="btn btn-secondary btn--sm">
-            <i data-lucide="eraser"></i>
-            Rensa
-        </button>
     </form>
-</div>
+</details>
 <?php endif; ?>
 
 <!-- Startlist Table -->
@@ -744,36 +899,150 @@ foreach ($registrations as $reg) {
     height: 18px;
 }
 
-/* Bib Controls */
-.sl-bib-controls {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--space-sm);
-    align-items: center;
-    padding: var(--space-sm) var(--space-md);
+/* Bib Panel (collapsible) */
+.sl-bib-panel {
     background: var(--color-bg-surface);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-md);
     margin-bottom: var(--space-md);
 }
-.sl-bib-form {
+.sl-bib-summary {
     display: flex;
     align-items: center;
     gap: var(--space-xs);
-}
-.sl-bib-label {
+    padding: var(--space-sm) var(--space-md);
+    font-weight: 600;
     font-size: var(--text-sm);
-    color: var(--color-text-secondary);
+    cursor: pointer;
+    user-select: none;
+    list-style: none;
+    color: var(--color-text-primary);
+}
+.sl-bib-summary::-webkit-details-marker { display: none; }
+.sl-bib-summary > i { width: 18px; height: 18px; }
+.sl-bib-chevron {
+    margin-left: auto;
+    transition: transform 0.2s;
+}
+.sl-bib-panel[open] .sl-bib-chevron {
+    transform: rotate(180deg);
+}
+.sl-bib-panel-body {
+    padding: 0 var(--space-md) var(--space-md);
+}
+.sl-bib-section-label {
+    display: block;
+    font-size: var(--text-xs);
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.04em;
+    color: var(--color-text-muted);
+    margin-bottom: var(--space-sm);
+}
+/* Sort options */
+.sl-bib-sort-section {
+    margin-bottom: var(--space-md);
+    padding-bottom: var(--space-md);
+    border-bottom: 1px solid var(--color-border);
+}
+.sl-bib-sort-options {
+    display: flex;
+    gap: var(--space-xs);
+    flex-wrap: wrap;
+}
+.sl-bib-sort-option {
+    flex: 1;
+    min-width: 120px;
+    cursor: pointer;
+}
+.sl-bib-sort-option input { display: none; }
+.sl-bib-sort-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    padding: var(--space-sm);
+    border: 2px solid var(--color-border);
+    border-radius: var(--radius-md);
+    text-align: center;
+    transition: all 0.15s;
+    font-size: var(--text-sm);
+    font-weight: 500;
+}
+.sl-bib-sort-card i { width: 20px; height: 20px; color: var(--color-text-muted); }
+.sl-bib-sort-card small { font-size: var(--text-xs); color: var(--color-text-muted); font-weight: 400; }
+.sl-bib-sort-option input:checked + .sl-bib-sort-card {
+    border-color: var(--color-accent);
+    background: var(--color-accent-light);
+}
+.sl-bib-sort-option input:checked + .sl-bib-sort-card i { color: var(--color-accent); }
+/* Class ranges */
+.sl-bib-ranges-section {
+    margin-bottom: var(--space-md);
+}
+.sl-bib-ranges {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+}
+.sl-bib-range-row {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: var(--space-md);
+    padding: var(--space-xs) var(--space-sm);
+    background: var(--color-bg-sunken);
+    border-radius: var(--radius-sm);
+}
+.sl-bib-range-class {
+    font-size: var(--text-sm);
+    font-weight: 500;
+    flex: 1;
+    min-width: 0;
+    overflow: hidden;
+    text-overflow: ellipsis;
     white-space: nowrap;
 }
-.sl-bib-input {
+.sl-bib-range-count {
+    display: inline-block;
+    margin-left: var(--space-xs);
+    color: var(--color-text-muted);
+    font-weight: 400;
+}
+.sl-bib-range-inputs {
+    display: flex;
+    align-items: center;
+    gap: var(--space-2xs);
+    flex-shrink: 0;
+}
+.sl-bib-range-input {
     width: 64px;
     padding: var(--space-xs);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-sm);
     text-align: center;
     font-size: var(--text-sm);
+    background: var(--color-bg-surface);
+    color: var(--color-text-primary);
     min-height: 36px;
+}
+.sl-bib-range-input:focus {
+    outline: none;
+    border-color: var(--color-accent);
+    box-shadow: 0 0 0 2px var(--color-accent-light);
+}
+.sl-bib-range-sep {
+    color: var(--color-text-muted);
+    font-size: var(--text-sm);
+}
+/* Actions */
+.sl-bib-actions {
+    display: flex;
+    gap: var(--space-sm);
+    flex-wrap: wrap;
+}
+.sl-bib-actions .btn {
+    min-height: 44px;
 }
 
 /* Class Sections */
@@ -971,12 +1240,38 @@ foreach ($registrations as $reg) {
     .sl-view-toggle {
         align-self: flex-end;
     }
-    .sl-bib-controls {
-        flex-direction: column;
-        align-items: stretch;
+    .sl-bib-panel {
+        margin-left: calc(-1 * var(--container-padding, 16px));
+        margin-right: calc(-1 * var(--container-padding, 16px));
+        border-radius: 0;
+        border-left: none;
+        border-right: none;
     }
-    .sl-bib-form {
-        flex-wrap: wrap;
+    .sl-bib-sort-options {
+        flex-direction: column;
+    }
+    .sl-bib-sort-option {
+        min-width: 0;
+    }
+    .sl-bib-sort-card {
+        flex-direction: row;
+        justify-content: flex-start;
+        gap: var(--space-xs);
+        padding: var(--space-sm) var(--space-md);
+    }
+    .sl-bib-sort-card small {
+        margin-left: auto;
+    }
+    .sl-bib-range-input {
+        width: 56px;
+        font-size: 16px; /* Prevent iOS zoom */
+    }
+    .sl-bib-actions {
+        flex-direction: column;
+    }
+    .sl-bib-actions .btn {
+        width: 100%;
+        justify-content: center;
     }
 
     /* Edge-to-edge for class sections */
@@ -1036,5 +1331,16 @@ foreach ($registrations as $reg) {
     }
 }
 </style>
+
+<script>
+function updateRangeEnd(input) {
+    var from = parseInt(input.value) || 1;
+    var count = parseInt(input.dataset.count) || 1;
+    var toInput = input.closest('.sl-bib-range-inputs').querySelector('input[name*="[to]"]');
+    if (toInput) {
+        toInput.value = from + count - 1;
+    }
+}
+</script>
 
 <?php include __DIR__ . '/components/unified-layout-footer.php'; ?>
