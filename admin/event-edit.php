@@ -332,6 +332,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'lift_use_global' => isset($_POST['lift_use_global']) ? 1 : 0,
             'invitation' => trim($_POST['invitation'] ?? ''),
             'invitation_use_global' => isset($_POST['invitation_use_global']) ? 1 : 0,
+            'general_competition_info' => trim($_POST['general_competition_info'] ?? ''),
+            'general_competition_use_global' => isset($_POST['general_competition_use_global']) ? 1 : 0,
             'hydration_stations' => trim($_POST['hydration_stations'] ?? ''),
             'hydration_use_global' => isset($_POST['hydration_use_global']) ? 1 : 0,
             'toilets_showers' => trim($_POST['toilets_showers'] ?? ''),
@@ -360,6 +362,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'scf_use_global' => isset($_POST['scf_use_global']) ? 1 : 0,
             // Hidden flags for each content section
             'invitation_hidden' => isset($_POST['invitation_hidden']) ? 1 : 0,
+            'general_competition_hidden' => isset($_POST['general_competition_hidden']) ? 1 : 0,
             'hydration_hidden' => isset($_POST['hydration_hidden']) ? 1 : 0,
             'toilets_hidden' => isset($_POST['toilets_hidden']) ? 1 : 0,
             'bike_wash_hidden' => isset($_POST['bike_wash_hidden']) ? 1 : 0,
@@ -1182,9 +1185,22 @@ include __DIR__ . '/components/unified-layout.php';
                 <small class="form-help">Inledande text som visas högst upp på Inbjudan-fliken på event-sidan.</small>
             </div>
 
+            <!-- General competition info field -->
+            <div class="admin-form-group mb-lg pb-lg border-bottom">
+                <label class="admin-form-label text-base font-semibold">
+                    Generell tävlingsinformation
+                    <label class="checkbox-inline">
+                        <input type="checkbox" name="general_competition_use_global" <?= !empty($event['general_competition_use_global']) ? 'checked' : '' ?>>
+                        <span class="text-xs">Global</span>
+                    </label>
+                </label>
+                <textarea name="general_competition_info" class="admin-form-input event-textarea" rows="6" placeholder="Generell information om tävlingen..."><?= h($event['general_competition_info'] ?? '') ?></textarea>
+                <small class="form-help">Visas under inbjudningstexten på Inbjudan-fliken. Faciliteter & Logistik visas nu på en egen flik.</small>
+            </div>
+
             <div class="facility-section-header">
                 <h3>Faciliteter & Logistik</h3>
-                <p>Övrig information för Inbjudan-fliken. Lämna tomt = visas ej.</p>
+                <p>Visas på en egen flik ("Faciliteter") på event-sidan. Lämna tomt = visas ej.</p>
             </div>
 
             <?php

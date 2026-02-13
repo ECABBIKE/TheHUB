@@ -186,6 +186,26 @@
 
 ---
 
+## EVENT-SIDA FLIKSTRUKTUR (2026-02-13)
+
+### Inbjudan-fliken (tab=info)
+- Visar inbjudningstext (`invitation`) overst
+- Under den visas "Generell tavlingsinformation" (`general_competition_info`) - ny ruta tillagd 2026-02-13
+- Faciliteter & Logistik ar BORTTAGEN fran denna flik
+
+### Faciliteter-fliken (tab=faciliteter) - NY 2026-02-13
+- Egen flik med alla facility-kategorier (vatskekontroller, toaletter, cykeltvatt, mat, etc.)
+- Visas bara i tab-nav om nagon facility har data
+- 12 kategorier med ikoner i info-grid layout
+
+### general_competition_info (migration 044)
+- `events.general_competition_info` - TEXT, nullable
+- `events.general_competition_use_global` - Global-flagga
+- `events.general_competition_hidden` - Dolj-flagga
+- Redigeras i admin event-edit under "Inbjudan"-sektionen
+
+---
+
 ## SENASTE FIXAR (2026-02-12)
 
 - **Login redirect-loop**: `hub_attempt_login()` saknade profilfalt i SELECT -> alla redirectades till /profile/edit. Fixat i hub-config.php

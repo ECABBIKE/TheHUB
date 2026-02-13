@@ -24,6 +24,29 @@
 
 # CHANGELOG
 
+### 2026-02-13 (Event-flikar: Generell info + Faciliteter-flik)
+- **Branch:** claude/fix-mobile-payment-layout-Kh2Gg
+
+- **Ny funktion: Generell tavlingsinformation**
+  - Ny textruta pa Inbjudan-fliken, visas under inbjudningstexten
+  - Nytt databasfalt `general_competition_info` med global/hidden-flaggor
+  - Redigerbar i admin event-edit under "Inbjudan"-sektionen
+
+- **Omstrukturering: Faciliteter & Logistik flyttad till egen flik**
+  - Alla 12 facility-kategorier (parkering, mat, boende, etc.) har nu en egen "Faciliteter"-flik
+  - Fliken visas bara nar nagon kategori har data
+  - Inbjudan-fliken visar nu bara inbjudningstext + generell tavlingsinformation
+
+- **Nya filer:**
+  - `Tools/migrations/044_event_general_competition_info.sql` - Databasmigration
+
+- **Andrade filer:**
+  - `pages/event.php` - Ny flik, ny inforuta, omstrukturerad Inbjudan-flik
+  - `admin/event-edit.php` - Nytt textfalt for generell tavlingsinformation
+  - `admin/migrations.php` - Registrerad migration 044
+
+---
+
 ### 2026-02-13 (Startlistor + forms.css)
 - **Branch:** claude/fix-mobile-payment-layout-Kh2Gg
 

@@ -911,6 +911,29 @@ try {
     // Ticketing info
     $ticketingEnabled = !empty($event['ticketing_enabled']);
 
+    // Pre-check if any facilities data exists (for tab visibility)
+    $facilityChecks = [
+        ['field' => 'hydration_stations', 'global' => 'hydration_use_global', 'hidden' => 'hydration_hidden'],
+        ['field' => 'toilets_showers', 'global' => 'toilets_use_global', 'hidden' => 'toilets_hidden'],
+        ['field' => 'bike_wash', 'global' => 'bike_wash_use_global', 'hidden' => 'bike_wash_hidden'],
+        ['field' => 'food_cafe', 'global' => 'food_use_global', 'hidden' => 'food_hidden'],
+        ['field' => 'shops_info', 'global' => 'shops_use_global', 'hidden' => 'shops_hidden'],
+        ['field' => 'exhibitors', 'global' => 'exhibitors_use_global', 'hidden' => 'exhibitors_hidden'],
+        ['field' => 'parking_detailed', 'global' => 'parking_use_global', 'hidden' => 'parking_hidden'],
+        ['field' => 'hotel_accommodation', 'global' => 'hotel_use_global', 'hidden' => 'hotel_hidden'],
+        ['field' => 'local_info', 'global' => 'local_use_global', 'hidden' => 'local_hidden'],
+        ['field' => 'medical_info', 'global' => 'medical_use_global', 'hidden' => 'medical_hidden'],
+        ['field' => 'media_production', 'global' => 'media_use_global', 'hidden' => 'media_hidden'],
+        ['field' => 'contacts_info', 'global' => 'contacts_use_global', 'hidden' => 'contacts_hidden'],
+    ];
+    $hasFacilitiesData = false;
+    foreach ($facilityChecks as $fc) {
+        if (empty($event[$fc['hidden']]) && (!empty($event[$fc['field']]) || !empty($event[$fc['global']]))) {
+            $hasFacilitiesData = true;
+            break;
+        }
+    }
+
     // Fetch other events in the same series for navigation
     $seriesEvents = [];
     if (!empty($event['series_id'])) {
@@ -1212,6 +1235,13 @@ if (!empty($eventSponsors['content'])): ?>
             <i data-lucide="file-text"></i>
             Inbjudan
         </a>
+
+        <?php if ($showAllTabs && $hasFacilitiesData): ?>
+        <a href="?id=<?= $eventId ?>&tab=faciliteter" class="event-tab <?= $activeTab === 'faciliteter' ? 'active' : '' ?>">
+            <i data-lucide="info"></i>
+            Faciliteter
+        </a>
+        <?php endif; ?>
 
         <?php if ($showAllTabs && $pmPublished && empty($event['pm_hidden']) && (!empty($event['pm_content']) || !empty($event['pm_use_global']))): ?>
         <a href="?id=<?= $eventId ?>&tab=pm" class="event-tab <?= $activeTab === 'pm' ? 'active' : '' ?>">
@@ -1918,25 +1948,11 @@ if (!empty($eventSponsors['content'])): ?>
 <?php endif; ?>
 
 <?php elseif ($activeTab === 'info'): ?>
-<!-- INBJUDAN TAB - Invitation + Facilities & Logistics -->
+<!-- INBJUDAN TAB - Invitation + General Competition Info -->
 <?php
 // Get invitation content
 $invitationText = getEventContent($event, 'invitation', 'invitation_use_global', $globalTextMap, 'invitation_hidden');
-
-// Get all facility content
-$hydrationInfo = getEventContent($event, 'hydration_stations', 'hydration_use_global', $globalTextMap, 'hydration_hidden');
-$toiletsInfo = getEventContent($event, 'toilets_showers', 'toilets_use_global', $globalTextMap, 'toilets_hidden');
-$bikeWashInfo = getEventContent($event, 'bike_wash', 'bike_wash_use_global', $globalTextMap, 'bike_wash_hidden');
-$foodCafe = getEventContent($event, 'food_cafe', 'food_use_global', $globalTextMap, 'food_hidden');
-$shopsInfo = getEventContent($event, 'shops_info', 'shops_use_global', $globalTextMap, 'shops_hidden');
-$exhibitorsInfo = getEventContent($event, 'exhibitors', 'exhibitors_use_global', $globalTextMap, 'exhibitors_hidden');
-$parkingInfo = !empty($event['parking_hidden']) ? '' : ($event['parking_detailed'] ?? '');
-$hotelInfo = !empty($event['hotel_hidden']) ? '' : ($event['hotel_accommodation'] ?? '');
-$localInfo = getEventContent($event, 'local_info', 'local_use_global', $globalTextMap, 'local_hidden');
-$medicalInfo = getEventContent($event, 'medical_info', 'medical_use_global', $globalTextMap, 'medical_hidden');
-$mediaInfo = getEventContent($event, 'media_production', 'media_use_global', $globalTextMap, 'media_hidden');
-$contactsInfo = getEventContent($event, 'contacts_info', 'contacts_use_global', $globalTextMap, 'contacts_hidden');
-$hasFacilities = $hydrationInfo || $toiletsInfo || $bikeWashInfo || $foodCafe || $shopsInfo || $exhibitorsInfo || $parkingInfo || $hotelInfo || $localInfo || $medicalInfo || $mediaInfo || $contactsInfo;
+$generalCompInfo = getEventContent($event, 'general_competition_info', 'general_competition_use_global', $globalTextMap, 'general_competition_hidden');
 ?>
 
 <?php if (!empty($invitationText)): ?>
@@ -1953,6 +1969,48 @@ $hasFacilities = $hydrationInfo || $toiletsInfo || $bikeWashInfo || $foodCafe ||
 </section>
 <?php endif; ?>
 
+<?php if (!empty($generalCompInfo)): ?>
+<section class="card">
+    <div class="card-header">
+        <h2 class="card-title">
+            <i data-lucide="clipboard-list"></i>
+            Generell tavlingsinformation
+        </h2>
+    </div>
+    <div class="card-body">
+        <div class="prose"><?= nl2br(h($generalCompInfo)) ?></div>
+    </div>
+</section>
+<?php endif; ?>
+
+<?php if (empty($invitationText) && empty($generalCompInfo)): ?>
+<section class="card">
+    <div class="empty-state">
+        <i data-lucide="file-text" class="empty-state-icon"></i>
+        <h3>Ingen inbjudan publicerad</h3>
+        <p>Inbjudan har inte publicerats for denna tavling annu.</p>
+    </div>
+</section>
+<?php endif; ?>
+
+<?php elseif ($activeTab === 'faciliteter'): ?>
+<!-- FACILITETER TAB - Facilities & Logistics -->
+<?php
+$hydrationInfo = getEventContent($event, 'hydration_stations', 'hydration_use_global', $globalTextMap, 'hydration_hidden');
+$toiletsInfo = getEventContent($event, 'toilets_showers', 'toilets_use_global', $globalTextMap, 'toilets_hidden');
+$bikeWashInfo = getEventContent($event, 'bike_wash', 'bike_wash_use_global', $globalTextMap, 'bike_wash_hidden');
+$foodCafe = getEventContent($event, 'food_cafe', 'food_use_global', $globalTextMap, 'food_hidden');
+$shopsInfo = getEventContent($event, 'shops_info', 'shops_use_global', $globalTextMap, 'shops_hidden');
+$exhibitorsInfo = getEventContent($event, 'exhibitors', 'exhibitors_use_global', $globalTextMap, 'exhibitors_hidden');
+$parkingInfo = !empty($event['parking_hidden']) ? '' : ($event['parking_detailed'] ?? '');
+$hotelInfo = !empty($event['hotel_hidden']) ? '' : ($event['hotel_accommodation'] ?? '');
+$localInfo = getEventContent($event, 'local_info', 'local_use_global', $globalTextMap, 'local_hidden');
+$medicalInfo = getEventContent($event, 'medical_info', 'medical_use_global', $globalTextMap, 'medical_hidden');
+$mediaInfo = getEventContent($event, 'media_production', 'media_use_global', $globalTextMap, 'media_hidden');
+$contactsInfo = getEventContent($event, 'contacts_info', 'contacts_use_global', $globalTextMap, 'contacts_hidden');
+$hasFacilities = $hydrationInfo || $toiletsInfo || $bikeWashInfo || $foodCafe || $shopsInfo || $exhibitorsInfo || $parkingInfo || $hotelInfo || $localInfo || $medicalInfo || $mediaInfo || $contactsInfo;
+?>
+
 <section class="card">
     <div class="card-header">
         <h2 class="card-title">
@@ -1965,7 +2023,7 @@ $hasFacilities = $hydrationInfo || $toiletsInfo || $bikeWashInfo || $foodCafe ||
         <div class="info-grid">
             <?php if (!empty($hydrationInfo)): ?>
             <div class="info-block">
-                <h3><i data-lucide="droplets"></i> Vätskekontroller</h3>
+                <h3><i data-lucide="droplets"></i> Vatskekontroller</h3>
                 <p><?= nl2br(h($hydrationInfo)) ?></p>
             </div>
             <?php endif; ?>
@@ -1979,28 +2037,28 @@ $hasFacilities = $hydrationInfo || $toiletsInfo || $bikeWashInfo || $foodCafe ||
 
             <?php if (!empty($bikeWashInfo)): ?>
             <div class="info-block">
-                <h3><i data-lucide="sparkles"></i> Cykeltvätt</h3>
+                <h3><i data-lucide="sparkles"></i> Cykeltvatt</h3>
                 <p><?= nl2br(h($bikeWashInfo)) ?></p>
             </div>
             <?php endif; ?>
 
             <?php if (!empty($foodCafe)): ?>
             <div class="info-block">
-                <h3><i data-lucide="utensils"></i> Mat/Café</h3>
+                <h3><i data-lucide="utensils"></i> Mat/Cafe</h3>
                 <p><?= nl2br(h($foodCafe)) ?></p>
             </div>
             <?php endif; ?>
 
             <?php if (!empty($shopsInfo)): ?>
             <div class="info-block">
-                <h3><i data-lucide="shopping-bag"></i> Affärer</h3>
+                <h3><i data-lucide="shopping-bag"></i> Affarer</h3>
                 <p><?= nl2br(h($shopsInfo)) ?></p>
             </div>
             <?php endif; ?>
 
             <?php if (!empty($exhibitorsInfo)): ?>
             <div class="info-block">
-                <h3><i data-lucide="store"></i> Utställare</h3>
+                <h3><i data-lucide="store"></i> Utstallare</h3>
                 <p><?= nl2br(h($exhibitorsInfo)) ?></p>
             </div>
             <?php endif; ?>
@@ -2028,7 +2086,7 @@ $hasFacilities = $hydrationInfo || $toiletsInfo || $bikeWashInfo || $foodCafe ||
 
             <?php if (!empty($medicalInfo)): ?>
             <div class="info-block">
-                <h3><i data-lucide="heart-pulse"></i> Sjukvård</h3>
+                <h3><i data-lucide="heart-pulse"></i> Sjukvard</h3>
                 <p><?= nl2br(h($medicalInfo)) ?></p>
             </div>
             <?php endif; ?>
@@ -2048,7 +2106,7 @@ $hasFacilities = $hydrationInfo || $toiletsInfo || $bikeWashInfo || $foodCafe ||
             <?php endif; ?>
         </div>
         <?php else: ?>
-        <p class="text-muted">Ingen information tillgänglig för detta event ännu.</p>
+        <p class="text-muted">Ingen information tillganglig for detta event annu.</p>
         <?php endif; ?>
     </div>
 </section>
