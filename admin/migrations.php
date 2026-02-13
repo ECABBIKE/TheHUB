@@ -151,6 +151,9 @@ $migrationChecks = [
     '043_rider_ice_and_address.sql' => [
         'columns' => ['riders.ice_name', 'riders.ice_phone', 'riders.address', 'riders.postal_code', 'riders.postal_city']
     ],
+    '044_event_general_competition_info.sql' => [
+        'columns' => ['events.general_competition_info', 'events.general_competition_use_global', 'events.general_competition_hidden']
+    ],
 ];
 
 // ============================================================================

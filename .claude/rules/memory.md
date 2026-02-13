@@ -94,6 +94,12 @@
 - Alla kort/tabeller gar kant-till-kant pa mobil (max-width: 767px)
 - Anvander negativa marginaler: `-16px` (matchar main-content padding)
 
+### Radius-skillnad publik vs admin (desktop)
+- **Publika sidor:** `.card` anvander `--radius-lg` (14px) i components.css - men pa mobil ar nastan allt edge-to-edge med `border-radius: 0`
+- **Admin:** `.admin-card` anvander `--radius-md` (10px) i admin.css
+- Skillnaden syns framst pa desktop
+- **TODO:** Standardisera radius och infora nya tabeller pa alla sidor (se ROADMAP)
+
 ### Z-index-skala
 - `--z-dropdown: 100`
 - `--z-sticky: 200`
@@ -177,6 +183,26 @@
 ### Rakning:
 - Rakning inkluderar ALLA icke-avbrutna registreringar (pending + confirmed)
 - `status NOT IN ('cancelled')` anvands konsekvent
+
+---
+
+## EVENT-SIDA FLIKSTRUKTUR (2026-02-13)
+
+### Inbjudan-fliken (tab=info)
+- Visar inbjudningstext (`invitation`) overst
+- Under den visas "Generell tavlingsinformation" (`general_competition_info`) - ny ruta tillagd 2026-02-13
+- Faciliteter & Logistik ar BORTTAGEN fran denna flik
+
+### Faciliteter-fliken (tab=faciliteter) - NY 2026-02-13
+- Egen flik med alla facility-kategorier (vatskekontroller, toaletter, cykeltvatt, mat, etc.)
+- Visas bara i tab-nav om nagon facility har data
+- 12 kategorier med ikoner i info-grid layout
+
+### general_competition_info (migration 044)
+- `events.general_competition_info` - TEXT, nullable
+- `events.general_competition_use_global` - Global-flagga
+- `events.general_competition_hidden` - Dolj-flagga
+- Redigeras i admin event-edit under "Inbjudan"-sektionen
 
 ---
 
