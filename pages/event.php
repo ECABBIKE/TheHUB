@@ -1953,6 +1953,7 @@ if (!empty($eventSponsors['content'])): ?>
 // Get invitation content
 $invitationText = getEventContent($event, 'invitation', 'invitation_use_global', $globalTextMap, 'invitation_hidden');
 $generalCompInfo = getEventContent($event, 'general_competition_info', 'general_competition_use_global', $globalTextMap, 'general_competition_hidden');
+$compClassesInfo = getEventContent($event, 'competition_classes_info', 'competition_classes_use_global', $globalTextMap, 'competition_classes_hidden');
 ?>
 
 <?php if (!empty($invitationText)): ?>
@@ -1970,7 +1971,7 @@ $generalCompInfo = getEventContent($event, 'general_competition_info', 'general_
 <?php endif; ?>
 
 <?php if (!empty($generalCompInfo)): ?>
-<section class="card">
+<section class="card mb-lg">
     <div class="card-header">
         <h2 class="card-title">
             <i data-lucide="clipboard-list"></i>
@@ -1983,7 +1984,21 @@ $generalCompInfo = getEventContent($event, 'general_competition_info', 'general_
 </section>
 <?php endif; ?>
 
-<?php if (empty($invitationText) && empty($generalCompInfo)): ?>
+<?php if (!empty($compClassesInfo)): ?>
+<section class="card">
+    <div class="card-header">
+        <h2 class="card-title">
+            <i data-lucide="list-checks"></i>
+            Tavlingsklasser
+        </h2>
+    </div>
+    <div class="card-body">
+        <div class="prose"><?= nl2br(h($compClassesInfo)) ?></div>
+    </div>
+</section>
+<?php endif; ?>
+
+<?php if (empty($invitationText) && empty($generalCompInfo) && empty($compClassesInfo)): ?>
 <section class="card">
     <div class="empty-state">
         <i data-lucide="file-text" class="empty-state-icon"></i>
