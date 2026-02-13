@@ -211,10 +211,40 @@ include __DIR__ . '/components/unified-layout.php';
     display: inline-flex;
     align-items: center;
     gap: var(--space-xs);
+    min-height: 44px;
 }
 .event-actions .btn i {
     width: 16px;
     height: 16px;
+}
+@media (max-width: 599px) {
+    .event-actions {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: var(--space-xs);
+    }
+    .event-actions .btn {
+        justify-content: center;
+        font-size: var(--text-sm);
+        padding: var(--space-sm);
+    }
+    .event-card-header {
+        flex-direction: column;
+        gap: var(--space-xs);
+        padding: var(--space-md);
+    }
+    .event-card-body {
+        padding: var(--space-md);
+    }
+    .event-title {
+        font-size: var(--text-lg);
+    }
+    .stat-value {
+        font-size: var(--text-xl);
+    }
+    .stat-box {
+        padding: var(--space-sm);
+    }
 }
 .empty-state {
     text-align: center;
@@ -535,6 +565,10 @@ include __DIR__ . '/components/unified-layout.php';
                 <a href="/admin/event-edit.php?id=<?= $event['id'] ?>" class="btn btn-primary">
                     <i data-lucide="pencil"></i>
                     Redigera event
+                </a>
+                <a href="/admin/event-startlist.php?event_id=<?= $event['id'] ?>" class="btn btn-secondary">
+                    <i data-lucide="clipboard-list"></i>
+                    Startlista
                 </a>
                 <a href="/admin/promotor-registrations.php?event_id=<?= $event['id'] ?>" class="btn btn-secondary">
                     <i data-lucide="users"></i>

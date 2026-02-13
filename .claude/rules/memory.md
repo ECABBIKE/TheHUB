@@ -1,6 +1,6 @@
 # TheHUB - Memory / Session Knowledge
 
-> Senast uppdaterad: 2026-02-12
+> Senast uppdaterad: 2026-02-13
 
 ---
 
@@ -127,6 +127,27 @@
 ### Publika sidor (ej inloggningskrav)
 - `cart` och `checkout` ar publika (`$publicPages` i router.php)
 - checkout.php gor egen auth-check och redirectar till login med return-URL
+
+---
+
+## STARTLISTOR
+
+### Admin/Promotor startliste-sida
+- `/admin/event-startlist.php` - Komplett startliste-vy
+- Tillganglig for bade admin och promotor (promotor ser bara sina events)
+- Event-valjare dropdown, filtrering per klass/status/sok
+- Tva vyer: **Basisk** (kompakt tabell) och **Utokad** (alla falt, sidscrollbar)
+- Startnummerhantering: auto-tilldelning per klass + manuell redigering (admin only)
+- CSV-export i startlisteformat
+- Grupperad per klass
+- Mobile-first: kortvy pa smal portrait, tabell pa landscape/desktop
+- Lankad fran: admin dashboard (snabbatgard), promotor dashboard (per event), admin-tabs (Tavlingar > Startlistor)
+- Publik startlista finns redan pa event-sidan (pages/event.php)
+
+### event_registrations.bib_number
+- Kolumnen `bib_number` finns redan i `event_registrations`
+- Anvands for att lagra startnummer
+- Kan tilldelas automatiskt (per klass, fran valfritt startnummer) eller manuellt
 
 ---
 

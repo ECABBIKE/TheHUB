@@ -29,6 +29,13 @@ $ADMIN_TABS = [
                 'pages' => ['events.php', 'event-create.php', 'event-edit.php', 'event-delete.php', 'event-map.php']
             ],
             [
+                'id' => 'startlist',
+                'label' => 'Startlistor',
+                'icon' => 'clipboard-list',
+                'url' => '/admin/event-startlist.php',
+                'pages' => ['event-startlist.php']
+            ],
+            [
                 'id' => 'results',
                 'label' => 'Resultat',
                 'icon' => 'trophy',

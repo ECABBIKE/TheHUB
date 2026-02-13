@@ -1,6 +1,6 @@
 # TheHUB - Development Roadmap
 
-> Senast uppdaterad: 2026-02-12
+> Senast uppdaterad: 2026-02-13
 >
 > **Se:** `/admin/roadmap.php` for interaktiv vy
 
@@ -15,8 +15,39 @@
 | Event Ratings | KLAR | Deltagarfeedback pa events | 100% |
 | Win-Back System | KLAR | Aterengagera churnade deltagare | 100% |
 | Klubb RF-Registrering | KLAR | SCF/NCF/DCU-synk och stavningskontroll | 100% |
+| Startlistor | KLAR | Admin/promotor startliste-vy med startnr, export, mobilvy | 100% |
 | Bildbanken | PAGAENDE | AI-analyserade bilder kopplade till profiler | 10% |
 | Ridercard Share | PAGAENDE | Statistikkort for Instagram-delning | 5% |
+
+---
+
+# CHANGELOG
+
+### 2026-02-13 (Startlistor + forms.css)
+- **Branch:** claude/fix-mobile-payment-layout-Kh2Gg
+
+- **Ny funktion: Startliste-sida for admin och promotor**
+  - Event-valjare, filtrering per klass/status/sok
+  - Basisk vy (kompakt) och utokad vy (alla falt, sidscrollbar)
+  - Startnummerhantering: auto-tilldelning per klass + manuell inline-redigering
+  - CSV-export i startlisteformat
+  - Grupperad per klass med deltagarantal
+  - Mobile-first: kortvy pa mobil portrait, tabell pa landscape/desktop
+  - Lankad fran admin dashboard, promotor dashboard och admin-tabs
+
+- **Forbattring: Promotor-dashboard mobildesign**
+  - Event-knappar i 2x2 grid pa sma skarmar
+  - Battre touch-targets (44px min-height)
+  - Kompaktare padding och typografi pa mobil
+
+- **Ny CSS: forms.css (ej aktiverad)**
+  - Komplett formularstyling klar att aktiveras
+  - Inkluderar: labels, inputs, selects, textareas, validering, mobiloptimering
+  - Aktiveras genom att lagga till i layout-header.php
+
+- **Nya filer:**
+  - `admin/event-startlist.php` - Startliste-sida
+  - `assets/css/forms.css` - Global form-styling (ej aktiverad)
 
 ---
 
