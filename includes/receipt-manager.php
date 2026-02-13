@@ -190,26 +190,49 @@ function createReceiptForOrder($pdo, int $orderId): array {
     $receipts = [];
     $totalVatAll = 0;
 
+    // Get order-level discount to distribute proportionally
+    $orderDiscount = (float)($order['discount'] ?? 0);
+    $orderSubtotal = (float)($order['subtotal'] ?? 0);
+
     try {
         foreach ($itemsBySeller as $sellerId => $sellerData) {
             // Generera kvittonummer för denna säljare
             $receiptNumber = generateReceiptNumber($pdo);
 
             // Beräkna totaler med moms för denna säljares produkter
-            $subtotal = 0;
-            $totalVat = 0;
-            $sellerTotal = 0;
+            $sellerItemsTotal = 0;
             $receiptItems = [];
 
+            // First pass: sum up seller items total (before discount)
+            foreach ($sellerData['items'] as $item) {
+                $sellerItemsTotal += (float)$item['total_price'];
+            }
+
+            // Calculate this seller's share of the order discount (proportional)
+            $sellerDiscount = 0;
+            if ($orderDiscount > 0 && $orderSubtotal > 0) {
+                $sellerDiscount = round($orderDiscount * ($sellerItemsTotal / $orderSubtotal), 2);
+            }
+
+            // The actual amount paid for this seller's items
+            $sellerPaidTotal = $sellerItemsTotal - $sellerDiscount;
+
+            // Calculate VAT on the actual paid amount (after discount)
+            $avgVatRate = 6.00; // Default, will be overridden if items have rates
+            foreach ($sellerData['items'] as $item) {
+                $avgVatRate = (float)($item['product_vat_rate'] ?? 6.00);
+                break; // Use first item's rate (typically all same for registrations)
+            }
+
+            $vatCalcTotal = calculateVatFromInclusive($sellerPaidTotal, $avgVatRate);
+            $totalVat = $vatCalcTotal['vat_amount'];
+            $subtotal = $vatCalcTotal['price_excl_vat'];
+
+            // Build receipt items (showing original prices before discount)
             foreach ($sellerData['items'] as $item) {
                 $vatRate = (float)($item['product_vat_rate'] ?? 6.00);
                 $totalPrice = (float)$item['total_price'];
-
                 $vatCalc = calculateVatFromInclusive($totalPrice, $vatRate);
-
-                $subtotal += $vatCalc['price_excl_vat'];
-                $totalVat += $vatCalc['vat_amount'];
-                $sellerTotal += $totalPrice;
 
                 $receiptItems[] = [
                     'description' => $item['description'],
@@ -245,8 +268,8 @@ function createReceiptForOrder($pdo, int $orderId): array {
                 $sellerData['recipient_id'],
                 round($subtotal, 2),
                 round($totalVat, 2),
-                0, // Discount per seller - kan utökas senare
-                round($sellerTotal, 2),
+                round($sellerDiscount, 2),
+                round($sellerPaidTotal, 2),
                 $order['currency'] ?? 'SEK',
                 $order['customer_name'],
                 $order['customer_email'],
