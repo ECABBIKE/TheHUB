@@ -868,6 +868,19 @@ try {
     $registrationConfigured = $hasPricing;
     $registrationOpen = $registrationConfigured && ($registrationDeadline === null || $registrationDeadline >= time());
 
+    // Check capacity (max participants)
+    $maxParticipants = !empty($event['max_participants']) ? intval($event['max_participants']) : null;
+    $registrationFull = false;
+    $confirmedRegistrations = 0;
+    if ($maxParticipants) {
+        // Count non-cancelled registrations (pending + confirmed)
+        $capStmt = $db->prepare("SELECT COUNT(*) FROM event_registrations WHERE event_id = ? AND status NOT IN ('cancelled')");
+        $capStmt->execute([$eventId]);
+        $confirmedRegistrations = intval($capStmt->fetchColumn());
+        $registrationFull = ($confirmedRegistrations >= $maxParticipants);
+        $spotsLeft = max(0, $maxParticipants - $confirmedRegistrations);
+    }
+
     // Check publish dates for starttider, karta and PM
     $starttiderPublished = empty($event['starttider_publish_at']) || strtotime($event['starttider_publish_at']) <= time();
     $kartaPublished = empty($event['karta_publish_at']) || strtotime($event['karta_publish_at']) <= time();
@@ -1130,7 +1143,7 @@ if ($eventHeaderBanner): ?>
             </div>
             <?php elseif ($totalRegistrations > 0): ?>
             <div class="event-stat">
-                <span class="event-stat-value"><?= $totalRegistrations ?></span>
+                <span class="event-stat-value"><?= $totalRegistrations ?><?php if ($maxParticipants): ?>/<span style="font-size:0.8em"><?= $maxParticipants ?></span><?php endif; ?></span>
                 <span class="event-stat-label">anmälda</span>
             </div>
             <?php endif; ?>
@@ -1254,7 +1267,7 @@ if (!empty($eventSponsors['content'])): ?>
         <a href="?id=<?= $eventId ?>&tab=anmalda" class="event-tab <?= $activeTab === 'anmalda' ? 'active' : '' ?>">
             <i data-lucide="users"></i>
             Anmälda
-            <span class="tab-badge tab-badge--secondary"><?= $totalRegistrations ?></span>
+            <span class="tab-badge tab-badge--secondary"><?= $totalRegistrations ?><?php if ($maxParticipants): ?>/<?= $maxParticipants ?><?php endif; ?></span>
         </a>
         <?php endif; ?>
 
@@ -2449,7 +2462,7 @@ try {
         <h2 class="card-title">
             <i data-lucide="users"></i>
             Anmälda deltagare
-            <span class="badge badge--primary ml-sm"><?= $totalRegistrations ?></span>
+            <span class="badge badge--primary ml-sm"><?= $totalRegistrations ?><?php if ($maxParticipants): ?>/<?= $maxParticipants ?><?php endif; ?></span>
         </h2>
     </div>
     <div class="card-body">
@@ -3330,7 +3343,13 @@ if (!empty($event['series_id'])) {
         <h2 class="card-title"><i data-lucide="user-plus"></i> Anmälan</h2>
     </div>
     <div class="card-body">
-        <?php if (!$registrationOpen): ?>
+        <?php if ($registrationFull): ?>
+            <div class="alert alert--warning">
+                <strong>Fullbokat</strong>
+                <p>Alla <?= $maxParticipants ?> platser är fyllda. Inga fler anmälningar kan göras.</p>
+            </div>
+
+        <?php elseif (!$registrationOpen): ?>
             <div class="alert alert--warning">
                 <strong>Anmälan stängd</strong>
                 <?php if (!empty($event['registration_deadline'])): ?>
@@ -3582,6 +3601,13 @@ if (!empty($event['series_id'])) {
                 </div>
             <?php endif; ?>
 
+
+            <?php if ($maxParticipants && !$registrationFull): ?>
+                <div class="alert alert--info mb-md" style="display: flex; align-items: center; gap: var(--space-sm);">
+                    <i data-lucide="users" style="flex-shrink: 0;"></i>
+                    <span><strong><?= $spotsLeft ?></strong> av <?= $maxParticipants ?> platser kvar</span>
+                </div>
+            <?php endif; ?>
 
             <?php if ($isEarlyBird): ?>
                 <div class="alert alert--success mb-md">
@@ -3874,6 +3900,19 @@ if (!empty($event['series_id'])) {
                                 </button>
                             </div>
                             <div style="flex: 1; overflow-y: auto; -webkit-overflow-scrolling: touch; padding: var(--space-lg);">
+
+                                <!-- UCI ID Lookup -->
+                                <div style="margin-bottom: var(--space-lg); padding: var(--space-md); background: var(--color-bg-sunken); border-radius: var(--radius-md); border: 1px solid var(--color-border);">
+                                    <label style="display: block; font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600; color: var(--color-text-muted); margin-bottom: var(--space-xs);">Sök din licens via UCI ID</label>
+                                    <div style="display: flex; gap: var(--space-xs);">
+                                        <input type="text" id="${p}uciIdLookup" style="${inputStyle} flex: 1;" placeholder="T.ex. 10012345678" inputmode="numeric">
+                                        <button type="button" id="${p}uciLookupBtn" style="padding: 10px 16px; background: var(--color-accent); color: var(--color-bg-page); border: none; border-radius: var(--radius-sm); font-weight: 600; cursor: pointer; white-space: nowrap; display: flex; align-items: center; gap: var(--space-2xs); min-height: 44px;">
+                                            <i data-lucide="search" style="width: 16px; height: 16px;"></i> Sök
+                                        </button>
+                                    </div>
+                                    <div id="${p}uciLookupStatus" style="display:none; margin-top: var(--space-xs); font-size: 0.875rem;"></div>
+                                </div>
+
                                 <table style="width: 100%; border-collapse: separate; border-spacing: 0 var(--space-sm);">
                                     <tr>
                                         <td style="${labelStyle}">Förnamn *</td>
@@ -3978,9 +4017,89 @@ if (!empty($event['series_id'])) {
                         });
                     }
 
-                    // Focus first name
-                    const firstInput = document.getElementById(p + 'newRiderFirstname');
-                    if (firstInput) setTimeout(() => firstInput.focus(), 100);
+                    // UCI ID Lookup
+                    const uciInput = document.getElementById(p + 'uciIdLookup');
+                    const uciBtn = document.getElementById(p + 'uciLookupBtn');
+                    const uciStatus = document.getElementById(p + 'uciLookupStatus');
+
+                    async function doUciLookup() {
+                        const uciId = uciInput.value.trim().replace(/\D/g, '');
+                        if (!uciId || uciId.length < 9) {
+                            uciStatus.innerHTML = 'Ange ett giltigt UCI ID (9-11 siffror)';
+                            uciStatus.style.color = 'var(--color-error)';
+                            uciStatus.style.display = 'block';
+                            return;
+                        }
+
+                        uciBtn.disabled = true;
+                        uciBtn.innerHTML = '<i data-lucide="loader" style="width:16px;height:16px;"></i> Söker...';
+                        uciStatus.style.display = 'none';
+
+                        try {
+                            const resp = await fetch('/api/scf-lookup.php?uci_id=' + encodeURIComponent(uciId));
+                            const data = await resp.json();
+
+                            if (data.success && data.rider) {
+                                const r = data.rider;
+
+                                // If rider already exists in database
+                                if (data.source === 'database' && data.existing_rider_id) {
+                                    uciStatus.innerHTML = '<span style="color: var(--color-warning);"><strong>' + (r.firstname || '') + ' ' + (r.lastname || '') + '</strong> finns redan i databasen. Sök på namnet istället.</span>';
+                                    uciStatus.style.display = 'block';
+                                    uciBtn.disabled = false;
+                                    uciBtn.innerHTML = '<i data-lucide="search" style="width:16px;height:16px;"></i> Sök';
+                                    if (typeof lucide !== 'undefined') lucide.createIcons();
+                                    return;
+                                }
+
+                                // Auto-fill form fields
+                                if (r.firstname) document.getElementById(p + 'newRiderFirstname').value = r.firstname;
+                                if (r.lastname) document.getElementById(p + 'newRiderLastname').value = r.lastname;
+                                if (r.birth_year) document.getElementById(p + 'newRiderBirthYear').value = r.birth_year;
+                                if (r.gender) {
+                                    const genderSel = document.getElementById(p + 'newRiderGender');
+                                    if (genderSel) genderSel.value = r.gender;
+                                }
+                                if (r.nationality) {
+                                    const natSel = document.getElementById(p + 'newRiderNationality');
+                                    if (natSel) {
+                                        for (let opt of natSel.options) {
+                                            if (opt.value === r.nationality) { natSel.value = r.nationality; break; }
+                                        }
+                                    }
+                                }
+
+                                let info = '<span style="color: var(--color-success);"><strong>' + (r.firstname || '') + ' ' + (r.lastname || '') + '</strong>';
+                                if (r.club_name) info += ' - ' + r.club_name;
+                                if (r.license_type) info += ' (' + r.license_type + ')';
+                                info += '</span>';
+                                uciStatus.innerHTML = info;
+                                uciStatus.style.display = 'block';
+
+                                // Focus email (first empty required field)
+                                const emailInput = document.getElementById(p + 'newRiderEmail');
+                                if (emailInput && !emailInput.value) setTimeout(() => emailInput.focus(), 100);
+                            } else {
+                                uciStatus.innerHTML = '<span style="color: var(--color-text-secondary);">' + (data.error || 'Ingen licens hittades') + '</span>';
+                                uciStatus.style.display = 'block';
+                            }
+                        } catch (err) {
+                            uciStatus.innerHTML = '<span style="color: var(--color-error);">Kunde inte kontakta SCF</span>';
+                            uciStatus.style.display = 'block';
+                        }
+
+                        uciBtn.disabled = false;
+                        uciBtn.innerHTML = '<i data-lucide="search" style="width:16px;height:16px;"></i> Sök';
+                        if (typeof lucide !== 'undefined') lucide.createIcons();
+                    }
+
+                    if (uciBtn) uciBtn.addEventListener('click', doUciLookup);
+                    if (uciInput) uciInput.addEventListener('keydown', function(e) {
+                        if (e.key === 'Enter') { e.preventDefault(); doUciLookup(); }
+                    });
+
+                    // Focus UCI input first
+                    if (uciInput) setTimeout(() => uciInput.focus(), 100);
                 }
 
                 async function handleCreateRider(prefix = '') {

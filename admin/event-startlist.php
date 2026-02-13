@@ -397,8 +397,8 @@ include __DIR__ . '/components/unified-layout.php';
 <!-- Stats Bar -->
 <div class="sl-stats">
     <div class="sl-stat">
-        <span class="sl-stat-value"><?= (int)($stats['total'] ?? 0) ?></span>
-        <span class="sl-stat-label">Anmalda</span>
+        <span class="sl-stat-value"><?= (int)($stats['total'] ?? 0) ?><?php if (!empty($event['max_participants'])): ?>/<span style="font-size:0.75em;opacity:0.7"><?= (int)$event['max_participants'] ?></span><?php endif; ?></span>
+        <span class="sl-stat-label">Anmalda<?php if (!empty($event['max_participants'])): ?> (max <?= (int)$event['max_participants'] ?>)<?php endif; ?></span>
     </div>
     <div class="sl-stat sl-stat--success">
         <span class="sl-stat-value"><?= (int)($stats['confirmed'] ?? 0) ?></span>

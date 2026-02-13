@@ -124,6 +124,16 @@
 - Delad funktion `getCreateRiderFormHtml(prefix)` hanterar bada modalerna
 - `handleCreateRider(prefix)` ar delad API-anropsfunktion
 
+### UCI ID-sokning via SCF (event.php + api/scf-lookup.php)
+- Overst i "Skapa ny deltagare"-formularet finns "Sok din licens via UCI ID"
+- Anvandaren skriver in UCI ID (9-11 siffror) och trycker Sok / Enter
+- `/api/scf-lookup.php` kollar forst databasen, sedan SCF API via SCFLicenseService
+- Om akare redan finns i databasen: visar varning "finns redan, sok pa namnet istallet"
+- Om hittad via SCF: auto-fyller firstname, lastname, birth_year, gender, nationality
+- Visar klubb och licenstyp i statusmeddelande
+- Focus gar till email-faltet efter lyckad sokning
+- SCF API: `SCFLicenseService::lookupByUciIds()` - anvander `licens.scf.se/api/1.0`
+
 ### Publika sidor (ej inloggningskrav)
 - `cart` och `checkout` ar publika (`$publicPages` i router.php)
 - checkout.php gor egen auth-check och redirectar till login med return-URL
@@ -148,6 +158,25 @@
 - Kolumnen `bib_number` finns redan i `event_registrations`
 - Anvands for att lagra startnummer
 - Kan tilldelas automatiskt (per klass, fran valfritt startnummer) eller manuellt
+
+---
+
+## MAX DELTAGARE (kapacitetsgrans)
+
+### events.max_participants
+- Kolumnen `max_participants` (INT, nullable) finns i `events`-tabellen
+- NULL eller 0 = obegransat antal platser
+- Konfigureras i admin event-edit under "Anmalan"-sektionen
+
+### Var kapaciteten valideras:
+1. **order-manager.php** (`createMultiRiderOrder`) - Blockerar nya registreringar nar fullt
+2. **pages/event.php** - Visar "Fullbokat" och "X av Y platser kvar"
+3. **api/create-checkout-session.php** - Re-validerar innan Stripe-betalning startar
+4. **admin/event-startlist.php** - Visar anmalda/max i stats-baren
+
+### Rakning:
+- Rakning inkluderar ALLA icke-avbrutna registreringar (pending + confirmed)
+- `status NOT IN ('cancelled')` anvands konsekvent
 
 ---
 

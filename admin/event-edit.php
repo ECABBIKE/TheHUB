@@ -296,6 +296,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'registration_opens' => !empty($_POST['registration_opens']) ? trim($_POST['registration_opens']) : null,
             'registration_deadline' => !empty($_POST['registration_deadline']) ? trim($_POST['registration_deadline']) : null,
             'registration_deadline_time' => !empty($_POST['registration_deadline_time']) ? trim($_POST['registration_deadline_time']) : null,
+            'max_participants' => !empty($_POST['max_participants']) ? intval($_POST['max_participants']) : null,
             'active' => isset($_POST['active']) ? 1 : 0,
             // is_championship: Only super admins can change this - handled separately below
             'contact_email' => trim($_POST['contact_email'] ?? ''),
@@ -789,6 +790,12 @@ include __DIR__ . '/components/unified-layout.php';
                     <label class="admin-form-label">Anmälningsfrist (klockslag)</label>
                     <input type="time" name="registration_deadline_time" class="admin-form-input" value="<?= h($event['registration_deadline_time'] ?? '') ?>">
                     <small class="form-help">Lämna tomt för 23:59</small>
+                </div>
+
+                <div class="admin-form-group">
+                    <label class="admin-form-label">Max antal deltagare</label>
+                    <input type="number" name="max_participants" class="admin-form-input" min="1" value="<?= h($event['max_participants'] ?? '') ?>" placeholder="Obegränsat">
+                    <small class="form-help">Lämna tomt för obegränsat antal platser</small>
                 </div>
             </div>
         </fieldset>
