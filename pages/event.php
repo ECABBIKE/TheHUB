@@ -1267,7 +1267,7 @@ if (!empty($eventSponsors['content'])): ?>
         <a href="?id=<?= $eventId ?>&tab=anmalda" class="event-tab <?= $activeTab === 'anmalda' ? 'active' : '' ?>">
             <i data-lucide="users"></i>
             Anmälda
-            <span class="tab-badge tab-badge--secondary"><?= $totalRegistrations ?></span>
+            <span class="tab-badge tab-badge--secondary"><?= $totalRegistrations ?><?php if ($maxParticipants): ?>/<?= $maxParticipants ?><?php endif; ?></span>
         </a>
         <?php endif; ?>
 
@@ -2462,7 +2462,7 @@ try {
         <h2 class="card-title">
             <i data-lucide="users"></i>
             Anmälda deltagare
-            <span class="badge badge--primary ml-sm"><?= $totalRegistrations ?></span>
+            <span class="badge badge--primary ml-sm"><?= $totalRegistrations ?><?php if ($maxParticipants): ?>/<?= $maxParticipants ?><?php endif; ?></span>
         </h2>
     </div>
     <div class="card-body">

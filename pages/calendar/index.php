@@ -30,7 +30,8 @@ $sql = "
            sb.accent_color as series_accent,
            v.name as venue_name,
            v.city as venue_city,
-           COUNT(DISTINCT er.id) as registration_count
+           COUNT(DISTINCT er.id) as registration_count,
+           e.max_participants
     FROM events e
     LEFT JOIN series s ON e.series_id = s.id
     LEFT JOIN series_brands sb ON s.brand_id = sb.id
@@ -266,8 +267,8 @@ if (!function_exists('getDeadlineInfo')) {
                             </span>
                             <?php endif; ?>
 
-                            <?php if ($event['registration_count'] > 0): ?>
-                            <span class="event-registrations"><?= $event['registration_count'] ?> anmälda</span>
+                            <?php if ($event['registration_count'] > 0 || !empty($event['max_participants'])): ?>
+                            <span class="event-registrations"><?= $event['registration_count'] ?><?php if (!empty($event['max_participants'])): ?>/<?= (int)$event['max_participants'] ?><?php endif; ?> anmälda<?php if (!empty($event['max_participants']) && $event['registration_count'] >= $event['max_participants']): ?> <strong style="color: var(--color-error);">(Fullbokat)</strong><?php endif; ?></span>
                             <?php endif; ?>
 
                             <?php if ($deadlineInfo && $deadlineInfo['days'] >= 0): ?>
