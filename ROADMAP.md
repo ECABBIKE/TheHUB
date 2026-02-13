@@ -18,6 +18,7 @@
 | Startlistor | KLAR | Admin/promotor startliste-vy med startnr, export, mobilvy | 100% |
 | Bildbanken | PAGAENDE | AI-analyserade bilder kopplade till profiler | 10% |
 | Ridercard Share | PAGAENDE | Statistikkort for Instagram-delning | 5% |
+| CSS/UI Standardisering | PLANERAD | Enhetlig radius och nya tabeller pa alla sidor | 0% |
 
 ---
 
@@ -141,6 +142,29 @@ Automatiskt genererade "trading cards" med deltagarstatistik:
   "profile_url": "thehub.gravityseries.se/rider/123"
 }
 ```
+
+---
+
+## CSS/UI Standardisering
+
+**Mal:** Enhetlig radius, tabelldesign och komponentstil pa bade publika och admin-sidor
+**Status:** PLANERAD (0%)
+**Identifierat:** 2026-02-13
+
+### Problem idag
+
+- **Radius-skillnad:** Publika sidor anvander `--radius-lg` (14px) for `.card`, admin anvander `--radius-md` (10px) for `.admin-card`
+- **Pa mobil:** Publika sidor ar redan edge-to-edge (radius: 0) - detta ar korrekt
+- **Tabeller:** Behover infora nya/enhetliga tabeller pa alla sidor
+
+### Steg
+
+- [ ] Bestam vilken radius som ska galla overallt (lg eller md)
+- [ ] Standardisera `.card` och `.admin-card` till samma radius
+- [ ] Infora nya tabeller pa alla publika sidor
+- [ ] Infora nya tabeller pa alla admin-sidor
+- [ ] Granska och enhetliggora knappar, badges, alerts mellan publik/admin
+- [ ] Testa pa mobil (320px) och desktop
 
 ---
 

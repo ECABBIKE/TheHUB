@@ -94,6 +94,12 @@
 - Alla kort/tabeller gar kant-till-kant pa mobil (max-width: 767px)
 - Anvander negativa marginaler: `-16px` (matchar main-content padding)
 
+### Radius-skillnad publik vs admin (desktop)
+- **Publika sidor:** `.card` anvander `--radius-lg` (14px) i components.css - men pa mobil ar nastan allt edge-to-edge med `border-radius: 0`
+- **Admin:** `.admin-card` anvander `--radius-md` (10px) i admin.css
+- Skillnaden syns framst pa desktop
+- **TODO:** Standardisera radius och infora nya tabeller pa alla sidor (se ROADMAP)
+
 ### Z-index-skala
 - `--z-dropdown: 100`
 - `--z-sticky: 200`
