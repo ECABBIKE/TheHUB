@@ -858,7 +858,7 @@ if (!$viewReceipt && isset($_GET['order'])) {
             </div>
             <?php
                 $vatRate = 6;
-                $orderVat = round($viewOrder['total_amount'] * $vatRate / (100 + $vatRate));
+                $orderVat = round($viewOrder['total_amount'] * $vatRate / (100 + $vatRate), 2);
             ?>
             <div class="receipt-total-row" style="font-size: var(--text-sm); color: var(--color-text-muted);">
                 <span>Varav moms (<?= $vatRate ?>%):</span>

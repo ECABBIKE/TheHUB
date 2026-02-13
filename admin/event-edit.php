@@ -332,8 +332,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'lift_use_global' => isset($_POST['lift_use_global']) ? 1 : 0,
             'invitation' => trim($_POST['invitation'] ?? ''),
             'invitation_use_global' => isset($_POST['invitation_use_global']) ? 1 : 0,
-            'general_competition_info' => trim($_POST['general_competition_info'] ?? ''),
-            'general_competition_use_global' => isset($_POST['general_competition_use_global']) ? 1 : 0,
             'hydration_stations' => trim($_POST['hydration_stations'] ?? ''),
             'hydration_use_global' => isset($_POST['hydration_use_global']) ? 1 : 0,
             'toilets_showers' => trim($_POST['toilets_showers'] ?? ''),
@@ -362,7 +360,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'scf_use_global' => isset($_POST['scf_use_global']) ? 1 : 0,
             // Hidden flags for each content section
             'invitation_hidden' => isset($_POST['invitation_hidden']) ? 1 : 0,
-            'general_competition_hidden' => isset($_POST['general_competition_hidden']) ? 1 : 0,
             'hydration_hidden' => isset($_POST['hydration_hidden']) ? 1 : 0,
             'toilets_hidden' => isset($_POST['toilets_hidden']) ? 1 : 0,
             'bike_wash_hidden' => isset($_POST['bike_wash_hidden']) ? 1 : 0,
@@ -440,6 +437,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 }
             } catch (Exception $extEx) {
                 error_log("EVENT EDIT: Extended fields update failed (non-critical): " . $extEx->getMessage());
+            }
+
+            // Update general_competition_info separately (migration 044 may not be run yet)
+            try {
+                $db->query("UPDATE events SET general_competition_info = ?, general_competition_use_global = ?, general_competition_hidden = ? WHERE id = ?", [
+                    trim($_POST['general_competition_info'] ?? ''),
+                    isset($_POST['general_competition_use_global']) ? 1 : 0,
+                    isset($_POST['general_competition_hidden']) ? 1 : 0,
+                    $id
+                ]);
+            } catch (Exception $gcEx) {
+                error_log("EVENT EDIT: general_competition_info update failed (run migration 044): " . $gcEx->getMessage());
             }
 
             // Update is_championship separately - ONLY if user is super admin (not promotor)
