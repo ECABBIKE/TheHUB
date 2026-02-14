@@ -13,7 +13,7 @@ require_admin();
 $shareUrl = env('UMAMI_SHARE_URL', '');
 $apiToken = env('UMAMI_API_TOKEN', '');
 $websiteId = env('UMAMI_WEBSITE_ID', 'd48052b4-61f9-4f41-ae2b-8215cdd3a82e');
-$apiBase = 'https://cloud.umami.is/api';
+$apiBase = 'https://api.umami.is';
 
 // ========================================
 // API Handler for AJAX requests
@@ -101,7 +101,7 @@ function umamiGet($endpoint, $params, $token, $base) {
         CURLOPT_RETURNTRANSFER => true,
         CURLOPT_TIMEOUT => 15,
         CURLOPT_HTTPHEADER => [
-            'Authorization: Bearer ' . $token,
+            'x-umami-api-key: ' . $token,
             'Accept: application/json'
         ]
     ]);
