@@ -477,7 +477,7 @@ function renderPendingMatches($matches) {
         $html .= '<div class="match-name">' . htmlspecialchars(($match['scf_firstname'] ?? '') . ' ' . ($match['scf_lastname'] ?? '')) . '</div>';
         $html .= '<div class="match-details">';
         $html .= 'UCI: <code>' . htmlspecialchars($match['scf_uci_id'] ?? '') . '</code>';
-        if (!empty($match['scf_nationality'])) $html .= ' &middot; ' . htmlspecialchars($match['scf_nationality']);
+        if (!empty($match['scf_nationality']) && !is_numeric($match['scf_nationality'])) $html .= ' &middot; ' . htmlspecialchars($match['scf_nationality']);
         if (!empty($match['scf_club'])) $html .= '<br>' . htmlspecialchars($match['scf_club']);
         $html .= '</div></div>';
 
