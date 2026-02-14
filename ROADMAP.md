@@ -1,6 +1,6 @@
 # TheHUB - Development Roadmap
 
-> Senast uppdaterad: 2026-02-13
+> Senast uppdaterad: 2026-02-14
 >
 > **Se:** `/admin/roadmap.php` for interaktiv vy
 
@@ -23,6 +23,24 @@
 ---
 
 # CHANGELOG
+
+### 2026-02-14 (Stripe Webhook Fix)
+- **Branch:** claude/fix-mobile-payment-layout-Kh2Gg
+
+- **Buggfix: Stripe webhook returnerade 404**
+  - Stripe Dashboard konfigurerad att skicka till `/api/stripe-webhook.php`
+  - Riktig webhook-hanterare lag pa `/api/webhooks/stripe-webhook.php`
+  - Skapad proxy-fil `/api/stripe-webhook.php` som inkluderar den riktiga filen
+  - Lagt till HTTPS-redirect-undantag i .htaccess for proxy-sökvägen
+
+- **Nya filer:**
+  - `api/stripe-webhook.php` - Proxy till riktiga webhook-hanteraren
+
+- **Andrade filer:**
+  - `.htaccess` - HTTPS-undantag for webhook proxy
+  - `config.php` - APP_BUILD uppdaterad
+
+---
 
 ### 2026-02-13 (Event-flikar: Generell info + Faciliteter-flik)
 - **Branch:** claude/fix-mobile-payment-layout-Kh2Gg
