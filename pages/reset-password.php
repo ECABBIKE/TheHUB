@@ -38,6 +38,7 @@ $nationalities = [
     'ESP' => 'Spanien',
     'GBR' => 'Storbritannien',
     'USA' => 'USA',
+    '' => 'Annan',
 ];
 
 $needsClub = false;

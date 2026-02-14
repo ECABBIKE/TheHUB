@@ -246,12 +246,32 @@
   - Riders markeras INTE som `not_found` vid API-fel (forhindrar falska negativa)
   - Loggen visar HTTP-statuskod och felmeddelande for enklare felsökning
 - **scf-match-review.php**: Fixat htmlspecialchars null-varning for `scf_uci_id`, doljer numeriska nationalitetskoder (t.ex. "161"), lade till saknad `unified-layout-footer.php`
+- **Nationalitetskoder standardiserade** (migration 047): Alla filer anvander nu korrekt ISO 3166-1 alpha-3
+  - DEN→DNK, GER→DEU, SUI→CHE, NED→NLD
+  - Legacy-koder mappas vid visning i admin/rider-edit.php och riders.php
+  - Flaggor i riderprofil (`pages/rider.php`) anvander `flagcdn.com` med alpha-3→alpha-2 mappning
+  - "Annan" (tom strang) tillagd som alternativ i reset-password.php och rider-edit.php
+  - DB-migration uppdaterar befintliga riders med felaktiga koder
+- **Umami analytics pa publika sidor**: Tracking-skriptet saknades i `components/head.php` - bara admin (unified-layout.php) hade det
+- **Rabattkoder redigeringsfunktion**: discount-codes.php saknade edit-funktionalitet helt (bara create/toggle/delete fanns). Lagt till update-handler, redigeringsknapp och modal
+- **Rabattkoder berakningsbugg FIXAD**: Procentuella rabattkoder beraknades pa ORDINARIE pris istallet for priset EFTER andra rabatter (t.ex. Gravity ID). 90% rabattkod + 100kr Gravity ID pa 1000kr = 0kr (FEL) istallet for 90kr (RATT). Fixat i bade `createOrder()` och `applyDiscountToOrder()` i payment.php
 - **Admin orders betalmetod**: Ordersidan visar nu vilken betalmetod kunden valt (Swish/Kort/Ej paborjad)
   - `payment_method` kolumnen i `orders`-tabellen lagrar detta (swish/card/manual/free)
   - Default ar `card` vid orderskapande - uppdateras till `swish` om kunden klickar "Jag har Swishat"
   - `gateway_transaction_id` visar om en Stripe-session ens skapades
   - "Ej paborjad" visas for ordrar dar kunden aldrig valde betalmetod
   - Expanderad ordervy visar betalmetod, gateway, session-ID och referens
+
+### Nationalitetskoder (ISO 3166-1 alpha-3 STANDARD)
+- **riders.nationality** lagrar ISO 3166-1 alpha-3 koder (SWE, NOR, DNK, FIN, DEU, etc.)
+- **clubs.country** lagrar FULLA landsnamn ("Sverige", "Norge", etc.) - ANNORLUNDA an riders!
+- Korrekt kod for Danmark ar `DNK` (INTE `DEN`)
+- Korrekt kod for Tyskland ar `DEU` (INTE `GER`)
+- Korrekt kod for Schweiz ar `CHE` (INTE `SUI`)
+- Korrekt kod for Nederlanderna ar `NLD` (INTE `NED`)
+- Legacy-koder mappad i rider-edit.php och riders.php for bakatkompatibilitet
+- Flaggor pa riderprofil: `flagcdn.com/24x18/{alpha-2}.png` med alpha-3→alpha-2 mappning
+- UNDANTAG: Nationsflaggor i riderprofiler ar OK trots inga-emojis-regeln (anvander IMG-taggar, inte emojis)
 
 ### scf_match_candidates tabell
 - Status-enum: `pending`, `confirmed`, `rejected`, `auto_confirmed`, `not_found` (migration 046)

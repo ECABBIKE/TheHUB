@@ -215,7 +215,9 @@ function createOrder(array $registrationIds, int $riderId, int $eventId, ?string
         $codeValidation = validateDiscountCode($discountCode, $eventId, $riderId, $subtotal);
         if ($codeValidation['valid']) {
             $discountCodeId = $codeValidation['discount']['id'];
-            $discountCodeAmount = calculateDiscountAmount($codeValidation['discount'], $subtotal);
+            // Apply discount code on remaining amount AFTER other discounts (e.g. Gravity ID)
+            $remainingAfterOtherDiscounts = max(0, $subtotal - $gravityIdAmount);
+            $discountCodeAmount = calculateDiscountAmount($codeValidation['discount'], $remainingAfterOtherDiscounts);
             $appliedDiscounts[] = [
                 'type' => 'discount_code',
                 'label' => 'Rabattkod: ' . $codeValidation['discount']['code'],
@@ -877,10 +879,12 @@ function applyDiscountToOrder(int $orderId, string $code, ?int $riderId = null):
     }
 
     $discount = $validation['discount'];
-    $discountAmount = calculateDiscountAmount($discount, $order['subtotal']);
+    // Apply discount code on remaining amount AFTER existing discounts (e.g. Gravity ID)
+    $currentDiscount = floatval($order['discount'] ?? 0);
+    $remainingAmount = max(0, $order['subtotal'] - $currentDiscount);
+    $discountAmount = calculateDiscountAmount($discount, $remainingAmount);
 
     // Calculate new totals
-    $currentDiscount = floatval($order['discount'] ?? 0);
     $newDiscount = $currentDiscount + $discountAmount;
     $newTotal = max(0, $order['subtotal'] - $newDiscount);
 

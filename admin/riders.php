@@ -269,10 +269,10 @@ $nationalities = $db->getAll("SELECT DISTINCT nationality, COUNT(*) as count FRO
 $nationalityNames = [
     'SWE' => 'Sverige',
     'NOR' => 'Norge',
-    'DEN' => 'Danmark',
+    'DNK' => 'Danmark',
     'FIN' => 'Finland',
     'GBR' => 'Storbritannien',
-    'GER' => 'Tyskland',
+    'DEU' => 'Tyskland',
     'FRA' => 'Frankrike',
     'ITA' => 'Italien',
     'ESP' => 'Spanien',
@@ -281,11 +281,16 @@ $nationalityNames = [
     'AUS' => 'Australien',
     'NZL' => 'Nya Zeeland',
     'AUT' => 'Österrike',
-    'SUI' => 'Schweiz',
+    'CHE' => 'Schweiz',
     'BEL' => 'Belgien',
-    'NED' => 'Nederländerna',
+    'NLD' => 'Nederländerna',
     'POL' => 'Polen',
     'CZE' => 'Tjeckien',
+    // Legacy code mapping for display
+    'DEN' => 'Danmark',
+    'GER' => 'Tyskland',
+    'SUI' => 'Schweiz',
+    'NED' => 'Nederländerna',
 ];
 
 // Helper function for age calculation (use existing if available)

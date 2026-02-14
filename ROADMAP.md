@@ -24,6 +24,26 @@
 
 # CHANGELOG
 
+### 2026-02-14 (Nationalitetskoder standardiserade)
+- **Branch:** claude/fix-mobile-payment-layout-Kh2Gg
+
+- **Standardisering: ISO 3166-1 alpha-3 nationalitetskoder**
+  - Alla dropdown-menyer anvander nu korrekta ISO-koder (DNK, DEU, CHE, NLD)
+  - Legacy-koder (DEN, GER, SUI, NED) mappas automatiskt i formuler
+  - Flaggor i riderprofil uppdaterade med komplett alpha-3→alpha-2 mappning
+  - "Annan" alternativ tillagt i reset-password och rider-edit
+  - DB-migration (047) uppdaterar befintliga riders med felaktiga koder
+
+- **Andrade filer:**
+  - `admin/rider-edit.php` - Fler lander, komplett legacy-mappning
+  - `admin/riders.php` - Korrekta ISO-koder i displaymappning
+  - `pages/reset-password.php` - Tillagd "Annan" option
+  - `pages/rider.php` - Komplett flagg-mappning for alla nationaliteter
+  - `admin/migrations.php` - Registrerad migration 047
+  - `Tools/migrations/047_standardize_nationality_codes.sql` - Uppdaterar DEN→DNK, GER→DEU, SUI→CHE, NED→NLD
+
+---
+
 ### 2026-02-14 (Automatisk licensvalidering vid anmalan)
 - **Branch:** claude/fix-mobile-payment-layout-Kh2Gg
 
