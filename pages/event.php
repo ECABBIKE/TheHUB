@@ -4042,7 +4042,19 @@ if (!empty($event['series_id'])) {
                                                 <option value="FIN">Finland</option>
                                                 <option value="DEU">Tyskland</option>
                                                 <option value="GBR">Storbritannien</option>
+                                                <option value="USA">USA</option>
+                                                <option value="">Annan</option>
                                             </select>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td style="${labelStyle}">Klubb</td>
+                                        <td>
+                                            <div style="position: relative;">
+                                                <input type="text" id="${p}newRiderClubSearch" style="${inputStyle}" placeholder="Sok klubb..." autocomplete="off">
+                                                <input type="hidden" id="${p}newRiderClubId" value="">
+                                                <div id="${p}clubSearchResults" style="display:none; position:absolute; top:100%; left:0; right:0; z-index:100; background:var(--color-bg-card); border:1px solid var(--color-border); border-top:none; border-radius:0 0 var(--radius-sm) var(--radius-sm); max-height:200px; overflow-y:auto; box-shadow: 0 4px 12px rgba(0,0,0,0.3);"></div>
+                                            </div>
                                         </td>
                                     </tr>
                                 </table>
@@ -4157,6 +4169,12 @@ if (!empty($event['series_id'])) {
                                     }
                                 }
 
+                                // Auto-fill club name from SCF lookup
+                                if (r.club_name) {
+                                    const clubSearch = document.getElementById(p + 'newRiderClubSearch');
+                                    if (clubSearch) clubSearch.value = r.club_name;
+                                }
+
                                 let info = '<span style="color: var(--color-success);"><strong>' + (r.firstname || '') + ' ' + (r.lastname || '') + '</strong>';
                                 if (r.club_name) info += ' - ' + r.club_name;
                                 if (r.license_type) info += ' (' + r.license_type + ')';
@@ -4186,6 +4204,63 @@ if (!empty($event['series_id'])) {
                         if (e.key === 'Enter') { e.preventDefault(); doUciLookup(); }
                     });
 
+                    // Club search with typeahead
+                    const clubInput = document.getElementById(p + 'newRiderClubSearch');
+                    const clubIdInput = document.getElementById(p + 'newRiderClubId');
+                    const clubResults = document.getElementById(p + 'clubSearchResults');
+                    let clubSearchTimer = null;
+
+                    if (clubInput) {
+                        clubInput.addEventListener('input', function() {
+                            clearTimeout(clubSearchTimer);
+                            const q = this.value.trim();
+                            if (q.length < 2) {
+                                clubResults.style.display = 'none';
+                                clubIdInput.value = '';
+                                return;
+                            }
+                            clubSearchTimer = setTimeout(async () => {
+                                try {
+                                    const resp = await fetch('/api/search.php?q=' + encodeURIComponent(q) + '&type=clubs&limit=8');
+                                    const data = await resp.json();
+                                    if (data.results && data.results.length > 0) {
+                                        clubResults.innerHTML = data.results.map(c =>
+                                            '<div style="padding: var(--space-sm) var(--space-md); cursor: pointer; font-size: 0.9rem; border-bottom: 1px solid var(--color-border);" ' +
+                                            'onmouseover="this.style.background=\'var(--color-bg-hover)\'" onmouseout="this.style.background=\'none\'" ' +
+                                            'data-club-id="' + c.id + '" data-club-name="' + (c.name || '').replace(/"/g, '&quot;') + '">' +
+                                            '<strong>' + (c.name || '') + '</strong>' +
+                                            (c.member_count ? ' <span style="color: var(--color-text-muted); font-size: 0.8rem;">(' + c.member_count + ' medlemmar)</span>' : '') +
+                                            '</div>'
+                                        ).join('');
+                                        clubResults.style.display = 'block';
+                                        clubResults.querySelectorAll('[data-club-id]').forEach(el => {
+                                            el.addEventListener('click', function() {
+                                                clubInput.value = this.dataset.clubName;
+                                                clubIdInput.value = this.dataset.clubId;
+                                                clubResults.style.display = 'none';
+                                            });
+                                        });
+                                    } else {
+                                        clubResults.innerHTML = '<div style="padding: var(--space-sm) var(--space-md); color: var(--color-text-muted); font-size: 0.875rem;">Ingen klubb hittades</div>';
+                                        clubResults.style.display = 'block';
+                                    }
+                                } catch(e) { clubResults.style.display = 'none'; }
+                            }, 300);
+                        });
+
+                        // Clear club_id if user types after selecting
+                        clubInput.addEventListener('keydown', function() {
+                            if (clubIdInput.value) clubIdInput.value = '';
+                        });
+
+                        // Close on click outside
+                        document.addEventListener('click', function(e) {
+                            if (!clubInput.contains(e.target) && !clubResults.contains(e.target)) {
+                                clubResults.style.display = 'none';
+                            }
+                        });
+                    }
+
                     // Focus UCI input first
                     if (uciInput) setTimeout(() => uciInput.focus(), 100);
                 }
@@ -4199,6 +4274,7 @@ if (!empty($event['series_id'])) {
                     const gender = document.getElementById(p + 'newRiderGender').value;
                     const nationality = document.getElementById(p + 'newRiderNationality').value;
                     const phone = document.getElementById(p + 'newRiderPhone').value.trim();
+                    const clubId = document.getElementById(p + 'newRiderClubId').value || null;
                     const iceName = document.getElementById(p + 'newRiderIceName').value.trim();
                     const icePhone = document.getElementById(p + 'newRiderIcePhone').value.trim();
                     const errorDiv = document.getElementById(p + 'createRiderError');
@@ -4256,6 +4332,7 @@ if (!empty($event['series_id'])) {
                                     firstname, lastname, email,
                                     birth_year: birthYear,
                                     gender, nationality, phone,
+                                    club_id: clubId,
                                     ice_name: iceName,
                                     ice_phone: icePhone
                                 }

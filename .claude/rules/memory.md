@@ -133,6 +133,9 @@
 - Aktiva konton -> "Logga in", inaktiva -> "Sok pa namnet istallet"
 - Delad funktion `getCreateRiderFormHtml(prefix)` hanterar bada modalerna
 - `handleCreateRider(prefix)` ar delad API-anropsfunktion
+- Nationalitet-dropdown: SWE, NOR, DNK, FIN, DEU, GBR, USA, Annan (tom strang)
+- Klubb-sokfalt (valfritt): typeahead mot `/api/search.php?type=clubs`, sparar `club_id`
+- UCI ID-lookup auto-fyller klubbnamnet fran SCF
 
 ### UCI ID-sokning via SCF (event.php + api/scf-lookup.php)
 - Overst i "Skapa ny deltagare"-formularet finns "Sok din licens via UCI ID"
