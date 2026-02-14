@@ -303,7 +303,8 @@ function hub_send_payment_confirmation_email(string $email, string $name, array 
         'seller_address' => $orderData['seller_address'] ?? '',
         'payment_method' => $orderData['payment_method'] ?? 'Kortbetalning',
         'payment_reference' => $orderData['payment_reference'] ?? '',
-        'profile_url' => SITE_URL . '/profile'
+        'profile_url' => SITE_URL . '/profile',
+        'activation_link' => $orderData['activation_link'] ?? ''
     ]);
 
     return hub_send_email($email, $subject, $body);
@@ -372,6 +373,33 @@ function hub_send_order_confirmation(int $orderId): bool {
         error_log("hub_send_order_confirmation: seller lookup failed: " . $e->getMessage());
     }
 
+    // Check if any riders in this order need account activation
+    // Only for riders who have NO password (= newly created, never activated)
+    $activationLink = '';
+    try {
+        $activationStmt = $pdo->prepare("
+            SELECT DISTINCT r.id, r.firstname, r.lastname, r.email
+            FROM event_registrations er
+            JOIN riders r ON er.cyclist_id = r.id
+            WHERE er.order_id = ?
+            AND r.password IS NULL
+            AND r.email IS NOT NULL AND r.email != ''
+            LIMIT 1
+        ");
+        $activationStmt->execute([$orderId]);
+        $unactivatedRider = $activationStmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($unactivatedRider) {
+            $token = bin2hex(random_bytes(32));
+            $expires = date('Y-m-d H:i:s', strtotime('+24 hours'));
+            $tokenStmt = $pdo->prepare("UPDATE riders SET password_reset_token = ?, password_reset_expires = ? WHERE id = ?");
+            $tokenStmt->execute([$token, $expires, $unactivatedRider['id']]);
+            $activationLink = SITE_URL . '/reset-password?token=' . $token . '&activate=1';
+        }
+    } catch (\Throwable $actErr) {
+        error_log("Activation link generation failed for order {$orderId}: " . $actErr->getMessage());
+    }
+
     $orderData = [
         'order_number' => $order['order_number'],
         'event_name' => $order['event_name'] ?? $order['series_name'] ?? 'Anmälan',
@@ -386,7 +414,8 @@ function hub_send_order_confirmation(int $orderId): bool {
         'seller_org' => $sellerOrg,
         'seller_address' => $sellerAddress,
         'payment_method' => ucfirst($order['payment_method'] ?? 'card'),
-        'payment_reference' => $order['payment_reference'] ?? ''
+        'payment_reference' => $order['payment_reference'] ?? '',
+        'activation_link' => $activationLink
     ];
 
     return hub_send_payment_confirmation_email(
@@ -495,6 +524,41 @@ function hub_send_receipt_email(int $orderId, ?array $receiptResult = null): boo
 
     $siteUrl = defined('SITE_URL') ? SITE_URL : 'https://thehub.gravityseries.se';
 
+    // Check if any riders in this order need account activation
+    $activationLink = '';
+    try {
+        $activationStmt = $pdo->prepare("
+            SELECT DISTINCT r.id, r.firstname, r.lastname, r.email
+            FROM event_registrations er
+            JOIN riders r ON er.cyclist_id = r.id
+            WHERE er.order_id = ?
+            AND r.password IS NULL
+            AND r.email IS NOT NULL AND r.email != ''
+            LIMIT 1
+        ");
+        $activationStmt->execute([$orderId]);
+        $unactivatedRider = $activationStmt->fetch(PDO::FETCH_ASSOC);
+
+        if ($unactivatedRider) {
+            // Check if token already exists (may have been set by order_confirmation path)
+            $existingToken = $pdo->prepare("SELECT password_reset_token FROM riders WHERE id = ? AND password_reset_expires > NOW()");
+            $existingToken->execute([$unactivatedRider['id']]);
+            $existingTokenVal = $existingToken->fetchColumn();
+
+            if ($existingTokenVal) {
+                $activationLink = $siteUrl . '/reset-password?token=' . $existingTokenVal . '&activate=1';
+            } else {
+                $token = bin2hex(random_bytes(32));
+                $expires = date('Y-m-d H:i:s', strtotime('+24 hours'));
+                $tokenStmt = $pdo->prepare("UPDATE riders SET password_reset_token = ?, password_reset_expires = ? WHERE id = ?");
+                $tokenStmt->execute([$token, $expires, $unactivatedRider['id']]);
+                $activationLink = $siteUrl . '/reset-password?token=' . $token . '&activate=1';
+            }
+        }
+    } catch (\Throwable $actErr) {
+        error_log("Activation link generation failed for receipt order {$orderId}: " . $actErr->getMessage());
+    }
+
     $subject = 'Kvitto - ' . ($receipt['receipt_number'] ?? 'TheHUB');
 
     $body = hub_email_template('receipt', [
@@ -509,7 +573,8 @@ function hub_send_receipt_email(int $orderId, ?array $receiptResult = null): boo
         'subtotal' => number_format($receipt['subtotal'], 0, ',', ' '),
         'vat_rows' => $vatRows,
         'total' => number_format($receipt['total_amount'], 0, ',', ' '),
-        'receipt_url' => $siteUrl . '/profile/receipts?view=' . $receiptId
+        'receipt_url' => $siteUrl . '/profile/receipts?view=' . $receiptId,
+        'activation_link' => $activationLink
     ]);
 
     return hub_send_email($order['customer_email'], $subject, $body);
@@ -668,6 +733,16 @@ function hub_email_template(string $template, array $vars = []): string {
                 {{/vat_amount}}
             </table>
 
+            {{#activation_link}}
+            <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 16px; margin: 24px 0;">
+                <p style="margin: 0 0 8px 0; font-weight: 600;">Aktivera ditt konto</p>
+                <p style="margin: 0 0 12px 0; font-size: 14px;">Vi har skapat en profil for dig pa TheHUB. Aktivera ditt konto for att se dina anmalningar, resultat och mycket mer.</p>
+                <p class="text-center" style="margin: 0;">
+                    <a href="{{activation_link}}" class="btn">Aktivera konto</a>
+                </p>
+            </div>
+            {{/activation_link}}
+
             <p class="text-center" style="margin-top: 24px;">
                 <a href="{{profile_url}}" class="btn">Se dina anmälningar</a>
             </p>
@@ -723,6 +798,16 @@ function hub_email_template(string $template, array $vars = []): string {
                     <td style="padding: 8px 0; font-weight: bold; font-size: 1.1em; text-align: right; border-top: 2px solid #333;">{{total}} kr</td>
                 </tr>
             </table>
+
+            {{#activation_link}}
+            <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 16px; margin: 24px 0;">
+                <p style="margin: 0 0 8px 0; font-weight: 600;">Aktivera ditt konto</p>
+                <p style="margin: 0 0 12px 0; font-size: 14px;">Vi har skapat en profil for dig pa TheHUB. Aktivera ditt konto for att se dina anmalningar, resultat och mycket mer.</p>
+                <p class="text-center" style="margin: 0;">
+                    <a href="{{activation_link}}" class="btn">Aktivera konto</a>
+                </p>
+            </div>
+            {{/activation_link}}
 
             <p class="text-center" style="margin-top: 24px;">
                 <a href="{{receipt_url}}" class="btn">Se kvitto online</a>

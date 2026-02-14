@@ -137,6 +137,14 @@
 - Klubb-sokfalt (valfritt): typeahead mot `/api/search.php?type=clubs`, sparar `club_id`
 - UCI ID-lookup auto-fyller klubbnamnet fran SCF
 
+### Automatisk kontoaktivering vid registrering
+- Nar en order betalas (`markOrderPaid`) kollas om nagon rider i ordern saknar losenord
+- Om ja: genereras en aktiveringstoken och lank laggs till i kvitto/bekraftelsemailet
+- Lanken visas i en gron ruta "Aktivera ditt konto" i bade `payment_confirmation` och `receipt` templates
+- Token giltig 24 timmar, leder till `/reset-password?token=X&activate=1`
+- Bara for riders med `password IS NULL` (= nyskapade, aldrig aktiverade)
+- Riders som redan har konto (password != NULL) far INTE aktiveringslank
+
 ### UCI ID-sokning via SCF (event.php + api/scf-lookup.php)
 - Overst i "Skapa ny deltagare"-formularet finns "Sok din licens via UCI ID"
 - Anvandaren skriver in UCI ID (9-11 siffror) och trycker Sok / Enter
