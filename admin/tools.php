@@ -980,6 +980,20 @@ include __DIR__ . '/components/unified-layout.php';
 <h3 class="section-title">System</h3>
 <div class="tools-grid">
 
+    <!-- Site Analytics -->
+    <div class="card">
+        <div class="tool-header">
+            <div class="tool-icon"><i data-lucide="bar-chart-3"></i></div>
+            <div>
+                <h4 class="tool-title">Besoksstatistik</h4>
+                <p class="tool-description">Trafik, besokare och populara sidor</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/site-analytics.php" class="btn-admin btn-admin-primary">Öppna</a>
+        </div>
+    </div>
+
     <!-- Test Event for Payment -->
     <div class="card">
         <div class="tool-header">
