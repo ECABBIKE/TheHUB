@@ -545,12 +545,12 @@ function getRegistrableRiders(int $userId): array {
 /**
  * Hämta tillgängliga klasser för en rider i ett event
  */
-function getEligibleClassesForEvent(int $eventId, int $riderId): array {
+function getEligibleClassesForEvent(int $eventId, int $riderId, ?array &$licenseValidationOut = null): array {
     $pdo = hub_db();
 
     // Hämta rider-info inkl licensinformation och kontaktuppgifter
     // Dynamically check available columns to avoid errors if ICE columns don't exist yet
-    $riderColumns = ['birth_year', 'gender', 'license_type', 'license_valid_until', 'license_year', 'email', 'phone'];
+    $riderColumns = ['firstname', 'lastname', 'birth_year', 'gender', 'license_number', 'license_type', 'license_valid_until', 'license_year', 'email', 'phone', 'nationality', 'scf_license_year'];
     $optionalColumns = ['ice_name', 'ice_phone'];
     $existingOptional = [];
     try {
@@ -560,6 +560,10 @@ function getEligibleClassesForEvent(int $eventId, int $riderId): array {
             if (in_array($col, $dbColumns)) {
                 $existingOptional[] = $col;
             }
+        }
+        // scf_license_year may not exist yet
+        if (!in_array('scf_license_year', $dbColumns)) {
+            $riderColumns = array_diff($riderColumns, ['scf_license_year']);
         }
     } catch (\Throwable $e) { /* ignore */ }
 
@@ -639,55 +643,108 @@ function getEligibleClassesForEvent(int $eventId, int $riderId): array {
         $licenseStatus = ($licenseExpiry >= $eventDate) ? 'valid' : 'expired';
     }
 
-    // If license is expired or missing, check SCF API for current license
-    if ($licenseStatus !== 'valid' && !empty($rider['license_number'])) {
-        error_log("SCF CHECK: Rider $riderId has license_number={$rider['license_number']}, status=$licenseStatus - checking SCF API");
+    // License validation details (returned to frontend for display)
+    $licenseValidation = [
+        'status' => $licenseStatus,
+        'source' => 'local',
+        'uci_id' => $rider['license_number'] ?? null,
+        'license_type' => $rider['license_type'] ?? null,
+        'license_year' => $rider['license_year'] ?? null,
+        'club_name' => null,
+        'uci_id_updated' => false,
+        'message' => null
+    ];
 
+    $eventYear = date('Y', $eventDate);
+    $licenseNumber = $rider['license_number'] ?? '';
+    $hasSweId = (stripos($licenseNumber, 'SWE') === 0);
+    $hasRealUciId = !empty($licenseNumber) && !$hasSweId && strlen(preg_replace('/[^0-9]/', '', $licenseNumber)) >= 9;
+
+    // Skip SCF check if already verified valid for this year
+    $alreadyVerified = ($licenseStatus === 'valid' && $hasRealUciId &&
+        !empty($rider['scf_license_year']) && $rider['scf_license_year'] >= $eventYear);
+
+    // If license is not verified valid, check SCF API
+    if (!$alreadyVerified) {
         try {
             require_once __DIR__ . '/SCFLicenseService.php';
             $scfApiKey = env('SCF_API_KEY', '');
 
-            if (empty($scfApiKey)) {
-                error_log("SCF CHECK: No API key configured");
-            } else {
+            if (!empty($scfApiKey)) {
                 $scfService = new SCFLicenseService($scfApiKey, getDB());
-                $eventYear = date('Y', $eventDate);
+                $scfResult = null;
 
-                // Check current year license from SCF API using UCI ID
-                $uciId = $scfService->normalizeUciId($rider['license_number']);
-                error_log("SCF CHECK: Normalized UCI: $uciId, checking year $eventYear");
-
-                $scfResults = $scfService->lookupByUciIds([$uciId], $eventYear);
-                error_log("SCF CHECK: API returned " . (empty($scfResults) ? 'empty' : count($scfResults)) . " results");
-
-                if (!empty($scfResults)) {
-                    error_log("SCF CHECK: Results: " . json_encode($scfResults));
-
-                    if (isset($scfResults[$uciId])) {
-                        $scfLicense = $scfResults[$uciId];
-                        error_log("SCF CHECK: Found license data: " . json_encode($scfLicense));
-
-                        // Check if license is valid for the event year
-                        if (!empty($scfLicense['license_year']) && $scfLicense['license_year'] >= $eventYear) {
-                            // License is valid according to SCF - update local database
-                            $licenseStatus = 'valid';
-
-                            // Update rider using SCFLicenseService method
-                            $scfService->updateRiderLicense($riderId, $scfLicense, $eventYear);
-
-                            error_log("SCF CHECK SUCCESS: Updated license for rider $riderId (UCI: $uciId) - valid for $eventYear, new status: $licenseStatus");
-                        } else {
-                            error_log("SCF CHECK: License year check failed - license_year=" . ($scfLicense['license_year'] ?? 'NULL') . ", event_year=$eventYear");
+                // Strategy 1: UCI ID lookup (for riders with real UCI ID)
+                if ($hasRealUciId) {
+                    $uciId = $scfService->normalizeUciId($licenseNumber);
+                    if (strlen($uciId) >= 9) {
+                        $scfResults = $scfService->lookupByUciIds([$uciId], $eventYear);
+                        if (!empty($scfResults) && isset($scfResults[$uciId])) {
+                            $scfResult = $scfResults[$uciId];
                         }
-                    } else {
-                        error_log("SCF CHECK: UCI $uciId not found in results array");
                     }
+                }
+
+                // Strategy 2: Name lookup (for SWE-ID riders or if UCI lookup failed)
+                if (!$scfResult && !empty($rider['firstname']) && !empty($rider['lastname']) && !empty($rider['gender'])) {
+                    $birthdate = !empty($rider['birth_year']) ? $rider['birth_year'] . '-01-01' : null;
+                    $gender = strtoupper(substr($rider['gender'], 0, 1));
+                    $scfResult = $scfService->lookupByName(
+                        $rider['firstname'], $rider['lastname'], $gender, $birthdate, $eventYear
+                    );
+                    if ($scfResult) {
+                        $licenseValidation['name_match'] = true;
+                    }
+                }
+
+                if ($scfResult) {
+                    $scfLicenseYear = $scfResult['license_year'] ?? null;
+                    $isValid = !empty($scfLicenseYear) && $scfLicenseYear >= $eventYear;
+
+                    if ($isValid) {
+                        $licenseStatus = 'valid';
+                    }
+
+                    // Update rider in database
+                    $scfService->updateRiderLicense($riderId, $scfResult, $eventYear);
+
+                    // If rider had SWE-ID or no UCI ID, and we found a real one - update license_number
+                    if (!$hasRealUciId && !empty($scfResult['uci_id'])) {
+                        $newUciId = $scfService->normalizeUciId($scfResult['uci_id']);
+                        if (strlen($newUciId) === 11) {
+                            $pdo->prepare("UPDATE riders SET license_number = ?, updated_at = NOW() WHERE id = ?")->execute([$newUciId, $riderId]);
+                            $licenseValidation['uci_id_updated'] = true;
+                            $licenseValidation['uci_id'] = $newUciId;
+                        }
+                    }
+
+                    // Update validation details for frontend
+                    $licenseValidation['status'] = $isValid ? 'valid' : 'expired';
+                    $licenseValidation['source'] = 'scf';
+                    $licenseValidation['license_type'] = $scfResult['license_type'] ?? $rider['license_type'] ?? null;
+                    $licenseValidation['license_year'] = $scfLicenseYear;
+                    $licenseValidation['club_name'] = $scfResult['club_name'] ?? null;
+                    $licenseValidation['discipline'] = $scfResult['discipline'] ?? null;
+                    $licenseValidation['message'] = $isValid
+                        ? 'Giltig licens for ' . $eventYear
+                        : 'Licensen ar inte giltig for ' . $eventYear;
+
+                    // Cache the result
+                    $scfService->cacheLicense($scfResult, $eventYear);
+                } else {
+                    $licenseValidation['status'] = $hasRealUciId ? 'not_found' : 'none';
+                    $licenseValidation['source'] = 'scf';
+                    $licenseValidation['message'] = 'Ingen licens hittades i SCFs register for ' . $eventYear;
                 }
             }
         } catch (Exception $e) {
             // Silently fail - don't block registration if SCF API is down
-            error_log("SCF CHECK ERROR for rider $riderId: " . $e->getMessage() . "\n" . $e->getTraceAsString());
+            error_log("SCF CHECK ERROR for rider $riderId: " . $e->getMessage());
+            $licenseValidation['message'] = 'Kunde inte kontakta SCF';
         }
+    } else {
+        $licenseValidation['source'] = 'local_verified';
+        $licenseValidation['message'] = 'Giltig licens for ' . $eventYear;
     }
 
     // Try pricing template system first (new system)
@@ -849,6 +906,9 @@ function getEligibleClassesForEvent(int $eventId, int $riderId): array {
             $ineligibleClasses[] = $classData;
         }
     }
+
+    // Pass license validation data to caller
+    $licenseValidationOut = $licenseValidation;
 
     // Returnera endast eligible klasser (dölj ineligible)
     // Om inga eligible klasser, returnera debug-info

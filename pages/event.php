@@ -3746,6 +3746,7 @@ if (!empty($event['series_id'])) {
                                 <i data-lucide="x"></i> Ändra
                             </button>
                         </div>
+                        <div id="licenseValidationResult" style="display: none; margin-top: var(--space-sm); padding: var(--space-sm) var(--space-md); border-radius: var(--radius-sm); font-size: 0.875rem;"></div>
                     </div>
 
                     <!-- Open search modal button -->
@@ -3840,6 +3841,7 @@ if (!empty($event['series_id'])) {
                                 <i data-lucide="x"></i> Ändra
                             </button>
                         </div>
+                        <div id="seriesLicenseValidationResult" style="display: none; margin-top: var(--space-sm); padding: var(--space-sm) var(--space-md); border-radius: var(--radius-sm); font-size: 0.875rem;"></div>
                     </div>
 
                     <button type="button" id="seriesOpenRiderSearchBtn" class="btn btn--outline btn--block" style="border: 2px solid var(--color-border-strong);">
@@ -4359,8 +4361,86 @@ if (!empty($event['series_id'])) {
                     openRiderSearchBtn.style.display = 'none';
                     selectedRiderDisplay.style.display = 'block';
 
-                    // Load classes for this rider
+                    // Show loading state for license validation (result comes with loadClasses)
+                    showLicenseLoading('licenseValidationResult');
+
+                    // Load classes for this rider (includes license validation from SCF)
                     loadClasses(rider.id);
+                }
+
+                // Show loading spinner in license validation result div
+                function showLicenseLoading(divId) {
+                    const resultDiv = document.getElementById(divId);
+                    if (!resultDiv) return;
+                    resultDiv.style.display = 'block';
+                    resultDiv.style.background = 'var(--color-bg-hover)';
+                    resultDiv.style.color = 'var(--color-text-secondary)';
+                    resultDiv.innerHTML = '<div style="display: flex; align-items: center; gap: var(--space-xs);"><i data-lucide="loader" style="width: 16px; height: 16px; animation: spin 1s linear infinite;"></i> Kontrollerar licens mot SCF...</div>';
+                    if (typeof lucide !== 'undefined') lucide.createIcons();
+                }
+
+                // Display license validation result from event_classes API response
+                function showLicenseValidation(data, divId, riderInfoEl, riderObj) {
+                    const resultDiv = document.getElementById(divId);
+                    if (!resultDiv || !data) {
+                        if (resultDiv) resultDiv.style.display = 'none';
+                        return;
+                    }
+
+                    const status = data.status;
+                    let icon, color, bg, text;
+
+                    if (status === 'valid') {
+                        icon = 'check-circle';
+                        color = 'var(--color-success)';
+                        bg = 'rgba(16, 185, 129, 0.1)';
+                        text = data.message || 'Giltig licens';
+                        if (data.license_type) text += ` (${data.license_type})`;
+                        if (data.club_name) text += ` - ${data.club_name}`;
+                    } else if (status === 'expired') {
+                        icon = 'alert-triangle';
+                        color = 'var(--color-warning)';
+                        bg = 'rgba(251, 191, 36, 0.1)';
+                        text = data.message || 'Licensen har gatt ut';
+                        if (data.license_year) text += ` (senast giltig: ${data.license_year})`;
+                    } else if (status === 'not_found') {
+                        icon = 'x-circle';
+                        color = 'var(--color-error)';
+                        bg = 'rgba(239, 68, 68, 0.1)';
+                        text = data.message || 'Ingen licens hittades i SCFs register';
+                    } else {
+                        icon = 'minus-circle';
+                        color = 'var(--color-text-muted)';
+                        bg = 'var(--color-bg-hover)';
+                        text = data.message || 'Ingen licens registrerad';
+                    }
+
+                    resultDiv.style.display = 'block';
+                    resultDiv.style.background = bg;
+                    resultDiv.style.color = color;
+
+                    let html = `<div style="display: flex; align-items: center; gap: var(--space-xs);"><i data-lucide="${icon}" style="width: 16px; height: 16px; flex-shrink: 0;"></i> ${text}</div>`;
+
+                    // Show UCI ID update notice
+                    if (data.uci_id_updated && data.uci_id) {
+                        html += `<div style="margin-top: var(--space-2xs); font-size: 0.8125rem; color: var(--color-accent);">
+                            <i data-lucide="refresh-cw" style="width: 14px; height: 14px; vertical-align: -2px;"></i>
+                            UCI ID uppdaterat till: ${data.uci_id}
+                        </div>`;
+                        // Update the rider info display
+                        if (riderObj && riderInfoEl) {
+                            riderObj.license_number = data.uci_id;
+                            const infoItems = [];
+                            if (riderObj.birth_year) infoItems.push('Ford ' + riderObj.birth_year);
+                            if (data.club_name) infoItems.push(data.club_name);
+                            else if (riderObj.club_name) infoItems.push(riderObj.club_name);
+                            infoItems.push('UCI: ' + data.uci_id);
+                            riderInfoEl.textContent = infoItems.join(' \u2022 ');
+                        }
+                    }
+
+                    resultDiv.innerHTML = html;
+                    if (typeof lucide !== 'undefined') lucide.createIcons();
                 }
 
                 function clearRiderSelection() {
@@ -4372,6 +4452,7 @@ if (!empty($event['series_id'])) {
                     selectedRiderDisplay.style.display = 'none';
                     classSelection.style.display = 'none';
                     document.getElementById('licenseCommitment').style.display = 'none';
+                    document.getElementById('licenseValidationResult').style.display = 'none';
                     selectedClassId = null;
                     requiresLicenseCommitment = false;
                     licenseCommitmentAccepted = false;
@@ -4408,6 +4489,13 @@ if (!empty($event['series_id'])) {
                         const data = await response.json();
 
                         if (data.success) {
+                            // Show license validation result (piggybacked on event_classes response)
+                            if (data.license_validation) {
+                                showLicenseValidation(data.license_validation, 'licenseValidationResult', selectedRiderInfo, selectedRider);
+                            } else {
+                                document.getElementById('licenseValidationResult').style.display = 'none';
+                            }
+
                             // Save license commitment requirement
                             requiresLicenseCommitment = data.requires_license_commitment || false;
                             licenseCommitmentAccepted = false;
@@ -5034,6 +5122,9 @@ if (!empty($event['series_id'])) {
                     seriesSelectedRiderName.textContent = `${rider.firstname} ${rider.lastname}`;
                     seriesSelectedRiderInfo.textContent = `${rider.birth_year || ''} ${rider.club_name ? '• ' + rider.club_name : ''}`;
 
+                    // Show loading state for license validation
+                    showLicenseLoading('seriesLicenseValidationResult');
+
                     seriesLoadEligibleClasses(rider.id);
                 }
 
@@ -5046,6 +5137,13 @@ if (!empty($event['series_id'])) {
                         const data = await response.json();
 
                         if (data.success) {
+                            // Show license validation result (piggybacked on event_classes response)
+                            if (data.license_validation) {
+                                showLicenseValidation(data.license_validation, 'seriesLicenseValidationResult', seriesSelectedRiderInfo, seriesSelectedRider);
+                            } else {
+                                document.getElementById('seriesLicenseValidationResult').style.display = 'none';
+                            }
+
                             if (data.classes && data.classes.length > 0) {
                                 if (data.classes[0].error === 'incomplete_profile') {
                                     seriesClassList.innerHTML = `
@@ -5226,6 +5324,8 @@ if (!empty($event['series_id'])) {
                     seriesOpenRiderSearchBtn.style.display = 'block';
                     seriesClassSelection.style.display = 'none';
                     seriesAddToCartBtn.disabled = true;
+                    const seriesLicDiv = document.getElementById('seriesLicenseValidationResult');
+                    if (seriesLicDiv) seriesLicDiv.style.display = 'none';
                 });
 
                 // License commitment checkbox
