@@ -160,6 +160,9 @@ $migrationChecks = [
     '046_scf_match_not_found_status.sql' => [
         'tables' => ['scf_match_candidates']
     ],
+    '047_standardize_nationality_codes.sql' => [
+        'data' => ["(SELECT COUNT(*) FROM riders WHERE nationality IN ('DEN','GER','SUI','NED')) = 0"]
+    ],
 ];
 
 // ============================================================================

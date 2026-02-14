@@ -1246,10 +1246,20 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
                     <?= $fullName ?>
                     <?php
                     $nationality = $rider['nationality'] ?? 'SWE';
-                    $countryCode = strtolower($nationality);
+                    // ISO 3166-1 alpha-3 to alpha-2 for flagcdn.com
+                    $alpha3to2 = [
+                        'SWE' => 'se', 'NOR' => 'no', 'DNK' => 'dk', 'FIN' => 'fi',
+                        'DEU' => 'de', 'FRA' => 'fr', 'CHE' => 'ch', 'AUT' => 'at',
+                        'ITA' => 'it', 'ESP' => 'es', 'GBR' => 'gb', 'USA' => 'us',
+                        'CAN' => 'ca', 'AUS' => 'au', 'NZL' => 'nz', 'BEL' => 'be',
+                        'NLD' => 'nl', 'POL' => 'pl', 'CZE' => 'cz',
+                        // Legacy codes
+                        'DEN' => 'dk', 'GER' => 'de', 'SUI' => 'ch', 'NED' => 'nl',
+                    ];
+                    $flagCode = $alpha3to2[strtoupper($nationality)] ?? strtolower(substr($nationality, 0, 2));
                     ?>
-                    <img src="https://flagcdn.com/24x18/<?= $countryCode === 'swe' ? 'se' : ($countryCode === 'nor' ? 'no' : ($countryCode === 'den' ? 'dk' : ($countryCode === 'fin' ? 'fi' : $countryCode))) ?>.png"
-                         alt="<?= $nationality ?>"
+                    <img src="https://flagcdn.com/24x18/<?= $flagCode ?>.png"
+                         alt="<?= htmlspecialchars($nationality) ?>"
                          class="profile-flag"
                          onerror="this.style.display='none'">
                 </h1>

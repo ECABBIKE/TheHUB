@@ -743,11 +743,12 @@ include __DIR__ . '/components/unified-layout.php';
   <?php
   $natOptions = [
       'SWE' => 'Sverige', 'NOR' => 'Norge', 'DNK' => 'Danmark', 'FIN' => 'Finland',
-      'DEU' => 'Tyskland', 'GBR' => 'Storbritannien', 'USA' => 'USA',
+      'DEU' => 'Tyskland', 'FRA' => 'Frankrike', 'CHE' => 'Schweiz', 'AUT' => 'Österrike',
+      'ITA' => 'Italien', 'ESP' => 'Spanien', 'GBR' => 'Storbritannien', 'USA' => 'USA',
   ];
-  // Map legacy codes to current (DEN->DNK, GER->DEU)
+  // Map legacy codes to correct ISO 3166-1 alpha-3
   $riderNat = $rider['nationality'] ?? 'SWE';
-  $legacyMap = ['DEN' => 'DNK', 'GER' => 'DEU'];
+  $legacyMap = ['DEN' => 'DNK', 'GER' => 'DEU', 'SUI' => 'CHE', 'NED' => 'NLD'];
   if (isset($legacyMap[$riderNat])) $riderNat = $legacyMap[$riderNat];
   ?>
   <select id="nationality" name="nationality" class="input">
