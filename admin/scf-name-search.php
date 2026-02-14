@@ -73,48 +73,48 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $apiKey) {
                 }
 
                 // Call SCF API
-                $apiResults = $scfService->lookupByName($firstname, $lastname, $gender, $birthdate, $year);
+                $scfData = $scfService->lookupByName($firstname, $lastname, $gender, $birthdate, $year);
 
-                if (!empty($apiResults)) {
-                    // Store as match candidates
-                    foreach ($apiResults as $scfData) {
-                        $matchScore = calculateMatchScore($rider, $scfData);
+                if (!empty($scfData)) {
+                    // lookupByName returns a single result (assoc array), not a list
+                    $matchScore = calculateMatchScore($rider, $scfData);
 
-                        $db->query("
-                            INSERT INTO scf_match_candidates
-                            (rider_id, hub_firstname, hub_lastname, hub_gender, hub_birth_year,
-                             scf_uci_id, scf_firstname, scf_lastname, scf_club, scf_nationality,
-                             match_score, match_reason, status)
-                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')
-                            ON DUPLICATE KEY UPDATE
-                                scf_firstname = VALUES(scf_firstname),
-                                scf_lastname = VALUES(scf_lastname),
-                                scf_club = VALUES(scf_club),
-                                match_score = VALUES(match_score),
-                                match_reason = VALUES(match_reason)
-                        ", [
-                            $riderId,
-                            $rider['firstname'],
-                            $rider['lastname'],
-                            $rider['gender'],
-                            $rider['birth_year'],
-                            $scfData['uci_id'] ?? null,
-                            $scfData['firstname'] ?? null,
-                            $scfData['lastname'] ?? null,
-                            $scfData['club_name'] ?? null,
-                            $scfData['nationality'] ?? null,
-                            $matchScore['score'],
-                            $matchScore['reason']
-                        ]);
+                    $db->query("
+                        INSERT INTO scf_match_candidates
+                        (rider_id, hub_firstname, hub_lastname, hub_gender, hub_birth_year,
+                         scf_uci_id, scf_firstname, scf_lastname, scf_club, scf_nationality,
+                         match_score, match_reason, status)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')
+                        ON DUPLICATE KEY UPDATE
+                            scf_uci_id = VALUES(scf_uci_id),
+                            scf_firstname = VALUES(scf_firstname),
+                            scf_lastname = VALUES(scf_lastname),
+                            scf_club = VALUES(scf_club),
+                            scf_nationality = VALUES(scf_nationality),
+                            match_score = VALUES(match_score),
+                            match_reason = VALUES(match_reason)
+                    ", [
+                        $riderId,
+                        $rider['firstname'],
+                        $rider['lastname'],
+                        $rider['gender'],
+                        $rider['birth_year'],
+                        $scfData['uci_id'] ?? null,
+                        $scfData['firstname'] ?? null,
+                        $scfData['lastname'] ?? null,
+                        $scfData['club_name'] ?? null,
+                        $scfData['nationality'] ?? null,
+                        $matchScore['score'],
+                        $matchScore['reason']
+                    ]);
 
-                        $searchResults[] = [
-                            'rider' => $rider,
-                            'scf' => $scfData,
-                            'score' => $matchScore
-                        ];
-                    }
+                    $searchResults[] = [
+                        'rider' => $rider,
+                        'scf' => $scfData,
+                        'score' => $matchScore
+                    ];
 
-                    $message = "Hittade " . count($apiResults) . " potentiella matchningar for \"{$firstname} {$lastname}\".";
+                    $message = "Hittade matchning for \"{$firstname} {$lastname}\".";
                     $messageType = 'success';
                 } else {
                     $message = "Ingen matchning hittades for \"{$firstname} {$lastname}\" i SCF.";
@@ -139,6 +139,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $apiKey) {
                 AND NOT EXISTS (
                     SELECT 1 FROM scf_match_candidates mc
                     WHERE mc.rider_id = r.id AND mc.status != 'rejected'
+                    AND mc.scf_uci_id IS NOT NULL
                 )
                 ORDER BY r.id
                 LIMIT ? OFFSET ?
@@ -154,7 +155,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $apiKey) {
                 // Rate limiting - wait between API calls
                 $scfService->rateLimit();
 
-                $apiResults = $scfService->lookupByName(
+                $scfData = $scfService->lookupByName(
                     $rider['firstname'],
                     $rider['lastname'],
                     $gender,
@@ -162,38 +163,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $apiKey) {
                     $year
                 );
 
-                if (!empty($apiResults)) {
+                if (!empty($scfData)) {
                     $found++;
-                    foreach ($apiResults as $scfData) {
-                        $matchScore = calculateMatchScore($rider, $scfData);
+                    // lookupByName returns a single result (assoc array), not a list
+                    $matchScore = calculateMatchScore($rider, $scfData);
 
-                        $db->query("
-                            INSERT INTO scf_match_candidates
-                            (rider_id, hub_firstname, hub_lastname, hub_gender, hub_birth_year,
-                             scf_uci_id, scf_firstname, scf_lastname, scf_club, scf_nationality,
-                             match_score, match_reason, status)
-                            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')
-                            ON DUPLICATE KEY UPDATE
-                                scf_firstname = VALUES(scf_firstname),
-                                scf_lastname = VALUES(scf_lastname),
-                                scf_club = VALUES(scf_club),
-                                match_score = VALUES(match_score),
-                                match_reason = VALUES(match_reason)
-                        ", [
-                            $rider['id'],
-                            $rider['firstname'],
-                            $rider['lastname'],
-                            $rider['gender'],
-                            $rider['birth_year'],
-                            $scfData['uci_id'] ?? null,
-                            $scfData['firstname'] ?? null,
-                            $scfData['lastname'] ?? null,
-                            $scfData['club_name'] ?? null,
-                            $scfData['nationality'] ?? null,
-                            $matchScore['score'],
-                            $matchScore['reason']
-                        ]);
-                    }
+                    $db->query("
+                        INSERT INTO scf_match_candidates
+                        (rider_id, hub_firstname, hub_lastname, hub_gender, hub_birth_year,
+                         scf_uci_id, scf_firstname, scf_lastname, scf_club, scf_nationality,
+                         match_score, match_reason, status)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending')
+                        ON DUPLICATE KEY UPDATE
+                            scf_uci_id = VALUES(scf_uci_id),
+                            scf_firstname = VALUES(scf_firstname),
+                            scf_lastname = VALUES(scf_lastname),
+                            scf_club = VALUES(scf_club),
+                            scf_nationality = VALUES(scf_nationality),
+                            match_score = VALUES(match_score),
+                            match_reason = VALUES(match_reason)
+                    ", [
+                        $rider['id'],
+                        $rider['firstname'],
+                        $rider['lastname'],
+                        $rider['gender'],
+                        $rider['birth_year'],
+                        $scfData['uci_id'] ?? null,
+                        $scfData['firstname'] ?? null,
+                        $scfData['lastname'] ?? null,
+                        $scfData['club_name'] ?? null,
+                        $scfData['nationality'] ?? null,
+                        $matchScore['score'],
+                        $matchScore['reason']
+                    ]);
                 } else {
                     $notFound++;
                 }
@@ -691,11 +693,11 @@ async function runNextBatch() {
 
             <div class="match-comparison">
                 <div class="match-side hub">
-                    <div class="match-name"><?= htmlspecialchars($match['hub_firstname'] . ' ' . $match['hub_lastname']) ?></div>
+                    <div class="match-name"><?= htmlspecialchars(($match['hub_firstname'] ?? '') . ' ' . ($match['hub_lastname'] ?? '')) ?></div>
                     <div class="match-details">
-                        <?php if ($match['rider_birth_year']): ?>Fodd <?= $match['rider_birth_year'] ?><?php endif; ?>
-                        <?php if ($match['rider_gender']): ?> &middot; <?= $match['rider_gender'] === 'M' ? 'Man' : 'Kvinna' ?><?php endif; ?>
-                        <?php if ($match['rider_club']): ?><br><?= htmlspecialchars($match['rider_club']) ?><?php endif; ?>
+                        <?php if (!empty($match['rider_birth_year'])): ?>Fodd <?= $match['rider_birth_year'] ?><?php endif; ?>
+                        <?php if (!empty($match['rider_gender'])): ?> &middot; <?= $match['rider_gender'] === 'M' ? 'Man' : 'Kvinna' ?><?php endif; ?>
+                        <?php if (!empty($match['rider_club'])): ?><br><?= htmlspecialchars($match['rider_club']) ?><?php endif; ?>
                     </div>
                 </div>
 
@@ -704,17 +706,17 @@ async function runNextBatch() {
                 </div>
 
                 <div class="match-side scf">
-                    <div class="match-name"><?= htmlspecialchars($match['scf_firstname'] . ' ' . $match['scf_lastname']) ?></div>
+                    <div class="match-name"><?= htmlspecialchars(($match['scf_firstname'] ?? '') . ' ' . ($match['scf_lastname'] ?? '')) ?></div>
                     <div class="match-details">
-                        UCI: <code><?= htmlspecialchars($match['scf_uci_id']) ?></code>
-                        <?php if ($match['scf_nationality']): ?> &middot; <?= htmlspecialchars($match['scf_nationality']) ?><?php endif; ?>
-                        <?php if ($match['scf_club']): ?><br><?= htmlspecialchars($match['scf_club']) ?><?php endif; ?>
+                        UCI: <code><?= htmlspecialchars($match['scf_uci_id'] ?? '') ?></code>
+                        <?php if (!empty($match['scf_nationality'])): ?> &middot; <?= htmlspecialchars($match['scf_nationality']) ?><?php endif; ?>
+                        <?php if (!empty($match['scf_club'])): ?><br><?= htmlspecialchars($match['scf_club']) ?><?php endif; ?>
                     </div>
                 </div>
             </div>
 
             <div class="text-secondary text-sm" style="margin-top: var(--space-sm);">
-                <?= htmlspecialchars($match['match_reason']) ?>
+                <?= htmlspecialchars($match['match_reason'] ?? '') ?>
             </div>
 
             <div class="match-actions">

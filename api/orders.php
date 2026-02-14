@@ -57,9 +57,10 @@ try {
                     throw new Exception('event_id och rider_id krävs');
                 }
 
-                $classes = getEligibleClassesForEvent($eventId, $riderId);
+                $licenseValidation = null;
+                $classes = getEligibleClassesForEvent($eventId, $riderId, $licenseValidation);
 
-                // Hämta rider license info för commitment check
+                // Hämta rider license info för commitment check (re-read after SCF update)
                 $pdo = hub_db();
                 $riderStmt = $pdo->prepare("
                     SELECT license_valid_until, license_year
@@ -148,6 +149,7 @@ try {
                     'is_early_bird' => $isEarlyBird,
                     'is_late_fee' => $isLateFee,
                     'requires_license_commitment' => $requiresLicenseCommitment,
+                    'license_validation' => $licenseValidation,
                     'classes' => $classes
                 ]);
                 break;

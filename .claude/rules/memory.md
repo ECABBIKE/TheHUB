@@ -213,6 +213,18 @@
 ## SENASTE FIXAR (2026-02-14)
 
 - **Stripe webhook 404**: Stripe skickade till `/api/stripe-webhook.php` men filen lag pa `/api/webhooks/stripe-webhook.php`. Fixat med proxy-fil och HTTPS-undantag i .htaccess
+- **Automatisk licensvalidering vid anmalan**: Nar en rider valjs for anmalan kontrolleras nu licensen automatiskt mot SCFs register. Resultatet visas direkt under riderns namn (gron/gul/rod). Integrerat i befintligt `event_classes`-API-anrop (noll extra latens). Hanterar bade UCI ID-lookup och namn-lookup for SWE-ID riders.
+- **SCF name search foreach-bugg**: `lookupByName()` returnerar EN assoc array men koden anvande `foreach` som itererade over nyckel-varden istallet for resultat. Allt sparades som NULL. Fixat i bade single search och batch search.
+- **htmlspecialchars null-varningar**: Fixat i scf-name-search.php med `?? ''` for potentiellt null-varden
+
+### Licensvalidering vid anmalan (getEligibleClassesForEvent)
+- Licenskontroll sker inne i `getEligibleClassesForEvent()` i order-manager.php
+- Returnerar `$licenseValidation` via referensparameter till orders.php
+- **Strategi 1:** UCI ID-lookup (for riders med riktigt UCI ID, >= 9 siffror)
+- **Strategi 2:** Namn-lookup (for SWE-ID riders eller om UCI-lookup misslyckades)
+- Om SWE-ID rider hittas i SCF: `license_number` uppdateras automatiskt till riktigt UCI ID
+- Skippar SCF-kontroll om rider redan ar verifierad for event-aret (`scf_license_year`)
+- Frontend visar resultat i `licenseValidationResult`-div under riderns namn
 
 ## TIDIGARE FIXAR (2026-02-12)
 

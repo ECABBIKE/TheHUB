@@ -24,6 +24,29 @@
 
 # CHANGELOG
 
+### 2026-02-14 (Automatisk licensvalidering vid anmalan)
+- **Branch:** claude/fix-mobile-payment-layout-Kh2Gg
+
+- **Ny funktion: Automatisk SCF-licensvalidering vid anmalan**
+  - Licens kontrolleras automatiskt mot SCFs register nar en rider valjs for anmalan
+  - Visar gron (giltig), gul (utgangen) eller rod (ej hittad) indikator
+  - Hanterar bade UCI ID-lookup och namn-lookup for SWE-ID riders
+  - SWE-ID riders som hittas i SCF far automatiskt riktigt UCI ID
+  - Integrerat i befintligt API-anrop (noll extra latens)
+
+- **Buggfix: SCF name search sparade NULL UCI ID**
+  - `lookupByName()` returnerar en assoc array men koden anvande `foreach` som brot ner den
+  - Fixat i bade single search och batch search
+  - Befintliga korrupta matchningar kan nu somas om
+
+- **Andrade filer:**
+  - `includes/order-manager.php` - Forbattrad licensvalidering med namn-lookup och referensparameter
+  - `api/orders.php` - Returnerar license_validation i event_classes-svaret
+  - `pages/event.php` - Visar licensresultat i rider-display (bade event och serie)
+  - `admin/scf-name-search.php` - Fixat foreach-bugg och null-varningar
+
+---
+
 ### 2026-02-14 (Stripe Webhook Fix)
 - **Branch:** claude/fix-mobile-payment-layout-Kh2Gg
 
