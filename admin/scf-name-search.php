@@ -77,21 +77,63 @@ if (isset($_POST['ajax']) && $_POST['ajax'] === '1') {
 
             $found = 0;
             $notFound = 0;
+            $apiErrors = 0;
             $results = [];
+            $debugFirstCall = null;
 
             foreach ($riders as $rider) {
-                $gender = $rider['gender'] ?: 'M';
-                $birthdate = $rider['birth_year'] ? $rider['birth_year'] . '-01-01' : null;
+                $gender = $rider['gender'] ?: null;
 
                 $scfService->rateLimit();
 
-                $scfData = $scfService->lookupByName(
-                    $rider['firstname'],
-                    $rider['lastname'],
-                    $gender,
-                    $birthdate,
-                    $year
-                );
+                // Search by name only (no birthdate).
+                // We only have birth_year, not exact date. Passing YYYY-01-01
+                // would filter out everyone not born on Jan 1st.
+                // Birth year is used for match scoring instead.
+                $scfData = null;
+
+                if ($gender) {
+                    // Try with known gender first
+                    $scfData = $scfService->lookupByName(
+                        $rider['firstname'],
+                        $rider['lastname'],
+                        $gender,
+                        null,
+                        $year
+                    );
+                }
+
+                if (!$scfData && !$gender) {
+                    // No gender set - try M first, then F
+                    $scfData = $scfService->lookupByName(
+                        $rider['firstname'],
+                        $rider['lastname'],
+                        'M',
+                        null,
+                        $year
+                    );
+                    if (!$scfData) {
+                        $scfService->rateLimit();
+                        $scfData = $scfService->lookupByName(
+                            $rider['firstname'],
+                            $rider['lastname'],
+                            'F',
+                            null,
+                            $year
+                        );
+                    }
+                }
+
+                // Debug: capture first API call result to help diagnose issues
+                if ($debugFirstCall === null) {
+                    $debugFirstCall = [
+                        'rider' => $rider['firstname'] . ' ' . $rider['lastname'],
+                        'gender' => $gender ?? 'null (tried M+F)',
+                        'result_type' => $scfData === null ? 'null (API error or not found)' : 'data',
+                        'has_data' => !empty($scfData),
+                        'uci_id' => $scfData['uci_id'] ?? null
+                    ];
+                }
 
                 if (!empty($scfData)) {
                     $found++;
@@ -181,7 +223,8 @@ if (isset($_POST['ajax']) && $_POST['ajax'] === '1') {
                 'remaining' => $remaining,
                 'pending_matches' => $pendingCount,
                 'has_more' => $remaining > 0,
-                'results' => $results
+                'results' => $results,
+                'debug' => $debugFirstCall
             ]);
             exit;
 
@@ -841,6 +884,11 @@ async function runNextBatch() {
 
         updateStatsFromData(data);
         updateProgress(data.remaining);
+
+        // Log debug info on first batch
+        if (data.debug && totalProcessed === data.processed) {
+            addLogEntry('Debug: ' + data.debug.rider + ' (kon: ' + data.debug.gender + ') -> ' + data.debug.result_type + (data.debug.uci_id ? ' UCI: ' + data.debug.uci_id : ''), false);
+        }
 
         // Log results
         data.results.forEach(r => {
