@@ -80,6 +80,110 @@ if (isset($_POST['ajax']) && $_POST['ajax'] === '1') {
             $apiErrors = 0;
             $results = [];
             $debugFirstCall = null;
+            $lastApiError = null;
+
+            // Quick API connectivity test before processing batch
+            $apiTestResult = null;
+            if (!empty($riders)) {
+                $testRider = $riders[0];
+                $testGender = $testRider['gender'] ?: 'M';
+                $scfService->rateLimit();
+                $testResult = $scfService->lookupByName(
+                    $testRider['firstname'],
+                    $testRider['lastname'],
+                    $testGender,
+                    null,
+                    $year
+                );
+                $apiTestResult = [
+                    'rider' => $testRider['firstname'] . ' ' . $testRider['lastname'],
+                    'gender' => $testGender,
+                    'http_code' => $scfService->getLastHttpCode(),
+                    'error' => $scfService->getLastError(),
+                    'found' => !empty($testResult)
+                ];
+
+                // If API is completely broken (non-200), abort early
+                $httpCode = $scfService->getLastHttpCode();
+                if ($httpCode !== null && $httpCode !== 200 && $httpCode !== 0) {
+                    echo json_encode([
+                        'success' => false,
+                        'error' => 'SCF API svarar med HTTP ' . $httpCode . '. ' . ($scfService->getLastError() ?? 'Kontrollera API-nyckeln.'),
+                        'debug' => $apiTestResult
+                    ]);
+                    exit;
+                }
+                if ($scfService->getLastError() && strpos($scfService->getLastError(), 'CURL') === 0) {
+                    echo json_encode([
+                        'success' => false,
+                        'error' => 'Kan inte na SCF API: ' . $scfService->getLastError(),
+                        'debug' => $apiTestResult
+                    ]);
+                    exit;
+                }
+
+                // First rider was already searched in the test - process the result
+                if (!empty($testResult)) {
+                    $found++;
+                    $matchScore = calculateMatchScore($testRider, $testResult);
+                    $db->query("
+                        INSERT INTO scf_match_candidates
+                        (rider_id, hub_firstname, hub_lastname, hub_gender, hub_birth_year,
+                         scf_uci_id, scf_firstname, scf_lastname, scf_club, scf_nationality,
+                         match_score, match_reason, status, created_at)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'pending', NOW())
+                        ON DUPLICATE KEY UPDATE
+                            scf_uci_id = VALUES(scf_uci_id),
+                            scf_firstname = VALUES(scf_firstname),
+                            scf_lastname = VALUES(scf_lastname),
+                            scf_club = VALUES(scf_club),
+                            scf_nationality = VALUES(scf_nationality),
+                            match_score = VALUES(match_score),
+                            match_reason = VALUES(match_reason),
+                            status = 'pending',
+                            created_at = NOW()
+                    ", [
+                        $testRider['id'],
+                        $testRider['firstname'],
+                        $testRider['lastname'],
+                        $testRider['gender'],
+                        $testRider['birth_year'],
+                        $testResult['uci_id'] ?? null,
+                        $testResult['firstname'] ?? null,
+                        $testResult['lastname'] ?? null,
+                        $testResult['club_name'] ?? null,
+                        $testResult['nationality'] ?? null,
+                        $matchScore['score'],
+                        $matchScore['reason']
+                    ]);
+                    $results[] = [
+                        'rider' => $testRider['firstname'] . ' ' . $testRider['lastname'],
+                        'match' => ($testResult['firstname'] ?? '') . ' ' . ($testResult['lastname'] ?? ''),
+                        'score' => $matchScore['score'],
+                        'uci_id' => $testResult['uci_id'] ?? null
+                    ];
+                } else {
+                    $notFound++;
+                    $db->query("
+                        INSERT INTO scf_match_candidates
+                        (rider_id, hub_firstname, hub_lastname, hub_gender, hub_birth_year,
+                         match_score, match_reason, status, created_at)
+                        VALUES (?, ?, ?, ?, ?, 0, 'Ingen matchning i SCF', 'not_found', NOW())
+                        ON DUPLICATE KEY UPDATE
+                            status = 'not_found',
+                            match_reason = 'Ingen matchning i SCF',
+                            created_at = NOW()
+                    ", [
+                        $testRider['id'],
+                        $testRider['firstname'],
+                        $testRider['lastname'],
+                        $testRider['gender'],
+                        $testRider['birth_year']
+                    ]);
+                }
+                // Skip first rider in main loop (already processed)
+                array_shift($riders);
+            }
 
             foreach ($riders as $rider) {
                 $gender = $rider['gender'] ?: null;
@@ -87,13 +191,9 @@ if (isset($_POST['ajax']) && $_POST['ajax'] === '1') {
                 $scfService->rateLimit();
 
                 // Search by name only (no birthdate).
-                // We only have birth_year, not exact date. Passing YYYY-01-01
-                // would filter out everyone not born on Jan 1st.
-                // Birth year is used for match scoring instead.
                 $scfData = null;
 
                 if ($gender) {
-                    // Try with known gender first
                     $scfData = $scfService->lookupByName(
                         $rider['firstname'],
                         $rider['lastname'],
@@ -124,15 +224,10 @@ if (isset($_POST['ajax']) && $_POST['ajax'] === '1') {
                     }
                 }
 
-                // Debug: capture first API call result to help diagnose issues
-                if ($debugFirstCall === null) {
-                    $debugFirstCall = [
-                        'rider' => $rider['firstname'] . ' ' . $rider['lastname'],
-                        'gender' => $gender ?? 'null (tried M+F)',
-                        'result_type' => $scfData === null ? 'null (API error or not found)' : 'data',
-                        'has_data' => !empty($scfData),
-                        'uci_id' => $scfData['uci_id'] ?? null
-                    ];
+                // Track API errors vs genuine not-found
+                if (!$scfData && $scfService->getLastError()) {
+                    $apiErrors++;
+                    $lastApiError = $scfService->getLastError();
                 }
 
                 if (!empty($scfData)) {
@@ -178,24 +273,29 @@ if (isset($_POST['ajax']) && $_POST['ajax'] === '1') {
                         'uci_id' => $scfData['uci_id'] ?? null
                     ];
                 } else {
-                    $notFound++;
-                    // Track "not found" to avoid re-searching this rider
-                    $db->query("
-                        INSERT INTO scf_match_candidates
-                        (rider_id, hub_firstname, hub_lastname, hub_gender, hub_birth_year,
-                         match_score, match_reason, status, created_at)
-                        VALUES (?, ?, ?, ?, ?, 0, 'Ingen matchning i SCF', 'not_found', NOW())
-                        ON DUPLICATE KEY UPDATE
-                            status = 'not_found',
-                            match_reason = 'Ingen matchning i SCF',
-                            created_at = NOW()
-                    ", [
-                        $rider['id'],
-                        $rider['firstname'],
-                        $rider['lastname'],
-                        $rider['gender'],
-                        $rider['birth_year']
-                    ]);
+                    // Only mark as "not_found" if API responded OK (no error).
+                    // If API failed, don't mark - rider should be re-searched later.
+                    $apiErr = $scfService->getLastError();
+                    if (!$apiErr) {
+                        $notFound++;
+                        $db->query("
+                            INSERT INTO scf_match_candidates
+                            (rider_id, hub_firstname, hub_lastname, hub_gender, hub_birth_year,
+                             match_score, match_reason, status, created_at)
+                            VALUES (?, ?, ?, ?, ?, 0, 'Ingen matchning i SCF', 'not_found', NOW())
+                            ON DUPLICATE KEY UPDATE
+                                status = 'not_found',
+                                match_reason = 'Ingen matchning i SCF',
+                                created_at = NOW()
+                        ", [
+                            $rider['id'],
+                            $rider['firstname'],
+                            $rider['lastname'],
+                            $rider['gender'],
+                            $rider['birth_year']
+                        ]);
+                    }
+                    // API errors are already tracked above
                 }
             }
 
@@ -215,16 +315,21 @@ if (isset($_POST['ajax']) && $_POST['ajax'] === '1') {
             // Get updated pending count
             $pendingCount = (int)$db->getValue("SELECT COUNT(*) FROM scf_match_candidates WHERE status = 'pending'");
 
+            // processed = riders in loop + 1 for the test rider
+            $totalProcessed = count($riders) + ($apiTestResult ? 1 : 0);
+
             echo json_encode([
                 'success' => true,
-                'processed' => count($riders),
+                'processed' => $totalProcessed,
                 'found' => $found,
                 'not_found' => $notFound,
+                'api_errors' => $apiErrors,
                 'remaining' => $remaining,
                 'pending_matches' => $pendingCount,
                 'has_more' => $remaining > 0,
                 'results' => $results,
-                'debug' => $debugFirstCall
+                'debug' => $apiTestResult,
+                'last_api_error' => $lastApiError
             ]);
             exit;
 
@@ -825,12 +930,27 @@ async function runSingleBatch() {
     try {
         const data = await ajaxPost('search_batch', { batch_size: batchSize });
         if (data.error) {
-            alert(data.error);
+            let msg = data.error;
+            if (data.debug) msg += '\n\nHTTP: ' + (data.debug.http_code || '?') + (data.debug.error ? '\nFel: ' + data.debug.error : '');
+            alert(msg);
             return;
         }
 
         updateStatsFromData(data);
         updateProgress(data.remaining);
+
+        // Log API test info
+        if (data.debug) {
+            const d = data.debug;
+            let debugMsg = 'API-test: ' + d.rider + ' -> HTTP ' + (d.http_code || '?');
+            if (d.error) debugMsg += ' FEL: ' + d.error;
+            else if (d.found) debugMsg += ' Hittad!';
+            else debugMsg += ' Ingen traff';
+            addLogEntry(debugMsg, d.found);
+        }
+        if (data.api_errors > 0 && data.last_api_error) {
+            addLogEntry('API-FEL (' + data.api_errors + ' st): ' + data.last_api_error, false);
+        }
 
         // Log results
         data.results.forEach(r => {
@@ -843,7 +963,9 @@ async function runSingleBatch() {
         // Refresh pending matches
         refreshPending();
 
-        alert('Sokte ' + data.processed + ' cyklister. Hittade ' + data.found + ' matchningar, ' + data.not_found + ' utan matchning.');
+        let summary = 'Sokte ' + data.processed + ' cyklister. Hittade ' + data.found + ' matchningar, ' + data.not_found + ' utan matchning.';
+        if (data.api_errors > 0) summary += '\n\nVARNING: ' + data.api_errors + ' API-fel!\n' + (data.last_api_error || '');
+        alert(summary);
     } catch (e) {
         alert('Fel: ' + e.message);
     } finally {
@@ -893,9 +1015,19 @@ async function runNextBatch() {
         updateStatsFromData(data);
         updateProgress(data.remaining);
 
-        // Log debug info on first batch
+        // Log API test result on first batch
         if (data.debug && totalProcessed === data.processed) {
-            addLogEntry('Debug: ' + data.debug.rider + ' (kon: ' + data.debug.gender + ') -> ' + data.debug.result_type + (data.debug.uci_id ? ' UCI: ' + data.debug.uci_id : ''), false);
+            const d = data.debug;
+            let debugMsg = 'API-test: ' + d.rider + ' (kon: ' + d.gender + ') -> HTTP ' + (d.http_code || '?');
+            if (d.error) debugMsg += ' FEL: ' + d.error;
+            else if (d.found) debugMsg += ' -> Hittad!';
+            else debugMsg += ' -> Ingen traff (API svarade OK)';
+            addLogEntry(debugMsg, d.found);
+        }
+
+        // Log API errors prominently
+        if (data.api_errors > 0 && data.last_api_error) {
+            addLogEntry('API-FEL (' + data.api_errors + ' st): ' + data.last_api_error, false);
         }
 
         // Log results
@@ -903,7 +1035,14 @@ async function runNextBatch() {
             addLogEntry('Hittade: ' + r.rider + ' -> ' + r.match + ' (' + r.score + '%)', true);
         });
         if (data.not_found > 0) {
-            addLogEntry('Batch klar: ' + data.not_found + '/' + data.processed + ' utan matchning', false);
+            addLogEntry('Batch: ' + data.found + ' hittade, ' + data.not_found + ' ej i SCF' + (data.api_errors > 0 ? ', ' + data.api_errors + ' API-fel' : ''), false);
+        }
+
+        // Stop auto-search if all results are API errors (API is broken)
+        if (data.api_errors > 0 && data.api_errors === data.processed && data.found === 0) {
+            addLogEntry('STOPP: Alla anrop i batchen misslyckades. API:t verkar nere.', false);
+            stopAutoSearch();
+            return;
         }
 
         if (data.has_more && isRunning && data.processed > 0) {
