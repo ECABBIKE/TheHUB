@@ -44,6 +44,13 @@ if (isset($_POST['ajax']) && $_POST['ajax'] === '1') {
     }
 
     $action = $_POST['action'] ?? '';
+    $adminId = $_SESSION['admin_id'] ?? null;
+
+    // Release session lock BEFORE long-running operations.
+    // PHP locks the session file during the entire request - this blocks
+    // ALL other requests (page loads, other AJAX calls) until released.
+    // We've already read CSRF token and admin_id, so safe to close.
+    session_write_close();
 
     switch ($action) {
         case 'search_batch':
@@ -197,7 +204,7 @@ if (isset($_POST['ajax']) && $_POST['ajax'] === '1') {
                 UPDATE scf_match_candidates
                 SET status = 'confirmed', reviewed_by = ?, reviewed_at = NOW()
                 WHERE id = ?
-            ", [$_SESSION['admin_id'] ?? null, $matchId]);
+            ", [$adminId, $matchId]);
 
             // Verify the rider's license via UCI ID lookup
             $uciIds = [$match['scf_uci_id']];
@@ -221,7 +228,7 @@ if (isset($_POST['ajax']) && $_POST['ajax'] === '1') {
                 UPDATE scf_match_candidates
                 SET status = 'rejected', reviewed_by = ?, reviewed_at = NOW()
                 WHERE id = ?
-            ", [$_SESSION['admin_id'] ?? null, $matchId]);
+            ", [$adminId, $matchId]);
 
             echo json_encode(['success' => true, 'message' => 'Matchning avvisad.']);
             exit;
