@@ -59,6 +59,16 @@ class SCFLicenseService {
     private $currentSyncId = null;
 
     /**
+     * @var string|null Last error message from API request
+     */
+    private $lastError = null;
+
+    /**
+     * @var int|null Last HTTP response code
+     */
+    private $lastHttpCode = null;
+
+    /**
      * Constructor
      *
      * @param string $apiKey SCF API key
@@ -105,6 +115,8 @@ class SCFLicenseService {
         }
 
         $this->log("API Request: $url");
+        $this->lastError = null;
+        $this->lastHttpCode = null;
 
         $ch = curl_init();
         curl_setopt_array($ch, [
@@ -125,23 +137,42 @@ class SCFLicenseService {
         $error = curl_error($ch);
         curl_close($ch);
 
+        $this->lastHttpCode = $httpCode;
+
         if ($error) {
+            $this->lastError = "CURL: $error";
             $this->log("CURL Error: $error");
             return null;
         }
 
         if ($httpCode !== 200) {
+            $this->lastError = "HTTP $httpCode: " . substr($response ?? '', 0, 200);
             $this->log("HTTP Error: $httpCode - Response: $response");
             return null;
         }
 
         $data = json_decode($response, true);
         if (json_last_error() !== JSON_ERROR_NONE) {
+            $this->lastError = "JSON: " . json_last_error_msg();
             $this->log("JSON Parse Error: " . json_last_error_msg());
             return null;
         }
 
         return $data;
+    }
+
+    /**
+     * Get the last error message from API request
+     */
+    public function getLastError(): ?string {
+        return $this->lastError;
+    }
+
+    /**
+     * Get the last HTTP response code
+     */
+    public function getLastHttpCode(): ?int {
+        return $this->lastHttpCode;
     }
 
     /**
