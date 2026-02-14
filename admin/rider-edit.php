@@ -740,12 +740,21 @@ include __DIR__ . '/components/unified-layout.php';
   <i data-lucide="flag"></i>
   Nationalitet
   </label>
+  <?php
+  $natOptions = [
+      'SWE' => 'Sverige', 'NOR' => 'Norge', 'DNK' => 'Danmark', 'FIN' => 'Finland',
+      'DEU' => 'Tyskland', 'GBR' => 'Storbritannien', 'USA' => 'USA',
+  ];
+  // Map legacy codes to current (DEN->DNK, GER->DEU)
+  $riderNat = $rider['nationality'] ?? 'SWE';
+  $legacyMap = ['DEN' => 'DNK', 'GER' => 'DEU'];
+  if (isset($legacyMap[$riderNat])) $riderNat = $legacyMap[$riderNat];
+  ?>
   <select id="nationality" name="nationality" class="input">
-  <option value="SWE" <?= ($rider['nationality'] ?? 'SWE') === 'SWE' ? 'selected' : '' ?>>🇸🇪 Sverige</option>
-  <option value="NOR" <?= ($rider['nationality'] ?? '') === 'NOR' ? 'selected' : '' ?>>🇳🇴 Norge</option>
-  <option value="DEN" <?= ($rider['nationality'] ?? '') === 'DEN' ? 'selected' : '' ?>>🇩🇰 Danmark</option>
-  <option value="FIN" <?= ($rider['nationality'] ?? '') === 'FIN' ? 'selected' : '' ?>>🇫🇮 Finland</option>
-  <option value="GBR" <?= ($rider['nationality'] ?? '') === 'GBR' ? 'selected' : '' ?>>🇬🇧 Storbritannien</option>
+  <?php foreach ($natOptions as $code => $name): ?>
+  <option value="<?= $code ?>" <?= $riderNat === $code ? 'selected' : '' ?>><?= $name ?></option>
+  <?php endforeach; ?>
+  <option value="" <?= ($riderNat === '' || !isset($natOptions[$riderNat])) && $riderNat !== 'SWE' ? 'selected' : '' ?>>Annan</option>
   </select>
   </div>
 
