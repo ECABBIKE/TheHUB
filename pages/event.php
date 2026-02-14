@@ -2551,11 +2551,11 @@ try {
             <div class="reg-participants-scroll">
                 <table class="table table--striped table--compact reg-participants-table">
                     <colgroup>
-                        <col style="width: 60px;">
-                        <col>
-                        <col style="width: 55px;">
-                        <col>
-                        <col style="width: 80px;">
+                        <col style="width: 10%;">
+                        <col style="width: 35%;">
+                        <col style="width: 10%;">
+                        <col style="width: 30%;">
+                        <col style="width: 15%;">
                     </colgroup>
                     <thead>
                         <tr>
