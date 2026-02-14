@@ -366,9 +366,9 @@ include __DIR__ . '/components/unified-layout.php';
                 <h4>SCF License Portal</h4>
                 <div class="name"><?= htmlspecialchars($match['scf_firstname'] . ' ' . $match['scf_lastname']) ?></div>
                 <div class="details">
-                    <p><strong>UCI ID:</strong> <code><?= htmlspecialchars($match['scf_uci_id']) ?></code></p>
-                    <?php if ($match['scf_nationality']): ?>
-                    <p><strong>Nationalitet:</strong> <?= htmlspecialchars($match['scf_nationality']) ?></p>
+                    <p><strong>UCI ID:</strong> <code><?= htmlspecialchars($match['scf_uci_id'] ?? '') ?></code></p>
+                    <?php if (!empty($match['scf_nationality']) && !is_numeric($match['scf_nationality'])): ?>
+                    <p><strong>Nationalitet:</strong> <?= htmlspecialchars($match['scf_nationality'] ?? '') ?></p>
                     <?php endif; ?>
                     <?php if ($match['scf_club']): ?>
                     <p><strong>Klubb:</strong> <?= htmlspecialchars($match['scf_club']) ?></p>
@@ -425,3 +425,5 @@ if (typeof lucide !== 'undefined') {
 </script>
 
 <?php endif; ?>
+
+<?php include __DIR__ . '/components/unified-layout-footer.php'; ?>

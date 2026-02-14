@@ -229,6 +229,18 @@
 - **Automatisk licensvalidering vid anmalan**: Nar en rider valjs for anmalan kontrolleras nu licensen automatiskt mot SCFs register. Resultatet visas direkt under riderns namn (gron/gul/rod). Integrerat i befintligt `event_classes`-API-anrop (noll extra latens). Hanterar bade UCI ID-lookup och namn-lookup for SWE-ID riders.
 - **SCF name search foreach-bugg**: `lookupByName()` returnerar EN assoc array men koden anvande `foreach` som itererade over nyckel-varden istallet for resultat. Allt sparades som NULL. Fixat i bade single search och batch search.
 - **htmlspecialchars null-varningar**: Fixat i scf-name-search.php med `?? ''` for potentiellt null-varden
+- **SCF API diagnostik**: SCFLicenseService trackar nu `lastError` och `lastHttpCode` per anrop
+  - Batch-sokning gor en API-test forst och avbryter tidigt om API:t ar nere (HTTP != 200)
+  - Auto-sokning stoppar om alla anrop i en batch misslyckas
+  - Riders markeras INTE som `not_found` vid API-fel (forhindrar falska negativa)
+  - Loggen visar HTTP-statuskod och felmeddelande for enklare felsökning
+- **scf-match-review.php**: Fixat htmlspecialchars null-varning for `scf_uci_id`, doljer numeriska nationalitetskoder (t.ex. "161"), lade till saknad `unified-layout-footer.php`
+- **Admin orders betalmetod**: Ordersidan visar nu vilken betalmetod kunden valt (Swish/Kort/Ej paborjad)
+  - `payment_method` kolumnen i `orders`-tabellen lagrar detta (swish/card/manual/free)
+  - Default ar `card` vid orderskapande - uppdateras till `swish` om kunden klickar "Jag har Swishat"
+  - `gateway_transaction_id` visar om en Stripe-session ens skapades
+  - "Ej paborjad" visas for ordrar dar kunden aldrig valde betalmetod
+  - Expanderad ordervy visar betalmetod, gateway, session-ID och referens
 
 ### scf_match_candidates tabell
 - Status-enum: `pending`, `confirmed`, `rejected`, `auto_confirmed`, `not_found` (migration 046)

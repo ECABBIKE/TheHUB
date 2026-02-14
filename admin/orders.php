@@ -335,7 +335,7 @@ if ($cancelledCount > 0): ?>
                         <th>Event/Serie</th>
                         <th>Deltagare</th>
                         <th>Belopp</th>
-                        <th>Ref</th>
+                        <th>Betalning</th>
                         <th>Status</th>
                         <th>Skapad</th>
                         <th></th>
@@ -392,10 +392,24 @@ if ($cancelledCount > 0): ?>
                         <td data-label="Belopp" class="font-medium">
                             <?= number_format($order['total_amount'], 0) ?> kr
                         </td>
-                        <td data-label="Ref" class="orders-swish-col">
-                            <?php if ($order['payment_reference']): ?>
-                            <code><?= h($order['payment_reference']) ?></code>
-                            <?php endif; ?>
+                        <td data-label="Betalning">
+                            <?php
+                            $pm = $order['payment_method'] ?? 'card';
+                            $hasStripeSession = !empty($order['gateway_transaction_id']);
+                            if ($pm === 'swish') {
+                                echo '<span class="admin-badge orders-badge-swish"><i data-lucide="smartphone" style="width:12px;height:12px;margin-right:4px;vertical-align:-2px;"></i>Swish</span>';
+                            } elseif ($pm === 'card' && $hasStripeSession) {
+                                echo '<span class="admin-badge orders-badge-card"><i data-lucide="credit-card" style="width:12px;height:12px;margin-right:4px;vertical-align:-2px;"></i>Kort</span>';
+                            } elseif ($pm === 'card' && !$hasStripeSession && $order['payment_status'] === 'pending') {
+                                echo '<span class="admin-badge admin-badge-secondary" title="Kunden har inte valt betalmetod an"><i data-lucide="clock" style="width:12px;height:12px;margin-right:4px;vertical-align:-2px;"></i>Ej paborjad</span>';
+                            } elseif ($pm === 'free') {
+                                echo '<span class="admin-badge admin-badge-success">Gratis</span>';
+                            } elseif ($pm === 'manual') {
+                                echo '<span class="admin-badge admin-badge-info">Manuell</span>';
+                            } else {
+                                echo '<span class="admin-badge admin-badge-secondary">' . h($pm) . '</span>';
+                            }
+                            ?>
                         </td>
                         <td data-label="Status">
                             <span class="admin-badge <?= $statusClass ?>"><?= $statusText ?></span>
@@ -439,6 +453,21 @@ if ($cancelledCount > 0): ?>
                     <tr class="order-detail-row" id="detail-<?= $order['id'] ?>" style="display: none;">
                         <td colspan="9" style="padding: 0; background: var(--color-bg-tertiary, var(--color-bg-hover));">
                             <div style="padding: var(--space-md) var(--space-lg);">
+                                <div style="display: flex; flex-wrap: wrap; gap: var(--space-md); margin-bottom: var(--space-md); font-size: var(--text-sm);">
+                                    <div><span class="text-secondary">Betalmetod:</span> <strong><?= h($order['payment_method'] ?? 'card') ?></strong></div>
+                                    <?php if ($order['gateway_code']): ?>
+                                    <div><span class="text-secondary">Gateway:</span> <?= h($order['gateway_code']) ?></div>
+                                    <?php endif; ?>
+                                    <?php if ($order['gateway_transaction_id']): ?>
+                                    <div><span class="text-secondary">Session:</span> <code style="font-size: var(--text-xs);"><?= h(substr($order['gateway_transaction_id'], 0, 40)) ?><?= strlen($order['gateway_transaction_id'] ?? '') > 40 ? '...' : '' ?></code></div>
+                                    <?php endif; ?>
+                                    <?php if ($order['payment_reference']): ?>
+                                    <div><span class="text-secondary">Ref:</span> <code><?= h($order['payment_reference']) ?></code></div>
+                                    <?php endif; ?>
+                                    <?php if ($order['paid_at']): ?>
+                                    <div><span class="text-secondary">Betald:</span> <?= date('Y-m-d H:i', strtotime($order['paid_at'])) ?></div>
+                                    <?php endif; ?>
+                                </div>
                                 <?php if (!empty($items)): ?>
                                 <div class="text-sm font-medium mb-sm">Orderinnehall:</div>
                                 <table style="width: 100%; font-size: var(--text-sm);">
@@ -551,6 +580,8 @@ if ($cancelledCount > 0): ?>
 .orders-btn-cancel:hover { background: var(--color-error); color: white; border-color: var(--color-error); }
 .orders-btn-delete { background: transparent; border: 1px solid var(--color-border); color: var(--color-text-muted); }
 .orders-btn-delete:hover { background: var(--color-error); color: white; border-color: var(--color-error); }
+.orders-badge-swish { background: rgba(102, 187, 106, 0.2); color: #43a047; }
+.orders-badge-card { background: rgba(66, 133, 244, 0.2); color: #1a73e8; }
 .order-row:hover { background: var(--color-bg-hover); }
 .order-detail-row td { border-top: none !important; }
 .orders-btn-label { display: none; }
@@ -589,8 +620,7 @@ if ($cancelledCount > 0): ?>
         margin-right: var(--space-md);
     }
 
-    /* Hide ref column on mobile to save space */
-    .orders-swish-col { display: none; }
+    /* Payment badge stays visible on mobile */
 
     .order-detail-row td { display: block; padding: 0 !important; }
     .order-detail-row td::before { display: none !important; }
