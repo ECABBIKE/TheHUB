@@ -687,10 +687,10 @@ function getEligibleClassesForEvent(int $eventId, int $riderId, ?array &$license
 
                 // Strategy 2: Name lookup (for SWE-ID riders or if UCI lookup failed)
                 if (!$scfResult && !empty($rider['firstname']) && !empty($rider['lastname']) && !empty($rider['gender'])) {
-                    $birthdate = !empty($rider['birth_year']) ? $rider['birth_year'] . '-01-01' : null;
                     $gender = strtoupper(substr($rider['gender'], 0, 1));
+                    // First try without birthdate (more reliable - we only have birth_year, not exact date)
                     $scfResult = $scfService->lookupByName(
-                        $rider['firstname'], $rider['lastname'], $gender, $birthdate, $eventYear
+                        $rider['firstname'], $rider['lastname'], $gender, null, $eventYear
                     );
                     if ($scfResult) {
                         $licenseValidation['name_match'] = true;
