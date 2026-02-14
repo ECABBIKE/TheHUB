@@ -212,6 +212,10 @@
 
 ## SENASTE FIXAR (2026-02-14)
 
+- **SCF Namnsok birthdate-bugg**: Batch-sokningen skickade `YYYY-01-01` som birthdate till SCF API, vilket filterade bort alla som inte var fodda 1 januari (= 0% traffar). Fixat: skickar INTE birthdate alls vid namn-sokning (samma fix som redan fanns i order-manager.php). Birth year anvands bara for match scoring.
+  - Riders utan kon soker nu bade M och F istallet for att anta M
+  - "Aterstall ej hittade"-knappen visas nu dynamiskt via JS (inte bara vid sidladdning)
+  - Debug-info fran forsta API-anropet visas i loggen for enklare felsökning
 - **SCF Namnsok prestandafix**: Hela verktyget (`/admin/scf-name-search.php`) omskrivet fran synkrona form-submits till AJAX JSON API
   - Sidan laser inte langre upp under sokning - allt kor asynkront i bakgrunden
   - Riders som sokts utan traff sparas nu med status `not_found` i `scf_match_candidates` (migration 046)
