@@ -157,6 +157,9 @@ $migrationChecks = [
     '045_event_competition_classes_info.sql' => [
         'columns' => ['events.competition_classes_info', 'events.competition_classes_use_global', 'events.competition_classes_hidden']
     ],
+    '046_scf_match_not_found_status.sql' => [
+        'tables' => ['scf_match_candidates']
+    ],
 ];
 
 // ============================================================================

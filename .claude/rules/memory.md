@@ -212,10 +212,25 @@
 
 ## SENASTE FIXAR (2026-02-14)
 
+- **SCF Namnsok prestandafix**: Hela verktyget (`/admin/scf-name-search.php`) omskrivet fran synkrona form-submits till AJAX JSON API
+  - Sidan laser inte langre upp under sokning - allt kor asynkront i bakgrunden
+  - Riders som sokts utan traff sparas nu med status `not_found` i `scf_match_candidates` (migration 046)
+  - Forhindrar omsokningar av redan sokta riders (sparar enormt med tid vid 2600+ riders)
+  - Bekrafta/avvisa matchningar kor nu via AJAX utan sidomladdning
+  - Progress-bar med ETA visas under sokning
+  - UNIQUE KEY tillagd pa `rider_id` i `scf_match_candidates` sa ON DUPLICATE KEY UPDATE fungerar korrekt
+  - Ny stat-ruta "Ej i SCF" visar hur manga riders som sokts utan traff
+  - "Aterstall ej hittade"-knapp for att tillata omsokning
 - **Stripe webhook 404**: Stripe skickade till `/api/stripe-webhook.php` men filen lag pa `/api/webhooks/stripe-webhook.php`. Fixat med proxy-fil och HTTPS-undantag i .htaccess
 - **Automatisk licensvalidering vid anmalan**: Nar en rider valjs for anmalan kontrolleras nu licensen automatiskt mot SCFs register. Resultatet visas direkt under riderns namn (gron/gul/rod). Integrerat i befintligt `event_classes`-API-anrop (noll extra latens). Hanterar bade UCI ID-lookup och namn-lookup for SWE-ID riders.
 - **SCF name search foreach-bugg**: `lookupByName()` returnerar EN assoc array men koden anvande `foreach` som itererade over nyckel-varden istallet for resultat. Allt sparades som NULL. Fixat i bade single search och batch search.
 - **htmlspecialchars null-varningar**: Fixat i scf-name-search.php med `?? ''` for potentiellt null-varden
+
+### scf_match_candidates tabell
+- Status-enum: `pending`, `confirmed`, `rejected`, `auto_confirmed`, `not_found` (migration 046)
+- UNIQUE KEY pa `rider_id` - en entry per rider (migration 046)
+- `not_found` = rider soktes i SCF men ingen matchning hittades (skippa vid omsokning)
+- `rejected` = admin avvisade matchningen (rider kan sokas igen)
 
 ### Licensvalidering vid anmalan (getEligibleClassesForEvent)
 - Licenskontroll sker inne i `getEligibleClassesForEvent()` i order-manager.php
