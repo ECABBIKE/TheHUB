@@ -677,11 +677,9 @@ include __DIR__ . '/components/unified-layout.php';
                 <i data-lucide="square"></i> Stoppa
             </button>
 
-            <?php if ($stats['not_found'] > 0): ?>
-            <button type="button" class="btn btn-ghost" onclick="resetNotFound()" title="Tillat omsokning av riders som tidigare inte hittades">
-                <i data-lucide="refresh-cw"></i> Aterstall ej hittade (<?= $stats['not_found'] ?>)
+            <button type="button" id="resetNotFoundBtn" class="btn btn-ghost" onclick="resetNotFound()" title="Tillat omsokning av riders som tidigare inte hittades" style="<?= $stats['not_found'] > 0 ? '' : 'display:none;' ?>">
+                <i data-lucide="refresh-cw"></i> Aterstall ej hittade (<span id="notFoundCount"><?= $stats['not_found'] ?></span>)
             </button>
-            <?php endif; ?>
         </div>
 
         <?php if ($stats['remaining'] > 0): ?>
@@ -760,6 +758,16 @@ function updateStatsFromData(data) {
     if (data.pending_matches !== undefined) {
         document.getElementById('statPending').textContent = data.pending_matches.toLocaleString();
         document.getElementById('pendingCount').textContent = data.pending_matches;
+    }
+    // Show/update "reset not found" button after batches mark riders as not_found
+    if (data.not_found > 0) {
+        const resetBtn = document.getElementById('resetNotFoundBtn');
+        const countEl = document.getElementById('notFoundCount');
+        if (resetBtn && countEl) {
+            const current = parseInt(countEl.textContent.replace(/\D/g, '')) || 0;
+            countEl.textContent = current + data.not_found;
+            resetBtn.style.display = '';
+        }
     }
 }
 
@@ -1012,6 +1020,14 @@ async function refreshStats() {
             document.getElementById('statConfirmed').textContent = data.stats.confirmed_matches.toLocaleString();
             document.getElementById('statNotFound').textContent = data.stats.not_found.toLocaleString();
             document.getElementById('pendingCount').textContent = data.stats.pending_matches;
+
+            // Sync reset button with actual DB count
+            const resetBtn = document.getElementById('resetNotFoundBtn');
+            const countEl = document.getElementById('notFoundCount');
+            if (resetBtn && countEl) {
+                countEl.textContent = data.stats.not_found;
+                resetBtn.style.display = data.stats.not_found > 0 ? '' : 'none';
+            }
         }
     } catch (e) {
         console.error('Failed to refresh stats:', e);
