@@ -111,6 +111,9 @@ $iconType = match($faviconExt) {
 <!-- Chart.js for dynamic charts -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
+<!-- Umami Analytics -->
+<script defer src="https://cloud.umami.is/script.js" data-website-id="d48052b4-61f9-4f41-ae2b-8215cdd3a82e"></script>
+
 <title><?= htmlspecialchars($pageTitle) ?></title>
 
 <!-- CSS with cache busting (filemtime) -->

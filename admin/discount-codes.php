@@ -110,6 +110,60 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $db->query("UPDATE discount_codes SET is_active = NOT is_active WHERE id = ?", [$id]);
             $message = "Status uppdaterad";
         }
+    } elseif ($action === 'update') {
+        $id = intval($_POST['id'] ?? 0);
+        $code = strtoupper(trim($_POST['code'] ?? ''));
+        $description = trim($_POST['description'] ?? '');
+        $discountType = $_POST['discount_type'] ?? 'fixed';
+        $discountValue = floatval($_POST['discount_value'] ?? 0);
+        $maxUses = !empty($_POST['max_uses']) ? intval($_POST['max_uses']) : null;
+        $maxUsesPerUser = !empty($_POST['max_uses_per_user']) ? intval($_POST['max_uses_per_user']) : 1;
+        $validFrom = !empty($_POST['valid_from']) ? $_POST['valid_from'] : null;
+        $validUntil = !empty($_POST['valid_until']) ? $_POST['valid_until'] : null;
+        $applicableTo = $_POST['applicable_to'] ?? 'all';
+        $eventId = !empty($_POST['event_id']) ? intval($_POST['event_id']) : null;
+        $seriesId = !empty($_POST['series_id']) ? intval($_POST['series_id']) : null;
+        $isActive = isset($_POST['is_active']) ? 1 : 0;
+
+        // Check access for promotors
+        if (!$isAdmin) {
+            $existing = $db->getRow("SELECT event_id, series_id FROM discount_codes WHERE id = ?", [$id]);
+            if ($existing) {
+                $canAccess = ($existing['event_id'] && in_array($existing['event_id'], $promotorEventIds)) ||
+                             ($existing['series_id'] && in_array($existing['series_id'], $promotorSeriesIds));
+                if (!$canAccess) {
+                    $error = "Du har inte behörighet att ändra denna rabattkod";
+                }
+            }
+            if ($applicableTo === 'all') {
+                $error = 'Du kan endast skapa koder för dina egna event eller serier';
+            }
+        }
+
+        if (!$error && empty($code)) {
+            $error = 'Rabattkod är obligatorisk';
+        } elseif (!$error && $discountValue <= 0) {
+            $error = 'Rabattvärde måste vara större än 0';
+        } elseif (!$error) {
+            try {
+                $db->query("UPDATE discount_codes SET
+                    code = ?, description = ?, discount_type = ?, discount_value = ?,
+                    max_uses = ?, max_uses_per_user = ?, valid_from = ?, valid_until = ?,
+                    applicable_to = ?, event_id = ?, series_id = ?, is_active = ?
+                    WHERE id = ?", [
+                    $code, $description, $discountType, $discountValue,
+                    $maxUses, $maxUsesPerUser, $validFrom, $validUntil,
+                    $applicableTo, $eventId, $seriesId, $isActive, $id
+                ]);
+                $message = "Rabattkod '$code' uppdaterad!";
+            } catch (Exception $e) {
+                if (strpos($e->getMessage(), 'Duplicate') !== false) {
+                    $error = "Rabattkoden '$code' finns redan";
+                } else {
+                    $error = "Kunde inte uppdatera: " . $e->getMessage();
+                }
+            }
+        }
     } elseif ($action === 'delete') {
         $id = intval($_POST['id']);
         // Check access for promotors
@@ -519,6 +573,23 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
 
             <div class="code-actions">
+                <button type="button" class="btn btn-ghost btn-sm" onclick='editCode(<?= json_encode([
+                    "id" => $code["id"],
+                    "code" => $code["code"],
+                    "description" => $code["description"] ?? "",
+                    "discount_type" => $code["discount_type"],
+                    "discount_value" => $code["discount_value"],
+                    "max_uses" => $code["max_uses"],
+                    "max_uses_per_user" => $code["max_uses_per_user"],
+                    "valid_from" => $code["valid_from"] ? date("Y-m-d\TH:i", strtotime($code["valid_from"])) : "",
+                    "valid_until" => $code["valid_until"] ? date("Y-m-d\TH:i", strtotime($code["valid_until"])) : "",
+                    "applicable_to" => $code["applicable_to"],
+                    "event_id" => $code["event_id"],
+                    "series_id" => $code["series_id"],
+                    "is_active" => $code["is_active"],
+                ], JSON_HEX_APOS | JSON_HEX_QUOT) ?>)'>
+                    <i data-lucide="pencil"></i> Redigera
+                </button>
                 <form method="POST" style="display: inline;">
                     <?= csrf_field() ?>
                     <input type="hidden" name="action" value="toggle">
@@ -541,11 +612,153 @@ include __DIR__ . '/components/unified-layout.php';
     <?php endforeach; ?>
 <?php endif; ?>
 
+<!-- Edit Modal -->
+<div id="editModal" style="display:none; position:fixed; top:0; left:0; right:0; bottom:0; z-index:var(--z-modal, 500); background:rgba(0,0,0,0.5); padding:var(--space-lg); overflow-y:auto;">
+    <div style="max-width:600px; margin:var(--space-2xl) auto; background:var(--color-bg-surface); border:1px solid var(--color-border); border-radius:var(--radius-md); padding:var(--space-lg);">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:var(--space-md);">
+            <h3 style="margin:0;">Redigera rabattkod</h3>
+            <button type="button" class="btn btn-ghost btn-sm" onclick="closeEditModal()"><i data-lucide="x"></i></button>
+        </div>
+        <form method="POST" id="editForm">
+            <?= csrf_field() ?>
+            <input type="hidden" name="action" value="update">
+            <input type="hidden" name="id" id="edit_id">
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Rabattkod *</label>
+                    <input type="text" name="code" id="edit_code" required style="text-transform:uppercase;">
+                </div>
+                <div class="form-group">
+                    <label>Beskrivning</label>
+                    <input type="text" name="description" id="edit_description">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Rabattyp</label>
+                    <select name="discount_type" id="edit_discount_type">
+                        <option value="fixed">Fast belopp (SEK)</option>
+                        <option value="percentage">Procent (%)</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Rabattvärde *</label>
+                    <input type="number" name="discount_value" id="edit_discount_value" required min="1" step="1">
+                </div>
+                <div class="form-group">
+                    <label>Max användningar</label>
+                    <input type="number" name="max_uses" id="edit_max_uses" min="1" placeholder="Obegränsat">
+                </div>
+                <div class="form-group">
+                    <label>Max per användare</label>
+                    <input type="number" name="max_uses_per_user" id="edit_max_uses_per_user" min="1" value="1">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Giltig från</label>
+                    <input type="datetime-local" name="valid_from" id="edit_valid_from">
+                </div>
+                <div class="form-group">
+                    <label>Giltig till</label>
+                    <input type="datetime-local" name="valid_until" id="edit_valid_until">
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Gäller för</label>
+                    <select name="applicable_to" id="edit_applicable_to" onchange="toggleEditRestriction(this.value)">
+                        <?php if ($isAdmin): ?>
+                        <option value="all">Alla anmälningar</option>
+                        <?php endif; ?>
+                        <option value="event">Specifikt event</option>
+                        <option value="series">Specifik serie</option>
+                    </select>
+                </div>
+                <div class="form-group" id="edit-event-select" style="display:none;">
+                    <label>Välj event</label>
+                    <select name="event_id" id="edit_event_id">
+                        <option value="">Välj...</option>
+                        <?php foreach ($events as $event): ?>
+                            <option value="<?= $event['id'] ?>"><?= htmlspecialchars($event['name']) ?> (<?= $event['date'] ?>)</option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <div class="form-group" id="edit-series-select" style="display:none;">
+                    <label>Välj serie</label>
+                    <select name="series_id" id="edit_series_id">
+                        <option value="">Välj...</option>
+                        <?php foreach ($seriesList as $series): ?>
+                            <option value="<?= $series['id'] ?>"><?= htmlspecialchars($series['name']) ?> (<?= $series['year'] ?>)</option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    <label>
+                        <input type="checkbox" name="is_active" id="edit_is_active" value="1">
+                        Aktiv
+                    </label>
+                </div>
+            </div>
+
+            <div style="display:flex; gap:var(--space-sm);">
+                <button type="submit" class="btn btn-primary">
+                    <i data-lucide="save"></i> Spara ändringar
+                </button>
+                <button type="button" class="btn btn-ghost" onclick="closeEditModal()">Avbryt</button>
+            </div>
+        </form>
+    </div>
+</div>
+
 <script>
 function toggleRestriction(value) {
     document.getElementById('event-select').style.display = value === 'event' ? 'block' : 'none';
     document.getElementById('series-select').style.display = value === 'series' ? 'block' : 'none';
 }
+
+function toggleEditRestriction(value) {
+    document.getElementById('edit-event-select').style.display = value === 'event' ? 'block' : 'none';
+    document.getElementById('edit-series-select').style.display = value === 'series' ? 'block' : 'none';
+}
+
+function editCode(data) {
+    document.getElementById('edit_id').value = data.id;
+    document.getElementById('edit_code').value = data.code;
+    document.getElementById('edit_description').value = data.description;
+    document.getElementById('edit_discount_type').value = data.discount_type;
+    document.getElementById('edit_discount_value').value = data.discount_value;
+    document.getElementById('edit_max_uses').value = data.max_uses || '';
+    document.getElementById('edit_max_uses_per_user').value = data.max_uses_per_user || 1;
+    document.getElementById('edit_valid_from').value = data.valid_from || '';
+    document.getElementById('edit_valid_until').value = data.valid_until || '';
+    document.getElementById('edit_applicable_to').value = data.applicable_to;
+    document.getElementById('edit_event_id').value = data.event_id || '';
+    document.getElementById('edit_series_id').value = data.series_id || '';
+    document.getElementById('edit_is_active').checked = !!data.is_active;
+    toggleEditRestriction(data.applicable_to);
+    document.getElementById('editModal').style.display = 'block';
+    lucide.createIcons();
+}
+
+function closeEditModal() {
+    document.getElementById('editModal').style.display = 'none';
+}
+
+document.getElementById('editModal').addEventListener('click', function(e) {
+    if (e.target === this) closeEditModal();
+});
+
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeEditModal();
+});
 
 // Initialize on page load
 document.addEventListener('DOMContentLoaded', function() {

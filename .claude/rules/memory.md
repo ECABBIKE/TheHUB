@@ -252,6 +252,9 @@
   - Flaggor i riderprofil (`pages/rider.php`) anvander `flagcdn.com` med alpha-3→alpha-2 mappning
   - "Annan" (tom strang) tillagd som alternativ i reset-password.php och rider-edit.php
   - DB-migration uppdaterar befintliga riders med felaktiga koder
+- **Umami analytics pa publika sidor**: Tracking-skriptet saknades i `components/head.php` - bara admin (unified-layout.php) hade det
+- **Rabattkoder redigeringsfunktion**: discount-codes.php saknade edit-funktionalitet helt (bara create/toggle/delete fanns). Lagt till update-handler, redigeringsknapp och modal
+- **Rabattkoder berakningsbugg FIXAD**: Procentuella rabattkoder beraknades pa ORDINARIE pris istallet for priset EFTER andra rabatter (t.ex. Gravity ID). 90% rabattkod + 100kr Gravity ID pa 1000kr = 0kr (FEL) istallet for 90kr (RATT). Fixat i bade `createOrder()` och `applyDiscountToOrder()` i payment.php
 - **Admin orders betalmetod**: Ordersidan visar nu vilken betalmetod kunden valt (Swish/Kort/Ej paborjad)
   - `payment_method` kolumnen i `orders`-tabellen lagrar detta (swish/card/manual/free)
   - Default ar `card` vid orderskapande - uppdateras till `swish` om kunden klickar "Jag har Swishat"
