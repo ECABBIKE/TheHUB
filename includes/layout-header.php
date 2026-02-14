@@ -39,11 +39,11 @@ if (isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on') {
 // Content Security Policy (allow self + unpkg.com for Lucide icons)
 $csp = implode('; ', [
     "default-src 'self'",
-    "script-src 'self' 'unsafe-inline' https://unpkg.com",
+    "script-src 'self' 'unsafe-inline' https://unpkg.com https://cloud.umami.is",
     "style-src 'self' 'unsafe-inline'",
     "img-src 'self' data: https:",
     "font-src 'self' data:",
-    "connect-src 'self'",
+    "connect-src 'self' https://cloud.umami.is",
     "frame-ancestors 'none'"
 ]);
 header("Content-Security-Policy: {$csp}");
@@ -253,6 +253,9 @@ $userTheme = 'light';
     <link rel="apple-touch-icon" href="<?= h($appleTouchIcon) ?>">
     <link rel="icon" type="<?= $faviconMime ?>" href="<?= h($faviconUrl) ?>">
     <link rel="icon" type="<?= $faviconMime ?>" sizes="32x32" href="<?= h($faviconUrl) ?>">
+
+    <!-- Umami Analytics (privacy-friendly, no cookies) -->
+    <script defer src="https://cloud.umami.is/script.js" data-website-id="d48052b4-61f9-4f41-ae2b-8215cdd3a82e"></script>
 
 </head>
 <body class="<?= $bodyClass ?>">

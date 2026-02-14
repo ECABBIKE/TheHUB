@@ -106,6 +106,10 @@ if (!isset($current_admin_page)) {
     <link rel="icon" type="<?= $faviconMime ?>" href="<?= htmlspecialchars($faviconUrl) ?>">
     <link rel="icon" type="<?= $faviconMime ?>" sizes="32x32" href="<?= htmlspecialchars($faviconUrl) ?>">
     <link rel="apple-touch-icon" href="<?= htmlspecialchars($faviconUrl) ?>">
+
+    <!-- Umami Analytics (privacy-friendly, no cookies) -->
+    <script defer src="https://cloud.umami.is/script.js" data-website-id="d48052b4-61f9-4f41-ae2b-8215cdd3a82e"></script>
+
     <link rel="manifest" href="/admin/manifest.json">
     <meta name="theme-color" content="#0066CC">
     <meta name="apple-mobile-web-app-capable" content="yes">
