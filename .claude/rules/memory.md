@@ -1,6 +1,6 @@
 # TheHUB - Memory / Session Knowledge
 
-> Senast uppdaterad: 2026-02-13
+> Senast uppdaterad: 2026-02-14
 
 ---
 
@@ -54,6 +54,10 @@
 - Single account (inte Connect)
 - Hanterar kortbetalningar
 - Webhook for automatisk bekraftelse
+- **Webhook-fil:** `/api/webhooks/stripe-webhook.php` (riktig fil)
+- **Proxy:** `/api/stripe-webhook.php` (inkluderar riktig fil - Stripe Dashboard pekar hit)
+- **HTTPS-undantag:** .htaccess skippar HTTPS-redirect for bade `/api/webhooks/` och `/api/stripe-webhook.php`
+- `STRIPE_MODE=test|live` i .env styr vilka nycklar som anvands (via `env()` i config.php)
 
 ### Moms
 - 6% moms pa eventregistreringar (svensk sport-moms)
@@ -206,7 +210,11 @@
 
 ---
 
-## SENASTE FIXAR (2026-02-12)
+## SENASTE FIXAR (2026-02-14)
+
+- **Stripe webhook 404**: Stripe skickade till `/api/stripe-webhook.php` men filen lag pa `/api/webhooks/stripe-webhook.php`. Fixat med proxy-fil och HTTPS-undantag i .htaccess
+
+## TIDIGARE FIXAR (2026-02-12)
 
 - **Login redirect-loop**: `hub_attempt_login()` saknade profilfalt i SELECT -> alla redirectades till /profile/edit. Fixat i hub-config.php
 - **UCI ID tom i profil**: Anvande `uci_id` istallet for `license_number`. Fixat i pages/profile/edit.php
