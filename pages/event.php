@@ -3971,7 +3971,8 @@ if (!empty($event['series_id'])) {
                 }
 
                 function getCreateRiderFormHtml(prefix = '') {
-                    const searchVal = (prefix === 'series' ? seriesRiderSearch : riderSearch).value.trim();
+                    const searchEl = document.getElementById(prefix === 'series' ? 'seriesRiderSearch' : 'riderSearch');
+                    const searchVal = (searchEl ? searchEl.value : '').trim();
                     const nameParts = searchVal.split(' ');
                     const suggestedFirst = nameParts[0] || '';
                     const suggestedLast = nameParts.slice(1).join(' ') || '';
@@ -4088,7 +4089,7 @@ if (!empty($event['series_id'])) {
                     const createSection = document.getElementById(p ? p + 'RiderCreateSection' : 'riderCreateSection');
 
                     // Update modal header
-                    const modal = p ? seriesRiderSearchModal : riderSearchModal;
+                    const modal = document.getElementById(p ? 'seriesRiderSearchModal' : 'riderSearchModal');
                     const headerH3 = modal.querySelector('.rider-search-modal__header h3');
                     if (headerH3) headerH3.textContent = 'Skapa ny deltagare';
 
@@ -4341,8 +4342,8 @@ if (!empty($event['series_id'])) {
                         const data = await response.json();
 
                         if (data.success && data.rider) {
-                            if (prefix === 'series') {
-                                seriesSelectRider(data.rider);
+                            if (prefix === 'series' && window._seriesSelectRider) {
+                                window._seriesSelectRider(data.rider);
                             } else {
                                 selectRider(data.rider);
                             }
@@ -5083,6 +5084,13 @@ if (!empty($event['series_id'])) {
                         closeSearchModal();
                     }
                 });
+
+                // Expose shared functions for series registration IIFE
+                window._showLicenseLoading = showLicenseLoading;
+                window._showLicenseValidation = showLicenseValidation;
+                window._showCreateRiderForm = showCreateRiderForm;
+                window._handleCreateRider = handleCreateRider;
+                window._getCreateRiderFormHtml = getCreateRiderFormHtml;
             })();
 
             <?php if ($seriesRegistrationAvailable && $seriesInfo): ?>
@@ -5200,7 +5208,7 @@ if (!empty($event['series_id'])) {
                     seriesSelectedRiderInfo.textContent = `${rider.birth_year || ''} ${rider.club_name ? '• ' + rider.club_name : ''}`;
 
                     // Show loading state for license validation
-                    showLicenseLoading('seriesLicenseValidationResult');
+                    window._showLicenseLoading('seriesLicenseValidationResult');
 
                     seriesLoadEligibleClasses(rider.id);
                 }
@@ -5216,7 +5224,7 @@ if (!empty($event['series_id'])) {
                         if (data.success) {
                             // Show license validation result (piggybacked on event_classes response)
                             if (data.license_validation) {
-                                showLicenseValidation(data.license_validation, 'seriesLicenseValidationResult', seriesSelectedRiderInfo, seriesSelectedRider);
+                                window._showLicenseValidation(data.license_validation, 'seriesLicenseValidationResult', seriesSelectedRiderInfo, seriesSelectedRider);
                             } else {
                                 document.getElementById('seriesLicenseValidationResult').style.display = 'none';
                             }
@@ -5380,7 +5388,7 @@ if (!empty($event['series_id'])) {
 
                 // Fixed "Create new rider" link for series modal
                 document.getElementById('seriesShowCreateRiderFormBtn').addEventListener('click', function() {
-                    showCreateRiderForm('series');
+                    window._showCreateRiderForm('series');
                 });
 
                 // Search input
@@ -5458,6 +5466,9 @@ if (!empty($event['series_id'])) {
                         seriesLicenseCommitmentCheckbox.checked = false;
                     }
                 });
+
+                // Expose seriesSelectRider for shared handleCreateRider function
+                window._seriesSelectRider = seriesSelectRider;
             })();
             <?php endif; ?>
             </script>
