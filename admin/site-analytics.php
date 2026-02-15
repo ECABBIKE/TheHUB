@@ -13,7 +13,7 @@ require_admin();
 $shareUrl = env('UMAMI_SHARE_URL', '');
 $apiToken = env('UMAMI_API_TOKEN', '');
 $websiteId = env('UMAMI_WEBSITE_ID', 'd48052b4-61f9-4f41-ae2b-8215cdd3a82e');
-$apiBase = 'https://api.umami.is';
+$apiBase = 'https://api.umami.is/v1';
 
 // ========================================
 // API Handler for AJAX requests

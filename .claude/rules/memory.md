@@ -256,6 +256,7 @@
 - **Rabattkoder redigeringsfunktion**: discount-codes.php saknade edit-funktionalitet helt (bara create/toggle/delete fanns). Lagt till update-handler, redigeringsknapp och modal
 - **Rabattkoder berakningsbugg FIXAD**: Procentuella rabattkoder beraknades pa ORDINARIE pris istallet for priset EFTER andra rabatter (t.ex. Gravity ID). 90% rabattkod + 100kr Gravity ID pa 1000kr = 0kr (FEL) istallet for 90kr (RATT). Fixat i bade `createOrder()` och `applyDiscountToOrder()` i payment.php
 - **Event startlista kolumnbredder**: Tabellen for anmalda deltagare hade obalanserade kolumnbredder (Namn tog nastan all plats). Fixat med procentbaserade bredder: Startnr 10%, Namn 35%, Fodd 10%, Klubb 30%, Status 15%
+- **Besoksstatistik tom (Umami API URL)**: `site-analytics.php` anvande `https://api.umami.is` men Umami Cloud API kraver `/v1`-prefix: `https://api.umami.is/v1`. Alla API-anrop returnerade 404 darfor visades ingen data
 - **Admin orders betalmetod**: Ordersidan visar nu vilken betalmetod kunden valt (Swish/Kort/Ej paborjad)
   - `payment_method` kolumnen i `orders`-tabellen lagrar detta (swish/card/manual/free)
   - Default ar `card` vid orderskapande - uppdateras till `swish` om kunden klickar "Jag har Swishat"
