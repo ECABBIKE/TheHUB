@@ -623,6 +623,12 @@ include __DIR__ . '/components/unified-layout.php';
             <strong>Totalt:</strong> <?= $totalFiles ?> filer<br>
             <strong>Storlek:</strong> <?= format_file_size($totalSize) ?>
         </div>
+
+        <!-- Bildformat-info knapp -->
+        <button type="button" onclick="document.getElementById('imageGuideModal').classList.add('active')" style="margin-top: var(--space-md); width: 100%; display: flex; align-items: center; gap: var(--space-sm); padding: var(--space-sm) var(--space-md); background: var(--color-accent-light); border: 1px solid var(--color-accent); border-radius: var(--radius-sm); cursor: pointer; color: var(--color-accent-text); font-size: 0.8rem; font-weight: 500;">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+            Bildformat &amp; storlekar
+        </button>
     </aside>
 
     <!-- Main content -->
@@ -1086,13 +1092,286 @@ function formatFileSize(bytes) {
 
 // Close modal on escape
 document.addEventListener('keydown', (e) => {
-    if (e.key === 'Escape') closeModal();
+    if (e.key === 'Escape') {
+        closeModal();
+        document.getElementById('imageGuideModal').classList.remove('active');
+    }
 });
 
 // Close modal on backdrop click
 document.getElementById('mediaModal').addEventListener('click', (e) => {
     if (e.target === document.getElementById('mediaModal')) closeModal();
 });
+
+document.getElementById('imageGuideModal').addEventListener('click', (e) => {
+    if (e.target === document.getElementById('imageGuideModal')) {
+        e.target.classList.remove('active');
+    }
+});
 </script>
+
+<!-- Bildformat & Storlekar - Informationsmodal -->
+<div class="media-modal" id="imageGuideModal">
+    <div class="media-modal-content" style="max-width: 750px;">
+        <div class="media-modal-header">
+            <h3 style="display: flex; align-items: center; gap: var(--space-sm);">
+                <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 16v-4"/><path d="M12 8h.01"/></svg>
+                Bildformat &amp; storlekar
+            </h3>
+            <button class="media-modal-close" onclick="document.getElementById('imageGuideModal').classList.remove('active')">
+                <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" x2="6" y1="6" y2="18"/><line x1="6" x2="18" y1="6" y2="18"/></svg>
+            </button>
+        </div>
+        <div style="padding: var(--space-lg); overflow-y: auto; max-height: calc(90vh - 60px);">
+
+            <!-- Sektion: Bildtyper -->
+            <div style="margin-bottom: var(--space-xl);">
+                <h4 style="margin: 0 0 var(--space-md); font-size: 0.95rem; color: var(--color-accent-text); display: flex; align-items: center; gap: var(--space-sm);">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="18" height="18" x="3" y="3" rx="2" ry="2"/><circle cx="9" cy="9" r="2"/><path d="m21 15-3.086-3.086a2 2 0 0 0-2.828 0L6 21"/></svg>
+                    Bildtyper och rekommenderade storlekar
+                </h4>
+
+                <div style="display: grid; gap: var(--space-md);">
+                    <!-- Banner -->
+                    <div style="background: var(--color-bg-sunken); border-radius: var(--radius-sm); padding: var(--space-md); border-left: 3px solid var(--color-accent);">
+                        <div style="display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: var(--space-xs);">
+                            <strong style="font-size: 0.9rem;">Banner</strong>
+                            <code style="background: var(--color-bg-card); padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; color: var(--color-accent-text);">1200 x 150 px</code>
+                        </div>
+                        <p style="margin: var(--space-xs) 0 0; font-size: 0.8rem; color: var(--color-text-secondary);">
+                            Stor sponsorbanner som visas i full bredd h&ouml;gst upp p&aring; eventsidan. Proportioner 8:1.
+                        </p>
+                        <div style="margin-top: var(--space-xs); font-size: 0.75rem; color: var(--color-text-muted);">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle;"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                            Eventsida &ndash; toppbanner
+                        </div>
+                    </div>
+
+                    <!-- Logo (standard) -->
+                    <div style="background: var(--color-bg-sunken); border-radius: var(--radius-sm); padding: var(--space-md); border-left: 3px solid var(--color-success);">
+                        <div style="display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: var(--space-xs);">
+                            <strong style="font-size: 0.9rem;">Logo (standard)</strong>
+                            <code style="background: var(--color-bg-card); padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; color: var(--color-success);">600 x 150 px</code>
+                        </div>
+                        <p style="margin: var(--space-xs) 0 0; font-size: 0.8rem; color: var(--color-text-secondary);">
+                            Prim&auml;r logotyp f&ouml;r de flesta placeringar. Proportioner 4:1. Skalas automatiskt ned till mindre storlekar.
+                        </p>
+                        <div style="margin-top: var(--space-xs); font-size: 0.75rem; color: var(--color-text-muted);">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle;"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                            Eventsida (logorader, partner-sektion) &bull; Header &bull; Footer &bull; Resultatheader
+                        </div>
+                        <div style="margin-top: var(--space-2xs); font-size: 0.7rem; color: var(--color-text-muted);">
+                            Auto-skalas till: 300&times;75, 240&times;60, 160&times;40 px
+                        </div>
+                    </div>
+
+                    <!-- Resultat-logo (sidebar) -->
+                    <div style="background: var(--color-bg-sunken); border-radius: var(--radius-sm); padding: var(--space-md); border-left: 3px solid var(--color-warning);">
+                        <div style="display: flex; justify-content: space-between; align-items: baseline; flex-wrap: wrap; gap: var(--space-xs);">
+                            <strong style="font-size: 0.9rem;">Resultatheader-logo</strong>
+                            <code style="background: var(--color-bg-card); padding: 2px 8px; border-radius: 4px; font-size: 0.75rem; color: var(--color-warning);">h&ouml;jd 40 px</code>
+                        </div>
+                        <p style="margin: var(--space-xs) 0 0; font-size: 0.8rem; color: var(--color-text-secondary);">
+                            Visas bredvid klassrubriken i resultat. Anv&auml;nder standard-logon (600&times;150) men renderas p&aring; 40px h&ouml;jd. Transparent bakgrund rekommenderas.
+                        </p>
+                        <div style="margin-top: var(--space-xs); font-size: 0.75rem; color: var(--color-text-muted);">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle;"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"/><circle cx="12" cy="10" r="3"/></svg>
+                            Eventsida &ndash; &rdquo;Resultaten presenteras av&rdquo;
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Sektion: Generella riktlinjer -->
+            <div style="margin-bottom: var(--space-xl);">
+                <h4 style="margin: 0 0 var(--space-md); font-size: 0.95rem; color: var(--color-accent-text); display: flex; align-items: center; gap: var(--space-sm);">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22c5.523 0 10-4.477 10-10S17.523 2 12 2 2 6.477 2 12s4.477 10 10 10z"/><path d="m9 12 2 2 4-4"/></svg>
+                    Generella riktlinjer
+                </h4>
+                <div style="background: var(--color-bg-sunken); border-radius: var(--radius-sm); padding: var(--space-md); font-size: 0.8rem; color: var(--color-text-secondary);">
+                    <ul style="margin: 0; padding-left: var(--space-md); display: flex; flex-direction: column; gap: var(--space-xs);">
+                        <li><strong>Format:</strong> PNG eller SVG med transparent bakgrund (b&auml;st). JPG och WebP fungerar ocks&aring;.</li>
+                        <li><strong>Maxstorlek:</strong> 10 MB per fil.</li>
+                        <li><strong>Transparent bakgrund:</strong> Starkt rekommenderat f&ouml;r logotyper &ndash; de visas p&aring; b&aring;de ljust och m&ouml;rkt tema.</li>
+                        <li><strong>H&aring;ll det enkelt:</strong> Logotyper med h&ouml;g kontrast och tydlig text fungerar b&auml;st i sm&aring; storlekar.</li>
+                        <li><strong>Proportioner:</strong> Bevara originalproportionerna. Systemet skalas aldrig sn&ouml;vrigt &ndash; bilder klipps med <code>object-fit: contain</code>.</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Sektion: Mappstruktur -->
+            <div style="margin-bottom: var(--space-xl);">
+                <h4 style="margin: 0 0 var(--space-md); font-size: 0.95rem; color: var(--color-accent-text); display: flex; align-items: center; gap: var(--space-sm);">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                    Mappstruktur
+                </h4>
+                <div style="display: grid; gap: var(--space-sm);">
+
+                    <?php if (!$isPromotorOnly): ?>
+                    <div style="background: var(--color-bg-sunken); border-radius: var(--radius-sm); padding: var(--space-md);">
+                        <div style="display: flex; align-items: center; gap: var(--space-sm); margin-bottom: var(--space-xs);">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2 2 7l10 5 10-5-10-5Z"/><path d="m2 17 10 5 10-5"/><path d="m2 12 10 5 10-5"/></svg>
+                            <strong style="font-size: 0.85rem;">Branding</strong>
+                        </div>
+                        <p style="margin: 0; font-size: 0.75rem; color: var(--color-text-secondary);">
+                            GravitySeries egna logotyper, profilbilder och varumärkesmaterial.
+                        </p>
+                    </div>
+
+                    <div style="background: var(--color-bg-sunken); border-radius: var(--radius-sm); padding: var(--space-md);">
+                        <div style="display: flex; align-items: center; gap: var(--space-sm); margin-bottom: var(--space-xs);">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                            <strong style="font-size: 0.85rem;">Allm&auml;nt</strong>
+                        </div>
+                        <p style="margin: 0; font-size: 0.75rem; color: var(--color-text-secondary);">
+                            &Ouml;vriga bilder som inte h&ouml;r till n&aring;gon specifik kategori.
+                        </p>
+                    </div>
+
+                    <div style="background: var(--color-bg-sunken); border-radius: var(--radius-sm); padding: var(--space-md);">
+                        <div style="display: flex; align-items: center; gap: var(--space-sm); margin-bottom: var(--space-xs);">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M6 9H4.5a2.5 2.5 0 0 1 0-5H6"/><path d="M18 9h1.5a2.5 2.5 0 0 0 0-5H18"/><path d="M4 22h16"/><path d="M10 14.66V17c0 .55-.47.98-.97 1.21C7.85 18.75 7 20.24 7 22"/><path d="M14 14.66V17c0 .55.47.98.97 1.21C16.15 18.75 17 20.24 17 22"/><path d="M18 2H6v7a6 6 0 0 0 12 0V2Z"/></svg>
+                            <strong style="font-size: 0.85rem;">Serier</strong>
+                        </div>
+                        <p style="margin: 0; font-size: 0.75rem; color: var(--color-text-secondary);">
+                            Serielogotyper och seriespecifikt bildmaterial. Visas p&aring; seriesidor.
+                        </p>
+                    </div>
+                    <?php endif; ?>
+
+                    <div style="background: var(--color-bg-sunken); border-radius: var(--radius-sm); padding: var(--space-md); border: 1px solid var(--color-accent-light);">
+                        <div style="display: flex; align-items: center; gap: var(--space-sm); margin-bottom: var(--space-xs);">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20.42 4.58a5.4 5.4 0 0 0-7.65 0l-.77.78-.77-.78a5.4 5.4 0 0 0-7.65 0C1.46 6.7 1.33 10.28 4 13l8 8 8-8c2.67-2.72 2.54-6.3.42-8.42z"/></svg>
+                            <strong style="font-size: 0.85rem;">Sponsorer</strong>
+                            <?php if ($isPromotorOnly): ?>
+                            <span style="font-size: 0.65rem; background: var(--color-accent); color: white; padding: 1px 6px; border-radius: 8px;">Din mapp</span>
+                            <?php endif; ?>
+                        </div>
+                        <p style="margin: 0; font-size: 0.75rem; color: var(--color-text-secondary);">
+                            Sponsorlogotyper och banners. Organiseras i undermappar per sponsor eller serie.
+                            <?php if ($isPromotorOnly): ?>
+                            <br>Du laddar upp till din series mapp och v&auml;ljer bilder h&auml;rifr&aring;n n&auml;r du skapar/redigerar sponsorer.
+                            <?php else: ?>
+                            <br>Inneh&aring;ller &auml;ven bilder som promotorer laddat upp till sina serier.
+                            <?php endif; ?>
+                        </p>
+                    </div>
+
+                    <?php if (!$isPromotorOnly): ?>
+                    <div style="background: var(--color-bg-sunken); border-radius: var(--radius-sm); padding: var(--space-md);">
+                        <div style="display: flex; align-items: center; gap: var(--space-sm); margin-bottom: var(--space-xs);">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3Z"/><path d="M12 9v4"/><path d="M12 17h.01"/></svg>
+                            <strong style="font-size: 0.85rem;">Annonser</strong>
+                        </div>
+                        <p style="margin: 0; font-size: 0.75rem; color: var(--color-text-secondary);">
+                            Annonsbilder och kampanjmaterial.
+                        </p>
+                    </div>
+
+                    <div style="background: var(--color-bg-sunken); border-radius: var(--radius-sm); padding: var(--space-md);">
+                        <div style="display: flex; align-items: center; gap: var(--space-sm); margin-bottom: var(--space-xs);">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>
+                            <strong style="font-size: 0.85rem;">Klubbar</strong>
+                        </div>
+                        <p style="margin: 0; font-size: 0.75rem; color: var(--color-text-secondary);">
+                            Klubblogotyper och klubbrelaterade bilder. Visas p&aring; klubbsidor.
+                        </p>
+                    </div>
+
+                    <div style="background: var(--color-bg-sunken); border-radius: var(--radius-sm); padding: var(--space-md);">
+                        <div style="display: flex; align-items: center; gap: var(--space-sm); margin-bottom: var(--space-xs);">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"/><line x1="16" y1="2" x2="16" y2="6"/><line x1="8" y1="2" x2="8" y2="6"/><line x1="3" y1="10" x2="21" y2="10"/></svg>
+                            <strong style="font-size: 0.85rem;">Event</strong>
+                        </div>
+                        <p style="margin: 0; font-size: 0.75rem; color: var(--color-text-secondary);">
+                            Eventspecifika bilder, banderoller och eventrelaterat material.
+                        </p>
+                    </div>
+                    <?php endif; ?>
+                </div>
+            </div>
+
+            <!-- Sektion: Var visas bilderna? -->
+            <div style="margin-bottom: var(--space-lg);">
+                <h4 style="margin: 0 0 var(--space-md); font-size: 0.95rem; color: var(--color-accent-text); display: flex; align-items: center; gap: var(--space-sm);">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/></svg>
+                    Var visas bilderna p&aring; sajten?
+                </h4>
+                <div style="display: grid; gap: 1px; background: var(--color-border); border-radius: var(--radius-sm); overflow: hidden;">
+                    <div style="background: var(--color-bg-sunken); padding: var(--space-sm) var(--space-md); display: grid; grid-template-columns: 1fr 1fr 1fr; gap: var(--space-sm); font-size: 0.7rem; font-weight: 600; text-transform: uppercase; color: var(--color-text-muted);">
+                        <span>Placering</span>
+                        <span>Bildtyp</span>
+                        <span>Renderad storlek</span>
+                    </div>
+
+                    <div style="background: var(--color-bg-card); padding: var(--space-sm) var(--space-md); display: grid; grid-template-columns: 1fr 1fr 1fr; gap: var(--space-sm); font-size: 0.8rem;">
+                        <span>Eventsida &ndash; toppbanner</span>
+                        <span style="color: var(--color-accent-text);">Banner</span>
+                        <span style="color: var(--color-text-secondary);">Full bredd, max 150px h&ouml;jd</span>
+                    </div>
+
+                    <div style="background: var(--color-bg-card); padding: var(--space-sm) var(--space-md); display: grid; grid-template-columns: 1fr 1fr 1fr; gap: var(--space-sm); font-size: 0.8rem;">
+                        <span>Eventsida &ndash; logorader</span>
+                        <span style="color: var(--color-success);">Logo</span>
+                        <span style="color: var(--color-text-secondary);">Max 180&times;50px (desktop), 120&times;65px (mobil)</span>
+                    </div>
+
+                    <div style="background: var(--color-bg-card); padding: var(--space-sm) var(--space-md); display: grid; grid-template-columns: 1fr 1fr 1fr; gap: var(--space-sm); font-size: 0.8rem;">
+                        <span>Eventsida &ndash; partner-sektion</span>
+                        <span style="color: var(--color-success);">Logo</span>
+                        <span style="color: var(--color-text-secondary);">Max 280&times;100px (desktop), 160&times;70px (mobil)</span>
+                    </div>
+
+                    <div style="background: var(--color-bg-card); padding: var(--space-sm) var(--space-md); display: grid; grid-template-columns: 1fr 1fr 1fr; gap: var(--space-sm); font-size: 0.8rem;">
+                        <span>Resultat &ndash; klassrubrik</span>
+                        <span style="color: var(--color-warning);">Logo (sidebar)</span>
+                        <span style="color: var(--color-text-secondary);">40px h&ouml;jd, auto bredd</span>
+                    </div>
+
+                    <div style="background: var(--color-bg-card); padding: var(--space-sm) var(--space-md); display: grid; grid-template-columns: 1fr 1fr 1fr; gap: var(--space-sm); font-size: 0.8rem;">
+                        <span>Header (global)</span>
+                        <span style="color: var(--color-success);">Logo</span>
+                        <span style="color: var(--color-text-secondary);">Max 120px bredd, 28&ndash;36px h&ouml;jd</span>
+                    </div>
+
+                    <div style="background: var(--color-bg-card); padding: var(--space-sm) var(--space-md); display: grid; grid-template-columns: 1fr 1fr 1fr; gap: var(--space-sm); font-size: 0.8rem;">
+                        <span>Footer (global)</span>
+                        <span style="color: var(--color-success);">Logo</span>
+                        <span style="color: var(--color-text-secondary);">Kompakt, 6 per rad</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Promotor-specifik info -->
+            <?php if ($isPromotorOnly): ?>
+            <div style="background: var(--color-accent-light); border: 1px solid var(--color-accent); border-radius: var(--radius-sm); padding: var(--space-md);">
+                <h4 style="margin: 0 0 var(--space-sm); font-size: 0.85rem; color: var(--color-accent-text); display: flex; align-items: center; gap: var(--space-sm);">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>
+                    Tips f&ouml;r promotorer
+                </h4>
+                <ul style="margin: 0; padding-left: var(--space-md); font-size: 0.8rem; color: var(--color-text-secondary); display: flex; flex-direction: column; gap: var(--space-xs);">
+                    <li>Dina uppladdade bilder hamnar i din series mapp under <strong>Sponsorer</strong>.</li>
+                    <li>N&auml;r du skapar en sponsor kan du v&auml;lja bilder fr&aring;n mediabiblioteket via &rdquo;V&auml;lj fr&aring;n media&rdquo;.</li>
+                    <li>Admin kan &auml;ven se och anv&auml;nda dina uppladdade bilder.</li>
+                    <li>Ladda upp b&aring;de en <strong>banner</strong> (1200&times;150) och en <strong>logo</strong> (600&times;150) f&ouml;r b&auml;st resultat.</li>
+                </ul>
+            </div>
+            <?php else: ?>
+            <div style="background: var(--color-accent-light); border: 1px solid var(--color-accent); border-radius: var(--radius-sm); padding: var(--space-md);">
+                <h4 style="margin: 0 0 var(--space-sm); font-size: 0.85rem; color: var(--color-accent-text); display: flex; align-items: center; gap: var(--space-sm);">
+                    <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>
+                    Admin-info
+                </h4>
+                <ul style="margin: 0; padding-left: var(--space-md); font-size: 0.8rem; color: var(--color-text-secondary); display: flex; flex-direction: column; gap: var(--space-xs);">
+                    <li>Du ser alla mappar inklusive bilder som promotorer laddat upp.</li>
+                    <li>Promotorers bilder hamnar i undermappar under <strong>Sponsorer</strong> (organiserat per serie).</li>
+                    <li>N&auml;r du v&auml;ljer logotyp f&ouml;r en sponsor kan du anv&auml;nda b&aring;de admin-uppladdade och promotor-uppladdade bilder.</li>
+                    <li>Globala placeringar (header, footer) konfigureras i <a href="/admin/sponsor-placements.php" style="color: var(--color-accent-text);">Sponsorplaceringar</a>.</li>
+                </ul>
+            </div>
+            <?php endif; ?>
+        </div>
+    </div>
+</div>
 
 <?php include __DIR__ . '/components/unified-layout-footer.php'; ?>

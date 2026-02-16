@@ -1,6 +1,6 @@
 # TheHUB - Development Roadmap
 
-> Senast uppdaterad: 2026-02-16
+> Senast uppdaterad: 2026-02-18
 >
 > **Se:** `/admin/roadmap.php` for interaktiv vy
 
@@ -24,6 +24,30 @@
 ---
 
 # CHANGELOG
+
+### 2026-02-18 (Navigation synkad over alla plattformar)
+- **Branch:** claude/fix-mobile-payment-layout-UVxvi
+
+- **Fix: Admin mobilmeny synkad med desktop**
+  - Mobilmenyn laser nu fran samma kalla som desktop sidebar ($ADMIN_TABS)
+  - Tidigare var mobilmenyn hardkodad med fel lankar och saknade sektioner
+
+- **Fix: Promotor-meny identisk overallt**
+  - Media-lanken pekade pa sponsors.php istallet for media.php
+  - Sponsorer tillagd som eget menyval
+  - Identisk meny pa desktop sidebar, mobilmeny och PWA
+
+- **Fix: PWA-manifest korrigerade**
+  - Admin: Borttagen dubbel "Media", lagt till Serier och Sponsorer
+  - Publik: Lagt till Serier och Ranking
+
+- **Andrade filer:**
+  - `admin/components/admin-mobile-nav.php` - Omskriven, laser fran $ADMIN_TABS
+  - `components/sidebar.php` - Promotor-nav fixad (Media, Sponsorer)
+  - `admin/manifest.json` - Genvagar korrigerade
+  - `manifest.json` - Genvagar utokade
+
+---
 
 ### 2026-02-16 (Session-fix + Mobilfixar + Checkout + Deltagarlista)
 - **Branch:** claude/fix-mobile-payment-layout-UVxvi
