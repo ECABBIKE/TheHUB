@@ -221,7 +221,25 @@
 
 ---
 
-## SENASTE FIXAR (2026-02-17)
+## SENASTE FIXAR (2026-02-18)
+
+- **Navigation synkad over alla plattformar (desktop, mobil, PWA)**:
+  - `admin-mobile-nav.php` omskriven: Admin-menyn laser nu fran `$ADMIN_TABS` (samma kalla som desktop sidebar) istallet for hardkodade lankar
+  - Promotor-menyn identisk pa alla plattformar: Tavlingar, Serier, Media, Sponsorer, Direktanmalan
+  - Media-lanken for promotor fixad: pekade pa `/admin/sponsors.php`, nu korrekt `/admin/media.php`
+  - Sponsorer tillagd som separat menyval for promotor (var tidigare dold bakom "Media")
+  - Admin PWA-manifest (`admin/manifest.json`): Borttagen dubbel "Media", lagt till Serier och Sponsorer som separata genvagar
+  - Publikt PWA-manifest (`manifest.json`): Lagt till Serier och Ranking som genvagar
+  - `sidebar.php` promotor-nav fixad: Media → media.php, Sponsorer tillagd
+
+### Navigationsarkitektur (efter fix)
+- **Kalla for sanning (admin):** `$ADMIN_TABS` i `/includes/config/admin-tabs-config.php`
+- **Desktop sidebar:** Laser fran `$ADMIN_TABS` (redan korrekt)
+- **Mobilmeny:** Laser fran `$ADMIN_TABS` (fixat 2026-02-18)
+- **PWA-genvagar:** Manuella men synkade med nav-strukturen
+- **Promotor:** Unik meny definierad pa TVA stallen (admin-mobile-nav.php + sidebar.php) - maste hallas synkade manuellt
+
+## TIDIGARE FIXAR (2026-02-17)
 
 - **Sponsorlogo i resultatheader fixad**: Borttagen ful gra bakgrundsruta (`color-bg-sunken`) och `align-items: stretch` fran `.class-sponsor`. Loggan ar nu 40px hojd utan bakgrund, ren och enkel.
 - **Bildformat-guide i mediabiblioteket**: Ny inforuta i sidofaltet pa `/admin/media.php` med knapp som oppnar detaljerad popup. Beskriver alla bildformat (Banner 1200x150, Logo 600x150, Resultatheader 40px hojd), generella riktlinjer, mappstruktur och var bilder visas pa sajten. Anpassad for bade admin (ser alla mappar + promotor-info) och promotor (ser bara sin mapp + tips).

@@ -53,10 +53,17 @@
       "icons": [{ "src": "/uploads/icons/GSIkon.png", "sizes": "192x192" }]
     },
     {
-      "name": "Min Sida",
-      "short_name": "Profil",
-      "description": "Min profil och anmälningar",
-      "url": "/profile",
+      "name": "Serier",
+      "short_name": "Serier",
+      "description": "Visa alla serier och ställningar",
+      "url": "/series",
+      "icons": [{ "src": "/uploads/icons/GSIkon.png", "sizes": "192x192" }]
+    },
+    {
+      "name": "Ranking",
+      "short_name": "Ranking",
+      "description": "Visa ranking och ställningar",
+      "url": "/ranking",
       "icons": [{ "src": "/uploads/icons/GSIkon.png", "sizes": "192x192" }]
     }
   ],

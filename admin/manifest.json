@@ -46,6 +46,13 @@
       "icons": [{ "src": "/uploads/icons/GSIkon.png", "sizes": "192x192" }]
     },
     {
+      "name": "Serier",
+      "short_name": "Serier",
+      "description": "Hantera dina serier",
+      "url": "/admin/promotor-series.php",
+      "icons": [{ "src": "/uploads/icons/GSIkon.png", "sizes": "192x192" }]
+    },
+    {
       "name": "Media",
       "short_name": "Media",
       "description": "Mediabibliotek",
@@ -53,9 +60,9 @@
       "icons": [{ "src": "/uploads/icons/GSIkon.png", "sizes": "192x192" }]
     },
     {
-      "name": "Media",
-      "short_name": "Media",
-      "description": "Ladda upp bilder och sponsorlogos",
+      "name": "Sponsorer",
+      "short_name": "Sponsorer",
+      "description": "Hantera sponsorer och logotyper",
       "url": "/admin/sponsors.php",
       "icons": [{ "src": "/uploads/icons/GSIkon.png", "sizes": "192x192" }]
     }

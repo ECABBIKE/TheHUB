@@ -3,92 +3,133 @@
  * TheHUB Admin Mobile Navigation
  * Horizontally scrollable bottom nav for admin pages
  *
- * NOTE: Primary navigation is defined in /includes/config/admin-tabs-config.php
- * and rendered via /components/sidebar.php
+ * IMPORTANT: This navigation reads from the SAME source as the desktop sidebar:
+ *   - Admin/Super Admin: Uses $ADMIN_TABS from /includes/config/admin-tabs-config.php
+ *   - Promotor: Uses $PROMOTOR_NAV defined here (must match sidebar.php promotor nav)
  *
- * This mobile nav should be kept in sync with admin-tabs-config.php
- * (admin-sidebar.php has been deprecated - 2026-01-12)
- *
- * Role-based access:
- * - promotor: Dashboard, Tävlingar, Serier
- * - admin/super_admin: + Ekonomi, Konfiguration, Databas, Import, System
+ * All platforms (desktop, mobile, PWA) must show identical navigation.
  */
 require_once __DIR__ . '/../../hub-config.php';
 require_once __DIR__ . '/../../components/icons.php';
 require_once __DIR__ . '/../../includes/auth.php';
+require_once __DIR__ . '/../../includes/config/admin-tabs-config.php';
 
 // Get current user's role for filtering
 $currentAdminRole = $_SESSION['admin_role'] ?? 'admin';
 $isPromotor = ($currentAdminRole === 'promotor');
-$roleHierarchy = ['promotor' => 1, 'admin' => 2, 'super_admin' => 3];
-$userRoleLevel = $roleHierarchy[$currentAdminRole] ?? 0;
 
 // Check analytics access
 $hasAnalytics = function_exists('hasAnalyticsAccess') && hasAnalyticsAccess();
 
-// Admin navigation - should match /includes/config/admin-tabs-config.php
-// Promotors get different URLs than admins
+// Build navigation
 $adminNav = [];
 
 if ($isPromotor) {
-    // PROMOTOR navigation - specific pages for promotors
+    // ========================================
+    // PROMOTOR navigation
+    // Unique menu adapted to what promotors need
+    // MUST be identical in sidebar.php and here
+    // ========================================
     $adminNav = [
         ['id' => 'dashboard', 'label' => 'Tävlingar', 'icon' => 'calendar', 'url' => '/admin/promotor.php'],
-        ['id' => 'series', 'label' => 'Serier', 'icon' => 'trophy', 'url' => '/admin/promotor-series.php'],
-        ['id' => 'media', 'label' => 'Media', 'icon' => 'image', 'url' => '/admin/sponsors.php'],
+        ['id' => 'series', 'label' => 'Serier', 'icon' => 'medal', 'url' => '/admin/promotor-series.php'],
+        ['id' => 'media', 'label' => 'Media', 'icon' => 'image', 'url' => '/admin/media.php'],
+        ['id' => 'sponsors', 'label' => 'Sponsorer', 'icon' => 'heart-handshake', 'url' => '/admin/sponsors.php'],
         ['id' => 'onsite', 'label' => 'Direktanmälan', 'icon' => 'user-plus', 'url' => '/admin/onsite-registration.php'],
     ];
 } else {
-    // ADMIN navigation - full admin access
-    $adminNav = [
-        ['id' => 'dashboard', 'label' => 'Dashboard', 'icon' => 'layout-dashboard', 'url' => '/admin/dashboard.php'],
-        ['id' => 'events', 'label' => 'Tävlingar', 'icon' => 'calendar', 'url' => '/admin/events.php'],
-        ['id' => 'series', 'label' => 'Serier', 'icon' => 'trophy', 'url' => '/admin/series.php'],
-        ['id' => 'ekonomi', 'label' => 'Ekonomi', 'icon' => 'wallet', 'url' => '/admin/ekonomi.php'],
-        ['id' => 'config', 'label' => 'Konfig', 'icon' => 'sliders', 'url' => '/admin/classes.php'],
-        ['id' => 'riders', 'label' => 'Databas', 'icon' => 'users', 'url' => '/admin/riders.php'],
-        ['id' => 'import', 'label' => 'Import', 'icon' => 'upload', 'url' => '/admin/import.php'],
-    ];
+    // ========================================
+    // ADMIN / SUPER ADMIN navigation
+    // Built from $ADMIN_TABS - same source as desktop sidebar
+    // ========================================
 
-    // Analytics for super_admin or statistics permission
-    if ($hasAnalytics) {
-        $adminNav[] = ['id' => 'analytics', 'label' => 'Analytics', 'icon' => 'bar-chart-3', 'url' => '/admin/analytics-dashboard.php'];
-    }
+    // Dashboard first (not in $ADMIN_TABS)
+    $adminNav[] = ['id' => 'admin-dashboard', 'label' => 'Dashboard', 'icon' => 'layout-dashboard', 'url' => '/admin/dashboard.php'];
 
-    // System only for super_admin
-    if ($currentAdminRole === 'super_admin') {
-        $adminNav[] = ['id' => 'settings', 'label' => 'System', 'icon' => 'settings', 'url' => '/admin/users.php'];
+    // Add main groups from ADMIN_TABS config (same logic as sidebar.php)
+    foreach ($ADMIN_TABS as $groupId => $group) {
+        // Skip super_admin_only groups for non-super admins
+        if (isset($group['super_admin_only']) && $group['super_admin_only']) {
+            if ($groupId === 'analytics') {
+                if (!$hasAnalytics) {
+                    continue;
+                }
+            } else {
+                if (!function_exists('hasRole') || !hasRole('super_admin')) {
+                    continue;
+                }
+            }
+        }
+
+        // Use first tab's URL as the group URL (same as sidebar.php)
+        $firstTabUrl = $group['tabs'][0]['url'] ?? '/admin/';
+
+        $adminNav[] = [
+            'id' => 'admin-' . $groupId,
+            'label' => $group['title'],
+            'icon' => $group['icon'],
+            'url' => $firstTabUrl,
+            'pages' => get_pages_in_group($groupId)
+        ];
     }
 }
 
 // Determine active page from URL
 $requestUri = $_SERVER['REQUEST_URI'] ?? '';
 $currentPath = parse_url($requestUri, PHP_URL_PATH);
+$currentPageFile = basename($currentPath);
 
-function isAdminNavActive($item, $currentPath) {
-    $itemPath = parse_url($item['url'], PHP_URL_PATH);
-
-    // Dashboard special case
+function isAdminMobileNavActive($item, $currentPath, $currentPageFile) {
+    // Promotor dashboard
     if ($item['id'] === 'dashboard') {
         return $currentPath === '/admin/dashboard' ||
+               $currentPath === '/admin/dashboard.php' ||
                $currentPath === '/admin/promotor' ||
+               $currentPath === '/admin/promotor.php' ||
                $currentPath === '/admin/' ||
                $currentPath === '/admin';
     }
 
-    // Analytics special case - match all analytics pages
-    if ($item['id'] === 'analytics') {
-        return strpos($currentPath, '/admin/analytics') === 0;
+    // Promotor series
+    if ($item['id'] === 'series') {
+        return strpos($currentPath, '/admin/promotor-series') !== false ||
+               strpos($currentPath, '/admin/series') !== false;
     }
 
-    // Check if current path starts with this item's path
+    // Promotor media
+    if ($item['id'] === 'media') {
+        return strpos($currentPath, '/admin/media') !== false;
+    }
+
+    // Promotor sponsors
+    if ($item['id'] === 'sponsors') {
+        return strpos($currentPath, '/admin/sponsor') !== false;
+    }
+
+    // Promotor onsite
+    if ($item['id'] === 'onsite') {
+        return strpos($currentPath, '/admin/onsite') !== false;
+    }
+
+    // Admin groups - check if current page is in this group's pages
+    if (isset($item['pages']) && is_array($item['pages'])) {
+        // Strip .php from current page if needed
+        $pageWithExt = $currentPageFile;
+        if (!str_ends_with($pageWithExt, '.php')) {
+            $pageWithExt .= '.php';
+        }
+        return in_array($pageWithExt, $item['pages']);
+    }
+
+    // Fallback: check by URL prefix
+    $itemPath = parse_url($item['url'], PHP_URL_PATH);
     return strpos($currentPath, $itemPath) === 0;
 }
 ?>
 <nav class="admin-mobile-nav" role="navigation" aria-label="Admin navigering">
     <div class="admin-mobile-nav-inner">
         <?php foreach ($adminNav as $item): ?>
-            <?php $isActive = isAdminNavActive($item, $currentPath); ?>
+            <?php $isActive = isAdminMobileNavActive($item, $currentPath, $currentPageFile); ?>
             <a href="<?= htmlspecialchars($item['url']) ?>"
                class="admin-mobile-nav-link<?= $isActive ? ' active' : '' ?>"
                <?= $isActive ? 'aria-current="page"' : '' ?>>
