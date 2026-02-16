@@ -4,6 +4,32 @@
 
 ---
 
+## SVENSKA TECKEN - OBLIGATORISKT
+
+**ANVÄND ALLTID korrekta svenska tecken (å, ä, ö, Å, Ä, Ö) i all text som visas för användare.**
+
+Detta gäller:
+- HTML-texter, labels, placeholders, felmeddelanden
+- JavaScript-strängar som visas i UI
+- PHP-strängar som skrivs ut till sidan
+- Kommentarer i koden (valfritt, men UI-text är KRAV)
+
+```php
+// FEL - ALDRIG SÅ HÄR
+'Inga anmalningar annu'
+'Fodelsear kravs'
+'Valj...'
+'Sok klubb...'
+
+// RÄTT - ALLTID SÅ HÄR
+'Inga anmälningar ännu'
+'Födelseår krävs'
+'Välj...'
+'Sök klubb...'
+```
+
+---
+
 ## VERSIONSNUMMER - OBLIGATORISKT
 
 **UPPDATERA ALLTID versionsnumret i `config.php` vid varje push.**

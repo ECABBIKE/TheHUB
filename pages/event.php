@@ -843,7 +843,7 @@ try {
     $registrationsByClass = [];
     $classSortOrders = []; // Track sort_order for each class
     foreach ($registrations as $reg) {
-        $className = $reg['class_name'] ?: $reg['category'] ?: 'Okand klass';
+        $className = $reg['class_name'] ?: $reg['category'] ?: 'Okänd klass';
         if (!isset($registrationsByClass[$className])) {
             $registrationsByClass[$className] = [];
             // Store sort_order for this class (use 9999 if null, to sort unknowns last)
@@ -1305,7 +1305,7 @@ if (!empty($eventSponsors['content'])): ?>
         <?php if ($showAllTabs && !$isPastEvent && $totalRegistrations > 0): ?>
         <a href="?id=<?= $eventId ?>&tab=anmalda" class="event-tab <?= $activeTab === 'anmalda' ? 'active' : '' ?>">
             <i data-lucide="<?= $hasBibNumbers ? 'list-ordered' : 'users' ?>"></i>
-            <?= $hasBibNumbers ? 'Startlista' : 'Anmalda' ?>
+            <?= $hasBibNumbers ? 'Startlista' : 'Anmälda' ?>
             <span class="tab-badge tab-badge--secondary"><?= $totalRegistrations ?><?php if ($maxParticipants): ?>/<?= $maxParticipants ?><?php endif; ?></span>
         </a>
         <?php endif; ?>
@@ -2543,13 +2543,13 @@ try {
     <div class="card-header">
         <h2 class="card-title">
             <i data-lucide="<?= $hasBibNumbers ? 'list-ordered' : 'users' ?>"></i>
-            <?= $hasBibNumbers ? 'Startlista' : 'Anmalda deltagare' ?>
+            <?= $hasBibNumbers ? 'Startlista' : 'Anmälda deltagare' ?>
             <span class="badge badge--primary ml-sm"><?= $totalRegistrations ?><?php if ($maxParticipants): ?>/<?= $maxParticipants ?><?php endif; ?></span>
         </h2>
     </div>
     <div class="card-body">
         <?php if (empty($registrationsByClass)): ?>
-            <p class="text-muted">Inga anmalningar annu.</p>
+            <p class="text-muted">Inga anmälningar ännu.</p>
         <?php else: ?>
         <?php foreach ($registrationsByClass as $className => $classRegs): ?>
         <div class="reg-class-group mb-lg">
@@ -2570,7 +2570,7 @@ try {
                         <tr>
                             <th>Startnr</th>
                             <th>Namn</th>
-                            <th>Fodd</th>
+                            <th>Född</th>
                             <th>Klubb</th>
                         </tr>
                     </thead>
@@ -2583,7 +2583,7 @@ try {
                     <thead>
                         <tr>
                             <th>Namn</th>
-                            <th>Fodd</th>
+                            <th>Född</th>
                             <th>Klubb</th>
                         </tr>
                     </thead>
@@ -4018,7 +4018,7 @@ if (!empty($event['series_id'])) {
 
                                 <div style="display: flex; flex-direction: column; gap: var(--space-sm);">
                                     <div>
-                                        <label style="${labelStyle}">Fornamn *</label>
+                                        <label style="${labelStyle}">Förnamn *</label>
                                         <input type="text" id="${p}newRiderFirstname" style="${inputStyle}" value="${suggestedFirst}" required>
                                     </div>
                                     <div>
@@ -4035,13 +4035,13 @@ if (!empty($event['series_id'])) {
                                     </div>
                                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-sm);">
                                         <div>
-                                            <label style="${labelStyle}">Fodelsear *</label>
+                                            <label style="${labelStyle}">Födelseår *</label>
                                             <input type="number" id="${p}newRiderBirthYear" style="${inputStyle}" placeholder="t.ex. 1990" min="1920" max="2025" required>
                                         </div>
                                         <div>
-                                            <label style="${labelStyle}">Kon *</label>
+                                            <label style="${labelStyle}">Kön *</label>
                                             <select id="${p}newRiderGender" style="${inputStyle}" required>
-                                                <option value="">Valj...</option>
+                                                <option value="">Välj...</option>
                                                 <option value="M">Man</option>
                                                 <option value="F">Kvinna</option>
                                             </select>
@@ -4063,7 +4063,7 @@ if (!empty($event['series_id'])) {
                                     <div>
                                         <label style="${labelStyle}">Klubb</label>
                                         <div style="position: relative;">
-                                            <input type="text" id="${p}newRiderClubSearch" style="${inputStyle}" placeholder="Sok klubb..." autocomplete="off">
+                                            <input type="text" id="${p}newRiderClubSearch" style="${inputStyle}" placeholder="Sök klubb..." autocomplete="off">
                                             <input type="hidden" id="${p}newRiderClubId" value="">
                                             <div id="${p}clubSearchResults" style="display:none; position:absolute; top:100%; left:0; right:0; z-index:100; background:var(--color-bg-card); border:1px solid var(--color-border); border-top:none; border-radius:0 0 var(--radius-sm) var(--radius-sm); max-height:200px; overflow-y:auto; box-shadow: 0 4px 12px rgba(0,0,0,0.3);"></div>
                                         </div>
@@ -4076,7 +4076,7 @@ if (!empty($event['series_id'])) {
                                 <div style="display: flex; flex-direction: column; gap: var(--space-sm);">
                                     <div>
                                         <label style="${labelStyle}">Namn *</label>
-                                        <input type="text" id="${p}newRiderIceName" style="${inputStyle}" placeholder="Fornamn Efternamn" required>
+                                        <input type="text" id="${p}newRiderIceName" style="${inputStyle}" placeholder="Förnamn Efternamn" required>
                                     </div>
                                     <div>
                                         <label style="${labelStyle}">Telefon *</label>
@@ -4293,7 +4293,7 @@ if (!empty($event['series_id'])) {
 
                     // Validate all required fields
                     if (!firstname || !lastname) {
-                        errorDiv.innerHTML = 'Fornamn och efternamn kravs.';
+                        errorDiv.innerHTML = 'Förnamn och efternamn krävs.';
                         errorDiv.style.color = 'var(--color-error)';
                         errorDiv.style.display = 'block';
                         return;
@@ -4305,7 +4305,7 @@ if (!empty($event['series_id'])) {
                         return;
                     }
                     if (!birthYear) {
-                        errorDiv.innerHTML = 'Fodelsear kravs for att bestamma klass.';
+                        errorDiv.innerHTML = 'Födelseår krävs för att bestämma klass.';
                         errorDiv.style.color = 'var(--color-error)';
                         errorDiv.style.display = 'block';
                         return;
