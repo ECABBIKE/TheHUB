@@ -814,27 +814,36 @@ try {
         });
     }
 
-    // Fetch registrations with class info
+    // Fetch registrations with class info (only paid registrations shown publicly)
     $registrations = $db->prepare("
-        SELECT reg.*, r.firstname, r.lastname, c.name as club_name,
+        SELECT reg.*, r.firstname, r.lastname, r.birth_year, c.name as club_name,
                COALESCE(cl.display_name, cl.name, reg.category) as class_name,
                cl.sort_order as class_sort_order
         FROM event_registrations reg
         LEFT JOIN riders r ON reg.rider_id = r.id
         LEFT JOIN clubs c ON r.club_id = c.id
         LEFT JOIN classes cl ON cl.name = reg.category
-        WHERE reg.event_id = ? AND reg.status NOT IN ('cancelled', 'pending')
-        ORDER BY cl.sort_order ASC, cl.name ASC, reg.registration_date ASC
+        WHERE reg.event_id = ? AND reg.status NOT IN ('cancelled') AND reg.payment_status = 'paid'
+        ORDER BY cl.sort_order ASC, cl.name ASC, reg.bib_number ASC, reg.registration_date ASC
     ");
     $registrations->execute([$eventId]);
     $registrations = $registrations->fetchAll(PDO::FETCH_ASSOC);
     $totalRegistrations = count($registrations);
 
+    // Check if bib numbers have been assigned (for tab name: Anmälda vs Startlista)
+    $hasBibNumbers = false;
+    foreach ($registrations as $reg) {
+        if (!empty($reg['bib_number'])) {
+            $hasBibNumbers = true;
+            break;
+        }
+    }
+
     // Group registrations by class (preserve sort_order)
     $registrationsByClass = [];
     $classSortOrders = []; // Track sort_order for each class
     foreach ($registrations as $reg) {
-        $className = $reg['class_name'] ?: $reg['category'] ?: 'Okänd klass';
+        $className = $reg['class_name'] ?: $reg['category'] ?: 'Okand klass';
         if (!isset($registrationsByClass[$className])) {
             $registrationsByClass[$className] = [];
             // Store sort_order for this class (use 9999 if null, to sort unknowns last)
@@ -1295,8 +1304,8 @@ if (!empty($eventSponsors['content'])): ?>
 
         <?php if ($showAllTabs && !$isPastEvent && $totalRegistrations > 0): ?>
         <a href="?id=<?= $eventId ?>&tab=anmalda" class="event-tab <?= $activeTab === 'anmalda' ? 'active' : '' ?>">
-            <i data-lucide="users"></i>
-            Anmälda
+            <i data-lucide="<?= $hasBibNumbers ? 'list-ordered' : 'users' ?>"></i>
+            <?= $hasBibNumbers ? 'Startlista' : 'Anmalda' ?>
             <span class="tab-badge tab-badge--secondary"><?= $totalRegistrations ?><?php if ($maxParticipants): ?>/<?= $maxParticipants ?><?php endif; ?></span>
         </a>
         <?php endif; ?>
@@ -2529,18 +2538,18 @@ try {
 </style>
 
 <?php elseif ($activeTab === 'anmalda'): ?>
-<!-- REGISTERED PARTICIPANTS TAB -->
+<!-- REGISTERED PARTICIPANTS / STARTLIST TAB -->
 <section class="card">
     <div class="card-header">
         <h2 class="card-title">
-            <i data-lucide="users"></i>
-            Anmälda deltagare
+            <i data-lucide="<?= $hasBibNumbers ? 'list-ordered' : 'users' ?>"></i>
+            <?= $hasBibNumbers ? 'Startlista' : 'Anmalda deltagare' ?>
             <span class="badge badge--primary ml-sm"><?= $totalRegistrations ?><?php if ($maxParticipants): ?>/<?= $maxParticipants ?><?php endif; ?></span>
         </h2>
     </div>
     <div class="card-body">
         <?php if (empty($registrationsByClass)): ?>
-            <p class="text-muted">Inga anmälningar ännu.</p>
+            <p class="text-muted">Inga anmalningar annu.</p>
         <?php else: ?>
         <?php foreach ($registrationsByClass as $className => $classRegs): ?>
         <div class="reg-class-group mb-lg">
@@ -2550,44 +2559,49 @@ try {
             </h3>
             <div class="reg-participants-scroll">
                 <table class="table table--striped table--compact reg-participants-table">
+                    <?php if ($hasBibNumbers): ?>
                     <colgroup>
-                        <col style="width: 10%;">
-                        <col style="width: 35%;">
-                        <col style="width: 10%;">
-                        <col style="width: 30%;">
-                        <col style="width: 15%;">
+                        <col style="width: 12%;">
+                        <col style="width: 38%;">
+                        <col style="width: 12%;">
+                        <col style="width: 38%;">
                     </colgroup>
                     <thead>
                         <tr>
                             <th>Startnr</th>
                             <th>Namn</th>
-                            <th>Född</th>
+                            <th>Fodd</th>
                             <th>Klubb</th>
-                            <th>Status</th>
                         </tr>
                     </thead>
+                    <?php else: ?>
+                    <colgroup>
+                        <col style="width: 45%;">
+                        <col style="width: 12%;">
+                        <col style="width: 43%;">
+                    </colgroup>
+                    <thead>
+                        <tr>
+                            <th>Namn</th>
+                            <th>Fodd</th>
+                            <th>Klubb</th>
+                        </tr>
+                    </thead>
+                    <?php endif; ?>
                     <tbody>
                         <?php foreach ($classRegs as $index => $reg):
                             $regName = h(($reg['firstname'] ?? $reg['first_name'] ?? '') . ' ' . ($reg['lastname'] ?? $reg['last_name'] ?? ''));
                             $regClub = h($reg['club_name'] ?? '-');
                             $regBib = h($reg['bib_number'] ?? '-');
                             $regYear = h($reg['birth_year'] ?? '-');
-                            $statusClass = 'badge--secondary';
-                            $statusText = ucfirst($reg['status'] ?? 'pending');
-                            if ($reg['status'] === 'confirmed' || $reg['payment_status'] === 'paid') {
-                                $statusClass = 'badge--success';
-                                $statusText = 'Betald';
-                            } elseif ($reg['status'] === 'pending') {
-                                $statusClass = 'badge--warning';
-                                $statusText = 'Väntande';
-                            }
                         ?>
                         <tr>
+                            <?php if ($hasBibNumbers): ?>
                             <td class="text-muted"><?= $regBib ?></td>
+                            <?php endif; ?>
                             <td><strong><?= $regName ?></strong></td>
                             <td class="text-muted"><?= $regYear ?></td>
                             <td class="text-secondary"><?= $regClub ?></td>
-                            <td><span class="badge <?= $statusClass ?>"><?= $statusText ?></span></td>
                         </tr>
                         <?php endforeach; ?>
                     </tbody>
@@ -3978,7 +3992,7 @@ if (!empty($event['series_id'])) {
                     const suggestedLast = nameParts.slice(1).join(' ') || '';
                     const p = prefix;
 
-                    const labelStyle = 'font-size: 0.875rem; font-weight: 500; color: var(--color-text-secondary); white-space: nowrap; padding-top: 10px;';
+                    const labelStyle = 'display: block; font-size: 0.8rem; font-weight: 600; color: var(--color-text-muted); margin-bottom: var(--space-2xs); text-transform: uppercase; letter-spacing: 0.3px;';
                     const inputStyle = 'width: 100%; padding: 10px 12px; font-size: 1rem; background: var(--color-bg-surface); border: 1px solid var(--color-border); border-radius: var(--radius-sm); color: var(--color-text-primary); box-sizing: border-box;';
 
                     return `
@@ -4002,77 +4016,73 @@ if (!empty($event['series_id'])) {
                                     <div id="${p}uciLookupStatus" style="display:none; margin-top: var(--space-xs); font-size: 0.875rem;"></div>
                                 </div>
 
-                                <table style="width: 100%; border-collapse: separate; border-spacing: 0 var(--space-sm);">
-                                    <tr>
-                                        <td style="${labelStyle}">Förnamn *</td>
-                                        <td><input type="text" id="${p}newRiderFirstname" style="${inputStyle}" value="${suggestedFirst}" required></td>
-                                    </tr>
-                                    <tr>
-                                        <td style="${labelStyle}">Efternamn *</td>
-                                        <td><input type="text" id="${p}newRiderLastname" style="${inputStyle}" value="${suggestedLast}" required></td>
-                                    </tr>
-                                    <tr>
-                                        <td style="${labelStyle}">E-post *</td>
-                                        <td><input type="email" id="${p}newRiderEmail" style="${inputStyle}" placeholder="namn@exempel.se" required></td>
-                                    </tr>
-                                    <tr>
-                                        <td style="${labelStyle}">Telefon *</td>
-                                        <td><input type="tel" id="${p}newRiderPhone" style="${inputStyle}" placeholder="070-123 45 67" required></td>
-                                    </tr>
-                                    <tr>
-                                        <td style="${labelStyle}">Födelseår *</td>
-                                        <td><input type="number" id="${p}newRiderBirthYear" style="${inputStyle}" placeholder="t.ex. 1990" min="1920" max="2025" required></td>
-                                    </tr>
-                                    <tr>
-                                        <td style="${labelStyle}">Kön *</td>
-                                        <td>
+                                <div style="display: flex; flex-direction: column; gap: var(--space-sm);">
+                                    <div>
+                                        <label style="${labelStyle}">Fornamn *</label>
+                                        <input type="text" id="${p}newRiderFirstname" style="${inputStyle}" value="${suggestedFirst}" required>
+                                    </div>
+                                    <div>
+                                        <label style="${labelStyle}">Efternamn *</label>
+                                        <input type="text" id="${p}newRiderLastname" style="${inputStyle}" value="${suggestedLast}" required>
+                                    </div>
+                                    <div>
+                                        <label style="${labelStyle}">E-post *</label>
+                                        <input type="email" id="${p}newRiderEmail" style="${inputStyle}" placeholder="namn@exempel.se" required>
+                                    </div>
+                                    <div>
+                                        <label style="${labelStyle}">Telefon *</label>
+                                        <input type="tel" id="${p}newRiderPhone" style="${inputStyle}" placeholder="070-123 45 67" required>
+                                    </div>
+                                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-sm);">
+                                        <div>
+                                            <label style="${labelStyle}">Fodelsear *</label>
+                                            <input type="number" id="${p}newRiderBirthYear" style="${inputStyle}" placeholder="t.ex. 1990" min="1920" max="2025" required>
+                                        </div>
+                                        <div>
+                                            <label style="${labelStyle}">Kon *</label>
                                             <select id="${p}newRiderGender" style="${inputStyle}" required>
-                                                <option value="">Välj...</option>
+                                                <option value="">Valj...</option>
                                                 <option value="M">Man</option>
                                                 <option value="F">Kvinna</option>
                                             </select>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td style="${labelStyle}">Nationalitet</td>
-                                        <td>
-                                            <select id="${p}newRiderNationality" style="${inputStyle}">
-                                                <option value="SWE" selected>Sverige</option>
-                                                <option value="NOR">Norge</option>
-                                                <option value="DNK">Danmark</option>
-                                                <option value="FIN">Finland</option>
-                                                <option value="DEU">Tyskland</option>
-                                                <option value="GBR">Storbritannien</option>
-                                                <option value="USA">USA</option>
-                                                <option value="">Annan</option>
-                                            </select>
-                                        </td>
-                                    </tr>
-                                    <tr>
-                                        <td style="${labelStyle}">Klubb</td>
-                                        <td>
-                                            <div style="position: relative;">
-                                                <input type="text" id="${p}newRiderClubSearch" style="${inputStyle}" placeholder="Sok klubb..." autocomplete="off">
-                                                <input type="hidden" id="${p}newRiderClubId" value="">
-                                                <div id="${p}clubSearchResults" style="display:none; position:absolute; top:100%; left:0; right:0; z-index:100; background:var(--color-bg-card); border:1px solid var(--color-border); border-top:none; border-radius:0 0 var(--radius-sm) var(--radius-sm); max-height:200px; overflow-y:auto; box-shadow: 0 4px 12px rgba(0,0,0,0.3);"></div>
-                                            </div>
-                                        </td>
-                                    </tr>
-                                </table>
+                                        </div>
+                                    </div>
+                                    <div>
+                                        <label style="${labelStyle}">Nationalitet</label>
+                                        <select id="${p}newRiderNationality" style="${inputStyle}">
+                                            <option value="SWE" selected>Sverige</option>
+                                            <option value="NOR">Norge</option>
+                                            <option value="DNK">Danmark</option>
+                                            <option value="FIN">Finland</option>
+                                            <option value="DEU">Tyskland</option>
+                                            <option value="GBR">Storbritannien</option>
+                                            <option value="USA">USA</option>
+                                            <option value="">Annan</option>
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label style="${labelStyle}">Klubb</label>
+                                        <div style="position: relative;">
+                                            <input type="text" id="${p}newRiderClubSearch" style="${inputStyle}" placeholder="Sok klubb..." autocomplete="off">
+                                            <input type="hidden" id="${p}newRiderClubId" value="">
+                                            <div id="${p}clubSearchResults" style="display:none; position:absolute; top:100%; left:0; right:0; z-index:100; background:var(--color-bg-card); border:1px solid var(--color-border); border-top:none; border-radius:0 0 var(--radius-sm) var(--radius-sm); max-height:200px; overflow-y:auto; box-shadow: 0 4px 12px rgba(0,0,0,0.3);"></div>
+                                        </div>
+                                    </div>
+                                </div>
 
                                 <div style="margin: var(--space-md) 0; padding-top: var(--space-md); border-top: 1px solid var(--color-border);">
                                     <span style="color: var(--color-text-muted); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.5px; font-weight: 600;">Nödkontakt (ICE)</span>
                                 </div>
-                                <table style="width: 100%; border-collapse: separate; border-spacing: 0 var(--space-sm);">
-                                    <tr>
-                                        <td style="${labelStyle}">Namn *</td>
-                                        <td><input type="text" id="${p}newRiderIceName" style="${inputStyle}" placeholder="Förnamn Efternamn" required></td>
-                                    </tr>
-                                    <tr>
-                                        <td style="${labelStyle}">Telefon *</td>
-                                        <td><input type="tel" id="${p}newRiderIcePhone" style="${inputStyle}" placeholder="070-123 45 67" required></td>
-                                    </tr>
-                                </table>
+                                <div style="display: flex; flex-direction: column; gap: var(--space-sm);">
+                                    <div>
+                                        <label style="${labelStyle}">Namn *</label>
+                                        <input type="text" id="${p}newRiderIceName" style="${inputStyle}" placeholder="Fornamn Efternamn" required>
+                                    </div>
+                                    <div>
+                                        <label style="${labelStyle}">Telefon *</label>
+                                        <input type="tel" id="${p}newRiderIcePhone" style="${inputStyle}" placeholder="070-123 45 67" required>
+                                    </div>
+                                </div>
 
                                 <button type="button" id="${p}createRiderBtn" class="btn btn--primary btn--block" style="margin-top: var(--space-lg); padding: var(--space-md); width: 100%; background: var(--color-accent); color: var(--color-bg-page); border: none; border-radius: var(--radius-sm); font-size: 1rem; font-weight: 600; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: var(--space-xs);">
                                     <i data-lucide="user-plus"></i> Skapa och välj

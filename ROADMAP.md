@@ -1,6 +1,6 @@
 # TheHUB - Development Roadmap
 
-> Senast uppdaterad: 2026-02-14
+> Senast uppdaterad: 2026-02-16
 >
 > **Se:** `/admin/roadmap.php` for interaktiv vy
 
@@ -23,6 +23,37 @@
 ---
 
 # CHANGELOG
+
+### 2026-02-16 (Session-fix + Mobilfixar + Checkout + Deltagarlista)
+- **Branch:** claude/fix-mobile-payment-layout-UVxvi
+
+- **Buggfix: "Aktivera profil" visades for lankade/familje-profiler**
+  - linked_to_rider_id saknades i SELECT-fragan i rider.php
+  - Fixat: kolumnen tillagd i bade huvud- och fallback-queryn
+
+- **Fix: Mobilmeny satt inte fast i botten (webblasare)**
+  - Fixat: z-index 9999 + translate3d i theme-base.css
+
+- **Fix: Checkout - Swish forst, kort under**
+  - Swish visas nu ovanfor kort med meddelande om bankavgifter
+
+- **Fix: Anmalda-listan pa event-sidan**
+  - Visar nu BARA betalda deltagare (payment_status = paid)
+  - Statuskolumnen borttagen - bara Namn, Fodd, Klubb
+  - Nar startnummer tilldelats byter fliken namn till "Startlista"
+
+- **Fix: Mobil formularlayout (skapa deltagare)**
+  - Bytt fran table-layout till staplad div-layout
+  - Cart-sidan: borttagen hardkodad max-width
+
+- **Andrade filer:**
+  - `pages/rider.php` - linked_to_rider_id tillagd i SELECT
+  - `assets/css/theme-base.css` - Mobilmeny z-index + GPU-acceleration
+  - `pages/checkout.php` - Swish forst, kort under, bankavgiftsmeddelande
+  - `pages/event.php` - Deltagarlista bara betalda, fliknamn dynamiskt, formularlayout
+  - `pages/cart.php` - Borttagen hardkodad max-width
+
+---
 
 ### 2026-02-14 (Nationalitetskoder standardiserade)
 - **Branch:** claude/fix-mobile-payment-layout-Kh2Gg
