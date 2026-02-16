@@ -115,22 +115,15 @@
     text-align: center;
 }
 
-/* Class Results Sponsor
-   Logo fills full height of card-header row
-*/
+/* Class Results Sponsor */
 .class-sponsor {
     display: inline-flex;
     align-items: center;
     gap: var(--space-xs);
     text-decoration: none;
-    padding: var(--space-2xs) var(--space-sm);
-    background: var(--color-bg-sunken);
-    border-radius: var(--radius-sm);
-    transition: background 0.2s;
+    padding: 0;
     flex-shrink: 0;
-    align-self: stretch;
 }
-.class-sponsor:hover { background: var(--color-border); }
 .class-sponsor-label-desktop,
 .class-sponsor-label-mobile {
     font-size: 0.65rem;
@@ -145,9 +138,8 @@
     .class-sponsor-label-mobile { display: inline; }
 }
 .class-sponsor-logo {
-    height: 100%;
-    max-height: 48px;
-    max-width: 200px;
+    height: 40px;
+    width: auto;
     object-fit: contain;
 }
 .class-sponsor-name {
@@ -158,10 +150,6 @@
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
-}
-/* Card header with sponsor: stretch so logo fills full height */
-.class-section > .card-header {
-    align-items: stretch;
 }
 
 /* Event Header */
