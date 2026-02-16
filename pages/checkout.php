@@ -511,16 +511,16 @@ include __DIR__ . '/../components/header.php';
                     </h2>
                 </div>
                 <div class="card-body">
-                    <form method="GET" action="/checkout" id="discount-form" class="flex gap-sm">
+                    <form method="GET" action="/checkout" id="discount-form" style="display: flex; flex-wrap: wrap; gap: var(--space-sm);">
                         <input type="hidden" name="order" value="<?= $order['id'] ?>">
                         <input type="text"
                                name="discount_code"
                                id="discount-code-input"
                                placeholder="Ange rabattkod"
-                               class="form-input flex-1"
+                               class="form-input"
                                value="<?= htmlspecialchars($discountCode ?? '') ?>"
-                               style="text-transform: uppercase;">
-                        <button type="submit" class="btn btn--secondary" id="apply-discount-btn">
+                               style="text-transform: uppercase; flex: 1; min-width: 0;">
+                        <button type="submit" class="btn btn--secondary" id="apply-discount-btn" style="white-space: nowrap;">
                             <i data-lucide="check"></i>
                             Använd
                         </button>
@@ -545,7 +545,7 @@ include __DIR__ . '/../components/header.php';
                 <div style="background: var(--color-accent-light); padding: var(--space-sm) var(--space-md); border-radius: var(--radius-md) var(--radius-md) 0 0; text-align: center;">
                     <p style="margin: 0; font-size: var(--text-sm); color: var(--color-accent-text);">
                         <i data-lucide="heart" style="width:14px;height:14px;display:inline-block;vertical-align:-2px;"></i>
-                        Valj Swish som betalning och hjalp oss halla nere bankavgifterna
+                        Välj Swish som betalning och hjälp oss hålla nere bankavgifterna
                     </p>
                 </div>
                 <div class="card-header">
@@ -699,7 +699,7 @@ include __DIR__ . '/../components/header.php';
 
                         <p class="text-xs text-secondary text-center mt-sm">
                             <i data-lucide="shield-check" class="icon-xs"></i>
-                            Sakra betalningar via Stripe. Vi lagrar inga kortuppgifter.
+                            Säkra betalningar via Stripe. Vi lagrar inga kortuppgifter.
                         </p>
                     </div>
                 </div>

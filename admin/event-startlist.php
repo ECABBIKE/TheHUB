@@ -647,7 +647,7 @@ foreach ($registrations as $reg) {
                             };
                             $statusLabel = match($reg['status']) {
                                 'confirmed' => 'OK',
-                                'pending' => 'Vantar',
+                                'pending' => 'Väntar',
                                 'cancelled' => 'Avbruten',
                                 default => $reg['status']
                             };
@@ -658,7 +658,7 @@ foreach ($registrations as $reg) {
                             <?php if (($reg['order_payment_status'] ?? '') === 'paid'): ?>
                             <span class="badge badge-success">Betald</span>
                             <?php elseif (($reg['order_payment_status'] ?? '') === 'pending'): ?>
-                            <span class="badge badge-warning">Vantar</span>
+                            <span class="badge badge-warning">Väntar</span>
                             <?php else: ?>
                             <span class="text-secondary">-</span>
                             <?php endif; ?>
@@ -710,8 +710,8 @@ foreach ($registrations as $reg) {
                     <strong><?= h($reg['last_name']) ?></strong>, <?= h($reg['first_name']) ?>
                 </div>
                 <div class="sl-card-meta">
-                    <?php if (!empty($reg['club_name'] ?? $reg['club'])): ?>
-                    <span><?= h($reg['club_name'] ?? $reg['club']) ?></span>
+                    <?php if (!empty($reg['club_name'] ?? $reg['club'] ?? '')): ?>
+                    <span><?= h($reg['club_name'] ?? $reg['club'] ?? '') ?></span>
                     <?php endif; ?>
                     <span><?= h($reg['rider_birth_year'] ?? $reg['birth_year'] ?? '') ?></span>
                 </div>
@@ -724,7 +724,7 @@ foreach ($registrations as $reg) {
                     default => 'badge-secondary'
                 };
                 ?>
-                <span class="badge <?= $statusBadge ?> badge-sm"><?= $reg['status'] === 'confirmed' ? 'OK' : 'Vantar' ?></span>
+                <span class="badge <?= $statusBadge ?> badge-sm"><?= $reg['status'] === 'confirmed' ? 'OK' : 'Väntar' ?></span>
                 <?php if (($reg['order_payment_status'] ?? '') === 'paid'): ?>
                 <span class="badge badge-success badge-sm">Betald</span>
                 <?php endif; ?>
