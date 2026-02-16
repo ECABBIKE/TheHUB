@@ -1,6 +1,6 @@
 # TheHUB - Memory / Session Knowledge
 
-> Senast uppdaterad: 2026-02-14
+> Senast uppdaterad: 2026-02-16
 
 ---
 
@@ -221,7 +221,27 @@
 
 ---
 
-## SENASTE FIXAR (2026-02-14)
+## SENASTE FIXAR (2026-02-16)
+
+- **Session-utloggning fixad (3 kritiska buggar)**:
+  1. `session.gc_maxlifetime` sattes ALDRIG → PHP default 24 min raderade sessionsdata pa servern trots att cookie levde 7-30 dagar. Fixat: satter `ini_set('session.gc_maxlifetime', 2592000)` (30 dagar) i index.php, config.php och auth.php
+  2. `rider-auth.php` laddades INTE pa publika sidor → `rider_check_remember_token()` var otillganglig → remember-me auto-login fungerade aldrig. Fixat: laddas nu fran hub-config.php
+  3. `hub_set_user_session()` skapade ALDRIG en remember-token i databasen → aven om remember-check fungerade fanns ingen token att kolla. Fixat: anropar nu `rider_set_remember_token()` vid remember_me
+  4. `rider_check_remember_token()` aterställde bara `rider_*` sessionsvariabler, INTE `hub_*` → auto-login satte rider_id men inte hub_user_id → publika sidor sag anvandaren som utloggad. Fixat: satter nu alla hub_* variabler + lankar profiler
+  5. Session-cookie fornyades inte vid varje sidladdning for remember-me-anvandare → 30-dagars-fonstret borjade vid login, inte senaste aktivitet. Fixat: cookie fornyas pa varje sidladdning i hub-config.php
+- **Session-cookie lifetime**: Alla session-cookiepar satta till 30 dagar (var 7 dagar / 1 dag pa olika stallen)
+
+### Session-arkitektur (efter fix)
+- **gc_maxlifetime**: 30 dagar (satt i index.php, config.php, auth.php)
+- **Cookie lifetime**: 30 dagar (alla stallen)
+- **Remember token**: DB-backed, 30 dagar, roteras vid varje auto-login
+- **Cookie refresh**: Session-cookie fornyas varje sidladdning for remember_me-anvandare
+- **Fallback-kedja**: Session → remember_token (cookie+DB) → utloggad
+- **rider-auth.php**: Laddas globalt via hub-config.php (behover inte inkluderas manuellt langre)
+
+---
+
+## TIDIGARE FIXAR (2026-02-14)
 
 - **SCF Namnsok birthdate-bugg**: Batch-sokningen skickade `YYYY-01-01` som birthdate till SCF API, vilket filterade bort alla som inte var fodda 1 januari (= 0% traffar). Fixat: skickar INTE birthdate alls vid namn-sokning (samma fix som redan fanns i order-manager.php). Birth year anvands bara for match scoring.
   - Riders utan kon soker nu bade M och F istallet for att anta M

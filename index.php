@@ -9,9 +9,13 @@ ob_start();
 
 // Start session if not started
 if (session_status() === PHP_SESSION_NONE) {
-    // Configure session with longer lifetime (7 days)
+    // CRITICAL: Set server-side session lifetime to match cookie lifetime
+    // PHP default is 1440s (24min) which causes premature session expiration
+    ini_set('session.gc_maxlifetime', 2592000); // 30 days
+
+    // Configure session cookie with longer lifetime
     session_set_cookie_params([
-        'lifetime' => 604800, // 7 days
+        'lifetime' => 2592000, // 30 days
         'path' => '/',
         'domain' => '',
         'secure' => isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on',

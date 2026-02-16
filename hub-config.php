@@ -25,6 +25,12 @@ if (!isset($GLOBALS['pdo'])) {
     die('Error: Database connection not established');
 }
 
+// Load rider auth for remember-me token support on all pages
+$riderAuthPath = __DIR__ . '/includes/rider-auth.php';
+if (file_exists($riderAuthPath)) {
+    require_once $riderAuthPath;
+}
+
 // ============================================================================
 // VERSION INFO
 // ============================================================================
@@ -193,6 +199,25 @@ if (!function_exists('hub_is_logged_in')) {
         }
         return false;
     }
+}
+
+// Refresh session cookie on each page load for remember-me users
+// This keeps the 30-day window rolling (like "remember me" on other sites)
+if (session_status() === PHP_SESSION_ACTIVE && !empty($_SESSION['remember_me'])) {
+    $lifetime = 30 * 24 * 60 * 60; // 30 days
+    $params = session_get_cookie_params();
+    setcookie(
+        session_name(),
+        session_id(),
+        [
+            'expires' => time() + $lifetime,
+            'path' => $params['path'],
+            'domain' => $params['domain'],
+            'secure' => $params['secure'],
+            'httponly' => $params['httponly'],
+            'samesite' => $params['samesite'] ?? 'Lax'
+        ]
+    );
 }
 
 if (!function_exists('hub_current_user')) {
@@ -658,6 +683,12 @@ if (!function_exists('hub_set_user_session')) {
                     'samesite' => $params['samesite'] ?? 'Lax'
                 ]
             );
+
+            // Create database-backed remember token as fallback
+            // This allows auto-login even if the server-side session is lost
+            if (function_exists('rider_set_remember_token') && $user['id'] > 0) {
+                rider_set_remember_token($user['id']);
+            }
         }
 
         // Store linked profiles for profile switching

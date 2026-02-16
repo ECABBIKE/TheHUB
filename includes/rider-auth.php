@@ -213,10 +213,30 @@ function rider_check_remember_token() {
     }
 
     // Valid token - log the user in
+    // Set rider_* session variables (legacy)
     $_SESSION['rider_id'] = $rider['id'];
     $_SESSION['rider_name'] = $rider['firstname'] . ' ' . $rider['lastname'];
     $_SESSION['rider_email'] = $rider['email'];
     $_SESSION['rider_remember_me'] = true;
+
+    // Set hub_* session variables (V3) for full compatibility
+    $_SESSION['hub_user_id'] = $rider['id'];
+    $_SESSION['hub_user_email'] = $rider['email'];
+    $_SESSION['hub_user_name'] = $rider['firstname'] . ' ' . $rider['lastname'];
+    $_SESSION['hub_user_role'] = (int)($rider['role_id'] ?? 1);
+    $_SESSION['hub_logged_in_at'] = time();
+    $_SESSION['hub_active_rider_id'] = $rider['id'];
+    $_SESSION['remember_me'] = true;
+
+    // Load linked profiles so profile switching works after auto-login
+    $allProfiles = $db->getAll(
+        "SELECT id, firstname, lastname, birth_year, gender FROM riders WHERE email = ? AND active = 1 ORDER BY birth_year DESC",
+        [$rider['email']]
+    );
+    $_SESSION['rider_all_profiles'] = $allProfiles;
+    $_SESSION['rider_profile_count'] = count($allProfiles);
+    $_SESSION['hub_linked_profiles'] = $allProfiles;
+    $_SESSION['hub_all_rider_ids'] = array_column($allProfiles, 'id');
 
     // Refresh the remember token (rotate for security)
     rider_set_remember_token($rider['id']);

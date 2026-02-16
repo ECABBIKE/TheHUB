@@ -13,9 +13,13 @@ if (!function_exists('redirect')) {
 
 // Start session if not already started
 if (session_status() === PHP_SESSION_NONE) {
+    // CRITICAL: Set server-side session lifetime to match cookie lifetime
+    // PHP default is 1440s (24min) which causes premature session expiration
+    ini_set('session.gc_maxlifetime', 2592000); // 30 days
+
     // Configure secure session parameters
     session_set_cookie_params([
-        'lifetime' => defined('SESSION_LIFETIME') ? SESSION_LIFETIME : 86400,
+        'lifetime' => 2592000, // 30 days
         'path' => '/',
         'domain' => '',
         // Auto-detect HTTPS - secure flag only if using SSL
