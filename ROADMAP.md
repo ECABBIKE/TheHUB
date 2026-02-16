@@ -25,8 +25,19 @@
 
 # CHANGELOG
 
-### 2026-02-18 (Navigation synkad over alla plattformar)
+### 2026-02-18 (Sponsors API + Reklamplatser preview + Navigation sync)
 - **Branch:** claude/fix-mobile-payment-layout-UVxvi
+
+- **Buggfix: Sponsors API trasig (debug-version)**
+  - `/api/sponsors.php` hade ersatts med en debug-version som returnerade HTML
+  - Alla CRUD-operationer (get, list, create, update, delete) fungerade inte
+  - Aterskriven till riktig JSON API
+
+- **Ny funktion: Forhandsvisning av reklamplatser**
+  - Ny sida `/admin/sponsor-placements-preview.php`
+  - Visuell simulering av en hel sida med alla placement-positioner markerade
+  - Detaljerade specifikationskort per position med bildformat och responsiv demo
+  - Lankad fran reklamplatser-sidan
 
 - **Fix: Admin mobilmeny synkad med desktop**
   - Mobilmenyn laser nu fran samma kalla som desktop sidebar ($ADMIN_TABS)
@@ -41,7 +52,12 @@
   - Admin: Borttagen dubbel "Media", lagt till Serier och Sponsorer
   - Publik: Lagt till Serier och Ranking
 
+- **Nya filer:**
+  - `admin/sponsor-placements-preview.php` - Visuell forhandsvisning av positioner
+
 - **Andrade filer:**
+  - `api/sponsors.php` - Aterskriven fran debug till riktig JSON API
+  - `admin/sponsor-placements.php` - Lagt till lank till forhandsvisning
   - `admin/components/admin-mobile-nav.php` - Omskriven, laser fran $ADMIN_TABS
   - `components/sidebar.php` - Promotor-nav fixad (Media, Sponsorer)
   - `admin/manifest.json` - Genvagar korrigerade

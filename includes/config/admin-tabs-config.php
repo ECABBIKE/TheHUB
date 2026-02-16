@@ -245,7 +245,7 @@ $ADMIN_TABS = [
                 'label' => 'Reklamplatser',
                 'icon' => 'layout-grid',
                 'url' => '/admin/sponsor-placements.php',
-                'pages' => ['sponsor-placements.php'],
+                'pages' => ['sponsor-placements.php', 'sponsor-placements-preview.php'],
                 'role' => 'super_admin'
             ],
         ]
