@@ -1,6 +1,6 @@
 # TheHUB - Memory / Session Knowledge
 
-> Senast uppdaterad: 2026-02-16
+> Senast uppdaterad: 2026-02-17
 
 ---
 
@@ -221,7 +221,12 @@
 
 ---
 
-## SENASTE FIXAR (2026-02-16)
+## SENASTE FIXAR (2026-02-17)
+
+- **Sponsorlogo i resultatheader fixad**: Borttagen ful gra bakgrundsruta (`color-bg-sunken`) och `align-items: stretch` fran `.class-sponsor`. Loggan ar nu 40px hojd utan bakgrund, ren och enkel.
+- **Bildformat-guide i mediabiblioteket**: Ny inforuta i sidofaltet pa `/admin/media.php` med knapp som oppnar detaljerad popup. Beskriver alla bildformat (Banner 1200x150, Logo 600x150, Resultatheader 40px hojd), generella riktlinjer, mappstruktur och var bilder visas pa sajten. Anpassad for bade admin (ser alla mappar + promotor-info) och promotor (ser bara sin mapp + tips).
+
+## TIDIGARE FIXAR (2026-02-16)
 
 - **Svenska tecken fixade**: Alla UI-texter i event.php, checkout.php och admin/event-startlist.php anvander nu korrekta a, a, o (var felaktigt utan diakritiska tecken). Krav tillagt i CLAUDE.md.
 - **Sponsorlogga forstorad i resultatkortheader**: `.class-sponsor-logo` okad fran max-height 36px till height 100% / max-height 48px, max-width 200px. Card-header i `.class-section` anvander nu `align-items: stretch` sa loggan fyller hela radens hojd.
