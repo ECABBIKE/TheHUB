@@ -105,7 +105,7 @@ if (APP_ENV === 'development') {
 // Version info
 define('APP_VERSION', '1.0');
 define('APP_VERSION_NAME', 'Release');
-define('APP_BUILD', '2026-02-15');
+define('APP_BUILD', '2026-02-16');
 define('DEPLOYMENT_OFFSET', 131);
 
 
@@ -128,9 +128,13 @@ try {
 // Skip session and security headers for API/webhook requests (they set their own headers)
 if (!defined('HUB_API_REQUEST')) {
     if (session_status() === PHP_SESSION_NONE) {
-        // Configure session with longer lifetime (7 days)
+        // CRITICAL: Set server-side session lifetime to match cookie lifetime
+        // PHP default is 1440s (24min) which causes premature session expiration
+        ini_set('session.gc_maxlifetime', 2592000); // 30 days
+
+        // Configure session cookie with longer lifetime
         session_set_cookie_params([
-            'lifetime' => 604800, // 7 days
+            'lifetime' => 2592000, // 30 days
             'path' => '/',
             'domain' => '',
             'secure' => isset($_SERVER['HTTPS']) && $_SERVER['HTTPS'] === 'on',
