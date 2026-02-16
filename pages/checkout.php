@@ -539,47 +539,15 @@ include __DIR__ . '/../components/header.php';
             $hasAnyPayment = $hasStripe || $hasSwish;
             ?>
 
-            <?php if ($hasStripe): ?>
-            <!-- Stripe Card Payment -->
-            <div class="card mb-lg">
-                <div class="card-header">
-                    <h2 class="text-lg">
-                        <i data-lucide="credit-card"></i>
-                        Betala med kort
-                    </h2>
-                </div>
-                <div class="card-body">
-                    <div class="payment-option payment-option--card">
-                        <div class="flex items-center gap-sm mb-md">
-                            <div style="width:40px;height:40px;flex-shrink:0;background:linear-gradient(135deg,#635bff,#5851db);border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center;">
-                                <i data-lucide="credit-card" style="width:20px;height:20px;color:white;"></i>
-                            </div>
-                            <div style="min-width:0;">
-                                <h3 class="font-medium">Kortbetalning</h3>
-                                <p class="text-sm text-secondary">Visa, Mastercard, Apple Pay, Google Pay</p>
-                            </div>
-                        </div>
-
-                        <button type="button"
-                                id="stripe-pay-btn"
-                                class="btn btn--primary btn--lg w-full"
-                                onclick="startStripeCheckout(<?= $order['id'] ?>)">
-                            <i data-lucide="lock"></i>
-                            Betala <?= number_format($order['total_amount'], 0) ?> kr
-                        </button>
-
-                        <p class="text-xs text-secondary text-center mt-sm">
-                            <i data-lucide="shield-check" class="icon-xs"></i>
-                            Säkra betalningar via Stripe. Vi lagrar inga kortuppgifter.
-                        </p>
-                    </div>
-                </div>
-            </div>
-            <?php endif; ?>
-
             <?php if ($hasSwish): ?>
-            <!-- Swish Payment -->
+            <!-- Swish Payment (preferred - lower fees) -->
             <div class="card mb-lg" id="swish-section">
+                <div style="background: var(--color-accent-light); padding: var(--space-sm) var(--space-md); border-radius: var(--radius-md) var(--radius-md) 0 0; text-align: center;">
+                    <p style="margin: 0; font-size: var(--text-sm); color: var(--color-accent-text);">
+                        <i data-lucide="heart" style="width:14px;height:14px;display:inline-block;vertical-align:-2px;"></i>
+                        Valj Swish som betalning och hjalp oss halla nere bankavgifterna
+                    </p>
+                </div>
                 <div class="card-header">
                     <h2 class="text-lg">
                         <i data-lucide="smartphone"></i>
@@ -695,6 +663,44 @@ include __DIR__ . '/../components/header.php';
                         <a href="/calendar" class="btn btn--secondary">
                             <i data-lucide="calendar"></i> Kalender
                         </a>
+                    </div>
+                </div>
+            </div>
+            <?php endif; ?>
+
+            <?php if ($hasStripe): ?>
+            <!-- Stripe Card Payment -->
+            <div class="card mb-lg">
+                <div class="card-header">
+                    <h2 class="text-lg">
+                        <i data-lucide="credit-card"></i>
+                        Betala med kort
+                    </h2>
+                </div>
+                <div class="card-body">
+                    <div class="payment-option payment-option--card">
+                        <div class="flex items-center gap-sm mb-md">
+                            <div style="width:40px;height:40px;flex-shrink:0;background:linear-gradient(135deg,#635bff,#5851db);border-radius:var(--radius-md);display:flex;align-items:center;justify-content:center;">
+                                <i data-lucide="credit-card" style="width:20px;height:20px;color:white;"></i>
+                            </div>
+                            <div style="min-width:0;">
+                                <h3 class="font-medium">Kortbetalning</h3>
+                                <p class="text-sm text-secondary">Visa, Mastercard, Apple Pay, Google Pay</p>
+                            </div>
+                        </div>
+
+                        <button type="button"
+                                id="stripe-pay-btn"
+                                class="btn btn--primary btn--lg w-full"
+                                onclick="startStripeCheckout(<?= $order['id'] ?>)">
+                            <i data-lucide="lock"></i>
+                            Betala <?= number_format($order['total_amount'], 0) ?> kr
+                        </button>
+
+                        <p class="text-xs text-secondary text-center mt-sm">
+                            <i data-lucide="shield-check" class="icon-xs"></i>
+                            Sakra betalningar via Stripe. Vi lagrar inga kortuppgifter.
+                        </p>
                     </div>
                 </div>
             </div>

@@ -400,13 +400,15 @@ a:hover {
     bottom: 0;
     left: 0;
     right: 0;
-    z-index: var(--z-fixed);
+    z-index: 9999;
     background: var(--color-bg-surface);
     border-top: 1px solid var(--color-border);
     padding: var(--space-xs) var(--space-sm);
     padding-bottom: calc(var(--space-xs) + env(safe-area-inset-bottom, 0));
     backdrop-filter: blur(var(--blur-sm));
     -webkit-backdrop-filter: blur(var(--blur-sm));
+    transform: translate3d(0, 0, 0);
+    -webkit-transform: translate3d(0, 0, 0);
 }
 
 @media (max-width: 1023px) {

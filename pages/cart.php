@@ -10,7 +10,7 @@ require_once __DIR__ . '/../includes/payment.php';
 // Gravity ID is checked client-side for ALL riders in cart via API
 ?>
 
-<div class="container" style="max-width: 800px; margin: 0 auto;">
+<div class="container container--sm">
     <h1 style="margin-bottom: var(--space-lg);">
         <i data-lucide="shopping-cart"></i>
         Kundvagn

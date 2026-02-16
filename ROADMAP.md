@@ -24,25 +24,34 @@
 
 # CHANGELOG
 
-### 2026-02-16 (Session-utloggningsbugg + Aktivera profil-bugg)
+### 2026-02-16 (Session-fix + Mobilfixar + Checkout + Deltagarlista)
 - **Branch:** claude/fix-mobile-payment-layout-UVxvi
-
-- **Buggfix: "Hall mig inloggad" fungerade inte - anvandare loggades ut**
-  - session.gc_maxlifetime var aldrig satt (PHP default 24 min) - sessionsfiler raderades
-  - Session-cookien fornyades inte pa publika sidor
-  - 30-dagars cookien overskrevs till 7 dagar vid nasta sidladdning
-  - Fixat: gc_maxlifetime=30 dagar + automatisk cookie-fornyelse pa varje sidladdning
 
 - **Buggfix: "Aktivera profil" visades for lankade/familje-profiler**
   - linked_to_rider_id saknades i SELECT-fragan i rider.php
-  - Logiken som kollar primarkontots losenord kunde aldrig koras
   - Fixat: kolumnen tillagd i bade huvud- och fallback-queryn
 
+- **Fix: Mobilmeny satt inte fast i botten (webblasare)**
+  - Fixat: z-index 9999 + translate3d i theme-base.css
+
+- **Fix: Checkout - Swish forst, kort under**
+  - Swish visas nu ovanfor kort med meddelande om bankavgifter
+
+- **Fix: Anmalda-listan pa event-sidan**
+  - Visar nu BARA betalda deltagare (payment_status = paid)
+  - Statuskolumnen borttagen - bara Namn, Fodd, Klubb
+  - Nar startnummer tilldelats byter fliken namn till "Startlista"
+
+- **Fix: Mobil formularlayout (skapa deltagare)**
+  - Bytt fran table-layout till staplad div-layout
+  - Cart-sidan: borttagen hardkodad max-width
+
 - **Andrade filer:**
-  - `config.php` - gc_maxlifetime + remember-me cookie-fornyelse + version bump
-  - `index.php` - gc_maxlifetime + remember-me cookie-fornyelse
-  - `includes/auth.php` - gc_maxlifetime + remember-me cookie-fornyelse
   - `pages/rider.php` - linked_to_rider_id tillagd i SELECT
+  - `assets/css/theme-base.css` - Mobilmeny z-index + GPU-acceleration
+  - `pages/checkout.php` - Swish forst, kort under, bankavgiftsmeddelande
+  - `pages/event.php` - Deltagarlista bara betalda, fliknamn dynamiskt, formularlayout
+  - `pages/cart.php` - Borttagen hardkodad max-width
 
 ---
 
