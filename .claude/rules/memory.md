@@ -223,6 +223,10 @@
 
 ## SENASTE FIXAR (2026-02-16)
 
+- **Svenska tecken fixade**: Alla UI-texter i event.php, checkout.php och admin/event-startlist.php anvander nu korrekta a, a, o (var felaktigt utan diakritiska tecken). Krav tillagt i CLAUDE.md.
+- **Sponsorlogga forstorad i resultatkortheader**: `.class-sponsor-logo` okad fran max-height 36px till height 100% / max-height 48px, max-width 200px. Card-header i `.class-section` anvander nu `align-items: stretch` sa loggan fyller hela radens hojd.
+- **Rabattkod mobilfix**: Formularet i checkout anvander nu `flex-wrap: wrap` sa input och knapp staplas pa smala skarmar istallet for att klippas.
+- **Admin startlista club-bugg**: `Undefined array key 'club'` pa rad 713 fixad med `?? ''`.
 - **Session-utloggning fixad (3 kritiska buggar)**:
   1. `session.gc_maxlifetime` sattes ALDRIG → PHP default 24 min raderade sessionsdata pa servern trots att cookie levde 7-30 dagar. Fixat: satter `ini_set('session.gc_maxlifetime', 2592000)` (30 dagar) i index.php, config.php och auth.php
   2. `rider-auth.php` laddades INTE pa publika sidor → `rider_check_remember_token()` var otillganglig → remember-me auto-login fungerade aldrig. Fixat: laddas nu fran hub-config.php
