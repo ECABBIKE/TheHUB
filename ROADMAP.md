@@ -19,6 +19,7 @@
 | Bildbanken | PAGAENDE | AI-analyserade bilder kopplade till profiler | 10% |
 | Ridercard Share | PAGAENDE | Statistikkort for Instagram-delning | 5% |
 | CSS/UI Standardisering | PLANERAD | Enhetlig radius och nya tabeller pa alla sidor | 0% |
+| POS Incheckning & Startlista | PLANERAD | QR-scanning, incheckning, auto-startnr, startlistevy vid event | 0% |
 
 ---
 
