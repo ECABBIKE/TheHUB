@@ -230,6 +230,7 @@
   4. `rider_check_remember_token()` aterställde bara `rider_*` sessionsvariabler, INTE `hub_*` → auto-login satte rider_id men inte hub_user_id → publika sidor sag anvandaren som utloggad. Fixat: satter nu alla hub_* variabler + lankar profiler
   5. Session-cookie fornyades inte vid varje sidladdning for remember-me-anvandare → 30-dagars-fonstret borjade vid login, inte senaste aktivitet. Fixat: cookie fornyas pa varje sidladdning i hub-config.php
 - **Session-cookie lifetime**: Alla session-cookiepar satta till 30 dagar (var 7 dagar / 1 dag pa olika stallen)
+- **"Aktivera profil" visades for lankade profiler (Vidar-buggen)**: `linked_to_rider_id` saknades i SELECT-fragan i `pages/rider.php`. Logiken som kollar om lankad primarkontot har losenord existerade men kunde aldrig koras for att kolumnen inte hamtades. Fixat genom att lagga till `r.linked_to_rider_id` i bade huvud- och fallback-queryn.
 
 ### Session-arkitektur (efter fix)
 - **gc_maxlifetime**: 30 dagar (satt i index.php, config.php, auth.php)

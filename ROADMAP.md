@@ -1,6 +1,6 @@
 # TheHUB - Development Roadmap
 
-> Senast uppdaterad: 2026-02-14
+> Senast uppdaterad: 2026-02-16
 >
 > **Se:** `/admin/roadmap.php` for interaktiv vy
 
@@ -23,6 +23,28 @@
 ---
 
 # CHANGELOG
+
+### 2026-02-16 (Session-utloggningsbugg + Aktivera profil-bugg)
+- **Branch:** claude/fix-mobile-payment-layout-UVxvi
+
+- **Buggfix: "Hall mig inloggad" fungerade inte - anvandare loggades ut**
+  - session.gc_maxlifetime var aldrig satt (PHP default 24 min) - sessionsfiler raderades
+  - Session-cookien fornyades inte pa publika sidor
+  - 30-dagars cookien overskrevs till 7 dagar vid nasta sidladdning
+  - Fixat: gc_maxlifetime=30 dagar + automatisk cookie-fornyelse pa varje sidladdning
+
+- **Buggfix: "Aktivera profil" visades for lankade/familje-profiler**
+  - linked_to_rider_id saknades i SELECT-fragan i rider.php
+  - Logiken som kollar primarkontots losenord kunde aldrig koras
+  - Fixat: kolumnen tillagd i bade huvud- och fallback-queryn
+
+- **Andrade filer:**
+  - `config.php` - gc_maxlifetime + remember-me cookie-fornyelse + version bump
+  - `index.php` - gc_maxlifetime + remember-me cookie-fornyelse
+  - `includes/auth.php` - gc_maxlifetime + remember-me cookie-fornyelse
+  - `pages/rider.php` - linked_to_rider_id tillagd i SELECT
+
+---
 
 ### 2026-02-14 (Nationalitetskoder standardiserade)
 - **Branch:** claude/fix-mobile-payment-layout-Kh2Gg
