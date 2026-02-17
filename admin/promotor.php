@@ -111,9 +111,17 @@ if ($isAdmin) {
             SELECT o.id, o.order_number, o.total_amount, o.payment_method, o.payment_status,
                    {$stripeFeeCol}
                    o.event_id, o.created_at,
-                   e.name as event_name
+                   COALESCE(e.name, s_name.sname, '-') as event_name
             FROM orders o
             LEFT JOIN events e ON o.event_id = e.id
+            LEFT JOIN (
+                SELECT oi2.order_id, CONCAT(s2.name, ' (serie)') as sname
+                FROM order_items oi2
+                JOIN series_registrations sr2 ON sr2.id = oi2.series_registration_id
+                JOIN series s2 ON s2.id = sr2.series_id
+                WHERE oi2.item_type = 'series_registration'
+                GROUP BY oi2.order_id
+            ) s_name ON s_name.order_id = o.id AND o.event_id IS NULL
             WHERE {$whereClause}
             ORDER BY o.created_at DESC
         ", $params);
@@ -388,56 +396,86 @@ if (!$isAdmin) {
             } catch (Exception $e) {}
         }
 
+        // Collect ALL order IDs belonging to this promotor:
+        // 1. Orders with event_id matching promotor's events
+        // 2. Orders containing series_registration items for promotor's series
+        // 3. Orders with series_id matching promotor's series (if column exists)
+        $stripeFeeCol = $hasStripeFeeCol ? "o.stripe_fee," : "NULL as stripe_fee,";
+
+        // Base conditions
+        $baseConditions = ["o.payment_status = 'paid'", "YEAR(o.created_at) = ?"];
+        $baseParams = [$ecoYear];
+
+        if ($ecoMonth > 0 && $ecoMonth <= 12) {
+            $baseConditions[] = "MONTH(o.created_at) = ?";
+            $baseParams[] = $ecoMonth;
+        }
+        if ($ecoEvent > 0) {
+            $baseConditions[] = "o.event_id = ?";
+            $baseParams[] = $ecoEvent;
+        }
+
+        // Build ownership condition: event_id OR series via order_items OR orders.series_id
+        $ownerParts = [];
+        $ownerParams = [];
+
         if (!empty($allEventIds)) {
             $placeholders = implode(',', array_fill(0, count($allEventIds), '?'));
-            $stripeFeeCol = $hasStripeFeeCol ? "o.stripe_fee," : "NULL as stripe_fee,";
+            $ownerParts[] = "o.event_id IN ({$placeholders})";
+            $ownerParams = array_merge($ownerParams, $allEventIds);
+        }
 
-            $conditions = ["o.payment_status = 'paid'", "YEAR(o.created_at) = ?"];
-            $params = [$ecoYear];
+        // Find orders that contain series_registration items for promotor's series
+        if (!empty($promotorSeriesIds)) {
+            $sPlaceholders = implode(',', array_fill(0, count($promotorSeriesIds), '?'));
+            $ownerParts[] = "o.id IN (
+                SELECT oi.order_id FROM order_items oi
+                JOIN series_registrations sr ON sr.id = oi.series_registration_id
+                WHERE sr.series_id IN ({$sPlaceholders})
+            )";
+            $ownerParams = array_merge($ownerParams, $promotorSeriesIds);
 
-            if ($ecoMonth > 0 && $ecoMonth <= 12) {
-                $conditions[] = "MONTH(o.created_at) = ?";
-                $params[] = $ecoMonth;
+            // Also via orders.series_id if column exists
+            if ($hasOrderSeriesId) {
+                $ownerParts[] = "o.series_id IN ({$sPlaceholders})";
+                $ownerParams = array_merge($ownerParams, $promotorSeriesIds);
             }
-            if ($ecoEvent > 0) {
-                $conditions[] = "o.event_id = ?";
-                $params[] = $ecoEvent;
-            }
+        }
 
-            // Include orders for promotor's events OR series
-            $eventCondition = "o.event_id IN ({$placeholders})";
-            $eventParams = $allEventIds;
-            if ($hasOrderSeriesId && !empty($promotorSeriesIds)) {
-                $sPlaceholders = implode(',', array_fill(0, count($promotorSeriesIds), '?'));
-                $eventCondition = "({$eventCondition} OR o.series_id IN ({$sPlaceholders}))";
-                $eventParams = array_merge($eventParams, $promotorSeriesIds);
-            }
-            $conditions[] = $eventCondition;
-
-            $whereClause = implode(' AND ', $conditions);
-            $allParams = array_merge($params, $eventParams);
+        if (!empty($ownerParts)) {
+            $baseConditions[] = '(' . implode(' OR ', $ownerParts) . ')';
+            $allParams = array_merge($baseParams, $ownerParams);
+            $whereClause = implode(' AND ', $baseConditions);
 
             try {
                 $promotorOrders = $db->getAll("
-                    SELECT o.id, o.order_number, o.total_amount, o.payment_method,
+                    SELECT DISTINCT o.id, o.order_number, o.total_amount, o.payment_method,
                            {$stripeFeeCol}
                            o.event_id, o.created_at, o.discount,
-                           e.name as event_name,
+                           COALESCE(e.name, s_name.name, 'Serieanmälan') as event_name,
                            COALESCE(dc.code, '') as discount_code
                     FROM orders o
                     LEFT JOIN events e ON o.event_id = e.id
+                    LEFT JOIN (
+                        SELECT oi2.order_id, s2.name
+                        FROM order_items oi2
+                        JOIN series_registrations sr2 ON sr2.id = oi2.series_registration_id
+                        JOIN series s2 ON s2.id = sr2.series_id
+                        WHERE oi2.item_type = 'series_registration'
+                        GROUP BY oi2.order_id
+                    ) s_name ON s_name.order_id = o.id AND o.event_id IS NULL
                     LEFT JOIN discount_codes dc ON o.discount_code_id = dc.id
                     WHERE {$whereClause}
                     ORDER BY o.created_at DESC
                 ", $allParams);
             } catch (Exception $e) {
-                // discount_code_id might not exist, retry without
+                // discount_code_id or series tables might not exist
                 try {
                     $promotorOrders = $db->getAll("
-                        SELECT o.id, o.order_number, o.total_amount, o.payment_method,
+                        SELECT DISTINCT o.id, o.order_number, o.total_amount, o.payment_method,
                                {$stripeFeeCol}
                                o.event_id, o.created_at, o.discount,
-                               e.name as event_name,
+                               COALESCE(e.name, 'Serieanmälan') as event_name,
                                '' as discount_code
                         FROM orders o
                         LEFT JOIN events e ON o.event_id = e.id
@@ -808,36 +846,58 @@ include __DIR__ . '/components/unified-layout.php';
                     'free' => 'Gratis',
                     default => ucfirst($method)
                 };
-                $totalFees = $order['payment_fee'] + $order['platform_fee'];
             ?>
             <div style="padding: var(--space-md); border-bottom: 1px solid var(--color-border);">
-                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: var(--space-2xs);">
-                    <div>
-                        <code style="font-size: var(--text-sm);"><?= h($order['order_number'] ?? '#' . $order['id']) ?></code>
-                        <span class="text-xs text-secondary" style="margin-left: var(--space-xs);"><?= date('j M', strtotime($order['created_at'])) ?></span>
-                    </div>
-                    <div style="text-align: right;">
-                        <div style="font-weight: 600; color: var(--color-success); font-variant-numeric: tabular-nums;"><?= number_format($order['net_amount'], 2, ',', ' ') ?> kr</div>
+                <div style="margin-bottom: var(--space-xs);">
+                    <div style="font-weight: 500; color: var(--color-text-primary); margin-bottom: 2px;"><?= h($order['event_name'] ?? '-') ?></div>
+                    <div class="text-xs text-secondary">
+                        <code><?= h($order['order_number'] ?? '#' . $order['id']) ?></code>
+                        &middot; <?= date('j M Y', strtotime($order['created_at'])) ?>
+                        &middot; <?= $methodLabel ?>
                     </div>
                 </div>
-                <div class="text-xs text-secondary" style="margin-bottom: var(--space-2xs);"><?= h($order['event_name'] ?? '-') ?></div>
-                <div style="display: flex; justify-content: space-between; font-size: var(--text-xs); color: var(--color-text-muted);">
-                    <span><?= $methodLabel ?> &middot; <?= number_format($order['total_amount'], 2, ',', ' ') ?> kr</span>
-                    <?php if ($totalFees > 0): ?>
-                    <span style="color: var(--color-error);">-<?= number_format($totalFees, 2, ',', ' ') ?> kr avg.</span>
-                    <?php endif; ?>
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: var(--space-xs); font-size: var(--text-xs); text-align: center; background: var(--color-bg-sunken); padding: var(--space-xs); border-radius: var(--radius-sm);">
+                    <div>
+                        <div style="color: var(--color-text-muted); margin-bottom: 1px;">Belopp</div>
+                        <div style="font-weight: 600;"><?= number_format($order['total_amount'], 0, ',', ' ') ?> kr</div>
+                    </div>
+                    <div>
+                        <div style="color: var(--color-text-muted); margin-bottom: 1px;">Avgift</div>
+                        <div style="color: var(--color-error);"><?= $order['payment_fee'] > 0 ? '-' . number_format($order['payment_fee'], 0, ',', ' ') : '-' ?></div>
+                    </div>
+                    <div>
+                        <div style="color: var(--color-text-muted); margin-bottom: 1px;">Plattform</div>
+                        <div style="color: var(--color-error);"><?= $order['platform_fee'] > 0 ? '-' . number_format($order['platform_fee'], 0, ',', ' ') : '-' ?></div>
+                    </div>
+                    <div>
+                        <div style="color: var(--color-text-muted); margin-bottom: 1px;">Netto</div>
+                        <div style="font-weight: 700; color: var(--color-success);"><?= number_format($order['net_amount'], 0, ',', ' ') ?> kr</div>
+                    </div>
                 </div>
             </div>
             <?php endforeach; ?>
             <!-- Mobile summary -->
-            <div style="padding: var(--space-md); background: var(--color-bg-hover); font-size: var(--text-sm);">
-                <div style="display: flex; justify-content: space-between; font-weight: 600; margin-bottom: var(--space-2xs);">
-                    <span>Summa (<?= $payoutTotals['order_count'] ?> ordrar)</span>
-                    <span style="color: var(--color-success);"><?= number_format($payoutTotals['net'], 2, ',', ' ') ?> kr</span>
+            <div style="padding: var(--space-md); background: var(--color-bg-hover);">
+                <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: var(--space-xs); font-size: var(--text-xs); text-align: center;">
+                    <div>
+                        <div style="color: var(--color-text-muted); margin-bottom: 1px;">Brutto</div>
+                        <div style="font-weight: 700;"><?= number_format($payoutTotals['gross'], 0, ',', ' ') ?> kr</div>
+                    </div>
+                    <div>
+                        <div style="color: var(--color-text-muted); margin-bottom: 1px;">Avgifter</div>
+                        <div style="font-weight: 700; color: var(--color-error);">-<?= number_format($payoutTotals['payment_fees'], 0, ',', ' ') ?></div>
+                    </div>
+                    <div>
+                        <div style="color: var(--color-text-muted); margin-bottom: 1px;">Plattform</div>
+                        <div style="font-weight: 700; color: var(--color-error);">-<?= number_format($payoutTotals['platform_fees'], 0, ',', ' ') ?></div>
+                    </div>
+                    <div>
+                        <div style="color: var(--color-text-muted); margin-bottom: 1px;">Netto</div>
+                        <div style="font-weight: 700; color: var(--color-success);"><?= number_format($payoutTotals['net'], 0, ',', ' ') ?> kr</div>
+                    </div>
                 </div>
-                <div style="display: flex; justify-content: space-between; font-size: var(--text-xs); color: var(--color-text-muted);">
-                    <span>Försäljning: <?= number_format($payoutTotals['gross'], 2, ',', ' ') ?> kr</span>
-                    <span style="color: var(--color-error);">Avgifter: -<?= number_format($payoutTotals['payment_fees'] + $payoutTotals['platform_fees'], 2, ',', ' ') ?> kr</span>
+                <div style="text-align: center; font-size: var(--text-xs); color: var(--color-text-muted); margin-top: var(--space-xs);">
+                    <?= $payoutTotals['order_count'] ?> ordrar
                 </div>
             </div>
         </div>
@@ -1366,32 +1426,60 @@ function cancelFeeEdit(recipientId, originalText) {
                 $totalFees = $order['payment_fee'] + $order['platform_fee'];
             ?>
             <div style="padding:var(--space-md);border-bottom:1px solid var(--color-border);">
-                <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:var(--space-2xs);">
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:var(--space-xs);">
                     <div>
-                        <code style="font-size:var(--text-sm);"><?= h($order['order_number'] ?? '#' . $order['id']) ?></code>
-                        <span class="text-xs text-secondary" style="margin-left:var(--space-xs);"><?= date('j M', strtotime($order['created_at'])) ?></span>
-                    </div>
-                    <div style="text-align:right;">
-                        <div style="font-weight:600;color:var(--color-success);"><?= number_format($order['net_amount'], 2, ',', ' ') ?> kr</div>
+                        <div style="font-weight:500;color:var(--color-text-primary);margin-bottom:2px;"><?= h($order['event_name'] ?? 'Serie') ?></div>
+                        <div class="text-xs text-secondary">
+                            <code><?= h($order['order_number'] ?? '#' . $order['id']) ?></code>
+                            &middot; <?= date('j M Y', strtotime($order['created_at'])) ?>
+                            &middot; <?= $methodLabel ?>
+                            <?php if (!empty($order['discount_code'])): ?>
+                            &middot; <span style="color:var(--color-warning);"><?= h($order['discount_code']) ?></span>
+                            <?php endif; ?>
+                        </div>
                     </div>
                 </div>
-                <div class="text-xs text-secondary" style="margin-bottom:var(--space-2xs);"><?= h($order['event_name'] ?? 'Serie') ?></div>
-                <div style="display:flex;justify-content:space-between;font-size:var(--text-xs);color:var(--color-text-muted);">
-                    <span><?= $methodLabel ?> &middot; <?= number_format($order['total_amount'], 2, ',', ' ') ?> kr</span>
-                    <?php if ($totalFees > 0): ?>
-                    <span style="color:var(--color-error);">-<?= number_format($totalFees, 2, ',', ' ') ?> avg.</span>
-                    <?php endif; ?>
+                <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:var(--space-xs);font-size:var(--text-xs);text-align:center;background:var(--color-bg-sunken);padding:var(--space-xs);border-radius:var(--radius-sm);">
+                    <div>
+                        <div style="color:var(--color-text-muted);margin-bottom:1px;">Belopp</div>
+                        <div style="font-weight:600;"><?= number_format($order['total_amount'], 0, ',', ' ') ?> kr</div>
+                    </div>
+                    <div>
+                        <div style="color:var(--color-text-muted);margin-bottom:1px;">Avgift</div>
+                        <div style="color:var(--color-error);"><?= $order['payment_fee'] > 0 ? '-' . number_format($order['payment_fee'], 0, ',', ' ') : '-' ?></div>
+                    </div>
+                    <div>
+                        <div style="color:var(--color-text-muted);margin-bottom:1px;">Plattform</div>
+                        <div style="color:var(--color-error);"><?= $order['platform_fee'] > 0 ? '-' . number_format($order['platform_fee'], 0, ',', ' ') : '-' ?></div>
+                    </div>
+                    <div>
+                        <div style="color:var(--color-text-muted);margin-bottom:1px;">Netto</div>
+                        <div style="font-weight:700;color:var(--color-success);"><?= number_format($order['net_amount'], 0, ',', ' ') ?> kr</div>
+                    </div>
                 </div>
             </div>
             <?php endforeach; ?>
-            <div style="padding:var(--space-md);background:var(--color-bg-hover);font-size:var(--text-sm);">
-                <div style="display:flex;justify-content:space-between;font-weight:600;margin-bottom:var(--space-2xs);">
-                    <span>Summa (<?= $promotorOrderTotals['order_count'] ?> ordrar)</span>
-                    <span style="color:var(--color-success);"><?= number_format($promotorOrderTotals['net'], 2, ',', ' ') ?> kr</span>
+            <div style="padding:var(--space-md);background:var(--color-bg-hover);">
+                <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:var(--space-xs);font-size:var(--text-xs);text-align:center;">
+                    <div>
+                        <div style="color:var(--color-text-muted);margin-bottom:1px;">Brutto</div>
+                        <div style="font-weight:700;"><?= number_format($promotorOrderTotals['gross'], 0, ',', ' ') ?> kr</div>
+                    </div>
+                    <div>
+                        <div style="color:var(--color-text-muted);margin-bottom:1px;">Avgifter</div>
+                        <div style="font-weight:700;color:var(--color-error);">-<?= number_format($promotorOrderTotals['payment_fees'], 0, ',', ' ') ?></div>
+                    </div>
+                    <div>
+                        <div style="color:var(--color-text-muted);margin-bottom:1px;">Plattform</div>
+                        <div style="font-weight:700;color:var(--color-error);">-<?= number_format($promotorOrderTotals['platform_fees'], 0, ',', ' ') ?></div>
+                    </div>
+                    <div>
+                        <div style="color:var(--color-text-muted);margin-bottom:1px;">Netto</div>
+                        <div style="font-weight:700;color:var(--color-success);"><?= number_format($promotorOrderTotals['net'], 0, ',', ' ') ?> kr</div>
+                    </div>
                 </div>
-                <div style="display:flex;justify-content:space-between;font-size:var(--text-xs);color:var(--color-text-muted);">
-                    <span>Brutto: <?= number_format($promotorOrderTotals['gross'], 2, ',', ' ') ?> kr</span>
-                    <span style="color:var(--color-error);">Avgifter: -<?= number_format($promotorOrderTotals['payment_fees'] + $promotorOrderTotals['platform_fees'], 2, ',', ' ') ?> kr</span>
+                <div style="text-align:center;font-size:var(--text-xs);color:var(--color-text-muted);margin-top:var(--space-xs);">
+                    <?= $promotorOrderTotals['order_count'] ?> ordrar
                 </div>
             </div>
         </div>
