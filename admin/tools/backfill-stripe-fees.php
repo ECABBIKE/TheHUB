@@ -223,7 +223,9 @@ try {
     $stats['total_paid_card'] = (int)($row['total'] ?? 0);
     $stats['missing_fee'] = (int)($row['missing_fee'] ?? 0);
     $stats['has_fee'] = (int)($row['has_fee'] ?? 0);
-} catch (Exception $e) {}
+} catch (Exception $e) {
+    $debug['stats_error'] = $e->getMessage();
+}
 
 $page_title = 'Backfill Stripe-avgifter';
 $breadcrumbs = [
@@ -259,6 +261,12 @@ include __DIR__ . '/../components/unified-layout.php';
             Söker PaymentIntent-ID i flera kolumner (stripe_payment_intent_id, payment_reference, gateway_transaction_id, gateway_metadata).
             Checkout-sessions (cs_xxx) slås upp automatiskt för att hitta tillhörande PaymentIntent.
         </p>
+
+        <?php if (!empty($debug['stats_error'])): ?>
+        <div class="alert alert-danger" style="margin-bottom: var(--space-lg);">
+            <strong>SQL-fel i stats-frågan:</strong> <?= htmlspecialchars($debug['stats_error']) ?>
+        </div>
+        <?php endif; ?>
 
         <?php if ($debug['total_paid'] > 0 && $stats['total_paid_card'] == 0): ?>
         <div class="alert alert-warning" style="margin-bottom: var(--space-lg);">
