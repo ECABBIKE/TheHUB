@@ -235,8 +235,8 @@
 
 ## SENASTE FIXAR (2026-02-19)
 
-- **Migration 050 visade alltid rod i migrations.php**: Tva buggar. 1) `checkMigrationStatus()` kunde inte tolka subquery-format `(SELECT ...)` i data-checkar - den forsokter splitta pa `.` och anvanda resultatet som tabellnamn, vilket alltid kastade exception. Fixat med `str_starts_with('(')` check som kor subquery direkt. 2) Data-checken for 050 var for strikt (kravde att ALLA betalda order_items har recipient, men events utan konfigurerad recipient gor att nagra items aldrig kan backfillas). Andrad till enkel check: `order_items.payment_recipient_id IS NOT NULL`.
-- **Backfill Stripe-avgifter visade 0 ordrar (igen)**: Stats-fragan och batch-fragan filtrerade pa `payment_method = 'card'`, men aldre ordrar kan ha `payment_method = NULL` aven om de betalades med kort. Fixat: inkluderar nu aven ordrar dar `payment_method IS NULL` men som har Stripe-referenser (stripe_payment_intent_id, gateway_transaction_id som borjar med cs_ eller pi_).
+- **Migration 050 visade alltid rod i migrations.php**: Andrad fran data-check (`order_items.payment_recipient_id IS NOT NULL`) till kolumn-check (`columns => ['order_items.payment_recipient_id']`). Data-checken var for strikt - events utan konfigurerad recipient gor att vissa items aldrig kan backfillas.
+- **Backfill Stripe-avgifter visade 0 ordrar (TREDJE GANGEN)**: `getOne()` i DatabaseWrapper (helpers.php) anropar `getValue()` → `fetchColumn()` som returnerar en SKALARVARDE, inte en rad/array. Koden behandlade resultatet som en associativ array (`$row['total']`). Fixat: andrat till `getRow()` som returnerar en hel rad. **VIKTIGT: `getOne()` = skalarvarde, `getRow()` = en rad som array, `getAll()` = alla rader.**
 
 ## TIDIGARE FIXAR (2026-02-18)
 

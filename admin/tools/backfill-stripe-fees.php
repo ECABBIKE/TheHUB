@@ -204,7 +204,7 @@ try {
 }
 
 try {
-    $row = $db->getOne("
+    $row = $db->getRow("
         SELECT
             COUNT(*) as total,
             SUM(CASE WHEN stripe_fee IS NULL THEN 1 ELSE 0 END) as missing_fee,
