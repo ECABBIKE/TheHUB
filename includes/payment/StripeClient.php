@@ -571,6 +571,45 @@ class StripeClient {
     }
 
     /**
+     * Get actual Stripe fee for a PaymentIntent
+     * Retrieves the balance_transaction to get the real fee charged by Stripe
+     *
+     * @param string $paymentIntentId Payment Intent ID
+     * @return array Fee data (fee in SEK, balance_transaction_id)
+     */
+    public function getPaymentFee(string $paymentIntentId): array {
+        // Retrieve PaymentIntent with expanded charge and balance_transaction
+        $response = $this->request('GET',
+            "/payment_intents/{$paymentIntentId}?expand[]=latest_charge.balance_transaction"
+        );
+
+        if (isset($response['error'])) {
+            return [
+                'success' => false,
+                'error' => $response['error']['message'] ?? 'Unknown error'
+            ];
+        }
+
+        $charge = $response['latest_charge'] ?? null;
+        if (!$charge || !is_array($charge)) {
+            return ['success' => false, 'error' => 'No charge found'];
+        }
+
+        $bt = $charge['balance_transaction'] ?? null;
+        if (!$bt || !is_array($bt)) {
+            return ['success' => false, 'error' => 'No balance_transaction found'];
+        }
+
+        return [
+            'success' => true,
+            'fee' => ($bt['fee'] ?? 0) / 100, // Convert from öre to SEK
+            'balance_transaction_id' => $bt['id'] ?? null,
+            'net' => ($bt['net'] ?? 0) / 100,
+            'currency' => $bt['currency'] ?? 'sek'
+        ];
+    }
+
+    /**
      * Get Balance for Platform Account
      *
      * @return array Balance data

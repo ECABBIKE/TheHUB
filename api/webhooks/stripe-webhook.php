@@ -148,6 +148,29 @@ try {
 
                     $pdo->commit();
 
+                    // Fetch and store actual Stripe fee from balance_transaction
+                    try {
+                        $feeApiKey = getenv('STRIPE_SECRET_KEY');
+                        if (!$feeApiKey && function_exists('env')) {
+                            $feeApiKey = env('STRIPE_SECRET_KEY', '');
+                        }
+                        if ($feeApiKey && $paymentIntentId) {
+                            $feeClient = new \TheHUB\Payment\StripeClient($feeApiKey);
+                            $feeData = $feeClient->getPaymentFee($paymentIntentId);
+                            if ($feeData['success']) {
+                                try {
+                                    $feeStmt = $pdo->prepare("UPDATE orders SET stripe_fee = ?, stripe_balance_transaction_id = ? WHERE id = ?");
+                                    $feeStmt->execute([$feeData['fee'], $feeData['balance_transaction_id'], $order['id']]);
+                                } catch (\Throwable $colErr) {
+                                    // Column may not exist yet (migration 049)
+                                    error_log("stripe_fee column not available: " . $colErr->getMessage());
+                                }
+                            }
+                        }
+                    } catch (\Throwable $feeError) {
+                        error_log("Failed to fetch Stripe fee for order {$order['id']}: " . $feeError->getMessage());
+                    }
+
                     // Generate receipt
                     $receiptResult = null;
                     try {
@@ -307,6 +330,31 @@ try {
                         }
 
                         $pdo->commit();
+
+                        // Fetch and store actual Stripe fee from balance_transaction
+                        $piForFee = $paymentIntentFromSession ?? null;
+                        if ($piForFee) {
+                            try {
+                                $feeApiKey2 = getenv('STRIPE_SECRET_KEY');
+                                if (!$feeApiKey2 && function_exists('env')) {
+                                    $feeApiKey2 = env('STRIPE_SECRET_KEY', '');
+                                }
+                                if ($feeApiKey2) {
+                                    $feeClient2 = new \TheHUB\Payment\StripeClient($feeApiKey2);
+                                    $feeData2 = $feeClient2->getPaymentFee($piForFee);
+                                    if ($feeData2['success']) {
+                                        try {
+                                            $feeStmt2 = $pdo->prepare("UPDATE orders SET stripe_fee = ?, stripe_balance_transaction_id = ? WHERE id = ?");
+                                            $feeStmt2->execute([$feeData2['fee'], $feeData2['balance_transaction_id'], $order['id']]);
+                                        } catch (\Throwable $colErr2) {
+                                            error_log("stripe_fee column not available: " . $colErr2->getMessage());
+                                        }
+                                    }
+                                }
+                            } catch (\Throwable $feeError2) {
+                                error_log("Failed to fetch Stripe fee for order {$order['id']}: " . $feeError2->getMessage());
+                            }
+                        }
 
                         // Generate receipt
                         $receiptResult2 = null;

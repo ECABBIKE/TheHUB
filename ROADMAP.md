@@ -25,6 +25,36 @@
 
 # CHANGELOG
 
+### 2026-02-18 (Faktiska Stripe-avgifter + Plattformsavgift-redigering)
+- **Branch:** claude/fix-mobile-payment-layout-UVxvi
+
+- **Ny funktion: Faktiska Stripe-avgifter fran webhook**
+  - Migration 049: `orders.stripe_fee` och `orders.stripe_balance_transaction_id`
+  - Webhook hamtar riktiga avgifter fran Stripes `balance_transaction` efter betalning
+  - StripeClient utokad med `getPaymentFee()` metod
+  - Graceful fallback om migration 049 inte korts annu
+
+- **Ny funktion: Backfill Stripe-avgifter**
+  - `/admin/tools/backfill-stripe-fees.php` - hamtar avgifter for redan betalda ordrar
+  - Batchar om 10 med rate limiting (50ms/anrop)
+  - Progress bar, loggvy, stopp-funktion
+  - Lankad fran `/admin/tools.php`
+
+- **Forbattring: Plattformsavgift redigerbar inline**
+  - Klicka pennan vid "Plattformsavgift" i utbetalningsvyn
+  - Inline-redigering med spara/avbryt
+  - AJAX-sparning utan sidomladdning
+  - Sidan laddas om for att rakna om totaler
+
+- **Forbattring: Avgiftsindikatorer i utbetalningsvyn**
+  - Badges visar om Stripe-avgifter ar "Faktiska" (gron), "Delvis faktiska" (gul) eller "Uppskattade" (gra)
+  - Swish-avgifter markerade som uppskattade (Swish har ingen per-transaktion fee API)
+  - Berakning: faktiska fees + proportionellt uppskattade for ordrar utan fee-data
+
+- **Nya filer:**
+  - `Tools/migrations/049_orders_stripe_fee.sql` - Kolumner for Stripe fee-lagring
+  - `admin/tools/backfill-stripe-fees.php` - Backfill-verktyg
+
 ### 2026-02-18 (Utbetalningar & Ekonomi + Sponsorsystem)
 - **Branch:** claude/fix-mobile-payment-layout-UVxvi
 

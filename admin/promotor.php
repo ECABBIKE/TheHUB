@@ -21,6 +21,34 @@ $userId = $currentUser['id'] ?? 0;
 $isAdmin = hasRole('admin');
 
 // ============================================================
+// AJAX: Update platform fee percent
+// ============================================================
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $isAdmin) {
+    header('Content-Type: application/json');
+
+    if ($_POST['action'] === 'update_platform_fee') {
+        $recipientId = intval($_POST['recipient_id'] ?? 0);
+        $newFee = floatval($_POST['platform_fee_percent'] ?? 2.00);
+
+        if ($recipientId <= 0 || $newFee < 0 || $newFee > 100) {
+            echo json_encode(['success' => false, 'error' => 'Ogiltigt värde']);
+            exit;
+        }
+
+        try {
+            $db->execute("UPDATE payment_recipients SET platform_fee_percent = ? WHERE id = ?", [$newFee, $recipientId]);
+            echo json_encode(['success' => true, 'fee' => $newFee]);
+        } catch (Exception $e) {
+            echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+        }
+        exit;
+    }
+
+    echo json_encode(['success' => false, 'error' => 'Okänd åtgärd']);
+    exit;
+}
+
+// ============================================================
 // ADMIN VIEW: Financial payout overview
 // ============================================================
 $payoutData = [];
@@ -29,11 +57,24 @@ $filterYear = isset($_GET['year']) ? intval($_GET['year']) : (int)date('Y');
 $filterRecipient = isset($_GET['recipient']) ? intval($_GET['recipient']) : 0;
 
 if ($isAdmin) {
-    // Stripe fee rates (Swedish standard)
+    // Estimate rates (fallback when actual fees aren't stored)
     $STRIPE_PERCENT = 1.5;
     $STRIPE_FIXED = 2.00; // SEK per transaction
     $SWISH_FEE = 2.00;    // SEK per transaction (approximate)
     $VAT_RATE = 6;         // Standard sport event VAT
+
+    // Check if stripe_fee column exists (migration 049)
+    $hasStripeFeeCol = false;
+    try {
+        $colCheck = $db->getAll("SHOW COLUMNS FROM orders LIKE 'stripe_fee'");
+        $hasStripeFeeCol = !empty($colCheck);
+    } catch (Exception $e) {}
+
+    // Build actual Stripe fee sub-query per recipient (sum of stored fees)
+    $actualFeeSelect = $hasStripeFeeCol
+        ? "COALESCE(SUM(CASE WHEN o.payment_status = 'paid' AND o.payment_method = 'card' AND o.stripe_fee IS NOT NULL THEN o.stripe_fee ELSE 0 END), 0) as actual_stripe_fees,
+           COUNT(DISTINCT CASE WHEN o.payment_status = 'paid' AND o.payment_method = 'card' AND o.stripe_fee IS NOT NULL THEN o.id END) as actual_fee_count,"
+        : "0 as actual_stripe_fees, 0 as actual_fee_count,";
 
     // Get all payment recipients with their financial data
     try {
@@ -59,6 +100,9 @@ if ($isAdmin) {
                 COALESCE(SUM(CASE WHEN o.payment_status = 'paid' AND o.payment_method = 'card' THEN oi.total_price ELSE 0 END), 0) as card_revenue,
                 COALESCE(SUM(CASE WHEN o.payment_status = 'paid' AND o.payment_method IN ('swish', 'swish_csv') THEN oi.total_price ELSE 0 END), 0) as swish_revenue,
                 COALESCE(SUM(CASE WHEN o.payment_status = 'paid' AND o.payment_method IN ('manual', 'free') THEN oi.total_price ELSE 0 END), 0) as manual_revenue,
+
+                -- Actual Stripe fees from webhook (migration 049)
+                {$actualFeeSelect}
 
                 -- Order counts by method
                 COUNT(DISTINCT CASE WHEN o.payment_status = 'paid' AND o.payment_method = 'card' THEN o.id END) as card_order_count,
@@ -100,14 +144,33 @@ if ($isAdmin) {
         // VAT (included in price): gross * VAT_RATE / (100 + VAT_RATE)
         $r['vat_amount'] = round($gross * $VAT_RATE / (100 + $VAT_RATE), 2);
 
-        // Stripe fees: 1.5% + 2 kr per card transaction
-        $r['stripe_fees'] = round(
-            ((float)$r['card_revenue'] * $STRIPE_PERCENT / 100) +
-            ((int)$r['card_order_count'] * $STRIPE_FIXED),
-            2
-        );
+        // Stripe fees: use actual fees where available, estimate the rest
+        $actualStripeFees = (float)($r['actual_stripe_fees'] ?? 0);
+        $actualFeeCount = (int)($r['actual_fee_count'] ?? 0);
+        $totalCardOrders = (int)$r['card_order_count'];
+        $estimatedCount = $totalCardOrders - $actualFeeCount;
 
-        // Swish fees
+        // Estimate fees for orders without actual fee data
+        $estimatedStripeFees = 0;
+        if ($estimatedCount > 0) {
+            // Proportional card revenue for estimated orders
+            $estimatedCardRevenue = $totalCardOrders > 0
+                ? (float)$r['card_revenue'] * ($estimatedCount / $totalCardOrders)
+                : 0;
+            $estimatedStripeFees = round(
+                ($estimatedCardRevenue * $STRIPE_PERCENT / 100) +
+                ($estimatedCount * $STRIPE_FIXED),
+                2
+            );
+        }
+
+        $r['stripe_fees'] = round($actualStripeFees + $estimatedStripeFees, 2);
+        $r['stripe_fees_actual'] = $actualStripeFees;
+        $r['stripe_fees_estimated'] = $estimatedStripeFees;
+        $r['has_actual_fees'] = $actualFeeCount > 0;
+        $r['all_fees_actual'] = ($actualFeeCount >= $totalCardOrders && $totalCardOrders > 0);
+
+        // Swish fees (always estimated - Swish doesn't provide per-transaction fee data)
         $r['swish_fees'] = round((int)$r['swish_order_count'] * $SWISH_FEE, 2);
 
         // Platform fee on gross
@@ -765,6 +828,76 @@ include __DIR__ . '/components/unified-layout.php';
     color: var(--color-text-secondary);
 }
 .bank-info-label { font-weight: 500; min-width: 100px; }
+
+/* Fee badges (actual/estimated indicators) */
+.fee-badge {
+    display: inline-block;
+    font-size: 10px;
+    padding: 1px 6px;
+    border-radius: var(--radius-full);
+    font-weight: 500;
+    vertical-align: middle;
+    margin-left: var(--space-2xs);
+}
+.fee-badge-actual {
+    background: rgba(16, 185, 129, 0.15);
+    color: var(--color-success);
+}
+.fee-badge-mixed {
+    background: rgba(251, 191, 36, 0.15);
+    color: var(--color-warning);
+}
+.fee-badge-estimated {
+    background: rgba(134, 143, 162, 0.15);
+    color: var(--color-text-muted);
+}
+
+/* Edit platform fee button */
+.btn-edit-fee {
+    background: none;
+    border: none;
+    cursor: pointer;
+    padding: 2px;
+    color: var(--color-text-muted);
+    opacity: 0.6;
+    transition: opacity 0.15s;
+    vertical-align: middle;
+}
+.btn-edit-fee:hover { opacity: 1; color: var(--color-accent); }
+.btn-edit-fee i { width: 12px; height: 12px; }
+
+/* Inline fee edit */
+.fee-edit-inline {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-xs);
+}
+.fee-edit-inline input {
+    width: 60px;
+    padding: 2px var(--space-xs);
+    border: 1px solid var(--color-accent);
+    border-radius: var(--radius-sm);
+    background: var(--color-bg-sunken);
+    color: var(--color-text-primary);
+    font-size: var(--text-sm);
+    text-align: center;
+}
+.fee-edit-inline button {
+    padding: 2px 6px;
+    border: none;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    font-size: 11px;
+    font-weight: 500;
+}
+.fee-edit-save {
+    background: var(--color-success);
+    color: white;
+}
+.fee-edit-cancel {
+    background: var(--color-bg-sunken);
+    color: var(--color-text-secondary);
+}
 </style>
 
 <?php if ($isAdmin): ?>
@@ -851,9 +984,12 @@ include __DIR__ . '/components/unified-layout.php';
                     <i data-lucide="calendar"></i>
                     <?= (int)$r['event_count'] ?> event, <?= (int)$r['paid_order_count'] ?> betalda ordrar
                 </span>
-                <span class="recipient-meta-item">
+                <span class="recipient-meta-item platform-fee-display" data-recipient-id="<?= $r['id'] ?>">
                     <i data-lucide="percent"></i>
-                    Plattformsavgift: <?= number_format($r['platform_fee_percent'], 1) ?>%
+                    Plattformsavgift: <span class="platform-fee-value"><?= number_format($r['platform_fee_percent'], 1) ?>%</span>
+                    <button type="button" class="btn-edit-fee" onclick="editPlatformFee(<?= $r['id'] ?>, <?= (float)$r['platform_fee_percent'] ?>)" title="Ändra plattformsavgift">
+                        <i data-lucide="pencil"></i>
+                    </button>
                 </span>
             </div>
         </div>
@@ -902,17 +1038,26 @@ include __DIR__ . '/components/unified-layout.php';
             <div class="fee-section">
                 <h4><i data-lucide="calculator"></i> Avgifter & Utbetalning</h4>
                 <div class="fee-row">
-                    <span class="fee-label">Stripe-avgifter (1,5% + 2 kr/order)</span>
+                    <span class="fee-label">
+                        Stripe-avgifter
+                        <?php if ($r['all_fees_actual']): ?>
+                            <span class="fee-badge fee-badge-actual">Faktiska</span>
+                        <?php elseif ($r['has_actual_fees']): ?>
+                            <span class="fee-badge fee-badge-mixed">Delvis faktiska</span>
+                        <?php else: ?>
+                            <span class="fee-badge fee-badge-estimated">Uppskattade</span>
+                        <?php endif; ?>
+                    </span>
                     <span class="fee-value negative">-<?= number_format($r['stripe_fees'], 2, ',', ' ') ?> kr</span>
                 </div>
                 <?php if ($r['swish_fees'] > 0): ?>
                 <div class="fee-row">
-                    <span class="fee-label">Swish-avgifter (~2 kr/order)</span>
+                    <span class="fee-label">Swish-avgifter (~2 kr/order) <span class="fee-badge fee-badge-estimated">Uppskattade</span></span>
                     <span class="fee-value negative">-<?= number_format($r['swish_fees'], 2, ',', ' ') ?> kr</span>
                 </div>
                 <?php endif; ?>
                 <div class="fee-row">
-                    <span class="fee-label">Plattformsavgift (<?= number_format($r['platform_fee_percent'], 1) ?>%)</span>
+                    <span class="fee-label">Plattformsavgift (<span class="platform-fee-pct-<?= $r['id'] ?>"><?= number_format($r['platform_fee_percent'], 1) ?></span>%)</span>
                     <span class="fee-value negative">-<?= number_format($r['platform_fee'], 2, ',', ' ') ?> kr</span>
                 </div>
                 <?php if ((float)$r['refunded_amount'] > 0): ?>
@@ -965,6 +1110,92 @@ include __DIR__ . '/components/unified-layout.php';
 </div>
 <?php endforeach; ?>
 <?php endif; ?>
+
+<script>
+function editPlatformFee(recipientId, currentFee) {
+    const container = document.querySelector(`.platform-fee-display[data-recipient-id="${recipientId}"]`);
+    if (!container) return;
+
+    const valueSpan = container.querySelector('.platform-fee-value');
+    const editBtn = container.querySelector('.btn-edit-fee');
+    const originalText = valueSpan.textContent;
+
+    // Replace with inline edit
+    editBtn.style.display = 'none';
+    valueSpan.innerHTML = `
+        <span class="fee-edit-inline">
+            <input type="number" value="${currentFee}" min="0" max="100" step="0.1" id="feeInput${recipientId}">
+            <span>%</span>
+            <button type="button" class="fee-edit-save" onclick="savePlatformFee(${recipientId})">Spara</button>
+            <button type="button" class="fee-edit-cancel" onclick="cancelFeeEdit(${recipientId}, '${originalText}')">Avbryt</button>
+        </span>
+    `;
+
+    const input = document.getElementById('feeInput' + recipientId);
+    input.focus();
+    input.select();
+
+    // Save on Enter, cancel on Escape
+    input.addEventListener('keydown', e => {
+        if (e.key === 'Enter') savePlatformFee(recipientId);
+        if (e.key === 'Escape') cancelFeeEdit(recipientId, originalText);
+    });
+}
+
+async function savePlatformFee(recipientId) {
+    const input = document.getElementById('feeInput' + recipientId);
+    if (!input) return;
+
+    const newFee = parseFloat(input.value);
+    if (isNaN(newFee) || newFee < 0 || newFee > 100) {
+        alert('Ange ett värde mellan 0 och 100');
+        return;
+    }
+
+    try {
+        const formData = new FormData();
+        formData.append('action', 'update_platform_fee');
+        formData.append('recipient_id', recipientId);
+        formData.append('platform_fee_percent', newFee);
+
+        const response = await fetch('/admin/promotor.php', {
+            method: 'POST',
+            body: formData
+        });
+
+        const result = await response.json();
+        if (result.success) {
+            // Update display
+            const formatted = newFee.toFixed(1);
+            cancelFeeEdit(recipientId, formatted + '%');
+
+            // Update fee percentage labels in breakdown
+            const pctSpan = document.querySelector('.platform-fee-pct-' + recipientId);
+            if (pctSpan) pctSpan.textContent = formatted;
+
+            // Reload page to recalculate totals
+            location.reload();
+        } else {
+            alert('Kunde inte spara: ' + (result.error || 'Okänt fel'));
+        }
+    } catch (error) {
+        console.error('Save error:', error);
+        alert('Ett fel uppstod');
+    }
+}
+
+function cancelFeeEdit(recipientId, originalText) {
+    const container = document.querySelector(`.platform-fee-display[data-recipient-id="${recipientId}"]`);
+    if (!container) return;
+
+    const valueSpan = container.querySelector('.platform-fee-value');
+    const editBtn = container.querySelector('.btn-edit-fee');
+
+    valueSpan.textContent = originalText;
+    editBtn.style.display = '';
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+</script>
 
 <?php else: ?>
 <!-- ===== PROMOTOR VIEW ===== -->

@@ -1050,6 +1050,20 @@ include __DIR__ . '/components/unified-layout.php';
         </div>
     </div>
 
+    <!-- Backfill Stripe Fees -->
+    <div class="card">
+        <div class="tool-header">
+            <div class="tool-icon"><i data-lucide="receipt"></i></div>
+            <div>
+                <h4 class="tool-title">Backfill Stripe-avgifter</h4>
+                <p class="tool-description">Hämta faktiska avgifter från Stripe för befintliga ordrar</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/tools/backfill-stripe-fees.php" class="btn-admin btn-admin-primary">Öppna</a>
+        </div>
+    </div>
+
     <!-- Reset Data -->
     <div class="card">
         <div class="tool-header">
