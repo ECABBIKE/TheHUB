@@ -77,6 +77,7 @@ if ($isAdmin) {
         : "0 as actual_stripe_fees, 0 as actual_fee_count,";
 
     // Get all payment recipients with their financial data
+    // Join via events → payment_recipients (not order_items.payment_recipient_id which may be NULL)
     try {
         $recipientWhere = $filterRecipient ? "AND pr.id = " . intval($filterRecipient) : "";
 
@@ -94,12 +95,12 @@ if ($isAdmin) {
                 pr.contact_email,
 
                 -- Gross revenue (paid orders only)
-                COALESCE(SUM(CASE WHEN o.payment_status = 'paid' THEN oi.total_price ELSE 0 END), 0) as gross_revenue,
+                COALESCE(SUM(CASE WHEN o.payment_status = 'paid' THEN o.total_amount ELSE 0 END), 0) as gross_revenue,
 
                 -- By payment method
-                COALESCE(SUM(CASE WHEN o.payment_status = 'paid' AND o.payment_method = 'card' THEN oi.total_price ELSE 0 END), 0) as card_revenue,
-                COALESCE(SUM(CASE WHEN o.payment_status = 'paid' AND o.payment_method IN ('swish', 'swish_csv') THEN oi.total_price ELSE 0 END), 0) as swish_revenue,
-                COALESCE(SUM(CASE WHEN o.payment_status = 'paid' AND o.payment_method IN ('manual', 'free') THEN oi.total_price ELSE 0 END), 0) as manual_revenue,
+                COALESCE(SUM(CASE WHEN o.payment_status = 'paid' AND o.payment_method = 'card' THEN o.total_amount ELSE 0 END), 0) as card_revenue,
+                COALESCE(SUM(CASE WHEN o.payment_status = 'paid' AND o.payment_method IN ('swish', 'swish_csv') THEN o.total_amount ELSE 0 END), 0) as swish_revenue,
+                COALESCE(SUM(CASE WHEN o.payment_status = 'paid' AND o.payment_method IN ('manual', 'free') THEN o.total_amount ELSE 0 END), 0) as manual_revenue,
 
                 -- Actual Stripe fees from webhook (migration 049)
                 {$actualFeeSelect}
@@ -111,18 +112,24 @@ if ($isAdmin) {
                 COUNT(DISTINCT CASE WHEN o.payment_status = 'paid' THEN o.id END) as paid_order_count,
 
                 -- Pending
-                COALESCE(SUM(CASE WHEN o.payment_status = 'pending' THEN oi.total_price ELSE 0 END), 0) as pending_revenue,
+                COALESCE(SUM(CASE WHEN o.payment_status = 'pending' THEN o.total_amount ELSE 0 END), 0) as pending_revenue,
                 COUNT(DISTINCT CASE WHEN o.payment_status = 'pending' THEN o.id END) as pending_order_count,
 
                 -- Refunded
-                COALESCE(SUM(CASE WHEN o.payment_status = 'refunded' THEN oi.total_price ELSE 0 END), 0) as refunded_amount,
+                COALESCE(SUM(CASE WHEN o.payment_status = 'refunded' THEN o.total_amount ELSE 0 END), 0) as refunded_amount,
 
                 -- Event count
                 COUNT(DISTINCT o.event_id) as event_count
 
             FROM payment_recipients pr
-            LEFT JOIN order_items oi ON oi.payment_recipient_id = pr.id
-            LEFT JOIN orders o ON oi.order_id = o.id AND YEAR(o.created_at) = ?
+            LEFT JOIN (
+                SELECT e.id as event_id,
+                       COALESCE(e.payment_recipient_id, s.payment_recipient_id) as recipient_id
+                FROM events e
+                LEFT JOIN series s ON e.series_id = s.id
+                WHERE COALESCE(e.payment_recipient_id, s.payment_recipient_id) IS NOT NULL
+            ) event_map ON event_map.recipient_id = pr.id
+            LEFT JOIN orders o ON o.event_id = event_map.event_id AND YEAR(o.created_at) = ?
             WHERE pr.active = 1 {$recipientWhere}
             GROUP BY pr.id
             ORDER BY gross_revenue DESC

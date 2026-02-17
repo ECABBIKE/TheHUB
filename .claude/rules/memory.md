@@ -111,6 +111,11 @@
 - Skillnaden syns framst pa desktop
 - **TODO:** Standardisera radius och infora nya tabeller pa alla sidor (se ROADMAP)
 
+### theme-base.css ar en DOD fil
+- `assets/css/theme-base.css` laddas ALDRIG av nagon PHP-fil
+- Alla `.nav-bottom` bas-stilar som lag dar har flyttats till `pwa.css`
+- Skriv INTE nya stilar i theme-base.css - anvand pwa.css for nav-bottom och mobil-relaterat
+
 ### Z-index-skala
 - `--z-dropdown: 100`
 - `--z-sticky: 200`
@@ -118,7 +123,7 @@
 - `--z-modal: 500`
 - `--z-toast: 600`
 - Modaler i event.php: `9999`
-- Mobile nav: `999`
+- Mobile nav: `9999` (nav-bottom i pwa.css)
 
 ---
 
@@ -230,6 +235,11 @@
 
 ## SENASTE FIXAR (2026-02-18)
 
+- **Ekonomi/utbetalningsvy visade noll betalningar**: Promotor.php-fragan JOINade via `order_items.payment_recipient_id` som var NULL for alla order-items (createMultiRiderOrder satte aldrig detta falt). Fixat: fragan joinar nu via `orders.event_id → events → payment_recipients` istallet. Anvander `o.total_amount` istallet for `oi.total_price`.
+- **order_items.payment_recipient_id sätts nu korrekt**: `createMultiRiderOrder()` i order-manager.php slår nu upp `payment_recipient_id` via events/series och sätter det vid INSERT för både event- och serieregistreringar.
+- **Backfill migration 050**: Uppdaterar befintliga order_items med NULL payment_recipient_id via events och series-tabellerna.
+- **Bottennavigation (nav-bottom) trasig i webbläsare**: `theme-base.css` som innehöll alla `.nav-bottom`-stilar laddades ALDRIG av någon PHP-fil. Fixat: alla bas-stilar för `.nav-bottom` flyttade till `pwa.css` (som faktiskt laddas).
+- **Backfill Stripe-avgifter visade noll ordrar**: Verktyget sökte bara i `stripe_payment_intent_id`-kolumnen. Omskrivet med 5 strategier: stripe_payment_intent_id, payment_reference, gateway_transaction_id (inkl cs_-sessionslookup), gateway_metadata JSON.
 - **Faktiska Stripe-avgifter fran webhook**: Stripe webhook hamtar nu riktiga avgifter fran `balance_transaction` via API-anrop efter betalning. Lagras i `orders.stripe_fee` och `orders.stripe_balance_transaction_id` (migration 049). Promotor-sidan anvander faktiska avgifter nar de finns, faller tillbaka pa uppskattningar (1,5%+2kr) for aldre ordrar.
 - **Backfill-verktyg for Stripe-avgifter**: `/admin/tools/backfill-stripe-fees.php` hamtar faktiska avgifter for redan betalda ordrar via Stripe API. Kor i batchar om 10 med rate limiting. Lankad fran tools.php.
 - **Plattformsavgift redigerbar**: Admin kan nu andra plattformsavgift per betalningsmottagare direkt i utbetalningsvyn (`/admin/promotor.php`). Klicka pennan vid "Plattformsavgift" for inline-redigering. Sparas via AJAX.

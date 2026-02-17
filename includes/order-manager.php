@@ -284,15 +284,30 @@ function createMultiRiderOrder(array $buyerData, array $items, ?string $discount
 
                 $registrationId = $pdo->lastInsertId();
 
+                // Look up payment recipient for this event
+                $eventRecipientId = null;
+                try {
+                    $recipientStmt = $pdo->prepare("
+                        SELECT COALESCE(e.payment_recipient_id, s.payment_recipient_id) as recipient_id
+                        FROM events e
+                        LEFT JOIN series s ON e.series_id = s.id
+                        WHERE e.id = ?
+                    ");
+                    $recipientStmt->execute([$eventId]);
+                    $recipientRow = $recipientStmt->fetch(PDO::FETCH_ASSOC);
+                    $eventRecipientId = $recipientRow['recipient_id'] ?? null;
+                } catch (\Throwable $e) {}
+
                 // Skapa order_item
                 $description = "{$rider['firstname']} {$rider['lastname']} - {$eventInfo['event_name']} - {$className}";
                 $itemStmt = $pdo->prepare("
                     INSERT INTO order_items (
                         order_id, item_type, registration_id,
-                        description, unit_price, quantity, total_price
-                    ) VALUES (?, 'registration', ?, ?, ?, 1, ?)
+                        description, unit_price, quantity, total_price,
+                        payment_recipient_id
+                    ) VALUES (?, 'registration', ?, ?, ?, 1, ?, ?)
                 ");
-                $itemStmt->execute([$orderId, $registrationId, $description, $finalPrice, $finalPrice]);
+                $itemStmt->execute([$orderId, $registrationId, $description, $finalPrice, $finalPrice, $eventRecipientId]);
 
                 $subtotal += $finalPrice;
 
@@ -395,15 +410,24 @@ function createMultiRiderOrder(array $buyerData, array $items, ?string $discount
                     $linkStmt->execute([$seriesRegId, $eventRow['id']]);
                 }
 
+                // Look up payment recipient for this series
+                $seriesRecipientId = null;
+                try {
+                    $recipientStmt = $pdo->prepare("SELECT payment_recipient_id FROM series WHERE id = ?");
+                    $recipientStmt->execute([$seriesId]);
+                    $seriesRecipientId = $recipientStmt->fetchColumn() ?: null;
+                } catch (\Throwable $e) {}
+
                 // Skapa order_item
                 $description = "{$rider['firstname']} {$rider['lastname']} - {$seriesInfo['series_name']} (Serie-pass) - {$className}";
                 $itemStmt = $pdo->prepare("
                     INSERT INTO order_items (
                         order_id, item_type, series_registration_id,
-                        description, unit_price, quantity, total_price
-                    ) VALUES (?, 'series_registration', ?, ?, ?, 1, ?)
+                        description, unit_price, quantity, total_price,
+                        payment_recipient_id
+                    ) VALUES (?, 'series_registration', ?, ?, ?, 1, ?, ?)
                 ");
-                $itemStmt->execute([$orderId, $seriesRegId, $description, $finalPrice, $finalPrice]);
+                $itemStmt->execute([$orderId, $seriesRegId, $description, $finalPrice, $finalPrice, $seriesRecipientId]);
 
                 $subtotal += $finalPrice;
 
