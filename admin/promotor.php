@@ -55,6 +55,8 @@ $payoutData = [];
 $payoutTotals = [];
 $filterYear = isset($_GET['year']) ? intval($_GET['year']) : (int)date('Y');
 $filterRecipient = isset($_GET['recipient']) ? intval($_GET['recipient']) : 0;
+$filterEvent = isset($_GET['event']) ? intval($_GET['event']) : 0;
+$filterMonth = isset($_GET['month']) ? intval($_GET['month']) : 0; // 0 = helår
 
 if ($isAdmin) {
     // Fee constants
@@ -80,14 +82,27 @@ if ($isAdmin) {
         }
     } catch (Exception $e) {}
 
-    // Fetch individual paid orders for the selected year
+    // Fetch individual paid orders with filters
     $orderRows = [];
     try {
         $stripeFeeCol = $hasStripeFeeCol ? "o.stripe_fee," : "NULL as stripe_fee,";
-        $yearFilter = $filterYear;
-        $recipientFilter = $filterRecipient ? " AND pr_match.id = " . intval($filterRecipient) : "";
 
-        // Simple approach: fetch all paid orders for the year, join event name
+        // Build WHERE conditions
+        $conditions = ["o.payment_status = 'paid'", "YEAR(o.created_at) = ?"];
+        $params = [$filterYear];
+
+        if ($filterMonth > 0 && $filterMonth <= 12) {
+            $conditions[] = "MONTH(o.created_at) = ?";
+            $params[] = $filterMonth;
+        }
+
+        if ($filterEvent > 0) {
+            $conditions[] = "o.event_id = ?";
+            $params[] = $filterEvent;
+        }
+
+        $whereClause = implode(' AND ', $conditions);
+
         $orderRows = $db->getAll("
             SELECT o.id, o.order_number, o.total_amount, o.payment_method, o.payment_status,
                    {$stripeFeeCol}
@@ -95,10 +110,9 @@ if ($isAdmin) {
                    e.name as event_name
             FROM orders o
             LEFT JOIN events e ON o.event_id = e.id
-            WHERE o.payment_status = 'paid'
-            AND YEAR(o.created_at) = ?
+            WHERE {$whereClause}
             ORDER BY o.created_at DESC
-        ", [$yearFilter]);
+        ", $params);
     } catch (Exception $e) {
         error_log("Promotor orders query error: " . $e->getMessage());
     }
@@ -159,6 +173,25 @@ if ($isAdmin) {
     try {
         $allRecipients = $db->getAll("SELECT id, name FROM payment_recipients WHERE active = 1 ORDER BY name");
     } catch (Exception $e) {}
+
+    // Get events that have paid orders (for filter)
+    $filterEvents = [];
+    try {
+        $filterEvents = $db->getAll("
+            SELECT DISTINCT e.id, e.name, e.date
+            FROM events e
+            JOIN orders o ON o.event_id = e.id
+            WHERE o.payment_status = 'paid' AND YEAR(o.created_at) = ?
+            ORDER BY e.date DESC
+        ", [$filterYear]);
+    } catch (Exception $e) {}
+
+    // Swedish month names
+    $monthNames = [
+        1 => 'Januari', 2 => 'Februari', 3 => 'Mars', 4 => 'April',
+        5 => 'Maj', 6 => 'Juni', 7 => 'Juli', 8 => 'Augusti',
+        9 => 'September', 10 => 'Oktober', 11 => 'November', 12 => 'December'
+    ];
 }
 
 // ============================================================
@@ -335,14 +368,51 @@ include __DIR__ . '/components/unified-layout.php';
                     <?php endforeach; ?>
                 </select>
             </div>
+            <div class="admin-form-group mb-0">
+                <label class="admin-form-label">Period</label>
+                <select name="month" class="admin-form-select" onchange="this.form.submit()">
+                    <option value="0" <?= $filterMonth == 0 ? 'selected' : '' ?>>Helår</option>
+                    <?php foreach ($monthNames as $num => $name): ?>
+                    <option value="<?= $num ?>" <?= $num == $filterMonth ? 'selected' : '' ?>><?= $name ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div class="admin-form-group mb-0">
+                <label class="admin-form-label">Event</label>
+                <select name="event" class="admin-form-select" onchange="this.form.submit()">
+                    <option value="0">Alla event</option>
+                    <?php foreach ($filterEvents as $ev): ?>
+                    <option value="<?= $ev['id'] ?>" <?= $ev['id'] == $filterEvent ? 'selected' : '' ?>><?= h($ev['name']) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div class="admin-form-group mb-0">
+                <label class="admin-form-label">Mottagare</label>
+                <select name="recipient" class="admin-form-select" onchange="this.form.submit()">
+                    <option value="0">Alla mottagare</option>
+                    <?php foreach ($allRecipients as $rec): ?>
+                    <option value="<?= $rec['id'] ?>" <?= $rec['id'] == $filterRecipient ? 'selected' : '' ?>><?= h($rec['name']) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
         </form>
     </div>
 </div>
 
 <!-- Per-order table -->
+<?php
+    // Build header label
+    $headerLabel = 'Ordrar ' . $filterYear;
+    if ($filterMonth > 0) $headerLabel .= ' ' . $monthNames[$filterMonth];
+    if ($filterEvent > 0) {
+        $evName = '';
+        foreach ($filterEvents as $ev) { if ($ev['id'] == $filterEvent) { $evName = $ev['name']; break; } }
+        if ($evName) $headerLabel .= ' — ' . $evName;
+    }
+?>
 <div class="admin-card">
     <div class="admin-card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: var(--space-sm);">
-        <h2>Ordrar <?= $filterYear ?></h2>
+        <h2><?= h($headerLabel) ?></h2>
         <?php if (isset($recipientInfo)): ?>
         <div class="platform-fee-info" data-recipient-id="<?= $recipientInfo['id'] ?>">
             <i data-lucide="percent"></i>
