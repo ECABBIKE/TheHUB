@@ -1,7 +1,86 @@
 /**
  * TheHUB V3 - PWA Styles
- * Styles for PWA-specific UI elements
+ * Styles for PWA-specific UI elements + Bottom Navigation
  */
+
+/* ========== BOTTOM NAVIGATION (nav-bottom) ========== */
+/* Base styles - always hidden on desktop, shown on mobile via critical-inline.css */
+.nav-bottom {
+  display: none;
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  z-index: 9999;
+  background: var(--color-bg-surface);
+  border-top: 1px solid var(--color-border);
+  padding: var(--space-xs) var(--space-sm);
+  padding-bottom: calc(var(--space-xs) + env(safe-area-inset-bottom, 0px));
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  transform: translate3d(0, 0, 0);
+  -webkit-transform: translate3d(0, 0, 0);
+}
+
+@media (max-width: 1023px) {
+  .nav-bottom {
+    display: flex;
+    justify-content: space-around;
+  }
+  body {
+    padding-bottom: var(--mobile-nav-height);
+  }
+}
+
+.nav-bottom-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: var(--space-xs) var(--space-sm);
+  color: var(--color-text-muted);
+  text-decoration: none;
+  border-radius: var(--radius-md);
+  transition: all 0.15s ease;
+  position: relative;
+}
+
+.nav-bottom-item:hover {
+  color: var(--color-text-primary);
+  background: var(--color-bg-hover);
+}
+
+.nav-bottom-item.is-active {
+  color: var(--color-accent);
+}
+
+.nav-bottom-item.is-active::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 50%;
+  transform: translateX(-50%);
+  width: 24px;
+  height: 2px;
+  background: var(--color-accent);
+  border-radius: var(--radius-full);
+}
+
+.nav-bottom-icon {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.nav-bottom-icon svg {
+  width: 24px;
+  height: 24px;
+}
+
+.nav-bottom-label {
+  font-size: 10px;
+  font-weight: 500;
+}
 
 /* ========== SAFE AREA HANDLING (Notch, etc) ========== */
 /* NOTE: Header safe-area is now ONLY applied in standalone PWA mode (see below)

@@ -169,6 +169,9 @@ $migrationChecks = [
     '049_orders_stripe_fee.sql' => [
         'columns' => ['orders.stripe_fee', 'orders.stripe_balance_transaction_id']
     ],
+    '050_backfill_order_items_recipient.sql' => [
+        'data' => ["(SELECT COUNT(*) FROM order_items WHERE payment_recipient_id IS NULL AND order_id IN (SELECT id FROM orders WHERE payment_status = 'paid')) = 0"]
+    ],
 ];
 
 // ============================================================================
