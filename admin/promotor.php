@@ -57,10 +57,10 @@ $filterYear = isset($_GET['year']) ? intval($_GET['year']) : (int)date('Y');
 $filterRecipient = isset($_GET['recipient']) ? intval($_GET['recipient']) : 0;
 
 if ($isAdmin) {
-    // Estimate rates (fallback when actual fees aren't stored)
+    // Fee constants
     $STRIPE_PERCENT = 1.5;
-    $STRIPE_FIXED = 2.00; // SEK per transaction
-    $SWISH_FEE = 2.00;    // SEK per transaction (approximate)
+    $STRIPE_FIXED = 2.00; // SEK per transaction (fallback estimate)
+    $SWISH_FEE = 3.00;    // SEK per Swish transaction
     $VAT_RATE = 6;         // Standard sport event VAT
 
     // Check if stripe_fee column exists (migration 049)
@@ -70,275 +70,83 @@ if ($isAdmin) {
         $hasStripeFeeCol = !empty($colCheck);
     } catch (Exception $e) {}
 
-    // ============================================================
-    // Build event_id → recipient_id mapping using ALL available paths
-    // This handles cases where columns may not exist or data is sparse
-    // ============================================================
-    $eventRecipientMap = []; // event_id => recipient_id
-    $mappingDebug = []; // Track which paths worked
-
-    // Path 1: events.payment_recipient_id (direct)
+    // Get platform fee percent (from first active recipient)
+    $platformFeePct = 2.00;
     try {
-        $rows = $db->getAll("SELECT id, payment_recipient_id FROM events WHERE payment_recipient_id IS NOT NULL");
-        foreach ($rows as $row) {
-            $eventRecipientMap[(int)$row['id']] = (int)$row['payment_recipient_id'];
+        $prRow = $db->getRow("SELECT id, name, platform_fee_percent, swish_number, bankgiro, bank_account, bank_name, bank_clearing, contact_email, org_number FROM payment_recipients WHERE active = 1 ORDER BY id LIMIT 1");
+        if ($prRow) {
+            $platformFeePct = (float)($prRow['platform_fee_percent'] ?? 2.00);
+            $recipientInfo = $prRow;
         }
-        $mappingDebug['path1'] = count($rows) . ' events';
-    } catch (\Throwable $e) {
-        $mappingDebug['path1'] = 'error: ' . $e->getMessage();
-    }
+    } catch (Exception $e) {}
 
-    // Path 2: series.payment_recipient_id via events.series_id
+    // Fetch individual paid orders for the selected year
+    $orderRows = [];
     try {
-        $rows = $db->getAll("
-            SELECT e.id as event_id, s.payment_recipient_id
-            FROM events e
-            JOIN series s ON e.series_id = s.id
-            WHERE s.payment_recipient_id IS NOT NULL
-        ");
-        foreach ($rows as $row) {
-            if (!isset($eventRecipientMap[(int)$row['event_id']])) {
-                $eventRecipientMap[(int)$row['event_id']] = (int)$row['payment_recipient_id'];
-            }
-        }
-        $mappingDebug['path2'] = count($rows) . ' events';
-    } catch (\Throwable $e) {
-        $mappingDebug['path2'] = 'error: ' . $e->getMessage();
-    }
+        $stripeFeeCol = $hasStripeFeeCol ? "o.stripe_fee," : "NULL as stripe_fee,";
+        $yearFilter = $filterYear;
+        $recipientFilter = $filterRecipient ? " AND pr_match.id = " . intval($filterRecipient) : "";
 
-    // Path 3: series.payment_recipient_id via series_events (many-to-many)
-    try {
-        $rows = $db->getAll("
-            SELECT se.event_id, s.payment_recipient_id
-            FROM series_events se
-            JOIN series s ON se.series_id = s.id
-            WHERE s.payment_recipient_id IS NOT NULL
-        ");
-        foreach ($rows as $row) {
-            if (!isset($eventRecipientMap[(int)$row['event_id']])) {
-                $eventRecipientMap[(int)$row['event_id']] = (int)$row['payment_recipient_id'];
-            }
-        }
-        $mappingDebug['path3'] = count($rows) . ' events';
-    } catch (\Throwable $e) {
-        $mappingDebug['path3'] = 'error: ' . $e->getMessage();
-    }
-
-    // Path 4: order_items.payment_recipient_id (fallback from order creation)
-    try {
-        $rows = $db->getAll("
-            SELECT DISTINCT o.event_id, oi.payment_recipient_id
-            FROM order_items oi
-            JOIN orders o ON oi.order_id = o.id
-            WHERE oi.payment_recipient_id IS NOT NULL
-            AND o.event_id IS NOT NULL
-        ");
-        foreach ($rows as $row) {
-            if (!isset($eventRecipientMap[(int)$row['event_id']])) {
-                $eventRecipientMap[(int)$row['event_id']] = (int)$row['payment_recipient_id'];
-            }
-        }
-        $mappingDebug['path4'] = count($rows) . ' events';
-    } catch (\Throwable $e) {
-        $mappingDebug['path4'] = 'error: ' . $e->getMessage();
-    }
-
-    // Path 5: Legacy payment_configs → payment_recipients via swish_number match
-    try {
-        $rows = $db->getAll("
-            SELECT e.id as event_id, pr.id as recipient_id
-            FROM events e
-            JOIN payment_configs pc ON (pc.event_id = e.id OR pc.series_id = e.series_id)
-            JOIN payment_recipients pr ON pr.swish_number = pc.swish_number AND pr.active = 1
-        ");
-        foreach ($rows as $row) {
-            if (!isset($eventRecipientMap[(int)$row['event_id']])) {
-                $eventRecipientMap[(int)$row['event_id']] = (int)$row['recipient_id'];
-            }
-        }
-        $mappingDebug['path5'] = count($rows) . ' events';
-    } catch (\Throwable $e) {
-        $mappingDebug['path5'] = 'error: ' . $e->getMessage();
-    }
-
-    // Path 6: Legacy payment_configs → payment_recipients via series_events + swish_number
-    try {
-        $rows = $db->getAll("
-            SELECT se.event_id, pr.id as recipient_id
-            FROM series_events se
-            JOIN payment_configs pc ON pc.series_id = se.series_id
-            JOIN payment_recipients pr ON pr.swish_number = pc.swish_number AND pr.active = 1
-        ");
-        foreach ($rows as $row) {
-            if (!isset($eventRecipientMap[(int)$row['event_id']])) {
-                $eventRecipientMap[(int)$row['event_id']] = (int)$row['recipient_id'];
-            }
-        }
-        $mappingDebug['path6'] = count($rows) . ' events';
-    } catch (\Throwable $e) {
-        $mappingDebug['path6'] = 'error: ' . $e->getMessage();
-    }
-
-    // Path 7: If STILL empty → assign ALL order events to first active recipient
-    if (empty($eventRecipientMap)) {
-        try {
-            $activeRecipients = $db->getAll("SELECT id FROM payment_recipients WHERE active = 1");
-            $orderEvents = $db->getAll("
-                SELECT DISTINCT event_id FROM orders
-                WHERE event_id IS NOT NULL AND YEAR(created_at) = ?
-            ", [$filterYear]);
-
-            if (!empty($activeRecipients) && !empty($orderEvents)) {
-                // Use first/sole recipient as catch-all
-                $fallbackRecipientId = (int)$activeRecipients[0]['id'];
-                foreach ($orderEvents as $oe) {
-                    $eventRecipientMap[(int)$oe['event_id']] = $fallbackRecipientId;
-                }
-                $mappingDebug['path7'] = count($orderEvents) . ' events → recipient ' . $fallbackRecipientId .
-                    ' (' . count($activeRecipients) . ' recipients total)';
-            } else {
-                $mappingDebug['path7'] = 'no recipients=' . count($activeRecipients ?? []) .
-                    ' or no events=' . count($orderEvents ?? []);
-            }
-        } catch (\Throwable $e) {
-            $mappingDebug['path7'] = 'error: ' . $e->getMessage();
-        }
-    }
-
-    $mappingDebug['total_mapped'] = count($eventRecipientMap);
-    error_log("Promotor mapping debug: " . json_encode($mappingDebug));
-
-    // Build SQL: use the PHP mapping to create a proper join
-    // If we have mappings, use them in the query via a constructed IN clause
-    // Otherwise, try a direct join as last resort
-    $recipientWhere = $filterRecipient ? "AND pr.id = " . intval($filterRecipient) : "";
-
-    $actualFeeSelect = $hasStripeFeeCol
-        ? "COALESCE(SUM(CASE WHEN o.payment_status = 'paid' AND o.payment_method = 'card' AND o.stripe_fee IS NOT NULL THEN o.stripe_fee ELSE 0 END), 0) as actual_stripe_fees,
-           COUNT(DISTINCT CASE WHEN o.payment_status = 'paid' AND o.payment_method = 'card' AND o.stripe_fee IS NOT NULL THEN o.id END) as actual_fee_count,"
-        : "0 as actual_stripe_fees, 0 as actual_fee_count,";
-
-    // Build a reverse mapping: recipient_id => [event_ids]
-    $recipientEvents = [];
-    foreach ($eventRecipientMap as $eventId => $recipientId) {
-        $recipientEvents[$recipientId][] = $eventId;
-    }
-
-    try {
-        // Get all payment recipients
-        $allRecipientsData = $db->getAll("
-            SELECT pr.*
-            FROM payment_recipients pr
-            WHERE pr.active = 1 {$recipientWhere}
-            ORDER BY pr.name
-        ");
-
-        $payoutData = [];
-        foreach ($allRecipientsData as $pr) {
-            $prId = (int)$pr['id'];
-            $eventIds = $recipientEvents[$prId] ?? [];
-
-            if (!empty($eventIds)) {
-                $placeholders = implode(',', array_fill(0, count($eventIds), '?'));
-                $params = array_merge($eventIds, [$filterYear]);
-
-                $orderData = $db->getRow("
-                    SELECT
-                        COALESCE(SUM(CASE WHEN o.payment_status = 'paid' THEN o.total_amount ELSE 0 END), 0) as gross_revenue,
-                        COALESCE(SUM(CASE WHEN o.payment_status = 'paid' AND o.payment_method = 'card' THEN o.total_amount ELSE 0 END), 0) as card_revenue,
-                        COALESCE(SUM(CASE WHEN o.payment_status = 'paid' AND o.payment_method IN ('swish', 'swish_csv') THEN o.total_amount ELSE 0 END), 0) as swish_revenue,
-                        COALESCE(SUM(CASE WHEN o.payment_status = 'paid' AND o.payment_method IN ('manual', 'free') THEN o.total_amount ELSE 0 END), 0) as manual_revenue,
-                        " . ($hasStripeFeeCol ? "
-                        COALESCE(SUM(CASE WHEN o.payment_status = 'paid' AND o.payment_method = 'card' AND o.stripe_fee IS NOT NULL THEN o.stripe_fee ELSE 0 END), 0) as actual_stripe_fees,
-                        COUNT(DISTINCT CASE WHEN o.payment_status = 'paid' AND o.payment_method = 'card' AND o.stripe_fee IS NOT NULL THEN o.id END) as actual_fee_count,
-                        " : "0 as actual_stripe_fees, 0 as actual_fee_count,") . "
-                        COUNT(DISTINCT CASE WHEN o.payment_status = 'paid' AND o.payment_method = 'card' THEN o.id END) as card_order_count,
-                        COUNT(DISTINCT CASE WHEN o.payment_status = 'paid' AND o.payment_method IN ('swish', 'swish_csv') THEN o.id END) as swish_order_count,
-                        COUNT(DISTINCT CASE WHEN o.payment_status = 'paid' AND o.payment_method IN ('manual', 'free') THEN o.id END) as manual_order_count,
-                        COUNT(DISTINCT CASE WHEN o.payment_status = 'paid' THEN o.id END) as paid_order_count,
-                        COALESCE(SUM(CASE WHEN o.payment_status = 'pending' THEN o.total_amount ELSE 0 END), 0) as pending_revenue,
-                        COUNT(DISTINCT CASE WHEN o.payment_status = 'pending' THEN o.id END) as pending_order_count,
-                        COALESCE(SUM(CASE WHEN o.payment_status = 'refunded' THEN o.total_amount ELSE 0 END), 0) as refunded_amount,
-                        COUNT(DISTINCT o.event_id) as event_count
-                    FROM orders o
-                    WHERE o.event_id IN ({$placeholders})
-                    AND YEAR(o.created_at) = ?
-                ", $params);
-            } else {
-                $orderData = [
-                    'gross_revenue' => 0, 'card_revenue' => 0, 'swish_revenue' => 0,
-                    'manual_revenue' => 0, 'actual_stripe_fees' => 0, 'actual_fee_count' => 0,
-                    'card_order_count' => 0, 'swish_order_count' => 0, 'manual_order_count' => 0,
-                    'paid_order_count' => 0, 'pending_revenue' => 0, 'pending_order_count' => 0,
-                    'refunded_amount' => 0, 'event_count' => 0
-                ];
-            }
-
-            $payoutData[] = array_merge($pr, $orderData);
-        }
+        // Simple approach: fetch all paid orders for the year, join event name
+        $orderRows = $db->getAll("
+            SELECT o.id, o.order_number, o.total_amount, o.payment_method, o.payment_status,
+                   {$stripeFeeCol}
+                   o.event_id, o.created_at,
+                   e.name as event_name
+            FROM orders o
+            LEFT JOIN events e ON o.event_id = e.id
+            WHERE o.payment_status = 'paid'
+            AND YEAR(o.created_at) = ?
+            ORDER BY o.created_at DESC
+        ", [$yearFilter]);
     } catch (Exception $e) {
-        error_log("Promotor payout query error: " . $e->getMessage());
+        error_log("Promotor orders query error: " . $e->getMessage());
     }
 
-    // Calculate fees for each recipient
+    // Calculate per-order fees
     $payoutTotals = [
-        'gross' => 0, 'vat' => 0, 'stripe_fees' => 0, 'swish_fees' => 0,
-        'platform_fees' => 0, 'net_payout' => 0, 'pending' => 0
+        'gross' => 0, 'payment_fees' => 0, 'platform_fees' => 0, 'net' => 0,
+        'order_count' => 0, 'card_count' => 0, 'swish_count' => 0
     ];
 
-    foreach ($payoutData as &$r) {
-        $gross = (float)$r['gross_revenue'];
-        $platformPct = (float)($r['platform_fee_percent'] ?? 2.00);
+    foreach ($orderRows as &$order) {
+        $amount = (float)$order['total_amount'];
+        $method = $order['payment_method'] ?? 'card';
 
-        // VAT (included in price): gross * VAT_RATE / (100 + VAT_RATE)
-        $r['vat_amount'] = round($gross * $VAT_RATE / (100 + $VAT_RATE), 2);
-
-        // Stripe fees: use actual fees where available, estimate the rest
-        $actualStripeFees = (float)($r['actual_stripe_fees'] ?? 0);
-        $actualFeeCount = (int)($r['actual_fee_count'] ?? 0);
-        $totalCardOrders = (int)$r['card_order_count'];
-        $estimatedCount = $totalCardOrders - $actualFeeCount;
-
-        $estimatedStripeFees = 0;
-        if ($estimatedCount > 0) {
-            $estimatedCardRevenue = $totalCardOrders > 0
-                ? (float)$r['card_revenue'] * ($estimatedCount / $totalCardOrders)
-                : 0;
-            $estimatedStripeFees = round(
-                ($estimatedCardRevenue * $STRIPE_PERCENT / 100) +
-                ($estimatedCount * $STRIPE_FIXED),
-                2
-            );
+        // Payment processing fee
+        if (in_array($method, ['swish', 'swish_csv'])) {
+            $order['payment_fee'] = $SWISH_FEE;
+            $order['fee_type'] = 'actual';
+            $payoutTotals['swish_count']++;
+        } elseif ($method === 'card') {
+            if ($order['stripe_fee'] !== null && (float)$order['stripe_fee'] > 0) {
+                $order['payment_fee'] = round((float)$order['stripe_fee'], 2);
+                $order['fee_type'] = 'actual';
+            } else {
+                $order['payment_fee'] = round(($amount * $STRIPE_PERCENT / 100) + $STRIPE_FIXED, 2);
+                $order['fee_type'] = 'estimated';
+            }
+            $payoutTotals['card_count']++;
+        } else {
+            // manual/free - no payment fee
+            $order['payment_fee'] = 0;
+            $order['fee_type'] = 'none';
         }
 
-        $r['stripe_fees'] = round($actualStripeFees + $estimatedStripeFees, 2);
-        $r['stripe_fees_actual'] = $actualStripeFees;
-        $r['stripe_fees_estimated'] = $estimatedStripeFees;
-        $r['has_actual_fees'] = $actualFeeCount > 0;
-        $r['all_fees_actual'] = ($actualFeeCount >= $totalCardOrders && $totalCardOrders > 0);
+        // Platform fee
+        $order['platform_fee'] = round($amount * $platformFeePct / 100, 2);
 
-        // Swish fees
-        $r['swish_fees'] = round((int)$r['swish_order_count'] * $SWISH_FEE, 2);
-
-        // Platform fee on gross
-        $r['platform_fee'] = round($gross * $platformPct / 100, 2);
-
-        // Net payout: gross - stripe - swish - platform fee
-        $r['net_payout'] = round($gross - $r['stripe_fees'] - $r['swish_fees'] - $r['platform_fee'], 2);
+        // Net after fees
+        $order['net_amount'] = round($amount - $order['payment_fee'] - $order['platform_fee'], 2);
 
         // Totals
-        $payoutTotals['gross'] += $gross;
-        $payoutTotals['vat'] += $r['vat_amount'];
-        $payoutTotals['stripe_fees'] += $r['stripe_fees'];
-        $payoutTotals['swish_fees'] += $r['swish_fees'];
-        $payoutTotals['platform_fees'] += $r['platform_fee'];
-        $payoutTotals['net_payout'] += $r['net_payout'];
-        $payoutTotals['pending'] += (float)$r['pending_revenue'];
+        $payoutTotals['gross'] += $amount;
+        $payoutTotals['payment_fees'] += $order['payment_fee'];
+        $payoutTotals['platform_fees'] += $order['platform_fee'];
+        $payoutTotals['net'] += $order['net_amount'];
+        $payoutTotals['order_count']++;
     }
-    unset($r);
-
-    // Sort by gross revenue descending
-    usort($payoutData, fn($a, $b) => (float)$b['gross_revenue'] <=> (float)$a['gross_revenue']);
+    unset($order);
 
     // Get available years for filter
     $availableYears = [];
@@ -428,49 +236,20 @@ include __DIR__ . '/components/unified-layout.php';
 <!-- ===== ADMIN: FINANCIAL PAYOUT OVERVIEW ===== -->
 
 <style>
-/* Payout page - minimal scoped styles */
-.payout-detail-row td { padding: 0 !important; }
-.payout-detail-inner { padding: var(--space-md) var(--space-lg); background: var(--color-bg-hover); }
-.payout-fee-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-md); }
-.payout-fee-section { background: var(--color-bg-surface); border-radius: var(--radius-md); padding: var(--space-md); }
-.payout-fee-section h4 {
-    font-size: var(--text-sm); font-weight: 600; color: var(--color-text-primary);
-    margin: 0 0 var(--space-sm) 0; display: flex; align-items: center; gap: var(--space-xs);
+/* Order table styles */
+.order-table { font-variant-numeric: tabular-nums; }
+.order-table th { white-space: nowrap; font-size: var(--text-xs); text-transform: uppercase; letter-spacing: 0.05em; }
+.order-table td { vertical-align: middle; }
+.order-method { display: inline-flex; align-items: center; gap: var(--space-2xs); }
+.order-method i { width: 14px; height: 14px; }
+.fee-estimated { opacity: 0.6; font-style: italic; }
+.order-event { font-size: var(--text-xs); color: var(--color-text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 180px; }
+.summary-row td { font-weight: 600; border-top: 2px solid var(--color-border-strong); background: var(--color-bg-hover); }
+.platform-fee-info {
+    display: flex; align-items: center; gap: var(--space-xs); font-size: var(--text-sm);
+    color: var(--color-text-secondary); margin-bottom: var(--space-sm);
 }
-.payout-fee-section h4 i { width: 16px; height: 16px; color: var(--color-accent); }
-.payout-fee-row {
-    display: flex; justify-content: space-between; padding: var(--space-xs) 0;
-    font-size: var(--text-sm); border-bottom: 1px solid var(--color-border);
-}
-.payout-fee-row:last-child { border-bottom: none; }
-.payout-fee-row .label { color: var(--color-text-secondary); }
-.payout-fee-row .value { font-weight: 500; color: var(--color-text-primary); white-space: nowrap; }
-.payout-fee-row .value.neg { color: var(--color-error); }
-.payout-fee-row .value.pos { color: var(--color-success); }
-.payout-fee-row.total-row {
-    padding-top: var(--space-sm); border-top: 2px solid var(--color-border);
-    border-bottom: none; font-weight: 600;
-}
-.payout-fee-row.total-row .label { color: var(--color-text-primary); }
-.payout-fee-row.total-row .value { font-size: var(--text-base); }
-.payout-bank {
-    margin-top: var(--space-md); padding: var(--space-md);
-    background: var(--color-accent-light); border-radius: var(--radius-md); font-size: var(--text-sm);
-}
-.payout-bank-title {
-    font-weight: 600; margin-bottom: var(--space-xs);
-    display: flex; align-items: center; gap: var(--space-xs);
-}
-.payout-bank-title i { width: 16px; height: 16px; }
-.payout-bank-row { display: flex; gap: var(--space-sm); padding: 2px 0; color: var(--color-text-secondary); }
-.payout-bank-row .lbl { font-weight: 500; min-width: 80px; }
-.fee-badge {
-    display: inline-block; font-size: 10px; padding: 1px 6px;
-    border-radius: var(--radius-full); font-weight: 500; vertical-align: middle; margin-left: var(--space-2xs);
-}
-.fee-badge-actual { background: rgba(16, 185, 129, 0.15); color: var(--color-success); }
-.fee-badge-mixed { background: rgba(251, 191, 36, 0.15); color: var(--color-warning); }
-.fee-badge-estimated { background: rgba(134, 143, 162, 0.15); color: var(--color-text-muted); }
+.platform-fee-info i { width: 14px; height: 14px; }
 .btn-edit-fee {
     background: none; border: none; cursor: pointer; padding: 2px;
     color: var(--color-text-muted); opacity: 0.6; transition: opacity 0.15s; vertical-align: middle;
@@ -490,38 +269,14 @@ include __DIR__ . '/components/unified-layout.php';
 .fee-edit-save { background: var(--color-success); color: white; }
 .fee-edit-cancel { background: var(--color-bg-sunken); color: var(--color-text-secondary); }
 
-/* Mobile cards for portrait phones */
-.payout-cards { display: none; }
+/* Mobile: card view for portrait phones */
+.order-cards { display: none; }
 
-@media (max-width: 767px) {
-    .payout-fee-grid { grid-template-columns: 1fr; }
-}
 @media (max-width: 599px) and (orientation: portrait) {
-    .payout-table-wrap { display: none; }
-    .payout-cards { display: block; }
+    .order-table-wrap { display: none; }
+    .order-cards { display: block; }
 }
 </style>
-
-<!-- Debug: mapping diagnostics (remove after fix confirmed) -->
-<?php if (!empty($mappingDebug)): ?>
-<div class="admin-card mb-lg" style="border-color: var(--color-info);">
-    <div class="admin-card-header" style="background: rgba(56, 189, 248, 0.1);">
-        <h2 style="font-size: var(--text-sm);">Mappning-diagnostik (tas bort efter fix)</h2>
-    </div>
-    <div class="admin-card-body" style="font-size: var(--text-xs); font-family: monospace;">
-        <?php foreach ($mappingDebug as $key => $val): ?>
-        <div style="padding: 2px 0;"><strong><?= h($key) ?>:</strong> <?= h($val) ?></div>
-        <?php endforeach; ?>
-        <div style="padding: 2px 0; margin-top: var(--space-xs); border-top: 1px solid var(--color-border);">
-            <strong>recipientEvents:</strong>
-            <?php foreach (($recipientEvents ?? []) as $rid => $eids): ?>
-            <span>Recipient <?= $rid ?> → <?= count($eids) ?> events</span>
-            <?php endforeach; ?>
-            <?php if (empty($recipientEvents ?? [])): ?><span>TOM</span><?php endif; ?>
-        </div>
-    </div>
-</div>
-<?php endif; ?>
 
 <!-- Stats -->
 <div class="admin-stats-grid">
@@ -531,7 +286,7 @@ include __DIR__ . '/components/unified-layout.php';
         </div>
         <div class="admin-stat-content">
             <div class="admin-stat-value"><?= number_format($payoutTotals['gross'], 0, ',', ' ') ?> kr</div>
-            <div class="admin-stat-label">Bruttointäkter</div>
+            <div class="admin-stat-label">Försäljning</div>
         </div>
     </div>
     <div class="admin-stat-card">
@@ -539,7 +294,7 @@ include __DIR__ . '/components/unified-layout.php';
             <i data-lucide="receipt"></i>
         </div>
         <div class="admin-stat-content">
-            <div class="admin-stat-value"><?= number_format($payoutTotals['stripe_fees'] + $payoutTotals['swish_fees'] + $payoutTotals['platform_fees'], 0, ',', ' ') ?> kr</div>
+            <div class="admin-stat-value"><?= number_format($payoutTotals['payment_fees'] + $payoutTotals['platform_fees'], 0, ',', ' ') ?> kr</div>
             <div class="admin-stat-label">Totala avgifter</div>
         </div>
     </div>
@@ -548,17 +303,17 @@ include __DIR__ . '/components/unified-layout.php';
             <i data-lucide="banknote"></i>
         </div>
         <div class="admin-stat-content">
-            <div class="admin-stat-value"><?= number_format($payoutTotals['net_payout'], 0, ',', ' ') ?> kr</div>
-            <div class="admin-stat-label">Att betala ut</div>
+            <div class="admin-stat-value"><?= number_format($payoutTotals['net'], 0, ',', ' ') ?> kr</div>
+            <div class="admin-stat-label">Netto efter avgifter</div>
         </div>
     </div>
     <div class="admin-stat-card">
         <div class="admin-stat-icon stat-icon-warning">
-            <i data-lucide="clock"></i>
+            <i data-lucide="hash"></i>
         </div>
         <div class="admin-stat-content">
-            <div class="admin-stat-value"><?= number_format($payoutTotals['pending'], 0, ',', ' ') ?> kr</div>
-            <div class="admin-stat-label">Ej betalda</div>
+            <div class="admin-stat-value"><?= $payoutTotals['order_count'] ?></div>
+            <div class="admin-stat-label">Ordrar (<?= $payoutTotals['card_count'] ?> kort, <?= $payoutTotals['swish_count'] ?> Swish)</div>
         </div>
     </div>
 </div>
@@ -579,224 +334,160 @@ include __DIR__ . '/components/unified-layout.php';
                     <?php endforeach; ?>
                 </select>
             </div>
-            <div class="admin-form-group mb-0">
-                <label class="admin-form-label">Mottagare</label>
-                <select name="recipient" class="admin-form-select" onchange="this.form.submit()">
-                    <option value="0">Alla mottagare</option>
-                    <?php foreach ($allRecipients as $rec): ?>
-                    <option value="<?= $rec['id'] ?>" <?= $rec['id'] == $filterRecipient ? 'selected' : '' ?>><?= h($rec['name']) ?></option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
         </form>
     </div>
 </div>
 
-<!-- Recipients table -->
+<!-- Per-order table -->
 <div class="admin-card">
-    <div class="admin-card-header">
-        <h2>Betalningsmottagare</h2>
+    <div class="admin-card-header" style="display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: var(--space-sm);">
+        <h2>Ordrar <?= $filterYear ?></h2>
+        <?php if (isset($recipientInfo)): ?>
+        <div class="platform-fee-info" data-recipient-id="<?= $recipientInfo['id'] ?>">
+            <i data-lucide="percent"></i>
+            Plattformsavgift: <strong class="platform-fee-value"><?= number_format($platformFeePct, 1) ?>%</strong>
+            <button type="button" class="btn-edit-fee" onclick="editPlatformFee(<?= $recipientInfo['id'] ?>, <?= $platformFeePct ?>)" title="Ändra plattformsavgift">
+                <i data-lucide="pencil"></i>
+            </button>
+        </div>
+        <?php endif; ?>
     </div>
     <div class="admin-card-body p-0">
-        <?php
-        // Filter out recipients with no data (unless filtering specific)
-        $visibleRecipients = $filterRecipient
-            ? $payoutData
-            : array_filter($payoutData, fn($r) => (float)$r['gross_revenue'] > 0 || (float)$r['pending_revenue'] > 0);
-
-        if (empty($visibleRecipients)): ?>
+        <?php if (empty($orderRows)): ?>
         <div class="admin-empty-state">
             <i data-lucide="inbox"></i>
-            <h3>Ingen ekonomisk data</h3>
-            <p>Inga betalningsmottagare med ordrar för <?= $filterYear ?>.</p>
+            <h3>Inga betalda ordrar</h3>
+            <p>Inga betalda ordrar hittades för <?= $filterYear ?>.</p>
         </div>
         <?php else: ?>
 
         <!-- Desktop/Landscape table -->
-        <div class="admin-table-container payout-table-wrap">
-            <table class="admin-table">
+        <div class="admin-table-container order-table-wrap">
+            <table class="admin-table order-table">
                 <thead>
                     <tr>
-                        <th>Mottagare</th>
-                        <th style="text-align: right;">Brutto</th>
-                        <th style="text-align: right;">Avgifter</th>
+                        <th>Ordernr</th>
+                        <th>Event</th>
+                        <th style="text-align: right;">Belopp</th>
+                        <th>Betalsätt</th>
+                        <th style="text-align: right;">Avgift betalning</th>
+                        <th style="text-align: right;">Plattformsavgift</th>
                         <th style="text-align: right;">Netto</th>
-                        <th style="text-align: center;">Ordrar</th>
-                        <th style="text-align: right;">Väntande</th>
-                        <th></th>
                     </tr>
                 </thead>
                 <tbody>
-                    <?php foreach ($visibleRecipients as $r):
-                        $totalFees = $r['stripe_fees'] + $r['swish_fees'] + $r['platform_fee'];
+                    <?php foreach ($orderRows as $order):
+                        $method = $order['payment_method'] ?? 'card';
+                        $methodLabel = match($method) {
+                            'swish', 'swish_csv' => 'Swish',
+                            'card' => 'Kort',
+                            'manual' => 'Manuell',
+                            'free' => 'Gratis',
+                            default => ucfirst($method)
+                        };
+                        $methodIcon = match($method) {
+                            'swish', 'swish_csv' => 'smartphone',
+                            'card' => 'credit-card',
+                            'manual' => 'hand',
+                            'free' => 'gift',
+                            default => 'circle'
+                        };
                     ?>
-                    <tr class="payout-row" onclick="togglePayoutDetail(<?= $r['id'] ?>)" style="cursor: pointer;">
-                        <td data-label="Mottagare">
-                            <div class="font-medium"><?= h($r['name']) ?></div>
-                            <div class="text-xs text-secondary">
-                                <?php if ($r['org_number']): ?>Org.nr: <?= h($r['org_number']) ?><?php endif; ?>
-                                <?php if ((int)$r['event_count'] > 0): ?> &middot; <?= (int)$r['event_count'] ?> event<?php endif; ?>
-                            </div>
+                    <tr>
+                        <td>
+                            <code style="font-size: var(--text-sm);"><?= h($order['order_number'] ?? '#' . $order['id']) ?></code>
+                            <div class="text-xs text-secondary"><?= date('j M', strtotime($order['created_at'])) ?></div>
                         </td>
-                        <td data-label="Brutto" style="text-align: right; font-weight: 600; font-variant-numeric: tabular-nums;">
-                            <?= number_format($r['gross_revenue'], 0, ',', ' ') ?> kr
+                        <td>
+                            <div class="order-event"><?= h($order['event_name'] ?? '-') ?></div>
                         </td>
-                        <td data-label="Avgifter" style="text-align: right; color: var(--color-error); font-variant-numeric: tabular-nums;">
-                            -<?= number_format($totalFees, 0, ',', ' ') ?> kr
+                        <td style="text-align: right; font-weight: 500;">
+                            <?= number_format($order['total_amount'], 0, ',', ' ') ?> kr
                         </td>
-                        <td data-label="Netto" style="text-align: right; font-weight: 600; color: var(--color-success); font-variant-numeric: tabular-nums;">
-                            <?= number_format($r['net_payout'], 0, ',', ' ') ?> kr
+                        <td>
+                            <span class="order-method">
+                                <i data-lucide="<?= $methodIcon ?>"></i>
+                                <?= $methodLabel ?>
+                            </span>
                         </td>
-                        <td data-label="Ordrar" style="text-align: center;">
-                            <span class="admin-badge admin-badge-success"><?= (int)$r['paid_order_count'] ?></span>
-                        </td>
-                        <td data-label="Väntande" style="text-align: right; font-variant-numeric: tabular-nums;">
-                            <?php if ((float)$r['pending_revenue'] > 0): ?>
-                            <span style="color: var(--color-warning);"><?= number_format($r['pending_revenue'], 0, ',', ' ') ?> kr</span>
+                        <td style="text-align: right; color: var(--color-error);">
+                            <?php if ($order['payment_fee'] > 0): ?>
+                                <span class="<?= $order['fee_type'] === 'estimated' ? 'fee-estimated' : '' ?>">
+                                    -<?= number_format($order['payment_fee'], 2, ',', ' ') ?> kr
+                                </span>
                             <?php else: ?>
-                            <span class="text-secondary">-</span>
+                                <span class="text-secondary">-</span>
                             <?php endif; ?>
                         </td>
-                        <td style="text-align: right; width: 40px;">
-                            <i data-lucide="chevron-down" style="width: 16px; height: 16px; opacity: 0.5; transition: transform 0.2s;" id="chevron-<?= $r['id'] ?>"></i>
+                        <td style="text-align: right; color: var(--color-error);">
+                            <?php if ($order['platform_fee'] > 0): ?>
+                                -<?= number_format($order['platform_fee'], 2, ',', ' ') ?> kr
+                            <?php else: ?>
+                                <span class="text-secondary">-</span>
+                            <?php endif; ?>
                         </td>
-                    </tr>
-                    <!-- Expandable detail row -->
-                    <tr class="payout-detail-row" id="detail-<?= $r['id'] ?>" style="display: none;">
-                        <td colspan="7">
-                            <div class="payout-detail-inner">
-                                <!-- Platform fee display -->
-                                <div style="margin-bottom: var(--space-md); font-size: var(--text-sm);" class="platform-fee-display" data-recipient-id="<?= $r['id'] ?>">
-                                    <i data-lucide="percent" style="width: 14px; height: 14px; vertical-align: -2px;"></i>
-                                    Plattformsavgift: <span class="platform-fee-value"><?= number_format($r['platform_fee_percent'], 1) ?>%</span>
-                                    <button type="button" class="btn-edit-fee" onclick="event.stopPropagation(); editPlatformFee(<?= $r['id'] ?>, <?= (float)$r['platform_fee_percent'] ?>)" title="Ändra plattformsavgift">
-                                        <i data-lucide="pencil"></i>
-                                    </button>
-                                </div>
-
-                                <div class="payout-fee-grid">
-                                    <!-- Revenue breakdown -->
-                                    <div class="payout-fee-section">
-                                        <h4><i data-lucide="trending-up"></i> Intäkter</h4>
-                                        <div class="payout-fee-row">
-                                            <span class="label">Bruttointäkter</span>
-                                            <span class="value"><?= number_format($r['gross_revenue'], 2, ',', ' ') ?> kr</span>
-                                        </div>
-                                        <div class="payout-fee-row">
-                                            <span class="label">Varav moms (6%)</span>
-                                            <span class="value"><?= number_format($r['vat_amount'], 2, ',', ' ') ?> kr</span>
-                                        </div>
-                                        <div class="payout-fee-row">
-                                            <span class="label">Kortbetalningar (<?= (int)$r['card_order_count'] ?>)</span>
-                                            <span class="value"><?= number_format($r['card_revenue'], 0, ',', ' ') ?> kr</span>
-                                        </div>
-                                        <div class="payout-fee-row">
-                                            <span class="label">Swish (<?= (int)$r['swish_order_count'] ?>)</span>
-                                            <span class="value"><?= number_format($r['swish_revenue'], 0, ',', ' ') ?> kr</span>
-                                        </div>
-                                        <?php if ((float)$r['manual_revenue'] > 0): ?>
-                                        <div class="payout-fee-row">
-                                            <span class="label">Manuellt (<?= (int)$r['manual_order_count'] ?>)</span>
-                                            <span class="value"><?= number_format($r['manual_revenue'], 0, ',', ' ') ?> kr</span>
-                                        </div>
-                                        <?php endif; ?>
-                                    </div>
-
-                                    <!-- Fee breakdown -->
-                                    <div class="payout-fee-section">
-                                        <h4><i data-lucide="calculator"></i> Avgifter & Utbetalning</h4>
-                                        <div class="payout-fee-row">
-                                            <span class="label">
-                                                Stripe-avgifter
-                                                <?php if ($r['all_fees_actual']): ?>
-                                                    <span class="fee-badge fee-badge-actual">Faktiska</span>
-                                                <?php elseif ($r['has_actual_fees']): ?>
-                                                    <span class="fee-badge fee-badge-mixed">Delvis</span>
-                                                <?php else: ?>
-                                                    <span class="fee-badge fee-badge-estimated">Uppsk.</span>
-                                                <?php endif; ?>
-                                            </span>
-                                            <span class="value neg">-<?= number_format($r['stripe_fees'], 2, ',', ' ') ?> kr</span>
-                                        </div>
-                                        <?php if ($r['swish_fees'] > 0): ?>
-                                        <div class="payout-fee-row">
-                                            <span class="label">Swish (~2 kr/order) <span class="fee-badge fee-badge-estimated">Uppsk.</span></span>
-                                            <span class="value neg">-<?= number_format($r['swish_fees'], 2, ',', ' ') ?> kr</span>
-                                        </div>
-                                        <?php endif; ?>
-                                        <div class="payout-fee-row">
-                                            <span class="label">Plattform (<span class="platform-fee-pct-<?= $r['id'] ?>"><?= number_format($r['platform_fee_percent'], 1) ?></span>%)</span>
-                                            <span class="value neg">-<?= number_format($r['platform_fee'], 2, ',', ' ') ?> kr</span>
-                                        </div>
-                                        <?php if ((float)$r['refunded_amount'] > 0): ?>
-                                        <div class="payout-fee-row">
-                                            <span class="label">Återbetalningar</span>
-                                            <span class="value neg">-<?= number_format($r['refunded_amount'], 2, ',', ' ') ?> kr</span>
-                                        </div>
-                                        <?php endif; ?>
-                                        <div class="payout-fee-row total-row">
-                                            <span class="label">Netto att betala ut</span>
-                                            <span class="value pos"><?= number_format($r['net_payout'], 2, ',', ' ') ?> kr</span>
-                                        </div>
-                                    </div>
-                                </div>
-
-                                <!-- Bank info -->
-                                <?php if ($r['swish_number'] || $r['bankgiro'] || ($r['bank_account'] ?? '')): ?>
-                                <div class="payout-bank">
-                                    <div class="payout-bank-title">
-                                        <i data-lucide="landmark"></i>
-                                        Utbetalningsuppgifter
-                                    </div>
-                                    <?php if ($r['swish_number']): ?>
-                                    <div class="payout-bank-row"><span class="lbl">Swish:</span><span><?= h($r['swish_number']) ?></span></div>
-                                    <?php endif; ?>
-                                    <?php if ($r['bankgiro']): ?>
-                                    <div class="payout-bank-row"><span class="lbl">Bankgiro:</span><span><?= h($r['bankgiro']) ?></span></div>
-                                    <?php endif; ?>
-                                    <?php if ($r['bank_account'] ?? ''): ?>
-                                    <div class="payout-bank-row"><span class="lbl">Bank:</span><span><?= h(($r['bank_name'] ? $r['bank_name'] . ' ' : '') . ($r['bank_clearing'] ? $r['bank_clearing'] . '-' : '') . $r['bank_account']) ?></span></div>
-                                    <?php endif; ?>
-                                    <?php if ($r['contact_email'] ?? ''): ?>
-                                    <div class="payout-bank-row"><span class="lbl">E-post:</span><span><?= h($r['contact_email']) ?></span></div>
-                                    <?php endif; ?>
-                                </div>
-                                <?php endif; ?>
-                            </div>
+                        <td style="text-align: right; font-weight: 600; color: var(--color-success);">
+                            <?= number_format($order['net_amount'], 0, ',', ' ') ?> kr
                         </td>
                     </tr>
                     <?php endforeach; ?>
                 </tbody>
+                <tfoot>
+                    <tr class="summary-row">
+                        <td colspan="2" style="font-weight: 600;">Summa (<?= $payoutTotals['order_count'] ?> ordrar)</td>
+                        <td style="text-align: right;"><?= number_format($payoutTotals['gross'], 0, ',', ' ') ?> kr</td>
+                        <td></td>
+                        <td style="text-align: right; color: var(--color-error);">-<?= number_format($payoutTotals['payment_fees'], 0, ',', ' ') ?> kr</td>
+                        <td style="text-align: right; color: var(--color-error);">-<?= number_format($payoutTotals['platform_fees'], 0, ',', ' ') ?> kr</td>
+                        <td style="text-align: right; color: var(--color-success);"><?= number_format($payoutTotals['net'], 0, ',', ' ') ?> kr</td>
+                    </tr>
+                </tfoot>
             </table>
         </div>
 
         <!-- Mobile portrait card view -->
-        <div class="payout-cards">
-            <?php foreach ($visibleRecipients as $r):
-                $totalFees = $r['stripe_fees'] + $r['swish_fees'] + $r['platform_fee'];
+        <div class="order-cards">
+            <?php foreach ($orderRows as $order):
+                $method = $order['payment_method'] ?? 'card';
+                $methodLabel = match($method) {
+                    'swish', 'swish_csv' => 'Swish',
+                    'card' => 'Kort',
+                    'manual' => 'Manuell',
+                    'free' => 'Gratis',
+                    default => ucfirst($method)
+                };
+                $totalFees = $order['payment_fee'] + $order['platform_fee'];
             ?>
-            <div style="padding: var(--space-md); border-bottom: 1px solid var(--color-border);" onclick="togglePayoutDetail(<?= $r['id'] ?>)">
-                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: var(--space-xs);">
+            <div style="padding: var(--space-md); border-bottom: 1px solid var(--color-border);">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: var(--space-2xs);">
                     <div>
-                        <div class="font-medium"><?= h($r['name']) ?></div>
-                        <div class="text-xs text-secondary">
-                            <?= (int)$r['paid_order_count'] ?> ordrar
-                            <?php if ((int)$r['event_count'] > 0): ?>&middot; <?= (int)$r['event_count'] ?> event<?php endif; ?>
-                        </div>
+                        <code style="font-size: var(--text-sm);"><?= h($order['order_number'] ?? '#' . $order['id']) ?></code>
+                        <span class="text-xs text-secondary" style="margin-left: var(--space-xs);"><?= date('j M', strtotime($order['created_at'])) ?></span>
                     </div>
                     <div style="text-align: right;">
-                        <div style="font-weight: 600; color: var(--color-success); font-variant-numeric: tabular-nums;"><?= number_format($r['net_payout'], 0, ',', ' ') ?> kr</div>
-                        <div class="text-xs text-secondary" style="font-variant-numeric: tabular-nums;">av <?= number_format($r['gross_revenue'], 0, ',', ' ') ?> kr</div>
+                        <div style="font-weight: 600; color: var(--color-success); font-variant-numeric: tabular-nums;"><?= number_format($order['net_amount'], 0, ',', ' ') ?> kr</div>
                     </div>
                 </div>
-                <?php if ((float)$r['pending_revenue'] > 0): ?>
-                <div class="text-xs" style="color: var(--color-warning);">
-                    <i data-lucide="clock" style="width: 12px; height: 12px; vertical-align: -2px;"></i>
-                    <?= number_format($r['pending_revenue'], 0, ',', ' ') ?> kr väntande
+                <div class="text-xs text-secondary" style="margin-bottom: var(--space-2xs);"><?= h($order['event_name'] ?? '-') ?></div>
+                <div style="display: flex; justify-content: space-between; font-size: var(--text-xs); color: var(--color-text-muted);">
+                    <span><?= $methodLabel ?> &middot; <?= number_format($order['total_amount'], 0, ',', ' ') ?> kr</span>
+                    <?php if ($totalFees > 0): ?>
+                    <span style="color: var(--color-error);">-<?= number_format($totalFees, 0, ',', ' ') ?> kr avg.</span>
+                    <?php endif; ?>
                 </div>
-                <?php endif; ?>
             </div>
             <?php endforeach; ?>
+            <!-- Mobile summary -->
+            <div style="padding: var(--space-md); background: var(--color-bg-hover); font-size: var(--text-sm);">
+                <div style="display: flex; justify-content: space-between; font-weight: 600; margin-bottom: var(--space-2xs);">
+                    <span>Summa (<?= $payoutTotals['order_count'] ?> ordrar)</span>
+                    <span style="color: var(--color-success);"><?= number_format($payoutTotals['net'], 0, ',', ' ') ?> kr</span>
+                </div>
+                <div style="display: flex; justify-content: space-between; font-size: var(--text-xs); color: var(--color-text-muted);">
+                    <span>Försäljning: <?= number_format($payoutTotals['gross'], 0, ',', ' ') ?> kr</span>
+                    <span style="color: var(--color-error);">Avgifter: -<?= number_format($payoutTotals['payment_fees'] + $payoutTotals['platform_fees'], 0, ',', ' ') ?> kr</span>
+                </div>
+            </div>
         </div>
 
         <?php endif; ?>
@@ -804,32 +495,21 @@ include __DIR__ . '/components/unified-layout.php';
 </div>
 
 <script>
-function togglePayoutDetail(id) {
-    const row = document.getElementById('detail-' + id);
-    const chevron = document.getElementById('chevron-' + id);
-    if (!row) return;
-
-    const isVisible = row.style.display !== 'none';
-    row.style.display = isVisible ? 'none' : '';
-    if (chevron) chevron.style.transform = isVisible ? '' : 'rotate(180deg)';
-    if (!isVisible && typeof lucide !== 'undefined') lucide.createIcons();
-}
-
 function editPlatformFee(recipientId, currentFee) {
-    const container = document.querySelector(`.platform-fee-display[data-recipient-id="${recipientId}"]`);
+    const container = document.querySelector(`.platform-fee-info[data-recipient-id="${recipientId}"]`);
     if (!container) return;
 
-    const valueSpan = container.querySelector('.platform-fee-value');
+    const valueEl = container.querySelector('.platform-fee-value');
     const editBtn = container.querySelector('.btn-edit-fee');
-    const originalText = valueSpan.textContent;
+    const originalText = valueEl.textContent;
 
     editBtn.style.display = 'none';
-    valueSpan.innerHTML = `
+    valueEl.innerHTML = `
         <span class="fee-edit-inline">
             <input type="number" value="${currentFee}" min="0" max="100" step="0.1" id="feeInput${recipientId}">
             <span>%</span>
-            <button type="button" class="fee-edit-save" onclick="event.stopPropagation(); savePlatformFee(${recipientId})">Spara</button>
-            <button type="button" class="fee-edit-cancel" onclick="event.stopPropagation(); cancelFeeEdit(${recipientId}, '${originalText}')">Avbryt</button>
+            <button type="button" class="fee-edit-save" onclick="savePlatformFee(${recipientId})">Spara</button>
+            <button type="button" class="fee-edit-cancel" onclick="cancelFeeEdit(${recipientId}, '${originalText}')">Avbryt</button>
         </span>
     `;
 
@@ -837,10 +517,9 @@ function editPlatformFee(recipientId, currentFee) {
     input.focus();
     input.select();
     input.addEventListener('keydown', e => {
-        if (e.key === 'Enter') { e.stopPropagation(); savePlatformFee(recipientId); }
-        if (e.key === 'Escape') { e.stopPropagation(); cancelFeeEdit(recipientId, originalText); }
+        if (e.key === 'Enter') savePlatformFee(recipientId);
+        if (e.key === 'Escape') cancelFeeEdit(recipientId, originalText);
     });
-    input.addEventListener('click', e => e.stopPropagation());
 }
 
 async function savePlatformFee(recipientId) {
@@ -873,7 +552,7 @@ async function savePlatformFee(recipientId) {
 }
 
 function cancelFeeEdit(recipientId, originalText) {
-    const container = document.querySelector(`.platform-fee-display[data-recipient-id="${recipientId}"]`);
+    const container = document.querySelector(`.platform-fee-info[data-recipient-id="${recipientId}"]`);
     if (!container) return;
     container.querySelector('.platform-fee-value').textContent = originalText;
     container.querySelector('.btn-edit-fee').style.display = '';
