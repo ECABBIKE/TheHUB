@@ -184,6 +184,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'proce
 
 // Get stats
 $stats = ['total_paid_card' => 0, 'missing_fee' => 0, 'has_fee' => 0];
+$debug = ['total_paid' => 0, 'by_method' => []];
+
+try {
+    // Debug: show ALL paid orders by payment_method
+    $methodRows = $db->getAll("
+        SELECT COALESCE(payment_method, 'NULL') as method, COUNT(*) as cnt
+        FROM orders
+        WHERE payment_status = 'paid'
+        GROUP BY payment_method
+        ORDER BY cnt DESC
+    ");
+    foreach ($methodRows as $mr) {
+        $debug['by_method'][$mr['method']] = (int)$mr['cnt'];
+        $debug['total_paid'] += (int)$mr['cnt'];
+    }
+} catch (Exception $e) {
+    $debug['error'] = $e->getMessage();
+}
 
 try {
     $row = $db->getOne("
@@ -242,6 +260,13 @@ include __DIR__ . '/../components/unified-layout.php';
             Checkout-sessions (cs_xxx) slås upp automatiskt för att hitta tillhörande PaymentIntent.
         </p>
 
+        <?php if ($debug['total_paid'] > 0 && $stats['total_paid_card'] == 0): ?>
+        <div class="alert alert-warning" style="margin-bottom: var(--space-lg);">
+            <strong>Diagnostik:</strong> Det finns <?= $debug['total_paid'] ?> betalda ordrar i databasen, men inga matchar kortbetalningsfiltret.
+            <br>Betalmetoder: <?php foreach ($debug['by_method'] as $m => $c) echo "<code>{$m}</code>: {$c} st &nbsp; "; ?>
+        </div>
+        <?php endif; ?>
+
         <div class="backfill-stats">
             <div class="backfill-stat">
                 <div class="backfill-stat-value"><?= $stats['total_paid_card'] ?></div>
@@ -277,7 +302,13 @@ include __DIR__ . '/../components/unified-layout.php';
             Stoppa
         </button>
         <?php elseif ($stats['total_paid_card'] == 0): ?>
-        <div class="alert alert-warning">Inga betalda kortordrar hittades i databasen.</div>
+        <div class="alert alert-warning">
+            Inga betalda kortordrar hittades.
+            <?php if ($debug['total_paid'] > 0): ?>
+                Totalt <?= $debug['total_paid'] ?> betalda ordrar finns, men alla har betalmetod:
+                <?php foreach ($debug['by_method'] as $m => $c) echo "<code>{$m}</code> ({$c}) "; ?>
+            <?php endif; ?>
+        </div>
         <?php else: ?>
         <div class="alert alert-success">Alla kortbetalningar har redan faktiska avgifter lagrade!</div>
         <?php endif; ?>
