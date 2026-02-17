@@ -1,6 +1,6 @@
 # TheHUB - Memory / Session Knowledge
 
-> Senast uppdaterad: 2026-02-18
+> Senast uppdaterad: 2026-02-19
 
 ---
 
@@ -235,8 +235,17 @@
 
 ## SENASTE FIXAR (2026-02-19)
 
+- **Ekonomi/utbetalningsvy FORTFARANDE tom (andra fixomgangen)**: Forsta fixen (2026-02-18) andrade fran `order_items.payment_recipient_id` till `events.payment_recipient_id` / `series.payment_recipient_id`. Men dessa kolumner ar ofta NULL (migration 054 kord men data ej ifylld pa alla events/serier). Fixat: bygger nu event→recipient-mappning i PHP via 4 fallback-vagar: (1) events.payment_recipient_id, (2) series.payment_recipient_id via events.series_id, (3) series.payment_recipient_id via series_events (many-to-many), (4) order_items.payment_recipient_id. Varje steg wrappat i try/catch sa det fungerar aven om kolumner saknas.
+- **Ekonomi-vyn omdesignad for mobile-first**: Hela admin-ekonomivyn i promotor.php omskriven fran custom recipient-cards till standard admin-table med expanderbara rader. Anvander admin-stats-grid, admin-card, admin-table, admin-badge, admin-form-select. Mobil portrait visar card-vy (payout-cards), desktop/landscape visar tabell. Edge-to-edge pa mobil. Expanderbar detaljrad med intakter + avgifter i tva-kolumns grid (en kolumn pa mobil).
 - **Migration 050 visade alltid rod i migrations.php**: Andrad fran data-check (`order_items.payment_recipient_id IS NOT NULL`) till kolumn-check (`columns => ['order_items.payment_recipient_id']`). Data-checken var for strikt - events utan konfigurerad recipient gor att vissa items aldrig kan backfillas.
 - **Backfill Stripe-avgifter visade 0 ordrar (TREDJE GANGEN)**: `getOne()` i DatabaseWrapper (helpers.php) anropar `getValue()` → `fetchColumn()` som returnerar en SKALARVARDE, inte en rad/array. Koden behandlade resultatet som en associativ array (`$row['total']`). Fixat: andrat till `getRow()` som returnerar en hel rad. **VIKTIGT: `getOne()` = skalarvarde, `getRow()` = en rad som array, `getAll()` = alla rader.**
+
+### Ekonomi-vyns arkitektur (efter fix 2026-02-19)
+- **Event→Recipient mappning**: Byggs i PHP (inte SQL) via 4 fallback-steg
+- **Prioritet**: events.payment_recipient_id > series.payment_recipient_id (via series_id) > series.payment_recipient_id (via series_events) > order_items.payment_recipient_id
+- **Felhantering**: Varje steg wrappat i try/catch - fungerar aven om kolumner saknas i databasen
+- **Layout**: admin-table med expanderbara detaljrader (klicka rad → visa intakter/avgifter/bankinfo)
+- **Mobil**: Portrait phones visar card-vy, landscape/tablet visar tabell
 
 ## TIDIGARE FIXAR (2026-02-18)
 

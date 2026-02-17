@@ -70,70 +70,136 @@ if ($isAdmin) {
         $hasStripeFeeCol = !empty($colCheck);
     } catch (Exception $e) {}
 
-    // Build actual Stripe fee sub-query per recipient (sum of stored fees)
+    // ============================================================
+    // Build event_id → recipient_id mapping using ALL available paths
+    // This handles cases where columns may not exist or data is sparse
+    // ============================================================
+    $eventRecipientMap = []; // event_id => recipient_id
+
+    // Path 1: events.payment_recipient_id (direct)
+    try {
+        $rows = $db->getAll("SELECT id, payment_recipient_id FROM events WHERE payment_recipient_id IS NOT NULL");
+        foreach ($rows as $row) {
+            $eventRecipientMap[(int)$row['id']] = (int)$row['payment_recipient_id'];
+        }
+    } catch (\Throwable $e) {
+        // Column may not exist - skip
+    }
+
+    // Path 2: series.payment_recipient_id via events.series_id
+    try {
+        $rows = $db->getAll("
+            SELECT e.id as event_id, s.payment_recipient_id
+            FROM events e
+            JOIN series s ON e.series_id = s.id
+            WHERE s.payment_recipient_id IS NOT NULL
+        ");
+        foreach ($rows as $row) {
+            if (!isset($eventRecipientMap[(int)$row['event_id']])) {
+                $eventRecipientMap[(int)$row['event_id']] = (int)$row['payment_recipient_id'];
+            }
+        }
+    } catch (\Throwable $e) {}
+
+    // Path 3: series.payment_recipient_id via series_events (many-to-many)
+    try {
+        $rows = $db->getAll("
+            SELECT se.event_id, s.payment_recipient_id
+            FROM series_events se
+            JOIN series s ON se.series_id = s.id
+            WHERE s.payment_recipient_id IS NOT NULL
+        ");
+        foreach ($rows as $row) {
+            if (!isset($eventRecipientMap[(int)$row['event_id']])) {
+                $eventRecipientMap[(int)$row['event_id']] = (int)$row['payment_recipient_id'];
+            }
+        }
+    } catch (\Throwable $e) {}
+
+    // Path 4: order_items.payment_recipient_id (fallback from order creation)
+    try {
+        $rows = $db->getAll("
+            SELECT DISTINCT o.event_id, oi.payment_recipient_id
+            FROM order_items oi
+            JOIN orders o ON oi.order_id = o.id
+            WHERE oi.payment_recipient_id IS NOT NULL
+            AND o.event_id IS NOT NULL
+        ");
+        foreach ($rows as $row) {
+            if (!isset($eventRecipientMap[(int)$row['event_id']])) {
+                $eventRecipientMap[(int)$row['event_id']] = (int)$row['payment_recipient_id'];
+            }
+        }
+    } catch (\Throwable $e) {}
+
+    // Build SQL: use the PHP mapping to create a proper join
+    // If we have mappings, use them in the query via a constructed IN clause
+    // Otherwise, try a direct join as last resort
+    $recipientWhere = $filterRecipient ? "AND pr.id = " . intval($filterRecipient) : "";
+
     $actualFeeSelect = $hasStripeFeeCol
         ? "COALESCE(SUM(CASE WHEN o.payment_status = 'paid' AND o.payment_method = 'card' AND o.stripe_fee IS NOT NULL THEN o.stripe_fee ELSE 0 END), 0) as actual_stripe_fees,
            COUNT(DISTINCT CASE WHEN o.payment_status = 'paid' AND o.payment_method = 'card' AND o.stripe_fee IS NOT NULL THEN o.id END) as actual_fee_count,"
         : "0 as actual_stripe_fees, 0 as actual_fee_count,";
 
-    // Get all payment recipients with their financial data
-    // Join via events → payment_recipients (not order_items.payment_recipient_id which may be NULL)
+    // Build a reverse mapping: recipient_id => [event_ids]
+    $recipientEvents = [];
+    foreach ($eventRecipientMap as $eventId => $recipientId) {
+        $recipientEvents[$recipientId][] = $eventId;
+    }
+
     try {
-        $recipientWhere = $filterRecipient ? "AND pr.id = " . intval($filterRecipient) : "";
-
-        $payoutData = $db->getAll("
-            SELECT
-                pr.id,
-                pr.name,
-                pr.org_number,
-                pr.platform_fee_percent,
-                pr.swish_number,
-                pr.bankgiro,
-                pr.bank_account,
-                pr.bank_name,
-                pr.bank_clearing,
-                pr.contact_email,
-
-                -- Gross revenue (paid orders only)
-                COALESCE(SUM(CASE WHEN o.payment_status = 'paid' THEN o.total_amount ELSE 0 END), 0) as gross_revenue,
-
-                -- By payment method
-                COALESCE(SUM(CASE WHEN o.payment_status = 'paid' AND o.payment_method = 'card' THEN o.total_amount ELSE 0 END), 0) as card_revenue,
-                COALESCE(SUM(CASE WHEN o.payment_status = 'paid' AND o.payment_method IN ('swish', 'swish_csv') THEN o.total_amount ELSE 0 END), 0) as swish_revenue,
-                COALESCE(SUM(CASE WHEN o.payment_status = 'paid' AND o.payment_method IN ('manual', 'free') THEN o.total_amount ELSE 0 END), 0) as manual_revenue,
-
-                -- Actual Stripe fees from webhook (migration 049)
-                {$actualFeeSelect}
-
-                -- Order counts by method
-                COUNT(DISTINCT CASE WHEN o.payment_status = 'paid' AND o.payment_method = 'card' THEN o.id END) as card_order_count,
-                COUNT(DISTINCT CASE WHEN o.payment_status = 'paid' AND o.payment_method IN ('swish', 'swish_csv') THEN o.id END) as swish_order_count,
-                COUNT(DISTINCT CASE WHEN o.payment_status = 'paid' AND o.payment_method IN ('manual', 'free') THEN o.id END) as manual_order_count,
-                COUNT(DISTINCT CASE WHEN o.payment_status = 'paid' THEN o.id END) as paid_order_count,
-
-                -- Pending
-                COALESCE(SUM(CASE WHEN o.payment_status = 'pending' THEN o.total_amount ELSE 0 END), 0) as pending_revenue,
-                COUNT(DISTINCT CASE WHEN o.payment_status = 'pending' THEN o.id END) as pending_order_count,
-
-                -- Refunded
-                COALESCE(SUM(CASE WHEN o.payment_status = 'refunded' THEN o.total_amount ELSE 0 END), 0) as refunded_amount,
-
-                -- Event count
-                COUNT(DISTINCT o.event_id) as event_count
-
+        // Get all payment recipients
+        $allRecipientsData = $db->getAll("
+            SELECT pr.*
             FROM payment_recipients pr
-            LEFT JOIN (
-                SELECT e.id as event_id,
-                       COALESCE(e.payment_recipient_id, s.payment_recipient_id) as recipient_id
-                FROM events e
-                LEFT JOIN series s ON e.series_id = s.id
-                WHERE COALESCE(e.payment_recipient_id, s.payment_recipient_id) IS NOT NULL
-            ) event_map ON event_map.recipient_id = pr.id
-            LEFT JOIN orders o ON o.event_id = event_map.event_id AND YEAR(o.created_at) = ?
             WHERE pr.active = 1 {$recipientWhere}
-            GROUP BY pr.id
-            ORDER BY gross_revenue DESC
-        ", [$filterYear]);
+            ORDER BY pr.name
+        ");
+
+        $payoutData = [];
+        foreach ($allRecipientsData as $pr) {
+            $prId = (int)$pr['id'];
+            $eventIds = $recipientEvents[$prId] ?? [];
+
+            if (!empty($eventIds)) {
+                $placeholders = implode(',', array_fill(0, count($eventIds), '?'));
+                $params = array_merge($eventIds, [$filterYear]);
+
+                $orderData = $db->getRow("
+                    SELECT
+                        COALESCE(SUM(CASE WHEN o.payment_status = 'paid' THEN o.total_amount ELSE 0 END), 0) as gross_revenue,
+                        COALESCE(SUM(CASE WHEN o.payment_status = 'paid' AND o.payment_method = 'card' THEN o.total_amount ELSE 0 END), 0) as card_revenue,
+                        COALESCE(SUM(CASE WHEN o.payment_status = 'paid' AND o.payment_method IN ('swish', 'swish_csv') THEN o.total_amount ELSE 0 END), 0) as swish_revenue,
+                        COALESCE(SUM(CASE WHEN o.payment_status = 'paid' AND o.payment_method IN ('manual', 'free') THEN o.total_amount ELSE 0 END), 0) as manual_revenue,
+                        " . ($hasStripeFeeCol ? "
+                        COALESCE(SUM(CASE WHEN o.payment_status = 'paid' AND o.payment_method = 'card' AND o.stripe_fee IS NOT NULL THEN o.stripe_fee ELSE 0 END), 0) as actual_stripe_fees,
+                        COUNT(DISTINCT CASE WHEN o.payment_status = 'paid' AND o.payment_method = 'card' AND o.stripe_fee IS NOT NULL THEN o.id END) as actual_fee_count,
+                        " : "0 as actual_stripe_fees, 0 as actual_fee_count,") . "
+                        COUNT(DISTINCT CASE WHEN o.payment_status = 'paid' AND o.payment_method = 'card' THEN o.id END) as card_order_count,
+                        COUNT(DISTINCT CASE WHEN o.payment_status = 'paid' AND o.payment_method IN ('swish', 'swish_csv') THEN o.id END) as swish_order_count,
+                        COUNT(DISTINCT CASE WHEN o.payment_status = 'paid' AND o.payment_method IN ('manual', 'free') THEN o.id END) as manual_order_count,
+                        COUNT(DISTINCT CASE WHEN o.payment_status = 'paid' THEN o.id END) as paid_order_count,
+                        COALESCE(SUM(CASE WHEN o.payment_status = 'pending' THEN o.total_amount ELSE 0 END), 0) as pending_revenue,
+                        COUNT(DISTINCT CASE WHEN o.payment_status = 'pending' THEN o.id END) as pending_order_count,
+                        COALESCE(SUM(CASE WHEN o.payment_status = 'refunded' THEN o.total_amount ELSE 0 END), 0) as refunded_amount,
+                        COUNT(DISTINCT o.event_id) as event_count
+                    FROM orders o
+                    WHERE o.event_id IN ({$placeholders})
+                    AND YEAR(o.created_at) = ?
+                ", $params);
+            } else {
+                $orderData = [
+                    'gross_revenue' => 0, 'card_revenue' => 0, 'swish_revenue' => 0,
+                    'manual_revenue' => 0, 'actual_stripe_fees' => 0, 'actual_fee_count' => 0,
+                    'card_order_count' => 0, 'swish_order_count' => 0, 'manual_order_count' => 0,
+                    'paid_order_count' => 0, 'pending_revenue' => 0, 'pending_order_count' => 0,
+                    'refunded_amount' => 0, 'event_count' => 0
+                ];
+            }
+
+            $payoutData[] = array_merge($pr, $orderData);
+        }
     } catch (Exception $e) {
         error_log("Promotor payout query error: " . $e->getMessage());
     }
@@ -157,10 +223,8 @@ if ($isAdmin) {
         $totalCardOrders = (int)$r['card_order_count'];
         $estimatedCount = $totalCardOrders - $actualFeeCount;
 
-        // Estimate fees for orders without actual fee data
         $estimatedStripeFees = 0;
         if ($estimatedCount > 0) {
-            // Proportional card revenue for estimated orders
             $estimatedCardRevenue = $totalCardOrders > 0
                 ? (float)$r['card_revenue'] * ($estimatedCount / $totalCardOrders)
                 : 0;
@@ -177,7 +241,7 @@ if ($isAdmin) {
         $r['has_actual_fees'] = $actualFeeCount > 0;
         $r['all_fees_actual'] = ($actualFeeCount >= $totalCardOrders && $totalCardOrders > 0);
 
-        // Swish fees (always estimated - Swish doesn't provide per-transaction fee data)
+        // Swish fees
         $r['swish_fees'] = round((int)$r['swish_order_count'] * $SWISH_FEE, 2);
 
         // Platform fee on gross
@@ -196,6 +260,9 @@ if ($isAdmin) {
         $payoutTotals['pending'] += (float)$r['pending_revenue'];
     }
     unset($r);
+
+    // Sort by gross revenue descending
+    usort($payoutData, fn($a, $b) => (float)$b['gross_revenue'] <=> (float)$a['gross_revenue']);
 
     // Get available years for filter
     $availableYears = [];
@@ -281,844 +348,376 @@ $breadcrumbs = [
 include __DIR__ . '/components/unified-layout.php';
 ?>
 
-<style>
-.promotor-grid {
-    display: grid;
-    gap: var(--space-lg);
-}
-.event-card {
-    background: var(--color-bg-surface);
-    border-radius: var(--radius-lg);
-    border: 1px solid var(--color-border);
-    overflow: hidden;
-}
-.event-card-header {
-    padding: var(--space-lg);
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: var(--space-md);
-    border-bottom: 1px solid var(--color-border);
-}
-.event-info {
-    flex: 1;
-}
-.event-title {
-    font-size: var(--text-xl);
-    font-weight: 600;
-    color: var(--color-text-primary);
-    margin: 0 0 var(--space-xs) 0;
-}
-.event-meta {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--space-md);
-    color: var(--color-text-secondary);
-    font-size: var(--text-sm);
-}
-.event-meta-item {
-    display: flex;
-    align-items: center;
-    gap: var(--space-xs);
-}
-.event-meta-item i {
-    width: 16px;
-    height: 16px;
-}
-.event-series {
-    display: flex;
-    align-items: center;
-    gap: var(--space-xs);
-    font-size: var(--text-sm);
-    color: var(--color-text-secondary);
-    background: var(--color-bg-sunken);
-    padding: var(--space-xs) var(--space-sm);
-    border-radius: var(--radius-full);
-}
-.event-series img {
-    width: 20px;
-    height: 20px;
-    object-fit: contain;
-}
-.event-card-body {
-    padding: var(--space-lg);
-}
-.stats-grid {
-    display: grid;
-    grid-template-columns: repeat(4, 1fr);
-    gap: var(--space-sm);
-    margin-bottom: var(--space-lg);
-}
-@media (max-width: 600px) {
-    .stats-grid {
-        grid-template-columns: repeat(2, 1fr);
-    }
-}
-
-/* Mobile edge-to-edge design */
-@media (max-width: 767px) {
-    .event-card,
-    .series-card {
-        margin-left: calc(-1 * var(--space-md));
-        margin-right: calc(-1 * var(--space-md));
-        border-radius: 0;
-        border-left: none;
-        border-right: none;
-        width: calc(100% + var(--space-md) * 2);
-    }
-    .series-grid,
-    .promotor-grid {
-        gap: 0;
-    }
-    .series-grid {
-        grid-template-columns: 1fr;
-    }
-    .event-card + .event-card,
-    .series-card + .series-card {
-        border-top: none;
-    }
-}
-.stat-box {
-    background: var(--color-bg-sunken);
-    padding: var(--space-md);
-    border-radius: var(--radius-md);
-    text-align: center;
-}
-.stat-value {
-    font-size: var(--text-2xl);
-    font-weight: 700;
-    color: var(--color-accent);
-}
-.stat-value.success {
-    color: var(--color-success);
-}
-.stat-value.pending {
-    color: var(--color-warning);
-}
-.stat-label {
-    font-size: var(--text-xs);
-    color: var(--color-text-secondary);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-}
-.event-actions {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--space-sm);
-}
-.event-actions .btn {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--space-xs);
-    min-height: 44px;
-}
-.event-actions .btn i {
-    width: 16px;
-    height: 16px;
-}
-@media (max-width: 599px) {
-    .event-actions {
-        display: grid;
-        grid-template-columns: 1fr 1fr;
-        gap: var(--space-xs);
-    }
-    .event-actions .btn {
-        justify-content: center;
-        font-size: var(--text-sm);
-        padding: var(--space-sm);
-    }
-    .event-card-header {
-        flex-direction: column;
-        gap: var(--space-xs);
-        padding: var(--space-md);
-    }
-    .event-card-body {
-        padding: var(--space-md);
-    }
-    .event-title {
-        font-size: var(--text-lg);
-    }
-    .stat-value {
-        font-size: var(--text-xl);
-    }
-    .stat-box {
-        padding: var(--space-sm);
-    }
-}
-.empty-state {
-    text-align: center;
-    padding: var(--space-2xl);
-    color: var(--color-text-secondary);
-}
-.empty-state i {
-    width: 48px;
-    height: 48px;
-    margin-bottom: var(--space-md);
-    opacity: 0.5;
-}
-.empty-state h2 {
-    margin: 0 0 var(--space-sm) 0;
-    color: var(--color-text-primary);
-}
-
-/* Series section */
-.section-title {
-    font-size: var(--text-xl);
-    font-weight: 600;
-    margin: 0 0 var(--space-lg) 0;
-    color: var(--color-text-primary);
-}
-.series-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-    gap: var(--space-lg);
-    margin-bottom: var(--space-2xl);
-}
-.series-card {
-    background: var(--color-bg-surface);
-    border-radius: var(--radius-lg);
-    border: 1px solid var(--color-border);
-    overflow: hidden;
-    display: flex;
-    flex-direction: column;
-}
-.series-card-header {
-    padding: var(--space-lg);
-    display: flex;
-    align-items: center;
-    gap: var(--space-md);
-    border-bottom: 1px solid var(--color-border);
-}
-.series-logo {
-    width: 48px;
-    height: 48px;
-    border-radius: var(--radius-md);
-    background: var(--color-bg-sunken);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    overflow: hidden;
-    flex-shrink: 0;
-}
-.series-logo img {
-    max-width: 100%;
-    max-height: 100%;
-    object-fit: contain;
-}
-.series-info h3 {
-    margin: 0 0 var(--space-2xs) 0;
-    font-size: var(--text-lg);
-}
-.series-info p {
-    margin: 0;
-    font-size: var(--text-sm);
-    color: var(--color-text-secondary);
-}
-.series-card-body {
-    padding: var(--space-lg);
-    flex: 1;
-}
-.series-detail {
-    display: flex;
-    align-items: center;
-    gap: var(--space-sm);
-    margin-bottom: var(--space-sm);
-    font-size: var(--text-sm);
-    color: var(--color-text-secondary);
-}
-.series-detail i {
-    width: 16px;
-    height: 16px;
-    flex-shrink: 0;
-}
-.series-detail.missing {
-    color: var(--color-warning);
-}
-.series-card-footer {
-    padding: var(--space-md) var(--space-lg);
-    background: var(--color-bg-sunken);
-    border-top: 1px solid var(--color-border);
-}
-.series-card-footer .btn {
-    width: 100%;
-}
-
-/* Modal styles */
-.modal {
-    display: none;
-    position: fixed;
-    inset: 0;
-    background: rgba(0,0,0,0.8);
-    z-index: 1000;
-    padding: var(--space-lg);
-    overflow-y: auto;
-}
-.modal.active {
-    display: flex;
-    align-items: flex-start;
-    justify-content: center;
-}
-.modal-content {
-    background: var(--color-bg-surface);
-    border-radius: var(--radius-lg);
-    max-width: 500px;
-    width: 100%;
-    margin-top: var(--space-xl);
-}
-.modal-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: var(--space-md) var(--space-lg);
-    border-bottom: 1px solid var(--color-border);
-}
-.modal-header h3 {
-    margin: 0;
-}
-.modal-close {
-    background: none;
-    border: none;
-    padding: var(--space-xs);
-    cursor: pointer;
-    color: var(--color-text-secondary);
-    font-size: 24px;
-    line-height: 1;
-}
-.modal-body {
-    padding: var(--space-lg);
-}
-.modal-footer {
-    padding: var(--space-md) var(--space-lg);
-    background: var(--color-bg-sunken);
-    border-top: 1px solid var(--color-border);
-    display: flex;
-    justify-content: flex-end;
-    gap: var(--space-sm);
-}
-.form-group {
-    margin-bottom: var(--space-md);
-}
-.form-label {
-    display: block;
-    margin-bottom: var(--space-xs);
-    font-weight: 500;
-    font-size: var(--text-sm);
-}
-.form-input {
-    width: 100%;
-    padding: var(--space-sm) var(--space-md);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-sm);
-    background: var(--color-bg-sunken);
-    color: var(--color-text-primary);
-}
-.form-hint {
-    font-size: var(--text-xs);
-    color: var(--color-text-secondary);
-    margin-top: var(--space-xs);
-}
-.logo-preview {
-    width: 100%;
-    height: 80px;
-    background: var(--color-bg-sunken);
-    border: 2px dashed var(--color-border);
-    border-radius: var(--radius-md);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    margin-bottom: var(--space-sm);
-    overflow: hidden;
-}
-.logo-preview img {
-    max-width: 100%;
-    max-height: 100%;
-    object-fit: contain;
-}
-.logo-actions {
-    display: flex;
-    gap: var(--space-sm);
-}
-
-@media (max-width: 599px) {
-    .modal {
-        padding: 0;
-    }
-    .modal-content {
-        max-width: 100%;
-        height: 100%;
-        margin: 0;
-        border-radius: 0;
-        display: flex;
-        flex-direction: column;
-    }
-    .modal-body {
-        flex: 1;
-        overflow-y: auto;
-    }
-}
-
-/* ===== Admin Financial View ===== */
-.payout-filters {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--space-md);
-    align-items: flex-end;
-    margin-bottom: var(--space-lg);
-}
-.payout-filters .filter-group {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-xs);
-}
-.payout-filters label {
-    font-size: var(--text-sm);
-    font-weight: 500;
-    color: var(--color-text-secondary);
-}
-.payout-filters select {
-    padding: var(--space-sm) var(--space-md);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-md);
-    background: var(--color-bg-surface);
-    color: var(--color-text-primary);
-    font-size: var(--text-sm);
-    min-width: 160px;
-}
-.totals-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-    gap: var(--space-md);
-    margin-bottom: var(--space-xl);
-}
-.total-card {
-    background: var(--color-bg-surface);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-md);
-    padding: var(--space-lg);
-    text-align: center;
-}
-.total-value {
-    font-size: var(--text-2xl);
-    font-weight: 700;
-    color: var(--color-text-primary);
-}
-.total-value.accent { color: var(--color-accent); }
-.total-value.success { color: var(--color-success); }
-.total-value.warning { color: var(--color-warning); }
-.total-value.danger { color: var(--color-error); }
-.total-label {
-    font-size: var(--text-xs);
-    color: var(--color-text-secondary);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    margin-top: var(--space-xs);
-}
-.recipient-card {
-    background: var(--color-bg-surface);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-lg);
-    overflow: hidden;
-    margin-bottom: var(--space-lg);
-}
-.recipient-header {
-    padding: var(--space-lg);
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    gap: var(--space-md);
-    border-bottom: 1px solid var(--color-border);
-    flex-wrap: wrap;
-}
-.recipient-name {
-    font-size: var(--text-xl);
-    font-weight: 600;
-    color: var(--color-text-primary);
-    margin: 0 0 var(--space-xs) 0;
-}
-.recipient-meta {
-    display: flex;
-    flex-wrap: wrap;
-    gap: var(--space-md);
-    font-size: var(--text-sm);
-    color: var(--color-text-secondary);
-}
-.recipient-meta-item {
-    display: flex;
-    align-items: center;
-    gap: var(--space-xs);
-}
-.recipient-meta-item i { width: 14px; height: 14px; }
-.recipient-payout {
-    text-align: right;
-    flex-shrink: 0;
-}
-.recipient-payout-label {
-    font-size: var(--text-xs);
-    color: var(--color-text-secondary);
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-}
-.recipient-payout-value {
-    font-size: var(--text-2xl);
-    font-weight: 700;
-    color: var(--color-success);
-}
-.recipient-body {
-    padding: var(--space-lg);
-}
-.fee-breakdown {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: var(--space-md);
-}
-@media (max-width: 767px) {
-    .fee-breakdown { grid-template-columns: 1fr; }
-    .recipient-header { flex-direction: column; }
-    .recipient-payout { text-align: left; }
-    .totals-grid { grid-template-columns: repeat(2, 1fr); }
-    .recipient-card {
-        margin-left: calc(-1 * var(--space-md));
-        margin-right: calc(-1 * var(--space-md));
-        border-radius: 0;
-        border-left: none;
-        border-right: none;
-        width: calc(100% + var(--space-md) * 2);
-    }
-}
-.fee-section {
-    background: var(--color-bg-sunken);
-    border-radius: var(--radius-md);
-    padding: var(--space-md);
-}
-.fee-section h4 {
-    font-size: var(--text-sm);
-    font-weight: 600;
-    color: var(--color-text-primary);
-    margin: 0 0 var(--space-sm) 0;
-    display: flex;
-    align-items: center;
-    gap: var(--space-xs);
-}
-.fee-section h4 i { width: 16px; height: 16px; color: var(--color-accent); }
-.fee-row {
-    display: flex;
-    justify-content: space-between;
-    padding: var(--space-xs) 0;
-    font-size: var(--text-sm);
-    border-bottom: 1px solid var(--color-border);
-}
-.fee-row:last-child { border-bottom: none; }
-.fee-label { color: var(--color-text-secondary); }
-.fee-value { font-weight: 500; color: var(--color-text-primary); }
-.fee-value.negative { color: var(--color-error); }
-.fee-value.positive { color: var(--color-success); }
-.bank-info {
-    margin-top: var(--space-md);
-    padding: var(--space-md);
-    background: var(--color-accent-light);
-    border-radius: var(--radius-md);
-    font-size: var(--text-sm);
-}
-.bank-info-title {
-    font-weight: 600;
-    color: var(--color-text-primary);
-    margin-bottom: var(--space-xs);
-    display: flex;
-    align-items: center;
-    gap: var(--space-xs);
-}
-.bank-info-title i { width: 16px; height: 16px; }
-.bank-info-row {
-    display: flex;
-    gap: var(--space-sm);
-    padding: 2px 0;
-    color: var(--color-text-secondary);
-}
-.bank-info-label { font-weight: 500; min-width: 100px; }
-
-/* Fee badges (actual/estimated indicators) */
-.fee-badge {
-    display: inline-block;
-    font-size: 10px;
-    padding: 1px 6px;
-    border-radius: var(--radius-full);
-    font-weight: 500;
-    vertical-align: middle;
-    margin-left: var(--space-2xs);
-}
-.fee-badge-actual {
-    background: rgba(16, 185, 129, 0.15);
-    color: var(--color-success);
-}
-.fee-badge-mixed {
-    background: rgba(251, 191, 36, 0.15);
-    color: var(--color-warning);
-}
-.fee-badge-estimated {
-    background: rgba(134, 143, 162, 0.15);
-    color: var(--color-text-muted);
-}
-
-/* Edit platform fee button */
-.btn-edit-fee {
-    background: none;
-    border: none;
-    cursor: pointer;
-    padding: 2px;
-    color: var(--color-text-muted);
-    opacity: 0.6;
-    transition: opacity 0.15s;
-    vertical-align: middle;
-}
-.btn-edit-fee:hover { opacity: 1; color: var(--color-accent); }
-.btn-edit-fee i { width: 12px; height: 12px; }
-
-/* Inline fee edit */
-.fee-edit-inline {
-    display: inline-flex;
-    align-items: center;
-    gap: var(--space-xs);
-}
-.fee-edit-inline input {
-    width: 60px;
-    padding: 2px var(--space-xs);
-    border: 1px solid var(--color-accent);
-    border-radius: var(--radius-sm);
-    background: var(--color-bg-sunken);
-    color: var(--color-text-primary);
-    font-size: var(--text-sm);
-    text-align: center;
-}
-.fee-edit-inline button {
-    padding: 2px 6px;
-    border: none;
-    border-radius: var(--radius-sm);
-    cursor: pointer;
-    font-size: 11px;
-    font-weight: 500;
-}
-.fee-edit-save {
-    background: var(--color-success);
-    color: white;
-}
-.fee-edit-cancel {
-    background: var(--color-bg-sunken);
-    color: var(--color-text-secondary);
-}
-</style>
-
 <?php if ($isAdmin): ?>
 <!-- ===== ADMIN: FINANCIAL PAYOUT OVERVIEW ===== -->
 
+<style>
+/* Payout page - minimal scoped styles */
+.payout-detail-row td { padding: 0 !important; }
+.payout-detail-inner { padding: var(--space-md) var(--space-lg); background: var(--color-bg-hover); }
+.payout-fee-grid { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-md); }
+.payout-fee-section { background: var(--color-bg-surface); border-radius: var(--radius-md); padding: var(--space-md); }
+.payout-fee-section h4 {
+    font-size: var(--text-sm); font-weight: 600; color: var(--color-text-primary);
+    margin: 0 0 var(--space-sm) 0; display: flex; align-items: center; gap: var(--space-xs);
+}
+.payout-fee-section h4 i { width: 16px; height: 16px; color: var(--color-accent); }
+.payout-fee-row {
+    display: flex; justify-content: space-between; padding: var(--space-xs) 0;
+    font-size: var(--text-sm); border-bottom: 1px solid var(--color-border);
+}
+.payout-fee-row:last-child { border-bottom: none; }
+.payout-fee-row .label { color: var(--color-text-secondary); }
+.payout-fee-row .value { font-weight: 500; color: var(--color-text-primary); white-space: nowrap; }
+.payout-fee-row .value.neg { color: var(--color-error); }
+.payout-fee-row .value.pos { color: var(--color-success); }
+.payout-fee-row.total-row {
+    padding-top: var(--space-sm); border-top: 2px solid var(--color-border);
+    border-bottom: none; font-weight: 600;
+}
+.payout-fee-row.total-row .label { color: var(--color-text-primary); }
+.payout-fee-row.total-row .value { font-size: var(--text-base); }
+.payout-bank {
+    margin-top: var(--space-md); padding: var(--space-md);
+    background: var(--color-accent-light); border-radius: var(--radius-md); font-size: var(--text-sm);
+}
+.payout-bank-title {
+    font-weight: 600; margin-bottom: var(--space-xs);
+    display: flex; align-items: center; gap: var(--space-xs);
+}
+.payout-bank-title i { width: 16px; height: 16px; }
+.payout-bank-row { display: flex; gap: var(--space-sm); padding: 2px 0; color: var(--color-text-secondary); }
+.payout-bank-row .lbl { font-weight: 500; min-width: 80px; }
+.fee-badge {
+    display: inline-block; font-size: 10px; padding: 1px 6px;
+    border-radius: var(--radius-full); font-weight: 500; vertical-align: middle; margin-left: var(--space-2xs);
+}
+.fee-badge-actual { background: rgba(16, 185, 129, 0.15); color: var(--color-success); }
+.fee-badge-mixed { background: rgba(251, 191, 36, 0.15); color: var(--color-warning); }
+.fee-badge-estimated { background: rgba(134, 143, 162, 0.15); color: var(--color-text-muted); }
+.btn-edit-fee {
+    background: none; border: none; cursor: pointer; padding: 2px;
+    color: var(--color-text-muted); opacity: 0.6; transition: opacity 0.15s; vertical-align: middle;
+}
+.btn-edit-fee:hover { opacity: 1; color: var(--color-accent); }
+.btn-edit-fee i { width: 12px; height: 12px; }
+.fee-edit-inline { display: inline-flex; align-items: center; gap: var(--space-xs); }
+.fee-edit-inline input {
+    width: 60px; padding: 2px var(--space-xs); border: 1px solid var(--color-accent);
+    border-radius: var(--radius-sm); background: var(--color-bg-sunken); color: var(--color-text-primary);
+    font-size: var(--text-sm); text-align: center;
+}
+.fee-edit-inline button {
+    padding: 2px 6px; border: none; border-radius: var(--radius-sm); cursor: pointer;
+    font-size: 11px; font-weight: 500;
+}
+.fee-edit-save { background: var(--color-success); color: white; }
+.fee-edit-cancel { background: var(--color-bg-sunken); color: var(--color-text-secondary); }
+
+/* Mobile cards for portrait phones */
+.payout-cards { display: none; }
+
+@media (max-width: 767px) {
+    .payout-fee-grid { grid-template-columns: 1fr; }
+}
+@media (max-width: 599px) and (orientation: portrait) {
+    .payout-table-wrap { display: none; }
+    .payout-cards { display: block; }
+}
+</style>
+
+<!-- Stats -->
+<div class="admin-stats-grid">
+    <div class="admin-stat-card">
+        <div class="admin-stat-icon stat-icon-accent">
+            <i data-lucide="wallet"></i>
+        </div>
+        <div class="admin-stat-content">
+            <div class="admin-stat-value"><?= number_format($payoutTotals['gross'], 0, ',', ' ') ?> kr</div>
+            <div class="admin-stat-label">Bruttointäkter</div>
+        </div>
+    </div>
+    <div class="admin-stat-card">
+        <div class="admin-stat-icon stat-icon-danger">
+            <i data-lucide="receipt"></i>
+        </div>
+        <div class="admin-stat-content">
+            <div class="admin-stat-value"><?= number_format($payoutTotals['stripe_fees'] + $payoutTotals['swish_fees'] + $payoutTotals['platform_fees'], 0, ',', ' ') ?> kr</div>
+            <div class="admin-stat-label">Totala avgifter</div>
+        </div>
+    </div>
+    <div class="admin-stat-card">
+        <div class="admin-stat-icon stat-icon-success">
+            <i data-lucide="banknote"></i>
+        </div>
+        <div class="admin-stat-content">
+            <div class="admin-stat-value"><?= number_format($payoutTotals['net_payout'], 0, ',', ' ') ?> kr</div>
+            <div class="admin-stat-label">Att betala ut</div>
+        </div>
+    </div>
+    <div class="admin-stat-card">
+        <div class="admin-stat-icon stat-icon-warning">
+            <i data-lucide="clock"></i>
+        </div>
+        <div class="admin-stat-content">
+            <div class="admin-stat-value"><?= number_format($payoutTotals['pending'], 0, ',', ' ') ?> kr</div>
+            <div class="admin-stat-label">Ej betalda</div>
+        </div>
+    </div>
+</div>
+
 <!-- Filters -->
-<form method="GET" class="payout-filters">
-    <div class="filter-group">
-        <label>År</label>
-        <select name="year" onchange="this.form.submit()">
-            <?php
-            $years = array_column($availableYears, 'yr');
-            if (!in_array($filterYear, $years)) $years[] = $filterYear;
-            rsort($years);
-            foreach ($years as $yr): ?>
-            <option value="<?= $yr ?>" <?= $yr == $filterYear ? 'selected' : '' ?>><?= $yr ?></option>
-            <?php endforeach; ?>
-        </select>
-    </div>
-    <div class="filter-group">
-        <label>Betalningsmottagare</label>
-        <select name="recipient" onchange="this.form.submit()">
-            <option value="0">Alla mottagare</option>
-            <?php foreach ($allRecipients as $rec): ?>
-            <option value="<?= $rec['id'] ?>" <?= $rec['id'] == $filterRecipient ? 'selected' : '' ?>><?= h($rec['name']) ?></option>
-            <?php endforeach; ?>
-        </select>
-    </div>
-</form>
-
-<!-- Totals -->
-<div class="totals-grid">
-    <div class="total-card">
-        <div class="total-value accent"><?= number_format($payoutTotals['gross'], 0, ',', ' ') ?> kr</div>
-        <div class="total-label">Bruttointäkter</div>
-    </div>
-    <div class="total-card">
-        <div class="total-value"><?= number_format($payoutTotals['vat'], 0, ',', ' ') ?> kr</div>
-        <div class="total-label">Varav moms (6%)</div>
-    </div>
-    <div class="total-card">
-        <div class="total-value danger"><?= number_format($payoutTotals['stripe_fees'] + $payoutTotals['swish_fees'], 0, ',', ' ') ?> kr</div>
-        <div class="total-label">Betalningsavgifter</div>
-    </div>
-    <div class="total-card">
-        <div class="total-value warning"><?= number_format($payoutTotals['platform_fees'], 0, ',', ' ') ?> kr</div>
-        <div class="total-label">Plattformsavgifter</div>
-    </div>
-    <div class="total-card">
-        <div class="total-value success"><?= number_format($payoutTotals['net_payout'], 0, ',', ' ') ?> kr</div>
-        <div class="total-label">Att betala ut</div>
-    </div>
-    <div class="total-card">
-        <div class="total-value warning"><?= number_format($payoutTotals['pending'], 0, ',', ' ') ?> kr</div>
-        <div class="total-label">Ej betalda ordrar</div>
-    </div>
-</div>
-
-<?php if (empty($payoutData)): ?>
-<div class="recipient-card">
-    <div style="text-align: center; padding: var(--space-2xl); color: var(--color-text-secondary);">
-        <i data-lucide="inbox" style="width: 48px; height: 48px; margin-bottom: var(--space-md); opacity: 0.5;"></i>
-        <h3>Inga betalningsmottagare</h3>
-        <p>Inga aktiva betalningsmottagare med ordrar för <?= $filterYear ?>.</p>
-    </div>
-</div>
-<?php else: ?>
-
-<?php foreach ($payoutData as $r):
-    if ((float)$r['gross_revenue'] == 0 && (float)$r['pending_revenue'] == 0 && !$filterRecipient) continue;
-?>
-<div class="recipient-card">
-    <div class="recipient-header">
-        <div>
-            <h2 class="recipient-name"><?= h($r['name']) ?></h2>
-            <div class="recipient-meta">
-                <?php if ($r['org_number']): ?>
-                <span class="recipient-meta-item">
-                    <i data-lucide="building"></i>
-                    Org.nr: <?= h($r['org_number']) ?>
-                </span>
-                <?php endif; ?>
-                <span class="recipient-meta-item">
-                    <i data-lucide="calendar"></i>
-                    <?= (int)$r['event_count'] ?> event, <?= (int)$r['paid_order_count'] ?> betalda ordrar
-                </span>
-                <span class="recipient-meta-item platform-fee-display" data-recipient-id="<?= $r['id'] ?>">
-                    <i data-lucide="percent"></i>
-                    Plattformsavgift: <span class="platform-fee-value"><?= number_format($r['platform_fee_percent'], 1) ?>%</span>
-                    <button type="button" class="btn-edit-fee" onclick="editPlatformFee(<?= $r['id'] ?>, <?= (float)$r['platform_fee_percent'] ?>)" title="Ändra plattformsavgift">
-                        <i data-lucide="pencil"></i>
-                    </button>
-                </span>
+<div class="admin-card mb-lg">
+    <div class="admin-card-body">
+        <form method="GET" class="flex flex-wrap gap-md items-end">
+            <div class="admin-form-group mb-0">
+                <label class="admin-form-label">År</label>
+                <select name="year" class="admin-form-select" onchange="this.form.submit()">
+                    <?php
+                    $years = array_column($availableYears, 'yr');
+                    if (!in_array($filterYear, $years)) $years[] = $filterYear;
+                    rsort($years);
+                    foreach ($years as $yr): ?>
+                    <option value="<?= $yr ?>" <?= $yr == $filterYear ? 'selected' : '' ?>><?= $yr ?></option>
+                    <?php endforeach; ?>
+                </select>
             </div>
-        </div>
-        <div class="recipient-payout">
-            <div class="recipient-payout-label">Att betala ut</div>
-            <div class="recipient-payout-value"><?= number_format($r['net_payout'], 0, ',', ' ') ?> kr</div>
-        </div>
+            <div class="admin-form-group mb-0">
+                <label class="admin-form-label">Mottagare</label>
+                <select name="recipient" class="admin-form-select" onchange="this.form.submit()">
+                    <option value="0">Alla mottagare</option>
+                    <?php foreach ($allRecipients as $rec): ?>
+                    <option value="<?= $rec['id'] ?>" <?= $rec['id'] == $filterRecipient ? 'selected' : '' ?>><?= h($rec['name']) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+        </form>
     </div>
+</div>
 
-    <div class="recipient-body">
-        <div class="fee-breakdown">
-            <!-- Left: Revenue breakdown -->
-            <div class="fee-section">
-                <h4><i data-lucide="trending-up"></i> Intäkter</h4>
-                <div class="fee-row">
-                    <span class="fee-label">Bruttointäkter</span>
-                    <span class="fee-value"><?= number_format($r['gross_revenue'], 2, ',', ' ') ?> kr</span>
+<!-- Recipients table -->
+<div class="admin-card">
+    <div class="admin-card-header">
+        <h2>Betalningsmottagare</h2>
+    </div>
+    <div class="admin-card-body p-0">
+        <?php
+        // Filter out recipients with no data (unless filtering specific)
+        $visibleRecipients = $filterRecipient
+            ? $payoutData
+            : array_filter($payoutData, fn($r) => (float)$r['gross_revenue'] > 0 || (float)$r['pending_revenue'] > 0);
+
+        if (empty($visibleRecipients)): ?>
+        <div class="admin-empty-state">
+            <i data-lucide="inbox"></i>
+            <h3>Ingen ekonomisk data</h3>
+            <p>Inga betalningsmottagare med ordrar för <?= $filterYear ?>.</p>
+        </div>
+        <?php else: ?>
+
+        <!-- Desktop/Landscape table -->
+        <div class="admin-table-container payout-table-wrap">
+            <table class="admin-table">
+                <thead>
+                    <tr>
+                        <th>Mottagare</th>
+                        <th style="text-align: right;">Brutto</th>
+                        <th style="text-align: right;">Avgifter</th>
+                        <th style="text-align: right;">Netto</th>
+                        <th style="text-align: center;">Ordrar</th>
+                        <th style="text-align: right;">Väntande</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($visibleRecipients as $r):
+                        $totalFees = $r['stripe_fees'] + $r['swish_fees'] + $r['platform_fee'];
+                    ?>
+                    <tr class="payout-row" onclick="togglePayoutDetail(<?= $r['id'] ?>)" style="cursor: pointer;">
+                        <td data-label="Mottagare">
+                            <div class="font-medium"><?= h($r['name']) ?></div>
+                            <div class="text-xs text-secondary">
+                                <?php if ($r['org_number']): ?>Org.nr: <?= h($r['org_number']) ?><?php endif; ?>
+                                <?php if ((int)$r['event_count'] > 0): ?> &middot; <?= (int)$r['event_count'] ?> event<?php endif; ?>
+                            </div>
+                        </td>
+                        <td data-label="Brutto" style="text-align: right; font-weight: 600; font-variant-numeric: tabular-nums;">
+                            <?= number_format($r['gross_revenue'], 0, ',', ' ') ?> kr
+                        </td>
+                        <td data-label="Avgifter" style="text-align: right; color: var(--color-error); font-variant-numeric: tabular-nums;">
+                            -<?= number_format($totalFees, 0, ',', ' ') ?> kr
+                        </td>
+                        <td data-label="Netto" style="text-align: right; font-weight: 600; color: var(--color-success); font-variant-numeric: tabular-nums;">
+                            <?= number_format($r['net_payout'], 0, ',', ' ') ?> kr
+                        </td>
+                        <td data-label="Ordrar" style="text-align: center;">
+                            <span class="admin-badge admin-badge-success"><?= (int)$r['paid_order_count'] ?></span>
+                        </td>
+                        <td data-label="Väntande" style="text-align: right; font-variant-numeric: tabular-nums;">
+                            <?php if ((float)$r['pending_revenue'] > 0): ?>
+                            <span style="color: var(--color-warning);"><?= number_format($r['pending_revenue'], 0, ',', ' ') ?> kr</span>
+                            <?php else: ?>
+                            <span class="text-secondary">-</span>
+                            <?php endif; ?>
+                        </td>
+                        <td style="text-align: right; width: 40px;">
+                            <i data-lucide="chevron-down" style="width: 16px; height: 16px; opacity: 0.5; transition: transform 0.2s;" id="chevron-<?= $r['id'] ?>"></i>
+                        </td>
+                    </tr>
+                    <!-- Expandable detail row -->
+                    <tr class="payout-detail-row" id="detail-<?= $r['id'] ?>" style="display: none;">
+                        <td colspan="7">
+                            <div class="payout-detail-inner">
+                                <!-- Platform fee display -->
+                                <div style="margin-bottom: var(--space-md); font-size: var(--text-sm);" class="platform-fee-display" data-recipient-id="<?= $r['id'] ?>">
+                                    <i data-lucide="percent" style="width: 14px; height: 14px; vertical-align: -2px;"></i>
+                                    Plattformsavgift: <span class="platform-fee-value"><?= number_format($r['platform_fee_percent'], 1) ?>%</span>
+                                    <button type="button" class="btn-edit-fee" onclick="event.stopPropagation(); editPlatformFee(<?= $r['id'] ?>, <?= (float)$r['platform_fee_percent'] ?>)" title="Ändra plattformsavgift">
+                                        <i data-lucide="pencil"></i>
+                                    </button>
+                                </div>
+
+                                <div class="payout-fee-grid">
+                                    <!-- Revenue breakdown -->
+                                    <div class="payout-fee-section">
+                                        <h4><i data-lucide="trending-up"></i> Intäkter</h4>
+                                        <div class="payout-fee-row">
+                                            <span class="label">Bruttointäkter</span>
+                                            <span class="value"><?= number_format($r['gross_revenue'], 2, ',', ' ') ?> kr</span>
+                                        </div>
+                                        <div class="payout-fee-row">
+                                            <span class="label">Varav moms (6%)</span>
+                                            <span class="value"><?= number_format($r['vat_amount'], 2, ',', ' ') ?> kr</span>
+                                        </div>
+                                        <div class="payout-fee-row">
+                                            <span class="label">Kortbetalningar (<?= (int)$r['card_order_count'] ?>)</span>
+                                            <span class="value"><?= number_format($r['card_revenue'], 0, ',', ' ') ?> kr</span>
+                                        </div>
+                                        <div class="payout-fee-row">
+                                            <span class="label">Swish (<?= (int)$r['swish_order_count'] ?>)</span>
+                                            <span class="value"><?= number_format($r['swish_revenue'], 0, ',', ' ') ?> kr</span>
+                                        </div>
+                                        <?php if ((float)$r['manual_revenue'] > 0): ?>
+                                        <div class="payout-fee-row">
+                                            <span class="label">Manuellt (<?= (int)$r['manual_order_count'] ?>)</span>
+                                            <span class="value"><?= number_format($r['manual_revenue'], 0, ',', ' ') ?> kr</span>
+                                        </div>
+                                        <?php endif; ?>
+                                    </div>
+
+                                    <!-- Fee breakdown -->
+                                    <div class="payout-fee-section">
+                                        <h4><i data-lucide="calculator"></i> Avgifter & Utbetalning</h4>
+                                        <div class="payout-fee-row">
+                                            <span class="label">
+                                                Stripe-avgifter
+                                                <?php if ($r['all_fees_actual']): ?>
+                                                    <span class="fee-badge fee-badge-actual">Faktiska</span>
+                                                <?php elseif ($r['has_actual_fees']): ?>
+                                                    <span class="fee-badge fee-badge-mixed">Delvis</span>
+                                                <?php else: ?>
+                                                    <span class="fee-badge fee-badge-estimated">Uppsk.</span>
+                                                <?php endif; ?>
+                                            </span>
+                                            <span class="value neg">-<?= number_format($r['stripe_fees'], 2, ',', ' ') ?> kr</span>
+                                        </div>
+                                        <?php if ($r['swish_fees'] > 0): ?>
+                                        <div class="payout-fee-row">
+                                            <span class="label">Swish (~2 kr/order) <span class="fee-badge fee-badge-estimated">Uppsk.</span></span>
+                                            <span class="value neg">-<?= number_format($r['swish_fees'], 2, ',', ' ') ?> kr</span>
+                                        </div>
+                                        <?php endif; ?>
+                                        <div class="payout-fee-row">
+                                            <span class="label">Plattform (<span class="platform-fee-pct-<?= $r['id'] ?>"><?= number_format($r['platform_fee_percent'], 1) ?></span>%)</span>
+                                            <span class="value neg">-<?= number_format($r['platform_fee'], 2, ',', ' ') ?> kr</span>
+                                        </div>
+                                        <?php if ((float)$r['refunded_amount'] > 0): ?>
+                                        <div class="payout-fee-row">
+                                            <span class="label">Återbetalningar</span>
+                                            <span class="value neg">-<?= number_format($r['refunded_amount'], 2, ',', ' ') ?> kr</span>
+                                        </div>
+                                        <?php endif; ?>
+                                        <div class="payout-fee-row total-row">
+                                            <span class="label">Netto att betala ut</span>
+                                            <span class="value pos"><?= number_format($r['net_payout'], 2, ',', ' ') ?> kr</span>
+                                        </div>
+                                    </div>
+                                </div>
+
+                                <!-- Bank info -->
+                                <?php if ($r['swish_number'] || $r['bankgiro'] || ($r['bank_account'] ?? '')): ?>
+                                <div class="payout-bank">
+                                    <div class="payout-bank-title">
+                                        <i data-lucide="landmark"></i>
+                                        Utbetalningsuppgifter
+                                    </div>
+                                    <?php if ($r['swish_number']): ?>
+                                    <div class="payout-bank-row"><span class="lbl">Swish:</span><span><?= h($r['swish_number']) ?></span></div>
+                                    <?php endif; ?>
+                                    <?php if ($r['bankgiro']): ?>
+                                    <div class="payout-bank-row"><span class="lbl">Bankgiro:</span><span><?= h($r['bankgiro']) ?></span></div>
+                                    <?php endif; ?>
+                                    <?php if ($r['bank_account'] ?? ''): ?>
+                                    <div class="payout-bank-row"><span class="lbl">Bank:</span><span><?= h(($r['bank_name'] ? $r['bank_name'] . ' ' : '') . ($r['bank_clearing'] ? $r['bank_clearing'] . '-' : '') . $r['bank_account']) ?></span></div>
+                                    <?php endif; ?>
+                                    <?php if ($r['contact_email'] ?? ''): ?>
+                                    <div class="payout-bank-row"><span class="lbl">E-post:</span><span><?= h($r['contact_email']) ?></span></div>
+                                    <?php endif; ?>
+                                </div>
+                                <?php endif; ?>
+                            </div>
+                        </td>
+                    </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+
+        <!-- Mobile portrait card view -->
+        <div class="payout-cards">
+            <?php foreach ($visibleRecipients as $r):
+                $totalFees = $r['stripe_fees'] + $r['swish_fees'] + $r['platform_fee'];
+            ?>
+            <div style="padding: var(--space-md); border-bottom: 1px solid var(--color-border);" onclick="togglePayoutDetail(<?= $r['id'] ?>)">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: var(--space-xs);">
+                    <div>
+                        <div class="font-medium"><?= h($r['name']) ?></div>
+                        <div class="text-xs text-secondary">
+                            <?= (int)$r['paid_order_count'] ?> ordrar
+                            <?php if ((int)$r['event_count'] > 0): ?>&middot; <?= (int)$r['event_count'] ?> event<?php endif; ?>
+                        </div>
+                    </div>
+                    <div style="text-align: right;">
+                        <div style="font-weight: 600; color: var(--color-success); font-variant-numeric: tabular-nums;"><?= number_format($r['net_payout'], 0, ',', ' ') ?> kr</div>
+                        <div class="text-xs text-secondary" style="font-variant-numeric: tabular-nums;">av <?= number_format($r['gross_revenue'], 0, ',', ' ') ?> kr</div>
+                    </div>
                 </div>
-                <div class="fee-row">
-                    <span class="fee-label">Varav moms (6%)</span>
-                    <span class="fee-value"><?= number_format($r['vat_amount'], 2, ',', ' ') ?> kr</span>
-                </div>
-                <div class="fee-row">
-                    <span class="fee-label">Kortbetalningar (<?= (int)$r['card_order_count'] ?> st)</span>
-                    <span class="fee-value"><?= number_format($r['card_revenue'], 0, ',', ' ') ?> kr</span>
-                </div>
-                <div class="fee-row">
-                    <span class="fee-label">Swish (<?= (int)$r['swish_order_count'] ?> st)</span>
-                    <span class="fee-value"><?= number_format($r['swish_revenue'], 0, ',', ' ') ?> kr</span>
-                </div>
-                <?php if ((float)$r['manual_revenue'] > 0): ?>
-                <div class="fee-row">
-                    <span class="fee-label">Manuellt (<?= (int)$r['manual_order_count'] ?> st)</span>
-                    <span class="fee-value"><?= number_format($r['manual_revenue'], 0, ',', ' ') ?> kr</span>
-                </div>
-                <?php endif; ?>
                 <?php if ((float)$r['pending_revenue'] > 0): ?>
-                <div class="fee-row">
-                    <span class="fee-label">Ej betalda (<?= (int)$r['pending_order_count'] ?> st)</span>
-                    <span class="fee-value warning"><?= number_format($r['pending_revenue'], 0, ',', ' ') ?> kr</span>
+                <div class="text-xs" style="color: var(--color-warning);">
+                    <i data-lucide="clock" style="width: 12px; height: 12px; vertical-align: -2px;"></i>
+                    <?= number_format($r['pending_revenue'], 0, ',', ' ') ?> kr väntande
                 </div>
                 <?php endif; ?>
             </div>
-
-            <!-- Right: Fee breakdown -->
-            <div class="fee-section">
-                <h4><i data-lucide="calculator"></i> Avgifter & Utbetalning</h4>
-                <div class="fee-row">
-                    <span class="fee-label">
-                        Stripe-avgifter
-                        <?php if ($r['all_fees_actual']): ?>
-                            <span class="fee-badge fee-badge-actual">Faktiska</span>
-                        <?php elseif ($r['has_actual_fees']): ?>
-                            <span class="fee-badge fee-badge-mixed">Delvis faktiska</span>
-                        <?php else: ?>
-                            <span class="fee-badge fee-badge-estimated">Uppskattade</span>
-                        <?php endif; ?>
-                    </span>
-                    <span class="fee-value negative">-<?= number_format($r['stripe_fees'], 2, ',', ' ') ?> kr</span>
-                </div>
-                <?php if ($r['swish_fees'] > 0): ?>
-                <div class="fee-row">
-                    <span class="fee-label">Swish-avgifter (~2 kr/order) <span class="fee-badge fee-badge-estimated">Uppskattade</span></span>
-                    <span class="fee-value negative">-<?= number_format($r['swish_fees'], 2, ',', ' ') ?> kr</span>
-                </div>
-                <?php endif; ?>
-                <div class="fee-row">
-                    <span class="fee-label">Plattformsavgift (<span class="platform-fee-pct-<?= $r['id'] ?>"><?= number_format($r['platform_fee_percent'], 1) ?></span>%)</span>
-                    <span class="fee-value negative">-<?= number_format($r['platform_fee'], 2, ',', ' ') ?> kr</span>
-                </div>
-                <?php if ((float)$r['refunded_amount'] > 0): ?>
-                <div class="fee-row">
-                    <span class="fee-label">Återbetalningar</span>
-                    <span class="fee-value negative">-<?= number_format($r['refunded_amount'], 2, ',', ' ') ?> kr</span>
-                </div>
-                <?php endif; ?>
-                <div class="fee-row" style="padding-top: var(--space-sm); border-top: 2px solid var(--color-border); font-weight: 600;">
-                    <span class="fee-label" style="color: var(--color-text-primary); font-weight: 600;">Netto att betala ut</span>
-                    <span class="fee-value positive" style="font-size: var(--text-lg);"><?= number_format($r['net_payout'], 2, ',', ' ') ?> kr</span>
-                </div>
-            </div>
+            <?php endforeach; ?>
         </div>
 
-        <!-- Bank info -->
-        <?php if ($r['swish_number'] || $r['bankgiro'] || $r['bank_account']): ?>
-        <div class="bank-info">
-            <div class="bank-info-title">
-                <i data-lucide="landmark"></i>
-                Utbetalningsuppgifter
-            </div>
-            <?php if ($r['swish_number']): ?>
-            <div class="bank-info-row">
-                <span class="bank-info-label">Swish:</span>
-                <span><?= h($r['swish_number']) ?></span>
-            </div>
-            <?php endif; ?>
-            <?php if ($r['bankgiro']): ?>
-            <div class="bank-info-row">
-                <span class="bank-info-label">Bankgiro:</span>
-                <span><?= h($r['bankgiro']) ?></span>
-            </div>
-            <?php endif; ?>
-            <?php if ($r['bank_account']): ?>
-            <div class="bank-info-row">
-                <span class="bank-info-label">Bankkonto:</span>
-                <span><?= h(($r['bank_name'] ? $r['bank_name'] . ' ' : '') . ($r['bank_clearing'] ? $r['bank_clearing'] . '-' : '') . $r['bank_account']) ?></span>
-            </div>
-            <?php endif; ?>
-            <?php if ($r['contact_email']): ?>
-            <div class="bank-info-row">
-                <span class="bank-info-label">E-post:</span>
-                <span><?= h($r['contact_email']) ?></span>
-            </div>
-            <?php endif; ?>
-        </div>
         <?php endif; ?>
     </div>
 </div>
-<?php endforeach; ?>
-<?php endif; ?>
 
 <script>
+function togglePayoutDetail(id) {
+    const row = document.getElementById('detail-' + id);
+    const chevron = document.getElementById('chevron-' + id);
+    if (!row) return;
+
+    const isVisible = row.style.display !== 'none';
+    row.style.display = isVisible ? 'none' : '';
+    if (chevron) chevron.style.transform = isVisible ? '' : 'rotate(180deg)';
+    if (!isVisible && typeof lucide !== 'undefined') lucide.createIcons();
+}
+
 function editPlatformFee(recipientId, currentFee) {
     const container = document.querySelector(`.platform-fee-display[data-recipient-id="${recipientId}"]`);
     if (!container) return;
@@ -1127,26 +726,24 @@ function editPlatformFee(recipientId, currentFee) {
     const editBtn = container.querySelector('.btn-edit-fee');
     const originalText = valueSpan.textContent;
 
-    // Replace with inline edit
     editBtn.style.display = 'none';
     valueSpan.innerHTML = `
         <span class="fee-edit-inline">
             <input type="number" value="${currentFee}" min="0" max="100" step="0.1" id="feeInput${recipientId}">
             <span>%</span>
-            <button type="button" class="fee-edit-save" onclick="savePlatformFee(${recipientId})">Spara</button>
-            <button type="button" class="fee-edit-cancel" onclick="cancelFeeEdit(${recipientId}, '${originalText}')">Avbryt</button>
+            <button type="button" class="fee-edit-save" onclick="event.stopPropagation(); savePlatformFee(${recipientId})">Spara</button>
+            <button type="button" class="fee-edit-cancel" onclick="event.stopPropagation(); cancelFeeEdit(${recipientId}, '${originalText}')">Avbryt</button>
         </span>
     `;
 
     const input = document.getElementById('feeInput' + recipientId);
     input.focus();
     input.select();
-
-    // Save on Enter, cancel on Escape
     input.addEventListener('keydown', e => {
-        if (e.key === 'Enter') savePlatformFee(recipientId);
-        if (e.key === 'Escape') cancelFeeEdit(recipientId, originalText);
+        if (e.key === 'Enter') { e.stopPropagation(); savePlatformFee(recipientId); }
+        if (e.key === 'Escape') { e.stopPropagation(); cancelFeeEdit(recipientId, originalText); }
     });
+    input.addEventListener('click', e => e.stopPropagation());
 }
 
 async function savePlatformFee(recipientId) {
@@ -1165,22 +762,9 @@ async function savePlatformFee(recipientId) {
         formData.append('recipient_id', recipientId);
         formData.append('platform_fee_percent', newFee);
 
-        const response = await fetch('/admin/promotor.php', {
-            method: 'POST',
-            body: formData
-        });
-
+        const response = await fetch('/admin/promotor.php', { method: 'POST', body: formData });
         const result = await response.json();
         if (result.success) {
-            // Update display
-            const formatted = newFee.toFixed(1);
-            cancelFeeEdit(recipientId, formatted + '%');
-
-            // Update fee percentage labels in breakdown
-            const pctSpan = document.querySelector('.platform-fee-pct-' + recipientId);
-            if (pctSpan) pctSpan.textContent = formatted;
-
-            // Reload page to recalculate totals
             location.reload();
         } else {
             alert('Kunde inte spara: ' + (result.error || 'Okänt fel'));
@@ -1194,18 +778,112 @@ async function savePlatformFee(recipientId) {
 function cancelFeeEdit(recipientId, originalText) {
     const container = document.querySelector(`.platform-fee-display[data-recipient-id="${recipientId}"]`);
     if (!container) return;
-
-    const valueSpan = container.querySelector('.platform-fee-value');
-    const editBtn = container.querySelector('.btn-edit-fee');
-
-    valueSpan.textContent = originalText;
-    editBtn.style.display = '';
+    container.querySelector('.platform-fee-value').textContent = originalText;
+    container.querySelector('.btn-edit-fee').style.display = '';
     if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 </script>
 
 <?php else: ?>
 <!-- ===== PROMOTOR VIEW ===== -->
+
+<style>
+.promotor-grid { display: grid; gap: var(--space-lg); }
+.event-card {
+    background: var(--color-bg-surface); border-radius: var(--radius-lg);
+    border: 1px solid var(--color-border); overflow: hidden;
+}
+.event-card-header {
+    padding: var(--space-lg); display: flex; justify-content: space-between;
+    align-items: flex-start; gap: var(--space-md); border-bottom: 1px solid var(--color-border);
+}
+.event-info { flex: 1; }
+.event-title { font-size: var(--text-xl); font-weight: 600; color: var(--color-text-primary); margin: 0 0 var(--space-xs) 0; }
+.event-meta { display: flex; flex-wrap: wrap; gap: var(--space-md); color: var(--color-text-secondary); font-size: var(--text-sm); }
+.event-meta-item { display: flex; align-items: center; gap: var(--space-xs); }
+.event-meta-item i { width: 16px; height: 16px; }
+.event-series {
+    display: flex; align-items: center; gap: var(--space-xs); font-size: var(--text-sm);
+    color: var(--color-text-secondary); background: var(--color-bg-sunken);
+    padding: var(--space-xs) var(--space-sm); border-radius: var(--radius-full);
+}
+.event-series img { width: 20px; height: 20px; object-fit: contain; }
+.event-card-body { padding: var(--space-lg); }
+.stats-grid { display: grid; grid-template-columns: repeat(4, 1fr); gap: var(--space-sm); margin-bottom: var(--space-lg); }
+.stat-box { background: var(--color-bg-sunken); padding: var(--space-md); border-radius: var(--radius-md); text-align: center; }
+.stat-value { font-size: var(--text-2xl); font-weight: 700; color: var(--color-accent); }
+.stat-value.success { color: var(--color-success); }
+.stat-value.pending { color: var(--color-warning); }
+.stat-label { font-size: var(--text-xs); color: var(--color-text-secondary); text-transform: uppercase; letter-spacing: 0.05em; }
+.event-actions { display: flex; flex-wrap: wrap; gap: var(--space-sm); }
+.event-actions .btn { display: inline-flex; align-items: center; gap: var(--space-xs); min-height: 44px; }
+.event-actions .btn i { width: 16px; height: 16px; }
+.empty-state { text-align: center; padding: var(--space-2xl); color: var(--color-text-secondary); }
+.empty-state i { width: 48px; height: 48px; margin-bottom: var(--space-md); opacity: 0.5; }
+.empty-state h2 { margin: 0 0 var(--space-sm) 0; color: var(--color-text-primary); }
+.section-title { font-size: var(--text-xl); font-weight: 600; margin: 0 0 var(--space-lg) 0; color: var(--color-text-primary); }
+.series-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: var(--space-lg); margin-bottom: var(--space-2xl); }
+.series-card {
+    background: var(--color-bg-surface); border-radius: var(--radius-lg);
+    border: 1px solid var(--color-border); overflow: hidden; display: flex; flex-direction: column;
+}
+.series-card-header { padding: var(--space-lg); display: flex; align-items: center; gap: var(--space-md); border-bottom: 1px solid var(--color-border); }
+.series-logo {
+    width: 48px; height: 48px; border-radius: var(--radius-md); background: var(--color-bg-sunken);
+    display: flex; align-items: center; justify-content: center; overflow: hidden; flex-shrink: 0;
+}
+.series-logo img { max-width: 100%; max-height: 100%; object-fit: contain; }
+.series-info h3 { margin: 0 0 var(--space-2xs) 0; font-size: var(--text-lg); }
+.series-info p { margin: 0; font-size: var(--text-sm); color: var(--color-text-secondary); }
+.series-card-body { padding: var(--space-lg); flex: 1; }
+.series-detail { display: flex; align-items: center; gap: var(--space-sm); margin-bottom: var(--space-sm); font-size: var(--text-sm); color: var(--color-text-secondary); }
+.series-detail i { width: 16px; height: 16px; flex-shrink: 0; }
+.series-detail.missing { color: var(--color-warning); }
+.series-card-footer { padding: var(--space-md) var(--space-lg); background: var(--color-bg-sunken); border-top: 1px solid var(--color-border); }
+.series-card-footer .btn { width: 100%; }
+
+/* Modal */
+.modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 1000; padding: var(--space-lg); overflow-y: auto; }
+.modal.active { display: flex; align-items: flex-start; justify-content: center; }
+.modal-content { background: var(--color-bg-surface); border-radius: var(--radius-lg); max-width: 500px; width: 100%; margin-top: var(--space-xl); }
+.modal-header { display: flex; justify-content: space-between; align-items: center; padding: var(--space-md) var(--space-lg); border-bottom: 1px solid var(--color-border); }
+.modal-header h3 { margin: 0; }
+.modal-close { background: none; border: none; padding: var(--space-xs); cursor: pointer; color: var(--color-text-secondary); font-size: 24px; line-height: 1; }
+.modal-body { padding: var(--space-lg); }
+.modal-footer { padding: var(--space-md) var(--space-lg); background: var(--color-bg-sunken); border-top: 1px solid var(--color-border); display: flex; justify-content: flex-end; gap: var(--space-sm); }
+.form-group { margin-bottom: var(--space-md); }
+.form-label { display: block; margin-bottom: var(--space-xs); font-weight: 500; font-size: var(--text-sm); }
+.form-input { width: 100%; padding: var(--space-sm) var(--space-md); border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-bg-sunken); color: var(--color-text-primary); }
+.logo-preview { width: 100%; height: 80px; background: var(--color-bg-sunken); border: 2px dashed var(--color-border); border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; margin-bottom: var(--space-sm); overflow: hidden; }
+.logo-preview img { max-width: 100%; max-height: 100%; object-fit: contain; }
+.logo-actions { display: flex; gap: var(--space-sm); }
+
+/* Mobile edge-to-edge */
+@media (max-width: 767px) {
+    .event-card, .series-card {
+        margin-left: calc(-1 * var(--space-md)); margin-right: calc(-1 * var(--space-md));
+        border-radius: 0; border-left: none; border-right: none; width: calc(100% + var(--space-md) * 2);
+    }
+    .series-grid, .promotor-grid { gap: 0; }
+    .series-grid { grid-template-columns: 1fr; }
+    .event-card + .event-card, .series-card + .series-card { border-top: none; }
+}
+@media (max-width: 600px) {
+    .stats-grid { grid-template-columns: repeat(2, 1fr); }
+}
+@media (max-width: 599px) {
+    .event-actions { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-xs); }
+    .event-actions .btn { justify-content: center; font-size: var(--text-sm); padding: var(--space-sm); }
+    .event-card-header { flex-direction: column; gap: var(--space-xs); padding: var(--space-md); }
+    .event-card-body { padding: var(--space-md); }
+    .event-title { font-size: var(--text-lg); }
+    .stat-value { font-size: var(--text-xl); }
+    .stat-box { padding: var(--space-sm); }
+    .modal { padding: 0; }
+    .modal-content { max-width: 100%; height: 100%; margin: 0; border-radius: 0; display: flex; flex-direction: column; }
+    .modal-body { flex: 1; overflow-y: auto; }
+}
+</style>
 
 <!-- MINA SERIER -->
 <?php if (!empty($series)): ?>
@@ -1352,7 +1030,7 @@ function cancelFeeEdit(recipientId, originalText) {
                 </p>
 
                 <div class="form-group">
-                    <label class="form-label">Banner <code style="background: var(--color-bg-sunken); padding: 2px 6px; border-radius: 4px; font-size: 0.7rem;">1200×150px</code></label>
+                    <label class="form-label">Banner <code style="background: var(--color-bg-sunken); padding: 2px 6px; border-radius: 4px; font-size: 0.7rem;">1200x150px</code></label>
                     <div class="logo-preview" id="seriesBannerPreview">
                         <i data-lucide="image-plus" style="width: 24px; height: 24px; opacity: 0.5;"></i>
                     </div>
@@ -1377,24 +1055,17 @@ function cancelFeeEdit(recipientId, originalText) {
 </div>
 
 <script>
-// Store series data for modal
 const seriesData = <?= json_encode(array_column($series, null, 'id')) ?>;
 let currentSeriesId = null;
 
 function editSeries(id) {
     const s = seriesData[id];
-    if (!s) {
-        alert('Kunde inte hitta seriedata');
-        return;
-    }
+    if (!s) { alert('Kunde inte hitta seriedata'); return; }
 
     currentSeriesId = id;
     document.getElementById('seriesId').value = id;
     document.getElementById('seriesModalTitle').textContent = 'Redigera ' + s.name;
 
-    // Set Swish fields - try series-specific first, then payment recipient
-
-    // Set banner preview
     clearSeriesBanner();
     if (s.banner_media_id && s.banner_url) {
         document.getElementById('seriesBannerMediaId').value = s.banner_media_id;
@@ -1402,7 +1073,6 @@ function editSeries(id) {
     }
 
     document.getElementById('seriesModal').classList.add('active');
-    // Reinitialize Lucide icons in the modal
     if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
@@ -1414,16 +1084,8 @@ function closeSeriesModal() {
 async function uploadSeriesBanner(input) {
     const file = input.files[0];
     if (!file) return;
-
-    if (!file.type.startsWith('image/')) {
-        alert('Välj en bildfil (JPG, PNG, etc.)');
-        return;
-    }
-
-    if (file.size > 10 * 1024 * 1024) {
-        alert('Filen är för stor. Max 10MB.');
-        return;
-    }
+    if (!file.type.startsWith('image/')) { alert('Välj en bildfil (JPG, PNG, etc.)'); return; }
+    if (file.size > 10 * 1024 * 1024) { alert('Filen är för stor. Max 10MB.'); return; }
 
     const preview = document.getElementById('seriesBannerPreview');
     preview.innerHTML = '<span style="font-size: 12px; color: var(--color-text-secondary);">Laddar upp...</span>';
@@ -1433,11 +1095,7 @@ async function uploadSeriesBanner(input) {
         formData.append('file', file);
         formData.append('folder', 'series');
 
-        const response = await fetch('/api/media.php?action=upload', {
-            method: 'POST',
-            body: formData
-        });
-
+        const response = await fetch('/api/media.php?action=upload', { method: 'POST', body: formData });
         const result = await response.json();
 
         if (result.success && result.media) {
@@ -1452,7 +1110,6 @@ async function uploadSeriesBanner(input) {
         alert('Ett fel uppstod vid uppladdning');
         clearSeriesBanner();
     }
-
     input.value = '';
 }
 
@@ -1464,40 +1121,25 @@ function clearSeriesBanner() {
 
 async function saveSeries(event) {
     event.preventDefault();
-
     const form = document.getElementById('seriesForm');
     const formData = new FormData(form);
-
-    const data = {
-        id: currentSeriesId,
-        banner_media_id: formData.get('banner_media_id') || null
-    };
 
     try {
         const response = await fetch('/api/series.php?action=update_promotor', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify(data)
+            body: JSON.stringify({ id: currentSeriesId, banner_media_id: formData.get('banner_media_id') || null })
         });
-
         const result = await response.json();
-
-        if (result.success) {
-            closeSeriesModal();
-            location.reload();
-        } else {
-            alert(result.error || 'Kunde inte spara');
-        }
+        if (result.success) { closeSeriesModal(); location.reload(); }
+        else { alert(result.error || 'Kunde inte spara'); }
     } catch (error) {
         console.error('Save error:', error);
         alert('Ett fel uppstod');
     }
 }
 
-// Close modal on escape or background click
-document.addEventListener('keydown', e => {
-    if (e.key === 'Escape') closeSeriesModal();
-});
+document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSeriesModal(); });
 document.getElementById('seriesModal').addEventListener('click', e => {
     if (e.target === document.getElementById('seriesModal')) closeSeriesModal();
 });
