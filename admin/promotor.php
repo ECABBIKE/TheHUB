@@ -105,6 +105,12 @@ if ($isAdmin) {
             $params[] = $filterEvent;
         }
 
+        if ($filterRecipient > 0) {
+            $conditions[] = "(e.payment_recipient_id = ? OR s_series.payment_recipient_id = ?)";
+            $params[] = $filterRecipient;
+            $params[] = $filterRecipient;
+        }
+
         $whereClause = implode(' AND ', $conditions);
 
         $orderRows = $db->getAll("
@@ -114,6 +120,7 @@ if ($isAdmin) {
                    COALESCE(e.name, s_name.sname, '-') as event_name
             FROM orders o
             LEFT JOIN events e ON o.event_id = e.id
+            LEFT JOIN series s_series ON e.series_id = s_series.id
             LEFT JOIN (
                 SELECT oi2.order_id, CONCAT(s2.name, ' (serie)') as sname
                 FROM order_items oi2
@@ -282,7 +289,7 @@ if (!$isAdmin) {
     try {
         $promotorEvents = $db->getAll("
             SELECT e.id, e.name, e.date, e.location, e.active, e.series_id,
-                   e.max_participants, e.registration_open,
+                   e.max_participants,
                    s.name as series_name, s.logo as series_logo,
                    COALESCE(reg.total_count, 0) as total_registrations,
                    COALESCE(reg.paid_count, 0) as paid_count,
@@ -329,7 +336,9 @@ if (!$isAdmin) {
                 GROUP BY sre2.event_id
             ) series_rev ON series_rev.event_id = e.id
             WHERE pe.user_id = ?
-            ORDER BY is_past ASC, e.date ASC
+            ORDER BY is_past ASC,
+                     CASE WHEN e.date >= CURDATE() THEN e.date END ASC,
+                     CASE WHEN e.date < CURDATE() THEN e.date END DESC
         ", [$userId]);
     } catch (Exception $e) {
         error_log("Promotor events error: " . $e->getMessage());
@@ -399,6 +408,7 @@ if (!$isAdmin) {
         }
         $ev['net_revenue'] = round($gross - $estPaymentFees - $estPlatformFee, 2);
         $ev['total_with_series'] = (int)$ev['total_registrations'] + $seriesCnt;
+        $ev['paid_with_series'] = (int)$ev['paid_count'] + $seriesCnt; // series regs are pre-paid
     }
     unset($ev);
 
@@ -562,18 +572,38 @@ if (!$isAdmin) {
         }
         unset($order);
 
-        // Available years for promotor
+        // Available years for promotor (include series orders too)
         $promotorYears = [];
-        if (!empty($allEventIds)) {
-            $placeholders = implode(',', array_fill(0, count($allEventIds), '?'));
-            try {
+        try {
+            $yearOwnerParts = [];
+            $yearOwnerParams = [];
+            if (!empty($allEventIds)) {
+                $placeholders = implode(',', array_fill(0, count($allEventIds), '?'));
+                $yearOwnerParts[] = "event_id IN ({$placeholders})";
+                $yearOwnerParams = array_merge($yearOwnerParams, $allEventIds);
+            }
+            if (!empty($promotorSeriesIds)) {
+                $sPlaceholders = implode(',', array_fill(0, count($promotorSeriesIds), '?'));
+                $yearOwnerParts[] = "id IN (
+                    SELECT oi.order_id FROM order_items oi
+                    JOIN series_registrations sr ON sr.id = oi.series_registration_id
+                    WHERE sr.series_id IN ({$sPlaceholders})
+                )";
+                $yearOwnerParams = array_merge($yearOwnerParams, $promotorSeriesIds);
+                if ($hasOrderSeriesId) {
+                    $yearOwnerParts[] = "series_id IN ({$sPlaceholders})";
+                    $yearOwnerParams = array_merge($yearOwnerParams, $promotorSeriesIds);
+                }
+            }
+            if (!empty($yearOwnerParts)) {
+                $yearWhere = "payment_status = 'paid' AND (" . implode(' OR ', $yearOwnerParts) . ")";
                 $promotorYears = $db->getAll("
                     SELECT DISTINCT YEAR(created_at) as yr FROM orders
-                    WHERE payment_status = 'paid' AND event_id IN ({$placeholders})
+                    WHERE {$yearWhere}
                     ORDER BY yr DESC
-                ", $allEventIds);
-            } catch (Exception $e) {}
-        }
+                ", $yearOwnerParams);
+            }
+        } catch (Exception $e) {}
 
         // Events for filter
         $promotorFilterEvents = [];
@@ -1183,7 +1213,7 @@ function cancelFeeEdit(recipientId, originalText) {
                     <div class="stat-label">Anmälda<?php if ($event['series_registration_count'] > 0): ?> <small>(<?= (int)$event['series_registration_count'] ?> serie)</small><?php endif; ?></div>
                 </div>
                 <div class="stat-box">
-                    <div class="stat-value success"><?= (int)$event['paid_count'] ?></div>
+                    <div class="stat-value success"><?= (int)$event['paid_with_series'] ?></div>
                     <div class="stat-label">Betalda</div>
                 </div>
                 <div class="stat-box">
