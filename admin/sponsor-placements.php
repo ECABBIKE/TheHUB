@@ -435,6 +435,13 @@ input:checked + .toggle-slider:before {
     </div>
 </div>
 
+<!-- Preview Link -->
+<div style="margin-bottom: var(--space-lg);">
+    <a href="/admin/sponsor-placements-preview.php" class="btn btn-secondary">
+        <i data-lucide="eye"></i> Förhandsvisa positioner
+    </a>
+</div>
+
 <!-- Create New Placement -->
 <div class="create-form">
     <h3><i data-lucide="plus"></i> Skapa ny placering</h3>
