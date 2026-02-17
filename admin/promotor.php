@@ -237,9 +237,10 @@ include __DIR__ . '/components/unified-layout.php';
 
 <style>
 /* Order table styles */
-.order-table { font-variant-numeric: tabular-nums; }
+.order-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.order-table { font-variant-numeric: tabular-nums; min-width: 700px; }
 .order-table th { white-space: nowrap; font-size: var(--text-xs); text-transform: uppercase; letter-spacing: 0.05em; }
-.order-table td { vertical-align: middle; }
+.order-table td { vertical-align: middle; white-space: nowrap; }
 .order-method { display: inline-flex; align-items: center; gap: var(--space-2xs); }
 .order-method i { width: 14px; height: 14px; }
 .fee-estimated { opacity: 0.6; font-style: italic; }
@@ -285,7 +286,7 @@ include __DIR__ . '/components/unified-layout.php';
             <i data-lucide="wallet"></i>
         </div>
         <div class="admin-stat-content">
-            <div class="admin-stat-value"><?= number_format($payoutTotals['gross'], 0, ',', ' ') ?> kr</div>
+            <div class="admin-stat-value"><?= number_format($payoutTotals['gross'], 2, ',', ' ') ?> kr</div>
             <div class="admin-stat-label">Försäljning</div>
         </div>
     </div>
@@ -294,7 +295,7 @@ include __DIR__ . '/components/unified-layout.php';
             <i data-lucide="receipt"></i>
         </div>
         <div class="admin-stat-content">
-            <div class="admin-stat-value"><?= number_format($payoutTotals['payment_fees'] + $payoutTotals['platform_fees'], 0, ',', ' ') ?> kr</div>
+            <div class="admin-stat-value"><?= number_format($payoutTotals['payment_fees'] + $payoutTotals['platform_fees'], 2, ',', ' ') ?> kr</div>
             <div class="admin-stat-label">Totala avgifter</div>
         </div>
     </div>
@@ -303,7 +304,7 @@ include __DIR__ . '/components/unified-layout.php';
             <i data-lucide="banknote"></i>
         </div>
         <div class="admin-stat-content">
-            <div class="admin-stat-value"><?= number_format($payoutTotals['net'], 0, ',', ' ') ?> kr</div>
+            <div class="admin-stat-value"><?= number_format($payoutTotals['net'], 2, ',', ' ') ?> kr</div>
             <div class="admin-stat-label">Netto efter avgifter</div>
         </div>
     </div>
@@ -402,7 +403,7 @@ include __DIR__ . '/components/unified-layout.php';
                             <div class="order-event"><?= h($order['event_name'] ?? '-') ?></div>
                         </td>
                         <td style="text-align: right; font-weight: 500;">
-                            <?= number_format($order['total_amount'], 0, ',', ' ') ?> kr
+                            <?= number_format($order['total_amount'], 2, ',', ' ') ?> kr
                         </td>
                         <td>
                             <span class="order-method">
@@ -427,7 +428,7 @@ include __DIR__ . '/components/unified-layout.php';
                             <?php endif; ?>
                         </td>
                         <td style="text-align: right; font-weight: 600; color: var(--color-success);">
-                            <?= number_format($order['net_amount'], 0, ',', ' ') ?> kr
+                            <?= number_format($order['net_amount'], 2, ',', ' ') ?> kr
                         </td>
                     </tr>
                     <?php endforeach; ?>
@@ -435,11 +436,11 @@ include __DIR__ . '/components/unified-layout.php';
                 <tfoot>
                     <tr class="summary-row">
                         <td colspan="2" style="font-weight: 600;">Summa (<?= $payoutTotals['order_count'] ?> ordrar)</td>
-                        <td style="text-align: right;"><?= number_format($payoutTotals['gross'], 0, ',', ' ') ?> kr</td>
+                        <td style="text-align: right;"><?= number_format($payoutTotals['gross'], 2, ',', ' ') ?> kr</td>
                         <td></td>
-                        <td style="text-align: right; color: var(--color-error);">-<?= number_format($payoutTotals['payment_fees'], 0, ',', ' ') ?> kr</td>
-                        <td style="text-align: right; color: var(--color-error);">-<?= number_format($payoutTotals['platform_fees'], 0, ',', ' ') ?> kr</td>
-                        <td style="text-align: right; color: var(--color-success);"><?= number_format($payoutTotals['net'], 0, ',', ' ') ?> kr</td>
+                        <td style="text-align: right; color: var(--color-error);">-<?= number_format($payoutTotals['payment_fees'], 2, ',', ' ') ?> kr</td>
+                        <td style="text-align: right; color: var(--color-error);">-<?= number_format($payoutTotals['platform_fees'], 2, ',', ' ') ?> kr</td>
+                        <td style="text-align: right; color: var(--color-success);"><?= number_format($payoutTotals['net'], 2, ',', ' ') ?> kr</td>
                     </tr>
                 </tfoot>
             </table>
@@ -465,14 +466,14 @@ include __DIR__ . '/components/unified-layout.php';
                         <span class="text-xs text-secondary" style="margin-left: var(--space-xs);"><?= date('j M', strtotime($order['created_at'])) ?></span>
                     </div>
                     <div style="text-align: right;">
-                        <div style="font-weight: 600; color: var(--color-success); font-variant-numeric: tabular-nums;"><?= number_format($order['net_amount'], 0, ',', ' ') ?> kr</div>
+                        <div style="font-weight: 600; color: var(--color-success); font-variant-numeric: tabular-nums;"><?= number_format($order['net_amount'], 2, ',', ' ') ?> kr</div>
                     </div>
                 </div>
                 <div class="text-xs text-secondary" style="margin-bottom: var(--space-2xs);"><?= h($order['event_name'] ?? '-') ?></div>
                 <div style="display: flex; justify-content: space-between; font-size: var(--text-xs); color: var(--color-text-muted);">
-                    <span><?= $methodLabel ?> &middot; <?= number_format($order['total_amount'], 0, ',', ' ') ?> kr</span>
+                    <span><?= $methodLabel ?> &middot; <?= number_format($order['total_amount'], 2, ',', ' ') ?> kr</span>
                     <?php if ($totalFees > 0): ?>
-                    <span style="color: var(--color-error);">-<?= number_format($totalFees, 0, ',', ' ') ?> kr avg.</span>
+                    <span style="color: var(--color-error);">-<?= number_format($totalFees, 2, ',', ' ') ?> kr avg.</span>
                     <?php endif; ?>
                 </div>
             </div>
@@ -481,11 +482,11 @@ include __DIR__ . '/components/unified-layout.php';
             <div style="padding: var(--space-md); background: var(--color-bg-hover); font-size: var(--text-sm);">
                 <div style="display: flex; justify-content: space-between; font-weight: 600; margin-bottom: var(--space-2xs);">
                     <span>Summa (<?= $payoutTotals['order_count'] ?> ordrar)</span>
-                    <span style="color: var(--color-success);"><?= number_format($payoutTotals['net'], 0, ',', ' ') ?> kr</span>
+                    <span style="color: var(--color-success);"><?= number_format($payoutTotals['net'], 2, ',', ' ') ?> kr</span>
                 </div>
                 <div style="display: flex; justify-content: space-between; font-size: var(--text-xs); color: var(--color-text-muted);">
-                    <span>Försäljning: <?= number_format($payoutTotals['gross'], 0, ',', ' ') ?> kr</span>
-                    <span style="color: var(--color-error);">Avgifter: -<?= number_format($payoutTotals['payment_fees'] + $payoutTotals['platform_fees'], 0, ',', ' ') ?> kr</span>
+                    <span>Försäljning: <?= number_format($payoutTotals['gross'], 2, ',', ' ') ?> kr</span>
+                    <span style="color: var(--color-error);">Avgifter: -<?= number_format($payoutTotals['payment_fees'] + $payoutTotals['platform_fees'], 2, ',', ' ') ?> kr</span>
                 </div>
             </div>
         </div>
