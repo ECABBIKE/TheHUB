@@ -82,12 +82,15 @@ function createMultiRiderOrder(array $buyerData, array $items, ?string $discount
             $checkStmt->execute([$orderReference]);
         }
 
-        // Hämta första event_id
+        // Hämta första event_id och series_id
         $firstEventId = null;
+        $firstSeriesId = null;
         foreach ($items as $item) {
             if (($item['type'] ?? 'event') === 'event' && !empty($item['event_id'])) {
-                $firstEventId = intval($item['event_id']);
-                break;
+                if ($firstEventId === null) $firstEventId = intval($item['event_id']);
+            }
+            if (($item['type'] ?? 'event') === 'series' && !empty($item['series_id'])) {
+                if ($firstSeriesId === null) $firstSeriesId = intval($item['series_id']);
             }
         }
 
@@ -116,26 +119,57 @@ function createMultiRiderOrder(array $buyerData, array $items, ?string $discount
             }
         }
 
-        $orderStmt = $pdo->prepare("
-            INSERT INTO orders (
-                order_number, rider_id, customer_email, customer_name,
-                event_id, subtotal, discount, total_amount, currency,
-                payment_method, payment_status,
-                expires_at, created_at
-            ) VALUES (
-                ?, ?, ?, ?,
-                ?, 0, 0, 0, 'SEK',
-                'card', 'pending',
-                DATE_ADD(NOW(), INTERVAL 24 HOUR), NOW()
-            )
-        ");
-        $orderStmt->execute([
-            $orderReference,
-            $validRiderId,  // Only set if valid rider ID
-            $buyerData['email'],
-            $buyerData['name'],
-            $firstEventId
-        ]);
+        // Check if series_id column exists (migration 051)
+        $hasSeriesIdCol = false;
+        try {
+            $colCheck = $pdo->query("SHOW COLUMNS FROM orders LIKE 'series_id'");
+            $hasSeriesIdCol = $colCheck->rowCount() > 0;
+        } catch (\Throwable $e) {}
+
+        if ($hasSeriesIdCol) {
+            $orderStmt = $pdo->prepare("
+                INSERT INTO orders (
+                    order_number, rider_id, customer_email, customer_name,
+                    event_id, series_id, subtotal, discount, total_amount, currency,
+                    payment_method, payment_status,
+                    expires_at, created_at
+                ) VALUES (
+                    ?, ?, ?, ?,
+                    ?, ?, 0, 0, 0, 'SEK',
+                    'card', 'pending',
+                    DATE_ADD(NOW(), INTERVAL 24 HOUR), NOW()
+                )
+            ");
+            $orderStmt->execute([
+                $orderReference,
+                $validRiderId,
+                $buyerData['email'],
+                $buyerData['name'],
+                $firstEventId,
+                $firstSeriesId
+            ]);
+        } else {
+            $orderStmt = $pdo->prepare("
+                INSERT INTO orders (
+                    order_number, rider_id, customer_email, customer_name,
+                    event_id, subtotal, discount, total_amount, currency,
+                    payment_method, payment_status,
+                    expires_at, created_at
+                ) VALUES (
+                    ?, ?, ?, ?,
+                    ?, 0, 0, 0, 'SEK',
+                    'card', 'pending',
+                    DATE_ADD(NOW(), INTERVAL 24 HOUR), NOW()
+                )
+            ");
+            $orderStmt->execute([
+                $orderReference,
+                $validRiderId,
+                $buyerData['email'],
+                $buyerData['name'],
+                $firstEventId
+            ]);
+        }
 
         $orderId = $pdo->lastInsertId();
 

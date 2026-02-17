@@ -165,11 +165,10 @@ function isAdminPageActive($item, $requestUri) {
         $currentPath = $_SERVER['REQUEST_URI'];
         // PROMOTOR navigation - must be identical to admin-mobile-nav.php promotor nav
         $promotorNav = [
-            ['id' => 'events', 'label' => 'Tävlingar', 'icon' => 'calendar', 'url' => '/admin/promotor.php', 'match' => '/admin/promotor.php'],
-            ['id' => 'series', 'label' => 'Serier', 'icon' => 'medal', 'url' => '/admin/promotor-series.php', 'match' => '/admin/promotor-series'],
-            ['id' => 'media', 'label' => 'Media', 'icon' => 'image', 'url' => '/admin/media.php', 'match' => '/admin/media'],
-            ['id' => 'sponsors', 'label' => 'Sponsorer', 'icon' => 'heart-handshake', 'url' => '/admin/sponsors.php', 'match' => '/admin/sponsor'],
-            ['id' => 'onsite', 'label' => 'Direktanmälan', 'icon' => 'user-plus', 'url' => '/admin/onsite-registration.php', 'match' => '/admin/onsite'],
+            ['id' => 'events', 'label' => 'Event', 'icon' => 'calendar', 'url' => '/admin/promotor.php?tab=event', 'match' => '/admin/promotor'],
+            ['id' => 'series', 'label' => 'Serier', 'icon' => 'medal', 'url' => '/admin/promotor.php?tab=serier', 'match' => '/admin/promotor-series'],
+            ['id' => 'ekonomi', 'label' => 'Ekonomi', 'icon' => 'wallet', 'url' => '/admin/promotor.php?tab=ekonomi', 'match' => '/admin/promotor.php?tab=ekonomi'],
+            ['id' => 'media', 'label' => 'Media', 'icon' => 'image', 'url' => '/admin/promotor.php?tab=media', 'match' => '/admin/media'],
         ];
         foreach ($promotorNav as $item):
             $isActive = strpos($currentPath, $item['match']) !== false;
