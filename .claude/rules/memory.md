@@ -235,17 +235,20 @@
 
 ## SENASTE FIXAR (2026-02-19)
 
-- **Ekonomi/utbetalningsvy FORTFARANDE tom (andra fixomgangen)**: Forsta fixen (2026-02-18) andrade fran `order_items.payment_recipient_id` till `events.payment_recipient_id` / `series.payment_recipient_id`. Men dessa kolumner ar ofta NULL (migration 054 kord men data ej ifylld pa alla events/serier). Fixat: bygger nu event→recipient-mappning i PHP via 4 fallback-vagar: (1) events.payment_recipient_id, (2) series.payment_recipient_id via events.series_id, (3) series.payment_recipient_id via series_events (many-to-many), (4) order_items.payment_recipient_id. Varje steg wrappat i try/catch sa det fungerar aven om kolumner saknas.
-- **Ekonomi-vyn omdesignad for mobile-first**: Hela admin-ekonomivyn i promotor.php omskriven fran custom recipient-cards till standard admin-table med expanderbara rader. Anvander admin-stats-grid, admin-card, admin-table, admin-badge, admin-form-select. Mobil portrait visar card-vy (payout-cards), desktop/landscape visar tabell. Edge-to-edge pa mobil. Expanderbar detaljrad med intakter + avgifter i tva-kolumns grid (en kolumn pa mobil).
-- **Migration 050 visade alltid rod i migrations.php**: Andrad fran data-check (`order_items.payment_recipient_id IS NOT NULL`) till kolumn-check (`columns => ['order_items.payment_recipient_id']`). Data-checken var for strikt - events utan konfigurerad recipient gor att vissa items aldrig kan backfillas.
-- **Backfill Stripe-avgifter visade 0 ordrar (TREDJE GANGEN)**: `getOne()` i DatabaseWrapper (helpers.php) anropar `getValue()` → `fetchColumn()` som returnerar en SKALARVARDE, inte en rad/array. Koden behandlade resultatet som en associativ array (`$row['total']`). Fixat: andrat till `getRow()` som returnerar en hel rad. **VIKTIGT: `getOne()` = skalarvarde, `getRow()` = en rad som array, `getAll()` = alla rader.**
+- **Ekonomi-vy omskriven till per-order-tabell**: Hela admin-ekonomivyn (`/admin/promotor.php`) omskriven fran aggregerad sammanfattning per betalningsmottagare till en detaljerad per-order-tabell. Kolumner: Ordernr, Event, Belopp, Betalsatt, Avgift betalning, Plattformsavgift, Netto. Summarad i tfoot. Mobil portrait visar kort-vy med komprimerad info.
+- **Swish-avgift andrad fran 2 kr till 3 kr**: `$SWISH_FEE = 3.00` (var 2.00). Bekraftat av anvandaren.
+- **Debugpanel borttagen**: Mappning-diagnostik (7-path mapping) borttagen fran vyn. Mappningen behovs inte langre - fragan hamtar helt enkelt alla betalda ordrar for aret direkt.
+- **Forenklad datahamtning**: Istallet for komplex 7-stegs event→recipient-mappning hamtar vyn nu alla betalda ordrar direkt med `SELECT FROM orders WHERE payment_status = 'paid' AND YEAR(created_at) = ?`. Plattformsavgift hamtas fran forsta aktiva payment_recipient.
+- **Migration 050 visade alltid rod i migrations.php**: Andrad fran data-check till kolumn-check.
+- **Backfill Stripe-avgifter visade 0 ordrar (TREDJE GANGEN)**: `getOne()` returnerar skalarvarde, inte array. Fixat med `getRow()`.
 
-### Ekonomi-vyns arkitektur (efter fix 2026-02-19)
-- **Event→Recipient mappning**: Byggs i PHP (inte SQL) via 4 fallback-steg
-- **Prioritet**: events.payment_recipient_id > series.payment_recipient_id (via series_id) > series.payment_recipient_id (via series_events) > order_items.payment_recipient_id
-- **Felhantering**: Varje steg wrappat i try/catch - fungerar aven om kolumner saknas i databasen
-- **Layout**: admin-table med expanderbara detaljrader (klicka rad → visa intakter/avgifter/bankinfo)
-- **Mobil**: Portrait phones visar card-vy, landscape/tablet visar tabell
+### Ekonomi-vyns arkitektur (efter omskrivning 2026-02-19)
+- **Datakalla**: Alla betalda ordrar for valt ar hamtas direkt (ingen mappning behövs)
+- **Per-order avgifter**: Stripe: faktisk fee fran `orders.stripe_fee` eller uppskattning (1,5%+2kr). Swish: alltid 3 kr. Manuell/gratis: 0 kr.
+- **Plattformsavgift**: Hamtas fran `payment_recipients.platform_fee_percent` (forsta aktiva), redigerbar inline
+- **Layout**: admin-table med 7 kolumner + summarad i tfoot
+- **Mobil**: Portrait phones visar kort-vy (`order-cards`), landscape/desktop visar tabell
+- **Stats-kort**: Forsaljning, Totala avgifter, Netto efter avgifter, Antal ordrar
 
 ## TIDIGARE FIXAR (2026-02-18)
 
