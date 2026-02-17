@@ -25,8 +25,17 @@
 
 # CHANGELOG
 
-### 2026-02-18 (Sponsorsystem: Custom images, rotation, logo-fix)
+### 2026-02-18 (Utbetalningar & Ekonomi + Sponsorsystem)
 - **Branch:** claude/fix-mobile-payment-layout-UVxvi
+
+- **Ny funktion: Promotor utbetalningsvy**
+  - `/admin/promotor.php` visar ekonomisk sammanstallning for admin
+  - Per betalningsmottagare: bruttointakter, moms, Stripe/Swish-avgifter, plattformsavgift, nettoutbetalning
+  - Filtrering per ar och betalningsmottagare
+  - Visar bankuppgifter (Swish, bankgiro, bankkonto) for utbetalning
+  - Promotor-rollen ser fortfarande sin vanliga tavlingsvy
+
+### 2026-02-18 (Sponsorsystem: Custom images, rotation, logo-fix)
 
 - **Ny funktion: Custom images per reklamplats**
   - Migration 048: `custom_media_id` i `sponsor_placements` for bild-override per placement
