@@ -10,6 +10,7 @@
 class GlobalSponsorManager {
 
     private $pdo;
+    private $hasCustomMedia = null;
 
     public function __construct($pdo = null) {
         if ($pdo) {
@@ -18,6 +19,21 @@ class GlobalSponsorManager {
             global $pdo;
             $this->pdo = $pdo;
         }
+    }
+
+    /**
+     * Kolla om custom_media_id-kolumnen finns (migration 048)
+     */
+    private function hasCustomMediaColumn(): bool {
+        if ($this->hasCustomMedia === null) {
+            try {
+                $check = $this->pdo->query("SHOW COLUMNS FROM sponsor_placements LIKE 'custom_media_id'")->fetch();
+                $this->hasCustomMedia = ($check !== false);
+            } catch (Exception $e) {
+                $this->hasCustomMedia = false;
+            }
+        }
+        return $this->hasCustomMedia;
     }
 
     /**
@@ -43,6 +59,11 @@ class GlobalSponsorManager {
      */
     public function getSponsorsForPlacement(string $page_type, string $position, int $limit = 5): array {
         try {
+            $hasCustom = $this->hasCustomMediaColumn();
+
+            $customSelect = $hasCustom ? "sp.custom_media_id, mc.filepath as custom_image_url," : "";
+            $customJoin = $hasCustom ? "LEFT JOIN media mc ON sp.custom_media_id = mc.id" : "";
+
             $sql = "SELECT
                         s.id,
                         s.name,
@@ -57,14 +78,13 @@ class GlobalSponsorManager {
                         sp.clicks,
                         sp.impressions_current,
                         sp.impressions_target,
-                        sp.custom_media_id,
-                        m.filepath as logo_url,
-                        mc.filepath as custom_image_url
+                        {$customSelect}
+                        m.filepath as logo_url
                     FROM sponsors s
                     INNER JOIN sponsor_placements sp ON s.id = sp.sponsor_id
                     LEFT JOIN media m ON s.logo_media_id = m.id
                     LEFT JOIN media mb ON s.logo_banner_id = mb.id
-                    LEFT JOIN media mc ON sp.custom_media_id = mc.id
+                    {$customJoin}
                     WHERE sp.page_type IN (:page_type, 'all')
                     AND sp.position = :position
                     AND sp.is_active = 1
@@ -358,12 +378,16 @@ class GlobalSponsorManager {
      */
     public function getAllPlacements(): array {
         try {
+            $hasCustom = $this->hasCustomMediaColumn();
+            $customSelect = $hasCustom ? ", mc.filepath as custom_image_path, mc.filename as custom_image_name" : "";
+            $customJoin = $hasCustom ? "LEFT JOIN media mc ON sp.custom_media_id = mc.id" : "";
+
             $stmt = $this->pdo->query("
-                SELECT sp.*, s.name as sponsor_name, s.tier as sponsor_tier,
-                       mc.filepath as custom_image_path, mc.filename as custom_image_name
+                SELECT sp.*, s.name as sponsor_name, s.tier as sponsor_tier
+                       {$customSelect}
                 FROM sponsor_placements sp
                 INNER JOIN sponsors s ON sp.sponsor_id = s.id
-                LEFT JOIN media mc ON sp.custom_media_id = mc.id
+                {$customJoin}
                 ORDER BY sp.page_type, sp.position, sp.display_order
             ");
             return $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -378,15 +402,12 @@ class GlobalSponsorManager {
      */
     public function createPlacement(array $data): array {
         try {
-            $stmt = $this->pdo->prepare("
-                INSERT INTO sponsor_placements
-                (sponsor_id, custom_media_id, page_type, position, display_order, is_active, start_date, end_date, impressions_target)
-                VALUES (:sponsor_id, :custom_media_id, :page_type, :position, :display_order, :is_active, :start_date, :end_date, :impressions_target)
-            ");
+            $hasCustom = $this->hasCustomMediaColumn();
 
-            $stmt->execute([
+            $cols = 'sponsor_id, page_type, position, display_order, is_active, start_date, end_date, impressions_target';
+            $vals = ':sponsor_id, :page_type, :position, :display_order, :is_active, :start_date, :end_date, :impressions_target';
+            $params = [
                 ':sponsor_id' => $data['sponsor_id'],
-                ':custom_media_id' => $data['custom_media_id'] ?: null,
                 ':page_type' => $data['page_type'],
                 ':position' => $data['position'],
                 ':display_order' => $data['display_order'] ?? 0,
@@ -394,7 +415,16 @@ class GlobalSponsorManager {
                 ':start_date' => $data['start_date'] ?: null,
                 ':end_date' => $data['end_date'] ?: null,
                 ':impressions_target' => $data['impressions_target'] ?: null
-            ]);
+            ];
+
+            if ($hasCustom) {
+                $cols .= ', custom_media_id';
+                $vals .= ', :custom_media_id';
+                $params[':custom_media_id'] = !empty($data['custom_media_id']) ? $data['custom_media_id'] : null;
+            }
+
+            $stmt = $this->pdo->prepare("INSERT INTO sponsor_placements ({$cols}) VALUES ({$vals})");
+            $stmt->execute($params);
 
             return ['success' => true, 'id' => $this->pdo->lastInsertId()];
         } catch (PDOException $e) {
@@ -408,24 +438,14 @@ class GlobalSponsorManager {
      */
     public function updatePlacement(int $id, array $data): array {
         try {
-            $stmt = $this->pdo->prepare("
-                UPDATE sponsor_placements SET
-                    sponsor_id = :sponsor_id,
-                    custom_media_id = :custom_media_id,
-                    page_type = :page_type,
-                    position = :position,
-                    display_order = :display_order,
-                    is_active = :is_active,
-                    start_date = :start_date,
-                    end_date = :end_date,
-                    impressions_target = :impressions_target
-                WHERE id = :id
-            ");
+            $hasCustom = $this->hasCustomMediaColumn();
 
-            $stmt->execute([
+            $sets = 'sponsor_id = :sponsor_id, page_type = :page_type, position = :position,
+                     display_order = :display_order, is_active = :is_active,
+                     start_date = :start_date, end_date = :end_date, impressions_target = :impressions_target';
+            $params = [
                 ':id' => $id,
                 ':sponsor_id' => $data['sponsor_id'],
-                ':custom_media_id' => $data['custom_media_id'] ?: null,
                 ':page_type' => $data['page_type'],
                 ':position' => $data['position'],
                 ':display_order' => $data['display_order'] ?? 0,
@@ -433,7 +453,15 @@ class GlobalSponsorManager {
                 ':start_date' => $data['start_date'] ?: null,
                 ':end_date' => $data['end_date'] ?: null,
                 ':impressions_target' => $data['impressions_target'] ?: null
-            ]);
+            ];
+
+            if ($hasCustom) {
+                $sets .= ', custom_media_id = :custom_media_id';
+                $params[':custom_media_id'] = !empty($data['custom_media_id']) ? $data['custom_media_id'] : null;
+            }
+
+            $stmt = $this->pdo->prepare("UPDATE sponsor_placements SET {$sets} WHERE id = :id");
+            $stmt->execute($params);
 
             return ['success' => true];
         } catch (PDOException $e) {

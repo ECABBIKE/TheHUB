@@ -59,6 +59,13 @@
 - **HTTPS-undantag:** .htaccess skippar HTTPS-redirect for bade `/api/webhooks/` och `/api/stripe-webhook.php`
 - `STRIPE_MODE=test|live` i .env styr vilka nycklar som anvands (via `env()` i config.php)
 
+### Faktiska Stripe-avgifter (migration 049)
+- `orders.stripe_fee` - Faktisk avgift i SEK fran Stripes `balance_transaction`
+- `orders.stripe_balance_transaction_id` - ID for fee-lookup
+- Hamtas automatiskt av webhook vid betalning (`getPaymentFee()` i StripeClient)
+- Backfill-verktyg: `/admin/tools/backfill-stripe-fees.php` for befintliga ordrar
+- Promotor-sidan anvander faktiska fees nar de finns, uppskattar for resten
+
 ### Moms
 - 6% moms pa eventregistreringar (svensk sport-moms)
 - Beraknas som: `total * 6 / 106`
@@ -223,10 +230,16 @@
 
 ## SENASTE FIXAR (2026-02-18)
 
+- **Faktiska Stripe-avgifter fran webhook**: Stripe webhook hamtar nu riktiga avgifter fran `balance_transaction` via API-anrop efter betalning. Lagras i `orders.stripe_fee` och `orders.stripe_balance_transaction_id` (migration 049). Promotor-sidan anvander faktiska avgifter nar de finns, faller tillbaka pa uppskattningar (1,5%+2kr) for aldre ordrar.
+- **Backfill-verktyg for Stripe-avgifter**: `/admin/tools/backfill-stripe-fees.php` hamtar faktiska avgifter for redan betalda ordrar via Stripe API. Kor i batchar om 10 med rate limiting. Lankad fran tools.php.
+- **Plattformsavgift redigerbar**: Admin kan nu andra plattformsavgift per betalningsmottagare direkt i utbetalningsvyn (`/admin/promotor.php`). Klicka pennan vid "Plattformsavgift" for inline-redigering. Sparas via AJAX.
+- **Avgiftsindikatorer**: Stripe-avgifter i utbetalningsvyn visar nu badges "Faktiska" (gron), "Delvis faktiska" (gul) eller "Uppskattade" (gra) beroende pa om faktisk data finns.
 - **Sponsorplacering: Custom images fran mediaarkivet**: Migration 048 lagger till `custom_media_id` i `sponsor_placements`. Admin kan nu valja fritt fran alla mappar i mediaarkivet (sponsors, annonser, branding, etc.) nar bilder tilldelas reklamplatser.
 - **Annonsrotation**: Bannerpositioner (`header_banner`, `header_inline`) roterar nu mellan sponsorer per besok via `ORDER BY RAND() LIMIT 1`.
 - **Resultat-sponsorlogga fixad**: `.class-sponsor-logo` har nu `max-width: 200px` for att forhindra att 1200x150-bannern stracker sig for bred i resultatheadern.
 - **Logo-fallback ordning forbattrad**: `get_sponsor_logo_for_placement()` provar nu `legacy_logo_url` och `logo_url` FORE banner, sa standardloggan anvands istallet for den breda bannern nar bada finns.
+- **Promotor utbetalningsvy (admin)**: `/admin/promotor.php` visar nu ekonomisk sammanstallning for admins. Per betalningsmottagare: bruttointakter, moms (6%), Stripe-avgifter (faktiska eller uppskattade), Swish-avgifter (~2kr), plattformsavgift (konfigurerbar per mottagare), nettoutbetalning. Filtrering per ar och mottagare. Promotor-rollen ser fortfarande sin vanliga vy.
+- **custom_media_id graceful fallback**: GlobalSponsorManager kollar nu om kolumnen finns innan den anvands. Forhindrar krasch om migration 048 inte korts annu.
 - **Sponsors API fixad**: `/api/sponsors.php` hade ersatts med en debug-version som returnerade HTML istallet for JSON. Alla CRUD-operationer (get, list, create, update, delete) fungerade inte. Aterskriven till riktig JSON API.
 - **Forhandsvisning av reklamplatser**: Ny sida `/admin/sponsor-placements-preview.php` som visuellt visar hur varje placement-position (header_inline, header_banner, content_top, content_bottom, footer) ser ut pa en simulerad sida. Inkluderar responsiv demo och specifikationstabeller.
 - **Navigation synkad over alla plattformar (desktop, mobil, PWA)**:
