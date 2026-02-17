@@ -172,6 +172,9 @@ $migrationChecks = [
     '050_backfill_order_items_recipient.sql' => [
         'columns' => ['order_items.payment_recipient_id']
     ],
+    '051_orders_series_id_and_platform_fee_fixed.sql' => [
+        'columns' => ['orders.series_id', 'payment_recipients.platform_fee_fixed', 'payment_recipients.platform_fee_type']
+    ],
 ];
 
 // ============================================================================

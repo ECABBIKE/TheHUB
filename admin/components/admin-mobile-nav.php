@@ -31,11 +31,10 @@ if ($isPromotor) {
     // MUST be identical in sidebar.php and here
     // ========================================
     $adminNav = [
-        ['id' => 'dashboard', 'label' => 'Tävlingar', 'icon' => 'calendar', 'url' => '/admin/promotor.php'],
-        ['id' => 'series', 'label' => 'Serier', 'icon' => 'medal', 'url' => '/admin/promotor-series.php'],
-        ['id' => 'media', 'label' => 'Media', 'icon' => 'image', 'url' => '/admin/media.php'],
-        ['id' => 'sponsors', 'label' => 'Sponsorer', 'icon' => 'heart-handshake', 'url' => '/admin/sponsors.php'],
-        ['id' => 'onsite', 'label' => 'Direktanmälan', 'icon' => 'user-plus', 'url' => '/admin/onsite-registration.php'],
+        ['id' => 'dashboard', 'label' => 'Event', 'icon' => 'calendar', 'url' => '/admin/promotor.php?tab=event'],
+        ['id' => 'series', 'label' => 'Serier', 'icon' => 'medal', 'url' => '/admin/promotor.php?tab=serier'],
+        ['id' => 'ekonomi', 'label' => 'Ekonomi', 'icon' => 'wallet', 'url' => '/admin/promotor.php?tab=ekonomi'],
+        ['id' => 'media', 'label' => 'Media', 'icon' => 'image', 'url' => '/admin/promotor.php?tab=media'],
     ];
 } else {
     // ========================================
@@ -80,40 +79,32 @@ $currentPath = parse_url($requestUri, PHP_URL_PATH);
 $currentPageFile = basename($currentPath);
 
 function isAdminMobileNavActive($item, $currentPath, $currentPageFile) {
-    // Promotor dashboard
+    $currentTab = $_GET['tab'] ?? '';
+    $isPromotorPage = ($currentPath === '/admin/promotor.php' || $currentPath === '/admin/promotor');
+
+    // Promotor tab-based navigation
     if ($item['id'] === 'dashboard') {
-        return $currentPath === '/admin/dashboard' ||
-               $currentPath === '/admin/dashboard.php' ||
-               $currentPath === '/admin/promotor' ||
-               $currentPath === '/admin/promotor.php' ||
-               $currentPath === '/admin/' ||
-               $currentPath === '/admin';
+        if ($isPromotorPage && ($currentTab === 'event' || $currentTab === '')) return true;
+        return $currentPath === '/admin/dashboard' || $currentPath === '/admin/dashboard.php' ||
+               $currentPath === '/admin/' || $currentPath === '/admin';
     }
 
-    // Promotor series
     if ($item['id'] === 'series') {
-        return strpos($currentPath, '/admin/promotor-series') !== false ||
-               strpos($currentPath, '/admin/series') !== false;
+        if ($isPromotorPage && $currentTab === 'serier') return true;
+        return strpos($currentPath, '/admin/promotor-series') !== false;
     }
 
-    // Promotor media
+    if ($item['id'] === 'ekonomi') {
+        return $isPromotorPage && $currentTab === 'ekonomi';
+    }
+
     if ($item['id'] === 'media') {
+        if ($isPromotorPage && $currentTab === 'media') return true;
         return strpos($currentPath, '/admin/media') !== false;
-    }
-
-    // Promotor sponsors
-    if ($item['id'] === 'sponsors') {
-        return strpos($currentPath, '/admin/sponsor') !== false;
-    }
-
-    // Promotor onsite
-    if ($item['id'] === 'onsite') {
-        return strpos($currentPath, '/admin/onsite') !== false;
     }
 
     // Admin groups - check if current page is in this group's pages
     if (isset($item['pages']) && is_array($item['pages'])) {
-        // Strip .php from current page if needed
         $pageWithExt = $currentPageFile;
         if (!str_ends_with($pageWithExt, '.php')) {
             $pageWithExt .= '.php';

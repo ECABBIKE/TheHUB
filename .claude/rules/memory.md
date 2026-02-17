@@ -1,6 +1,41 @@
 # TheHUB - Memory / Session Knowledge
 
-> Senast uppdaterad: 2026-02-19
+> Senast uppdaterad: 2026-02-17
+
+---
+
+## PROMOTOR-GRANSSNITT (redesign 2026-02-17)
+
+### Ny flikstruktur
+- **Event** - Event-kort med anmalda (inkl serieanmalningar), brutto/netto-intakter, redigera-lank
+  - Sorteras: kommande forst (datum ASC), genomforda sist
+  - Visar bade event-registreringar OCH serie-registreringar via `series_registration_events`
+- **Serier** - Serieanmalan oppen/stangd, serierabatt, prismall, banner
+- **Ekonomi** - Detaljerad ordertabell med avgifter, rabattkoder. Samma layout som admin-ekonomivyn. Filter: ar, manad, event
+  - Lank till rabattkodshantering (`/admin/discount-codes.php` stodjer promotor)
+- **Media** - Lankar till mediabiblioteket med formatguide
+
+### Borttaget fran promotor-nav
+- Swish (all Swish-konfiguration borttagen fran promotor)
+- Direktanmalan (ska byggas om som QR-baserad)
+- Sponsorer (hanteras via Media istallet)
+
+### Navigation
+- Desktop sidebar och mobil bottomnav uppdaterade till 4 lankar: Event, Serier, Ekonomi, Media
+- Alla pekar pa `/admin/promotor.php?tab=X` (utom promotor-series som har egen sida)
+- Aktiv-markering baseras pa `$_GET['tab']`
+
+### Serieanmalningar i ekonomin (bugg-fix)
+- **Problem:** `orders.event_id` sattes till forsta eventet i orderns items. Serieanmalningar hamnade under ETT event - ovriga (t.ex. Tranas, Varnamo) visade 0 ordrar
+- **Fix:** Migration 051 lagger till `orders.series_id`. Order-manager satter nu `series_id` vid serieanmalningar. Ekonomi-vyn inkluderar ordrar med matchande `series_id` ELLER `event_id`
+- **Backfill:** Migrationen uppdaterar befintliga ordrar via `order_items → series_registrations`
+
+### Plattformsavgifter: stod for fast belopp (migration 051)
+- `payment_recipients.platform_fee_fixed` - Fast avgift per anmalan i SEK
+- `payment_recipients.platform_fee_type` - ENUM: `percent`, `fixed`, `both`
+- Berakning: percent = `amount * pct / 100`, fixed = fast summa per order, both = bada
+- Default: `percent` med 2.00% (bakatompatibelt)
+- Admin kan andra typ och varde i promotor.php (admin-vyn)
 
 ---
 

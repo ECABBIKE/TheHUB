@@ -72,12 +72,16 @@ if ($isAdmin) {
         $hasStripeFeeCol = !empty($colCheck);
     } catch (Exception $e) {}
 
-    // Get platform fee percent (from first active recipient)
+    // Get platform fee config (from first active recipient)
     $platformFeePct = 2.00;
+    $platformFeeFixed = 0;
+    $platformFeeType = 'percent';
     try {
-        $prRow = $db->getRow("SELECT id, name, platform_fee_percent, swish_number, bankgiro, bank_account, bank_name, bank_clearing, contact_email, org_number FROM payment_recipients WHERE active = 1 ORDER BY id LIMIT 1");
+        $prRow = $db->getRow("SELECT id, name, platform_fee_percent, platform_fee_fixed, platform_fee_type, swish_number, bankgiro, bank_account, bank_name, bank_clearing, contact_email, org_number FROM payment_recipients WHERE active = 1 ORDER BY id LIMIT 1");
         if ($prRow) {
             $platformFeePct = (float)($prRow['platform_fee_percent'] ?? 2.00);
+            $platformFeeFixed = (float)($prRow['platform_fee_fixed'] ?? 0);
+            $platformFeeType = $prRow['platform_fee_type'] ?? 'percent';
             $recipientInfo = $prRow;
         }
     } catch (Exception $e) {}
@@ -147,8 +151,14 @@ if ($isAdmin) {
             $order['fee_type'] = 'none';
         }
 
-        // Platform fee
-        $order['platform_fee'] = round($amount * $platformFeePct / 100, 2);
+        // Platform fee (supports percent, fixed, or both)
+        if ($platformFeeType === 'fixed') {
+            $order['platform_fee'] = $platformFeeFixed;
+        } elseif ($platformFeeType === 'both') {
+            $order['platform_fee'] = round(($amount * $platformFeePct / 100) + $platformFeeFixed, 2);
+        } else {
+            $order['platform_fee'] = round($amount * $platformFeePct / 100, 2);
+        }
 
         // Net after fees
         $order['net_amount'] = round($amount - $order['payment_fee'] - $order['platform_fee'], 2);
@@ -195,22 +205,62 @@ if ($isAdmin) {
 }
 
 // ============================================================
-// PROMOTOR VIEW: Their assigned events/series
+// PROMOTOR VIEW: Their assigned events/series/economy/media
 // ============================================================
-$series = [];
-$events = [];
+$promotorTab = $_GET['tab'] ?? 'event';
+$promotorSeries = [];
+$promotorEvents = [];
+$promotorOrders = [];
+$promotorOrderTotals = [];
 
 if (!$isAdmin) {
-    // Get promotor's series
+    // Fee constants for promotor economy view
+    $STRIPE_PERCENT = 1.5;
+    $STRIPE_FIXED = 2.00;
+    $SWISH_FEE = 3.00;
+
+    // Check if stripe_fee column exists
+    $hasStripeFeeCol = false;
     try {
-        $series = $db->getAll("
-            SELECT s.*,
+        $colCheck = $db->getAll("SHOW COLUMNS FROM orders LIKE 'stripe_fee'");
+        $hasStripeFeeCol = !empty($colCheck);
+    } catch (Exception $e) {}
+
+    // Check if series_id column exists on orders
+    $hasOrderSeriesId = false;
+    try {
+        $colCheck2 = $db->getAll("SHOW COLUMNS FROM orders LIKE 'series_id'");
+        $hasOrderSeriesId = !empty($colCheck2);
+    } catch (Exception $e) {}
+
+    // Get promotor's series IDs
+    $promotorSeriesIds = [];
+    try {
+        $psRows = $db->getAll("SELECT series_id FROM promotor_series WHERE user_id = ?", [$userId]);
+        $promotorSeriesIds = array_column($psRows, 'series_id');
+    } catch (Exception $e) {}
+
+    // Get promotor's event IDs
+    $promotorEventIds = [];
+    try {
+        $peRows = $db->getAll("SELECT event_id FROM promotor_events WHERE user_id = ?", [$userId]);
+        $promotorEventIds = array_column($peRows, 'event_id');
+    } catch (Exception $e) {}
+
+    // Get promotor's series with settings
+    try {
+        $promotorSeries = $db->getAll("
+            SELECT s.id, s.name, s.year, s.logo,
+                   s.allow_series_registration, s.series_discount_percent,
+                   s.default_pricing_template_id,
                    m.filepath as banner_url,
-                   COUNT(DISTINCT e.id) as event_count
+                   COUNT(DISTINCT e.id) as event_count,
+                   pt.name as template_name
             FROM series s
             JOIN promotor_series ps ON ps.series_id = s.id
             LEFT JOIN media m ON s.banner_media_id = m.id
             LEFT JOIN events e ON e.series_id = s.id AND YEAR(e.date) = YEAR(CURDATE())
+            LEFT JOIN pricing_templates pt ON pt.id = s.default_pricing_template_id
             WHERE ps.user_id = ?
             GROUP BY s.id
             ORDER BY s.name
@@ -219,47 +269,278 @@ if (!$isAdmin) {
         error_log("Promotor series error: " . $e->getMessage());
     }
 
-    // Get promotor's events
+    // Get promotor's events with registration + revenue data
+    // Sort: upcoming first (by date ASC), then past events after
     try {
-        $events = $db->getAll("
-            SELECT e.*,
-                   s.name as series_name,
-                   s.logo as series_logo,
-                   COALESCE(reg.registration_count, 0) as registration_count,
-                   COALESCE(reg.confirmed_count, 0) as confirmed_count,
+        $promotorEvents = $db->getAll("
+            SELECT e.id, e.name, e.date, e.location, e.active, e.series_id,
+                   e.max_participants, e.registration_open,
+                   s.name as series_name, s.logo as series_logo,
+                   COALESCE(reg.total_count, 0) as total_registrations,
+                   COALESCE(reg.paid_count, 0) as paid_count,
                    COALESCE(reg.pending_count, 0) as pending_count,
-                   COALESCE(ord.total_paid, 0) as total_paid,
-                   COALESCE(ord.total_pending, 0) as total_pending
+                   COALESCE(ord.gross_revenue, 0) as gross_revenue,
+                   COALESCE(ord.order_count, 0) as order_count,
+                   COALESCE(series_reg.series_count, 0) as series_registration_count,
+                   CASE WHEN e.date >= CURDATE() THEN 0 ELSE 1 END as is_past
             FROM events e
             LEFT JOIN series s ON e.series_id = s.id
             JOIN promotor_events pe ON pe.event_id = e.id
             LEFT JOIN (
                 SELECT event_id,
-                       COUNT(*) as registration_count,
-                       SUM(CASE WHEN status = 'confirmed' THEN 1 ELSE 0 END) as confirmed_count,
-                       SUM(CASE WHEN status = 'pending' THEN 1 ELSE 0 END) as pending_count
+                       COUNT(*) as total_count,
+                       SUM(CASE WHEN payment_status = 'paid' THEN 1 ELSE 0 END) as paid_count,
+                       SUM(CASE WHEN payment_status = 'pending' THEN 1 ELSE 0 END) as pending_count
                 FROM event_registrations
+                WHERE status != 'cancelled'
                 GROUP BY event_id
             ) reg ON reg.event_id = e.id
             LEFT JOIN (
                 SELECT event_id,
-                       SUM(CASE WHEN payment_status = 'paid' THEN total_amount ELSE 0 END) as total_paid,
-                       SUM(CASE WHEN payment_status = 'pending' THEN total_amount ELSE 0 END) as total_pending
+                       SUM(CASE WHEN payment_status = 'paid' THEN total_amount ELSE 0 END) as gross_revenue,
+                       SUM(CASE WHEN payment_status = 'paid' THEN 1 ELSE 0 END) as order_count
                 FROM orders
                 GROUP BY event_id
             ) ord ON ord.event_id = e.id
+            LEFT JOIN (
+                SELECT sre.event_id, COUNT(DISTINCT sr.id) as series_count
+                FROM series_registration_events sre
+                JOIN series_registrations sr ON sr.id = sre.series_registration_id
+                WHERE sr.payment_status = 'paid' AND sr.status != 'cancelled'
+                GROUP BY sre.event_id
+            ) series_reg ON series_reg.event_id = e.id
             WHERE pe.user_id = ?
-            ORDER BY e.date DESC
+            ORDER BY is_past ASC, e.date ASC
         ", [$userId]);
     } catch (Exception $e) {
         error_log("Promotor events error: " . $e->getMessage());
     }
+
+    // Calculate net revenue per event (after fees)
+    // Get platform fee for promotor's recipient
+    $promotorPlatformPct = 2.00;
+    $promotorPlatformFixed = 0;
+    $promotorFeeType = 'percent';
+    $promotorRecipientInfo = null;
+    try {
+        // Find recipient via series or events
+        $recipientQuery = null;
+        if (!empty($promotorSeriesIds)) {
+            $placeholders = implode(',', array_fill(0, count($promotorSeriesIds), '?'));
+            $recipientQuery = $db->getRow("
+                SELECT pr.* FROM payment_recipients pr
+                JOIN series s ON s.payment_recipient_id = pr.id
+                WHERE s.id IN ({$placeholders}) AND pr.active = 1
+                LIMIT 1
+            ", $promotorSeriesIds);
+        }
+        if (!$recipientQuery && !empty($promotorEventIds)) {
+            $placeholders = implode(',', array_fill(0, count($promotorEventIds), '?'));
+            $recipientQuery = $db->getRow("
+                SELECT pr.* FROM payment_recipients pr
+                JOIN events e ON e.payment_recipient_id = pr.id
+                WHERE e.id IN ({$placeholders}) AND pr.active = 1
+                LIMIT 1
+            ", $promotorEventIds);
+        }
+        if ($recipientQuery) {
+            $promotorRecipientInfo = $recipientQuery;
+            $promotorPlatformPct = (float)($recipientQuery['platform_fee_percent'] ?? 2.00);
+            $promotorPlatformFixed = (float)($recipientQuery['platform_fee_fixed'] ?? 0);
+            $promotorFeeType = $recipientQuery['platform_fee_type'] ?? 'percent';
+        }
+    } catch (Exception $e) {}
+
+    // For event cards: calculate net per event
+    foreach ($promotorEvents as &$ev) {
+        $gross = (float)$ev['gross_revenue'];
+        $orderCnt = (int)$ev['order_count'];
+        // Estimate fees
+        $estPaymentFees = $orderCnt * (($gross / max($orderCnt, 1)) * $STRIPE_PERCENT / 100 + $STRIPE_FIXED);
+        if ($promotorFeeType === 'fixed') {
+            $estPlatformFee = $promotorPlatformFixed * (int)$ev['paid_count'];
+        } elseif ($promotorFeeType === 'both') {
+            $estPlatformFee = ($gross * $promotorPlatformPct / 100) + ($promotorPlatformFixed * (int)$ev['paid_count']);
+        } else {
+            $estPlatformFee = $gross * $promotorPlatformPct / 100;
+        }
+        $ev['net_revenue'] = round($gross - $estPaymentFees - $estPlatformFee, 2);
+        $ev['total_with_series'] = (int)$ev['total_registrations'] + (int)$ev['series_registration_count'];
+    }
+    unset($ev);
+
+    // ---- ECONOMY TAB DATA ----
+    if ($promotorTab === 'ekonomi') {
+        $ecoYear = isset($_GET['year']) ? intval($_GET['year']) : (int)date('Y');
+        $ecoMonth = isset($_GET['month']) ? intval($_GET['month']) : 0;
+        $ecoEvent = isset($_GET['event']) ? intval($_GET['event']) : 0;
+
+        // Build conditions for promotor's orders (via their events or series)
+        $allEventIds = $promotorEventIds;
+        // Also get events from promotor's series
+        if (!empty($promotorSeriesIds)) {
+            try {
+                $placeholders = implode(',', array_fill(0, count($promotorSeriesIds), '?'));
+                $seriesEventRows = $db->getAll("SELECT id FROM events WHERE series_id IN ({$placeholders})", $promotorSeriesIds);
+                foreach ($seriesEventRows as $ser) {
+                    if (!in_array($ser['id'], $allEventIds)) $allEventIds[] = $ser['id'];
+                }
+            } catch (Exception $e) {}
+        }
+
+        if (!empty($allEventIds)) {
+            $placeholders = implode(',', array_fill(0, count($allEventIds), '?'));
+            $stripeFeeCol = $hasStripeFeeCol ? "o.stripe_fee," : "NULL as stripe_fee,";
+
+            $conditions = ["o.payment_status = 'paid'", "YEAR(o.created_at) = ?"];
+            $params = [$ecoYear];
+
+            if ($ecoMonth > 0 && $ecoMonth <= 12) {
+                $conditions[] = "MONTH(o.created_at) = ?";
+                $params[] = $ecoMonth;
+            }
+            if ($ecoEvent > 0) {
+                $conditions[] = "o.event_id = ?";
+                $params[] = $ecoEvent;
+            }
+
+            // Include orders for promotor's events OR series
+            $eventCondition = "o.event_id IN ({$placeholders})";
+            $eventParams = $allEventIds;
+            if ($hasOrderSeriesId && !empty($promotorSeriesIds)) {
+                $sPlaceholders = implode(',', array_fill(0, count($promotorSeriesIds), '?'));
+                $eventCondition = "({$eventCondition} OR o.series_id IN ({$sPlaceholders}))";
+                $eventParams = array_merge($eventParams, $promotorSeriesIds);
+            }
+            $conditions[] = $eventCondition;
+
+            $whereClause = implode(' AND ', $conditions);
+            $allParams = array_merge($params, $eventParams);
+
+            try {
+                $promotorOrders = $db->getAll("
+                    SELECT o.id, o.order_number, o.total_amount, o.payment_method,
+                           {$stripeFeeCol}
+                           o.event_id, o.created_at, o.discount,
+                           e.name as event_name,
+                           COALESCE(dc.code, '') as discount_code
+                    FROM orders o
+                    LEFT JOIN events e ON o.event_id = e.id
+                    LEFT JOIN discount_codes dc ON o.discount_code_id = dc.id
+                    WHERE {$whereClause}
+                    ORDER BY o.created_at DESC
+                ", $allParams);
+            } catch (Exception $e) {
+                // discount_code_id might not exist, retry without
+                try {
+                    $promotorOrders = $db->getAll("
+                        SELECT o.id, o.order_number, o.total_amount, o.payment_method,
+                               {$stripeFeeCol}
+                               o.event_id, o.created_at, o.discount,
+                               e.name as event_name,
+                               '' as discount_code
+                        FROM orders o
+                        LEFT JOIN events e ON o.event_id = e.id
+                        WHERE {$whereClause}
+                        ORDER BY o.created_at DESC
+                    ", $allParams);
+                } catch (Exception $e2) {
+                    error_log("Promotor economy query error: " . $e2->getMessage());
+                }
+            }
+        }
+
+        // Calculate totals
+        $promotorOrderTotals = [
+            'gross' => 0, 'payment_fees' => 0, 'platform_fees' => 0,
+            'net' => 0, 'order_count' => 0, 'discounts' => 0,
+            'card_count' => 0, 'swish_count' => 0
+        ];
+
+        foreach ($promotorOrders as &$order) {
+            $amount = (float)$order['total_amount'];
+            $method = $order['payment_method'] ?? 'card';
+
+            if (in_array($method, ['swish', 'swish_csv'])) {
+                $order['payment_fee'] = $SWISH_FEE;
+                $order['fee_type'] = 'actual';
+                $promotorOrderTotals['swish_count']++;
+            } elseif ($method === 'card') {
+                if ($order['stripe_fee'] !== null && (float)$order['stripe_fee'] > 0) {
+                    $order['payment_fee'] = round((float)$order['stripe_fee'], 2);
+                    $order['fee_type'] = 'actual';
+                } else {
+                    $order['payment_fee'] = round(($amount * $STRIPE_PERCENT / 100) + $STRIPE_FIXED, 2);
+                    $order['fee_type'] = 'estimated';
+                }
+                $promotorOrderTotals['card_count']++;
+            } else {
+                $order['payment_fee'] = 0;
+                $order['fee_type'] = 'none';
+            }
+
+            // Platform fee calculation based on type
+            if ($promotorFeeType === 'fixed') {
+                $order['platform_fee'] = $promotorPlatformFixed;
+            } elseif ($promotorFeeType === 'both') {
+                $order['platform_fee'] = round(($amount * $promotorPlatformPct / 100) + $promotorPlatformFixed, 2);
+            } else {
+                $order['platform_fee'] = round($amount * $promotorPlatformPct / 100, 2);
+            }
+
+            $order['net_amount'] = round($amount - $order['payment_fee'] - $order['platform_fee'], 2);
+
+            $promotorOrderTotals['gross'] += $amount;
+            $promotorOrderTotals['payment_fees'] += $order['payment_fee'];
+            $promotorOrderTotals['platform_fees'] += $order['platform_fee'];
+            $promotorOrderTotals['net'] += $order['net_amount'];
+            $promotorOrderTotals['discounts'] += (float)($order['discount'] ?? 0);
+            $promotorOrderTotals['order_count']++;
+        }
+        unset($order);
+
+        // Available years for promotor
+        $promotorYears = [];
+        if (!empty($allEventIds)) {
+            $placeholders = implode(',', array_fill(0, count($allEventIds), '?'));
+            try {
+                $promotorYears = $db->getAll("
+                    SELECT DISTINCT YEAR(created_at) as yr FROM orders
+                    WHERE payment_status = 'paid' AND event_id IN ({$placeholders})
+                    ORDER BY yr DESC
+                ", $allEventIds);
+            } catch (Exception $e) {}
+        }
+
+        // Events for filter
+        $promotorFilterEvents = [];
+        try {
+            if (!empty($allEventIds)) {
+                $placeholders = implode(',', array_fill(0, count($allEventIds), '?'));
+                $promotorFilterEvents = $db->getAll("
+                    SELECT id, name, date FROM events WHERE id IN ({$placeholders}) ORDER BY date DESC
+                ", $allEventIds);
+            }
+        } catch (Exception $e) {}
+
+        $monthNames = [
+            1 => 'Januari', 2 => 'Februari', 3 => 'Mars', 4 => 'April',
+            5 => 'Maj', 6 => 'Juni', 7 => 'Juli', 8 => 'Augusti',
+            9 => 'September', 10 => 'Oktober', 11 => 'November', 12 => 'December'
+        ];
+    }
 }
 
 // Page config for unified layout
-$page_title = $isAdmin ? 'Utbetalningar & Ekonomi' : 'Mina Tävlingar';
+$promotorTabLabels = [
+    'event' => 'Event',
+    'serier' => 'Serier',
+    'ekonomi' => 'Ekonomi',
+    'media' => 'Media'
+];
+$page_title = $isAdmin ? 'Utbetalningar & Ekonomi' : ($promotorTabLabels[$promotorTab] ?? 'Promotor');
 $breadcrumbs = [
-    ['label' => $isAdmin ? 'Utbetalningar & Ekonomi' : 'Mina Tävlingar']
+    ['label' => $isAdmin ? 'Utbetalningar & Ekonomi' : 'Promotor']
 ];
 
 include __DIR__ . '/components/unified-layout.php';
@@ -635,11 +916,27 @@ function cancelFeeEdit(recipientId, originalText) {
 <!-- ===== PROMOTOR VIEW ===== -->
 
 <style>
+/* Promotor tabs */
+.promotor-tabs {
+    display: flex; gap: 0; border-bottom: 2px solid var(--color-border);
+    margin-bottom: var(--space-lg); overflow-x: auto; -webkit-overflow-scrolling: touch;
+}
+.promotor-tab {
+    display: flex; align-items: center; gap: var(--space-xs); padding: var(--space-sm) var(--space-lg);
+    color: var(--color-text-secondary); text-decoration: none; font-size: var(--text-sm); font-weight: 500;
+    white-space: nowrap; border-bottom: 2px solid transparent; margin-bottom: -2px; transition: all 0.15s;
+}
+.promotor-tab i { width: 16px; height: 16px; }
+.promotor-tab:hover { color: var(--color-text-primary); }
+.promotor-tab.active { color: var(--color-accent); border-bottom-color: var(--color-accent); }
+
+/* Event cards */
 .promotor-grid { display: grid; gap: var(--space-lg); }
 .event-card {
     background: var(--color-bg-surface); border-radius: var(--radius-lg);
     border: 1px solid var(--color-border); overflow: hidden;
 }
+.event-card.past { opacity: 0.7; }
 .event-card-header {
     padding: var(--space-lg); display: flex; justify-content: space-between;
     align-items: flex-start; gap: var(--space-md); border-bottom: 1px solid var(--color-border);
@@ -660,7 +957,7 @@ function cancelFeeEdit(recipientId, originalText) {
 .stat-box { background: var(--color-bg-sunken); padding: var(--space-md); border-radius: var(--radius-md); text-align: center; }
 .stat-value { font-size: var(--text-2xl); font-weight: 700; color: var(--color-accent); }
 .stat-value.success { color: var(--color-success); }
-.stat-value.pending { color: var(--color-warning); }
+.stat-value.warning { color: var(--color-warning); }
 .stat-label { font-size: var(--text-xs); color: var(--color-text-secondary); text-transform: uppercase; letter-spacing: 0.05em; }
 .event-actions { display: flex; flex-wrap: wrap; gap: var(--space-sm); }
 .event-actions .btn { display: inline-flex; align-items: center; gap: var(--space-xs); min-height: 44px; }
@@ -668,11 +965,12 @@ function cancelFeeEdit(recipientId, originalText) {
 .empty-state { text-align: center; padding: var(--space-2xl); color: var(--color-text-secondary); }
 .empty-state i { width: 48px; height: 48px; margin-bottom: var(--space-md); opacity: 0.5; }
 .empty-state h2 { margin: 0 0 var(--space-sm) 0; color: var(--color-text-primary); }
-.section-title { font-size: var(--text-xl); font-weight: 600; margin: 0 0 var(--space-lg) 0; color: var(--color-text-primary); }
-.series-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(300px, 1fr)); gap: var(--space-lg); margin-bottom: var(--space-2xl); }
+
+/* Series cards */
+.series-grid { display: grid; gap: var(--space-lg); }
 .series-card {
     background: var(--color-bg-surface); border-radius: var(--radius-lg);
-    border: 1px solid var(--color-border); overflow: hidden; display: flex; flex-direction: column;
+    border: 1px solid var(--color-border); overflow: hidden;
 }
 .series-card-header { padding: var(--space-lg); display: flex; align-items: center; gap: var(--space-md); border-bottom: 1px solid var(--color-border); }
 .series-logo {
@@ -682,43 +980,44 @@ function cancelFeeEdit(recipientId, originalText) {
 .series-logo img { max-width: 100%; max-height: 100%; object-fit: contain; }
 .series-info h3 { margin: 0 0 var(--space-2xs) 0; font-size: var(--text-lg); }
 .series-info p { margin: 0; font-size: var(--text-sm); color: var(--color-text-secondary); }
-.series-card-body { padding: var(--space-lg); flex: 1; }
+.series-card-body { padding: var(--space-lg); }
 .series-detail { display: flex; align-items: center; gap: var(--space-sm); margin-bottom: var(--space-sm); font-size: var(--text-sm); color: var(--color-text-secondary); }
 .series-detail i { width: 16px; height: 16px; flex-shrink: 0; }
-.series-detail.missing { color: var(--color-warning); }
-.series-card-footer { padding: var(--space-md) var(--space-lg); background: var(--color-bg-sunken); border-top: 1px solid var(--color-border); }
-.series-card-footer .btn { width: 100%; }
+.series-detail.on { color: var(--color-success); }
+.series-detail.off { color: var(--color-text-muted); }
+.series-card-footer { padding: var(--space-md) var(--space-lg); background: var(--color-bg-sunken); border-top: 1px solid var(--color-border); display: flex; gap: var(--space-sm); }
+.series-card-footer .btn { flex: 1; }
 
-/* Modal */
-.modal { display: none; position: fixed; inset: 0; background: rgba(0,0,0,0.8); z-index: 1000; padding: var(--space-lg); overflow-y: auto; }
-.modal.active { display: flex; align-items: flex-start; justify-content: center; }
-.modal-content { background: var(--color-bg-surface); border-radius: var(--radius-lg); max-width: 500px; width: 100%; margin-top: var(--space-xl); }
-.modal-header { display: flex; justify-content: space-between; align-items: center; padding: var(--space-md) var(--space-lg); border-bottom: 1px solid var(--color-border); }
-.modal-header h3 { margin: 0; }
-.modal-close { background: none; border: none; padding: var(--space-xs); cursor: pointer; color: var(--color-text-secondary); font-size: 24px; line-height: 1; }
-.modal-body { padding: var(--space-lg); }
-.modal-footer { padding: var(--space-md) var(--space-lg); background: var(--color-bg-sunken); border-top: 1px solid var(--color-border); display: flex; justify-content: flex-end; gap: var(--space-sm); }
-.form-group { margin-bottom: var(--space-md); }
-.form-label { display: block; margin-bottom: var(--space-xs); font-weight: 500; font-size: var(--text-sm); }
-.form-input { width: 100%; padding: var(--space-sm) var(--space-md); border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-bg-sunken); color: var(--color-text-primary); }
-.logo-preview { width: 100%; height: 80px; background: var(--color-bg-sunken); border: 2px dashed var(--color-border); border-radius: var(--radius-md); display: flex; align-items: center; justify-content: center; margin-bottom: var(--space-sm); overflow: hidden; }
-.logo-preview img { max-width: 100%; max-height: 100%; object-fit: contain; }
-.logo-actions { display: flex; gap: var(--space-sm); }
+/* Economy table (reuse admin styles) */
+.eco-table-wrap { overflow-x: auto; -webkit-overflow-scrolling: touch; }
+.eco-table { font-variant-numeric: tabular-nums; min-width: 650px; }
+.eco-table th { white-space: nowrap; font-size: var(--text-xs); text-transform: uppercase; letter-spacing: 0.05em; }
+.eco-table td { vertical-align: middle; white-space: nowrap; }
+.eco-event { font-size: var(--text-xs); color: var(--color-text-muted); max-width: 160px; overflow: hidden; text-overflow: ellipsis; }
+.fee-est { opacity: 0.6; font-style: italic; }
+.eco-cards { display: none; }
+.eco-summary td { font-weight: 600; border-top: 2px solid var(--color-border-strong); background: var(--color-bg-hover); }
 
-/* Mobile edge-to-edge */
+/* Badge for past/upcoming */
+.badge-past { background: var(--color-bg-sunken); color: var(--color-text-muted); font-size: var(--text-xs); padding: 2px var(--space-xs); border-radius: var(--radius-full); }
+.badge-upcoming { background: var(--color-accent-light); color: var(--color-accent-text); font-size: var(--text-xs); padding: 2px var(--space-xs); border-radius: var(--radius-full); }
+
+/* Mobile */
 @media (max-width: 767px) {
-    .event-card, .series-card {
+    .event-card, .series-card, .admin-card {
         margin-left: calc(-1 * var(--space-md)); margin-right: calc(-1 * var(--space-md));
-        border-radius: 0; border-left: none; border-right: none; width: calc(100% + var(--space-md) * 2);
+        border-radius: 0 !important; border-left: none !important; border-right: none !important;
+        width: calc(100% + var(--space-md) * 2);
     }
-    .series-grid, .promotor-grid { gap: 0; }
-    .series-grid { grid-template-columns: 1fr; }
+    .promotor-grid, .series-grid { gap: 0; }
     .event-card + .event-card, .series-card + .series-card { border-top: none; }
 }
 @media (max-width: 600px) {
     .stats-grid { grid-template-columns: repeat(2, 1fr); }
 }
-@media (max-width: 599px) {
+@media (max-width: 599px) and (orientation: portrait) {
+    .eco-table-wrap { display: none; }
+    .eco-cards { display: block; }
     .event-actions { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-xs); }
     .event-actions .btn { justify-content: center; font-size: var(--text-sm); padding: var(--space-sm); }
     .event-card-header { flex-direction: column; gap: var(--space-xs); padding: var(--space-md); }
@@ -726,68 +1025,41 @@ function cancelFeeEdit(recipientId, originalText) {
     .event-title { font-size: var(--text-lg); }
     .stat-value { font-size: var(--text-xl); }
     .stat-box { padding: var(--space-sm); }
-    .modal { padding: 0; }
-    .modal-content { max-width: 100%; height: 100%; margin: 0; border-radius: 0; display: flex; flex-direction: column; }
-    .modal-body { flex: 1; overflow-y: auto; }
 }
 </style>
 
-<!-- MINA SERIER -->
-<?php if (!empty($series)): ?>
-<h2 class="section-title">Mina Serier</h2>
-<div class="series-grid">
-    <?php foreach ($series as $s): ?>
-    <div class="series-card" data-series-id="<?= $s['id'] ?>">
-        <div class="series-card-header">
-            <div class="series-logo">
-                <?php if ($s['logo']): ?>
-                    <img src="<?= h($s['logo']) ?>" alt="<?= h($s['name']) ?>">
-                <?php else: ?>
-                    <i data-lucide="medal"></i>
-                <?php endif; ?>
-            </div>
-            <div class="series-info">
-                <h3><?= h($s['name']) ?></h3>
-                <p><?= (int)$s['event_count'] ?> tävlingar <?= date('Y') ?></p>
-            </div>
-        </div>
-        <div class="series-card-body">
-            <?php if ($s['banner_media_id'] ?? null): ?>
-            <div class="series-detail">
-                <i data-lucide="image"></i>
-                <span>Banner konfigurerad</span>
-            </div>
-            <?php else: ?>
-            <div class="series-detail missing">
-                <i data-lucide="image-off"></i>
-                <span>Ingen banner</span>
-            </div>
-            <?php endif; ?>
-        </div>
-        <div class="series-card-footer" style="display: flex; gap: var(--space-sm);">
-            <button class="btn btn-secondary" onclick="editSeries(<?= $s['id'] ?>)" style="flex: 1;">
-                <i data-lucide="settings"></i>
-                Inställningar
-            </button>
-        </div>
-    </div>
-    <?php endforeach; ?>
-</div>
-<?php endif; ?>
+<!-- Promotor Tab Navigation -->
+<nav class="promotor-tabs">
+    <a href="?tab=event" class="promotor-tab <?= $promotorTab === 'event' ? 'active' : '' ?>">
+        <i data-lucide="calendar"></i> Event
+    </a>
+    <a href="?tab=serier" class="promotor-tab <?= $promotorTab === 'serier' ? 'active' : '' ?>">
+        <i data-lucide="medal"></i> Serier
+    </a>
+    <a href="?tab=ekonomi" class="promotor-tab <?= $promotorTab === 'ekonomi' ? 'active' : '' ?>">
+        <i data-lucide="wallet"></i> Ekonomi
+    </a>
+    <a href="?tab=media" class="promotor-tab <?= $promotorTab === 'media' ? 'active' : '' ?>">
+        <i data-lucide="image"></i> Media
+    </a>
+</nav>
 
-<!-- MINA TÄVLINGAR -->
-<?php if (empty($events)): ?>
+<?php if ($promotorTab === 'event'): ?>
+<!-- =============== EVENT TAB =============== -->
+<?php if (empty($promotorEvents)): ?>
 <div class="event-card">
     <div class="empty-state">
         <i data-lucide="calendar-x"></i>
-        <h2>Inga tävlingar</h2>
-        <p>Du har inga tävlingar tilldelade ännu. Kontakta administratören för att få tillgång.</p>
+        <h2>Inga event</h2>
+        <p>Du har inga event tilldelade ännu. Kontakta administratören för att få tillgång.</p>
     </div>
 </div>
 <?php else: ?>
 <div class="promotor-grid">
-    <?php foreach ($events as $event): ?>
-    <div class="event-card">
+    <?php foreach ($promotorEvents as $event):
+        $isPast = strtotime($event['date']) < strtotime('today');
+    ?>
+    <div class="event-card <?= $isPast ? 'past' : '' ?>">
         <div class="event-card-header">
             <div class="event-info">
                 <h2 class="event-title"><?= h($event['name']) ?></h2>
@@ -801,6 +1073,11 @@ function cancelFeeEdit(recipientId, originalText) {
                         <i data-lucide="map-pin"></i>
                         <?= h($event['location']) ?>
                     </span>
+                    <?php endif; ?>
+                    <?php if ($isPast): ?>
+                    <span class="badge-past">Genomfört</span>
+                    <?php else: ?>
+                    <span class="badge-upcoming">Kommande</span>
                     <?php endif; ?>
                 </div>
             </div>
@@ -817,27 +1094,27 @@ function cancelFeeEdit(recipientId, originalText) {
         <div class="event-card-body">
             <div class="stats-grid">
                 <div class="stat-box">
-                    <div class="stat-value"><?= (int)$event['registration_count'] ?></div>
-                    <div class="stat-label">Anmälda</div>
+                    <div class="stat-value"><?= $event['total_with_series'] ?></div>
+                    <div class="stat-label">Anmälda<?php if ($event['series_registration_count'] > 0): ?> <small>(<?= (int)$event['series_registration_count'] ?> serie)</small><?php endif; ?></div>
                 </div>
                 <div class="stat-box">
-                    <div class="stat-value success"><?= (int)$event['confirmed_count'] ?></div>
-                    <div class="stat-label">Bekräftade</div>
+                    <div class="stat-value success"><?= (int)$event['paid_count'] ?></div>
+                    <div class="stat-label">Betalda</div>
                 </div>
                 <div class="stat-box">
-                    <div class="stat-value pending"><?= (int)$event['pending_count'] ?></div>
-                    <div class="stat-label">Väntande</div>
+                    <div class="stat-value"><?= number_format($event['gross_revenue'], 0, ',', ' ') ?> kr</div>
+                    <div class="stat-label">Brutto</div>
                 </div>
                 <div class="stat-box">
-                    <div class="stat-value"><?= number_format($event['total_paid'], 0, ',', ' ') ?> kr</div>
-                    <div class="stat-label">Betalat</div>
+                    <div class="stat-value success"><?= number_format(max(0, $event['net_revenue']), 0, ',', ' ') ?> kr</div>
+                    <div class="stat-label">Netto (est.)</div>
                 </div>
             </div>
 
             <div class="event-actions">
                 <a href="/admin/event-edit.php?id=<?= $event['id'] ?>" class="btn btn-primary">
                     <i data-lucide="pencil"></i>
-                    Redigera event
+                    Redigera
                 </a>
                 <a href="/admin/event-startlist.php?event_id=<?= $event['id'] ?>" class="btn btn-secondary">
                     <i data-lucide="clipboard-list"></i>
@@ -847,10 +1124,6 @@ function cancelFeeEdit(recipientId, originalText) {
                     <i data-lucide="users"></i>
                     Anmälningar
                 </a>
-                <a href="/admin/promotor-payments.php?event_id=<?= $event['id'] ?>" class="btn btn-secondary">
-                    <i data-lucide="credit-card"></i>
-                    Betalningar
-                </a>
             </div>
         </div>
     </div>
@@ -858,139 +1131,316 @@ function cancelFeeEdit(recipientId, originalText) {
 </div>
 <?php endif; ?>
 
-<!-- Series Edit Modal -->
-<div class="modal" id="seriesModal">
-    <div class="modal-content">
-        <div class="modal-header">
-            <h3 id="seriesModalTitle">Redigera serie</h3>
-            <button type="button" class="modal-close" onclick="closeSeriesModal()">&times;</button>
-        </div>
-        <form id="seriesForm" onsubmit="saveSeries(event)">
-            <input type="hidden" id="seriesId" name="id">
-            <div class="modal-body">
-                <h4 style="margin: 0 0 var(--space-md) 0; font-size: var(--text-md);">
-                    <i data-lucide="image" style="width: 18px; height: 18px; vertical-align: middle;"></i>
-                    Serie-banner
-                </h4>
-                <p style="font-size: var(--text-sm); color: var(--color-text-secondary); margin-bottom: var(--space-md);">
-                    Visas på alla tävlingar i serien (om inte tävlingen har egen banner).
-                </p>
-
-                <div class="form-group">
-                    <label class="form-label">Banner <code style="background: var(--color-bg-sunken); padding: 2px 6px; border-radius: 4px; font-size: 0.7rem;">1200x150px</code></label>
-                    <div class="logo-preview" id="seriesBannerPreview">
-                        <i data-lucide="image-plus" style="width: 24px; height: 24px; opacity: 0.5;"></i>
-                    </div>
-                    <input type="hidden" id="seriesBannerMediaId" name="banner_media_id">
-                    <div class="logo-actions">
-                        <input type="file" id="seriesBannerUpload" accept="image/*" style="display:none" onchange="uploadSeriesBanner(this)">
-                        <button type="button" class="btn btn-sm btn-primary" onclick="document.getElementById('seriesBannerUpload').click()">
-                            <i data-lucide="upload"></i> Ladda upp
-                        </button>
-                        <button type="button" class="btn btn-sm btn-ghost" onclick="clearSeriesBanner()">
-                            <i data-lucide="x"></i> Ta bort
-                        </button>
-                    </div>
-                </div>
+<?php elseif ($promotorTab === 'serier'): ?>
+<!-- =============== SERIER TAB =============== -->
+<?php if (empty($promotorSeries)): ?>
+<div class="event-card">
+    <div class="empty-state">
+        <i data-lucide="medal"></i>
+        <h2>Inga serier</h2>
+        <p>Du har inga serier tilldelade. Kontakta administratören.</p>
+    </div>
+</div>
+<?php else: ?>
+<div class="series-grid">
+    <?php foreach ($promotorSeries as $s): ?>
+    <div class="series-card">
+        <div class="series-card-header">
+            <div class="series-logo">
+                <?php if ($s['logo']): ?>
+                    <img src="<?= h($s['logo']) ?>" alt="<?= h($s['name']) ?>">
+                <?php else: ?>
+                    <i data-lucide="medal"></i>
+                <?php endif; ?>
             </div>
-            <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" onclick="closeSeriesModal()">Avbryt</button>
-                <button type="submit" class="btn btn-primary">Spara</button>
+            <div class="series-info">
+                <h3><?= h($s['name']) ?></h3>
+                <p><?= (int)$s['event_count'] ?> event <?= date('Y') ?></p>
+            </div>
+        </div>
+        <div class="series-card-body">
+            <div class="series-detail <?= ($s['allow_series_registration'] ?? 0) ? 'on' : 'off' ?>">
+                <i data-lucide="<?= ($s['allow_series_registration'] ?? 0) ? 'check-circle' : 'x-circle' ?>"></i>
+                <span>Serieanmälan <?= ($s['allow_series_registration'] ?? 0) ? 'öppen' : 'stängd' ?></span>
+            </div>
+            <div class="series-detail">
+                <i data-lucide="percent"></i>
+                <span>Serierabatt: <?= number_format((float)($s['series_discount_percent'] ?? 15), 0) ?>%</span>
+            </div>
+            <div class="series-detail">
+                <i data-lucide="tag"></i>
+                <span>Prismall: <?= h($s['template_name'] ?? 'Ingen kopplad') ?></span>
+            </div>
+            <?php if ($s['banner_url'] ?? null): ?>
+            <div class="series-detail on">
+                <i data-lucide="image"></i>
+                <span>Banner konfigurerad</span>
+            </div>
+            <?php endif; ?>
+        </div>
+        <div class="series-card-footer">
+            <a href="/admin/promotor-series.php?id=<?= $s['id'] ?>" class="btn btn-primary">
+                <i data-lucide="settings"></i>
+                Inställningar
+            </a>
+        </div>
+    </div>
+    <?php endforeach; ?>
+</div>
+<?php endif; ?>
+
+<?php elseif ($promotorTab === 'ekonomi'): ?>
+<!-- =============== EKONOMI TAB =============== -->
+<?php
+    $ecoYear = $ecoYear ?? (int)date('Y');
+    $ecoMonth = $ecoMonth ?? 0;
+    $ecoEvent = $ecoEvent ?? 0;
+    $monthNames = $monthNames ?? [];
+?>
+
+<!-- Stats -->
+<div class="admin-stats-grid">
+    <div class="admin-stat-card">
+        <div class="admin-stat-icon stat-icon-accent"><i data-lucide="wallet"></i></div>
+        <div class="admin-stat-content">
+            <div class="admin-stat-value"><?= number_format($promotorOrderTotals['gross'] ?? 0, 2, ',', ' ') ?> kr</div>
+            <div class="admin-stat-label">Försäljning</div>
+        </div>
+    </div>
+    <div class="admin-stat-card">
+        <div class="admin-stat-icon stat-icon-danger"><i data-lucide="receipt"></i></div>
+        <div class="admin-stat-content">
+            <div class="admin-stat-value"><?= number_format(($promotorOrderTotals['payment_fees'] ?? 0) + ($promotorOrderTotals['platform_fees'] ?? 0), 2, ',', ' ') ?> kr</div>
+            <div class="admin-stat-label">Totala avgifter</div>
+        </div>
+    </div>
+    <div class="admin-stat-card">
+        <div class="admin-stat-icon stat-icon-success"><i data-lucide="banknote"></i></div>
+        <div class="admin-stat-content">
+            <div class="admin-stat-value"><?= number_format($promotorOrderTotals['net'] ?? 0, 2, ',', ' ') ?> kr</div>
+            <div class="admin-stat-label">Netto</div>
+        </div>
+    </div>
+    <div class="admin-stat-card">
+        <div class="admin-stat-icon stat-icon-warning"><i data-lucide="hash"></i></div>
+        <div class="admin-stat-content">
+            <div class="admin-stat-value"><?= $promotorOrderTotals['order_count'] ?? 0 ?></div>
+            <div class="admin-stat-label">Ordrar</div>
+        </div>
+    </div>
+</div>
+
+<!-- Filters -->
+<div class="admin-card mb-lg">
+    <div class="admin-card-body">
+        <form method="GET" class="flex flex-wrap gap-md items-end">
+            <input type="hidden" name="tab" value="ekonomi">
+            <div class="admin-form-group mb-0">
+                <label class="admin-form-label">År</label>
+                <select name="year" class="admin-form-select" onchange="this.form.submit()">
+                    <?php
+                    $years = array_column($promotorYears ?? [], 'yr');
+                    if (!in_array($ecoYear, $years)) $years[] = $ecoYear;
+                    rsort($years);
+                    foreach ($years as $yr): ?>
+                    <option value="<?= $yr ?>" <?= $yr == $ecoYear ? 'selected' : '' ?>><?= $yr ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div class="admin-form-group mb-0">
+                <label class="admin-form-label">Period</label>
+                <select name="month" class="admin-form-select" onchange="this.form.submit()">
+                    <option value="0" <?= $ecoMonth == 0 ? 'selected' : '' ?>>Helår</option>
+                    <?php foreach ($monthNames as $num => $name): ?>
+                    <option value="<?= $num ?>" <?= $num == $ecoMonth ? 'selected' : '' ?>><?= $name ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div class="admin-form-group mb-0">
+                <label class="admin-form-label">Event</label>
+                <select name="event" class="admin-form-select" onchange="this.form.submit()">
+                    <option value="0">Alla event</option>
+                    <?php foreach ($promotorFilterEvents ?? [] as $ev): ?>
+                    <option value="<?= $ev['id'] ?>" <?= $ev['id'] == $ecoEvent ? 'selected' : '' ?>><?= h($ev['name']) ?></option>
+                    <?php endforeach; ?>
+                </select>
             </div>
         </form>
     </div>
 </div>
 
-<script>
-const seriesData = <?= json_encode(array_column($series, null, 'id')) ?>;
-let currentSeriesId = null;
+<!-- Discount codes link -->
+<div style="margin-bottom: var(--space-lg);">
+    <a href="/admin/discount-codes.php" class="btn btn-secondary">
+        <i data-lucide="ticket"></i>
+        Hantera rabattkoder
+    </a>
+</div>
 
-function editSeries(id) {
-    const s = seriesData[id];
-    if (!s) { alert('Kunde inte hitta seriedata'); return; }
+<!-- Order table -->
+<div class="admin-card">
+    <div class="admin-card-header">
+        <h2>Betalningar <?= $ecoYear ?><?= $ecoMonth > 0 ? ' ' . ($monthNames[$ecoMonth] ?? '') : '' ?></h2>
+    </div>
+    <div class="admin-card-body p-0">
+        <?php if (empty($promotorOrders)): ?>
+        <div class="admin-empty-state">
+            <i data-lucide="inbox"></i>
+            <h3>Inga betalningar</h3>
+            <p>Inga betalda ordrar hittades för vald period.</p>
+        </div>
+        <?php else: ?>
 
-    currentSeriesId = id;
-    document.getElementById('seriesId').value = id;
-    document.getElementById('seriesModalTitle').textContent = 'Redigera ' + s.name;
+        <!-- Desktop table -->
+        <div class="admin-table-container eco-table-wrap">
+            <table class="admin-table eco-table">
+                <thead>
+                    <tr>
+                        <th>Ordernr</th>
+                        <th>Event</th>
+                        <th style="text-align:right;">Belopp</th>
+                        <th>Betalsätt</th>
+                        <th style="text-align:right;">Avgift</th>
+                        <th style="text-align:right;">Plattform</th>
+                        <th style="text-align:right;">Netto</th>
+                        <th>Rabatt</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($promotorOrders as $order):
+                        $method = $order['payment_method'] ?? 'card';
+                        $methodLabel = match($method) {
+                            'swish', 'swish_csv' => 'Swish',
+                            'card' => 'Kort',
+                            'manual' => 'Manuell',
+                            'free' => 'Gratis',
+                            default => ucfirst($method)
+                        };
+                    ?>
+                    <tr>
+                        <td>
+                            <code style="font-size:var(--text-sm);"><?= h($order['order_number'] ?? '#' . $order['id']) ?></code>
+                            <div class="text-xs text-secondary"><?= date('j M', strtotime($order['created_at'])) ?></div>
+                        </td>
+                        <td><div class="eco-event"><?= h($order['event_name'] ?? 'Serie') ?></div></td>
+                        <td style="text-align:right;font-weight:500;"><?= number_format($order['total_amount'], 2, ',', ' ') ?> kr</td>
+                        <td><span style="font-size:var(--text-sm);"><?= $methodLabel ?></span></td>
+                        <td style="text-align:right;color:var(--color-error);">
+                            <?php if ($order['payment_fee'] > 0): ?>
+                            <span class="<?= $order['fee_type'] === 'estimated' ? 'fee-est' : '' ?>">-<?= number_format($order['payment_fee'], 2, ',', ' ') ?></span>
+                            <?php else: ?><span class="text-secondary">-</span><?php endif; ?>
+                        </td>
+                        <td style="text-align:right;color:var(--color-error);">
+                            <?php if ($order['platform_fee'] > 0): ?>-<?= number_format($order['platform_fee'], 2, ',', ' ') ?><?php else: ?><span class="text-secondary">-</span><?php endif; ?>
+                        </td>
+                        <td style="text-align:right;font-weight:600;color:var(--color-success);"><?= number_format($order['net_amount'], 2, ',', ' ') ?> kr</td>
+                        <td>
+                            <?php if (!empty($order['discount_code'])): ?>
+                            <span class="badge badge-warning"><?= h($order['discount_code']) ?></span>
+                            <?php elseif ((float)($order['discount'] ?? 0) > 0): ?>
+                            <span style="font-size:var(--text-xs);color:var(--color-warning);">-<?= number_format($order['discount'], 0) ?> kr</span>
+                            <?php endif; ?>
+                        </td>
+                    </tr>
+                    <?php endforeach; ?>
+                </tbody>
+                <tfoot>
+                    <tr class="eco-summary">
+                        <td colspan="2" style="font-weight:600;">Summa (<?= $promotorOrderTotals['order_count'] ?> ordrar)</td>
+                        <td style="text-align:right;"><?= number_format($promotorOrderTotals['gross'], 2, ',', ' ') ?> kr</td>
+                        <td></td>
+                        <td style="text-align:right;color:var(--color-error);">-<?= number_format($promotorOrderTotals['payment_fees'], 2, ',', ' ') ?> kr</td>
+                        <td style="text-align:right;color:var(--color-error);">-<?= number_format($promotorOrderTotals['platform_fees'], 2, ',', ' ') ?> kr</td>
+                        <td style="text-align:right;color:var(--color-success);"><?= number_format($promotorOrderTotals['net'], 2, ',', ' ') ?> kr</td>
+                        <td></td>
+                    </tr>
+                </tfoot>
+            </table>
+        </div>
 
-    clearSeriesBanner();
-    if (s.banner_media_id && s.banner_url) {
-        document.getElementById('seriesBannerMediaId').value = s.banner_media_id;
-        document.getElementById('seriesBannerPreview').innerHTML = `<img src="${s.banner_url}" alt="Banner">`;
-    }
+        <!-- Mobile portrait card view -->
+        <div class="eco-cards">
+            <?php foreach ($promotorOrders as $order):
+                $method = $order['payment_method'] ?? 'card';
+                $methodLabel = match($method) { 'swish','swish_csv' => 'Swish', 'card' => 'Kort', 'manual' => 'Manuell', 'free' => 'Gratis', default => ucfirst($method) };
+                $totalFees = $order['payment_fee'] + $order['platform_fee'];
+            ?>
+            <div style="padding:var(--space-md);border-bottom:1px solid var(--color-border);">
+                <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:var(--space-2xs);">
+                    <div>
+                        <code style="font-size:var(--text-sm);"><?= h($order['order_number'] ?? '#' . $order['id']) ?></code>
+                        <span class="text-xs text-secondary" style="margin-left:var(--space-xs);"><?= date('j M', strtotime($order['created_at'])) ?></span>
+                    </div>
+                    <div style="text-align:right;">
+                        <div style="font-weight:600;color:var(--color-success);"><?= number_format($order['net_amount'], 2, ',', ' ') ?> kr</div>
+                    </div>
+                </div>
+                <div class="text-xs text-secondary" style="margin-bottom:var(--space-2xs);"><?= h($order['event_name'] ?? 'Serie') ?></div>
+                <div style="display:flex;justify-content:space-between;font-size:var(--text-xs);color:var(--color-text-muted);">
+                    <span><?= $methodLabel ?> &middot; <?= number_format($order['total_amount'], 2, ',', ' ') ?> kr</span>
+                    <?php if ($totalFees > 0): ?>
+                    <span style="color:var(--color-error);">-<?= number_format($totalFees, 2, ',', ' ') ?> avg.</span>
+                    <?php endif; ?>
+                </div>
+            </div>
+            <?php endforeach; ?>
+            <div style="padding:var(--space-md);background:var(--color-bg-hover);font-size:var(--text-sm);">
+                <div style="display:flex;justify-content:space-between;font-weight:600;margin-bottom:var(--space-2xs);">
+                    <span>Summa (<?= $promotorOrderTotals['order_count'] ?> ordrar)</span>
+                    <span style="color:var(--color-success);"><?= number_format($promotorOrderTotals['net'], 2, ',', ' ') ?> kr</span>
+                </div>
+                <div style="display:flex;justify-content:space-between;font-size:var(--text-xs);color:var(--color-text-muted);">
+                    <span>Brutto: <?= number_format($promotorOrderTotals['gross'], 2, ',', ' ') ?> kr</span>
+                    <span style="color:var(--color-error);">Avgifter: -<?= number_format($promotorOrderTotals['payment_fees'] + $promotorOrderTotals['platform_fees'], 2, ',', ' ') ?> kr</span>
+                </div>
+            </div>
+        </div>
 
-    document.getElementById('seriesModal').classList.add('active');
-    if (typeof lucide !== 'undefined') lucide.createIcons();
-}
+        <?php endif; ?>
+    </div>
+</div>
 
-function closeSeriesModal() {
-    document.getElementById('seriesModal').classList.remove('active');
-    currentSeriesId = null;
-}
+<?php elseif ($promotorTab === 'media'): ?>
+<!-- =============== MEDIA TAB =============== -->
+<div class="admin-card">
+    <div class="admin-card-header" style="display:flex;justify-content:space-between;align-items:center;">
+        <h2>Media</h2>
+        <a href="/admin/media.php" class="btn btn-primary">
+            <i data-lucide="folder-open"></i>
+            Öppna mediabiblioteket
+        </a>
+    </div>
+    <div class="admin-card-body">
+        <p style="color:var(--color-text-secondary);margin-bottom:var(--space-lg);">
+            Ladda upp bilder i mediabiblioteket som sedan kan kopplas till sponsorplatser på dina event.
+        </p>
+        <div style="display:grid;gap:var(--space-md);">
+            <div style="display:flex;align-items:center;gap:var(--space-sm);padding:var(--space-md);background:var(--color-bg-sunken);border-radius:var(--radius-md);">
+                <i data-lucide="image" style="width:20px;height:20px;color:var(--color-accent);flex-shrink:0;"></i>
+                <div>
+                    <strong style="font-size:var(--text-sm);">Banner</strong>
+                    <div class="text-xs text-secondary">1200 x 150 px - Visas i resultatheader och eventsida</div>
+                </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:var(--space-sm);padding:var(--space-md);background:var(--color-bg-sunken);border-radius:var(--radius-md);">
+                <i data-lucide="square" style="width:20px;height:20px;color:var(--color-accent);flex-shrink:0;"></i>
+                <div>
+                    <strong style="font-size:var(--text-sm);">Logo</strong>
+                    <div class="text-xs text-secondary">600 x 150 px - Sponsorlogga i sidebar och kort</div>
+                </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:var(--space-sm);padding:var(--space-md);background:var(--color-bg-sunken);border-radius:var(--radius-md);">
+                <i data-lucide="trophy" style="width:20px;height:20px;color:var(--color-accent);flex-shrink:0;"></i>
+                <div>
+                    <strong style="font-size:var(--text-sm);">Resultatheader</strong>
+                    <div class="text-xs text-secondary">Max 40px höjd - Liten logga bredvid klassnamn</div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
 
-async function uploadSeriesBanner(input) {
-    const file = input.files[0];
-    if (!file) return;
-    if (!file.type.startsWith('image/')) { alert('Välj en bildfil (JPG, PNG, etc.)'); return; }
-    if (file.size > 10 * 1024 * 1024) { alert('Filen är för stor. Max 10MB.'); return; }
-
-    const preview = document.getElementById('seriesBannerPreview');
-    preview.innerHTML = '<span style="font-size: 12px; color: var(--color-text-secondary);">Laddar upp...</span>';
-
-    try {
-        const formData = new FormData();
-        formData.append('file', file);
-        formData.append('folder', 'series');
-
-        const response = await fetch('/api/media.php?action=upload', { method: 'POST', body: formData });
-        const result = await response.json();
-
-        if (result.success && result.media) {
-            document.getElementById('seriesBannerMediaId').value = result.media.id;
-            preview.innerHTML = `<img src="/${result.media.filepath}" alt="Banner">`;
-        } else {
-            alert('Uppladdning misslyckades: ' + (result.error || 'Okänt fel'));
-            clearSeriesBanner();
-        }
-    } catch (error) {
-        console.error('Upload error:', error);
-        alert('Ett fel uppstod vid uppladdning');
-        clearSeriesBanner();
-    }
-    input.value = '';
-}
-
-function clearSeriesBanner() {
-    document.getElementById('seriesBannerMediaId').value = '';
-    document.getElementById('seriesBannerPreview').innerHTML = '<i data-lucide="image-plus" style="width: 24px; height: 24px; opacity: 0.5;"></i>';
-    if (typeof lucide !== 'undefined') lucide.createIcons();
-}
-
-async function saveSeries(event) {
-    event.preventDefault();
-    const form = document.getElementById('seriesForm');
-    const formData = new FormData(form);
-
-    try {
-        const response = await fetch('/api/series.php?action=update_promotor', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ id: currentSeriesId, banner_media_id: formData.get('banner_media_id') || null })
-        });
-        const result = await response.json();
-        if (result.success) { closeSeriesModal(); location.reload(); }
-        else { alert(result.error || 'Kunde inte spara'); }
-    } catch (error) {
-        console.error('Save error:', error);
-        alert('Ett fel uppstod');
-    }
-}
-
-document.addEventListener('keydown', e => { if (e.key === 'Escape') closeSeriesModal(); });
-document.getElementById('seriesModal').addEventListener('click', e => {
-    if (e.target === document.getElementById('seriesModal')) closeSeriesModal();
-});
-</script>
+<?php endif; // end promotor tabs ?>
 
 <?php endif; // end admin/promotor view toggle ?>
 
