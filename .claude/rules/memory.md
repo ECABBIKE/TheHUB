@@ -1,6 +1,6 @@
 # TheHUB - Memory / Session Knowledge
 
-> Senast uppdaterad: 2026-02-17
+> Senast uppdaterad: 2026-02-18
 
 ---
 
@@ -223,6 +223,10 @@
 
 ## SENASTE FIXAR (2026-02-18)
 
+- **Sponsorplacering: Custom images fran mediaarkivet**: Migration 048 lagger till `custom_media_id` i `sponsor_placements`. Admin kan nu valja fritt fran alla mappar i mediaarkivet (sponsors, annonser, branding, etc.) nar bilder tilldelas reklamplatser.
+- **Annonsrotation**: Bannerpositioner (`header_banner`, `header_inline`) roterar nu mellan sponsorer per besok via `ORDER BY RAND() LIMIT 1`.
+- **Resultat-sponsorlogga fixad**: `.class-sponsor-logo` har nu `max-width: 200px` for att forhindra att 1200x150-bannern stracker sig for bred i resultatheadern.
+- **Logo-fallback ordning forbattrad**: `get_sponsor_logo_for_placement()` provar nu `legacy_logo_url` och `logo_url` FORE banner, sa standardloggan anvands istallet for den breda bannern nar bada finns.
 - **Sponsors API fixad**: `/api/sponsors.php` hade ersatts med en debug-version som returnerade HTML istallet for JSON. Alla CRUD-operationer (get, list, create, update, delete) fungerade inte. Aterskriven till riktig JSON API.
 - **Forhandsvisning av reklamplatser**: Ny sida `/admin/sponsor-placements-preview.php` som visuellt visar hur varje placement-position (header_inline, header_banner, content_top, content_bottom, footer) ser ut pa en simulerad sida. Inkluderar responsiv demo och specifikationstabeller.
 - **Navigation synkad over alla plattformar (desktop, mobil, PWA)**:
@@ -233,6 +237,13 @@
   - Admin PWA-manifest (`admin/manifest.json`): Borttagen dubbel "Media", lagt till Serier och Sponsorer som separata genvagar
   - Publikt PWA-manifest (`manifest.json`): Lagt till Serier och Ranking som genvagar
   - `sidebar.php` promotor-nav fixad: Media → media.php, Sponsorer tillagd
+
+### Sponsorsystem-arkitektur
+- **sponsor_placements.custom_media_id**: Override per placement, JOIN mot media-tabellen
+- **Bildprioritet vid rendering**: custom_image → banner (breda positioner) → logo → text
+- **Rotation**: `header_banner` och `header_inline` visar 1 sponsor at gangen, roterar via RAND()
+- **Logo-fallback**: sidebar/small → legacy_logo_url → logo_url → standard → small → banner (sista utvag)
+- **event.php sponsorer**: Laddas fran series_sponsors + event_sponsors, alla logo-storlekar JOINas
 
 ### Navigationsarkitektur (efter fix)
 - **Kalla for sanning (admin):** `$ADMIN_TABS` i `/includes/config/admin-tabs-config.php`
