@@ -75,6 +75,7 @@ if ($isAdmin) {
     // This handles cases where columns may not exist or data is sparse
     // ============================================================
     $eventRecipientMap = []; // event_id => recipient_id
+    $mappingDebug = []; // Track which paths worked
 
     // Path 1: events.payment_recipient_id (direct)
     try {
@@ -82,8 +83,9 @@ if ($isAdmin) {
         foreach ($rows as $row) {
             $eventRecipientMap[(int)$row['id']] = (int)$row['payment_recipient_id'];
         }
+        $mappingDebug['path1'] = count($rows) . ' events';
     } catch (\Throwable $e) {
-        // Column may not exist - skip
+        $mappingDebug['path1'] = 'error: ' . $e->getMessage();
     }
 
     // Path 2: series.payment_recipient_id via events.series_id
@@ -99,7 +101,10 @@ if ($isAdmin) {
                 $eventRecipientMap[(int)$row['event_id']] = (int)$row['payment_recipient_id'];
             }
         }
-    } catch (\Throwable $e) {}
+        $mappingDebug['path2'] = count($rows) . ' events';
+    } catch (\Throwable $e) {
+        $mappingDebug['path2'] = 'error: ' . $e->getMessage();
+    }
 
     // Path 3: series.payment_recipient_id via series_events (many-to-many)
     try {
@@ -114,7 +119,10 @@ if ($isAdmin) {
                 $eventRecipientMap[(int)$row['event_id']] = (int)$row['payment_recipient_id'];
             }
         }
-    } catch (\Throwable $e) {}
+        $mappingDebug['path3'] = count($rows) . ' events';
+    } catch (\Throwable $e) {
+        $mappingDebug['path3'] = 'error: ' . $e->getMessage();
+    }
 
     // Path 4: order_items.payment_recipient_id (fallback from order creation)
     try {
@@ -130,7 +138,75 @@ if ($isAdmin) {
                 $eventRecipientMap[(int)$row['event_id']] = (int)$row['payment_recipient_id'];
             }
         }
-    } catch (\Throwable $e) {}
+        $mappingDebug['path4'] = count($rows) . ' events';
+    } catch (\Throwable $e) {
+        $mappingDebug['path4'] = 'error: ' . $e->getMessage();
+    }
+
+    // Path 5: Legacy payment_configs → payment_recipients via swish_number match
+    try {
+        $rows = $db->getAll("
+            SELECT e.id as event_id, pr.id as recipient_id
+            FROM events e
+            JOIN payment_configs pc ON (pc.event_id = e.id OR pc.series_id = e.series_id)
+            JOIN payment_recipients pr ON pr.swish_number = pc.swish_number AND pr.active = 1
+        ");
+        foreach ($rows as $row) {
+            if (!isset($eventRecipientMap[(int)$row['event_id']])) {
+                $eventRecipientMap[(int)$row['event_id']] = (int)$row['recipient_id'];
+            }
+        }
+        $mappingDebug['path5'] = count($rows) . ' events';
+    } catch (\Throwable $e) {
+        $mappingDebug['path5'] = 'error: ' . $e->getMessage();
+    }
+
+    // Path 6: Legacy payment_configs → payment_recipients via series_events + swish_number
+    try {
+        $rows = $db->getAll("
+            SELECT se.event_id, pr.id as recipient_id
+            FROM series_events se
+            JOIN payment_configs pc ON pc.series_id = se.series_id
+            JOIN payment_recipients pr ON pr.swish_number = pc.swish_number AND pr.active = 1
+        ");
+        foreach ($rows as $row) {
+            if (!isset($eventRecipientMap[(int)$row['event_id']])) {
+                $eventRecipientMap[(int)$row['event_id']] = (int)$row['recipient_id'];
+            }
+        }
+        $mappingDebug['path6'] = count($rows) . ' events';
+    } catch (\Throwable $e) {
+        $mappingDebug['path6'] = 'error: ' . $e->getMessage();
+    }
+
+    // Path 7: If STILL empty → assign ALL order events to first active recipient
+    if (empty($eventRecipientMap)) {
+        try {
+            $activeRecipients = $db->getAll("SELECT id FROM payment_recipients WHERE active = 1");
+            $orderEvents = $db->getAll("
+                SELECT DISTINCT event_id FROM orders
+                WHERE event_id IS NOT NULL AND YEAR(created_at) = ?
+            ", [$filterYear]);
+
+            if (!empty($activeRecipients) && !empty($orderEvents)) {
+                // Use first/sole recipient as catch-all
+                $fallbackRecipientId = (int)$activeRecipients[0]['id'];
+                foreach ($orderEvents as $oe) {
+                    $eventRecipientMap[(int)$oe['event_id']] = $fallbackRecipientId;
+                }
+                $mappingDebug['path7'] = count($orderEvents) . ' events → recipient ' . $fallbackRecipientId .
+                    ' (' . count($activeRecipients) . ' recipients total)';
+            } else {
+                $mappingDebug['path7'] = 'no recipients=' . count($activeRecipients ?? []) .
+                    ' or no events=' . count($orderEvents ?? []);
+            }
+        } catch (\Throwable $e) {
+            $mappingDebug['path7'] = 'error: ' . $e->getMessage();
+        }
+    }
+
+    $mappingDebug['total_mapped'] = count($eventRecipientMap);
+    error_log("Promotor mapping debug: " . json_encode($mappingDebug));
 
     // Build SQL: use the PHP mapping to create a proper join
     // If we have mappings, use them in the query via a constructed IN clause
@@ -425,6 +501,27 @@ include __DIR__ . '/components/unified-layout.php';
     .payout-cards { display: block; }
 }
 </style>
+
+<!-- Debug: mapping diagnostics (remove after fix confirmed) -->
+<?php if (!empty($mappingDebug)): ?>
+<div class="admin-card mb-lg" style="border-color: var(--color-info);">
+    <div class="admin-card-header" style="background: rgba(56, 189, 248, 0.1);">
+        <h2 style="font-size: var(--text-sm);">Mappning-diagnostik (tas bort efter fix)</h2>
+    </div>
+    <div class="admin-card-body" style="font-size: var(--text-xs); font-family: monospace;">
+        <?php foreach ($mappingDebug as $key => $val): ?>
+        <div style="padding: 2px 0;"><strong><?= h($key) ?>:</strong> <?= h($val) ?></div>
+        <?php endforeach; ?>
+        <div style="padding: 2px 0; margin-top: var(--space-xs); border-top: 1px solid var(--color-border);">
+            <strong>recipientEvents:</strong>
+            <?php foreach (($recipientEvents ?? []) as $rid => $eids): ?>
+            <span>Recipient <?= $rid ?> → <?= count($eids) ?> events</span>
+            <?php endforeach; ?>
+            <?php if (empty($recipientEvents ?? [])): ?><span>TOM</span><?php endif; ?>
+        </div>
+    </div>
+</div>
+<?php endif; ?>
 
 <!-- Stats -->
 <div class="admin-stats-grid">
