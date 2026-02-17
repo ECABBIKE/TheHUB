@@ -170,7 +170,7 @@ $migrationChecks = [
         'columns' => ['orders.stripe_fee', 'orders.stripe_balance_transaction_id']
     ],
     '050_backfill_order_items_recipient.sql' => [
-        'data' => ['order_items.payment_recipient_id IS NOT NULL']
+        'columns' => ['order_items.payment_recipient_id']
     ],
 ];
 
