@@ -27,6 +27,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     if ($action === 'create_placement') {
         $result = $sponsorManager->createPlacement([
             'sponsor_id' => (int)$_POST['sponsor_id'],
+            'custom_media_id' => $_POST['custom_media_id'] ?: null,
             'page_type' => $_POST['page_type'],
             'position' => $_POST['position'],
             'display_order' => (int)($_POST['display_order'] ?? 0),
@@ -44,6 +45,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     } elseif ($action === 'update_placement') {
         $result = $sponsorManager->updatePlacement((int)$_POST['placement_id'], [
             'sponsor_id' => (int)$_POST['sponsor_id'],
+            'custom_media_id' => $_POST['custom_media_id'] ?: null,
             'page_type' => $_POST['page_type'],
             'position' => $_POST['position'],
             'display_order' => (int)($_POST['display_order'] ?? 0),
@@ -488,6 +490,25 @@ input:checked + .toggle-slider:before {
             <span id="format-text"></span>
         </div>
 
+        <!-- Custom bild från mediaarkivet -->
+        <div class="form-row">
+            <div class="form-group" style="grid-column: 1 / -1;">
+                <label>Anpassad bild (valfritt - ersätter sponsorns standardbild)</label>
+                <input type="hidden" name="custom_media_id" id="create-custom-media-id" value="">
+                <div style="display: flex; align-items: center; gap: var(--space-sm); flex-wrap: wrap;">
+                    <div id="create-custom-preview" style="display: none; background: var(--color-bg-page); border: 1px solid var(--color-border); border-radius: var(--radius-sm); padding: var(--space-xs); max-width: 300px;">
+                        <img id="create-custom-preview-img" src="" alt="Förhandsvisa" style="max-height: 80px; max-width: 100%; object-fit: contain; display: block; margin: 0 auto;">
+                    </div>
+                    <button type="button" class="btn btn-secondary btn-sm" onclick="openMediaPicker('create')">
+                        <i data-lucide="image"></i> Välj från mediaarkivet
+                    </button>
+                    <button type="button" class="btn btn-ghost btn-sm" id="create-custom-remove" style="display: none;" onclick="removeCustomImage('create')">
+                        <i data-lucide="x"></i> Ta bort
+                    </button>
+                </div>
+            </div>
+        </div>
+
         <div class="form-row">
             <div class="form-group">
                 <label>Sorteringsordning</label>
@@ -560,6 +581,13 @@ input:checked + .toggle-slider:before {
                     </span>
                 </div>
 
+                <?php if (!empty($placement['custom_image_path'])): ?>
+                    <div style="margin-bottom: var(--space-sm); background: var(--color-bg-page); border: 1px solid var(--color-border); border-radius: var(--radius-sm); padding: var(--space-xs); text-align: center;">
+                        <img src="/<?= htmlspecialchars(ltrim($placement['custom_image_path'], '/')) ?>" alt="Anpassad bild" style="max-height: 60px; max-width: 100%; object-fit: contain; display: block; margin: 0 auto;">
+                        <div style="font-size: 0.7rem; color: var(--color-text-muted); margin-top: var(--space-2xs);">Anpassad bild</div>
+                    </div>
+                <?php endif; ?>
+
                 <div class="placement-stats">
                     <span><i data-lucide="eye"></i> <?= number_format($placement['impressions_current']) ?> visningar</span>
                     <span><i data-lucide="mouse-pointer"></i> <?= number_format($placement['clicks']) ?> klick</span>
@@ -626,6 +654,25 @@ input:checked + .toggle-slider:before {
                                         <option value="<?= $key ?>" <?= $placement['position'] == $key ? 'selected' : '' ?>><?= $label ?></option>
                                     <?php endforeach; ?>
                                 </select>
+                            </div>
+                        </div>
+
+                        <!-- Anpassad bild -->
+                        <div class="form-row">
+                            <div class="form-group" style="grid-column: 1 / -1;">
+                                <label>Anpassad bild (ersätter sponsorns standardbild)</label>
+                                <input type="hidden" name="custom_media_id" id="edit-custom-media-id-<?= $placement['id'] ?>" value="<?= $placement['custom_media_id'] ?? '' ?>">
+                                <div style="display: flex; align-items: center; gap: var(--space-sm); flex-wrap: wrap;">
+                                    <div id="edit-custom-preview-<?= $placement['id'] ?>" style="<?= empty($placement['custom_image_path']) ? 'display: none;' : '' ?> background: var(--color-bg-page); border: 1px solid var(--color-border); border-radius: var(--radius-sm); padding: var(--space-xs); max-width: 300px;">
+                                        <img id="edit-custom-preview-img-<?= $placement['id'] ?>" src="<?= !empty($placement['custom_image_path']) ? '/' . htmlspecialchars(ltrim($placement['custom_image_path'], '/')) : '' ?>" alt="Förhandsvisa" style="max-height: 80px; max-width: 100%; object-fit: contain; display: block; margin: 0 auto;">
+                                    </div>
+                                    <button type="button" class="btn btn-secondary btn-sm" onclick="openMediaPicker('edit-<?= $placement['id'] ?>')">
+                                        <i data-lucide="image"></i> Välj från mediaarkivet
+                                    </button>
+                                    <button type="button" class="btn btn-ghost btn-sm" id="edit-custom-remove-<?= $placement['id'] ?>" style="<?= empty($placement['custom_media_id']) ? 'display: none;' : '' ?>" onclick="removeCustomImage('edit-<?= $placement['id'] ?>')">
+                                        <i data-lucide="x"></i> Ta bort
+                                    </button>
+                                </div>
                             </div>
                         </div>
 
@@ -733,6 +780,168 @@ document.addEventListener('DOMContentLoaded', showFormatInfo);
     <?php endforeach; ?>
 </div>
 
+<!-- Media Picker Modal -->
+<div id="mediaPickerModal" style="display: none; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: rgba(0,0,0,0.7); z-index: 9999; align-items: center; justify-content: center;">
+    <div style="background: var(--color-bg-surface); border-radius: var(--radius-md); max-width: 900px; width: 95%; max-height: 85vh; display: flex; flex-direction: column; border: 1px solid var(--color-border);">
+        <!-- Header -->
+        <div style="display: flex; align-items: center; justify-content: space-between; padding: var(--space-md); border-bottom: 1px solid var(--color-border);">
+            <h3 style="margin: 0; font-size: 1.125rem;">Välj bild från mediaarkivet</h3>
+            <button type="button" onclick="closeMediaPicker()" style="background: none; border: none; cursor: pointer; color: var(--color-text-muted); padding: var(--space-xs);">
+                <i data-lucide="x"></i>
+            </button>
+        </div>
+        <!-- Folder nav + search -->
+        <div style="display: flex; align-items: center; gap: var(--space-sm); padding: var(--space-sm) var(--space-md); border-bottom: 1px solid var(--color-border); flex-wrap: wrap;">
+            <select id="mediaFolderSelect" onchange="loadMediaFolder()" style="padding: var(--space-xs) var(--space-sm); border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-bg-page); color: var(--color-text-primary); min-width: 180px;">
+                <option value="">Alla mappar</option>
+                <option value="sponsors">Sponsorer</option>
+                <option value="ads">Annonser</option>
+                <option value="branding">Branding</option>
+                <option value="general">Allmänt</option>
+                <option value="series">Serier</option>
+                <option value="events">Event</option>
+                <option value="clubs">Klubbar</option>
+            </select>
+            <input type="text" id="mediaSearchInput" placeholder="Sök..." onkeyup="debounceSearch()" style="flex: 1; min-width: 150px; padding: var(--space-xs) var(--space-sm); border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-bg-page); color: var(--color-text-primary);">
+        </div>
+        <!-- Grid -->
+        <div id="mediaPickerGrid" style="flex: 1; overflow-y: auto; padding: var(--space-md); display: grid; grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); gap: var(--space-sm); align-content: start;">
+            <div style="grid-column: 1 / -1; text-align: center; color: var(--color-text-muted); padding: var(--space-xl);">
+                Välj en mapp eller sök...
+            </div>
+        </div>
+    </div>
+</div>
+
 <script>
+let currentPickerField = null;
+let searchTimeout = null;
+
+function openMediaPicker(fieldPrefix) {
+    currentPickerField = fieldPrefix;
+    document.getElementById('mediaPickerModal').style.display = 'flex';
+    loadMediaFolder();
+}
+
+function closeMediaPicker() {
+    document.getElementById('mediaPickerModal').style.display = 'none';
+    currentPickerField = null;
+}
+
+// Stäng modal med Escape
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') closeMediaPicker();
+});
+
+// Stäng modal vid klick utanför
+document.getElementById('mediaPickerModal').addEventListener('click', function(e) {
+    if (e.target === this) closeMediaPicker();
+});
+
+function debounceSearch() {
+    clearTimeout(searchTimeout);
+    searchTimeout = setTimeout(loadMediaFolder, 300);
+}
+
+function loadMediaFolder() {
+    const folder = document.getElementById('mediaFolderSelect').value;
+    const search = document.getElementById('mediaSearchInput').value.trim();
+    const grid = document.getElementById('mediaPickerGrid');
+
+    grid.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; color: var(--color-text-muted); padding: var(--space-xl);">Laddar...</div>';
+
+    let url = '/api/media.php?action=list&limit=100';
+    if (search) {
+        url += '&search=' + encodeURIComponent(search);
+        if (folder) url += '&folder=' + encodeURIComponent(folder);
+    } else if (folder) {
+        url += '&folder=' + encodeURIComponent(folder);
+    }
+
+    fetch(url)
+        .then(r => r.json())
+        .then(data => {
+            if (!data.success || !data.data.length) {
+                grid.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; color: var(--color-text-muted); padding: var(--space-xl);">Inga bilder hittades</div>';
+                return;
+            }
+
+            // Filtrera bara bilder
+            const images = data.data.filter(f => f.mime_type && f.mime_type.startsWith('image/'));
+            if (!images.length) {
+                grid.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; color: var(--color-text-muted); padding: var(--space-xl);">Inga bilder i denna mapp</div>';
+                return;
+            }
+
+            grid.innerHTML = '';
+            images.forEach(file => {
+                const item = document.createElement('div');
+                item.style.cssText = 'cursor: pointer; border: 2px solid var(--color-border); border-radius: var(--radius-sm); overflow: hidden; transition: border-color 0.2s; aspect-ratio: 4/3; display: flex; flex-direction: column;';
+                item.onmouseenter = () => item.style.borderColor = 'var(--color-accent)';
+                item.onmouseleave = () => item.style.borderColor = 'var(--color-border)';
+                item.onclick = () => selectMediaImage(file.id, file.url, file.filename);
+
+                const imgWrap = document.createElement('div');
+                imgWrap.style.cssText = 'flex: 1; display: flex; align-items: center; justify-content: center; background: var(--color-bg-page); overflow: hidden;';
+
+                const img = document.createElement('img');
+                img.src = file.url;
+                img.alt = file.filename || '';
+                img.loading = 'lazy';
+                img.style.cssText = 'max-width: 100%; max-height: 100%; object-fit: contain;';
+                imgWrap.appendChild(img);
+
+                const label = document.createElement('div');
+                label.style.cssText = 'padding: 2px 4px; font-size: 0.65rem; color: var(--color-text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; background: var(--color-bg-surface);';
+                label.textContent = file.filename || 'Namnlös';
+
+                item.appendChild(imgWrap);
+                item.appendChild(label);
+                grid.appendChild(item);
+            });
+        })
+        .catch(err => {
+            grid.innerHTML = '<div style="grid-column: 1 / -1; text-align: center; color: var(--color-error); padding: var(--space-xl);">Kunde inte ladda bilder</div>';
+            console.error(err);
+        });
+}
+
+function selectMediaImage(mediaId, url, filename) {
+    if (!currentPickerField) return;
+
+    // Sätt hidden input
+    const hiddenInput = document.getElementById(currentPickerField + '-custom-media-id');
+    if (hiddenInput) hiddenInput.value = mediaId;
+
+    // Visa preview
+    const preview = document.getElementById(currentPickerField + '-custom-preview');
+    const previewImg = document.getElementById(currentPickerField + '-custom-preview-img');
+    if (preview && previewImg) {
+        previewImg.src = url;
+        preview.style.display = '';
+    }
+
+    // Visa ta-bort-knapp
+    const removeBtn = document.getElementById(currentPickerField + '-custom-remove');
+    if (removeBtn) removeBtn.style.display = '';
+
+    closeMediaPicker();
+    lucide.createIcons();
+}
+
+function removeCustomImage(fieldPrefix) {
+    const hiddenInput = document.getElementById(fieldPrefix + '-custom-media-id');
+    if (hiddenInput) hiddenInput.value = '';
+
+    const preview = document.getElementById(fieldPrefix + '-custom-preview');
+    if (preview) preview.style.display = 'none';
+
+    const previewImg = document.getElementById(fieldPrefix + '-custom-preview-img');
+    if (previewImg) previewImg.src = '';
+
+    const removeBtn = document.getElementById(fieldPrefix + '-custom-remove');
+    if (removeBtn) removeBtn.style.display = 'none';
+}
+
 lucide.createIcons();
 </script>

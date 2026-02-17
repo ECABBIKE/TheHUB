@@ -57,11 +57,14 @@ class GlobalSponsorManager {
                         sp.clicks,
                         sp.impressions_current,
                         sp.impressions_target,
-                        m.filepath as logo_url
+                        sp.custom_media_id,
+                        m.filepath as logo_url,
+                        mc.filepath as custom_image_url
                     FROM sponsors s
                     INNER JOIN sponsor_placements sp ON s.id = sp.sponsor_id
                     LEFT JOIN media m ON s.logo_media_id = m.id
                     LEFT JOIN media mb ON s.logo_banner_id = mb.id
+                    LEFT JOIN media mc ON sp.custom_media_id = mc.id
                     WHERE sp.page_type IN (:page_type, 'all')
                     AND sp.position = :position
                     AND sp.is_active = 1
@@ -239,6 +242,12 @@ class GlobalSponsorManager {
         $tier = htmlspecialchars($sponsor['tier'] ?? 'silver');
         $classes = "sponsor-item sponsor-{$position} sponsor-tier-{$tier}";
 
+        // Custom image override har högsta prioritet
+        $customImage = $sponsor['custom_image_url'] ?? '';
+        if ($customImage) {
+            $customImage = '/' . ltrim($customImage, '/');
+        }
+
         // Använd logo_url om den finns, annars logo
         $logo = $sponsor['logo_url'] ?? $sponsor['logo'] ?? '';
         if ($logo) {
@@ -255,18 +264,24 @@ class GlobalSponsorManager {
                          onclick="trackSponsorClick(' . intval($sponsor['id']) . ', ' . intval($sponsor['placement_id'] ?? 0) . ')">';
         }
 
-        // Använd banner för breda positioner (header_banner, header_inline, content_top, content_bottom)
-        $useBanner = in_array($position, ['header_banner', 'header_inline', 'content_top', 'content_bottom', 'footer']);
-        if ($useBanner && !empty($sponsor['banner_image'])) {
-            $html .= '<img src="' . htmlspecialchars($sponsor['banner_image']) . '"
+        // Prioritet: 1) Custom image, 2) Banner (breda positioner), 3) Logo, 4) Text
+        if ($customImage) {
+            $html .= '<img src="' . htmlspecialchars($customImage) . '"
                          alt="' . htmlspecialchars($sponsor['name']) . '"
-                         class="sponsor-banner">';
-        } elseif ($logo) {
-            $html .= '<img src="' . htmlspecialchars($logo) . '"
-                         alt="' . htmlspecialchars($sponsor['name']) . '"
-                         class="sponsor-logo">';
+                         class="sponsor-banner" loading="lazy">';
         } else {
-            $html .= '<span class="sponsor-name">' . htmlspecialchars($sponsor['name']) . '</span>';
+            $useBanner = in_array($position, ['header_banner', 'header_inline', 'content_top', 'content_bottom', 'footer']);
+            if ($useBanner && !empty($sponsor['banner_image'])) {
+                $html .= '<img src="' . htmlspecialchars($sponsor['banner_image']) . '"
+                             alt="' . htmlspecialchars($sponsor['name']) . '"
+                             class="sponsor-banner" loading="lazy">';
+            } elseif ($logo) {
+                $html .= '<img src="' . htmlspecialchars($logo) . '"
+                             alt="' . htmlspecialchars($sponsor['name']) . '"
+                             class="sponsor-logo" loading="lazy">';
+            } else {
+                $html .= '<span class="sponsor-name">' . htmlspecialchars($sponsor['name']) . '</span>';
+            }
         }
 
         if (!empty($sponsor['website'])) {
@@ -282,7 +297,11 @@ class GlobalSponsorManager {
      * Rendera sponsor-sektion för en sida
      */
     public function renderSection(string $page_type, string $position, string $title = 'Våra partners'): string {
-        $sponsors = $this->getSponsorsForPlacement($page_type, $position);
+        // Bannerpositioner roterar: visa bara 1 åt gången (RAND() i SQL hanterar rotation)
+        $rotatingPositions = ['header_banner', 'header_inline'];
+        $limit = in_array($position, $rotatingPositions) ? 1 : 5;
+
+        $sponsors = $this->getSponsorsForPlacement($page_type, $position, $limit);
 
         if (empty($sponsors)) {
             return '';
@@ -340,9 +359,11 @@ class GlobalSponsorManager {
     public function getAllPlacements(): array {
         try {
             $stmt = $this->pdo->query("
-                SELECT sp.*, s.name as sponsor_name, s.tier as sponsor_tier
+                SELECT sp.*, s.name as sponsor_name, s.tier as sponsor_tier,
+                       mc.filepath as custom_image_path, mc.filename as custom_image_name
                 FROM sponsor_placements sp
                 INNER JOIN sponsors s ON sp.sponsor_id = s.id
+                LEFT JOIN media mc ON sp.custom_media_id = mc.id
                 ORDER BY sp.page_type, sp.position, sp.display_order
             ");
             return $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -359,12 +380,13 @@ class GlobalSponsorManager {
         try {
             $stmt = $this->pdo->prepare("
                 INSERT INTO sponsor_placements
-                (sponsor_id, page_type, position, display_order, is_active, start_date, end_date, impressions_target)
-                VALUES (:sponsor_id, :page_type, :position, :display_order, :is_active, :start_date, :end_date, :impressions_target)
+                (sponsor_id, custom_media_id, page_type, position, display_order, is_active, start_date, end_date, impressions_target)
+                VALUES (:sponsor_id, :custom_media_id, :page_type, :position, :display_order, :is_active, :start_date, :end_date, :impressions_target)
             ");
 
             $stmt->execute([
                 ':sponsor_id' => $data['sponsor_id'],
+                ':custom_media_id' => $data['custom_media_id'] ?: null,
                 ':page_type' => $data['page_type'],
                 ':position' => $data['position'],
                 ':display_order' => $data['display_order'] ?? 0,
@@ -389,6 +411,7 @@ class GlobalSponsorManager {
             $stmt = $this->pdo->prepare("
                 UPDATE sponsor_placements SET
                     sponsor_id = :sponsor_id,
+                    custom_media_id = :custom_media_id,
                     page_type = :page_type,
                     position = :position,
                     display_order = :display_order,
@@ -402,6 +425,7 @@ class GlobalSponsorManager {
             $stmt->execute([
                 ':id' => $id,
                 ':sponsor_id' => $data['sponsor_id'],
+                ':custom_media_id' => $data['custom_media_id'] ?: null,
                 ':page_type' => $data['page_type'],
                 ':position' => $data['position'],
                 ':display_order' => $data['display_order'] ?? 0,

@@ -163,6 +163,9 @@ $migrationChecks = [
     '047_standardize_nationality_codes.sql' => [
         'data' => ["(SELECT COUNT(*) FROM riders WHERE nationality IN ('DEN','GER','SUI','NED')) = 0"]
     ],
+    '048_sponsor_placement_custom_image.sql' => [
+        'columns' => ['sponsor_placements.custom_media_id']
+    ],
 ];
 
 // ============================================================================

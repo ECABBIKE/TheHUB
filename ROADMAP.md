@@ -25,8 +25,21 @@
 
 # CHANGELOG
 
-### 2026-02-18 (Sponsors API + Reklamplatser preview + Navigation sync)
+### 2026-02-18 (Sponsorsystem: Custom images, rotation, logo-fix)
 - **Branch:** claude/fix-mobile-payment-layout-UVxvi
+
+- **Ny funktion: Custom images per reklamplats**
+  - Migration 048: `custom_media_id` i `sponsor_placements` for bild-override per placement
+  - Mediaarkiv-valjare i admin/sponsor-placements.php - browsa alla mappar (sponsors, annonser, branding, etc.)
+
+- **Ny funktion: Annonsrotation**
+  - Bannerpositioner (`header_banner`, `header_inline`) roterar mellan sponsorer per besok
+  - Implementerat via `ORDER BY RAND() LIMIT 1` i GlobalSponsorManager
+
+- **Buggfix: Resultat-sponsorlogga anvande 1200x150-banner**
+  - `.class-sponsor-logo` fick `max-width: 200px` for att begrana bredden
+  - Logo-fallback ordning andrad: provar `legacy_logo_url` och `logo_url` fore bannern
+  - Forhindrar att den breda bannern visas i smala positioner (resultatheader, sidebar)
 
 - **Buggfix: Sponsors API trasig (debug-version)**
   - `/api/sponsors.php` hade ersatts med en debug-version som returnerade HTML
