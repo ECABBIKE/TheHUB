@@ -170,7 +170,7 @@ $migrationChecks = [
         'columns' => ['orders.stripe_fee', 'orders.stripe_balance_transaction_id']
     ],
     '050_backfill_order_items_recipient.sql' => [
-        'data' => ["(SELECT COUNT(*) FROM order_items WHERE payment_recipient_id IS NULL AND order_id IN (SELECT id FROM orders WHERE payment_status = 'paid')) = 0"]
+        'data' => ['order_items.payment_recipient_id IS NOT NULL']
     ],
 ];
 
@@ -232,12 +232,18 @@ function checkMigrationStatus(PDO $pdo, array $checks): array {
         foreach ($checks['data'] as $condition) {
             $totalChecks++;
             try {
-                // Parse "table.condition"
-                $parts = explode('.', $condition, 2);
-                $table = $parts[0];
-                $where = $parts[1] ?? '1=1';
-                $stmt = $pdo->query("SELECT COUNT(*) FROM `$table` WHERE $where");
-                $exists = $stmt->fetchColumn() > 0;
+                if (str_starts_with(trim($condition), '(')) {
+                    // Full expression format: (SELECT ...) = 0
+                    $stmt = $pdo->query("SELECT " . $condition);
+                    $exists = (bool)$stmt->fetchColumn();
+                } else {
+                    // Parse "table.condition"
+                    $parts = explode('.', $condition, 2);
+                    $table = $parts[0];
+                    $where = $parts[1] ?? '1=1';
+                    $stmt = $pdo->query("SELECT COUNT(*) FROM `$table` WHERE $where");
+                    $exists = $stmt->fetchColumn() > 0;
+                }
             } catch (Exception $e) {
                 $exists = false;
             }

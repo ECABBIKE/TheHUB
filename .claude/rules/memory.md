@@ -233,7 +233,12 @@
 
 ---
 
-## SENASTE FIXAR (2026-02-18)
+## SENASTE FIXAR (2026-02-19)
+
+- **Migration 050 visade alltid rod i migrations.php**: Tva buggar. 1) `checkMigrationStatus()` kunde inte tolka subquery-format `(SELECT ...)` i data-checkar - den forsokter splitta pa `.` och anvanda resultatet som tabellnamn, vilket alltid kastade exception. Fixat med `str_starts_with('(')` check som kor subquery direkt. 2) Data-checken for 050 var for strikt (kravde att ALLA betalda order_items har recipient, men events utan konfigurerad recipient gor att nagra items aldrig kan backfillas). Andrad till enkel check: `order_items.payment_recipient_id IS NOT NULL`.
+- **Backfill Stripe-avgifter visade 0 ordrar (igen)**: Stats-fragan och batch-fragan filtrerade pa `payment_method = 'card'`, men aldre ordrar kan ha `payment_method = NULL` aven om de betalades med kort. Fixat: inkluderar nu aven ordrar dar `payment_method IS NULL` men som har Stripe-referenser (stripe_payment_intent_id, gateway_transaction_id som borjar med cs_ eller pi_).
+
+## TIDIGARE FIXAR (2026-02-18)
 
 - **Ekonomi/utbetalningsvy visade noll betalningar**: Promotor.php-fragan JOINade via `order_items.payment_recipient_id` som var NULL for alla order-items (createMultiRiderOrder satte aldrig detta falt). Fixat: fragan joinar nu via `orders.event_id → events → payment_recipients` istallet. Anvander `o.total_amount` istallet for `oi.total_price`.
 - **order_items.payment_recipient_id sätts nu korrekt**: `createMultiRiderOrder()` i order-manager.php slår nu upp `payment_recipient_id` via events/series och sätter det vid INSERT för både event- och serieregistreringar.
