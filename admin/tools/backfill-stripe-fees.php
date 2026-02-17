@@ -103,7 +103,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'proce
                     $piId = $sessionResp['payment_intent'];
                     // Also store the PI ID for future use
                     try {
-                        $db->execute("UPDATE orders SET stripe_payment_intent_id = ? WHERE id = ? AND (stripe_payment_intent_id IS NULL OR stripe_payment_intent_id = '')",
+                        $db->query("UPDATE orders SET stripe_payment_intent_id = ? WHERE id = ? AND (stripe_payment_intent_id IS NULL OR stripe_payment_intent_id = '')",
                             [$piId, $order['id']]);
                     } catch (\Throwable $e) {}
                 }
@@ -141,7 +141,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'proce
             $feeData = $stripe->getPaymentFee($piId);
 
             if ($feeData['success']) {
-                $db->execute(
+                $db->query(
                     "UPDATE orders SET stripe_fee = ?, stripe_balance_transaction_id = ?, stripe_payment_intent_id = COALESCE(NULLIF(stripe_payment_intent_id, ''), ?) WHERE id = ?",
                     [$feeData['fee'], $feeData['balance_transaction_id'], $piId, $order['id']]
                 );
