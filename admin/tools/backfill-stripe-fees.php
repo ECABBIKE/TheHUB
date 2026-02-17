@@ -53,13 +53,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && ($_POST['action'] ?? '') === 'proce
     $stripe = new \TheHUB\Payment\StripeClient($stripeApiKey);
 
     // Get orders that need backfilling - look in ALL possible PI ID columns
+    // Include payment_method = 'card' OR NULL with Stripe references
     $orders = $db->getAll("
         SELECT id, order_number, stripe_payment_intent_id, payment_reference,
-               gateway_transaction_id, gateway_metadata, total_amount
+               gateway_transaction_id, gateway_metadata, total_amount, payment_method
         FROM orders
         WHERE payment_status = 'paid'
-          AND payment_method = 'card'
           AND stripe_fee IS NULL
+          AND (
+              payment_method = 'card'
+              OR (payment_method IS NULL AND (
+                  stripe_payment_intent_id IS NOT NULL
+                  OR gateway_transaction_id LIKE 'cs_%'
+                  OR gateway_transaction_id LIKE 'pi_%'
+              ))
+          )
         ORDER BY id ASC
         LIMIT ?
     ", [$batchSize]);
@@ -184,7 +192,15 @@ try {
             SUM(CASE WHEN stripe_fee IS NULL THEN 1 ELSE 0 END) as missing_fee,
             SUM(CASE WHEN stripe_fee IS NOT NULL THEN 1 ELSE 0 END) as has_fee
         FROM orders
-        WHERE payment_status = 'paid' AND payment_method = 'card'
+        WHERE payment_status = 'paid'
+          AND (
+              payment_method = 'card'
+              OR (payment_method IS NULL AND (
+                  stripe_payment_intent_id IS NOT NULL
+                  OR gateway_transaction_id LIKE 'cs_%'
+                  OR gateway_transaction_id LIKE 'pi_%'
+              ))
+          )
     ");
     $stats['total_paid_card'] = (int)($row['total'] ?? 0);
     $stats['missing_fee'] = (int)($row['missing_fee'] ?? 0);
