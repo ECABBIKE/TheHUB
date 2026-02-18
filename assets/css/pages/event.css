@@ -1233,6 +1233,11 @@ td.col-place {
         font-size: 0.65rem;
     }
 
+    /* Hide registration count on mobile - shown in tab instead */
+    .event-stat--registered {
+        display: none;
+    }
+
     /* Compact tabs */
     .event-tabs-wrapper {
         margin-bottom: var(--space-sm);

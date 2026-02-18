@@ -1174,7 +1174,7 @@ if ($eventHeaderBanner): ?>
                 <span class="event-stat-label">i mål</span>
             </div>
             <?php elseif ($totalRegistrations > 0): ?>
-            <div class="event-stat">
+            <div class="event-stat event-stat--registered">
                 <span class="event-stat-value"><?= $totalRegistrations ?><?php if ($maxParticipants): ?>/<span style="font-size:0.8em"><?= $maxParticipants ?></span><?php endif; ?></span>
                 <span class="event-stat-label">anmälda</span>
             </div>

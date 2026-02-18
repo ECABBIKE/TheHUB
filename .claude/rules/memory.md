@@ -271,7 +271,11 @@
 
 ---
 
-## SENASTE FIXAR (2026-02-19, session 2)
+## SENASTE FIXAR (2026-02-18)
+
+- **Mobil: Anmalda-raknare dold i event-headern**: Pa mobil visades antal anmalda som en egen sektion under eventinformationen (t.ex. bara "11"), vilket tog onodigt mycket plats. Nu dold pa mobil via CSS-klassen `.event-stat--registered` med `display: none`. Antalet visas istallet enbart i fliken "Anmalda" med formatet x/y (t.ex. "11/50"). Pa desktop visas statistiken fortfarande i headern.
+
+## TIDIGARE FIXAR (2026-02-19, session 2)
 
 - **Betalda-raknare inkluderar serieanmalningar**: Event-kort visade bara `paid_count` fran event_registrations. Nu laggs `series_registration_count` till (`paid_with_series`) - serier ar forbetalda
 - **Tidigare event sorteras senast-forst**: Genomforda event sorteras nu med nyaste forst (DATE DESC) istallet for aldsta forst
