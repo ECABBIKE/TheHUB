@@ -77,7 +77,7 @@ if ($isAdmin) {
     $platformFeeFixed = 0;
     $platformFeeType = 'percent';
     try {
-        $prRow = $db->getRow("SELECT id, name, platform_fee_percent, platform_fee_fixed, platform_fee_type, swish_number, bankgiro, bank_account, bank_name, bank_clearing, contact_email, org_number FROM payment_recipients WHERE active = 1 ORDER BY id LIMIT 1");
+        $prRow = $db->getRow("SELECT * FROM payment_recipients WHERE active = 1 ORDER BY id LIMIT 1");
         if ($prRow) {
             $platformFeePct = (float)($prRow['platform_fee_percent'] ?? 2.00);
             $platformFeeFixed = (float)($prRow['platform_fee_fixed'] ?? 0);
@@ -105,6 +105,12 @@ if ($isAdmin) {
             $params[] = $filterEvent;
         }
 
+        if ($filterRecipient > 0) {
+            $conditions[] = "(e.payment_recipient_id = ? OR s_series.payment_recipient_id = ?)";
+            $params[] = $filterRecipient;
+            $params[] = $filterRecipient;
+        }
+
         $whereClause = implode(' AND ', $conditions);
 
         $orderRows = $db->getAll("
@@ -114,6 +120,7 @@ if ($isAdmin) {
                    COALESCE(e.name, s_name.sname, '-') as event_name
             FROM orders o
             LEFT JOIN events e ON o.event_id = e.id
+            LEFT JOIN series s_series ON e.series_id = s_series.id
             LEFT JOIN (
                 SELECT oi2.order_id, CONCAT(s2.name, ' (serie)') as sname
                 FROM order_items oi2
@@ -282,14 +289,15 @@ if (!$isAdmin) {
     try {
         $promotorEvents = $db->getAll("
             SELECT e.id, e.name, e.date, e.location, e.active, e.series_id,
-                   e.max_participants, e.registration_open,
+                   e.max_participants,
                    s.name as series_name, s.logo as series_logo,
                    COALESCE(reg.total_count, 0) as total_registrations,
                    COALESCE(reg.paid_count, 0) as paid_count,
                    COALESCE(reg.pending_count, 0) as pending_count,
-                   COALESCE(ord.gross_revenue, 0) as gross_revenue,
+                   COALESCE(ord.gross_revenue, 0) as event_gross_revenue,
                    COALESCE(ord.order_count, 0) as order_count,
                    COALESCE(series_reg.series_count, 0) as series_registration_count,
+                   COALESCE(series_rev.series_revenue, 0) as series_revenue,
                    CASE WHEN e.date >= CURDATE() THEN 0 ELSE 1 END as is_past
             FROM events e
             LEFT JOIN series s ON e.series_id = s.id
@@ -317,8 +325,20 @@ if (!$isAdmin) {
                 WHERE sr.payment_status = 'paid' AND sr.status != 'cancelled'
                 GROUP BY sre.event_id
             ) series_reg ON series_reg.event_id = e.id
+            LEFT JOIN (
+                SELECT sre2.event_id,
+                       SUM(sr2.final_price / GREATEST(
+                           (SELECT COUNT(*) FROM series_registration_events sre3 WHERE sre3.series_registration_id = sr2.id), 1
+                       )) as series_revenue
+                FROM series_registration_events sre2
+                JOIN series_registrations sr2 ON sr2.id = sre2.series_registration_id
+                WHERE sr2.payment_status = 'paid' AND sr2.status != 'cancelled'
+                GROUP BY sre2.event_id
+            ) series_rev ON series_rev.event_id = e.id
             WHERE pe.user_id = ?
-            ORDER BY is_past ASC, e.date ASC
+            ORDER BY is_past ASC,
+                     CASE WHEN e.date >= CURDATE() THEN e.date END ASC,
+                     CASE WHEN e.date < CURDATE() THEN e.date END DESC
         ", [$userId]);
     } catch (Exception $e) {
         error_log("Promotor events error: " . $e->getMessage());
@@ -359,21 +379,36 @@ if (!$isAdmin) {
         }
     } catch (Exception $e) {}
 
-    // For event cards: calculate net per event
+    // For event cards: calculate gross (event + series share) and net per event
     foreach ($promotorEvents as &$ev) {
-        $gross = (float)$ev['gross_revenue'];
+        $eventGross = (float)$ev['event_gross_revenue'];
+        $seriesShare = (float)$ev['series_revenue'];
+        $gross = $eventGross + $seriesShare;
+        $ev['gross_revenue'] = $gross;
+
         $orderCnt = (int)$ev['order_count'];
-        // Estimate fees
-        $estPaymentFees = $orderCnt * (($gross / max($orderCnt, 1)) * $STRIPE_PERCENT / 100 + $STRIPE_FIXED);
+        $seriesCnt = (int)$ev['series_registration_count'];
+        $totalPaidItems = $orderCnt + $seriesCnt;
+
+        // Estimate payment fees
+        if ($totalPaidItems > 0) {
+            $avgAmount = $gross / $totalPaidItems;
+            $estPaymentFees = $totalPaidItems * (($avgAmount * $STRIPE_PERCENT / 100) + $STRIPE_FIXED);
+        } else {
+            $estPaymentFees = 0;
+        }
+
+        // Platform fee
         if ($promotorFeeType === 'fixed') {
-            $estPlatformFee = $promotorPlatformFixed * (int)$ev['paid_count'];
+            $estPlatformFee = $promotorPlatformFixed * $totalPaidItems;
         } elseif ($promotorFeeType === 'both') {
-            $estPlatformFee = ($gross * $promotorPlatformPct / 100) + ($promotorPlatformFixed * (int)$ev['paid_count']);
+            $estPlatformFee = ($gross * $promotorPlatformPct / 100) + ($promotorPlatformFixed * $totalPaidItems);
         } else {
             $estPlatformFee = $gross * $promotorPlatformPct / 100;
         }
         $ev['net_revenue'] = round($gross - $estPaymentFees - $estPlatformFee, 2);
-        $ev['total_with_series'] = (int)$ev['total_registrations'] + (int)$ev['series_registration_count'];
+        $ev['total_with_series'] = (int)$ev['total_registrations'] + $seriesCnt;
+        $ev['paid_with_series'] = (int)$ev['paid_count'] + $seriesCnt; // series regs are pre-paid
     }
     unset($ev);
 
@@ -537,18 +572,38 @@ if (!$isAdmin) {
         }
         unset($order);
 
-        // Available years for promotor
+        // Available years for promotor (include series orders too)
         $promotorYears = [];
-        if (!empty($allEventIds)) {
-            $placeholders = implode(',', array_fill(0, count($allEventIds), '?'));
-            try {
+        try {
+            $yearOwnerParts = [];
+            $yearOwnerParams = [];
+            if (!empty($allEventIds)) {
+                $placeholders = implode(',', array_fill(0, count($allEventIds), '?'));
+                $yearOwnerParts[] = "event_id IN ({$placeholders})";
+                $yearOwnerParams = array_merge($yearOwnerParams, $allEventIds);
+            }
+            if (!empty($promotorSeriesIds)) {
+                $sPlaceholders = implode(',', array_fill(0, count($promotorSeriesIds), '?'));
+                $yearOwnerParts[] = "id IN (
+                    SELECT oi.order_id FROM order_items oi
+                    JOIN series_registrations sr ON sr.id = oi.series_registration_id
+                    WHERE sr.series_id IN ({$sPlaceholders})
+                )";
+                $yearOwnerParams = array_merge($yearOwnerParams, $promotorSeriesIds);
+                if ($hasOrderSeriesId) {
+                    $yearOwnerParts[] = "series_id IN ({$sPlaceholders})";
+                    $yearOwnerParams = array_merge($yearOwnerParams, $promotorSeriesIds);
+                }
+            }
+            if (!empty($yearOwnerParts)) {
+                $yearWhere = "payment_status = 'paid' AND (" . implode(' OR ', $yearOwnerParts) . ")";
                 $promotorYears = $db->getAll("
                     SELECT DISTINCT YEAR(created_at) as yr FROM orders
-                    WHERE payment_status = 'paid' AND event_id IN ({$placeholders})
+                    WHERE {$yearWhere}
                     ORDER BY yr DESC
-                ", $allEventIds);
-            } catch (Exception $e) {}
-        }
+                ", $yearOwnerParams);
+            }
+        } catch (Exception $e) {}
 
         // Events for filter
         $promotorFilterEvents = [];
@@ -622,10 +677,10 @@ include __DIR__ . '/components/unified-layout.php';
 .fee-edit-save { background: var(--color-success); color: white; }
 .fee-edit-cancel { background: var(--color-bg-sunken); color: var(--color-text-secondary); }
 
-/* Mobile: card view for portrait phones */
+/* Mobile: card view on all phones (portrait + landscape) */
 .order-cards { display: none; }
 
-@media (max-width: 599px) and (orientation: portrait) {
+@media (max-width: 767px) {
     .order-table-wrap { display: none; }
     .order-cards { display: block; }
 }
@@ -1075,7 +1130,7 @@ function cancelFeeEdit(recipientId, originalText) {
 @media (max-width: 600px) {
     .stats-grid { grid-template-columns: repeat(2, 1fr); }
 }
-@media (max-width: 599px) and (orientation: portrait) {
+@media (max-width: 767px) {
     .eco-table-wrap { display: none; }
     .eco-cards { display: block; }
     .event-actions { display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-xs); }
@@ -1158,7 +1213,7 @@ function cancelFeeEdit(recipientId, originalText) {
                     <div class="stat-label">Anmälda<?php if ($event['series_registration_count'] > 0): ?> <small>(<?= (int)$event['series_registration_count'] ?> serie)</small><?php endif; ?></div>
                 </div>
                 <div class="stat-box">
-                    <div class="stat-value success"><?= (int)$event['paid_count'] ?></div>
+                    <div class="stat-value success"><?= (int)$event['paid_with_series'] ?></div>
                     <div class="stat-label">Betalda</div>
                 </div>
                 <div class="stat-box">

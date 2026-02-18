@@ -163,15 +163,23 @@ function isAdminPageActive($item, $requestUri) {
         <div class="sidebar-section-title">Promotor</div>
         <?php
         $currentPath = $_SERVER['REQUEST_URI'];
+        $currentTab = $_GET['tab'] ?? '';
+        $isPromotorPage = (strpos($currentPath, '/admin/promotor.php') !== false || $currentPath === '/admin/promotor');
         // PROMOTOR navigation - must be identical to admin-mobile-nav.php promotor nav
         $promotorNav = [
-            ['id' => 'events', 'label' => 'Event', 'icon' => 'calendar', 'url' => '/admin/promotor.php?tab=event', 'match' => '/admin/promotor'],
-            ['id' => 'series', 'label' => 'Serier', 'icon' => 'medal', 'url' => '/admin/promotor.php?tab=serier', 'match' => '/admin/promotor-series'],
-            ['id' => 'ekonomi', 'label' => 'Ekonomi', 'icon' => 'wallet', 'url' => '/admin/promotor.php?tab=ekonomi', 'match' => '/admin/promotor.php?tab=ekonomi'],
-            ['id' => 'media', 'label' => 'Media', 'icon' => 'image', 'url' => '/admin/promotor.php?tab=media', 'match' => '/admin/media'],
+            ['id' => 'events', 'label' => 'Event', 'icon' => 'calendar', 'url' => '/admin/promotor.php?tab=event'],
+            ['id' => 'series', 'label' => 'Serier', 'icon' => 'medal', 'url' => '/admin/promotor.php?tab=serier'],
+            ['id' => 'ekonomi', 'label' => 'Ekonomi', 'icon' => 'wallet', 'url' => '/admin/promotor.php?tab=ekonomi'],
+            ['id' => 'media', 'label' => 'Media', 'icon' => 'image', 'url' => '/admin/promotor.php?tab=media'],
         ];
         foreach ($promotorNav as $item):
-            $isActive = strpos($currentPath, $item['match']) !== false;
+            $isActive = match($item['id']) {
+                'events' => $isPromotorPage && ($currentTab === 'event' || $currentTab === ''),
+                'series' => ($isPromotorPage && $currentTab === 'serier') || strpos($currentPath, '/admin/promotor-series') !== false,
+                'ekonomi' => $isPromotorPage && $currentTab === 'ekonomi',
+                'media' => ($isPromotorPage && $currentTab === 'media') || strpos($currentPath, '/admin/media') !== false,
+                default => false,
+            };
         ?>
           <a href="<?= htmlspecialchars($item['url']) ?>"
              class="sidebar-link<?= $isActive ? ' is-active' : '' ?>"

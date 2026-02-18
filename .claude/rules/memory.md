@@ -1,6 +1,6 @@
 # TheHUB - Memory / Session Knowledge
 
-> Senast uppdaterad: 2026-02-17
+> Senast uppdaterad: 2026-02-19
 
 ---
 
@@ -8,11 +8,14 @@
 
 ### Ny flikstruktur
 - **Event** - Event-kort med anmalda (inkl serieanmalningar), brutto/netto-intakter, redigera-lank
-  - Sorteras: kommande forst (datum ASC), genomforda sist
+  - Sorteras: kommande forst (datum ASC), sedan genomforda senast-forst (datum DESC)
   - Visar bade event-registreringar OCH serie-registreringar via `series_registration_events`
+  - "Betalda" inkluderar bade event-registreringar och serieanmalningar
+  - Serie-intakter fördelas jämnt: `final_price / antal event i serien`
 - **Serier** - Serieanmalan oppen/stangd, serierabatt, prismall, banner
 - **Ekonomi** - Detaljerad ordertabell med avgifter, rabattkoder. Samma layout som admin-ekonomivyn. Filter: ar, manad, event
   - Lank till rabattkodshantering (`/admin/discount-codes.php` stodjer promotor)
+  - Ar-filter inkluderar bade event-ordrar och serieanmalningar (tre-vagssokning)
 - **Media** - Lankar till mediabiblioteket med formatguide
 
 ### Borttaget fran promotor-nav
@@ -268,7 +271,15 @@
 
 ---
 
-## SENASTE FIXAR (2026-02-19)
+## SENASTE FIXAR (2026-02-19, session 2)
+
+- **Betalda-raknare inkluderar serieanmalningar**: Event-kort visade bara `paid_count` fran event_registrations. Nu laggs `series_registration_count` till (`paid_with_series`) - serier ar forbetalda
+- **Tidigare event sorteras senast-forst**: Genomforda event sorteras nu med nyaste forst (DATE DESC) istallet for aldsta forst
+- **Admin mottagarfilter fungerar**: Mottagare-dropdown filtrerar nu faktiskt orderlistan via `events.payment_recipient_id` och `series.payment_recipient_id`
+- **Promotor arfilter inkluderar serieordrar**: Arsvaljaren i ekonomi-fliken soker nu bade event-ordrar och serieordrar (tre-vagssokning med event_id, order_items och orders.series_id)
+- **Borttagen `e.registration_open`**: Kolumnen valdes i event-fragan men anvandes aldrig - borttagen for att undvika potentiellt SQL-fel
+
+## FIXAR (2026-02-19, session 1)
 
 - **Ekonomi-vy omskriven till per-order-tabell**: Hela admin-ekonomivyn (`/admin/promotor.php`) omskriven fran aggregerad sammanfattning per betalningsmottagare till en detaljerad per-order-tabell. Kolumner: Ordernr, Event, Belopp, Betalsatt, Avgift betalning, Plattformsavgift, Netto. Summarad i tfoot. Mobil portrait visar kort-vy med komprimerad info.
 - **Swish-avgift andrad fran 2 kr till 3 kr**: `$SWISH_FEE = 3.00` (var 2.00). Bekraftat av anvandaren.
@@ -282,7 +293,7 @@
 - **Per-order avgifter**: Stripe: faktisk fee fran `orders.stripe_fee` eller uppskattning (1,5%+2kr). Swish: alltid 3 kr. Manuell/gratis: 0 kr.
 - **Plattformsavgift**: Hamtas fran `payment_recipients.platform_fee_percent` (forsta aktiva), redigerbar inline
 - **Layout**: admin-table med 7 kolumner + summarad i tfoot
-- **Mobil**: Portrait phones visar kort-vy (`order-cards`), landscape/desktop visar tabell
+- **Mobil**: Alla telefoner (portrait + landscape, max 767px) visar kort-vy, desktop visar tabell
 - **Stats-kort**: Forsaljning, Totala avgifter, Netto efter avgifter, Antal ordrar
 
 ## TIDIGARE FIXAR (2026-02-18)
