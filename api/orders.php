@@ -320,7 +320,7 @@ try {
             case 'claim_swish':
                 $orderId = intval($data['order_id'] ?? 0);
                 if (!$orderId) {
-                    throw new Exception('order_id kravs');
+                    throw new Exception('order_id krävs');
                 }
 
                 $pdo = hub_db();
@@ -335,7 +335,7 @@ try {
                 }
 
                 if ($orderRow['payment_status'] === 'paid') {
-                    throw new Exception('Ordern ar redan betald');
+                    throw new Exception('Ordern är redan betald');
                 }
 
                 // Uppdatera payment_method till 'swish' och behall pending status
@@ -350,7 +350,7 @@ try {
 
                 echo json_encode([
                     'success' => true,
-                    'message' => 'Swish-betalning registrerad. Bekraftas manuellt.'
+                    'message' => 'Swish-betalning registrerad. Bekräftas manuellt.'
                 ]);
                 break;
 

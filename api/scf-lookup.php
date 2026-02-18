@@ -57,7 +57,7 @@ if ($existing) {
             'license_type' => $existing['license_type'],
             'license_category' => $existing['license_category'],
         ],
-        'message' => 'Denna akare finns redan i databasen'
+        'message' => 'Denna åkare finns redan i databasen'
     ]);
     exit;
 }
@@ -70,7 +70,7 @@ $year = (int)date('Y');
 $results = $scfService->lookupByUciIds([$uciClean], $year);
 
 if (empty($results)) {
-    echo json_encode(['success' => false, 'error' => 'Ingen licens hittades for detta UCI ID']);
+    echo json_encode(['success' => false, 'error' => 'Ingen licens hittades för detta UCI ID']);
     exit;
 }
 

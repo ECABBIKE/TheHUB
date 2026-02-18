@@ -591,7 +591,7 @@ include __DIR__ . '/../components/header.php';
                         <!-- Instructions -->
                         <div style="background: var(--color-accent-light); border-radius: var(--radius-md); padding: var(--space-md); margin-bottom: var(--space-md);">
                             <ol style="margin: 0; padding-left: var(--space-lg); font-size: var(--text-sm); color: var(--color-text-secondary);">
-                                <li style="margin-bottom: var(--space-xs);">Oppna Swish-appen</li>
+                                <li style="margin-bottom: var(--space-xs);">Öppna Swish-appen</li>
                                 <li style="margin-bottom: var(--space-xs);">Swisha <strong><?= number_format($order['total_amount'], 0) ?> kr</strong> till <strong><?= htmlspecialchars($swishNumber) ?></strong></li>
                                 <li style="margin-bottom: var(--space-xs);">Skriv <strong><?= htmlspecialchars($order['order_number']) ?></strong> som meddelande</li>
                                 <li>Klicka "Jag har Swishat" nedan</li>
@@ -624,7 +624,7 @@ include __DIR__ . '/../components/header.php';
                            id="swish-open-btn"
                            style="background: linear-gradient(135deg, #32a852, #1e7e34); color: white; margin-bottom: var(--space-sm); text-decoration: none; display: flex; align-items: center; justify-content: center; gap: var(--space-sm);">
                             <i data-lucide="external-link"></i>
-                            Oppna Swish-appen
+                            Öppna Swish-appen
                         </a>
 
                         <!-- Confirm button -->
@@ -637,7 +637,7 @@ include __DIR__ . '/../components/header.php';
                         </button>
 
                         <p class="text-xs text-muted text-center mt-sm">
-                            Betalningen bekraftas manuellt inom kort.
+                            Betalningen bekräftas manuellt inom kort.
                         </p>
                     </div>
                 </div>
@@ -649,7 +649,7 @@ include __DIR__ . '/../components/header.php';
                     <i data-lucide="clock" class="icon-xl text-accent mb-md"></i>
                     <h2 class="text-lg mb-sm">Swish-betalning registrerad!</h2>
                     <p class="text-secondary mb-md">
-                        Vi har noterat din betalning. Den bekraftas manuellt sa snart vi ser den pa Swish.
+                        Vi har noterat din betalning. Den bekräftas manuellt så snart vi ser den på Swish.
                     </p>
                     <p class="text-sm text-secondary mb-lg">
                         Order: <strong><?= htmlspecialchars($order['order_number']) ?></strong>
@@ -731,13 +731,13 @@ include __DIR__ . '/../components/header.php';
                     </h3>
                     <p class="text-sm text-secondary">
                         <?php if ($hasStripe): ?>
-                        Kortbetalning bekraftas automatiskt.
+                        Kortbetalning bekräftas automatiskt.
                         <?php endif; ?>
                         <?php if ($hasSwish): ?>
-                        Swish-betalning bekraftas manuellt inom kort.
+                        Swish-betalning bekräftas manuellt inom kort.
                         <?php endif; ?>
                         <?php if (!empty($order['customer_email'])): ?>
-                        Du far ett bekraftelsemail till <strong><?= htmlspecialchars($order['customer_email']) ?></strong>.
+                        Du får ett bekräftelsemail till <strong><?= htmlspecialchars($order['customer_email']) ?></strong>.
                         <?php endif; ?>
                     </p>
                 </div>
@@ -791,7 +791,7 @@ async function confirmSwishPayment(orderId) {
             if (typeof lucide !== 'undefined') lucide.createIcons();
         }
     } catch (error) {
-        alert('Nagot gick fel. Forsok igen.');
+        alert('Något gick fel. Försök igen.');
         btn.disabled = false;
         btn.innerHTML = '<i data-lucide="check-circle"></i> Jag har Swishat';
         if (typeof lucide !== 'undefined') lucide.createIcons();
@@ -874,7 +874,7 @@ document.addEventListener('DOMContentLoaded', function() {
                 const data = await response.json();
 
                 if (data.success) {
-                    showMessage('Rabattkod tillampad! Du sparade ' + data.discount_amount + ' kr', 'success');
+                    showMessage('Rabattkod tillämpad! Du sparade ' + data.discount_amount + ' kr', 'success');
                     setTimeout(() => { window.location.reload(); }, 1000);
                 } else {
                     showMessage(data.error || 'Ogiltig rabattkod', 'error');
@@ -884,7 +884,7 @@ document.addEventListener('DOMContentLoaded', function() {
             }
 
             applyBtn.disabled = false;
-            applyBtn.innerHTML = '<i data-lucide="check"></i> Anvand';
+            applyBtn.innerHTML = '<i data-lucide="check"></i> Använd';
             if (typeof lucide !== 'undefined') lucide.createIcons();
         });
     }
