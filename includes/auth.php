@@ -64,12 +64,12 @@ function requireLogin() {
     }
 
     // Session activity timeout
-    // If "remember me" is set, use 30 days, otherwise 30 minutes
+    // If "remember me" is set, use 30 days, otherwise 24 hours
     $rememberMe = $_SESSION['remember_me'] ?? false;
     if ($rememberMe) {
         $timeout = 30 * 24 * 60 * 60; // 30 days
     } else {
-        $timeout = defined('SESSION_ACTIVITY_TIMEOUT') ? SESSION_ACTIVITY_TIMEOUT : 1800; // 30 minutes
+        $timeout = 24 * 60 * 60; // 24 hours
     }
 
     if (isset($_SESSION['last_activity']) && (time() - $_SESSION['last_activity'] > $timeout)) {
