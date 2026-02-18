@@ -2594,12 +2594,13 @@ try {
                             $regClub = h($reg['club_name'] ?? '-');
                             $regBib = h($reg['bib_number'] ?? '-');
                             $regYear = h($reg['birth_year'] ?? '-');
+                            $regRiderId = $reg['rider_id'] ?? null;
                         ?>
                         <tr>
                             <?php if ($hasBibNumbers): ?>
                             <td class="text-muted"><?= $regBib ?></td>
                             <?php endif; ?>
-                            <td><strong><?= $regName ?></strong></td>
+                            <td><?php if ($regRiderId): ?><a href="/rider/<?= $regRiderId ?>" class="rider-link"><strong><?= $regName ?></strong></a><?php else: ?><strong><?= $regName ?></strong><?php endif; ?></td>
                             <td class="text-muted"><?= $regYear ?></td>
                             <td class="text-secondary"><?= $regClub ?></td>
                         </tr>
