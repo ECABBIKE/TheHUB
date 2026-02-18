@@ -736,7 +736,7 @@ function hub_email_template(string $template, array $vars = []): string {
             {{#activation_link}}
             <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 16px; margin: 24px 0;">
                 <p style="margin: 0 0 8px 0; font-weight: 600;">Aktivera ditt konto</p>
-                <p style="margin: 0 0 12px 0; font-size: 14px;">Vi har skapat en profil for dig pa TheHUB. Aktivera ditt konto for att se dina anmalningar, resultat och mycket mer.</p>
+                <p style="margin: 0 0 12px 0; font-size: 14px;">Vi har skapat en profil för dig på TheHUB. Aktivera ditt konto för att se dina anmälningar, resultat och mycket mer.</p>
                 <p class="text-center" style="margin: 0;">
                     <a href="{{activation_link}}" class="btn">Aktivera konto</a>
                 </p>
@@ -802,7 +802,7 @@ function hub_email_template(string $template, array $vars = []): string {
             {{#activation_link}}
             <div style="background: #f0fdf4; border: 1px solid #bbf7d0; border-radius: 8px; padding: 16px; margin: 24px 0;">
                 <p style="margin: 0 0 8px 0; font-weight: 600;">Aktivera ditt konto</p>
-                <p style="margin: 0 0 12px 0; font-size: 14px;">Vi har skapat en profil for dig pa TheHUB. Aktivera ditt konto for att se dina anmalningar, resultat och mycket mer.</p>
+                <p style="margin: 0 0 12px 0; font-size: 14px;">Vi har skapat en profil för dig på TheHUB. Aktivera ditt konto för att se dina anmälningar, resultat och mycket mer.</p>
                 <p class="text-center" style="margin: 0;">
                     <a href="{{activation_link}}" class="btn">Aktivera konto</a>
                 </p>

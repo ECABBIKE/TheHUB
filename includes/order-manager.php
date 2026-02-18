@@ -784,15 +784,15 @@ function getEligibleClassesForEvent(int $eventId, int $riderId, ?array &$license
                     $licenseValidation['club_name'] = $scfResult['club_name'] ?? null;
                     $licenseValidation['discipline'] = $scfResult['discipline'] ?? null;
                     $licenseValidation['message'] = $isValid
-                        ? 'Giltig licens for ' . $eventYear
-                        : 'Licensen ar inte giltig for ' . $eventYear;
+                        ? 'Giltig licens för' . $eventYear
+                        : 'Licensen är inte giltig för' . $eventYear;
 
                     // Cache the result
                     $scfService->cacheLicense($scfResult, $eventYear);
                 } else {
                     $licenseValidation['status'] = $hasRealUciId ? 'not_found' : 'none';
                     $licenseValidation['source'] = 'scf';
-                    $licenseValidation['message'] = 'Ingen licens hittades i SCFs register for ' . $eventYear;
+                    $licenseValidation['message'] = 'Ingen licens hittades i SCFs register för' . $eventYear;
                 }
             }
         } catch (Exception $e) {
@@ -802,7 +802,7 @@ function getEligibleClassesForEvent(int $eventId, int $riderId, ?array &$license
         }
     } else {
         $licenseValidation['source'] = 'local_verified';
-        $licenseValidation['message'] = 'Giltig licens for ' . $eventYear;
+        $licenseValidation['message'] = 'Giltig licens för' . $eventYear;
     }
 
     // Try pricing template system first (new system)
@@ -1097,7 +1097,7 @@ function createRiderFromRegistration(array $data, int $parentUserId): array {
     try {
         // Validera obligatoriska falt
         if (empty($data['firstname']) || empty($data['lastname']) || empty($data['email'])) {
-            throw new Exception('Fornamn, efternamn och e-post kravs');
+            throw new Exception('Förnamn, efternamn och e-post krävs');
         }
 
         // Kolla om email redan finns - ge specifik feedback
@@ -1112,13 +1112,13 @@ function createRiderFromRegistration(array $data, int $parentUserId): array {
                 return [
                     'success' => false,
                     'code' => 'email_exists_active',
-                    'error' => "Det finns redan ett konto ({$name}) med denna e-post. Logga in for att anmala."
+                    'error' => "Det finns redan ett konto ({$name}) med denna e-post. Logga in för att anmäla."
                 ];
             } else {
                 return [
                     'success' => false,
                     'code' => 'email_exists_inactive',
-                    'error' => "Det finns redan en profil ({$name}) med denna e-post som inte ar aktiverad."
+                    'error' => "Det finns redan en profil ({$name}) med denna e-post som inte är aktiverad."
                 ];
             }
         }

@@ -153,7 +153,7 @@ if ($eventId > 0) {
                 // Group by category
                 $byCategory = [];
                 foreach ($allRegs as $reg) {
-                    $cat = $reg['category'] ?? 'Okand';
+                    $cat = $reg['category'] ?? 'Okänd';
                     $byCategory[$cat][] = $reg;
                 }
 
@@ -300,18 +300,18 @@ if ($eventId > 0) {
             echo "\xEF\xBB\xBF";
 
             $fp = fopen('php://output', 'w');
-            $headers = ['Startnr', 'Klass', 'Efternamn', 'Fornamn', 'Fodelsear', 'Kon', 'Klubb', 'Nationalitet', 'UCI ID', 'E-post', 'Telefon'];
+            $headers = ['Startnr', 'Klass', 'Efternamn', 'Förnamn', 'Födelseår', 'Kön', 'Klubb', 'Nationalitet', 'UCI ID', 'E-post', 'Telefon'];
             if ($hasIceFields) {
-                $headers[] = 'Nodkontakt namn';
-                $headers[] = 'Nodkontakt telefon';
+                $headers[] = 'Nödkontakt namn';
+                $headers[] = 'Nödkontakt telefon';
             }
             $headers[] = 'Status';
             $headers[] = 'Betalning';
             fputcsv($fp, $headers, ';');
 
             foreach ($registrations as $reg) {
-                $statusMap = ['pending' => 'Vantande', 'confirmed' => 'Bekraftad', 'cancelled' => 'Avbruten'];
-                $paymentMap = ['paid' => 'Betald', 'pending' => 'Vantande'];
+                $statusMap = ['pending' => 'Väntande', 'confirmed' => 'Bekräftad', 'cancelled' => 'Avbruten'];
+                $paymentMap = ['paid' => 'Betald', 'pending' => 'Väntande'];
                 $row = [
                     $reg['bib_number'] ?? '',
                     $reg['category'] ?? '',
@@ -371,7 +371,7 @@ include __DIR__ . '/components/unified-layout.php';
         <div class="sl-event-select-wrap">
             <i data-lucide="calendar" class="sl-event-icon"></i>
             <select name="event_id" class="sl-event-dropdown" onchange="this.form.submit()">
-                <option value="">-- Valj event --</option>
+                <option value="">-- Välj event --</option>
                 <?php foreach ($events as $ev): ?>
                 <option value="<?= $ev['id'] ?>"
                     <?= $eventId == $ev['id'] ? 'selected' : '' ?>
@@ -389,8 +389,8 @@ include __DIR__ . '/components/unified-layout.php';
 <?php if (!$event): ?>
 <div class="sl-empty">
     <i data-lucide="clipboard-list"></i>
-    <h3>Valj ett event</h3>
-    <p>Valj ett event i listan ovan for att se startlistan.</p>
+    <h3>Välj ett event</h3>
+    <p>Välj ett event i listan ovan för att se startlistan.</p>
 </div>
 <?php else: ?>
 
@@ -398,15 +398,15 @@ include __DIR__ . '/components/unified-layout.php';
 <div class="sl-stats">
     <div class="sl-stat">
         <span class="sl-stat-value"><?= (int)($stats['total'] ?? 0) ?><?php if (!empty($event['max_participants'])): ?>/<span style="font-size:0.75em;opacity:0.7"><?= (int)$event['max_participants'] ?></span><?php endif; ?></span>
-        <span class="sl-stat-label">Anmalda<?php if (!empty($event['max_participants'])): ?> (max <?= (int)$event['max_participants'] ?>)<?php endif; ?></span>
+        <span class="sl-stat-label">Anmälda<?php if (!empty($event['max_participants'])): ?> (max <?= (int)$event['max_participants'] ?>)<?php endif; ?></span>
     </div>
     <div class="sl-stat sl-stat--success">
         <span class="sl-stat-value"><?= (int)($stats['confirmed'] ?? 0) ?></span>
-        <span class="sl-stat-label">Bekraftade</span>
+        <span class="sl-stat-label">Bekräftade</span>
     </div>
     <div class="sl-stat sl-stat--warning">
         <span class="sl-stat-value"><?= (int)($stats['pending'] ?? 0) ?></span>
-        <span class="sl-stat-label">Vantande</span>
+        <span class="sl-stat-label">Väntande</span>
     </div>
 </div>
 
@@ -430,14 +430,14 @@ include __DIR__ . '/components/unified-layout.php';
         <select name="status" class="sl-filter-select" onchange="this.form.submit()">
             <option value="active" <?= ($filterStatus ?? 'active') === 'active' ? 'selected' : '' ?>>Aktiva</option>
             <option value="all" <?= ($filterStatus ?? '') === 'all' ? 'selected' : '' ?>>Alla</option>
-            <option value="confirmed" <?= ($filterStatus ?? '') === 'confirmed' ? 'selected' : '' ?>>Bekraftade</option>
-            <option value="pending" <?= ($filterStatus ?? '') === 'pending' ? 'selected' : '' ?>>Vantande</option>
+            <option value="confirmed" <?= ($filterStatus ?? '') === 'confirmed' ? 'selected' : '' ?>>Bekräftade</option>
+            <option value="pending" <?= ($filterStatus ?? '') === 'pending' ? 'selected' : '' ?>>Väntande</option>
         </select>
 
         <div class="sl-search-wrap">
             <i data-lucide="search" class="sl-search-icon"></i>
             <input type="text" name="search" value="<?= h($search ?? '') ?>"
-                   placeholder="Sok namn / startnr..."
+                   placeholder="Sök namn / startnr..."
                    class="sl-search-input">
         </div>
 
@@ -454,7 +454,7 @@ include __DIR__ . '/components/unified-layout.php';
         </a>
         <a href="?event_id=<?= $eventId ?>&view=extended<?= $filterClass ? '&class=' . urlencode($filterClass) : '' ?><?= $filterStatus !== 'active' ? '&status=' . urlencode($filterStatus) : '' ?>"
            class="sl-view-btn <?= ($viewMode ?? 'basic') === 'extended' ? 'active' : '' ?>"
-           title="Utokad vy">
+           title="Utökad vy">
             <i data-lucide="columns-3"></i>
         </a>
     </div>
@@ -490,7 +490,7 @@ include __DIR__ . '/components/unified-layout.php';
                     <span class="sl-bib-sort-card">
                         <i data-lucide="trophy"></i>
                         <span>Ranking</span>
-                        <small>Seriepoang</small>
+                        <small>Seriepoäng</small>
                     </span>
                 </label>
                 <?php endif; ?>
@@ -498,8 +498,8 @@ include __DIR__ . '/components/unified-layout.php';
                     <input type="radio" name="sort_mode" value="registration">
                     <span class="sl-bib-sort-card">
                         <i data-lucide="clock"></i>
-                        <span>Anmalningsordning</span>
-                        <small>Forst anmald forst</small>
+                        <span>Anmälningsordning</span>
+                        <small>Först anmäld först</small>
                     </span>
                 </label>
             </div>
@@ -528,7 +528,7 @@ include __DIR__ . '/components/unified-layout.php';
                     <div class="sl-bib-range-inputs">
                         <input type="number" name="class_range[<?= $catKey ?>][from]"
                                value="<?= $defaultStart ?>" min="1"
-                               class="sl-bib-range-input" placeholder="Fran"
+                               class="sl-bib-range-input" placeholder="Från"
                                data-cat="<?= $catKey ?>" data-count="<?= $regCount ?>"
                                onchange="updateRangeEnd(this)">
                         <span class="sl-bib-range-sep">-</span>
@@ -547,7 +547,7 @@ include __DIR__ . '/components/unified-layout.php';
 
         <!-- Actions -->
         <div class="sl-bib-actions">
-            <button type="submit" class="btn btn-primary" onclick="return confirm('Tilldela startnummer enligt installningarna?')">
+            <button type="submit" class="btn btn-primary" onclick="return confirm('Tilldela startnummer enligt inställningarna?')">
                 <i data-lucide="hash"></i>
                 Tilldela startnummer
             </button>
@@ -569,7 +569,7 @@ include __DIR__ . '/components/unified-layout.php';
 <div class="sl-empty">
     <i data-lucide="users"></i>
     <h3>Inga deltagare</h3>
-    <p>Inga anmalningar matchar dina filter.</p>
+    <p>Inga anmälningar matchar dina filter.</p>
 </div>
 <?php else: ?>
 
@@ -577,7 +577,7 @@ include __DIR__ . '/components/unified-layout.php';
 // Group by class
 $grouped = [];
 foreach ($registrations as $reg) {
-    $cat = $reg['category'] ?? 'Okand klass';
+    $cat = $reg['category'] ?? 'Okänd klass';
     $grouped[$cat][] = $reg;
 }
 ?>
@@ -597,18 +597,18 @@ foreach ($registrations as $reg) {
                     <tr>
                         <th class="sl-col-bib">Nr</th>
                         <th class="sl-col-name">Namn</th>
-                        <th class="sl-col-year">Ar</th>
+                        <th class="sl-col-year">År</th>
                         <th class="sl-col-club">Klubb</th>
                         <th class="sl-col-status">Status</th>
                         <th class="sl-col-payment">Betalning</th>
                         <?php if (($viewMode ?? 'basic') === 'extended'): ?>
-                        <th class="sl-col-ext">Kon</th>
+                        <th class="sl-col-ext">Kön</th>
                         <th class="sl-col-ext">Nation</th>
                         <th class="sl-col-ext">UCI ID</th>
                         <th class="sl-col-ext">E-post</th>
                         <th class="sl-col-ext">Telefon</th>
                         <?php if ($hasIceFields): ?>
-                        <th class="sl-col-ext sl-col-ice">Nodkontakt</th>
+                        <th class="sl-col-ext sl-col-ice">Nödkontakt</th>
                         <?php endif; ?>
                         <th class="sl-col-ext">Order</th>
                         <?php endif; ?>

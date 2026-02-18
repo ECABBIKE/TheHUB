@@ -259,7 +259,7 @@ if (!empty($eventIds)) {
 
         // Only include riders with points
         if ($riderData['total_points'] > 0) {
-            $classKey = $rider['class_display_name'] ?? $rider['class_name'] ?? 'Okand';
+            $classKey = $rider['class_display_name'] ?? $rider['class_name'] ?? 'Okänd';
             if (!isset($standingsByClass[$classKey])) {
                 $standingsByClass[$classKey] = [
                     'class_id' => $rider['class_id'],
@@ -498,9 +498,9 @@ skip_club_standings:
                 <p class="series-description"><?= htmlspecialchars($series['description']) ?></p>
             <?php endif; ?>
             <div class="series-meta">
-                <span><?= count($events) ?> tavlingar</span>
+                <span><?= count($events) ?> tävlingar</span>
                 <?php if ($countBest): ?>
-                <span>Raknar <?= $countBest ?> basta resultat</span>
+                <span>Räknar <?= $countBest ?> bästa resultat</span>
                 <?php endif; ?>
             </div>
         </div>
@@ -536,13 +536,13 @@ skip_club_standings:
         <!-- Collapsible Events Section -->
         <details class="events-dropdown">
             <summary class="events-dropdown-header">
-                <span><i data-lucide="calendar" class="events-dropdown-icon"></i> Tavlingar i serien</span>
+                <span><i data-lucide="calendar" class="events-dropdown-icon"></i> Tävlingar i serien</span>
                 <span class="events-count"><?= count($events) ?> st</span>
                 <span class="dropdown-arrow">▾</span>
             </summary>
             <div class="events-dropdown-content">
                 <?php if (empty($events)): ?>
-                    <p class="text-muted">Inga tavlingar i serien annu.</p>
+                    <p class="text-muted">Inga tävlingar i serien ännu.</p>
                 <?php else: ?>
                     <?php foreach ($events as $i => $event):
                         $eventDate = strtotime($event['date']);
@@ -611,13 +611,13 @@ skip_club_standings:
 
         <!-- Individual Standings -->
         <div class="card">
-            <h2 class="card-title">Individuell stallning</h2>
+            <h2 class="card-title">Individuell ställning</h2>
             <?php if ($countBest): ?>
-                <p class="text-muted standings-note">Raknar <?= $countBest ?> basta resultat</p>
+                <p class="text-muted standings-note">Räknar <?= $countBest ?> bästa resultat</p>
             <?php endif; ?>
 
             <?php if (empty($standingsByClass)): ?>
-                <p class="text-muted text-center">Ingen stallning annu.</p>
+                <p class="text-muted text-center">Ingen ställning ännu.</p>
             <?php else: ?>
                 <?php foreach ($standingsByClass as $className => $classData): ?>
                 <div class="standings-class">
@@ -685,7 +685,7 @@ skip_club_standings:
                                         <td class="col-event <?= $isExcluded ? 'excluded' : '' ?>">
                                             <?php if ($pts > 0): ?>
                                                 <?php if ($isExcluded): ?>
-                                                    <span class="points-excluded" title="Raknas ej"><?= $pts ?></span>
+                                                    <span class="points-excluded" title="Räknas ej"><?= $pts ?></span>
                                                 <?php else: ?>
                                                     <?= $pts ?>
                                                 <?php endif; ?>
@@ -752,7 +752,7 @@ skip_club_standings:
             <?php if (empty($clubStandings)): ?>
                 <div class="empty-state">
                     <div class="empty-state-icon"><i data-lucide="shield"></i></div>
-                    <p>Inga klubbresultat annu.</p>
+                    <p>Inga klubbresultat ännu.</p>
                 </div>
             <?php else: ?>
                 <div class="table-responsive">
@@ -761,10 +761,10 @@ skip_club_standings:
                             <tr>
                                 <th style="width: 60px;">Rank</th>
                                 <th>Klubb</th>
-                                <th class="text-right">Poang</th>
+                                <th class="text-right">Poäng</th>
                                 <th class="text-right table-col-hide-portrait">Deltagare</th>
                                 <th class="text-right table-col-hide-portrait">Events</th>
-                                <th class="text-right table-col-hide-portrait">Basta event</th>
+                                <th class="text-right table-col-hide-portrait">Bästa event</th>
                                 <th style="width: 50px;"></th>
                             </tr>
                         </thead>
@@ -805,7 +805,7 @@ skip_club_standings:
             <div class="card-body">
                 <p class="text-muted text-sm" style="margin: 0;">
                     <i data-lucide="info" style="width: 14px; height: 14px; vertical-align: middle;"></i>
-                    Basta akare per klubb/klass far 100%, nast basta 50%, ovriga 0%.
+                    Bästa åkare per klubb/klass får 100%, näst bästa 50%, övriga 0%.
                 </p>
             </div>
         </div>
@@ -896,7 +896,7 @@ function showClubDetail(clubId) {
             </div>
             <div class="modal-stat">
                 <div class="modal-stat-value">${club.rider_count}</div>
-                <div class="modal-stat-label">Akare</div>
+                <div class="modal-stat-label">Åkare</div>
             </div>
             <div class="modal-stat">
                 <div class="modal-stat-value">${club.events_with_points}</div>
@@ -904,11 +904,11 @@ function showClubDetail(clubId) {
             </div>
             <div class="modal-stat">
                 <div class="modal-stat-value">${club.best_event_points.toLocaleString()}</div>
-                <div class="modal-stat-label">Basta</div>
+                <div class="modal-stat-label">Bästa</div>
             </div>
         </div>
 
-        <h4 style="margin: 16px 0 8px;">Poang per event</h4>
+        <h4 style="margin: 16px 0 8px;">Poäng per event</h4>
         <div class="table-responsive">
             <table class="table table--sm">
                 <thead>
@@ -916,21 +916,21 @@ function showClubDetail(clubId) {
                         <th>#</th>
                         <th>Event</th>
                         <th>Datum</th>
-                        <th class="text-right">Poang</th>
+                        <th class="text-right">Poäng</th>
                     </tr>
                 </thead>
                 <tbody>${eventRows}</tbody>
             </table>
         </div>
 
-        <h4 style="margin: 16px 0 8px;">Akare (${club.rider_count} st)</h4>
+        <h4 style="margin: 16px 0 8px;">Åkare (${club.rider_count} st)</h4>
         <div class="table-responsive">
             <table class="table table--sm">
                 <thead>
                     <tr>
                         <th>Namn</th>
                         <th>Klass</th>
-                        <th class="text-right">Poang</th>
+                        <th class="text-right">Poäng</th>
                     </tr>
                 </thead>
                 <tbody>${riderRows}</tbody>

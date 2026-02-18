@@ -914,19 +914,19 @@ include __DIR__ . '/components/unified-layout.php';
                 <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: var(--space-xs); font-size: var(--text-xs); text-align: center; background: var(--color-bg-sunken); padding: var(--space-xs); border-radius: var(--radius-sm);">
                     <div>
                         <div style="color: var(--color-text-muted); margin-bottom: 1px;">Belopp</div>
-                        <div style="font-weight: 600;"><?= number_format($order['total_amount'], 0, ',', ' ') ?> kr</div>
+                        <div style="font-weight: 600;"><?= number_format($order['total_amount'], 2, ',', ' ') ?> kr</div>
                     </div>
                     <div>
                         <div style="color: var(--color-text-muted); margin-bottom: 1px;">Avgift</div>
-                        <div style="color: var(--color-error);"><?= $order['payment_fee'] > 0 ? '-' . number_format($order['payment_fee'], 0, ',', ' ') : '-' ?></div>
+                        <div style="color: var(--color-error);"><?= $order['payment_fee'] > 0 ? '-' . number_format($order['payment_fee'], 2, ',', ' ') : '-' ?></div>
                     </div>
                     <div>
                         <div style="color: var(--color-text-muted); margin-bottom: 1px;">Plattform</div>
-                        <div style="color: var(--color-error);"><?= $order['platform_fee'] > 0 ? '-' . number_format($order['platform_fee'], 0, ',', ' ') : '-' ?></div>
+                        <div style="color: var(--color-error);"><?= $order['platform_fee'] > 0 ? '-' . number_format($order['platform_fee'], 2, ',', ' ') : '-' ?></div>
                     </div>
                     <div>
                         <div style="color: var(--color-text-muted); margin-bottom: 1px;">Netto</div>
-                        <div style="font-weight: 700; color: var(--color-success);"><?= number_format($order['net_amount'], 0, ',', ' ') ?> kr</div>
+                        <div style="font-weight: 700; color: var(--color-success);"><?= number_format($order['net_amount'], 2, ',', ' ') ?> kr</div>
                     </div>
                 </div>
             </div>
@@ -936,19 +936,19 @@ include __DIR__ . '/components/unified-layout.php';
                 <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: var(--space-xs); font-size: var(--text-xs); text-align: center;">
                     <div>
                         <div style="color: var(--color-text-muted); margin-bottom: 1px;">Brutto</div>
-                        <div style="font-weight: 700;"><?= number_format($payoutTotals['gross'], 0, ',', ' ') ?> kr</div>
+                        <div style="font-weight: 700;"><?= number_format($payoutTotals['gross'], 2, ',', ' ') ?> kr</div>
                     </div>
                     <div>
                         <div style="color: var(--color-text-muted); margin-bottom: 1px;">Avgifter</div>
-                        <div style="font-weight: 700; color: var(--color-error);">-<?= number_format($payoutTotals['payment_fees'], 0, ',', ' ') ?></div>
+                        <div style="font-weight: 700; color: var(--color-error);">-<?= number_format($payoutTotals['payment_fees'], 2, ',', ' ') ?></div>
                     </div>
                     <div>
                         <div style="color: var(--color-text-muted); margin-bottom: 1px;">Plattform</div>
-                        <div style="font-weight: 700; color: var(--color-error);">-<?= number_format($payoutTotals['platform_fees'], 0, ',', ' ') ?></div>
+                        <div style="font-weight: 700; color: var(--color-error);">-<?= number_format($payoutTotals['platform_fees'], 2, ',', ' ') ?></div>
                     </div>
                     <div>
                         <div style="color: var(--color-text-muted); margin-bottom: 1px;">Netto</div>
-                        <div style="font-weight: 700; color: var(--color-success);"><?= number_format($payoutTotals['net'], 0, ',', ' ') ?> kr</div>
+                        <div style="font-weight: 700; color: var(--color-success);"><?= number_format($payoutTotals['net'], 2, ',', ' ') ?> kr</div>
                     </div>
                 </div>
                 <div style="text-align: center; font-size: var(--text-xs); color: var(--color-text-muted); margin-top: var(--space-xs);">
@@ -1497,19 +1497,19 @@ function cancelFeeEdit(recipientId, originalText) {
                 <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:var(--space-xs);font-size:var(--text-xs);text-align:center;background:var(--color-bg-sunken);padding:var(--space-xs);border-radius:var(--radius-sm);">
                     <div>
                         <div style="color:var(--color-text-muted);margin-bottom:1px;">Belopp</div>
-                        <div style="font-weight:600;"><?= number_format($order['total_amount'], 0, ',', ' ') ?> kr</div>
+                        <div style="font-weight:600;"><?= number_format($order['total_amount'], 2, ',', ' ') ?> kr</div>
                     </div>
                     <div>
                         <div style="color:var(--color-text-muted);margin-bottom:1px;">Avgift</div>
-                        <div style="color:var(--color-error);"><?= $order['payment_fee'] > 0 ? '-' . number_format($order['payment_fee'], 0, ',', ' ') : '-' ?></div>
+                        <div style="color:var(--color-error);"><?= $order['payment_fee'] > 0 ? '-' . number_format($order['payment_fee'], 2, ',', ' ') : '-' ?></div>
                     </div>
                     <div>
                         <div style="color:var(--color-text-muted);margin-bottom:1px;">Plattform</div>
-                        <div style="color:var(--color-error);"><?= $order['platform_fee'] > 0 ? '-' . number_format($order['platform_fee'], 0, ',', ' ') : '-' ?></div>
+                        <div style="color:var(--color-error);"><?= $order['platform_fee'] > 0 ? '-' . number_format($order['platform_fee'], 2, ',', ' ') : '-' ?></div>
                     </div>
                     <div>
                         <div style="color:var(--color-text-muted);margin-bottom:1px;">Netto</div>
-                        <div style="font-weight:700;color:var(--color-success);"><?= number_format($order['net_amount'], 0, ',', ' ') ?> kr</div>
+                        <div style="font-weight:700;color:var(--color-success);"><?= number_format($order['net_amount'], 2, ',', ' ') ?> kr</div>
                     </div>
                 </div>
             </div>
@@ -1518,19 +1518,19 @@ function cancelFeeEdit(recipientId, originalText) {
                 <div style="display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:var(--space-xs);font-size:var(--text-xs);text-align:center;">
                     <div>
                         <div style="color:var(--color-text-muted);margin-bottom:1px;">Brutto</div>
-                        <div style="font-weight:700;"><?= number_format($promotorOrderTotals['gross'], 0, ',', ' ') ?> kr</div>
+                        <div style="font-weight:700;"><?= number_format($promotorOrderTotals['gross'], 2, ',', ' ') ?> kr</div>
                     </div>
                     <div>
                         <div style="color:var(--color-text-muted);margin-bottom:1px;">Avgifter</div>
-                        <div style="font-weight:700;color:var(--color-error);">-<?= number_format($promotorOrderTotals['payment_fees'], 0, ',', ' ') ?></div>
+                        <div style="font-weight:700;color:var(--color-error);">-<?= number_format($promotorOrderTotals['payment_fees'], 2, ',', ' ') ?></div>
                     </div>
                     <div>
                         <div style="color:var(--color-text-muted);margin-bottom:1px;">Plattform</div>
-                        <div style="font-weight:700;color:var(--color-error);">-<?= number_format($promotorOrderTotals['platform_fees'], 0, ',', ' ') ?></div>
+                        <div style="font-weight:700;color:var(--color-error);">-<?= number_format($promotorOrderTotals['platform_fees'], 2, ',', ' ') ?></div>
                     </div>
                     <div>
                         <div style="color:var(--color-text-muted);margin-bottom:1px;">Netto</div>
-                        <div style="font-weight:700;color:var(--color-success);"><?= number_format($promotorOrderTotals['net'], 0, ',', ' ') ?> kr</div>
+                        <div style="font-weight:700;color:var(--color-success);"><?= number_format($promotorOrderTotals['net'], 2, ',', ' ') ?> kr</div>
                     </div>
                 </div>
                 <div style="text-align:center;font-size:var(--text-xs);color:var(--color-text-muted);margin-top:var(--space-xs);">

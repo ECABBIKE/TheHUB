@@ -1984,7 +1984,7 @@ $compClassesInfo = getEventContent($event, 'competition_classes_info', 'competit
     <div class="card-header">
         <h2 class="card-title">
             <i data-lucide="clipboard-list"></i>
-            Generell tavlingsinformation
+            Generell tävlingsinformation
         </h2>
     </div>
     <div class="card-body">
@@ -1998,7 +1998,7 @@ $compClassesInfo = getEventContent($event, 'competition_classes_info', 'competit
     <div class="card-header">
         <h2 class="card-title">
             <i data-lucide="list-checks"></i>
-            Tavlingsklasser
+            Tävlingsklasser
         </h2>
     </div>
     <div class="card-body">
@@ -2012,7 +2012,7 @@ $compClassesInfo = getEventContent($event, 'competition_classes_info', 'competit
     <div class="empty-state">
         <i data-lucide="file-text" class="empty-state-icon"></i>
         <h3>Ingen inbjudan publicerad</h3>
-        <p>Inbjudan har inte publicerats for denna tavling annu.</p>
+        <p>Inbjudan har inte publicerats för denna tävling ännu.</p>
     </div>
 </section>
 <?php endif; ?>
@@ -2047,7 +2047,7 @@ $hasFacilities = $hydrationInfo || $toiletsInfo || $bikeWashInfo || $foodCafe ||
         <div class="info-grid">
             <?php if (!empty($hydrationInfo)): ?>
             <div class="info-block">
-                <h3><i data-lucide="droplets"></i> Vatskekontroller</h3>
+                <h3><i data-lucide="droplets"></i> Vätskekontroller</h3>
                 <p><?= nl2br(h($hydrationInfo)) ?></p>
             </div>
             <?php endif; ?>
@@ -2061,28 +2061,28 @@ $hasFacilities = $hydrationInfo || $toiletsInfo || $bikeWashInfo || $foodCafe ||
 
             <?php if (!empty($bikeWashInfo)): ?>
             <div class="info-block">
-                <h3><i data-lucide="sparkles"></i> Cykeltvatt</h3>
+                <h3><i data-lucide="sparkles"></i> Cykeltvätt</h3>
                 <p><?= nl2br(h($bikeWashInfo)) ?></p>
             </div>
             <?php endif; ?>
 
             <?php if (!empty($foodCafe)): ?>
             <div class="info-block">
-                <h3><i data-lucide="utensils"></i> Mat/Cafe</h3>
+                <h3><i data-lucide="utensils"></i> Mat/Café</h3>
                 <p><?= nl2br(h($foodCafe)) ?></p>
             </div>
             <?php endif; ?>
 
             <?php if (!empty($shopsInfo)): ?>
             <div class="info-block">
-                <h3><i data-lucide="shopping-bag"></i> Affarer</h3>
+                <h3><i data-lucide="shopping-bag"></i> Affärer</h3>
                 <p><?= nl2br(h($shopsInfo)) ?></p>
             </div>
             <?php endif; ?>
 
             <?php if (!empty($exhibitorsInfo)): ?>
             <div class="info-block">
-                <h3><i data-lucide="store"></i> Utstallare</h3>
+                <h3><i data-lucide="store"></i> Utställare</h3>
                 <p><?= nl2br(h($exhibitorsInfo)) ?></p>
             </div>
             <?php endif; ?>
@@ -2110,7 +2110,7 @@ $hasFacilities = $hydrationInfo || $toiletsInfo || $bikeWashInfo || $foodCafe ||
 
             <?php if (!empty($medicalInfo)): ?>
             <div class="info-block">
-                <h3><i data-lucide="heart-pulse"></i> Sjukvard</h3>
+                <h3><i data-lucide="heart-pulse"></i> Sjukvård</h3>
                 <p><?= nl2br(h($medicalInfo)) ?></p>
             </div>
             <?php endif; ?>
@@ -2130,7 +2130,7 @@ $hasFacilities = $hydrationInfo || $toiletsInfo || $bikeWashInfo || $foodCafe ||
             <?php endif; ?>
         </div>
         <?php else: ?>
-        <p class="text-muted">Ingen information tillganglig for detta event annu.</p>
+        <p class="text-muted">Ingen information tillgänglig för detta event ännu.</p>
         <?php endif; ?>
     </div>
 </section>
@@ -2360,7 +2360,7 @@ try {
     </div>
     <div class="card-body">
         <?php if (empty($eventReports)): ?>
-            <p class="text-muted">Inga nyheter eller media fran detta event an.</p>
+            <p class="text-muted">Inga nyheter eller media från detta event än.</p>
         <?php else: ?>
         <div class="event-news-grid">
             <?php foreach ($eventReports as $report): ?>
@@ -2393,7 +2393,7 @@ try {
 
         <?php if (function_exists('hub_current_user') && hub_current_user()): ?>
         <div class="event-news-cta">
-            <p>Deltog du i denna tavling? Dela din upplevelse!</p>
+            <p>Deltog du i denna tävling? Dela din upplevelse!</p>
             <a href="/profile/race-reports" class="btn btn-primary">
                 <i data-lucide="pen-tool"></i>
                 Skriv Race Report
@@ -4299,7 +4299,7 @@ if (!empty($event['series_id'])) {
                         return;
                     }
                     if (!email) {
-                        errorDiv.innerHTML = 'E-post kravs.';
+                        errorDiv.innerHTML = 'E-post krävs.';
                         errorDiv.style.color = 'var(--color-error)';
                         errorDiv.style.display = 'block';
                         return;
@@ -4311,19 +4311,19 @@ if (!empty($event['series_id'])) {
                         return;
                     }
                     if (!gender) {
-                        errorDiv.innerHTML = 'Kon kravs for att bestamma klass.';
+                        errorDiv.innerHTML = 'Kön krävs för att bestämma klass.';
                         errorDiv.style.color = 'var(--color-error)';
                         errorDiv.style.display = 'block';
                         return;
                     }
                     if (!phone) {
-                        errorDiv.innerHTML = 'Telefonnummer kravs.';
+                        errorDiv.innerHTML = 'Telefonnummer krävs.';
                         errorDiv.style.color = 'var(--color-error)';
                         errorDiv.style.display = 'block';
                         return;
                     }
                     if (!iceName || !icePhone) {
-                        errorDiv.innerHTML = 'Nodkontakt (namn och telefon) kravs.';
+                        errorDiv.innerHTML = 'Nödkontakt (namn och telefon) krävs.';
                         errorDiv.style.color = 'var(--color-error)';
                         errorDiv.style.display = 'block';
                         return;
@@ -4361,7 +4361,7 @@ if (!empty($event['series_id'])) {
                             // Check for specific error codes
                             if (data.code === 'email_exists_active') {
                                 errorDiv.innerHTML = '<span style="color: var(--color-warning);">' + (data.error || '') + '</span>' +
-                                    '<br><a href="/login" style="color: var(--color-accent); text-decoration: underline; font-weight: 500;">Logga in har</a>';
+                                    '<br><a href="/login" style="color: var(--color-accent); text-decoration: underline; font-weight: 500;">Logga in här</a>';
                             } else if (data.code === 'email_exists_inactive') {
                                 errorDiv.innerHTML = '<span style="color: var(--color-warning);">' + (data.error || '') + '</span>' +
                                     '<br><span style="color: var(--color-text-secondary);">Sök på namnet istället för att hitta profilen.</span>';
@@ -4371,16 +4371,16 @@ if (!empty($event['series_id'])) {
                             }
                             errorDiv.style.display = 'block';
                             btn.disabled = false;
-                            btn.innerHTML = '<i data-lucide="user-plus"></i> Skapa och valj';
+                            btn.innerHTML = '<i data-lucide="user-plus"></i> Skapa och välj';
                             if (typeof lucide !== 'undefined') lucide.createIcons();
                         }
                     } catch (e) {
                         console.error('Create rider failed:', e);
-                        errorDiv.innerHTML = 'Nagot gick fel. Forsok igen.';
+                        errorDiv.innerHTML = 'Något gick fel. Försök igen.';
                         errorDiv.style.color = 'var(--color-error)';
                         errorDiv.style.display = 'block';
                         btn.disabled = false;
-                        btn.innerHTML = '<i data-lucide="user-plus"></i> Skapa och valj';
+                        btn.innerHTML = '<i data-lucide="user-plus"></i> Skapa och välj';
                         if (typeof lucide !== 'undefined') lucide.createIcons();
                     }
                 }
@@ -4489,7 +4489,7 @@ if (!empty($event['series_id'])) {
                         icon = 'alert-triangle';
                         color = 'var(--color-warning)';
                         bg = 'rgba(251, 191, 36, 0.1)';
-                        text = data.message || 'Licensen har gatt ut';
+                        text = data.message || 'Licensen har gått ut';
                         if (data.license_year) text += ` (senast giltig: ${data.license_year})`;
                     } else if (status === 'not_found') {
                         icon = 'x-circle';
@@ -4519,7 +4519,7 @@ if (!empty($event['series_id'])) {
                         if (riderObj && riderInfoEl) {
                             riderObj.license_number = data.uci_id;
                             const infoItems = [];
-                            if (riderObj.birth_year) infoItems.push('Ford ' + riderObj.birth_year);
+                            if (riderObj.birth_year) infoItems.push('Född ' + riderObj.birth_year);
                             if (data.club_name) infoItems.push(data.club_name);
                             else if (riderObj.club_name) infoItems.push(riderObj.club_name);
                             infoItems.push('UCI: ' + data.uci_id);
@@ -5246,7 +5246,7 @@ if (!empty($event['series_id'])) {
                                             <div style="display: flex; gap: var(--space-sm); align-items: flex-start;">
                                                 <i data-lucide="alert-triangle" style="flex-shrink: 0; margin-top: 2px;"></i>
                                                 <div>
-                                                    <strong style="display: block; margin-bottom: var(--space-xs);">Profilen ar inte komplett</strong>
+                                                    <strong style="display: block; margin-bottom: var(--space-xs);">Profilen är inte komplett</strong>
                                                     <p style="margin: 0;">${data.classes[0].message}</p>
                                                     <a href="/profile/edit" class="btn btn-primary" style="margin-top: var(--space-sm); display: inline-flex; align-items: center; gap: var(--space-xs);">
                                                         <i data-lucide="user-pen" style="width:16px;height:16px;"></i> Uppdatera profil
@@ -5259,7 +5259,7 @@ if (!empty($event['series_id'])) {
                                 } else if (data.classes[0].error === 'no_eligible_classes') {
                                     const debug = data.classes[0].debug || {};
                                     const reasons = (debug.ineligible_classes || []).map(c =>
-                                        `<li><strong>${c.name || 'Okand'}:</strong> ${c.reason}</li>`
+                                        `<li><strong>${c.name || 'Okänd'}:</strong> ${c.reason}</li>`
                                     ).join('');
                                     seriesClassList.innerHTML = `
                                         <div class="alert alert--info" style="text-align: left;">
@@ -5267,9 +5267,9 @@ if (!empty($event['series_id'])) {
                                                 <i data-lucide="info" style="flex-shrink: 0; margin-top: 2px;"></i>
                                                 <div>
                                                     <strong style="display: block; margin-bottom: var(--space-xs);">Inga matchande klasser</strong>
-                                                    <p style="margin: 0 0 var(--space-sm) 0;">Deltagaren matchade inte kriterierna for nagon klass:</p>
+                                                    <p style="margin: 0 0 var(--space-sm) 0;">Deltagaren matchade inte kriterierna för någon klass:</p>
                                                     <div style="font-size: 0.875rem; color: var(--color-text-secondary);">
-                                                        <p>Alder: ${debug.rider_age} ar | Kon: ${debug.rider_gender}</p>
+                                                        <p>Ålder: ${debug.rider_age} år | Kön: ${debug.rider_gender}</p>
                                                     </div>
                                                     <ul style="margin: var(--space-xs) 0 0 0; padding-left: var(--space-lg); font-size: 0.875rem;">
                                                         ${reasons}
@@ -5296,7 +5296,7 @@ if (!empty($event['series_id'])) {
                                     seriesRenderClasses(data.classes, data.requires_license_commitment);
                                 }
                             } else {
-                                seriesClassList.innerHTML = '<p class="text-muted">Inga tillgangliga klasser for denna deltagare</p>';
+                                seriesClassList.innerHTML = '<p class="text-muted">Inga tillgängliga klasser för denna deltagare</p>';
                             }
                         } else {
                             const errorMsg = data.error || 'Kunde inte ladda klasser';
