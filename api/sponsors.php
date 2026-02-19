@@ -61,6 +61,64 @@ try {
             break;
 
         // =============================================
+        // FIND OR CREATE sponsor by media image
+        // Used by promotor event-edit: pick image → auto-get sponsor
+        // =============================================
+        case 'find_or_create_by_media':
+            $mediaId = (int)($_GET['media_id'] ?? 0);
+            if (!$mediaId) {
+                echo json_encode(['success' => false, 'error' => 'media_id krävs']);
+                exit;
+            }
+
+            // Check if a sponsor already uses this media
+            $stmt = $pdo->prepare("
+                SELECT id, name FROM sponsors
+                WHERE (logo_media_id = ? OR logo_banner_id = ?) AND active = 1
+                LIMIT 1
+            ");
+            $stmt->execute([$mediaId, $mediaId]);
+            $existing = $stmt->fetch(PDO::FETCH_ASSOC);
+
+            if ($existing) {
+                echo json_encode(['success' => true, 'data' => $existing]);
+                exit;
+            }
+
+            // Get media info for auto-naming
+            $mediaStmt = $pdo->prepare("SELECT original_filename FROM media WHERE id = ?");
+            $mediaStmt->execute([$mediaId]);
+            $mediaInfo = $mediaStmt->fetch(PDO::FETCH_ASSOC);
+
+            if (!$mediaInfo) {
+                echo json_encode(['success' => false, 'error' => 'Bilden hittades inte']);
+                exit;
+            }
+
+            // Create sponsor with filename as name
+            $autoName = pathinfo($mediaInfo['original_filename'], PATHINFO_FILENAME);
+            $autoName = ucfirst(str_replace(['-', '_'], ' ', $autoName));
+
+            $result = create_sponsor([
+                'name' => $autoName,
+                'tier' => 'bronze',
+                'active' => true,
+                'logo_media_id' => $mediaId,
+                'logo_banner_id' => $mediaId,
+            ]);
+
+            if ($result['success']) {
+                echo json_encode([
+                    'success' => true,
+                    'data' => ['id' => $result['id'], 'name' => $autoName],
+                    'created' => true
+                ]);
+            } else {
+                echo json_encode($result);
+            }
+            break;
+
+        // =============================================
         // CREATE sponsor
         // =============================================
         case 'create':

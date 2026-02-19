@@ -458,8 +458,41 @@ include __DIR__ . '/components/unified-layout.php';
 }
 
 @media (max-width: 768px) {
+    .media-modal {
+        padding: 0;
+        z-index: 10000;
+    }
+    .media-modal.active {
+        align-items: stretch;
+    }
+    .media-modal-content {
+        max-height: 100vh;
+        max-height: 100dvh;
+        height: 100%;
+        border-radius: 0;
+        display: flex;
+        flex-direction: column;
+    }
+    .media-modal-header {
+        position: sticky;
+        top: 0;
+        background: var(--color-bg-surface);
+        z-index: 2;
+        flex-shrink: 0;
+    }
     .media-modal-body {
         grid-template-columns: 1fr;
+        overflow-y: auto;
+        flex: 1;
+        padding: var(--space-md);
+        padding-bottom: calc(var(--space-lg) + env(safe-area-inset-bottom, 0px) + 70px);
+    }
+    .media-preview {
+        min-height: 160px;
+        max-height: 220px;
+    }
+    .media-preview img {
+        max-height: 200px;
     }
 }
 
@@ -758,6 +791,11 @@ include __DIR__ . '/components/unified-layout.php';
                     <select class="media-detail-input" id="detailFolder">
                         <?php foreach ($folders as $folder): ?>
                         <option value="<?= $folder['id'] ?>"><?= htmlspecialchars($folder['name']) ?></option>
+                        <?php if ($folder['id'] === 'sponsors' && !empty($sponsorSubfolders)): ?>
+                            <?php foreach ($sponsorSubfolders as $sub): ?>
+                            <option value="<?= htmlspecialchars($sub['path']) ?>">&nbsp;&nbsp;└ <?= htmlspecialchars(ucfirst($sub['name'])) ?></option>
+                            <?php endforeach; ?>
+                        <?php endif; ?>
                         <?php endforeach; ?>
                     </select>
                 </div>
@@ -944,6 +982,8 @@ async function deleteSelected() {
 }
 
 // Modal
+let currentMediaFolder = null; // Track original folder for move detection
+
 async function openMedia(id) {
     currentMediaId = id;
 
@@ -957,6 +997,7 @@ async function openMedia(id) {
         }
 
         const media = result.data;
+        currentMediaFolder = media.folder;
 
         document.getElementById('modalTitle').textContent = media.original_filename;
         document.getElementById('modalImage').src = media.url;
@@ -1004,12 +1045,15 @@ function closeModal() {
 async function saveMedia() {
     if (!currentMediaId) return;
 
+    const newFolder = document.getElementById('detailFolder').value;
     const data = {
         id: currentMediaId,
-        folder: document.getElementById('detailFolder').value,
+        folder: newFolder,
         alt_text: document.getElementById('detailAltText').value,
         caption: document.getElementById('detailCaption').value
     };
+
+    const folderChanged = currentMediaFolder && newFolder !== currentMediaFolder;
 
     try {
         const response = await fetch('/api/media.php?action=update', {
@@ -1020,10 +1064,16 @@ async function saveMedia() {
 
         const result = await response.json();
         if (result.success) {
-            alert('Sparad!');
+            if (folderChanged) {
+                const sel = document.getElementById('detailFolder');
+                const folderName = sel.options[sel.selectedIndex].text.trim();
+                alert('Bilden flyttad till ' + folderName);
+            } else {
+                alert('Sparad!');
+            }
             location.reload();
         } else {
-            alert(result.error);
+            alert(result.error || 'Kunde inte spara');
         }
     } catch (error) {
         console.error('Save error:', error);
