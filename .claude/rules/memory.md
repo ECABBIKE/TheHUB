@@ -271,7 +271,13 @@
 
 ---
 
-## SENASTE FIXAR (2026-02-19, session 3)
+## SENASTE FIXAR (2026-02-19, session 4)
+
+- **Snabbskapa sponsor direkt i event-edit**: Promotors (och admins) kan nu skapa nya sponsorer direkt fran event-redigering utan att behova lamna sidan. Modal med namn, webbplats, banner- och logo-upload samt media-picker. Sponsorn dyker upp i alla vallistor (header, logo-rad, resultat, partners) direkt efter skapande utan sidladdning.
+- **Sponsor-sektionen visas alltid**: Tidigare doldes hela sponsor-sektionen i event-edit om inga sponsorer fanns (`if (!empty($allSponsors))`). Nu visas den alltid med uppmaning att skapa ny sponsor om listan ar tom.
+- **Profilredigering tom - admin_email saknades i session**: `hub_set_user_session()` satte aldrig `$_SESSION['admin_email']` vid inloggning via publika sidan. `hub_current_user()` kunde darfor inte sla upp rider-profilen via email. Fixat: satter admin_email + fallback till hub_user_email.
+
+## TIDIGARE FIXAR (2026-02-19, session 3)
 
 - **Promotor: Mappar synliga och skapbara i mediabiblioteket**: Tre buggar fixade:
   1. `get_media_subfolders()` sokte bara i DB - tomma mappar (skapade via filsystemet) syntes aldrig. Nu skannas aven filsystemet for undermappar.
