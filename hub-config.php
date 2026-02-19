@@ -243,8 +243,8 @@ if (!function_exists('hub_current_user')) {
             $adminRole = $_SESSION['admin_role'] ?? 'admin';
             $roleId = $roleMap[$adminRole] ?? ROLE_ADMIN;
 
-            // Get email - from session or lookup from database
-            $adminEmail = $_SESSION['admin_email'] ?? '';
+            // Get email - from admin session, hub session, or lookup from database
+            $adminEmail = $_SESSION['admin_email'] ?? $_SESSION['hub_user_email'] ?? '';
             if (empty($adminEmail) && isset($_SESSION['admin_id']) && $_SESSION['admin_id'] > 0) {
                 try {
                     $stmt = hub_db()->prepare("SELECT email FROM admin_users WHERE id = ?");
@@ -735,6 +735,7 @@ if (!function_exists('hub_set_user_session')) {
             $_SESSION['admin_logged_in'] = true;
             $_SESSION['admin_id'] = $user['id'];
             $_SESSION['admin_username'] = $user['email'] ?? $user['username'] ?? '';
+            $_SESSION['admin_email'] = $user['email'] ?? '';
             $_SESSION['admin_name'] = $userName;
             $_SESSION['last_activity'] = time();
 
