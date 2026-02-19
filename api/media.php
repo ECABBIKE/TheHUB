@@ -183,11 +183,12 @@ function handleList() {
     $search = $_GET['search'] ?? '';
     $limit = min((int)($_GET['limit'] ?? 50), 200);
     $offset = (int)($_GET['offset'] ?? 0);
-    
+    $includeSubfolders = isset($_GET['subfolders']) && $_GET['subfolders'] === '1';
+
     if ($search) {
         $files = search_media($search, $folder, $limit);
     } else {
-        $files = get_media_by_folder($folder, $limit, $offset);
+        $files = get_media_by_folder($folder, $limit, $offset, $includeSubfolders);
     }
     
     // Add URLs

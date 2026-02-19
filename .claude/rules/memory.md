@@ -274,6 +274,10 @@
 ## SENASTE FIXAR (2026-02-18)
 
 - **Mobil: Anmalda-raknare dold i event-headern**: Pa mobil visades antal anmalda som en egen sektion under eventinformationen (t.ex. bara "11"), vilket tog onodigt mycket plats. Nu dold pa mobil via CSS-klassen `.event-stat--registered` med `display: none`. Antalet visas istallet enbart i fliken "Anmalda" med formatet x/y (t.ex. "11/50"). Pa desktop visas statistiken fortfarande i headern.
+- **Anmalda-listan: Akarnamn lankade till profilkort**: Namn i anmalda/startlista-fliken ar nu klickbara lankar till respektive akares profilsida (`/rider/{id}`). Anvander befintlig `.rider-link`-klass.
+- **Admin session-timeout okat fran 30 min till 24 timmar**: Utan "Kom ihag mig" var timeout bara 30 minuter. Nu 24 timmar default, 30 dagar med remember_me.
+- **Promotor: Sponsorbilder fran subfolders visas i media-pickern**: Media-pickern i sponsors.php sokte bara i exakt `sponsors/`-mappen. Nu inkluderas subfolders (`sponsors/serie-namn/` etc.) via `subfolders=1` parameter. Media API:t stodjer nu `subfolders=1` GET-parameter.
+- **Promotor kan skapa/redigera sponsorer**: Flödet var redan tekniskt implementerat (knapp, formulär, API) men media-pickern visade inte promotorens uppladdade bilder. Nu fixat.
 
 ## TIDIGARE FIXAR (2026-02-19, session 2)
 
