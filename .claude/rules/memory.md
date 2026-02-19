@@ -278,6 +278,7 @@
 - **Admin session-timeout okat fran 30 min till 24 timmar**: Utan "Kom ihag mig" var timeout bara 30 minuter. Nu 24 timmar default, 30 dagar med remember_me.
 - **Promotor: Sponsorbilder fran subfolders visas i media-pickern**: Media-pickern i sponsors.php sokte bara i exakt `sponsors/`-mappen. Nu inkluderas subfolders (`sponsors/serie-namn/` etc.) via `subfolders=1` parameter. Media API:t stodjer nu `subfolders=1` GET-parameter.
 - **Promotor kan skapa/redigera sponsorer**: Flödet var redan tekniskt implementerat (knapp, formulär, API) men media-pickern visade inte promotorens uppladdade bilder. Nu fixat.
+- **Admin profilredigering tom (hub_current_user-bugg)**: `hub_current_user()` returnerade hardkodad session-data for admin-anvandare (bara namn/email/role). Rider-profilen (phone, ICE, birth_year, club etc.) hamtades aldrig fran databasen. Fixat: slar nu upp rider-profil via email nar admin ar inloggad. Om kopplad rider finns returneras fullstandig rider-data med admin-flaggor.
 
 ## TIDIGARE FIXAR (2026-02-19, session 2)
 

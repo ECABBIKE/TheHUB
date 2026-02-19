@@ -243,10 +243,6 @@ if (!function_exists('hub_current_user')) {
             $adminRole = $_SESSION['admin_role'] ?? 'admin';
             $roleId = $roleMap[$adminRole] ?? ROLE_ADMIN;
 
-            // Parse name into first/last
-            $fullName = $_SESSION['admin_name'] ?? 'Admin';
-            $nameParts = explode(' ', $fullName, 2);
-
             // Get email - from session or lookup from database
             $adminEmail = $_SESSION['admin_email'] ?? '';
             if (empty($adminEmail) && isset($_SESSION['admin_id']) && $_SESSION['admin_id'] > 0) {
@@ -262,6 +258,22 @@ if (!function_exists('hub_current_user')) {
                     // Ignore errors
                 }
             }
+
+            // Try to find linked rider profile via email
+            // This ensures admin users see their full rider data (phone, ICE, etc.)
+            if (!empty($adminEmail)) {
+                $riderProfile = hub_get_rider_by_email($adminEmail);
+                if ($riderProfile) {
+                    // Merge admin role info into rider profile
+                    $riderProfile['role_id'] = $roleId;
+                    $riderProfile['is_admin'] = $roleId >= ROLE_ADMIN ? 1 : 0;
+                    return $riderProfile;
+                }
+            }
+
+            // Fallback: no linked rider profile - return basic admin data
+            $fullName = $_SESSION['admin_name'] ?? 'Admin';
+            $nameParts = explode(' ', $fullName, 2);
 
             return [
                 'id' => $_SESSION['admin_id'] ?? 0,
