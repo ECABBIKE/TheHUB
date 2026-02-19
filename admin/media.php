@@ -20,36 +20,10 @@ $promotorEventSlugs = [];
 $promotorAllowedFolders = [];
 
 if ($isPromotorOnly && $pdo) {
-    // Get promotor's events and their folder slugs
-    try {
-        $promotorEvents = getPromotorEvents();
-        $promotorSeriesSlugs = []; // Track series for series-level access
-        foreach ($promotorEvents as $event) {
-            // Get series info for folder path
-            $eventInfo = $pdo->prepare("
-                SELECT e.name as event_name, s.short_name as series_short, s.name as series_name
-                FROM events e
-                LEFT JOIN series s ON e.series_id = s.id
-                WHERE e.id = ?
-            ");
-            $eventInfo->execute([$event['id']]);
-            $info = $eventInfo->fetch(PDO::FETCH_ASSOC);
-            if ($info) {
-                $seriesSlug = slugify($info['series_short'] ?: $info['series_name'] ?: 'general');
-                $eventSlug = slugify($info['event_name']);
-                // Add event-specific folder
-                $promotorAllowedFolders[] = "sponsors/{$seriesSlug}/{$eventSlug}";
-                $promotorEventSlugs[] = $eventSlug;
-                // Also allow series-level folder access
-                if (!in_array($seriesSlug, $promotorSeriesSlugs)) {
-                    $promotorSeriesSlugs[] = $seriesSlug;
-                    $promotorAllowedFolders[] = "sponsors/{$seriesSlug}";
-                }
-            }
-        }
-    } catch (Exception $e) {
-        error_log("Promotor folder access error: " . $e->getMessage());
-    }
+    // Promotors get full access to all sponsors/ folders
+    // They are already scoped to only the sponsors main folder (line ~124)
+    // so no further subfolder restriction is needed
+    $promotorAllowedFolders[] = 'sponsors';
 }
 
 // Get current folder from query
@@ -120,8 +94,10 @@ if ($isPromotorOnly) {
     $folders = [
         ['id' => 'sponsors', 'name' => 'Eventmedia', 'icon' => 'handshake']
     ];
-    // Force promotors to sponsors folder - ALWAYS
-    $currentFolder = 'sponsors';
+    // Force promotors to sponsors folder if no folder selected or outside sponsors
+    if (!$currentFolder || strpos($currentFolder, 'sponsors') !== 0) {
+        $currentFolder = 'sponsors';
+    }
 } else {
     $folders = [
         ['id' => 'branding', 'name' => 'Branding', 'icon' => 'palette'],

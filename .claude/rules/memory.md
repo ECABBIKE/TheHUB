@@ -271,7 +271,14 @@
 
 ---
 
-## SENASTE FIXAR (2026-02-18)
+## SENASTE FIXAR (2026-02-19, session 3)
+
+- **Promotor: Mappar synliga och skapbara i mediabiblioteket**: Tre buggar fixade:
+  1. `get_media_subfolders()` sokte bara i DB - tomma mappar (skapade via filsystemet) syntes aldrig. Nu skannas aven filsystemet for undermappar.
+  2. Promotors `promotorAllowedFolders` inneholl bara seriespecifika sokvagar (`sponsors/{seriesSlug}`). Mappar skapade med sponsornamn (t.ex. `sponsors/husqvarna`) matchade inte och filtrerades bort. Fixat: promotors far nu tillgang till alla `sponsors/`-undermappar (de ar redan begransade till enbart sponsors-mappen).
+  3. Promotor som navigerade till en undermapp (`?folder=sponsors/husqvarna`) tvingades alltid tillbaka till `sponsors` av `$currentFolder = 'sponsors'`. Fixat: undermappar under sponsors tillats nu.
+
+## TIDIGARE FIXAR (2026-02-18/19)
 
 - **Mobil: Anmalda-raknare dold i event-headern**: Pa mobil visades antal anmalda som en egen sektion under eventinformationen (t.ex. bara "11"), vilket tog onodigt mycket plats. Nu dold pa mobil via CSS-klassen `.event-stat--registered` med `display: none`. Antalet visas istallet enbart i fliken "Anmalda" med formatet x/y (t.ex. "11/50"). Pa desktop visas statistiken fortfarande i headern.
 - **Anmalda-listan: Akarnamn lankade till profilkort**: Namn i anmalda/startlista-fliken ar nu klickbara lankar till respektive akares profilsida (`/rider/{id}`). Anvander befintlig `.rider-link`-klass.

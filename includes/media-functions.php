@@ -64,10 +64,15 @@ function get_media_by_folder($folder = null, $limit = 50, $offset = 0, $includeS
 
 /**
  * Get subfolders within a parent folder
+ * Combines DB-based folders (with media files) and filesystem folders (possibly empty)
  */
 function get_media_subfolders($parentFolder) {
     global $pdo;
 
+    $subfolders = [];
+    $knownPaths = [];
+
+    // 1. Get subfolders from DB (folders that have media files)
     try {
         $stmt = $pdo->prepare("
             SELECT
@@ -82,10 +87,7 @@ function get_media_subfolders($parentFolder) {
         $stmt->execute([$parentFolder . '/%']);
         $results = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-        // Extract subfolder names
-        $subfolders = [];
         foreach ($results as $row) {
-            // Get the subfolder name (part after parent/)
             $subPath = substr($row['folder'], strlen($parentFolder) + 1);
             // Only include direct subfolders (not nested)
             if (strpos($subPath, '/') === false) {
@@ -95,14 +97,42 @@ function get_media_subfolders($parentFolder) {
                     'count' => (int)$row['count'],
                     'size' => (int)$row['total_size']
                 ];
+                $knownPaths[] = $row['folder'];
             }
         }
-
-        return $subfolders;
     } catch (PDOException $e) {
         error_log("get_media_subfolders error: " . $e->getMessage());
-        return [];
     }
+
+    // 2. Also scan filesystem for empty folders not yet in DB
+    $uploadBase = defined('HUB_ROOT') ? HUB_ROOT : (__DIR__ . '/..');
+    $parentDir = $uploadBase . '/uploads/media/' . $parentFolder;
+
+    if (is_dir($parentDir)) {
+        $entries = scandir($parentDir);
+        foreach ($entries as $entry) {
+            if ($entry === '.' || $entry === '..' || $entry === '.gitkeep') continue;
+            $fullPath = $parentDir . '/' . $entry;
+            if (is_dir($fullPath)) {
+                $folderPath = $parentFolder . '/' . $entry;
+                if (!in_array($folderPath, $knownPaths)) {
+                    $subfolders[] = [
+                        'name' => $entry,
+                        'path' => $folderPath,
+                        'count' => 0,
+                        'size' => 0
+                    ];
+                }
+            }
+        }
+    }
+
+    // Sort by name
+    usort($subfolders, function($a, $b) {
+        return strcasecmp($a['name'], $b['name']);
+    });
+
+    return $subfolders;
 }
 
 /**
