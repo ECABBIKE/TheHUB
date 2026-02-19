@@ -273,6 +273,7 @@
 
 ## SENASTE FIXAR (2026-02-19, session 4-5)
 
+- **Promotor event-kort: 0 kr intäkter för serie-event fixat**: Serieanmälningars intäkter beräknades via `series_registration_events` (snapshot vid köp). Event som lades till serien efter köp fick 0 kr. Omskrivet: beräknar nu dynamiskt via `events.series_id` - total serieintäkt / antal event i serien. Alla event i serien får sin andel oavsett när de lades till.
 - **Mediabibliotek: Flytta bilder mellan mappar**: `update_media()` flyttar nu den fysiska filen (inte bara DB-metadata) när mappen ändras. Filepath uppdateras automatiskt. Mapp-dropdown i bilddetalj-modalen visar nu även undermappar (t.ex. `sponsors/husqvarna`). Bekräftelsemeddelande "Bilden flyttad till X" vid mappbyte.
 - **Mediabibliotek: Mobilanpassad bilddetalj-modal**: Modalen tar nu hela skärmen på mobil (fullscreen), med sticky header och scrollbart innehåll. Extra padding i botten (70px) förhindrar att knappar hamnar bakom bottom-nav. Z-index höjt till 10000 för att ligga ovanför alla menyer.
 - **Promotor: Bildbaserad sponsorväljare i event-edit**: Promotorer ser nu ett förenklat UI med fyra placeringsgrupper (Banner, Logo-rad, Resultat-sponsor, Partners) där de väljer bilder direkt från mediabiblioteket. Bakom kulisserna auto-skapas sponsors via `find_or_create_by_media` API-endpoint. Admins behåller det befintliga dropdown/checkbox-UIet. Ingen sponsor-entitetshantering synlig för promotorer.

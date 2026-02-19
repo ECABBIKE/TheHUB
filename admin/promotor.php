@@ -296,8 +296,11 @@ if (!$isAdmin) {
                    COALESCE(reg.pending_count, 0) as pending_count,
                    COALESCE(ord.gross_revenue, 0) as event_gross_revenue,
                    COALESCE(ord.order_count, 0) as order_count,
-                   COALESCE(series_reg.series_count, 0) as series_registration_count,
-                   COALESCE(series_rev.series_revenue, 0) as series_revenue,
+                   COALESCE(series_agg.series_count, 0) as series_registration_count,
+                   CASE WHEN series_agg.series_total_revenue IS NOT NULL AND series_event_count.event_count > 0
+                        THEN ROUND(series_agg.series_total_revenue / series_event_count.event_count, 2)
+                        ELSE 0
+                   END as series_revenue,
                    CASE WHEN e.date >= CURDATE() THEN 0 ELSE 1 END as is_past
             FROM events e
             LEFT JOIN series s ON e.series_id = s.id
@@ -319,22 +322,19 @@ if (!$isAdmin) {
                 GROUP BY event_id
             ) ord ON ord.event_id = e.id
             LEFT JOIN (
-                SELECT sre.event_id, COUNT(DISTINCT sr.id) as series_count
-                FROM series_registration_events sre
-                JOIN series_registrations sr ON sr.id = sre.series_registration_id
+                SELECT sr.series_id,
+                       COUNT(DISTINCT sr.id) as series_count,
+                       SUM(sr.final_price) as series_total_revenue
+                FROM series_registrations sr
                 WHERE sr.payment_status = 'paid' AND sr.status != 'cancelled'
-                GROUP BY sre.event_id
-            ) series_reg ON series_reg.event_id = e.id
+                GROUP BY sr.series_id
+            ) series_agg ON series_agg.series_id = e.series_id
             LEFT JOIN (
-                SELECT sre2.event_id,
-                       SUM(sr2.final_price / GREATEST(
-                           (SELECT COUNT(*) FROM series_registration_events sre3 WHERE sre3.series_registration_id = sr2.id), 1
-                       )) as series_revenue
-                FROM series_registration_events sre2
-                JOIN series_registrations sr2 ON sr2.id = sre2.series_registration_id
-                WHERE sr2.payment_status = 'paid' AND sr2.status != 'cancelled'
-                GROUP BY sre2.event_id
-            ) series_rev ON series_rev.event_id = e.id
+                SELECT series_id, COUNT(*) as event_count
+                FROM events
+                WHERE series_id IS NOT NULL
+                GROUP BY series_id
+            ) series_event_count ON series_event_count.series_id = e.series_id
             WHERE pe.user_id = ?
             ORDER BY is_past ASC,
                      CASE WHEN e.date >= CURDATE() THEN e.date END ASC,
