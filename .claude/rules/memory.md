@@ -21,7 +21,7 @@
 ### Borttaget fran promotor-nav
 - Swish (all Swish-konfiguration borttagen fran promotor)
 - Direktanmalan (ska byggas om som QR-baserad)
-- Sponsorer (hanteras via Media istallet)
+- Sponsorer (hanteras direkt i event-edit via bildväljare + Media-biblioteket)
 
 ### Navigation
 - Desktop sidebar och mobil bottomnav uppdaterade till 4 lankar: Event, Serier, Ekonomi, Media
@@ -271,11 +271,19 @@
 
 ---
 
-## SENASTE FIXAR (2026-02-19, session 4)
+## SENASTE FIXAR (2026-02-19, session 4-5)
 
-- **Snabbskapa sponsor direkt i event-edit**: Promotors (och admins) kan nu skapa nya sponsorer direkt fran event-redigering utan att behova lamna sidan. Modal med namn, webbplats, banner- och logo-upload samt media-picker. Sponsorn dyker upp i alla vallistor (header, logo-rad, resultat, partners) direkt efter skapande utan sidladdning.
-- **Sponsor-sektionen visas alltid**: Tidigare doldes hela sponsor-sektionen i event-edit om inga sponsorer fanns (`if (!empty($allSponsors))`). Nu visas den alltid med uppmaning att skapa ny sponsor om listan ar tom.
+- **Promotor: Bildbaserad sponsorväljare i event-edit**: Promotorer ser nu ett förenklat UI med fyra placeringsgrupper (Banner, Logo-rad, Resultat-sponsor, Partners) där de väljer bilder direkt från mediabiblioteket. Bakom kulisserna auto-skapas sponsors via `find_or_create_by_media` API-endpoint. Admins behåller det befintliga dropdown/checkbox-UIet. Ingen sponsor-entitetshantering synlig för promotorer.
+- **API: find_or_create_by_media endpoint**: `/api/sponsors.php?action=find_or_create_by_media&media_id=X` - Kollar om en sponsor redan använder bilden (logo_media_id eller logo_banner_id), returnerar den i så fall. Annars skapas en ny sponsor automatiskt med filnamnet som namn.
 - **Profilredigering tom - admin_email saknades i session**: `hub_set_user_session()` satte aldrig `$_SESSION['admin_email']` vid inloggning via publika sidan. `hub_current_user()` kunde darfor inte sla upp rider-profilen via email. Fixat: satter admin_email + fallback till hub_user_email.
+
+### Promotor sponsorväljare - arkitektur
+- **Villkorlig rendering**: `<?php if ($isPromotorOnly): ?>` styr vilken sponsor-UI som visas i event-edit.php
+- **Placeringar**: header (1 bild), content/logo-rad (max 5), sidebar/resultat (1 bild), partner (obegransat)
+- **Bildväljare modal**: Laddar bilder från `sponsors/` (inkl subfolders) via media API
+- **Upload inline**: Möjlighet att ladda upp ny bild direkt i modalen (sparas i sponsors-mappen)
+- **Auto-sponsor**: `selectMediaForPlacement()` → `find_or_create_by_media` → sponsor skapas/hittas → hidden input med sponsor_id
+- **Form-fält**: Samma namn som admin-UIet (sponsor_header, sponsor_content[], sponsor_sidebar, sponsor_partner[]) → `saveEventSponsorAssignments()` fungerar identiskt
 
 ## TIDIGARE FIXAR (2026-02-19, session 3)
 
