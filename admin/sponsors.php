@@ -1130,7 +1130,7 @@ async function openMediaPicker(field) {
     modal.classList.add('active');
 
     try {
-        const response = await fetch('/api/media.php?action=list&folder=sponsors&limit=100');
+        const response = await fetch('/api/media.php?action=list&folder=sponsors&subfolders=1&limit=100');
         const result = await response.json();
 
         if (result.success && result.data.length > 0) {
