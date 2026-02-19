@@ -273,6 +273,8 @@
 
 ## SENASTE FIXAR (2026-02-19, session 4-5)
 
+- **Mediabibliotek: Flytta bilder mellan mappar**: `update_media()` flyttar nu den fysiska filen (inte bara DB-metadata) när mappen ändras. Filepath uppdateras automatiskt. Mapp-dropdown i bilddetalj-modalen visar nu även undermappar (t.ex. `sponsors/husqvarna`). Bekräftelsemeddelande "Bilden flyttad till X" vid mappbyte.
+- **Mediabibliotek: Mobilanpassad bilddetalj-modal**: Modalen tar nu hela skärmen på mobil (fullscreen), med sticky header och scrollbart innehåll. Extra padding i botten (70px) förhindrar att knappar hamnar bakom bottom-nav. Z-index höjt till 10000 för att ligga ovanför alla menyer.
 - **Promotor: Bildbaserad sponsorväljare i event-edit**: Promotorer ser nu ett förenklat UI med fyra placeringsgrupper (Banner, Logo-rad, Resultat-sponsor, Partners) där de väljer bilder direkt från mediabiblioteket. Bakom kulisserna auto-skapas sponsors via `find_or_create_by_media` API-endpoint. Admins behåller det befintliga dropdown/checkbox-UIet. Ingen sponsor-entitetshantering synlig för promotorer.
 - **API: find_or_create_by_media endpoint**: `/api/sponsors.php?action=find_or_create_by_media&media_id=X` - Kollar om en sponsor redan använder bilden (logo_media_id eller logo_banner_id), returnerar den i så fall. Annars skapas en ny sponsor automatiskt med filnamnet som namn.
 - **Profilredigering tom - admin_email saknades i session**: `hub_set_user_session()` satte aldrig `$_SESSION['admin_email']` vid inloggning via publika sidan. `hub_current_user()` kunde darfor inte sla upp rider-profilen via email. Fixat: satter admin_email + fallback till hub_user_email.

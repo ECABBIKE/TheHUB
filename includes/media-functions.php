@@ -301,33 +301,67 @@ function upload_media($file, $folder = 'general', $uploadedBy = null) {
 }
 
 /**
- * Update media metadata
+ * Update media metadata (and move file if folder changed)
  */
 function update_media($id, $data) {
     global $pdo;
-    
+
     try {
-        $allowedFields = ['folder', 'alt_text', 'caption'];
+        // If folder is changing, move the physical file too
+        if (isset($data['folder'])) {
+            $media = get_media($id);
+            if (!$media) {
+                return ['success' => false, 'error' => 'Media hittades inte'];
+            }
+
+            $oldFolder = $media['folder'];
+            $newFolder = $data['folder'];
+
+            if ($oldFolder !== $newFolder) {
+                $rootPath = defined('ROOT_PATH') ? ROOT_PATH : dirname(__DIR__);
+                $oldPath = $rootPath . '/' . $media['filepath'];
+                $newRelativePath = "uploads/media/{$newFolder}/{$media['filename']}";
+                $newAbsolutePath = $rootPath . '/' . $newRelativePath;
+
+                // Create target directory if needed
+                $newDir = dirname($newAbsolutePath);
+                if (!is_dir($newDir)) {
+                    mkdir($newDir, 0755, true);
+                }
+
+                // Move file
+                if (file_exists($oldPath)) {
+                    if (!rename($oldPath, $newAbsolutePath)) {
+                        return ['success' => false, 'error' => 'Kunde inte flytta filen'];
+                    }
+                }
+
+                // Update filepath in data
+                $data['filepath'] = $newRelativePath;
+            }
+        }
+
+        $allowedFields = ['folder', 'filepath', 'alt_text', 'caption'];
         $updates = [];
         $params = [];
-        
+
         foreach ($allowedFields as $field) {
             if (isset($data[$field])) {
                 $updates[] = "{$field} = ?";
                 $params[] = $data[$field];
             }
         }
-        
+
         if (empty($updates)) {
             return ['success' => false, 'error' => 'Inget att uppdatera'];
         }
-        
+
         $params[] = $id;
         $sql = "UPDATE media SET " . implode(', ', $updates) . " WHERE id = ?";
-        
+
         $stmt = $pdo->prepare($sql);
         $stmt->execute($params);
-        
+
         return ['success' => true];
     } catch (PDOException $e) {
         error_log("update_media error: " . $e->getMessage());
