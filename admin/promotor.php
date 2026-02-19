@@ -101,7 +101,14 @@ if ($isAdmin) {
         }
 
         if ($filterEvent > 0) {
-            $conditions[] = "o.event_id = ?";
+            // Include direct event orders AND series orders if the event belongs to a series
+            $conditions[] = "(o.event_id = ? OR o.id IN (
+                SELECT oi_f.order_id FROM order_items oi_f
+                JOIN series_registrations sr_f ON sr_f.id = oi_f.series_registration_id
+                JOIN events e_f ON e_f.series_id = sr_f.series_id
+                WHERE e_f.id = ? AND oi_f.item_type = 'series_registration'
+            ))";
+            $params[] = $filterEvent;
             $params[] = $filterEvent;
         }
 
@@ -199,14 +206,19 @@ if ($isAdmin) {
         $allRecipients = $db->getAll("SELECT id, name FROM payment_recipients WHERE active = 1 ORDER BY name");
     } catch (Exception $e) {}
 
-    // Get events that have paid orders (for filter)
+    // Get events that have paid orders OR belong to a series with paid registrations (for filter)
     $filterEvents = [];
     try {
         $filterEvents = $db->getAll("
             SELECT DISTINCT e.id, e.name, e.date
             FROM events e
-            JOIN orders o ON o.event_id = e.id
-            WHERE o.payment_status = 'paid' AND YEAR(o.created_at) = ?
+            WHERE (
+                e.id IN (SELECT DISTINCT o.event_id FROM orders o WHERE o.payment_status = 'paid' AND YEAR(o.created_at) = ?)
+                OR e.series_id IN (
+                    SELECT DISTINCT sr.series_id FROM series_registrations sr
+                    WHERE sr.payment_status = 'paid' AND sr.status != 'cancelled'
+                )
+            )
             ORDER BY e.date DESC
         ", [$filterYear]);
     } catch (Exception $e) {}
@@ -446,7 +458,14 @@ if (!$isAdmin) {
             $baseParams[] = $ecoMonth;
         }
         if ($ecoEvent > 0) {
-            $baseConditions[] = "o.event_id = ?";
+            // Include direct event orders AND series orders if the event belongs to a series
+            $baseConditions[] = "(o.event_id = ? OR o.id IN (
+                SELECT oi_f.order_id FROM order_items oi_f
+                JOIN series_registrations sr_f ON sr_f.id = oi_f.series_registration_id
+                JOIN events e_f ON e_f.series_id = sr_f.series_id
+                WHERE e_f.id = ? AND oi_f.item_type = 'series_registration'
+            ))";
+            $baseParams[] = $ecoEvent;
             $baseParams[] = $ecoEvent;
         }
 
