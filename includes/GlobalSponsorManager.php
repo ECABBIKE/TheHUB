@@ -10,7 +10,9 @@
 class GlobalSponsorManager {
 
     private $pdo;
-    private $hasCustomMedia = null;
+    // Static caches - shared across ALL instances within a request
+    private static $hasCustomMedia = null;
+    private static $settingsCache = null;
 
     public function __construct($pdo = null) {
         if ($pdo) {
@@ -23,30 +25,42 @@ class GlobalSponsorManager {
 
     /**
      * Kolla om custom_media_id-kolumnen finns (migration 048)
+     * Statisk cache - frågas bara en gång per request oavsett antal instanser
      */
     private function hasCustomMediaColumn(): bool {
-        if ($this->hasCustomMedia === null) {
+        if (self::$hasCustomMedia === null) {
             try {
-                $check = $this->pdo->query("SHOW COLUMNS FROM sponsor_placements LIKE 'custom_media_id'")->fetch();
-                $this->hasCustomMedia = ($check !== false);
+                $stmt = $this->pdo->prepare("SELECT 1 FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = 'sponsor_placements' AND column_name = 'custom_media_id' LIMIT 1");
+                $stmt->execute();
+                self::$hasCustomMedia = ($stmt->fetch() !== false);
             } catch (Exception $e) {
-                $this->hasCustomMedia = false;
+                self::$hasCustomMedia = false;
             }
         }
-        return $this->hasCustomMedia;
+        return self::$hasCustomMedia;
+    }
+
+    /**
+     * Ladda alla sponsor_settings i en fråga (cachad per request)
+     */
+    private function loadSettings(): array {
+        if (self::$settingsCache === null) {
+            try {
+                $stmt = $this->pdo->query("SELECT setting_key, setting_value FROM sponsor_settings");
+                self::$settingsCache = $stmt->fetchAll(PDO::FETCH_KEY_PAIR) ?: [];
+            } catch (Exception $e) {
+                self::$settingsCache = [];
+            }
+        }
+        return self::$settingsCache;
     }
 
     /**
      * Kolla om globala sponsorer är aktiverade för publika sidor
      */
     public function isPublicEnabled(): bool {
-        try {
-            $stmt = $this->pdo->query("SELECT setting_value FROM sponsor_settings WHERE setting_key = 'public_enabled'");
-            $row = $stmt->fetch(PDO::FETCH_ASSOC);
-            return ($row && $row['setting_value'] == '1');
-        } catch (Exception $e) {
-            return false;
-        }
+        $settings = $this->loadSettings();
+        return ($settings['public_enabled'] ?? '0') === '1';
     }
 
     /**
@@ -243,16 +257,11 @@ class GlobalSponsorManager {
     }
 
     /**
-     * Kolla om analytics är aktiverat
+     * Kolla om analytics är aktiverat (cachad via loadSettings)
      */
     private function isAnalyticsEnabled(): bool {
-        try {
-            $stmt = $this->pdo->query("SELECT setting_value FROM sponsor_settings WHERE setting_key = 'enable_analytics'");
-            $row = $stmt->fetch(PDO::FETCH_ASSOC);
-            return ($row && $row['setting_value'] == '1');
-        } catch (Exception $e) {
-            return false;
-        }
+        $settings = $this->loadSettings();
+        return ($settings['enable_analytics'] ?? '0') === '1';
     }
 
     /**

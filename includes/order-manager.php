@@ -12,6 +12,43 @@ require_once __DIR__ . '/../hub-config.php';
 require_once __DIR__ . '/payment.php';
 
 /**
+ * Cachad kolumnkontroll - undviker SHOW COLUMNS per anrop
+ * Returnerar true om en kolumn finns i angiven tabell
+ */
+function _hub_column_exists(PDO $pdo, string $table, string $column): bool {
+    static $cache = [];
+    $key = "{$table}.{$column}";
+    if (!isset($cache[$key])) {
+        try {
+            $stmt = $pdo->prepare("SELECT 1 FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = ? AND column_name = ? LIMIT 1");
+            $stmt->execute([$table, $column]);
+            $cache[$key] = ($stmt->fetch() !== false);
+        } catch (\Throwable $e) {
+            $cache[$key] = false;
+        }
+    }
+    return $cache[$key];
+}
+
+/**
+ * Cachad tabell-kolumnlista - undviker SHOW COLUMNS FROM riders per anrop
+ * Returnerar array med kolumnnamn för angiven tabell
+ */
+function _hub_table_columns(PDO $pdo, string $table): array {
+    static $cache = [];
+    if (!isset($cache[$table])) {
+        try {
+            $stmt = $pdo->prepare("SELECT column_name FROM information_schema.columns WHERE table_schema = DATABASE() AND table_name = ?");
+            $stmt->execute([$table]);
+            $cache[$table] = $stmt->fetchAll(PDO::FETCH_COLUMN);
+        } catch (\Throwable $e) {
+            $cache[$table] = [];
+        }
+    }
+    return $cache[$table];
+}
+
+/**
  * Generera unik order-referens (ex: "A5F2J0112")
  */
 function generateOrderReference(): string {
@@ -120,11 +157,7 @@ function createMultiRiderOrder(array $buyerData, array $items, ?string $discount
         }
 
         // Check if series_id column exists (migration 051)
-        $hasSeriesIdCol = false;
-        try {
-            $colCheck = $pdo->query("SHOW COLUMNS FROM orders LIKE 'series_id'");
-            $hasSeriesIdCol = $colCheck->rowCount() > 0;
-        } catch (\Throwable $e) {}
+        $hasSeriesIdCol = _hub_column_exists($pdo, 'orders', 'series_id');
 
         if ($hasSeriesIdCol) {
             $orderStmt = $pdo->prepare("
@@ -611,19 +644,16 @@ function getEligibleClassesForEvent(int $eventId, int $riderId, ?array &$license
     $riderColumns = ['firstname', 'lastname', 'birth_year', 'gender', 'license_number', 'license_type', 'license_valid_until', 'license_year', 'email', 'phone', 'nationality', 'scf_license_year'];
     $optionalColumns = ['ice_name', 'ice_phone'];
     $existingOptional = [];
-    try {
-        $colCheck = $pdo->query("SHOW COLUMNS FROM riders");
-        $dbColumns = array_column($colCheck->fetchAll(PDO::FETCH_ASSOC), 'Field');
-        foreach ($optionalColumns as $col) {
-            if (in_array($col, $dbColumns)) {
-                $existingOptional[] = $col;
-            }
+    $dbColumns = _hub_table_columns($pdo, 'riders');
+    foreach ($optionalColumns as $col) {
+        if (in_array($col, $dbColumns)) {
+            $existingOptional[] = $col;
         }
-        // scf_license_year may not exist yet
-        if (!in_array('scf_license_year', $dbColumns)) {
-            $riderColumns = array_diff($riderColumns, ['scf_license_year']);
-        }
-    } catch (\Throwable $e) { /* ignore */ }
+    }
+    // scf_license_year may not exist yet
+    if (!in_array('scf_license_year', $dbColumns)) {
+        $riderColumns = array_diff($riderColumns, ['scf_license_year']);
+    }
 
     $selectCols = implode(', ', array_merge($riderColumns, $existingOptional));
     $riderStmt = $pdo->prepare("SELECT {$selectCols} FROM riders WHERE id = ?");
@@ -1131,17 +1161,14 @@ function createRiderFromRegistration(array $data, int $parentUserId): array {
             $birthYear = intval($data['birth_year']);
         }
 
-        // Check which optional columns exist
+        // Check which optional columns exist (cached per request)
         $optionalCols = [];
-        try {
-            $colCheck = $pdo->query("SHOW COLUMNS FROM riders");
-            $dbColumns = array_column($colCheck->fetchAll(PDO::FETCH_ASSOC), 'Field');
-            foreach (['phone', 'ice_name', 'ice_phone', 'nationality'] as $col) {
-                if (in_array($col, $dbColumns)) {
-                    $optionalCols[] = $col;
-                }
+        $dbColumns = _hub_table_columns($pdo, 'riders');
+        foreach (['phone', 'ice_name', 'ice_phone', 'nationality'] as $col) {
+            if (in_array($col, $dbColumns)) {
+                $optionalCols[] = $col;
             }
-        } catch (\Throwable $e) { /* ignore */ }
+        }
 
         // Build dynamic insert
         $columns = ['firstname', 'lastname', 'email', 'birth_year', 'gender',

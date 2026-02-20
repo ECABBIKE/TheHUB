@@ -18,13 +18,42 @@
 | Startlistor | KLAR | Admin/promotor startliste-vy med startnr, export, mobilvy | 100% |
 | Bildbanken | PAGAENDE | AI-analyserade bilder kopplade till profiler | 10% |
 | Ridercard Share | PAGAENDE | Statistikkort for Instagram-delning | 5% |
-| Prestandaoptimering | PAGAENDE | Fas 1 klar. Fas 2-4 planerade (DB-index, CSS-bundling, arkitektur) | 25% |
+| Prestandaoptimering | PAGAENDE | Fas 1-2 klar. Fas 3-4 planerade (CSS-bundling, arkitektur) | 50% |
 | CSS/UI Standardisering | PLANERAD | Enhetlig radius och nya tabeller pa alla sidor | 0% |
 | POS Incheckning & Startlista | PLANERAD | QR-scanning, incheckning, auto-startnr, startlistevy vid event | 0% |
 
 ---
 
 # CHANGELOG
+
+### 2026-02-21 (Prestandaoptimering Fas 2 - Databasoptimering)
+- **Branch:** claude/fix-site-performance-PbeNY
+
+- **Migration 052: Prestandaindex**
+  - 15 nya index pa 5 tabeller (event_registrations, results, orders, events, riders)
+  - Kor via admin/migrations.php
+
+- **search.php: Borttagen CONCAT i WHERE**
+  - CONCAT(firstname, ' ', lastname) forhindrade index-anvandning → full table scan
+  - Ersatt med separata firstname/lastname-villkor
+  - Multi-ord-sokning stods (t.ex. "Erik Svensson" → firstname LIKE + lastname LIKE)
+
+- **order-manager.php: Cachade kolumnkontroller**
+  - 3 st SHOW COLUMNS-anrop ersatta med cachade helperfunktioner
+  - `_hub_column_exists()` och `_hub_table_columns()` med statisk cache
+  - Kolumnlista for riders hamtas en gang per request
+
+- **GlobalSponsorManager: Statisk cache**
+  - `hasCustomMediaColumn()` cachad statiskt (delade over instanser)
+  - Alla sponsor_settings laddas i en fraga (var 2 separata)
+  - `isPublicEnabled()` och `isAnalyticsEnabled()` laser fran cache
+
+- **Andrade filer:**
+  - `Tools/migrations/052_performance_indexes.sql` - Ny migration
+  - `admin/migrations.php` - Registrering av migration 052
+  - `api/search.php` - Borttagen CONCAT, index-vanlig sokning
+  - `includes/order-manager.php` - Cachade kolumnkontroller
+  - `includes/GlobalSponsorManager.php` - Statisk cache for sponsor-data
 
 ### 2026-02-21 (Prestandaoptimering Fas 1 - Snabba vinster)
 - **Branch:** claude/fix-site-performance-PbeNY

@@ -30,49 +30,104 @@ try {
 
     // Search riders
     if ($type === 'all' || $type === 'riders') {
+        // Split query into words to support "firstname lastname" searches
+        $words = preg_split('/\s+/', $query);
+
         // Build query based on filter setting
         if ($filter === 'with_results') {
             // Only show riders who have at least one result
-            $stmt = $pdo->prepare("
-                SELECT DISTINCT r.id, r.firstname, r.lastname, c.name as club_name
-                FROM riders r
-                LEFT JOIN clubs c ON r.club_id = c.id
-                INNER JOIN results res ON r.id = res.cyclist_id
-                WHERE (CONCAT(r.firstname, ' ', r.lastname) LIKE ?
-                   OR r.firstname LIKE ?
-                   OR r.lastname LIKE ?)
-                ORDER BY
-                    CASE
-                        WHEN CONCAT(r.firstname, ' ', r.lastname) LIKE ? THEN 1
-                        WHEN r.firstname LIKE ? THEN 2
-                        ELSE 3
-                    END,
-                    r.lastname, r.firstname
-                LIMIT ?
-            ");
+            if (count($words) >= 2) {
+                // Multi-word: search firstname+lastname combination (uses idx_riders_name)
+                $stmt = $pdo->prepare("
+                    SELECT DISTINCT r.id, r.firstname, r.lastname, c.name as club_name
+                    FROM riders r
+                    LEFT JOIN clubs c ON r.club_id = c.id
+                    INNER JOIN results res ON r.id = res.cyclist_id
+                    WHERE (r.firstname LIKE ? AND r.lastname LIKE ?)
+                       OR r.firstname LIKE ?
+                       OR r.lastname LIKE ?
+                    ORDER BY
+                        CASE
+                            WHEN r.firstname LIKE ? AND r.lastname LIKE ? THEN 1
+                            WHEN r.firstname LIKE ? THEN 2
+                            ELSE 3
+                        END,
+                        r.lastname, r.firstname
+                    LIMIT ?
+                ");
+                $firstWord = "%{$words[0]}%";
+                $lastWord = "%{$words[count($words)-1]}%";
+                $searchPattern = "%{$query}%";
+                $startFirst = "{$words[0]}%";
+                $startLast = "{$words[count($words)-1]}%";
+                $stmt->execute([$firstWord, $lastWord, $searchPattern, $searchPattern, $startFirst, $startLast, $startFirst, $limit]);
+            } else {
+                $stmt = $pdo->prepare("
+                    SELECT DISTINCT r.id, r.firstname, r.lastname, c.name as club_name
+                    FROM riders r
+                    LEFT JOIN clubs c ON r.club_id = c.id
+                    INNER JOIN results res ON r.id = res.cyclist_id
+                    WHERE r.firstname LIKE ?
+                       OR r.lastname LIKE ?
+                    ORDER BY
+                        CASE
+                            WHEN r.firstname LIKE ? THEN 1
+                            WHEN r.lastname LIKE ? THEN 2
+                            ELSE 3
+                        END,
+                        r.lastname, r.firstname
+                    LIMIT ?
+                ");
+                $searchPattern = "%{$query}%";
+                $startPattern = "{$query}%";
+                $stmt->execute([$searchPattern, $searchPattern, $startPattern, $startPattern, $limit]);
+            }
         } else {
             // Show all riders
-            $stmt = $pdo->prepare("
-                SELECT r.id, r.firstname, r.lastname, c.name as club_name
-                FROM riders r
-                LEFT JOIN clubs c ON r.club_id = c.id
-                WHERE CONCAT(r.firstname, ' ', r.lastname) LIKE ?
-                   OR r.firstname LIKE ?
-                   OR r.lastname LIKE ?
-                ORDER BY
-                    CASE
-                        WHEN CONCAT(r.firstname, ' ', r.lastname) LIKE ? THEN 1
-                        WHEN r.firstname LIKE ? THEN 2
-                        ELSE 3
-                    END,
-                    r.lastname, r.firstname
-                LIMIT ?
-            ");
+            if (count($words) >= 2) {
+                $stmt = $pdo->prepare("
+                    SELECT r.id, r.firstname, r.lastname, c.name as club_name
+                    FROM riders r
+                    LEFT JOIN clubs c ON r.club_id = c.id
+                    WHERE (r.firstname LIKE ? AND r.lastname LIKE ?)
+                       OR r.firstname LIKE ?
+                       OR r.lastname LIKE ?
+                    ORDER BY
+                        CASE
+                            WHEN r.firstname LIKE ? AND r.lastname LIKE ? THEN 1
+                            WHEN r.firstname LIKE ? THEN 2
+                            ELSE 3
+                        END,
+                        r.lastname, r.firstname
+                    LIMIT ?
+                ");
+                $firstWord = "%{$words[0]}%";
+                $lastWord = "%{$words[count($words)-1]}%";
+                $searchPattern = "%{$query}%";
+                $startFirst = "{$words[0]}%";
+                $startLast = "{$words[count($words)-1]}%";
+                $stmt->execute([$firstWord, $lastWord, $searchPattern, $searchPattern, $startFirst, $startLast, $startFirst, $limit]);
+            } else {
+                $stmt = $pdo->prepare("
+                    SELECT r.id, r.firstname, r.lastname, c.name as club_name
+                    FROM riders r
+                    LEFT JOIN clubs c ON r.club_id = c.id
+                    WHERE r.firstname LIKE ?
+                       OR r.lastname LIKE ?
+                    ORDER BY
+                        CASE
+                            WHEN r.firstname LIKE ? THEN 1
+                            WHEN r.lastname LIKE ? THEN 2
+                            ELSE 3
+                        END,
+                        r.lastname, r.firstname
+                    LIMIT ?
+                ");
+                $searchPattern = "%{$query}%";
+                $startPattern = "{$query}%";
+                $stmt->execute([$searchPattern, $searchPattern, $startPattern, $startPattern, $limit]);
+            }
         }
-
-        $searchPattern = "%{$query}%";
-        $startPattern = "{$query}%";
-        $stmt->execute([$searchPattern, $searchPattern, $searchPattern, $startPattern, $startPattern, $limit]);
 
         foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
             $results[] = [
