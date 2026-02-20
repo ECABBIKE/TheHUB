@@ -409,42 +409,57 @@ function paginate($totalItems, $perPage, $currentPage = 1) {
  * @return array Version information
  */
 function getVersionInfo() {
-  // Try to get git commit count
+  // Cache result - git commands are expensive (spawn new processes)
+  static $cached = null;
+  if ($cached !== null) {
+    return $cached;
+  }
+
+  // Try to read from cache file first (updated on deploy/push)
+  $cacheFile = ROOT_PATH . '/.version-cache.json';
+  if (file_exists($cacheFile) && (time() - filemtime($cacheFile)) < 3600) {
+    $data = json_decode(file_get_contents($cacheFile), true);
+    if ($data && isset($data['deployment'])) {
+      $cached = $data;
+      return $cached;
+    }
+  }
+
+  // Fallback: run git commands (only if cache is missing/stale)
   $gitCommits = 0;
+  $commitHash = '';
   try {
     if (function_exists('shell_exec')) {
-      $output = @shell_exec('cd ' . ROOT_PATH . ' && git rev-list --count HEAD 2>/dev/null');
+      // Single combined git command instead of two separate calls
+      $output = @shell_exec('cd ' . ROOT_PATH . ' && git rev-list --count HEAD 2>/dev/null && git rev-parse --short HEAD 2>/dev/null');
       if ($output !== null) {
-        $gitCommits = (int)trim($output);
+        $lines = array_filter(array_map('trim', explode("\n", $output)));
+        if (count($lines) >= 2) {
+          $gitCommits = (int)$lines[0];
+          $commitHash = $lines[1];
+        } elseif (count($lines) === 1 && is_numeric($lines[0])) {
+          $gitCommits = (int)$lines[0];
+        }
       }
     }
   } catch (Exception $e) {
     // Silently fail if git is not available
   }
 
-  // Calculate total deployments
   $totalDeployments = $gitCommits + DEPLOYMENT_OFFSET;
 
-  // Get short commit hash
-  $commitHash = '';
-  try {
-    if (function_exists('shell_exec')) {
-      $output = @shell_exec('cd ' . ROOT_PATH . ' && git rev-parse --short HEAD 2>/dev/null');
-      if ($output !== null) {
-        $commitHash = trim($output);
-      }
-    }
-  } catch (Exception $e) {
-    // Silently fail
-  }
-
-  return [
+  $cached = [
     'version' => APP_VERSION,
     'name' => APP_VERSION_NAME,
     'build' => defined('APP_BUILD') ? APP_BUILD : '',
     'deployment' => $totalDeployments,
     'commit' => $commitHash
   ];
+
+  // Write cache file for subsequent requests
+  @file_put_contents($cacheFile, json_encode($cached));
+
+  return $cached;
 }
 
 /**

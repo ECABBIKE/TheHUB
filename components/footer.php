@@ -31,7 +31,8 @@ if (function_exists('getVersionInfo')) {
 </footer>
 
 <!-- Global Cart JS -->
-<script src="/assets/js/global-cart.js?v=<?= time() ?>"></script>
+<?php $cartJsPath = __DIR__ . '/../assets/js/global-cart.js'; ?>
+<script src="/assets/js/global-cart.js?v=<?= file_exists($cartJsPath) ? filemtime($cartJsPath) : '1' ?>"></script>
 
 <!-- Cart Badge Updater -->
 <script>

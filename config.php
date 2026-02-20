@@ -7,14 +7,37 @@ ini_set('log_errors', '1');
 ini_set('error_log', __DIR__ . '/logs/error.log');
 
 function env($key, $default = null) {
-    // Stripe test/live mode toggle
-    // When STRIPE_MODE=test, redirect Stripe key lookups to test keys
+    // Static cache - parse .env files ONCE per request instead of on every call
+    static $envCache = null;
     static $stripeTestKeys = [
         'STRIPE_SECRET_KEY' => 'STRIPE_TEST_SECRET_KEY',
         'STRIPE_PUBLISHABLE_KEY' => 'STRIPE_TEST_PUBLISHABLE_KEY',
         'STRIPE_WEBHOOK_SECRET' => 'STRIPE_TEST_WEBHOOK_SECRET',
     ];
 
+    // Load and cache all .env values on first call
+    if ($envCache === null) {
+        $envCache = [];
+        $envFiles = [
+            __DIR__ . '/.env.production',  // Load production first (lower priority)
+            __DIR__ . '/.env'              // Then .env (higher priority, overwrites)
+        ];
+        foreach ($envFiles as $envFile) {
+            if (file_exists($envFile)) {
+                $lines = file($envFile);
+                foreach ($lines as $line) {
+                    $line = trim($line);
+                    if (empty($line) || strpos($line, '#') === 0) continue;
+                    if (strpos($line, '=') !== false) {
+                        list($k, $v) = explode('=', $line, 2);
+                        $envCache[trim($k)] = trim($v);
+                    }
+                }
+            }
+        }
+    }
+
+    // Stripe test/live mode toggle
     if (isset($stripeTestKeys[$key])) {
         $mode = env('STRIPE_MODE', 'live');
         if ($mode === 'test') {
@@ -22,32 +45,13 @@ function env($key, $default = null) {
         }
     }
 
+    // Check real environment variables first, then cached .env values
     $value = getenv($key);
-    if ($value === false) {
-        // Check .env first, then .env.production as fallback
-        $envFiles = [
-            __DIR__ . '/.env',
-            __DIR__ . '/.env.production'
-        ];
-        foreach ($envFiles as $envFile) {
-            if (file_exists($envFile)) {
-                $lines = file($envFile);
-                foreach ($lines as $line) {
-                    $line = trim($line);
-                    // Skip comments and empty lines
-                    if (empty($line) || strpos($line, '#') === 0) continue;
-                    if (strpos($line, '=') !== false) {
-                        list($k, $v) = explode('=', $line, 2);
-                        if (trim($k) === $key) {
-                            return trim($v);
-                        }
-                    }
-                }
-            }
-        }
-        return $default;
+    if ($value !== false) {
+        return $value;
     }
-    return $value;
+
+    return $envCache[$key] ?? $default;
 }
 
 define('ROOT_PATH', __DIR__);
@@ -105,7 +109,7 @@ if (APP_ENV === 'development') {
 // Version info
 define('APP_VERSION', '1.0');
 define('APP_VERSION_NAME', 'Release');
-define('APP_BUILD', '2026-02-20');
+define('APP_BUILD', '2026-02-21');
 define('DEPLOYMENT_OFFSET', 131);
 
 

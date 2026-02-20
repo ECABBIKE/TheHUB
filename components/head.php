@@ -105,11 +105,17 @@ $iconType = match($faviconExt) {
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Cabin+Condensed:wght@400;500;600;700&family=Manrope:wght@300;400;500;600;700&family=Oswald:wght@400;500;600;700&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
 
-<!-- Lucide Icons - pinned to specific version for stability -->
-<script src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
+<!-- Lucide Icons - deferred to not block initial render -->
+<script defer src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
 
-<!-- Chart.js for dynamic charts -->
-<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<!-- Chart.js - only loaded on pages that use charts (rider, club, analytics) -->
+<?php
+$chartPages = ['rider', 'club', 'database-rider', 'database-club'];
+$currentPageId = $pageInfo['page'] ?? '';
+if (in_array($currentPageId, $chartPages)):
+?>
+<script defer src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<?php endif; ?>
 
 <!-- Umami Analytics -->
 <script defer src="https://cloud.umami.is/script.js" data-website-id="d48052b4-61f9-4f41-ae2b-8215cdd3a82e"></script>
@@ -135,7 +141,6 @@ $cssVersion = function($file) use ($cssDir) {
 <link rel="stylesheet" href="<?= hub_asset('css/badge-system.css') ?>?v=<?= $cssVersion('badge-system.css') ?>">
 <link rel="stylesheet" href="<?= hub_asset('css/pwa.css') ?>?v=<?= $cssVersion('pwa.css') ?>">
 <link rel="stylesheet" href="<?= hub_asset('css/viewport.css') ?>?v=<?= $cssVersion('viewport.css') ?>">
-<link rel="stylesheet" href="<?= hub_asset('css/theme-enhancement.css') ?>?v=<?= $cssVersion('theme-enhancement.css') ?>">
 
 <!-- Page-Specific CSS (loaded conditionally based on current page) -->
 <?php
@@ -179,13 +184,11 @@ if ($currentPage) {
  * Load custom colors and responsive settings from admin branding panel
  * File: /uploads/branding.json
  * Admin panel: /admin/branding.php
+ * Reuses $brandingDataForIcons loaded in the iOS icons section above
  */
-$brandingFile = __DIR__ . '/../uploads/branding.json';
+$brandingData = $brandingDataForIcons; // Already loaded above - no second file read
 
-if (file_exists($brandingFile)) {
-    $brandingData = json_decode(file_get_contents($brandingFile), true);
-
-    if (is_array($brandingData)) {
+if (is_array($brandingData)) {
         $cssOutput = '';
         $colorCount = 0;
 
@@ -373,6 +376,5 @@ if (file_exists($brandingFile)) {
             echo $responsiveCss;
             echo '</style>';
         }
-    }
 }
 ?>

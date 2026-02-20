@@ -140,11 +140,15 @@ if (hub_is_ajax()) {
         })();
     </script>
 
-    <!-- Initialize Lucide icons -->
+    <!-- Initialize Lucide icons (works with defer) -->
     <script>
-        lucide.createIcons();
+        function _initLucideIcons() {
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+        }
+        // Initialize after deferred scripts have loaded
+        document.addEventListener('DOMContentLoaded', _initLucideIcons);
         // Re-initialize icons after AJAX page loads
-        document.addEventListener('hub:contentloaded', () => lucide.createIcons());
+        document.addEventListener('hub:contentloaded', _initLucideIcons);
     </script>
 </body>
 </html>
