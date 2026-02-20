@@ -1,6 +1,40 @@
 # TheHUB - Memory / Session Knowledge
 
-> Senast uppdaterad: 2026-02-20
+> Senast uppdaterad: 2026-02-21
+
+---
+
+## PRESTANDAOPTIMERING (2026-02-21)
+
+### Fas 1 - Snabba vinster (KLAR)
+- **env() cachad**: Statisk variabel i config.php. .env lasas en gang per request istallet for 13+.
+- **getVersionInfo() cachad**: Resultat sparas i `.version-cache.json` (1h TTL). Inga shell_exec per request.
+- **global-cart.js**: Andrat fran `?v=time()` till `?v=filemtime()`. Webblasar-cache fungerar nu.
+- **theme-enhancement.css borttagen**: Refererade till en fil som inte existerade (404 per sidladdning).
+- **Chart.js villkorlig**: Laddas bara pa rider.php och club.php (inte alla sidor). Sparar ~80 KB.
+- **Lucide + Chart.js defer**: Blockar inte langre initial rendering. Lucide init via DOMContentLoaded.
+- **branding.json**: Lastes 2 ganger i head.php, nu 1 gang (ateranvander data fran ikon-sektionen).
+
+### Fas 2 - Databasoptimering (PLANERAD)
+- Saknade index: `event_registrations(event_id, status)`, `results(cyclist_id)`, `orders(series_id, payment_status)`, `events(date, active)`
+- CONCAT i search.php WHERE-clause forhindrar index-anvandning
+- SHOW COLUMNS FROM riders pa varje registrerings-API-anrop (order-manager.php)
+- Sponsordata: 6-8 DB-queries + skrivningar per sida utan cache
+
+### Fas 3 - Frontend (PLANERAD)
+- 12 CSS-filer = 12 HTTP-requests (~106 KB). Bor slas ihop.
+- event.php: 5,893 rader med ~2,000 rader inline-JS
+- Google Fonts laddar 4 fontfamiljer med 16 vikter
+
+### Fas 4 - Arkitektur (PLANERAD)
+- Ingen applikationscache (APCu/Redis)
+- SCF API-anrop blockerar registrering i 2-5 sek (synkront)
+- Resultat i event.php saknar paginering
+
+### Tekniska detaljer
+- `.version-cache.json` i rotmappen - auto-genereras, ignorera i git
+- Chart.js-sidor definieras i `$chartPages` array i head.php (rad ~110)
+- Lucide init anvander `_initLucideIcons()` + DOMContentLoaded i index.php
 
 ---
 

@@ -1,6 +1,6 @@
 # TheHUB - Development Roadmap
 
-> Senast uppdaterad: 2026-02-20
+> Senast uppdaterad: 2026-02-21
 >
 > **Se:** `/admin/roadmap.php` for interaktiv vy
 
@@ -18,12 +18,71 @@
 | Startlistor | KLAR | Admin/promotor startliste-vy med startnr, export, mobilvy | 100% |
 | Bildbanken | PAGAENDE | AI-analyserade bilder kopplade till profiler | 10% |
 | Ridercard Share | PAGAENDE | Statistikkort for Instagram-delning | 5% |
+| Prestandaoptimering | PAGAENDE | Fas 1 klar. Fas 2-4 planerade (DB-index, CSS-bundling, arkitektur) | 25% |
 | CSS/UI Standardisering | PLANERAD | Enhetlig radius och nya tabeller pa alla sidor | 0% |
 | POS Incheckning & Startlista | PLANERAD | QR-scanning, incheckning, auto-startnr, startlistevy vid event | 0% |
 
 ---
 
 # CHANGELOG
+
+### 2026-02-21 (Prestandaoptimering Fas 1 - Snabba vinster)
+- **Branch:** claude/fix-site-performance-PbeNY
+
+- **Prestandafix: env() cachas per request**
+  - env() funktionen i config.php laste .env fran disk 13+ ganger per sidladdning
+  - Nu lasas .env-filer en enda gang och cachas i en statisk variabel
+  - Sparar ~13 filsystemsoperationer per request
+
+- **Prestandafix: getVersionInfo() cachas med fil-cache**
+  - Funktionen korde `git rev-list --count HEAD` + `git rev-parse --short HEAD` pa varje sidladdning
+  - Nu cachas resultatet i `.version-cache.json` (1 timme TTL)
+  - Gar fran 2 shell_exec-anrop per request till 0 (efter forsta)
+
+- **Prestandafix: global-cart.js cache-busting**
+  - Anvande `?v=<?= time() ?>` vilket tvingade webblasar-download vid varje sidvisning
+  - Andrat till `filemtime()` - webblasar-cache fungerar nu korrekt
+
+- **Prestandafix: Borttagen theme-enhancement.css (404)**
+  - Filen existerade inte men refererades i head.php
+  - Varje sidladdning genererade en 404-request till servern
+
+- **Prestandafix: Chart.js laddas villkorligt**
+  - Chart.js (~80 KB) laddades pa ALLA sidor trots att bara rider.php och club.php anvander den
+  - Laddas nu bara pa sidor som faktiskt behover diagram
+  - Sparar ~80 KB nedladdning pa alla andra sidor
+
+- **Prestandafix: Lucide och Chart.js defer**
+  - Bada externa scripts laddas nu med `defer` attribut
+  - Blockar inte langre initial rendering av sidan
+  - Lucide-initiering anpassad till DOMContentLoaded for kompatibilitet
+
+- **Prestandafix: branding.json lasas bara en gang**
+  - head.php laste branding.json 2 ganger (en for ikoner, en for CSS-variabler)
+  - Ateranvander nu data fran forsta lasningen
+
+- **Andrade filer:**
+  - `config.php` - Cachad env(), APP_BUILD uppdaterad
+  - `includes/helpers.php` - Cachad getVersionInfo() med fil-cache
+  - `components/head.php` - Borttagen 404-CSS, defer scripts, villkorlig Chart.js, cachad branding
+  - `components/footer.php` - filemtime() istallet for time() pa global-cart.js
+  - `index.php` - Lucide init anpassad for defer
+
+- **Framtida fas 2 (databasoptimering):**
+  - Skapa saknade index (event_registrations, results, orders, events)
+  - Fixa CONCAT i search.php WHERE-clause
+  - Cacha SHOW COLUMNS-resultat i order-manager.php
+  - Cacha sponsordata per request
+
+- **Framtida fas 3 (frontend-optimering):**
+  - Sla ihop CSS-filer till farre HTTP-requests
+  - Flytta event.php inline-JS till extern fil
+  - Google Fonts: minska antal vikter
+
+- **Framtida fas 4 (arkitekturforbattringar):**
+  - Paginera resultat i event.php
+  - Implementera APCu eller filbaserad cache
+  - Asynkrona SCF API-anrop
 
 ### 2026-02-20 (Mediabibliotek + Ekonomi-filter + Promotor sponsorväljare)
 - **Branch:** claude/fix-mobile-participants-2pIVE
