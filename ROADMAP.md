@@ -1,6 +1,6 @@
 # TheHUB - Development Roadmap
 
-> Senast uppdaterad: 2026-02-18
+> Senast uppdaterad: 2026-02-20
 >
 > **Se:** `/admin/roadmap.php` for interaktiv vy
 
@@ -24,6 +24,42 @@
 ---
 
 # CHANGELOG
+
+### 2026-02-20 (Mediabibliotek + Ekonomi-filter + Promotor sponsorväljare)
+- **Branch:** claude/fix-mobile-participants-2pIVE
+
+- **Ny funktion: Flytta bilder mellan mappar i mediabiblioteket**
+  - Mapp-dropdown i bilddetalj-modalen visar nu även undermappar (t.ex. `sponsors/husqvarna`)
+  - Fysisk fil flyttas på disk vid mappbyte (inte bara DB-metadata)
+  - Filepath uppdateras automatiskt
+  - Bekräftelsemeddelande "Bilden flyttad till X"
+
+- **Förbättring: Mobilanpassad bilddetalj-modal**
+  - Fullscreen på mobil med sticky header och scrollbart innehåll
+  - Extra padding i botten (70px) för att undvika bottom-nav
+  - Z-index 10000
+
+- **Ny funktion: Bildbaserad sponsorväljare för promotorer**
+  - Promotorer ser förenklat UI med fyra placeringsgrupper (Banner, Logo-rad, Resultat, Partners)
+  - Välj bild direkt från mediabiblioteket - sponsor skapas automatiskt bakom kulisserna
+  - Ny API-endpoint: `find_or_create_by_media` i sponsors.php
+  - Admin-UI oförändrat (dropdown/checkbox)
+
+- **Buggfix: 0 kr serie-intäkter för event tillagda efter köp**
+  - Serie-intäkter beräknades via `series_registration_events` (snapshot vid köp)
+  - Event tillagda i serien efter köp fick 0 kr
+  - Omskrivet till dynamisk beräkning via `events.series_id`
+
+- **Buggfix: Tranås/Värnamo saknades i ekonomi-filtret**
+  - Event-dropdown visade bara event med direkta ordrar (`orders.event_id`)
+  - Serie-event utan egna ordrar saknades helt
+  - Fixat: filtret inkluderar nu event som tillhör serier med serieanmälningar
+  - Vid val av serie-event visas även serie-ordrar
+  - Fixat i BÅDA admin- och promotor-vyn
+
+- **Buggfix: Tom profilredigering (admin_email)**
+  - `hub_set_user_session()` satte aldrig `admin_email` i session
+  - Fixat med fallback till `hub_user_email`
 
 ### 2026-02-18 (Faktiska Stripe-avgifter + Plattformsavgift-redigering)
 - **Branch:** claude/fix-mobile-payment-layout-UVxvi
