@@ -15,11 +15,11 @@
 - **Lucide + Chart.js defer**: Blockar inte langre initial rendering. Lucide init via DOMContentLoaded.
 - **branding.json**: Lastes 2 ganger i head.php, nu 1 gang (ateranvander data fran ikon-sektionen).
 
-### Fas 2 - Databasoptimering (PLANERAD)
-- Saknade index: `event_registrations(event_id, status)`, `results(cyclist_id)`, `orders(series_id, payment_status)`, `events(date, active)`
-- CONCAT i search.php WHERE-clause forhindrar index-anvandning
-- SHOW COLUMNS FROM riders pa varje registrerings-API-anrop (order-manager.php)
-- Sponsordata: 6-8 DB-queries + skrivningar per sida utan cache
+### Fas 2 - Databasoptimering (KLAR)
+- **Migration 052**: 15 index pa event_registrations, results, orders, events, riders
+- **search.php CONCAT borttagen**: Anvander nu separata firstname/lastname-villkor. Multi-ord-sokning (t.ex. "Erik Svensson") matchar `firstname LIKE '%Erik%' AND lastname LIKE '%Svensson%'`. Index `idx_riders_name(lastname, firstname)` kan nu anvandas.
+- **SHOW COLUMNS cachad**: Ny `_hub_column_exists()` och `_hub_table_columns()` i order-manager.php med statisk cache. Kolumnlistan for riders hamtas en gang per request istallet for 1-3 ganger.
+- **GlobalSponsorManager cachad**: `hasCustomMediaColumn()` och `loadSettings()` anvander statisk cache (delade over instanser). Sponsor-settings laddas i en enda fraga istallet for 2 separata. SHOW COLUMNS ersatt med information_schema-fraga.
 
 ### Fas 3 - Frontend (PLANERAD)
 - 12 CSS-filer = 12 HTTP-requests (~106 KB). Bor slas ihop.
