@@ -1,6 +1,60 @@
 # TheHUB - Memory / Session Knowledge
 
-> Senast uppdaterad: 2026-02-21
+> Senast uppdaterad: 2026-02-22
+
+---
+
+## GRAVITYTIMING API (2026-02-22)
+
+### Ny integration: GravityTiming tidtagnings-API
+GravityTiming ar en lokal tidtagningsapp som kors pa en stationer dator vid tavlingsplatsen. API:t later appen:
+1. Hamta startlistor fran TheHUB
+2. Ladda upp resultat (batch eller live split times)
+3. Visa resultat i realtid pa event-sidan
+
+### API-autentisering
+- API-nyckel + hemlighet via HTTP-headers: `X-API-Key` + `X-API-Secret`
+- Nycklar skapas i `/admin/api-keys.php`, prefix `gt_`
+- Secret hashas med bcrypt, visas bara vid skapande
+- Rate limiting: 60 anrop/minut per nyckel
+- Scope-system: `readonly`, `timing`, `admin` (hierarkiskt)
+- Nycklar kan begransas till specifika event_ids
+
+### API-endpoints (alla under /api/v1/)
+- `GET /api/v1/events` - Lista events (med klasser, stage_names)
+- `GET /api/v1/events/{id}/startlist` - Hamta startlista (riders, bib, klass, klubb, licens)
+- `GET /api/v1/events/{id}/classes` - Hamta klasser med deltagarantal
+- `POST /api/v1/events/{id}/results` - Batch-upload resultat (mode: upsert/replace/append)
+- `POST /api/v1/events/{id}/results/live` - Live split time (en SS at gangen)
+- `GET /api/v1/events/{id}/results/status` - Polling-endpoint for live-resultat
+- `PATCH /api/v1/events/{id}/results?result_id=X` - Uppdatera enstaka resultat
+- `DELETE /api/v1/events/{id}/results?mode=all` - Rensa alla resultat
+
+### Databasandringar (migration 053)
+- `api_keys` - API-nyckeltabell med scope, event-begransning, utgangsdatum
+- `api_request_log` - Logg for alla API-anrop (debug/rate limiting)
+- `events.timing_live` - TINYINT flagga for live-tidtagning
+
+### Live-resultat pa event-sidan
+- Event-sidan pollar `/api/v1/events/{id}/results/status` var 10:e sekund nar `timing_live = 1`
+- LIVE-badge (rod, pulserande) visas i resultat-fliken
+- Sidan laddas om automatiskt nar nya resultat kommer in
+- `timing_live` satts till 1 vid forsta live-resultatet, 0 nar resultat rensas
+
+### Filstruktur
+- `/api/v1/auth-middleware.php` - Autentisering, rate limiting, helpers
+- `/api/v1/events.php` - Lista events
+- `/api/v1/event-startlist.php` - Startlista
+- `/api/v1/event-classes.php` - Klasser
+- `/api/v1/event-results.php` - Resultat CRUD (POST/PATCH/DELETE)
+- `/api/v1/event-results-live.php` - Live split times
+- `/api/v1/event-results-status.php` - Polling/status
+- `/admin/api-keys.php` - Admin API-nyckelhantering
+- `/admin/tools/test-timing-api.php` - Testverktyg
+
+### .htaccess routing
+- Clean URLs: `/api/v1/events/42/startlist` → `api/v1/event-startlist.php?event_id=42`
+- HTTPS-redirect undantag for `/api/v1/` (extern utrustning foljer inte redirects)
 
 ---
 

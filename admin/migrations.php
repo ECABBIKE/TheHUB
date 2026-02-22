@@ -180,6 +180,10 @@ $migrationChecks = [
         'columns' => [],
         'data' => ["(SELECT COUNT(1) FROM information_schema.statistics WHERE table_schema = DATABASE() AND index_name = 'idx_er_event_status') > 0"]
     ],
+    '053_gravitytiming_api.sql' => [
+        'tables' => ['api_keys', 'api_request_log'],
+        'columns' => ['events.timing_live']
+    ],
 ];
 
 // ============================================================================
