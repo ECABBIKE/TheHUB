@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GravityTiming — Start</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+<div class="app">
+    <div class="header">
+        <h1><span class="logo">🚦</span> <span id="stage-title">START</span></h1>
+    </div>
+
+    <div class="main">
+        <!-- Next rider -->
+        <div class="card text-center">
+            <h2 class="text-muted mb-1">Nästa åkare</h2>
+            <div style="font-size:4rem; font-weight:700; color:var(--accent-green)" id="next-bib">—</div>
+            <div style="font-size:1.5rem" id="next-name"></div>
+            <div class="text-muted" id="next-class"></div>
+        </div>
+
+        <!-- Start order -->
+        <div class="card">
+            <div class="card-header">
+                <h3>Startordning</h3>
+            </div>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr><th>Ordning</th><th>BIB</th><th>Namn</th><th>Klass</th><th>Status</th></tr>
+                    </thead>
+                    <tbody id="start-order"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="status-bar">
+        <span><span class="status-dot offline" id="ws-dot"></span> <span id="ws-status">Frånkopplad</span></span>
+    </div>
+</div>
+
+<script src="/static/js/ws-client.js"></script>
+<script>
+    const params = new URLSearchParams(location.search);
+    const stageNumber = parseInt(params.get('stage')) || 1;
+    let eventId = null;
+
+    const ws = new GravityWS(['start']);
+    ws.bindStatus(
+        document.getElementById('ws-dot'),
+        document.getElementById('ws-status')
+    );
+
+    ws.on('punch', (msg) => {
+        // Reload start order when someone starts
+        if (msg.control_type === 'start' && eventId) {
+            loadStartOrder();
+        }
+    });
+
+    ws.on('_connected', init);
+
+    async function init() {
+        try {
+            const status = await API.get('/status');
+            if (!status.active_event) return;
+            eventId = status.active_event.id;
+
+            const stages = await API.get(`/events/${eventId}/stages`);
+            const stage = stages.find(s => s.stage_number === stageNumber);
+            if (stage) {
+                document.getElementById('stage-title').textContent =
+                    `START — Stage ${stage.stage_number}: ${stage.name}`;
+            }
+
+            loadStartOrder();
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    async function loadStartOrder() {
+        if (!eventId) return;
+        try {
+            const entries = await API.get(`/events/${eventId}/entries`);
+            const tbody = document.getElementById('start-order');
+            tbody.innerHTML = entries.map((e, i) => `
+                <tr>
+                    <td>${i + 1}</td>
+                    <td><strong>${e.bib}</strong></td>
+                    <td>${e.first_name} ${e.last_name}</td>
+                    <td>${e.class_name || ''}</td>
+                    <td class="text-muted">${e.status}</td>
+                </tr>
+            `).join('');
+
+            // Set "next" rider (first registered)
+            if (entries.length > 0) {
+                const next = entries[0];
+                document.getElementById('next-bib').textContent = `#${next.bib}`;
+                document.getElementById('next-name').textContent =
+                    `${next.first_name} ${next.last_name}`;
+                document.getElementById('next-class').textContent = next.class_name || '';
+            }
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    init();
+</script>
+</body>
+</html>

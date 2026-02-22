@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GravityTiming — Ställning</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <style>
+        .search-bar {
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            background: var(--bg-primary);
+            padding: 0.5rem 0;
+        }
+        .search-bar input {
+            width: 100%;
+        }
+    </style>
+</head>
+<body>
+<div class="app">
+    <div class="header">
+        <h1><span class="logo">⏱ GravityTiming</span></h1>
+        <span class="text-muted" id="event-name"></span>
+    </div>
+
+    <div class="main">
+        <!-- Filters -->
+        <div class="search-bar">
+            <div class="form-row">
+                <div class="form-group" style="flex:1">
+                    <input type="text" id="search" placeholder="Sök namn eller BIB..." oninput="filterStandings()">
+                </div>
+                <div class="form-group">
+                    <select id="class-filter" onchange="loadStandings()">
+                        <option value="">Alla klasser</option>
+                    </select>
+                </div>
+            </div>
+        </div>
+
+        <!-- Results -->
+        <div class="table-wrap">
+            <table>
+                <thead>
+                    <tr><th>Pos</th><th>BIB</th><th>Namn</th><th>Klubb</th><th>Klass</th><th>Total</th><th>Diff</th></tr>
+                </thead>
+                <tbody id="standings-body"></tbody>
+            </table>
+        </div>
+    </div>
+
+    <div class="status-bar">
+        <span><span class="status-dot offline" id="ws-dot"></span> <span id="ws-status"></span></span>
+        <span class="text-muted">Uppdateras automatiskt</span>
+    </div>
+</div>
+
+<script src="/static/js/ws-client.js"></script>
+<script>
+    let eventId = null;
+    let precision = 'seconds';
+    let allResults = [];
+
+    const ws = new GravityWS(['all']);
+    ws.bindStatus(
+        document.getElementById('ws-dot'),
+        document.getElementById('ws-status')
+    );
+
+    ws.on('standings', () => loadStandings());
+    ws.on('punch', () => {
+        // Debounced reload
+        clearTimeout(window._reloadTimer);
+        window._reloadTimer = setTimeout(loadStandings, 1000);
+    });
+    ws.on('_connected', init);
+
+    async function init() {
+        try {
+            const status = await API.get('/status');
+            if (!status.active_event) {
+                document.getElementById('event-name').textContent = 'Inget aktivt event';
+                return;
+            }
+            eventId = status.active_event.id;
+            precision = status.active_event.time_precision || 'seconds';
+            document.getElementById('event-name').textContent = status.active_event.name;
+
+            // Load classes
+            const classes = await API.get(`/events/${eventId}/classes`);
+            const sel = document.getElementById('class-filter');
+            sel.innerHTML = '<option value="">Alla klasser</option>' +
+                classes.map(c => `<option value="${c.name}">${c.name}</option>`).join('');
+
+            loadStandings();
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    async function loadStandings() {
+        if (!eventId) return;
+        const className = document.getElementById('class-filter').value;
+        try {
+            let path = `/events/${eventId}/overall`;
+            if (className) path += `?class=${encodeURIComponent(className)}`;
+            allResults = await API.get(path);
+            renderStandings();
+        } catch (e) {
+            console.error(e);
+        }
+    }
+
+    function renderStandings() {
+        const search = document.getElementById('search').value.toLowerCase();
+        const filtered = allResults.filter(r => {
+            if (!search) return true;
+            const text = `${r.bib} ${r.first_name} ${r.last_name}`.toLowerCase();
+            return text.includes(search);
+        });
+
+        const tbody = document.getElementById('standings-body');
+        tbody.innerHTML = filtered.map(r => `
+            <tr data-pos="${r.position || ''}">
+                <td class="pos">${r.position || ''}</td>
+                <td><strong>${r.bib}</strong></td>
+                <td>${r.first_name} ${r.last_name}</td>
+                <td>${r.club || ''}</td>
+                <td class="text-muted">${r.class_name}</td>
+                <td class="time">${r.total_seconds != null ? formatElapsed(r.total_seconds, precision) : ''}</td>
+                <td class="time text-muted">${r.time_behind ? formatBehind(r.time_behind, precision) : ''}</td>
+            </tr>
+        `).join('');
+    }
+
+    function filterStandings() {
+        renderStandings();
+    }
+
+    // Auto-refresh every 15s
+    setInterval(() => { if (eventId) loadStandings(); }, 15000);
+
+    init();
+</script>
+</body>
+</html>
