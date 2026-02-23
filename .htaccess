@@ -29,10 +29,11 @@ RewriteEngine On
 RewriteBase /
 
 # Redirect to HTTPS (enabled for production)
-# Skip HTTPS redirect for API webhooks (Stripe sends POST and doesn't follow redirects)
+# Skip HTTPS redirect for API webhooks and v1 (external tools may not follow redirects)
 RewriteCond %{HTTPS} off
 RewriteCond %{REQUEST_URI} !^/api/webhooks/ [NC]
 RewriteCond %{REQUEST_URI} !^/api/stripe-webhook\.php$ [NC]
+RewriteCond %{REQUEST_URI} !^/api/v1/ [NC]
 RewriteRule ^(.*)$ https://%{HTTP_HOST}%{REQUEST_URI} [L,R=301]
 
 # Prevent directory listing
@@ -192,6 +193,14 @@ RewriteRule ^admin/global-texts/?$ admin/global-texts.php [QSA,L]
 
 # Skip remaining admin files (direct PHP access)
 RewriteRule ^admin/.*\.php$ - [L]
+
+# API v1 routing - GravityTiming etc
+RewriteRule ^api/v1/events/(\d+)/startlist/?$ api/v1/event-startlist.php?event_id=$1 [QSA,L]
+RewriteRule ^api/v1/events/(\d+)/classes/?$ api/v1/event-classes.php?event_id=$1 [QSA,L]
+RewriteRule ^api/v1/events/(\d+)/results/live/?$ api/v1/event-results-live.php?event_id=$1 [QSA,L]
+RewriteRule ^api/v1/events/(\d+)/results/status/?$ api/v1/event-results-status.php?event_id=$1 [QSA,L]
+RewriteRule ^api/v1/events/(\d+)/results/?$ api/v1/event-results.php?event_id=$1 [QSA,L]
+RewriteRule ^api/v1/events/?$ api/v1/events.php [QSA,L]
 
 # Skip API endpoints (direct PHP files)
 RewriteRule ^api/.*\.php$ - [L]

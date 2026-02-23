@@ -21,10 +21,42 @@
 | Prestandaoptimering | PAGAENDE | Fas 1-2 klar. Fas 3-4 planerade (CSS-bundling, arkitektur) | 50% |
 | CSS/UI Standardisering | PLANERAD | Enhetlig radius och nya tabeller pa alla sidor | 0% |
 | POS Incheckning & Startlista | PLANERAD | QR-scanning, incheckning, auto-startnr, startlistevy vid event | 0% |
+| GravityTiming API | KLAR | API for tidtagningsapp: startlistor, resultat, live-uppdatering | 100% |
 
 ---
 
 # CHANGELOG
+
+### 2026-02-22 (GravityTiming API)
+- **Branch:** claude/plan-gravitytiming-api-rjZDG
+
+- **Ny funktion: GravityTiming Timing API**
+  - Komplett REST API for att hamta startlistor och ladda upp resultat
+  - API-nyckelbaserad autentisering med scope-system (readonly/timing/admin)
+  - Rate limiting (60 anrop/minut per nyckel)
+  - Batch-upload av resultat med upsert/replace/append-lage
+  - Live split time endpoint for realtidsuppdatering under tavling
+  - Polling-baserade live-resultat pa event-sidan med LIVE-badge
+  - Admin-sida for API-nyckelhantering med dokumentation
+  - Testverktyg for att prova API-endpoints direkt fran admin
+
+- **Nya filer:**
+  - `api/v1/auth-middleware.php` - API-autentisering och helpers
+  - `api/v1/events.php` - Lista events
+  - `api/v1/event-startlist.php` - Hamta startlista
+  - `api/v1/event-classes.php` - Hamta klasser
+  - `api/v1/event-results.php` - Resultat CRUD
+  - `api/v1/event-results-live.php` - Live split times
+  - `api/v1/event-results-status.php` - Polling/status
+  - `admin/api-keys.php` - API-nyckelhantering
+  - `admin/tools/test-timing-api.php` - Testverktyg
+  - `Tools/migrations/053_gravitytiming_api.sql` - Databastabeller
+
+- **Andrade filer:**
+  - `.htaccess` - Clean URL routing for /api/v1/*, HTTPS-undantag
+  - `admin/tools.php` - Lankar till API-nycklar och testverktyg
+  - `admin/migrations.php` - Registrering av migration 053
+  - `pages/event.php` - LIVE-badge och JS-polling for live-resultat
 
 ### 2026-02-21 (Prestandaoptimering Fas 2 - Databasoptimering)
 - **Branch:** claude/fix-site-performance-PbeNY
