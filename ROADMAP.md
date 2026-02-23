@@ -27,6 +27,14 @@
 
 # CHANGELOG
 
+### 2026-02-23 (Klassanmälan kön-bugg)
+- **Branch:** claude/fix-class-eligibility-19XRE
+
+- **Buggfix: Kvinnliga åkare kunde inte anmäla sig till någon klass**
+  - `classes`-tabellen använder `'K'` för dam, `riders`-tabellen använder `'F'` - jämförelsen misslyckades alltid
+  - Fixat i båda `getEligibleClassesForEvent()` och `getEligibleClassesForSeries()` i `order-manager.php`
+  - Normaliserar `'K'` → `'F'` vid könsjämförelse
+
 ### 2026-02-22 (GravityTiming API)
 - **Branch:** claude/plan-gravitytiming-api-rjZDG
 
