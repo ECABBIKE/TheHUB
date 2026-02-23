@@ -4,6 +4,23 @@
 
 ---
 
+## KLASSANMÄLAN KÖN-BUGG FIXAD (2026-02-23)
+
+### Problem
+Kvinnliga åkare kunde inte anmäla sig till någon klass - varken dam-klasser eller mixade klasser. Felmeddelandet sa "Endast damer" för dam-klasser trots att åkaren var kvinna.
+
+### Orsak
+- `classes`-tabellen lagrar kön som `'K'` (Kvinna) för dam-klasser
+- `riders`-tabellen lagrar kön som `'F'` (Female) för kvinnor
+- `getEligibleClassesForEvent()` och `getEligibleClassesForSeries()` i `order-manager.php` jämförde `$class['gender'] !== $riderGender` direkt → `'K' !== 'F'` = alltid sant = ingen dam-klass matchade
+
+### Fix
+- Normaliserar class gender i jämförelsen: `'K'` mappas till `'F'` innan jämförelse
+- Fixat i båda funktionerna: `getEligibleClassesForEvent()` (rad ~903) och `getEligibleClassesForSeries()` (rad ~1087)
+- Ingen databasändring behövdes
+
+---
+
 ## GRAVITYTIMING API-DOKUMENTATION (2026-02-23)
 
 ### Extern integrationsdokumentation

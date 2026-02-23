@@ -899,11 +899,13 @@ function getEligibleClassesForEvent(int $eventId, int $riderId, ?array &$license
             $warning = 'Ingen licens registrerad';
         }
 
-        // Kolla kön
-        if ($eligible && $class['gender'] && $class['gender'] !== $riderGender) {
+        // Kolla kön - classes använder 'K' för dam, riders använder 'F'
+        $classGender = $class['gender'];
+        $normalizedClassGender = ($classGender === 'K') ? 'F' : $classGender;
+        if ($eligible && $classGender && $normalizedClassGender !== $riderGender) {
             $eligible = false;
-            $reason = $class['gender'] === 'M' ? 'Endast herrar' : 'Endast damer';
-            error_log("    BLOCKED: Gender mismatch (need='{$class['gender']}', have='$riderGender')");
+            $reason = ($classGender === 'M') ? 'Endast herrar' : 'Endast damer';
+            error_log("    BLOCKED: Gender mismatch (need='{$classGender}', have='$riderGender')");
         }
 
         // Kolla ålder
@@ -1081,10 +1083,12 @@ function getEligibleClassesForSeries(int $seriesId, int $riderId): array {
         $eligible = true;
         $reason = '';
 
-        // Kolla kön
-        if ($class['gender'] && $class['gender'] !== $riderGender) {
+        // Kolla kön - classes använder 'K' för dam, riders använder 'F'
+        $classGender = $class['gender'];
+        $normalizedClassGender = ($classGender === 'K') ? 'F' : $classGender;
+        if ($classGender && $normalizedClassGender !== $riderGender) {
             $eligible = false;
-            $reason = $class['gender'] === 'M' ? 'Endast herrar' : 'Endast damer';
+            $reason = ($classGender === 'M') ? 'Endast herrar' : 'Endast damer';
         }
 
         // Kolla ålder
