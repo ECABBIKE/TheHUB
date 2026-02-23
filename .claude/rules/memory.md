@@ -1,6 +1,16 @@
 # TheHUB - Memory / Session Knowledge
 
-> Senast uppdaterad: 2026-02-22
+> Senast uppdaterad: 2026-02-23
+
+---
+
+## GRAVITYTIMING API-DOKUMENTATION (2026-02-23)
+
+### Extern integrationsdokumentation
+- `/docs/gravitytiming-api-guide.md` - Komplett guide for tidtagningsprogrammet
+- Beskriver alla endpoints, autentisering, tidsformat, felhantering, retry-strategi
+- Inkluderar typiskt arbetsflode (fore/under/efter tavling) och cURL-exempel
+- Riktar sig till utvecklare av GravityTiming-appen
 
 ---
 
