@@ -1036,6 +1036,34 @@ include __DIR__ . '/components/unified-layout.php';
         </div>
     </div>
 
+    <!-- API Keys -->
+    <div class="card">
+        <div class="tool-header">
+            <div class="tool-icon"><i data-lucide="key"></i></div>
+            <div>
+                <h4 class="tool-title">API-nycklar</h4>
+                <p class="tool-description">Hantera nycklar för GravityTiming och andra integrationer</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/api-keys.php" class="btn-admin btn-admin-primary">Öppna</a>
+        </div>
+    </div>
+
+    <!-- Test Timing API -->
+    <div class="card">
+        <div class="tool-header">
+            <div class="tool-icon"><i data-lucide="radio-tower"></i></div>
+            <div>
+                <h4 class="tool-title">Testa Timing API</h4>
+                <p class="tool-description">Testa GravityTiming API-endpoints</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/tools/test-timing-api.php" class="btn-admin btn-admin-primary">Öppna</a>
+        </div>
+    </div>
+
     <!-- Migrations -->
     <div class="card">
         <div class="tool-header">

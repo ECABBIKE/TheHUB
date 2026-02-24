@@ -907,6 +907,9 @@ try {
         $hasEliminationData = false;
     }
 
+    // Live timing flag
+    $isTimingLive = !empty($event['timing_live']);
+
     // Determine active tab based on event state
     // Priority: 1. Results (if exists) 2. Inbjudan (default for upcoming events)
     $hasResults = !empty($results);
@@ -1218,11 +1221,15 @@ if (!empty($eventSponsors['content'])): ?>
         $showAllTabs = !$hasResults;
         ?>
 
-        <?php if ($hasResults): ?>
+        <?php if ($hasResults || $isTimingLive): ?>
         <a href="?id=<?= $eventId ?>&tab=resultat" class="event-tab <?= $activeTab === 'resultat' ? 'active' : '' ?>">
             <i data-lucide="trophy"></i>
             Resultat
+            <?php if ($isTimingLive): ?>
+            <span class="tab-badge tab-badge--live" id="live-badge">LIVE</span>
+            <?php else: ?>
             <span class="tab-badge"><?= $totalParticipants ?></span>
+            <?php endif; ?>
         </a>
         <?php endif; ?>
 
@@ -5897,7 +5904,65 @@ function sortDHTotalByRun(headerEl, runNum) {
 
 </script>
 
+<?php if ($isTimingLive && $activeTab === 'resultat'): ?>
+<script>
+// Live results polling
+(function() {
+    const eventId = <?= (int)$eventId ?>;
+    let lastUpdated = null;
+    let pollInterval = 10000; // 10 seconds
+
+    function pollResults() {
+        const url = '/api/v1/event-results-status.php?event_id=' + eventId +
+            (lastUpdated ? '&since=' + encodeURIComponent(lastUpdated) : '');
+
+        fetch(url)
+            .then(r => r.json())
+            .then(data => {
+                if (!data.success) return;
+
+                // Update LIVE badge pulse
+                const badge = document.getElementById('live-badge');
+                if (badge) {
+                    badge.classList.toggle('pulse', data.is_live);
+                    if (!data.is_live) badge.textContent = 'Resultat';
+                }
+
+                // If new results since last poll, reload the page
+                if (data.last_updated && data.last_updated !== lastUpdated) {
+                    if (lastUpdated !== null) {
+                        // New results arrived - reload to show them
+                        window.location.reload();
+                    }
+                    lastUpdated = data.last_updated;
+                }
+            })
+            .catch(() => { /* Ignore polling errors silently */ });
+    }
+
+    // Start polling
+    pollResults();
+    setInterval(pollResults, pollInterval);
+})();
+</script>
+<?php endif; ?>
+
 <style>
+/* Live badge styling */
+.tab-badge--live {
+    background: var(--color-error) !important;
+    color: #fff !important;
+    animation: livePulse 2s ease-in-out infinite;
+    font-weight: 700;
+    font-size: 0.65rem;
+    letter-spacing: 0.5px;
+    text-transform: uppercase;
+}
+@keyframes livePulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.6; }
+}
+
 /* Series branding colors - dynamic per event */
 :root {
     --series-gradient-start: <?= htmlspecialchars($event['series_gradient_start'] ?? '#004A98') ?>;

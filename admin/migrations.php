@@ -180,7 +180,17 @@ $migrationChecks = [
         'columns' => [],
         'data' => ["(SELECT COUNT(1) FROM information_schema.statistics WHERE table_schema = DATABASE() AND index_name = 'idx_er_event_status') > 0"]
     ],
-    '053_event_general_competition_link.sql' => [
+    '053_gravitytiming_api.sql' => [
+        'tables' => ['api_keys', 'api_request_log'],
+        'columns' => ['events.timing_live']
+    ],
+    '054_premium_rider_sponsors.sql' => [
+        'tables' => ['rider_sponsors']
+    ],
+    '055_public_display_settings.sql' => [
+        'data' => ["sponsor_settings.setting_key = 'public_riders_display'"]
+    ],
+    '056_event_general_competition_link.sql' => [
         'tables' => [],
         'columns' => ['events.general_competition_link_url', 'events.general_competition_link_text'],
         'data' => []

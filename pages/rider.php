@@ -50,6 +50,12 @@ if (file_exists($avatarHelperPath)) {
     require_once $avatarHelperPath;
 }
 
+// Include premium membership helpers
+$premiumPath = dirname(__DIR__) . '/includes/premium.php';
+if (file_exists($premiumPath)) {
+    require_once $premiumPath;
+}
+
 if (!$riderId) {
     header('Location: /riders');
     exit;
@@ -635,6 +641,16 @@ try {
 
     // Check Gravity ID status
     $hasGravityId = !empty($rider['gravity_id']);
+
+    // Check premium membership status and rider sponsors
+    $isPremium = false;
+    $riderSponsors = [];
+    if (function_exists('isPremiumMember')) {
+        $isPremium = isPremiumMember($db, $riderId);
+        if ($isPremium) {
+            $riderSponsors = getRiderSponsors($db, $riderId);
+        }
+    }
 
     // Check if this profile can be claimed or needs activation
     // Available to ALL visitors - not just logged in users
@@ -1274,9 +1290,15 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
                 <?php endif; ?>
             </div>
 
-            <!-- Status Badges Row - License and/or Gravity ID -->
-            <?php if ($hasLicense || $hasGravityId): ?>
+            <!-- Status Badges Row - License, Gravity ID, Premium -->
+            <?php if ($hasLicense || $hasGravityId || $isPremium): ?>
             <div class="profile-badges-row">
+                <?php if ($isPremium): ?>
+                <div class="profile-status-badge badge-premium">
+                    <i data-lucide="crown" class="badge-icon"></i>
+                    <span class="badge-label">Premium</span>
+                </div>
+                <?php endif; ?>
                 <?php if ($hasLicense): ?>
                 <div class="profile-status-badge <?= $licenseActive ? 'badge-active' : 'badge-inactive' ?>">
                     <i data-lucide="award" class="badge-icon"></i>
@@ -1427,6 +1449,65 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
         .btn-delete-club-season:hover { opacity: 1; }
         .btn-delete-club-season i { width: 14px; height: 14px; }
         </style>
+        <?php endif; ?>
+
+        <!-- RIDER SPONSORS CARD (Premium only) -->
+        <?php if ($isPremium && !empty($riderSponsors)): ?>
+        <div class="card rider-sponsors-card">
+            <h3 class="card-section-title-sm"><i data-lucide="heart-handshake"></i> Mina sponsorer</h3>
+            <div class="rider-sponsors-grid">
+                <?php foreach ($riderSponsors as $sponsor): ?>
+                <<?= $sponsor['website_url'] ? 'a href="' . htmlspecialchars($sponsor['website_url']) . '" target="_blank" rel="noopener"' : 'div' ?> class="rider-sponsor-item">
+                    <?php if ($sponsor['logo_url']): ?>
+                    <img src="<?= htmlspecialchars($sponsor['logo_url']) ?>" alt="<?= htmlspecialchars($sponsor['name']) ?>" class="rider-sponsor-logo">
+                    <?php else: ?>
+                    <span class="rider-sponsor-name-text"><?= htmlspecialchars($sponsor['name']) ?></span>
+                    <?php endif; ?>
+                </<?= $sponsor['website_url'] ? 'a' : 'div' ?>>
+                <?php endforeach; ?>
+            </div>
+        </div>
+        <style>
+        .rider-sponsors-card { padding: var(--space-md); }
+        .rider-sponsors-grid {
+            display: flex;
+            flex-wrap: wrap;
+            gap: var(--space-sm);
+            align-items: center;
+            justify-content: center;
+        }
+        .rider-sponsor-item {
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            padding: var(--space-xs) var(--space-sm);
+            border-radius: var(--radius-sm);
+            background: var(--color-bg-hover);
+            text-decoration: none;
+            transition: opacity 0.2s;
+        }
+        a.rider-sponsor-item:hover { opacity: 0.8; }
+        .rider-sponsor-logo {
+            max-height: 32px;
+            max-width: 120px;
+            object-fit: contain;
+        }
+        .rider-sponsor-name-text {
+            font-size: 0.85rem;
+            font-weight: 600;
+            color: var(--color-text-secondary);
+        }
+        </style>
+        <?php elseif ($isPremium && empty($riderSponsors) && $isOwnProfile): ?>
+        <div class="card rider-sponsors-card">
+            <h3 class="card-section-title-sm"><i data-lucide="heart-handshake"></i> Mina sponsorer</h3>
+            <div style="text-align: center; padding: var(--space-md);">
+                <p class="text-muted" style="margin-bottom: var(--space-sm); font-size: 0.9rem;">Lägg till dina sponsorer här</p>
+                <a href="/profile/edit" class="btn btn-secondary" style="font-size: 0.85rem;">
+                    <i data-lucide="plus"></i> Lägg till sponsor
+                </a>
+            </div>
+        </div>
         <?php endif; ?>
 
         <!-- HIGHLIGHTS CARD -->

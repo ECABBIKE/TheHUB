@@ -612,19 +612,31 @@ try {
                     $plan = $stmt->fetch(PDO::FETCH_ASSOC);
 
                     if ($plan) {
-                        // Get customer email from Stripe
+                        // Get customer email and rider_id from metadata
                         $customerEmail = $data['metadata']['email'] ?? '';
                         $customerName = $data['metadata']['name'] ?? '';
+                        $riderId = $data['metadata']['rider_id'] ?? null;
 
-                        // Create new subscription record
+                        // If no rider_id in metadata, try to look up by email
+                        if (!$riderId && $customerEmail) {
+                            $rStmt = $pdo->prepare("SELECT id FROM riders WHERE email = ? LIMIT 1");
+                            $rStmt->execute([$customerEmail]);
+                            $riderRow = $rStmt->fetch(PDO::FETCH_ASSOC);
+                            if ($riderRow) {
+                                $riderId = (int)$riderRow['id'];
+                            }
+                        }
+
+                        // Create new subscription record with rider_id
                         $stmt = $pdo->prepare("
                             INSERT INTO member_subscriptions (
-                                plan_id, email, name, stripe_customer_id, stripe_subscription_id,
+                                rider_id, plan_id, email, name, stripe_customer_id, stripe_subscription_id,
                                 stripe_subscription_status, current_period_start, current_period_end,
                                 cancel_at_period_end, trial_start, trial_end, metadata
-                            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                            ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                         ");
                         $stmt->execute([
+                            $riderId,
                             $plan['id'],
                             $customerEmail,
                             $customerName,

@@ -1,0 +1,627 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GravityTiming — Admin</title>
+    <link rel="stylesheet" href="/static/css/style.css?_={{ cache_bust }}">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-title" content="GravityTiming">
+</head>
+<body>
+<div class="app">
+    <!-- Header -->
+    <div class="header">
+        <h1><span class="logo">GravityTiming</span> <span class="text-muted" id="event-name">Inget event</span></h1>
+        <div class="flex gap-sm items-center">
+            <span id="punch-count" class="text-muted">0 stämplingar</span>
+        </div>
+    </div>
+
+    <!-- Welcome screen (no event selected) -->
+    <div id="welcome-screen" class="welcome-screen">
+        <div class="welcome-inner">
+            <div class="welcome-logo">GravityTiming</div>
+            <p class="welcome-sub">Tidtagningssystem för svensk gravity</p>
+
+            <div id="existing-events" class="hidden">
+                <h3 style="margin-bottom:0.5rem">Tidigare event</h3>
+                <div id="event-list-welcome"></div>
+            </div>
+
+            <div class="welcome-create">
+                <h3>Skapa nytt event</h3>
+                <div class="welcome-form">
+                    <div class="form-row">
+                        <div class="form-group" style="flex:2">
+                            <label>Namn</label>
+                            <input type="text" id="new-event-name" placeholder="T.ex. Vallåsen Enduro 2025">
+                        </div>
+                        <div class="form-group">
+                            <label>Datum</label>
+                            <input type="date" id="new-event-date">
+                        </div>
+                    </div>
+                    <div class="form-row">
+                        <div class="form-group" style="flex:1">
+                            <label>Plats</label>
+                            <input type="text" id="new-event-location" placeholder="Vallåsen">
+                        </div>
+                        <div class="form-group" style="flex:1">
+                            <label>Mall</label>
+                            <select id="new-event-template">
+                                <option value="">Laddar...</option>
+                            </select>
+                        </div>
+                        <div class="form-group">
+                            <label>ROC-ID (valfritt)</label>
+                            <input type="text" id="new-event-roc" placeholder="2256" style="width:100px">
+                        </div>
+                    </div>
+                    <button class="btn btn-primary btn-lg" onclick="createEvent()" style="margin-top:0.5rem">Skapa event</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Tabs (hidden until event selected) -->
+    <div class="tabs hidden" id="main-tabs">
+        <div class="tab active" data-tab="live">Live</div>
+        <div class="tab" data-tab="stages">Stages</div>
+        <div class="tab" data-tab="overall">Totalt</div>
+        <div class="tab" data-tab="entries">Startlista</div>
+        <div class="tab" data-tab="punches">Stämplingar</div>
+        <div class="tab" data-tab="raceday">Tävlingsdag</div>
+        <div class="tab" data-tab="connections">Anslutningar</div>
+        <div class="tab" data-tab="setup">Setup</div>
+    </div>
+
+    <!-- Main content (hidden until event selected) -->
+    <div class="main hidden" id="main-content">
+
+        <!-- ═══ LIVE TAB ═══ -->
+        <div class="tab-content active" id="tab-live">
+            <div class="card">
+                <div class="card-header">
+                    <h2>Senaste stämplingar</h2>
+                </div>
+                <div id="live-hero" class="finish-hero hidden">
+                    <div class="bib" id="live-bib"></div>
+                    <div class="name" id="live-name"></div>
+                    <div class="time" id="live-time"></div>
+                    <div class="position" id="live-pos"></div>
+                    <div class="behind text-muted" id="live-behind"></div>
+                </div>
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr><th>Tid</th><th>BIB</th><th>Namn</th><th>Kontroll</th><th>Stage</th><th>Resultat</th><th>Källa</th></tr>
+                        </thead>
+                        <tbody id="live-feed"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ═══ STAGES TAB ═══ -->
+        <div class="tab-content" id="tab-stages">
+            <div class="card">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Stage</label>
+                        <select id="stage-select"></select>
+                    </div>
+                    <div class="form-group">
+                        <label>Klass</label>
+                        <select id="stage-class-select"><option value="">Alla</option></select>
+                    </div>
+                    <button class="btn btn-secondary btn-sm" onclick="loadStageResults()">Ladda</button>
+                </div>
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr><th>Pos</th><th>BIB</th><th>Namn</th><th>Klubb</th><th>Klass</th><th>Tid</th><th>Diff</th></tr>
+                        </thead>
+                        <tbody id="stage-results"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ═══ OVERALL TAB ═══ -->
+        <div class="tab-content" id="tab-overall">
+            <div class="card">
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Klass</label>
+                        <select id="overall-class-select"><option value="">Alla</option></select>
+                    </div>
+                    <button class="btn btn-secondary btn-sm" onclick="loadOverallResults()">Ladda</button>
+                </div>
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr><th>Pos</th><th>BIB</th><th>Namn</th><th>Klubb</th><th>Klass</th><th>Total</th><th>Diff</th><th>Status</th></tr>
+                        </thead>
+                        <tbody id="overall-results"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ═══ ENTRIES TAB ═══ -->
+        <div class="tab-content" id="tab-entries">
+            <div class="card">
+                <div class="card-header">
+                    <h2>Startlista</h2>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Importera startlista (CSV)</label>
+                        <input type="file" id="startlist-file" accept=".csv">
+                    </div>
+                    <button class="btn btn-primary btn-sm" onclick="importStartlist()">Importera</button>
+                </div>
+                <div id="startlist-msg" class="hidden"></div>
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr><th>BIB</th><th>Namn</th><th>Klubb</th><th>Klass</th><th></th></tr>
+                        </thead>
+                        <tbody id="entries-list"></tbody>
+                    </table>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h2>Chip-mappning</h2>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Importera chip-mappning (CSV)</label>
+                        <input type="file" id="chip-file" accept=".csv">
+                    </div>
+                    <button class="btn btn-primary btn-sm" onclick="importChips()">Importera</button>
+                </div>
+                <div id="chip-msg" class="hidden"></div>
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr><th>BIB</th><th>SIAC</th><th>Primär</th><th></th></tr>
+                        </thead>
+                        <tbody id="chips-list"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ═══ PUNCHES TAB ═══ -->
+        <div class="tab-content" id="tab-punches">
+            <div class="card">
+                <div class="card-header">
+                    <h2>Alla stämplingar</h2>
+                </div>
+                <div class="form-row">
+                    <div class="form-group">
+                        <label>Källa</label>
+                        <select id="punch-source-filter">
+                            <option value="">Alla</option>
+                            <option value="roc">ROC</option>
+                            <option value="sirap">SIRAP</option>
+                            <option value="usb">USB</option>
+                            <option value="manual">Manuell</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label>Visa duplikat</label>
+                        <select id="punch-dup-filter">
+                            <option value="">Alla</option>
+                            <option value="false" selected>Utan duplikat</option>
+                            <option value="true">Bara duplikat</option>
+                        </select>
+                    </div>
+                    <button class="btn btn-secondary btn-sm" onclick="loadPunches()">Filtrera</button>
+                </div>
+
+                <div class="form-row mt-1">
+                    <div class="form-group">
+                        <label>Manuell stämpling</label>
+                        <input type="number" id="manual-siac" placeholder="SIAC" style="width:100px">
+                    </div>
+                    <div class="form-group">
+                        <label>&nbsp;</label>
+                        <input type="number" id="manual-control" placeholder="Kontroll" style="width:100px">
+                    </div>
+                    <div class="form-group">
+                        <label>&nbsp;</label>
+                        <input type="text" id="manual-time" placeholder="YYYY-MM-DD HH:MM:SS" style="width:180px">
+                    </div>
+                    <button class="btn btn-primary btn-sm" onclick="addManualPunch()">Lägg till</button>
+                </div>
+
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr><th>ID</th><th>SIAC</th><th>Kontroll</th><th>Tid</th><th>Källa</th><th>Dup</th></tr>
+                        </thead>
+                        <tbody id="punches-list"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ═══ RACE DAY TAB ═══ -->
+        <div class="tab-content" id="tab-raceday">
+
+            <!-- Kill switches -->
+            <div class="card">
+                <div class="card-header">
+                    <h2>Tävlingskontroll</h2>
+                </div>
+                <div class="race-controls">
+                    <div class="race-control-row">
+                        <div class="race-control-info">
+                            <strong>Stämplingsmottagning</strong>
+                            <span class="text-muted">Pausar all ingest (ROC, USB, manuell)</span>
+                        </div>
+                        <div class="race-control-action">
+                            <span class="badge" id="badge-ingest">Aktiv</span>
+                            <button class="btn btn-sm" id="btn-toggle-ingest" onclick="toggleIngest()">Pausa</button>
+                        </div>
+                    </div>
+                    <div class="race-control-row">
+                        <div class="race-control-info">
+                            <strong>Publik resultatvy</strong>
+                            <span class="text-muted">Fryser displays/standings (loggar fortfarande)</span>
+                        </div>
+                        <div class="race-control-action">
+                            <span class="badge" id="badge-standings">Aktiv</span>
+                            <button class="btn btn-sm" id="btn-toggle-standings" onclick="toggleStandings()">Frys</button>
+                        </div>
+                    </div>
+                    <div class="race-control-row">
+                        <div class="race-control-info">
+                            <strong>Omberäkna alla resultat</strong>
+                            <span class="text-muted">Räknar om allt från stämplingarna</span>
+                        </div>
+                        <div class="race-control-action">
+                            <button class="btn btn-secondary btn-sm" onclick="recomputeResults()">Beräkna om</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Backup -->
+            <div class="card">
+                <div class="card-header">
+                    <h2>Backup</h2>
+                </div>
+                <div class="flex gap-sm flex-wrap mb-1">
+                    <button class="btn btn-primary btn-sm" onclick="createBackup()">Skapa backup</button>
+                    <a class="btn btn-secondary btn-sm" href="/api/backup/download" target="_blank">Ladda ner backup</a>
+                </div>
+                <div id="backup-msg" class="hidden"></div>
+                <div id="backups-list"></div>
+            </div>
+
+            <!-- Audit log -->
+            <div class="card">
+                <div class="card-header">
+                    <h2>Audit-logg</h2>
+                    <button class="btn btn-secondary btn-sm" onclick="loadAuditLog()">Uppdatera</button>
+                </div>
+                <div class="table-wrap">
+                    <table>
+                        <thead>
+                            <tr><th>Tid</th><th>Handling</th><th>Typ</th><th>Detaljer</th><th>Källa</th></tr>
+                        </thead>
+                        <tbody id="audit-list"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- ═══ CONNECTIONS TAB ═══ -->
+        <div class="tab-content" id="tab-connections">
+
+            <!-- ROC Polling -->
+            <div class="card">
+                <div class="card-header">
+                    <h2>ROC Polling</h2>
+                    <span class="badge badge-danger" id="badge-roc">Stoppad</span>
+                </div>
+                <p class="text-muted" style="margin-bottom:0.75rem; font-size:0.85rem;">
+                    H&auml;mtar st&auml;mplingar fr&aring;n roc.olresultat.se via HTTP-polling.
+                </p>
+                <div class="race-controls">
+                    <div class="race-control-row">
+                        <div class="race-control-info">
+                            <strong>T&auml;vlings-ID</strong>
+                            <span class="text-muted">ROC competition ID (t.ex. 2256)</span>
+                        </div>
+                        <div class="race-control-action">
+                            <input type="text" id="roc-competition-id" placeholder="2256" style="width:100px; text-align:center;">
+                            <button class="btn btn-secondary btn-sm" onclick="saveRocConfig()">Spara</button>
+                        </div>
+                    </div>
+                    <div class="race-control-row">
+                        <div class="race-control-info">
+                            <strong>Polling</strong>
+                            <span class="text-muted" id="roc-status-text">Inte startad</span>
+                        </div>
+                        <div class="race-control-action">
+                            <button class="btn btn-primary btn-sm" id="btn-roc-toggle" onclick="toggleRocPolling()">Starta</button>
+                        </div>
+                    </div>
+                    <div class="race-control-row">
+                        <div class="race-control-info">
+                            <strong>Statistik</strong>
+                            <span class="text-muted">
+                                St&auml;mplingar: <span id="roc-punch-count">0</span> &middot;
+                                Fel: <span id="roc-error-count">0</span> &middot;
+                                Senaste: <span id="roc-last-poll">&mdash;</span>
+                            </span>
+                        </div>
+                        <div class="race-control-action">
+                            <span class="text-muted" style="font-size:0.75rem;">last_id: <span id="roc-last-id">0</span></span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- USB Reader -->
+            <div class="card">
+                <div class="card-header">
+                    <h2>USB-l&auml;sare (BSM8)</h2>
+                    <span class="badge badge-danger" id="badge-usb">Stoppad</span>
+                </div>
+                <p class="text-muted" style="margin-bottom:0.75rem; font-size:0.85rem;">
+                    L&auml;ser st&auml;mplingar direkt fr&aring;n SIAC-chip via BSM8-USB. Chipminnet &auml;r facit (prioritet 1).<br>
+                    <strong>Mac-anv&auml;ndare:</strong> Installera
+                    <a href="https://www.silabs.com/developers/usb-to-uart-bridge-vcp-drivers" target="_blank" style="color:var(--accent-green);">CP210x USB-to-UART-drivrutin</a>
+                    fr&aring;n Silicon Labs.
+                </p>
+                <div class="race-controls">
+                    <div class="race-control-row">
+                        <div class="race-control-info">
+                            <strong>Seriell port</strong>
+                            <span class="text-muted">V&auml;lj den port som BSM8-USB &auml;r ansluten till</span>
+                        </div>
+                        <div class="race-control-action">
+                            <select id="usb-port-select" style="min-width:200px;">
+                                <option value="">S&ouml;ker portar...</option>
+                            </select>
+                            <button class="btn btn-secondary btn-sm" onclick="refreshUsbPorts()">S&ouml;k</button>
+                        </div>
+                    </div>
+                    <div class="race-control-row">
+                        <div class="race-control-info">
+                            <strong>L&auml;sare</strong>
+                            <span class="text-muted" id="usb-status-text">Inte implementerad &auml;nnu</span>
+                        </div>
+                        <div class="race-control-action">
+                            <button class="btn btn-sm" id="btn-usb-toggle" onclick="toggleUsbReader()" disabled>Kommer snart</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- TheHUB Import -->
+            <div class="card">
+                <div class="card-header">
+                    <h2>TheHUB &mdash; Startlista</h2>
+                </div>
+                <p class="text-muted" style="margin-bottom:0.75rem; font-size:0.85rem;">
+                    H&auml;mta startlista direkt fr&aring;n TheHUB ist&auml;llet f&ouml;r CSV-export/import.
+                    Chip-mappning (SIAC) g&ouml;rs separat.
+                </p>
+                <div class="race-controls">
+                    <div class="race-control-row">
+                        <div class="race-control-info">
+                            <strong>Bas-URL</strong>
+                            <span class="text-muted">TheHUB-server</span>
+                        </div>
+                        <div class="race-control-action">
+                            <input type="text" id="thehub-base-url" value="https://thehub.gravityseries.se" style="width:280px;">
+                        </div>
+                    </div>
+                    <div class="race-control-row">
+                        <div class="race-control-info">
+                            <strong>T&auml;vlings-ID</strong>
+                            <span class="text-muted">Competitions-ID fr&aring;n TheHUB (t.ex. 342)</span>
+                        </div>
+                        <div class="race-control-action">
+                            <input type="text" id="thehub-competition-id" placeholder="342" style="width:100px; text-align:center;">
+                            <button class="btn btn-secondary btn-sm" onclick="previewTheHub()">H&auml;mta</button>
+                            <button class="btn btn-primary btn-sm" id="btn-thehub-import" onclick="importFromTheHub()" disabled>Importera</button>
+                        </div>
+                    </div>
+                </div>
+                <div id="thehub-msg" class="hidden" style="margin-top:0.5rem;"></div>
+                <div id="thehub-preview" class="hidden" style="margin-top:0.5rem;">
+                    <div class="table-wrap">
+                        <table>
+                            <thead>
+                                <tr><th>BIB</th><th>Namn</th><th>Klubb</th><th>Klass</th></tr>
+                            </thead>
+                            <tbody id="thehub-preview-list"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SIRAP TCP -->
+            <div class="card">
+                <div class="card-header">
+                    <h2>SIRAP TCP</h2>
+                    <span class="badge" style="background: var(--bg-elevated); color: var(--text-muted);">Planerad</span>
+                </div>
+                <p class="text-muted" style="font-size:0.85rem;">
+                    SIRAP TCP-lyssnare tar emot st&auml;mplingar direkt via lokal WiFi fr&aring;n ROC-enheten.<br>
+                    Kr&auml;ver ingen internetanslutning. Kommer i en framtida version.
+                </p>
+            </div>
+
+        </div>
+
+        <!-- ═══ SETUP TAB ═══ -->
+        <div class="tab-content" id="tab-setup">
+
+            <!-- Quick-start: Mall -->
+            <div class="card" id="setup-template-card">
+                <div class="card-header">
+                    <h2>Snabbstart med mall</h2>
+                </div>
+                <p class="text-muted mb-1">Ladda en färdig mall som skapar kontroller, stages, bana och klass automatiskt.</p>
+                <div class="form-row">
+                    <div class="form-group" style="flex:1">
+                        <select id="template-select" style="width:100%"></select>
+                    </div>
+                    <button class="btn btn-primary" onclick="applyTemplate()">Ladda mall</button>
+                </div>
+            </div>
+
+            <!-- Setup summary -->
+            <div class="card" id="setup-summary">
+                <div class="card-header">
+                    <h2>Eventstruktur</h2>
+                    <button class="btn btn-secondary btn-sm" onclick="toggleSetupDetails()">Visa detaljer</button>
+                </div>
+                <div class="setup-stats">
+                    <div class="setup-stat"><span id="stat-controls">0</span> kontroller</div>
+                    <div class="setup-stat"><span id="stat-stages">0</span> stages</div>
+                    <div class="setup-stat"><span id="stat-courses">0</span> banor</div>
+                    <div class="setup-stat"><span id="stat-classes">0</span> klasser</div>
+                    <div class="setup-stat"><span id="stat-entries">0</span> åkare</div>
+                    <div class="setup-stat"><span id="stat-chips">0</span> chip</div>
+                </div>
+            </div>
+
+            <!-- Detailed setup (collapsed by default) -->
+            <div id="setup-details" class="hidden">
+                <!-- Controls -->
+                <div class="card">
+                    <div class="card-header"><h3>Kontroller</h3></div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Kod</label>
+                            <input type="number" id="ctrl-code" style="width:80px">
+                        </div>
+                        <div class="form-group">
+                            <label>Namn</label>
+                            <input type="text" id="ctrl-name" placeholder="Start S1">
+                        </div>
+                        <div class="form-group">
+                            <label>Typ</label>
+                            <select id="ctrl-type">
+                                <option value="start">start</option>
+                                <option value="finish">finish</option>
+                                <option value="split">split</option>
+                            </select>
+                        </div>
+                        <button class="btn btn-primary btn-sm" onclick="addControl()">Lägg till</button>
+                    </div>
+                    <p class="text-muted" style="font-size:0.8rem; margin:0 0 0.5rem 0;">Klicka p&aring; en cell f&ouml;r att redigera</p>
+                    <div class="table-wrap">
+                        <table>
+                            <thead><tr><th>Kod</th><th>Namn</th><th>Typ</th><th></th></tr></thead>
+                            <tbody id="controls-list"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Stages -->
+                <div class="card">
+                    <div class="card-header"><h3>Stages</h3></div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>#</label>
+                            <input type="number" id="stage-num" style="width:60px" value="1">
+                        </div>
+                        <div class="form-group">
+                            <label>Namn</label>
+                            <input type="text" id="stage-name" placeholder="Stage 1">
+                        </div>
+                        <div class="form-group">
+                            <label>Start-kontroll</label>
+                            <select id="stage-start-ctrl"></select>
+                        </div>
+                        <div class="form-group">
+                            <label>Mål-kontroll</label>
+                            <select id="stage-finish-ctrl"></select>
+                        </div>
+                        <button class="btn btn-primary btn-sm" onclick="addStage()">Lägg till</button>
+                    </div>
+                    <p class="text-muted" style="font-size:0.8rem; margin:0 0 0.5rem 0;">Klicka för att redigera</p>
+                    <div class="table-wrap">
+                        <table>
+                            <thead><tr><th>#</th><th>Namn</th><th>Start</th><th>Mål</th><th>Timed</th><th title="Bästa N åk räknas">Bästa</th><th title="Max antal åk (0=obegränsat)">Max åk</th><th></th></tr></thead>
+                            <tbody id="stages-list"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <!-- Courses -->
+                <div class="card">
+                    <div class="card-header"><h3>Banor</h3></div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Namn</label>
+                            <input type="text" id="course-name" placeholder="Huvudbana">
+                        </div>
+                        <button class="btn btn-primary btn-sm" onclick="addCourse()">Lägg till</button>
+                    </div>
+                    <div id="courses-list"></div>
+                </div>
+
+                <!-- Classes -->
+                <div class="card">
+                    <div class="card-header"><h3>Klasser</h3></div>
+                    <div class="form-row">
+                        <div class="form-group">
+                            <label>Namn</label>
+                            <input type="text" id="class-name" placeholder="Herr Elite">
+                        </div>
+                        <div class="form-group">
+                            <label>Bana</label>
+                            <select id="class-course"></select>
+                        </div>
+                        <button class="btn btn-primary btn-sm" onclick="addClass()">Lägg till</button>
+                    </div>
+                    <div class="table-wrap">
+                        <table>
+                            <thead><tr><th>Namn</th><th>Bana</th><th></th></tr></thead>
+                            <tbody id="classes-list"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Actions -->
+            <div class="card">
+                <div class="card-header"><h3>Åtgärder</h3></div>
+                <div class="flex gap-sm flex-wrap">
+                    <button class="btn btn-primary" id="btn-activate" onclick="activateEvent()">Aktivera event</button>
+                    <button class="btn btn-danger" id="btn-finish" onclick="finishEvent()">Avsluta event</button>
+                    <button class="btn btn-secondary" onclick="switchEvent()">Byt event</button>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- Status bar -->
+    <div class="status-bar">
+        <span><span class="status-dot offline" id="ws-dot"></span> <span id="ws-status">Frånkopplad</span></span>
+        <span><span class="status-dot offline" id="roc-dot"></span> <span id="roc-bar-status">ROC av</span></span>
+        <span id="status-event" class="text-muted"></span>
+        <span id="status-punches" class="text-muted"></span>
+    </div>
+</div>
+
+<script src="/static/js/ws-client.js?_={{ cache_bust }}"></script>
+<script src="/static/js/admin.js?_={{ cache_bust }}"></script>
+</body>
+</html>

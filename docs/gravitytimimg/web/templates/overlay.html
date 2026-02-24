@@ -1,0 +1,40 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GravityTiming — OBS Overlay</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+    <style>
+        body { background: transparent !important; overflow: hidden; }
+    </style>
+</head>
+<body class="overlay-page">
+
+<!-- Popup (bottom-right, slides in on finish) -->
+<div id="overlay-popup" class="overlay-popup hidden">
+    <div style="display:flex; align-items:center; gap:1rem">
+        <div>
+            <div style="font-size:2rem; font-weight:700; color:var(--accent-green)" id="ov-bib"></div>
+            <div style="font-size:1.1rem" id="ov-name"></div>
+        </div>
+        <div style="text-align:right">
+            <div class="time" style="font-size:2.5rem; font-weight:700" id="ov-time"></div>
+            <div style="font-size:1.2rem" id="ov-pos"></div>
+            <div class="text-muted" id="ov-behind"></div>
+        </div>
+    </div>
+    <div class="text-muted mt-1" style="font-size:0.85rem" id="ov-stage"></div>
+</div>
+
+<!-- Ticker bar (bottom) -->
+<div class="overlay-ticker" id="overlay-ticker">
+    <div class="ticker-content" id="ticker-text">
+        ⏱ GravityTiming — Väntar på resultat...
+    </div>
+</div>
+
+<script src="/static/js/ws-client.js"></script>
+<script src="/static/js/overlay.js"></script>
+</body>
+</html>

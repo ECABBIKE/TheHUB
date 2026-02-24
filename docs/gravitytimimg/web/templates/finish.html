@@ -1,0 +1,49 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GravityTiming — Finish</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+<div class="app">
+    <div class="header">
+        <h1><span class="logo">🏁</span> <span id="stage-title">FINISH</span></h1>
+        <span class="text-muted" id="stage-leader"></span>
+    </div>
+
+    <div class="main" style="padding:2rem">
+        <!-- Hero (current finisher) -->
+        <div id="finish-hero" class="finish-hero finish-popup hidden">
+            <div class="bib" id="f-bib"></div>
+            <div class="name" id="f-name"></div>
+            <div class="time" id="f-time"></div>
+            <div class="position" id="f-pos"></div>
+            <div class="behind" id="f-behind"></div>
+            <div class="text-muted mt-1" id="f-overall"></div>
+        </div>
+
+        <!-- Recent results -->
+        <div class="card mt-2">
+            <h3 class="mb-1">Senaste</h3>
+            <div class="table-wrap">
+                <table>
+                    <thead>
+                        <tr><th>Pos</th><th>BIB</th><th>Namn</th><th>Tid</th><th>Diff</th></tr>
+                    </thead>
+                    <tbody id="recent-results"></tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="status-bar">
+        <span><span class="status-dot offline" id="ws-dot"></span> <span id="ws-status">Frånkopplad</span></span>
+    </div>
+</div>
+
+<script src="/static/js/ws-client.js"></script>
+<script src="/static/js/finish.js"></script>
+</body>
+</html>

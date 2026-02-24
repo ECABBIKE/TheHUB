@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="sv">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>GravityTiming — Speaker</title>
+    <link rel="stylesheet" href="/static/css/style.css">
+</head>
+<body>
+<div class="app">
+    <div class="header">
+        <h1><span class="logo">🎤 SPEAKER</span></h1>
+        <span class="text-muted" id="event-info"></span>
+    </div>
+
+    <div class="main">
+        <!-- Stage status bar -->
+        <div class="card">
+            <div class="flex gap-sm" id="stage-status-bar" style="flex-wrap:wrap"></div>
+        </div>
+
+        <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem">
+            <!-- Left: Recent finishes + highlights -->
+            <div>
+                <div class="card">
+                    <div class="card-header"><h3>Senaste målgångar</h3></div>
+                    <div class="table-wrap">
+                        <table>
+                            <thead><tr><th>BIB</th><th>Namn</th><th>Stage</th><th>Tid</th><th>Pos</th><th>Diff</th></tr></thead>
+                            <tbody id="recent-finishes"></tbody>
+                        </table>
+                    </div>
+                </div>
+
+                <div class="card">
+                    <div class="card-header"><h3>⚡ Highlights</h3></div>
+                    <div id="highlights-feed"></div>
+                </div>
+            </div>
+
+            <!-- Right: Overall standings -->
+            <div>
+                <div class="card">
+                    <div class="card-header">
+                        <h3>Totalställning</h3>
+                        <select id="speaker-class" onchange="loadSpeakerOverall()">
+                            <option value="">Alla</option>
+                        </select>
+                    </div>
+                    <div class="table-wrap">
+                        <table>
+                            <thead><tr><th>Pos</th><th>BIB</th><th>Namn</th><th>Total</th><th>Diff</th></tr></thead>
+                            <tbody id="speaker-overall"></tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="status-bar">
+        <span><span class="status-dot offline" id="ws-dot"></span> <span id="ws-status">Frånkopplad</span></span>
+    </div>
+</div>
+
+<script src="/static/js/ws-client.js"></script>
+<script src="/static/js/speaker.js"></script>
+</body>
+</html>
