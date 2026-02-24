@@ -138,18 +138,34 @@ try {
         // Table might not exist yet
     }
 
-    // Load info links for this event (migration 057)
-    $eventInfoLinks = [];
+    // Load info links per section for this event (migration 057+058)
+    $eventInfoLinks = ['general' => [], 'regulations' => [], 'licenses' => []];
     try {
-        $linkStmt = $db->prepare("SELECT link_url, link_text FROM event_info_links WHERE event_id = ? ORDER BY sort_order, id");
+        $linkStmt = $db->prepare("SELECT section, link_url, link_text FROM event_info_links WHERE event_id = ? ORDER BY sort_order, id");
         $linkStmt->execute([$eventId]);
-        $eventInfoLinks = $linkStmt->fetchAll(PDO::FETCH_ASSOC);
+        $allLinks = $linkStmt->fetchAll(PDO::FETCH_ASSOC);
+        foreach ($allLinks as $link) {
+            $sec = $link['section'] ?? 'general';
+            $eventInfoLinks[$sec][] = $link;
+        }
     } catch (PDOException $e) {
         // Table may not exist yet - fall back to single-link columns
         $singleUrl = $event['general_competition_link_url'] ?? '';
         if (!empty($singleUrl)) {
-            $eventInfoLinks = [['link_url' => $singleUrl, 'link_text' => $event['general_competition_link_text'] ?? '']];
+            $eventInfoLinks['general'][] = ['link_url' => $singleUrl, 'link_text' => $event['general_competition_link_text'] ?? ''];
         }
+    }
+
+    // Load global text links (migration 058)
+    $globalTextLinksMap = [];
+    try {
+        $gtlStmt = $db->prepare("SELECT field_key, link_url, link_text FROM global_text_links ORDER BY field_key, sort_order, id");
+        $gtlStmt->execute();
+        foreach ($gtlStmt->fetchAll(PDO::FETCH_ASSOC) as $gtl) {
+            $globalTextLinksMap[$gtl['field_key']][] = $gtl;
+        }
+    } catch (PDOException $e) {
+        // Table may not exist yet
     }
 
     // Check for interactive map (GPX data)
@@ -2000,7 +2016,7 @@ $compClassesInfo = getEventContent($event, 'competition_classes_info', 'competit
 </section>
 <?php endif; ?>
 
-<?php if (!empty($generalCompInfo) || !empty($eventInfoLinks)): ?>
+<?php if (!empty($generalCompInfo) || !empty($eventInfoLinks['general'])): ?>
 <section class="card mb-lg">
     <div class="card-header">
         <h2 class="card-title">
@@ -2012,9 +2028,105 @@ $compClassesInfo = getEventContent($event, 'competition_classes_info', 'competit
         <?php if (!empty($generalCompInfo)): ?>
         <div class="prose"><?= nl2br(h($generalCompInfo)) ?></div>
         <?php endif; ?>
-        <?php if (!empty($eventInfoLinks)): ?>
+        <?php if (!empty($eventInfoLinks['general'])): ?>
         <div style="margin-top: var(--space-sm); display: flex; flex-direction: column; gap: var(--space-2xs);">
-            <?php foreach ($eventInfoLinks as $link):
+            <?php foreach ($eventInfoLinks['general'] as $link):
+                $url = $link['link_url'] ?? '';
+                if (empty($url)) continue;
+                $text = !empty($link['link_text']) ? $link['link_text'] : $url;
+            ?>
+            <a href="<?= h($url) ?>" target="_blank" rel="noopener" style="display: inline-flex; align-items: center; gap: var(--space-2xs); color: var(--color-accent-text);">
+                <i data-lucide="external-link" style="width: 16px; height: 16px;"></i>
+                <?= h($text) ?>
+            </a>
+            <?php endforeach; ?>
+        </div>
+        <?php endif; ?>
+    </div>
+</section>
+<?php endif; ?>
+
+<?php
+// Regelverk section
+$regulationsGlobalType = $event['regulations_global_type'] ?? '';
+$regulationsHidden = !empty($event['regulations_hidden'] ?? 0);
+$regulationsText = '';
+$regulationsGlobalLinks = [];
+if (!$regulationsHidden) {
+    if ($regulationsGlobalType === 'sportmotion' && !empty($globalTextMap['regulations_sportmotion'])) {
+        $regulationsText = $globalTextMap['regulations_sportmotion'];
+        $regulationsGlobalLinks = $globalTextLinksMap['regulations_sportmotion'] ?? [];
+    } elseif ($regulationsGlobalType === 'competition' && !empty($globalTextMap['regulations_competition'])) {
+        $regulationsText = $globalTextMap['regulations_competition'];
+        $regulationsGlobalLinks = $globalTextLinksMap['regulations_competition'] ?? [];
+    } else {
+        $regulationsText = $event['regulations_info'] ?? '';
+    }
+}
+$regulationsEventLinks = $eventInfoLinks['regulations'] ?? [];
+$allRegulationsLinks = array_merge($regulationsGlobalLinks, $regulationsEventLinks);
+?>
+<?php if (!empty($regulationsText) || !empty($allRegulationsLinks)): ?>
+<section class="card mb-lg">
+    <div class="card-header">
+        <h2 class="card-title">
+            <i data-lucide="scale"></i>
+            Regelverk
+        </h2>
+    </div>
+    <div class="card-body">
+        <?php if (!empty($regulationsText)): ?>
+        <div class="prose"><?= nl2br(h($regulationsText)) ?></div>
+        <?php endif; ?>
+        <?php if (!empty($allRegulationsLinks)): ?>
+        <div style="margin-top: var(--space-sm); display: flex; flex-direction: column; gap: var(--space-2xs);">
+            <?php foreach ($allRegulationsLinks as $link):
+                $url = $link['link_url'] ?? '';
+                if (empty($url)) continue;
+                $text = !empty($link['link_text']) ? $link['link_text'] : $url;
+            ?>
+            <a href="<?= h($url) ?>" target="_blank" rel="noopener" style="display: inline-flex; align-items: center; gap: var(--space-2xs); color: var(--color-accent-text);">
+                <i data-lucide="external-link" style="width: 16px; height: 16px;"></i>
+                <?= h($text) ?>
+            </a>
+            <?php endforeach; ?>
+        </div>
+        <?php endif; ?>
+    </div>
+</section>
+<?php endif; ?>
+
+<?php
+// Licenser section
+$licenseText = '';
+$licenseHidden = !empty($event['license_hidden'] ?? 0);
+$licenseGlobalLinks = [];
+if (!$licenseHidden) {
+    if (!empty($event['license_use_global']) && !empty($globalTextMap['license_info'])) {
+        $licenseText = $globalTextMap['license_info'];
+        $licenseGlobalLinks = $globalTextLinksMap['license_info'] ?? [];
+    } else {
+        $licenseText = $event['license_info'] ?? '';
+    }
+}
+$licenseEventLinks = $eventInfoLinks['licenses'] ?? [];
+$allLicenseLinks = array_merge($licenseGlobalLinks, $licenseEventLinks);
+?>
+<?php if (!empty($licenseText) || !empty($allLicenseLinks)): ?>
+<section class="card mb-lg">
+    <div class="card-header">
+        <h2 class="card-title">
+            <i data-lucide="badge-check"></i>
+            Licenser
+        </h2>
+    </div>
+    <div class="card-body">
+        <?php if (!empty($licenseText)): ?>
+        <div class="prose"><?= nl2br(h($licenseText)) ?></div>
+        <?php endif; ?>
+        <?php if (!empty($allLicenseLinks)): ?>
+        <div style="margin-top: var(--space-sm); display: flex; flex-direction: column; gap: var(--space-2xs);">
+            <?php foreach ($allLicenseLinks as $link):
                 $url = $link['link_url'] ?? '';
                 if (empty($url)) continue;
                 $text = !empty($link['link_text']) ? $link['link_text'] : $url;

@@ -21,6 +21,20 @@
 - Kortet visas nu även om det bara finns länkar men ingen informationstext
 - Fallback till gamla kolumnerna om tabellen inte finns (try/catch i både admin och publik vy)
 
+### Migration 058 (Regelverk + Licenser + globala text-länkar)
+- `event_info_links.section` - VARCHAR(30), default 'general' - stödjer 'general', 'regulations', 'licenses'
+- `events.regulations_info` TEXT - egen regelverkstext per event
+- `events.regulations_global_type` VARCHAR(20) - 'sportmotion', 'competition' eller tom (egen text)
+- `events.regulations_hidden` TINYINT - dölj regelverk-rutan
+- `events.license_info` TEXT - egen licenstext per event
+- `events.license_use_global` TINYINT - använd global licenstext
+- `events.license_hidden` TINYINT - dölj licens-rutan
+- Ny tabell `global_text_links` (id, field_key, link_url, link_text, sort_order) - länkar kopplade till globala texter
+- Seedar tre globala texter: `regulations_sportmotion`, `regulations_competition`, `license_info`
+- Regelverk har TVÅ globala val via radioknappar (sportMotion / Tävling) - inte en enkel checkbox
+- Globala länkar mergas med eventspecifika vid visning (globala först, sedan event-egna)
+- Globala texter admin (`/admin/global-texts.php`) har nu länk-UI under varje textfält
+
 ---
 
 ## DATABASBASERADE PUBLIKA INSTÄLLNINGAR (2026-02-24)

@@ -28,6 +28,34 @@
 
 # CHANGELOG
 
+### 2026-02-24 (Regelverk, Licenser & globala text-länkar)
+- **Branch:** claude/fix-site-performance-PbeNY
+
+- **Ny funktion: Regelverk-sektion på event-sidan**
+  - Ny informationsruta under "Generell tävlingsinformation"
+  - Två globala regelverk-val via radioknappar: sportMotion eller Tävling
+  - Egen text eller globalt regelverk per event
+  - Eventspecifika + globala länkar
+
+- **Ny funktion: Licenser-sektion på event-sidan**
+  - Ny informationsruta under "Regelverk"
+  - Global licenstext via checkbox (samma system som andra sektioner)
+  - Eventspecifika + globala länkar
+
+- **Ny funktion: Länkstöd i Globala Texter**
+  - Varje global text kan nu ha egna länkar
+  - Länkarna följer med automatiskt när global text väljs på event
+  - Ny tabell `global_text_links` för att lagra globala text-länkar
+
+- **Nya filer:**
+  - `Tools/migrations/058_regulations_licenses_sections.sql` - Regelverk/Licenser-kolumner, global_text_links, seed
+
+- **Ändrade filer:**
+  - `admin/event-edit.php` - Regelverk och Licenser sektioner med radioknappar och länk-UI
+  - `admin/global-texts.php` - Länk-UI under varje global text
+  - `pages/event.php` - Visar Regelverk och Licenser rutor publikt
+  - `admin/migrations.php` - Registrering av migration 058
+
 ### 2026-02-24 (Flera länkar i Generell tävlingsinformation)
 - **Branch:** claude/fix-site-performance-PbeNY
 

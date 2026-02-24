@@ -200,6 +200,11 @@ $migrationChecks = [
         'columns' => [],
         'data' => []
     ],
+    '058_regulations_licenses_sections.sql' => [
+        'tables' => ['global_text_links'],
+        'columns' => ['events.regulations_info', 'events.license_info', 'event_info_links.section'],
+        'data' => ["global_texts.field_key = 'regulations_sportmotion'"]
+    ],
 ];
 
 // ============================================================================

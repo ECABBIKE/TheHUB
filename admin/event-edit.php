@@ -165,15 +165,19 @@ if (!$event) {
     exit;
 }
 
-// Load info links for this event (migration 057)
-$eventInfoLinks = [];
+// Load info links for this event per section (migration 057+058)
+$eventInfoLinks = ['general' => [], 'regulations' => [], 'licenses' => []];
 try {
-    $eventInfoLinks = $db->getAll("SELECT id, link_url, link_text, sort_order FROM event_info_links WHERE event_id = ? ORDER BY sort_order, id", [$id]);
+    $allLinks = $db->getAll("SELECT id, section, link_url, link_text, sort_order FROM event_info_links WHERE event_id = ? ORDER BY sort_order, id", [$id]);
+    foreach ($allLinks as $link) {
+        $sec = $link['section'] ?? 'general';
+        $eventInfoLinks[$sec][] = $link;
+    }
 } catch (Exception $e) {
     // Table may not exist yet - fall back to single-link columns
     $singleUrl = $event['general_competition_link_url'] ?? '';
     if (!empty($singleUrl)) {
-        $eventInfoLinks = [['id' => 0, 'link_url' => $singleUrl, 'link_text' => $event['general_competition_link_text'] ?? '', 'sort_order' => 0]];
+        $eventInfoLinks['general'][] = ['id' => 0, 'link_url' => $singleUrl, 'link_text' => $event['general_competition_link_text'] ?? '', 'sort_order' => 0];
     }
 }
 
@@ -463,22 +467,49 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 error_log("EVENT EDIT: general_competition_info update failed (run migration 044): " . $gcEx->getMessage());
             }
 
-            // Save info links (migration 057 - event_info_links table)
+            // Save info links per section (migration 057+058 - event_info_links table)
             try {
                 $db->query("DELETE FROM event_info_links WHERE event_id = ?", [$id]);
-                $linkUrls = $_POST['info_link_url'] ?? [];
-                $linkTexts = $_POST['info_link_text'] ?? [];
-                $sortOrder = 0;
-                foreach ($linkUrls as $i => $url) {
-                    $url = trim($url);
-                    if (empty($url)) continue;
-                    $text = trim($linkTexts[$i] ?? '');
-                    $db->query("INSERT INTO event_info_links (event_id, link_url, link_text, sort_order) VALUES (?, ?, ?, ?)", [
-                        $id, $url, $text, $sortOrder++
-                    ]);
+                $sections = ['general', 'regulations', 'licenses'];
+                foreach ($sections as $section) {
+                    $linkUrls = $_POST["info_link_{$section}_url"] ?? [];
+                    $linkTexts = $_POST["info_link_{$section}_text"] ?? [];
+                    $sortOrder = 0;
+                    foreach ($linkUrls as $i => $url) {
+                        $url = trim($url);
+                        if (empty($url)) continue;
+                        $text = trim($linkTexts[$i] ?? '');
+                        $db->query("INSERT INTO event_info_links (event_id, section, link_url, link_text, sort_order) VALUES (?, ?, ?, ?, ?)", [
+                            $id, $section, $url, $text, $sortOrder++
+                        ]);
+                    }
                 }
             } catch (Exception $linkEx) {
                 error_log("EVENT EDIT: event_info_links save failed (run migration 057): " . $linkEx->getMessage());
+            }
+
+            // Save Regelverk fields (migration 058)
+            try {
+                $db->query("UPDATE events SET regulations_info = ?, regulations_global_type = ?, regulations_hidden = ? WHERE id = ?", [
+                    trim($_POST['regulations_info'] ?? ''),
+                    trim($_POST['regulations_global_type'] ?? ''),
+                    isset($_POST['regulations_hidden']) ? 1 : 0,
+                    $id
+                ]);
+            } catch (Exception $regEx) {
+                error_log("EVENT EDIT: regulations update failed (run migration 058): " . $regEx->getMessage());
+            }
+
+            // Save Licenser fields (migration 058)
+            try {
+                $db->query("UPDATE events SET license_info = ?, license_use_global = ?, license_hidden = ? WHERE id = ?", [
+                    trim($_POST['license_info'] ?? ''),
+                    isset($_POST['license_use_global']) ? 1 : 0,
+                    isset($_POST['license_hidden']) ? 1 : 0,
+                    $id
+                ]);
+            } catch (Exception $licEx) {
+                error_log("EVENT EDIT: license update failed (run migration 058): " . $licEx->getMessage());
             }
 
             // Update competition_classes_info separately (migration 045 may not be run yet)
@@ -1276,22 +1307,86 @@ include __DIR__ . '/components/unified-layout.php';
                 <textarea name="general_competition_info" class="admin-form-input event-textarea" rows="6" placeholder="Generell information om tävlingen..."><?= h($event['general_competition_info'] ?? '') ?></textarea>
                 <small class="form-help">Visas under inbjudningstexten på Inbjudan-fliken.</small>
 
-                <div id="info-links-container" style="margin-top: var(--space-sm);">
+                <div id="info-links-general" style="margin-top: var(--space-sm);">
                     <label class="admin-form-label text-sm" style="margin-bottom: var(--space-xs);">Länkar</label>
-                    <?php if (!empty($eventInfoLinks)): ?>
-                        <?php foreach ($eventInfoLinks as $i => $link): ?>
-                        <div class="info-link-row" style="display: grid; grid-template-columns: 1fr 1fr auto; gap: var(--space-xs); margin-bottom: var(--space-xs); align-items: end;">
-                            <input type="url" name="info_link_url[]" class="admin-form-input" placeholder="https://..." value="<?= h($link['link_url'] ?? '') ?>">
-                            <input type="text" name="info_link_text[]" class="admin-form-input" placeholder="Visningsnamn (valfritt)" value="<?= h($link['link_text'] ?? '') ?>">
-                            <button type="button" onclick="this.closest('.info-link-row').remove()" class="btn-admin btn-admin-danger" style="padding: var(--space-xs) var(--space-sm); height: 38px;" title="Ta bort länk"><i data-lucide="x" style="width:16px;height:16px;"></i></button>
-                        </div>
-                        <?php endforeach; ?>
-                    <?php endif; ?>
+                    <?php foreach ($eventInfoLinks['general'] as $link): ?>
+                    <div class="info-link-row" style="display: grid; grid-template-columns: 1fr 1fr auto; gap: var(--space-xs); margin-bottom: var(--space-xs); align-items: end;">
+                        <input type="url" name="info_link_general_url[]" class="admin-form-input" placeholder="https://..." value="<?= h($link['link_url'] ?? '') ?>">
+                        <input type="text" name="info_link_general_text[]" class="admin-form-input" placeholder="Visningsnamn (valfritt)" value="<?= h($link['link_text'] ?? '') ?>">
+                        <button type="button" onclick="this.closest('.info-link-row').remove()" class="btn-admin btn-admin-danger" style="padding: var(--space-xs) var(--space-sm); height: 38px;" title="Ta bort länk"><i data-lucide="x" style="width:16px;height:16px;"></i></button>
+                    </div>
+                    <?php endforeach; ?>
                 </div>
-                <button type="button" onclick="addInfoLink()" class="btn-admin btn-admin-ghost" style="margin-top: var(--space-2xs); font-size: 0.85rem;">
+                <button type="button" onclick="addInfoLink('general')" class="btn-admin btn-admin-ghost" style="margin-top: var(--space-2xs); font-size: 0.85rem;">
                     <i data-lucide="plus" style="width:14px;height:14px;"></i> Lägg till länk
                 </button>
                 <small class="form-help" style="margin-top: var(--space-2xs);">Länkar visas under informationstexten. Om visningsnamn lämnas tomt visas URL:en.</small>
+            </div>
+
+            <!-- Regelverk field -->
+            <div class="admin-form-group mb-lg pb-lg border-bottom">
+                <label class="admin-form-label text-base font-semibold">
+                    Regelverk
+                    <span style="display: inline-flex; gap: var(--space-sm); margin-left: var(--space-sm);">
+                        <label class="checkbox-inline">
+                            <input type="radio" name="regulations_global_type" value="" <?= empty($event['regulations_global_type'] ?? '') ? 'checked' : '' ?>>
+                            <span class="text-xs">Egen text</span>
+                        </label>
+                        <label class="checkbox-inline">
+                            <input type="radio" name="regulations_global_type" value="sportmotion" <?= ($event['regulations_global_type'] ?? '') === 'sportmotion' ? 'checked' : '' ?>>
+                            <span class="text-xs">sportMotion</span>
+                        </label>
+                        <label class="checkbox-inline">
+                            <input type="radio" name="regulations_global_type" value="competition" <?= ($event['regulations_global_type'] ?? '') === 'competition' ? 'checked' : '' ?>>
+                            <span class="text-xs">Tävling</span>
+                        </label>
+                    </span>
+                </label>
+                <textarea name="regulations_info" class="admin-form-input event-textarea" rows="4" placeholder="Regelverk och bestämmelser..."><?= h($event['regulations_info'] ?? '') ?></textarea>
+                <small class="form-help">Visas i egen ruta under "Generell tävlingsinformation". Välj globalt regelverk (sportMotion/Tävling) eller skriv egen text.</small>
+
+                <div id="info-links-regulations" style="margin-top: var(--space-sm);">
+                    <label class="admin-form-label text-sm" style="margin-bottom: var(--space-xs);">Länkar</label>
+                    <?php foreach ($eventInfoLinks['regulations'] as $link): ?>
+                    <div class="info-link-row" style="display: grid; grid-template-columns: 1fr 1fr auto; gap: var(--space-xs); margin-bottom: var(--space-xs); align-items: end;">
+                        <input type="url" name="info_link_regulations_url[]" class="admin-form-input" placeholder="https://..." value="<?= h($link['link_url'] ?? '') ?>">
+                        <input type="text" name="info_link_regulations_text[]" class="admin-form-input" placeholder="Visningsnamn (valfritt)" value="<?= h($link['link_text'] ?? '') ?>">
+                        <button type="button" onclick="this.closest('.info-link-row').remove()" class="btn-admin btn-admin-danger" style="padding: var(--space-xs) var(--space-sm); height: 38px;" title="Ta bort länk"><i data-lucide="x" style="width:16px;height:16px;"></i></button>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
+                <button type="button" onclick="addInfoLink('regulations')" class="btn-admin btn-admin-ghost" style="margin-top: var(--space-2xs); font-size: 0.85rem;">
+                    <i data-lucide="plus" style="width:14px;height:14px;"></i> Lägg till länk
+                </button>
+                <small class="form-help" style="margin-top: var(--space-2xs);">Eventspecifika länkar. Globala regelverk-länkar läggs till automatiskt vid visning.</small>
+            </div>
+
+            <!-- Licenser field -->
+            <div class="admin-form-group mb-lg pb-lg border-bottom">
+                <label class="admin-form-label text-base font-semibold">
+                    Licenser
+                    <label class="checkbox-inline">
+                        <input type="checkbox" name="license_use_global" <?= !empty($event['license_use_global'] ?? '') ? 'checked' : '' ?>>
+                        <span class="text-xs">Global</span>
+                    </label>
+                </label>
+                <textarea name="license_info" class="admin-form-input event-textarea" rows="4" placeholder="Licensinformation..."><?= h($event['license_info'] ?? '') ?></textarea>
+                <small class="form-help">Visas i egen ruta under "Regelverk". Bocka i Global för att använda den globala licenstexten.</small>
+
+                <div id="info-links-licenses" style="margin-top: var(--space-sm);">
+                    <label class="admin-form-label text-sm" style="margin-bottom: var(--space-xs);">Länkar</label>
+                    <?php foreach ($eventInfoLinks['licenses'] as $link): ?>
+                    <div class="info-link-row" style="display: grid; grid-template-columns: 1fr 1fr auto; gap: var(--space-xs); margin-bottom: var(--space-xs); align-items: end;">
+                        <input type="url" name="info_link_licenses_url[]" class="admin-form-input" placeholder="https://..." value="<?= h($link['link_url'] ?? '') ?>">
+                        <input type="text" name="info_link_licenses_text[]" class="admin-form-input" placeholder="Visningsnamn (valfritt)" value="<?= h($link['link_text'] ?? '') ?>">
+                        <button type="button" onclick="this.closest('.info-link-row').remove()" class="btn-admin btn-admin-danger" style="padding: var(--space-xs) var(--space-sm); height: 38px;" title="Ta bort länk"><i data-lucide="x" style="width:16px;height:16px;"></i></button>
+                    </div>
+                    <?php endforeach; ?>
+                </div>
+                <button type="button" onclick="addInfoLink('licenses')" class="btn-admin btn-admin-ghost" style="margin-top: var(--space-2xs); font-size: 0.85rem;">
+                    <i data-lucide="plus" style="width:14px;height:14px;"></i> Lägg till länk
+                </button>
+                <small class="form-help" style="margin-top: var(--space-2xs);">Eventspecifika länkar. Globala licens-länkar läggs till automatiskt vid visning.</small>
             </div>
 
             <!-- Competition classes info field -->
@@ -2039,14 +2134,14 @@ include __DIR__ . '/components/unified-layout.php';
 // =====================================================
 // INFO LINKS: Add/remove links in general competition info
 // =====================================================
-function addInfoLink() {
-    const container = document.getElementById('info-links-container');
+function addInfoLink(section) {
+    const container = document.getElementById('info-links-' + section);
     if (!container) return;
     const row = document.createElement('div');
     row.className = 'info-link-row';
     row.style.cssText = 'display:grid;grid-template-columns:1fr 1fr auto;gap:var(--space-xs);margin-bottom:var(--space-xs);align-items:end;';
-    row.innerHTML = '<input type="url" name="info_link_url[]" class="admin-form-input" placeholder="https://...">'
-        + '<input type="text" name="info_link_text[]" class="admin-form-input" placeholder="Visningsnamn (valfritt)">'
+    row.innerHTML = '<input type="url" name="info_link_' + section + '_url[]" class="admin-form-input" placeholder="https://...">'
+        + '<input type="text" name="info_link_' + section + '_text[]" class="admin-form-input" placeholder="Visningsnamn (valfritt)">'
         + '<button type="button" onclick="this.closest(\'.info-link-row\').remove()" class="btn-admin btn-admin-danger" style="padding:var(--space-xs) var(--space-sm);height:38px;" title="Ta bort länk"><i data-lucide="x" style="width:16px;height:16px;"></i></button>';
     container.appendChild(row);
     if (typeof lucide !== 'undefined') lucide.createIcons();
