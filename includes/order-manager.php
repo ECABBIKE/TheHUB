@@ -216,16 +216,33 @@ function createMultiRiderOrder(array $buyerData, array $items, ?string $discount
             $riderId = intval($item['rider_id']);
             $classId = intval($item['class_id']);
 
-            // Hämta rider-info
-            $riderStmt = $pdo->prepare("
-                SELECT firstname, lastname, email, birth_year, gender, club_id
-                FROM riders WHERE id = ?
-            ");
+            // Hämta rider-info (inkl fält för profilvalidering)
+            $riderCols = ['firstname', 'lastname', 'email', 'birth_year', 'gender', 'club_id'];
+            $riderDbCols = _hub_table_columns($pdo, 'riders');
+            foreach (['phone', 'ice_name', 'ice_phone'] as $optCol) {
+                if (in_array($optCol, $riderDbCols)) {
+                    $riderCols[] = $optCol;
+                }
+            }
+            $riderStmt = $pdo->prepare("SELECT " . implode(', ', $riderCols) . " FROM riders WHERE id = ?");
             $riderStmt->execute([$riderId]);
             $rider = $riderStmt->fetch(PDO::FETCH_ASSOC);
 
             if (!$rider) {
                 throw new Exception("Rider med ID {$riderId} hittades inte");
+            }
+
+            // Validera att profilen är komplett innan anmälan skapas
+            $orderMissing = [];
+            if (empty($rider['gender'])) $orderMissing[] = 'kön';
+            if (empty($rider['birth_year'])) $orderMissing[] = 'födelseår';
+            if (empty($rider['email'])) $orderMissing[] = 'e-post';
+            if (in_array('phone', $riderCols) && empty($rider['phone'])) $orderMissing[] = 'telefonnummer';
+            if (in_array('ice_name', $riderCols) && empty($rider['ice_name'])) $orderMissing[] = 'nödkontakt (namn)';
+            if (in_array('ice_phone', $riderCols) && empty($rider['ice_phone'])) $orderMissing[] = 'nödkontakt (telefon)';
+            if (!empty($orderMissing)) {
+                $riderName = trim($rider['firstname'] . ' ' . $rider['lastname']);
+                throw new Exception("{$riderName} saknar obligatoriska uppgifter: " . implode(', ', $orderMissing) . ". Uppdatera profilen först.");
             }
 
             // Hämta klubbnamn
@@ -1042,15 +1059,53 @@ function getEligibleClassesForEvent(int $eventId, int $riderId, ?array &$license
 function getEligibleClassesForSeries(int $seriesId, int $riderId): array {
     $pdo = hub_db();
 
-    // Hämta rider-info
-    $riderStmt = $pdo->prepare("
-        SELECT birth_year, gender, license_type FROM riders WHERE id = ?
-    ");
+    // Hämta rider-info (inkl alla fält som behövs för validering)
+    // Check which optional columns exist (cached per request)
+    $dbColumns = _hub_table_columns($pdo, 'riders');
+    $optionalCols = [];
+    foreach (['phone', 'ice_name', 'ice_phone'] as $col) {
+        if (in_array($col, $dbColumns)) {
+            $optionalCols[] = $col;
+        }
+    }
+    $selectCols = array_merge(['birth_year', 'gender', 'license_type', 'email'], $optionalCols);
+    $selectStr = implode(', ', $selectCols);
+
+    $riderStmt = $pdo->prepare("SELECT {$selectStr} FROM riders WHERE id = ?");
     $riderStmt->execute([$riderId]);
     $rider = $riderStmt->fetch(PDO::FETCH_ASSOC);
 
     if (!$rider) {
         return [];
+    }
+
+    // Kontrollera att kritisk profildata finns (samma som getEligibleClassesForEvent)
+    $missingFields = [];
+    if (empty($rider['gender'])) {
+        $missingFields[] = 'kön';
+    }
+    if (empty($rider['birth_year'])) {
+        $missingFields[] = 'födelseår';
+    }
+    if (empty($rider['phone'])) {
+        $missingFields[] = 'telefonnummer';
+    }
+    if (empty($rider['email'])) {
+        $missingFields[] = 'e-post';
+    }
+    if (in_array('ice_name', $optionalCols) && empty($rider['ice_name'])) {
+        $missingFields[] = 'nödkontakt (namn)';
+    }
+    if (in_array('ice_phone', $optionalCols) && empty($rider['ice_phone'])) {
+        $missingFields[] = 'nödkontakt (telefon)';
+    }
+
+    if (!empty($missingFields)) {
+        return [[
+            'error' => 'incomplete_profile',
+            'message' => 'Profilen saknar: ' . implode(', ', $missingFields),
+            'missing_fields' => $missingFields
+        ]];
     }
 
     // Använd nuvarande år för ålder
