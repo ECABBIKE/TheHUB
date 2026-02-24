@@ -187,6 +187,9 @@ $migrationChecks = [
     '054_premium_rider_sponsors.sql' => [
         'tables' => ['rider_sponsors']
     ],
+    '055_public_display_settings.sql' => [
+        'data' => ["sponsor_settings.setting_key = 'public_riders_display'"]
+    ],
 ];
 
 // ============================================================================

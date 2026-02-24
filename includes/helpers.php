@@ -370,6 +370,58 @@ function getDB() {
   return $db;
 }
 
+/**
+ * Get a site setting from the sponsor_settings table (used for all site-wide settings).
+ * Uses static cache - DB queried once per request per key.
+ * Falls back to $default if not found in database.
+ */
+function site_setting($key, $default = null) {
+    static $cache = [];
+
+    if (array_key_exists($key, $cache)) {
+        return $cache[$key];
+    }
+
+    try {
+        global $pdo;
+        if (!$pdo) return $default;
+
+        $stmt = $pdo->prepare("SELECT setting_value FROM sponsor_settings WHERE setting_key = ?");
+        $stmt->execute([$key]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+
+        $cache[$key] = $row ? $row['setting_value'] : $default;
+    } catch (Exception $e) {
+        $cache[$key] = $default;
+    }
+
+    return $cache[$key];
+}
+
+/**
+ * Save a site setting to the sponsor_settings table.
+ * Creates or updates the setting.
+ */
+function save_site_setting($key, $value, $description = null) {
+    try {
+        global $pdo;
+        if (!$pdo) return false;
+
+        $stmt = $pdo->prepare("SELECT setting_key FROM sponsor_settings WHERE setting_key = ?");
+        $stmt->execute([$key]);
+
+        if ($stmt->fetch()) {
+            $pdo->prepare("UPDATE sponsor_settings SET setting_value = ? WHERE setting_key = ?")->execute([$value, $key]);
+        } else {
+            $desc = $description ?? '';
+            $pdo->prepare("INSERT INTO sponsor_settings (setting_key, setting_value, description) VALUES (?, ?, ?)")->execute([$key, $value, $desc]);
+        }
+        return true;
+    } catch (Exception $e) {
+        return false;
+    }
+}
+
 function checkCsrf() {
   return check_csrf();
 }

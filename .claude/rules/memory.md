@@ -4,6 +4,32 @@
 
 ---
 
+## DATABASBASERADE PUBLIKA INSTÄLLNINGAR (2026-02-24)
+
+### Flytt från fil till databas
+- **Tidigare:** `public_riders_display` lästes från `/config/public_settings.php` (filbaserat)
+- **Nu:** Läses från `sponsor_settings`-tabellen via `site_setting()` helper
+- **Migration 055:** Seedar default-värden (`public_riders_display = 'with_results'`, `min_results_to_show = 1`)
+
+### Helper-funktioner (includes/helpers.php)
+- **`site_setting($key, $default)`** - Läser en setting från `sponsor_settings` med statisk cache per request
+- **`save_site_setting($key, $value, $description)`** - Sparar/uppdaterar setting i databasen
+
+### Hur det fungerar
+- `pages/riders.php` anropar `site_setting('public_riders_display', 'with_results')` vid varje request
+- Admin ändrar via `/admin/public-settings.php` → `save_site_setting()` → omedelbar effekt
+- Default: `'with_results'` = bara åkare med minst 1 resultat visas på publika deltagarsidan
+- `'all'` = alla aktiva åkare visas (använd när alla funktioner är klara)
+
+### Strava API-integration (UNDER UTREDNING)
+- Strava Developer Program ansökningsformulär mottaget
+- Tillåtna use-cases: visa enskild åkares Strava-stats på deras profil
+- Förbjudet: cross-user leaderboards, virtuella tävlingar
+- Kräver: OAuth 2.0, Brand Guidelines compliance, screenshots
+- Status: Ej ansökt ännu
+
+---
+
 ## PREMIUM-MEDLEMSKAP (2026-02-24)
 
 ### Ny funktion: Premium-prenumeration

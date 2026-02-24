@@ -28,6 +28,24 @@
 
 # CHANGELOG
 
+### 2026-02-24 (Databasbaserade publika inställningar)
+- **Branch:** claude/fix-class-eligibility-19XRE
+
+- **Ny funktion: Publika inställningar via databasen**
+  - `public_riders_display` och `min_results_to_show` flyttade från filconfig till `sponsor_settings`-tabellen
+  - Nya helper-funktioner: `site_setting()` och `save_site_setting()` i `includes/helpers.php`
+  - Admin kan toggla synlighet direkt i `/admin/public-settings.php` utan deploy
+  - Default: bara åkare med resultat visas publikt (säkert vid push av ofärdiga features)
+
+- **Nya filer:**
+  - `Tools/migrations/055_public_display_settings.sql` - Seed default-värden i sponsor_settings
+
+- **Ändrade filer:**
+  - `includes/helpers.php` - Nya funktioner `site_setting()` och `save_site_setting()`
+  - `pages/riders.php` - Läser från DB istället för filconfig
+  - `admin/public-settings.php` - Sparar till DB istället för fil
+  - `admin/migrations.php` - Migration 055 registrerad
+
 ### 2026-02-24 (Premium-medlemskap)
 - **Branch:** claude/fix-class-eligibility-19XRE
 

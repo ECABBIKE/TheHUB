@@ -5,9 +5,8 @@
 
 $db = hub_db();
 
-// Load filter setting from admin configuration
-$publicSettings = require HUB_ROOT . '/config/public_settings.php';
-$filter = $publicSettings['public_riders_display'] ?? 'all';
+// Load filter setting from database (with file fallback)
+$filter = site_setting('public_riders_display', 'with_results');
 
 // Get search query
 $search = isset($_GET['q']) ? trim($_GET['q']) : '';
