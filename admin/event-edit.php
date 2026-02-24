@@ -451,6 +451,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 error_log("EVENT EDIT: general_competition_info update failed (run migration 044): " . $gcEx->getMessage());
             }
 
+            // Update general_competition link fields (migration 053)
+            try {
+                $db->query("UPDATE events SET general_competition_link_url = ?, general_competition_link_text = ? WHERE id = ?", [
+                    trim($_POST['general_competition_link_url'] ?? ''),
+                    trim($_POST['general_competition_link_text'] ?? ''),
+                    $id
+                ]);
+            } catch (Exception $linkEx) {
+                error_log("EVENT EDIT: general_competition_link update failed (run migration 053): " . $linkEx->getMessage());
+            }
+
             // Update competition_classes_info separately (migration 045 may not be run yet)
             $db->query("UPDATE events SET competition_classes_info = ?, competition_classes_use_global = ?, competition_classes_hidden = ? WHERE id = ?", [
                 trim($_POST['competition_classes_info'] ?? ''),
@@ -1245,6 +1256,18 @@ include __DIR__ . '/components/unified-layout.php';
                 </label>
                 <textarea name="general_competition_info" class="admin-form-input event-textarea" rows="6" placeholder="Generell information om tävlingen..."><?= h($event['general_competition_info'] ?? '') ?></textarea>
                 <small class="form-help">Visas under inbjudningstexten på Inbjudan-fliken.</small>
+
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-sm); margin-top: var(--space-sm);">
+                    <div>
+                        <label class="admin-form-label text-sm">Länk (URL)</label>
+                        <input type="url" name="general_competition_link_url" class="admin-form-input" placeholder="https://..." value="<?= h($event['general_competition_link_url'] ?? '') ?>">
+                    </div>
+                    <div>
+                        <label class="admin-form-label text-sm">Länktext (visningsnamn)</label>
+                        <input type="text" name="general_competition_link_text" class="admin-form-input" placeholder="T.ex. Läs mer här" value="<?= h($event['general_competition_link_text'] ?? '') ?>">
+                    </div>
+                </div>
+                <small class="form-help">Valfri länk som visas under informationstexten. Om länktext lämnas tomt visas URL:en.</small>
             </div>
 
             <!-- Competition classes info field -->

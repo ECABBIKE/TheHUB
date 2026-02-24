@@ -9,9 +9,11 @@ $current_admin = get_current_admin();
 $message = '';
 $messageType = 'info';
 
-// Load current settings
-$settingsFile = __DIR__ . '/../config/public_settings.php';
-$currentSettings = require $settingsFile;
+// Load current settings from database (with file fallback)
+$currentSettings = [
+    'public_riders_display' => site_setting('public_riders_display', 'with_results'),
+    'min_results_to_show' => (int) site_setting('min_results_to_show', '1'),
+];
 
 // Load sponsor settings from database
 $sponsorPublicEnabled = false;
@@ -72,33 +74,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
   $message = 'Minsta antal resultat måste vara minst 1';
   $messageType = 'error';
  } else {
-  // Create new settings array
-  $newSettings = [
-  'public_riders_display' => $public_riders_display,
-  'min_results_to_show' => $min_results_to_show,
+  // Save to database
+  $saved1 = save_site_setting('public_riders_display', $public_riders_display, 'Show all riders or only those with results (all/with_results)');
+  $saved2 = save_site_setting('min_results_to_show', (string) $min_results_to_show, 'Minimum number of results required to show rider');
+
+  if ($saved1 && $saved2) {
+  $currentSettings = [
+   'public_riders_display' => $public_riders_display,
+   'min_results_to_show' => $min_results_to_show,
   ];
-
-  // Generate PHP code for the settings file
-  $phpCode ="<?php\n";
-  $phpCode .="/**\n";
-  $phpCode .=" * Public Display Settings\n";
-  $phpCode .=" * Configure what data is visible on the public website\n";
-  $phpCode .=" */\n\n";
-  $phpCode .="return [\n";
-  $phpCode .=" // Show all riders publicly or only those with results\n";
-  $phpCode .=" // Options: 'all' or 'with_results'\n";
-  $phpCode .=" 'public_riders_display' => '{$newSettings['public_riders_display']}',\n\n";
-  $phpCode .=" // Minimum number of results required to show rider (when 'with_results' is selected)\n";
-  $phpCode .=" 'min_results_to_show' => {$newSettings['min_results_to_show']},\n";
-  $phpCode .="];\n";
-
-  // Write to file
-  if (file_put_contents($settingsFile, $phpCode) !== false) {
-  $currentSettings = $newSettings;
   $message = 'Inställningar sparade!';
   $messageType = 'success';
   } else {
-  $message = 'Kunde inte spara inställningar. Kontrollera filrättigheter.';
+  $message = 'Kunde inte spara inställningar till databasen.';
   $messageType = 'error';
   }
  }

@@ -1,6 +1,81 @@
 # TheHUB - Memory / Session Knowledge
 
-> Senast uppdaterad: 2026-02-23
+> Senast uppdaterad: 2026-02-24
+
+---
+
+## LÄNK I GENERELL TÄVLINGSINFORMATION (2026-02-24)
+
+### Migration 056
+- `events.general_competition_link_url` - VARCHAR(500), nullable - URL for länken
+- `events.general_competition_link_text` - VARCHAR(255), nullable - Visningsnamn for länken
+- Om länktext är tom visas URL:en istället
+- Länken visas under informationstexten i "Generell tävlingsinformation"-kortet på event-sidan
+- Redigeras i admin event-edit under "Generell tävlingsinformation"-sektionen (två fält: URL + länktext)
+- Sparas separat med try/catch (graceful fallback om migration 056 inte körts)
+
+---
+
+## DATABASBASERADE PUBLIKA INSTÄLLNINGAR (2026-02-24)
+
+### Flytt från fil till databas
+- **Tidigare:** `public_riders_display` lästes från `/config/public_settings.php` (filbaserat)
+- **Nu:** Läses från `sponsor_settings`-tabellen via `site_setting()` helper
+- **Migration 055:** Seedar default-värden (`public_riders_display = 'with_results'`, `min_results_to_show = 1`)
+
+### Helper-funktioner (includes/helpers.php)
+- **`site_setting($key, $default)`** - Läser en setting från `sponsor_settings` med statisk cache per request
+- **`save_site_setting($key, $value, $description)`** - Sparar/uppdaterar setting i databasen
+
+### Hur det fungerar
+- `pages/riders.php` anropar `site_setting('public_riders_display', 'with_results')` vid varje request
+- Admin ändrar via `/admin/public-settings.php` → `save_site_setting()` → omedelbar effekt
+- Default: `'with_results'` = bara åkare med minst 1 resultat visas på publika deltagarsidan
+- `'all'` = alla aktiva åkare visas (använd när alla funktioner är klara)
+
+### Strava API-integration (UNDER UTREDNING)
+- Strava Developer Program ansökningsformulär mottaget
+- Tillåtna use-cases: visa enskild åkares Strava-stats på deras profil
+- Förbjudet: cross-user leaderboards, virtuella tävlingar
+- Kräver: OAuth 2.0, Brand Guidelines compliance, screenshots
+- Status: Ej ansökt ännu
+
+---
+
+## PREMIUM-MEDLEMSKAP (2026-02-24)
+
+### Ny funktion: Premium-prenumeration
+- **Prisplaner:** 25 kr/mån eller 199 kr/år
+- **Stripe-baserat:** Använder befintlig prenumerationsinfrastruktur (migration 025)
+- **Migration 054:** Skapar `rider_sponsors`-tabell och uppdaterar planer i `membership_plans`
+
+### Premium-funktioner
+1. **Premium-badge på profilen** - Guld crown-ikon i badge-raden (Licens, Gravity ID, Premium)
+2. **Personliga sponsorer** - Max 6 sponsorer med namn, logotyp-URL och webbplatslänk
+3. **Sponsorsektion på profilsidan** - Visas i högerkolumnen under klubbtillhörighet
+4. **Sponsorhantering i profilredigering** - Lägg till/ta bort sponsorer via `/api/rider-sponsors.php`
+5. **Premium upsell** - Icke-premium-medlemmar ser "Bli Premium"-ruta i profilredigeringen
+
+### Teknisk arkitektur
+- **`includes/premium.php`** - Helper-funktioner: `isPremiumMember()`, `getPremiumSubscription()`, `getRiderSponsors()`
+- **`api/rider-sponsors.php`** - CRUD API (add/remove/update/list), kräver inloggning + premium
+- **`api/memberships.php`** - Uppdaterad: sparar `rider_id` i metadata vid checkout, länkar till stripe_customers
+- **Webhook** (`stripe-webhook.php`) - Uppdaterad: sätter `rider_id` på `member_subscriptions` vid subscription.created
+- **`isPremiumMember()`** har statisk cache per request, söker på rider_id + email-fallback
+
+### rider_sponsors tabell
+- `id, rider_id, name, logo_url, website_url, sort_order, active, created_at, updated_at`
+- FK till riders(id) med ON DELETE CASCADE
+- Max 6 aktiva sponsorer per rider (valideras i API)
+
+### Premium-badge CSS
+- Guld gradient: `linear-gradient(135deg, rgba(251, 191, 36, 0.2), rgba(245, 158, 11, 0.1))`
+- Definierad i `assets/css/pages/rider.css` som `.badge-premium`
+
+### Strava-integration AVVISAD
+- Stravas API-avtal (nov 2024) förbjuder uttryckligen virtuella tävlingar och cross-user leaderboards
+- Segment efforts kräver betald Strava-prenumeration
+- Partnerskap möjligt men osäkert - kräver direkt kontakt med Strava Business
 
 ---
 

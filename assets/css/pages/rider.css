@@ -191,6 +191,21 @@
     color: var(--color-accent);
 }
 
+/* Premium badge styling - gold accent */
+.profile-status-badge.badge-premium {
+    background: linear-gradient(135deg, rgba(251, 191, 36, 0.2) 0%, rgba(245, 158, 11, 0.1) 100%);
+    border-color: rgba(251, 191, 36, 0.35);
+}
+
+.profile-status-badge.badge-premium .badge-icon {
+    color: #fbbf24;
+}
+
+.profile-status-badge.badge-premium .badge-label {
+    color: #fbbf24;
+    font-weight: 600;
+}
+
 /* Legacy License Badge - backwards compatibility */
 .profile-license-badge {
     margin: 0 var(--space-md);
