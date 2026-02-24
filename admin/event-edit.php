@@ -1275,138 +1275,163 @@ include __DIR__ . '/components/unified-layout.php';
         </div>
     </details>
 
-    <!-- INVITATION & FACILITIES - Editable for promotors -->
+    <!-- INVITATION - Editable for promotors -->
     <details class="admin-card mb-lg">
         <summary class="admin-card-header collapsible-header">
             <h2>Inbjudan</h2>
-            <span class="text-secondary text-sm">Klicka för att expandera/minimera</span>
+            <span class="text-secondary text-sm">Inbjudningstext, tävlingsinfo, regelverk, licenser, klasser</span>
         </summary>
         <div class="admin-card-body">
-            <!-- Invitation field - shown first -->
-            <div class="admin-form-group mb-lg pb-lg border-bottom">
-                <label class="admin-form-label text-base font-semibold">
-                    Inbjudningstext
-                    <label class="checkbox-inline">
-                        <input type="checkbox" name="invitation_use_global" <?= !empty($event['invitation_use_global']) ? 'checked' : '' ?>>
-                        <span class="text-xs">Global</span>
-                    </label>
-                </label>
-                <textarea name="invitation" class="admin-form-input event-textarea" rows="4" data-format-toolbar placeholder="Välkommen till... (visas högst upp på Inbjudan-fliken)"><?= h($event['invitation'] ?? '') ?></textarea>
-                <small class="form-help">Inledande text som visas högst upp på Inbjudan-fliken på event-sidan.</small>
-            </div>
-
-            <!-- General competition info field -->
-            <div class="admin-form-group mb-lg pb-lg border-bottom">
-                <label class="admin-form-label text-base font-semibold">
-                    Generell tävlingsinformation
-                    <label class="checkbox-inline">
-                        <input type="checkbox" name="general_competition_use_global" <?= !empty($event['general_competition_use_global']) ? 'checked' : '' ?>>
-                        <span class="text-xs">Global</span>
-                    </label>
-                </label>
-                <textarea name="general_competition_info" class="admin-form-input event-textarea" rows="6" data-format-toolbar placeholder="Generell information om tävlingen..."><?= h($event['general_competition_info'] ?? '') ?></textarea>
-                <small class="form-help">Visas under inbjudningstexten på Inbjudan-fliken.</small>
-
-                <div id="info-links-general" style="margin-top: var(--space-sm);">
-                    <label class="admin-form-label text-sm" style="margin-bottom: var(--space-xs);">Länkar</label>
-                    <?php foreach ($eventInfoLinks['general'] as $link): ?>
-                    <div class="info-link-row" style="display: grid; grid-template-columns: 1fr 1fr auto; gap: var(--space-xs); margin-bottom: var(--space-xs); align-items: end;">
-                        <input type="url" name="info_link_general_url[]" class="admin-form-input" placeholder="https://..." value="<?= h($link['link_url'] ?? '') ?>">
-                        <input type="text" name="info_link_general_text[]" class="admin-form-input" placeholder="Visningsnamn (valfritt)" value="<?= h($link['link_text'] ?? '') ?>">
-                        <button type="button" onclick="this.closest('.info-link-row').remove()" class="btn-admin btn-admin-danger" style="padding: var(--space-xs) var(--space-sm); height: 38px;" title="Ta bort länk"><i data-lucide="x" style="width:16px;height:16px;"></i></button>
-                    </div>
-                    <?php endforeach; ?>
-                </div>
-                <button type="button" onclick="addInfoLink('general')" class="btn-admin btn-admin-ghost" style="margin-top: var(--space-2xs); font-size: 0.85rem;">
-                    <i data-lucide="plus" style="width:14px;height:14px;"></i> Lägg till länk
-                </button>
-                <small class="form-help" style="margin-top: var(--space-2xs);">Länkar visas under informationstexten. Om visningsnamn lämnas tomt visas URL:en.</small>
-            </div>
-
-            <!-- Regelverk field -->
-            <div class="admin-form-group mb-lg pb-lg border-bottom">
-                <label class="admin-form-label text-base font-semibold">
-                    Regelverk
-                    <span style="display: inline-flex; gap: var(--space-sm); margin-left: var(--space-sm);">
-                        <label class="checkbox-inline">
-                            <input type="radio" name="regulations_global_type" value="" <?= empty($event['regulations_global_type'] ?? '') ? 'checked' : '' ?>>
-                            <span class="text-xs">Egen text</span>
+            <div class="facility-fields">
+                <!-- Inbjudningstext -->
+                <div class="facility-field">
+                    <div class="facility-field-header">
+                        <div class="facility-field-label">
+                            <i data-lucide="scroll"></i>
+                            <span>Inbjudningstext</span>
+                        </div>
+                        <label class="global-toggle">
+                            <input type="checkbox" name="invitation_use_global" <?= !empty($event['invitation_use_global']) ? 'checked' : '' ?>>
+                            <span>Global</span>
                         </label>
-                        <label class="checkbox-inline">
-                            <input type="radio" name="regulations_global_type" value="sportmotion" <?= ($event['regulations_global_type'] ?? '') === 'sportmotion' ? 'checked' : '' ?>>
-                            <span class="text-xs">sportMotion</span>
-                        </label>
-                        <label class="checkbox-inline">
-                            <input type="radio" name="regulations_global_type" value="competition" <?= ($event['regulations_global_type'] ?? '') === 'competition' ? 'checked' : '' ?>>
-                            <span class="text-xs">Tävling</span>
-                        </label>
-                    </span>
-                </label>
-                <textarea name="regulations_info" class="admin-form-input event-textarea" rows="4" data-format-toolbar placeholder="Regelverk och bestämmelser..."><?= h($event['regulations_info'] ?? '') ?></textarea>
-                <small class="form-help">Visas i egen ruta under "Generell tävlingsinformation". Välj globalt regelverk (sportMotion/Tävling) eller skriv egen text.</small>
-
-                <div id="info-links-regulations" style="margin-top: var(--space-sm);">
-                    <label class="admin-form-label text-sm" style="margin-bottom: var(--space-xs);">Länkar</label>
-                    <?php foreach ($eventInfoLinks['regulations'] as $link): ?>
-                    <div class="info-link-row" style="display: grid; grid-template-columns: 1fr 1fr auto; gap: var(--space-xs); margin-bottom: var(--space-xs); align-items: end;">
-                        <input type="url" name="info_link_regulations_url[]" class="admin-form-input" placeholder="https://..." value="<?= h($link['link_url'] ?? '') ?>">
-                        <input type="text" name="info_link_regulations_text[]" class="admin-form-input" placeholder="Visningsnamn (valfritt)" value="<?= h($link['link_text'] ?? '') ?>">
-                        <button type="button" onclick="this.closest('.info-link-row').remove()" class="btn-admin btn-admin-danger" style="padding: var(--space-xs) var(--space-sm); height: 38px;" title="Ta bort länk"><i data-lucide="x" style="width:16px;height:16px;"></i></button>
                     </div>
-                    <?php endforeach; ?>
+                    <textarea name="invitation" class="facility-textarea" rows="4" data-format-toolbar placeholder="Välkommen till... (visas högst upp på Inbjudan-fliken)"><?= h($event['invitation'] ?? '') ?></textarea>
                 </div>
-                <button type="button" onclick="addInfoLink('regulations')" class="btn-admin btn-admin-ghost" style="margin-top: var(--space-2xs); font-size: 0.85rem;">
-                    <i data-lucide="plus" style="width:14px;height:14px;"></i> Lägg till länk
-                </button>
-                <small class="form-help" style="margin-top: var(--space-2xs);">Eventspecifika länkar. Globala regelverk-länkar läggs till automatiskt vid visning.</small>
-            </div>
 
-            <!-- Licenser field -->
-            <div class="admin-form-group mb-lg pb-lg border-bottom">
-                <label class="admin-form-label text-base font-semibold">
-                    Licenser
-                    <label class="checkbox-inline">
-                        <input type="checkbox" name="license_use_global" <?= !empty($event['license_use_global'] ?? '') ? 'checked' : '' ?>>
-                        <span class="text-xs">Global</span>
-                    </label>
-                </label>
-                <textarea name="license_info" class="admin-form-input event-textarea" rows="4" data-format-toolbar placeholder="Licensinformation..."><?= h($event['license_info'] ?? '') ?></textarea>
-                <small class="form-help">Visas i egen ruta under "Regelverk". Bocka i Global för att använda den globala licenstexten.</small>
-
-                <div id="info-links-licenses" style="margin-top: var(--space-sm);">
-                    <label class="admin-form-label text-sm" style="margin-bottom: var(--space-xs);">Länkar</label>
-                    <?php foreach ($eventInfoLinks['licenses'] as $link): ?>
-                    <div class="info-link-row" style="display: grid; grid-template-columns: 1fr 1fr auto; gap: var(--space-xs); margin-bottom: var(--space-xs); align-items: end;">
-                        <input type="url" name="info_link_licenses_url[]" class="admin-form-input" placeholder="https://..." value="<?= h($link['link_url'] ?? '') ?>">
-                        <input type="text" name="info_link_licenses_text[]" class="admin-form-input" placeholder="Visningsnamn (valfritt)" value="<?= h($link['link_text'] ?? '') ?>">
-                        <button type="button" onclick="this.closest('.info-link-row').remove()" class="btn-admin btn-admin-danger" style="padding: var(--space-xs) var(--space-sm); height: 38px;" title="Ta bort länk"><i data-lucide="x" style="width:16px;height:16px;"></i></button>
+                <!-- Generell tävlingsinformation -->
+                <div class="facility-field">
+                    <div class="facility-field-header">
+                        <div class="facility-field-label">
+                            <i data-lucide="info"></i>
+                            <span>Generell tävlingsinformation</span>
+                        </div>
+                        <label class="global-toggle">
+                            <input type="checkbox" name="general_competition_use_global" <?= !empty($event['general_competition_use_global']) ? 'checked' : '' ?>>
+                            <span>Global</span>
+                        </label>
                     </div>
-                    <?php endforeach; ?>
+                    <textarea name="general_competition_info" class="facility-textarea" rows="6" data-format-toolbar placeholder="Generell information om tävlingen..."><?= h($event['general_competition_info'] ?? '') ?></textarea>
+                    <div class="info-links-section" id="info-links-general">
+                        <div class="info-links-header">
+                            <i data-lucide="link"></i>
+                            <span>Länkar</span>
+                        </div>
+                        <div class="info-links-list">
+                            <?php foreach ($eventInfoLinks['general'] as $link): ?>
+                            <div class="info-link-row">
+                                <input type="url" name="info_link_general_url[]" class="admin-form-input" placeholder="https://..." value="<?= h($link['link_url'] ?? '') ?>">
+                                <input type="text" name="info_link_general_text[]" class="admin-form-input" placeholder="Visningsnamn (valfritt)" value="<?= h($link['link_text'] ?? '') ?>">
+                                <button type="button" onclick="this.closest('.info-link-row').remove()" class="btn-admin btn-admin-danger info-link-remove" title="Ta bort länk"><i data-lucide="x" style="width:14px;height:14px;"></i></button>
+                            </div>
+                            <?php endforeach; ?>
+                        </div>
+                        <button type="button" onclick="addInfoLink('general')" class="btn-admin btn-admin-ghost info-link-add">
+                            <i data-lucide="plus" style="width:14px;height:14px;"></i> Lägg till länk
+                        </button>
+                    </div>
                 </div>
-                <button type="button" onclick="addInfoLink('licenses')" class="btn-admin btn-admin-ghost" style="margin-top: var(--space-2xs); font-size: 0.85rem;">
-                    <i data-lucide="plus" style="width:14px;height:14px;"></i> Lägg till länk
-                </button>
-                <small class="form-help" style="margin-top: var(--space-2xs);">Eventspecifika länkar. Globala licens-länkar läggs till automatiskt vid visning.</small>
-            </div>
 
-            <!-- Competition classes info field -->
-            <div class="admin-form-group mb-lg pb-lg border-bottom">
-                <label class="admin-form-label text-base font-semibold">
-                    Tävlingsklasser
-                    <label class="checkbox-inline">
-                        <input type="checkbox" name="competition_classes_use_global" <?= !empty($event['competition_classes_use_global']) ? 'checked' : '' ?>>
-                        <span class="text-xs">Global</span>
-                    </label>
-                </label>
-                <textarea name="competition_classes_info" class="admin-form-input event-textarea" rows="6" data-format-toolbar placeholder="Beskrivning av tävlingsklasser..."><?= h($event['competition_classes_info'] ?? '') ?></textarea>
-                <small class="form-help">Visas under generell tävlingsinformation på Inbjudan-fliken.</small>
-            </div>
+                <!-- Regelverk -->
+                <div class="facility-field">
+                    <div class="facility-field-header">
+                        <div class="facility-field-label">
+                            <i data-lucide="book-open"></i>
+                            <span>Regelverk</span>
+                        </div>
+                        <div class="global-toggle-group">
+                            <label class="global-toggle <?= empty($event['regulations_global_type'] ?? '') ? 'active' : '' ?>">
+                                <input type="radio" name="regulations_global_type" value="" <?= empty($event['regulations_global_type'] ?? '') ? 'checked' : '' ?>>
+                                <span>Egen text</span>
+                            </label>
+                            <label class="global-toggle <?= ($event['regulations_global_type'] ?? '') === 'sportmotion' ? 'active' : '' ?>">
+                                <input type="radio" name="regulations_global_type" value="sportmotion" <?= ($event['regulations_global_type'] ?? '') === 'sportmotion' ? 'checked' : '' ?>>
+                                <span>sportMotion</span>
+                            </label>
+                            <label class="global-toggle <?= ($event['regulations_global_type'] ?? '') === 'competition' ? 'active' : '' ?>">
+                                <input type="radio" name="regulations_global_type" value="competition" <?= ($event['regulations_global_type'] ?? '') === 'competition' ? 'checked' : '' ?>>
+                                <span>Tävling</span>
+                            </label>
+                        </div>
+                    </div>
+                    <textarea name="regulations_info" class="facility-textarea" rows="4" data-format-toolbar placeholder="Regelverk och bestämmelser..."><?= h($event['regulations_info'] ?? '') ?></textarea>
+                    <div class="info-links-section" id="info-links-regulations">
+                        <div class="info-links-header">
+                            <i data-lucide="link"></i>
+                            <span>Länkar</span>
+                        </div>
+                        <div class="info-links-list">
+                            <?php foreach ($eventInfoLinks['regulations'] as $link): ?>
+                            <div class="info-link-row">
+                                <input type="url" name="info_link_regulations_url[]" class="admin-form-input" placeholder="https://..." value="<?= h($link['link_url'] ?? '') ?>">
+                                <input type="text" name="info_link_regulations_text[]" class="admin-form-input" placeholder="Visningsnamn (valfritt)" value="<?= h($link['link_text'] ?? '') ?>">
+                                <button type="button" onclick="this.closest('.info-link-row').remove()" class="btn-admin btn-admin-danger info-link-remove" title="Ta bort länk"><i data-lucide="x" style="width:14px;height:14px;"></i></button>
+                            </div>
+                            <?php endforeach; ?>
+                        </div>
+                        <button type="button" onclick="addInfoLink('regulations')" class="btn-admin btn-admin-ghost info-link-add">
+                            <i data-lucide="plus" style="width:14px;height:14px;"></i> Lägg till länk
+                        </button>
+                    </div>
+                </div>
 
-            <div class="facility-section-header">
-                <h3>Faciliteter & Logistik</h3>
-                <p>Visas på en egen flik ("Faciliteter") på event-sidan. Lämna tomt = visas ej.</p>
-            </div>
+                <!-- Licenser -->
+                <div class="facility-field">
+                    <div class="facility-field-header">
+                        <div class="facility-field-label">
+                            <i data-lucide="id-card"></i>
+                            <span>Licenser</span>
+                        </div>
+                        <label class="global-toggle">
+                            <input type="checkbox" name="license_use_global" <?= !empty($event['license_use_global'] ?? '') ? 'checked' : '' ?>>
+                            <span>Global</span>
+                        </label>
+                    </div>
+                    <textarea name="license_info" class="facility-textarea" rows="4" data-format-toolbar placeholder="Licensinformation..."><?= h($event['license_info'] ?? '') ?></textarea>
+                    <div class="info-links-section" id="info-links-licenses">
+                        <div class="info-links-header">
+                            <i data-lucide="link"></i>
+                            <span>Länkar</span>
+                        </div>
+                        <div class="info-links-list">
+                            <?php foreach ($eventInfoLinks['licenses'] as $link): ?>
+                            <div class="info-link-row">
+                                <input type="url" name="info_link_licenses_url[]" class="admin-form-input" placeholder="https://..." value="<?= h($link['link_url'] ?? '') ?>">
+                                <input type="text" name="info_link_licenses_text[]" class="admin-form-input" placeholder="Visningsnamn (valfritt)" value="<?= h($link['link_text'] ?? '') ?>">
+                                <button type="button" onclick="this.closest('.info-link-row').remove()" class="btn-admin btn-admin-danger info-link-remove" title="Ta bort länk"><i data-lucide="x" style="width:14px;height:14px;"></i></button>
+                            </div>
+                            <?php endforeach; ?>
+                        </div>
+                        <button type="button" onclick="addInfoLink('licenses')" class="btn-admin btn-admin-ghost info-link-add">
+                            <i data-lucide="plus" style="width:14px;height:14px;"></i> Lägg till länk
+                        </button>
+                    </div>
+                </div>
 
+                <!-- Tävlingsklasser -->
+                <div class="facility-field">
+                    <div class="facility-field-header">
+                        <div class="facility-field-label">
+                            <i data-lucide="trophy"></i>
+                            <span>Tävlingsklasser</span>
+                        </div>
+                        <label class="global-toggle">
+                            <input type="checkbox" name="competition_classes_use_global" <?= !empty($event['competition_classes_use_global']) ? 'checked' : '' ?>>
+                            <span>Global</span>
+                        </label>
+                    </div>
+                    <textarea name="competition_classes_info" class="facility-textarea" rows="6" data-format-toolbar placeholder="Beskrivning av tävlingsklasser..."><?= h($event['competition_classes_info'] ?? '') ?></textarea>
+                </div>
+            </div>
+        </div>
+    </details>
+
+    <!-- FACILITETER & LOGISTIK - Own section -->
+    <details class="admin-card mb-lg">
+        <summary class="admin-card-header collapsible-header">
+            <h2>Faciliteter & Logistik</h2>
+            <span class="text-secondary text-sm">Visas på egen flik på event-sidan. Lämna tomt = visas ej.</span>
+        </summary>
+        <div class="admin-card-body">
             <?php
             $facilityFields = [
                 ['key' => 'hydration_stations', 'label' => 'Vätskekontroller', 'global_key' => 'hydration_use_global', 'icon' => 'droplet'],
@@ -2030,6 +2055,62 @@ include __DIR__ . '/components/unified-layout.php';
     color: var(--color-text-muted);
 }
 
+/* ===== INFO LINKS SECTION - Inside facility-field cards ===== */
+.info-links-section {
+    border-top: 1px solid var(--color-border);
+    background: var(--color-bg-hover);
+}
+.info-links-header {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    padding: var(--space-sm) var(--space-md) var(--space-xs);
+    font-size: var(--text-xs);
+    font-weight: 600;
+    color: var(--color-text-secondary);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+}
+.info-links-header i {
+    width: 14px;
+    height: 14px;
+    color: var(--color-accent);
+}
+.info-links-list {
+    padding: 0 var(--space-md);
+}
+.info-link-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr auto;
+    gap: var(--space-xs);
+    margin-bottom: var(--space-xs);
+    align-items: center;
+}
+.info-link-row .admin-form-input {
+    font-size: var(--text-sm);
+    padding: var(--space-xs) var(--space-sm);
+    height: 36px;
+}
+.info-link-remove {
+    padding: var(--space-xs) !important;
+    height: 36px !important;
+    width: 36px;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+.info-link-add {
+    margin: var(--space-xs) var(--space-md) var(--space-sm);
+    font-size: var(--text-xs) !important;
+}
+
+/* ===== GLOBAL TOGGLE GROUP - Multiple radio toggles in a row ===== */
+.global-toggle-group {
+    display: flex;
+    gap: var(--space-2xs);
+    flex-wrap: wrap;
+}
+
 /* Mobile: Stack facility fields edge-to-edge */
 @media (max-width: 767px) {
     .facility-fields {
@@ -2042,6 +2123,19 @@ include __DIR__ . '/components/unified-layout.php';
         border-left: none;
         border-right: none;
         margin-bottom: -1px;
+    }
+    .info-link-row {
+        grid-template-columns: 1fr auto;
+    }
+    .info-link-row input[type="text"] {
+        grid-column: 1;
+    }
+    .global-toggle-group {
+        gap: var(--space-2xs);
+    }
+    .facility-field-header {
+        flex-wrap: wrap;
+        gap: var(--space-xs);
     }
 }
 
@@ -2137,13 +2231,14 @@ include __DIR__ . '/components/unified-layout.php';
 function addInfoLink(section) {
     const container = document.getElementById('info-links-' + section);
     if (!container) return;
+    const list = container.querySelector('.info-links-list');
+    if (!list) return;
     const row = document.createElement('div');
     row.className = 'info-link-row';
-    row.style.cssText = 'display:grid;grid-template-columns:1fr 1fr auto;gap:var(--space-xs);margin-bottom:var(--space-xs);align-items:end;';
     row.innerHTML = '<input type="url" name="info_link_' + section + '_url[]" class="admin-form-input" placeholder="https://...">'
         + '<input type="text" name="info_link_' + section + '_text[]" class="admin-form-input" placeholder="Visningsnamn (valfritt)">'
-        + '<button type="button" onclick="this.closest(\'.info-link-row\').remove()" class="btn-admin btn-admin-danger" style="padding:var(--space-xs) var(--space-sm);height:38px;" title="Ta bort länk"><i data-lucide="x" style="width:16px;height:16px;"></i></button>';
-    container.appendChild(row);
+        + '<button type="button" onclick="this.closest(\'.info-link-row\').remove()" class="btn-admin btn-admin-danger info-link-remove" title="Ta bort länk"><i data-lucide="x" style="width:14px;height:14px;"></i></button>';
+    list.appendChild(row);
     if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 

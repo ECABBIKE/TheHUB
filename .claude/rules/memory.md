@@ -4,6 +4,28 @@
 
 ---
 
+## EVENT-EDIT INBJUDAN REDESIGN (2026-02-24)
+
+### Inbjudan-sektionen omstrukturerad
+- Alla fält (Inbjudningstext, Generell tävlingsinformation, Regelverk, Licenser, Tävlingsklasser) använder nu samma `.facility-field`-kortstil som PM och Faciliteter
+- Varje fält har en banner-header med ikon + Global-toggle till höger
+- Ikoner: scroll (Inbjudan), info (Generell), book-open (Regelverk), id-card (Licenser), trophy (Klasser)
+
+### Faciliteter utbruten till egen sektion
+- Faciliteter & Logistik är nu en egen `<details class="admin-card">` - inte längre inuti Inbjudan
+- Matchar att Faciliteter har en egen flik på publika event-sidan
+
+### Länk-sektioner förbättrade
+- Ny `.info-links-section` med egen bakgrund, header med länk-ikon och "LÄNKAR" rubrik
+- Renare `.info-link-row` grid-layout utan inline styles
+- `addInfoLink()` JS-funktion uppdaterad att appenda till `.info-links-list` istället för container-div
+- Mobilanpassat: link-rows stackas på smala skärmar
+
+### Regelverk radio-knappar
+- Ny `.global-toggle-group` klass för att visa flera `.global-toggle` radio-knappar i rad (Egen text / sportMotion / Tävling)
+
+---
+
 ## TEXTFORMATERING I EVENT-INFO (2026-02-24)
 
 ### Markdown-stil formatering i admin-textareas
