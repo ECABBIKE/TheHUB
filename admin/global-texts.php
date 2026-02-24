@@ -230,6 +230,7 @@ include __DIR__ . '/components/unified-layout.php';
   <div class="global-text-content">
   <textarea name="content"
    class="input global-text-textarea"
+   data-format-toolbar
    placeholder="Ange standardtext..."><?= h($text['content']) ?></textarea>
   </div>
 
@@ -301,6 +302,7 @@ include __DIR__ . '/components/unified-layout.php';
  <div class="mb-md">
   <label class="label">Innehåll</label>
   <textarea name="content" class="input" rows="4"
+  data-format-toolbar
   placeholder="Standardtext..."></textarea>
  </div>
  </div>
@@ -362,4 +364,5 @@ document.addEventListener('keydown', function(e) {
 });
 </script>
 
+<?php include __DIR__ . '/components/format-toolbar.php'; ?>
 <?php include __DIR__ . '/components/unified-layout-footer.php'; ?>

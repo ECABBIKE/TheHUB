@@ -2011,7 +2011,7 @@ $compClassesInfo = getEventContent($event, 'competition_classes_info', 'competit
         </h2>
     </div>
     <div class="card-body">
-        <div class="prose"><?= nl2br(h($invitationText)) ?></div>
+        <div class="prose"><?= format_text($invitationText) ?></div>
     </div>
 </section>
 <?php endif; ?>
@@ -2026,7 +2026,7 @@ $compClassesInfo = getEventContent($event, 'competition_classes_info', 'competit
     </div>
     <div class="card-body">
         <?php if (!empty($generalCompInfo)): ?>
-        <div class="prose"><?= nl2br(h($generalCompInfo)) ?></div>
+        <div class="prose"><?= format_text($generalCompInfo) ?></div>
         <?php endif; ?>
         <?php if (!empty($eventInfoLinks['general'])): ?>
         <div style="margin-top: var(--space-sm); display: flex; flex-direction: column; gap: var(--space-2xs);">
@@ -2076,7 +2076,7 @@ $allRegulationsLinks = array_merge($regulationsGlobalLinks, $regulationsEventLin
     </div>
     <div class="card-body">
         <?php if (!empty($regulationsText)): ?>
-        <div class="prose"><?= nl2br(h($regulationsText)) ?></div>
+        <div class="prose"><?= format_text($regulationsText) ?></div>
         <?php endif; ?>
         <?php if (!empty($allRegulationsLinks)): ?>
         <div style="margin-top: var(--space-sm); display: flex; flex-direction: column; gap: var(--space-2xs);">
@@ -2122,7 +2122,7 @@ $allLicenseLinks = array_merge($licenseGlobalLinks, $licenseEventLinks);
     </div>
     <div class="card-body">
         <?php if (!empty($licenseText)): ?>
-        <div class="prose"><?= nl2br(h($licenseText)) ?></div>
+        <div class="prose"><?= format_text($licenseText) ?></div>
         <?php endif; ?>
         <?php if (!empty($allLicenseLinks)): ?>
         <div style="margin-top: var(--space-sm); display: flex; flex-direction: column; gap: var(--space-2xs);">
@@ -2151,7 +2151,7 @@ $allLicenseLinks = array_merge($licenseGlobalLinks, $licenseEventLinks);
         </h2>
     </div>
     <div class="card-body">
-        <div class="prose"><?= nl2br(h($compClassesInfo)) ?></div>
+        <div class="prose"><?= format_text($compClassesInfo) ?></div>
     </div>
 </section>
 <?php endif; ?>
@@ -2197,84 +2197,84 @@ $hasFacilities = $hydrationInfo || $toiletsInfo || $bikeWashInfo || $foodCafe ||
             <?php if (!empty($hydrationInfo)): ?>
             <div class="info-block">
                 <h3><i data-lucide="droplets"></i> Vätskekontroller</h3>
-                <p><?= nl2br(h($hydrationInfo)) ?></p>
+                <p><?= format_text($hydrationInfo) ?></p>
             </div>
             <?php endif; ?>
 
             <?php if (!empty($toiletsInfo)): ?>
             <div class="info-block">
                 <h3><i data-lucide="bath"></i> Toaletter/Dusch</h3>
-                <p><?= nl2br(h($toiletsInfo)) ?></p>
+                <p><?= format_text($toiletsInfo) ?></p>
             </div>
             <?php endif; ?>
 
             <?php if (!empty($bikeWashInfo)): ?>
             <div class="info-block">
                 <h3><i data-lucide="sparkles"></i> Cykeltvätt</h3>
-                <p><?= nl2br(h($bikeWashInfo)) ?></p>
+                <p><?= format_text($bikeWashInfo) ?></p>
             </div>
             <?php endif; ?>
 
             <?php if (!empty($foodCafe)): ?>
             <div class="info-block">
                 <h3><i data-lucide="utensils"></i> Mat/Café</h3>
-                <p><?= nl2br(h($foodCafe)) ?></p>
+                <p><?= format_text($foodCafe) ?></p>
             </div>
             <?php endif; ?>
 
             <?php if (!empty($shopsInfo)): ?>
             <div class="info-block">
                 <h3><i data-lucide="shopping-bag"></i> Affärer</h3>
-                <p><?= nl2br(h($shopsInfo)) ?></p>
+                <p><?= format_text($shopsInfo) ?></p>
             </div>
             <?php endif; ?>
 
             <?php if (!empty($exhibitorsInfo)): ?>
             <div class="info-block">
                 <h3><i data-lucide="store"></i> Utställare</h3>
-                <p><?= nl2br(h($exhibitorsInfo)) ?></p>
+                <p><?= format_text($exhibitorsInfo) ?></p>
             </div>
             <?php endif; ?>
 
             <?php if (!empty($parkingInfo)): ?>
             <div class="info-block">
                 <h3><i data-lucide="car"></i> Parkering</h3>
-                <p><?= nl2br(h($parkingInfo)) ?></p>
+                <p><?= format_text($parkingInfo) ?></p>
             </div>
             <?php endif; ?>
 
             <?php if (!empty($hotelInfo)): ?>
             <div class="info-block">
                 <h3><i data-lucide="bed"></i> Hotell/Boende</h3>
-                <p><?= nl2br(h($hotelInfo)) ?></p>
+                <p><?= format_text($hotelInfo) ?></p>
             </div>
             <?php endif; ?>
 
             <?php if (!empty($localInfo)): ?>
             <div class="info-block">
                 <h3><i data-lucide="map-pin"></i> Lokal information</h3>
-                <p><?= nl2br(h($localInfo)) ?></p>
+                <p><?= format_text($localInfo) ?></p>
             </div>
             <?php endif; ?>
 
             <?php if (!empty($medicalInfo)): ?>
             <div class="info-block">
                 <h3><i data-lucide="heart-pulse"></i> Sjukvård</h3>
-                <p><?= nl2br(h($medicalInfo)) ?></p>
+                <p><?= format_text($medicalInfo) ?></p>
             </div>
             <?php endif; ?>
 
             <?php if (!empty($mediaInfo)): ?>
             <div class="info-block">
                 <h3><i data-lucide="camera"></i> Media</h3>
-                <p><?= nl2br(h($mediaInfo)) ?></p>
+                <p><?= format_text($mediaInfo) ?></p>
             </div>
             <?php endif; ?>
 
             <?php if (!empty($contactsInfo)): ?>
             <div class="info-block">
                 <h3><i data-lucide="phone"></i> Kontakter</h3>
-                <p><?= nl2br(h($contactsInfo)) ?></p>
+                <p><?= format_text($contactsInfo) ?></p>
             </div>
             <?php endif; ?>
         </div>
@@ -2315,7 +2315,7 @@ $hasPMContent = $pmContent || $driverMeetingPM || $trainingPM || $timingPM || $l
     </div>
     <div class="card-body">
         <?php if ($pmContent): ?>
-        <div class="prose mb-lg"><?= nl2br(h($pmContent)) ?></div>
+        <div class="prose mb-lg"><?= format_text($pmContent) ?></div>
         <?php endif; ?>
 
         <?php if ($driverMeetingPM || $trainingPM || $timingPM || $liftPM || $rulesPM || $insurancePM || $equipmentPM || $scfPM || $medicalPM): ?>
@@ -2323,63 +2323,63 @@ $hasPMContent = $pmContent || $driverMeetingPM || $trainingPM || $timingPM || $l
             <?php if ($driverMeetingPM): ?>
             <div class="info-block">
                 <h3><i data-lucide="megaphone"></i> Förarmöte</h3>
-                <p><?= nl2br(h($driverMeetingPM)) ?></p>
+                <p><?= format_text($driverMeetingPM) ?></p>
             </div>
             <?php endif; ?>
 
             <?php if ($trainingPM): ?>
             <div class="info-block">
                 <h3><i data-lucide="bike"></i> Träning</h3>
-                <p><?= nl2br(h($trainingPM)) ?></p>
+                <p><?= format_text($trainingPM) ?></p>
             </div>
             <?php endif; ?>
 
             <?php if ($timingPM): ?>
             <div class="info-block">
                 <h3><i data-lucide="timer"></i> Tidtagning</h3>
-                <p><?= nl2br(h($timingPM)) ?></p>
+                <p><?= format_text($timingPM) ?></p>
             </div>
             <?php endif; ?>
 
             <?php if ($liftPM): ?>
             <div class="info-block">
                 <h3><i data-lucide="cable-car"></i> Lift</h3>
-                <p><?= nl2br(h($liftPM)) ?></p>
+                <p><?= format_text($liftPM) ?></p>
             </div>
             <?php endif; ?>
 
             <?php if ($rulesPM): ?>
             <div class="info-block">
                 <h3><i data-lucide="book-open"></i> Tävlingsregler</h3>
-                <p><?= nl2br(h($rulesPM)) ?></p>
+                <p><?= format_text($rulesPM) ?></p>
             </div>
             <?php endif; ?>
 
             <?php if ($insurancePM): ?>
             <div class="info-block">
                 <h3><i data-lucide="shield-check"></i> Försäkring</h3>
-                <p><?= nl2br(h($insurancePM)) ?></p>
+                <p><?= format_text($insurancePM) ?></p>
             </div>
             <?php endif; ?>
 
             <?php if ($equipmentPM): ?>
             <div class="info-block">
                 <h3><i data-lucide="hard-hat"></i> Utrustning</h3>
-                <p><?= nl2br(h($equipmentPM)) ?></p>
+                <p><?= format_text($equipmentPM) ?></p>
             </div>
             <?php endif; ?>
 
             <?php if ($medicalPM): ?>
             <div class="info-block">
                 <h3><i data-lucide="heart-pulse"></i> Sjukvård</h3>
-                <p><?= nl2br(h($medicalPM)) ?></p>
+                <p><?= format_text($medicalPM) ?></p>
             </div>
             <?php endif; ?>
 
             <?php if ($scfPM): ?>
             <div class="info-block">
                 <h3><i data-lucide="badge-check"></i> SCF Representanter</h3>
-                <p><?= nl2br(h($scfPM)) ?></p>
+                <p><?= format_text($scfPM) ?></p>
             </div>
             <?php endif; ?>
         </div>
@@ -2401,7 +2401,7 @@ $hasPMContent = $pmContent || $driverMeetingPM || $trainingPM || $timingPM || $l
     <div class="card-body">
         <?php $juryContent = getEventContent($event, 'jury_communication', 'jury_use_global', $globalTextMap, 'jury_hidden'); ?>
         <?php if ($juryContent): ?>
-            <div class="prose"><?= nl2br(h($juryContent)) ?></div>
+            <div class="prose"><?= format_text($juryContent) ?></div>
         <?php else: ?>
             <p class="text-muted">Ingen jurykommuniké tillgänglig.</p>
         <?php endif; ?>
@@ -2417,7 +2417,7 @@ $hasPMContent = $pmContent || $driverMeetingPM || $trainingPM || $timingPM || $l
     <div class="card-body">
         <?php $scheduleContent = getEventContent($event, 'competition_schedule', 'schedule_use_global', $globalTextMap, 'schedule_hidden'); ?>
         <?php if ($scheduleContent): ?>
-            <div class="prose"><?= nl2br(h($scheduleContent)) ?></div>
+            <div class="prose"><?= format_text($scheduleContent) ?></div>
         <?php else: ?>
             <p class="text-muted">Inget tävlingsschema tillgängligt.</p>
         <?php endif; ?>
@@ -2433,7 +2433,7 @@ $hasPMContent = $pmContent || $driverMeetingPM || $trainingPM || $timingPM || $l
     <div class="card-body">
         <?php $startContent = getEventContent($event, 'start_times', 'start_times_use_global', $globalTextMap, 'start_times_hidden'); ?>
         <?php if ($startContent): ?>
-            <div class="prose"><?= nl2br(h($startContent)) ?></div>
+            <div class="prose"><?= format_text($startContent) ?></div>
         <?php else: ?>
             <p class="text-muted">Inga starttider publicerade ännu.</p>
         <?php endif; ?>
@@ -2449,7 +2449,7 @@ $hasPMContent = $pmContent || $driverMeetingPM || $trainingPM || $timingPM || $l
     <div class="card-body">
         <?php $courseTracksContent = getEventContent($event, 'course_tracks', 'course_tracks_use_global', $globalTextMap); ?>
         <?php if ($courseTracksContent): ?>
-            <div class="prose"><?= nl2br(h($courseTracksContent)) ?></div>
+            <div class="prose"><?= format_text($courseTracksContent) ?></div>
         <?php else: ?>
             <p class="text-muted">Ingen information om bansträckningar tillgänglig.</p>
         <?php endif; ?>

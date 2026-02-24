@@ -1291,7 +1291,7 @@ include __DIR__ . '/components/unified-layout.php';
                         <span class="text-xs">Global</span>
                     </label>
                 </label>
-                <textarea name="invitation" class="admin-form-input event-textarea" rows="4" placeholder="Välkommen till... (visas högst upp på Inbjudan-fliken)"><?= h($event['invitation'] ?? '') ?></textarea>
+                <textarea name="invitation" class="admin-form-input event-textarea" rows="4" data-format-toolbar placeholder="Välkommen till... (visas högst upp på Inbjudan-fliken)"><?= h($event['invitation'] ?? '') ?></textarea>
                 <small class="form-help">Inledande text som visas högst upp på Inbjudan-fliken på event-sidan.</small>
             </div>
 
@@ -1304,7 +1304,7 @@ include __DIR__ . '/components/unified-layout.php';
                         <span class="text-xs">Global</span>
                     </label>
                 </label>
-                <textarea name="general_competition_info" class="admin-form-input event-textarea" rows="6" placeholder="Generell information om tävlingen..."><?= h($event['general_competition_info'] ?? '') ?></textarea>
+                <textarea name="general_competition_info" class="admin-form-input event-textarea" rows="6" data-format-toolbar placeholder="Generell information om tävlingen..."><?= h($event['general_competition_info'] ?? '') ?></textarea>
                 <small class="form-help">Visas under inbjudningstexten på Inbjudan-fliken.</small>
 
                 <div id="info-links-general" style="margin-top: var(--space-sm);">
@@ -1342,7 +1342,7 @@ include __DIR__ . '/components/unified-layout.php';
                         </label>
                     </span>
                 </label>
-                <textarea name="regulations_info" class="admin-form-input event-textarea" rows="4" placeholder="Regelverk och bestämmelser..."><?= h($event['regulations_info'] ?? '') ?></textarea>
+                <textarea name="regulations_info" class="admin-form-input event-textarea" rows="4" data-format-toolbar placeholder="Regelverk och bestämmelser..."><?= h($event['regulations_info'] ?? '') ?></textarea>
                 <small class="form-help">Visas i egen ruta under "Generell tävlingsinformation". Välj globalt regelverk (sportMotion/Tävling) eller skriv egen text.</small>
 
                 <div id="info-links-regulations" style="margin-top: var(--space-sm);">
@@ -1370,7 +1370,7 @@ include __DIR__ . '/components/unified-layout.php';
                         <span class="text-xs">Global</span>
                     </label>
                 </label>
-                <textarea name="license_info" class="admin-form-input event-textarea" rows="4" placeholder="Licensinformation..."><?= h($event['license_info'] ?? '') ?></textarea>
+                <textarea name="license_info" class="admin-form-input event-textarea" rows="4" data-format-toolbar placeholder="Licensinformation..."><?= h($event['license_info'] ?? '') ?></textarea>
                 <small class="form-help">Visas i egen ruta under "Regelverk". Bocka i Global för att använda den globala licenstexten.</small>
 
                 <div id="info-links-licenses" style="margin-top: var(--space-sm);">
@@ -1398,7 +1398,7 @@ include __DIR__ . '/components/unified-layout.php';
                         <span class="text-xs">Global</span>
                     </label>
                 </label>
-                <textarea name="competition_classes_info" class="admin-form-input event-textarea" rows="6" placeholder="Beskrivning av tävlingsklasser..."><?= h($event['competition_classes_info'] ?? '') ?></textarea>
+                <textarea name="competition_classes_info" class="admin-form-input event-textarea" rows="6" data-format-toolbar placeholder="Beskrivning av tävlingsklasser..."><?= h($event['competition_classes_info'] ?? '') ?></textarea>
                 <small class="form-help">Visas under generell tävlingsinformation på Inbjudan-fliken.</small>
             </div>
 
@@ -1436,7 +1436,7 @@ include __DIR__ . '/components/unified-layout.php';
                                 <span>Global</span>
                             </label>
                         </div>
-                        <textarea name="<?= $field['key'] ?>" class="facility-textarea" rows="4" placeholder="Skriv information här..."><?= h($event[$field['key']] ?? '') ?></textarea>
+                        <textarea name="<?= $field['key'] ?>" class="facility-textarea" rows="4" data-format-toolbar placeholder="Skriv information här..."><?= h($event[$field['key']] ?? '') ?></textarea>
                     </div>
                 <?php endforeach; ?>
             </div>
@@ -1498,7 +1498,7 @@ include __DIR__ . '/components/unified-layout.php';
                                 <span>Global</span>
                             </label>
                         </div>
-                        <textarea name="<?= $field['key'] ?>" class="facility-textarea" rows="4" placeholder="Skriv information här..."><?= h($event[$field['key']] ?? '') ?></textarea>
+                        <textarea name="<?= $field['key'] ?>" class="facility-textarea" rows="4" data-format-toolbar placeholder="Skriv information här..."><?= h($event[$field['key']] ?? '') ?></textarea>
                     </div>
                 <?php endforeach; ?>
             </div>
@@ -1539,7 +1539,7 @@ include __DIR__ . '/components/unified-layout.php';
                                 <span>Global</span>
                             </label>
                         </div>
-                        <textarea name="<?= $field['key'] ?>" class="facility-textarea" rows="4" placeholder="Skriv information här..."><?= h($event[$field['key']] ?? '') ?></textarea>
+                        <textarea name="<?= $field['key'] ?>" class="facility-textarea" rows="4" data-format-toolbar placeholder="Skriv information här..."><?= h($event[$field['key']] ?? '') ?></textarea>
                         <?php if (!empty($field['publish_key'])): ?>
                         <div class="publish-date-row">
                             <i data-lucide="calendar-clock"></i>
@@ -2364,4 +2364,5 @@ document.addEventListener('DOMContentLoaded', function() {
 
 </script>
 
+<?php include __DIR__ . '/components/format-toolbar.php'; ?>
 <?php include __DIR__ . '/components/unified-layout-footer.php'; ?>

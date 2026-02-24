@@ -4,6 +4,32 @@
 
 ---
 
+## TEXTFORMATERING I EVENT-INFO (2026-02-24)
+
+### Markdown-stil formatering i admin-textareas
+- **`format_text()`** i `includes/helpers.php` - ersätter `nl2br(h())` på publika sidan
+- Konverterar `**fetstil**` → `<strong>fetstil</strong>` och `*kursiv*` → `<em>kursiv</em>`
+- Säker: HTML escapas med `h()` FÖRST, sedan konverteras markdown-mönster
+- Regex kräver icke-mellanslag direkt innanför `*` (förhindrar falska matchningar typ `5 * 3 * 10`)
+
+### Toolbar-komponent
+- **`admin/components/format-toolbar.php`** - inkluderbar komponent med CSS + JS
+- Lägger automatiskt till B/I-knappar ovanför alla `<textarea data-format-toolbar>`
+- Knappar wrappar markerad text med `**` / `*`
+- Stödjer Ctrl+B och Ctrl+I tangentbordsgenvägar
+- Toggle: om text redan är wrapppad tas markörerna bort vid nytt klick
+- Hint-text `**fet** *kursiv*` visas till höger i toolbaren
+
+### Var toolbaren finns
+- `admin/event-edit.php` - alla `event-textarea` och `facility-textarea` fält
+- `admin/global-texts.php` - alla textareas (befintliga och skapa-ny)
+- Toolbaren inkluderas före `unified-layout-footer.php`
+
+### Var format_text() renderar
+- `pages/event.php` - alla 31 textfält (invitation, general_competition_info, regulations, license, facilities, PM, jury, schedule etc.)
+
+---
+
 ## LÄNKAR I GENERELL TÄVLINGSINFORMATION (2026-02-24)
 
 ### Migration 056 (enskild länk - ERSATT av 057)
