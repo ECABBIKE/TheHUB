@@ -1,6 +1,18 @@
 # TheHUB - Memory / Session Knowledge
 
-> Senast uppdaterad: 2026-02-21
+> Senast uppdaterad: 2026-02-24
+
+---
+
+## LÄNK I GENERELL TÄVLINGSINFORMATION (2026-02-24)
+
+### Migration 053
+- `events.general_competition_link_url` - VARCHAR(500), nullable - URL for länken
+- `events.general_competition_link_text` - VARCHAR(255), nullable - Visningsnamn for länken
+- Om länktext är tom visas URL:en istället
+- Länken visas under informationstexten i "Generell tävlingsinformation"-kortet på event-sidan
+- Redigeras i admin event-edit under "Generell tävlingsinformation"-sektionen (två fält: URL + länktext)
+- Sparas separat med try/catch (graceful fallback om migration 053 inte körts)
 
 ---
 

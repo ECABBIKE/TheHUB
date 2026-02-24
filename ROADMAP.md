@@ -1,6 +1,6 @@
 # TheHUB - Development Roadmap
 
-> Senast uppdaterad: 2026-02-21
+> Senast uppdaterad: 2026-02-24
 >
 > **Se:** `/admin/roadmap.php` for interaktiv vy
 
@@ -25,6 +25,23 @@
 ---
 
 # CHANGELOG
+
+### 2026-02-24 (Länk i Generell tävlingsinformation)
+- **Branch:** claude/fix-site-performance-PbeNY
+
+- **Ny funktion: Länk med visningsnamn i Generell tävlingsinformation**
+  - Möjlighet att lägga till en klickbar länk med valfritt visningsnamn under informationstexten
+  - Två nya fält i admin event-edit: URL och länktext
+  - Om länktext lämnas tomt visas URL:en som länktext
+  - Gäller samtliga event
+
+- **Nya filer:**
+  - `Tools/migrations/053_event_general_competition_link.sql` - Lägger till link_url och link_text kolumner
+
+- **Ändrade filer:**
+  - `admin/event-edit.php` - Formulärfält och sparlogik för länk
+  - `pages/event.php` - Visar länken publikt
+  - `admin/migrations.php` - Registrering av migration 053
 
 ### 2026-02-21 (Prestandaoptimering Fas 2 - Databasoptimering)
 - **Branch:** claude/fix-site-performance-PbeNY

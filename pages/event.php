@@ -1989,6 +1989,19 @@ $compClassesInfo = getEventContent($event, 'competition_classes_info', 'competit
     </div>
     <div class="card-body">
         <div class="prose"><?= nl2br(h($generalCompInfo)) ?></div>
+        <?php
+        $gcLinkUrl = $event['general_competition_link_url'] ?? '';
+        $gcLinkText = $event['general_competition_link_text'] ?? '';
+        if (!empty($gcLinkUrl)):
+            $displayText = !empty($gcLinkText) ? $gcLinkText : $gcLinkUrl;
+        ?>
+        <p style="margin-top: var(--space-sm);">
+            <a href="<?= h($gcLinkUrl) ?>" target="_blank" rel="noopener" style="display: inline-flex; align-items: center; gap: var(--space-2xs); color: var(--color-accent-text);">
+                <i data-lucide="external-link" style="width: 16px; height: 16px;"></i>
+                <?= h($displayText) ?>
+            </a>
+        </p>
+        <?php endif; ?>
     </div>
 </section>
 <?php endif; ?>

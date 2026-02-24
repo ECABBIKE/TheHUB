@@ -180,6 +180,11 @@ $migrationChecks = [
         'columns' => [],
         'data' => ["(SELECT COUNT(1) FROM information_schema.statistics WHERE table_schema = DATABASE() AND index_name = 'idx_er_event_status') > 0"]
     ],
+    '053_event_general_competition_link.sql' => [
+        'tables' => [],
+        'columns' => ['events.general_competition_link_url', 'events.general_competition_link_text'],
+        'data' => []
+    ],
 ];
 
 // ============================================================================
