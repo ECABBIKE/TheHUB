@@ -801,12 +801,21 @@ include __DIR__ . '/components/unified-layout.php';
 
     <!-- BASIC INFO - Locked for promotors -->
     <?php if ($isPromotorOnly): ?>
-    <!-- Hidden fields to preserve locked values for promotors -->
+    <!-- Hidden fields to preserve ALL locked values for promotors -->
     <input type="hidden" name="name" value="<?= h($event['name']) ?>">
     <input type="hidden" name="date" value="<?= h($event['date']) ?>">
     <input type="hidden" name="advent_id" value="<?= h($event['advent_id'] ?? '') ?>">
     <input type="hidden" name="location" value="<?= h($event['location'] ?? '') ?>">
     <input type="hidden" name="venue_id" value="<?= h($event['venue_id'] ?? '') ?>">
+    <input type="hidden" name="end_date" value="<?= h($event['end_date'] ?? '') ?>">
+    <input type="hidden" name="event_type" value="<?= h($event['event_type'] ?? 'single') ?>">
+    <input type="hidden" name="logo_media_id" value="<?= h($event['logo_media_id'] ?? '') ?>">
+    <input type="hidden" name="registration_opens" value="<?= h($event['registration_opens'] ?? '') ?>">
+    <input type="hidden" name="registration_deadline" value="<?= h($event['registration_deadline'] ?? '') ?>">
+    <input type="hidden" name="registration_deadline_time" value="<?= h($event['registration_deadline_time'] ?? '') ?>">
+    <input type="hidden" name="max_participants" value="<?= h($event['max_participants'] ?? '') ?>">
+    <input type="hidden" name="contact_email" value="<?= h($event['contact_email'] ?? '') ?>">
+    <input type="hidden" name="contact_phone" value="<?= h($event['contact_phone'] ?? '') ?>">
     <?php endif; ?>
     <details class="admin-card mb-lg <?= $isPromotorOnly ? 'locked-section' : '' ?>">
         <summary class="admin-card-header collapsible-header">
@@ -916,7 +925,7 @@ include __DIR__ . '/components/unified-layout.php';
 
     <!-- COMPETITION SETTINGS - Locked for promotors -->
     <?php if ($isPromotorOnly): ?>
-    <!-- Hidden fields to preserve locked values for promotors -->
+    <!-- Hidden fields to preserve ALL locked values for promotors -->
     <input type="hidden" name="discipline" value="<?= h($event['discipline'] ?? '') ?>">
     <input type="hidden" name="series_id" value="<?= h($event['series_id'] ?? '') ?>">
     <input type="hidden" name="event_level" value="<?= h($event['event_level'] ?? 'national') ?>">
@@ -926,6 +935,14 @@ include __DIR__ . '/components/unified-layout.php';
     <input type="hidden" name="distance" value="<?= h($event['distance'] ?? '') ?>">
     <input type="hidden" name="elevation_gain" value="<?= h($event['elevation_gain'] ?? '') ?>">
     <input type="hidden" name="stage_names" value="<?= h($event['stage_names'] ?? '') ?>">
+    <?php
+    // Preserve formats[] checkboxes as hidden inputs
+    if (!empty($event['formats'])) {
+        foreach (array_map('trim', explode(',', $event['formats'])) as $fmt) {
+            echo '<input type="hidden" name="formats[]" value="' . h($fmt) . '">';
+        }
+    }
+    ?>
     <?php endif; ?>
     <details class="admin-card mb-lg <?= $isPromotorOnly ? 'locked-section' : '' ?>">
         <summary class="admin-card-header collapsible-header">
