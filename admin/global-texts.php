@@ -33,6 +33,27 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
  'content' => $content
  ], 'id = ?', [$id]);
 
+ // Save global text links (migration 058)
+ $fieldKey = trim($_POST['field_key_for_links'] ?? '');
+ if ($fieldKey) {
+     try {
+         $db->query("DELETE FROM global_text_links WHERE field_key = ?", [$fieldKey]);
+         $linkUrls = $_POST['gtl_url'] ?? [];
+         $linkTexts = $_POST['gtl_text'] ?? [];
+         $sortOrder = 0;
+         foreach ($linkUrls as $i => $url) {
+             $url = trim($url);
+             if (empty($url)) continue;
+             $text = trim($linkTexts[$i] ?? '');
+             $db->query("INSERT INTO global_text_links (field_key, link_url, link_text, sort_order) VALUES (?, ?, ?, ?)", [
+                 $fieldKey, $url, $text, $sortOrder++
+             ]);
+         }
+     } catch (Exception $e) {
+         error_log("GLOBAL TEXTS: global_text_links save failed: " . $e->getMessage());
+     }
+ }
+
  $message = 'Text uppdaterad!';
  } elseif ($action === 'add') {
  $fieldKey = trim($_POST['field_key'] ?? '');
@@ -86,6 +107,17 @@ $categories = $db->getAll("
  FROM global_texts
  ORDER BY field_category
 ");
+
+// Load global text links (migration 058)
+$globalTextLinks = [];
+try {
+    $allGtLinks = $db->getAll("SELECT field_key, link_url, link_text, sort_order FROM global_text_links ORDER BY field_key, sort_order, id");
+    foreach ($allGtLinks as $gtl) {
+        $globalTextLinks[$gtl['field_key']][] = $gtl;
+    }
+} catch (Exception $e) {
+    // Table may not exist yet
+}
 
 // Category labels
 $categoryLabels = [
@@ -200,6 +232,22 @@ include __DIR__ . '/components/unified-layout.php';
    class="input global-text-textarea"
    placeholder="Ange standardtext..."><?= h($text['content']) ?></textarea>
   </div>
+
+  <!-- Global text links -->
+  <input type="hidden" name="field_key_for_links" value="<?= h($text['field_key']) ?>">
+  <div id="gtl-<?= h($text['field_key']) ?>" style="margin-top: var(--space-sm);">
+  <label class="label text-sm" style="margin-bottom: var(--space-xs);">Länkar</label>
+  <?php $fk = $text['field_key']; foreach ($globalTextLinks[$fk] ?? [] as $gtl): ?>
+  <div class="info-link-row" style="display: grid; grid-template-columns: 1fr 1fr auto; gap: var(--space-xs); margin-bottom: var(--space-xs); align-items: end;">
+      <input type="url" name="gtl_url[]" class="input" placeholder="https://..." value="<?= h($gtl['link_url'] ?? '') ?>">
+      <input type="text" name="gtl_text[]" class="input" placeholder="Visningsnamn (valfritt)" value="<?= h($gtl['link_text'] ?? '') ?>">
+      <button type="button" onclick="this.closest('.info-link-row').remove()" class="btn btn-danger btn--sm" style="padding: var(--space-xs) var(--space-sm); height: 38px;" title="Ta bort länk"><i data-lucide="x" style="width:16px;height:16px;"></i></button>
+  </div>
+  <?php endforeach; ?>
+  </div>
+  <button type="button" onclick="addGlobalTextLink('<?= h($text['field_key']) ?>')" class="btn btn--secondary btn--sm" style="margin-top: var(--space-2xs); font-size: 0.85rem;">
+  <i data-lucide="plus" style="width:14px;height:14px;"></i> Lägg till länk
+  </button>
   </form>
  </div>
  </div>
@@ -291,6 +339,19 @@ function deleteText(id, name) {
  document.body.appendChild(form);
  form.submit();
  }
+}
+
+function addGlobalTextLink(fieldKey) {
+    const container = document.getElementById('gtl-' + fieldKey);
+    if (!container) return;
+    const row = document.createElement('div');
+    row.className = 'info-link-row';
+    row.style.cssText = 'display:grid;grid-template-columns:1fr 1fr auto;gap:var(--space-xs);margin-bottom:var(--space-xs);align-items:end;';
+    row.innerHTML = '<input type="url" name="gtl_url[]" class="input" placeholder="https://...">'
+        + '<input type="text" name="gtl_text[]" class="input" placeholder="Visningsnamn (valfritt)">'
+        + '<button type="button" onclick="this.closest(\'.info-link-row\').remove()" class="btn btn-danger btn--sm" style="padding:var(--space-xs) var(--space-sm);height:38px;" title="Ta bort länk"><i data-lucide="x" style="width:16px;height:16px;"></i></button>';
+    container.appendChild(row);
+    if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
 // Close modal on escape

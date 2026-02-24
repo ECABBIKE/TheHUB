@@ -28,22 +28,53 @@
 
 # CHANGELOG
 
-### 2026-02-24 (Länk i Generell tävlingsinformation)
+### 2026-02-24 (Regelverk, Licenser & globala text-länkar)
 - **Branch:** claude/fix-site-performance-PbeNY
 
-- **Ny funktion: Länk med visningsnamn i Generell tävlingsinformation**
-  - Möjlighet att lägga till en klickbar länk med valfritt visningsnamn under informationstexten
-  - Två nya fält i admin event-edit: URL och länktext
-  - Om länktext lämnas tomt visas URL:en som länktext
-  - Gäller samtliga event
+- **Ny funktion: Regelverk-sektion på event-sidan**
+  - Ny informationsruta under "Generell tävlingsinformation"
+  - Två globala regelverk-val via radioknappar: sportMotion eller Tävling
+  - Egen text eller globalt regelverk per event
+  - Eventspecifika + globala länkar
+
+- **Ny funktion: Licenser-sektion på event-sidan**
+  - Ny informationsruta under "Regelverk"
+  - Global licenstext via checkbox (samma system som andra sektioner)
+  - Eventspecifika + globala länkar
+
+- **Ny funktion: Länkstöd i Globala Texter**
+  - Varje global text kan nu ha egna länkar
+  - Länkarna följer med automatiskt när global text väljs på event
+  - Ny tabell `global_text_links` för att lagra globala text-länkar
 
 - **Nya filer:**
-  - `Tools/migrations/056_event_general_competition_link.sql` - Lägger till link_url och link_text kolumner
+  - `Tools/migrations/058_regulations_licenses_sections.sql` - Regelverk/Licenser-kolumner, global_text_links, seed
 
 - **Ändrade filer:**
-  - `admin/event-edit.php` - Formulärfält och sparlogik för länk
-  - `pages/event.php` - Visar länken publikt
-  - `admin/migrations.php` - Registrering av migration 056
+  - `admin/event-edit.php` - Regelverk och Licenser sektioner med radioknappar och länk-UI
+  - `admin/global-texts.php` - Länk-UI under varje global text
+  - `pages/event.php` - Visar Regelverk och Licenser rutor publikt
+  - `admin/migrations.php` - Registrering av migration 058
+
+### 2026-02-24 (Flera länkar i Generell tävlingsinformation)
+- **Branch:** claude/fix-site-performance-PbeNY
+
+- **Ny funktion: Obegränsat antal länkar per event**
+  - Arrangörer kan lägga till flera länkar med +/x-knappar i admin event-edit
+  - Varje länk har URL och valfritt visningsnamn
+  - Om visningsnamn lämnas tomt visas URL:en
+  - Länkarna visas under informationstexten i "Generell tävlingsinformation"-kortet
+  - Kortet visas även om det bara finns länkar men ingen informationstext
+  - Graceful fallback till gamla kolumnerna om migration 057 inte körts
+
+- **Nya filer:**
+  - `Tools/migrations/056_event_general_competition_link.sql` - Enskild länk (kolumner på events)
+  - `Tools/migrations/057_event_info_links.sql` - Fler-länk-tabell med datamigrering
+
+- **Ändrade filer:**
+  - `admin/event-edit.php` - Dynamiskt flerlenks-UI med +/x-knappar
+  - `pages/event.php` - Visar alla länkar publikt
+  - `admin/migrations.php` - Registrering av migration 056 + 057
 
 ### 2026-02-24 (Databasbaserade publika inställningar)
 - **Branch:** claude/fix-class-eligibility-19XRE
