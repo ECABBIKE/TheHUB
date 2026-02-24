@@ -19,6 +19,10 @@ require_once __DIR__ . '/../includes/payment/StripeClient.php';
 
 $pdo = $GLOBALS['pdo'];
 
+// Try to get logged-in rider_id from session
+session_start();
+$sessionRiderId = $_SESSION['rider_id'] ?? $_SESSION['hub_user_id'] ?? null;
+
 $action = $_GET['action'] ?? $_POST['action'] ?? '';
 
 try {
@@ -78,36 +82,56 @@ try {
                 throw new Exception('Plan not found or not configured in Stripe');
             }
 
+            // Look up rider_id by email if not in session
+            $riderId = $sessionRiderId;
+            if (!$riderId) {
+                $rStmt = $pdo->prepare("SELECT id FROM riders WHERE email = ? AND password IS NOT NULL LIMIT 1");
+                $rStmt->execute([$email]);
+                $riderRow = $rStmt->fetch(PDO::FETCH_ASSOC);
+                if ($riderRow) {
+                    $riderId = (int)$riderRow['id'];
+                }
+            }
+
             // Get or create Stripe customer
+            $customerMeta = ['source' => 'membership_signup'];
+            if ($riderId) {
+                $customerMeta['rider_id'] = $riderId;
+            }
             $customer = $stripe->getOrCreateCustomer([
                 'email' => $email,
                 'name' => $name,
-                'metadata' => ['source' => 'membership_signup']
+                'metadata' => $customerMeta
             ]);
 
             if (!$customer['success']) {
                 throw new Exception('Failed to create customer: ' . $customer['error']);
             }
 
-            // Store customer mapping
+            // Store customer mapping with rider_id
             $stmt = $pdo->prepare("
-                INSERT INTO stripe_customers (email, name, stripe_customer_id)
-                VALUES (?, ?, ?)
-                ON DUPLICATE KEY UPDATE name = VALUES(name), updated_at = NOW()
+                INSERT INTO stripe_customers (email, name, stripe_customer_id, rider_id)
+                VALUES (?, ?, ?, ?)
+                ON DUPLICATE KEY UPDATE name = VALUES(name), rider_id = COALESCE(VALUES(rider_id), rider_id), updated_at = NOW()
             ");
-            $stmt->execute([$email, $name, $customer['customer_id']]);
+            $stmt->execute([$email, $name, $customer['customer_id'], $riderId]);
 
-            // Create checkout session
+            // Create checkout session with rider_id in metadata
+            $checkoutMeta = [
+                'plan_id' => $planId,
+                'email' => $email,
+                'name' => $name
+            ];
+            if ($riderId) {
+                $checkoutMeta['rider_id'] = $riderId;
+            }
+
             $checkout = $stripe->createSubscriptionCheckout([
                 'price_id' => $plan['stripe_price_id'],
                 'customer_id' => $customer['customer_id'],
                 'success_url' => $successUrl,
                 'cancel_url' => $cancelUrl,
-                'metadata' => [
-                    'plan_id' => $planId,
-                    'email' => $email,
-                    'name' => $name
-                ]
+                'metadata' => $checkoutMeta
             ]);
 
             if (!$checkout['success']) {

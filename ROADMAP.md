@@ -1,6 +1,6 @@
 # TheHUB - Development Roadmap
 
-> Senast uppdaterad: 2026-02-21
+> Senast uppdaterad: 2026-02-24
 >
 > **Se:** `/admin/roadmap.php` for interaktiv vy
 
@@ -17,6 +17,7 @@
 | Klubb RF-Registrering | KLAR | SCF/NCF/DCU-synk och stavningskontroll | 100% |
 | Startlistor | KLAR | Admin/promotor startliste-vy med startnr, export, mobilvy | 100% |
 | Bildbanken | PAGAENDE | AI-analyserade bilder kopplade till profiler | 10% |
+| Premium-medlemskap | PAGAENDE | Prenumeration, sponsorprofil, delningsbadges | 40% |
 | Ridercard Share | PAGAENDE | Statistikkort for Instagram-delning | 5% |
 | Prestandaoptimering | PAGAENDE | Fas 1-2 klar. Fas 3-4 planerade (CSS-bundling, arkitektur) | 50% |
 | CSS/UI Standardisering | PLANERAD | Enhetlig radius och nya tabeller pa alla sidor | 0% |
@@ -26,6 +27,32 @@
 ---
 
 # CHANGELOG
+
+### 2026-02-24 (Premium-medlemskap)
+- **Branch:** claude/fix-class-eligibility-19XRE
+
+- **Ny funktion: Premium-prenumeration med sponsorprofil**
+  - Prisplaner: 25 kr/mån eller 199 kr/år via Stripe Subscriptions
+  - Premium-badge (guld crown) på rider-profilsidan
+  - Personliga sponsorer (max 6) med logotyp och länk på profilen
+  - Sponsorhantering i profilredigering med CRUD API
+  - Premium upsell-ruta för icke-medlemmar i profilredigering
+  - Medlemssidan uppdaterad med auto-ifyllning för inloggade och prenumerationsstatus
+  - Webhook och API kopplar rider_id till prenumerationen
+
+- **Nya filer:**
+  - `includes/premium.php` - Helper-funktioner (isPremiumMember, getRiderSponsors)
+  - `api/rider-sponsors.php` - CRUD API för personliga sponsorer
+  - `Tools/migrations/054_premium_rider_sponsors.sql` - rider_sponsors-tabell + prisplaner
+
+- **Ändrade filer:**
+  - `pages/rider.php` - Premium-badge, sponsorsektion
+  - `pages/membership.php` - Omskriven med rätt priser, inloggad-stöd
+  - `pages/profile/edit.php` - Sponsorhantering (premium only)
+  - `api/memberships.php` - rider_id-koppling
+  - `api/webhooks/stripe-webhook.php` - rider_id vid subscription.created
+  - `assets/css/pages/rider.css` - Premium badge-styling
+  - `admin/migrations.php` - Migration 054 registrerad
 
 ### 2026-02-23 (Klassanmälan kön-bugg)
 - **Branch:** claude/fix-class-eligibility-19XRE

@@ -1,6 +1,43 @@
 # TheHUB - Memory / Session Knowledge
 
-> Senast uppdaterad: 2026-02-23
+> Senast uppdaterad: 2026-02-24
+
+---
+
+## PREMIUM-MEDLEMSKAP (2026-02-24)
+
+### Ny funktion: Premium-prenumeration
+- **Prisplaner:** 25 kr/mån eller 199 kr/år
+- **Stripe-baserat:** Använder befintlig prenumerationsinfrastruktur (migration 025)
+- **Migration 054:** Skapar `rider_sponsors`-tabell och uppdaterar planer i `membership_plans`
+
+### Premium-funktioner
+1. **Premium-badge på profilen** - Guld crown-ikon i badge-raden (Licens, Gravity ID, Premium)
+2. **Personliga sponsorer** - Max 6 sponsorer med namn, logotyp-URL och webbplatslänk
+3. **Sponsorsektion på profilsidan** - Visas i högerkolumnen under klubbtillhörighet
+4. **Sponsorhantering i profilredigering** - Lägg till/ta bort sponsorer via `/api/rider-sponsors.php`
+5. **Premium upsell** - Icke-premium-medlemmar ser "Bli Premium"-ruta i profilredigeringen
+
+### Teknisk arkitektur
+- **`includes/premium.php`** - Helper-funktioner: `isPremiumMember()`, `getPremiumSubscription()`, `getRiderSponsors()`
+- **`api/rider-sponsors.php`** - CRUD API (add/remove/update/list), kräver inloggning + premium
+- **`api/memberships.php`** - Uppdaterad: sparar `rider_id` i metadata vid checkout, länkar till stripe_customers
+- **Webhook** (`stripe-webhook.php`) - Uppdaterad: sätter `rider_id` på `member_subscriptions` vid subscription.created
+- **`isPremiumMember()`** har statisk cache per request, söker på rider_id + email-fallback
+
+### rider_sponsors tabell
+- `id, rider_id, name, logo_url, website_url, sort_order, active, created_at, updated_at`
+- FK till riders(id) med ON DELETE CASCADE
+- Max 6 aktiva sponsorer per rider (valideras i API)
+
+### Premium-badge CSS
+- Guld gradient: `linear-gradient(135deg, rgba(251, 191, 36, 0.2), rgba(245, 158, 11, 0.1))`
+- Definierad i `assets/css/pages/rider.css` som `.badge-premium`
+
+### Strava-integration AVVISAD
+- Stravas API-avtal (nov 2024) förbjuder uttryckligen virtuella tävlingar och cross-user leaderboards
+- Segment efforts kräver betald Strava-prenumeration
+- Partnerskap möjligt men osäkert - kräver direkt kontakt med Strava Business
 
 ---
 

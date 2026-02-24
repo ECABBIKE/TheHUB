@@ -1,10 +1,22 @@
 <?php
 /**
- * Membership Page
- * Public page for viewing and purchasing memberships
+ * Membership Page - Premium Subscription
+ * Public page for viewing and purchasing premium memberships
  */
 
 $pdo = hub_db();
+
+// Include premium helpers
+require_once dirname(__DIR__) . '/includes/premium.php';
+
+// Check logged-in user
+$currentUser = function_exists('hub_current_user') ? hub_current_user() : null;
+$isLoggedIn = $currentUser && !empty($currentUser['id']);
+$existingSubscription = null;
+
+if ($isLoggedIn) {
+    $existingSubscription = getPremiumSubscription($pdo, (int)$currentUser['id']);
+}
 
 // Get all active plans
 $plans = [];
@@ -18,12 +30,10 @@ try {
     ");
     $plans = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // Parse benefits JSON
     foreach ($plans as &$plan) {
         $plan['benefits'] = json_decode($plan['benefits'] ?? '[]', true);
     }
 } catch (Exception $e) {
-    // Tables might not exist yet
     error_log("Membership page error: " . $e->getMessage());
 }
 
@@ -33,10 +43,10 @@ $success = isset($_GET['session_id']);
 
 <div class="page-header">
     <h1 class="page-title">
-        <i data-lucide="users" class="page-icon"></i>
-        Medlemskap
+        <i data-lucide="crown" class="page-icon"></i>
+        Premium
     </h1>
-    <p class="page-subtitle">Bli medlem och få exklusiva förmåner</p>
+    <p class="page-subtitle">Stöd Gravity Series och visa upp dina sponsorer</p>
 </div>
 
 <?php if ($success): ?>
@@ -46,29 +56,76 @@ $success = isset($_GET['session_id']);
         <div style="margin-bottom: var(--space-lg); color: var(--color-success);">
             <i data-lucide="check-circle" style="width: 64px; height: 64px;"></i>
         </div>
-        <h2 style="color: var(--color-success); margin-bottom: var(--space-md);">Tack för ditt medlemskap!</h2>
+        <h2 style="color: var(--color-success); margin-bottom: var(--space-md);">Välkommen som Premium-medlem!</h2>
         <p class="text-muted" style="margin-bottom: var(--space-lg);">
-            Din prenumeration är nu aktiv. Du kommer att få ett bekräftelsemail inom kort.
+            Din prenumeration är nu aktiv. Du kan nu lägga till dina sponsorer på din profil.
         </p>
-        <a href="/membership" class="btn btn-primary">Till medlemssidan</a>
+        <div style="display: flex; gap: var(--space-sm); justify-content: center; flex-wrap: wrap;">
+            <a href="/profile/edit" class="btn btn-primary">Redigera profil</a>
+            <?php if ($isLoggedIn): ?>
+            <a href="/rider/<?= $currentUser['id'] ?>" class="btn btn-secondary">Visa profil</a>
+            <?php endif; ?>
+        </div>
+    </div>
+</div>
+
+<?php elseif ($existingSubscription): ?>
+<!-- Active Subscription -->
+<div class="card" style="max-width: 600px; margin: var(--space-xl) auto;">
+    <div class="card-body" style="padding: var(--space-xl);">
+        <div style="display: flex; align-items: center; gap: var(--space-md); margin-bottom: var(--space-lg);">
+            <div style="width: 48px; height: 48px; border-radius: var(--radius-full); background: linear-gradient(135deg, #fbbf24, #f59e0b); display: flex; align-items: center; justify-content: center;">
+                <i data-lucide="crown" style="width: 24px; height: 24px; color: #1a1a1a;"></i>
+            </div>
+            <div>
+                <h2 style="margin: 0;">Du är Premium-medlem</h2>
+                <p class="text-muted" style="margin: 0;"><?= htmlspecialchars($existingSubscription['plan_name']) ?></p>
+            </div>
+        </div>
+
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-md); margin-bottom: var(--space-lg);">
+            <div>
+                <span class="text-muted" style="font-size: 0.85rem;">Status</span>
+                <div><span class="badge badge-success">Aktiv</span></div>
+            </div>
+            <div>
+                <span class="text-muted" style="font-size: 0.85rem;">Förnyas</span>
+                <div style="font-weight: 600;">
+                    <?= $existingSubscription['current_period_end'] ? date('j M Y', strtotime($existingSubscription['current_period_end'])) : '-' ?>
+                </div>
+            </div>
+        </div>
+
+        <div style="display: flex; gap: var(--space-sm); flex-wrap: wrap;">
+            <a href="/profile/edit" class="btn btn-primary">
+                <i data-lucide="pencil"></i> Hantera sponsorer
+            </a>
+            <button class="btn btn-secondary" id="openPortalBtn">
+                <i data-lucide="settings"></i> Hantera betalning
+            </button>
+        </div>
     </div>
 </div>
 
 <?php elseif (empty($plans)): ?>
 <!-- No plans yet -->
 <div class="empty-state">
-    <div class="empty-icon"><i data-lucide="users"></i></div>
-    <h3>Medlemskap kommer snart</h3>
-    <p>Vi arbetar på medlemskapsfunktioner. Kom tillbaka senare!</p>
+    <div class="empty-icon"><i data-lucide="crown"></i></div>
+    <h3>Premium kommer snart</h3>
+    <p>Vi arbetar på premium-funktioner. Kom tillbaka senare!</p>
 </div>
 
 <?php else: ?>
 <!-- Membership Plans -->
 <div class="membership-plans">
-    <?php foreach ($plans as $index => $plan): ?>
-        <div class="card plan-card <?= $index === 1 ? 'featured' : '' ?>">
-            <?php if ($index === 1): ?>
-                <div class="plan-badge">Populärt val</div>
+    <?php foreach ($plans as $index => $plan):
+        $isYearly = $plan['billing_interval'] === 'year';
+        $isFeatured = $isYearly;
+        $priceKr = $plan['price_amount'] / 100;
+    ?>
+        <div class="card plan-card <?= $isFeatured ? 'featured' : '' ?>">
+            <?php if ($isFeatured): ?>
+                <div class="plan-badge">Bäst pris</div>
             <?php endif; ?>
 
             <div class="card-body">
@@ -79,14 +136,14 @@ $success = isset($_GET['session_id']);
                 <?php endif; ?>
 
                 <div class="plan-price">
-                    <span class="price-amount"><?= number_format($plan['price_amount'] / 100, 0) ?></span>
-                    <span class="price-suffix">kr/<?= $plan['billing_interval'] === 'year' ? 'år' : 'mån' ?></span>
+                    <span class="price-amount"><?= number_format($priceKr, 0) ?></span>
+                    <span class="price-suffix">kr/<?= $isYearly ? 'år' : 'mån' ?></span>
                 </div>
 
-                <?php if ($plan['discount_percent'] > 0): ?>
-                    <div class="plan-discount">
-                        <i data-lucide="percent"></i>
-                        <?= $plan['discount_percent'] ?>% rabatt på alla anmälningar
+                <?php if ($isYearly): ?>
+                    <div class="plan-savings">
+                        <i data-lucide="tag"></i>
+                        Motsvarar <?= number_format($priceKr / 12, 0) ?> kr/mån
                     </div>
                 <?php endif; ?>
 
@@ -102,14 +159,16 @@ $success = isset($_GET['session_id']);
                 <?php endif; ?>
 
                 <?php if ($plan['stripe_price_id']): ?>
-                    <button class="btn btn-primary btn-block subscribe-btn"
+                    <button class="btn <?= $isFeatured ? 'btn-primary' : 'btn-secondary' ?> btn-block subscribe-btn"
                             data-plan-id="<?= $plan['id'] ?>"
                             data-plan-name="<?= htmlspecialchars($plan['name']) ?>">
-                        Välj <?= htmlspecialchars($plan['name']) ?>
+                        Bli Premium
                     </button>
                 <?php else: ?>
-                    <button class="btn btn-secondary btn-block" disabled>
-                        Kommer snart
+                    <button class="btn btn-secondary btn-block subscribe-btn"
+                            data-plan-id="<?= $plan['id'] ?>"
+                            data-plan-name="<?= htmlspecialchars($plan['name']) ?>">
+                        Bli Premium
                     </button>
                 <?php endif; ?>
             </div>
@@ -119,17 +178,18 @@ $success = isset($_GET['session_id']);
 
 <!-- Already a member? -->
 <div class="membership-footer">
-    <p class="text-muted">Redan medlem?</p>
+    <p class="text-muted">Redan Premium-medlem?</p>
     <button class="btn btn-secondary" id="openPortalBtn">
         <i data-lucide="settings"></i> Hantera prenumeration
     </button>
 </div>
+<?php endif; ?>
 
 <!-- Signup Modal -->
 <dialog id="signupModal" class="hub-modal">
     <div class="modal-content">
         <div class="modal-header">
-            <h3>Bli medlem</h3>
+            <h3>Bli Premium-medlem</h3>
             <button class="modal-close" onclick="this.closest('dialog').close()">
                 <i data-lucide="x"></i>
             </button>
@@ -137,16 +197,24 @@ $success = isset($_GET['session_id']);
         <form id="signupForm">
             <input type="hidden" name="plan_id" id="planId">
             <div class="modal-body">
+                <?php if (!$isLoggedIn): ?>
                 <p class="text-muted" style="margin-bottom: var(--space-lg);">
                     Fyll i dina uppgifter för att fortsätta till betalning.
                 </p>
+                <?php else: ?>
+                <p class="text-muted" style="margin-bottom: var(--space-lg);">
+                    Bekräfta dina uppgifter och fortsätt till betalning.
+                </p>
+                <?php endif; ?>
                 <div class="form-group">
                     <label class="form-label">Namn *</label>
-                    <input type="text" name="name" id="signupName" class="form-input" required>
+                    <input type="text" name="name" id="signupName" class="form-input" required
+                           value="<?= $isLoggedIn ? htmlspecialchars(($currentUser['firstname'] ?? '') . ' ' . ($currentUser['lastname'] ?? '')) : '' ?>">
                 </div>
                 <div class="form-group">
                     <label class="form-label">E-post *</label>
-                    <input type="email" name="email" id="signupEmail" class="form-input" required>
+                    <input type="email" name="email" id="signupEmail" class="form-input" required
+                           value="<?= $isLoggedIn ? htmlspecialchars($currentUser['email'] ?? '') : '' ?>">
                 </div>
             </div>
             <div class="modal-footer">
@@ -173,7 +241,8 @@ $success = isset($_GET['session_id']);
                 </p>
                 <div class="form-group">
                     <label class="form-label">E-post *</label>
-                    <input type="email" name="email" id="portalEmail" class="form-input" required>
+                    <input type="email" name="email" id="portalEmail" class="form-input" required
+                           value="<?= $isLoggedIn ? htmlspecialchars($currentUser['email'] ?? '') : '' ?>">
                 </div>
             </div>
             <div class="modal-footer">
@@ -189,7 +258,7 @@ $success = isset($_GET['session_id']);
     display: grid;
     grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
     gap: var(--space-xl);
-    max-width: 900px;
+    max-width: 700px;
     margin: var(--space-xl) auto;
 }
 
@@ -226,7 +295,7 @@ $success = isset($_GET['session_id']);
 }
 
 .plan-price {
-    margin: var(--space-lg) 0;
+    margin: var(--space-lg) 0 var(--space-sm);
     display: flex;
     align-items: baseline;
     gap: var(--space-xs);
@@ -242,18 +311,16 @@ $success = isset($_GET['session_id']);
     color: var(--color-text-muted);
 }
 
-.plan-discount {
+.plan-savings {
     display: inline-flex;
     align-items: center;
     gap: var(--space-xs);
-    background: var(--color-accent-light);
-    color: var(--color-accent-text);
-    padding: var(--space-xs) var(--space-sm);
-    border-radius: var(--radius-full);
-    font-size: 0.875rem;
+    color: var(--color-success);
+    font-size: 0.85rem;
+    font-weight: 500;
     margin-bottom: var(--space-md);
 }
-.plan-discount i {
+.plan-savings i {
     width: 14px;
     height: 14px;
 }
@@ -369,7 +436,12 @@ document.addEventListener('DOMContentLoaded', function() {
 
     // Open portal button
     document.getElementById('openPortalBtn')?.addEventListener('click', function() {
+        <?php if ($isLoggedIn && $existingSubscription): ?>
+        // Auto-submit for logged-in premium members
+        openPortalDirectly('<?= htmlspecialchars($currentUser['email'] ?? '', ENT_QUOTES) ?>');
+        <?php else: ?>
         document.getElementById('portalModal').showModal();
+        <?php endif; ?>
     });
 
     // Signup form
@@ -413,28 +485,30 @@ document.addEventListener('DOMContentLoaded', function() {
     // Portal form
     document.getElementById('portalForm')?.addEventListener('submit', async function(e) {
         e.preventDefault();
-
-        try {
-            const response = await fetch('/api/memberships.php?action=create_portal', {
-                method: 'POST',
-                headers: { 'Content-Type': 'application/json' },
-                body: JSON.stringify({
-                    email: document.getElementById('portalEmail').value,
-                    return_url: window.location.href
-                })
-            });
-
-            const data = await response.json();
-
-            if (data.success && data.portal_url) {
-                window.location.href = data.portal_url;
-            } else {
-                alert('Fel: ' + (data.error || 'Kunde inte öppna portalen'));
-            }
-        } catch (err) {
-            alert('Ett fel uppstod. Försök igen.');
-        }
+        openPortalDirectly(document.getElementById('portalEmail').value);
     });
 });
+
+async function openPortalDirectly(email) {
+    try {
+        const response = await fetch('/api/memberships.php?action=create_portal', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+                email: email,
+                return_url: window.location.href
+            })
+        });
+
+        const data = await response.json();
+
+        if (data.success && data.portal_url) {
+            window.location.href = data.portal_url;
+        } else {
+            alert('Fel: ' + (data.error || 'Kunde inte öppna portalen. Kontrollera e-postadressen.'));
+        }
+    } catch (err) {
+        alert('Ett fel uppstod. Försök igen.');
+    }
+}
 </script>
-<?php endif; ?>

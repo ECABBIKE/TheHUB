@@ -184,6 +184,9 @@ $migrationChecks = [
         'tables' => ['api_keys', 'api_request_log'],
         'columns' => ['events.timing_live']
     ],
+    '054_premium_rider_sponsors.sql' => [
+        'tables' => ['rider_sponsors']
+    ],
 ];
 
 // ============================================================================

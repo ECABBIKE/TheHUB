@@ -13,6 +13,15 @@ $pdo = hub_db();
 $message = '';
 $error = '';
 
+// Include premium helpers
+$premiumPath = dirname(dirname(__DIR__)) . '/includes/premium.php';
+if (file_exists($premiumPath)) {
+    require_once $premiumPath;
+}
+
+$isPremium = function_exists('isPremiumMember') && isPremiumMember($pdo, (int)$currentUser['id']);
+$riderSponsors = ($isPremium && function_exists('getRiderSponsors')) ? getRiderSponsors($pdo, (int)$currentUser['id']) : [];
+
 // Include social profile sanitizer
 $rebuildPath = dirname(dirname(__DIR__)) . '/includes/rebuild-rider-stats.php';
 if (file_exists($rebuildPath)) {
@@ -439,6 +448,81 @@ $clubs = $pdo->query("SELECT id, name FROM clubs WHERE active = 1 ORDER BY name"
     </div>
 </form>
 
+<!-- SPONSOR MANAGEMENT (Premium only) -->
+<?php if ($isPremium): ?>
+<div class="form-section" id="sponsorSection">
+    <div style="display: flex; align-items: center; gap: var(--space-sm); margin-bottom: var(--space-sm);">
+        <div style="width: 28px; height: 28px; border-radius: var(--radius-full); background: linear-gradient(135deg, #fbbf24, #f59e0b); display: flex; align-items: center; justify-content: center;">
+            <i data-lucide="crown" style="width: 14px; height: 14px; color: #1a1a1a;"></i>
+        </div>
+        <h2 style="margin: 0;">Mina sponsorer</h2>
+        <span class="badge badge-warning" style="font-size: 0.7rem;">Premium</span>
+    </div>
+    <p class="form-help">Lägg till dina personliga sponsorer. De visas på din profilsida. Max 6 sponsorer.</p>
+
+    <div id="sponsorList" class="sponsor-manage-list">
+        <?php foreach ($riderSponsors as $sponsor): ?>
+        <div class="sponsor-manage-item" data-id="<?= $sponsor['id'] ?>">
+            <div class="sponsor-manage-info">
+                <?php if ($sponsor['logo_url']): ?>
+                <img src="<?= htmlspecialchars($sponsor['logo_url']) ?>" alt="" class="sponsor-manage-thumb">
+                <?php else: ?>
+                <div class="sponsor-manage-thumb sponsor-manage-thumb-text">
+                    <?= strtoupper(substr($sponsor['name'], 0, 2)) ?>
+                </div>
+                <?php endif; ?>
+                <div>
+                    <strong><?= htmlspecialchars($sponsor['name']) ?></strong>
+                    <?php if ($sponsor['website_url']): ?>
+                    <small class="text-muted" style="display: block;"><?= htmlspecialchars($sponsor['website_url']) ?></small>
+                    <?php endif; ?>
+                </div>
+            </div>
+            <button type="button" class="btn-sponsor-remove" onclick="removeSponsor(<?= $sponsor['id'] ?>)" title="Ta bort">
+                <i data-lucide="trash-2"></i>
+            </button>
+        </div>
+        <?php endforeach; ?>
+    </div>
+
+    <?php if (count($riderSponsors) < 6): ?>
+    <div id="addSponsorForm" class="sponsor-add-form">
+        <h3 style="font-size: 0.95rem; margin-bottom: var(--space-sm);">Lägg till sponsor</h3>
+        <div class="form-group">
+            <label>Sponsornamn *</label>
+            <input type="text" id="sponsorName" placeholder="T.ex. Fox Racing" maxlength="150">
+        </div>
+        <div class="form-group">
+            <label>Logotyp (URL)</label>
+            <input type="url" id="sponsorLogo" placeholder="https://example.com/logo.png">
+            <small class="form-help">Länk till sponsorns logotyp (valfritt). Max 120px bred.</small>
+        </div>
+        <div class="form-group">
+            <label>Webbplats</label>
+            <input type="url" id="sponsorWebsite" placeholder="https://www.example.com">
+        </div>
+        <button type="button" class="btn btn-secondary" onclick="addSponsor()" id="addSponsorBtn">
+            <i data-lucide="plus"></i> Lägg till
+        </button>
+    </div>
+    <?php endif; ?>
+</div>
+<?php else: ?>
+<!-- Premium upsell -->
+<div class="form-section">
+    <div style="display: flex; align-items: center; gap: var(--space-sm); margin-bottom: var(--space-sm);">
+        <i data-lucide="crown" style="width: 20px; height: 20px; color: var(--color-text-muted);"></i>
+        <h2 style="margin: 0;">Mina sponsorer</h2>
+    </div>
+    <div style="text-align: center; padding: var(--space-lg); background: var(--color-bg-hover); border-radius: var(--radius-md);">
+        <p class="text-muted" style="margin-bottom: var(--space-md);">Visa upp dina sponsorer på din profilsida med Premium-medlemskap.</p>
+        <a href="/membership" class="btn btn-primary">
+            <i data-lucide="crown"></i> Bli Premium - från 25 kr/mån
+        </a>
+    </div>
+</div>
+<?php endif; ?>
+
 <!-- Avatar Upload Styles -->
 <style>
 .avatar-section {
@@ -741,5 +825,144 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 });
 </script>
+
+<!-- Sponsor Management Styles & Scripts -->
+<?php if ($isPremium): ?>
+<style>
+.sponsor-manage-list {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-xs);
+    margin-bottom: var(--space-md);
+}
+.sponsor-manage-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: var(--space-sm);
+    background: var(--color-bg-hover);
+    border-radius: var(--radius-sm);
+    border: 1px solid var(--color-border);
+}
+.sponsor-manage-info {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    min-width: 0;
+}
+.sponsor-manage-info div {
+    min-width: 0;
+}
+.sponsor-manage-info strong {
+    display: block;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+.sponsor-manage-info small {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 200px;
+}
+.sponsor-manage-thumb {
+    width: 40px;
+    height: 40px;
+    border-radius: var(--radius-sm);
+    object-fit: contain;
+    background: var(--color-bg-surface);
+    flex-shrink: 0;
+}
+.sponsor-manage-thumb-text {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: 700;
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+    border: 1px solid var(--color-border);
+}
+.btn-sponsor-remove {
+    background: none;
+    border: none;
+    color: var(--color-text-muted);
+    cursor: pointer;
+    padding: var(--space-xs);
+    border-radius: var(--radius-sm);
+    transition: color 0.2s;
+}
+.btn-sponsor-remove:hover {
+    color: var(--color-error);
+}
+.btn-sponsor-remove i { width: 16px; height: 16px; }
+.sponsor-add-form {
+    padding: var(--space-md);
+    background: var(--color-bg-hover);
+    border-radius: var(--radius-md);
+    border: 1px dashed var(--color-border);
+}
+</style>
+<script>
+async function addSponsor() {
+    const name = document.getElementById('sponsorName').value.trim();
+    const logo = document.getElementById('sponsorLogo').value.trim();
+    const website = document.getElementById('sponsorWebsite').value.trim();
+
+    if (!name) {
+        alert('Sponsornamn krävs');
+        return;
+    }
+
+    const btn = document.getElementById('addSponsorBtn');
+    btn.disabled = true;
+    btn.textContent = 'Sparar...';
+
+    try {
+        const res = await fetch('/api/rider-sponsors.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'add', name, logo_url: logo, website_url: website })
+        });
+        const data = await res.json();
+
+        if (data.success) {
+            location.reload();
+        } else {
+            alert(data.error || 'Kunde inte lägga till sponsor');
+            btn.disabled = false;
+            btn.innerHTML = '<i data-lucide="plus"></i> Lägg till';
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+        }
+    } catch (e) {
+        alert('Ett fel uppstod');
+        btn.disabled = false;
+        btn.innerHTML = '<i data-lucide="plus"></i> Lägg till';
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
+}
+
+async function removeSponsor(id) {
+    if (!confirm('Ta bort denna sponsor?')) return;
+
+    try {
+        const res = await fetch('/api/rider-sponsors.php', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ action: 'remove', sponsor_id: id })
+        });
+        const data = await res.json();
+
+        if (data.success) {
+            const item = document.querySelector(`.sponsor-manage-item[data-id="${id}"]`);
+            if (item) item.remove();
+        } else {
+            alert(data.error || 'Kunde inte ta bort sponsor');
+        }
+    } catch (e) {
+        alert('Ett fel uppstod');
+    }
+}
+</script>
+<?php endif; ?>
 
 <!-- CSS loaded from /assets/css/pages/profile-edit.css -->
