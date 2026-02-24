@@ -6,6 +6,21 @@ function h($str) {
 }
 
 /**
+ * Format text with basic markdown-style formatting.
+ * Converts **bold** to <strong> and *italic* to <em>.
+ * Also applies nl2br() for line breaks.
+ * Safe: HTML is escaped first, then markdown patterns are converted.
+ */
+function format_text($str) {
+  $escaped = h($str);
+  // Convert **bold** to <strong>bold</strong> (non-greedy, content must not start/end with space)
+  $escaped = preg_replace('/\*\*(\S(?:.*?\S)?)\*\*/', '<strong>$1</strong>', $escaped);
+  // Convert *italic* to <em>italic</em> (non-greedy, content must not start/end with space)
+  $escaped = preg_replace('/(?<!\*)\*(?!\*)(\S(?:.*?\S)?)\*(?!\*)/', '<em>$1</em>', $escaped);
+  return nl2br($escaped);
+}
+
+/**
  * Normalize UCI-ID to standard format: XXX XXX XXX XX
  * Example:"10108943209" or"101-089-432-09" becomes"101 089 432 09"
  */
