@@ -4,15 +4,22 @@
 
 ---
 
-## LÄNK I GENERELL TÄVLINGSINFORMATION (2026-02-24)
+## LÄNKAR I GENERELL TÄVLINGSINFORMATION (2026-02-24)
 
-### Migration 056
-- `events.general_competition_link_url` - VARCHAR(500), nullable - URL for länken
-- `events.general_competition_link_text` - VARCHAR(255), nullable - Visningsnamn for länken
-- Om länktext är tom visas URL:en istället
-- Länken visas under informationstexten i "Generell tävlingsinformation"-kortet på event-sidan
-- Redigeras i admin event-edit under "Generell tävlingsinformation"-sektionen (två fält: URL + länktext)
-- Sparas separat med try/catch (graceful fallback om migration 056 inte körts)
+### Migration 056 (enskild länk - ERSATT av 057)
+- Lade till `events.general_competition_link_url` och `events.general_competition_link_text`
+- Dessa kolumner används nu bara som fallback om migration 057 inte körts
+
+### Migration 057 (fler-länk-tabell)
+- Ny tabell `event_info_links` (id, event_id, link_url, link_text, sort_order, created_at)
+- FK till events(id) med ON DELETE CASCADE
+- Migrationen flyttar befintlig data från de gamla kolumnerna till nya tabellen
+- Obegränsat antal länkar per event
+- Arrangörer lägger till/tar bort länkar med +/x-knappar i admin event-edit
+- Om länktext lämnas tomt visas URL:en som länktext
+- Länkar visas under informationstexten i "Generell tävlingsinformation"-kortet
+- Kortet visas nu även om det bara finns länkar men ingen informationstext
+- Fallback till gamla kolumnerna om tabellen inte finns (try/catch i både admin och publik vy)
 
 ---
 

@@ -28,22 +28,25 @@
 
 # CHANGELOG
 
-### 2026-02-24 (Länk i Generell tävlingsinformation)
+### 2026-02-24 (Flera länkar i Generell tävlingsinformation)
 - **Branch:** claude/fix-site-performance-PbeNY
 
-- **Ny funktion: Länk med visningsnamn i Generell tävlingsinformation**
-  - Möjlighet att lägga till en klickbar länk med valfritt visningsnamn under informationstexten
-  - Två nya fält i admin event-edit: URL och länktext
-  - Om länktext lämnas tomt visas URL:en som länktext
-  - Gäller samtliga event
+- **Ny funktion: Obegränsat antal länkar per event**
+  - Arrangörer kan lägga till flera länkar med +/x-knappar i admin event-edit
+  - Varje länk har URL och valfritt visningsnamn
+  - Om visningsnamn lämnas tomt visas URL:en
+  - Länkarna visas under informationstexten i "Generell tävlingsinformation"-kortet
+  - Kortet visas även om det bara finns länkar men ingen informationstext
+  - Graceful fallback till gamla kolumnerna om migration 057 inte körts
 
 - **Nya filer:**
-  - `Tools/migrations/056_event_general_competition_link.sql` - Lägger till link_url och link_text kolumner
+  - `Tools/migrations/056_event_general_competition_link.sql` - Enskild länk (kolumner på events)
+  - `Tools/migrations/057_event_info_links.sql` - Fler-länk-tabell med datamigrering
 
 - **Ändrade filer:**
-  - `admin/event-edit.php` - Formulärfält och sparlogik för länk
-  - `pages/event.php` - Visar länken publikt
-  - `admin/migrations.php` - Registrering av migration 056
+  - `admin/event-edit.php` - Dynamiskt flerlenks-UI med +/x-knappar
+  - `pages/event.php` - Visar alla länkar publikt
+  - `admin/migrations.php` - Registrering av migration 056 + 057
 
 ### 2026-02-24 (Databasbaserade publika inställningar)
 - **Branch:** claude/fix-class-eligibility-19XRE

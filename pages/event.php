@@ -138,6 +138,20 @@ try {
         // Table might not exist yet
     }
 
+    // Load info links for this event (migration 057)
+    $eventInfoLinks = [];
+    try {
+        $linkStmt = $db->prepare("SELECT link_url, link_text FROM event_info_links WHERE event_id = ? ORDER BY sort_order, id");
+        $linkStmt->execute([$eventId]);
+        $eventInfoLinks = $linkStmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        // Table may not exist yet - fall back to single-link columns
+        $singleUrl = $event['general_competition_link_url'] ?? '';
+        if (!empty($singleUrl)) {
+            $eventInfoLinks = [['link_url' => $singleUrl, 'link_text' => $event['general_competition_link_text'] ?? '']];
+        }
+    }
+
     // Check for interactive map (GPX data)
     require_once INCLUDES_PATH . '/map_functions.php';
     $hasInteractiveMap = eventHasMap($db, $eventId);
@@ -1986,7 +2000,7 @@ $compClassesInfo = getEventContent($event, 'competition_classes_info', 'competit
 </section>
 <?php endif; ?>
 
-<?php if (!empty($generalCompInfo)): ?>
+<?php if (!empty($generalCompInfo) || !empty($eventInfoLinks)): ?>
 <section class="card mb-lg">
     <div class="card-header">
         <h2 class="card-title">
@@ -1995,19 +2009,22 @@ $compClassesInfo = getEventContent($event, 'competition_classes_info', 'competit
         </h2>
     </div>
     <div class="card-body">
+        <?php if (!empty($generalCompInfo)): ?>
         <div class="prose"><?= nl2br(h($generalCompInfo)) ?></div>
-        <?php
-        $gcLinkUrl = $event['general_competition_link_url'] ?? '';
-        $gcLinkText = $event['general_competition_link_text'] ?? '';
-        if (!empty($gcLinkUrl)):
-            $displayText = !empty($gcLinkText) ? $gcLinkText : $gcLinkUrl;
-        ?>
-        <p style="margin-top: var(--space-sm);">
-            <a href="<?= h($gcLinkUrl) ?>" target="_blank" rel="noopener" style="display: inline-flex; align-items: center; gap: var(--space-2xs); color: var(--color-accent-text);">
+        <?php endif; ?>
+        <?php if (!empty($eventInfoLinks)): ?>
+        <div style="margin-top: var(--space-sm); display: flex; flex-direction: column; gap: var(--space-2xs);">
+            <?php foreach ($eventInfoLinks as $link):
+                $url = $link['link_url'] ?? '';
+                if (empty($url)) continue;
+                $text = !empty($link['link_text']) ? $link['link_text'] : $url;
+            ?>
+            <a href="<?= h($url) ?>" target="_blank" rel="noopener" style="display: inline-flex; align-items: center; gap: var(--space-2xs); color: var(--color-accent-text);">
                 <i data-lucide="external-link" style="width: 16px; height: 16px;"></i>
-                <?= h($displayText) ?>
+                <?= h($text) ?>
             </a>
-        </p>
+            <?php endforeach; ?>
+        </div>
         <?php endif; ?>
     </div>
 </section>

@@ -195,6 +195,11 @@ $migrationChecks = [
         'columns' => ['events.general_competition_link_url', 'events.general_competition_link_text'],
         'data' => []
     ],
+    '057_event_info_links.sql' => [
+        'tables' => ['event_info_links'],
+        'columns' => [],
+        'data' => []
+    ],
 ];
 
 // ============================================================================

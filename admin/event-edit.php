@@ -165,6 +165,18 @@ if (!$event) {
     exit;
 }
 
+// Load info links for this event (migration 057)
+$eventInfoLinks = [];
+try {
+    $eventInfoLinks = $db->getAll("SELECT id, link_url, link_text, sort_order FROM event_info_links WHERE event_id = ? ORDER BY sort_order, id", [$id]);
+} catch (Exception $e) {
+    // Table may not exist yet - fall back to single-link columns
+    $singleUrl = $event['general_competition_link_url'] ?? '';
+    if (!empty($singleUrl)) {
+        $eventInfoLinks = [['id' => 0, 'link_url' => $singleUrl, 'link_text' => $event['general_competition_link_text'] ?? '', 'sort_order' => 0]];
+    }
+}
+
 // Check if user is promotor (can only edit certain sections)
 $isPromotorOnly = function_exists('isRole') && isRole('promotor');
 
@@ -451,15 +463,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 error_log("EVENT EDIT: general_competition_info update failed (run migration 044): " . $gcEx->getMessage());
             }
 
-            // Update general_competition link fields (migration 053)
+            // Save info links (migration 057 - event_info_links table)
             try {
-                $db->query("UPDATE events SET general_competition_link_url = ?, general_competition_link_text = ? WHERE id = ?", [
-                    trim($_POST['general_competition_link_url'] ?? ''),
-                    trim($_POST['general_competition_link_text'] ?? ''),
-                    $id
-                ]);
+                $db->query("DELETE FROM event_info_links WHERE event_id = ?", [$id]);
+                $linkUrls = $_POST['info_link_url'] ?? [];
+                $linkTexts = $_POST['info_link_text'] ?? [];
+                $sortOrder = 0;
+                foreach ($linkUrls as $i => $url) {
+                    $url = trim($url);
+                    if (empty($url)) continue;
+                    $text = trim($linkTexts[$i] ?? '');
+                    $db->query("INSERT INTO event_info_links (event_id, link_url, link_text, sort_order) VALUES (?, ?, ?, ?)", [
+                        $id, $url, $text, $sortOrder++
+                    ]);
+                }
             } catch (Exception $linkEx) {
-                error_log("EVENT EDIT: general_competition_link update failed (run migration 053): " . $linkEx->getMessage());
+                error_log("EVENT EDIT: event_info_links save failed (run migration 057): " . $linkEx->getMessage());
             }
 
             // Update competition_classes_info separately (migration 045 may not be run yet)
@@ -1257,17 +1276,22 @@ include __DIR__ . '/components/unified-layout.php';
                 <textarea name="general_competition_info" class="admin-form-input event-textarea" rows="6" placeholder="Generell information om tävlingen..."><?= h($event['general_competition_info'] ?? '') ?></textarea>
                 <small class="form-help">Visas under inbjudningstexten på Inbjudan-fliken.</small>
 
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-sm); margin-top: var(--space-sm);">
-                    <div>
-                        <label class="admin-form-label text-sm">Länk (URL)</label>
-                        <input type="url" name="general_competition_link_url" class="admin-form-input" placeholder="https://..." value="<?= h($event['general_competition_link_url'] ?? '') ?>">
-                    </div>
-                    <div>
-                        <label class="admin-form-label text-sm">Länktext (visningsnamn)</label>
-                        <input type="text" name="general_competition_link_text" class="admin-form-input" placeholder="T.ex. Läs mer här" value="<?= h($event['general_competition_link_text'] ?? '') ?>">
-                    </div>
+                <div id="info-links-container" style="margin-top: var(--space-sm);">
+                    <label class="admin-form-label text-sm" style="margin-bottom: var(--space-xs);">Länkar</label>
+                    <?php if (!empty($eventInfoLinks)): ?>
+                        <?php foreach ($eventInfoLinks as $i => $link): ?>
+                        <div class="info-link-row" style="display: grid; grid-template-columns: 1fr 1fr auto; gap: var(--space-xs); margin-bottom: var(--space-xs); align-items: end;">
+                            <input type="url" name="info_link_url[]" class="admin-form-input" placeholder="https://..." value="<?= h($link['link_url'] ?? '') ?>">
+                            <input type="text" name="info_link_text[]" class="admin-form-input" placeholder="Visningsnamn (valfritt)" value="<?= h($link['link_text'] ?? '') ?>">
+                            <button type="button" onclick="this.closest('.info-link-row').remove()" class="btn-admin btn-admin-danger" style="padding: var(--space-xs) var(--space-sm); height: 38px;" title="Ta bort länk"><i data-lucide="x" style="width:16px;height:16px;"></i></button>
+                        </div>
+                        <?php endforeach; ?>
+                    <?php endif; ?>
                 </div>
-                <small class="form-help">Valfri länk som visas under informationstexten. Om länktext lämnas tomt visas URL:en.</small>
+                <button type="button" onclick="addInfoLink()" class="btn-admin btn-admin-ghost" style="margin-top: var(--space-2xs); font-size: 0.85rem;">
+                    <i data-lucide="plus" style="width:14px;height:14px;"></i> Lägg till länk
+                </button>
+                <small class="form-help" style="margin-top: var(--space-2xs);">Länkar visas under informationstexten. Om visningsnamn lämnas tomt visas URL:en.</small>
             </div>
 
             <!-- Competition classes info field -->
@@ -2012,6 +2036,22 @@ include __DIR__ . '/components/unified-layout.php';
 </style>
 
 <script>
+// =====================================================
+// INFO LINKS: Add/remove links in general competition info
+// =====================================================
+function addInfoLink() {
+    const container = document.getElementById('info-links-container');
+    if (!container) return;
+    const row = document.createElement('div');
+    row.className = 'info-link-row';
+    row.style.cssText = 'display:grid;grid-template-columns:1fr 1fr auto;gap:var(--space-xs);margin-bottom:var(--space-xs);align-items:end;';
+    row.innerHTML = '<input type="url" name="info_link_url[]" class="admin-form-input" placeholder="https://...">'
+        + '<input type="text" name="info_link_text[]" class="admin-form-input" placeholder="Visningsnamn (valfritt)">'
+        + '<button type="button" onclick="this.closest(\'.info-link-row\').remove()" class="btn-admin btn-admin-danger" style="padding:var(--space-xs) var(--space-sm);height:38px;" title="Ta bort länk"><i data-lucide="x" style="width:16px;height:16px;"></i></button>';
+    container.appendChild(row);
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
 // =====================================================
 // PROMOTOR: Image-based sponsor placement picker
 // =====================================================
