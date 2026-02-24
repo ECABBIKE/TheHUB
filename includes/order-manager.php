@@ -1129,9 +1129,21 @@ function createRiderFromRegistration(array $data, int $parentUserId): array {
     $pdo->beginTransaction();
 
     try {
-        // Validera obligatoriska falt
+        // Validera alla obligatoriska fält (backend - matchar frontend-validering)
         if (empty($data['firstname']) || empty($data['lastname']) || empty($data['email'])) {
             throw new Exception('Förnamn, efternamn och e-post krävs');
+        }
+        if (empty($data['birth_year'])) {
+            throw new Exception('Födelseår krävs');
+        }
+        if (empty($data['gender'])) {
+            throw new Exception('Kön krävs');
+        }
+        if (empty($data['phone'])) {
+            throw new Exception('Telefonnummer krävs');
+        }
+        if (empty($data['ice_name']) || empty($data['ice_phone'])) {
+            throw new Exception('Nödkontakt (namn och telefon) krävs');
         }
 
         // Kolla om email redan finns - ge specifik feedback
@@ -1153,6 +1165,35 @@ function createRiderFromRegistration(array $data, int $parentUserId): array {
                     'success' => false,
                     'code' => 'email_exists_inactive',
                     'error' => "Det finns redan en profil ({$name}) med denna e-post som inte är aktiverad."
+                ];
+            }
+        }
+
+        // Kolla om namn + födelseår redan finns (fångar dubbletter med annan e-post)
+        $birthYearCheck = !empty($data['birth_year']) ? intval($data['birth_year']) : null;
+        if ($birthYearCheck) {
+            $nameCheckStmt = $pdo->prepare("
+                SELECT id, email, firstname, lastname, password
+                FROM riders
+                WHERE LOWER(firstname) = LOWER(?) AND LOWER(lastname) = LOWER(?) AND birth_year = ?
+                LIMIT 1
+            ");
+            $nameCheckStmt->execute([trim($data['firstname']), trim($data['lastname']), $birthYearCheck]);
+            $nameMatch = $nameCheckStmt->fetch(PDO::FETCH_ASSOC);
+
+            if ($nameMatch) {
+                $pdo->rollBack();
+                $existingName = trim($nameMatch['firstname'] . ' ' . $nameMatch['lastname']);
+                $maskedEmail = '';
+                if (!empty($nameMatch['email'])) {
+                    $parts = explode('@', $nameMatch['email']);
+                    $maskedEmail = substr($parts[0], 0, 2) . '***@' . ($parts[1] ?? '');
+                }
+                return [
+                    'success' => false,
+                    'code' => 'name_duplicate',
+                    'error' => "Det finns redan en profil för {$existingName} (f. {$birthYearCheck}) med e-post {$maskedEmail}. Sök på namnet istället för att skapa en ny profil.",
+                    'existing_rider_id' => $nameMatch['id']
                 ];
             }
         }

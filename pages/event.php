@@ -4515,6 +4515,11 @@ if (!empty($event['series_id'])) {
                             } else if (data.code === 'email_exists_inactive') {
                                 errorDiv.innerHTML = '<span style="color: var(--color-warning);">' + (data.error || '') + '</span>' +
                                     '<br><span style="color: var(--color-text-secondary);">Sök på namnet istället för att hitta profilen.</span>';
+                            } else if (data.code === 'name_duplicate') {
+                                errorDiv.innerHTML = '<span style="color: var(--color-warning);">' + (data.error || '') + '</span>' +
+                                    '<br><button type="button" onclick="document.getElementById(\'' + prefix + 'backToSearchBtn\')?.click()" ' +
+                                    'style="color: var(--color-accent); background: none; border: none; cursor: pointer; text-decoration: underline; font-weight: 500; padding: 0; margin-top: var(--space-xs);">' +
+                                    'Tillbaka till sök</button>';
                             } else {
                                 errorDiv.innerHTML = data.error || 'Kunde inte skapa deltagare.';
                                 errorDiv.style.color = 'var(--color-error)';
