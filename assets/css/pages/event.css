@@ -869,9 +869,8 @@ td.col-place {
 }
 
 /* Class badge for total view */
-.col-class {
-    min-width: 100px;
-}
+.results-table th.col-class,
+.results-table td.col-class { width: 100px !important; min-width: 80px; max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 
 .class-badge {
     display: inline-block;
