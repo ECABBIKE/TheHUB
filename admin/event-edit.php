@@ -836,56 +836,70 @@ include __DIR__ . '/components/unified-layout.php';
             <?php endif; ?>
         </summary>
         <fieldset class="admin-card-body fieldset-reset" style="padding: var(--space-lg);" <?= $isPromotorOnly ? 'disabled' : '' ?>>
-            <div class="form-grid form-grid-2">
-                <div class="admin-form-group form-full-width">
+
+            <!-- Event-namn -->
+            <div class="form-subsection">
+                <div class="admin-form-group">
                     <label class="admin-form-label">Namn <span class="required">*</span></label>
                     <input type="text" class="admin-form-input" <?= $isPromotorOnly ? '' : 'name="name" required' ?> value="<?= h($event['name']) ?>">
                 </div>
+            </div>
 
-                <div class="admin-form-group">
-                    <label class="admin-form-label">Startdatum <span class="required">*</span></label>
-                    <input type="date" class="admin-form-input" <?= $isPromotorOnly ? '' : 'name="date" required' ?> value="<?= h($event['date']) ?>">
+            <!-- Datum & Typ -->
+            <div class="form-subsection">
+                <div class="form-subsection-label"><i data-lucide="calendar"></i> Datum & typ</div>
+                <div class="form-grid form-grid-2">
+                    <div class="admin-form-group">
+                        <label class="admin-form-label">Startdatum <span class="required">*</span></label>
+                        <input type="date" class="admin-form-input" <?= $isPromotorOnly ? '' : 'name="date" required' ?> value="<?= h($event['date']) ?>">
+                    </div>
+                    <div class="admin-form-group">
+                        <label class="admin-form-label">Slutdatum</label>
+                        <input type="date" name="end_date" class="admin-form-input" value="<?= h($event['end_date'] ?? '') ?>">
+                        <small class="form-help">För flerdagars-event</small>
+                    </div>
+                    <div class="admin-form-group">
+                        <label class="admin-form-label">Eventtyp</label>
+                        <select name="event_type" class="admin-form-select">
+                            <option value="single" <?= ($event['event_type'] ?? 'single') === 'single' ? 'selected' : '' ?>>Enstaka event</option>
+                            <option value="festival" <?= ($event['event_type'] ?? '') === 'festival' ? 'selected' : '' ?>>Festival (flerdagars)</option>
+                            <option value="stage_race" <?= ($event['event_type'] ?? '') === 'stage_race' ? 'selected' : '' ?>>Etapplopp</option>
+                            <option value="multi_event" <?= ($event['event_type'] ?? '') === 'multi_event' ? 'selected' : '' ?>>Multi-event</option>
+                        </select>
+                    </div>
+                    <div class="admin-form-group">
+                        <label class="admin-form-label">Advent ID</label>
+                        <input type="text" name="advent_id" class="admin-form-input" value="<?= h($event['advent_id'] ?? '') ?>" placeholder="Externt ID">
+                    </div>
                 </div>
+            </div>
 
-                <div class="admin-form-group">
-                    <label class="admin-form-label">Slutdatum <span class="text-secondary text-sm">(för flerdagars-event)</span></label>
-                    <input type="date" name="end_date" class="admin-form-input" value="<?= h($event['end_date'] ?? '') ?>">
+            <!-- Plats & Bana -->
+            <div class="form-subsection">
+                <div class="form-subsection-label"><i data-lucide="map-pin"></i> Plats</div>
+                <div class="form-grid form-grid-2">
+                    <div class="admin-form-group">
+                        <label class="admin-form-label">Plats</label>
+                        <input type="text" name="location" class="admin-form-input" value="<?= h($event['location'] ?? '') ?>" placeholder="T.ex. Järvsö">
+                    </div>
+                    <div class="admin-form-group">
+                        <label class="admin-form-label">Bana/Anläggning</label>
+                        <select name="venue_id" class="admin-form-select">
+                            <option value="">Ingen specifik bana</option>
+                            <?php foreach ($venues as $venue): ?>
+                                <option value="<?= $venue['id'] ?>" <?= ($event['venue_id'] == $venue['id']) ? 'selected' : '' ?>>
+                                    <?= h($venue['name']) ?><?php if ($venue['city']): ?> (<?= h($venue['city']) ?>)<?php endif; ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
                 </div>
+            </div>
 
+            <!-- Logga -->
+            <div class="form-subsection">
+                <div class="form-subsection-label"><i data-lucide="image"></i> Logga</div>
                 <div class="admin-form-group">
-                    <label class="admin-form-label">Eventtyp</label>
-                    <select name="event_type" class="admin-form-select">
-                        <option value="single" <?= ($event['event_type'] ?? 'single') === 'single' ? 'selected' : '' ?>>Enstaka event</option>
-                        <option value="festival" <?= ($event['event_type'] ?? '') === 'festival' ? 'selected' : '' ?>>Festival (flerdagars, flera format)</option>
-                        <option value="stage_race" <?= ($event['event_type'] ?? '') === 'stage_race' ? 'selected' : '' ?>>Etapplopp</option>
-                        <option value="multi_event" <?= ($event['event_type'] ?? '') === 'multi_event' ? 'selected' : '' ?>>Multi-event</option>
-                    </select>
-                </div>
-
-                <div class="admin-form-group">
-                    <label class="admin-form-label">Advent ID</label>
-                    <input type="text" name="advent_id" class="admin-form-input" value="<?= h($event['advent_id'] ?? '') ?>" placeholder="Externt ID för import">
-                </div>
-
-                <div class="admin-form-group">
-                    <label class="admin-form-label">Plats</label>
-                    <input type="text" name="location" class="admin-form-input" value="<?= h($event['location'] ?? '') ?>" placeholder="T.ex. Järvsö">
-                </div>
-
-                <div class="admin-form-group">
-                    <label class="admin-form-label">Bana/Anläggning</label>
-                    <select name="venue_id" class="admin-form-select">
-                        <option value="">Ingen specifik bana</option>
-                        <?php foreach ($venues as $venue): ?>
-                            <option value="<?= $venue['id'] ?>" <?= ($event['venue_id'] == $venue['id']) ? 'selected' : '' ?>>
-                                <?= h($venue['name']) ?><?php if ($venue['city']): ?> (<?= h($venue['city']) ?>)<?php endif; ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-
-                <div class="admin-form-group">
-                    <label class="admin-form-label">Event-logga <span class="text-secondary text-sm">(om ingen serie)</span></label>
                     <select name="logo_media_id" class="admin-form-select">
                         <option value="">-- Ingen (använd seriens) --</option>
                         <?php foreach ($seriesMediaFiles as $media): ?>
@@ -899,34 +913,38 @@ include __DIR__ . '/components/unified-layout.php';
                         <img src="<?= h($event['logo']) ?>" alt="Event logo" style="max-height: 60px; border-radius: var(--radius-sm);">
                     </div>
                     <?php endif; ?>
-                    <small class="form-help block mt-sm">
-                        Välj bild från <a href="/admin/media?folder=series" target="_blank">Mediabiblioteket (Serie-loggor)</a>. Används i kalender om eventet inte tillhör en serie.
+                    <small class="form-help">
+                        Välj bild från <a href="/admin/media?folder=series" target="_blank">Mediabiblioteket</a>. Används i kalender om eventet inte tillhör en serie.
                     </small>
                 </div>
+            </div>
 
-                <div class="admin-form-group">
-                    <label class="admin-form-label">Anmälan öppnar (datum och tid)</label>
-                    <input type="datetime-local" name="registration_opens" class="admin-form-input" value="<?= !empty($event['registration_opens']) ? date('Y-m-d\TH:i', strtotime($event['registration_opens'])) : '' ?>">
-                    <small class="form-help">När anmälan öppnar. Lämna tomt om anmälan redan är öppen.</small>
-                </div>
-
-                <div class="admin-form-group">
-                    <label class="admin-form-label">Anmälningsfrist (datum)</label>
-                    <input type="date" name="registration_deadline" class="admin-form-input" value="<?= h($event['registration_deadline'] ?? '') ?>">
-                </div>
-
-                <div class="admin-form-group">
-                    <label class="admin-form-label">Anmälningsfrist (klockslag)</label>
-                    <input type="time" name="registration_deadline_time" class="admin-form-input" value="<?= h($event['registration_deadline_time'] ?? '') ?>">
-                    <small class="form-help">Lämna tomt för 23:59</small>
-                </div>
-
-                <div class="admin-form-group">
-                    <label class="admin-form-label">Max antal deltagare</label>
-                    <input type="number" name="max_participants" class="admin-form-input" min="1" value="<?= h($event['max_participants'] ?? '') ?>" placeholder="Obegränsat">
-                    <small class="form-help">Lämna tomt för obegränsat antal platser</small>
+            <!-- Anmälan -->
+            <div class="form-subsection">
+                <div class="form-subsection-label"><i data-lucide="clipboard-list"></i> Anmälan</div>
+                <div class="form-grid form-grid-2">
+                    <div class="admin-form-group">
+                        <label class="admin-form-label">Anmälan öppnar</label>
+                        <input type="datetime-local" name="registration_opens" class="admin-form-input" value="<?= !empty($event['registration_opens']) ? date('Y-m-d\TH:i', strtotime($event['registration_opens'])) : '' ?>">
+                        <small class="form-help">Lämna tomt om anmälan redan är öppen</small>
+                    </div>
+                    <div class="admin-form-group">
+                        <label class="admin-form-label">Max antal deltagare</label>
+                        <input type="number" name="max_participants" class="admin-form-input" min="1" value="<?= h($event['max_participants'] ?? '') ?>" placeholder="Obegränsat">
+                        <small class="form-help">Lämna tomt = obegränsat</small>
+                    </div>
+                    <div class="admin-form-group">
+                        <label class="admin-form-label">Anmälningsfrist (datum)</label>
+                        <input type="date" name="registration_deadline" class="admin-form-input" value="<?= h($event['registration_deadline'] ?? '') ?>">
+                    </div>
+                    <div class="admin-form-group">
+                        <label class="admin-form-label">Anmälningsfrist (klockslag)</label>
+                        <input type="time" name="registration_deadline_time" class="admin-form-input" value="<?= h($event['registration_deadline_time'] ?? '') ?>">
+                        <small class="form-help">Lämna tomt för 23:59</small>
+                    </div>
                 </div>
             </div>
+
         </fieldset>
     </details>
 
@@ -963,44 +981,50 @@ include __DIR__ . '/components/unified-layout.php';
             <?php endif; ?>
         </summary>
         <fieldset class="admin-card-body fieldset-reset" style="padding: var(--space-lg);" <?= $isPromotorOnly ? 'disabled' : '' ?>>
-            <div class="form-grid form-grid-2">
-                <div class="admin-form-group">
-                    <label class="admin-form-label">Huvudformat</label>
-                    <select name="discipline" class="admin-form-select">
-                        <option value="">Välj format...</option>
-                        <option value="ENDURO" <?= ($event['discipline'] ?? '') === 'ENDURO' ? 'selected' : '' ?>>Enduro</option>
-                        <option value="DH" <?= ($event['discipline'] ?? '') === 'DH' ? 'selected' : '' ?>>Downhill</option>
-                        <option value="XC" <?= ($event['discipline'] ?? '') === 'XC' ? 'selected' : '' ?>>XC</option>
-                        <option value="XCO" <?= ($event['discipline'] ?? '') === 'XCO' ? 'selected' : '' ?>>XCO</option>
-                        <option value="XCC" <?= ($event['discipline'] ?? '') === 'XCC' ? 'selected' : '' ?>>XCC</option>
-                        <option value="XCE" <?= ($event['discipline'] ?? '') === 'XCE' ? 'selected' : '' ?>>XCE</option>
-                        <option value="DUAL_SLALOM" <?= ($event['discipline'] ?? '') === 'DUAL_SLALOM' ? 'selected' : '' ?>>Dual Slalom</option>
-                        <option value="PUMPTRACK" <?= ($event['discipline'] ?? '') === 'PUMPTRACK' ? 'selected' : '' ?>>Pumptrack</option>
-                        <option value="GRAVEL" <?= ($event['discipline'] ?? '') === 'GRAVEL' ? 'selected' : '' ?>>Gravel</option>
-                        <option value="E-MTB" <?= ($event['discipline'] ?? '') === 'E-MTB' ? 'selected' : '' ?>>E-MTB</option>
-                    </select>
-                </div>
 
+            <!-- Format & Disciplin -->
+            <div class="form-subsection">
+                <div class="form-subsection-label"><i data-lucide="bike"></i> Format & disciplin</div>
+                <div class="form-grid form-grid-2">
+                    <div class="admin-form-group">
+                        <label class="admin-form-label">Huvudformat</label>
+                        <select name="discipline" class="admin-form-select">
+                            <option value="">Välj format...</option>
+                            <option value="ENDURO" <?= ($event['discipline'] ?? '') === 'ENDURO' ? 'selected' : '' ?>>Enduro</option>
+                            <option value="DH" <?= ($event['discipline'] ?? '') === 'DH' ? 'selected' : '' ?>>Downhill</option>
+                            <option value="XC" <?= ($event['discipline'] ?? '') === 'XC' ? 'selected' : '' ?>>XC</option>
+                            <option value="XCO" <?= ($event['discipline'] ?? '') === 'XCO' ? 'selected' : '' ?>>XCO</option>
+                            <option value="XCC" <?= ($event['discipline'] ?? '') === 'XCC' ? 'selected' : '' ?>>XCC</option>
+                            <option value="XCE" <?= ($event['discipline'] ?? '') === 'XCE' ? 'selected' : '' ?>>XCE</option>
+                            <option value="DUAL_SLALOM" <?= ($event['discipline'] ?? '') === 'DUAL_SLALOM' ? 'selected' : '' ?>>Dual Slalom</option>
+                            <option value="PUMPTRACK" <?= ($event['discipline'] ?? '') === 'PUMPTRACK' ? 'selected' : '' ?>>Pumptrack</option>
+                            <option value="GRAVEL" <?= ($event['discipline'] ?? '') === 'GRAVEL' ? 'selected' : '' ?>>Gravel</option>
+                            <option value="E-MTB" <?= ($event['discipline'] ?? '') === 'E-MTB' ? 'selected' : '' ?>>E-MTB</option>
+                        </select>
+                    </div>
+                    <div class="admin-form-group">
+                        <label class="admin-form-label">Event-format</label>
+                        <select name="event_format" class="admin-form-select">
+                            <option value="ENDURO" <?= ($event['event_format'] ?? 'ENDURO') === 'ENDURO' ? 'selected' : '' ?>>Enduro (en tid, splittider)</option>
+                            <option value="DH_STANDARD" <?= ($event['event_format'] ?? '') === 'DH_STANDARD' ? 'selected' : '' ?>>Downhill Standard (två åk)</option>
+                            <option value="DH_SWECUP" <?= ($event['event_format'] ?? '') === 'DH_SWECUP' ? 'selected' : '' ?>>SweCUP DH (Kval + Final)</option>
+                            <option value="DUAL_SLALOM" <?= ($event['event_format'] ?? '') === 'DUAL_SLALOM' ? 'selected' : '' ?>>Dual Slalom</option>
+                        </select>
+                    </div>
+                </div>
                 <?php
-                // Parse existing formats for checkboxes
                 $existingFormats = [];
                 if (!empty($event['formats'])) {
                     $existingFormats = array_map('trim', explode(',', $event['formats']));
                 }
                 $allFormats = [
-                    'ENDURO' => 'Enduro',
-                    'DH' => 'Downhill',
-                    'XC' => 'XC',
-                    'XCO' => 'XCO',
-                    'XCC' => 'XCC',
-                    'XCE' => 'XCE',
-                    'DUAL_SLALOM' => 'Dual Slalom',
-                    'PUMPTRACK' => 'Pumptrack',
-                    'GRAVEL' => 'Gravel',
-                    'E-MTB' => 'E-MTB'
+                    'ENDURO' => 'Enduro', 'DH' => 'Downhill', 'XC' => 'XC',
+                    'XCO' => 'XCO', 'XCC' => 'XCC', 'XCE' => 'XCE',
+                    'DUAL_SLALOM' => 'Dual Slalom', 'PUMPTRACK' => 'Pumptrack',
+                    'GRAVEL' => 'Gravel', 'E-MTB' => 'E-MTB'
                 ];
                 ?>
-                <div class="admin-form-group">
+                <div class="admin-form-group mt-md">
                     <label class="admin-form-label">Alla format <span class="text-secondary text-sm">(för festivaler/multi-events)</span></label>
                     <div class="checkbox-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: var(--space-sm);">
                         <?php foreach ($allFormats as $key => $label): ?>
@@ -1010,106 +1034,91 @@ include __DIR__ . '/components/unified-layout.php';
                         </label>
                         <?php endforeach; ?>
                     </div>
-                    <small class="form-help block mt-sm">
-                        Välj flera format om eventet innehåller flera olika tävlingar (t.ex. en festival med både Enduro och Downhill).
-                    </small>
-                </div>
-
-                <div class="admin-form-group">
-                    <label class="admin-form-label">
-                        Serie (direktkoppling)
-                        <span class="text-xs text-secondary font-normal">
-                            - eventet läggs också till via
-                            <a href="/admin/series" class="text-accent">seriehantering</a>
-                        </span>
-                    </label>
-                    <select name="series_id" id="series_id" class="admin-form-select">
-                        <option value="">Ingen serie</option>
-                        <?php foreach ($seriesByBrand as $brandName => $brandSeries): ?>
-                            <optgroup label="<?= h($brandName) ?>">
-                                <?php foreach ($brandSeries as $s):
-                                    $yearMatch = ($s['year'] == $eventYear);
-                                    $isCompleted = ($s['status'] ?? '') === 'completed';
-                                    $matchIndicator = $yearMatch ? ' ✓' : '';
-                                    $completedIndicator = $isCompleted ? ' [Avslutad]' : '';
-                                ?>
-                                    <option value="<?= $s['id'] ?>"
-                                            data-year="<?= $s['year'] ?>"
-                                            <?= ($event['series_id'] == $s['id']) ? 'selected' : '' ?>
-                                            <?= $yearMatch ? 'style="font-weight: bold;"' : '' ?>>
-                                        <?= h($s['name']) ?><?= $matchIndicator ?><?= $completedIndicator ?>
-                                    </option>
-                                <?php endforeach; ?>
-                            </optgroup>
-                        <?php endforeach; ?>
-                    </select>
-                    <small class="form-help">
-                        Välj serie som matchar eventets år (<?= $eventYear ?>).
-                        = matchar år. [Avslutad] = serien är markerad som avslutad.
-                    </small>
-                </div>
-
-                <div class="admin-form-group">
-                    <label class="admin-form-label">Rankingklass</label>
-                    <select name="event_level" class="admin-form-select">
-                        <option value="national" <?= ($event['event_level'] ?? 'national') === 'national' ? 'selected' : '' ?>>Nationell (100%)</option>
-                        <option value="sportmotion" <?= ($event['event_level'] ?? 'national') === 'sportmotion' ? 'selected' : '' ?>>Sportmotion (50%)</option>
-                    </select>
-                    <small class="form-help">Styr rankingpoäng</small>
-                </div>
-
-                <div class="admin-form-group">
-                    <label class="admin-form-label">Event-format</label>
-                    <select name="event_format" class="admin-form-select">
-                        <option value="ENDURO" <?= ($event['event_format'] ?? 'ENDURO') === 'ENDURO' ? 'selected' : '' ?>>Enduro (en tid, splittider)</option>
-                        <option value="DH_STANDARD" <?= ($event['event_format'] ?? '') === 'DH_STANDARD' ? 'selected' : '' ?>>Downhill Standard (två åk, snabbaste räknas)</option>
-                        <option value="DH_SWECUP" <?= ($event['event_format'] ?? '') === 'DH_SWECUP' ? 'selected' : '' ?>>SweCUP Downhill (Kval + Final, ranking efter Final)</option>
-                        <option value="DUAL_SLALOM" <?= ($event['event_format'] ?? '') === 'DUAL_SLALOM' ? 'selected' : '' ?>>Dual Slalom</option>
-                    </select>
-                </div>
-
-                <div class="admin-form-group">
-                    <label class="admin-form-label">Poängskala (ranking)</label>
-                    <select name="point_scale_id" class="admin-form-select">
-                        <option value="">Ingen poängskala</option>
-                        <?php foreach ($pointScales as $scale): ?>
-                            <option value="<?= $scale['id'] ?>" <?= ($event['point_scale_id'] ?? '') == $scale['id'] ? 'selected' : '' ?>>
-                                <?= h($scale['name']) ?><?php if ($scale['discipline']): ?> (<?= h($scale['discipline']) ?>)<?php endif; ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                    <small class="form-help">Används för att beräkna rankingpoäng</small>
-                </div>
-
-                <div class="admin-form-group">
-                    <label class="admin-form-label">Prismall</label>
-                    <select name="pricing_template_id" class="admin-form-select">
-                        <option value="">Ingen prismall</option>
-                        <?php foreach ($pricingTemplates as $template): ?>
-                            <option value="<?= $template['id'] ?>" <?= ($event['pricing_template_id'] ?? '') == $template['id'] ? 'selected' : '' ?>>
-                                <?= h($template['name']) ?><?php if ($template['is_default']): ?> (Standard)<?php endif; ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                    <small class="form-help">Välj prismall för detta event.<?php if (isRole('super_admin')): ?> <a href="/admin/pricing-templates.php">Hantera prismallar</a><?php elseif (!empty($event['pricing_template_id'])): ?> <a href="/admin/pricing-template-edit.php?id=<?= $event['pricing_template_id'] ?>&event=<?= $id ?>">Redigera prismall</a><?php endif; ?></small>
-                </div>
-
-                <div class="admin-form-group">
-                    <label class="admin-form-label">Distans (km)</label>
-                    <input type="number" name="distance" class="admin-form-input" step="0.01" min="0" value="<?= h($event['distance'] ?? '') ?>">
-                </div>
-
-                <div class="admin-form-group">
-                    <label class="admin-form-label">Höjdmeter (m)</label>
-                    <input type="number" name="elevation_gain" class="admin-form-input" min="0" value="<?= h($event['elevation_gain'] ?? '') ?>">
                 </div>
             </div>
 
-            <div class="admin-form-group mt-md">
-                <label class="admin-form-label">Sträcknamn (JSON)</label>
-                <input type="text" name="stage_names" class="admin-form-input" value="<?= h($event['stage_names'] ?? '') ?>" placeholder='{"1":"SS1","2":"SS2","3":"SS3"}'>
-                <small class="form-help">Anpassade namn. Lämna tomt för standard.</small>
+            <!-- Serie & Ranking -->
+            <div class="form-subsection">
+                <div class="form-subsection-label"><i data-lucide="trophy"></i> Serie & ranking</div>
+                <div class="form-grid form-grid-2">
+                    <div class="admin-form-group">
+                        <label class="admin-form-label">Serie</label>
+                        <select name="series_id" id="series_id" class="admin-form-select">
+                            <option value="">Ingen serie</option>
+                            <?php foreach ($seriesByBrand as $brandName => $brandSeries): ?>
+                                <optgroup label="<?= h($brandName) ?>">
+                                    <?php foreach ($brandSeries as $s):
+                                        $yearMatch = ($s['year'] == $eventYear);
+                                        $isCompleted = ($s['status'] ?? '') === 'completed';
+                                        $matchIndicator = $yearMatch ? ' ✓' : '';
+                                        $completedIndicator = $isCompleted ? ' [Avslutad]' : '';
+                                    ?>
+                                        <option value="<?= $s['id'] ?>"
+                                                data-year="<?= $s['year'] ?>"
+                                                <?= ($event['series_id'] == $s['id']) ? 'selected' : '' ?>
+                                                <?= $yearMatch ? 'style="font-weight: bold;"' : '' ?>>
+                                            <?= h($s['name']) ?><?= $matchIndicator ?><?= $completedIndicator ?>
+                                        </option>
+                                    <?php endforeach; ?>
+                                </optgroup>
+                            <?php endforeach; ?>
+                        </select>
+                        <small class="form-help">År <?= $eventYear ?>. <a href="/admin/series" class="text-accent">Seriehantering</a></small>
+                    </div>
+                    <div class="admin-form-group">
+                        <label class="admin-form-label">Rankingklass</label>
+                        <select name="event_level" class="admin-form-select">
+                            <option value="national" <?= ($event['event_level'] ?? 'national') === 'national' ? 'selected' : '' ?>>Nationell (100%)</option>
+                            <option value="sportmotion" <?= ($event['event_level'] ?? 'national') === 'sportmotion' ? 'selected' : '' ?>>Sportmotion (50%)</option>
+                        </select>
+                        <small class="form-help">Styr rankingpoäng</small>
+                    </div>
+                    <div class="admin-form-group">
+                        <label class="admin-form-label">Poängskala</label>
+                        <select name="point_scale_id" class="admin-form-select">
+                            <option value="">Ingen poängskala</option>
+                            <?php foreach ($pointScales as $scale): ?>
+                                <option value="<?= $scale['id'] ?>" <?= ($event['point_scale_id'] ?? '') == $scale['id'] ? 'selected' : '' ?>>
+                                    <?= h($scale['name']) ?><?php if ($scale['discipline']): ?> (<?= h($scale['discipline']) ?>)<?php endif; ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="admin-form-group">
+                        <label class="admin-form-label">Prismall</label>
+                        <select name="pricing_template_id" class="admin-form-select">
+                            <option value="">Ingen prismall</option>
+                            <?php foreach ($pricingTemplates as $template): ?>
+                                <option value="<?= $template['id'] ?>" <?= ($event['pricing_template_id'] ?? '') == $template['id'] ? 'selected' : '' ?>>
+                                    <?= h($template['name']) ?><?php if ($template['is_default']): ?> (Standard)<?php endif; ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                        <small class="form-help"><?php if (isRole('super_admin')): ?><a href="/admin/pricing-templates.php" class="text-accent">Hantera prismallar</a><?php elseif (!empty($event['pricing_template_id'])): ?><a href="/admin/pricing-template-edit.php?id=<?= $event['pricing_template_id'] ?>&event=<?= $id ?>" class="text-accent">Redigera prismall</a><?php endif; ?></small>
+                    </div>
+                </div>
             </div>
+
+            <!-- Bana -->
+            <div class="form-subsection">
+                <div class="form-subsection-label"><i data-lucide="route"></i> Bana</div>
+                <div class="form-grid form-grid-2">
+                    <div class="admin-form-group">
+                        <label class="admin-form-label">Distans (km)</label>
+                        <input type="number" name="distance" class="admin-form-input" step="0.01" min="0" value="<?= h($event['distance'] ?? '') ?>">
+                    </div>
+                    <div class="admin-form-group">
+                        <label class="admin-form-label">Höjdmeter (m)</label>
+                        <input type="number" name="elevation_gain" class="admin-form-input" min="0" value="<?= h($event['elevation_gain'] ?? '') ?>">
+                    </div>
+                </div>
+                <div class="admin-form-group mt-md">
+                    <label class="admin-form-label">Sträcknamn (JSON)</label>
+                    <input type="text" name="stage_names" class="admin-form-input" value="<?= h($event['stage_names'] ?? '') ?>" placeholder='{"1":"SS1","2":"SS2","3":"SS3"}'>
+                    <small class="form-help">Anpassade namn. Lämna tomt för standard.</small>
+                </div>
+            </div>
+
         </fieldset>
     </details>
 
@@ -1197,105 +1206,96 @@ include __DIR__ . '/components/unified-layout.php';
     </details>
     <?php endif; /* End hide Klasser for promotors */ ?>
 
-    <!-- ORGANIZER & CONTACT - Editable for promotors -->
+    <!-- ORGANIZER, LOCATION & PRICING - Editable for promotors -->
     <details class="admin-card mb-lg">
         <summary class="admin-card-header collapsible-header">
-            <h2>Arrangör & Kontakt</h2>
-            <span class="text-secondary text-sm">Klicka för att expandera/minimera</span>
+            <h2>Arrangör, plats & rabatt</h2>
+            <span class="text-secondary text-sm">Kontakt, platsdetaljer, Gravity ID</span>
         </summary>
-        <div class="admin-card-body">
-            <div class="form-grid form-grid-2">
-                <div class="admin-form-group">
-                    <label class="admin-form-label">Arrangör (klubb)</label>
-                    <select name="organizer_club_id" class="admin-form-select">
-                        <option value="">Välj klubb...</option>
-                        <?php foreach ($clubs as $club): ?>
-                            <option value="<?= $club['id'] ?>" <?= ($event['organizer_club_id'] ?? '') == $club['id'] ? 'selected' : '' ?>>
-                                <?= h($club['name']) ?><?php if ($club['city']): ?> (<?= h($club['city']) ?>)<?php endif; ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
+        <div class="admin-card-body" style="padding: var(--space-lg);">
 
-                <div class="admin-form-group">
-                    <label class="admin-form-label">Webbplats</label>
-                    <input type="url" name="website" class="admin-form-input" value="<?= h($event['website'] ?? '') ?>" placeholder="https://...">
-                </div>
-
-                <div class="admin-form-group">
-                    <label class="admin-form-label">Kontakt e-post</label>
-                    <input type="email" name="contact_email" class="admin-form-input" value="<?= h($event['contact_email'] ?? '') ?>">
-                </div>
-
-                <div class="admin-form-group">
-                    <label class="admin-form-label">Kontakt telefon</label>
-                    <input type="tel" name="contact_phone" class="admin-form-input" value="<?= h($event['contact_phone'] ?? '') ?>">
+            <!-- Arrangör & Kontakt -->
+            <div class="form-subsection">
+                <div class="form-subsection-label"><i data-lucide="users"></i> Arrangör & kontakt</div>
+                <div class="form-grid form-grid-2">
+                    <div class="admin-form-group">
+                        <label class="admin-form-label">Arrangör (klubb)</label>
+                        <select name="organizer_club_id" class="admin-form-select">
+                            <option value="">Välj klubb...</option>
+                            <?php foreach ($clubs as $club): ?>
+                                <option value="<?= $club['id'] ?>" <?= ($event['organizer_club_id'] ?? '') == $club['id'] ? 'selected' : '' ?>>
+                                    <?= h($club['name']) ?><?php if ($club['city']): ?> (<?= h($club['city']) ?>)<?php endif; ?>
+                                </option>
+                            <?php endforeach; ?>
+                        </select>
+                    </div>
+                    <div class="admin-form-group">
+                        <label class="admin-form-label">Webbplats</label>
+                        <input type="url" name="website" class="admin-form-input" value="<?= h($event['website'] ?? '') ?>" placeholder="https://...">
+                    </div>
+                    <div class="admin-form-group">
+                        <label class="admin-form-label">Kontakt e-post</label>
+                        <input type="email" name="contact_email" class="admin-form-input" value="<?= h($event['contact_email'] ?? '') ?>">
+                    </div>
+                    <div class="admin-form-group">
+                        <label class="admin-form-label">Kontakt telefon</label>
+                        <input type="tel" name="contact_phone" class="admin-form-input" value="<?= h($event['contact_phone'] ?? '') ?>">
+                    </div>
                 </div>
             </div>
-        </div>
-    </details>
 
-    <!-- GRAVITY ID DISCOUNT -->
-    <details class="admin-card mb-lg">
-        <summary class="admin-card-header collapsible-header">
-            <h2><i data-lucide="badge-check" class="icon-md"></i> Gravity ID-rabatt</h2>
-            <span class="text-secondary text-sm">Klicka för att expandera/minimera</span>
-        </summary>
-        <div class="admin-card-body">
-            <p class="text-secondary text-sm mb-md">
-                Sätt rabatt för deltagare med Gravity ID. Lämna 0 för att använda seriens inställning.
-            </p>
-            <div class="admin-form-group">
-                <label class="admin-form-label">Rabatt (SEK)</label>
-                <input type="number" name="gravity_id_discount" class="admin-form-input" style="max-width: 200px;"
-                       value="<?= h($event['gravity_id_discount'] ?? 0) ?>"
-                       min="0" step="1" placeholder="0">
-                <small class="form-help">
-                    0 = använd seriens inställning, >0 = specifik rabatt för detta event
-                </small>
-            </div>
-            <?php
-            // Get series GID discount if available
-            if (!empty($event['series_id'])) {
-                try {
-                    $seriesGid = $db->getRow("SELECT gravity_id_discount FROM series WHERE id = ?", [$event['series_id']]);
-                    $seriesDiscount = floatval($seriesGid['gravity_id_discount'] ?? 0);
-                    if ($seriesDiscount > 0):
-            ?>
-            <div class="info-box mt-sm">
-                Seriens rabatt: <strong><?= $seriesDiscount ?> kr</strong>
-            </div>
-            <?php
-                    endif;
-                } catch (Exception $e) {}
-            }
-            ?>
-        </div>
-    </details>
-
-    <!-- LOCATION DETAILS - Editable for promotors -->
-    <details class="admin-card mb-lg">
-        <summary class="admin-card-header collapsible-header">
-            <h2>Platsdetaljer</h2>
-            <span class="text-secondary text-sm">Klicka för att expandera/minimera</span>
-        </summary>
-        <div class="admin-card-body">
-            <div class="form-grid form-grid-2">
-                <div class="admin-form-group">
-                    <label class="admin-form-label">GPS-koordinater</label>
-                    <input type="text" name="venue_coordinates" class="admin-form-input" value="<?= h($event['venue_coordinates'] ?? '') ?>" placeholder="59.3293, 18.0686">
+            <!-- Platsdetaljer -->
+            <div class="form-subsection">
+                <div class="form-subsection-label"><i data-lucide="map-pin"></i> Platsdetaljer</div>
+                <div class="form-grid form-grid-2">
+                    <div class="admin-form-group">
+                        <label class="admin-form-label">GPS-koordinater</label>
+                        <input type="text" name="venue_coordinates" class="admin-form-input" value="<?= h($event['venue_coordinates'] ?? '') ?>" placeholder="59.3293, 18.0686">
+                    </div>
+                    <div class="admin-form-group">
+                        <label class="admin-form-label">Google Maps URL</label>
+                        <input type="url" name="venue_map_url" class="admin-form-input" value="<?= h($event['venue_map_url'] ?? '') ?>">
+                    </div>
                 </div>
-
-                <div class="admin-form-group">
-                    <label class="admin-form-label">Google Maps URL</label>
-                    <input type="url" name="venue_map_url" class="admin-form-input" value="<?= h($event['venue_map_url'] ?? '') ?>">
-                </div>
-
-                <div class="admin-form-group form-full-width">
+                <div class="admin-form-group mt-md">
                     <label class="admin-form-label">Platsdetaljer</label>
                     <textarea name="venue_details" class="admin-form-input" rows="3"><?= h($event['venue_details'] ?? '') ?></textarea>
                 </div>
             </div>
+
+            <!-- Gravity ID-rabatt -->
+            <div class="form-subsection">
+                <div class="form-subsection-label"><i data-lucide="badge-check"></i> Gravity ID-rabatt</div>
+                <div class="form-grid form-grid-2">
+                    <div class="admin-form-group">
+                        <label class="admin-form-label">Rabatt (SEK)</label>
+                        <input type="number" name="gravity_id_discount" class="admin-form-input"
+                               value="<?= h($event['gravity_id_discount'] ?? 0) ?>"
+                               min="0" step="1" placeholder="0">
+                        <small class="form-help">0 = använd seriens inställning</small>
+                    </div>
+                    <div class="admin-form-group">
+                        <?php
+                        $seriesDiscount = 0;
+                        if (!empty($event['series_id'])) {
+                            try {
+                                $seriesGid = $db->getRow("SELECT gravity_id_discount FROM series WHERE id = ?", [$event['series_id']]);
+                                $seriesDiscount = floatval($seriesGid['gravity_id_discount'] ?? 0);
+                            } catch (Exception $e) {}
+                        }
+                        if ($seriesDiscount > 0): ?>
+                        <label class="admin-form-label">Seriens rabatt</label>
+                        <div class="info-box" style="padding: var(--space-sm); margin-top: var(--space-xs);">
+                            <strong><?= $seriesDiscount ?> kr</strong>
+                        </div>
+                        <?php else: ?>
+                        <label class="admin-form-label">&nbsp;</label>
+                        <small class="form-help" style="margin-top: var(--space-sm);">Ingen serierabatt konfigurerad</small>
+                        <?php endif; ?>
+                    </div>
+                </div>
+            </div>
+
         </div>
     </details>
 
@@ -1357,7 +1357,7 @@ include __DIR__ . '/components/unified-layout.php';
                             <span>Länkar</span>
                         </div>
                         <div class="info-links-list">
-                            <?php foreach ($eventInfoLinks['general'] as $link): ?>
+                            <?php foreach ($eventInfoLinks['general'] ?? [] as $link): ?>
                             <div class="info-link-row">
                                 <input type="url" name="info_link_general_url[]" class="admin-form-input" placeholder="https://..." value="<?= h($link['link_url'] ?? '') ?>">
                                 <input type="text" name="info_link_general_text[]" class="admin-form-input" placeholder="Visningsnamn (valfritt)" value="<?= h($link['link_text'] ?? '') ?>">
@@ -1400,7 +1400,7 @@ include __DIR__ . '/components/unified-layout.php';
                             <span>Länkar</span>
                         </div>
                         <div class="info-links-list">
-                            <?php foreach ($eventInfoLinks['regulations'] as $link): ?>
+                            <?php foreach ($eventInfoLinks['regulations'] ?? [] as $link): ?>
                             <div class="info-link-row">
                                 <input type="url" name="info_link_regulations_url[]" class="admin-form-input" placeholder="https://..." value="<?= h($link['link_url'] ?? '') ?>">
                                 <input type="text" name="info_link_regulations_text[]" class="admin-form-input" placeholder="Visningsnamn (valfritt)" value="<?= h($link['link_text'] ?? '') ?>">
@@ -1433,7 +1433,7 @@ include __DIR__ . '/components/unified-layout.php';
                             <span>Länkar</span>
                         </div>
                         <div class="info-links-list">
-                            <?php foreach ($eventInfoLinks['licenses'] as $link): ?>
+                            <?php foreach ($eventInfoLinks['licenses'] ?? [] as $link): ?>
                             <div class="info-link-row">
                                 <input type="url" name="info_link_licenses_url[]" class="admin-form-input" placeholder="https://..." value="<?= h($link['link_url'] ?? '') ?>">
                                 <input type="text" name="info_link_licenses_text[]" class="admin-form-input" placeholder="Visningsnamn (valfritt)" value="<?= h($link['link_text'] ?? '') ?>">
@@ -1984,12 +1984,13 @@ include __DIR__ . '/components/unified-layout.php';
 </div>
 
 <style>
+/* ===== FLOATING SAVE BAR ===== */
 .floating-save-bar {
     position: fixed;
     bottom: 0;
     left: 0;
     right: 0;
-    background: var(--color-bg);
+    background: var(--color-bg-surface);
     border-top: 1px solid var(--color-border);
     box-shadow: 0 -4px 12px rgba(0,0,0,0.1);
     padding: var(--space-sm) var(--space-md);
@@ -2001,7 +2002,6 @@ include __DIR__ . '/components/unified-layout.php';
         left: var(--sidebar-width, 280px);
     }
 }
-/* Mobile portrait: Position above mobile nav */
 @media (max-width: 899px) and (orientation: portrait) {
     .floating-save-bar {
         bottom: calc(var(--mobile-nav-height, 64px) + env(safe-area-inset-bottom, 0px));
@@ -2015,27 +2015,56 @@ include __DIR__ . '/components/unified-layout.php';
     max-width: 1200px;
     margin: 0 auto;
 }
-/* Mobile: Stack buttons */
-@media (max-width: 599px) {
-    .floating-save-content {
-        flex-direction: column;
-    }
-    .floating-save-content .btn {
-        width: 100%;
-        justify-content: center;
-    }
-}
-/* Add padding at bottom of page to account for floating bar */
 .admin-content {
     padding-bottom: 80px !important;
 }
-/* Extra padding on mobile for floating bar + mobile nav */
 @media (max-width: 899px) and (orientation: portrait) {
     .admin-content {
         padding-bottom: calc(80px + var(--mobile-nav-height, 64px) + env(safe-area-inset-bottom, 0px)) !important;
     }
 }
-/* ===== FACILITY FIELDS - Improved Layout ===== */
+
+/* ===== FORM SUB-SECTIONS - Visual grouping within cards ===== */
+.form-subsection {
+    padding-bottom: var(--space-md);
+    margin-bottom: var(--space-md);
+    border-bottom: 1px solid var(--color-border);
+}
+.form-subsection:last-child {
+    padding-bottom: 0;
+    margin-bottom: 0;
+    border-bottom: none;
+}
+.form-subsection-label {
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+    font-size: var(--text-xs);
+    font-weight: 600;
+    color: var(--color-text-muted);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: var(--space-md);
+}
+.form-subsection-label i {
+    width: 14px;
+    height: 14px;
+    color: var(--color-accent);
+}
+
+/* ===== FORM GRID IMPROVEMENTS ===== */
+.form-grid.form-grid-2 {
+    display: grid;
+    grid-template-columns: repeat(2, 1fr);
+    gap: var(--space-md);
+}
+.form-grid.form-grid-3 {
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-md);
+}
+
+/* ===== FACILITY FIELDS ===== */
 .facility-section-header {
     margin-bottom: var(--space-lg);
     padding-bottom: var(--space-md);
@@ -2052,20 +2081,17 @@ include __DIR__ . '/components/unified-layout.php';
     color: var(--color-text-secondary);
     margin: 0;
 }
-
 .facility-fields {
     display: flex;
     flex-direction: column;
     gap: var(--space-md);
 }
-
 .facility-field {
     background: var(--color-bg-surface);
     border: 1px solid var(--color-border);
     border-radius: var(--radius-md);
     overflow: hidden;
 }
-
 .facility-field-header {
     display: flex;
     justify-content: space-between;
@@ -2074,7 +2100,6 @@ include __DIR__ . '/components/unified-layout.php';
     background: var(--color-bg-hover);
     border-bottom: 1px solid var(--color-border);
 }
-
 .facility-field-label {
     display: flex;
     align-items: center;
@@ -2089,6 +2114,7 @@ include __DIR__ . '/components/unified-layout.php';
     color: var(--color-accent);
 }
 
+/* ===== GLOBAL TOGGLE ===== */
 .global-toggle {
     display: flex;
     align-items: center;
@@ -2119,7 +2145,13 @@ include __DIR__ . '/components/unified-layout.php';
 .global-toggle span {
     font-weight: 500;
 }
+.global-toggle-group {
+    display: flex;
+    gap: var(--space-2xs);
+    flex-wrap: wrap;
+}
 
+/* ===== TEXTAREA ===== */
 .facility-textarea {
     width: 100%;
     min-height: 100px;
@@ -2139,6 +2171,7 @@ include __DIR__ . '/components/unified-layout.php';
     color: var(--color-text-muted);
 }
 
+/* ===== PUBLISH DATE ROW ===== */
 .publish-date-row {
     display: flex;
     align-items: center;
@@ -2165,7 +2198,7 @@ include __DIR__ . '/components/unified-layout.php';
     color: var(--color-text-muted);
 }
 
-/* ===== INFO LINKS SECTION - Inside facility-field cards ===== */
+/* ===== INFO LINKS ===== */
 .info-links-section {
     border-top: 1px solid var(--color-border);
     background: var(--color-bg-hover);
@@ -2214,15 +2247,79 @@ include __DIR__ . '/components/unified-layout.php';
     font-size: var(--text-xs) !important;
 }
 
-/* ===== GLOBAL TOGGLE GROUP - Multiple radio toggles in a row ===== */
-.global-toggle-group {
-    display: flex;
+/* ===== LOCKED SECTION BADGE ===== */
+.locked-badge {
+    display: inline-flex;
+    align-items: center;
     gap: var(--space-2xs);
-    flex-wrap: wrap;
+    font-size: var(--text-xs);
+    color: var(--color-text-muted);
+    padding: var(--space-2xs) var(--space-sm);
+    background: var(--color-bg-hover);
+    border-radius: var(--radius-full);
+}
+.locked-badge i {
+    width: 12px;
+    height: 12px;
 }
 
-/* Mobile: Stack facility fields edge-to-edge */
+/* ========================================================
+   MOBILE: Edge-to-edge admin cards + better form layout
+   ======================================================== */
 @media (max-width: 767px) {
+    /* Admin cards go edge-to-edge on mobile */
+    .admin-card.mb-lg,
+    details.admin-card {
+        margin-left: calc(-1 * var(--space-md));
+        margin-right: calc(-1 * var(--space-md));
+        border-radius: 0 !important;
+        border-left: none !important;
+        border-right: none !important;
+        width: calc(100% + 2 * var(--space-md));
+    }
+
+    /* Card body needs comfortable padding on mobile */
+    .admin-card-body,
+    fieldset.admin-card-body {
+        padding: var(--space-md) !important;
+    }
+
+    /* Form grids collapse to single column on mobile */
+    .form-grid,
+    .form-grid.form-grid-2,
+    .form-grid.form-grid-3 {
+        grid-template-columns: 1fr !important;
+        gap: var(--space-md) !important;
+    }
+
+    /* Larger touch targets for inputs */
+    .admin-form-input,
+    .admin-form-select,
+    .admin-form-textarea,
+    input[type="text"],
+    input[type="email"],
+    input[type="tel"],
+    input[type="url"],
+    input[type="number"],
+    input[type="date"],
+    input[type="time"],
+    input[type="datetime-local"],
+    select,
+    textarea {
+        min-height: 48px !important;
+        font-size: 16px !important; /* Prevents iOS zoom */
+    }
+
+    /* Floating save bar: full width buttons */
+    .floating-save-content {
+        flex-direction: row;
+    }
+    .floating-save-content .btn-admin {
+        flex: 1;
+        justify-content: center;
+    }
+
+    /* Facility fields edge-to-edge */
     .facility-fields {
         gap: 0;
         margin-left: calc(-1 * var(--space-md));
@@ -2234,18 +2331,67 @@ include __DIR__ . '/components/unified-layout.php';
         border-right: none;
         margin-bottom: -1px;
     }
+    .facility-field-header {
+        flex-wrap: wrap;
+        gap: var(--space-xs);
+    }
+
+    /* Info link rows: stack on mobile */
     .info-link-row {
         grid-template-columns: 1fr auto;
     }
     .info-link-row input[type="text"] {
         grid-column: 1;
     }
-    .global-toggle-group {
-        gap: var(--space-2xs);
+
+    /* Collapsible header: easier to tap */
+    .collapsible-header {
+        padding: var(--space-md) !important;
+        min-height: 52px;
     }
-    .facility-field-header {
-        flex-wrap: wrap;
-        gap: var(--space-xs);
+    .collapsible-header h2 {
+        font-size: var(--text-md) !important;
+    }
+
+    /* Sub-section labels */
+    .form-subsection-label {
+        padding-top: var(--space-xs);
+    }
+
+    /* Alert edge-to-edge */
+    .alert.mb-lg {
+        margin-left: calc(-1 * var(--space-md));
+        margin-right: calc(-1 * var(--space-md));
+        border-radius: 0 !important;
+        border-left: none !important;
+        border-right: none !important;
+        width: calc(100% + 2 * var(--space-md));
+    }
+}
+
+/* Extra small screens */
+@media (max-width: 374px) {
+    .admin-card-body,
+    fieldset.admin-card-body {
+        padding: var(--space-sm) !important;
+    }
+
+    .admin-card.mb-lg,
+    details.admin-card {
+        margin-left: calc(-1 * var(--space-sm));
+        margin-right: calc(-1 * var(--space-sm));
+        width: calc(100% + 2 * var(--space-sm));
+    }
+
+    .facility-fields {
+        margin-left: calc(-1 * var(--space-sm));
+        margin-right: calc(-1 * var(--space-sm));
+    }
+
+    .alert.mb-lg {
+        margin-left: calc(-1 * var(--space-sm));
+        margin-right: calc(-1 * var(--space-sm));
+        width: calc(100% + 2 * var(--space-sm));
     }
 }
 
