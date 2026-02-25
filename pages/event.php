@@ -81,6 +81,26 @@ if (!function_exists('getEventContent')) {
         }
         return $event[$field] ?? '';
     }
+
+    /**
+     * Render section links HTML for an event info section
+     * @param array $links Array of link arrays with 'link_url' and 'link_text'
+     * @return string HTML output
+     */
+    function renderSectionLinks(array $links): string {
+        if (empty($links)) return '';
+        $html = '<div style="margin-top: var(--space-sm); display: flex; flex-direction: column; gap: var(--space-2xs);">';
+        foreach ($links as $link) {
+            $url = $link['link_url'] ?? '';
+            if (empty($url)) continue;
+            $text = !empty($link['link_text']) ? $link['link_text'] : $url;
+            $html .= '<a href="' . htmlspecialchars($url, ENT_QUOTES) . '" target="_blank" rel="noopener" style="display: inline-flex; align-items: center; gap: var(--space-2xs); color: var(--color-accent-text);">'
+                   . '<i data-lucide="external-link" style="width: 16px; height: 16px;"></i>'
+                   . htmlspecialchars($text, ENT_QUOTES) . '</a>';
+        }
+        $html .= '</div>';
+        return $html;
+    }
 }
 
 try {
@@ -139,7 +159,8 @@ try {
     }
 
     // Load info links per section for this event (migration 057+058)
-    $eventInfoLinks = ['general' => [], 'regulations' => [], 'licenses' => []];
+    // Dynamic: any section is supported
+    $eventInfoLinks = [];
     try {
         $linkStmt = $db->prepare("SELECT section, link_url, link_text FROM event_info_links WHERE event_id = ? ORDER BY sort_order, id");
         $linkStmt->execute([$eventId]);
@@ -2002,7 +2023,8 @@ $generalCompInfo = getEventContent($event, 'general_competition_info', 'general_
 $compClassesInfo = getEventContent($event, 'competition_classes_info', 'competition_classes_use_global', $globalTextMap, 'competition_classes_hidden');
 ?>
 
-<?php if (!empty($invitationText)): ?>
+<?php $invitationLinks = $eventInfoLinks['invitation'] ?? []; ?>
+<?php if (!empty($invitationText) || !empty($invitationLinks)): ?>
 <section class="card mb-lg">
     <div class="card-header">
         <h2 class="card-title">
@@ -2011,12 +2033,14 @@ $compClassesInfo = getEventContent($event, 'competition_classes_info', 'competit
         </h2>
     </div>
     <div class="card-body">
-        <div class="prose"><?= format_text($invitationText) ?></div>
+        <?php if (!empty($invitationText)): ?><div class="prose"><?= format_text($invitationText) ?></div><?php endif; ?>
+        <?= renderSectionLinks($invitationLinks) ?>
     </div>
 </section>
 <?php endif; ?>
 
-<?php if (!empty($generalCompInfo) || !empty($eventInfoLinks['general'])): ?>
+<?php $generalLinks = $eventInfoLinks['general'] ?? []; ?>
+<?php if (!empty($generalCompInfo) || !empty($generalLinks)): ?>
 <section class="card mb-lg">
     <div class="card-header">
         <h2 class="card-title">
@@ -2028,20 +2052,7 @@ $compClassesInfo = getEventContent($event, 'competition_classes_info', 'competit
         <?php if (!empty($generalCompInfo)): ?>
         <div class="prose"><?= format_text($generalCompInfo) ?></div>
         <?php endif; ?>
-        <?php if (!empty($eventInfoLinks['general'])): ?>
-        <div style="margin-top: var(--space-sm); display: flex; flex-direction: column; gap: var(--space-2xs);">
-            <?php foreach ($eventInfoLinks['general'] as $link):
-                $url = $link['link_url'] ?? '';
-                if (empty($url)) continue;
-                $text = !empty($link['link_text']) ? $link['link_text'] : $url;
-            ?>
-            <a href="<?= h($url) ?>" target="_blank" rel="noopener" style="display: inline-flex; align-items: center; gap: var(--space-2xs); color: var(--color-accent-text);">
-                <i data-lucide="external-link" style="width: 16px; height: 16px;"></i>
-                <?= h($text) ?>
-            </a>
-            <?php endforeach; ?>
-        </div>
-        <?php endif; ?>
+        <?= renderSectionLinks($generalLinks) ?>
     </div>
 </section>
 <?php endif; ?>
@@ -2078,20 +2089,7 @@ $allRegulationsLinks = array_merge($regulationsGlobalLinks, $regulationsEventLin
         <?php if (!empty($regulationsText)): ?>
         <div class="prose"><?= format_text($regulationsText) ?></div>
         <?php endif; ?>
-        <?php if (!empty($allRegulationsLinks)): ?>
-        <div style="margin-top: var(--space-sm); display: flex; flex-direction: column; gap: var(--space-2xs);">
-            <?php foreach ($allRegulationsLinks as $link):
-                $url = $link['link_url'] ?? '';
-                if (empty($url)) continue;
-                $text = !empty($link['link_text']) ? $link['link_text'] : $url;
-            ?>
-            <a href="<?= h($url) ?>" target="_blank" rel="noopener" style="display: inline-flex; align-items: center; gap: var(--space-2xs); color: var(--color-accent-text);">
-                <i data-lucide="external-link" style="width: 16px; height: 16px;"></i>
-                <?= h($text) ?>
-            </a>
-            <?php endforeach; ?>
-        </div>
-        <?php endif; ?>
+        <?= renderSectionLinks($allRegulationsLinks) ?>
     </div>
 </section>
 <?php endif; ?>
@@ -2124,25 +2122,13 @@ $allLicenseLinks = array_merge($licenseGlobalLinks, $licenseEventLinks);
         <?php if (!empty($licenseText)): ?>
         <div class="prose"><?= format_text($licenseText) ?></div>
         <?php endif; ?>
-        <?php if (!empty($allLicenseLinks)): ?>
-        <div style="margin-top: var(--space-sm); display: flex; flex-direction: column; gap: var(--space-2xs);">
-            <?php foreach ($allLicenseLinks as $link):
-                $url = $link['link_url'] ?? '';
-                if (empty($url)) continue;
-                $text = !empty($link['link_text']) ? $link['link_text'] : $url;
-            ?>
-            <a href="<?= h($url) ?>" target="_blank" rel="noopener" style="display: inline-flex; align-items: center; gap: var(--space-2xs); color: var(--color-accent-text);">
-                <i data-lucide="external-link" style="width: 16px; height: 16px;"></i>
-                <?= h($text) ?>
-            </a>
-            <?php endforeach; ?>
-        </div>
-        <?php endif; ?>
+        <?= renderSectionLinks($allLicenseLinks) ?>
     </div>
 </section>
 <?php endif; ?>
 
-<?php if (!empty($compClassesInfo)): ?>
+<?php $compClassLinks = $eventInfoLinks['competition_classes'] ?? []; ?>
+<?php if (!empty($compClassesInfo) || !empty($compClassLinks)): ?>
 <section class="card">
     <div class="card-header">
         <h2 class="card-title">
@@ -2151,7 +2137,8 @@ $allLicenseLinks = array_merge($licenseGlobalLinks, $licenseEventLinks);
         </h2>
     </div>
     <div class="card-body">
-        <div class="prose"><?= format_text($compClassesInfo) ?></div>
+        <?php if (!empty($compClassesInfo)): ?><div class="prose"><?= format_text($compClassesInfo) ?></div><?php endif; ?>
+        <?= renderSectionLinks($compClassLinks) ?>
     </div>
 </section>
 <?php endif; ?>
@@ -2169,19 +2156,28 @@ $allLicenseLinks = array_merge($licenseGlobalLinks, $licenseEventLinks);
 <?php elseif ($activeTab === 'faciliteter'): ?>
 <!-- FACILITETER TAB - Facilities & Logistics -->
 <?php
-$hydrationInfo = getEventContent($event, 'hydration_stations', 'hydration_use_global', $globalTextMap, 'hydration_hidden');
-$toiletsInfo = getEventContent($event, 'toilets_showers', 'toilets_use_global', $globalTextMap, 'toilets_hidden');
-$bikeWashInfo = getEventContent($event, 'bike_wash', 'bike_wash_use_global', $globalTextMap, 'bike_wash_hidden');
-$foodCafe = getEventContent($event, 'food_cafe', 'food_use_global', $globalTextMap, 'food_hidden');
-$shopsInfo = getEventContent($event, 'shops_info', 'shops_use_global', $globalTextMap, 'shops_hidden');
-$exhibitorsInfo = getEventContent($event, 'exhibitors', 'exhibitors_use_global', $globalTextMap, 'exhibitors_hidden');
-$parkingInfo = !empty($event['parking_hidden']) ? '' : ($event['parking_detailed'] ?? '');
-$hotelInfo = !empty($event['hotel_hidden']) ? '' : ($event['hotel_accommodation'] ?? '');
-$localInfo = getEventContent($event, 'local_info', 'local_use_global', $globalTextMap, 'local_hidden');
-$medicalInfo = getEventContent($event, 'medical_info', 'medical_use_global', $globalTextMap, 'medical_hidden');
-$mediaInfo = getEventContent($event, 'media_production', 'media_use_global', $globalTextMap, 'media_hidden');
-$contactsInfo = getEventContent($event, 'contacts_info', 'contacts_use_global', $globalTextMap, 'contacts_hidden');
-$hasFacilities = $hydrationInfo || $toiletsInfo || $bikeWashInfo || $foodCafe || $shopsInfo || $exhibitorsInfo || $parkingInfo || $hotelInfo || $localInfo || $medicalInfo || $mediaInfo || $contactsInfo;
+// Build facilities data array (content + links)
+$facilityDefs = [
+    ['key' => 'hydration_stations', 'global' => 'hydration_use_global', 'hidden' => 'hydration_hidden', 'icon' => 'droplets', 'label' => 'Vätskekontroller'],
+    ['key' => 'toilets_showers', 'global' => 'toilets_use_global', 'hidden' => 'toilets_hidden', 'icon' => 'bath', 'label' => 'Toaletter/Dusch'],
+    ['key' => 'bike_wash', 'global' => 'bike_wash_use_global', 'hidden' => 'bike_wash_hidden', 'icon' => 'sparkles', 'label' => 'Cykeltvätt'],
+    ['key' => 'food_cafe', 'global' => 'food_use_global', 'hidden' => 'food_hidden', 'icon' => 'utensils', 'label' => 'Mat/Café'],
+    ['key' => 'shops_info', 'global' => 'shops_use_global', 'hidden' => 'shops_hidden', 'icon' => 'shopping-bag', 'label' => 'Affärer'],
+    ['key' => 'exhibitors', 'global' => 'exhibitors_use_global', 'hidden' => 'exhibitors_hidden', 'icon' => 'store', 'label' => 'Utställare'],
+    ['key' => 'parking_detailed', 'global' => 'parking_use_global', 'hidden' => 'parking_hidden', 'icon' => 'car', 'label' => 'Parkering'],
+    ['key' => 'hotel_accommodation', 'global' => 'hotel_use_global', 'hidden' => 'hotel_hidden', 'icon' => 'bed', 'label' => 'Hotell/Boende'],
+    ['key' => 'local_info', 'global' => 'local_use_global', 'hidden' => 'local_hidden', 'icon' => 'map-pin', 'label' => 'Lokal information'],
+    ['key' => 'medical_info', 'global' => 'medical_use_global', 'hidden' => 'medical_hidden', 'icon' => 'heart-pulse', 'label' => 'Sjukvård'],
+    ['key' => 'media_production', 'global' => 'media_use_global', 'hidden' => 'media_hidden', 'icon' => 'camera', 'label' => 'Media'],
+    ['key' => 'contacts_info', 'global' => 'contacts_use_global', 'hidden' => 'contacts_hidden', 'icon' => 'phone', 'label' => 'Kontakter'],
+];
+$hasFacilities = false;
+foreach ($facilityDefs as &$f) {
+    $f['text'] = getEventContent($event, $f['key'], $f['global'], $globalTextMap, $f['hidden']);
+    $f['links'] = $eventInfoLinks[$f['key']] ?? [];
+    if (!empty($f['text']) || !empty($f['links'])) $hasFacilities = true;
+}
+unset($f);
 ?>
 
 <section class="card">
@@ -2194,89 +2190,15 @@ $hasFacilities = $hydrationInfo || $toiletsInfo || $bikeWashInfo || $foodCafe ||
     <div class="card-body">
         <?php if ($hasFacilities): ?>
         <div class="info-grid">
-            <?php if (!empty($hydrationInfo)): ?>
+            <?php foreach ($facilityDefs as $f): ?>
+            <?php if (!empty($f['text']) || !empty($f['links'])): ?>
             <div class="info-block">
-                <h3><i data-lucide="droplets"></i> Vätskekontroller</h3>
-                <p><?= format_text($hydrationInfo) ?></p>
+                <h3><i data-lucide="<?= $f['icon'] ?>"></i> <?= $f['label'] ?></h3>
+                <?php if (!empty($f['text'])): ?><p><?= format_text($f['text']) ?></p><?php endif; ?>
+                <?= renderSectionLinks($f['links']) ?>
             </div>
             <?php endif; ?>
-
-            <?php if (!empty($toiletsInfo)): ?>
-            <div class="info-block">
-                <h3><i data-lucide="bath"></i> Toaletter/Dusch</h3>
-                <p><?= format_text($toiletsInfo) ?></p>
-            </div>
-            <?php endif; ?>
-
-            <?php if (!empty($bikeWashInfo)): ?>
-            <div class="info-block">
-                <h3><i data-lucide="sparkles"></i> Cykeltvätt</h3>
-                <p><?= format_text($bikeWashInfo) ?></p>
-            </div>
-            <?php endif; ?>
-
-            <?php if (!empty($foodCafe)): ?>
-            <div class="info-block">
-                <h3><i data-lucide="utensils"></i> Mat/Café</h3>
-                <p><?= format_text($foodCafe) ?></p>
-            </div>
-            <?php endif; ?>
-
-            <?php if (!empty($shopsInfo)): ?>
-            <div class="info-block">
-                <h3><i data-lucide="shopping-bag"></i> Affärer</h3>
-                <p><?= format_text($shopsInfo) ?></p>
-            </div>
-            <?php endif; ?>
-
-            <?php if (!empty($exhibitorsInfo)): ?>
-            <div class="info-block">
-                <h3><i data-lucide="store"></i> Utställare</h3>
-                <p><?= format_text($exhibitorsInfo) ?></p>
-            </div>
-            <?php endif; ?>
-
-            <?php if (!empty($parkingInfo)): ?>
-            <div class="info-block">
-                <h3><i data-lucide="car"></i> Parkering</h3>
-                <p><?= format_text($parkingInfo) ?></p>
-            </div>
-            <?php endif; ?>
-
-            <?php if (!empty($hotelInfo)): ?>
-            <div class="info-block">
-                <h3><i data-lucide="bed"></i> Hotell/Boende</h3>
-                <p><?= format_text($hotelInfo) ?></p>
-            </div>
-            <?php endif; ?>
-
-            <?php if (!empty($localInfo)): ?>
-            <div class="info-block">
-                <h3><i data-lucide="map-pin"></i> Lokal information</h3>
-                <p><?= format_text($localInfo) ?></p>
-            </div>
-            <?php endif; ?>
-
-            <?php if (!empty($medicalInfo)): ?>
-            <div class="info-block">
-                <h3><i data-lucide="heart-pulse"></i> Sjukvård</h3>
-                <p><?= format_text($medicalInfo) ?></p>
-            </div>
-            <?php endif; ?>
-
-            <?php if (!empty($mediaInfo)): ?>
-            <div class="info-block">
-                <h3><i data-lucide="camera"></i> Media</h3>
-                <p><?= format_text($mediaInfo) ?></p>
-            </div>
-            <?php endif; ?>
-
-            <?php if (!empty($contactsInfo)): ?>
-            <div class="info-block">
-                <h3><i data-lucide="phone"></i> Kontakter</h3>
-                <p><?= format_text($contactsInfo) ?></p>
-            </div>
-            <?php endif; ?>
+            <?php endforeach; ?>
         </div>
         <?php else: ?>
         <p class="text-muted">Ingen information tillgänglig för detta event ännu.</p>
@@ -2296,92 +2218,51 @@ if (!$pmPublished):
     </div>
 </section>
 <?php else:
-// Get all PM-related content
-$pmContent = getEventContent($event, 'pm_content', 'pm_use_global', $globalTextMap, 'pm_hidden');
-$driverMeetingPM = getEventContent($event, 'driver_meeting', 'driver_meeting_use_global', $globalTextMap, 'driver_meeting_hidden');
-$trainingPM = getEventContent($event, 'training_info', 'training_use_global', $globalTextMap, 'training_hidden');
-$timingPM = getEventContent($event, 'timing_info', 'timing_use_global', $globalTextMap, 'timing_hidden');
-$liftPM = getEventContent($event, 'lift_info', 'lift_use_global', $globalTextMap, 'lift_hidden');
-$rulesPM = getEventContent($event, 'competition_rules', 'rules_use_global', $globalTextMap, 'rules_hidden');
-$insurancePM = getEventContent($event, 'insurance_info', 'insurance_use_global', $globalTextMap, 'insurance_hidden');
-$equipmentPM = getEventContent($event, 'equipment_info', 'equipment_use_global', $globalTextMap, 'equipment_hidden');
-$scfPM = getEventContent($event, 'scf_representatives', 'scf_use_global', $globalTextMap, 'scf_hidden');
-$medicalPM = getEventContent($event, 'medical_info', 'medical_use_global', $globalTextMap, 'medical_hidden');
-$hasPMContent = $pmContent || $driverMeetingPM || $trainingPM || $timingPM || $liftPM || $rulesPM || $insurancePM || $equipmentPM || $scfPM || $medicalPM;
+// Build PM data array (content + links)
+$pmDefs = [
+    ['key' => 'pm_content', 'global' => 'pm_use_global', 'hidden' => 'pm_hidden', 'icon' => 'file-text', 'label' => 'PM Huvudtext', 'main' => true],
+    ['key' => 'driver_meeting', 'global' => 'driver_meeting_use_global', 'hidden' => 'driver_meeting_hidden', 'icon' => 'megaphone', 'label' => 'Förarmöte'],
+    ['key' => 'training_info', 'global' => 'training_use_global', 'hidden' => 'training_hidden', 'icon' => 'bike', 'label' => 'Träning'],
+    ['key' => 'timing_info', 'global' => 'timing_use_global', 'hidden' => 'timing_hidden', 'icon' => 'timer', 'label' => 'Tidtagning'],
+    ['key' => 'lift_info', 'global' => 'lift_use_global', 'hidden' => 'lift_hidden', 'icon' => 'cable-car', 'label' => 'Lift'],
+    ['key' => 'competition_rules', 'global' => 'rules_use_global', 'hidden' => 'rules_hidden', 'icon' => 'book-open', 'label' => 'Tävlingsregler'],
+    ['key' => 'insurance_info', 'global' => 'insurance_use_global', 'hidden' => 'insurance_hidden', 'icon' => 'shield-check', 'label' => 'Försäkring'],
+    ['key' => 'equipment_info', 'global' => 'equipment_use_global', 'hidden' => 'equipment_hidden', 'icon' => 'hard-hat', 'label' => 'Utrustning'],
+    ['key' => 'medical_info', 'global' => 'medical_use_global', 'hidden' => 'medical_hidden', 'icon' => 'heart-pulse', 'label' => 'Sjukvård'],
+    ['key' => 'scf_representatives', 'global' => 'scf_use_global', 'hidden' => 'scf_hidden', 'icon' => 'badge-check', 'label' => 'SCF Representanter'],
+];
+$hasPMContent = false;
+$hasSubPM = false;
+foreach ($pmDefs as &$p) {
+    $p['text'] = getEventContent($event, $p['key'], $p['global'], $globalTextMap, $p['hidden']);
+    $p['links'] = $eventInfoLinks[$p['key']] ?? [];
+    $hasContent = !empty($p['text']) || !empty($p['links']);
+    if ($hasContent) $hasPMContent = true;
+    if ($hasContent && empty($p['main'])) $hasSubPM = true;
+}
+unset($p);
 ?>
 <section class="card">
     <div class="card-header">
         <h2 class="card-title"><i data-lucide="clipboard-list"></i> PM (Promemoria)</h2>
     </div>
     <div class="card-body">
-        <?php if ($pmContent): ?>
-        <div class="prose mb-lg"><?= format_text($pmContent) ?></div>
+        <?php if (!empty($pmDefs[0]['text'])): ?>
+        <div class="prose mb-lg"><?= format_text($pmDefs[0]['text']) ?></div>
         <?php endif; ?>
+        <?= renderSectionLinks($pmDefs[0]['links']) ?>
 
-        <?php if ($driverMeetingPM || $trainingPM || $timingPM || $liftPM || $rulesPM || $insurancePM || $equipmentPM || $scfPM || $medicalPM): ?>
+        <?php if ($hasSubPM): ?>
         <div class="info-grid">
-            <?php if ($driverMeetingPM): ?>
+            <?php foreach (array_slice($pmDefs, 1) as $p): ?>
+            <?php if (!empty($p['text']) || !empty($p['links'])): ?>
             <div class="info-block">
-                <h3><i data-lucide="megaphone"></i> Förarmöte</h3>
-                <p><?= format_text($driverMeetingPM) ?></p>
+                <h3><i data-lucide="<?= $p['icon'] ?>"></i> <?= $p['label'] ?></h3>
+                <?php if (!empty($p['text'])): ?><p><?= format_text($p['text']) ?></p><?php endif; ?>
+                <?= renderSectionLinks($p['links']) ?>
             </div>
             <?php endif; ?>
-
-            <?php if ($trainingPM): ?>
-            <div class="info-block">
-                <h3><i data-lucide="bike"></i> Träning</h3>
-                <p><?= format_text($trainingPM) ?></p>
-            </div>
-            <?php endif; ?>
-
-            <?php if ($timingPM): ?>
-            <div class="info-block">
-                <h3><i data-lucide="timer"></i> Tidtagning</h3>
-                <p><?= format_text($timingPM) ?></p>
-            </div>
-            <?php endif; ?>
-
-            <?php if ($liftPM): ?>
-            <div class="info-block">
-                <h3><i data-lucide="cable-car"></i> Lift</h3>
-                <p><?= format_text($liftPM) ?></p>
-            </div>
-            <?php endif; ?>
-
-            <?php if ($rulesPM): ?>
-            <div class="info-block">
-                <h3><i data-lucide="book-open"></i> Tävlingsregler</h3>
-                <p><?= format_text($rulesPM) ?></p>
-            </div>
-            <?php endif; ?>
-
-            <?php if ($insurancePM): ?>
-            <div class="info-block">
-                <h3><i data-lucide="shield-check"></i> Försäkring</h3>
-                <p><?= format_text($insurancePM) ?></p>
-            </div>
-            <?php endif; ?>
-
-            <?php if ($equipmentPM): ?>
-            <div class="info-block">
-                <h3><i data-lucide="hard-hat"></i> Utrustning</h3>
-                <p><?= format_text($equipmentPM) ?></p>
-            </div>
-            <?php endif; ?>
-
-            <?php if ($medicalPM): ?>
-            <div class="info-block">
-                <h3><i data-lucide="heart-pulse"></i> Sjukvård</h3>
-                <p><?= format_text($medicalPM) ?></p>
-            </div>
-            <?php endif; ?>
-
-            <?php if ($scfPM): ?>
-            <div class="info-block">
-                <h3><i data-lucide="badge-check"></i> SCF Representanter</h3>
-                <p><?= format_text($scfPM) ?></p>
-            </div>
-            <?php endif; ?>
+            <?php endforeach; ?>
         </div>
         <?php endif; ?>
 
@@ -2399,10 +2280,12 @@ $hasPMContent = $pmContent || $driverMeetingPM || $trainingPM || $timingPM || $l
         <h2 class="card-title"><i data-lucide="gavel"></i> Jurykommuniké</h2>
     </div>
     <div class="card-body">
-        <?php $juryContent = getEventContent($event, 'jury_communication', 'jury_use_global', $globalTextMap, 'jury_hidden'); ?>
+        <?php $juryContent = getEventContent($event, 'jury_communication', 'jury_use_global', $globalTextMap, 'jury_hidden'); $juryLinks = $eventInfoLinks['jury_communication'] ?? []; ?>
         <?php if ($juryContent): ?>
             <div class="prose"><?= format_text($juryContent) ?></div>
-        <?php else: ?>
+        <?php endif; ?>
+        <?= renderSectionLinks($juryLinks) ?>
+        <?php if (!$juryContent && empty($juryLinks)): ?>
             <p class="text-muted">Ingen jurykommuniké tillgänglig.</p>
         <?php endif; ?>
     </div>
@@ -2415,10 +2298,12 @@ $hasPMContent = $pmContent || $driverMeetingPM || $trainingPM || $timingPM || $l
         <h2 class="card-title"><i data-lucide="calendar-clock"></i> Tävlingsschema</h2>
     </div>
     <div class="card-body">
-        <?php $scheduleContent = getEventContent($event, 'competition_schedule', 'schedule_use_global', $globalTextMap, 'schedule_hidden'); ?>
+        <?php $scheduleContent = getEventContent($event, 'competition_schedule', 'schedule_use_global', $globalTextMap, 'schedule_hidden'); $scheduleLinks = $eventInfoLinks['competition_schedule'] ?? []; ?>
         <?php if ($scheduleContent): ?>
             <div class="prose"><?= format_text($scheduleContent) ?></div>
-        <?php else: ?>
+        <?php endif; ?>
+        <?= renderSectionLinks($scheduleLinks) ?>
+        <?php if (!$scheduleContent && empty($scheduleLinks)): ?>
             <p class="text-muted">Inget tävlingsschema tillgängligt.</p>
         <?php endif; ?>
     </div>
@@ -2431,10 +2316,12 @@ $hasPMContent = $pmContent || $driverMeetingPM || $trainingPM || $timingPM || $l
         <h2 class="card-title"><i data-lucide="clock"></i> Starttider</h2>
     </div>
     <div class="card-body">
-        <?php $startContent = getEventContent($event, 'start_times', 'start_times_use_global', $globalTextMap, 'start_times_hidden'); ?>
+        <?php $startContent = getEventContent($event, 'start_times', 'start_times_use_global', $globalTextMap, 'start_times_hidden'); $startLinks = $eventInfoLinks['start_times'] ?? []; ?>
         <?php if ($startContent): ?>
             <div class="prose"><?= format_text($startContent) ?></div>
-        <?php else: ?>
+        <?php endif; ?>
+        <?= renderSectionLinks($startLinks) ?>
+        <?php if (!$startContent && empty($startLinks)): ?>
             <p class="text-muted">Inga starttider publicerade ännu.</p>
         <?php endif; ?>
     </div>
@@ -2447,10 +2334,12 @@ $hasPMContent = $pmContent || $driverMeetingPM || $trainingPM || $timingPM || $l
         <h2 class="card-title"><i data-lucide="route"></i> Bansträckningar</h2>
     </div>
     <div class="card-body">
-        <?php $courseTracksContent = getEventContent($event, 'course_tracks', 'course_tracks_use_global', $globalTextMap); ?>
+        <?php $courseTracksContent = getEventContent($event, 'course_tracks', 'course_tracks_use_global', $globalTextMap); $courseLinks = $eventInfoLinks['course_tracks'] ?? []; ?>
         <?php if ($courseTracksContent): ?>
             <div class="prose"><?= format_text($courseTracksContent) ?></div>
-        <?php else: ?>
+        <?php endif; ?>
+        <?= renderSectionLinks($courseLinks) ?>
+        <?php if (!$courseTracksContent && empty($courseLinks)): ?>
             <p class="text-muted">Ingen information om bansträckningar tillgänglig.</p>
         <?php endif; ?>
     </div>

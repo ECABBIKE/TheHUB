@@ -1,6 +1,38 @@
 # TheHUB - Memory / Session Knowledge
 
-> Senast uppdaterad: 2026-02-24
+> Senast uppdaterad: 2026-02-25
+
+---
+
+## UNIVERSELLA LÄNKAR I ALLA EVENT-SEKTIONER (2026-02-25)
+
+### Bakgrund
+- Tidigare stödde bara 3 sektioner (general, regulations, licenses) länkar via `event_info_links`-tabellen
+- Nu stödjer ALLA ~30 informationssektioner länkar (inbjudan, faciliteter, PM, jury, schema, etc.)
+
+### Ändringar i admin/event-edit.php
+- `$eventInfoLinks` laddas nu dynamiskt (inga hardkodade sektioner)
+- Sparning använder regex-parsing av POST-nycklar: `preg_match('/^info_link_(.+)_url$/', ...)`
+- Länk-UI (`.info-links-section`) tillagt i alla fält-loopar: facilityFields, pmFields, otherTabFields
+- Även `invitation` och `competition_classes` har fått länk-UI
+
+### Ändringar i pages/event.php
+- Ny helper `renderSectionLinks()` - renderar länklista konsekvent med external-link-ikon
+- Faciliteter-fliken refaktorerad från 12 manuella block till data-driven `$facilityDefs`-array
+- PM-fliken refaktorerad från 10 manuella block till data-driven `$pmDefs`-array
+- Jury, Schema, Starttider, Bansträckning använder nu `renderSectionLinks()` istället för manuell rendering
+- Alla befintliga manuella länk-renderingar (general, regulations, licenses) ersatta med `renderSectionLinks()`
+
+### Sektionsnycklar (section-kolumnen i event_info_links)
+- `invitation`, `general`, `regulations`, `licenses`, `competition_classes`
+- Faciliteter: `hydration_stations`, `toilets`, `bike_wash`, `food_options`, `camping`, `first_aid`, `transport_info`, `parking_info`, `spectator_info`, `environmental_info`, `accessibility_info`, `other_facilities`
+- PM: `pm_general`, `pm_registration_info`, `pm_equipment`, `pm_safety`, `pm_other`
+- Övriga: `jury_info`, `schedule`, `start_times`, `course_description`
+
+### Tekniska detaljer
+- `addInfoLink(section)` JS-funktion stödjer alla sektionsnamn dynamiskt
+- Inga migrationsändringar behövdes - `event_info_links.section` VARCHAR(30) var redan flexibelt
+- Fallback: sektioner utan länkar visas utan länk-sektion (ingen UI-påverkan)
 
 ---
 
@@ -86,7 +118,7 @@
 - Fallback till gamla kolumnerna om tabellen inte finns (try/catch i både admin och publik vy)
 
 ### Migration 058 (Regelverk + Licenser + globala text-länkar)
-- `event_info_links.section` - VARCHAR(30), default 'general' - stödjer 'general', 'regulations', 'licenses'
+- `event_info_links.section` - VARCHAR(30), default 'general' - stödjer ALLA sektioner (se "UNIVERSELLA LÄNKAR" ovan)
 - `events.regulations_info` TEXT - egen regelverkstext per event
 - `events.regulations_global_type` VARCHAR(20) - 'sportmotion', 'competition' eller tom (egen text)
 - `events.regulations_hidden` TINYINT - dölj regelverk-rutan
