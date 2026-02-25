@@ -4,6 +4,37 @@
 
 ---
 
+## BETALNINGSMOTTAGARE & AVRÄKNINGAR (2026-02-25)
+
+### Nya admin-sidor
+- **`/admin/payment-recipients.php`** - CRUD för betalningsmottagare (Swish, bank, Stripe)
+  - Lista med kort-layout, skapa/redigera/aktivera-inaktivera
+  - Hanterar: namn, org.nr, kontakt, Swish, bank, plattformsavgift (procent/fast/båda)
+  - Koppling till promotor-användare via `admin_user_id`
+- **`/admin/settlements.php`** - Avräkningsvy per betalningsmottagare
+  - Visar alla betalda ordrar kopplade till en mottagare via event/serie
+  - Beräknar per order: brutto, betalningsavgift (Stripe/Swish), plattformsavgift, netto
+  - Filter: år, månad, mottagare
+  - Sammanfattningskort med totaler överst
+
+### Migration 059
+- `payment_recipients.admin_user_id` INT NULL - FK till `admin_users(id)` ON DELETE SET NULL
+- Möjliggör koppling mellan betalningsmottagare och promotor-användare
+
+### SQL-strategi (förenklad vs promotor.php)
+Avräkningssidan (`settlements.php`) använder **enklare SQL** än den befintliga ekonomivyn i `promotor.php`:
+1. Hitta alla event med `events.payment_recipient_id = ?`
+2. Hitta alla serier med `series.payment_recipient_id = ?`
+3. Hämta ordrar via `orders.event_id IN (events)` OR `orders.series_id IN (serier)`
+4. Plus fallback via `order_items → series_registrations` för serie-ordrar utan `series_id`
+
+### Navigation
+- Tillagda som flikar i Konfiguration → Ekonomi-gruppen i `admin-tabs-config.php`
+- Tillagda i `tools.php` under "Medlemskap & Betalningar"-sektionen
+- `unified-layout.php` pageMap: `payment-recipients` och `settlements` → `economy`
+
+---
+
 ## EKONOMI EVENT-FILTER: ROBUSTGJORT MED FYRA SÖKVÄGAR (2026-02-25)
 
 ### Grundorsak (iteration 2 - djupare)

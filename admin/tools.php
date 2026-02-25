@@ -965,12 +965,40 @@ include __DIR__ . '/components/unified-layout.php';
         <div class="tool-header">
             <div class="tool-icon"><i data-lucide="undo-2"></i></div>
             <div>
-                <h4 class="tool-title">Aterbetalningar</h4>
-                <p class="tool-description">Processa refunds med auto transfer-aterforing</p>
+                <h4 class="tool-title">Återbetalningar</h4>
+                <p class="tool-description">Processa refunds med auto transfer-återföring</p>
             </div>
         </div>
         <div class="tool-actions">
             <a href="/admin/process-refunds.php" class="btn-admin btn-admin-secondary">Öppna</a>
+        </div>
+    </div>
+
+    <!-- Betalningsmottagare -->
+    <div class="card">
+        <div class="tool-header">
+            <div class="tool-icon"><i data-lucide="building-2"></i></div>
+            <div>
+                <h4 class="tool-title">Betalningsmottagare</h4>
+                <p class="tool-description">Hantera mottagare, avgifter och bankuppgifter</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/payment-recipients.php" class="btn-admin btn-admin-primary">Öppna</a>
+        </div>
+    </div>
+
+    <!-- Avräkningar -->
+    <div class="card">
+        <div class="tool-header">
+            <div class="tool-icon"><i data-lucide="receipt"></i></div>
+            <div>
+                <h4 class="tool-title">Avräkningar</h4>
+                <p class="tool-description">Ekonomisk översikt per betalningsmottagare</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/settlements.php" class="btn-admin btn-admin-primary">Öppna</a>
         </div>
     </div>
 
