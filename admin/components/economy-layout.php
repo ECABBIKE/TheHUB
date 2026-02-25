@@ -111,8 +111,9 @@ $theme = hub_get_theme();
     <link rel="stylesheet" href="<?= hub_asset('css/utilities.css') ?>">
     <link rel="stylesheet" href="<?= hub_asset('css/grid.css') ?>">
 
-    <!-- Admin CSS -->
-    <link rel="stylesheet" href="/admin/assets/css/admin.css?v=<?= filemtime(__DIR__ . '/../assets/css/admin.css') ?>">
+    <!-- Admin CSS - same as unified-layout.php -->
+    <link rel="stylesheet" href="/admin/assets/css/admin-layout-only.css?v=<?= filemtime(__DIR__ . '/../assets/css/admin-layout-only.css') ?>">
+    <link rel="stylesheet" href="/admin/assets/css/admin-color-fix.css?v=<?= filemtime(__DIR__ . '/../assets/css/admin-color-fix.css') ?>">
 </head>
 <body>
     <a href="#main-content" class="skip-link">Hoppa till huvudinnehåll</a>

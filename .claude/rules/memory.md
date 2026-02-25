@@ -4,41 +4,54 @@
 
 ---
 
-## ADMIN MOBIL EDGE-TO-EDGE FIX (2026-02-25) - ITERATION 2
+## ADMIN MOBIL EDGE-TO-EDGE FIX (2026-02-25) - ITERATION 3 (GLOBAL)
 
-### Problem 1: Sektion 26 överskrev mobilregler
-- `admin-color-fix.css` sektion 24 satte `border-radius: 0` på mobil
-- Sektion 26 (border-radius, rad ~955) kom EFTER och satte tillbaka `border-radius: 14px !important`
-- Samma specificitet + senare position = sektion 26 vann alltid
-- **Fix:** Flyttade alla mobilregler till sektion 37, allra SIST i filen
+### Grundorsaker som fixats
+1. **Sektion 26** överskrev mobilregler (border-radius 14px) → Flyttat mobilregler till sektion 37 SIST i filen
+2. **branding.json** satte `--container-padding: 32px` utan media query → unified-layout.php genererar nu media queries per breakpoint
+3. **CSS-variabler** opålitliga på mobil → Sektion 37 använder HÅRDKODADE pixelvärden (12px/8px)
+4. **economy-layout.php** laddade `admin.css` istf `admin-color-fix.css` → Fixat till samma CSS som unified-layout
+5. **33 card bodies med `style="padding: 0"`** för tabeller överskrevs av sektion 37 → `:has(> table)` undantag
 
-### Problem 2: branding.json satte --container-padding: 32px på ALLA skärmar
-- `unified-layout.php` läste BARA `$responsive['desktop']` från branding.json
-- Genererade `--container-padding: 32px` i inline `<style>` utan media query
-- På iPhone: admin-main fick 32px padding, kort fick -32px margin → matematiskt edge-to-edge
-- MEN: kort-innehållet fick OCKSÅ `var(--container-padding)` = 32px inre padding → ingen synlig skillnad
-- **Fix 1:** unified-layout.php genererar nu media queries per breakpoint (mobil 12px, tablet 24px, desktop 32px)
-- **Fix 2:** Sektion 37 använder HÅRDKODADE pixelvärden (12px) istället för CSS-variabler
+### Sektion 37: Fullständig mobil-arkitektur (admin-color-fix.css, SIST i filen)
 
-### Problem 3: Floating save-knapp svävade ovanför bottenmenyn
-- `bottom: calc(var(--mobile-nav-height) + env(safe-area-inset-bottom))` skapade extra gap
-- **Fix:** `bottom: var(--mobile-nav-height, 64px)` utan extra safe-area (nav hanterar det)
+**Edge-to-edge kort** (max-width: 767px):
+- admin-main: 12px padding (hardkodat)
+- Kort: -12px negativ margin, border-radius: 0, inga sidoborders
+- Stat-kort: INTE edge-to-edge (behåller radius + border)
+- Card-body med tabell: padding 0 (`:has(> table)` / `.p-0`)
+- Card-body med formulär: padding 10px 12px
 
-### Nuvarande CSS-arkitektur (viktigt)
-- **admin-layout-only.css**: Grundläggande layout (bas-regler utan !important)
-- **admin-color-fix.css**: Laddas SIST, överskriver med !important
-  - Sektion 16: admin-main padding (12px → 24px → 32px per breakpoint, hardkodat)
-  - Sektion 17: Kort styling (padding, radius, box-shadow)
-  - Sektion 26: Border radius (14px, gäller BARA på desktop)
-  - **Sektion 37: Mobil edge-to-edge (MÅSTE vara SIST, hardkodade px-värden)**
-- **branding.json → inline `<style>`**: CSS-variabler med media queries
-- **Sida-specifik `<style>`**: Bara unika komponenter (form-subsection, facility-field etc.)
+**Tabeller** (automatisk horisontell scroll):
+- `.admin-card-body`, `.card-body`, `.admin-table-container`, `.table-responsive` → `overflow-x: auto`
+- Tabeller inuti kort: `min-width: 500px` → tvingar scroll istället för squish
+- Första kolumnen: `position: sticky; left: 0` → stannar kvar vid scroll
+- Kompakta celler: 8px 10px padding, 13px font
+
+**Övrigt mobil**:
+- Flikar (tabs): `overflow-x: auto`, `white-space: nowrap` → horisontell scroll
+- Modaler: fullscreen (100vw, 100vh)
+- Filter bars: edge-to-edge
+- Knappar: kompakta (13px, 8px 12px)
+- Page header: kompakt (1.25rem)
+
+**Extra litet** (max-width: 480px):
+- admin-main: 8px padding
+- Kort: -8px negativ margin
+- Tabellceller: 6px 8px, 12px font
 
 ### VIKTIGT: Regler för framtida CSS-ändringar
 1. Mobilregler MÅSTE ligga i sektion 37 (sist i admin-color-fix.css)
 2. Använd ALDRIG `var(--container-padding)` i mobilregler - branding kan överskriva
 3. Använd hardkodade px-värden: 12px (mobil), 8px (< 480px)
 4. `!important` i stylesheet > inline styles utan `!important`
+5. Card-body med tabell: använd `:has(> table)` eller `.p-0` klass för padding: 0
+6. Nya tabellwrappers: `.admin-table-container` ELLER `.table-responsive`
+
+### CSS-laddningskedja (alla admin-sidor)
+- **unified-layout.php** → admin-layout-only.css + admin-color-fix.css (de flesta sidor)
+- **economy-layout.php** → admin-layout-only.css + admin-color-fix.css (ekonomisidor, FIXAT)
+- **branding.json** → inline `<style>` med media queries per breakpoint (FIXAT)
 
 ---
 
