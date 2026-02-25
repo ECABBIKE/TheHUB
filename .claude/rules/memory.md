@@ -4,6 +4,50 @@
 
 ---
 
+## ADMIN EVENT-EDIT MOBILANPASSNING & OMSTRUKTURERING (2026-02-25)
+
+### Bugg: eventInfoLinks PHP warnings
+- `$eventInfoLinks` initierades som tom `[]` utan default-nycklar
+- `foreach ($eventInfoLinks['regulations'] as $link)` kraschade med "Undefined array key"
+- **Fix:** Lagt till `?? []` på alla tre foreach-loopar (general, regulations, licenses)
+
+### Omstrukturering av de första 5 sektionerna
+- **Grundläggande information**: Uppdelad i 5 visuella sub-sektioner med `form-subsection`
+  - Eventnamn (egen rad)
+  - Datum & typ (startdatum, slutdatum, eventtyp, advent ID)
+  - Plats (plats + bana/anläggning)
+  - Logga (media-väljare)
+  - Anmälan (öppnar, max deltagare, frist datum/tid)
+- **Tävlingsinställningar**: Uppdelad i 3 sub-sektioner
+  - Format & disciplin (huvudformat, event-format, alla format checkboxar)
+  - Serie & ranking (serie, rankingklass, poängskala, prismall)
+  - Bana (distans, höjdmeter, sträcknamn)
+- **Arrangör + Gravity ID + Platsdetaljer**: Sammanslagna till EN sektion "Arrangör, plats & rabatt"
+  - Arrangör & kontakt (klubb, webb, email, telefon)
+  - Platsdetaljer (GPS, Maps URL, detaljer)
+  - Gravity ID-rabatt (belopp + seriens rabatt)
+
+### CSS-komponent: `.form-subsection`
+- Ny CSS-klass för visuell gruppering inuti admin-cards
+- Separeras med border-bottom mellan grupper
+- Varje sub-sektion har en `.form-subsection-label` med ikon + uppercase text
+- Sista subsection har ingen border-bottom
+
+### Mobile edge-to-edge för admin event-edit
+- `.admin-card.mb-lg` och `details.admin-card` går nu kant-till-kant på mobil (max-width: 767px)
+- Negativa marginaler matchar `.admin-main` padding (var(--space-md) = 16px)
+- `.alert.mb-lg` går också edge-to-edge
+- Extra små skärmar (max-width: 374px) matchar --space-sm istället
+
+### Mobila förbättringar
+- Alla inputs har `min-height: 48px` på mobil (bättre touch targets)
+- `font-size: 16px` på inputs förhindrar iOS auto-zoom
+- Form grids kollapsar till 1 kolumn på mobil
+- Floating save bar: knappar sida vid sida (inte staplat)
+- Collapsible headers: min-height 52px för enklare tapp
+
+---
+
 ## UNIVERSELLA LÄNKAR I ALLA EVENT-SEKTIONER (2026-02-25)
 
 ### Bakgrund
