@@ -102,18 +102,21 @@ if ($isAdmin) {
 
         if ($filterEvent > 0) {
             // Include direct event orders AND series orders if the event belongs to a series
+            // Uses series_events junction table to find which series the event belongs to
             $conditions[] = "(o.event_id = ? OR o.id IN (
                 SELECT oi_f.order_id FROM order_items oi_f
                 JOIN series_registrations sr_f ON sr_f.id = oi_f.series_registration_id
-                JOIN events e_f ON e_f.series_id = sr_f.series_id
-                WHERE e_f.id = ? AND oi_f.item_type = 'series_registration'
+                JOIN series_events se_f ON se_f.series_id = sr_f.series_id
+                WHERE se_f.event_id = ? AND oi_f.item_type = 'series_registration'
             ))";
             $params[] = $filterEvent;
             $params[] = $filterEvent;
         }
 
         if ($filterRecipient > 0) {
-            $conditions[] = "(e.payment_recipient_id = ? OR s_series.payment_recipient_id = ?)";
+            // Check recipient via event OR via series (for series orders where event_id is NULL)
+            $conditions[] = "(e.payment_recipient_id = ? OR s_series.payment_recipient_id = ? OR s_name.recipient_id = ?)";
+            $params[] = $filterRecipient;
             $params[] = $filterRecipient;
             $params[] = $filterRecipient;
         }
@@ -129,13 +132,13 @@ if ($isAdmin) {
             LEFT JOIN events e ON o.event_id = e.id
             LEFT JOIN series s_series ON e.series_id = s_series.id
             LEFT JOIN (
-                SELECT oi2.order_id, CONCAT(s2.name, ' (serie)') as sname
+                SELECT oi2.order_id, s2.payment_recipient_id as recipient_id, CONCAT(s2.name, ' (serie)') as sname
                 FROM order_items oi2
                 JOIN series_registrations sr2 ON sr2.id = oi2.series_registration_id
                 JOIN series s2 ON s2.id = sr2.series_id
                 WHERE oi2.item_type = 'series_registration'
                 GROUP BY oi2.order_id
-            ) s_name ON s_name.order_id = o.id AND o.event_id IS NULL
+            ) s_name ON s_name.order_id = o.id
             WHERE {$whereClause}
             ORDER BY o.created_at DESC
         ", $params);
@@ -207,6 +210,7 @@ if ($isAdmin) {
     } catch (Exception $e) {}
 
     // Get events that have paid orders OR belong to a series with paid registrations (for filter)
+    // Uses series_events junction table (many-to-many) instead of events.series_id
     $filterEvents = [];
     try {
         $filterEvents = $db->getAll("
@@ -214,9 +218,12 @@ if ($isAdmin) {
             FROM events e
             WHERE (
                 e.id IN (SELECT DISTINCT o.event_id FROM orders o WHERE o.payment_status = 'paid' AND YEAR(o.created_at) = ?)
-                OR e.series_id IN (
-                    SELECT DISTINCT sr.series_id FROM series_registrations sr
-                    WHERE sr.payment_status = 'paid' AND sr.status != 'cancelled'
+                OR e.id IN (
+                    SELECT se.event_id FROM series_events se
+                    WHERE se.series_id IN (
+                        SELECT DISTINCT sr.series_id FROM series_registrations sr
+                        WHERE sr.payment_status = 'paid' AND sr.status != 'cancelled'
+                    )
                 )
             )
             ORDER BY e.date DESC
@@ -286,7 +293,8 @@ if (!$isAdmin) {
             FROM series s
             JOIN promotor_series ps ON ps.series_id = s.id
             LEFT JOIN media m ON s.banner_media_id = m.id
-            LEFT JOIN events e ON e.series_id = s.id AND YEAR(e.date) = YEAR(CURDATE())
+            LEFT JOIN series_events se_cnt ON se_cnt.series_id = s.id
+            LEFT JOIN events e ON e.id = se_cnt.event_id AND YEAR(e.date) = YEAR(CURDATE())
             LEFT JOIN pricing_templates pt ON pt.id = s.default_pricing_template_id
             WHERE ps.user_id = ?
             GROUP BY s.id
@@ -298,11 +306,13 @@ if (!$isAdmin) {
 
     // Get promotor's events with registration + revenue data
     // Sort: upcoming first (by date ASC), then past events after
+    // Uses series_events junction table for many-to-many event-series linking
     try {
         $promotorEvents = $db->getAll("
             SELECT e.id, e.name, e.date, e.location, e.active, e.series_id,
                    e.max_participants,
-                   s.name as series_name, s.logo as series_logo,
+                   COALESCE(s.name, se_s.name) as series_name,
+                   COALESCE(s.logo, se_s.logo) as series_logo,
                    COALESCE(reg.total_count, 0) as total_registrations,
                    COALESCE(reg.paid_count, 0) as paid_count,
                    COALESCE(reg.pending_count, 0) as pending_count,
@@ -316,6 +326,8 @@ if (!$isAdmin) {
                    CASE WHEN e.date >= CURDATE() THEN 0 ELSE 1 END as is_past
             FROM events e
             LEFT JOIN series s ON e.series_id = s.id
+            LEFT JOIN series_events se_link ON se_link.event_id = e.id
+            LEFT JOIN series se_s ON se_link.series_id = se_s.id AND s.id IS NULL
             JOIN promotor_events pe ON pe.event_id = e.id
             LEFT JOIN (
                 SELECT event_id,
@@ -340,14 +352,14 @@ if (!$isAdmin) {
                 FROM series_registrations sr
                 WHERE sr.payment_status = 'paid' AND sr.status != 'cancelled'
                 GROUP BY sr.series_id
-            ) series_agg ON series_agg.series_id = e.series_id
+            ) series_agg ON series_agg.series_id = COALESCE(e.series_id, se_link.series_id)
             LEFT JOIN (
                 SELECT series_id, COUNT(*) as event_count
-                FROM events
-                WHERE series_id IS NOT NULL
+                FROM series_events
                 GROUP BY series_id
-            ) series_event_count ON series_event_count.series_id = e.series_id
+            ) series_event_count ON series_event_count.series_id = COALESCE(e.series_id, se_link.series_id)
             WHERE pe.user_id = ?
+            GROUP BY e.id
             ORDER BY is_past ASC,
                      CASE WHEN e.date >= CURDATE() THEN e.date END ASC,
                      CASE WHEN e.date < CURDATE() THEN e.date END DESC
@@ -432,11 +444,11 @@ if (!$isAdmin) {
 
         // Build conditions for promotor's orders (via their events or series)
         $allEventIds = $promotorEventIds;
-        // Also get events from promotor's series
+        // Also get events from promotor's series via series_events junction table
         if (!empty($promotorSeriesIds)) {
             try {
                 $placeholders = implode(',', array_fill(0, count($promotorSeriesIds), '?'));
-                $seriesEventRows = $db->getAll("SELECT id FROM events WHERE series_id IN ({$placeholders})", $promotorSeriesIds);
+                $seriesEventRows = $db->getAll("SELECT DISTINCT event_id as id FROM series_events WHERE series_id IN ({$placeholders})", $promotorSeriesIds);
                 foreach ($seriesEventRows as $ser) {
                     if (!in_array($ser['id'], $allEventIds)) $allEventIds[] = $ser['id'];
                 }
@@ -459,11 +471,12 @@ if (!$isAdmin) {
         }
         if ($ecoEvent > 0) {
             // Include direct event orders AND series orders if the event belongs to a series
+            // Uses series_events junction table to find series membership
             $baseConditions[] = "(o.event_id = ? OR o.id IN (
                 SELECT oi_f.order_id FROM order_items oi_f
                 JOIN series_registrations sr_f ON sr_f.id = oi_f.series_registration_id
-                JOIN events e_f ON e_f.series_id = sr_f.series_id
-                WHERE e_f.id = ? AND oi_f.item_type = 'series_registration'
+                JOIN series_events se_f ON se_f.series_id = sr_f.series_id
+                WHERE se_f.event_id = ? AND oi_f.item_type = 'series_registration'
             ))";
             $baseParams[] = $ecoEvent;
             $baseParams[] = $ecoEvent;
