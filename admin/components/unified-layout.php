@@ -177,15 +177,37 @@ if (!isset($current_admin_page)) {
                 $cssOutput .= '--header-height:' . $headerHeight . 'px;';
             }
 
-            // Process responsive layout settings
+            // Process responsive layout settings - generate media queries per breakpoint
             $responsive = $brandingData['responsive'] ?? null;
+            $responsiveCss = '';
             if ($responsive) {
+                // Mobile portrait (default / base) - max-width: 767px
+                $mobilePadding = intval($responsive['mobile_portrait']['padding'] ?? 12);
+                $mobileRadius = intval($responsive['mobile_portrait']['radius'] ?? 0);
+                // Base (mobile-first): set mobile values as default
+                $cssOutput .= '--container-padding:' . $mobilePadding . 'px;';
+                $cssOutput .= '--card-radius:' . $mobileRadius . 'px;';
+
+                // Tablet - min-width: 768px
+                $tabletPadding = intval($responsive['tablet']['padding'] ?? 24);
+                $tabletRadius = intval($responsive['tablet']['radius'] ?? 8);
+                $responsiveCss .= '@media(min-width:768px){:root{';
+                $responsiveCss .= '--container-padding:' . $tabletPadding . 'px;';
+                $responsiveCss .= '--card-radius:' . $tabletRadius . 'px;';
+                $responsiveCss .= '--radius-sm:' . $tabletRadius . 'px;';
+                $responsiveCss .= '--radius-md:' . $tabletRadius . 'px;';
+                $responsiveCss .= '--radius-lg:' . $tabletRadius . 'px;';
+                $responsiveCss .= '}}';
+
+                // Desktop - min-width: 1024px
                 $desktopPadding = intval($responsive['desktop']['padding'] ?? 32);
                 $desktopRadius = intval($responsive['desktop']['radius'] ?? 12);
-                $cssOutput .= '--container-padding:' . $desktopPadding . 'px;';
-                $cssOutput .= '--radius-sm:' . $desktopRadius . 'px;';
-                $cssOutput .= '--radius-md:' . $desktopRadius . 'px;';
-                $cssOutput .= '--radius-lg:' . $desktopRadius . 'px;';
+                $responsiveCss .= '@media(min-width:1024px){:root{';
+                $responsiveCss .= '--container-padding:' . $desktopPadding . 'px;';
+                $responsiveCss .= '--radius-sm:' . $desktopRadius . 'px;';
+                $responsiveCss .= '--radius-md:' . $desktopRadius . 'px;';
+                $responsiveCss .= '--radius-lg:' . $desktopRadius . 'px;';
+                $responsiveCss .= '}}';
             }
 
             // Process gradient settings
@@ -202,13 +224,16 @@ if (!isset($current_admin_page)) {
             }
 
             // Output combined CSS
-            if ($cssOutput || $colorsCss || $layout || $gradient) {
+            if ($cssOutput || $colorsCss || $layout || $gradient || $responsiveCss) {
                 echo '<style id="admin-branding">';
                 if ($cssOutput) {
                     echo ':root{' . $cssOutput . '}';
                 }
                 if ($colorsCss) {
                     echo ':root{' . $colorsCss . '}';
+                }
+                if ($responsiveCss) {
+                    echo $responsiveCss;
                 }
                 echo '</style>';
             }

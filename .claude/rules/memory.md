@@ -4,37 +4,41 @@
 
 ---
 
-## ADMIN MOBIL EDGE-TO-EDGE FIX (2026-02-25)
+## ADMIN MOBIL EDGE-TO-EDGE FIX (2026-02-25) - ITERATION 2
 
-### Problem: Gigantiska marginaler på admin-sidor på mobil
-- `admin-color-fix.css` laddades SIST med `!important` på allt
-- Satte `padding: var(--card-padding, 16px) !important` och `border-radius: var(--radius-lg, 14px) !important` på alla kort
-- Hade **INGA edge-to-edge mobilregler** → kort behöll border-radius, sidmarginaler och padding
-- Tre CSS-filer slogs mot varandra: `admin-layout-only.css` + `admin-color-fix.css` + event-edit.php `<style>`
-- Resultat: 16px (admin-main) + 16px (card) + 24px (fieldset inline) = 56px slösad plats per sida
+### Problem 1: Sektion 26 överskrev mobilregler
+- `admin-color-fix.css` sektion 24 satte `border-radius: 0` på mobil
+- Sektion 26 (border-radius, rad ~955) kom EFTER och satte tillbaka `border-radius: 14px !important`
+- Samma specificitet + senare position = sektion 26 vann alltid
+- **Fix:** Flyttade alla mobilregler till sektion 37, allra SIST i filen
 
-### Fix: Edge-to-edge i admin-color-fix.css (sektion 24)
-- **Kort går kant-till-kant**: negativa marginaler matchar `--container-padding`, border-radius: 0, inga sidoborders
-- **Strukturerade kort** (med header/body): yttre padding = 0, header och body har `12px var(--container-padding)` padding
-- **Enkla kort** (utan header/body): kompakt padding `12px var(--container-padding)`
-- **Stat-kort**: INTE edge-to-edge (behåller border-radius och borders i grid)
-- **Alerts & filterrader**: edge-to-edge
-- **Form grids**: kollapsar till 1 kolumn
-- **`:has()` selector**: Används för att skilja strukturerade kort (med .admin-card-body) från enkla
-- **`!important` i stylesheet slår inline styles**: Fieldsets med `style="padding: var(--space-lg)"` överrids korrekt
+### Problem 2: branding.json satte --container-padding: 32px på ALLA skärmar
+- `unified-layout.php` läste BARA `$responsive['desktop']` från branding.json
+- Genererade `--container-padding: 32px` i inline `<style>` utan media query
+- På iPhone: admin-main fick 32px padding, kort fick -32px margin → matematiskt edge-to-edge
+- MEN: kort-innehållet fick OCKSÅ `var(--container-padding)` = 32px inre padding → ingen synlig skillnad
+- **Fix 1:** unified-layout.php genererar nu media queries per breakpoint (mobil 12px, tablet 24px, desktop 32px)
+- **Fix 2:** Sektion 37 använder HÅRDKODADE pixelvärden (12px) istället för CSS-variabler
 
-### Rensning av event-edit.php mobilregler
-- Borttagna duplicerade edge-to-edge regler (hanteras nu globalt av admin-color-fix.css)
-- Behållet: form grids, touch targets, facility fields, info links, floating save bar
+### Problem 3: Floating save-knapp svävade ovanför bottenmenyn
+- `bottom: calc(var(--mobile-nav-height) + env(safe-area-inset-bottom))` skapade extra gap
+- **Fix:** `bottom: var(--mobile-nav-height, 64px)` utan extra safe-area (nav hanterar det)
 
-### admin-layout-only.css rensning
-- Borttaget: `.admin-card { padding: var(--space-md); border-radius: var(--radius-md); }` vid 599px (konfliktar)
+### Nuvarande CSS-arkitektur (viktigt)
+- **admin-layout-only.css**: Grundläggande layout (bas-regler utan !important)
+- **admin-color-fix.css**: Laddas SIST, överskriver med !important
+  - Sektion 16: admin-main padding (12px → 24px → 32px per breakpoint, hardkodat)
+  - Sektion 17: Kort styling (padding, radius, box-shadow)
+  - Sektion 26: Border radius (14px, gäller BARA på desktop)
+  - **Sektion 37: Mobil edge-to-edge (MÅSTE vara SIST, hardkodade px-värden)**
+- **branding.json → inline `<style>`**: CSS-variabler med media queries
+- **Sida-specifik `<style>`**: Bara unika komponenter (form-subsection, facility-field etc.)
 
-### CSS-arkitektur (viktigt)
-- **admin-layout-only.css**: Grundläggande layout, sidebar, header, cards (bas-regler utan !important)
-- **admin-color-fix.css**: Laddas SIST, överskriver ALLT med !important, MÅSTE ha mobilregler
-- **Sida-specifik `<style>`**: Bara för unika komponenter (form-subsection, facility-field etc.)
-- **Regel**: Alla globala mobilregler MÅSTE finnas i admin-color-fix.css, annars överrids de
+### VIKTIGT: Regler för framtida CSS-ändringar
+1. Mobilregler MÅSTE ligga i sektion 37 (sist i admin-color-fix.css)
+2. Använd ALDRIG `var(--container-padding)` i mobilregler - branding kan överskriva
+3. Använd hardkodade px-värden: 12px (mobil), 8px (< 480px)
+4. `!important` i stylesheet > inline styles utan `!important`
 
 ---
 
