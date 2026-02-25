@@ -101,21 +101,37 @@ if ($isAdmin) {
         }
 
         if ($filterEvent > 0) {
-            // Include direct event orders AND series orders if the event belongs to a series
-            // Uses series_events junction table to find which series the event belongs to
-            $conditions[] = "(o.event_id = ? OR o.id IN (
-                SELECT oi_f.order_id FROM order_items oi_f
-                JOIN series_registrations sr_f ON sr_f.id = oi_f.series_registration_id
-                JOIN series_events se_f ON se_f.series_id = sr_f.series_id
-                WHERE se_f.event_id = ? AND oi_f.item_type = 'series_registration'
-            ))";
+            // Include direct event orders AND series orders covering this event
+            // Path 1: Direct (o.event_id)
+            // Path 2: Via series_events junction table
+            // Path 3: Via series_registration_events snapshot
+            // Path 4: Via events.series_id (legacy)
+            $conditions[] = "(o.event_id = ?
+                OR o.id IN (
+                    SELECT oi_f.order_id FROM order_items oi_f
+                    JOIN series_registrations sr_f ON sr_f.id = oi_f.series_registration_id
+                    JOIN series_events se_f ON se_f.series_id = sr_f.series_id
+                    WHERE se_f.event_id = ? AND oi_f.item_type = 'series_registration'
+                )
+                OR o.id IN (
+                    SELECT sr_f2.order_id FROM series_registrations sr_f2
+                    JOIN series_registration_events sre_f ON sre_f.series_registration_id = sr_f2.id
+                    WHERE sre_f.event_id = ? AND sr_f2.payment_status = 'paid'
+                )
+                OR o.series_id IN (
+                    SELECT se_f3.series_id FROM series_events se_f3 WHERE se_f3.event_id = ?
+                )
+            )";
+            $params[] = $filterEvent;
+            $params[] = $filterEvent;
             $params[] = $filterEvent;
             $params[] = $filterEvent;
         }
 
         if ($filterRecipient > 0) {
-            // Check recipient via event OR via series (for series orders where event_id is NULL)
-            $conditions[] = "(e.payment_recipient_id = ? OR s_series.payment_recipient_id = ? OR s_name.recipient_id = ?)";
+            // Check recipient via event, via event's series, via order's series (direct), or via order_items
+            $conditions[] = "(e.payment_recipient_id = ? OR s_via_event.payment_recipient_id = ? OR s_via_order.payment_recipient_id = ? OR s_via_items.recipient_id = ?)";
+            $params[] = $filterRecipient;
             $params[] = $filterRecipient;
             $params[] = $filterRecipient;
             $params[] = $filterRecipient;
@@ -127,10 +143,11 @@ if ($isAdmin) {
             SELECT o.id, o.order_number, o.total_amount, o.payment_method, o.payment_status,
                    {$stripeFeeCol}
                    o.event_id, o.created_at,
-                   COALESCE(e.name, s_name.sname, '-') as event_name
+                   COALESCE(e.name, s_via_items.sname, '-') as event_name
             FROM orders o
             LEFT JOIN events e ON o.event_id = e.id
-            LEFT JOIN series s_series ON e.series_id = s_series.id
+            LEFT JOIN series s_via_event ON e.series_id = s_via_event.id
+            LEFT JOIN series s_via_order ON o.series_id = s_via_order.id
             LEFT JOIN (
                 SELECT oi2.order_id, s2.payment_recipient_id as recipient_id, CONCAT(s2.name, ' (serie)') as sname
                 FROM order_items oi2
@@ -138,7 +155,7 @@ if ($isAdmin) {
                 JOIN series s2 ON s2.id = sr2.series_id
                 WHERE oi2.item_type = 'series_registration'
                 GROUP BY oi2.order_id
-            ) s_name ON s_name.order_id = o.id
+            ) s_via_items ON s_via_items.order_id = o.id
             WHERE {$whereClause}
             ORDER BY o.created_at DESC
         ", $params);
@@ -210,25 +227,41 @@ if ($isAdmin) {
     } catch (Exception $e) {}
 
     // Get events that have paid orders OR belong to a series with paid registrations (for filter)
-    // Uses series_events junction table (many-to-many) instead of events.series_id
+    // Uses THREE paths to find series events (belt and suspenders):
+    // 1. Direct orders (orders.event_id)
+    // 2. Via orders.series_id → series_events junction table
+    // 3. Via series_registration_events snapshot table
+    // 4. Via events.series_id (legacy fallback)
     $filterEvents = [];
     try {
         $filterEvents = $db->getAll("
             SELECT DISTINCT e.id, e.name, e.date
             FROM events e
             WHERE (
-                e.id IN (SELECT DISTINCT o.event_id FROM orders o WHERE o.payment_status = 'paid' AND YEAR(o.created_at) = ?)
+                e.id IN (SELECT DISTINCT o.event_id FROM orders o WHERE o.payment_status = 'paid' AND YEAR(o.created_at) = ? AND o.event_id IS NOT NULL)
                 OR e.id IN (
                     SELECT se.event_id FROM series_events se
-                    WHERE se.series_id IN (
-                        SELECT DISTINCT sr.series_id FROM series_registrations sr
-                        WHERE sr.payment_status = 'paid' AND sr.status != 'cancelled'
+                    JOIN orders o2 ON o2.series_id = se.series_id
+                    WHERE o2.payment_status = 'paid' AND o2.series_id IS NOT NULL
+                )
+                OR e.id IN (
+                    SELECT sre.event_id FROM series_registration_events sre
+                    JOIN series_registrations sr ON sr.id = sre.series_registration_id
+                    WHERE sr.payment_status = 'paid' AND sr.status != 'cancelled'
+                )
+                OR e.id IN (
+                    SELECT e2.id FROM events e2
+                    WHERE e2.series_id IN (
+                        SELECT DISTINCT sr2.series_id FROM series_registrations sr2
+                        WHERE sr2.payment_status = 'paid' AND sr2.status != 'cancelled'
                     )
                 )
             )
             ORDER BY e.date DESC
         ", [$filterYear]);
-    } catch (Exception $e) {}
+    } catch (Exception $e) {
+        error_log("Economy filter events error: " . $e->getMessage());
+    }
 
     // Swedish month names
     $monthNames = [
@@ -470,14 +503,26 @@ if (!$isAdmin) {
             $baseParams[] = $ecoMonth;
         }
         if ($ecoEvent > 0) {
-            // Include direct event orders AND series orders if the event belongs to a series
-            // Uses series_events junction table to find series membership
-            $baseConditions[] = "(o.event_id = ? OR o.id IN (
-                SELECT oi_f.order_id FROM order_items oi_f
-                JOIN series_registrations sr_f ON sr_f.id = oi_f.series_registration_id
-                JOIN series_events se_f ON se_f.series_id = sr_f.series_id
-                WHERE se_f.event_id = ? AND oi_f.item_type = 'series_registration'
-            ))";
+            // Include direct event orders AND series orders covering this event
+            // Multiple paths for reliability (series_events, series_registration_events, orders.series_id)
+            $baseConditions[] = "(o.event_id = ?
+                OR o.id IN (
+                    SELECT oi_f.order_id FROM order_items oi_f
+                    JOIN series_registrations sr_f ON sr_f.id = oi_f.series_registration_id
+                    JOIN series_events se_f ON se_f.series_id = sr_f.series_id
+                    WHERE se_f.event_id = ? AND oi_f.item_type = 'series_registration'
+                )
+                OR o.id IN (
+                    SELECT sr_f2.order_id FROM series_registrations sr_f2
+                    JOIN series_registration_events sre_f ON sre_f.series_registration_id = sr_f2.id
+                    WHERE sre_f.event_id = ? AND sr_f2.payment_status = 'paid'
+                )
+                OR o.series_id IN (
+                    SELECT se_f3.series_id FROM series_events se_f3 WHERE se_f3.event_id = ?
+                )
+            )";
+            $baseParams[] = $ecoEvent;
+            $baseParams[] = $ecoEvent;
             $baseParams[] = $ecoEvent;
             $baseParams[] = $ecoEvent;
         }
