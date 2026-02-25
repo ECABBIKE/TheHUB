@@ -1390,11 +1390,15 @@ textarea:disabled {
     .admin-card-body:has(> table),
     .admin-card-body:has(> .table-responsive),
     .admin-card-body:has(> .admin-table),
+    .admin-card-body:has(> .admin-table-container),
     .card-body:has(> table),
     .card-body:has(> .table-responsive),
     .card-body:has(> .admin-table),
+    .card-body:has(> .admin-table-container),
     .admin-card-body.p-0,
-    .card-body.p-0 {
+    .card-body.p-0,
+    [style*="padding: 0"],
+    [style*="padding:0"] {
         padding: 0 !important;
     }
 
@@ -1582,10 +1586,14 @@ textarea:disabled {
     /* Same table exception for very small screens */
     .admin-card-body:has(> table),
     .admin-card-body:has(> .table-responsive),
+    .admin-card-body:has(> .admin-table-container),
     .card-body:has(> table),
     .card-body:has(> .table-responsive),
+    .card-body:has(> .admin-table-container),
     .admin-card-body.p-0,
-    .card-body.p-0 {
+    .card-body.p-0,
+    [style*="padding: 0"],
+    [style*="padding:0"] {
         padding: 0 !important;
     }
 
