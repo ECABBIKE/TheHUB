@@ -375,11 +375,6 @@
     .admin-main {
         padding: var(--space-sm);
     }
-
-    .admin-card {
-        padding: var(--space-md);
-        border-radius: var(--radius-md);
-    }
 }
 
 /* ========================================================================

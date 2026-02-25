@@ -2264,27 +2264,11 @@ include __DIR__ . '/components/unified-layout.php';
 }
 
 /* ========================================================
-   MOBILE: Edge-to-edge admin cards + better form layout
+   MOBILE: Form layout improvements for event-edit
+   Edge-to-edge handled globally by admin-color-fix.css
    ======================================================== */
 @media (max-width: 767px) {
-    /* Admin cards go edge-to-edge on mobile */
-    .admin-card.mb-lg,
-    details.admin-card {
-        margin-left: calc(-1 * var(--space-md));
-        margin-right: calc(-1 * var(--space-md));
-        border-radius: 0 !important;
-        border-left: none !important;
-        border-right: none !important;
-        width: calc(100% + 2 * var(--space-md));
-    }
-
-    /* Card body needs comfortable padding on mobile */
-    .admin-card-body,
-    fieldset.admin-card-body {
-        padding: var(--space-md) !important;
-    }
-
-    /* Form grids collapse to single column on mobile */
+    /* Form grids collapse to single column */
     .form-grid,
     .form-grid.form-grid-2,
     .form-grid.form-grid-3 {
@@ -2306,7 +2290,7 @@ include __DIR__ . '/components/unified-layout.php';
     input[type="datetime-local"],
     select,
     textarea {
-        min-height: 48px !important;
+        min-height: 44px !important;
         font-size: 16px !important; /* Prevents iOS zoom */
     }
 
@@ -2319,11 +2303,11 @@ include __DIR__ . '/components/unified-layout.php';
         justify-content: center;
     }
 
-    /* Facility fields edge-to-edge */
+    /* Facility fields edge-to-edge within card */
     .facility-fields {
         gap: 0;
-        margin-left: calc(-1 * var(--space-md));
-        margin-right: calc(-1 * var(--space-md));
+        margin-left: calc(-1 * var(--container-padding, 16px));
+        margin-right: calc(-1 * var(--container-padding, 16px));
     }
     .facility-field {
         border-radius: 0;
@@ -2344,10 +2328,9 @@ include __DIR__ . '/components/unified-layout.php';
         grid-column: 1;
     }
 
-    /* Collapsible header: easier to tap */
+    /* Collapsible header min height */
     .collapsible-header {
-        padding: var(--space-md) !important;
-        min-height: 52px;
+        min-height: 48px;
     }
     .collapsible-header h2 {
         font-size: var(--text-md) !important;
@@ -2356,42 +2339,6 @@ include __DIR__ . '/components/unified-layout.php';
     /* Sub-section labels */
     .form-subsection-label {
         padding-top: var(--space-xs);
-    }
-
-    /* Alert edge-to-edge */
-    .alert.mb-lg {
-        margin-left: calc(-1 * var(--space-md));
-        margin-right: calc(-1 * var(--space-md));
-        border-radius: 0 !important;
-        border-left: none !important;
-        border-right: none !important;
-        width: calc(100% + 2 * var(--space-md));
-    }
-}
-
-/* Extra small screens */
-@media (max-width: 374px) {
-    .admin-card-body,
-    fieldset.admin-card-body {
-        padding: var(--space-sm) !important;
-    }
-
-    .admin-card.mb-lg,
-    details.admin-card {
-        margin-left: calc(-1 * var(--space-sm));
-        margin-right: calc(-1 * var(--space-sm));
-        width: calc(100% + 2 * var(--space-sm));
-    }
-
-    .facility-fields {
-        margin-left: calc(-1 * var(--space-sm));
-        margin-right: calc(-1 * var(--space-sm));
-    }
-
-    .alert.mb-lg {
-        margin-left: calc(-1 * var(--space-sm));
-        margin-right: calc(-1 * var(--space-sm));
-        width: calc(100% + 2 * var(--space-sm));
     }
 }
 

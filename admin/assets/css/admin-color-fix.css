@@ -767,15 +767,86 @@ label {
 }
 
 /* ========================================================================
-   24. MOBILE RESPONSIVE - Consistent padding on mobile
+   24. MOBILE RESPONSIVE - Edge-to-edge cards on mobile
+   Cards pull out to screen edges using negative margins matching
+   the admin-main container padding (--container-padding from tokens.css)
    ======================================================================== */
 
-@media (max-width: 768px) {
-    .card,
+@media (max-width: 767px) {
+    /* Edge-to-edge cards - pull out to screen edges */
     .admin-card,
+    .admin-content .card,
+    details.admin-card {
+        margin-left: calc(-1 * var(--container-padding, 16px)) !important;
+        margin-right: calc(-1 * var(--container-padding, 16px)) !important;
+        border-radius: 0 !important;
+        border-left: none !important;
+        border-right: none !important;
+        width: auto !important;
+        max-width: none !important;
+    }
+
+    /* Simple cards (no header/body): compact padding for content */
+    .admin-card,
+    .admin-content .card {
+        padding: var(--space-sm, 12px) var(--container-padding, 16px) !important;
+    }
+
+    /* Cards with header/body structure: outer padding = 0 (inner elements handle it) */
+    details.admin-card,
+    .admin-card:has(.admin-card-body),
+    .admin-card:has(.card-body),
+    .admin-card:has(.admin-card-header) {
+        padding: 0 !important;
+    }
+
+    /* Stat cards: NOT edge-to-edge, keep compact grid */
     .stat-card,
     .admin-stat-card {
-        padding: var(--space-md, 16px) !important;
+        margin-left: 0 !important;
+        margin-right: 0 !important;
+        border-radius: var(--radius-md, 10px) !important;
+        border: 1px solid var(--color-border) !important;
+        padding: var(--space-sm, 12px) !important;
+    }
+
+    /* Card header padding - comfortable tap target */
+    .card-header,
+    .admin-card-header,
+    summary.admin-card-header,
+    summary.collapsible-header {
+        padding: var(--space-sm, 12px) var(--container-padding, 16px) !important;
+        margin-bottom: 0 !important;
+    }
+
+    /* Card body / fieldset padding - matches container-padding for aligned content */
+    .card-body,
+    .admin-card-body,
+    fieldset.admin-card-body,
+    .admin-card > .fieldset-reset,
+    details.admin-card > .fieldset-reset {
+        padding: var(--space-sm, 12px) var(--container-padding, 16px) !important;
+    }
+
+    /* Alerts edge-to-edge */
+    .admin-content .alert,
+    .admin-content > .alert {
+        margin-left: calc(-1 * var(--container-padding, 16px)) !important;
+        margin-right: calc(-1 * var(--container-padding, 16px)) !important;
+        border-radius: 0 !important;
+        border-left: none !important;
+        border-right: none !important;
+    }
+
+    /* Filter bars edge-to-edge */
+    .filter-bar,
+    .filters-bar,
+    .filter-row {
+        margin-left: calc(-1 * var(--container-padding, 16px)) !important;
+        margin-right: calc(-1 * var(--container-padding, 16px)) !important;
+        border-radius: 0 !important;
+        border-left: none !important;
+        border-right: none !important;
     }
 
     .stat-value {
@@ -785,15 +856,25 @@ label {
     .stats-grid {
         grid-template-columns: repeat(2, 1fr) !important;
     }
+
+    /* Form grids collapse to 1 column */
+    .form-grid {
+        grid-template-columns: 1fr !important;
+    }
+
+    .admin-form-row {
+        flex-direction: column !important;
+    }
+
+    .admin-form-group.flex-1 {
+        width: 100% !important;
+    }
 }
 
 @media (max-width: 480px) {
-    .card,
-    .admin-card,
     .stat-card,
     .admin-stat-card {
-        padding: var(--space-sm, 12px) var(--space-xs, 8px) !important;
-        border-radius: var(--radius-md, 10px) !important;
+        padding: var(--space-xs, 8px) !important;
     }
 
     .stat-value {
@@ -1258,6 +1339,7 @@ textarea,
 
 /* ========================================================================
    33. MOBILE RESPONSIVE FOR ADMIN COMPONENTS
+   Note: Form rows and card edge-to-edge handled in section 24 above
    ======================================================================== */
 
 @media (max-width: 768px) {
@@ -1268,7 +1350,6 @@ textarea,
     .admin-stat-card {
         flex-direction: column !important;
         text-align: center !important;
-        padding: var(--space-sm, 12px) !important;
     }
 
     .admin-stat-icon {
@@ -1284,23 +1365,11 @@ textarea,
     .stat-content .stat-value {
         font-size: var(--text-lg, 1.125rem) !important;
     }
-
-    .admin-form-row {
-        flex-direction: column !important;
-    }
-
-    .admin-form-group.flex-1 {
-        width: 100% !important;
-    }
 }
 
 @media (max-width: 480px) {
     .admin-stats-grid {
         gap: var(--space-xs, 8px) !important;
-    }
-
-    .admin-stat-card {
-        padding: var(--space-xs, 8px) !important;
     }
 
     .stat-content .stat-value {

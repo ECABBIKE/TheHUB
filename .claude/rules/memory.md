@@ -4,6 +4,40 @@
 
 ---
 
+## ADMIN MOBIL EDGE-TO-EDGE FIX (2026-02-25)
+
+### Problem: Gigantiska marginaler på admin-sidor på mobil
+- `admin-color-fix.css` laddades SIST med `!important` på allt
+- Satte `padding: var(--card-padding, 16px) !important` och `border-radius: var(--radius-lg, 14px) !important` på alla kort
+- Hade **INGA edge-to-edge mobilregler** → kort behöll border-radius, sidmarginaler och padding
+- Tre CSS-filer slogs mot varandra: `admin-layout-only.css` + `admin-color-fix.css` + event-edit.php `<style>`
+- Resultat: 16px (admin-main) + 16px (card) + 24px (fieldset inline) = 56px slösad plats per sida
+
+### Fix: Edge-to-edge i admin-color-fix.css (sektion 24)
+- **Kort går kant-till-kant**: negativa marginaler matchar `--container-padding`, border-radius: 0, inga sidoborders
+- **Strukturerade kort** (med header/body): yttre padding = 0, header och body har `12px var(--container-padding)` padding
+- **Enkla kort** (utan header/body): kompakt padding `12px var(--container-padding)`
+- **Stat-kort**: INTE edge-to-edge (behåller border-radius och borders i grid)
+- **Alerts & filterrader**: edge-to-edge
+- **Form grids**: kollapsar till 1 kolumn
+- **`:has()` selector**: Används för att skilja strukturerade kort (med .admin-card-body) från enkla
+- **`!important` i stylesheet slår inline styles**: Fieldsets med `style="padding: var(--space-lg)"` överrids korrekt
+
+### Rensning av event-edit.php mobilregler
+- Borttagna duplicerade edge-to-edge regler (hanteras nu globalt av admin-color-fix.css)
+- Behållet: form grids, touch targets, facility fields, info links, floating save bar
+
+### admin-layout-only.css rensning
+- Borttaget: `.admin-card { padding: var(--space-md); border-radius: var(--radius-md); }` vid 599px (konfliktar)
+
+### CSS-arkitektur (viktigt)
+- **admin-layout-only.css**: Grundläggande layout, sidebar, header, cards (bas-regler utan !important)
+- **admin-color-fix.css**: Laddas SIST, överskriver ALLT med !important, MÅSTE ha mobilregler
+- **Sida-specifik `<style>`**: Bara för unika komponenter (form-subsection, facility-field etc.)
+- **Regel**: Alla globala mobilregler MÅSTE finnas i admin-color-fix.css, annars överrids de
+
+---
+
 ## ADMIN EVENT-EDIT MOBILANPASSNING & OMSTRUKTURERING (2026-02-25)
 
 ### Bugg: eventInfoLinks PHP warnings
