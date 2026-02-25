@@ -543,12 +543,11 @@ textarea:focus {
    16. CONSISTENCY FIX - Match public pages padding, borders, radius
    ======================================================================== */
 
-/* Admin main content - match public page container padding */
+/* Admin main content - responsive padding */
 .admin-main {
-    padding: var(--container-padding, 16px) !important;
+    padding: 12px !important;
 }
 
-/* Responsive padding - match public pages exactly */
 @media (min-width: 768px) {
     .admin-main {
         padding: 24px !important;
@@ -1313,18 +1312,23 @@ textarea:disabled {
 
 /* ========================================================================
    37. MOBILE EDGE-TO-EDGE - MUST BE LAST IN FILE
-   These rules MUST come after all other rules (especially section 26
-   border-radius) to actually take effect. Same specificity + later
-   position = these win.
+   Uses hardcoded pixel values because --container-padding can be
+   overridden by branding.json inline styles to desktop values.
+   admin-main gets 12px padding on mobile, cards get -12px margin.
    ======================================================================== */
 
 @media (max-width: 767px) {
-    /* Edge-to-edge cards - pull out to screen edges */
+    /* Force admin-main to compact mobile padding */
+    .admin-main {
+        padding: 12px !important;
+    }
+
+    /* Edge-to-edge cards - negative margin matches admin-main 12px */
     .admin-card,
     .admin-content .card,
     details.admin-card {
-        margin-left: calc(-1 * var(--container-padding, 16px)) !important;
-        margin-right: calc(-1 * var(--container-padding, 16px)) !important;
+        margin-left: -12px !important;
+        margin-right: -12px !important;
         border-radius: 0 !important;
         border-left: none !important;
         border-right: none !important;
@@ -1336,10 +1340,10 @@ textarea:disabled {
     /* Simple cards (no header/body): compact padding */
     .admin-card,
     .admin-content .card {
-        padding: var(--space-sm, 12px) var(--container-padding, 16px) !important;
+        padding: 10px 12px !important;
     }
 
-    /* Cards with header/body: outer padding = 0, inner elements handle it */
+    /* Cards with header/body: outer padding = 0 */
     details.admin-card,
     .admin-card:has(.admin-card-body),
     .admin-card:has(.card-body),
@@ -1354,7 +1358,7 @@ textarea:disabled {
         margin-right: 0 !important;
         border-radius: var(--radius-md, 10px) !important;
         border: 1px solid var(--color-border) !important;
-        padding: var(--space-sm, 12px) !important;
+        padding: 10px !important;
     }
 
     /* Card header */
@@ -1362,24 +1366,24 @@ textarea:disabled {
     .admin-card-header,
     summary.admin-card-header,
     summary.collapsible-header {
-        padding: var(--space-sm, 12px) var(--container-padding, 16px) !important;
+        padding: 10px 12px !important;
         margin-bottom: 0 !important;
     }
 
-    /* Card body / fieldset */
+    /* Card body / fieldset - override inline styles */
     .card-body,
     .admin-card-body,
     fieldset.admin-card-body,
     .admin-card > .fieldset-reset,
     details.admin-card > .fieldset-reset {
-        padding: var(--space-sm, 12px) var(--container-padding, 16px) !important;
+        padding: 10px 12px !important;
     }
 
     /* Alerts edge-to-edge */
     .alert,
     .admin-content .alert {
-        margin-left: calc(-1 * var(--container-padding, 16px)) !important;
-        margin-right: calc(-1 * var(--container-padding, 16px)) !important;
+        margin-left: -12px !important;
+        margin-right: -12px !important;
         border-radius: 0 !important;
         border-left: none !important;
         border-right: none !important;
@@ -1389,8 +1393,8 @@ textarea:disabled {
     .filter-bar,
     .filters-bar,
     .filter-row {
-        margin-left: calc(-1 * var(--container-padding, 16px)) !important;
-        margin-right: calc(-1 * var(--container-padding, 16px)) !important;
+        margin-left: -12px !important;
+        margin-right: -12px !important;
         border-radius: 0 !important;
         border-left: none !important;
         border-right: none !important;
@@ -1419,6 +1423,27 @@ textarea:disabled {
 }
 
 @media (max-width: 480px) {
+    /* Even tighter on very small screens */
+    .admin-main {
+        padding: 8px !important;
+    }
+
+    .admin-card,
+    .admin-content .card,
+    details.admin-card {
+        margin-left: -8px !important;
+        margin-right: -8px !important;
+    }
+
+    .alert,
+    .admin-content .alert,
+    .filter-bar,
+    .filters-bar,
+    .filter-row {
+        margin-left: -8px !important;
+        margin-right: -8px !important;
+    }
+
     .stat-card,
     .admin-stat-card {
         padding: var(--space-xs, 8px) !important;
