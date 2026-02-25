@@ -1343,11 +1343,17 @@ textarea:disabled {
         padding: 10px 12px !important;
     }
 
-    /* Cards with header/body: outer padding = 0 */
+    /* Cards with header/body/table: outer padding = 0 */
     details.admin-card,
     .admin-card:has(.admin-card-body),
     .admin-card:has(.card-body),
-    .admin-card:has(.admin-card-header) {
+    .admin-card:has(.admin-card-header),
+    .admin-card:has(.admin-table-container),
+    .admin-card:has(> table),
+    .admin-content .card:has(.card-body),
+    .admin-content .card:has(.card-header),
+    .admin-content .card:has(.admin-table-container),
+    .admin-content .card:has(> table) {
         padding: 0 !important;
     }
 
@@ -1361,7 +1367,7 @@ textarea:disabled {
         padding: 10px !important;
     }
 
-    /* Card header */
+    /* Card header - compact */
     .card-header,
     .admin-card-header,
     summary.admin-card-header,
@@ -1370,13 +1376,78 @@ textarea:disabled {
         margin-bottom: 0 !important;
     }
 
-    /* Card body / fieldset - override inline styles */
+    /* Card body / fieldset - compact padding for form content */
     .card-body,
     .admin-card-body,
     fieldset.admin-card-body,
     .admin-card > .fieldset-reset,
     details.admin-card > .fieldset-reset {
         padding: 10px 12px !important;
+    }
+
+    /* EXCEPTION: card bodies with tables/charts keep padding: 0
+       Overrides the rule above because it comes later + higher specificity */
+    .admin-card-body:has(> table),
+    .admin-card-body:has(> .table-responsive),
+    .admin-card-body:has(> .admin-table),
+    .card-body:has(> table),
+    .card-body:has(> .table-responsive),
+    .card-body:has(> .admin-table),
+    .admin-card-body.p-0,
+    .card-body.p-0 {
+        padding: 0 !important;
+    }
+
+    /* ---- TABLES: automatic horizontal scroll ---- */
+
+    /* Card bodies and table wrappers get overflow-x: auto */
+    .admin-card-body,
+    .card-body,
+    .table-responsive,
+    .admin-table-container {
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+    }
+
+    /* Tables: force min-width so they scroll instead of squish */
+    .admin-card table,
+    .admin-content .card table,
+    .admin-content > table,
+    .table-responsive table,
+    .admin-table-container table {
+        min-width: 500px !important;
+        font-size: 13px !important;
+        width: 100% !important;
+    }
+
+    /* Compact table cells */
+    .admin-table th,
+    .admin-table td,
+    table.table th,
+    table.table td,
+    .report-table th,
+    .report-table td {
+        padding: 8px 10px !important;
+        font-size: 13px !important;
+        white-space: nowrap !important;
+    }
+
+    /* Allow text wrap in name/description columns */
+    .admin-table td:nth-child(2),
+    table.table td:nth-child(2) {
+        white-space: normal !important;
+        min-width: 120px !important;
+    }
+
+    /* Sticky first column for easier scrolling */
+    .admin-table th:first-child,
+    .admin-table td:first-child,
+    table.table th:first-child,
+    table.table td:first-child {
+        position: sticky !important;
+        left: 0 !important;
+        z-index: 1 !important;
+        background: var(--color-bg-card) !important;
     }
 
     /* Alerts edge-to-edge */
@@ -1398,6 +1469,17 @@ textarea:disabled {
         border-radius: 0 !important;
         border-left: none !important;
         border-right: none !important;
+        padding: 10px 12px !important;
+    }
+
+    /* Page header compact */
+    .page-header {
+        padding-bottom: 8px !important;
+        margin-bottom: 12px !important;
+    }
+
+    .page-header h1 {
+        font-size: 1.25rem !important;
     }
 
     .stat-value {
@@ -1419,6 +1501,45 @@ textarea:disabled {
 
     .admin-form-group.flex-1 {
         width: 100% !important;
+    }
+
+    /* Tabs compact on mobile */
+    .tabs-nav,
+    .economy-tabs {
+        overflow-x: auto !important;
+        -webkit-overflow-scrolling: touch !important;
+        flex-wrap: nowrap !important;
+        gap: 0 !important;
+    }
+
+    .tab-btn,
+    .economy-tab {
+        white-space: nowrap !important;
+        font-size: 13px !important;
+        padding: 8px 12px !important;
+    }
+
+    /* Modal fullscreen on mobile */
+    .modal-content,
+    .modal-dialog {
+        width: 100% !important;
+        max-width: 100% !important;
+        margin: 0 !important;
+        border-radius: 0 !important;
+        min-height: 100vh !important;
+    }
+
+    /* Action buttons: stack vertically if many */
+    .page-header .btn-group,
+    .page-header .actions,
+    .card-header .btn-group {
+        flex-wrap: wrap !important;
+        gap: 6px !important;
+    }
+
+    .btn-admin {
+        font-size: 13px !important;
+        padding: 8px 12px !important;
     }
 }
 
@@ -1444,9 +1565,33 @@ textarea:disabled {
         margin-right: -8px !important;
     }
 
+    /* Card headers/bodies even tighter */
+    .card-header,
+    .admin-card-header,
+    summary.admin-card-header,
+    summary.collapsible-header {
+        padding: 8px !important;
+    }
+
+    .card-body,
+    .admin-card-body,
+    fieldset.admin-card-body {
+        padding: 8px !important;
+    }
+
+    /* Same table exception for very small screens */
+    .admin-card-body:has(> table),
+    .admin-card-body:has(> .table-responsive),
+    .card-body:has(> table),
+    .card-body:has(> .table-responsive),
+    .admin-card-body.p-0,
+    .card-body.p-0 {
+        padding: 0 !important;
+    }
+
     .stat-card,
     .admin-stat-card {
-        padding: var(--space-xs, 8px) !important;
+        padding: 8px !important;
     }
 
     .stat-value {
@@ -1463,7 +1608,15 @@ textarea:disabled {
 
     .stats-grid {
         grid-template-columns: repeat(2, 1fr) !important;
-        gap: var(--space-xs, 8px) !important;
+        gap: 8px !important;
+    }
+
+    .admin-table th,
+    .admin-table td,
+    table.table th,
+    table.table td {
+        padding: 6px 8px !important;
+        font-size: 12px !important;
     }
 }
 
