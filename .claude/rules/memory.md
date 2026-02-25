@@ -4,27 +4,34 @@
 
 ---
 
-## EKONOMI EVENT-FILTER: series_events ISTÄLLET FÖR events.series_id (2026-02-25)
+## EKONOMI EVENT-FILTER: ROBUSTGJORT MED FYRA SÖKVÄGAR (2026-02-25)
 
-### Grundorsak
-Ekonomi-vyn (admin + promotor) använde `events.series_id` för att hitta vilka event som tillhör en serie. Men events kopplas till serier via `series_events`-tabellen (many-to-many). Events kan finnas i `series_events` utan att ha `events.series_id` satt (t.ex. om eventet redan tillhör en annan serie som "primär").
+### Grundorsak (iteration 2 - djupare)
+Första fixen bytte från `events.series_id` till `series_events` men det räckte inte. Orsaken:
+1. `events.series_id` är inte alltid satt (events kan vara kopplade enbart via `series_events`)
+2. `series_events` kanske inte heller har rätt data (beror på hur events lades till)
+3. `series_registration_events` skapades via `events WHERE series_id = ?` (order-manager.php) - samma bristfälliga källa
+4. `orders.series_id` sätts vid skapande men kopplar inte vidare till specifika event
 
-**Resultat:** Event med bara serieanmälningar (inga direkta ordrar) syntes inte i event-filtrets dropdown.
+**Lösning:** Alla ekonomi-frågor använder nu FYRA parallella sökvägar:
+1. `orders.event_id` - direkt event-order
+2. `series_events` junction table - aktuell serie-medlemskap
+3. `series_registration_events` - snapshot vid köptillfället
+4. `events.series_id` / `orders.series_id` - legacy fallback
 
-### Fixade ställen i promotor.php
-1. **Admin filter dropdown** (rad ~212): `e.series_id IN (...)` → `e.id IN (SELECT se.event_id FROM series_events se WHERE ...)`
-2. **Admin event-filter villkor** (rad ~103): `JOIN events e_f ON e_f.series_id = sr_f.series_id` → `JOIN series_events se_f ON se_f.series_id = sr_f.series_id WHERE se_f.event_id = ?`
-3. **Promotor $allEventIds** (rad ~439): `SELECT id FROM events WHERE series_id IN (...)` → `SELECT event_id FROM series_events WHERE series_id IN (...)`
-4. **Promotor event-kort** (rad ~307): `series_agg ON e.series_id` → `COALESCE(e.series_id, se_link.series_id)` + LEFT JOIN series_events
-5. **Promotor event-count** (rad ~350): `FROM events WHERE series_id IS NOT NULL` → `FROM series_events`
-6. **Promotor ekonomi-filter** (rad ~469): Samma fix som admin event-filter
-7. **Promotor serie-count** (rad ~294): `LEFT JOIN events e ON e.series_id = s.id` → via `series_events`
-8. **Admin recipient-filter**: `s_name` subquery utökad med `payment_recipient_id` för att fånga serie-ordrars mottagare
+### Mottagarfilter (Götaland Gravity-buggen)
+Serie-ordrar har `event_id = NULL` → alla JOINs via event-tabellen ger NULL.
+**Fix:** Lagt till `LEFT JOIN series s_via_order ON o.series_id = s_via_order.id` som direkt koppling.
+Fyra vägar att hitta mottagare: `e.payment_recipient_id`, `s_via_event`, `s_via_order`, `s_via_items`.
 
-### VIKTIGT: Regel för framtida SQL-frågor
-- **ANVÄND ALLTID `series_events`** för att koppla event till serier
-- `events.series_id` kan användas som FALLBACK (display) men ALDRIG som enda källa
-- Mönster: `COALESCE(e.series_id, se.series_id)` ger bäst resultat
+### order-manager.php fix
+`createMultiRiderOrder()` skapade `series_registration_events` via `SELECT id FROM events WHERE series_id = ?`.
+**Fix:** Använder nu `series_events` UNION `events.series_id` (fallback) för att hitta ALLA event i serien.
+
+### KRITISK REGEL för framtida SQL
+- **ANVÄND ALDRIG bara EN källa** för att hitta serie-event
+- Mönstret är: `series_events` UNION/OR `events.series_id` UNION/OR `series_registration_events`
+- För mottagare: JOIN via `orders.series_id → series` (direkt, ingen omväg via events)
 
 ---
 

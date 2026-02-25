@@ -484,8 +484,14 @@ function createMultiRiderOrder(array $buyerData, array $items, ?string $discount
                 $seriesRegId = $pdo->lastInsertId();
 
                 // Skapa event-kopplingar för alla event i serien
-                $eventsStmt = $pdo->prepare("SELECT id FROM events WHERE series_id = ?");
-                $eventsStmt->execute([$seriesId]);
+                // Använd series_events (junction table) istället för events.series_id
+                // Fallback till events.series_id om series_events är tom
+                $eventsStmt = $pdo->prepare("
+                    SELECT DISTINCT event_id as id FROM series_events WHERE series_id = ?
+                    UNION
+                    SELECT id FROM events WHERE series_id = ? AND id NOT IN (SELECT event_id FROM series_events WHERE series_id = ?)
+                ");
+                $eventsStmt->execute([$seriesId, $seriesId, $seriesId]);
                 while ($eventRow = $eventsStmt->fetch(PDO::FETCH_ASSOC)) {
                     $linkStmt = $pdo->prepare("
                         INSERT INTO series_registration_events (series_registration_id, event_id, status)
