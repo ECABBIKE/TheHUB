@@ -1,6 +1,6 @@
 # TheHUB - Development Roadmap
 
-> Senast uppdaterad: 2026-02-24
+> Senast uppdaterad: 2026-02-25
 >
 > **Se:** `/admin/roadmap.php` for interaktiv vy
 
@@ -27,6 +27,33 @@
 ---
 
 # CHANGELOG
+
+### 2026-02-25 (Betalningsmottagare & Avräkningar)
+- **Branch:** claude/fix-site-performance-PbeNY
+
+- **Ny funktion: Betalningsmottagare CRUD**
+  - Ny admin-sida `/admin/payment-recipients.php`
+  - Lista med kort-layout, skapa/redigera/aktivera-inaktivera
+  - Hanterar: namn, org.nr, kontakt, Swish, bank, plattformsavgift
+  - Koppling till promotor-användare via `admin_user_id`
+
+- **Ny funktion: Avräkningsvy**
+  - Ny admin-sida `/admin/settlements.php`
+  - Ekonomisk översikt per betalningsmottagare
+  - Alla betalda ordrar med brutto, betalningsavgift, plattformsavgift, netto
+  - Filter: år, månad, mottagare
+  - Sammanfattningskort med totaler
+
+- **Nya filer:**
+  - `Tools/migrations/059_payment_recipients_admin_user.sql` - Lägger till admin_user_id
+  - `admin/payment-recipients.php` - CRUD för betalningsmottagare
+  - `admin/settlements.php` - Avräkningsvy
+
+- **Ändrade filer:**
+  - `includes/config/admin-tabs-config.php` - Nya flikar i ekonomi-gruppen
+  - `admin/tools.php` - Nya verktyg i Medlemskap & Betalningar
+  - `admin/components/unified-layout.php` - PageMap för nya sidor
+  - `admin/migrations.php` - Registrering av migration 059
 
 ### 2026-02-24 (Regelverk, Licenser & globala text-länkar)
 - **Branch:** claude/fix-site-performance-PbeNY

@@ -205,6 +205,9 @@ $migrationChecks = [
         'columns' => ['events.regulations_info', 'events.license_info', 'event_info_links.section'],
         'data' => ["global_texts.field_key = 'regulations_sportmotion'"]
     ],
+    '059_payment_recipients_admin_user.sql' => [
+        'columns' => ['payment_recipients.admin_user_id']
+    ],
 ];
 
 // ============================================================================

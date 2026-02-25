@@ -64,7 +64,9 @@ if (!isset($current_admin_page)) {
         'ranking' => 'ranking',
         'settings' => 'settings',
         'system-settings' => 'settings',
-        'role-permissions' => 'settings'
+        'role-permissions' => 'settings',
+        'payment-recipients' => 'economy',
+        'settlements' => 'economy'
     );
     $current_admin_page = isset($pageMap[$scriptName]) ? $pageMap[$scriptName] : $scriptName;
 }

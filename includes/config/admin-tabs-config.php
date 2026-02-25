@@ -188,8 +188,25 @@ $ADMIN_TABS = [
                     // Anmälningsregler
                     'registration-rules.php',
                     // Promotor
-                    'promotor-payments.php'
+                    'promotor-payments.php',
+                    // Betalningsmottagare & avräkningar
+                    'payment-recipients.php',
+                    'settlements.php'
                 ]
+            ],
+            [
+                'id' => 'payment-recipients',
+                'label' => 'Mottagare',
+                'icon' => 'building-2',
+                'url' => '/admin/payment-recipients.php',
+                'pages' => ['payment-recipients.php']
+            ],
+            [
+                'id' => 'settlements',
+                'label' => 'Avräkningar',
+                'icon' => 'receipt',
+                'url' => '/admin/settlements.php',
+                'pages' => ['settlements.php']
             ],
             [
                 'id' => 'discount-codes',
