@@ -4,6 +4,22 @@
 
 ---
 
+## PROMOTOR-SPARNING NOLLSTÄLLDE FÄLT (2026-02-24)
+
+### Bug: max_participants och andra fält försvann vid promotor-edit
+- **Orsak:** Event-edit har två `<fieldset disabled>` sektioner för promotorer (Grundläggande info + Tävlingsinställningar). Disabled inputs skickas INTE med i POST. Hidden inputs som bevarar värdena saknades för flera fält.
+- **Saknades i Grundläggande info:** end_date, event_type, logo_media_id, registration_opens, registration_deadline, registration_deadline_time, max_participants, contact_email, contact_phone
+- **Saknades i Tävlingsinställningar:** formats[] (checkbox-array)
+- **Fix:** Lade till hidden inputs för alla saknade fält i båda sektionerna
+- **VIKTIGT:** Vid nya fält i en `<fieldset disabled>` MÅSTE motsvarande hidden input läggas till för promotorer
+
+### Registreringsvalidering förstärkt
+- `getEligibleClassesForSeries()` saknade helt `incomplete_profile`-kontroll (hade den bara i event-versionen)
+- `createMultiRiderOrder()` validerade aldrig rider-profil innan anmälan skapades
+- Nu valideras kön, födelseår, telefon, e-post, nödkontakt i alla tre nivåer: klasslistning, orderskapande, profilskapande
+
+---
+
 ## EVENT-EDIT INBJUDAN REDESIGN (2026-02-24)
 
 ### Inbjudan-sektionen omstrukturerad
