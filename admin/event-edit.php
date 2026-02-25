@@ -166,7 +166,8 @@ if (!$event) {
 }
 
 // Load info links for this event per section (migration 057+058)
-$eventInfoLinks = ['general' => [], 'regulations' => [], 'licenses' => []];
+// Dynamic: any section string is supported - no hardcoded list needed
+$eventInfoLinks = [];
 try {
     $allLinks = $db->getAll("SELECT id, section, link_url, link_text, sort_order FROM event_info_links WHERE event_id = ? ORDER BY sort_order, id", [$id]);
     foreach ($allLinks as $link) {
@@ -468,10 +469,16 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
 
             // Save info links per section (migration 057+058 - event_info_links table)
+            // Dynamically find all sections from POST keys (info_link_SECTION_url[])
             try {
                 $db->query("DELETE FROM event_info_links WHERE event_id = ?", [$id]);
-                $sections = ['general', 'regulations', 'licenses'];
-                foreach ($sections as $section) {
+                $linkSections = [];
+                foreach (array_keys($_POST) as $postKey) {
+                    if (preg_match('/^info_link_(.+)_url$/', $postKey, $m)) {
+                        $linkSections[] = $m[1];
+                    }
+                }
+                foreach ($linkSections as $section) {
                     $linkUrls = $_POST["info_link_{$section}_url"] ?? [];
                     $linkTexts = $_POST["info_link_{$section}_text"] ?? [];
                     $sortOrder = 0;
@@ -1313,6 +1320,22 @@ include __DIR__ . '/components/unified-layout.php';
                         </label>
                     </div>
                     <textarea name="invitation" class="facility-textarea" rows="4" data-format-toolbar placeholder="Välkommen till... (visas högst upp på Inbjudan-fliken)"><?= h($event['invitation'] ?? '') ?></textarea>
+                    <?php $invLinks = $eventInfoLinks['invitation'] ?? []; ?>
+                    <div class="info-links-section" id="info-links-invitation">
+                        <div class="info-links-header"><i data-lucide="link"></i><span>Länkar</span></div>
+                        <div class="info-links-list">
+                            <?php foreach ($invLinks as $link): ?>
+                            <div class="info-link-row">
+                                <input type="url" name="info_link_invitation_url[]" class="admin-form-input" placeholder="https://..." value="<?= h($link['link_url'] ?? '') ?>">
+                                <input type="text" name="info_link_invitation_text[]" class="admin-form-input" placeholder="Visningsnamn (valfritt)" value="<?= h($link['link_text'] ?? '') ?>">
+                                <button type="button" onclick="this.closest('.info-link-row').remove()" class="btn-admin btn-admin-danger info-link-remove" title="Ta bort länk"><i data-lucide="x" style="width:14px;height:14px;"></i></button>
+                            </div>
+                            <?php endforeach; ?>
+                        </div>
+                        <button type="button" onclick="addInfoLink('invitation')" class="btn-admin btn-admin-ghost info-link-add">
+                            <i data-lucide="plus" style="width:14px;height:14px;"></i> Lägg till länk
+                        </button>
+                    </div>
                 </div>
 
                 <!-- Generell tävlingsinformation -->
@@ -1437,6 +1460,22 @@ include __DIR__ . '/components/unified-layout.php';
                         </label>
                     </div>
                     <textarea name="competition_classes_info" class="facility-textarea" rows="6" data-format-toolbar placeholder="Beskrivning av tävlingsklasser..."><?= h($event['competition_classes_info'] ?? '') ?></textarea>
+                    <?php $classLinks = $eventInfoLinks['competition_classes'] ?? []; ?>
+                    <div class="info-links-section" id="info-links-competition_classes">
+                        <div class="info-links-header"><i data-lucide="link"></i><span>Länkar</span></div>
+                        <div class="info-links-list">
+                            <?php foreach ($classLinks as $link): ?>
+                            <div class="info-link-row">
+                                <input type="url" name="info_link_competition_classes_url[]" class="admin-form-input" placeholder="https://..." value="<?= h($link['link_url'] ?? '') ?>">
+                                <input type="text" name="info_link_competition_classes_text[]" class="admin-form-input" placeholder="Visningsnamn (valfritt)" value="<?= h($link['link_text'] ?? '') ?>">
+                                <button type="button" onclick="this.closest('.info-link-row').remove()" class="btn-admin btn-admin-danger info-link-remove" title="Ta bort länk"><i data-lucide="x" style="width:14px;height:14px;"></i></button>
+                            </div>
+                            <?php endforeach; ?>
+                        </div>
+                        <button type="button" onclick="addInfoLink('competition_classes')" class="btn-admin btn-admin-ghost info-link-add">
+                            <i data-lucide="plus" style="width:14px;height:14px;"></i> Lägg till länk
+                        </button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -1466,7 +1505,10 @@ include __DIR__ . '/components/unified-layout.php';
             ?>
 
             <div class="facility-fields">
-                <?php foreach ($facilityFields as $field): ?>
+                <?php foreach ($facilityFields as $field):
+                    $linkSection = $field['key'];
+                    $sectionLinks = $eventInfoLinks[$linkSection] ?? [];
+                ?>
                     <div class="facility-field">
                         <div class="facility-field-header">
                             <div class="facility-field-label">
@@ -1479,6 +1521,21 @@ include __DIR__ . '/components/unified-layout.php';
                             </label>
                         </div>
                         <textarea name="<?= $field['key'] ?>" class="facility-textarea" rows="4" data-format-toolbar placeholder="Skriv information här..."><?= h($event[$field['key']] ?? '') ?></textarea>
+                        <div class="info-links-section" id="info-links-<?= $linkSection ?>">
+                            <div class="info-links-header"><i data-lucide="link"></i><span>Länkar</span></div>
+                            <div class="info-links-list">
+                                <?php foreach ($sectionLinks as $link): ?>
+                                <div class="info-link-row">
+                                    <input type="url" name="info_link_<?= $linkSection ?>_url[]" class="admin-form-input" placeholder="https://..." value="<?= h($link['link_url'] ?? '') ?>">
+                                    <input type="text" name="info_link_<?= $linkSection ?>_text[]" class="admin-form-input" placeholder="Visningsnamn (valfritt)" value="<?= h($link['link_text'] ?? '') ?>">
+                                    <button type="button" onclick="this.closest('.info-link-row').remove()" class="btn-admin btn-admin-danger info-link-remove" title="Ta bort länk"><i data-lucide="x" style="width:14px;height:14px;"></i></button>
+                                </div>
+                                <?php endforeach; ?>
+                            </div>
+                            <button type="button" onclick="addInfoLink('<?= $linkSection ?>')" class="btn-admin btn-admin-ghost info-link-add">
+                                <i data-lucide="plus" style="width:14px;height:14px;"></i> Lägg till länk
+                            </button>
+                        </div>
                     </div>
                 <?php endforeach; ?>
             </div>
@@ -1528,7 +1585,10 @@ include __DIR__ . '/components/unified-layout.php';
             ?>
 
             <div class="facility-fields">
-                <?php foreach ($pmFields as $field): ?>
+                <?php foreach ($pmFields as $field):
+                    $linkSection = $field['key'];
+                    $sectionLinks = $eventInfoLinks[$linkSection] ?? [];
+                ?>
                     <div class="facility-field">
                         <div class="facility-field-header">
                             <div class="facility-field-label">
@@ -1541,6 +1601,21 @@ include __DIR__ . '/components/unified-layout.php';
                             </label>
                         </div>
                         <textarea name="<?= $field['key'] ?>" class="facility-textarea" rows="4" data-format-toolbar placeholder="Skriv information här..."><?= h($event[$field['key']] ?? '') ?></textarea>
+                        <div class="info-links-section" id="info-links-<?= $linkSection ?>">
+                            <div class="info-links-header"><i data-lucide="link"></i><span>Länkar</span></div>
+                            <div class="info-links-list">
+                                <?php foreach ($sectionLinks as $link): ?>
+                                <div class="info-link-row">
+                                    <input type="url" name="info_link_<?= $linkSection ?>_url[]" class="admin-form-input" placeholder="https://..." value="<?= h($link['link_url'] ?? '') ?>">
+                                    <input type="text" name="info_link_<?= $linkSection ?>_text[]" class="admin-form-input" placeholder="Visningsnamn (valfritt)" value="<?= h($link['link_text'] ?? '') ?>">
+                                    <button type="button" onclick="this.closest('.info-link-row').remove()" class="btn-admin btn-admin-danger info-link-remove" title="Ta bort länk"><i data-lucide="x" style="width:14px;height:14px;"></i></button>
+                                </div>
+                                <?php endforeach; ?>
+                            </div>
+                            <button type="button" onclick="addInfoLink('<?= $linkSection ?>')" class="btn-admin btn-admin-ghost info-link-add">
+                                <i data-lucide="plus" style="width:14px;height:14px;"></i> Lägg till länk
+                            </button>
+                        </div>
                     </div>
                 <?php endforeach; ?>
             </div>
@@ -1569,7 +1644,10 @@ include __DIR__ . '/components/unified-layout.php';
             ?>
 
             <div class="facility-fields">
-                <?php foreach ($otherTabFields as $field): ?>
+                <?php foreach ($otherTabFields as $field):
+                    $linkSection = $field['key'];
+                    $sectionLinks = $eventInfoLinks[$linkSection] ?? [];
+                ?>
                     <div class="facility-field">
                         <div class="facility-field-header">
                             <div class="facility-field-label">
@@ -1592,6 +1670,21 @@ include __DIR__ . '/components/unified-layout.php';
                             <span class="text-muted">Lämna tomt = synlig direkt</span>
                         </div>
                         <?php endif; ?>
+                        <div class="info-links-section" id="info-links-<?= $linkSection ?>">
+                            <div class="info-links-header"><i data-lucide="link"></i><span>Länkar</span></div>
+                            <div class="info-links-list">
+                                <?php foreach ($sectionLinks as $link): ?>
+                                <div class="info-link-row">
+                                    <input type="url" name="info_link_<?= $linkSection ?>_url[]" class="admin-form-input" placeholder="https://..." value="<?= h($link['link_url'] ?? '') ?>">
+                                    <input type="text" name="info_link_<?= $linkSection ?>_text[]" class="admin-form-input" placeholder="Visningsnamn (valfritt)" value="<?= h($link['link_text'] ?? '') ?>">
+                                    <button type="button" onclick="this.closest('.info-link-row').remove()" class="btn-admin btn-admin-danger info-link-remove" title="Ta bort länk"><i data-lucide="x" style="width:14px;height:14px;"></i></button>
+                                </div>
+                                <?php endforeach; ?>
+                            </div>
+                            <button type="button" onclick="addInfoLink('<?= $linkSection ?>')" class="btn-admin btn-admin-ghost info-link-add">
+                                <i data-lucide="plus" style="width:14px;height:14px;"></i> Lägg till länk
+                            </button>
+                        </div>
                     </div>
                 <?php endforeach; ?>
             </div>
