@@ -1993,9 +1993,9 @@ include __DIR__ . '/components/unified-layout.php';
     background: var(--color-bg-surface);
     border-top: 1px solid var(--color-border);
     box-shadow: 0 -4px 12px rgba(0,0,0,0.1);
-    padding: var(--space-sm) var(--space-md);
+    padding: var(--space-xs) var(--space-md);
     z-index: 1000;
-    padding-bottom: calc(var(--space-sm) + env(safe-area-inset-bottom, 0));
+    padding-bottom: calc(var(--space-xs) + env(safe-area-inset-bottom, 0));
 }
 @media (min-width: 769px) {
     .floating-save-bar {
@@ -2004,8 +2004,10 @@ include __DIR__ . '/components/unified-layout.php';
 }
 @media (max-width: 899px) and (orientation: portrait) {
     .floating-save-bar {
-        bottom: calc(var(--mobile-nav-height, 64px) + env(safe-area-inset-bottom, 0px));
-        padding-bottom: var(--space-sm);
+        /* Snap directly on top of mobile nav - no extra gap */
+        bottom: var(--mobile-nav-height, 64px);
+        padding: var(--space-xs) var(--space-sm);
+        padding-bottom: var(--space-xs);
     }
 }
 .floating-save-content {
@@ -2016,11 +2018,11 @@ include __DIR__ . '/components/unified-layout.php';
     margin: 0 auto;
 }
 .admin-content {
-    padding-bottom: 80px !important;
+    padding-bottom: 70px !important;
 }
 @media (max-width: 899px) and (orientation: portrait) {
     .admin-content {
-        padding-bottom: calc(80px + var(--mobile-nav-height, 64px) + env(safe-area-inset-bottom, 0px)) !important;
+        padding-bottom: calc(60px + var(--mobile-nav-height, 64px)) !important;
     }
 }
 
