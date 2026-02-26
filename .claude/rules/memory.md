@@ -4,7 +4,21 @@
 
 ---
 
-## SENASTE FIXAR (2026-02-26, session 4)
+## SENASTE FIXAR (2026-02-26, session 5)
+
+### Kontoaktivering krävde inte alla obligatoriska fält
+- **Problem:** Aktiveringsformuläret (`/reset-password?activate=1`) krävde bara lösenord, nationalitet och födelseår. Telefon, kön, nödkontakt (namn+telefon) saknades. Användare kunde aktivera konto med ofullständig profil och sedan bli blockerade vid eventanmälan.
+- **Fix:** Lagt till 4 obligatoriska fält i aktiveringsformuläret: kön (select M/F), telefonnummer, nödkontakt namn, nödkontakt telefon. Alla valideras server-side och sparas i UPDATE-queryn.
+- **Layout:** Födelseår+kön och ICE-namn+ICE-telefon visas i 2-kolumns grid (`.activation-row`)
+- **Fil:** `/pages/reset-password.php`
+- **SELECT utökad:** Rider-queryn hämtar nu även phone, ice_name, ice_phone, gender (förfylls om data redan finns)
+
+### Max deltagare kan sättas i serie-registreringsfliken
+- **Ny funktion:** "Max deltagare" kolumn tillagd i "Anmälningsinställningar per event" på `/admin/series/manage/{id}?tab=registration`
+- **Fil:** `/admin/series-manage.php` - SELECT-query, save handler, HTML-formulär
+- **Befintligt grid:** Den fjärde (tomma) kolumnen i `.reg-time-row` används nu för number-input
+
+## TIDIGARE FIXAR (2026-02-26, session 4)
 
 ### Serie-event dropdown flyttad ovanför flikarna
 - **Problem:** Serie-event-dropdownen låg inuti flikraden och bröt layouten på mobil
