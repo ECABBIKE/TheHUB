@@ -19,7 +19,13 @@
 - **Ny fil:** `/admin/tools/r2-config.php` - Konfigurationstest och statusvy
 - **Funktioner:** Testa anslutning, testa uppladdning, lista filer i bucket
 - **Installationsguide** med steg-för-steg för Cloudflare Dashboard
+- **r2.dev är primärt** (domänen ligger på annan server, inte Cloudflare → Custom Domain fungerar inte)
+- **CORS-policy** behöver konfigureras på bucketen (AllowedOrigins: thehub.gravityseries.se)
 - **Tillagd i** `/admin/tools.php` under System-sektionen
+
+### Event-albums: Google Photos-fält borttaget
+- **Ändring:** "Google Photos-album" fältet bytt till "Källänk (valfritt)" - generellt för alla bildkällor
+- **Fil:** `/admin/event-albums.php` - formuläret, albumlistan och bildsektionen uppdaterade
 
 ### Event-albums: R2-stöd + bulk-URL
 - **R2-uppladdning:** När R2 är konfigurerat optimeras bilder automatiskt och laddas upp till R2

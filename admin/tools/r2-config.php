@@ -307,51 +307,82 @@ include __DIR__ . '/../components/unified-layout.php';
                 <span style="display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: var(--radius-full); background: var(--color-accent); color: var(--color-bg-page); font-weight: 700; font-size: 0.9rem; flex-shrink: 0;">3</span>
                 <h4 style="color: var(--color-text-primary); margin: 0;">Aktivera publik åtkomst (så besökare kan se bilderna)</h4>
             </div>
-            <p>Bucketen är privat som standard. Bilder måste vara publikt åtkomliga för att visas på sajten. Det finns två alternativ:</p>
+            <p>Bucketen är privat som standard. Bilder måste vara publikt åtkomliga för att visas på sajten.</p>
 
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-md); margin: var(--space-md) 0;">
-                <!-- Custom domain -->
-                <div style="padding: var(--space-md); border: 2px solid var(--color-accent); border-radius: var(--radius-sm); background: var(--color-bg-card);">
-                    <div style="font-weight: 600; color: var(--color-accent-text); margin-bottom: var(--space-xs); font-size: 0.85rem;">
-                        <i data-lucide="star" class="icon-xs" style="vertical-align: text-bottom;"></i> Alternativ A: Custom domain (rekommenderat)
-                    </div>
-                    <ol style="margin: 0; padding-left: var(--space-lg); font-size: 0.85rem;">
-                        <li>Gå in i din bucket (klicka på <code>thehub-photos</code>)</li>
-                        <li>Klicka fliken <strong>"Settings"</strong></li>
-                        <li>Under <strong>"Public access"</strong>, sektionen <strong>"Custom Domains"</strong></li>
-                        <li>Klicka <strong>"Connect Domain"</strong></li>
+            <!-- R2.dev - primärt alternativ -->
+            <div style="padding: var(--space-md); border: 2px solid var(--color-accent); border-radius: var(--radius-sm); background: var(--color-bg-card); margin: var(--space-md) 0;">
+                <div style="font-weight: 600; color: var(--color-accent-text); margin-bottom: var(--space-sm); font-size: 0.9rem;">
+                    <i data-lucide="globe" class="icon-sm" style="vertical-align: text-bottom;"></i> Aktivera Public Development URL (r2.dev)
+                </div>
+                <p style="font-size: 0.85rem; margin: 0 0 var(--space-sm);">
+                    Detta ger dig en publik URL direkt från Cloudflare. Perfekt när din webbdomän ligger på en annan server (t.ex. Hostinger).
+                </p>
+                <ol style="margin: 0; padding-left: var(--space-lg); font-size: 0.85rem;">
+                    <li>Öppna din bucket <strong>thehub-photos</strong> i Cloudflare Dashboard</li>
+                    <li>Klicka fliken <strong>"Settings"</strong></li>
+                    <li>Scrolla ner till sektionen <strong>"Public Development URL"</strong></li>
+                    <li>Den visar texten <em>"The public development URL is disabled for this bucket."</em></li>
+                    <li>Klicka <strong>"Allow Access"</strong> (eller "Enable" om det står så)</li>
+                    <li>Bekräfta i dialogen som dyker upp</li>
+                    <li>Nu visas en URL i formatet: <code style="background: var(--color-bg-hover); padding: 2px 6px; border-radius: 3px;">https://pub-XXXXXXXXXXXXXXXX.r2.dev</code></li>
+                    <li><strong>Kopiera hela denna URL</strong> - du behöver den i steg 5</li>
+                </ol>
+                <div style="margin-top: var(--space-md); padding: var(--space-sm) var(--space-md); background: var(--color-accent-light); border-radius: var(--radius-sm); font-size: 0.8rem;">
+                    <strong>Testa direkt:</strong> Öppna URL:en i webbläsaren. Du bör se ett XML-svar med <code>&lt;ListBucketResult&gt;</code> eller liknande.
+                    Det betyder att publik åtkomst fungerar. (Bucketen är tom så inga bilder visas än.)
+                </div>
+            </div>
+
+            <!-- CORS Policy -->
+            <div style="padding: var(--space-md); border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-bg-card); margin: var(--space-md) 0;">
+                <div style="font-weight: 600; color: var(--color-text-primary); margin-bottom: var(--space-sm); font-size: 0.85rem;">
+                    <i data-lucide="shield" class="icon-sm" style="vertical-align: text-bottom;"></i> Konfigurera CORS (valfritt men rekommenderat)
+                </div>
+                <p style="font-size: 0.85rem; margin: 0 0 var(--space-sm);">
+                    CORS tillåter att bilder från r2.dev laddas på din sajt utan att webbläsaren blockerar dem.
+                    Utan CORS kan lightbox och bildladdning ibland strula.
+                </p>
+                <ol style="margin: 0; padding-left: var(--space-lg); font-size: 0.85rem;">
+                    <li>I bucket Settings, scrolla till <strong>"CORS Policy"</strong></li>
+                    <li>Klicka <strong>"Add CORS policy"</strong> (eller "Edit")</li>
+                    <li>Klistra in följande JSON-policy:</li>
+                </ol>
+                <pre style="background: var(--color-bg-hover); padding: var(--space-sm) var(--space-md); border-radius: var(--radius-sm); font-size: 0.75rem; margin: var(--space-sm) 0; overflow-x: auto;">[
+  {
+    "AllowedOrigins": ["https://thehub.gravityseries.se"],
+    "AllowedMethods": ["GET", "HEAD"],
+    "AllowedHeaders": ["*"],
+    "MaxAgeSeconds": 86400
+  }
+]</pre>
+                <ol start="4" style="margin: 0; padding-left: var(--space-lg); font-size: 0.85rem;">
+                    <li>Klicka <strong>"Save"</strong></li>
+                </ol>
+            </div>
+
+            <!-- Custom domain - alternativ -->
+            <details style="margin-top: var(--space-md);">
+                <summary style="font-size: 0.85rem; cursor: pointer; color: var(--color-text-muted);">
+                    <i data-lucide="globe-2" class="icon-xs" style="vertical-align: text-bottom;"></i>
+                    Alternativ: Custom domain (kräver att domänen ligger på Cloudflare)
+                </summary>
+                <div style="margin-top: var(--space-sm); padding: var(--space-md); border: 1px solid var(--color-border); border-radius: var(--radius-sm); font-size: 0.85rem;">
+                    <p style="margin: 0 0 var(--space-sm);">
+                        Om du i framtiden flyttar <code>gravityseries.se</code> till Cloudflare DNS kan du lägga till en custom domain
+                        (t.ex. <code>photos.gravityseries.se</code>) istället för r2.dev-URL:en. Så här:
+                    </p>
+                    <ol style="margin: 0; padding-left: var(--space-lg);">
+                        <li>I bucket Settings, under <strong>"Custom Domains"</strong> &rarr; <strong>"Connect Domain"</strong></li>
                         <li>Skriv in: <code>photos.gravityseries.se</code></li>
-                        <li>Cloudflare skapar automatiskt DNS-posten (om domänen ligger på Cloudflare)</li>
-                        <li>Vänta några minuter tills status visar <strong>"Active"</strong></li>
+                        <li>Cloudflare skapar DNS-posten automatiskt</li>
+                        <li>Uppdatera <code>R2_PUBLIC_URL</code> i <code>.env</code> till den nya domänen</li>
                     </ol>
-                    <div style="margin-top: var(--space-sm); font-size: 0.8rem; color: var(--color-success);">
-                        Resultat: Bilder nås via <code>https://photos.gravityseries.se/events/...</code>
-                    </div>
+                    <p style="margin: var(--space-sm) 0 0; color: var(--color-text-muted);">
+                        <strong>Obs:</strong> Domänen måste vara tillagd i samma Cloudflare-konto som bucketen.
+                        Om den hanteras av annan DNS-tjänst (Hostinger, Loopia etc.) fungerar detta <strong>inte</strong> - använd r2.dev istället.
+                    </p>
                 </div>
-
-                <!-- r2.dev -->
-                <div style="padding: var(--space-md); border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-bg-card);">
-                    <div style="font-weight: 600; color: var(--color-text-primary); margin-bottom: var(--space-xs); font-size: 0.85rem;">
-                        Alternativ B: R2.dev subdomain (snabbtest)
-                    </div>
-                    <ol style="margin: 0; padding-left: var(--space-lg); font-size: 0.85rem;">
-                        <li>Gå in i din bucket</li>
-                        <li>Klicka fliken <strong>"Settings"</strong></li>
-                        <li>Under <strong>"Public access"</strong>, sektionen <strong>"R2.dev subdomain"</strong></li>
-                        <li>Klicka <strong>"Allow Access"</strong></li>
-                        <li>Bekräfta</li>
-                    </ol>
-                    <div style="margin-top: var(--space-sm); font-size: 0.8rem; color: var(--color-text-muted);">
-                        Resultat: Bilder nås via <code>https://pub-XXXXX.r2.dev/events/...</code><br>
-                        (fungerar men ser inte lika proffsigt ut)
-                    </div>
-                </div>
-            </div>
-
-            <div style="padding: var(--space-sm) var(--space-md); background: var(--color-bg-hover); border-radius: var(--radius-sm); font-size: 0.8rem; margin-top: var(--space-sm);">
-                <strong>Krav:</strong> Om du använder custom domain (Alt A) måste domänen <code>gravityseries.se</code> redan vara tillagd i ditt Cloudflare-konto.
-                Om den hanteras av en annan DNS-tjänst behöver du skapa en CNAME-post manuellt.
-            </div>
+            </details>
         </div>
 
         <!-- STEG 4 -->
@@ -396,28 +427,28 @@ include __DIR__ . '/../components/unified-layout.php';
             <p>Öppna filen <code>.env</code> i TheHUBs rotmapp på servern och lägg till (eller uppdatera) dessa rader:</p>
 
             <pre style="background: var(--color-bg-hover); padding: var(--space-md); border-radius: var(--radius-sm); font-size: 0.8rem; overflow-x: auto; line-height: 1.8;"><span style="color: var(--color-text-muted);"># Cloudflare R2 Bildlagring</span>
-R2_ACCOUNT_ID=<span style="color: var(--color-accent-text);">ditt_account_id_från_steg_1</span>
-R2_ACCESS_KEY_ID=<span style="color: var(--color-accent-text);">din_access_key_id_från_steg_4</span>
-R2_SECRET_ACCESS_KEY=<span style="color: var(--color-accent-text);">din_secret_access_key_från_steg_4</span>
-R2_BUCKET=<span style="color: var(--color-accent-text);">thehub-photos</span>
-R2_PUBLIC_URL=<span style="color: var(--color-accent-text);">https://photos.gravityseries.se</span></pre>
+R2_ACCOUNT_ID=<span style="color: var(--color-accent-text);">ditt_account_id</span>             <span style="color: var(--color-text-muted);"># 32 tecken, finns i Cloudflare Dashboard URL</span>
+R2_ACCESS_KEY_ID=<span style="color: var(--color-accent-text);">din_access_key_id</span>        <span style="color: var(--color-text-muted);"># Från steg 4</span>
+R2_SECRET_ACCESS_KEY=<span style="color: var(--color-accent-text);">din_secret_key</span>       <span style="color: var(--color-text-muted);"># Från steg 4 (visas bara en gång!)</span>
+R2_BUCKET=<span style="color: var(--color-accent-text);">thehub-photos</span>                   <span style="color: var(--color-text-muted);"># Bucket-namnet du skapade i steg 2</span>
+R2_PUBLIC_URL=<span style="color: var(--color-accent-text);">https://pub-XXXXX.r2.dev</span>     <span style="color: var(--color-text-muted);"># URL:en från steg 3 (utan / på slutet)</span></pre>
 
-            <div style="margin-top: var(--space-sm);">
-                <strong>Var hittar jag Account ID?</strong>
-                <ul style="margin: var(--space-xs) 0; padding-left: var(--space-lg); font-size: 0.85rem;">
-                    <li>Logga in på <a href="https://dash.cloudflare.com" target="_blank" style="color: var(--color-accent-text);">dash.cloudflare.com</a></li>
-                    <li>Klicka på ditt konto (om du har flera)</li>
-                    <li>Account ID syns i höger sidebar under <strong>"Account details"</strong></li>
-                    <li>Alternativt: kolla URL:en i webbläsaren - den ser ut som <code>dash.cloudflare.com/<strong>a1b2c3d4...</strong></code></li>
-                </ul>
-            </div>
-
-            <div style="margin-top: var(--space-sm);">
-                <strong>Vad ska R2_PUBLIC_URL vara?</strong>
-                <ul style="margin: var(--space-xs) 0; padding-left: var(--space-lg); font-size: 0.85rem;">
-                    <li>Om du använde <strong>Alt A</strong> (custom domain): <code>https://photos.gravityseries.se</code></li>
-                    <li>Om du använde <strong>Alt B</strong> (r2.dev): <code>https://pub-XXXXX.r2.dev</code> (ersätt XXXXX med ditt subdomain-ID, se bucket Settings)</li>
-                </ul>
+            <div style="margin-top: var(--space-md); padding: var(--space-md); background: var(--color-accent-light); border-radius: var(--radius-sm);">
+                <strong style="color: var(--color-text-primary);">Var hittar jag värdena?</strong>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-md); margin-top: var(--space-sm); font-size: 0.85rem;">
+                    <div>
+                        <strong>R2_ACCOUNT_ID</strong><br>
+                        Logga in på <a href="https://dash.cloudflare.com" target="_blank" style="color: var(--color-accent-text);">dash.cloudflare.com</a>.
+                        Account ID syns i höger sidebar under <strong>"Account details"</strong>,
+                        eller direkt i URL:en: <code>dash.cloudflare.com/<strong>a1b2c3d4...</strong></code>
+                    </div>
+                    <div>
+                        <strong>R2_PUBLIC_URL</strong><br>
+                        Gå till din bucket &rarr; <strong>Settings</strong> &rarr; <strong>Public Development URL</strong>.
+                        Kopiera hela URL:en som visas, t.ex. <code>https://pub-abc123def456.r2.dev</code>.
+                        <strong>Ingen</strong> avslutande <code>/</code>.
+                    </div>
+                </div>
             </div>
         </div>
 
