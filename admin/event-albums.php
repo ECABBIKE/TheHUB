@@ -5,6 +5,7 @@
  */
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../includes/media-functions.php';
+require_once __DIR__ . '/../includes/r2-storage.php';
 require_admin();
 
 global $pdo;
@@ -73,9 +74,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
-    // Upload photos
+    // Upload photos (R2 or local fallback)
     if ($postAction === 'upload_photos' && $albumId > 0) {
         $uploaded = 0;
+        $errors = [];
+
+        // Get event_id for R2 key generation
+        $albumEventId = 0;
+        try {
+            $stmt = $pdo->prepare("SELECT event_id FROM event_albums WHERE id = ?");
+            $stmt->execute([$albumId]);
+            $albumEventId = (int)$stmt->fetchColumn();
+        } catch (PDOException $e) {}
+
+        $r2 = R2Storage::getInstance();
+
         if (!empty($_FILES['photos']['name'][0])) {
             foreach ($_FILES['photos']['name'] as $i => $name) {
                 $file = [
@@ -88,16 +101,59 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 if ($file['error'] !== UPLOAD_ERR_OK) continue;
 
-                $result = upload_media($file, 'events/photos', $_SESSION['user']['id'] ?? null);
-                if ($result['success']) {
-                    try {
-                        $stmt = $pdo->prepare("
-                            INSERT INTO event_photos (album_id, media_id, sort_order) VALUES (?, ?, ?)
-                        ");
-                        $stmt->execute([$albumId, $result['id'], $uploaded]);
-                        $uploaded++;
-                    } catch (PDOException $e) {
-                        error_log("Insert photo error: " . $e->getMessage());
+                if ($r2 && $albumEventId) {
+                    // R2-uppladdning: optimera → ladda upp → spara URL
+                    $optimized = R2Storage::optimizeImage($file['tmp_name'], 1920, 82);
+                    $key = R2Storage::generatePhotoKey($albumEventId, $file['name']);
+
+                    $contentType = $file['type'] ?: 'image/jpeg';
+                    $r2Result = $r2->upload($optimized['path'], $key, $contentType);
+
+                    // Generera thumbnail
+                    $thumbUrl = null;
+                    $thumbResult = R2Storage::generateThumbnail($file['tmp_name'], 400, 75);
+                    if ($thumbResult['path'] !== $file['tmp_name']) {
+                        $thumbKey = 'thumbs/' . $key;
+                        $thumbUpload = $r2->upload($thumbResult['path'], $thumbKey, $contentType);
+                        if ($thumbUpload['success']) {
+                            $thumbUrl = $thumbUpload['url'];
+                        }
+                        @unlink($thumbResult['path']);
+                    }
+
+                    // Rensa temp-filer
+                    if ($optimized['path'] !== $file['tmp_name']) {
+                        @unlink($optimized['path']);
+                    }
+
+                    if ($r2Result['success']) {
+                        try {
+                            $stmt = $pdo->prepare("
+                                INSERT INTO event_photos (album_id, external_url, thumbnail_url, r2_key, sort_order)
+                                VALUES (?, ?, ?, ?, ?)
+                            ");
+                            $stmt->execute([$albumId, $r2Result['url'], $thumbUrl ?? $r2Result['url'], $key, $uploaded]);
+                            $uploaded++;
+                        } catch (PDOException $e) {
+                            error_log("Insert R2 photo error: " . $e->getMessage());
+                            $errors[] = $file['name'] . ': DB-fel';
+                        }
+                    } else {
+                        $errors[] = $file['name'] . ': ' . ($r2Result['error'] ?? 'R2-fel');
+                    }
+                } else {
+                    // Lokal fallback (via media-system)
+                    $result = upload_media($file, 'events/photos', $_SESSION['user']['id'] ?? null);
+                    if ($result['success']) {
+                        try {
+                            $stmt = $pdo->prepare("
+                                INSERT INTO event_photos (album_id, media_id, sort_order) VALUES (?, ?, ?)
+                            ");
+                            $stmt->execute([$albumId, $result['id'], $uploaded]);
+                            $uploaded++;
+                        } catch (PDOException $e) {
+                            error_log("Insert photo error: " . $e->getMessage());
+                        }
                     }
                 }
             }
@@ -108,8 +164,39 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $pdo->prepare("UPDATE event_albums SET photo_count = (SELECT COUNT(*) FROM event_photos WHERE album_id = ?) WHERE id = ?")->execute([$albumId, $albumId]);
         } catch (PDOException $e) {}
 
-        $message = $uploaded . ' bilder uppladdade';
-        $messageType = 'success';
+        $message = $uploaded . ' bilder uppladdade' . ($r2 ? ' till R2' : ' lokalt');
+        if (!empty($errors)) {
+            $message .= ' (' . count($errors) . ' fel: ' . implode(', ', array_slice($errors, 0, 3)) . ')';
+            $messageType = 'warning';
+        } else {
+            $messageType = 'success';
+        }
+        $action = 'edit';
+    }
+
+    // Bulk add external URLs (multiple URLs at once)
+    if ($postAction === 'bulk_add_urls' && $albumId > 0) {
+        $urlsText = trim($_POST['urls'] ?? '');
+        $urls = array_filter(array_map('trim', preg_split('/[\r\n]+/', $urlsText)));
+        $added = 0;
+
+        foreach ($urls as $url) {
+            if (!filter_var($url, FILTER_VALIDATE_URL)) continue;
+            try {
+                $stmt = $pdo->prepare("INSERT INTO event_photos (album_id, external_url, thumbnail_url) VALUES (?, ?, ?)");
+                $stmt->execute([$albumId, $url, $url]);
+                $added++;
+            } catch (PDOException $e) {
+                error_log("Bulk add URL error: " . $e->getMessage());
+            }
+        }
+
+        if ($added > 0) {
+            $pdo->prepare("UPDATE event_albums SET photo_count = (SELECT COUNT(*) FROM event_photos WHERE album_id = ?) WHERE id = ?")->execute([$albumId, $albumId]);
+        }
+
+        $message = $added . ' av ' . count($urls) . ' URL:er tillagda';
+        $messageType = $added > 0 ? 'success' : 'warning';
         $action = 'edit';
     }
 
@@ -175,12 +262,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $photoId = (int)($_POST['photo_id'] ?? 0);
         if ($photoId) {
             try {
-                // Get media_id to delete the file too
-                $stmt = $pdo->prepare("SELECT media_id FROM event_photos WHERE id = ?");
+                // Get media_id and r2_key to delete the file too
+                $stmt = $pdo->prepare("SELECT media_id, r2_key FROM event_photos WHERE id = ?");
                 $stmt->execute([$photoId]);
                 $photo = $stmt->fetch(PDO::FETCH_ASSOC);
 
                 $pdo->prepare("DELETE FROM event_photos WHERE id = ?")->execute([$photoId]);
+
+                // Radera från R2 om r2_key finns
+                if ($photo && !empty($photo['r2_key'])) {
+                    $r2 = R2Storage::getInstance();
+                    if ($r2) {
+                        $r2->deleteObject($photo['r2_key']);
+                        // Radera thumbnail också
+                        $r2->deleteObject('thumbs/' . $photo['r2_key']);
+                    }
+                }
 
                 if ($photo && $photo['media_id']) {
                     delete_media($photo['media_id'], true);
@@ -259,8 +356,16 @@ if (($action === 'edit' || $action === 'photos') && $albumId > 0) {
         $album = $stmt->fetch(PDO::FETCH_ASSOC);
 
         if ($album) {
+            $photoFields = 'ep.id, ep.album_id, ep.media_id, ep.external_url, ep.thumbnail_url, ep.caption, ep.photographer, ep.sort_order, ep.is_highlight';
+            // Check if r2_key column exists
+            try {
+                $pdo->query("SELECT r2_key FROM event_photos LIMIT 0");
+                $photoFields .= ', ep.r2_key';
+            } catch (PDOException $e) {
+                // Column doesn't exist yet (migration 064 not run)
+            }
             $stmt = $pdo->prepare("
-                SELECT ep.*, m.filepath, m.original_filename, m.width, m.height,
+                SELECT {$photoFields}, m.filepath, m.original_filename, m.width, m.height,
                     (SELECT COUNT(*) FROM photo_rider_tags WHERE photo_id = ep.id) as tag_count
                 FROM event_photos ep
                 LEFT JOIN media m ON ep.media_id = m.id
@@ -418,11 +523,15 @@ include __DIR__ . '/components/unified-layout.php';
 </details>
 
 <?php if ($album): ?>
-<!-- Add photos via external URL (primary method) -->
+<!-- Add photos -->
+<?php $r2Active = R2Storage::isConfigured(); ?>
 <div class="admin-card" style="margin-top: var(--space-md);">
     <div class="admin-card-header">
         <h3 style="margin: 0; display: flex; align-items: center; gap: var(--space-sm);">
             <i data-lucide="image-plus" class="icon-sm"></i> Lägg till bilder
+            <?php if ($r2Active): ?>
+            <span class="badge badge-success" style="font-size: 0.65rem; font-weight: 400;">R2</span>
+            <?php endif; ?>
         </h3>
     </div>
     <div class="admin-card-body">
@@ -431,36 +540,81 @@ include __DIR__ . '/components/unified-layout.php';
             <i data-lucide="link" class="icon-sm" style="vertical-align: text-bottom;"></i>
             Google Photos-album:
             <a href="<?= htmlspecialchars($album['google_photos_url']) ?>" target="_blank" style="color: var(--color-accent-text);">Öppna album</a>
-            &mdash; Kopiera bild-URL:er och klistra in nedan.
         </p>
         <?php endif; ?>
 
-        <form method="POST" id="addPhotoForm" style="display: flex; flex-wrap: wrap; gap: var(--space-sm); align-items: end;">
-            <input type="hidden" name="action" value="add_external_photo">
-            <input type="hidden" name="album_id" value="<?= $album['id'] ?>">
-            <div class="admin-form-group" style="flex: 2; min-width: 250px;">
-                <label class="admin-form-label">Bild-URL (extern hosting)</label>
-                <input type="url" name="external_url" class="form-input" placeholder="https://lh3.googleusercontent.com/... eller annan extern URL" required>
-            </div>
-            <div class="admin-form-group" style="flex: 1; min-width: 150px;">
-                <label class="admin-form-label">Bildtext (valfritt)</label>
-                <input type="text" name="caption" class="form-input" placeholder="Beskrivning...">
-            </div>
-            <button type="submit" class="btn btn-primary">
-                <i data-lucide="plus" class="icon-sm"></i> Lägg till
-            </button>
-        </form>
+        <!-- Filuppladdning (primärt om R2 är konfigurerat) -->
+        <?php if ($r2Active): ?>
+        <div style="margin-bottom: var(--space-lg);">
+            <h4 style="margin: 0 0 var(--space-sm); font-size: 0.85rem; color: var(--color-text-primary); display: flex; align-items: center; gap: var(--space-xs);">
+                <i data-lucide="upload" class="icon-sm"></i> Ladda upp bilder
+                <span style="font-size: 0.75rem; color: var(--color-text-muted); font-weight: 400;">(optimeras och lagras i Cloudflare R2)</span>
+            </h4>
+            <form method="POST" enctype="multipart/form-data" style="display: flex; flex-wrap: wrap; gap: var(--space-sm); align-items: end;">
+                <input type="hidden" name="action" value="upload_photos">
+                <input type="hidden" name="album_id" value="<?= $album['id'] ?>">
+                <div class="admin-form-group" style="flex: 1; min-width: 200px;">
+                    <input type="file" name="photos[]" multiple accept="image/*" class="form-input" required>
+                    <small class="form-help">Max 1920px bredd, JPEG-kvalitet 82%. Välj flera filer samtidigt.</small>
+                </div>
+                <button type="submit" class="btn btn-primary">
+                    <i data-lucide="upload" class="icon-sm"></i> Ladda upp till R2
+                </button>
+            </form>
+        </div>
+        <hr style="border: none; border-top: 1px solid var(--color-border); margin: var(--space-md) 0;">
+        <?php endif; ?>
 
+        <!-- Enstaka extern URL -->
+        <div style="margin-bottom: var(--space-md);">
+            <h4 style="margin: 0 0 var(--space-sm); font-size: 0.85rem; color: var(--color-text-primary); display: flex; align-items: center; gap: var(--space-xs);">
+                <i data-lucide="link" class="icon-sm"></i> Extern bild-URL
+            </h4>
+            <form method="POST" id="addPhotoForm" style="display: flex; flex-wrap: wrap; gap: var(--space-sm); align-items: end;">
+                <input type="hidden" name="action" value="add_external_photo">
+                <input type="hidden" name="album_id" value="<?= $album['id'] ?>">
+                <div class="admin-form-group" style="flex: 2; min-width: 250px;">
+                    <input type="url" name="external_url" class="form-input" placeholder="https://..." required>
+                </div>
+                <div class="admin-form-group" style="flex: 1; min-width: 150px;">
+                    <input type="text" name="caption" class="form-input" placeholder="Bildtext (valfritt)">
+                </div>
+                <button type="submit" class="btn btn-secondary">
+                    <i data-lucide="plus" class="icon-sm"></i> Lägg till
+                </button>
+            </form>
+        </div>
+
+        <!-- Bulk-URL:er -->
+        <details>
+            <summary style="font-size: 0.85rem; color: var(--color-text-muted); cursor: pointer;">
+                <i data-lucide="list" class="icon-sm" style="vertical-align: text-bottom;"></i>
+                Klistra in flera URL:er samtidigt
+            </summary>
+            <form method="POST" style="margin-top: var(--space-sm);">
+                <input type="hidden" name="action" value="bulk_add_urls">
+                <input type="hidden" name="album_id" value="<?= $album['id'] ?>">
+                <div class="admin-form-group">
+                    <textarea name="urls" class="form-input" rows="6" placeholder="En URL per rad:&#10;https://example.com/photo1.jpg&#10;https://example.com/photo2.jpg&#10;https://example.com/photo3.jpg" required></textarea>
+                    <small class="form-help">En URL per rad. Ogiltiga URL:er ignoreras.</small>
+                </div>
+                <button type="submit" class="btn btn-secondary">
+                    <i data-lucide="plus" class="icon-sm"></i> Lägg till alla
+                </button>
+            </form>
+        </details>
+
+        <?php if (!$r2Active): ?>
+        <!-- Lokal uppladdning (fallback) -->
         <details style="margin-top: var(--space-md);">
             <summary style="font-size: 0.85rem; color: var(--color-text-muted); cursor: pointer;">
                 <i data-lucide="upload" class="icon-sm" style="vertical-align: text-bottom;"></i>
-                Ladda upp från fil (om extern URL inte finns)
+                Ladda upp från fil (lokal lagring)
             </summary>
             <form method="POST" enctype="multipart/form-data" style="display: flex; flex-wrap: wrap; gap: var(--space-md); align-items: end; margin-top: var(--space-sm);">
                 <input type="hidden" name="action" value="upload_photos">
                 <input type="hidden" name="album_id" value="<?= $album['id'] ?>">
                 <div class="admin-form-group" style="flex: 1; min-width: 200px;">
-                    <label class="admin-form-label">Välj bilder</label>
                     <input type="file" name="photos[]" multiple accept="image/*" class="form-input" required>
                 </div>
                 <button type="submit" class="btn btn-secondary">
@@ -468,6 +622,7 @@ include __DIR__ . '/components/unified-layout.php';
                 </button>
             </form>
         </details>
+        <?php endif; ?>
     </div>
 </div>
 

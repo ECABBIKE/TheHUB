@@ -16,7 +16,7 @@
 | Win-Back System | KLAR | Aterengagera churnade deltagare | 100% |
 | Klubb RF-Registrering | KLAR | SCF/NCF/DCU-synk och stavningskontroll | 100% |
 | Startlistor | KLAR | Admin/promotor startliste-vy med startnr, export, mobilvy | 100% |
-| Bildbanken / Fotoalbum | PAGAENDE | Fotoalbum per event, manuell taggning, galleri med lightbox | 60% |
+| Bildbanken / Fotoalbum | PAGAENDE | Fotoalbum, manuell taggning, galleri, R2-integration. Fas 3: OCR-taggning | 80% |
 | Premium-medlemskap | PAGAENDE | Stripe-oberoende, sponsorprofil, hogupplosta bilder, swapmeet | 50% |
 | Ridercard Share | PAGAENDE | Statistikkort for Instagram-delning | 5% |
 | Prestandaoptimering | PAGAENDE | Fas 1-2 klar. Fas 3-4 planerade (CSS-bundling, arkitektur) | 50% |
@@ -54,29 +54,79 @@
 
 ### 2. Högupplösta tävlingsbilder
 
-**Koncept:** Premium-medlemmar får tillgång till 3 högupplösta bilder per tävling från Bildbanken. Bilderna kan laddas ner i full upplösning för att göra prints, tackkort, sociala medier-inlägg m.m.
+**Koncept:** Premium-medlemmar får tillgång till 3 högupplösta bilder per tävling. Bilderna kan laddas ner i full upplösning för prints, tackkort, sociala medier m.m.
 
 **Grundidé:**
-- Fotografer laddar upp bilder till Bildbanken (befintligt system, pågående)
-- AI-taggning kopplar bilder till rätt deltagare automatiskt
-- Alla kan se sina bilder i lågupplösning (med vattenstämpel)
-- Premium-medlemmar väljer 3 bilder per event att ladda ner i full kvalitet
-- Perfekt för: prints, ramar, tackkort, Instagram-stories, sponsorrapporter
+- Fotografer laddar upp bilder till Google Photos (källa)
+- Bilder hostas via Cloudflare R2 CDN ($0 bandbredd, 10 GB gratis lagring)
+- OCR-taggning läser nummerlappar → matchar mot startlista → auto-taggar riders
+- Alla kan se bilder i galleriet, premium-medlemmar får high-res nedladdning
+- "Mina bilder" på profil- och event-sidan (BYGGT)
 
 **Möjliga funktioner:**
-- "Mina bilder" på profil- och event-sidan
 - Välj 3 favoriter per event → ladda ner i högupplösning
 - Vattenstämpel på icke-premium-vy
 - Nedladdning som ZIP eller enskilda filer
 - Koppling till Ridercard Share (statistikkort + bästa bild)
 
-**Beroende av:** Bildbanken (AI-taggning, fotograf-uppladdning)
+**Status:** Fas 1 klar (manuell taggning + galleri). Fas 2-3 planerade.
 
-**Status:** Idéstadium - ej påbörjat
+### 3. Bildbanken - Teknisk plan
+
+**Fas 1 - Manuell taggning (KLAR):**
+- Migration 063: event_albums, event_photos, photo_rider_tags
+- Admin album-hantering med manuell rider-taggning
+- Galleri-flik på event-sidan med lightbox + sponsor-annonser
+- "Mina bilder" på premium-profiler
+
+**Fas 2 - Cloudflare R2 CDN (KLAR - kräver .env-konfiguration):**
+- `/includes/r2-storage.php` - Lättviktig S3-klient med AWS Signature V4 (inga beroenden)
+- Bildoptimering: max 1920px, JPEG 82% + thumbnails 400px
+- Admin-uppladdning: bulk-upload till R2 via `/admin/event-albums.php`
+- Bulk-URL: klistra in flera externa URL:er samtidigt
+- Konfiguration: `R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET`, `R2_PUBLIC_URL` i .env
+- Admin-test: `/admin/tools/r2-config.php` - testa anslutning, lista filer
+- Migration 064: `event_photos.r2_key` för R2-objekthantering
+- Kostnad 2026-2027: $0 (8 000 bilder optimerade = ~4 GB)
+- Kostnad 2028+: ~$0.02/mån vid 11.5 GB
+
+**Fas 3 - OCR nummerlapps-taggning (PLANERAD):**
+- Tesseract OCR (open source, gratis, körs på servern)
+- Läser nummerlappar/bib numbers från tävlingsbilder
+- Matchar mot startlista: `event_registrations.bib_number → rider_id`
+- Flera nummer per bild = flera riders taggade
+- Admin granskar/korrigerar AI-förslag
+- Kostnad: $0 (Tesseract är gratis)
+
+**Kostnadsberäkning (8 000 befintliga + ~5 000 nya/år):**
+
+| År | Bilder | Lagring (opt) | R2-kostnad | OCR-kostnad |
+|----|--------|---------------|------------|-------------|
+| 2026 | 13 000 | 6.5 GB | $0 | $0 (Tesseract) |
+| 2027 | 18 000 | 9 GB | $0 | $0 |
+| 2028 | 23 000 | 11.5 GB | $0.02/mån | $0 |
+| 2030 | 33 000 | 16.5 GB | $0.10/mån | $0 |
 
 ---
 
 # CHANGELOG
+
+### 2026-02-26 (Cloudflare R2 bildlagring)
+- **Branch:** claude/fix-site-performance-wVdVq
+
+- **Ny funktion: Cloudflare R2 integration**
+  - R2-klient: `/includes/r2-storage.php` - AWS Sig V4, inga beroenden
+  - Bildoptimering vid uppladdning (max 1920px, JPEG 82%) + thumbnails (400px)
+  - Admin-uppladdning: bilder optimeras → R2 → URL sparas i event_photos
+  - Bulk-URL: klistra in flera bild-URL:er samtidigt
+  - Radering: tar bort från R2 (bild + thumbnail) via r2_key
+  - Admin-verktyg: `/admin/tools/r2-config.php` - test och status
+  - Migration 064: `event_photos.r2_key`
+
+- **Nya filer:**
+  - `includes/r2-storage.php` - R2/S3 klient med AWS Signature V4
+  - `admin/tools/r2-config.php` - R2 konfiguration och testverktyg
+  - `Tools/migrations/064_event_photos_r2_key.sql` - R2-nyckel i event_photos
 
 ### 2026-02-26 (Fotoalbum & Premium-system)
 - **Branch:** claude/fix-site-performance-wVdVq

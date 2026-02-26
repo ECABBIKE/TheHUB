@@ -221,6 +221,9 @@ $migrationChecks = [
         'tables' => ['event_albums', 'event_photos', 'photo_rider_tags'],
         'columns' => ['riders.premium_until']
     ],
+    '064_event_photos_r2_key.sql' => [
+        'columns' => ['event_photos.r2_key']
+    ],
 ];
 
 // ============================================================================
