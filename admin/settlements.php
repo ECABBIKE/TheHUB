@@ -195,6 +195,36 @@ function getRecipientEventAndSeriesIds($db, $rid, $recipientData, $hasAdminUserC
         } catch (Exception $e) {}
     }
 
+    // Path 5: Multi-recipient series - find series that CONTAIN events owned by this recipient
+    // (e.g. Swecup DH with 4 events, each having a different organizer)
+    try {
+        $multiRecipientSeries = $db->getAll("
+            SELECT DISTINCT se.series_id as id
+            FROM series_events se
+            JOIN events e ON se.event_id = e.id
+            WHERE e.payment_recipient_id = ?
+        ", [$rid]);
+        foreach ($multiRecipientSeries as $row) {
+            if (!in_array($row['id'], $seriesIds)) $seriesIds[] = $row['id'];
+        }
+    } catch (Exception $e) {}
+
+    // Path 6: Same via promotor chain (events owned by promotor in a series)
+    if ($hasAdminUserCol) {
+        try {
+            $multiRecipientSeriesPC = $db->getAll("
+                SELECT DISTINCT se.series_id as id
+                FROM series_events se
+                JOIN promotor_events pe ON pe.event_id = se.event_id
+                JOIN payment_recipients pr ON pr.admin_user_id = pe.user_id
+                WHERE pr.id = ?
+            ", [$rid]);
+            foreach ($multiRecipientSeriesPC as $row) {
+                if (!in_array($row['id'], $seriesIds)) $seriesIds[] = $row['id'];
+            }
+        } catch (Exception $e) {}
+    }
+
     return ['eventIds' => $eventIds, 'seriesIds' => $seriesIds];
 }
 
@@ -299,6 +329,11 @@ foreach ($recipientsToShow as $recipient) {
 
     // Split series orders into per-event rows
     $orders = explodeSeriesOrdersToEvents($orders, $db);
+
+    // Filter split rows: only show events belonging to THIS recipient
+    // Critical for multi-recipient series (e.g. Swecup DH with 4 organizers)
+    $recipientEventIds = getRecipientEventIds($db, $rid);
+    $orders = filterSplitRowsByRecipient($orders, $rid, $recipientEventIds);
 
     // Calculate fees per order
     $totals = ['gross' => 0, 'payment_fees' => 0, 'platform_fees' => 0, 'net' => 0, 'count' => 0];

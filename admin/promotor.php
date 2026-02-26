@@ -185,6 +185,34 @@ if ($isAdmin) {
                     WHERE pr8.id = ? AND oi8.item_type = 'series_registration'
                 )";
                 $recipientParams[] = $filterRecipient;
+
+                // Path 9: Series order where series CONTAINS an event owned by this recipient
+                // (for multi-recipient series like Swecup DH with 4 different organizers)
+                $recipientParts[] = "o.series_id IN (
+                    SELECT se9.series_id FROM series_events se9
+                    JOIN events e9 ON se9.event_id = e9.id
+                    WHERE e9.payment_recipient_id = ?
+                )";
+                $recipientParams[] = $filterRecipient;
+
+                // Path 10: Same via promotor chain (event owned by promotor in series)
+                $recipientParts[] = "o.series_id IN (
+                    SELECT se10.series_id FROM series_events se10
+                    JOIN promotor_events pe10 ON pe10.event_id = se10.event_id
+                    JOIN payment_recipients pr10 ON pr10.admin_user_id = pe10.user_id
+                    WHERE pr10.id = ?
+                )";
+                $recipientParams[] = $filterRecipient;
+
+                // Path 11: Via order_items for series containing recipient's events
+                $recipientParts[] = "o.id IN (
+                    SELECT oi11.order_id FROM order_items oi11
+                    JOIN series_registrations sr11 ON sr11.id = oi11.series_registration_id
+                    JOIN series_events se11 ON se11.series_id = sr11.series_id
+                    JOIN events e11 ON se11.event_id = e11.id
+                    WHERE e11.payment_recipient_id = ? AND oi11.item_type = 'series_registration'
+                )";
+                $recipientParams[] = $filterRecipient;
             }
 
             $conditions[] = "(" . implode(" OR ", $recipientParts) . ")";
@@ -241,6 +269,13 @@ if ($isAdmin) {
             }
             return true; // keep non-split rows
         }));
+    }
+
+    // If recipient filter is active, filter split rows to only show THIS recipient's events
+    // This is critical for multi-recipient series (e.g. Swecup DH with 4 organizers)
+    if ($filterRecipient > 0) {
+        $recipientEventIds = getRecipientEventIds($db, $filterRecipient);
+        $orderRows = filterSplitRowsByRecipient($orderRows, $filterRecipient, $recipientEventIds);
     }
 
     // Calculate per-order fees
