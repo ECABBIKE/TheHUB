@@ -1264,6 +1264,30 @@ if (!empty($eventSponsors['content'])): ?>
 </section>
 <?php endif; ?>
 
+<?php if (count($seriesEvents) > 1 || !empty($event['series_id'])): ?>
+<!-- Series Event Switcher -->
+<div class="series-switcher">
+    <?php if (count($seriesEvents) > 1): ?>
+    <div class="series-switcher__select-wrapper">
+        <span class="series-switcher__label"><?= h($event['series_name']) ?> <?= date('Y', strtotime($event['date'])) ?></span>
+        <select onchange="if(this.value) window.location.href='/event/' + this.value" class="series-switcher__select">
+            <?php foreach ($seriesEvents as $sEvent): ?>
+                <option value="<?= $sEvent['id'] ?>" <?= $sEvent['id'] == $eventId ? 'selected' : '' ?>>
+                    <?= date('j M', strtotime($sEvent['date'])) ?> – <?= h($sEvent['name']) ?>
+                </option>
+            <?php endforeach; ?>
+        </select>
+    </div>
+    <?php endif; ?>
+    <?php if (!empty($event['series_id'])): ?>
+    <a href="/series/<?= $event['series_id'] ?>" class="series-switcher__standings-btn">
+        <i data-lucide="trophy"></i>
+        Serietabeller
+    </a>
+    <?php endif; ?>
+</div>
+<?php endif; ?>
+
 <!-- Tab Navigation -->
 <div class="event-tabs-wrapper mb-sm">
     <div class="event-tabs">
@@ -1375,25 +1399,6 @@ if (!empty($eventSponsors['content'])): ?>
         </a>
         <?php endif; ?>
 
-        <?php if (count($seriesEvents) > 1): ?>
-        <div class="series-jump-wrapper">
-            <span class="series-jump-label"><?= h($event['series_name']) ?> <?= date('Y', strtotime($event['date'])) ?></span>
-            <select onchange="if(this.value) window.location.href='/event/' + this.value" class="series-jump-select">
-                <?php foreach ($seriesEvents as $sEvent): ?>
-                    <option value="<?= $sEvent['id'] ?>" <?= $sEvent['id'] == $eventId ? 'selected' : '' ?>>
-                        <?= date('j M', strtotime($sEvent['date'])) ?> – <?= h($sEvent['name']) ?>
-                    </option>
-                <?php endforeach; ?>
-            </select>
-        </div>
-        <?php endif; ?>
-
-        <?php if (!empty($event['series_id'])): ?>
-        <a href="/series/<?= $event['series_id'] ?>" class="series-standings-btn">
-            <i data-lucide="trophy"></i>
-            Serietabeller
-        </a>
-        <?php endif; ?>
     </div>
 </div>
 
