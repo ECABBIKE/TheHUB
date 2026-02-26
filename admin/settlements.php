@@ -366,15 +366,19 @@ foreach ($recipientsToShow as $recipient) {
             $order['fee_label'] = '-';
         }
 
-        // Platform fee: fixed/per_participant charged per event (not divided across series events)
+        // Platform fee:
+        // - fixed/percent/both: proportional (split across series events)
+        // - per_participant: full fee per event (5kr × 4 events = 20kr)
+        $evCount = (int)($order['_split_event_count'] ?? 1);
         if ($feeType === 'fixed') {
-            $order['platform_fee'] = $feeFixed;
+            $order['platform_fee'] = $isSplit ? round($feeFixed / $evCount, 2) : $feeFixed;
         } elseif ($feeType === 'per_participant') {
             $pCount = (int)($order['participant_count'] ?? 1);
+            // Per participant/event: full fee on every event in series
             $order['platform_fee'] = $feeFixed * $pCount;
         } elseif ($feeType === 'both') {
             $order['platform_fee'] = $isSplit
-                ? round(($amount * $feePct / 100) + $feeFixed, 2)
+                ? round(($amount * $feePct / 100) + ($feeFixed / $evCount), 2)
                 : round(($amount * $feePct / 100) + $feeFixed, 2);
         } else {
             $order['platform_fee'] = round($amount * $feePct / 100, 2);

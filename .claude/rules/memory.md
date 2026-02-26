@@ -40,11 +40,12 @@ Filtreras nu även via promotor-kedjan - visar events ägda av vald mottagares p
 ### Plattformsavgift
 Hämtas nu från VALD mottagare (om filterRecipient > 0) istället för alltid första aktiva.
 
-### VIKTIGT: Fast plattformsavgift per event i serier (2026-02-26)
-Fast avgift (fixed/per_participant) tas ut PER EVENT i serien, INTE delat mellan event.
-Exempel: 5 kr/deltagare × 4 event = 20 kr total plattformsavgift.
-Varje split-rad (per-event) får den fulla avgiften.
-Procentbaserad avgift är fortfarande proportionell mot beloppet (som redan är per-event).
+### VIKTIGT: Avgiftsregler för serieanmälningar (2026-02-26)
+- **Betalningsavgifter (Stripe/Swish)**: Delas proportionellt mellan event
+- **Plattformsavgift %**: Proportionell mot beloppet (redan per-event)
+- **Plattformsavgift fast per order (`fixed`)**: Delas proportionellt mellan event
+- **Plattformsavgift per deltagare/event (`per_participant`)**: Full avgift PER EVENT (5 kr × 4 event = 20 kr)
+- **Plattformsavgift `both` (% + fast)**: Båda delarna delas proportionellt
 
 ### Multi-recipient serier (Swecup DH-problemet)
 En serie kan ha event med OLIKA betalningsmottagare (t.ex. Swecup DH med 4 arrangörer).

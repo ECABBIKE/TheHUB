@@ -818,9 +818,11 @@ if (!$isAdmin) {
                 $order['fee_type'] = 'none';
             }
 
-            // Platform fee: fixed/per_participant charged per event (not divided across series events)
+            // Platform fee:
+            // - fixed/percent/both: proportional (split across series events)
+            // - per_participant: full fee per event (5kr × 4 events = 20kr)
             if ($promotorFeeType === 'fixed') {
-                $order['platform_fee'] = $promotorPlatformFixed;
+                $order['platform_fee'] = $isSplit ? round($promotorPlatformFixed * $fraction, 2) : $promotorPlatformFixed;
             } elseif ($promotorFeeType === 'per_participant') {
                 $pCount = 1;
                 if (!$isSplit) {
@@ -829,10 +831,11 @@ if (!$isAdmin) {
                         $pCount = max(1, (int)($pcRow['cnt'] ?? 1));
                     } catch (Exception $e) {}
                 }
+                // Per participant/event: full fee on every event in series
                 $order['platform_fee'] = $promotorPlatformFixed * $pCount;
             } elseif ($promotorFeeType === 'both') {
                 $order['platform_fee'] = $isSplit
-                    ? round(($amount * $promotorPlatformPct / 100) + $promotorPlatformFixed, 2)
+                    ? round(($amount * $promotorPlatformPct / 100) + ($promotorPlatformFixed * $fraction), 2)
                     : round(($amount * $promotorPlatformPct / 100) + $promotorPlatformFixed, 2);
             } else {
                 $order['platform_fee'] = round($amount * $promotorPlatformPct / 100, 2);
