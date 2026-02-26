@@ -417,16 +417,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $isChampionship = (!empty($_POST['is_championship']) && $_POST['is_championship'] == '1') ? 1 : 0;
             }
 
-            // First, update the core fields (original 10 that always work)
+            // First, update the core fields (these MUST always be saved reliably)
             $basicResult = $db->query(
                 "UPDATE events SET name = ?, date = ?, location = ?, venue_id = ?,
                  discipline = ?, event_level = ?, event_format = ?, series_id = ?,
-                 active = ?, website = ? WHERE id = ?",
+                 active = ?, website = ?, max_participants = ?,
+                 registration_opens = ?, registration_deadline = ?,
+                 registration_deadline_time = ?, contact_email = ?,
+                 contact_phone = ?, end_date = ?, event_type = ?,
+                 formats = ?, point_scale_id = ?, pricing_template_id = ?,
+                 distance = ?, elevation_gain = ?, stage_names = ?,
+                 venue_details = ?, venue_coordinates = ?, venue_map_url = ?
+                 WHERE id = ?",
                 [
                     $eventData['name'], $eventData['date'], $eventData['location'],
                     $eventData['venue_id'], $eventData['discipline'], $eventData['event_level'],
                     $eventData['event_format'], $eventData['series_id'], $eventData['active'],
-                    $eventData['website'], $id
+                    $eventData['website'], $eventData['max_participants'],
+                    $eventData['registration_opens'], $eventData['registration_deadline'],
+                    $eventData['registration_deadline_time'], $eventData['contact_email'],
+                    $eventData['contact_phone'], $eventData['end_date'], $eventData['event_type'],
+                    $eventData['formats'], $eventData['point_scale_id'], $eventData['pricing_template_id'],
+                    $eventData['distance'], $eventData['elevation_gain'], $eventData['stage_names'],
+                    $eventData['venue_details'], $eventData['venue_coordinates'], $eventData['venue_map_url'],
+                    $id
                 ]
             );
 
@@ -442,12 +456,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 error_log("EVENT EDIT: organizer_club_id update failed: " . $clubEx->getMessage());
             }
 
-            // Now try to update extended fields (these might not exist in all installs)
+            // Now try to update extended fields (content texts, use_global flags, hidden flags)
+            // These are non-critical and may not exist if migrations haven't been run
             try {
                 unset($eventData['name'], $eventData['date'], $eventData['location'],
                       $eventData['venue_id'], $eventData['discipline'], $eventData['event_level'],
                       $eventData['event_format'], $eventData['series_id'], $eventData['active'],
-                      $eventData['website'], $eventData['organizer_club_id']);
+                      $eventData['website'], $eventData['organizer_club_id'],
+                      $eventData['max_participants'], $eventData['registration_opens'],
+                      $eventData['registration_deadline'], $eventData['registration_deadline_time'],
+                      $eventData['contact_email'], $eventData['contact_phone'],
+                      $eventData['end_date'], $eventData['event_type'],
+                      $eventData['formats'], $eventData['point_scale_id'],
+                      $eventData['pricing_template_id'], $eventData['distance'],
+                      $eventData['elevation_gain'], $eventData['stage_names'],
+                      $eventData['venue_details'], $eventData['venue_coordinates'],
+                      $eventData['venue_map_url']);
 
                 if (!empty($eventData)) {
                     $db->update('events', $eventData, 'id = ?', [$id]);

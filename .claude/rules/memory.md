@@ -4,12 +4,29 @@
 
 ---
 
-## SENASTE FIXAR (2026-02-26, session 3)
+## SENASTE FIXAR (2026-02-26, session 4)
 
-### Serie-event dropdown mobilfix
-- **Problem:** `.series-jump-wrapper` med `width: 100%` och `flex: 1` på select gjorde att serie-event-dropdownen blev enorm på mobilen och bröt tab-raden
-- **Fix:** Mobil (max-width 900px): label döljs, kompakt padding/font-size, transparent bakgrund utan border. Behåller naturlig position (efter Anmälda-fliken)
-- **Fil:** `/assets/css/pages/event.css` rad ~525-541
+### Serie-event dropdown flyttad ovanför flikarna
+- **Problem:** Serie-event-dropdownen låg inuti flikraden och bröt layouten på mobil
+- **Ändring:** Flyttad till en egen `.series-switcher` sektion mellan sponsorlogotyper och flikraden. Edge-to-edge på mobil. Inkluderar dropdown + Serietabeller-knapp
+- **CSS:** Nya klasser `.series-switcher`, `.series-switcher__select`, `.series-switcher__standings-btn` (BEM). Gamla `.series-jump-*` och `.series-standings-btn` borttagna
+- **Fil:** `/assets/css/pages/event.css` + `/pages/event.php`
+
+### max_participants nollställdes vid event-sparning
+- **Problem:** `max_participants` (och andra fält som registration_opens, end_date, etc.) sparades bara i "extended fields" UPDATE-queryn. Om NÅGON kolumn i den queryn inte fanns i databasen (t.ex. efter ny migration), kraschade hela UPDATE:en tyst och ~50 fält sparades aldrig. Nästa gång eventet sparades lästes tomma/NULL-värden från POST och skrevs till databasen.
+- **Fix:** Flyttade 17 kritiska fält (max_participants, registration_opens, registration_deadline, registration_deadline_time, contact_email, contact_phone, end_date, event_type, formats, point_scale_id, pricing_template_id, distance, elevation_gain, stage_names, venue_details, venue_coordinates, venue_map_url) till den grundläggande SQL UPDATE-queryn som ALLTID körs. Kvarvarande extended fields (textinnehåll, use_global-flaggor, hidden-flaggor) sparas fortfarande i den feltoleranta update-queryn.
+- **Fil:** `/admin/event-edit.php` rad ~420-474
+
+### KRITISK REGEL för event-edit sparning
+- **Core UPDATE** (rad ~420): Alla strukturella fält som MÅSTE sparas. Kraschar om fel (throw Exception)
+- **Extended UPDATE** (rad ~476): Textinnehåll och flaggor. Fångar exceptions, loggar, fortsätter
+- Vid NYA kolumner i events-tabellen: lägg i core om fältet är kritiskt, extended om det är innehållstext
+- **Promotor hidden inputs**: MÅSTE finnas för ALLA fält i disabled fieldsets (rad ~834-849 och ~976-994)
+
+## TIDIGARE FIXAR (2026-02-26, session 3)
+
+### Serie-event dropdown mobilfix (ERSATT av session 4)
+- Hela serie-event-dropdownen flyttades ovanför flikarna (se ovan)
 
 ### Enhetlig bildbaserad sponsorväljare (admin + promotor)
 - **Ändring:** Admin-sidan i event-edit.php använde dropdown-select och checkboxar för sponsorer. Promotor hade bildväljare från mediabiblioteket. Nu använder BÅDA samma bildbaserade picker.
