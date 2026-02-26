@@ -3873,11 +3873,8 @@ if (!empty($event['series_id'])) {
 
             <?php if ($seriesRegistrationAvailable && $seriesInfo): ?>
             <!-- SERIES REGISTRATION SECTION -->
-            <div style="margin-top: var(--space-2xl); padding-top: var(--space-xl); border-top: 2px solid var(--color-border);">
-                <h3 style="display: flex; align-items: center; gap: var(--space-sm); margin-bottom: var(--space-md);">
-                    <i data-lucide="trophy"></i>
-                    Serieanmälan: <?= h($seriesInfo['name']) ?>
-                </h3>
+            <div class="reg-add-rider" style="margin-top: var(--space-lg);">
+                <h3 class="mb-md"><i data-lucide="trophy"></i> Serieanmälan: <?= h($seriesInfo['name']) ?></h3>
                 <p style="margin-bottom: var(--space-lg); color: var(--color-text-secondary);">
                     Anmäl dig till alla <?= count($seriesEventsWithPricing) ?> event i serien samtidigt.
                 </p>
