@@ -366,15 +366,16 @@ foreach ($recipientsToShow as $recipient) {
             $order['fee_label'] = '-';
         }
 
-        // Platform fee
+        // Platform fee: percent-based is proportional to amount, fixed/per_participant divided equally per event
+        $evCount = (int)($order['_split_event_count'] ?? 1);
         if ($feeType === 'fixed') {
-            $order['platform_fee'] = $isSplit ? round($feeFixed * $fraction, 2) : $feeFixed;
+            $order['platform_fee'] = $isSplit ? round($feeFixed / $evCount, 2) : $feeFixed;
         } elseif ($feeType === 'per_participant') {
             $pCount = (int)($order['participant_count'] ?? 1);
-            $order['platform_fee'] = $isSplit ? round($feeFixed * $fraction, 2) : $feeFixed * $pCount;
+            $order['platform_fee'] = $isSplit ? round($feeFixed * $pCount / $evCount, 2) : $feeFixed * $pCount;
         } elseif ($feeType === 'both') {
             $order['platform_fee'] = $isSplit
-                ? round(($amount * $feePct / 100) + ($feeFixed * $fraction), 2)
+                ? round(($amount * $feePct / 100) + ($feeFixed / $evCount), 2)
                 : round(($amount * $feePct / 100) + $feeFixed, 2);
         } else {
             $order['platform_fee'] = round($amount * $feePct / 100, 2);

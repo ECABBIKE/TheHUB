@@ -172,6 +172,7 @@ function explodeSeriesOrdersToEvents(array $orders, $db): array {
             $eventRow['series_name'] = $seriesName;
             $eventRow['total_amount'] = $evAmount;
             $eventRow['_split_fraction'] = $fraction;
+            $eventRow['_split_event_count'] = $eventCount;
             $eventRow['_event_recipient_id'] = $eventRecipientMap[$evId] ?? null;
             if (isset($order['stripe_fee']) && $order['stripe_fee'] !== null) {
                 $eventRow['stripe_fee'] = round((float)$order['stripe_fee'] * $fraction, 2);

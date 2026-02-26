@@ -189,6 +189,7 @@ $ADMIN_TABS = [
                     'registration-rules.php',
                     // Promotor
                     'promotor-payments.php',
+                    'promotor.php',
                     // Betalningsmottagare & avräkningar
                     'payment-recipients.php',
                     'settlements.php'
@@ -207,6 +208,14 @@ $ADMIN_TABS = [
                 'icon' => 'receipt',
                 'url' => '/admin/settlements.php',
                 'pages' => ['settlements.php']
+            ],
+            [
+                'id' => 'promotor',
+                'label' => 'Promotor',
+                'icon' => 'user-check',
+                'url' => '/admin/promotor.php?tab=economy',
+                'pages' => ['promotor.php'],
+                'role' => 'admin'
             ],
             [
                 'id' => 'discount-codes',

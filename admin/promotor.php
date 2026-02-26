@@ -313,15 +313,16 @@ if ($isAdmin) {
             $order['fee_type'] = 'none';
         }
 
-        // Platform fee (for split rows, distribute proportionally)
+        // Platform fee: percent-based is proportional to amount, fixed/per_participant divided equally per event
+        $evCount = (int)($order['_split_event_count'] ?? 1);
         if ($platformFeeType === 'fixed') {
-            $order['platform_fee'] = $isSplit ? round($platformFeeFixed * $fraction, 2) : $platformFeeFixed;
+            $order['platform_fee'] = $isSplit ? round($platformFeeFixed / $evCount, 2) : $platformFeeFixed;
         } elseif ($platformFeeType === 'per_participant') {
             $pCount = (int)($order['participant_count'] ?? 1);
-            $order['platform_fee'] = $isSplit ? round($platformFeeFixed * $pCount * $fraction, 2) : $platformFeeFixed * $pCount;
+            $order['platform_fee'] = $isSplit ? round($platformFeeFixed * $pCount / $evCount, 2) : $platformFeeFixed * $pCount;
         } elseif ($platformFeeType === 'both') {
             $order['platform_fee'] = $isSplit
-                ? round(($amount * $platformFeePct / 100) + ($platformFeeFixed * $fraction), 2)
+                ? round(($amount * $platformFeePct / 100) + ($platformFeeFixed / $evCount), 2)
                 : round(($amount * $platformFeePct / 100) + $platformFeeFixed, 2);
         } else {
             $order['platform_fee'] = round($amount * $platformFeePct / 100, 2);
