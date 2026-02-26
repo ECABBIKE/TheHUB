@@ -40,14 +40,36 @@ Filtreras nu även via promotor-kedjan - visar events ägda av vald mottagares p
 ### Plattformsavgift
 Hämtas nu från VALD mottagare (om filterRecipient > 0) istället för alltid första aktiva.
 
+### VIKTIGT: Avgiftsregler för serieanmälningar (2026-02-26)
+- **Betalningsavgifter (Stripe/Swish)**: Delas proportionellt mellan event
+- **Plattformsavgift %**: Proportionell mot beloppet (redan per-event)
+- **Plattformsavgift fast per order (`fixed`)**: Delas proportionellt mellan event
+- **Plattformsavgift per deltagare/event (`per_participant`)**: Full avgift PER EVENT (5 kr × 4 event = 20 kr)
+- **Plattformsavgift `both` (% + fast)**: Båda delarna delas proportionellt
+
+### Multi-recipient serier (Swecup DH-problemet)
+En serie kan ha event med OLIKA betalningsmottagare (t.ex. Swecup DH med 4 arrangörer).
+Serieanmälningar skapar EN order → `explodeSeriesOrdersToEvents()` delar den i per-event-rader.
+Varje split-rad taggas med `_event_recipient_id` från eventets `payment_recipient_id`.
+
+**Två-stegs filtrering:**
+1. **SQL-nivå** (promotor.php väg 9-11): Hitta serier som INNEHÅLLER events ägda av mottagaren
+2. **Post-split filtrering** (`filterSplitRowsByRecipient()`): Efter uppdelning, behåll bara split-rader för mottagarens events
+
+**Delade helpers i `/includes/economy-helpers.php`:**
+- `getRecipientEventIds($db, $recipientId)` - alla event-ID:n via 3 vägar (direkt + promotor + serie)
+- `filterSplitRowsByRecipient($rows, $recipientId, $recipientEventIds)` - filtrera split-rader
+
 ### KRITISK REGEL
 - **ANVÄND ALLTID promotor-kedjan** vid ekonomifrågor (inte bara payment_recipient_id)
 - Mönstret: `payment_recipients.admin_user_id → promotor_events/series.user_id`
 - `payment_recipient_id` på events/series är en CACHE - promotor-kedjan är sanningskällan
+- **Multi-recipient serier**: Serie-ordrar MÅSTE delas per event OCH filtreras per mottagare
 
 ### Filer ändrade
-- **`/admin/promotor.php`** - 8-vägs mottagarfilter + promotor-kedjad event-dropdown
-- **`/admin/settlements.php`** - Omskriven med promotor-kedja + settlement payouts + saldo
+- **`/admin/promotor.php`** - 11-vägs mottagarfilter + post-split recipient-filtrering
+- **`/admin/settlements.php`** - Omskriven med promotor-kedja + multi-recipient + settlement payouts + saldo
+- **`/includes/economy-helpers.php`** - `explodeSeriesOrdersToEvents()` + `getRecipientEventIds()` + `filterSplitRowsByRecipient()`
 - **`/admin/payment-recipients.php`** - Auto-sync vid create/update
 - **`/admin/user-events.php`** - Auto-sync vid promotor-tilldelning
 - **`/Tools/migrations/061_settlement_payouts_and_recipient_backfill.sql`** - Ny tabell + backfill

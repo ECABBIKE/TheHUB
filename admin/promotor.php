@@ -185,6 +185,34 @@ if ($isAdmin) {
                     WHERE pr8.id = ? AND oi8.item_type = 'series_registration'
                 )";
                 $recipientParams[] = $filterRecipient;
+
+                // Path 9: Series order where series CONTAINS an event owned by this recipient
+                // (for multi-recipient series like Swecup DH with 4 different organizers)
+                $recipientParts[] = "o.series_id IN (
+                    SELECT se9.series_id FROM series_events se9
+                    JOIN events e9 ON se9.event_id = e9.id
+                    WHERE e9.payment_recipient_id = ?
+                )";
+                $recipientParams[] = $filterRecipient;
+
+                // Path 10: Same via promotor chain (event owned by promotor in series)
+                $recipientParts[] = "o.series_id IN (
+                    SELECT se10.series_id FROM series_events se10
+                    JOIN promotor_events pe10 ON pe10.event_id = se10.event_id
+                    JOIN payment_recipients pr10 ON pr10.admin_user_id = pe10.user_id
+                    WHERE pr10.id = ?
+                )";
+                $recipientParams[] = $filterRecipient;
+
+                // Path 11: Via order_items for series containing recipient's events
+                $recipientParts[] = "o.id IN (
+                    SELECT oi11.order_id FROM order_items oi11
+                    JOIN series_registrations sr11 ON sr11.id = oi11.series_registration_id
+                    JOIN series_events se11 ON se11.series_id = sr11.series_id
+                    JOIN events e11 ON se11.event_id = e11.id
+                    WHERE e11.payment_recipient_id = ? AND oi11.item_type = 'series_registration'
+                )";
+                $recipientParams[] = $filterRecipient;
             }
 
             $conditions[] = "(" . implode(" OR ", $recipientParts) . ")";
@@ -243,6 +271,13 @@ if ($isAdmin) {
         }));
     }
 
+    // If recipient filter is active, filter split rows to only show THIS recipient's events
+    // This is critical for multi-recipient series (e.g. Swecup DH with 4 organizers)
+    if ($filterRecipient > 0) {
+        $recipientEventIds = getRecipientEventIds($db, $filterRecipient);
+        $orderRows = filterSplitRowsByRecipient($orderRows, $filterRecipient, $recipientEventIds);
+    }
+
     // Calculate per-order fees
     $payoutTotals = [
         'gross' => 0, 'payment_fees' => 0, 'platform_fees' => 0, 'net' => 0,
@@ -278,15 +313,16 @@ if ($isAdmin) {
             $order['fee_type'] = 'none';
         }
 
-        // Platform fee (for split rows, distribute proportionally)
+        // Platform fee: percent-based is proportional to amount, fixed/per_participant divided equally per event
+        $evCount = (int)($order['_split_event_count'] ?? 1);
         if ($platformFeeType === 'fixed') {
-            $order['platform_fee'] = $isSplit ? round($platformFeeFixed * $fraction, 2) : $platformFeeFixed;
+            $order['platform_fee'] = $isSplit ? round($platformFeeFixed / $evCount, 2) : $platformFeeFixed;
         } elseif ($platformFeeType === 'per_participant') {
             $pCount = (int)($order['participant_count'] ?? 1);
-            $order['platform_fee'] = $isSplit ? round($platformFeeFixed * $pCount * $fraction, 2) : $platformFeeFixed * $pCount;
+            $order['platform_fee'] = $isSplit ? round($platformFeeFixed * $pCount / $evCount, 2) : $platformFeeFixed * $pCount;
         } elseif ($platformFeeType === 'both') {
             $order['platform_fee'] = $isSplit
-                ? round(($amount * $platformFeePct / 100) + ($platformFeeFixed * $fraction), 2)
+                ? round(($amount * $platformFeePct / 100) + ($platformFeeFixed / $evCount), 2)
                 : round(($amount * $platformFeePct / 100) + $platformFeeFixed, 2);
         } else {
             $order['platform_fee'] = round($amount * $platformFeePct / 100, 2);
@@ -782,7 +818,9 @@ if (!$isAdmin) {
                 $order['fee_type'] = 'none';
             }
 
-            // Platform fee (proportional for split rows)
+            // Platform fee:
+            // - fixed/percent/both: proportional (split across series events)
+            // - per_participant: full fee per event (5kr × 4 events = 20kr)
             if ($promotorFeeType === 'fixed') {
                 $order['platform_fee'] = $isSplit ? round($promotorPlatformFixed * $fraction, 2) : $promotorPlatformFixed;
             } elseif ($promotorFeeType === 'per_participant') {
@@ -793,9 +831,8 @@ if (!$isAdmin) {
                         $pCount = max(1, (int)($pcRow['cnt'] ?? 1));
                     } catch (Exception $e) {}
                 }
-                $order['platform_fee'] = $isSplit
-                    ? round($promotorPlatformFixed * $fraction, 2)
-                    : $promotorPlatformFixed * $pCount;
+                // Per participant/event: full fee on every event in series
+                $order['platform_fee'] = $promotorPlatformFixed * $pCount;
             } elseif ($promotorFeeType === 'both') {
                 $order['platform_fee'] = $isSplit
                     ? round(($amount * $promotorPlatformPct / 100) + ($promotorPlatformFixed * $fraction), 2)
@@ -1473,11 +1510,11 @@ function cancelFeeEdit(recipientId, originalText) {
                     <div class="stat-label">Betalda</div>
                 </div>
                 <div class="stat-box">
-                    <div class="stat-value"><?= number_format($event['gross_revenue'], 0, ',', ' ') ?> kr</div>
+                    <div class="stat-value"><?= number_format($event['gross_revenue'], 2, ',', ' ') ?> kr</div>
                     <div class="stat-label">Brutto</div>
                 </div>
                 <div class="stat-box">
-                    <div class="stat-value success"><?= number_format(max(0, $event['net_revenue']), 0, ',', ' ') ?> kr</div>
+                    <div class="stat-value success"><?= number_format(max(0, $event['net_revenue']), 2, ',', ' ') ?> kr</div>
                     <div class="stat-label">Netto (est.)</div>
                 </div>
             </div>

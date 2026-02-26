@@ -44,7 +44,7 @@ if (!isset($current_admin_page)) {
     $scriptName = basename($_SERVER['SCRIPT_NAME'] ?? '', '.php');
     // PHP 5.x/7.x compatible - use array lookup instead of match()
     $pageMap = array(
-        'promotor' => 'events',
+        'promotor' => 'economy',
         'event-edit' => 'events',
         'event-create' => 'events',
         'events' => 'events',
