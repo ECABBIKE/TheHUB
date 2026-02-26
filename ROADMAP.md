@@ -23,6 +23,34 @@
 | CSS/UI Standardisering | PLANERAD | Enhetlig radius och nya tabeller pa alla sidor | 0% |
 | POS Incheckning & Startlista | PLANERAD | QR-scanning, incheckning, auto-startnr, startlistevy vid event | 0% |
 | GravityTiming API | KLAR | API for tidtagningsapp: startlistor, resultat, live-uppdatering | 100% |
+| TheHUB Swapmeet | PLANERAD | Kop/salj-marknadsplats for gravity-prylar (Premium-funktion) | 0% |
+
+---
+
+## PLANERAT: TheHUB Swapmeet (Premium-funktion)
+
+**Koncept:** En köp/sälj-marknadsplats för gravity-prylar integrerad i TheHUB. Premium-medlemmar kan lägga upp annonser på begagnade produkter (cyklar, skydd, hjälmar, reservdelar etc.) som enkelt kan tas med till tävlingar för överlämning istället för att behöva skickas med frakt.
+
+**Målgrupp:** Premium-medlemmar (befintligt prenumerationssystem)
+
+**Grundidé:**
+- Deltagare listar produkter de vill sälja/byta
+- Köpare/intresserade kan kontakta säljaren direkt
+- Överlämning sker på tävlingar (slipper frakt)
+- Event-sidan kan visa "X prylar tillgängliga på detta event"
+- Perfekt för gravity-specifika produkter som är svåra att hitta begagnade
+
+**Möjliga funktioner:**
+- Annonsvy med bilder, pris, kategori, skick
+- Filtrera på produkttyp, storlek, pris
+- "Tar med till [Event X]" - markera vilka event man planerar besöka
+- Meddelandesystem eller kontaktformulär
+- Avslutade/sålda annonser
+- Betyg/omdömen på säljare (kopplat till rider-profil)
+
+**Krav:** Premium-medlemskap (25 kr/mån eller 199 kr/år)
+
+**Status:** Idéstadium - ej påbörjat
 
 ---
 
