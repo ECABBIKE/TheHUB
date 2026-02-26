@@ -48,7 +48,8 @@ $scfClubs = [];
 if (!empty($token)) {
     // First check riders table
     $stmt = $pdo->prepare("
-        SELECT id, firstname, lastname, email, nationality, birth_year, club_id, license_number
+        SELECT id, firstname, lastname, email, nationality, birth_year, club_id, license_number,
+               phone, ice_name, ice_phone, gender
         FROM riders
         WHERE password_reset_token = ?
         AND password_reset_expires > NOW()
@@ -111,6 +112,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $validToken) {
     $postNationality = $_POST['nationality'] ?? '';
     $postBirthYear = $_POST['birth_year'] ?? '';
     $postClubId = $_POST['club_id'] ?? '';
+    $postPhone = trim($_POST['phone'] ?? '');
+    $postIceName = trim($_POST['ice_name'] ?? '');
+    $postIcePhone = trim($_POST['ice_phone'] ?? '');
+    $postGender = $_POST['gender'] ?? '';
 
     if (strlen($password) < 8) {
         $message = 'Lösenordet måste vara minst 8 tecken';
@@ -129,6 +134,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $validToken) {
         $messageType = 'error';
     } elseif ($isActivation && $accountType === 'rider' && (!is_numeric($postBirthYear) || (int)$postBirthYear < 1930 || (int)$postBirthYear > date('Y'))) {
         $message = 'Ogiltigt födelseår';
+        $messageType = 'error';
+    } elseif ($isActivation && $accountType === 'rider' && empty($postGender)) {
+        $message = 'Välj kön';
+        $messageType = 'error';
+    } elseif ($isActivation && $accountType === 'rider' && empty($postPhone)) {
+        $message = 'Ange ditt telefonnummer';
+        $messageType = 'error';
+    } elseif ($isActivation && $accountType === 'rider' && empty($postIceName)) {
+        $message = 'Ange nödkontakt (namn)';
+        $messageType = 'error';
+    } elseif ($isActivation && $accountType === 'rider' && empty($postIcePhone)) {
+        $message = 'Ange nödkontakt (telefon)';
         $messageType = 'error';
     } elseif ($isActivation && $accountType === 'rider' && $needsClub && empty($postClubId)) {
         $message = 'Välj en klubb';
@@ -168,6 +185,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && $validToken) {
 
                 $updateFields[] = 'birth_year = ?';
                 $updateParams[] = (int)$postBirthYear;
+
+                $updateFields[] = 'gender = ?';
+                $updateParams[] = $postGender;
+
+                $updateFields[] = 'phone = ?';
+                $updateParams[] = $postPhone;
+
+                $updateFields[] = 'ice_name = ?';
+                $updateParams[] = $postIceName;
+
+                $updateFields[] = 'ice_phone = ?';
+                $updateParams[] = $postIcePhone;
 
                 if ($needsClub && !empty($postClubId)) {
                     $updateFields[] = 'club_id = ?';
@@ -261,10 +290,14 @@ $pageTitle = $isActivation ? 'Aktivera konto' : 'Återställ lösenord';
                     <?php
                         $selNationality = $_POST['nationality'] ?? $rider['nationality'] ?? 'SWE';
                         $selBirthYear = $_POST['birth_year'] ?? $rider['birth_year'] ?? '';
+                        $selGender = $_POST['gender'] ?? $rider['gender'] ?? '';
+                        $selPhone = $_POST['phone'] ?? $rider['phone'] ?? '';
+                        $selIceName = $_POST['ice_name'] ?? $rider['ice_name'] ?? '';
+                        $selIcePhone = $_POST['ice_phone'] ?? $rider['ice_phone'] ?? '';
                         $selClubId = $_POST['club_id'] ?? '';
                     ?>
                     <div class="form-group">
-                        <label for="nationality">Land</label>
+                        <label for="nationality">Land <span class="required">*</span></label>
                         <select id="nationality" name="nationality" required class="form-select">
                             <?php foreach ($nationalities as $code => $name): ?>
                                 <option value="<?= $code ?>"
@@ -275,12 +308,48 @@ $pageTitle = $isActivation ? 'Aktivera konto' : 'Återställ lösenord';
                         </select>
                     </div>
 
+                    <div class="activation-row">
+                        <div class="form-group">
+                            <label for="birth_year">Födelseår <span class="required">*</span></label>
+                            <input type="number" id="birth_year" name="birth_year" required
+                                   placeholder="t.ex. 1995"
+                                   min="1930" max="<?= date('Y') ?>"
+                                   value="<?= htmlspecialchars($selBirthYear) ?>">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="gender">Kön <span class="required">*</span></label>
+                            <select id="gender" name="gender" required class="form-select">
+                                <option value="">Välj...</option>
+                                <option value="M" <?= $selGender === 'M' ? 'selected' : '' ?>>Man</option>
+                                <option value="F" <?= $selGender === 'F' ? 'selected' : '' ?>>Kvinna</option>
+                            </select>
+                        </div>
+                    </div>
+
                     <div class="form-group">
-                        <label for="birth_year">Födelseår</label>
-                        <input type="number" id="birth_year" name="birth_year" required
-                               placeholder="t.ex. 1995"
-                               min="1930" max="<?= date('Y') ?>"
-                               value="<?= htmlspecialchars($selBirthYear) ?>">
+                        <label for="phone">Telefonnummer <span class="required">*</span></label>
+                        <input type="tel" id="phone" name="phone" required
+                               placeholder="070-123 45 67"
+                               value="<?= htmlspecialchars($selPhone) ?>">
+                    </div>
+
+                    <div class="profile-section-label">Nödkontakt (ICE)</div>
+
+                    <div class="activation-row">
+                        <div class="form-group">
+                            <label for="ice_name">Namn <span class="required">*</span></label>
+                            <input type="text" id="ice_name" name="ice_name" required
+                                   placeholder="Förnamn Efternamn"
+                                   value="<?= htmlspecialchars($selIceName) ?>">
+                        </div>
+
+                        <div class="form-group">
+                            <label for="ice_phone">Telefon <span class="required">*</span></label>
+                            <input type="tel" id="ice_phone" name="ice_phone" required
+                                   placeholder="070-123 45 67"
+                                   value="<?= htmlspecialchars($selIcePhone) ?>">
+                        </div>
                     </div>
 
                     <?php if ($needsClub): ?>
@@ -370,6 +439,16 @@ $pageTitle = $isActivation ? 'Aktivera konto' : 'Återställ lösenord';
     letter-spacing: 0.5px;
     padding-bottom: var(--space-xs);
     border-bottom: 1px solid var(--color-border);
+}
+
+.activation-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-md);
+}
+
+.required {
+    color: var(--color-error);
 }
 
 .form-select {
