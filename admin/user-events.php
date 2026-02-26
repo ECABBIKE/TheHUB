@@ -33,6 +33,51 @@ if (!$user || $user['role'] !== 'promotor') {
 $message = '';
 $messageType = 'info';
 
+/**
+ * Auto-sync payment_recipient_id on events and series
+ * When a promotor is assigned events/series, set payment_recipient_id
+ * based on the payment_recipients linked to this promotor (via admin_user_id)
+ */
+function syncPaymentRecipientForPromotor($db, $promotorUserId) {
+    try {
+        // Find payment recipient linked to this promotor
+        $recipient = $db->getRow(
+            "SELECT id FROM payment_recipients WHERE admin_user_id = ? AND active = 1 LIMIT 1",
+            [$promotorUserId]
+        );
+        if (!$recipient) return;
+        $recipientId = (int)$recipient['id'];
+
+        // Set payment_recipient_id on all events assigned to this promotor (if not already set)
+        $db->execute("
+            UPDATE events e
+            JOIN promotor_events pe ON pe.event_id = e.id
+            SET e.payment_recipient_id = ?
+            WHERE pe.user_id = ? AND (e.payment_recipient_id IS NULL OR e.payment_recipient_id = 0)
+        ", [$recipientId, $promotorUserId]);
+
+        // Set payment_recipient_id on all series assigned to this promotor (if not already set)
+        $db->execute("
+            UPDATE series s
+            JOIN promotor_series ps ON ps.series_id = s.id
+            SET s.payment_recipient_id = ?
+            WHERE ps.user_id = ? AND (s.payment_recipient_id IS NULL OR s.payment_recipient_id = 0)
+        ", [$recipientId, $promotorUserId]);
+
+        // Also set on events belonging to promotor's series (via series_events)
+        $db->execute("
+            UPDATE events e
+            JOIN series_events se ON se.event_id = e.id
+            JOIN promotor_series ps ON ps.series_id = se.series_id
+            SET e.payment_recipient_id = ?
+            WHERE ps.user_id = ? AND (e.payment_recipient_id IS NULL OR e.payment_recipient_id = 0)
+        ", [$recipientId, $promotorUserId]);
+    } catch (Exception $e) {
+        // Silently ignore - this is a best-effort sync
+        error_log("syncPaymentRecipientForPromotor error: " . $e->getMessage());
+    }
+}
+
 // Handle form submission
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     checkCsrf();
@@ -77,10 +122,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     if ($insertId) {
                         $message = 'Event tillagt!';
                         $messageType = 'success';
+                        // Auto-sync payment_recipient_id
+                        syncPaymentRecipientForPromotor($db, $id);
                     } else {
                         $message = 'Kunde inte lägga till event. Kontrollera att tabellen promotor_events finns.';
                         $messageType = 'error';
                     }
+                } else {
+                    // Event already existed, still sync recipient
+                    syncPaymentRecipientForPromotor($db, $id);
                 }
             } catch (Exception $e) {
                 $message = 'Ett fel uppstod: ' . $e->getMessage();
@@ -178,6 +228,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 } else {
                     $message = "Serie '{$seriesName}' tilldelad! " . ($addedCount > 0 ? "$addedCount event tillagda." : "Alla events fanns redan.");
                     $messageType = 'success';
+                    // Auto-sync payment_recipient_id
+                    syncPaymentRecipientForPromotor($db, $id);
                 }
             } catch (Exception $e) {
                 $message = 'Ett fel uppstod: ' . $e->getMessage();

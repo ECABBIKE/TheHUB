@@ -4,6 +4,56 @@
 
 ---
 
+## EKONOMI-BACKBONE: PROMOTOR-KEDJAN (2026-02-26)
+
+### Grundproblem
+`events.payment_recipient_id` och `series.payment_recipient_id` sattes ALDRIG - det fanns inget UI eller automatik för det. Hela ekonomisystemet (promotor.php admin-vy, settlements.php) byggde på dessa kolumner men de var alltid NULL. Resultat: 0 betalningar visades i alla ekonomivyer.
+
+### Lösning: Tre-stegs kopplingskedja
+
+**Kedjan:** `payment_recipients.admin_user_id` → `promotor_events/promotor_series` → `events/series` → `orders`
+
+#### 1. Promotor-kedjan i SQL-frågor
+Alla ekonomivyer (promotor.php + settlements.php) söker nu via 8 vägar istället för 5:
+- Väg 1-5: Befintliga (events.payment_recipient_id, series via event, orders.series_id, order_items, series_events junction)
+- **Väg 6**: `promotor_events.user_id` → `payment_recipients.admin_user_id` (event direkt)
+- **Väg 7**: `promotor_series.user_id` → `payment_recipients.admin_user_id` (serie via orders.series_id)
+- **Väg 8**: `order_items → series_registrations → promotor_series → payment_recipients` (serie via items)
+
+#### 2. Auto-sync vid promotor-tilldelning
+`payment_recipient_id` sätts automatiskt på events/series när:
+- En promotor tilldelas ett event/serie (`user-events.php` → `syncPaymentRecipientForPromotor()`)
+- En betalningsmottagare skapas/uppdateras med kopplad promotor (`payment-recipients.php` → `_syncRecipientToPromotorAssets()`)
+
+#### 3. Backfill via migration 061
+SQL backfill sätter `payment_recipient_id` på alla befintliga events/series baserat på promotor-kopplingar.
+
+### Settlement/Avräkningssystem (migration 061)
+- **`settlement_payouts`** tabell: id, recipient_id, amount, period_start, period_end, reference, payment_method, notes, status, created_by
+- Registrera utbetalningar direkt i settlements.php (knapp per mottagare)
+- **Saldovisning**: Netto intäkter - Utbetalt = Kvar att betala
+- Annullera utbetalningar (status → cancelled)
+
+### Event-dropdown i promotor.php
+Filtreras nu även via promotor-kedjan - visar events ägda av vald mottagares promotor.
+
+### Plattformsavgift
+Hämtas nu från VALD mottagare (om filterRecipient > 0) istället för alltid första aktiva.
+
+### KRITISK REGEL
+- **ANVÄND ALLTID promotor-kedjan** vid ekonomifrågor (inte bara payment_recipient_id)
+- Mönstret: `payment_recipients.admin_user_id → promotor_events/series.user_id`
+- `payment_recipient_id` på events/series är en CACHE - promotor-kedjan är sanningskällan
+
+### Filer ändrade
+- **`/admin/promotor.php`** - 8-vägs mottagarfilter + promotor-kedjad event-dropdown
+- **`/admin/settlements.php`** - Omskriven med promotor-kedja + settlement payouts + saldo
+- **`/admin/payment-recipients.php`** - Auto-sync vid create/update
+- **`/admin/user-events.php`** - Auto-sync vid promotor-tilldelning
+- **`/Tools/migrations/061_settlement_payouts_and_recipient_backfill.sql`** - Ny tabell + backfill
+
+---
+
 ## SERIE-ORDRAR: PER-EVENT INTÄKTSFÖRDELNING (2026-02-26)
 
 ### Bakgrund

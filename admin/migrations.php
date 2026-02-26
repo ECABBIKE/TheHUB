@@ -211,6 +211,9 @@ $migrationChecks = [
     '060_platform_fee_per_participant.sql' => [
         'columns' => ['payment_recipients.platform_fee_type']
     ],
+    '061_settlement_payouts_and_recipient_backfill.sql' => [
+        'tables' => ['settlement_payouts']
+    ],
 ];
 
 // ============================================================================
