@@ -1508,11 +1508,11 @@ function cancelFeeEdit(recipientId, originalText) {
                     <div class="stat-label">Betalda</div>
                 </div>
                 <div class="stat-box">
-                    <div class="stat-value"><?= number_format($event['gross_revenue'], 0, ',', ' ') ?> kr</div>
+                    <div class="stat-value"><?= number_format($event['gross_revenue'], 2, ',', ' ') ?> kr</div>
                     <div class="stat-label">Brutto</div>
                 </div>
                 <div class="stat-box">
-                    <div class="stat-value success"><?= number_format(max(0, $event['net_revenue']), 0, ',', ' ') ?> kr</div>
+                    <div class="stat-value success"><?= number_format(max(0, $event['net_revenue']), 2, ',', ' ') ?> kr</div>
                     <div class="stat-label">Netto (est.)</div>
                 </div>
             </div>

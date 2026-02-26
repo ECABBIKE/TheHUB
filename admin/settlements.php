@@ -613,23 +613,23 @@ include __DIR__ . '/components/unified-layout.php';
 <!-- Sammanfattning -->
 <div class="grand-stats">
     <div class="grand-stat">
-        <div class="grand-stat-value"><?= number_format($grandTotals['gross'], 0, ',', ' ') ?> kr</div>
+        <div class="grand-stat-value"><?= number_format($grandTotals['gross'], 2, ',', ' ') ?> kr</div>
         <div class="grand-stat-label">Brutto</div>
     </div>
     <div class="grand-stat">
-        <div class="grand-stat-value"><?= number_format($grandTotals['payment_fees'] + $grandTotals['platform_fees'], 0, ',', ' ') ?> kr</div>
+        <div class="grand-stat-value"><?= number_format($grandTotals['payment_fees'] + $grandTotals['platform_fees'], 2, ',', ' ') ?> kr</div>
         <div class="grand-stat-label">Totala avgifter</div>
     </div>
     <div class="grand-stat">
-        <div class="grand-stat-value positive"><?= number_format($grandTotals['net'], 0, ',', ' ') ?> kr</div>
+        <div class="grand-stat-value positive"><?= number_format($grandTotals['net'], 2, ',', ' ') ?> kr</div>
         <div class="grand-stat-label">Netto</div>
     </div>
     <div class="grand-stat">
-        <div class="grand-stat-value settled"><?= number_format($grandTotals['settled'], 0, ',', ' ') ?> kr</div>
+        <div class="grand-stat-value settled"><?= number_format($grandTotals['settled'], 2, ',', ' ') ?> kr</div>
         <div class="grand-stat-label">Utbetalt</div>
     </div>
     <div class="grand-stat">
-        <div class="grand-stat-value <?= $grandTotals['balance'] <= 0 ? 'positive' : 'warning' ?>"><?= number_format($grandTotals['balance'], 0, ',', ' ') ?> kr</div>
+        <div class="grand-stat-value <?= $grandTotals['balance'] <= 0 ? 'positive' : 'warning' ?>"><?= number_format($grandTotals['balance'], 2, ',', ' ') ?> kr</div>
         <div class="grand-stat-label">Kvar att betala</div>
     </div>
     <div class="grand-stat">
@@ -678,27 +678,27 @@ include __DIR__ . '/components/unified-layout.php';
     <!-- Saldo-bar -->
     <div class="balance-bar">
         <div class="balance-item">
-            <div class="balance-item-value"><?= number_format($t['gross'], 0, ',', ' ') ?> kr</div>
+            <div class="balance-item-value"><?= number_format($t['gross'], 2, ',', ' ') ?> kr</div>
             <div class="balance-item-label">Brutto</div>
         </div>
         <div class="balance-item">
-            <div class="balance-item-value"><?= number_format($t['payment_fees'], 0, ',', ' ') ?> kr</div>
+            <div class="balance-item-value"><?= number_format($t['payment_fees'], 2, ',', ' ') ?> kr</div>
             <div class="balance-item-label">Bet.avgifter</div>
         </div>
         <div class="balance-item">
-            <div class="balance-item-value"><?= number_format($t['platform_fees'], 0, ',', ' ') ?> kr</div>
+            <div class="balance-item-value"><?= number_format($t['platform_fees'], 2, ',', ' ') ?> kr</div>
             <div class="balance-item-label">Plattform</div>
         </div>
         <div class="balance-item">
-            <div class="balance-item-value net"><?= number_format($t['net'], 0, ',', ' ') ?> kr</div>
+            <div class="balance-item-value net"><?= number_format($t['net'], 2, ',', ' ') ?> kr</div>
             <div class="balance-item-label">Netto</div>
         </div>
         <div class="balance-item">
-            <div class="balance-item-value settled"><?= number_format($s['total_settled'], 0, ',', ' ') ?> kr</div>
+            <div class="balance-item-value settled"><?= number_format($s['total_settled'], 2, ',', ' ') ?> kr</div>
             <div class="balance-item-label">Utbetalt</div>
         </div>
         <div class="balance-item">
-            <div class="balance-item-value remaining <?= $s['balance'] <= 0 ? 'zero' : '' ?>"><?= number_format($s['balance'], 0, ',', ' ') ?> kr</div>
+            <div class="balance-item-value remaining <?= $s['balance'] <= 0 ? 'zero' : '' ?>"><?= number_format($s['balance'], 2, ',', ' ') ?> kr</div>
             <div class="balance-item-label">Kvar</div>
         </div>
     </div>
@@ -770,7 +770,7 @@ include __DIR__ . '/components/unified-layout.php';
             <?php foreach ($s['payouts'] as $p): ?>
             <div class="payout-row">
                 <div>
-                    <strong><?= number_format($p['amount'], 0, ',', ' ') ?> kr</strong>
+                    <strong><?= number_format($p['amount'], 2, ',', ' ') ?> kr</strong>
                     <span style="color: var(--color-text-muted); margin-left: var(--space-xs);">
                         <?= date('Y-m-d', strtotime($p['created_at'])) ?>
                     </span>
@@ -835,22 +835,22 @@ include __DIR__ . '/components/unified-layout.php';
                                     <span class="badge" style="font-size:10px;">Serie</span>
                                 <?php endif; ?>
                             </td>
-                            <td style="text-align:right;"><?= number_format($order['total_amount'], 0, ',', ' ') ?> kr</td>
+                            <td style="text-align:right;"><?= number_format($order['total_amount'], 2, ',', ' ') ?> kr</td>
                             <td style="text-align:right;" title="<?= htmlspecialchars($order['fee_label']) ?>">
-                                <?= number_format($order['payment_fee'], 0, ',', ' ') ?> kr
+                                <?= number_format($order['payment_fee'], 2, ',', ' ') ?> kr
                             </td>
-                            <td style="text-align:right;"><?= number_format($order['platform_fee'], 0, ',', ' ') ?> kr</td>
-                            <td style="text-align:right; font-weight: 600;"><?= number_format($order['net'], 0, ',', ' ') ?> kr</td>
+                            <td style="text-align:right;"><?= number_format($order['platform_fee'], 2, ',', ' ') ?> kr</td>
+                            <td style="text-align:right; font-weight: 600;"><?= number_format($order['net'], 2, ',', ' ') ?> kr</td>
                         </tr>
                         <?php endforeach; ?>
                     </tbody>
                     <tfoot>
                         <tr style="font-weight: 700; border-top: 2px solid var(--color-border);">
                             <td colspan="3">Summa (<?= $t['count'] ?> ordrar)</td>
-                            <td style="text-align:right;"><?= number_format($t['gross'], 0, ',', ' ') ?> kr</td>
-                            <td style="text-align:right;"><?= number_format($t['payment_fees'], 0, ',', ' ') ?> kr</td>
-                            <td style="text-align:right;"><?= number_format($t['platform_fees'], 0, ',', ' ') ?> kr</td>
-                            <td style="text-align:right; color: var(--color-success);"><?= number_format($t['net'], 0, ',', ' ') ?> kr</td>
+                            <td style="text-align:right;"><?= number_format($t['gross'], 2, ',', ' ') ?> kr</td>
+                            <td style="text-align:right;"><?= number_format($t['payment_fees'], 2, ',', ' ') ?> kr</td>
+                            <td style="text-align:right;"><?= number_format($t['platform_fees'], 2, ',', ' ') ?> kr</td>
+                            <td style="text-align:right; color: var(--color-success);"><?= number_format($t['net'], 2, ',', ' ') ?> kr</td>
                         </tr>
                     </tfoot>
                 </table>
