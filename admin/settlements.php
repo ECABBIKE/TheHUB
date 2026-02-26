@@ -124,10 +124,17 @@ foreach ($recipientsToShow as $recipient) {
                    {$stripeFeeCol}
                    o.event_id, o.series_id, o.created_at,
                    COALESCE(e.name, s.name, '-') as source_name,
-                   CASE WHEN o.event_id IS NOT NULL THEN 'event' ELSE 'serie' END as source_type
+                   CASE WHEN o.event_id IS NOT NULL THEN 'event' ELSE 'serie' END as source_type,
+                   COALESCE(oi_count.participant_count, 1) as participant_count
             FROM orders o
             LEFT JOIN events e ON o.event_id = e.id
             LEFT JOIN series s ON o.series_id = s.id
+            LEFT JOIN (
+                SELECT order_id, COUNT(*) as participant_count
+                FROM order_items
+                WHERE item_type IN ('event_registration', 'series_registration')
+                GROUP BY order_id
+            ) oi_count ON oi_count.order_id = o.id
             WHERE {$whereClause}
             ORDER BY o.created_at DESC
         ", $params);
@@ -169,6 +176,8 @@ foreach ($recipientsToShow as $recipient) {
         // Platform fee
         if ($feeType === 'fixed') {
             $order['platform_fee'] = $feeFixed;
+        } elseif ($feeType === 'per_participant') {
+            $order['platform_fee'] = $feeFixed * (int)($order['participant_count'] ?? 1);
         } elseif ($feeType === 'both') {
             $order['platform_fee'] = round(($amount * $feePct / 100) + $feeFixed, 2);
         } else {

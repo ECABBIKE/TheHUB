@@ -143,7 +143,8 @@ if ($isAdmin) {
             SELECT o.id, o.order_number, o.total_amount, o.payment_method, o.payment_status,
                    {$stripeFeeCol}
                    o.event_id, o.created_at,
-                   COALESCE(e.name, s_via_items.sname, '-') as event_name
+                   COALESCE(e.name, CONCAT(s_via_order.name, ' (serie)'), s_via_items.sname, '-') as event_name,
+                   COALESCE(oi_count.participant_count, 1) as participant_count
             FROM orders o
             LEFT JOIN events e ON o.event_id = e.id
             LEFT JOIN series s_via_event ON e.series_id = s_via_event.id
@@ -156,6 +157,12 @@ if ($isAdmin) {
                 WHERE oi2.item_type = 'series_registration'
                 GROUP BY oi2.order_id
             ) s_via_items ON s_via_items.order_id = o.id
+            LEFT JOIN (
+                SELECT order_id, COUNT(*) as participant_count
+                FROM order_items
+                WHERE item_type IN ('event_registration', 'series_registration')
+                GROUP BY order_id
+            ) oi_count ON oi_count.order_id = o.id
             WHERE {$whereClause}
             ORDER BY o.created_at DESC
         ", $params);
@@ -193,9 +200,11 @@ if ($isAdmin) {
             $order['fee_type'] = 'none';
         }
 
-        // Platform fee (supports percent, fixed, or both)
+        // Platform fee (supports percent, fixed, per_participant, or both)
         if ($platformFeeType === 'fixed') {
             $order['platform_fee'] = $platformFeeFixed;
+        } elseif ($platformFeeType === 'per_participant') {
+            $order['platform_fee'] = $platformFeeFixed * (int)($order['participant_count'] ?? 1);
         } elseif ($platformFeeType === 'both') {
             $order['platform_fee'] = round(($amount * $platformFeePct / 100) + $platformFeeFixed, 2);
         } else {
