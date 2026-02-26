@@ -407,6 +407,42 @@ include __DIR__ . '/components/unified-layout.php';
         <p style="color: var(--color-text-secondary);">Skapa ett album för att börja lägga till bilder från tävlingar.</p>
     </div>
 </div>
+
+<!-- Handbok -->
+<details class="admin-card" style="margin-top: var(--space-md);">
+    <summary class="admin-card-header" style="cursor: pointer;">
+        <h3 style="margin: 0; display: flex; align-items: center; gap: var(--space-sm);">
+            <i data-lucide="book-open" class="icon-sm"></i> Så här fungerar fotoalbum
+        </h3>
+    </summary>
+    <div class="admin-card-body" style="font-size: 0.9rem; line-height: 1.7; color: var(--color-text-secondary);">
+        <h4 style="color: var(--color-text-primary); margin: 0 0 var(--space-xs);">1. Skapa album</h4>
+        <p>Klicka <strong>"Skapa album"</strong> ovan. Välj ett event i dropdown-listan och fyll i fotografens namn. Albumet kan sparas som utkast eller publiceras direkt.</p>
+
+        <h4 style="color: var(--color-text-primary); margin: var(--space-md) 0 var(--space-xs);">2. Lägg till bilder</h4>
+        <p>Det finns tre sätt att lägga till bilder:</p>
+        <ul style="margin: var(--space-xs) 0; padding-left: var(--space-lg);">
+            <?php if (R2Storage::isConfigured()): ?>
+            <li><strong>Ladda upp filer</strong> — Bilder optimeras automatiskt (max 1920px, JPEG 82%) och lagras i Cloudflare R2. Välj flera filer samtidigt.</li>
+            <?php endif; ?>
+            <li><strong>Extern URL</strong> — Klistra in en bild-URL (t.ex. från Google Photos eller annan bildtjänst).</li>
+            <li><strong>Bulk-URL</strong> — Klistra in flera URL:er samtidigt, en per rad.</li>
+        </ul>
+
+        <h4 style="color: var(--color-text-primary); margin: var(--space-md) 0 var(--space-xs);">3. Tagga deltagare</h4>
+        <p>Klicka på en bild för att öppna taggningsmodalen. Sök på deltagarens namn och klicka för att tagga. En bild kan ha flera taggade deltagare (t.ex. om flera cyklister syns på samma bild).</p>
+
+        <h4 style="color: var(--color-text-primary); margin: var(--space-md) 0 var(--space-xs);">4. Publicera</h4>
+        <p>Markera <strong>"Publicerat"</strong> i albuminställningarna. Albumet syns då som en <strong>Galleri-flik</strong> på event-sidan. Premium-medlemmar ser sina taggade bilder på sin profilsida.</p>
+
+        <?php if (!R2Storage::isConfigured()): ?>
+        <div style="margin-top: var(--space-md); padding: var(--space-md); background: var(--color-accent-light); border-radius: var(--radius-sm);">
+            <strong>Tips:</strong> Konfigurera Cloudflare R2 för att kunna ladda upp bilder direkt.
+            <a href="/admin/tools/r2-config.php" style="color: var(--color-accent-text);">Konfigurera R2</a>
+        </div>
+        <?php endif; ?>
+    </div>
+</details>
 <?php else: ?>
 <div style="display: grid; gap: var(--space-md);">
     <?php foreach ($albums as $a): ?>
