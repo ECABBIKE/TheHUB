@@ -4,6 +4,37 @@
 
 ---
 
+## SENASTE FIXAR (2026-02-26, session 2)
+
+### Serie-ordrar: Tranås/Värnamo tomma i ekonomivyn
+- **Grundorsak:** `explodeSeriesOrdersToEvents()` kollade `$hasEventId` först och skippade splitting om `event_id` var satt. Gamla serie-ordrar (pre-migration 051) hade BÅDE `event_id` OCH `series_id` satt.
+- **Fix:** Ändrat villkoret till: om `series_id` finns → ALLTID splitta (oavsett `event_id`).
+- **Fil:** `/includes/economy-helpers.php` rad 28
+
+### Promotor event-kort: all intäkt under Vallåsen
+- **Grundorsak:** `orders`-subqueryn i promotor.php räknade ALL orders.total_amount per event_id. Serie-ordrar med felaktigt event_id hamnade under Vallåsen.
+- **Fix:** Lagt till `WHERE series_id IS NULL` i orders-subqueryn så enbart direkta event-ordrar räknas. Serie-intäkter beräknas separat via `series_revenue`.
+- **Fil:** `/admin/promotor.php` rad ~540
+
+### Login-redirect till profil för promotorer
+- **Grundorsak:** Admin-login (admin_users) returnerade INTE rider-profilfält (gender, phone, ice_name etc.). Login-checken i login.php kontrollerar dessa fält → alltid redirect till /profile/edit.
+- **Fix:** Efter admin_users-login, slår nu upp kopplad rider-profil via email och mergar profilfälten.
+- **Fil:** `/hub-config.php` rad ~562
+
+### Profilformulär saknade kön, nationalitet
+- **Fix:** Lagt till `gender` (select M/F) och `nationality` (select SWE/NOR/DNK/FIN/DEU/GBR/USA) i `/pages/profile/edit.php`. Båda sparas vid submit.
+- **UCI ID** kan nu fyllas i av användare som saknar det (redan implementerat men hade felaktig placeholder).
+
+### Premium-upsell dold
+- Sektionen "Bli Premium" i profilredigeringen döljs tills funktionen aktiveras.
+- **Fil:** `/pages/profile/edit.php` rad ~510
+
+### Dashboard: Verktyg-snabblänk
+- Tillagd i Snabbåtgärder-sektionen på admin dashboard.
+- **Fil:** `/admin/dashboard.php`
+
+---
+
 ## EKONOMI-BACKBONE: PROMOTOR-KEDJAN (2026-02-26)
 
 ### Grundproblem
