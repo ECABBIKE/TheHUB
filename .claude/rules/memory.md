@@ -6,6 +6,11 @@
 
 ## SENASTE FIXAR (2026-02-26, session 3)
 
+### Serie-event dropdown mobilfix
+- **Problem:** `.series-jump-wrapper` med `width: 100%` och `flex: 1` på select gjorde att serie-event-dropdownen blev enorm på mobilen och bröt tab-raden
+- **Fix:** Mobil (max-width 900px): `order: -1` (hamnar först i tab-raden), label döljs, kompakt padding/font-size, transparent bakgrund utan border
+- **Fil:** `/assets/css/pages/event.css` rad ~525-541
+
 ### Enhetlig bildbaserad sponsorväljare (admin + promotor)
 - **Ändring:** Admin-sidan i event-edit.php använde dropdown-select och checkboxar för sponsorer. Promotor hade bildväljare från mediabiblioteket. Nu använder BÅDA samma bildbaserade picker.
 - **Borttaget:** `$isPromotorOnly`-villkoret som delade sponsor-UI i event-edit.php

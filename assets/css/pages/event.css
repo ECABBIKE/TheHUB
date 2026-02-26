@@ -524,12 +524,19 @@
 
 @media (max-width: 900px) {
     .series-jump-wrapper {
-        width: 100%;
-        justify-content: center;
+        order: -1;
+        padding: var(--space-2xs) var(--space-xs);
+        gap: var(--space-xs);
+        border: none;
+        background: transparent;
+    }
+    .series-jump-label {
+        display: none;
     }
     .series-jump-select {
         max-width: none;
-        flex: 1;
+        font-size: var(--text-xs);
+        padding: var(--space-2xs) var(--space-lg) var(--space-2xs) var(--space-xs);
     }
 }
 
