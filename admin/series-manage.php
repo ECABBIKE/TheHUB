@@ -412,6 +412,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $opensTime = $_POST['opens_time'] ?? [];
         $closesDate = $_POST['closes_date'] ?? [];
         $closesTime = $_POST['closes_time'] ?? [];
+        $maxParticipants = $_POST['max_participants'] ?? [];
 
         // Use raw PDO for direct error handling (DatabaseWrapper swallows exceptions)
         $pdo = $db->getPdo();
@@ -467,6 +468,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $values[] = $regOpens;
                 }
 
+                // Max participants (INT column - always exists)
+                $maxPart = !empty($maxParticipants[$index]) ? intval($maxParticipants[$index]) : null;
+                $sets[] = 'max_participants = ?';
+                $values[] = $maxPart;
+
                 if (!empty($sets)) {
                     $values[] = $eventId;
                     $sql = "UPDATE events SET " . implode(', ', $sets) . " WHERE id = ?";
@@ -488,7 +494,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $message = "Sparade $saved events, $errors fel: " . implode('; ', $errorMessages);
             $messageType = 'warning';
         } elseif ($saved > 0) {
-            $message = "Sparade anmälningstider för $saved event(s)!";
+            $message = "Sparade anmälningsinställningar för $saved event!";
             $messageType = 'success';
         } else {
             $message = "Inga events att spara (event_ids: " . implode(',', $eventIds) . ")";
@@ -630,7 +636,7 @@ try {
         SELECT se.id, se.event_id, se.series_id, se.template_id, se.sort_order,
                e.name as event_name, e.date as event_date, e.location, e.discipline,
                e.series_id as event_series_id, {$regOpensSelect}, e.registration_deadline,
-               {$regDeadlineTimeSelect}, ps.name as template_name
+               {$regDeadlineTimeSelect}, e.max_participants, ps.name as template_name
         FROM series_events se
         JOIN events e ON se.event_id = e.id
         LEFT JOIN point_scales ps ON se.template_id = ps.id
@@ -1381,7 +1387,7 @@ include __DIR__ . '/components/unified-layout.php';
     <?php if (!empty($seriesEvents)): ?>
     <div class="admin-card">
         <div class="admin-card-header">
-            <h2><i data-lucide="clock"></i> Anmälningstider per event</h2>
+            <h2><i data-lucide="clock"></i> Anmälningsinställningar per event</h2>
         </div>
         <div class="admin-card-body">
             <form method="POST">
@@ -1423,14 +1429,17 @@ include __DIR__ . '/components/unified-layout.php';
                                 <input type="time" name="closes_time[]" class="admin-form-input" value="<?= $closesTime ?>" style="width: 100px;">
                             </div>
                         </div>
-                        <div></div>
+                        <div>
+                            <label class="text-xs text-secondary">Max deltagare</label>
+                            <input type="number" name="max_participants[]" class="admin-form-input" min="1" value="<?= $se['max_participants'] ?? '' ?>" placeholder="Obegränsat">
+                        </div>
                     </div>
                     <?php endforeach; ?>
                 </div>
 
                 <div class="mt-lg">
                     <button type="submit" class="btn-admin btn-admin-primary">
-                        <i data-lucide="save"></i> Spara anmälningstider
+                        <i data-lucide="save"></i> Spara anmälningsinställningar
                     </button>
                 </div>
             </form>
