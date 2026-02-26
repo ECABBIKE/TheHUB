@@ -1,6 +1,56 @@
 # TheHUB - Memory / Session Knowledge
 
-> Senast uppdaterad: 2026-02-25
+> Senast uppdaterad: 2026-02-26
+
+---
+
+## SERIE-ORDRAR: PER-EVENT INTÄKTSFÖRDELNING (2026-02-26)
+
+### Bakgrund
+Serieanmälningar skapas som EN order med `event_id = NULL` och `series_id = X`.
+Ekonomivyerna (promotor.php + settlements.php) visade dessa som EN rad med serie-namn.
+Användaren vill se intäkter fördelade per event i serien.
+
+### Lösning: `explodeSeriesOrdersToEvents()`
+Ny delad helper i **`/includes/economy-helpers.php`** som:
+1. Hittar alla event i serien (via `series_events` + `events.series_id` fallback)
+2. Slår upp `series_registrations` → `class_id`, `discount_percent`, `final_price`
+3. Hämtar per-event priser via `event_pricing_rules` för varje klass
+4. Fördelar orderbeloppet proportionellt: `event_base_price * (1 - rabatt%) / summa_base_price * orderbelopp`
+5. Fallback till jämn fördelning om pricing rules saknas
+
+### Avgiftsfördelning för uppdelade rader
+- **Betalningsavgift**: Proportionell via `_split_fraction` (Stripe %-del + fast del * fraction)
+- **Plattformsavgift**: %-baserade proportionella, fasta proportionella via fraction
+- **stripe_fee**: Redan proportionerad i helper-funktionen
+
+### Visuell markering
+- Uppdelade rader har `border-left: 3px solid var(--color-accent)` och "Serieanmälan"-badge
+- Rabattkolumnen visar `X%` (andel av serien) istället för rabattkod
+- Mobilvy: "Serie" label i metadata-raden
+
+### Event-filter & uppdelade rader
+- När event-filter är aktivt och serie-ordrar har delats upp, filtreras uppdelade rader
+  så att BARA det valda eventets rad visas (andra event i serien döljs)
+
+### VIKTIGT: Korrekt prisberäkning
+```
+Serie med 4 event, klass-priser: 500, 600, 500, 400 (totalt 2000)
+Serie-rabatt: 15%
+Totalt betalt: 2000 * 0.85 = 1700 kr
+
+Per-event fördelning:
+  Event 1: 500 * 0.85 = 425 kr (25%)
+  Event 2: 600 * 0.85 = 510 kr (30%)
+  Event 3: 500 * 0.85 = 425 kr (25%)
+  Event 4: 400 * 0.85 = 340 kr (20%)
+  Summa: 1700 kr ✓
+```
+
+### Filer
+- **`/includes/economy-helpers.php`** - NY - Delad helper med `explodeSeriesOrdersToEvents()`
+- **`/admin/promotor.php`** - Använder helper för båda admin och promotor ekonomivyn
+- **`/admin/settlements.php`** - Använder helper för avräkningar per mottagare
 
 ---
 

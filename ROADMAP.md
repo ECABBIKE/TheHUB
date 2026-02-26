@@ -28,6 +28,24 @@
 
 # CHANGELOG
 
+### 2026-02-26 (Serie-ordrar per-event fördelning)
+- **Branch:** claude/fix-site-performance-PbeNY
+
+- **Ny funktion: Serie-intäkter per event**
+  - Serieanmälningar fördelas nu per event i ekonomivyerna
+  - Fördelning baserad på per-event pricing rules med serie-rabatt
+  - Betalnings- och plattformsavgifter fördelas proportionellt
+  - Visuell markering med accent-border och "Serieanmälan"-badge
+  - Event-filter visar bara det valda eventets andel av serie-ordrar
+  - Fallback till jämn fördelning om pricing rules saknas
+
+- **Nya filer:**
+  - `includes/economy-helpers.php` - Delad helper `explodeSeriesOrdersToEvents()`
+
+- **Ändrade filer:**
+  - `admin/promotor.php` - Använder per-event split i admin + promotor ekonomivy
+  - `admin/settlements.php` - Använder per-event split i avräkningar
+
 ### 2026-02-25 (Betalningsmottagare & Avräkningar)
 - **Branch:** claude/fix-site-performance-PbeNY
 
