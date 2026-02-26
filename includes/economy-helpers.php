@@ -22,10 +22,12 @@ function explodeSeriesOrdersToEvents(array $orders, $db): array {
     $seriesEventsCache = [];
 
     foreach ($orders as $order) {
-        $hasEventId = !empty($order['event_id']);
         $hasSeriesId = !empty($order['series_id']);
 
-        if ($hasEventId || !$hasSeriesId) {
+        // If series_id is set, ALWAYS split (even if event_id is also set).
+        // Old orders (pre-migration 051) have both event_id AND series_id;
+        // event_id pointed to the first event as a bug.
+        if (!$hasSeriesId) {
             $result[] = $order;
             continue;
         }

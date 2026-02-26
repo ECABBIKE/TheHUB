@@ -43,6 +43,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
     // New profile fields
     $birthYear = intval($_POST['birth_year'] ?? 0) ?: null;
+    $gender = trim($_POST['gender'] ?? '');
+    $nationality = trim($_POST['nationality'] ?? '');
     $phone = trim($_POST['phone'] ?? '');
     $uciId = trim($_POST['uci_id'] ?? '');
     $iceName = trim($_POST['ice_name'] ?? '');
@@ -105,6 +107,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             }
 
             // Add new profile fields if they exist
+            if (in_array('gender', $existingColumns) && in_array($gender, ['M', 'F'])) {
+                $updateFields[] = 'gender = ?';
+                $updateValues[] = $gender;
+            }
+            if (in_array('nationality', $existingColumns) && !empty($nationality)) {
+                $updateFields[] = 'nationality = ?';
+                $updateValues[] = $nationality;
+            }
             if (in_array('phone', $existingColumns)) {
                 $updateFields[] = 'birth_year = ?';
                 $updateFields[] = 'phone = ?';
@@ -295,6 +305,30 @@ $clubs = $pdo->query("SELECT id, name FROM clubs WHERE active = 1 ORDER BY name"
                        placeholder="ÅÅÅÅ" required>
             </div>
             <div class="form-group">
+                <label for="gender">Kön *</label>
+                <select id="gender" name="gender" class="form-select" required>
+                    <option value="">Välj...</option>
+                    <option value="M" <?= ($currentUser['gender'] ?? '') === 'M' ? 'selected' : '' ?>>Man</option>
+                    <option value="F" <?= ($currentUser['gender'] ?? '') === 'F' ? 'selected' : '' ?>>Kvinna</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label for="nationality">Nationalitet</label>
+                <select id="nationality" name="nationality" class="form-select">
+                    <option value="">Välj...</option>
+                    <option value="SWE" <?= ($currentUser['nationality'] ?? '') === 'SWE' ? 'selected' : '' ?>>Sverige</option>
+                    <option value="NOR" <?= ($currentUser['nationality'] ?? '') === 'NOR' ? 'selected' : '' ?>>Norge</option>
+                    <option value="DNK" <?= ($currentUser['nationality'] ?? '') === 'DNK' ? 'selected' : '' ?>>Danmark</option>
+                    <option value="FIN" <?= ($currentUser['nationality'] ?? '') === 'FIN' ? 'selected' : '' ?>>Finland</option>
+                    <option value="DEU" <?= ($currentUser['nationality'] ?? '') === 'DEU' ? 'selected' : '' ?>>Tyskland</option>
+                    <option value="GBR" <?= ($currentUser['nationality'] ?? '') === 'GBR' ? 'selected' : '' ?>>Storbritannien</option>
+                    <option value="USA" <?= ($currentUser['nationality'] ?? '') === 'USA' ? 'selected' : '' ?>>USA</option>
+                </select>
+            </div>
+            <div class="form-group">
                 <label for="uci_id">UCI ID</label>
                 <?php if (!empty($currentUser['license_number'])): ?>
                     <input type="text" id="uci_id" name="uci_id"
@@ -305,8 +339,8 @@ $clubs = $pdo->query("SELECT id, name FROM clubs WHERE active = 1 ORDER BY name"
                 <?php else: ?>
                     <input type="text" id="uci_id" name="uci_id"
                            value=""
-                           placeholder="SWE19901231">
-                    <small class="form-help">Fyll i ditt UCI ID om du har ett.</small>
+                           placeholder="10012345678">
+                    <small class="form-help">Fyll i ditt UCI ID om du har ett (11 siffror).</small>
                 <?php endif; ?>
             </div>
         </div>
@@ -508,19 +542,7 @@ $clubs = $pdo->query("SELECT id, name FROM clubs WHERE active = 1 ORDER BY name"
     <?php endif; ?>
 </div>
 <?php else: ?>
-<!-- Premium upsell -->
-<div class="form-section">
-    <div style="display: flex; align-items: center; gap: var(--space-sm); margin-bottom: var(--space-sm);">
-        <i data-lucide="crown" style="width: 20px; height: 20px; color: var(--color-text-muted);"></i>
-        <h2 style="margin: 0;">Mina sponsorer</h2>
-    </div>
-    <div style="text-align: center; padding: var(--space-lg); background: var(--color-bg-hover); border-radius: var(--radius-md);">
-        <p class="text-muted" style="margin-bottom: var(--space-md);">Visa upp dina sponsorer på din profilsida med Premium-medlemskap.</p>
-        <a href="/membership" class="btn btn-primary">
-            <i data-lucide="crown"></i> Bli Premium - från 25 kr/mån
-        </a>
-    </div>
-</div>
+<!-- Premium upsell - hidden until Premium is activated -->
 <?php endif; ?>
 
 <!-- Avatar Upload Styles -->

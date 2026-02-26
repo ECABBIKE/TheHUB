@@ -455,6 +455,10 @@ include __DIR__ . '/components/unified-layout.php';
                 <i data-lucide="bar-chart-3"></i>
                 <span>Besökstatistik</span>
             </a>
+            <a href="/admin/tools.php" class="quick-action">
+                <i data-lucide="wrench"></i>
+                <span>Verktyg</span>
+            </a>
             <a href="/admin/roadmap.php" class="quick-action <?= $roadmapPendingCount > 0 ? 'has-badge' : '' ?>">
                 <i data-lucide="map"></i>
                 <span>Roadmap</span>

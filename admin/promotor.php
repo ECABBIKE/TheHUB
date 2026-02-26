@@ -541,6 +541,7 @@ if (!$isAdmin) {
                        SUM(CASE WHEN payment_status = 'paid' THEN total_amount ELSE 0 END) as gross_revenue,
                        SUM(CASE WHEN payment_status = 'paid' THEN 1 ELSE 0 END) as order_count
                 FROM orders
+                WHERE series_id IS NULL
                 GROUP BY event_id
             ) ord ON ord.event_id = e.id
             LEFT JOIN (

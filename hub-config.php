@@ -559,6 +559,22 @@ if (!function_exists('hub_attempt_login')) {
                         'admin_role' => $adminUser['role']
                     ];
 
+                    // Load linked rider profile fields (gender, phone, ice etc.)
+                    // so the profile completeness check in login.php works
+                    if (!empty($adminUser['email'])) {
+                        try {
+                            $riderProfileStmt = $pdo->prepare("
+                                SELECT birth_year, gender, phone, ice_name, ice_phone, nationality
+                                FROM riders WHERE email = ? AND active = 1 LIMIT 1
+                            ");
+                            $riderProfileStmt->execute([$adminUser['email']]);
+                            $riderProfile = $riderProfileStmt->fetch(PDO::FETCH_ASSOC);
+                            if ($riderProfile) {
+                                $user = array_merge($user, $riderProfile);
+                            }
+                        } catch (PDOException $e) {}
+                    }
+
                     hub_set_user_session($user, [], $rememberMe);
 
                     // Update last login
