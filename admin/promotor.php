@@ -49,6 +49,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $isAdmin
 }
 
 // ============================================================
+// HELPER: Split series orders into per-event rows
+// ============================================================
+require_once __DIR__ . '/../includes/economy-helpers.php';
+
+// ============================================================
 // ADMIN VIEW: Financial payout overview
 // ============================================================
 $payoutData = [];
@@ -143,7 +148,7 @@ if ($isAdmin) {
         $orderRows = $db->getAll("
             SELECT o.id, o.order_number, o.total_amount, o.payment_method, o.payment_status,
                    {$stripeFeeCol}
-                   o.event_id, o.created_at,
+                   o.event_id, o.series_id, o.created_at,
                    COALESCE(e.name, CONCAT(s_via_order.name, ' (serie)'), s_via_items.sname, '-') as event_name,
                    COALESCE(oi_count.participant_count, 1) as participant_count
             FROM orders o
@@ -177,6 +182,19 @@ if ($isAdmin) {
         error_log("Promotor orders query error: " . $e->getMessage());
     }
 
+    // Split series orders into per-event rows
+    $orderRows = explodeSeriesOrdersToEvents($orderRows, $db);
+
+    // If event filter is active, only show the matching event's split rows
+    if ($filterEvent > 0) {
+        $orderRows = array_values(array_filter($orderRows, function($row) use ($filterEvent) {
+            if (!empty($row['is_series_split'])) {
+                return (int)$row['event_id'] === $filterEvent;
+            }
+            return true; // keep non-split rows
+        }));
+    }
+
     // Calculate per-order fees
     $payoutTotals = [
         'gross' => 0, 'payment_fees' => 0, 'platform_fees' => 0, 'net' => 0,
@@ -186,34 +204,42 @@ if ($isAdmin) {
     foreach ($orderRows as &$order) {
         $amount = (float)$order['total_amount'];
         $method = $order['payment_method'] ?? 'card';
+        $isSplit = !empty($order['is_series_split']);
+        $fraction = (float)($order['_split_fraction'] ?? 1.0);
 
-        // Payment processing fee
+        // Payment processing fee (for split rows, distribute proportionally)
         if (in_array($method, ['swish', 'swish_csv'])) {
-            $order['payment_fee'] = $SWISH_FEE;
+            $order['payment_fee'] = $isSplit ? round($SWISH_FEE * $fraction, 2) : $SWISH_FEE;
             $order['fee_type'] = 'actual';
-            $payoutTotals['swish_count']++;
+            if (!$isSplit) $payoutTotals['swish_count']++;
         } elseif ($method === 'card') {
             if ($order['stripe_fee'] !== null && (float)$order['stripe_fee'] > 0) {
+                // stripe_fee already proportioned in explodeSeriesOrdersToEvents
                 $order['payment_fee'] = round((float)$order['stripe_fee'], 2);
                 $order['fee_type'] = 'actual';
             } else {
-                $order['payment_fee'] = round(($amount * $STRIPE_PERCENT / 100) + $STRIPE_FIXED, 2);
+                // For split rows, estimate fee proportionally
+                $order['payment_fee'] = $isSplit
+                    ? round((($amount * $STRIPE_PERCENT / 100) + ($STRIPE_FIXED * $fraction)), 2)
+                    : round(($amount * $STRIPE_PERCENT / 100) + $STRIPE_FIXED, 2);
                 $order['fee_type'] = 'estimated';
             }
-            $payoutTotals['card_count']++;
+            if (!$isSplit) $payoutTotals['card_count']++;
         } else {
-            // manual/free - no payment fee
             $order['payment_fee'] = 0;
             $order['fee_type'] = 'none';
         }
 
-        // Platform fee (supports percent, fixed, per_participant, or both)
+        // Platform fee (for split rows, distribute proportionally)
         if ($platformFeeType === 'fixed') {
-            $order['platform_fee'] = $platformFeeFixed;
+            $order['platform_fee'] = $isSplit ? round($platformFeeFixed * $fraction, 2) : $platformFeeFixed;
         } elseif ($platformFeeType === 'per_participant') {
-            $order['platform_fee'] = $platformFeeFixed * (int)($order['participant_count'] ?? 1);
+            $pCount = (int)($order['participant_count'] ?? 1);
+            $order['platform_fee'] = $isSplit ? round($platformFeeFixed * $pCount * $fraction, 2) : $platformFeeFixed * $pCount;
         } elseif ($platformFeeType === 'both') {
-            $order['platform_fee'] = round(($amount * $platformFeePct / 100) + $platformFeeFixed, 2);
+            $order['platform_fee'] = $isSplit
+                ? round(($amount * $platformFeePct / 100) + ($platformFeeFixed * $fraction), 2)
+                : round(($amount * $platformFeePct / 100) + $platformFeeFixed, 2);
         } else {
             $order['platform_fee'] = round($amount * $platformFeePct / 100, 2);
         }
@@ -643,6 +669,19 @@ if (!$isAdmin) {
             }
         }
 
+        // Split series orders into per-event rows
+        $promotorOrders = explodeSeriesOrdersToEvents($promotorOrders, $db);
+
+        // If event filter is active, only show the matching event's split rows
+        if ($ecoEvent > 0) {
+            $promotorOrders = array_values(array_filter($promotorOrders, function($row) use ($ecoEvent) {
+                if (!empty($row['is_series_split'])) {
+                    return (int)$row['event_id'] === $ecoEvent;
+                }
+                return true;
+            }));
+        }
+
         // Calculate totals
         $promotorOrderTotals = [
             'gross' => 0, 'payment_fees' => 0, 'platform_fees' => 0,
@@ -653,38 +692,47 @@ if (!$isAdmin) {
         foreach ($promotorOrders as &$order) {
             $amount = (float)$order['total_amount'];
             $method = $order['payment_method'] ?? 'card';
+            $isSplit = !empty($order['is_series_split']);
+            $fraction = (float)($order['_split_fraction'] ?? 1.0);
 
             if (in_array($method, ['swish', 'swish_csv'])) {
-                $order['payment_fee'] = $SWISH_FEE;
+                $order['payment_fee'] = $isSplit ? round($SWISH_FEE * $fraction, 2) : $SWISH_FEE;
                 $order['fee_type'] = 'actual';
-                $promotorOrderTotals['swish_count']++;
+                if (!$isSplit) $promotorOrderTotals['swish_count']++;
             } elseif ($method === 'card') {
                 if ($order['stripe_fee'] !== null && (float)$order['stripe_fee'] > 0) {
                     $order['payment_fee'] = round((float)$order['stripe_fee'], 2);
                     $order['fee_type'] = 'actual';
                 } else {
-                    $order['payment_fee'] = round(($amount * $STRIPE_PERCENT / 100) + $STRIPE_FIXED, 2);
+                    $order['payment_fee'] = $isSplit
+                        ? round((($amount * $STRIPE_PERCENT / 100) + ($STRIPE_FIXED * $fraction)), 2)
+                        : round(($amount * $STRIPE_PERCENT / 100) + $STRIPE_FIXED, 2);
                     $order['fee_type'] = 'estimated';
                 }
-                $promotorOrderTotals['card_count']++;
+                if (!$isSplit) $promotorOrderTotals['card_count']++;
             } else {
                 $order['payment_fee'] = 0;
                 $order['fee_type'] = 'none';
             }
 
-            // Platform fee calculation based on type
+            // Platform fee (proportional for split rows)
             if ($promotorFeeType === 'fixed') {
-                $order['platform_fee'] = $promotorPlatformFixed;
+                $order['platform_fee'] = $isSplit ? round($promotorPlatformFixed * $fraction, 2) : $promotorPlatformFixed;
             } elseif ($promotorFeeType === 'per_participant') {
-                // Count participants from order_items
                 $pCount = 1;
-                try {
-                    $pcRow = $db->getRow("SELECT COUNT(*) as cnt FROM order_items WHERE order_id = ? AND item_type IN ('event_registration','series_registration')", [$order['id']]);
-                    $pCount = max(1, (int)($pcRow['cnt'] ?? 1));
-                } catch (Exception $e) {}
-                $order['platform_fee'] = $promotorPlatformFixed * $pCount;
+                if (!$isSplit) {
+                    try {
+                        $pcRow = $db->getRow("SELECT COUNT(*) as cnt FROM order_items WHERE order_id = ? AND item_type IN ('event_registration','series_registration')", [$order['id']]);
+                        $pCount = max(1, (int)($pcRow['cnt'] ?? 1));
+                    } catch (Exception $e) {}
+                }
+                $order['platform_fee'] = $isSplit
+                    ? round($promotorPlatformFixed * $fraction, 2)
+                    : $promotorPlatformFixed * $pCount;
             } elseif ($promotorFeeType === 'both') {
-                $order['platform_fee'] = round(($amount * $promotorPlatformPct / 100) + $promotorPlatformFixed, 2);
+                $order['platform_fee'] = $isSplit
+                    ? round(($amount * $promotorPlatformPct / 100) + ($promotorPlatformFixed * $fraction), 2)
+                    : round(($amount * $promotorPlatformPct / 100) + $promotorPlatformFixed, 2);
             } else {
                 $order['platform_fee'] = round($amount * $promotorPlatformPct / 100, 2);
             }
@@ -781,6 +829,8 @@ include __DIR__ . '/components/unified-layout.php';
 .fee-estimated { opacity: 0.6; font-style: italic; }
 .order-event { font-size: var(--text-xs); color: var(--color-text-muted); white-space: nowrap; overflow: hidden; text-overflow: ellipsis; max-width: 180px; }
 .summary-row td { font-weight: 600; border-top: 2px solid var(--color-border-strong); background: var(--color-bg-hover); }
+.series-split-row td { border-left: 3px solid var(--color-accent); opacity: 0.85; font-size: var(--text-sm); }
+.series-split-row td:first-child { border-left: 3px solid var(--color-accent); }
 .platform-fee-info {
     display: flex; align-items: center; gap: var(--space-xs); font-size: var(--text-sm);
     color: var(--color-text-secondary); margin-bottom: var(--space-sm);
@@ -966,13 +1016,19 @@ include __DIR__ . '/components/unified-layout.php';
                             default => 'circle'
                         };
                     ?>
-                    <tr>
+                    <tr<?= !empty($order['is_series_split']) ? ' class="series-split-row"' : '' ?>>
                         <td>
                             <code style="font-size: var(--text-sm);"><?= h($order['order_number'] ?? '#' . $order['id']) ?></code>
                             <div class="text-xs text-secondary"><?= date('j M', strtotime($order['created_at'])) ?></div>
                         </td>
                         <td>
                             <div class="order-event"><?= h($order['event_name'] ?? '-') ?></div>
+                            <?php if (!empty($order['is_series_split'])): ?>
+                            <div class="text-xs" style="color: var(--color-accent); opacity: 0.7;">
+                                <i data-lucide="link" style="width: 10px; height: 10px; display: inline;"></i>
+                                Serieanmälan
+                            </div>
+                            <?php endif; ?>
                         </td>
                         <td style="text-align: right; font-weight: 500;">
                             <?= number_format($order['total_amount'], 2, ',', ' ') ?> kr
@@ -1037,6 +1093,9 @@ include __DIR__ . '/components/unified-layout.php';
                         <code><?= h($order['order_number'] ?? '#' . $order['id']) ?></code>
                         &middot; <?= date('j M Y', strtotime($order['created_at'])) ?>
                         &middot; <?= $methodLabel ?>
+                        <?php if (!empty($order['is_series_split'])): ?>
+                        &middot; <span style="color: var(--color-accent);">Serie</span>
+                        <?php endif; ?>
                     </div>
                 </div>
                 <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: var(--space-xs); font-size: var(--text-xs); text-align: center; background: var(--color-bg-sunken); padding: var(--space-xs); border-radius: var(--radius-sm);">
@@ -1237,6 +1296,8 @@ function cancelFeeEdit(recipientId, originalText) {
 .eco-table th { white-space: nowrap; font-size: var(--text-xs); text-transform: uppercase; letter-spacing: 0.05em; }
 .eco-table td { vertical-align: middle; white-space: nowrap; }
 .eco-event { font-size: var(--text-xs); color: var(--color-text-muted); max-width: 160px; overflow: hidden; text-overflow: ellipsis; }
+.eco-table .series-split-row td { border-left: 3px solid var(--color-accent); opacity: 0.85; }
+.eco-table .series-split-row td:first-child { border-left: 3px solid var(--color-accent); }
 .fee-est { opacity: 0.6; font-style: italic; }
 .eco-cards { display: none; }
 .eco-summary td { font-weight: 600; border-top: 2px solid var(--color-border-strong); background: var(--color-bg-hover); }
@@ -1560,12 +1621,17 @@ function cancelFeeEdit(recipientId, originalText) {
                             default => ucfirst($method)
                         };
                     ?>
-                    <tr>
+                    <tr<?= !empty($order['is_series_split']) ? ' class="series-split-row"' : '' ?>>
                         <td>
                             <code style="font-size:var(--text-sm);"><?= h($order['order_number'] ?? '#' . $order['id']) ?></code>
                             <div class="text-xs text-secondary"><?= date('j M', strtotime($order['created_at'])) ?></div>
                         </td>
-                        <td><div class="eco-event"><?= h($order['event_name'] ?? 'Serie') ?></div></td>
+                        <td>
+                            <div class="eco-event"><?= h($order['event_name'] ?? 'Serie') ?></div>
+                            <?php if (!empty($order['is_series_split'])): ?>
+                            <div class="text-xs" style="color: var(--color-accent); opacity: 0.7;">Serieanmälan</div>
+                            <?php endif; ?>
+                        </td>
                         <td style="text-align:right;font-weight:500;"><?= number_format($order['total_amount'], 2, ',', ' ') ?> kr</td>
                         <td><span style="font-size:var(--text-sm);"><?= $methodLabel ?></span></td>
                         <td style="text-align:right;color:var(--color-error);">
@@ -1580,6 +1646,8 @@ function cancelFeeEdit(recipientId, originalText) {
                         <td>
                             <?php if (!empty($order['discount_code'])): ?>
                             <span class="badge badge-warning"><?= h($order['discount_code']) ?></span>
+                            <?php elseif (!empty($order['is_series_split'])): ?>
+                            <span style="font-size:var(--text-xs);color:var(--color-accent);"><?= round(($order['_split_fraction'] ?? 0) * 100) ?>%</span>
                             <?php elseif ((float)($order['discount'] ?? 0) > 0): ?>
                             <span style="font-size:var(--text-xs);color:var(--color-warning);">-<?= number_format($order['discount'], 0) ?> kr</span>
                             <?php endif; ?>
@@ -1608,7 +1676,7 @@ function cancelFeeEdit(recipientId, originalText) {
                 $methodLabel = match($method) { 'swish','swish_csv' => 'Swish', 'card' => 'Kort', 'manual' => 'Manuell', 'free' => 'Gratis', default => ucfirst($method) };
                 $totalFees = $order['payment_fee'] + $order['platform_fee'];
             ?>
-            <div style="padding:var(--space-md);border-bottom:1px solid var(--color-border);">
+            <div style="padding:var(--space-md);border-bottom:1px solid var(--color-border);<?= !empty($order['is_series_split']) ? 'border-left:3px solid var(--color-accent);' : '' ?>">
                 <div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:var(--space-xs);">
                     <div>
                         <div style="font-weight:500;color:var(--color-text-primary);margin-bottom:2px;"><?= h($order['event_name'] ?? 'Serie') ?></div>
@@ -1616,6 +1684,9 @@ function cancelFeeEdit(recipientId, originalText) {
                             <code><?= h($order['order_number'] ?? '#' . $order['id']) ?></code>
                             &middot; <?= date('j M Y', strtotime($order['created_at'])) ?>
                             &middot; <?= $methodLabel ?>
+                            <?php if (!empty($order['is_series_split'])): ?>
+                            &middot; <span style="color:var(--color-accent);">Serie</span>
+                            <?php endif; ?>
                             <?php if (!empty($order['discount_code'])): ?>
                             &middot; <span style="color:var(--color-warning);"><?= h($order['discount_code']) ?></span>
                             <?php endif; ?>

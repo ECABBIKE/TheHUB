@@ -13,6 +13,9 @@ if (!hasRole('admin')) {
 
 $db = getDB();
 
+// Shared helper: series order → per-event splitting
+require_once __DIR__ . '/../includes/economy-helpers.php';
+
 // Fee constants
 $STRIPE_PERCENT = 1.5;
 $STRIPE_FIXED = 2.00;
@@ -162,6 +165,9 @@ foreach ($recipientsToShow as $recipient) {
         continue;
     }
 
+    // Split series orders into per-event rows
+    $orders = explodeSeriesOrdersToEvents($orders, $db);
+
     // Calculate fees per order
     $totals = ['gross' => 0, 'payment_fees' => 0, 'platform_fees' => 0, 'net' => 0, 'count' => 0];
     $feeType = $recipient['platform_fee_type'] ?? 'percent';
@@ -171,17 +177,21 @@ foreach ($recipientsToShow as $recipient) {
     foreach ($orders as &$order) {
         $amount = (float)$order['total_amount'];
         $method = $order['payment_method'] ?? 'card';
+        $isSplit = !empty($order['is_series_split']);
+        $fraction = (float)($order['_split_fraction'] ?? 1.0);
 
-        // Payment processing fee
+        // Payment processing fee (proportional for split rows)
         if (in_array($method, ['swish', 'swish_csv'])) {
-            $order['payment_fee'] = $SWISH_FEE;
+            $order['payment_fee'] = $isSplit ? round($SWISH_FEE * $fraction, 2) : $SWISH_FEE;
             $order['fee_label'] = 'Swish';
         } elseif ($method === 'card') {
             if ($order['stripe_fee'] !== null && (float)$order['stripe_fee'] > 0) {
                 $order['payment_fee'] = round((float)$order['stripe_fee'], 2);
                 $order['fee_label'] = 'Stripe (faktisk)';
             } else {
-                $order['payment_fee'] = round(($amount * $STRIPE_PERCENT / 100) + $STRIPE_FIXED, 2);
+                $order['payment_fee'] = $isSplit
+                    ? round((($amount * $STRIPE_PERCENT / 100) + ($STRIPE_FIXED * $fraction)), 2)
+                    : round(($amount * $STRIPE_PERCENT / 100) + $STRIPE_FIXED, 2);
                 $order['fee_label'] = 'Stripe (uppskattad)';
             }
         } else {
@@ -189,13 +199,16 @@ foreach ($recipientsToShow as $recipient) {
             $order['fee_label'] = '-';
         }
 
-        // Platform fee
+        // Platform fee (proportional for split rows)
         if ($feeType === 'fixed') {
-            $order['platform_fee'] = $feeFixed;
+            $order['platform_fee'] = $isSplit ? round($feeFixed * $fraction, 2) : $feeFixed;
         } elseif ($feeType === 'per_participant') {
-            $order['platform_fee'] = $feeFixed * (int)($order['participant_count'] ?? 1);
+            $pCount = (int)($order['participant_count'] ?? 1);
+            $order['platform_fee'] = $isSplit ? round($feeFixed * $fraction, 2) : $feeFixed * $pCount;
         } elseif ($feeType === 'both') {
-            $order['platform_fee'] = round(($amount * $feePct / 100) + $feeFixed, 2);
+            $order['platform_fee'] = $isSplit
+                ? round(($amount * $feePct / 100) + ($feeFixed * $fraction), 2)
+                : round(($amount * $feePct / 100) + $feeFixed, 2);
         } else {
             $order['platform_fee'] = round($amount * $feePct / 100, 2);
         }
@@ -415,12 +428,14 @@ include __DIR__ . '/components/unified-layout.php';
                     </thead>
                     <tbody>
                         <?php foreach ($s['orders'] as $order): ?>
-                        <tr>
+                        <tr<?= !empty($order['is_series_split']) ? ' style="border-left: 3px solid var(--color-accent); opacity: 0.9;"' : '' ?>>
                             <td><a href="/admin/orders.php?search=<?= urlencode($order['order_number']) ?>"><?= htmlspecialchars($order['order_number']) ?></a></td>
                             <td><?= date('Y-m-d', strtotime($order['created_at'])) ?></td>
                             <td>
-                                <?= htmlspecialchars($order['source_name']) ?>
-                                <?php if ($order['source_type'] === 'serie'): ?>
+                                <?= htmlspecialchars($order['source_name'] ?? '-') ?>
+                                <?php if (!empty($order['is_series_split'])): ?>
+                                    <span class="badge" style="font-size:10px;background:var(--color-accent-light);color:var(--color-accent);">Serieanmälan</span>
+                                <?php elseif (($order['source_type'] ?? '') === 'serie'): ?>
                                     <span class="badge" style="font-size:10px;">Serie</span>
                                 <?php endif; ?>
                             </td>
