@@ -246,50 +246,328 @@ include __DIR__ . '/../components/unified-layout.php';
 <?php endif; ?>
 
 <!-- Setup Guide -->
-<details class="admin-card">
+<?php $guideOpen = !$r2Configured ? 'open' : ''; ?>
+<details class="admin-card" <?= $guideOpen ?>>
     <summary class="admin-card-header" style="cursor: pointer;">
         <h3 style="margin: 0; display: flex; align-items: center; gap: var(--space-sm);">
-            <i data-lucide="book-open" class="icon-sm"></i> Installationsguide
+            <i data-lucide="book-open" class="icon-sm"></i> Installationsguide - Cloudflare R2
         </h3>
     </summary>
-    <div class="admin-card-body">
-        <div style="font-size: 0.9rem; line-height: 1.6; color: var(--color-text-secondary);">
-            <h4 style="color: var(--color-text-primary); margin: 0 0 var(--space-sm);">1. Skapa Cloudflare-konto</h4>
-            <p>Registrera dig gratis på <a href="https://dash.cloudflare.com" target="_blank" style="color: var(--color-accent-text);">dash.cloudflare.com</a>.</p>
+    <div class="admin-card-body" style="font-size: 0.9rem; line-height: 1.7; color: var(--color-text-secondary);">
 
-            <h4 style="color: var(--color-text-primary); margin: var(--space-md) 0 var(--space-sm);">2. Skapa R2-bucket</h4>
-            <p>Gå till R2 Object Storage → Create Bucket. Namnge den <code>thehub-photos</code>.</p>
+        <!-- Vad är R2? -->
+        <div style="padding: var(--space-md); background: var(--color-accent-light); border-radius: var(--radius-sm); margin-bottom: var(--space-lg);">
+            <strong style="color: var(--color-text-primary);">Vad är Cloudflare R2?</strong><br>
+            R2 är Cloudflares objektlagring (som AWS S3) men med <strong>$0 utgående bandbredd</strong>.
+            Det betyder att oavsett hur många besökare som tittar på bilderna kostar det inget extra.
+            Gratis: 10 GB lagring (~20 000 optimerade bilder). TheHUB optimerar automatiskt alla uppladdade bilder.
+        </div>
 
-            <h4 style="color: var(--color-text-primary); margin: var(--space-md) 0 var(--space-sm);">3. Aktivera publik åtkomst</h4>
-            <p>I bucket-inställningarna, aktivera publik åtkomst via:</p>
-            <ul style="margin: var(--space-xs) 0;">
-                <li><strong>Custom domain</strong> (rekommenderat): Lägg till t.ex. <code>photos.gravityseries.se</code></li>
-                <li><strong>R2.dev subdomain</strong> (enklare): Aktivera r2.dev-åtkomst för test</li>
-            </ul>
-
-            <h4 style="color: var(--color-text-primary); margin: var(--space-md) 0 var(--space-sm);">4. Skapa API-token</h4>
-            <p>Gå till R2 → Manage R2 API Tokens → Create API Token.</p>
-            <ul style="margin: var(--space-xs) 0;">
-                <li>Behörigheter: <strong>Object Read & Write</strong></li>
-                <li>Bucket-begränsning: <strong>thehub-photos</strong></li>
-                <li>Notera <strong>Access Key ID</strong> och <strong>Secret Access Key</strong></li>
-            </ul>
-
-            <h4 style="color: var(--color-text-primary); margin: var(--space-md) 0 var(--space-sm);">5. Uppdatera .env</h4>
-            <pre style="background: var(--color-bg-hover); padding: var(--space-md); border-radius: var(--radius-sm); font-size: 0.8rem; overflow-x: auto;">R2_ACCOUNT_ID=ditt_cloudflare_account_id
-R2_ACCESS_KEY_ID=din_access_key
-R2_SECRET_ACCESS_KEY=din_secret_key
-R2_BUCKET=thehub-photos
-R2_PUBLIC_URL=https://photos.gravityseries.se</pre>
-
-            <h4 style="color: var(--color-text-primary); margin: var(--space-md) 0 var(--space-sm);">6. Testa</h4>
-            <p>Klicka "Testa anslutning" ovan för att verifiera att allt fungerar.</p>
-
-            <div style="margin-top: var(--space-lg); padding: var(--space-md); background: var(--color-accent-light); border-radius: var(--radius-sm);">
-                <strong>Kostnad:</strong> Cloudflare R2 har 10 GB gratis lagring och $0 utgående bandbredd.
-                Med ~500 KB per optimerad bild räcker gratisplanen till ~20 000 bilder.
+        <!-- STEG 1 -->
+        <div class="setup-step" style="margin-bottom: var(--space-xl); padding-bottom: var(--space-lg); border-bottom: 1px solid var(--color-border);">
+            <div style="display: flex; align-items: center; gap: var(--space-sm); margin-bottom: var(--space-md);">
+                <span style="display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: var(--radius-full); background: var(--color-accent); color: var(--color-bg-page); font-weight: 700; font-size: 0.9rem; flex-shrink: 0;">1</span>
+                <h4 style="color: var(--color-text-primary); margin: 0;">Skapa Cloudflare-konto</h4>
+            </div>
+            <ol style="margin: 0; padding-left: var(--space-xl);">
+                <li>Gå till <a href="https://dash.cloudflare.com/sign-up" target="_blank" rel="noopener" style="color: var(--color-accent-text);">dash.cloudflare.com/sign-up</a></li>
+                <li>Registrera med e-post och lösenord</li>
+                <li>Verifiera din e-post</li>
+                <li>Du behöver <strong>inte</strong> lägga till en domän eller betala något - gratiskontot räcker</li>
+            </ol>
+            <div style="margin-top: var(--space-sm); padding: var(--space-sm) var(--space-md); background: var(--color-bg-hover); border-radius: var(--radius-sm); font-size: 0.8rem;">
+                <strong>Account ID:</strong> När du är inloggad, klicka på ditt konto. Account ID visas i höger sidebar (eller i URL:en).
+                Ser ut som: <code>a1b2c3d4e5f6...</code> (32 tecken). Notera denna - du behöver den i steg 5.
             </div>
         </div>
+
+        <!-- STEG 2 -->
+        <div class="setup-step" style="margin-bottom: var(--space-xl); padding-bottom: var(--space-lg); border-bottom: 1px solid var(--color-border);">
+            <div style="display: flex; align-items: center; gap: var(--space-sm); margin-bottom: var(--space-md);">
+                <span style="display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: var(--radius-full); background: var(--color-accent); color: var(--color-bg-page); font-weight: 700; font-size: 0.9rem; flex-shrink: 0;">2</span>
+                <h4 style="color: var(--color-text-primary); margin: 0;">Skapa R2-bucket</h4>
+            </div>
+            <ol style="margin: 0; padding-left: var(--space-xl);">
+                <li>I vänstermenyn i Cloudflare Dashboard, klicka <strong>R2 Object Storage</strong></li>
+                <li>Första gången: Cloudflare ber dig bekräfta R2-villkoren och kan fråga efter betaluppgifter (inget dras förrän du överstiger gratiskvoten)</li>
+                <li>Klicka <strong>"Create bucket"</strong></li>
+                <li>Bucket name: <code>thehub-photos</code></li>
+                <li>Location: <strong>Automatic</strong> (Cloudflare väljer närmaste region automatiskt)</li>
+                <li>Klicka <strong>"Create bucket"</strong></li>
+            </ol>
+            <div style="margin-top: var(--space-sm); padding: var(--space-sm) var(--space-md); background: var(--color-bg-hover); border-radius: var(--radius-sm); font-size: 0.8rem;">
+                <strong>Bucket-namn måste vara globalt unikt.</strong> Om <code>thehub-photos</code> redan är taget, prova <code>thehub-photos-gs</code> eller liknande.
+                Notera exakt vad du döpte bucketen till - du behöver det i steg 5.
+            </div>
+        </div>
+
+        <!-- STEG 3 -->
+        <div class="setup-step" style="margin-bottom: var(--space-xl); padding-bottom: var(--space-lg); border-bottom: 1px solid var(--color-border);">
+            <div style="display: flex; align-items: center; gap: var(--space-sm); margin-bottom: var(--space-md);">
+                <span style="display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: var(--radius-full); background: var(--color-accent); color: var(--color-bg-page); font-weight: 700; font-size: 0.9rem; flex-shrink: 0;">3</span>
+                <h4 style="color: var(--color-text-primary); margin: 0;">Aktivera publik åtkomst (så besökare kan se bilderna)</h4>
+            </div>
+            <p>Bucketen är privat som standard. Bilder måste vara publikt åtkomliga för att visas på sajten. Det finns två alternativ:</p>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-md); margin: var(--space-md) 0;">
+                <!-- Custom domain -->
+                <div style="padding: var(--space-md); border: 2px solid var(--color-accent); border-radius: var(--radius-sm); background: var(--color-bg-card);">
+                    <div style="font-weight: 600; color: var(--color-accent-text); margin-bottom: var(--space-xs); font-size: 0.85rem;">
+                        <i data-lucide="star" class="icon-xs" style="vertical-align: text-bottom;"></i> Alternativ A: Custom domain (rekommenderat)
+                    </div>
+                    <ol style="margin: 0; padding-left: var(--space-lg); font-size: 0.85rem;">
+                        <li>Gå in i din bucket (klicka på <code>thehub-photos</code>)</li>
+                        <li>Klicka fliken <strong>"Settings"</strong></li>
+                        <li>Under <strong>"Public access"</strong>, sektionen <strong>"Custom Domains"</strong></li>
+                        <li>Klicka <strong>"Connect Domain"</strong></li>
+                        <li>Skriv in: <code>photos.gravityseries.se</code></li>
+                        <li>Cloudflare skapar automatiskt DNS-posten (om domänen ligger på Cloudflare)</li>
+                        <li>Vänta några minuter tills status visar <strong>"Active"</strong></li>
+                    </ol>
+                    <div style="margin-top: var(--space-sm); font-size: 0.8rem; color: var(--color-success);">
+                        Resultat: Bilder nås via <code>https://photos.gravityseries.se/events/...</code>
+                    </div>
+                </div>
+
+                <!-- r2.dev -->
+                <div style="padding: var(--space-md); border: 1px solid var(--color-border); border-radius: var(--radius-sm); background: var(--color-bg-card);">
+                    <div style="font-weight: 600; color: var(--color-text-primary); margin-bottom: var(--space-xs); font-size: 0.85rem;">
+                        Alternativ B: R2.dev subdomain (snabbtest)
+                    </div>
+                    <ol style="margin: 0; padding-left: var(--space-lg); font-size: 0.85rem;">
+                        <li>Gå in i din bucket</li>
+                        <li>Klicka fliken <strong>"Settings"</strong></li>
+                        <li>Under <strong>"Public access"</strong>, sektionen <strong>"R2.dev subdomain"</strong></li>
+                        <li>Klicka <strong>"Allow Access"</strong></li>
+                        <li>Bekräfta</li>
+                    </ol>
+                    <div style="margin-top: var(--space-sm); font-size: 0.8rem; color: var(--color-text-muted);">
+                        Resultat: Bilder nås via <code>https://pub-XXXXX.r2.dev/events/...</code><br>
+                        (fungerar men ser inte lika proffsigt ut)
+                    </div>
+                </div>
+            </div>
+
+            <div style="padding: var(--space-sm) var(--space-md); background: var(--color-bg-hover); border-radius: var(--radius-sm); font-size: 0.8rem; margin-top: var(--space-sm);">
+                <strong>Krav:</strong> Om du använder custom domain (Alt A) måste domänen <code>gravityseries.se</code> redan vara tillagd i ditt Cloudflare-konto.
+                Om den hanteras av en annan DNS-tjänst behöver du skapa en CNAME-post manuellt.
+            </div>
+        </div>
+
+        <!-- STEG 4 -->
+        <div class="setup-step" style="margin-bottom: var(--space-xl); padding-bottom: var(--space-lg); border-bottom: 1px solid var(--color-border);">
+            <div style="display: flex; align-items: center; gap: var(--space-sm); margin-bottom: var(--space-md);">
+                <span style="display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: var(--radius-full); background: var(--color-accent); color: var(--color-bg-page); font-weight: 700; font-size: 0.9rem; flex-shrink: 0;">4</span>
+                <h4 style="color: var(--color-text-primary); margin: 0;">Skapa API-nyckel (för uppladdning från TheHUB)</h4>
+            </div>
+            <ol style="margin: 0; padding-left: var(--space-xl);">
+                <li>Gå tillbaka till <strong>R2 Object Storage</strong> i vänstermenyn</li>
+                <li>Klicka <strong>"Manage R2 API Tokens"</strong> (länken ligger till höger ovanför bucket-listan)</li>
+                <li>Klicka <strong>"Create API token"</strong></li>
+                <li>Fyll i:
+                    <ul style="margin: var(--space-xs) 0; padding-left: var(--space-lg);">
+                        <li><strong>Token name:</strong> <code>TheHUB Photo Upload</code></li>
+                        <li><strong>Permissions:</strong> <code>Object Read & Write</code></li>
+                        <li><strong>Specify bucket(s):</strong> Välj <strong>Apply to specific buckets only</strong> och välj <code>thehub-photos</code></li>
+                        <li><strong>TTL:</strong> Lämna tomt (ingen utgångstid) eller välj 1 år</li>
+                    </ul>
+                </li>
+                <li>Klicka <strong>"Create API Token"</strong></li>
+            </ol>
+
+            <div style="margin-top: var(--space-md); padding: var(--space-md); background: var(--color-warning); color: #000; border-radius: var(--radius-sm);">
+                <strong>VIKTIGT: Spara nycklarna nu!</strong><br>
+                Du får se två värden:
+                <ul style="margin: var(--space-xs) 0; padding-left: var(--space-lg);">
+                    <li><strong>Access Key ID</strong> — ser ut som: <code>a1b2c3d4e5f6g7h8i9j0...</code></li>
+                    <li><strong>Secret Access Key</strong> — ser ut som: <code>aBcDeFgHiJkLmNoPqRsT...</code></li>
+                </ul>
+                Secret Access Key visas <strong>bara en gång</strong>. Kopiera och spara den direkt!
+                Om du tappar den måste du skapa en ny token.
+            </div>
+        </div>
+
+        <!-- STEG 5 -->
+        <div class="setup-step" style="margin-bottom: var(--space-xl); padding-bottom: var(--space-lg); border-bottom: 1px solid var(--color-border);">
+            <div style="display: flex; align-items: center; gap: var(--space-sm); margin-bottom: var(--space-md);">
+                <span style="display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: var(--radius-full); background: var(--color-accent); color: var(--color-bg-page); font-weight: 700; font-size: 0.9rem; flex-shrink: 0;">5</span>
+                <h4 style="color: var(--color-text-primary); margin: 0;">Uppdatera .env på servern</h4>
+            </div>
+            <p>Öppna filen <code>.env</code> i TheHUBs rotmapp på servern och lägg till (eller uppdatera) dessa rader:</p>
+
+            <pre style="background: var(--color-bg-hover); padding: var(--space-md); border-radius: var(--radius-sm); font-size: 0.8rem; overflow-x: auto; line-height: 1.8;"><span style="color: var(--color-text-muted);"># Cloudflare R2 Bildlagring</span>
+R2_ACCOUNT_ID=<span style="color: var(--color-accent-text);">ditt_account_id_från_steg_1</span>
+R2_ACCESS_KEY_ID=<span style="color: var(--color-accent-text);">din_access_key_id_från_steg_4</span>
+R2_SECRET_ACCESS_KEY=<span style="color: var(--color-accent-text);">din_secret_access_key_från_steg_4</span>
+R2_BUCKET=<span style="color: var(--color-accent-text);">thehub-photos</span>
+R2_PUBLIC_URL=<span style="color: var(--color-accent-text);">https://photos.gravityseries.se</span></pre>
+
+            <div style="margin-top: var(--space-sm);">
+                <strong>Var hittar jag Account ID?</strong>
+                <ul style="margin: var(--space-xs) 0; padding-left: var(--space-lg); font-size: 0.85rem;">
+                    <li>Logga in på <a href="https://dash.cloudflare.com" target="_blank" style="color: var(--color-accent-text);">dash.cloudflare.com</a></li>
+                    <li>Klicka på ditt konto (om du har flera)</li>
+                    <li>Account ID syns i höger sidebar under <strong>"Account details"</strong></li>
+                    <li>Alternativt: kolla URL:en i webbläsaren - den ser ut som <code>dash.cloudflare.com/<strong>a1b2c3d4...</strong></code></li>
+                </ul>
+            </div>
+
+            <div style="margin-top: var(--space-sm);">
+                <strong>Vad ska R2_PUBLIC_URL vara?</strong>
+                <ul style="margin: var(--space-xs) 0; padding-left: var(--space-lg); font-size: 0.85rem;">
+                    <li>Om du använde <strong>Alt A</strong> (custom domain): <code>https://photos.gravityseries.se</code></li>
+                    <li>Om du använde <strong>Alt B</strong> (r2.dev): <code>https://pub-XXXXX.r2.dev</code> (ersätt XXXXX med ditt subdomain-ID, se bucket Settings)</li>
+                </ul>
+            </div>
+        </div>
+
+        <!-- STEG 6 -->
+        <div class="setup-step" style="margin-bottom: var(--space-xl); padding-bottom: var(--space-lg); border-bottom: 1px solid var(--color-border);">
+            <div style="display: flex; align-items: center; gap: var(--space-sm); margin-bottom: var(--space-md);">
+                <span style="display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: var(--radius-full); background: var(--color-accent); color: var(--color-bg-page); font-weight: 700; font-size: 0.9rem; flex-shrink: 0;">6</span>
+                <h4 style="color: var(--color-text-primary); margin: 0;">Kör databasmigrering</h4>
+            </div>
+            <ol style="margin: 0; padding-left: var(--space-xl);">
+                <li>Gå till <a href="/admin/migrations.php" style="color: var(--color-accent-text);">Verktyg &rarr; Databasmigrationer</a></li>
+                <li>Leta efter <strong>064_event_photos_r2_key.sql</strong></li>
+                <li>Klicka <strong>"Kör"</strong> om den inte redan är körd (grönmarkerad)</li>
+            </ol>
+            <p style="margin-top: var(--space-sm); font-size: 0.85rem;">
+                Denna migration lägger till en kolumn (<code>r2_key</code>) i fotodatabasen.
+                Den behövs för att TheHUB ska kunna radera bilder från R2 när du tar bort dem i admin.
+            </p>
+        </div>
+
+        <!-- STEG 7 -->
+        <div class="setup-step" style="margin-bottom: var(--space-lg);">
+            <div style="display: flex; align-items: center; gap: var(--space-sm); margin-bottom: var(--space-md);">
+                <span style="display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: var(--radius-full); background: var(--color-success); color: #fff; font-weight: 700; font-size: 0.9rem; flex-shrink: 0;">7</span>
+                <h4 style="color: var(--color-text-primary); margin: 0;">Testa!</h4>
+            </div>
+            <ol style="margin: 0; padding-left: var(--space-xl);">
+                <li>Ladda om denna sida - statusen ska visa <span class="badge badge-success">Konfigurerat</span></li>
+                <li>Klicka <strong>"Testa anslutning"</strong> - bör visa grönt meddelande</li>
+                <li>Klicka <strong>"Testa uppladdning"</strong> - laddar upp en testfil och raderar den direkt</li>
+                <li>Gå till <a href="/admin/event-albums" style="color: var(--color-accent-text);">Fotoalbum</a>, skapa ett album och ladda upp en bild</li>
+            </ol>
+        </div>
+
+        <!-- Kostnad -->
+        <div style="padding: var(--space-md); background: var(--color-bg-hover); border-radius: var(--radius-sm); margin-bottom: var(--space-md);">
+            <h4 style="color: var(--color-text-primary); margin: 0 0 var(--space-sm);">
+                <i data-lucide="calculator" class="icon-sm" style="vertical-align: text-bottom;"></i> Kostnadsberäkning
+            </h4>
+            <table style="width: 100%; font-size: 0.8rem; border-collapse: collapse;">
+                <thead>
+                    <tr style="border-bottom: 1px solid var(--color-border);">
+                        <th style="text-align: left; padding: var(--space-xs);">År</th>
+                        <th style="text-align: right; padding: var(--space-xs);">Bilder</th>
+                        <th style="text-align: right; padding: var(--space-xs);">Lagring</th>
+                        <th style="text-align: right; padding: var(--space-xs);">Kostnad/mån</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <tr><td style="padding: var(--space-xs);">2026</td><td style="text-align: right; padding: var(--space-xs);">~13 000</td><td style="text-align: right; padding: var(--space-xs);">6.5 GB</td><td style="text-align: right; padding: var(--space-xs); color: var(--color-success); font-weight: 600;">$0 (gratis)</td></tr>
+                    <tr><td style="padding: var(--space-xs);">2027</td><td style="text-align: right; padding: var(--space-xs);">~18 000</td><td style="text-align: right; padding: var(--space-xs);">9 GB</td><td style="text-align: right; padding: var(--space-xs); color: var(--color-success); font-weight: 600;">$0 (gratis)</td></tr>
+                    <tr><td style="padding: var(--space-xs);">2028</td><td style="text-align: right; padding: var(--space-xs);">~23 000</td><td style="text-align: right; padding: var(--space-xs);">11.5 GB</td><td style="text-align: right; padding: var(--space-xs);">~$0.02</td></tr>
+                    <tr><td style="padding: var(--space-xs);">2030</td><td style="text-align: right; padding: var(--space-xs);">~33 000</td><td style="text-align: right; padding: var(--space-xs);">16.5 GB</td><td style="text-align: right; padding: var(--space-xs);">~$0.10</td></tr>
+                </tbody>
+            </table>
+            <p style="font-size: 0.75rem; color: var(--color-text-muted); margin: var(--space-xs) 0 0;">
+                Beräknat med ~500 KB per optimerad bild. 10 GB gratis lagring. $0 bandbredd oavsett antal besökare.
+                Bilder optimeras automatiskt vid uppladdning (max 1920px, JPEG 82%).
+            </p>
+        </div>
+
+        <!-- Felsökning -->
+        <details style="margin-top: var(--space-md);">
+            <summary style="font-size: 0.85rem; cursor: pointer; color: var(--color-text-primary); font-weight: 600;">
+                <i data-lucide="wrench" class="icon-sm" style="vertical-align: text-bottom;"></i> Felsökning
+            </summary>
+            <div style="margin-top: var(--space-sm); font-size: 0.85rem;">
+                <p><strong>"Kunde inte ansluta"</strong></p>
+                <ul style="padding-left: var(--space-lg); margin: var(--space-xs) 0;">
+                    <li>Kontrollera att <code>R2_ACCOUNT_ID</code> är korrekt (32 tecken, inga mellanslag)</li>
+                    <li>Kontrollera att <code>R2_ACCESS_KEY_ID</code> och <code>R2_SECRET_ACCESS_KEY</code> matchar exakt vad Cloudflare visade</li>
+                    <li>Kontrollera att <code>R2_BUCKET</code> är exakt samma namn som bucketen (skiftlägeskänsligt)</li>
+                </ul>
+
+                <p style="margin-top: var(--space-md);"><strong>"Uppladdning lyckades men bilderna visas inte"</strong></p>
+                <ul style="padding-left: var(--space-lg); margin: var(--space-xs) 0;">
+                    <li>Kontrollera att publik åtkomst är aktiverat (steg 3)</li>
+                    <li>Kontrollera att <code>R2_PUBLIC_URL</code> matchar din custom domain eller r2.dev-URL</li>
+                    <li>Testa att öppna <code>R2_PUBLIC_URL</code> direkt i webbläsaren (ska visa XML eller "NoSuchKey")</li>
+                </ul>
+
+                <p style="margin-top: var(--space-md);"><strong>"Access Denied" / "SignatureDoesNotMatch"</strong></p>
+                <ul style="padding-left: var(--space-lg); margin: var(--space-xs) 0;">
+                    <li>Secret Access Key kan ha kopierats fel (extra mellanslag?)</li>
+                    <li>Token-behörigheterna kanske bara är "Read" - du behöver "Object Read & Write"</li>
+                    <li>Lösning: Skapa en ny API-token med rätt behörigheter</li>
+                </ul>
+
+                <p style="margin-top: var(--space-md);"><strong>Servern har inte cURL eller GD</strong></p>
+                <ul style="padding-left: var(--space-lg); margin: var(--space-xs) 0;">
+                    <li>R2-klienten kräver PHP-tilläggen <code>curl</code> och <code>gd</code> (för bildoptimering)</li>
+                    <li>Kontrollera med: <code>php -m | grep -i 'curl\|gd'</code></li>
+                    <li>Hostinger har dessa aktiverade som standard</li>
+                </ul>
+            </div>
+        </details>
+
+    </div>
+</details>
+
+<!-- Så fungerar det -->
+<details class="admin-card" style="margin-top: var(--space-md);">
+    <summary class="admin-card-header" style="cursor: pointer;">
+        <h3 style="margin: 0; display: flex; align-items: center; gap: var(--space-sm);">
+            <i data-lucide="info" class="icon-sm"></i> Så fungerar bildlagringen
+        </h3>
+    </summary>
+    <div class="admin-card-body" style="font-size: 0.9rem; line-height: 1.7; color: var(--color-text-secondary);">
+        <h4 style="color: var(--color-text-primary); margin: 0 0 var(--space-sm);">Uppladdningsflöde</h4>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(120px, 1fr)); gap: var(--space-sm); margin-bottom: var(--space-md);">
+            <div style="text-align: center; padding: var(--space-sm); background: var(--color-bg-hover); border-radius: var(--radius-sm);">
+                <div style="font-size: 1.2rem; margin-bottom: var(--space-2xs);"><i data-lucide="upload" class="icon-sm"></i></div>
+                <div style="font-size: 0.75rem;">Admin laddar<br>upp bild</div>
+            </div>
+            <div style="text-align: center; padding: var(--space-sm); display: flex; align-items: center; justify-content: center; color: var(--color-text-muted);">
+                <i data-lucide="arrow-right" class="icon-sm"></i>
+            </div>
+            <div style="text-align: center; padding: var(--space-sm); background: var(--color-bg-hover); border-radius: var(--radius-sm);">
+                <div style="font-size: 1.2rem; margin-bottom: var(--space-2xs);"><i data-lucide="image" class="icon-sm"></i></div>
+                <div style="font-size: 0.75rem;">TheHUB<br>optimerar</div>
+            </div>
+            <div style="text-align: center; padding: var(--space-sm); display: flex; align-items: center; justify-content: center; color: var(--color-text-muted);">
+                <i data-lucide="arrow-right" class="icon-sm"></i>
+            </div>
+            <div style="text-align: center; padding: var(--space-sm); background: var(--color-accent-light); border-radius: var(--radius-sm);">
+                <div style="font-size: 1.2rem; margin-bottom: var(--space-2xs);"><i data-lucide="cloud" class="icon-sm"></i></div>
+                <div style="font-size: 0.75rem;">Sparas i<br>Cloudflare R2</div>
+            </div>
+            <div style="text-align: center; padding: var(--space-sm); display: flex; align-items: center; justify-content: center; color: var(--color-text-muted);">
+                <i data-lucide="arrow-right" class="icon-sm"></i>
+            </div>
+            <div style="text-align: center; padding: var(--space-sm); background: var(--color-bg-hover); border-radius: var(--radius-sm);">
+                <div style="font-size: 1.2rem; margin-bottom: var(--space-2xs);"><i data-lucide="globe" class="icon-sm"></i></div>
+                <div style="font-size: 0.75rem;">Visas på<br>event-sidan</div>
+            </div>
+        </div>
+
+        <h4 style="color: var(--color-text-primary); margin: var(--space-md) 0 var(--space-sm);">Vad händer automatiskt</h4>
+        <ul style="padding-left: var(--space-lg); margin: 0;">
+            <li><strong>Bildoptimering:</strong> Stora bilder skalas ner till max 1920px bredd, JPEG-kvalitet 82%</li>
+            <li><strong>Thumbnails:</strong> En miniatyrbild (400px) skapas automatiskt för snabbare laddning i galleriet</li>
+            <li><strong>Unik filnamn:</strong> Varje bild får ett unikt namn (<code>events/123/a1b2c3d4_foto.jpg</code>) för att undvika konflikter</li>
+            <li><strong>Radering:</strong> När du tar bort en bild i admin raderas den även från R2 (inklusive thumbnail)</li>
+        </ul>
+
+        <h4 style="color: var(--color-text-primary); margin: var(--space-md) 0 var(--space-sm);">Var visas bilderna?</h4>
+        <ul style="padding-left: var(--space-lg); margin: 0;">
+            <li><strong>Event-sidan:</strong> Galleri-flik med alla publicerade bilder, lightbox, sponsor-annonser</li>
+            <li><strong>Rider-profil:</strong> "Mina bilder" visar taggade bilder (premium-medlemmar)</li>
+        </ul>
     </div>
 </details>
 
