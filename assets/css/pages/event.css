@@ -524,7 +524,12 @@
 
 @media (max-width: 900px) {
     .series-jump-wrapper {
-        display: none;
+        width: 100%;
+        justify-content: center;
+    }
+    .series-jump-select {
+        max-width: none;
+        flex: 1;
     }
 }
 
@@ -1235,6 +1240,12 @@ td.col-place {
     /* Hide registration count on mobile - shown in tab instead */
     .event-stat--registered {
         display: none;
+    }
+
+    /* Remove border when registered stat is hidden */
+    .event-stats {
+        border-top: none;
+        padding-top: 0;
     }
 
     /* Compact tabs */

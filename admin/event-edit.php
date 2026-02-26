@@ -1727,9 +1727,25 @@ include __DIR__ . '/components/unified-layout.php';
             </p>
 
             <div class="flex flex-col gap-lg">
+                <!-- Event header banner image -->
+                <div class="admin-form-group">
+                    <label class="admin-form-label">Event-banner (stor bannerbild högst upp)</label>
+                    <select name="header_banner_media_id" class="admin-form-select">
+                        <option value="">-- Ingen (använd seriens) --</option>
+                        <?php foreach ($eventMediaFiles as $media): ?>
+                        <option value="<?= $media['id'] ?>" <?= ($event['header_banner_media_id'] ?? '') == $media['id'] ? 'selected' : '' ?>>
+                            <?= htmlspecialchars($media['original_filename']) ?>
+                        </option>
+                        <?php endforeach; ?>
+                    </select>
+                    <small class="form-help block mt-sm">
+                        Välj bild från <a href="/admin/media?folder=events" target="_blank">Mediabiblioteket (Event-mappen)</a>
+                    </small>
+                </div>
+
                 <!-- Banner sponsor -->
                 <div class="admin-form-group">
-                    <label class="admin-form-label">Banner-sponsor (bred bild högst upp)</label>
+                    <label class="admin-form-label">Banner-sponsor (bred sponsorbild)</label>
                     <div id="pl-header" class="placement-imgs"></div>
                     <div id="pl-header-inputs"></div>
                     <button type="button" class="btn btn-sm btn-secondary mt-sm" onclick="openImgPicker('header',1)">
@@ -1794,7 +1810,7 @@ include __DIR__ . '/components/unified-layout.php';
                 </button>
                 <span class="text-secondary text-sm">eller välj en befintlig nedan</span>
             </div>
-            <div id="imgPickerGrid" style="padding:var(--space-md);overflow-y:auto;flex:1;display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:var(--space-sm);"></div>
+            <div id="imgPickerGrid" style="padding:var(--space-md);overflow-y:auto;flex:1;display:grid;grid-template-columns:repeat(3,1fr);gap:var(--space-sm);align-content:start;"></div>
         </div>
     </div>
 
@@ -2273,32 +2289,39 @@ include __DIR__ . '/components/unified-layout.php';
     border: 2px solid var(--color-border);
     border-radius: var(--radius-sm);
     overflow: hidden;
-    aspect-ratio: 4/3;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
+    position: relative;
     background: var(--color-bg-card);
     transition: border-color 0.15s;
+    min-height: 0;
 }
 .img-picker-item:hover {
     border-color: var(--color-accent);
 }
 .img-picker-item img {
     width: 100%;
-    flex: 1;
+    height: 90px;
     object-fit: contain;
     padding: var(--space-2xs);
+    display: block;
+    background: var(--color-bg-card);
 }
 .img-picker-name {
-    font-size: 0.65rem;
+    font-size: 0.7rem;
     color: var(--color-text-muted);
-    padding: 2px var(--space-2xs);
+    padding: 4px var(--space-2xs);
     text-align: center;
     white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
     width: 100%;
+    display: block;
+    background: var(--color-bg-surface);
+    border-top: 1px solid var(--color-border);
+}
+@media (max-width: 767px) {
+    .img-picker-item img {
+        height: 70px;
+    }
 }
 </style>
 

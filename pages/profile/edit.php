@@ -567,7 +567,7 @@ $clubs = $pdo->query("SELECT id, name FROM clubs WHERE active = 1 ORDER BY name"
                 </button>
                 <span class="text-secondary text-sm">eller välj en befintlig nedan</span>
             </div>
-            <div id="riderImgPickerGrid" style="padding:var(--space-md);overflow-y:auto;flex:1;display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:var(--space-sm);"></div>
+            <div id="riderImgPickerGrid" style="padding:var(--space-md);overflow-y:auto;flex:1;display:grid;grid-template-columns:repeat(3,1fr);gap:var(--space-sm);align-content:start;"></div>
         </div>
     </div>
 </div>
@@ -1047,9 +1047,9 @@ async function loadRiderImgGrid() {
             if (!media.mime_type || !media.mime_type.startsWith('image/')) return;
             const imgSrc = media.url || ('/' + media.filepath);
             const div = document.createElement('div');
-            div.style.cssText = 'cursor:pointer;border:2px solid var(--color-border);border-radius:var(--radius-sm);overflow:hidden;aspect-ratio:4/3;display:flex;flex-direction:column;align-items:center;justify-content:center;background:var(--color-bg-card);transition:border-color 0.15s;';
-            div.innerHTML = '<img src="' + imgSrc + '" style="width:100%;flex:1;object-fit:contain;padding:4px;" onerror="this.style.display=\'none\'">'
-                + '<span style="font-size:0.6rem;color:var(--color-text-muted);padding:2px 4px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:100%;">' + (media.original_filename||'').substring(0,20) + '</span>';
+            div.style.cssText = 'cursor:pointer;border:2px solid var(--color-border);border-radius:var(--radius-sm);overflow:hidden;background:var(--color-bg-card);transition:border-color 0.15s;';
+            div.innerHTML = '<img src="' + imgSrc + '" style="width:100%;height:70px;object-fit:contain;padding:4px;display:block;" onerror="this.style.display=\'none\'">'
+                + '<span style="font-size:0.65rem;color:var(--color-text-muted);padding:4px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:100%;display:block;border-top:1px solid var(--color-border);background:var(--color-bg-surface);">' + (media.original_filename||'').substring(0,20) + '</span>';
             div.onmouseover = function() { div.style.borderColor = 'var(--color-accent)'; };
             div.onmouseout = function() { div.style.borderColor = 'var(--color-border)'; };
             div.onclick = function() { selectRiderSponsorImg(imgSrc, media.original_filename); };
