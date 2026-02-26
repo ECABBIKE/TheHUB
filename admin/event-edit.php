@@ -1789,7 +1789,7 @@ include __DIR__ . '/components/unified-layout.php';
                     <button type="button" class="btn btn-sm btn-secondary mt-sm" onclick="openImgPicker('content',5)">
                         <i data-lucide="image-plus" class="icon-sm"></i> Lägg till bild
                     </button>
-                    <small class="form-help block mt-sm">Max 5. Rekommenderad storlek: 600 x 150 px</small>
+                    <small class="form-help block mt-sm">Max 5. Rekommenderad storlek: 600 x 150 px. Dra för att ändra ordning.</small>
                 </div>
 
                 <!-- Results sponsor -->
@@ -1814,7 +1814,7 @@ include __DIR__ . '/components/unified-layout.php';
                     <button type="button" class="btn btn-sm btn-secondary mt-sm" onclick="openImgPicker('partner',0)">
                         <i data-lucide="image-plus" class="icon-sm"></i> Lägg till bild
                     </button>
-                    <small class="form-help block mt-sm">Visas längst ner på event-sidan</small>
+                    <small class="form-help block mt-sm">Visas längst ner på event-sidan. Dra för att ändra ordning.</small>
                 </div>
             </div>
         </div>
@@ -2276,6 +2276,16 @@ include __DIR__ . '/components/unified-layout.php';
     max-width: 200px;
     height: 60px;
     padding: var(--space-2xs);
+    cursor: grab;
+    transition: opacity 0.15s, transform 0.15s;
+}
+.pl-tile.dragging {
+    opacity: 0.4;
+    transform: scale(0.95);
+}
+.pl-tile.drag-over {
+    border-color: var(--color-accent);
+    box-shadow: 0 0 0 2px var(--color-accent);
 }
 .pl-tile img {
     max-width: 100%;
@@ -2405,11 +2415,13 @@ function addToPlacement(pl, sponsorId, name, logoUrl, updateCount) {
     const tile = document.createElement('div');
     tile.className = 'pl-tile';
     tile.dataset.sponsorId = sponsorId;
+    tile.draggable = true;
     tile.innerHTML = (logoUrl
         ? '<img src="' + logoUrl + '" alt="' + (name||'') + '" title="' + (name||'') + '">'
         : '<span class="pl-tile-text">' + (name||'?') + '</span>')
         + '<button type="button" class="pl-tile-remove" onclick="removeFromPlacement(\'' + pl + '\',' + sponsorId + ')" title="Ta bort">&times;</button>';
     container.appendChild(tile);
+    initTileDrag(tile, pl);
 
     // Hidden form input
     const inputContainer = document.getElementById('pl-' + pl + '-inputs');
@@ -2551,6 +2563,92 @@ async function selectMediaForPlacement(mediaId, imageUrl) {
     } catch (e) {
         alert('Kunde inte skapa sponsor');
     }
+}
+
+// Drag & drop reordering for sponsor tiles
+let dragTile = null;
+let dragPlacement = null;
+
+function initTileDrag(tile, pl) {
+    tile.addEventListener('dragstart', function(e) {
+        dragTile = tile;
+        dragPlacement = pl;
+        tile.classList.add('dragging');
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', tile.dataset.sponsorId);
+    });
+
+    tile.addEventListener('dragend', function() {
+        tile.classList.remove('dragging');
+        // Remove drag-over from all tiles
+        document.querySelectorAll('.pl-tile.drag-over').forEach(function(t) {
+            t.classList.remove('drag-over');
+        });
+        dragTile = null;
+        dragPlacement = null;
+    });
+
+    tile.addEventListener('dragover', function(e) {
+        e.preventDefault();
+        if (!dragTile || dragTile === tile || dragPlacement !== pl) return;
+        e.dataTransfer.dropEffect = 'move';
+        tile.classList.add('drag-over');
+    });
+
+    tile.addEventListener('dragleave', function() {
+        tile.classList.remove('drag-over');
+    });
+
+    tile.addEventListener('drop', function(e) {
+        e.preventDefault();
+        tile.classList.remove('drag-over');
+        if (!dragTile || dragTile === tile || dragPlacement !== pl) return;
+
+        // Swap position in DOM
+        const container = document.getElementById('pl-' + pl);
+        const tiles = Array.from(container.querySelectorAll('.pl-tile'));
+        const dragIdx = tiles.indexOf(dragTile);
+        const dropIdx = tiles.indexOf(tile);
+
+        if (dragIdx < dropIdx) {
+            container.insertBefore(dragTile, tile.nextSibling);
+        } else {
+            container.insertBefore(dragTile, tile);
+        }
+
+        // Rebuild hidden inputs to match new order
+        rebuildInputOrder(pl);
+    });
+}
+
+function rebuildInputOrder(pl) {
+    const container = document.getElementById('pl-' + pl);
+    const inputContainer = document.getElementById('pl-' + pl + '-inputs');
+    const tiles = container.querySelectorAll('.pl-tile');
+
+    // Clear and re-add inputs in DOM order
+    inputContainer.innerHTML = '';
+    const newPlacements = [];
+
+    tiles.forEach(function(tile) {
+        const sponsorId = parseInt(tile.dataset.sponsorId);
+        const input = document.createElement('input');
+        input.type = 'hidden';
+        input.id = 'pl-input-' + pl + '-' + sponsorId;
+        if (pl === 'header' || pl === 'sidebar') {
+            input.name = 'sponsor_' + pl;
+        } else {
+            input.name = 'sponsor_' + pl + '[]';
+        }
+        input.value = sponsorId;
+        inputContainer.appendChild(input);
+
+        // Update internal placements array
+        const existing = placements[pl].find(function(s) { return s.id === sponsorId; });
+        if (existing) newPlacements.push(existing);
+    });
+
+    placements[pl] = newPlacements;
 }
 
 // Init on page load

@@ -684,6 +684,21 @@ include __DIR__ . '/components/unified-layout.php';
         </div>
         <?php endif; ?>
 
+        <?php if ($isSubfolder): ?>
+        <!-- Delete subfolder option -->
+        <div style="display: flex; align-items: center; justify-content: space-between; background: var(--color-bg-surface); border: 1px solid var(--color-border); border-radius: var(--radius-md); padding: var(--space-sm) var(--space-md); margin-bottom: var(--space-lg);">
+            <div style="display: flex; align-items: center; gap: var(--space-sm); font-size: 0.85rem;">
+                <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/></svg>
+                <strong><?= htmlspecialchars($currentFolder) ?></strong>
+                <span style="color: var(--color-text-muted);">(<?= count($mediaFiles) ?> filer)</span>
+            </div>
+            <button type="button" class="btn btn-sm btn-danger" onclick="deleteCurrentFolder()" title="Radera denna mapp">
+                <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/><path d="M8 6V4c0-1 1-2 2-2h4c1 0 2 1 2 2v2"/></svg>
+                Radera mapp
+            </button>
+        </div>
+        <?php endif; ?>
+
         <!-- Toolbar -->
         <div class="media-toolbar">
             <div class="media-search">
@@ -808,7 +823,11 @@ include __DIR__ . '/components/unified-layout.php';
                     <textarea class="media-detail-input" id="detailCaption" rows="2" placeholder="Valfri bildtext"></textarea>
                 </div>
                 <div class="media-detail-group">
-                    <span class="media-detail-label">URL</span>
+                    <span class="media-detail-label">Länk (webbplats)</span>
+                    <input type="url" class="media-detail-input" id="detailLinkUrl" placeholder="https://www.example.com">
+                </div>
+                <div class="media-detail-group">
+                    <span class="media-detail-label">Fil-URL</span>
                     <input type="text" class="media-detail-input" id="detailUrl" readonly onclick="this.select()">
                 </div>
 
@@ -968,16 +987,23 @@ function updateBulkActions() {
 }
 
 async function deleteSelected() {
-    if (!confirm(`Vill du radera ${selectedIds.size} filer?`)) return;
+    if (!confirm(`Vill du radera ${selectedIds.size} filer? (Kopplingar till sponsorer/event rensas automatiskt)`)) return;
 
+    let errors = [];
     for (const id of selectedIds) {
         try {
-            await fetch('/api/media.php?action=delete&id=' + id, { method: 'DELETE' });
+            const response = await fetch('/api/media.php?action=delete&id=' + id + '&force=1', { method: 'DELETE' });
+            const result = await response.json();
+            if (!result.success) errors.push(result.error);
         } catch (error) {
             console.error('Delete error:', error);
+            errors.push('Nätverksfel');
         }
     }
 
+    if (errors.length > 0) {
+        alert('Vissa filer kunde inte raderas:\n' + errors.join('\n'));
+    }
     location.reload();
 }
 
@@ -1010,6 +1036,7 @@ async function openMedia(id) {
         document.getElementById('detailFolder').value = media.folder;
         document.getElementById('detailAltText').value = media.alt_text || '';
         document.getElementById('detailCaption').value = media.caption || '';
+        document.getElementById('detailLinkUrl').value = media.link_url || '';
         document.getElementById('detailUrl').value = media.url;
 
         // Show usage
@@ -1022,12 +1049,17 @@ async function openMedia(id) {
             usageList.innerHTML = media.usage.map(u =>
                 `<li>${u.entity_type}: ${u.entity_name || u.entity_id} (${u.field})</li>`
             ).join('');
-            deleteBtn.disabled = true;
-            deleteBtn.title = 'Kan inte radera - filen används';
+            // Allow delete but mark as "in use" - will need force confirmation
+            deleteBtn.disabled = false;
+            deleteBtn.dataset.inUse = '1';
+            deleteBtn.title = 'Filen används - klicka för att radera ändå';
+            deleteBtn.textContent = 'Radera ändå';
         } else {
             usageSection.style.display = 'none';
             deleteBtn.disabled = false;
+            deleteBtn.dataset.inUse = '0';
             deleteBtn.title = '';
+            deleteBtn.textContent = 'Radera';
         }
 
         document.getElementById('mediaModal').classList.add('active');
@@ -1050,7 +1082,8 @@ async function saveMedia() {
         id: currentMediaId,
         folder: newFolder,
         alt_text: document.getElementById('detailAltText').value,
-        caption: document.getElementById('detailCaption').value
+        caption: document.getElementById('detailCaption').value,
+        link_url: document.getElementById('detailLinkUrl').value
     };
 
     const folderChanged = currentMediaFolder && newFolder !== currentMediaFolder;
@@ -1083,10 +1116,21 @@ async function saveMedia() {
 
 async function deleteMedia() {
     if (!currentMediaId) return;
-    if (!confirm('Vill du radera denna fil?')) return;
+
+    const deleteBtn = document.getElementById('deleteBtn');
+    const inUse = deleteBtn.dataset.inUse === '1';
+
+    if (inUse) {
+        if (!confirm('Denna bild används av sponsorer/event/serier.\n\nOm du raderar den rensas alla kopplingar automatiskt.\n\nVill du radera ändå?')) return;
+    } else {
+        if (!confirm('Vill du radera denna fil?')) return;
+    }
+
+    // Use force=1 if in use (or always, since the backend handles it gracefully)
+    const forceParam = inUse ? '&force=1' : '';
 
     try {
-        const response = await fetch(`/api/media.php?action=delete&id=${currentMediaId}`, {
+        const response = await fetch(`/api/media.php?action=delete&id=${currentMediaId}${forceParam}`, {
             method: 'DELETE'
         });
 
@@ -1094,12 +1138,57 @@ async function deleteMedia() {
         if (result.success) {
             closeModal();
             location.reload();
+        } else if (result.in_use) {
+            // Backend returned in_use without force - offer force delete
+            if (confirm(result.error + '\n\nVill du radera och rensa alla kopplingar?')) {
+                const forceResponse = await fetch(`/api/media.php?action=delete&id=${currentMediaId}&force=1`, {
+                    method: 'DELETE'
+                });
+                const forceResult = await forceResponse.json();
+                if (forceResult.success) {
+                    closeModal();
+                    location.reload();
+                } else {
+                    alert(forceResult.error || 'Kunde inte radera');
+                }
+            }
         } else {
             alert(result.error);
         }
     } catch (error) {
         console.error('Delete error:', error);
         alert('Kunde inte radera');
+    }
+}
+
+async function deleteCurrentFolder() {
+    const folder = <?= json_encode($currentFolder ?? '') ?>;
+    if (!folder) return;
+
+    const fileCount = <?= count($mediaFiles) ?>;
+    if (fileCount > 0) {
+        alert('Mappen innehåller ' + fileCount + ' filer. Radera alla filer först innan du kan radera mappen.');
+        return;
+    }
+
+    if (!confirm('Vill du radera mappen "' + folder + '"?')) return;
+
+    try {
+        const response = await fetch('/api/media.php?action=delete_folder&folder=' + encodeURIComponent(folder));
+        const result = await response.json();
+
+        if (result.success) {
+            // Navigate to parent folder
+            const parts = folder.split('/');
+            parts.pop();
+            const parentFolder = parts.join('/') || parts[0] || '';
+            window.location.href = '/admin/media' + (parentFolder ? '?folder=' + encodeURIComponent(parentFolder) : '');
+        } else {
+            alert(result.error || 'Kunde inte radera mappen');
+        }
+    } catch (error) {
+        console.error('Delete folder error:', error);
+        alert('Ett fel uppstod');
     }
 }
 

@@ -17,16 +17,101 @@
 | Klubb RF-Registrering | KLAR | SCF/NCF/DCU-synk och stavningskontroll | 100% |
 | Startlistor | KLAR | Admin/promotor startliste-vy med startnr, export, mobilvy | 100% |
 | Bildbanken | PAGAENDE | AI-analyserade bilder kopplade till profiler | 10% |
-| Premium-medlemskap | PAGAENDE | Prenumeration, sponsorprofil, delningsbadges | 40% |
+| Premium-medlemskap | PAGAENDE | Prenumeration, sponsorprofil, hogupplosta bilder, swapmeet | 40% |
 | Ridercard Share | PAGAENDE | Statistikkort for Instagram-delning | 5% |
 | Prestandaoptimering | PAGAENDE | Fas 1-2 klar. Fas 3-4 planerade (CSS-bundling, arkitektur) | 50% |
 | CSS/UI Standardisering | PLANERAD | Enhetlig radius och nya tabeller pa alla sidor | 0% |
 | POS Incheckning & Startlista | PLANERAD | QR-scanning, incheckning, auto-startnr, startlistevy vid event | 0% |
 | GravityTiming API | KLAR | API for tidtagningsapp: startlistor, resultat, live-uppdatering | 100% |
+| TheHUB Swapmeet | PLANERAD | Kop/salj-marknadsplats for gravity-prylar (Premium-funktion) | 0% |
+
+---
+
+## PLANERADE PREMIUM-FUNKTIONER
+
+**Krav:** Premium-medlemskap (25 kr/mån eller 199 kr/år)
+
+### 1. TheHUB Swapmeet - Köp/sälj-marknadsplats
+
+**Koncept:** En köp/sälj-marknadsplats för gravity-prylar integrerad i TheHUB. Premium-medlemmar kan lägga upp annonser på begagnade produkter (cyklar, skydd, hjälmar, reservdelar etc.) som enkelt kan tas med till tävlingar för överlämning istället för att behöva skickas med frakt.
+
+**Grundidé:**
+- Deltagare listar produkter de vill sälja/byta
+- Köpare/intresserade kan kontakta säljaren direkt
+- Överlämning sker på tävlingar (slipper frakt)
+- Event-sidan kan visa "X prylar tillgängliga på detta event"
+- Perfekt för gravity-specifika produkter som är svåra att hitta begagnade
+
+**Möjliga funktioner:**
+- Annonsvy med bilder, pris, kategori, skick
+- Filtrera på produkttyp, storlek, pris
+- "Tar med till [Event X]" - markera vilka event man planerar besöka
+- Meddelandesystem eller kontaktformulär
+- Avslutade/sålda annonser
+- Betyg/omdömen på säljare (kopplat till rider-profil)
+
+**Status:** Idéstadium - ej påbörjat
+
+### 2. Högupplösta tävlingsbilder
+
+**Koncept:** Premium-medlemmar får tillgång till 3 högupplösta bilder per tävling från Bildbanken. Bilderna kan laddas ner i full upplösning för att göra prints, tackkort, sociala medier-inlägg m.m.
+
+**Grundidé:**
+- Fotografer laddar upp bilder till Bildbanken (befintligt system, pågående)
+- AI-taggning kopplar bilder till rätt deltagare automatiskt
+- Alla kan se sina bilder i lågupplösning (med vattenstämpel)
+- Premium-medlemmar väljer 3 bilder per event att ladda ner i full kvalitet
+- Perfekt för: prints, ramar, tackkort, Instagram-stories, sponsorrapporter
+
+**Möjliga funktioner:**
+- "Mina bilder" på profil- och event-sidan
+- Välj 3 favoriter per event → ladda ner i högupplösning
+- Vattenstämpel på icke-premium-vy
+- Nedladdning som ZIP eller enskilda filer
+- Koppling till Ridercard Share (statistikkort + bästa bild)
+
+**Beroende av:** Bildbanken (AI-taggning, fotograf-uppladdning)
+
+**Status:** Idéstadium - ej påbörjat
 
 ---
 
 # CHANGELOG
+
+### 2026-02-26 (Mediabibliotek & sponsorsortering)
+- **Branch:** claude/fix-site-performance-wVdVq
+
+- **Förbättring: Force-delete av bilder som används**
+  - Bilder kan nu raderas även om de används av sponsorer/event/serier
+  - Alla FK-kopplingar rensas automatiskt vid radering
+  - Admin kan radera alla bilder, promotorer begränsade till sponsors/
+  - Bekräftelsedialog visar vilka kopplingar som påverkas
+
+- **Ny funktion: Radera mappar**
+  - Tomma undermappar kan raderas via "Radera mapp"-knapp
+  - Skydd: rotmappar kan inte raderas, mappar med filer måste tömmas först
+
+- **Förbättring: Auto-resize vid uppladdning**
+  - Bilder i sponsors/banners-mappar skalas automatiskt till max 1200px bredd
+  - Allmänna bilder skalas till max 2000px bredd
+  - Förhindrar att stora originalfiler laddar långsamt på sajten
+
+- **Ny funktion: Länk-URL per bild (migration 062)**
+  - Ny kolumn `media.link_url` för att koppla webbadress till bilder
+  - Redigerbart i bilddetalj-modalen
+
+- **Ny funktion: Drag-and-drop sponsorsortering**
+  - Sponsorbilder i Logo-rad och Partners kan dras för att ändra ordning
+  - Visuell feedback vid drag (genomskinlighet, accent-border)
+  - Ordning sparas korrekt i display_order
+
+- **Nya/ändrade filer:**
+  - `includes/media-functions.php` - Auto-resize, force-delete, folder delete
+  - `api/media.php` - Force-param i delete, ny delete_folder action
+  - `admin/media.php` - Force-delete UI, folder delete knapp, link_url fält
+  - `admin/event-edit.php` - Drag-and-drop CSS/JS för sponsortiles
+  - `Tools/migrations/062_media_link_url.sql` - media.link_url kolumn
+  - `admin/migrations.php` - Migration 062 registrerad
 
 ### 2026-02-26 (Enhetligt sponsorsystem)
 - **Branch:** claude/fix-site-performance-wVdVq
