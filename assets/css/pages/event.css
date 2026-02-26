@@ -524,7 +524,6 @@
 
 @media (max-width: 900px) {
     .series-jump-wrapper {
-        order: -1;
         padding: var(--space-2xs) var(--space-xs);
         gap: var(--space-xs);
         border: none;
