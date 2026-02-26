@@ -208,6 +208,9 @@ $migrationChecks = [
     '059_payment_recipients_admin_user.sql' => [
         'columns' => ['payment_recipients.admin_user_id']
     ],
+    '060_platform_fee_per_participant.sql' => [
+        'columns' => ['payment_recipients.platform_fee_type']
+    ],
 ];
 
 // ============================================================================

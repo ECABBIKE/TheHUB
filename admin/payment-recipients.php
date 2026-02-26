@@ -326,6 +326,8 @@ include __DIR__ . '/components/unified-layout.php';
             $feeDesc = number_format($r['platform_fee_percent'] ?? 2, 1) . '%';
         } elseif ($feeType === 'fixed') {
             $feeDesc = number_format($r['platform_fee_fixed'] ?? 0, 0) . ' kr/order';
+        } elseif ($feeType === 'per_participant') {
+            $feeDesc = number_format($r['platform_fee_fixed'] ?? 0, 0) . ' kr/deltagare';
         } else {
             $feeDesc = number_format($r['platform_fee_percent'] ?? 2, 1) . '% + ' . number_format($r['platform_fee_fixed'] ?? 0, 0) . ' kr';
         }
@@ -480,9 +482,10 @@ $isNew = empty($editRecipient);
                 <div class="form-group">
                     <label class="form-label">Avgiftstyp</label>
                     <select name="platform_fee_type" class="form-select" id="feeType">
-                        <option value="percent" <?= ($r['platform_fee_type'] ?? 'percent') === 'percent' ? 'selected' : '' ?>>Procent</option>
-                        <option value="fixed" <?= ($r['platform_fee_type'] ?? '') === 'fixed' ? 'selected' : '' ?>>Fast belopp</option>
-                        <option value="both" <?= ($r['platform_fee_type'] ?? '') === 'both' ? 'selected' : '' ?>>Procent + fast</option>
+                        <option value="percent" <?= ($r['platform_fee_type'] ?? 'percent') === 'percent' ? 'selected' : '' ?>>Procent (provision)</option>
+                        <option value="fixed" <?= ($r['platform_fee_type'] ?? '') === 'fixed' ? 'selected' : '' ?>>Fast per transaktion</option>
+                        <option value="per_participant" <?= ($r['platform_fee_type'] ?? '') === 'per_participant' ? 'selected' : '' ?>>Fast per deltagare</option>
+                        <option value="both" <?= ($r['platform_fee_type'] ?? '') === 'both' ? 'selected' : '' ?>>Fast + provision</option>
                     </select>
                 </div>
                 <div class="form-group" id="feePercentGroup">
@@ -539,7 +542,7 @@ var feePreview = document.getElementById('feePreview');
 function updateFeeVisibility() {
     if (!feeTypeSelect) return;
     var type = feeTypeSelect.value;
-    feePercentGroup.style.display = (type === 'fixed') ? 'none' : '';
+    feePercentGroup.style.display = (type === 'fixed' || type === 'per_participant') ? 'none' : '';
     feeFixedGroup.style.display = (type === 'percent') ? 'none' : '';
 
     var pct = parseFloat(document.querySelector('[name="platform_fee_percent"]').value) || 0;
@@ -548,9 +551,16 @@ function updateFeeVisibility() {
     var fee = 0;
     if (type === 'percent') fee = example * pct / 100;
     else if (type === 'fixed') fee = fixed;
+    else if (type === 'per_participant') fee = fixed * 2;
     else fee = (example * pct / 100) + fixed;
 
-    feePreview.textContent = 'Exempel: På en order om ' + example + ' kr blir plattformsavgiften ' + fee.toFixed(2) + ' kr';
+    var desc = 'Exempel: ';
+    if (type === 'per_participant') {
+        desc += 'En order med 2 deltagare ger plattformsavgift ' + fee.toFixed(2) + ' kr (' + fixed.toFixed(0) + ' kr/deltagare)';
+    } else {
+        desc += 'En order om ' + example + ' kr ger plattformsavgift ' + fee.toFixed(2) + ' kr';
+    }
+    feePreview.textContent = desc;
 }
 
 if (feeTypeSelect) {

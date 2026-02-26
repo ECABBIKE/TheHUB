@@ -470,6 +470,14 @@ include __DIR__ . '/components/unified-layout.php';
                 <i data-lucide="download"></i>
                 Exportera ordrar (CSV)
             </a>
+            <a href="/admin/settlements.php" class="action-link">
+                <i data-lucide="receipt"></i>
+                Avräkningar
+            </a>
+            <a href="/admin/payment-recipients.php" class="action-link">
+                <i data-lucide="building-2"></i>
+                Betalningsmottagare
+            </a>
             <?php if ($isSuperAdmin): ?>
             <a href="/admin/promotor-payments" class="action-link">
                 <i data-lucide="wallet"></i>
