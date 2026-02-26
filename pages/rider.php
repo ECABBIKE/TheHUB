@@ -652,6 +652,31 @@ try {
         }
     }
 
+    // Fetch tagged photos for premium members
+    $riderPhotos = [];
+    if ($isPremium) {
+        try {
+            $photoStmt = $db->prepare("
+                SELECT ep.id, ep.media_id, ep.external_url, ep.thumbnail_url, ep.caption,
+                       m.filepath,
+                       ea.event_id, ea.title as album_title,
+                       e.name as event_name, e.date as event_date
+                FROM photo_rider_tags prt
+                JOIN event_photos ep ON prt.photo_id = ep.id
+                JOIN event_albums ea ON ep.album_id = ea.id
+                JOIN events e ON ea.event_id = e.id
+                LEFT JOIN media m ON ep.media_id = m.id
+                WHERE prt.rider_id = ? AND ea.is_published = 1
+                ORDER BY e.date DESC, ep.sort_order ASC
+                LIMIT 50
+            ");
+            $photoStmt->execute([$riderId]);
+            $riderPhotos = $photoStmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
+            // Table might not exist yet
+        }
+    }
+
     // Check if this profile can be claimed or needs activation
     // Available to ALL visitors - not just logged in users
     $canClaimProfile = false;      // Profile without email - can connect email
@@ -1508,6 +1533,60 @@ $finishRate = $totalStarts > 0 ? round(($finishedRaces / $totalStarts) * 100) : 
                 </a>
             </div>
         </div>
+        <?php endif; ?>
+
+        <!-- RIDER PHOTOS CARD (Premium only - tagged photos) -->
+        <?php if ($isPremium && !empty($riderPhotos)): ?>
+        <div class="card rider-photos-card">
+            <h3 class="card-section-title-sm"><i data-lucide="camera"></i> Mina bilder</h3>
+            <div class="rider-photos-grid">
+                <?php
+                $shownPhotos = array_slice($riderPhotos, 0, 6);
+                foreach ($shownPhotos as $rp):
+                    $rpSrc = '';
+                    if ($rp['media_id'] && $rp['filepath']) {
+                        $rpSrc = '/' . ltrim($rp['filepath'], '/');
+                    } elseif ($rp['thumbnail_url']) {
+                        $rpSrc = $rp['thumbnail_url'];
+                    } elseif ($rp['external_url']) {
+                        $rpSrc = $rp['external_url'];
+                    }
+                    if (!$rpSrc) continue;
+                ?>
+                <a href="/event/<?= $rp['event_id'] ?>?tab=galleri" class="rider-photo-item" title="<?= htmlspecialchars($rp['event_name']) ?> (<?= date('Y-m-d', strtotime($rp['event_date'])) ?>)">
+                    <img src="<?= htmlspecialchars($rpSrc) ?>" alt="<?= htmlspecialchars($rp['caption'] ?? $rp['event_name']) ?>" loading="lazy">
+                </a>
+                <?php endforeach; ?>
+            </div>
+            <?php if (count($riderPhotos) > 6): ?>
+            <div style="text-align: center; padding: var(--space-xs) 0 var(--space-sm);">
+                <span style="font-size: 0.8rem; color: var(--color-text-muted);">+<?= count($riderPhotos) - 6 ?> fler bilder</span>
+            </div>
+            <?php endif; ?>
+        </div>
+        <style>
+        .rider-photos-card { padding: var(--space-md); }
+        .rider-photos-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: var(--space-xs);
+        }
+        .rider-photo-item {
+            aspect-ratio: 1;
+            overflow: hidden;
+            border-radius: var(--radius-sm);
+            display: block;
+        }
+        .rider-photo-item img {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+            transition: transform 0.2s ease;
+        }
+        .rider-photo-item:hover img {
+            transform: scale(1.05);
+        }
+        </style>
         <?php endif; ?>
 
         <!-- HIGHLIGHTS CARD -->

@@ -1092,6 +1092,20 @@ include __DIR__ . '/components/unified-layout.php';
         </div>
     </div>
 
+    <!-- Cloudflare R2 -->
+    <div class="card">
+        <div class="tool-header">
+            <div class="tool-icon"><i data-lucide="cloud"></i></div>
+            <div>
+                <h4 class="tool-title">Bildlagring (R2)</h4>
+                <p class="tool-description">Cloudflare R2 - konfiguration och test</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/tools/r2-config.php" class="btn-admin btn-admin-primary">Öppna</a>
+        </div>
+    </div>
+
     <!-- Migrations -->
     <div class="card">
         <div class="tool-header">

@@ -6,6 +6,10 @@
 
 /**
  * Check if a rider has an active premium membership
+ * Checks TWO sources (in order):
+ * 1. riders.premium_until - Admin-managed, provider-agnostic (primary)
+ * 2. member_subscriptions - Stripe/payment-based (legacy fallback)
+ *
  * @param PDO $pdo Database connection
  * @param int $riderId Rider ID
  * @return bool True if rider has active premium
@@ -16,8 +20,21 @@ function isPremiumMember(PDO $pdo, int $riderId): bool {
         return $cache[$riderId];
     }
 
+    // 1. Check riders.premium_until (admin-managed, no payment provider needed)
     try {
-        // Check by rider_id first, then fallback to email
+        $stmt = $pdo->prepare("SELECT premium_until FROM riders WHERE id = ? LIMIT 1");
+        $stmt->execute([$riderId]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($row && !empty($row['premium_until']) && $row['premium_until'] >= date('Y-m-d')) {
+            $cache[$riderId] = true;
+            return true;
+        }
+    } catch (PDOException $e) {
+        // Column might not exist yet - continue to fallback
+    }
+
+    // 2. Fallback: Check member_subscriptions (Stripe-based)
+    try {
         $stmt = $pdo->prepare("
             SELECT ms.id FROM member_subscriptions ms
             WHERE (ms.rider_id = ? OR ms.email = (SELECT email FROM riders WHERE id = ? LIMIT 1))

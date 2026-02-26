@@ -4,6 +4,82 @@
 
 ---
 
+## SENASTE FIXAR (2026-02-26, session 8)
+
+### Cloudflare R2 Integration (bildlagring)
+- **Ny fil:** `/includes/r2-storage.php` - Lättviktig S3-kompatibel klient med AWS Signature V4
+- **Inga beroenden:** Ren cURL + hash_hmac, kräver inte aws-sdk-php eller composer
+- **Singleton:** `R2Storage::getInstance()` konfigureras via `env()` (R2_ACCOUNT_ID, R2_ACCESS_KEY_ID, etc.)
+- **Metoder:** `upload()`, `putObject()`, `deleteObject()`, `exists()`, `listObjects()`, `testConnection()`
+- **Bildoptimering:** `R2Storage::optimizeImage()` skalar ner (max 1920px), komprimerar (JPEG 82%)
+- **Thumbnails:** `R2Storage::generateThumbnail()` skapar 400px-versioner
+- **Objektnycklar:** `events/{eventId}/{hash}_{filename}.{ext}`, thumbnails under `thumbs/`
+
+### Admin R2-verktyg
+- **Ny fil:** `/admin/tools/r2-config.php` - Konfigurationstest och statusvy
+- **Funktioner:** Testa anslutning, testa uppladdning, lista filer i bucket
+- **Installationsguide** med steg-för-steg för Cloudflare Dashboard
+- **Tillagd i** `/admin/tools.php` under System-sektionen
+
+### Event-albums: R2-stöd + bulk-URL
+- **R2-uppladdning:** När R2 är konfigurerat optimeras bilder automatiskt och laddas upp till R2
+- **Thumbnails:** Genereras (400px) och lagras under `thumbs/` i R2
+- **r2_key-kolumn:** Migration 064 - lagrar R2-objektnyckel för radering
+- **Radering:** `delete_photo` raderar nu även från R2 (bild + thumbnail) om r2_key finns
+- **Bulk-URL:** Ny funktion "Klistra in flera URL:er samtidigt" (en per rad)
+- **Fallback:** Om R2 inte är konfigurerat funkar lokal uppladdning som förut
+
+### Migration 064: event_photos.r2_key
+- **Kolumn:** `r2_key VARCHAR(300)` - R2-objektnyckel för att kunna radera bilder
+- **Index:** `idx_r2_key` på r2_key-kolumnen
+
+### Konfiguration (.env)
+```
+R2_ACCOUNT_ID=cloudflare_account_id
+R2_ACCESS_KEY_ID=r2_access_key
+R2_SECRET_ACCESS_KEY=r2_secret_key
+R2_BUCKET=thehub-photos
+R2_PUBLIC_URL=https://photos.gravityseries.se
+```
+
+### VIKTIGT: R2-arkitektur
+- **R2 endpoint:** `https://{ACCOUNT_ID}.r2.cloudflarestorage.com`
+- **Region:** Alltid `'auto'` (Cloudflare-specifikt)
+- **Publik URL:** Via custom domain eller r2.dev subdomain
+- **S3-kompatibelt:** Använder AWS Signature V4, standard PUT/DELETE/GET
+- **event_photos.external_url** = R2 publik URL (samma fält som externa URL:er)
+- **event_photos.r2_key** = R2-objektnyckel (för radering/hantering)
+- **Publika vyer** (event.php, rider.php) använder `external_url` → fungerar automatiskt med R2
+
+---
+
+## TIDIGARE FIXAR (2026-02-26, session 7)
+
+### Fotoalbum: Komplett system (migration 063)
+- **Tabeller:** `event_albums`, `event_photos`, `photo_rider_tags`
+- **Admin:** `/admin/event-albums.php` - skapa album, lägg till bilder, tagga riders
+- **Publik:** Galleri-flik på event-sidan med inline lightbox, sponsor-annonser var 12:e bild
+- **Profil:** "Mina bilder" på riderprofil för premium-medlemmar (3-kolumns grid, max 6 bilder)
+- **VIKTIGT:** Bilder ska INTE hostas på TheHUB-servern. Alla bilder lagras som externa URL:er.
+- **CDN-beslut:** Cloudflare R2 valt som bildhosting ($0 bandbredd, 10 GB gratis, sedan $0.015/GB)
+- **AI-taggning:** OCR av nummerlappar via Tesseract (gratis) → matchning mot startlista (bib_number → rider_id)
+- **Volym:** ~8 000 befintliga bilder, ~250/event, ~5 000 nya/år
+- **Taggning fas 1:** Manuell taggning via sökmodal i admin (KLAR)
+- **Taggning fas 2:** OCR nummerlapps-igenkänning (PLANERAD, Tesseract open source)
+- **Google Photos:** Fungerar som källa/arbetsflöde, men bilder serveras via Cloudflare R2
+
+### Premium: Stripe-oberoende (migration 063)
+- **Ny kolumn:** `riders.premium_until` DATE - admin-hanterad, inget betalleverantörskrav
+- **`isPremiumMember()`** kollar `riders.premium_until` FÖRST, sedan Stripe-fallback
+- **Syfte:** Förbereder för byte från Stripe till Swedbank Pay
+- **Premium hålls dolt** tills allt är klart
+
+### API: Photo tags
+- `/api/photo-tags.php` - GET med photo_id, returnerar taggade riders
+- Taggning/borttagning sker via POST till `/admin/event-albums.php` (action: tag_rider/remove_tag)
+
+---
+
 ## SENASTE FIXAR (2026-02-26, session 6)
 
 ### Mediabibliotek: Force-delete av bilder som används
