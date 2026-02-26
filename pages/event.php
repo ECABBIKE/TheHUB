@@ -958,6 +958,29 @@ try {
         $hasEliminationData = false;
     }
 
+    // Fetch published photo albums for this event
+    $eventAlbumPhotos = [];
+    $hasEventPhotos = false;
+    try {
+        $albumStmt = $db->prepare("
+            SELECT ep.id, ep.album_id, ep.media_id, ep.external_url, ep.thumbnail_url,
+                   ep.caption, ep.photographer, ep.sort_order, ep.is_highlight,
+                   m.filepath, m.width, m.height,
+                   ea.title as album_title, ea.photographer as album_photographer,
+                   ea.photographer_url as album_photographer_url
+            FROM event_photos ep
+            JOIN event_albums ea ON ep.album_id = ea.id
+            LEFT JOIN media m ON ep.media_id = m.id
+            WHERE ea.event_id = ? AND ea.is_published = 1
+            ORDER BY ep.is_highlight DESC, ep.sort_order ASC, ep.id ASC
+        ");
+        $albumStmt->execute([$eventId]);
+        $eventAlbumPhotos = $albumStmt->fetchAll(PDO::FETCH_ASSOC);
+        $hasEventPhotos = !empty($eventAlbumPhotos);
+    } catch (PDOException $e) {
+        // Table might not exist yet
+    }
+
     // Live timing flag
     $isTimingLive = !empty($event['timing_live']);
 
@@ -1381,6 +1404,14 @@ if (!empty($eventSponsors['content'])): ?>
             <i data-lucide="newspaper"></i>
             Media
             <span class="tab-badge tab-badge--accent"><?= $eventReportsCount ?></span>
+        </a>
+        <?php endif; ?>
+
+        <?php if ($hasEventPhotos): ?>
+        <a href="?id=<?= $eventId ?>&tab=galleri" class="event-tab <?= $activeTab === 'galleri' ? 'active' : '' ?>">
+            <i data-lucide="camera"></i>
+            Galleri
+            <span class="tab-badge"><?= count($eventAlbumPhotos) ?></span>
         </a>
         <?php endif; ?>
 
@@ -5531,6 +5562,343 @@ if (!empty($event['series_id'])) {
         <?php endif; ?>
     </div>
 </section>
+
+<?php elseif ($activeTab === 'galleri'): ?>
+<!-- GALLERY TAB - Inline photo display with ad slots -->
+<?php
+    // Get photographer info from first photo
+    $galleryPhotographer = '';
+    $galleryPhotographerUrl = '';
+    foreach ($eventAlbumPhotos as $gp) {
+        if (!empty($gp['album_photographer'])) {
+            $galleryPhotographer = $gp['album_photographer'];
+            $galleryPhotographerUrl = $gp['album_photographer_url'] ?? '';
+            break;
+        }
+    }
+
+    // Load event sponsors for ad slots (content position)
+    $galleryAdSponsors = $eventSponsors['content'] ?? [];
+    if (empty($galleryAdSponsors)) {
+        $galleryAdSponsors = $eventSponsors['partner'] ?? [];
+    }
+?>
+
+<section class="card">
+    <div class="card-header" style="display: flex; justify-content: space-between; align-items: center;">
+        <h2 class="card-title"><i data-lucide="camera"></i> Galleri</h2>
+        <?php if ($galleryPhotographer): ?>
+        <div style="font-size: 0.85rem; color: var(--color-text-secondary);">
+            Foto:
+            <?php if ($galleryPhotographerUrl): ?>
+            <a href="<?= htmlspecialchars($galleryPhotographerUrl) ?>" target="_blank" rel="noopener" style="color: var(--color-accent-text);"><?= htmlspecialchars($galleryPhotographer) ?></a>
+            <?php else: ?>
+            <?= htmlspecialchars($galleryPhotographer) ?>
+            <?php endif; ?>
+        </div>
+        <?php endif; ?>
+    </div>
+    <div class="card-body" style="padding: var(--space-sm);">
+        <div class="gallery-grid">
+            <?php
+            $adInterval = 12; // Show ad every N photos
+            $adIndex = 0;
+            foreach ($eventAlbumPhotos as $idx => $photo):
+                $imgSrc = '';
+                if ($photo['media_id'] && $photo['filepath']) {
+                    $imgSrc = '/' . ltrim($photo['filepath'], '/');
+                } elseif ($photo['thumbnail_url']) {
+                    $imgSrc = $photo['thumbnail_url'];
+                } elseif ($photo['external_url']) {
+                    $imgSrc = $photo['external_url'];
+                }
+                if (!$imgSrc) continue;
+
+                // Insert sponsor ad slot every N photos
+                if ($idx > 0 && $idx % $adInterval === 0 && !empty($galleryAdSponsors)):
+                    $adSponsor = $galleryAdSponsors[$adIndex % count($galleryAdSponsors)];
+                    $adIndex++;
+                    $adLogo = '';
+                    if (!empty($adSponsor['custom_image_url'])) {
+                        $adLogo = $adSponsor['custom_image_url'];
+                    } elseif (!empty($adSponsor['logo_url'])) {
+                        $adLogo = $adSponsor['logo_url'];
+                    } elseif (!empty($adSponsor['legacy_logo_url'])) {
+                        $adLogo = $adSponsor['legacy_logo_url'];
+                    }
+                    if ($adLogo):
+            ?>
+            <div class="gallery-ad-slot">
+                <?php if (!empty($adSponsor['website'])): ?>
+                <a href="<?= htmlspecialchars($adSponsor['website']) ?>" target="_blank" rel="noopener sponsored" class="gallery-ad-link">
+                    <img src="<?= htmlspecialchars($adLogo) ?>" alt="<?= htmlspecialchars($adSponsor['name'] ?? '') ?>" class="gallery-ad-img" loading="lazy">
+                </a>
+                <?php else: ?>
+                <div class="gallery-ad-link">
+                    <img src="<?= htmlspecialchars($adLogo) ?>" alt="<?= htmlspecialchars($adSponsor['name'] ?? '') ?>" class="gallery-ad-img" loading="lazy">
+                </div>
+                <?php endif; ?>
+            </div>
+            <?php
+                    endif;
+                endif;
+            ?>
+            <div class="gallery-item" data-idx="<?= $idx ?>" onclick="openLightbox(<?= $idx ?>)">
+                <img src="<?= htmlspecialchars($imgSrc) ?>" alt="<?= htmlspecialchars($photo['caption'] ?? '') ?>" loading="lazy">
+                <?php if ($photo['is_highlight']): ?>
+                <span class="gallery-highlight-badge"><i data-lucide="star" style="width: 12px; height: 12px;"></i></span>
+                <?php endif; ?>
+            </div>
+            <?php endforeach; ?>
+        </div>
+    </div>
+</section>
+
+<!-- Lightbox -->
+<div id="galleryLightbox" class="gallery-lightbox" style="display: none;">
+    <div class="gallery-lightbox-backdrop" onclick="closeLightbox()"></div>
+    <button class="gallery-lightbox-close" onclick="closeLightbox()"><i data-lucide="x"></i></button>
+    <button class="gallery-lightbox-nav gallery-lightbox-prev" onclick="navigateLightbox(-1)"><i data-lucide="chevron-left"></i></button>
+    <button class="gallery-lightbox-nav gallery-lightbox-next" onclick="navigateLightbox(1)"><i data-lucide="chevron-right"></i></button>
+    <div class="gallery-lightbox-content">
+        <img id="lightboxImg" src="" alt="">
+        <div id="lightboxCaption" class="gallery-lightbox-caption"></div>
+    </div>
+    <div class="gallery-lightbox-counter">
+        <span id="lightboxCounter"></span>
+    </div>
+</div>
+
+<style>
+.gallery-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: var(--space-xs);
+}
+.gallery-item {
+    aspect-ratio: 4/3;
+    overflow: hidden;
+    border-radius: var(--radius-sm);
+    cursor: pointer;
+    position: relative;
+    background: var(--color-bg-card);
+}
+.gallery-item img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+    transition: transform 0.2s ease;
+}
+.gallery-item:hover img {
+    transform: scale(1.05);
+}
+.gallery-highlight-badge {
+    position: absolute;
+    top: var(--space-xs);
+    right: var(--space-xs);
+    background: rgba(251, 191, 36, 0.9);
+    color: #000;
+    border-radius: var(--radius-full);
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.gallery-ad-slot {
+    grid-column: 1 / -1;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    padding: var(--space-md) 0;
+    border-top: 1px solid var(--color-border);
+    border-bottom: 1px solid var(--color-border);
+    margin: var(--space-xs) 0;
+}
+.gallery-ad-link {
+    display: block;
+    max-width: 600px;
+    text-decoration: none;
+}
+.gallery-ad-img {
+    max-height: 80px;
+    max-width: 100%;
+    object-fit: contain;
+}
+
+/* Lightbox */
+.gallery-lightbox {
+    position: fixed;
+    inset: 0;
+    z-index: 9999;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.gallery-lightbox-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(0, 0, 0, 0.92);
+}
+.gallery-lightbox-content {
+    position: relative;
+    z-index: 1;
+    max-width: 90vw;
+    max-height: 85vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+.gallery-lightbox-content img {
+    max-width: 90vw;
+    max-height: 80vh;
+    object-fit: contain;
+    border-radius: var(--radius-sm);
+}
+.gallery-lightbox-caption {
+    color: #fff;
+    font-size: 0.85rem;
+    margin-top: var(--space-sm);
+    text-align: center;
+    max-width: 600px;
+}
+.gallery-lightbox-close {
+    position: absolute;
+    top: var(--space-md);
+    right: var(--space-md);
+    z-index: 2;
+    background: rgba(255,255,255,0.15);
+    border: none;
+    color: #fff;
+    width: 44px;
+    height: 44px;
+    border-radius: var(--radius-full);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.gallery-lightbox-close:hover {
+    background: rgba(255,255,255,0.25);
+}
+.gallery-lightbox-nav {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    z-index: 2;
+    background: rgba(255,255,255,0.15);
+    border: none;
+    color: #fff;
+    width: 48px;
+    height: 48px;
+    border-radius: var(--radius-full);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+.gallery-lightbox-nav:hover {
+    background: rgba(255,255,255,0.25);
+}
+.gallery-lightbox-prev { left: var(--space-md); }
+.gallery-lightbox-next { right: var(--space-md); }
+.gallery-lightbox-counter {
+    position: absolute;
+    bottom: var(--space-md);
+    left: 50%;
+    transform: translateX(-50%);
+    z-index: 2;
+    color: rgba(255,255,255,0.7);
+    font-size: 0.8rem;
+}
+
+@media (max-width: 767px) {
+    .gallery-grid {
+        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+        gap: 4px;
+    }
+    .gallery-item {
+        border-radius: 0;
+    }
+    .gallery-lightbox-nav {
+        width: 40px;
+        height: 40px;
+    }
+    .gallery-lightbox-prev { left: var(--space-xs); }
+    .gallery-lightbox-next { right: var(--space-xs); }
+}
+</style>
+
+<script>
+(function() {
+    const photos = <?= json_encode(array_values(array_map(function($p) {
+        $src = '';
+        if ($p['media_id'] && $p['filepath']) {
+            $src = '/' . ltrim($p['filepath'], '/');
+        } elseif ($p['external_url']) {
+            $src = $p['external_url'];
+        }
+        return ['src' => $src, 'caption' => $p['caption'] ?? ''];
+    }, array_filter($eventAlbumPhotos, function($p) {
+        return ($p['media_id'] && $p['filepath']) || $p['external_url'];
+    })))) ?>;
+
+    let currentIdx = 0;
+
+    window.openLightbox = function(idx) {
+        if (idx < 0 || idx >= photos.length) return;
+        currentIdx = idx;
+        const lb = document.getElementById('galleryLightbox');
+        const img = document.getElementById('lightboxImg');
+        const caption = document.getElementById('lightboxCaption');
+        const counter = document.getElementById('lightboxCounter');
+
+        img.src = photos[idx].src;
+        caption.textContent = photos[idx].caption || '';
+        caption.style.display = photos[idx].caption ? 'block' : 'none';
+        counter.textContent = (idx + 1) + ' / ' + photos.length;
+        lb.style.display = 'flex';
+        document.body.style.overflow = 'hidden';
+
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+    };
+
+    window.closeLightbox = function() {
+        document.getElementById('galleryLightbox').style.display = 'none';
+        document.body.style.overflow = '';
+    };
+
+    window.navigateLightbox = function(dir) {
+        let newIdx = currentIdx + dir;
+        if (newIdx < 0) newIdx = photos.length - 1;
+        if (newIdx >= photos.length) newIdx = 0;
+        window.openLightbox(newIdx);
+    };
+
+    document.addEventListener('keydown', function(e) {
+        const lb = document.getElementById('galleryLightbox');
+        if (lb.style.display === 'none') return;
+        if (e.key === 'Escape') window.closeLightbox();
+        if (e.key === 'ArrowLeft') window.navigateLightbox(-1);
+        if (e.key === 'ArrowRight') window.navigateLightbox(1);
+    });
+
+    // Swipe support for mobile
+    let touchStartX = 0;
+    const lb = document.getElementById('galleryLightbox');
+    if (lb) {
+        lb.addEventListener('touchstart', function(e) {
+            touchStartX = e.changedTouches[0].screenX;
+        }, {passive: true});
+        lb.addEventListener('touchend', function(e) {
+            const diff = e.changedTouches[0].screenX - touchStartX;
+            if (Math.abs(diff) > 50) {
+                window.navigateLightbox(diff > 0 ? -1 : 1);
+            }
+        }, {passive: true});
+    }
+})();
+</script>
 
 <?php elseif ($activeTab === 'elimination'): ?>
 <!-- ELIMINATION TAB -->

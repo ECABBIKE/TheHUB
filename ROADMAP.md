@@ -16,8 +16,8 @@
 | Win-Back System | KLAR | Aterengagera churnade deltagare | 100% |
 | Klubb RF-Registrering | KLAR | SCF/NCF/DCU-synk och stavningskontroll | 100% |
 | Startlistor | KLAR | Admin/promotor startliste-vy med startnr, export, mobilvy | 100% |
-| Bildbanken | PAGAENDE | AI-analyserade bilder kopplade till profiler | 10% |
-| Premium-medlemskap | PAGAENDE | Prenumeration, sponsorprofil, hogupplosta bilder, swapmeet | 40% |
+| Bildbanken / Fotoalbum | PAGAENDE | Fotoalbum per event, manuell taggning, galleri med lightbox | 60% |
+| Premium-medlemskap | PAGAENDE | Stripe-oberoende, sponsorprofil, hogupplosta bilder, swapmeet | 50% |
 | Ridercard Share | PAGAENDE | Statistikkort for Instagram-delning | 5% |
 | Prestandaoptimering | PAGAENDE | Fas 1-2 klar. Fas 3-4 planerade (CSS-bundling, arkitektur) | 50% |
 | CSS/UI Standardisering | PLANERAD | Enhetlig radius och nya tabeller pa alla sidor | 0% |
@@ -77,6 +77,46 @@
 ---
 
 # CHANGELOG
+
+### 2026-02-26 (Fotoalbum & Premium-system)
+- **Branch:** claude/fix-site-performance-wVdVq
+
+- **Ny funktion: Fotoalbum per event (migration 063)**
+  - Nya tabeller: event_albums, event_photos, photo_rider_tags
+  - Admin-sida: `/admin/event-albums.php` - skapa album, ladda upp bilder, tagga deltagare
+  - Google Photos-länk som referens/import, men alla bilder visas på TheHUB
+  - Manuell taggning av deltagare till foton via sökmodal
+
+- **Ny funktion: Galleri-flik på event-sidan**
+  - Responsivt fotogalleri med thumbnail-grid
+  - Lightbox med piltangentstöd och swipe-gester på mobil
+  - Sponsor-annonser infogas var 12:e bild i galleriet
+  - Fotografinfo visas i gallerihuvudet
+
+- **Ny funktion: Mina bilder på riderprofil**
+  - Premium-medlemmar ser taggade bilder i en 3-kolumns grid på sin profil
+  - Bilder länkar till respektive events galleri-flik
+  - Visar max 6 bilder med "+X fler" indikator
+
+- **Förbättring: Stripe-oberoende Premium**
+  - Ny kolumn `riders.premium_until` (DATE) - admin-hanterad, inget betalleverantörskrav
+  - `isPremiumMember()` kollar premium_until FÖRST, Stripe som fallback
+  - Förbereder för byte till Swedbank Pay
+
+- **API: Photo tags**
+  - `/api/photo-tags.php` - hämta taggade deltagare per foto
+  - Används av admin-albumets taggningsmodal
+
+- **Nya/ändrade filer:**
+  - `Tools/migrations/063_photo_albums_and_premium.sql` - Nya tabeller + riders.premium_until
+  - `admin/event-albums.php` - Admin fotoalbum-hantering
+  - `api/photo-tags.php` - Photo tags API
+  - `includes/premium.php` - Provider-agnostisk premium-check
+  - `pages/event.php` - Galleri-flik med lightbox och sponsor-annonser
+  - `pages/rider.php` - Mina bilder-sektion för premium
+  - `includes/config/admin-tabs-config.php` - Fotoalbum i navigationen
+  - `admin/components/unified-layout.php` - PageMap för event-albums
+  - `admin/migrations.php` - Migration 063 registrerad
 
 ### 2026-02-26 (Mediabibliotek & sponsorsortering)
 - **Branch:** claude/fix-site-performance-wVdVq

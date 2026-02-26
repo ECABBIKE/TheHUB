@@ -217,6 +217,10 @@ $migrationChecks = [
     '062_media_link_url.sql' => [
         'columns' => ['media.link_url']
     ],
+    '063_photo_albums_and_premium.sql' => [
+        'tables' => ['event_albums', 'event_photos', 'photo_rider_tags'],
+        'columns' => ['riders.premium_until']
+    ],
 ];
 
 // ============================================================================

@@ -50,6 +50,7 @@ if (!isset($current_admin_page)) {
         'events' => 'events',
         'media' => 'media',
         'media-archive' => 'media',
+        'event-albums' => 'event-albums',
         'sponsors' => 'sponsors',
         'sponsor-edit' => 'sponsors',
         'dashboard' => 'dashboard',

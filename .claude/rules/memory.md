@@ -4,6 +4,29 @@
 
 ---
 
+## SENASTE FIXAR (2026-02-26, session 7)
+
+### Fotoalbum: Komplett system (migration 063)
+- **Tabeller:** `event_albums`, `event_photos`, `photo_rider_tags`
+- **Admin:** `/admin/event-albums.php` - skapa album, lägg till bilder, tagga riders
+- **Publik:** Galleri-flik på event-sidan med inline lightbox, sponsor-annonser var 12:e bild
+- **Profil:** "Mina bilder" på riderprofil för premium-medlemmar (3-kolumns grid, max 6 bilder)
+- **VIKTIGT:** Bilder ska INTE hostas på TheHUB-servern. Alla bilder lagras som externa URL:er (Google Photos, Cloudflare etc). `event_photos.external_url` är primärt fält, `media_id` är sekundärt/optional.
+- **Google Photos-koppling:** Album-URL sparas i `event_albums.google_photos_url`. Admin kopierar bild-URL:er manuellt från Google Photos.
+- **Taggning:** Manuell taggning via sökmodal i admin. AI-taggning planerad som framtida steg.
+
+### Premium: Stripe-oberoende (migration 063)
+- **Ny kolumn:** `riders.premium_until` DATE - admin-hanterad, inget betalleverantörskrav
+- **`isPremiumMember()`** kollar `riders.premium_until` FÖRST, sedan Stripe-fallback
+- **Syfte:** Förbereder för byte från Stripe till Swedbank Pay
+- **Premium hålls dolt** tills allt är klart
+
+### API: Photo tags
+- `/api/photo-tags.php` - GET med photo_id, returnerar taggade riders
+- Taggning/borttagning sker via POST till `/admin/event-albums.php` (action: tag_rider/remove_tag)
+
+---
+
 ## SENASTE FIXAR (2026-02-26, session 6)
 
 ### Mediabibliotek: Force-delete av bilder som används
