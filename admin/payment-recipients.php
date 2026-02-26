@@ -13,6 +13,41 @@ if (!hasRole('admin')) {
 
 $db = getDB();
 
+/**
+ * Auto-sync: Set payment_recipient_id on events/series owned by a promotor
+ * Called when creating/updating a payment recipient with a linked promotor
+ */
+function _syncRecipientToPromotorAssets($db, int $recipientId, int $adminUserId): void {
+    try {
+        // Set payment_recipient_id on events assigned to this promotor
+        $db->execute("
+            UPDATE events e
+            JOIN promotor_events pe ON pe.event_id = e.id
+            SET e.payment_recipient_id = ?
+            WHERE pe.user_id = ? AND (e.payment_recipient_id IS NULL OR e.payment_recipient_id = 0)
+        ", [$recipientId, $adminUserId]);
+
+        // Set payment_recipient_id on series assigned to this promotor
+        $db->execute("
+            UPDATE series s
+            JOIN promotor_series ps ON ps.series_id = s.id
+            SET s.payment_recipient_id = ?
+            WHERE ps.user_id = ? AND (s.payment_recipient_id IS NULL OR s.payment_recipient_id = 0)
+        ", [$recipientId, $adminUserId]);
+
+        // Also set on events in promotor's series (via series_events)
+        $db->execute("
+            UPDATE events e
+            JOIN series_events se ON se.event_id = e.id
+            JOIN promotor_series ps ON ps.series_id = se.series_id
+            SET e.payment_recipient_id = ?
+            WHERE ps.user_id = ? AND (e.payment_recipient_id IS NULL OR e.payment_recipient_id = 0)
+        ", [$recipientId, $adminUserId]);
+    } catch (Exception $e) {
+        error_log("_syncRecipientToPromotorAssets error: " . $e->getMessage());
+    }
+}
+
 // Check if admin_user_id column exists (migration 059)
 $hasAdminUserCol = false;
 try {
@@ -77,13 +112,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
             try {
                 if ($action === 'create') {
-                    $db->insert('payment_recipients', $data);
+                    $newId = $db->insert('payment_recipients', $data);
                     $message = 'Betalningsmottagare skapad';
+
+                    // Auto-sync: set payment_recipient_id on promotor's events/series
+                    if ($newId && $adminUserId) {
+                        _syncRecipientToPromotorAssets($db, (int)$newId, (int)$adminUserId);
+                    }
                 } else {
                     $id = intval($_POST['id'] ?? 0);
                     if ($id > 0) {
                         $db->update('payment_recipients', $data, 'id = ?', [$id]);
                         $message = 'Betalningsmottagare uppdaterad';
+
+                        // Auto-sync: set payment_recipient_id on promotor's events/series
+                        if ($adminUserId) {
+                            _syncRecipientToPromotorAssets($db, $id, (int)$adminUserId);
+                        }
                     }
                 }
             } catch (Exception $e) {

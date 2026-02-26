@@ -63,6 +63,13 @@ $filterRecipient = isset($_GET['recipient']) ? intval($_GET['recipient']) : 0;
 $filterEvent = isset($_GET['event']) ? intval($_GET['event']) : 0;
 $filterMonth = isset($_GET['month']) ? intval($_GET['month']) : 0; // 0 = helår
 
+// Check if admin_user_id column exists on payment_recipients (for promotor chain)
+$hasAdminUserCol = false;
+try {
+    $colCheck = $db->getAll("SHOW COLUMNS FROM payment_recipients LIKE 'admin_user_id'");
+    $hasAdminUserCol = !empty($colCheck);
+} catch (Exception $e) {}
+
 if ($isAdmin) {
     // Fee constants
     $STRIPE_PERCENT = 1.5;
@@ -77,12 +84,17 @@ if ($isAdmin) {
         $hasStripeFeeCol = !empty($colCheck);
     } catch (Exception $e) {}
 
-    // Get platform fee config (from first active recipient)
+    // Get platform fee config (from selected recipient, or first active)
     $platformFeePct = 2.00;
     $platformFeeFixed = 0;
     $platformFeeType = 'percent';
+    $recipientInfo = null;
     try {
-        $prRow = $db->getRow("SELECT * FROM payment_recipients WHERE active = 1 ORDER BY id LIMIT 1");
+        if ($filterRecipient > 0) {
+            $prRow = $db->getRow("SELECT * FROM payment_recipients WHERE id = ?", [$filterRecipient]);
+        } else {
+            $prRow = $db->getRow("SELECT * FROM payment_recipients WHERE active = 1 ORDER BY id LIMIT 1");
+        }
         if ($prRow) {
             $platformFeePct = (float)($prRow['platform_fee_percent'] ?? 2.00);
             $platformFeeFixed = (float)($prRow['platform_fee_fixed'] ?? 0);
@@ -134,13 +146,49 @@ if ($isAdmin) {
         }
 
         if ($filterRecipient > 0) {
-            // Check recipient via 5 paths: event direct, event's series (legacy), order's series, order_items, series_events junction
-            $conditions[] = "(e.payment_recipient_id = ? OR s_via_event.payment_recipient_id = ? OR s_via_order.payment_recipient_id = ? OR s_via_items.recipient_id = ? OR s_via_se.recipient_id = ?)";
-            $params[] = $filterRecipient;
-            $params[] = $filterRecipient;
-            $params[] = $filterRecipient;
-            $params[] = $filterRecipient;
-            $params[] = $filterRecipient;
+            // Check recipient via 8 paths: 5 original + 3 via PROMOTOR CHAIN
+            // Paths 1-5: Direct payment_recipient_id on events/series
+            // Paths 6-8: Via payment_recipients.admin_user_id → promotor_events/series
+            $recipientParts = [
+                "e.payment_recipient_id = ?",
+                "s_via_event.payment_recipient_id = ?",
+                "s_via_order.payment_recipient_id = ?",
+                "s_via_items.recipient_id = ?",
+                "s_via_se.recipient_id = ?"
+            ];
+            $recipientParams = array_fill(0, 5, $filterRecipient);
+
+            // PROMOTOR CHAIN: Find events/series owned by this recipient's promotor
+            if ($hasAdminUserCol) {
+                // Path 6: event owned by promotor linked to this recipient
+                $recipientParts[] = "o.event_id IN (
+                    SELECT pe6.event_id FROM promotor_events pe6
+                    JOIN payment_recipients pr6 ON pr6.admin_user_id = pe6.user_id
+                    WHERE pr6.id = ?
+                )";
+                $recipientParams[] = $filterRecipient;
+
+                // Path 7: series owned by promotor linked to this recipient (via orders.series_id)
+                $recipientParts[] = "o.series_id IN (
+                    SELECT ps7.series_id FROM promotor_series ps7
+                    JOIN payment_recipients pr7 ON pr7.admin_user_id = ps7.user_id
+                    WHERE pr7.id = ?
+                )";
+                $recipientParams[] = $filterRecipient;
+
+                // Path 8: series via order_items for promotor's series
+                $recipientParts[] = "o.id IN (
+                    SELECT oi8.order_id FROM order_items oi8
+                    JOIN series_registrations sr8 ON sr8.id = oi8.series_registration_id
+                    JOIN promotor_series ps8 ON ps8.series_id = sr8.series_id
+                    JOIN payment_recipients pr8 ON pr8.admin_user_id = ps8.user_id
+                    WHERE pr8.id = ? AND oi8.item_type = 'series_registration'
+                )";
+                $recipientParams[] = $filterRecipient;
+            }
+
+            $conditions[] = "(" . implode(" OR ", $recipientParts) . ")";
+            $params = array_merge($params, $recipientParams);
         }
 
         $whereClause = implode(' AND ', $conditions);
@@ -280,7 +328,7 @@ if ($isAdmin) {
         $recipientEventFilter = '';
         $extraParams = [];
         if ($filterRecipient > 0) {
-            // Also include ALL events belonging to series with this recipient
+            // Include ALL events belonging to series with this recipient
             $recipientEventFilter = "
                 OR e.id IN (
                     SELECT se_r.event_id FROM series_events se_r
@@ -293,6 +341,25 @@ if ($isAdmin) {
                 )
             ";
             $extraParams = [$filterRecipient, $filterRecipient];
+
+            // PROMOTOR CHAIN: include events owned by this recipient's promotor
+            if ($hasAdminUserCol) {
+                $recipientEventFilter .= "
+                    OR e.id IN (
+                        SELECT pe_r.event_id FROM promotor_events pe_r
+                        JOIN payment_recipients pr_r ON pr_r.admin_user_id = pe_r.user_id
+                        WHERE pr_r.id = ?
+                    )
+                    OR e.id IN (
+                        SELECT se_r2.event_id FROM series_events se_r2
+                        JOIN promotor_series ps_r ON ps_r.series_id = se_r2.series_id
+                        JOIN payment_recipients pr_r2 ON pr_r2.admin_user_id = ps_r.user_id
+                        WHERE pr_r2.id = ?
+                    )
+                ";
+                $extraParams[] = $filterRecipient;
+                $extraParams[] = $filterRecipient;
+            }
         }
 
         $filterEvents = $db->getAll("
