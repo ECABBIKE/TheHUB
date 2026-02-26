@@ -28,6 +28,35 @@
 
 # CHANGELOG
 
+### 2026-02-26 (Enhetligt sponsorsystem)
+- **Branch:** claude/fix-site-performance-wVdVq
+
+- **Ny funktion: Bildbaserad sponsorväljare för alla roller**
+  - Admin och promotor använder nu samma bildväljare från mediabiblioteket
+  - Tidigare admin-dropdown/checkboxar ersatta med visuell bildpicker
+  - Fix: bildladdning i väljaren använder nu rätt URL-fält från API
+  - Webbplatslänk krävs vid skapande av ny sponsor
+
+- **Ny funktion: Serie-sponsorer**
+  - Ny "Sponsorer"-flik i seriehantering med bildbaserad väljare
+  - Stöd för 4 placeringar: Banner, Logo-rad, Resultat-sponsor, Partners
+  - Publik seriesida visar nu banner-sponsor, logo-rad och partners
+  - Sponsorer ärvs av event utan egna sponsorer
+
+- **Ny funktion: Premium-medlemmar kan välja sponsorlogotyper**
+  - "Välj bild från biblioteket"-knapp i profilredigering
+  - Bläddra i sponsors-mappen, ladda upp egna bilder
+  - Webbplatslänk nu obligatoriskt för rider-sponsorer
+  - Auto-namngivning från filnamn
+
+- **Ändrade filer:**
+  - `admin/event-edit.php` - Enhetlig bildväljare (ta bort admin/promotor-split)
+  - `admin/series-manage.php` - Ny sponsor-flik med bildväljare
+  - `pages/series/show.php` - Visar serie-sponsorer (banner, logos, partners)
+  - `pages/profile/edit.php` - Bildväljare för premium-sponsorer
+  - `api/sponsors.php` - Ny action `update_website`
+  - `api/rider-sponsors.php` - Kräv website_url vid add
+
 ### 2026-02-26 (Serie-ordrar per-event fördelning)
 - **Branch:** claude/fix-site-performance-PbeNY
 

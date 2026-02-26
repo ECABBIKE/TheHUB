@@ -119,6 +119,34 @@ try {
             break;
 
         // =============================================
+        // UPDATE WEBSITE only (used by image picker)
+        // =============================================
+        case 'update_website':
+            if ($method !== 'POST') {
+                http_response_code(405);
+                echo json_encode(['success' => false, 'error' => 'Använd POST']);
+                exit;
+            }
+
+            $data = json_decode(file_get_contents('php://input'), true);
+            $sponsorId = (int)($data['sponsor_id'] ?? 0);
+            $website = trim($data['website'] ?? '');
+
+            if (!$sponsorId || empty($website)) {
+                echo json_encode(['success' => false, 'error' => 'sponsor_id och website krävs']);
+                exit;
+            }
+
+            try {
+                $stmt = $pdo->prepare("UPDATE sponsors SET website = ? WHERE id = ?");
+                $stmt->execute([$website, $sponsorId]);
+                echo json_encode(['success' => true]);
+            } catch (Exception $e) {
+                echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+            }
+            break;
+
+        // =============================================
         // CREATE sponsor
         // =============================================
         case 'create':

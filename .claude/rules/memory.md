@@ -4,7 +4,38 @@
 
 ---
 
-## SENASTE FIXAR (2026-02-26, session 2)
+## SENASTE FIXAR (2026-02-26, session 3)
+
+### Enhetlig bildbaserad sponsorväljare (admin + promotor)
+- **Ändring:** Admin-sidan i event-edit.php använde dropdown-select och checkboxar för sponsorer. Promotor hade bildväljare från mediabiblioteket. Nu använder BÅDA samma bildbaserade picker.
+- **Borttaget:** `$isPromotorOnly`-villkoret som delade sponsor-UI i event-edit.php
+- **Fix bildväljare:** `loadImgPickerGrid()` använder nu `media.url` (förbearbetad av API) istället för manuell `'/' + media.filepath`. Bättre felhantering och `onerror` på bilder.
+- **Fil:** `/admin/event-edit.php` rad ~1709-1800
+
+### Serie-sponsorer (ny funktion)
+- **Ny flik:** "Sponsorer" i `/admin/series-manage.php` med bildbaserad väljare (samma UI som event)
+- **Placeringar:** Banner (header), Logo-rad (content, max 5), Resultat-sponsor (sidebar), Partners (partner)
+- **Sparlogik:** POST action `save_sponsors` → DELETE + INSERT i `series_sponsors`
+- **Publik visning:** `/pages/series/show.php` visar nu:
+  - Banner-sponsor ovanför hero-sektionen (klickbar länk till website)
+  - Logo-rad under hero-sektionen
+  - Samarbetspartners längst ner
+- **Tabell:** `series_sponsors` (redan existerande i schema.sql)
+- **Data loading:** Laddar `allSponsors` + `seriesSponsors` med logo_url via media JOIN
+
+### Premium-medlemmar: bildväljare för sponsorlogotyper
+- **Ändring:** Profilredigering (`/pages/profile/edit.php`) har nu en "Välj bild från biblioteket"-knapp
+- **Funktionalitet:** Premium-medlemmar kan bläddra i sponsors-mappen i mediabiblioteket och välja logotyper. Kan även ladda upp nya bilder.
+- **Webbplats krävs:** `website_url` är nu obligatoriskt i `/api/rider-sponsors.php`
+- **Auto-namngivning:** Om sponsornamn-fältet är tomt fylls det i automatiskt från filnamnet
+
+### Webbplatslänk krävs vid sponsorskapande
+- **Event/Serie:** `selectMediaForPlacement()` promptar nu för webbplats-URL vid nyskapad sponsor
+- **Premium:** Webbplats-fältet är markerat som obligatoriskt (*)
+- **API:** `/api/sponsors.php` har ny action `update_website` för att uppdatera enbart website-fältet
+- **Rider API:** `/api/rider-sponsors.php` kräver nu `website_url` vid `add`-action
+
+## TIDIGARE FIXAR (2026-02-26, session 2)
 
 ### Serie-ordrar: Tranås/Värnamo tomma i ekonomivyn
 - **Grundorsak:** `explodeSeriesOrdersToEvents()` kollade `$hasEventId` först och skippade splitting om `event_id` var satt. Gamla serie-ordrar (pre-migration 051) hade BÅDE `event_id` OCH `series_id` satt.

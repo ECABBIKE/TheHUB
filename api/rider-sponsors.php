@@ -47,15 +47,19 @@ try {
                 throw new Exception('Sponsornamn krävs');
             }
 
+            if (empty($websiteUrl)) {
+                throw new Exception('Webbplatslänk krävs');
+            }
+
             if (strlen($name) > 150) {
                 throw new Exception('Sponsornamn får vara max 150 tecken');
             }
 
-            // Validate URLs if provided
+            // Validate URLs
             if ($logoUrl && !filter_var($logoUrl, FILTER_VALIDATE_URL)) {
                 throw new Exception('Ogiltig logotyp-URL');
             }
-            if ($websiteUrl && !filter_var($websiteUrl, FILTER_VALIDATE_URL)) {
+            if (!filter_var($websiteUrl, FILTER_VALIDATE_URL)) {
                 throw new Exception('Ogiltig webbplats-URL');
             }
 

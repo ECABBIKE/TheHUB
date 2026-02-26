@@ -1706,9 +1706,8 @@ include __DIR__ . '/components/unified-layout.php';
         </div>
     </details>
 
-    <?php if ($isPromotorOnly): ?>
     <!-- ========================================================= -->
-    <!-- PROMOTOR: Enkel bildbaserad sponsor/partner-väljare       -->
+    <!-- SPONSORER & PARTNERS: Bildbaserad sponsorväljare          -->
     <!-- ========================================================= -->
     <details class="admin-card mb-lg">
         <summary class="admin-card-header collapsible-header">
@@ -1722,6 +1721,9 @@ include __DIR__ . '/components/unified-layout.php';
             <p class="mb-lg text-secondary text-sm">
                 Välj bilder till sponsorplatserna. Ladda upp bilder via
                 <a href="/admin/media?folder=sponsors" target="_blank">Mediabiblioteket</a> först.
+                <?php if (!$isPromotorOnly): ?>
+                <br>Seriens sponsorer visas om inga event-sponsorer anges.
+                <?php endif; ?>
             </p>
 
             <div class="flex flex-col gap-lg">
@@ -1778,14 +1780,14 @@ include __DIR__ . '/components/unified-layout.php';
         </div>
     </details>
 
-    <!-- Image Picker Modal (promotor) -->
+    <!-- Image Picker Modal -->
     <div id="imgPickerModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:9999;background:rgba(0,0,0,0.6);">
         <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:92%;max-width:700px;background:var(--color-bg-surface);border-radius:var(--radius-lg);border:1px solid var(--color-border);max-height:85vh;display:flex;flex-direction:column;">
             <div style="padding:var(--space-md) var(--space-lg);border-bottom:1px solid var(--color-border);display:flex;justify-content:space-between;align-items:center;">
                 <h3 style="margin:0;font-size:1rem;">Välj bild</h3>
                 <button type="button" onclick="closeImgPicker()" style="background:none;border:none;cursor:pointer;color:var(--color-text-secondary);font-size:1.5rem;line-height:1;">&times;</button>
             </div>
-            <div style="padding:var(--space-md);border-bottom:1px solid var(--color-border);display:flex;gap:var(--space-sm);align-items:center;">
+            <div style="padding:var(--space-md);border-bottom:1px solid var(--color-border);display:flex;gap:var(--space-sm);align-items:center;flex-wrap:wrap;">
                 <input type="file" id="imgPickerUpload" accept="image/*" style="display:none" onchange="uploadAndPick(this)">
                 <button type="button" class="btn btn-sm btn-primary" onclick="document.getElementById('imgPickerUpload').click()">
                     <i data-lucide="upload" class="icon-sm"></i> Ladda upp ny bild
@@ -1795,135 +1797,6 @@ include __DIR__ . '/components/unified-layout.php';
             <div id="imgPickerGrid" style="padding:var(--space-md);overflow-y:auto;flex:1;display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:var(--space-sm);"></div>
         </div>
     </div>
-
-    <?php else: ?>
-    <!-- ========================================================= -->
-    <!-- ADMIN: Full sponsor management                            -->
-    <!-- ========================================================= -->
-    <details class="admin-card mb-lg">
-        <summary class="admin-card-header collapsible-header">
-            <h2>
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-md"><path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z"/></svg>
-                Sponsorer
-            </h2>
-            <span class="text-secondary text-sm">Klicka för att expandera/minimera</span>
-        </summary>
-        <div class="admin-card-body">
-            <p class="mb-md text-secondary text-sm">
-                Välj sponsorer specifikt för detta event. <strong>OBS:</strong> Seriens sponsorer visas om inga event-sponsorer anges.
-            </p>
-
-            <div class="flex flex-col gap-lg">
-                <!-- Header Banner from Media Library -->
-                <div class="admin-form-group">
-                    <label class="admin-form-label">Header-banner (stor banner högst upp)</label>
-                    <select name="header_banner_media_id" class="admin-form-select">
-                        <option value="">-- Ingen (använd seriens) --</option>
-                        <?php foreach ($eventMediaFiles as $media): ?>
-                        <option value="<?= $media['id'] ?>" <?= ($event['header_banner_media_id'] ?? '') == $media['id'] ? 'selected' : '' ?>>
-                            <?= htmlspecialchars($media['original_filename']) ?>
-                        </option>
-                        <?php endforeach; ?>
-                    </select>
-                    <small class="form-help block mt-sm">
-                        Välj bild från <a href="/admin/media?folder=events" target="_blank">Mediabiblioteket (Event-mappen)</a>
-                    </small>
-                </div>
-
-                <!-- Header Banner Sponsor -->
-                <div class="admin-form-group">
-                    <label class="admin-form-label">Banner-sponsor (bred banner högst upp)</label>
-                    <select name="sponsor_header" class="admin-form-select">
-                        <option value="">-- Ingen (använd seriens) --</option>
-                        <?php foreach ($allSponsors as $sp): ?>
-                        <option value="<?= $sp['id'] ?>" <?= in_array((int)$sp['id'], $eventSponsors['header']) ? 'selected' : '' ?>>
-                            <?= htmlspecialchars($sp['name']) ?> (<?= ucfirst($sp['tier']) ?>)
-                        </option>
-                        <?php endforeach; ?>
-                    </select>
-                    <small class="form-help block mt-sm">
-                        Sponsorns banner-logo visas som bred banner högst upp på event-sidan
-                    </small>
-                </div>
-
-                <!-- Content Logo Row - Max 5 -->
-                <div class="admin-form-group">
-                    <label class="admin-form-label">
-                        Logo-rad (under event-info)
-                        <span id="logoRowCount" class="font-normal text-secondary ml-sm">
-                            (<?= count($eventSponsors['content']) ?>/5 valda)
-                        </span>
-                    </label>
-                    <div id="logoRowSponsors" class="tag-list">
-                        <?php foreach ($allSponsors as $sp): ?>
-                        <label class="sponsor-checkbox">
-                            <input type="checkbox" name="sponsor_content[]" value="<?= $sp['id'] ?>" class="logo-row-checkbox" <?= in_array((int)$sp['id'], $eventSponsors['content']) ? 'checked' : '' ?>>
-                            <?= htmlspecialchars($sp['name']) ?>
-                        </label>
-                        <?php endforeach; ?>
-                    </div>
-                    <small class="form-help block mt-sm">
-                        Max 5 sponsorer i logo-raden. Visas på desktop i en rad, mobil i 3-kolumner.
-                    </small>
-                </div>
-
-                <!-- Results Sponsor -->
-                <div class="admin-form-group">
-                    <label class="admin-form-label">Resultat-sponsor ("Resultat sponsrat av")</label>
-                    <select name="sponsor_sidebar" class="admin-form-select">
-                        <option value="">-- Ingen (använd seriens) --</option>
-                        <?php foreach ($allSponsors as $sp): ?>
-                        <option value="<?= $sp['id'] ?>" <?= in_array((int)$sp['id'], $eventSponsors['sidebar']) ? 'selected' : '' ?>>
-                            <?= htmlspecialchars($sp['name']) ?> (<?= ucfirst($sp['tier']) ?>)
-                        </option>
-                        <?php endforeach; ?>
-                    </select>
-                </div>
-            </div>
-        </div>
-    </details>
-
-    <!-- SAMARBETSPARTNERS -->
-    <details class="admin-card mb-lg">
-        <summary class="admin-card-header collapsible-header">
-            <h2>
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="icon-md"><path d="M11 17a1 1 0 0 1 2 0c0 .5-.34 3-.5 4.5a.5.5 0 0 1-1 0c-.16-1.5-.5-4-.5-4.5Z"/><path d="M8 14a6 6 0 1 1 8 0"/><path d="M12 2v1"/><path d="m4.93 4.93.71.71"/><path d="M2 12h1"/><path d="m4.93 19.07.71-.71"/><path d="m19.07 4.93-.71.71"/><path d="M22 12h-1"/><path d="m19.07 19.07-.71-.71"/></svg>
-                Samarbetspartners
-            </h2>
-            <span class="text-secondary text-sm">Klicka för att expandera/minimera</span>
-        </summary>
-        <div class="admin-card-body">
-            <p class="mb-md text-secondary text-sm">
-                Visa lokala samarbetspartners längst ner på event-sidan.
-            </p>
-
-            <div class="admin-form-group">
-                <label class="admin-form-label">
-                    Partner-logorad (längst ner på sidan)
-                    <span id="partnerCount" class="font-normal text-secondary ml-sm">
-                        (<?= count($eventSponsors['partner']) ?> valda)
-                    </span>
-                </label>
-                <div id="partnerSponsors" class="partner-grid">
-                    <?php foreach ($allSponsors as $sp): ?>
-                    <label class="sponsor-checkbox">
-                        <input type="checkbox" name="sponsor_partner[]" value="<?= $sp['id'] ?>" class="partner-checkbox" <?= in_array((int)$sp['id'], $eventSponsors['partner']) ? 'checked' : '' ?>>
-                        <?= htmlspecialchars($sp['name']) ?>
-                    </label>
-                    <?php endforeach; ?>
-                </div>
-                <small class="form-help block mt-sm">
-                    Visas i en egen sektion längst ner på event-sidan. 4 i bredd på desktop, 2 på mobil.
-                </small>
-
-                <a href="/admin/sponsors.php" class="btn btn-secondary mt-md">
-                    <i data-lucide="plus" class="icon-sm"></i>
-                    Hantera sponsorer
-                </a>
-            </div>
-        </div>
-    </details>
-    <?php endif; ?>
 
     <!-- STATUS & ACTIONS -->
     <div class="admin-card">
@@ -2552,25 +2425,34 @@ async function loadImgPickerGrid() {
 
     try {
         const response = await fetch('/api/media.php?action=list&folder=sponsors&subfolders=1&limit=200');
+        if (!response.ok) throw new Error('HTTP ' + response.status);
         const result = await response.json();
         grid.innerHTML = '';
 
-        if (!result.success || !result.data.length) {
+        if (!result.success || !Array.isArray(result.data) || !result.data.length) {
             grid.innerHTML = '<p style="color:var(--color-text-secondary);text-align:center;grid-column:1/-1;">Inga bilder. Ladda upp en bild ovan eller via <a href="/admin/media?folder=sponsors" target="_blank">Mediabiblioteket</a>.</p>';
             return;
         }
 
+        let imgCount = 0;
         result.data.forEach(function(media) {
             if (!media.mime_type || !media.mime_type.startsWith('image/')) return;
+            const imgSrc = media.url || ('/' + media.filepath);
             const div = document.createElement('div');
             div.className = 'img-picker-item';
-            div.innerHTML = '<img src="/' + media.filepath + '" alt="' + (media.original_filename||'') + '" title="' + (media.original_filename||'') + '">'
-                + '<span class="img-picker-name">' + (media.original_filename||'').substring(0,20) + '</span>';
-            div.onclick = function() { selectMediaForPlacement(media.id, '/' + media.filepath); };
+            div.innerHTML = '<img src="' + imgSrc + '" alt="' + (media.original_filename||'') + '" title="' + (media.original_filename||'') + '" onerror="this.style.display=\'none\'">'
+                + '<span class="img-picker-name">' + (media.original_filename||'').substring(0,25) + '</span>';
+            div.onclick = function() { selectMediaForPlacement(media.id, imgSrc); };
             grid.appendChild(div);
+            imgCount++;
         });
+
+        if (imgCount === 0) {
+            grid.innerHTML = '<p style="color:var(--color-text-secondary);text-align:center;grid-column:1/-1;">Inga bilder hittades. Ladda upp via knappen ovan.</p>';
+        }
     } catch (e) {
-        grid.innerHTML = '<p style="color:var(--color-error);text-align:center;grid-column:1/-1;">Kunde inte ladda bilder</p>';
+        console.error('Image picker error:', e);
+        grid.innerHTML = '<p style="color:var(--color-error);text-align:center;grid-column:1/-1;">Kunde inte ladda bilder: ' + e.message + '</p>';
     }
 }
 
@@ -2602,6 +2484,18 @@ async function selectMediaForPlacement(mediaId, imageUrl) {
         const response = await fetch('/api/sponsors.php?action=find_or_create_by_media&media_id=' + mediaId);
         const result = await response.json();
         if (result.success && result.data) {
+            // If newly created, prompt for website URL
+            if (result.created && !result.data.website) {
+                const website = prompt('Ange sponsorns webbplats (krävs):', 'https://');
+                if (website && website !== 'https://' && website.length > 5) {
+                    // Update sponsor with website
+                    await fetch('/api/sponsors.php?action=update_website', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ sponsor_id: result.data.id, website: website })
+                    });
+                }
+            }
             addToPlacement(pickerPlacement, result.data.id, result.data.name, imageUrl, true);
             closeImgPicker();
         } else {
