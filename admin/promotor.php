@@ -129,8 +129,9 @@ if ($isAdmin) {
         }
 
         if ($filterRecipient > 0) {
-            // Check recipient via event, via event's series, via order's series (direct), or via order_items
-            $conditions[] = "(e.payment_recipient_id = ? OR s_via_event.payment_recipient_id = ? OR s_via_order.payment_recipient_id = ? OR s_via_items.recipient_id = ?)";
+            // Check recipient via 5 paths: event direct, event's series (legacy), order's series, order_items, series_events junction
+            $conditions[] = "(e.payment_recipient_id = ? OR s_via_event.payment_recipient_id = ? OR s_via_order.payment_recipient_id = ? OR s_via_items.recipient_id = ? OR s_via_se.recipient_id = ?)";
+            $params[] = $filterRecipient;
             $params[] = $filterRecipient;
             $params[] = $filterRecipient;
             $params[] = $filterRecipient;
@@ -157,6 +158,12 @@ if ($isAdmin) {
                 WHERE oi2.item_type = 'series_registration'
                 GROUP BY oi2.order_id
             ) s_via_items ON s_via_items.order_id = o.id
+            LEFT JOIN (
+                SELECT se5.event_id, s5.payment_recipient_id as recipient_id
+                FROM series_events se5
+                JOIN series s5 ON se5.series_id = s5.id
+                WHERE s5.payment_recipient_id IS NOT NULL
+            ) s_via_se ON s_via_se.event_id = e.id
             LEFT JOIN (
                 SELECT order_id, COUNT(*) as participant_count
                 FROM order_items
@@ -236,13 +243,32 @@ if ($isAdmin) {
     } catch (Exception $e) {}
 
     // Get events that have paid orders OR belong to a series with paid registrations (for filter)
-    // Uses THREE paths to find series events (belt and suspenders):
+    // 5 paths to find relevant events:
     // 1. Direct orders (orders.event_id)
     // 2. Via orders.series_id → series_events junction table
     // 3. Via series_registration_events snapshot table
     // 4. Via events.series_id (legacy fallback)
+    // 5. All events in series that have a payment_recipient matching selected filter
     $filterEvents = [];
     try {
+        $recipientEventFilter = '';
+        $extraParams = [];
+        if ($filterRecipient > 0) {
+            // Also include ALL events belonging to series with this recipient
+            $recipientEventFilter = "
+                OR e.id IN (
+                    SELECT se_r.event_id FROM series_events se_r
+                    JOIN series s_r ON se_r.series_id = s_r.id
+                    WHERE s_r.payment_recipient_id = ?
+                )
+                OR e.id IN (
+                    SELECT e_r.id FROM events e_r
+                    WHERE e_r.series_id IN (SELECT s_r2.id FROM series s_r2 WHERE s_r2.payment_recipient_id = ?)
+                )
+            ";
+            $extraParams = [$filterRecipient, $filterRecipient];
+        }
+
         $filterEvents = $db->getAll("
             SELECT DISTINCT e.id, e.name, e.date
             FROM events e
@@ -265,9 +291,10 @@ if ($isAdmin) {
                         WHERE sr2.payment_status = 'paid' AND sr2.status != 'cancelled'
                     )
                 )
+                {$recipientEventFilter}
             )
             ORDER BY e.date DESC
-        ", [$filterYear]);
+        ", array_merge([$filterYear], $extraParams));
     } catch (Exception $e) {
         error_log("Economy filter events error: " . $e->getMessage());
     }
@@ -465,7 +492,7 @@ if (!$isAdmin) {
         }
 
         // Platform fee
-        if ($promotorFeeType === 'fixed') {
+        if ($promotorFeeType === 'fixed' || $promotorFeeType === 'per_participant') {
             $estPlatformFee = $promotorPlatformFixed * $totalPaidItems;
         } elseif ($promotorFeeType === 'both') {
             $estPlatformFee = ($gross * $promotorPlatformPct / 100) + ($promotorPlatformFixed * $totalPaidItems);
@@ -486,13 +513,19 @@ if (!$isAdmin) {
 
         // Build conditions for promotor's orders (via their events or series)
         $allEventIds = $promotorEventIds;
-        // Also get events from promotor's series via series_events junction table
+        // Also get events from promotor's series via BOTH series_events AND events.series_id
         if (!empty($promotorSeriesIds)) {
             try {
                 $placeholders = implode(',', array_fill(0, count($promotorSeriesIds), '?'));
+                // Path 1: series_events junction table
                 $seriesEventRows = $db->getAll("SELECT DISTINCT event_id as id FROM series_events WHERE series_id IN ({$placeholders})", $promotorSeriesIds);
                 foreach ($seriesEventRows as $ser) {
                     if (!in_array($ser['id'], $allEventIds)) $allEventIds[] = $ser['id'];
+                }
+                // Path 2: events.series_id (legacy/fallback)
+                $legacyEventRows = $db->getAll("SELECT DISTINCT id FROM events WHERE series_id IN ({$placeholders})", $promotorSeriesIds);
+                foreach ($legacyEventRows as $le) {
+                    if (!in_array($le['id'], $allEventIds)) $allEventIds[] = $le['id'];
                 }
             } catch (Exception $e) {}
         }
@@ -572,11 +605,12 @@ if (!$isAdmin) {
                 $promotorOrders = $db->getAll("
                     SELECT DISTINCT o.id, o.order_number, o.total_amount, o.payment_method,
                            {$stripeFeeCol}
-                           o.event_id, o.created_at, o.discount,
-                           COALESCE(e.name, s_name.name, 'Serieanmälan') as event_name,
+                           o.event_id, o.series_id, o.created_at, o.discount,
+                           COALESCE(e.name, CONCAT(s_direct.name, ' (serie)'), CONCAT(s_name.name, ' (serie)'), 'Serieanmälan') as event_name,
                            COALESCE(dc.code, '') as discount_code
                     FROM orders o
                     LEFT JOIN events e ON o.event_id = e.id
+                    LEFT JOIN series s_direct ON o.series_id = s_direct.id
                     LEFT JOIN (
                         SELECT oi2.order_id, s2.name
                         FROM order_items oi2
@@ -641,6 +675,14 @@ if (!$isAdmin) {
             // Platform fee calculation based on type
             if ($promotorFeeType === 'fixed') {
                 $order['platform_fee'] = $promotorPlatformFixed;
+            } elseif ($promotorFeeType === 'per_participant') {
+                // Count participants from order_items
+                $pCount = 1;
+                try {
+                    $pcRow = $db->getRow("SELECT COUNT(*) as cnt FROM order_items WHERE order_id = ? AND item_type IN ('event_registration','series_registration')", [$order['id']]);
+                    $pCount = max(1, (int)($pcRow['cnt'] ?? 1));
+                } catch (Exception $e) {}
+                $order['platform_fee'] = $promotorPlatformFixed * $pCount;
             } elseif ($promotorFeeType === 'both') {
                 $order['platform_fee'] = round(($amount * $promotorPlatformPct / 100) + $promotorPlatformFixed, 2);
             } else {
