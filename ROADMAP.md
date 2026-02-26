@@ -17,7 +17,7 @@
 | Klubb RF-Registrering | KLAR | SCF/NCF/DCU-synk och stavningskontroll | 100% |
 | Startlistor | KLAR | Admin/promotor startliste-vy med startnr, export, mobilvy | 100% |
 | Bildbanken | PAGAENDE | AI-analyserade bilder kopplade till profiler | 10% |
-| Premium-medlemskap | PAGAENDE | Prenumeration, sponsorprofil, delningsbadges | 40% |
+| Premium-medlemskap | PAGAENDE | Prenumeration, sponsorprofil, hogupplosta bilder, swapmeet | 40% |
 | Ridercard Share | PAGAENDE | Statistikkort for Instagram-delning | 5% |
 | Prestandaoptimering | PAGAENDE | Fas 1-2 klar. Fas 3-4 planerade (CSS-bundling, arkitektur) | 50% |
 | CSS/UI Standardisering | PLANERAD | Enhetlig radius och nya tabeller pa alla sidor | 0% |
@@ -27,11 +27,13 @@
 
 ---
 
-## PLANERAT: TheHUB Swapmeet (Premium-funktion)
+## PLANERADE PREMIUM-FUNKTIONER
+
+**Krav:** Premium-medlemskap (25 kr/mån eller 199 kr/år)
+
+### 1. TheHUB Swapmeet - Köp/sälj-marknadsplats
 
 **Koncept:** En köp/sälj-marknadsplats för gravity-prylar integrerad i TheHUB. Premium-medlemmar kan lägga upp annonser på begagnade produkter (cyklar, skydd, hjälmar, reservdelar etc.) som enkelt kan tas med till tävlingar för överlämning istället för att behöva skickas med frakt.
-
-**Målgrupp:** Premium-medlemmar (befintligt prenumerationssystem)
 
 **Grundidé:**
 - Deltagare listar produkter de vill sälja/byta
@@ -48,7 +50,27 @@
 - Avslutade/sålda annonser
 - Betyg/omdömen på säljare (kopplat till rider-profil)
 
-**Krav:** Premium-medlemskap (25 kr/mån eller 199 kr/år)
+**Status:** Idéstadium - ej påbörjat
+
+### 2. Högupplösta tävlingsbilder
+
+**Koncept:** Premium-medlemmar får tillgång till 3 högupplösta bilder per tävling från Bildbanken. Bilderna kan laddas ner i full upplösning för att göra prints, tackkort, sociala medier-inlägg m.m.
+
+**Grundidé:**
+- Fotografer laddar upp bilder till Bildbanken (befintligt system, pågående)
+- AI-taggning kopplar bilder till rätt deltagare automatiskt
+- Alla kan se sina bilder i lågupplösning (med vattenstämpel)
+- Premium-medlemmar väljer 3 bilder per event att ladda ner i full kvalitet
+- Perfekt för: prints, ramar, tackkort, Instagram-stories, sponsorrapporter
+
+**Möjliga funktioner:**
+- "Mina bilder" på profil- och event-sidan
+- Välj 3 favoriter per event → ladda ner i högupplösning
+- Vattenstämpel på icke-premium-vy
+- Nedladdning som ZIP eller enskilda filer
+- Koppling till Ridercard Share (statistikkort + bästa bild)
+
+**Beroende av:** Bildbanken (AI-taggning, fotograf-uppladdning)
 
 **Status:** Idéstadium - ej påbörjat
 
