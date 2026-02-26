@@ -1,7 +1,7 @@
 <?php
 /**
  * Event Photo Albums - Admin
- * Hantera fotoalbum per event med Google Photos-koppling och manuell rider-taggning
+ * Hantera fotoalbum per event med Cloudflare R2-lagring och manuell rider-taggning
  */
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../includes/media-functions.php';
@@ -425,7 +425,7 @@ include __DIR__ . '/components/unified-layout.php';
             <?php if (R2Storage::isConfigured()): ?>
             <li><strong>Ladda upp filer</strong> — Bilder optimeras automatiskt (max 1920px, JPEG 82%) och lagras i Cloudflare R2. Välj flera filer samtidigt.</li>
             <?php endif; ?>
-            <li><strong>Extern URL</strong> — Klistra in en bild-URL (t.ex. från Google Photos eller annan bildtjänst).</li>
+            <li><strong>Extern URL</strong> — Klistra in en bild-URL från valfri bildtjänst.</li>
             <li><strong>Bulk-URL</strong> — Klistra in flera URL:er samtidigt, en per rad.</li>
         </ul>
 
@@ -472,7 +472,7 @@ include __DIR__ . '/components/unified-layout.php';
                 <span class="badge badge-warning">Utkast</span>
                 <?php endif; ?>
                 <?php if ($a['google_photos_url']): ?>
-                <i data-lucide="link" style="width: 16px; height: 16px; color: var(--color-text-muted);" title="Google Photos-länk"></i>
+                <i data-lucide="external-link" style="width: 16px; height: 16px; color: var(--color-text-muted);" title="Källänk"></i>
                 <?php endif; ?>
             </div>
         </div>
@@ -521,9 +521,9 @@ include __DIR__ . '/components/unified-layout.php';
                     <input type="text" name="title" class="form-input" value="<?= htmlspecialchars($album['title'] ?? '') ?>" placeholder="T.ex. Tävlingsbilder">
                 </div>
                 <div class="admin-form-group">
-                    <label class="admin-form-label">Google Photos-album</label>
-                    <input type="url" name="google_photos_url" class="form-input" value="<?= htmlspecialchars($album['google_photos_url'] ?? '') ?>" placeholder="https://photos.google.com/share/...">
-                    <small class="form-help">Länk till källalbumet. Bilder hostas externt, inte på TheHUB.</small>
+                    <label class="admin-form-label">Källänk (valfritt)</label>
+                    <input type="url" name="google_photos_url" class="form-input" value="<?= htmlspecialchars($album['google_photos_url'] ?? '') ?>" placeholder="https://photos.google.com/share/... eller annan källa">
+                    <small class="form-help">Länk till originalalbum hos fotografen (Google Photos, Flickr, etc.)</small>
                 </div>
                 <div class="admin-form-group">
                     <label class="admin-form-label">Fotograf</label>
@@ -573,9 +573,9 @@ include __DIR__ . '/components/unified-layout.php';
     <div class="admin-card-body">
         <?php if ($album['google_photos_url']): ?>
         <p style="font-size: 0.85rem; color: var(--color-text-secondary); margin: 0 0 var(--space-md);">
-            <i data-lucide="link" class="icon-sm" style="vertical-align: text-bottom;"></i>
-            Google Photos-album:
-            <a href="<?= htmlspecialchars($album['google_photos_url']) ?>" target="_blank" style="color: var(--color-accent-text);">Öppna album</a>
+            <i data-lucide="external-link" class="icon-sm" style="vertical-align: text-bottom;"></i>
+            Originalalbum:
+            <a href="<?= htmlspecialchars($album['google_photos_url']) ?>" target="_blank" style="color: var(--color-accent-text);">Öppna källänk</a>
         </p>
         <?php endif; ?>
 
