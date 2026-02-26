@@ -107,6 +107,33 @@ if ($useSeriesEvents) {
 $stmt->execute([$seriesId]);
 $events = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
+// Load series sponsors
+$seriesSponsors = ['header' => [], 'content' => [], 'sidebar' => [], 'partner' => []];
+try {
+    $spStmt = $pdo->prepare("
+        SELECT ss.placement, ss.display_order, s.id, s.name, s.website,
+               COALESCE(CONCAT('/', m1.filepath), CONCAT('/', m2.filepath), s.logo) as logo_url
+        FROM series_sponsors ss
+        JOIN sponsors s ON ss.sponsor_id = s.id AND s.active = 1
+        LEFT JOIN media m1 ON s.logo_media_id = m1.id
+        LEFT JOIN media m2 ON s.logo_banner_id = m2.id
+        WHERE ss.series_id = ?
+        ORDER BY ss.display_order ASC
+    ");
+    $spStmt->execute([$seriesId]);
+    foreach ($spStmt->fetchAll(PDO::FETCH_ASSOC) as $sp) {
+        $placement = $sp['placement'];
+        if (isset($seriesSponsors[$placement])) {
+            $seriesSponsors[$placement][] = $sp;
+        }
+    }
+} catch (Exception $e) {
+    // series_sponsors table may not exist yet
+}
+
+$hasAnySponsors = !empty($seriesSponsors['header']) || !empty($seriesSponsors['content'])
+    || !empty($seriesSponsors['sidebar']) || !empty($seriesSponsors['partner']);
+
 // Get classes with results in this series (only point-awarding classes)
 if ($useSeriesEvents) {
     $stmt = $pdo->prepare("
@@ -483,6 +510,21 @@ skip_club_standings:
 </div>
 
 <div class="series-detail">
+    <?php // Banner sponsor (full-width above hero)
+    if (!empty($seriesSponsors['header'])):
+        $bannerSponsor = $seriesSponsors['header'][0];
+    ?>
+    <div class="series-sponsor-banner">
+        <?php if ($bannerSponsor['website']): ?>
+        <a href="<?= htmlspecialchars($bannerSponsor['website']) ?>" target="_blank" rel="noopener">
+            <img src="<?= htmlspecialchars($bannerSponsor['logo_url']) ?>" alt="<?= htmlspecialchars($bannerSponsor['name']) ?>">
+        </a>
+        <?php else: ?>
+        <img src="<?= htmlspecialchars($bannerSponsor['logo_url']) ?>" alt="<?= htmlspecialchars($bannerSponsor['name']) ?>">
+        <?php endif; ?>
+    </div>
+    <?php endif; ?>
+
     <!-- Series Header -->
     <div class="series-hero">
         <div class="series-hero-logo">
@@ -505,6 +547,24 @@ skip_club_standings:
             </div>
         </div>
     </div>
+
+    <?php // Sponsor logo row (content placement)
+    if (!empty($seriesSponsors['content'])):
+    ?>
+    <div class="series-sponsor-logos">
+        <?php foreach ($seriesSponsors['content'] as $sp): ?>
+        <div class="series-sponsor-logo-item">
+            <?php if ($sp['website']): ?>
+            <a href="<?= htmlspecialchars($sp['website']) ?>" target="_blank" rel="noopener" title="<?= htmlspecialchars($sp['name']) ?>">
+                <img src="<?= htmlspecialchars($sp['logo_url']) ?>" alt="<?= htmlspecialchars($sp['name']) ?>">
+            </a>
+            <?php else: ?>
+            <img src="<?= htmlspecialchars($sp['logo_url']) ?>" alt="<?= htmlspecialchars($sp['name']) ?>" title="<?= htmlspecialchars($sp['name']) ?>">
+            <?php endif; ?>
+        </div>
+        <?php endforeach; ?>
+    </div>
+    <?php endif; ?>
 
     <?php
     // Show warning for unverified historical series (2024 and older)
@@ -811,6 +871,35 @@ skip_club_standings:
         </div>
     </div>
 </div>
+
+<?php // Partner sponsors (full-width bottom section)
+if (!empty($seriesSponsors['partner'])):
+?>
+<div class="series-partners-section">
+    <h3 class="series-partners-title">Samarbetspartners</h3>
+    <div class="series-partners-grid">
+        <?php foreach ($seriesSponsors['partner'] as $sp): ?>
+        <div class="series-partner-item">
+            <?php if ($sp['website']): ?>
+            <a href="<?= htmlspecialchars($sp['website']) ?>" target="_blank" rel="noopener" title="<?= htmlspecialchars($sp['name']) ?>">
+                <?php if ($sp['logo_url']): ?>
+                <img src="<?= htmlspecialchars($sp['logo_url']) ?>" alt="<?= htmlspecialchars($sp['name']) ?>">
+                <?php else: ?>
+                <span><?= htmlspecialchars($sp['name']) ?></span>
+                <?php endif; ?>
+            </a>
+            <?php else: ?>
+                <?php if ($sp['logo_url']): ?>
+                <img src="<?= htmlspecialchars($sp['logo_url']) ?>" alt="<?= htmlspecialchars($sp['name']) ?>" title="<?= htmlspecialchars($sp['name']) ?>">
+                <?php else: ?>
+                <span><?= htmlspecialchars($sp['name']) ?></span>
+                <?php endif; ?>
+            <?php endif; ?>
+        </div>
+        <?php endforeach; ?>
+    </div>
+</div>
+<?php endif; ?>
 
 <!-- Club Detail Modal -->
 <div id="club-detail-modal" class="modal" style="display: none;">
@@ -1213,6 +1302,105 @@ document.addEventListener('keydown', function(e) {
 }
 .table--sm th, .table--sm td {
     padding: var(--space-xs) var(--space-sm);
+}
+</style>
+
+<style>
+/* Series Sponsor Banner */
+.series-sponsor-banner {
+    text-align: center;
+    margin-bottom: var(--space-md);
+    border-radius: var(--radius-md);
+    overflow: hidden;
+}
+.series-sponsor-banner img {
+    max-width: 100%;
+    height: auto;
+    max-height: 150px;
+    object-fit: contain;
+}
+.series-sponsor-banner a {
+    display: block;
+}
+
+/* Series Sponsor Logo Row */
+.series-sponsor-logos {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: var(--space-lg);
+    flex-wrap: wrap;
+    padding: var(--space-md) 0;
+    margin-bottom: var(--space-md);
+    border-top: 1px solid var(--color-border);
+    border-bottom: 1px solid var(--color-border);
+}
+.series-sponsor-logo-item img {
+    max-height: 50px;
+    max-width: 150px;
+    object-fit: contain;
+    opacity: 0.85;
+    transition: opacity 0.15s;
+}
+.series-sponsor-logo-item img:hover {
+    opacity: 1;
+}
+.series-sponsor-logo-item a {
+    display: block;
+}
+
+/* Series Partners Section */
+.series-partners-section {
+    margin-top: var(--space-xl);
+    padding-top: var(--space-lg);
+    border-top: 1px solid var(--color-border);
+    text-align: center;
+}
+.series-partners-title {
+    font-size: 0.85rem;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+    color: var(--color-text-muted);
+    margin-bottom: var(--space-md);
+}
+.series-partners-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+    gap: var(--space-md);
+    justify-items: center;
+    align-items: center;
+}
+.series-partner-item img {
+    max-height: 40px;
+    max-width: 120px;
+    object-fit: contain;
+    opacity: 0.7;
+    transition: opacity 0.15s;
+}
+.series-partner-item img:hover {
+    opacity: 1;
+}
+.series-partner-item a {
+    display: block;
+}
+.series-partner-item span {
+    font-size: 0.8rem;
+    color: var(--color-text-secondary);
+}
+
+@media (max-width: 767px) {
+    .series-sponsor-logos {
+        gap: var(--space-md);
+        padding: var(--space-sm) 0;
+    }
+    .series-sponsor-logo-item img {
+        max-height: 36px;
+        max-width: 100px;
+    }
+    .series-partners-grid {
+        grid-template-columns: repeat(2, 1fr);
+    }
 }
 </style>
 

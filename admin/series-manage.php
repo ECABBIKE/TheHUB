@@ -155,7 +155,7 @@ try {
 
 // Get active tab
 $activeTab = $_GET['tab'] ?? 'info';
-$validTabs = ['info', 'events', 'registration', 'payment', 'results'];
+$validTabs = ['info', 'events', 'registration', 'payment', 'results', 'sponsors'];
 if (!in_array($activeTab, $validTabs)) {
     $activeTab = 'info';
 }
@@ -551,6 +551,48 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
         $activeTab = 'results';
     }
+
+    // SPONSORS TAB ACTIONS
+    elseif ($action === 'save_sponsors') {
+        try {
+            $pdo = $db->getPdo();
+            // Delete existing sponsor assignments
+            $stmt = $pdo->prepare("DELETE FROM series_sponsors WHERE series_id = ?");
+            $stmt->execute([$id]);
+
+            $insertStmt = $pdo->prepare("INSERT INTO series_sponsors (series_id, sponsor_id, placement, display_order) VALUES (?, ?, ?, ?)");
+
+            // Header (single)
+            if (!empty($_POST['sponsor_header'])) {
+                $insertStmt->execute([$id, (int)$_POST['sponsor_header'], 'header', 0]);
+            }
+            // Content / Logo row (array)
+            if (!empty($_POST['sponsor_content']) && is_array($_POST['sponsor_content'])) {
+                $order = 0;
+                foreach ($_POST['sponsor_content'] as $sponsorId) {
+                    $insertStmt->execute([$id, (int)$sponsorId, 'content', $order++]);
+                }
+            }
+            // Sidebar / Results sponsor (single)
+            if (!empty($_POST['sponsor_sidebar'])) {
+                $insertStmt->execute([$id, (int)$_POST['sponsor_sidebar'], 'sidebar', 0]);
+            }
+            // Partners (array)
+            if (!empty($_POST['sponsor_partner']) && is_array($_POST['sponsor_partner'])) {
+                $order = 0;
+                foreach ($_POST['sponsor_partner'] as $sponsorId) {
+                    $insertStmt->execute([$id, (int)$sponsorId, 'partner', $order++]);
+                }
+            }
+
+            $message = 'Sponsorer sparade!';
+            $messageType = 'success';
+        } catch (Exception $e) {
+            $message = 'Kunde inte spara sponsorer: ' . $e->getMessage();
+            $messageType = 'error';
+        }
+        $activeTab = 'sponsors';
+    }
 }
 
 // ============================================================
@@ -659,6 +701,45 @@ $pricingTemplates = [];
 try {
     $pricingTemplates = $db->getAll("SELECT id, name, is_default FROM pricing_templates ORDER BY is_default DESC, name ASC");
 } catch (Exception $e) {}
+
+// Get all active sponsors (for sponsor tab)
+$allSponsors = [];
+$seriesSponsors = ['header' => [], 'content' => [], 'sidebar' => [], 'partner' => []];
+$sponsorLookup = [];
+try {
+    $pdo = $db->getPdo();
+    $spStmt = $pdo->query("
+        SELECT s.id, s.name, s.logo, s.tier, s.website,
+               COALESCE(CONCAT('/', m1.filepath), CONCAT('/', m2.filepath), s.logo) as logo_url
+        FROM sponsors s
+        LEFT JOIN media m1 ON s.logo_media_id = m1.id
+        LEFT JOIN media m2 ON s.logo_banner_id = m2.id
+        WHERE s.active = 1
+        ORDER BY s.name ASC
+    ");
+    $allSponsors = $spStmt->fetchAll(PDO::FETCH_ASSOC);
+
+    foreach ($allSponsors as $sp) {
+        $sponsorLookup[(int)$sp['id']] = [
+            'id' => (int)$sp['id'],
+            'name' => $sp['name'],
+            'logo_url' => $sp['logo_url'] ?? '',
+        ];
+    }
+
+    if ($id > 0) {
+        $ssStmt = $pdo->prepare("SELECT sponsor_id, placement FROM series_sponsors WHERE series_id = ? ORDER BY display_order ASC");
+        $ssStmt->execute([$id]);
+        foreach ($ssStmt->fetchAll(PDO::FETCH_ASSOC) as $ss) {
+            $placement = $ss['placement'];
+            if (isset($seriesSponsors[$placement])) {
+                $seriesSponsors[$placement][] = (int)$ss['sponsor_id'];
+            }
+        }
+    }
+} catch (Exception $e) {
+    error_log("series-manage.php: Sponsor load error: " . $e->getMessage());
+}
 
 
 // Count stats
@@ -913,6 +994,10 @@ include __DIR__ . '/components/unified-layout.php';
     <a href="?id=<?= $id ?>&tab=results" class="series-tab <?= $activeTab === 'results' ? 'active' : '' ?>">
         <i data-lucide="trophy"></i>
         Resultat
+    </a>
+    <a href="?id=<?= $id ?>&tab=sponsors" class="series-tab <?= $activeTab === 'sponsors' ? 'active' : '' ?>">
+        <i data-lucide="heart"></i>
+        Sponsorer
     </a>
 </nav>
 <?php endif; // End of !$isNewSeries ?>
@@ -1510,10 +1595,358 @@ include __DIR__ . '/components/unified-layout.php';
         </div>
     </div>
 </div>
+<!-- ============================================================ -->
+<!-- SPONSORS TAB -->
+<!-- ============================================================ -->
+<div class="tab-content <?= $activeTab === 'sponsors' ? 'active' : '' ?>" id="tab-sponsors">
+    <form method="POST">
+        <?= csrf_field() ?>
+        <input type="hidden" name="action" value="save_sponsors">
+
+        <div class="admin-card">
+            <div class="admin-card-header">
+                <h2><i data-lucide="heart"></i> Sponsorer &amp; Partners</h2>
+            </div>
+            <div class="admin-card-body">
+                <p class="mb-lg text-secondary text-sm">
+                    Välj bilder till sponsorplatserna. Ladda upp bilder via
+                    <a href="/admin/media?folder=sponsors" target="_blank">Mediabiblioteket</a> först.
+                    Dessa sponsorer visas på seriesidan och ärvs av event utan egna sponsorer.
+                </p>
+
+                <div class="flex flex-col gap-lg">
+                    <!-- Banner sponsor -->
+                    <div class="admin-form-group">
+                        <label class="admin-form-label">Banner-sponsor (bred bild högst upp)</label>
+                        <div id="spl-header" class="placement-imgs"></div>
+                        <div id="spl-header-inputs"></div>
+                        <button type="button" class="btn btn-sm btn-secondary mt-sm" onclick="openSeriesImgPicker('header',1)">
+                            <i data-lucide="image-plus" class="icon-sm"></i> Välj bild
+                        </button>
+                        <small class="form-help block mt-sm">Rekommenderad storlek: 1200 x 150 px</small>
+                    </div>
+
+                    <!-- Logo row -->
+                    <div class="admin-form-group">
+                        <label class="admin-form-label">
+                            Logo-rad (under serieinfo)
+                            <span id="spl-content-count" class="font-normal text-secondary ml-sm"></span>
+                        </label>
+                        <div id="spl-content" class="placement-imgs"></div>
+                        <div id="spl-content-inputs"></div>
+                        <button type="button" class="btn btn-sm btn-secondary mt-sm" onclick="openSeriesImgPicker('content',5)">
+                            <i data-lucide="image-plus" class="icon-sm"></i> Lägg till bild
+                        </button>
+                        <small class="form-help block mt-sm">Max 5. Rekommenderad storlek: 600 x 150 px</small>
+                    </div>
+
+                    <!-- Results sponsor -->
+                    <div class="admin-form-group">
+                        <label class="admin-form-label">Resultat-sponsor</label>
+                        <div id="spl-sidebar" class="placement-imgs"></div>
+                        <div id="spl-sidebar-inputs"></div>
+                        <button type="button" class="btn btn-sm btn-secondary mt-sm" onclick="openSeriesImgPicker('sidebar',1)">
+                            <i data-lucide="image-plus" class="icon-sm"></i> Välj bild
+                        </button>
+                        <small class="form-help block mt-sm">Visas som "Resultat sponsrat av..."</small>
+                    </div>
+
+                    <!-- Partners -->
+                    <div class="admin-form-group">
+                        <label class="admin-form-label">
+                            Samarbetspartners
+                            <span id="spl-partner-count" class="font-normal text-secondary ml-sm"></span>
+                        </label>
+                        <div id="spl-partner" class="placement-imgs"></div>
+                        <div id="spl-partner-inputs"></div>
+                        <button type="button" class="btn btn-sm btn-secondary mt-sm" onclick="openSeriesImgPicker('partner',0)">
+                            <i data-lucide="image-plus" class="icon-sm"></i> Lägg till bild
+                        </button>
+                        <small class="form-help block mt-sm">Visas längst ner på seriesidan</small>
+                    </div>
+                </div>
+
+                <div class="mt-lg">
+                    <button type="submit" class="btn-admin btn-admin-primary">
+                        <i data-lucide="save"></i> Spara sponsorer
+                    </button>
+                </div>
+            </div>
+        </div>
+    </form>
+</div>
+
+<!-- Image Picker Modal (series sponsors) -->
+<div id="seriesImgPickerModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:9999;background:rgba(0,0,0,0.6);">
+    <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:92%;max-width:700px;background:var(--color-bg-surface);border-radius:var(--radius-lg);border:1px solid var(--color-border);max-height:85vh;display:flex;flex-direction:column;">
+        <div style="padding:var(--space-md) var(--space-lg);border-bottom:1px solid var(--color-border);display:flex;justify-content:space-between;align-items:center;">
+            <h3 style="margin:0;font-size:1rem;">Välj bild</h3>
+            <button type="button" onclick="closeSeriesImgPicker()" style="background:none;border:none;cursor:pointer;color:var(--color-text-secondary);font-size:1.5rem;line-height:1;">&times;</button>
+        </div>
+        <div style="padding:var(--space-md);border-bottom:1px solid var(--color-border);display:flex;gap:var(--space-sm);align-items:center;flex-wrap:wrap;">
+            <input type="file" id="seriesImgPickerUpload" accept="image/*" style="display:none" onchange="seriesUploadAndPick(this)">
+            <button type="button" class="btn btn-sm btn-primary" onclick="document.getElementById('seriesImgPickerUpload').click()">
+                <i data-lucide="upload" class="icon-sm"></i> Ladda upp ny bild
+            </button>
+            <span class="text-secondary text-sm">eller välj en befintlig nedan</span>
+        </div>
+        <div id="seriesImgPickerGrid" style="padding:var(--space-md);overflow-y:auto;flex:1;display:grid;grid-template-columns:repeat(auto-fill,minmax(140px,1fr));gap:var(--space-sm);"></div>
+    </div>
+</div>
+
 <?php endif; // End of !$isNewSeries for Events, Registration, Payment, Results tabs ?>
 
+<!-- Shared sponsor picker styles -->
+<style>
+.placement-imgs {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-sm);
+    min-height: 40px;
+}
+.pl-tile {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    background: var(--color-bg-card);
+    overflow: hidden;
+    max-width: 200px;
+    height: 60px;
+    padding: var(--space-2xs);
+}
+.pl-tile img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+}
+.pl-tile-text {
+    font-size: 0.75rem;
+    color: var(--color-text-secondary);
+    padding: 0 var(--space-xs);
+}
+.pl-tile-remove {
+    position: absolute;
+    top: 0;
+    right: 0;
+    background: var(--color-error);
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    width: 20px;
+    height: 20px;
+    font-size: 14px;
+    line-height: 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: 0 var(--radius-sm) 0 var(--radius-sm);
+    opacity: 0.8;
+}
+.pl-tile-remove:hover { opacity: 1; }
+.img-picker-item {
+    cursor: pointer;
+    border: 2px solid var(--color-border);
+    border-radius: var(--radius-sm);
+    overflow: hidden;
+    aspect-ratio: 4/3;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    background: var(--color-bg-card);
+    transition: border-color 0.15s;
+}
+.img-picker-item:hover { border-color: var(--color-accent); }
+.img-picker-item img {
+    width: 100%;
+    flex: 1;
+    object-fit: contain;
+    padding: var(--space-2xs);
+}
+.img-picker-name {
+    font-size: 0.65rem;
+    color: var(--color-text-muted);
+    padding: 2px var(--space-2xs);
+    text-align: center;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    width: 100%;
+}
+</style>
+
 <script>
+// =====================================================
+// Series sponsor image picker (mirrors event-edit.php)
+// =====================================================
+const seriesSponsorLookup = <?= json_encode($sponsorLookup) ?>;
+const seriesInitPlacements = <?= json_encode($seriesSponsors) ?>;
+let seriesPickerPlacement = null;
+let seriesPickerMax = 0;
+const seriesPlacements = { header: [], content: [], sidebar: [], partner: [] };
+
+function initSeriesSponsors() {
+    for (const [pl, ids] of Object.entries(seriesInitPlacements)) {
+        ids.forEach(function(id) {
+            const sp = seriesSponsorLookup[id];
+            if (sp) addToSeriesPlacement(pl, id, sp.name, sp.logo_url, false);
+        });
+    }
+    updateSeriesCounts();
+}
+
+function addToSeriesPlacement(pl, sponsorId, name, logoUrl, updateCount) {
+    if (seriesPlacements[pl].some(function(s){ return s.id === sponsorId; })) return;
+    if ((pl === 'header' || pl === 'sidebar') && seriesPlacements[pl].length > 0) {
+        clearSeriesPlacement(pl);
+    }
+    seriesPlacements[pl].push({ id: sponsorId, name: name, logo_url: logoUrl });
+
+    const container = document.getElementById('spl-' + pl);
+    const tile = document.createElement('div');
+    tile.className = 'pl-tile';
+    tile.dataset.sponsorId = sponsorId;
+    tile.innerHTML = (logoUrl
+        ? '<img src="' + logoUrl + '" alt="' + (name||'') + '" title="' + (name||'') + '">'
+        : '<span class="pl-tile-text">' + (name||'?') + '</span>')
+        + '<button type="button" class="pl-tile-remove" onclick="removeFromSeriesPlacement(\'' + pl + '\',' + sponsorId + ')" title="Ta bort">&times;</button>';
+    container.appendChild(tile);
+
+    const inputContainer = document.getElementById('spl-' + pl + '-inputs');
+    const input = document.createElement('input');
+    input.type = 'hidden';
+    input.id = 'spl-input-' + pl + '-' + sponsorId;
+    input.name = (pl === 'header' || pl === 'sidebar') ? 'sponsor_' + pl : 'sponsor_' + pl + '[]';
+    input.value = sponsorId;
+    inputContainer.appendChild(input);
+
+    if (updateCount !== false) updateSeriesCounts();
+}
+
+function removeFromSeriesPlacement(pl, sponsorId) {
+    seriesPlacements[pl] = seriesPlacements[pl].filter(function(s){ return s.id !== sponsorId; });
+    const tile = document.querySelector('#spl-' + pl + ' .pl-tile[data-sponsor-id="' + sponsorId + '"]');
+    if (tile) tile.remove();
+    const input = document.getElementById('spl-input-' + pl + '-' + sponsorId);
+    if (input) input.remove();
+    updateSeriesCounts();
+}
+
+function clearSeriesPlacement(pl) {
+    seriesPlacements[pl] = [];
+    document.getElementById('spl-' + pl).innerHTML = '';
+    document.getElementById('spl-' + pl + '-inputs').innerHTML = '';
+}
+
+function updateSeriesCounts() {
+    const cc = document.getElementById('spl-content-count');
+    if (cc) cc.textContent = '(' + seriesPlacements.content.length + '/5 valda)';
+    const pc = document.getElementById('spl-partner-count');
+    if (pc) pc.textContent = '(' + seriesPlacements.partner.length + ' valda)';
+}
+
+function openSeriesImgPicker(pl, max) {
+    if (max > 0 && seriesPlacements[pl].length >= max) {
+        alert('Max ' + max + ' bilder tillåtet');
+        return;
+    }
+    seriesPickerPlacement = pl;
+    seriesPickerMax = max;
+    loadSeriesImgPickerGrid();
+    document.getElementById('seriesImgPickerModal').style.display = 'block';
+}
+
+function closeSeriesImgPicker() {
+    document.getElementById('seriesImgPickerModal').style.display = 'none';
+    seriesPickerPlacement = null;
+}
+
+async function loadSeriesImgPickerGrid() {
+    const grid = document.getElementById('seriesImgPickerGrid');
+    grid.innerHTML = '<p style="color:var(--color-text-secondary);text-align:center;grid-column:1/-1;">Laddar bilder...</p>';
+    try {
+        const response = await fetch('/api/media.php?action=list&folder=sponsors&subfolders=1&limit=200');
+        if (!response.ok) throw new Error('HTTP ' + response.status);
+        const result = await response.json();
+        grid.innerHTML = '';
+        if (!result.success || !Array.isArray(result.data) || !result.data.length) {
+            grid.innerHTML = '<p style="color:var(--color-text-secondary);text-align:center;grid-column:1/-1;">Inga bilder. Ladda upp via <a href="/admin/media?folder=sponsors" target="_blank">Mediabiblioteket</a>.</p>';
+            return;
+        }
+        let imgCount = 0;
+        result.data.forEach(function(media) {
+            if (!media.mime_type || !media.mime_type.startsWith('image/')) return;
+            const imgSrc = media.url || ('/' + media.filepath);
+            const div = document.createElement('div');
+            div.className = 'img-picker-item';
+            div.innerHTML = '<img src="' + imgSrc + '" alt="' + (media.original_filename||'') + '" onerror="this.style.display=\'none\'">'
+                + '<span class="img-picker-name">' + (media.original_filename||'').substring(0,25) + '</span>';
+            div.onclick = function() { selectSeriesMedia(media.id, imgSrc); };
+            grid.appendChild(div);
+            imgCount++;
+        });
+        if (imgCount === 0) {
+            grid.innerHTML = '<p style="color:var(--color-text-secondary);text-align:center;grid-column:1/-1;">Inga bilder hittades.</p>';
+        }
+    } catch (e) {
+        console.error('Series image picker error:', e);
+        grid.innerHTML = '<p style="color:var(--color-error);text-align:center;grid-column:1/-1;">Kunde inte ladda bilder: ' + e.message + '</p>';
+    }
+}
+
+async function seriesUploadAndPick(input) {
+    if (!input.files.length) return;
+    const formData = new FormData();
+    formData.append('file', input.files[0]);
+    formData.append('folder', 'sponsors');
+    try {
+        const response = await fetch('/api/media.php?action=upload', { method: 'POST', body: formData });
+        const result = await response.json();
+        if (result.success && result.data) {
+            const url = result.data.url || ('/' + result.data.filepath);
+            await selectSeriesMedia(result.data.id, url);
+        } else {
+            alert('Kunde inte ladda upp: ' + (result.error || 'Okänt fel'));
+        }
+    } catch (e) {
+        alert('Uppladdningsfel');
+    }
+    input.value = '';
+}
+
+async function selectSeriesMedia(mediaId, imageUrl) {
+    try {
+        const response = await fetch('/api/sponsors.php?action=find_or_create_by_media&media_id=' + mediaId);
+        const result = await response.json();
+        if (result.success && result.data) {
+            if (result.created && !result.data.website) {
+                const website = prompt('Ange sponsorns webbplats (krävs):', 'https://');
+                if (website && website !== 'https://' && website.length > 5) {
+                    await fetch('/api/sponsors.php?action=update_website', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({ sponsor_id: result.data.id, website: website })
+                    });
+                }
+            }
+            addToSeriesPlacement(seriesPickerPlacement, result.data.id, result.data.name, imageUrl, true);
+            closeSeriesImgPicker();
+        } else {
+            alert('Fel: ' + (result.error || 'Okänt fel'));
+        }
+    } catch (e) {
+        alert('Kunde inte skapa sponsor');
+    }
+}
+
+// Init on page load
 document.addEventListener('DOMContentLoaded', function() {
+    if (document.getElementById('spl-header')) {
+        initSeriesSponsors();
+    }
     if (typeof lucide !== 'undefined') {
         lucide.createIcons();
     }

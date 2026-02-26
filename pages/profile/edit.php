@@ -522,24 +522,54 @@ $clubs = $pdo->query("SELECT id, name FROM clubs WHERE active = 1 ORDER BY name"
     <?php if (count($riderSponsors) < 6): ?>
     <div id="addSponsorForm" class="sponsor-add-form">
         <h3 style="font-size: 0.95rem; margin-bottom: var(--space-sm);">Lägg till sponsor</h3>
+
+        <!-- Option 1: Pick from media library -->
+        <div style="margin-bottom: var(--space-md); padding: var(--space-md); background: var(--color-bg-hover); border-radius: var(--radius-md);">
+            <p class="form-help" style="margin-bottom: var(--space-sm);">Välj en befintlig sponsorlogotyp eller ladda upp en ny:</p>
+            <button type="button" class="btn btn-secondary btn-sm" onclick="openRiderImgPicker()">
+                <i data-lucide="image-plus"></i> Välj bild från biblioteket
+            </button>
+            <div id="selectedSponsorImg" style="margin-top: var(--space-sm);"></div>
+            <input type="hidden" id="sponsorLogoFromMedia" value="">
+        </div>
+
+        <!-- Sponsor details -->
         <div class="form-group">
             <label>Sponsornamn *</label>
             <input type="text" id="sponsorName" placeholder="T.ex. Fox Racing" maxlength="150">
         </div>
         <div class="form-group">
-            <label>Logotyp (URL)</label>
+            <label>Logotyp (URL) <small class="text-muted">- eller välj bild ovan</small></label>
             <input type="url" id="sponsorLogo" placeholder="https://example.com/logo.png">
-            <small class="form-help">Länk till sponsorns logotyp (valfritt). Max 120px bred.</small>
         </div>
         <div class="form-group">
-            <label>Webbplats</label>
-            <input type="url" id="sponsorWebsite" placeholder="https://www.example.com">
+            <label>Webbplats *</label>
+            <input type="url" id="sponsorWebsite" placeholder="https://www.example.com" required>
+            <small class="form-help">Länk till sponsorns webbplats (krävs).</small>
         </div>
         <button type="button" class="btn btn-secondary" onclick="addSponsor()" id="addSponsorBtn">
             <i data-lucide="plus"></i> Lägg till
         </button>
     </div>
     <?php endif; ?>
+
+    <!-- Rider Image Picker Modal -->
+    <div id="riderImgPickerModal" style="display:none;position:fixed;top:0;left:0;right:0;bottom:0;z-index:9999;background:rgba(0,0,0,0.6);">
+        <div style="position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:92%;max-width:700px;background:var(--color-bg-surface);border-radius:var(--radius-lg);border:1px solid var(--color-border);max-height:85vh;display:flex;flex-direction:column;">
+            <div style="padding:var(--space-md) var(--space-lg);border-bottom:1px solid var(--color-border);display:flex;justify-content:space-between;align-items:center;">
+                <h3 style="margin:0;font-size:1rem;">Välj sponsorlogotyp</h3>
+                <button type="button" onclick="closeRiderImgPicker()" style="background:none;border:none;cursor:pointer;color:var(--color-text-secondary);font-size:1.5rem;line-height:1;">&times;</button>
+            </div>
+            <div style="padding:var(--space-md);border-bottom:1px solid var(--color-border);display:flex;gap:var(--space-sm);align-items:center;flex-wrap:wrap;">
+                <input type="file" id="riderImgUpload" accept="image/*" style="display:none" onchange="riderUploadAndPick(this)">
+                <button type="button" class="btn btn-sm btn-primary" onclick="document.getElementById('riderImgUpload').click()">
+                    <i data-lucide="upload" class="icon-sm"></i> Ladda upp ny bild
+                </button>
+                <span class="text-secondary text-sm">eller välj en befintlig nedan</span>
+            </div>
+            <div id="riderImgPickerGrid" style="padding:var(--space-md);overflow-y:auto;flex:1;display:grid;grid-template-columns:repeat(auto-fill,minmax(120px,1fr));gap:var(--space-sm);"></div>
+        </div>
+    </div>
 </div>
 <?php else: ?>
 <!-- Premium upsell - hidden until Premium is activated -->
@@ -927,11 +957,17 @@ document.addEventListener('DOMContentLoaded', function() {
 <script>
 async function addSponsor() {
     const name = document.getElementById('sponsorName').value.trim();
-    const logo = document.getElementById('sponsorLogo').value.trim();
+    const logoUrl = document.getElementById('sponsorLogo').value.trim();
+    const mediaLogo = document.getElementById('sponsorLogoFromMedia').value.trim();
     const website = document.getElementById('sponsorWebsite').value.trim();
+    const finalLogo = mediaLogo || logoUrl;
 
     if (!name) {
         alert('Sponsornamn krävs');
+        return;
+    }
+    if (!website) {
+        alert('Webbplats krävs');
         return;
     }
 
@@ -943,7 +979,7 @@ async function addSponsor() {
         const res = await fetch('/api/rider-sponsors.php', {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ action: 'add', name, logo_url: logo, website_url: website })
+            body: JSON.stringify({ action: 'add', name, logo_url: finalLogo, website_url: website })
         });
         const data = await res.json();
 
@@ -983,6 +1019,89 @@ async function removeSponsor(id) {
     } catch (e) {
         alert('Ett fel uppstod');
     }
+}
+
+// Rider Image Picker
+function openRiderImgPicker() {
+    loadRiderImgGrid();
+    document.getElementById('riderImgPickerModal').style.display = 'block';
+}
+
+function closeRiderImgPicker() {
+    document.getElementById('riderImgPickerModal').style.display = 'none';
+}
+
+async function loadRiderImgGrid() {
+    const grid = document.getElementById('riderImgPickerGrid');
+    grid.innerHTML = '<p style="color:var(--color-text-secondary);text-align:center;grid-column:1/-1;">Laddar bilder...</p>';
+    try {
+        const response = await fetch('/api/media.php?action=list&folder=sponsors&subfolders=1&limit=200');
+        if (!response.ok) throw new Error('HTTP ' + response.status);
+        const result = await response.json();
+        grid.innerHTML = '';
+        if (!result.success || !Array.isArray(result.data) || !result.data.length) {
+            grid.innerHTML = '<p style="color:var(--color-text-secondary);text-align:center;grid-column:1/-1;">Inga bilder tillgängliga. Ladda upp en ny bild.</p>';
+            return;
+        }
+        result.data.forEach(function(media) {
+            if (!media.mime_type || !media.mime_type.startsWith('image/')) return;
+            const imgSrc = media.url || ('/' + media.filepath);
+            const div = document.createElement('div');
+            div.style.cssText = 'cursor:pointer;border:2px solid var(--color-border);border-radius:var(--radius-sm);overflow:hidden;aspect-ratio:4/3;display:flex;flex-direction:column;align-items:center;justify-content:center;background:var(--color-bg-card);transition:border-color 0.15s;';
+            div.innerHTML = '<img src="' + imgSrc + '" style="width:100%;flex:1;object-fit:contain;padding:4px;" onerror="this.style.display=\'none\'">'
+                + '<span style="font-size:0.6rem;color:var(--color-text-muted);padding:2px 4px;text-align:center;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;width:100%;">' + (media.original_filename||'').substring(0,20) + '</span>';
+            div.onmouseover = function() { div.style.borderColor = 'var(--color-accent)'; };
+            div.onmouseout = function() { div.style.borderColor = 'var(--color-border)'; };
+            div.onclick = function() { selectRiderSponsorImg(imgSrc, media.original_filename); };
+            grid.appendChild(div);
+        });
+    } catch (e) {
+        console.error('Rider image picker error:', e);
+        grid.innerHTML = '<p style="color:var(--color-error);text-align:center;grid-column:1/-1;">Kunde inte ladda bilder</p>';
+    }
+}
+
+async function riderUploadAndPick(input) {
+    if (!input.files.length) return;
+    const formData = new FormData();
+    formData.append('file', input.files[0]);
+    formData.append('folder', 'sponsors');
+    try {
+        const response = await fetch('/api/media.php?action=upload', { method: 'POST', body: formData });
+        const result = await response.json();
+        if (result.success && result.data) {
+            const url = result.data.url || ('/' + result.data.filepath);
+            selectRiderSponsorImg(url, result.data.original_filename || '');
+        } else {
+            alert('Kunde inte ladda upp: ' + (result.error || 'Okänt fel'));
+        }
+    } catch (e) {
+        alert('Uppladdningsfel');
+    }
+    input.value = '';
+}
+
+function selectRiderSponsorImg(imgUrl, filename) {
+    document.getElementById('sponsorLogoFromMedia').value = imgUrl;
+    document.getElementById('sponsorLogo').value = '';
+    document.getElementById('selectedSponsorImg').innerHTML =
+        '<div style="display:flex;align-items:center;gap:var(--space-sm);padding:var(--space-xs);border:1px solid var(--color-border);border-radius:var(--radius-sm);background:var(--color-bg-card);max-width:200px;">'
+        + '<img src="' + imgUrl + '" style="max-height:40px;max-width:100px;object-fit:contain;">'
+        + '<span style="font-size:0.8rem;color:var(--color-text-secondary);">' + (filename||'').substring(0,20) + '</span>'
+        + '<button type="button" onclick="clearRiderSponsorImg()" style="background:none;border:none;cursor:pointer;color:var(--color-text-muted);font-size:1.2rem;">&times;</button>'
+        + '</div>';
+    // Auto-fill name from filename if empty
+    const nameInput = document.getElementById('sponsorName');
+    if (!nameInput.value.trim() && filename) {
+        const autoName = filename.replace(/\.[^.]+$/, '').replace(/[-_]/g, ' ');
+        nameInput.value = autoName.charAt(0).toUpperCase() + autoName.slice(1);
+    }
+    closeRiderImgPicker();
+}
+
+function clearRiderSponsorImg() {
+    document.getElementById('sponsorLogoFromMedia').value = '';
+    document.getElementById('selectedSponsorImg').innerHTML = '';
 }
 </script>
 <?php endif; ?>
