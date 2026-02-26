@@ -214,6 +214,9 @@ $migrationChecks = [
     '061_settlement_payouts_and_recipient_backfill.sql' => [
         'tables' => ['settlement_payouts']
     ],
+    '062_media_link_url.sql' => [
+        'columns' => ['media.link_url']
+    ],
 ];
 
 // ============================================================================

@@ -4,7 +4,43 @@
 
 ---
 
-## SENASTE FIXAR (2026-02-26, session 5)
+## SENASTE FIXAR (2026-02-26, session 6)
+
+### Mediabibliotek: Force-delete av bilder som används
+- **Problem:** Bilder som användes av sponsorer/event/serier kunde aldrig raderas, inte ens av admin. Delete-knappen var `disabled` med "Kan inte radera - filen används".
+- **Fix:** `delete_media($id, $force)` i `media-functions.php` stödjer nu `$force` parameter. Med `force=true` rensas alla FK-kopplingar (sponsors.logo_media_id, sponsors.logo_banner_id, events.logo_media_id, events.header_banner_media_id, series.logo_light/dark_media_id, sponsor_placements, ad_placements) innan bilden raderas.
+- **API:** `api/media.php?action=delete&id=X&force=1` skickar force-parametern
+- **UI:** Delete-knappen i modalen är alltid aktiv. Om bilden används visas "Radera ändå" med bekräftelsedialog som nämner att kopplingar rensas automatiskt.
+- **Admin vs Promotor:** Admins kan radera alla bilder. Promotorer begränsade till `sponsors/`-mappar.
+
+### Mediabibliotek: Radera mappar
+- **Ny funktion:** Tomma undermappar kan nu raderas via "Radera mapp"-knapp
+- **Begränsning:** Rotmappar (sponsors, general) kan inte raderas. Mappar med filer eller undermappar måste tömmas först.
+- **Funktion:** `delete_media_folder($folderPath)` i `media-functions.php`
+- **API:** `api/media.php?action=delete_folder&folder=X`
+- **UI:** "Radera mapp"-knapp visas i admin/media.php när man är i en undermapp
+
+### Mediabibliotek: Auto-resize vid uppladdning
+- **Ny funktion:** `upload_media()` skalar nu automatiskt ner stora bilder
+- **Sponsors/banners-mappar:** Max 1200px bredd
+- **Allmänna mappar:** Max 2000px bredd
+- **Filstorlek:** Uppdateras i databasen efter resize (inte originalstorlek)
+- **SVG undantagna:** Vektorbilder skalas inte
+
+### Mediabibliotek: Länk-URL per bild
+- **Migration 062:** Ny kolumn `media.link_url` VARCHAR(500)
+- **Syfte:** Associera webbplats-URL med bilder (t.ex. sponsorlogotyp → sponsorns webbplats)
+- **UI:** "Länk (webbplats)"-fält i bilddetalj-modalen
+- **Sparbar via:** `update_media()` - `link_url` tillagd i `$allowedFields`
+
+### Sponsor-sortering: Drag-and-drop i event-edit
+- **Ny funktion:** Sponsorbilder i Logo-rad och Samarbetspartners kan nu dras och släppas för att ändra ordning
+- **Teknik:** Natitivt HTML5 Drag & Drop API. Tiles har `draggable=true`, `cursor: grab`.
+- **Visuell feedback:** Draggad tile blir genomskinlig, hovrad tile får accent-border
+- **Ordning sparas:** `rebuildInputOrder(pl)` uppdaterar hidden inputs i DOM-ordning → `saveEventSponsorAssignments()` sparar med korrekt `display_order`
+- **Fil:** `/admin/event-edit.php` - CSS + JS tillagda i sponsorsektionen
+
+## TIDIGARE FIXAR (2026-02-26, session 5)
 
 ### Kontoaktivering krävde inte alla obligatoriska fält
 - **Problem:** Aktiveringsformuläret (`/reset-password?activate=1`) krävde bara lösenord, nationalitet och födelseår. Telefon, kön, nödkontakt (namn+telefon) saknades. Användare kunde aktivera konto med ofullständig profil och sedan bli blockerade vid eventanmälan.

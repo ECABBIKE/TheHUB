@@ -28,6 +28,41 @@
 
 # CHANGELOG
 
+### 2026-02-26 (Mediabibliotek & sponsorsortering)
+- **Branch:** claude/fix-site-performance-wVdVq
+
+- **Förbättring: Force-delete av bilder som används**
+  - Bilder kan nu raderas även om de används av sponsorer/event/serier
+  - Alla FK-kopplingar rensas automatiskt vid radering
+  - Admin kan radera alla bilder, promotorer begränsade till sponsors/
+  - Bekräftelsedialog visar vilka kopplingar som påverkas
+
+- **Ny funktion: Radera mappar**
+  - Tomma undermappar kan raderas via "Radera mapp"-knapp
+  - Skydd: rotmappar kan inte raderas, mappar med filer måste tömmas först
+
+- **Förbättring: Auto-resize vid uppladdning**
+  - Bilder i sponsors/banners-mappar skalas automatiskt till max 1200px bredd
+  - Allmänna bilder skalas till max 2000px bredd
+  - Förhindrar att stora originalfiler laddar långsamt på sajten
+
+- **Ny funktion: Länk-URL per bild (migration 062)**
+  - Ny kolumn `media.link_url` för att koppla webbadress till bilder
+  - Redigerbart i bilddetalj-modalen
+
+- **Ny funktion: Drag-and-drop sponsorsortering**
+  - Sponsorbilder i Logo-rad och Partners kan dras för att ändra ordning
+  - Visuell feedback vid drag (genomskinlighet, accent-border)
+  - Ordning sparas korrekt i display_order
+
+- **Nya/ändrade filer:**
+  - `includes/media-functions.php` - Auto-resize, force-delete, folder delete
+  - `api/media.php` - Force-param i delete, ny delete_folder action
+  - `admin/media.php` - Force-delete UI, folder delete knapp, link_url fält
+  - `admin/event-edit.php` - Drag-and-drop CSS/JS för sponsortiles
+  - `Tools/migrations/062_media_link_url.sql` - media.link_url kolumn
+  - `admin/migrations.php` - Migration 062 registrerad
+
 ### 2026-02-26 (Enhetligt sponsorsystem)
 - **Branch:** claude/fix-site-performance-wVdVq
 

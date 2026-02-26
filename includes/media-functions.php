@@ -255,6 +255,31 @@ function upload_media($file, $folder = 'general', $uploadedBy = null) {
         return ['success' => false, 'error' => 'Kunde inte spara filen'];
     }
 
+    // Auto-resize large images to reasonable web dimensions
+    // Max 1200px wide for banners, max 2000px for general images
+    if (strpos($mimeType, 'image/') === 0 && $mimeType !== 'image/svg+xml') {
+        $imageInfo = getimagesize($absoluteFilepath);
+        if ($imageInfo) {
+            $origWidth = $imageInfo[0];
+            $origHeight = $imageInfo[1];
+
+            // Determine max width based on folder context
+            $maxWidth = 2000; // Default max for general images
+            if (strpos($folder, 'sponsors') !== false || strpos($folder, 'banner') !== false) {
+                $maxWidth = 1200; // Sponsor logos and banners
+            }
+
+            if ($origWidth > $maxWidth) {
+                $newHeight = (int) round($origHeight * ($maxWidth / $origWidth));
+                $resized = resize_image($absoluteFilepath, $absoluteFilepath, $maxWidth, $newHeight, true);
+                if ($resized) {
+                    // Update file size after resize
+                    clearstatcache(true, $absoluteFilepath);
+                }
+            }
+        }
+    }
+
     // Get image dimensions if applicable
     $width = null;
     $height = null;
@@ -265,6 +290,9 @@ function upload_media($file, $folder = 'general', $uploadedBy = null) {
             $height = $dimensions[1];
         }
     }
+
+    // Get actual file size (may have changed after resize)
+    $fileSize = filesize($absoluteFilepath);
     
     // Save to database (store relative path)
     try {
@@ -277,7 +305,7 @@ function upload_media($file, $folder = 'general', $uploadedBy = null) {
             $file['name'],
             $relativeFilepath,
             $mimeType,
-            $file['size'],
+            $fileSize ?? $file['size'],
             $width,
             $height,
             $folder,
@@ -341,7 +369,7 @@ function update_media($id, $data) {
             }
         }
 
-        $allowedFields = ['folder', 'filepath', 'alt_text', 'caption'];
+        $allowedFields = ['folder', 'filepath', 'alt_text', 'caption', 'link_url'];
         $updates = [];
         $params = [];
 
@@ -371,27 +399,55 @@ function update_media($id, $data) {
 
 /**
  * Delete media file
+ * If force=true, clears all references before deleting
+ * If force=false and file is in use, returns usage info
  */
-function delete_media($id) {
+function delete_media($id, $force = false) {
     global $pdo;
-    
+
     try {
         // Get file info first
         $media = get_media($id);
         if (!$media) {
             return ['success' => false, 'error' => 'Media hittades inte'];
         }
-        
+
         // Check if media is in use
         $usage = get_media_usage($id);
-        if (!empty($usage)) {
-            return ['success' => false, 'error' => 'Filen används och kan inte raderas'];
+        if (!empty($usage) && !$force) {
+            return ['success' => false, 'error' => 'Filen används. Radera ändå?', 'in_use' => true, 'usage' => $usage];
         }
-        
+
+        // Clear references before deleting
+        if (!empty($usage)) {
+            try {
+                $pdo->prepare("UPDATE sponsors SET logo_media_id = NULL WHERE logo_media_id = ?")->execute([$id]);
+            } catch (PDOException $e) {}
+            try {
+                $pdo->prepare("UPDATE sponsors SET logo_banner_id = NULL WHERE logo_banner_id = ?")->execute([$id]);
+            } catch (PDOException $e) {}
+            try {
+                $pdo->prepare("UPDATE events SET logo_media_id = NULL WHERE logo_media_id = ?")->execute([$id]);
+            } catch (PDOException $e) {}
+            try {
+                $pdo->prepare("UPDATE events SET header_banner_media_id = NULL WHERE header_banner_media_id = ?")->execute([$id]);
+            } catch (PDOException $e) {}
+            try {
+                $pdo->prepare("UPDATE series SET logo_light_media_id = NULL WHERE logo_light_media_id = ?")->execute([$id]);
+                $pdo->prepare("UPDATE series SET logo_dark_media_id = NULL WHERE logo_dark_media_id = ?")->execute([$id]);
+            } catch (PDOException $e) {}
+            try {
+                $pdo->prepare("DELETE FROM sponsor_placements WHERE custom_media_id = ?")->execute([$id]);
+            } catch (PDOException $e) {}
+            try {
+                $pdo->prepare("DELETE FROM ad_placements WHERE media_id = ?")->execute([$id]);
+            } catch (PDOException $e) {}
+        }
+
         // Delete from database
         $stmt = $pdo->prepare("DELETE FROM media WHERE id = ?");
         $stmt->execute([$id]);
-        
+
         // Delete file (use absolute path)
         $rootPath = defined('ROOT_PATH') ? ROOT_PATH : dirname(__DIR__);
         $absolutePath = $rootPath . '/' . ltrim($media['filepath'], '/');
@@ -399,11 +455,71 @@ function delete_media($id) {
             @unlink($absolutePath);
         }
 
-        return ['success' => true];
+        return ['success' => true, 'cleared_references' => !empty($usage)];
     } catch (PDOException $e) {
         error_log("delete_media error: " . $e->getMessage());
         return ['success' => false, 'error' => 'Kunde inte radera'];
     }
+}
+
+/**
+ * Delete an empty media folder
+ */
+function delete_media_folder($folderPath) {
+    global $pdo;
+
+    // Prevent deleting root-level folders
+    if (empty($folderPath) || $folderPath === 'sponsors' || $folderPath === 'general') {
+        return ['success' => false, 'error' => 'Kan inte radera rotmappar'];
+    }
+
+    // Check if folder has any files
+    try {
+        $stmt = $pdo->prepare("SELECT COUNT(*) FROM media WHERE folder = ? OR folder LIKE ?");
+        $stmt->execute([$folderPath, $folderPath . '/%']);
+        $fileCount = (int)$stmt->fetchColumn();
+
+        if ($fileCount > 0) {
+            return ['success' => false, 'error' => "Mappen innehåller {$fileCount} filer. Radera filerna först."];
+        }
+    } catch (PDOException $e) {
+        return ['success' => false, 'error' => 'Databasfel vid kontroll'];
+    }
+
+    // Delete the physical directory
+    $rootPath = defined('ROOT_PATH') ? ROOT_PATH : dirname(__DIR__);
+    $absolutePath = $rootPath . '/uploads/media/' . $folderPath;
+
+    if (is_dir($absolutePath)) {
+        // Check for subdirectories
+        $entries = scandir($absolutePath);
+        $hasSubDirs = false;
+        foreach ($entries as $entry) {
+            if ($entry === '.' || $entry === '..') continue;
+            if (is_dir($absolutePath . '/' . $entry)) {
+                $hasSubDirs = true;
+                break;
+            }
+        }
+
+        if ($hasSubDirs) {
+            return ['success' => false, 'error' => 'Mappen har undermappar. Radera dem först.'];
+        }
+
+        // Remove any remaining filesystem files (e.g., .gitkeep)
+        $files = glob($absolutePath . '/*');
+        foreach ($files as $f) {
+            if (is_file($f)) @unlink($f);
+        }
+
+        if (@rmdir($absolutePath)) {
+            return ['success' => true];
+        } else {
+            return ['success' => false, 'error' => 'Kunde inte radera mappen från filsystemet'];
+        }
+    }
+
+    return ['success' => true]; // Already gone
 }
 
 /**
