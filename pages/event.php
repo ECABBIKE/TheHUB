@@ -3820,7 +3820,7 @@ if (!empty($event['series_id'])) {
 
             <!-- Add Rider Section -->
             <div id="addRiderSection" class="reg-add-rider">
-                <h3 class="mb-md">Lägg till deltagare</h3>
+                <h3 class="mb-md">Anmäl deltagare till <?= h($event['name']) ?></h3>
 
                 <!-- Rider Search -->
                 <div class="form-group">
