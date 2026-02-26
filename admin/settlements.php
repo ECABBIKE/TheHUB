@@ -62,9 +62,10 @@ if ($filterRecipient > 0) {
 foreach ($recipientsToShow as $recipient) {
     $rid = $recipient['id'];
 
-    // Find all event IDs linked to this recipient
+    // Find all event IDs linked to this recipient (direct + via series)
     $eventIds = [];
     try {
+        // Path 1: events.payment_recipient_id
         $events = $db->getAll("SELECT id FROM events WHERE payment_recipient_id = ?", [$rid]);
         $eventIds = array_column($events, 'id');
     } catch (Exception $e) {}
@@ -75,6 +76,21 @@ foreach ($recipientsToShow as $recipient) {
         $series = $db->getAll("SELECT id FROM series WHERE payment_recipient_id = ?", [$rid]);
         $seriesIds = array_column($series, 'id');
     } catch (Exception $e) {}
+
+    // Path 2: events belonging to this recipient's series (via series_events + events.series_id)
+    if (!empty($seriesIds)) {
+        try {
+            $sPlaceholders = implode(',', array_fill(0, count($seriesIds), '?'));
+            $seriesEventRows = $db->getAll("
+                SELECT DISTINCT event_id as id FROM series_events WHERE series_id IN ({$sPlaceholders})
+                UNION
+                SELECT DISTINCT id FROM events WHERE series_id IN ({$sPlaceholders})
+            ", array_merge($seriesIds, $seriesIds));
+            foreach ($seriesEventRows as $row) {
+                if (!in_array($row['id'], $eventIds)) $eventIds[] = $row['id'];
+            }
+        } catch (Exception $e) {}
+    }
 
     if (empty($eventIds) && empty($seriesIds)) {
         continue;
