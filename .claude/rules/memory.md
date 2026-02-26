@@ -8,7 +8,7 @@
 
 ### Serie-event dropdown mobilfix
 - **Problem:** `.series-jump-wrapper` med `width: 100%` och `flex: 1` på select gjorde att serie-event-dropdownen blev enorm på mobilen och bröt tab-raden
-- **Fix:** Mobil (max-width 900px): `order: -1` (hamnar först i tab-raden), label döljs, kompakt padding/font-size, transparent bakgrund utan border
+- **Fix:** Mobil (max-width 900px): label döljs, kompakt padding/font-size, transparent bakgrund utan border. Behåller naturlig position (efter Anmälda-fliken)
 - **Fil:** `/assets/css/pages/event.css` rad ~525-541
 
 ### Enhetlig bildbaserad sponsorväljare (admin + promotor)
