@@ -103,6 +103,7 @@ $pageTypes = [
     'rider' => 'Åkarsida',
     'club' => 'Klubbsida',
     'event' => 'Eventsida',
+    'gallery' => 'Galleri (bildspel)',
     'blog' => 'Race Reports',
     'all' => 'Alla sidor'
 ];

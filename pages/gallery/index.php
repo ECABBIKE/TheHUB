@@ -96,6 +96,7 @@ $stmt = $pdo->prepare("
            p.name as photographer_name, p.slug as photographer_slug, p.avatar_url as photographer_avatar,
            cover.external_url as cover_url, cover.thumbnail_url as cover_thumb,
            cover_media.filepath as cover_filepath,
+           GROUP_CONCAT(DISTINCT s2.name ORDER BY s2.name SEPARATOR ', ') as series_name,
            (SELECT COUNT(*) FROM photo_rider_tags prt
             JOIN event_photos ep2 ON prt.photo_id = ep2.id
             WHERE ep2.album_id = ea.id) as tag_count
@@ -104,6 +105,8 @@ $stmt = $pdo->prepare("
     LEFT JOIN photographers p ON ea.photographer_id = p.id
     LEFT JOIN series_events se ON se.event_id = e.id
     LEFT JOIN series s ON se.series_id = s.id
+    LEFT JOIN series_events se2 ON se2.event_id = e.id
+    LEFT JOIN series s2 ON se2.series_id = s2.id
     LEFT JOIN event_photos cover ON cover.id = ea.cover_photo_id
     LEFT JOIN media cover_media ON cover.media_id = cover_media.id
     WHERE {$whereClause}
@@ -274,7 +277,9 @@ $totalTags = array_sum(array_column($albums, 'tag_count'));
         </div>
         <div class="gallery-listing-info">
             <h3 class="gallery-listing-title"><?= htmlspecialchars($album['title'] ?: $album['event_name']) ?></h3>
-            <div class="gallery-listing-event"><?= htmlspecialchars($album['event_name']) ?></div>
+            <?php if (!empty($album['series_name'])): ?>
+            <div class="gallery-listing-series"><?= htmlspecialchars($album['series_name']) ?></div>
+            <?php endif; ?>
             <div class="gallery-listing-meta">
                 <?php if ($eventDate): ?>
                 <span><?= $eventDate ?></span>
@@ -286,7 +291,7 @@ $totalTags = array_sum(array_column($albums, 'tag_count'));
             <?php if ($photographerName): ?>
             <div class="gallery-listing-photographer">
                 <i data-lucide="camera" style="width: 13px; height: 13px;"></i>
-                <?php if (!empty($album['photographer_slug'])): ?>
+                <?php if (!empty($album['photographer_id'])): ?>
                 <span class="gallery-photographer-link" onclick="event.preventDefault(); event.stopPropagation(); window.location='/photographer/<?= (int)$album['photographer_id'] ?>';" style="color: var(--color-accent-text); cursor: pointer;"><?= htmlspecialchars($photographerName) ?></span>
                 <?php else: ?>
                 <?= htmlspecialchars($photographerName) ?>

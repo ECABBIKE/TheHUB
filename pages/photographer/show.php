@@ -2,6 +2,7 @@
 /**
  * TheHUB - Fotografprofil
  * Visar en fotografs profil med bio, sociala medier och alla deras gallerier
+ * Tvåkolumns-layout: Album (vänster) + Profilkort (höger) - samma som åkarprofilen
  */
 
 if (!defined('HUB_ROOT')) {
@@ -99,121 +100,147 @@ if ($photographer['facebook_url']) $socials[] = ['icon' => 'facebook', 'url' => 
 if ($photographer['youtube_url']) $socials[] = ['icon' => 'youtube', 'url' => $photographer['youtube_url'], 'label' => 'YouTube'];
 ?>
 
-<!-- Photographer Profile Card -->
-<div class="photographer-card-v4">
-    <!-- Square Photo or Initials -->
-    <div class="photographer-photo-hero <?= $photographer['avatar_url'] ? '' : 'initials-bg' ?>">
-        <?php if ($photographer['avatar_url']): ?>
-        <img src="<?= htmlspecialchars($photographer['avatar_url']) ?>" alt="<?= htmlspecialchars($photographer['name']) ?>" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
-        <div class="photographer-initials-fallback" style="display: none;"><?= htmlspecialchars($initials) ?></div>
+<div class="photographer-profile-layout">
+    <!-- LEFT COLUMN: Albums -->
+    <div class="photographer-left-column">
+        <?php if (empty($albums)): ?>
+        <div class="card">
+            <div style="padding: var(--space-2xl); text-align: center;">
+                <i data-lucide="image-off" style="width: 48px; height: 48px; color: var(--color-text-muted); margin-bottom: var(--space-md);"></i>
+                <p style="color: var(--color-text-muted);">Inga publicerade album</p>
+            </div>
+        </div>
         <?php else: ?>
-        <div class="photographer-initials"><?= htmlspecialchars($initials) ?></div>
-        <?php endif; ?>
-    </div>
-
-    <!-- Info Section -->
-    <div class="photographer-info-section">
-        <h1 class="photographer-profile-name">
-            <?= htmlspecialchars($photographer['name']) ?>
-            <?php if (function_exists('hub_is_admin') && hub_is_admin()): ?>
-            <a href="/admin/photographers.php?edit=<?= $photographerId ?>" class="photographer-edit-link" title="Redigera fotograf">
-                <i data-lucide="pencil" style="width: 16px; height: 16px;"></i>
-            </a>
-            <?php endif; ?>
-        </h1>
-
-        <div class="photographer-role-badge">
-            <i data-lucide="camera" style="width: 14px; height: 14px;"></i> Fotograf
-        </div>
-
-        <?php if ($photographer['linked_rider_id']): ?>
-        <a href="/rider/<?= $photographer['linked_rider_id'] ?>" class="photographer-rider-link">
-            <i data-lucide="user" style="width: 14px; height: 14px;"></i>
-            <?= htmlspecialchars($photographer['rider_firstname'] . ' ' . $photographer['rider_lastname']) ?> - Deltagarprofil
-        </a>
-        <?php endif; ?>
-
-        <?php if ($photographer['bio']): ?>
-        <p class="photographer-bio"><?= nl2br(htmlspecialchars($photographer['bio'])) ?></p>
-        <?php endif; ?>
-
-        <!-- Stats -->
-        <div class="photographer-stats-row">
-            <div class="photographer-stat">
-                <span class="photographer-stat-value"><?= $totalAlbums ?></span>
-                <span class="photographer-stat-label">Album</span>
-            </div>
-            <div class="photographer-stat">
-                <span class="photographer-stat-value"><?= number_format($totalPhotos) ?></span>
-                <span class="photographer-stat-label">Bilder</span>
-            </div>
-        </div>
-
-        <?php if (!empty($socials)): ?>
-        <div class="photographer-socials">
-            <?php foreach ($socials as $social): ?>
-            <a href="<?= htmlspecialchars($social['url']) ?>" target="_blank" rel="noopener" class="photographer-social-link" title="<?= $social['label'] ?>">
-                <i data-lucide="<?= $social['icon'] ?>" style="width: 18px; height: 18px;"></i>
-                <span><?= $social['label'] ?></span>
+        <h2 style="font-family: var(--font-heading-secondary); font-size: 1.1rem; color: var(--color-text-secondary); margin-bottom: var(--space-md); text-transform: uppercase; letter-spacing: 0.5px;">
+            <i data-lucide="image" style="width: 18px; height: 18px; vertical-align: -3px;"></i> Album (<?= $totalAlbums ?>)
+        </h2>
+        <div class="gallery-listing-grid">
+            <?php foreach ($albums as $album):
+                $coverSrc = '';
+                if ($album['cover_thumb']) {
+                    $coverSrc = $album['cover_thumb'];
+                } elseif ($album['cover_url']) {
+                    $coverSrc = $album['cover_url'];
+                } elseif ($album['cover_filepath']) {
+                    $coverSrc = '/' . ltrim($album['cover_filepath'], '/');
+                }
+                $eventDate = $album['event_date'] ? date('j M Y', strtotime($album['event_date'])) : '';
+            ?>
+            <a href="/event/<?= $album['event_id'] ?>?tab=galleri" class="gallery-listing-card">
+                <div class="gallery-listing-cover">
+                    <?php if ($coverSrc): ?>
+                    <img src="<?= htmlspecialchars($coverSrc) ?>" alt="<?= htmlspecialchars($album['title'] ?: $album['event_name']) ?>" loading="lazy">
+                    <?php else: ?>
+                    <div class="gallery-listing-placeholder">
+                        <i data-lucide="image" style="width: 48px; height: 48px; color: var(--color-text-muted);"></i>
+                    </div>
+                    <?php endif; ?>
+                    <div class="gallery-listing-photo-count">
+                        <i data-lucide="image" style="width: 14px; height: 14px;"></i>
+                        <?= $album['photo_count'] ?>
+                    </div>
+                </div>
+                <div class="gallery-listing-info">
+                    <h3 class="gallery-listing-title"><?= htmlspecialchars($album['title'] ?: $album['event_name']) ?></h3>
+                    <div class="gallery-listing-meta">
+                        <?php if ($eventDate): ?><span><?= $eventDate ?></span><?php endif; ?>
+                        <?php if ($album['event_location']): ?><span><?= htmlspecialchars($album['event_location']) ?></span><?php endif; ?>
+                    </div>
+                </div>
             </a>
             <?php endforeach; ?>
         </div>
         <?php endif; ?>
     </div>
-</div>
 
-<!-- Albums -->
-<?php if (empty($albums)): ?>
-<div class="card">
-    <div style="padding: var(--space-2xl); text-align: center;">
-        <i data-lucide="image-off" style="width: 48px; height: 48px; color: var(--color-text-muted); margin-bottom: var(--space-md);"></i>
-        <p style="color: var(--color-text-muted);">Inga publicerade album</p>
+    <!-- RIGHT COLUMN: Profile Card -->
+    <div class="photographer-right-column">
+        <div class="photographer-card-v4">
+            <!-- Square Photo or Initials -->
+            <div class="photographer-photo-hero <?= $photographer['avatar_url'] ? '' : 'initials-bg' ?>">
+                <?php if ($photographer['avatar_url']): ?>
+                <img src="<?= htmlspecialchars($photographer['avatar_url']) ?>" alt="<?= htmlspecialchars($photographer['name']) ?>" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+                <div class="photographer-initials-fallback" style="display: none;"><?= htmlspecialchars($initials) ?></div>
+                <?php else: ?>
+                <div class="photographer-initials"><?= htmlspecialchars($initials) ?></div>
+                <?php endif; ?>
+            </div>
+
+            <!-- Info Section -->
+            <div class="photographer-info-section">
+                <h1 class="photographer-profile-name">
+                    <?= htmlspecialchars($photographer['name']) ?>
+                    <?php if (function_exists('hub_is_admin') && hub_is_admin()): ?>
+                    <a href="/admin/photographers.php?edit=<?= $photographerId ?>" class="photographer-edit-link" title="Redigera fotograf">
+                        <i data-lucide="pencil" style="width: 16px; height: 16px;"></i>
+                    </a>
+                    <?php endif; ?>
+                </h1>
+
+                <div class="photographer-role-badge">
+                    <i data-lucide="camera" style="width: 14px; height: 14px;"></i> Fotograf
+                </div>
+
+                <?php if ($photographer['linked_rider_id']): ?>
+                <a href="/rider/<?= $photographer['linked_rider_id'] ?>" class="photographer-rider-link">
+                    <i data-lucide="user" style="width: 14px; height: 14px;"></i>
+                    <?= htmlspecialchars($photographer['rider_firstname'] . ' ' . $photographer['rider_lastname']) ?> - Deltagarprofil
+                </a>
+                <?php endif; ?>
+
+                <?php if ($photographer['bio']): ?>
+                <p class="photographer-bio"><?= nl2br(htmlspecialchars($photographer['bio'])) ?></p>
+                <?php endif; ?>
+
+                <!-- Stats -->
+                <div class="photographer-stats-row">
+                    <div class="photographer-stat">
+                        <span class="photographer-stat-value"><?= $totalAlbums ?></span>
+                        <span class="photographer-stat-label">Album</span>
+                    </div>
+                    <div class="photographer-stat">
+                        <span class="photographer-stat-value"><?= number_format($totalPhotos) ?></span>
+                        <span class="photographer-stat-label">Bilder</span>
+                    </div>
+                </div>
+
+                <?php if (!empty($socials)): ?>
+                <div class="photographer-socials">
+                    <?php foreach ($socials as $social): ?>
+                    <a href="<?= htmlspecialchars($social['url']) ?>" target="_blank" rel="noopener" class="photographer-social-link" title="<?= $social['label'] ?>">
+                        <i data-lucide="<?= $social['icon'] ?>" style="width: 18px; height: 18px;"></i>
+                        <span><?= $social['label'] ?></span>
+                    </a>
+                    <?php endforeach; ?>
+                </div>
+                <?php endif; ?>
+            </div>
+        </div>
     </div>
 </div>
-<?php else: ?>
-<h2 style="font-family: var(--font-heading-secondary); font-size: 1.1rem; color: var(--color-text-secondary); margin-bottom: var(--space-md); text-transform: uppercase; letter-spacing: 0.5px;">
-    <i data-lucide="image" style="width: 18px; height: 18px; vertical-align: -3px;"></i> Album
-</h2>
-<div class="gallery-listing-grid">
-    <?php foreach ($albums as $album):
-        $coverSrc = '';
-        if ($album['cover_thumb']) {
-            $coverSrc = $album['cover_thumb'];
-        } elseif ($album['cover_url']) {
-            $coverSrc = $album['cover_url'];
-        } elseif ($album['cover_filepath']) {
-            $coverSrc = '/' . ltrim($album['cover_filepath'], '/');
-        }
-        $eventDate = $album['event_date'] ? date('j M Y', strtotime($album['event_date'])) : '';
-    ?>
-    <a href="/event/<?= $album['event_id'] ?>?tab=galleri" class="gallery-listing-card">
-        <div class="gallery-listing-cover">
-            <?php if ($coverSrc): ?>
-            <img src="<?= htmlspecialchars($coverSrc) ?>" alt="<?= htmlspecialchars($album['title'] ?: $album['event_name']) ?>" loading="lazy">
-            <?php else: ?>
-            <div class="gallery-listing-placeholder">
-                <i data-lucide="image" style="width: 48px; height: 48px; color: var(--color-text-muted);"></i>
-            </div>
-            <?php endif; ?>
-            <div class="gallery-listing-photo-count">
-                <i data-lucide="image" style="width: 14px; height: 14px;"></i>
-                <?= $album['photo_count'] ?>
-            </div>
-        </div>
-        <div class="gallery-listing-info">
-            <h3 class="gallery-listing-title"><?= htmlspecialchars($album['title'] ?: $album['event_name']) ?></h3>
-            <div class="gallery-listing-meta">
-                <?php if ($eventDate): ?><span><?= $eventDate ?></span><?php endif; ?>
-                <?php if ($album['event_location']): ?><span><?= htmlspecialchars($album['event_location']) ?></span><?php endif; ?>
-            </div>
-        </div>
-    </a>
-    <?php endforeach; ?>
-</div>
-<?php endif; ?>
 
 <style>
-/* Photographer Profile Card - Same style as rider profile-card-v4 */
+/* Two-column layout - same proportions as rider profile (7fr / 3fr) */
+.photographer-profile-layout {
+    display: grid;
+    grid-template-columns: 7fr 3fr;
+    gap: var(--space-lg);
+    margin-bottom: var(--space-lg);
+}
+.photographer-left-column {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-lg);
+    min-width: 0;
+}
+.photographer-right-column {
+    display: flex;
+    flex-direction: column;
+    gap: var(--space-lg);
+    min-width: 0;
+}
+
+/* Profile Card */
 .photographer-card-v4 {
     background: var(--color-bg-surface);
     border-radius: var(--radius-lg);
@@ -223,7 +250,6 @@ if ($photographer['youtube_url']) $socials[] = ['icon' => 'youtube', 'url' => $p
     flex-direction: column;
     box-shadow: var(--shadow-md);
     border: 1px solid var(--color-border);
-    margin-bottom: var(--space-lg);
 }
 .photographer-photo-hero {
     width: 100%;
@@ -341,8 +367,9 @@ if ($photographer['youtube_url']) $socials[] = ['icon' => 'youtube', 'url' => $p
 }
 .photographer-socials {
     display: flex;
+    flex-wrap: wrap;
     justify-content: center;
-    gap: var(--space-sm);
+    gap: var(--space-xs);
     margin-top: var(--space-md);
     padding-top: var(--space-sm);
     border-top: 1px solid var(--color-border);
@@ -364,10 +391,10 @@ if ($photographer['youtube_url']) $socials[] = ['icon' => 'youtube', 'url' => $p
     color: var(--color-accent-text);
 }
 
-/* Gallery listing grid (shared with gallery/index.php) */
+/* Gallery listing grid */
 .gallery-listing-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
     gap: var(--space-md);
 }
 .gallery-listing-card {
@@ -438,7 +465,21 @@ if ($photographer['youtube_url']) $socials[] = ['icon' => 'youtube', 'url' => $p
     color: var(--color-text-muted);
 }
 
+/* Tablet: fixed right column at 280px */
+@media (max-width: 1024px) and (min-width: 768px) {
+    .photographer-profile-layout {
+        grid-template-columns: 1fr 280px;
+    }
+}
+
+/* Mobile: single column, profile card first */
 @media (max-width: 767px) {
+    .photographer-profile-layout {
+        grid-template-columns: 1fr;
+    }
+    .photographer-right-column {
+        order: -1;
+    }
     .photographer-card-v4 {
         border-radius: 0;
         border-left: none;
