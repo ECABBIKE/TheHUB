@@ -126,9 +126,10 @@
   overflow: hidden;
 }
 
-.gallery-listing-event {
-  font-size: 0.8rem;
-  color: var(--color-text-secondary);
+.gallery-listing-series {
+  font-size: 0.75rem;
+  color: var(--color-accent-text);
+  font-weight: 500;
   margin-bottom: 4px;
 }
 
@@ -224,8 +225,8 @@
   .gallery-listing-title {
     font-size: 0.85rem;
   }
-  .gallery-listing-event {
-    display: none;
+  .gallery-listing-series {
+    font-size: 0.7rem;
   }
 }
 
