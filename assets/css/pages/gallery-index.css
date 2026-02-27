@@ -165,6 +165,34 @@
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
   }
 
+  /* Filter bar - 2 per row on mobile (dropdowns open native picker anyway) */
+  .filter-bar {
+    display: grid !important;
+    grid-template-columns: 1fr 1fr;
+    gap: var(--space-xs);
+    padding: var(--space-sm);
+  }
+  .filter-bar .filter-select-wrapper {
+    min-width: 0;
+    max-width: none;
+  }
+  .filter-bar .filter-search-wrapper {
+    grid-column: 1 / -1;
+    max-width: none;
+  }
+  .filter-bar .filter-btn {
+    white-space: nowrap;
+  }
+  .filter-bar .filter-select,
+  .filter-bar .filter-input {
+    width: 100%;
+    font-size: 14px;
+    padding: var(--space-xs) var(--space-sm);
+  }
+  .filter-bar .filter-label {
+    font-size: 10px;
+  }
+
   .gallery-listing-grid {
     grid-template-columns: repeat(2, 1fr);
     gap: var(--space-xs);
