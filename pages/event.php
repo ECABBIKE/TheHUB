@@ -958,7 +958,7 @@ try {
         $hasEliminationData = false;
     }
 
-    // Fetch published photo albums for this event
+    // Fetch published photo albums for this event (with rider tags)
     $eventAlbumPhotos = [];
     $hasEventPhotos = false;
     try {
@@ -967,7 +967,15 @@ try {
                    ep.caption, ep.photographer, ep.sort_order, ep.is_highlight,
                    m.filepath, m.width, m.height,
                    ea.title as album_title, ea.photographer as album_photographer,
-                   ea.photographer_url as album_photographer_url
+                   ea.photographer_url as album_photographer_url,
+                   (SELECT GROUP_CONCAT(CONCAT(r.firstname, ' ', r.lastname) SEPARATOR '||')
+                    FROM photo_rider_tags prt
+                    JOIN riders r ON prt.rider_id = r.id
+                    WHERE prt.photo_id = ep.id) as tagged_names,
+                   (SELECT GROUP_CONCAT(r.id SEPARATOR ',')
+                    FROM photo_rider_tags prt
+                    JOIN riders r ON prt.rider_id = r.id
+                    WHERE prt.photo_id = ep.id) as tagged_ids
             FROM event_photos ep
             JOIN event_albums ea ON ep.album_id = ea.id
             LEFT JOIN media m ON ep.media_id = m.id
@@ -5599,7 +5607,20 @@ if (!empty($event['series_id'])) {
         <?php endif; ?>
     </div>
     <div class="card-body" style="padding: var(--space-sm);">
-        <div class="gallery-grid">
+        <!-- Sökfilter: hitta bilder med taggade deltagare -->
+        <div class="gallery-search-bar">
+            <div class="gallery-search-input-wrap">
+                <i data-lucide="search" style="width: 16px; height: 16px; color: var(--color-text-muted); position: absolute; left: 12px; top: 50%; transform: translateY(-50%); pointer-events: none;"></i>
+                <input type="text" id="galleryRiderSearch" class="form-input" placeholder="Sök deltagare i bilderna..." autocomplete="off" style="padding-left: 36px; font-size: 16px;">
+                <button id="gallerySearchClear" onclick="clearGallerySearch()" style="display: none; position: absolute; right: 8px; top: 50%; transform: translateY(-50%); background: none; border: none; color: var(--color-text-muted); cursor: pointer; padding: 4px;">
+                    <i data-lucide="x" style="width: 16px; height: 16px;"></i>
+                </button>
+            </div>
+            <div id="gallerySearchSuggestions" class="gallery-search-suggestions"></div>
+            <div id="galleryFilterActive" class="gallery-filter-badge" style="display: none;"></div>
+        </div>
+
+        <div class="gallery-grid" id="galleryGrid">
             <?php
             $adInterval = 12; // Show ad every N photos
             $adIndex = 0;
@@ -5643,10 +5664,17 @@ if (!empty($event['series_id'])) {
                     endif;
                 endif;
             ?>
-            <div class="gallery-item" data-idx="<?= $idx ?>" onclick="openLightbox(<?= $idx ?>)">
+            <div class="gallery-item" data-idx="<?= $idx ?>" data-tagged-ids="<?= htmlspecialchars($photo['tagged_ids'] ?? '') ?>" data-tagged-names="<?= htmlspecialchars(str_replace('||', ',', $photo['tagged_names'] ?? '')) ?>" onclick="openLightbox(<?= $idx ?>)">
                 <img src="<?= htmlspecialchars($imgSrc) ?>" alt="<?= htmlspecialchars($photo['caption'] ?? '') ?>" loading="lazy">
                 <?php if ($photo['is_highlight']): ?>
                 <span class="gallery-highlight-badge"><i data-lucide="star" style="width: 12px; height: 12px;"></i></span>
+                <?php endif; ?>
+                <?php if (!empty($photo['tagged_names'])): ?>
+                <div class="gallery-item-tags">
+                    <?php foreach (explode('||', $photo['tagged_names']) as $tagName): ?>
+                    <span class="gallery-item-tag"><?= htmlspecialchars($tagName) ?></span>
+                    <?php endforeach; ?>
+                </div>
                 <?php endif; ?>
             </div>
             <?php endforeach; ?>
@@ -5654,22 +5682,126 @@ if (!empty($event['series_id'])) {
     </div>
 </section>
 
-<!-- Lightbox -->
+<!-- Lightbox (fullscreen on mobile) -->
 <div id="galleryLightbox" class="gallery-lightbox" style="display: none;">
     <div class="gallery-lightbox-backdrop" onclick="closeLightbox()"></div>
-    <button class="gallery-lightbox-close" onclick="closeLightbox()"><i data-lucide="x"></i></button>
-    <button class="gallery-lightbox-nav gallery-lightbox-prev" onclick="navigateLightbox(-1)"><i data-lucide="chevron-left"></i></button>
-    <button class="gallery-lightbox-nav gallery-lightbox-next" onclick="navigateLightbox(1)"><i data-lucide="chevron-right"></i></button>
-    <div class="gallery-lightbox-content">
+
+    <!-- Top bar: close + counter -->
+    <div class="gallery-lightbox-topbar">
+        <span id="lightboxCounter" class="gallery-lightbox-counter-text"></span>
+        <button class="gallery-lightbox-close" onclick="closeLightbox()"><i data-lucide="x"></i></button>
+    </div>
+
+    <!-- Main image area -->
+    <div class="gallery-lightbox-content" id="lightboxContent">
         <img id="lightboxImg" src="" alt="">
+    </div>
+
+    <!-- Navigation arrows (placed AFTER content for z-index stacking) -->
+    <button class="gallery-lightbox-nav gallery-lightbox-prev" onclick="event.stopPropagation(); navigateLightbox(-1)"><i data-lucide="chevron-left"></i></button>
+    <button class="gallery-lightbox-nav gallery-lightbox-next" onclick="event.stopPropagation(); navigateLightbox(1)"><i data-lucide="chevron-right"></i></button>
+
+    <!-- Bottom overlay: tags + caption -->
+    <div class="gallery-lightbox-bottom">
+        <div id="lightboxTags" class="gallery-lightbox-tags"></div>
         <div id="lightboxCaption" class="gallery-lightbox-caption"></div>
     </div>
-    <div class="gallery-lightbox-counter">
-        <span id="lightboxCounter"></span>
+
+    <?php if ($isLoggedIn): ?>
+    <!-- Tagg-knapp -->
+    <button id="tagToggleBtn" class="gallery-tag-toggle" onclick="toggleTagPanel()" title="Tagga deltagare">
+        <i data-lucide="user-plus" style="width: 20px; height: 20px;"></i>
+    </button>
+    <!-- Taggpanel (slide-in från höger) -->
+    <div id="tagPanel" class="gallery-tag-panel" style="display: none;">
+        <div class="gallery-tag-panel-header">
+            <h4 style="margin: 0; font-size: 0.9rem;">Tagga deltagare</h4>
+            <button onclick="toggleTagPanel()" style="background: none; border: none; color: var(--color-text-secondary); cursor: pointer; padding: 4px;">
+                <i data-lucide="x" style="width: 18px; height: 18px;"></i>
+            </button>
+        </div>
+        <div class="gallery-tag-panel-body">
+            <input type="text" id="galleryTagSearch" class="form-input" placeholder="Sök deltagare..." oninput="gallerySearchRiders(this.value)" autocomplete="off" style="font-size: 16px;">
+            <div id="galleryTagSearchResults" style="margin-top: var(--space-xs); max-height: 200px; overflow-y: auto;"></div>
+            <div style="margin-top: var(--space-sm);">
+                <label style="font-size: 0.75rem; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Taggade på denna bild</label>
+                <div id="galleryTagList" style="margin-top: var(--space-xs);"></div>
+            </div>
+        </div>
     </div>
+    <?php endif; ?>
 </div>
 
 <style>
+/* ========== GALLERY SEARCH ========== */
+.gallery-search-bar {
+    margin-bottom: var(--space-sm);
+    position: relative;
+}
+.gallery-search-input-wrap {
+    position: relative;
+}
+.gallery-search-suggestions {
+    position: absolute;
+    top: 100%;
+    left: 0;
+    right: 0;
+    z-index: 20;
+    background: var(--color-bg-surface);
+    border: 1px solid var(--color-border);
+    border-top: none;
+    border-radius: 0 0 var(--radius-sm) var(--radius-sm);
+    max-height: 240px;
+    overflow-y: auto;
+    display: none;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+.gallery-search-suggestions.active {
+    display: block;
+}
+.gallery-search-suggestion {
+    padding: var(--space-sm) var(--space-md);
+    cursor: pointer;
+    font-size: 0.9rem;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    transition: background 0.15s;
+}
+.gallery-search-suggestion:hover {
+    background: var(--color-bg-hover);
+}
+.gallery-search-suggestion-name {
+    font-weight: 500;
+    color: var(--color-text-primary);
+}
+.gallery-search-suggestion-club {
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+}
+.gallery-filter-badge {
+    margin-top: var(--space-xs);
+    display: inline-flex;
+    align-items: center;
+    gap: var(--space-xs);
+    padding: 4px 12px;
+    background: var(--color-accent-light);
+    border: 1px solid var(--color-accent);
+    border-radius: var(--radius-full);
+    font-size: 0.8rem;
+    color: var(--color-accent-text);
+}
+.gallery-filter-badge button {
+    background: none;
+    border: none;
+    cursor: pointer;
+    color: var(--color-accent-text);
+    padding: 2px;
+    display: flex;
+    align-items: center;
+}
+
+/* ========== GALLERY GRID ========== */
 .gallery-grid {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
@@ -5726,7 +5858,30 @@ if (!empty($event['series_id'])) {
     object-fit: contain;
 }
 
-/* Lightbox */
+/* Tag badges on gallery grid */
+.gallery-item-tags {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    padding: 6px 8px;
+    background: linear-gradient(transparent, rgba(0,0,0,0.7));
+    display: flex;
+    flex-wrap: wrap;
+    gap: 4px;
+    pointer-events: none;
+}
+.gallery-item-tag {
+    font-size: 0.65rem;
+    color: #fff;
+    background: rgba(55, 212, 214, 0.75);
+    padding: 2px 7px;
+    border-radius: var(--radius-full);
+    white-space: nowrap;
+    font-weight: 500;
+}
+
+/* ========== LIGHTBOX (fullscreen) ========== */
 .gallery-lightbox {
     position: fixed;
     inset: 0;
@@ -5734,59 +5889,130 @@ if (!empty($event['series_id'])) {
     display: flex;
     align-items: center;
     justify-content: center;
+    /* Prevent scroll on iOS/PWA */
+    overscroll-behavior: contain;
 }
 .gallery-lightbox-backdrop {
     position: absolute;
     inset: 0;
-    background: rgba(0, 0, 0, 0.92);
+    background: #000;
 }
-.gallery-lightbox-content {
-    position: relative;
-    z-index: 1;
-    max-width: 90vw;
-    max-height: 85vh;
+
+/* Top bar with counter + close */
+.gallery-lightbox-topbar {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    z-index: 4;
     display: flex;
-    flex-direction: column;
+    justify-content: space-between;
     align-items: center;
+    padding: var(--space-sm) var(--space-md);
+    background: linear-gradient(rgba(0,0,0,0.6), transparent);
 }
-.gallery-lightbox-content img {
-    max-width: 90vw;
-    max-height: 80vh;
-    object-fit: contain;
-    border-radius: var(--radius-sm);
-}
-.gallery-lightbox-caption {
-    color: #fff;
+.gallery-lightbox-counter-text {
+    color: rgba(255,255,255,0.8);
     font-size: 0.85rem;
-    margin-top: var(--space-sm);
-    text-align: center;
-    max-width: 600px;
+    font-weight: 500;
 }
 .gallery-lightbox-close {
-    position: absolute;
-    top: var(--space-md);
-    right: var(--space-md);
-    z-index: 2;
     background: rgba(255,255,255,0.15);
     border: none;
     color: #fff;
-    width: 44px;
-    height: 44px;
+    width: 40px;
+    height: 40px;
     border-radius: var(--radius-full);
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
 }
 .gallery-lightbox-close:hover {
-    background: rgba(255,255,255,0.25);
+    background: rgba(255,255,255,0.3);
 }
+
+/* Main image - fills available space */
+.gallery-lightbox-content {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 48px 60px 80px;
+}
+.gallery-lightbox-content img {
+    max-width: 100%;
+    max-height: 100%;
+    object-fit: contain;
+    border-radius: var(--radius-sm);
+    user-select: none;
+    -webkit-user-select: none;
+}
+
+/* Bottom overlay: tags + caption */
+.gallery-lightbox-bottom {
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    z-index: 3;
+    padding: var(--space-lg) var(--space-lg) var(--space-md);
+    background: linear-gradient(transparent, rgba(0,0,0,0.75));
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: var(--space-xs);
+    pointer-events: none;
+}
+.gallery-lightbox-bottom > * {
+    pointer-events: auto;
+}
+
+/* Tags in lightbox - prominent, clickable */
+.gallery-lightbox-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-xs);
+    justify-content: center;
+}
+.gallery-lightbox-tag {
+    font-size: 0.85rem;
+    font-weight: 500;
+    color: #fff;
+    background: rgba(55, 212, 214, 0.35);
+    border: 1px solid rgba(55, 212, 214, 0.6);
+    padding: 4px 14px;
+    border-radius: var(--radius-full);
+    text-decoration: none;
+    transition: background 0.2s;
+    backdrop-filter: blur(6px);
+    -webkit-backdrop-filter: blur(6px);
+}
+.gallery-lightbox-tag:hover {
+    background: rgba(55, 212, 214, 0.6);
+    color: #fff;
+}
+
+/* Caption */
+.gallery-lightbox-caption {
+    color: rgba(255,255,255,0.8);
+    font-size: 0.85rem;
+    text-align: center;
+    max-width: 600px;
+}
+
+/* Navigation arrows */
 .gallery-lightbox-nav {
     position: absolute;
     top: 50%;
     transform: translateY(-50%);
-    z-index: 2;
-    background: rgba(255,255,255,0.15);
+    z-index: 4;
+    background: rgba(255,255,255,0.12);
     border: none;
     color: #fff;
     width: 48px;
@@ -5796,36 +6022,215 @@ if (!empty($event['series_id'])) {
     display: flex;
     align-items: center;
     justify-content: center;
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
+    transition: background 0.2s;
 }
 .gallery-lightbox-nav:hover {
     background: rgba(255,255,255,0.25);
 }
-.gallery-lightbox-prev { left: var(--space-md); }
-.gallery-lightbox-next { right: var(--space-md); }
-.gallery-lightbox-counter {
+.gallery-lightbox-prev { left: var(--space-sm); }
+.gallery-lightbox-next { right: var(--space-sm); }
+
+/* Tag toggle button */
+.gallery-tag-toggle {
     position: absolute;
-    bottom: var(--space-md);
-    left: 50%;
-    transform: translateX(-50%);
-    z-index: 2;
-    color: rgba(255,255,255,0.7);
-    font-size: 0.8rem;
+    bottom: var(--space-lg);
+    right: var(--space-md);
+    z-index: 5;
+    background: rgba(55, 212, 214, 0.85);
+    border: none;
+    color: #fff;
+    width: 48px;
+    height: 48px;
+    border-radius: var(--radius-full);
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background 0.2s, transform 0.2s;
+    box-shadow: 0 2px 12px rgba(0,0,0,0.4);
+}
+.gallery-tag-toggle:hover {
+    background: rgba(55, 212, 214, 1);
+    transform: scale(1.05);
 }
 
+/* Tag panel (slide-in) */
+.gallery-tag-panel {
+    position: absolute;
+    top: 0;
+    right: 0;
+    bottom: 0;
+    width: 320px;
+    max-width: 85vw;
+    z-index: 6;
+    background: var(--color-bg-surface);
+    border-left: 1px solid var(--color-border);
+    display: flex;
+    flex-direction: column;
+    animation: slideInRight 0.2s ease;
+}
+@keyframes slideInRight {
+    from { transform: translateX(100%); }
+    to { transform: translateX(0); }
+}
+.gallery-tag-panel-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: var(--space-md);
+    border-bottom: 1px solid var(--color-border);
+    min-height: 52px;
+}
+.gallery-tag-panel-body {
+    flex: 1;
+    overflow-y: auto;
+    padding: var(--space-md);
+}
+
+/* ========== MOBILE (portrait) ========== */
 @media (max-width: 767px) {
     .gallery-grid {
         grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-        gap: 4px;
+        gap: 3px;
     }
     .gallery-item {
         border-radius: 0;
     }
-    .gallery-lightbox-nav {
-        width: 40px;
-        height: 40px;
+
+    /* Fullscreen lightbox */
+    .gallery-lightbox-content {
+        padding: 44px 0 72px;
     }
-    .gallery-lightbox-prev { left: var(--space-xs); }
-    .gallery-lightbox-next { right: var(--space-xs); }
+    .gallery-lightbox-content img {
+        border-radius: 0;
+        width: 100%;
+    }
+
+    /* Compact top bar */
+    .gallery-lightbox-topbar {
+        padding: var(--space-xs) var(--space-sm);
+    }
+    .gallery-lightbox-close {
+        width: 36px;
+        height: 36px;
+    }
+
+    /* Nav arrows: smaller, semi-transparent */
+    .gallery-lightbox-nav {
+        width: 36px;
+        height: 36px;
+        background: rgba(255,255,255,0.08);
+    }
+    .gallery-lightbox-prev { left: 4px; }
+    .gallery-lightbox-next { right: 4px; }
+
+    /* Bottom tags bigger on mobile for touch */
+    .gallery-lightbox-bottom {
+        padding: var(--space-md) var(--space-sm) var(--space-sm);
+    }
+    .gallery-lightbox-tag {
+        font-size: 0.9rem;
+        padding: 6px 16px;
+    }
+
+    /* Tag panel fullscreen */
+    .gallery-tag-panel {
+        width: 100%;
+        max-width: 100%;
+    }
+    .gallery-tag-toggle {
+        bottom: 76px;
+        right: var(--space-sm);
+    }
+}
+
+/* ========== LANDSCAPE MODE (mobile + tablet) ========== */
+@media (max-height: 500px) and (orientation: landscape) {
+    /* True fullscreen - image fills entire screen */
+    .gallery-lightbox-content {
+        padding: 0;
+    }
+    .gallery-lightbox-content img {
+        width: 100vw;
+        height: 100vh;
+        max-width: 100vw;
+        max-height: 100vh;
+        object-fit: contain;
+        border-radius: 0;
+    }
+
+    /* Topbar: minimal, auto-fade */
+    .gallery-lightbox-topbar {
+        padding: 4px 8px;
+        opacity: 0;
+        transition: opacity 0.3s;
+    }
+    .gallery-lightbox:hover .gallery-lightbox-topbar,
+    .gallery-lightbox:active .gallery-lightbox-topbar {
+        opacity: 1;
+    }
+    .gallery-lightbox-close {
+        width: 32px;
+        height: 32px;
+    }
+    .gallery-lightbox-counter-text {
+        font-size: 0.75rem;
+    }
+
+    /* Nav arrows: thin, edge-hugging */
+    .gallery-lightbox-nav {
+        width: 32px;
+        height: 60px;
+        border-radius: var(--radius-sm);
+        background: rgba(255,255,255,0.06);
+        opacity: 0;
+        transition: opacity 0.3s;
+    }
+    .gallery-lightbox:hover .gallery-lightbox-nav,
+    .gallery-lightbox:active .gallery-lightbox-nav {
+        opacity: 1;
+    }
+    .gallery-lightbox-prev { left: 0; border-radius: 0 var(--radius-sm) var(--radius-sm) 0; }
+    .gallery-lightbox-next { right: 0; border-radius: var(--radius-sm) 0 0 var(--radius-sm); }
+
+    /* Bottom tags: compact, floating */
+    .gallery-lightbox-bottom {
+        padding: var(--space-xs) var(--space-md);
+        background: linear-gradient(transparent, rgba(0,0,0,0.65));
+    }
+    .gallery-lightbox-tag {
+        font-size: 0.8rem;
+        padding: 3px 12px;
+    }
+
+    /* Tag toggle: smaller */
+    .gallery-tag-toggle {
+        width: 36px;
+        height: 36px;
+        bottom: var(--space-sm);
+        right: var(--space-sm);
+    }
+
+    /* Tag panel: narrower in landscape */
+    .gallery-tag-panel {
+        width: 280px;
+    }
+}
+
+/* ========== PWA standalone mode: extra immersive ========== */
+@media (display-mode: standalone) {
+    .gallery-lightbox {
+        /* Account for safe areas (notch, home indicator) */
+        padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
+    }
+    .gallery-lightbox-topbar {
+        padding-top: max(var(--space-xs), env(safe-area-inset-top));
+    }
+    .gallery-lightbox-bottom {
+        padding-bottom: max(var(--space-sm), env(safe-area-inset-bottom));
+    }
 }
 </style>
 
@@ -5838,12 +6243,16 @@ if (!empty($event['series_id'])) {
         } elseif ($p['external_url']) {
             $src = $p['external_url'];
         }
-        return ['src' => $src, 'caption' => $p['caption'] ?? ''];
+        return ['id' => (int)$p['id'], 'src' => $src, 'caption' => $p['caption'] ?? ''];
     }, array_filter($eventAlbumPhotos, function($p) {
         return ($p['media_id'] && $p['filepath']) || $p['external_url'];
     })))) ?>;
 
+    const isLoggedIn = <?= $isLoggedIn ? 'true' : 'false' ?>;
     let currentIdx = 0;
+    let tagSearchTimeout = null;
+    let gallerySearchTimeout = null;
+    let activeFilterRiderId = null;
 
     window.openLightbox = function(idx) {
         if (idx < 0 || idx >= photos.length) return;
@@ -5860,12 +6269,27 @@ if (!empty($event['series_id'])) {
         lb.style.display = 'flex';
         document.body.style.overflow = 'hidden';
 
+        // Visa/dölj pilknappar
+        const prevBtn = lb.querySelector('.gallery-lightbox-prev');
+        const nextBtn = lb.querySelector('.gallery-lightbox-next');
+        if (prevBtn) prevBtn.style.display = photos.length > 1 ? 'flex' : 'none';
+        if (nextBtn) nextBtn.style.display = photos.length > 1 ? 'flex' : 'none';
+
+        // Ladda taggar för bilden
+        loadLightboxTags(photos[idx].id);
+
+        // Stäng taggpanelen vid bildnavigering
+        const panel = document.getElementById('tagPanel');
+        if (panel) panel.style.display = 'none';
+
         if (typeof lucide !== 'undefined') lucide.createIcons();
     };
 
     window.closeLightbox = function() {
         document.getElementById('galleryLightbox').style.display = 'none';
         document.body.style.overflow = '';
+        const panel = document.getElementById('tagPanel');
+        if (panel) panel.style.display = 'none';
     };
 
     window.navigateLightbox = function(dir) {
@@ -5875,28 +6299,326 @@ if (!empty($event['series_id'])) {
         window.openLightbox(newIdx);
     };
 
+    // Ladda och visa taggar under bilden i lightboxen
+    async function loadLightboxTags(photoId) {
+        const container = document.getElementById('lightboxTags');
+        if (!container) return;
+        container.innerHTML = '';
+
+        try {
+            const res = await fetch('/api/photo-tags.php?photo_id=' + photoId);
+            const data = await res.json();
+            if (data.success && data.data.length > 0) {
+                container.innerHTML = data.data.map(t =>
+                    '<a href="/rider/' + t.rider_id + '" class="gallery-lightbox-tag">' +
+                    (t.firstname || '') + ' ' + (t.lastname || '') + '</a>'
+                ).join('');
+            }
+        } catch(e) {}
+
+        // Uppdatera taggpanelen om den är öppen
+        const panel = document.getElementById('tagPanel');
+        if (panel && panel.style.display !== 'none') {
+            loadGalleryTagList(photoId);
+        }
+    }
+
+    // Toggle taggpanel
+    window.toggleTagPanel = function() {
+        const panel = document.getElementById('tagPanel');
+        if (!panel) return;
+        if (panel.style.display === 'none') {
+            panel.style.display = 'flex';
+            const input = document.getElementById('galleryTagSearch');
+            if (input) { input.value = ''; input.focus(); }
+            document.getElementById('galleryTagSearchResults').innerHTML = '';
+            loadGalleryTagList(photos[currentIdx].id);
+        } else {
+            panel.style.display = 'none';
+        }
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+    };
+
+    // Sök riders i taggpanelen
+    window.gallerySearchRiders = function(query) {
+        clearTimeout(tagSearchTimeout);
+        const results = document.getElementById('galleryTagSearchResults');
+        if (query.length < 2) { results.innerHTML = ''; return; }
+
+        tagSearchTimeout = setTimeout(async () => {
+            try {
+                const res = await fetch('/api/search.php?type=riders&q=' + encodeURIComponent(query) + '&limit=8');
+                const data = await res.json();
+                const riders = data.results || data.data || data;
+
+                if (Array.isArray(riders) && riders.length > 0) {
+                    results.innerHTML = riders.map(r =>
+                        '<div onclick="galleryTagRider(' + r.id + ')" ' +
+                        'style="padding: var(--space-xs) var(--space-sm); cursor: pointer; font-size: 0.85rem; border-radius: var(--radius-sm); display: flex; justify-content: space-between; align-items: center;" ' +
+                        'onmouseover="this.style.background=\'var(--color-bg-hover)\'" onmouseout="this.style.background=\'none\'">' +
+                            '<span>' + (r.firstname || '') + ' ' + (r.lastname || '') + '</span>' +
+                            '<span style="font-size: 0.7rem; color: var(--color-text-muted);">' + (r.club_name || r.club || '') + '</span>' +
+                        '</div>'
+                    ).join('');
+                } else {
+                    results.innerHTML = '<div style="font-size: 0.8rem; color: var(--color-text-muted); padding: var(--space-xs);">Inga träffar</div>';
+                }
+            } catch(e) { results.innerHTML = ''; }
+        }, 300);
+    };
+
+    // Tagga rider via publikt API
+    window.galleryTagRider = async function(riderId) {
+        const photoId = photos[currentIdx].id;
+        try {
+            const res = await fetch('/api/photo-tags.php', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ photo_id: photoId, rider_id: riderId })
+            });
+            const data = await res.json();
+            if (data.success) {
+                document.getElementById('galleryTagSearch').value = '';
+                document.getElementById('galleryTagSearchResults').innerHTML = '';
+                loadGalleryTagList(photoId);
+                loadLightboxTags(photoId);
+            } else {
+                alert(data.error || 'Kunde inte tagga');
+            }
+        } catch(e) {
+            alert('Nätverksfel');
+        }
+    };
+
+    // Ladda tagg-listan i panelen
+    async function loadGalleryTagList(photoId) {
+        const list = document.getElementById('galleryTagList');
+        if (!list) return;
+        list.innerHTML = '<div style="font-size: 0.8rem; color: var(--color-text-muted);">Laddar...</div>';
+
+        try {
+            const res = await fetch('/api/photo-tags.php?photo_id=' + photoId);
+            const data = await res.json();
+            if (data.success && data.data.length > 0) {
+                list.innerHTML = data.data.map(t =>
+                    '<div style="display: flex; align-items: center; justify-content: space-between; padding: var(--space-xs) var(--space-sm); background: var(--color-bg-hover); border-radius: var(--radius-sm); font-size: 0.85rem; margin-bottom: 4px;">' +
+                        '<a href="/rider/' + t.rider_id + '" style="color: var(--color-accent-text); text-decoration: none;">' +
+                            (t.firstname || '') + ' ' + (t.lastname || '') +
+                        '</a>' +
+                        '<button onclick="galleryRemoveTag(' + t.tag_id + ')" style="background: none; border: none; cursor: pointer; color: var(--color-text-muted); padding: 2px;" title="Ta bort tagg">' +
+                            '<i data-lucide="x" style="width: 14px; height: 14px;"></i>' +
+                        '</button>' +
+                    '</div>'
+                ).join('');
+            } else {
+                list.innerHTML = '<div style="font-size: 0.8rem; color: var(--color-text-muted);">Inga taggade deltagare</div>';
+            }
+            if (typeof lucide !== 'undefined') lucide.createIcons();
+        } catch(e) {
+            list.innerHTML = '<div style="font-size: 0.8rem; color: var(--color-error);">Kunde inte ladda taggar</div>';
+        }
+    }
+
+    // Ta bort tagg
+    window.galleryRemoveTag = async function(tagId) {
+        try {
+            const res = await fetch('/api/photo-tags.php?tag_id=' + tagId, {
+                method: 'DELETE'
+            });
+            const data = await res.json();
+            if (data.success) {
+                const photoId = photos[currentIdx].id;
+                loadGalleryTagList(photoId);
+                loadLightboxTags(photoId);
+            } else {
+                alert(data.error || 'Kunde inte ta bort tagg');
+            }
+        } catch(e) {
+            alert('Nätverksfel');
+        }
+    };
+
     document.addEventListener('keydown', function(e) {
         const lb = document.getElementById('galleryLightbox');
         if (lb.style.display === 'none') return;
-        if (e.key === 'Escape') window.closeLightbox();
+        if (e.key === 'Escape') {
+            const panel = document.getElementById('tagPanel');
+            if (panel && panel.style.display !== 'none') {
+                panel.style.display = 'none';
+            } else {
+                window.closeLightbox();
+            }
+        }
         if (e.key === 'ArrowLeft') window.navigateLightbox(-1);
         if (e.key === 'ArrowRight') window.navigateLightbox(1);
     });
 
     // Swipe support for mobile
     let touchStartX = 0;
+    let touchStartY = 0;
     const lb = document.getElementById('galleryLightbox');
     if (lb) {
         lb.addEventListener('touchstart', function(e) {
             touchStartX = e.changedTouches[0].screenX;
+            touchStartY = e.changedTouches[0].screenY;
         }, {passive: true});
         lb.addEventListener('touchend', function(e) {
-            const diff = e.changedTouches[0].screenX - touchStartX;
-            if (Math.abs(diff) > 50) {
-                window.navigateLightbox(diff > 0 ? -1 : 1);
+            const diffX = e.changedTouches[0].screenX - touchStartX;
+            const diffY = e.changedTouches[0].screenY - touchStartY;
+            // Only navigate on horizontal swipes (not vertical)
+            if (Math.abs(diffX) > 50 && Math.abs(diffX) > Math.abs(diffY)) {
+                window.navigateLightbox(diffX > 0 ? -1 : 1);
             }
         }, {passive: true});
     }
+
+    // Tap left/right half of image area to navigate (mobile)
+    const lbContent = document.getElementById('lightboxContent');
+    if (lbContent) {
+        lbContent.addEventListener('click', function(e) {
+            // Don't navigate if clicking on a tag link or button
+            if (e.target.closest('a') || e.target.closest('button')) return;
+            const rect = lbContent.getBoundingClientRect();
+            const clickX = e.clientX - rect.left;
+            const halfWidth = rect.width / 2;
+            if (clickX < halfWidth) {
+                window.navigateLightbox(-1);
+            } else {
+                window.navigateLightbox(1);
+            }
+        });
+    }
+
+    // ========== GALLERY RIDER SEARCH & FILTER ==========
+    const searchInput = document.getElementById('galleryRiderSearch');
+    const suggestionsDiv = document.getElementById('gallerySearchSuggestions');
+    const clearBtn = document.getElementById('gallerySearchClear');
+    const filterBadge = document.getElementById('galleryFilterActive');
+    const galleryGrid = document.getElementById('galleryGrid');
+
+    if (searchInput) {
+        searchInput.addEventListener('input', function() {
+            const q = this.value.trim();
+            clearBtn.style.display = q ? 'block' : 'none';
+
+            if (q.length < 2) {
+                suggestionsDiv.classList.remove('active');
+                suggestionsDiv.innerHTML = '';
+                return;
+            }
+
+            clearTimeout(gallerySearchTimeout);
+            gallerySearchTimeout = setTimeout(async () => {
+                try {
+                    const res = await fetch('/api/search.php?type=riders&q=' + encodeURIComponent(q) + '&limit=8');
+                    const data = await res.json();
+                    const riders = data.results || data.data || data;
+
+                    if (Array.isArray(riders) && riders.length > 0) {
+                        // Filtrera till riders som faktiskt är taggade i detta galleri
+                        const allTaggedIds = new Set();
+                        galleryGrid.querySelectorAll('.gallery-item[data-tagged-ids]').forEach(el => {
+                            (el.dataset.taggedIds || '').split(',').forEach(id => { if (id) allTaggedIds.add(id); });
+                        });
+
+                        const tagged = riders.filter(r => allTaggedIds.has(String(r.id)));
+                        const untagged = riders.filter(r => !allTaggedIds.has(String(r.id)));
+
+                        let html = '';
+                        if (tagged.length > 0) {
+                            html += tagged.map(r =>
+                                '<div class="gallery-search-suggestion" onclick="filterGalleryByRider(' + r.id + ', \'' + ((r.firstname || '') + ' ' + (r.lastname || '')).replace(/'/g, "\\'") + '\')">' +
+                                    '<span class="gallery-search-suggestion-name">' + (r.firstname || '') + ' ' + (r.lastname || '') +
+                                    ' <span style="font-size: 0.7rem; color: var(--color-accent); font-weight: 400;">(' + countPhotosForRider(r.id) + ' bilder)</span></span>' +
+                                    '<span class="gallery-search-suggestion-club">' + (r.club_name || r.club || '') + '</span>' +
+                                '</div>'
+                            ).join('');
+                        }
+                        if (untagged.length > 0 && tagged.length > 0) {
+                            html += '<div style="padding: 4px var(--space-md); font-size: 0.7rem; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.5px; border-top: 1px solid var(--color-border);">Ej taggade i detta galleri</div>';
+                        }
+                        if (untagged.length > 0) {
+                            html += untagged.map(r =>
+                                '<div class="gallery-search-suggestion" style="opacity: 0.5;">' +
+                                    '<span class="gallery-search-suggestion-name">' + (r.firstname || '') + ' ' + (r.lastname || '') + '</span>' +
+                                    '<span class="gallery-search-suggestion-club">' + (r.club_name || r.club || '') + '</span>' +
+                                '</div>'
+                            ).join('');
+                        }
+
+                        suggestionsDiv.innerHTML = html || '<div style="padding: var(--space-sm) var(--space-md); font-size: 0.8rem; color: var(--color-text-muted);">Inga träffar</div>';
+                        suggestionsDiv.classList.add('active');
+                    } else {
+                        suggestionsDiv.innerHTML = '<div style="padding: var(--space-sm) var(--space-md); font-size: 0.8rem; color: var(--color-text-muted);">Inga träffar</div>';
+                        suggestionsDiv.classList.add('active');
+                    }
+                } catch(e) {
+                    suggestionsDiv.classList.remove('active');
+                }
+            }, 300);
+        });
+
+        // Stäng suggestions vid klick utanför
+        document.addEventListener('click', function(e) {
+            if (!e.target.closest('.gallery-search-bar')) {
+                suggestionsDiv.classList.remove('active');
+            }
+        });
+    }
+
+    function countPhotosForRider(riderId) {
+        let count = 0;
+        galleryGrid.querySelectorAll('.gallery-item[data-tagged-ids]').forEach(el => {
+            const ids = (el.dataset.taggedIds || '').split(',');
+            if (ids.includes(String(riderId))) count++;
+        });
+        return count;
+    }
+
+    window.filterGalleryByRider = function(riderId, name) {
+        activeFilterRiderId = riderId;
+        suggestionsDiv.classList.remove('active');
+        searchInput.value = '';
+        clearBtn.style.display = 'none';
+
+        // Visa filterbadge
+        filterBadge.innerHTML = '<i data-lucide="user" style="width: 14px; height: 14px;"></i> ' +
+            '<span>' + name + '</span>' +
+            '<button onclick="clearGallerySearch()" title="Rensa filter"><i data-lucide="x" style="width: 14px; height: 14px;"></i></button>';
+        filterBadge.style.display = 'inline-flex';
+
+        // Filtrera gallery items
+        const items = galleryGrid.querySelectorAll('.gallery-item');
+        const ads = galleryGrid.querySelectorAll('.gallery-ad-slot');
+        let visibleCount = 0;
+
+        items.forEach(el => {
+            const ids = (el.dataset.taggedIds || '').split(',');
+            if (ids.includes(String(riderId))) {
+                el.style.display = '';
+                visibleCount++;
+            } else {
+                el.style.display = 'none';
+            }
+        });
+
+        // Dölj annonser vid filtrering
+        ads.forEach(ad => ad.style.display = 'none');
+
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+    };
+
+    window.clearGallerySearch = function() {
+        activeFilterRiderId = null;
+        if (searchInput) { searchInput.value = ''; }
+        if (clearBtn) clearBtn.style.display = 'none';
+        if (filterBadge) filterBadge.style.display = 'none';
+        suggestionsDiv.classList.remove('active');
+
+        // Visa alla bilder igen
+        galleryGrid.querySelectorAll('.gallery-item').forEach(el => el.style.display = '');
+        galleryGrid.querySelectorAll('.gallery-ad-slot').forEach(el => el.style.display = '');
+    };
 })();
 </script>
 
