@@ -424,39 +424,68 @@ include __DIR__ . '/../components/unified-layout.php';
                 <span style="display: inline-flex; align-items: center; justify-content: center; width: 32px; height: 32px; border-radius: var(--radius-full); background: var(--color-accent); color: var(--color-bg-page); font-weight: 700; font-size: 0.9rem; flex-shrink: 0;">5</span>
                 <h4 style="color: var(--color-text-primary); margin: 0;">Uppdatera .env på servern</h4>
             </div>
-            <p>Öppna filen <code>.env</code> i TheHUBs rotmapp på servern och lägg till (eller uppdatera) dessa rader:</p>
+            <p>Öppna filen <code>.env</code> i TheHUBs rotmapp på servern och lägg till dessa 5 rader.
+            <strong>Kopiera inte rakt av</strong> - ersätt värdena med dina egna från Cloudflare:</p>
 
-            <pre style="background: var(--color-bg-hover); padding: var(--space-md); border-radius: var(--radius-sm); font-size: 0.8rem; overflow-x: auto; line-height: 1.8;"><span style="color: var(--color-text-muted);"># Cloudflare R2 Bildlagring
-# VIKTIGT: Skriv INTE kommentarer efter värdena på samma rad!</span>
-R2_ACCOUNT_ID=<span style="color: var(--color-accent-text);">ditt_account_id_här</span>
-R2_ACCESS_KEY_ID=<span style="color: var(--color-accent-text);">din_access_key_id_här</span>
-R2_SECRET_ACCESS_KEY=<span style="color: var(--color-accent-text);">din_secret_access_key_här</span>
-R2_BUCKET=<span style="color: var(--color-accent-text);">thehub-photos</span>
-R2_PUBLIC_URL=<span style="color: var(--color-accent-text);">https://pub-XXXXX.r2.dev</span></pre>
-
-            <div style="margin-top: var(--space-sm); padding: var(--space-sm) var(--space-md); background: var(--color-bg-hover); border-radius: var(--radius-sm); font-size: 0.8rem;">
-                <i data-lucide="alert-triangle" class="icon-xs" style="vertical-align: text-bottom; color: var(--color-warning);"></i>
-                <strong>Inga kommentarer efter =</strong> — skriv kommentarer på egna rader med <code>#</code>.
-                T.ex. <code>R2_BUCKET=thehub-photos</code> (inte <code>R2_BUCKET=thehub-photos # mitt bucket</code>).
-                Avsluta <strong>inte</strong> R2_PUBLIC_URL med <code>/</code>.
+            <div style="margin-top: var(--space-md); padding: var(--space-md); background: var(--color-warning); color: #000; border-radius: var(--radius-sm); font-size: 0.85rem;">
+                <strong>Viktigt:</strong> Varje rad ska ha formatet <code>NYCKEL=värde</code> (inget annat).
+                Inga mellanslag runt <code>=</code>. Inga kommentarer efter värdet. Inga citattecken.
             </div>
 
-            <div style="margin-top: var(--space-md); padding: var(--space-md); background: var(--color-accent-light); border-radius: var(--radius-sm);">
-                <strong style="color: var(--color-text-primary);">Var hittar jag värdena?</strong>
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-md); margin-top: var(--space-sm); font-size: 0.85rem;">
-                    <div>
-                        <strong>R2_ACCOUNT_ID</strong><br>
-                        Logga in på <a href="https://dash.cloudflare.com" target="_blank" style="color: var(--color-accent-text);">dash.cloudflare.com</a>.
-                        Account ID syns i höger sidebar under <strong>"Account details"</strong>,
-                        eller direkt i URL:en: <code>dash.cloudflare.com/<strong>a1b2c3d4...</strong></code>
-                    </div>
-                    <div>
-                        <strong>R2_PUBLIC_URL</strong><br>
-                        Gå till din bucket &rarr; <strong>Settings</strong> &rarr; <strong>Public Development URL</strong>.
-                        Kopiera hela URL:en som visas, t.ex. <code>https://pub-abc123def456.r2.dev</code>.
-                        <strong>Ingen</strong> avslutande <code>/</code>.
-                    </div>
-                </div>
+            <pre style="background: var(--color-bg-hover); padding: var(--space-md); border-radius: var(--radius-sm); font-size: 0.85rem; overflow-x: auto; line-height: 2.2; margin-top: var(--space-md);">R2_ACCOUNT_ID=<span style="color: var(--color-error); font-weight: 700; text-decoration: underline;">DITT-ACCOUNT-ID</span>
+R2_ACCESS_KEY_ID=<span style="color: var(--color-error); font-weight: 700; text-decoration: underline;">DIN-ACCESS-KEY</span>
+R2_SECRET_ACCESS_KEY=<span style="color: var(--color-error); font-weight: 700; text-decoration: underline;">DIN-SECRET-KEY</span>
+R2_BUCKET=thehub-photos
+R2_PUBLIC_URL=<span style="color: var(--color-error); font-weight: 700; text-decoration: underline;">DIN-R2DEV-URL</span></pre>
+
+            <p style="font-size: 0.85rem; margin-top: var(--space-md);">
+                De <span style="color: var(--color-error); font-weight: 700; text-decoration: underline;">röda understrukna</span> värdena ska ersättas.
+                <code>R2_BUCKET</code> är redan rätt om du döpte bucketen till <code>thehub-photos</code>.
+            </p>
+
+            <!-- Tabell med var man hittar varje värde -->
+            <div class="table-responsive" style="margin-top: var(--space-md);">
+                <table class="table" style="font-size: 0.8rem;">
+                    <thead>
+                        <tr>
+                            <th style="width: 30%;">Variabel</th>
+                            <th>Var hittar jag värdet?</th>
+                            <th style="width: 35%;">Exempel</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        <tr>
+                            <td><code>R2_ACCOUNT_ID</code></td>
+                            <td>
+                                <a href="https://dash.cloudflare.com" target="_blank" style="color: var(--color-accent-text);">dash.cloudflare.com</a>
+                                &rarr; URL:en i webbläsaren: <code>dash.cloudflare.com/<strong>xxxxxxx</strong></code><br>
+                                Eller: höger sidebar &rarr; "Account details"
+                            </td>
+                            <td><code>3dacfab04fdcdc34e817dacbb77be0f4</code></td>
+                        </tr>
+                        <tr>
+                            <td><code>R2_ACCESS_KEY_ID</code></td>
+                            <td>Visas efter att du skapat API-token i steg 4</td>
+                            <td><code>a1b2c3d4e5f6g7h8...</code></td>
+                        </tr>
+                        <tr>
+                            <td><code>R2_SECRET_ACCESS_KEY</code></td>
+                            <td>Visas <strong>en enda gång</strong> efter steg 4 - kopiera direkt!</td>
+                            <td><code>aBcDeFgHiJkLmNoPqRsT...</code></td>
+                        </tr>
+                        <tr>
+                            <td><code>R2_BUCKET</code></td>
+                            <td>Namnet du gav bucketen i steg 2</td>
+                            <td><code>thehub-photos</code></td>
+                        </tr>
+                        <tr>
+                            <td><code>R2_PUBLIC_URL</code></td>
+                            <td>Bucket &rarr; Settings &rarr; Public Development URL (från steg 3).
+                                <strong>Ingen</strong> avslutande <code>/</code>.</td>
+                            <td><code>https://pub-abc123def456.r2.dev</code></td>
+                        </tr>
+                    </tbody>
+                </table>
             </div>
         </div>
 
