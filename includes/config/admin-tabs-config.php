@@ -284,13 +284,6 @@ $ADMIN_TABS = [
                 'pages' => ['media.php']
             ],
             [
-                'id' => 'event-albums',
-                'label' => 'Fotoalbum',
-                'icon' => 'camera',
-                'url' => '/admin/event-albums.php',
-                'pages' => ['event-albums.php']
-            ],
-            [
                 'id' => 'sponsors',
                 'label' => 'Sponsorer',
                 'icon' => 'heart-handshake',

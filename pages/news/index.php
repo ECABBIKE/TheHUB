@@ -121,56 +121,50 @@ $currentUser = function_exists('hub_current_user') ? hub_current_user() : null;
         <i data-lucide="newspaper" class="page-icon"></i>
         <?= $pageTitle ?>
     </h1>
-    <p class="page-subtitle">Race reports, foton och videos fran communityn</p>
+    <p class="page-subtitle">Race reports, foton och videos från communityn</p>
 </div>
 
 <!-- Global Sponsor: Header Banner -->
 <?= render_global_sponsors('news', 'header_banner', '') ?>
 
-<!-- Filter Bar -->
-<div class="news-filter-bar">
-    <div class="news-filter-scroll">
-        <a href="/news" class="news-filter-chip <?= !$filterTag && !$filterType && !$filterDiscipline ? 'active' : '' ?>">
-            <i data-lucide="layers"></i>
-            Alla
-        </a>
-
-        <span class="news-filter-divider"></span>
-
-        <?php foreach ($disciplines as $slug => $disc): ?>
-        <a href="/news?discipline=<?= $slug ?>" class="news-filter-chip <?= $filterDiscipline === $slug ? 'active' : '' ?>" style="--chip-color: <?= $disc['color'] ?>">
-            <?= htmlspecialchars($disc['name']) ?>
-        </a>
-        <?php endforeach; ?>
-
-        <span class="news-filter-divider"></span>
-
-        <a href="/news?type=photo_gallery" class="news-filter-chip <?= $filterType === 'photo_gallery' ? 'active' : '' ?>">
-            <i data-lucide="camera"></i>
-            Foton
-        </a>
-        <a href="/news?type=video" class="news-filter-chip <?= $filterType === 'video' ? 'active' : '' ?>">
-            <i data-lucide="play"></i>
-            Videos
-        </a>
+<!-- Filter Bar (standard component) -->
+<form method="GET" action="/news" class="filter-bar">
+    <div class="filter-select-wrapper">
+        <label class="filter-label">Disciplin</label>
+        <select name="discipline" class="filter-select" onchange="this.form.submit()">
+            <option value="">Alla discipliner</option>
+            <?php foreach ($disciplines as $slug => $disc): ?>
+            <option value="<?= $slug ?>" <?= $filterDiscipline === $slug ? 'selected' : '' ?>><?= htmlspecialchars($disc['name']) ?></option>
+            <?php endforeach; ?>
+        </select>
     </div>
-
-    <div class="news-filter-actions">
-        <div class="news-search">
-            <form action="/news" method="GET" class="news-search-form">
-                <input type="text" name="q" value="<?= htmlspecialchars($searchQuery) ?>" placeholder="Sok..." class="news-search-input">
-                <button type="submit" class="news-search-btn">
-                    <i data-lucide="search"></i>
-                </button>
-            </form>
-        </div>
-        <select class="news-sort-select" onchange="location.href='/news?sort='+this.value">
+    <div class="filter-select-wrapper">
+        <label class="filter-label">Typ</label>
+        <select name="type" class="filter-select" onchange="this.form.submit()">
+            <option value="">Alla typer</option>
+            <option value="photo_gallery" <?= $filterType === 'photo_gallery' ? 'selected' : '' ?>>Foton</option>
+            <option value="video" <?= $filterType === 'video' ? 'selected' : '' ?>>Videos</option>
+        </select>
+    </div>
+    <div class="filter-select-wrapper">
+        <label class="filter-label">Sortera</label>
+        <select name="sort" class="filter-select" onchange="this.form.submit()">
             <option value="recent" <?= $sortBy === 'recent' ? 'selected' : '' ?>>Senaste</option>
-            <option value="popular" <?= $sortBy === 'popular' ? 'selected' : '' ?>>Mest lasta</option>
+            <option value="popular" <?= $sortBy === 'popular' ? 'selected' : '' ?>>Mest lästa</option>
             <option value="liked" <?= $sortBy === 'liked' ? 'selected' : '' ?>>Mest gillade</option>
         </select>
     </div>
-</div>
+    <div class="filter-search-wrapper">
+        <label class="filter-label">Sök</label>
+        <input type="text" name="q" class="filter-input" placeholder="Sök nyheter..." value="<?= htmlspecialchars($searchQuery) ?>">
+    </div>
+    <button type="submit" class="btn btn-primary filter-btn">
+        <i data-lucide="search" style="width: 16px; height: 16px;"></i> Sök
+    </button>
+    <?php if ($filterTag || $filterType || $filterDiscipline || $searchQuery || $sortBy !== 'recent'): ?>
+    <a href="/news" class="btn btn-ghost filter-btn">Rensa</a>
+    <?php endif; ?>
+</form>
 
 <div class="news-layout">
     <!-- Main Content -->
@@ -185,7 +179,7 @@ $currentUser = function_exists('hub_current_user') ? hub_current_user() : null;
                 <?php if ($currentUser): ?>
                 <a href="/profile/race-reports" class="btn btn-primary mt-md">
                     <i data-lucide="plus"></i>
-                    Skriv den forsta!
+                    Skriv den första!
                 </a>
                 <?php endif; ?>
             </div>
@@ -322,7 +316,7 @@ $currentUser = function_exists('hub_current_user') ? hub_current_user() : null;
                 <?php if ($page > 1): ?>
                 <a href="?page=<?= $page - 1 ?><?= $filterTag ? '&tag=' . urlencode($filterTag) : '' ?><?= $sortBy !== 'recent' ? '&sort=' . $sortBy : '' ?>" class="news-pagination-btn">
                     <i data-lucide="chevron-left"></i>
-                    Foregaende
+                    Föregående
                 </a>
                 <?php endif; ?>
 
@@ -332,7 +326,7 @@ $currentUser = function_exists('hub_current_user') ? hub_current_user() : null;
 
                 <?php if ($page < $totalPages): ?>
                 <a href="?page=<?= $page + 1 ?><?= $filterTag ? '&tag=' . urlencode($filterTag) : '' ?><?= $sortBy !== 'recent' ? '&sort=' . $sortBy : '' ?>" class="news-pagination-btn">
-                    Nasta
+                    Nästa
                     <i data-lucide="chevron-right"></i>
                 </a>
                 <?php endif; ?>
@@ -360,7 +354,7 @@ $currentUser = function_exists('hub_current_user') ? hub_current_user() : null;
                 <i data-lucide="pen-tool"></i>
             </div>
             <h3>Dela din story</h3>
-            <p>Skriv om din senaste tavling och dela med communityn!</p>
+            <p>Skriv om din senaste tävling och dela med communityn!</p>
             <a href="/profile/race-reports" class="btn btn-primary btn-block">
                 <i data-lucide="plus"></i>
                 Skriv Race Report
@@ -372,7 +366,7 @@ $currentUser = function_exists('hub_current_user') ? hub_current_user() : null;
                 <i data-lucide="user-plus"></i>
             </div>
             <h3>Bli en del av communityn</h3>
-            <p>Logga in for att skriva egna race reports och interagera med andra.</p>
+            <p>Logga in för att skriva egna race reports och interagera med andra.</p>
             <a href="/login?redirect=/profile/race-reports" class="btn btn-primary btn-block">
                 <i data-lucide="log-in"></i>
                 Logga in
@@ -388,13 +382,13 @@ $currentUser = function_exists('hub_current_user') ? hub_current_user() : null;
         <div class="news-sidebar-section">
             <h3 class="news-sidebar-title">
                 <i data-lucide="hash"></i>
-                Populara taggar
+                Populära taggar
             </h3>
             <div class="news-tags-cloud">
                 <?php foreach (array_slice($allTags, 0, 12) as $tag): ?>
                 <a href="/news?tag=<?= htmlspecialchars($tag['slug']) ?>" class="news-tag-link <?= $filterTag === $tag['slug'] ? 'active' : '' ?>">
                     #<?= htmlspecialchars($tag['name']) ?>
-                    <span class="news-tag-count"><?= $tag['usage_count'] ?></span>
+                    <span class="news-tag-count"><?= $tag['actual_count'] ?></span>
                 </a>
                 <?php endforeach; ?>
             </div>
@@ -409,7 +403,7 @@ $currentUser = function_exists('hub_current_user') ? hub_current_user() : null;
         <div class="news-sidebar-section">
             <h3 class="news-sidebar-title">
                 <i data-lucide="flag"></i>
-                Senaste tavlingar
+                Senaste tävlingar
             </h3>
             <ul class="news-event-list">
                 <?php foreach ($recentEvents as $event): ?>
@@ -418,7 +412,7 @@ $currentUser = function_exists('hub_current_user') ? hub_current_user() : null;
                         <span class="news-event-name"><?= htmlspecialchars($event['name']) ?></span>
                         <span class="news-event-meta">
                             <span class="news-event-date"><?= date('j M', strtotime($event['date'])) ?></span>
-                            <span class="news-event-count"><?= $event['report_count'] ?> inlagg</span>
+                            <span class="news-event-count"><?= $event['report_count'] ?> inlägg</span>
                         </span>
                     </a>
                 </li>
@@ -496,7 +490,7 @@ document.getElementById('loadMoreBtn')?.addEventListener('click', async function
     } catch (e) {
         console.error('Load more failed:', e);
         btn.disabled = false;
-        btn.innerHTML = '<i data-lucide="alert-circle"></i> Forsok igen';
+        btn.innerHTML = '<i data-lucide="alert-circle"></i> Försök igen';
     }
 });
 </script>

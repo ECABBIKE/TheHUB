@@ -501,9 +501,14 @@ class RaceReportManager {
      */
     public function getAllTags() {
         try {
+            // Only return tags that are actually used in published reports
             $stmt = $this->pdo->query("
-                SELECT * FROM race_report_tags
-                ORDER BY usage_count DESC, name ASC
+                SELECT t.*, COUNT(tr.report_id) as actual_count
+                FROM race_report_tags t
+                INNER JOIN race_report_tag_relations tr ON t.id = tr.tag_id
+                INNER JOIN race_reports rr ON tr.report_id = rr.id AND rr.status = 'published'
+                GROUP BY t.id
+                ORDER BY actual_count DESC, t.name ASC
             ");
             return $stmt->fetchAll(PDO::FETCH_ASSOC);
         } catch (PDOException $e) {

@@ -78,6 +78,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $content = trim($_POST['content'] ?? '');
         $eventId = !empty($_POST['event_id']) ? (int)$_POST['event_id'] : null;
         $featuredImage = trim($_POST['featured_image'] ?? '');
+        $youtubeUrl = trim($_POST['youtube_url'] ?? '');
+        $instagramUrl = trim($_POST['instagram_url'] ?? '');
 
         $report = $reportManager->getReport($reportId, false);
 
@@ -109,7 +111,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 'title' => $title,
                 'content' => $content,
                 'event_id' => $eventId,
-                'featured_image' => $featuredImage ?: null
+                'featured_image' => $featuredImage ?: null,
+                'youtube_url' => $youtubeUrl ?: null,
+                'instagram_url' => $instagramUrl ?: null
             ];
 
             // Rider posts go back to draft after editing, admin posts stay published
@@ -203,16 +207,25 @@ if ($isAdminUser) {
 }
 $myReports = $reportManager->listReports($reportFilters);
 
-// Get rider's recent events for dropdown
+// Get rider's recent events for dropdown (events they participated in + all recent events)
 $recentEvents = [];
 try {
     $stmt = $pdo->prepare("
-        SELECT DISTINCT e.id, e.name, e.date
+        (SELECT DISTINCT e.id, e.name, e.date
         FROM events e
         INNER JOIN results r ON e.id = r.event_id
         WHERE r.cyclist_id = ?
         ORDER BY e.date DESC
-        LIMIT 20
+        LIMIT 20)
+        UNION
+        (SELECT e.id, e.name, e.date
+        FROM events e
+        WHERE e.date >= DATE_SUB(CURDATE(), INTERVAL 6 MONTH)
+        AND e.active = 1
+        ORDER BY e.date DESC
+        LIMIT 20)
+        ORDER BY date DESC
+        LIMIT 30
     ");
     $stmt->execute([$currentUser['id']]);
     $recentEvents = $stmt->fetchAll(PDO::FETCH_ASSOC);
@@ -251,6 +264,8 @@ foreach ($myReports['reports'] as $r) {
 }
 ?>
 
+<link rel="stylesheet" href="/assets/css/pages/race-reports.css?v=<?= filemtime(HUB_ROOT . '/assets/css/pages/race-reports.css') ?>">
+
 <?php if ($message): ?>
     <div class="alert alert-success mb-lg">
         <i data-lucide="check-circle"></i>
@@ -268,12 +283,12 @@ foreach ($myReports['reports'] as $r) {
 <!-- Quick Tips Bar -->
 <div class="rr-tips-bar">
     <div class="rr-tip">
-        <i data-lucide="instagram"></i>
-        <span>Dela Instagram-inlägg</span>
+        <i data-lucide="camera"></i>
+        <span>Ladda upp omslagsbild</span>
     </div>
     <div class="rr-tip">
         <i data-lucide="youtube"></i>
-        <span>Dela YouTube-video</span>
+        <span>Dela video eller inlägg</span>
     </div>
     <div class="rr-tip">
         <i data-lucide="file-text"></i>
@@ -299,12 +314,12 @@ foreach ($myReports['reports'] as $r) {
         <?php if ($editReport): ?>
         <a href="/profile/race-reports" class="btn btn-ghost btn-sm">
             <i data-lucide="x"></i>
-            Avbryt redigering
+            Avbryt
         </a>
         <?php endif; ?>
     </div>
 
-    <form method="POST" class="card-body rr-form">
+    <form method="POST" class="card-body rr-form" id="rr-form">
         <?php if ($editReport): ?>
             <input type="hidden" name="action" value="update_report">
             <input type="hidden" name="report_id" value="<?= $editReport['id'] ?>">
@@ -331,9 +346,9 @@ foreach ($myReports['reports'] as $r) {
 
                 <div class="form-row">
                     <div class="form-group">
-                        <label class="form-label">Kopplat event</label>
-                        <select name="event_id" class="form-select">
-                            <option value="">-- Välj event (valfritt) --</option>
+                        <label class="filter-label">Kopplat event</label>
+                        <select name="event_id" class="filter-select">
+                            <option value="">Välj event (valfritt)</option>
                             <?php foreach ($recentEvents as $event): ?>
                                 <option value="<?= $event['id'] ?>"
                                         <?= ($editReport && $editReport['event_id'] == $event['id']) ? 'selected' : '' ?>>
@@ -358,10 +373,41 @@ foreach ($myReports['reports'] as $r) {
             </div>
         </div>
 
-        <!-- Section 2: Content -->
+        <!-- Section 2: Cover Image -->
         <div class="rr-section">
             <div class="rr-section-header">
                 <span class="rr-section-number">2</span>
+                <h3>Omslagsbild <span class="rr-optional">(valfritt)</span></h3>
+            </div>
+            <div class="rr-section-content">
+                <input type="hidden" name="featured_image" id="featured_image_input" value="<?= htmlspecialchars($editReport['featured_image'] ?? '') ?>">
+                <input type="file" id="cover_file_input" accept="image/*" style="display: none;">
+
+                <div class="rr-cover-upload <?= !empty($editReport['featured_image']) ? 'has-image' : '' ?>" id="cover_upload_area" onclick="document.getElementById('cover_file_input').click()">
+                    <?php if (!empty($editReport['featured_image'])): ?>
+                        <img src="<?= htmlspecialchars($editReport['featured_image']) ?>" alt="Omslagsbild" id="cover_preview_img">
+                        <div class="rr-cover-overlay">
+                            <i data-lucide="camera"></i>
+                            <span>Byt bild</span>
+                        </div>
+                        <button type="button" class="rr-cover-remove" id="cover_remove_btn" onclick="event.stopPropagation(); removeCoverImage()">
+                            <i data-lucide="x"></i>
+                        </button>
+                    <?php else: ?>
+                        <div class="rr-cover-placeholder" id="cover_placeholder">
+                            <i data-lucide="image-plus"></i>
+                            <span>Klicka för att ladda upp omslagsbild</span>
+                        </div>
+                    <?php endif; ?>
+                </div>
+                <small class="form-help">Rekommenderad storlek: 1200x675 px (16:9). Max 10 MB.</small>
+            </div>
+        </div>
+
+        <!-- Section 3: Content -->
+        <div class="rr-section">
+            <div class="rr-section-header">
+                <span class="rr-section-number">3</span>
                 <h3>Innehåll</h3>
             </div>
             <div class="rr-section-content">
@@ -370,81 +416,72 @@ foreach ($myReports['reports'] as $r) {
                     <textarea name="content"
                               class="form-textarea rr-content-textarea"
                               rows="10"
-                              placeholder="Berätta om din tävlingsupplevelse!
+                              data-format-toolbar
+                              placeholder="Berätta om din tävlingsupplevelse! Använd **fetstil** och *kursiv* för att formatera texten.
 
 Hur förberedde du dig?
 Hur gick det på tävlingen?
 Vilka utmaningar mötte du?
-Vad lärde du dig?
-
-Tipsa gärna andra åkare om banan eller arrangemanget."><?= htmlspecialchars($editReport['content'] ?? '') ?></textarea>
-                    <small class="form-help">Skriv fritt - ditt inlägg kan vara kort eller långt</small>
+Vad lärde du dig?"><?= htmlspecialchars($editReport['content'] ?? '') ?></textarea>
+                    <small class="form-help">Använd **fetstil** och *kursiv* för formatering</small>
                 </div>
             </div>
         </div>
 
-        <!-- Section 3: Media -->
+        <!-- Section 4: Link Media -->
         <div class="rr-section">
             <div class="rr-section-header">
-                <span class="rr-section-number">3</span>
-                <h3>Media <span class="rr-optional">(valfritt)</span></h3>
+                <span class="rr-section-number">4</span>
+                <h3>Länka media <span class="rr-optional">(valfritt)</span></h3>
             </div>
             <div class="rr-section-content">
-                <div class="rr-media-grid">
-                    <!-- YouTube -->
-                    <div class="rr-media-card">
-                        <div class="rr-media-icon rr-media-youtube">
-                            <i data-lucide="youtube"></i>
-                        </div>
-                        <div class="rr-media-content">
-                            <label class="form-label">YouTube-video</label>
-                            <input type="url"
-                                   name="youtube_url"
-                                   id="youtube_url"
-                                   class="form-input"
-                                   placeholder="https://www.youtube.com/watch?v=..."
-                                   value="<?= htmlspecialchars($editReport['youtube_url'] ?? '') ?>"
-                                   onchange="previewYoutube(this.value)">
-                        </div>
-                    </div>
+                <?php
+                $hasYoutube = !empty($editReport['youtube_url']);
+                $hasInstagram = !empty($editReport['instagram_url']);
+                $defaultMedia = $hasInstagram ? 'instagram' : 'youtube';
+                ?>
+                <div class="rr-media-toggle">
+                    <button type="button" class="rr-media-toggle-btn rr-toggle-youtube <?= $defaultMedia === 'youtube' ? 'active' : '' ?>" onclick="toggleMediaType('youtube')">
+                        <i data-lucide="youtube"></i>
+                        YouTube
+                    </button>
+                    <button type="button" class="rr-media-toggle-btn rr-toggle-instagram <?= $defaultMedia === 'instagram' ? 'active' : '' ?>" onclick="toggleMediaType('instagram')">
+                        <i data-lucide="instagram"></i>
+                        Instagram
+                    </button>
+                </div>
 
-                    <!-- Instagram -->
-                    <div class="rr-media-card">
-                        <div class="rr-media-icon rr-media-instagram">
-                            <i data-lucide="instagram"></i>
-                        </div>
-                        <div class="rr-media-content">
-                            <label class="form-label">Instagram-inlägg</label>
-                            <input type="url"
-                                   name="instagram_url"
-                                   id="instagram_url"
-                                   class="form-input"
-                                   placeholder="https://www.instagram.com/p/..."
-                                   value="<?= htmlspecialchars($editReport['instagram_url'] ?? '') ?>">
-                        </div>
+                <!-- YouTube input -->
+                <div class="rr-media-input-area <?= $defaultMedia === 'youtube' ? 'active' : '' ?>" id="media-youtube">
+                    <div class="form-group">
+                        <label class="form-label">YouTube-länk</label>
+                        <input type="url"
+                               name="youtube_url"
+                               id="youtube_url"
+                               class="form-input"
+                               placeholder="https://www.youtube.com/watch?v=..."
+                               value="<?= htmlspecialchars($editReport['youtube_url'] ?? '') ?>"
+                               onchange="previewYoutube(this.value)">
+                        <small class="form-help">Klistra in länken till din YouTube-video</small>
                     </div>
-
-                    <!-- Featured Image -->
-                    <div class="rr-media-card">
-                        <div class="rr-media-icon rr-media-image">
-                            <i data-lucide="image"></i>
-                        </div>
-                        <div class="rr-media-content">
-                            <label class="form-label">Omslagsbild</label>
-                            <input type="url"
-                                   name="featured_image"
-                                   class="form-input"
-                                   placeholder="https://imgur.com/..."
-                                   value="<?= htmlspecialchars($editReport['featured_image'] ?? '') ?>">
-                            <small class="form-help">Länk till bild (Imgur, Google Photos etc)</small>
-                        </div>
+                    <div id="youtube-preview" class="rr-preview" style="display: none;">
+                        <div class="rr-preview-label"><i data-lucide="eye"></i> Förhandsgranskning</div>
+                        <div id="youtube-embed"></div>
                     </div>
                 </div>
 
-                <!-- YouTube Preview -->
-                <div id="youtube-preview" class="rr-preview" style="display: none;">
-                    <div class="rr-preview-label"><i data-lucide="eye"></i> Förhandsgranskning</div>
-                    <div id="youtube-embed"></div>
+                <!-- Instagram input -->
+                <div class="rr-media-input-area <?= $defaultMedia === 'instagram' ? 'active' : '' ?>" id="media-instagram">
+                    <div class="form-group">
+                        <label class="form-label">Instagram-länk</label>
+                        <input type="url"
+                               name="instagram_url"
+                               id="instagram_url"
+                               class="form-input"
+                               placeholder="https://www.instagram.com/p/..."
+                               value="<?= htmlspecialchars($editReport['instagram_url'] ?? '') ?>">
+                        <small class="form-help">Klistra in länken till ditt Instagram-inlägg</small>
+                    </div>
                 </div>
             </div>
         </div>
@@ -551,613 +588,110 @@ Tipsa gärna andra åkare om banan eller arrangemanget."><?= htmlspecialchars($e
 </div>
 <?php endif; ?>
 
-<style>
-/* Race Reports Page - Premium Desktop & Mobile Design */
-
-/* Container for max-width on desktop */
-.rr-container {
-    max-width: 900px;
-    margin: 0 auto;
-}
-
-/* Tips Bar - Compact horizontal strip */
-.rr-tips-bar {
-    display: flex;
-    justify-content: center;
-    flex-wrap: wrap;
-    gap: var(--space-md) var(--space-xl);
-    padding: var(--space-md) var(--space-lg);
-    background: var(--color-bg-card);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-lg);
-    margin-bottom: var(--space-xl);
-}
-
-.rr-tip {
-    display: flex;
-    align-items: center;
-    gap: var(--space-xs);
-    font-size: 0.8125rem;
-    color: var(--color-text-secondary);
-    white-space: nowrap;
-}
-
-.rr-tip i {
-    width: 16px;
-    height: 16px;
-    color: var(--color-accent);
-    flex-shrink: 0;
-}
-
-/* Form Card - Clean white card */
-.rr-form-card {
-    margin-bottom: var(--space-xl);
-    border-radius: var(--radius-lg);
-    overflow: hidden;
-}
-
-.rr-form-card .card-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: var(--space-lg) var(--space-xl);
-    background: var(--color-bg-surface);
-    border-bottom: 1px solid var(--color-border);
-}
-
-.rr-form-card .card-header h2 {
-    display: flex;
-    align-items: center;
-    gap: var(--space-sm);
-    margin: 0;
-    font-size: 1.25rem;
-}
-
-.rr-form-card .card-body {
-    padding: var(--space-xl);
-}
-
-/* Sections - Clear visual separation */
-.rr-section {
-    margin-bottom: var(--space-xl);
-    padding-bottom: var(--space-xl);
-    border-bottom: 1px solid var(--color-border);
-}
-
-.rr-section:last-of-type {
-    border-bottom: none;
-    margin-bottom: 0;
-    padding-bottom: 0;
-}
-
-.rr-section-header {
-    display: flex;
-    align-items: center;
-    gap: var(--space-md);
-    margin-bottom: var(--space-lg);
-}
-
-.rr-section-number {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    width: 28px;
-    height: 28px;
-    background: var(--color-accent);
-    color: white;
-    font-weight: 700;
-    font-size: 0.8125rem;
-    border-radius: 50%;
-    flex-shrink: 0;
-}
-
-.rr-section-header h3 {
-    margin: 0;
-    font-size: 1rem;
-    font-weight: 600;
-    color: var(--color-text-primary);
-}
-
-.rr-optional {
-    font-weight: 400;
-    font-size: 0.8125rem;
-    color: var(--color-text-muted);
-    margin-left: var(--space-xs);
-}
-
-.rr-section-content {
-    padding-left: calc(28px + var(--space-md));
-}
-
-/* Form Elements - Clean inputs */
-.form-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: var(--space-lg);
-}
-
-.form-input-lg {
-    font-size: 1rem;
-    padding: var(--space-sm) var(--space-md);
-    border-radius: var(--radius-md);
-}
-
-.rr-content-textarea {
-    font-size: 0.9375rem;
-    line-height: 1.7;
-    min-height: 200px;
-    resize: vertical;
-    border-radius: var(--radius-md);
-}
-
-.form-help {
-    display: block;
-    margin-top: var(--space-xs);
-    font-size: 0.75rem;
-    color: var(--color-text-muted);
-}
-
-/* Media Grid - 3-column on desktop, stacked on mobile */
-.rr-media-grid {
-    display: grid;
-    grid-template-columns: repeat(3, 1fr);
-    gap: var(--space-md);
-}
-
-.rr-media-card {
-    display: flex;
-    flex-direction: column;
-    gap: var(--space-sm);
-    padding: var(--space-md);
-    background: var(--color-bg-hover);
-    border-radius: var(--radius-md);
-    border: 1px solid transparent;
-    transition: border-color 0.2s ease;
-}
-
-.rr-media-card:focus-within {
-    border-color: var(--color-accent);
-}
-
-.rr-media-card-header {
-    display: flex;
-    align-items: center;
-    gap: var(--space-sm);
-}
-
-.rr-media-icon {
-    width: 36px;
-    height: 36px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    border-radius: var(--radius-sm);
-    flex-shrink: 0;
-}
-
-.rr-media-icon i {
-    width: 18px;
-    height: 18px;
-}
-
-.rr-media-youtube {
-    background: rgba(255, 0, 0, 0.1);
-    color: #ff0000;
-}
-
-.rr-media-instagram {
-    background: linear-gradient(135deg, rgba(131, 58, 180, 0.15), rgba(253, 29, 29, 0.15));
-    color: #c13584;
-}
-
-.rr-media-image {
-    background: var(--color-accent-light);
-    color: var(--color-accent);
-}
-
-.rr-media-content {
-    flex: 1;
-    min-width: 0;
-}
-
-.rr-media-content .form-label {
-    font-size: 0.8125rem;
-    font-weight: 500;
-    margin-bottom: 0;
-    color: var(--color-text-primary);
-}
-
-.rr-media-content .form-input {
-    font-size: 0.8125rem;
-    padding: var(--space-xs) var(--space-sm);
-    margin-top: var(--space-xs);
-}
-
-/* Preview */
-.rr-preview {
-    margin-top: var(--space-lg);
-    padding: var(--space-md);
-    background: var(--color-bg-surface);
-    border-radius: var(--radius-md);
-    border: 1px solid var(--color-border);
-}
-
-.rr-preview-label {
-    display: flex;
-    align-items: center;
-    gap: var(--space-xs);
-    font-size: 0.6875rem;
-    text-transform: uppercase;
-    letter-spacing: 0.05em;
-    color: var(--color-text-muted);
-    margin-bottom: var(--space-sm);
-}
-
-.rr-preview-label i {
-    width: 12px;
-    height: 12px;
-}
-
-/* Submit Section */
-.rr-submit-section {
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: var(--space-md);
-    padding-top: var(--space-xl);
-    border-top: 1px solid var(--color-border);
-    margin-top: var(--space-xl);
-}
-
-.btn-xl {
-    padding: var(--space-md) var(--space-2xl);
-    font-size: 1rem;
-    font-weight: 600;
-    border-radius: var(--radius-md);
-}
-
-.rr-submit-notice {
-    display: flex;
-    align-items: center;
-    gap: var(--space-sm);
-    font-size: 0.8125rem;
-    color: var(--color-text-muted);
-    margin: 0;
-}
-
-.rr-submit-notice i {
-    width: 16px;
-    height: 16px;
-    color: var(--color-accent);
-}
-
-/* Reports List */
-.rr-list-card .card-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-}
-
-.rr-header-stats {
-    display: flex;
-    gap: var(--space-md);
-}
-
-.rr-mini-stat {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2xs);
-    font-size: 0.8125rem;
-    color: var(--color-text-muted);
-}
-
-.rr-mini-stat i {
-    width: 14px;
-    height: 14px;
-}
-
-.rr-list {
-    display: flex;
-    flex-direction: column;
-}
-
-.rr-item {
-    display: flex;
-    align-items: center;
-    gap: var(--space-md);
-    padding: var(--space-md) var(--space-lg);
-    border-bottom: 1px solid var(--color-border);
-    transition: background 0.15s ease;
-}
-
-.rr-item:last-child {
-    border-bottom: none;
-}
-
-.rr-item:hover {
-    background: var(--color-bg-hover);
-}
-
-.rr-item-thumb {
-    width: 80px;
-    height: 56px;
-    flex-shrink: 0;
-    border-radius: var(--radius-sm);
-    overflow: hidden;
-    position: relative;
-    background: var(--color-bg-surface);
-}
-
-.rr-item-thumb img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-
-.rr-item-play {
-    position: absolute;
-    inset: 0;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: rgba(0,0,0,0.4);
-    color: white;
-}
-
-.rr-item-play i {
-    width: 20px;
-    height: 20px;
-}
-
-.rr-item-placeholder {
-    width: 100%;
-    height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--color-text-muted);
-}
-
-.rr-item-placeholder i {
-    width: 24px;
-    height: 24px;
-}
-
-.rr-item-body {
-    flex: 1;
-    min-width: 0;
-}
-
-.rr-item-top {
-    display: flex;
-    align-items: center;
-    gap: var(--space-sm);
-    margin-bottom: var(--space-2xs);
-}
-
-.rr-item-title {
-    margin: 0;
-    font-size: 1rem;
-    font-weight: 600;
-    color: var(--color-text-primary);
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-}
-
-.rr-item-status {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2xs);
-    font-size: 0.6875rem;
-    padding: 2px 8px;
-    border-radius: var(--radius-full);
-    white-space: nowrap;
-    flex-shrink: 0;
-}
-
-.rr-item-status i {
-    width: 10px;
-    height: 10px;
-}
-
-.rr-status-published .rr-item-status {
-    background: rgba(16, 185, 129, 0.15);
-    color: var(--color-success);
-}
-
-.rr-status-draft .rr-item-status {
-    background: rgba(251, 191, 36, 0.15);
-    color: var(--color-warning);
-}
-
-.rr-status-archived .rr-item-status {
-    background: rgba(107, 114, 128, 0.15);
-    color: var(--color-text-muted);
-}
-
-.rr-item-meta {
-    display: flex;
-    gap: var(--space-md);
-    font-size: 0.75rem;
-    color: var(--color-text-muted);
-}
-
-.rr-item-meta span {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2xs);
-}
-
-.rr-item-meta i {
-    width: 12px;
-    height: 12px;
-}
-
-.rr-item-actions {
-    display: flex;
-    gap: var(--space-xs);
-    flex-shrink: 0;
-}
-
-/* Empty State */
-.rr-empty-state {
-    text-align: center;
-    padding: var(--space-3xl) var(--space-lg);
-    background: var(--color-bg-card);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-lg);
-}
-
-.rr-empty-icon {
-    width: 80px;
-    height: 80px;
-    margin: 0 auto var(--space-lg);
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: var(--color-bg-hover);
-    border-radius: 50%;
-    color: var(--color-text-muted);
-}
-
-.rr-empty-icon i {
-    width: 36px;
-    height: 36px;
-}
-
-.rr-empty-state h3 {
-    font-size: 1.25rem;
-    margin: 0 0 var(--space-sm);
-    color: var(--color-text-primary);
-}
-
-.rr-empty-state p {
-    color: var(--color-text-secondary);
-    max-width: 400px;
-    margin: 0 auto;
-}
-
-/* YouTube Preview Card */
-.rr-youtube-card {
-    display: block;
-    text-decoration: none;
-    max-width: 480px;
-    margin: 0 auto;
-    border-radius: var(--radius-md);
-    overflow: hidden;
-    background: var(--color-bg-surface);
-    border: 1px solid var(--color-border);
-    transition: all 0.2s ease;
-}
-
-.rr-youtube-card:hover {
-    border-color: var(--color-accent);
-    transform: translateY(-2px);
-}
-
-.rr-youtube-thumbnail {
-    position: relative;
-    width: 100%;
-    aspect-ratio: 16 / 9;
-    background: #000;
-}
-
-.rr-youtube-thumbnail img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-
-.rr-youtube-play {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    opacity: 0.9;
-}
-
-.rr-youtube-info {
-    padding: var(--space-md);
-    text-align: center;
-    font-size: 0.875rem;
-    color: var(--color-text-secondary);
-}
-
-/* Responsive */
-@media (max-width: 1024px) {
-    .rr-media-grid {
-        grid-template-columns: 1fr;
-    }
-}
-
-@media (max-width: 767px) {
-    .rr-tips-bar {
-        display: grid;
-        grid-template-columns: repeat(3, 1fr);
-        gap: var(--space-sm);
-        text-align: center;
-        margin-left: calc(-1 * var(--space-md));
-        margin-right: calc(-1 * var(--space-md));
-        border-radius: 0;
-        border-left: none;
-        border-right: none;
-    }
-
-    .rr-tip {
-        flex-direction: column;
-        gap: var(--space-2xs);
-        font-size: 0.6875rem;
-    }
-
-    .rr-section-content {
-        padding-left: 0;
-    }
-
-    .form-row {
-        grid-template-columns: 1fr;
-    }
-
-    .rr-item {
-        flex-wrap: wrap;
-        padding: var(--space-md);
-    }
-
-    .rr-item-thumb {
-        width: 60px;
-        height: 42px;
-    }
-
-    .rr-item-body {
-        flex: 1;
-        min-width: calc(100% - 80px - var(--space-md));
-    }
-
-    .rr-item-actions {
-        width: 100%;
-        justify-content: flex-end;
-        margin-top: var(--space-sm);
-        padding-top: var(--space-sm);
-        border-top: 1px solid var(--color-border);
-    }
-
-    .rr-header-stats {
-        display: none;
-    }
-}
-
-@media (max-width: 480px) {
-    .rr-tips-bar {
-        grid-template-columns: repeat(2, 1fr);
-    }
-
-    .rr-tips-bar .rr-tip:last-child {
-        grid-column: span 2;
-    }
-}
-</style>
+<?php include HUB_ROOT . '/admin/components/format-toolbar.php'; ?>
 
 <script>
+// Media type toggle (YouTube OR Instagram)
+function toggleMediaType(type) {
+    // Toggle buttons
+    document.querySelectorAll('.rr-media-toggle-btn').forEach(b => b.classList.remove('active'));
+    document.querySelector('.rr-toggle-' + type).classList.add('active');
+
+    // Toggle input areas
+    document.querySelectorAll('.rr-media-input-area').forEach(a => a.classList.remove('active'));
+    document.getElementById('media-' + type).classList.add('active');
+
+    // Clear the hidden one so only one gets submitted
+    if (type === 'youtube') {
+        document.getElementById('instagram_url').value = '';
+    } else {
+        document.getElementById('youtube_url').value = '';
+        // Clear YouTube preview
+        const preview = document.getElementById('youtube-preview');
+        if (preview) preview.style.display = 'none';
+    }
+}
+
+// Cover image upload
+document.getElementById('cover_file_input').addEventListener('change', async function() {
+    const file = this.files[0];
+    if (!file) return;
+
+    // Validate
+    if (!file.type.startsWith('image/')) {
+        alert('Välj en bildfil (JPG, PNG, etc.)');
+        return;
+    }
+    if (file.size > 10 * 1024 * 1024) {
+        alert('Bilden är för stor. Max 10 MB.');
+        return;
+    }
+
+    const area = document.getElementById('cover_upload_area');
+
+    // Show loading
+    area.innerHTML = '<div class="rr-cover-loading"><i data-lucide="loader-2" class="spin" style="width:32px;height:32px;"></i></div>';
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+
+    try {
+        const formData = new FormData();
+        formData.append('file', file);
+        formData.append('folder', 'general');
+
+        const response = await fetch('/api/media.php?action=upload', {
+            method: 'POST',
+            body: formData
+        });
+        const result = await response.json();
+
+        if (result.success && result.url) {
+            const imageUrl = result.url.startsWith('/') ? result.url : '/' + result.url;
+            document.getElementById('featured_image_input').value = imageUrl;
+
+            area.classList.add('has-image');
+            area.innerHTML = `
+                <img src="${imageUrl}" alt="Omslagsbild" id="cover_preview_img">
+                <div class="rr-cover-overlay">
+                    <i data-lucide="camera"></i>
+                    <span>Byt bild</span>
+                </div>
+                <button type="button" class="rr-cover-remove" onclick="event.stopPropagation(); removeCoverImage()">
+                    <i data-lucide="x"></i>
+                </button>
+            `;
+        } else {
+            throw new Error(result.error || 'Uppladdning misslyckades');
+        }
+    } catch (err) {
+        // Restore placeholder
+        area.classList.remove('has-image');
+        area.innerHTML = `
+            <div class="rr-cover-placeholder" id="cover_placeholder">
+                <i data-lucide="image-plus"></i>
+                <span>Klicka för att ladda upp omslagsbild</span>
+            </div>
+        `;
+        alert('Kunde inte ladda upp bilden: ' + err.message);
+    }
+
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+    // Reset file input
+    this.value = '';
+});
+
+function removeCoverImage() {
+    document.getElementById('featured_image_input').value = '';
+    const area = document.getElementById('cover_upload_area');
+    area.classList.remove('has-image');
+    area.innerHTML = `
+        <div class="rr-cover-placeholder" id="cover_placeholder">
+            <i data-lucide="image-plus"></i>
+            <span>Klicka för att ladda upp omslagsbild</span>
+        </div>
+    `;
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+}
+
 // YouTube preview
 function previewYoutube(url) {
     const previewContainer = document.getElementById('youtube-preview');
@@ -1169,7 +703,6 @@ function previewYoutube(url) {
         return;
     }
 
-    // Extract video ID from URL
     let videoId = null;
     const patterns = [
         /youtube\.com\/watch\?v=([^&\s]+)/,
@@ -1209,13 +742,10 @@ function previewYoutube(url) {
             <div class="rr-youtube-info">Klicka för att öppna på YouTube</div>
         </a>
     `;
-
-    if (typeof lucide !== 'undefined') {
-        lucide.createIcons();
-    }
+    if (typeof lucide !== 'undefined') lucide.createIcons();
 }
 
-// Check existing YouTube URL on load
+// Init on load
 document.addEventListener('DOMContentLoaded', function() {
     const youtubeInput = document.getElementById('youtube_url');
     if (youtubeInput && youtubeInput.value) {
