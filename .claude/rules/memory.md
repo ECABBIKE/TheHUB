@@ -4,7 +4,35 @@
 
 ---
 
-## SENASTE FIXAR (2026-02-27, session 15)
+## SENASTE FIXAR (2026-02-27, session 16)
+
+### Nyhetssidan: Standardiserade filter + svenska tecken
+- **Filter-bar:** Ersatt custom `.news-filter-bar` med standard `.filter-bar` komponent (samma som databas/galleri)
+  - Dropdowns: Disciplin, Typ, Sortera + sökfält + Sök-knapp + Rensa-länk
+  - Auto-submit på dropdown-val via `onchange="this.form.submit()"`
+- **CSS cleanup:** Borttagen gammal CSS: `.news-filter-bar`, `.news-filter-chip`, `.news-filter-scroll`, `.news-search-*`, `.news-sort-select` (130+ rader)
+- **Svenska tecken:** Fixat "Skriv den forsta" → "första", "inlagg" → "inlägg", "Forsok igen" → "Försök igen"
+- **Taggar:** `getAllTags()` i RaceReportManager.php använder nu INNER JOIN mot publicerade reports - visar bara taggar med faktiska inlägg (inte seedade/oanvända)
+- **Filer:** `pages/news/index.php`, `assets/css/pages/news.css`, `includes/RaceReportManager.php`
+
+### Race Report Editor: Omslagsbild-uppladdning + formateringsverktyg + Instagram/YouTube-val
+- **Omslagsbild:** Ersatt URL-input med klickbar uppladdningsarea (16:9 ratio)
+  - Laddar upp till `/api/media.php?action=upload` (samma som fotografer/profilbilder)
+  - Visar förhandsgranskning, hover-overlay "Byt bild", X-knapp för att ta bort
+  - Loading spinner under uppladdning, max 10 MB
+- **Formateringsverktyg:** Inkluderar `format-toolbar.php` - B/I knappar och Ctrl+B/I genvägar
+  - `data-format-toolbar` attribut på textarea aktiverar toolbar automatiskt
+  - Stödjer **fetstil** och *kursiv* (markdown-stil)
+- **Instagram ELLER YouTube:** Toggle-knappar istället för båda fälten samtidigt
+  - Klick på en typ aktiverar dess input och rensar den andra
+  - Visuell feedback: YouTube = röd, Instagram = lila när aktiv
+- **Event-dropdown:** Bytt från `.form-select` till `.filter-select` (standard-komponent)
+  - Visar nu även alla event senaste 6 månaderna (inte bara de man deltagit i)
+- **CSS externaliserad:** Flyttat 600+ rader inline `<style>` till `assets/css/pages/race-reports.css`
+- **Update handler:** youtube_url och instagram_url kan nu uppdateras vid redigering
+- **Filer:** `pages/profile/race-reports.php`, `assets/css/pages/race-reports.css`
+
+## TIDIGARE FIXAR (2026-02-27, session 15)
 
 ### Galleri: Layout matchar databas-sidan + destinationsfilter + varumärkesfilter
 - **Layout-fix:** Stats-kort (Album, Bilder, Taggningar) visas nu ÖVERST, före tabs och filter
