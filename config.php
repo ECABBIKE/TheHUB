@@ -30,7 +30,16 @@ function env($key, $default = null) {
                     if (empty($line) || strpos($line, '#') === 0) continue;
                     if (strpos($line, '=') !== false) {
                         list($k, $v) = explode('=', $line, 2);
-                        $envCache[trim($k)] = trim($v);
+                        $v = trim($v);
+                        // Strip inline comments (# ...) but not inside quoted values
+                        if (isset($v[0]) && ($v[0] === '"' || $v[0] === "'")) {
+                            // Quoted value - remove quotes
+                            $v = trim($v, "\"'");
+                        } elseif (($hashPos = strpos($v, ' #')) !== false) {
+                            // Unquoted value with inline comment
+                            $v = trim(substr($v, 0, $hashPos));
+                        }
+                        $envCache[trim($k)] = $v;
                     }
                 }
             }

@@ -426,12 +426,20 @@ include __DIR__ . '/../components/unified-layout.php';
             </div>
             <p>Öppna filen <code>.env</code> i TheHUBs rotmapp på servern och lägg till (eller uppdatera) dessa rader:</p>
 
-            <pre style="background: var(--color-bg-hover); padding: var(--space-md); border-radius: var(--radius-sm); font-size: 0.8rem; overflow-x: auto; line-height: 1.8;"><span style="color: var(--color-text-muted);"># Cloudflare R2 Bildlagring</span>
-R2_ACCOUNT_ID=<span style="color: var(--color-accent-text);">ditt_account_id</span>             <span style="color: var(--color-text-muted);"># 32 tecken, finns i Cloudflare Dashboard URL</span>
-R2_ACCESS_KEY_ID=<span style="color: var(--color-accent-text);">din_access_key_id</span>        <span style="color: var(--color-text-muted);"># Från steg 4</span>
-R2_SECRET_ACCESS_KEY=<span style="color: var(--color-accent-text);">din_secret_key</span>       <span style="color: var(--color-text-muted);"># Från steg 4 (visas bara en gång!)</span>
-R2_BUCKET=<span style="color: var(--color-accent-text);">thehub-photos</span>                   <span style="color: var(--color-text-muted);"># Bucket-namnet du skapade i steg 2</span>
-R2_PUBLIC_URL=<span style="color: var(--color-accent-text);">https://pub-XXXXX.r2.dev</span>     <span style="color: var(--color-text-muted);"># URL:en från steg 3 (utan / på slutet)</span></pre>
+            <pre style="background: var(--color-bg-hover); padding: var(--space-md); border-radius: var(--radius-sm); font-size: 0.8rem; overflow-x: auto; line-height: 1.8;"><span style="color: var(--color-text-muted);"># Cloudflare R2 Bildlagring
+# VIKTIGT: Skriv INTE kommentarer efter värdena på samma rad!</span>
+R2_ACCOUNT_ID=<span style="color: var(--color-accent-text);">ditt_account_id_här</span>
+R2_ACCESS_KEY_ID=<span style="color: var(--color-accent-text);">din_access_key_id_här</span>
+R2_SECRET_ACCESS_KEY=<span style="color: var(--color-accent-text);">din_secret_access_key_här</span>
+R2_BUCKET=<span style="color: var(--color-accent-text);">thehub-photos</span>
+R2_PUBLIC_URL=<span style="color: var(--color-accent-text);">https://pub-XXXXX.r2.dev</span></pre>
+
+            <div style="margin-top: var(--space-sm); padding: var(--space-sm) var(--space-md); background: var(--color-bg-hover); border-radius: var(--radius-sm); font-size: 0.8rem;">
+                <i data-lucide="alert-triangle" class="icon-xs" style="vertical-align: text-bottom; color: var(--color-warning);"></i>
+                <strong>Inga kommentarer efter =</strong> — skriv kommentarer på egna rader med <code>#</code>.
+                T.ex. <code>R2_BUCKET=thehub-photos</code> (inte <code>R2_BUCKET=thehub-photos # mitt bucket</code>).
+                Avsluta <strong>inte</strong> R2_PUBLIC_URL med <code>/</code>.
+            </div>
 
             <div style="margin-top: var(--space-md); padding: var(--space-md); background: var(--color-accent-light); border-radius: var(--radius-sm);">
                 <strong style="color: var(--color-text-primary);">Var hittar jag värdena?</strong>
