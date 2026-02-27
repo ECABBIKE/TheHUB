@@ -104,7 +104,14 @@ if ($photographer['youtube_url']) $socials[] = ['icon' => 'youtube', 'url' => $p
             <?php endif; ?>
         </div>
         <div class="photographer-profile-info">
-            <h1 class="photographer-profile-name"><?= htmlspecialchars($photographer['name']) ?></h1>
+            <h1 class="photographer-profile-name">
+                <?= htmlspecialchars($photographer['name']) ?>
+                <?php if (function_exists('hub_is_admin') && hub_is_admin()): ?>
+                <a href="/admin/photographers.php?edit=<?= $photographerId ?>" class="photographer-edit-link" title="Redigera fotograf">
+                    <i data-lucide="pencil" style="width: 16px; height: 16px;"></i>
+                </a>
+                <?php endif; ?>
+            </h1>
             <?php if ($photographer['linked_rider_id']): ?>
             <a href="/rider/<?= $photographer['linked_rider_id'] ?>" class="photographer-rider-link">
                 <i data-lucide="user" style="width: 14px; height: 14px;"></i>
@@ -165,7 +172,7 @@ if ($photographer['youtube_url']) $socials[] = ['icon' => 'youtube', 'url' => $p
         }
         $eventDate = $album['event_date'] ? date('j M Y', strtotime($album['event_date'])) : '';
     ?>
-    <a href="/event/<?= $album['event_id'] ?>?tab=gallery" class="gallery-listing-card">
+    <a href="/event/<?= $album['event_id'] ?>?tab=galleri" class="gallery-listing-card">
         <div class="gallery-listing-cover">
             <?php if ($coverSrc): ?>
             <img src="<?= htmlspecialchars($coverSrc) ?>" alt="<?= htmlspecialchars($album['title'] ?: $album['event_name']) ?>" loading="lazy">
@@ -230,6 +237,23 @@ if ($photographer['youtube_url']) $socials[] = ['icon' => 'youtube', 'url' => $p
     color: var(--color-text-primary);
     margin: 0 0 4px;
     line-height: 1.2;
+    display: flex;
+    align-items: center;
+    gap: var(--space-xs);
+}
+.photographer-edit-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    color: var(--color-text-muted);
+    transition: background 0.2s, color 0.2s;
+}
+.photographer-edit-link:hover {
+    background: var(--color-accent-light);
+    color: var(--color-accent-text);
 }
 .photographer-rider-link {
     display: inline-flex;
@@ -378,6 +402,7 @@ if ($photographer['youtube_url']) $socials[] = ['icon' => 'youtube', 'url' => $p
     }
     .photographer-profile-name {
         font-size: 1.3rem;
+        justify-content: center;
     }
     .photographer-stats {
         width: 100%;
