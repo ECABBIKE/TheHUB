@@ -27,13 +27,19 @@
 - **Orsak:** Filen använde `require_once __DIR__ . '/../config/database.php'` som inte laddar helpers.php
 - **Fix:** Ändrat till `require_once __DIR__ . '/../config.php'; require_admin();` (standardmönstret)
 
-### TikTok tillagd för fotografer (migration 067)
-- **Migration:** `ALTER TABLE photographers ADD COLUMN tiktok_url VARCHAR(255) DEFAULT NULL AFTER instagram_url`
-- **Admin-formulär:** TikTok-fält tillagt i `admin/photographers.php` (INSERT/UPDATE + formulär)
-- **Dashboard:** TikTok-fält tillagt i `admin/photographer-dashboard.php` (sparning + formulär)
-- **Publik profil:** TikTok visas i sociala medier-listan i `pages/photographer/show.php`
-- **Ikon:** Använder `music` (Lucide har inget TikTok-ikon)
-- **Fotografers sociala medier nu:** Webbplats, Instagram, TikTok, Facebook, YouTube
+### TikTok + Strava tillagd för fotografer (migration 067 + 068)
+- **Migration 067:** `ALTER TABLE photographers ADD COLUMN tiktok_url VARCHAR(255) DEFAULT NULL AFTER instagram_url`
+- **Migration 068:** `ALTER TABLE photographers ADD COLUMN strava_url VARCHAR(255) DEFAULT NULL AFTER tiktok_url`
+- **Admin-formulär:** TikTok + Strava-fält i `admin/photographers.php` (INSERT/UPDATE + formulär)
+- **Dashboard:** TikTok + Strava-fält i `admin/photographer-dashboard.php` (sparning + formulär)
+- **Publik profil:** TikTok + Strava visas i sociala medier-listan i `pages/photographer/show.php`
+- **Ikoner:** TikTok = `music`, Strava = `activity` (Lucide har inga varumärkesikoner)
+- **Fotografers sociala medier nu:** Webbplats, Instagram, TikTok, Strava, Facebook, YouTube
+- **Graceful degradation:** SQL kontrollerar om `strava_url`-kolumnen finns via SHOW COLUMNS
+
+### Photographers.php vit sida fixad
+- **Problem:** Sidan inkluderade `admin-header.php` / `admin-footer.php` som inte existerar
+- **Fix:** Bytt till `unified-layout.php` / `unified-layout-footer.php` (samma som alla andra admin-sidor)
 
 ### Fotografer synliga i användarhantering
 - **Problem:** Användaren tyckte att fotografer borde vara åtkomliga från användarhanteringen, inte bara en separat admin-sida

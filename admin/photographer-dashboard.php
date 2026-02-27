@@ -44,6 +44,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $website_url = trim($_POST['website_url'] ?? '');
         $instagram_url = trim($_POST['instagram_url'] ?? '');
         $tiktok_url = trim($_POST['tiktok_url'] ?? '');
+        $strava_url = trim($_POST['strava_url'] ?? '');
         $facebook_url = trim($_POST['facebook_url'] ?? '');
         $youtube_url = trim($_POST['youtube_url'] ?? '');
 
@@ -56,15 +57,35 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $slug = strtolower(trim(preg_replace('/[^a-z0-9]+/i', '-', transliterator_transliterate('Any-Latin; Latin-ASCII', $name)), '-'));
             if (!$slug) $slug = 'photographer-' . $photographer['id'];
 
-            $stmt = $pdo->prepare("
-                UPDATE photographers SET
-                    name = ?, slug = ?, bio = ?, avatar_url = ?,
-                    website_url = ?, instagram_url = ?, tiktok_url = ?, facebook_url = ?, youtube_url = ?
-                WHERE id = ? AND admin_user_id = ?
-            ");
-            $stmt->execute([$name, $slug, $bio ?: null, $avatar_url ?: null,
-                $website_url ?: null, $instagram_url ?: null, $tiktok_url ?: null,
-                $facebook_url ?: null, $youtube_url ?: null, $photographer['id'], $userId]);
+            // Check if strava_url column exists
+            $hasStrava = false;
+            try {
+                $cols = $pdo->query("SHOW COLUMNS FROM photographers")->fetchAll(PDO::FETCH_COLUMN);
+                $hasStrava = in_array('strava_url', $cols);
+            } catch (PDOException $e) {}
+
+            if ($hasStrava) {
+                $stmt = $pdo->prepare("
+                    UPDATE photographers SET
+                        name = ?, slug = ?, bio = ?, avatar_url = ?,
+                        website_url = ?, instagram_url = ?, tiktok_url = ?, strava_url = ?, facebook_url = ?, youtube_url = ?
+                    WHERE id = ? AND admin_user_id = ?
+                ");
+                $stmt->execute([$name, $slug, $bio ?: null, $avatar_url ?: null,
+                    $website_url ?: null, $instagram_url ?: null, $tiktok_url ?: null,
+                    $strava_url ?: null, $facebook_url ?: null, $youtube_url ?: null,
+                    $photographer['id'], $userId]);
+            } else {
+                $stmt = $pdo->prepare("
+                    UPDATE photographers SET
+                        name = ?, slug = ?, bio = ?, avatar_url = ?,
+                        website_url = ?, instagram_url = ?, tiktok_url = ?, facebook_url = ?, youtube_url = ?
+                    WHERE id = ? AND admin_user_id = ?
+                ");
+                $stmt->execute([$name, $slug, $bio ?: null, $avatar_url ?: null,
+                    $website_url ?: null, $instagram_url ?: null, $tiktok_url ?: null,
+                    $facebook_url ?: null, $youtube_url ?: null, $photographer['id'], $userId]);
+            }
             echo json_encode(['success' => true]);
         } catch (PDOException $e) {
             echo json_encode(['success' => false, 'error' => 'Kunde inte spara: ' . $e->getMessage()]);
@@ -233,6 +254,10 @@ include __DIR__ . '/components/unified-layout.php';
                 <div class="form-group">
                     <label class="form-label"><i data-lucide="music" style="width: 14px; height: 14px; vertical-align: -2px;"></i> TikTok</label>
                     <input type="url" name="tiktok_url" class="form-input" value="<?= htmlspecialchars($photographer['tiktok_url'] ?? '') ?>" placeholder="https://tiktok.com/@...">
+                </div>
+                <div class="form-group">
+                    <label class="form-label"><i data-lucide="activity" style="width: 14px; height: 14px; vertical-align: -2px;"></i> Strava</label>
+                    <input type="url" name="strava_url" class="form-input" value="<?= htmlspecialchars($photographer['strava_url'] ?? '') ?>" placeholder="https://strava.com/athletes/...">
                 </div>
                 <div class="form-group">
                     <label class="form-label"><i data-lucide="facebook" style="width: 14px; height: 14px; vertical-align: -2px;"></i> Facebook</label>
