@@ -141,14 +141,29 @@ $totalPhotos = array_sum(array_column($albums, 'photo_count'));
 $totalTags = array_sum(array_column($albums, 'tag_count'));
 ?>
 
-<!-- Database tabs navigation + Gallery filters -->
+<!-- Database tabs navigation -->
 <div class="search-card">
     <div class="tabs-nav">
         <button class="tab-pill" onclick="window.location='/database'"><i data-lucide="users"></i> Sök Åkare</button>
         <button class="tab-pill" onclick="window.location='/database?tab=clubs'"><i data-lucide="shield"></i> Sök Klubbar</button>
         <button class="tab-pill active"><i data-lucide="camera"></i> Galleri</button>
     </div>
+</div>
 
+<!-- Stats Cards -->
+<div class="stats-grid gallery-stats-grid">
+    <div class="stat-card">
+        <span class="stat-value"><?= $totalAlbums ?></span>
+        <span class="stat-label">Album</span>
+    </div>
+    <div class="stat-card">
+        <span class="stat-value"><?= number_format($totalPhotos) ?></span>
+        <span class="stat-label">Bilder</span>
+    </div>
+    <div class="stat-card">
+        <span class="stat-value"><?= $totalTags ?></span>
+        <span class="stat-label">Taggningar</span>
+    </div>
 </div>
 
 <!-- Filters -->
@@ -206,22 +221,6 @@ $totalTags = array_sum(array_column($albums, 'tag_count'));
     <a href="/gallery" class="btn btn-ghost filter-btn">Rensa</a>
     <?php endif; ?>
 </form>
-
-<!-- Stats Cards -->
-<div class="stats-grid gallery-stats-grid">
-    <div class="stat-card">
-        <span class="stat-value"><?= $totalAlbums ?></span>
-        <span class="stat-label">Album</span>
-    </div>
-    <div class="stat-card">
-        <span class="stat-value"><?= number_format($totalPhotos) ?></span>
-        <span class="stat-label">Bilder</span>
-    </div>
-    <div class="stat-card">
-        <span class="stat-value"><?= $totalTags ?></span>
-        <span class="stat-label">Taggningar</span>
-    </div>
-</div>
 
 <?php if (empty($albums)): ?>
 <div class="card">
