@@ -25,7 +25,13 @@
 .stats-grid {
   grid-template-columns: repeat(4, 1fr);
 }
-/* NOTE: .stat-card, .stat-value, .stat-label now in components.css */
+/* Explicit text colors for stat cards (defensive against stale PWA cache) */
+.stat-value {
+  color: var(--color-accent) !important;
+}
+.stat-label {
+  color: var(--color-text-secondary) !important;
+}
 
 /* Search Card */
 .search-card {
@@ -117,6 +123,7 @@
 .search-result-name {
   font-weight: var(--weight-medium);
   display: block;
+  color: var(--color-text-primary);
 }
 
 .search-result-meta {
@@ -145,12 +152,14 @@
   padding: var(--container-padding);
   border: 1px solid var(--color-border);
   margin-bottom: var(--space-lg);
+  color: var(--color-text-primary);
 }
 
 .card-title {
   font-size: var(--text-lg);
   font-weight: var(--weight-semibold);
   margin: 0 0 var(--space-md);
+  color: var(--color-text-primary);
 }
 
 .card-link {
@@ -227,6 +236,7 @@
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  color: var(--color-text-primary);
 }
 
 .ranking-meta {

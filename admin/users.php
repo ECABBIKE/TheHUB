@@ -88,6 +88,30 @@ try {
     // Ignore errors
 }
 
+// Get photographers with linked accounts
+$photographersList = [];
+try {
+    $stmt = $pdo->query("
+        SELECT
+            p.id as photographer_id,
+            p.name,
+            p.email,
+            p.active,
+            au.id as user_id,
+            au.full_name as admin_name,
+            au.email as admin_email,
+            COUNT(DISTINCT ea.id) as album_count
+        FROM photographers p
+        LEFT JOIN admin_users au ON p.admin_user_id = au.id
+        LEFT JOIN event_albums ea ON ea.photographer_id = p.id
+        GROUP BY p.id
+        ORDER BY p.name ASC
+    ");
+    $photographersList = $stmt->fetchAll(PDO::FETCH_ASSOC);
+} catch (Exception $e) {
+    // Table might not exist
+}
+
 // Get club admins
 $clubAdmins = [];
 try {
@@ -167,6 +191,15 @@ include __DIR__ . '/components/unified-layout.php';
         <div class="stat-content">
             <div class="stat-value"><?= $roleStats['promotor'] ?? 0 ?></div>
             <div class="stat-label">Promotor</div>
+        </div>
+    </a>
+    <a href="#photographers-section" class="admin-stat-card" style="text-decoration: none; color: inherit;">
+        <div class="admin-stat-icon stat-icon-accent">
+            <i data-lucide="camera" class="icon-lg"></i>
+        </div>
+        <div class="stat-content">
+            <div class="stat-value"><?= $roleStats['photographer'] ?? 0 ?></div>
+            <div class="stat-label">Fotograf</div>
         </div>
     </a>
     <a href="/admin/riders?activated=1" class="admin-stat-card" style="text-decoration: none; color: inherit;">
@@ -370,6 +403,80 @@ include __DIR__ . '/components/unified-layout.php';
     </div>
 </div>
 
+<!-- Photographers List -->
+<div class="card mb-lg" id="photographers-section">
+    <div class="card-header flex justify-between items-center">
+        <h2>
+            <i data-lucide="camera"></i>
+            Fotografer (<?= count($photographersList) ?>)
+        </h2>
+        <a href="/admin/photographers.php?edit=0" class="btn btn--primary btn--sm">
+            <i data-lucide="plus"></i> Ny fotograf
+        </a>
+    </div>
+    <div class="card-body">
+        <?php if (empty($photographersList)): ?>
+        <p class="text-secondary">Inga fotografer skapade ännu.</p>
+        <?php else: ?>
+        <div class="table-responsive">
+            <table class="table">
+                <thead>
+                    <tr>
+                        <th>Fotograf</th>
+                        <th>Kopplat konto</th>
+                        <th>Album</th>
+                        <th>Status</th>
+                        <th></th>
+                    </tr>
+                </thead>
+                <tbody>
+                    <?php foreach ($photographersList as $ph): ?>
+                    <tr>
+                        <td>
+                            <a href="/admin/photographers.php?edit=<?= $ph['photographer_id'] ?>" class="link">
+                                <?= h($ph['name']) ?>
+                            </a>
+                            <?php if ($ph['email']): ?>
+                            <div class="text-xs text-secondary"><?= h($ph['email']) ?></div>
+                            <?php endif; ?>
+                        </td>
+                        <td>
+                            <?php if ($ph['user_id']): ?>
+                            <a href="/admin/users/edit/<?= $ph['user_id'] ?>" class="link">
+                                <?= h($ph['admin_name'] ?: $ph['admin_email']) ?>
+                            </a>
+                            <?php else: ?>
+                            <span class="text-muted">Ej kopplat</span>
+                            <?php endif; ?>
+                        </td>
+                        <td><?= $ph['album_count'] ?></td>
+                        <td>
+                            <span class="admin-badge <?= $ph['active'] ? 'admin-badge-success' : '' ?>" <?= !$ph['active'] ? 'style="background: var(--color-bg-sunken); color: var(--color-text-secondary);"' : '' ?>>
+                                <?= $ph['active'] ? 'Aktiv' : 'Inaktiv' ?>
+                            </span>
+                        </td>
+                        <td class="text-right">
+                            <a href="/admin/photographers.php?edit=<?= $ph['photographer_id'] ?>" class="btn btn--secondary btn--sm" title="Redigera fotograf">
+                                <i data-lucide="pencil"></i>
+                            </a>
+                            <a href="/photographer/<?= $ph['photographer_id'] ?>" target="_blank" class="btn btn--secondary btn--sm" title="Visa publik profil">
+                                <i data-lucide="external-link"></i>
+                            </a>
+                        </td>
+                    </tr>
+                    <?php endforeach; ?>
+                </tbody>
+            </table>
+        </div>
+        <?php endif; ?>
+        <div style="margin-top: var(--space-sm);">
+            <a href="/admin/photographers.php" class="btn btn--secondary btn--sm">
+                <i data-lucide="camera"></i> Hantera alla fotografer
+            </a>
+        </div>
+    </div>
+</div>
+
 <!-- Club Admins List -->
 <div class="card mb-lg" id="club-admins-section">
     <div class="card-header flex justify-between items-center">
@@ -446,6 +553,13 @@ include __DIR__ . '/components/unified-layout.php';
                     Promotor
                 </h3>
                 <p class="text-sm text-secondary">Kan endast hantera tilldelade events - redigera eventinfo, hantera resultat och registreringar.</p>
+            </div>
+            <div>
+                <h3 style="font-weight: var(--weight-medium); color: var(--color-accent); margin-bottom: var(--space-xs); display: flex; align-items: center; gap: var(--space-xs);">
+                    <i data-lucide="camera" class="icon-sm"></i>
+                    Fotograf
+                </h3>
+                <p class="text-sm text-secondary">Kan hantera sina egna fotoalbum - ladda upp bilder, redigera albuminfo och uppdatera sin profil.</p>
             </div>
         </div>
     </div>

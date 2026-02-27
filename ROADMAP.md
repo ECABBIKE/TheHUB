@@ -1,6 +1,6 @@
 # TheHUB - Development Roadmap
 
-> Senast uppdaterad: 2026-02-25
+> Senast uppdaterad: 2026-02-27
 >
 > **Se:** `/admin/roadmap.php` for interaktiv vy
 
@@ -16,7 +16,7 @@
 | Win-Back System | KLAR | Aterengagera churnade deltagare | 100% |
 | Klubb RF-Registrering | KLAR | SCF/NCF/DCU-synk och stavningskontroll | 100% |
 | Startlistor | KLAR | Admin/promotor startliste-vy med startnr, export, mobilvy | 100% |
-| Bildbanken / Fotoalbum | PAGAENDE | Fotoalbum, manuell taggning, galleri, R2-integration, fotografroll. Fas 3: OCR-taggning | 90% |
+| Bildbanken / Fotoalbum | PAGAENDE | Fotoalbum, manuell taggning, galleri, R2-integration, fotografroll, TikTok. Fas 3: OCR-taggning | 92% |
 | Premium-medlemskap | PAGAENDE | Stripe-oberoende, sponsorprofil, hogupplosta bilder, swapmeet | 50% |
 | Ridercard Share | PAGAENDE | Statistikkort for Instagram-delning | 5% |
 | Prestandaoptimering | PAGAENDE | Fas 1-2 klar. Fas 3-4 planerade (CSS-bundling, arkitektur) | 50% |
@@ -110,6 +110,32 @@
 ---
 
 # CHANGELOG
+
+### 2026-02-27 (PWA-fix, Galleri-CSS, TikTok, Användarhantering)
+- **Branch:** claude/fix-site-performance-wVdVq
+
+- **Fix: PWA vit-på-vit text**
+  - Bumpat SW cache v1 → v2, uppdaterat manifest.json färger
+  - Explicita textfärger i database.css som skydd mot cachad CSS
+
+- **Fix: Galleri-CSS konsistens**
+  - Ny fil `assets/css/pages/gallery-index.css` (extraherat från inline styles)
+  - Galleri-stats konverterade till `.stat-card` komponenter
+
+- **Fix: photographers.php fatal error**
+  - Ändrat require från `config/database.php` till `config.php`
+
+- **Ny funktion: TikTok för fotografer (migration 067)**
+  - Ny kolumn `tiktok_url` i photographers-tabellen
+  - TikTok-fält i admin-formulär, dashboard och publik profil
+
+- **Förbättring: Fotografer i användarhantering**
+  - Fotografer-sektion tillagd i `admin/users.php`
+  - Stat-kort, rollbeskrivning och länk till fotografhantering
+
+- **Nya filer:**
+  - `assets/css/pages/gallery-index.css` - Galleri-specifika stilar
+  - `Tools/migrations/067_photographer_tiktok.sql` - TikTok-kolumn
 
 ### 2026-02-27 (Fotografroll - self-service)
 - **Branch:** claude/fix-site-performance-wVdVq

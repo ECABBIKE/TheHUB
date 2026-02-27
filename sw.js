@@ -3,7 +3,7 @@
  * Handles caching and offline functionality
  */
 
-const CACHE_NAME = 'thehub-cache-v1';
+const CACHE_NAME = 'thehub-cache-v2';
 const OFFLINE_URL = '/offline.html';
 
 // Assets to cache immediately on install

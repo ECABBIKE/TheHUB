@@ -232,6 +232,9 @@ $migrationChecks = [
         'tables' => ['photographer_albums'],
         'columns' => ['photographers.admin_user_id']
     ],
+    '067_photographer_tiktok.sql' => [
+        'columns' => ['photographers.tiktok_url']
+    ],
 ];
 
 // ============================================================================

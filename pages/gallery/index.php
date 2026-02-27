@@ -134,21 +134,19 @@ $totalTags = array_sum(array_column($albums, 'tag_count'));
     </div>
 </div>
 
-<!-- Stats -->
-<div class="card" style="margin-bottom: var(--space-lg);">
-    <div style="display: grid; grid-template-columns: repeat(3, 1fr); text-align: center; padding: var(--space-md);">
-        <div>
-            <div style="font-size: 1.5rem; font-weight: 700; color: var(--color-accent-text); font-family: var(--font-heading);"><?= $totalAlbums ?></div>
-            <div style="font-size: 0.75rem; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Album</div>
-        </div>
-        <div>
-            <div style="font-size: 1.5rem; font-weight: 700; color: var(--color-accent-text); font-family: var(--font-heading);"><?= number_format($totalPhotos) ?></div>
-            <div style="font-size: 0.75rem; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Bilder</div>
-        </div>
-        <div>
-            <div style="font-size: 1.5rem; font-weight: 700; color: var(--color-accent-text); font-family: var(--font-heading);"><?= $totalTags ?></div>
-            <div style="font-size: 0.75rem; color: var(--color-text-muted); text-transform: uppercase; letter-spacing: 0.5px;">Taggningar</div>
-        </div>
+<!-- Stats Cards -->
+<div class="stats-grid gallery-stats-grid">
+    <div class="stat-card">
+        <span class="stat-value"><?= $totalAlbums ?></span>
+        <span class="stat-label">Album</span>
+    </div>
+    <div class="stat-card">
+        <span class="stat-value"><?= number_format($totalPhotos) ?></span>
+        <span class="stat-label">Bilder</span>
+    </div>
+    <div class="stat-card">
+        <span class="stat-value"><?= $totalTags ?></span>
+        <span class="stat-label">Taggningar</span>
     </div>
 </div>
 
@@ -257,131 +255,3 @@ $totalTags = array_sum(array_column($albums, 'tag_count'));
     <?php endforeach; ?>
 </div>
 <?php endif; ?>
-
-<style>
-.gallery-listing-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: var(--space-md);
-}
-.gallery-listing-card {
-    background: var(--color-bg-card);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-md);
-    overflow: hidden;
-    text-decoration: none;
-    color: inherit;
-    transition: transform 0.2s, box-shadow 0.2s, border-color 0.2s;
-}
-.gallery-listing-card:hover {
-    transform: translateY(-2px);
-    box-shadow: 0 8px 24px rgba(0,0,0,0.15);
-    border-color: var(--color-accent);
-}
-.gallery-listing-cover {
-    position: relative;
-    aspect-ratio: 16/10;
-    overflow: hidden;
-    background: var(--color-bg-page);
-}
-.gallery-listing-cover img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    transition: transform 0.3s ease;
-}
-.gallery-listing-card:hover .gallery-listing-cover img {
-    transform: scale(1.05);
-}
-.gallery-listing-placeholder {
-    width: 100%;
-    height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    background: var(--color-bg-hover);
-}
-.gallery-listing-photo-count {
-    position: absolute;
-    bottom: var(--space-xs);
-    right: var(--space-xs);
-    background: rgba(0,0,0,0.7);
-    color: #fff;
-    padding: 3px 10px;
-    border-radius: var(--radius-full);
-    font-size: 0.75rem;
-    font-weight: 600;
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    backdrop-filter: blur(4px);
-}
-.gallery-listing-info {
-    padding: var(--space-sm) var(--space-md) var(--space-md);
-}
-.gallery-listing-title {
-    font-family: var(--font-heading-secondary);
-    font-size: 1rem;
-    font-weight: 600;
-    color: var(--color-text-primary);
-    margin: 0 0 2px;
-    line-height: 1.3;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-}
-.gallery-listing-event {
-    font-size: 0.8rem;
-    color: var(--color-text-secondary);
-    margin-bottom: 4px;
-}
-.gallery-listing-meta {
-    display: flex;
-    gap: var(--space-sm);
-    font-size: 0.75rem;
-    color: var(--color-text-muted);
-    margin-bottom: 6px;
-}
-.gallery-listing-photographer {
-    display: flex;
-    align-items: center;
-    gap: 4px;
-    font-size: 0.75rem;
-    color: var(--color-accent-text);
-    font-weight: 500;
-}
-
-@media (max-width: 767px) {
-    .gallery-listing-grid {
-        grid-template-columns: repeat(2, 1fr);
-        gap: var(--space-xs);
-        margin-left: -16px;
-        margin-right: -16px;
-        width: calc(100% + 32px);
-    }
-    .gallery-listing-card {
-        border-radius: 0;
-        border-left: none;
-        border-right: none;
-    }
-    .gallery-listing-info {
-        padding: var(--space-xs) var(--space-sm) var(--space-sm);
-    }
-    .gallery-listing-title {
-        font-size: 0.85rem;
-    }
-    .gallery-listing-event {
-        display: none;
-    }
-}
-
-@media (max-width: 480px) {
-    .gallery-listing-grid {
-        grid-template-columns: 1fr;
-    }
-    .gallery-listing-cover {
-        aspect-ratio: 16/9;
-    }
-}
-</style>
