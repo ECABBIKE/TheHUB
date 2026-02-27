@@ -4,7 +4,30 @@
 
 ---
 
-## SENASTE FIXAR (2026-02-27, session 18)
+## SENASTE FIXAR (2026-02-27, session 19)
+
+### Event-sida: Klient-sida fliknavigering (ingen sidladdning)
+- **Problem:** Skärmen blinkade/flashade vid byte mellan flikar (resultat, galleri, anmälda etc.) — varje klick orsakade en full sidladdning via `?tab=X` query parameter
+- **Orsak:** Alla 15+ flikar navigerades via `<a href="?tab=X">` — full HTTP request, PHP kör om 7 200 rader, alla DB-frågor exekveras igen
+- **Fix:** Konverterat till klient-sida flikväxling:
+  - Alla flik-innehåll renderas i HTML (wrappade i `<div class="event-tab-pane" id="tab-pane-X">`)
+  - Inaktiva flikar döljs med `display:none`
+  - JS intercept på alla `<a data-tab="X">` — byter `display` och uppdaterar `.active`-klass
+  - URL uppdateras via `history.pushState()` utan sidladdning
+  - Bakåt/framåt-knappar hanteras via `popstate`-event
+  - Lucide-ikoner re-initieras vid flikbyte (`lucide.createIcons()`)
+  - Karta-fliken behåller mobil-redirect till `/map.php` (speciellt onclick)
+  - Live-timing polling renderas nu alltid (inte bara om `$activeTab === 'resultat'`)
+- **Resultat:** Instant flikbyte (~0ms) istället för ~500ms-2s sidladdning
+- **href behålls:** Länkar har fortfarande `href` som fallback om JS inte laddar
+- **Fil:** `pages/event.php`
+
+### Klassordning: Registreringar sorteras efter classes.sort_order
+- **Problem:** `LEFT JOIN classes cl ON cl.name = reg.category` kunde matcha flera klasser med samma namn → fel sort_order eller dubbletter
+- **Fix:** Tvåstegs-JOIN: 1) via `event_pricing_rules` (exakt event-klass-mappning), 2) fallback `MIN(sort_order)` per klassnamn
+- **Fil:** `pages/event.php` (registrerings-SQL)
+
+## TIDIGARE FIXAR (2026-02-27, session 18)
 
 ### Galleri-grid: Fast kolumnantal + större bilder på desktop
 - **Problem:** `auto-fill` med `minmax(200px)` gav 7 kolumner på desktop - bilderna var för små att överblicka

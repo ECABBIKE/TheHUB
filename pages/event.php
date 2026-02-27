@@ -1343,7 +1343,7 @@ if (!empty($eventSponsors['content'])): ?>
         ?>
 
         <?php if ($hasResults || $isTimingLive): ?>
-        <a href="?id=<?= $eventId ?>&tab=resultat" class="event-tab <?= $activeTab === 'resultat' ? 'active' : '' ?>">
+        <a href="?id=<?= $eventId ?>&tab=resultat" data-tab="resultat" class="event-tab <?= $activeTab === 'resultat' ? 'active' : '' ?>">
             <i data-lucide="trophy"></i>
             Resultat
             <?php if ($isTimingLive): ?>
@@ -1355,75 +1355,75 @@ if (!empty($eventSponsors['content'])): ?>
         <?php endif; ?>
 
         <?php if ($hasEliminationData): ?>
-        <a href="?id=<?= $eventId ?>&tab=elimination" class="event-tab <?= $activeTab === 'elimination' ? 'active' : '' ?>">
+        <a href="?id=<?= $eventId ?>&tab=elimination" data-tab="elimination" class="event-tab <?= $activeTab === 'elimination' ? 'active' : '' ?>">
             <i data-lucide="git-branch"></i>
             Elimination
         </a>
         <?php endif; ?>
 
         <?php if ($showAllTabs && $registrationOpen): ?>
-        <a href="?id=<?= $eventId ?>&tab=anmalan" class="event-tab <?= $activeTab === 'anmalan' ? 'active' : '' ?>">
+        <a href="?id=<?= $eventId ?>&tab=anmalan" data-tab="anmalan" class="event-tab <?= $activeTab === 'anmalan' ? 'active' : '' ?>">
             <i data-lucide="edit-3"></i>
             Anmälan
         </a>
         <?php endif; ?>
 
-        <a href="?id=<?= $eventId ?>&tab=info" class="event-tab <?= $activeTab === 'info' ? 'active' : '' ?>">
+        <a href="?id=<?= $eventId ?>&tab=info" data-tab="info" class="event-tab <?= $activeTab === 'info' ? 'active' : '' ?>">
             <i data-lucide="file-text"></i>
             Inbjudan
         </a>
 
         <?php if ($showAllTabs && $hasFacilitiesData): ?>
-        <a href="?id=<?= $eventId ?>&tab=faciliteter" class="event-tab <?= $activeTab === 'faciliteter' ? 'active' : '' ?>">
+        <a href="?id=<?= $eventId ?>&tab=faciliteter" data-tab="faciliteter" class="event-tab <?= $activeTab === 'faciliteter' ? 'active' : '' ?>">
             <i data-lucide="info"></i>
             Faciliteter
         </a>
         <?php endif; ?>
 
         <?php if ($showAllTabs && $pmPublished && empty($event['pm_hidden']) && (!empty($event['pm_content']) || !empty($event['pm_use_global']))): ?>
-        <a href="?id=<?= $eventId ?>&tab=pm" class="event-tab <?= $activeTab === 'pm' ? 'active' : '' ?>">
+        <a href="?id=<?= $eventId ?>&tab=pm" data-tab="pm" class="event-tab <?= $activeTab === 'pm' ? 'active' : '' ?>">
             <i data-lucide="file-text"></i>
             PM
         </a>
         <?php endif; ?>
 
         <?php if ($showAllTabs && empty($event['jury_hidden']) && (!empty($event['jury_communication']) || !empty($event['jury_use_global']))): ?>
-        <a href="?id=<?= $eventId ?>&tab=jury" class="event-tab <?= $activeTab === 'jury' ? 'active' : '' ?>">
+        <a href="?id=<?= $eventId ?>&tab=jury" data-tab="jury" class="event-tab <?= $activeTab === 'jury' ? 'active' : '' ?>">
             <i data-lucide="scale"></i>
             Jury
         </a>
         <?php endif; ?>
 
         <?php if ($showAllTabs && empty($event['schedule_hidden']) && (!empty($event['competition_schedule']) || !empty($event['schedule_use_global']))): ?>
-        <a href="?id=<?= $eventId ?>&tab=schema" class="event-tab <?= $activeTab === 'schema' ? 'active' : '' ?>">
+        <a href="?id=<?= $eventId ?>&tab=schema" data-tab="schema" class="event-tab <?= $activeTab === 'schema' ? 'active' : '' ?>">
             <i data-lucide="calendar-clock"></i>
             Schema
         </a>
         <?php endif; ?>
 
         <?php if ($showAllTabs && $starttiderPublished && empty($event['start_times_hidden']) && (!empty($event['start_times']) || !empty($event['start_times_use_global']))): ?>
-        <a href="?id=<?= $eventId ?>&tab=starttider" class="event-tab <?= $activeTab === 'starttider' ? 'active' : '' ?>">
+        <a href="?id=<?= $eventId ?>&tab=starttider" data-tab="starttider" class="event-tab <?= $activeTab === 'starttider' ? 'active' : '' ?>">
             <i data-lucide="list-ordered"></i>
             Starttider
         </a>
         <?php endif; ?>
 
         <?php if ($showAllTabs && (!empty($event['course_tracks']) || !empty($event['course_tracks_use_global']))): ?>
-        <a href="?id=<?= $eventId ?>&tab=banstrackning" class="event-tab <?= $activeTab === 'banstrackning' ? 'active' : '' ?>">
+        <a href="?id=<?= $eventId ?>&tab=banstrackning" data-tab="banstrackning" class="event-tab <?= $activeTab === 'banstrackning' ? 'active' : '' ?>">
             <i data-lucide="route"></i>
             Bansträckningar
         </a>
         <?php endif; ?>
 
         <?php if ($hasInteractiveMap && $kartaPublished): ?>
-        <a href="?id=<?= $eventId ?>&tab=karta" class="event-tab <?= $activeTab === 'karta' ? 'active' : '' ?>" onclick="if(window.innerWidth <= 768) { window.location.href='/map.php?id=<?= $eventId ?>'; return false; }">
+        <a href="?id=<?= $eventId ?>&tab=karta" data-tab="karta" class="event-tab <?= $activeTab === 'karta' ? 'active' : '' ?>" onclick="if(window.innerWidth <= 768) { window.location.href='/map.php?id=<?= $eventId ?>'; return false; }">
             <i data-lucide="map-pin"></i>
             Karta
         </a>
         <?php endif; ?>
 
         <?php if ($eventReportsCount > 0): ?>
-        <a href="?id=<?= $eventId ?>&tab=nyheter" class="event-tab <?= $activeTab === 'nyheter' ? 'active' : '' ?>">
+        <a href="?id=<?= $eventId ?>&tab=nyheter" data-tab="nyheter" class="event-tab <?= $activeTab === 'nyheter' ? 'active' : '' ?>">
             <i data-lucide="newspaper"></i>
             Media
             <span class="tab-badge tab-badge--accent"><?= $eventReportsCount ?></span>
@@ -1431,7 +1431,7 @@ if (!empty($eventSponsors['content'])): ?>
         <?php endif; ?>
 
         <?php if ($hasEventPhotos): ?>
-        <a href="?id=<?= $eventId ?>&tab=galleri" class="event-tab <?= $activeTab === 'galleri' ? 'active' : '' ?>">
+        <a href="?id=<?= $eventId ?>&tab=galleri" data-tab="galleri" class="event-tab <?= $activeTab === 'galleri' ? 'active' : '' ?>">
             <i data-lucide="camera"></i>
             Galleri
             <span class="tab-badge"><?= count($eventAlbumPhotos) ?></span>
@@ -1439,7 +1439,7 @@ if (!empty($eventSponsors['content'])): ?>
         <?php endif; ?>
 
         <?php if ($showAllTabs && !$isPastEvent && $totalRegistrations > 0): ?>
-        <a href="?id=<?= $eventId ?>&tab=anmalda" class="event-tab <?= $activeTab === 'anmalda' ? 'active' : '' ?>">
+        <a href="?id=<?= $eventId ?>&tab=anmalda" data-tab="anmalda" class="event-tab <?= $activeTab === 'anmalda' ? 'active' : '' ?>">
             <i data-lucide="<?= $hasBibNumbers ? 'list-ordered' : 'users' ?>"></i>
             <?= $hasBibNumbers ? 'Startlista' : 'Anmälda' ?>
             <span class="tab-badge tab-badge--secondary"><?= $totalRegistrations ?><?php if ($maxParticipants): ?>/<?= $maxParticipants ?><?php endif; ?></span>
@@ -1447,7 +1447,7 @@ if (!empty($eventSponsors['content'])): ?>
         <?php endif; ?>
 
         <?php if ($showAllTabs && $ticketingEnabled): ?>
-        <a href="?id=<?= $eventId ?>&tab=biljetter" class="event-tab <?= $activeTab === 'biljetter' ? 'active' : '' ?>">
+        <a href="?id=<?= $eventId ?>&tab=biljetter" data-tab="biljetter" class="event-tab <?= $activeTab === 'biljetter' ? 'active' : '' ?>">
             <i data-lucide="ticket"></i>
             Biljetter
         </a>
@@ -1457,7 +1457,7 @@ if (!empty($eventSponsors['content'])): ?>
 </div>
 
 <!-- Tab Content -->
-<?php if ($activeTab === 'resultat'): ?>
+<div id="tab-pane-resultat" class="event-tab-pane" <?= $activeTab !== 'resultat' ? 'style="display:none"' : '' ?>>
 <!-- RESULTS TAB -->
 <?php if (empty($results)): ?>
 <section class="card">
@@ -2073,7 +2073,8 @@ if (!empty($eventSponsors['content'])): ?>
 
 <?php endif; ?>
 
-<?php elseif ($activeTab === 'info'): ?>
+</div>
+<div id="tab-pane-info" class="event-tab-pane" <?= $activeTab !== 'info' ? 'style="display:none"' : '' ?>>
 <!-- INBJUDAN TAB - Invitation + General Competition Info -->
 <?php
 // Get invitation content
@@ -2212,7 +2213,8 @@ $allLicenseLinks = array_merge($licenseGlobalLinks, $licenseEventLinks);
 </section>
 <?php endif; ?>
 
-<?php elseif ($activeTab === 'faciliteter'): ?>
+</div>
+<div id="tab-pane-faciliteter" class="event-tab-pane" <?= $activeTab !== 'faciliteter' ? 'style="display:none"' : '' ?>>
 <!-- FACILITETER TAB - Facilities & Logistics -->
 <?php
 // Build facilities data array (content + links)
@@ -2265,7 +2267,8 @@ unset($f);
     </div>
 </section>
 
-<?php elseif ($activeTab === 'pm'): ?>
+</div>
+<div id="tab-pane-pm" class="event-tab-pane" <?= $activeTab !== 'pm' ? 'style="display:none"' : '' ?>>
 <!-- PM TAB - With subcategories -->
 <?php
 // Check if PM is published yet
@@ -2332,7 +2335,8 @@ unset($p);
 </section>
 <?php endif; // end pmPublished check ?>
 
-<?php elseif ($activeTab === 'jury'): ?>
+</div>
+<div id="tab-pane-jury" class="event-tab-pane" <?= $activeTab !== 'jury' ? 'style="display:none"' : '' ?>>
 <!-- JURY TAB -->
 <section class="card">
     <div class="card-header">
@@ -2350,7 +2354,8 @@ unset($p);
     </div>
 </section>
 
-<?php elseif ($activeTab === 'schema'): ?>
+</div>
+<div id="tab-pane-schema" class="event-tab-pane" <?= $activeTab !== 'schema' ? 'style="display:none"' : '' ?>>
 <!-- SCHEDULE TAB -->
 <section class="card">
     <div class="card-header">
@@ -2368,7 +2373,8 @@ unset($p);
     </div>
 </section>
 
-<?php elseif ($activeTab === 'starttider'): ?>
+</div>
+<div id="tab-pane-starttider" class="event-tab-pane" <?= $activeTab !== 'starttider' ? 'style="display:none"' : '' ?>>
 <!-- START TIMES TAB -->
 <section class="card">
     <div class="card-header">
@@ -2386,7 +2392,8 @@ unset($p);
     </div>
 </section>
 
-<?php elseif ($activeTab === 'banstrackning'): ?>
+</div>
+<div id="tab-pane-banstrackning" class="event-tab-pane" <?= $activeTab !== 'banstrackning' ? 'style="display:none"' : '' ?>>
 <!-- COURSE TRACKS TAB -->
 <section class="card">
     <div class="card-header">
@@ -2404,7 +2411,8 @@ unset($p);
     </div>
 </section>
 
-<?php elseif ($activeTab === 'karta'): ?>
+</div>
+<div id="tab-pane-karta" class="event-tab-pane" <?= $activeTab !== 'karta' ? 'style="display:none"' : '' ?>>
 <!-- MAP TAB - Full width interactive map -->
 <?php if ($hasInteractiveMap): ?>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
@@ -2426,7 +2434,8 @@ render_event_map($eventId, $db, [
 <p class="text-muted">Ingen interaktiv karta tillgänglig.</p>
 <?php endif; ?>
 
-<?php elseif ($activeTab === 'nyheter'): ?>
+</div>
+<div id="tab-pane-nyheter" class="event-tab-pane" <?= $activeTab !== 'nyheter' ? 'style="display:none"' : '' ?>>
 <!-- NEWS/MEDIA TAB -->
 <?php
 // Fetch race reports for this event
@@ -2634,7 +2643,8 @@ try {
 }
 </style>
 
-<?php elseif ($activeTab === 'anmalda'): ?>
+</div>
+<div id="tab-pane-anmalda" class="event-tab-pane" <?= $activeTab !== 'anmalda' ? 'style="display:none"' : '' ?>>
 <!-- REGISTERED PARTICIPANTS / STARTLIST TAB -->
 <section class="card">
     <div class="card-header">
@@ -2711,7 +2721,8 @@ try {
     </div>
 </section>
 
-<?php elseif ($activeTab === 'biljetter'): ?>
+</div>
+<div id="tab-pane-biljetter" class="event-tab-pane" <?= $activeTab !== 'biljetter' ? 'style="display:none"' : '' ?>>
 <!-- TICKETS TAB -->
 <section class="card">
     <div class="card-header">
@@ -2732,7 +2743,8 @@ try {
     </div>
 </section>
 
-<?php elseif ($activeTab === 'anmalan'): ?>
+</div>
+<div id="tab-pane-anmalan" class="event-tab-pane" <?= $activeTab !== 'anmalan' ? 'style="display:none"' : '' ?>>
 <!-- REGISTRATION TAB -->
 <?php
 // Load registration-related data
@@ -5586,7 +5598,8 @@ if (!empty($event['series_id'])) {
     </div>
 </section>
 
-<?php elseif ($activeTab === 'galleri'): ?>
+</div>
+<div id="tab-pane-galleri" class="event-tab-pane" <?= $activeTab !== 'galleri' ? 'style="display:none"' : '' ?>>
 <!-- GALLERY TAB - Inline photo display with ad slots -->
 <?php
     // Get photographer info from first photo - prefer profile link over website
@@ -6758,7 +6771,8 @@ html.lightbox-open body {
 })();
 </script>
 
-<?php elseif ($activeTab === 'elimination'): ?>
+</div>
+<div id="tab-pane-elimination" class="event-tab-pane" <?= $activeTab !== 'elimination' ? 'style="display:none"' : '' ?>>
 <!-- ELIMINATION TAB -->
 <section class="card">
     <div class="card-header">
@@ -6795,6 +6809,80 @@ if (!empty($partnerSponsorsWithLogos)): ?>
     </div>
 </section>
 <?php endif; ?>
+</div><!-- end last tab pane -->
+
+<script>
+// Client-side tab switching - no page reload
+(function() {
+    var tabLinks = document.querySelectorAll('.event-tab[data-tab]');
+    var tabPanes = document.querySelectorAll('.event-tab-pane');
+    var eventId = <?= (int)$eventId ?>;
+
+    function switchTab(tabId, pushState) {
+        // Hide all panes
+        for (var i = 0; i < tabPanes.length; i++) {
+            tabPanes[i].style.display = 'none';
+        }
+        // Deactivate all tab links
+        for (var i = 0; i < tabLinks.length; i++) {
+            tabLinks[i].classList.remove('active');
+        }
+        // Show target pane
+        var pane = document.getElementById('tab-pane-' + tabId);
+        if (pane) {
+            pane.style.display = '';
+        }
+        // Activate matching tab link(s)
+        for (var i = 0; i < tabLinks.length; i++) {
+            if (tabLinks[i].getAttribute('data-tab') === tabId) {
+                tabLinks[i].classList.add('active');
+            }
+        }
+        // Update URL without reload
+        if (pushState !== false) {
+            var url = '?id=' + eventId + '&tab=' + tabId;
+            history.pushState({ tab: tabId }, '', url);
+        }
+        // Scroll tab bar into view if needed
+        var activeLink = document.querySelector('.event-tab[data-tab="' + tabId + '"]');
+        if (activeLink) {
+            activeLink.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
+        }
+        // Re-init Lucide icons in newly shown pane (some may not have rendered while hidden)
+        if (window.lucide) {
+            lucide.createIcons();
+        }
+    }
+
+    // Intercept tab link clicks
+    for (var i = 0; i < tabLinks.length; i++) {
+        tabLinks[i].addEventListener('click', function(e) {
+            // Let Karta mobile redirect through (has its own onclick)
+            if (this.getAttribute('data-tab') === 'karta' && window.innerWidth <= 768) {
+                return; // Let the existing onclick handler do its thing
+            }
+            e.preventDefault();
+            switchTab(this.getAttribute('data-tab'));
+        });
+    }
+
+    // Handle browser back/forward
+    window.addEventListener('popstate', function(e) {
+        if (e.state && e.state.tab) {
+            switchTab(e.state.tab, false);
+        } else {
+            // Parse tab from URL
+            var params = new URLSearchParams(window.location.search);
+            var tab = params.get('tab') || '<?= h($defaultTab) ?>';
+            switchTab(tab, false);
+        }
+    });
+
+    // Set initial state for back button
+    var initialTab = '<?= h($activeTab) ?>';
+    history.replaceState({ tab: initialTab }, '', window.location.href);
+})();
+</script>
 
 <script>
 function filterResults() {
@@ -7155,7 +7243,7 @@ function sortDHTotalByRun(headerEl, runNum) {
 
 </script>
 
-<?php if ($isTimingLive && $activeTab === 'resultat'): ?>
+<?php if ($isTimingLive): ?>
 <script>
 // Live results polling
 (function() {
