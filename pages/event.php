@@ -5692,9 +5692,9 @@ if (!empty($event['series_id'])) {
         <button class="gallery-lightbox-close" onclick="closeLightbox()"><i data-lucide="x"></i></button>
     </div>
 
-    <!-- Main image area -->
+    <!-- Main image area (click empty area to close) -->
     <div class="gallery-lightbox-content" id="lightboxContent">
-        <img id="lightboxImg" src="" alt="">
+        <img id="lightboxImg" src="" alt="" onclick="event.stopPropagation()">
     </div>
 
     <!-- Navigation arrows (placed AFTER content for z-index stacking) -->
@@ -5881,16 +5881,20 @@ if (!empty($event['series_id'])) {
     font-weight: 500;
 }
 
-/* ========== LIGHTBOX (fullscreen) ========== */
+/* ========== LIGHTBOX (fullscreen, above ALL UI) ========== */
 .gallery-lightbox {
     position: fixed;
-    inset: 0;
-    z-index: 9999;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    height: 100dvh; /* dynamic viewport height - excludes mobile browser chrome */
+    z-index: 99999; /* Above nav-bottom (9999), header, sidebar, everything */
     display: flex;
     align-items: center;
     justify-content: center;
-    /* Prevent scroll on iOS/PWA */
     overscroll-behavior: contain;
+    touch-action: none; /* Prevent pull-to-refresh and other gestures */
 }
 .gallery-lightbox-backdrop {
     position: absolute;
@@ -5934,22 +5938,20 @@ if (!empty($event['series_id'])) {
     background: rgba(255,255,255,0.3);
 }
 
-/* Main image - fills available space */
+/* Main image - fills available space, never clipped */
 .gallery-lightbox-content {
-    position: relative;
+    position: absolute;
+    inset: 0;
     z-index: 1;
-    width: 100%;
-    height: 100%;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 48px 60px 80px;
+    padding: 48px 56px 72px;
 }
 .gallery-lightbox-content img {
     max-width: 100%;
     max-height: 100%;
     object-fit: contain;
-    border-radius: var(--radius-sm);
     user-select: none;
     -webkit-user-select: none;
 }
@@ -6099,13 +6101,9 @@ if (!empty($event['series_id'])) {
         border-radius: 0;
     }
 
-    /* Fullscreen lightbox */
+    /* Fullscreen lightbox - edge to edge */
     .gallery-lightbox-content {
-        padding: 44px 0 72px;
-    }
-    .gallery-lightbox-content img {
-        border-radius: 0;
-        width: 100%;
+        padding: 40px 0 64px;
     }
 
     /* Compact top bar */
@@ -6161,36 +6159,25 @@ if (!empty($event['series_id'])) {
         border-radius: 0;
     }
 
-    /* Topbar: minimal, auto-fade */
+    /* Topbar: compact but ALWAYS VISIBLE (close button must be reachable) */
     .gallery-lightbox-topbar {
         padding: 4px 8px;
-        opacity: 0;
-        transition: opacity 0.3s;
-    }
-    .gallery-lightbox:hover .gallery-lightbox-topbar,
-    .gallery-lightbox:active .gallery-lightbox-topbar {
-        opacity: 1;
+        background: linear-gradient(rgba(0,0,0,0.5), transparent);
     }
     .gallery-lightbox-close {
-        width: 32px;
-        height: 32px;
+        width: 36px;
+        height: 36px;
     }
     .gallery-lightbox-counter-text {
         font-size: 0.75rem;
     }
 
-    /* Nav arrows: thin, edge-hugging */
+    /* Nav arrows: edge-hugging, always visible */
     .gallery-lightbox-nav {
         width: 32px;
         height: 60px;
         border-radius: var(--radius-sm);
-        background: rgba(255,255,255,0.06);
-        opacity: 0;
-        transition: opacity 0.3s;
-    }
-    .gallery-lightbox:hover .gallery-lightbox-nav,
-    .gallery-lightbox:active .gallery-lightbox-nav {
-        opacity: 1;
+        background: rgba(255,255,255,0.08);
     }
     .gallery-lightbox-prev { left: 0; border-radius: 0 var(--radius-sm) var(--radius-sm) 0; }
     .gallery-lightbox-next { right: 0; border-radius: var(--radius-sm) 0 0 var(--radius-sm); }
@@ -6267,7 +6254,12 @@ if (!empty($event['series_id'])) {
         caption.style.display = photos[idx].caption ? 'block' : 'none';
         counter.textContent = (idx + 1) + ' / ' + photos.length;
         lb.style.display = 'flex';
+        // Lock body scroll (including iOS)
         document.body.style.overflow = 'hidden';
+        document.body.style.position = 'fixed';
+        document.body.style.width = '100%';
+        document.body.dataset.scrollY = window.scrollY;
+        document.body.style.top = '-' + window.scrollY + 'px';
 
         // Visa/dölj pilknappar
         const prevBtn = lb.querySelector('.gallery-lightbox-prev');
@@ -6287,7 +6279,13 @@ if (!empty($event['series_id'])) {
 
     window.closeLightbox = function() {
         document.getElementById('galleryLightbox').style.display = 'none';
+        // Restore body scroll
+        const scrollY = parseInt(document.body.dataset.scrollY || '0');
         document.body.style.overflow = '';
+        document.body.style.position = '';
+        document.body.style.width = '';
+        document.body.style.top = '';
+        window.scrollTo(0, scrollY);
         const panel = document.getElementById('tagPanel');
         if (panel) panel.style.display = 'none';
     };
@@ -6472,19 +6470,28 @@ if (!empty($event['series_id'])) {
         }, {passive: true});
     }
 
-    // Tap left/right half of image area to navigate (mobile)
-    const lbContent = document.getElementById('lightboxContent');
-    if (lbContent) {
-        lbContent.addEventListener('click', function(e) {
-            // Don't navigate if clicking on a tag link or button
-            if (e.target.closest('a') || e.target.closest('button')) return;
-            const rect = lbContent.getBoundingClientRect();
+    // Tap left/right half of IMAGE to navigate, tap empty area to close
+    const lbImg = document.getElementById('lightboxImg');
+    if (lbImg) {
+        lbImg.addEventListener('click', function(e) {
+            e.stopPropagation();
+            const rect = lbImg.getBoundingClientRect();
             const clickX = e.clientX - rect.left;
             const halfWidth = rect.width / 2;
             if (clickX < halfWidth) {
                 window.navigateLightbox(-1);
             } else {
                 window.navigateLightbox(1);
+            }
+        });
+    }
+
+    // Click empty content area (outside image) closes lightbox
+    const lbContent = document.getElementById('lightboxContent');
+    if (lbContent) {
+        lbContent.addEventListener('click', function(e) {
+            if (e.target === lbContent) {
+                window.closeLightbox();
             }
         });
     }
