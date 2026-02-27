@@ -217,7 +217,7 @@ $totalTags = array_sum(array_column($albums, 'tag_count'));
         $photographerName = $album['photographer_name'] ?: $album['photographer'];
         $eventDate = $album['event_date'] ? date('j M Y', strtotime($album['event_date'])) : '';
     ?>
-    <a href="/event/<?= $album['event_id'] ?>?tab=gallery" class="gallery-listing-card">
+    <a href="/event/<?= $album['event_id'] ?>?tab=galleri" class="gallery-listing-card">
         <div class="gallery-listing-cover">
             <?php if ($coverSrc): ?>
             <img src="<?= htmlspecialchars($coverSrc) ?>" alt="<?= htmlspecialchars($album['title'] ?: $album['event_name']) ?>" loading="lazy">

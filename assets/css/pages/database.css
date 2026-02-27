@@ -290,6 +290,45 @@
   }
 }
 
+/* Mobile - Clean up borders and polish */
+@media (max-width: 767px) {
+  /* Stat cards - borderless, clean look */
+  .stats-grid .stat-card {
+    border: none;
+    background: var(--color-bg-card);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  }
+
+  /* Tab pills - softer, no border on inactive */
+  .search-card .tab-pill {
+    border-color: transparent;
+    background: transparent;
+    font-size: 13px;
+    padding: var(--space-xs) var(--space-sm);
+  }
+  .search-card .tab-pill.active {
+    border-color: var(--color-accent);
+  }
+
+  /* Search card - softer border */
+  .search-card {
+    border-color: transparent;
+    background: var(--color-bg-card);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  }
+
+  /* Search input - thinner border */
+  .search-input {
+    border-width: 1px;
+  }
+
+  /* Content cards - borderless */
+  .database-grid .card {
+    border: none;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  }
+}
+
 /* Mobile Portrait - Extra compact + Edge-to-Edge */
 @media (max-width: 480px) {
   .page-header {
@@ -313,7 +352,6 @@
     gap: var(--space-xs);
     margin-bottom: var(--space-md);
   }
-  /* NOTE: .stat-card, .stat-value, .stat-label responsive styles now in components.css */
 
   /* Search card - edge-to-edge */
   .search-card {
@@ -322,8 +360,8 @@
     margin-right: calc(-1 * var(--container-padding));
     margin-bottom: var(--space-md);
     border-radius: 0;
-    border-left: none;
-    border-right: none;
+    border-left: none !important;
+    border-right: none !important;
     width: calc(100% + var(--container-padding) * 2);
   }
   .search-input {
@@ -347,8 +385,8 @@
     margin-right: calc(-1 * var(--container-padding));
     margin-bottom: var(--space-md);
     border-radius: 0;
-    border-left: none;
-    border-right: none;
+    border-left: none !important;
+    border-right: none !important;
     width: calc(100% + var(--container-padding) * 2);
   }
   .card-title {
@@ -359,6 +397,13 @@
     padding: var(--space-xs);
     margin-top: var(--space-sm);
     font-size: var(--text-sm);
+  }
+
+  /* Stat cards - compact, no visible border */
+  .stats-grid .stat-card {
+    border-radius: var(--radius-md);
+    box-shadow: none;
+    background: var(--color-bg-card);
   }
 
   /* Ranking items - optimized */
