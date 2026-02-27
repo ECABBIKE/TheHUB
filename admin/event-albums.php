@@ -3,6 +3,9 @@
  * Event Photo Albums - Admin
  * Hantera fotoalbum per event med Cloudflare R2-lagring och manuell rider-taggning
  */
+set_time_limit(300);
+ini_set('memory_limit', '256M');
+
 require_once __DIR__ . '/../config.php';
 require_once __DIR__ . '/../includes/media-functions.php';
 require_once __DIR__ . '/../includes/r2-storage.php';
@@ -579,24 +582,44 @@ include __DIR__ . '/components/unified-layout.php';
         </p>
         <?php endif; ?>
 
-        <!-- Filuppladdning (primärt om R2 är konfigurerat) -->
+        <!-- Filuppladdning (chunked AJAX - hanterar stora album) -->
         <?php if ($r2Active): ?>
-        <div style="margin-bottom: var(--space-lg);">
+        <div style="margin-bottom: var(--space-lg);" id="uploadSection">
             <h4 style="margin: 0 0 var(--space-sm); font-size: 0.85rem; color: var(--color-text-primary); display: flex; align-items: center; gap: var(--space-xs);">
                 <i data-lucide="upload" class="icon-sm"></i> Ladda upp bilder
                 <span style="font-size: 0.75rem; color: var(--color-text-muted); font-weight: 400;">(optimeras och lagras i Cloudflare R2)</span>
             </h4>
-            <form method="POST" enctype="multipart/form-data" style="display: flex; flex-wrap: wrap; gap: var(--space-sm); align-items: end;">
-                <input type="hidden" name="action" value="upload_photos">
-                <input type="hidden" name="album_id" value="<?= $album['id'] ?>">
+            <div style="display: flex; flex-wrap: wrap; gap: var(--space-sm); align-items: end;">
                 <div class="admin-form-group" style="flex: 1; min-width: 200px;">
-                    <input type="file" name="photos[]" multiple accept="image/*" class="form-input" required>
-                    <small class="form-help">Max 1920px bredd, JPEG-kvalitet 82%. Välj flera filer samtidigt.</small>
+                    <input type="file" id="r2FileInput" multiple accept="image/*" class="form-input">
+                    <small class="form-help">Välj upp till hundratals bilder. Laddas upp en åt gången med progressindikator.</small>
                 </div>
-                <button type="submit" class="btn btn-primary">
+                <button type="button" class="btn btn-primary" id="r2UploadBtn" onclick="startChunkedUpload()" disabled>
                     <i data-lucide="upload" class="icon-sm"></i> Ladda upp till R2
                 </button>
-            </form>
+            </div>
+
+            <!-- Progress UI (dolt tills uppladdning startar) -->
+            <div id="uploadProgress" style="display: none; margin-top: var(--space-md);">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-xs);">
+                    <span id="uploadStatusText" style="font-size: 0.85rem; color: var(--color-text-secondary);">Förbereder...</span>
+                    <span id="uploadPercent" style="font-size: 0.85rem; font-weight: 600; color: var(--color-accent-text);">0%</span>
+                </div>
+                <div style="background: var(--color-bg-hover); border-radius: var(--radius-full); height: 8px; overflow: hidden;">
+                    <div id="uploadBar" style="height: 100%; width: 0%; background: var(--color-accent); border-radius: var(--radius-full); transition: width 0.3s ease;"></div>
+                </div>
+                <div id="uploadDetails" style="display: flex; gap: var(--space-lg); margin-top: var(--space-xs); font-size: 0.75rem; color: var(--color-text-muted);">
+                    <span id="uploadCount">0 / 0 bilder</span>
+                    <span id="uploadSpeed"></span>
+                    <span id="uploadEta"></span>
+                </div>
+                <div id="uploadErrors" style="display: none; margin-top: var(--space-sm); padding: var(--space-sm); background: rgba(239,68,68,0.1); border-radius: var(--radius-sm); font-size: 0.8rem; color: var(--color-error); max-height: 120px; overflow-y: auto;"></div>
+                <div style="margin-top: var(--space-sm);">
+                    <button type="button" id="uploadCancelBtn" class="btn btn-secondary" onclick="cancelUpload()" style="display: none;">
+                        <i data-lucide="x" class="icon-sm"></i> Avbryt
+                    </button>
+                </div>
+            </div>
         </div>
         <hr style="border: none; border-top: 1px solid var(--color-border); margin: var(--space-md) 0;">
         <?php endif; ?>
@@ -906,6 +929,155 @@ async function deletePhoto(photoId) {
         }
     } catch (e) {
         alert('Fel vid radering');
+    }
+}
+
+// =================================================================
+// Chunked Upload System - laddar upp bilder en åt gången via AJAX
+// =================================================================
+let uploadCancelled = false;
+const ALBUM_ID = <?= json_encode($albumId) ?>;
+
+(function() {
+    const fileInput = document.getElementById('r2FileInput');
+    const uploadBtn = document.getElementById('r2UploadBtn');
+    if (!fileInput || !uploadBtn) return;
+
+    fileInput.addEventListener('change', function() {
+        uploadBtn.disabled = this.files.length === 0;
+        if (this.files.length > 0) {
+            uploadBtn.textContent = '';
+            uploadBtn.innerHTML = '<i data-lucide="upload" class="icon-sm"></i> Ladda upp ' + this.files.length + ' bilder';
+            if (typeof lucide !== 'undefined') lucide.createIcons({nodes: [uploadBtn]});
+        }
+    });
+})();
+
+async function startChunkedUpload() {
+    const fileInput = document.getElementById('r2FileInput');
+    const files = Array.from(fileInput.files);
+    if (files.length === 0) return;
+
+    uploadCancelled = false;
+
+    // Visa progress UI
+    const progressDiv = document.getElementById('uploadProgress');
+    const statusText = document.getElementById('uploadStatusText');
+    const percentText = document.getElementById('uploadPercent');
+    const bar = document.getElementById('uploadBar');
+    const countText = document.getElementById('uploadCount');
+    const speedText = document.getElementById('uploadSpeed');
+    const etaText = document.getElementById('uploadEta');
+    const errorsDiv = document.getElementById('uploadErrors');
+    const cancelBtn = document.getElementById('uploadCancelBtn');
+    const uploadBtn = document.getElementById('r2UploadBtn');
+
+    progressDiv.style.display = 'block';
+    cancelBtn.style.display = 'inline-flex';
+    uploadBtn.disabled = true;
+    fileInput.disabled = true;
+    errorsDiv.style.display = 'none';
+    errorsDiv.innerHTML = '';
+
+    const totalFiles = files.length;
+    let uploaded = 0;
+    let failed = 0;
+    let errors = [];
+    const startTime = Date.now();
+
+    for (let i = 0; i < totalFiles; i++) {
+        if (uploadCancelled) break;
+
+        const file = files[i];
+        const pct = Math.round((i / totalFiles) * 100);
+        bar.style.width = pct + '%';
+        percentText.textContent = pct + '%';
+        statusText.textContent = 'Laddar upp: ' + file.name;
+        countText.textContent = uploaded + ' / ' + totalFiles + ' bilder';
+
+        // Beräkna hastighet och ETA
+        const elapsed = (Date.now() - startTime) / 1000;
+        if (uploaded > 0 && elapsed > 0) {
+            const perImage = elapsed / uploaded;
+            const remaining = (totalFiles - i) * perImage;
+            speedText.textContent = perImage.toFixed(1) + 's/bild';
+            if (remaining > 60) {
+                etaText.textContent = 'ca ' + Math.ceil(remaining / 60) + ' min kvar';
+            } else {
+                etaText.textContent = 'ca ' + Math.ceil(remaining) + 's kvar';
+            }
+        }
+
+        try {
+            const formData = new FormData();
+            formData.append('photo', file);
+            formData.append('album_id', ALBUM_ID);
+
+            const response = await fetch('/api/upload-album-photo.php', {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!response.ok) {
+                throw new Error('HTTP ' + response.status);
+            }
+
+            const result = await response.json();
+            if (result.success) {
+                uploaded++;
+            } else {
+                failed++;
+                errors.push(file.name + ': ' + (result.error || 'Okänt fel'));
+            }
+        } catch (e) {
+            failed++;
+            errors.push(file.name + ': ' + e.message);
+        }
+    }
+
+    // Klar
+    bar.style.width = '100%';
+    percentText.textContent = '100%';
+    cancelBtn.style.display = 'none';
+    speedText.textContent = '';
+    etaText.textContent = '';
+
+    if (uploadCancelled) {
+        statusText.textContent = 'Avbruten. ' + uploaded + ' av ' + totalFiles + ' bilder uppladdade.';
+        bar.style.background = 'var(--color-warning)';
+    } else if (failed > 0) {
+        statusText.textContent = uploaded + ' bilder uppladdade, ' + failed + ' misslyckades.';
+        bar.style.background = 'var(--color-warning)';
+    } else {
+        statusText.textContent = uploaded + ' bilder uppladdade!';
+        bar.style.background = 'var(--color-success)';
+    }
+
+    countText.textContent = uploaded + ' / ' + totalFiles + ' bilder';
+
+    if (errors.length > 0) {
+        errorsDiv.style.display = 'block';
+        errorsDiv.innerHTML = '<strong>Fel:</strong><br>' + errors.map(e => '• ' + e).join('<br>');
+    }
+
+    // Återställ filväljare
+    fileInput.disabled = false;
+    fileInput.value = '';
+    uploadBtn.disabled = true;
+    uploadBtn.innerHTML = '<i data-lucide="upload" class="icon-sm"></i> Ladda upp till R2';
+    if (typeof lucide !== 'undefined') lucide.createIcons({nodes: [uploadBtn]});
+
+    // Ladda om sidan efter 2 sekunder för att visa nya bilder
+    if (uploaded > 0) {
+        setTimeout(() => {
+            window.location.reload();
+        }, 2000);
+    }
+}
+
+function cancelUpload() {
+    if (confirm('Avbryta uppladdningen? Redan uppladdade bilder behålls.')) {
+        uploadCancelled = true;
     }
 }
 </script>

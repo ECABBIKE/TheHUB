@@ -30,7 +30,16 @@ function env($key, $default = null) {
                     if (empty($line) || strpos($line, '#') === 0) continue;
                     if (strpos($line, '=') !== false) {
                         list($k, $v) = explode('=', $line, 2);
-                        $envCache[trim($k)] = trim($v);
+                        $v = trim($v);
+                        // Strip inline comments (# ...) but not inside quoted values
+                        if (isset($v[0]) && ($v[0] === '"' || $v[0] === "'")) {
+                            // Quoted value - remove quotes
+                            $v = trim($v, "\"'");
+                        } elseif (($hashPos = strpos($v, ' #')) !== false) {
+                            // Unquoted value with inline comment
+                            $v = trim(substr($v, 0, $hashPos));
+                        }
+                        $envCache[trim($k)] = $v;
                     }
                 }
             }
@@ -109,7 +118,7 @@ if (APP_ENV === 'development') {
 // Version info
 define('APP_VERSION', '1.0');
 define('APP_VERSION_NAME', 'Release');
-define('APP_BUILD', '2026-02-26');
+define('APP_BUILD', '2026-02-27');
 define('DEPLOYMENT_OFFSET', 131);
 
 
