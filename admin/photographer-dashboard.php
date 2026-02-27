@@ -43,6 +43,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $avatar_url = trim($_POST['avatar_url'] ?? '');
         $website_url = trim($_POST['website_url'] ?? '');
         $instagram_url = trim($_POST['instagram_url'] ?? '');
+        $tiktok_url = trim($_POST['tiktok_url'] ?? '');
         $facebook_url = trim($_POST['facebook_url'] ?? '');
         $youtube_url = trim($_POST['youtube_url'] ?? '');
 
@@ -58,12 +59,12 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt = $pdo->prepare("
                 UPDATE photographers SET
                     name = ?, slug = ?, bio = ?, avatar_url = ?,
-                    website_url = ?, instagram_url = ?, facebook_url = ?, youtube_url = ?
+                    website_url = ?, instagram_url = ?, tiktok_url = ?, facebook_url = ?, youtube_url = ?
                 WHERE id = ? AND admin_user_id = ?
             ");
             $stmt->execute([$name, $slug, $bio ?: null, $avatar_url ?: null,
-                $website_url ?: null, $instagram_url ?: null, $facebook_url ?: null,
-                $youtube_url ?: null, $photographer['id'], $userId]);
+                $website_url ?: null, $instagram_url ?: null, $tiktok_url ?: null,
+                $facebook_url ?: null, $youtube_url ?: null, $photographer['id'], $userId]);
             echo json_encode(['success' => true]);
         } catch (PDOException $e) {
             echo json_encode(['success' => false, 'error' => 'Kunde inte spara: ' . $e->getMessage()]);
@@ -228,6 +229,10 @@ include __DIR__ . '/components/unified-layout.php';
                 <div class="form-group">
                     <label class="form-label"><i data-lucide="instagram" style="width: 14px; height: 14px; vertical-align: -2px;"></i> Instagram</label>
                     <input type="url" name="instagram_url" class="form-input" value="<?= htmlspecialchars($photographer['instagram_url'] ?? '') ?>" placeholder="https://instagram.com/...">
+                </div>
+                <div class="form-group">
+                    <label class="form-label"><i data-lucide="music" style="width: 14px; height: 14px; vertical-align: -2px;"></i> TikTok</label>
+                    <input type="url" name="tiktok_url" class="form-input" value="<?= htmlspecialchars($photographer['tiktok_url'] ?? '') ?>" placeholder="https://tiktok.com/@...">
                 </div>
                 <div class="form-group">
                     <label class="form-label"><i data-lucide="facebook" style="width: 14px; height: 14px; vertical-align: -2px;"></i> Facebook</label>

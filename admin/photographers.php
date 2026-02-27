@@ -1,7 +1,6 @@
 <?php
-require_once __DIR__ . '/../config/database.php';
-require_once __DIR__ . '/../includes/auth.php';
-requireAdmin();
+require_once __DIR__ . '/../config.php';
+require_admin();
 
 $db = getDB();
 $pdo = $db->getConnection();
@@ -20,6 +19,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $avatar_url = trim($_POST['avatar_url'] ?? '');
         $website_url = trim($_POST['website_url'] ?? '');
         $instagram_url = trim($_POST['instagram_url'] ?? '');
+        $tiktok_url = trim($_POST['tiktok_url'] ?? '');
         $facebook_url = trim($_POST['facebook_url'] ?? '');
         $youtube_url = trim($_POST['youtube_url'] ?? '');
         $rider_id = intval($_POST['rider_id'] ?? 0) ?: null;
@@ -37,18 +37,18 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $stmt = $pdo->prepare("
                     UPDATE photographers SET
                         name = ?, slug = ?, email = ?, bio = ?, avatar_url = ?,
-                        website_url = ?, instagram_url = ?, facebook_url = ?,
+                        website_url = ?, instagram_url = ?, tiktok_url = ?, facebook_url = ?,
                         youtube_url = ?, rider_id = ?, admin_user_id = ?, active = ?
                     WHERE id = ?
                 ");
-                $stmt->execute([$name, $slug, $email, $bio, $avatar_url, $website_url, $instagram_url, $facebook_url, $youtube_url, $rider_id, $admin_user_id, $active, $id]);
+                $stmt->execute([$name, $slug, $email, $bio, $avatar_url, $website_url, $instagram_url, $tiktok_url, $facebook_url, $youtube_url, $rider_id, $admin_user_id, $active, $id]);
                 $message = 'Fotograf uppdaterad';
             } else {
                 $stmt = $pdo->prepare("
-                    INSERT INTO photographers (name, slug, email, bio, avatar_url, website_url, instagram_url, facebook_url, youtube_url, rider_id, admin_user_id, active)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    INSERT INTO photographers (name, slug, email, bio, avatar_url, website_url, instagram_url, tiktok_url, facebook_url, youtube_url, rider_id, admin_user_id, active)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ");
-                $stmt->execute([$name, $slug, $email, $bio, $avatar_url, $website_url, $instagram_url, $facebook_url, $youtube_url, $rider_id, $admin_user_id, $active]);
+                $stmt->execute([$name, $slug, $email, $bio, $avatar_url, $website_url, $instagram_url, $tiktok_url, $facebook_url, $youtube_url, $rider_id, $admin_user_id, $active]);
                 $id = $pdo->lastInsertId();
                 $message = 'Fotograf skapad';
             }
@@ -171,6 +171,10 @@ include __DIR__ . '/../includes/admin-header.php';
                     <div class="form-group">
                         <label class="form-label"><i data-lucide="instagram" style="width: 14px; height: 14px; vertical-align: -2px;"></i> Instagram</label>
                         <input type="url" name="instagram_url" class="form-input" value="<?= htmlspecialchars($editPhotographer['instagram_url'] ?? '') ?>" placeholder="https://instagram.com/...">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label"><i data-lucide="music" style="width: 14px; height: 14px; vertical-align: -2px;"></i> TikTok</label>
+                        <input type="url" name="tiktok_url" class="form-input" value="<?= htmlspecialchars($editPhotographer['tiktok_url'] ?? '') ?>" placeholder="https://tiktok.com/@...">
                     </div>
                     <div class="form-group">
                         <label class="form-label"><i data-lucide="facebook" style="width: 14px; height: 14px; vertical-align: -2px;"></i> Facebook</label>

@@ -4,7 +4,46 @@
 
 ---
 
-## SENASTE FIXAR (2026-02-27, session 9)
+## SENASTE FIXAR (2026-02-27, session 12)
+
+### PWA vit-på-vit text fixad (databas-sidan)
+- **Problem:** Stat-kort och kort på databas-sidan hade vit text på vit bakgrund i PWA
+- **Orsak:** Gammal PWA-cache (cache-first strategi) serverade inaktuell CSS. Manifest hade gamla mörka temafärger
+- **Fix 1:** Bumpat service worker cache `thehub-cache-v1` → `thehub-cache-v2` i `sw.js`
+- **Fix 2:** Uppdaterat `manifest.json` färger: `background_color: #F9F9F9`, `theme_color: #0066CC`
+- **Fix 3:** Lagt till explicita textfärger i `database.css` med `!important` som skydd mot cachad CSS
+  - `.stat-value { color: var(--color-accent) !important; }`
+  - `.stat-label { color: var(--color-text-secondary) !important; }`
+  - `.card`, `.card-title`, `.ranking-name`, `.search-result-name` med explicit `color: var(--color-text-primary)`
+
+### Galleri-sidan CSS konsistens
+- **Problem:** Galleri-sidan använde inline `<style>` istället för extern CSS-fil som databas-sidan
+- **Fix:** Skapat `/assets/css/pages/gallery-index.css` med alla galleri-specifika stilar
+- **Fix:** Konverterat stats från inline-stylade divs till `.stats-grid .stat-card` komponenter
+- **Fix:** Tagit bort inline `<style>` block från `pages/gallery/index.php`
+
+### Photographers.php fatal error fixad
+- **Problem:** `Call to undefined function getDB()` vid åtkomst av `/admin/photographers.php`
+- **Orsak:** Filen använde `require_once __DIR__ . '/../config/database.php'` som inte laddar helpers.php
+- **Fix:** Ändrat till `require_once __DIR__ . '/../config.php'; require_admin();` (standardmönstret)
+
+### TikTok tillagd för fotografer (migration 067)
+- **Migration:** `ALTER TABLE photographers ADD COLUMN tiktok_url VARCHAR(255) DEFAULT NULL AFTER instagram_url`
+- **Admin-formulär:** TikTok-fält tillagt i `admin/photographers.php` (INSERT/UPDATE + formulär)
+- **Dashboard:** TikTok-fält tillagt i `admin/photographer-dashboard.php` (sparning + formulär)
+- **Publik profil:** TikTok visas i sociala medier-listan i `pages/photographer/show.php`
+- **Ikon:** Använder `music` (Lucide har inget TikTok-ikon)
+- **Fotografers sociala medier nu:** Webbplats, Instagram, TikTok, Facebook, YouTube
+
+### Fotografer synliga i användarhantering
+- **Problem:** Användaren tyckte att fotografer borde vara åtkomliga från användarhanteringen, inte bara en separat admin-sida
+- **Fix:** Lagt till "Fotografer"-sektion i `admin/users.php` (mellan Promotörer och Klubb-admin)
+  - Tabell med namn, kopplat konto, album, status, redigeringsknapp
+  - Stat-kort för "Fotograf"-rollen i statistik-raden
+  - Rollbeskrivning tillagd
+  - "Hantera alla fotografer"-länk och "Ny fotograf"-knapp
+
+## TIDIGARE FIXAR (2026-02-27, session 9)
 
 ### Chunked Album Upload (prestandafix för stora album)
 - **Problem:** Uppladdning av 256+ bilder (~1.1GB) frös sidan helt. Alla filer skickades i ETT POST-anrop → PHP-timeout, post_max_size-gräns, max_file_uploads=20, ingen feedback.
