@@ -126,8 +126,8 @@ $totalTags = array_sum(array_column($albums, 'tag_count'));
 ?>
 
 <!-- Database tabs navigation -->
-<div class="card" style="margin-bottom: var(--space-md); padding: var(--space-sm) var(--space-md) 0;">
-    <div class="tabs-nav" style="margin-bottom: 0;">
+<div class="search-card">
+    <div class="tabs-nav">
         <button class="tab-pill" onclick="window.location='/database'"><i data-lucide="users"></i> Sök Åkare</button>
         <button class="tab-pill" onclick="window.location='/database?tab=clubs'"><i data-lucide="shield"></i> Sök Klubbar</button>
         <button class="tab-pill active"><i data-lucide="camera"></i> Galleri</button>

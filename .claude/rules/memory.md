@@ -4,7 +4,37 @@
 
 ---
 
-## SENASTE FIXAR (2026-02-27, session 12)
+## SENASTE FIXAR (2026-02-27, session 14)
+
+### Fotografer: Bilduppladdning istället för URL-fält
+- **Problem:** Fotografer hade ett manuellt URL-fält för profilbild istället för uppladdning
+- **Fix:** Ersatt URL-fält med cirkulär avatar-uppladdning (samma stil som /profile/edit)
+  - Klick på avatar öppnar filväljare, bild laddas upp till media-biblioteket via `/api/media.php?action=upload`
+  - Camera-ikon overlay vid hover, loading spinner under uppladdning
+  - "Ta bort"-knapp för att rensa avatar
+  - CSS-klasser: `.pg-avatar-*` (photographers.php) och `.dash-avatar-*` (photographer-dashboard.php)
+- **Filer:** `admin/photographers.php`, `admin/photographer-dashboard.php`
+
+### Galleri-sidan CSS matchar nu databas-sidan
+- **Problem:** Galleri-sidan hade fortfarande avvikande CSS (tab-wrapper, stat-kort, mobil-behandling)
+- **Fix 1:** Ändrat filterkortets wrapper från `.card` till `.search-card` i `pages/gallery/index.php`
+- **Fix 2:** Omskrivit `assets/css/pages/gallery-index.css` med matchande stilar:
+  - `.search-card` bas-stilar, `.stat-value`/`.stat-label` färger med `!important`
+  - Mobilanpassning: tab-pills, edge-to-edge search-card, stat-kort
+- **Referens:** `assets/css/pages/database-index.css` är "gold standard"
+
+### Rider-taggar i galleriet redesignade
+- **Problem:** När flera åkare taggades på bilder visades individuella gröna pills ovanpå bilden - stökigt och svårt att se bilden
+- **Grid-vy (ny):** Svart halvtransparent banner i botten av bilden med users-ikon
+  - 1 taggad: visar namn ("Roger Edvinsson")
+  - 2+ taggade: visar antal ("3 taggade")
+- **Lightbox-vy (ny):** Fullbreddsbanner med subtil cyan-bakgrund
+  - Users-ikon + alla namn som klickbara länkar separerade med bullet-punkter
+  - Inga pills längre - renare utseende
+- **CSS-klasser ändrade:** `.gallery-item-tag` → `.gallery-item-tag-text` (grid), `.gallery-lightbox-tag-sep` (ny)
+- **Fil:** `pages/event.php` (inline CSS + PHP + JS)
+
+## TIDIGARE FIXAR (2026-02-27, session 12)
 
 ### PWA vit-på-vit text fixad (databas-sidan)
 - **Problem:** Stat-kort och kort på databas-sidan hade vit text på vit bakgrund i PWA

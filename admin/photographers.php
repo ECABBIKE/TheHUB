@@ -181,8 +181,40 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
 
             <div class="form-group">
-                <label class="form-label">Profilbild (URL)</label>
-                <input type="url" name="avatar_url" class="form-input" value="<?= htmlspecialchars($editPhotographer['avatar_url'] ?? '') ?>" placeholder="https://...">
+                <label class="form-label">Profilbild</label>
+                <input type="hidden" name="avatar_url" id="avatarUrlInput" value="<?= htmlspecialchars($editPhotographer['avatar_url'] ?? '') ?>">
+                <?php
+                $avatarUrl = $editPhotographer['avatar_url'] ?? '';
+                $initials = strtoupper(substr($editPhotographer['name'] ?? 'F', 0, 1));
+                ?>
+                <div style="display: flex; align-items: center; gap: var(--space-lg);">
+                    <div class="pg-avatar-upload-container" id="avatarContainer">
+                        <div class="pg-avatar-preview" id="avatarPreview">
+                            <?php if ($avatarUrl): ?>
+                                <img src="<?= htmlspecialchars($avatarUrl) ?>" alt="Profilbild" class="pg-avatar-image" id="avatarImage">
+                            <?php else: ?>
+                                <div class="pg-avatar-fallback" id="avatarFallback">
+                                    <span class="pg-avatar-initials"><?= htmlspecialchars($initials) ?></span>
+                                </div>
+                            <?php endif; ?>
+                        </div>
+                        <div class="pg-avatar-overlay" id="avatarOverlay">
+                            <i data-lucide="camera"></i>
+                        </div>
+                        <div class="pg-avatar-loading" id="avatarLoading" style="display: none;"></div>
+                        <input type="file" id="avatarInput" class="pg-avatar-file-input" accept="image/jpeg,image/png,image/gif,image/webp" aria-label="Välj profilbild">
+                    </div>
+                    <div>
+                        <p style="color: var(--color-text-secondary); font-size: 0.85rem; margin: 0;">Klicka för att välja en bild</p>
+                        <p style="color: var(--color-text-muted); font-size: 0.75rem; margin: var(--space-2xs) 0 0;">Max 2MB. JPG, PNG, GIF eller WebP.</p>
+                        <?php if ($avatarUrl): ?>
+                        <button type="button" class="btn btn-ghost" id="avatarRemoveBtn" style="padding: 4px 10px; font-size: 0.8rem; color: var(--color-error); margin-top: var(--space-xs);" onclick="clearAvatar()">
+                            <i data-lucide="x" style="width: 12px; height: 12px;"></i> Ta bort bild
+                        </button>
+                        <?php endif; ?>
+                    </div>
+                </div>
+                <div class="pg-avatar-status" id="avatarStatus" style="display: none;"></div>
             </div>
 
             <h4 style="margin: var(--space-lg) 0 var(--space-sm); font-family: var(--font-heading-secondary); color: var(--color-text-secondary);">
@@ -335,5 +367,218 @@ include __DIR__ . '/components/unified-layout.php';
         </div>
     </div>
 </div>
+
+<!-- Avatar Upload Styles -->
+<style>
+.pg-avatar-upload-container {
+    position: relative;
+    cursor: pointer;
+    flex-shrink: 0;
+}
+.pg-avatar-preview {
+    width: 120px;
+    height: 120px;
+    border-radius: 50%;
+    overflow: hidden;
+    background: var(--color-accent-light);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    transition: transform 0.3s ease, box-shadow 0.3s ease;
+}
+.pg-avatar-upload-container:hover .pg-avatar-preview {
+    transform: scale(1.02);
+    box-shadow: 0 4px 16px rgba(0,0,0,0.15);
+}
+.pg-avatar-image {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.pg-avatar-fallback {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--color-accent);
+    color: #ffffff;
+}
+.pg-avatar-initials {
+    font-size: 3rem;
+    font-weight: 700;
+    text-transform: uppercase;
+}
+.pg-avatar-overlay {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.5);
+    border-radius: 50%;
+    opacity: 0;
+    transition: opacity 0.3s ease;
+    pointer-events: none;
+}
+.pg-avatar-upload-container:hover .pg-avatar-overlay {
+    opacity: 1;
+}
+.pg-avatar-overlay i,
+.pg-avatar-overlay svg {
+    color: #ffffff;
+    width: 36px;
+    height: 36px;
+}
+.pg-avatar-file-input {
+    position: absolute;
+    inset: 0;
+    opacity: 0;
+    cursor: pointer;
+    border-radius: 50%;
+}
+.pg-avatar-loading {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.6);
+    border-radius: 50%;
+}
+.pg-avatar-loading::after {
+    content: '';
+    width: 36px;
+    height: 36px;
+    border: 3px solid rgba(255, 255, 255, 0.3);
+    border-top-color: #ffffff;
+    border-radius: 50%;
+    animation: pg-avatar-spin 0.8s linear infinite;
+}
+@keyframes pg-avatar-spin {
+    to { transform: rotate(360deg); }
+}
+.pg-avatar-status {
+    margin-top: var(--space-sm);
+    padding: var(--space-xs) var(--space-md);
+    border-radius: var(--radius-sm);
+    font-size: 0.85rem;
+}
+.pg-avatar-status.success {
+    background: rgba(16, 185, 129, 0.1);
+    color: var(--color-success);
+    border: 1px solid var(--color-success);
+}
+.pg-avatar-status.error {
+    background: rgba(239, 68, 68, 0.1);
+    color: var(--color-error);
+    border: 1px solid var(--color-error);
+}
+</style>
+
+<!-- Avatar Upload Script -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    var avatarInput = document.getElementById('avatarInput');
+    if (!avatarInput) return;
+
+    var avatarPreview = document.getElementById('avatarPreview');
+    var avatarLoading = document.getElementById('avatarLoading');
+    var avatarStatus = document.getElementById('avatarStatus');
+
+    avatarInput.addEventListener('change', async function(e) {
+        var file = e.target.files[0];
+        if (!file) return;
+
+        var allowedTypes = ['image/jpeg', 'image/png', 'image/gif', 'image/webp'];
+        if (allowedTypes.indexOf(file.type) === -1) {
+            showStatus('Otillåten filtyp. Välj JPG, PNG, GIF eller WebP.', 'error');
+            return;
+        }
+        if (file.size > 2 * 1024 * 1024) {
+            showStatus('Bilden är för stor. Max 2MB.', 'error');
+            return;
+        }
+
+        // Show preview immediately
+        var reader = new FileReader();
+        reader.onload = function(ev) {
+            avatarPreview.innerHTML = '<img src="' + ev.target.result + '" alt="Profilbild" class="pg-avatar-image">';
+        };
+        reader.readAsDataURL(file);
+
+        avatarLoading.style.display = 'flex';
+        hideStatus();
+
+        // Upload via media API
+        var formData = new FormData();
+        formData.append('file', file);
+        formData.append('folder', 'general');
+
+        try {
+            var response = await fetch('/api/media.php?action=upload', { method: 'POST', body: formData });
+            var result = await response.json();
+
+            if (result.success && result.data) {
+                var url = result.data.url || ('/' + result.data.filepath);
+                document.getElementById('avatarUrlInput').value = url;
+                avatarPreview.innerHTML = '<img src="' + url + '" alt="Profilbild" class="pg-avatar-image">';
+                showStatus('Bilden har laddats upp!', 'success');
+
+                // Show remove button
+                var removeBtn = document.getElementById('avatarRemoveBtn');
+                if (!removeBtn) {
+                    var infoDiv = document.getElementById('avatarContainer').nextElementSibling;
+                    if (infoDiv) {
+                        var btn = document.createElement('button');
+                        btn.type = 'button';
+                        btn.id = 'avatarRemoveBtn';
+                        btn.className = 'btn btn-ghost';
+                        btn.style.cssText = 'padding:4px 10px; font-size:0.8rem; color:var(--color-error); margin-top:var(--space-xs);';
+                        btn.innerHTML = '<i data-lucide="x" style="width:12px; height:12px;"></i> Ta bort bild';
+                        btn.onclick = clearAvatar;
+                        infoDiv.appendChild(btn);
+                        if (window.lucide) lucide.createIcons();
+                    }
+                }
+            } else {
+                showStatus(result.error || 'Kunde inte ladda upp bilden.', 'error');
+            }
+        } catch (err) {
+            showStatus('Kunde inte ladda upp bilden. Försök igen.', 'error');
+        } finally {
+            avatarLoading.style.display = 'none';
+        }
+    });
+
+    function showStatus(message, type) {
+        avatarStatus.textContent = message;
+        avatarStatus.className = 'pg-avatar-status ' + type;
+        avatarStatus.style.display = 'block';
+        if (type === 'success') {
+            setTimeout(hideStatus, 4000);
+        }
+    }
+
+    function hideStatus() {
+        avatarStatus.style.display = 'none';
+    }
+
+    if (typeof lucide !== 'undefined') {
+        lucide.createIcons();
+    }
+});
+
+function clearAvatar() {
+    document.getElementById('avatarUrlInput').value = '';
+    var preview = document.getElementById('avatarPreview');
+    var name = document.querySelector('input[name="name"]');
+    var initial = (name && name.value) ? name.value.charAt(0).toUpperCase() : 'F';
+    preview.innerHTML = '<div class="pg-avatar-fallback"><span class="pg-avatar-initials">' + initial + '</span></div>';
+    var removeBtn = document.getElementById('avatarRemoveBtn');
+    if (removeBtn) removeBtn.remove();
+}
+</script>
 
 <?php include __DIR__ . '/components/unified-layout-footer.php'; ?>

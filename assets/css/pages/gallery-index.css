@@ -1,6 +1,6 @@
 /**
  * Gallery Page Styles
- * Consistent with database page styling
+ * Consistent with database-index.css styling
  */
 
 /* Stats Grid - 3 columns for gallery stats */
@@ -8,21 +8,21 @@
   grid-template-columns: repeat(3, 1fr);
 }
 
-/* Gallery filter form */
-.gallery-filter-form {
-  display: flex;
-  flex-wrap: wrap;
-  gap: var(--space-sm);
-  align-items: center;
+/* Explicit text colors for stat cards (defensive against stale PWA cache) */
+.stat-value {
+  color: var(--color-accent) !important;
 }
-.gallery-filter-form .form-select {
-  flex: 1;
-  min-width: 100px;
-  max-width: 200px;
+.stat-label {
+  color: var(--color-text-secondary) !important;
 }
-.gallery-filter-form .form-input {
-  flex: 2;
-  min-width: 160px;
+
+/* Search Card (tab navigation wrapper - same as database page) */
+.search-card {
+  background: var(--color-bg-card);
+  border-radius: var(--radius-lg);
+  padding: var(--container-padding);
+  margin-bottom: var(--space-xl);
+  border: 1px solid var(--color-border);
 }
 
 /* Gallery Listing Grid */
@@ -128,11 +128,37 @@
   font-weight: 500;
 }
 
+/* Tablet */
+@media (max-width: 768px) {
+  .gallery-stats-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-sm);
+  }
+}
+
 /* Mobile - Consistent with database page */
 @media (max-width: 767px) {
   /* Stat cards - borderless, clean look */
-  .gallery-stats-grid .stat-card {
+  .stats-grid .stat-card {
     border: none;
+    background: var(--color-bg-card);
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
+  }
+
+  /* Tab pills - softer, no border on inactive */
+  .search-card .tab-pill {
+    border-color: transparent;
+    background: transparent;
+    font-size: 13px;
+    padding: var(--space-xs) var(--space-sm);
+  }
+  .search-card .tab-pill.active {
+    border-color: var(--color-accent);
+  }
+
+  /* Search card - softer border */
+  .search-card {
+    border-color: transparent;
     background: var(--color-bg-card);
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
   }
@@ -160,8 +186,20 @@
   }
 }
 
-/* Mobile Portrait */
+/* Mobile Portrait - Extra compact + Edge-to-Edge */
 @media (max-width: 480px) {
+  /* Search card - edge-to-edge */
+  .search-card {
+    padding: var(--container-padding);
+    margin-left: calc(-1 * var(--container-padding));
+    margin-right: calc(-1 * var(--container-padding));
+    margin-bottom: var(--space-md);
+    border-radius: 0;
+    border-left: none !important;
+    border-right: none !important;
+    width: calc(100% + var(--container-padding) * 2);
+  }
+
   .gallery-listing-grid {
     grid-template-columns: 1fr;
   }
@@ -173,6 +211,8 @@
     gap: var(--space-xs);
   }
   .gallery-stats-grid .stat-card {
+    border-radius: var(--radius-md);
     box-shadow: none;
+    background: var(--color-bg-card);
   }
 }
