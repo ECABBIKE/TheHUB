@@ -42,10 +42,7 @@ $albumStmt = $pdo->prepare("
     SELECT ea.id, ea.event_id, ea.title, ea.photo_count, ea.created_at,
            e.name as event_name, e.date as event_date, e.location as event_location,
            cover.external_url as cover_url, cover.thumbnail_url as cover_thumb,
-           cover_media.filepath as cover_filepath,
-           (SELECT COUNT(*) FROM photo_rider_tags prt
-            JOIN event_photos ep2 ON prt.photo_id = ep2.id
-            WHERE ep2.album_id = ea.id) as tag_count
+           cover_media.filepath as cover_filepath
     FROM event_albums ea
     JOIN events e ON ea.event_id = e.id
     LEFT JOIN event_photos cover ON cover.id = ea.cover_photo_id
@@ -81,7 +78,6 @@ unset($album);
 // Stats
 $totalPhotos = array_sum(array_column($albums, 'photo_count'));
 $totalAlbums = count($albums);
-$totalTags = array_sum(array_column($albums, 'tag_count'));
 
 // Social media links
 $socials = [];
@@ -139,10 +135,6 @@ if ($photographer['youtube_url']) $socials[] = ['icon' => 'youtube', 'url' => $p
             <div class="photographer-stat">
                 <span class="photographer-stat-value"><?= number_format($totalPhotos) ?></span>
                 <span class="photographer-stat-label">Bilder</span>
-            </div>
-            <div class="photographer-stat">
-                <span class="photographer-stat-value"><?= $totalTags ?></span>
-                <span class="photographer-stat-label">Taggningar</span>
             </div>
         </div>
     </div>
