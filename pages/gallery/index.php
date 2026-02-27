@@ -141,6 +141,14 @@ $totalPhotos = array_sum(array_column($albums, 'photo_count'));
 $totalTags = array_sum(array_column($albums, 'tag_count'));
 ?>
 
+<div class="page-header">
+    <h1 class="page-title">
+        <i data-lucide="camera" class="page-icon"></i>
+        Galleri
+    </h1>
+    <p class="page-subtitle">Foton från tävlingar och event</p>
+</div>
+
 <!-- Stats Cards -->
 <div class="stats-grid gallery-stats-grid">
     <div class="stat-card">
