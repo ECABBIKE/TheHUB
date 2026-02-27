@@ -22,10 +22,13 @@
 - **Fix:** Konverterat stats från inline-stylade divs till `.stats-grid .stat-card` komponenter
 - **Fix:** Tagit bort inline `<style>` block från `pages/gallery/index.php`
 
-### Photographers.php fatal error fixad
-- **Problem:** `Call to undefined function getDB()` vid åtkomst av `/admin/photographers.php`
-- **Orsak:** Filen använde `require_once __DIR__ . '/../config/database.php'` som inte laddar helpers.php
-- **Fix:** Ändrat till `require_once __DIR__ . '/../config.php'; require_admin();` (standardmönstret)
+### Photographers.php vit sida fixad (igen)
+- **Problem:** Skapa/redigera fotograf gav vit sida (fatal error)
+- **Orsak 1 (session 12):** `getDB()` var odefinierad pga fel include - fixat genom att byta till `config.php`
+- **Orsak 2 (session 13):** `getDB()` returnerar `DatabaseWrapper` (från helpers.php) som har `getPdo()`, men koden anropade `getConnection()` som bara finns i `Database`-klassen (db.php) → `Call to undefined method DatabaseWrapper::getConnection()`
+- **Fix:** Ersatt `$db = getDB(); $pdo = $db->getConnection();` med `global $pdo;` (standardmönstret för admin-sidor)
+- **Fix:** Ändrat `$pageTitle` till `$page_title` (unified-layout.php förväntar sig underscore)
+- **VIKTIGT:** Admin-sidor ska använda `global $pdo;` - INTE `getDB()->getConnection()`
 
 ### TikTok + Strava tillagd för fotografer (migration 067 + 068)
 - **Migration 067:** `ALTER TABLE photographers ADD COLUMN tiktok_url VARCHAR(255) DEFAULT NULL AFTER instagram_url`

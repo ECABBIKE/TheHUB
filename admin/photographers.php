@@ -2,8 +2,7 @@
 require_once __DIR__ . '/../config.php';
 require_admin();
 
-$db = getDB();
-$pdo = $db->getConnection();
+global $pdo;
 $message = '';
 $error = '';
 
@@ -142,7 +141,7 @@ $photographers = $pdo->query("
     ORDER BY p.name ASC
 ")->fetchAll(PDO::FETCH_ASSOC);
 
-$pageTitle = 'Fotografer';
+$page_title = 'Fotografer';
 $page_actions = '<a href="?edit=0" class="btn btn--primary btn--sm"><i data-lucide="plus"></i> Ny fotograf</a>';
 include __DIR__ . '/components/unified-layout.php';
 ?>
