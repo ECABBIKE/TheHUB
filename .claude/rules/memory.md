@@ -13,6 +13,26 @@
 - **Ad-styling:** Borttagna borders, subtilare med opacity 0.85, hover till 1.0, mindre (60px istf 80px)
 - **Fil:** `pages/event.php` (inline CSS)
 
+### Fotografprofil: Tvåkolumns-layout (som åkarprofilen)
+- **Problem:** Profilbilden var ENORM på desktop - hela sidbredden
+- **Fix:** Tvåkolumns-layout med `grid-template-columns: 7fr 3fr` (samma som rider.php)
+- **Vänster:** Album-galleri med rutnät
+- **Höger:** Profilkort med bild, namn, bio, stats, sociala medier
+- **Mobil:** Enkolumn med profilkort först (order: -1)
+- **Tablet:** Fast 280px högerkolumn
+- **Fil:** `pages/photographer/show.php`
+
+### Galleri-listning: Serienamn + galleri-bannerplaceringar
+- **Serienamn:** Visas under eventnamn på varje album-kort i galleri-listningen (/gallery)
+  - Hämtas via `GROUP_CONCAT(DISTINCT s2.name)` genom `series_events → series`
+  - CSS: `.gallery-listing-series` i cyan accent-färg
+- **Galleri-banners via sponsorsystemet (migration 069):**
+  - Ny `page_type = 'gallery'` i `sponsor_placements` ENUM
+  - Admin konfigurerar galleri-banners via `/admin/sponsor-placements.php` (page_type=gallery, position=content_top)
+  - Prioritet i event.php: globala galleri-placeringar → event/serie content-sponsorer → partner-sponsorer
+  - Globala placeringar överskriver event/serie-sponsorer i bildgalleriet
+- **Filer:** `pages/gallery/index.php`, `assets/css/pages/gallery-index.css`, `pages/event.php`, `admin/sponsor-placements.php`, `Tools/migrations/069_gallery_sponsor_placement.sql`
+
 ### Album-uppladdning: Kraschade efter ~97 bilder
 - **Problem:** Uppladdning av stora album (100+ bilder) kraschade efter ~10 minuter
 - **Orsaker:** 3 parallella uploads, 60s PHP-timeout per fil (för kort för stora bilder), ingen retry-logik, ingen session keep-alive, ingen fetch timeout

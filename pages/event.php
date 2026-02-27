@@ -5589,8 +5589,33 @@ if (!empty($event['series_id'])) {
         }
     }
 
-    // Load event sponsors for ad slots (content position)
-    $galleryAdSponsors = $eventSponsors['content'] ?? [];
+    // Load gallery ad sponsors
+    // Priority: 1) Global gallery placements (from sponsor_placements)
+    //           2) Event/series content sponsors
+    //           3) Event/series partner sponsors
+    $galleryAdSponsors = [];
+    try {
+        require_once __DIR__ . '/../includes/GlobalSponsorManager.php';
+        $gallerySponsorMgr = new GlobalSponsorManager($pdo);
+        $globalGallerySponsors = $gallerySponsorMgr->getSponsorsForPlacement('gallery', 'content_top', 10);
+        if (!empty($globalGallerySponsors)) {
+            // Mappa till samma format som eventSponsors
+            foreach ($globalGallerySponsors as $gs) {
+                $galleryAdSponsors[] = [
+                    'name' => $gs['name'] ?? '',
+                    'website' => $gs['website'] ?? '',
+                    'custom_image_url' => !empty($gs['custom_image_url']) ? '/' . ltrim($gs['custom_image_url'], '/') : '',
+                    'logo_url' => !empty($gs['logo_url']) ? '/' . ltrim($gs['logo_url'], '/') : '',
+                    'legacy_logo_url' => !empty($gs['banner_image']) ? '/' . ltrim($gs['banner_image'], '/') : '',
+                ];
+            }
+        }
+    } catch (Exception $e) {
+        // Fallback silently
+    }
+    if (empty($galleryAdSponsors)) {
+        $galleryAdSponsors = $eventSponsors['content'] ?? [];
+    }
     if (empty($galleryAdSponsors)) {
         $galleryAdSponsors = $eventSponsors['partner'] ?? [];
     }

@@ -238,6 +238,9 @@ $migrationChecks = [
     '068_photographer_strava.sql' => [
         'columns' => ['photographers.strava_url']
     ],
+    '069_gallery_sponsor_placement.sql' => [
+        'data' => ["SHOW COLUMNS FROM sponsor_placements WHERE Field = 'page_type' AND Type LIKE '%gallery%'"]
+    ],
 ];
 
 // ============================================================================
