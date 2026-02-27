@@ -16,13 +16,34 @@
   color: var(--color-text-secondary) !important;
 }
 
-/* Search Card (tab navigation wrapper - same as database page) */
-.search-card {
-  background: var(--color-bg-card);
-  border-radius: var(--radius-lg);
-  padding: var(--container-padding);
-  margin-bottom: var(--space-xl);
-  border: 1px solid var(--color-border);
+/* Gallery filters inside search-card */
+.gallery-filters {
+  margin-top: var(--space-md);
+}
+.gallery-filters-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
+  gap: var(--space-sm);
+}
+.gallery-filters-grid .filter-select-wrapper {
+  min-width: 0;
+  max-width: none;
+}
+.gallery-filters-grid .filter-select {
+  width: 100%;
+}
+.gallery-filters-actions {
+  display: flex;
+  gap: var(--space-sm);
+  align-items: flex-end;
+  margin-top: var(--space-sm);
+}
+.gallery-filters-actions .filter-search-wrapper {
+  flex: 1;
+  max-width: none;
+}
+.gallery-filters-actions .filter-input {
+  width: 100%;
 }
 
 /* Gallery Listing Grid */
@@ -138,14 +159,14 @@
 
 /* Mobile - Consistent with database page */
 @media (max-width: 767px) {
-  /* Stat cards - borderless, clean look */
+  /* Stat cards - borderless, clean look (same as database) */
   .stats-grid .stat-card {
     border: none;
     background: var(--color-bg-card);
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
   }
 
-  /* Tab pills - softer, no border on inactive */
+  /* Tab pills - same as database page */
   .search-card .tab-pill {
     border-color: transparent;
     background: transparent;
@@ -158,39 +179,31 @@
     border-color: var(--color-accent);
   }
 
-  /* Search card - softer border */
+  /* Search card - same as database page */
   .search-card {
     border-color: transparent;
     background: var(--color-bg-card);
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
   }
 
-  /* Filter bar - 2 per row on mobile (dropdowns open native picker anyway) */
-  .filter-bar {
-    display: grid !important;
+  /* Filter dropdowns - 2 per row on mobile */
+  .gallery-filters-grid {
     grid-template-columns: 1fr 1fr;
     gap: var(--space-xs);
-    padding: var(--space-sm);
   }
-  .filter-bar .filter-select-wrapper {
-    min-width: 0;
-    max-width: none;
-  }
-  .filter-bar .filter-search-wrapper {
-    grid-column: 1 / -1;
-    max-width: none;
-  }
-  .filter-bar .filter-btn {
-    white-space: nowrap;
-  }
-  .filter-bar .filter-select,
-  .filter-bar .filter-input {
-    width: 100%;
+  .gallery-filters-grid .filter-select {
     font-size: 14px;
     padding: var(--space-xs) var(--space-sm);
   }
-  .filter-bar .filter-label {
+  .gallery-filters-grid .filter-label {
     font-size: 10px;
+  }
+  .gallery-filters-actions {
+    gap: var(--space-xs);
+  }
+  .gallery-filters-actions .filter-input {
+    font-size: 14px;
+    padding: var(--space-xs) var(--space-sm);
   }
 
   .gallery-listing-grid {
@@ -218,7 +231,19 @@
 
 /* Mobile Portrait - Extra compact + Edge-to-Edge */
 @media (max-width: 480px) {
-  /* Search card - edge-to-edge */
+  /* Stats grid - keep 3 columns */
+  .gallery-stats-grid {
+    grid-template-columns: repeat(3, 1fr);
+    gap: var(--space-xs);
+    margin-bottom: var(--space-md);
+  }
+  .gallery-stats-grid .stat-card {
+    border-radius: var(--radius-md);
+    box-shadow: none;
+    background: var(--color-bg-card);
+  }
+
+  /* Search card - edge-to-edge (same as database) */
   .search-card {
     padding: var(--container-padding);
     margin-left: calc(-1 * var(--container-padding));
@@ -235,14 +260,5 @@
   }
   .gallery-listing-cover {
     aspect-ratio: 16/9;
-  }
-  .gallery-stats-grid {
-    grid-template-columns: repeat(3, 1fr);
-    gap: var(--space-xs);
-  }
-  .gallery-stats-grid .stat-card {
-    border-radius: var(--radius-md);
-    box-shadow: none;
-    background: var(--color-bg-card);
   }
 }

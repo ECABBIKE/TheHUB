@@ -6,15 +6,24 @@
 
 ## SENASTE FIXAR (2026-02-27, session 15)
 
-### Galleri: Destinationsfilter + varumärkesfilter (ej enskilda serier)
+### Galleri: Layout matchar databas-sidan + destinationsfilter + varumärkesfilter
+- **Layout-fix:** Stats-kort (Album, Bilder, Taggningar) visas nu ÖVERST, före tabs och filter
+  - Ordningen matchar databas-sidan: Stats → Tabs+Filter inuti search-card
+  - Tabs och filter-dropdowns ligger nu inuti samma `.search-card` (inte separata block)
 - **Ny funktion:** Destination-dropdown tillagd i galleri-filtren (events.location)
 - **Ändring:** Serie-filtret visar nu varumärken (`series_brands`) istället för enskilda serier
-  - Förhindrar 30+ val i dropdown (varje serie har ett år-suffix)
-  - Användare kombinerar år + varumärke för att nå specifik serie
 - **Filter-ordning:** År, Destination, Serie (varumärke), Fotograf, Sök
-- **Standardkomponent:** Bytt från custom `.gallery-filter-*` klasser till `.filter-bar` / `.filter-select` (samma som resultatsidan)
-- **Auto-submit:** Alla dropdowns submittar formuläret vid val (`onchange="this.form.submit()"`)
+- **Mobil:** Dropdowns visas 2 per rad (grid) istället för full bredd - tar mindre plats
+- **Auto-submit:** Alla dropdowns submittar formuläret vid val
+- **CSS:** Nya klasser `.gallery-filters`, `.gallery-filters-grid`, `.gallery-filters-actions`
 - **Filer:** `pages/gallery/index.php`, `assets/css/pages/gallery-index.css`
+
+### Fotoalbum: Omslagsval i admin (event-albums.php)
+- **Problem:** Admin kunde inte välja omslagsbild för album (funktionen fanns bara i photographer-album.php)
+- **Fix:** Stjärn-knapp på varje bild i fotogridet, cyan border + "Omslag"-badge på vald bild
+- **AJAX:** `setCover()` JS-funktion uppdaterar via POST `action=set_cover` utan sidomladdning
+- **Visuell feedback:** Gammal omslag-markering tas bort, ny sätts direkt i DOM
+- **Fil:** `admin/event-albums.php`
 
 ### Fotografer: Bilduppladdning trasig (result.data bugg)
 - **Problem:** Avatar-uppladdning misslyckades alltid med "Kunde inte ladda upp bilden"
