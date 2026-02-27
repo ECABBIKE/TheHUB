@@ -243,8 +243,9 @@ if (empty($clubRankings)) {
 <!-- Search Section -->
 <div class="search-card">
     <div class="tabs-nav">
-        <button class="tab-pill active" data-tab="riders"><i data-lucide="users"></i> Sök Åkare</button>
+        <button class="tab-pill <?= $tab !== 'gallery' ? 'active' : '' ?>" data-tab="riders"><i data-lucide="users"></i> Sök Åkare</button>
         <button class="tab-pill" data-tab="clubs"><i data-lucide="shield"></i> Sök Klubbar</button>
+        <button class="tab-pill <?= $tab === 'gallery' ? 'active' : '' ?>" data-tab="gallery" onclick="window.location='/gallery'"><i data-lucide="camera"></i> Galleri</button>
     </div>
 
     <div class="search-box">

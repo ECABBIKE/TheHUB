@@ -56,6 +56,39 @@
 - **Fix 6: PWA standalone** - padding anpassad med `env(safe-area-inset-*)` för notch/home indicator
 - **VIKTIGT:** Alla z-index inuti lightboxen är 10-12 (relativa), inte globala. Topbar/nav/bottom = 10, tag-toggle = 11, tag-panel = 12
 
+### Galleri-listning och fotografprofiler (session 10)
+- **Ny flik:** "Galleri" tillagd som tredje flik i Databas-sektionen (under /database)
+  - Klick på "Galleri"-fliken navigerar till `/gallery`
+  - Galleri-sidan visar samma flikrad (Sök Åkare / Sök Klubbar / Galleri) för enkel navigering
+  - Databas-ikonen i sidebar markeras aktiv på /gallery och /photographer/*
+- **Ny sida:** `/pages/gallery/index.php` - Lista alla publicerade fotoalbum
+  - Filtrera per år, serie, fotograf, fritextsök
+  - Cover-bild från album (cover_photo_id eller första bilden)
+  - Visar eventnamn, datum, plats, fotograf och antal bilder per album
+  - Klick på album → event-sidan med ?tab=gallery
+  - Mobilanpassad: 2-kolumns grid på mobil, edge-to-edge
+- **Ny sida:** `/pages/photographer/show.php` - Fotografprofil
+  - Profilbild (avatar), bio, sociala medier (webb, Instagram, Facebook, YouTube)
+  - Om fotografen är deltagare: länk till deltagarprofilen
+  - Lista alla album av fotografen med cover-bilder och statistik
+- **Ny sida:** `/pages/photographer/index.php` - Lista alla fotografer
+- **Admin:** `/admin/photographers.php` - CRUD för fotografer
+  - Namn, e-post, bio, profilbild-URL, sociala medier, kopplad rider_id
+  - Aktiv/inaktiv status
+  - Tillagd i admin-tabs under "Galleri"-gruppen (Album + Fotografer)
+  - Tillagd i tools.php under System-sektionen
+- **Migration 065:** `photographers`-tabell med alla fält
+  - `photographer_id` tillagd i `event_albums` och `event_photos`
+  - Backfill: Befintliga fotografer (från album-textfält) skapas som photographer-poster automatiskt
+- **Lightbox:** "Foto: Namn" visas under bilden, länkat till fotografprofilen
+  - Data från `photographers`-tabellen via LEFT JOIN i SQL
+  - Fallback till textfältet `event_albums.photographer` om ingen photographer_id
+- **Album admin:** Ny dropdown "Fotograf (profil)" i event-albums.php
+  - Välj bland aktiva fotografer eller skriv fritext som fallback
+- **Router:** `/gallery` och `/photographer` tillagda som publika sektionsrouter
+  - `/photographer/{id}` → photographer/show.php
+  - Båda markerar "Databas" som aktiv i navigationen
+
 ---
 
 ## TIDIGARE FIXAR (2026-02-26, session 8)

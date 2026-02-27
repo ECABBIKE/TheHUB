@@ -36,6 +36,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $aDescription = trim($_POST['description'] ?? '');
         $aPhotographer = trim($_POST['photographer'] ?? '');
         $aPhotographerUrl = trim($_POST['photographer_url'] ?? '');
+        $aPhotographerId = intval($_POST['photographer_id'] ?? 0) ?: null;
         $aPublished = isset($_POST['is_published']) ? 1 : 0;
         $aId = (int)($_POST['album_id'] ?? 0);
 
@@ -48,22 +49,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $stmt = $pdo->prepare("
                         UPDATE event_albums SET
                             event_id = ?, title = ?, google_photos_url = ?, description = ?,
-                            photographer = ?, photographer_url = ?, is_published = ?,
+                            photographer = ?, photographer_url = ?, photographer_id = ?, is_published = ?,
                             updated_at = NOW()
                         WHERE id = ?
                     ");
                     $stmt->execute([$aEventId, $aTitle ?: null, $aGoogleUrl ?: null, $aDescription ?: null,
-                        $aPhotographer ?: null, $aPhotographerUrl ?: null, $aPublished, $aId]);
+                        $aPhotographer ?: null, $aPhotographerUrl ?: null, $aPhotographerId, $aPublished, $aId]);
                     $message = 'Albumet uppdaterat';
                     $messageType = 'success';
                     $albumId = $aId;
                 } else {
                     $stmt = $pdo->prepare("
-                        INSERT INTO event_albums (event_id, title, google_photos_url, description, photographer, photographer_url, is_published)
-                        VALUES (?, ?, ?, ?, ?, ?, ?)
+                        INSERT INTO event_albums (event_id, title, google_photos_url, description, photographer, photographer_url, photographer_id, is_published)
+                        VALUES (?, ?, ?, ?, ?, ?, ?, ?)
                     ");
                     $stmt->execute([$aEventId, $aTitle ?: null, $aGoogleUrl ?: null, $aDescription ?: null,
-                        $aPhotographer ?: null, $aPhotographerUrl ?: null, $aPublished]);
+                        $aPhotographer ?: null, $aPhotographerUrl ?: null, $aPhotographerId, $aPublished]);
                     $albumId = (int)$pdo->lastInsertId();
                     $message = 'Album skapat';
                     $messageType = 'success';
@@ -579,8 +580,22 @@ include __DIR__ . '/components/unified-layout.php';
                     <small class="form-help">Länk till originalalbum hos fotografen (Google Photos, Flickr, etc.)</small>
                 </div>
                 <div class="admin-form-group">
-                    <label class="admin-form-label">Fotograf</label>
-                    <input type="text" name="photographer" class="form-input" value="<?= htmlspecialchars($album['photographer'] ?? '') ?>" placeholder="Namn">
+                    <label class="admin-form-label">Fotograf (profil)</label>
+                    <?php
+                    $allPhotographers = [];
+                    try { $allPhotographers = $pdo->query("SELECT id, name FROM photographers WHERE active = 1 ORDER BY name")->fetchAll(PDO::FETCH_ASSOC); } catch (Exception $e) {}
+                    ?>
+                    <select name="photographer_id" class="form-select">
+                        <option value="">-- Välj fotograf --</option>
+                        <?php foreach ($allPhotographers as $ph): ?>
+                        <option value="<?= $ph['id'] ?>" <?= ($album['photographer_id'] ?? '') == $ph['id'] ? 'selected' : '' ?>><?= htmlspecialchars($ph['name']) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                    <small class="form-help">Koppla till en <a href="/admin/photographers.php">fotografprofil</a> (rekommenderat)</small>
+                </div>
+                <div class="admin-form-group">
+                    <label class="admin-form-label">Fotograf (fritext)</label>
+                    <input type="text" name="photographer" class="form-input" value="<?= htmlspecialchars($album['photographer'] ?? '') ?>" placeholder="Namn (om ingen profil finns)">
                 </div>
                 <div class="admin-form-group">
                     <label class="admin-form-label">Fotografens webbplats</label>

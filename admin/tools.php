@@ -1092,6 +1092,20 @@ include __DIR__ . '/components/unified-layout.php';
         </div>
     </div>
 
+    <!-- Fotografer -->
+    <div class="card">
+        <div class="tool-header">
+            <div class="tool-icon"><i data-lucide="camera"></i></div>
+            <div>
+                <h4 class="tool-title">Fotografer</h4>
+                <p class="tool-description">Hantera fotografprofiler, sociala medier och kopplingar</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/photographers.php" class="btn-admin btn-admin-primary">Öppna</a>
+        </div>
+    </div>
+
     <!-- Cloudflare R2 -->
     <div class="card">
         <div class="tool-header">

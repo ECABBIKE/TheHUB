@@ -224,6 +224,10 @@ $migrationChecks = [
     '064_event_photos_r2_key.sql' => [
         'columns' => ['event_photos.r2_key']
     ],
+    '065_photographers.sql' => [
+        'tables' => ['photographers'],
+        'columns' => ['event_albums.photographer_id', 'event_photos.photographer_id']
+    ],
 ];
 
 // ============================================================================

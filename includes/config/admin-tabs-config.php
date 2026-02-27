@@ -152,6 +152,30 @@ $ADMIN_TABS = [
     ],
 
     // ========================================
+    // GALLERI (Albums + Photographers)
+    // ========================================
+    'galleries' => [
+        'title' => 'Galleri',
+        'icon' => 'camera',
+        'tabs' => [
+            [
+                'id' => 'event-albums',
+                'label' => 'Album',
+                'icon' => 'image',
+                'url' => '/admin/event-albums.php',
+                'pages' => ['event-albums.php']
+            ],
+            [
+                'id' => 'photographers',
+                'label' => 'Fotografer',
+                'icon' => 'camera',
+                'url' => '/admin/photographers.php',
+                'pages' => ['photographers.php']
+            ]
+        ]
+    ],
+
+    // ========================================
     // KONFIGURATION
     // ========================================
     'config' => [

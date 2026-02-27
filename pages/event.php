@@ -968,6 +968,8 @@ try {
                    m.filepath, m.width, m.height,
                    ea.title as album_title, ea.photographer as album_photographer,
                    ea.photographer_url as album_photographer_url,
+                   ea.photographer_id as album_photographer_id,
+                   ph.name as photographer_name, ph.slug as photographer_slug, ph.id as photographer_profile_id,
                    (SELECT GROUP_CONCAT(CONCAT(r.firstname, ' ', r.lastname) SEPARATOR '||')
                     FROM photo_rider_tags prt
                     JOIN riders r ON prt.rider_id = r.id
@@ -979,6 +981,7 @@ try {
             FROM event_photos ep
             JOIN event_albums ea ON ep.album_id = ea.id
             LEFT JOIN media m ON ep.media_id = m.id
+            LEFT JOIN photographers ph ON COALESCE(ep.photographer_id, ea.photographer_id) = ph.id
             WHERE ea.event_id = ? AND ea.is_published = 1
             ORDER BY ep.is_highlight DESC, ep.sort_order ASC, ep.id ASC
         ");
@@ -5701,9 +5704,10 @@ if (!empty($event['series_id'])) {
     <button class="gallery-lightbox-nav gallery-lightbox-prev" onclick="event.stopPropagation(); navigateLightbox(-1)"><i data-lucide="chevron-left"></i></button>
     <button class="gallery-lightbox-nav gallery-lightbox-next" onclick="event.stopPropagation(); navigateLightbox(1)"><i data-lucide="chevron-right"></i></button>
 
-    <!-- Bottom overlay: tags + caption -->
+    <!-- Bottom overlay: tags + photographer + caption -->
     <div class="gallery-lightbox-bottom">
         <div id="lightboxTags" class="gallery-lightbox-tags"></div>
+        <div id="lightboxPhotographer" class="gallery-lightbox-photographer"></div>
         <div id="lightboxCaption" class="gallery-lightbox-caption"></div>
     </div>
 
@@ -6024,6 +6028,21 @@ html.lightbox-open body {
     color: #fff;
 }
 
+/* Photographer credit */
+.gallery-lightbox-photographer {
+    font-size: 0.8rem;
+    color: rgba(255,255,255,0.7);
+}
+.gallery-lightbox-photographer a {
+    color: rgba(255,255,255,0.85);
+    text-decoration: none;
+    transition: color 0.2s;
+}
+.gallery-lightbox-photographer a:hover {
+    color: var(--color-accent);
+    text-decoration: underline;
+}
+
 /* Caption */
 .gallery-lightbox-caption {
     color: rgba(255,255,255,0.8);
@@ -6249,7 +6268,15 @@ html.lightbox-open body {
         } elseif ($p['external_url']) {
             $src = $p['external_url'];
         }
-        return ['id' => (int)$p['id'], 'src' => $src, 'caption' => $p['caption'] ?? ''];
+        $photoName = $p['photographer_name'] ?: ($p['photographer'] ?: ($p['album_photographer'] ?? ''));
+        $photoProfileId = $p['photographer_profile_id'] ?: null;
+        return [
+            'id' => (int)$p['id'],
+            'src' => $src,
+            'caption' => $p['caption'] ?? '',
+            'photographer' => $photoName,
+            'photographerId' => $photoProfileId ? (int)$photoProfileId : null
+        ];
     }, array_filter($eventAlbumPhotos, function($p) {
         return ($p['media_id'] && $p['filepath']) || $p['external_url'];
     })))) ?>;
@@ -6272,6 +6299,23 @@ html.lightbox-open body {
         caption.textContent = photos[idx].caption || '';
         caption.style.display = photos[idx].caption ? 'block' : 'none';
         counter.textContent = (idx + 1) + ' / ' + photos.length;
+
+        // Visa fotograf-credit
+        const photographerEl = document.getElementById('lightboxPhotographer');
+        if (photographerEl) {
+            const p = photos[idx];
+            if (p.photographer) {
+                if (p.photographerId) {
+                    photographerEl.innerHTML = '<i data-lucide="camera" style="width: 13px; height: 13px; vertical-align: -2px;"></i> Foto: <a href="/photographer/' + p.photographerId + '">' + p.photographer + '</a>';
+                } else {
+                    photographerEl.innerHTML = '<i data-lucide="camera" style="width: 13px; height: 13px; vertical-align: -2px;"></i> Foto: ' + p.photographer;
+                }
+                photographerEl.style.display = 'block';
+            } else {
+                photographerEl.style.display = 'none';
+            }
+        }
+
         lb.style.display = 'flex';
 
         // Hide ALL navigation: header, sidebar, nav-bottom
