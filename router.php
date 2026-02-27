@@ -38,6 +38,7 @@ function hub_requires_auth(string $page): bool {
         'calendar', 'results', 'series', 'database', 'ranking',
         'rider', 'riders', 'event', 'club', 'clubs',
         'rider-register', 'club-points', 'achievements',
+        'gallery', 'photographer',
         // News/Blog
         'news',
         // Shopping - cart is public, checkout handles its own auth
@@ -150,6 +151,14 @@ function hub_get_current_page(): array {
             'event' => '/pages/news/index.php',
             'rider' => '/pages/news/index.php'
         ],
+        'gallery' => [
+            'index' => '/pages/gallery/index.php',
+            'show' => '/pages/gallery/index.php'
+        ],
+        'photographer' => [
+            'index' => '/pages/photographer/index.php',
+            'show' => '/pages/photographer/show.php'
+        ],
         'cart' => [
             'index' => '/pages/cart.php'
         ]
@@ -168,7 +177,8 @@ function hub_get_current_page(): array {
                 'database' => 'rider',
                 'ranking' => 'riders',
                 'register' => 'series',  // /register/5 -> /register/series/5
-                'news' => 'show'  // /news/slug -> /pages/news/show.php
+                'news' => 'show',  // /news/slug -> /pages/news/show.php
+                'photographer' => 'show'  // /photographer/123 -> show.php
             ];
             $subpage = $detailPages[$section] ?? 'index';
         } elseif (isset($segments[1]) && !is_numeric($segments[1])) {
@@ -267,7 +277,7 @@ if (!function_exists('hub_is_nav_active')) {
         if ($navId === 'calendar' && in_array($currentPage, ['calendar', 'calendar-event', 'calendar-index'])) return true;
         if ($navId === 'results' && in_array($currentPage, ['results', 'event', 'results-event'])) return true;
         if ($navId === 'series' && in_array($currentPage, ['series', 'series-index', 'series-show'])) return true;
-        if ($navId === 'database' && in_array($currentPage, ['database', 'riders', 'rider', 'clubs', 'club', 'database-rider', 'database-club'])) return true;
+        if ($navId === 'database' && in_array($currentPage, ['database', 'riders', 'rider', 'clubs', 'club', 'database-rider', 'database-club', 'gallery', 'gallery-index', 'photographer', 'photographer-show', 'photographer-index'])) return true;
         if ($navId === 'ranking' && str_starts_with($currentPage, 'ranking')) return true;
         if ($navId === 'profile' && str_starts_with($currentPage, 'profile')) return true;
         if ($navId === 'news' && str_starts_with($currentPage, 'news')) return true;

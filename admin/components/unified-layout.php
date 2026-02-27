@@ -51,6 +51,7 @@ if (!isset($current_admin_page)) {
         'media' => 'media',
         'media-archive' => 'media',
         'event-albums' => 'event-albums',
+        'photographers' => 'photographers',
         'sponsors' => 'sponsors',
         'sponsor-edit' => 'sponsors',
         'dashboard' => 'dashboard',
