@@ -4,7 +4,32 @@
 
 ---
 
-## SENASTE FIXAR (2026-02-27, session 16)
+## SENASTE FIXAR (2026-02-27, session 17)
+
+### Admin-navigation: Galleri-gruppen borttagen
+- **Problem:** Galleri hade en egen ikon i sidomenyn med sub-tabs (Album, Fotografer) - "sjukt krångligt och ologiskt"
+- **Fix:** Galleri-gruppen (`galleries`) borttagen helt från `admin-tabs-config.php`
+- **Album:** Flyttat till Konfiguration-gruppen (bredvid Media)
+- **Fotografer:** Flyttat till System-gruppen (bredvid Användare)
+- **Resultat:** En ikon mindre i sidomenyn, Album och Fotografer nås via befintliga menyer
+
+### Album: Uppladdning skapar album automatiskt
+- **Problem:** Gammalt flöde krävde 2 steg: 1) Skapa album (fyll i formulär), 2) Ladda upp bilder
+- **Nytt flöde:** Listsidan har nu en integrerad uppladdningssektion med Event-dropdown + Fotograf-dropdown + Filväljare
+- **Auto-skapande:** Klick på "Ladda upp" skapar album automatiskt via AJAX (`create_album_ajax`), sedan startar chunked upload
+- **Album publiceras direkt** (is_published = 1)
+- **Efter uppladdning:** Omdirigeras till album-redigeringssidan
+- **Befintligt edit-flöde** för existerande album fungerar som förut
+- **Fil:** `admin/event-albums.php`
+
+### Fotografer: Profilbild via ImgBB (inte mediabiblioteket)
+- **Problem:** Fotografers profilbilder laddades upp till mediabiblioteket (`/api/media.php?action=upload`) men vanliga användares profilbilder använder ImgBB (`/api/update-avatar.php`)
+- **Fix:** Fotografer använder nu samma ImgBB-uppladdning som vanliga användare
+- **API utökat:** `update-avatar.php` stödjer nu `type=photographer` + `photographer_id` parameter
+- **Säkerhet:** Kräver admin-inloggning för fotograf-avatarer
+- **Filer:** `api/update-avatar.php`, `admin/photographers.php`, `admin/photographer-dashboard.php`
+
+## TIDIGARE FIXAR (2026-02-27, session 16)
 
 ### Nyhetssidan: Standardiserade filter + svenska tecken
 - **Filter-bar:** Ersatt custom `.news-filter-bar` med standard `.filter-bar` komponent (samma som databas/galleri)

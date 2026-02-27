@@ -47,27 +47,44 @@ try {
         exit;
     }
 
-    // Get rider ID to update
-    $riderId = intval($_POST['rider_id'] ?? ($currentUser['id'] ?? 0));
+    // Determine target type: rider (default) or photographer
+    $type = $_POST['type'] ?? 'rider';
 
-    if ($riderId <= 0) {
-        http_response_code(400);
-        $response['error'] = 'Ingen åkare angiven.';
-        echo json_encode($response);
-        exit;
-    }
+    if ($type === 'photographer') {
+        // Photographer avatar - requires admin
+        if (!$isAdminLoggedIn) {
+            http_response_code(403);
+            $response['error'] = 'Bara admin kan ändra fotografers profilbild.';
+            echo json_encode($response);
+            exit;
+        }
+        $photographerId = intval($_POST['photographer_id'] ?? 0);
+        if ($photographerId <= 0) {
+            http_response_code(400);
+            $response['error'] = 'Ingen fotograf angiven.';
+            echo json_encode($response);
+            exit;
+        }
+    } else {
+        // Rider avatar
+        $riderId = intval($_POST['rider_id'] ?? ($currentUser['id'] ?? 0));
 
-    // Security: Check if user can edit this profile
-    // Admins can edit any profile
-    if (!$isAdminLoggedIn) {
-        // For non-admins, check ownership
-        if (!$currentUser || $riderId !== $currentUser['id']) {
-            // Check if it's a child profile
-            if (!$currentUser || !function_exists('hub_is_parent_of') || !hub_is_parent_of($currentUser['id'], $riderId)) {
-                http_response_code(403);
-                $response['error'] = 'Du har inte behörighet att ändra denna profil.';
-                echo json_encode($response);
-                exit;
+        if ($riderId <= 0) {
+            http_response_code(400);
+            $response['error'] = 'Ingen åkare angiven.';
+            echo json_encode($response);
+            exit;
+        }
+
+        // Security: Check if user can edit this profile
+        if (!$isAdminLoggedIn) {
+            if (!$currentUser || $riderId !== $currentUser['id']) {
+                if (!$currentUser || !function_exists('hub_is_parent_of') || !hub_is_parent_of($currentUser['id'], $riderId)) {
+                    http_response_code(403);
+                    $response['error'] = 'Du har inte behörighet att ändra denna profil.';
+                    echo json_encode($response);
+                    exit;
+                }
             }
         }
     }
@@ -92,10 +109,15 @@ try {
 
     $avatarUrl = $uploadResult['url'];
 
-    // Update rider's avatar_url in database
+    // Update avatar in database
     $pdo = hub_db();
-    $stmt = $pdo->prepare("UPDATE riders SET avatar_url = ?, updated_at = NOW() WHERE id = ?");
-    $stmt->execute([$avatarUrl, $riderId]);
+    if ($type === 'photographer') {
+        $stmt = $pdo->prepare("UPDATE photographers SET avatar_url = ?, updated_at = NOW() WHERE id = ?");
+        $stmt->execute([$avatarUrl, $photographerId]);
+    } else {
+        $stmt = $pdo->prepare("UPDATE riders SET avatar_url = ?, updated_at = NOW() WHERE id = ?");
+        $stmt->execute([$avatarUrl, $riderId]);
+    }
 
     if ($stmt->rowCount() === 0) {
         // Rider not found or no change

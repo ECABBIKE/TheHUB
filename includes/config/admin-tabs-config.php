@@ -152,30 +152,6 @@ $ADMIN_TABS = [
     ],
 
     // ========================================
-    // GALLERI (Albums + Photographers)
-    // ========================================
-    'galleries' => [
-        'title' => 'Galleri',
-        'icon' => 'camera',
-        'tabs' => [
-            [
-                'id' => 'event-albums',
-                'label' => 'Album',
-                'icon' => 'image',
-                'url' => '/admin/event-albums.php',
-                'pages' => ['event-albums.php']
-            ],
-            [
-                'id' => 'photographers',
-                'label' => 'Fotografer',
-                'icon' => 'camera',
-                'url' => '/admin/photographers.php',
-                'pages' => ['photographers.php']
-            ]
-        ]
-    ],
-
-    // ========================================
     // KONFIGURATION
     // ========================================
     'config' => [
@@ -282,6 +258,13 @@ $ADMIN_TABS = [
                 'icon' => 'image',
                 'url' => '/admin/media.php',
                 'pages' => ['media.php']
+            ],
+            [
+                'id' => 'event-albums',
+                'label' => 'Album',
+                'icon' => 'camera',
+                'url' => '/admin/event-albums.php',
+                'pages' => ['event-albums.php']
             ],
             [
                 'id' => 'sponsors',
@@ -412,6 +395,13 @@ $ADMIN_TABS = [
                 'icon' => 'users',
                 'url' => '/admin/users.php',
                 'pages' => ['users.php', 'user-edit.php', 'user-events.php', 'user-rider.php']
+            ],
+            [
+                'id' => 'photographers',
+                'label' => 'Fotografer',
+                'icon' => 'camera',
+                'url' => '/admin/photographers.php',
+                'pages' => ['photographers.php']
             ],
             [
                 'id' => 'permissions',
