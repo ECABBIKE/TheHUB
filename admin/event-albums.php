@@ -953,7 +953,29 @@ const ALBUM_ID = <?= json_encode($albumId) ?>;
     });
 })();
 
+async function uploadOneFile(file) {
+    const formData = new FormData();
+    formData.append('photo', file);
+    formData.append('album_id', ALBUM_ID);
+
+    const response = await fetch('/api/upload-album-photo.php', {
+        method: 'POST',
+        body: formData
+    });
+
+    if (!response.ok) {
+        throw new Error('HTTP ' + response.status);
+    }
+
+    const result = await response.json();
+    if (!result.success) {
+        throw new Error(result.error || 'Okänt fel');
+    }
+    return result;
+}
+
 async function startChunkedUpload() {
+    const CONCURRENT = 3; // Antal parallella uppladdningar
     const fileInput = document.getElementById('r2FileInput');
     const files = Array.from(fileInput.files);
     if (files.length === 0) return;
@@ -982,58 +1004,57 @@ async function startChunkedUpload() {
     const totalFiles = files.length;
     let uploaded = 0;
     let failed = 0;
+    let processed = 0;
     let errors = [];
     const startTime = Date.now();
 
-    for (let i = 0; i < totalFiles; i++) {
-        if (uploadCancelled) break;
-
-        const file = files[i];
-        const pct = Math.round((i / totalFiles) * 100);
+    function updateProgress() {
+        const done = uploaded + failed;
+        const pct = Math.round((done / totalFiles) * 100);
         bar.style.width = pct + '%';
         percentText.textContent = pct + '%';
-        statusText.textContent = 'Laddar upp: ' + file.name;
-        countText.textContent = uploaded + ' / ' + totalFiles + ' bilder';
+        countText.textContent = done + ' / ' + totalFiles + ' bilder';
 
-        // Beräkna hastighet och ETA
         const elapsed = (Date.now() - startTime) / 1000;
-        if (uploaded > 0 && elapsed > 0) {
-            const perImage = elapsed / uploaded;
-            const remaining = (totalFiles - i) * perImage;
-            speedText.textContent = perImage.toFixed(1) + 's/bild';
+        if (done > 0 && elapsed > 0) {
+            const perImage = elapsed / done;
+            const remaining = ((totalFiles - done) / CONCURRENT) * perImage;
+            speedText.textContent = (perImage / CONCURRENT).toFixed(1) + 's/bild';
             if (remaining > 60) {
                 etaText.textContent = 'ca ' + Math.ceil(remaining / 60) + ' min kvar';
             } else {
                 etaText.textContent = 'ca ' + Math.ceil(remaining) + 's kvar';
             }
         }
+    }
 
-        try {
-            const formData = new FormData();
-            formData.append('photo', file);
-            formData.append('album_id', ALBUM_ID);
+    // Bearbeta i parallella batchar om CONCURRENT
+    let index = 0;
 
-            const response = await fetch('/api/upload-album-photo.php', {
-                method: 'POST',
-                body: formData
-            });
+    async function processNext() {
+        while (index < totalFiles && !uploadCancelled) {
+            const i = index++;
+            const file = files[i];
+            statusText.textContent = 'Laddar upp (' + CONCURRENT + ' parallella)...';
+            updateProgress();
 
-            if (!response.ok) {
-                throw new Error('HTTP ' + response.status);
-            }
-
-            const result = await response.json();
-            if (result.success) {
+            try {
+                await uploadOneFile(file);
                 uploaded++;
-            } else {
+            } catch (e) {
                 failed++;
-                errors.push(file.name + ': ' + (result.error || 'Okänt fel'));
+                errors.push(file.name + ': ' + e.message);
             }
-        } catch (e) {
-            failed++;
-            errors.push(file.name + ': ' + e.message);
+            updateProgress();
         }
     }
+
+    // Starta CONCURRENT parallella workers
+    const workers = [];
+    for (let w = 0; w < CONCURRENT; w++) {
+        workers.push(processNext());
+    }
+    await Promise.all(workers);
 
     // Klar
     bar.style.width = '100%';
