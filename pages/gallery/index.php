@@ -245,7 +245,11 @@ $totalTags = array_sum(array_column($albums, 'tag_count'));
             <?php if ($photographerName): ?>
             <div class="gallery-listing-photographer">
                 <i data-lucide="camera" style="width: 13px; height: 13px;"></i>
+                <?php if (!empty($album['photographer_slug'])): ?>
+                <span class="gallery-photographer-link" onclick="event.preventDefault(); event.stopPropagation(); window.location='/photographer/<?= (int)$album['photographer_id'] ?>';" style="color: var(--color-accent-text); cursor: pointer;"><?= htmlspecialchars($photographerName) ?></span>
+                <?php else: ?>
                 <?= htmlspecialchars($photographerName) ?>
+                <?php endif; ?>
             </div>
             <?php endif; ?>
         </div>
