@@ -5673,11 +5673,17 @@ if (!empty($event['series_id'])) {
                 <?php if ($photo['is_highlight']): ?>
                 <span class="gallery-highlight-badge"><i data-lucide="star" style="width: 12px; height: 12px;"></i></span>
                 <?php endif; ?>
-                <?php if (!empty($photo['tagged_names'])): ?>
+                <?php if (!empty($photo['tagged_names'])):
+                    $tagNames = explode('||', $photo['tagged_names']);
+                    $tagCount = count($tagNames);
+                ?>
                 <div class="gallery-item-tags">
-                    <?php foreach (explode('||', $photo['tagged_names']) as $tagName): ?>
-                    <span class="gallery-item-tag"><?= htmlspecialchars($tagName) ?></span>
-                    <?php endforeach; ?>
+                    <i data-lucide="users" style="width: 13px; height: 13px; color: #fff; flex-shrink: 0;"></i>
+                    <?php if ($tagCount === 1): ?>
+                    <span class="gallery-item-tag-text"><?= htmlspecialchars($tagNames[0]) ?></span>
+                    <?php else: ?>
+                    <span class="gallery-item-tag-text"><?= $tagCount ?> taggade</span>
+                    <?php endif; ?>
                 </div>
                 <?php endif; ?>
             </div>
@@ -5863,26 +5869,27 @@ if (!empty($event['series_id'])) {
     object-fit: contain;
 }
 
-/* Tag badges on gallery grid */
+/* Tag banner on gallery grid */
 .gallery-item-tags {
     position: absolute;
     bottom: 0;
     left: 0;
     right: 0;
-    padding: 6px 8px;
-    background: linear-gradient(transparent, rgba(0,0,0,0.7));
+    padding: 5px 8px;
+    background: rgba(0, 0, 0, 0.65);
+    backdrop-filter: blur(4px);
+    -webkit-backdrop-filter: blur(4px);
     display: flex;
-    flex-wrap: wrap;
-    gap: 4px;
+    align-items: center;
+    gap: 5px;
     pointer-events: none;
 }
-.gallery-item-tag {
-    font-size: 0.65rem;
-    color: #fff;
-    background: rgba(55, 212, 214, 0.75);
-    padding: 2px 7px;
-    border-radius: var(--radius-full);
+.gallery-item-tag-text {
+    font-size: 0.7rem;
+    color: rgba(255, 255, 255, 0.9);
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
     font-weight: 500;
 }
 
@@ -6004,29 +6011,39 @@ html.lightbox-open body {
     pointer-events: auto;
 }
 
-/* Tags in lightbox - prominent, clickable */
+/* Tags banner in lightbox - full-width under image */
 .gallery-lightbox-tags {
     display: flex;
     flex-wrap: wrap;
     gap: 6px;
+    align-items: center;
     justify-content: center;
+    width: 100%;
+}
+.gallery-lightbox-tags:not(:empty) {
+    padding: 8px 16px;
+    background: rgba(55, 212, 214, 0.12);
+    border-radius: var(--radius-sm);
+}
+.gallery-lightbox-tags-icon {
+    color: rgba(55, 212, 214, 0.8);
+    flex-shrink: 0;
 }
 .gallery-lightbox-tag {
     font-size: 0.85rem;
     font-weight: 500;
     color: #fff;
-    background: rgba(55, 212, 214, 0.35);
-    border: 1px solid rgba(55, 212, 214, 0.6);
-    padding: 4px 14px;
-    border-radius: 9999px;
+    padding: 2px 0;
     text-decoration: none;
-    transition: background 0.2s;
-    backdrop-filter: blur(6px);
-    -webkit-backdrop-filter: blur(6px);
+    transition: color 0.2s;
 }
 .gallery-lightbox-tag:hover {
-    background: rgba(55, 212, 214, 0.6);
-    color: #fff;
+    color: var(--color-accent);
+    text-decoration: underline;
+}
+.gallery-lightbox-tag-sep {
+    color: rgba(255,255,255,0.3);
+    font-size: 0.7rem;
 }
 
 /* Photographer credit */
@@ -6379,10 +6396,12 @@ html.lightbox-open body {
             const res = await fetch('/api/photo-tags.php?photo_id=' + photoId);
             const data = await res.json();
             if (data.success && data.data.length > 0) {
-                container.innerHTML = data.data.map(t =>
+                const icon = '<svg class="gallery-lightbox-tags-icon" xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>';
+                const names = data.data.map(t =>
                     '<a href="/rider/' + t.rider_id + '" class="gallery-lightbox-tag">' +
                     (t.firstname || '') + ' ' + (t.lastname || '') + '</a>'
-                ).join('');
+                ).join('<span class="gallery-lightbox-tag-sep">&bull;</span>');
+                container.innerHTML = icon + names;
             }
         } catch(e) {}
 
