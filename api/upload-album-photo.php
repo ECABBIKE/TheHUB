@@ -4,7 +4,7 @@
  * Hanterar uppladdning av EN bild åt gången till R2
  * Anropas från chunked uploader i event-albums.php
  */
-set_time_limit(60);
+set_time_limit(120);
 ini_set('memory_limit', '256M');
 
 require_once __DIR__ . '/../config.php';

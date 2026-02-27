@@ -634,12 +634,15 @@ async function startListUpload() {
         return;
     }
 
-    // Step 2: Chunked upload
-    const CONCURRENT = 3;
+    // Step 2: Sekventiell upload med retry
     const totalFiles = files.length;
     let uploaded = 0, failed = 0, errors = [];
     const startTime = Date.now();
-    let index = 0;
+
+    // Session keep-alive var 2:a minut
+    const keepAlive = setInterval(() => {
+        fetch('/api/upload-album-photo.php', { method: 'HEAD' }).catch(() => {});
+    }, 120000);
 
     function updateProgress() {
         const done = uploaded + failed;
@@ -650,37 +653,51 @@ async function startListUpload() {
         const elapsed = (Date.now() - startTime) / 1000;
         if (done > 0 && elapsed > 0) {
             const perImage = elapsed / done;
-            const remaining = ((totalFiles - done) / CONCURRENT) * perImage;
-            speedText.textContent = (perImage / CONCURRENT).toFixed(1) + 's/bild';
+            const remaining = (totalFiles - done) * perImage;
+            speedText.textContent = perImage.toFixed(1) + 's/bild';
             etaText.textContent = remaining > 60 ? 'ca ' + Math.ceil(remaining / 60) + ' min kvar' : 'ca ' + Math.ceil(remaining) + 's kvar';
         }
     }
 
-    async function processNext() {
-        while (index < totalFiles && !listUploadCancelled) {
-            const i = index++;
-            const file = files[i];
-            updateProgress();
-            try {
-                const formData = new FormData();
-                formData.append('photo', file);
-                formData.append('album_id', albumId);
-                const response = await fetch('/api/upload-album-photo.php', { method: 'POST', body: formData });
-                if (!response.ok) throw new Error('HTTP ' + response.status);
-                const result = await response.json();
-                if (!result.success) throw new Error(result.error || 'Okänt fel');
-                uploaded++;
-            } catch (e) {
-                failed++;
-                errors.push(file.name + ': ' + e.message);
+    async function uploadWithRetry(file, retries) {
+        retries = retries || 0;
+        const formData = new FormData();
+        formData.append('photo', file);
+        formData.append('album_id', albumId);
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), 120000);
+        try {
+            const response = await fetch('/api/upload-album-photo.php', { method: 'POST', body: formData, signal: controller.signal });
+            clearTimeout(timeout);
+            if (!response.ok) throw new Error('HTTP ' + response.status);
+            const result = await response.json();
+            if (!result.success) throw new Error(result.error || 'Okänt fel');
+            return result;
+        } catch (e) {
+            clearTimeout(timeout);
+            if (retries < 3) {
+                await new Promise(r => setTimeout(r, Math.pow(2, retries) * 1000));
+                return uploadWithRetry(file, retries + 1);
             }
-            updateProgress();
+            throw e;
         }
     }
 
-    const workers = [];
-    for (let w = 0; w < CONCURRENT; w++) workers.push(processNext());
-    await Promise.all(workers);
+    for (let i = 0; i < totalFiles; i++) {
+        if (listUploadCancelled) break;
+        statusText.textContent = 'Laddar upp bild ' + (i + 1) + ' av ' + totalFiles + '...';
+        updateProgress();
+        try {
+            await uploadWithRetry(files[i]);
+            uploaded++;
+        } catch (e) {
+            failed++;
+            errors.push(files[i].name + ': ' + e.message);
+        }
+        updateProgress();
+    }
+
+    clearInterval(keepAlive);
 
     // Done
     bar.style.width = '100%';
@@ -1339,29 +1356,45 @@ const ALBUM_ID = <?= json_encode($albumId) ?>;
     });
 })();
 
-async function uploadOneFile(file) {
+async function uploadOneFile(file, retries) {
+    retries = retries || 0;
+    const MAX_RETRIES = 3;
     const formData = new FormData();
     formData.append('photo', file);
     formData.append('album_id', ALBUM_ID);
 
-    const response = await fetch('/api/upload-album-photo.php', {
-        method: 'POST',
-        body: formData
-    });
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 120000); // 2 min timeout
 
-    if (!response.ok) {
-        throw new Error('HTTP ' + response.status);
-    }
+    try {
+        const response = await fetch('/api/upload-album-photo.php', {
+            method: 'POST',
+            body: formData,
+            signal: controller.signal
+        });
+        clearTimeout(timeout);
 
-    const result = await response.json();
-    if (!result.success) {
-        throw new Error(result.error || 'Okänt fel');
+        if (!response.ok) {
+            throw new Error('HTTP ' + response.status);
+        }
+
+        const result = await response.json();
+        if (!result.success) {
+            throw new Error(result.error || 'Okänt fel');
+        }
+        return result;
+    } catch (e) {
+        clearTimeout(timeout);
+        if (retries < MAX_RETRIES && !e.message.includes('Otillåten filtyp')) {
+            const delay = Math.pow(2, retries) * 1000; // 1s, 2s, 4s
+            await new Promise(r => setTimeout(r, delay));
+            return uploadOneFile(file, retries + 1);
+        }
+        throw e;
     }
-    return result;
 }
 
 async function startChunkedUpload() {
-    const CONCURRENT = 3; // Antal parallella uppladdningar
     const fileInput = document.getElementById('r2FileInput');
     const files = Array.from(fileInput.files);
     if (files.length === 0) return;
@@ -1390,9 +1423,13 @@ async function startChunkedUpload() {
     const totalFiles = files.length;
     let uploaded = 0;
     let failed = 0;
-    let processed = 0;
     let errors = [];
     const startTime = Date.now();
+
+    // Session keep-alive: ping var 2:a minut
+    const keepAlive = setInterval(() => {
+        fetch('/api/upload-album-photo.php', { method: 'HEAD' }).catch(() => {});
+    }, 120000);
 
     function updateProgress() {
         const done = uploaded + failed;
@@ -1404,8 +1441,8 @@ async function startChunkedUpload() {
         const elapsed = (Date.now() - startTime) / 1000;
         if (done > 0 && elapsed > 0) {
             const perImage = elapsed / done;
-            const remaining = ((totalFiles - done) / CONCURRENT) * perImage;
-            speedText.textContent = (perImage / CONCURRENT).toFixed(1) + 's/bild';
+            const remaining = (totalFiles - done) * perImage;
+            speedText.textContent = perImage.toFixed(1) + 's/bild';
             if (remaining > 60) {
                 etaText.textContent = 'ca ' + Math.ceil(remaining / 60) + ' min kvar';
             } else {
@@ -1414,33 +1451,24 @@ async function startChunkedUpload() {
         }
     }
 
-    // Bearbeta i parallella batchar om CONCURRENT
-    let index = 0;
+    // Sekventiell uppladdning - en bild åt gången för stabilitet
+    for (let i = 0; i < totalFiles; i++) {
+        if (uploadCancelled) break;
+        const file = files[i];
+        statusText.textContent = 'Laddar upp bild ' + (i + 1) + ' av ' + totalFiles + '...';
+        updateProgress();
 
-    async function processNext() {
-        while (index < totalFiles && !uploadCancelled) {
-            const i = index++;
-            const file = files[i];
-            statusText.textContent = 'Laddar upp (' + CONCURRENT + ' parallella)...';
-            updateProgress();
-
-            try {
-                await uploadOneFile(file);
-                uploaded++;
-            } catch (e) {
-                failed++;
-                errors.push(file.name + ': ' + e.message);
-            }
-            updateProgress();
+        try {
+            await uploadOneFile(file);
+            uploaded++;
+        } catch (e) {
+            failed++;
+            errors.push(file.name + ': ' + e.message);
         }
+        updateProgress();
     }
 
-    // Starta CONCURRENT parallella workers
-    const workers = [];
-    for (let w = 0; w < CONCURRENT; w++) {
-        workers.push(processNext());
-    }
-    await Promise.all(workers);
+    clearInterval(keepAlive);
 
     // Klar
     bar.style.width = '100%';

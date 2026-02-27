@@ -4,7 +4,26 @@
 
 ---
 
-## SENASTE FIXAR (2026-02-27, session 17)
+## SENASTE FIXAR (2026-02-27, session 18)
+
+### Galleri-grid: Fast kolumnantal + större bilder på desktop
+- **Problem:** `auto-fill` med `minmax(200px)` gav 7 kolumner på desktop - bilderna var för små att överblicka
+- **Fix:** Fast `repeat(5, 1fr)` på desktop, `repeat(4, 1fr)` på mellanstor skärm, `repeat(3, 1fr)` på mobil
+- **Reklamslots:** Intervall ändrat från 12 till 15 bilder (3 fulla rader × 5 kolumner)
+- **Ad-styling:** Borttagna borders, subtilare med opacity 0.85, hover till 1.0, mindre (60px istf 80px)
+- **Fil:** `pages/event.php` (inline CSS)
+
+### Album-uppladdning: Kraschade efter ~97 bilder
+- **Problem:** Uppladdning av stora album (100+ bilder) kraschade efter ~10 minuter
+- **Orsaker:** 3 parallella uploads, 60s PHP-timeout per fil (för kort för stora bilder), ingen retry-logik, ingen session keep-alive, ingen fetch timeout
+- **Fix 1:** PHP timeout 60s → 120s i `api/upload-album-photo.php`
+- **Fix 2:** Parallella uploads (3) → sekventiell (1 åt gången) för stabilitet
+- **Fix 3:** Retry-logik med exponentiell backoff (1s, 2s, 4s) - max 3 försök per bild
+- **Fix 4:** AbortController med 2 min timeout på varje fetch-anrop
+- **Fix 5:** Session keep-alive ping var 2:a minut under uppladdning
+- **Filer:** `api/upload-album-photo.php`, `admin/event-albums.php` (båda uploader-instanserna)
+
+## TIDIGARE FIXAR (2026-02-27, session 17)
 
 ### Admin-navigation: Galleri-gruppen borttagen
 - **Problem:** Galleri hade en egen ikon i sidomenyn med sub-tabs (Album, Fotografer) - "sjukt krångligt och ologiskt"

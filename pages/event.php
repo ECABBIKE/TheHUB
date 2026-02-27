@@ -5626,7 +5626,7 @@ if (!empty($event['series_id'])) {
 
         <div class="gallery-grid" id="galleryGrid">
             <?php
-            $adInterval = 12; // Show ad every N photos
+            $adInterval = 15; // Show ad every 3 rows (5 cols x 3 rows)
             $adIndex = 0;
             foreach ($eventAlbumPhotos as $idx => $photo):
                 $imgSrc = '';
@@ -5815,8 +5815,13 @@ if (!empty($event['series_id'])) {
 /* ========== GALLERY GRID ========== */
 .gallery-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    grid-template-columns: repeat(5, 1fr);
     gap: var(--space-xs);
+}
+@media (max-width: 1100px) and (min-width: 768px) {
+    .gallery-grid {
+        grid-template-columns: repeat(4, 1fr);
+    }
 }
 .gallery-item {
     aspect-ratio: 4/3;
@@ -5853,18 +5858,21 @@ if (!empty($event['series_id'])) {
     display: flex;
     justify-content: center;
     align-items: center;
-    padding: var(--space-md) 0;
-    border-top: 1px solid var(--color-border);
-    border-bottom: 1px solid var(--color-border);
-    margin: var(--space-xs) 0;
+    padding: var(--space-sm) 0;
+    margin: var(--space-2xs) 0;
 }
 .gallery-ad-link {
     display: block;
-    max-width: 600px;
+    max-width: 500px;
     text-decoration: none;
+    opacity: 0.85;
+    transition: opacity 0.2s ease;
+}
+.gallery-ad-link:hover {
+    opacity: 1;
 }
 .gallery-ad-img {
-    max-height: 80px;
+    max-height: 60px;
     max-width: 100%;
     object-fit: contain;
 }
