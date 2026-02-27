@@ -37,15 +37,22 @@ if (!$photographer) {
 
 $pageTitle = $photographer['name'] . ' - Fotograf';
 
+// Generate initials for avatar fallback
+$nameParts = explode(' ', trim($photographer['name']));
+$initials = strtoupper(substr($nameParts[0] ?? '', 0, 1) . substr(end($nameParts) ?: '', 0, 1));
+if (strlen($initials) < 2) $initials = strtoupper(substr($photographer['name'], 0, 2));
+
+$avatarUrl = $photographer['avatar_url'] ?: null;
+if (!$avatarUrl) {
+    $avatarUrl = 'https://ui-avatars.com/api/?name=' . urlencode($photographer['name']) . '&size=200&background=0066CC&color=ffffff&bold=true&format=svg';
+}
+
 // Get their albums
 $albumStmt = $pdo->prepare("
     SELECT ea.id, ea.event_id, ea.title, ea.photo_count, ea.created_at,
            e.name as event_name, e.date as event_date, e.location as event_location,
            cover.external_url as cover_url, cover.thumbnail_url as cover_thumb,
-           cover_media.filepath as cover_filepath,
-           (SELECT COUNT(*) FROM photo_rider_tags prt
-            JOIN event_photos ep2 ON prt.photo_id = ep2.id
-            WHERE ep2.album_id = ea.id) as tag_count
+           cover_media.filepath as cover_filepath
     FROM event_albums ea
     JOIN events e ON ea.event_id = e.id
     LEFT JOIN event_photos cover ON cover.id = ea.cover_photo_id
@@ -81,7 +88,6 @@ unset($album);
 // Stats
 $totalPhotos = array_sum(array_column($albums, 'photo_count'));
 $totalAlbums = count($albums);
-$totalTags = array_sum(array_column($albums, 'tag_count'));
 
 // Social media links
 $socials = [];
@@ -91,40 +97,46 @@ if ($photographer['facebook_url']) $socials[] = ['icon' => 'facebook', 'url' => 
 if ($photographer['youtube_url']) $socials[] = ['icon' => 'youtube', 'url' => $photographer['youtube_url'], 'label' => 'YouTube'];
 ?>
 
-<!-- Photographer Profile Header -->
-<div class="card" style="margin-bottom: var(--space-lg);">
-    <div class="photographer-profile-header">
-        <div class="photographer-avatar">
-            <?php if ($photographer['avatar_url']): ?>
-            <img src="<?= htmlspecialchars($photographer['avatar_url']) ?>" alt="<?= htmlspecialchars($photographer['name']) ?>">
-            <?php else: ?>
-            <div class="photographer-avatar-placeholder">
-                <i data-lucide="camera" style="width: 40px; height: 40px; color: var(--color-text-muted);"></i>
-            </div>
-            <?php endif; ?>
-        </div>
-        <div class="photographer-profile-info">
-            <h1 class="photographer-profile-name"><?= htmlspecialchars($photographer['name']) ?></h1>
-            <?php if ($photographer['linked_rider_id']): ?>
-            <a href="/rider/<?= $photographer['linked_rider_id'] ?>" class="photographer-rider-link">
-                <i data-lucide="user" style="width: 14px; height: 14px;"></i>
-                <?= htmlspecialchars($photographer['rider_firstname'] . ' ' . $photographer['rider_lastname']) ?> - Deltagarprofil
+<!-- Photographer Profile Card -->
+<div class="photographer-card-v4">
+    <!-- Square Photo or Initials -->
+    <div class="photographer-photo-hero <?= $photographer['avatar_url'] ? '' : 'initials-bg' ?>">
+        <?php if ($photographer['avatar_url']): ?>
+        <img src="<?= htmlspecialchars($photographer['avatar_url']) ?>" alt="<?= htmlspecialchars($photographer['name']) ?>" onerror="this.style.display='none'; this.nextElementSibling.style.display='flex';">
+        <div class="photographer-initials-fallback" style="display: none;"><?= htmlspecialchars($initials) ?></div>
+        <?php else: ?>
+        <div class="photographer-initials"><?= htmlspecialchars($initials) ?></div>
+        <?php endif; ?>
+    </div>
+
+    <!-- Info Section -->
+    <div class="photographer-info-section">
+        <h1 class="photographer-profile-name">
+            <?= htmlspecialchars($photographer['name']) ?>
+            <?php if (function_exists('hub_is_admin') && hub_is_admin()): ?>
+            <a href="/admin/photographers.php?edit=<?= $photographerId ?>" class="photographer-edit-link" title="Redigera fotograf">
+                <i data-lucide="pencil" style="width: 16px; height: 16px;"></i>
             </a>
             <?php endif; ?>
-            <?php if ($photographer['bio']): ?>
-            <p class="photographer-bio"><?= nl2br(htmlspecialchars($photographer['bio'])) ?></p>
-            <?php endif; ?>
-            <?php if (!empty($socials)): ?>
-            <div class="photographer-socials">
-                <?php foreach ($socials as $social): ?>
-                <a href="<?= htmlspecialchars($social['url']) ?>" target="_blank" rel="noopener" class="photographer-social-link" title="<?= $social['label'] ?>">
-                    <i data-lucide="<?= $social['icon'] ?>" style="width: 18px; height: 18px;"></i>
-                </a>
-                <?php endforeach; ?>
-            </div>
-            <?php endif; ?>
+        </h1>
+
+        <div class="photographer-role-badge">
+            <i data-lucide="camera" style="width: 14px; height: 14px;"></i> Fotograf
         </div>
-        <div class="photographer-stats">
+
+        <?php if ($photographer['linked_rider_id']): ?>
+        <a href="/rider/<?= $photographer['linked_rider_id'] ?>" class="photographer-rider-link">
+            <i data-lucide="user" style="width: 14px; height: 14px;"></i>
+            <?= htmlspecialchars($photographer['rider_firstname'] . ' ' . $photographer['rider_lastname']) ?> - Deltagarprofil
+        </a>
+        <?php endif; ?>
+
+        <?php if ($photographer['bio']): ?>
+        <p class="photographer-bio"><?= nl2br(htmlspecialchars($photographer['bio'])) ?></p>
+        <?php endif; ?>
+
+        <!-- Stats -->
+        <div class="photographer-stats-row">
             <div class="photographer-stat">
                 <span class="photographer-stat-value"><?= $totalAlbums ?></span>
                 <span class="photographer-stat-label">Album</span>
@@ -133,11 +145,18 @@ if ($photographer['youtube_url']) $socials[] = ['icon' => 'youtube', 'url' => $p
                 <span class="photographer-stat-value"><?= number_format($totalPhotos) ?></span>
                 <span class="photographer-stat-label">Bilder</span>
             </div>
-            <div class="photographer-stat">
-                <span class="photographer-stat-value"><?= $totalTags ?></span>
-                <span class="photographer-stat-label">Taggningar</span>
-            </div>
         </div>
+
+        <?php if (!empty($socials)): ?>
+        <div class="photographer-socials">
+            <?php foreach ($socials as $social): ?>
+            <a href="<?= htmlspecialchars($social['url']) ?>" target="_blank" rel="noopener" class="photographer-social-link" title="<?= $social['label'] ?>">
+                <i data-lucide="<?= $social['icon'] ?>" style="width: 18px; height: 18px;"></i>
+                <span><?= $social['label'] ?></span>
+            </a>
+            <?php endforeach; ?>
+        </div>
+        <?php endif; ?>
     </div>
 </div>
 
@@ -165,7 +184,7 @@ if ($photographer['youtube_url']) $socials[] = ['icon' => 'youtube', 'url' => $p
         }
         $eventDate = $album['event_date'] ? date('j M Y', strtotime($album['event_date'])) : '';
     ?>
-    <a href="/event/<?= $album['event_id'] ?>?tab=gallery" class="gallery-listing-card">
+    <a href="/event/<?= $album['event_id'] ?>?tab=galleri" class="gallery-listing-card">
         <div class="gallery-listing-cover">
             <?php if ($coverSrc): ?>
             <img src="<?= htmlspecialchars($coverSrc) ?>" alt="<?= htmlspecialchars($album['title'] ?: $album['event_name']) ?>" loading="lazy">
@@ -192,44 +211,86 @@ if ($photographer['youtube_url']) $socials[] = ['icon' => 'youtube', 'url' => $p
 <?php endif; ?>
 
 <style>
-/* Photographer profile header */
-.photographer-profile-header {
-    display: flex;
-    gap: var(--space-lg);
-    padding: var(--space-lg);
-    align-items: flex-start;
-}
-.photographer-avatar {
-    flex-shrink: 0;
-    width: 100px;
-    height: 100px;
-    border-radius: 50%;
+/* Photographer Profile Card - Same style as rider profile-card-v4 */
+.photographer-card-v4 {
+    background: var(--color-bg-surface);
+    border-radius: var(--radius-lg);
+    padding: 0;
     overflow: hidden;
-    border: 3px solid var(--color-accent);
+    display: flex;
+    flex-direction: column;
+    box-shadow: var(--shadow-md);
+    border: 1px solid var(--color-border);
+    margin-bottom: var(--space-lg);
 }
-.photographer-avatar img {
+.photographer-photo-hero {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    background: var(--color-bg-sunken);
+    overflow: hidden;
+}
+.photographer-photo-hero img {
     width: 100%;
     height: 100%;
     object-fit: cover;
+    object-position: center top;
 }
-.photographer-avatar-placeholder {
+.photographer-photo-hero.initials-bg {
+    background: linear-gradient(135deg, var(--color-accent) 0%, #004d99 100%);
+}
+.photographer-initials,
+.photographer-initials-fallback {
     width: 100%;
     height: 100%;
     display: flex;
     align-items: center;
     justify-content: center;
-    background: var(--color-bg-hover);
+    font-size: 4rem;
+    font-weight: 700;
+    color: white;
+    text-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+    background: linear-gradient(135deg, var(--color-accent) 0%, #004d99 100%);
 }
-.photographer-profile-info {
-    flex: 1;
-    min-width: 0;
+.photographer-info-section {
+    padding: var(--space-lg);
+    text-align: center;
 }
 .photographer-profile-name {
     font-family: var(--font-heading);
-    font-size: 1.6rem;
+    font-size: 1.5rem;
     color: var(--color-text-primary);
-    margin: 0 0 4px;
+    margin: 0 0 var(--space-xs);
     line-height: 1.2;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--space-xs);
+}
+.photographer-edit-link {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    color: var(--color-text-muted);
+    transition: background 0.2s, color 0.2s;
+}
+.photographer-edit-link:hover {
+    background: var(--color-accent-light);
+    color: var(--color-accent-text);
+}
+.photographer-role-badge {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 3px 12px;
+    border-radius: var(--radius-full);
+    background: var(--color-accent-light);
+    color: var(--color-accent-text);
+    font-size: 0.8rem;
+    font-weight: 500;
+    margin-bottom: var(--space-sm);
 }
 .photographer-rider-link {
     display: inline-flex;
@@ -248,47 +309,57 @@ if ($photographer['youtube_url']) $socials[] = ['icon' => 'youtube', 'url' => $p
     color: var(--color-text-secondary);
     line-height: 1.5;
     margin: var(--space-sm) 0;
+    text-align: left;
 }
-.photographer-socials {
+.photographer-stats-row {
     display: flex;
-    gap: var(--space-sm);
-    margin-top: var(--space-sm);
-}
-.photographer-social-link {
-    display: flex;
-    align-items: center;
     justify-content: center;
-    width: 40px;
-    height: 40px;
-    border-radius: 50%;
-    background: var(--color-bg-hover);
-    color: var(--color-text-secondary);
-    transition: background 0.2s, color 0.2s;
-}
-.photographer-social-link:hover {
-    background: var(--color-accent-light);
-    color: var(--color-accent-text);
-}
-.photographer-stats {
-    display: flex;
-    gap: var(--space-lg);
-    flex-shrink: 0;
+    gap: var(--space-xl);
+    padding: var(--space-md) 0;
+    border-top: 1px solid var(--color-border);
+    margin-top: var(--space-sm);
 }
 .photographer-stat {
     text-align: center;
 }
 .photographer-stat-value {
     display: block;
-    font-size: 1.3rem;
+    font-size: 1.4rem;
     font-weight: 700;
     color: var(--color-accent-text);
     font-family: var(--font-heading);
+    line-height: 1.2;
 }
 .photographer-stat-label {
     font-size: 0.7rem;
     color: var(--color-text-muted);
     text-transform: uppercase;
     letter-spacing: 0.5px;
+    margin-top: 2px;
+}
+.photographer-socials {
+    display: flex;
+    justify-content: center;
+    gap: var(--space-sm);
+    margin-top: var(--space-md);
+    padding-top: var(--space-sm);
+    border-top: 1px solid var(--color-border);
+}
+.photographer-social-link {
+    display: inline-flex;
+    align-items: center;
+    gap: 6px;
+    padding: 6px 14px;
+    border-radius: var(--radius-full);
+    background: var(--color-bg-hover);
+    color: var(--color-text-secondary);
+    font-size: 0.8rem;
+    text-decoration: none;
+    transition: background 0.2s, color 0.2s;
+}
+.photographer-social-link:hover {
+    background: var(--color-accent-light);
+    color: var(--color-accent-text);
 }
 
 /* Gallery listing grid (shared with gallery/index.php) */
@@ -366,26 +437,35 @@ if ($photographer['youtube_url']) $socials[] = ['icon' => 'youtube', 'url' => $p
 }
 
 @media (max-width: 767px) {
-    .photographer-profile-header {
-        flex-direction: column;
-        align-items: center;
-        text-align: center;
+    .photographer-card-v4 {
+        border-radius: 0;
+        border-left: none;
+        border-right: none;
+        margin-left: -16px;
+        margin-right: -16px;
+        width: calc(100% + 32px);
+    }
+    .photographer-photo-hero {
+        aspect-ratio: 4 / 3;
+    }
+    .photographer-initials,
+    .photographer-initials-fallback {
+        font-size: 3rem;
+    }
+    .photographer-info-section {
         padding: var(--space-md);
     }
-    .photographer-avatar {
-        width: 80px;
-        height: 80px;
-    }
     .photographer-profile-name {
-        font-size: 1.3rem;
+        font-size: 1.2rem;
     }
-    .photographer-stats {
-        width: 100%;
-        justify-content: space-around;
-        padding-top: var(--space-sm);
-        border-top: 1px solid var(--color-border);
+    .photographer-social-link span {
+        display: none;
     }
-    .photographer-socials {
+    .photographer-social-link {
+        width: 40px;
+        height: 40px;
+        padding: 0;
+        border-radius: 50%;
         justify-content: center;
     }
     .gallery-listing-grid {
