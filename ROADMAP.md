@@ -16,7 +16,7 @@
 | Win-Back System | KLAR | Aterengagera churnade deltagare | 100% |
 | Klubb RF-Registrering | KLAR | SCF/NCF/DCU-synk och stavningskontroll | 100% |
 | Startlistor | KLAR | Admin/promotor startliste-vy med startnr, export, mobilvy | 100% |
-| Bildbanken / Fotoalbum | PAGAENDE | Fotoalbum, manuell taggning, galleri, R2-integration. Fas 3: OCR-taggning | 80% |
+| Bildbanken / Fotoalbum | PAGAENDE | Fotoalbum, manuell taggning, galleri, R2-integration, fotografroll. Fas 3: OCR-taggning | 90% |
 | Premium-medlemskap | PAGAENDE | Stripe-oberoende, sponsorprofil, hogupplosta bilder, swapmeet | 50% |
 | Ridercard Share | PAGAENDE | Statistikkort for Instagram-delning | 5% |
 | Prestandaoptimering | PAGAENDE | Fas 1-2 klar. Fas 3-4 planerade (CSS-bundling, arkitektur) | 50% |
@@ -110,6 +110,34 @@
 ---
 
 # CHANGELOG
+
+### 2026-02-27 (Fotografroll - self-service)
+- **Branch:** claude/fix-site-performance-wVdVq
+
+- **Ny funktion: Photographer-roll med self-service**
+  - Ny roll `photographer` i admin_users (migration 066)
+  - Fotografer kan logga in och hantera sin profil + album
+  - Kan INTE radera album - bara admin
+  - Dashboard med albumlista, stats och profilredigering
+  - Chunked fotoupladdning till R2 med progressbar
+  - Automatisk navigering (sidebar + mobil) anpassad per roll
+  - Login-redirect baserat på roll (fotograf → dashboard, promotor → promotor.php)
+
+- **Nya filer:**
+  - `admin/photographer-dashboard.php` - Fotograf-dashboard med flikar
+  - `admin/photographer-album.php` - Albumhantering (upload, cover, redigera)
+  - `Tools/migrations/066_photographer_role.sql` - Rollstöd, photographer_albums
+
+- **Ändrade filer:**
+  - `includes/auth.php` - Photographer i rollhierarki, canAccessAlbum(), getLinkedPhotographer()
+  - `components/sidebar.php` - Fotograf-navigation (Mina album, Min profil)
+  - `admin/components/admin-mobile-nav.php` - Fotograf i mobil-nav
+  - `admin/photographers.php` - admin_user_id-koppling + auto-länkning av album
+  - `admin/users.php` - Fotograf i rollfilter
+  - `admin/login.php` - Rollbaserad redirect efter login
+  - `api/upload-album-photo.php` - Åtkomstkontroll för fotografer
+  - `admin/components/unified-layout.php` - pageMap för fotograf-sidor
+  - `admin/migrations.php` - Migration 066 registrerad
 
 ### 2026-02-26 (Cloudflare R2 bildlagring)
 - **Branch:** claude/fix-site-performance-wVdVq

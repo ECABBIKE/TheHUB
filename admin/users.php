@@ -52,7 +52,8 @@ ORDER BY
         WHEN 'super_admin' THEN 1
         WHEN 'admin' THEN 2
         WHEN 'promotor' THEN 3
-        WHEN 'rider' THEN 4
+        WHEN 'photographer' THEN 4
+        WHEN 'rider' THEN 5
     END,
     username ASC";
 
@@ -201,6 +202,7 @@ include __DIR__ . '/components/unified-layout.php';
                     <option value="super_admin" <?= $roleFilter === 'super_admin' ? 'selected' : '' ?>>Super Admin</option>
                     <option value="admin" <?= $roleFilter === 'admin' ? 'selected' : '' ?>>Admin</option>
                     <option value="promotor" <?= $roleFilter === 'promotor' ? 'selected' : '' ?>>Promotor</option>
+                    <option value="photographer" <?= $roleFilter === 'photographer' ? 'selected' : '' ?>>Fotograf</option>
                 </select>
             </div>
             <div class="admin-form-group" style="margin-bottom: 0;">

@@ -323,7 +323,7 @@ function getCurrentAdmin() {
 
 /**
  * Check if user has role
- * Role hierarchy: rider(1) < promotor(2) < admin(3) < super_admin(4)
+ * Role hierarchy: rider(1) < promotor(2) = photographer(2) < admin(3) < super_admin(4)
  */
 function hasRole($role) {
     if (!isLoggedIn()) {
@@ -335,6 +335,7 @@ function hasRole($role) {
     // Updated role hierarchy with new roles
     $roles = [
         'rider' => 1,
+        'photographer' => 2,
         'promotor' => 2,
         'admin' => 3,
         'super_admin' => 4,
@@ -517,6 +518,99 @@ function getPromotorEvents() {
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     } catch (PDOException $e) {
         error_log("Get promotor events error: " . $e->getMessage());
+        return [];
+    }
+}
+
+/**
+ * Check if photographer can access a specific album
+ */
+function canAccessAlbum($albumId) {
+    if (!isLoggedIn()) {
+        return false;
+    }
+
+    // Admin and above can access all albums
+    if (hasRole('admin')) {
+        return true;
+    }
+
+    // Photographers can only access assigned albums
+    if (!isRole('photographer')) {
+        return false;
+    }
+
+    global $pdo;
+    if (!$pdo) {
+        return false;
+    }
+
+    try {
+        $userId = $_SESSION['admin_id'] ?? null;
+        $sql = "SELECT 1 FROM photographer_albums
+                WHERE user_id = ? AND album_id = ?
+                LIMIT 1";
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute([$userId, $albumId]);
+        return $stmt->fetch() !== false;
+    } catch (PDOException $e) {
+        error_log("Album access check error: " . $e->getMessage());
+        return false;
+    }
+}
+
+/**
+ * Get the photographer profile linked to the current admin user
+ */
+function getLinkedPhotographer() {
+    if (!isLoggedIn()) {
+        return null;
+    }
+
+    global $pdo;
+    if (!$pdo) {
+        return null;
+    }
+
+    try {
+        $userId = $_SESSION['admin_id'] ?? null;
+        $stmt = $pdo->prepare("SELECT * FROM photographers WHERE admin_user_id = ? LIMIT 1");
+        $stmt->execute([$userId]);
+        return $stmt->fetch(PDO::FETCH_ASSOC) ?: null;
+    } catch (PDOException $e) {
+        error_log("Get linked photographer error: " . $e->getMessage());
+        return null;
+    }
+}
+
+/**
+ * Get all albums a photographer can access
+ */
+function getPhotographerAlbums() {
+    if (!isLoggedIn()) {
+        return [];
+    }
+
+    global $pdo;
+    if (!$pdo) {
+        return [];
+    }
+
+    try {
+        $userId = $_SESSION['admin_id'] ?? null;
+        $sql = "SELECT ea.*, e.name as event_name, e.date as event_date, e.location as event_location,
+                       pa.can_upload, pa.can_edit,
+                       (SELECT COUNT(*) FROM event_photos ep WHERE ep.album_id = ea.id) as actual_photo_count
+                FROM event_albums ea
+                JOIN photographer_albums pa ON ea.id = pa.album_id
+                JOIN events e ON ea.event_id = e.id
+                WHERE pa.user_id = ?
+                ORDER BY e.date DESC, ea.created_at DESC";
+        $stmt = $pdo->prepare($sql);
+        $stmt->execute([$userId]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        error_log("Get photographer albums error: " . $e->getMessage());
         return [];
     }
 }

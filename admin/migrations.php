@@ -228,6 +228,10 @@ $migrationChecks = [
         'tables' => ['photographers'],
         'columns' => ['event_albums.photographer_id', 'event_photos.photographer_id']
     ],
+    '066_photographer_role.sql' => [
+        'tables' => ['photographer_albums'],
+        'columns' => ['photographers.admin_user_id']
+    ],
 ];
 
 // ============================================================================

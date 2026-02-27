@@ -17,6 +17,7 @@ require_once __DIR__ . '/../../includes/config/admin-tabs-config.php';
 // Get current user's role for filtering
 $currentAdminRole = $_SESSION['admin_role'] ?? 'admin';
 $isPromotor = ($currentAdminRole === 'promotor');
+$isPhotographer = ($currentAdminRole === 'photographer');
 
 // Check analytics access
 $hasAnalytics = function_exists('hasAnalyticsAccess') && hasAnalyticsAccess();
@@ -24,7 +25,16 @@ $hasAnalytics = function_exists('hasAnalyticsAccess') && hasAnalyticsAccess();
 // Build navigation
 $adminNav = [];
 
-if ($isPromotor) {
+if ($isPhotographer) {
+    // ========================================
+    // PHOTOGRAPHER navigation
+    // MUST be identical in sidebar.php and here
+    // ========================================
+    $adminNav = [
+        ['id' => 'albums', 'label' => 'Mina album', 'icon' => 'image', 'url' => '/admin/photographer-dashboard.php?tab=albums'],
+        ['id' => 'profile', 'label' => 'Min profil', 'icon' => 'user', 'url' => '/admin/photographer-dashboard.php?tab=profile'],
+    ];
+} elseif ($isPromotor) {
     // ========================================
     // PROMOTOR navigation
     // Unique menu adapted to what promotors need
@@ -81,6 +91,16 @@ $currentPageFile = basename($currentPath);
 function isAdminMobileNavActive($item, $currentPath, $currentPageFile) {
     $currentTab = $_GET['tab'] ?? '';
     $isPromotorPage = ($currentPath === '/admin/promotor.php' || $currentPath === '/admin/promotor');
+    $isPhotographerPage = (strpos($currentPath, '/admin/photographer-dashboard') !== false);
+    $isAlbumPage = (strpos($currentPath, '/admin/photographer-album') !== false);
+
+    // Photographer tab-based navigation
+    if ($item['id'] === 'albums') {
+        return ($isPhotographerPage && $currentTab !== 'profile') || $isAlbumPage;
+    }
+    if ($item['id'] === 'profile' && $isPhotographerPage) {
+        return $currentTab === 'profile';
+    }
 
     // Promotor tab-based navigation
     if ($item['id'] === 'dashboard') {

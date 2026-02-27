@@ -23,6 +23,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $facebook_url = trim($_POST['facebook_url'] ?? '');
         $youtube_url = trim($_POST['youtube_url'] ?? '');
         $rider_id = intval($_POST['rider_id'] ?? 0) ?: null;
+        $admin_user_id = intval($_POST['admin_user_id'] ?? 0) ?: null;
         $active = isset($_POST['active']) ? 1 : 0;
 
         // Generate slug
@@ -37,19 +38,33 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     UPDATE photographers SET
                         name = ?, slug = ?, email = ?, bio = ?, avatar_url = ?,
                         website_url = ?, instagram_url = ?, facebook_url = ?,
-                        youtube_url = ?, rider_id = ?, active = ?
+                        youtube_url = ?, rider_id = ?, admin_user_id = ?, active = ?
                     WHERE id = ?
                 ");
-                $stmt->execute([$name, $slug, $email, $bio, $avatar_url, $website_url, $instagram_url, $facebook_url, $youtube_url, $rider_id, $active, $id]);
+                $stmt->execute([$name, $slug, $email, $bio, $avatar_url, $website_url, $instagram_url, $facebook_url, $youtube_url, $rider_id, $admin_user_id, $active, $id]);
                 $message = 'Fotograf uppdaterad';
             } else {
                 $stmt = $pdo->prepare("
-                    INSERT INTO photographers (name, slug, email, bio, avatar_url, website_url, instagram_url, facebook_url, youtube_url, rider_id, active)
-                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                    INSERT INTO photographers (name, slug, email, bio, avatar_url, website_url, instagram_url, facebook_url, youtube_url, rider_id, admin_user_id, active)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ");
-                $stmt->execute([$name, $slug, $email, $bio, $avatar_url, $website_url, $instagram_url, $facebook_url, $youtube_url, $rider_id, $active]);
+                $stmt->execute([$name, $slug, $email, $bio, $avatar_url, $website_url, $instagram_url, $facebook_url, $youtube_url, $rider_id, $admin_user_id, $active]);
                 $id = $pdo->lastInsertId();
                 $message = 'Fotograf skapad';
+            }
+
+            // Auto-koppla befintliga album till fotografens admin-konto
+            if ($admin_user_id && $id) {
+                try {
+                    $pdo->prepare("
+                        INSERT IGNORE INTO photographer_albums (user_id, album_id, can_upload, can_edit)
+                        SELECT ?, ea.id, 1, 1
+                        FROM event_albums ea
+                        WHERE ea.photographer_id = ?
+                    ")->execute([$admin_user_id, $id]);
+                } catch (PDOException $e) {
+                    // photographer_albums kanske inte finns ännu
+                }
             }
         }
     } elseif ($action === 'delete') {
@@ -73,14 +88,27 @@ if ($editId) {
     $editPhotographer = $stmt->fetch(PDO::FETCH_ASSOC);
 }
 
+// Get available admin users (photographer role) for linking
+$adminUsers = [];
+try {
+    $adminUsers = $pdo->query("
+        SELECT au.id, au.full_name, au.email, au.role
+        FROM admin_users au
+        WHERE au.active = 1 AND au.role IN ('photographer', 'admin', 'super_admin')
+        ORDER BY au.full_name ASC
+    ")->fetchAll(PDO::FETCH_ASSOC);
+} catch (PDOException $e) {}
+
 // Get all photographers
 $photographers = $pdo->query("
     SELECT p.*,
            r.firstname as rider_firstname, r.lastname as rider_lastname,
+           au.full_name as admin_user_name, au.email as admin_user_email,
            COUNT(DISTINCT ea.id) as album_count,
            COALESCE(SUM(ea.photo_count), 0) as photo_count
     FROM photographers p
     LEFT JOIN riders r ON p.rider_id = r.id
+    LEFT JOIN admin_users au ON p.admin_user_id = au.id
     LEFT JOIN event_albums ea ON ea.photographer_id = p.id
     GROUP BY p.id
     ORDER BY p.name ASC
@@ -154,10 +182,24 @@ include __DIR__ . '/../includes/admin-header.php';
                     </div>
                 </div>
 
-                <div class="form-group">
-                    <label class="form-label">Kopplad deltagare (rider_id)</label>
-                    <input type="number" name="rider_id" class="form-input" value="<?= $editPhotographer['rider_id'] ?? '' ?>" placeholder="Lämna tomt om ej deltagare" style="max-width: 200px;">
-                    <small style="color: var(--color-text-muted);">Om fotografen även är deltagare, ange deras rider-ID</small>
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-md);">
+                    <div class="form-group">
+                        <label class="form-label">Kopplad deltagare (rider_id)</label>
+                        <input type="number" name="rider_id" class="form-input" value="<?= $editPhotographer['rider_id'] ?? '' ?>" placeholder="Lämna tomt om ej deltagare">
+                        <small style="color: var(--color-text-muted);">Om fotografen även är deltagare</small>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label"><i data-lucide="key" style="width: 14px; height: 14px; vertical-align: -2px;"></i> Kopplat inloggningskonto</label>
+                        <select name="admin_user_id" class="form-select">
+                            <option value="">Inget konto (kan ej logga in)</option>
+                            <?php foreach ($adminUsers as $au): ?>
+                            <option value="<?= $au['id'] ?>" <?= ($editPhotographer['admin_user_id'] ?? 0) == $au['id'] ? 'selected' : '' ?>>
+                                <?= htmlspecialchars($au['full_name'] ?: $au['email']) ?> (<?= $au['role'] ?>)
+                            </option>
+                            <?php endforeach; ?>
+                        </select>
+                        <small style="color: var(--color-text-muted);">Koppla till admin-användare med rollen "photographer"</small>
+                    </div>
                 </div>
 
                 <div class="form-group">
@@ -189,15 +231,15 @@ include __DIR__ . '/../includes/admin-header.php';
                             <th>Namn</th>
                             <th>Album</th>
                             <th>Bilder</th>
+                            <th>Konto</th>
                             <th>Kopplad deltagare</th>
-                            <th>Sociala medier</th>
                             <th>Status</th>
                             <th></th>
                         </tr>
                     </thead>
                     <tbody>
                         <?php if (empty($photographers)): ?>
-                        <tr><td colspan="7" style="text-align: center; color: var(--color-text-muted);">Inga fotografer</td></tr>
+                        <tr><td colspan="8" style="text-align: center; color: var(--color-text-muted);">Inga fotografer</td></tr>
                         <?php else: ?>
                         <?php foreach ($photographers as $p): ?>
                         <tr>
@@ -217,24 +259,21 @@ include __DIR__ . '/../includes/admin-header.php';
                             <td><?= $p['album_count'] ?></td>
                             <td><?= number_format($p['photo_count']) ?></td>
                             <td>
-                                <?php if ($p['rider_id']): ?>
-                                <a href="/rider/<?= $p['rider_id'] ?>"><?= htmlspecialchars(($p['rider_firstname'] ?? '') . ' ' . ($p['rider_lastname'] ?? '')) ?></a>
+                                <?php if ($p['admin_user_id']): ?>
+                                <span class="badge badge-success" title="<?= htmlspecialchars($p['admin_user_email'] ?? '') ?>">
+                                    <i data-lucide="key" style="width: 10px; height: 10px;"></i>
+                                    <?= htmlspecialchars($p['admin_user_name'] ?? 'Kopplat') ?>
+                                </span>
                                 <?php else: ?>
                                 <span style="color: var(--color-text-muted);">-</span>
                                 <?php endif; ?>
                             </td>
                             <td>
-                                <?php
-                                $icons = [];
-                                if ($p['website_url']) $icons[] = 'globe';
-                                if ($p['instagram_url']) $icons[] = 'instagram';
-                                if ($p['facebook_url']) $icons[] = 'facebook';
-                                if ($p['youtube_url']) $icons[] = 'youtube';
-                                foreach ($icons as $icon):
-                                ?>
-                                <i data-lucide="<?= $icon ?>" style="width: 14px; height: 14px; color: var(--color-text-muted);"></i>
-                                <?php endforeach; ?>
-                                <?php if (empty($icons)): ?><span style="color: var(--color-text-muted);">-</span><?php endif; ?>
+                                <?php if ($p['rider_id']): ?>
+                                <a href="/rider/<?= $p['rider_id'] ?>"><?= htmlspecialchars(($p['rider_firstname'] ?? '') . ' ' . ($p['rider_lastname'] ?? '')) ?></a>
+                                <?php else: ?>
+                                <span style="color: var(--color-text-muted);">-</span>
+                                <?php endif; ?>
                             </td>
                             <td>
                                 <span class="badge <?= $p['active'] ? 'badge-success' : 'badge-danger' ?>"><?= $p['active'] ? 'Aktiv' : 'Inaktiv' ?></span>

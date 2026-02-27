@@ -22,6 +22,12 @@ if (!$albumId) {
     exit;
 }
 
+// Fotografer kan bara ladda upp till sina tilldelade album
+if (isRole('photographer') && !canAccessAlbum($albumId)) {
+    echo json_encode(['success' => false, 'error' => 'Du har inte behörighet till detta album']);
+    exit;
+}
+
 // Hämta event_id för R2-nyckel
 try {
     $stmt = $pdo->prepare("SELECT event_id FROM event_albums WHERE id = ?");
