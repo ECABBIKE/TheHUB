@@ -16,6 +16,7 @@ $pdo = hub_db();
 
 // Filter parameters
 $filterYear = isset($_GET['year']) && is_numeric($_GET['year']) ? intval($_GET['year']) : null;
+$filterLocation = isset($_GET['location']) ? trim($_GET['location']) : '';
 $filterSeries = isset($_GET['series']) && is_numeric($_GET['series']) ? intval($_GET['series']) : null;
 $filterPhotographer = isset($_GET['photographer']) && is_numeric($_GET['photographer']) ? intval($_GET['photographer']) : null;
 $search = isset($_GET['q']) ? trim($_GET['q']) : '';
@@ -27,6 +28,15 @@ $years = $pdo->query("
     JOIN events e ON ea.event_id = e.id
     WHERE ea.is_published = 1
     ORDER BY yr DESC
+")->fetchAll(PDO::FETCH_COLUMN);
+
+// Get available locations (destinations) for filter
+$locations = $pdo->query("
+    SELECT DISTINCT e.location
+    FROM event_albums ea
+    JOIN events e ON ea.event_id = e.id
+    WHERE ea.is_published = 1 AND e.location IS NOT NULL AND e.location != ''
+    ORDER BY e.location ASC
 ")->fetchAll(PDO::FETCH_COLUMN);
 
 // Get available series for filter
@@ -55,6 +65,10 @@ $params = [];
 if ($filterYear) {
     $where[] = "YEAR(e.date) = ?";
     $params[] = $filterYear;
+}
+if ($filterLocation) {
+    $where[] = "e.location = ?";
+    $params[] = $filterLocation;
 }
 if ($filterSeries) {
     $where[] = "se.series_id = ?";
@@ -140,6 +154,14 @@ $totalTags = array_sum(array_column($albums, 'tag_count'));
             <option value="<?= $yr ?>" <?= $filterYear == $yr ? 'selected' : '' ?>><?= $yr ?></option>
             <?php endforeach; ?>
         </select>
+        <?php if (!empty($locations)): ?>
+        <select name="location" class="form-select gallery-filter-select gallery-filter-select--wide">
+            <option value="">Alla destinationer</option>
+            <?php foreach ($locations as $loc): ?>
+            <option value="<?= htmlspecialchars($loc) ?>" <?= $filterLocation === $loc ? 'selected' : '' ?>><?= htmlspecialchars($loc) ?></option>
+            <?php endforeach; ?>
+        </select>
+        <?php endif; ?>
         <?php if (!empty($seriesList)): ?>
         <select name="series" class="form-select gallery-filter-select gallery-filter-select--wide">
             <option value="">Alla serier</option>
@@ -162,7 +184,7 @@ $totalTags = array_sum(array_column($albums, 'tag_count'));
         <button type="submit" class="btn btn-primary gallery-filter-btn">
             <i data-lucide="search" style="width: 16px; height: 16px;"></i> Sök
         </button>
-        <?php if ($filterYear || $filterSeries || $filterPhotographer || $search): ?>
+        <?php if ($filterYear || $filterLocation || $filterSeries || $filterPhotographer || $search): ?>
         <a href="/gallery" class="btn btn-ghost gallery-filter-btn">Rensa</a>
         <?php endif; ?>
     </form>
@@ -189,7 +211,7 @@ $totalTags = array_sum(array_column($albums, 'tag_count'));
     <div style="padding: var(--space-2xl); text-align: center;">
         <i data-lucide="image-off" style="width: 48px; height: 48px; color: var(--color-text-muted); margin-bottom: var(--space-md);"></i>
         <p style="color: var(--color-text-muted); font-size: 1rem;">Inga gallerier hittades</p>
-        <?php if ($filterYear || $filterSeries || $filterPhotographer || $search): ?>
+        <?php if ($filterYear || $filterLocation || $filterSeries || $filterPhotographer || $search): ?>
         <a href="/gallery" class="btn btn-ghost" style="margin-top: var(--space-md);">Visa alla gallerier</a>
         <?php endif; ?>
     </div>
