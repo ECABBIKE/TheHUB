@@ -5577,13 +5577,14 @@ if (!empty($event['series_id'])) {
 <?php elseif ($activeTab === 'galleri'): ?>
 <!-- GALLERY TAB - Inline photo display with ad slots -->
 <?php
-    // Get photographer info from first photo
+    // Get photographer info from first photo - prefer profile link over website
     $galleryPhotographer = '';
-    $galleryPhotographerUrl = '';
+    $galleryPhotographerProfileId = null;
     foreach ($eventAlbumPhotos as $gp) {
-        if (!empty($gp['album_photographer'])) {
-            $galleryPhotographer = $gp['album_photographer'];
-            $galleryPhotographerUrl = $gp['album_photographer_url'] ?? '';
+        $name = $gp['photographer_name'] ?: ($gp['album_photographer'] ?? '');
+        if (!empty($name)) {
+            $galleryPhotographer = $name;
+            $galleryPhotographerProfileId = $gp['photographer_profile_id'] ?: null;
             break;
         }
     }
@@ -5601,8 +5602,8 @@ if (!empty($event['series_id'])) {
         <?php if ($galleryPhotographer): ?>
         <div style="font-size: 0.85rem; color: var(--color-text-secondary);">
             Foto:
-            <?php if ($galleryPhotographerUrl): ?>
-            <a href="<?= htmlspecialchars($galleryPhotographerUrl) ?>" target="_blank" rel="noopener" style="color: var(--color-accent-text);"><?= htmlspecialchars($galleryPhotographer) ?></a>
+            <?php if ($galleryPhotographerProfileId): ?>
+            <a href="/photographer/<?= (int)$galleryPhotographerProfileId ?>" style="color: var(--color-accent-text);"><?= htmlspecialchars($galleryPhotographer) ?></a>
             <?php else: ?>
             <?= htmlspecialchars($galleryPhotographer) ?>
             <?php endif; ?>
