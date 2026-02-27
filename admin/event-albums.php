@@ -300,6 +300,36 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
+    // Fix broken R2 URLs (from corrupted R2_PUBLIC_URL in .env)
+    if ($postAction === 'fix_r2_urls') {
+        $r2 = R2Storage::getInstance();
+        if ($r2) {
+            $fixAlbumId = (int)($_POST['album_id'] ?? 0);
+            $where = $fixAlbumId ? "AND album_id = ?" : "";
+            $params = $fixAlbumId ? [$fixAlbumId] : [];
+            $stmt = $pdo->prepare("SELECT id, r2_key FROM event_photos WHERE r2_key IS NOT NULL AND r2_key != '' {$where}");
+            $stmt->execute($params);
+            $rows = $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $fixed = 0;
+            foreach ($rows as $row) {
+                $correctUrl = $r2->getPublicUrl($row['r2_key']);
+                $correctThumb = $r2->getPublicUrl('thumbs/' . $row['r2_key']);
+                $pdo->prepare("UPDATE event_photos SET external_url = ?, thumbnail_url = ? WHERE id = ?")
+                    ->execute([$correctUrl, $correctThumb, $row['id']]);
+                $fixed++;
+            }
+            $message = $fixed . ' bild-URL:er uppdaterade med korrekt R2-adress';
+            $messageType = 'success';
+        } else {
+            $message = 'R2 är inte konfigurerat';
+            $messageType = 'danger';
+        }
+        if ($fixAlbumId) {
+            $albumId = $fixAlbumId;
+            $action = 'edit';
+        }
+    }
+
     // Delete album
     if ($postAction === 'delete_album') {
         $delId = (int)($_POST['album_id'] ?? 0);
@@ -707,12 +737,42 @@ include __DIR__ . '/components/unified-layout.php';
 
 <!-- Photo grid with tagging -->
 <?php if (!empty($photos)): ?>
+<?php
+    // Kolla om det finns bilder med trasiga URL:er (innehåller dubbla https:// eller = i URL:en)
+    $brokenUrlCount = 0;
+    foreach ($photos as $p) {
+        if (!empty($p['external_url']) && (substr_count($p['external_url'], 'https://') > 1 || strpos($p['external_url'], '=https://') !== false)) {
+            $brokenUrlCount++;
+        }
+    }
+?>
+<?php if ($brokenUrlCount > 0): ?>
+<div class="alert alert-warning" style="margin-top: var(--space-md); display: flex; justify-content: space-between; align-items: center; flex-wrap: wrap; gap: var(--space-sm);">
+    <span><i data-lucide="alert-triangle" class="icon-sm" style="vertical-align: text-bottom;"></i> <?= $brokenUrlCount ?> bild<?= $brokenUrlCount > 1 ? 'er' : '' ?> har trasiga URL:er (korrupt R2-adress). Bilderna visas inte förrän URL:erna fixas.</span>
+    <form method="POST" style="margin: 0;">
+        <input type="hidden" name="action" value="fix_r2_urls">
+        <input type="hidden" name="album_id" value="<?= $album['id'] ?>">
+        <button type="submit" class="btn btn-primary" style="white-space: nowrap;">
+            <i data-lucide="wrench" class="icon-sm"></i> Fixa URL:er
+        </button>
+    </form>
+</div>
+<?php endif; ?>
 <div class="admin-card" style="margin-top: var(--space-md);">
-    <div class="admin-card-header">
+    <div class="admin-card-header" style="display: flex; justify-content: space-between; align-items: center;">
         <h3 style="margin: 0; display: flex; align-items: center; gap: var(--space-sm);">
             <i data-lucide="images" class="icon-sm"></i> Bilder (<?= count($photos) ?>)
             <span style="font-size: 0.8rem; font-weight: 400; color: var(--color-text-secondary);">Klicka på en bild för att tagga deltagare</span>
         </h3>
+        <?php if ($album && R2Storage::isConfigured()): ?>
+        <form method="POST" style="margin: 0;">
+            <input type="hidden" name="action" value="fix_r2_urls">
+            <input type="hidden" name="album_id" value="<?= $album['id'] ?>">
+            <button type="submit" class="btn btn-ghost" style="font-size: 0.75rem; padding: var(--space-2xs) var(--space-sm);" title="Uppdatera alla bild-URL:er med aktuell R2-adress" onclick="return confirm('Uppdatera alla bild-URL:er i detta album?')">
+                <i data-lucide="refresh-cw" class="icon-sm"></i> Uppdatera URL:er
+            </button>
+        </form>
+        <?php endif; ?>
     </div>
     <div class="admin-card-body" style="padding: var(--space-sm);">
         <div class="photo-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: var(--space-sm);">

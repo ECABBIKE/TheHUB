@@ -57,7 +57,14 @@ class R2Storage {
         $this->accessKeyId = $accessKeyId;
         $this->secretAccessKey = $secretAccessKey;
         $this->bucket = $bucket;
-        $this->publicUrl = rtrim($publicUrl, '/');
+        // Sanera publicUrl - hantera korrupt .env med dubbla = (t.ex. "https://x.r2.dev=https://y.r2.dev")
+        $cleanUrl = $publicUrl;
+        if ($cleanUrl && substr_count($cleanUrl, 'https://') > 1) {
+            // Ta sista giltiga https:// URL:en
+            $parts = explode('https://', $cleanUrl);
+            $cleanUrl = 'https://' . end($parts);
+        }
+        $this->publicUrl = rtrim($cleanUrl, '/');
         $this->endpoint = "https://{$accountId}.r2.cloudflarestorage.com";
     }
 
