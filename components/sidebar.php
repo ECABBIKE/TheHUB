@@ -22,11 +22,12 @@ require_once __DIR__ . '/../includes/auth.php';
 $currentPage = $pageInfo['page'] ?? 'dashboard';
 $currentSection = $pageInfo['section'] ?? '';
 // Check roles properly - use hasRole for hierarchical check
-// promotor = role 2, admin = role 3, super_admin = role 4
+// promotor = role 2, photographer = role 2, admin = role 3, super_admin = role 4
 $isPromotorOnly = function_exists('isRole') && isRole('promotor') && !(function_exists('hasRole') && hasRole('admin'));
+$isPhotographerOnly = function_exists('isRole') && isRole('photographer') && !(function_exists('hasRole') && hasRole('admin'));
 // isAdminUser must be admin or super_admin, NOT just logged in
 $isAdminUser = function_exists('hasRole') && hasRole('admin');
-// Promotors should see their limited admin menu, not full admin
+// Promotors/photographers should see their limited admin menu, not full admin
 $isAdminSection = strpos($_SERVER['REQUEST_URI'], '/admin') === 0;
 
 // Fallback for hub_is_nav_active if not defined
@@ -201,6 +202,48 @@ function isAdminPageActive($item, $requestUri) {
       <!-- Back to Public Site -->
       <div class="sidebar-section">
         <div class="sidebar-section-title">Publik</div>
+
+    <?php elseif ($isAdminSection && $isPhotographerOnly): ?>
+      <!-- Photographer Navigation -->
+      <div class="sidebar-section">
+        <div class="sidebar-section-title">Fotograf</div>
+        <?php
+        $currentPath = $_SERVER['REQUEST_URI'];
+        $currentTab = $_GET['tab'] ?? '';
+        $isPhotographerPage = (strpos($currentPath, '/admin/photographer-dashboard') !== false);
+        $isAlbumPage = (strpos($currentPath, '/admin/photographer-album') !== false);
+        // PHOTOGRAPHER navigation - must be identical to admin-mobile-nav.php photographer nav
+        $photographerNav = [
+            ['id' => 'albums', 'label' => 'Mina album', 'icon' => 'image', 'url' => '/admin/photographer-dashboard.php?tab=albums'],
+            ['id' => 'profile', 'label' => 'Min profil', 'icon' => 'user', 'url' => '/admin/photographer-dashboard.php?tab=profile'],
+        ];
+        foreach ($photographerNav as $item):
+            $isActive = match($item['id']) {
+                'albums' => ($isPhotographerPage && $currentTab !== 'profile') || $isAlbumPage,
+                'profile' => $isPhotographerPage && $currentTab === 'profile',
+                default => false,
+            };
+        ?>
+          <a href="<?= htmlspecialchars($item['url']) ?>"
+             class="sidebar-link<?= $isActive ? ' is-active' : '' ?>"
+             data-nav="<?= htmlspecialchars($item['id']) ?>"
+             data-tooltip="<?= htmlspecialchars($item['label']) ?>"
+             <?= $isActive ? 'aria-current="page"' : '' ?>
+             aria-label="<?= htmlspecialchars($item['label']) ?>">
+            <span class="sidebar-icon" aria-hidden="true">
+              <?= hub_icon($item['icon'], 'sidebar-icon-svg') ?>
+            </span>
+            <span class="sidebar-label"><?= htmlspecialchars($item['label']) ?></span>
+          </a>
+        <?php endforeach; ?>
+      </div>
+
+      <!-- Divider -->
+      <div class="sidebar-divider"></div>
+
+      <!-- Back to Public Site -->
+      <div class="sidebar-section">
+        <div class="sidebar-section-title">Publik</div>
     <?php endif; ?>
 
     <!-- Public Navigation -->
@@ -217,7 +260,7 @@ function isAdminPageActive($item, $requestUri) {
       </a>
     <?php endforeach; ?>
 
-    <?php if ($isAdminSection && ($isAdminUser || $isPromotorOnly)): ?>
+    <?php if ($isAdminSection && ($isAdminUser || $isPromotorOnly || $isPhotographerOnly)): ?>
       </div>
     <?php endif; ?>
 
@@ -242,6 +285,17 @@ function isAdminPageActive($item, $requestUri) {
          aria-label="Hantera mina tävlingar">
         <span class="sidebar-icon" aria-hidden="true"><?= hub_icon('settings', 'sidebar-icon-svg') ?></span>
         <span class="sidebar-label">Admin</span>
+      </a>
+    <?php elseif (!$isAdminSection && $isPhotographerOnly): ?>
+      <!-- Photographer Admin Link -->
+      <div class="sidebar-divider"></div>
+      <a href="/admin/photographer-dashboard.php"
+         class="sidebar-link sidebar-link--admin"
+         data-nav="photographer-admin"
+         data-tooltip="Mina album"
+         aria-label="Hantera mina album">
+        <span class="sidebar-icon" aria-hidden="true"><?= hub_icon('camera', 'sidebar-icon-svg') ?></span>
+        <span class="sidebar-label">Fotograf</span>
       </a>
     <?php endif; ?>
   </nav>

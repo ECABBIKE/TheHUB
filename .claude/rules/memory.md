@@ -56,6 +56,31 @@
 - **Fix 6: PWA standalone** - padding anpassad med `env(safe-area-inset-*)` för notch/home indicator
 - **VIKTIGT:** Alla z-index inuti lightboxen är 10-12 (relativa), inte globala. Topbar/nav/bottom = 10, tag-toggle = 11, tag-panel = 12
 
+### Fotografroll - self-service (session 11)
+- **Ny roll:** `photographer` tillagd i `admin_users.role` ENUM (migration 066)
+- **Rollhierarki:** photographer = level 2 (samma som promotor) i auth.php
+- **Koppling:** `photographers.admin_user_id` → `admin_users.id` (koppling fotograf → inloggning)
+- **Behörighetsmodell:** `photographer_albums` tabell (user_id, album_id, can_upload, can_edit)
+  - `canAccessAlbum($albumId)` i auth.php kontrollerar åtkomst
+  - `getLinkedPhotographer()` hämtar kopplad fotograf-profil
+  - `getPhotographerAlbums()` hämtar alla album fotografen har tillgång till
+- **Dashboard:** `/admin/photographer-dashboard.php` med två flikar:
+  - "Mina album" - lista album med stats, skapa nytt album (med event-koppling)
+  - "Min profil" - redigera namn, bio, avatar, sociala medier (AJAX-sparning)
+- **Albumhantering:** `/admin/photographer-album.php`
+  - Redigera albuminfo (titel, beskrivning, publicerad)
+  - Chunked AJAX-uppladdning till R2 (en bild åt gången med progress)
+  - Fotogrid med cover-val och enskild radering
+  - **INGEN albumradering** - bara admin kan radera album
+- **Upload-åtkomst:** `/api/upload-album-photo.php` kontrollerar `canAccessAlbum()` för fotografer
+- **Navigation:** Sidebar + mobil bottomnav visar "Mina album" + "Min profil" för fotograf-rollen
+  - Identiskt mönster som promotor-navigationen
+  - Aktiv-markering baseras på `$isPhotographerPage` och `$isAlbumPage`
+- **Login-redirect:** Fotografer skickas till `/admin/photographer-dashboard.php` efter inloggning
+- **Admin-koppling:** `/admin/photographers.php` har nu dropdown för att länka admin-användare
+  - Auto-skapar `photographer_albums`-poster vid koppling
+- **Admin users:** Fotograf-rollen visas i filterdropdown i `/admin/users.php`
+
 ### Galleri-listning och fotografprofiler (session 10)
 - **Ny flik:** "Galleri" tillagd som tredje flik i Databas-sektionen (under /database)
   - Klick på "Galleri"-fliken navigerar till `/gallery`

@@ -1,9 +1,16 @@
 <?php
 require_once __DIR__ . '/../config.php';
 
-// If already logged in, redirect to homepage
+// If already logged in, redirect based on role
 if (is_admin()) {
- redirect('/');
+ $role = $_SESSION['admin_role'] ?? '';
+ if ($role === 'photographer') {
+  redirect('/admin/photographer-dashboard.php');
+ } elseif ($role === 'promotor') {
+  redirect('/admin/promotor.php');
+ } else {
+  redirect('/');
+ }
 }
 
 // Handle login
@@ -27,8 +34,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
  if (isLoginRateLimited($username)) {
   $error = 'För många inloggningsförsök. Vänta 15 minuter och försök igen.';
  } elseif (login($username, $password, $rememberMe)) {
-  // All users go to homepage after login
-  redirect('/');
+  // Redirect based on role
+  $role = $_SESSION['admin_role'] ?? '';
+  if ($role === 'photographer') {
+   redirect('/admin/photographer-dashboard.php');
+  } elseif ($role === 'promotor') {
+   redirect('/admin/promotor.php');
+  } else {
+   redirect('/');
+  }
  } else {
   $error = 'Felaktigt användarnamn eller lösenord';
  }
