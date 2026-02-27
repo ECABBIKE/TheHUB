@@ -22,6 +22,27 @@
 - **R2 lagring:** Noll lokalt serverutrymme. Temp-filer rensas direkt efter R2-upload.
 - **Kapacitet:** Testat för 256+ bilder. ~2-3s per bild = ~10 min totalt, med live-feedback hela vägen
 
+### R2 URL-sanering (korrupt .env-fix)
+- **Problem:** `.env` hade `R2_PUBLIC_URL=https://x.r2.dev=https://y.r2.dev` (dubbla `=`) → alla bild-URL:er blev trasiga
+- **r2-storage.php:** Auto-detekterar och fixar dubbla `https://` i publicUrl vid konstruktion
+- **event-albums.php:** Ny POST-handler `fix_r2_urls` som uppdaterar alla external_url/thumbnail_url i event_photos via r2_key
+- **UI:** Gul varningsruta vid trasiga URL:er + "Fixa URL:er"-knapp. "Uppdatera URL:er"-knapp i grid-headern.
+
+### Publik fototaggning (alla inloggade kan tagga)
+- **API utökat:** `/api/photo-tags.php` stödjer nu GET/POST/DELETE (var bara GET)
+  - POST: Tagga rider på foto (kräver inloggning, rider_id från session)
+  - DELETE: Ta bort tagg (bara egna taggar eller admin)
+- **Galleri-grid:** Taggade namnbadges visas på bilderna (cyan badges nertill)
+  - Data via GROUP_CONCAT i SQL-frågan (inga extra API-anrop)
+- **Lightbox:** Taggade namn visas under bilden som klickbara badges (→ profil)
+- **Taggpanel:** Slide-in panel i lightboxen (höger sida, toggle-knapp nere till höger)
+  - Sökfält för riders, realtidssökning mot /api/search.php
+  - Tagga med ett klick, ta bort egna taggar
+  - Enbart synlig för inloggade användare
+- **Profil:** "Mina bilder" redan implementerad (premium only, max 6, 3-kolumns grid)
+  - Laddar via photo_rider_tags → event_photos → event_albums → events
+  - Visar thumbnail med hover-zoom, länk till eventgalleriet
+
 ---
 
 ## TIDIGARE FIXAR (2026-02-26, session 8)
