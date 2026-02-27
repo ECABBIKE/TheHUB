@@ -16,6 +16,7 @@ $pdo = hub_db();
 
 // Filter parameters
 $filterYear = isset($_GET['year']) && is_numeric($_GET['year']) ? intval($_GET['year']) : null;
+$filterLocation = isset($_GET['location']) ? trim($_GET['location']) : '';
 $filterSeries = isset($_GET['series']) && is_numeric($_GET['series']) ? intval($_GET['series']) : null;
 $filterPhotographer = isset($_GET['photographer']) && is_numeric($_GET['photographer']) ? intval($_GET['photographer']) : null;
 $search = isset($_GET['q']) ? trim($_GET['q']) : '';
@@ -27,6 +28,15 @@ $years = $pdo->query("
     JOIN events e ON ea.event_id = e.id
     WHERE ea.is_published = 1
     ORDER BY yr DESC
+")->fetchAll(PDO::FETCH_COLUMN);
+
+// Get available locations (destinations) for filter
+$locations = $pdo->query("
+    SELECT DISTINCT e.location
+    FROM event_albums ea
+    JOIN events e ON ea.event_id = e.id
+    WHERE ea.is_published = 1 AND e.location IS NOT NULL AND e.location != ''
+    ORDER BY e.location ASC
 ")->fetchAll(PDO::FETCH_COLUMN);
 
 // Get available series for filter
@@ -55,6 +65,10 @@ $params = [];
 if ($filterYear) {
     $where[] = "YEAR(e.date) = ?";
     $params[] = $filterYear;
+}
+if ($filterLocation) {
+    $where[] = "e.location = ?";
+    $params[] = $filterLocation;
 }
 if ($filterSeries) {
     $where[] = "se.series_id = ?";
@@ -125,14 +139,71 @@ $totalPhotos = array_sum(array_column($albums, 'photo_count'));
 $totalTags = array_sum(array_column($albums, 'tag_count'));
 ?>
 
-<!-- Database tabs navigation -->
+<!-- Database tabs navigation + Gallery filters -->
 <div class="search-card">
     <div class="tabs-nav">
         <button class="tab-pill" onclick="window.location='/database'"><i data-lucide="users"></i> Sök Åkare</button>
         <button class="tab-pill" onclick="window.location='/database?tab=clubs'"><i data-lucide="shield"></i> Sök Klubbar</button>
         <button class="tab-pill active"><i data-lucide="camera"></i> Galleri</button>
     </div>
+
 </div>
+
+<!-- Filters -->
+<form method="GET" action="/gallery" class="filter-bar">
+    <div class="filter-select-wrapper">
+        <label class="filter-label">År</label>
+        <select name="year" class="filter-select" onchange="this.form.submit()">
+            <option value="">Alla år</option>
+            <?php foreach ($years as $yr): ?>
+            <option value="<?= $yr ?>" <?= $filterYear == $yr ? 'selected' : '' ?>><?= $yr ?></option>
+            <?php endforeach; ?>
+        </select>
+    </div>
+    <?php if (!empty($locations)): ?>
+    <div class="filter-select-wrapper">
+        <label class="filter-label">Destination</label>
+        <select name="location" class="filter-select" onchange="this.form.submit()">
+            <option value="">Alla destinationer</option>
+            <?php foreach ($locations as $loc): ?>
+            <option value="<?= htmlspecialchars($loc) ?>" <?= $filterLocation === $loc ? 'selected' : '' ?>><?= htmlspecialchars($loc) ?></option>
+            <?php endforeach; ?>
+        </select>
+    </div>
+    <?php endif; ?>
+    <?php if (!empty($seriesList)): ?>
+    <div class="filter-select-wrapper">
+        <label class="filter-label">Serie</label>
+        <select name="series" class="filter-select" onchange="this.form.submit()">
+            <option value="">Alla serier</option>
+            <?php foreach ($seriesList as $s): ?>
+            <option value="<?= $s['id'] ?>" <?= $filterSeries == $s['id'] ? 'selected' : '' ?>><?= htmlspecialchars($s['name']) ?> <?= $s['year'] ?></option>
+            <?php endforeach; ?>
+        </select>
+    </div>
+    <?php endif; ?>
+    <?php if (!empty($photographers)): ?>
+    <div class="filter-select-wrapper">
+        <label class="filter-label">Fotograf</label>
+        <select name="photographer" class="filter-select" onchange="this.form.submit()">
+            <option value="">Alla fotografer</option>
+            <?php foreach ($photographers as $ph): ?>
+            <option value="<?= $ph['id'] ?>" <?= $filterPhotographer == $ph['id'] ? 'selected' : '' ?>><?= htmlspecialchars($ph['name']) ?></option>
+            <?php endforeach; ?>
+        </select>
+    </div>
+    <?php endif; ?>
+    <div class="filter-search-wrapper">
+        <label class="filter-label">Sök</label>
+        <input type="text" name="q" class="filter-input" placeholder="Event eller fotograf..." value="<?= htmlspecialchars($search) ?>">
+    </div>
+    <button type="submit" class="btn btn-primary filter-btn">
+        <i data-lucide="search" style="width: 16px; height: 16px;"></i> Sök
+    </button>
+    <?php if ($filterYear || $filterLocation || $filterSeries || $filterPhotographer || $search): ?>
+    <a href="/gallery" class="btn btn-ghost filter-btn">Rensa</a>
+    <?php endif; ?>
+</form>
 
 <!-- Stats Cards -->
 <div class="stats-grid gallery-stats-grid">
@@ -150,51 +221,12 @@ $totalTags = array_sum(array_column($albums, 'tag_count'));
     </div>
 </div>
 
-<!-- Filters -->
-<div class="card" style="margin-bottom: var(--space-md);">
-    <div style="padding: var(--space-sm) var(--space-md);">
-        <form method="GET" action="/gallery" style="display: flex; flex-wrap: wrap; gap: var(--space-sm); align-items: center;">
-            <select name="year" class="form-select" style="flex: 1; min-width: 100px; max-width: 140px;">
-                <option value="">Alla år</option>
-                <?php foreach ($years as $yr): ?>
-                <option value="<?= $yr ?>" <?= $filterYear == $yr ? 'selected' : '' ?>><?= $yr ?></option>
-                <?php endforeach; ?>
-            </select>
-            <?php if (!empty($seriesList)): ?>
-            <select name="series" class="form-select" style="flex: 1; min-width: 140px; max-width: 200px;">
-                <option value="">Alla serier</option>
-                <?php foreach ($seriesList as $s): ?>
-                <option value="<?= $s['id'] ?>" <?= $filterSeries == $s['id'] ? 'selected' : '' ?>><?= htmlspecialchars($s['name']) ?> <?= $s['year'] ?></option>
-                <?php endforeach; ?>
-            </select>
-            <?php endif; ?>
-            <?php if (!empty($photographers)): ?>
-            <select name="photographer" class="form-select" style="flex: 1; min-width: 140px; max-width: 200px;">
-                <option value="">Alla fotografer</option>
-                <?php foreach ($photographers as $ph): ?>
-                <option value="<?= $ph['id'] ?>" <?= $filterPhotographer == $ph['id'] ? 'selected' : '' ?>><?= htmlspecialchars($ph['name']) ?></option>
-                <?php endforeach; ?>
-            </select>
-            <?php endif; ?>
-            <div style="flex: 2; min-width: 160px; position: relative;">
-                <input type="text" name="q" class="form-input" placeholder="Sök event eller fotograf..." value="<?= htmlspecialchars($search) ?>" style="width: 100%;">
-            </div>
-            <button type="submit" class="btn btn-primary" style="white-space: nowrap;">
-                <i data-lucide="search" style="width: 16px; height: 16px;"></i> Sök
-            </button>
-            <?php if ($filterYear || $filterSeries || $filterPhotographer || $search): ?>
-            <a href="/gallery" class="btn btn-ghost" style="white-space: nowrap;">Rensa</a>
-            <?php endif; ?>
-        </form>
-    </div>
-</div>
-
 <?php if (empty($albums)): ?>
 <div class="card">
     <div style="padding: var(--space-2xl); text-align: center;">
         <i data-lucide="image-off" style="width: 48px; height: 48px; color: var(--color-text-muted); margin-bottom: var(--space-md);"></i>
         <p style="color: var(--color-text-muted); font-size: 1rem;">Inga gallerier hittades</p>
-        <?php if ($filterYear || $filterSeries || $filterPhotographer || $search): ?>
+        <?php if ($filterYear || $filterLocation || $filterSeries || $filterPhotographer || $search): ?>
         <a href="/gallery" class="btn btn-ghost" style="margin-top: var(--space-md);">Visa alla gallerier</a>
         <?php endif; ?>
     </div>

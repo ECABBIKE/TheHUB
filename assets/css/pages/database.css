@@ -317,6 +317,8 @@
     padding: var(--space-xs) var(--space-sm);
   }
   .search-card .tab-pill.active {
+    background: var(--color-accent);
+    color: var(--color-text-inverse);
     border-color: var(--color-accent);
   }
 
