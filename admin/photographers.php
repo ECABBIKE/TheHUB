@@ -511,17 +511,18 @@ document.addEventListener('DOMContentLoaded', function() {
         avatarLoading.style.display = 'flex';
         hideStatus();
 
-        // Upload via media API
+        // Upload via avatar API (same as user profiles - ImgBB)
         var formData = new FormData();
-        formData.append('file', file);
-        formData.append('folder', 'general');
+        formData.append('avatar', file);
+        formData.append('type', 'photographer');
+        formData.append('photographer_id', '<?= $editPhotographer['id'] ?? 0 ?>');
 
         try {
-            var response = await fetch('/api/media.php?action=upload', { method: 'POST', body: formData });
+            var response = await fetch('/api/update-avatar.php', { method: 'POST', body: formData });
             var result = await response.json();
 
             if (result.success) {
-                var url = result.url || ('/' + result.filepath);
+                var url = result.avatar_url;
                 document.getElementById('avatarUrlInput').value = url;
                 avatarPreview.innerHTML = '<img src="' + url + '" alt="Profilbild" class="pg-avatar-image">';
                 showStatus('Bilden har laddats upp!', 'success');

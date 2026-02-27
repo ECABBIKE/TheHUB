@@ -318,6 +318,37 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
+    // Create album via AJAX (returns JSON)
+    if ($postAction === 'create_album_ajax') {
+        header('Content-Type: application/json');
+        $aEventId = (int)($_POST['event_id'] ?? 0);
+        $aPhotographerId = intval($_POST['photographer_id'] ?? 0) ?: null;
+
+        if (!$aEventId) {
+            echo json_encode(['success' => false, 'error' => 'Välj ett event']);
+            exit;
+        }
+
+        try {
+            // Get event name for album title
+            $stmt = $pdo->prepare("SELECT name FROM events WHERE id = ?");
+            $stmt->execute([$aEventId]);
+            $eventName = $stmt->fetchColumn();
+
+            $stmt = $pdo->prepare("
+                INSERT INTO event_albums (event_id, title, photographer_id, is_published)
+                VALUES (?, ?, ?, 1)
+            ");
+            $stmt->execute([$aEventId, null, $aPhotographerId]);
+            $newAlbumId = (int)$pdo->lastInsertId();
+
+            echo json_encode(['success' => true, 'album_id' => $newAlbumId, 'event_name' => $eventName]);
+        } catch (PDOException $e) {
+            echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+        }
+        exit;
+    }
+
     // Fix broken R2 URLs (from corrupted R2_PUBLIC_URL in .env)
     if ($postAction === 'fix_r2_urls') {
         $r2 = R2Storage::getInstance();
@@ -395,6 +426,10 @@ try {
     ")->fetchAll(PDO::FETCH_ASSOC);
 } catch (PDOException $e) {}
 
+// Get photographers for dropdown
+$allPhotographers = [];
+try { $allPhotographers = $pdo->query("SELECT id, name FROM photographers WHERE active = 1 ORDER BY name")->fetchAll(PDO::FETCH_ASSOC); } catch (Exception $e) {}
+
 if ($action === 'list') {
     try {
         $albums = $pdo->query("
@@ -455,58 +490,244 @@ include __DIR__ . '/components/unified-layout.php';
 <?php endif; ?>
 
 <?php if ($action === 'list'): ?>
+<?php $r2Active = R2Storage::isConfigured(); ?>
 <!-- ALBUM LIST -->
-<div class="page-header" style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-lg);">
+<div class="page-header" style="margin-bottom: var(--space-lg);">
     <h1><?= $pageTitle ?></h1>
-    <a href="/admin/event-albums?action=edit" class="btn btn-primary">
-        <i data-lucide="plus" class="icon-sm"></i> Skapa album
-    </a>
 </div>
+
+<!-- Ladda upp bilder (skapar album automatiskt) -->
+<?php if ($r2Active): ?>
+<div class="admin-card" style="margin-bottom: var(--space-lg);">
+    <div class="admin-card-header">
+        <h3 style="margin: 0; display: flex; align-items: center; gap: var(--space-sm);">
+            <i data-lucide="upload" class="icon-sm"></i> Ladda upp bilder
+        </h3>
+    </div>
+    <div class="admin-card-body">
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: var(--space-md); margin-bottom: var(--space-md);">
+            <div class="admin-form-group" style="margin: 0;">
+                <label class="admin-form-label">Event *</label>
+                <select id="uploadEventId" class="form-select" required>
+                    <option value="">Välj event...</option>
+                    <?php foreach ($events as $ev): ?>
+                    <option value="<?= $ev['id'] ?>"><?= htmlspecialchars($ev['name']) ?> (<?= $ev['date'] ?>)</option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div class="admin-form-group" style="margin: 0;">
+                <label class="admin-form-label">Fotograf</label>
+                <select id="uploadPhotographerId" class="form-select">
+                    <option value="">-- Valfritt --</option>
+                    <?php foreach ($allPhotographers as $ph): ?>
+                    <option value="<?= $ph['id'] ?>"><?= htmlspecialchars($ph['name']) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+        </div>
+        <div style="display: flex; flex-wrap: wrap; gap: var(--space-sm); align-items: end;">
+            <div class="admin-form-group" style="flex: 1; min-width: 200px; margin: 0;">
+                <input type="file" id="listFileInput" multiple accept="image/*" class="form-input">
+                <small class="form-help">Välj bilder. Album skapas automatiskt.</small>
+            </div>
+            <button type="button" class="btn btn-primary" id="listUploadBtn" onclick="startListUpload()" disabled>
+                <i data-lucide="upload" class="icon-sm"></i> Ladda upp
+            </button>
+        </div>
+
+        <!-- Progress UI -->
+        <div id="listUploadProgress" style="display: none; margin-top: var(--space-md);">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: var(--space-xs);">
+                <span id="listUploadStatus" style="font-size: 0.85rem; color: var(--color-text-secondary);">Förbereder...</span>
+                <span id="listUploadPercent" style="font-size: 0.85rem; font-weight: 600; color: var(--color-accent-text);">0%</span>
+            </div>
+            <div style="background: var(--color-bg-hover); border-radius: var(--radius-full); height: 8px; overflow: hidden;">
+                <div id="listUploadBar" style="height: 100%; width: 0%; background: var(--color-accent); border-radius: var(--radius-full); transition: width 0.3s ease;"></div>
+            </div>
+            <div style="display: flex; gap: var(--space-lg); margin-top: var(--space-xs); font-size: 0.75rem; color: var(--color-text-muted);">
+                <span id="listUploadCount">0 / 0 bilder</span>
+                <span id="listUploadSpeed"></span>
+                <span id="listUploadEta"></span>
+            </div>
+            <div id="listUploadErrors" style="display: none; margin-top: var(--space-sm); padding: var(--space-sm); background: rgba(239,68,68,0.1); border-radius: var(--radius-sm); font-size: 0.8rem; color: var(--color-error); max-height: 120px; overflow-y: auto;"></div>
+            <div style="margin-top: var(--space-sm);">
+                <button type="button" id="listCancelBtn" class="btn btn-secondary" onclick="listUploadCancelled = true" style="display: none;">
+                    <i data-lucide="x" class="icon-sm"></i> Avbryt
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+let listUploadCancelled = false;
+
+document.getElementById('listFileInput').addEventListener('change', function() {
+    const btn = document.getElementById('listUploadBtn');
+    btn.disabled = this.files.length === 0;
+    if (this.files.length > 0) {
+        btn.innerHTML = '<i data-lucide="upload" class="icon-sm"></i> Ladda upp ' + this.files.length + ' bilder';
+        if (typeof lucide !== 'undefined') lucide.createIcons({nodes: [btn]});
+    }
+});
+
+async function startListUpload() {
+    const eventId = document.getElementById('uploadEventId').value;
+    if (!eventId) {
+        alert('Välj ett event först');
+        return;
+    }
+
+    const fileInput = document.getElementById('listFileInput');
+    const files = Array.from(fileInput.files);
+    if (files.length === 0) return;
+
+    const photographerId = document.getElementById('uploadPhotographerId').value;
+    const uploadBtn = document.getElementById('listUploadBtn');
+    const progressDiv = document.getElementById('listUploadProgress');
+    const statusText = document.getElementById('listUploadStatus');
+    const percentText = document.getElementById('listUploadPercent');
+    const bar = document.getElementById('listUploadBar');
+    const countText = document.getElementById('listUploadCount');
+    const speedText = document.getElementById('listUploadSpeed');
+    const etaText = document.getElementById('listUploadEta');
+    const errorsDiv = document.getElementById('listUploadErrors');
+    const cancelBtn = document.getElementById('listCancelBtn');
+
+    // Disable inputs
+    uploadBtn.disabled = true;
+    fileInput.disabled = true;
+    document.getElementById('uploadEventId').disabled = true;
+    document.getElementById('uploadPhotographerId').disabled = true;
+    listUploadCancelled = false;
+
+    // Show progress
+    progressDiv.style.display = 'block';
+    cancelBtn.style.display = 'inline-flex';
+    errorsDiv.style.display = 'none';
+    errorsDiv.innerHTML = '';
+    statusText.textContent = 'Skapar album...';
+
+    // Step 1: Create album via AJAX
+    let albumId = 0;
+    try {
+        const createData = new FormData();
+        createData.append('action', 'create_album_ajax');
+        createData.append('event_id', eventId);
+        if (photographerId) createData.append('photographer_id', photographerId);
+
+        const createResp = await fetch('/admin/event-albums.php', { method: 'POST', body: createData });
+        const createResult = await createResp.json();
+
+        if (!createResult.success) {
+            statusText.textContent = 'Kunde inte skapa album: ' + (createResult.error || 'Okänt fel');
+            bar.style.background = 'var(--color-error)';
+            cancelBtn.style.display = 'none';
+            return;
+        }
+        albumId = createResult.album_id;
+        statusText.textContent = 'Album skapat. Laddar upp bilder...';
+    } catch (e) {
+        statusText.textContent = 'Fel vid skapande av album';
+        bar.style.background = 'var(--color-error)';
+        cancelBtn.style.display = 'none';
+        return;
+    }
+
+    // Step 2: Chunked upload
+    const CONCURRENT = 3;
+    const totalFiles = files.length;
+    let uploaded = 0, failed = 0, errors = [];
+    const startTime = Date.now();
+    let index = 0;
+
+    function updateProgress() {
+        const done = uploaded + failed;
+        const pct = Math.round((done / totalFiles) * 100);
+        bar.style.width = pct + '%';
+        percentText.textContent = pct + '%';
+        countText.textContent = done + ' / ' + totalFiles + ' bilder';
+        const elapsed = (Date.now() - startTime) / 1000;
+        if (done > 0 && elapsed > 0) {
+            const perImage = elapsed / done;
+            const remaining = ((totalFiles - done) / CONCURRENT) * perImage;
+            speedText.textContent = (perImage / CONCURRENT).toFixed(1) + 's/bild';
+            etaText.textContent = remaining > 60 ? 'ca ' + Math.ceil(remaining / 60) + ' min kvar' : 'ca ' + Math.ceil(remaining) + 's kvar';
+        }
+    }
+
+    async function processNext() {
+        while (index < totalFiles && !listUploadCancelled) {
+            const i = index++;
+            const file = files[i];
+            updateProgress();
+            try {
+                const formData = new FormData();
+                formData.append('photo', file);
+                formData.append('album_id', albumId);
+                const response = await fetch('/api/upload-album-photo.php', { method: 'POST', body: formData });
+                if (!response.ok) throw new Error('HTTP ' + response.status);
+                const result = await response.json();
+                if (!result.success) throw new Error(result.error || 'Okänt fel');
+                uploaded++;
+            } catch (e) {
+                failed++;
+                errors.push(file.name + ': ' + e.message);
+            }
+            updateProgress();
+        }
+    }
+
+    const workers = [];
+    for (let w = 0; w < CONCURRENT; w++) workers.push(processNext());
+    await Promise.all(workers);
+
+    // Done
+    bar.style.width = '100%';
+    percentText.textContent = '100%';
+    cancelBtn.style.display = 'none';
+    speedText.textContent = '';
+    etaText.textContent = '';
+
+    if (listUploadCancelled) {
+        statusText.textContent = 'Avbruten. ' + uploaded + ' av ' + totalFiles + ' bilder uppladdade.';
+        bar.style.background = 'var(--color-warning)';
+    } else if (failed > 0) {
+        statusText.textContent = uploaded + ' bilder uppladdade, ' + failed + ' misslyckades.';
+        bar.style.background = 'var(--color-warning)';
+    } else {
+        statusText.textContent = uploaded + ' bilder uppladdade!';
+        bar.style.background = 'var(--color-success)';
+    }
+
+    if (errors.length > 0) {
+        errorsDiv.style.display = 'block';
+        errorsDiv.innerHTML = '<strong>Fel:</strong><br>' + errors.map(e => '&bull; ' + e).join('<br>');
+    }
+
+    // Redirect to album after 2 seconds
+    if (uploaded > 0) {
+        setTimeout(() => {
+            window.location.href = '/admin/event-albums?action=edit&album_id=' + albumId;
+        }, 2000);
+    }
+}
+</script>
+<?php elseif (!R2Storage::isConfigured()): ?>
+<div class="alert alert-warning" style="margin-bottom: var(--space-lg);">
+    <i data-lucide="alert-triangle" class="icon-sm" style="vertical-align: text-bottom;"></i>
+    Cloudflare R2 är inte konfigurerat. <a href="/admin/tools/r2-config.php" style="color: var(--color-accent-text);">Konfigurera R2</a> för att kunna ladda upp bilder.
+</div>
+<?php endif; ?>
 
 <?php if (empty($albums)): ?>
 <div class="admin-card">
     <div class="admin-card-body" style="text-align: center; padding: var(--space-2xl);">
         <i data-lucide="images" style="width: 48px; height: 48px; color: var(--color-text-muted); margin-bottom: var(--space-md);"></i>
         <h3 style="margin: 0 0 var(--space-sm);">Inga album ännu</h3>
-        <p style="color: var(--color-text-secondary);">Skapa ett album för att börja lägga till bilder från tävlingar.</p>
+        <p style="color: var(--color-text-secondary);">Välj ett event och ladda upp bilder ovan för att skapa ditt första album.</p>
     </div>
 </div>
-
-<!-- Handbok -->
-<details class="admin-card" style="margin-top: var(--space-md);">
-    <summary class="admin-card-header" style="cursor: pointer;">
-        <h3 style="margin: 0; display: flex; align-items: center; gap: var(--space-sm);">
-            <i data-lucide="book-open" class="icon-sm"></i> Så här fungerar fotoalbum
-        </h3>
-    </summary>
-    <div class="admin-card-body" style="font-size: 0.9rem; line-height: 1.7; color: var(--color-text-secondary);">
-        <h4 style="color: var(--color-text-primary); margin: 0 0 var(--space-xs);">1. Skapa album</h4>
-        <p>Klicka <strong>"Skapa album"</strong> ovan. Välj ett event i dropdown-listan och fyll i fotografens namn. Albumet kan sparas som utkast eller publiceras direkt.</p>
-
-        <h4 style="color: var(--color-text-primary); margin: var(--space-md) 0 var(--space-xs);">2. Lägg till bilder</h4>
-        <p>Det finns tre sätt att lägga till bilder:</p>
-        <ul style="margin: var(--space-xs) 0; padding-left: var(--space-lg);">
-            <?php if (R2Storage::isConfigured()): ?>
-            <li><strong>Ladda upp filer</strong> — Bilder optimeras automatiskt (max 1920px, JPEG 82%) och lagras i Cloudflare R2. Välj flera filer samtidigt.</li>
-            <?php endif; ?>
-            <li><strong>Extern URL</strong> — Klistra in en bild-URL från valfri bildtjänst.</li>
-            <li><strong>Bulk-URL</strong> — Klistra in flera URL:er samtidigt, en per rad.</li>
-        </ul>
-
-        <h4 style="color: var(--color-text-primary); margin: var(--space-md) 0 var(--space-xs);">3. Tagga deltagare</h4>
-        <p>Klicka på en bild för att öppna taggningsmodalen. Sök på deltagarens namn och klicka för att tagga. En bild kan ha flera taggade deltagare (t.ex. om flera cyklister syns på samma bild).</p>
-
-        <h4 style="color: var(--color-text-primary); margin: var(--space-md) 0 var(--space-xs);">4. Publicera</h4>
-        <p>Markera <strong>"Publicerat"</strong> i albuminställningarna. Albumet syns då som en <strong>Galleri-flik</strong> på event-sidan. Premium-medlemmar ser sina taggade bilder på sin profilsida.</p>
-
-        <?php if (!R2Storage::isConfigured()): ?>
-        <div style="margin-top: var(--space-md); padding: var(--space-md); background: var(--color-accent-light); border-radius: var(--radius-sm);">
-            <strong>Tips:</strong> Konfigurera Cloudflare R2 för att kunna ladda upp bilder direkt.
-            <a href="/admin/tools/r2-config.php" style="color: var(--color-accent-text);">Konfigurera R2</a>
-        </div>
-        <?php endif; ?>
-    </div>
-</details>
 <?php else: ?>
 <div style="display: grid; gap: var(--space-md);">
     <?php foreach ($albums as $a): ?>
@@ -598,10 +819,6 @@ include __DIR__ . '/components/unified-layout.php';
                 </div>
                 <div class="admin-form-group">
                     <label class="admin-form-label">Fotograf (profil)</label>
-                    <?php
-                    $allPhotographers = [];
-                    try { $allPhotographers = $pdo->query("SELECT id, name FROM photographers WHERE active = 1 ORDER BY name")->fetchAll(PDO::FETCH_ASSOC); } catch (Exception $e) {}
-                    ?>
                     <select name="photographer_id" class="form-select">
                         <option value="">-- Välj fotograf --</option>
                         <?php foreach ($allPhotographers as $ph): ?>

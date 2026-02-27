@@ -541,13 +541,14 @@ document.addEventListener('DOMContentLoaded', function() {
         hideSt();
 
         var fd = new FormData();
-        fd.append('file', file);
-        fd.append('folder', 'general');
+        fd.append('avatar', file);
+        fd.append('type', 'photographer');
+        fd.append('photographer_id', '<?= $photographer['id'] ?? 0 ?>');
         try {
-            var resp = await fetch('/api/media.php?action=upload', { method: 'POST', body: fd });
+            var resp = await fetch('/api/update-avatar.php', { method: 'POST', body: fd });
             var result = await resp.json();
             if (result.success) {
-                var url = result.url || ('/' + result.filepath);
+                var url = result.avatar_url;
                 document.getElementById('dashAvatarUrlInput').value = url;
                 preview.innerHTML = '<img src="' + url + '" class="pg-avatar-image">';
                 showSt('Bilden har laddats upp!', 'success');
