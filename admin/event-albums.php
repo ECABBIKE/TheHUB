@@ -301,6 +301,23 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
     }
 
+    // Set cover photo for album
+    if ($postAction === 'set_cover') {
+        $photoId = (int)($_POST['photo_id'] ?? 0);
+        $covAlbumId = (int)($_POST['album_id'] ?? 0);
+        if ($photoId && $covAlbumId) {
+            try {
+                $pdo->prepare("UPDATE event_albums SET cover_photo_id = ? WHERE id = ?")
+                    ->execute([$photoId, $covAlbumId]);
+                echo json_encode(['success' => true]);
+                exit;
+            } catch (PDOException $e) {
+                echo json_encode(['success' => false, 'error' => $e->getMessage()]);
+                exit;
+            }
+        }
+    }
+
     // Fix broken R2 URLs (from corrupted R2_PUBLIC_URL in .env)
     if ($postAction === 'fix_r2_urls') {
         $r2 = R2Storage::getInstance();
@@ -791,8 +808,7 @@ include __DIR__ . '/components/unified-layout.php';
     </div>
     <div class="admin-card-body" style="padding: var(--space-sm);">
         <div class="photo-grid" style="display: grid; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); gap: var(--space-sm);">
-            <?php foreach ($photos as $photo): ?>
-            <?php
+            <?php foreach ($photos as $photo):
                 $imgSrc = '';
                 if ($photo['media_id'] && $photo['filepath']) {
                     $imgSrc = '/' . ltrim($photo['filepath'], '/');
@@ -801,8 +817,12 @@ include __DIR__ . '/components/unified-layout.php';
                 } elseif ($photo['external_url']) {
                     $imgSrc = $photo['external_url'];
                 }
+                $isCover = ($album['cover_photo_id'] == $photo['id']);
             ?>
-            <div class="photo-card" data-photo-id="<?= $photo['id'] ?>" style="border: 1px solid var(--color-border); border-radius: var(--radius-sm); overflow: hidden; background: var(--color-bg-card); cursor: pointer;" onclick="openTagModal(<?= $photo['id'] ?>, '<?= htmlspecialchars($imgSrc, ENT_QUOTES) ?>')">
+            <div class="photo-card" id="photo-<?= $photo['id'] ?>" data-photo-id="<?= $photo['id'] ?>" style="border: 2px solid <?= $isCover ? 'var(--color-accent)' : 'var(--color-border)' ?>; border-radius: var(--radius-sm); overflow: hidden; background: var(--color-bg-card); cursor: pointer; position: relative;" onclick="openTagModal(<?= $photo['id'] ?>, '<?= htmlspecialchars($imgSrc, ENT_QUOTES) ?>')">
+                <?php if ($isCover): ?>
+                <div style="position: absolute; top: var(--space-xs); left: var(--space-xs); background: var(--color-accent); color: #fff; font-size: 0.65rem; font-weight: 700; padding: 2px 8px; border-radius: var(--radius-full); z-index: 2; text-transform: uppercase; letter-spacing: 0.5px;">Omslag</div>
+                <?php endif; ?>
                 <?php if ($imgSrc): ?>
                 <div style="aspect-ratio: 4/3; overflow: hidden; background: var(--color-bg-sunken);">
                     <img src="<?= htmlspecialchars($imgSrc) ?>" alt="" style="width: 100%; height: 100%; object-fit: cover;" loading="lazy">
@@ -823,9 +843,16 @@ include __DIR__ . '/components/unified-layout.php';
                         <span style="color: var(--color-text-muted);">Inga taggar</span>
                         <?php endif; ?>
                     </div>
-                    <button type="button" class="btn-icon" style="padding: 2px; background: none; border: none; cursor: pointer; color: var(--color-text-muted);" onclick="event.stopPropagation(); deletePhoto(<?= $photo['id'] ?>)" title="Radera">
-                        <i data-lucide="trash-2" style="width: 14px; height: 14px;"></i>
-                    </button>
+                    <div style="display: flex; gap: 4px; align-items: center;">
+                        <?php if (!$isCover): ?>
+                        <button type="button" class="btn-icon" style="padding: 2px; background: none; border: none; cursor: pointer; color: var(--color-text-muted);" onclick="event.stopPropagation(); setCover(<?= $photo['id'] ?>)" title="Välj som omslag">
+                            <i data-lucide="star" style="width: 14px; height: 14px;"></i>
+                        </button>
+                        <?php endif; ?>
+                        <button type="button" class="btn-icon" style="padding: 2px; background: none; border: none; cursor: pointer; color: var(--color-text-muted);" onclick="event.stopPropagation(); deletePhoto(<?= $photo['id'] ?>)" title="Radera">
+                            <i data-lucide="trash-2" style="width: 14px; height: 14px;"></i>
+                        </button>
+                    </div>
                 </div>
             </div>
             <?php endforeach; ?>
@@ -1024,6 +1051,53 @@ async function deletePhoto(photoId) {
         }
     } catch (e) {
         alert('Fel vid radering');
+    }
+}
+
+async function setCover(photoId) {
+    try {
+        const formData = new FormData();
+        formData.append('action', 'set_cover');
+        formData.append('photo_id', photoId);
+        formData.append('album_id', <?= json_encode($albumId) ?>);
+
+        const response = await fetch('/admin/event-albums.php', {
+            method: 'POST',
+            body: formData
+        });
+        const result = await response.json();
+
+        if (result.success) {
+            // Remove old cover styling
+            document.querySelectorAll('.photo-card').forEach(c => {
+                c.style.borderColor = 'var(--color-border)';
+                const badge = c.querySelector('[data-cover-badge]');
+                if (badge) badge.remove();
+                // Show star button on all
+                const star = c.querySelector('[data-cover-btn]');
+                if (star) star.style.display = '';
+            });
+            // Apply new cover styling
+            const card = document.getElementById('photo-' + photoId);
+            if (card) {
+                card.style.borderColor = 'var(--color-accent)';
+                const imgDiv = card.querySelector('div[style*="aspect-ratio"]');
+                if (imgDiv) {
+                    const badge = document.createElement('div');
+                    badge.setAttribute('data-cover-badge', '');
+                    badge.style.cssText = 'position:absolute;top:var(--space-xs);left:var(--space-xs);background:var(--color-accent);color:#fff;font-size:0.65rem;font-weight:700;padding:2px 8px;border-radius:var(--radius-full);z-index:2;text-transform:uppercase;letter-spacing:0.5px';
+                    badge.textContent = 'Omslag';
+                    card.insertBefore(badge, card.firstChild);
+                }
+                // Hide star button on new cover
+                const star = card.querySelector('[title="Välj som omslag"]');
+                if (star) star.style.display = 'none';
+            }
+        } else {
+            alert(result.error || 'Kunde inte sätta omslag');
+        }
+    } catch (e) {
+        alert('Fel vid val av omslag');
     }
 }
 
