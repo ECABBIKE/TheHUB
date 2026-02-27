@@ -6786,10 +6786,10 @@ html.lightbox-open body {
     </div>
 </section>
 
-<?php endif; ?>
+</div><!-- end last tab pane (elimination) -->
 
 <?php
-// Partner sponsors (bottom of page - unlimited)
+// Partner sponsors (bottom of page - unlimited, shown on ALL tabs)
 $partnerSponsorsWithLogos = array_filter($eventSponsors['partner'] ?? [], function($s) {
     return get_sponsor_logo_for_placement($s, 'content') !== null;
 });
@@ -6809,7 +6809,6 @@ if (!empty($partnerSponsorsWithLogos)): ?>
     </div>
 </section>
 <?php endif; ?>
-</div><!-- end last tab pane -->
 
 <script>
 // Client-side tab switching - no page reload
