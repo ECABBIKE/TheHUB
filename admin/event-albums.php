@@ -305,8 +305,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $delId = (int)($_POST['album_id'] ?? 0);
         if ($delId) {
             try {
+                // Radera R2-objekt för alla bilder i albumet
+                $r2 = R2Storage::getInstance();
+                if ($r2) {
+                    $stmt = $pdo->prepare("SELECT r2_key FROM event_photos WHERE album_id = ? AND r2_key IS NOT NULL AND r2_key != ''");
+                    $stmt->execute([$delId]);
+                    $keys = $stmt->fetchAll(PDO::FETCH_COLUMN);
+                    foreach ($keys as $key) {
+                        $r2->deleteObject($key);
+                        $r2->deleteObject('thumbs/' . $key);
+                    }
+                }
+
+                // Radera album (CASCADE tar bort event_photos + photo_rider_tags)
                 $pdo->prepare("DELETE FROM event_albums WHERE id = ?")->execute([$delId]);
-                $message = 'Album raderat';
+                $message = 'Album raderat' . ($keys ? ' (' . count($keys) . ' bilder borttagna från R2)' : '');
                 $messageType = 'success';
                 $action = 'list';
                 $albumId = 0;
@@ -449,8 +462,8 @@ include __DIR__ . '/components/unified-layout.php';
 <?php else: ?>
 <div style="display: grid; gap: var(--space-md);">
     <?php foreach ($albums as $a): ?>
-    <div class="admin-card" style="cursor: pointer;" onclick="location.href='/admin/event-albums?action=edit&album_id=<?= $a['id'] ?>'">
-        <div class="admin-card-body" style="display: flex; justify-content: space-between; align-items: center; padding: var(--space-md);">
+    <div class="admin-card">
+        <div class="admin-card-body" style="display: flex; justify-content: space-between; align-items: center; padding: var(--space-md); cursor: pointer;" onclick="location.href='/admin/event-albums?action=edit&album_id=<?= $a['id'] ?>'">
             <div style="display: flex; align-items: center; gap: var(--space-md);">
                 <div style="width: 48px; height: 48px; border-radius: var(--radius-sm); background: var(--color-accent-light); display: flex; align-items: center; justify-content: center;">
                     <i data-lucide="camera" style="width: 24px; height: 24px; color: var(--color-accent);"></i>
@@ -477,6 +490,13 @@ include __DIR__ . '/components/unified-layout.php';
                 <?php if ($a['google_photos_url']): ?>
                 <i data-lucide="external-link" style="width: 16px; height: 16px; color: var(--color-text-muted);" title="Källänk"></i>
                 <?php endif; ?>
+                <form method="POST" style="margin: 0;" onclick="event.stopPropagation();">
+                    <input type="hidden" name="action" value="delete_album">
+                    <input type="hidden" name="album_id" value="<?= $a['id'] ?>">
+                    <button type="submit" class="btn btn-ghost" style="padding: var(--space-xs); color: var(--color-text-muted);" onclick="return confirm('Radera albumet &quot;<?= htmlspecialchars($a['event_name'], ENT_QUOTES) ?>&quot; och alla dess bilder?')" title="Radera album">
+                        <i data-lucide="trash-2" style="width: 16px; height: 16px;"></i>
+                    </button>
+                </form>
             </div>
         </div>
     </div>
