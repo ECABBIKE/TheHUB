@@ -866,16 +866,28 @@ try {
     }
 
     // Fetch registrations with class info (only paid registrations shown publicly)
+    // Join classes via event_pricing_rules first (exact event-class mapping),
+    // then fallback to name match with MIN(sort_order) to avoid duplicates
     $registrations = $db->prepare("
         SELECT reg.*, r.firstname, r.lastname, r.birth_year, c.name as club_name,
-               COALESCE(cl.display_name, cl.name, reg.category) as class_name,
-               cl.sort_order as class_sort_order
+               COALESCE(cl_epr.display_name, cl_epr.name, cl_min.display_name, cl_min.name, reg.category) as class_name,
+               COALESCE(cl_epr.sort_order, cl_min.sort_order, 9999) as class_sort_order
         FROM event_registrations reg
         LEFT JOIN riders r ON reg.rider_id = r.id
         LEFT JOIN clubs c ON r.club_id = c.id
-        LEFT JOIN classes cl ON cl.name = reg.category
+        LEFT JOIN (
+            SELECT epr.event_id, cl2.name, cl2.display_name, cl2.sort_order
+            FROM event_pricing_rules epr
+            JOIN classes cl2 ON cl2.id = epr.class_id
+        ) cl_epr ON cl_epr.event_id = reg.event_id AND cl_epr.name = reg.category
+        LEFT JOIN (
+            SELECT name, MIN(sort_order) as sort_order,
+                   SUBSTRING_INDEX(GROUP_CONCAT(display_name ORDER BY sort_order ASC), ',', 1) as display_name
+            FROM classes
+            GROUP BY name
+        ) cl_min ON cl_min.name = reg.category
         WHERE reg.event_id = ? AND reg.status NOT IN ('cancelled') AND reg.payment_status = 'paid'
-        ORDER BY cl.sort_order ASC, cl.name ASC, reg.bib_number ASC, reg.registration_date ASC
+        ORDER BY COALESCE(cl_epr.sort_order, cl_min.sort_order, 9999) ASC, reg.category ASC, reg.bib_number ASC, reg.registration_date ASC
     ");
     $registrations->execute([$eventId]);
     $registrations = $registrations->fetchAll(PDO::FETCH_ASSOC);
