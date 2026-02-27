@@ -43,6 +43,19 @@
   - Laddar via photo_rider_tags → event_photos → event_albums → events
   - Visar thumbnail med hover-zoom, länk till eventgalleriet
 
+### Fullscreen lightbox - komplett fix (session 10)
+- **Problem:** Header, sidebar, nav-bottom syntes ovanpå lightboxen. Bilden var liten med stora svarta fält. Inget X synligt. Klick bredvid bilden stängde galleriet av misstag.
+- **Fix 1: Dölj all navigation:** `html.lightbox-open` klass som sätts på `<html>` vid öppning
+  - Döljer `.header`, `.sidebar`, `.nav-bottom`, `.mobile-nav` med `display: none !important`
+  - Tas bort vid stängning
+- **Fix 2: Z-index höjt till 999999** (från 99999) - ovanför ALLT
+- **Fix 3: Stängknapp (X)** alltid synlig i topbar med 44x44px, bakgrund blur + semi-transparent
+- **Fix 4: Klick utanför bilden stänger INTE galleriet** - bara X-knapp eller Escape stänger
+  - Backdrop onclick borttagen, content-area click-to-close borttagen
+- **Fix 5: Portrait-läge** - bättre padding (48px top, 56px bottom), img med `width: auto; height: auto`
+- **Fix 6: PWA standalone** - padding anpassad med `env(safe-area-inset-*)` för notch/home indicator
+- **VIKTIGT:** Alla z-index inuti lightboxen är 10-12 (relativa), inte globala. Topbar/nav/bottom = 10, tag-toggle = 11, tag-panel = 12
+
 ---
 
 ## TIDIGARE FIXAR (2026-02-26, session 8)

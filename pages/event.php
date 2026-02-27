@@ -5684,7 +5684,7 @@ if (!empty($event['series_id'])) {
 
 <!-- Lightbox (fullscreen on mobile) -->
 <div id="galleryLightbox" class="gallery-lightbox" style="display: none;">
-    <div class="gallery-lightbox-backdrop" onclick="closeLightbox()"></div>
+    <div class="gallery-lightbox-backdrop"></div>
 
     <!-- Top bar: close + counter -->
     <div class="gallery-lightbox-topbar">
@@ -5881,6 +5881,19 @@ if (!empty($event['series_id'])) {
     font-weight: 500;
 }
 
+/* ========== LIGHTBOX: HIDE ALL NAVIGATION ========== */
+/* When lightbox is open, hide header, sidebar, nav-bottom, and everything else */
+html.lightbox-open .header,
+html.lightbox-open .sidebar,
+html.lightbox-open .nav-bottom,
+html.lightbox-open .mobile-nav,
+html.lightbox-open .admin-mobile-nav {
+    display: none !important;
+}
+html.lightbox-open body {
+    overflow: hidden !important;
+}
+
 /* ========== LIGHTBOX (fullscreen, above ALL UI) ========== */
 .gallery-lightbox {
     position: fixed;
@@ -5888,13 +5901,14 @@ if (!empty($event['series_id'])) {
     left: 0;
     width: 100vw;
     height: 100vh;
-    height: 100dvh; /* dynamic viewport height - excludes mobile browser chrome */
-    z-index: 99999; /* Above nav-bottom (9999), header, sidebar, everything */
+    height: 100dvh;
+    z-index: 999999;
     display: flex;
     align-items: center;
     justify-content: center;
     overscroll-behavior: contain;
-    touch-action: none; /* Prevent pull-to-refresh and other gestures */
+    touch-action: none;
+    background: #000;
 }
 .gallery-lightbox-backdrop {
     position: absolute;
@@ -5902,58 +5916,68 @@ if (!empty($event['series_id'])) {
     background: #000;
 }
 
-/* Top bar with counter + close */
+/* Top bar with counter + close - ALWAYS VISIBLE */
 .gallery-lightbox-topbar {
     position: absolute;
     top: 0;
     left: 0;
     right: 0;
-    z-index: 4;
+    z-index: 10;
     display: flex;
     justify-content: space-between;
     align-items: center;
-    padding: var(--space-sm) var(--space-md);
-    background: linear-gradient(rgba(0,0,0,0.6), transparent);
+    padding: 12px 16px;
+    background: linear-gradient(rgba(0,0,0,0.7), transparent);
+    pointer-events: auto;
 }
 .gallery-lightbox-counter-text {
-    color: rgba(255,255,255,0.8);
+    color: rgba(255,255,255,0.85);
     font-size: 0.85rem;
     font-weight: 500;
 }
 .gallery-lightbox-close {
-    background: rgba(255,255,255,0.15);
+    background: rgba(255,255,255,0.2);
     border: none;
     color: #fff;
-    width: 40px;
-    height: 40px;
-    border-radius: var(--radius-full);
+    width: 44px;
+    height: 44px;
+    border-radius: 50%;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
+    -webkit-tap-highlight-color: transparent;
 }
-.gallery-lightbox-close:hover {
-    background: rgba(255,255,255,0.3);
+.gallery-lightbox-close:hover,
+.gallery-lightbox-close:active {
+    background: rgba(255,255,255,0.35);
 }
 
 /* Main image - fills available space, never clipped */
 .gallery-lightbox-content {
     position: absolute;
-    inset: 0;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
     z-index: 1;
     display: flex;
     align-items: center;
     justify-content: center;
-    padding: 48px 56px 72px;
+    padding: 52px 8px 60px;
 }
 .gallery-lightbox-content img {
+    display: block;
     max-width: 100%;
     max-height: 100%;
+    width: auto;
+    height: auto;
     object-fit: contain;
     user-select: none;
     -webkit-user-select: none;
+    -webkit-touch-callout: none;
 }
 
 /* Bottom overlay: tags + caption */
@@ -5962,13 +5986,13 @@ if (!empty($event['series_id'])) {
     bottom: 0;
     left: 0;
     right: 0;
-    z-index: 3;
-    padding: var(--space-lg) var(--space-lg) var(--space-md);
-    background: linear-gradient(transparent, rgba(0,0,0,0.75));
+    z-index: 10;
+    padding: 32px 16px 12px;
+    background: linear-gradient(transparent, rgba(0,0,0,0.8));
     display: flex;
     flex-direction: column;
     align-items: center;
-    gap: var(--space-xs);
+    gap: 6px;
     pointer-events: none;
 }
 .gallery-lightbox-bottom > * {
@@ -5979,7 +6003,7 @@ if (!empty($event['series_id'])) {
 .gallery-lightbox-tags {
     display: flex;
     flex-wrap: wrap;
-    gap: var(--space-xs);
+    gap: 6px;
     justify-content: center;
 }
 .gallery-lightbox-tag {
@@ -5989,7 +6013,7 @@ if (!empty($event['series_id'])) {
     background: rgba(55, 212, 214, 0.35);
     border: 1px solid rgba(55, 212, 214, 0.6);
     padding: 4px 14px;
-    border-radius: var(--radius-full);
+    border-radius: 9999px;
     text-decoration: none;
     transition: background 0.2s;
     backdrop-filter: blur(6px);
@@ -6013,13 +6037,13 @@ if (!empty($event['series_id'])) {
     position: absolute;
     top: 50%;
     transform: translateY(-50%);
-    z-index: 4;
+    z-index: 10;
     background: rgba(255,255,255,0.12);
     border: none;
     color: #fff;
     width: 48px;
     height: 48px;
-    border-radius: var(--radius-full);
+    border-radius: 50%;
     cursor: pointer;
     display: flex;
     align-items: center;
@@ -6027,31 +6051,33 @@ if (!empty($event['series_id'])) {
     backdrop-filter: blur(8px);
     -webkit-backdrop-filter: blur(8px);
     transition: background 0.2s;
+    -webkit-tap-highlight-color: transparent;
 }
 .gallery-lightbox-nav:hover {
     background: rgba(255,255,255,0.25);
 }
-.gallery-lightbox-prev { left: var(--space-sm); }
-.gallery-lightbox-next { right: var(--space-sm); }
+.gallery-lightbox-prev { left: 8px; }
+.gallery-lightbox-next { right: 8px; }
 
 /* Tag toggle button */
 .gallery-tag-toggle {
     position: absolute;
-    bottom: var(--space-lg);
-    right: var(--space-md);
-    z-index: 5;
+    bottom: 16px;
+    right: 16px;
+    z-index: 11;
     background: rgba(55, 212, 214, 0.85);
     border: none;
     color: #fff;
     width: 48px;
     height: 48px;
-    border-radius: var(--radius-full);
+    border-radius: 50%;
     cursor: pointer;
     display: flex;
     align-items: center;
     justify-content: center;
     transition: background 0.2s, transform 0.2s;
     box-shadow: 0 2px 12px rgba(0,0,0,0.4);
+    -webkit-tap-highlight-color: transparent;
 }
 .gallery-tag-toggle:hover {
     background: rgba(55, 212, 214, 1);
@@ -6066,7 +6092,7 @@ if (!empty($event['series_id'])) {
     bottom: 0;
     width: 320px;
     max-width: 85vw;
-    z-index: 6;
+    z-index: 12;
     background: var(--color-bg-surface);
     border-left: 1px solid var(--color-border);
     display: flex;
@@ -6101,32 +6127,32 @@ if (!empty($event['series_id'])) {
         border-radius: 0;
     }
 
-    /* Fullscreen lightbox - edge to edge */
+    /* Lightbox: use ALL available space */
     .gallery-lightbox-content {
-        padding: 40px 0 64px;
+        padding: 48px 0 56px;
     }
 
-    /* Compact top bar */
+    /* Topbar always visible */
     .gallery-lightbox-topbar {
-        padding: var(--space-xs) var(--space-sm);
+        padding: 8px 12px;
     }
     .gallery-lightbox-close {
-        width: 36px;
-        height: 36px;
+        width: 40px;
+        height: 40px;
     }
 
-    /* Nav arrows: smaller, semi-transparent */
+    /* Nav arrows */
     .gallery-lightbox-nav {
         width: 36px;
         height: 36px;
-        background: rgba(255,255,255,0.08);
+        background: rgba(255,255,255,0.1);
     }
     .gallery-lightbox-prev { left: 4px; }
     .gallery-lightbox-next { right: 4px; }
 
     /* Bottom tags bigger on mobile for touch */
     .gallery-lightbox-bottom {
-        padding: var(--space-md) var(--space-sm) var(--space-sm);
+        padding: 24px 12px 10px;
     }
     .gallery-lightbox-tag {
         font-size: 0.9rem;
@@ -6139,14 +6165,13 @@ if (!empty($event['series_id'])) {
         max-width: 100%;
     }
     .gallery-tag-toggle {
-        bottom: 76px;
-        right: var(--space-sm);
+        bottom: 68px;
+        right: 12px;
     }
 }
 
 /* ========== LANDSCAPE MODE (mobile + tablet) ========== */
 @media (max-height: 500px) and (orientation: landscape) {
-    /* True fullscreen - image fills entire screen */
     .gallery-lightbox-content {
         padding: 0;
     }
@@ -6156,10 +6181,8 @@ if (!empty($event['series_id'])) {
         max-width: 100vw;
         max-height: 100vh;
         object-fit: contain;
-        border-radius: 0;
     }
 
-    /* Topbar: compact but ALWAYS VISIBLE (close button must be reachable) */
     .gallery-lightbox-topbar {
         padding: 4px 8px;
         background: linear-gradient(rgba(0,0,0,0.5), transparent);
@@ -6172,19 +6195,17 @@ if (!empty($event['series_id'])) {
         font-size: 0.75rem;
     }
 
-    /* Nav arrows: edge-hugging, always visible */
     .gallery-lightbox-nav {
         width: 32px;
         height: 60px;
-        border-radius: var(--radius-sm);
+        border-radius: 6px;
         background: rgba(255,255,255,0.08);
     }
-    .gallery-lightbox-prev { left: 0; border-radius: 0 var(--radius-sm) var(--radius-sm) 0; }
-    .gallery-lightbox-next { right: 0; border-radius: var(--radius-sm) 0 0 var(--radius-sm); }
+    .gallery-lightbox-prev { left: 0; border-radius: 0 6px 6px 0; }
+    .gallery-lightbox-next { right: 0; border-radius: 6px 0 0 6px; }
 
-    /* Bottom tags: compact, floating */
     .gallery-lightbox-bottom {
-        padding: var(--space-xs) var(--space-md);
+        padding: 6px 16px;
         background: linear-gradient(transparent, rgba(0,0,0,0.65));
     }
     .gallery-lightbox-tag {
@@ -6192,31 +6213,29 @@ if (!empty($event['series_id'])) {
         padding: 3px 12px;
     }
 
-    /* Tag toggle: smaller */
     .gallery-tag-toggle {
         width: 36px;
         height: 36px;
-        bottom: var(--space-sm);
-        right: var(--space-sm);
+        bottom: 8px;
+        right: 8px;
     }
 
-    /* Tag panel: narrower in landscape */
     .gallery-tag-panel {
         width: 280px;
     }
 }
 
-/* ========== PWA standalone mode: extra immersive ========== */
+/* ========== PWA standalone mode ========== */
 @media (display-mode: standalone) {
-    .gallery-lightbox {
-        /* Account for safe areas (notch, home indicator) */
-        padding: env(safe-area-inset-top) env(safe-area-inset-right) env(safe-area-inset-bottom) env(safe-area-inset-left);
-    }
     .gallery-lightbox-topbar {
-        padding-top: max(var(--space-xs), env(safe-area-inset-top));
+        padding-top: max(12px, env(safe-area-inset-top));
+    }
+    .gallery-lightbox-content {
+        padding-top: max(48px, calc(env(safe-area-inset-top) + 40px));
+        padding-bottom: max(56px, calc(env(safe-area-inset-bottom) + 40px));
     }
     .gallery-lightbox-bottom {
-        padding-bottom: max(var(--space-sm), env(safe-area-inset-bottom));
+        padding-bottom: max(10px, env(safe-area-inset-bottom));
     }
 }
 </style>
@@ -6254,6 +6273,10 @@ if (!empty($event['series_id'])) {
         caption.style.display = photos[idx].caption ? 'block' : 'none';
         counter.textContent = (idx + 1) + ' / ' + photos.length;
         lb.style.display = 'flex';
+
+        // Hide ALL navigation: header, sidebar, nav-bottom
+        document.documentElement.classList.add('lightbox-open');
+
         // Lock body scroll (including iOS)
         document.body.style.overflow = 'hidden';
         document.body.style.position = 'fixed';
@@ -6279,6 +6302,10 @@ if (!empty($event['series_id'])) {
 
     window.closeLightbox = function() {
         document.getElementById('galleryLightbox').style.display = 'none';
+
+        // Restore ALL navigation
+        document.documentElement.classList.remove('lightbox-open');
+
         // Restore body scroll
         const scrollY = parseInt(document.body.dataset.scrollY || '0');
         document.body.style.overflow = '';
@@ -6486,15 +6513,8 @@ if (!empty($event['series_id'])) {
         });
     }
 
-    // Click empty content area (outside image) closes lightbox
-    const lbContent = document.getElementById('lightboxContent');
-    if (lbContent) {
-        lbContent.addEventListener('click', function(e) {
-            if (e.target === lbContent) {
-                window.closeLightbox();
-            }
-        });
-    }
+    // Click empty content area does NOT close - use X button or Escape instead
+    // This prevents accidental closes when tapping near the image edge
 
     // ========== GALLERY RIDER SEARCH & FILTER ==========
     const searchInput = document.getElementById('galleryRiderSearch');
