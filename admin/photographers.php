@@ -520,8 +520,8 @@ document.addEventListener('DOMContentLoaded', function() {
             var response = await fetch('/api/media.php?action=upload', { method: 'POST', body: formData });
             var result = await response.json();
 
-            if (result.success && result.data) {
-                var url = result.data.url || ('/' + result.data.filepath);
+            if (result.success) {
+                var url = result.url || ('/' + result.filepath);
                 document.getElementById('avatarUrlInput').value = url;
                 avatarPreview.innerHTML = '<img src="' + url + '" alt="Profilbild" class="pg-avatar-image">';
                 showStatus('Bilden har laddats upp!', 'success');

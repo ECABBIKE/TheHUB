@@ -546,8 +546,8 @@ document.addEventListener('DOMContentLoaded', function() {
         try {
             var resp = await fetch('/api/media.php?action=upload', { method: 'POST', body: fd });
             var result = await resp.json();
-            if (result.success && result.data) {
-                var url = result.data.url || ('/' + result.data.filepath);
+            if (result.success) {
+                var url = result.url || ('/' + result.filepath);
                 document.getElementById('dashAvatarUrlInput').value = url;
                 preview.innerHTML = '<img src="' + url + '" class="pg-avatar-image">';
                 showSt('Bilden har laddats upp!', 'success');

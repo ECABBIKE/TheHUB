@@ -4,7 +4,25 @@
 
 ---
 
-## SENASTE FIXAR (2026-02-27, session 14)
+## SENASTE FIXAR (2026-02-27, session 15)
+
+### Galleri: Destinationsfilter + varumärkesfilter (ej enskilda serier)
+- **Ny funktion:** Destination-dropdown tillagd i galleri-filtren (events.location)
+- **Ändring:** Serie-filtret visar nu varumärken (`series_brands`) istället för enskilda serier
+  - Förhindrar 30+ val i dropdown (varje serie har ett år-suffix)
+  - Användare kombinerar år + varumärke för att nå specifik serie
+- **Filter-ordning:** År, Destination, Serie (varumärke), Fotograf, Sök
+- **Standardkomponent:** Bytt från custom `.gallery-filter-*` klasser till `.filter-bar` / `.filter-select` (samma som resultatsidan)
+- **Auto-submit:** Alla dropdowns submittar formuläret vid val (`onchange="this.form.submit()"`)
+- **Filer:** `pages/gallery/index.php`, `assets/css/pages/gallery-index.css`
+
+### Fotografer: Bilduppladdning trasig (result.data bugg)
+- **Problem:** Avatar-uppladdning misslyckades alltid med "Kunde inte ladda upp bilden"
+- **Orsak:** JavaScript kollade `result.success && result.data` men `/api/media.php` returnerar `result.url` direkt (inte `result.data.url`)
+- **Fix:** Ändrat `result.data` → `result` i båda filerna
+- **Filer:** `admin/photographers.php`, `admin/photographer-dashboard.php`
+
+## TIDIGARE FIXAR (2026-02-27, session 14)
 
 ### Fotografer: Bilduppladdning istället för URL-fält
 - **Problem:** Fotografer hade ett manuellt URL-fält för profilbild istället för uppladdning

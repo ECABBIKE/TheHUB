@@ -17,7 +17,7 @@ $pdo = hub_db();
 // Filter parameters
 $filterYear = isset($_GET['year']) && is_numeric($_GET['year']) ? intval($_GET['year']) : null;
 $filterLocation = isset($_GET['location']) ? trim($_GET['location']) : '';
-$filterSeries = isset($_GET['series']) && is_numeric($_GET['series']) ? intval($_GET['series']) : null;
+$filterBrand = isset($_GET['brand']) && is_numeric($_GET['brand']) ? intval($_GET['brand']) : null;
 $filterPhotographer = isset($_GET['photographer']) && is_numeric($_GET['photographer']) ? intval($_GET['photographer']) : null;
 $search = isset($_GET['q']) ? trim($_GET['q']) : '';
 
@@ -39,14 +39,15 @@ $locations = $pdo->query("
     ORDER BY e.location ASC
 ")->fetchAll(PDO::FETCH_COLUMN);
 
-// Get available series for filter
-$seriesList = $pdo->query("
-    SELECT DISTINCT s.id, s.name, s.year
-    FROM series s
+// Get available brands for filter (not individual series - too many)
+$brandsList = $pdo->query("
+    SELECT DISTINCT sb.id, sb.name
+    FROM series_brands sb
+    JOIN series s ON s.brand_id = sb.id
     JOIN series_events se ON se.series_id = s.id
     JOIN event_albums ea ON ea.event_id = se.event_id
     WHERE ea.is_published = 1
-    ORDER BY s.year DESC, s.name ASC
+    ORDER BY sb.name ASC
 ")->fetchAll(PDO::FETCH_ASSOC);
 
 // Get photographers for filter
@@ -70,9 +71,9 @@ if ($filterLocation) {
     $where[] = "e.location = ?";
     $params[] = $filterLocation;
 }
-if ($filterSeries) {
-    $where[] = "se.series_id = ?";
-    $params[] = $filterSeries;
+if ($filterBrand) {
+    $where[] = "s.brand_id = ?";
+    $params[] = $filterBrand;
 }
 if ($filterPhotographer) {
     $where[] = "ea.photographer_id = ?";
@@ -102,6 +103,7 @@ $stmt = $pdo->prepare("
     JOIN events e ON ea.event_id = e.id
     LEFT JOIN photographers p ON ea.photographer_id = p.id
     LEFT JOIN series_events se ON se.event_id = e.id
+    LEFT JOIN series s ON se.series_id = s.id
     LEFT JOIN event_photos cover ON cover.id = ea.cover_photo_id
     LEFT JOIN media cover_media ON cover.media_id = cover_media.id
     WHERE {$whereClause}
@@ -171,13 +173,13 @@ $totalTags = array_sum(array_column($albums, 'tag_count'));
         </select>
     </div>
     <?php endif; ?>
-    <?php if (!empty($seriesList)): ?>
+    <?php if (!empty($brandsList)): ?>
     <div class="filter-select-wrapper">
         <label class="filter-label">Serie</label>
-        <select name="series" class="filter-select" onchange="this.form.submit()">
+        <select name="brand" class="filter-select" onchange="this.form.submit()">
             <option value="">Alla serier</option>
-            <?php foreach ($seriesList as $s): ?>
-            <option value="<?= $s['id'] ?>" <?= $filterSeries == $s['id'] ? 'selected' : '' ?>><?= htmlspecialchars($s['name']) ?> <?= $s['year'] ?></option>
+            <?php foreach ($brandsList as $b): ?>
+            <option value="<?= $b['id'] ?>" <?= $filterBrand == $b['id'] ? 'selected' : '' ?>><?= htmlspecialchars($b['name']) ?></option>
             <?php endforeach; ?>
         </select>
     </div>
@@ -200,7 +202,7 @@ $totalTags = array_sum(array_column($albums, 'tag_count'));
     <button type="submit" class="btn btn-primary filter-btn">
         <i data-lucide="search" style="width: 16px; height: 16px;"></i> Sök
     </button>
-    <?php if ($filterYear || $filterLocation || $filterSeries || $filterPhotographer || $search): ?>
+    <?php if ($filterYear || $filterLocation || $filterBrand || $filterPhotographer || $search): ?>
     <a href="/gallery" class="btn btn-ghost filter-btn">Rensa</a>
     <?php endif; ?>
 </form>
@@ -226,7 +228,7 @@ $totalTags = array_sum(array_column($albums, 'tag_count'));
     <div style="padding: var(--space-2xl); text-align: center;">
         <i data-lucide="image-off" style="width: 48px; height: 48px; color: var(--color-text-muted); margin-bottom: var(--space-md);"></i>
         <p style="color: var(--color-text-muted); font-size: 1rem;">Inga gallerier hittades</p>
-        <?php if ($filterYear || $filterLocation || $filterSeries || $filterPhotographer || $search): ?>
+        <?php if ($filterYear || $filterLocation || $filterBrand || $filterPhotographer || $search): ?>
         <a href="/gallery" class="btn btn-ghost" style="margin-top: var(--space-md);">Visa alla gallerier</a>
         <?php endif; ?>
     </div>
