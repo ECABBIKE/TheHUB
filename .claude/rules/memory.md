@@ -1,10 +1,30 @@
 # TheHUB - Memory / Session Knowledge
 
-> Senast uppdaterad: 2026-02-26
+> Senast uppdaterad: 2026-02-27
 
 ---
 
-## SENASTE FIXAR (2026-02-26, session 8)
+## SENASTE FIXAR (2026-02-27, session 9)
+
+### Chunked Album Upload (prestandafix för stora album)
+- **Problem:** Uppladdning av 256+ bilder (~1.1GB) frös sidan helt. Alla filer skickades i ETT POST-anrop → PHP-timeout, post_max_size-gräns, max_file_uploads=20, ingen feedback.
+- **Lösning:** Ny AJAX-baserad chunked uploader som laddar upp EN bild åt gången
+- **Ny fil:** `/api/upload-album-photo.php` - AJAX-endpoint för single-file R2-upload
+  - set_time_limit(60), memory_limit 256M per fil
+  - Validerar filtyp via finfo, optimerar, genererar thumbnail, laddar upp till R2
+  - Returnerar JSON med photo_id, url, thumbnail_url
+- **Frontend:** Gammalt `<form enctype="multipart/form-data">` ersatt med JS chunked uploader
+  - Progressbar med procent, antal, hastighet (s/bild), ETA
+  - Avbryt-knapp (redan uppladdade bilder behålls)
+  - Fil-input visar antal valda filer på knappen
+  - Auto-reload efter avslutad uppladdning
+- **Timeout-skydd:** event-albums.php har nu `set_time_limit(300)` + `memory_limit 256M` som safety net
+- **R2 lagring:** Noll lokalt serverutrymme. Temp-filer rensas direkt efter R2-upload.
+- **Kapacitet:** Testat för 256+ bilder. ~2-3s per bild = ~10 min totalt, med live-feedback hela vägen
+
+---
+
+## TIDIGARE FIXAR (2026-02-26, session 8)
 
 ### Cloudflare R2 Integration (bildlagring)
 - **Ny fil:** `/includes/r2-storage.php` - Lättviktig S3-kompatibel klient med AWS Signature V4
