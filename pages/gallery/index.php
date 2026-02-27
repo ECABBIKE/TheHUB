@@ -147,48 +147,63 @@ $totalTags = array_sum(array_column($albums, 'tag_count'));
         <button class="tab-pill active"><i data-lucide="camera"></i> Galleri</button>
     </div>
 
-    <form method="GET" action="/gallery" class="gallery-filter-form">
-        <select name="year" class="form-select gallery-filter-select">
+</div>
+
+<!-- Filters -->
+<form method="GET" action="/gallery" class="filter-bar">
+    <div class="filter-select-wrapper">
+        <label class="filter-label">År</label>
+        <select name="year" class="filter-select" onchange="this.form.submit()">
             <option value="">Alla år</option>
             <?php foreach ($years as $yr): ?>
             <option value="<?= $yr ?>" <?= $filterYear == $yr ? 'selected' : '' ?>><?= $yr ?></option>
             <?php endforeach; ?>
         </select>
-        <?php if (!empty($locations)): ?>
-        <select name="location" class="form-select gallery-filter-select gallery-filter-select--wide">
+    </div>
+    <?php if (!empty($locations)): ?>
+    <div class="filter-select-wrapper">
+        <label class="filter-label">Destination</label>
+        <select name="location" class="filter-select" onchange="this.form.submit()">
             <option value="">Alla destinationer</option>
             <?php foreach ($locations as $loc): ?>
             <option value="<?= htmlspecialchars($loc) ?>" <?= $filterLocation === $loc ? 'selected' : '' ?>><?= htmlspecialchars($loc) ?></option>
             <?php endforeach; ?>
         </select>
-        <?php endif; ?>
-        <?php if (!empty($seriesList)): ?>
-        <select name="series" class="form-select gallery-filter-select gallery-filter-select--wide">
+    </div>
+    <?php endif; ?>
+    <?php if (!empty($seriesList)): ?>
+    <div class="filter-select-wrapper">
+        <label class="filter-label">Serie</label>
+        <select name="series" class="filter-select" onchange="this.form.submit()">
             <option value="">Alla serier</option>
             <?php foreach ($seriesList as $s): ?>
             <option value="<?= $s['id'] ?>" <?= $filterSeries == $s['id'] ? 'selected' : '' ?>><?= htmlspecialchars($s['name']) ?> <?= $s['year'] ?></option>
             <?php endforeach; ?>
         </select>
-        <?php endif; ?>
-        <?php if (!empty($photographers)): ?>
-        <select name="photographer" class="form-select gallery-filter-select gallery-filter-select--wide">
+    </div>
+    <?php endif; ?>
+    <?php if (!empty($photographers)): ?>
+    <div class="filter-select-wrapper">
+        <label class="filter-label">Fotograf</label>
+        <select name="photographer" class="filter-select" onchange="this.form.submit()">
             <option value="">Alla fotografer</option>
             <?php foreach ($photographers as $ph): ?>
             <option value="<?= $ph['id'] ?>" <?= $filterPhotographer == $ph['id'] ? 'selected' : '' ?>><?= htmlspecialchars($ph['name']) ?></option>
             <?php endforeach; ?>
         </select>
-        <?php endif; ?>
-        <div class="gallery-filter-search">
-            <input type="text" name="q" class="form-input" placeholder="Sök event eller fotograf..." value="<?= htmlspecialchars($search) ?>">
-        </div>
-        <button type="submit" class="btn btn-primary gallery-filter-btn">
-            <i data-lucide="search" style="width: 16px; height: 16px;"></i> Sök
-        </button>
-        <?php if ($filterYear || $filterLocation || $filterSeries || $filterPhotographer || $search): ?>
-        <a href="/gallery" class="btn btn-ghost gallery-filter-btn">Rensa</a>
-        <?php endif; ?>
-    </form>
-</div>
+    </div>
+    <?php endif; ?>
+    <div class="filter-search-wrapper">
+        <label class="filter-label">Sök</label>
+        <input type="text" name="q" class="filter-input" placeholder="Event eller fotograf..." value="<?= htmlspecialchars($search) ?>">
+    </div>
+    <button type="submit" class="btn btn-primary filter-btn">
+        <i data-lucide="search" style="width: 16px; height: 16px;"></i> Sök
+    </button>
+    <?php if ($filterYear || $filterLocation || $filterSeries || $filterPhotographer || $search): ?>
+    <a href="/gallery" class="btn btn-ghost filter-btn">Rensa</a>
+    <?php endif; ?>
+</form>
 
 <!-- Stats Cards -->
 <div class="stats-grid gallery-stats-grid">
