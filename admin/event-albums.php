@@ -305,8 +305,21 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $delId = (int)($_POST['album_id'] ?? 0);
         if ($delId) {
             try {
+                // Radera R2-objekt för alla bilder i albumet
+                $r2 = R2Storage::getInstance();
+                if ($r2) {
+                    $stmt = $pdo->prepare("SELECT r2_key FROM event_photos WHERE album_id = ? AND r2_key IS NOT NULL AND r2_key != ''");
+                    $stmt->execute([$delId]);
+                    $keys = $stmt->fetchAll(PDO::FETCH_COLUMN);
+                    foreach ($keys as $key) {
+                        $r2->deleteObject($key);
+                        $r2->deleteObject('thumbs/' . $key);
+                    }
+                }
+
+                // Radera album (CASCADE tar bort event_photos + photo_rider_tags)
                 $pdo->prepare("DELETE FROM event_albums WHERE id = ?")->execute([$delId]);
-                $message = 'Album raderat';
+                $message = 'Album raderat' . ($keys ? ' (' . count($keys) . ' bilder borttagna från R2)' : '');
                 $messageType = 'success';
                 $action = 'list';
                 $albumId = 0;
@@ -449,8 +462,8 @@ include __DIR__ . '/components/unified-layout.php';
 <?php else: ?>
 <div style="display: grid; gap: var(--space-md);">
     <?php foreach ($albums as $a): ?>
-    <div class="admin-card" style="cursor: pointer;" onclick="location.href='/admin/event-albums?action=edit&album_id=<?= $a['id'] ?>'">
-        <div class="admin-card-body" style="display: flex; justify-content: space-between; align-items: center; padding: var(--space-md);">
+    <div class="admin-card">
+        <div class="admin-card-body" style="display: flex; justify-content: space-between; align-items: center; padding: var(--space-md); cursor: pointer;" onclick="location.href='/admin/event-albums?action=edit&album_id=<?= $a['id'] ?>'">
             <div style="display: flex; align-items: center; gap: var(--space-md);">
                 <div style="width: 48px; height: 48px; border-radius: var(--radius-sm); background: var(--color-accent-light); display: flex; align-items: center; justify-content: center;">
                     <i data-lucide="camera" style="width: 24px; height: 24px; color: var(--color-accent);"></i>
@@ -477,6 +490,13 @@ include __DIR__ . '/components/unified-layout.php';
                 <?php if ($a['google_photos_url']): ?>
                 <i data-lucide="external-link" style="width: 16px; height: 16px; color: var(--color-text-muted);" title="Källänk"></i>
                 <?php endif; ?>
+                <form method="POST" style="margin: 0;" onclick="event.stopPropagation();">
+                    <input type="hidden" name="action" value="delete_album">
+                    <input type="hidden" name="album_id" value="<?= $a['id'] ?>">
+                    <button type="submit" class="btn btn-ghost" style="padding: var(--space-xs); color: var(--color-text-muted);" onclick="return confirm('Radera albumet &quot;<?= htmlspecialchars($a['event_name'], ENT_QUOTES) ?>&quot; och alla dess bilder?')" title="Radera album">
+                        <i data-lucide="trash-2" style="width: 16px; height: 16px;"></i>
+                    </button>
+                </form>
             </div>
         </div>
     </div>
@@ -953,7 +973,29 @@ const ALBUM_ID = <?= json_encode($albumId) ?>;
     });
 })();
 
+async function uploadOneFile(file) {
+    const formData = new FormData();
+    formData.append('photo', file);
+    formData.append('album_id', ALBUM_ID);
+
+    const response = await fetch('/api/upload-album-photo.php', {
+        method: 'POST',
+        body: formData
+    });
+
+    if (!response.ok) {
+        throw new Error('HTTP ' + response.status);
+    }
+
+    const result = await response.json();
+    if (!result.success) {
+        throw new Error(result.error || 'Okänt fel');
+    }
+    return result;
+}
+
 async function startChunkedUpload() {
+    const CONCURRENT = 3; // Antal parallella uppladdningar
     const fileInput = document.getElementById('r2FileInput');
     const files = Array.from(fileInput.files);
     if (files.length === 0) return;
@@ -982,58 +1024,57 @@ async function startChunkedUpload() {
     const totalFiles = files.length;
     let uploaded = 0;
     let failed = 0;
+    let processed = 0;
     let errors = [];
     const startTime = Date.now();
 
-    for (let i = 0; i < totalFiles; i++) {
-        if (uploadCancelled) break;
-
-        const file = files[i];
-        const pct = Math.round((i / totalFiles) * 100);
+    function updateProgress() {
+        const done = uploaded + failed;
+        const pct = Math.round((done / totalFiles) * 100);
         bar.style.width = pct + '%';
         percentText.textContent = pct + '%';
-        statusText.textContent = 'Laddar upp: ' + file.name;
-        countText.textContent = uploaded + ' / ' + totalFiles + ' bilder';
+        countText.textContent = done + ' / ' + totalFiles + ' bilder';
 
-        // Beräkna hastighet och ETA
         const elapsed = (Date.now() - startTime) / 1000;
-        if (uploaded > 0 && elapsed > 0) {
-            const perImage = elapsed / uploaded;
-            const remaining = (totalFiles - i) * perImage;
-            speedText.textContent = perImage.toFixed(1) + 's/bild';
+        if (done > 0 && elapsed > 0) {
+            const perImage = elapsed / done;
+            const remaining = ((totalFiles - done) / CONCURRENT) * perImage;
+            speedText.textContent = (perImage / CONCURRENT).toFixed(1) + 's/bild';
             if (remaining > 60) {
                 etaText.textContent = 'ca ' + Math.ceil(remaining / 60) + ' min kvar';
             } else {
                 etaText.textContent = 'ca ' + Math.ceil(remaining) + 's kvar';
             }
         }
+    }
 
-        try {
-            const formData = new FormData();
-            formData.append('photo', file);
-            formData.append('album_id', ALBUM_ID);
+    // Bearbeta i parallella batchar om CONCURRENT
+    let index = 0;
 
-            const response = await fetch('/api/upload-album-photo.php', {
-                method: 'POST',
-                body: formData
-            });
+    async function processNext() {
+        while (index < totalFiles && !uploadCancelled) {
+            const i = index++;
+            const file = files[i];
+            statusText.textContent = 'Laddar upp (' + CONCURRENT + ' parallella)...';
+            updateProgress();
 
-            if (!response.ok) {
-                throw new Error('HTTP ' + response.status);
-            }
-
-            const result = await response.json();
-            if (result.success) {
+            try {
+                await uploadOneFile(file);
                 uploaded++;
-            } else {
+            } catch (e) {
                 failed++;
-                errors.push(file.name + ': ' + (result.error || 'Okänt fel'));
+                errors.push(file.name + ': ' + e.message);
             }
-        } catch (e) {
-            failed++;
-            errors.push(file.name + ': ' + e.message);
+            updateProgress();
         }
     }
+
+    // Starta CONCURRENT parallella workers
+    const workers = [];
+    for (let w = 0; w < CONCURRENT; w++) {
+        workers.push(processNext());
+    }
+    await Promise.all(workers);
 
     // Klar
     bar.style.width = '100%';
