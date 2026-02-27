@@ -235,6 +235,9 @@ $migrationChecks = [
     '067_photographer_tiktok.sql' => [
         'columns' => ['photographers.tiktok_url']
     ],
+    '068_photographer_strava.sql' => [
+        'columns' => ['photographers.strava_url']
+    ],
 ];
 
 // ============================================================================

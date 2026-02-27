@@ -94,6 +94,7 @@ $socials = [];
 if ($photographer['website_url']) $socials[] = ['icon' => 'globe', 'url' => $photographer['website_url'], 'label' => 'Webbplats'];
 if ($photographer['instagram_url']) $socials[] = ['icon' => 'instagram', 'url' => $photographer['instagram_url'], 'label' => 'Instagram'];
 if (!empty($photographer['tiktok_url'])) $socials[] = ['icon' => 'music', 'url' => $photographer['tiktok_url'], 'label' => 'TikTok'];
+if (!empty($photographer['strava_url'])) $socials[] = ['icon' => 'activity', 'url' => $photographer['strava_url'], 'label' => 'Strava'];
 if ($photographer['facebook_url']) $socials[] = ['icon' => 'facebook', 'url' => $photographer['facebook_url'], 'label' => 'Facebook'];
 if ($photographer['youtube_url']) $socials[] = ['icon' => 'youtube', 'url' => $photographer['youtube_url'], 'label' => 'YouTube'];
 ?>
