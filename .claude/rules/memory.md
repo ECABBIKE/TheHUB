@@ -1,10 +1,23 @@
 # TheHUB - Memory / Session Knowledge
 
-> Senast uppdaterad: 2026-02-27
+> Senast uppdaterad: 2026-03-01
 
 ---
 
-## SENASTE FIXAR (2026-02-27, session 18)
+## BETALNINGSSYSTEM-ANALYS (2026-03-01, session 19)
+
+### Jämförelse: Stripe vs Swedbank Pay vs ePay
+- **Dokumenterat i:** `docs/payment-comparison.md`
+- **Stripe (nuvarande):** 1,4% + 1,80 kr/transaktion, ingen månadsavgift, allt-i-ett (gateway + inlösen), ingen Swish
+- **Swedbank Pay (förberett):** Från 0,79% kort + 3 kr Swish, allt-i-ett med integrerad Swish i checkout, kräver offert för e-handelspriser
+- **ePay (utvärderat):** 99 kr/mån + 0,25 kr/tx + separat inlösenavgift (~1,25%), BARA gateway - kräver separat inlösenavtal
+- **Viktig insikt:** ePay är INTE en inlösare - du behöver ändå t.ex. Swedbank Pay som inlösare, vilket gör ePay till ett onödigt extra lager
+- **Rekommendation:** Swedbank Pay rankas #1 pga integrerad Swish (löser manuell Swish-hantering), Stripe behålls som #2/fallback
+- **SwebankPayClient.php status:** Grundstruktur finns, createPaymentOrder/getPaymentOrder implementerade, capture/refund/callback = TODO
+
+---
+
+## TIDIGARE FIXAR (2026-02-27, session 18)
 
 ### Galleri-grid: Fast kolumnantal + större bilder på desktop
 - **Problem:** `auto-fill` med `minmax(200px)` gav 7 kolumner på desktop - bilderna var för små att överblicka
