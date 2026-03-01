@@ -208,6 +208,11 @@ try {
         'success_url' => $baseUrl . '/checkout?order=' . $orderId . '&stripe_success=1',
         'cancel_url' => $baseUrl . '/checkout?order=' . $orderId . '&stripe_cancelled=1',
         'payment_method_types' => ['card'],
+        'payment_method_options' => [
+            'card' => [
+                'request_three_d_secure' => 'any'
+            ]
+        ],
         'metadata' => [
             'order_id' => $orderId,
             'order_number' => $order['order_number'] ?? '',
