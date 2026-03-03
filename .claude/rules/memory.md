@@ -4,7 +4,7 @@
 
 ---
 
-## SENASTE FIXAR (2026-03-03, session 19)
+## SENASTE FIXAR (2026-03-03, session 19-20)
 
 ### Rapportera problem / Feedback-system (bug reports)
 - **Ny funktion:** Komplett system för användarrapporter och feedback
@@ -16,9 +16,23 @@
   - Inloggade användare: e-post och rider_id fylls i automatiskt
   - Sparar sidans URL (referer) och webbläsarinfo
   - AJAX-baserad submit via `/api/feedback.php`
-- **Flytande knapp:** Cyan FAB (Floating Action Button) ENBART på förstasidan (welcome)
+- **Formulärdesign (session 20):** Omgjord enligt login-sidans designmönster
+  - Använder `.login-page` > `.login-container` > `.login-card` (max-width 520px)
+  - Standard `.form-group`, `.form-label`, `.form-input`, `.form-select`
+  - Submitknapp: `.btn .btn--primary .btn--block .btn--lg`
+  - Kategorival: 3-kolumns grid med radio-knappar, accent-färg vid vald
+  - Ikon: `bug` istället för `message-circle` (tydligare rapportknapp)
+  - Döljer formuläret efter lyckad inskickning (visar bara tack-meddelande)
+- **Flytande knapp (session 20):** Redesignad FAB ENBART på förstasidan (welcome)
+  - Pill-form med text "Rapportera" + bug-ikon (inte bara cirkel med ikon)
+  - Cyan bakgrund, vit text, tydligt en rapportknapp
   - Position: fixed, nere till höger (ovanför mobilnavigeringen)
   - Inkluderad i `index.php` (inte i footer.php som är låst)
+- **Spamskydd (session 20):** Tre lager i `/api/feedback.php`:
+  1. Honeypot-fält (`website_url`) - dolt fält som bots fyller i, accepterar tyst men sparar inte
+  2. Tidskontroll - formuläret måste vara öppet i minst 3 sekunder
+  3. IP-baserad rate limiting - max 5 rapporter per IP per timme (via `includes/rate-limiter.php`)
+  4. Session-token-validering (CSRF-skydd) - token genereras vid sidladdning, valideras vid submit
 - **Admin-sida:** `/admin/bug-reports.php` - lista, filtrera och hantera rapporter
   - Stats-kort: Totalt, Nya, Pågår, Lösta
   - Filter: status (ny/pågår/löst/avvisad), kategori (profil/resultat/övrigt)
@@ -29,7 +43,7 @@
 - **Dashboard-notis:** Röd alert-box på admin dashboard när det finns nya rapporter
   - Identisk stil som profilkopplingar/nyhets-notiser (röd gradient, ikon med count-badge)
   - Länk direkt till `/admin/bug-reports.php`
-- **API:** `/api/feedback.php` (POST) - tar emot JSON med category, title, description, email, page_url, browser_info, related_rider_ids[], related_event_id
+- **API:** `/api/feedback.php` (POST) - tar emot JSON med category, title, description, email, page_url, browser_info, related_rider_ids[], related_event_id, _token, _render_time, website_url (honeypot)
 - **Migration 070:** `bug_reports`-tabell med id, rider_id, category (ENUM: profile/results/other), title, description, email, page_url, browser_info, related_rider_ids (kommaseparerade ID:n), related_event_id, status (ENUM), admin_notes, resolved_by, resolved_at, created_at, updated_at
 - **Navigation:** Tillagd i admin-tabs under System-gruppen, tillagd i tools.php under System
 - **Router:** `feedback` tillagd som publik sida (ingen inloggning krävs)
