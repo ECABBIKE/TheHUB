@@ -581,6 +581,63 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
 
 ### Formulär
 
+**VIKTIGT:** Formulärklasserna (`.form-group`, `.form-label`, `.form-input`, `.form-select`, `.form-textarea`) definieras i `/assets/css/forms.css`. Knappklasserna (`.btn--primary`, `.btn--block`, `.btn--lg`) och alerts (`.alert--success`, `.alert--error`) definieras i `/assets/css/pages/auth.css`.
+
+**Dessa CSS-filer laddas INTE automatiskt på publika sidor.** De auto-laddas bara för auth-sidor (login, reset-password etc.) via `layout-header.php`.
+
+**Om du skapar en publik sida med formulär MÅSTE du inkludera:**
+
+```php
+<!-- Lägg överst i sidans PHP-fil (före HTML) -->
+<link rel="stylesheet" href="/assets/css/forms.css?v=<?= filemtime(HUB_ROOT . '/assets/css/forms.css') ?>">
+<link rel="stylesheet" href="/assets/css/pages/auth.css?v=<?= filemtime(HUB_ROOT . '/assets/css/pages/auth.css') ?>">
+```
+
+**Centrerat formulär-kort (som login-sidan):**
+
+```html
+<div class="login-page">
+    <div class="login-container" style="max-width: 520px;">
+        <div class="login-card">
+            <div class="login-header">
+                <div class="login-logo">
+                    <i data-lucide="ikon-namn" style="width: 36px; height: 36px;"></i>
+                </div>
+                <h1 class="login-title">Sidtitel</h1>
+                <p class="login-subtitle">Beskrivning</p>
+            </div>
+
+            <form class="login-form">
+                <div class="form-group">
+                    <label class="form-label">Etikett</label>
+                    <input type="text" class="form-input" placeholder="...">
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Dropdown</label>
+                    <select class="form-select">
+                        <option>Val 1</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label class="form-label">Textfält</label>
+                    <textarea class="form-textarea" rows="5"></textarea>
+                </div>
+
+                <button type="submit" class="btn btn--primary btn--block btn--lg">
+                    <i data-lucide="send"></i> Skicka
+                </button>
+            </form>
+
+            <div class="login-footer">Fotnot</div>
+        </div>
+    </div>
+</div>
+```
+
+**Formulär-element (standard):**
+
 ```html
 <div class="form-group">
     <label class="form-label">Etikett</label>
@@ -594,6 +651,29 @@ document.querySelectorAll('.tab-btn').forEach(btn => {
     </select>
 </div>
 ```
+
+**Tillgängliga klasser (forms.css):**
+- `.form-group` - Wrapper per fält (margin-bottom)
+- `.form-label` - Label (bold, liten text)
+- `.form-input` - Text/email/password input (full bredd, border, focus-glow)
+- `.form-select` - Dropdown (full bredd, chevron-ikon)
+- `.form-textarea` - Textarea (resizable, min-height)
+- `.form-row` - Tvåkolumns grid (1fr 1fr, kollapsar på mobil)
+- `.form-row-3` - Trekolumns grid
+- `.form-help` - Hjälptext under fält (liten, muted)
+- `.form-error` - Feltext (röd)
+- `.form-section` - Kort-wrapper med bakgrund och border
+- `.form-actions` - Knapprad
+
+**Tillgängliga klasser (auth.css):**
+- `.login-page` - Centrerad flexbox container (min-height 60vh)
+- `.login-container` - Max-width wrapper (default 400px)
+- `.login-card` - Kort med bakgrund, border, shadow, padding
+- `.login-header` - Centrerad rubrik-sektion
+- `.login-form` - Flexbox column med gap
+- `.login-footer` - Centrerad fotnot
+- `.btn`, `.btn--primary`, `.btn--block`, `.btn--lg` - Knappar
+- `.alert--success`, `.alert--error`, `.alert--warning`, `.alert--info` - Alerts
 
 ### Tabell
 

@@ -112,6 +112,35 @@
 
 # CHANGELOG
 
+### 2026-03-03 (Rapportera problem / Feedback-system)
+- **Branch:** claude/add-bug-report-feature-dNafh
+
+- **Ny funktion: Rapportera problem**
+  - Publik sida `/feedback` - centrerat formulär-kort (login-sidans designmönster)
+  - Tre kategorier: Profil (sök + länka profiler), Resultat (event-väljare), Övrigt
+  - AJAX-submit med spamskydd: honeypot, tidskontroll (3s), IP rate limit (5/h), CSRF-token
+  - Admin-sida `/admin/bug-reports.php` med stats, filter och statushantering
+  - Röd notis-box på admin dashboard vid nya rapporter
+  - Flytande "Rapportera"-knapp (pill med text + bug-ikon) på förstasidan
+
+- **Nya filer:**
+  - `pages/feedback.php` - Publik feedback-sida
+  - `api/feedback.php` - API-endpoint med spamskydd
+  - `admin/bug-reports.php` - Admin-hantering
+  - `Tools/migrations/070_bug_reports.sql` - Databastabell
+
+- **Ändrade filer:**
+  - `index.php` - FAB-knapp (pill-form med text)
+  - `admin/dashboard.php` - Röd notis-box
+  - `router.php` - Publik route
+  - `includes/config/admin-tabs-config.php` - System-gruppen
+  - `admin/tools.php` - Länk under System
+
+- **Dokumentation: Formulär på publika sidor**
+  - `forms.css` och `auth.css` laddas INTE automatiskt på publika sidor
+  - Nya formulärsidor MÅSTE inkludera `<link>` till dessa filer manuellt
+  - Dokumenterat i CLAUDE.md och memory.md
+
 ### 2026-02-27 (PWA-fix, Galleri-CSS, TikTok, Användarhantering)
 - **Branch:** claude/fix-site-performance-wVdVq
 
