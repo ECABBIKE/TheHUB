@@ -42,14 +42,18 @@ $_SESSION['feedback_token'] = $formToken;
 $_SESSION['feedback_token_time'] = time();
 ?>
 
+<!-- Load form & auth CSS (not globally loaded on public pages) -->
+<link rel="stylesheet" href="/assets/css/forms.css?v=<?= filemtime(HUB_ROOT . '/assets/css/forms.css') ?>">
+<link rel="stylesheet" href="/assets/css/pages/auth.css?v=<?= filemtime(HUB_ROOT . '/assets/css/pages/auth.css') ?>">
+
 <div class="login-page">
-    <div class="login-container">
-        <div class="login-card" style="max-width: 520px;">
+    <div class="login-container" style="max-width: 520px;">
+        <div class="login-card">
 
             <!-- Header -->
             <div class="login-header">
                 <div class="login-logo">
-                    <i data-lucide="bug" class="icon-xl"></i>
+                    <i data-lucide="bug" style="width: 36px; height: 36px;"></i>
                 </div>
                 <h1 class="login-title">Rapportera problem</h1>
                 <p class="login-subtitle">Hittade du ett fel eller vill du ge feedback? Berätta för oss!</p>
@@ -73,22 +77,22 @@ $_SESSION['feedback_token_time'] = time();
                 <!-- Category selector -->
                 <div class="form-group">
                     <label class="form-label">Vad gäller det?</label>
-                    <div class="feedback-categories">
-                        <label class="feedback-cat">
+                    <div class="fb-categories">
+                        <label class="fb-cat">
                             <input type="radio" name="category" value="profile">
-                            <span class="feedback-cat-label">
+                            <span class="fb-cat-label">
                                 <i data-lucide="user"></i> Profil
                             </span>
                         </label>
-                        <label class="feedback-cat">
+                        <label class="fb-cat">
                             <input type="radio" name="category" value="results">
-                            <span class="feedback-cat-label">
+                            <span class="fb-cat-label">
                                 <i data-lucide="flag"></i> Resultat
                             </span>
                         </label>
-                        <label class="feedback-cat">
+                        <label class="fb-cat">
                             <input type="radio" name="category" value="other" checked>
-                            <span class="feedback-cat-label">
+                            <span class="fb-cat-label">
                                 <i data-lucide="message-square"></i> Övrigt
                             </span>
                         </label>
@@ -97,12 +101,12 @@ $_SESSION['feedback_token_time'] = time();
 
                 <!-- Profile: Rider search (shown when category=profile) -->
                 <div id="section-profile" class="form-group" style="display: none;">
-                    <label class="form-label">Vilka profiler gäller det? <small class="text-muted">(max 4)</small></label>
-                    <div class="rider-search-wrapper">
+                    <label class="form-label">Vilka profiler gäller det? <small style="color: var(--color-text-muted); font-weight: normal;">(max 4)</small></label>
+                    <div class="fb-search-wrap">
                         <input type="text" id="rider-search-input" class="form-input" placeholder="Sök deltagare..." autocomplete="off">
-                        <div id="rider-search-results" class="rider-search-dropdown" style="display: none;"></div>
+                        <div id="rider-search-results" class="fb-search-dropdown" style="display: none;"></div>
                     </div>
-                    <div id="selected-riders" class="selected-riders-list"></div>
+                    <div id="selected-riders" class="fb-selected"></div>
                     <input type="hidden" id="related-rider-ids" name="related_rider_ids" value="">
                 </div>
 
@@ -121,23 +125,23 @@ $_SESSION['feedback_token_time'] = time();
 
                 <!-- Title -->
                 <div class="form-group">
-                    <label class="form-label" for="feedback-title">Rubrik <span class="text-required">*</span></label>
+                    <label class="form-label" for="feedback-title">Rubrik <span style="color: var(--color-error);">*</span></label>
                     <input type="text" id="feedback-title" name="title" class="form-input"
                            placeholder="Kort beskrivning av problemet..." maxlength="255" required>
                 </div>
 
                 <!-- Description -->
                 <div class="form-group">
-                    <label class="form-label" for="feedback-description">Beskrivning <span class="text-required">*</span></label>
-                    <textarea id="feedback-description" name="description" class="form-input"
-                              rows="5" placeholder="Beskriv vad som är fel eller vad du vill rapportera..." maxlength="5000" required style="resize: vertical; min-height: 120px;"></textarea>
-                    <small class="text-muted"><span id="desc-count">0</span> / 5000</small>
+                    <label class="form-label" for="feedback-description">Beskrivning <span style="color: var(--color-error);">*</span></label>
+                    <textarea id="feedback-description" name="description" class="form-textarea"
+                              rows="5" placeholder="Beskriv vad som är fel eller vad du vill rapportera..." maxlength="5000" required></textarea>
+                    <span class="form-help"><span id="desc-count">0</span> / 5000</span>
                 </div>
 
                 <!-- Email (only for anonymous) -->
                 <?php if (!$isLoggedIn): ?>
                 <div class="form-group">
-                    <label class="form-label" for="feedback-email">E-post <small class="text-muted">(valfritt, om du vill ha svar)</small></label>
+                    <label class="form-label" for="feedback-email">E-post <small style="color: var(--color-text-muted); font-weight: normal;">(valfritt, om du vill ha svar)</small></label>
                     <input type="email" id="feedback-email" name="email" class="form-input"
                            placeholder="din@email.se">
                 </div>
@@ -166,8 +170,8 @@ $_SESSION['feedback_token_time'] = time();
 
             <!-- Footer -->
             <div class="login-footer">
-                <i data-lucide="shield-check" style="width: 14px; height: 14px;"></i>
-                <span>Dina rapporter behandlas konfidentiellt</span>
+                <i data-lucide="shield-check" style="width: 14px; height: 14px; vertical-align: middle;"></i>
+                Dina rapporter behandlas konfidentiellt
             </div>
 
         </div>
@@ -176,15 +180,13 @@ $_SESSION['feedback_token_time'] = time();
 
 <style>
 /* Category selector - 3-column grid */
-.feedback-categories {
+.fb-categories {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
     gap: var(--space-xs);
 }
-.feedback-cat input[type="radio"] {
-    display: none;
-}
-.feedback-cat-label {
+.fb-cat input[type="radio"] { display: none; }
+.fb-cat-label {
     display: flex;
     align-items: center;
     justify-content: center;
@@ -193,56 +195,24 @@ $_SESSION['feedback_token_time'] = time();
     border: 2px solid var(--color-border);
     border-radius: var(--radius-sm);
     cursor: pointer;
-    transition: all 0.15s ease;
+    transition: border-color 0.15s, background 0.15s, color 0.15s;
     font-size: 0.875rem;
     color: var(--color-text-secondary);
-    text-align: center;
 }
-.feedback-cat-label i {
-    width: 18px;
-    height: 18px;
-}
-.feedback-cat-label:hover {
+.fb-cat-label i { width: 18px; height: 18px; }
+.fb-cat-label:hover {
     border-color: var(--color-accent);
     color: var(--color-text-primary);
 }
-.feedback-cat input[type="radio"]:checked + .feedback-cat-label {
+.fb-cat input:checked + .fb-cat-label {
     border-color: var(--color-accent);
     background: var(--color-accent-light);
     color: var(--color-accent-text);
 }
 
-/* Submit button icon */
-#feedback-submit {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    gap: var(--space-xs);
-    margin-top: var(--space-sm);
-}
-#feedback-submit i {
-    width: 18px;
-    height: 18px;
-}
-#feedback-submit:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-}
-
-/* Text helpers */
-.text-muted {
-    color: var(--color-text-muted);
-    font-size: 0.8125rem;
-}
-.text-required {
-    color: var(--color-error);
-}
-
 /* Rider search dropdown */
-.rider-search-wrapper {
-    position: relative;
-}
-.rider-search-dropdown {
+.fb-search-wrap { position: relative; }
+.fb-search-dropdown {
     position: absolute;
     top: 100%;
     left: 0;
@@ -255,7 +225,7 @@ $_SESSION['feedback_token_time'] = time();
     z-index: 100;
     box-shadow: 0 4px 12px rgba(0,0,0,0.2);
 }
-.rider-search-item {
+.fb-search-item {
     padding: var(--space-sm) var(--space-md);
     cursor: pointer;
     font-size: 0.875rem;
@@ -265,31 +235,27 @@ $_SESSION['feedback_token_time'] = time();
     justify-content: space-between;
     align-items: center;
 }
-.rider-search-item:last-child {
-    border-bottom: none;
-}
-.rider-search-item:hover {
-    background: var(--color-bg-hover);
-}
-.rider-search-item .rider-club {
+.fb-search-item:last-child { border-bottom: none; }
+.fb-search-item:hover { background: var(--color-bg-hover); }
+.fb-search-item .fb-club {
     font-size: 0.75rem;
     color: var(--color-text-muted);
 }
-.rider-search-none {
+.fb-search-none {
     padding: var(--space-sm) var(--space-md);
     font-size: 0.875rem;
     color: var(--color-text-muted);
     text-align: center;
 }
 
-/* Selected riders */
-.selected-riders-list {
+/* Selected rider tags */
+.fb-selected {
     display: flex;
     flex-wrap: wrap;
     gap: var(--space-xs);
     margin-top: var(--space-xs);
 }
-.selected-rider-tag {
+.fb-tag {
     display: inline-flex;
     align-items: center;
     gap: 6px;
@@ -299,7 +265,7 @@ $_SESSION['feedback_token_time'] = time();
     border-radius: var(--radius-full);
     font-size: 0.875rem;
 }
-.selected-rider-tag button {
+.fb-tag button {
     background: none;
     border: none;
     color: var(--color-accent-text);
@@ -309,18 +275,8 @@ $_SESSION['feedback_token_time'] = time();
     align-items: center;
     opacity: 0.7;
 }
-.selected-rider-tag button:hover {
-    opacity: 1;
-}
-.selected-rider-tag button i {
-    width: 14px;
-    height: 14px;
-}
-
-/* form-select styling matching form-input */
-.form-select {
-    width: 100%;
-}
+.fb-tag button:hover { opacity: 1; }
+.fb-tag button i { width: 14px; height: 14px; }
 </style>
 
 <script>
@@ -346,7 +302,7 @@ $_SESSION['feedback_token_time'] = time();
         descCount.textContent = this.value.length;
     });
 
-    // Category switching - show/hide conditional sections
+    // Category switching
     var categoryRadios = form.querySelectorAll('input[name="category"]');
     categoryRadios.forEach(function(radio) {
         radio.addEventListener('change', function() {
@@ -356,7 +312,7 @@ $_SESSION['feedback_token_time'] = time();
     });
 
     // ========================
-    // RIDER SEARCH (profile)
+    // RIDER SEARCH
     // ========================
     var selectedRiders = [];
     var searchInput = document.getElementById('rider-search-input');
@@ -381,12 +337,12 @@ $_SESSION['feedback_token_time'] = time();
                         return selectedRiders.findIndex(function(s) { return s.id === r.id; }) === -1;
                     });
                     if (results.length === 0) {
-                        searchDropdown.innerHTML = '<div class="rider-search-none">Inga träffar</div>';
+                        searchDropdown.innerHTML = '<div class="fb-search-none">Inga träffar</div>';
                     } else {
                         searchDropdown.innerHTML = results.map(function(r) {
-                            return '<div class="rider-search-item" data-id="' + r.id + '" data-name="' + (r.firstname + ' ' + r.lastname).replace(/"/g, '&quot;') + '">'
+                            return '<div class="fb-search-item" data-id="' + r.id + '" data-name="' + (r.firstname + ' ' + r.lastname).replace(/"/g, '&quot;') + '">'
                                 + '<span>' + r.firstname + ' ' + r.lastname + '</span>'
-                                + (r.club_name ? '<span class="rider-club">' + r.club_name + '</span>' : '')
+                                + (r.club_name ? '<span class="fb-club">' + r.club_name + '</span>' : '')
                                 + '</div>';
                         }).join('');
                     }
@@ -399,27 +355,24 @@ $_SESSION['feedback_token_time'] = time();
     });
 
     searchDropdown.addEventListener('click', function(e) {
-        var item = e.target.closest('.rider-search-item');
+        var item = e.target.closest('.fb-search-item');
         if (!item) return;
         if (selectedRiders.length >= 4) return;
-
-        var id = parseInt(item.dataset.id);
-        var name = item.dataset.name;
-        selectedRiders.push({ id: id, name: name });
+        selectedRiders.push({ id: parseInt(item.dataset.id), name: item.dataset.name });
         updateSelectedRiders();
         searchInput.value = '';
         searchDropdown.style.display = 'none';
     });
 
     document.addEventListener('click', function(e) {
-        if (!e.target.closest('.rider-search-wrapper')) {
+        if (!e.target.closest('.fb-search-wrap')) {
             searchDropdown.style.display = 'none';
         }
     });
 
     function updateSelectedRiders() {
         selectedContainer.innerHTML = selectedRiders.map(function(r, i) {
-            return '<span class="selected-rider-tag">'
+            return '<span class="fb-tag">'
                 + r.name
                 + '<button type="button" onclick="window._removeRider(' + i + ')" title="Ta bort"><i data-lucide="x"></i></button>'
                 + '</span>';

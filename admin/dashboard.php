@@ -366,7 +366,7 @@ include __DIR__ . '/components/unified-layout.php';
 <!-- Pending Bug Reports Alert - Red Box -->
 <a href="/admin/bug-reports.php" class="pending-bugs-box">
     <div class="bugs-box-icon">
-        <i data-lucide="message-circle"></i>
+        <i data-lucide="bug"></i>
         <span class="bugs-box-count"><?= $stats['pending_bug_reports'] ?></span>
     </div>
     <div class="bugs-box-text">
