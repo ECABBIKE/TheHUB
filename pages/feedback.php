@@ -277,6 +277,32 @@ $_SESSION['feedback_token_time'] = time();
 }
 .fb-tag button:hover { opacity: 1; }
 .fb-tag button i { width: 14px; height: 14px; }
+
+/* Mobile responsive */
+@media (max-width: 767px) {
+    .login-page {
+        padding: var(--space-sm) 0 calc(var(--space-lg) + 70px) 0;
+        align-items: flex-start;
+        min-height: auto;
+    }
+    .login-container {
+        max-width: 100% !important;
+    }
+    .login-card {
+        border-radius: 0 !important;
+        border-left: none !important;
+        border-right: none !important;
+        padding: var(--space-lg) var(--space-md);
+        box-shadow: none;
+    }
+    .fb-categories {
+        gap: var(--space-2xs);
+    }
+    .fb-cat-label {
+        padding: var(--space-xs) var(--space-2xs);
+        font-size: 0.8125rem;
+    }
+}
 </style>
 
 <script>
