@@ -1328,6 +1328,9 @@ function cancelFeeEdit(recipientId, originalText) {
     display: flex; gap: 0; border-bottom: 2px solid var(--color-border);
     margin-bottom: var(--space-lg); overflow-x: auto; -webkit-overflow-scrolling: touch;
 }
+@media (max-width: 1023px) {
+    .promotor-tabs { display: none; }
+}
 .promotor-tab {
     display: flex; align-items: center; gap: var(--space-xs); padding: var(--space-sm) var(--space-lg);
     color: var(--color-text-secondary); text-decoration: none; font-size: var(--text-sm); font-weight: 500;
