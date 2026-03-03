@@ -4,24 +4,29 @@
 
 ---
 
-## SENASTE FIXAR (2026-03-03, session 21)
+## SENASTE FIXAR (2026-03-03, session 21-22)
 
-### Arrangörsguide (promotor-instruktion)
-- **Ny funktion:** Komplett arrangörsguide för promotorer
-- **Markdown-källa:** `/docs/promotor-instruktion.md` - all dokumentation i ett ställe
+### Arrangörsguide v1.1 - Korrigerad med faktiska fält
+- **Markdown-källa:** `/docs/promotor-instruktion.md` - uppdaterad version 1.1
 - **Visningssida:** `/admin/promotor-guide.php` - renderar markdown till HTML med TheHUB-styling
-  - Egen markdown-parser (inga externa beroenden)
-  - Stödjer tabeller, blockquotes, kod, listor, rubriker med ankare
-  - Mobilanpassad
-- **Info-knapp i promotor-panelen:** "Guide"-länk tillagd i:
-  - Flikraden i promotor.php (högerställd, accent-färg)
+- **Guide-länk finns i:**
+  - Flikraden i promotor.php (högerställd, accent-färg, dold på mobil via `display:none` vid max-width 1023px)
   - Sidomenyn (sidebar.php) för promotor-rollen
-  - INTE i mobil bottom-nav (för trånga med 5 ikoner)
-- **CLAUDE.md-regel:** Ny sektion "ARRANGÖRSGUIDE - UPPDATERA VID PROMOTOR-ÄNDRINGAR"
-  - Guiden MÅSTE uppdateras vid ändringar i event-edit, faciliteter, PM, sponsorer, ekonomi etc.
-- **Guidens innehåll:** Logga in, navigation, event-översikt, redigera event (låsta vs redigerbara fält), arrangör/plats/kontakt, faciliteter (alla 12 kategorier), PM, sponsorer (bildväljare, placeringar, format), startlistor, rabattkoder, serier, ekonomi (ordertabell, avgifter, filter), mediabibliotek, FAQ
-- **Filer:** `docs/promotor-instruktion.md`, `admin/promotor-guide.php`
-- **Ändrade filer:** `admin/promotor.php` (guide-flik), `components/sidebar.php` (guide-länk), `CLAUDE.md` (regel)
+  - Mobil bottom-nav som 5:e ikon (admin-mobile-nav.php)
+- **Session 22 korrigeringar:**
+  - **Faciliteter:** Korrigerat från 12 påhittade kategorier till de 11 faktiska: Vätskekontroller, Toaletter/Dusch, Cykeltvätt, Mat/Café, Affärer, Utställare, Parkering, Hotell/Boende, Lokal information, Media, Kontakter
+  - **PM:** Korrigerat från 5 påhittade fält till de 10 faktiska: PM Huvudtext, Förarmöte, Träning, Tidtagning, Lift, Tävlingsregler, Försäkring, Utrustning, Sjukvård, SCF Representanter
+  - **Ny sektion:** "Inbjudan & Tävlingsinfo" tillagd (5 fält: Inbjudningstext, Generell tävlingsinfo, Regelverk, Licenser, Tävlingsklasser)
+  - **Låsta sektioner:** Uppdaterat med exakta fält (inkl. start-/slutdatum, eventtyp, logotyp, distans, höjdmeter, sträcknamn)
+  - **Klasser/Startavgifter:** Dokumenterat att denna sektion är helt dold för promotorer
+  - **Serier:** Lagt till Swish-nummer/namn som redigerbara fält, lagt till prismall i låsta fält
+- **CLAUDE.md-regel:** Sektion "ARRANGÖRSGUIDE - UPPDATERA VID PROMOTOR-ÄNDRINGAR"
+
+### VIKTIGT: Faktiska fältdefinitioner i event-edit.php
+- **facilityFields** (11 st): hydration_stations, toilets_showers, bike_wash, food_cafe, shops_info, exhibitors, parking_detailed, hotel_accommodation, local_info, media_production, contacts_info
+- **pmFields** (10 st): pm_content (main), driver_meeting, training_info, timing_info, lift_info, competition_rules, insurance_info, equipment_info, medical_info, scf_representatives
+- **Inbjudan-fält** (5 st): invitation, general_competition_info, regulations_info, license_info, competition_classes_info
+- **Övriga flikar** (4 st, admin-only): jury_communication, competition_schedule, start_times, course_tracks
 
 ### Feedback mobilfix
 - **FAB-knapp:** Breakpoint ändrat till 1023px (matchar nav-bottom), bottom ökad till `calc(70px + safe-area)`
