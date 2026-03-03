@@ -47,7 +47,38 @@
 - **Migration 070:** `bug_reports`-tabell med id, rider_id, category (ENUM: profile/results/other), title, description, email, page_url, browser_info, related_rider_ids (kommaseparerade ID:n), related_event_id, status (ENUM), admin_notes, resolved_by, resolved_at, created_at, updated_at
 - **Navigation:** Tillagd i admin-tabs under System-gruppen, tillagd i tools.php under System
 - **Router:** `feedback` tillagd som publik sida (ingen inloggning krävs)
+- **VIKTIGT CSS-fix (session 20):** `forms.css` och `auth.css` laddas INTE automatiskt på publika sidor
+  - `forms.css` definierar `.form-group`, `.form-label`, `.form-input`, `.form-select`, `.form-textarea`
+  - `auth.css` definierar `.login-page`, `.login-card`, `.btn--primary`, `.btn--block`, `.alert--success` etc.
+  - Auto-laddning i `layout-header.php` mappar bara auth-sidor (login, reset-password) till `auth.css`
+  - Publika sidor med formulär MÅSTE inkludera `<link>` till båda filerna manuellt
+  - Utan dessa `<link>`-taggar renderas formulär helt utan stilar (rå HTML)
 - **Filer:** `pages/feedback.php`, `api/feedback.php`, `admin/bug-reports.php`, `Tools/migrations/070_bug_reports.sql`
+
+---
+
+## VIKTIGT: FORMULÄR PÅ PUBLIKA SIDOR
+
+**`forms.css` och `auth.css` laddas INTE globalt.** De auto-laddas bara för auth-sidor via `layout-header.php` pageStyleMap.
+
+### Vid nya publika formulär-sidor MÅSTE du lägga till:
+```php
+<link rel="stylesheet" href="/assets/css/forms.css?v=<?= filemtime(HUB_ROOT . '/assets/css/forms.css') ?>">
+<link rel="stylesheet" href="/assets/css/pages/auth.css?v=<?= filemtime(HUB_ROOT . '/assets/css/pages/auth.css') ?>">
+```
+
+### Centrerat formulär-kort (referensmönster: feedback.php, login.php):
+- `.login-page` > `.login-container` > `.login-card` > `.login-form`
+- `.form-group` > `.form-label` + `.form-input` / `.form-select` / `.form-textarea`
+- `.btn .btn--primary .btn--block .btn--lg` för submitknapp
+- `.alert--success` / `.alert--error` för meddelanden
+
+### CSS-filer och vad de innehåller:
+| Fil | Klasser | Laddas automatiskt? |
+|-----|---------|---------------------|
+| `assets/css/forms.css` | `.form-group`, `.form-label`, `.form-input`, `.form-select`, `.form-textarea`, `.form-row`, `.form-help` | NEJ |
+| `assets/css/pages/auth.css` | `.login-page`, `.login-card`, `.btn--primary`, `.btn--block`, `.alert--success`, `.alert--error` | Bara på auth-sidor |
+| `assets/css/components.css` | `.card`, `.table`, `.badge`, `.alert` (utan --) | JA (globalt) |
 
 ---
 
