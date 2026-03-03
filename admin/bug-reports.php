@@ -26,9 +26,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $newStatus = $_POST['status'] ?? '';
         if (in_array($newStatus, ['new', 'in_progress', 'resolved', 'wontfix'])) {
             try {
-                $resolvedAt = in_array($newStatus, ['resolved', 'wontfix']) ? 'NOW()' : 'NULL';
-                $resolvedBy = in_array($newStatus, ['resolved', 'wontfix']) ? (int)($_SESSION['admin_user_id'] ?? 0) : 'NULL';
-
                 $stmt = $pdo->prepare("
                     UPDATE bug_reports
                     SET status = ?,
@@ -133,9 +130,11 @@ try {
 
     $stmt = $pdo->prepare("
         SELECT br.*,
-               r.firstname, r.lastname, r.email as rider_email
+               r.firstname, r.lastname, r.email as rider_email,
+               ev.name as event_name, ev.date as event_date
         FROM bug_reports br
         LEFT JOIN riders r ON br.rider_id = r.id
+        LEFT JOIN events ev ON br.related_event_id = ev.id
         $whereClause
         ORDER BY
             CASE br.status
@@ -153,12 +152,37 @@ try {
     $error = 'Kunde inte läsa rapporter. Har migration 070 körts?';
 }
 
+// Pre-fetch related rider names for profile reports
+$relatedRiderNames = [];
+foreach ($reports as $report) {
+    if ($report['category'] === 'profile' && !empty($report['related_rider_ids'])) {
+        $ids = array_filter(array_map('intval', explode(',', $report['related_rider_ids'])));
+        if (!empty($ids)) {
+            try {
+                $placeholders = implode(',', array_fill(0, count($ids), '?'));
+                $rStmt = $pdo->prepare("SELECT id, firstname, lastname FROM riders WHERE id IN ($placeholders)");
+                $rStmt->execute($ids);
+                foreach ($rStmt->fetchAll() as $rr) {
+                    $relatedRiderNames[$rr['id']] = $rr['firstname'] . ' ' . $rr['lastname'];
+                }
+            } catch (Exception $e) {
+                // Ignore
+            }
+        }
+    }
+}
+
 // Category labels
 $categoryLabels = [
-    'bug' => 'Bugg',
-    'feature' => 'Förslag',
-    'design' => 'Design',
+    'profile' => 'Profil',
+    'results' => 'Resultat',
     'other' => 'Övrigt'
+];
+
+$categoryIcons = [
+    'profile' => 'user',
+    'results' => 'flag',
+    'other' => 'message-square'
 ];
 
 $statusLabels = [
@@ -166,13 +190,6 @@ $statusLabels = [
     'in_progress' => 'Pågår',
     'resolved' => 'Löst',
     'wontfix' => 'Avvisad'
-];
-
-$statusColors = [
-    'new' => 'warning',
-    'in_progress' => 'info',
-    'resolved' => 'success',
-    'wontfix' => 'danger'
 ];
 
 // Page config
@@ -266,12 +283,6 @@ include __DIR__ . '/components/unified-layout.php';
     white-space: pre-wrap;
     word-break: break-word;
     margin-bottom: var(--space-md);
-    max-height: 200px;
-    overflow: hidden;
-    position: relative;
-}
-.report-card-body.expanded {
-    max-height: none;
 }
 .report-card-actions {
     display: flex;
@@ -280,6 +291,49 @@ include __DIR__ . '/components/unified-layout.php';
     align-items: center;
     padding-top: var(--space-sm);
     border-top: 1px solid var(--color-border);
+}
+
+.report-related {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--space-xs);
+    margin-bottom: var(--space-sm);
+}
+.report-related-tag {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: var(--space-2xs) var(--space-sm);
+    background: var(--color-accent-light);
+    color: var(--color-accent-text);
+    border-radius: var(--radius-full);
+    font-size: var(--text-xs);
+    text-decoration: none;
+}
+.report-related-tag:hover {
+    text-decoration: underline;
+}
+.report-related-tag i {
+    width: 12px;
+    height: 12px;
+}
+.report-related-event {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: var(--space-2xs) var(--space-sm);
+    background: rgba(251, 191, 36, 0.15);
+    color: var(--color-warning);
+    border-radius: var(--radius-full);
+    font-size: var(--text-xs);
+    text-decoration: none;
+}
+.report-related-event:hover {
+    text-decoration: underline;
+}
+.report-related-event i {
+    width: 12px;
+    height: 12px;
 }
 
 .report-notes {
@@ -299,25 +353,14 @@ include __DIR__ . '/components/unified-layout.php';
     margin-bottom: var(--space-2xs);
 }
 
-.badge-bug { background: var(--color-error); color: #fff; }
-.badge-feature { background: var(--color-info); color: #fff; }
-.badge-design { background: #8b5cf6; color: #fff; }
+.badge-profile { background: var(--color-info); color: #fff; }
+.badge-results { background: var(--color-warning); color: #000; }
 .badge-other { background: var(--color-text-muted); color: #fff; }
 
 .badge-status-new { background: var(--color-warning); color: #000; }
 .badge-status-in_progress { background: var(--color-info); color: #fff; }
 .badge-status-resolved { background: var(--color-success); color: #fff; }
 .badge-status-wontfix { background: var(--color-error); color: #fff; }
-
-.report-url {
-    font-size: var(--text-xs);
-    color: var(--color-accent-text);
-    text-decoration: none;
-    word-break: break-all;
-}
-.report-url:hover {
-    text-decoration: underline;
-}
 
 .notes-form {
     margin-top: var(--space-sm);
@@ -403,9 +446,8 @@ include __DIR__ . '/components/unified-layout.php';
     </select>
     <select name="category" class="form-select" onchange="this.form.submit()">
         <option value="">Alla kategorier</option>
-        <option value="bug" <?= $categoryFilter === 'bug' ? 'selected' : '' ?>>Bugg</option>
-        <option value="feature" <?= $categoryFilter === 'feature' ? 'selected' : '' ?>>Förslag</option>
-        <option value="design" <?= $categoryFilter === 'design' ? 'selected' : '' ?>>Design</option>
+        <option value="profile" <?= $categoryFilter === 'profile' ? 'selected' : '' ?>>Profil</option>
+        <option value="results" <?= $categoryFilter === 'results' ? 'selected' : '' ?>>Resultat</option>
         <option value="other" <?= $categoryFilter === 'other' ? 'selected' : '' ?>>Övrigt</option>
     </select>
     <?php if ($statusFilter || $categoryFilter): ?>
@@ -433,6 +475,7 @@ include __DIR__ . '/components/unified-layout.php';
                 </div>
                 <div style="display: flex; gap: var(--space-xs); flex-shrink: 0;">
                     <span class="badge badge-<?= htmlspecialchars($report['category']) ?>">
+                        <i data-lucide="<?= $categoryIcons[$report['category']] ?? 'message-square' ?>" style="width: 12px; height: 12px; margin-right: 2px;"></i>
                         <?= $categoryLabels[$report['category']] ?? $report['category'] ?>
                     </span>
                     <span class="badge badge-status-<?= htmlspecialchars($report['status']) ?>">
@@ -464,21 +507,52 @@ include __DIR__ . '/components/unified-layout.php';
                         </a>
                     </span>
                 <?php endif; ?>
-                <?php if ($report['page_url']): ?>
+                <?php if (!empty($report['page_url'])): ?>
                     <span>
                         <i data-lucide="link"></i>
-                        <a href="<?= htmlspecialchars($report['page_url']) ?>" class="report-url" target="_blank">
-                            <?= htmlspecialchars(strlen($report['page_url']) > 60 ? substr($report['page_url'], 0, 60) . '...' : $report['page_url']) ?>
+                        <a href="<?= htmlspecialchars($report['page_url']) ?>" style="color: var(--color-accent-text); text-decoration: none; font-size: var(--text-xs);" target="_blank">
+                            <?= htmlspecialchars(strlen($report['page_url']) > 50 ? substr($report['page_url'], 0, 50) . '...' : $report['page_url']) ?>
                         </a>
                     </span>
                 <?php endif; ?>
             </div>
 
-            <div class="report-card-body" id="body-<?= $report['id'] ?>">
+            <!-- Related riders (profile reports) -->
+            <?php if ($report['category'] === 'profile' && !empty($report['related_rider_ids'])): ?>
+                <div class="report-related">
+                    <span style="font-size: var(--text-xs); color: var(--color-text-muted); margin-right: var(--space-2xs);">Profiler:</span>
+                    <?php
+                    $rIds = array_filter(array_map('intval', explode(',', $report['related_rider_ids'])));
+                    foreach ($rIds as $rId):
+                        $rName = $relatedRiderNames[$rId] ?? "Deltagare #$rId";
+                    ?>
+                        <a href="/rider/<?= $rId ?>" class="report-related-tag" target="_blank">
+                            <i data-lucide="user"></i>
+                            <?= htmlspecialchars($rName) ?>
+                        </a>
+                    <?php endforeach; ?>
+                </div>
+            <?php endif; ?>
+
+            <!-- Related event (results reports) -->
+            <?php if ($report['category'] === 'results' && !empty($report['related_event_id'])): ?>
+                <div class="report-related">
+                    <span style="font-size: var(--text-xs); color: var(--color-text-muted); margin-right: var(--space-2xs);">Event:</span>
+                    <a href="/event/<?= $report['related_event_id'] ?>" class="report-related-event" target="_blank">
+                        <i data-lucide="flag"></i>
+                        <?= htmlspecialchars($report['event_name'] ?? 'Event #' . $report['related_event_id']) ?>
+                        <?php if (!empty($report['event_date'])): ?>
+                            (<?= date('Y-m-d', strtotime($report['event_date'])) ?>)
+                        <?php endif; ?>
+                    </a>
+                </div>
+            <?php endif; ?>
+
+            <div class="report-card-body">
                 <?= htmlspecialchars($report['description']) ?>
             </div>
 
-            <?php if ($report['browser_info']): ?>
+            <?php if (!empty($report['browser_info'])): ?>
                 <details style="margin-bottom: var(--space-sm);">
                     <summary style="font-size: var(--text-xs); color: var(--color-text-muted); cursor: pointer;">Webbläsarinfo</summary>
                     <code style="font-size: var(--text-xs); color: var(--color-text-muted); word-break: break-all; display: block; margin-top: var(--space-xs);">
@@ -487,7 +561,7 @@ include __DIR__ . '/components/unified-layout.php';
                 </details>
             <?php endif; ?>
 
-            <?php if ($report['admin_notes']): ?>
+            <?php if (!empty($report['admin_notes'])): ?>
                 <div class="report-notes">
                     <div class="report-notes-label">Admin-anteckning</div>
                     <?= htmlspecialchars($report['admin_notes']) ?>

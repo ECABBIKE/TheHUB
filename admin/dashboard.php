@@ -58,7 +58,7 @@ try {
         'riders' => 0, 'events' => 0, 'clubs' => 0, 'series' => 0,
         'upcoming' => 0, 'results' => 0, 'pending_orders' => 0,
         'total_revenue' => 0, 'registrations_today' => 0, 'registrations_week' => 0,
-        'pending_claims' => 0, 'pending_news' => 0
+        'pending_claims' => 0, 'pending_news' => 0, 'pending_bug_reports' => 0
     ];
 }
 
@@ -77,6 +77,15 @@ if (!isset($stats['pending_news'])) {
         $stats['pending_news'] = $pdo->query("SELECT COUNT(*) FROM race_reports WHERE status = 'draft'")->fetchColumn();
     } catch (Exception $e) {
         $stats['pending_news'] = 0;
+    }
+}
+
+// Pending bug reports
+if (!isset($stats['pending_bug_reports'])) {
+    try {
+        $stats['pending_bug_reports'] = $pdo->query("SELECT COUNT(*) FROM bug_reports WHERE status = 'new'")->fetchColumn();
+    } catch (Exception $e) {
+        $stats['pending_bug_reports'] = 0;
     }
 }
 
@@ -347,6 +356,117 @@ include __DIR__ . '/components/unified-layout.php';
         font-size: var(--text-base);
     }
     .news-box-arrow {
+        display: none;
+    }
+}
+</style>
+<?php endif; ?>
+
+<?php if ($stats['pending_bug_reports'] > 0): ?>
+<!-- Pending Bug Reports Alert - Red Box -->
+<a href="/admin/bug-reports.php" class="pending-bugs-box">
+    <div class="bugs-box-icon">
+        <i data-lucide="message-circle"></i>
+        <span class="bugs-box-count"><?= $stats['pending_bug_reports'] ?></span>
+    </div>
+    <div class="bugs-box-text">
+        <strong>Nya felrapporter</strong>
+        <span><?= $stats['pending_bug_reports'] ?> rapport<?= $stats['pending_bug_reports'] !== 1 ? 'er' : '' ?> väntar på granskning</span>
+    </div>
+    <div class="bugs-box-arrow">
+        <i data-lucide="chevron-right"></i>
+    </div>
+</a>
+<style>
+.pending-bugs-box {
+    display: flex;
+    align-items: center;
+    gap: var(--space-lg);
+    padding: var(--space-lg) var(--space-xl);
+    margin-bottom: var(--space-lg);
+    background: linear-gradient(135deg, #ef4444 0%, #dc2626 100%);
+    border-radius: var(--radius-lg);
+    text-decoration: none;
+    color: white;
+    transition: transform 0.15s ease, box-shadow 0.15s ease;
+    box-shadow: 0 4px 12px rgba(239, 68, 68, 0.3);
+}
+.pending-bugs-box:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 8px 20px rgba(239, 68, 68, 0.4);
+}
+.bugs-box-icon {
+    position: relative;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 56px;
+    height: 56px;
+    background: rgba(255,255,255,0.2);
+    border-radius: var(--radius-md);
+    flex-shrink: 0;
+}
+.bugs-box-icon i {
+    width: 28px;
+    height: 28px;
+}
+.bugs-box-count {
+    position: absolute;
+    top: -8px;
+    right: -8px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    min-width: 28px;
+    height: 28px;
+    padding: 0 6px;
+    background: white;
+    color: #ef4444;
+    font-size: 14px;
+    font-weight: 700;
+    border-radius: 14px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.2);
+}
+.bugs-box-text {
+    flex: 1;
+}
+.bugs-box-text strong {
+    display: block;
+    font-size: var(--text-lg);
+    font-weight: 600;
+    margin-bottom: 4px;
+}
+.bugs-box-text span {
+    font-size: var(--text-sm);
+    opacity: 0.9;
+}
+.bugs-box-arrow {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    width: 40px;
+    height: 40px;
+    background: rgba(255,255,255,0.2);
+    border-radius: 50%;
+    flex-shrink: 0;
+}
+.bugs-box-arrow i {
+    width: 24px;
+    height: 24px;
+}
+@media (max-width: 600px) {
+    .pending-bugs-box {
+        padding: var(--space-md);
+        gap: var(--space-md);
+    }
+    .bugs-box-icon {
+        width: 48px;
+        height: 48px;
+    }
+    .bugs-box-text strong {
+        font-size: var(--text-base);
+    }
+    .bugs-box-arrow {
         display: none;
     }
 }

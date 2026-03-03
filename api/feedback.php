@@ -14,32 +14,20 @@ if ($_SERVER['REQUEST_METHOD'] !== 'POST') {
     exit;
 }
 
-// Rate limiting: max 5 reports per IP per hour
-$ip = $_SERVER['REMOTE_ADDR'] ?? 'unknown';
-try {
-    $stmt = $pdo->prepare("
-        SELECT COUNT(*) FROM bug_reports
-        WHERE created_at > DATE_SUB(NOW(), INTERVAL 1 HOUR)
-        AND email = :ip_check
-    ");
-    // Use a simple check - we'll store IP in a pragmatic way
-} catch (Exception $e) {
-    // Table might not exist yet - continue
-}
-
 // Parse input
 $input = json_decode(file_get_contents('php://input'), true);
 if (!$input) {
     $input = $_POST;
 }
 
-$category = $input['category'] ?? 'bug';
+$category = $input['category'] ?? 'other';
 $title = trim($input['title'] ?? '');
 $description = trim($input['description'] ?? '');
 $email = trim($input['email'] ?? '');
 $pageUrl = trim($input['page_url'] ?? '');
 $browserInfo = trim($input['browser_info'] ?? '');
-$screenshotUrl = trim($input['screenshot_url'] ?? '');
+$relatedRiderIds = $input['related_rider_ids'] ?? [];
+$relatedEventId = !empty($input['related_event_id']) ? (int)$input['related_event_id'] : null;
 
 // Validate required fields
 $errors = [];
@@ -56,11 +44,22 @@ if (empty($description)) {
 if (strlen($description) > 5000) {
     $errors[] = 'Beskrivningen är för lång (max 5000 tecken)';
 }
-if (!in_array($category, ['bug', 'feature', 'design', 'other'])) {
+if (!in_array($category, ['profile', 'results', 'other'])) {
     $errors[] = 'Ogiltig kategori';
 }
 if (!empty($email) && !filter_var($email, FILTER_VALIDATE_EMAIL)) {
     $errors[] = 'Ogiltig e-postadress';
+}
+
+// Validate related rider IDs (max 4, must be integers)
+$riderIdsString = null;
+if (!empty($relatedRiderIds) && is_array($relatedRiderIds)) {
+    $relatedRiderIds = array_slice($relatedRiderIds, 0, 4);
+    $relatedRiderIds = array_map('intval', $relatedRiderIds);
+    $relatedRiderIds = array_filter($relatedRiderIds, function($id) { return $id > 0; });
+    if (!empty($relatedRiderIds)) {
+        $riderIdsString = implode(',', $relatedRiderIds);
+    }
 }
 
 if (!empty($errors)) {
@@ -93,8 +92,8 @@ if (!empty($_SESSION['rider_id'])) {
 
 try {
     $stmt = $pdo->prepare("
-        INSERT INTO bug_reports (rider_id, category, title, description, email, page_url, browser_info, screenshot_url, created_at)
-        VALUES (:rider_id, :category, :title, :description, :email, :page_url, :browser_info, :screenshot_url, NOW())
+        INSERT INTO bug_reports (rider_id, category, title, description, email, page_url, browser_info, related_rider_ids, related_event_id, created_at)
+        VALUES (:rider_id, :category, :title, :description, :email, :page_url, :browser_info, :related_rider_ids, :related_event_id, NOW())
     ");
     $stmt->execute([
         ':rider_id' => $riderId,
@@ -104,7 +103,8 @@ try {
         ':email' => $email ?: null,
         ':page_url' => $pageUrl ?: null,
         ':browser_info' => $browserInfo ?: null,
-        ':screenshot_url' => $screenshotUrl ?: null
+        ':related_rider_ids' => $riderIdsString,
+        ':related_event_id' => $relatedEventId
     ]);
 
     $reportId = $pdo->lastInsertId();
@@ -117,7 +117,6 @@ try {
     ]);
 
 } catch (PDOException $e) {
-    // Check if table doesn't exist
     if (strpos($e->getMessage(), "doesn't exist") !== false) {
         http_response_code(500);
         echo json_encode(['error' => 'Systemet är inte konfigurerat ännu. Kör migration 070 först.']);

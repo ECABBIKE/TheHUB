@@ -8,23 +8,29 @@
 
 ### Rapportera problem / Feedback-system (bug reports)
 - **Ny funktion:** Komplett system för användarrapporter och feedback
-- **Publik sida:** `/feedback` (pages/feedback.php) - formulär med kategori (Bugg/Förslag/Design/Övrigt), titel, beskrivning
+- **Publik sida:** `/feedback` (pages/feedback.php) - formulär med tre kategorier:
+  - **Profil:** Sökfunktion för att länka upp till 4 deltagarprofiler (via /api/search.php)
+  - **Resultat:** Event-väljare dropdown (senaste 12 månader)
+  - **Övrigt:** Enbart titel + beskrivning
   - Tillgänglig för alla (inloggade och anonyma)
   - Inloggade användare: e-post och rider_id fylls i automatiskt
-  - Sparar även sidans URL (referer) och webbläsarinfo
+  - Sparar sidans URL (referer) och webbläsarinfo
   - AJAX-baserad submit via `/api/feedback.php`
-- **Flytande knapp:** Cyan FAB (Floating Action Button) på alla publika sidor
+- **Flytande knapp:** Cyan FAB (Floating Action Button) ENBART på förstasidan (welcome)
   - Position: fixed, nere till höger (ovanför mobilnavigeringen)
-  - Döljs på feedback-sidan (ingen dubbel-knapp)
   - Inkluderad i `index.php` (inte i footer.php som är låst)
 - **Admin-sida:** `/admin/bug-reports.php` - lista, filtrera och hantera rapporter
   - Stats-kort: Totalt, Nya, Pågår, Lösta
-  - Filter: status (ny/pågår/löst/avvisad), kategori (bugg/förslag/design/övrigt)
+  - Filter: status (ny/pågår/löst/avvisad), kategori (profil/resultat/övrigt)
   - Statusändring, admin-anteckningar, radering per rapport
   - Visar rapportörens namn/email, sidans URL, webbläsarinfo
+  - Visar länkade profiler (klickbara taggar) och relaterat event
   - Sorterat: nya först, sedan pågår, sedan lösta
-- **API:** `/api/feedback.php` (POST) - tar emot JSON med category, title, description, email, page_url, browser_info
-- **Migration 070:** `bug_reports`-tabell med id, rider_id, category (ENUM), title, description, email, page_url, browser_info, screenshot_url, status (ENUM), admin_notes, resolved_by, resolved_at, created_at, updated_at
+- **Dashboard-notis:** Röd alert-box på admin dashboard när det finns nya rapporter
+  - Identisk stil som profilkopplingar/nyhets-notiser (röd gradient, ikon med count-badge)
+  - Länk direkt till `/admin/bug-reports.php`
+- **API:** `/api/feedback.php` (POST) - tar emot JSON med category, title, description, email, page_url, browser_info, related_rider_ids[], related_event_id
+- **Migration 070:** `bug_reports`-tabell med id, rider_id, category (ENUM: profile/results/other), title, description, email, page_url, browser_info, related_rider_ids (kommaseparerade ID:n), related_event_id, status (ENUM), admin_notes, resolved_by, resolved_at, created_at, updated_at
 - **Navigation:** Tillagd i admin-tabs under System-gruppen, tillagd i tools.php under System
 - **Router:** `feedback` tillagd som publik sida (ingen inloggning krävs)
 - **Filer:** `pages/feedback.php`, `api/feedback.php`, `admin/bug-reports.php`, `Tools/migrations/070_bug_reports.sql`

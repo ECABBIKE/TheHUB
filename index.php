@@ -114,11 +114,10 @@ if (hub_is_ajax()) {
     <?php include __DIR__ . '/components/footer.php'; ?>
     <?php include __DIR__ . '/components/woocommerce-modal.php'; ?>
 
-    <!-- Floating Feedback Button -->
+    <!-- Floating Feedback Button - only on welcome/front page -->
     <?php
-    // Don't show on feedback page itself or admin pages
     $currentPage = $pageInfo['page'] ?? '';
-    if ($currentPage !== 'feedback'):
+    if ($currentPage === 'welcome'):
     ?>
     <a href="/feedback" class="feedback-fab" title="Rapportera problem" aria-label="Rapportera problem">
         <i data-lucide="message-circle"></i>
