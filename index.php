@@ -152,9 +152,9 @@ if (hub_is_ajax()) {
         width: 18px;
         height: 18px;
     }
-    @media (max-width: 767px) {
+    @media (max-width: 1023px) {
         .feedback-fab {
-            bottom: 80px;
+            bottom: calc(70px + env(safe-area-inset-bottom, 0px));
             right: var(--space-sm);
             height: 38px;
             padding: 0 var(--space-sm) 0 var(--space-xs);
