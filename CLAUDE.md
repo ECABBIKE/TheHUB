@@ -78,6 +78,31 @@ Memory-filen innehåller viktiga beslut, kända buggar, tekniska detaljer och l�
 
 ---
 
+## ARRANGÖRSGUIDE - UPPDATERA VID PROMOTOR-ÄNDRINGAR
+
+**Uppdatera ALLTID `/docs/promotor-instruktion.md` vid ändringar som påverkar promotor-flödet.**
+
+Arrangörsguiden är den officiella dokumentationen för arrangörer (promotorer). Den visas i promotor-panelen via `/admin/promotor-guide.php`.
+
+### Uppdatera guiden vid ändringar i:
+- Event-redigering (vilka fält som är låsta/redigerbara)
+- Faciliteter & Logistik (kategorier, fält, beteende)
+- PM-sektionen (fält, formatering)
+- Sponsorhantering (placeringar, bildväljare)
+- Ekonomi-vyn (kolumner, filter, avgifter)
+- Startlistor (funktioner, export)
+- Mediabiblioteket (mappar, behörigheter)
+- Serie-inställningar
+- Rabattkoder
+
+### Vad ska uppdateras:
+- Tabeller med fält/kategorier
+- Beskrivningar av nya funktioner
+- Borttagna eller ändrade beteenden
+- Senast uppdaterad-datum i filens header
+
+---
+
 ## ROADMAP - UPPDATERA EFTER VARJE IMPLEMENTATION
 
 **Uppdatera ALLTID `/ROADMAP.md` efter varje implementerad funktion.**

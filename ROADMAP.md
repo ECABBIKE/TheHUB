@@ -112,6 +112,30 @@
 
 # CHANGELOG
 
+### 2026-03-03 (Arrangörsguide)
+- **Branch:** claude/add-bug-report-feature-dNafh
+
+- **Ny funktion: Arrangörsguide för promotorer**
+  - Komplett guide i `/docs/promotor-instruktion.md`
+  - Visningssida `/admin/promotor-guide.php` med markdown-rendering
+  - Guide-knapp i promotor-flikraden och sidomenyn
+  - Täcker: event-redigering, faciliteter, PM, sponsorer, ekonomi, startlistor, media, rabattkoder
+
+- **Fix: Feedback mobilanpassning**
+  - FAB-knapp positionerad korrekt ovanför bottom-nav
+  - Formuläret edge-to-edge på mobil
+
+- **Nya filer:**
+  - `docs/promotor-instruktion.md` - Arrangörsguide (markdown-källa)
+  - `admin/promotor-guide.php` - Visningssida för guiden
+
+- **Ändrade filer:**
+  - `admin/promotor.php` - Guide-flik i tab-navigeringen
+  - `components/sidebar.php` - Guide-länk i promotor-meny
+  - `CLAUDE.md` - Regel om att uppdatera guiden vid promotor-ändringar
+  - `index.php` - FAB-knapp mobilfix
+  - `pages/feedback.php` - Formulär mobilanpassning
+
 ### 2026-03-03 (Rapportera problem / Feedback-system)
 - **Branch:** claude/add-bug-report-feature-dNafh
 

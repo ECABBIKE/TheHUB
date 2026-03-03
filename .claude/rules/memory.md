@@ -4,7 +4,32 @@
 
 ---
 
-## SENASTE FIXAR (2026-03-03, session 19-20)
+## SENASTE FIXAR (2026-03-03, session 21)
+
+### Arrangörsguide (promotor-instruktion)
+- **Ny funktion:** Komplett arrangörsguide för promotorer
+- **Markdown-källa:** `/docs/promotor-instruktion.md` - all dokumentation i ett ställe
+- **Visningssida:** `/admin/promotor-guide.php` - renderar markdown till HTML med TheHUB-styling
+  - Egen markdown-parser (inga externa beroenden)
+  - Stödjer tabeller, blockquotes, kod, listor, rubriker med ankare
+  - Mobilanpassad
+- **Info-knapp i promotor-panelen:** "Guide"-länk tillagd i:
+  - Flikraden i promotor.php (högerställd, accent-färg)
+  - Sidomenyn (sidebar.php) för promotor-rollen
+  - INTE i mobil bottom-nav (för trånga med 5 ikoner)
+- **CLAUDE.md-regel:** Ny sektion "ARRANGÖRSGUIDE - UPPDATERA VID PROMOTOR-ÄNDRINGAR"
+  - Guiden MÅSTE uppdateras vid ändringar i event-edit, faciliteter, PM, sponsorer, ekonomi etc.
+- **Guidens innehåll:** Logga in, navigation, event-översikt, redigera event (låsta vs redigerbara fält), arrangör/plats/kontakt, faciliteter (alla 12 kategorier), PM, sponsorer (bildväljare, placeringar, format), startlistor, rabattkoder, serier, ekonomi (ordertabell, avgifter, filter), mediabibliotek, FAQ
+- **Filer:** `docs/promotor-instruktion.md`, `admin/promotor-guide.php`
+- **Ändrade filer:** `admin/promotor.php` (guide-flik), `components/sidebar.php` (guide-länk), `CLAUDE.md` (regel)
+
+### Feedback mobilfix
+- **FAB-knapp:** Breakpoint ändrat till 1023px (matchar nav-bottom), bottom ökad till `calc(70px + safe-area)`
+- **Formulär:** Edge-to-edge på mobil, borttagen padding/radius/shadow, extra bottom-padding
+
+---
+
+## TIDIGARE FIXAR (2026-03-03, session 19-20)
 
 ### Rapportera problem / Feedback-system (bug reports)
 - **Ny funktion:** Komplett system för användarrapporter och feedback
