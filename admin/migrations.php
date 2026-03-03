@@ -241,6 +241,9 @@ $migrationChecks = [
     '069_gallery_sponsor_placement.sql' => [
         'data' => ["(SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'sponsor_placements' AND COLUMN_NAME = 'page_type' AND COLUMN_TYPE LIKE '%gallery%')"]
     ],
+    '070_bug_reports.sql' => [
+        'tables' => ['bug_reports']
+    ],
 ];
 
 // ============================================================================

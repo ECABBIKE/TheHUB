@@ -1148,6 +1148,20 @@ include __DIR__ . '/components/unified-layout.php';
         </div>
     </div>
 
+    <!-- Bug Reports / Feedback -->
+    <div class="card">
+        <div class="tool-header">
+            <div class="tool-icon"><i data-lucide="message-circle"></i></div>
+            <div>
+                <h4 class="tool-title">Felrapporter</h4>
+                <p class="tool-description">Visa och hantera användarrapporter och feedback</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/bug-reports.php" class="btn-admin btn-admin-primary">Öppna</a>
+        </div>
+    </div>
+
     <!-- Reset Data -->
     <div class="card">
         <div class="tool-header">

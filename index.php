@@ -114,6 +114,56 @@ if (hub_is_ajax()) {
     <?php include __DIR__ . '/components/footer.php'; ?>
     <?php include __DIR__ . '/components/woocommerce-modal.php'; ?>
 
+    <!-- Floating Feedback Button -->
+    <?php
+    // Don't show on feedback page itself or admin pages
+    $currentPage = $pageInfo['page'] ?? '';
+    if ($currentPage !== 'feedback'):
+    ?>
+    <a href="/feedback" class="feedback-fab" title="Rapportera problem" aria-label="Rapportera problem">
+        <i data-lucide="message-circle"></i>
+    </a>
+    <style>
+    .feedback-fab {
+        position: fixed;
+        bottom: 90px;
+        right: var(--space-md);
+        width: 48px;
+        height: 48px;
+        border-radius: var(--radius-full);
+        background: var(--color-accent);
+        color: var(--color-bg-page);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
+        z-index: 900;
+        transition: transform 0.15s ease, box-shadow 0.15s ease;
+        text-decoration: none;
+    }
+    .feedback-fab:hover {
+        transform: scale(1.1);
+        box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
+    }
+    .feedback-fab i {
+        width: 22px;
+        height: 22px;
+    }
+    @media (max-width: 767px) {
+        .feedback-fab {
+            bottom: 80px;
+            right: var(--space-sm);
+            width: 44px;
+            height: 44px;
+        }
+        .feedback-fab i {
+            width: 20px;
+            height: 20px;
+        }
+    }
+    </style>
+    <?php endif; ?>
+
     <!-- Toast Container -->
     <div id="toast-container" class="toast-container"></div>
 

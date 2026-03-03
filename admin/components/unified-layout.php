@@ -70,7 +70,8 @@ if (!isset($current_admin_page)) {
         'system-settings' => 'settings',
         'role-permissions' => 'settings',
         'payment-recipients' => 'economy',
-        'settlements' => 'economy'
+        'settlements' => 'economy',
+        'bug-reports' => 'bug-reports'
     );
     $current_admin_page = isset($pageMap[$scriptName]) ? $pageMap[$scriptName] : $scriptName;
 }
