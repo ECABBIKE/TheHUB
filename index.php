@@ -120,44 +120,49 @@ if (hub_is_ajax()) {
     if ($currentPage === 'welcome'):
     ?>
     <a href="/feedback" class="feedback-fab" title="Rapportera problem" aria-label="Rapportera problem">
-        <i data-lucide="message-circle"></i>
+        <i data-lucide="bug"></i>
+        <span class="feedback-fab-text">Rapportera</span>
     </a>
     <style>
     .feedback-fab {
         position: fixed;
         bottom: 90px;
         right: var(--space-md);
-        width: 48px;
-        height: 48px;
+        height: 42px;
+        padding: 0 var(--space-md) 0 var(--space-sm);
         border-radius: var(--radius-full);
         background: var(--color-accent);
         color: var(--color-bg-page);
         display: flex;
         align-items: center;
-        justify-content: center;
+        gap: var(--space-2xs);
         box-shadow: 0 4px 12px rgba(0, 0, 0, 0.3);
         z-index: 900;
         transition: transform 0.15s ease, box-shadow 0.15s ease;
         text-decoration: none;
+        font-size: 0.8125rem;
+        font-weight: 600;
+        letter-spacing: 0.02em;
     }
     .feedback-fab:hover {
-        transform: scale(1.1);
+        transform: scale(1.05);
         box-shadow: 0 6px 16px rgba(0, 0, 0, 0.4);
     }
     .feedback-fab i {
-        width: 22px;
-        height: 22px;
+        width: 18px;
+        height: 18px;
     }
     @media (max-width: 767px) {
         .feedback-fab {
             bottom: 80px;
             right: var(--space-sm);
-            width: 44px;
-            height: 44px;
+            height: 38px;
+            padding: 0 var(--space-sm) 0 var(--space-xs);
+            font-size: 0.75rem;
         }
         .feedback-fab i {
-            width: 20px;
-            height: 20px;
+            width: 16px;
+            height: 16px;
         }
     }
     </style>

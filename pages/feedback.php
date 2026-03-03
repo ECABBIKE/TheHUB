@@ -32,56 +32,64 @@ try {
 } catch (Exception $e) {
     // Ignore - events dropdown will be empty
 }
+
+// Generate spam protection token
+$formToken = bin2hex(random_bytes(16));
+if (session_status() === PHP_SESSION_NONE) {
+    session_start();
+}
+$_SESSION['feedback_token'] = $formToken;
+$_SESSION['feedback_token_time'] = time();
 ?>
 
-<div class="page-header">
-    <h1><i data-lucide="message-circle"></i> Rapportera problem</h1>
-    <p style="color: var(--color-text-secondary); margin-top: var(--space-xs);">
-        Hittade du ett fel eller vill du rapportera något? Berätta för oss!
-    </p>
-</div>
+<div class="login-page">
+    <div class="login-container">
+        <div class="login-card" style="max-width: 520px;">
 
-<div class="container container--sm">
+            <!-- Header -->
+            <div class="login-header">
+                <div class="login-logo">
+                    <i data-lucide="bug" class="icon-xl"></i>
+                </div>
+                <h1 class="login-title">Rapportera problem</h1>
+                <p class="login-subtitle">Hittade du ett fel eller vill du ge feedback? Berätta för oss!</p>
+            </div>
 
-    <!-- Success message -->
-    <div id="feedback-success" class="alert alert-success" style="display: none;">
-        <i data-lucide="check-circle"></i>
-        <span id="feedback-success-text">Tack för din rapport!</span>
-    </div>
+            <!-- Success message -->
+            <div id="feedback-success" class="alert alert--success" style="display: none;">
+                <i data-lucide="check-circle"></i>
+                <span id="feedback-success-text">Tack för din rapport!</span>
+            </div>
 
-    <!-- Error message -->
-    <div id="feedback-error" class="alert alert-danger" style="display: none;">
-        <i data-lucide="alert-circle"></i>
-        <span id="feedback-error-text"></span>
-    </div>
+            <!-- Error message -->
+            <div id="feedback-error" class="alert alert--error" style="display: none;">
+                <i data-lucide="alert-circle"></i>
+                <span id="feedback-error-text"></span>
+            </div>
 
-    <div class="card">
-        <div class="card-body">
-            <form id="feedback-form" method="POST">
+            <!-- Form -->
+            <form id="feedback-form" method="POST" class="login-form">
 
-                <!-- Category -->
+                <!-- Category selector -->
                 <div class="form-group">
                     <label class="form-label">Vad gäller det?</label>
-                    <div class="feedback-category-grid">
-                        <label class="feedback-category-option">
+                    <div class="feedback-categories">
+                        <label class="feedback-cat">
                             <input type="radio" name="category" value="profile">
-                            <span class="feedback-category-card">
-                                <i data-lucide="user"></i>
-                                <span>Profil</span>
+                            <span class="feedback-cat-label">
+                                <i data-lucide="user"></i> Profil
                             </span>
                         </label>
-                        <label class="feedback-category-option">
+                        <label class="feedback-cat">
                             <input type="radio" name="category" value="results">
-                            <span class="feedback-category-card">
-                                <i data-lucide="flag"></i>
-                                <span>Resultat</span>
+                            <span class="feedback-cat-label">
+                                <i data-lucide="flag"></i> Resultat
                             </span>
                         </label>
-                        <label class="feedback-category-option">
+                        <label class="feedback-cat">
                             <input type="radio" name="category" value="other" checked>
-                            <span class="feedback-category-card">
-                                <i data-lucide="message-square"></i>
-                                <span>Övrigt</span>
+                            <span class="feedback-cat-label">
+                                <i data-lucide="message-square"></i> Övrigt
                             </span>
                         </label>
                     </div>
@@ -89,7 +97,7 @@ try {
 
                 <!-- Profile: Rider search (shown when category=profile) -->
                 <div id="section-profile" class="form-group" style="display: none;">
-                    <label class="form-label">Vilka profiler gäller det? <small style="color: var(--color-text-muted);">(max 4)</small></label>
+                    <label class="form-label">Vilka profiler gäller det? <small class="text-muted">(max 4)</small></label>
                     <div class="rider-search-wrapper">
                         <input type="text" id="rider-search-input" class="form-input" placeholder="Sök deltagare..." autocomplete="off">
                         <div id="rider-search-results" class="rider-search-dropdown" style="display: none;"></div>
@@ -113,110 +121,104 @@ try {
 
                 <!-- Title -->
                 <div class="form-group">
-                    <label class="form-label" for="feedback-title">Titel <span style="color: var(--color-error);">*</span></label>
+                    <label class="form-label" for="feedback-title">Rubrik <span class="text-required">*</span></label>
                     <input type="text" id="feedback-title" name="title" class="form-input"
                            placeholder="Kort beskrivning av problemet..." maxlength="255" required>
                 </div>
 
                 <!-- Description -->
                 <div class="form-group">
-                    <label class="form-label" for="feedback-description">Beskrivning <span style="color: var(--color-error);">*</span></label>
+                    <label class="form-label" for="feedback-description">Beskrivning <span class="text-required">*</span></label>
                     <textarea id="feedback-description" name="description" class="form-input"
-                              rows="5" placeholder="Beskriv vad som är fel eller vad du vill rapportera..." maxlength="5000" required></textarea>
-                    <small style="color: var(--color-text-muted);"><span id="desc-count">0</span> / 5000</small>
+                              rows="5" placeholder="Beskriv vad som är fel eller vad du vill rapportera..." maxlength="5000" required style="resize: vertical; min-height: 120px;"></textarea>
+                    <small class="text-muted"><span id="desc-count">0</span> / 5000</small>
                 </div>
 
-                <!-- Email -->
+                <!-- Email (only for anonymous) -->
                 <?php if (!$isLoggedIn): ?>
                 <div class="form-group">
-                    <label class="form-label" for="feedback-email">E-post (valfritt)</label>
+                    <label class="form-label" for="feedback-email">E-post <small class="text-muted">(valfritt, om du vill ha svar)</small></label>
                     <input type="email" id="feedback-email" name="email" class="form-input"
-                           placeholder="Din e-post om du vill ha svar...">
+                           placeholder="din@email.se">
                 </div>
                 <?php else: ?>
                 <input type="hidden" name="email" value="<?= htmlspecialchars($userEmail) ?>">
                 <?php endif; ?>
 
+                <!-- Honeypot - hidden from real users -->
+                <div style="position: absolute; left: -9999px;" aria-hidden="true">
+                    <input type="text" name="website_url" tabindex="-1" autocomplete="off" value="">
+                </div>
+
                 <!-- Hidden fields -->
                 <input type="hidden" id="feedback-page-url" name="page_url" value="<?= htmlspecialchars($referrerUrl) ?>">
                 <input type="hidden" id="feedback-browser-info" name="browser_info" value="">
+                <input type="hidden" name="_token" value="<?= $formToken ?>">
+                <input type="hidden" id="feedback-render-time" name="_render_time" value="<?= time() ?>">
 
                 <!-- Submit -->
-                <div class="form-group" style="margin-top: var(--space-lg);">
-                    <button type="submit" id="feedback-submit" class="btn btn-primary" style="width: 100%;">
-                        <i data-lucide="send"></i> Skicka rapport
-                    </button>
-                </div>
+                <button type="submit" id="feedback-submit" class="btn btn--primary btn--block btn--lg">
+                    <i data-lucide="send"></i>
+                    Skicka rapport
+                </button>
 
             </form>
+
+            <!-- Footer -->
+            <div class="login-footer">
+                <i data-lucide="shield-check" style="width: 14px; height: 14px;"></i>
+                <span>Dina rapporter behandlas konfidentiellt</span>
+            </div>
+
         </div>
     </div>
-
-    <div style="text-align: center; margin-top: var(--space-md); color: var(--color-text-muted); font-size: var(--text-sm);">
-        <i data-lucide="shield-check" style="width: 14px; height: 14px; vertical-align: middle;"></i>
-        Dina rapporter behandlas konfidentiellt
-    </div>
-
 </div>
 
 <style>
-.container--sm {
-    max-width: 600px;
-    margin: 0 auto;
-}
-
-.feedback-category-grid {
+/* Category selector - 3-column grid */
+.feedback-categories {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: var(--space-sm);
+    gap: var(--space-xs);
 }
-
-.feedback-category-option input[type="radio"] {
+.feedback-cat input[type="radio"] {
     display: none;
 }
-
-.feedback-category-card {
+.feedback-cat-label {
     display: flex;
-    flex-direction: column;
     align-items: center;
-    gap: var(--space-xs);
-    padding: var(--space-md) var(--space-sm);
+    justify-content: center;
+    gap: var(--space-2xs);
+    padding: var(--space-sm);
     border: 2px solid var(--color-border);
-    border-radius: var(--radius-md);
+    border-radius: var(--radius-sm);
     cursor: pointer;
     transition: all 0.15s ease;
-    text-align: center;
-    font-size: var(--text-sm);
+    font-size: 0.875rem;
     color: var(--color-text-secondary);
-    background: var(--color-bg-surface);
+    text-align: center;
 }
-
-.feedback-category-card i {
-    width: 24px;
-    height: 24px;
+.feedback-cat-label i {
+    width: 18px;
+    height: 18px;
 }
-
-.feedback-category-card:hover {
+.feedback-cat-label:hover {
     border-color: var(--color-accent);
     color: var(--color-text-primary);
 }
-
-.feedback-category-option input[type="radio"]:checked + .feedback-category-card {
+.feedback-cat input[type="radio"]:checked + .feedback-cat-label {
     border-color: var(--color-accent);
     background: var(--color-accent-light);
     color: var(--color-accent-text);
 }
 
-#feedback-form textarea {
-    resize: vertical;
-    min-height: 120px;
-}
-
+/* Submit button icon */
 #feedback-submit {
     display: inline-flex;
     align-items: center;
     justify-content: center;
     gap: var(--space-xs);
+    margin-top: var(--space-sm);
 }
 #feedback-submit i {
     width: 18px;
@@ -227,7 +229,16 @@ try {
     cursor: not-allowed;
 }
 
-/* Rider search */
+/* Text helpers */
+.text-muted {
+    color: var(--color-text-muted);
+    font-size: 0.8125rem;
+}
+.text-required {
+    color: var(--color-error);
+}
+
+/* Rider search dropdown */
 .rider-search-wrapper {
     position: relative;
 }
@@ -247,7 +258,7 @@ try {
 .rider-search-item {
     padding: var(--space-sm) var(--space-md);
     cursor: pointer;
-    font-size: var(--text-sm);
+    font-size: 0.875rem;
     color: var(--color-text-primary);
     border-bottom: 1px solid var(--color-border);
     display: flex;
@@ -261,12 +272,12 @@ try {
     background: var(--color-bg-hover);
 }
 .rider-search-item .rider-club {
-    font-size: var(--text-xs);
+    font-size: 0.75rem;
     color: var(--color-text-muted);
 }
 .rider-search-none {
     padding: var(--space-sm) var(--space-md);
-    font-size: var(--text-sm);
+    font-size: 0.875rem;
     color: var(--color-text-muted);
     text-align: center;
 }
@@ -286,7 +297,7 @@ try {
     background: var(--color-accent-light);
     color: var(--color-accent-text);
     border-radius: var(--radius-full);
-    font-size: var(--text-sm);
+    font-size: 0.875rem;
 }
 .selected-rider-tag button {
     background: none;
@@ -306,10 +317,9 @@ try {
     height: 14px;
 }
 
-@media (max-width: 767px) {
-    .container--sm {
-        max-width: 100%;
-    }
+/* form-select styling matching form-input */
+.form-select {
+    width: 100%;
 }
 </style>
 
@@ -367,7 +377,6 @@ try {
                 .then(function(r) { return r.json(); })
                 .then(function(data) {
                     var results = (data.results || []).filter(function(r) { return r.type === 'rider'; });
-                    // Filter out already selected
                     results = results.filter(function(r) {
                         return selectedRiders.findIndex(function(s) { return s.id === r.id; }) === -1;
                     });
@@ -389,7 +398,6 @@ try {
         }, 250);
     });
 
-    // Click on search result
     searchDropdown.addEventListener('click', function(e) {
         var item = e.target.closest('.rider-search-item');
         if (!item) return;
@@ -403,7 +411,6 @@ try {
         searchDropdown.style.display = 'none';
     });
 
-    // Close dropdown on outside click
     document.addEventListener('click', function(e) {
         if (!e.target.closest('.rider-search-wrapper')) {
             searchDropdown.style.display = 'none';
@@ -419,8 +426,6 @@ try {
         }).join('');
         hiddenRiderIds.value = JSON.stringify(selectedRiders.map(function(r) { return r.id; }));
         if (typeof lucide !== 'undefined') lucide.createIcons();
-
-        // Hide search if 4 selected
         searchInput.style.display = selectedRiders.length >= 4 ? 'none' : 'block';
     }
 
@@ -452,7 +457,10 @@ try {
             page_url: form.querySelector('#feedback-page-url').value,
             browser_info: browserInfoField.value,
             related_rider_ids: category === 'profile' ? selectedRiders.map(function(r) { return r.id; }) : [],
-            related_event_id: category === 'results' ? (document.getElementById('related-event').value || null) : null
+            related_event_id: category === 'results' ? (document.getElementById('related-event').value || null) : null,
+            _token: form.querySelector('input[name="_token"]').value,
+            _render_time: form.querySelector('input[name="_render_time"]').value,
+            website_url: form.querySelector('input[name="website_url"]').value
         };
 
         fetch('/api/feedback.php', {
@@ -465,16 +473,7 @@ try {
             if (result.ok && result.data.success) {
                 successText.textContent = result.data.message;
                 successDiv.style.display = 'flex';
-                form.reset();
-                descCount.textContent = '0';
-                form.querySelector('input[name="category"][value="other"]').checked = true;
-                sectionProfile.style.display = 'none';
-                sectionResults.style.display = 'none';
-                selectedRiders = [];
-                updateSelectedRiders();
-                searchInput.style.display = 'block';
-                if (typeof lucide !== 'undefined') lucide.createIcons();
-                // Scroll to top
+                form.style.display = 'none';
                 window.scrollTo({ top: 0, behavior: 'smooth' });
             } else {
                 errorText.textContent = result.data.error || 'Något gick fel. Försök igen.';
