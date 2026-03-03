@@ -458,6 +458,13 @@ $ADMIN_TABS = [
                 'icon' => 'badge-check',
                 'url' => '/admin/scf-sync-status.php',
                 'pages' => ['scf-sync-status.php', 'scf-match-review.php']
+            ],
+            [
+                'id' => 'bug-reports',
+                'label' => 'Felrapporter',
+                'icon' => 'message-circle',
+                'url' => '/admin/bug-reports.php',
+                'pages' => ['bug-reports.php']
             ]
         ]
     ]

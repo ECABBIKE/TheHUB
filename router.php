@@ -41,6 +41,8 @@ function hub_requires_auth(string $page): bool {
         'gallery', 'photographer',
         // News/Blog
         'news',
+        // Feedback
+        'feedback',
         // Shopping - cart is public, checkout handles its own auth
         'cart', 'checkout',
         // Registration pages (login required but handled in page)
@@ -89,6 +91,7 @@ function hub_get_current_page(): array {
         'activate-account' => '/pages/activate-account.php',
         'checkout' => '/pages/checkout.php',
         'membership' => '/pages/membership.php',
+        'feedback' => '/pages/feedback.php',
     ];
 
     if (isset($simplePages[$section])) {

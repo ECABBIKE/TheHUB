@@ -1,6 +1,6 @@
 # TheHUB - Development Roadmap
 
-> Senast uppdaterad: 2026-02-27
+> Senast uppdaterad: 2026-03-03
 >
 > **Se:** `/admin/roadmap.php` for interaktiv vy
 
@@ -24,6 +24,7 @@
 | POS Incheckning & Startlista | PLANERAD | QR-scanning, incheckning, auto-startnr, startlistevy vid event | 0% |
 | GravityTiming API | KLAR | API for tidtagningsapp: startlistor, resultat, live-uppdatering | 100% |
 | TheHUB Swapmeet | PLANERAD | Kop/salj-marknadsplats for gravity-prylar (Premium-funktion) | 0% |
+| Rapportera Problem | KLAR | Anvandare kan rapportera buggar och ge feedback, admin kan hantera | 100% |
 
 ---
 
@@ -1085,6 +1086,36 @@ Automatiskt genererade "trading cards" med deltagarstatistik:
 ---
 
 # CHANGELOG
+
+### 2026-03-03 (Rapportera Problem / Feedback)
+- **Branch:** claude/add-bug-report-feature-dNafh
+
+- **Ny funktion: Rapportera problem / Feedback**
+  - Användare kan rapportera buggar, föreslå funktioner, ge design-feedback eller skicka övrigt
+  - Publik sida `/feedback` med kategori-väljare, titel, beskrivning
+  - Fungerar för både inloggade (auto-fyller email) och anonyma användare
+  - Sparar sidans URL och webbläsarinfo automatiskt
+  - Flytande feedback-knapp (cyan FAB) synlig på alla publika sidor
+  - Admin-sida `/admin/bug-reports.php` med stats, filter, statushantering, anteckningar
+  - API endpoint `/api/feedback.php` med JSON-baserad AJAX submit
+
+- **Nya filer:**
+  - `pages/feedback.php` - Publik feedback-sida
+  - `api/feedback.php` - API för att ta emot rapporter
+  - `admin/bug-reports.php` - Admin-hantering av rapporter
+  - `Tools/migrations/070_bug_reports.sql` - Databastabell
+
+- **Ändrade filer:**
+  - `index.php` - Flytande feedback-knapp tillagd
+  - `router.php` - Feedback tillagd som publik sida
+  - `includes/config/admin-tabs-config.php` - Felrapporter under System-gruppen
+  - `admin/tools.php` - Länk till felrapporter under System
+  - `admin/components/unified-layout.php` - pageMap för bug-reports
+  - `admin/migrations.php` - Migration 070 registrerad
+  - `config.php` - APP_BUILD uppdaterad
+  - `ROADMAP.md` - Changelog och statusuppdatering
+
+---
 
 ### 2026-02-12 (Profilfix, Swish QR, Mobilfix)
 - **Branch:** claude/fix-mobile-payment-layout-Kh2Gg
