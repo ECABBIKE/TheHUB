@@ -172,6 +172,7 @@ function isAdminPageActive($item, $requestUri) {
             ['id' => 'series', 'label' => 'Serier', 'icon' => 'medal', 'url' => '/admin/promotor.php?tab=serier'],
             ['id' => 'ekonomi', 'label' => 'Ekonomi', 'icon' => 'wallet', 'url' => '/admin/promotor.php?tab=ekonomi'],
             ['id' => 'media', 'label' => 'Media', 'icon' => 'image', 'url' => '/admin/promotor.php?tab=media'],
+            ['id' => 'guide', 'label' => 'Guide', 'icon' => 'book-open', 'url' => '/admin/promotor-guide.php'],
         ];
         foreach ($promotorNav as $item):
             $isActive = match($item['id']) {
@@ -179,6 +180,7 @@ function isAdminPageActive($item, $requestUri) {
                 'series' => ($isPromotorPage && $currentTab === 'serier') || strpos($currentPath, '/admin/promotor-series') !== false,
                 'ekonomi' => $isPromotorPage && $currentTab === 'ekonomi',
                 'media' => ($isPromotorPage && $currentTab === 'media') || strpos($currentPath, '/admin/media') !== false,
+                'guide' => strpos($currentPath, '/admin/promotor-guide') !== false,
                 default => false,
             };
         ?>

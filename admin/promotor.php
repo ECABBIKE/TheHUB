@@ -1336,6 +1336,8 @@ function cancelFeeEdit(recipientId, originalText) {
 .promotor-tab i { width: 16px; height: 16px; }
 .promotor-tab:hover { color: var(--color-text-primary); }
 .promotor-tab.active { color: var(--color-accent); border-bottom-color: var(--color-accent); }
+.promotor-tab--guide { margin-left: auto; color: var(--color-accent); opacity: 0.7; border-bottom-color: transparent !important; }
+.promotor-tab--guide:hover { opacity: 1; }
 
 /* Event cards */
 .promotor-grid { display: grid; gap: var(--space-lg); }
@@ -1450,6 +1452,9 @@ function cancelFeeEdit(recipientId, originalText) {
     </a>
     <a href="?tab=media" class="promotor-tab <?= $promotorTab === 'media' ? 'active' : '' ?>">
         <i data-lucide="image"></i> Media
+    </a>
+    <a href="/admin/promotor-guide.php" class="promotor-tab promotor-tab--guide" title="Arrangörsguide">
+        <i data-lucide="book-open"></i> <span class="guide-label">Guide</span>
     </a>
 </nav>
 
