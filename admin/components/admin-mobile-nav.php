@@ -45,6 +45,7 @@ if ($isPhotographer) {
         ['id' => 'series', 'label' => 'Serier', 'icon' => 'medal', 'url' => '/admin/promotor.php?tab=serier'],
         ['id' => 'ekonomi', 'label' => 'Ekonomi', 'icon' => 'wallet', 'url' => '/admin/promotor.php?tab=ekonomi'],
         ['id' => 'media', 'label' => 'Media', 'icon' => 'image', 'url' => '/admin/promotor.php?tab=media'],
+        ['id' => 'guide', 'label' => 'Guide', 'icon' => 'book-open', 'url' => '/admin/promotor-guide.php'],
     ];
 } else {
     // ========================================
@@ -121,6 +122,10 @@ function isAdminMobileNavActive($item, $currentPath, $currentPageFile) {
     if ($item['id'] === 'media') {
         if ($isPromotorPage && $currentTab === 'media') return true;
         return strpos($currentPath, '/admin/media') !== false;
+    }
+
+    if ($item['id'] === 'guide') {
+        return strpos($currentPath, '/admin/promotor-guide') !== false;
     }
 
     // Admin groups - check if current page is in this group's pages
