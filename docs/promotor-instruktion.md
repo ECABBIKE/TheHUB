@@ -1,6 +1,6 @@
 # TheHUB - Arrangörsguide
 
-> **Version:** 1.0 | **Senast uppdaterad:** 2026-03-03
+> **Version:** 1.1 | **Senast uppdaterad:** 2026-03-03
 >
 > Denna guide förklarar hur du som arrangör (promotor) använder TheHUB för att hantera dina event, se över ekonomi och arbeta med sponsorer.
 
@@ -14,15 +14,16 @@
    - [Vad du kan redigera](#vad-du-kan-redigera)
    - [Vad som är låst](#vad-som-är-låst)
 4. [Arrangör, plats & kontakt](#arrangör-plats--kontakt)
-5. [Faciliteter & Logistik](#faciliteter--logistik)
-6. [PM - Viktig information](#pm---viktig-information)
-7. [Sponsorer & Partners](#sponsorer--partners)
-8. [Startlistor](#startlistor)
-9. [Rabattkoder](#rabattkoder)
-10. [Serier](#serier)
-11. [Ekonomi & Betalningar](#ekonomi--betalningar)
-12. [Mediabiblioteket](#mediabiblioteket)
-13. [Vanliga frågor](#vanliga-frågor)
+5. [Inbjudan & Tävlingsinfo](#inbjudan--tävlingsinfo)
+6. [Faciliteter & Logistik](#faciliteter--logistik)
+7. [PM - Tävlingsinformation](#pm---tävlingsinformation)
+8. [Sponsorer & Partners](#sponsorer--partners)
+9. [Startlistor](#startlistor)
+10. [Rabattkoder](#rabattkoder)
+11. [Serier](#serier)
+12. [Ekonomi & Betalningar](#ekonomi--betalningar)
+13. [Mediabiblioteket](#mediabiblioteket)
+14. [Vanliga frågor](#vanliga-frågor)
 
 ---
 
@@ -86,18 +87,21 @@ Som arrangör har du **full kontroll** över följande sektioner:
 | Sektion | Innehåll |
 |---------|----------|
 | **Arrangör, plats & rabatt** | Kontaktinfo, GPS, platsdetaljer, Gravity ID-rabatt |
-| **Faciliteter & Logistik** | 12 kategorier: parkering, mat, camping, toaletter m.m. |
-| **PM (Promemoria)** | Allmän info, anmälningsinfo, utrustning, säkerhet, övrigt |
+| **Inbjudan & Tävlingsinfo** | Inbjudningstext, generell info, regelverk, licenser, tävlingsklasser |
+| **Faciliteter & Logistik** | 11 kategorier: parkering, mat, hotell, toaletter m.m. |
+| **PM (Tävlingsinformation)** | 10 fält: förarmöte, träning, tidtagning, lift, regler, utrustning m.m. |
 | **Sponsorer & Partners** | Banner, logotyper, resultat-sponsor, samarbetspartners |
 
 ### Vad som är låst
 
-Två sektioner är **låsta** och kan bara ändras av administratören. De visas med en gul **"Låst"**-markering:
+Två sektioner är **låsta** och kan bara ändras av administratören. De visas med en **"Låst"**-markering:
 
 | Låst sektion | Innehåll |
 |-------------|----------|
-| **Grundläggande information** | Eventnamn, datum, plats, anmälningsdatum, max deltagare |
-| **Tävlingsinställningar** | Format, disciplin, serie, rankingklass, poängskala, klasser & priser |
+| **Grundläggande information** | Eventnamn, start-/slutdatum, eventtyp, logotyp, anmälningsdatum/-tid, max deltagare |
+| **Tävlingsinställningar** | Disciplin, serie, rankingklass, huvudformat, alla format, poängskala, prismall, distans, höjdmeter, sträcknamn |
+
+En tredje sektion - **Klasser och Startavgifter** - är helt dold för arrangörer och hanteras enbart av administratören.
 
 > **Behöver du ändra något i en låst sektion?** Kontakta administratören.
 
@@ -130,26 +134,51 @@ Den här sektionen innehåller tre grupper:
 
 ---
 
+## Inbjudan & Tävlingsinfo
+
+Inbjudan-sektionen innehåller övergripande information om tävlingen. Alla fält stödjer **global text** (standardtext från admin), **dölj**-funktion och **länkar**.
+
+### Tillgängliga fält
+
+| Fält | Ikon | Beskrivning |
+|------|------|-------------|
+| **Inbjudningstext** | scroll | Välkomsttext och inbjudan till tävlingen |
+| **Generell tävlingsinformation** | info | Övergripande info om tävlingsdagen, regler, upplägg |
+| **Regelverk** | book-open | Tävlingsregler. Tre val: egen text, sportMotion-regler eller Tävlingsregler (globala) |
+| **Licenser** | id-card | Information om licenskrav och licenstyper |
+| **Tävlingsklasser** | trophy | Beskrivning av klassindelning och villkor |
+
+### Regelverk - speciellt
+
+Regelverksfältet fungerar annorlunda än övriga fält. Istället för en enkel global-toggle har du tre val:
+
+- **Egen text** - Skriv eget regelverk
+- **sportMotion** - Använd sportMotions standardregelverk
+- **Tävling** - Använd tävlingsreglementet
+
+Alla fält stödjer **\*\*fetstil\*\*** och **\*kursiv\*** samt **länkar** (klicka "Lägg till länk").
+
+---
+
 ## Faciliteter & Logistik
 
 Här beskriver du all praktisk information för deltagarna. Varje kategori har ett textfält och möjlighet att lägga till länkar.
 
 ### Tillgängliga kategorier
 
-| Kategori | Ikon | Exempel på innehåll |
-|----------|------|---------------------|
-| **Vätskekontroller** | Droplets | Antal stationer, placering, vad som erbjuds |
-| **Toaletter** | Bath | Antal, typ (portabel/fast), placering |
-| **Cykeltvätt** | Wrench | Finns/finns inte, var, kostnad |
-| **Mat & dryck** | Utensils | Matförsäljning, öppettider, sortiment |
-| **Camping** | Tent | Campingmöjligheter, kostnad, faciliteter |
-| **Första hjälpen** | Heart Pulse | Sjukvård, ambulans, var den finns |
-| **Transportinfo** | Bus | Kollektivtrafik, skyttel, lyftinfo |
-| **Parkering** | Car | Parkeringsplatser, kostnad, avstånd |
-| **Åskådarinfo** | Users | Var man kan se tävlingen, bästa platser |
-| **Miljöinfo** | Leaf | Sophantering, miljöregler |
-| **Tillgänglighet** | Accessibility | Rullstolsanpassning, framkomlighet |
-| **Övriga faciliteter** | Settings | Garderob, dusch, wifi, laddstationer |
+| Kategori | Ikon | Beskrivning |
+|----------|------|-------------|
+| **Vätskekontroller** | droplet | Antal stationer, placering, vad som erbjuds |
+| **Toaletter/Dusch** | bath | Antal, typ (portabel/fast), placering, dusch |
+| **Cykeltvätt** | sparkles | Finns/finns inte, var, kostnad |
+| **Mat/Café** | utensils | Matförsäljning, öppettider, sortiment |
+| **Affärer** | store | Lokala butiker i närområdet |
+| **Utställare** | tent | Varumärken och utställare på plats |
+| **Parkering** | car | Parkeringsplatser, kostnad, avstånd |
+| **Hotell/Boende** | bed | Hotell, camping, boendealternativ |
+| **Lokal information** | info | Info om orten, besöksmål, service |
+| **Media** | camera | Media/film, kameror på banan |
+| **Kontakter** | phone | Kontaktuppgifter för event-teamet |
 
 ### Redigera en kategori
 
@@ -168,21 +197,26 @@ Behöver du inte en kategori? Markera **"Dölj"** så visas den inte alls på de
 
 ---
 
-## PM - Viktig information
+## PM - Tävlingsinformation
 
-PM-sektionen (Promemoria) innehåller viktig information som deltagare behöver inför tävlingen. Denna visas under en egen flik på den publika eventsidan.
+PM-sektionen (Promemoria) innehåller detaljerad tävlingsinformation som deltagare behöver inför tävlingen. Denna visas under en egen flik på den publika eventsidan.
 
 ### Tillgängliga fält
 
-| Fält | Beskrivning |
-|------|-------------|
-| **Allmän PM** | Generell information om tävlingsdagen |
-| **Anmälningsinfo** | Information om anmälan, incheckning, starttider |
-| **Utrustning** | Krav på utrustning, regler kring hjälm/skydd |
-| **Säkerhet** | Säkerhetsregler, farliga passager, första hjälpen |
-| **Övrig information** | Allt annat: priser, sociala media, efter-tävling |
+| Fält | Ikon | Beskrivning |
+|------|------|-------------|
+| **PM Huvudtext** | file-text | Övergripande PM/promemoria för tävlingen. Kan ha publiceringsdatum. |
+| **Förarmöte** | users | Tid, plats och agenda för förarmötet |
+| **Träning** | bike | Träningstider, banöppning, regler under träning |
+| **Tidtagning** | timer | Info om tidtagningssystem, transponder, brickhantering |
+| **Lift** | cable-car | Liftöppning, skytteltider, liftbiljetter |
+| **Tävlingsregler** | scroll-text | Specifika tävlingsregler och beteenderegler |
+| **Försäkring** | shield-check | Försäkringskrav, licensförsäkring, tilläggsförsäkring |
+| **Utrustning** | hard-hat | Krav på hjälm, skydd, cykelspecifikationer |
+| **Sjukvård** | heart-pulse | Sjukvårdsresurser, ambulans, sjukvårdsstationer |
+| **SCF Representanter** | badge-check | Tävlingsledare, jury, kommissarier |
 
-Alla fält stödjer **\*\*fetstil\*\*** och **\*kursiv\*** formatering samt **länkar**.
+Alla fält stödjer **\*\*fetstil\*\*** och **\*kursiv\*** formatering samt **länkar** (klicka "Lägg till länk").
 
 ---
 
@@ -278,7 +312,7 @@ Klicka på **Rabattkoder**-länken i ekonomi-fliken.
 
 ## Serier
 
-Under **Serier**-fliken ser du de serier som tilldelats dig.
+Under **Serier**-fliken ser du de serier som tilldelats dig. Klicka **Inställningar** på ett seriekort för att öppna serieinställningarna.
 
 ### Inställningar du kan ändra
 
@@ -286,10 +320,14 @@ Under **Serier**-fliken ser du de serier som tilldelats dig.
 |-------------|-------------|
 | **Tillåt serieanmälan** | Aktivera/inaktivera möjligheten att anmäla sig till hela serien |
 | **Serierabatt** | Procentuell rabatt vid serieanmälan (standard 15%) |
+| **Swish-nummer** | Swish-nummer för seriens betalningar |
+| **Swish-namn** | Betalningsmottagarens namn för Swish |
+
+Serie-sidan visar även alla event som ingår i serien med datum och plats.
 
 ### Vad som är låst
 
-Seriernas namn, år, logotyp, poängskalor och event-tillhörighet hanteras av administratören.
+Seriernas namn, år, logotyp, poängskalor, prismall och event-tillhörighet hanteras av administratören.
 
 ---
 
