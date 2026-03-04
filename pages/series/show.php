@@ -45,14 +45,10 @@ $clubChampionshipEnabled = !isset($series['enable_club_championship']) || !empty
 // Show actual standings only if both tab is shown AND championship is enabled
 $showClubChampionship = $showClubTab && $clubChampionshipEnabled;
 
-// Check series_events table + series_results data + DH mode in ONE query
-$useSeriesEvents = false;
+// series_events table always exists - no need for SHOW TABLES check
+$useSeriesEvents = true;
 $useSeriesResults = false;
 $isDHSeries = false;
-try {
-    $check = $pdo->query("SHOW TABLES LIKE 'series_events'");
-    $useSeriesEvents = $check->rowCount() > 0;
-} catch (Exception $e) {}
 try {
     $srCheck = $pdo->prepare("
         SELECT COUNT(*) as cnt,
@@ -66,28 +62,16 @@ try {
 } catch (Exception $e) {}
 
 // Get events in series (only needed columns, subquery for count to avoid GROUP BY)
-if ($useSeriesEvents) {
-    $stmt = $pdo->prepare("
-        SELECT e.id, e.name, e.date, e.location, e.is_championship,
-               v.name as venue_name, v.city as venue_city,
-               (SELECT COUNT(DISTINCT r.cyclist_id) FROM results r WHERE r.event_id = e.id) as result_count
-        FROM series_events se
-        JOIN events e ON se.event_id = e.id
-        LEFT JOIN venues v ON e.venue_id = v.id
-        WHERE se.series_id = ?
-        ORDER BY e.date ASC
-    ");
-} else {
-    $stmt = $pdo->prepare("
-        SELECT e.id, e.name, e.date, e.location, e.is_championship,
-               v.name as venue_name, v.city as venue_city,
-               (SELECT COUNT(DISTINCT r.cyclist_id) FROM results r WHERE r.event_id = e.id) as result_count
-        FROM events e
-        LEFT JOIN venues v ON e.venue_id = v.id
-        WHERE e.series_id = ?
-        ORDER BY e.date ASC
-    ");
-}
+$stmt = $pdo->prepare("
+    SELECT e.id, e.name, e.date, e.location, e.is_championship,
+           v.name as venue_name, v.city as venue_city,
+           (SELECT COUNT(DISTINCT r.cyclist_id) FROM results r WHERE r.event_id = e.id) as result_count
+    FROM series_events se
+    JOIN events e ON se.event_id = e.id
+    LEFT JOIN venues v ON e.venue_id = v.id
+    WHERE se.series_id = ?
+    ORDER BY e.date ASC
+");
 $stmt->execute([$seriesId]);
 $events = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
@@ -119,37 +103,20 @@ $hasAnySponsors = !empty($seriesSponsors['header']) || !empty($seriesSponsors['c
     || !empty($seriesSponsors['sidebar']) || !empty($seriesSponsors['partner']);
 
 // Get classes with results in this series (only point-awarding classes)
-if ($useSeriesEvents) {
-    $stmt = $pdo->prepare("
-        SELECT DISTINCT c.id, c.name, c.display_name, c.sort_order,
-               COUNT(DISTINCT r.cyclist_id) as rider_count
-        FROM classes c
-        JOIN results r ON c.id = r.class_id
-        JOIN series_events se ON r.event_id = se.event_id
-        WHERE se.series_id = ?
-          AND COALESCE(c.series_eligible, 1) = 1
-          AND COALESCE(c.awards_points, 1) = 1
-        GROUP BY c.id
-        ORDER BY c.sort_order ASC
-    ");
-    $stmt->execute([$seriesId]);
-    $classes = $stmt->fetchAll(PDO::FETCH_ASSOC);
-} else {
-    $stmt = $pdo->prepare("
-        SELECT DISTINCT c.id, c.name, c.display_name, c.sort_order,
-               COUNT(DISTINCT r.cyclist_id) as rider_count
-        FROM classes c
-        JOIN results r ON c.id = r.class_id
-        JOIN events e ON r.event_id = e.id
-        WHERE e.series_id = ?
-          AND COALESCE(c.series_eligible, 1) = 1
-          AND COALESCE(c.awards_points, 1) = 1
-        GROUP BY c.id
-        ORDER BY c.sort_order ASC
-    ");
-    $stmt->execute([$seriesId]);
-    $classes = $stmt->fetchAll(PDO::FETCH_ASSOC);
-}
+$stmt = $pdo->prepare("
+    SELECT DISTINCT c.id, c.name, c.display_name, c.sort_order,
+           COUNT(DISTINCT r.cyclist_id) as rider_count
+    FROM classes c
+    JOIN results r ON c.id = r.class_id
+    JOIN series_events se ON r.event_id = se.event_id
+    WHERE se.series_id = ?
+      AND COALESCE(c.series_eligible, 1) = 1
+      AND COALESCE(c.awards_points, 1) = 1
+    GROUP BY c.id
+    ORDER BY c.sort_order ASC
+");
+$stmt->execute([$seriesId]);
+$classes = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
 // Selected class filter
 $selectedClass = $_GET['class'] ?? 'all';

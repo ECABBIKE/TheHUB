@@ -100,14 +100,18 @@ $iconType = match($faviconExt) {
 <link rel="icon" type="<?= $iconType ?>" sizes="16x16" href="<?= htmlspecialchars($faviconPath) ?>">
 <link rel="icon" type="<?= $iconType ?>" href="<?= htmlspecialchars($faviconPath) ?>">
 
-<!-- Preconnect & Google Fonts (non-render-blocking with preload trick) -->
+<!-- Preconnect to external CDNs (reduces DNS+TLS latency by ~200-400ms) -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="preconnect" href="https://cdn.jsdelivr.net" crossorigin>
+<link rel="dns-prefetch" href="https://cloud.umami.is">
+
+<!-- Google Fonts (non-render-blocking with preload trick) -->
 <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Cabin+Condensed:wght@400;700&family=Manrope:wght@400;500;600;700&family=Oswald:wght@400;600;700&family=Roboto:wght@400;500&display=swap" onload="this.onload=null;this.rel='stylesheet'">
 <noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cabin+Condensed:wght@400;700&family=Manrope:wght@400;500;600;700&family=Oswald:wght@400;600;700&family=Roboto:wght@400;500&display=swap"></noscript>
 
-<!-- Lucide Icons - deferred to not block initial render -->
-<script defer src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
+<!-- Lucide Icons - deferred, jsdelivr CDN (faster than unpkg) -->
+<script defer src="https://cdn.jsdelivr.net/npm/lucide@0.460.0/dist/umd/lucide.min.js"></script>
 
 <!-- Chart.js - only loaded on pages that use charts (rider, club, analytics) -->
 <?php
@@ -127,21 +131,16 @@ if (in_array($currentPageId, $chartPages)):
 <?php
 $cssDir = __DIR__ . '/../assets/css/';
 $bundlePath = $cssDir . 'bundle.css';
-$cssVersion = function($file) use ($cssDir) {
-    $path = $cssDir . $file;
-    return file_exists($path) ? filemtime($path) : time();
-};
-// Auto-rebuild bundle if any source file is newer
-$sourceFiles = ['reset.css','tokens.css','theme.css','effects.css','layout.css','components.css','tables.css','utilities.css','badge-system.css','pwa.css','viewport.css'];
+// Bundle exists (rebuilt by Tools/rebuild-css-bundle.sh or deploy script)
+// Only check mtime of bundle itself - no per-file stat loop (saves 22 syscalls)
 $bundleMtime = file_exists($bundlePath) ? filemtime($bundlePath) : 0;
-$needsRebuild = false;
-foreach ($sourceFiles as $sf) {
-    if ($cssVersion($sf) > $bundleMtime) { $needsRebuild = true; break; }
-}
-if ($needsRebuild) {
+if (!$bundleMtime) {
+    // Auto-rebuild only if bundle is missing entirely
+    $sourceFiles = ['reset.css','tokens.css','theme.css','effects.css','layout.css','components.css','tables.css','utilities.css','badge-system.css','pwa.css','viewport.css'];
     $bundleContent = '';
     foreach ($sourceFiles as $sf) {
-        $bundleContent .= "/* === {$sf} === */\n" . file_get_contents($cssDir . $sf) . "\n";
+        $sfPath = $cssDir . $sf;
+        if (file_exists($sfPath)) $bundleContent .= "/* === {$sf} === */\n" . file_get_contents($sfPath) . "\n";
     }
     file_put_contents($bundlePath, $bundleContent);
     $bundleMtime = time();
