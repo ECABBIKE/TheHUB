@@ -53,6 +53,14 @@ if ($searchQuery) {
     $filters['search'] = $searchQuery;
 }
 
+if ($filterDiscipline) {
+    $filters['discipline'] = $filterDiscipline;
+}
+
+if ($filterType) {
+    $filters['type'] = $filterType;
+}
+
 // Get reports
 $result = $reportManager->listReports($filters);
 $reports = $result['reports'];
@@ -78,14 +86,32 @@ if ($page === 1 && !$filterTag && !$filterType && !$searchQuery) {
 // Get all tags for filter
 $allTags = $reportManager->getAllTags();
 
-// Get disciplines for filter
-$disciplines = [
-    'enduro' => ['name' => 'Enduro', 'color' => '#FFE009'],
-    'downhill' => ['name' => 'Downhill', 'color' => '#FF6B35'],
-    'xc' => ['name' => 'XC', 'color' => '#2E7D32'],
-    'gravel' => ['name' => 'Gravel', 'color' => '#795548'],
-    'dual' => ['name' => 'Dual Slalom', 'color' => '#E91E63']
-];
+// Get disciplines that actually have published reports (via events)
+$activeDisciplines = [];
+try {
+    $stmt = $pdo->query("
+        SELECT DISTINCT e.discipline
+        FROM race_reports rr
+        INNER JOIN events e ON rr.event_id = e.id
+        WHERE rr.status = 'published' AND e.discipline IS NOT NULL AND e.discipline != ''
+        ORDER BY e.discipline
+    ");
+    $disciplineNames = [
+        'enduro' => 'Enduro',
+        'downhill' => 'Downhill',
+        'xc' => 'XC',
+        'gravel' => 'Gravel',
+        'dual' => 'Dual Slalom',
+        'road' => 'Landsväg',
+        'mtb' => 'MTB'
+    ];
+    while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+        $slug = strtolower($row['discipline']);
+        $activeDisciplines[$slug] = $disciplineNames[$slug] ?? ucfirst($slug);
+    }
+} catch (Exception $e) {
+    // Ignore
+}
 
 // Get recent events for sidebar
 $recentEvents = [];
@@ -135,8 +161,8 @@ $currentUser = function_exists('hub_current_user') ? hub_current_user() : null;
                 <label class="filter-label">Disciplin</label>
                 <select name="discipline" class="filter-select" onchange="this.form.submit()">
                     <option value="">Alla discipliner</option>
-                    <?php foreach ($disciplines as $slug => $disc): ?>
-                    <option value="<?= $slug ?>" <?= $filterDiscipline === $slug ? 'selected' : '' ?>><?= htmlspecialchars($disc['name']) ?></option>
+                    <?php foreach ($activeDisciplines as $slug => $name): ?>
+                    <option value="<?= $slug ?>" <?= $filterDiscipline === $slug ? 'selected' : '' ?>><?= htmlspecialchars($name) ?></option>
                     <?php endforeach; ?>
                 </select>
             </div>
@@ -144,9 +170,15 @@ $currentUser = function_exists('hub_current_user') ? hub_current_user() : null;
                 <label class="filter-label">Typ</label>
                 <select name="type" class="filter-select" onchange="this.form.submit()">
                     <option value="">Alla typer</option>
-                    <option value="photo_gallery" <?= $filterType === 'photo_gallery' ? 'selected' : '' ?>>Foton</option>
-                    <option value="video" <?= $filterType === 'video' ? 'selected' : '' ?>>Videos</option>
+                    <option value="race_report" <?= $filterType === 'race_report' ? 'selected' : '' ?>>Race reportage</option>
+                    <option value="photo_gallery" <?= $filterType === 'photo_gallery' ? 'selected' : '' ?>>Galleri</option>
+                    <option value="video" <?= $filterType === 'video' ? 'selected' : '' ?>>Video</option>
                 </select>
+            </div>
+        </div>
+        <div class="gallery-filters-actions">
+            <div class="filter-search-wrapper">
+                <input type="text" name="q" class="filter-input" placeholder="Sök nyheter..." value="<?= htmlspecialchars($searchQuery) ?>">
             </div>
             <div class="filter-select-wrapper">
                 <label class="filter-label">Sortera</label>
@@ -155,11 +187,6 @@ $currentUser = function_exists('hub_current_user') ? hub_current_user() : null;
                     <option value="popular" <?= $sortBy === 'popular' ? 'selected' : '' ?>>Mest lästa</option>
                     <option value="liked" <?= $sortBy === 'liked' ? 'selected' : '' ?>>Mest gillade</option>
                 </select>
-            </div>
-        </div>
-        <div class="gallery-filters-actions">
-            <div class="filter-search-wrapper">
-                <input type="text" name="q" class="filter-input" placeholder="Sök nyheter..." value="<?= htmlspecialchars($searchQuery) ?>">
             </div>
             <button type="submit" class="btn btn-primary filter-btn">
                 <i data-lucide="search" style="width: 16px; height: 16px;"></i> Sök
