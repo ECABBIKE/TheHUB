@@ -174,30 +174,28 @@ if (!function_exists('hub_is_logged_in')) {
      * Check if user is logged in (via WooCommerce/WordPress or session)
      */
     function hub_is_logged_in(): bool {
+        static $_cached = null;
+        if ($_cached !== null) return $_cached;
+
         if (function_exists('is_user_logged_in')) {
-            return is_user_logged_in();
+            return $_cached = is_user_logged_in();
         }
-        // Check admin login (from includes/auth.php)
         if (isset($_SESSION['admin_logged_in']) && $_SESSION['admin_logged_in'] === true) {
-            return true;
+            return $_cached = true;
         }
-        // Check if login timestamp exists (set on successful login)
         if (isset($_SESSION['hub_logged_in_at']) && $_SESSION['hub_logged_in_at'] > 0) {
-            return true;
+            return $_cached = true;
         }
-        // Check V3 session (rider id >= 0, 0 = admin fallback)
         if (isset($_SESSION['hub_user_id']) && is_numeric($_SESSION['hub_user_id'])) {
-            return true;
+            return $_cached = true;
         }
-        // Check V2 rider session (backwards compatibility)
         if (isset($_SESSION['rider_id']) && $_SESSION['rider_id'] > 0) {
-            return true;
+            return $_cached = true;
         }
-        // Check for "remember me" token and auto-login
         if (function_exists('rider_check_remember_token') && rider_check_remember_token()) {
-            return true;
+            return $_cached = true;
         }
-        return false;
+        return $_cached = false;
     }
 }
 

@@ -4,6 +4,28 @@
 
 ---
 
+## SENASTE FIXAR (2026-03-04, session 26)
+
+### Prestandaoptimering fas 3 - Caching och render-blocking
+- **hub_current_user() cachad:** Anropades 2-3 gånger per sida med DB-lookup (SELECT * FROM riders) varje gång. Nu cachad med static variabel via _hub_current_user_uncached() wrapper.
+- **hub_is_logged_in() cachad:** Anropades från header.php + hub_current_user() + diverse. rider_check_remember_token() gjorde DB-query. Nu cachad med static.
+- **render_global_sponsors() cachad:** Settings-query (sponsor_settings) kördes 3 gånger per sida (en per position). Nu cachad med static per request.
+- **GlobalSponsorManager batch-laddar:** getSponsorsForPlacement() körde EN SQL-query (4 JOINs) per position × 3 positioner per sida = 3 tunga queries. Nu laddar ALLA placements för en page_type i EN query, grupperar i PHP.
+- **Impression tracking borttagen från render:** trackImpression() gjorde UPDATE + INSERT per sponsor per sidladdning = 6-9 WRITE-queries per sida. Helt onödigt synkront. Borttagen.
+- **render_global_sponsors() dubbelarbete fixat:** Anropade getSponsorsForPlacement() och sedan renderSection() som anropade getSponsorsForPlacement() IGEN. Renderar nu direkt.
+- **Variabelnamn-bugg fixad:** render_global_sponsors() använde `$sponsorManager` (undefined) istf `$_sponsorManagerInstance`.
+- **Google Fonts icke-blockerande:** Ändrad från render-blocking `<link rel="stylesheet">` till `<link rel="preload" as="style" onload>`. Reducerade font-vikter från 16 till 10 (tog bort oanvända).
+- **Timing-kommentar:** HTML-kommentar längst ner i sidkällan visar config/router/page/total ms.
+
+### Filer ändrade
+- **`hub-config.php`** - hub_current_user() + hub_is_logged_in() cachade
+- **`includes/helpers.php`** - render_global_sponsors() cachad + direkt-rendering
+- **`includes/GlobalSponsorManager.php`** - Batch-ladda placements, impression tracking borttagen
+- **`components/head.php`** - Google Fonts preload, reducerade vikter
+- **`index.php`** - Timing-instrumentering
+
+---
+
 ## SENASTE FIXAR (2026-03-04, session 25)
 
 ### KRITISK: PHP Session Locking fixad
