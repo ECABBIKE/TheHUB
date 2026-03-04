@@ -4,6 +4,17 @@
 
 ---
 
+## SENASTE FIXAR (2026-03-04, session 29)
+
+### Promotor event-tilldelning: Tabellerna saknades i databasen
+- **Problem:** Kunde inte lägga till event till promotorer - INSERT misslyckades tyst
+- **Orsak:** `promotor_events` och `promotor_series`-tabellerna hade aldrig skapats. Migrationsfilen låg arkiverad i `/database/migrations/_archive/068_create_promotor_events_table.sql` men fanns inte i aktiva `/Tools/migrations/`
+- **Fix:** Ny migration `073_promotor_events_tables.sql` skapad i `/Tools/migrations/` med båda tabellerna
+- **Registrering:** Migrationen registrerad i `admin/migrations.php` med `$migrationChecks`
+- **VIKTIGT:** Kör migrationen via `/admin/migrations.php` för att skapa tabellerna
+
+---
+
 ## SENASTE FIXAR (2026-03-04, session 28)
 
 ### Serietabeller: Identisk bredd på ALLA klasser (mobil + desktop)
