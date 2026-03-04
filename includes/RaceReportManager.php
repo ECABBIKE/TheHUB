@@ -348,8 +348,31 @@ class RaceReportManager {
 
             $reports = [];
             while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-                $row['tags'] = $this->getReportTags($row['id']);
                 $reports[] = $row;
+            }
+
+            // Bulk-ladda taggar för alla rapporter (eliminerar N+1)
+            if (!empty($reports)) {
+                $reportIds = array_column($reports, 'id');
+                $placeholders = implode(',', array_fill(0, count($reportIds), '?'));
+                $tagStmt = $this->pdo->prepare("
+                    SELECT rrtr.report_id, rrt.*
+                    FROM race_report_tags rrt
+                    INNER JOIN race_report_tag_relations rrtr ON rrt.id = rrtr.tag_id
+                    WHERE rrtr.report_id IN ({$placeholders})
+                    ORDER BY rrt.name
+                ");
+                $tagStmt->execute($reportIds);
+                $tagsMap = [];
+                while ($tagRow = $tagStmt->fetch(PDO::FETCH_ASSOC)) {
+                    $rid = $tagRow['report_id'];
+                    unset($tagRow['report_id']);
+                    $tagsMap[$rid][] = $tagRow;
+                }
+                foreach ($reports as &$r) {
+                    $r['tags'] = $tagsMap[$r['id']] ?? [];
+                }
+                unset($r);
             }
 
             // Räkna total (inkludera JOINs om WHERE refererar till dem)

@@ -23,8 +23,7 @@ $riderCount = 0;
 $clubCount = 0;
 $eventCount = 0;
 $seriesCount = 0;
-$upcomingEnduro = [];
-$upcomingDH = [];
+$upcomingEvents = [];
 $recentResults = [];
 
 // Load filter setting from database (batch-loaded, no extra query)
@@ -79,22 +78,15 @@ try {
         ]));
     }
 
-    // Upcoming events - both disciplines in ONE query
-    $upcomingAll = $pdo->query("
+    // Upcoming events - next 3 regardless of discipline
+    $upcomingEvents = $pdo->query("
         SELECT e.id, e.name, e.date, e.location, e.discipline, s.name as series_name
         FROM events e
         LEFT JOIN series s ON e.series_id = s.id
-        WHERE e.date >= CURDATE() AND e.active = 1 AND e.discipline IN ('ENDURO', 'DH')
-        ORDER BY e.discipline, e.date ASC
-        LIMIT 6
+        WHERE e.date >= CURDATE() AND e.active = 1
+        ORDER BY e.date ASC
+        LIMIT 3
     ")->fetchAll(PDO::FETCH_ASSOC);
-    foreach ($upcomingAll as $ev) {
-        if ($ev['discipline'] === 'ENDURO' && count($upcomingEnduro) < 3) {
-            $upcomingEnduro[] = $ev;
-        } elseif ($ev['discipline'] === 'DH' && count($upcomingDH) < 3) {
-            $upcomingDH[] = $ev;
-        }
-    }
 
     // Recent results (events with results from last 30 days)
     $recentResults = $pdo->query("
@@ -211,76 +203,54 @@ $homepageLogo = getBranding('logos.homepage');
         <?php endif; ?>
     </div>
 
-    <?php if (!empty($upcomingEnduro) || !empty($upcomingDH)): ?>
-    <!-- Upcoming Events - Two Columns -->
-    <div class="welcome-upcoming-grid">
-        <?php if (!empty($upcomingEnduro)): ?>
-        <div class="welcome-section">
-            <h2 class="welcome-section-title">
-                <?= hub_icon('mountain', 'section-icon') ?>
-                Kommande Enduro
-            </h2>
-            <div class="welcome-event-list">
-                <?php foreach ($upcomingEnduro as $event): ?>
-                <a href="/calendar/<?= $event['id'] ?>" class="welcome-event-item">
-                    <div class="event-date-badge event-date-badge--enduro">
-                        <span class="event-day"><?= date('j', strtotime($event['date'])) ?></span>
-                        <span class="event-month"><?= date('M', strtotime($event['date'])) ?></span>
-                    </div>
-                    <div class="event-info">
-                        <h4><?= htmlspecialchars($event['name']) ?></h4>
-                        <p>
-                            <?php if ($event['series_name']): ?>
-                                <span class="event-series"><?= htmlspecialchars($event['series_name']) ?></span>
-                            <?php endif; ?>
-                            <?php if ($event['location']): ?>
-                                <span class="event-location"><?= hub_icon('map-pin', 'icon-xs') ?> <?= htmlspecialchars($event['location']) ?></span>
-                            <?php endif; ?>
-                        </p>
-                    </div>
-                    <?= hub_icon('chevron-right', 'event-arrow') ?>
-                </a>
-                <?php endforeach; ?>
-            </div>
-            <a href="/calendar?discipline=ENDURO" class="welcome-more-link">
-                Visa alla Enduro <?= hub_icon('arrow-right', 'icon-sm') ?>
+    <?php if (!empty($upcomingEvents)): ?>
+    <!-- Upcoming Events - 3 cards in a row -->
+    <div class="welcome-section">
+        <h2 class="welcome-section-title">
+            <?= hub_icon('calendar', 'section-icon') ?>
+            Kommande tävlingar
+        </h2>
+        <div class="welcome-upcoming-cards">
+            <?php
+            $disciplineBadgeClass = [
+                'ENDURO' => 'event-date-badge--enduro',
+                'DH' => 'event-date-badge--dh',
+            ];
+            $disciplineLabels = [
+                'ENDURO' => 'Enduro',
+                'DH' => 'Downhill',
+                'XC' => 'XC',
+                'GRAVEL' => 'Gravel',
+            ];
+            foreach ($upcomingEvents as $event):
+                $badgeClass = $disciplineBadgeClass[$event['discipline']] ?? '';
+                $discLabel = $disciplineLabels[$event['discipline']] ?? $event['discipline'];
+            ?>
+            <a href="/calendar/<?= $event['id'] ?>" class="welcome-upcoming-card">
+                <div class="event-date-badge <?= $badgeClass ?>">
+                    <span class="event-day"><?= date('j', strtotime($event['date'])) ?></span>
+                    <span class="event-month"><?= date('M', strtotime($event['date'])) ?></span>
+                </div>
+                <div class="event-info">
+                    <h4><?= htmlspecialchars($event['name']) ?></h4>
+                    <p>
+                        <?php if ($event['discipline']): ?>
+                            <span class="event-discipline"><?= htmlspecialchars($discLabel) ?></span>
+                        <?php endif; ?>
+                        <?php if ($event['series_name']): ?>
+                            <span class="event-series"><?= htmlspecialchars($event['series_name']) ?></span>
+                        <?php endif; ?>
+                    </p>
+                    <?php if ($event['location']): ?>
+                    <p class="event-location"><?= hub_icon('map-pin', 'icon-xs') ?> <?= htmlspecialchars($event['location']) ?></p>
+                    <?php endif; ?>
+                </div>
             </a>
+            <?php endforeach; ?>
         </div>
-        <?php endif; ?>
-
-        <?php if (!empty($upcomingDH)): ?>
-        <div class="welcome-section">
-            <h2 class="welcome-section-title">
-                <?= hub_icon('arrow-down', 'section-icon') ?>
-                Kommande Downhill
-            </h2>
-            <div class="welcome-event-list">
-                <?php foreach ($upcomingDH as $event): ?>
-                <a href="/calendar/<?= $event['id'] ?>" class="welcome-event-item">
-                    <div class="event-date-badge event-date-badge--dh">
-                        <span class="event-day"><?= date('j', strtotime($event['date'])) ?></span>
-                        <span class="event-month"><?= date('M', strtotime($event['date'])) ?></span>
-                    </div>
-                    <div class="event-info">
-                        <h4><?= htmlspecialchars($event['name']) ?></h4>
-                        <p>
-                            <?php if ($event['series_name']): ?>
-                                <span class="event-series"><?= htmlspecialchars($event['series_name']) ?></span>
-                            <?php endif; ?>
-                            <?php if ($event['location']): ?>
-                                <span class="event-location"><?= hub_icon('map-pin', 'icon-xs') ?> <?= htmlspecialchars($event['location']) ?></span>
-                            <?php endif; ?>
-                        </p>
-                    </div>
-                    <?= hub_icon('chevron-right', 'event-arrow') ?>
-                </a>
-                <?php endforeach; ?>
-            </div>
-            <a href="/calendar?discipline=DH" class="welcome-more-link">
-                Visa alla Downhill <?= hub_icon('arrow-right', 'icon-sm') ?>
-            </a>
-        </div>
-        <?php endif; ?>
+        <a href="/calendar" class="welcome-more-link">
+            Visa hela kalendern <?= hub_icon('arrow-right', 'icon-sm') ?>
+        </a>
     </div>
     <?php endif; ?>
 
