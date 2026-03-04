@@ -27,53 +27,74 @@ $upcomingEnduro = [];
 $upcomingDH = [];
 $recentResults = [];
 
-// Load filter setting from admin configuration
-$publicSettings = @include(HUB_ROOT . '/config/public_settings.php');
-$filter = $publicSettings['public_riders_display'] ?? 'all';
+// Load filter setting from database (batch-loaded, no extra query)
+$filter = site_setting('public_riders_display', 'with_results');
 
-// Get current statistics in one query
-try {
-    if ($filter === 'with_results') {
-        $countsRow = $pdo->query("
-            SELECT
-                (SELECT COUNT(DISTINCT r.id) FROM riders r INNER JOIN results res ON r.id = res.cyclist_id) as rider_count,
-                (SELECT COUNT(DISTINCT c.id) FROM clubs c INNER JOIN riders r ON c.id = r.club_id INNER JOIN results res ON r.id = res.cyclist_id) as club_count,
-                (SELECT COUNT(DISTINCT e.id) FROM events e INNER JOIN results r ON e.id = r.event_id) as event_count,
-                (SELECT COUNT(*) FROM series WHERE status = 'active') as series_count
-        ")->fetch(PDO::FETCH_ASSOC);
-    } else {
-        $countsRow = $pdo->query("
-            SELECT
-                (SELECT COUNT(*) FROM riders WHERE active = 1) as rider_count,
-                (SELECT COUNT(*) FROM clubs) as club_count,
-                (SELECT COUNT(DISTINCT e.id) FROM events e INNER JOIN results r ON e.id = r.event_id) as event_count,
-                (SELECT COUNT(*) FROM series WHERE status = 'active') as series_count
-        ")->fetch(PDO::FETCH_ASSOC);
+// Get current statistics - cached in file for 1 hour (expensive COUNT queries)
+$cacheFile = HUB_ROOT . '/.welcome-stats-cache.json';
+$cacheMaxAge = 3600; // 1 hour
+$statsFromCache = false;
+
+if (file_exists($cacheFile) && (time() - filemtime($cacheFile)) < $cacheMaxAge) {
+    $cached = json_decode(file_get_contents($cacheFile), true);
+    if ($cached) {
+        $riderCount = $cached['rider_count'] ?? 0;
+        $clubCount = $cached['club_count'] ?? 0;
+        $eventCount = $cached['event_count'] ?? 0;
+        $seriesCount = $cached['series_count'] ?? 0;
+        $statsFromCache = true;
     }
-    $riderCount = $countsRow['rider_count'];
-    $clubCount = $countsRow['club_count'];
-    $eventCount = $countsRow['event_count'];
-    $seriesCount = $countsRow['series_count'];
+}
 
-    // Upcoming Enduro events
-    $upcomingEnduro = $pdo->query("
-        SELECT e.id, e.name, e.date, e.location, s.name as series_name
+try {
+    if (!$statsFromCache) {
+        if ($filter === 'with_results') {
+            $countsRow = $pdo->query("
+                SELECT
+                    (SELECT COUNT(DISTINCT r.id) FROM riders r INNER JOIN results res ON r.id = res.cyclist_id) as rider_count,
+                    (SELECT COUNT(DISTINCT c.id) FROM clubs c INNER JOIN riders r ON c.id = r.club_id INNER JOIN results res ON r.id = res.cyclist_id) as club_count,
+                    (SELECT COUNT(DISTINCT e.id) FROM events e INNER JOIN results r ON e.id = r.event_id) as event_count,
+                    (SELECT COUNT(*) FROM series WHERE status = 'active') as series_count
+            ")->fetch(PDO::FETCH_ASSOC);
+        } else {
+            $countsRow = $pdo->query("
+                SELECT
+                    (SELECT COUNT(*) FROM riders WHERE active = 1) as rider_count,
+                    (SELECT COUNT(*) FROM clubs) as club_count,
+                    (SELECT COUNT(DISTINCT e.id) FROM events e INNER JOIN results r ON e.id = r.event_id) as event_count,
+                    (SELECT COUNT(*) FROM series WHERE status = 'active') as series_count
+            ")->fetch(PDO::FETCH_ASSOC);
+        }
+        $riderCount = $countsRow['rider_count'];
+        $clubCount = $countsRow['club_count'];
+        $eventCount = $countsRow['event_count'];
+        $seriesCount = $countsRow['series_count'];
+
+        // Cache stats to file
+        @file_put_contents($cacheFile, json_encode([
+            'rider_count' => $riderCount,
+            'club_count' => $clubCount,
+            'event_count' => $eventCount,
+            'series_count' => $seriesCount,
+        ]));
+    }
+
+    // Upcoming events - both disciplines in ONE query
+    $upcomingAll = $pdo->query("
+        SELECT e.id, e.name, e.date, e.location, e.discipline, s.name as series_name
         FROM events e
         LEFT JOIN series s ON e.series_id = s.id
-        WHERE e.date >= CURDATE() AND e.active = 1 AND e.discipline = 'ENDURO'
-        ORDER BY e.date ASC
-        LIMIT 3
+        WHERE e.date >= CURDATE() AND e.active = 1 AND e.discipline IN ('ENDURO', 'DH')
+        ORDER BY e.discipline, e.date ASC
+        LIMIT 6
     ")->fetchAll(PDO::FETCH_ASSOC);
-
-    // Upcoming Downhill events
-    $upcomingDH = $pdo->query("
-        SELECT e.id, e.name, e.date, e.location, s.name as series_name
-        FROM events e
-        LEFT JOIN series s ON e.series_id = s.id
-        WHERE e.date >= CURDATE() AND e.active = 1 AND e.discipline = 'DH'
-        ORDER BY e.date ASC
-        LIMIT 3
-    ")->fetchAll(PDO::FETCH_ASSOC);
+    foreach ($upcomingAll as $ev) {
+        if ($ev['discipline'] === 'ENDURO' && count($upcomingEnduro) < 3) {
+            $upcomingEnduro[] = $ev;
+        } elseif ($ev['discipline'] === 'DH' && count($upcomingDH) < 3) {
+            $upcomingDH[] = $ev;
+        }
+    }
 
     // Recent results (events with results from last 30 days)
     $recentResults = $pdo->query("
