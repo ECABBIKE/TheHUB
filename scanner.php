@@ -1,71 +1,53 @@
 <?php
 /**
- * ARCHITECTURE BLUEPRINT SCANNER
- * Detta script skannar din struktur för att ge en AI en överblick av mönster.
- * Det läser INTE bilder, tunga bibliotek eller känslig data i .env.
+ * PERFORMANCE AUDITOR - Summary Version
+ * Körs på servern och hittar de 10 största problemen.
  */
-
 header('Content-Type: text/plain; charset=utf-8');
+echo "=== SNABB-AUDIT: THE HUB ===\n\n";
 
-$root = __DIR__;
-$ignoreDirs = ['node_modules', 'vendor', '.git', 'uploads', 'cache', 'images', 'assets'];
-$importantFiles = ['index.php', '.htaccess', 'wp-config.php', 'functions.php', 'router.php'];
-$extensionsToRead = ['php', 'sql', 'json'];
+// 1. KOLLA PHP & SERVER
+echo "1. SERVER-INFO:\n";
+echo "- PHP Version: " . PHP_VERSION . "\n";
+echo "- Memory Limit: " . ini_get('memory_limit') . "\n";
+echo "- OPcache aktivt: " . (function_exists('opcache_get_status') && opcache_get_status() ? "JA" : "NEJ") . "\n\n";
 
-echo "=== SYSTEM BLUEPRINT START ===\n";
-echo "Root Directory: " . $root . "\n\n";
-
-// 1. GENERERA MAPPTRAID (FILSTRUKTUR)
-echo "--- FILSTRUKTUR ---\n";
-$iter = new RecursiveIteratorIterator(
-    new RecursiveDirectoryIterator($root, RecursiveDirectoryIterator::SKIP_DOTS),
-    RecursiveIteratorIterator::SELF_FIRST
-);
-$iter->setMaxDepth(3); // Vi kollar 3 nivåer djupt för att se mönstret
-
-foreach ($iter as $path) {
-    $relativePath = str_replace($root, '', $path);
-    $skip = false;
-    foreach ($ignoreDirs as $ignore) {
-        if (strpos($relativePath, DIRECTORY_SEPARATOR . $ignore) !== false) {
-            $skip = true;
-            break;
-        }
-    }
-    if (!$skip) {
-        echo str_repeat("  ", $iter->getDepth()) . ($path->isDir() ? "[D] " : "[F] ") . basename($path) . "\n";
-    }
-}
-
-echo "\n--- KÄRNLOGIK (FILINNEHÅLL) ---\n";
-
-// 2. LÄS VIKTIGA FILER
-foreach ($iter as $path) {
-    if ($path->isDir()) continue;
+// 2. KOLLA DATABAS-BELASTNING (OM WP FINNS)
+if (file_exists('wp-config.php')) {
+    echo "2. DATABAS-STATUS (WordPress):\n";
+    include 'wp-config.php';
+    $conn = new mysqli(DB_HOST, DB_USER, DB_PASSWORD, DB_NAME);
     
-    $filename = basename($path);
-    $ext = pathinfo($filename, PATHINFO_EXTENSION);
-    $relativePath = str_replace($root, '', $path);
-
-    // Vi läser bara filer som sannolikt innehåller arkitekturmönster
-    $isCoreFile = in_array($filename, $importantFiles);
-    $isSmallLogic = (in_array($ext, $extensionsToRead) && $path->getSize() < 50000); // Max 50KB
-
-    if ($isCoreFile || $isSmallLogic) {
-        // Hoppa över bibliotek/tredjepart
-        foreach ($ignoreDirs as $ignore) {
-            if (strpos($relativePath, DIRECTORY_SEPARATOR . $ignore) !== false) continue 2;
+    // Kolla storlek på wp_options (vanligaste flaskhalsen)
+    $res = $conn->query("SELECT SUM(LENGTH(option_value)) as size FROM wp_options WHERE autoload = 'yes'");
+    $row = $res->fetch_assoc();
+    echo "- Autoloaded options storlek: " . round($row['size'] / 1024 / 1024, 2) . " MB (Bör vara < 1MB)\n";
+    
+    // Kolla antal rader i tunga tabeller
+    $tables = ['wp_posts', 'wp_postmeta', 'wp_users', 'user_registration_sessions']; // Lägg till egna tabeller här
+    foreach ($tables as $t) {
+        $r = $conn->query("SHOW TABLES LIKE '$t'");
+        if ($r->num_rows > 0) {
+            $count = $conn->query("SELECT COUNT(*) as c FROM $t")->fetch_assoc();
+            echo "- Tabell $t: " . $count['c'] . " rader\n";
         }
-
-        echo "\nFILE: " . $relativePath . "\n";
-        echo "------------------------------------------\n";
-        $content = file_get_contents($path);
-        // Ta bort kommentarer för att spara plats om det behövs, 
-        // men här behåller vi dem för att se logiken.
-        echo substr($content, 0, 5000); // Vi tar de första 5000 tecknen
-        echo "\n[...]\n";
     }
 }
 
-echo "\n=== SYSTEM BLUEPRINT END ===\n";
+// 3. Hitta den tyngsta filen i din källkod
+echo "\n3. TYNGSTA KODFILER (Top 5):\n";
+$root = __DIR__;
+$files = new RecursiveIteratorIterator(new RecursiveDirectoryIterator($root));
+$fileList = [];
+foreach ($files as $file) {
+    if ($file->getExtension() == 'php' && strpos($file->getPath(), 'vendor') === false) {
+        $fileList[$file->getPathname()] = $file->getSize();
+    }
+}
+arsort($fileList);
+foreach (array_slice($fileList, 0, 5) as $path => $size) {
+    echo "- " . basename($path) . " (" . round($size / 1024, 1) . " KB)\n";
+}
+
+echo "\n=== AUDIT KLAR ===\n";
 
