@@ -703,6 +703,7 @@
     width: 100%;
     border-collapse: collapse;
     table-layout: fixed;
+    min-width: 400px; /* Ensures consistent minimum width across all class tables */
 }
 
 /* Clean table styling - matching database/ranking pages */
@@ -826,17 +827,19 @@ td.col-place {
 .results-table th.col-gap,
 .results-table td.col-gap { width: 70px !important; min-width: 70px; max-width: 70px; }
 
-.results-table th.col-split {
+.results-table th.col-split,
+.results-table td.col-split {
     width: 85px !important;
-    min-width: 70px;
-    max-width: 100px;
+    min-width: 85px;
+    max-width: 85px;
+}
+.results-table th.col-split {
     white-space: normal !important;
     word-break: break-word;
     line-height: 1.2;
     font-size: var(--text-xs);
     padding: 4px 6px !important;
 }
-.results-table td.col-split { width: 85px !important; min-width: 85px; max-width: 85px; }
 
 .col-time {
     width: 75px;
