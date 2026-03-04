@@ -123,25 +123,31 @@ if (in_array($currentPageId, $chartPages)):
 
 <title><?= htmlspecialchars($pageTitle) ?></title>
 
-<!-- CSS with cache busting (filemtime) -->
+<!-- CSS Bundle (11 files merged into 1 = 10 fewer HTTP requests) -->
 <?php
 $cssDir = __DIR__ . '/../assets/css/';
+$bundlePath = $cssDir . 'bundle.css';
 $cssVersion = function($file) use ($cssDir) {
     $path = $cssDir . $file;
     return file_exists($path) ? filemtime($path) : time();
 };
+// Auto-rebuild bundle if any source file is newer
+$sourceFiles = ['reset.css','tokens.css','theme.css','effects.css','layout.css','components.css','tables.css','utilities.css','badge-system.css','pwa.css','viewport.css'];
+$bundleMtime = file_exists($bundlePath) ? filemtime($bundlePath) : 0;
+$needsRebuild = false;
+foreach ($sourceFiles as $sf) {
+    if ($cssVersion($sf) > $bundleMtime) { $needsRebuild = true; break; }
+}
+if ($needsRebuild) {
+    $bundleContent = '';
+    foreach ($sourceFiles as $sf) {
+        $bundleContent .= "/* === {$sf} === */\n" . file_get_contents($cssDir . $sf) . "\n";
+    }
+    file_put_contents($bundlePath, $bundleContent);
+    $bundleMtime = time();
+}
 ?>
-<link rel="stylesheet" href="<?= hub_asset('css/reset.css') ?>?v=<?= $cssVersion('reset.css') ?>">
-<link rel="stylesheet" href="<?= hub_asset('css/tokens.css') ?>?v=<?= $cssVersion('tokens.css') ?>">
-<link rel="stylesheet" href="<?= hub_asset('css/theme.css') ?>?v=<?= $cssVersion('theme.css') ?>">
-<link rel="stylesheet" href="<?= hub_asset('css/effects.css') ?>?v=<?= $cssVersion('effects.css') ?>">
-<link rel="stylesheet" href="<?= hub_asset('css/layout.css') ?>?v=<?= $cssVersion('layout.css') ?>">
-<link rel="stylesheet" href="<?= hub_asset('css/components.css') ?>?v=<?= $cssVersion('components.css') ?>">
-<link rel="stylesheet" href="<?= hub_asset('css/tables.css') ?>?v=<?= $cssVersion('tables.css') ?>">
-<link rel="stylesheet" href="<?= hub_asset('css/utilities.css') ?>?v=<?= $cssVersion('utilities.css') ?>">
-<link rel="stylesheet" href="<?= hub_asset('css/badge-system.css') ?>?v=<?= $cssVersion('badge-system.css') ?>">
-<link rel="stylesheet" href="<?= hub_asset('css/pwa.css') ?>?v=<?= $cssVersion('pwa.css') ?>">
-<link rel="stylesheet" href="<?= hub_asset('css/viewport.css') ?>?v=<?= $cssVersion('viewport.css') ?>">
+<link rel="stylesheet" href="<?= hub_asset('css/bundle.css') ?>?v=<?= $bundleMtime ?>">
 
 <!-- Page-Specific CSS (loaded conditionally based on current page) -->
 <?php
