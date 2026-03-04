@@ -31,36 +31,29 @@ $recentResults = [];
 $publicSettings = @include(HUB_ROOT . '/config/public_settings.php');
 $filter = $publicSettings['public_riders_display'] ?? 'all';
 
-// Get current statistics
+// Get current statistics in one query
 try {
-    // Total riders - respects admin filter setting
     if ($filter === 'with_results') {
-        $riderCount = $pdo->query("
-            SELECT COUNT(DISTINCT r.id)
-            FROM riders r
-            INNER JOIN results res ON r.id = res.cyclist_id
-        ")->fetchColumn();
-
-        $clubCount = $pdo->query("
-            SELECT COUNT(DISTINCT c.id)
-            FROM clubs c
-            INNER JOIN riders r ON c.id = r.club_id
-            INNER JOIN results res ON r.id = res.cyclist_id
-        ")->fetchColumn();
+        $countsRow = $pdo->query("
+            SELECT
+                (SELECT COUNT(DISTINCT r.id) FROM riders r INNER JOIN results res ON r.id = res.cyclist_id) as rider_count,
+                (SELECT COUNT(DISTINCT c.id) FROM clubs c INNER JOIN riders r ON c.id = r.club_id INNER JOIN results res ON r.id = res.cyclist_id) as club_count,
+                (SELECT COUNT(DISTINCT e.id) FROM events e INNER JOIN results r ON e.id = r.event_id) as event_count,
+                (SELECT COUNT(*) FROM series WHERE status = 'active') as series_count
+        ")->fetch(PDO::FETCH_ASSOC);
     } else {
-        $riderCount = $pdo->query("SELECT COUNT(*) FROM riders WHERE active = 1")->fetchColumn();
-        $clubCount = $pdo->query("SELECT COUNT(*) FROM clubs")->fetchColumn();
+        $countsRow = $pdo->query("
+            SELECT
+                (SELECT COUNT(*) FROM riders WHERE active = 1) as rider_count,
+                (SELECT COUNT(*) FROM clubs) as club_count,
+                (SELECT COUNT(DISTINCT e.id) FROM events e INNER JOIN results r ON e.id = r.event_id) as event_count,
+                (SELECT COUNT(*) FROM series WHERE status = 'active') as series_count
+        ")->fetch(PDO::FETCH_ASSOC);
     }
-
-    // Total events with results
-    $eventCount = $pdo->query("
-        SELECT COUNT(DISTINCT e.id)
-        FROM events e
-        INNER JOIN results r ON e.id = r.event_id
-    ")->fetchColumn();
-
-    // Active series
-    $seriesCount = $pdo->query("SELECT COUNT(*) FROM series WHERE status = 'active'")->fetchColumn();
+    $riderCount = $countsRow['rider_count'];
+    $clubCount = $countsRow['club_count'];
+    $eventCount = $countsRow['event_count'];
+    $seriesCount = $countsRow['series_count'];
 
     // Upcoming Enduro events
     $upcomingEnduro = $pdo->query("

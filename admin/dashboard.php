@@ -12,89 +12,45 @@ if (isRole('promotor')) {
 
 global $pdo;
 
-// Get statistics
-$stats = [];
+// Get all statistics in ONE query (was 14 separate queries)
+$stats = [
+    'riders' => 0, 'events' => 0, 'clubs' => 0, 'series' => 0,
+    'upcoming' => 0, 'results' => 0, 'pending_orders' => 0,
+    'total_revenue' => 0, 'registrations_today' => 0, 'registrations_week' => 0,
+    'pending_claims' => 0, 'pending_news' => 0, 'pending_bug_reports' => 0
+];
 try {
-    $stats['riders'] = $pdo->query("SELECT COUNT(*) FROM riders")->fetchColumn();
-    $stats['events'] = $pdo->query("SELECT COUNT(*) FROM events")->fetchColumn();
-    $stats['clubs'] = $pdo->query("SELECT COUNT(*) FROM clubs")->fetchColumn();
-    $stats['series'] = $pdo->query("SELECT COUNT(*) FROM series")->fetchColumn();
-    $stats['upcoming'] = $pdo->query("SELECT COUNT(*) FROM events WHERE date >= CURDATE()")->fetchColumn();
-    $stats['results'] = $pdo->query("SELECT COUNT(*) FROM results")->fetchColumn();
-
-    // Payment stats (if table exists)
-    try {
-        $stats['pending_orders'] = $pdo->query("SELECT COUNT(*) FROM orders WHERE payment_status = 'pending'")->fetchColumn();
-        $stats['total_revenue'] = $pdo->query("SELECT COALESCE(SUM(total_amount), 0) FROM orders WHERE payment_status = 'paid'")->fetchColumn();
-    } catch (Exception $e) {
-        $stats['pending_orders'] = 0;
-        $stats['total_revenue'] = 0;
-    }
-
-    // Recent registrations
-    try {
-        $stats['registrations_today'] = $pdo->query("SELECT COUNT(*) FROM event_registrations WHERE DATE(created_at) = CURDATE()")->fetchColumn();
-        $stats['registrations_week'] = $pdo->query("SELECT COUNT(*) FROM event_registrations WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)")->fetchColumn();
-    } catch (Exception $e) {
-        $stats['registrations_today'] = 0;
-        $stats['registrations_week'] = 0;
-    }
-
-    // Pending rider claims
-    try {
-        $stats['pending_claims'] = $pdo->query("SELECT COUNT(*) FROM rider_claims WHERE status = 'pending'")->fetchColumn();
-    } catch (Exception $e) {
-        $stats['pending_claims'] = 0;
-    }
-
-    // Pending news/race reports
-    try {
-        $stats['pending_news'] = $pdo->query("SELECT COUNT(*) FROM race_reports WHERE status = 'draft'")->fetchColumn();
-    } catch (Exception $e) {
-        $stats['pending_news'] = 0;
-    }
+    $row = $pdo->query("
+        SELECT
+            (SELECT COUNT(*) FROM riders) as riders,
+            (SELECT COUNT(*) FROM events) as events,
+            (SELECT COUNT(*) FROM clubs) as clubs,
+            (SELECT COUNT(*) FROM series) as series,
+            (SELECT COUNT(*) FROM events WHERE date >= CURDATE()) as upcoming,
+            (SELECT COUNT(*) FROM results) as results,
+            (SELECT COUNT(*) FROM orders WHERE payment_status = 'pending') as pending_orders,
+            (SELECT COALESCE(SUM(total_amount), 0) FROM orders WHERE payment_status = 'paid') as total_revenue,
+            (SELECT COUNT(*) FROM event_registrations WHERE DATE(created_at) = CURDATE()) as registrations_today,
+            (SELECT COUNT(*) FROM event_registrations WHERE created_at >= DATE_SUB(CURDATE(), INTERVAL 7 DAY)) as registrations_week,
+            (SELECT COUNT(*) FROM rider_claims WHERE status = 'pending') as pending_claims,
+            (SELECT COUNT(*) FROM race_reports WHERE status = 'draft') as pending_news,
+            (SELECT COUNT(*) FROM bug_reports WHERE status = 'new') as pending_bug_reports
+    ")->fetch(PDO::FETCH_ASSOC);
+    $stats = array_merge($stats, $row);
 } catch (Exception $e) {
-    $stats = [
-        'riders' => 0, 'events' => 0, 'clubs' => 0, 'series' => 0,
-        'upcoming' => 0, 'results' => 0, 'pending_orders' => 0,
-        'total_revenue' => 0, 'registrations_today' => 0, 'registrations_week' => 0,
-        'pending_claims' => 0, 'pending_news' => 0, 'pending_bug_reports' => 0
-    ];
+    // Keep defaults
 }
 
-// Ensure pending_claims is always set (in case of partial failure above)
-if (!isset($stats['pending_claims'])) {
-    try {
-        $stats['pending_claims'] = $pdo->query("SELECT COUNT(*) FROM rider_claims WHERE status = 'pending'")->fetchColumn();
-    } catch (Exception $e) {
-        $stats['pending_claims'] = 0;
-    }
-}
-
-// Ensure pending_news is always set
-if (!isset($stats['pending_news'])) {
-    try {
-        $stats['pending_news'] = $pdo->query("SELECT COUNT(*) FROM race_reports WHERE status = 'draft'")->fetchColumn();
-    } catch (Exception $e) {
-        $stats['pending_news'] = 0;
-    }
-}
-
-// Pending bug reports
-if (!isset($stats['pending_bug_reports'])) {
-    try {
-        $stats['pending_bug_reports'] = $pdo->query("SELECT COUNT(*) FROM bug_reports WHERE status = 'new'")->fetchColumn();
-    } catch (Exception $e) {
-        $stats['pending_bug_reports'] = 0;
-    }
-}
-
-// Count pending roadmap tasks from ROADMAP.md
+// Count pending roadmap tasks from ROADMAP.md (cached for 1 hour)
 $roadmapPendingCount = 0;
+$roadmapCachePath = __DIR__ . '/../.roadmap-count-cache.json';
 $roadmapPath = __DIR__ . '/../ROADMAP.md';
-if (file_exists($roadmapPath)) {
+if (file_exists($roadmapCachePath) && (time() - filemtime($roadmapCachePath)) < 3600) {
+    $roadmapPendingCount = (int)file_get_contents($roadmapCachePath);
+} elseif (file_exists($roadmapPath)) {
     $roadmapContent = file_get_contents($roadmapPath);
     $roadmapPendingCount = substr_count($roadmapContent, '[ ]');
+    @file_put_contents($roadmapCachePath, $roadmapPendingCount);
 }
 
 // Get upcoming events

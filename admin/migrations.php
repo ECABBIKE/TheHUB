@@ -244,6 +244,9 @@ $migrationChecks = [
     '070_bug_reports.sql' => [
         'tables' => ['bug_reports']
     ],
+    '071_performance_indexes.sql' => [
+        'data' => ["(SELECT 1 FROM INFORMATION_SCHEMA.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'photo_rider_tags' AND INDEX_NAME = 'idx_prt_photo_id')"]
+    ],
 ];
 
 // ============================================================================

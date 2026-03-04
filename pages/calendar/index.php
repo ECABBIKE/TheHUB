@@ -30,13 +30,12 @@ $sql = "
            sb.accent_color as series_accent,
            v.name as venue_name,
            v.city as venue_city,
-           COUNT(DISTINCT er.id) as registration_count,
+           (SELECT COUNT(*) FROM event_registrations er WHERE er.event_id = e.id AND er.status != 'cancelled') as registration_count,
            e.max_participants
     FROM events e
     LEFT JOIN series s ON e.series_id = s.id
     LEFT JOIN series_brands sb ON s.brand_id = sb.id
     LEFT JOIN venues v ON e.venue_id = v.id
-    LEFT JOIN event_registrations er ON e.id = er.event_id AND er.status != 'cancelled'
     WHERE e.date >= CURDATE() AND e.active = 1
 ";
 $params = [];
@@ -51,7 +50,7 @@ if ($filterFormat) {
     $params[] = $filterFormat;
 }
 
-$sql .= " GROUP BY e.id ORDER BY e.date ASC LIMIT 50";
+$sql .= " ORDER BY e.date ASC LIMIT 50";
 
 $events = [];
 $seriesList = [];

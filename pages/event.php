@@ -268,9 +268,6 @@ try {
         error_log("EVENT PAGE: event_sponsors load error: " . $e->getMessage());
     }
 
-    // DEBUG: Log all sponsor placements
-    error_log("EVENT PAGE: Sponsor placements - header:" . count($eventSponsors['header']) . ", content:" . count($eventSponsors['content']) . ", sidebar:" . count($eventSponsors['sidebar']));
-
     // Check event format for DH mode
     $eventFormat = $event['event_format'] ?? 'ENDURO';
     $isDH = in_array($eventFormat, ['DH_STANDARD', 'DH_SWECUP']);
@@ -284,9 +281,6 @@ try {
         $dsRow = $dsCheck->fetch(PDO::FETCH_ASSOC);
         $isDS = ($dsRow && (int)$dsRow['cnt'] > 0);
     }
-
-    // DEBUG: Log DS detection
-    error_log("EVENT {$eventId}: isDS=" . ($isDS ? 'true' : 'false') . ", discipline=" . ($event['discipline'] ?? 'null'));
 
     // For DH events, calculate run time stats for color coding
     $dhRunStats = [];
@@ -982,19 +976,16 @@ try {
                    ea.photographer_url as album_photographer_url,
                    ea.photographer_id as album_photographer_id,
                    ph.name as photographer_name, ph.slug as photographer_slug, ph.id as photographer_profile_id,
-                   (SELECT GROUP_CONCAT(CONCAT(r.firstname, ' ', r.lastname) SEPARATOR '||')
-                    FROM photo_rider_tags prt
-                    JOIN riders r ON prt.rider_id = r.id
-                    WHERE prt.photo_id = ep.id) as tagged_names,
-                   (SELECT GROUP_CONCAT(r.id SEPARATOR ',')
-                    FROM photo_rider_tags prt
-                    JOIN riders r ON prt.rider_id = r.id
-                    WHERE prt.photo_id = ep.id) as tagged_ids
+                   GROUP_CONCAT(DISTINCT CONCAT(tr.firstname, ' ', tr.lastname) ORDER BY tr.firstname SEPARATOR '||') as tagged_names,
+                   GROUP_CONCAT(DISTINCT tr.id ORDER BY tr.firstname SEPARATOR ',') as tagged_ids
             FROM event_photos ep
             JOIN event_albums ea ON ep.album_id = ea.id
             LEFT JOIN media m ON ep.media_id = m.id
             LEFT JOIN photographers ph ON COALESCE(ep.photographer_id, ea.photographer_id) = ph.id
+            LEFT JOIN photo_rider_tags prt ON prt.photo_id = ep.id
+            LEFT JOIN riders tr ON prt.rider_id = tr.id
             WHERE ea.event_id = ? AND ea.is_published = 1
+            GROUP BY ep.id
             ORDER BY ep.is_highlight DESC, ep.sort_order ASC, ep.id ASC
         ");
         $albumStmt->execute([$eventId]);
@@ -1287,14 +1278,7 @@ if ($eventHeaderBanner): ?>
 </section>
 
 <?php
-// Content sponsors (logo row) - show all, with or without logos
-// DEBUG: Log content sponsors count
-error_log("EVENT PAGE DEBUG: Content sponsors count = " . count($eventSponsors['content'] ?? []));
-if (!empty($eventSponsors['content'])) {
-    foreach ($eventSponsors['content'] as $sp) {
-        error_log("EVENT PAGE DEBUG: Content sponsor: " . ($sp['name'] ?? 'N/A') . " (ID: " . ($sp['id'] ?? 'N/A') . ")");
-    }
-}
+// Content sponsors (logo row)
 if (!empty($eventSponsors['content'])): ?>
 <section class="event-sponsor-logos mb-sm">
     <div class="sponsor-logos-grid">
