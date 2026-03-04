@@ -80,10 +80,15 @@ try {
 
     // Upcoming events - next 3 regardless of discipline
     $upcomingEvents = $pdo->query("
-        SELECT e.id, e.name, e.date, e.location, e.discipline, s.name as series_name
+        SELECT e.id, e.name, e.date, e.end_date, e.location, e.discipline,
+               COALESCE(s2.name, s.name) as series_name,
+               COALESCE(s2.logo, s.logo) as series_logo
         FROM events e
         LEFT JOIN series s ON e.series_id = s.id
+        LEFT JOIN series_events se ON se.event_id = e.id
+        LEFT JOIN series s2 ON se.series_id = s2.id
         WHERE e.date >= CURDATE() AND e.active = 1
+        GROUP BY e.id
         ORDER BY e.date ASC
         LIMIT 3
     ")->fetchAll(PDO::FETCH_ASSOC);
@@ -212,10 +217,6 @@ $homepageLogo = getBranding('logos.homepage');
         </h2>
         <div class="welcome-upcoming-cards">
             <?php
-            $disciplineBadgeClass = [
-                'ENDURO' => 'event-date-badge--enduro',
-                'DH' => 'event-date-badge--dh',
-            ];
             $disciplineLabels = [
                 'ENDURO' => 'Enduro',
                 'DH' => 'Downhill',
@@ -223,27 +224,34 @@ $homepageLogo = getBranding('logos.homepage');
                 'GRAVEL' => 'Gravel',
             ];
             foreach ($upcomingEvents as $event):
-                $badgeClass = $disciplineBadgeClass[$event['discipline']] ?? '';
                 $discLabel = $disciplineLabels[$event['discipline']] ?? $event['discipline'];
+                // Format date range
+                $startDate = strtotime($event['date']);
+                $endDate = !empty($event['end_date']) ? strtotime($event['end_date']) : null;
+                if ($endDate && $endDate > $startDate) {
+                    // Multi-day: "14-15 Jun" or "30 Jun - 1 Jul"
+                    if (date('M', $startDate) === date('M', $endDate)) {
+                        $dateStr = date('j', $startDate) . '-' . date('j', $endDate) . ' ' . date('M', $endDate);
+                    } else {
+                        $dateStr = date('j M', $startDate) . ' - ' . date('j M', $endDate);
+                    }
+                } else {
+                    $dateStr = date('j M', $startDate);
+                }
             ?>
             <a href="/calendar/<?= $event['id'] ?>" class="welcome-upcoming-card">
-                <div class="event-date-badge <?= $badgeClass ?>">
-                    <span class="event-day"><?= date('j', strtotime($event['date'])) ?></span>
-                    <span class="event-month"><?= date('M', strtotime($event['date'])) ?></span>
+                <?php if (!empty($event['series_logo'])): ?>
+                <div class="welcome-card-logo">
+                    <img src="<?= htmlspecialchars($event['series_logo']) ?>" alt="<?= htmlspecialchars($event['series_name'] ?? '') ?>">
                 </div>
-                <div class="event-info">
-                    <h4><?= htmlspecialchars($event['name']) ?></h4>
-                    <p>
-                        <?php if ($event['discipline']): ?>
-                            <span class="event-discipline"><?= htmlspecialchars($discLabel) ?></span>
-                        <?php endif; ?>
-                        <?php if ($event['series_name']): ?>
-                            <span class="event-series"><?= htmlspecialchars($event['series_name']) ?></span>
-                        <?php endif; ?>
-                    </p>
-                    <?php if ($event['location']): ?>
-                    <p class="event-location"><?= hub_icon('map-pin', 'icon-xs') ?> <?= htmlspecialchars($event['location']) ?></p>
+                <?php endif; ?>
+                <h4 class="welcome-card-title"><?= htmlspecialchars($event['name']) ?></h4>
+                <div class="welcome-card-meta">
+                    <span class="welcome-card-date"><?= hub_icon('calendar', 'icon-xs') ?> <?= $dateStr ?></span>
+                    <?php if (!empty($event['location'])): ?>
+                    <span class="welcome-card-location"><?= hub_icon('map-pin', 'icon-xs') ?> <?= htmlspecialchars($event['location']) ?></span>
                     <?php endif; ?>
+                    <span class="welcome-card-discipline"><?= htmlspecialchars($discLabel) ?></span>
                 </div>
             </a>
             <?php endforeach; ?>
