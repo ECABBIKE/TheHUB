@@ -6,6 +6,21 @@
 
 ## SENASTE FIXAR (2026-03-04, session 26)
 
+### CSS Bundle: 11 filer → 1 (10 färre HTTP-requests)
+- **Problem:** 11 separata CSS-filer laddades på varje sida = 11 HTTP round-trips
+- **Fix:** `bundle.css` skapas automatiskt av head.php genom att konkatenera alla 11 källfiler
+- **Auto-rebuild:** Om någon källfil är nyare än bundlen, rebuilds den automatiskt vid sidladdning
+- **Manuell rebuild:** `Tools/rebuild-css-bundle.sh`
+- **Källfiler bevarade:** Alla 11 originalfiler finns kvar (4 är LÅSTA i CLAUDE.md)
+- **Storlek:** 105 KB (samma som innan, bara färre requests)
+- **VIKTIGT:** layout-footer.php (admin) laddar fortfarande Lucide + Chart.js dubbeladdning fixad
+
+### Lucide dubbeladdning fixad (layout-footer.php)
+- **Problem:** layout-footer.php laddade Lucide v0.263.1 SYNKRONT + Chart.js OVILLKORLIGT
+- **Fix:** Uppdaterad till v0.460.0 (samma som head.php) + defer. Chart.js borttagen.
+- **Kvarvarande:** Lucide + Google Fonts kan inte self-hostas i denna miljö (nätverksbegränsning)
+- **TODO framtida:** Self-hosta Lucide (~500KB → ~30KB sprite) och Google Fonts woff2-filer
+
 ### Prestandaoptimering fas 3 - Caching och render-blocking
 - **hub_current_user() cachad:** Anropades 2-3 gånger per sida med DB-lookup (SELECT * FROM riders) varje gång. Nu cachad med static variabel via _hub_current_user_uncached() wrapper.
 - **hub_is_logged_in() cachad:** Anropades från header.php + hub_current_user() + diverse. rider_check_remember_token() gjorde DB-query. Nu cachad med static.
