@@ -1451,7 +1451,7 @@ function cancelFeeEdit(recipientId, originalText) {
         <i data-lucide="medal"></i> Serier
     </a>
     <a href="?tab=ekonomi" class="promotor-tab <?= $promotorTab === 'ekonomi' ? 'active' : '' ?>">
-        <i data-lucide="wallet"></i> Ekonomi
+        <i data-lucide="circle-dollar-sign"></i> Ekonomi
     </a>
     <a href="?tab=media" class="promotor-tab <?= $promotorTab === 'media' ? 'active' : '' ?>">
         <i data-lucide="image"></i> Media
