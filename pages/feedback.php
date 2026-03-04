@@ -33,13 +33,14 @@ try {
     // Ignore - events dropdown will be empty
 }
 
-// Generate spam protection token
+// Generate spam protection token - need to reopen session for writing
 $formToken = bin2hex(random_bytes(16));
-if (session_status() === PHP_SESSION_NONE) {
+if (session_status() !== PHP_SESSION_ACTIVE) {
     session_start();
 }
 $_SESSION['feedback_token'] = $formToken;
 $_SESSION['feedback_token_time'] = time();
+session_write_close(); // Release lock immediately after writing
 ?>
 
 <!-- Load form & auth CSS (not globally loaded on public pages) -->
