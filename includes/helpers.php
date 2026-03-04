@@ -391,26 +391,25 @@ function getDB() {
  * Falls back to $default if not found in database.
  */
 function site_setting($key, $default = null) {
-    static $cache = [];
+    static $cache = null;
 
-    if (array_key_exists($key, $cache)) {
-        return $cache[$key];
+    // Batch-load ALL settings on first call (1 query instead of N)
+    if ($cache === null) {
+        $cache = [];
+        try {
+            global $pdo;
+            if ($pdo) {
+                $rows = $pdo->query("SELECT setting_key, setting_value FROM sponsor_settings")->fetchAll(PDO::FETCH_ASSOC);
+                foreach ($rows as $row) {
+                    $cache[$row['setting_key']] = $row['setting_value'];
+                }
+            }
+        } catch (Exception $e) {
+            // Table may not exist yet
+        }
     }
 
-    try {
-        global $pdo;
-        if (!$pdo) return $default;
-
-        $stmt = $pdo->prepare("SELECT setting_value FROM sponsor_settings WHERE setting_key = ?");
-        $stmt->execute([$key]);
-        $row = $stmt->fetch(PDO::FETCH_ASSOC);
-
-        $cache[$key] = $row ? $row['setting_value'] : $default;
-    } catch (Exception $e) {
-        $cache[$key] = $default;
-    }
-
-    return $cache[$key];
+    return array_key_exists($key, $cache) ? $cache[$key] : $default;
 }
 
 /**
@@ -548,21 +547,12 @@ function render_global_sponsors($pageType, $position, $title = 'Sponsorer') {
     // Check user roles - super_admin ALWAYS sees sponsors
     $isSuperAdmin = function_exists('hasRole') && hasRole('super_admin');
 
-    // Check public_enabled and hide_empty_for_admin settings (cached per request)
+    // Check public_enabled and hide_empty_for_admin settings (uses batch-loaded site_setting cache)
     if ($_sponsorSettingsCache === null) {
-        $_sponsorSettingsCache = ['public_enabled' => false, 'hide_empty_for_admin' => false];
-        try {
-            $stmt = $pdo->query("SELECT setting_key, setting_value FROM sponsor_settings WHERE setting_key IN ('public_enabled', 'hide_empty_for_admin')");
-            while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-                if ($row['setting_key'] === 'public_enabled') {
-                    $_sponsorSettingsCache['public_enabled'] = ($row['setting_value'] == '1');
-                } elseif ($row['setting_key'] === 'hide_empty_for_admin') {
-                    $_sponsorSettingsCache['hide_empty_for_admin'] = ($row['setting_value'] == '1');
-                }
-            }
-        } catch (Exception $e) {
-            if (!$isSuperAdmin) return '';
-        }
+        $_sponsorSettingsCache = [
+            'public_enabled' => (site_setting('public_enabled', '0') == '1'),
+            'hide_empty_for_admin' => (site_setting('hide_empty_for_admin', '0') == '1'),
+        ];
     }
 
     $publicEnabled = $_sponsorSettingsCache['public_enabled'];

@@ -71,7 +71,7 @@
     </script>
 
     <!-- Lucide Icons (same version as head.php, deferred) -->
-    <script defer src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>
+    <script defer src="https://cdn.jsdelivr.net/npm/lucide@0.460.0/dist/umd/lucide.min.js"></script>
     <script>
         // Initialize Lucide icons when loaded
         document.addEventListener('DOMContentLoaded', function() {

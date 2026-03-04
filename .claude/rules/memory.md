@@ -4,6 +4,41 @@
 
 ---
 
+## SENASTE FIXAR (2026-03-04, session 28)
+
+### Serietabeller: Identisk bredd på ALLA klasser (mobil + desktop)
+- **Problem:** Tabellerna hade olika bredd per klass - "Herrar Elit" bredare än "Damer Elit" pga längre namn/poäng
+- **Orsak:** `table-layout: auto` (satt i session 27) låter innehållet styra bredden
+- **Fix:** `table-layout: fixed !important` + `width: 100% !important` på mobil portrait
+- **Kolumner mobil portrait:** # (44px fast), Namn (auto, fyller resten), Total (72px fast)
+- **Kolumner desktop/landscape:** # (48px), Namn (160px), Klubb (120px), Event×N (44px), Total (64px)
+- **Resultat:** Alla klasser har exakt identiska kolumnbredder oavsett datainnehåll
+- **Fil:** `assets/css/pages/series-show.css`
+
+### Event resultat-tabell: Konsekvent col-split bredd
+- **Problem:** `col-split` th hade min-width 70px men td hade 85px - inkonsekvent
+- **Fix:** Båda 85px. `min-width: 400px` på results-table för basbredd
+- **Fil:** `assets/css/pages/event.css`
+
+### Prestandaoptimering fas 4 - Globala flaskhalsar
+- **site_setting() batch-laddar ALLA settings:** Var 1 SQL per nyckel, nu 1 SQL för ALLA vid första anrop
+- **render_global_sponsors() använder site_setting():** Ingen separat sponsor_settings-query längre
+- **CSS bundle stat-loop borttagen:** Var 22 file_exists/filemtime-anrop per sidladdning. Nu kollar bara bundle.css existens. Rebuild bara om bundlen saknas helt (deploy/Tools ansvarar för rebuild)
+- **Lucide CDN: unpkg → jsdelivr:** jsdelivr har snabbare edge-noder (global anycast CDN)
+- **Preconnect/dns-prefetch:** Tillagd för cdn.jsdelivr.net och cloud.umami.is (sparar ~200-400ms DNS+TLS)
+- **SHOW TABLES borttagen:** series_events existerar alltid → onödig SHOW TABLES-fråga borttagen
+- **series/show.php förenklad:** Borttagna if/else-grenar för $useSeriesEvents (alltid true)
+- **Filer:** `includes/helpers.php`, `components/head.php`, `includes/layout-footer.php`, `admin/components/unified-layout-footer.php`, `admin/components/economy-layout-footer.php`, `pages/series/show.php`
+
+### VIKTIGT: CSS bundle auto-rebuild
+- **Förut:** head.php kollade alla 11 CSS-filers mtime varje sidladdning (22 syscalls)
+- **Nu:** head.php kollar BARA om bundle.css finns. Rebuild sker via:
+  - `Tools/rebuild-css-bundle.sh` (manuellt eller i deploy-script)
+  - Om bundlen saknas helt (auto-rebuild vid sidladdning)
+- **Vid CSS-ändringar MÅSTE du köra:** `Tools/rebuild-css-bundle.sh`
+
+---
+
 ## SENASTE FIXAR (2026-03-04, session 27)
 
 ### Series show.php: ~1200 SQL-queries → ~10 (N+1 eliminerad)
@@ -15,10 +50,8 @@
 - **Resultat:** ~1214 queries → ~10 queries (99% reduktion)
 - **Filer:** `pages/series/show.php`
 
-### Serietabeller: Inkonsistenta bredder mellan klasser fixad
-- **Problem:** `table-layout: fixed` med `width: auto` på namnkolumnen gav olika tabellbredder per klass beroende på datalängd
-- **Fix:** På mobil portrait: `table-layout: auto` + `width: 100%` + fasta bredder på #/Total-kolumner
-- **Fil:** `assets/css/pages/series-show.css`
+### Serietabeller: Inkonsistenta bredder mellan klasser fixad (ERSATT av session 28)
+- Ersatt av bättre fix i session 28 ovan
 
 ---
 
