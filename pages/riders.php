@@ -27,70 +27,78 @@ try {
     // Determine JOIN type based on filter
     $joinType = ($filter === 'with_results') ? 'INNER' : 'LEFT';
 
-    // Fetch riders with stats - matching v2 structure
+    // Pre-aggregate results per rider (much faster than GROUP BY on main query with many JOINs)
+    // Also pre-aggregate rider_club_seasons to avoid correlated subquery
+    $riderStatsSubquery = "
+        SELECT cyclist_id,
+               COUNT(*) as total_races,
+               COUNT(CASE WHEN position <= 3 THEN 1 END) as podiums,
+               MIN(position) as best_position,
+               SUM(COALESCE(points, 0)) as total_points
+        FROM results
+        GROUP BY cyclist_id
+    ";
+
+    $rcsSubquery = "
+        SELECT rcs.rider_id, rcs.club_id
+        FROM rider_club_seasons rcs
+        INNER JOIN (
+            SELECT rider_id, MAX(season_year) as max_year
+            FROM rider_club_seasons
+            GROUP BY rider_id
+        ) rcs_max ON rcs.rider_id = rcs_max.rider_id AND rcs.season_year = rcs_max.max_year
+    ";
+
     if ($search !== '') {
-        $searchTerm = '%' . $search . '%';
+        // Split search into words for better matching
+        $searchWords = preg_split('/\s+/', $search);
+        if (count($searchWords) >= 2) {
+            // Multi-word: match firstname + lastname
+            $whereSearch = "(c.firstname LIKE ? AND c.lastname LIKE ?)";
+            $searchParams = ['%' . $searchWords[0] . '%', '%' . $searchWords[1] . '%'];
+        } else {
+            $searchTerm = '%' . $search . '%';
+            $whereSearch = "(c.firstname LIKE ? OR c.lastname LIKE ? OR c.license_number LIKE ?)";
+            $searchParams = [$searchTerm, $searchTerm, $searchTerm];
+        }
+
         $stmt = $db->prepare("
-            SELECT
-                c.id,
-                c.firstname,
-                c.lastname,
-                c.birth_year,
-                c.gender,
-                c.license_number,
-                c.license_type,
-                COALESCE(cl.name, cl_season.name) as club_name,
-                COALESCE(cl.id, rcs_latest.club_id) as club_id,
-                COUNT(DISTINCT r.id) as total_races,
-                COUNT(CASE WHEN r.position <= 3 THEN 1 END) as podiums,
-                MIN(r.position) as best_position,
-                SUM(COALESCE(r.points, 0)) as total_points
+            SELECT c.id, c.firstname, c.lastname, c.birth_year, c.gender,
+                   c.license_number, c.license_type,
+                   COALESCE(cl.name, cl_season.name) as club_name,
+                   COALESCE(cl.id, rcs_latest.club_id) as club_id,
+                   COALESCE(rs.total_races, 0) as total_races,
+                   COALESCE(rs.podiums, 0) as podiums,
+                   rs.best_position,
+                   COALESCE(rs.total_points, 0) as total_points
             FROM riders c
             LEFT JOIN clubs cl ON c.club_id = cl.id
-            LEFT JOIN (
-                SELECT rider_id, club_id
-                FROM rider_club_seasons rcs1
-                WHERE season_year = (SELECT MAX(season_year) FROM rider_club_seasons rcs2 WHERE rcs2.rider_id = rcs1.rider_id)
-            ) rcs_latest ON rcs_latest.rider_id = c.id AND c.club_id IS NULL
+            LEFT JOIN ({$rcsSubquery}) rcs_latest ON rcs_latest.rider_id = c.id AND c.club_id IS NULL
             LEFT JOIN clubs cl_season ON rcs_latest.club_id = cl_season.id
-            {$joinType} JOIN results r ON c.id = r.cyclist_id
-            WHERE c.active = 1
-              AND (c.firstname LIKE ? OR c.lastname LIKE ? OR cl.name LIKE ?
-                   OR CONCAT(c.firstname, ' ', c.lastname) LIKE ?
-                   OR c.license_number LIKE ?)
-            GROUP BY c.id
+            {$joinType} JOIN ({$riderStatsSubquery}) rs ON rs.cyclist_id = c.id
+            WHERE c.active = 1 AND {$whereSearch}
             ORDER BY total_races DESC, c.lastname, c.firstname
+            LIMIT 200
         ");
-        $stmt->execute([$searchTerm, $searchTerm, $searchTerm, $searchTerm, $searchTerm]);
+        $stmt->execute($searchParams);
     } else {
-        // Show all riders, ordered by most races first
         $stmt = $db->query("
-            SELECT
-                c.id,
-                c.firstname,
-                c.lastname,
-                c.birth_year,
-                c.gender,
-                c.license_number,
-                c.license_type,
-                COALESCE(cl.name, cl_season.name) as club_name,
-                COALESCE(cl.id, rcs_latest.club_id) as club_id,
-                COUNT(DISTINCT r.id) as total_races,
-                COUNT(CASE WHEN r.position <= 3 THEN 1 END) as podiums,
-                MIN(r.position) as best_position,
-                SUM(COALESCE(r.points, 0)) as total_points
+            SELECT c.id, c.firstname, c.lastname, c.birth_year, c.gender,
+                   c.license_number, c.license_type,
+                   COALESCE(cl.name, cl_season.name) as club_name,
+                   COALESCE(cl.id, rcs_latest.club_id) as club_id,
+                   COALESCE(rs.total_races, 0) as total_races,
+                   COALESCE(rs.podiums, 0) as podiums,
+                   rs.best_position,
+                   COALESCE(rs.total_points, 0) as total_points
             FROM riders c
             LEFT JOIN clubs cl ON c.club_id = cl.id
-            LEFT JOIN (
-                SELECT rider_id, club_id
-                FROM rider_club_seasons rcs1
-                WHERE season_year = (SELECT MAX(season_year) FROM rider_club_seasons rcs2 WHERE rcs2.rider_id = rcs1.rider_id)
-            ) rcs_latest ON rcs_latest.rider_id = c.id AND c.club_id IS NULL
+            LEFT JOIN ({$rcsSubquery}) rcs_latest ON rcs_latest.rider_id = c.id AND c.club_id IS NULL
             LEFT JOIN clubs cl_season ON rcs_latest.club_id = cl_season.id
-            {$joinType} JOIN results r ON c.id = r.cyclist_id
+            {$joinType} JOIN ({$riderStatsSubquery}) rs ON rs.cyclist_id = c.id
             WHERE c.active = 1
-            GROUP BY c.id
             ORDER BY total_races DESC, c.lastname, c.firstname
+            LIMIT 500
         ");
     }
     $riders = $stmt->fetchAll(PDO::FETCH_ASSOC);

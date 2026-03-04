@@ -16,29 +16,29 @@ $filterBrand = isset($_GET['brand']) && is_numeric($_GET['brand']) ? intval($_GE
 $filterYear = isset($_GET['year']) && is_numeric($_GET['year']) ? intval($_GET['year']) : null;
 
 try {
-    // Get years that have results (for filter dropdown)
+    // Get years that have results (for filter dropdown) - use EXISTS instead of JOIN
     $yearsStmt = $pdo->query("
         SELECT DISTINCT YEAR(e.date) as year
         FROM events e
-        INNER JOIN results r ON e.id = r.event_id
-        WHERE e.date IS NOT NULL
+        WHERE e.date IS NOT NULL AND EXISTS (SELECT 1 FROM results r WHERE r.event_id = e.id)
         ORDER BY year DESC
     ");
     $yearsList = $yearsStmt->fetchAll(PDO::FETCH_COLUMN);
 
-    // Get brands for filter - only brands that have results
+    // Get brands for filter - only brands that have results (use EXISTS to avoid DISTINCT overhead)
     $brandsStmt = $pdo->query("
-        SELECT DISTINCT sb.id, sb.name, sb.accent_color
+        SELECT sb.id, sb.name, sb.accent_color
         FROM series_brands sb
-        INNER JOIN series s ON s.brand_id = sb.id
-        INNER JOIN events e ON s.id = e.series_id
-        INNER JOIN results r ON e.id = r.event_id
-        WHERE sb.active = 1
+        WHERE sb.active = 1 AND EXISTS (
+            SELECT 1 FROM series s
+            INNER JOIN events e ON s.id = e.series_id
+            WHERE s.brand_id = sb.id AND EXISTS (SELECT 1 FROM results r WHERE r.event_id = e.id)
+        )
         ORDER BY sb.name
     ");
     $brandsList = $brandsStmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // Get events with results, including brand colors and logo
+    // Get events with results - use pre-aggregated LEFT JOIN instead of correlated subqueries
     $sql = "
         SELECT e.id, e.name, e.date, e.location, e.is_championship,
                s.id as series_id, s.name as series_name,
@@ -46,13 +46,18 @@ try {
                sb.logo as series_logo,
                sb.accent_color as series_accent,
                v.name as venue_name, v.city as venue_city,
-               (SELECT COUNT(*) FROM results r2 WHERE r2.event_id = e.id) as result_count,
-               (SELECT COUNT(DISTINCT r3.cyclist_id) FROM results r3 WHERE r3.event_id = e.id) as rider_count
+               COALESCE(rc.result_count, 0) as result_count,
+               COALESCE(rc.rider_count, 0) as rider_count
         FROM events e
+        INNER JOIN (
+            SELECT event_id, COUNT(*) as result_count, COUNT(DISTINCT cyclist_id) as rider_count
+            FROM results
+            GROUP BY event_id
+        ) rc ON rc.event_id = e.id
         LEFT JOIN series s ON e.series_id = s.id
         LEFT JOIN series_brands sb ON s.brand_id = sb.id
         LEFT JOIN venues v ON e.venue_id = v.id
-        WHERE EXISTS (SELECT 1 FROM results r WHERE r.event_id = e.id)
+        WHERE 1=1
     ";
     $params = [];
 
