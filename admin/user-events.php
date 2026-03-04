@@ -109,6 +109,9 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         'granted_by' => $currentAdmin['id']
                     ], 'id = ?', [$existing['id']]);
                     $message = 'Event-behörighet uppdaterad!';
+                    $messageType = 'success';
+                    // Already existed, still sync recipient
+                    syncPaymentRecipientForPromotor($db, $id);
                 } else {
                     // Insert new
                     $insertId = $db->insert('promotor_events', [
@@ -128,9 +131,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                         $message = 'Kunde inte lägga till event. Kontrollera att tabellen promotor_events finns.';
                         $messageType = 'error';
                     }
-                } else {
-                    // Event already existed, still sync recipient
-                    syncPaymentRecipientForPromotor($db, $id);
                 }
             } catch (Exception $e) {
                 $message = 'Ett fel uppstod: ' . $e->getMessage();
