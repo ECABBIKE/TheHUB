@@ -4,6 +4,45 @@
 
 ---
 
+## SENASTE FIXAR (2026-03-04, session 25)
+
+### KRITISK: PHP Session Locking fixad
+- **Problem:** PHP håller exklusivt lås på sessionsfilen under hela requesten. Om event.php tar 5s att rendera blockeras ALLA andra requests från samma användare (andra flikar, navigering).
+- **Fix:** `session_write_close()` i index.php och config.php efter att auth/config laddats. Bara GET-requests (POST behöver skriva till session).
+- **feedback.php:** Startar om session för CSRF-token, stänger direkt efter.
+- **Filer:** `index.php`, `config.php`, `pages/feedback.php`
+
+### Prestandaoptimering fas 2 - SQL-frågor
+- **event.php: 6 frågor eliminerade**
+  - Huvudfrågan utökad: organisatörsklubb (LEFT JOIN clubs), header banner (LEFT JOIN media), serie-detaljer (discount, allow_series_registration, registration_enabled) - sparar 3 separata queries
+  - Redundant serie-fråga (Q16) borttagen - data redan i huvudfrågan
+  - Sponsor-frågorna (serie + event) slagna ihop till EN query via UNION ALL
+  - DS-check använder `LIMIT 1` istf `COUNT(*)`
+  - Kapacitets-check skippas om max_participants inte är satt eller registrering stängd
+  - Global texts + global text links cachade med statisk variabel (samma för alla events)
+- **results.php: Korrelerade subqueries eliminerade**
+  - 2 korrelerade COUNT-subqueries (result_count, rider_count per event) ersatta med pre-aggregerad LEFT JOIN: `INNER JOIN (SELECT event_id, COUNT(*), COUNT(DISTINCT cyclist_id) FROM results GROUP BY event_id) rc`
+  - Brands-filter: DISTINCT+4 INNER JOINs ersatt med EXISTS-subquery
+  - Years-filter: INNER JOIN ersatt med EXISTS
+- **riders.php: Korrelerad subquery + sökning optimerad**
+  - `rider_club_seasons` korrelerad subquery (körde per rad) ersatt med INNER JOIN mot pre-aggregerad MAX(season_year)
+  - Resultat-aggregering flyttad till subquery istf GROUP BY på huvudfrågan med alla JOINs
+  - Sökning: CONCAT(firstname, lastname) och club-name LIKE borttagna (kan inte använda index). Multi-ord-sökning matchar firstname+lastname separat
+  - LIMIT tillagd: 500 utan sökning, 200 med sökning (var obegränsat)
+- **Migration 072:** 9 nya index: results(cyclist_id), rider_club_seasons(rider_id, season_year), events(date,active), events(series_id,active), event_info_links(event_id), event_albums(event_id,is_published), event_photos(album_id), series_sponsors(series_id), event_sponsors(event_id)
+
+### Filer ändrade
+- **`index.php`** - session_write_close() efter router (GET only)
+- **`config.php`** - session_write_close() efter auth (GET only)
+- **`pages/event.php`** - 6 frågor eliminerade, sponsor UNION, statisk cache
+- **`pages/results.php`** - Pre-aggregerad JOIN istf korrelerade subqueries
+- **`pages/riders.php`** - Eliminerad korrelerad subquery, LIMIT, bättre sökning
+- **`pages/feedback.php`** - Session restart+close för CSRF
+- **`Tools/migrations/072_performance_indexes_v2.sql`** - 9 nya index
+- **`admin/migrations.php`** - Migration 072 registrerad
+
+---
+
 ## SENASTE FIXAR (2026-03-04, session 24)
 
 ### Prestandaoptimering - SQL-frågor och index

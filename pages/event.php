@@ -104,9 +104,7 @@ if (!function_exists('getEventContent')) {
 }
 
 try {
-    // Fetch event details with venue info
-    // Note: Uses only core columns that exist in base schema
-    // organizer_club_id might not exist if migration 053 not run
+    // Fetch event details with venue, series, organizer club and header banner in ONE query
     $stmt = $db->prepare("
         SELECT
             e.*,
@@ -116,77 +114,68 @@ try {
             s.gradient_start as series_gradient_start,
             s.gradient_end as series_gradient_end,
             s.organizer as series_organizer,
+            s.series_discount_percent,
+            s.allow_series_registration,
+            s.registration_enabled as series_registration_enabled,
+            s.year as series_year,
             v.name as venue_name,
             v.city as venue_city,
-            v.address as venue_address
+            v.address as venue_address,
+            org_club.name as organizer_club_name,
+            org_club.id as organizer_club_id_ref,
+            hbm.filepath as header_banner_media_filepath
         FROM events e
         LEFT JOIN series s ON e.series_id = s.id
         LEFT JOIN venues v ON e.venue_id = v.id
+        LEFT JOIN clubs org_club ON e.organizer_club_id = org_club.id
+        LEFT JOIN media hbm ON e.header_banner_media_id = hbm.id
         WHERE e.id = ?
     ");
     $stmt->execute([$eventId]);
     $event = $stmt->fetch(PDO::FETCH_ASSOC);
-
-    // Try to get organizer club info if the column exists
-    if ($event && isset($event['organizer_club_id']) && $event['organizer_club_id']) {
-        try {
-            $clubStmt = $db->prepare("SELECT id, name FROM clubs WHERE id = ?");
-            $clubStmt->execute([$event['organizer_club_id']]);
-            $orgClub = $clubStmt->fetch(PDO::FETCH_ASSOC);
-            if ($orgClub) {
-                $event['organizer_club_name'] = $orgClub['name'];
-                $event['organizer_club_id_ref'] = $orgClub['id'];
-            }
-        } catch (PDOException $e) {
-            // Column or table doesn't exist
-        }
-    }
 
     if (!$event) {
         include HUB_ROOT . '/pages/404.php';
         return;
     }
 
-    // Fetch global texts for use_global functionality
-    $globalTextMap = [];
-    try {
-        $globalTexts = $db->query("SELECT field_key, content FROM global_texts WHERE is_active = 1")->fetchAll(PDO::FETCH_ASSOC);
-        foreach ($globalTexts as $gt) {
-            $globalTextMap[$gt['field_key']] = $gt['content'];
-        }
-    } catch (PDOException $e) {
-        // Table might not exist yet
+    // Fetch global texts + global text links in ONE query via static cache
+    // These are the same for all events, so cache per-request
+    static $_cachedGlobalTexts = null;
+    static $_cachedGlobalTextLinks = null;
+    if ($_cachedGlobalTexts === null) {
+        $_cachedGlobalTexts = [];
+        try {
+            $globalTexts = $db->query("SELECT field_key, content FROM global_texts WHERE is_active = 1")->fetchAll(PDO::FETCH_ASSOC);
+            foreach ($globalTexts as $gt) {
+                $_cachedGlobalTexts[$gt['field_key']] = $gt['content'];
+            }
+        } catch (PDOException $e) {}
     }
+    if ($_cachedGlobalTextLinks === null) {
+        $_cachedGlobalTextLinks = [];
+        try {
+            foreach ($db->query("SELECT field_key, link_url, link_text FROM global_text_links ORDER BY field_key, sort_order, id")->fetchAll(PDO::FETCH_ASSOC) as $gtl) {
+                $_cachedGlobalTextLinks[$gtl['field_key']][] = $gtl;
+            }
+        } catch (PDOException $e) {}
+    }
+    $globalTextMap = $_cachedGlobalTexts;
+    $globalTextLinksMap = $_cachedGlobalTextLinks;
 
-    // Load info links per section for this event (migration 057+058)
-    // Dynamic: any section is supported
+    // Load info links for this event (migration 057+058)
     $eventInfoLinks = [];
     try {
         $linkStmt = $db->prepare("SELECT section, link_url, link_text FROM event_info_links WHERE event_id = ? ORDER BY sort_order, id");
         $linkStmt->execute([$eventId]);
-        $allLinks = $linkStmt->fetchAll(PDO::FETCH_ASSOC);
-        foreach ($allLinks as $link) {
-            $sec = $link['section'] ?? 'general';
-            $eventInfoLinks[$sec][] = $link;
+        foreach ($linkStmt->fetchAll(PDO::FETCH_ASSOC) as $link) {
+            $eventInfoLinks[$link['section'] ?? 'general'][] = $link;
         }
     } catch (PDOException $e) {
-        // Table may not exist yet - fall back to single-link columns
         $singleUrl = $event['general_competition_link_url'] ?? '';
         if (!empty($singleUrl)) {
             $eventInfoLinks['general'][] = ['link_url' => $singleUrl, 'link_text' => $event['general_competition_link_text'] ?? ''];
         }
-    }
-
-    // Load global text links (migration 058)
-    $globalTextLinksMap = [];
-    try {
-        $gtlStmt = $db->prepare("SELECT field_key, link_url, link_text FROM global_text_links ORDER BY field_key, sort_order, id");
-        $gtlStmt->execute();
-        foreach ($gtlStmt->fetchAll(PDO::FETCH_ASSOC) as $gtl) {
-            $globalTextLinksMap[$gtl['field_key']][] = $gtl;
-        }
-    } catch (PDOException $e) {
-        // Table may not exist yet
     }
 
     // Check for interactive map (GPX data)
@@ -203,20 +192,19 @@ try {
         // Table might not exist yet
     }
 
-    // Fetch sponsors - series sponsors take priority over event sponsors
-    // Include all logo fields for placement-specific logos
+    // Fetch ALL sponsors (series + event) in ONE query
     require_once INCLUDES_PATH . '/sponsor-functions.php';
     $eventSponsors = ['header' => [], 'content' => [], 'sidebar' => [], 'footer' => [], 'partner' => []];
-
-    // First, try series sponsors (these override event sponsors)
-    if (!empty($event['series_id'])) {
-        try {
-            $seriesSponsorStmt = $db->prepare("
+    try {
+        $sponsorParams = [$eventId];
+        $seriesJoin = "";
+        if (!empty($event['series_id'])) {
+            $seriesJoin = "
+                UNION ALL
                 SELECT s.*, ss.placement, ss.display_order,
-                       m_banner.filepath as banner_logo_url,
-                       m_standard.filepath as standard_logo_url,
-                       m_small.filepath as small_logo_url,
-                       m_legacy.filepath as legacy_logo_url
+                       m_banner.filepath as banner_logo_url, m_standard.filepath as standard_logo_url,
+                       m_small.filepath as small_logo_url, m_legacy.filepath as legacy_logo_url,
+                       'series' as sponsor_source
                 FROM sponsors s
                 INNER JOIN series_sponsors ss ON s.id = ss.sponsor_id
                 LEFT JOIN media m_banner ON s.logo_banner_id = m_banner.id
@@ -224,26 +212,14 @@ try {
                 LEFT JOIN media m_small ON s.logo_small_id = m_small.id
                 LEFT JOIN media m_legacy ON s.logo_media_id = m_legacy.id
                 WHERE ss.series_id = ? AND s.active = 1
-                ORDER BY ss.display_order ASC, s.tier ASC
-            ");
-            $seriesSponsorStmt->execute([$event['series_id']]);
-            foreach ($seriesSponsorStmt->fetchAll(PDO::FETCH_ASSOC) as $sponsor) {
-                $placement = $sponsor['placement'] ?? 'sidebar';
-                $eventSponsors[$placement][] = $sponsor;
-            }
-        } catch (Exception $e) {
-            // Table might not exist yet
+            ";
+            $sponsorParams[] = $event['series_id'];
         }
-    }
-
-    // Event-specific sponsors - these ADD to series sponsors (or replace per placement if specified)
-    try {
-        $sponsorStmt = $db->prepare("
+        $allSponsorsStmt = $db->prepare("
             SELECT s.*, es.placement, es.display_order,
-                   m_banner.filepath as banner_logo_url,
-                   m_standard.filepath as standard_logo_url,
-                   m_small.filepath as small_logo_url,
-                   m_legacy.filepath as legacy_logo_url
+                   m_banner.filepath as banner_logo_url, m_standard.filepath as standard_logo_url,
+                   m_small.filepath as small_logo_url, m_legacy.filepath as legacy_logo_url,
+                   'event' as sponsor_source
             FROM sponsors s
             INNER JOIN event_sponsors es ON s.id = es.sponsor_id
             LEFT JOIN media m_banner ON s.logo_banner_id = m_banner.id
@@ -251,35 +227,33 @@ try {
             LEFT JOIN media m_small ON s.logo_small_id = m_small.id
             LEFT JOIN media m_legacy ON s.logo_media_id = m_legacy.id
             WHERE es.event_id = ? AND s.active = 1
-            ORDER BY es.display_order ASC, s.tier ASC
+            {$seriesJoin}
+            ORDER BY display_order ASC
         ");
-        $sponsorStmt->execute([$eventId]);
-        foreach ($sponsorStmt->fetchAll(PDO::FETCH_ASSOC) as $sponsor) {
+        $allSponsorsStmt->execute($sponsorParams);
+        foreach ($allSponsorsStmt->fetchAll(PDO::FETCH_ASSOC) as $sponsor) {
             $placement = $sponsor['placement'] ?? 'sidebar';
-            // Event sponsors override series sponsors for each placement
-            if (empty($eventSponsors[$placement])) {
-                $eventSponsors[$placement] = [];
+            if ($sponsor['sponsor_source'] === 'event') {
+                array_unshift($eventSponsors[$placement], $sponsor);
+            } else {
+                $eventSponsors[$placement][] = $sponsor;
             }
-            // Add to beginning (event sponsors take priority)
-            array_unshift($eventSponsors[$placement], $sponsor);
         }
     } catch (Exception $e) {
-        // Table might not exist yet
-        error_log("EVENT PAGE: event_sponsors load error: " . $e->getMessage());
+        // Tables might not exist yet
     }
 
     // Check event format for DH mode
     $eventFormat = $event['event_format'] ?? 'ENDURO';
     $isDH = in_array($eventFormat, ['DH_STANDARD', 'DH_SWECUP']);
 
-    // Check if this is a Dual Slalom event (discipline = DS or has elimination data with series_class_id)
+    // Check if this is a Dual Slalom event
     $isDS = ($event['discipline'] ?? '') === 'DS';
     if (!$isDS) {
-        // Also check if results have series_class_id set (indicating DS-style import)
-        $dsCheck = $db->prepare("SELECT COUNT(*) as cnt FROM results WHERE event_id = ? AND series_class_id IS NOT NULL");
+        // Fallback: check results for DS-style data (series_class_id set)
+        $dsCheck = $db->prepare("SELECT 1 FROM results WHERE event_id = ? AND series_class_id IS NOT NULL LIMIT 1");
         $dsCheck->execute([$eventId]);
-        $dsRow = $dsCheck->fetch(PDO::FETCH_ASSOC);
-        $isDS = ($dsRow && (int)$dsRow['cnt'] > 0);
+        $isDS = (bool)$dsCheck->fetch();
     }
 
     // For DH events, calculate run time stats for color coding
@@ -934,12 +908,15 @@ try {
     $registrationConfigured = $hasPricing;
     $registrationOpen = $registrationConfigured && ($registrationDeadline === null || $registrationDeadline >= time());
 
-    // Check capacity (max participants)
+    // Check capacity (max participants) - skip query if no limit set
     $maxParticipants = !empty($event['max_participants']) ? intval($event['max_participants']) : null;
     $registrationFull = false;
     $confirmedRegistrations = 0;
-    if ($maxParticipants) {
-        // Count non-cancelled registrations (pending + confirmed)
+    $spotsLeft = null;
+    if ($maxParticipants && $registrationOpen) {
+        // Use count from already-fetched registrations when possible
+        $confirmedRegistrations = $totalRegistrations; // Paid registrations already counted above
+        // But capacity includes pending too, so we need the full count
         $capStmt = $db->prepare("SELECT COUNT(*) FROM event_registrations WHERE event_id = ? AND status NOT IN ('cancelled')");
         $capStmt->execute([$eventId]);
         $confirmedRegistrations = intval($capStmt->fetchColumn());
@@ -1053,21 +1030,23 @@ try {
     $seriesEventsWithPricing = [];
 
     if (!empty($event['series_id'])) {
-        // Load series information
-        $seriesStmt = $db->prepare("
-            SELECT id, name, logo, series_discount_percent, year, allow_series_registration, registration_enabled
-            FROM series
-            WHERE id = ?
-        ");
-        $seriesStmt->execute([$event['series_id']]);
-        $seriesInfo = $seriesStmt->fetch(PDO::FETCH_ASSOC);
+        // Use series data already fetched in main query (no extra DB call needed)
+        $seriesInfo = [
+            'id' => $event['series_id'],
+            'name' => $event['series_name'],
+            'logo' => $event['series_logo'],
+            'series_discount_percent' => $event['series_discount_percent'] ?? 0,
+            'year' => $event['series_year'] ?? null,
+            'allow_series_registration' => $event['allow_series_registration'] ?? 0,
+            'registration_enabled' => $event['series_registration_enabled'] ?? 1,
+        ];
 
         // If series has registration disabled, override event registration
-        if ($seriesInfo && empty($seriesInfo['registration_enabled'])) {
+        if (empty($seriesInfo['registration_enabled'])) {
             $registrationOpen = false;
         }
 
-        if ($seriesInfo && $registrationOpen && count($seriesEvents) > 1 && !empty($seriesInfo['allow_series_registration'])) {
+        if ($registrationOpen && count($seriesEvents) > 1 && !empty($seriesInfo['allow_series_registration'])) {
             // Load all events in series with pricing info
             $eventIds = array_column($seriesEvents, 'id');
             $placeholders = str_repeat('?,', count($eventIds) - 1) . '?';
@@ -1115,22 +1094,11 @@ if (!$event) {
 ?>
 
 <?php
-// Event Header Banner (direct media upload on event) - hämta filepath
+// Event Header Banner - already fetched in main query via LEFT JOIN media
 $eventHeaderBanner = null;
-if (!empty($event['header_banner_media_id'])) {
-    try {
-        $bannerStmt = $db->prepare("SELECT filepath FROM media WHERE id = ?");
-        $bannerStmt->execute([$event['header_banner_media_id']]);
-        $bannerRow = $bannerStmt->fetch(PDO::FETCH_ASSOC);
-        if ($bannerRow && !empty($bannerRow['filepath'])) {
-            $eventHeaderBanner = '/' . ltrim($bannerRow['filepath'], '/');
-        }
-    } catch (Exception $e) {
-        error_log("EVENT PAGE: Error loading header banner: " . $e->getMessage());
-    }
-}
-// Fallback till header_banner_url om det finns
-if (!$eventHeaderBanner && !empty($event['header_banner_url'])) {
+if (!empty($event['header_banner_media_filepath'])) {
+    $eventHeaderBanner = '/' . ltrim($event['header_banner_media_filepath'], '/');
+} elseif (!empty($event['header_banner_url'])) {
     $eventHeaderBanner = '/' . ltrim($event['header_banner_url'], '/');
 }
 
