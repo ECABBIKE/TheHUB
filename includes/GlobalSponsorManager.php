@@ -72,26 +72,27 @@ class GlobalSponsorManager {
      * @return array Array av sponsorer
      */
     public function getSponsorsForPlacement(string $page_type, string $position, int $limit = 5): array {
+        // Cache all placements for this page_type in ONE query, then filter by position
+        if (!isset($this->_placementCache[$page_type])) {
+            $this->_placementCache[$page_type] = $this->_loadAllPlacementsForPage($page_type);
+        }
+        $results = $this->_placementCache[$page_type][$position] ?? [];
+        return array_slice($results, 0, $limit);
+    }
+
+    private array $_placementCache = [];
+
+    private function _loadAllPlacementsForPage(string $page_type): array {
         try {
             $hasCustom = $this->hasCustomMediaColumn();
-
             $customSelect = $hasCustom ? "sp.custom_media_id, mc.filepath as custom_image_url," : "";
             $customJoin = $hasCustom ? "LEFT JOIN media mc ON sp.custom_media_id = mc.id" : "";
 
             $sql = "SELECT
-                        s.id,
-                        s.name,
-                        s.logo,
-                        s.logo_dark,
-                        s.website,
-                        s.tier,
+                        s.id, s.name, s.logo, s.logo_dark, s.website, s.tier,
                         COALESCE(mb.filepath, s.banner_image) as banner_image,
-                        sp.id as placement_id,
-                        sp.position,
-                        sp.display_order,
-                        sp.clicks,
-                        sp.impressions_current,
-                        sp.impressions_target,
+                        sp.id as placement_id, sp.position, sp.display_order,
+                        sp.clicks, sp.impressions_current, sp.impressions_target,
                         {$customSelect}
                         m.filepath as logo_url
                     FROM sponsors s
@@ -100,7 +101,6 @@ class GlobalSponsorManager {
                     LEFT JOIN media mb ON s.logo_banner_id = mb.id
                     {$customJoin}
                     WHERE sp.page_type IN (:page_type, 'all')
-                    AND sp.position = :position
                     AND sp.is_active = 1
                     AND s.active = 1
                     AND (sp.start_date IS NULL OR sp.start_date <= CURDATE())
@@ -109,18 +109,19 @@ class GlobalSponsorManager {
                     ORDER BY
                         s.display_priority DESC,
                         sp.display_order ASC,
-                        RAND()
-                    LIMIT :limit";
+                        RAND()";
 
             $stmt = $this->pdo->prepare($sql);
             $stmt->bindValue(':page_type', $page_type, PDO::PARAM_STR);
-            $stmt->bindValue(':position', $position, PDO::PARAM_STR);
-            $stmt->bindValue(':limit', $limit, PDO::PARAM_INT);
             $stmt->execute();
 
-            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+            $grouped = [];
+            foreach ($stmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+                $grouped[$row['position']][] = $row;
+            }
+            return $grouped;
         } catch (PDOException $e) {
-            error_log("getSponsorsForPlacement error: " . $e->getMessage());
+            error_log("_loadAllPlacementsForPage error: " . $e->getMessage());
             return [];
         }
     }

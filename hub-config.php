@@ -225,6 +225,16 @@ if (!function_exists('hub_current_user')) {
      * Get current logged in user's rider profile
      */
     function hub_current_user(): ?array {
+        // Cache result per request - this function is called multiple times per page
+        static $_cachedUser = null;
+        static $_cachedUserChecked = false;
+        if ($_cachedUserChecked) return $_cachedUser;
+        $_cachedUserChecked = true;
+        $_cachedUser = _hub_current_user_uncached();
+        return $_cachedUser;
+    }
+
+    function _hub_current_user_uncached(): ?array {
         if (!hub_is_logged_in()) return null;
 
         if (function_exists('wp_get_current_user')) {
@@ -234,7 +244,6 @@ if (!function_exists('hub_current_user')) {
 
         // Check admin session (from includes/auth.php)
         if (isset($_SESSION['admin_logged_in']) && $_SESSION['admin_logged_in'] === true) {
-            // Map admin_role string to role_id
             $roleMap = [
                 'super_admin' => ROLE_SUPER_ADMIN,
                 'admin' => ROLE_ADMIN,
@@ -243,7 +252,6 @@ if (!function_exists('hub_current_user')) {
             $adminRole = $_SESSION['admin_role'] ?? 'admin';
             $roleId = $roleMap[$adminRole] ?? ROLE_ADMIN;
 
-            // Get email - from admin session, hub session, or lookup from database
             $adminEmail = $_SESSION['admin_email'] ?? $_SESSION['hub_user_email'] ?? '';
             if (empty($adminEmail) && isset($_SESSION['admin_id']) && $_SESSION['admin_id'] > 0) {
                 try {
@@ -252,29 +260,21 @@ if (!function_exists('hub_current_user')) {
                     $result = $stmt->fetch(PDO::FETCH_ASSOC);
                     if ($result && !empty($result['email'])) {
                         $adminEmail = $result['email'];
-                        $_SESSION['admin_email'] = $adminEmail; // Cache for future
                     }
-                } catch (Exception $e) {
-                    // Ignore errors
-                }
+                } catch (Exception $e) {}
             }
 
-            // Try to find linked rider profile via email
-            // This ensures admin users see their full rider data (phone, ICE, etc.)
             if (!empty($adminEmail)) {
                 $riderProfile = hub_get_rider_by_email($adminEmail);
                 if ($riderProfile) {
-                    // Merge admin role info into rider profile
                     $riderProfile['role_id'] = $roleId;
                     $riderProfile['is_admin'] = $roleId >= ROLE_ADMIN ? 1 : 0;
                     return $riderProfile;
                 }
             }
 
-            // Fallback: no linked rider profile - return basic admin data
             $fullName = $_SESSION['admin_name'] ?? 'Admin';
             $nameParts = explode(' ', $fullName, 2);
-
             return [
                 'id' => $_SESSION['admin_id'] ?? 0,
                 'email' => $adminEmail,
@@ -289,8 +289,6 @@ if (!function_exists('hub_current_user')) {
         // Check V3 session first
         if (isset($_SESSION['hub_user_id'])) {
             $userId = $_SESSION['hub_user_id'];
-
-            // Admin fallback user (id=0) - return session data instead of DB lookup
             if ($userId === 0 || $userId === '0') {
                 return [
                     'id' => 0,
@@ -302,7 +300,6 @@ if (!function_exists('hub_current_user')) {
                     'active' => 1
                 ];
             }
-
             return hub_get_rider_by_id($userId);
         }
 

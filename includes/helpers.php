@@ -541,41 +541,45 @@ function getVersionInfo() {
 function render_global_sponsors($pageType, $position, $title = 'Sponsorer') {
     global $pdo;
 
+    // Static cache for sponsor settings (same for all calls per request)
+    static $_sponsorSettingsCache = null;
+    static $_sponsorManagerInstance = null;
+
     // Check user roles - super_admin ALWAYS sees sponsors
     $isSuperAdmin = function_exists('hasRole') && hasRole('super_admin');
-    $isAdmin = function_exists('hasRole') && (hasRole('admin') || hasRole('super_admin'));
 
-    // Check public_enabled and hide_empty_for_admin settings
-    $publicEnabled = false;
-    $hideEmptyForAdmin = false;
-    try {
-        $stmt = $pdo->query("SELECT setting_key, setting_value FROM sponsor_settings WHERE setting_key IN ('public_enabled', 'hide_empty_for_admin')");
-        while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
-            if ($row['setting_key'] === 'public_enabled') {
-                $publicEnabled = ($row['setting_value'] == '1');
-            } elseif ($row['setting_key'] === 'hide_empty_for_admin') {
-                $hideEmptyForAdmin = ($row['setting_value'] == '1');
+    // Check public_enabled and hide_empty_for_admin settings (cached per request)
+    if ($_sponsorSettingsCache === null) {
+        $_sponsorSettingsCache = ['public_enabled' => false, 'hide_empty_for_admin' => false];
+        try {
+            $stmt = $pdo->query("SELECT setting_key, setting_value FROM sponsor_settings WHERE setting_key IN ('public_enabled', 'hide_empty_for_admin')");
+            while ($row = $stmt->fetch(PDO::FETCH_ASSOC)) {
+                if ($row['setting_key'] === 'public_enabled') {
+                    $_sponsorSettingsCache['public_enabled'] = ($row['setting_value'] == '1');
+                } elseif ($row['setting_key'] === 'hide_empty_for_admin') {
+                    $_sponsorSettingsCache['hide_empty_for_admin'] = ($row['setting_value'] == '1');
+                }
             }
-        }
-    } catch (Exception $e) {
-        // Table might not exist yet - super_admin can still see placeholders
-        if (!$isSuperAdmin) {
-            return '';
+        } catch (Exception $e) {
+            if (!$isSuperAdmin) return '';
         }
     }
 
-    // Super admin ALWAYS sees sponsors (for testing)
-    // Others only see if public is enabled
+    $publicEnabled = $_sponsorSettingsCache['public_enabled'];
+    $hideEmptyForAdmin = $_sponsorSettingsCache['hide_empty_for_admin'];
+
     if (!$isSuperAdmin && !$publicEnabled) {
         return '';
     }
 
-    // Load sponsor manager
-    require_once __DIR__ . '/GlobalSponsorManager.php';
-    $sponsorManager = new GlobalSponsorManager($pdo);
+    // Reuse sponsor manager instance (cached per request)
+    if ($_sponsorManagerInstance === null) {
+        require_once __DIR__ . '/GlobalSponsorManager.php';
+        $_sponsorManagerInstance = new GlobalSponsorManager($pdo);
+    }
 
     // Get sponsors for this placement
-    $sponsors = $sponsorManager->getSponsorsForPlacement($pageType, $position);
+    $sponsors = $_sponsorManagerInstance->getSponsorsForPlacement($pageType, $position);
 
     if (empty($sponsors)) {
         // Show placeholder for super_admin if no sponsors configured
