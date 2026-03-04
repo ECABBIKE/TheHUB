@@ -1176,6 +1176,9 @@ if ($eventHeaderBanner): ?>
 
         <div class="event-info">
             <div class="event-title-row">
+                <?php if ($event['series_logo']): ?>
+                <img src="<?= h($event['series_logo']) ?>" alt="<?= h($event['series_name'] ?? 'Serie') ?>" class="event-title-logo">
+                <?php endif; ?>
                 <h1 class="event-title"><?= h($event['name']) ?></h1>
                 <?php if ($canEditEvent): ?>
                 <a href="/admin/event-edit.php?id=<?= $eventId ?>" class="btn-admin-edit" title="Redigera event">

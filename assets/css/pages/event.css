@@ -212,6 +212,17 @@
     margin-bottom: var(--space-sm);
 }
 
+/* Series logo inline with title - hidden on desktop, shown on mobile */
+.event-title-logo {
+    display: none;
+    width: 36px;
+    height: 36px;
+    object-fit: contain;
+    border-radius: var(--radius-sm);
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
 .event-title {
     font-size: var(--text-xl);
     font-weight: var(--weight-bold);
@@ -1140,16 +1151,14 @@ td.col-place {
         flex-direction: column;
     }
 
-    /* Hide big logo on tablet/mobile - use inline version in stats */
+    /* Hide big logo on tablet/mobile - use inline version in title row */
     .event-logo {
         display: none;
     }
 
-    /* Show series logo inline with stats on tablet/mobile */
-    .event-stat--logo {
-        display: flex;
-        align-items: center;
-        justify-content: center;
+    /* Show series logo inline with title on tablet/mobile */
+    .event-title-logo {
+        display: block;
     }
 
     .event-stats {
@@ -1221,14 +1230,14 @@ td.col-place {
     }
 
     .event-logo {
-        display: none; /* Hide big logo on mobile - small version shown in stats row */
+        display: none; /* Hide big logo on mobile - shown inline with title instead */
     }
 
-    /* Show series logo in stats row on mobile */
-    .event-stat--logo {
-        display: flex;
-        align-items: center;
-        justify-content: center;
+    /* Show series logo inline with title on mobile */
+    .event-title-logo {
+        display: block;
+        width: 32px;
+        height: 32px;
     }
 
     .event-meta {
