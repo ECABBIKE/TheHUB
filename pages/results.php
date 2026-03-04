@@ -46,14 +46,13 @@ try {
                sb.logo as series_logo,
                sb.accent_color as series_accent,
                v.name as venue_name, v.city as venue_city,
-               COUNT(DISTINCT r.id) as result_count,
-               COUNT(DISTINCT r.cyclist_id) as rider_count
+               (SELECT COUNT(*) FROM results r2 WHERE r2.event_id = e.id) as result_count,
+               (SELECT COUNT(DISTINCT r3.cyclist_id) FROM results r3 WHERE r3.event_id = e.id) as rider_count
         FROM events e
         LEFT JOIN series s ON e.series_id = s.id
         LEFT JOIN series_brands sb ON s.brand_id = sb.id
         LEFT JOIN venues v ON e.venue_id = v.id
-        INNER JOIN results r ON e.id = r.event_id
-        WHERE 1=1
+        WHERE EXISTS (SELECT 1 FROM results r WHERE r.event_id = e.id)
     ";
     $params = [];
 
@@ -67,7 +66,7 @@ try {
         $params[] = $filterYear;
     }
 
-    $sql .= " GROUP BY e.id ORDER BY e.date DESC";
+    $sql .= " ORDER BY e.date DESC";
 
     $stmt = $pdo->prepare($sql);
     $stmt->execute($params);

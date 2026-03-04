@@ -4,6 +4,40 @@
 
 ---
 
+## SENASTE FIXAR (2026-03-04, session 24)
+
+### Prestandaoptimering - SQL-frågor och index
+- **Problem:** Dashboard 5-6s, Kalender 6-7s, Event-sida 5-6s, Resultat-sida trög
+- **Fix 1: Dashboard** - 14 separata COUNT-frågor (riders, events, clubs, series, upcoming, results, pending_orders, total_revenue, registrations_today, registrations_week, pending_claims, pending_news, pending_bug_reports) slagna ihop till EN enda SELECT med subqueries. Sparar 13 DB round-trips.
+- **Fix 2: Kalender** - Bytt från `LEFT JOIN event_registrations + GROUP BY` till korrelerad subquery `(SELECT COUNT(*) FROM event_registrations WHERE event_id = e.id)`. Eliminerar cartesian product och GROUP BY.
+- **Fix 3: Resultat-sida** - Samma mönster: bytt från `INNER JOIN results + GROUP BY` till `EXISTS + korrelerade subqueries`. Eliminerar tung aggregering.
+- **Fix 4: Event-sida galleri** - 2 korrelerade subqueries per foto (tagged_names + tagged_ids) ersatta med `LEFT JOIN photo_rider_tags + GROUP_CONCAT + GROUP BY`. Från O(2×N) extra frågor till 0 extra frågor.
+- **Fix 5: Welcome-sida** - 4 separata COUNT-frågor (riders, clubs, events, series) slagna ihop till 1 fråga med subqueries.
+- **Fix 6: Debug-loggar borttagna** - 5 `error_log()` DEBUG-anrop i event.php som kördes vid varje sidladdning borttagna (sponsor placements, DS detection, content sponsors).
+- **Fix 7: Roadmap-cache** - ROADMAP.md-filläsning cachad i `.roadmap-count-cache.json` (1h TTL) istället för att läsa hela filen vid varje dashboard-laddning.
+- **Migration 071:** Prestandaindex för: event_registrations(event_id), event_registrations(created_at), photo_rider_tags(photo_id), race_reports(status), race_reports(event_id,status), rider_claims(status), bug_reports(status), results(event_id), orders(payment_status)
+
+### CSS-extraktion slutförd (event.php)
+- 4 inline `<style>`-block extraherade till `assets/css/pages/event.css`: News/Media, Registration, Countdown, Gallery/Lightbox
+- event.css gick från 1402 → 2848 rader
+- Enda kvarvarande `<style>` i event.php är den med PHP-variabler (serie-gradient, rad 5940)
+
+### VIKTIGT: Service Worker "Ny version"-meddelande
+- Normalt beteende vid deploy/push - SW upptäcker cache-ändring
+- Användaren ska klicka "Uppdatera" för att hämta senaste versionen
+- Om sidan "hänger sig": SW cache-uppdatering pågår, stäng och öppna igen
+
+### Filer ändrade
+- **`admin/dashboard.php`** - 14 COUNT → 1, roadmap-cache
+- **`pages/calendar/index.php`** - JOIN→subquery, borttagen GROUP BY
+- **`pages/results.php`** - JOIN→EXISTS+subqueries, borttagen GROUP BY
+- **`pages/event.php`** - Galleri subqueries→LEFT JOIN, debug-loggar borttagna
+- **`pages/welcome.php`** - 4 frågor → 1
+- **`Tools/migrations/071_performance_indexes.sql`** - 9 nya index
+- **`admin/migrations.php`** - Migration 071 registrerad
+
+---
+
 ## SENASTE FIXAR (2026-03-04, session 23)
 
 ### Event-sida prestandaöversyn - Klient-sida flikbyte + CSS-extraktion
