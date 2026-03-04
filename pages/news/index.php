@@ -127,44 +127,49 @@ $currentUser = function_exists('hub_current_user') ? hub_current_user() : null;
 <!-- Global Sponsor: Header Banner -->
 <?= render_global_sponsors('news', 'header_banner', '') ?>
 
-<!-- Filter Bar (standard component) -->
-<form method="GET" action="/news" class="filter-bar">
-    <div class="filter-select-wrapper">
-        <label class="filter-label">Disciplin</label>
-        <select name="discipline" class="filter-select" onchange="this.form.submit()">
-            <option value="">Alla discipliner</option>
-            <?php foreach ($disciplines as $slug => $disc): ?>
-            <option value="<?= $slug ?>" <?= $filterDiscipline === $slug ? 'selected' : '' ?>><?= htmlspecialchars($disc['name']) ?></option>
-            <?php endforeach; ?>
-        </select>
-    </div>
-    <div class="filter-select-wrapper">
-        <label class="filter-label">Typ</label>
-        <select name="type" class="filter-select" onchange="this.form.submit()">
-            <option value="">Alla typer</option>
-            <option value="photo_gallery" <?= $filterType === 'photo_gallery' ? 'selected' : '' ?>>Foton</option>
-            <option value="video" <?= $filterType === 'video' ? 'selected' : '' ?>>Videos</option>
-        </select>
-    </div>
-    <div class="filter-select-wrapper">
-        <label class="filter-label">Sortera</label>
-        <select name="sort" class="filter-select" onchange="this.form.submit()">
-            <option value="recent" <?= $sortBy === 'recent' ? 'selected' : '' ?>>Senaste</option>
-            <option value="popular" <?= $sortBy === 'popular' ? 'selected' : '' ?>>Mest lästa</option>
-            <option value="liked" <?= $sortBy === 'liked' ? 'selected' : '' ?>>Mest gillade</option>
-        </select>
-    </div>
-    <div class="filter-search-wrapper">
-        <label class="filter-label">Sök</label>
-        <input type="text" name="q" class="filter-input" placeholder="Sök nyheter..." value="<?= htmlspecialchars($searchQuery) ?>">
-    </div>
-    <button type="submit" class="btn btn-primary filter-btn">
-        <i data-lucide="search" style="width: 16px; height: 16px;"></i> Sök
-    </button>
-    <?php if ($filterTag || $filterType || $filterDiscipline || $searchQuery || $sortBy !== 'recent'): ?>
-    <a href="/news" class="btn btn-ghost filter-btn">Rensa</a>
-    <?php endif; ?>
-</form>
+<!-- Filter Bar (gallery-style 2-row grid) -->
+<div class="search-card">
+    <form method="GET" action="/news" class="gallery-filters">
+        <div class="gallery-filters-grid">
+            <div class="filter-select-wrapper">
+                <label class="filter-label">Disciplin</label>
+                <select name="discipline" class="filter-select" onchange="this.form.submit()">
+                    <option value="">Alla discipliner</option>
+                    <?php foreach ($disciplines as $slug => $disc): ?>
+                    <option value="<?= $slug ?>" <?= $filterDiscipline === $slug ? 'selected' : '' ?>><?= htmlspecialchars($disc['name']) ?></option>
+                    <?php endforeach; ?>
+                </select>
+            </div>
+            <div class="filter-select-wrapper">
+                <label class="filter-label">Typ</label>
+                <select name="type" class="filter-select" onchange="this.form.submit()">
+                    <option value="">Alla typer</option>
+                    <option value="photo_gallery" <?= $filterType === 'photo_gallery' ? 'selected' : '' ?>>Foton</option>
+                    <option value="video" <?= $filterType === 'video' ? 'selected' : '' ?>>Videos</option>
+                </select>
+            </div>
+            <div class="filter-select-wrapper">
+                <label class="filter-label">Sortera</label>
+                <select name="sort" class="filter-select" onchange="this.form.submit()">
+                    <option value="recent" <?= $sortBy === 'recent' ? 'selected' : '' ?>>Senaste</option>
+                    <option value="popular" <?= $sortBy === 'popular' ? 'selected' : '' ?>>Mest lästa</option>
+                    <option value="liked" <?= $sortBy === 'liked' ? 'selected' : '' ?>>Mest gillade</option>
+                </select>
+            </div>
+        </div>
+        <div class="gallery-filters-actions">
+            <div class="filter-search-wrapper">
+                <input type="text" name="q" class="filter-input" placeholder="Sök nyheter..." value="<?= htmlspecialchars($searchQuery) ?>">
+            </div>
+            <button type="submit" class="btn btn-primary filter-btn">
+                <i data-lucide="search" style="width: 16px; height: 16px;"></i> Sök
+            </button>
+            <?php if ($filterTag || $filterType || $filterDiscipline || $searchQuery || $sortBy !== 'recent'): ?>
+            <a href="/news" class="btn btn-ghost filter-btn">Rensa</a>
+            <?php endif; ?>
+        </div>
+    </form>
+</div>
 
 <div class="news-layout">
     <!-- Main Content -->

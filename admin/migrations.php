@@ -250,6 +250,9 @@ $migrationChecks = [
     '072_performance_indexes_v2.sql' => [
         'data' => ["(SELECT 1 FROM INFORMATION_SCHEMA.STATISTICS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'results' AND INDEX_NAME = 'idx_results_cyclist_id')"]
     ],
+    '073_promotor_events_tables.sql' => [
+        'tables' => ['promotor_events', 'promotor_series']
+    ],
 ];
 
 // ============================================================================
