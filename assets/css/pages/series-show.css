@@ -230,7 +230,10 @@ input.filter-select {
     margin-bottom: 1rem;
 }
 
-/* Standings Tables */
+/* ============================================================
+   STANDINGS TABLES - Consistent across all classes
+   ============================================================ */
+
 .standings-class {
     margin-bottom: var(--space-xl);
 }
@@ -269,44 +272,96 @@ input.filter-select {
 .table tbody tr:hover {
     background: var(--color-bg-hover);
 }
-/* Standardized column widths */
+
+/*
+ * DESKTOP + LANDSCAPE: Horizontal scroll with fixed column widths.
+ * All classes get identical column sizing regardless of content.
+ * table-layout: fixed ensures columns don't auto-size from data.
+ */
+.table-responsive {
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+}
 .standings-table {
     table-layout: fixed;
     width: 100%;
     font-size: var(--text-sm);
 }
-.col-pos {
+/* Fixed widths - these MUST match across all tables */
+.standings-table th.col-pos,
+.standings-table td.col-pos {
     width: 48px;
+    min-width: 48px;
+    max-width: 48px;
     text-align: center;
 }
-.col-name {
-    width: auto;
-    min-width: 140px;
+.standings-table th.col-name,
+.standings-table td.col-name {
+    width: 160px;
+    min-width: 160px;
+    max-width: 160px;
     white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
-.col-club {
-    width: auto;
-    min-width: 100px;
+.standings-table th.col-club,
+.standings-table td.col-club {
+    width: 120px;
+    min-width: 120px;
+    max-width: 120px;
     color: var(--color-text-secondary);
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
+.standings-table th.col-event,
+.standings-table td.col-event {
+    width: 44px;
+    min-width: 44px;
+    max-width: 44px;
+    text-align: center;
+    font-size: var(--text-sm);
+}
+.standings-table th.col-event {
+    font-size: var(--text-xs);
+    padding: var(--space-xs);
+}
+.standings-table th.col-total,
+.standings-table td.col-total {
+    width: 64px;
+    min-width: 64px;
+    max-width: 64px;
+    text-align: center;
+    background: var(--color-bg-sunken);
+}
+/* Club standings columns */
 .col-riders {
     width: 60px;
     text-align: center;
     color: var(--color-text-secondary);
 }
-.col-club-name {
-    width: auto;
-    min-width: 150px;
+.standings-table th.col-club-name,
+.standings-table td.col-club-name {
+    width: 180px;
+    min-width: 180px;
+    max-width: 180px;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
 }
-.col-event {
-    width: 44px;
-    text-align: center;
-    font-size: var(--text-sm);
+/* DH columns */
+.col-event-dh {
+    width: 36px !important;
+    min-width: 36px !important;
+    max-width: 36px !important;
 }
-.col-total {
-    width: 64px;
-    text-align: center;
-    background: var(--color-bg-sunken);
+.th-dh {
+    font-size: var(--text-xs);
+    line-height: 1.2;
+}
+.th-dh-type {
+    font-size: 0.6rem;
+    color: var(--color-text-muted);
 }
 
 /* Medal icons */
@@ -315,10 +370,6 @@ input.filter-select {
     height: 24px;
     vertical-align: middle;
     display: inline-block;
-}
-.standings-table th.col-event {
-    font-size: var(--text-xs);
-    padding: var(--space-xs);
 }
 .points-excluded {
     text-decoration: line-through;
@@ -386,8 +437,87 @@ input.filter-select {
     color: white;
 }
 
-/* Mobile Portrait - hide event columns, compact layout */
-@media (max-width: 599px) {
+/* Club Detail Button */
+.col-action {
+    width: 48px;
+    text-align: center;
+}
+.btn-icon {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    width: 32px;
+    height: 32px;
+    border-radius: var(--radius-full);
+    background: var(--color-bg-surface);
+    border: 1px solid var(--color-border);
+    color: var(--color-text-muted);
+    text-decoration: none;
+    transition: all var(--transition-fast);
+}
+.btn-icon:hover {
+    background: var(--color-accent);
+    border-color: var(--color-accent);
+    color: white;
+}
+.btn-icon i, .btn-icon svg {
+    width: 16px;
+    height: 16px;
+}
+
+/* Club Result Item - make clickable */
+.club-result-item {
+    display: flex;
+    align-items: center;
+    gap: var(--space-sm);
+    padding: var(--space-md);
+    border-bottom: 1px solid var(--color-border-light);
+    text-decoration: none;
+    color: inherit;
+    transition: background var(--transition-fast);
+}
+.club-result-item:hover {
+    background: var(--color-bg-hover);
+}
+.result-action {
+    color: var(--color-text-muted);
+    margin-left: auto;
+}
+.result-action i, .result-action svg {
+    width: 20px;
+    height: 20px;
+}
+.club-result-item:hover .result-action {
+    color: var(--color-accent);
+}
+
+/* Historical Data Warning Banner */
+.series-historical-warning {
+    display: flex;
+    align-items: flex-start;
+    gap: var(--space-sm);
+    padding: var(--space-md);
+    background: rgba(245, 158, 11, 0.1);
+    border: 1px solid var(--color-warning);
+    border-radius: var(--radius-md);
+    margin-bottom: var(--space-lg);
+    color: var(--color-text-secondary);
+    font-size: var(--text-sm);
+    line-height: 1.5;
+}
+.series-historical-warning i {
+    flex-shrink: 0;
+    width: 18px;
+    height: 18px;
+    color: var(--color-warning);
+    margin-top: 1px;
+}
+
+/* ============================================================
+   MOBILE PORTRAIT: Only #, Name, Total - no scroll needed
+   ============================================================ */
+@media (max-width: 767px) and (orientation: portrait) {
+    /* Filter bar compact */
     .filters-bar {
         flex-direction: column;
         padding: var(--space-sm);
@@ -397,15 +527,10 @@ input.filter-select {
         width: 100%;
         min-width: 0;
     }
-    .filter-select {
+    .filter-select, .filter-btn {
         width: 100%;
     }
-    .filter-btn {
-        width: 100%;
-    }
-}
 
-@media (max-width: 599px) and (orientation: portrait) {
     /* Compact series hero */
     .series-hero {
         flex-direction: row;
@@ -437,7 +562,7 @@ input.filter-select {
         margin-bottom: var(--space-2xs);
     }
     .series-description {
-        display: none; /* Hide description on mobile */
+        display: none;
     }
     .series-meta {
         justify-content: flex-start;
@@ -457,8 +582,6 @@ input.filter-select {
         font-size: 0.65rem;
         padding: 1px 6px;
     }
-
-    /* Ultra compact event items - single line like history */
     .event-dropdown-item {
         padding: var(--space-xs) var(--space-md);
         font-size: var(--text-sm);
@@ -486,18 +609,47 @@ input.filter-select {
         font-size: var(--text-sm);
     }
 
-    /* Hide columns in table */
+    /* Hide event columns + club + riders + action on portrait */
     .standings-table .col-club,
     .standings-table th.col-club,
     .standings-table .col-riders,
     .standings-table th.col-riders,
     .standings-table .col-event,
-    .standings-table th.col-event {
-        display: none;
+    .standings-table th.col-event,
+    .standings-table .col-event-dh,
+    .standings-table th.col-event-dh,
+    .standings-table .col-action,
+    .standings-table th.col-action {
+        display: none !important;
     }
-    .col-name, .col-club-name {
+
+    /* Table takes full width, auto-layout since only 3 columns */
+    .standings-table {
+        table-layout: auto;
+        width: 100%;
+    }
+    .standings-table th.col-pos,
+    .standings-table td.col-pos {
+        width: 40px;
+        min-width: 40px;
+        max-width: 40px;
+    }
+    .standings-table th.col-name,
+    .standings-table td.col-name,
+    .standings-table th.col-club-name,
+    .standings-table td.col-club-name {
+        width: auto;
+        min-width: 0;
+        max-width: none;
         white-space: normal;
         word-break: break-word;
+        overflow: visible;
+    }
+    .standings-table th.col-total,
+    .standings-table td.col-total {
+        width: 64px;
+        min-width: 64px;
+        max-width: 64px;
     }
 
     /* Compact cards */
@@ -509,11 +661,23 @@ input.filter-select {
         font-size: var(--text-md);
         margin-bottom: var(--space-sm);
     }
+
+    /* Edge-to-edge warning */
+    .series-historical-warning {
+        margin-left: -16px;
+        margin-right: -16px;
+        border-radius: 0;
+        border-left: none;
+        border-right: none;
+    }
 }
 
-/* Mobile Landscape & Tablet - scrollable table with all columns */
+/* ============================================================
+   LANDSCAPE (all devices): Show all columns, horizontal scroll
+   Same layout as desktop - consistent column widths via table-layout: fixed
+   ============================================================ */
 @media (max-width: 1024px) and (orientation: landscape),
-       (min-width: 600px) and (max-width: 1024px) {
+       (min-width: 600px) and (max-width: 767px) {
     .series-hero {
         flex-direction: row;
         text-align: left;
@@ -522,139 +686,29 @@ input.filter-select {
         width: 80px;
         height: 80px;
     }
-    /* Make table horizontally scrollable */
-    .table-responsive {
-        overflow-x: auto;
-        -webkit-overflow-scrolling: touch;
-        margin: 0 calc(-1 * var(--container-padding));
-        padding: 0 var(--container-padding);
+}
+
+/* Small filter bar on tablets */
+@media (max-width: 767px) {
+    .filters-bar {
+        flex-direction: column;
+        padding: var(--space-sm);
+        gap: var(--space-sm);
     }
-    .standings-table {
-        min-width: 700px;
+    .filter-group {
+        width: 100%;
+        min-width: 0;
     }
-    /* Compact columns for landscape */
-    .standings-table .col-event {
-        width: 36px;
-        font-size: var(--text-xs);
-        padding: var(--space-xs);
-    }
-    .standings-table th.col-event {
-        font-size: 0.65rem;
-        padding: var(--space-xs);
-    }
-    .col-name, .col-club-name {
-        white-space: nowrap;
-        max-width: 120px;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-    .col-club {
-        max-width: 80px;
-        overflow: hidden;
-        text-overflow: ellipsis;
-    }
-    .col-total {
-        width: 50px;
-        font-size: var(--text-sm);
+    .filter-select, .filter-btn {
+        width: 100%;
     }
 }
 
-/* Club Detail Button */
-.col-action {
-    width: 48px;
-    text-align: center;
-}
-
-.btn-icon {
-    display: inline-flex;
-    align-items: center;
-    justify-content: center;
-    width: 32px;
-    height: 32px;
-    border-radius: var(--radius-full);
-    background: var(--color-bg-surface);
-    border: 1px solid var(--color-border);
-    color: var(--color-text-muted);
-    text-decoration: none;
-    transition: all var(--transition-fast);
-}
-
-.btn-icon:hover {
-    background: var(--color-accent);
-    border-color: var(--color-accent);
-    color: white;
-}
-
-.btn-icon i, .btn-icon svg {
-    width: 16px;
-    height: 16px;
-}
-
-/* Club Result Item - make clickable */
-.club-result-item {
-    display: flex;
-    align-items: center;
-    gap: var(--space-sm);
-    padding: var(--space-md);
-    border-bottom: 1px solid var(--color-border-light);
-    text-decoration: none;
-    color: inherit;
-    transition: background var(--transition-fast);
-}
-
-.club-result-item:hover {
-    background: var(--color-bg-hover);
-}
-
-.result-action {
-    color: var(--color-text-muted);
-    margin-left: auto;
-}
-
-.result-action i, .result-action svg {
-    width: 20px;
-    height: 20px;
-}
-
-.club-result-item:hover .result-action {
-    color: var(--color-accent);
-}
-
-/* Hide action column on mobile portrait */
-@media (max-width: 599px) and (orientation: portrait) {
-    .standings-table .col-action,
-    .standings-table th.col-action {
-        display: none;
-    }
-}
-
-/* Historical Data Warning Banner */
-.series-historical-warning {
-    display: flex;
-    align-items: flex-start;
-    gap: var(--space-sm);
-    padding: var(--space-md);
-    background: rgba(245, 158, 11, 0.1);
-    border: 1px solid var(--color-warning);
-    border-radius: var(--radius-md);
-    margin-bottom: var(--space-lg);
-    color: var(--color-text-secondary);
-    font-size: var(--text-sm);
-    line-height: 1.5;
-}
-
-.series-historical-warning i {
-    flex-shrink: 0;
-    width: 18px;
-    height: 18px;
-    color: var(--color-warning);
-    margin-top: 1px;
-}
-
+/* Edge-to-edge warning on all mobile */
 @media (max-width: 767px) {
     .series-historical-warning {
-        margin-left: calc(-1 * var(--container-padding, 16px));
-        margin-right: calc(-1 * var(--container-padding, 16px));
+        margin-left: -16px;
+        margin-right: -16px;
         border-radius: 0;
         border-left: none;
         border-right: none;

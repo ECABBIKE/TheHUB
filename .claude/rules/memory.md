@@ -4,6 +4,24 @@
 
 ---
 
+## SENASTE FIXAR (2026-03-04, session 27)
+
+### Series show.php: ~1200 SQL-queries → ~10 (N+1 eliminerad)
+- **Problem:** Seriesidan körde EN query per åkare per event för att hämta poäng. 200 åkare × 6 event = 1200 queries. Plus 1 query per event för klubb-standings = 6 extra tunga queries.
+- **Fix 1: Bulk pointsMap** - EN query hämtar ALLA poäng (series_results/results) för alla events. Byggs till PHP-array `$pointsMap[cyclist_id][event_id][class_id]`. Loop-lookup istället för SQL.
+- **Fix 2: Bulk club results** - EN query hämtar ALLA klubb-resultat för alla events. Grupperas i PHP per event/klubb/klass för 100%/50%-regeln.
+- **Fix 3: Merged meta-queries** - `series_results COUNT` + DH-check slagna ihop till EN query med SUM(CASE).
+- **Fix 4: Events-query optimerad** - `e.*` ersatt med bara använda kolumner. `LEFT JOIN results + GROUP BY` ersatt med subquery.
+- **Resultat:** ~1214 queries → ~10 queries (99% reduktion)
+- **Filer:** `pages/series/show.php`
+
+### Serietabeller: Inkonsistenta bredder mellan klasser fixad
+- **Problem:** `table-layout: fixed` med `width: auto` på namnkolumnen gav olika tabellbredder per klass beroende på datalängd
+- **Fix:** På mobil portrait: `table-layout: auto` + `width: 100%` + fasta bredder på #/Total-kolumner
+- **Fil:** `assets/css/pages/series-show.css`
+
+---
+
 ## SENASTE FIXAR (2026-03-04, session 26)
 
 ### CSS Bundle: 11 filer → 1 (10 färre HTTP-requests)

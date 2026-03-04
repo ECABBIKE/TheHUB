@@ -45,62 +45,46 @@ $clubChampionshipEnabled = !isset($series['enable_club_championship']) || !empty
 // Show actual standings only if both tab is shown AND championship is enabled
 $showClubChampionship = $showClubTab && $clubChampionshipEnabled;
 
-// Check if series_events table exists
+// Check series_events table + series_results data + DH mode in ONE query
 $useSeriesEvents = false;
+$useSeriesResults = false;
+$isDHSeries = false;
 try {
     $check = $pdo->query("SHOW TABLES LIKE 'series_events'");
     $useSeriesEvents = $check->rowCount() > 0;
-} catch (Exception $e) {
-    $useSeriesEvents = false;
-}
-
-// Check if series_results table has data for this series
-$useSeriesResults = false;
+} catch (Exception $e) {}
 try {
-    $check = $pdo->prepare("SELECT COUNT(*) as cnt FROM series_results WHERE series_id = ?");
-    $check->execute([$seriesId]);
-    $row = $check->fetch(PDO::FETCH_ASSOC);
-    $useSeriesResults = ($row && $row['cnt'] > 0);
-} catch (Exception $e) {
-    $useSeriesResults = false;
-}
-
-// Check if this series uses DH-style points (run_1_points + run_2_points)
-$isDHSeries = false;
-try {
-    $dhCheck = $pdo->prepare("
-        SELECT COUNT(*) as cnt FROM series_results
-        WHERE series_id = ? AND (COALESCE(run_1_points, 0) > 0 OR COALESCE(run_2_points, 0) > 0)
+    $srCheck = $pdo->prepare("
+        SELECT COUNT(*) as cnt,
+               SUM(CASE WHEN COALESCE(run_1_points, 0) > 0 OR COALESCE(run_2_points, 0) > 0 THEN 1 ELSE 0 END) as dh_cnt
+        FROM series_results WHERE series_id = ?
     ");
-    $dhCheck->execute([$seriesId]);
-    $dhRow = $dhCheck->fetch(PDO::FETCH_ASSOC);
-    $isDHSeries = ($dhRow && $dhRow['cnt'] > 0);
-} catch (Exception $e) {
-    $isDHSeries = false;
-}
+    $srCheck->execute([$seriesId]);
+    $srRow = $srCheck->fetch(PDO::FETCH_ASSOC);
+    $useSeriesResults = ($srRow && $srRow['cnt'] > 0);
+    $isDHSeries = ($srRow && $srRow['dh_cnt'] > 0);
+} catch (Exception $e) {}
 
-// Get events in series
+// Get events in series (only needed columns, subquery for count to avoid GROUP BY)
 if ($useSeriesEvents) {
     $stmt = $pdo->prepare("
-        SELECT e.*, v.name as venue_name, v.city as venue_city,
-               COUNT(DISTINCT r.cyclist_id) as result_count
+        SELECT e.id, e.name, e.date, e.location, e.is_championship,
+               v.name as venue_name, v.city as venue_city,
+               (SELECT COUNT(DISTINCT r.cyclist_id) FROM results r WHERE r.event_id = e.id) as result_count
         FROM series_events se
         JOIN events e ON se.event_id = e.id
         LEFT JOIN venues v ON e.venue_id = v.id
-        LEFT JOIN results r ON e.id = r.event_id
         WHERE se.series_id = ?
-        GROUP BY e.id
         ORDER BY e.date ASC
     ");
 } else {
     $stmt = $pdo->prepare("
-        SELECT e.*, v.name as venue_name, v.city as venue_city,
-               COUNT(DISTINCT r.cyclist_id) as result_count
+        SELECT e.id, e.name, e.date, e.location, e.is_championship,
+               v.name as venue_name, v.city as venue_city,
+               (SELECT COUNT(DISTINCT r.cyclist_id) FROM results r WHERE r.event_id = e.id) as result_count
         FROM events e
         LEFT JOIN venues v ON e.venue_id = v.id
-        LEFT JOIN results r ON e.id = r.event_id
         WHERE e.series_id = ?
-        GROUP BY e.id
         ORDER BY e.date ASC
     ");
 }
@@ -221,7 +205,32 @@ if (!empty($eventIds)) {
     $stmt->execute($params);
     $riders = $stmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // For each rider, get their points from each event
+    // BULK fetch all points for all riders in ONE query (instead of N×M queries)
+    $pointsMap = []; // [cyclist_id][event_id][class_id] => {points, run1, run2}
+    if ($useSeriesResults) {
+        $bulkStmt = $pdo->prepare("
+            SELECT cyclist_id, event_id, class_id, points, run_1_points, run_2_points
+            FROM series_results
+            WHERE series_id = ? AND event_id IN ({$placeholders})
+        ");
+        $bulkStmt->execute(array_merge([$seriesId], $eventIds));
+    } else {
+        $bulkStmt = $pdo->prepare("
+            SELECT cyclist_id, event_id, class_id, points, 0 as run_1_points, 0 as run_2_points
+            FROM results
+            WHERE event_id IN ({$placeholders})
+        ");
+        $bulkStmt->execute($eventIds);
+    }
+    foreach ($bulkStmt->fetchAll(PDO::FETCH_ASSOC) as $row) {
+        $pointsMap[$row['cyclist_id']][$row['event_id']][$row['class_id']] = [
+            'points' => (int)$row['points'],
+            'run1' => (int)($row['run_1_points'] ?? 0),
+            'run2' => (int)($row['run_2_points'] ?? 0),
+        ];
+    }
+
+    // Build standings from bulk data (zero additional queries)
     foreach ($riders as $rider) {
         $riderData = [
             'rider_id' => $rider['rider_id'],
@@ -231,34 +240,18 @@ if (!empty($eventIds)) {
             'club_name' => $rider['club_name'],
             'class_id' => $rider['class_id'],
             'event_points' => [],
-            'event_run1' => [],   // DH Kval points
-            'event_run2' => [],   // DH Race points
+            'event_run1' => [],
+            'event_run2' => [],
             'excluded_events' => [],
             'total_points' => 0
         ];
 
-        // Get points for each event
         $allPoints = [];
         foreach ($events as $event) {
-            if ($useSeriesResults) {
-                $pStmt = $pdo->prepare("
-                    SELECT points, run_1_points, run_2_points FROM series_results
-                    WHERE series_id = ? AND cyclist_id = ? AND event_id = ? AND class_id = ?
-                    LIMIT 1
-                ");
-                $pStmt->execute([$seriesId, $rider['rider_id'], $event['id'], $rider['class_id']]);
-            } else {
-                $pStmt = $pdo->prepare("
-                    SELECT points, 0 as run_1_points, 0 as run_2_points FROM results
-                    WHERE cyclist_id = ? AND event_id = ? AND class_id = ?
-                    LIMIT 1
-                ");
-                $pStmt->execute([$rider['rider_id'], $event['id'], $rider['class_id']]);
-            }
-            $result = $pStmt->fetch(PDO::FETCH_ASSOC);
-            $points = $result ? (int)$result['points'] : 0;
-            $run1 = $result ? (int)($result['run_1_points'] ?? 0) : 0;
-            $run2 = $result ? (int)($result['run_2_points'] ?? 0) : 0;
+            $p = $pointsMap[$rider['rider_id']][$event['id']][$rider['class_id']] ?? null;
+            $points = $p ? $p['points'] : 0;
+            $run1 = $p ? $p['run1'] : 0;
+            $run2 = $p ? $p['run2'] : 0;
             $riderData['event_points'][$event['id']] = $points;
             $riderData['event_run1'][$event['id']] = $run1;
             $riderData['event_run2'][$event['id']] = $run2;
@@ -284,7 +277,6 @@ if (!empty($eventIds)) {
             }
         }
 
-        // Only include riders with points
         if ($riderData['total_points'] > 0) {
             $classKey = $rider['class_display_name'] ?? $rider['class_name'] ?? 'Okänd';
             if (!isset($standingsByClass[$classKey])) {
@@ -325,80 +317,77 @@ if (!$showClubChampionship) {
     goto skip_club_standings;
 }
 
-foreach ($events as $event) {
-    $eventId = $event['id'];
+// Fetch ALL club results in ONE query (instead of 1 per event)
+$clubEventPlaceholders = implode(',', array_fill(0, count($eventIds), '?'));
+if ($useSeriesResults) {
+    $clubStmt = $pdo->prepare("
+        SELECT
+            sr.event_id,
+            sr.cyclist_id,
+            sr.class_id,
+            sr.points,
+            rd.firstname,
+            rd.lastname,
+            COALESCE(rcs.club_id, rd.club_id) as club_id,
+            COALESCE(rcs_club.name, c.name) as club_name,
+            COALESCE(rcs_club.city, c.city) as club_city,
+            cls.name as class_name,
+            cls.display_name as class_display_name
+        FROM series_results sr
+        JOIN riders rd ON sr.cyclist_id = rd.id
+        LEFT JOIN rider_club_seasons rcs ON rd.id = rcs.rider_id AND rcs.season_year = ?
+        LEFT JOIN clubs rcs_club ON rcs.club_id = rcs_club.id
+        LEFT JOIN clubs c ON rd.club_id = c.id
+        LEFT JOIN classes cls ON sr.class_id = cls.id
+        WHERE sr.series_id = ? AND sr.event_id IN ({$clubEventPlaceholders})
+        AND COALESCE(rcs.club_id, rd.club_id) IS NOT NULL
+        AND sr.points > 0
+        AND COALESCE(cls.series_eligible, 1) = 1
+        AND COALESCE(cls.awards_points, 1) = 1
+        ORDER BY sr.event_id, COALESCE(rcs.club_id, rd.club_id), sr.class_id, sr.points DESC
+    ");
+    $clubStmt->execute(array_merge([$seriesYear, $seriesId], $eventIds));
+} else {
+    $clubStmt = $pdo->prepare("
+        SELECT
+            r.event_id,
+            r.cyclist_id,
+            r.class_id,
+            r.points,
+            rd.firstname,
+            rd.lastname,
+            COALESCE(rcs.club_id, rd.club_id) as club_id,
+            COALESCE(rcs_club.name, c.name) as club_name,
+            COALESCE(rcs_club.city, c.city) as club_city,
+            cls.name as class_name,
+            cls.display_name as class_display_name
+        FROM results r
+        JOIN riders rd ON r.cyclist_id = rd.id
+        LEFT JOIN rider_club_seasons rcs ON rd.id = rcs.rider_id AND rcs.season_year = ?
+        LEFT JOIN clubs rcs_club ON rcs.club_id = rcs_club.id
+        LEFT JOIN clubs c ON rd.club_id = c.id
+        LEFT JOIN classes cls ON r.class_id = cls.id
+        WHERE r.event_id IN ({$clubEventPlaceholders})
+        AND r.status = 'finished'
+        AND COALESCE(rcs.club_id, rd.club_id) IS NOT NULL
+        AND r.points > 0
+        AND COALESCE(cls.series_eligible, 1) = 1
+        AND COALESCE(cls.awards_points, 1) = 1
+        ORDER BY r.event_id, COALESCE(rcs.club_id, rd.club_id), r.class_id, r.points DESC
+    ");
+    $clubStmt->execute(array_merge([$seriesYear], $eventIds));
+}
+$allClubResults = $clubStmt->fetchAll(PDO::FETCH_ASSOC);
 
-    // Get all results for this event with series points, grouped by club and class
-    // Use rider_club_seasons for accurate year-based club membership
-    if ($useSeriesResults) {
-        $stmt = $pdo->prepare("
-            SELECT
-                sr.cyclist_id,
-                sr.class_id,
-                sr.points,
-                rd.firstname,
-                rd.lastname,
-                COALESCE(rcs.club_id, rd.club_id) as club_id,
-                COALESCE(rcs_club.name, c.name) as club_name,
-                COALESCE(rcs_club.city, c.city) as club_city,
-                cls.name as class_name,
-                cls.display_name as class_display_name
-            FROM series_results sr
-            JOIN riders rd ON sr.cyclist_id = rd.id
-            LEFT JOIN rider_club_seasons rcs ON rd.id = rcs.rider_id AND rcs.season_year = ?
-            LEFT JOIN clubs rcs_club ON rcs.club_id = rcs_club.id
-            LEFT JOIN clubs c ON rd.club_id = c.id
-            LEFT JOIN classes cls ON sr.class_id = cls.id
-            WHERE sr.series_id = ? AND sr.event_id = ?
-            AND COALESCE(rcs.club_id, rd.club_id) IS NOT NULL
-            AND sr.points > 0
-            AND COALESCE(cls.series_eligible, 1) = 1
-            AND COALESCE(cls.awards_points, 1) = 1
-            ORDER BY COALESCE(rcs.club_id, rd.club_id), sr.class_id, sr.points DESC
-        ");
-        $stmt->execute([$seriesYear, $seriesId, $eventId]);
-    } else {
-        $stmt = $pdo->prepare("
-            SELECT
-                r.cyclist_id,
-                r.class_id,
-                r.points,
-                rd.firstname,
-                rd.lastname,
-                COALESCE(rcs.club_id, rd.club_id) as club_id,
-                COALESCE(rcs_club.name, c.name) as club_name,
-                COALESCE(rcs_club.city, c.city) as club_city,
-                cls.name as class_name,
-                cls.display_name as class_display_name
-            FROM results r
-            JOIN riders rd ON r.cyclist_id = rd.id
-            LEFT JOIN rider_club_seasons rcs ON rd.id = rcs.rider_id AND rcs.season_year = ?
-            LEFT JOIN clubs rcs_club ON rcs.club_id = rcs_club.id
-            LEFT JOIN clubs c ON rd.club_id = c.id
-            LEFT JOIN classes cls ON r.class_id = cls.id
-            WHERE r.event_id = ?
-            AND r.status = 'finished'
-            AND COALESCE(rcs.club_id, rd.club_id) IS NOT NULL
-            AND r.points > 0
-            AND COALESCE(cls.series_eligible, 1) = 1
-            AND COALESCE(cls.awards_points, 1) = 1
-            ORDER BY COALESCE(rcs.club_id, rd.club_id), r.class_id, r.points DESC
-        ");
-        $stmt->execute([$seriesYear, $eventId]);
-    }
-    $eventResults = $stmt->fetchAll(PDO::FETCH_ASSOC);
+// Group by event -> club -> class, then apply 100%/50% rule
+$resultsByEvent = [];
+foreach ($allClubResults as $result) {
+    $eid = $result['event_id'];
+    $key = $result['club_id'] . '_' . $result['class_id'];
+    $resultsByEvent[$eid][$key][] = $result;
+}
 
-    // Group by club and class
-    $clubClassResults = [];
-    foreach ($eventResults as $result) {
-        $key = $result['club_id'] . '_' . $result['class_id'];
-        if (!isset($clubClassResults[$key])) {
-            $clubClassResults[$key] = [];
-        }
-        $clubClassResults[$key][] = $result;
-    }
-
-    // Apply 100%/50% rule for each club/class combo
+foreach ($resultsByEvent as $eventId => $clubClassResults) {
     foreach ($clubClassResults as $clubRiders) {
         $rank = 1;
         foreach ($clubRiders as $rider) {
@@ -413,7 +402,6 @@ foreach ($events as $event) {
                 $clubPoints = round($originalPoints * 0.5, 0);
             }
 
-            // Initialize club if not exists
             if (!isset($clubStandings[$clubId])) {
                 $clubStandings[$clubId] = [
                     'club_id' => $clubId,
@@ -431,11 +419,9 @@ foreach ($events as $event) {
                 }
             }
 
-            // Add club points for this event
             $clubStandings[$clubId]['event_points'][$eventId] += $clubPoints;
             $clubStandings[$clubId]['total_points'] += $clubPoints;
 
-            // Track rider contribution
             $riderId = $rider['cyclist_id'];
             $riderKey = $clubId . '_' . $riderId;
             if (!isset($clubRiderContributions[$riderKey])) {
