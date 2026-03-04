@@ -100,15 +100,21 @@ if (hub_is_ajax()) {
 <!DOCTYPE html>
 <html lang="sv">
 <head>
+    <?php $_pageTimings['head_start'] = microtime(true); ?>
     <?php include __DIR__ . '/components/head.php'; ?>
+    <?php $_pageTimings['head_end'] = microtime(true); ?>
 </head>
 <body>
     <a href="#main-content" class="skip-link">Hoppa till huvudinnehåll</a>
 
+    <?php $_pageTimings['header_start'] = microtime(true); ?>
     <?php include __DIR__ . '/components/header.php'; ?>
+    <?php $_pageTimings['header_end'] = microtime(true); ?>
 
     <div class="app-layout">
+        <?php $_pageTimings['sidebar_start'] = microtime(true); ?>
         <?php include __DIR__ . '/components/sidebar.php'; ?>
+        <?php $_pageTimings['sidebar_end'] = microtime(true); ?>
 
         <main id="main-content" class="main-content" role="main" aria-live="polite" tabindex="-1">
             <?php include __DIR__ . '/components/breadcrumb.php'; ?>
@@ -140,13 +146,19 @@ if (hub_is_ajax()) {
     $_perfPage = round(($_pageTimings['after_page'] - $_pageTimings['before_page']) * 1000);
     $_perfTotal = round(($_pageTimings['end'] - $s) * 1000);
     // Always in HTML comment
-    echo "\n<!-- PERF: config={$_perfConfig}ms router={$_perfRouter}ms before_page={$_perfBeforePage}ms page={$_perfPage}ms total={$_perfTotal}ms -->\n";
+    $_perfHead = round(($_pageTimings['head_end'] - $_pageTimings['head_start']) * 1000);
+    $_perfHeader = round(($_pageTimings['header_end'] - $_pageTimings['header_start']) * 1000);
+    $_perfSidebar = round(($_pageTimings['sidebar_end'] - $_pageTimings['sidebar_start']) * 1000);
+    echo "\n<!-- PERF: config={$_perfConfig}ms router={$_perfRouter}ms head={$_perfHead}ms header={$_perfHeader}ms sidebar={$_perfSidebar}ms page={$_perfPage}ms total={$_perfTotal}ms -->\n";
     // Visible bar with ?perf=1
     if (isset($_GET['perf'])) {
         $_perfColor = $_perfTotal < 500 ? '#10b981' : ($_perfTotal < 1500 ? '#fbbf24' : '#ef4444');
-        echo '<div style="position:fixed;bottom:0;left:0;right:0;z-index:999999;background:#111;color:#fff;font:12px monospace;padding:6px 12px;display:flex;gap:12px;justify-content:center;">';
+        echo '<div style="position:fixed;bottom:0;left:0;right:0;z-index:999999;background:#111;color:#fff;font:12px monospace;padding:6px 12px;display:flex;gap:12px;justify-content:center;flex-wrap:wrap;">';
         echo "<span style='color:{$_perfColor};font-weight:bold;'>PHP {$_perfTotal}ms</span>";
         echo "<span>config {$_perfConfig}ms</span>";
+        echo "<span>head {$_perfHead}ms</span>";
+        echo "<span>header {$_perfHeader}ms</span>";
+        echo "<span>sidebar {$_perfSidebar}ms</span>";
         echo "<span>layout " . ($_perfBeforePage - $_perfRouter) . "ms</span>";
         echo "<span style='color:{$_perfColor};'>page {$_perfPage}ms</span>";
         echo '</div>';
