@@ -197,4 +197,13 @@ date_default_timezone_set('Europe/Stockholm');
 
 require_once __DIR__ . '/includes/helpers.php';
 require_once __DIR__ . '/includes/auth.php';
+
+// CRITICAL: Release session lock early to prevent blocking other requests.
+// PHP holds exclusive lock on session file - if one page takes 5+ seconds,
+// ALL other requests from same user are blocked. Release after auth check.
+// Only for GET requests - POST requests may need to write to session.
+if (session_status() === PHP_SESSION_ACTIVE && php_sapi_name() !== 'cli'
+    && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET') {
+    session_write_close();
+}
 ?>
