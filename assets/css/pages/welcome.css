@@ -247,16 +247,56 @@
     margin: 0;
 }
 
-/* Two-column grid for upcoming events */
-.welcome-upcoming-grid {
+/* Upcoming events - 3 cards in a row */
+.welcome-upcoming-cards {
     display: grid;
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(3, 1fr);
     gap: var(--space-md);
-    margin-bottom: var(--space-md);
 }
 
-.welcome-upcoming-grid .welcome-section {
-    margin-bottom: 0;
+.welcome-upcoming-card {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: var(--space-sm);
+    padding: var(--space-md);
+    background: var(--color-bg-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius-md);
+    text-decoration: none;
+    transition: background var(--transition-fast), border-color var(--transition-fast);
+}
+
+.welcome-upcoming-card:hover {
+    background: var(--color-bg-hover);
+    border-color: var(--color-border-strong);
+}
+
+.welcome-upcoming-card .event-date-badge {
+    min-width: 56px;
+    height: 56px;
+}
+
+.welcome-upcoming-card .event-info {
+    text-align: center;
+}
+
+.welcome-upcoming-card .event-info h4 {
+    white-space: normal;
+    font-size: var(--text-md);
+}
+
+.welcome-upcoming-card .event-info p {
+    justify-content: center;
+}
+
+.event-discipline {
+    font-weight: var(--weight-medium);
+    color: var(--color-text-muted);
+    font-size: var(--text-xs);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
 }
 
 /* Discipline-specific date badges */
@@ -422,9 +462,22 @@
         grid-template-columns: repeat(2, 1fr);
     }
 
-    .welcome-upcoming-grid {
+    .welcome-upcoming-cards {
         grid-template-columns: 1fr;
         gap: var(--space-sm);
+    }
+
+    .welcome-upcoming-card {
+        flex-direction: row;
+        text-align: left;
+    }
+
+    .welcome-upcoming-card .event-info {
+        text-align: left;
+    }
+
+    .welcome-upcoming-card .event-info p {
+        justify-content: flex-start;
     }
 
     .welcome-login-cta {
