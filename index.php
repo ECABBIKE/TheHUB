@@ -131,14 +131,26 @@ if (hub_is_ajax()) {
     <?php include __DIR__ . '/components/footer.php'; ?>
     <?php include __DIR__ . '/components/woocommerce-modal.php'; ?>
     <?php
-    // Performance timing output (visible in page source / dev tools)
+    // Performance timing
     $_pageTimings['end'] = microtime(true);
     $s = $_pageTimings['start'];
-    echo "\n<!-- PERF: config=" . round(($_pageTimings['config'] - $s) * 1000) . "ms";
-    echo " router=" . round(($_pageTimings['router'] - $s) * 1000) . "ms";
-    echo " before_page=" . round(($_pageTimings['before_page'] - $s) * 1000) . "ms";
-    echo " page=" . round(($_pageTimings['after_page'] - $_pageTimings['before_page']) * 1000) . "ms";
-    echo " total=" . round(($_pageTimings['end'] - $s) * 1000) . "ms -->\n";
+    $_perfConfig = round(($_pageTimings['config'] - $s) * 1000);
+    $_perfRouter = round(($_pageTimings['router'] - $s) * 1000);
+    $_perfBeforePage = round(($_pageTimings['before_page'] - $s) * 1000);
+    $_perfPage = round(($_pageTimings['after_page'] - $_pageTimings['before_page']) * 1000);
+    $_perfTotal = round(($_pageTimings['end'] - $s) * 1000);
+    // Always in HTML comment
+    echo "\n<!-- PERF: config={$_perfConfig}ms router={$_perfRouter}ms before_page={$_perfBeforePage}ms page={$_perfPage}ms total={$_perfTotal}ms -->\n";
+    // Visible bar with ?perf=1
+    if (isset($_GET['perf'])) {
+        $_perfColor = $_perfTotal < 500 ? '#10b981' : ($_perfTotal < 1500 ? '#fbbf24' : '#ef4444');
+        echo '<div style="position:fixed;bottom:0;left:0;right:0;z-index:999999;background:#111;color:#fff;font:12px monospace;padding:6px 12px;display:flex;gap:12px;justify-content:center;">';
+        echo "<span style='color:{$_perfColor};font-weight:bold;'>PHP {$_perfTotal}ms</span>";
+        echo "<span>config {$_perfConfig}ms</span>";
+        echo "<span>layout " . ($_perfBeforePage - $_perfRouter) . "ms</span>";
+        echo "<span style='color:{$_perfColor};'>page {$_perfPage}ms</span>";
+        echo '</div>';
+    }
     ?>
 
     <!-- Floating Feedback Button - only on welcome/front page -->
