@@ -259,7 +259,7 @@
     flex-direction: column;
     align-items: center;
     text-align: center;
-    gap: var(--space-sm);
+    gap: var(--space-xs);
     padding: var(--space-md);
     background: var(--color-bg-surface);
     border: 1px solid var(--color-border);
@@ -273,39 +273,55 @@
     border-color: var(--color-border-strong);
 }
 
-.welcome-upcoming-card .event-date-badge {
-    min-width: 56px;
-    height: 56px;
-}
-
-.welcome-upcoming-card .event-info {
-    text-align: center;
-}
-
-.welcome-upcoming-card .event-info h4 {
-    white-space: normal;
-    font-size: var(--text-md);
-}
-
-.welcome-upcoming-card .event-info p {
+.welcome-card-logo {
+    height: 40px;
+    display: flex;
+    align-items: center;
     justify-content: center;
+    margin-bottom: var(--space-2xs);
 }
 
-.event-discipline {
+.welcome-card-logo img {
+    max-height: 40px;
+    max-width: 120px;
+    object-fit: contain;
+}
+
+.welcome-card-title {
+    font-size: var(--text-md);
+    font-weight: var(--weight-semibold);
+    color: var(--color-text-primary);
+    margin: 0;
+    line-height: 1.3;
+}
+
+.welcome-card-meta {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 2px;
+    font-size: var(--text-sm);
+    color: var(--color-text-secondary);
+    margin-top: var(--space-2xs);
+}
+
+.welcome-card-date,
+.welcome-card-location {
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+}
+
+.welcome-card-date {
+    color: var(--color-accent);
     font-weight: var(--weight-medium);
-    color: var(--color-text-muted);
+}
+
+.welcome-card-discipline {
     font-size: var(--text-xs);
     text-transform: uppercase;
     letter-spacing: 0.05em;
-}
-
-/* Discipline-specific date badges */
-.event-date-badge--enduro {
-    background: var(--color-ges-orange, #EF761F);
-}
-
-.event-date-badge--dh {
-    background: var(--color-gs-blue, #004a98);
+    color: var(--color-text-muted);
 }
 
 /* Sections */
@@ -470,14 +486,26 @@
     .welcome-upcoming-card {
         flex-direction: row;
         text-align: left;
+        gap: var(--space-md);
+        padding: var(--space-sm) var(--space-md);
     }
 
-    .welcome-upcoming-card .event-info {
-        text-align: left;
+    .welcome-card-logo {
+        height: 32px;
+        margin-bottom: 0;
+        flex-shrink: 0;
     }
 
-    .welcome-upcoming-card .event-info p {
-        justify-content: flex-start;
+    .welcome-card-logo img {
+        max-height: 32px;
+        max-width: 80px;
+    }
+
+    .welcome-card-meta {
+        flex-direction: row;
+        flex-wrap: wrap;
+        gap: var(--space-sm);
+        align-items: flex-start;
     }
 
     .welcome-login-cta {
