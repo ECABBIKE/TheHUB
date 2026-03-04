@@ -348,15 +348,8 @@ class GlobalSponsorManager {
 
         foreach ($sponsors as $sponsor) {
             $html .= $this->renderSponsor($sponsor, $position);
-
-            // Tracka impression
-            if (isset($sponsor['placement_id'])) {
-                $this->trackImpression(
-                    $sponsor['id'],
-                    $sponsor['placement_id'],
-                    $page_type
-                );
-            }
+            // Impression tracking disabled in render path for performance.
+            // Was doing UPDATE + INSERT per sponsor per page load (6-9 writes/page).
         }
 
         $html .= '</div></section>';

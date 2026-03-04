@@ -100,10 +100,11 @@ $iconType = match($faviconExt) {
 <link rel="icon" type="<?= $iconType ?>" sizes="16x16" href="<?= htmlspecialchars($faviconPath) ?>">
 <link rel="icon" type="<?= $iconType ?>" href="<?= htmlspecialchars($faviconPath) ?>">
 
-<!-- Preconnect & Google Fonts -->
+<!-- Preconnect & Google Fonts (non-render-blocking with preload trick) -->
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Cabin+Condensed:wght@400;500;600;700&family=Manrope:wght@300;400;500;600;700&family=Oswald:wght@400;500;600;700&family=Roboto:wght@400;500;700&display=swap" rel="stylesheet">
+<link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Cabin+Condensed:wght@400;700&family=Manrope:wght@400;500;600;700&family=Oswald:wght@400;600;700&family=Roboto:wght@400;500&display=swap" onload="this.onload=null;this.rel='stylesheet'">
+<noscript><link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Cabin+Condensed:wght@400;700&family=Manrope:wght@400;500;600;700&family=Oswald:wght@400;600;700&family=Roboto:wght@400;500&display=swap"></noscript>
 
 <!-- Lucide Icons - deferred to not block initial render -->
 <script defer src="https://unpkg.com/lucide@0.460.0/dist/umd/lucide.min.js"></script>

@@ -578,12 +578,10 @@ function render_global_sponsors($pageType, $position, $title = 'Sponsorer') {
         $_sponsorManagerInstance = new GlobalSponsorManager($pdo);
     }
 
-    // Get sponsors for this placement
+    // Get sponsors for this placement (already cached per page_type)
     $sponsors = $_sponsorManagerInstance->getSponsorsForPlacement($pageType, $position);
 
     if (empty($sponsors)) {
-        // Show placeholder for super_admin if no sponsors configured
-        // BUT only if hide_empty_for_admin is NOT enabled
         if ($isSuperAdmin && !$hideEmptyForAdmin) {
             return '<div class="sponsor-section sponsor-section-' . h($position) . '" style="border: 2px dashed var(--color-border); padding: var(--space-md); text-align: center; opacity: 0.6;">
                 <small style="color: var(--color-text-muted);">
@@ -595,7 +593,16 @@ function render_global_sponsors($pageType, $position, $title = 'Sponsorer') {
         return '';
     }
 
-    // Render sponsors
-    return $sponsorManager->renderSection($pageType, $position, $title);
+    // Render sponsors directly (avoid renderSection calling getSponsorsForPlacement again)
+    $html = '<section class="sponsor-section sponsor-section-' . h($position) . '">';
+    if ($title && !in_array($position, ['header_banner', 'header_inline'])) {
+        $html .= '<h3 class="sponsor-section-title">' . h($title) . '</h3>';
+    }
+    $html .= '<div class="sponsor-grid sponsor-grid-' . h($position) . '">';
+    foreach ($sponsors as $sponsor) {
+        $html .= $_sponsorManagerInstance->renderSponsor($sponsor, $position);
+    }
+    $html .= '</div></section>';
+    return $html;
 }
 ?>
