@@ -1,10 +1,41 @@
 # TheHUB - Memory / Session Knowledge
 
-> Senast uppdaterad: 2026-03-03
+> Senast uppdaterad: 2026-03-04
 
 ---
 
-## SENASTE FIXAR (2026-03-03, session 21-22)
+## SENASTE FIXAR (2026-03-04, session 23)
+
+### Event-sida prestandaöversyn - Klient-sida flikbyte + CSS-extraktion
+- **Problem:** Event-sidan (pages/event.php) var extremt långsam - "som sirap". Varje flikbyte orsakade full sidladdning med 22 SQL-frågor. 7225 rader med ~1400 rader inline CSS.
+- **Fix 1: Klient-sida flikbyte** - Alla 15 flikar renderas nu som `<div class="event-tab-pane">` med `style="display:none"` för inaktiva. JavaScript byter flik via `display`-toggle + `history.pushState` (ingen sidladdning). Bakåt/framåt-knappar fungerar via `popstate`-event.
+- **Fix 2: CSS-extraktion** - 4 inline `<style>`-block (~1400 rader) extraherade till `/assets/css/pages/event.css`. Enda kvarvarande inline-CSS har PHP-variabler (serie-gradient). event.php gick från 7225→5961 rader.
+- **Fix 3: Leaflet lazy-load** - Kartans CSS/JS (Leaflet ~180KB) laddas nu BARA när kartfliken visas. MutationObserver bevakar flikens `style`-attribut och laddar scripts dynamiskt.
+- **Fix 4: Resultat-paginering** - Klasser med >30 resultat visar bara de 30 första. "Visa alla X resultat"-knapp expanderar. Integrerat med sökfilter (sökning visar alltid alla).
+- **Fix 5: Live timing** - `$isTimingLive` kontrollerar nu utan `$activeTab === 'resultat'` (alla flikar finns i DOM).
+- **Fix 6: Serielogga på mobil** - Loggan visas nu inline med eventnamnet (`.event-title-logo`) istället för på egen rad i stats-raden.
+- **Fix 7: Ekonomi-ikon** - Ändrad från `wallet` (såg ut som "I") till `circle-dollar-sign` i sidebar, mobilnav och promotor-flikar.
+
+### VIKTIGT: Event-sidans tab-arkitektur (ny)
+- **Alla 15 flikar renderas alltid** - PHP genererar alla tab-panes med `display:none` för inaktiva
+- **Tab-ID format:** `tab-pane-{tabnamn}` (t.ex. `tab-pane-resultat`, `tab-pane-info`)
+- **Tab-länk attribut:** `data-tab="{tabnamn}"` på alla `.event-tab` länkar
+- **Flikbyte JS:** IIFE efter partner-sponsorer-sektionen, använder `switchTab(tabId)`
+- **Kartfliken:** Leaflet laddas lazy via MutationObserver första gången fliken visas
+- **Villkorliga flikar:** Flikarna syns/döljs i navbaren via PHP-villkor, men alla div-panes finns alltid i DOM
+- **Resultatfilter:** `filterResults()` integrerad med paginering - sökning override:ar 30-raders-gränsen
+
+### Filer ändrade
+- **`pages/event.php`** - Tab-konvertering, tab-JS, lazy Leaflet, resultat-paginering, live timing fix, serielogga mobil
+- **`assets/css/pages/event.css`** - Utökad med ~1400 rader extraherad CSS (news, registration, gallery)
+- **`admin/components/admin-mobile-nav.php`** - Ekonomi-ikon `circle-dollar-sign`
+- **`admin/promotor.php`** - Ekonomi-ikon `circle-dollar-sign`
+- **`components/sidebar.php`** - Ekonomi-ikon `circle-dollar-sign`
+- **`docs/promotor-instruktion.md`** - Korrigerad arrangörsguide v1.1
+
+---
+
+## TIDIGARE FIXAR (2026-03-03, session 21-22)
 
 ### Arrangörsguide v1.1 - Korrigerad med faktiska fält
 - **Markdown-källa:** `/docs/promotor-instruktion.md` - uppdaterad version 1.1
