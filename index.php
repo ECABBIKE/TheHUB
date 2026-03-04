@@ -4,6 +4,9 @@ error_reporting(E_ALL);
 ini_set('display_errors', '1');
 ini_set('display_startup_errors', '1');
 
+// Performance timing - outputs as HTML comment at page bottom
+$_pageTimings = ['start' => microtime(true)];
+
 // Start output buffering to allow redirects from included pages (like login.php)
 ob_start();
 
@@ -31,11 +34,13 @@ $hubConfigPath = __DIR__ . '/hub-config.php';
 if (file_exists($hubConfigPath)) {
     require_once $hubConfigPath;
 }
+$_pageTimings['config'] = microtime(true);
 
 $routerPath = __DIR__ . '/router.php';
 if (file_exists($routerPath)) {
     require_once $routerPath;
 }
+$_pageTimings['router'] = microtime(true);
 
 // Fallback for hub_get_theme
 if (!function_exists('hub_get_theme')) {
@@ -110,11 +115,13 @@ if (hub_is_ajax()) {
 
             <div id="page-content" class="page-content">
                 <?php
+                $_pageTimings['before_page'] = microtime(true);
                 if (file_exists($pageInfo['file'])) {
                     include $pageInfo['file'];
                 } else {
                     include HUB_ROOT . '/pages/404.php';
                 }
+                $_pageTimings['after_page'] = microtime(true);
                 ?>
             </div>
         </main>
@@ -123,6 +130,16 @@ if (hub_is_ajax()) {
     <?php include __DIR__ . '/components/mobile-nav.php'; ?>
     <?php include __DIR__ . '/components/footer.php'; ?>
     <?php include __DIR__ . '/components/woocommerce-modal.php'; ?>
+    <?php
+    // Performance timing output (visible in page source / dev tools)
+    $_pageTimings['end'] = microtime(true);
+    $s = $_pageTimings['start'];
+    echo "\n<!-- PERF: config=" . round(($_pageTimings['config'] - $s) * 1000) . "ms";
+    echo " router=" . round(($_pageTimings['router'] - $s) * 1000) . "ms";
+    echo " before_page=" . round(($_pageTimings['before_page'] - $s) * 1000) . "ms";
+    echo " page=" . round(($_pageTimings['after_page'] - $_pageTimings['before_page']) * 1000) . "ms";
+    echo " total=" . round(($_pageTimings['end'] - $s) * 1000) . "ms -->\n";
+    ?>
 
     <!-- Floating Feedback Button - only on welcome/front page -->
     <?php
