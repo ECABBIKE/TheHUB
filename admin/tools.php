@@ -1008,13 +1008,27 @@ include __DIR__ . '/components/unified-layout.php';
 <h3 class="section-title">System</h3>
 <div class="tools-grid">
 
+    <!-- Page Profiler -->
+    <div class="card">
+        <div class="tool-header">
+            <div class="tool-icon"><i data-lucide="gauge"></i></div>
+            <div>
+                <h4 class="tool-title">Sidprestanda</h4>
+                <p class="tool-description">Profilera laddningstider per komponent</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/tools/page-profiler.php" class="btn-admin btn-admin-primary">Öppna</a>
+        </div>
+    </div>
+
     <!-- Site Analytics -->
     <div class="card">
         <div class="tool-header">
             <div class="tool-icon"><i data-lucide="bar-chart-3"></i></div>
             <div>
-                <h4 class="tool-title">Besoksstatistik</h4>
-                <p class="tool-description">Trafik, besokare och populara sidor</p>
+                <h4 class="tool-title">Besöksstatistik</h4>
+                <p class="tool-description">Trafik, besökare och populära sidor</p>
             </div>
         </div>
         <div class="tool-actions">
