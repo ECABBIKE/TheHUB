@@ -1346,7 +1346,7 @@ if (!empty($eventSponsors['content'])): ?>
         ?>
 
         <?php if ($hasResults || $isTimingLive): ?>
-        <a href="?id=<?= $eventId ?>&tab=resultat" class="event-tab <?= $activeTab === 'resultat' ? 'active' : '' ?>">
+        <a href="?id=<?= $eventId ?>&tab=resultat" data-tab="resultat" class="event-tab <?= $activeTab === 'resultat' ? 'active' : '' ?>">
             <i data-lucide="trophy"></i>
             Resultat
             <?php if ($isTimingLive): ?>
@@ -1358,75 +1358,75 @@ if (!empty($eventSponsors['content'])): ?>
         <?php endif; ?>
 
         <?php if ($hasEliminationData): ?>
-        <a href="?id=<?= $eventId ?>&tab=elimination" class="event-tab <?= $activeTab === 'elimination' ? 'active' : '' ?>">
+        <a href="?id=<?= $eventId ?>&tab=elimination" data-tab="elimination" class="event-tab <?= $activeTab === 'elimination' ? 'active' : '' ?>">
             <i data-lucide="git-branch"></i>
             Elimination
         </a>
         <?php endif; ?>
 
         <?php if ($showAllTabs && $registrationOpen): ?>
-        <a href="?id=<?= $eventId ?>&tab=anmalan" class="event-tab <?= $activeTab === 'anmalan' ? 'active' : '' ?>">
+        <a href="?id=<?= $eventId ?>&tab=anmalan" data-tab="anmalan" class="event-tab <?= $activeTab === 'anmalan' ? 'active' : '' ?>">
             <i data-lucide="edit-3"></i>
             Anmälan
         </a>
         <?php endif; ?>
 
-        <a href="?id=<?= $eventId ?>&tab=info" class="event-tab <?= $activeTab === 'info' ? 'active' : '' ?>">
+        <a href="?id=<?= $eventId ?>&tab=info" data-tab="info" class="event-tab <?= $activeTab === 'info' ? 'active' : '' ?>">
             <i data-lucide="file-text"></i>
             Inbjudan
         </a>
 
         <?php if ($showAllTabs && $hasFacilitiesData): ?>
-        <a href="?id=<?= $eventId ?>&tab=faciliteter" class="event-tab <?= $activeTab === 'faciliteter' ? 'active' : '' ?>">
+        <a href="?id=<?= $eventId ?>&tab=faciliteter" data-tab="faciliteter" class="event-tab <?= $activeTab === 'faciliteter' ? 'active' : '' ?>">
             <i data-lucide="info"></i>
             Faciliteter
         </a>
         <?php endif; ?>
 
         <?php if ($showAllTabs && $pmPublished && empty($event['pm_hidden']) && (!empty($event['pm_content']) || !empty($event['pm_use_global']))): ?>
-        <a href="?id=<?= $eventId ?>&tab=pm" class="event-tab <?= $activeTab === 'pm' ? 'active' : '' ?>">
+        <a href="?id=<?= $eventId ?>&tab=pm" data-tab="pm" class="event-tab <?= $activeTab === 'pm' ? 'active' : '' ?>">
             <i data-lucide="file-text"></i>
             PM
         </a>
         <?php endif; ?>
 
         <?php if ($showAllTabs && empty($event['jury_hidden']) && (!empty($event['jury_communication']) || !empty($event['jury_use_global']))): ?>
-        <a href="?id=<?= $eventId ?>&tab=jury" class="event-tab <?= $activeTab === 'jury' ? 'active' : '' ?>">
+        <a href="?id=<?= $eventId ?>&tab=jury" data-tab="jury" class="event-tab <?= $activeTab === 'jury' ? 'active' : '' ?>">
             <i data-lucide="scale"></i>
             Jury
         </a>
         <?php endif; ?>
 
         <?php if ($showAllTabs && empty($event['schedule_hidden']) && (!empty($event['competition_schedule']) || !empty($event['schedule_use_global']))): ?>
-        <a href="?id=<?= $eventId ?>&tab=schema" class="event-tab <?= $activeTab === 'schema' ? 'active' : '' ?>">
+        <a href="?id=<?= $eventId ?>&tab=schema" data-tab="schema" class="event-tab <?= $activeTab === 'schema' ? 'active' : '' ?>">
             <i data-lucide="calendar-clock"></i>
             Schema
         </a>
         <?php endif; ?>
 
         <?php if ($showAllTabs && $starttiderPublished && empty($event['start_times_hidden']) && (!empty($event['start_times']) || !empty($event['start_times_use_global']))): ?>
-        <a href="?id=<?= $eventId ?>&tab=starttider" class="event-tab <?= $activeTab === 'starttider' ? 'active' : '' ?>">
+        <a href="?id=<?= $eventId ?>&tab=starttider" data-tab="starttider" class="event-tab <?= $activeTab === 'starttider' ? 'active' : '' ?>">
             <i data-lucide="list-ordered"></i>
             Starttider
         </a>
         <?php endif; ?>
 
         <?php if ($showAllTabs && (!empty($event['course_tracks']) || !empty($event['course_tracks_use_global']))): ?>
-        <a href="?id=<?= $eventId ?>&tab=banstrackning" class="event-tab <?= $activeTab === 'banstrackning' ? 'active' : '' ?>">
+        <a href="?id=<?= $eventId ?>&tab=banstrackning" data-tab="banstrackning" class="event-tab <?= $activeTab === 'banstrackning' ? 'active' : '' ?>">
             <i data-lucide="route"></i>
             Bansträckningar
         </a>
         <?php endif; ?>
 
         <?php if ($hasInteractiveMap && $kartaPublished): ?>
-        <a href="?id=<?= $eventId ?>&tab=karta" class="event-tab <?= $activeTab === 'karta' ? 'active' : '' ?>" onclick="if(window.innerWidth <= 768) { window.location.href='/map.php?id=<?= $eventId ?>'; return false; }">
+        <a href="?id=<?= $eventId ?>&tab=karta" data-tab="karta" class="event-tab <?= $activeTab === 'karta' ? 'active' : '' ?>" onclick="if(window.innerWidth <= 768) { window.location.href='/map.php?id=<?= $eventId ?>'; return false; }">
             <i data-lucide="map-pin"></i>
             Karta
         </a>
         <?php endif; ?>
 
         <?php if ($eventReportsCount > 0): ?>
-        <a href="?id=<?= $eventId ?>&tab=nyheter" class="event-tab <?= $activeTab === 'nyheter' ? 'active' : '' ?>">
+        <a href="?id=<?= $eventId ?>&tab=nyheter" data-tab="nyheter" class="event-tab <?= $activeTab === 'nyheter' ? 'active' : '' ?>">
             <i data-lucide="newspaper"></i>
             Media
             <span class="tab-badge tab-badge--accent"><?= $eventReportsCount ?></span>
@@ -1434,7 +1434,7 @@ if (!empty($eventSponsors['content'])): ?>
         <?php endif; ?>
 
         <?php if ($hasEventPhotos): ?>
-        <a href="?id=<?= $eventId ?>&tab=galleri" class="event-tab <?= $activeTab === 'galleri' ? 'active' : '' ?>">
+        <a href="?id=<?= $eventId ?>&tab=galleri" data-tab="galleri" class="event-tab <?= $activeTab === 'galleri' ? 'active' : '' ?>">
             <i data-lucide="camera"></i>
             Galleri
             <span class="tab-badge"><?= count($eventAlbumPhotos) ?></span>
@@ -1442,7 +1442,7 @@ if (!empty($eventSponsors['content'])): ?>
         <?php endif; ?>
 
         <?php if ($showAllTabs && !$isPastEvent && $totalRegistrations > 0): ?>
-        <a href="?id=<?= $eventId ?>&tab=anmalda" class="event-tab <?= $activeTab === 'anmalda' ? 'active' : '' ?>">
+        <a href="?id=<?= $eventId ?>&tab=anmalda" data-tab="anmalda" class="event-tab <?= $activeTab === 'anmalda' ? 'active' : '' ?>">
             <i data-lucide="<?= $hasBibNumbers ? 'list-ordered' : 'users' ?>"></i>
             <?= $hasBibNumbers ? 'Startlista' : 'Anmälda' ?>
             <span class="tab-badge tab-badge--secondary"><?= $totalRegistrations ?><?php if ($maxParticipants): ?>/<?= $maxParticipants ?><?php endif; ?></span>
@@ -1450,7 +1450,7 @@ if (!empty($eventSponsors['content'])): ?>
         <?php endif; ?>
 
         <?php if ($showAllTabs && $ticketingEnabled): ?>
-        <a href="?id=<?= $eventId ?>&tab=biljetter" class="event-tab <?= $activeTab === 'biljetter' ? 'active' : '' ?>">
+        <a href="?id=<?= $eventId ?>&tab=biljetter" data-tab="biljetter" class="event-tab <?= $activeTab === 'biljetter' ? 'active' : '' ?>">
             <i data-lucide="ticket"></i>
             Biljetter
         </a>
@@ -1460,7 +1460,7 @@ if (!empty($eventSponsors['content'])): ?>
 </div>
 
 <!-- Tab Content -->
-<?php if ($activeTab === 'resultat'): ?>
+<div id="tab-pane-resultat" class="event-tab-pane" <?= $activeTab !== 'resultat' ? 'style="display:none"' : '' ?>>
 <!-- RESULTS TAB -->
 <?php if (empty($results)): ?>
 <section class="card">
@@ -1585,7 +1585,7 @@ if (!empty($eventSponsors['content'])): ?>
                 <?php foreach ($classData['results'] as $result):
                     $searchData = strtolower($result['firstname'] . ' ' . $result['lastname'] . ' ' . ($result['club_name'] ?? ''));
                 ?>
-                <tr class="result-row" onclick="window.location='/rider/<?= $result['rider_id'] ?>'" data-search="<?= h($searchData) ?>">
+                <tr class="result-row" data-result-row onclick="window.location='/rider/<?= $result['rider_id'] ?>'" data-search="<?= h($searchData) ?>">
                     <td class="col-place <?= $result['class_position'] && $result['class_position'] <= 3 ? 'col-place--' . $result['class_position'] : '' ?>">
                         <?php if (!$isTimeRanked): ?>
                             ✓
@@ -1825,7 +1825,7 @@ if (!empty($eventSponsors['content'])): ?>
                 <?php foreach ($globalSplitResults as $gIdx => $result):
                     $searchData = strtolower($result['firstname'] . ' ' . $result['lastname'] . ' ' . ($result['club_name'] ?? ''));
                 ?>
-                <tr class="result-row" onclick="window.location='/rider/<?= $result['rider_id'] ?>'" data-search="<?= h($searchData) ?>">
+                <tr class="result-row" data-result-row onclick="window.location='/rider/<?= $result['rider_id'] ?>'" data-search="<?= h($searchData) ?>">
                     <td class="col-place total-position">
                         <?php if ($result['status'] !== 'finished'): ?>
                             <span class="status-badge status-<?= strtolower($result['status']) ?>"><?= strtoupper(substr($result['status'], 0, 3)) ?></span>
@@ -1979,7 +1979,7 @@ if (!empty($eventSponsors['content'])): ?>
                         }
                     }
                 ?>
-                <tr class="result-row" onclick="window.location='/rider/<?= $result['rider_id'] ?>'" data-search="<?= h($searchData) ?>">
+                <tr class="result-row" data-result-row onclick="window.location='/rider/<?= $result['rider_id'] ?>'" data-search="<?= h($searchData) ?>">
                     <td class="col-place total-position">
                         <?php if ($result['status'] !== 'finished'): ?>
                             <span class="status-badge status-<?= strtolower($result['status']) ?>"><?= strtoupper(substr($result['status'], 0, 3)) ?></span>
@@ -2076,7 +2076,8 @@ if (!empty($eventSponsors['content'])): ?>
 
 <?php endif; ?>
 
-<?php elseif ($activeTab === 'info'): ?>
+</div>
+<div id="tab-pane-info" class="event-tab-pane" <?= $activeTab !== 'info' ? 'style="display:none"' : '' ?>>
 <!-- INBJUDAN TAB - Invitation + General Competition Info -->
 <?php
 // Get invitation content
@@ -2215,7 +2216,8 @@ $allLicenseLinks = array_merge($licenseGlobalLinks, $licenseEventLinks);
 </section>
 <?php endif; ?>
 
-<?php elseif ($activeTab === 'faciliteter'): ?>
+</div>
+<div id="tab-pane-faciliteter" class="event-tab-pane" <?= $activeTab !== 'faciliteter' ? 'style="display:none"' : '' ?>>
 <!-- FACILITETER TAB - Facilities & Logistics -->
 <?php
 // Build facilities data array (content + links)
@@ -2268,7 +2270,8 @@ unset($f);
     </div>
 </section>
 
-<?php elseif ($activeTab === 'pm'): ?>
+</div>
+<div id="tab-pane-pm" class="event-tab-pane" <?= $activeTab !== 'pm' ? 'style="display:none"' : '' ?>>
 <!-- PM TAB - With subcategories -->
 <?php
 // Check if PM is published yet
@@ -2335,7 +2338,8 @@ unset($p);
 </section>
 <?php endif; // end pmPublished check ?>
 
-<?php elseif ($activeTab === 'jury'): ?>
+</div>
+<div id="tab-pane-jury" class="event-tab-pane" <?= $activeTab !== 'jury' ? 'style="display:none"' : '' ?>>
 <!-- JURY TAB -->
 <section class="card">
     <div class="card-header">
@@ -2353,7 +2357,8 @@ unset($p);
     </div>
 </section>
 
-<?php elseif ($activeTab === 'schema'): ?>
+</div>
+<div id="tab-pane-schema" class="event-tab-pane" <?= $activeTab !== 'schema' ? 'style="display:none"' : '' ?>>
 <!-- SCHEDULE TAB -->
 <section class="card">
     <div class="card-header">
@@ -2371,7 +2376,8 @@ unset($p);
     </div>
 </section>
 
-<?php elseif ($activeTab === 'starttider'): ?>
+</div>
+<div id="tab-pane-starttider" class="event-tab-pane" <?= $activeTab !== 'starttider' ? 'style="display:none"' : '' ?>>
 <!-- START TIMES TAB -->
 <section class="card">
     <div class="card-header">
@@ -2389,7 +2395,8 @@ unset($p);
     </div>
 </section>
 
-<?php elseif ($activeTab === 'banstrackning'): ?>
+</div>
+<div id="tab-pane-banstrackning" class="event-tab-pane" <?= $activeTab !== 'banstrackning' ? 'style="display:none"' : '' ?>>
 <!-- COURSE TRACKS TAB -->
 <section class="card">
     <div class="card-header">
@@ -2407,11 +2414,14 @@ unset($p);
     </div>
 </section>
 
-<?php elseif ($activeTab === 'karta'): ?>
+</div>
+<div id="tab-pane-karta" class="event-tab-pane" <?= $activeTab !== 'karta' ? 'style="display:none"' : '' ?>>
 <!-- MAP TAB - Full width interactive map -->
 <?php if ($hasInteractiveMap): ?>
+<?php if ($activeTab === 'karta'): ?>
 <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" integrity="sha256-p4NxAoJBhIIN+hmNHrzRCf9tD/miZyoHS5obTRR9BMY=" crossorigin="">
 <link rel="stylesheet" href="<?= hub_asset('css/map.css') ?>">
+<?php endif; ?>
 <?php
 require_once ROOT_PATH . '/components/event-map.php';
 render_event_map($eventId, $db, [
@@ -2421,15 +2431,59 @@ render_event_map($eventId, $db, [
     'event_name' => $event['name'] ?? 'Event'
 ]);
 ?>
-<script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" integrity="sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=" crossorigin=""></script>
-<script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
-<script>if (typeof lucide !== 'undefined') lucide.createIcons();</script>
-<script src="<?= hub_asset('js/event-map.js') ?>"></script>
+<div id="map-scripts" data-leaflet-js="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js" data-leaflet-css="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" data-map-css="<?= hub_asset('css/map.css') ?>" data-map-js="<?= hub_asset('js/event-map.js') ?>"></div>
+<script>
+(function() {
+    var mapPane = document.getElementById('tab-pane-karta');
+    var scriptsEl = document.getElementById('map-scripts');
+    var loaded = <?= $activeTab === 'karta' ? 'true' : 'false' ?>;
+    <?php if ($activeTab === 'karta'): ?>
+    // Map tab is active on load - load scripts immediately
+    var s1 = document.createElement('script');
+    s1.src = scriptsEl.dataset.leafletJs;
+    s1.integrity = 'sha256-20nQCchB9co0qIjJZRGuk2/Z9VM+kNiyxNV1lvTlZBo=';
+    s1.crossOrigin = '';
+    s1.onload = function() {
+        var s2 = document.createElement('script');
+        s2.src = scriptsEl.dataset.mapJs;
+        document.head.appendChild(s2);
+    };
+    document.head.appendChild(s1);
+    <?php endif; ?>
+    // Lazy load Leaflet when map tab is shown
+    if (!loaded) {
+        var observer = new MutationObserver(function(mutations) {
+            if (mapPane.style.display !== 'none' && !loaded) {
+                loaded = true;
+                observer.disconnect();
+                var css = document.createElement('link');
+                css.rel = 'stylesheet';
+                css.href = scriptsEl.dataset.leafletCss;
+                document.head.appendChild(css);
+                var css2 = document.createElement('link');
+                css2.rel = 'stylesheet';
+                css2.href = scriptsEl.dataset.mapCss;
+                document.head.appendChild(css2);
+                var s = document.createElement('script');
+                s.src = scriptsEl.dataset.leafletJs;
+                s.onload = function() {
+                    var s2 = document.createElement('script');
+                    s2.src = scriptsEl.dataset.mapJs;
+                    document.head.appendChild(s2);
+                };
+                document.head.appendChild(s);
+            }
+        });
+        observer.observe(mapPane, { attributes: true, attributeFilter: ['style'] });
+    }
+})();
+</script>
 <?php else: ?>
 <p class="text-muted">Ingen interaktiv karta tillgänglig.</p>
 <?php endif; ?>
 
-<?php elseif ($activeTab === 'nyheter'): ?>
+</div>
+<div id="tab-pane-nyheter" class="event-tab-pane" <?= $activeTab !== 'nyheter' ? 'style="display:none"' : '' ?>>
 <!-- NEWS/MEDIA TAB -->
 <?php
 // Fetch race reports for this event
@@ -2503,141 +2557,9 @@ try {
     </div>
 </section>
 
-<style>
-.event-news-grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-    gap: var(--space-md);
-    margin-bottom: var(--space-lg);
-}
 
-.event-news-card {
-    display: flex;
-    flex-direction: column;
-    background: var(--color-bg-surface);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-md);
-    overflow: hidden;
-    text-decoration: none;
-    transition: all 0.15s ease;
-}
-
-.event-news-card:hover {
-    border-color: var(--color-accent);
-    transform: translateY(-2px);
-    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
-}
-
-.event-news-card__image {
-    position: relative;
-    aspect-ratio: 16 / 9;
-    background: var(--color-bg-page);
-    overflow: hidden;
-}
-
-.event-news-card__image img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-}
-
-.event-news-card__placeholder {
-    width: 100%;
-    height: 100%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: var(--color-text-muted);
-}
-
-.event-news-card__placeholder i {
-    width: 32px;
-    height: 32px;
-}
-
-.event-news-card__play {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: 40px;
-    height: 40px;
-    background: rgba(0,0,0,0.7);
-    border-radius: 50%;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    color: white;
-}
-
-.event-news-card__play i {
-    width: 18px;
-    height: 18px;
-    margin-left: 2px;
-}
-
-.event-news-card__content {
-    padding: var(--space-md);
-}
-
-.event-news-card__title {
-    font-size: 1rem;
-    font-weight: 600;
-    color: var(--color-text-primary);
-    margin: 0 0 var(--space-xs);
-    line-height: 1.3;
-    display: -webkit-box;
-    -webkit-line-clamp: 2;
-    -webkit-box-orient: vertical;
-    overflow: hidden;
-}
-
-.event-news-card__meta {
-    display: flex;
-    justify-content: space-between;
-    font-size: 0.75rem;
-    color: var(--color-text-muted);
-    margin-bottom: var(--space-xs);
-}
-
-.event-news-card__stats {
-    display: flex;
-    gap: var(--space-md);
-    font-size: 0.75rem;
-    color: var(--color-text-muted);
-}
-
-.event-news-card__stats span {
-    display: flex;
-    align-items: center;
-    gap: var(--space-2xs);
-}
-
-.event-news-card__stats i {
-    width: 12px;
-    height: 12px;
-}
-
-.event-news-cta {
-    text-align: center;
-    padding: var(--space-lg);
-    background: var(--color-accent-light);
-    border-radius: var(--radius-md);
-}
-
-.event-news-cta p {
-    margin: 0 0 var(--space-md);
-    color: var(--color-text-secondary);
-}
-
-@media (max-width: 767px) {
-    .event-news-grid {
-        grid-template-columns: 1fr;
-    }
-}
-</style>
-
-<?php elseif ($activeTab === 'anmalda'): ?>
+</div>
+<div id="tab-pane-anmalda" class="event-tab-pane" <?= $activeTab !== 'anmalda' ? 'style="display:none"' : '' ?>>
 <!-- REGISTERED PARTICIPANTS / STARTLIST TAB -->
 <section class="card">
     <div class="card-header">
@@ -2714,7 +2636,8 @@ try {
     </div>
 </section>
 
-<?php elseif ($activeTab === 'biljetter'): ?>
+</div>
+<div id="tab-pane-biljetter" class="event-tab-pane" <?= $activeTab !== 'biljetter' ? 'style="display:none"' : '' ?>>
 <!-- TICKETS TAB -->
 <section class="card">
     <div class="card-header">
@@ -2735,7 +2658,8 @@ try {
     </div>
 </section>
 
-<?php elseif ($activeTab === 'anmalan'): ?>
+</div>
+<div id="tab-pane-anmalan" class="event-tab-pane" <?= $activeTab !== 'anmalan' ? 'style="display:none"' : '' ?>>
 <!-- REGISTRATION TAB -->
 <?php
 // Load registration-related data
@@ -2896,648 +2820,6 @@ if (!empty($event['series_id'])) {
 }
 ?>
 
-<style>
-/* Registration form styles - mobile first */
-.reg-form {
-    display: grid;
-    gap: var(--space-md);
-}
-
-.reg-class-list {
-    display: grid;
-    gap: var(--space-sm);
-}
-
-.reg-class-item {
-    display: flex;
-    align-items: center;
-    gap: var(--space-md);
-    padding: var(--space-md);
-    background: var(--color-bg-surface);
-    border: 2px solid var(--color-border);
-    border-radius: var(--radius-md);
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.reg-class-item:hover {
-    border-color: var(--color-accent);
-}
-
-.reg-class-item.selected {
-    border-color: var(--color-accent);
-    background: var(--color-accent-light);
-}
-
-.reg-class-item.disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-}
-
-.reg-class-radio {
-    width: 20px;
-    height: 20px;
-    flex-shrink: 0;
-}
-
-.reg-class-info {
-    flex: 1;
-    min-width: 0;
-}
-
-.reg-class-name {
-    font-weight: 600;
-    color: var(--color-text-primary);
-}
-
-.reg-class-desc {
-    font-size: 0.875rem;
-    color: var(--color-text-muted);
-}
-
-.reg-class-price {
-    text-align: right;
-    flex-shrink: 0;
-}
-
-.reg-class-price__current {
-    font-weight: 700;
-    font-size: 1.125rem;
-    color: var(--color-accent);
-}
-
-.reg-class-price__original {
-    font-size: 0.75rem;
-    color: var(--color-text-muted);
-    text-decoration: line-through;
-}
-
-.reg-series-upsell {
-    background: linear-gradient(135deg, var(--color-accent-light) 0%, var(--color-bg-surface) 100%);
-    border: 1px solid var(--color-accent);
-    border-radius: var(--radius-md);
-    padding: var(--space-md);
-    margin-top: var(--space-md);
-}
-
-.reg-series-upsell__header {
-    display: flex;
-    align-items: center;
-    gap: var(--space-sm);
-    margin-bottom: var(--space-sm);
-}
-
-.reg-series-upsell__logo {
-    width: 40px;
-    height: 40px;
-    object-fit: contain;
-}
-
-.reg-series-upsell__title {
-    font-weight: 600;
-    color: var(--color-text-primary);
-}
-
-.reg-series-upsell__savings {
-    font-size: 0.875rem;
-    color: var(--color-success);
-    font-weight: 600;
-}
-
-.reg-summary {
-    background: var(--color-bg-surface);
-    border-radius: var(--radius-md);
-    padding: var(--space-md);
-    margin-top: var(--space-md);
-}
-
-.reg-summary__row {
-    display: flex;
-    justify-content: space-between;
-    padding: var(--space-xs) 0;
-}
-
-.reg-summary__total {
-    border-top: 1px solid var(--color-border);
-    padding-top: var(--space-sm);
-    margin-top: var(--space-sm);
-    font-weight: 700;
-    font-size: 1.25rem;
-}
-
-.reg-existing {
-    padding: var(--space-lg);
-    text-align: center;
-}
-
-.reg-existing__icon {
-    width: 48px;
-    height: 48px;
-    color: var(--color-success);
-    margin-bottom: var(--space-md);
-}
-
-@media (max-width: 767px) {
-    .reg-class-item {
-        flex-wrap: wrap;
-        padding: var(--space-sm);
-    }
-    .reg-class-price {
-        width: 100%;
-        text-align: left;
-        margin-top: var(--space-xs);
-        padding-left: 36px;
-    }
-
-    /* Compact registration section on mobile */
-    .reg-add-rider {
-        padding: var(--space-md);
-        border-radius: 0;
-        border-left: none;
-        border-right: none;
-        margin-left: calc(-1 * var(--container-padding, 12px));
-        margin-right: calc(-1 * var(--container-padding, 12px));
-    }
-
-    /* Cart edge-to-edge on mobile */
-    .reg-cart {
-        border-radius: 0;
-        border-left: none;
-        border-right: none;
-        margin-left: calc(-1 * var(--container-padding, 12px));
-        margin-right: calc(-1 * var(--container-padding, 12px));
-    }
-
-    .reg-cart__header {
-        padding: var(--space-sm) var(--space-md);
-    }
-
-    .reg-cart__item {
-        padding: var(--space-sm);
-        gap: var(--space-sm);
-    }
-
-    .reg-cart__summary {
-        padding: var(--space-sm) var(--space-md);
-    }
-
-    .reg-cart__actions {
-        padding: var(--space-sm) var(--space-md);
-    }
-
-    /* Compact class list on mobile */
-    .reg-class-list {
-        gap: var(--space-xs);
-    }
-
-    /* Series upsell compact on mobile */
-    .reg-series-upsell {
-        padding: var(--space-sm);
-    }
-}
-
-/* Multi-rider cart styles */
-.reg-cart {
-    background: var(--color-bg-surface);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-md);
-    margin-bottom: var(--space-lg);
-}
-
-.reg-cart__header {
-    display: flex;
-    align-items: center;
-    gap: var(--space-sm);
-    padding: var(--space-md);
-    border-bottom: 1px solid var(--color-border);
-}
-
-.reg-cart__header h3 {
-    margin: 0;
-    font-size: 1rem;
-    font-weight: 600;
-    display: flex;
-    align-items: center;
-    gap: var(--space-xs);
-}
-
-.reg-cart__items {
-    padding: var(--space-sm);
-}
-
-.reg-cart__item {
-    display: flex;
-    align-items: center;
-    gap: var(--space-md);
-    padding: var(--space-sm) var(--space-md);
-    background: var(--color-bg-card);
-    border-radius: var(--radius-sm);
-    margin-bottom: var(--space-xs);
-}
-
-.reg-cart__item:last-child {
-    margin-bottom: 0;
-}
-
-.reg-cart__item-info {
-    flex: 1;
-    min-width: 0;
-}
-
-.reg-cart__item-rider {
-    font-weight: 600;
-    color: var(--color-text-primary);
-}
-
-.reg-cart__item-class {
-    font-size: 0.875rem;
-    color: var(--color-text-muted);
-}
-
-.reg-cart__item-price {
-    font-weight: 600;
-    color: var(--color-accent);
-    white-space: nowrap;
-}
-
-.reg-cart__item-remove {
-    background: none;
-    border: none;
-    color: var(--color-text-muted);
-    cursor: pointer;
-    padding: var(--space-xs);
-    border-radius: var(--radius-sm);
-    transition: all 0.2s ease;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-
-.reg-cart__item-remove:hover {
-    color: var(--color-error);
-    background: rgba(239, 68, 68, 0.1);
-}
-
-.reg-cart__summary {
-    padding: var(--space-md);
-    border-top: 1px solid var(--color-border);
-    background: var(--color-bg-hover);
-}
-
-.reg-cart__savings {
-    background: linear-gradient(135deg, rgba(16, 185, 129, 0.15), rgba(16, 185, 129, 0.05));
-    border: 1px solid var(--color-success);
-    border-radius: var(--radius-sm);
-    padding: var(--space-sm) var(--space-md);
-    margin-top: var(--space-sm);
-    display: flex;
-    align-items: center;
-    gap: var(--space-sm);
-    color: var(--color-success);
-    font-weight: 500;
-}
-
-.reg-cart__actions {
-    padding: var(--space-md);
-    border-top: 1px solid var(--color-border);
-}
-
-/* Add rider section */
-.reg-add-rider {
-    background: var(--color-bg-surface);
-    border: 2px dashed var(--color-border);
-    border-radius: var(--radius-md);
-    padding: var(--space-lg);
-}
-
-.reg-add-rider__header {
-    margin-bottom: var(--space-md);
-}
-
-.reg-add-rider__header h4 {
-    margin: 0 0 var(--space-xs) 0;
-    font-weight: 600;
-}
-
-.reg-rider-select {
-    display: grid;
-    gap: var(--space-md);
-}
-
-.reg-rider-select .form-group {
-    margin: 0;
-}
-
-/* Create rider inline form */
-.reg-create-rider {
-    background: var(--color-bg-card);
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-md);
-    padding: var(--space-md);
-    margin-top: var(--space-md);
-}
-
-.reg-create-rider__fields {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: var(--space-md);
-}
-
-@media (max-width: 599px) {
-    .reg-create-rider__fields {
-        grid-template-columns: 1fr;
-    }
-}
-
-/* Registered participants by class */
-.reg-class-group {
-    border: 1px solid var(--color-border);
-    border-radius: var(--radius-md);
-    overflow: hidden;
-}
-
-.reg-class-group__title {
-    background: var(--color-bg-surface);
-    padding: var(--space-sm) var(--space-md);
-    margin: 0;
-    font-size: 1rem;
-    font-weight: 600;
-    display: flex;
-    align-items: center;
-    gap: var(--space-sm);
-    border-bottom: 1px solid var(--color-border);
-}
-
-.reg-class-group .table-wrapper {
-    margin: 0;
-}
-
-.reg-class-group .table {
-    margin: 0;
-}
-
-.table--compact th,
-.table--compact td {
-    padding: var(--space-xs) var(--space-sm);
-}
-
-/* Registered participants - horizontally scrollable table */
-.reg-participants-scroll {
-    overflow-x: auto;
-    -webkit-overflow-scrolling: touch;
-    margin: 0;
-}
-
-.reg-participants-table {
-    margin: 0;
-    table-layout: fixed;
-    width: 100%;
-}
-
-.reg-participants-table th,
-.reg-participants-table td {
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-}
-
-/* Column widths controlled via colgroup in HTML */
-
-@media (max-width: 767px) {
-    .reg-participants-scroll {
-        margin-left: calc(-1 * var(--space-md));
-        margin-right: calc(-1 * var(--space-md));
-    }
-
-    .reg-participants-table col:nth-child(1),
-    .reg-participants-table th:nth-child(1),
-    .reg-participants-table td:nth-child(1) {
-        display: none;
-    }
-
-    .reg-participants-table th,
-    .reg-participants-table td {
-        padding: var(--space-xs) var(--space-sm);
-        font-size: var(--text-sm);
-    }
-}
-
-/* Rider search modal */
-.rider-search-modal {
-    position: fixed;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    z-index: 9999;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: var(--space-md);
-}
-
-.rider-search-modal__backdrop {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    background: rgba(0, 0, 0, 0.7);
-    backdrop-filter: blur(4px);
-}
-
-.rider-search-modal__container {
-    position: relative;
-    background: var(--color-bg-card);
-    border-radius: var(--radius-lg);
-    box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
-    width: 100%;
-    max-width: 600px;
-    max-height: 80vh;
-    display: flex;
-    flex-direction: column;
-}
-
-.rider-search-modal__header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: var(--space-lg);
-    border-bottom: 1px solid var(--color-border);
-}
-
-.rider-search-modal__header h3 {
-    margin: 0;
-    font-size: 1.25rem;
-    font-weight: 600;
-}
-
-.rider-search-modal__body {
-    padding: var(--space-lg);
-    overflow-y: auto;
-    flex: 1;
-}
-
-.rider-search-modal__input-wrapper {
-    position: relative;
-    margin-bottom: var(--space-lg);
-}
-
-.rider-search-modal__search-icon {
-    position: absolute;
-    left: var(--space-md);
-    top: 50%;
-    transform: translateY(-50%);
-    color: var(--color-text-muted);
-    width: 20px;
-    height: 20px;
-    pointer-events: none;
-}
-
-.rider-search-modal__input {
-    width: 100%;
-    padding: var(--space-md) var(--space-md) var(--space-md) 48px;
-    font-size: 1rem;
-    border: 2px solid var(--color-border);
-    border-radius: var(--radius-md);
-    background: var(--color-bg-surface);
-    color: var(--color-text-primary);
-    transition: border-color 0.2s ease;
-}
-
-.rider-search-modal__input:focus {
-    outline: none;
-    border-color: var(--color-accent);
-}
-
-.rider-search-modal__results {
-    display: grid;
-    gap: var(--space-xs);
-}
-
-.rider-search-result {
-    padding: var(--space-md);
-    background: var(--color-bg-surface);
-    border: 2px solid var(--color-border);
-    border-radius: var(--radius-md);
-    cursor: pointer;
-    transition: all 0.2s ease;
-}
-
-.rider-search-result:hover {
-    border-color: var(--color-accent);
-    background: var(--color-accent-light);
-}
-
-.rider-search-result__name {
-    font-weight: 600;
-    font-size: 1.0625rem;
-    color: var(--color-text-primary);
-    margin-bottom: 4px;
-}
-
-.rider-search-result__info {
-    font-size: 0.875rem;
-    color: var(--color-text-secondary);
-    display: flex;
-    gap: var(--space-sm);
-    flex-wrap: wrap;
-}
-
-.rider-search-result__uci {
-    color: var(--color-accent);
-    font-family: monospace;
-    font-weight: 500;
-}
-
-.rider-search-empty {
-    padding: var(--space-2xl);
-    text-align: center;
-    color: var(--color-text-muted);
-}
-
-.rider-search-empty i {
-    width: 48px;
-    height: 48px;
-    color: var(--color-text-muted);
-    margin-bottom: var(--space-md);
-}
-
-@media (max-width: 767px) {
-    .rider-search-modal {
-        padding: 0;
-        align-items: stretch;
-    }
-
-    .rider-search-modal__container {
-        max-width: 100%;
-        border-radius: 0;
-        height: calc(100vh - var(--header-height));
-        height: calc(100dvh - var(--header-height));
-        max-height: calc(100vh - var(--header-height));
-        max-height: calc(100dvh - var(--header-height));
-        margin-top: var(--header-height);
-        display: flex;
-        flex-direction: column;
-    }
-
-    .rider-search-modal__header {
-        padding: var(--space-sm) var(--space-md);
-        flex-shrink: 0;
-    }
-
-    .rider-search-modal__body {
-        padding: 0;
-        display: flex;
-        flex-direction: column;
-        flex: 1;
-        min-height: 0;
-        overflow: hidden;
-    }
-
-    .rider-search-modal__input-wrapper {
-        margin-bottom: 0;
-        padding: var(--space-sm) var(--space-md);
-        background: var(--color-bg-card);
-        flex-shrink: 0;
-        position: relative;
-    }
-
-    .rider-search-modal__results {
-        flex: 1;
-        overflow-y: auto;
-        -webkit-overflow-scrolling: touch;
-        padding: var(--space-sm) var(--space-md);
-    }
-
-    .rider-search-modal__input {
-        font-size: 16px; /* Prevents iOS zoom on focus */
-        padding: var(--space-sm) var(--space-sm) var(--space-sm) 40px;
-    }
-
-    .rider-search-modal__search-icon {
-        left: calc(var(--space-md) + var(--space-sm));
-        width: 18px;
-        height: 18px;
-    }
-
-    .rider-search-result {
-        padding: var(--space-sm);
-    }
-
-    .rider-search-result__name {
-        font-size: 1rem;
-    }
-
-    .rider-search-result__info {
-        font-size: 0.8125rem;
-    }
-
-    .rider-search-empty {
-        padding: var(--space-xl);
-    }
-}
-</style>
 
 <section class="card">
     <div class="card-header">
@@ -3567,126 +2849,7 @@ if (!empty($event['series_id'])) {
 
         <?php elseif ($registrationNotYetOpen): ?>
             <!-- Registration not yet open - Show countdown -->
-            <style>
-                .reg-countdown {
-                    background: linear-gradient(135deg, var(--color-bg-card) 0%, var(--color-bg-surface) 100%);
-                    border: 1px solid var(--color-border);
-                    border-radius: var(--radius-lg);
-                    padding: var(--space-2xl) var(--space-lg);
-                    text-align: center;
-                    position: relative;
-                    overflow: hidden;
-                }
-                .reg-countdown::before {
-                    content: '';
-                    position: absolute;
-                    top: 0;
-                    left: 0;
-                    right: 0;
-                    bottom: 0;
-                    background: radial-gradient(circle at top right, var(--color-accent-light), transparent 60%);
-                    opacity: 0.3;
-                    pointer-events: none;
-                }
-                .reg-countdown__content {
-                    position: relative;
-                    z-index: 1;
-                }
-                .reg-countdown__icon {
-                    width: 64px;
-                    height: 64px;
-                    color: var(--color-accent);
-                    margin: 0 auto var(--space-md);
-                    filter: drop-shadow(0 0 8px var(--color-accent-light));
-                }
-                .reg-countdown__title {
-                    font-size: 1.75rem;
-                    font-weight: 700;
-                    margin-bottom: var(--space-sm);
-                    background: linear-gradient(135deg, var(--color-accent) 0%, var(--color-accent-hover) 100%);
-                    -webkit-background-clip: text;
-                    background-clip: text;
-                    -webkit-text-fill-color: transparent;
-                }
-                .reg-countdown__date {
-                    color: var(--color-text-secondary);
-                    margin-bottom: var(--space-xl);
-                    font-size: 1.1rem;
-                }
-                .reg-countdown__timer {
-                    display: flex;
-                    justify-content: center;
-                    gap: var(--space-md);
-                    margin: var(--space-xl) 0;
-                }
-                .reg-countdown__block {
-                    display: flex;
-                    flex-direction: column;
-                    align-items: center;
-                    min-width: 70px;
-                }
-                .reg-countdown__value {
-                    font-size: 3rem;
-                    font-weight: 800;
-                    line-height: 1;
-                    background: linear-gradient(180deg, var(--color-text-primary) 0%, var(--color-text-secondary) 100%);
-                    -webkit-background-clip: text;
-                    background-clip: text;
-                    -webkit-text-fill-color: transparent;
-                    text-shadow: 0 2px 8px rgba(0,0,0,0.2);
-                }
-                .reg-countdown__label {
-                    font-size: 0.75rem;
-                    text-transform: uppercase;
-                    letter-spacing: 1px;
-                    color: var(--color-text-muted);
-                    margin-top: var(--space-xs);
-                }
-                .reg-countdown__separator {
-                    font-size: 2rem;
-                    color: var(--color-accent-light);
-                    align-self: center;
-                    margin-top: -12px;
-                }
-                @media (max-width: 767px) {
-                    .reg-countdown {
-                        padding: var(--space-lg) var(--space-sm);
-                        margin-left: -16px;
-                        margin-right: -16px;
-                        border-radius: 0 !important;
-                        border-left: none !important;
-                        border-right: none !important;
-                    }
-                    .reg-countdown__icon {
-                        width: 48px;
-                        height: 48px;
-                    }
-                    .reg-countdown__title {
-                        font-size: 1.3rem;
-                    }
-                    .reg-countdown__date {
-                        font-size: 0.95rem;
-                    }
-                    .reg-countdown__timer {
-                        gap: var(--space-2xs);
-                    }
-                    .reg-countdown__block {
-                        flex: 1;
-                        min-width: 0;
-                    }
-                    .reg-countdown__value {
-                        font-size: 2rem;
-                    }
-                    .reg-countdown__label {
-                        font-size: 0.65rem;
-                        letter-spacing: 0;
-                    }
-                    .reg-countdown__separator {
-                        font-size: 1.3rem;
-                        margin: 0 -2px;
-                    }
-                }
-            </style>
+            
             <div class="reg-countdown">
                 <div class="reg-countdown__content">
                     <i data-lucide="clock" class="reg-countdown__icon"></i>
@@ -5589,7 +4752,8 @@ if (!empty($event['series_id'])) {
     </div>
 </section>
 
-<?php elseif ($activeTab === 'galleri'): ?>
+</div>
+<div id="tab-pane-galleri" class="event-tab-pane" <?= $activeTab !== 'galleri' ? 'style="display:none"' : '' ?>>
 <!-- GALLERY TAB - Inline photo display with ad slots -->
 <?php
     // Get photographer info from first photo - prefer profile link over website
@@ -5783,547 +4947,6 @@ if (!empty($event['series_id'])) {
     <?php endif; ?>
 </div>
 
-<style>
-/* ========== GALLERY SEARCH ========== */
-.gallery-search-bar {
-    margin-bottom: var(--space-sm);
-    position: relative;
-}
-.gallery-search-input-wrap {
-    position: relative;
-}
-.gallery-search-suggestions {
-    position: absolute;
-    top: 100%;
-    left: 0;
-    right: 0;
-    z-index: 20;
-    background: var(--color-bg-surface);
-    border: 1px solid var(--color-border);
-    border-top: none;
-    border-radius: 0 0 var(--radius-sm) var(--radius-sm);
-    max-height: 240px;
-    overflow-y: auto;
-    display: none;
-    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
-}
-.gallery-search-suggestions.active {
-    display: block;
-}
-.gallery-search-suggestion {
-    padding: var(--space-sm) var(--space-md);
-    cursor: pointer;
-    font-size: 0.9rem;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    transition: background 0.15s;
-}
-.gallery-search-suggestion:hover {
-    background: var(--color-bg-hover);
-}
-.gallery-search-suggestion-name {
-    font-weight: 500;
-    color: var(--color-text-primary);
-}
-.gallery-search-suggestion-club {
-    font-size: 0.75rem;
-    color: var(--color-text-muted);
-}
-.gallery-filter-badge {
-    margin-top: var(--space-xs);
-    display: inline-flex;
-    align-items: center;
-    gap: var(--space-xs);
-    padding: 4px 12px;
-    background: var(--color-accent-light);
-    border: 1px solid var(--color-accent);
-    border-radius: var(--radius-full);
-    font-size: 0.8rem;
-    color: var(--color-accent-text);
-}
-.gallery-filter-badge button {
-    background: none;
-    border: none;
-    cursor: pointer;
-    color: var(--color-accent-text);
-    padding: 2px;
-    display: flex;
-    align-items: center;
-}
-
-/* ========== GALLERY GRID ========== */
-.gallery-grid {
-    display: grid;
-    grid-template-columns: repeat(5, 1fr);
-    gap: var(--space-xs);
-}
-@media (max-width: 1100px) and (min-width: 768px) {
-    .gallery-grid {
-        grid-template-columns: repeat(4, 1fr);
-    }
-}
-.gallery-item {
-    aspect-ratio: 4/3;
-    overflow: hidden;
-    border-radius: var(--radius-sm);
-    cursor: pointer;
-    position: relative;
-    background: var(--color-bg-card);
-}
-.gallery-item img {
-    width: 100%;
-    height: 100%;
-    object-fit: cover;
-    transition: transform 0.2s ease;
-}
-.gallery-item:hover img {
-    transform: scale(1.05);
-}
-.gallery-highlight-badge {
-    position: absolute;
-    top: var(--space-xs);
-    right: var(--space-xs);
-    background: rgba(251, 191, 36, 0.9);
-    color: #000;
-    border-radius: var(--radius-full);
-    width: 24px;
-    height: 24px;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-}
-.gallery-ad-slot {
-    grid-column: 1 / -1;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    padding: var(--space-sm) 0;
-    margin: var(--space-2xs) 0;
-}
-.gallery-ad-link {
-    display: block;
-    max-width: 500px;
-    text-decoration: none;
-    opacity: 0.85;
-    transition: opacity 0.2s ease;
-}
-.gallery-ad-link:hover {
-    opacity: 1;
-}
-.gallery-ad-img {
-    max-height: 60px;
-    max-width: 100%;
-    object-fit: contain;
-}
-
-/* Tag banner on gallery grid */
-.gallery-item-tags {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    padding: 5px 8px;
-    background: rgba(0, 0, 0, 0.65);
-    backdrop-filter: blur(4px);
-    -webkit-backdrop-filter: blur(4px);
-    display: flex;
-    align-items: center;
-    gap: 5px;
-    pointer-events: none;
-}
-.gallery-item-tag-text {
-    font-size: 0.7rem;
-    color: rgba(255, 255, 255, 0.9);
-    white-space: nowrap;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    font-weight: 500;
-}
-
-/* ========== LIGHTBOX: HIDE ALL NAVIGATION ========== */
-/* When lightbox is open, hide header, sidebar, nav-bottom, and everything else */
-html.lightbox-open .header,
-html.lightbox-open .sidebar,
-html.lightbox-open .nav-bottom,
-html.lightbox-open .mobile-nav,
-html.lightbox-open .admin-mobile-nav {
-    display: none !important;
-}
-html.lightbox-open body {
-    overflow: hidden !important;
-}
-
-/* ========== LIGHTBOX (fullscreen, above ALL UI) ========== */
-.gallery-lightbox {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100vw;
-    height: 100vh;
-    height: 100dvh;
-    z-index: 999999;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    overscroll-behavior: contain;
-    touch-action: none;
-    background: #000;
-}
-.gallery-lightbox-backdrop {
-    position: absolute;
-    inset: 0;
-    background: #000;
-}
-
-/* Top bar with counter + close - ALWAYS VISIBLE */
-.gallery-lightbox-topbar {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    z-index: 10;
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: 12px 16px;
-    background: linear-gradient(rgba(0,0,0,0.7), transparent);
-    pointer-events: auto;
-}
-.gallery-lightbox-counter-text {
-    color: rgba(255,255,255,0.85);
-    font-size: 0.85rem;
-    font-weight: 500;
-}
-.gallery-lightbox-close {
-    background: rgba(255,255,255,0.2);
-    border: none;
-    color: #fff;
-    width: 44px;
-    height: 44px;
-    border-radius: 50%;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    -webkit-tap-highlight-color: transparent;
-}
-.gallery-lightbox-close:hover,
-.gallery-lightbox-close:active {
-    background: rgba(255,255,255,0.35);
-}
-
-/* Main image - fills available space, never clipped */
-.gallery-lightbox-content {
-    position: absolute;
-    top: 0;
-    left: 0;
-    right: 0;
-    bottom: 0;
-    z-index: 1;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    padding: 52px 8px 60px;
-}
-.gallery-lightbox-content img {
-    display: block;
-    max-width: 100%;
-    max-height: 100%;
-    width: auto;
-    height: auto;
-    object-fit: contain;
-    user-select: none;
-    -webkit-user-select: none;
-    -webkit-touch-callout: none;
-}
-
-/* Bottom overlay: tags + caption */
-.gallery-lightbox-bottom {
-    position: absolute;
-    bottom: 0;
-    left: 0;
-    right: 0;
-    z-index: 10;
-    padding: 32px 16px 12px;
-    background: linear-gradient(transparent, rgba(0,0,0,0.8));
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 6px;
-    pointer-events: none;
-}
-.gallery-lightbox-bottom > * {
-    pointer-events: auto;
-}
-
-/* Tags banner in lightbox - full-width under image */
-.gallery-lightbox-tags {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 6px;
-    align-items: center;
-    justify-content: center;
-    width: 100%;
-}
-.gallery-lightbox-tags:not(:empty) {
-    padding: 8px 16px;
-    background: rgba(55, 212, 214, 0.12);
-    border-radius: var(--radius-sm);
-}
-.gallery-lightbox-tags-icon {
-    color: rgba(55, 212, 214, 0.8);
-    flex-shrink: 0;
-}
-.gallery-lightbox-tag {
-    font-size: 0.85rem;
-    font-weight: 500;
-    color: #fff;
-    padding: 2px 0;
-    text-decoration: none;
-    transition: color 0.2s;
-}
-.gallery-lightbox-tag:hover {
-    color: var(--color-accent);
-    text-decoration: underline;
-}
-.gallery-lightbox-tag-sep {
-    color: rgba(255,255,255,0.3);
-    font-size: 0.7rem;
-}
-
-/* Photographer credit */
-.gallery-lightbox-photographer {
-    font-size: 0.8rem;
-    color: rgba(255,255,255,0.7);
-}
-.gallery-lightbox-photographer a {
-    color: rgba(255,255,255,0.85);
-    text-decoration: none;
-    transition: color 0.2s;
-}
-.gallery-lightbox-photographer a:hover {
-    color: var(--color-accent);
-    text-decoration: underline;
-}
-
-/* Caption */
-.gallery-lightbox-caption {
-    color: rgba(255,255,255,0.8);
-    font-size: 0.85rem;
-    text-align: center;
-    max-width: 600px;
-}
-
-/* Navigation arrows */
-.gallery-lightbox-nav {
-    position: absolute;
-    top: 50%;
-    transform: translateY(-50%);
-    z-index: 10;
-    background: rgba(255,255,255,0.12);
-    border: none;
-    color: #fff;
-    width: 48px;
-    height: 48px;
-    border-radius: 50%;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    backdrop-filter: blur(8px);
-    -webkit-backdrop-filter: blur(8px);
-    transition: background 0.2s;
-    -webkit-tap-highlight-color: transparent;
-}
-.gallery-lightbox-nav:hover {
-    background: rgba(255,255,255,0.25);
-}
-.gallery-lightbox-prev { left: 8px; }
-.gallery-lightbox-next { right: 8px; }
-
-/* Tag toggle button */
-.gallery-tag-toggle {
-    position: absolute;
-    bottom: 16px;
-    right: 16px;
-    z-index: 11;
-    background: rgba(55, 212, 214, 0.85);
-    border: none;
-    color: #fff;
-    width: 48px;
-    height: 48px;
-    border-radius: 50%;
-    cursor: pointer;
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    transition: background 0.2s, transform 0.2s;
-    box-shadow: 0 2px 12px rgba(0,0,0,0.4);
-    -webkit-tap-highlight-color: transparent;
-}
-.gallery-tag-toggle:hover {
-    background: rgba(55, 212, 214, 1);
-    transform: scale(1.05);
-}
-
-/* Tag panel (slide-in) */
-.gallery-tag-panel {
-    position: absolute;
-    top: 0;
-    right: 0;
-    bottom: 0;
-    width: 320px;
-    max-width: 85vw;
-    z-index: 12;
-    background: var(--color-bg-surface);
-    border-left: 1px solid var(--color-border);
-    display: flex;
-    flex-direction: column;
-    animation: slideInRight 0.2s ease;
-}
-@keyframes slideInRight {
-    from { transform: translateX(100%); }
-    to { transform: translateX(0); }
-}
-.gallery-tag-panel-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: center;
-    padding: var(--space-md);
-    border-bottom: 1px solid var(--color-border);
-    min-height: 52px;
-}
-.gallery-tag-panel-body {
-    flex: 1;
-    overflow-y: auto;
-    padding: var(--space-md);
-}
-
-/* ========== MOBILE (portrait) ========== */
-@media (max-width: 767px) {
-    .gallery-grid {
-        grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
-        gap: 3px;
-    }
-    .gallery-item {
-        border-radius: 0;
-    }
-
-    /* Lightbox: use ALL available space */
-    .gallery-lightbox-content {
-        padding: 48px 0 56px;
-    }
-
-    /* Topbar always visible */
-    .gallery-lightbox-topbar {
-        padding: 8px 12px;
-    }
-    .gallery-lightbox-close {
-        width: 40px;
-        height: 40px;
-    }
-
-    /* Nav arrows */
-    .gallery-lightbox-nav {
-        width: 36px;
-        height: 36px;
-        background: rgba(255,255,255,0.1);
-    }
-    .gallery-lightbox-prev { left: 4px; }
-    .gallery-lightbox-next { right: 4px; }
-
-    /* Bottom tags bigger on mobile for touch */
-    .gallery-lightbox-bottom {
-        padding: 24px 12px 10px;
-    }
-    .gallery-lightbox-tag {
-        font-size: 0.9rem;
-        padding: 6px 16px;
-    }
-
-    /* Tag panel fullscreen */
-    .gallery-tag-panel {
-        width: 100%;
-        max-width: 100%;
-    }
-    .gallery-tag-toggle {
-        bottom: 68px;
-        right: 12px;
-    }
-}
-
-/* ========== LANDSCAPE MODE (mobile + tablet) ========== */
-@media (max-height: 500px) and (orientation: landscape) {
-    .gallery-lightbox-content {
-        padding: 0;
-    }
-    .gallery-lightbox-content img {
-        width: 100vw;
-        height: 100vh;
-        max-width: 100vw;
-        max-height: 100vh;
-        object-fit: contain;
-    }
-
-    .gallery-lightbox-topbar {
-        padding: 4px 8px;
-        background: linear-gradient(rgba(0,0,0,0.5), transparent);
-    }
-    .gallery-lightbox-close {
-        width: 36px;
-        height: 36px;
-    }
-    .gallery-lightbox-counter-text {
-        font-size: 0.75rem;
-    }
-
-    .gallery-lightbox-nav {
-        width: 32px;
-        height: 60px;
-        border-radius: 6px;
-        background: rgba(255,255,255,0.08);
-    }
-    .gallery-lightbox-prev { left: 0; border-radius: 0 6px 6px 0; }
-    .gallery-lightbox-next { right: 0; border-radius: 6px 0 0 6px; }
-
-    .gallery-lightbox-bottom {
-        padding: 6px 16px;
-        background: linear-gradient(transparent, rgba(0,0,0,0.65));
-    }
-    .gallery-lightbox-tag {
-        font-size: 0.8rem;
-        padding: 3px 12px;
-    }
-
-    .gallery-tag-toggle {
-        width: 36px;
-        height: 36px;
-        bottom: 8px;
-        right: 8px;
-    }
-
-    .gallery-tag-panel {
-        width: 280px;
-    }
-}
-
-/* ========== PWA standalone mode ========== */
-@media (display-mode: standalone) {
-    .gallery-lightbox-topbar {
-        padding-top: max(12px, env(safe-area-inset-top));
-    }
-    .gallery-lightbox-content {
-        padding-top: max(48px, calc(env(safe-area-inset-top) + 40px));
-        padding-bottom: max(56px, calc(env(safe-area-inset-bottom) + 40px));
-    }
-    .gallery-lightbox-bottom {
-        padding-bottom: max(10px, env(safe-area-inset-bottom));
-    }
-}
-</style>
 
 <script>
 (function() {
@@ -6761,7 +5384,8 @@ html.lightbox-open body {
 })();
 </script>
 
-<?php elseif ($activeTab === 'elimination'): ?>
+</div>
+<div id="tab-pane-elimination" class="event-tab-pane" <?= $activeTab !== 'elimination' ? 'style="display:none"' : '' ?>>
 <!-- ELIMINATION TAB -->
 <section class="card">
     <div class="card-header">
@@ -6775,7 +5399,7 @@ html.lightbox-open body {
     </div>
 </section>
 
-<?php endif; ?>
+</div>
 
 <?php
 // Partner sponsors (bottom of page - unlimited)
@@ -6800,6 +5424,105 @@ if (!empty($partnerSponsorsWithLogos)): ?>
 <?php endif; ?>
 
 <script>
+// Client-side tab switching - no page reload
+(function() {
+    var tabLinks = document.querySelectorAll('.event-tab[data-tab]');
+    var tabPanes = document.querySelectorAll('.event-tab-pane');
+    var eventId = <?= (int)$eventId ?>;
+
+    function switchTab(tabId, pushState) {
+        for (var i = 0; i < tabPanes.length; i++) {
+            tabPanes[i].style.display = 'none';
+        }
+        for (var i = 0; i < tabLinks.length; i++) {
+            tabLinks[i].classList.remove('active');
+        }
+        var pane = document.getElementById('tab-pane-' + tabId);
+        if (pane) {
+            pane.style.display = '';
+        }
+        for (var i = 0; i < tabLinks.length; i++) {
+            if (tabLinks[i].getAttribute('data-tab') === tabId) {
+                tabLinks[i].classList.add('active');
+            }
+        }
+        if (pushState !== false) {
+            history.pushState({ tab: tabId }, '', '?id=' + eventId + '&tab=' + tabId);
+        }
+        var activeLink = document.querySelector('.event-tab[data-tab="' + tabId + '"]');
+        if (activeLink) {
+            activeLink.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
+        }
+        if (window.lucide) lucide.createIcons();
+    }
+
+    for (var i = 0; i < tabLinks.length; i++) {
+        tabLinks[i].addEventListener('click', function(e) {
+            if (this.getAttribute('data-tab') === 'karta' && window.innerWidth <= 768) return;
+            e.preventDefault();
+            switchTab(this.getAttribute('data-tab'));
+        });
+    }
+
+    window.addEventListener('popstate', function(e) {
+        if (e.state && e.state.tab) {
+            switchTab(e.state.tab, false);
+        } else {
+            var params = new URLSearchParams(window.location.search);
+            var tab = params.get('tab') || '<?= h($defaultTab) ?>';
+            switchTab(tab, false);
+        }
+    });
+
+    history.replaceState({ tab: '<?= h($activeTab) ?>' }, '', window.location.href);
+})();
+</script>
+
+<script>
+// Results pagination - show first 30 per class, button to show rest
+(function() {
+    var MAX_VISIBLE = 30;
+    var sections = document.querySelectorAll('.class-section');
+    for (var s = 0; s < sections.length; s++) {
+        var section = sections[s];
+        var rows = section.querySelectorAll('tr[data-result-row]');
+        var cards = section.querySelectorAll('.result-list > a, .result-list > div.result-card');
+        var totalCount = Math.max(rows.length, cards.length);
+        if (totalCount <= MAX_VISIBLE) continue;
+
+        // Hide rows beyond MAX_VISIBLE in desktop table
+        for (var i = MAX_VISIBLE; i < rows.length; i++) {
+            rows[i].style.display = 'none';
+            rows[i].setAttribute('data-paginated-hidden', '1');
+        }
+        // Hide cards beyond MAX_VISIBLE in mobile view
+        for (var i = MAX_VISIBLE; i < cards.length; i++) {
+            cards[i].style.display = 'none';
+            cards[i].setAttribute('data-paginated-hidden', '1');
+        }
+
+        // Create "Show all" button
+        var btn = document.createElement('button');
+        btn.className = 'btn btn-ghost';
+        btn.style.cssText = 'display:block;width:100%;margin-top:var(--space-sm);padding:var(--space-sm);text-align:center;cursor:pointer;';
+        btn.textContent = 'Visa alla ' + totalCount + ' resultat';
+        btn.setAttribute('data-show-all-btn', '1');
+        btn.addEventListener('click', (function(sec) {
+            return function() {
+                var hidden = sec.querySelectorAll('[data-paginated-hidden]');
+                for (var j = 0; j < hidden.length; j++) {
+                    hidden[j].style.display = '';
+                    hidden[j].removeAttribute('data-paginated-hidden');
+                }
+                this.style.display = 'none';
+            };
+        })(section));
+        section.appendChild(btn);
+    }
+})();
+</script>
+
+<script>
 function filterResults() {
     const classFilter = document.getElementById('classFilter')?.value || 'all';
     const searchFilter = (document.getElementById('searchFilter')?.value || '').toLowerCase().trim();
@@ -6818,6 +5541,7 @@ function filterResults() {
         return;
     }
 
+    var isFiltering = !!searchFilter;
     document.querySelectorAll('.class-section').forEach(section => {
         const classId = section.dataset.class;
         const showClass = classFilter === 'all' || classFilter === classId;
@@ -6827,8 +5551,20 @@ function filterResults() {
             section.querySelectorAll('.result-row, .result-item').forEach(row => {
                 const searchData = row.dataset.search || '';
                 const matchesSearch = !searchFilter || searchData.includes(searchFilter);
-                row.style.display = matchesSearch ? '' : 'none';
+                // When filtering, override pagination hiding
+                if (isFiltering) {
+                    row.style.display = matchesSearch ? '' : 'none';
+                } else if (row.hasAttribute('data-paginated-hidden')) {
+                    row.style.display = 'none';
+                } else {
+                    row.style.display = matchesSearch ? '' : 'none';
+                }
             });
+        }
+        // Show/hide "Visa alla" button when filtering
+        var showAllBtn = section.querySelector('[data-show-all-btn]');
+        if (showAllBtn) {
+            showAllBtn.style.display = isFiltering ? 'none' : (section.querySelector('[data-paginated-hidden]') ? 'block' : 'none');
         }
     });
 }
@@ -7158,7 +5894,7 @@ function sortDHTotalByRun(headerEl, runNum) {
 
 </script>
 
-<?php if ($isTimingLive && $activeTab === 'resultat'): ?>
+<?php if ($isTimingLive): ?>
 <script>
 // Live results polling
 (function() {

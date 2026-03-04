@@ -19,7 +19,7 @@
 | Bildbanken / Fotoalbum | PAGAENDE | Fotoalbum, manuell taggning, galleri, R2-integration, fotografroll, TikTok. Fas 3: OCR-taggning | 92% |
 | Premium-medlemskap | PAGAENDE | Stripe-oberoende, sponsorprofil, hogupplosta bilder, swapmeet | 50% |
 | Ridercard Share | PAGAENDE | Statistikkort for Instagram-delning | 5% |
-| Prestandaoptimering | PAGAENDE | Fas 1-2 klar. Fas 3-4 planerade (CSS-bundling, arkitektur) | 50% |
+| Prestandaoptimering | PAGAENDE | Fas 1-3 klar (cache, DB-index, event-sida). Fas 4 planerad (arkitektur) | 75% |
 | CSS/UI Standardisering | PLANERAD | Enhetlig radius och nya tabeller pa alla sidor | 0% |
 | POS Incheckning & Startlista | PLANERAD | QR-scanning, incheckning, auto-startnr, startlistevy vid event | 0% |
 | GravityTiming API | KLAR | API for tidtagningsapp: startlistor, resultat, live-uppdatering | 100% |
@@ -111,6 +111,30 @@
 ---
 
 # CHANGELOG
+
+### 2026-03-04 (Event-sida prestandaöversyn)
+- **Branch:** claude/add-bug-report-feature-dNafh
+
+- **Prestandaförbättring: Klient-sida flikbyte på event-sidan**
+  - Alla 15 flikar renderas server-side, visas/döljs via JavaScript
+  - Inga sidladdningar vid flikbyte - `history.pushState` uppdaterar URL
+  - ~1400 rader inline CSS extraherade till `assets/css/pages/event.css`
+  - Leaflet-karta lazy-laddas först vid flikklick (~180KB sparas)
+  - Resultat-paginering: max 30 per klass med "Visa alla"-knapp
+  - Event-sidan reducerad från 7225 till 5961 rader
+
+- **Buggfix: Ekonomi-ikon**
+  - Ändrad från `wallet` (såg ut som "I") till `circle-dollar-sign`
+
+- **Buggfix: Serielogga på mobil**
+  - Visas nu inline med eventnamnet istället för på egen rad
+
+- **Ändrade filer:**
+  - `pages/event.php` - Komplett tab-omskrivning + optimeringar
+  - `assets/css/pages/event.css` - +1400 rader extraherad CSS
+  - `admin/components/admin-mobile-nav.php` - Ikon-fix
+  - `admin/promotor.php` - Ikon-fix
+  - `components/sidebar.php` - Ikon-fix
 
 ### 2026-03-03 (Arrangörsguide)
 - **Branch:** claude/add-bug-report-feature-dNafh
