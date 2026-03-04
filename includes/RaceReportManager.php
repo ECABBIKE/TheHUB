@@ -280,6 +280,25 @@ class RaceReportManager {
                 $params[':tag'] = $filters['tag'];
             }
 
+            if (!empty($filters['discipline'])) {
+                $where[] = "e.discipline = :discipline";
+                $params[':discipline'] = $filters['discipline'];
+            }
+
+            if (!empty($filters['type'])) {
+                switch ($filters['type']) {
+                    case 'video':
+                        $where[] = "rr.is_from_youtube = 1";
+                        break;
+                    case 'photo_gallery':
+                        $where[] = "rr.is_from_instagram = 1";
+                        break;
+                    case 'race_report':
+                        $where[] = "rr.is_from_youtube = 0 AND rr.is_from_instagram = 0";
+                        break;
+                }
+            }
+
             if (!empty($filters['search'])) {
                 $where[] = "(rr.title LIKE :search OR rr.content LIKE :search2 OR rr.excerpt LIKE :search3)";
                 $searchTerm = '%' . $filters['search'] . '%';
@@ -333,8 +352,12 @@ class RaceReportManager {
                 $reports[] = $row;
             }
 
-            // Räkna total
-            $count_sql = "SELECT COUNT(*) as total FROM race_reports rr {$where_clause}";
+            // Räkna total (inkludera JOINs om WHERE refererar till dem)
+            $count_joins = '';
+            if (!empty($filters['discipline'])) {
+                $count_joins = 'LEFT JOIN events e ON rr.event_id = e.id';
+            }
+            $count_sql = "SELECT COUNT(*) as total FROM race_reports rr {$count_joins} {$where_clause}";
             $count_stmt = $this->pdo->prepare($count_sql);
             foreach ($params as $key => $value) {
                 $count_stmt->bindValue($key, $value);
