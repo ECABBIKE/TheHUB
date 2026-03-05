@@ -773,26 +773,39 @@ if (!function_exists('hub_logout')) {
      * Clears all session types: V3, V2, and Admin
      */
     function hub_logout(): void {
-        // Clear V3 session
-        unset($_SESSION['hub_user_id']);
-        unset($_SESSION['hub_user_email']);
-        unset($_SESSION['hub_user_name']);
-        unset($_SESSION['hub_user_role']);
-        unset($_SESSION['hub_is_admin']);
-        unset($_SESSION['hub_logged_in_at']);
+        // Clear remember-me token from DB and cookie
+        $riderId = $_SESSION['rider_id'] ?? $_SESSION['hub_user_id'] ?? null;
+        if ($riderId && function_exists('rider_clear_remember_token')) {
+            rider_clear_remember_token($riderId);
+        }
 
-        // Clear V2 rider session
-        unset($_SESSION['rider_id']);
-        unset($_SESSION['rider_email']);
-        unset($_SESSION['rider_name']);
+        // Clear admin remember-me cookie
+        if (isset($_COOKIE['admin_remember'])) {
+            setcookie('admin_remember', '', [
+                'expires' => time() - 3600,
+                'path' => '/',
+                'httponly' => true,
+                'samesite' => 'Lax'
+            ]);
+        }
 
-        // Clear admin session
-        unset($_SESSION['admin_logged_in']);
-        unset($_SESSION['admin_id']);
-        unset($_SESSION['admin_username']);
-        unset($_SESSION['admin_name']);
-        unset($_SESSION['admin_role']);
-        unset($_SESSION['last_activity']);
+        // Destroy the entire session
+        $_SESSION = [];
+
+        // Delete the session cookie
+        if (ini_get('session.use_cookies')) {
+            $params = session_get_cookie_params();
+            setcookie(session_name(), '', [
+                'expires' => time() - 3600,
+                'path' => $params['path'],
+                'domain' => $params['domain'],
+                'secure' => $params['secure'],
+                'httponly' => $params['httponly'],
+                'samesite' => $params['samesite'] ?? 'Lax'
+            ]);
+        }
+
+        session_destroy();
     }
 }
 

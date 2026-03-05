@@ -4,6 +4,20 @@
 
 ---
 
+## SENASTE FIXAR (2026-03-05, session 33)
+
+### Logout fungerade inte (remember-me levde kvar)
+- **Problem:** `hub_logout()` rensade bara session-variabler med `unset()` men anropade aldrig `rider_clear_remember_token()`, raderade aldrig session-cookien, och körde aldrig `session_destroy()`. Remember-me cookien levde kvar → användaren loggades in automatiskt igen.
+- **Fix:** `hub_logout()` i `hub-config.php` gör nu:
+  1. Rensar remember-me token från databas + cookie via `rider_clear_remember_token()`
+  2. Rensar admin remember-me cookie
+  3. Tömmer `$_SESSION = []`
+  4. Raderar session-cookien
+  5. Kör `session_destroy()`
+- **Fil:** `hub-config.php`
+
+---
+
 ## SENASTE FIXAR (2026-03-05, session 32)
 
 ### Felrapporter: Svara via e-post direkt från admin
