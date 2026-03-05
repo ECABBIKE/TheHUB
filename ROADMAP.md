@@ -1,6 +1,6 @@
 # TheHUB - Development Roadmap
 
-> Senast uppdaterad: 2026-03-03
+> Senast uppdaterad: 2026-03-05
 >
 > **Se:** `/admin/roadmap.php` for interaktiv vy
 
@@ -24,7 +24,8 @@
 | POS Incheckning & Startlista | PLANERAD | QR-scanning, incheckning, auto-startnr, startlistevy vid event | 0% |
 | GravityTiming API | KLAR | API for tidtagningsapp: startlistor, resultat, live-uppdatering | 100% |
 | TheHUB Swapmeet | PLANERAD | Kop/salj-marknadsplats for gravity-prylar (Premium-funktion) | 0% |
-| Rapportera Problem | KLAR | Anvandare kan rapportera buggar och ge feedback, admin kan hantera | 100% |
+| Rapportera Problem | KLAR | Anvandare kan rapportera buggar och ge feedback, admin kan hantera och svara via e-post | 100% |
+| UCI ID-synkning | KLAR | Deltagare kan verifiera och synka sin licens via UCI ID i profilen | 100% |
 
 ---
 
@@ -111,6 +112,24 @@
 ---
 
 # CHANGELOG
+
+### 2026-03-05 (Felrapporter e-postsvar + UCI ID-synk)
+- **Branch:** claude/add-bug-report-feature-dNafh
+
+- **Ny funktion: Svara via e-post på felrapporter**
+  - "Svara"-knapp direkt på varje rapport i admin
+  - HTML-formaterat mail med TheHUB-branding
+  - Svaret sparas som admin-anteckning
+  - Valfri auto-markering som löst
+
+- **Ny funktion: UCI ID-synkning i profilen**
+  - Deltagare fyller i UCI ID och trycker "Synka"
+  - SCF API verifierar licens och namnmatchning
+  - Profilen uppdateras med licenstyp, klubb, disciplin, nationalitet etc.
+  - Skydd mot dubbletter (kontrollerar att UCI ID inte redan tillhör annan profil)
+
+- **Nya filer:**
+  - `api/sync-license.php` - API för licenssynkning
 
 ### 2026-03-04 (Event-sida prestandaöversyn)
 - **Branch:** claude/add-bug-report-feature-dNafh

@@ -52,6 +52,76 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } catch (Exception $e) {
             $error = 'Kunde inte spara anteckning.';
         }
+    } elseif ($action === 'send_reply' && $reportId) {
+        $replyMessage = trim($_POST['reply_message'] ?? '');
+        $replyEmail = trim($_POST['reply_email'] ?? '');
+        $autoResolve = !empty($_POST['auto_resolve']);
+
+        if (empty($replyMessage) || empty($replyEmail)) {
+            $error = 'Meddelande och e-postadress krävs.';
+        } else {
+            require_once __DIR__ . '/../includes/mail.php';
+
+            // Get report title for subject
+            try {
+                $rStmt = $pdo->prepare("SELECT title FROM bug_reports WHERE id = ?");
+                $rStmt->execute([$reportId]);
+                $reportTitle = $rStmt->fetchColumn() ?: 'Din felrapport';
+            } catch (Exception $e) {
+                $reportTitle = 'Din felrapport';
+            }
+
+            $subject = 'Re: ' . $reportTitle . ' - TheHUB';
+            $htmlBody = '<div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">'
+                . '<div style="background: #0e1621; padding: 20px; text-align: center;">'
+                . '<h2 style="color: #37d4d6; margin: 0;">TheHUB</h2>'
+                . '</div>'
+                . '<div style="padding: 24px; background: #f8f9fa; color: #333;">'
+                . '<p style="color: #666; font-size: 14px; margin-top: 0;">Svar på din felrapport: <strong>' . htmlspecialchars($reportTitle) . '</strong></p>'
+                . '<div style="white-space: pre-wrap; line-height: 1.6;">' . htmlspecialchars($replyMessage) . '</div>'
+                . '</div>'
+                . '<div style="padding: 16px; text-align: center; font-size: 12px; color: #999;">'
+                . 'Detta mail skickades från TheHUB · gravityseries.se'
+                . '</div></div>';
+
+            $adminEmail = $_SESSION['admin_email'] ?? $_SESSION['hub_user_email'] ?? env('MAIL_FROM_ADDRESS', 'info@gravityseries.se');
+            $sent = hub_send_email($replyEmail, $subject, $htmlBody, [
+                'reply_to' => $adminEmail
+            ]);
+
+            if ($sent) {
+                $message = 'Svar skickat till ' . htmlspecialchars($replyEmail) . '!';
+
+                // Save reply as admin note
+                try {
+                    $existingNotes = '';
+                    $nStmt = $pdo->prepare("SELECT admin_notes FROM bug_reports WHERE id = ?");
+                    $nStmt->execute([$reportId]);
+                    $existingNotes = $nStmt->fetchColumn() ?: '';
+
+                    $replyNote = '[Svar skickat ' . date('Y-m-d H:i') . "]\n" . $replyMessage;
+                    $newNotes = $existingNotes ? $existingNotes . "\n\n" . $replyNote : $replyNote;
+
+                    $stmt = $pdo->prepare("UPDATE bug_reports SET admin_notes = ? WHERE id = ?");
+                    $stmt->execute([$newNotes, $reportId]);
+                } catch (Exception $e) {
+                    // Note save failed, mail still sent
+                }
+
+                // Auto-resolve if checked
+                if ($autoResolve) {
+                    try {
+                        $stmt = $pdo->prepare("UPDATE bug_reports SET status = 'resolved', resolved_at = NOW(), resolved_by = ? WHERE id = ?");
+                        $stmt->execute([(int)($_SESSION['admin_user_id'] ?? 0), $reportId]);
+                        $message .= ' Status ändrad till Löst.';
+                    } catch (Exception $e) {
+                        // Status update failed
+                    }
+                }
+            } else {
+                $error = 'Kunde inte skicka e-post. Kontrollera mailkonfigurationen.';
+            }
+        }
     } elseif ($action === 'delete' && $reportId) {
         try {
             $stmt = $pdo->prepare("DELETE FROM bug_reports WHERE id = ?");
@@ -582,6 +652,16 @@ include __DIR__ . '/components/unified-layout.php';
                     <button type="submit" class="btn btn-secondary" style="padding: var(--space-xs) var(--space-sm); font-size: var(--text-sm);">Uppdatera</button>
                 </form>
 
+                <!-- Reply by email -->
+                <?php
+                $replyEmail = $report['email'] ?? $report['rider_email'] ?? '';
+                if ($replyEmail): ?>
+                <button type="button" class="btn btn-ghost" style="padding: var(--space-xs) var(--space-sm); font-size: var(--text-sm); color: var(--color-accent-text);"
+                        onclick="toggleReply(<?= $report['id'] ?>)">
+                    <i data-lucide="mail" style="width: 14px; height: 14px;"></i> Svara
+                </button>
+                <?php endif; ?>
+
                 <!-- Notes toggle -->
                 <button type="button" class="btn btn-ghost" style="padding: var(--space-xs) var(--space-sm); font-size: var(--text-sm);"
                         onclick="toggleNotes(<?= $report['id'] ?>)">
@@ -607,6 +687,31 @@ include __DIR__ . '/components/unified-layout.php';
                     <button type="submit" class="btn btn-primary" style="padding: var(--space-xs) var(--space-sm); font-size: var(--text-sm);">Spara anteckning</button>
                 </form>
             </div>
+
+            <!-- Reply form (hidden by default) -->
+            <?php if (!empty($replyEmail)): ?>
+            <div class="notes-form" id="reply-<?= $report['id'] ?>" style="display: none;">
+                <form method="POST">
+                    <input type="hidden" name="action" value="send_reply">
+                    <input type="hidden" name="report_id" value="<?= $report['id'] ?>">
+                    <input type="hidden" name="reply_email" value="<?= htmlspecialchars($replyEmail) ?>">
+                    <div style="font-size: var(--text-sm); color: var(--color-text-muted); margin-bottom: var(--space-xs);">
+                        <i data-lucide="mail" style="width: 12px; height: 12px; display: inline;"></i>
+                        Till: <strong style="color: var(--color-text-primary);"><?= htmlspecialchars($replyEmail) ?></strong>
+                    </div>
+                    <textarea name="reply_message" class="form-input" placeholder="Skriv ditt svar..." style="min-height: 80px;"></textarea>
+                    <div style="display: flex; gap: var(--space-sm); align-items: center; flex-wrap: wrap;">
+                        <button type="submit" class="btn btn-primary" style="padding: var(--space-xs) var(--space-sm); font-size: var(--text-sm);">
+                            <i data-lucide="send" style="width: 14px; height: 14px;"></i> Skicka svar
+                        </button>
+                        <label style="font-size: var(--text-sm); color: var(--color-text-secondary); display: inline-flex; align-items: center; gap: 4px; cursor: pointer;">
+                            <input type="checkbox" name="auto_resolve" value="1" <?= $report['status'] !== 'resolved' ? 'checked' : '' ?>>
+                            Markera som löst
+                        </label>
+                    </div>
+                </form>
+            </div>
+            <?php endif; ?>
         </div>
     <?php endforeach; ?>
 
@@ -635,6 +740,13 @@ include __DIR__ . '/components/unified-layout.php';
 <script>
 function toggleNotes(id) {
     var el = document.getElementById('notes-' + id);
+    el.style.display = el.style.display === 'none' ? 'block' : 'none';
+    if (el.style.display === 'block') {
+        el.querySelector('textarea').focus();
+    }
+}
+function toggleReply(id) {
+    var el = document.getElementById('reply-' + id);
     el.style.display = el.style.display === 'none' ? 'block' : 'none';
     if (el.style.display === 'block') {
         el.querySelector('textarea').focus();

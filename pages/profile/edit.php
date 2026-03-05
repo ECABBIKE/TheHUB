@@ -331,16 +331,30 @@ $clubs = $pdo->query("SELECT id, name FROM clubs WHERE active = 1 ORDER BY name"
             <div class="form-group">
                 <label for="uci_id">UCI ID</label>
                 <?php if (!empty($currentUser['license_number'])): ?>
-                    <input type="text" id="uci_id" name="uci_id"
-                           value="<?= htmlspecialchars($currentUser['license_number']) ?>"
-                           readonly disabled
-                           class="input-disabled">
-                    <small class="form-help">UCI ID kan inte ändras efter att det sparats.</small>
+                    <div style="display: flex; gap: var(--space-xs); align-items: center;">
+                        <input type="text" id="uci_id" name="uci_id"
+                               value="<?= htmlspecialchars($currentUser['license_number']) ?>"
+                               readonly disabled
+                               class="input-disabled" style="flex: 1;">
+                        <button type="button" id="btn-sync-license" onclick="syncLicense()"
+                                style="white-space: nowrap; padding: 8px 12px; background: var(--color-accent); color: var(--color-bg-page); border: none; border-radius: var(--radius-sm); cursor: pointer; font-size: 13px; font-weight: 600;">
+                            <i data-lucide="refresh-cw" style="width: 14px; height: 14px; display: inline;"></i> Synka
+                        </button>
+                    </div>
+                    <div id="license-sync-result" style="margin-top: var(--space-xs);"></div>
+                    <small class="form-help">Tryck Synka för att uppdatera licensinfo från SCF.</small>
                 <?php else: ?>
-                    <input type="text" id="uci_id" name="uci_id"
-                           value=""
-                           placeholder="10012345678">
-                    <small class="form-help">Fyll i ditt UCI ID om du har ett (11 siffror).</small>
+                    <div style="display: flex; gap: var(--space-xs); align-items: center;">
+                        <input type="text" id="uci_id" name="uci_id"
+                               value=""
+                               placeholder="10012345678" style="flex: 1;">
+                        <button type="button" id="btn-sync-license" onclick="syncLicense()"
+                                style="white-space: nowrap; padding: 8px 12px; background: var(--color-accent); color: var(--color-bg-page); border: none; border-radius: var(--radius-sm); cursor: pointer; font-size: 13px; font-weight: 600;">
+                            <i data-lucide="refresh-cw" style="width: 14px; height: 14px; display: inline;"></i> Synka
+                        </button>
+                    </div>
+                    <div id="license-sync-result" style="margin-top: var(--space-xs);"></div>
+                    <small class="form-help">Fyll i ditt UCI ID (11 siffror) och tryck Synka för att verifiera och uppdatera din profil.</small>
                 <?php endif; ?>
             </div>
         </div>
@@ -1105,5 +1119,79 @@ function clearRiderSponsorImg() {
 }
 </script>
 <?php endif; ?>
+
+<!-- UCI ID License Sync -->
+<script>
+async function syncLicense() {
+    const uciInput = document.getElementById('uci_id');
+    const resultDiv = document.getElementById('license-sync-result');
+    const btn = document.getElementById('btn-sync-license');
+    const uciId = (uciInput.value || '').trim();
+
+    if (!uciId) {
+        resultDiv.innerHTML = '<div style="padding:var(--space-xs) var(--space-sm);background:rgba(239,68,68,0.1);color:var(--color-error);border-radius:var(--radius-sm);font-size:var(--text-sm);">Fyll i ditt UCI ID först.</div>';
+        return;
+    }
+
+    // Validate format
+    const digits = uciId.replace(/\D/g, '');
+    if (digits.length < 9 || digits.length > 11) {
+        resultDiv.innerHTML = '<div style="padding:var(--space-xs) var(--space-sm);background:rgba(239,68,68,0.1);color:var(--color-error);border-radius:var(--radius-sm);font-size:var(--text-sm);">UCI ID ska vara 9-11 siffror.</div>';
+        return;
+    }
+
+    // Show loading
+    btn.disabled = true;
+    btn.innerHTML = '<i data-lucide="loader" style="width:14px;height:14px;display:inline;animation:avatar-spin 1s linear infinite;"></i> Söker...';
+    if (typeof lucide !== 'undefined') lucide.createIcons();
+    resultDiv.innerHTML = '';
+
+    try {
+        const res = await fetch('/api/sync-license.php?uci_id=' + encodeURIComponent(uciId));
+        const data = await res.json();
+
+        if (data.success) {
+            const d = data.data;
+            let info = '<strong>' + escH(d.firstname) + ' ' + escH(d.lastname) + '</strong>';
+            if (d.license_type) info += ' &middot; ' + escH(d.license_type);
+            if (d.club_name) info += ' &middot; ' + escH(d.club_name);
+            if (d.discipline) info += ' &middot; ' + escH(d.discipline);
+            info += ' &middot; Licens ' + d.license_year;
+
+            resultDiv.innerHTML = '<div style="padding:var(--space-sm);background:rgba(16,185,129,0.1);color:var(--color-success);border-radius:var(--radius-sm);font-size:var(--text-sm);">'
+                + '<div style="font-weight:600;margin-bottom:2px;"><i data-lucide="check-circle" style="width:14px;height:14px;display:inline;"></i> ' + escH(data.message) + '</div>'
+                + '<div style="color:var(--color-text-secondary);">' + info + '</div>'
+                + '</div>';
+
+            // Update the UCI ID field to show it's now set
+            if (!uciInput.disabled) {
+                uciInput.value = d.uci_id;
+                uciInput.readOnly = true;
+                uciInput.disabled = true;
+                uciInput.classList.add('input-disabled');
+            }
+
+            // Reload page after short delay to show updated data
+            setTimeout(function() { location.reload(); }, 2000);
+        } else {
+            resultDiv.innerHTML = '<div style="padding:var(--space-xs) var(--space-sm);background:rgba(239,68,68,0.1);color:var(--color-error);border-radius:var(--radius-sm);font-size:var(--text-sm);">'
+                + escH(data.error) + '</div>';
+        }
+    } catch (err) {
+        resultDiv.innerHTML = '<div style="padding:var(--space-xs) var(--space-sm);background:rgba(239,68,68,0.1);color:var(--color-error);border-radius:var(--radius-sm);font-size:var(--text-sm);">Nätverksfel. Försök igen.</div>';
+    } finally {
+        btn.disabled = false;
+        btn.innerHTML = '<i data-lucide="refresh-cw" style="width:14px;height:14px;display:inline;"></i> Synka';
+        if (typeof lucide !== 'undefined') lucide.createIcons();
+    }
+}
+
+function escH(s) {
+    if (!s) return '';
+    var d = document.createElement('div');
+    d.textContent = s;
+    return d.innerHTML;
+}
+</script>
 
 <!-- CSS loaded from /assets/css/pages/profile-edit.css -->

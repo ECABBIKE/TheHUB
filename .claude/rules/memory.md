@@ -4,6 +4,29 @@
 
 ---
 
+## SENASTE FIXAR (2026-03-05, session 32)
+
+### Felrapporter: Svara via e-post direkt från admin
+- **Ny funktion:** "Svara"-knapp på varje felrapport som har en e-postadress
+- **Svarsformulär:** Textarea med mottagarens e-post, "Skicka svar"-knapp + "Markera som löst"-checkbox
+- **E-postformat:** HTML-mail med TheHUB-branding, original rapporttitel i ämnesraden (Re: ...)
+- **Automatisk anteckning:** Svaret sparas som admin-anteckning med tidstämpel `[Svar skickat YYYY-MM-DD HH:MM]`
+- **Auto-resolve:** Checkbox (default ikryssad) markerar rapporten som löst vid svar
+- **Reply-to:** Sätts till admin-användarens e-post
+- **Filer:** `admin/bug-reports.php`
+
+### UCI ID-synkning i profilen
+- **Ny funktion:** Deltagare kan koppla sitt UCI ID mot sin profil via "Synka"-knapp
+- **Flöde utan UCI ID:** Fyll i UCI ID → Tryck Synka → SCF API verifierar → Profil uppdateras
+- **Flöde med UCI ID:** Tryck Synka → SCF API verifierar → Licensdata uppdateras (typ, klubb, disciplin etc.)
+- **Verifiering:** Namn i SCF måste matcha profilnamn (fuzzy match, tillåter mindre avvikelser)
+- **Skydd:** Kontrollerar att UCI ID inte redan tillhör annan profil
+- **Uppdaterar:** license_number, license_type, license_category, license_year, discipline, nationality, birth_year, gender, club via SCFLicenseService::updateRiderLicense()
+- **Ny API:** `/api/sync-license.php` - GET med uci_id parameter, kräver inloggning
+- **Filer:** `pages/profile/edit.php`, `api/sync-license.php`
+
+---
+
 ## SENASTE FIXAR (2026-03-05, session 31)
 
 ### Regelverk: 4 typer istället för 2
