@@ -1072,7 +1072,7 @@ include __DIR__ . '/components/unified-layout.php';
 
                 <div class="admin-form-group">
                     <label class="admin-form-label">Beskrivning</label>
-                    <textarea name="description" class="admin-form-input" rows="3"><?= htmlspecialchars($series['description'] ?? '') ?></textarea>
+                    <textarea name="description" class="admin-form-input" rows="3" data-format-toolbar><?= htmlspecialchars($series['description'] ?? '') ?></textarea>
                 </div>
 
                 <div class="mt-lg">
@@ -1969,4 +1969,5 @@ document.addEventListener('DOMContentLoaded', function() {
 });
 </script>
 
+<?php include __DIR__ . '/components/format-toolbar.php'; ?>
 <?php include __DIR__ . '/components/unified-layout-footer.php'; ?>
