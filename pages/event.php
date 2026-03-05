@@ -198,7 +198,9 @@ try {
     try {
         $sponsorParams = [$eventId];
         $seriesJoin = "";
-        if (!empty($event['series_id']) && !empty($event['inherit_series_sponsors'])) {
+        // Inherit series sponsors if explicitly enabled, or if column doesn't exist yet (pre-migration fallback)
+        $inheritSponsors = !array_key_exists('inherit_series_sponsors', $event) || !empty($event['inherit_series_sponsors']);
+        if (!empty($event['series_id']) && $inheritSponsors) {
             $seriesJoin = "
                 UNION ALL
                 SELECT s.*, ss.placement, ss.display_order, ss.display_size,
