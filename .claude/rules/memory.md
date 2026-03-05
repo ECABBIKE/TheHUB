@@ -6,6 +6,15 @@
 
 ## SENASTE FIXAR (2026-03-05, session 31)
 
+### Regelverk: 4 typer istället för 2
+- **Gamla typer:** `sportmotion`, `competition` (avaktiverade i global_texts)
+- **Nya typer:** `sportmotion_edr`, `sportmotion_dh`, `national_edr`, `national_dh`
+- **Migration 077:** Seedar 4 nya globala texter, kopierar innehåll/länkar från gamla, migrerar events, avaktiverar gamla
+- **Admin event-edit:** 5 radioknappar: Egen text, sM EDR, sM DH, Nat. EDR, Nat. DH
+- **Publik event.php:** Dynamisk lookup via `regulations_` + type-nyckel (stödjer alla typer inkl legacy)
+- **VIKTIGT:** Kör migration 077 via `/admin/migrations.php`
+- **Filer:** `admin/event-edit.php`, `pages/event.php`, `Tools/migrations/077_regulations_four_types.sql`, `admin/migrations.php`
+
 ### PM-fält: Speglade fält från Inbjudan och Faciliteter
 - **PM Huvudtext** → Speglar nu `invitation` (Inbjudningstext). Redigeras under Inbjudan, visas som kopia i PM.
 - **PM Lift** → Flyttad till Faciliteter-sektionen. Visas som kopia i PM-fliken.

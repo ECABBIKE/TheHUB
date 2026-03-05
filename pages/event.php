@@ -2117,18 +2117,16 @@ $compClassesInfo = getEventContent($event, 'competition_classes_info', 'competit
 <?php endif; ?>
 
 <?php
-// Regelverk section
+// Regelverk section - supports: sportmotion_edr, sportmotion_dh, national_edr, national_dh (+ legacy sportmotion, competition)
 $regulationsGlobalType = $event['regulations_global_type'] ?? '';
 $regulationsHidden = !empty($event['regulations_hidden'] ?? 0);
 $regulationsText = '';
 $regulationsGlobalLinks = [];
 if (!$regulationsHidden) {
-    if ($regulationsGlobalType === 'sportmotion' && !empty($globalTextMap['regulations_sportmotion'])) {
-        $regulationsText = $globalTextMap['regulations_sportmotion'];
-        $regulationsGlobalLinks = $globalTextLinksMap['regulations_sportmotion'] ?? [];
-    } elseif ($regulationsGlobalType === 'competition' && !empty($globalTextMap['regulations_competition'])) {
-        $regulationsText = $globalTextMap['regulations_competition'];
-        $regulationsGlobalLinks = $globalTextLinksMap['regulations_competition'] ?? [];
+    $regGlobalKey = $regulationsGlobalType ? 'regulations_' . $regulationsGlobalType : '';
+    if ($regGlobalKey && !empty($globalTextMap[$regGlobalKey])) {
+        $regulationsText = $globalTextMap[$regGlobalKey];
+        $regulationsGlobalLinks = $globalTextLinksMap[$regGlobalKey] ?? [];
     } else {
         $regulationsText = $event['regulations_info'] ?? '';
     }
