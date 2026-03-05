@@ -4,6 +4,23 @@
 
 ---
 
+## SENASTE FIXAR (2026-03-05, session 31)
+
+### Serie-sidan: Kollapsbar beskrivning + mobilanpassning + partnerfix
+- **Problem 1:** Serie-beskrivningen var helt dold på mobil (`display: none`)
+- **Fix:** Ersatt `<p>` med `<details>` element - "Läs mer om serien" klickbar summary, text visas vid öppning
+- **Problem 2:** "Seriesammanställning: X tävlingar" tog för mycket plats på mobil
+- **Fix:** Kompaktare format: "X tävlingar · Y bästa räknas" på en rad
+- **Problem 3:** Logo-raden visade alla logotyper i en lång rad utan radbrytning
+- **Fix:** Max 3 per rad med `flex: 0 0 calc(33.333% - gap)`, fler wrappas till ny rad
+- **Problem 4:** Samarbetspartners-logotyper överlappade varandra på serie-sidan
+- **Fix:** Bytt från CSS grid till flexbox med `justify-content: center` + `overflow: hidden` på items. Mobil: `max-width: 100%` på bilder förhindrar overflow. Gap minskat till `--space-sm` på mobil.
+- **Problem 5:** L/S-knappar (stor/liten) i event-edit sponsorväljaren satt inne i bilden - fick inte plats
+- **Fix:** Knapparna flyttade under bilden i en wrapper-div. `removeFromPlacement()` uppdaterad att hantera wrapper.
+- **Filer:** `pages/series/show.php` (inline CSS + HTML), `assets/css/pages/series-show.css`, `assets/css/pages/event.css`, `admin/event-edit.php`
+
+---
+
 ## SENASTE FIXAR (2026-03-05, session 30)
 
 ### Sponsorsystem: Per-placement "Ärv från serie" + Storleksval för partners
