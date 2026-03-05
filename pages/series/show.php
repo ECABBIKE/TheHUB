@@ -490,9 +490,10 @@ skip_club_standings:
         <div class="series-hero-info">
             <h1 class="series-title"><?= htmlspecialchars($series['name']) ?></h1>
             <?php if ($series['description']): ?>
-                <p class="series-description"><?= htmlspecialchars($series['description']) ?></p>
+                <p class="series-description"><?= format_text($series['description']) ?></p>
             <?php endif; ?>
             <div class="series-meta">
+                <strong>Seriesammanställning:</strong>
                 <span><?= count($events) ?> tävlingar</span>
                 <?php if ($countBest): ?>
                 <span>Räknar <?= $countBest ?> bästa resultat</span>
