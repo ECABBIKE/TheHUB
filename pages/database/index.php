@@ -201,6 +201,8 @@ if ($hofSort === 'sm') {
 // ── Tab 4: Gallerier ──
 $galleryFilterYear = isset($_GET['gy']) && is_numeric($_GET['gy']) ? intval($_GET['gy']) : null;
 $galleryFilterLocation = isset($_GET['gl']) ? trim($_GET['gl']) : '';
+$galleryFilterBrand = isset($_GET['gb']) && is_numeric($_GET['gb']) ? intval($_GET['gb']) : null;
+$galleryFilterPhotographer = isset($_GET['gp']) && is_numeric($_GET['gp']) ? intval($_GET['gp']) : null;
 
 $galleryYears = $pdo->query("
     SELECT DISTINCT YEAR(e.date) as yr
@@ -216,6 +218,24 @@ $galleryLocations = $pdo->query("
     ORDER BY e.location ASC
 ")->fetchAll(PDO::FETCH_COLUMN);
 
+$galleryBrands = $pdo->query("
+    SELECT DISTINCT sb.id, sb.name
+    FROM series_brands sb
+    JOIN series s ON s.brand_id = sb.id
+    JOIN series_events se ON se.series_id = s.id
+    JOIN event_albums ea ON ea.event_id = se.event_id
+    WHERE ea.is_published = 1
+    ORDER BY sb.name ASC
+")->fetchAll(PDO::FETCH_ASSOC);
+
+$galleryPhotographers = $pdo->query("
+    SELECT DISTINCT p.id, p.name
+    FROM photographers p
+    JOIN event_albums ea ON ea.photographer_id = p.id
+    WHERE ea.is_published = 1 AND p.active = 1
+    ORDER BY p.name ASC
+")->fetchAll(PDO::FETCH_ASSOC);
+
 $gWhere = ["ea.is_published = 1"];
 $gParams = [];
 if ($galleryFilterYear) {
@@ -225,6 +245,14 @@ if ($galleryFilterYear) {
 if ($galleryFilterLocation) {
     $gWhere[] = "e.location = ?";
     $gParams[] = $galleryFilterLocation;
+}
+if ($galleryFilterBrand) {
+    $gWhere[] = "s.brand_id = ?";
+    $gParams[] = $galleryFilterBrand;
+}
+if ($galleryFilterPhotographer) {
+    $gWhere[] = "ea.photographer_id = ?";
+    $gParams[] = $galleryFilterPhotographer;
 }
 $gWhereClause = implode(' AND ', $gWhere);
 
@@ -239,6 +267,8 @@ $gStmt = $pdo->prepare("
     FROM event_albums ea
     JOIN events e ON ea.event_id = e.id
     LEFT JOIN photographers p ON ea.photographer_id = p.id
+    LEFT JOIN series_events se ON se.event_id = e.id
+    LEFT JOIN series s ON se.series_id = s.id
     LEFT JOIN series_events se2 ON se2.event_id = e.id
     LEFT JOIN series s2 ON se2.series_id = s2.id
     LEFT JOIN event_photos cover ON cover.id = ea.cover_photo_id
@@ -492,8 +522,30 @@ $totalPhotos = $pdo->query("SELECT COALESCE(SUM(photo_count), 0) FROM event_albu
                     </select>
                 </div>
                 <?php endif; ?>
+                <?php if (!empty($galleryBrands)): ?>
+                <div class="filter-select-wrapper">
+                    <label class="filter-label">Serie</label>
+                    <select name="gb" class="filter-select" onchange="this.form.submit()">
+                        <option value="">Alla serier</option>
+                        <?php foreach ($galleryBrands as $b): ?>
+                        <option value="<?= $b['id'] ?>" <?= $galleryFilterBrand == $b['id'] ? 'selected' : '' ?>><?= htmlspecialchars($b['name']) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <?php endif; ?>
+                <?php if (!empty($galleryPhotographers)): ?>
+                <div class="filter-select-wrapper">
+                    <label class="filter-label">Fotograf</label>
+                    <select name="gp" class="filter-select" onchange="this.form.submit()">
+                        <option value="">Alla fotografer</option>
+                        <?php foreach ($galleryPhotographers as $ph): ?>
+                        <option value="<?= $ph['id'] ?>" <?= $galleryFilterPhotographer == $ph['id'] ? 'selected' : '' ?>><?= htmlspecialchars($ph['name']) ?></option>
+                        <?php endforeach; ?>
+                    </select>
+                </div>
+                <?php endif; ?>
             </div>
-            <?php if ($galleryFilterYear || $galleryFilterLocation): ?>
+            <?php if ($galleryFilterYear || $galleryFilterLocation || $galleryFilterBrand || $galleryFilterPhotographer): ?>
             <div style="margin-top: var(--space-sm);">
                 <a href="/database?tab=gallery" class="btn btn-ghost" style="font-size: var(--text-sm);">Rensa filter</a>
             </div>
