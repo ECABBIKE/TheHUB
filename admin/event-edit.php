@@ -303,6 +303,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'event_format' => trim($_POST['event_format'] ?? 'ENDURO'),
             'stage_names' => !empty($_POST['stage_names']) ? trim($_POST['stage_names']) : null,
             'series_id' => !empty($_POST['series_id']) ? intval($_POST['series_id']) : null,
+            'inherit_series_sponsors' => isset($_POST['inherit_series_sponsors']) ? 1 : 0,
             'point_scale_id' => !empty($_POST['point_scale_id']) ? intval($_POST['point_scale_id']) : null,
             'pricing_template_id' => !empty($_POST['pricing_template_id']) ? intval($_POST['pricing_template_id']) : null,
             'distance' => !empty($_POST['distance']) ? floatval($_POST['distance']) : null,
@@ -421,7 +422,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $basicResult = $db->query(
                 "UPDATE events SET name = ?, date = ?, location = ?, venue_id = ?,
                  discipline = ?, event_level = ?, event_format = ?, series_id = ?,
-                 active = ?, website = ?, max_participants = ?,
+                 inherit_series_sponsors = ?, active = ?, website = ?, max_participants = ?,
                  registration_opens = ?, registration_deadline = ?,
                  registration_deadline_time = ?, contact_email = ?,
                  contact_phone = ?, end_date = ?, event_type = ?,
@@ -432,7 +433,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 [
                     $eventData['name'], $eventData['date'], $eventData['location'],
                     $eventData['venue_id'], $eventData['discipline'], $eventData['event_level'],
-                    $eventData['event_format'], $eventData['series_id'], $eventData['active'],
+                    $eventData['event_format'], $eventData['series_id'],
+                    $eventData['inherit_series_sponsors'], $eventData['active'],
                     $eventData['website'], $eventData['max_participants'],
                     $eventData['registration_opens'], $eventData['registration_deadline'],
                     $eventData['registration_deadline_time'], $eventData['contact_email'],
@@ -461,7 +463,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             try {
                 unset($eventData['name'], $eventData['date'], $eventData['location'],
                       $eventData['venue_id'], $eventData['discipline'], $eventData['event_level'],
-                      $eventData['event_format'], $eventData['series_id'], $eventData['active'],
+                      $eventData['event_format'], $eventData['series_id'],
+                      $eventData['inherit_series_sponsors'], $eventData['active'],
                       $eventData['website'], $eventData['organizer_club_id'],
                       $eventData['max_participants'], $eventData['registration_opens'],
                       $eventData['registration_deadline'], $eventData['registration_deadline_time'],
@@ -977,6 +980,7 @@ include __DIR__ . '/components/unified-layout.php';
     <!-- Hidden fields to preserve ALL locked values for promotors -->
     <input type="hidden" name="discipline" value="<?= h($event['discipline'] ?? '') ?>">
     <input type="hidden" name="series_id" value="<?= h($event['series_id'] ?? '') ?>">
+    <input type="hidden" name="inherit_series_sponsors" value="<?= h($event['inherit_series_sponsors'] ?? 0) ?>">
     <input type="hidden" name="event_level" value="<?= h($event['event_level'] ?? 'national') ?>">
     <input type="hidden" name="event_format" value="<?= h($event['event_format'] ?? 'ENDURO') ?>">
     <input type="hidden" name="point_scale_id" value="<?= h($event['point_scale_id'] ?? '') ?>">
@@ -1745,10 +1749,21 @@ include __DIR__ . '/components/unified-layout.php';
             <p class="mb-lg text-secondary text-sm">
                 Välj bilder till sponsorplatserna. Ladda upp bilder via
                 <a href="/admin/media?folder=sponsors" target="_blank">Mediabiblioteket</a> först.
-                <?php if (!$isPromotorOnly): ?>
-                <br>Seriens sponsorer visas om inga event-sponsorer anges.
-                <?php endif; ?>
             </p>
+
+            <?php if (!empty($event['series_id'])): ?>
+            <div class="admin-form-group mb-lg" style="padding: var(--space-md); background: var(--color-bg-hover); border-radius: var(--radius-sm); border: 1px solid var(--color-border);">
+                <label style="display: flex; align-items: center; gap: var(--space-sm); cursor: pointer;">
+                    <input type="checkbox" name="inherit_series_sponsors" value="1"
+                        <?= !empty($event['inherit_series_sponsors']) ? 'checked' : '' ?>
+                        style="width: 18px; height: 18px; accent-color: var(--color-accent);">
+                    <span>
+                        <strong>Ärv sponsorer från serien</strong>
+                        <br><small class="text-secondary">Seriens sponsorer visas automatiskt på detta event. Eventets egna sponsorer (nedan) visas också.</small>
+                    </span>
+                </label>
+            </div>
+            <?php endif; ?>
 
             <div class="flex flex-col gap-lg">
                 <!-- Event header banner image -->

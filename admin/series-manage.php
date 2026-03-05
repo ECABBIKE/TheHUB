@@ -566,28 +566,30 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $stmt = $pdo->prepare("DELETE FROM series_sponsors WHERE series_id = ?");
             $stmt->execute([$id]);
 
-            $insertStmt = $pdo->prepare("INSERT INTO series_sponsors (series_id, sponsor_id, placement, display_order) VALUES (?, ?, ?, ?)");
+            $insertStmt = $pdo->prepare("INSERT INTO series_sponsors (series_id, sponsor_id, placement, display_order, display_size) VALUES (?, ?, ?, ?, ?)");
 
             // Header (single)
             if (!empty($_POST['sponsor_header'])) {
-                $insertStmt->execute([$id, (int)$_POST['sponsor_header'], 'header', 0]);
+                $insertStmt->execute([$id, (int)$_POST['sponsor_header'], 'header', 0, 'small']);
             }
             // Content / Logo row (array)
             if (!empty($_POST['sponsor_content']) && is_array($_POST['sponsor_content'])) {
                 $order = 0;
                 foreach ($_POST['sponsor_content'] as $sponsorId) {
-                    $insertStmt->execute([$id, (int)$sponsorId, 'content', $order++]);
+                    $insertStmt->execute([$id, (int)$sponsorId, 'content', $order++, 'small']);
                 }
             }
             // Sidebar / Results sponsor (single)
             if (!empty($_POST['sponsor_sidebar'])) {
-                $insertStmt->execute([$id, (int)$_POST['sponsor_sidebar'], 'sidebar', 0]);
+                $insertStmt->execute([$id, (int)$_POST['sponsor_sidebar'], 'sidebar', 0, 'small']);
             }
-            // Partners (array)
+            // Partners (array) - with display_size per sponsor
+            $partnerSizes = $_POST['sponsor_partner_size'] ?? [];
             if (!empty($_POST['sponsor_partner']) && is_array($_POST['sponsor_partner'])) {
                 $order = 0;
-                foreach ($_POST['sponsor_partner'] as $sponsorId) {
-                    $insertStmt->execute([$id, (int)$sponsorId, 'partner', $order++]);
+                foreach ($_POST['sponsor_partner'] as $idx => $sponsorId) {
+                    $size = ($partnerSizes[$idx] ?? 'small') === 'large' ? 'large' : 'small';
+                    $insertStmt->execute([$id, (int)$sponsorId, 'partner', $order++, $size]);
                 }
             }
 
@@ -733,13 +735,17 @@ try {
         ];
     }
 
+    $partnerDisplaySizes = [];
     if ($id > 0) {
-        $ssStmt = $pdo->prepare("SELECT sponsor_id, placement FROM series_sponsors WHERE series_id = ? ORDER BY display_order ASC");
+        $ssStmt = $pdo->prepare("SELECT sponsor_id, placement, display_size FROM series_sponsors WHERE series_id = ? ORDER BY display_order ASC");
         $ssStmt->execute([$id]);
         foreach ($ssStmt->fetchAll(PDO::FETCH_ASSOC) as $ss) {
             $placement = $ss['placement'];
             if (isset($seriesSponsors[$placement])) {
                 $seriesSponsors[$placement][] = (int)$ss['sponsor_id'];
+            }
+            if ($placement === 'partner') {
+                $partnerDisplaySizes[(int)$ss['sponsor_id']] = $ss['display_size'] ?? 'small';
             }
         }
     }
@@ -1755,6 +1761,25 @@ include __DIR__ . '/components/unified-layout.php';
     opacity: 0.8;
 }
 .pl-tile-remove:hover { opacity: 1; }
+.pl-tile-size { position: absolute; bottom: 2px; left: 2px; }
+.size-btn {
+    background: var(--color-bg-surface);
+    border: 1px solid var(--color-border);
+    color: var(--color-text-muted);
+    font-size: 10px;
+    font-weight: 700;
+    width: 20px;
+    height: 18px;
+    cursor: pointer;
+    border-radius: 3px;
+    padding: 0;
+    line-height: 1;
+}
+.size-btn.active {
+    background: var(--color-accent);
+    color: var(--color-bg-page);
+    border-color: var(--color-accent);
+}
 .img-picker-item {
     cursor: pointer;
     border: 2px solid var(--color-border);
@@ -1800,6 +1825,7 @@ include __DIR__ . '/components/unified-layout.php';
 // =====================================================
 const seriesSponsorLookup = <?= json_encode($sponsorLookup) ?>;
 const seriesInitPlacements = <?= json_encode($seriesSponsors) ?>;
+const seriesPartnerSizes = <?= json_encode($partnerDisplaySizes ?? new \stdClass()) ?>;
 let seriesPickerPlacement = null;
 let seriesPickerMax = 0;
 const seriesPlacements = { header: [], content: [], sidebar: [], partner: [] };
@@ -1819,15 +1845,26 @@ function addToSeriesPlacement(pl, sponsorId, name, logoUrl, updateCount) {
     if ((pl === 'header' || pl === 'sidebar') && seriesPlacements[pl].length > 0) {
         clearSeriesPlacement(pl);
     }
-    seriesPlacements[pl].push({ id: sponsorId, name: name, logo_url: logoUrl });
+    const size = (pl === 'partner' && seriesPartnerSizes[sponsorId]) ? seriesPartnerSizes[sponsorId] : 'small';
+    seriesPlacements[pl].push({ id: sponsorId, name: name, logo_url: logoUrl, size: size });
 
     const container = document.getElementById('spl-' + pl);
     const tile = document.createElement('div');
     tile.className = 'pl-tile';
     tile.dataset.sponsorId = sponsorId;
+
+    let sizeToggle = '';
+    if (pl === 'partner') {
+        sizeToggle = '<div class="pl-tile-size" style="display:flex;gap:2px;margin-top:2px;">'
+            + '<button type="button" class="size-btn' + (size === 'large' ? ' active' : '') + '" data-size="large" onclick="setPartnerSize(' + sponsorId + ',\'large\',this)" title="Stor (600x150)">L</button>'
+            + '<button type="button" class="size-btn' + (size === 'small' ? ' active' : '') + '" data-size="small" onclick="setPartnerSize(' + sponsorId + ',\'small\',this)" title="Liten (300x75)">S</button>'
+            + '</div>';
+    }
+
     tile.innerHTML = (logoUrl
         ? '<img src="' + logoUrl + '" alt="' + (name||'') + '" title="' + (name||'') + '">'
         : '<span class="pl-tile-text">' + (name||'?') + '</span>')
+        + sizeToggle
         + '<button type="button" class="pl-tile-remove" onclick="removeFromSeriesPlacement(\'' + pl + '\',' + sponsorId + ')" title="Ta bort">&times;</button>';
     container.appendChild(tile);
 
@@ -1839,7 +1876,28 @@ function addToSeriesPlacement(pl, sponsorId, name, logoUrl, updateCount) {
     input.value = sponsorId;
     inputContainer.appendChild(input);
 
+    // Size hidden input for partners
+    if (pl === 'partner') {
+        const sizeInput = document.createElement('input');
+        sizeInput.type = 'hidden';
+        sizeInput.id = 'spl-size-' + sponsorId;
+        sizeInput.name = 'sponsor_partner_size[]';
+        sizeInput.value = size;
+        inputContainer.appendChild(sizeInput);
+    }
+
     if (updateCount !== false) updateSeriesCounts();
+}
+
+function setPartnerSize(sponsorId, size, btn) {
+    const sizeInput = document.getElementById('spl-size-' + sponsorId);
+    if (sizeInput) sizeInput.value = size;
+    // Update button active state
+    const parent = btn.parentElement;
+    parent.querySelectorAll('.size-btn').forEach(function(b) { b.classList.remove('active'); });
+    btn.classList.add('active');
+    // Update data
+    seriesPlacements.partner.forEach(function(s) { if (s.id === sponsorId) s.size = size; });
 }
 
 function removeFromSeriesPlacement(pl, sponsorId) {
@@ -1848,6 +1906,8 @@ function removeFromSeriesPlacement(pl, sponsorId) {
     if (tile) tile.remove();
     const input = document.getElementById('spl-input-' + pl + '-' + sponsorId);
     if (input) input.remove();
+    const sizeInput = document.getElementById('spl-size-' + sponsorId);
+    if (sizeInput) sizeInput.remove();
     updateSeriesCounts();
 }
 

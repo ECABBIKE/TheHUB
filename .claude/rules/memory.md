@@ -1,6 +1,42 @@
 # TheHUB - Memory / Session Knowledge
 
-> Senast uppdaterad: 2026-03-04
+> Senast uppdaterad: 2026-03-05
+
+---
+
+## SENASTE FIXAR (2026-03-05, session 30)
+
+### Sponsorsystem: Explicit "Ärv från serie" + Storleksval för partners
+- **Problem 1:** Serie-sponsorer laddades ALLTID automatiskt på event-sidor om eventet tillhörde en serie. Om serien saknade sponsorer visades inga sponsorer alls, även om eventet hade egna.
+- **Fix:** Ny kolumn `events.inherit_series_sponsors` (TINYINT, default 0). Serie-sponsorer laddas BARA om denna flagga är aktiverad. Toggle-checkbox i event-edit sponsorsektionen.
+- **Problem 2:** Samarbetspartner-logotyper på seriesidan var dimmiga (opacity: 0.7) och för små (40px/120px).
+- **Fix:** Ny kolumn `series_sponsors.display_size` ENUM('large','small'). Stor = 600x150px (3/rad desktop, 2/rad mobil). Liten = 300x75px (5/rad desktop, 3/rad mobil). Opacity borttagen helt.
+- **Serie-manage:** L/S knappar per partner-sponsor i admin-gränssnittet för storleksval.
+- **Event.php:** Partner-rendering stödjer storleksklasser vid ärvda serie-sponsorer.
+- **Logo-rad:** Storlek ökad från 50px/150px till 75px/300px på seriesidan.
+- **Migration 074:** `events.inherit_series_sponsors` + `series_sponsors.display_size`
+- **VIKTIGT:** Kör migration 074 via `/admin/migrations.php`
+
+### Format-toolbar på serie-beskrivning
+- `data-format-toolbar` attribut tillagt på serie-beskrivningstextarean i series-manage.php
+- `format-toolbar.php` inkluderad för B/I knappar och Ctrl+B/I
+
+### VIKTIGT: Sponsorarv-arkitektur (ny)
+- **Default:** Event visar BARA sina egna sponsorer (`event_sponsors`)
+- **Med inherit:** Om `events.inherit_series_sponsors = 1`, laddas serie-sponsorer via UNION query
+- **Prioritet:** Event-sponsorer hamnar först (array_unshift), serie-sponsorer sist
+- **Storleksklasser:** `display_size` på `series_sponsors` styr rendering (large/small)
+- **Event-edit:** Checkbox "Ärv sponsorer från serien" syns bara om eventet tillhör en serie
+- **Promotorer:** Hidden input bevarar inherit-flaggan (disabled fieldset)
+
+### Filer ändrade
+- **`Tools/migrations/074_sponsor_inherit_and_display_size.sql`** - Ny migration
+- **`admin/migrations.php`** - Migration 074 registrerad
+- **`admin/event-edit.php`** - Inherit-toggle, inherit_series_sponsors i core UPDATE
+- **`pages/event.php`** - Villkorlig serie-sponsor-laddning, partner storleksklasser
+- **`admin/series-manage.php`** - display_size per partner, L/S toggle-knappar, format-toolbar
+- **`pages/series/show.php`** - Stora/små partner-grid, borttagen opacity, ökade logo-storlekar
+- **`assets/css/pages/event.css`** - Partner storleksklasser (large/small) med mobilanpassning
 
 ---
 

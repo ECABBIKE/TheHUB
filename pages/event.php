@@ -198,10 +198,10 @@ try {
     try {
         $sponsorParams = [$eventId];
         $seriesJoin = "";
-        if (!empty($event['series_id'])) {
+        if (!empty($event['series_id']) && !empty($event['inherit_series_sponsors'])) {
             $seriesJoin = "
                 UNION ALL
-                SELECT s.*, ss.placement, ss.display_order,
+                SELECT s.*, ss.placement, ss.display_order, ss.display_size,
                        m_banner.filepath as banner_logo_url, m_standard.filepath as standard_logo_url,
                        m_small.filepath as small_logo_url, m_legacy.filepath as legacy_logo_url,
                        'series' as sponsor_source
@@ -216,7 +216,7 @@ try {
             $sponsorParams[] = $event['series_id'];
         }
         $allSponsorsStmt = $db->prepare("
-            SELECT s.*, es.placement, es.display_order,
+            SELECT s.*, es.placement, es.display_order, 'small' as display_size,
                    m_banner.filepath as banner_logo_url, m_standard.filepath as standard_logo_url,
                    m_small.filepath as small_logo_url, m_legacy.filepath as legacy_logo_url,
                    'event' as sponsor_source
@@ -5358,20 +5358,36 @@ if (!empty($event['series_id'])) {
 $partnerSponsorsWithLogos = array_filter($eventSponsors['partner'] ?? [], function($s) {
     return get_sponsor_logo_for_placement($s, 'content') !== null;
 });
-if (!empty($partnerSponsorsWithLogos)): ?>
+if (!empty($partnerSponsorsWithLogos)):
+    $largeParters = array_filter($partnerSponsorsWithLogos, function($s) { return ($s['display_size'] ?? 'small') === 'large'; });
+    $smallPartners = array_filter($partnerSponsorsWithLogos, function($s) { return ($s['display_size'] ?? 'small') !== 'large'; });
+?>
 <section class="event-partner-sponsors mt-xl mb-lg">
     <div class="partner-sponsors-header">
         <span class="partner-sponsors-label">Samarbetspartners</span>
     </div>
-    <div class="partner-sponsors-grid">
-        <?php foreach ($partnerSponsorsWithLogos as $sponsor):
+    <?php if (!empty($largeParters)): ?>
+    <div class="partner-sponsors-grid partner-sponsors-large">
+        <?php foreach ($largeParters as $sponsor):
             $partnerLogo = get_sponsor_logo_for_placement($sponsor, 'content');
         ?>
-        <a href="<?= h($sponsor['website'] ?? '#') ?>" target="_blank" rel="noopener sponsored" class="partner-sponsor-item" title="<?= h($sponsor['name']) ?>">
+        <a href="<?= h($sponsor['website'] ?? '#') ?>" target="_blank" rel="noopener sponsored" class="partner-sponsor-item partner-sponsor-lg" title="<?= h($sponsor['name']) ?>">
             <img src="<?= h($partnerLogo) ?>" alt="<?= h($sponsor['name']) ?>">
         </a>
         <?php endforeach; ?>
     </div>
+    <?php endif; ?>
+    <?php if (!empty($smallPartners)): ?>
+    <div class="partner-sponsors-grid partner-sponsors-small">
+        <?php foreach ($smallPartners as $sponsor):
+            $partnerLogo = get_sponsor_logo_for_placement($sponsor, 'content');
+        ?>
+        <a href="<?= h($sponsor['website'] ?? '#') ?>" target="_blank" rel="noopener sponsored" class="partner-sponsor-item partner-sponsor-sm" title="<?= h($sponsor['name']) ?>">
+            <img src="<?= h($partnerLogo) ?>" alt="<?= h($sponsor['name']) ?>">
+        </a>
+        <?php endforeach; ?>
+    </div>
+    <?php endif; ?>
 </section>
 <?php endif; ?>
 
