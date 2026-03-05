@@ -72,14 +72,24 @@ if (!function_exists('hub_get_current_page')) {
 $pageInfo = hub_get_current_page();
 $theme = hub_get_theme();
 
-// CRITICAL: Release session lock early to prevent blocking other requests.
-// PHP holds an exclusive lock on the session file during the entire request.
-// If a page takes 5+ seconds to render, ALL other tabs/requests from the same
-// user are blocked until this request finishes. session_write_close() releases
-// the lock while keeping $_SESSION readable for the rest of the request.
-// Only for GET requests - POST requests may need to write to session.
-if (session_status() === PHP_SESSION_ACTIVE && $_SERVER['REQUEST_METHOD'] === 'GET') {
-    session_write_close();
+// CRITICAL: Generate CSRF token BEFORE closing session, so it persists.
+// session_write_close() makes $_SESSION read-only - any new tokens generated
+// after this point won't be saved to the session file.
+if (session_status() === PHP_SESSION_ACTIVE) {
+    // Ensure CSRF token exists in session before we close it
+    if (function_exists('generate_csrf_token')) {
+        generate_csrf_token();
+    }
+
+    // Release session lock early to prevent blocking other requests.
+    // PHP holds an exclusive lock on the session file during the entire request.
+    // If a page takes 5+ seconds to render, ALL other tabs/requests from the same
+    // user are blocked until this request finishes. session_write_close() releases
+    // the lock while keeping $_SESSION readable for the rest of the request.
+    // Only for GET requests - POST requests may need to write to session.
+    if ($_SERVER['REQUEST_METHOD'] === 'GET') {
+        session_write_close();
+    }
 }
 
 // AJAX request = return only content

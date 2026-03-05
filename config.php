@@ -198,12 +198,21 @@ date_default_timezone_set('Europe/Stockholm');
 require_once __DIR__ . '/includes/helpers.php';
 require_once __DIR__ . '/includes/auth.php';
 
-// CRITICAL: Release session lock early to prevent blocking other requests.
-// PHP holds exclusive lock on session file - if one page takes 5+ seconds,
-// ALL other requests from same user are blocked. Release after auth check.
-// Only for GET requests - POST requests may need to write to session.
-if (session_status() === PHP_SESSION_ACTIVE && php_sapi_name() !== 'cli'
-    && ($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET') {
-    session_write_close();
+// CRITICAL: Generate CSRF token BEFORE closing session, so it persists.
+// session_write_close() makes $_SESSION read-only - any new tokens generated
+// after this point won't be saved to the session file.
+if (session_status() === PHP_SESSION_ACTIVE && php_sapi_name() !== 'cli') {
+    // Ensure CSRF token exists in session before we close it
+    if (function_exists('generate_csrf_token')) {
+        generate_csrf_token();
+    }
+
+    // Release session lock early to prevent blocking other requests.
+    // PHP holds exclusive lock on session file - if one page takes 5+ seconds,
+    // ALL other requests from same user are blocked. Release after auth check.
+    // Only for GET requests - POST requests may need to write to session.
+    if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'GET') {
+        session_write_close();
+    }
 }
 ?>
