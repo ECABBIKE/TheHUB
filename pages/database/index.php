@@ -131,16 +131,8 @@ if (!in_array($hofSort, ['sm', 'wins', 'podiums'])) $hofSort = 'sm';
 
 $hofRiders = [];
 
-// Check if is_championship_class column exists
-$hasChampionshipClass = false;
-try {
-    $cols = $pdo->query("SHOW COLUMNS FROM classes LIKE 'is_championship_class'")->fetchAll();
-    $hasChampionshipClass = !empty($cols);
-} catch (Exception $e) {}
-
 if ($hofSort === 'sm') {
-    // SM-titlar: vunnit i championship event + championship class
-    $champClassFilter = $hasChampionshipClass ? "AND COALESCE(cls.is_championship_class, 0) = 1" : "";
+    // SM-titlar: vunnit i championship event (position 1, is_championship = 1)
     $hofRiders = $pdo->query("
         SELECT r.id, r.firstname, r.lastname, c.name as club_name,
                COUNT(*) as sm_titles,
@@ -150,11 +142,9 @@ if ($hofSort === 'sm') {
         INNER JOIN riders r ON res.cyclist_id = r.id
         LEFT JOIN clubs c ON r.club_id = c.id
         INNER JOIN events e ON res.event_id = e.id
-        LEFT JOIN classes cls ON res.class_id = cls.id
         WHERE res.position = 1
           AND res.status = 'finished'
           AND e.is_championship = 1
-          {$champClassFilter}
         GROUP BY r.id
         ORDER BY sm_titles DESC, wins DESC
         LIMIT 20
@@ -162,7 +152,7 @@ if ($hofSort === 'sm') {
 } elseif ($hofSort === 'wins') {
     $hofRiders = $pdo->query("
         SELECT r.id, r.firstname, r.lastname, c.name as club_name,
-               COUNT(CASE WHEN e.is_championship = 1 " . ($hasChampionshipClass ? "AND COALESCE(cls.is_championship_class, 0) = 1" : "") . " THEN 1 END) as sm_titles,
+               COUNT(CASE WHEN e.is_championship = 1 THEN 1 END) as sm_titles,
                COUNT(*) as wins,
                r.stats_total_podiums as podiums
         FROM results res
@@ -181,7 +171,7 @@ if ($hofSort === 'sm') {
     // podiums
     $hofRiders = $pdo->query("
         SELECT r.id, r.firstname, r.lastname, c.name as club_name,
-               COUNT(CASE WHEN res.position = 1 AND e.is_championship = 1 " . ($hasChampionshipClass ? "AND COALESCE(cls.is_championship_class, 0) = 1" : "") . " THEN 1 END) as sm_titles,
+               COUNT(CASE WHEN res.position = 1 AND e.is_championship = 1 THEN 1 END) as sm_titles,
                COUNT(CASE WHEN res.position = 1 THEN 1 END) as wins,
                COUNT(*) as podiums
         FROM results res
@@ -336,18 +326,10 @@ $totalPhotos = $pdo->query("SELECT COALESCE(SUM(photo_count), 0) FROM event_albu
 <!-- Tab Navigation -->
 <div class="search-card">
     <div class="tabs-nav">
-        <button class="tab-pill <?= $activeTab === 'riders' ? 'active' : '' ?>" data-db-tab="riders">
-            <i data-lucide="users"></i> Åkare
-        </button>
-        <button class="tab-pill <?= $activeTab === 'clubs' ? 'active' : '' ?>" data-db-tab="clubs">
-            <i data-lucide="shield"></i> Klubbar
-        </button>
-        <button class="tab-pill <?= $activeTab === 'halloffame' ? 'active' : '' ?>" data-db-tab="halloffame">
-            <i data-lucide="trophy"></i> Hall of Fame
-        </button>
-        <button class="tab-pill <?= $activeTab === 'gallery' ? 'active' : '' ?>" data-db-tab="gallery">
-            <i data-lucide="camera"></i> Gallerier
-        </button>
+        <button class="tab-pill <?= $activeTab === 'riders' ? 'active' : '' ?>" data-db-tab="riders">Åkare</button>
+        <button class="tab-pill <?= $activeTab === 'clubs' ? 'active' : '' ?>" data-db-tab="clubs">Klubbar</button>
+        <button class="tab-pill <?= $activeTab === 'halloffame' ? 'active' : '' ?>" data-db-tab="halloffame">Hall of Fame</button>
+        <button class="tab-pill <?= $activeTab === 'gallery' ? 'active' : '' ?>" data-db-tab="gallery">Gallerier</button>
     </div>
 </div>
 
