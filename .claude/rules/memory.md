@@ -4,7 +4,7 @@
 
 ---
 
-## SENASTE FIXAR (2026-03-05, session 33)
+## SENASTE FIXAR (2026-03-05, session 34)
 
 ### Logout fungerade inte (remember-me levde kvar)
 - **Problem:** `hub_logout()` rensade bara session-variabler med `unset()` men anropade aldrig `rider_clear_remember_token()`, raderade aldrig session-cookien, och körde aldrig `session_destroy()`. Remember-me cookien levde kvar → användaren loggades in automatiskt igen.
@@ -15,6 +15,46 @@
   4. Raderar session-cookien
   5. Kör `session_destroy()`
 - **Fil:** `hub-config.php`
+
+### TheHUB Promotion - Riktade e-postkampanjer
+- **Ny funktion:** Admin-verktyg för riktade e-postutskick till aktiva deltagare
+- **Filter:** Kön (alla/herrar/damer), ålder (min/max), region (klubbens), distrikt (åkarens)
+- **Kampanjstatus:** Utkast → Skickad → Arkiverad
+- **Variabel-ersättning:** {{fornamn}}, {{efternamn}}, {{namn}}, {{klubb}}, {{rabattkod}}, {{rabatt}}
+- **Valfri rabattkod:** Koppling till befintliga rabattkoder (kod+belopp visas i mailet)
+- **Spårning:** Räknar skickade/misslyckade/överhoppade per kampanj
+- **Audience preview:** AJAX-endpoint (`/api/promotion-preview.php`) visar antal mottagare i realtid
+- **E-post:** Använder `hub_send_email()` med branded HTML-mall
+- **Migration 078:** `promotion_campaigns` + `promotion_sends` tabeller
+- **Filer:** `admin/hub-promotion.php`, `api/promotion-preview.php`, `Tools/migrations/078_hub_promotion.sql`
+- **Registrerad i:** admin-tabs (Analytics-gruppen), tools.php, migrations.php, unified-layout pageMap
+
+### Klubb-admin: Fixad åtkomst + redigeringssida
+- **Problem:** `hub_get_admin_clubs()` och `hub_can_edit_club()` använde `ca.rider_id` men `club_admins`-tabellen har `ca.user_id` (admin_users.id). Klubb-admins kunde aldrig se eller redigera sina klubbar.
+- **Fix:** Ny helper `_hub_get_admin_user_id($riderId)` som mappar rider_id → admin_users.id via email-matchning. Cachad med statisk variabel + session fallback.
+- **Ny sida:** `/pages/profile/edit-club.php` - Formulär för att redigera klubbnamn, ort, region, webbplats, logotyp, beskrivning
+- **Router:** `edit-club` tillagd i profile-sektionen
+- **Filer:** `hub-config.php`, `pages/profile/edit-club.php`, `router.php`
+
+### Destination-admin: Ny användargrupp
+- **Ny roll:** `venue_admin` i admin_users role ENUM (nivå 2, samma som promotor)
+- **Junction-tabell:** `venue_admins` (user_id → admin_users.id, venue_id → venues.id)
+- **Admin-sida:** `/admin/venue-admins.php` - Tilldela riders som destination-admins
+- **Profilsida:** `/pages/profile/venue-admin.php` - Lista/redigera tilldelade destinationer
+- **Profil-index:** Visar "Destination-admin" quick-link om användaren har venues
+- **Helper-funktioner:** `hub_can_edit_venue()`, `hub_get_admin_venues()` i hub-config.php
+- **Auth:** `canManageVenue()`, `getUserManagedVenues()` i includes/auth.php
+- **Migration 079:** Skapar `club_admins` (IF NOT EXISTS) + `venue_admins` + `clubs.logo_url` + uppdaterar role ENUM
+- **Router:** `venue-admin` tillagd i profile-sektionen
+- **Navigation:** Tillagd i admin-tabs (System-gruppen) + unified-layout pageMap
+- **Filer:** `admin/venue-admins.php`, `pages/profile/venue-admin.php`, `hub-config.php`, `includes/auth.php`, `router.php`
+
+### Multipla admin-roller samtidigt
+- **Arkitektur:** En användare kan vara klubb-admin + destination-admin + promotor samtidigt
+- **Rollhierarki:** `admin_users.role` ENUM sätts till den "högsta" rollen (admin > promotor > club_admin/venue_admin > rider)
+- **Faktiska behörigheter:** Styrs av junction-tabeller (`club_admins`, `venue_admins`, `promotor_events`), inte role-fältet
+- **Hub-funktioner:** `hub_can_edit_club()` och `hub_can_edit_venue()` kollar junction-tabeller direkt → fungerar oavsett vilken roll som står i admin_users
+- **Profil-index:** Visar quick-links för ALLA roller användaren har (klubb + destination + barn etc)
 
 ---
 

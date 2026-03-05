@@ -827,6 +827,20 @@ include __DIR__ . '/components/unified-layout.php';
         </div>
     </div>
 
+    <!-- TheHUB Promotion -->
+    <div class="card">
+        <div class="tool-header">
+            <div class="tool-icon"><i data-lucide="megaphone"></i></div>
+            <div>
+                <h4 class="tool-title">TheHUB Promotion</h4>
+                <p class="tool-description">Riktade e-postutskick baserat på ålder, kön och region</p>
+            </div>
+        </div>
+        <div class="tool-actions">
+            <a href="/admin/hub-promotion.php" class="btn-admin btn-admin-primary">Öppna</a>
+        </div>
+    </div>
+
 </div>
 
 <!-- ========== SCF LICENSSYNK ========== -->

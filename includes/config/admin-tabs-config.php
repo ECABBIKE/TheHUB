@@ -293,6 +293,13 @@ $ADMIN_TABS = [
         'super_admin_only' => true,  // Visas bara for super_admin (eller statistics-behorighet via hasPermission)
         'tabs' => [
             [
+                'id' => 'hub-promotion',
+                'label' => 'Promotion',
+                'icon' => 'megaphone',
+                'url' => '/admin/hub-promotion.php',
+                'pages' => ['hub-promotion.php']
+            ],
+            [
                 'id' => 'dashboard',
                 'label' => 'Dashboard',
                 'icon' => 'layout-dashboard',
@@ -402,6 +409,20 @@ $ADMIN_TABS = [
                 'icon' => 'camera',
                 'url' => '/admin/photographers.php',
                 'pages' => ['photographers.php']
+            ],
+            [
+                'id' => 'club-admins',
+                'label' => 'Klubb-admin',
+                'icon' => 'building-2',
+                'url' => '/admin/club-admins.php',
+                'pages' => ['club-admins.php', 'my-clubs.php', 'my-club-edit.php']
+            ],
+            [
+                'id' => 'venue-admins',
+                'label' => 'Dest.-admin',
+                'icon' => 'mountain',
+                'url' => '/admin/venue-admins.php',
+                'pages' => ['venue-admins.php']
             ],
             [
                 'id' => 'permissions',

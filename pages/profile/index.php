@@ -66,6 +66,9 @@ $linkedChildren = hub_get_linked_children($currentUser['id']);
 // Get admin clubs
 $adminClubs = hub_get_admin_clubs($currentUser['id']);
 
+// Get admin venues
+$adminVenues = hub_get_admin_venues($currentUser['id']);
+
 // Get upcoming registrations (if table exists)
 // Match by rider_id (direct) OR via orders placed by this user (rider_id/email)
 $upcomingRegs = [];
@@ -289,6 +292,13 @@ try {
         <a href="/profile/club-admin" class="quick-link">
             <span class="quick-link-icon"><i data-lucide="settings"></i></span>
             <span class="quick-link-label">Klubb-admin</span>
+            <span class="quick-link-arrow">›</span>
+        </a>
+    <?php endif; ?>
+    <?php if (!empty($adminVenues)): ?>
+        <a href="/profile/venue-admin" class="quick-link">
+            <span class="quick-link-icon"><i data-lucide="map-pin"></i></span>
+            <span class="quick-link-label">Destination-admin</span>
             <span class="quick-link-arrow">›</span>
         </a>
     <?php endif; ?>

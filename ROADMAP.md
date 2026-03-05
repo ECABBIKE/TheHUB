@@ -26,6 +26,8 @@
 | TheHUB Swapmeet | PLANERAD | Kop/salj-marknadsplats for gravity-prylar (Premium-funktion) | 0% |
 | Rapportera Problem | KLAR | Anvandare kan rapportera buggar och ge feedback, admin kan hantera och svara via e-post | 100% |
 | UCI ID-synkning | KLAR | Deltagare kan verifiera och synka sin licens via UCI ID i profilen | 100% |
+| TheHUB Promotion | KLAR | Riktade e-postkampanjer med filter på kön, ålder, region | 100% |
+| Klubb/Destination-admin | KLAR | Klubb- och destination-admins kan redigera via profil, multipla roller | 100% |
 
 ---
 
@@ -112,6 +114,41 @@
 ---
 
 # CHANGELOG
+
+### 2026-03-05 (TheHUB Promotion + Klubb/Destination-admin)
+- **Branch:** claude/add-bug-report-feature-dNafh
+
+- **Ny funktion: TheHUB Promotion - Riktade e-postkampanjer**
+  - Admin-verktyg för riktade e-postutskick till aktiva deltagare
+  - Filter: kön, ålder (min/max), region (klubbens), distrikt (åkarens)
+  - Kampanjstatus: utkast → skickad → arkiverad
+  - Variabel-ersättning i e-post (fornamn, efternamn, klubb, rabattkod etc.)
+  - Audience preview i realtid via AJAX
+  - Valfri koppling till rabattkoder
+
+- **Ny funktion: Klubb-admin fixad + redigeringssida**
+  - Fixat bug i `hub_get_admin_clubs()` / `hub_can_edit_club()` (använde rider_id istf admin_user_id)
+  - Ny helper `_hub_get_admin_user_id()` mappar rider_id → admin_users.id
+  - Ny sida `/pages/profile/edit-club.php` för att redigera klubbinfo
+
+- **Ny funktion: Destination-admin (venue_admins)**
+  - Ny roll `venue_admin` med junction-tabell `venue_admins`
+  - Admin-sida `/admin/venue-admins.php` för att tilldela admins
+  - Profilsida `/pages/profile/venue-admin.php` för att redigera destinationer
+  - Quick-link på Min Sida-profilen
+
+- **Multipla roller:** En användare kan vara klubb-admin + destination-admin + promotor samtidigt
+
+- **Logout fixad:** Remember-me token/cookie rensas korrekt
+
+- **Nya filer:**
+  - `admin/hub-promotion.php` - Kampanjhantering
+  - `api/promotion-preview.php` - Audience preview API
+  - `Tools/migrations/078_hub_promotion.sql` - Promotion-tabeller
+  - `Tools/migrations/079_club_and_venue_admins.sql` - Admin-tabeller
+  - `admin/venue-admins.php` - Venue admin management
+  - `pages/profile/edit-club.php` - Klubb-redigering
+  - `pages/profile/venue-admin.php` - Destination-admin profil
 
 ### 2026-03-05 (Felrapporter e-postsvar + UCI ID-synk)
 - **Branch:** claude/add-bug-report-feature-dNafh

@@ -134,6 +134,8 @@ function hub_get_current_page(): array {
             'profiles' => '/pages/profile/profiles.php',
             'children' => '/pages/profile/children.php',
             'club-admin' => '/pages/profile/club-admin.php',
+            'edit-club' => '/pages/profile/edit-club.php',
+            'venue-admin' => '/pages/profile/venue-admin.php',
             'registrations' => '/pages/profile/registrations.php',
             'results' => '/pages/profile/results.php',
             'receipts' => '/pages/profile/receipts.php',
