@@ -4,12 +4,16 @@
  * Uses ImgBB for image hosting (same as rider avatars)
  */
 require_once __DIR__ . '/../config.php';
+require_once __DIR__ . '/../hub-config.php';
 require_once __DIR__ . '/../includes/upload-avatar.php';
 
 header('Content-Type: application/json');
 
-// Check if user is logged in
-if (!isLoggedIn()) {
+// Check if user is logged in (admin or public side)
+$isAdmin = function_exists('isLoggedIn') && isLoggedIn();
+$isPublicUser = function_exists('hub_is_logged_in') && hub_is_logged_in();
+
+if (!$isAdmin && !$isPublicUser) {
     http_response_code(401);
     echo json_encode(['success' => false, 'error' => 'Inte inloggad']);
     exit;
@@ -24,15 +28,19 @@ if (!$clubId) {
     exit;
 }
 
-// Check permissions - either admin or club admin with logo permission
+// Check permissions - admin, admin-side club admin, or public-side club admin
 $canUpload = false;
-if (hasRole('admin')) {
+if ($isAdmin && hasRole('admin')) {
     $canUpload = true;
-} else {
+} elseif ($isAdmin) {
     $perms = getClubAdminPermissions($clubId);
     if ($perms && $perms['can_upload_logo']) {
         $canUpload = true;
     }
+}
+// Public-side check via hub_can_edit_club
+if (!$canUpload && $isPublicUser && function_exists('hub_can_edit_club') && hub_can_edit_club($clubId)) {
+    $canUpload = true;
 }
 
 if (!$canUpload) {

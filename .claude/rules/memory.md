@@ -29,12 +29,21 @@
 - **Filer:** `admin/hub-promotion.php`, `api/promotion-preview.php`, `Tools/migrations/078_hub_promotion.sql`
 - **Registrerad i:** admin-tabs (Analytics-gruppen), tools.php, migrations.php, unified-layout pageMap
 
-### Klubb-admin: Fixad åtkomst + redigeringssida
-- **Problem:** `hub_get_admin_clubs()` och `hub_can_edit_club()` använde `ca.rider_id` men `club_admins`-tabellen har `ca.user_id` (admin_users.id). Klubb-admins kunde aldrig se eller redigera sina klubbar.
-- **Fix:** Ny helper `_hub_get_admin_user_id($riderId)` som mappar rider_id → admin_users.id via email-matchning. Cachad med statisk variabel + session fallback.
-- **Ny sida:** `/pages/profile/edit-club.php` - Formulär för att redigera klubbnamn, ort, region, webbplats, logotyp, beskrivning
+### Klubb-admin: Komplett redigeringssida + medlemshantering borttagen
+- **Problem 1:** `hub_get_admin_clubs()` och `hub_can_edit_club()` använde `ca.rider_id` men `club_admins`-tabellen har `ca.user_id` (admin_users.id). Klubb-admins kunde aldrig se eller redigera sina klubbar.
+- **Fix 1:** Ny helper `_hub_get_admin_user_id($riderId)` som mappar rider_id → admin_users.id via email-matchning. Cachad med statisk variabel + session fallback.
+- **Problem 2:** edit-club.php hade bara 5 fält (namn, ort, region, webbplats, beskrivning). Alla klubbfält behövs för att kunna sätta klubben som betalningsmottagare.
+- **Fix 2:** Omskriven `/pages/profile/edit-club.php` med ALLA fält från `admin/my-club-edit.php`:
+  - Grundläggande info: namn, kortnamn, org.nummer, beskrivning
+  - Logotyp: ImgBB-uppladdning (klickbar avatar med camera-overlay, via `/api/update-club-logo.php`)
+  - Kontakt: kontaktperson, e-post, telefon, webbplats, Facebook, Instagram, YouTube, TikTok
+  - Adress: adress, postnummer, ort, region, land
+  - Betalning: Swish-nummer, Swish-namn
+- **Problem 3:** Klubb-admins kunde ta bort medlemmar, men medlemskap styrs av SCF-register och historisk data.
+- **Fix 3:** Borttagna "Lägg till" och "Ta bort"-knappar från `club-admin.php`
+- **Logo-upload API:** `/api/update-club-logo.php` uppdaterad med dubbel auth (admin-side + public-side). Public-side använder `hub_can_edit_club()` för behörighetskontroll.
 - **Router:** `edit-club` tillagd i profile-sektionen
-- **Filer:** `hub-config.php`, `pages/profile/edit-club.php`, `router.php`
+- **Filer:** `pages/profile/edit-club.php`, `pages/profile/club-admin.php`, `api/update-club-logo.php`, `hub-config.php`, `router.php`
 
 ### Destination-admin: Ny användargrupp
 - **Ny roll:** `venue_admin` i admin_users role ENUM (nivå 2, samma som promotor)
