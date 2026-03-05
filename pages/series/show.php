@@ -493,6 +493,7 @@ skip_club_standings:
                 <p class="series-description"><?= format_text($series['description']) ?></p>
             <?php endif; ?>
             <div class="series-meta">
+                <strong>Seriesammanställning:</strong>
                 <span><?= count($events) ?> tävlingar</span>
                 <?php if ($countBest): ?>
                 <span>Räknar <?= $countBest ?> bästa resultat</span>
