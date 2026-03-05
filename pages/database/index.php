@@ -186,107 +186,84 @@ $hofLists = [
     'podiums' => ['label' => 'Pallplatser', 'primary' => 'podiums', 'suffix' => ' pall', 'data' => $hofPodiums],
 ];
 
-// ── Tab 4: Gallerier ──
-$galleryFilterYear = isset($_GET['gy']) && is_numeric($_GET['gy']) ? intval($_GET['gy']) : null;
-$galleryFilterLocation = isset($_GET['gl']) ? trim($_GET['gl']) : '';
-$galleryFilterBrand = isset($_GET['gb']) && is_numeric($_GET['gb']) ? intval($_GET['gb']) : null;
-$galleryFilterPhotographer = isset($_GET['gp']) && is_numeric($_GET['gp']) ? intval($_GET['gp']) : null;
+// ── Tab 4: Gallerier (all data fetched once, filtered client-side) ──
 
-$galleryYears = $pdo->query("
-    SELECT DISTINCT YEAR(e.date) as yr
-    FROM event_albums ea JOIN events e ON ea.event_id = e.id
-    WHERE ea.is_published = 1
-    ORDER BY yr DESC
-")->fetchAll(PDO::FETCH_COLUMN);
-
-$galleryLocations = $pdo->query("
-    SELECT DISTINCT e.location
-    FROM event_albums ea JOIN events e ON ea.event_id = e.id
-    WHERE ea.is_published = 1 AND e.location IS NOT NULL AND e.location != ''
-    ORDER BY e.location ASC
-")->fetchAll(PDO::FETCH_COLUMN);
-
-$galleryBrands = $pdo->query("
-    SELECT DISTINCT sb.id, sb.name
-    FROM series_brands sb
-    JOIN series s ON s.brand_id = sb.id
-    JOIN series_events se ON se.series_id = s.id
-    JOIN event_albums ea ON ea.event_id = se.event_id
-    WHERE ea.is_published = 1
-    ORDER BY sb.name ASC
-")->fetchAll(PDO::FETCH_ASSOC);
-
-$galleryPhotographers = $pdo->query("
-    SELECT DISTINCT p.id, p.name
-    FROM photographers p
-    JOIN event_albums ea ON ea.photographer_id = p.id
-    WHERE ea.is_published = 1 AND p.active = 1
-    ORDER BY p.name ASC
-")->fetchAll(PDO::FETCH_ASSOC);
-
-$gWhere = ["ea.is_published = 1"];
-$gParams = [];
-if ($galleryFilterYear) {
-    $gWhere[] = "YEAR(e.date) = ?";
-    $gParams[] = $galleryFilterYear;
-}
-if ($galleryFilterLocation) {
-    $gWhere[] = "e.location = ?";
-    $gParams[] = $galleryFilterLocation;
-}
-if ($galleryFilterBrand) {
-    $gWhere[] = "s.brand_id = ?";
-    $gParams[] = $galleryFilterBrand;
-}
-if ($galleryFilterPhotographer) {
-    $gWhere[] = "ea.photographer_id = ?";
-    $gParams[] = $galleryFilterPhotographer;
-}
-$gWhereClause = implode(' AND ', $gWhere);
-
-$gStmt = $pdo->prepare("
+$albums = $pdo->query("
     SELECT ea.id, ea.event_id, ea.title, ea.photographer, ea.photographer_id,
            ea.photo_count, ea.created_at,
            e.name as event_name, e.date as event_date, e.location as event_location,
-           p.name as photographer_name, p.avatar_url as photographer_avatar,
+           YEAR(e.date) as event_year,
+           p.id as pg_id, p.name as photographer_name, p.avatar_url as photographer_avatar,
            cover.external_url as cover_url, cover.thumbnail_url as cover_thumb,
            cover_media.filepath as cover_filepath,
-           GROUP_CONCAT(DISTINCT s2.name ORDER BY s2.name SEPARATOR ', ') as series_name
+           GROUP_CONCAT(DISTINCT s.name ORDER BY s.name SEPARATOR ', ') as series_name,
+           GROUP_CONCAT(DISTINCT sb.id) as brand_ids
     FROM event_albums ea
     JOIN events e ON ea.event_id = e.id
     LEFT JOIN photographers p ON ea.photographer_id = p.id
     LEFT JOIN series_events se ON se.event_id = e.id
     LEFT JOIN series s ON se.series_id = s.id
-    LEFT JOIN series_events se2 ON se2.event_id = e.id
-    LEFT JOIN series s2 ON se2.series_id = s2.id
+    LEFT JOIN series_brands sb ON s.brand_id = sb.id
     LEFT JOIN event_photos cover ON cover.id = ea.cover_photo_id
     LEFT JOIN media cover_media ON cover.media_id = cover_media.id
-    WHERE {$gWhereClause}
+    WHERE ea.is_published = 1
     GROUP BY ea.id
     ORDER BY e.date DESC, ea.created_at DESC
-");
-$gStmt->execute($gParams);
-$albums = $gStmt->fetchAll(PDO::FETCH_ASSOC);
+")->fetchAll(PDO::FETCH_ASSOC);
 
+// Build filter options from the actual data
+$galleryYears = [];
+$galleryLocations = [];
+$galleryBrands = [];
+$galleryPhotographers = [];
 foreach ($albums as &$album) {
+    // Cover image fallback
     if (!$album['cover_url'] && !$album['cover_filepath']) {
-        $fp = $pdo->prepare("
-            SELECT ep.external_url, ep.thumbnail_url, m.filepath
-            FROM event_photos ep LEFT JOIN media m ON ep.media_id = m.id
-            WHERE ep.album_id = ? ORDER BY ep.sort_order ASC, ep.id ASC LIMIT 1
-        ");
-        $fp->execute([$album['id']]);
-        $row = $fp->fetch(PDO::FETCH_ASSOC);
-        if ($row) {
-            $album['cover_url'] = $row['external_url'] ?: '';
-            $album['cover_thumb'] = $row['thumbnail_url'] ?: '';
-            $album['cover_filepath'] = $row['filepath'] ?: '';
+        try {
+            $firstPhoto = $pdo->prepare("SELECT external_url, thumbnail_url FROM event_photos WHERE album_id = ? ORDER BY id ASC LIMIT 1");
+            $firstPhoto->execute([$album['id']]);
+            $fp = $firstPhoto->fetch(PDO::FETCH_ASSOC);
+            if ($fp) {
+                $album['cover_url'] = $fp['external_url'];
+                $album['cover_thumb'] = $fp['thumbnail_url'];
+            }
+        } catch (Exception $e) {}
+    }
+
+    // Collect unique filter values
+    $yr = (int)$album['event_year'];
+    if ($yr && !in_array($yr, $galleryYears)) $galleryYears[] = $yr;
+
+    $loc = $album['event_location'] ?? '';
+    if ($loc !== '' && !in_array($loc, $galleryLocations)) $galleryLocations[] = $loc;
+
+    if ($album['pg_id'] && $album['photographer_name']) {
+        $galleryPhotographers[$album['pg_id']] = $album['photographer_name'];
+    }
+
+    if ($album['brand_ids']) {
+        foreach (explode(',', $album['brand_ids']) as $bid) {
+            if (!isset($galleryBrands[$bid])) $galleryBrands[$bid] = null;
         }
     }
 }
 unset($album);
 
-$totalAlbums = $pdo->query("SELECT COUNT(*) FROM event_albums WHERE is_published = 1")->fetchColumn();
+rsort($galleryYears);
+sort($galleryLocations);
+asort($galleryPhotographers);
+
+// Fetch brand names for collected IDs
+if (!empty($galleryBrands)) {
+    $brandIds = implode(',', array_map('intval', array_keys($galleryBrands)));
+    $brandRows = $pdo->query("SELECT id, name FROM series_brands WHERE id IN ({$brandIds}) ORDER BY name")->fetchAll(PDO::FETCH_ASSOC);
+    $galleryBrands = [];
+    foreach ($brandRows as $b) $galleryBrands[$b['id']] = $b['name'];
+} else {
+    $galleryBrands = [];
+}
+
+$totalAlbums = count($albums);
 $totalPhotos = $pdo->query("SELECT COALESCE(SUM(photo_count), 0) FROM event_albums WHERE is_published = 1")->fetchColumn();
 ?>
 
@@ -471,25 +448,24 @@ $totalPhotos = $pdo->query("SELECT COALESCE(SUM(photo_count), 0) FROM event_albu
 <!-- ═══════ TAB: GALLERIER ═══════ -->
 <div class="db-tab-pane" id="db-tab-gallery" style="<?= $activeTab !== 'gallery' ? 'display:none' : '' ?>">
     <div class="search-card">
-        <form method="GET" action="/database" class="gallery-filters" id="gallery-filter-form">
-            <input type="hidden" name="tab" value="gallery">
+        <div class="gallery-filters">
             <div class="gallery-filters-grid">
                 <div class="filter-select-wrapper">
                     <label class="filter-label">År</label>
-                    <select name="gy" class="filter-select" onchange="this.form.submit()">
+                    <select id="gf-year" class="filter-select">
                         <option value="">Alla år</option>
                         <?php foreach ($galleryYears as $yr): ?>
-                        <option value="<?= $yr ?>" <?= $galleryFilterYear == $yr ? 'selected' : '' ?>><?= $yr ?></option>
+                        <option value="<?= $yr ?>"><?= $yr ?></option>
                         <?php endforeach; ?>
                     </select>
                 </div>
                 <?php if (!empty($galleryLocations)): ?>
                 <div class="filter-select-wrapper">
                     <label class="filter-label">Destination</label>
-                    <select name="gl" class="filter-select" onchange="this.form.submit()">
+                    <select id="gf-location" class="filter-select">
                         <option value="">Alla destinationer</option>
                         <?php foreach ($galleryLocations as $loc): ?>
-                        <option value="<?= htmlspecialchars($loc) ?>" <?= $galleryFilterLocation === $loc ? 'selected' : '' ?>><?= htmlspecialchars($loc) ?></option>
+                        <option value="<?= htmlspecialchars($loc) ?>"><?= htmlspecialchars($loc) ?></option>
                         <?php endforeach; ?>
                     </select>
                 </div>
@@ -497,10 +473,10 @@ $totalPhotos = $pdo->query("SELECT COALESCE(SUM(photo_count), 0) FROM event_albu
                 <?php if (!empty($galleryBrands)): ?>
                 <div class="filter-select-wrapper">
                     <label class="filter-label">Serie</label>
-                    <select name="gb" class="filter-select" onchange="this.form.submit()">
+                    <select id="gf-brand" class="filter-select">
                         <option value="">Alla serier</option>
-                        <?php foreach ($galleryBrands as $b): ?>
-                        <option value="<?= $b['id'] ?>" <?= $galleryFilterBrand == $b['id'] ? 'selected' : '' ?>><?= htmlspecialchars($b['name']) ?></option>
+                        <?php foreach ($galleryBrands as $bid => $bname): ?>
+                        <option value="<?= $bid ?>"><?= htmlspecialchars($bname) ?></option>
                         <?php endforeach; ?>
                     </select>
                 </div>
@@ -508,36 +484,35 @@ $totalPhotos = $pdo->query("SELECT COALESCE(SUM(photo_count), 0) FROM event_albu
                 <?php if (!empty($galleryPhotographers)): ?>
                 <div class="filter-select-wrapper">
                     <label class="filter-label">Fotograf</label>
-                    <select name="gp" class="filter-select" onchange="this.form.submit()">
+                    <select id="gf-photographer" class="filter-select">
                         <option value="">Alla fotografer</option>
-                        <?php foreach ($galleryPhotographers as $ph): ?>
-                        <option value="<?= $ph['id'] ?>" <?= $galleryFilterPhotographer == $ph['id'] ? 'selected' : '' ?>><?= htmlspecialchars($ph['name']) ?></option>
+                        <?php foreach ($galleryPhotographers as $pid => $pname): ?>
+                        <option value="<?= $pid ?>"><?= htmlspecialchars($pname) ?></option>
                         <?php endforeach; ?>
                     </select>
                 </div>
                 <?php endif; ?>
             </div>
-            <?php if ($galleryFilterYear || $galleryFilterLocation || $galleryFilterBrand || $galleryFilterPhotographer): ?>
-            <div style="margin-top: var(--space-sm);">
-                <a href="/database?tab=gallery" class="btn btn-ghost" style="font-size: var(--text-sm);">Rensa filter</a>
+            <div id="gf-reset" style="margin-top: var(--space-sm); display:none;">
+                <button type="button" class="btn btn-ghost" style="font-size: var(--text-sm);" onclick="resetGalleryFilters()">Rensa filter</button>
             </div>
-            <?php endif; ?>
-        </form>
+        </div>
     </div>
 
-    <?php if (empty($albums)): ?>
-    <div class="card" style="text-align:center; padding: var(--space-2xl);">
-        <i data-lucide="image-off" style="width:48px;height:48px;color:var(--color-text-muted);margin-bottom:var(--space-md);"></i>
-        <p style="color:var(--color-text-muted);">Inga gallerier hittades</p>
+    <div id="gallery-empty" class="card" style="text-align:center; padding: var(--space-2xl); display:none;">
+        <p style="color:var(--color-text-muted);">Inga gallerier matchar filtret</p>
     </div>
-    <?php else: ?>
-    <div class="gallery-listing-grid">
+    <div class="gallery-listing-grid" id="gallery-grid">
         <?php foreach ($albums as $album):
             $coverSrc = $album['cover_thumb'] ?: ($album['cover_url'] ?: ($album['cover_filepath'] ? '/' . ltrim($album['cover_filepath'], '/') : ''));
-            $photographerName = $album['photographer_name'] ?: $album['photographer'];
+            $photographerName = $album['photographer_name'] ?: ($album['photographer'] ?? '');
             $eventDate = $album['event_date'] ? date('j M Y', strtotime($album['event_date'])) : '';
         ?>
-        <a href="/event/<?= $album['event_id'] ?>?tab=galleri" class="gallery-listing-card">
+        <a href="/event/<?= $album['event_id'] ?>?tab=galleri" class="gallery-listing-card"
+           data-year="<?= $album['event_year'] ?>"
+           data-location="<?= htmlspecialchars($album['event_location'] ?? '') ?>"
+           data-brands="<?= htmlspecialchars($album['brand_ids'] ?? '') ?>"
+           data-photographer="<?= $album['pg_id'] ?? '' ?>">
             <div class="gallery-listing-cover">
                 <?php if ($coverSrc): ?>
                 <img src="<?= htmlspecialchars($coverSrc) ?>" alt="<?= htmlspecialchars($album['title'] ?: $album['event_name']) ?>" loading="lazy">
@@ -570,7 +545,6 @@ $totalPhotos = $pdo->query("SELECT COALESCE(SUM(photo_count), 0) FROM event_albu
         </a>
         <?php endforeach; ?>
     </div>
-    <?php endif; ?>
 </div>
 
 <?= render_global_sponsors('database', 'content_bottom', 'Tack till våra partners') ?>
@@ -605,6 +579,89 @@ document.addEventListener('DOMContentLoaded', function() {
             if (pane) pane.style.display = '';
         });
     });
+
+    // ── Gallery client-side filtering with cascading options ──
+    (function() {
+        const grid = document.getElementById('gallery-grid');
+        const empty = document.getElementById('gallery-empty');
+        const reset = document.getElementById('gf-reset');
+        if (!grid) return;
+
+        const cards = Array.from(grid.querySelectorAll('.gallery-listing-card'));
+        const selYear = document.getElementById('gf-year');
+        const selLoc = document.getElementById('gf-location');
+        const selBrand = document.getElementById('gf-brand');
+        const selPhoto = document.getElementById('gf-photographer');
+        const selects = [selYear, selLoc, selBrand, selPhoto].filter(Boolean);
+
+        function filterGallery() {
+            const fy = selYear ? selYear.value : '';
+            const fl = selLoc ? selLoc.value : '';
+            const fb = selBrand ? selBrand.value : '';
+            const fp = selPhoto ? selPhoto.value : '';
+            let visible = 0;
+
+            // First pass: determine which cards match
+            cards.forEach(c => {
+                const match =
+                    (!fy || c.dataset.year === fy) &&
+                    (!fl || c.dataset.location === fl) &&
+                    (!fb || (c.dataset.brands || '').split(',').includes(fb)) &&
+                    (!fp || c.dataset.photographer === fp);
+                c.style.display = match ? '' : 'none';
+                if (match) visible++;
+            });
+
+            empty.style.display = visible === 0 ? '' : 'none';
+            grid.style.display = visible === 0 ? 'none' : '';
+            reset.style.display = (fy || fl || fb || fp) ? '' : 'none';
+
+            // Second pass: cascade filter options to only show values present in visible cards
+            const visibleCards = cards.filter(c => c.style.display !== 'none');
+            updateOptions(selYear, 'year', visibleCards, fy, [selLoc, selBrand, selPhoto]);
+            updateOptions(selLoc, 'location', visibleCards, fl, [selYear, selBrand, selPhoto]);
+            updateOptions(selBrand, 'brands', visibleCards, fb, [selYear, selLoc, selPhoto]);
+            updateOptions(selPhoto, 'photographer', visibleCards, fp, [selYear, selLoc, selBrand]);
+        }
+
+        function updateOptions(sel, attr, visCards, currentVal, otherSels) {
+            if (!sel) return;
+            // Collect values present in cards that match ALL OTHER filters (not this one)
+            const available = new Set();
+            cards.forEach(c => {
+                // Check if card matches all filters EXCEPT this one
+                const matchOthers = otherSels.every(os => {
+                    if (!os || !os.value) return true;
+                    if (os === selYear) return !os.value || c.dataset.year === os.value;
+                    if (os === selLoc) return !os.value || c.dataset.location === os.value;
+                    if (os === selBrand) return !os.value || (c.dataset.brands || '').split(',').includes(os.value);
+                    if (os === selPhoto) return !os.value || c.dataset.photographer === os.value;
+                    return true;
+                });
+                if (!matchOthers) return;
+
+                if (attr === 'brands') {
+                    (c.dataset.brands || '').split(',').filter(Boolean).forEach(v => available.add(v));
+                } else {
+                    const v = c.dataset[attr];
+                    if (v) available.add(v);
+                }
+            });
+
+            // Disable/enable options
+            Array.from(sel.options).forEach(opt => {
+                if (!opt.value) return; // "Alla..." always visible
+                opt.disabled = !available.has(opt.value);
+                opt.style.display = available.has(opt.value) ? '' : 'none';
+            });
+        }
+
+        selects.forEach(s => s.addEventListener('change', filterGallery));
+        window.resetGalleryFilters = function() {
+            selects.forEach(s => { s.value = ''; });
+            filterGallery();
+        };
+    })();
 
     // ── Search functionality ──
     function initSearch(inputId, resultsId, type) {
