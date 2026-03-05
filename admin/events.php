@@ -283,69 +283,64 @@ include __DIR__ . '/components/unified-layout.php';
 
 <!-- Filter Section -->
 <div class="admin-card">
-    <div class="admin-card-body">
-        <form method="GET" action="/admin/events" class="admin-form-row" id="filter-form">
-            <!-- Brand Filter -->
-            <div class="admin-form-group mb-0">
-                <label for="brand-filter" class="admin-form-label">Varumärke<?= $filterYear ? ' (' . $filterYear . ')' : '' ?></label>
-                <select id="brand-filter" name="brand" class="admin-form-select" onchange="this.form.submit()">
-                    <option value="">Alla varumärken</option>
-                    <?php foreach ($allBrands as $brand): ?>
-                        <option value="<?= htmlspecialchars($brand) ?>" <?= $filterBrand === $brand ? 'selected' : '' ?>>
-                            <?= htmlspecialchars($brand) ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
-
-            <!-- Year Filter -->
-            <div class="admin-form-group mb-0">
-                <label for="year-filter" class="admin-form-label">År</label>
-                <select id="year-filter" name="year" class="admin-form-select" onchange="this.form.submit()">
-                    <option value="">Alla år</option>
-                    <?php foreach ($allYears as $yearRow): ?>
-                        <option value="<?= $yearRow['year'] ?>" <?= $filterYear == $yearRow['year'] ? 'selected' : '' ?>>
-                            <?= $yearRow['year'] ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
-
-            <!-- Discipline Filter -->
-            <div class="admin-form-group mb-0">
-                <label for="discipline-filter" class="admin-form-label">Format</label>
-                <select id="discipline-filter" name="discipline" class="admin-form-select" onchange="this.form.submit()">
-                    <option value="">Alla format</option>
-                    <?php foreach ($allDisciplines as $code => $displayName): ?>
-                        <option value="<?= htmlspecialchars($code) ?>" <?= $filterDiscipline === $code ? 'selected' : '' ?>>
-                            <?= htmlspecialchars($displayName) ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
-            </div>
+    <div class="admin-card-body p-0" style="padding: var(--space-sm) var(--space-md) !important;">
+        <form method="GET" action="/admin/events" class="events-filter-row" id="filter-form">
+            <select name="brand" class="admin-form-select" onchange="this.form.submit()">
+                <option value="">Alla varumärken</option>
+                <?php foreach ($allBrands as $brand): ?>
+                    <option value="<?= htmlspecialchars($brand) ?>" <?= $filterBrand === $brand ? 'selected' : '' ?>>
+                        <?= htmlspecialchars($brand) ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
+            <select name="year" class="admin-form-select" onchange="this.form.submit()">
+                <option value="">Alla år</option>
+                <?php foreach ($allYears as $yearRow): ?>
+                    <option value="<?= $yearRow['year'] ?>" <?= $filterYear == $yearRow['year'] ? 'selected' : '' ?>>
+                        <?= $yearRow['year'] ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
+            <select name="discipline" class="admin-form-select" onchange="this.form.submit()">
+                <option value="">Alla format</option>
+                <?php foreach ($allDisciplines as $code => $displayName): ?>
+                    <option value="<?= htmlspecialchars($code) ?>" <?= $filterDiscipline === $code ? 'selected' : '' ?>>
+                        <?= htmlspecialchars($displayName) ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
+            <?php if ($filterBrand || $filterYear || $filterDiscipline): ?>
+            <a href="/admin/events" class="btn-admin btn-admin-sm btn-admin-secondary" style="white-space: nowrap;">
+                <i data-lucide="x" style="width:14px;height:14px;"></i> Rensa
+            </a>
+            <?php endif; ?>
         </form>
-
-        <!-- Active Filters Info -->
-        <?php if ($filterBrand || $filterYear || $filterDiscipline): ?>
-            <div class="mt-md flex items-center gap-sm flex-wrap" style="padding-top: var(--space-md); border-top: 1px solid var(--color-border);">
-                <span class="text-sm text-secondary">Visar:</span>
-                <?php if ($filterBrand): ?>
-                    <span class="admin-badge admin-badge-info"><?= htmlspecialchars($filterBrand) ?></span>
-                <?php endif; ?>
-                <?php if ($filterYear): ?>
-                    <span class="admin-badge admin-badge-warning"><?= $filterYear ?></span>
-                <?php endif; ?>
-                <?php if ($filterDiscipline): ?>
-                    <span class="admin-badge admin-badge-success"><?= htmlspecialchars($disciplineMapping[$filterDiscipline] ?? $filterDiscipline) ?></span>
-                <?php endif; ?>
-                <a href="/admin/events" class="btn-admin btn-admin-sm btn-admin-secondary">
-                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" class="icon-xs"><path d="M18 6 6 18"/><path d="m6 6 12 12"/></svg>
-                    Visa alla
-                </a>
-            </div>
-        <?php endif; ?>
     </div>
 </div>
+<style>
+.events-filter-row {
+    display: flex;
+    gap: var(--space-sm);
+    align-items: center;
+    flex-wrap: wrap;
+}
+.events-filter-row .admin-form-select {
+    flex: 1;
+    min-width: 0;
+    padding: var(--space-xs) var(--space-sm) !important;
+    font-size: var(--text-sm) !important;
+}
+@media (max-width: 767px) {
+    .events-filter-row {
+        flex-wrap: nowrap;
+    }
+    .events-filter-row .admin-form-select {
+        padding: 8px 10px !important;
+        font-size: 13px !important;
+        border-radius: var(--radius-sm) !important;
+    }
+}
+</style>
 
 <!-- Events Table -->
 <div class="admin-card">
