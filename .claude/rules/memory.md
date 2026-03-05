@@ -4,6 +4,34 @@
 
 ---
 
+## SENASTE FIXAR (2026-03-05, session 35)
+
+### Felrapporter: Konversationssystem (ersätter e-postsvar)
+- **Problem:** Admin-svar skickades som e-post med fulltext. Om användaren svarade hamnade det i vanlig inkorg och tråden förlorades.
+- **Lösning:** Nytt chattliknande konversationssystem direkt i TheHUB.
+- **Ny tabell:** `bug_report_messages` (id, bug_report_id, sender_type ENUM admin/user, sender_id, sender_name, message, created_at)
+- **Ny kolumn:** `bug_reports.view_token` VARCHAR(64) - unik token för publik åtkomst till konversation
+- **Publik konversationssida:** `/feedback/view?token=xxx` - visar originalrapport + alla meddelanden som chattbubblar
+  - Användaren kan svara direkt i formuläret
+  - Lösta ärenden visar "avslutat"-meddelande, inget svarsformulär
+  - Mobilanpassad med edge-to-edge kort
+- **Admin-sidan uppdaterad:**
+  - "Svara"-knappen sparar nu meddelandet i `bug_report_messages` (inte bara admin_notes)
+  - E-postnotis skickas med text "Ditt ärende på TheHUB har fått ett svar" + knapp "Visa ärende" (länk till konversationssidan)
+  - Konversation visas inline i rapportkortet med meddelandebubblar (admin = cyan, användare = grå)
+  - Meddelanderäknare-badge bredvid rapporttiteln
+  - Länk "Visa publik" för att öppna konversationssidan
+  - Fallback till admin_notes om messages-tabellen inte finns
+- **API:** `/api/bug-report-reply.php` - POST med token + message, rate limited (10/h/IP)
+  - Identifierar avsändare via session (inloggad rider) eller e-post
+  - Sätter status till 'in_progress' om rapporten var 'new'
+- **view_token genereras vid:** Ny rapport (api/feedback.php) + första admin-svaret (backfill)
+- **Migration 080:** `bug_report_messages` tabell + `bug_reports.view_token` kolumn + backfill
+- **Router:** `feedback` konverterad från simplePage till sectionRoute med index + view
+- **Filer:** `admin/bug-reports.php`, `pages/feedback/view.php` (ny), `api/bug-report-reply.php` (ny), `api/feedback.php`, `router.php`, `Tools/migrations/080_bug_report_messages.sql`, `admin/migrations.php`
+
+---
+
 ## SENASTE FIXAR (2026-03-05, session 34)
 
 ### Logout fungerade inte (remember-me levde kvar)

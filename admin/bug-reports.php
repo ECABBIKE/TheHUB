@@ -62,26 +62,67 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         } else {
             require_once __DIR__ . '/../includes/mail.php';
 
-            // Get report title for subject
+            // Get report details
+            $reportTitle = 'Din felrapport';
+            $viewToken = null;
             try {
-                $rStmt = $pdo->prepare("SELECT title FROM bug_reports WHERE id = ?");
+                $rStmt = $pdo->prepare("SELECT title, view_token FROM bug_reports WHERE id = ?");
                 $rStmt->execute([$reportId]);
-                $reportTitle = $rStmt->fetchColumn() ?: 'Din felrapport';
-            } catch (Exception $e) {
-                $reportTitle = 'Din felrapport';
+                $rRow = $rStmt->fetch();
+                if ($rRow) {
+                    $reportTitle = $rRow['title'] ?: $reportTitle;
+                    $viewToken = $rRow['view_token'];
+                }
+            } catch (Exception $e) {}
+
+            // Ensure view_token exists (generate if missing)
+            if (!$viewToken) {
+                $viewToken = bin2hex(random_bytes(32));
+                try {
+                    $pdo->prepare("UPDATE bug_reports SET view_token = ? WHERE id = ?")->execute([$viewToken, $reportId]);
+                } catch (Exception $e) {}
             }
 
-            $subject = 'Re: ' . $reportTitle . ' - TheHUB';
+            // Save reply as conversation message
+            $adminName = ($_SESSION['admin_name'] ?? $_SESSION['hub_user_name'] ?? 'TheHUB Support');
+            $adminUserId = (int)($_SESSION['admin_user_id'] ?? 0);
+            try {
+                $stmt = $pdo->prepare("
+                    INSERT INTO bug_report_messages (bug_report_id, sender_type, sender_id, sender_name, message, created_at)
+                    VALUES (?, 'admin', ?, ?, ?, NOW())
+                ");
+                $stmt->execute([$reportId, $adminUserId, $adminName, $replyMessage]);
+            } catch (Exception $e) {
+                // Table might not exist - fall back to admin_notes
+                try {
+                    $existingNotes = '';
+                    $nStmt = $pdo->prepare("SELECT admin_notes FROM bug_reports WHERE id = ?");
+                    $nStmt->execute([$reportId]);
+                    $existingNotes = $nStmt->fetchColumn() ?: '';
+                    $replyNote = '[Svar skickat ' . date('Y-m-d H:i') . "]\n" . $replyMessage;
+                    $newNotes = $existingNotes ? $existingNotes . "\n\n" . $replyNote : $replyNote;
+                    $pdo->prepare("UPDATE bug_reports SET admin_notes = ? WHERE id = ?")->execute([$newNotes, $reportId]);
+                } catch (Exception $e2) {}
+            }
+
+            // Send notification email with link to conversation
+            $baseUrl = env('APP_URL', 'https://thehub.gravityseries.se');
+            $conversationUrl = $baseUrl . '/feedback/view?token=' . $viewToken;
+
+            $subject = 'Ditt ärende på TheHUB har fått ett svar';
             $htmlBody = '<div style="font-family: sans-serif; max-width: 600px; margin: 0 auto;">'
                 . '<div style="background: #0e1621; padding: 20px; text-align: center;">'
                 . '<h2 style="color: #37d4d6; margin: 0;">TheHUB</h2>'
                 . '</div>'
                 . '<div style="padding: 24px; background: #f8f9fa; color: #333;">'
-                . '<p style="color: #666; font-size: 14px; margin-top: 0;">Svar på din felrapport: <strong>' . htmlspecialchars($reportTitle) . '</strong></p>'
-                . '<div style="white-space: pre-wrap; line-height: 1.6;">' . htmlspecialchars($replyMessage) . '</div>'
+                . '<p style="font-size: 16px; margin-top: 0;">Ditt ärende <strong>&ldquo;' . htmlspecialchars($reportTitle) . '&rdquo;</strong> har fått ett svar.</p>'
+                . '<p style="color: #666; font-size: 14px;">Klicka på knappen nedan för att läsa svaret och fortsätta konversationen.</p>'
+                . '<div style="text-align: center; margin: 24px 0;">'
+                . '<a href="' . htmlspecialchars($conversationUrl) . '" style="display: inline-block; padding: 12px 32px; background: #37d4d6; color: #0e1621; text-decoration: none; border-radius: 6px; font-weight: 600; font-size: 15px;">Visa ärende</a>'
+                . '</div>'
                 . '</div>'
                 . '<div style="padding: 16px; text-align: center; font-size: 12px; color: #999;">'
-                . 'Detta mail skickades från TheHUB · gravityseries.se'
+                . 'Detta mail skickades från TheHUB &middot; gravityseries.se'
                 . '</div></div>';
 
             $adminEmail = $_SESSION['admin_email'] ?? $_SESSION['hub_user_email'] ?? env('MAIL_FROM_ADDRESS', 'info@gravityseries.se');
@@ -90,36 +131,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             ]);
 
             if ($sent) {
-                $message = 'Svar skickat till ' . htmlspecialchars($replyEmail) . '!';
-
-                // Save reply as admin note
-                try {
-                    $existingNotes = '';
-                    $nStmt = $pdo->prepare("SELECT admin_notes FROM bug_reports WHERE id = ?");
-                    $nStmt->execute([$reportId]);
-                    $existingNotes = $nStmt->fetchColumn() ?: '';
-
-                    $replyNote = '[Svar skickat ' . date('Y-m-d H:i') . "]\n" . $replyMessage;
-                    $newNotes = $existingNotes ? $existingNotes . "\n\n" . $replyNote : $replyNote;
-
-                    $stmt = $pdo->prepare("UPDATE bug_reports SET admin_notes = ? WHERE id = ?");
-                    $stmt->execute([$newNotes, $reportId]);
-                } catch (Exception $e) {
-                    // Note save failed, mail still sent
-                }
-
-                // Auto-resolve if checked
-                if ($autoResolve) {
-                    try {
-                        $stmt = $pdo->prepare("UPDATE bug_reports SET status = 'resolved', resolved_at = NOW(), resolved_by = ? WHERE id = ?");
-                        $stmt->execute([(int)($_SESSION['admin_user_id'] ?? 0), $reportId]);
-                        $message .= ' Status ändrad till Löst.';
-                    } catch (Exception $e) {
-                        // Status update failed
-                    }
-                }
+                $message = 'Svar skickat! Notis skickad till ' . htmlspecialchars($replyEmail);
             } else {
-                $error = 'Kunde inte skicka e-post. Kontrollera mailkonfigurationen.';
+                // Message still saved, just email failed
+                $message = 'Svaret sparades men e-postnotisen kunde inte skickas.';
+            }
+
+            // Auto-resolve if checked
+            if ($autoResolve) {
+                try {
+                    $stmt = $pdo->prepare("UPDATE bug_reports SET status = 'resolved', resolved_at = NOW(), resolved_by = ? WHERE id = ?");
+                    $stmt->execute([$adminUserId, $reportId]);
+                    $message .= ' Status ändrad till Löst.';
+                } catch (Exception $e) {}
             }
         }
     } elseif ($action === 'delete' && $reportId) {
@@ -220,6 +244,17 @@ try {
     $reports = $stmt->fetchAll();
 } catch (Exception $e) {
     $error = 'Kunde inte läsa rapporter. Har migration 070 körts?';
+}
+
+// Pre-fetch conversation message counts
+$messageCounts = [];
+try {
+    $mcStmt = $pdo->query("SELECT bug_report_id, COUNT(*) as cnt FROM bug_report_messages GROUP BY bug_report_id");
+    foreach ($mcStmt->fetchAll() as $mc) {
+        $messageCounts[(int)$mc['bug_report_id']] = (int)$mc['cnt'];
+    }
+} catch (Exception $e) {
+    // Table might not exist yet
 }
 
 // Pre-fetch related rider names for profile reports
@@ -540,8 +575,14 @@ include __DIR__ . '/components/unified-layout.php';
     <?php foreach ($reports as $report): ?>
         <div class="report-card" id="report-<?= $report['id'] ?>">
             <div class="report-card-header">
-                <div>
+                <div style="display: flex; align-items: center; gap: var(--space-xs);">
                     <h3 class="report-card-title"><?= htmlspecialchars($report['title']) ?></h3>
+                    <?php if (($messageCounts[$report['id']] ?? 0) > 0): ?>
+                        <span style="display: inline-flex; align-items: center; gap: 3px; padding: 2px 8px; border-radius: var(--radius-full); background: var(--color-accent-light); color: var(--color-accent-text); font-size: var(--text-xs);">
+                            <i data-lucide="message-circle" style="width: 11px; height: 11px;"></i>
+                            <?= $messageCounts[$report['id']] ?>
+                        </span>
+                    <?php endif; ?>
                 </div>
                 <div style="display: flex; gap: var(--space-xs); flex-shrink: 0;">
                     <span class="badge badge-<?= htmlspecialchars($report['category']) ?>">
@@ -629,6 +670,38 @@ include __DIR__ . '/components/unified-layout.php';
                         <?= htmlspecialchars($report['browser_info']) ?>
                     </code>
                 </details>
+            <?php endif; ?>
+
+            <?php
+            // Show conversation messages if any
+            $msgCount = $messageCounts[$report['id']] ?? 0;
+            if ($msgCount > 0):
+                $msgStmt = $pdo->prepare("SELECT * FROM bug_report_messages WHERE bug_report_id = ? ORDER BY created_at ASC");
+                $msgStmt->execute([$report['id']]);
+                $reportMessages = $msgStmt->fetchAll();
+            ?>
+                <div class="report-notes" style="max-height: 300px; overflow-y: auto;">
+                    <div class="report-notes-label">
+                        <i data-lucide="message-circle" style="width: 12px; height: 12px;"></i>
+                        Konversation (<?= $msgCount ?> meddelanden)
+                        <?php if (!empty($report['view_token'])): ?>
+                            <a href="/feedback/view?token=<?= htmlspecialchars($report['view_token']) ?>" target="_blank"
+                               style="margin-left: var(--space-sm); font-weight: 400; text-transform: none; letter-spacing: 0; color: var(--color-accent-text); font-size: var(--text-xs);">
+                                <i data-lucide="external-link" style="width: 11px; height: 11px;"></i> Visa publik
+                            </a>
+                        <?php endif; ?>
+                    </div>
+                    <?php foreach ($reportMessages as $rmsg): ?>
+                        <div style="margin-bottom: var(--space-sm); padding: var(--space-xs) var(--space-sm); border-radius: var(--radius-sm); <?= $rmsg['sender_type'] === 'admin' ? 'background: var(--color-accent-light); border-left: 2px solid var(--color-accent);' : 'background: var(--color-bg-page); border-left: 2px solid var(--color-border-strong);' ?>">
+                            <div style="display: flex; align-items: center; gap: var(--space-xs); font-size: var(--text-xs); color: var(--color-text-muted); margin-bottom: 2px;">
+                                <i data-lucide="<?= $rmsg['sender_type'] === 'admin' ? 'shield' : 'user' ?>" style="width: 11px; height: 11px;"></i>
+                                <strong style="color: var(--color-text-primary);"><?= htmlspecialchars($rmsg['sender_name'] ?? ($rmsg['sender_type'] === 'admin' ? 'Admin' : 'Användare')) ?></strong>
+                                <span style="margin-left: auto;"><?= date('Y-m-d H:i', strtotime($rmsg['created_at'])) ?></span>
+                            </div>
+                            <div style="font-size: var(--text-sm); white-space: pre-wrap; word-break: break-word;"><?= htmlspecialchars($rmsg['message']) ?></div>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
             <?php endif; ?>
 
             <?php if (!empty($report['admin_notes'])): ?>

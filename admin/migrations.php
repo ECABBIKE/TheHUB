@@ -271,6 +271,10 @@ $migrationChecks = [
     '079_club_and_venue_admins.sql' => [
         'tables' => ['club_admins', 'venue_admins']
     ],
+    '080_bug_report_messages.sql' => [
+        'tables' => ['bug_report_messages'],
+        'columns' => ['bug_reports.view_token']
+    ],
 ];
 
 // ============================================================================
