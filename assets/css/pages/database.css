@@ -431,11 +431,19 @@
     box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
   }
 
+  .search-card .tabs-nav {
+    gap: var(--space-2xs);
+    flex-wrap: nowrap;
+    overflow-x: auto;
+    -webkit-overflow-scrolling: touch;
+  }
   .search-card .tab-pill {
     border-color: transparent;
     background: transparent;
     font-size: 13px;
     padding: var(--space-xs) var(--space-sm);
+    white-space: nowrap;
+    flex-shrink: 0;
   }
   .search-card .tab-pill.active {
     background: var(--color-accent);
