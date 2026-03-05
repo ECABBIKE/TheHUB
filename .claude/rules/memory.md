@@ -4,6 +4,30 @@
 
 ---
 
+## VIKTIGT: ÄNDRA ALDRIG NAVIGATION UTAN GODKÄNNANDE
+
+**Lägg ALDRIG till nya ikoner, grupper eller länkar i sidomenyn (sidebar), mobilmenyn eller admin-tabs utan att användaren explicit ber om det.**
+
+- Nya verktyg/sidor ska länkas från befintliga navigationsytor (t.ex. analytics-dashboardens ikongrid, tools.php)
+- Flytta INTE saker mellan menygrupper utan godkännande
+- Skapa INTE nya menygrupper i admin-tabs-config.php utan godkännande
+- Om en ny sida behöver nås: lägg den under befintlig grupp i `pages`-arrayen, och länka från relevant dashboard/grid
+
+---
+
+## SENASTE FIXAR (2026-03-05, session 37)
+
+### Databas-sidan: Mobilfix, HoF klient-sida, gallerifiltrer
+- **Flikar utan ikoner:** Borttagna lucide-ikoner från tab-pills (Åkare, Klubbar, Hall of Fame, Gallerier) - sparar plats på mobil
+- **HoF klient-sida flikbyte:** Alla tre sorteringar (SM-titlar, Segrar, Pallplatser) pre-renderas server-side, flikbyte utan sidladdning
+- **HoF SM-räkning fixad:** Använder nu `rider_achievements`-tabellen istället för results-query med `is_championship_class`-filter. Matchar rider-profilsidans räkning exakt.
+- **Gallerifiltrer klient-sida:** EN SQL-query hämtar alla album, filtrering sker via JS data-attribut (ingen sidladdning). Kaskadrande filter - icke-matchande options döljs helt.
+- **Serie/Fotograf-filter återtagna:** Varumärke och fotograf-dropdown tillagda igen i galleri-fliken
+- **Promotion:** Ligger i analytics-dashboardens ikongrid (inte som egen sidebar-ikon). Mappas till analytics-gruppen i unified-layout.
+- **Filer:** `pages/database/index.php`, `assets/css/pages/database-index.css`, `includes/config/admin-tabs-config.php`, `admin/analytics-dashboard.php`, `admin/components/unified-layout.php`
+
+---
+
 ## SENASTE FIXAR (2026-03-05, session 36)
 
 ### CSRF-token-validering fixad (session_write_close-bugg)

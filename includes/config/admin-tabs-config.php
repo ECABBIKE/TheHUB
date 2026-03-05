@@ -285,24 +285,6 @@ $ADMIN_TABS = [
     ],
 
     // ========================================
-    // PROMOTION (e-postkampanjer)
-    // ========================================
-    'promotion' => [
-        'title' => 'Promotion',
-        'icon' => 'megaphone',
-        'super_admin_only' => true,
-        'tabs' => [
-            [
-                'id' => 'hub-promotion',
-                'label' => 'Promotion',
-                'icon' => 'megaphone',
-                'url' => '/admin/hub-promotion.php',
-                'pages' => ['hub-promotion.php']
-            ]
-        ]
-    ],
-
-    // ========================================
     // ANALYTICS (super_admin eller statistics-behorighet)
     // ========================================
     'analytics' => [
@@ -318,6 +300,7 @@ $ADMIN_TABS = [
                 // Alla analytics-sidor nås via dashboard navigation grid
                 'pages' => [
                     'analytics-dashboard.php',
+                    'hub-promotion.php',
                     'analytics-cohorts.php',
                     'analytics-atrisk.php',
                     'analytics-geography.php',
