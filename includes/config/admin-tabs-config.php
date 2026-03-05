@@ -285,12 +285,12 @@ $ADMIN_TABS = [
     ],
 
     // ========================================
-    // ANALYTICS (super_admin eller statistics-behorighet)
+    // PROMOTION (e-postkampanjer)
     // ========================================
-    'analytics' => [
-        'title' => 'Analytics',
-        'icon' => 'chart-line',
-        'super_admin_only' => true,  // Visas bara for super_admin (eller statistics-behorighet via hasPermission)
+    'promotion' => [
+        'title' => 'Promotion',
+        'icon' => 'megaphone',
+        'super_admin_only' => true,
         'tabs' => [
             [
                 'id' => 'hub-promotion',
@@ -298,7 +298,18 @@ $ADMIN_TABS = [
                 'icon' => 'megaphone',
                 'url' => '/admin/hub-promotion.php',
                 'pages' => ['hub-promotion.php']
-            ],
+            ]
+        ]
+    ],
+
+    // ========================================
+    // ANALYTICS (super_admin eller statistics-behorighet)
+    // ========================================
+    'analytics' => [
+        'title' => 'Analytics',
+        'icon' => 'chart-line',
+        'super_admin_only' => true,
+        'tabs' => [
             [
                 'id' => 'dashboard',
                 'label' => 'Dashboard',
