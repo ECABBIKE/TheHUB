@@ -79,7 +79,7 @@ $events = $stmt->fetchAll(PDO::FETCH_ASSOC);
 $seriesSponsors = ['header' => [], 'content' => [], 'sidebar' => [], 'partner' => []];
 try {
     $spStmt = $pdo->prepare("
-        SELECT ss.placement, ss.display_order, s.id, s.name, s.website,
+        SELECT ss.placement, ss.display_order, ss.display_size, s.id, s.name, s.website,
                COALESCE(CONCAT('/', m1.filepath), CONCAT('/', m2.filepath), s.logo) as logo_url
         FROM series_sponsors ss
         JOIN sponsors s ON ss.sponsor_id = s.id AND s.active = 1
@@ -828,12 +828,15 @@ skip_club_standings:
 
 <?php // Partner sponsors (full-width bottom section)
 if (!empty($seriesSponsors['partner'])):
+    $largePartners = array_filter($seriesSponsors['partner'], function($sp) { return ($sp['display_size'] ?? 'small') === 'large'; });
+    $smallPartners = array_filter($seriesSponsors['partner'], function($sp) { return ($sp['display_size'] ?? 'small') !== 'large'; });
 ?>
 <div class="series-partners-section">
     <h3 class="series-partners-title">Samarbetspartners</h3>
-    <div class="series-partners-grid">
-        <?php foreach ($seriesSponsors['partner'] as $sp): ?>
-        <div class="series-partner-item">
+    <?php if (!empty($largePartners)): ?>
+    <div class="series-partners-grid series-partners-large">
+        <?php foreach ($largePartners as $sp): ?>
+        <div class="series-partner-item series-partner-lg">
             <?php if ($sp['website']): ?>
             <a href="<?= htmlspecialchars($sp['website']) ?>" target="_blank" rel="noopener" title="<?= htmlspecialchars($sp['name']) ?>">
                 <?php if ($sp['logo_url']): ?>
@@ -852,6 +855,30 @@ if (!empty($seriesSponsors['partner'])):
         </div>
         <?php endforeach; ?>
     </div>
+    <?php endif; ?>
+    <?php if (!empty($smallPartners)): ?>
+    <div class="series-partners-grid series-partners-small">
+        <?php foreach ($smallPartners as $sp): ?>
+        <div class="series-partner-item series-partner-sm">
+            <?php if ($sp['website']): ?>
+            <a href="<?= htmlspecialchars($sp['website']) ?>" target="_blank" rel="noopener" title="<?= htmlspecialchars($sp['name']) ?>">
+                <?php if ($sp['logo_url']): ?>
+                <img src="<?= htmlspecialchars($sp['logo_url']) ?>" alt="<?= htmlspecialchars($sp['name']) ?>">
+                <?php else: ?>
+                <span><?= htmlspecialchars($sp['name']) ?></span>
+                <?php endif; ?>
+            </a>
+            <?php else: ?>
+                <?php if ($sp['logo_url']): ?>
+                <img src="<?= htmlspecialchars($sp['logo_url']) ?>" alt="<?= htmlspecialchars($sp['name']) ?>" title="<?= htmlspecialchars($sp['name']) ?>">
+                <?php else: ?>
+                <span><?= htmlspecialchars($sp['name']) ?></span>
+                <?php endif; ?>
+            <?php endif; ?>
+        </div>
+        <?php endforeach; ?>
+    </div>
+    <?php endif; ?>
 </div>
 <?php endif; ?>
 
@@ -1277,27 +1304,23 @@ document.addEventListener('keydown', function(e) {
     display: block;
 }
 
-/* Series Sponsor Logo Row */
+/* Series Sponsor Logo Row - 600x150px logos */
 .series-sponsor-logos {
     display: flex;
     justify-content: center;
     align-items: center;
-    gap: var(--space-lg);
+    gap: var(--space-xl);
     flex-wrap: wrap;
-    padding: var(--space-md) 0;
+    padding: var(--space-lg) 0;
     margin-bottom: var(--space-md);
     border-top: 1px solid var(--color-border);
     border-bottom: 1px solid var(--color-border);
 }
 .series-sponsor-logo-item img {
-    max-height: 50px;
-    max-width: 150px;
+    height: 75px;
+    width: auto;
+    max-width: 300px;
     object-fit: contain;
-    opacity: 0.85;
-    transition: opacity 0.15s;
-}
-.series-sponsor-logo-item img:hover {
-    opacity: 1;
 }
 .series-sponsor-logo-item a {
     display: block;
@@ -1320,20 +1343,30 @@ document.addEventListener('keydown', function(e) {
 }
 .series-partners-grid {
     display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
-    gap: var(--space-md);
+    gap: var(--space-lg);
     justify-items: center;
     align-items: center;
 }
-.series-partner-item img {
-    max-height: 40px;
-    max-width: 120px;
-    object-fit: contain;
-    opacity: 0.7;
-    transition: opacity 0.15s;
+/* Large partners: 3 per row desktop, 600x150 */
+.series-partners-large {
+    grid-template-columns: repeat(3, 1fr);
+    margin-bottom: var(--space-lg);
 }
-.series-partner-item img:hover {
-    opacity: 1;
+.series-partner-lg img {
+    height: 75px;
+    width: auto;
+    max-width: 300px;
+    object-fit: contain;
+}
+/* Small partners: 5 per row desktop, 300x75 */
+.series-partners-small {
+    grid-template-columns: repeat(5, 1fr);
+}
+.series-partner-sm img {
+    height: 38px;
+    width: auto;
+    max-width: 150px;
+    object-fit: contain;
 }
 .series-partner-item a {
     display: block;
@@ -1349,11 +1382,24 @@ document.addEventListener('keydown', function(e) {
         padding: var(--space-sm) 0;
     }
     .series-sponsor-logo-item img {
-        max-height: 36px;
-        max-width: 100px;
+        height: 50px;
+        max-width: 200px;
     }
-    .series-partners-grid {
+    /* Large partners: 2 per row on mobile */
+    .series-partners-large {
         grid-template-columns: repeat(2, 1fr);
+    }
+    .series-partner-lg img {
+        height: 50px;
+        max-width: 200px;
+    }
+    /* Small partners: 3 per row on mobile */
+    .series-partners-small {
+        grid-template-columns: repeat(3, 1fr);
+    }
+    .series-partner-sm img {
+        height: 30px;
+        max-width: 120px;
     }
 }
 </style>

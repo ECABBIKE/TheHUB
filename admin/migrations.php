@@ -253,6 +253,9 @@ $migrationChecks = [
     '073_promotor_events_tables.sql' => [
         'tables' => ['promotor_events', 'promotor_series']
     ],
+    '074_sponsor_inherit_and_display_size.sql' => [
+        'columns' => ['events.inherit_series_sponsors', 'series_sponsors.display_size']
+    ],
 ];
 
 // ============================================================================

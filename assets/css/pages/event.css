@@ -1350,13 +1350,25 @@ td.col-place {
     letter-spacing: 0.05em;
 }
 
-/* Grid layout: 4 columns on desktop, always centered */
+/* Grid layout for partner sponsors */
 .partner-sponsors-grid {
     display: grid;
-    grid-template-columns: repeat(4, auto);
     justify-content: center;
     align-items: center;
     gap: var(--space-xl);
+    margin-bottom: var(--space-md);
+}
+/* Large partners: 3 per row, 600x150px */
+.partner-sponsors-large {
+    grid-template-columns: repeat(3, 1fr);
+}
+/* Small partners: 5 per row, 300x75px */
+.partner-sponsors-small {
+    grid-template-columns: repeat(5, 1fr);
+}
+/* Fallback for grids without size class */
+.partner-sponsors-grid:not(.partner-sponsors-large):not(.partner-sponsors-small) {
+    grid-template-columns: repeat(4, auto);
 }
 
 .partner-sponsor-item {
@@ -1364,23 +1376,36 @@ td.col-place {
     align-items: center;
     justify-content: center;
     text-decoration: none;
-    transition: transform 0.2s, opacity 0.2s;
+    transition: transform 0.2s;
 }
 
 .partner-sponsor-item:hover {
     transform: scale(1.05);
-    opacity: 0.9;
 }
 
-/* Larger logos for partner section (original: 400x120px) */
-.partner-sponsor-item img {
+/* Large partner logos: 600x150 */
+.partner-sponsor-lg img {
+    height: 75px;
+    width: auto;
+    max-width: 300px;
+    object-fit: contain;
+}
+/* Small partner logos: 300x75 */
+.partner-sponsor-sm img {
+    height: 38px;
+    width: auto;
+    max-width: 150px;
+    object-fit: contain;
+}
+/* Fallback for items without size class */
+.partner-sponsor-item:not(.partner-sponsor-lg):not(.partner-sponsor-sm) img {
     max-height: 100px;
     max-width: 280px;
     width: auto;
     object-fit: contain;
 }
 
-/* Mobile: 2 columns, centered */
+/* Mobile */
 @media (max-width: 767px) {
     .event-partner-sponsors {
         margin-left: -16px;
@@ -1391,13 +1416,27 @@ td.col-place {
         width: calc(100% + 32px);
         padding: var(--space-md);
     }
-
-    .partner-sponsors-grid {
+    /* Large: 2 per row on mobile */
+    .partner-sponsors-large {
+        grid-template-columns: repeat(2, 1fr);
+    }
+    .partner-sponsor-lg img {
+        height: 50px;
+        max-width: 200px;
+    }
+    /* Small: 3 per row on mobile */
+    .partner-sponsors-small {
+        grid-template-columns: repeat(3, 1fr);
+    }
+    .partner-sponsor-sm img {
+        height: 30px;
+        max-width: 120px;
+    }
+    .partner-sponsors-grid:not(.partner-sponsors-large):not(.partner-sponsors-small) {
         grid-template-columns: repeat(2, auto);
         gap: var(--space-md);
     }
-
-    .partner-sponsor-item img {
+    .partner-sponsor-item:not(.partner-sponsor-lg):not(.partner-sponsor-sm) img {
         max-height: 70px;
         max-width: 160px;
     }
