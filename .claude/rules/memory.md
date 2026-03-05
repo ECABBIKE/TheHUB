@@ -15,6 +15,30 @@
 
 ---
 
+## SENASTE FIXAR (2026-03-05, session 38)
+
+### Serieanmälan: "Klassen är inte tillgänglig" vid checkout - förbättrad diagnostik
+- **Problem:** Serieanmälan kunde läggas i varukorgen men vid checkout kom "Klassen är inte tillgänglig för denna deltagare". Fungerade för vissa åkare men inte andra. Enskild eventanmälan fungerade alltid.
+- **Orsak:** Varukorgen (event.php) sparar serieanmälningar som N separata items med `type: 'event'` + `is_series_registration: true` (ett per event i serien). Vid checkout processerar `createMultiRiderOrder()` varje item som en vanlig event-registrering och anropar `getEligibleClassesForEvent()` **per event**. Om ett events pricing template inte innehåller den valda klassen, eller om profilen saknar fält, kastar den fel. Det generiska felmeddelandet "Klassen är inte tillgänglig" döljer orsaken.
+- **Fix fas 1:** Förbättrade felmeddelanden i `createMultiRiderOrder()`:
+  - Om getEligibleClassesForEvent returnerar error-objekt (t.ex. incomplete_profile): visar det specifika felet + eventnamn
+  - Om klassen inte hittas: visar eventnamn + loggar tillgängliga klass-IDs till error_log
+  - Gör det möjligt att identifiera EXAKT vilket event och varför det misslyckas
+- **VIKTIGT:** Serieanmälan skapar 4 separata eventregistreringar, INTE en series_registration
+- **Fil:** `includes/order-manager.php`
+
+### Promotion flyttad till analytics-dashboardens ikongrid
+- **Problem:** Promotion hade lagts till som egen ikon/grupp i sidomenyn (admin-tabs-config.php)
+- **Fix:** Borttagen som separat grupp. Istället tillagd som ikon i analytics-dashboardens nav-grid. `hub-promotion.php` mappas till analytics-gruppen i admin-tabs och unified-layout.
+- **Filer:** `includes/config/admin-tabs-config.php`, `admin/analytics-dashboard.php`, `admin/components/unified-layout.php`
+
+### VIKTIGT: Serieanmälans cart-arkitektur
+- **Varukorgen (localStorage):** Sparar N items med `type: 'event'` + `is_series_registration: true` + `series_id` - ett per event i serien. Visar per-event priser och serierabatt.
+- **Backend (createMultiRiderOrder):** Processerar varje item som en vanlig event-registrering med `getEligibleClassesForEvent()` per event.
+- **ALDRIG konvertera till type:'series'** - serieanmälan ska vara 4 separata eventregistreringar.
+
+---
+
 ## SENASTE FIXAR (2026-03-05, session 37)
 
 ### Databas-sidan: Mobilfix, HoF klient-sida, gallerifiltrer
