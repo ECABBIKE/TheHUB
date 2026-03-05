@@ -192,16 +192,44 @@ try {
         // Table might not exist yet
     }
 
-    // Fetch ALL sponsors (series + event) in ONE query
+    // Fetch event sponsors
     require_once INCLUDES_PATH . '/sponsor-functions.php';
     $eventSponsors = ['header' => [], 'content' => [], 'sidebar' => [], 'footer' => [], 'partner' => []];
+
+    // 1) Load event's OWN sponsors
     try {
-        $sponsorParams = [$eventId];
-        $seriesJoin = "";
-        if (!empty($event['series_id']) && !empty($event['inherit_series_sponsors'])) {
-            $seriesJoin = "
-                UNION ALL
-                SELECT s.*, ss.placement, ss.display_order, ss.display_size,
+        $ownStmt = $db->prepare("
+            SELECT s.*, es.placement, es.display_order,
+                   m_banner.filepath as banner_logo_url, m_standard.filepath as standard_logo_url,
+                   m_small.filepath as small_logo_url, m_legacy.filepath as legacy_logo_url,
+                   'event' as sponsor_source, 'small' as display_size
+            FROM sponsors s
+            INNER JOIN event_sponsors es ON s.id = es.sponsor_id
+            LEFT JOIN media m_banner ON s.logo_banner_id = m_banner.id
+            LEFT JOIN media m_standard ON s.logo_standard_id = m_standard.id
+            LEFT JOIN media m_small ON s.logo_small_id = m_small.id
+            LEFT JOIN media m_legacy ON s.logo_media_id = m_legacy.id
+            WHERE es.event_id = ? AND s.active = 1
+            ORDER BY es.display_order ASC
+        ");
+        $ownStmt->execute([$eventId]);
+        foreach ($ownStmt->fetchAll(PDO::FETCH_ASSOC) as $sponsor) {
+            $placement = $sponsor['placement'] ?? 'sidebar';
+            $eventSponsors[$placement][] = $sponsor;
+        }
+    } catch (Exception $e) {
+        // event_sponsors table might not exist yet
+    }
+
+    // 2) Load series sponsors (if series exists and inherit is enabled per placement)
+    // Pre-migration fallback: if column doesn't exist, inherit all (old behavior)
+    $inheritAll = !array_key_exists('inherit_series_sponsors', $event);
+    $inheritFlag = $event['inherit_series_sponsors'] ?? '';
+    // inherit flag can be: '1' (all), 'header,content,partner' (per-placement), or '0'/empty (none)
+    if (!empty($event['series_id']) && ($inheritAll || !empty($inheritFlag))) {
+        try {
+            $seriesStmt = $db->prepare("
+                SELECT s.*, ss.placement, ss.display_order,
                        m_banner.filepath as banner_logo_url, m_standard.filepath as standard_logo_url,
                        m_small.filepath as small_logo_url, m_legacy.filepath as legacy_logo_url,
                        'series' as sponsor_source
@@ -212,35 +240,36 @@ try {
                 LEFT JOIN media m_small ON s.logo_small_id = m_small.id
                 LEFT JOIN media m_legacy ON s.logo_media_id = m_legacy.id
                 WHERE ss.series_id = ? AND s.active = 1
-            ";
-            $sponsorParams[] = $event['series_id'];
-        }
-        $allSponsorsStmt = $db->prepare("
-            SELECT s.*, es.placement, es.display_order, 'small' as display_size,
-                   m_banner.filepath as banner_logo_url, m_standard.filepath as standard_logo_url,
-                   m_small.filepath as small_logo_url, m_legacy.filepath as legacy_logo_url,
-                   'event' as sponsor_source
-            FROM sponsors s
-            INNER JOIN event_sponsors es ON s.id = es.sponsor_id
-            LEFT JOIN media m_banner ON s.logo_banner_id = m_banner.id
-            LEFT JOIN media m_standard ON s.logo_standard_id = m_standard.id
-            LEFT JOIN media m_small ON s.logo_small_id = m_small.id
-            LEFT JOIN media m_legacy ON s.logo_media_id = m_legacy.id
-            WHERE es.event_id = ? AND s.active = 1
-            {$seriesJoin}
-            ORDER BY display_order ASC
-        ");
-        $allSponsorsStmt->execute($sponsorParams);
-        foreach ($allSponsorsStmt->fetchAll(PDO::FETCH_ASSOC) as $sponsor) {
-            $placement = $sponsor['placement'] ?? 'sidebar';
-            if ($sponsor['sponsor_source'] === 'event') {
-                array_unshift($eventSponsors[$placement], $sponsor);
+                ORDER BY ss.display_order ASC
+            ");
+            $seriesStmt->execute([$event['series_id']]);
+
+            // Try to load display_size separately (may not exist pre-migration)
+            $displaySizes = [];
+            try {
+                $sizeStmt = $db->prepare("SELECT sponsor_id, display_size FROM series_sponsors WHERE series_id = ?");
+                $sizeStmt->execute([$event['series_id']]);
+                foreach ($sizeStmt->fetchAll(PDO::FETCH_ASSOC) as $sz) {
+                    $displaySizes[$sz['sponsor_id']] = $sz['display_size'];
+                }
+            } catch (Exception $e2) { /* display_size column may not exist */ }
+
+            // Determine which placements to inherit
+            if ($inheritAll || $inheritFlag === '1') {
+                $inheritPlacements = ['header', 'content', 'sidebar', 'footer', 'partner'];
             } else {
+                $inheritPlacements = array_map('trim', explode(',', $inheritFlag));
+            }
+
+            foreach ($seriesStmt->fetchAll(PDO::FETCH_ASSOC) as $sponsor) {
+                $placement = $sponsor['placement'] ?? 'sidebar';
+                if (!in_array($placement, $inheritPlacements)) continue;
+                $sponsor['display_size'] = $displaySizes[$sponsor['id']] ?? 'small';
                 $eventSponsors[$placement][] = $sponsor;
             }
+        } catch (Exception $e) {
+            // series_sponsors table might not exist yet
         }
-    } catch (Exception $e) {
-        // Tables might not exist yet
     }
 
     // Check event format for DH mode
