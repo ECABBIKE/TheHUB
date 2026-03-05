@@ -489,16 +489,15 @@ skip_club_standings:
         </div>
         <div class="series-hero-info">
             <h1 class="series-title"><?= htmlspecialchars($series['name']) ?></h1>
-            <?php if ($series['description']): ?>
-                <p class="series-description"><?= format_text($series['description']) ?></p>
-            <?php endif; ?>
             <div class="series-meta">
-                <strong>Seriesammanställning:</strong>
-                <span><?= count($events) ?> tävlingar</span>
-                <?php if ($countBest): ?>
-                <span>Räknar <?= $countBest ?> bästa resultat</span>
-                <?php endif; ?>
+                <span class="series-meta-summary"><?= count($events) ?> tävlingar<?php if ($countBest): ?> &middot; <?= $countBest ?> bästa räknas<?php endif; ?></span>
             </div>
+            <?php if ($series['description']): ?>
+            <details class="series-description-toggle">
+                <summary>Läs mer om serien</summary>
+                <div class="series-description-content"><?= format_text($series['description']) ?></div>
+            </details>
+            <?php endif; ?>
         </div>
     </div>
 
@@ -1316,6 +1315,14 @@ document.addEventListener('keydown', function(e) {
     border-top: 1px solid var(--color-border);
     border-bottom: 1px solid var(--color-border);
 }
+/* Max 3 logos per row */
+.series-sponsor-logo-item {
+    flex: 0 0 calc(33.333% - var(--space-xl));
+    max-width: calc(33.333% - var(--space-xl));
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
 .series-sponsor-logo-item img {
     height: 75px;
     width: auto;
@@ -1377,7 +1384,15 @@ document.addEventListener('keydown', function(e) {
     max-width: 150px;
     object-fit: contain;
 }
+.series-partner-item {
+    overflow: hidden;
+}
 .series-partner-item a {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+}
+.series-partner-item img {
     display: block;
 }
 .series-partner-item span {
@@ -1390,30 +1405,45 @@ document.addEventListener('keydown', function(e) {
         gap: var(--space-md);
         padding: var(--space-sm) 0;
     }
-    .series-sponsor-logo-item img {
-        height: 50px;
-        max-width: 200px;
-    }
-    .series-partners-grid {
-        gap: var(--space-md);
-    }
-    /* Large partners: 2 per row on mobile */
-    .series-partners-large .series-partner-item {
-        flex: 0 0 calc(50% - var(--space-md));
-        max-width: calc(50% - var(--space-md));
-    }
-    .series-partner-lg img {
-        height: 50px;
-        max-width: 200px;
-    }
-    /* Small partners: 3 per row on mobile */
-    .series-partners-small .series-partner-item {
+    /* Logo row: 3 per row on mobile too, smaller images */
+    .series-sponsor-logo-item {
         flex: 0 0 calc(33.333% - var(--space-md));
         max-width: calc(33.333% - var(--space-md));
     }
+    .series-sponsor-logo-item img {
+        height: 50px;
+        max-width: 100%;
+    }
+    /* Partners section edge-to-edge */
+    .series-partners-section {
+        margin-left: -16px;
+        margin-right: -16px;
+        padding-left: 16px;
+        padding-right: 16px;
+        width: calc(100% + 32px);
+    }
+    .series-partners-grid {
+        gap: var(--space-sm);
+    }
+    /* Large partners: 2 per row on mobile */
+    .series-partners-large .series-partner-item {
+        flex: 0 0 calc(50% - var(--space-sm));
+        max-width: calc(50% - var(--space-sm));
+    }
+    .series-partner-lg img {
+        height: auto;
+        max-height: 50px;
+        max-width: 100%;
+    }
+    /* Small partners: 3 per row on mobile */
+    .series-partners-small .series-partner-item {
+        flex: 0 0 calc(33.333% - var(--space-sm));
+        max-width: calc(33.333% - var(--space-sm));
+    }
     .series-partner-sm img {
-        height: 30px;
-        max-width: 120px;
+        height: auto;
+        max-height: 30px;
+        max-width: 100%;
     }
 }
 </style>
