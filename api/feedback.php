@@ -154,10 +154,13 @@ if (!empty($_SESSION['rider_id'])) {
 // SAVE REPORT
 // ========================
 
+// Generate a unique view token for conversation access
+$viewToken = bin2hex(random_bytes(32));
+
 try {
     $stmt = $pdo->prepare("
-        INSERT INTO bug_reports (rider_id, category, title, description, email, page_url, browser_info, related_rider_ids, related_event_id, created_at)
-        VALUES (:rider_id, :category, :title, :description, :email, :page_url, :browser_info, :related_rider_ids, :related_event_id, NOW())
+        INSERT INTO bug_reports (rider_id, category, title, description, email, page_url, browser_info, related_rider_ids, related_event_id, view_token, created_at)
+        VALUES (:rider_id, :category, :title, :description, :email, :page_url, :browser_info, :related_rider_ids, :related_event_id, :view_token, NOW())
     ");
     $stmt->execute([
         ':rider_id' => $riderId,
@@ -168,7 +171,8 @@ try {
         ':page_url' => $pageUrl ?: null,
         ':browser_info' => $browserInfo ?: null,
         ':related_rider_ids' => $riderIdsString,
-        ':related_event_id' => $relatedEventId
+        ':related_event_id' => $relatedEventId,
+        ':view_token' => $viewToken
     ]);
 
     $reportId = $pdo->lastInsertId();

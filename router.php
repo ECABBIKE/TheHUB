@@ -91,7 +91,6 @@ function hub_get_current_page(): array {
         'activate-account' => '/pages/activate-account.php',
         'checkout' => '/pages/checkout.php',
         'membership' => '/pages/membership.php',
-        'feedback' => '/pages/feedback.php',
     ];
 
     if (isset($simplePages[$section])) {
@@ -163,6 +162,10 @@ function hub_get_current_page(): array {
         'photographer' => [
             'index' => '/pages/photographer/index.php',
             'show' => '/pages/photographer/show.php'
+        ],
+        'feedback' => [
+            'index' => '/pages/feedback.php',
+            'view' => '/pages/feedback/view.php'
         ],
         'cart' => [
             'index' => '/pages/cart.php'
