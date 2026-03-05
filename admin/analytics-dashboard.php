@@ -213,6 +213,10 @@ include __DIR__ . '/components/unified-layout.php';
         <i data-lucide="download"></i>
         <span>Export</span>
     </a>
+    <a href="/admin/hub-promotion.php" class="analytics-nav-item">
+        <i data-lucide="megaphone"></i>
+        <span>Promotion</span>
+    </a>
     <a href="/admin/analytics-data-quality.php" class="analytics-nav-item analytics-nav-item--muted">
         <i data-lucide="check-circle"></i>
         <span>Datakvalitet</span>

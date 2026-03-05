@@ -648,10 +648,9 @@ document.addEventListener('DOMContentLoaded', function() {
                 }
             });
 
-            // Disable/enable options
+            // Hide options not present in filtered results
             Array.from(sel.options).forEach(opt => {
-                if (!opt.value) return; // "Alla..." always visible
-                opt.disabled = !available.has(opt.value);
+                if (!opt.value) return;
                 opt.style.display = available.has(opt.value) ? '' : 'none';
             });
         }

@@ -290,15 +290,8 @@ $ADMIN_TABS = [
     'analytics' => [
         'title' => 'Analytics',
         'icon' => 'chart-line',
-        'super_admin_only' => true,  // Visas bara for super_admin (eller statistics-behorighet via hasPermission)
+        'super_admin_only' => true,
         'tabs' => [
-            [
-                'id' => 'hub-promotion',
-                'label' => 'Promotion',
-                'icon' => 'megaphone',
-                'url' => '/admin/hub-promotion.php',
-                'pages' => ['hub-promotion.php']
-            ],
             [
                 'id' => 'dashboard',
                 'label' => 'Dashboard',
@@ -307,6 +300,7 @@ $ADMIN_TABS = [
                 // Alla analytics-sidor nås via dashboard navigation grid
                 'pages' => [
                     'analytics-dashboard.php',
+                    'hub-promotion.php',
                     'analytics-cohorts.php',
                     'analytics-atrisk.php',
                     'analytics-geography.php',

@@ -72,7 +72,7 @@ if (!isset($current_admin_page)) {
         'payment-recipients' => 'economy',
         'settlements' => 'economy',
         'bug-reports' => 'bug-reports',
-        'hub-promotion' => 'hub-promotion',
+        'hub-promotion' => 'analytics',
         'club-admins' => 'users',
         'my-clubs' => 'users',
         'my-club-edit' => 'users',
