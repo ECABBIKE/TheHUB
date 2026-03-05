@@ -1447,18 +1447,27 @@ include __DIR__ . '/components/unified-layout.php';
                             <i data-lucide="book-open"></i>
                             <span>Regelverk</span>
                         </div>
-                        <div class="global-toggle-group">
-                            <label class="global-toggle <?= empty($event['regulations_global_type'] ?? '') ? 'active' : '' ?>">
-                                <input type="radio" name="regulations_global_type" value="" <?= empty($event['regulations_global_type'] ?? '') ? 'checked' : '' ?>>
+                        <?php $regType = $event['regulations_global_type'] ?? ''; ?>
+                        <div class="global-toggle-group" style="flex-wrap: wrap;">
+                            <label class="global-toggle <?= empty($regType) ? 'active' : '' ?>">
+                                <input type="radio" name="regulations_global_type" value="" <?= empty($regType) ? 'checked' : '' ?>>
                                 <span>Egen text</span>
                             </label>
-                            <label class="global-toggle <?= ($event['regulations_global_type'] ?? '') === 'sportmotion' ? 'active' : '' ?>">
-                                <input type="radio" name="regulations_global_type" value="sportmotion" <?= ($event['regulations_global_type'] ?? '') === 'sportmotion' ? 'checked' : '' ?>>
-                                <span>sportMotion</span>
+                            <label class="global-toggle <?= $regType === 'sportmotion_edr' ? 'active' : '' ?>">
+                                <input type="radio" name="regulations_global_type" value="sportmotion_edr" <?= $regType === 'sportmotion_edr' ? 'checked' : '' ?>>
+                                <span>sM EDR</span>
                             </label>
-                            <label class="global-toggle <?= ($event['regulations_global_type'] ?? '') === 'competition' ? 'active' : '' ?>">
-                                <input type="radio" name="regulations_global_type" value="competition" <?= ($event['regulations_global_type'] ?? '') === 'competition' ? 'checked' : '' ?>>
-                                <span>Tävling</span>
+                            <label class="global-toggle <?= $regType === 'sportmotion_dh' ? 'active' : '' ?>">
+                                <input type="radio" name="regulations_global_type" value="sportmotion_dh" <?= $regType === 'sportmotion_dh' ? 'checked' : '' ?>>
+                                <span>sM DH</span>
+                            </label>
+                            <label class="global-toggle <?= $regType === 'national_edr' ? 'active' : '' ?>">
+                                <input type="radio" name="regulations_global_type" value="national_edr" <?= $regType === 'national_edr' ? 'checked' : '' ?>>
+                                <span>Nat. EDR</span>
+                            </label>
+                            <label class="global-toggle <?= $regType === 'national_dh' ? 'active' : '' ?>">
+                                <input type="radio" name="regulations_global_type" value="national_dh" <?= $regType === 'national_dh' ? 'checked' : '' ?>>
+                                <span>Nat. DH</span>
                             </label>
                         </div>
                     </div>
@@ -1675,7 +1684,27 @@ include __DIR__ . '/components/unified-layout.php';
                     </div>
                     <div style="padding: var(--space-sm) var(--space-md); background: var(--color-bg-hover); border-radius: var(--radius-sm); font-size: var(--text-sm); color: var(--color-text-secondary);">
                         <?php
-                        $val = trim($event[$mf['key']] ?? '');
+                        // Resolve value: check global text first, then event-specific
+                        $val = '';
+                        if ($mf['key'] === 'regulations_info') {
+                            $regType = $event['regulations_global_type'] ?? '';
+                            if ($regType) {
+                                $regLabels = [
+                                    'sportmotion_edr' => 'sportMotion EDR', 'sportmotion_dh' => 'sportMotion DH',
+                                    'national_edr' => 'Nationell EDR', 'national_dh' => 'Nationell DH',
+                                    'sportmotion' => 'sportMotion', 'competition' => 'Tävling'
+                                ];
+                                $val = '(Global: ' . ($regLabels[$regType] ?? $regType) . ')';
+                            } else {
+                                $val = trim($event['regulations_info'] ?? '');
+                            }
+                        } elseif ($mf['key'] === 'license_info' && !empty($event['license_use_global'])) {
+                            $val = '(Global licenstext)';
+                        } elseif ($mf['key'] === 'invitation' && !empty($event['invitation_use_global'])) {
+                            $val = '(Global inbjudningstext)';
+                        } else {
+                            $val = trim($event[$mf['key']] ?? '');
+                        }
                         if ($val): ?>
                             <div style="margin-bottom: var(--space-xs); max-height: 60px; overflow: hidden; text-overflow: ellipsis;"><?= h(mb_substr($val, 0, 150)) ?><?= mb_strlen($val) > 150 ? '...' : '' ?></div>
                         <?php else: ?>

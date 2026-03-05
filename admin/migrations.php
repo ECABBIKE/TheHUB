@@ -262,6 +262,9 @@ $migrationChecks = [
     '076_event_sponsors_display_size_and_partner.sql' => [
         'columns' => ['event_sponsors.display_size']
     ],
+    '077_regulations_four_types.sql' => [
+        'data' => ["global_texts.field_key = 'regulations_sportmotion_edr'"]
+    ],
 ];
 
 // ============================================================================
