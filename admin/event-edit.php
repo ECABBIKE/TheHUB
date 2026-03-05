@@ -219,13 +219,25 @@ function saveEventSponsorAssignments($db, $eventId, $postData) {
     // Insert new assignments
     $insertStmt = $pdo->prepare("INSERT INTO event_sponsors (event_id, sponsor_id, placement, display_order) VALUES (?, ?, ?, ?)");
 
+    // Check if display_size column exists for partner size support
+    $hasDisplaySize = false;
+    try {
+        $pdo->query("SELECT display_size FROM event_sponsors LIMIT 0");
+        $hasDisplaySize = true;
+    } catch (Exception $e) { /* column not yet added */ }
+
+    $insertWithSize = null;
+    if ($hasDisplaySize) {
+        $insertWithSize = $pdo->prepare("INSERT INTO event_sponsors (event_id, sponsor_id, placement, display_order, display_size) VALUES (?, ?, ?, ?, ?)");
+    }
+
     $insertedCount = 0;
+    $partnerSizeMap = $postData['sponsor_partner_size'] ?? [];
 
     // Header sponsors (banner at top - single select)
     if (!empty($postData['sponsor_header'])) {
         $insertStmt->execute([$eventId, (int)$postData['sponsor_header'], 'header', 0]);
         $insertedCount++;
-        error_log("Inserted header sponsor: " . $postData['sponsor_header']);
     }
 
     // Content sponsors (logo row - multiple checkboxes)
@@ -234,7 +246,6 @@ function saveEventSponsorAssignments($db, $eventId, $postData) {
         foreach ($postData['sponsor_content'] as $sponsorId) {
             $insertStmt->execute([$eventId, (int)$sponsorId, 'content', $order++]);
             $insertedCount++;
-            error_log("Inserted content sponsor: $sponsorId");
         }
     }
 
@@ -244,11 +255,16 @@ function saveEventSponsorAssignments($db, $eventId, $postData) {
         $insertedCount++;
     }
 
-    // Partner sponsors (bottom logo row - unlimited)
+    // Partner sponsors (bottom logo row - unlimited, with display_size)
     if (!empty($postData['sponsor_partner']) && is_array($postData['sponsor_partner'])) {
         $order = 0;
         foreach ($postData['sponsor_partner'] as $sponsorId) {
-            $insertStmt->execute([$eventId, (int)$sponsorId, 'partner', $order++]);
+            $size = $partnerSizeMap[$sponsorId] ?? 'small';
+            if ($hasDisplaySize && $insertWithSize) {
+                $insertWithSize->execute([$eventId, (int)$sponsorId, 'partner', $order++, $size]);
+            } else {
+                $insertStmt->execute([$eventId, (int)$sponsorId, 'partner', $order++]);
+            }
             $insertedCount++;
         }
     }
@@ -303,7 +319,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'event_format' => trim($_POST['event_format'] ?? 'ENDURO'),
             'stage_names' => !empty($_POST['stage_names']) ? trim($_POST['stage_names']) : null,
             'series_id' => !empty($_POST['series_id']) ? intval($_POST['series_id']) : null,
-            'inherit_series_sponsors' => !empty($_POST['inherit_placements']) ? implode(',', $_POST['inherit_placements']) : '',
             'point_scale_id' => !empty($_POST['point_scale_id']) ? intval($_POST['point_scale_id']) : null,
             'pricing_template_id' => !empty($_POST['pricing_template_id']) ? intval($_POST['pricing_template_id']) : null,
             'distance' => !empty($_POST['distance']) ? floatval($_POST['distance']) : null,
@@ -422,7 +437,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             $basicResult = $db->query(
                 "UPDATE events SET name = ?, date = ?, location = ?, venue_id = ?,
                  discipline = ?, event_level = ?, event_format = ?, series_id = ?,
-                 inherit_series_sponsors = ?, active = ?, website = ?, max_participants = ?,
+                 active = ?, website = ?, max_participants = ?,
                  registration_opens = ?, registration_deadline = ?,
                  registration_deadline_time = ?, contact_email = ?,
                  contact_phone = ?, end_date = ?, event_type = ?,
@@ -434,7 +449,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $eventData['name'], $eventData['date'], $eventData['location'],
                     $eventData['venue_id'], $eventData['discipline'], $eventData['event_level'],
                     $eventData['event_format'], $eventData['series_id'],
-                    $eventData['inherit_series_sponsors'], $eventData['active'],
+                    $eventData['active'],
                     $eventData['website'], $eventData['max_participants'],
                     $eventData['registration_opens'], $eventData['registration_deadline'],
                     $eventData['registration_deadline_time'], $eventData['contact_email'],
@@ -458,13 +473,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 error_log("EVENT EDIT: organizer_club_id update failed: " . $clubEx->getMessage());
             }
 
+            // Try to update inherit_series_sponsors separately (migration 074/075)
+            try {
+                $inheritPlacements = isset($_POST['inherit_placements']) ? implode(',', $_POST['inherit_placements']) : '';
+                $db->query("UPDATE events SET inherit_series_sponsors = ? WHERE id = ?",
+                    [$inheritPlacements, $id]);
+            } catch (Exception $inhEx) {
+                error_log("EVENT EDIT: inherit_series_sponsors update failed: " . $inhEx->getMessage());
+            }
+
             // Now try to update extended fields (content texts, use_global flags, hidden flags)
             // These are non-critical and may not exist if migrations haven't been run
             try {
                 unset($eventData['name'], $eventData['date'], $eventData['location'],
                       $eventData['venue_id'], $eventData['discipline'], $eventData['event_level'],
                       $eventData['event_format'], $eventData['series_id'],
-                      $eventData['inherit_series_sponsors'], $eventData['active'],
+                      $eventData['active'],
                       $eventData['website'], $eventData['organizer_club_id'],
                       $eventData['max_participants'], $eventData['registration_opens'],
                       $eventData['registration_deadline'], $eventData['registration_deadline_time'],
@@ -784,6 +808,15 @@ try {
         }
         $eventSponsors[$placement][] = (int)$sa['sponsor_id'];
     }
+
+    // Load partner display sizes
+    $partnerDisplaySizes = [];
+    try {
+        $sizeRows = $db->getAll("SELECT sponsor_id, display_size FROM event_sponsors WHERE event_id = ? AND placement = 'partner'", [$id]);
+        foreach ($sizeRows as $sr) {
+            $partnerDisplaySizes[(int)$sr['sponsor_id']] = $sr['display_size'] ?? 'small';
+        }
+    } catch (Exception $e2) { /* display_size column may not exist yet */ }
 } catch (Exception $e) {
     error_log("EVENT EDIT: Could not load sponsors: " . $e->getMessage());
 }
@@ -2424,6 +2457,7 @@ let pickerMax = 0;
 
 // Track selections per placement
 const placements = { header: [], content: [], sidebar: [], partner: [] };
+const partnerSizes = <?= json_encode($partnerDisplaySizes ?? new stdClass()) ?>;
 
 function initPromotorSponsors() {
     // Populate from existing event_sponsors
@@ -2453,10 +2487,19 @@ function addToPlacement(pl, sponsorId, name, logoUrl, updateCount) {
     tile.className = 'pl-tile';
     tile.dataset.sponsorId = sponsorId;
     tile.draggable = true;
+    var sizeButtons = '';
+    if (pl === 'partner') {
+        var currentSize = (partnerSizes[sponsorId] || 'small');
+        sizeButtons = '<div class="pl-tile-size" style="display:flex;gap:2px;margin-top:4px;justify-content:center;">'
+            + '<button type="button" class="btn btn-xs ' + (currentSize === 'large' ? 'btn-primary' : 'btn-secondary') + '" onclick="setPartnerSize(' + sponsorId + ',\'large\',this)" style="padding:1px 6px;font-size:11px;line-height:1.4;">L</button>'
+            + '<button type="button" class="btn btn-xs ' + (currentSize === 'small' ? 'btn-primary' : 'btn-secondary') + '" onclick="setPartnerSize(' + sponsorId + ',\'small\',this)" style="padding:1px 6px;font-size:11px;line-height:1.4;">S</button>'
+            + '</div>';
+    }
     tile.innerHTML = (logoUrl
         ? '<img src="' + logoUrl + '" alt="' + (name||'') + '" title="' + (name||'') + '">'
         : '<span class="pl-tile-text">' + (name||'?') + '</span>')
-        + '<button type="button" class="pl-tile-remove" onclick="removeFromPlacement(\'' + pl + '\',' + sponsorId + ')" title="Ta bort">&times;</button>';
+        + '<button type="button" class="pl-tile-remove" onclick="removeFromPlacement(\'' + pl + '\',' + sponsorId + ')" title="Ta bort">&times;</button>'
+        + sizeButtons;
     container.appendChild(tile);
     initTileDrag(tile, pl);
 
@@ -2473,6 +2516,16 @@ function addToPlacement(pl, sponsorId, name, logoUrl, updateCount) {
     input.value = sponsorId;
     inputContainer.appendChild(input);
 
+    // Hidden size input for partners
+    if (pl === 'partner') {
+        var sizeInput = document.createElement('input');
+        sizeInput.type = 'hidden';
+        sizeInput.id = 'pl-size-partner-' + sponsorId;
+        sizeInput.name = 'sponsor_partner_size[' + sponsorId + ']';
+        sizeInput.value = partnerSizes[sponsorId] || 'small';
+        inputContainer.appendChild(sizeInput);
+    }
+
     if (updateCount !== false) updateCounts();
 }
 
@@ -2482,7 +2535,22 @@ function removeFromPlacement(pl, sponsorId) {
     if (tile) tile.remove();
     const input = document.getElementById('pl-input-' + pl + '-' + sponsorId);
     if (input) input.remove();
+    const sizeInput = document.getElementById('pl-size-partner-' + sponsorId);
+    if (sizeInput) sizeInput.remove();
+    delete partnerSizes[sponsorId];
     updateCounts();
+}
+
+function setPartnerSize(sponsorId, size, btn) {
+    partnerSizes[sponsorId] = size;
+    var sizeInput = document.getElementById('pl-size-partner-' + sponsorId);
+    if (sizeInput) sizeInput.value = size;
+    // Toggle button styles
+    var btns = btn.parentElement.querySelectorAll('button');
+    btns.forEach(function(b) {
+        b.className = 'btn btn-xs ' + (b.textContent.trim() === (size === 'large' ? 'L' : 'S') ? 'btn-primary' : 'btn-secondary');
+        b.style.cssText = 'padding:1px 6px;font-size:11px;line-height:1.4;';
+    });
 }
 
 function clearPlacement(pl) {

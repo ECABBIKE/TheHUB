@@ -259,6 +259,9 @@ $migrationChecks = [
     '075_fix_inherit_sponsors_column_type.sql' => [
         'data' => ["(SELECT 1 FROM INFORMATION_SCHEMA.COLUMNS WHERE TABLE_SCHEMA = DATABASE() AND TABLE_NAME = 'events' AND COLUMN_NAME = 'inherit_series_sponsors' AND DATA_TYPE = 'varchar')"]
     ],
+    '076_event_sponsors_display_size_and_partner.sql' => [
+        'columns' => ['event_sponsors.display_size']
+    ],
 ];
 
 // ============================================================================

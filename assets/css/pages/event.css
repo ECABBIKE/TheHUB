@@ -99,13 +99,14 @@
     transition: transform 0.2s;
     /* Fixed width for consistent sizing - 5 items fit with gaps on desktop */
     width: calc((100% - 4 * var(--space-md)) / 5);
-    min-width: 100px;
-    max-width: 180px;
+    min-width: 120px;
+    max-width: 300px;
 }
 .sponsor-logo-item:hover { transform: scale(1.05); }
 .sponsor-logo-item img {
-    max-height: 50px;
-    max-width: 100%;
+    height: 75px;
+    max-width: 300px;
+    width: auto;
     object-fit: contain;
 }
 .sponsor-logo-item span {
@@ -1218,12 +1219,12 @@ td.col-place {
     .sponsor-logo-item {
         width: calc((100% - 2 * var(--space-sm)) / 3);
         min-width: 80px;
-        max-width: 120px;
+        max-width: 200px;
     }
 
-    /* Larger sponsor logos on mobile */
     .sponsor-logo-item img {
-        max-height: 65px;
+        height: 50px;
+        max-width: 200px;
     }
 
     /* Compact event header on mobile */
@@ -1993,9 +1994,10 @@ td.col-place {
         margin-right: calc(-1 * var(--space-md));
     }
 
-    .reg-participants-table col:nth-child(1),
-    .reg-participants-table th:nth-child(1),
-    .reg-participants-table td:nth-child(1) {
+    /* Hide bib number column on mobile (only when startlist has bib numbers) */
+    .reg-participants-table.has-bib col:nth-child(1),
+    .reg-participants-table.has-bib th:nth-child(1),
+    .reg-participants-table.has-bib td:nth-child(1) {
         display: none;
     }
 
