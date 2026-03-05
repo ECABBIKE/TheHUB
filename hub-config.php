@@ -370,17 +370,50 @@ if (!function_exists('hub_can_edit_profile')) {
     }
 }
 
+if (!function_exists('_hub_get_admin_user_id')) {
+    /**
+     * Get admin_users.id for a rider (by matching email)
+     */
+    function _hub_get_admin_user_id(int $riderId): ?int {
+        static $cache = [];
+        if (isset($cache[$riderId])) return $cache[$riderId];
+        try {
+            // Try session first
+            $adminId = $_SESSION['admin_id'] ?? null;
+            if ($adminId) {
+                $cache[$riderId] = (int)$adminId;
+                return (int)$adminId;
+            }
+            // Fallback: look up via email
+            $pdo = hub_db();
+            $stmt = $pdo->prepare("
+                SELECT au.id FROM admin_users au
+                JOIN riders r ON r.email = au.email
+                WHERE r.id = ? LIMIT 1
+            ");
+            $stmt->execute([$riderId]);
+            $id = $stmt->fetchColumn();
+            $cache[$riderId] = $id ? (int)$id : null;
+            return $cache[$riderId];
+        } catch (PDOException $e) {
+            return null;
+        }
+    }
+}
+
 if (!function_exists('hub_can_edit_club')) {
     function hub_can_edit_club(int $clubId): bool {
         $user = hub_current_user();
         if (!$user) return false;
 
+        $adminUserId = _hub_get_admin_user_id($user['id']);
+        if (!$adminUserId) return false;
+
         try {
-            $stmt = hub_db()->prepare("SELECT 1 FROM club_admins WHERE rider_id = ? AND club_id = ?");
-            $stmt->execute([$user['id'], $clubId]);
+            $stmt = hub_db()->prepare("SELECT 1 FROM club_admins WHERE user_id = ? AND club_id = ?");
+            $stmt->execute([$adminUserId, $clubId]);
             return (bool) $stmt->fetch();
         } catch (PDOException $e) {
-            // Table doesn't exist yet
             return false;
         }
     }
@@ -388,16 +421,55 @@ if (!function_exists('hub_can_edit_club')) {
 
 if (!function_exists('hub_get_admin_clubs')) {
     function hub_get_admin_clubs(int $riderId): array {
+        $adminUserId = _hub_get_admin_user_id($riderId);
+        if (!$adminUserId) return [];
+
         try {
             $stmt = hub_db()->prepare("
                 SELECT c.* FROM clubs c
                 JOIN club_admins ca ON c.id = ca.club_id
-                WHERE ca.rider_id = ?
+                WHERE ca.user_id = ?
             ");
-            $stmt->execute([$riderId]);
+            $stmt->execute([$adminUserId]);
             return $stmt->fetchAll(PDO::FETCH_ASSOC);
         } catch (PDOException $e) {
-            // Table doesn't exist yet
+            return [];
+        }
+    }
+}
+
+if (!function_exists('hub_can_edit_venue')) {
+    function hub_can_edit_venue(int $venueId): bool {
+        $user = hub_current_user();
+        if (!$user) return false;
+
+        $adminUserId = _hub_get_admin_user_id($user['id']);
+        if (!$adminUserId) return false;
+
+        try {
+            $stmt = hub_db()->prepare("SELECT 1 FROM venue_admins WHERE user_id = ? AND venue_id = ?");
+            $stmt->execute([$adminUserId, $venueId]);
+            return (bool) $stmt->fetch();
+        } catch (PDOException $e) {
+            return false;
+        }
+    }
+}
+
+if (!function_exists('hub_get_admin_venues')) {
+    function hub_get_admin_venues(int $riderId): array {
+        $adminUserId = _hub_get_admin_user_id($riderId);
+        if (!$adminUserId) return [];
+
+        try {
+            $stmt = hub_db()->prepare("
+                SELECT v.* FROM venues v
+                JOIN venue_admins va ON v.id = va.venue_id
+                WHERE va.user_id = ?
+            ");
+            $stmt->execute([$adminUserId]);
+            return $stmt->fetchAll(PDO::FETCH_ASSOC);
+        } catch (PDOException $e) {
             return [];
         }
     }

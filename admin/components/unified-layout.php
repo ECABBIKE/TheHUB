@@ -71,7 +71,12 @@ if (!isset($current_admin_page)) {
         'role-permissions' => 'settings',
         'payment-recipients' => 'economy',
         'settlements' => 'economy',
-        'bug-reports' => 'bug-reports'
+        'bug-reports' => 'bug-reports',
+        'hub-promotion' => 'hub-promotion',
+        'club-admins' => 'users',
+        'my-clubs' => 'users',
+        'my-club-edit' => 'users',
+        'venue-admins' => 'users'
     );
     $current_admin_page = isset($pageMap[$scriptName]) ? $pageMap[$scriptName] : $scriptName;
 }

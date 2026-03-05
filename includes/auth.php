@@ -323,7 +323,7 @@ function getCurrentAdmin() {
 
 /**
  * Check if user has role
- * Role hierarchy: rider(1) < promotor(2) = photographer(2) < admin(3) < super_admin(4)
+ * Role hierarchy: rider(1) < club_admin/venue_admin/promotor/photographer(2) < admin(3) < super_admin(4)
  */
 function hasRole($role) {
     if (!isLoggedIn()) {
@@ -335,6 +335,8 @@ function hasRole($role) {
     // Updated role hierarchy with new roles
     $roles = [
         'rider' => 1,
+        'club_admin' => 2,
+        'venue_admin' => 2,
         'photographer' => 2,
         'promotor' => 2,
         'admin' => 3,
@@ -782,6 +784,58 @@ function getUserManagedClubs() {
         return $stmt->fetchAll(PDO::FETCH_ASSOC);
     } catch (PDOException $e) {
         error_log("Get user managed clubs error: " . $e->getMessage());
+        return [];
+    }
+}
+
+/**
+ * Check if user can manage a specific venue/destination
+ */
+function canManageVenue($venueId) {
+    if (!isLoggedIn()) return false;
+    if (hasRole('admin')) return true;
+
+    global $pdo;
+    if (!$pdo) return false;
+
+    try {
+        $userId = $_SESSION['admin_id'] ?? null;
+        $stmt = $pdo->prepare("SELECT 1 FROM venue_admins WHERE user_id = ? AND venue_id = ? LIMIT 1");
+        $stmt->execute([$userId, $venueId]);
+        return $stmt->fetch() !== false;
+    } catch (PDOException $e) {
+        return false;
+    }
+}
+
+/**
+ * Get all venues a user can manage
+ */
+function getUserManagedVenues() {
+    if (!isLoggedIn()) return [];
+
+    global $pdo;
+    if (!$pdo) return [];
+
+    try {
+        $userId = $_SESSION['admin_id'] ?? null;
+
+        if (hasRole('admin')) {
+            return $pdo->query("SELECT id, name, city, region, active FROM venues ORDER BY name")->fetchAll(PDO::FETCH_ASSOC);
+        }
+
+        $stmt = $pdo->prepare("
+            SELECT v.id, v.name, v.city, v.region, v.active,
+                   va.can_edit_profile, va.can_upload_media
+            FROM venues v
+            JOIN venue_admins va ON v.id = va.venue_id
+            WHERE va.user_id = ?
+            ORDER BY v.name
+        ");
+        $stmt->execute([$userId]);
+        return $stmt->fetchAll(PDO::FETCH_ASSOC);
+    } catch (PDOException $e) {
+        error_log("Get user managed venues error: " . $e->getMessage());
         return [];
     }
 }

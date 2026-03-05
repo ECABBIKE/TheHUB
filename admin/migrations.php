@@ -265,6 +265,12 @@ $migrationChecks = [
     '077_regulations_four_types.sql' => [
         'data' => ["global_texts.field_key = 'regulations_sportmotion_edr'"]
     ],
+    '078_hub_promotion.sql' => [
+        'tables' => ['promotion_campaigns', 'promotion_sends']
+    ],
+    '079_club_and_venue_admins.sql' => [
+        'tables' => ['club_admins', 'venue_admins']
+    ],
 ];
 
 // ============================================================================
