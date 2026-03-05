@@ -303,7 +303,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             'event_format' => trim($_POST['event_format'] ?? 'ENDURO'),
             'stage_names' => !empty($_POST['stage_names']) ? trim($_POST['stage_names']) : null,
             'series_id' => !empty($_POST['series_id']) ? intval($_POST['series_id']) : null,
-            'inherit_series_sponsors' => isset($_POST['inherit_series_sponsors']) ? 1 : 0,
+            'inherit_series_sponsors' => !empty($_POST['inherit_placements']) ? implode(',', $_POST['inherit_placements']) : '',
             'point_scale_id' => !empty($_POST['point_scale_id']) ? intval($_POST['point_scale_id']) : null,
             'pricing_template_id' => !empty($_POST['pricing_template_id']) ? intval($_POST['pricing_template_id']) : null,
             'distance' => !empty($_POST['distance']) ? floatval($_POST['distance']) : null,
@@ -980,7 +980,15 @@ include __DIR__ . '/components/unified-layout.php';
     <!-- Hidden fields to preserve ALL locked values for promotors -->
     <input type="hidden" name="discipline" value="<?= h($event['discipline'] ?? '') ?>">
     <input type="hidden" name="series_id" value="<?= h($event['series_id'] ?? '') ?>">
-    <input type="hidden" name="inherit_series_sponsors" value="<?= h($event['inherit_series_sponsors'] ?? 0) ?>">
+    <?php
+    // Preserve inherit placements as hidden inputs for promotors
+    $inheritVal = $event['inherit_series_sponsors'] ?? '';
+    if ($inheritVal === '1') $inheritPls = ['header','content','sidebar','partner'];
+    else $inheritPls = array_filter(array_map('trim', explode(',', $inheritVal)));
+    foreach ($inheritPls as $ipl):
+    ?>
+    <input type="hidden" name="inherit_placements[]" value="<?= h($ipl) ?>">
+    <?php endforeach; ?>
     <input type="hidden" name="event_level" value="<?= h($event['event_level'] ?? 'national') ?>">
     <input type="hidden" name="event_format" value="<?= h($event['event_format'] ?? 'ENDURO') ?>">
     <input type="hidden" name="point_scale_id" value="<?= h($event['point_scale_id'] ?? '') ?>">
@@ -1751,17 +1759,31 @@ include __DIR__ . '/components/unified-layout.php';
                 <a href="/admin/media?folder=sponsors" target="_blank">Mediabiblioteket</a> först.
             </p>
 
-            <?php if (!empty($event['series_id'])): ?>
+            <?php
+            if (!empty($event['series_id'])):
+                $inheritFlag = $event['inherit_series_sponsors'] ?? '';
+                $inheritPlacements = ($inheritFlag === '1') ? ['header','content','sidebar','partner'] : array_filter(array_map('trim', explode(',', $inheritFlag)));
+            ?>
             <div class="admin-form-group mb-lg" style="padding: var(--space-md); background: var(--color-bg-hover); border-radius: var(--radius-sm); border: 1px solid var(--color-border);">
-                <label style="display: flex; align-items: center; gap: var(--space-sm); cursor: pointer;">
-                    <input type="checkbox" name="inherit_series_sponsors" value="1"
-                        <?= !empty($event['inherit_series_sponsors']) ? 'checked' : '' ?>
-                        style="width: 18px; height: 18px; accent-color: var(--color-accent);">
-                    <span>
-                        <strong>Ärv sponsorer från serien</strong>
-                        <br><small class="text-secondary">Seriens sponsorer visas automatiskt på detta event. Eventets egna sponsorer (nedan) visas också.</small>
-                    </span>
-                </label>
+                <strong style="display: block; margin-bottom: var(--space-xs);">Ärv sponsorer från serien</strong>
+                <small class="text-secondary" style="display: block; margin-bottom: var(--space-sm);">Välj vilka sponsorplatser som ska ärvas från serien. Eventets egna sponsorer visas alltid.</small>
+                <div style="display: flex; flex-wrap: wrap; gap: var(--space-md);">
+                    <?php
+                    $inheritOptions = [
+                        'header' => 'Banner',
+                        'content' => 'Logo-rad',
+                        'sidebar' => 'Resultat-sponsor',
+                        'partner' => 'Samarbetspartners',
+                    ];
+                    foreach ($inheritOptions as $key => $label): ?>
+                    <label style="display: flex; align-items: center; gap: var(--space-2xs); cursor: pointer;">
+                        <input type="checkbox" name="inherit_placements[]" value="<?= $key ?>"
+                            <?= in_array($key, $inheritPlacements) ? 'checked' : '' ?>
+                            style="width: 16px; height: 16px; accent-color: var(--color-accent);">
+                        <span style="font-size: 0.85rem;"><?= $label ?></span>
+                    </label>
+                    <?php endforeach; ?>
+                </div>
             </div>
             <?php endif; ?>
 
