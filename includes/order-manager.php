@@ -305,6 +305,18 @@ function createMultiRiderOrder(array $buyerData, array $items, ?string $discount
                 // Hämta event-info och pris (använd pricing template system)
                 $classesData = getEligibleClassesForEvent($eventId, $riderId);
                 $selectedClass = null;
+
+                // Kolla om getEligibleClassesForEvent returnerade ett error-objekt
+                if (!empty($classesData) && isset($classesData[0]['error'])) {
+                    $errorInfo = $classesData[0];
+                    $errorMsg = $errorInfo['message'] ?? 'Okänt fel';
+                    // Hämta eventnamn för bättre felmeddelande
+                    $evNameStmt = $pdo->prepare("SELECT name FROM events WHERE id = ?");
+                    $evNameStmt->execute([$eventId]);
+                    $evName = $evNameStmt->fetchColumn() ?: "Event #{$eventId}";
+                    throw new Exception("{$evName}: {$errorMsg}");
+                }
+
                 foreach ($classesData as $cls) {
                     if ($cls['class_id'] == $classId) {
                         $selectedClass = $cls;
@@ -313,7 +325,13 @@ function createMultiRiderOrder(array $buyerData, array $items, ?string $discount
                 }
 
                 if (!$selectedClass) {
-                    throw new Exception("Klassen är inte tillgänglig för denna deltagare");
+                    // Förbättrat felmeddelande med detaljer
+                    $evNameStmt = $pdo->prepare("SELECT name FROM events WHERE id = ?");
+                    $evNameStmt->execute([$eventId]);
+                    $evName = $evNameStmt->fetchColumn() ?: "Event #{$eventId}";
+                    $availableIds = array_map(function($c) { return $c['class_id'] ?? '?'; }, $classesData);
+                    error_log("Class not found: event={$eventId} ({$evName}), rider={$riderId}, requested_class={$classId}, available_classes=" . implode(',', $availableIds));
+                    throw new Exception("Klassen är inte tillgänglig för {$evName}. Kontakta arrangören.");
                 }
 
                 // Get event info
