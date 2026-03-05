@@ -125,68 +125,66 @@ if (empty($topClubs)) {
     } catch (Exception $e) {}
 }
 
-// ── Tab 3: Hall of Fame - top 20 by SM titles / wins / podiums ──
-$hofSort = $_GET['hof'] ?? 'sm';
-if (!in_array($hofSort, ['sm', 'wins', 'podiums'])) $hofSort = 'sm';
+// ── Tab 3: Hall of Fame - all three lists pre-rendered for client-side tab switching ──
 
-$hofRiders = [];
+// SM-titlar: count from achievements table (matches rider profile exactly)
+$hofSm = $pdo->query("
+    SELECT r.id, r.firstname, r.lastname, c.name as club_name,
+           COUNT(*) as sm_titles,
+           r.stats_total_wins as wins,
+           r.stats_total_podiums as podiums
+    FROM rider_achievements ra
+    INNER JOIN riders r ON ra.rider_id = r.id
+    LEFT JOIN clubs c ON r.club_id = c.id
+    WHERE ra.achievement_type = 'swedish_champion'
+    GROUP BY r.id
+    ORDER BY sm_titles DESC, wins DESC
+    LIMIT 20
+")->fetchAll(PDO::FETCH_ASSOC);
 
-if ($hofSort === 'sm') {
-    // SM-titlar: vunnit i championship event (position 1, is_championship = 1)
-    $hofRiders = $pdo->query("
-        SELECT r.id, r.firstname, r.lastname, c.name as club_name,
-               COUNT(*) as sm_titles,
-               r.stats_total_wins as wins,
-               r.stats_total_podiums as podiums
-        FROM results res
-        INNER JOIN riders r ON res.cyclist_id = r.id
-        LEFT JOIN clubs c ON r.club_id = c.id
-        INNER JOIN events e ON res.event_id = e.id
-        WHERE res.position = 1
-          AND res.status = 'finished'
-          AND e.is_championship = 1
-        GROUP BY r.id
-        ORDER BY sm_titles DESC, wins DESC
-        LIMIT 20
-    ")->fetchAll(PDO::FETCH_ASSOC);
-} elseif ($hofSort === 'wins') {
-    $hofRiders = $pdo->query("
-        SELECT r.id, r.firstname, r.lastname, c.name as club_name,
-               COUNT(CASE WHEN e.is_championship = 1 THEN 1 END) as sm_titles,
-               COUNT(*) as wins,
-               r.stats_total_podiums as podiums
-        FROM results res
-        INNER JOIN riders r ON res.cyclist_id = r.id
-        LEFT JOIN clubs c ON r.club_id = c.id
-        INNER JOIN events e ON res.event_id = e.id
-        LEFT JOIN classes cls ON res.class_id = cls.id
-        WHERE res.position = 1
-          AND res.status = 'finished'
-          AND COALESCE(cls.awards_points, 1) = 1
-        GROUP BY r.id
-        ORDER BY wins DESC, sm_titles DESC
-        LIMIT 20
-    ")->fetchAll(PDO::FETCH_ASSOC);
-} else {
-    // podiums
-    $hofRiders = $pdo->query("
-        SELECT r.id, r.firstname, r.lastname, c.name as club_name,
-               COUNT(CASE WHEN res.position = 1 AND e.is_championship = 1 THEN 1 END) as sm_titles,
-               COUNT(CASE WHEN res.position = 1 THEN 1 END) as wins,
-               COUNT(*) as podiums
-        FROM results res
-        INNER JOIN riders r ON res.cyclist_id = r.id
-        LEFT JOIN clubs c ON r.club_id = c.id
-        INNER JOIN events e ON res.event_id = e.id
-        LEFT JOIN classes cls ON res.class_id = cls.id
-        WHERE res.position <= 3
-          AND res.status = 'finished'
-          AND COALESCE(cls.awards_points, 1) = 1
-        GROUP BY r.id
-        ORDER BY podiums DESC, wins DESC
-        LIMIT 20
-    ")->fetchAll(PDO::FETCH_ASSOC);
-}
+// Segrar: position 1 in points-awarding classes
+$hofWins = $pdo->query("
+    SELECT r.id, r.firstname, r.lastname, c.name as club_name,
+           COUNT(CASE WHEN e.is_championship = 1 THEN 1 END) as sm_titles,
+           COUNT(*) as wins,
+           r.stats_total_podiums as podiums
+    FROM results res
+    INNER JOIN riders r ON res.cyclist_id = r.id
+    LEFT JOIN clubs c ON r.club_id = c.id
+    INNER JOIN events e ON res.event_id = e.id
+    LEFT JOIN classes cls ON res.class_id = cls.id
+    WHERE res.position = 1
+      AND res.status = 'finished'
+      AND COALESCE(cls.awards_points, 1) = 1
+    GROUP BY r.id
+    ORDER BY wins DESC, sm_titles DESC
+    LIMIT 20
+")->fetchAll(PDO::FETCH_ASSOC);
+
+// Pallplatser: position <= 3 in points-awarding classes
+$hofPodiums = $pdo->query("
+    SELECT r.id, r.firstname, r.lastname, c.name as club_name,
+           COUNT(CASE WHEN res.position = 1 AND e.is_championship = 1 THEN 1 END) as sm_titles,
+           COUNT(CASE WHEN res.position = 1 THEN 1 END) as wins,
+           COUNT(*) as podiums
+    FROM results res
+    INNER JOIN riders r ON res.cyclist_id = r.id
+    LEFT JOIN clubs c ON r.club_id = c.id
+    INNER JOIN events e ON res.event_id = e.id
+    LEFT JOIN classes cls ON res.class_id = cls.id
+    WHERE res.position <= 3
+      AND res.status = 'finished'
+      AND COALESCE(cls.awards_points, 1) = 1
+    GROUP BY r.id
+    ORDER BY podiums DESC, wins DESC
+    LIMIT 20
+")->fetchAll(PDO::FETCH_ASSOC);
+
+$hofLists = [
+    'sm' => ['label' => 'SM-titlar', 'primary' => 'sm_titles', 'suffix' => ' SM', 'data' => $hofSm],
+    'wins' => ['label' => 'Segrar', 'primary' => 'wins', 'suffix' => ' segrar', 'data' => $hofWins],
+    'podiums' => ['label' => 'Pallplatser', 'primary' => 'podiums', 'suffix' => ' pall', 'data' => $hofPodiums],
+];
 
 // ── Tab 4: Gallerier ──
 $galleryFilterYear = isset($_GET['gy']) && is_numeric($_GET['gy']) ? intval($_GET['gy']) : null;
@@ -425,27 +423,18 @@ $totalPhotos = $pdo->query("SELECT COALESCE(SUM(photo_count), 0) FROM event_albu
 <!-- ═══════ TAB: HALL OF FAME ═══════ -->
 <div class="db-tab-pane" id="db-tab-halloffame" style="<?= $activeTab !== 'halloffame' ? 'display:none' : '' ?>">
     <div class="search-card">
-        <div class="hof-sort-bar">
-            <span class="hof-sort-label">Sortera efter:</span>
-            <button class="tab-pill <?= $hofSort === 'sm' ? 'active' : '' ?>" data-hof-sort="sm">
-                <i data-lucide="award"></i> SM-titlar
-            </button>
-            <button class="tab-pill <?= $hofSort === 'wins' ? 'active' : '' ?>" data-hof-sort="wins">
-                <i data-lucide="trophy"></i> Segrar
-            </button>
-            <button class="tab-pill <?= $hofSort === 'podiums' ? 'active' : '' ?>" data-hof-sort="podiums">
-                <i data-lucide="medal"></i> Pallplatser
-            </button>
+        <div class="tabs-nav">
+            <button class="tab-pill active" data-hof-tab="sm">SM-titlar</button>
+            <button class="tab-pill" data-hof-tab="wins">Segrar</button>
+            <button class="tab-pill" data-hof-tab="podiums">Pallplatser</button>
         </div>
     </div>
 
-    <div class="card">
-        <h2 class="card-title">
-            <i data-lucide="<?= $hofSort === 'sm' ? 'award' : ($hofSort === 'wins' ? 'trophy' : 'medal') ?>"></i>
-            Topp 20 – <?= $hofSort === 'sm' ? 'SM-titlar' : ($hofSort === 'wins' ? 'Segrar' : 'Pallplatser') ?>
-        </h2>
+    <?php foreach ($hofLists as $key => $hof): ?>
+    <div class="card hof-pane" id="hof-<?= $key ?>" style="<?= $key !== 'sm' ? 'display:none' : '' ?>">
+        <h2 class="card-title">Topp 20 – <?= $hof['label'] ?></h2>
         <div class="ranking-list">
-            <?php foreach ($hofRiders as $i => $rider): ?>
+            <?php foreach ($hof['data'] as $i => $rider): ?>
             <a href="/rider/<?= $rider['id'] ?>" class="ranking-item">
                 <span class="ranking-pos <?= $i < 3 ? 'top-' . ($i + 1) : '' ?>">
                     <?php if ($i === 0): ?>
@@ -471,11 +460,12 @@ $totalPhotos = $pdo->query("SELECT COALESCE(SUM(photo_count), 0) FROM event_albu
                 </div>
             </a>
             <?php endforeach; ?>
-            <?php if (empty($hofRiders)): ?>
+            <?php if (empty($hof['data'])): ?>
             <p style="padding: var(--space-lg); text-align: center; color: var(--color-text-muted);">Ingen data tillgänglig</p>
             <?php endif; ?>
         </div>
     </div>
+    <?php endforeach; ?>
 </div>
 
 <!-- ═══════ TAB: GALLERIER ═══════ -->
@@ -604,10 +594,15 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
 
-    // ── Hall of Fame sort buttons ──
-    document.querySelectorAll('[data-hof-sort]').forEach(btn => {
+    // ── Hall of Fame sub-tabs (client-side) ──
+    document.querySelectorAll('[data-hof-tab]').forEach(btn => {
         btn.addEventListener('click', function() {
-            window.location = '/database?tab=halloffame&hof=' + this.dataset.hofSort;
+            const key = this.dataset.hofTab;
+            document.querySelectorAll('[data-hof-tab]').forEach(b => b.classList.remove('active'));
+            this.classList.add('active');
+            document.querySelectorAll('.hof-pane').forEach(p => p.style.display = 'none');
+            const pane = document.getElementById('hof-' + key);
+            if (pane) pane.style.display = '';
         });
     });
 
