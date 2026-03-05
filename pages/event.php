@@ -2282,21 +2282,16 @@ if (!$pmPublished):
 <?php else:
 // Build PM data array - mirrored fields from other sections + PM-specific fields
 // Mirrored: PM Huvudtext ← invitation, Lift ← lift_info (faciliteter), Tävlingsregler ← regulations_info, Licenser ← license_info
-$pmMirrored = [
-    ['key' => 'invitation', 'global' => 'invitation_use_global', 'hidden' => 'invitation_hidden', 'icon' => 'file-text', 'label' => 'PM Huvudtext', 'main' => true],
-    ['key' => 'lift_info', 'global' => 'lift_use_global', 'hidden' => 'lift_hidden', 'icon' => 'cable-car', 'label' => 'Lift'],
-    ['key' => 'competition_rules', 'global' => 'rules_use_global', 'hidden' => 'rules_hidden', 'icon' => 'book-open', 'label' => 'Tävlingsregler'],
-    ['key' => 'license_info', 'global' => 'license_use_global', 'hidden' => 'license_hidden', 'icon' => 'shield-check', 'label' => 'Licenser'],
+// Use already-computed text from Inbjudan sections ($regulationsText, $licenseText)
+$invitationText = getEventContent($event, 'invitation', 'invitation_use_global', $globalTextMap, 'invitation_hidden');
+$liftText = getEventContent($event, 'lift_info', 'lift_use_global', $globalTextMap, 'lift_hidden');
+
+$pmMirroredItems = [
+    ['text' => $invitationText, 'links' => $eventInfoLinks['invitation'] ?? [], 'icon' => 'file-text', 'label' => 'PM Huvudtext', 'main' => true],
+    ['text' => $liftText, 'links' => $eventInfoLinks['lift_info'] ?? [], 'icon' => 'cable-car', 'label' => 'Lift'],
+    ['text' => $regulationsText, 'links' => $allRegulationsLinks ?? [], 'icon' => 'book-open', 'label' => 'Tävlingsregler'],
+    ['text' => $licenseText, 'links' => $allLicenseLinks ?? [], 'icon' => 'shield-check', 'label' => 'Licenser'],
 ];
-// For regulations: check regulations_global_type for global text
-$regulationsText = '';
-if (!empty($event['regulations_hidden'])) {
-    $regulationsText = '';
-} elseif (!empty($event['regulations_global_type'])) {
-    $regulationsText = $globalTextMap['regulations_' . $event['regulations_global_type']] ?? '';
-} else {
-    $regulationsText = $event['regulations_info'] ?? '';
-}
 
 $pmDefs = [
     ['key' => 'driver_meeting', 'global' => 'driver_meeting_use_global', 'hidden' => 'driver_meeting_hidden', 'icon' => 'megaphone', 'label' => 'Förarmöte'],
@@ -2310,20 +2305,12 @@ $pmDefs = [
 $hasPMContent = false;
 $hasSubPM = false;
 
-// Resolve mirrored fields
-foreach ($pmMirrored as &$m) {
-    if ($m['key'] === 'regulations_info') {
-        // Special handling for regulations (uses regulations_global_type radio, not checkbox)
-        $m['text'] = $regulationsText;
-    } else {
-        $m['text'] = getEventContent($event, $m['key'], $m['global'], $globalTextMap, $m['hidden']);
-    }
-    $m['links'] = $eventInfoLinks[$m['key']] ?? [];
+// Check mirrored fields for content
+foreach ($pmMirroredItems as $m) {
     $hasContent = !empty($m['text']) || !empty($m['links']);
     if ($hasContent) $hasPMContent = true;
     if ($hasContent && empty($m['main'])) $hasSubPM = true;
 }
-unset($m);
 
 // Resolve PM-specific fields
 foreach ($pmDefs as &$p) {
@@ -2341,15 +2328,15 @@ unset($p);
     </div>
     <div class="card-body">
         <?php // PM Huvudtext (mirrored from invitation) ?>
-        <?php if (!empty($pmMirrored[0]['text'])): ?>
-        <div class="prose mb-lg"><?= format_text($pmMirrored[0]['text']) ?></div>
+        <?php if (!empty($pmMirroredItems[0]['text'])): ?>
+        <div class="prose mb-lg"><?= format_text($pmMirroredItems[0]['text']) ?></div>
         <?php endif; ?>
-        <?= renderSectionLinks($pmMirrored[0]['links']) ?>
+        <?= renderSectionLinks($pmMirroredItems[0]['links']) ?>
 
         <?php if ($hasSubPM): ?>
         <div class="info-grid">
             <?php // Mirrored fields (Lift, Tävlingsregler, Licenser) ?>
-            <?php foreach (array_slice($pmMirrored, 1) as $m): ?>
+            <?php foreach (array_slice($pmMirroredItems, 1) as $m): ?>
             <?php if (!empty($m['text']) || !empty($m['links'])): ?>
             <div class="info-block">
                 <h3><i data-lucide="<?= $m['icon'] ?>"></i> <?= $m['label'] ?></h3>

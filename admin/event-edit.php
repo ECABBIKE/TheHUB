@@ -1675,7 +1675,22 @@ include __DIR__ . '/components/unified-layout.php';
                     </div>
                     <div style="padding: var(--space-sm) var(--space-md); background: var(--color-bg-hover); border-radius: var(--radius-sm); font-size: var(--text-sm); color: var(--color-text-secondary);">
                         <?php
-                        $val = trim($event[$mf['key']] ?? '');
+                        // Resolve value: check global text first, then event-specific
+                        $val = '';
+                        if ($mf['key'] === 'regulations_info') {
+                            $regType = $event['regulations_global_type'] ?? '';
+                            if ($regType) {
+                                $val = '(Global: ' . ($regType === 'sportmotion' ? 'sportMotion' : 'Tävling') . ')';
+                            } else {
+                                $val = trim($event['regulations_info'] ?? '');
+                            }
+                        } elseif ($mf['key'] === 'license_info' && !empty($event['license_use_global'])) {
+                            $val = '(Global licenstext)';
+                        } elseif ($mf['key'] === 'invitation' && !empty($event['invitation_use_global'])) {
+                            $val = '(Global inbjudningstext)';
+                        } else {
+                            $val = trim($event[$mf['key']] ?? '');
+                        }
                         if ($val): ?>
                             <div style="margin-bottom: var(--space-xs); max-height: 60px; overflow: hidden; text-overflow: ellipsis;"><?= h(mb_substr($val, 0, 150)) ?><?= mb_strlen($val) > 150 ? '...' : '' ?></div>
                         <?php else: ?>
