@@ -6,6 +6,17 @@
 
 ## SENASTE FIXAR (2026-03-05, session 31)
 
+### PM-fält: Speglade fält från Inbjudan och Faciliteter
+- **PM Huvudtext** → Speglar nu `invitation` (Inbjudningstext). Redigeras under Inbjudan, visas som kopia i PM.
+- **PM Lift** → Flyttad till Faciliteter-sektionen. Visas som kopia i PM-fliken.
+- **PM Tävlingsregler** → Speglar `regulations_info` (Inbjudan > Regelverk). Stödjer regulations_global_type (sportmotion/competition).
+- **PM Licenser** → Speglar `license_info` (Inbjudan > Licenser). Visas som kopia i PM-fliken.
+- **Admin event-edit:** PM-sektionen visar nu skrivskyddade kort med förhandsvisning + "Redigeras under: X"-text för speglade fält. Redigerbara PM-fält (Förarmöte, Träning, Tidtagning, Försäkring, Utrustning, Sjukvård, SCF) ligger under.
+- **Publik event.php:** PM-fliken visar speglade fält + PM-specifika fält i info-grid. PM Huvudtext (= inbjudningstext) visas som prose ovanför.
+- **Faciliteter utökat:** `lift_info` tillagd i facilityFields (admin) och facilityDefs (publik).
+- **Tab-synlighet:** PM-fliken visas om invitation ELLER pm_content ELLER driver_meeting har innehåll.
+- **Filer:** `admin/event-edit.php`, `pages/event.php`
+
 ### Serie-sidan: Kollapsbar beskrivning + mobilanpassning + partnerfix
 - **Problem 1:** Serie-beskrivningen var helt dold på mobil (`display: none`)
 - **Fix:** Ersatt `<p>` med `<details>` element - "Läs mer om serien" klickbar summary, text visas vid öppning

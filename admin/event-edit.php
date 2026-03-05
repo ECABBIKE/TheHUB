@@ -1567,6 +1567,7 @@ include __DIR__ . '/components/unified-layout.php';
                 ['key' => 'exhibitors', 'label' => 'Utställare', 'global_key' => 'exhibitors_use_global', 'icon' => 'tent'],
                 ['key' => 'parking_detailed', 'label' => 'Parkering', 'global_key' => 'parking_use_global', 'icon' => 'car'],
                 ['key' => 'hotel_accommodation', 'label' => 'Hotell/Boende', 'global_key' => 'hotel_use_global', 'icon' => 'bed'],
+                ['key' => 'lift_info', 'label' => 'Lift', 'global_key' => 'lift_use_global', 'icon' => 'cable-car'],
                 ['key' => 'local_info', 'label' => 'Lokal information', 'global_key' => 'local_use_global', 'icon' => 'info'],
                 ['key' => 'media_production', 'label' => 'Media', 'global_key' => 'media_use_global', 'icon' => 'camera'],
                 ['key' => 'contacts_info', 'label' => 'Kontakter', 'global_key' => 'contacts_use_global', 'icon' => 'phone'],
@@ -1639,19 +1640,56 @@ include __DIR__ . '/components/unified-layout.php';
             </div>
 
             <?php
+            // Fields that are mirrored from other sections (read-only in PM)
+            $pmMirroredFields = [
+                ['label' => 'PM Huvudtext', 'icon' => 'file-text', 'source' => 'Inbjudan → Inbjudningstext', 'key' => 'invitation'],
+                ['label' => 'Lift', 'icon' => 'cable-car', 'source' => 'Faciliteter → Lift', 'key' => 'lift_info'],
+                ['label' => 'Tävlingsregler', 'icon' => 'scroll-text', 'source' => 'Inbjudan → Regelverk', 'key' => 'regulations_info'],
+                ['label' => 'Licenser', 'icon' => 'shield-check', 'source' => 'Inbjudan → Licenser', 'key' => 'license_info'],
+            ];
+
             $pmFields = [
-                ['key' => 'pm_content', 'label' => 'PM Huvudtext', 'global_key' => 'pm_use_global', 'icon' => 'file-text'],
                 ['key' => 'driver_meeting', 'label' => 'Förarmöte', 'global_key' => 'driver_meeting_use_global', 'icon' => 'users'],
                 ['key' => 'training_info', 'label' => 'Träning', 'global_key' => 'training_use_global', 'icon' => 'bike'],
                 ['key' => 'timing_info', 'label' => 'Tidtagning', 'global_key' => 'timing_use_global', 'icon' => 'timer'],
-                ['key' => 'lift_info', 'label' => 'Lift', 'global_key' => 'lift_use_global', 'icon' => 'cable-car'],
-                ['key' => 'competition_rules', 'label' => 'Tävlingsregler', 'global_key' => 'rules_use_global', 'icon' => 'scroll-text'],
                 ['key' => 'insurance_info', 'label' => 'Försäkring', 'global_key' => 'insurance_use_global', 'icon' => 'shield-check'],
                 ['key' => 'equipment_info', 'label' => 'Utrustning', 'global_key' => 'equipment_use_global', 'icon' => 'hard-hat'],
                 ['key' => 'medical_info', 'label' => 'Sjukvård', 'global_key' => 'medical_use_global', 'icon' => 'heart-pulse'],
                 ['key' => 'scf_representatives', 'label' => 'SCF Representanter', 'global_key' => 'scf_use_global', 'icon' => 'badge-check'],
             ];
             ?>
+
+            <!-- Mirrored fields info -->
+            <div class="facility-section-header" style="margin-bottom: var(--space-md);">
+                <p style="color: var(--color-text-muted); font-size: var(--text-sm);">Följande fält kopieras automatiskt från andra sektioner och visas i PM-fliken på event-sidan:</p>
+            </div>
+            <div class="facility-fields" style="margin-bottom: var(--space-lg);">
+                <?php foreach ($pmMirroredFields as $mf): ?>
+                <div class="facility-field" style="opacity: 0.7;">
+                    <div class="facility-field-header">
+                        <div class="facility-field-label">
+                            <i data-lucide="<?= $mf['icon'] ?>"></i>
+                            <span><?= $mf['label'] ?></span>
+                        </div>
+                        <span style="font-size: var(--text-xs); color: var(--color-accent-text);"><i data-lucide="copy" style="width:12px;height:12px;display:inline;vertical-align:middle;"></i> Kopia</span>
+                    </div>
+                    <div style="padding: var(--space-sm) var(--space-md); background: var(--color-bg-hover); border-radius: var(--radius-sm); font-size: var(--text-sm); color: var(--color-text-secondary);">
+                        <?php
+                        $val = trim($event[$mf['key']] ?? '');
+                        if ($val): ?>
+                            <div style="margin-bottom: var(--space-xs); max-height: 60px; overflow: hidden; text-overflow: ellipsis;"><?= h(mb_substr($val, 0, 150)) ?><?= mb_strlen($val) > 150 ? '...' : '' ?></div>
+                        <?php else: ?>
+                            <em>Tomt — redigera under <?= $mf['source'] ?></em>
+                        <?php endif; ?>
+                        <div style="font-size: var(--text-xs); color: var(--color-text-muted);">Redigeras under: <strong><?= $mf['source'] ?></strong></div>
+                    </div>
+                </div>
+                <?php endforeach; ?>
+            </div>
+
+            <div class="facility-section-header" style="margin-bottom: var(--space-md);">
+                <h3>PM-specifika fält</h3>
+            </div>
 
             <div class="facility-fields">
                 <?php foreach ($pmFields as $field):

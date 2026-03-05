@@ -1379,7 +1379,7 @@ if (!empty($eventSponsors['content'])): ?>
         </a>
         <?php endif; ?>
 
-        <?php if ($showAllTabs && $pmPublished && empty($event['pm_hidden']) && (!empty($event['pm_content']) || !empty($event['pm_use_global']))): ?>
+        <?php if ($showAllTabs && $pmPublished && empty($event['pm_hidden']) && (!empty($event['invitation']) || !empty($event['invitation_use_global']) || !empty($event['pm_content']) || !empty($event['pm_use_global']) || !empty($event['driver_meeting']) || !empty($event['driver_meeting_use_global']))): ?>
         <a href="?id=<?= $eventId ?>&tab=pm" data-tab="pm" class="event-tab <?= $activeTab === 'pm' ? 'active' : '' ?>">
             <i data-lucide="file-text"></i>
             PM
@@ -2226,6 +2226,7 @@ $facilityDefs = [
     ['key' => 'exhibitors', 'global' => 'exhibitors_use_global', 'hidden' => 'exhibitors_hidden', 'icon' => 'store', 'label' => 'Utställare'],
     ['key' => 'parking_detailed', 'global' => 'parking_use_global', 'hidden' => 'parking_hidden', 'icon' => 'car', 'label' => 'Parkering'],
     ['key' => 'hotel_accommodation', 'global' => 'hotel_use_global', 'hidden' => 'hotel_hidden', 'icon' => 'bed', 'label' => 'Hotell/Boende'],
+    ['key' => 'lift_info', 'global' => 'lift_use_global', 'hidden' => 'lift_hidden', 'icon' => 'cable-car', 'label' => 'Lift'],
     ['key' => 'local_info', 'global' => 'local_use_global', 'hidden' => 'local_hidden', 'icon' => 'map-pin', 'label' => 'Lokal information'],
     ['key' => 'medical_info', 'global' => 'medical_use_global', 'hidden' => 'medical_hidden', 'icon' => 'heart-pulse', 'label' => 'Sjukvård'],
     ['key' => 'media_production', 'global' => 'media_use_global', 'hidden' => 'media_hidden', 'icon' => 'camera', 'label' => 'Media'],
@@ -2279,14 +2280,28 @@ if (!$pmPublished):
     </div>
 </section>
 <?php else:
-// Build PM data array (content + links)
+// Build PM data array - mirrored fields from other sections + PM-specific fields
+// Mirrored: PM Huvudtext ← invitation, Lift ← lift_info (faciliteter), Tävlingsregler ← regulations_info, Licenser ← license_info
+$pmMirrored = [
+    ['key' => 'invitation', 'global' => 'invitation_use_global', 'hidden' => 'invitation_hidden', 'icon' => 'file-text', 'label' => 'PM Huvudtext', 'main' => true],
+    ['key' => 'lift_info', 'global' => 'lift_use_global', 'hidden' => 'lift_hidden', 'icon' => 'cable-car', 'label' => 'Lift'],
+    ['key' => 'competition_rules', 'global' => 'rules_use_global', 'hidden' => 'rules_hidden', 'icon' => 'book-open', 'label' => 'Tävlingsregler'],
+    ['key' => 'license_info', 'global' => 'license_use_global', 'hidden' => 'license_hidden', 'icon' => 'shield-check', 'label' => 'Licenser'],
+];
+// For regulations: check regulations_global_type for global text
+$regulationsText = '';
+if (!empty($event['regulations_hidden'])) {
+    $regulationsText = '';
+} elseif (!empty($event['regulations_global_type'])) {
+    $regulationsText = $globalTextMap['regulations_' . $event['regulations_global_type']] ?? '';
+} else {
+    $regulationsText = $event['regulations_info'] ?? '';
+}
+
 $pmDefs = [
-    ['key' => 'pm_content', 'global' => 'pm_use_global', 'hidden' => 'pm_hidden', 'icon' => 'file-text', 'label' => 'PM Huvudtext', 'main' => true],
     ['key' => 'driver_meeting', 'global' => 'driver_meeting_use_global', 'hidden' => 'driver_meeting_hidden', 'icon' => 'megaphone', 'label' => 'Förarmöte'],
     ['key' => 'training_info', 'global' => 'training_use_global', 'hidden' => 'training_hidden', 'icon' => 'bike', 'label' => 'Träning'],
     ['key' => 'timing_info', 'global' => 'timing_use_global', 'hidden' => 'timing_hidden', 'icon' => 'timer', 'label' => 'Tidtagning'],
-    ['key' => 'lift_info', 'global' => 'lift_use_global', 'hidden' => 'lift_hidden', 'icon' => 'cable-car', 'label' => 'Lift'],
-    ['key' => 'competition_rules', 'global' => 'rules_use_global', 'hidden' => 'rules_hidden', 'icon' => 'book-open', 'label' => 'Tävlingsregler'],
     ['key' => 'insurance_info', 'global' => 'insurance_use_global', 'hidden' => 'insurance_hidden', 'icon' => 'shield-check', 'label' => 'Försäkring'],
     ['key' => 'equipment_info', 'global' => 'equipment_use_global', 'hidden' => 'equipment_hidden', 'icon' => 'hard-hat', 'label' => 'Utrustning'],
     ['key' => 'medical_info', 'global' => 'medical_use_global', 'hidden' => 'medical_hidden', 'icon' => 'heart-pulse', 'label' => 'Sjukvård'],
@@ -2294,12 +2309,29 @@ $pmDefs = [
 ];
 $hasPMContent = false;
 $hasSubPM = false;
+
+// Resolve mirrored fields
+foreach ($pmMirrored as &$m) {
+    if ($m['key'] === 'regulations_info') {
+        // Special handling for regulations (uses regulations_global_type radio, not checkbox)
+        $m['text'] = $regulationsText;
+    } else {
+        $m['text'] = getEventContent($event, $m['key'], $m['global'], $globalTextMap, $m['hidden']);
+    }
+    $m['links'] = $eventInfoLinks[$m['key']] ?? [];
+    $hasContent = !empty($m['text']) || !empty($m['links']);
+    if ($hasContent) $hasPMContent = true;
+    if ($hasContent && empty($m['main'])) $hasSubPM = true;
+}
+unset($m);
+
+// Resolve PM-specific fields
 foreach ($pmDefs as &$p) {
     $p['text'] = getEventContent($event, $p['key'], $p['global'], $globalTextMap, $p['hidden']);
     $p['links'] = $eventInfoLinks[$p['key']] ?? [];
     $hasContent = !empty($p['text']) || !empty($p['links']);
     if ($hasContent) $hasPMContent = true;
-    if ($hasContent && empty($p['main'])) $hasSubPM = true;
+    if ($hasContent) $hasSubPM = true;
 }
 unset($p);
 ?>
@@ -2308,14 +2340,26 @@ unset($p);
         <h2 class="card-title"><i data-lucide="clipboard-list"></i> PM (Promemoria)</h2>
     </div>
     <div class="card-body">
-        <?php if (!empty($pmDefs[0]['text'])): ?>
-        <div class="prose mb-lg"><?= format_text($pmDefs[0]['text']) ?></div>
+        <?php // PM Huvudtext (mirrored from invitation) ?>
+        <?php if (!empty($pmMirrored[0]['text'])): ?>
+        <div class="prose mb-lg"><?= format_text($pmMirrored[0]['text']) ?></div>
         <?php endif; ?>
-        <?= renderSectionLinks($pmDefs[0]['links']) ?>
+        <?= renderSectionLinks($pmMirrored[0]['links']) ?>
 
         <?php if ($hasSubPM): ?>
         <div class="info-grid">
-            <?php foreach (array_slice($pmDefs, 1) as $p): ?>
+            <?php // Mirrored fields (Lift, Tävlingsregler, Licenser) ?>
+            <?php foreach (array_slice($pmMirrored, 1) as $m): ?>
+            <?php if (!empty($m['text']) || !empty($m['links'])): ?>
+            <div class="info-block">
+                <h3><i data-lucide="<?= $m['icon'] ?>"></i> <?= $m['label'] ?></h3>
+                <?php if (!empty($m['text'])): ?><p><?= format_text($m['text']) ?></p><?php endif; ?>
+                <?= renderSectionLinks($m['links']) ?>
+            </div>
+            <?php endif; ?>
+            <?php endforeach; ?>
+            <?php // PM-specific fields ?>
+            <?php foreach ($pmDefs as $p): ?>
             <?php if (!empty($p['text']) || !empty($p['links'])): ?>
             <div class="info-block">
                 <h3><i data-lucide="<?= $p['icon'] ?>"></i> <?= $p['label'] ?></h3>
