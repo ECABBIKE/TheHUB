@@ -4,6 +4,37 @@
 
 ---
 
+## SENASTE FIXAR (2026-03-05, session 36)
+
+### CSRF-token-validering fixad (session_write_close-bugg)
+- **Problem:** "CSRF token validation failed" vid godkännande av betalningar
+- **Orsak:** `session_write_close()` i config.php (rad 207) och index.php (rad 82) anropades FÖRE sidans rendering. `csrf_field()` → `generate_csrf_token()` skapade token i minnet men sessionen var redan stängd → tokenen sparades aldrig till sessionsfilen. Vid POST hittades ingen token.
+- **Fix:** `generate_csrf_token()` anropas nu INNAN `session_write_close()` i båda filerna. Tokenen finns i sessionen FÖRE den stängs → POST-requests kan verifiera den.
+- **VIKTIGT:** All session-skrivning (tokens, variabler) MÅSTE ske INNAN `session_write_close()`
+- **Filer:** `config.php`, `index.php`
+
+### Databas-sidan omgjord till 4 flikar (klient-sida flikbyte)
+- **Ny arkitektur:** Databas-sidan (`/database`) har nu 4 flikar med klient-sida flikbyte (samma mönster som event-sidan)
+- **Flik 1 - Åkare:** Topp 20 rankade (GRAVITY ranking snapshots) + sökruta (AJAX via /api/search.php)
+- **Flik 2 - Klubbar:** Topp 20 klubbar (club ranking snapshots) + sökruta
+- **Flik 3 - Hall of Fame:** Topp 20 historiskt bästa, sorterbara efter SM-titlar / Segrar / Pallplatser
+  - SM-titlar räknas via `events.is_championship = 1` + `classes.is_championship_class = 1`
+  - Segrar = position 1 i klasser med `awards_points = 1`
+  - Pallplatser = position ≤ 3 i klasser med `awards_points = 1`
+  - Tre sort-knappar i sub-navbaren (server-side reload vid byte)
+- **Flik 4 - Gallerier:** Alla publicerade album i datumordning, filter på år/destination
+  - Samma data och kort-layout som `/gallery`-sidan
+  - `/gallery` fungerar fortfarande som standalone-sida (bakåtkompatibel)
+- **Stats:** 4 kort överst (Åkare, Klubbar, Album, Bilder)
+- **URL-format:** `/database?tab=riders|clubs|halloffame|gallery` + `&hof=sm|wins|podiums`
+- **Tab-historik:** `history.replaceState` uppdaterar URL vid flikbyte (ingen sidomladdning)
+- **Fallback:** Om ranking_snapshots/club_ranking_snapshots saknas → beräknas från senaste events
+- **CSS:** database-index.css omskriven med galleri-stilar inkluderade
+- **CSS bundle rebuildd**
+- **Filer:** `pages/database/index.php` (omskriven), `assets/css/pages/database-index.css` (omskriven)
+
+---
+
 ## SENASTE FIXAR (2026-03-05, session 35)
 
 ### Felrapporter: Konversationssystem (ersätter e-postsvar)
