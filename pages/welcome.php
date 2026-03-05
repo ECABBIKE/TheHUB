@@ -81,12 +81,15 @@ try {
     // Upcoming events - next 3 regardless of discipline
     $upcomingEvents = $pdo->query("
         SELECT e.id, e.name, e.date, e.end_date, e.location, e.discipline,
+               e.logo as event_logo,
                COALESCE(s2.name, s.name) as series_name,
-               COALESCE(s2.logo, s.logo) as series_logo
+               COALESCE(sb2.logo, sb.logo, s2.logo, s.logo) as brand_logo
         FROM events e
         LEFT JOIN series s ON e.series_id = s.id
+        LEFT JOIN series_brands sb ON s.brand_id = sb.id
         LEFT JOIN series_events se ON se.event_id = e.id
         LEFT JOIN series s2 ON se.series_id = s2.id
+        LEFT JOIN series_brands sb2 ON s2.brand_id = sb2.id
         WHERE e.date >= CURDATE() AND e.active = 1
         GROUP BY e.id
         ORDER BY e.date ASC
@@ -217,19 +220,13 @@ $homepageLogo = getBranding('logos.homepage');
         </h2>
         <div class="welcome-upcoming-cards">
             <?php
-            $disciplineLabels = [
-                'ENDURO' => 'Enduro',
-                'DH' => 'Downhill',
-                'XC' => 'XC',
-                'GRAVEL' => 'Gravel',
-            ];
             foreach ($upcomingEvents as $event):
-                $discLabel = $disciplineLabels[$event['discipline']] ?? $event['discipline'];
+                // Pick best logo: event logo > brand logo
+                $displayLogo = !empty($event['event_logo']) ? $event['event_logo'] : ($event['brand_logo'] ?? '');
                 // Format date range
                 $startDate = strtotime($event['date']);
                 $endDate = !empty($event['end_date']) ? strtotime($event['end_date']) : null;
                 if ($endDate && $endDate > $startDate) {
-                    // Multi-day: "14-15 Jun" or "30 Jun - 1 Jul"
                     if (date('M', $startDate) === date('M', $endDate)) {
                         $dateStr = date('j', $startDate) . '-' . date('j', $endDate) . ' ' . date('M', $endDate);
                     } else {
@@ -240,18 +237,22 @@ $homepageLogo = getBranding('logos.homepage');
                 }
             ?>
             <a href="/calendar/<?= $event['id'] ?>" class="welcome-upcoming-card">
-                <?php if (!empty($event['series_logo'])): ?>
+                <?php if (!empty($displayLogo)): ?>
                 <div class="welcome-card-logo">
-                    <img src="<?= htmlspecialchars($event['series_logo']) ?>" alt="<?= htmlspecialchars($event['series_name'] ?? '') ?>">
+                    <img src="<?= htmlspecialchars($displayLogo) ?>" alt="">
                 </div>
                 <?php endif; ?>
-                <h4 class="welcome-card-title"><?= htmlspecialchars($event['name']) ?></h4>
-                <div class="welcome-card-meta">
-                    <span class="welcome-card-date"><?= hub_icon('calendar', 'icon-xs') ?> <?= $dateStr ?></span>
-                    <?php if (!empty($event['location'])): ?>
-                    <span class="welcome-card-location"><?= hub_icon('map-pin', 'icon-xs') ?> <?= htmlspecialchars($event['location']) ?></span>
+                <div class="welcome-card-body">
+                    <h4 class="welcome-card-title"><?= htmlspecialchars($event['name']) ?></h4>
+                    <div class="welcome-card-row">
+                        <span class="welcome-card-date"><?= hub_icon('calendar', 'icon-xs') ?> <?= $dateStr ?></span>
+                        <?php if (!empty($event['location'])): ?>
+                        <span class="welcome-card-location"><?= hub_icon('map-pin', 'icon-xs') ?> <?= htmlspecialchars($event['location']) ?></span>
+                        <?php endif; ?>
+                    </div>
+                    <?php if (!empty($event['series_name'])): ?>
+                    <div class="welcome-card-brand"><?= htmlspecialchars($event['series_name']) ?></div>
                     <?php endif; ?>
-                    <span class="welcome-card-discipline"><?= htmlspecialchars($discLabel) ?></span>
                 </div>
             </a>
             <?php endforeach; ?>
