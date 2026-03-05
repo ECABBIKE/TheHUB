@@ -2487,20 +2487,29 @@ function addToPlacement(pl, sponsorId, name, logoUrl, updateCount) {
     tile.className = 'pl-tile';
     tile.dataset.sponsorId = sponsorId;
     tile.draggable = true;
-    var sizeButtons = '';
-    if (pl === 'partner') {
-        var currentSize = (partnerSizes[sponsorId] || 'small');
-        sizeButtons = '<div class="pl-tile-size" style="display:flex;gap:2px;margin-top:4px;justify-content:center;">'
-            + '<button type="button" class="btn btn-xs ' + (currentSize === 'large' ? 'btn-primary' : 'btn-secondary') + '" onclick="setPartnerSize(' + sponsorId + ',\'large\',this)" style="padding:1px 6px;font-size:11px;line-height:1.4;">L</button>'
-            + '<button type="button" class="btn btn-xs ' + (currentSize === 'small' ? 'btn-primary' : 'btn-secondary') + '" onclick="setPartnerSize(' + sponsorId + ',\'small\',this)" style="padding:1px 6px;font-size:11px;line-height:1.4;">S</button>'
-            + '</div>';
-    }
     tile.innerHTML = (logoUrl
         ? '<img src="' + logoUrl + '" alt="' + (name||'') + '" title="' + (name||'') + '">'
         : '<span class="pl-tile-text">' + (name||'?') + '</span>')
-        + '<button type="button" class="pl-tile-remove" onclick="removeFromPlacement(\'' + pl + '\',' + sponsorId + ')" title="Ta bort">&times;</button>'
-        + sizeButtons;
-    container.appendChild(tile);
+        + '<button type="button" class="pl-tile-remove" onclick="removeFromPlacement(\'' + pl + '\',' + sponsorId + ')" title="Ta bort">&times;</button>';
+
+    // Wrap tile + size buttons in a wrapper for partner placement
+    if (pl === 'partner') {
+        var currentSize = (partnerSizes[sponsorId] || 'small');
+        var wrapper = document.createElement('div');
+        wrapper.className = 'pl-tile-wrapper';
+        wrapper.dataset.sponsorId = sponsorId;
+        wrapper.style.cssText = 'display:inline-flex;flex-direction:column;align-items:center;gap:4px;';
+        wrapper.appendChild(tile);
+        var sizeBtns = document.createElement('div');
+        sizeBtns.className = 'pl-tile-size';
+        sizeBtns.style.cssText = 'display:flex;gap:3px;';
+        sizeBtns.innerHTML = '<button type="button" class="btn btn-xs ' + (currentSize === 'large' ? 'btn-primary' : 'btn-secondary') + '" onclick="setPartnerSize(' + sponsorId + ',\'large\',this)" style="padding:1px 8px;font-size:11px;line-height:1.4;">L</button>'
+            + '<button type="button" class="btn btn-xs ' + (currentSize === 'small' ? 'btn-primary' : 'btn-secondary') + '" onclick="setPartnerSize(' + sponsorId + ',\'small\',this)" style="padding:1px 8px;font-size:11px;line-height:1.4;">S</button>';
+        wrapper.appendChild(sizeBtns);
+        container.appendChild(wrapper);
+    } else {
+        container.appendChild(tile);
+    }
     initTileDrag(tile, pl);
 
     // Hidden form input
@@ -2531,8 +2540,14 @@ function addToPlacement(pl, sponsorId, name, logoUrl, updateCount) {
 
 function removeFromPlacement(pl, sponsorId) {
     placements[pl] = placements[pl].filter(function(s){ return s.id !== sponsorId; });
-    const tile = document.querySelector('#pl-' + pl + ' .pl-tile[data-sponsor-id="' + sponsorId + '"]');
-    if (tile) tile.remove();
+    // For partner: remove wrapper (which contains tile + size buttons)
+    var wrapper = document.querySelector('#pl-' + pl + ' .pl-tile-wrapper[data-sponsor-id="' + sponsorId + '"]');
+    if (wrapper) {
+        wrapper.remove();
+    } else {
+        var tile = document.querySelector('#pl-' + pl + ' .pl-tile[data-sponsor-id="' + sponsorId + '"]');
+        if (tile) tile.remove();
+    }
     const input = document.getElementById('pl-input-' + pl + '-' + sponsorId);
     if (input) input.remove();
     const sizeInput = document.getElementById('pl-size-partner-' + sponsorId);

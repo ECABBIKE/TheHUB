@@ -1342,15 +1342,21 @@ document.addEventListener('keydown', function(e) {
     margin-bottom: var(--space-md);
 }
 .series-partners-grid {
-    display: grid;
-    gap: var(--space-lg);
-    justify-items: center;
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: center;
     align-items: center;
+    gap: var(--space-lg);
 }
-/* Large partners: 3 per row desktop, 600x150 */
+/* Large partners: max 3 per row desktop, 600x150 */
 .series-partners-large {
-    grid-template-columns: repeat(3, 1fr);
     margin-bottom: var(--space-lg);
+}
+.series-partners-large .series-partner-item {
+    flex: 0 0 calc(33.333% - var(--space-lg));
+    max-width: calc(33.333% - var(--space-lg));
+    display: flex;
+    justify-content: center;
 }
 .series-partner-lg img {
     height: 75px;
@@ -1358,9 +1364,12 @@ document.addEventListener('keydown', function(e) {
     max-width: 300px;
     object-fit: contain;
 }
-/* Small partners: 5 per row desktop, 300x75 */
-.series-partners-small {
-    grid-template-columns: repeat(5, 1fr);
+/* Small partners: max 5 per row desktop, 300x75 */
+.series-partners-small .series-partner-item {
+    flex: 0 0 calc(20% - var(--space-lg));
+    max-width: calc(20% - var(--space-lg));
+    display: flex;
+    justify-content: center;
 }
 .series-partner-sm img {
     height: 38px;
@@ -1385,17 +1394,22 @@ document.addEventListener('keydown', function(e) {
         height: 50px;
         max-width: 200px;
     }
+    .series-partners-grid {
+        gap: var(--space-md);
+    }
     /* Large partners: 2 per row on mobile */
-    .series-partners-large {
-        grid-template-columns: repeat(2, 1fr);
+    .series-partners-large .series-partner-item {
+        flex: 0 0 calc(50% - var(--space-md));
+        max-width: calc(50% - var(--space-md));
     }
     .series-partner-lg img {
         height: 50px;
         max-width: 200px;
     }
     /* Small partners: 3 per row on mobile */
-    .series-partners-small {
-        grid-template-columns: repeat(3, 1fr);
+    .series-partners-small .series-partner-item {
+        flex: 0 0 calc(33.333% - var(--space-md));
+        max-width: calc(33.333% - var(--space-md));
     }
     .series-partner-sm img {
         height: 30px;
