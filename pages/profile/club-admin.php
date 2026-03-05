@@ -115,7 +115,6 @@ $stats = $statsStmt->fetch(PDO::FETCH_ASSOC);
 <div class="members-section">
     <div class="section-header">
         <h2>Medlemmar (<?= count($members) ?>)</h2>
-        <a href="/profile/add-member/<?= $selectedClubId ?>" class="btn btn--primary btn-sm">+ Lägg till</a>
     </div>
 
     <?php if (empty($members)): ?>
@@ -130,17 +129,13 @@ $stats = $statsStmt->fetch(PDO::FETCH_ASSOC);
                         <?= strtoupper(substr($member['firstname'], 0, 1)) ?>
                     </div>
                     <div class="member-info">
-                        <a href="/database/rider/<?= $member['id'] ?>" class="member-name">
+                        <a href="/rider/<?= $member['id'] ?>" class="member-name">
                             <?= htmlspecialchars($member['firstname'] . ' ' . $member['lastname']) ?>
                         </a>
                         <span class="member-stats">
                             <?= $member['result_count'] ?> resultat
                         </span>
                     </div>
-                    <button type="button" class="btn btn-sm btn-outline"
-                            onclick="removeMember(<?= $member['id'] ?>, '<?= htmlspecialchars($member['firstname']) ?>')">
-                        Ta bort
-                    </button>
                 </div>
             <?php endforeach; ?>
         </div>
