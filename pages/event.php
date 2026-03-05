@@ -202,7 +202,7 @@ try {
             SELECT s.*, es.placement, es.display_order,
                    m_banner.filepath as banner_logo_url, m_standard.filepath as standard_logo_url,
                    m_small.filepath as small_logo_url, m_legacy.filepath as legacy_logo_url,
-                   'event' as sponsor_source, 'small' as display_size
+                   'event' as sponsor_source
             FROM sponsors s
             INNER JOIN event_sponsors es ON s.id = es.sponsor_id
             LEFT JOIN media m_banner ON s.logo_banner_id = m_banner.id
@@ -213,8 +213,21 @@ try {
             ORDER BY es.display_order ASC
         ");
         $ownStmt->execute([$eventId]);
-        foreach ($ownStmt->fetchAll(PDO::FETCH_ASSOC) as $sponsor) {
+        $ownSponsors = $ownStmt->fetchAll(PDO::FETCH_ASSOC);
+
+        // Try to load display_size from event_sponsors (may not exist pre-migration 076)
+        $eventDisplaySizes = [];
+        try {
+            $esSizeStmt = $db->prepare("SELECT sponsor_id, display_size FROM event_sponsors WHERE event_id = ?");
+            $esSizeStmt->execute([$eventId]);
+            foreach ($esSizeStmt->fetchAll(PDO::FETCH_ASSOC) as $sz) {
+                $eventDisplaySizes[$sz['sponsor_id']] = $sz['display_size'];
+            }
+        } catch (Exception $e2) { /* display_size column may not exist */ }
+
+        foreach ($ownSponsors as $sponsor) {
             $placement = $sponsor['placement'] ?? 'sidebar';
+            $sponsor['display_size'] = $eventDisplaySizes[$sponsor['id']] ?? 'small';
             $eventSponsors[$placement][] = $sponsor;
         }
     } catch (Exception $e) {
@@ -866,7 +879,9 @@ try {
     // Join classes via event_pricing_rules first (exact event-class mapping),
     // then fallback to name match with MIN(sort_order) to avoid duplicates
     $registrations = $db->prepare("
-        SELECT reg.*, r.firstname, r.lastname, r.birth_year, c.name as club_name,
+        SELECT reg.id, reg.event_id, reg.rider_id, reg.category, reg.bib_number,
+               reg.status, reg.payment_status, reg.registration_date,
+               r.firstname, r.lastname, r.birth_year, c.name as club_name,
                COALESCE(cl_epr.display_name, cl_epr.name, cl_min.display_name, cl_min.name, reg.category) as class_name,
                COALESCE(cl_epr.sort_order, cl_min.sort_order, 9999) as class_sort_order
         FROM event_registrations reg
@@ -2561,7 +2576,7 @@ try {
                 <span class="badge badge--neutral ml-sm"><?= count($classRegs) ?></span>
             </h3>
             <div class="reg-participants-scroll">
-                <table class="table table--striped table--compact reg-participants-table">
+                <table class="table table--striped table--compact reg-participants-table<?= $hasBibNumbers ? ' has-bib' : '' ?>">
                     <?php if ($hasBibNumbers): ?>
                     <colgroup>
                         <col style="width: 12%;">
@@ -2593,7 +2608,7 @@ try {
                     <?php endif; ?>
                     <tbody>
                         <?php foreach ($classRegs as $index => $reg):
-                            $regName = h(($reg['firstname'] ?? $reg['first_name'] ?? '') . ' ' . ($reg['lastname'] ?? $reg['last_name'] ?? ''));
+                            $regName = h(($reg['firstname'] ?? '') . ' ' . ($reg['lastname'] ?? ''));
                             $regClub = h($reg['club_name'] ?? '-');
                             $regBib = h($reg['bib_number'] ?? '-');
                             $regYear = h($reg['birth_year'] ?? '-');
@@ -2603,7 +2618,7 @@ try {
                             <?php if ($hasBibNumbers): ?>
                             <td class="text-muted"><?= $regBib ?></td>
                             <?php endif; ?>
-                            <td><?php if ($regRiderId): ?><a href="/rider/<?= $regRiderId ?>" class="rider-link"><strong><?= $regName ?></strong></a><?php else: ?><strong><?= $regName ?></strong><?php endif; ?></td>
+                            <td><?php if ($regRiderId): ?><a href="/rider/<?= $regRiderId ?>" class="rider-link"><?= $regName ?></a><?php else: ?><?= $regName ?><?php endif; ?></td>
                             <td class="text-muted"><?= $regYear ?></td>
                             <td class="text-secondary"><?= $regClub ?></td>
                         </tr>

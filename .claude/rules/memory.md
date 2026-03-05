@@ -6,37 +6,49 @@
 
 ## SENASTE FIXAR (2026-03-05, session 30)
 
-### Sponsorsystem: Explicit "Ärv från serie" + Storleksval för partners
-- **Problem 1:** Serie-sponsorer laddades ALLTID automatiskt på event-sidor om eventet tillhörde en serie. Om serien saknade sponsorer visades inga sponsorer alls, även om eventet hade egna.
-- **Fix:** Ny kolumn `events.inherit_series_sponsors` (TINYINT, default 0). Serie-sponsorer laddas BARA om denna flagga är aktiverad. Toggle-checkbox i event-edit sponsorsektionen.
-- **Problem 2:** Samarbetspartner-logotyper på seriesidan var dimmiga (opacity: 0.7) och för små (40px/120px).
-- **Fix:** Ny kolumn `series_sponsors.display_size` ENUM('large','small'). Stor = 600x150px (3/rad desktop, 2/rad mobil). Liten = 300x75px (5/rad desktop, 3/rad mobil). Opacity borttagen helt.
-- **Serie-manage:** L/S knappar per partner-sponsor i admin-gränssnittet för storleksval.
-- **Event.php:** Partner-rendering stödjer storleksklasser vid ärvda serie-sponsorer.
-- **Logo-rad:** Storlek ökad från 50px/150px till 75px/300px på seriesidan.
+### Sponsorsystem: Per-placement "Ärv från serie" + Storleksval för partners
+- **Problem 1:** Serie-sponsorer laddades ALLTID automatiskt på event-sidor. Inga egna kontroller per placement.
+- **Fix:** Ny kolumn `events.inherit_series_sponsors` VARCHAR(100) lagrar kommaseparerade placements (t.ex. 'header,content,partner'). Per-placement checkboxar i event-edit sponsorsektionen.
+- **Problem 2:** Samarbetspartner-logotyper var dimmiga (opacity: 0.7) och för små.
+- **Fix:** Ny kolumn `series_sponsors.display_size` och `event_sponsors.display_size` ENUM('large','small'). Stor = 600x150px (3/rad desktop, 2/rad mobil). Liten = 300x75px (5/rad desktop, 3/rad mobil). Opacity borttagen helt.
+- **Serie-manage + Event-edit:** L/S knappar per partner-sponsor i admin-gränssnittet.
+- **Logo-rad:** Storlek ökad från 50px till 75px höjd, 300px max-width (matchar serier).
 - **Migration 074:** `events.inherit_series_sponsors` + `series_sponsors.display_size`
-- **VIKTIGT:** Kör migration 074 via `/admin/migrations.php`
+- **Migration 075:** Fixar kolumntyp TINYINT→VARCHAR om 074 kördes tidigt
+- **Migration 076:** `event_sponsors.display_size` + 'partner' i placement ENUM
+- **VIKTIGT:** Kör migration 074+075+076 via `/admin/migrations.php`
+
+### Registrering dubbeltext + klasssortering fixad
+- **Problem:** Namn i anmälda-fliken visades med "dubbeltext" (nästan oläsbart)
+- **Orsak 1:** `SELECT reg.*` hämtade `first_name`/`last_name` från event_registrations OCH `r.firstname`/`r.lastname` från riders → PDO returnerade båda
+- **Fix:** Explicit kolumnlista istället för `reg.*`
+- **Orsak 2:** `<strong>` inuti `.rider-link` (som redan har font-weight:medium) → dubbel fetstil
+- **Fix:** `<strong>` borttagen
+- **Mobil CSS:** Kolumn-döljning ändrad från `nth-child(1)` till `.has-bib`-klass (förut doldes Namn istf startnr)
 
 ### Format-toolbar på serie-beskrivning
 - `data-format-toolbar` attribut tillagt på serie-beskrivningstextarean i series-manage.php
-- `format-toolbar.php` inkluderad för B/I knappar och Ctrl+B/I
 
 ### VIKTIGT: Sponsorarv-arkitektur (ny)
-- **Default:** Event visar BARA sina egna sponsorer (`event_sponsors`)
-- **Med inherit:** Om `events.inherit_series_sponsors = 1`, laddas serie-sponsorer via UNION query
-- **Prioritet:** Event-sponsorer hamnar först (array_unshift), serie-sponsorer sist
-- **Storleksklasser:** `display_size` på `series_sponsors` styr rendering (large/small)
-- **Event-edit:** Checkbox "Ärv sponsorer från serien" syns bara om eventet tillhör en serie
-- **Promotorer:** Hidden input bevarar inherit-flaggan (disabled fieldset)
+- **Pre-migration fallback:** Om `inherit_series_sponsors`-kolumnen saknas → ärver ALLA placements (gammalt beteende)
+- **Tom sträng:** Inga placements ärvs (default för nya events)
+- **'1':** Alla placements ärvs (bakåtkompatibilitet)
+- **'header,content,partner':** Bara valda placements ärvs
+- **Event.php:** Separata SQL-frågor för event-sponsorer och serie-sponsorer (inga UNION)
+- **display_size:** Laddas via separat try/catch-fråga (pre-migration-safe)
+- **Event-edit sparning:** `inherit_series_sponsors` sparas via egen try/catch (ny kolumn → kan saknas)
+- **Promotorer:** Hidden inputs bevarar inherit-val i disabled fieldsets
 
 ### Filer ändrade
-- **`Tools/migrations/074_sponsor_inherit_and_display_size.sql`** - Ny migration
-- **`admin/migrations.php`** - Migration 074 registrerad
-- **`admin/event-edit.php`** - Inherit-toggle, inherit_series_sponsors i core UPDATE
-- **`pages/event.php`** - Villkorlig serie-sponsor-laddning, partner storleksklasser
+- **`Tools/migrations/074_sponsor_inherit_and_display_size.sql`** - inherit + series display_size
+- **`Tools/migrations/075_fix_inherit_sponsors_column_type.sql`** - TINYINT→VARCHAR fix
+- **`Tools/migrations/076_event_sponsors_display_size_and_partner.sql`** - event display_size + partner ENUM
+- **`admin/migrations.php`** - Migration 074-076 registrerade
+- **`admin/event-edit.php`** - Per-placement inherit checkboxar, L/S knappar, inherit i egen try/catch
+- **`pages/event.php`** - Separata sponsor-frågor, display_size, registration-kolumnfix, borttagen strong
 - **`admin/series-manage.php`** - display_size per partner, L/S toggle-knappar, format-toolbar
 - **`pages/series/show.php`** - Stora/små partner-grid, borttagen opacity, ökade logo-storlekar
-- **`assets/css/pages/event.css`** - Partner storleksklasser (large/small) med mobilanpassning
+- **`assets/css/pages/event.css`** - Partner storleksklasser, logo-rad 75px, mobilfix bib-kolumn
 
 ---
 
