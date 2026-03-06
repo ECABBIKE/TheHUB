@@ -687,8 +687,8 @@ function generateExternalCodes($pdo, $campaignId, $prefix, $brandIds, $startYear
         }
     }
 
-    // Insert codes for categories with riders (suffix A-J)
-    $suffix = 'A';
+    // Insert codes for categories with riders (3-digit random suffix)
+    $usedSuffixes = [];
     $inserted = 0;
     $insertStmt = $pdo->prepare("
         INSERT INTO winback_external_codes (campaign_id, code, category_key, category_label, experience_min, experience_max, age_min, age_max, rider_count)
@@ -699,14 +699,19 @@ function generateExternalCodes($pdo, $campaignId, $prefix, $brandIds, $startYear
         $count = $categoryCounts[$cat['key']];
         if ($count === 0) continue;
 
-        $code = $prefix . '-' . $suffix;
+        // Generate unique 3-digit random suffix
+        do {
+            $suffix = str_pad(random_int(100, 999), 3, '0', STR_PAD_LEFT);
+        } while (in_array($suffix, $usedSuffixes));
+        $usedSuffixes[] = $suffix;
+
+        $code = $prefix . $suffix;
         $insertStmt->execute([
             $campaignId, $code, $cat['key'], $cat['label'],
             $cat['exp_min'], $cat['exp_max'], $cat['age_min'], $cat['age_max'],
             $count
         ]);
         $inserted++;
-        $suffix++;
         if ($inserted >= 10) break;
     }
 
