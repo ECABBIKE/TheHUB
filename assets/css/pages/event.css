@@ -1968,13 +1968,11 @@ td.col-place {
 
 .reg-participants-table {
     margin: 0;
-    table-layout: fixed;
     width: 100%;
 }
 
 .reg-participants-table th,
 .reg-participants-table td {
-    white-space: nowrap;
     overflow: hidden;
     text-overflow: ellipsis;
 }
@@ -1982,22 +1980,48 @@ td.col-place {
 /* Column widths controlled via colgroup in HTML */
 
 @media (max-width: 767px) {
-    .reg-participants-scroll {
+    /* Edge-to-edge for the whole class group on mobile */
+    .reg-class-group {
+        border-radius: 0;
+        border-left: none;
+        border-right: none;
         margin-left: calc(-1 * var(--space-md));
         margin-right: calc(-1 * var(--space-md));
+        width: calc(100% + 2 * var(--space-md));
     }
 
-    /* Hide bib number column on mobile (only when startlist has bib numbers) */
-    .reg-participants-table.has-bib col:nth-child(1),
-    .reg-participants-table.has-bib th:nth-child(1),
-    .reg-participants-table.has-bib td:nth-child(1) {
-        display: none;
+    /* Remove the scroll wrapper's negative margins - the group is already edge-to-edge */
+    .reg-participants-scroll {
+        margin-left: 0;
+        margin-right: 0;
     }
 
+    /* Let table content breathe - auto layout instead of fixed */
+    .reg-participants-table {
+        table-layout: auto;
+    }
+
+    /* Allow names and clubs to wrap on mobile */
     .reg-participants-table th,
     .reg-participants-table td {
+        white-space: normal;
+        word-break: break-word;
         padding: var(--space-xs) var(--space-sm);
         font-size: var(--text-sm);
+    }
+
+    /* Hide bib number column on mobile portrait (only when startlist has bib numbers) */
+    .reg-participants-table.has-bib th:first-child,
+    .reg-participants-table.has-bib td:first-child {
+        display: none;
+    }
+}
+
+@media (max-width: 599px) {
+    .reg-class-group {
+        margin-left: calc(-1 * var(--space-sm));
+        margin-right: calc(-1 * var(--space-sm));
+        width: calc(100% + 2 * var(--space-sm));
     }
 }
 
